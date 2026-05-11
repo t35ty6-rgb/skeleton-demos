@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>インタラクティブデモ - ホットペッパー予約通知ツール</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+    background: #f0f2f5;
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+  }
+  .container { max-width: 1300px; margin: 0 auto; }
+  header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 24px 32px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+  }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .desc { font-size: 14px; opacity: 0.9; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .card h2 {
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: #444;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge {
+    background: #667eea;
+    color: white;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: normal;
+  }
+  textarea {
+    width: 100%;
+    height: 360px;
+    padding: 12px;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    resize: vertical;
+    line-height: 1.6;
+  }
+  textarea:focus { outline: none; border-color: #667eea; }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .input-row input {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 13px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+  }
+  .input-row input:focus { outline: none; border-color: #667eea; }
+
+  .samples {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .samples button {
+    padding: 6px 12px;
+    font-size: 12px;
+    background: #f0f2f5;
+    border: 1px solid #ddd;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .samples button:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+  }
+
+  .preview-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+    border-bottom: 2px solid #e0e0e0;
+  }
+  .preview-tabs button {
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    color: #888;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.15s;
+  }
+  .preview-tabs button.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* LINEプレビュー */
+  .line-screen {
+    background: #7494c0;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .line-header {
+    background: white;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .line-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #00b900;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 13px;
+  }
+  .line-room-name { font-weight: bold; font-size: 14px; }
+  .line-room-sub { font-size: 11px; color: #888; }
+  .line-body {
+    padding: 20px 12px;
+    min-height: 300px;
+  }
+  .line-time {
+    text-align: center;
+    font-size: 11px;
+    color: white;
+    background: rgba(0,0,0,0.3);
+    border-radius: 12px;
+    padding: 4px 10px;
+    width: fit-content;
+    margin: 0 auto 12px;
+  }
+  .line-msg {
+    background: white;
+    border-radius: 16px;
+    padding: 12px 14px;
+    max-width: 90%;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-line;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  }
+
+  /* カレンダープレビュー */
+  .calendar {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .cal-header {
+    background: #1a73e8;
+    color: white;
+    padding: 12px 16px;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .cal-day {
+    padding: 12px 16px;
+    background: #f8f9fa;
+    font-size: 13px;
+    font-weight: bold;
+    color: #5f6368;
+    border-bottom: 1px solid #eee;
+  }
+  .cal-event {
+    margin: 8px 12px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, #4285f4 0%, #1a73e8 100%);
+    color: white;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .cal-event-time { font-size: 11px; opacity: 0.9; }
+  .cal-event-title { font-weight: bold; font-size: 13px; margin: 4px 0; }
+  .cal-event-desc {
+    font-size: 11px;
+    opacity: 0.95;
+    background: rgba(0,0,0,0.15);
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+    white-space: pre-line;
+  }
+
+  /* パース結果テーブル */
+  .parsed-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .parsed-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+  }
+  .parsed-table td:first-child {
+    font-weight: bold;
+    color: #666;
+    width: 130px;
+    background: #f8f9fa;
+  }
+  .parsed-table .empty { color: #ccc; font-style: italic; }
+  .parsed-table .true { color: #00b900; font-weight: bold; }
+  .parsed-table .false { color: #aaa; }
+
+  .info {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    margin-top: 16px;
+    color: #856404;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🧪 インタラクティブデモ</h1>
+    <p class="desc">メール本文を貼り付けると、リアルタイムでLINE通知＆カレンダー登録のプレビューが見られます</p>
+  </header>
+
+  <div class="layout">
+    <!-- 入力側 -->
+    <div class="card">
+      <h2>📧 受信メール（編集可）<span class="badge">入力</span></h2>
+
+      <div class="samples">
+        <span style="font-size:12px; color:#888; padding:6px 0;">サンプル:</span>
+        <button data-sample="new1">新規予約 (フォーマット1)</button>
+        <button data-sample="new2">新規予約 (フォーマット2)</button>
+        <button data-sample="change">変更</button>
+        <button data-sample="cancel">キャンセル</button>
+        <button data-sample="empty">空にする</button>
+      </div>
+
+      <div class="input-row">
+        <input type="text" id="subject" placeholder="件名">
+      </div>
+      <textarea id="body" placeholder="ここにメール本文を貼り付け..."></textarea>
+
+      <div class="info">
+        💡 実際にお客様が受信した予約メールをここに貼り付けると、ツールがどう動くかがすぐ分かります
+      </div>
+    </div>
+
+    <!-- 出力側 -->
+    <div class="card">
+      <h2>👁 リアルタイムプレビュー<span class="badge">出力</span></h2>
+
+      <div class="preview-tabs">
+        <button class="tab-btn active" data-tab="line">📱 LINE通知</button>
+        <button class="tab-btn" data-tab="calendar">📅 カレンダー</button>
+        <button class="tab-btn" data-tab="parsed">⚙️ パース結果</button>
+      </div>
+
+      <div id="panel-line" class="panel active">
+        <div class="line-screen">
+          <div class="line-header">
+            <div class="line-avatar">SL</div>
+            <div>
+              <div class="line-room-name">サロンスタッフ</div>
+              <div class="line-room-sub">3人</div>
+            </div>
+          </div>
+          <div class="line-body">
+            <div class="line-time" id="line-time"></div>
+            <div class="line-msg" id="line-msg">(メール本文を入力すると、ここにLINE通知が表示されます)</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-calendar" class="panel">
+        <div class="calendar">
+          <div class="cal-header" id="cal-header">カレンダー</div>
+          <div class="cal-day" id="cal-day">(日付未取得)</div>
+          <div id="cal-events">
+            <div style="padding:24px; text-align:center; color:#888; font-size:13px;">
+              (メール本文を入力すると、ここにイベントが表示されます)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-parsed" class="panel">
+        <table class="parsed-table" id="parsed-table"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============== Parser.gs を移植 (純粋ロジック) ==============
+function parseReservationEmail(subject, body) {
+  const result = {
+    reservationNo: '', customerName: '', startAt: null,
+    durationMin: 60, menu: '', staff: '', phone: '', note: '',
+    isCancel: /キャンセル|取消/i.test(subject + body),
+    isChange: /変更|修正/i.test(subject + body),
+    raw: body,
+  };
+  result.reservationNo = matchOne(body, [
+    /予約番号[\s:：]*([A-Za-z0-9\-]+)/,
+    /予約No[\s.:：]*([A-Za-z0-9\-]+)/i,
+  ]);
+  result.customerName = matchOne(body, [
+    /お客様名[\s:：]*([^\n\r]+?)\s*様?\s*$/m,
+    /ご予約者[\s:：]*([^\n\r]+?)\s*様?\s*$/m,
+    /氏\s*名[\s:：]*([^\n\r]+?)\s*様?\s*$/m,
+  ]).replace(/\s*様\s*$/, '').trim();
+  const dateStr = matchOne(body, [
+    /予約日時[\s:：]*([0-9]{4}[\/年][0-9]{1,2}[\/月][0-9]{1,2}日?[^\n]*?[0-9]{1,2}[:：][0-9]{2})/,
+    /来店日時[\s:：]*([0-9]{4}[\/年][0-9]{1,2}[\/月][0-9]{1,2}日?[^\n]*?[0-9]{1,2}[:：][0-9]{2})/,
+    /日\s*時[\s:：]*([0-9]{4}[\/年][0-9]{1,2}[\/月][0-9]{1,2}日?[^\n]*?[0-9]{1,2}[:：][0-9]{2})/,
+  ]);
+  result.startAt = parseJaDateTime(dateStr);
+  const durStr = matchOne(body, [/所要時間[\s:：]*([0-9]+\s*時間\s*[0-9]*\s*分?|[0-9]+\s*分)/]);
+  if (durStr) result.durationMin = parseDurationMin(durStr);
+  result.menu = matchOne(body, [
+    /メニュー[\s:：]*([^\n\r]+)/, /ご予約メニュー[\s:：]*([^\n\r]+)/, /コース[\s:：]*([^\n\r]+)/,
+  ]).trim();
+  result.staff = matchOne(body, [
+    /担当[\s者]*[\s:：]*([^\n\r]+)/, /スタイリスト[\s:：]*([^\n\r]+)/, /指名[\s:：]*([^\n\r]+)/,
+  ]).trim();
+  result.phone = matchOne(body, [
+    /(?:お客様)?電話番号[\s:：]*([0-9\-+\s]+)/, /TEL[\s:：]*([0-9\-+\s]+)/i,
+  ]).trim();
+  result.note = matchOne(body, [/備\s*考[\s:：]*([^\n\r]+)/, /要望[\s:：]*([^\n\r]+)/]).trim();
+  return result;
+}
+function matchOne(text, patterns) {
+  for (const re of patterns) { const m = text.match(re); if (m && m[1]) return m[1].trim(); }
+  return '';
+}
+function parseJaDateTime(str) {
+  if (!str) return null;
+  const m = str.match(/([0-9]{4})[\/年]([0-9]{1,2})[\/月]([0-9]{1,2})日?[^0-9]*([0-9]{1,2})[:：]([0-9]{2})/);
+  if (!m) return null;
+  const [, y, mo, d, h, mi] = m.map(Number);
+  return new Date(y, mo - 1, d, h, mi, 0);
+}
+function parseDurationMin(str) {
+  let total = 0;
+  const h = str.match(/([0-9]+)\s*時間/), m = str.match(/([0-9]+)\s*分/);
+  if (h) total += Number(h[1]) * 60;
+  if (m) total += Number(m[1]);
+  return total || 60;
+}
+function buildLineMessage(r) {
+  const header = r.isCancel ? '❌ 予約キャンセル' : r.isChange ? '🔄 予約変更' : '✅ 新規予約';
+  const lines = [header, '', '👤 ' + (r.customerName || '(名前不明)') + ' 様'];
+  if (r.startAt) lines.push('📅 ' + formatJaDateTime(r.startAt) + ' (' + r.durationMin + '分)');
+  if (r.menu) lines.push('💇 ' + r.menu);
+  if (r.staff) lines.push('👥 担当: ' + r.staff);
+  if (r.phone) lines.push('📞 ' + r.phone);
+  if (r.note) lines.push('📝 ' + r.note);
+  if (r.reservationNo) lines.push('🔖 ' + r.reservationNo);
+  return lines.join('\n');
+}
+function formatJaDateTime(d) {
+  const days = ['日','月','火','水','木','金','土'];
+  const pad = n => String(n).padStart(2,'0');
+  return d.getFullYear()+'/'+pad(d.getMonth()+1)+'/'+pad(d.getDate())+'('+days[d.getDay()]+') '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
+
+// ============== サンプル ==============
+const SAMPLES = {
+  new1: {
+    subject: '[ホットペッパービューティー] 新しいご予約が入りました',
+    body: `[ホットペッパービューティーからのお知らせ]
+新しいご予約が入りました。
+
+────────────────────────────────
+■予約番号: HPB202604280001
+■お客様名: 山田 花子 様
+■予約日時: 2026/05/02 (土) 14:00
+■所要時間: 120分
+■予約メニュー: カット + フルカラー
+■担当: 佐藤
+■お客様電話番号: 090-1234-5678
+■備考: 駐車場の利用希望
+────────────────────────────────`
+  },
+  new2: {
+    subject: 'ホットペッパービューティーからのご予約通知',
+    body: `ホットペッパービューティーからのご予約通知
+
+ご予約者	田中 太郎 様
+来店日時	2026年5月10日(日) 11:30
+所要時間	1時間30分
+ご予約メニュー	メンズカット
+スタイリスト	鈴木
+TEL	080-9876-5432
+要望	初回利用
+予約No.	HPB202604280002`
+  },
+  change: {
+    subject: '[ホットペッパービューティー] 予約内容変更のお知らせ',
+    body: `[ホットペッパービューティー] 予約内容変更のお知らせ
+
+下記のご予約が変更されました。
+
+■予約番号: HPB202604280002
+■お客様名: 田中 太郎 様
+■予約日時: 2026/05/11 (月) 13:00
+■所要時間: 90分
+■予約メニュー: メンズカット + シャンプー
+■担当: 鈴木
+■お客様電話番号: 080-9876-5432
+■備考: 時間変更希望のため`
+  },
+  cancel: {
+    subject: '[ホットペッパービューティー] 予約キャンセルのお知らせ',
+    body: `[ホットペッパービューティー] 予約キャンセルのお知らせ
+
+下記のご予約がキャンセルされました。
+
+■予約番号: HPB202604280001
+■お客様名: 山田 花子 様
+■予約日時: 2026/05/02 (土) 14:00
+■予約メニュー: カット + フルカラー
+■担当: 佐藤`
+  },
+  empty: { subject: '', body: '' },
+};
+
+// ============== UI ==============
+const subjectInput = document.getElementById('subject');
+const bodyInput = document.getElementById('body');
+
+document.querySelectorAll('.samples button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const s = SAMPLES[btn.dataset.sample];
+    subjectInput.value = s.subject;
+    bodyInput.value = s.body;
+    update();
+  });
+});
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+subjectInput.addEventListener('input', update);
+bodyInput.addEventListener('input', update);
+
+function update() {
+  const subject = subjectInput.value;
+  const body = bodyInput.value;
+  if (!body.trim()) {
+    document.getElementById('line-msg').textContent = '(メール本文を入力すると、ここにLINE通知が表示されます)';
+    document.getElementById('cal-events').innerHTML =
+      '<div style="padding:24px; text-align:center; color:#888; font-size:13px;">(メール本文を入力すると、ここにイベントが表示されます)</div>';
+    document.getElementById('cal-day').textContent = '(日付未取得)';
+    document.getElementById('parsed-table').innerHTML = '';
+    return;
+  }
+  const r = parseReservationEmail(subject, body);
+
+  // LINE
+  const now = new Date();
+  document.getElementById('line-time').textContent = now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日';
+  document.getElementById('line-msg').textContent = buildLineMessage(r);
+
+  // カレンダー
+  const cal = document.getElementById('cal-events');
+  cal.innerHTML = '';
+  if (r.isCancel) {
+    document.getElementById('cal-header').textContent = r.startAt ? r.startAt.getFullYear()+'年'+(r.startAt.getMonth()+1)+'月' : 'カレンダー';
+    document.getElementById('cal-day').textContent = r.startAt ? (r.startAt.getMonth()+1)+'月'+r.startAt.getDate()+'日' : '';
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:24px; text-align:center; color:#d33; font-size:13px; font-weight:bold;';
+    empty.textContent = '❌ 該当イベントは自動削除されます';
+    cal.appendChild(empty);
+  } else if (r.startAt) {
+    document.getElementById('cal-header').textContent = r.startAt.getFullYear()+'年'+(r.startAt.getMonth()+1)+'月';
+    document.getElementById('cal-day').textContent = formatJaDateTime(r.startAt).split(' ')[0];
+    const endAt = new Date(r.startAt.getTime() + r.durationMin*60000);
+    const ev = document.createElement('div');
+    ev.className = 'cal-event';
+    const desc = [];
+    if (r.staff) desc.push('担当: ' + r.staff);
+    if (r.phone) desc.push('TEL: ' + r.phone);
+    if (r.note) desc.push('備考: ' + r.note);
+    if (r.reservationNo) desc.push('予約番号: ' + r.reservationNo);
+    const timeStr = pad(r.startAt.getHours())+':'+pad(r.startAt.getMinutes())+' - '+pad(endAt.getHours())+':'+pad(endAt.getMinutes());
+    ev.innerHTML =
+      '<div class="cal-event-time">'+timeStr + (r.isChange ? '  🔄更新' : '') +'</div>'+
+      '<div class="cal-event-title">'+escapeHtml('【予約】'+(r.customerName||'名前不明')+' 様' + (r.menu ? ' / '+r.menu : '')) +'</div>'+
+      '<div class="cal-event-desc">'+escapeHtml(desc.join('\n'))+'</div>';
+    cal.appendChild(ev);
+  } else {
+    document.getElementById('cal-header').textContent = 'カレンダー';
+    document.getElementById('cal-day').textContent = '(日付抽出失敗)';
+    const err = document.createElement('div');
+    err.style.cssText = 'padding:24px; text-align:center; color:#d33; font-size:13px;';
+    err.textContent = '⚠️ 日時が抽出できませんでした。Parser.gsの調整が必要かもしれません';
+    cal.appendChild(err);
+  }
+
+  // パース結果テーブル
+  const tbl = document.getElementById('parsed-table');
+  const fields = [
+    ['予約番号', r.reservationNo],
+    ['お客様名', r.customerName],
+    ['予約日時', r.startAt ? formatJaDateTime(r.startAt) : ''],
+    ['所要時間', r.durationMin + '分'],
+    ['メニュー', r.menu],
+    ['担当', r.staff],
+    ['電話番号', r.phone],
+    ['備考', r.note],
+    ['キャンセル', r.isCancel],
+    ['変更', r.isChange],
+  ];
+  tbl.innerHTML = fields.map(([k, v]) => {
+    let cls = '', disp = v;
+    if (v === '') { cls = 'empty'; disp = '(抽出できず)'; }
+    else if (v === true) { cls = 'true'; disp = 'YES'; }
+    else if (v === false) { cls = 'false'; disp = 'NO'; }
+    return '<tr><td>'+k+'</td><td class="'+cls+'">'+escapeHtml(String(disp))+'</td></tr>';
+  }).join('');
+}
+
+function pad(n) { return String(n).padStart(2,'0'); }
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// 初期表示
+SAMPLES.new1 && (subjectInput.value = SAMPLES.new1.subject, bodyInput.value = SAMPLES.new1.body, update());
+</script>
+</body>
+</html>

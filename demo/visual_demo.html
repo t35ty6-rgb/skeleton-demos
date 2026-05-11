@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ホットペッパー予約通知ツール デモ</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 40px 20px;
+    color: #333;
+  }
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  h1 {
+    color: white;
+    text-align: center;
+    font-size: 32px;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .subtitle {
+    color: rgba(255,255,255,0.9);
+    text-align: center;
+    font-size: 16px;
+    margin-bottom: 40px;
+  }
+  .flow {
+    display: grid;
+    grid-template-columns: 1fr 80px 1fr 80px 1fr;
+    gap: 0;
+    align-items: stretch;
+  }
+  .step {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+  }
+  .step-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #667eea;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .step-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 16px;
+  }
+  .arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 40px;
+  }
+
+  /* メール風 */
+  .email {
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 12px;
+    flex-grow: 1;
+    overflow: auto;
+    max-height: 480px;
+  }
+  .email-header {
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+  .email-from { color: #888; font-size: 11px; }
+  .email-subject { font-weight: bold; margin-top: 4px; }
+  .email-body {
+    white-space: pre-wrap;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  /* LINE風 */
+  .line-screen {
+    background: #7494c0;
+    border-radius: 16px;
+    padding: 0;
+    overflow: hidden;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .line-header {
+    background: white;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .line-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #00b900;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .line-room-name {
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .line-room-sub {
+    font-size: 11px;
+    color: #888;
+  }
+  .line-body {
+    background: #7494c0;
+    flex-grow: 1;
+    padding: 20px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .line-time {
+    text-align: center;
+    font-size: 11px;
+    color: white;
+    background: rgba(0,0,0,0.3);
+    border-radius: 12px;
+    padding: 4px 10px;
+    align-self: center;
+  }
+  .line-msg {
+    background: white;
+    border-radius: 16px;
+    padding: 12px 14px;
+    max-width: 85%;
+    align-self: flex-start;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-line;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  }
+
+  /* カレンダー風 */
+  .calendar {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-grow: 1;
+    border: 1px solid #e0e0e0;
+  }
+  .cal-header {
+    background: #1a73e8;
+    color: white;
+    padding: 12px 16px;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .cal-day {
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+    background: #f8f9fa;
+    font-size: 13px;
+    font-weight: bold;
+    color: #5f6368;
+  }
+  .cal-event {
+    margin: 8px 12px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, #4285f4 0%, #1a73e8 100%);
+    color: white;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    box-shadow: 0 2px 4px rgba(26,115,232,0.3);
+  }
+  .cal-event-time {
+    font-size: 11px;
+    opacity: 0.9;
+    margin-bottom: 4px;
+  }
+  .cal-event-title {
+    font-weight: bold;
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  .cal-event-desc {
+    font-size: 11px;
+    opacity: 0.95;
+    background: rgba(0,0,0,0.15);
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+    white-space: pre-line;
+  }
+
+  /* 切り替えボタン */
+  .switcher {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  .switcher button {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 2px solid rgba(255,255,255,0.4);
+    padding: 10px 20px;
+    margin: 0 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.2s;
+  }
+  .switcher button:hover {
+    background: rgba(255,255,255,0.3);
+  }
+  .switcher button.active {
+    background: white;
+    color: #667eea;
+  }
+
+  .footer {
+    margin-top: 40px;
+    text-align: center;
+    color: rgba(255,255,255,0.9);
+    font-size: 14px;
+  }
+  .footer strong {
+    color: white;
+    font-size: 18px;
+  }
+
+  @media (max-width: 1100px) {
+    .flow {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    .arrow {
+      transform: rotate(90deg);
+    }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎬 ホットペッパー予約通知ツール</h1>
+  <p class="subtitle">予約メールが届いた瞬間、自動でLINE通知 & Googleカレンダー登録</p>
+
+  <div class="switcher">
+    <button data-case="new" class="active">✅ 新規予約</button>
+    <button data-case="change">🔄 変更通知</button>
+    <button data-case="cancel">❌ キャンセル通知</button>
+  </div>
+
+  <div class="flow">
+    <!-- ステップ1: メール -->
+    <div class="step">
+      <div class="step-label">STEP 1</div>
+      <div class="step-title">📧 受信メール</div>
+      <div class="email">
+        <div class="email-header">
+          <div class="email-from" id="email-from">no-reply@beauty.hotpepper.jp</div>
+          <div class="email-subject" id="email-subject"></div>
+        </div>
+        <div class="email-body" id="email-body"></div>
+      </div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <!-- ステップ2: LINE -->
+    <div class="step">
+      <div class="step-label">STEP 2 (約30秒後)</div>
+      <div class="step-title">📱 LINE通知</div>
+      <div class="line-screen">
+        <div class="line-header">
+          <div class="line-avatar">SL</div>
+          <div>
+            <div class="line-room-name">サロンスタッフ</div>
+            <div class="line-room-sub">3人</div>
+          </div>
+        </div>
+        <div class="line-body">
+          <div class="line-time" id="line-time"></div>
+          <div class="line-msg" id="line-msg"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <!-- ステップ3: カレンダー -->
+    <div class="step">
+      <div class="step-label">STEP 3 (同時)</div>
+      <div class="step-title">📅 Googleカレンダー</div>
+      <div class="calendar">
+        <div class="cal-header" id="cal-header">2026年5月</div>
+        <div class="cal-day" id="cal-day">5月2日 (土)</div>
+        <div id="cal-events"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <strong>💡 すべて自動。サロン側で何もする必要なし。</strong><br><br>
+    月額 3,980円〜 / 初月無料 / 月単位で解約可
+  </div>
+</div>
+
+<script>
+const SAMPLES = {
+  new: {
+    subject: '[ホットペッパービューティー] 新しいご予約が入りました',
+    body:
+`[ホットペッパービューティーからのお知らせ]
+新しいご予約が入りました。
+
+────────────────────────────────
+■予約番号: HPB202604280001
+■お客様名: 山田 花子 様
+■予約日時: 2026/05/02 (土) 14:00
+■所要時間: 120分
+■予約メニュー: カット + フルカラー
+■担当: 佐藤
+■お客様電話番号: 090-1234-5678
+■備考: 駐車場の利用希望
+────────────────────────────────
+
+ご予約確定通知です。
+サロンボードでも内容をご確認ください。`,
+    line:
+`✅ 新規予約
+
+👤 山田 花子 様
+📅 2026/05/02(土) 14:00 (120分)
+💇 カット + フルカラー
+👥 担当: 佐藤
+📞 090-1234-5678
+📝 駐車場の利用希望
+🔖 HPB202604280001`,
+    cal: {
+      header: '2026年5月',
+      day: '5月2日 (土)',
+      events: [{
+        time: '14:00 - 16:00',
+        title: '【予約】山田 花子 様 / カット + フルカラー',
+        desc: '担当: 佐藤\nTEL: 090-1234-5678\n備考: 駐車場の利用希望\n予約番号: HPB202604280001'
+      }],
+    },
+  },
+  change: {
+    subject: '[ホットペッパービューティー] 予約内容変更のお知らせ',
+    body:
+`[ホットペッパービューティー] 予約内容変更のお知らせ
+
+下記のご予約が変更されました。
+
+■予約番号: HPB202604280002
+■お客様名: 田中 太郎 様
+■予約日時: 2026/05/11 (月) 13:00
+■所要時間: 90分
+■予約メニュー: メンズカット + シャンプー
+■担当: 鈴木
+■お客様電話番号: 080-9876-5432
+■備考: 時間変更希望のため`,
+    line:
+`🔄 予約変更
+
+👤 田中 太郎 様
+📅 2026/05/11(月) 13:00 (90分)
+💇 メンズカット + シャンプー
+👥 担当: 鈴木
+📞 080-9876-5432
+📝 時間変更希望のため
+🔖 HPB202604280002`,
+    cal: {
+      header: '2026年5月',
+      day: '5月11日 (月)',
+      events: [{
+        time: '13:00 - 14:30  🔄更新',
+        title: '【予約】田中 太郎 様 / メンズカット + シャンプー',
+        desc: '担当: 鈴木\nTEL: 080-9876-5432\n備考: 時間変更希望のため\n予約番号: HPB202604280002'
+      }],
+    },
+  },
+  cancel: {
+    subject: '[ホットペッパービューティー] 予約キャンセルのお知らせ',
+    body:
+`[ホットペッパービューティー] 予約キャンセルのお知らせ
+
+下記のご予約がキャンセルされました。
+
+■予約番号: HPB202604280001
+■お客様名: 山田 花子 様
+■予約日時: 2026/05/02 (土) 14:00
+■予約メニュー: カット + フルカラー
+■担当: 佐藤`,
+    line:
+`❌ 予約キャンセル
+
+👤 山田 花子 様
+📅 2026/05/02(土) 14:00 (60分)
+💇 カット + フルカラー
+👥 担当: 佐藤
+🔖 HPB202604280001`,
+    cal: {
+      header: '2026年5月',
+      day: '5月2日 (土)',
+      events: [],
+      empty: '❌ 既存イベントは自動削除されました',
+    },
+  },
+};
+
+function nowJa() {
+  const d = new Date();
+  return d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
+}
+
+function render(key) {
+  const s = SAMPLES[key];
+  document.getElementById('email-subject').textContent = s.subject;
+  document.getElementById('email-body').textContent = s.body;
+  document.getElementById('line-time').textContent = nowJa();
+  document.getElementById('line-msg').textContent = s.line;
+  document.getElementById('cal-header').textContent = s.cal.header;
+  document.getElementById('cal-day').textContent = s.cal.day;
+  const evCon = document.getElementById('cal-events');
+  evCon.innerHTML = '';
+  if (s.cal.events.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.padding = '24px';
+    empty.style.textAlign = 'center';
+    empty.style.color = '#888';
+    empty.style.fontSize = '13px';
+    empty.textContent = s.cal.empty || '(予定なし)';
+    evCon.appendChild(empty);
+  } else {
+    s.cal.events.forEach(ev => {
+      const el = document.createElement('div');
+      el.className = 'cal-event';
+      el.innerHTML =
+        '<div class="cal-event-time">' + ev.time + '</div>' +
+        '<div class="cal-event-title">' + escapeHtml(ev.title) + '</div>' +
+        '<div class="cal-event-desc">' + escapeHtml(ev.desc) + '</div>';
+      evCon.appendChild(el);
+    });
+  }
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+document.querySelectorAll('.switcher button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.switcher button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render(btn.dataset.case);
+  });
+});
+
+render('new');
+</script>
+</body>
+</html>

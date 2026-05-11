@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>サロン向け LINE デモ ｜ 予約通知 + LINE購入体験</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --line-green: #06c755;
+  --line-dark: #05a847;
+  --primary: #c44569;
+  --gold: #ffc857;
+  --text: #2d1b3d;
+  --bg-dark: #0a1628;
+}
+body {
+  font-family: 'Noto Sans JP', -apple-system, sans-serif;
+  background: linear-gradient(160deg, var(--bg-dark) 0%, #0f2040 40%, #1a3a60 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+.demo-header {
+  padding: 18px 32px;
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(0,0,0,.3); backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,.1); flex-shrink: 0;
+}
+.demo-logo { font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+.demo-logo .line-badge { background: var(--line-green); color: #fff; padding: 3px 10px; border-radius: 6px; font-size: 12px; }
+.demo-tag { background: rgba(255,200,87,.15); border: 1px solid rgba(255,200,87,.3); color: var(--gold); padding: 5px 14px; border-radius: 16px; font-size: 11px; font-weight: 700; }
+
+/* ── TAB BAR ── */
+.tab-bar {
+  display: flex; gap: 0; padding: 20px 32px 0;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  background: rgba(0,0,0,.2);
+}
+.tab-btn {
+  padding: 12px 28px; font-size: 13px; font-weight: 700;
+  background: none; border: none; cursor: pointer; color: rgba(255,255,255,.45);
+  border-bottom: 3px solid transparent; transition: all .2s;
+  display: flex; align-items: center; gap: 8px; white-space: nowrap;
+}
+.tab-btn .tab-num {
+  width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,.1);
+  display: flex; align-items: center; justify-content: center; font-size: 11px;
+}
+.tab-btn.active { color: #fff; border-bottom-color: var(--line-green); }
+.tab-btn.active .tab-num { background: var(--line-green); }
+.tab-btn:hover:not(.active) { color: rgba(255,255,255,.7); }
+
+/* ── CONTENT ── */
+.tab-content { display: none; flex: 1; }
+.tab-content.active { display: flex; flex-direction: column; }
+
+/* ── COMMON PHONE STYLES ── */
+.phone-frame-outer {
+  background: #1a1a1a; border-radius: 44px; padding: 14px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 40px 100px rgba(0,0,0,.5), 0 0 60px rgba(6,199,85,.1);
+}
+.phone-screen-inner {
+  background: #e8eaea; border-radius: 30px; overflow: hidden;
+}
+.pstatus {
+  display: flex; justify-content: space-between; padding: 8px 14px 4px;
+  font-size: 11px; font-weight: 700; background: var(--line-green); color: #fff;
+}
+
+/* ════════════════════════════════
+   TAB 1: 予約通知デモ
+════════════════════════════════ */
+.res-main { flex: 1; display: flex; flex-direction: column; padding: 28px 32px; gap: 24px; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+.res-site-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.res-site-label { font-size: 12px; color: rgba(255,255,255,.5); font-weight: 700; white-space: nowrap; }
+.site-btn {
+  padding: 9px 20px; border-radius: 24px; font-size: 12px; font-weight: 700;
+  border: 2px solid transparent; cursor: pointer; transition: all .2s; white-space: nowrap;
+}
+.site-btn.hp    { background: rgba(230,0,18,.15); border-color: rgba(230,0,18,.4); color: #ff8a8a; }
+.site-btn.rakuten { background: rgba(191,0,0,.15); border-color: rgba(191,0,0,.4); color: #ff9898; }
+.site-btn.minimo { background: rgba(123,94,167,.15); border-color: rgba(123,94,167,.4); color: #c9b2f0; }
+.site-btn.epark  { background: rgba(0,166,81,.15); border-color: rgba(0,166,81,.4); color: #86e8b4; }
+.site-btn.active.hp    { background: rgba(230,0,18,.3); border-color: #ff4444; color: #fff; }
+.site-btn.active.rakuten { background: rgba(191,0,0,.3); border-color: #ff6666; color: #fff; }
+.site-btn.active.minimo { background: rgba(123,94,167,.3); border-color: #a084d0; color: #fff; }
+.site-btn.active.epark  { background: rgba(0,166,81,.3); border-color: var(--line-green); color: #fff; }
+.site-badge { font-size: 10px; background: rgba(255,255,255,.1); color: rgba(255,255,255,.5); padding: 2px 8px; border-radius: 8px; margin-left: auto; }
+
+.res-flow { display: grid; grid-template-columns: 1fr 120px 1fr; gap: 0; align-items: stretch; }
+@media(max-width:900px){ .res-flow { grid-template-columns: 1fr; } }
+
+/* Email card */
+.email-card {
+  background: #fff; border-radius: 16px; overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,.25); opacity: 0;
+  transform: translateX(-20px); transition: opacity .4s ease, transform .4s ease;
+}
+.email-card.show { opacity: 1; transform: translateX(0); }
+.email-header { padding: 14px 18px; display: flex; align-items: center; gap: 10px; }
+.email-site-badge { padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; color: #fff; }
+.email-from { font-size: 11px; color: #888; }
+.email-subject { font-size: 13px; font-weight: 700; color: var(--text); padding: 0 18px 8px; }
+.email-body { font-size: 12px; color: #444; line-height: 1.7; padding: 12px 18px 18px; background: #f9f9f9; border-top: 1px solid #eee; white-space: pre-line; }
+.email-highlight { background: #fff8c0; padding: 1px 4px; border-radius: 3px; font-weight: 700; }
+
+/* Processing arrow */
+.res-arrow { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 20px; }
+.arrow-line { width: 2px; height: 80px; background: linear-gradient(to bottom, rgba(6,199,85,.3), rgba(6,199,85,.8)); position: relative; overflow: hidden; }
+.arrow-line::after { content: ''; position: absolute; top: -40px; left: -4px; right: -4px; height: 40px; background: linear-gradient(to bottom, transparent, var(--line-green)); animation: flowDown 1.2s linear infinite; }
+@keyframes flowDown { to { top: calc(100% + 40px); } }
+.arrow-label { font-size: 10px; color: var(--line-green); font-weight: 700; text-align: center; line-height: 1.4; }
+.arrow-head { font-size: 20px; color: var(--line-green); }
+@media(max-width:900px){ .res-arrow { flex-direction: row; } .arrow-line { width: 80px; height: 2px; } }
+
+/* Output panel */
+.res-output { display: flex; flex-direction: column; gap: 16px; }
+.out-card {
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 16px; overflow: hidden; opacity: 0;
+  transform: translateX(20px); transition: opacity .4s ease, transform .4s ease;
+}
+.out-card.show { opacity: 1; transform: translateX(0); }
+.out-card-header { padding: 10px 16px; font-size: 11px; font-weight: 700; color: rgba(255,255,255,.5); border-bottom: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; gap: 6px; }
+.out-card-header.green { color: var(--line-green); }
+.out-card-header.blue { color: #64b5f6; }
+
+/* LINE Preview (mini, in res tab) */
+.mini-line { background: #bacccb; }
+.mini-line-hdr { background: var(--line-green); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+.mini-avatar { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.3); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.mini-room { font-size: 12px; font-weight: 700; color: #fff; }
+.mini-sub { font-size: 9px; color: rgba(255,255,255,.7); }
+.mini-body { padding: 10px; }
+.mini-time { text-align: center; font-size: 9px; color: rgba(0,0,0,.4); background: rgba(0,0,0,.15); border-radius: 10px; padding: 2px 8px; width: fit-content; margin: 0 auto 8px; }
+.mini-msg { background: #fff; border-radius: 12px; padding: 8px 10px; font-size: 11px; line-height: 1.55; white-space: pre-line; box-shadow: 0 1px 3px rgba(0,0,0,.1); max-width: 90%; color: #333; }
+.mini-msg.cancel { background: #fff0f0; border-left: 3px solid #f44; }
+.mini-msg.change { background: #fff8e8; border-left: 3px solid #ffa000; }
+
+/* Calendar Preview (mini, in res tab) */
+.mini-cal-hdr { background: #1a73e8; padding: 8px 12px; font-size: 12px; font-weight: 700; color: #fff; }
+.mini-cal-day { padding: 6px 12px; font-size: 11px; color: #5f6368; font-weight: 700; background: #f8f9fa; border-bottom: 1px solid #eee; }
+.mini-cal-evt { margin: 8px; border-radius: 6px; padding: 8px 10px; font-size: 11px; color: #fff; line-height: 1.5; }
+.mini-cal-evt.hp     { background: linear-gradient(135deg, #e60012, #c00); }
+.mini-cal-evt.rakuten{ background: linear-gradient(135deg, #bf0000, #900); }
+.mini-cal-evt.minimo { background: linear-gradient(135deg, #7b5ea7, #5b3e87); }
+.mini-cal-evt.epark  { background: linear-gradient(135deg, #00a651, var(--line-dark)); }
+.mini-cal-evt.cancel { background: #9e9e9e; text-decoration: line-through; }
+.mini-cal-evt-time { font-size: 10px; opacity: .85; }
+.mini-cal-evt-title { font-weight: 700; margin-top: 2px; }
+
+/* Processing overlay */
+.processing-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(6,199,85,.15); border: 1px solid rgba(6,199,85,.3);
+  color: var(--line-green); padding: 5px 12px; border-radius: 12px;
+  font-size: 11px; font-weight: 700;
+}
+.spinner { width: 12px; height: 12px; border: 2px solid rgba(6,199,85,.3); border-top-color: var(--line-green); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ════════════════════════════════
+   TAB 2: LINE購入体験デモ
+════════════════════════════════ */
+.ec-main {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-start; padding: 28px 20px; width: 100%;
+}
+.ec-layout {
+  display: grid; grid-template-columns: 320px 1fr; gap: 40px;
+  align-items: flex-start; width: 100%; max-width: 1050px;
+}
+@media(max-width:800px){ .ec-layout { grid-template-columns: 1fr; } }
+
+.phone-wrap { width: 320px; flex-shrink: 0; }
+.phone-screen {
+  background: #e8eaea; border-radius: 30px; overflow: hidden;
+  height: 560px; position: relative;
+}
+.screen { position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0; transition: opacity .3s; pointer-events: none; display: flex; flex-direction: column; }
+.screen.active { opacity: 1; pointer-events: all; }
+
+/* LINE Header */
+.lh { background: var(--line-green); padding: 10px 14px 12px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.lh-back { color: #fff; font-size: 20px; }
+.lh-avatar { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.3); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.lh-name { font-size: 13px; font-weight: 700; color: #fff; }
+.lh-sub { font-size: 9px; color: rgba(255,255,255,.7); }
+.lh-more { margin-left: auto; color: #fff; font-size: 18px; }
+
+/* Chat */
+.chat-area { flex: 1; background: #bacccb; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
+.mrow { display: flex; align-items: flex-end; gap: 5px; }
+.mav { width: 26px; height: 26px; border-radius: 50%; background: var(--line-green); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.bbl { max-width: 76%; background: #fff; border-radius: 14px; border-top-left-radius: 3px; padding: 8px 11px; font-size: 11px; line-height: 1.55; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.mt { font-size: 9px; color: rgba(0,0,0,.35); align-self: flex-end; margin-bottom: 1px; }
+.chat-link { background: #fff; border-radius: 10px; overflow: hidden; margin-top: 5px; max-width: 76%; box-shadow: 0 1px 4px rgba(0,0,0,.1); cursor: pointer; }
+.chat-link-img { height: 48px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.chat-link-body { padding: 6px 10px; }
+.chat-link-title { font-size: 10px; font-weight: 700; color: #333; }
+.chat-link-sub { font-size: 9px; color: #aaa; }
+
+/* Rich menu */
+.rm { background: #fff; border-top: 1px solid #ddd; flex-shrink: 0; }
+.rm-handle { text-align: center; padding: 3px 0; }
+.rm-handle span { display: block; width: 28px; height: 3px; background: #ccc; border-radius: 2px; margin: 0 auto; }
+.rm-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: #e0e0e0; }
+.rmb { background: #fff; padding: 9px 4px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; transition: background .15s; }
+.rmb:hover { background: #f5f5f5; }
+.rmb.hl { background: linear-gradient(135deg,rgba(6,199,85,.12),rgba(6,199,85,.04)); }
+.rbi { font-size: 16px; }
+.rbl { font-size: 8px; font-weight: 700; color: #444; text-align: center; }
+.rmb.hl .rbl { color: var(--line-dark); }
+
+/* Webview bar */
+.wb { background: #fff; border-bottom: 1px solid #e0e0e0; padding: 7px 10px; display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.wb-back { font-size: 17px; color: #444; cursor: pointer; }
+.wb-url { flex: 1; background: #f0f0f0; border-radius: 7px; padding: 3px 8px; font-size: 9px; color: #888; }
+.wb-url b { color: var(--line-green); }
+
+/* Shop */
+.wc { flex: 1; background: #fff; overflow-y: auto; }
+.sh-hdr { padding: 12px 14px 8px; border-bottom: 1px solid #eee; flex-shrink: 0; }
+.sh-name { font-size: 14px; font-weight: 900; color: var(--text); display: flex; align-items: center; gap: 7px; }
+.sh-tag { font-size: 9px; background: var(--line-green); color: #fff; padding: 2px 7px; border-radius: 5px; }
+.sh-sub { font-size: 10px; color: #888; margin-top: 1px; }
+.plist { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.pc { background: #fff; border: 1px solid #eee; border-radius: 10px; overflow: hidden; display: flex; cursor: pointer; box-shadow: 0 1px 6px rgba(0,0,0,.05); }
+.pc-img { width: 72px; height: 72px; flex-shrink: 0; background: linear-gradient(135deg,#e8f5e9,#c8e6c9); display: flex; align-items: center; justify-content: center; font-size: 28px; overflow: hidden; }
+.pc-img img { width:100%; height:100%; object-fit:cover; }
+.pc-info { padding: 9px 11px; flex: 1; }
+.pc-name { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.pc-sub { font-size: 10px; color: #888; margin-bottom: 5px; }
+.pc-price { font-size: 14px; font-weight: 900; color: var(--line-dark); font-family: 'Outfit',sans-serif; }
+.pc-price span { font-size: 9px; color: #888; font-weight: 400; }
+
+/* Detail */
+.dc { padding: 14px; }
+.d-img { width: 100%; height: 130px; border-radius: 10px; background: linear-gradient(135deg,#e8f5e9,#b2dfdb); display: flex; align-items: center; justify-content: center; font-size: 50px; margin-bottom: 12px; overflow: hidden; }
+.d-img img { width:100%;height:100%;object-fit:cover; }
+.d-name { font-size: 14px; font-weight: 900; color: var(--text); margin-bottom: 3px; }
+.d-brand { font-size: 10px; color: #888; margin-bottom: 8px; }
+.d-price { font-size: 24px; font-weight: 900; color: var(--line-dark); font-family: 'Outfit',sans-serif; margin-bottom: 10px; }
+.d-price span { font-size: 12px; color: #888; font-weight: 400; }
+.d-desc { font-size: 11px; color: #555; line-height: 1.65; background: #f9f9f9; border-radius: 7px; padding: 9px 11px; margin-bottom: 12px; }
+.d-ship { font-size: 10px; color: #888; margin-bottom: 12px; }
+.btn-cart { width: 100%; padding: 13px; border-radius: 10px; background: var(--line-green); color: #fff; font-size: 14px; font-weight: 700; border: none; cursor: pointer; }
+
+/* Cart */
+.cc { padding: 12px; }
+.cc-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+.ci { background: #f9f9f9; border-radius: 9px; padding: 10px; display: flex; gap: 9px; margin-bottom: 10px; }
+.ci-img { width: 50px; height: 50px; border-radius: 7px; background: linear-gradient(135deg,#e8f5e9,#b2dfdb); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; overflow: hidden; }
+.ci-img img { width:100%;height:100%;object-fit:cover; }
+.ci-name { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.ci-price { font-size: 13px; font-weight: 900; color: var(--line-dark); font-family: 'Outfit',sans-serif; }
+.del-sel { background: #f0faf5; border: 1px solid rgba(6,199,85,.2); border-radius: 9px; padding: 9px 11px; margin-bottom: 12px; }
+.del-lbl { font-size: 10px; color: var(--line-dark); font-weight: 700; margin-bottom: 4px; }
+.del-opt { font-size: 11px; color: var(--text); display: flex; gap: 7px; }
+.del-opt input { accent-color: var(--line-green); }
+.cs { border-top: 1px solid #eee; padding-top: 10px; margin-bottom: 12px; }
+.cr { display: flex; justify-content: space-between; font-size: 11px; color: #666; margin-bottom: 5px; }
+.cr.total { font-weight: 700; color: var(--text); font-size: 13px; border-top: 1px solid #eee; padding-top: 8px; margin-top: 4px; }
+.btn-buy { width: 100%; padding: 14px; border-radius: 10px; background: linear-gradient(135deg,var(--line-green),var(--line-dark)); color: #fff; font-size: 14px; font-weight: 700; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(6,199,85,.3); }
+
+/* Complete */
+.compl { background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+.compl-icon { width: 70px; height: 70px; background: linear-gradient(135deg,var(--line-green),#4ade80); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px; margin-bottom: 16px; box-shadow: 0 6px 24px rgba(6,199,85,.3); animation: bounce .5s ease; }
+@keyframes bounce { 0%{transform:scale(0)} 60%{transform:scale(1.15)} 100%{transform:scale(1)} }
+.compl-title { font-size: 16px; font-weight: 900; color: var(--text); margin-bottom: 6px; }
+.compl-sub { font-size: 11px; color: #888; line-height: 1.6; margin-bottom: 18px; }
+.compl-order { background: #f0faf5; border: 1px solid rgba(6,199,85,.2); border-radius: 10px; padding: 12px; width: 100%; text-align: left; margin-bottom: 14px; }
+.co-r { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 5px; }
+.co-r .lbl { color: #888; }
+.co-r .val { font-weight: 700; color: var(--text); }
+.compl-note { background: #f5f5f5; border-radius: 8px; padding: 10px; font-size: 10px; color: #666; line-height: 1.6; }
+
+/* ── EC SIDE PANEL ── */
+.ec-side { color: #fff; }
+.progress-bar { margin-bottom: 24px; }
+.pb-label { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,.4); margin-bottom: 5px; }
+.pb-track { height: 4px; background: rgba(255,255,255,.1); border-radius: 2px; overflow: hidden; }
+.pb-fill { height: 100%; background: linear-gradient(90deg,var(--line-green),#4ade80); border-radius: 2px; transition: width .4s ease; }
+.step-list { display: flex; flex-direction: column; gap: 0; }
+.si { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; cursor: pointer; transition: background .15s; position: relative; }
+.si::before { content:''; position:absolute; left:26px; top:42px; bottom:-12px; width:2px; background:rgba(255,255,255,.08); }
+.si:last-child::before { display:none; }
+.si.active { background: rgba(6,199,85,.12); border: 1px solid rgba(6,199,85,.25); }
+.si:hover:not(.active) { background: rgba(255,255,255,.05); }
+.snum { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; background: rgba(255,255,255,.1); color: rgba(255,255,255,.4); border: 1px solid rgba(255,255,255,.12); transition: all .3s; }
+.si.active .snum { background: var(--line-green); color: #fff; border-color: var(--line-green); box-shadow: 0 0 10px rgba(6,199,85,.4); }
+.si.done .snum { background: rgba(6,199,85,.25); color: var(--line-green); border-color: rgba(6,199,85,.4); }
+.si-name { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.5); }
+.si.active .si-name { color: rgba(255,255,255,.9); }
+.si-desc { font-size: 10px; color: rgba(255,255,255,.35); margin-top: 2px; line-height: 1.4; }
+.si.active .si-desc { color: rgba(255,255,255,.55); }
+.nav-btns { display: flex; gap: 10px; margin-top: 22px; }
+.bnav { flex: 1; padding: 12px; border-radius: 9px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 5px; }
+.bprev { background: rgba(255,255,255,.08); color: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.12); }
+.bprev:disabled { opacity: .3; cursor: default; }
+.bnext { background: linear-gradient(135deg,var(--line-green),var(--line-dark)); color: #fff; box-shadow: 0 4px 14px rgba(6,199,85,.3); }
+.bnext:hover { transform: translateY(-1px); }
+.explain { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 16px; margin-top: 20px; }
+.expl-title { font-size: 11px; font-weight: 700; color: rgba(255,255,255,.65); margin-bottom: 6px; }
+.expl-text { font-size: 11px; color: rgba(255,255,255,.4); line-height: 1.7; }
+
+/* ── HP DEMO ── */
+.hp-main { flex: 1; display: flex; flex-direction: column; padding: 24px 32px; gap: 18px; max-width: 1400px; margin: 0 auto; width: 100%; }
+.hp-selector-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.hp-sel-label { font-size: 12px; color: rgba(255,255,255,.5); font-weight: 700; white-space: nowrap; }
+.hp-salon-btn {
+  padding: 9px 22px; border-radius: 24px; font-size: 12px; font-weight: 700;
+  background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.15);
+  color: rgba(255,255,255,.6); cursor: pointer; transition: all .2s; white-space: nowrap;
+}
+.hp-salon-btn.active { background: rgba(196,69,105,.2); border-color: var(--primary); color: #fff; }
+.hp-salon-btn:hover:not(.active) { background: rgba(255,255,255,.12); color: #fff; }
+.hp-info-bar { display: flex; align-items: center; gap: 16px; }
+.hp-salon-desc { font-size: 12px; color: rgba(255,255,255,.45); flex: 1; }
+.hp-open-link { font-size: 11px; color: var(--line-green); text-decoration: none; font-weight: 700; border: 1px solid rgba(6,199,85,.3); padding: 5px 14px; border-radius: 12px; white-space: nowrap; }
+.hp-open-link:hover { background: rgba(6,199,85,.1); }
+.browser-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.browser-frame {
+  background: #2a2a2a; border-radius: 12px 12px 0 0;
+  box-shadow: 0 8px 40px rgba(0,0,0,.4);
+  display: flex; flex-direction: column;
+  flex: 1; overflow: hidden;
+}
+.browser-bar {
+  background: #3a3a3a; padding: 10px 16px;
+  display: flex; align-items: center; gap: 12px;
+  border-radius: 12px 12px 0 0; flex-shrink: 0;
+}
+.browser-dots { display: flex; gap: 6px; flex-shrink: 0; }
+.browser-dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot-red { background: #ff5f57; }
+.dot-yellow { background: #febc2e; }
+.dot-green { background: #28c840; }
+.browser-url { flex: 1; background: #222; border-radius: 6px; padding: 5px 12px; font-size: 12px; color: #aaa; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.browser-url b { color: #fff; }
+.browser-badge { background: rgba(196,69,105,.25); border: 1px solid rgba(196,69,105,.4); color: #ff8aad; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 8px; white-space: nowrap; flex-shrink: 0; }
+.browser-iframe-wrap { flex: 1; background: #fff; position: relative; overflow: hidden; }
+.browser-iframe-wrap iframe { width: 100%; height: 100%; border: none; display: block; }
+.hp-note-bar { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 4px; }
+.hp-note { flex: 1; min-width: 180px; background: rgba(6,199,85,.08); border: 1px solid rgba(6,199,85,.2); border-radius: 10px; padding: 10px 14px; font-size: 11px; color: rgba(255,255,255,.5); }
+.hp-note strong { display: block; color: var(--line-green); font-size: 11px; margin-bottom: 3px; }
+
+/* ── FOOTER ── */
+.demo-footer {
+  padding: 16px 32px; background: rgba(0,0,0,.3);
+  border-top: 1px solid rgba(255,255,255,.08);
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; flex-shrink: 0;
+}
+.footer-note { font-size: 11px; color: rgba(255,255,255,.3); }
+.footer-btns { display: flex; gap: 10px; }
+.fbtn { padding: 7px 18px; border-radius: 18px; font-size: 11px; font-weight: 700; text-decoration: none; border: none; cursor: pointer; }
+.fbtn-p { background: var(--line-green); color: #fff; }
+.fbtn-s { background: rgba(255,255,255,.1); color: rgba(255,255,255,.65); border: 1px solid rgba(255,255,255,.12); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="demo-header">
+  <div class="demo-logo"><span class="line-badge">LINE</span> サロン向けデモ ｜ 予約通知 × LINE型EC「レア」</div>
+  <div class="demo-tag">対面プレゼン用デモ</div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('res')" id="tabbtn-res">
+    <span class="tab-num">①</span> 予約通知デモ（スタッフ向け）
+  </button>
+  <button class="tab-btn" onclick="switchTab('ec')" id="tabbtn-ec">
+    <span class="tab-num">②</span> LINE購入体験デモ（お客様向け）
+  </button>
+  <button class="tab-btn" onclick="switchTab('hp')" id="tabbtn-hp">
+    <span class="tab-num">③</span> カスタムHP実例（集客サイト）
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 1: 予約通知デモ
+═══════════════════════════════════════════ -->
+<div class="tab-content active" id="tab-res">
+  <div class="res-main">
+
+    <!-- Site selector -->
+    <div class="res-site-bar">
+      <span class="res-site-label">予約サイトを選択:</span>
+      <button class="site-btn hp" onclick="selectSite('hp')">🔴 ホットペッパービューティー</button>
+      <button class="site-btn rakuten" onclick="selectSite('rakuten')">🏮 楽天ビューティー</button>
+      <button class="site-btn minimo" onclick="selectSite('minimo')">🔵 minimo</button>
+      <button class="site-btn epark" onclick="selectSite('epark')">🟢 EPARK Beauty</button>
+      <span class="site-badge">4サイト同時対応</span>
+    </div>
+
+    <!-- Flow -->
+    <div class="res-flow">
+
+      <!-- Email card -->
+      <div>
+        <div style="font-size:11px; color:rgba(255,255,255,.4); font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+          <span>📧 受信した予約メール</span>
+          <span id="proc-badge" style="display:none;"><span class="processing-badge"><span class="spinner"></span>自動解析中...</span></span>
+        </div>
+        <div class="email-card" id="email-card">
+          <div class="email-header">
+            <div class="email-site-badge" id="email-badge"></div>
+            <div class="email-from" id="email-from"></div>
+          </div>
+          <div class="email-subject" id="email-subject"></div>
+          <div class="email-body" id="email-body"></div>
+        </div>
+        <div id="no-select" style="color:rgba(255,255,255,.3); font-size:13px; padding:40px 20px; text-align:center; background:rgba(255,255,255,.04); border-radius:16px; border:1px dashed rgba(255,255,255,.12);">
+          ↑ 上のサイトを選んでください
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="res-arrow">
+        <div class="arrow-label">ツールが<br>1分ごとに<br>自動検知</div>
+        <div class="arrow-line"></div>
+        <div class="arrow-head">▼</div>
+        <div class="arrow-label" style="margin-top:4px;">自動解析・整形<br>配信</div>
+      </div>
+
+      <!-- Output -->
+      <div class="res-output">
+        <div style="font-size:11px; color:rgba(255,255,255,.4); font-weight:700; margin-bottom:10px;">📤 自動出力（同時に2箇所へ）</div>
+
+        <!-- LINE Preview -->
+        <div class="out-card" id="out-line">
+          <div class="out-card-header green">💬 スタッフLINEグループへ自動配信</div>
+          <div class="mini-line">
+            <div class="mini-line-hdr">
+              <div class="mini-avatar">SL</div>
+              <div>
+                <div class="mini-room">サロンスタッフグループ</div>
+                <div class="mini-sub">3人</div>
+              </div>
+            </div>
+            <div class="mini-body">
+              <div class="mini-time" id="line-time"></div>
+              <div class="mini-msg" id="line-msg">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calendar Preview -->
+        <div class="out-card" id="out-cal">
+          <div class="out-card-header blue">📅 Googleカレンダーへ自動登録</div>
+          <div id="cal-wrap">
+            <div class="mini-cal-hdr" id="cal-month">カレンダー</div>
+            <div class="mini-cal-day" id="cal-day">—</div>
+            <div id="cal-event-area" style="padding:4px 0;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:200px; background:rgba(6,199,85,.08); border:1px solid rgba(6,199,85,.2); border-radius:12px; padding:14px 16px;">
+        <div style="font-size:11px; font-weight:700; color:var(--line-green); margin-bottom:6px;">✓ 4予約サイトを統合</div>
+        <div style="font-size:11px; color:rgba(255,255,255,.5);">ホットペッパー・楽天・minimo・EPARKをまとめてスタッフLINEに届ける</div>
+      </div>
+      <div style="flex:1; min-width:200px; background:rgba(6,199,85,.08); border:1px solid rgba(6,199,85,.2); border-radius:12px; padding:14px 16px;">
+        <div style="font-size:11px; font-weight:700; color:var(--line-green); margin-bottom:6px;">✓ キャンセル・変更も自動対応</div>
+        <div style="font-size:11px; color:rgba(255,255,255,.5);">変更は差分表示、キャンセルはカレンダーから自動削除</div>
+      </div>
+      <div style="flex:1; min-width:200px; background:rgba(6,199,85,.08); border:1px solid rgba(6,199,85,.2); border-radius:12px; padding:14px 16px;">
+        <div style="font-size:11px; font-weight:700; color:var(--line-green); margin-bottom:6px;">✓ サーバー不要・初月無料</div>
+        <div style="font-size:11px; color:rgba(255,255,255,.5);">Google Apps Scriptで動く。余分なサービス不要</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 2: LINE購入体験デモ
+═══════════════════════════════════════════ -->
+<div class="tab-content" id="tab-ec">
+  <div class="ec-main">
+    <div class="ec-layout">
+
+      <!-- Phone -->
+      <div class="phone-wrap">
+        <div class="phone-frame-outer">
+          <div class="phone-screen-inner" style="height:540px; position:relative;">
+
+            <div class="pstatus">
+              <span>9:41</span><span>▲▲▲ 📶 🔋</span>
+            </div>
+
+            <!-- Screen 1: Chat -->
+            <div class="screen active" id="sc-1" style="top:30px;">
+              <div class="lh">
+                <div class="lh-back">‹</div>
+                <div class="lh-avatar">✂️</div>
+                <div style="flex:1;"><div class="lh-name">Sakura Hair Salon</div><div class="lh-sub">LINE公式アカウント</div></div>
+                <div class="lh-more">⋯</div>
+              </div>
+              <div class="chat-area">
+                <div class="mrow"><div class="mav">✂️</div><div class="bbl">本日のご来店ありがとうございました🌸</div><span class="mt">14:30</span></div>
+                <div class="mrow" style="margin-top:5px;">
+                  <div class="mav">✂️</div>
+                  <div>
+                    <div class="bbl">施術中にご紹介したシャンプー、LINEからご購入いただけます👇</div>
+                    <div class="chat-link" onclick="ecGo(2)">
+                      <div class="chat-link-img" style="background:linear-gradient(135deg,#e8f5e9,#a5d6a7);">🧴</div>
+                      <div class="chat-link-body">
+                        <div class="chat-link-title">Sakura Shop で購入する</div>
+                        <div class="chat-link-sub">LINEの中で完結</div>
+                      </div>
+                    </div>
+                  </div>
+                  <span class="mt">14:33</span>
+                </div>
+                <div style="text-align:center;font-size:9px;color:rgba(0,0,0,.3);padding:6px 0;">↓ メニューの「商品を買う」もタップできます</div>
+              </div>
+              <div class="rm">
+                <div class="rm-handle"><span></span></div>
+                <div class="rm-grid">
+                  <div class="rmb"><span class="rbi">📅</span><span class="rbl">予約する</span></div>
+                  <div class="rmb hl" onclick="ecGo(2)"><span class="rbi">🛍️</span><span class="rbl" style="color:var(--line-dark);font-weight:900;">商品を買う</span></div>
+                  <div class="rmb"><span class="rbi">🎁</span><span class="rbl">お得情報</span></div>
+                </div>
+                <div class="rm-grid" style="border-top:1px solid #e0e0e0;">
+                  <div class="rmb"><span class="rbi">📷</span><span class="rbl">スタイル一覧</span></div>
+                  <div class="rmb"><span class="rbi">🕐</span><span class="rbl">営業時間</span></div>
+                  <div class="rmb"><span class="rbi">❓</span><span class="rbl">よくある質問</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Screen 2: Shop list -->
+            <div class="screen" id="sc-2" style="top:30px;">
+              <div class="wb"><div class="wb-back" onclick="ecGo(1)">✕</div><div class="wb-url"><b>LINE内</b> · Sakura Shop</div></div>
+              <div class="wc">
+                <div class="sh-hdr"><div class="sh-name">Sakura Shop<span class="sh-tag">LINE公式</span></div><div class="sh-sub">サロン専用ホームケア · 送料無料</div></div>
+                <div style="overflow:hidden;max-height:90px;background:#f0f7f4;display:flex;align-items:center;justify-content:center;">
+                  <img src="https://line-marketplace.com/sites/default/files/media/app/lea/img/lea_0.png" alt="レア" style="width:100%;max-height:90px;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=\'height:60px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#e8f5e9,#b2dfdb);\'><span style=\'font-size:20px;\'>🛍️ Sakura Shop</span></div>'">
+                </div>
+                <div class="plist">
+                  <div class="pc" onclick="ecGo(3)">
+                    <div class="pc-img"><img src="https://line-marketplace.com/sites/default/files/media/app/lea/1%20%282%29.png" alt="" onerror="this.parentElement.innerHTML='🧴'"></div>
+                    <div class="pc-info"><div class="pc-name">ナチュラルリペアシャンプー</div><div class="pc-sub">天然由来・400ml</div><div class="pc-price">¥2,800<span> 税込</span></div></div>
+                  </div>
+                  <div class="pc">
+                    <div class="pc-img">🌿</div>
+                    <div class="pc-info"><div class="pc-name">モイスチャートリートメント</div><div class="pc-sub">保湿集中ケア・250g</div><div class="pc-price">¥3,200<span> 税込</span></div></div>
+                  </div>
+                  <div class="pc">
+                    <div class="pc-img">💆</div>
+                    <div class="pc-info"><div class="pc-name">スカルプエッセンス</div><div class="pc-sub">地肌ケア</div><div class="pc-price">¥3,800<span> 税込</span></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Screen 3: Detail -->
+            <div class="screen" id="sc-3" style="top:30px;">
+              <div class="wb"><div class="wb-back" onclick="ecGo(2)">‹</div><div class="wb-url"><b>LINE内</b> · 商品詳細</div></div>
+              <div class="wc">
+                <div class="dc">
+                  <div class="d-img"><img src="https://line-marketplace.com/sites/default/files/media/app/lea/1%20%282%29.png" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='🧴'"></div>
+                  <div class="d-name">ナチュラルリペアシャンプー</div>
+                  <div class="d-brand">Sakura Hair Salon セレクト</div>
+                  <div class="d-price">¥2,800<span> (税込)</span></div>
+                  <div class="d-desc">施術後のダメージヘアに特化した、天然由来成分100%のシャンプー。ノンシリコン・パラベンフリーで頭皮から毛先まで優しくケア。</div>
+                  <div class="d-ship">📦 送料無料 · 最短翌日配送</div>
+                  <button class="btn-cart" onclick="ecGo(4)">🛒 カートに追加する</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Screen 4: Cart -->
+            <div class="screen" id="sc-4" style="top:30px;">
+              <div class="wb"><div class="wb-back" onclick="ecGo(3)">‹</div><div class="wb-url"><b>LINE内</b> · カート</div></div>
+              <div class="wc">
+                <div class="cc">
+                  <div class="cc-title">🛒 カートの中身</div>
+                  <div class="ci">
+                    <div class="ci-img"><img src="https://line-marketplace.com/sites/default/files/media/app/lea/1%20%282%29.png" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='🧴'"></div>
+                    <div><div class="ci-name">ナチュラルリペアシャンプー × 1</div><div class="ci-price">¥2,800</div></div>
+                  </div>
+                  <div class="del-sel">
+                    <div class="del-lbl">📦 受け取り方法</div>
+                    <div class="del-opt"><label><input type="radio" name="del" checked> 自宅へ配送（送料無料）</label></div>
+                    <div class="del-opt" style="margin-top:3px;"><label><input type="radio" name="del"> 店頭受取</label></div>
+                  </div>
+                  <div class="cs">
+                    <div class="cr"><span>小計</span><span>¥2,800</span></div>
+                    <div class="cr"><span>送料</span><span style="color:var(--line-green);">無料</span></div>
+                    <div class="cr total"><span>合計</span><span>¥2,800</span></div>
+                  </div>
+                  <div style="background:#f0f0f0;border-radius:7px;padding:7px 9px;font-size:10px;color:#888;margin-bottom:10px;">💳 LINE Payまたは登録済みカードで決済</div>
+                  <button class="btn-buy" onclick="ecGo(5)">✓ 購入する（¥2,800）</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Screen 5: Complete -->
+            <div class="screen" id="sc-5" style="top:30px;">
+              <div class="wb"><div class="wb-back" style="opacity:.3;">‹</div><div class="wb-url"><b>LINE内</b> · 購入完了</div></div>
+              <div class="wc compl">
+                <div class="compl-icon" id="compl-icon">✓</div>
+                <div class="compl-title">ご購入ありがとうございます！</div>
+                <div class="compl-sub">注文を受け付けました。<br>確認メッセージをLINEに送ります📩</div>
+                <div class="compl-order">
+                  <div class="co-r"><span class="lbl">注文番号</span><span class="val">#SKR-20260504</span></div>
+                  <div class="co-r"><span class="lbl">商品</span><span class="val">シャンプー × 1</span></div>
+                  <div class="co-r"><span class="lbl">合計</span><span class="val" style="color:var(--line-dark);">¥2,800</span></div>
+                </div>
+                <div class="compl-note">✅ <strong>全てLINE内で完結しました</strong><br>外部サイト移動・ログイン・住所入力が不要。LINEを開いてタップするだけで購入できました。</div>
+              </div>
+            </div>
+
+          </div><!-- /phone-screen-inner -->
+        </div><!-- /phone-frame-outer -->
+      </div><!-- /phone-wrap -->
+
+      <!-- EC Side Panel -->
+      <div class="ec-side">
+        <div class="progress-bar">
+          <div class="pb-label">
+            <span>ステップ <span id="ec-cur">1</span> / 5</span>
+            <span id="ec-sname">LINEチャット画面</span>
+          </div>
+          <div class="pb-track"><div class="pb-fill" id="ec-pb" style="width:20%;"></div></div>
+        </div>
+        <div class="step-list">
+          <div class="si active" id="ec-si-1" onclick="ecGo(1)"><div class="snum">1</div><div><div class="si-name">LINEチャットを開く</div><div class="si-desc">サロンからのメッセージとリッチメニューが表示される</div></div></div>
+          <div class="si" id="ec-si-2" onclick="ecGo(2)"><div class="snum">2</div><div><div class="si-name">「商品を買う」をタップ</div><div class="si-desc">LINE内でショップが開く。外部サイトに飛ばない</div></div></div>
+          <div class="si" id="ec-si-3" onclick="ecGo(3)"><div class="snum">3</div><div><div class="si-name">商品を選んでタップ</div><div class="si-desc">施術中に紹介された商品を発見、詳細を確認</div></div></div>
+          <div class="si" id="ec-si-4" onclick="ecGo(4)"><div class="snum">4</div><div><div class="si-name">カートに入れて購入</div><div class="si-desc">登録済みカードで即決済。情報入力不要</div></div></div>
+          <div class="si" id="ec-si-5" onclick="ecGo(5)"><div class="snum">5</div><div><div class="si-name">購入完了 🎉</div><div class="si-desc">全てLINE内で完結。脱落ゼロ</div></div></div>
+        </div>
+        <div class="nav-btns">
+          <button class="bnav bprev" id="ec-prev" onclick="ecPrev()" disabled>← 戻る</button>
+          <button class="bnav bnext" id="ec-next" onclick="ecNext()">次へ →</button>
+        </div>
+        <div class="explain">
+          <div class="expl-title">💡 今ここで起きていること</div>
+          <div class="expl-text" id="ec-explain">サロンのLINE公式アカウントを開くと、スタッフからのメッセージとリッチメニューが表示されます。「商品を買う」ボタンは常に固定表示されています。</div>
+        </div>
+      </div>
+
+    </div><!-- /ec-layout -->
+  </div><!-- /ec-main -->
+</div><!-- /tab-ec -->
+
+<!-- ═══════════════════════════════════════════
+     TAB 3: カスタムHP デモ
+═══════════════════════════════════════════ -->
+<div class="tab-content" id="tab-hp">
+  <div class="hp-main">
+
+    <!-- Salon selector -->
+    <div class="hp-selector-bar">
+      <span class="hp-sel-label">サロンサンプルを選択:</span>
+      <button class="hp-salon-btn active" onclick="loadHP('arika')" id="hpbtn-arika">arika（アリカ）</button>
+      <button class="hp-salon-btn" onclick="loadHP('kaguya')" id="hpbtn-kaguya">かぐや</button>
+      <button class="hp-salon-btn" onclick="loadHP('storia')" id="hpbtn-storia">SALON STORIA</button>
+      <button class="hp-salon-btn" onclick="loadHP('bloom')" id="hpbtn-bloom">BLOOM</button>
+      <button class="hp-salon-btn" onclick="loadHP('ricci')" id="hpbtn-ricci">RICCI</button>
+      <button class="hp-salon-btn" onclick="loadHP('linne')" id="hpbtn-linne">LINNE</button>
+    </div>
+
+    <!-- Info bar -->
+    <div class="hp-info-bar">
+      <div class="hp-salon-desc" id="hp-desc">福井市大町のヘアサロン arika。ナチュラル&透明感カラー専門。撮影・ドメイン・SSL・保守すべて込み、1営業日で制作。</div>
+      <a href="../sales/hp_samples/arika.html" target="_blank" class="hp-open-link" id="hp-open-link">↗ 別タブで全画面表示</a>
+    </div>
+
+    <!-- Browser frame -->
+    <div class="browser-wrap">
+      <div class="browser-frame">
+        <div class="browser-bar">
+          <div class="browser-dots">
+            <span class="browser-dot dot-red"></span>
+            <span class="browser-dot dot-yellow"></span>
+            <span class="browser-dot dot-green"></span>
+          </div>
+          <div class="browser-url" id="hp-url-bar"><b>arika-hair.jp</b> — arika（アリカ）福井市のヘアサロン</div>
+          <div class="browser-badge">✓ LINE友だち追加ボタン設置済み</div>
+        </div>
+        <div class="browser-iframe-wrap">
+          <iframe id="hp-iframe" src="../sales/hp_samples/arika.html" title="サロンHP プレビュー"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="hp-note-bar">
+      <div class="hp-note"><strong>✓ LINEへの動線設計済み</strong>各HPにLINE友だち追加ボタンを設置。閲覧者をそのまま友だちに変換。</div>
+      <div class="hp-note"><strong>✓ 現地撮影30〜50カット込み</strong>テンプレート不使用の完全カスタムデザイン。1営業日で納品。</div>
+      <div class="hp-note"><strong>✓ 月額¥9,980（初期費用¥0）</strong>ドメイン・SSL・保守・更新すべて込み。バンドルで25%OFF。</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="demo-footer">
+  <div class="footer-note">このデモはPC/タブレット向けシミュレーターです。実際はお客様のスマホのLINEアプリ内で全て完結します。</div>
+  <div class="footer-btns">
+    <a href="../sales/20_LINE動線設計_レア提案.html" class="fbtn fbtn-s">← 提案資料</a>
+    <a href="../sales/LP_サービス紹介_サロン向け.html" class="fbtn fbtn-p">詳細資料を見る</a>
+  </div>
+</div>
+
+<script>
+/* ════ TAB SWITCHING ════ */
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  document.getElementById('tabbtn-' + id).classList.add('active');
+}
+
+/* ════ RESERVATION DEMO ════ */
+const SITES = {
+  hp: {
+    color: '#e60012', label: 'ホットペッパービューティー', from: 'no-reply@beauty.hotpepper.jp',
+    subject: '[ホットペッパービューティー] 新しいご予約が入りました',
+    body: `[ホットペッパービューティーからのお知らせ]
+新しいご予約が入りました。
+
+────────────────────────────
+■予約番号: HPB202605040001
+■お客様名: 山田 花子 様
+■予約日時: 2026/05/09 (土) 14:00
+■所要時間: 120分
+■予約メニュー: カット + フルカラー
+■担当: 佐藤
+■お客様電話番号: 090-1234-5678
+■備考: 駐車場の利用希望
+────────────────────────────`,
+    cls: 'hp'
+  },
+  rakuten: {
+    color: '#bf0000', label: '楽天ビューティー', from: 'beauty@rakuten.co.jp',
+    subject: '【楽天ビューティー】ご予約内容変更のお知らせ',
+    body: `【楽天ビューティー】予約変更通知
+
+下記のご予約が変更されました。
+
+ご予約者	田中 太郎 様
+来店日時	2026年5月10日(土) 11:30
+所要時間	1時間30分
+ご予約メニュー	メンズカット + ヘッドスパ
+スタイリスト	鈴木
+TEL	080-9876-5432
+予約No.	RB202605040002`,
+    cls: 'rakuten'
+  },
+  minimo: {
+    color: '#7b5ea7', label: 'minimo', from: 'info@minimo.jp',
+    subject: '[minimo] 予約が入りました！',
+    body: `[minimo] 予約通知
+
+新しい予約が入りました！
+
+予約番号: MNM202605040003
+お客様名: 佐々木 美咲 様
+予約日時: 2026/05/11 (日) 15:00
+所要時間: 60分
+メニュー: カット
+担当: 高橋
+電話番号: 070-3456-7890`,
+    cls: 'minimo'
+  },
+  epark: {
+    color: '#00a651', label: 'EPARK Beauty', from: 'beauty@epark.jp',
+    subject: 'EPARK Beauty 予約キャンセルのお知らせ',
+    body: `EPARK Beauty 予約キャンセル通知
+
+下記のご予約がキャンセルされました。
+
+■予約番号: EPK202605040004
+■お客様名: 中村 健一 様
+■予約日時: 2026/05/08 (金) 10:00
+■予約メニュー: カット + パーマ
+■担当: 山口`,
+    cls: 'epark'
+  }
+};
+
+let currentSite = null;
+
+function selectSite(id) {
+  currentSite = id;
+  document.querySelectorAll('.site-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.site-btn.' + id).classList.add('active');
+
+  const s = SITES[id];
+  document.getElementById('no-select').style.display = 'none';
+
+  // Show badge
+  const badge = document.getElementById('email-badge');
+  badge.textContent = s.label;
+  badge.style.background = s.color;
+  document.getElementById('email-from').textContent = s.from;
+  document.getElementById('email-subject').textContent = s.subject;
+
+  // Highlight key fields
+  let bodyHtml = escHtml(s.body);
+  bodyHtml = bodyHtml.replace(/(山田 花子|田中 太郎|佐々木 美咲|中村 健一)/g, '<span class="email-highlight">$1</span>');
+  bodyHtml = bodyHtml.replace(/(2026[\/年][^\n]+(?:00|30))/g, '<span class="email-highlight">$1</span>');
+  document.getElementById('email-body').innerHTML = bodyHtml;
+
+  const card = document.getElementById('email-card');
+  card.classList.remove('show');
+  void card.offsetWidth;
+  card.classList.add('show');
+
+  // Show processing badge
+  const pb = document.getElementById('proc-badge');
+  pb.style.display = 'inline';
+
+  // Parse & show output after delay
+  setTimeout(() => {
+    const subj = s.subject;
+    const body = s.body;
+    const r = parseEmail(subj, body);
+    renderLine(r, id);
+    renderCal(r, id);
+    pb.style.display = 'none';
+
+    setTimeout(() => {
+      document.getElementById('out-line').classList.add('show');
+    }, 200);
+    setTimeout(() => {
+      document.getElementById('out-cal').classList.add('show');
+    }, 500);
+  }, 900);
+}
+
+/* ── Parser (from Parser.gs) ── */
+function parseEmail(subject, body) {
+  const r = {
+    reservationNo:'', customerName:'', startAt:null,
+    durationMin:60, menu:'', staff:'', phone:'', note:'',
+    isCancel:/キャンセル|取消/i.test(subject+body),
+    isChange:/変更|修正/i.test(subject+body),
+  };
+  r.reservationNo = m1(body,[/予約番号[\s:：]*([A-Za-z0-9\-]+)/,/予約No[\s.:：]*([A-Za-z0-9\-]+)/i]);
+  r.customerName = m1(body,[/お客様名[\s:：]*([^\n\r]+?)\s*様?\s*$/m,/ご予約者[\s:：]*([^\n\r]+?)\s*様?\s*$/m,/氏\s*名[\s:：]*([^\n\r]+?)\s*様?\s*$/m]).replace(/\s*様\s*$/,'').trim();
+  const ds = m1(body,[/予約日時[\s:：]*([0-9]{4}[\/年][0-9]{1,2}[\/月][0-9]{1,2}日?[^\n]*?[0-9]{1,2}[:：][0-9]{2})/,/来店日時[\s:：]*([0-9]{4}[\/年][0-9]{1,2}[\/月][0-9]{1,2}日?[^\n]*?[0-9]{1,2}[:：][0-9]{2})/,/日\s*時[\s:：]*([0-9]{4}[\/年][0-9]{1,2}[\/月][0-9]{1,2}日?[^\n]*?[0-9]{1,2}[:：][0-9]{2})/]);
+  r.startAt = parseDt(ds);
+  const du = m1(body,[/所要時間[\s:：]*([0-9]+\s*時間\s*[0-9]*\s*分?|[0-9]+\s*分)/]);
+  if(du) r.durationMin = parseDur(du);
+  r.menu = m1(body,[/メニュー[\s:：]*([^\n\r]+)/,/ご予約メニュー[\s:：]*([^\n\r]+)/,/コース[\s:：]*([^\n\r]+)/]).trim();
+  r.staff = m1(body,[/担当[\s者]*[\s:：]*([^\n\r]+)/,/スタイリスト[\s:：]*([^\n\r]+)/]).trim();
+  r.phone = m1(body,[/(?:お客様)?電話番号[\s:：]*([0-9\-+\s]+)/,/TEL[\s:：]*([0-9\-+\s]+)/i]).trim();
+  return r;
+}
+function m1(text,pats){for(const re of pats){const m=text.match(re);if(m&&m[1])return m[1].trim();}return '';}
+function parseDt(str){if(!str)return null;const m=str.match(/([0-9]{4})[\/年]([0-9]{1,2})[\/月]([0-9]{1,2})日?[^0-9]*([0-9]{1,2})[:：]([0-9]{2})/);if(!m)return null;const[,y,mo,d,h,mi]=m.map(Number);return new Date(y,mo-1,d,h,mi,0);}
+function parseDur(str){let t=0;const h=str.match(/([0-9]+)\s*時間/),m=str.match(/([0-9]+)\s*分/);if(h)t+=Number(h[1])*60;if(m)t+=Number(m[1]);return t||60;}
+
+function buildMsg(r){
+  const hdr=r.isCancel?'❌ 予約キャンセル':r.isChange?'🔄 予約変更':'✅ 新規予約';
+  const lines=[hdr,'','👤 '+(r.customerName||'(名前不明)')+' 様'];
+  if(r.startAt)lines.push('📅 '+fmtDt(r.startAt)+' ('+r.durationMin+'分)');
+  if(r.menu)lines.push('💇 '+r.menu);
+  if(r.staff)lines.push('👥 担当: '+r.staff);
+  if(r.phone)lines.push('📞 '+r.phone);
+  if(r.reservationNo)lines.push('🔖 '+r.reservationNo);
+  return lines.join('\n');
+}
+const DAYS=['日','月','火','水','木','金','土'];
+function fmtDt(d){const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+'('+DAYS[d.getDay()]+') '+p(d.getHours())+':'+p(d.getMinutes());}
+function pad(n){return String(n).padStart(2,'0');}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function renderLine(r, site){
+  const now = new Date();
+  document.getElementById('line-time').textContent = now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日';
+  const el = document.getElementById('line-msg');
+  el.textContent = buildMsg(r);
+  el.className = 'mini-msg' + (r.isCancel?' cancel':r.isChange?' change':'');
+}
+function renderCal(r, site){
+  document.getElementById('cal-month').textContent = r.startAt ? r.startAt.getFullYear()+'年'+(r.startAt.getMonth()+1)+'月' : 'カレンダー';
+  document.getElementById('cal-day').textContent = r.startAt ? fmtDt(r.startAt).split(' ')[0] : '日付取得失敗';
+  const area = document.getElementById('cal-event-area');
+  if(r.isCancel){
+    area.innerHTML = '<div class="mini-cal-evt" style="background:#9e9e9e;text-decoration:line-through;">❌ キャンセル: '+(r.customerName||'名前不明')+' 様</div>';
+  } else if(r.startAt){
+    const end = new Date(r.startAt.getTime()+r.durationMin*60000);
+    const time = pad(r.startAt.getHours())+':'+pad(r.startAt.getMinutes())+' - '+pad(end.getHours())+':'+pad(end.getMinutes());
+    const title = '【予約】'+(r.customerName||'名前不明')+' 様'+(r.menu?' / '+r.menu:'');
+    area.innerHTML = '<div class="mini-cal-evt '+site+'"><div class="mini-cal-evt-time">'+escHtml(time)+(r.isChange?' 🔄更新':'')+'</div><div class="mini-cal-evt-title">'+escHtml(title)+'</div>'+(r.staff?'<div style="font-size:10px;opacity:.8;">担当: '+escHtml(r.staff)+'</div>':'')+'</div>';
+  } else {
+    area.innerHTML = '<div style="padding:10px 12px;font-size:11px;color:#d33;">⚠️ 日時を抽出できませんでした</div>';
+  }
+}
+
+/* ════ EC DEMO ════ */
+let ecCurrent = 1;
+const EC_TOTAL = 5;
+const EC_NAMES = ['LINEチャット画面','ショップ一覧','商品詳細','カート確認','購入完了 🎉'];
+const EC_EXPLAINS = [
+  'サロンのLINE公式アカウントを開くと、スタッフからのメッセージとリッチメニューが表示されます。「商品を買う」ボタンは常にここに固定表示されています。',
+  'リッチメニューの「商品を買う」をタップすると、LINE内でそのままショップ画面が開きます。外部サイトへの移動がないため、離脱率が大幅に低下します。',
+  '商品一覧から施術中に紹介されたシャンプーを発見。「カートに追加する」をタップします。会員登録・ログイン不要です。',
+  '受け取り方法を選んで「購入する」をタップ。LINE Payや登録済みカードがあれば、カード番号入力も不要です。',
+  '購入完了！ 全てLINEの中だけで終わりました。外部サイト・ログイン・住所入力不要で、サロンの店販品を購入できました。'
+];
+
+function ecGo(n) {
+  document.getElementById('sc-'+ecCurrent).classList.remove('active');
+  document.getElementById('ec-si-'+ecCurrent).classList.remove('active');
+  for(let i=1;i<n;i++) document.getElementById('ec-si-'+i).classList.add('done');
+  for(let i=n;i<=EC_TOTAL;i++) document.getElementById('ec-si-'+i).classList.remove('done');
+  ecCurrent = n;
+  document.getElementById('sc-'+ecCurrent).classList.add('active');
+  document.getElementById('ec-si-'+ecCurrent).classList.remove('done');
+  document.getElementById('ec-si-'+ecCurrent).classList.add('active');
+  document.getElementById('ec-cur').textContent = ecCurrent;
+  document.getElementById('ec-sname').textContent = EC_NAMES[ecCurrent-1];
+  document.getElementById('ec-pb').style.width = (ecCurrent/EC_TOTAL*100)+'%';
+  document.getElementById('ec-explain').textContent = EC_EXPLAINS[ecCurrent-1];
+  document.getElementById('ec-prev').disabled = ecCurrent===1;
+  document.getElementById('ec-next').disabled = ecCurrent===EC_TOTAL;
+  document.getElementById('ec-next').textContent = ecCurrent===EC_TOTAL ? '完了 ✓' : '次へ →';
+  if(ecCurrent===EC_TOTAL){
+    const icon=document.getElementById('compl-icon');
+    icon.style.animation='none'; void icon.offsetWidth; icon.style.animation='bounce .5s ease';
+  }
+}
+function ecNext(){ if(ecCurrent<EC_TOTAL) ecGo(ecCurrent+1); }
+function ecPrev(){ if(ecCurrent>1) ecGo(ecCurrent-1); }
+
+/* ════ HP DEMO ════ */
+const HP_DATA = {
+  arika:  { file:'arika.html',            url:'arika-hair.jp',         title:'arika（アリカ）福井市のヘアサロン', desc:'福井市大町のヘアサロン arika。ナチュラル&透明感カラー専門。撮影・ドメイン・SSL・保守すべて込み、1営業日で制作。' },
+  kaguya: { file:'kaguya.html',           url:'kaguya-salon.jp',       title:'かぐや — 福井市のヘアサロン',       desc:'かぐや。和モダンをテーマにしたサロンHP。実際の撮影写真を使った高品質カスタムデザイン。' },
+  storia: { file:'01_salon_storia.html',  url:'salon-storia.jp',       title:'SALON STORIA — 福井市のヘアサロン', desc:'SALON STORIA。ミニマルデザインで高級感を演出。ドメイン・SSL・保守込みの月額プラン。' },
+  bloom:  { file:'02_bloom.html',         url:'bloom-hair.jp',         title:'BLOOM — ヘアサロン',               desc:'BLOOM。フレッシュ＆ナチュラルなコンセプトのサロンHP。LINE友だち追加導線設置済み。' },
+  ricci:  { file:'03_ricci.html',         url:'ricci-salon.jp',        title:'RICCI — ヘアサロン',               desc:'RICCI。スタイリッシュなデザイン。撮影込みで1営業日納品の実例。' },
+  linne:  { file:'04_linne.html',         url:'linne-hair.jp',         title:'LINNE — ヘアサロン',               desc:'LINNE。シンプルで洗練されたデザイン。スクロールするたびに見どころが続く構成。' },
+};
+function loadHP(id) {
+  const d = HP_DATA[id];
+  if (!d) return;
+  document.querySelectorAll('.hp-salon-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('hpbtn-' + id).classList.add('active');
+  document.getElementById('hp-iframe').src = '../sales/hp_samples/' + d.file;
+  document.getElementById('hp-url-bar').innerHTML = '<b>' + d.url + '</b> — ' + d.title;
+  document.getElementById('hp-desc').textContent = d.desc;
+  document.getElementById('hp-open-link').href = '../sales/hp_samples/' + d.file;
+}
+
+document.addEventListener('keydown', e => {
+  const activeTab = document.querySelector('.tab-content.active').id;
+  if(activeTab==='tab-ec'){
+    if(e.key==='ArrowRight'||e.key===' '){ e.preventDefault(); ecNext(); }
+    if(e.key==='ArrowLeft'){ e.preventDefault(); ecPrev(); }
+  }
+});
+</script>
+</body>
+</html>
