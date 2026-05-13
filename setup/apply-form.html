@@ -158,12 +158,10 @@ h1{font-size:24px;text-align:center;font-weight:600;margin-bottom:6px;color:#1d1
 
   </form>
 
-  <div id="preview-section" class="card hidden">
-    <h3>📋 ご記入内容(これがSkeletonに送られます)</h3>
-    <div class="preview" id="preview"></div>
-    <div id="success-msg" class="alert alert-success hidden">
-      送信ありがとうございました。Skeletonから1営業日以内にご連絡します。
-    </div>
+  <div id="success-section" class="card hidden" style="text-align:center; border-top:4px solid #28a745; padding:32px 24px;">
+    <div style="font-size:48px; margin-bottom:14px;">✅</div>
+    <h3 style="color:#155724; font-size:18px; margin-bottom:10px;">送信ありがとうございました</h3>
+    <p style="font-size:14px; color:#555;">Skeletonから1営業日以内にご連絡します。</p>
   </div>
 
   <div class="footer">
@@ -231,7 +229,6 @@ async function sendToSkeleton(){
   const origText=btn.textContent;
   btn.disabled=true;
   btn.textContent='送信中…';
-  showPreview();
   try{
     // GAS Web App は CORS未対応なので no-cors で fire-and-forget
     await fetch(SKELETON_INTAKE_URL, {
@@ -242,9 +239,9 @@ async function sendToSkeleton(){
     });
     btn.textContent='✓ 送信完了';
     btn.style.background='#28a745';
-    const msg=document.getElementById('success-msg');
-    msg.textContent='送信ありがとうございました。Skeletonから1営業日以内にご連絡します。';
-    msg.classList.remove('hidden');
+    const ok=document.getElementById('success-section');
+    ok.classList.remove('hidden');
+    setTimeout(()=>ok.scrollIntoView({behavior:'smooth'}),100);
   }catch(err){
     btn.textContent='送信失敗 → もう一度お試しください';
     btn.style.background='#dc3545';
@@ -258,12 +255,6 @@ function validateRequired(){
   if(!salon){alert('サロン名を入れてください');return false;}
   if(!phone){alert('お電話番号を入れてください');return false;}
   return true;
-}
-
-function showPreview(){
-  document.getElementById('preview-section').classList.remove('hidden');
-  document.getElementById('preview').textContent=buildBody();
-  setTimeout(()=>document.getElementById('preview-section').scrollIntoView({behavior:'smooth'}),100);
 }
 
 </script>
