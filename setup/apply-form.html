@@ -32,10 +32,25 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
 .field .hint{font-size:11.5px;color:#888;margin-top:5px}
 .field textarea{resize:vertical;min-height:80px}
 
-.site-list{display:flex;flex-direction:column;gap:8px}
-.site-list label{display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid #e5e7eb;border-radius:10px;cursor:pointer;font-size:14px;transition:all .15s}
-.site-list label:has(input:checked){border-color:#c44569;background:#fff0f5;font-weight:600}
-.site-list input[type="checkbox"]{width:18px;height:18px;accent-color:#c44569}
+/* 予約サイトのアコーディオン */
+.site-row-list{display:flex;flex-direction:column;gap:12px}
+.site-row{border:2px solid #e5e7eb;border-radius:12px;background:#fff;overflow:hidden;transition:all .2s}
+.site-row.checked{border-color:#c44569;background:linear-gradient(180deg,#fff7fa,#fff);box-shadow:0 1px 4px rgba(196,69,105,.1)}
+.site-row-header{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;user-select:none}
+.site-row-header input[type="checkbox"]{width:20px;height:20px;accent-color:#c44569;flex-shrink:0}
+.site-row-header .site-body{flex:1}
+.site-row-header .site-name{font-size:15px;font-weight:700;margin-bottom:2px}
+.site-row-header .site-name.hp{color:#e60039}
+.site-row-header .site-name.rk{color:#bf0000}
+.site-row-header .site-name.mn{color:#00a86b}
+.site-row-header .site-name.ep{color:#0a7cff}
+.site-row-header .site-tag{font-size:11px;color:#888}
+.site-input-wrap{max-height:0;overflow:hidden;transition:max-height .3s,padding .3s;padding:0 16px}
+.site-row.checked .site-input-wrap{max-height:200px;padding:0 16px 18px 50px;background:#fff}
+.site-input-label{display:block;font-size:11.5px;font-weight:700;color:#666;margin-bottom:6px;letter-spacing:.03em}
+.site-input{width:100%;padding:11px 14px;border:1.5px solid #ddd;border-radius:8px;font-family:'SF Mono',Menlo,monospace;font-size:13px;background:#fff}
+.site-input:focus{outline:none;border-color:#c44569}
+.site-input-hint{font-size:11px;color:#999;margin-top:5px}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 22px;border-radius:11px;font-size:15px;font-weight:bold;cursor:pointer;border:none;text-decoration:none;transition:all .15s}
 .btn-primary{background:linear-gradient(135deg,#ff6b9d,#c44569);color:#fff;box-shadow:0 3px 10px rgba(196,69,105,.3)}
@@ -81,7 +96,7 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
 
   <div class="progress-wrap">
     <div class="progress"><div class="progress-bar" id="pbar"></div></div>
-    <div class="progress-text" id="ptext">ステップ 1 / 9</div>
+    <div class="progress-text" id="ptext">ステップ 1 / 7</div>
   </div>
 
   <form id="apply-form" onsubmit="return false;">
@@ -90,7 +105,7 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
   <div class="card step-card" data-step="1">
     <div class="card-num">1</div>
     <h2>🌸 はじめに</h2>
-    <p class="desc">ホットペッパーに予約が入ると、自動でスタッフのLINEに通知が届くツールです。<br>記入は <b>9ステップ</b>・約5分で完了します。途中で閉じても入力内容は残ります。</p>
+    <p class="desc">ホットペッパーに予約が入ると、自動でスタッフのLINEに通知が届くツールです。<br>記入は <b>7ステップ</b>・約5分で完了します。途中で閉じても入力内容は残ります。</p>
     <div class="alert alert-tip">
       Gmail と LINE公式アカウント をこのサロン用に <b>新しく作成</b> していただきます。<br>
       作り方マニュアル(画像つき)を後で開く案内をします。
@@ -148,62 +163,83 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
     </div>
   </div>
 
-  <!-- ステップ4: 予約サイト -->
+  <!-- ステップ4: 予約サイト + 各サイトの現在の受信メアド -->
   <div class="card step-card hidden" data-step="4">
     <div class="card-num">4</div>
-    <h2>🎯 使ってる予約サイト</h2>
-    <p class="desc">使ってるものに全部チェックを入れてください(複数OK)。</p>
-    <div class="site-list">
-      <label><input type="checkbox" id="s-hp" checked> 🔴 ホットペッパービューティー</label>
-      <label><input type="checkbox" id="s-rk"> 🌸 楽天ビューティー</label>
-      <label><input type="checkbox" id="s-mn"> 🟢 minimo</label>
-      <label><input type="checkbox" id="s-ep"> 🔵 EPARK Beauty</label>
+    <h2>🎯 使ってる予約サイトと現在の通知メアド</h2>
+    <p class="desc">使ってる予約サイトにチェックを入れて、それぞれ <b>今、予約通知が届いているメアド</b> を教えてください(複数OK)。</p>
+    <div class="alert alert-tip">
+      ツールはここに書いてもらったメアドの受信トレイをチェックします。当日、これらのメアドを Skeletonが作成する <b>専用Gmail</b> に切り替えます。
     </div>
+
+    <div class="site-row-list">
+      <div class="site-row" data-site="hotpepper">
+        <label class="site-row-header">
+          <input type="checkbox" id="s-hp" checked>
+          <div class="site-body">
+            <div class="site-name hp">🔴 ホットペッパービューティー</div>
+            <div class="site-tag">サロンボード経由</div>
+          </div>
+        </label>
+        <div class="site-input-wrap">
+          <label class="site-input-label">今、ホッペからの予約通知が届いているメアド</label>
+          <input type="email" class="site-input" id="m-hp" placeholder="例: salon@example.com">
+          <div class="site-input-hint">サロンボードに登録中のメアド。分からなければ空欄でOK</div>
+        </div>
+      </div>
+
+      <div class="site-row" data-site="rakuten">
+        <label class="site-row-header">
+          <input type="checkbox" id="s-rk">
+          <div class="site-body">
+            <div class="site-name rk">🌸 楽天ビューティー</div>
+            <div class="site-tag">楽天IDで予約してくる客層</div>
+          </div>
+        </label>
+        <div class="site-input-wrap">
+          <label class="site-input-label">楽天からの予約通知が届いているメアド</label>
+          <input type="email" class="site-input" id="m-rk" placeholder="例: salon@example.com">
+        </div>
+      </div>
+
+      <div class="site-row" data-site="minimo">
+        <label class="site-row-header">
+          <input type="checkbox" id="s-mn">
+          <div class="site-body">
+            <div class="site-name mn">🟢 minimo</div>
+            <div class="site-tag">スタイリスト指名予約</div>
+          </div>
+        </label>
+        <div class="site-input-wrap">
+          <label class="site-input-label">minimoからの予約通知が届いているメアド</label>
+          <input type="email" class="site-input" id="m-mn" placeholder="例: salon@example.com">
+        </div>
+      </div>
+
+      <div class="site-row" data-site="epark">
+        <label class="site-row-header">
+          <input type="checkbox" id="s-ep">
+          <div class="site-body">
+            <div class="site-name ep">🔵 EPARK Beauty</div>
+            <div class="site-tag">EPARKポイント連動</div>
+          </div>
+        </label>
+        <div class="site-input-wrap">
+          <label class="site-input-label">EPARKからの予約通知が届いているメアド</label>
+          <input type="email" class="site-input" id="m-ep" placeholder="例: salon@example.com">
+        </div>
+      </div>
+    </div>
+
     <div class="nav">
       <button class="btn btn-secondary" onclick="prev()">← 戻る</button>
       <button class="btn btn-primary" onclick="next()">次へ →</button>
     </div>
   </div>
 
-  <!-- ステップ5: 予約通知の受信先 -->
+  <!-- ステップ5: 専用Gmail -->
   <div class="card step-card hidden" data-step="5">
     <div class="card-num">5</div>
-    <h2>📨 ホットペッパー予約通知の受信メアド</h2>
-    <p class="desc">今、サロンに <b>ホットペッパーから予約が入った時に通知メールが届くメアド</b> はどれですか?</p>
-    <div class="field">
-      <label>ホットペッパー予約通知メアド</label>
-      <input type="email" id="f-hp-mail" placeholder="例: salon@example.com" style="font-family:monospace">
-      <div class="hint">サロンボードに登録されているメアドです。分からなければ空欄でOK(後で確認)</div>
-    </div>
-    <div class="alert alert-tip">
-      このメアドにホットペッパーから「ご予約が入りました」というメールが届く設定になっています。<br>
-      ツール導入時は、これを <b>専用Gmail</b>(STEP 7で作成)に切り替えます。
-    </div>
-    <div class="nav">
-      <button class="btn btn-secondary" onclick="prev()">← 戻る</button>
-      <button class="btn btn-primary" onclick="next()">次へ →</button>
-    </div>
-  </div>
-
-  <!-- ステップ6: 通知の受け取り先(スタッフ) -->
-  <div class="card step-card hidden" data-step="6">
-    <div class="card-num">6</div>
-    <h2>👥 通知を受け取るスタッフ</h2>
-    <p class="desc">予約が入った時に通知を受け取りたいスタッフのお名前とメアドを教えてください(複数可)。</p>
-    <div class="field">
-      <label>スタッフ一覧(1行1人)</label>
-      <textarea id="f-staff-list" rows="6" placeholder="例)&#10;川島 / xx.1989mari0420.xx@docomo.ne.jp&#10;桜井 / xjrs4166@i.softbank.jp&#10;盤戸 / baaaaand02@icloud.com&#10;お店 / adjust.start.by.emotion@gmail.com" style="font-family:monospace;font-size:13px"></textarea>
-      <div class="hint">「名前 / メールアドレス」の形式で改行区切り。LINEで通知を受け取る場合もメアドは連絡先として記録しておきます。</div>
-    </div>
-    <div class="nav">
-      <button class="btn btn-secondary" onclick="prev()">← 戻る</button>
-      <button class="btn btn-primary" onclick="next()">次へ →</button>
-    </div>
-  </div>
-
-  <!-- ステップ7: 専用Gmail -->
-  <div class="card step-card hidden" data-step="7">
-    <div class="card-num">7</div>
     <h2>📧 専用Gmailを作成</h2>
     <p class="desc">予約通知だけに使う <b>専用のGmail</b> をこのサロン用に1つ作っていただきます。</p>
     <div class="alert alert-tip">
@@ -226,11 +262,11 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
     </div>
   </div>
 
-  <!-- ステップ8: LINE公式 -->
-  <div class="card step-card hidden" data-step="8">
-    <div class="card-num">8</div>
+  <!-- ステップ6: LINE公式 -->
+  <div class="card step-card hidden" data-step="6">
+    <div class="card-num">6</div>
     <h2>📱 LINE公式アカウントを作成</h2>
-    <p class="desc">予約通知を <b>スタッフ全員のLINEに送る</b> ためのお店用LINEを作っていただきます。料金は無料です。</p>
+    <p class="desc">予約通知を <b>スタッフ全員のLINEに送る</b> ためのお店用LINEを作っていただきます。料金は無料です。スタッフは作成したLINE公式を友達追加→グループに招待すれば通知が届きます。</p>
     <div class="alert alert-tip">
       初めての方は下のマニュアルを見ながら作ってください(画像つき・12ステップ・約20分)。
     </div>
@@ -242,7 +278,7 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
     <div class="field">
       <label>LINEビジネスIDのログインメール<span class="req">必須</span></label>
       <input type="email" id="f-line-mail" placeholder="例: skeleton.bloom@gmail.com" style="font-family:monospace">
-      <div class="hint">通常は STEP 7 の専用Gmailと同じ</div>
+      <div class="hint">通常は STEP 5 の専用Gmailと同じ</div>
     </div>
     <div class="field">
       <label>LINEビジネスIDのパスワード<span class="req">必須</span></label>
@@ -254,9 +290,9 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
     </div>
   </div>
 
-  <!-- ステップ9: プラン + 確認・送信 -->
-  <div class="card step-card hidden" data-step="9">
-    <div class="card-num">9</div>
+  <!-- ステップ7: プラン + 確認・送信 -->
+  <div class="card step-card hidden" data-step="7">
+    <div class="card-num">7</div>
     <h2>✅ 最後の確認</h2>
     <p class="desc">プランを選んで、内容を確認して送信してください。</p>
 
@@ -301,17 +337,16 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
 
 <script>
 const SKELETON_INTAKE_URL = 'https://asia-northeast1-skeleton-pricer-130118.cloudfunctions.net/skeleton-intake';
-const TOTAL = 9;
-const STORE_KEY = 'apply_form_v2';
+const TOTAL = 7;
+const STORE_KEY = 'apply_form_v3';
 
-// localStorage 復元
 let state = {};
 try { state = JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e){}
 let currentStep = state._step || 1;
 
 const FIELDS = ['f-salon','f-address','f-owner','f-staff','f-phone','f-email',
-  'f-hp-mail','f-staff-list','f-gmail','f-gmail-pass','f-line','f-line-mail',
-  'f-line-pass','f-plan','f-note'];
+  'm-hp','m-rk','m-mn','m-ep',
+  'f-gmail','f-gmail-pass','f-line','f-line-mail','f-line-pass','f-plan','f-note'];
 const SITES = ['s-hp','s-rk','s-mn','s-ep'];
 
 function restoreForm(){
@@ -323,6 +358,11 @@ function restoreForm(){
     const el = document.getElementById(id);
     if(el && state[id] !== undefined) el.checked = state[id];
   }
+  // チェック状態を site-row に反映
+  document.querySelectorAll('.site-row').forEach(row => {
+    const cb = row.querySelector('input[type=checkbox]');
+    if(cb) row.classList.toggle('checked', cb.checked);
+  });
 }
 function saveForm(){
   for(const id of FIELDS){
@@ -348,20 +388,17 @@ function showStep(n){
 }
 
 function validateStep(n){
-  // 必須チェック
   if(n === 2){
-    const v = document.getElementById('f-salon').value.trim();
-    if(!v){ alert('サロン名を入れてください'); return false; }
+    if(!document.getElementById('f-salon').value.trim()){ alert('サロン名を入れてください'); return false; }
   }
   if(n === 3){
-    const v = document.getElementById('f-phone').value.trim();
-    if(!v){ alert('お電話番号を入れてください'); return false; }
+    if(!document.getElementById('f-phone').value.trim()){ alert('お電話番号を入れてください'); return false; }
   }
-  if(n === 7){
+  if(n === 5){
     if(!document.getElementById('f-gmail').value.trim()){ alert('専用Gmailアドレスを入れてください'); return false; }
     if(!document.getElementById('f-gmail-pass').value.trim()){ alert('Gmailパスワードを入れてください'); return false; }
   }
-  if(n === 8){
+  if(n === 6){
     if(!document.getElementById('f-line').value.trim()){ alert('LINE公式アカウント名を入れてください'); return false; }
     if(!document.getElementById('f-line-mail').value.trim()){ alert('LINEログインメールを入れてください'); return false; }
     if(!document.getElementById('f-line-pass').value.trim()){ alert('LINEパスワードを入れてください'); return false; }
@@ -387,20 +424,34 @@ function prev(){
   }
 }
 
+function buildSiteList(){
+  // [{site, mail}] の配列
+  const out = [];
+  const map = [
+    ['hotpepper','s-hp','m-hp','ホットペッパービューティー'],
+    ['rakuten',  's-rk','m-rk','楽天ビューティー'],
+    ['minimo',   's-mn','m-mn','minimo'],
+    ['epark',    's-ep','m-ep','EPARK Beauty'],
+  ];
+  for(const [code,cbId,mailId,label] of map){
+    if(document.getElementById(cbId).checked){
+      out.push({ code, label, mail: document.getElementById(mailId).value.trim() });
+    }
+  }
+  return out;
+}
+
 function updateReview(){
-  const sites = [];
-  if(document.getElementById('s-hp').checked) sites.push('ホットペッパー');
-  if(document.getElementById('s-rk').checked) sites.push('楽天');
-  if(document.getElementById('s-mn').checked) sites.push('minimo');
-  if(document.getElementById('s-ep').checked) sites.push('EPARK');
+  const sites = buildSiteList();
   const plan = document.getElementById('f-plan');
+  const sitesStr = sites.length
+    ? sites.map(s => `${s.label}${s.mail?'('+s.mail+')':''}`).join(' / ')
+    : '(なし)';
   const items = [
     ['サロン名', document.getElementById('f-salon').value],
     ['代表者', document.getElementById('f-owner').value],
     ['電話', document.getElementById('f-phone').value],
-    ['予約サイト', sites.join(' / ') || '(なし)'],
-    ['ホッペ通知メアド', document.getElementById('f-hp-mail').value || '(空欄)'],
-    ['スタッフ人数', (document.getElementById('f-staff-list').value||'').split(/\r?\n/).filter(s=>s.trim()).length + '名'],
+    ['予約サイト+受信メアド', sitesStr],
     ['専用Gmail', document.getElementById('f-gmail').value],
     ['LINE公式名', document.getElementById('f-line').value],
     ['プラン', plan.options[plan.selectedIndex].text],
@@ -413,11 +464,7 @@ function updateReview(){
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
 
 function buildPayload(){
-  const sites = [];
-  if(document.getElementById('s-hp').checked) sites.push('ホットペッパービューティー');
-  if(document.getElementById('s-rk').checked) sites.push('楽天ビューティー');
-  if(document.getElementById('s-mn').checked) sites.push('minimo');
-  if(document.getElementById('s-ep').checked) sites.push('EPARK Beauty');
+  const sites = buildSiteList();
   const plan = document.getElementById('f-plan');
   return {
     timestamp: new Date().toISOString(),
@@ -427,11 +474,10 @@ function buildPayload(){
     staffCount: document.getElementById('f-staff').value,
     phone: document.getElementById('f-phone').value,
     email: document.getElementById('f-email').value,
-    sites: sites,
+    sites: sites.map(s => s.label),
+    siteMails: sites,  // 構造化: [{code,label,mail}]
     planCode: plan.value,
     planText: plan.options[plan.selectedIndex].text,
-    hpNoticeMail: document.getElementById('f-hp-mail').value,
-    staffList: document.getElementById('f-staff-list').value,
     gmail: document.getElementById('f-gmail').value,
     gmailPass: document.getElementById('f-gmail-pass').value,
     lineAccount: document.getElementById('f-line').value,
@@ -463,11 +509,16 @@ async function sendToSkeleton(){
   }
 }
 
-// 起動
+// site-row のクリックでチェック切替+ハイライト
+document.querySelectorAll('.site-row input[type=checkbox]').forEach(cb => {
+  cb.addEventListener('change', () => {
+    cb.closest('.site-row').classList.toggle('checked', cb.checked);
+    saveForm();
+  });
+});
+
 restoreForm();
-// 入力変更で自動保存
 for(const id of FIELDS) document.getElementById(id)?.addEventListener('input', saveForm);
-for(const id of SITES) document.getElementById(id)?.addEventListener('change', saveForm);
 showStep(currentStep);
 </script>
 </body>
