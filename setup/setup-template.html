@@ -601,24 +601,66 @@ body {
 // =============================================
 // データ・状態管理
 // =============================================
-// この値は apply-list.html のダウンロード処理で書き換えられる
+// この値は apply-list.html からのDL時に書き換えられる(ローカル開き用)
 const CLIENT_DATA = /*__CLIENT_DATA__*/ {
-  salonName: 'ad+just野々市店',
-  salonCode: 'adjust',
-  ownerName: '(代表者)',
-  address: '石川県野々市市',
+  salonName: '(申込待ち)',
+  salonCode: 'pending',
+  ownerName: '',
+  address: '',
   contractPlan: 'demo',
-  gmailAddress: 'adjust.start.by.emotion@gmail.com',
-  lineAccountName: 'ad+just野々市店 予約通知',
+  gmailAddress: '',
+  lineAccountName: '',
   fromAddress: 'beauty.hotpepper.jp salonboard.com',
   siteAddrs: { hotpepper: 'beauty.hotpepper.jp salonboard.com' },
-  adjustStaff: [
-    { name: '川島', mail: 'xx.1989mari0420.xx@docomo.ne.jp' },
-    { name: '桜井', mail: 'xjrs4166@i.Softbank.jp' },
-    { name: '盤戸', mail: 'baaaaand02@icloud.com' },
-    { name: 'お店', mail: 'adjust.start.by.emotion@gmail.com' },
-  ]
+  adjustStaff: []
 };
+
+// ?ts=...&key=... が付いてたら Cloud Function から該当行を取得して CLIENT_DATA を上書き
+async function _fetchClientFromApi(){
+  const params = new URLSearchParams(location.search);
+  const ts = params.get('ts');
+  const key = params.get('key');
+  if(!ts || !key) return;
+  try {
+    const res = await fetch(`https://asia-northeast1-skeleton-pricer-130118.cloudfunctions.net/skeleton-intake?key=${encodeURIComponent(key)}`);
+    const j = await res.json();
+    if(!j.ok || !j.rows) return;
+    // 受付日時で該当行を見つける
+    const row = j.rows.find(r => (r['受付日時(JST)']||'') === ts);
+    if(!row) return;
+    // staffList列をパース(行ごとに「名前 / メアド」)
+    const staffLines = (row['スタッフ一覧']||'').split(/[\n;]/).map(s=>s.trim()).filter(Boolean);
+    const staff = staffLines.map(line => {
+      const m = line.match(/^(.+?)\s*[\/／]\s*(.+)$/);
+      return m ? { name: m[1].trim(), mail: m[2].trim() } : { name: line, mail: '' };
+    });
+    // salonCode 自動生成
+    const salonName = row['サロン名'] || '客先';
+    const ascii = salonName.toLowerCase().replace(/[^a-z0-9]/g,'');
+    const salonCode = ascii.length >= 3 ? ascii.slice(0,6) :
+      'client' + Math.abs([...salonName].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,0) % 10000).toString().padStart(4,'0');
+    // planCode 抽出
+    const planText = row['プラン'] || '';
+    const planCode = planText.includes('デモ') ? 'demo' :
+                     planText.includes('ライト') ? 'light' :
+                     planText.includes('スタンダード') ? 'standard' :
+                     planText.includes('プロ') ? 'pro' : 'demo';
+    Object.assign(CLIENT_DATA, {
+      salonName: salonName,
+      salonCode: salonCode,
+      ownerName: row['代表者'] || '',
+      address: row['住所'] || '',
+      contractPlan: planCode,
+      gmailAddress: row['Gmail'] || row['ホッペ通知メアド'] || '',
+      gmailPass: row['Gmail PW'] || '',
+      lineAccountName: row['LINE公式'] || `${salonName} 予約通知`,
+      lineBizMail: row['LINE login'] || row['Gmail'] || '',
+      linePass: row['LINE PW'] || '',
+      clientPhone: row['電話'] || '',
+      adjustStaff: staff.length ? staff : [{ name: row['代表者']||'代表', mail: row['メール']||row['Gmail']||'' }],
+    });
+  } catch(e) { console.warn('client fetch failed', e); }
+}
 
 const STORAGE_KEY = 'wizard_' + (CLIENT_DATA.salonCode || 'unknown') + '_v1';
 const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
@@ -3352,14 +3394,32 @@ function copyLatestFile(fileName, btn) {
 // =============================================
 // 起動
 // =============================================
-// 動的タイトル(CLIENT_DATA反映)
-document.title = `${state.salonName} セットアップ｜Skeleton Inc.`;
-const h1El = document.getElementById('hero-salon');
-const subEl = document.getElementById('hero-plan');
-if (h1El) h1El.textContent = `🌸 ${state.salonName} 様`;
-if (subEl) subEl.textContent = `セットアップウィザード(${state.contractPlan === 'demo' ? 'デモ無料' : state.contractPlan})`;
-
-render();
+// URLパラメータあれば API から CLIENT_DATA を上書き → state再初期化 → render
+(async () => {
+  await _fetchClientFromApi();
+  // state は既に上で初期化済みだが、APIから取得した CLIENT_DATA を反映
+  if(CLIENT_DATA.salonName && CLIENT_DATA.salonName !== '(申込待ち)'){
+    state.salonName = CLIENT_DATA.salonName;
+    state.salonCode = CLIENT_DATA.salonCode;
+    state.ownerName = CLIENT_DATA.ownerName || state.ownerName;
+    state.address = CLIENT_DATA.address || state.address;
+    state.contractPlan = CLIENT_DATA.contractPlan;
+    state.gmailAddress = CLIENT_DATA.gmailAddress || state.gmailAddress;
+    state.gmailPass = CLIENT_DATA.gmailPass || state.gmailPass;
+    state.lineBizMail = CLIENT_DATA.lineBizMail || state.lineBizMail;
+    state.linePass = CLIENT_DATA.linePass || '';
+    state.lineAccountName = CLIENT_DATA.lineAccountName || state.lineAccountName;
+    state.clientPhone = CLIENT_DATA.clientPhone || state.clientPhone;
+    state.adjustStaff = CLIENT_DATA.adjustStaff || state.adjustStaff;
+  }
+  // 動的タイトル
+  document.title = `${state.salonName} セットアップ｜Skeleton Inc.`;
+  const h1El = document.getElementById('hero-salon');
+  const subEl = document.getElementById('hero-plan');
+  if (h1El) h1El.textContent = `🌸 ${state.salonName} 様`;
+  if (subEl) subEl.textContent = `セットアップウィザード(${state.contractPlan === 'demo' ? 'デモ無料' : state.contractPlan})`;
+  render();
+})();
 </script>
 
 </body>

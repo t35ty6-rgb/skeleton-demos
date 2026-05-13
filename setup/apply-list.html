@@ -297,8 +297,9 @@ function render(){
     const sorted = (SORT_COL===h) ? ' sorted' : '';
     const arrow = (SORT_COL===h) ? (SORT_DIR>0?'▲':'▼') : '';
     return `<th class="${sorted}" onclick="sortBy('${esc(h)}')">${esc(h)} <span class="arrow">${arrow}</span></th>`;
-  }).join('') + `<th class="no-sort">📥 専用ウィザード</th>`;
+  }).join('') + `<th class="no-sort">🔗 専用セットアップURL</th>`;
 
+  const baseUrl = location.origin + location.pathname.replace(/apply-list\.html.*$/,'setup-template.html');
   const trs = rows.map((r,idx) => {
     const tds = DATA.header.map(h => {
       const v = r[h] || '';
@@ -309,9 +310,14 @@ function render(){
       }
       return `<td>${esc(v)}</td>`;
     }).join('');
-    // データ属性で行データを埋め込み
-    const rowDataAttr = encodeURIComponent(JSON.stringify(r));
-    return `<tr>${tds}<td><button class="btn btn-dl" onclick='downloadWizard(${JSON.stringify(rowDataAttr)})'>📥 DL</button></td></tr>`;
+    const ts = r['受付日時(JST)'] || '';
+    const wizardUrl = `${baseUrl}?ts=${encodeURIComponent(ts)}&key=${encodeURIComponent(VIEWER_KEY)}`;
+    const wizardCell = ts ? `
+      <td style="white-space:nowrap;">
+        <a href="${esc(wizardUrl)}" target="_blank" class="btn btn-dl" style="text-decoration:none;display:inline-block">🔗 開く</a>
+        <button class="btn btn-secondary" style="padding:6px 10px;font-size:11px;margin-left:4px" onclick='copyUrl(${JSON.stringify(wizardUrl)}, this)'>📋 URL</button>
+      </td>` : '<td>-</td>';
+    return `<tr>${tds}${wizardCell}</tr>`;
   }).join('');
 
   document.getElementById('table-wrap').innerHTML =
@@ -327,6 +333,14 @@ function genSalonCode(salonName){
   let h = 0;
   for(let i=0; i<salonName.length; i++) h = (h*31 + salonName.charCodeAt(i)) >>> 0;
   return 'client' + (h % 10000).toString().padStart(4,'0');
+}
+
+function copyUrl(url, btn){
+  navigator.clipboard.writeText(url).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ コピー済';
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
 }
 
 async function downloadWizard(rowDataEnc){
