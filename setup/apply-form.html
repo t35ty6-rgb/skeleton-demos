@@ -97,6 +97,7 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
   <div class="progress-wrap">
     <div class="progress"><div class="progress-bar" id="pbar"></div></div>
     <div class="progress-text" id="ptext">ステップ 1 / 8</div>
+    <!-- 動的に書き換えられる(選択サイト数に応じて) -->
   </div>
 
   <form id="apply-form" onsubmit="return false;">
@@ -105,7 +106,7 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
   <div class="card step-card" data-step="1">
     <div class="card-num">1</div>
     <h2>🌸 はじめに</h2>
-    <p class="desc">ホットペッパーに予約が入ると、自動でスタッフのLINEに通知が届くツールです。<br>記入は <b>8ステップ</b>・約5分で完了します。途中で閉じても入力内容は残ります。</p>
+    <p class="desc">ホットペッパーに予約が入ると、自動でスタッフのLINEに通知が届くツールです。<br>記入は <b>8〜11ステップ</b>(選んだ予約サイトの数で変わります)・約5分で完了します。途中で閉じても入力内容は残ります。</p>
     <div class="alert alert-tip">
       Gmail と LINE公式アカウント をこのサロン用に <b>新しく作成</b> していただきます。<br>
       作り方マニュアル(画像つき)を後で開く案内をします。
@@ -180,11 +181,11 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
     </div>
   </div>
 
-  <!-- ステップ5: 選んだサイトの TO/FROM 入力(動的) -->
+  <!-- ステップ5: 選んだサイトの TO/FROM 入力(1サイト1ステップで繰り返し) -->
   <div class="card step-card hidden" data-step="5">
-    <div class="card-num">5</div>
-    <h2>📨 選んだ予約サイトの通知メール設定</h2>
-    <p class="desc">STEP 4で選んだ予約サイトについて、それぞれ <b>2つのメアド</b> を教えてください。</p>
+    <div class="card-num" id="step5-num">5</div>
+    <h2 id="step5-title">📨 予約サイトの通知メール設定</h2>
+    <p class="desc" id="step5-counter"></p>
     <div class="alert alert-tip">
       <b>2つの違い</b>:<br>
       ① <b>受信メアド(TO)</b> = 今、サロンに予約通知が <b>届いている</b> メアド<br>
@@ -193,7 +194,7 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
     </div>
 
     <div id="site-detail-container">
-      <!-- JSで動的生成 -->
+      <!-- JSで動的生成(現在のサイト1個分のみ) -->
     </div>
 
     <div class="nav">
@@ -320,8 +321,25 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
 
 <script>
 const SKELETON_INTAKE_URL = 'https://asia-northeast1-skeleton-pricer-130118.cloudfunctions.net/skeleton-intake';
-const TOTAL = 8;
-const STORE_KEY = 'apply_form_v4';
+// 動的ステップ: STEP 1-4 + STEP 5(選んだサイト数) + STEP 6-8(専用Gmail/LINE/確認)
+const BASE_BEFORE_5 = 4;  // STEP 1〜4
+const BASE_AFTER_5  = 3;  // STEP 6〜8 (3つ)
+function selectedSiteCodes(){
+  return Object.keys(SITE_DEFS).filter(code => document.getElementById(SITE_DEFS[code].cb)?.checked);
+}
+function totalSteps(){
+  return BASE_BEFORE_5 + Math.max(1, selectedSiteCodes().length) + BASE_AFTER_5;
+}
+// 論理ステップ n を「画面の data-step + サイトインデックス」に変換
+function mapStep(n){
+  if(n <= 4) return { dataStep: n, siteIdx: -1 };
+  const sites = selectedSiteCodes();
+  const last5 = 4 + Math.max(1, sites.length);  // STEP 5の最後の論理番号
+  if(n <= last5) return { dataStep: 5, siteIdx: n - 5 };  // STEP 5(サイト別)
+  // 残り(専用Gmail/LINE/確認) → 既存の data-step 6,7,8 にマップ
+  return { dataStep: 6 + (n - last5 - 1), siteIdx: -1 };
+}
+const STORE_KEY = 'apply_form_v5';
 
 let state = {};
 try { state = JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e){}
@@ -374,55 +392,61 @@ function saveForm(){
 }
 
 function showStep(n){
+  const total = totalSteps();
+  const mapped = mapStep(n);
   document.querySelectorAll('.step-card').forEach(c => {
-    c.classList.toggle('hidden', +c.dataset.step !== n);
+    c.classList.toggle('hidden', +c.dataset.step !== mapped.dataStep);
   });
-  document.getElementById('pbar').style.width = (n/TOTAL*100) + '%';
-  document.getElementById('ptext').textContent = `ステップ ${n} / ${TOTAL}`;
+  document.getElementById('pbar').style.width = (n/total*100) + '%';
+  document.getElementById('ptext').textContent = `ステップ ${n} / ${total}`;
   window.scrollTo({top:0, behavior:'smooth'});
-  if(n === 5) renderSiteDetails();
-  if(n === TOTAL) updateReview();
+  if(mapped.dataStep === 5) renderSiteDetails(mapped.siteIdx);
+  if(n === total) updateReview();
 }
 
-function renderSiteDetails(){
+function renderSiteDetails(siteIdx){
   const container = document.getElementById('site-detail-container');
   container.innerHTML = '';
-  const selected = Object.keys(SITE_DEFS).filter(code => {
-    const cb = document.getElementById(SITE_DEFS[code].cb);
-    return cb && cb.checked;
-  });
+  const selected = selectedSiteCodes();
   if(selected.length === 0){
+    document.getElementById('step5-title').textContent = '📨 予約サイト未選択';
+    document.getElementById('step5-counter').textContent = '';
     container.innerHTML = '<div class="alert alert-warn">予約サイトを1つも選んでいません。STEP 4 に戻ってチェックを入れてください。</div>';
     return;
   }
-  for(const code of selected){
-    const def = SITE_DEFS[code];
-    const data = getSiteMail(code);
-    const div = document.createElement('div');
-    div.className = 'site-row checked';
-    div.style.marginBottom = '12px';
-    div.innerHTML = `
-      <div class="site-row-header">
-        <div class="site-body">
-          <div class="site-name" style="color:#c44569">${def.label}</div>
-        </div>
+  if(siteIdx < 0 || siteIdx >= selected.length) siteIdx = 0;
+  const code = selected[siteIdx];
+  const def = SITE_DEFS[code];
+  const data = getSiteMail(code);
+  // タイトル「1件目: ホットペッパー」
+  document.getElementById('step5-title').textContent = `📨 ${def.label} の通知メール設定`;
+  document.getElementById('step5-counter').textContent =
+    selected.length > 1
+      ? `予約サイト ${siteIdx + 1}件目 / 全${selected.length}件中`
+      : '使ってる予約サイトについて、2つのメアドを教えてください';
+
+  const div = document.createElement('div');
+  div.className = 'site-row checked';
+  div.innerHTML = `
+    <div class="site-row-header">
+      <div class="site-body">
+        <div class="site-name" style="color:#c44569;font-size:18px">${def.label}</div>
       </div>
-      <div class="site-input-wrap" style="max-height:300px;padding:0 16px 18px 50px">
-        <label class="site-input-label">① 受信メアド(TO): 今、サロンに通知が届いているメアド <span class="req">必須</span></label>
-        <input type="email" class="site-input" data-site="${code}" data-kind="to" placeholder="例: salon@example.com" value="${(data.toMail||'').replace(/"/g,'&quot;')}">
-        <div class="site-input-hint">サロン管理画面 → 店舗設定 で確認できます</div>
-        <label class="site-input-label" style="margin-top:10px">② 送信元(FROM): 自動入力(変更不要)</label>
-        <input type="text" class="site-input" data-site="${code}" data-kind="from" value="${(data.fromAddr||def.defaultFrom).replace(/"/g,'&quot;')}" style="background:#f5f5f7">
-      </div>
-    `;
-    container.appendChild(div);
-  }
-  // 入力イベント
+    </div>
+    <div class="site-input-wrap" style="max-height:400px;padding:0 16px 18px 50px">
+      <label class="site-input-label">① 受信メアド(TO): 今、サロンに通知が届いているメアド <span class="req">必須</span></label>
+      <input type="email" class="site-input" data-site="${code}" data-kind="to" placeholder="例: salon@example.com" value="${(data.toMail||'').replace(/"/g,'&quot;')}">
+      <div class="site-input-hint">サロン管理画面 → 店舗設定 で確認できます</div>
+      <label class="site-input-label" style="margin-top:10px">② 送信元(FROM): 自動入力(変更不要)</label>
+      <input type="text" class="site-input" data-site="${code}" data-kind="from" value="${(data.fromAddr||def.defaultFrom).replace(/"/g,'&quot;')}" style="background:#f5f5f7">
+    </div>
+  `;
+  container.appendChild(div);
   container.querySelectorAll('input[data-site]').forEach(inp => {
     inp.addEventListener('input', () => {
-      const code = inp.dataset.site;
+      const c = inp.dataset.site;
       const kind = inp.dataset.kind;
-      const obj = getSiteMail(code);
+      const obj = getSiteMail(c);
       if(kind === 'to') obj.toMail = inp.value;
       else if(kind === 'from') obj.fromAddr = inp.value;
       saveForm();
@@ -431,6 +455,7 @@ function renderSiteDetails(){
 }
 
 function validateStep(n){
+  const mapped = mapStep(n);
   if(n === 2){
     if(!document.getElementById('f-salon').value.trim()){ alert('サロン名を入れてください'); return false; }
   }
@@ -441,18 +466,18 @@ function validateStep(n){
     const anyChecked = Object.values(SITE_DEFS).some(d => document.getElementById(d.cb)?.checked);
     if(!anyChecked){ alert('使ってる予約サイトを1つ以上選んでください'); return false; }
   }
-  if(n === 5){
-    const selected = Object.keys(SITE_DEFS).filter(c => document.getElementById(SITE_DEFS[c].cb)?.checked);
-    for(const c of selected){
-      const m = (state.siteMails?.[c]?.toMail || '').trim();
-      if(!m){ alert(SITE_DEFS[c].label+' の受信メアド(TO)を入れてください'); return false; }
-    }
+  if(mapped.dataStep === 5){
+    const sites = selectedSiteCodes();
+    const c = sites[mapped.siteIdx];
+    if(!c) return true;
+    const m = (state.siteMails?.[c]?.toMail || '').trim();
+    if(!m){ alert(SITE_DEFS[c].label + ' の受信メアド(TO)を入れてください'); return false; }
   }
-  if(n === 6){
+  if(mapped.dataStep === 6){
     if(!document.getElementById('f-gmail').value.trim()){ alert('専用Gmailアドレスを入れてください'); return false; }
     if(!document.getElementById('f-gmail-pass').value.trim()){ alert('Gmailパスワードを入れてください'); return false; }
   }
-  if(n === 7){
+  if(mapped.dataStep === 7){
     if(!document.getElementById('f-line').value.trim()){ alert('LINE公式アカウント名を入れてください'); return false; }
     if(!document.getElementById('f-line-mail').value.trim()){ alert('LINEログインメールを入れてください'); return false; }
     if(!document.getElementById('f-line-pass').value.trim()){ alert('LINEパスワードを入れてください'); return false; }
@@ -463,7 +488,7 @@ function validateStep(n){
 function next(){
   if(!validateStep(currentStep)) return;
   saveForm();
-  if(currentStep < TOTAL){
+  if(currentStep < totalSteps()){
     currentStep++;
     showStep(currentStep);
     saveForm();
