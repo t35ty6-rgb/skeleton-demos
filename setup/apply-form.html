@@ -163,13 +163,17 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
     </div>
   </div>
 
-  <!-- ステップ4: 予約サイト + 各サイトの現在の受信メアド -->
+  <!-- ステップ4: 予約サイト + TO/FROM両方 -->
   <div class="card step-card hidden" data-step="4">
     <div class="card-num">4</div>
-    <h2>🎯 使ってる予約サイトと現在の通知メアド</h2>
-    <p class="desc">使ってる予約サイトにチェックを入れて、それぞれ <b>今、予約通知が届いているメアド</b> を教えてください(複数OK)。</p>
+    <h2>🎯 使ってる予約サイトと通知メール</h2>
+    <p class="desc">使ってる予約サイトにチェックを入れて、それぞれ <b>2つのメアド</b> を教えてください。</p>
+
     <div class="alert alert-tip">
-      ツールはここに書いてもらったメアドの受信トレイをチェックします。当日、これらのメアドを Skeletonが作成する <b>専用Gmail</b> に切り替えます。
+      <b>2つの違い</b>:<br>
+      ① <b>受信メアド(TO)</b> = 今、サロンに予約通知が <b>届いている</b> メアド(サロン管理画面で登録中)<br>
+      ② <b>送信元(FROM)</b> = 予約サイトが通知を <b>送ってくる</b> メアド/ドメイン(基本固定なので自動入力)<br>
+      → ツールは ①の受信トレイ を見に行き、②のFROM でメールを判別します。
     </div>
 
     <div class="site-row-list">
@@ -182,9 +186,11 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
           </div>
         </label>
         <div class="site-input-wrap">
-          <label class="site-input-label">今、ホッペからの予約通知が届いているメアド</label>
+          <label class="site-input-label">① 受信メアド(TO): 今、サロンに通知が届いているメアド <span class="req">必須</span></label>
           <input type="email" class="site-input" id="m-hp" placeholder="例: salon@example.com">
-          <div class="site-input-hint">サロンボードに登録中のメアド。分からなければ空欄でOK</div>
+          <div class="site-input-hint">サロンボード管理画面 → 店舗設定 で確認できます</div>
+          <label class="site-input-label" style="margin-top:10px">② 送信元(FROM): 自動入力(変更不要)</label>
+          <input type="text" class="site-input" id="from-hp" value="beauty.hotpepper.jp salonboard.com" style="background:#f5f5f7">
         </div>
       </div>
 
@@ -197,8 +203,10 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
           </div>
         </label>
         <div class="site-input-wrap">
-          <label class="site-input-label">楽天からの予約通知が届いているメアド</label>
+          <label class="site-input-label">① 受信メアド(TO) <span class="req">必須</span></label>
           <input type="email" class="site-input" id="m-rk" placeholder="例: salon@example.com">
+          <label class="site-input-label" style="margin-top:10px">② 送信元(FROM): 自動入力</label>
+          <input type="text" class="site-input" id="from-rk" value="beauty.rakuten.co.jp" style="background:#f5f5f7">
         </div>
       </div>
 
@@ -211,8 +219,10 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
           </div>
         </label>
         <div class="site-input-wrap">
-          <label class="site-input-label">minimoからの予約通知が届いているメアド</label>
+          <label class="site-input-label">① 受信メアド(TO) <span class="req">必須</span></label>
           <input type="email" class="site-input" id="m-mn" placeholder="例: salon@example.com">
+          <label class="site-input-label" style="margin-top:10px">② 送信元(FROM): 自動入力</label>
+          <input type="text" class="site-input" id="from-mn" value="minimodel.jp" style="background:#f5f5f7">
         </div>
       </div>
 
@@ -225,8 +235,10 @@ h1{font-size:22px;text-align:center;font-weight:600;margin-bottom:4px;color:#1d1
           </div>
         </label>
         <div class="site-input-wrap">
-          <label class="site-input-label">EPARKからの予約通知が届いているメアド</label>
+          <label class="site-input-label">① 受信メアド(TO) <span class="req">必須</span></label>
           <input type="email" class="site-input" id="m-ep" placeholder="例: salon@example.com">
+          <label class="site-input-label" style="margin-top:10px">② 送信元(FROM): 自動入力</label>
+          <input type="text" class="site-input" id="from-ep" value="beauty.epark.jp" style="background:#f5f5f7">
         </div>
       </div>
     </div>
@@ -346,6 +358,7 @@ let currentStep = state._step || 1;
 
 const FIELDS = ['f-salon','f-address','f-owner','f-staff','f-phone','f-email',
   'm-hp','m-rk','m-mn','m-ep',
+  'from-hp','from-rk','from-mn','from-ep',
   'f-gmail','f-gmail-pass','f-line','f-line-mail','f-line-pass','f-plan','f-note'];
 const SITES = ['s-hp','s-rk','s-mn','s-ep'];
 
@@ -425,17 +438,21 @@ function prev(){
 }
 
 function buildSiteList(){
-  // [{site, mail}] の配列
+  // [{code, label, toMail(受信), fromAddr(送信元)}] の配列
   const out = [];
   const map = [
-    ['hotpepper','s-hp','m-hp','ホットペッパービューティー'],
-    ['rakuten',  's-rk','m-rk','楽天ビューティー'],
-    ['minimo',   's-mn','m-mn','minimo'],
-    ['epark',    's-ep','m-ep','EPARK Beauty'],
+    ['hotpepper','s-hp','m-hp','from-hp','ホットペッパービューティー'],
+    ['rakuten',  's-rk','m-rk','from-rk','楽天ビューティー'],
+    ['minimo',   's-mn','m-mn','from-mn','minimo'],
+    ['epark',    's-ep','m-ep','from-ep','EPARK Beauty'],
   ];
-  for(const [code,cbId,mailId,label] of map){
+  for(const [code,cbId,toId,fromId,label] of map){
     if(document.getElementById(cbId).checked){
-      out.push({ code, label, mail: document.getElementById(mailId).value.trim() });
+      out.push({
+        code, label,
+        toMail: document.getElementById(toId).value.trim(),
+        fromAddr: document.getElementById(fromId).value.trim(),
+      });
     }
   }
   return out;
@@ -445,20 +462,22 @@ function updateReview(){
   const sites = buildSiteList();
   const plan = document.getElementById('f-plan');
   const sitesStr = sites.length
-    ? sites.map(s => `${s.label}${s.mail?'('+s.mail+')':''}`).join(' / ')
+    ? sites.map(s => `${s.label}<br>　TO: ${s.toMail||'(空)'}<br>　FROM: ${s.fromAddr||'(空)'}`).join('<br>')
     : '(なし)';
   const items = [
     ['サロン名', document.getElementById('f-salon').value],
     ['代表者', document.getElementById('f-owner').value],
     ['電話', document.getElementById('f-phone').value],
-    ['予約サイト+受信メアド', sitesStr],
+    ['予約サイト+TO/FROM', sitesStr],
     ['専用Gmail', document.getElementById('f-gmail').value],
     ['LINE公式名', document.getElementById('f-line').value],
     ['プラン', plan.options[plan.selectedIndex].text],
   ];
-  document.getElementById('review').innerHTML = items.map(([k,v]) =>
-    `<div class="row"><div class="label">${k}</div><div class="val">${esc(v||'(未入力)')}</div></div>`
-  ).join('');
+  document.getElementById('review').innerHTML = items.map(([k,v]) => {
+    // 予約サイトだけHTML埋め込み許可(改行用)
+    const isHtml = k === '予約サイト+TO/FROM';
+    return `<div class="row"><div class="label">${k}</div><div class="val">${isHtml ? (v||'(未入力)') : esc(v||'(未入力)')}</div></div>`;
+  }).join('');
 }
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
