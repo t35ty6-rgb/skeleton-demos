@@ -131,10 +131,12 @@ h1{font-size:24px;text-align:center;font-weight:600;margin-bottom:6px;color:#1d1
       <div class="field">
         <label>プラン</label>
         <select id="f-plan">
+          <option value="demo" selected>🎁 デモ(無料 / 動作確認用)</option>
           <option value="light">ライト(¥6,980 / 月200通)— 月予約100件以下</option>
           <option value="standard">スタンダードプレミアム(¥13,800 / 月5,000通)— 月予約100〜500件</option>
           <option value="pro">プロ(¥18,800 / 月30,000通)— 大規模・多店舗</option>
         </select>
+        <div class="hint">今回はデモ運用(無料で実際に動かしてもらいます)。本契約は後ほどご相談。</div>
       </div>
     </div>
 
@@ -147,13 +149,20 @@ h1{font-size:24px;text-align:center;font-weight:600;margin-bottom:6px;color:#1d1
 
     <div class="card">
       <h3>📤 送信</h3>
-      <p style="font-size:13px; color:#666; margin-bottom:10px;">下のボタンから、お好きな方法でSkeletonに送ってください。</p>
+      <p style="font-size:13px; color:#666; margin-bottom:10px;">下の「Skeletonに送信」ボタン1つで完了します。</p>
 
       <div class="send-options">
-        <button class="btn btn-link" onclick="sendByLine()">📱 LINEで送る(おすすめ)</button>
-        <button class="btn btn-primary" onclick="sendByMail()">📧 メールで送る</button>
-        <button class="btn btn-secondary" onclick="copyToClipboard()">📋 内容をコピーする</button>
+        <button class="btn btn-primary btn-large" onclick="sendToSkeleton()" id="btn-send-main">✉️ Skeletonに送信</button>
       </div>
+
+      <details style="margin-top:14px;">
+        <summary style="cursor:pointer; font-size:13px; color:#888;">▶ うまく送れない場合の代替方法</summary>
+        <div class="send-options" style="margin-top:10px;">
+          <button class="btn btn-link" onclick="sendByLine()">📱 LINEで送る</button>
+          <button class="btn btn-secondary" onclick="sendByMail()">📧 メールで送る</button>
+          <button class="btn btn-secondary" onclick="copyToClipboard()">📋 内容をコピー</button>
+        </div>
+      </details>
     </div>
 
   </form>
@@ -173,39 +182,83 @@ h1{font-size:24px;text-align:center;font-weight:600;margin-bottom:6px;color:#1d1
 </div>
 
 <script>
-const SKELETON_LINE_ID = '';  // TODO: SkeletonのLINE公式アカウントID(@で始まる)
-const SKELETON_EMAIL = 'hello@skeleton.example';  // TODO: 受付メアド
+// TODO: 司が GAS Web App をデプロイしたら、ここのURLを差し替える(intake-setup.html 参照)
+const SKELETON_INTAKE_URL = 'https://script.google.com/macros/s/REPLACE_ME/exec';
+const SKELETON_EMAIL = 'hello@skeleton.example';
 
-function buildBody(){
+function buildPayload(){
   const sites=[];
   if(document.getElementById('s-hp').checked)sites.push('ホットペッパービューティー');
   if(document.getElementById('s-rk').checked)sites.push('楽天ビューティー');
   if(document.getElementById('s-mn').checked)sites.push('minimo');
   if(document.getElementById('s-ep').checked)sites.push('EPARK Beauty');
   const plan=document.getElementById('f-plan');
-  const planText=plan.options[plan.selectedIndex].text;
+  return {
+    timestamp: new Date().toISOString(),
+    salonName: document.getElementById('f-salon').value,
+    address: document.getElementById('f-address').value,
+    ownerName: document.getElementById('f-owner').value,
+    staffCount: document.getElementById('f-staff').value,
+    phone: document.getElementById('f-phone').value,
+    email: document.getElementById('f-email').value,
+    sites: sites,
+    planCode: plan.value,
+    planText: plan.options[plan.selectedIndex].text,
+    note: document.getElementById('f-note').value
+  };
+}
+
+function buildBody(){
+  const p=buildPayload();
   return `■ ホットペッパー予約LINE通知ツール 申込
 
 【お店情報】
-サロン名: ${document.getElementById('f-salon').value}
-住所: ${document.getElementById('f-address').value}
-代表者: ${document.getElementById('f-owner').value}
-スタッフ人数: ${document.getElementById('f-staff').value}
+サロン名: ${p.salonName}
+住所: ${p.address}
+代表者: ${p.ownerName}
+スタッフ人数: ${p.staffCount}
 
 【ご連絡先】
-電話番号(SMS可): ${document.getElementById('f-phone').value}
-メール: ${document.getElementById('f-email').value}
+電話番号(SMS可): ${p.phone}
+メール: ${p.email}
 
 【使ってる予約サイト】
-${sites.join(' / ') || '(未選択)'}
+${p.sites.join(' / ') || '(未選択)'}
 
 【ご契約プラン】
-${planText}
+${p.planText}
 
 【備考】
-${document.getElementById('f-note').value || '(なし)'}
+${p.note || '(なし)'}
 
 — Skeleton Inc. 申込フォームから送信`;
+}
+
+async function sendToSkeleton(){
+  if(!validateRequired())return;
+  const btn=document.getElementById('btn-send-main');
+  const origText=btn.textContent;
+  btn.disabled=true;
+  btn.textContent='送信中…';
+  showPreview();
+  try{
+    // GAS Web App は CORS未対応なので no-cors で fire-and-forget
+    await fetch(SKELETON_INTAKE_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify(buildPayload())
+    });
+    btn.textContent='✓ 送信完了';
+    btn.style.background='#28a745';
+    const msg=document.getElementById('success-msg');
+    msg.textContent='送信ありがとうございました。Skeletonから1営業日以内にご連絡します。';
+    msg.classList.remove('hidden');
+  }catch(err){
+    btn.textContent='送信失敗 → 代替方法をお試しください';
+    btn.style.background='#dc3545';
+    setTimeout(()=>{btn.disabled=false;btn.textContent=origText;btn.style.background='';},3000);
+  }
 }
 
 function validateRequired(){
