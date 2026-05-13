@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>申込一覧｜Skeleton Inc.</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;background:#f5f5f7;color:#1d1d1f;padding:20px}
+.wrap{max-width:1400px;margin:0 auto}
+.brand{font-size:11px;letter-spacing:.25em;color:#888;text-align:center;margin-bottom:6px}
+h1{font-size:22px;text-align:center;font-weight:600;color:#c44569;margin-bottom:16px}
+
+.toolbar{display:flex;gap:10px;align-items:center;background:#fff;padding:12px 16px;border-radius:10px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.05);flex-wrap:wrap}
+.toolbar .search{flex:1;min-width:200px;padding:8px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px}
+.toolbar .search:focus{outline:none;border-color:#c44569}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none}
+.btn-primary{background:linear-gradient(135deg,#ff6b9d,#c44569);color:#fff}
+.btn-primary:hover{transform:translateY(-1px)}
+.btn-secondary{background:#f0f0f0;color:#555}
+.btn-secondary:hover{background:#e0e0e0}
+
+.summary{font-size:13px;color:#666;margin-bottom:10px}
+
+.table-wrap{background:#fff;border-radius:10px;overflow:auto;box-shadow:0 2px 8px rgba(0,0,0,.05);max-height:calc(100vh - 200px)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{position:sticky;top:0;background:#fff0f5;color:#c44569;font-weight:700;padding:12px 14px;text-align:left;border-bottom:2px solid #c44569;cursor:pointer;white-space:nowrap;user-select:none}
+thead th:hover{background:#ffe0eb}
+thead th .arrow{opacity:0;margin-left:4px}
+thead th.sorted .arrow{opacity:1}
+tbody td{padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:top}
+tbody tr:hover{background:#fffafa}
+tbody tr:nth-child(even){background:#fafafa}
+tbody tr:nth-child(even):hover{background:#fff5f7}
+
+.empty{text-align:center;padding:40px;color:#999;font-size:14px}
+.error{background:#fff3cd;color:#856404;padding:14px;border-radius:8px;margin:14px 0}
+.loading{text-align:center;padding:40px;color:#666}
+
+.cell-secret{font-family:'SF Mono',Menlo,monospace;font-size:11px;color:#555}
+.cell-secret.hidden-content{filter:blur(4px);cursor:pointer}
+.cell-secret.hidden-content:hover{filter:none}
+
+.footer{text-align:center;font-size:11px;color:#999;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">SKELETON INC.</div>
+  <h1>📋 ホットペッパーLINEツール 申込一覧</h1>
+
+  <div class="toolbar">
+    <input class="search" id="search" type="search" placeholder="🔍 サロン名・電話・メールで絞り込み...">
+    <button class="btn btn-secondary" onclick="toggleSecrets()">👁 パスワード表示切替</button>
+    <button class="btn btn-secondary" onclick="exportCSV()">📥 CSVダウンロード</button>
+    <button class="btn btn-primary" onclick="loadList()">🔄 再読み込み</button>
+  </div>
+
+  <div class="summary" id="summary">読み込み中...</div>
+
+  <div class="table-wrap" id="table-wrap">
+    <div class="loading" id="loading">⏳ 読み込み中…</div>
+  </div>
+
+  <div class="footer">
+    <strong>Skeleton Inc.</strong> — 申込内容は自動でこの一覧に集約されます
+  </div>
+</div>
+
+<script>
+// URLクエリ ?key=... でAPIキーを渡す
+const PARAMS = new URLSearchParams(location.search);
+const VIEWER_KEY = PARAMS.get('key') || '';
+const API = 'https://asia-northeast1-skeleton-pricer-130118.cloudfunctions.net/skeleton-intake';
+
+let DATA = { header: [], rows: [] };
+let SECRETS_VISIBLE = false;
+let SORT_COL = null;
+let SORT_DIR = 1;
+
+const SECRET_COLS = new Set(['Gmail PW', 'LINE PW']);
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+async function loadList(){
+  if(!VIEWER_KEY){
+    document.getElementById('table-wrap').innerHTML =
+      '<div class="error">URLに <code>?key=司に渡されたトークン</code> を追加してください</div>';
+    document.getElementById('summary').textContent = '';
+    return;
+  }
+  document.getElementById('loading').textContent = '⏳ 読み込み中…';
+  document.getElementById('table-wrap').innerHTML = '<div class="loading" id="loading">⏳ 読み込み中…</div>';
+  try {
+    const res = await fetch(`${API}?key=${encodeURIComponent(VIEWER_KEY)}`);
+    const j = await res.json();
+    if(!j.ok){
+      document.getElementById('table-wrap').innerHTML =
+        `<div class="error">エラー: ${esc(j.error || 'unknown')}</div>`;
+      return;
+    }
+    DATA = j;
+    render();
+  } catch(e){
+    document.getElementById('table-wrap').innerHTML =
+      `<div class="error">通信エラー: ${esc(e.message)}</div>`;
+  }
+}
+
+function render(){
+  const q = (document.getElementById('search').value || '').toLowerCase().trim();
+  let rows = DATA.rows;
+  if(q){
+    rows = rows.filter(r => Object.values(r).some(v => String(v).toLowerCase().includes(q)));
+  }
+  if(SORT_COL){
+    rows = [...rows].sort((a,b)=>{
+      const va=String(a[SORT_COL]||''), vb=String(b[SORT_COL]||'');
+      return va.localeCompare(vb,'ja')*SORT_DIR;
+    });
+  }
+  document.getElementById('summary').textContent =
+    `件数: ${rows.length} / 全${DATA.rows.length}件` +
+    (q ? ` (🔍「${q}」で絞り込み中)` : '');
+
+  if(rows.length===0){
+    document.getElementById('table-wrap').innerHTML =
+      '<div class="empty">該当する申込はありません</div>';
+    return;
+  }
+
+  const ths = DATA.header.map(h => {
+    const sorted = (SORT_COL===h) ? ' sorted' : '';
+    const arrow = (SORT_COL===h) ? (SORT_DIR>0?'▲':'▼') : '';
+    return `<th class="${sorted}" onclick="sortBy('${esc(h)}')">${esc(h)} <span class="arrow">${arrow}</span></th>`;
+  }).join('');
+
+  const trs = rows.map(r => {
+    const tds = DATA.header.map(h => {
+      const v = r[h] || '';
+      const isSecret = SECRET_COLS.has(h);
+      if(isSecret){
+        const cls = SECRETS_VISIBLE ? 'cell-secret' : 'cell-secret hidden-content';
+        return `<td><span class="${cls}" onclick="this.classList.remove('hidden-content')">${esc(v)}</span></td>`;
+      }
+      return `<td>${esc(v)}</td>`;
+    }).join('');
+    return `<tr>${tds}</tr>`;
+  }).join('');
+
+  document.getElementById('table-wrap').innerHTML =
+    `<table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`;
+}
+
+function sortBy(col){
+  if(SORT_COL===col) SORT_DIR = -SORT_DIR;
+  else { SORT_COL = col; SORT_DIR = 1; }
+  render();
+}
+
+function toggleSecrets(){
+  SECRETS_VISIBLE = !SECRETS_VISIBLE;
+  render();
+}
+
+function exportCSV(){
+  const rows = DATA.rows;
+  if(rows.length===0){ alert('データがありません'); return; }
+  const head = DATA.header.join(',');
+  const body = rows.map(r =>
+    DATA.header.map(h => `"${String(r[h]||'').replace(/"/g,'""')}"`).join(',')
+  ).join('\n');
+  const csv = '﻿' + head + '\n' + body;  // BOM付きでExcelで文字化け回避
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `申込一覧_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+document.getElementById('search').addEventListener('input', render);
+loadList();
+</script>
+</body>
+</html>
