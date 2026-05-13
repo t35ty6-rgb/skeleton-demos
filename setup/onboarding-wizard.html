@@ -2,398 +2,658 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
-<title>Skeleton標準導入ウィザード — ホットペッパーLINEツール</title>
+<title>Skeleton標準導入ウィザード｜ホットペッパーLINEツール</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;background:#f7f5f1;color:#2a2a2a;line-height:1.7;padding:24px 14px 64px}
-  .wrap{max-width:920px;margin:0 auto}
-  .brand{font-size:11px;letter-spacing:.25em;color:#888;text-align:center;margin-bottom:8px}
-  h1{font-size:26px;color:#1f3a5f;text-align:center;font-weight:600;margin-bottom:6px;line-height:1.4}
-  .sub{font-size:13px;color:#777;text-align:center;margin-bottom:8px}
-  .meta{font-size:12px;color:#999;text-align:center;margin-bottom:24px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;background:#f5f5f7;color:#1d1d1f;line-height:1.6;min-height:100vh}
+.app{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+@media(max-width:800px){.app{grid-template-columns:1fr}.sidebar{position:sticky;top:0;z-index:10}}
+.sidebar{background:linear-gradient(180deg,#1f3a5f 0%,#2d527f 100%);color:#fff;padding:24px 20px}
+.sidebar h1{font-size:17px;margin-bottom:4px;line-height:1.4}
+.sidebar .brand{font-size:10px;letter-spacing:.25em;opacity:.7;margin-bottom:6px}
+.sidebar .sub{font-size:12px;opacity:.85;margin-bottom:22px}
+.progress{background:rgba(255,255,255,.15);height:6px;border-radius:3px;overflow:hidden;margin-bottom:20px}
+.progress-bar{height:100%;background:linear-gradient(90deg,#ffd54f,#ff8a65);transition:width .3s}
+.steps{list-style:none;counter-reset:s}
+.steps li{padding:9px 12px;border-radius:8px;margin-bottom:3px;font-size:12.5px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px;counter-increment:s}
+.steps li:hover{background:rgba(255,255,255,.1)}
+.steps li.active{background:rgba(255,255,255,.25);font-weight:600}
+.steps li.done{opacity:.7}
+.steps li.done::before{content:'✓';color:#80ff80;font-weight:bold;background:transparent;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.steps li:not(.done)::before{content:counter(s);background:rgba(255,255,255,.2);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold}
+.sidebar-foot{margin-top:24px;padding-top:18px;border-top:1px solid rgba(255,255,255,.2);font-size:11.5px;opacity:.85}
+.sidebar-foot button{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.3);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer;margin-top:8px}
+.sidebar-foot button:hover{background:rgba(255,255,255,.2)}
+.main{padding:40px 56px;overflow-y:auto;max-height:100vh}
+@media(max-width:800px){.main{padding:24px 18px;max-height:none}}
+.step-content{max-width:780px;margin:0 auto}
+.step-content h2{font-size:26px;margin-bottom:8px;color:#1f3a5f;display:flex;align-items:center;gap:12px}
+.step-content .step-num{background:#1f3a5f;color:#fff;font-size:14px;width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:600}
+.step-content .step-sub{color:#666;font-size:14px;margin-bottom:24px;padding-left:46px}
+.who-pill{display:inline-block;background:#eef1f6;color:#1f3a5f;font-size:11px;padding:2px 9px;border-radius:10px;font-weight:600;margin-left:8px;vertical-align:middle}
+.who-pill.client{background:#fff4e5;color:#a35400}
+.who-pill.skeleton{background:#e3edf6;color:#1f3a5f}
 
-  /* Phase progress bar */
-  .progress{display:flex;justify-content:center;gap:6px;margin-bottom:28px;flex-wrap:wrap}
-  .phase-pill{font-size:11px;letter-spacing:.05em;padding:6px 12px;border-radius:14px;background:#fff;color:#666;border:1px solid #ddd}
-  .phase-pill.active{background:#1f3a5f;color:#fff;border-color:#1f3a5f}
+.box{background:#fff;border-radius:12px;padding:22px 26px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.box h3{font-size:15px;color:#1f3a5f;margin-bottom:10px;font-weight:600}
 
-  /* Hero overview */
-  .hero{background:linear-gradient(135deg,#1f3a5f,#2d527f);color:#fff;border-radius:14px;padding:24px 28px;margin-bottom:24px;box-shadow:0 4px 16px rgba(31,58,95,.25)}
-  .hero h2{font-size:18px;margin-bottom:12px;color:#fff;font-weight:600}
-  .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
-  @media(max-width:600px){.hero-grid{grid-template-columns:1fr}}
-  .hero-stat{background:rgba(255,255,255,.1);padding:14px 16px;border-radius:8px}
-  .hero-stat .label{font-size:11px;opacity:.7;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
-  .hero-stat .value{font-size:20px;font-weight:600}
-  .hero-stat .note{font-size:12px;opacity:.85;margin-top:4px}
+.action-list{list-style:none;counter-reset:a}
+.action-list li{padding:10px 0 10px 38px;position:relative;border-bottom:1px dashed #eee;counter-increment:a;font-size:14.5px}
+.action-list li:last-child{border-bottom:none}
+.action-list li::before{content:counter(a);position:absolute;left:0;top:11px;background:#1f3a5f;color:#fff;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.action-list code{background:#eef1f6;padding:2px 7px;border-radius:4px;font-size:90%;font-family:'SF Mono','Menlo',monospace;color:#1f3a5f}
+.action-list strong{color:#1f3a5f}
 
-  .card{background:#fff;border-radius:12px;padding:24px 28px;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:18px;border-top:4px solid #1f3a5f}
-  .card.phase1{border-top-color:#8a7c5f}
-  .card.phase2{border-top-color:#1f3a5f}
-  .card.phase3{border-top-color:#2c8a47}
-  .card.phase4{border-top-color:#c97c1f}
-  .card.phase5{border-top-color:#6b4f8a}
+.field{margin:14px 0}
+.field label{display:block;font-size:12px;color:#666;margin-bottom:6px;font-weight:600;letter-spacing:.03em}
+.field input,.field select,.field textarea{width:100%;padding:11px 14px;border:1.5px solid #d1d1d6;border-radius:8px;font-size:14px;font-family:inherit;background:#fff;transition:border-color .15s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#1f3a5f}
+.field .hint{font-size:11.5px;color:#888;margin-top:5px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:560px){.field-row{grid-template-columns:1fr}}
 
-  h2.phase-title{font-size:18px;color:#1f3a5f;margin-bottom:6px;font-weight:600;display:flex;align-items:center;gap:10px}
-  h2.phase-title .badge{background:#1f3a5f;color:#fff;font-size:13px;min-width:32px;height:28px;padding:0 10px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-weight:600}
-  .card.phase1 h2 .badge{background:#8a7c5f}
-  .card.phase3 h2 .badge{background:#2c8a47}
-  .card.phase4 h2 .badge{background:#c97c1f}
-  .card.phase5 h2 .badge{background:#6b4f8a}
-  .phase-meta{font-size:12px;color:#888;margin-bottom:14px;padding-left:42px}
-  .who-pill{display:inline-block;background:#eef1f6;color:#1f3a5f;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;margin-right:6px}
-  .who-pill.client{background:#fff4e5;color:#a35400}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .15s;text-decoration:none}
+.btn-primary{background:#1f3a5f;color:#fff}
+.btn-primary:hover{background:#163055}
+.btn-secondary{background:#e5e5ea;color:#1d1d1f}
+.btn-secondary:hover{background:#d1d1d6}
+.btn-large{padding:14px 30px;font-size:15px}
+.btn-link{background:#fff;color:#1f3a5f;border:1.5px solid #1f3a5f}
+.btn-link:hover{background:#1f3a5f;color:#fff}
+.btn-copy{background:#ff9800;color:#fff;font-size:12.5px;padding:7px 14px}
+.btn-copy:hover{background:#e88600}
+.btn-copy.copied{background:#2c8a47}
 
-  .step{padding:12px 0 12px 38px;position:relative;border-bottom:1px dashed #e8e3da}
-  .step:last-child{border-bottom:none}
-  .step input[type="checkbox"]{position:absolute;left:0;top:14px;width:20px;height:20px;accent-color:#1f3a5f;cursor:pointer}
-  .step .step-title{font-weight:600;color:#1f3a5f;margin-bottom:4px;display:block;cursor:pointer}
-  .step input:checked ~ .step-title{color:#999;text-decoration:line-through}
-  .step .step-body{font-size:13.5px;color:#555;margin-top:4px}
-  .step .step-body ul{margin-top:6px;padding-left:18px}
-  .step .step-body li{padding:3px 0;list-style:disc;list-style-position:outside}
-  .step code{background:#eef1f6;padding:2px 6px;border-radius:4px;font-size:90%;font-family:'SF Mono','Menlo',monospace;color:#1f3a5f}
-  .step strong{color:#1f3a5f}
+.nav-bar{display:flex;justify-content:space-between;gap:12px;margin-top:28px;padding-top:20px;border-top:1px solid #e5e5ea}
 
-  .warn{background:#fff4e5;border-left:4px solid #d97706;padding:14px 18px;border-radius:6px;margin:10px 0;font-size:14px;color:#5c3d12}
-  .warn strong{color:#a35400}
-  .note{background:#eaf3ec;border-left:4px solid #2c8a47;padding:12px 16px;border-radius:6px;margin:10px 0;font-size:13.5px;color:#1f4a2c}
-  .tmpl{background:#f0ede5;border-left:4px solid #8a7c5f;padding:12px 16px;border-radius:6px;margin:10px 0;font-size:13.5px;white-space:pre-wrap;font-family:inherit;color:#3d3520}
-  .tmpl-label{font-size:11px;color:#8a7c5f;letter-spacing:.15em;margin-bottom:6px;text-transform:uppercase}
+.warn{background:#fff4e5;border-left:4px solid #d97706;padding:13px 17px;border-radius:6px;margin:12px 0;font-size:13.5px;color:#5c3d12}
+.warn strong{color:#a35400}
+.note{background:#eaf3ec;border-left:4px solid #2c8a47;padding:12px 17px;border-radius:6px;margin:12px 0;font-size:13.5px;color:#1f4a2c}
+.tip{background:#e3edf6;border-left:4px solid #1f3a5f;padding:12px 17px;border-radius:6px;margin:12px 0;font-size:13.5px;color:#1a3050}
 
-  .footer{text-align:center;color:#888;font-size:12px;margin-top:32px;padding-top:20px;border-top:1px solid #e0dcd2}
-  .footer a{color:#1f3a5f;text-decoration:none;margin:0 6px}
-  .footer a:hover{text-decoration:underline}
+.code-block{position:relative;background:#1d1d1f;color:#e5e5ea;padding:16px 18px;border-radius:8px;font-family:'SF Mono','Menlo',monospace;font-size:12.5px;line-height:1.6;margin:12px 0;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+.code-block-copy{position:absolute;top:8px;right:8px}
 
-  @media print{
-    body{background:#fff;padding:0}
-    .card,.hero{box-shadow:none;border:1px solid #ddd;page-break-inside:avoid}
-  }
+.kv{display:grid;grid-template-columns:160px 1fr;gap:8px 16px;margin:10px 0;font-size:14px}
+.kv .k{color:#666;font-weight:600}
+.kv .v{color:#1f3a5f;font-weight:600;word-break:break-all}
+
+.checklist{list-style:none}
+.checklist li{padding:8px 0;display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.checklist input[type="checkbox"]{margin-top:5px;width:18px;height:18px;accent-color:#1f3a5f;flex-shrink:0;cursor:pointer}
+.checklist label{cursor:pointer;flex:1}
+.checklist input:checked + label{color:#999;text-decoration:line-through}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="brand">SKELETON INC.</div>
-  <h1>標準導入ウィザード<br>ホットペッパーLINEツール</h1>
-  <div class="sub">Skeleton側で全アカウント開設まで代行 → 当日の客作業はほぼゼロ</div>
-  <div class="meta">最終更新: 2026-05-13 / Skeleton社内用ドキュメント</div>
-
-  <div class="progress">
-    <span class="phase-pill">P1 申込</span>
-    <span class="phase-pill">P2 事前仕込み</span>
-    <span class="phase-pill">P3 当日(客5分)</span>
-    <span class="phase-pill">P4 サロンボード</span>
-    <span class="phase-pill">P5 引き渡し</span>
-  </div>
-
-  <div class="hero">
-    <h2>導入パッケージの考え方</h2>
-    <div style="font-size:14px;opacity:.95">客の業務用Gmail/LINEに相乗りせず、<strong style="color:#fff">通知ツール専用アカウントを Skeleton 側で開設</strong>して納品する。トラブル時の責任分界・解約時の安全性・代行作業の心理的ハードル、全部解決する。</div>
-    <div class="hero-grid">
-      <div class="hero-stat">
-        <div class="label">当日の客操作時間</div>
-        <div class="value">5〜10分</div>
-        <div class="note">(従来60〜90分から圧縮)</div>
-      </div>
-      <div class="hero-stat">
-        <div class="label">Skeleton側の事前作業</div>
-        <div class="value">60〜90分</div>
-        <div class="note">(納品前日までに完了)</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== Phase 1 ===== -->
-  <div class="card phase1">
-    <h2 class="phase-title"><span class="badge">P1</span>申込時に客から取る情報</h2>
-    <div class="phase-meta"><span class="who-pill client">客</span>契約書と同時に1枚で取得 / 5分</div>
-
-    <div class="step">
-      <input type="checkbox" id="p1-1">
-      <label for="p1-1" class="step-title">サロン基本情報</label>
-      <div class="step-body">
-        <ul>
-          <li>サロン名(屋号)</li>
-          <li>サロン略号(<code>skeleton.{略号}@gmail.com</code> に使用、半角英数3〜6文字)</li>
-          <li>店舗住所</li>
-          <li>代表者氏名</li>
-        </ul>
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p1-2">
-      <label for="p1-2" class="step-title">客側の電話番号(SMS受信可)</label>
-      <div class="step-body">
-        Gmail新規作成時の電話番号認証で必要。客の携帯番号を申込書に記載してもらう。<br>
-        当日 or 事前に「Googleから6桁のコードがSMSで来るので転送してください」と1回お願いするだけ。
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p1-3">
-      <label for="p1-3" class="step-title">サロンボード(ホットペッパー)ログイン情報</label>
-      <div class="step-body">
-        Phase 4 で送信先メール変更に使う。預かりではなく「画面共有しながら客が入力」運用でも可。
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p1-4">
-      <label for="p1-4" class="step-title">使ってる予約サイト</label>
-      <div class="step-body">
-        ホットペッパー / 楽天ビューティ / minimo / EPARK のチェック。該当のみツールで監視する。
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p1-5">
-      <label for="p1-5" class="step-title">スタッフ人数 + 通知先LINE運用</label>
-      <div class="step-body">
-        <ul>
-          <li>通知を受け取るスタッフは何人か</li>
-          <li>既存スタッフLINEグループあるか / 新規作成するか</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== Phase 2 ===== -->
-  <div class="card phase2">
-    <h2 class="phase-title"><span class="badge">P2</span>Skeleton側の事前仕込み</h2>
-    <div class="phase-meta"><span class="who-pill">Skeleton</span>納品前日までに完了 / 60〜90分 / 客は何もしない</div>
-
-    <div class="step">
-      <input type="checkbox" id="p2-1">
-      <label for="p2-1" class="step-title">① 専用Gmail新規作成</label>
-      <div class="step-body">
-        命名規則: <code>skeleton.{サロン略号}@gmail.com</code> (例: <code>skeleton.bloom@gmail.com</code>)<br>
-        電話番号認証で客のSMSコードを1回もらう。パスワードはSkeleton側1Passwordで管理。
-        <div class="warn"><strong>同一電話番号で複数Gmail作成は数アカウントまで制限あり</strong> — 必ず客の番号で認証する</div>
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p2-2">
-      <label for="p2-2" class="step-title">② LINEビジネスIDを客名義で作成</label>
-      <div class="step-body">
-        <a href="https://www.lycbiz.com/jp/login/" target="_blank">LINEヤフー for Business</a> でビジネスID登録。事業者情報(屋号・住所)はP1で取得済み。
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p2-3">
-      <label for="p2-3" class="step-title">③ LINE Official Account 作成</label>
-      <div class="step-body">
-        <a href="https://manager.line.biz/" target="_blank">LINE Official Account Manager</a> で新規。<br>
-        命名規則: <code>{サロン名} 予約通知</code>(例: <code>BLOOM 予約通知</code>)
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p2-4">
-      <label for="p2-4" class="step-title">④ Messaging API 有効化 + 長期トークン発行</label>
-      <div class="step-body">
-        Official Account Manager → 設定 → Messaging API → 「利用する」ON → <a href="https://developers.line.biz/console/" target="_blank">LINE Developers</a> に自動遷移 → チャネルアクセストークン(<strong>長期</strong>)発行 → 1Passwordに保存
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p2-5">
-      <label for="p2-5" class="step-title">⑤ 通知先LINE ID取得</label>
-      <div class="step-body">
-        <a href="https://webhook.site/" target="_blank">webhook.site</a> でURL発行 → LINE Developers の Webhook URL に貼り付け → スタッフLINEグループ作成 → 公式アカウントを招待 → グループで「テスト」発言 → webhook.siteで <code>"groupId": "C..."</code> 取得 → 1Passwordに保存<br>
-        終わったらWebhook URLは空欄に戻す。
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p2-6">
-      <label for="p2-6" class="step-title">⑥ GASマスタープロジェクトを複製 → 客用に値を焼き込み</label>
-      <div class="step-body">
-        Skeleton管理の<strong>マスターGASプロジェクト</strong>を開く → 「ファイル → コピーを作成」 → 客のサロン名でリネーム → <code>Config.gs</code> に以下を埋め込む:
-        <ul>
-          <li><code>LINE_CHANNEL_ACCESS_TOKEN</code> ← ④のトークン</li>
-          <li><code>LINE_TO_IDS</code> ← ⑤のグループID</li>
-          <li><code>SALON_NAME</code> ← 客のサロン名</li>
-          <li><code>FROM_ADDRESS</code> ← <strong>空</strong>(既知バグ回避)</li>
-          <li><code>CALENDAR_IDS</code> ← 後でPhase 3-3で自動生成される、ここでは <code>primary</code> プレースホルダ</li>
-        </ul>
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p2-7">
-      <label for="p2-7" class="step-title">⑦ GAS共有URLを発行(コピー用)</label>
-      <div class="step-body">
-        GASプロジェクト右上「共有」 → 「リンクを知っている全員(閲覧者)」 → URLコピー → 1Password 該当客レコードに保存<br>
-        このURLを当日 Phase 3 で客に送る。
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p2-8">
-      <label for="p2-8" class="step-title">⑧ 引き渡しシート作成</label>
-      <div class="step-body">
-        客に渡すA4 1枚(Google Sheets):
-        <ul>
-          <li>専用Gmailアドレス / パスワード</li>
-          <li>LINE公式アカウント名 / 管理画面URL / ログイン情報</li>
-          <li>GAS共有URL(コピー用)</li>
-          <li>スタッフ向けLINE友達追加用 QRコード</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== Phase 3 ===== -->
-  <div class="card phase3">
-    <h2 class="phase-title"><span class="badge">P3</span>当日の客作業 — ここが本番</h2>
-    <div class="phase-meta"><span class="who-pill client">客</span>司が画面共有で隣に立つ / 5〜10分</div>
-
-    <div class="step">
-      <input type="checkbox" id="p3-1">
-      <label for="p3-1" class="step-title">① 客が専用Gmailにログイン</label>
-      <div class="step-body">
-        P2-8の引き渡しシートのGmailアドレス + パスワードでログイン。<br>
-        2段階認証設定はこのタイミングで一緒にやっておく(客の電話番号で)。
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p3-2">
-      <label for="p3-2" class="step-title">② GAS共有URLを開いて「コピーを作成」</label>
-      <div class="step-body">
-        P2-7の共有URLをクリック → GASエディタ右上「コピーを作成」ボタン → 客のドライブに複製される<br>
-        <strong>これで客のアカウントで動くGASプロジェクトが完成</strong>(Configは焼き込み済み)
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p3-3">
-      <label for="p3-3" class="step-title">③ 認可ダイアログ → installTriggers実行</label>
-      <div class="step-body">
-        GASエディタで関数選択 <code>installTriggers</code> → 「実行」<br>
-        初回のみ「権限を許可」ダイアログ → 「詳細」 → 「(プロジェクト名) に移動」 → 「許可」<br>
-        実行完了でトリガー2件(1分おき + 月曜9時)が設定される。
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p3-4">
-      <label for="p3-4" class="step-title">④ <code>setupSiteCalendars</code> 実行</label>
-      <div class="step-body">
-        関数選択 <code>setupSiteCalendars</code> → 「実行」<br>
-        4つのサイト別カレンダーが客のGoogleカレンダーに自動作成される(🔴ホッペ / 🌸楽天 / 🟢minimo / 🔵EPARK)
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p3-5">
-      <label for="p3-5" class="step-title">⑤ スタッフがLINE QRコードを読んで友達追加</label>
-      <div class="step-body">
-        引き渡しシートのQRコードをスタッフ全員のスマホで読む。<br>
-        LINE公式が既にグループに参加済み(P2-5)なので、これで通知が届く状態になる。
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p3-6">
-      <label for="p3-6" class="step-title">⑥ <code>testLine</code> → スタッフLINEに着信確認</label>
-      <div class="step-body">
-        関数 <code>testLine</code> 実行 → スタッフLINEグループに「テスト通知」着弾を確認
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== Phase 4 ===== -->
-  <div class="card phase4">
-    <h2 class="phase-title"><span class="badge">P4</span>サロンボード(予約サイト)送信先変更</h2>
-    <div class="phase-meta"><span class="who-pill client">客</span>司が画面共有で同席 / 5分</div>
-
-    <div class="step">
-      <input type="checkbox" id="p4-1">
-      <label for="p4-1" class="step-title">サロンボードにログイン</label>
-      <div class="step-body">
-        客のログイン情報(P1-3)で <a href="https://salonboard.com/" target="_blank">サロンボード</a> ログイン。
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p4-2">
-      <label for="p4-2" class="step-title">予約通知メール送信先を専用Gmailに変更</label>
-      <div class="step-body">
-        「店舗設定」or「メール設定」→ 通知先メールアドレスを <code>skeleton.{略号}@gmail.com</code> に変更 → 保存
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p4-3">
-      <label for="p4-3" class="step-title">他予約サイトも同様(該当あれば)</label>
-      <div class="step-body">
-        楽天ビューティ / minimo / EPARK Beauty の管理画面でも同じ変更。
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== Phase 5 ===== -->
-  <div class="card phase5">
-    <h2 class="phase-title"><span class="badge">P5</span>動作確認 → 引き渡し</h2>
-    <div class="phase-meta"><span class="who-pill">Skeleton</span>納品判定 / 10分</div>
-
-    <div class="step">
-      <input type="checkbox" id="p5-1">
-      <label for="p5-1" class="step-title">テスト予約1件を実際に入れる</label>
-      <div class="step-body">
-        ホットペッパー側からテスト予約(明日以降の日時、適当な顧客名)を投入。
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p5-2">
-      <label for="p5-2" class="step-title">end-to-end確認 — 全部✅でようやく納品完了</label>
-      <div class="step-body">
-        <ul>
-          <li>1分以内に専用Gmailに予約通知メール着信</li>
-          <li>1分以内にスタッフLINEグループに通知着弾</li>
-          <li>Googleカレンダーの該当サイト別カレンダーにイベント追加</li>
-          <li>顧客名・日時・メニュー・担当が「⚠️取得失敗」ではなく正しく抽出されている</li>
-        </ul>
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p5-3">
-      <label for="p5-3" class="step-title">引き渡しシート(P2-8)を客に渡す + 操作説明1回</label>
-      <div class="step-body">
-        「通知LINE公式の見方」「もし通知止まったらSkeleton連絡」を1分で説明 → 完了。
-      </div>
-    </div>
-    <div class="step">
-      <input type="checkbox" id="p5-4">
-      <label for="p5-4" class="step-title">Skeleton台帳に記録</label>
-      <div class="step-body">
-        客台帳(Sheets) に: 専用Gmail / LINE公式 / GASプロジェクトURL / 納品日 / 月次保守の有無 を記録。
-      </div>
-    </div>
-  </div>
-
-  <!-- 落とし穴 -->
-  <div class="card">
-    <h2 class="phase-title" style="color:#a35400"><span class="badge" style="background:#d97706">!</span>既知の落とし穴</h2>
-    <div class="warn"><strong>FROM_ADDRESS を埋めるとマッチしなくなる</strong> — Config.gs では空のまま。</div>
-    <ul style="font-size:14px;color:#555;padding-left:20px;margin-top:8px">
-      <li style="list-style:disc;padding:4px 0">専用Gmail作成時の電話番号認証 — 同じ番号で3〜4個までしか作れない。客ごとに必ず客の番号で認証</li>
-      <li style="list-style:disc;padding:4px 0">LINE長期トークンの有効期限(60日)— 期限通知の仕組みは別途検討。月次保守メニュー化候補</li>
-      <li style="list-style:disc;padding:4px 0">GAS共有URLを「閲覧者」で発行すること(編集権限にすると客が触ってマスターを壊すリスク)</li>
-      <li style="list-style:disc;padding:4px 0">「コピーを作成」後は完全に客のアカウント所有物 → Skeleton側からはアクセスできなくなる(意図通り)</li>
-      <li style="list-style:disc;padding:4px 0">2段階認証は専用Gmail作成時に必ずセット(客が後で乗っ取られないため)</li>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">SKELETON INC.</div>
+    <h1>標準導入ウィザード</h1>
+    <div class="sub">ホットペッパーLINEツール</div>
+    <div class="progress"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+    <ul class="steps" id="step-list">
+      <li data-step="0">客情報入力</li>
+      <li data-step="1">専用Gmail作成</li>
+      <li data-step="2">LINEビジネスID</li>
+      <li data-step="3">LINE公式作成</li>
+      <li data-step="4">トークン取得</li>
+      <li data-step="5">グループID取得</li>
+      <li data-step="6">GASマスタークローン</li>
+      <li data-step="7">Config.gs焼き込み</li>
+      <li data-step="8">共有URL発行</li>
+      <li data-step="9">引き渡しシート</li>
+      <li data-step="10">当日:客作業</li>
+      <li data-step="11">サロンボード</li>
+      <li data-step="12">動作確認</li>
+      <li data-step="13">完了</li>
     </ul>
-  </div>
-
-  <!-- 関連 -->
-  <div class="card">
-    <h2 class="phase-title"><span class="badge">📎</span>関連ドキュメント</h2>
-    <ul style="font-size:14px;padding-left:20px;margin-top:6px">
-      <li style="list-style:disc;padding:4px 0"><a href="hotpepper-line-tool.html" style="color:#1f3a5f;font-weight:600">司向け作業カンペ →</a></li>
-      <li style="list-style:disc;padding:4px 0"><a href="setup-wizard.html" style="color:#1f3a5f;font-weight:600">14ステップ詳細ウィザード(旧手順) →</a></li>
-      <li style="list-style:disc;padding:4px 0"><a href="installer-guide.html" style="color:#1f3a5f;font-weight:600">インストールガイド →</a></li>
-    </ul>
-  </div>
-
-  <div class="footer">
-    Skeleton Inc. — 標準導入パッケージ仕様書<br>
-    チェックボックスの状態はlocalStorageに保存されます
-  </div>
+    <div class="sidebar-foot">
+      入力は自動保存されます<br>
+      <button onclick="resetAll()">最初からやり直す</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div id="step-container"></div>
+  </main>
 </div>
+
 <script>
-  document.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-    const k='hpl_onboarding_'+cb.id;
-    if(localStorage.getItem(k)==='1') cb.checked=true;
-    cb.addEventListener('change',()=>localStorage.setItem(k,cb.checked?'1':'0'));
+const KEY='skeleton_onb_v1';
+const state=JSON.parse(localStorage.getItem(KEY)||'{}');
+state.cur=state.cur||0;
+state.done=state.done||{};
+state.salonName=state.salonName||'';
+state.salonCode=state.salonCode||'';
+state.ownerName=state.ownerName||'';
+state.clientPhone=state.clientPhone||'';
+state.address=state.address||'';
+state.staffCount=state.staffCount||'';
+state.sites=state.sites||{hotpepper:true,rakuten:false,minimo:false,epark:false};
+state.gmail=state.gmail||'';
+state.gmailPass=state.gmailPass||'';
+state.lineBizId=state.lineBizId||'';
+state.lineAccountName=state.lineAccountName||'';
+state.lineToken=state.lineToken||'';
+state.groupId=state.groupId||'';
+state.gasShareUrl=state.gasShareUrl||'';
+
+const MASTER_GAS_URL='https://script.google.com/home'; // TODO: マスタープロジェクトURLを後で差し替え
+
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function resetAll(){if(confirm('全部リセットしていい?')){localStorage.removeItem(KEY);location.reload()}}
+
+const STEPS=[
+  // 0
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">0</span>客情報を入力</h2>
+    <div class="step-sub">申込書から転記。後の全ステップで使う値の元データ。<span class="who-pill skeleton">Skeleton</span></div>
+    <div class="box">
+      <h3>サロン基本情報</h3>
+      <div class="field"><label>サロン名(屋号)</label><input id="i-salonName" value="${esc(state.salonName)}" placeholder="例: BLOOM"><div class="hint">LINE公式名やレポート表記に使う</div></div>
+      <div class="field-row">
+        <div class="field"><label>サロン略号(半角英数3〜6文字)</label><input id="i-salonCode" value="${esc(state.salonCode)}" placeholder="例: bloom"><div class="hint">専用Gmailアドレスに使う(<code>skeleton.bloom@gmail.com</code>)</div></div>
+        <div class="field"><label>代表者氏名</label><input id="i-ownerName" value="${esc(state.ownerName)}" placeholder="山田 太郎"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>客側電話番号(SMS受信可)</label><input id="i-clientPhone" value="${esc(state.clientPhone)}" placeholder="090-XXXX-XXXX"><div class="hint">Gmail新規作成の番号認証で使う</div></div>
+        <div class="field"><label>スタッフ人数(目安)</label><input id="i-staffCount" value="${esc(state.staffCount)}" placeholder="3"></div>
+      </div>
+      <div class="field"><label>店舗住所</label><input id="i-address" value="${esc(state.address)}" placeholder="福井県大野市..."></div>
+      <h3 style="margin-top:18px">使ってる予約サイト</h3>
+      <ul class="checklist">
+        <li><input type="checkbox" id="s-hp" ${state.sites.hotpepper?'checked':''}><label for="s-hp"><strong>ホットペッパービューティー</strong></label></li>
+        <li><input type="checkbox" id="s-rk" ${state.sites.rakuten?'checked':''}><label for="s-rk">楽天ビューティー</label></li>
+        <li><input type="checkbox" id="s-mn" ${state.sites.minimo?'checked':''}><label for="s-mn">minimo</label></li>
+        <li><input type="checkbox" id="s-ep" ${state.sites.epark?'checked':''}><label for="s-ep">EPARK Beauty</label></li>
+      </ul>
+    </div>
+    <div class="nav-bar">
+      <div></div>
+      <button class="btn btn-primary" onclick="saveStep0()">次へ:専用Gmail作成 →</button>
+    </div>
+  </div>`,
+  // 1
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">1</span>専用Gmail新規作成</h2>
+    <div class="step-sub">客の本業Gmailと分けるための専用アカウント。客の電話番号でSMS認証する。<span class="who-pill skeleton">Skeleton</span> 所要: 約10分</div>
+    <div class="box">
+      <h3>このサロン用に作るGmail</h3>
+      <div class="kv"><div class="k">アドレス候補</div><div class="v" id="suggestedGmail">skeleton.${state.salonCode||'(略号未設定)'}@gmail.com</div></div>
+      <div class="tip">パスワードは1Password等で管理。客には引き渡し時に渡す。</div>
+    </div>
+    <div class="box">
+      <h3>作業手順</h3>
+      <ol class="action-list">
+        <li><a href="https://accounts.google.com/signup" target="_blank" class="btn btn-link" style="font-size:13px;padding:7px 14px">Googleアカウント作成画面を開く →</a></li>
+        <li>姓: <code>${esc(state.salonName||'(サロン名)')}</code>、名: <code>予約通知</code> で入力</li>
+        <li>ユーザー名: <code>skeleton.${esc(state.salonCode||'(略号)')}</code> を入力(末尾 <code>@gmail.com</code> は自動)</li>
+        <li>パスワードを生成 → 下のフィールドに記録</li>
+        <li>電話番号認証 → <strong>客の電話番号 <code>${esc(state.clientPhone||'(未入力)')}</code></strong> を入力 → 客にSMSコード(6桁)を読み上げてもらう</li>
+        <li>生年月日・性別など適当に入力(代表者情報でOK)</li>
+        <li>作成完了 → 下に記録</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>記録</h3>
+      <div class="field"><label>作成したGmailアドレス</label><input id="i-gmail" value="${esc(state.gmail)}" placeholder="skeleton.${state.salonCode||'xxx'}@gmail.com"></div>
+      <div class="field"><label>パスワード(1Password にも保存)</label><input id="i-gmailPass" value="${esc(state.gmailPass)}" placeholder="生成パスワード"></div>
+    </div>
+    <div class="warn"><strong>2段階認証はこのタイミングで設定する</strong> — 客の電話番号で認証アプリ or SMS。乗っ取られ対策。</div>
+    <div class="warn"><strong>同一電話番号でGmail新規作成は3〜4個まで</strong>。客ごとに必ず客の番号で。</div>
+    <div class="nav-bar">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="saveStep1()">次へ:LINEビジネスID →</button>
+    </div>
+  </div>`,
+  // 2
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">2</span>LINEビジネスIDを客名義で作成</h2>
+    <div class="step-sub">LINE公式アカウントを作るための事業者ID。<span class="who-pill skeleton">Skeleton</span> 所要: 約10分</div>
+    <div class="box">
+      <h3>作業手順</h3>
+      <ol class="action-list">
+        <li><a href="https://www.lycbiz.com/jp/login/" target="_blank" class="btn btn-link" style="font-size:13px;padding:7px 14px">LINEヤフー for Business を開く →</a></li>
+        <li>「アカウント新規作成」 → 「メールアドレスで登録」</li>
+        <li>登録メールアドレス: <code>${esc(state.gmail||'(Step1のGmail)')}</code> を入力</li>
+        <li>パスワードはStep1のGmailと同じか、別途生成して1Passwordに保存</li>
+        <li>事業者情報入力 — 屋号: <code>${esc(state.salonName||'(サロン名)')}</code> / 住所: <code>${esc(state.address||'(住所)')}</code> / 代表者: <code>${esc(state.ownerName||'(代表者)')}</code></li>
+        <li>登録完了 → 下に記録</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>記録</h3>
+      <div class="field"><label>LINEビジネスIDのログインメール</label><input id="i-lineBizId" value="${esc(state.lineBizId||state.gmail)}" placeholder="${state.gmail||'登録メール'}"></div>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="saveStep2()">次へ:LINE公式アカウント作成 →</button>
+    </div>
+  </div>`,
+  // 3
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">3</span>LINE Official Account 作成</h2>
+    <div class="step-sub">通知を受け取る専用の公式LINE。<span class="who-pill skeleton">Skeleton</span> 所要: 約5分</div>
+    <div class="box">
+      <h3>このサロン用に作る公式アカウント</h3>
+      <div class="kv"><div class="k">アカウント名</div><div class="v">${esc(state.salonName||'(サロン名)')} 予約通知</div></div>
+    </div>
+    <div class="box">
+      <h3>作業手順</h3>
+      <ol class="action-list">
+        <li><a href="https://manager.line.biz/" target="_blank" class="btn btn-link" style="font-size:13px;padding:7px 14px">LINE Official Account Manager を開く →</a></li>
+        <li>Step2 のビジネスIDでログイン</li>
+        <li>「新規アカウント作成」をクリック</li>
+        <li>アカウント名: <code>${esc(state.salonName||'(サロン名)')} 予約通知</code></li>
+        <li>業種: 「美容・健康」→ 「サロン」</li>
+        <li>会社名: <code>${esc(state.salonName||'(サロン名)')}</code></li>
+        <li>作成 → アカウント一覧に表示されたら完了</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>記録</h3>
+      <div class="field"><label>作成したLINE公式アカウント名</label><input id="i-lineAccountName" value="${esc(state.lineAccountName||(state.salonName?state.salonName+' 予約通知':''))}" placeholder="${state.salonName||'サロン名'} 予約通知"></div>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="saveStep3()">次へ:トークン取得 →</button>
+    </div>
+  </div>`,
+  // 4
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">4</span>Messaging API有効化 + 長期トークン発行</h2>
+    <div class="step-sub">プログラムからLINEに通知を送るための鍵。<span class="who-pill skeleton">Skeleton</span> 所要: 約5分</div>
+    <div class="box">
+      <h3>作業手順</h3>
+      <ol class="action-list">
+        <li><a href="https://manager.line.biz/" target="_blank" class="btn btn-link" style="font-size:13px;padding:7px 14px">LINE Official Account Manager を開く →</a></li>
+        <li>左上で <code>${esc(state.lineAccountName||'(LINE公式)')}</code> を選択</li>
+        <li>右上「設定」(歯車) → 左メニュー「Messaging API」</li>
+        <li>「Messaging APIを利用する」をクリック → プロバイダー選択 or 新規作成 → 同意</li>
+        <li>有効化後、自動で <a href="https://developers.line.biz/console/" target="_blank">LINE Developers Console</a> に飛ぶ(飛ばなければ手動で開く)</li>
+        <li>「Messaging API設定」タブ → 下の方の「チャネルアクセストークン(長期)」セクション → <strong>「発行」ボタン</strong></li>
+        <li>発行された文字列(60〜200文字)をコピー → 下に貼り付け</li>
+        <li>続けて「応答設定」タブ → 応答メッセージ: オフ、Webhook: オン</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>記録</h3>
+      <div class="field"><label>チャネルアクセストークン(長期)</label><textarea id="i-lineToken" rows="3" placeholder="ここに発行されたトークンを貼り付け">${esc(state.lineToken)}</textarea><div class="hint">短期トークンはNG。必ず「長期」のボタンを押す</div></div>
+    </div>
+    <div class="warn"><strong>長期トークンの有効期限は最大期間で発行</strong> — 発行時に期間が選べる(デフォルト最大)。1Passwordにも保存。</div>
+    <div class="nav-bar">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="saveStep4()">次へ:グループID取得 →</button>
+    </div>
+  </div>`,
+  // 5
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">5</span>通知先LINEグループのID取得</h2>
+    <div class="step-sub">スタッフのLINEグループに公式LINEを参加させて、グループIDを取り出す。<span class="who-pill skeleton">Skeleton</span>+<span class="who-pill client">客</span> 所要: 約15分</div>
+    <div class="box">
+      <h3>事前準備</h3>
+      <ol class="action-list">
+        <li>客のスマホでスタッフ用LINEグループを作る(無ければ。グループ名: <code>${esc(state.salonName||'')} 予約通知</code>)</li>
+        <li>LINE Developers Console で「Messaging API設定」タブを開く → QRコード表示</li>
+        <li>客スタッフ全員にQRコードを読み込ませる → 公式LINEを友達追加</li>
+        <li>客のスマホで上記グループに公式LINE(<code>${esc(state.lineAccountName||'(LINE公式)')}</code>)を招待</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>グループID取得手順</h3>
+      <ol class="action-list">
+        <li><a href="https://webhook.site/" target="_blank" class="btn btn-link" style="font-size:13px;padding:7px 14px">webhook.site を開く →</a> 「Your unique URL」をコピー</li>
+        <li>LINE Developers Console の「Messaging API設定」→ Webhook URL欄に貼り付け → 「更新」 → 「Webhookの利用」をON</li>
+        <li>客にスタッフLINEグループで <strong>「テスト」</strong> と発言してもらう</li>
+        <li>webhook.site の左サイドにPOSTリクエストが届く → クリックしてJSON表示</li>
+        <li><code>"source"</code> 内の <code>"groupId": "C..."</code> をコピー(<strong>C</strong>始まりの32文字)</li>
+        <li>下に貼り付け</li>
+        <li>取得後 → LINE Developers のWebhook URLを<strong>空欄に戻して</strong> 「更新」、「Webhookの利用」をOFF</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>記録</h3>
+      <div class="field"><label>グループID</label><input id="i-groupId" value="${esc(state.groupId)}" placeholder="C で始まる32文字"></div>
+    </div>
+    <div class="warn"><strong>"userId" ではなく "groupId"</strong> を取ること。userIdだと個人通知になる。</div>
+    <div class="nav-bar">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="saveStep5()">次へ:GASマスタークローン →</button>
+    </div>
+  </div>`,
+  // 6
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">6</span>GASマスタープロジェクトをクローン</h2>
+    <div class="step-sub">Skeleton管理のマスター GAS を客用にコピー → 中身は次のStep 7で書き換える。<span class="who-pill skeleton">Skeleton</span> 所要: 約5分</div>
+    <div class="box">
+      <h3>作業手順</h3>
+      <ol class="action-list">
+        <li><strong>Skeleton管理のマスターGoogleアカウントでログイン</strong>している状態にする</li>
+        <li>マスター GAS プロジェクト(社内ナレッジから URL 取得)を開く<br><span style="font-size:12px;color:#888">※ Skeleton社内マスターGASのURLは <code>意思決定ログ/skeleton-master-gas.md</code> に記載予定</span></li>
+        <li>左上「📁 ファイル」→ 「コピーを作成」</li>
+        <li>プロジェクト名を <code>${esc(state.salonName||'(サロン名)')} ホットペッパー予約通知</code> にリネーム</li>
+        <li>左サイドバーで <code>Config.gs</code> を開く準備</li>
+      </ol>
+    </div>
+    <div class="note">コピー先は <strong>Skeleton管理アカウント</strong> のドライブでOK。後で共有URLで客に渡す。</div>
+    <div class="nav-bar">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="goNext()">次へ:Config.gs焼き込み →</button>
+    </div>
+  </div>`,
+  // 7
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">7</span>Config.gs に値を焼き込む</h2>
+    <div class="step-sub">ここまで取得した値を入れた Config.gs を自動生成。コピーしてGASに貼る。<span class="who-pill skeleton">Skeleton</span></div>
+    <div class="box">
+      <h3>生成された Config.gs</h3>
+      <div class="code-block"><button class="btn btn-copy code-block-copy" onclick="copyCode('config-out',this)">📋 コピー</button><span id="config-out">${escHtml(generateConfig())}</span></div>
+    </div>
+    <div class="box">
+      <h3>貼り付け手順</h3>
+      <ol class="action-list">
+        <li>GASエディタで <code>Config.gs</code> を開く</li>
+        <li>Cmd+A で全選択 → Delete</li>
+        <li>上の「📋 コピー」ボタンを押す</li>
+        <li>GASエディタにペースト(Cmd+V)</li>
+        <li>Cmd+S で保存</li>
+      </ol>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="goNext()">次へ:共有URL発行 →</button>
+    </div>
+  </div>`,
+  // 8
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">8</span>GAS共有URLを発行</h2>
+    <div class="step-sub">客がワンクリックで自分のドライブにコピーするためのURLを取る。<span class="who-pill skeleton">Skeleton</span> 所要: 約2分</div>
+    <div class="box">
+      <h3>作業手順</h3>
+      <ol class="action-list">
+        <li>GASエディタ右上「共有」ボタン</li>
+        <li>「リンクを取得」セクションで <strong>「制限付き」 → 「リンクを知っている全員」</strong> に変更</li>
+        <li>権限は <strong>「閲覧者」</strong> にする(編集者にすると客がマスターを壊せる)</li>
+        <li>「リンクをコピー」 → 下に貼り付け</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>記録</h3>
+      <div class="field"><label>GAS共有URL</label><input id="i-gasShareUrl" value="${esc(state.gasShareUrl)}" placeholder="https://script.google.com/d/..."></div>
+    </div>
+    <div class="warn"><strong>必ず「閲覧者」</strong> — 編集権限で渡すと客がマスターを書き換えるリスク。「コピーを作成」は閲覧者でもできる。</div>
+    <div class="nav-bar">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="saveStep8()">次へ:引き渡しシート →</button>
+    </div>
+  </div>`,
+  // 9
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">9</span>引き渡しシートを作る</h2>
+    <div class="step-sub">客に渡す情報一式。Google Sheetsにコピペで完成。<span class="who-pill skeleton">Skeleton</span> 所要: 約5分</div>
+    <div class="box">
+      <h3>引き渡し内容(自動生成)</h3>
+      <div class="code-block"><button class="btn btn-copy code-block-copy" onclick="copyCode('handover',this)">📋 コピー</button><span id="handover">${escHtml(generateHandover())}</span></div>
+    </div>
+    <div class="box">
+      <h3>作業手順</h3>
+      <ol class="action-list">
+        <li>客台帳の Google Sheets を開く(Skeleton社内マスター)</li>
+        <li>新規タブを作成 → タブ名: <code>${esc(state.salonName||'(サロン名)')}</code></li>
+        <li>上の「📋 コピー」を押して内容を貼り付け</li>
+        <li>このタブのURLを当日プレゼンで使う</li>
+      </ol>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="goNext()">次へ:当日の客作業 →</button>
+    </div>
+  </div>`,
+  // 10
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">10</span>当日:客作業(画面共有しながら隣で見る)</h2>
+    <div class="step-sub">ここからは現場。客のPCで操作する。<span class="who-pill client">客</span> 所要: 5〜10分</div>
+    <div class="box">
+      <h3>① 客のPCで専用Gmailにログイン</h3>
+      <ol class="action-list">
+        <li><a href="https://gmail.com" target="_blank" class="btn btn-link" style="font-size:13px;padding:7px 14px">Gmail を開く →</a></li>
+        <li>Step1で作ったメールアドレス <code>${esc(state.gmail||'(専用Gmail)')}</code> でログイン</li>
+        <li>パスワード(引き渡しシート参照)</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>② GAS共有URLを開く → コピーを作成</h3>
+      <ol class="action-list">
+        <li>引き渡しシートのGAS共有URLをクリック<br>${state.gasShareUrl?`<a href="${esc(state.gasShareUrl)}" target="_blank" class="btn btn-link" style="font-size:12px;padding:6px 12px;margin-top:6px">${esc(state.gasShareUrl)}</a>`:'<div style="color:#888;font-size:12.5px">(Step 8で発行)</div>'}</li>
+        <li>GASエディタ画面右上「📁 ファイル」 → 「<strong>コピーを作成</strong>」</li>
+        <li>「OK」を押すと客のドライブに複製される</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>③ 認可ダイアログ → installTriggers実行</h3>
+      <ol class="action-list">
+        <li>GAS上部の関数選択ドロップダウンで <code>installTriggers</code> を選択</li>
+        <li>「▶ 実行」をクリック</li>
+        <li>「権限を確認」ダイアログが出る → 「権限を確認」</li>
+        <li>客のGoogleアカウントを選択 → 「<strong>詳細</strong>」をクリック → 「(プロジェクト名)に移動」 → 「許可」</li>
+        <li>実行完了 → 実行ログに「✅ トリガー設定完了」表示</li>
+      </ol>
+      <div class="warn"><strong>「このアプリは認証されていません」警告</strong>が出ても、「詳細」→「(プロジェクト名)に移動」で進めてOK(自作プロジェクトだから安全)</div>
+    </div>
+    <div class="box">
+      <h3>④ setupSiteCalendars実行 → サイト別カレンダー自動作成</h3>
+      <ol class="action-list">
+        <li>関数選択 → <code>setupSiteCalendars</code></li>
+        <li>「▶ 実行」</li>
+        <li>客のGoogleカレンダーに🔴ホッペ/🌸楽天/🟢minimo/🔵EPARKの4カレンダーができる</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>⑤ testLine実行 → スタッフLINEに着信確認</h3>
+      <ol class="action-list">
+        <li>関数選択 → <code>testLine</code> → 「▶ 実行」</li>
+        <li>スタッフLINEグループに「✅ テスト通知」が届けばOK</li>
+      </ol>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="goNext()">次へ:サロンボード設定 →</button>
+    </div>
+  </div>`,
+  // 11
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">11</span>サロンボード送信先変更</h2>
+    <div class="step-sub">予約通知メールの送信先を専用Gmailに切り替える。<span class="who-pill client">客</span>+<span class="who-pill skeleton">Skeleton</span>同席 所要: 5分</div>
+    <div class="box">
+      <h3>ホットペッパー(サロンボード)</h3>
+      <ol class="action-list">
+        <li><a href="https://salonboard.com/" target="_blank" class="btn btn-link" style="font-size:13px;padding:7px 14px">サロンボードを開く →</a></li>
+        <li>客のID/PWでログイン(画面共有しながら客自身に入力してもらう)</li>
+        <li>「店舗設定」or「メール設定」を開く</li>
+        <li>予約通知メール送信先を <code>${esc(state.gmail||'(専用Gmail)')}</code> に変更</li>
+        <li>「保存」</li>
+      </ol>
+    </div>
+    ${state.sites.rakuten?`<div class="box"><h3>楽天ビューティー</h3><ol class="action-list"><li>楽天ビューティー管理画面で同じく送信先メールを <code>${esc(state.gmail||'(専用Gmail)')}</code> に変更</li></ol></div>`:''}
+    ${state.sites.minimo?`<div class="box"><h3>minimo</h3><ol class="action-list"><li>minimo管理画面で送信先メールを <code>${esc(state.gmail||'(専用Gmail)')}</code> に変更</li></ol></div>`:''}
+    ${state.sites.epark?`<div class="box"><h3>EPARK Beauty</h3><ol class="action-list"><li>EPARK管理画面で送信先メールを <code>${esc(state.gmail||'(専用Gmail)')}</code> に変更</li></ol></div>`:''}
+    <div class="nav-bar">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="goNext()">次へ:動作確認 →</button>
+    </div>
+  </div>`,
+  // 12
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">12</span>動作確認(納品判定)</h2>
+    <div class="step-sub">テスト予約1件を投入して全部通すまで「完成」と言わない。<span class="who-pill skeleton">Skeleton</span> 所要: 10分</div>
+    <div class="box">
+      <h3>テスト予約投入</h3>
+      <ol class="action-list">
+        <li>ホットペッパービューティー(顧客視点)を別タブで開く</li>
+        <li>テスト予約: 顧客名「テスト 太郎」、日時: 明日以降、メニュー: カット、担当: 代表者</li>
+        <li>予約完了</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>4点チェック</h3>
+      <ul class="checklist">
+        <li><input type="checkbox" id="v-1"><label for="v-1"><strong>1分以内</strong>に専用Gmailに予約通知メール着信</label></li>
+        <li><input type="checkbox" id="v-2"><label for="v-2"><strong>1分以内</strong>にスタッフLINEグループに通知着弾</label></li>
+        <li><input type="checkbox" id="v-3"><label for="v-3">Googleカレンダーの🔴ホッペカレンダーにイベント追加</label></li>
+        <li><input type="checkbox" id="v-4"><label for="v-4">顧客名/日時/メニュー/担当が「⚠️取得失敗」ではなく正しい値</label></li>
+      </ul>
+    </div>
+    <div class="warn"><strong>1つでも✗があれば納品しない</strong>。原因究明してから引き渡し。</div>
+    <div class="nav-bar">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="goNext()">次へ:完了 →</button>
+    </div>
+  </div>`,
+  // 13
+  ()=>`<div class="step-content">
+    <h2><span class="step-num">✓</span>完了 🎉</h2>
+    <div class="step-sub">納品完了。客台帳に記録 + 月次保守の予定組む。</div>
+    <div class="box">
+      <h3>引き渡しチェックリスト</h3>
+      <ul class="checklist">
+        <li><input type="checkbox" id="c-1"><label for="c-1">引き渡しシート(Step9のSheetsタブ)のURLを客に送付</label></li>
+        <li><input type="checkbox" id="c-2"><label for="c-2">スタッフ全員のLINEで「予約通知が来る」状態を確認</label></li>
+        <li><input type="checkbox" id="c-3"><label for="c-3">「通知止まったらSkeleton連絡」のサポート窓口を伝達</label></li>
+        <li><input type="checkbox" id="c-4"><label for="c-4">客台帳マスターに本案件を1行追加(納品日/プラン/月次保守の有無)</label></li>
+        <li><input type="checkbox" id="c-5"><label for="c-5">LINEトークン期限カレンダーに登録(60日後を目安)</label></li>
+        <li><input type="checkbox" id="c-6"><label for="c-6">月次レポート発行日(月初)をカレンダー登録</label></li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>このサロンの引き渡し情報サマリー</h3>
+      <div class="kv">
+        <div class="k">サロン名</div><div class="v">${esc(state.salonName)}</div>
+        <div class="k">専用Gmail</div><div class="v">${esc(state.gmail)}</div>
+        <div class="k">LINE公式</div><div class="v">${esc(state.lineAccountName)}</div>
+        <div class="k">GAS共有URL</div><div class="v" style="font-size:11px">${esc(state.gasShareUrl)}</div>
+      </div>
+    </div>
+    <div class="note">お疲れさま。次の案件もこのウィザードで進められる。</div>
+    <div class="nav-bar">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-link" onclick="resetAll()">次の案件を開始 →</button>
+    </div>
+  </div>`
+];
+
+function esc(s){return(s||'').toString().replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function escHtml(s){return(s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function generateConfig(){
+  const sites=Object.entries(state.sites).filter(([k,v])=>v).map(([k])=>k);
+  return `/**
+ * ${state.salonName||'(サロン名)'} 予約通知ツール 設定
+ * Generated by Skeleton onboarding-wizard
+ */
+const CONFIG = {
+  LINE_CHANNEL_ACCESS_TOKEN: '${state.lineToken||'（Step4で取得）'}',
+
+  LINE_TO_IDS: [
+    '${state.groupId||'（Step5で取得）'}'
+  ],
+
+  SALON_NAME: '${state.salonName||''}',
+
+  // サイト別カレンダーは setupSiteCalendars() 実行で自動作成される
+  CALENDAR_IDS: {
+    hotpepper: '',
+    rakuten:   '',
+    minimo:    '',
+    epark:     ''
+  },
+
+  // 既知バグ回避: FROM_ADDRESS は空のまま
+  FROM_ADDRESS: '',
+
+  // 監視対象サイト
+  ENABLED_SITES: ${JSON.stringify(sites)},
+
+  PROCESSED_LABEL: 'HotPepper-処理済み',
+  ENABLE_HEALTHCHECK: true,
+  ENABLE_MONTHLY_REPORT: true
+};`;
+}
+
+function generateHandover(){
+  return `■ ${state.salonName||'(サロン名)'} 様 ホットペッパーLINEツール 引き渡し情報
+
+【専用Gmail】
+  アドレス: ${state.gmail||''}
+  パスワード: ${state.gmailPass||''}
+  ※2段階認証あり(客電話 ${state.clientPhone||''})
+
+【LINE公式アカウント】
+  アカウント名: ${state.lineAccountName||''}
+  管理画面: https://manager.line.biz/
+  ログイン: ${state.lineBizId||state.gmail||''}
+
+【GAS(予約通知ツール本体)】
+  共有URL(コピー用): ${state.gasShareUrl||''}
+  ※当日このURLを開いて「コピーを作成」ボタンを押す
+
+【納品手順】
+  1) 専用Gmailにログイン
+  2) GAS共有URLを開く → コピーを作成
+  3) installTriggers 関数を実行 → 認可
+  4) setupSiteCalendars 関数を実行
+  5) testLine 関数を実行 → スタッフLINEで着信確認
+
+【サポート窓口】
+  Skeleton Inc. / hello@skeleton.example
+  通知が止まった/おかしい時はご連絡ください`;
+}
+
+function render(){
+  const i=state.cur;
+  document.getElementById('step-container').innerHTML=STEPS[i]();
+  document.querySelectorAll('#step-list li').forEach((li,idx)=>{
+    li.classList.toggle('active',idx===i);
+    li.classList.toggle('done',!!state.done[idx]&&idx!==i);
   });
+  document.getElementById('progress-bar').style.width=((i)/(STEPS.length-1)*100)+'%';
+  window.scrollTo(0,0);
+}
+function goNext(){state.done[state.cur]=true;state.cur=Math.min(state.cur+1,STEPS.length-1);save();render()}
+function goPrev(){state.cur=Math.max(state.cur-1,0);save();render()}
+
+function saveStep0(){
+  state.salonName=val('i-salonName');
+  state.salonCode=val('i-salonCode').toLowerCase().replace(/[^a-z0-9]/g,'');
+  state.ownerName=val('i-ownerName');
+  state.clientPhone=val('i-clientPhone');
+  state.address=val('i-address');
+  state.staffCount=val('i-staffCount');
+  state.sites={hotpepper:document.getElementById('s-hp').checked,rakuten:document.getElementById('s-rk').checked,minimo:document.getElementById('s-mn').checked,epark:document.getElementById('s-ep').checked};
+  if(!state.salonName||!state.salonCode){alert('サロン名と略号は必須');return}
+  goNext();
+}
+function saveStep1(){state.gmail=val('i-gmail');state.gmailPass=val('i-gmailPass');goNext()}
+function saveStep2(){state.lineBizId=val('i-lineBizId');goNext()}
+function saveStep3(){state.lineAccountName=val('i-lineAccountName');goNext()}
+function saveStep4(){state.lineToken=val('i-lineToken');goNext()}
+function saveStep5(){state.groupId=val('i-groupId');goNext()}
+function saveStep8(){state.gasShareUrl=val('i-gasShareUrl');goNext()}
+function val(id){return(document.getElementById(id)||{}).value||''}
+
+function copyCode(id,btn){
+  const t=document.getElementById(id).innerText;
+  navigator.clipboard.writeText(t).then(()=>{
+    btn.textContent='✓ コピーしました';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='📋 コピー';btn.classList.remove('copied')},1800);
+  });
+}
+
+document.querySelectorAll('#step-list li').forEach(li=>{
+  li.addEventListener('click',()=>{state.cur=parseInt(li.dataset.step);save();render()});
+});
+render();
 </script>
 </body>
 </html>
