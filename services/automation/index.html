@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>自動化ラボ — Skeleton Inc.</title>
+<meta name="description" content="店舗運営の手間をソフトウェアで削る。Skeleton自動化ラボのSaaS事業。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#050810;
+  --bg2:#0a0f1a;
+  --fg:#e6f7ff;
+  --cyan:#00d9ff;
+  --green:#00ff88;
+  --pink:#c44569;
+  --muted:#5a7a8a;
+}
+html{scroll-behavior:smooth;background:var(--bg);overflow-x:hidden}
+body{font-family:'Inter','Noto Sans JP',sans-serif;background:var(--bg);color:var(--fg);line-height:1.65;-webkit-font-smoothing:antialiased}
+
+/* グリッド背景 */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:
+    linear-gradient(rgba(0,217,255,.04) 1px,transparent 1px) 0 0/60px 60px,
+    linear-gradient(90deg,rgba(0,217,255,.04) 1px,transparent 1px) 0 0/60px 60px;
+  z-index:-1;
+  mask-image:radial-gradient(ellipse at center,#000 30%,transparent 80%);
+}
+
+/* Nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:20px 40px;display:flex;justify-content:space-between;align-items:center;transition:all .35s;border-bottom:1px solid transparent}
+nav.scrolled{padding:14px 40px;background:rgba(5,8,16,.85);backdrop-filter:blur(20px);border-bottom-color:rgba(0,217,255,.12)}
+nav .back{font-family:'JetBrains Mono';font-size:12px;color:#88a0b0;text-decoration:none;letter-spacing:.1em;transition:color .2s;display:flex;align-items:center;gap:8px}
+nav .back:hover{color:var(--cyan)}
+nav .logo{font-family:'Inter';font-weight:900;font-size:18px;letter-spacing:-.03em;color:#fff;text-decoration:none}
+nav .badge{font-family:'JetBrains Mono';font-size:10px;color:var(--cyan);border:1px solid var(--cyan);padding:4px 10px;border-radius:20px;letter-spacing:.15em;background:rgba(0,217,255,.05)}
+@media(max-width:768px){nav,nav.scrolled{padding:14px 22px}.badge{display:none}}
+
+.container{max-width:1280px;margin:0 auto;padding:0 40px}
+@media(max-width:768px){.container{padding:0 22px}}
+
+/* Hero */
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;overflow:hidden;padding:120px 0 80px}
+.hero .glow{position:absolute;width:900px;height:900px;border-radius:50%;background:radial-gradient(circle,rgba(0,217,255,.18),transparent 60%);top:-200px;right:-300px;filter:blur(40px);animation:floatGlow 12s ease-in-out infinite}
+.hero .glow.g2{background:radial-gradient(circle,rgba(0,255,136,.15),transparent 60%);top:auto;bottom:-200px;left:-200px;right:auto;animation-duration:16s}
+@keyframes floatGlow{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,-50px)}}
+
+.hero .tag{display:inline-flex;align-items:center;gap:12px;font-family:'JetBrains Mono';font-size:11px;color:var(--cyan);letter-spacing:.3em;text-transform:uppercase;border:1px solid rgba(0,217,255,.35);padding:8px 16px;border-radius:30px;margin-bottom:32px;background:rgba(0,217,255,.05)}
+.hero .tag::before{content:'';width:6px;height:6px;background:var(--cyan);border-radius:50%;box-shadow:0 0 12px var(--cyan);animation:blink 1.5s ease-in-out infinite}
+@keyframes blink{50%{opacity:.3}}
+.hero h1{font-family:'Inter';font-weight:900;font-size:clamp(48px,9vw,140px);letter-spacing:-.05em;line-height:.95;margin-bottom:32px;color:#fff}
+.hero h1 .cyan{background:linear-gradient(135deg,#fff,var(--cyan));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero .jp{font-family:'Noto Sans JP';font-weight:700;font-size:clamp(22px,3vw,36px);color:#aab8c0;margin-bottom:36px;letter-spacing:.02em;line-height:1.4}
+.hero .lead{font-family:'Noto Sans JP';font-size:17px;color:#aab8c0;max-width:620px;line-height:2;margin-bottom:46px}
+.hero .lead strong{color:#fff}
+.hero .ctas{display:flex;gap:14px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:12px;padding:16px 32px;border-radius:50px;font-weight:600;font-size:14px;text-decoration:none;transition:all .25s;letter-spacing:.02em}
+.btn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s}
+.btn:hover svg{transform:translateX(5px)}
+.btn.primary{background:linear-gradient(135deg,var(--cyan),var(--green));color:#000;font-weight:700;box-shadow:0 12px 30px rgba(0,217,255,.3)}
+.btn.primary:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(0,217,255,.5)}
+.btn.secondary{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.2)}
+.btn.secondary:hover{border-color:var(--cyan);color:var(--cyan)}
+
+/* Code preview */
+.code-preview{margin-top:60px;background:rgba(10,15,26,.7);border:1px solid rgba(0,217,255,.2);border-radius:16px;padding:30px;font-family:'JetBrains Mono';font-size:13px;line-height:1.9;max-width:680px;backdrop-filter:blur(10px);box-shadow:0 30px 80px rgba(0,217,255,.08)}
+.code-preview .dots{display:flex;gap:8px;margin-bottom:18px}
+.code-preview .dots span{width:12px;height:12px;border-radius:50%}
+.code-preview .dots span:nth-child(1){background:#ff5f56}
+.code-preview .dots span:nth-child(2){background:#ffbd2e}
+.code-preview .dots span:nth-child(3){background:#27c93f}
+.code-preview .line .ln{color:#456;display:inline-block;width:28px}
+.code-preview .green{color:var(--green)}
+.code-preview .cyan{color:var(--cyan)}
+.code-preview .pink{color:#ff79c6}
+.code-preview .gray{color:#6a8a9a}
+
+/* Sections */
+section{padding:140px 0;position:relative}
+@media(max-width:768px){section{padding:90px 0}}
+.eyebrow{display:inline-flex;align-items:center;gap:14px;font-family:'JetBrains Mono';font-size:11px;color:var(--cyan);text-transform:uppercase;font-weight:500;letter-spacing:.3em;margin-bottom:24px}
+.eyebrow::before{content:'';width:32px;height:1px;background:var(--cyan)}
+.s-title{font-family:'Inter';font-weight:800;font-size:clamp(40px,5.5vw,72px);letter-spacing:-.03em;line-height:1.05;color:#fff;margin-bottom:24px}
+.s-title.jp{font-family:'Noto Sans JP'}
+.s-title .accent{background:linear-gradient(135deg,var(--cyan),var(--green));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.s-lead{font-family:'Noto Sans JP';font-size:16px;color:#88a0b0;line-height:2;max-width:680px;margin-bottom:70px}
+
+/* Features grid */
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.feature{background:rgba(0,217,255,.03);border:1px solid rgba(0,217,255,.1);border-radius:18px;padding:32px 28px;transition:all .35s;position:relative;overflow:hidden}
+.feature::before{content:'';position:absolute;top:0;left:0;width:100%;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);transform:scaleX(0);transition:transform .4s}
+.feature:hover{background:rgba(0,217,255,.06);border-color:rgba(0,217,255,.3);transform:translateY(-4px)}
+.feature:hover::before{transform:scaleX(1)}
+.feature .ic{width:48px;height:48px;background:rgba(0,217,255,.1);border:1px solid rgba(0,217,255,.25);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.feature .ic svg{width:22px;height:22px;stroke:var(--cyan);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.feature h3{font-size:18px;font-weight:700;color:#fff;margin-bottom:12px}
+.feature p{font-family:'Noto Sans JP';font-size:14px;color:#88a0b0;line-height:1.9}
+
+/* Timeline */
+.timeline{position:relative;padding-left:50px;max-width:780px}
+.timeline::before{content:'';position:absolute;left:18px;top:0;bottom:0;width:1px;background:linear-gradient(180deg,var(--cyan),transparent)}
+.tl-item{position:relative;margin-bottom:50px}
+.tl-item::before{content:'';position:absolute;left:-40px;top:8px;width:14px;height:14px;background:var(--bg);border:2px solid var(--cyan);border-radius:50%;box-shadow:0 0 16px var(--cyan)}
+.tl-item .step{font-family:'JetBrains Mono';font-size:11px;color:var(--cyan);letter-spacing:.25em;margin-bottom:10px}
+.tl-item h4{font-size:20px;font-weight:700;color:#fff;margin-bottom:8px}
+.tl-item p{font-family:'Noto Sans JP';font-size:14px;color:#88a0b0;line-height:1.9}
+
+/* Plans */
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.plan{position:relative;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:36px 30px;transition:all .35s}
+.plan.featured{border-color:rgba(0,217,255,.4);background:rgba(0,217,255,.05);box-shadow:0 30px 80px rgba(0,217,255,.15)}
+.plan.featured::before{content:'POPULAR';position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--cyan),var(--green));color:#000;font-family:'JetBrains Mono';font-size:10px;font-weight:700;padding:5px 14px;border-radius:20px;letter-spacing:.2em}
+.plan .pname{font-family:'JetBrains Mono';font-size:12px;letter-spacing:.25em;color:var(--cyan);text-transform:uppercase;margin-bottom:14px}
+.plan .price{display:flex;align-items:baseline;gap:6px;margin-bottom:8px}
+.plan .price .v{font-family:'Inter';font-weight:300;font-size:48px;color:#fff;letter-spacing:-.03em}
+.plan .price .u{font-size:14px;color:#88a0b0}
+.plan .quota{font-size:13px;color:#88a0b0;margin-bottom:24px;font-family:'Noto Sans JP'}
+.plan ul{list-style:none;margin-bottom:30px}
+.plan ul li{font-family:'Noto Sans JP';font-size:14px;color:#cce4ef;padding:8px 0;display:flex;gap:10px;align-items:flex-start}
+.plan ul li::before{content:'✓';color:var(--green);font-weight:bold;flex-shrink:0}
+.plan .cta{display:block;text-align:center;padding:14px;border-radius:30px;font-weight:600;font-size:13px;text-decoration:none;transition:all .25s;background:rgba(255,255,255,.05);color:#fff;border:1px solid rgba(255,255,255,.1)}
+.plan.featured .cta{background:linear-gradient(135deg,var(--cyan),var(--green));color:#000;font-weight:700;border:none}
+.plan:hover .cta{transform:translateY(-2px)}
+
+/* CTA */
+.cta-band{margin-top:120px;padding:100px 60px;background:radial-gradient(circle at 50% 50%,rgba(0,217,255,.18),transparent 60%),rgba(0,217,255,.04);border:1px solid rgba(0,217,255,.2);border-radius:28px;text-align:center}
+@media(max-width:768px){.cta-band{padding:60px 30px}}
+.cta-band h3{font-family:'Noto Sans JP';font-weight:700;font-size:clamp(28px,4.5vw,48px);color:#fff;margin-bottom:36px;line-height:1.4}
+
+/* Footer */
+footer{padding:80px 0 40px;border-top:1px solid rgba(0,217,255,.08);margin-top:80px;background:#03060c}
+.foot{display:grid;grid-template-columns:2fr 1fr 1fr;gap:50px;margin-bottom:50px}
+@media(max-width:768px){.foot{grid-template-columns:1fr;gap:30px}}
+.foot .logo{font-family:'Inter';font-weight:900;font-size:28px;letter-spacing:-.03em;color:#fff;margin-bottom:12px}
+.foot .tag{font-size:13px;color:#5a7a8a;line-height:1.8;max-width:320px}
+.foot-col h4{font-family:'JetBrains Mono';font-size:11px;letter-spacing:.25em;color:var(--cyan);text-transform:uppercase;margin-bottom:18px}
+.foot-col a,.foot-col p{display:block;color:#88a0b0;font-size:13px;text-decoration:none;margin-bottom:10px}
+.foot-col a:hover{color:var(--cyan)}
+.foot-bottom{padding-top:24px;border-top:1px solid rgba(0,217,255,.06);font-size:11px;color:#456;letter-spacing:.05em;text-align:center}
+
+/* Reveal */
+.reveal{opacity:0;transform:translateY(40px);transition:opacity 1s cubic-bezier(.16,1,.3,1),transform 1s cubic-bezier(.16,1,.3,1)}
+.reveal.in{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <a href="../../" class="back">← Skeleton Inc.</a>
+  <a href="../../" class="logo">SKELETON</a>
+  <span class="badge">SaaS / Automation Lab</span>
+</nav>
+
+<section class="hero">
+  <div class="glow"></div>
+  <div class="glow g2"></div>
+  <div class="container">
+    <div class="tag">事業 01 / 自動化ラボ</div>
+    <h1>店舗の手間を、<br><span class="cyan">ソフトで削る。</span></h1>
+    <p class="jp">Automation Lab — Business Tools for SMB</p>
+    <p class="lead">
+      ホットペッパー予約 → スタッフLINE通知ツール、サロンボード送信先変更ツール、各種定期ジョブ。<br>
+      <strong>現場で本当に削れる手間</strong>だけを、月額制で提供します。
+    </p>
+    <div class="ctas">
+      <a href="../../setup/apply-form.html" class="btn primary">申込フォーム<svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></a>
+      <a href="#features" class="btn secondary">機能を見る</a>
+    </div>
+
+    <div class="code-preview">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="line"><span class="ln">1</span> <span class="gray">// Config.gs — 客ごとに焼き込み済</span></div>
+      <div class="line"><span class="ln">2</span> <span class="pink">const</span> <span class="cyan">CONFIG</span> = {</div>
+      <div class="line"><span class="ln">3</span>   <span class="green">LINE_CHANNEL_ACCESS_TOKEN</span>: <span class="cyan">'長期トークン'</span>,</div>
+      <div class="line"><span class="ln">4</span>   <span class="green">LINE_TO_IDS</span>: [<span class="cyan">'C...グループID'</span>],</div>
+      <div class="line"><span class="ln">5</span>   <span class="green">SALON_NAME</span>: <span class="cyan">'BLOOM'</span>,</div>
+      <div class="line"><span class="ln">6</span>   <span class="green">ENABLE_HEALTHCHECK</span>: <span class="pink">true</span>,</div>
+      <div class="line"><span class="ln">7</span> };</div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <div class="container">
+    <div class="eyebrow reveal">Features</div>
+    <h2 class="s-title jp reveal">5つの<span class="accent">機能</span>。</h2>
+    <p class="s-lead reveal">単機能を5つ束ねた、現場特化のSaaSです。サロン業界での実運用で揉まれた仕様。</p>
+
+    <div class="features">
+      <div class="feature reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+        <h3>1分以内のLINE通知</h3>
+        <p>予約メール受信 → 1分以内にスタッフのLINEグループに通知。遅延ゼロを目指す設計。</p>
+      </div>
+      <div class="feature reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+        <h3>Googleカレンダー自動登録</h3>
+        <p>予約日時・顧客名・メニュー・担当を含むイベントを自動作成。キャンセル時は自動削除。</p>
+      </div>
+      <div class="feature reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg></div>
+        <h3>4サイト同時監視</h3>
+        <p>ホットペッパー / 楽天 / minimo / EPARK の4予約サイトをまとめて1つのGmailで監視。</p>
+      </div>
+      <div class="feature reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <h3>週次ヘルスチェック</h3>
+        <p>毎週月曜9時、過去7日の処理件数と稼働状況をLINEにサマリー送信。「動いてるか不安」を解消。</p>
+      </div>
+      <div class="feature reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div>
+        <h3>fixAndDiagnose</h3>
+        <p>1コマンドで全機能の動作診断 + 4サイトのテスト予約を投入。納品時の動作確認に使用。</p>
+      </div>
+      <div class="feature reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <h3>月次レポート</h3>
+        <p>月初に「先月の予約件数・キャンセル率・人気メニュー」をLINEで配信。経営判断のヒントに。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section>
+  <div class="container">
+    <div class="eyebrow reveal">How it works</div>
+    <h2 class="s-title jp reveal">導入の<span class="accent">5ステップ</span>。</h2>
+    <p class="s-lead reveal">申込から本番稼働まで、Skeleton側で進められるところは全部代行します。</p>
+
+    <div class="timeline reveal">
+      <div class="tl-item">
+        <div class="step">STEP 01 / 申込時</div>
+        <h4>申込フォームに記入</h4>
+        <p>客は申込フォーム(マルチステップ式・約5分)で必要情報を入力。サロン情報・予約サイト・既存メアド等を申告。</p>
+      </div>
+      <div class="tl-item">
+        <div class="step">STEP 02 / 準備期間</div>
+        <h4>専用Gmail・LINE公式アカウント開設</h4>
+        <p>客が用意する形(画像つきマニュアルあり)。Skeleton側でGAS構築のための鍵類を準備。</p>
+      </div>
+      <div class="tl-item">
+        <div class="step">STEP 03 / 客のドライブにGASクローン</div>
+        <h4>6ファイルをコピペで配置</h4>
+        <p>Config.gsには申込内容(LINEトークン・グループID)が事前焼き込み済み。手書きゼロでセットアップ。</p>
+      </div>
+      <div class="tl-item">
+        <div class="step">STEP 04 / 当日納品</div>
+        <h4>15分の現場作業で稼働開始</h4>
+        <p>installTriggers実行 → setupSiteCalendars実行 → fixAndDiagnose で動作確認。LINEに4種類のテスト通知が届けば完了。</p>
+      </div>
+      <div class="tl-item">
+        <div class="step">STEP 05 / 納品後</div>
+        <h4>月次保守 + サポート</h4>
+        <p>稼働状況の監視・LINEトークン期限管理・パーサ更新・トラブル対応はすべてSkeleton側。客は通知を受け取るだけ。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Plans -->
+<section>
+  <div class="container">
+    <div class="eyebrow reveal">Pricing</div>
+    <h2 class="s-title jp reveal">プラン<span class="accent">料金</span>。</h2>
+    <p class="s-lead reveal">月額制。長期契約・最低利用期間なし。最初の月は<b style="color:var(--green)">デモ無料</b>で動作確認OK。</p>
+
+    <div class="plans">
+      <div class="plan reveal">
+        <div class="pname">Plan A</div>
+        <div class="price"><span class="v">¥6,980</span><span class="u">/ 月</span></div>
+        <div class="quota">月200通まで通知</div>
+        <ul>
+          <li>ホットペッパー監視</li>
+          <li>1分以内LINE通知</li>
+          <li>Googleカレンダー登録</li>
+          <li>週次ヘルスチェック</li>
+          <li>メールサポート</li>
+        </ul>
+        <a href="../../setup/apply-form.html" class="cta">申し込む →</a>
+      </div>
+      <div class="plan featured reveal">
+        <div class="pname">Plan B</div>
+        <div class="price"><span class="v">¥13,800</span><span class="u">/ 月</span></div>
+        <div class="quota">月5,000通まで通知</div>
+        <ul>
+          <li>Plan A の全機能</li>
+          <li>4予約サイト同時監視</li>
+          <li>月次レポート配信</li>
+          <li>カスタムフィルタ</li>
+          <li>優先サポート</li>
+        </ul>
+        <a href="../../setup/apply-form.html" class="cta">申し込む →</a>
+      </div>
+      <div class="plan reveal">
+        <div class="pname">Plan C</div>
+        <div class="price"><span class="v">¥18,800</span><span class="u">/ 月</span></div>
+        <div class="quota">月30,000通まで通知</div>
+        <ul>
+          <li>Plan B の全機能</li>
+          <li>多店舗・スタッフ管理</li>
+          <li>API カスタマイズ</li>
+          <li>個別案件対応</li>
+          <li>専任サポート</li>
+        </ul>
+        <a href="../../setup/apply-form.html" class="cta">申し込む →</a>
+      </div>
+    </div>
+
+    <div class="cta-band reveal" style="margin-top:80px">
+      <h3>30秒で始められる。<br>まずデモから。</h3>
+      <a href="../../setup/apply-form.html" class="btn primary">無料デモを申し込む<svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="foot">
+      <div>
+        <div class="logo">SKELETON</div>
+        <p class="tag">事業を骨格から組み立てる。<br>業務効率化SaaS × エステ × EC物販。</p>
+      </div>
+      <div class="foot-col">
+        <h4>Services</h4>
+        <a href="../automation/">自動化ラボ</a>
+        <a href="../idealskin/">IDEAL SKIN</a>
+        <a href="../commerce/">物販・代行</a>
+      </div>
+      <div class="foot-col">
+        <h4>Contact</h4>
+        <a href="mailto:t3.5ty6@gmail.com">t3.5ty6@gmail.com</a>
+        <p>福井県大野市</p>
+      </div>
+    </div>
+    <div class="foot-bottom">© 2026 SKELETON INC. ALL RIGHTS RESERVED.</div>
+  </div>
+</footer>
+
+<script>
+const nav=document.getElementById('nav');
+addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>30));
+const io=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>
