@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skeleton SP-API 認可コード受取</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #222; line-height: 1.6; }
+  h1 { color: #f5a623; border-bottom: 3px solid #f5a623; padding-bottom: 8px; }
+  .box { background: #fff8e0; border: 1px solid #f5cc7a; border-radius: 8px; padding: 16px; margin: 16px 0; }
+  .code { background: #1e1e1e; color: #4ade80; padding: 12px; border-radius: 6px; font-family: "SF Mono", Menlo, monospace; font-size: 12px; word-break: break-all; user-select: all; }
+  .label { font-size: 12px; color: #666; font-weight: 600; margin-top: 12px; }
+  .err { background: #fee; border-color: #f99; color: #900; }
+  button { background: #f5a623; color: #fff; border: 0; padding: 10px 20px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 14px; }
+  button:hover { background: #f39200; }
+  .copied { color: #16a34a; font-weight: 700; margin-left: 12px; display: none; }
+</style>
+</head>
+<body>
+
+<h1>Skeleton SP-API 認可コード受取</h1>
+
+<div id="out"></div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const code = params.get('spapi_oauth_code');
+const sellingPartnerId = params.get('selling_partner_id');
+const state = params.get('state');
+const mwsAuthToken = params.get('mws_auth_token');
+const error = params.get('error');
+
+const out = document.getElementById('out');
+
+if (error) {
+  out.innerHTML = `<div class="box err"><strong>エラー:</strong> ${error}<br>${params.get('error_description') || ''}</div>`;
+} else if (code) {
+  out.innerHTML = `
+    <div class="box">
+      <strong>認可成功 — 以下を Jobs に送ってください</strong>
+      <div class="label">spapi_oauth_code</div>
+      <div class="code" id="c1">${code}</div>
+      <div class="label">selling_partner_id</div>
+      <div class="code">${sellingPartnerId || '(なし)'}</div>
+      <div class="label">state</div>
+      <div class="code">${state || '(なし)'}</div>
+      ${mwsAuthToken ? `<div class="label">mws_auth_token</div><div class="code">${mwsAuthToken}</div>` : ''}
+      <div style="margin-top:16px">
+        <button onclick="copyAll()">全部コピー</button>
+        <span class="copied" id="copied">コピーしました</span>
+      </div>
+    </div>
+    <div class="box">
+      <strong>次のステップ</strong><br>
+      上の情報を Jobs（Claude）に貼り付けてください。Jobs が refresh_token に交換して credentials を保存します。
+    </div>
+  `;
+} else {
+  out.innerHTML = `<div class="box err">URLにコードがありません。Seller Central からの正規リダイレクトでアクセスしてください。</div>`;
+}
+
+function copyAll() {
+  const text = `spapi_oauth_code=${code}\nselling_partner_id=${sellingPartnerId}\nstate=${state}`;
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copied').style.display = 'inline';
+    setTimeout(() => document.getElementById('copied').style.display = 'none', 2000);
+  });
+}
+</script>
+
+</body>
+</html>
