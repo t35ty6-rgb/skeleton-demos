@@ -732,6 +732,30 @@ window.addEventListener('DOMContentLoaded', function() {
       <div class="card-head brown">📦 在庫あり SKU 一覧（上位30件・販売可能数順）</div>
       <div class="inv-list" id="invItemList"></div>
     </div>
+
+    <!-- 出品中SKU 一覧（インライン編集対応）-->
+    <div class="card" style="margin-top:14px;">
+      <div class="card-head" style="background:#f5a623;display:flex;justify-content:space-between;align-items:center;">
+        <span>✏️ 出品中SKU一覧 (インライン編集) <span class="badge-r" id="invPageActiveCount">-</span></span>
+        <span style="font-size:10px;font-weight:400;background:rgba(255,255,255,.2);padding:3px 8px;border-radius:3px;">価格=両方編集可 / 数量=FBMのみ・FBAは🔒</span>
+      </div>
+      <div style="background:#fff8e0;padding:8px 14px;font-size:11px;color:#856404;border-bottom:1px solid #f5cc7a;">
+        💡 値を変えて <kbd style="background:#fff;border:1px solid #ddd;padding:1px 4px;border-radius:3px;font-size:10px;">Enter</kbd> またはフォーカス外しで自動保存 → Amazon SP-API へPATCH送信
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <thead style="background:#f7f0e0;">
+          <tr>
+            <th style="padding:6px;text-align:left;color:#8b5a3c;width:30px;">#</th>
+            <th style="padding:6px;text-align:left;color:#8b5a3c;width:50px;">区分</th>
+            <th style="padding:6px;text-align:left;color:#8b5a3c;width:60px;">画像</th>
+            <th style="padding:6px;text-align:left;color:#8b5a3c;">商品 (タップでAmazon)</th>
+            <th style="padding:6px;text-align:right;color:#8b5a3c;width:110px;">価格(¥)</th>
+            <th style="padding:6px;text-align:right;color:#8b5a3c;width:90px;">在庫</th>
+          </tr>
+        </thead>
+        <tbody id="invPageActiveTbody"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- ============ ORDERS PAGE ============ -->
@@ -1076,6 +1100,7 @@ window.addEventListener('DOMContentLoaded', function() {
       const total = r.activeCount || 0;
       $('kpiActiveListings').firstChild.textContent = fmt(total);
       $('kpiActiveBreakdown').textContent = `FBA ${fmt(r.fbaCount || 0)} / FBM ${fmt(r.fbmCount || 0)}`;
+      renderActiveListingsOnInventoryPage();
       const cell = $('kpiActiveListings').closest('.inv-cell');
       if (cell && !cell.dataset.bound) {
         cell.style.cursor = 'pointer';
@@ -1088,11 +1113,9 @@ window.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  function openActiveListingsModal() {
-    const r = _activeListingsCache;
-    if (!r) return;
-    $('alm-summary').textContent = `(${r.activeCount}件・FBA ${r.fbaCount} / FBM ${r.fbmCount})`;
-    const rows = (r.listings || []).map((l, i) => {
+  // 出品中SKU 行をHTML化（モーダル/在庫ページ共通）
+  function buildActiveListingRows(listings) {
+    return (listings || []).map((l, i) => {
       const isFba = /^AMAZON/i.test(l.fulfillmentChannel || '');
       const badge = isFba
         ? '<span style="background:#2c7be5;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600;">FBA</span>'
@@ -1118,12 +1141,31 @@ window.addEventListener('DOMContentLoaded', function() {
         <td style="padding:6px;text-align:right;">${qtyCell}</td>
       </tr>`;
     }).join('');
-    $('alm-tbody').innerHTML = rows;
-    bindInlineEditors();
+  }
+
+  function openActiveListingsModal() {
+    const r = _activeListingsCache;
+    if (!r) return;
+    $('alm-summary').textContent = `(${r.activeCount}件・FBA ${r.fbaCount} / FBM ${r.fbmCount})`;
+    $('alm-tbody').innerHTML = buildActiveListingRows(r.listings || []);
+    bindInlineEditors('#alm-tbody');
     $('activeListingsModal').style.display = 'flex';
   }
 
-  function bindInlineEditors() {
+  function renderActiveListingsOnInventoryPage() {
+    const r = _activeListingsCache;
+    if (!r) return;
+    const badge = $('invPageActiveCount');
+    if (badge) badge.textContent = `${r.activeCount}件 (FBA ${r.fbaCount} / FBM ${r.fbmCount})`;
+    const tb = $('invPageActiveTbody');
+    if (tb) {
+      tb.innerHTML = buildActiveListingRows(r.listings || []);
+      bindInlineEditors('#invPageActiveTbody');
+    }
+  }
+
+  function bindInlineEditors(rootSelector) {
+    const rootSel = rootSelector || '#alm-tbody';
     const save = async (kind, input) => {
       const sku = input.dataset.sku;
       const current = input.dataset.current;
@@ -1150,11 +1192,11 @@ window.addEventListener('DOMContentLoaded', function() {
         input.disabled = false;
       }
     };
-    $$('#alm-tbody .alm-price').forEach((el) => {
+    $$(`${rootSel} .alm-price`).forEach((el) => {
       el.addEventListener('change', () => save('price', el));
       el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') el.blur(); });
     });
-    $$('#alm-tbody .alm-qty').forEach((el) => {
+    $$(`${rootSel} .alm-qty`).forEach((el) => {
       el.addEventListener('change', () => save('quantity', el));
       el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') el.blur(); });
     });
