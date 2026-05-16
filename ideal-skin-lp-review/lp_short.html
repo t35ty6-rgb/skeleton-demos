@@ -56,7 +56,110 @@
     .section-h { font-size: 18px !important; line-height: 1.85 !important; padding: 0 12px !important; }
     .worry-text { font-size: 13.5px !important; line-height: 1.85 !important; }
   }
+
+  /* ===== Worry リスト: タップで詳細展開 (メリハリ&コンパクト化) ===== */
+  /* 元 .worry-item は display:flex / 7項目で長い → 折り畳んで詳細はタップで表示 */
+  .worry-item {
+    flex-wrap: wrap !important;
+    padding: 18px 4px !important;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.3s ease, padding-left 0.3s ease !important;
+    align-items: center !important;
+  }
+  .worry-item:hover { background: rgba(168,139,69,0.04); }
+  /* worry-text を flex:1 にして残りスペースを取り、num/icon/toggle が同じ行に並ぶよう確保 */
+  .worry-text {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+  }
+  .worry-toggle {
+    margin-left: 12px;
+    color: var(--gold);
+    font-family: "Cormorant Garamond", serif;
+    font-weight: 300;
+    font-size: 20px;
+    line-height: 1;
+    flex-shrink: 0;
+    min-width: 22px;
+    text-align: right;
+    align-self: center;
+    transition: color 0.35s ease, transform 0.35s ease;
+    padding-top: 2px;
+  }
+  .worry-item.open .worry-toggle {
+    color: var(--gold-deep);
+    transform: rotate(45deg); /* ＋ が × っぽくなる */
+  }
+  .worry-detail {
+    flex-basis: 100%;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.45s ease, opacity 0.35s ease, padding 0.35s ease, margin 0.35s ease;
+    color: var(--gray-1);
+    font-family: "Shippori Mincho", "Noto Serif JP", serif;
+    font-size: 13.5px;
+    line-height: 1.95;
+    letter-spacing: 0.05em;
+    margin-left: 60px;
+    padding-left: 16px;
+    border-left: 1px solid var(--line-soft);
+  }
+  .worry-item.open .worry-detail {
+    max-height: 240px;
+    opacity: 1;
+    padding-top: 12px;
+    padding-bottom: 4px;
+    margin-top: 14px;
+  }
+  @media (max-width: 700px) {
+    .worry-detail { margin-left: 48px; padding-left: 14px; font-size: 13px; }
+    .worry-item { padding: 16px 2px !important; gap: 14px !important; }
+    .worry-num { min-width: 28px !important; font-size: 18px !important; }
+  }
 </style>
+<script>
+  /* worry項目に詳細テキストを注入 + クリック展開ハンドラ */
+  window.addEventListener('DOMContentLoaded', () => {
+    const details = [
+      '表面だけのケアでは、体内の根本原因がそのままだからです。',
+      'ホルモン・腸内環境・自律神経。肌は、内側を映す鏡です。',
+      '細胞レベルの酸化・糖化のサイン。体内環境の見直しどきです。',
+      'あなたの体質・季節・いまの肌状態に合った答えが、必ずあります。',
+      '肌は、何歳からでも変わります。年齢を理由に、閉じないでください。',
+      '完全予約制の自宅サロン × オンラインで、誰にも知られず通えます。',
+      '月1〜2回 + オンラインケアで、忙しい毎日にも無理なく続けられます。'
+    ];
+    const items = document.querySelectorAll('.worry-item');
+    items.forEach((item, i) => {
+      const toggle = document.createElement('span');
+      toggle.className = 'worry-toggle';
+      toggle.textContent = '＋';
+      toggle.setAttribute('aria-hidden', 'true');
+      item.appendChild(toggle);
+
+      const detail = document.createElement('div');
+      detail.className = 'worry-detail';
+      detail.textContent = details[i] || '';
+      item.appendChild(detail);
+
+      item.setAttribute('role', 'button');
+      item.setAttribute('aria-expanded', 'false');
+      item.setAttribute('tabindex', '0');
+
+      const toggleOpen = () => {
+        const open = item.classList.toggle('open');
+        item.setAttribute('aria-expanded', String(open));
+      };
+      item.addEventListener('click', toggleOpen);
+      item.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOpen(); }
+      });
+    });
+  });
+</script>
 <meta name="description" content="ひかる先生が、あなたの肌トラブルの『本当の原因』を見つけます。何をしても良くならなかったニキビ・シミ・たるみを、専用スキンケアで立て直す6ヶ月プログラム。福井県大野市・自宅サロン × 全国オンライン。">
 
 <meta property="og:type" content="website">
