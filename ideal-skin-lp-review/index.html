@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LP校正 — IDEAL SKIN by Hikaru</title>
+<style>
+  :root {
+    --bg: #1a1614;
+    --paper: #FCFAF4;
+    --ink: #2D2722;
+    --gold: #A88B45;
+    --gold-soft: #D4BC85;
+    --line: #C9BDA0;
+    --accent: #C24F4F;
+    --ok: #4F9C5C;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+  html, body { background: #efe7d5; color: var(--ink); font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; line-height: 1.6; }
+  body { padding: 12px 12px 200px; max-width: 900px; margin: 0 auto; }
+
+  header { text-align: center; padding: 16px 8px 20px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+  header h1 { font-size: 18px; font-weight: 700; color: var(--ink); letter-spacing: 0.04em; }
+  header .sub { font-size: 12px; color: #7a6e60; margin-top: 4px; }
+  header a.lp-link { display: inline-block; margin-top: 10px; padding: 8px 16px; background: var(--ink); color: var(--paper); text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600; }
+  header a.lp-link:active { opacity: 0.7; }
+
+  .howto { background: #fff8e7; border-left: 3px solid var(--gold); padding: 12px 14px; margin-bottom: 16px; border-radius: 4px; font-size: 13px; color: #5a4d3e; }
+  .howto strong { color: var(--ink); }
+  .howto ol { padding-left: 20px; margin-top: 6px; }
+  .howto li { margin-bottom: 2px; }
+
+  .editor { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+  .editor label { display: block; font-size: 12px; font-weight: 600; color: var(--ink); margin-bottom: 6px; letter-spacing: 0.05em; }
+  .editor label .hint { color: #a08e76; font-weight: 400; margin-left: 8px; }
+  textarea {
+    width: 100%; min-height: 120px; padding: 12px;
+    border: 1px solid var(--line); border-radius: 6px;
+    background: #fffef9;
+    font-family: inherit; font-size: 16px; line-height: 1.8;
+    color: var(--ink); resize: vertical;
+  }
+  textarea:focus { outline: 2px solid var(--gold-soft); outline-offset: -1px; }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+  button {
+    flex: 1; padding: 12px 16px; border: none; border-radius: 6px;
+    font-family: inherit; font-size: 15px; font-weight: 600;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .btn-add { background: #e8dfc8; color: var(--ink); }
+  .btn-add:active { background: #d8cdb0; }
+  .btn-send { background: var(--ink); color: var(--paper); flex: 2; }
+  .btn-send:active { opacity: 0.7; }
+  .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .memos { margin-bottom: 14px; }
+  .memos-title { font-size: 12px; font-weight: 600; color: #6b5f56; margin-bottom: 8px; padding: 0 4px; letter-spacing: 0.05em; }
+  .memo-item {
+    background: var(--paper); border: 1px solid var(--line);
+    border-left: 3px solid var(--gold); border-radius: 4px;
+    padding: 10px 12px; margin-bottom: 8px;
+    font-size: 14px; color: var(--ink);
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .memo-item .time { font-size: 11px; color: #a08e76; flex-shrink: 0; min-width: 50px; padding-top: 2px; }
+  .memo-item .text { flex: 1; white-space: pre-wrap; word-break: break-word; }
+  .memo-item .del { background: none; border: none; color: #c0a890; font-size: 20px; cursor: pointer; padding: 0 4px; flex-shrink: 0; }
+  .memo-item .del:active { color: var(--accent); }
+
+  .send-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(255, 248, 231, 0.97);
+    border-top: 1px solid var(--gold-soft);
+    padding: 12px 16px env(safe-area-inset-bottom, 12px);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+  }
+  .send-bar .count { font-size: 11px; color: #7a6e60; text-align: center; margin-bottom: 6px; }
+  .send-bar button { width: 100%; padding: 14px; background: var(--ink); color: var(--paper); border-radius: 6px; font-size: 16px; font-weight: 700; }
+  .send-bar button:active { opacity: 0.7; }
+  .send-bar button:disabled { background: #c0b8aa; }
+
+  .status { text-align: center; font-size: 12px; color: #7a6e60; margin-top: 6px; }
+  .status.ok { color: var(--ok); font-weight: 600; }
+
+  .empty { text-align: center; color: #a08e76; font-size: 13px; padding: 20px; font-style: italic; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>IDEAL SKIN LP — 校正メモ</h1>
+  <div class="sub">声で気になった所をメモ → Jobsに送信</div>
+  <a class="lp-link" href="lp.html" target="_blank" rel="noopener">▶ LP本体を別タブで開く</a>
+</header>
+
+<div class="howto">
+  <strong>使い方</strong>
+  <ol>
+    <li>下の入力欄をタップ → キーボードのマイクボタンで音声入力</li>
+    <li>「ヒーロー画像をもう少し小さく」など喋る → <strong>追加</strong>ボタン</li>
+    <li>気になる所いくつでも追加 → 最後に下の<strong>Jobsに送信</strong>でメール送信</li>
+  </ol>
+</div>
+
+<div class="editor">
+  <label>校正メモ <span class="hint">どこを直す? 何が気になる?</span></label>
+  <textarea id="memo" autofocus placeholder="例: ヒーロー画像が大きすぎる。もう少しコンパクトに。&#10;例: ヒカル先生の写真3枚目、左に寄せて。&#10;例: メソッドのセクションの2枚目、別の写真に差し替えたい。"></textarea>
+  <div class="btn-row">
+    <button class="btn-add" id="btn-add">＋ メモを追加</button>
+  </div>
+</div>
+
+<div class="memos">
+  <div class="memos-title">📝 蓄積中のメモ <span id="memo-count" style="color:#a08e76;">(0件)</span></div>
+  <div id="memo-list"><div class="empty">まだメモはありません</div></div>
+</div>
+
+<div class="send-bar">
+  <div class="count" id="send-count">0件のメモ</div>
+  <button id="btn-send" disabled>Jobsに送信 (メール起動)</button>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'ideal_skin_lp_review_memos_v1';
+const JOBS_EMAIL = 't3.5ty6@gmail.com';
+
+let memos = [];
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) memos = JSON.parse(raw);
+  } catch (e) { memos = []; }
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(memos));
+}
+
+function render() {
+  const list = document.getElementById('memo-list');
+  const count = document.getElementById('memo-count');
+  const sendCount = document.getElementById('send-count');
+  const sendBtn = document.getElementById('btn-send');
+
+  count.textContent = `(${memos.length}件)`;
+  sendCount.textContent = `${memos.length}件のメモ`;
+  sendBtn.disabled = memos.length === 0;
+
+  if (memos.length === 0) {
+    list.innerHTML = '<div class="empty">まだメモはありません</div>';
+    return;
+  }
+
+  list.innerHTML = memos.map((m, i) => `
+    <div class="memo-item">
+      <div class="time">${m.time}</div>
+      <div class="text">${escapeHtml(m.text)}</div>
+      <button class="del" data-i="${i}" aria-label="削除">×</button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.del').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const i = parseInt(e.target.dataset.i, 10);
+      memos.splice(i, 1);
+      save(); render();
+    });
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
+function nowHHMM() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+function addMemo() {
+  const ta = document.getElementById('memo');
+  const text = ta.value.trim();
+  if (!text) {
+    ta.focus();
+    return;
+  }
+  memos.push({ time: nowHHMM(), text, ts: Date.now() });
+  save();
+  ta.value = '';
+  ta.focus();
+  render();
+  showStatus('メモを追加しました', true);
+}
+
+function showStatus(msg, ok) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = ok ? 'status ok' : 'status';
+  clearTimeout(showStatus._t);
+  showStatus._t = setTimeout(() => { el.textContent = ''; el.className = 'status'; }, 2500);
+}
+
+function sendToJobs() {
+  if (memos.length === 0) return;
+
+  const dateStr = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  const timeStr = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+  const subject = `[LP校正] IDEAL SKIN ${dateStr} ${timeStr} (${memos.length}件)`;
+  const bodyLines = [
+    `IDEAL SKIN by Hikaru LP 校正メモ`,
+    `送信日時: ${dateStr} ${timeStr}`,
+    `件数: ${memos.length}件`,
+    ``,
+    `以下のメモ通りに LP を修正してください:`,
+    `(creative/LP/index.html)`,
+    ``,
+    `---`,
+    ``,
+  ];
+  memos.forEach((m, i) => {
+    bodyLines.push(`【${i+1}】${m.time}`);
+    bodyLines.push(m.text);
+    bodyLines.push('');
+  });
+  bodyLines.push('---');
+  bodyLines.push('(送信元: skeleton-demos/ideal-skin-lp-review)');
+
+  const body = bodyLines.join('\n');
+  const url = `mailto:${JOBS_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  // Backup: copy to clipboard too
+  try {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`);
+    }
+  } catch(e){}
+
+  window.location.href = url;
+  showStatus('メーラーを起動しました', true);
+}
+
+document.getElementById('btn-add').addEventListener('click', addMemo);
+document.getElementById('btn-send').addEventListener('click', sendToJobs);
+
+// Enter (ctrl/cmd+Enter on desktop, plain Enter as alt key behavior)
+document.getElementById('memo').addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    addMemo();
+  }
+});
+
+load();
+render();
+</script>
+</body>
+</html>
