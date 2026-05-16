@@ -25,6 +25,21 @@
   header a.lp-link { display: inline-block; margin-top: 10px; padding: 8px 16px; background: var(--ink); color: var(--paper); text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600; }
   header a.lp-link:active { opacity: 0.7; }
 
+  .status-box {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+    padding: 10px 12px; margin-bottom: 14px; font-size: 12px;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .status-box .label { color: #7a6e60; }
+  .status-box .ver { color: var(--gold); font-weight: 700; }
+  .status-box .when { color: var(--ink); font-weight: 600; }
+  .status-box .reload {
+    background: var(--gold-soft); color: var(--ink); border: none;
+    padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;
+    cursor: pointer;
+  }
+  .status-box .summary { display: block; color: #5a4d3e; font-size: 11px; margin-top: 4px; width: 100%; }
+
   .howto { background: #fff8e7; border-left: 3px solid var(--gold); padding: 12px 14px; margin-bottom: 16px; border-radius: 4px; font-size: 13px; color: #5a4d3e; }
   .howto strong { color: var(--ink); }
   .howto ol { padding-left: 20px; margin-top: 6px; }
@@ -92,8 +107,18 @@
 <header>
   <h1>IDEAL SKIN LP — 校正メモ</h1>
   <div class="sub">声で気になった所をメモ → Jobsに送信</div>
-  <a class="lp-link" href="lp.html" target="_blank" rel="noopener">▶ LP本体を別タブで開く</a>
+  <a class="lp-link" id="lp-link" href="lp.html" target="_blank" rel="noopener">▶ LP本体を別タブで開く</a>
 </header>
+
+<div class="status-box" id="status-box">
+  <div>
+    <span class="label">最新版:</span>
+    <span class="ver" id="ver">--</span>
+    <span class="when" id="when">読み込み中…</span>
+    <span class="summary" id="summary"></span>
+  </div>
+  <button class="reload" id="btn-reload">最新を取得</button>
+</div>
 
 <div class="howto">
   <strong>使い方</strong>
@@ -257,6 +282,32 @@ document.getElementById('memo').addEventListener('keydown', (e) => {
 
 load();
 render();
+
+// === ステータス取得 (Jobs反映状況) ===
+async function fetchStatus() {
+  try {
+    const r = await fetch('status.json?t=' + Date.now(), { cache: 'no-store' });
+    const s = await r.json();
+    document.getElementById('ver').textContent = 'v' + s.version;
+    const dt = new Date(s.last_update);
+    const hhmm = String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0');
+    const mmdd = (dt.getMonth()+1) + '/' + dt.getDate();
+    document.getElementById('when').textContent = mmdd + ' ' + hhmm + ' 更新';
+    document.getElementById('summary').textContent = s.last_summary || '';
+    // LP リンクにキャッシュバスター付与
+    document.getElementById('lp-link').href = 'lp.html?v=' + s.version + '&t=' + Date.now();
+  } catch (e) {
+    document.getElementById('when').textContent = '取得失敗';
+  }
+}
+fetchStatus();
+
+document.getElementById('btn-reload').addEventListener('click', fetchStatus);
+
+// フォーカス復帰時 (アプリ切替戻り) 自動再取得
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') fetchStatus();
+});
 </script>
 </body>
 </html>
