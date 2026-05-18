@@ -20,6 +20,17 @@
 {"@context":"https://schema.org","@type":"BeautySalon","name":"IDEAL SKIN by Hikaru","description":"体内環境から肌悩みを根本改善するエステサロン","url":"https://idealskin-hikaru.com","address":{"@type":"PostalAddress","addressLocality":"大野市","addressRegion":"福井県","addressCountry":"JP"},"areaServed":["大野市","勝山市","福井市","越前市"],"openingHours":"Tu-Sa 10:00-18:00"}
 </script>
 
+<!-- Google Tag Manager -->
+<script>
+window.dataLayer = window.dataLayer || [];
+(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-PLACEHOLDER');
+</script>
+<!-- End Google Tag Manager -->
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Noto+Serif+JP:wght@300;400;500;600;700&family=Shippori+Mincho:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -874,6 +885,11 @@
 </head>
 <body>
 
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PLACEHOLDER"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+
 <!-- HERO -->
 <section class="hero">
   <div class="hero-frame"></div>
@@ -891,7 +907,7 @@
       ニキビ・シミ・たるみを、<br class="mb-only">体内環境から立て直す<br>
       6ヶ月の専用プログラム。
     </p>
-    <a href="#cta" class="hero-cta">
+    <a href="#cta" class="hero-cta" data-cta="hero">
       Free Skin Diagnosis <span class="hero-cta-arrow">—</span>
     </a>
     <span class="hero-cta-sub">登録1分・あなた専用の肌診断シートをお送りします</span>
@@ -1230,7 +1246,7 @@
         <li>体験予約・料金もLINEで直接ご案内</li>
       </ul>
 
-      <a href="#cta-final" class="hero-cta">
+      <a href="#cta-final" class="hero-cta" data-cta="menu">
         友だち追加で受け取る <span class="hero-cta-arrow">→</span>
       </a>
     </div>
@@ -1288,7 +1304,7 @@
     スキンケアも、体内ケアも──<br>
     ひとり分ずつお仕立てし、6ヶ月、毎日伴走します。
   </p>
-  <a href="https://lin.ee/V8eLd5T" class="final-cta-button" target="_blank" rel="noopener">
+  <a href="https://lin.ee/V8eLd5T" class="final-cta-button" target="_blank" rel="noopener" data-cta="final" data-line-click="1">
     LINEでひかる先生に相談する <span>→</span>
   </a>
   <span class="final-cta-sub">登録無料・しつこい勧誘は一切ありません</span>
@@ -1305,6 +1321,79 @@
   if (typeof AOS !== 'undefined') {
     AOS.init({ duration: 900, once: true, easing: 'ease-out' });
   }
+</script>
+
+<!-- ── dataLayer 計測イベント (GTM経由でGA4/広告ピクセルへ配信) ── -->
+<script>
+(function(){
+  var dl = (window.dataLayer = window.dataLayer || []);
+
+  /* 1. CTAクリック (Hero / Menu / Final) ─ data-cta属性で識別 */
+  document.querySelectorAll('[data-cta]').forEach(function(el){
+    el.addEventListener('click', function(){
+      var ev = {
+        event: 'cta_click',
+        cta_location: el.getAttribute('data-cta'),
+        cta_text: (el.textContent||'').trim().slice(0, 40)
+      };
+      if (el.getAttribute('data-line-click') === '1') ev.event = 'line_click';
+      dl.push(ev);
+    });
+  });
+
+  /* 2. アコーディオン開閉 (worry / why / range) */
+  function trackAccordion(selector, kind){
+    document.querySelectorAll(selector).forEach(function(d){
+      d.addEventListener('toggle', function(){
+        if (!d.open) return;
+        var label = (d.querySelector('.worry-text,.label')||{}).textContent;
+        dl.push({
+          event: kind + '_open',
+          item: (label||'').trim().slice(0, 30)
+        });
+      });
+    });
+  }
+  trackAccordion('details.worry-item', 'worry');
+  trackAccordion('details.why-point', 'why');
+  trackAccordion('details.range-item', 'range');
+  /* FAQも計測 */
+  document.querySelectorAll('details.faq-item').forEach(function(d){
+    d.addEventListener('toggle', function(){
+      if (!d.open) return;
+      dl.push({
+        event: 'faq_open',
+        item: (d.querySelector('summary')||{}).textContent.trim().slice(0, 40)
+      });
+    });
+  });
+
+  /* 3. スクロール深度 (25/50/75/100%) ─ 一度きり */
+  var hits = {};
+  function checkScroll(){
+    var doc = document.documentElement;
+    var scrolled = (window.scrollY + window.innerHeight) / doc.scrollHeight * 100;
+    [25, 50, 75, 100].forEach(function(p){
+      if (scrolled >= p && !hits[p]) {
+        hits[p] = 1;
+        dl.push({event: 'scroll_depth', percent: p});
+      }
+    });
+  }
+  var scrollTimer;
+  window.addEventListener('scroll', function(){
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(checkScroll, 200);
+  }, {passive: true});
+  setTimeout(checkScroll, 1000);
+
+  /* 4. ページ滞在時間マイルストーン (30s / 60s / 180s) */
+  [30, 60, 180].forEach(function(sec){
+    setTimeout(function(){
+      dl.push({event: 'time_on_page', seconds: sec});
+    }, sec * 1000);
+  });
+})();
 </script>
 
 </body>
