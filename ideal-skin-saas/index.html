@@ -164,6 +164,40 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   .app { grid-template-columns: 1fr; }
   .sidebar { display: none; }
 }
+
+/* ── DAILY view ── */
+.daily-view { padding: 40px 56px; max-width: 980px; margin: 0 auto; }
+.daily-head { border-bottom: 1px solid var(--gold-faint); padding-bottom: 18px; margin-bottom: 28px; }
+.daily-head h1 { font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 5px; color: var(--gold); margin-bottom: 8px;}
+.daily-head .date { font-family: 'Cormorant Garamond', serif; font-size: 26px; color: var(--text); letter-spacing: 2px;}
+.daily-head .summary { font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.7;}
+.daily-proposals { display: flex; flex-direction: column; gap: 20px;}
+.proposal {
+  background: var(--black-soft); border: 1px solid var(--line); padding: 24px 28px;
+  border-left: 3px solid var(--gold);
+}
+.proposal .rank { font-family: 'Cormorant Garamond', serif; color: var(--gold); font-size: 18px; letter-spacing: 2px; margin-bottom: 10px;}
+.proposal .news-title { font-size: 16px; line-height: 1.5; margin-bottom: 8px;}
+.proposal .news-source { font-size: 11px; color: var(--gold-deep); letter-spacing: 1px; margin-bottom: 14px;}
+.proposal .arrow { color: var(--gold); margin: 8px 0; font-family: 'Cormorant Garamond', serif; }
+.proposal .linked { font-size: 13px; color: var(--text); padding: 12px 14px; background: var(--black); border: 1px solid var(--gold-faint); margin-bottom: 14px; cursor: pointer;}
+.proposal .linked:hover { background: rgba(197,164,114,0.06); }
+.proposal .linked b { color: var(--gold); font-weight: 400;}
+.proposal .hook { background: var(--black); padding: 14px 16px; border-left: 2px solid var(--gold-deep); font-size: 14px; line-height: 1.7; margin-bottom: 12px;}
+.proposal .why-now { font-size: 11px; color: var(--muted); line-height: 1.7;}
+.proposal .why-now b { color: var(--gold-deep); }
+.proposal-actions { margin-top: 14px; display: flex; gap: 10px;}
+.proposal-actions button {
+  padding: 8px 16px; background: transparent; border: 1px solid var(--gold-faint);
+  color: var(--gold); font-family: 'Cinzel', serif; letter-spacing: 2px; font-size: 10px;
+  cursor: pointer;
+}
+.proposal-actions button:hover { background: var(--gold-faint); }
+
+.daily-empty { text-align: center; padding: 100px 30px; color: var(--muted); }
+.daily-empty h2 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 14px; letter-spacing: 4px; margin-bottom: 18px;}
+.daily-empty p { font-size: 13px; line-height: 1.9; max-width: 540px; margin: 0 auto;}
+.daily-empty code { background: var(--black-soft); padding: 2px 8px; color: var(--gold); }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -178,11 +212,11 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     <span class="brand-app">投稿管理 SaaS (Hikaru版 / mock v0.1)</span>
   </div>
   <nav class="topbar-nav">
-    <a href="#" class="active">ネタ庫</a>
+    <a href="#" id="nav-stock" class="active">ネタ庫</a>
+    <a href="#" id="nav-daily">📰 今日の提案</a>
     <a href="#">投稿予約</a>
     <a href="#">配信履歴</a>
     <a href="#">KPI</a>
-    <a href="#">セミナー録画</a>
   </nav>
   <div class="topbar-meta">
     <span>@hikaru_ideal_skin</span>
@@ -190,7 +224,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   </div>
 </header>
 
-<div class="app">
+<div class="app" id="app">
 
   <!-- ── 左サイドバー ── -->
   <aside class="sidebar">
@@ -200,6 +234,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
       <input class="search" id="search" placeholder="キーワード検索 (例: 毛穴 / シミ / 腸)">
       <div class="filter-tabs">
         <button class="filter-tab active" data-cat="all">ALL</button>
+        <button class="filter-tab" data-cat="done">✓ 生成済</button>
         <button class="filter-tab" data-cat="skin">肌・美容</button>
         <button class="filter-tab" data-cat="health">健康</button>
         <button class="filter-tab" data-cat="female">女性身体</button>
@@ -284,7 +319,11 @@ function renderTopics() {
   const list = document.getElementById('topic-list');
   const q = STATE.filter.q.toLowerCase();
   const filtered = STATE.topics.filter(t => {
-    if (STATE.filter.cat !== 'all' && t.cat !== STATE.filter.cat) return false;
+    if (STATE.filter.cat === 'done') {
+      if (!STATE.scriptsManifest[String(t.id)]) return false;
+    } else if (STATE.filter.cat !== 'all' && t.cat !== STATE.filter.cat) {
+      return false;
+    }
     if (q && !t.title.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -443,6 +482,94 @@ function renderThreads(th) {
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+
+// ────────────────────────────────────────
+// View 切り替え (ネタ庫 / DAILY)
+// ────────────────────────────────────────
+function showStockView() {
+  document.getElementById('nav-stock').classList.add('active');
+  document.getElementById('nav-daily').classList.remove('active');
+  document.getElementById('app').style.display = 'grid';
+  const dailyEl = document.getElementById('daily-view');
+  if (dailyEl) dailyEl.remove();
+}
+
+function showDailyView() {
+  document.getElementById('nav-stock').classList.remove('active');
+  document.getElementById('nav-daily').classList.add('active');
+  document.getElementById('app').style.display = 'none';
+  let dailyEl = document.getElementById('daily-view');
+  if (!dailyEl) {
+    dailyEl = document.createElement('section');
+    dailyEl.id = 'daily-view';
+    dailyEl.className = 'daily-view';
+    document.querySelector('.app').insertAdjacentElement('afterend', dailyEl);
+  }
+  dailyEl.innerHTML = '<p style="color:var(--muted)">読み込み中...</p>';
+  fetch('data/daily/latest.json').then(r => r.ok ? r.json() : null).then(data => {
+    if (!data) {
+      dailyEl.innerHTML = `
+        <div class="daily-empty">
+          <h2>DAILY PROPOSAL — NOT GENERATED YET</h2>
+          <p>毎朝6:30に Jobs が以下を実行して「今日のリール提案3本」を出す予定:</p>
+          <p style="margin-top:18px;text-align:left;display:inline-block;">
+            ① 美容/健康/食/女性系 RSS 8ソースから直近24h以内のニュースを収集<br>
+            ② Claude が IDEAL SKIN顧客に刺さる5本を選定<br>
+            ③ れいか先生Notion 229本から「掛け合わせ候補」を紐付け<br>
+            ④ 3軸台本のフック試作を出力<br>
+            ⑤ LINE Push でオーナーへ通知
+          </p>
+          <p style="margin-top:24px;">起動コマンド: <code>npm run daily</code> (要 ANTHROPIC_API_KEY)<br>LaunchAgent名: <code>com.skeleton.idealskin.daily-news</code></p>
+        </div>`;
+      return;
+    }
+    dailyEl.innerHTML = renderDailyProposal(data);
+    dailyEl.querySelectorAll('.linked').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = parseInt(el.dataset.id);
+        showStockView();
+        STATE.selectedId = id;
+        loadScriptIfNeeded(id).then(() => { renderTopics(); renderDetail(); });
+      });
+    });
+  });
+}
+
+function renderDailyProposal(d) {
+  const date = d.date;
+  const props = d.proposals || [];
+  return `
+    <div class="daily-head">
+      <h1>DAILY PROPOSAL</h1>
+      <div class="date">${escapeHtml(date)}</div>
+      <div class="summary"><b style="color:var(--gold-deep)">今日のテーマ:</b> ${escapeHtml(d.summary||'')}</div>
+      <div class="summary">ニュース収集: ${d.news_count}件 / 提案: ${props.length}本</div>
+    </div>
+    <div class="daily-proposals">
+      ${props.map(p => `
+        <div class="proposal">
+          <div class="rank">PROPOSAL ${p.rank}</div>
+          <div class="news-title">${escapeHtml(p.news_title)}</div>
+          <div class="news-source">出典: ${escapeHtml(p.news_source)}</div>
+          <div class="arrow">↓ 掛け合わせ</div>
+          <div class="linked" data-id="${p.linked_topic_id}">
+            <b>#${p.linked_topic_id}</b> ${escapeHtml(p.linked_topic_title)} <span style="float:right;color:var(--muted);font-size:10px;">クリックでネタ庫へ →</span>
+          </div>
+          <div class="hook">${escapeHtml(p.hook_idea)}</div>
+          <div class="why-now"><b>なぜ今日:</b> ${escapeHtml(p.why_now)}</div>
+          <div class="proposal-actions">
+            <button>▶ 3軸台本を生成</button>
+            <button>📋 LINEで送る</button>
+            <button>スキップ</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+document.getElementById('nav-stock').addEventListener('click', e => { e.preventDefault(); showStockView(); });
+document.getElementById('nav-daily').addEventListener('click', e => { e.preventDefault(); showDailyView(); });
 </script>
 
 </body>
