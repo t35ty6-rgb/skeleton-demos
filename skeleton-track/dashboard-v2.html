@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skeleton Track アナリティクス</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bg:#f7f7f5; --ink:#1a1a1a; --muted:#6b6b6b; --line:#e3e3e0; --green:#1e7e34; --yellow:#b8860b; --red:#c0392b; --accent:#0b5d9e; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif; padding:24px 16px 60px; }
+  .wrap { max-width:1080px; margin:0 auto; }
+  header { display:flex; align-items:baseline; justify-content:space-between; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:16px; flex-wrap:wrap; }
+  h1 { font-size:22px; margin:0; }
+  .meta { font-size:12px; color:var(--muted); }
+
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:18px; }
+  @media (max-width:680px) { .tiles { grid-template-columns:repeat(2,1fr); } }
+  .tile { background:white; border:1px solid var(--line); border-radius:8px; padding:14px; }
+  .tile .label { font-size:11px; color:var(--muted); letter-spacing:.05em; text-transform:uppercase; }
+  .tile .value { font-size:28px; font-weight:600; margin-top:2px; line-height:1.1; }
+  .tile .sub { font-size:11px; color:var(--muted); margin-top:4px; }
+
+  .card { background:white; border:1px solid var(--line); border-radius:8px; padding:18px 20px; margin-bottom:16px; }
+  .card h2 { font-size:14px; margin:0 0 12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px) { .grid2 { grid-template-columns:1fr; } }
+
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { padding:8px 10px; text-align:left; border-bottom:1px solid var(--line); }
+  th { background:#efefec; font-weight:600; color:var(--muted); font-size:10px; letter-spacing:.04em; text-transform:uppercase; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  td.cvr { text-align:right; font-weight:600; }
+  .good { color:var(--green); }
+  .mid  { color:var(--yellow); }
+  .bad  { color:var(--red); }
+  tr:last-child td { border-bottom:none; }
+
+  .feed { font-family:ui-monospace,Menlo,monospace; font-size:12px; max-height:320px; overflow-y:auto; }
+  .feed .ev { padding:6px 0; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:10px; }
+  .feed .ev:last-child { border-bottom:none; }
+  .feed .badge { display:inline-block; min-width:46px; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:600; text-align:center; }
+  .feed .badge.click { background:#eef3f9; color:var(--accent); }
+  .feed .badge.follow { background:#dff5e3; color:var(--green); }
+  .feed .t { color:var(--muted); white-space:nowrap; }
+
+  .chart-wrap { position:relative; height:260px; }
+  .error { background:#fdf2f2; border:1px solid #f1c3c0; color:var(--red); padding:10px 14px; border-radius:6px; margin-bottom:12px; font-size:13px; }
+  code { font-family:ui-monospace,Menlo,monospace; font-size:12px; background:#eef3f9; padding:1px 5px; border-radius:3px; }
+
+  .nav { font-size:12px; color:var(--muted); margin-top:24px; text-align:center; }
+  .nav a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Skeleton Track アナリティクス</h1>
+  <div class="meta" id="meta">読込中…</div>
+</header>
+
+<div id="err"></div>
+
+<div class="tiles" id="tiles"></div>
+
+<div class="card">
+  <h2>📈 日別の動き (直近14日)</h2>
+  <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
+</div>
+
+<div class="grid2">
+
+<div class="card">
+  <h2>⏱ 直近48時間 (時間別)</h2>
+  <div class="chart-wrap"><canvas id="hourlyChart"></canvas></div>
+</div>
+
+<div class="card">
+  <h2>🏆 効くボタン TOP5 (CVR順)</h2>
+  <table id="topTable">
+    <thead><tr><th>ad_id</th><th style="text-align:right">click</th><th style="text-align:right">follow</th><th style="text-align:right">CVR</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+</div>
+
+<div class="card">
+  <h2>📋 最近のイベント (リアルタイム流入)</h2>
+  <div class="feed" id="feed"></div>
+</div>
+
+<div class="nav">
+  シンプル版: <a href="dashboard.html">dashboard.html</a> / 状況サマリー: <a href="status.html">status.html</a>
+</div>
+
+</div>
+
+<script>
+const BASE = 'https://holland-unit-fan-evans.trycloudflare.com';
+
+let dailyChart, hourlyChart;
+
+async function fetchJSON(path) {
+  const res = await fetch(BASE + path, { cache:'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+function classify(cvr) {
+  if (cvr >= 0.6) return 'good';
+  if (cvr >= 0.3) return 'mid';
+  return 'bad';
+}
+
+function fmtPct(v) { return (v*100).toFixed(1) + '%'; }
+function fmtTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleString('ja-JP', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+async function refresh() {
+  try {
+    const [agg, daily, hourly, recent] = await Promise.all([
+      fetchJSON('/stats'),
+      fetchJSON('/stats/daily?days=14'),
+      fetchJSON('/stats/hourly?hours=48'),
+      fetchJSON('/stats/recent?limit=30'),
+    ]);
+
+    const ads = agg.ads || [];
+    const totalClicks  = ads.reduce((s,a)=>s+(a.clicks||0),0);
+    const totalFollows = ads.reduce((s,a)=>s+(a.follows||0),0);
+    const cvr = totalClicks>0 ? totalFollows/totalClicks : 0;
+    const todayDailyRows = (daily.rows||[]).filter(r => r.day === new Date().toISOString().slice(0,10));
+    const todayClicks = todayDailyRows.reduce((s,r)=>s+(r.clicks||0),0);
+
+    document.getElementById('tiles').innerHTML = `
+      <div class="tile"><div class="label">累計クリック</div><div class="value">${totalClicks.toLocaleString()}</div><div class="sub">全期間</div></div>
+      <div class="tile"><div class="label">累計友だち追加</div><div class="value">${totalFollows.toLocaleString()}</div><div class="sub">全期間</div></div>
+      <div class="tile"><div class="label">全体CVR</div><div class="value ${classify(cvr)}">${fmtPct(cvr)}</div><div class="sub">click→follow 転換率</div></div>
+      <div class="tile"><div class="label">今日のクリック</div><div class="value">${todayClicks.toLocaleString()}</div><div class="sub">${new Date().toLocaleDateString('ja-JP')}</div></div>
+    `;
+
+    // Daily chart: aggregate across all ad_ids per day
+    const dayMap = new Map();
+    for (const r of daily.rows) {
+      const cur = dayMap.get(r.day) || { clicks:0, follows:0 };
+      cur.clicks += r.clicks||0;
+      cur.follows += r.follows||0;
+      dayMap.set(r.day, cur);
+    }
+    const days = [...dayMap.keys()].sort();
+    const dailyClicks  = days.map(d => dayMap.get(d).clicks);
+    const dailyFollows = days.map(d => dayMap.get(d).follows);
+
+    if (dailyChart) dailyChart.destroy();
+    dailyChart = new Chart(document.getElementById('dailyChart'), {
+      type:'line',
+      data:{
+        labels:days,
+        datasets:[
+          { label:'クリック', data:dailyClicks, borderColor:'#0b5d9e', backgroundColor:'rgba(11,93,158,.12)', fill:true, tension:.3 },
+          { label:'友だち追加', data:dailyFollows, borderColor:'#1e7e34', backgroundColor:'rgba(30,126,52,.12)', fill:true, tension:.3 },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom' } } }
+    });
+
+    // Hourly chart
+    const hours = (hourly.rows||[]).map(r=>r.hour.slice(11));
+    if (hourlyChart) hourlyChart.destroy();
+    hourlyChart = new Chart(document.getElementById('hourlyChart'), {
+      type:'bar',
+      data:{
+        labels:hours,
+        datasets:[
+          { label:'クリック', data:hourly.rows.map(r=>r.clicks), backgroundColor:'rgba(11,93,158,.5)' },
+          { label:'友だち追加', data:hourly.rows.map(r=>r.follows), backgroundColor:'rgba(30,126,52,.7)' },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom' } }, scales:{ x:{ ticks:{ autoSkip:true, maxTicksLimit:12 } } } }
+    });
+
+    // Top5 by CVR (require clicks >= 3)
+    const tops = ads
+      .filter(a => a.clicks >= 3)
+      .map(a => ({...a, cvr: a.clicks>0 ? a.follows/a.clicks : 0}))
+      .sort((a,b)=>b.cvr-a.cvr)
+      .slice(0,5);
+    document.getElementById('topTable').querySelector('tbody').innerHTML = tops.length === 0
+      ? '<tr><td colspan="4" style="text-align:center; color:#999; padding:14px">3クリック以上のad_idがまだ無い</td></tr>'
+      : tops.map(a=>`<tr>
+          <td><code>${a.campaign_id||'-'}/${a.ad_id||'-'}</code></td>
+          <td class="num">${a.clicks}</td>
+          <td class="num">${a.follows}</td>
+          <td class="cvr ${classify(a.cvr)}">${fmtPct(a.cvr)}</td>
+        </tr>`).join('');
+
+    // Feed
+    const events = recent.events || [];
+    document.getElementById('feed').innerHTML = events.length === 0
+      ? '<div style="text-align:center; color:#999; padding:14px">イベントなし</div>'
+      : events.map(e => `
+        <div class="ev">
+          <div>
+            <span class="badge ${e.type}">${e.type==='click'?'CLICK':'FOLLOW'}</span>
+            ${e.type==='click'
+              ? `<code>${e.campaign_id||'-'}/${e.ad_id||'-'}</code>`
+              : `<code>user ${(e.user_id||'').slice(0,10)}…</code>`}
+          </div>
+          <div class="t">${fmtTime(e.ts)}</div>
+        </div>
+      `).join('');
+
+    document.getElementById('meta').textContent = '更新: ' + new Date(agg.updated_at).toLocaleString('ja-JP') + ' (30秒ごと自動更新)';
+    document.getElementById('err').innerHTML = '';
+  } catch (err) {
+    document.getElementById('err').innerHTML = '<div class="error">サーバ未接続: '+ err.message +' (サーバURL変更/停止の可能性)</div>';
+  }
+}
+
+refresh();
+setInterval(refresh, 30000);
+</script>
+
+</body>
+</html>
