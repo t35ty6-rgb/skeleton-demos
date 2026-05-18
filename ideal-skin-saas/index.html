@@ -77,14 +77,27 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .topic-row.has-script .topic-title::before {
   content: "✓ "; color: var(--gold); font-weight: bold;
 }
+.topic-row .date-badge {
+  margin-left: auto; font-size: 10px; color: var(--gold-deep);
+  font-family: 'Cormorant Garamond', serif; padding-left: 8px; white-space: nowrap;
+  letter-spacing: 1px;
+}
 
 /* ── right: detail ── */
 .detail { display: flex; flex-direction: column; min-height: 0; }
 .detail-head { padding: 22px 32px 16px; border-bottom: 1px solid var(--line); background: var(--black-soft); }
+.detail-nav { display: flex; gap: 12px; margin-bottom: 12px; }
+.detail-nav button, .detail-nav a {
+  background: transparent; border: 1px solid var(--line); color: var(--muted);
+  padding: 5px 12px; font-size: 10px; letter-spacing: 2px; cursor: pointer;
+  font-family: 'Cinzel', serif; text-decoration: none; display: inline-block;
+}
+.detail-nav button:hover, .detail-nav a:hover { border-color: var(--gold-faint); color: var(--gold); }
 .breadcrumb { font-size: 10px; letter-spacing: 2px; color: var(--muted); margin-bottom: 8px; }
 .detail-title { font-size: 24px; font-weight: 400; letter-spacing: 1px; line-height: 1.35; }
-.detail-meta { display: flex; gap: 18px; margin-top: 12px; font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+.detail-meta { display: flex; gap: 18px; margin-top: 12px; font-size: 11px; color: var(--muted); letter-spacing: 1px; flex-wrap: wrap; }
 .detail-meta b { color: var(--gold); font-weight: 400; }
+.detail-meta .gen-date { color: var(--gold-deep); }
 
 .tabs { display: flex; border-bottom: 1px solid var(--line); padding: 0 32px; background: var(--black-soft); }
 .tab {
@@ -504,12 +517,22 @@ function renderTopics() {
     if (q && !t.title.toLowerCase().includes(q)) return false;
     return true;
   });
-  list.innerHTML = filtered.map(t => `
-    <div class="topic-row ${t.id===STATE.selectedId?'selected':''} ${STATE.scriptsManifest[String(t.id)]?'has-script':''}" data-id="${t.id}">
-      <span class="topic-mark">${t.type==='video'?'▶':'♪'}</span>
-      <span class="topic-title">${escapeHtml(t.title)}</span>
-    </div>
-  `).join('');
+  list.innerHTML = filtered.map(t => {
+    const hasScript = !!STATE.scriptsManifest[String(t.id)];
+    const cachedScript = STATE.scripts[t.id];
+    let dateBadge = '';
+    if (hasScript && cachedScript && cachedScript.generated_at) {
+      dateBadge = `<span class="date-badge">${cachedScript.generated_at.substring(5,10).replace('-','/')}</span>`;
+    } else if (hasScript) {
+      dateBadge = `<span class="date-badge">✓</span>`;
+    }
+    return `
+      <div class="topic-row ${t.id===STATE.selectedId?'selected':''} ${hasScript?'has-script':''}" data-id="${t.id}">
+        <span class="topic-mark">${t.type==='video'?'▶':'♪'}</span>
+        <span class="topic-title">${escapeHtml(t.title)}</span>
+        ${dateBadge}
+      </div>`;
+  }).join('');
   list.querySelectorAll('.topic-row').forEach(el => {
     el.addEventListener('click', () => {
       STATE.selectedId = parseInt(el.dataset.id);
@@ -555,14 +578,20 @@ function renderDetail() {
     body = renderScript(script);
   }
 
+  const genDate = script && script.generated_at ? script.generated_at.substring(0,10) : null;
   detail.innerHTML = `
     <div class="detail-head">
+      <div class="detail-nav">
+        <button id="back-stock-list">← ネタ一覧に絞る (生成済のみ)</button>
+        <button id="back-daily">← 今日の提案へ</button>
+      </div>
       <div class="breadcrumb">REIKA TOPICS &nbsp;/&nbsp; #${topic.id} &nbsp;/&nbsp; ${topic.cat.toUpperCase()}</div>
       <div class="detail-title">${escapeHtml(topic.title)}</div>
       <div class="detail-meta">
         <span><b>ソース:</b> れいか先生 Notion (${topic.type==='video'?'動画':'音声'})</span>
         <span><b>カテゴリ:</b> ${topic.cat}</span>
         <span><b>状態:</b> ${script?'台本生成済':'未生成'}</span>
+        ${genDate ? `<span class="gen-date"><b>生成日:</b> ${genDate}</span>` : ''}
       </div>
     </div>
     ${script ? `
@@ -577,6 +606,14 @@ function renderDetail() {
   detail.querySelectorAll('.tab').forEach(t => {
     t.addEventListener('click', () => { STATE.currentTab = t.dataset.tab; renderDetail(); });
   });
+  const back1 = detail.querySelector('#back-stock-list');
+  if (back1) back1.addEventListener('click', () => {
+    STATE.filter.cat = 'done';
+    document.querySelectorAll('.filter-tab').forEach(x => x.classList.toggle('active', x.dataset.cat === 'done'));
+    renderTopics();
+  });
+  const back2 = detail.querySelector('#back-daily');
+  if (back2) back2.addEventListener('click', () => showDailyView());
 }
 
 function renderScript(s) {
@@ -833,6 +870,9 @@ function renderDailyProposal(d) {
   return renderHelpBar() + `
     <div class="daily-head">
       <div class="badge">TODAY</div>
+      <div style="position:absolute; top:14px; right:18px;">
+        <button id="daily-to-stock" style="background:transparent;border:1px solid var(--gold-faint);color:var(--gold);padding:5px 12px;font-size:10px;letter-spacing:2px;cursor:pointer;font-family:'Cinzel',serif;">→ ネタ庫を見る</button>
+      </div>
       <h1>DAILY PROPOSAL</h1>
       <div class="date">${escapeHtml(date)}<span class="weekday">${wd ? '('+wd+')' : ''}</span></div>
       <div class="summary">${escapeHtml(d.summary||'(要約なし)')}</div>
@@ -900,6 +940,13 @@ function attachHelpHandlers(dailyEl) {
 
 function attachDailyHandlers(dailyEl, d) {
   attachHelpHandlers(dailyEl);
+  const toStock = dailyEl.querySelector('#daily-to-stock');
+  if (toStock) toStock.addEventListener('click', () => {
+    showStockView();
+    STATE.filter.cat = 'done';
+    document.querySelectorAll('.filter-tab').forEach(x => x.classList.toggle('active', x.dataset.cat === 'done'));
+    renderTopics();
+  });
   // ネタ庫へジャンプ
   dailyEl.querySelectorAll('.linked').forEach(el => {
     el.addEventListener('click', () => {
