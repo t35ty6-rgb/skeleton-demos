@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skeleton Track ダッシュボード</title>
+<style>
+  :root { --bg:#f7f7f5; --ink:#1a1a1a; --muted:#6b6b6b; --line:#e3e3e0; --green:#1e7e34; --yellow:#b8860b; --red:#c0392b; --accent:#0b5d9e; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif; padding:24px 16px; }
+  .wrap { max-width:880px; margin:0 auto; }
+  header { display:flex; align-items:baseline; justify-content:space-between; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:16px; }
+  h1 { font-size:20px; margin:0; }
+  .meta { font-size:12px; color:var(--muted); }
+  .summary { display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+  .stat { background:white; border:1px solid var(--line); border-radius:6px; padding:10px 14px; flex:1; min-width:140px; }
+  .stat .label { font-size:11px; color:var(--muted); letter-spacing:.05em; text-transform:uppercase; }
+  .stat .value { font-size:24px; font-weight:600; margin-top:2px; }
+  table { width:100%; border-collapse:collapse; background:white; border:1px solid var(--line); border-radius:6px; overflow:hidden; font-size:13.5px; }
+  th,td { padding:9px 12px; text-align:left; border-bottom:1px solid var(--line); }
+  th { background:#efefec; font-weight:600; color:var(--muted); font-size:11px; letter-spacing:.04em; text-transform:uppercase; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  td.cvr { text-align:right; font-weight:600; }
+  .cvr.good { color:var(--green); }
+  .cvr.mid  { color:var(--yellow); }
+  .cvr.bad  { color:var(--red); }
+  tr:last-child td { border-bottom:none; }
+  .controls { font-size:12px; color:var(--muted); margin-top:12px; }
+  .error { background:#fdf2f2; border:1px solid #f1c3c0; color:var(--red); padding:10px 14px; border-radius:6px; margin-bottom:12px; font-size:13px; }
+  code { font-family:ui-monospace,Menlo,monospace; font-size:12px; background:#eef3f9; padding:1px 5px; border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Skeleton Track ダッシュボード</h1>
+  <div class="meta" id="meta">読込中…</div>
+</header>
+
+<div id="err"></div>
+
+<div class="summary" id="summary"></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>account</th>
+      <th>campaign</th>
+      <th>ad_id</th>
+      <th style="text-align:right">clicks</th>
+      <th style="text-align:right">follows</th>
+      <th style="text-align:right">CVR</th>
+      <th>判定</th>
+    </tr>
+  </thead>
+  <tbody id="rows"><tr><td colspan="7" style="text-align:center; padding:20px; color:#999">読込中…</td></tr></tbody>
+</table>
+
+<div class="controls">
+  30秒ごとに自動更新 / データソース: <code id="src">…</code>
+</div>
+
+</div>
+
+<script>
+const ENDPOINT = 'https://holland-unit-fan-evans.trycloudflare.com/stats';
+document.getElementById('src').textContent = ENDPOINT;
+
+async function refresh() {
+  try {
+    const res = await fetch(ENDPOINT, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    render(data);
+    document.getElementById('err').innerHTML = '';
+  } catch (err) {
+    document.getElementById('err').innerHTML =
+      '<div class="error">サーバに繋がりません: ' + err.message + ' (サーバURL変更/停止の可能性)</div>';
+  }
+}
+
+function classifyCvr(cvr) {
+  if (cvr >= 0.6) return 'good';
+  if (cvr >= 0.3) return 'mid';
+  return 'bad';
+}
+function classifyLabel(cvr) {
+  if (cvr >= 0.6) return '🟢 効く';
+  if (cvr >= 0.3) return '🟡 普通';
+  return '🔴 見直し';
+}
+
+function render(data) {
+  const ads = data.ads || [];
+  const totalClicks  = ads.reduce((s,a) => s + (a.clicks||0), 0);
+  const totalFollows = ads.reduce((s,a) => s + (a.follows||0), 0);
+  const totalCvr     = totalClicks > 0 ? (totalFollows/totalClicks) : 0;
+
+  document.getElementById('summary').innerHTML = `
+    <div class="stat"><div class="label">総クリック</div><div class="value">${totalClicks.toLocaleString()}</div></div>
+    <div class="stat"><div class="label">総友だち追加</div><div class="value">${totalFollows.toLocaleString()}</div></div>
+    <div class="stat"><div class="label">全体CVR</div><div class="value">${(totalCvr*100).toFixed(1)}%</div></div>
+    <div class="stat"><div class="label">広告クリエ数</div><div class="value">${ads.length}</div></div>
+  `;
+
+  // sort by clicks desc
+  ads.sort((a,b) => (b.clicks||0) - (a.clicks||0));
+
+  document.getElementById('rows').innerHTML = ads.length === 0
+    ? '<tr><td colspan="7" style="text-align:center; padding:20px; color:#999">データなし</td></tr>'
+    : ads.map(a => {
+        const cvr = a.clicks > 0 ? (a.follows / a.clicks) : 0;
+        const c = classifyCvr(cvr);
+        return `<tr>
+          <td>${a.account_id || '-'}</td>
+          <td>${a.campaign_id || '-'}</td>
+          <td><code>${a.ad_id || '-'}</code></td>
+          <td class="num">${a.clicks||0}</td>
+          <td class="num">${a.follows||0}</td>
+          <td class="cvr ${c}">${(cvr*100).toFixed(1)}%</td>
+          <td class="cvr ${c}">${classifyLabel(cvr)}</td>
+        </tr>`;
+      }).join('');
+
+  document.getElementById('meta').textContent =
+    '更新: ' + new Date(data.updated_at).toLocaleString('ja-JP');
+}
+
+refresh();
+setInterval(refresh, 30000);
+</script>
+
+</body>
+</html>
