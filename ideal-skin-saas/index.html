@@ -740,8 +740,8 @@ function renderJobsRequestForm() {
       </div>
       <textarea id="jobs-req-text" placeholder="例: 『今週末イベントがあるから、毛穴と化粧ノリの話をリール&ストーリーで作りたい』 のように自由に書いて送って。Jobs が読んでネタ選定+台本生成までやるよ。"></textarea>
       <div class="send-row">
-        <button class="send-btn" id="jobs-req-send">▷ Jobs に送る</button>
-        <span class="send-hint">送信先: GitHub Issue + Gmail通知 (オーナーへ CC)</span>
+        <button class="send-btn" id="jobs-req-send">📋 コピーしてJobsに渡す</button>
+        <span class="send-hint">→ Claude Code チャットに貼り付けて送信</span>
       </div>
       <div class="queue">
         <div class="queue-title">過去の依頼 (このブラウザに保存)</div>
@@ -764,32 +764,32 @@ function attachJobsRequestHandlers(rootEl) {
       document.getElementById('jobs-req-text').focus();
     });
   });
-  // 送信
+  // 送信 (クリップボード方式)
   const sendBtn = rootEl.querySelector('#jobs-req-send');
   if (sendBtn) sendBtn.addEventListener('click', () => {
     const txt = document.getElementById('jobs-req-text').value.trim();
     if (!txt) { alert('依頼内容を書いて'); return; }
-    sendBtn.disabled = true; sendBtn.textContent = '送信中…';
-    // 1) localStorage に履歴保存
-    const queue = JSON.parse(localStorage.getItem('jobs_request_queue') || '[]');
-    const now = new Date().toISOString().replace('T',' ').substring(5,16);
-    queue.unshift({ time: now, text: txt, status: 'SENT' });
-    localStorage.setItem('jobs_request_queue', JSON.stringify(queue.slice(0,20)));
-    // 2) GitHub Issue 作成 (mailto Fallback + ガイダンス)
-    const title = encodeURIComponent('[依頼] ' + txt.substring(0,50) + (txt.length>50?'…':''));
-    const body = encodeURIComponent(`# IDEAL SKIN 投稿依頼\n\n${txt}\n\n---\n送信時刻: ${now}\n送信元: SaaS UI`);
-    const issueUrl = `https://github.com/t35ty6-rgb/skeleton-demos/issues/new?title=${title}&body=${body}&labels=ideal-skin,jobs-request`;
-    window.open(issueUrl, '_blank');
-    // 3) UI更新
-    document.getElementById('jobs-req-text').value = '';
-    sendBtn.disabled = false; sendBtn.textContent = '▷ Jobs に送る';
-    // queue 表示更新
-    document.getElementById('jobs-req-queue').innerHTML = queue.map(q=>`
-      <div class="queue-item">
-        <span class="time">${escapeHtml(q.time)}</span>
-        ${escapeHtml(q.text.substring(0,80))}${q.text.length>80?'…':''}
-        <span class="status">${escapeHtml(q.status||'SENT')}</span>
-      </div>`).join('');
+    const payload = `[IDEAL SKIN リール台本生成 依頼]\n\n${txt}\n\n→ Jobs、上記テーマでネタを選定して3軸台本 (REEL 60s / STORY 7枚 / Threads 5投稿) をヒカル先生口調で生成して。`;
+    const copyAndNotify = () => {
+      alert('✓ 依頼内容をコピーしたよ。\n\nClaude Code チャットに貼り付けて送信すれば、俺が即その場で台本生成して SaaS に反映する。');
+      const queue = JSON.parse(localStorage.getItem('jobs_request_queue') || '[]');
+      const now = new Date().toISOString().replace('T',' ').substring(5,16);
+      queue.unshift({ time: now, text: txt, status: 'COPIED' });
+      localStorage.setItem('jobs_request_queue', JSON.stringify(queue.slice(0,20)));
+      document.getElementById('jobs-req-text').value = '';
+      document.getElementById('jobs-req-queue').innerHTML = queue.map(q=>`
+        <div class="queue-item">
+          <span class="time">${escapeHtml(q.time)}</span>
+          ${escapeHtml(q.text.substring(0,80))}${q.text.length>80?'…':''}
+          <span class="status">${escapeHtml(q.status||'SENT')}</span>
+        </div>`).join('');
+    };
+    navigator.clipboard.writeText(payload).then(copyAndNotify).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = payload; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      copyAndNotify();
+    });
   });
 }
 
@@ -812,11 +812,11 @@ function renderHelpBar() {
       <h3>📖 使い方</h3>
       <ol>
         <li><b>下の3本の提案を読む</b> — ニュース・掛け合わせネタ・フック試作・なぜ今日の理由が並んでる</li>
-        <li><b>気に入った提案の「✓ 採用して台本生成」ボタンを押す</b> — 新タブで GitHub Issue 画面が開くので「Submit new issue」をクリック</li>
-        <li><b>1時間以内に Jobs が3軸台本 (リール/ストーリー/Threads) を作成</b> — 完成したら左サイドの「✓生成済」フィルタに出現、内容クリックで台本見れる</li>
+        <li><b>気に入った提案の「✓ 採用してJobsに渡す」ボタンを押す</b> — 依頼内容が自動でクリップボードにコピーされる</li>
+        <li><b>Claude Code チャットに貼り付けて送信</b> — Jobs がその場で3軸台本 (リール/ストーリー/Threads) 生成して SaaSに反映、左サイド「✓ 生成済」フィルタに出現</li>
       </ol>
       <p style="margin-top:10px;color:var(--muted);font-size:11.5px;">
-        ピンとくる提案がなければ、ページ下の「<b style="color:var(--gold)">JOBS に依頼する</b>」フォームに自由に書いて送信もOK。
+        ピンとくる提案がなければ、ページ下の「<b style="color:var(--gold)">JOBS に依頼する</b>」フォームに自由に書いてもOK (同じくチャットに貼って送信)。
       </p>
     </div>
   `;
@@ -881,9 +881,7 @@ function renderDailyProposal(d) {
           </div>
           <div class="proposal-actions">
             <button class="skip" data-action="skip" data-rank="${p.rank}">⏭ スキップ</button>
-            <a class="btn primary" data-action="adopt" data-rank="${p.rank}"
-               href="${buildAdoptIssueUrl(p)}"
-               target="_blank" rel="noopener">✓ 採用して台本生成</a>
+            <button class="primary" data-action="adopt" data-rank="${p.rank}">✓ 採用してJobsに渡す</button>
           </div>
         </div>
         `;
@@ -922,20 +920,38 @@ function attachDailyHandlers(dailyEl, d) {
       });
     });
   });
-  // 採用 (a.btn) — リンク自体は href で開くので、ここでは状態保存のみ
-  dailyEl.querySelectorAll('a.btn[data-action="adopt"]').forEach(el => {
-    el.addEventListener('click', () => {
-      const rank = parseInt(el.dataset.rank);
-      const states = JSON.parse(localStorage.getItem('daily_states') || '{}');
-      states[d.date] = states[d.date] || {};
-      states[d.date][rank] = 'adopted';
-      localStorage.setItem('daily_states', JSON.stringify(states));
-      // 少し遅らせて再レンダ (新タブが先に開くように)
-      setTimeout(() => {
+  // 採用 — クリップボードにコピー → オーナーがJobsチャットに貼る
+  dailyEl.querySelectorAll('button[data-action="adopt"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const rank = parseInt(btn.dataset.rank);
+      const p = d.proposals.find(x => x.rank === rank);
+      if (!p) return;
+      const payload = `[IDEAL SKIN リール台本生成 依頼]\n\n` +
+        `日付: ${d.date} / DAILY提案 #${p.rank}\n\n` +
+        `■ ニュース: ${p.news_title}\n` +
+        `■ 出典: ${p.news_source}\n` +
+        `■ 原文URL: ${p.news_url||'(なし)'}\n\n` +
+        `■ 掛け合わせネタ: #${p.linked_topic_id} ${p.linked_topic_title}\n\n` +
+        `■ 角度: ${p.angle}\n` +
+        `■ フック試作: ${p.hook_idea}\n` +
+        `■ なぜ今日: ${p.why_now}\n\n` +
+        `→ Jobs、上記を元に3軸台本 (REEL 60s / STORY 7枚 / Threads 5投稿) をヒカル先生口調で生成して。`;
+      navigator.clipboard.writeText(payload).then(() => {
+        alert('✓ 依頼内容をコピーしたよ。\n\nClaude Code チャットに貼り付けて送信すれば、俺が即その場で台本生成して SaaS に反映する。\n\n（GitHub経由じゃなくて、チャットに貼るだけでOK）');
+        const states = JSON.parse(localStorage.getItem('daily_states') || '{}');
+        states[d.date] = states[d.date] || {};
+        states[d.date][rank] = 'adopted';
+        localStorage.setItem('daily_states', JSON.stringify(states));
         dailyEl.innerHTML = renderDailyProposal(d) + renderJobsRequestForm();
         attachDailyHandlers(dailyEl, d);
         attachJobsRequestHandlers(dailyEl);
-      }, 100);
+      }).catch(e => {
+        // フォールバック: textarea経由
+        const ta = document.createElement('textarea');
+        ta.value = payload; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+        alert('✓ 依頼内容をコピーしたよ (フォールバック)。\nClaude Code チャットに貼り付けて送って。');
+      });
     });
   });
   // スキップ
