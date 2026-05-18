@@ -744,8 +744,9 @@ function renderDetail() {
     body = `
       <div class="empty-state">
         <h3>SCRIPT NOT GENERATED</h3>
-        <p>このネタはまだ3軸台本が生成されていない。<br>「生成」ボタンで れいか先生Notion本編 × IDEAL SKINブランド理論 を掛け合わせて<br>リール60秒 / ストーリー / Threads の3軸を自動生成する。</p>
-        <button class="gen-btn">▷ 3軸台本を生成 (mock)</button>
+        <p>このネタはまだ3軸台本が生成されていない。<br>下のボタンで Claude Code チャット用の依頼文を生成しコピーする。<br>そのままチャットに貼ると Jobs がリール60秒 / ストーリー / Threads の3軸を書く (トークン課金なし)。</p>
+        <button class="gen-btn" id="gen-prompt-btn" data-topic-id="${topic.id}">▷ 依頼プロンプトをコピー</button>
+        <div id="gen-prompt-status" style="margin-top:14px; font-size:11.5px; color:var(--muted);"></div>
       </div>
     `;
   } else {
@@ -788,6 +789,40 @@ function renderDetail() {
   });
   const back2 = detail.querySelector('#back-daily');
   if (back2) back2.addEventListener('click', () => showDailyView());
+
+  // 「依頼プロンプトをコピー」ボタン: Claude Code チャット用の依頼文を作成→clipboardへ
+  const genBtn = detail.querySelector('#gen-prompt-btn');
+  if (genBtn) genBtn.addEventListener('click', () => {
+    const tid = parseInt(genBtn.dataset.topicId);
+    const t = STATE.topics.find(x => x.id === tid);
+    if (!t) return;
+    const prompt =
+`「${t.title}」の3軸台本作って。
+
+要件:
+- リール: 60秒構成 (フック→展開→CTA)。台本+カット指示+キャプション
+- ストーリー: 8〜10枚 (1枚1メッセージ・派手要素禁止・黒×金×セリフ)
+- Threads: 3〜5投稿 (1投稿500字以内・ハッシュタグ含む)
+
+ブランドトーン: IDEAL SKIN by Hikaru / 「設計」NG / 「お仕立て」「あなただけ」OK
+最後にCTA: 「無料肌診断はLINEから (URL: https://t35ty6-rgb.github.io/skeleton-demos/ideal-skin-lp-review/lp_short.html )」
+
+完成したらJSONで data/scripts/${t.id}.json を書いてSaaSに反映して。
+`;
+    navigator.clipboard.writeText(prompt).then(() => {
+      const status = detail.querySelector('#gen-prompt-status');
+      if (status) status.innerHTML = '✅ コピーした。Claude Code チャットに貼り付けて送って (Jobsが書きます)';
+      genBtn.textContent = '✓ コピー済み';
+    }).catch(() => {
+      // フォールバック: textarea
+      const ta = document.createElement('textarea');
+      ta.value = prompt; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch(e){}
+      document.body.removeChild(ta);
+      const status = detail.querySelector('#gen-prompt-status');
+      if (status) status.innerHTML = '✅ コピーした (フォールバック)。Claude Code チャットに貼り付けて';
+    });
+  });
 }
 
 function renderScript(s) {
