@@ -1188,6 +1188,7 @@ function showLiveView() {
 }
 
 function renderLiveView() {
+  // localStorage(ブラウザ側履歴) + Drive(rclone由来) のマージ表示は別関数で fetch して再レンダ
   const recordings = JSON.parse(localStorage.getItem('live_recordings') || '[]');
   return `
     <div class="live-head">
@@ -1230,7 +1231,12 @@ function renderLiveView() {
     </div>
 
     <div class="live-recordings">
-      <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:var(--gold);margin-bottom:10px;">📁 録画履歴 (このブラウザに保存)</div>
+      <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:var(--gold);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+        <span>📁 録画履歴 (Drive 上の全録画)</span>
+        <span id="rec-updated" style="font-size:10px;color:var(--muted);"></span>
+      </div>
+      <div id="drive-recordings"><div style="color:var(--muted);font-size:11px;">Drive 上のファイル取得中…</div></div>
+      <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold-deep);margin:24px 0 8px;">— このブラウザ内の今セッション履歴 —</div>
       ${recordings.length === 0
         ? `<div style="color:var(--muted);font-size:12px;padding:14px 0;">録画履歴なし。金曜の講義で「▶ 録画開始」を押すと、ここに残るよ。</div>`
         : recordings.map(r => `
@@ -1269,6 +1275,56 @@ function attachLiveHandlers(rootEl) {
       });
     });
   });
+  // Drive 上の録画リストを fetch
+  loadDriveRecordings();
+}
+
+function loadDriveRecordings() {
+  fetch('data/recordings.json?t=' + Date.now())
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      const container = document.getElementById('drive-recordings');
+      const updatedEl = document.getElementById('rec-updated');
+      if (!container) return;
+      if (!data || !data.recordings || data.recordings.length === 0) {
+        container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:14px 0;">Drive 上に録画なし。最初の講義で録画開始してね。</div>';
+        return;
+      }
+      if (updatedEl && data.updated_at) updatedEl.textContent = '最終同期: ' + data.updated_at.replace('T',' ').substring(0,16);
+      container.innerHTML = data.recordings.map(r => `
+        <div class="recording-item">
+          <div style="flex:1; min-width:0;">
+            <div class="name">${escapeHtml(r.name)}</div>
+            <div class="meta">
+              ${escapeHtml(r.mtime ? r.mtime.replace('T',' ').substring(0,16) : '')}
+              / ${escapeHtml(r.size_mb)} MB
+            </div>
+            <div class="meta" style="margin-top:6px;font-size:10px;">
+              🔗 <a href="${escapeHtml(r.drive_url)}" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:underline;">${escapeHtml(r.drive_url)}</a>
+            </div>
+            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="copy-url-btn" data-url="${escapeHtml(r.drive_url)}" style="background:transparent;border:1px solid var(--line);color:var(--gold);padding:4px 10px;font-size:9px;cursor:pointer;font-family:inherit;letter-spacing:1px;">📋 視聴URLコピー</button>
+              <button class="copy-url-btn" data-url="${escapeHtml(r.download_url)}" style="background:transparent;border:1px solid var(--line);color:var(--gold);padding:4px 10px;font-size:9px;cursor:pointer;font-family:inherit;letter-spacing:1px;">📥 DL用URLコピー</button>
+              <a href="${escapeHtml(r.download_url)}" download="${escapeHtml(r.name)}" style="background:transparent;border:1px solid var(--gold-faint);color:var(--gold);padding:4px 10px;font-size:9px;cursor:pointer;font-family:inherit;letter-spacing:1px;text-decoration:none;">⬇ ダウンロード</a>
+            </div>
+          </div>
+          <a class="dl-btn" href="${escapeHtml(r.drive_url)}" target="_blank" rel="noopener" style="flex-shrink:0;margin-left:12px;">▶ Drive で開く</a>
+        </div>
+      `).join('');
+      // コピーボタン再bind
+      container.querySelectorAll('.copy-url-btn').forEach(b => {
+        b.addEventListener('click', () => {
+          navigator.clipboard.writeText(b.dataset.url).then(() => {
+            const orig = b.textContent; b.textContent = '✓ コピー済';
+            setTimeout(() => b.textContent = orig, 1500);
+          });
+        });
+      });
+    })
+    .catch(e => {
+      const container = document.getElementById('drive-recordings');
+      if (container) container.innerHTML = `<div style="color:#c97a7a;font-size:11px;">recordings.json 読み込み失敗: ${e.message}</div>`;
+    });
 }
 
 async function startRecording() {
