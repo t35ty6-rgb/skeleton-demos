@@ -219,8 +219,8 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 </div>
 
 <footer class="kpi-bar">
-  <span>選定ネタ: <b id="kpi-selected">毛穴の黒ずみは押し出すな</b></span>
-  <span>生成済3軸: <b>1 / 229</b></span>
+  <span>選定ネタ: <b id="kpi-selected">—</b></span>
+  <span>生成済3軸: <b id="kpi-generated">0</b> / <b>229</b></span>
   <span>今週投稿予定: <b>0</b></span>
   <span>LP流入(GA4過去24h): <b>—</b></span>
   <span style="margin-left:auto; color:var(--gold-deep)">SaaSモック v0.1 / 2026-05-18</span>
@@ -232,8 +232,9 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 // ────────────────────────────────────────
 const STATE = {
   topics: [],
-  scripts: { 80: null }, // pore script を後で投入
-  selectedId: 80,
+  scriptsManifest: {}, // topic_id -> filename
+  scripts: {}, // topic_id -> loaded script (lazy)
+  selectedId: null,
   currentTab: 'reel',
   filter: { cat: 'all', q: '' }
 };
@@ -252,16 +253,29 @@ function categorize(title) {
 // ────────────────────────────────────────
 Promise.all([
   fetch('data/topics.json').then(r=>r.json()),
-  fetch('data/script_pore.json').then(r=>r.json())
-]).then(([topicsData, poreScript]) => {
+  fetch('data/scripts_index.json').then(r=>r.json())
+]).then(([topicsData, manifest]) => {
   STATE.topics = topicsData.items.map(t => ({...t, cat: categorize(t.title)}));
-  // 毛穴の黒ずみネタの ID を実データから探して合わせる
+  STATE.scriptsManifest = manifest.scripts || {};
+  // デフォルト選択: 毛穴の黒ずみネタ (生成済の代表)
   const pore = STATE.topics.find(t => t.title.includes('毛穴の黒ずみ'));
-  if (pore) { STATE.selectedId = pore.id; STATE.scripts[pore.id] = poreScript; }
-  renderTopics();
-  renderDetail();
-  document.getElementById('kpi-selected').textContent = pore ? pore.title : '未選択';
+  STATE.selectedId = pore ? pore.id : STATE.topics[0].id;
+  document.getElementById('kpi-generated').textContent = Object.keys(STATE.scriptsManifest).length;
+  loadScriptIfNeeded(STATE.selectedId).then(() => {
+    renderTopics();
+    renderDetail();
+  });
 });
+
+function loadScriptIfNeeded(topicId) {
+  if (STATE.scripts[topicId] !== undefined) return Promise.resolve(STATE.scripts[topicId]);
+  const fname = STATE.scriptsManifest[String(topicId)];
+  if (!fname) { STATE.scripts[topicId] = null; return Promise.resolve(null); }
+  return fetch('data/' + fname).then(r=>r.json()).then(s => {
+    STATE.scripts[topicId] = s;
+    return s;
+  }).catch(e => { STATE.scripts[topicId] = null; return null; });
+}
 
 // ────────────────────────────────────────
 // 左サイドバー描画
@@ -275,7 +289,7 @@ function renderTopics() {
     return true;
   });
   list.innerHTML = filtered.map(t => `
-    <div class="topic-row ${t.id===STATE.selectedId?'selected':''} ${STATE.scripts[t.id]?'has-script':''}" data-id="${t.id}">
+    <div class="topic-row ${t.id===STATE.selectedId?'selected':''} ${STATE.scriptsManifest[String(t.id)]?'has-script':''}" data-id="${t.id}">
       <span class="topic-mark">${t.type==='video'?'▶':'♪'}</span>
       <span class="topic-title">${escapeHtml(t.title)}</span>
     </div>
@@ -283,7 +297,9 @@ function renderTopics() {
   list.querySelectorAll('.topic-row').forEach(el => {
     el.addEventListener('click', () => {
       STATE.selectedId = parseInt(el.dataset.id);
-      renderTopics(); renderDetail();
+      loadScriptIfNeeded(STATE.selectedId).then(() => {
+        renderTopics(); renderDetail();
+      });
     });
   });
 }
