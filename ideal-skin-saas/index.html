@@ -166,38 +166,144 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 }
 
 /* ── DAILY view ── */
-.daily-view { padding: 40px 56px; max-width: 980px; margin: 0 auto; }
-.daily-head { border-bottom: 1px solid var(--gold-faint); padding-bottom: 18px; margin-bottom: 28px; }
-.daily-head h1 { font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 5px; color: var(--gold); margin-bottom: 8px;}
-.daily-head .date { font-family: 'Cormorant Garamond', serif; font-size: 26px; color: var(--text); letter-spacing: 2px;}
-.daily-head .summary { font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.7;}
-.daily-proposals { display: flex; flex-direction: column; gap: 20px;}
-.proposal {
-  background: var(--black-soft); border: 1px solid var(--line); padding: 24px 28px;
-  border-left: 3px solid var(--gold);
+.daily-view { padding: 40px 56px; max-width: 1080px; margin: 0 auto; }
+.daily-head {
+  border: 1px solid var(--gold-faint); padding: 28px 32px; margin-bottom: 32px;
+  background: linear-gradient(180deg, var(--black-soft), var(--black));
+  position: relative;
 }
-.proposal .rank { font-family: 'Cormorant Garamond', serif; color: var(--gold); font-size: 18px; letter-spacing: 2px; margin-bottom: 10px;}
-.proposal .news-title { font-size: 16px; line-height: 1.5; margin-bottom: 8px;}
-.proposal .news-source { font-size: 11px; color: var(--gold-deep); letter-spacing: 1px; margin-bottom: 14px;}
-.proposal .arrow { color: var(--gold); margin: 8px 0; font-family: 'Cormorant Garamond', serif; }
-.proposal .linked { font-size: 13px; color: var(--text); padding: 12px 14px; background: var(--black); border: 1px solid var(--gold-faint); margin-bottom: 14px; cursor: pointer;}
-.proposal .linked:hover { background: rgba(197,164,114,0.06); }
-.proposal .linked b { color: var(--gold); font-weight: 400;}
-.proposal .hook { background: var(--black); padding: 14px 16px; border-left: 2px solid var(--gold-deep); font-size: 14px; line-height: 1.7; margin-bottom: 12px;}
-.proposal .why-now { font-size: 11px; color: var(--muted); line-height: 1.7;}
-.proposal .why-now b { color: var(--gold-deep); }
-.proposal-actions { margin-top: 14px; display: flex; gap: 10px;}
+.daily-head .badge {
+  position: absolute; top: -10px; left: 32px;
+  background: var(--gold); color: var(--black);
+  padding: 4px 14px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 4px;
+}
+.daily-head h1 { font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: 5px; color: var(--gold); margin-bottom: 12px;}
+.daily-head .date { font-family: 'Cormorant Garamond', serif; font-size: 32px; color: var(--text); letter-spacing: 2px; font-weight: 300;}
+.daily-head .date .weekday { color: var(--gold-deep); font-size: 18px; margin-left: 12px;}
+.daily-head .summary {
+  font-size: 14px; color: var(--text); margin-top: 18px; line-height: 1.8;
+  padding: 14px 16px; background: var(--black); border-left: 2px solid var(--gold);
+}
+.daily-head .meta { display: flex; gap: 24px; margin-top: 14px; font-size: 11px; color: var(--muted); letter-spacing: 1px;}
+.daily-head .meta b { color: var(--gold); font-family: 'Cormorant Garamond', serif; font-size: 14px;}
+
+.daily-proposals { display: flex; flex-direction: column; gap: 24px;}
+.proposal {
+  background: var(--black-soft); border: 1px solid var(--line); padding: 0;
+  border-left: 4px solid var(--gold);
+  transition: border-left-color .2s;
+  overflow: hidden;
+}
+.proposal.adopted { border-left-color: #6BB87A; opacity: 0.85;}
+.proposal.skipped { border-left-color: #555; opacity: 0.5;}
+
+.proposal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 28px; background: var(--black); border-bottom: 1px solid var(--line);
+}
+.proposal .rank {
+  font-family: 'Cinzel', serif; color: var(--gold); font-size: 12px; letter-spacing: 4px;
+  display: flex; align-items: center; gap: 12px;
+}
+.proposal .rank::before {
+  content: ""; display: inline-block; width: 32px; height: 32px;
+  background: var(--gold); color: var(--black);
+  font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 400;
+  text-align: center; line-height: 32px; letter-spacing: 0;
+}
+.proposal[data-rank="1"] .rank::before { content: "1"; }
+.proposal[data-rank="2"] .rank::before { content: "2"; }
+.proposal[data-rank="3"] .rank::before { content: "3"; }
+.proposal-status { font-size: 10px; letter-spacing: 2px; color: var(--muted); font-family: 'Cinzel', serif;}
+.proposal.adopted .proposal-status { color: #6BB87A; }
+.proposal.skipped .proposal-status { color: #888; }
+
+.proposal-body { padding: 24px 28px;}
+
+.news-block {
+  margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line);
+}
+.news-block .label {
+  font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 3px;
+  color: var(--gold-deep); margin-bottom: 8px;
+}
+.news-block .news-title {
+  font-size: 16px; line-height: 1.55; color: var(--text); margin-bottom: 8px;
+}
+.news-block .news-source {
+  font-size: 11px; color: var(--muted); letter-spacing: 1px;
+}
+.news-block .news-source a { color: var(--gold-deep); text-decoration: none; margin-left: 8px;}
+.news-block .news-source a:hover { color: var(--gold); text-decoration: underline;}
+
+.cross-block { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line);}
+.cross-arrow {
+  text-align: center; font-family: 'Cormorant Garamond', serif; color: var(--gold);
+  font-size: 24px; margin: -8px 0 10px; letter-spacing: 8px;
+}
+.cross-block .label {
+  font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 3px;
+  color: var(--gold-deep); margin-bottom: 8px;
+}
+.linked {
+  font-size: 14px; color: var(--text); padding: 14px 16px;
+  background: var(--black); border: 1px solid var(--gold-faint);
+  cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+}
+.linked:hover { background: rgba(197,164,114,0.08); border-color: var(--gold);}
+.linked .id { color: var(--gold); font-family: 'Cormorant Garamond', serif; margin-right: 12px; font-size: 16px;}
+.linked .open-hint { font-size: 10px; color: var(--muted); letter-spacing: 1px;}
+
+.angle-block { margin-bottom: 18px; }
+.angle-block .label {
+  font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 3px;
+  color: var(--gold-deep); margin-bottom: 8px;
+}
+.angle-text { font-size: 13px; line-height: 1.8; color: var(--muted);}
+
+.hook-block { margin-bottom: 18px;}
+.hook-block .label {
+  font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 3px;
+  color: var(--gold-deep); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
+}
+.hook-block .copy-btn {
+  background: transparent; border: 1px solid var(--gold-faint); color: var(--gold);
+  padding: 4px 10px; font-size: 9px; letter-spacing: 1px; cursor: pointer; font-family: 'Cinzel', serif;
+}
+.hook-block .copy-btn:hover { background: var(--gold-faint); }
+.hook-block .copy-btn.copied { background: #6BB87A; border-color: #6BB87A; color: var(--black);}
+.hook {
+  background: var(--black); padding: 18px 20px; border-left: 3px solid var(--gold);
+  font-size: 17px; line-height: 1.7; color: var(--text); font-family: 'Shippori Mincho', serif;
+}
+
+.why-block { margin-bottom: 20px;}
+.why-block .label {
+  font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 3px;
+  color: var(--gold-deep); margin-bottom: 8px;
+}
+.why-text { font-size: 12.5px; line-height: 1.8; color: var(--muted); font-style: italic;}
+
+.proposal-actions {
+  margin: 0; padding: 16px 28px; background: var(--black);
+  border-top: 1px solid var(--line);
+  display: flex; gap: 10px; justify-content: flex-end;
+}
 .proposal-actions button {
-  padding: 8px 16px; background: transparent; border: 1px solid var(--gold-faint);
+  padding: 10px 18px; background: transparent; border: 1px solid var(--gold-faint);
   color: var(--gold); font-family: 'Cinzel', serif; letter-spacing: 2px; font-size: 10px;
-  cursor: pointer;
+  cursor: pointer; transition: all .15s;
 }
 .proposal-actions button:hover { background: var(--gold-faint); }
+.proposal-actions button.primary { background: var(--gold); color: var(--black);}
+.proposal-actions button.primary:hover { background: var(--gold-deep); }
+.proposal-actions button.skip { color: var(--muted); border-color: var(--line);}
 
 .daily-empty { text-align: center; padding: 100px 30px; color: var(--muted); }
 .daily-empty h2 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 14px; letter-spacing: 4px; margin-bottom: 18px;}
 .daily-empty p { font-size: 13px; line-height: 1.9; max-width: 540px; margin: 0 auto;}
 .daily-empty code { background: var(--black-soft); padding: 2px 8px; color: var(--gold); }
+.daily-loading { text-align: center; padding: 80px 30px; color: var(--muted); font-size: 12px; letter-spacing: 2px;}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -505,67 +611,134 @@ function showDailyView() {
     dailyEl.className = 'daily-view';
     document.querySelector('.app').insertAdjacentElement('afterend', dailyEl);
   }
-  dailyEl.innerHTML = '<p style="color:var(--muted)">読み込み中...</p>';
-  fetch('data/daily/latest.json').then(r => r.ok ? r.json() : null).then(data => {
+  dailyEl.innerHTML = '<div class="daily-loading">読み込み中…</div>';
+  fetch('data/daily/latest.json?t=' + Date.now()).then(r => r.ok ? r.json() : null).then(data => {
     if (!data) {
       dailyEl.innerHTML = `
         <div class="daily-empty">
-          <h2>DAILY PROPOSAL — NOT GENERATED YET</h2>
-          <p>毎朝6:30に Jobs が以下を実行して「今日のリール提案3本」を出す予定:</p>
-          <p style="margin-top:18px;text-align:left;display:inline-block;">
+          <h2>DAILY PROPOSAL — まだ生成されていない</h2>
+          <p>毎朝6:30に Claude Code リモートエージェントが以下を実行して<br>「今日のリール提案3本」を作る予定:</p>
+          <p style="margin-top:24px;text-align:left;display:inline-block;line-height:2;">
             ① 美容/健康/食/女性系 RSS 8ソースから直近24h以内のニュースを収集<br>
-            ② Claude が IDEAL SKIN顧客に刺さる5本を選定<br>
-            ③ れいか先生Notion 229本から「掛け合わせ候補」を紐付け<br>
-            ④ 3軸台本のフック試作を出力<br>
-            ⑤ LINE Push でオーナーへ通知
+            ② IDEAL SKIN 顧客 (30-50代女性) に刺さる3本を選定<br>
+            ③ れいか先生 Notion 229本から「掛け合わせ候補」を紐付け<br>
+            ④ ヒカル先生口調でフック試作 + なぜ今日 を出力<br>
+            ⑤ JSONをこのSaaSに自動push → ここに表示
           </p>
-          <p style="margin-top:24px;">起動コマンド: <code>npm run daily</code> (要 ANTHROPIC_API_KEY)<br>LaunchAgent名: <code>com.skeleton.idealskin.daily-news</code></p>
+          <p style="margin-top:28px;font-size:11px;">
+            ルーチンID: <code>trig_01ETh2B3ZLYN9JfaaPkqwfBp</code><br>
+            次回実行: 06:30 (Asia/Tokyo)
+          </p>
         </div>`;
       return;
     }
     dailyEl.innerHTML = renderDailyProposal(data);
-    dailyEl.querySelectorAll('.linked').forEach(el => {
-      el.addEventListener('click', () => {
-        const id = parseInt(el.dataset.id);
-        showStockView();
-        STATE.selectedId = id;
-        loadScriptIfNeeded(id).then(() => { renderTopics(); renderDetail(); });
-      });
-    });
+    attachDailyHandlers(dailyEl, data);
   });
 }
 
 function renderDailyProposal(d) {
   const date = d.date;
   const props = d.proposals || [];
+  const dt = new Date(date);
+  const weekdays = ['日','月','火','水','木','金','土'];
+  const wd = !isNaN(dt.getTime()) ? weekdays[dt.getDay()] : '';
+  const states = JSON.parse(localStorage.getItem('daily_states') || '{}');
+  const dayStates = states[date] || {};
   return `
     <div class="daily-head">
+      <div class="badge">TODAY</div>
       <h1>DAILY PROPOSAL</h1>
-      <div class="date">${escapeHtml(date)}</div>
-      <div class="summary"><b style="color:var(--gold-deep)">今日のテーマ:</b> ${escapeHtml(d.summary||'')}</div>
-      <div class="summary">ニュース収集: ${d.news_count}件 / 提案: ${props.length}本</div>
+      <div class="date">${escapeHtml(date)}<span class="weekday">${wd ? '('+wd+')' : ''}</span></div>
+      <div class="summary">${escapeHtml(d.summary||'(要約なし)')}</div>
+      <div class="meta">
+        <span>ニュース収集: <b>${d.news_count||0}</b>件</span>
+        <span>提案: <b>${props.length}</b>本</span>
+        <span>生成時刻: <b>${(d.generated_at||'').replace('T',' ').substring(0,16)}</b></span>
+      </div>
     </div>
     <div class="daily-proposals">
-      ${props.map(p => `
-        <div class="proposal">
-          <div class="rank">PROPOSAL ${p.rank}</div>
-          <div class="news-title">${escapeHtml(p.news_title)}</div>
-          <div class="news-source">出典: ${escapeHtml(p.news_source)}</div>
-          <div class="arrow">↓ 掛け合わせ</div>
-          <div class="linked" data-id="${p.linked_topic_id}">
-            <b>#${p.linked_topic_id}</b> ${escapeHtml(p.linked_topic_title)} <span style="float:right;color:var(--muted);font-size:10px;">クリックでネタ庫へ →</span>
+      ${props.map(p => {
+        const state = dayStates[p.rank] || 'pending';
+        const statusLabel = { pending:'PENDING', adopted:'✓ ADOPTED', skipped:'⏭ SKIPPED' }[state] || 'PENDING';
+        return `
+        <div class="proposal ${state}" data-rank="${p.rank}">
+          <div class="proposal-header">
+            <div class="rank">PROPOSAL ${p.rank}</div>
+            <div class="proposal-status">${statusLabel}</div>
           </div>
-          <div class="hook">${escapeHtml(p.hook_idea)}</div>
-          <div class="why-now"><b>なぜ今日:</b> ${escapeHtml(p.why_now)}</div>
+          <div class="proposal-body">
+            <div class="news-block">
+              <div class="label">📰 NEWS</div>
+              <div class="news-title">${escapeHtml(p.news_title)}</div>
+              <div class="news-source">出典: ${escapeHtml(p.news_source)}${p.news_url?` <a href="${escapeHtml(p.news_url)}" target="_blank" rel="noopener">原文を読む →</a>`:''}</div>
+            </div>
+            <div class="cross-arrow">×</div>
+            <div class="cross-block">
+              <div class="label">🎦 REIKA LIBRARY (掛け合わせ)</div>
+              <div class="linked" data-id="${p.linked_topic_id}">
+                <span><span class="id">#${p.linked_topic_id}</span>${escapeHtml(p.linked_topic_title)}</span>
+                <span class="open-hint">クリックでネタ庫へ →</span>
+              </div>
+            </div>
+            <div class="angle-block">
+              <div class="label">💡 ANGLE</div>
+              <div class="angle-text">${escapeHtml(p.angle||'')}</div>
+            </div>
+            <div class="hook-block">
+              <div class="label">🎤 HOOK (リール冒頭) <button class="copy-btn" data-copy="${escapeHtml(p.hook_idea)}">📋 コピー</button></div>
+              <div class="hook">${escapeHtml(p.hook_idea)}</div>
+            </div>
+            <div class="why-block">
+              <div class="label">⏰ WHY NOW</div>
+              <div class="why-text">${escapeHtml(p.why_now||'')}</div>
+            </div>
+          </div>
           <div class="proposal-actions">
-            <button>▶ 3軸台本を生成</button>
-            <button>📋 LINEで送る</button>
-            <button>スキップ</button>
+            <button class="skip" data-action="skip" data-rank="${p.rank}">⏭ スキップ</button>
+            <button class="primary" data-action="adopt" data-rank="${p.rank}">✓ 採用して台本生成</button>
           </div>
         </div>
-      `).join('')}
+        `;
+      }).join('')}
     </div>
   `;
+}
+
+function attachDailyHandlers(dailyEl, d) {
+  // ネタ庫へジャンプ
+  dailyEl.querySelectorAll('.linked').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = parseInt(el.dataset.id);
+      showStockView();
+      STATE.selectedId = id;
+      loadScriptIfNeeded(id).then(() => { renderTopics(); renderDetail(); });
+    });
+  });
+  // コピーボタン
+  dailyEl.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const text = btn.dataset.copy;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.classList.add('copied'); btn.textContent = '✓ コピー済';
+        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '📋 コピー'; }, 2000);
+      });
+    });
+  });
+  // 採用/スキップ
+  dailyEl.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      const rank = btn.dataset.rank;
+      const states = JSON.parse(localStorage.getItem('daily_states') || '{}');
+      states[d.date] = states[d.date] || {};
+      states[d.date][rank] = action === 'adopt' ? 'adopted' : 'skipped';
+      localStorage.setItem('daily_states', JSON.stringify(states));
+      dailyEl.innerHTML = renderDailyProposal(d);
+      attachDailyHandlers(dailyEl, d);
+    });
+  });
 }
 
 document.getElementById('nav-stock').addEventListener('click', e => { e.preventDefault(); showStockView(); });
