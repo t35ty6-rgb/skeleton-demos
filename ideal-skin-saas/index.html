@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDEAL SKIN | 投稿管理 (Hikaru版 SaaS モック)</title>
+<style>
+:root {
+  --black: #0E0B09;
+  --black-soft: #15110D;
+  --paper: #F5F0E6;
+  --gold: #C5A472;
+  --gold-deep: #8E703F;
+  --gold-faint: rgba(197,164,114,0.25);
+  --line: rgba(245,240,230,0.12);
+  --text: #F5F0E6;
+  --muted: rgba(245,240,230,0.55);
+  --reel: #C5A472;
+  --story: #B89172;
+  --threads: #9A9685;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--black); color: var(--text); font-family: 'Shippori Mincho', 'Noto Serif JP', serif; height: 100%; }
+body { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* ── header ── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 32px; border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--black-soft), var(--black));
+}
+.brand { display: flex; align-items: center; gap: 16px; }
+.brand-mark {
+  font-family: 'Cinzel', serif; font-weight: 500; letter-spacing: 4px;
+  font-size: 14px; color: var(--gold);
+}
+.brand-divider { width: 1px; height: 16px; background: var(--gold-faint); }
+.brand-app { font-size: 13px; color: var(--muted); letter-spacing: 2px; }
+
+.topbar-nav { display: flex; gap: 26px; }
+.topbar-nav a {
+  color: var(--text); text-decoration: none; font-size: 12px;
+  letter-spacing: 2px; padding: 6px 2px; border-bottom: 1px solid transparent;
+}
+.topbar-nav a.active { border-bottom-color: var(--gold); color: var(--gold); }
+.topbar-meta { display: flex; align-items: center; gap: 14px; font-size: 11px; color: var(--muted); letter-spacing: 1px;}
+
+/* ── layout ── */
+.app { flex: 1; display: grid; grid-template-columns: 360px 1fr; min-height: 0; }
+
+/* ── left: topic list ── */
+.sidebar {
+  background: var(--black-soft); border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; min-height: 0;
+}
+.sidebar-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--line); }
+.sidebar-title { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 4px; color: var(--gold); }
+.sidebar-sub { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+.search { width: 100%; margin-top: 10px; padding: 8px 12px; background: var(--black); color: var(--text);
+  border: 1px solid var(--line); font-family: inherit; font-size: 12px; outline: none; }
+.search:focus { border-color: var(--gold-faint); }
+.filter-tabs { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.filter-tab { padding: 4px 10px; font-size: 10px; letter-spacing: 1px; color: var(--muted);
+  border: 1px solid var(--line); cursor: pointer; background: transparent; font-family: inherit; }
+.filter-tab.active { color: var(--gold); border-color: var(--gold-faint); }
+
+.topic-list { overflow-y: auto; flex: 1; }
+.topic-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 22px; border-bottom: 1px solid var(--line); cursor: pointer;
+  transition: background .15s;
+}
+.topic-row:hover { background: rgba(197,164,114,0.04); }
+.topic-row.selected { background: rgba(197,164,114,0.08); border-left: 2px solid var(--gold); padding-left: 20px; }
+.topic-mark { font-size: 13px; color: var(--gold); width: 16px; flex-shrink: 0; padding-top: 2px; }
+.topic-title { font-size: 12.5px; line-height: 1.55; color: var(--text); }
+.topic-row.has-script .topic-title::before {
+  content: "✓ "; color: var(--gold); font-weight: bold;
+}
+
+/* ── right: detail ── */
+.detail { display: flex; flex-direction: column; min-height: 0; }
+.detail-head { padding: 22px 32px 16px; border-bottom: 1px solid var(--line); background: var(--black-soft); }
+.breadcrumb { font-size: 10px; letter-spacing: 2px; color: var(--muted); margin-bottom: 8px; }
+.detail-title { font-size: 24px; font-weight: 400; letter-spacing: 1px; line-height: 1.35; }
+.detail-meta { display: flex; gap: 18px; margin-top: 12px; font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+.detail-meta b { color: var(--gold); font-weight: 400; }
+
+.tabs { display: flex; border-bottom: 1px solid var(--line); padding: 0 32px; background: var(--black-soft); }
+.tab {
+  padding: 14px 22px; font-size: 12px; letter-spacing: 3px; cursor: pointer;
+  color: var(--muted); border-bottom: 2px solid transparent; font-family: 'Cinzel', serif;
+}
+.tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+.tab .tag { display: inline-block; font-size: 8px; padding: 2px 6px; margin-left: 8px;
+  background: var(--gold-faint); color: var(--gold); border-radius: 2px; letter-spacing: 0; }
+
+.tab-body { flex: 1; overflow-y: auto; padding: 26px 32px; }
+
+/* ── reel rendering ── */
+.section { margin-bottom: 28px; }
+.section-title {
+  font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 4px; color: var(--gold);
+  margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--gold-faint);
+}
+.cover-card {
+  background: var(--black-soft); border: 1px solid var(--gold-faint);
+  padding: 24px; display: flex; gap: 24px; align-items: center;
+}
+.cover-art {
+  width: 120px; height: 213px; flex-shrink: 0; background: var(--black);
+  border: 1px solid var(--gold-faint); display: flex; align-items: center; justify-content: center;
+  font-family: 'Shippori Mincho', serif; font-size: 18px; color: var(--gold); text-align: center;
+  padding: 12px; line-height: 1.4; letter-spacing: 2px;
+}
+.cover-meta { font-size: 12px; line-height: 1.8; color: var(--text); }
+.cover-meta dt { color: var(--muted); font-size: 10px; letter-spacing: 1px; margin-top: 6px; }
+.cover-meta dd { margin-bottom: 4px; }
+
+.scene-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.scene-table th, .scene-table td { text-align: left; padding: 14px 16px; vertical-align: top; border-bottom: 1px solid var(--line); }
+.scene-table th { background: var(--black-soft); color: var(--gold); font-weight: 400; letter-spacing: 1px; font-size: 10px; text-transform: uppercase;}
+.scene-table .t { color: var(--gold); width: 80px; font-family: 'Cormorant Garamond', serif; font-size: 13px;}
+.scene-table .label { width: 140px; color: var(--muted); font-size: 11px; }
+.scene-table .lines { line-height: 1.7; }
+.scene-table .telop { color: var(--gold-deep); font-size: 11px; margin-top: 6px; font-style: italic;}
+
+.tag-line { font-size: 11px; color: var(--muted); margin-top: 12px; line-height: 1.8;}
+
+/* ── story rendering ── */
+.story-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+.story-slide { background: var(--black-soft); border: 1px solid var(--line); padding: 20px 16px; min-height: 280px;
+  display: flex; flex-direction: column; justify-content: space-between; }
+.story-slide .num { font-family: 'Cormorant Garamond', serif; color: var(--gold); font-size: 11px; letter-spacing: 1px; }
+.story-slide .type { font-size: 9px; color: var(--muted); letter-spacing: 2px; margin-top: 4px; text-transform: uppercase; }
+.story-slide .txt { font-size: 13px; line-height: 1.7; margin: 16px 0; white-space: pre-line; }
+.story-slide .design { font-size: 10px; color: var(--gold-deep); margin-top: auto; font-style: italic; line-height: 1.5; }
+
+/* ── threads rendering ── */
+.threads-thread { max-width: 580px; }
+.threads-post { background: var(--black-soft); border: 1px solid var(--line); padding: 18px 22px; margin-bottom: 10px;
+  position: relative; }
+.threads-post .num { position: absolute; top: 16px; right: 18px; font-family: 'Cormorant Garamond', serif;
+  color: var(--gold); font-size: 13px; letter-spacing: 1px; }
+.threads-post .text { font-size: 13.5px; line-height: 1.8; white-space: pre-line; }
+
+/* ── empty ── */
+.empty-state { text-align: center; padding: 80px 32px; color: var(--muted); }
+.empty-state h3 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 14px; letter-spacing: 3px; margin-bottom: 16px; }
+.empty-state p { font-size: 12.5px; line-height: 1.8; }
+.empty-state .gen-btn { margin-top: 24px; padding: 12px 32px; background: transparent;
+  border: 1px solid var(--gold); color: var(--gold); font-family: 'Cinzel', serif; letter-spacing: 3px;
+  font-size: 11px; cursor: pointer; }
+.empty-state .gen-btn:hover { background: var(--gold-faint); }
+
+/* ── footer KPI bar ── */
+.kpi-bar {
+  display: flex; gap: 32px; padding: 14px 32px; border-top: 1px solid var(--line);
+  background: var(--black-soft); font-size: 11px; color: var(--muted); letter-spacing: 1px;
+}
+.kpi-bar b { color: var(--gold); font-family: 'Cormorant Garamond', serif; font-size: 14px; }
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Cormorant+Garamond:wght@300;400&family=Noto+Serif+JP:wght@300;400;500&family=Shippori+Mincho:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">IDEAL SKIN</span>
+    <span class="brand-divider"></span>
+    <span class="brand-app">投稿管理 SaaS (Hikaru版 / mock v0.1)</span>
+  </div>
+  <nav class="topbar-nav">
+    <a href="#" class="active">ネタ庫</a>
+    <a href="#">投稿予約</a>
+    <a href="#">配信履歴</a>
+    <a href="#">KPI</a>
+    <a href="#">セミナー録画</a>
+  </nav>
+  <div class="topbar-meta">
+    <span>@hikaru_ideal_skin</span>
+    <span>v0.1 (mock)</span>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- ── 左サイドバー ── -->
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-title">REIKA TOPICS</div>
+      <div class="sidebar-sub">れいか先生 知識ライブラリ 全229本<br>(Notion: 2c3a833f53da4acd...)</div>
+      <input class="search" id="search" placeholder="キーワード検索 (例: 毛穴 / シミ / 腸)">
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-cat="all">ALL</button>
+        <button class="filter-tab" data-cat="skin">肌・美容</button>
+        <button class="filter-tab" data-cat="health">健康</button>
+        <button class="filter-tab" data-cat="female">女性身体</button>
+        <button class="filter-tab" data-cat="biz">経営マーケ</button>
+      </div>
+    </div>
+    <div class="topic-list" id="topic-list">
+      <!-- JS で動的描画 -->
+    </div>
+  </aside>
+
+  <!-- ── 右メインペイン ── -->
+  <main class="detail" id="detail">
+    <!-- JS で動的描画 -->
+  </main>
+
+</div>
+
+<footer class="kpi-bar">
+  <span>選定ネタ: <b id="kpi-selected">毛穴の黒ずみは押し出すな</b></span>
+  <span>生成済3軸: <b>1 / 229</b></span>
+  <span>今週投稿予定: <b>0</b></span>
+  <span>LP流入(GA4過去24h): <b>—</b></span>
+  <span style="margin-left:auto; color:var(--gold-deep)">SaaSモック v0.1 / 2026-05-18</span>
+</footer>
+
+<script>
+// ────────────────────────────────────────
+// データ: 229本のネタ + 1本完成台本
+// ────────────────────────────────────────
+const STATE = {
+  topics: [],
+  scripts: { 80: null }, // pore script を後で投入
+  selectedId: 80,
+  currentTab: 'reel',
+  filter: { cat: 'all', q: '' }
+};
+
+// カテゴリ判定 (シンプルなキーワード)
+function categorize(title) {
+  if (/肌|シミ|たるみ|毛穴|ニキビ|アトピー|皮膚|UV|SPF|美肌|エステ|スキンケア/.test(title)) return 'skin';
+  if (/生理|子宮|卵巣|妊娠|フェムケア|ホルモン/.test(title)) return 'female';
+  if (/サロン|マーケ|集客|売上|単価|営業|HPB|経営|SNS|リール|LIVE|物販|発信|クロージング/.test(title)) return 'biz';
+  if (/食|腸|肝臓|健康|アレルギー|ガン|癌|血液|腰痛|頭痛|添加|オメガ|大豆|牛乳|プロテイン|水素|白湯|栄養|デトックス|解毒/.test(title)) return 'health';
+  return 'other';
+}
+
+// ────────────────────────────────────────
+// ロード
+// ────────────────────────────────────────
+Promise.all([
+  fetch('data/topics.json').then(r=>r.json()),
+  fetch('data/script_pore.json').then(r=>r.json())
+]).then(([topicsData, poreScript]) => {
+  STATE.topics = topicsData.items.map(t => ({...t, cat: categorize(t.title)}));
+  // 毛穴の黒ずみネタの ID を実データから探して合わせる
+  const pore = STATE.topics.find(t => t.title.includes('毛穴の黒ずみ'));
+  if (pore) { STATE.selectedId = pore.id; STATE.scripts[pore.id] = poreScript; }
+  renderTopics();
+  renderDetail();
+  document.getElementById('kpi-selected').textContent = pore ? pore.title : '未選択';
+});
+
+// ────────────────────────────────────────
+// 左サイドバー描画
+// ────────────────────────────────────────
+function renderTopics() {
+  const list = document.getElementById('topic-list');
+  const q = STATE.filter.q.toLowerCase();
+  const filtered = STATE.topics.filter(t => {
+    if (STATE.filter.cat !== 'all' && t.cat !== STATE.filter.cat) return false;
+    if (q && !t.title.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  list.innerHTML = filtered.map(t => `
+    <div class="topic-row ${t.id===STATE.selectedId?'selected':''} ${STATE.scripts[t.id]?'has-script':''}" data-id="${t.id}">
+      <span class="topic-mark">${t.type==='video'?'▶':'♪'}</span>
+      <span class="topic-title">${escapeHtml(t.title)}</span>
+    </div>
+  `).join('');
+  list.querySelectorAll('.topic-row').forEach(el => {
+    el.addEventListener('click', () => {
+      STATE.selectedId = parseInt(el.dataset.id);
+      renderTopics(); renderDetail();
+    });
+  });
+}
+
+document.getElementById('search').addEventListener('input', e => {
+  STATE.filter.q = e.target.value; renderTopics();
+});
+document.querySelectorAll('.filter-tab').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.filter-tab').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    STATE.filter.cat = b.dataset.cat; renderTopics();
+  });
+});
+
+// ────────────────────────────────────────
+// 右メインペイン描画
+// ────────────────────────────────────────
+function renderDetail() {
+  const topic = STATE.topics.find(t => t.id === STATE.selectedId);
+  if (!topic) return;
+  const script = STATE.scripts[topic.id];
+  const detail = document.getElementById('detail');
+
+  document.getElementById('kpi-selected').textContent = topic.title;
+
+  let body;
+  if (!script) {
+    body = `
+      <div class="empty-state">
+        <h3>SCRIPT NOT GENERATED</h3>
+        <p>このネタはまだ3軸台本が生成されていない。<br>「生成」ボタンで れいか先生Notion本編 × IDEAL SKINブランド理論 を掛け合わせて<br>リール60秒 / ストーリー / Threads の3軸を自動生成する。</p>
+        <button class="gen-btn">▷ 3軸台本を生成 (mock)</button>
+      </div>
+    `;
+  } else {
+    body = renderScript(script);
+  }
+
+  detail.innerHTML = `
+    <div class="detail-head">
+      <div class="breadcrumb">REIKA TOPICS &nbsp;/&nbsp; #${topic.id} &nbsp;/&nbsp; ${topic.cat.toUpperCase()}</div>
+      <div class="detail-title">${escapeHtml(topic.title)}</div>
+      <div class="detail-meta">
+        <span><b>ソース:</b> れいか先生 Notion (${topic.type==='video'?'動画':'音声'})</span>
+        <span><b>カテゴリ:</b> ${topic.cat}</span>
+        <span><b>状態:</b> ${script?'台本生成済':'未生成'}</span>
+      </div>
+    </div>
+    ${script ? `
+      <div class="tabs">
+        <div class="tab ${STATE.currentTab==='reel'?'active':''}" data-tab="reel">REEL <span class="tag">60s</span></div>
+        <div class="tab ${STATE.currentTab==='story'?'active':''}" data-tab="story">STORY <span class="tag">${script.story.slides.length}枚</span></div>
+        <div class="tab ${STATE.currentTab==='threads'?'active':''}" data-tab="threads">THREADS <span class="tag">${script.threads.posts.length}post</span></div>
+      </div>
+    `:''}
+    <div class="tab-body">${body}</div>
+  `;
+  detail.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => { STATE.currentTab = t.dataset.tab; renderDetail(); });
+  });
+}
+
+function renderScript(s) {
+  if (STATE.currentTab === 'reel') return renderReel(s.reel);
+  if (STATE.currentTab === 'story') return renderStory(s.story);
+  if (STATE.currentTab === 'threads') return renderThreads(s.threads);
+  return '';
+}
+
+function renderReel(r) {
+  return `
+    <div class="section">
+      <div class="section-title">REEL — ${r.duration_sec}秒 / カバー&構成</div>
+      <div class="cover-card">
+        <div class="cover-art">${escapeHtml(r.cover_text)}</div>
+        <dl class="cover-meta">
+          <dt>タイトル</dt><dd>${escapeHtml(r.title)}</dd>
+          <dt>カバーデザイン</dt><dd>${escapeHtml(r.cover_design_note)}</dd>
+          <dt>BGM</dt><dd>${escapeHtml(r.bgm_hint)}</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">タイムライン台本</div>
+      <table class="scene-table">
+        <thead><tr><th>時間</th><th>パート</th><th>セリフ / テロップ</th></tr></thead>
+        <tbody>
+          ${r.scenes.map(sc => `
+            <tr>
+              <td class="t">${sc.t}</td>
+              <td class="label">${escapeHtml(sc.label)}</td>
+              <td class="lines">${escapeHtml(sc.lines)}<div class="telop">テロップ: ${escapeHtml(sc.telop)}</div></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <div class="tag-line">ハッシュタグ: ${escapeHtml(r.hashtags)}</div>
+    </div>
+  `;
+}
+
+function renderStory(st) {
+  return `
+    <div class="section">
+      <div class="section-title">STORY — ${st.slides.length}枚連投 / ${escapeHtml(st.title)}</div>
+      <div class="story-grid">
+        ${st.slides.map(sl => `
+          <div class="story-slide">
+            <div>
+              <span class="num">#${sl.n}</span>
+              <div class="type">${escapeHtml(sl.type)}</div>
+              <div class="txt">${escapeHtml(sl.text)}</div>
+            </div>
+            <div class="design">${escapeHtml(sl.design)}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="tag-line">ステッカー: ${escapeHtml(st.sticker_hints)} / 投稿時間: ${escapeHtml(st.post_time_hint)}</div>
+    </div>
+  `;
+}
+
+function renderThreads(th) {
+  return `
+    <div class="section">
+      <div class="section-title">THREADS — ${th.posts.length}投稿スレ / ${escapeHtml(th.title)}</div>
+      <div class="threads-thread">
+        ${th.posts.map(p => `
+          <div class="threads-post">
+            <span class="num">${p.n}/${th.posts.length}</span>
+            <div class="text">${escapeHtml(p.text)}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="tag-line">投稿時間: ${escapeHtml(th.post_time_hint)} / トーン: ${escapeHtml(th.tone_note)}</div>
+    </div>
+  `;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+</script>
+
+</body>
+</html>
