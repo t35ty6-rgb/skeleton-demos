@@ -699,10 +699,11 @@ function resetAll() {
 // GASコード（埋め込み・コピー対象）
 // =============================================
 const GAS_FILES = {
-  'Config.gs': function(token, groupId, fromAddress, contractPlan) {
+  'Config.gs': function(token, groupId, fromAddress, contractPlan, salonName) {
     const quotaByPlan = { demo: 200, light: 200, standard: 5000, pro: 30000 };
     const quota = quotaByPlan[contractPlan] || 200;
     const planLabel = { demo: 'デモ(無料)', light: 'ライト', standard: 'スタンダードプレミアム', pro: 'プロ' }[contractPlan] || 'デモ(無料)';
+    const safeSalon = (salonName || '').replace(/'/g, "\\'");
     return `/**
  * 設定ファイル
  * 契約プラン: ${planLabel}
@@ -747,9 +748,12 @@ const CONFIG = {
   LINE_MONTHLY_QUOTA: ${quota},
   LINE_QUOTA_WARNING_RATIO: 0.75,
 
+  // Skeleton本社向けアラートメール（75%/100%到達時に飛ぶ / 客には見えない）
+  VENDOR_ALERT_EMAIL: 't3.5ty6@gmail.com',
+
   MAIN_FAILURE_THRESHOLD: 3,
 
-  SALON_NAME: '',
+  SALON_NAME: '${safeSalon}',
 };
 `;
   },
@@ -1041,12 +1045,17 @@ function incrementQuotaCounter() {
   const key = 'lineQuota_' + ym;
   const current = Number(props.getProperty(key) || '0') + 1;
   props.setProperty(key, String(current));
-  const warnFlagKey = 'lineQuotaWarned_' + ym;
-  if (props.getProperty(warnFlagKey)) return;
   const threshold = Math.floor(CONFIG.LINE_MONTHLY_QUOTA * CONFIG.LINE_QUOTA_WARNING_RATIO);
-  if (current >= threshold) {
+  const warnFlagKey = 'lineQuotaWarned_' + ym;
+  if (current >= threshold && !props.getProperty(warnFlagKey)) {
     props.setProperty(warnFlagKey, '1');
     sendQuotaWarning(current, CONFIG.LINE_MONTHLY_QUOTA);
+    notifyVendorAlert('warning', current, CONFIG.LINE_MONTHLY_QUOTA);
+  }
+  const exhaustedFlagKey = 'lineQuotaExhausted_' + ym;
+  if (current >= CONFIG.LINE_MONTHLY_QUOTA && !props.getProperty(exhaustedFlagKey)) {
+    props.setProperty(exhaustedFlagKey, '1');
+    notifyVendorAlert('exhausted', current, CONFIG.LINE_MONTHLY_QUOTA);
   }
 }
 
@@ -1059,6 +1068,43 @@ function sendQuotaWarning(current, quota) {
   for (const toId of CONFIG.LINE_TO_IDS) {
     if (!toId || toId.indexOf('ここに') === 0) continue;
     try { pushLineMessageRaw(toId, text); } catch (e) { Logger.log('クォータ警告送信失敗: ' + e.message); }
+  }
+}
+
+/**
+ * Skeleton本社（ベンダー）への通知メール
+ *   kind: 'warning' (75%到達) | 'exhausted' (100%到達)
+ *   客側LINEには出ない裏チャネル。本社が先回りでプランアップ提案できる。
+ */
+function notifyVendorAlert(kind, current, quota) {
+  const to = CONFIG.VENDOR_ALERT_EMAIL;
+  if (!to) return;
+  const salon = CONFIG.SALON_NAME || '(SALON_NAME未設定)';
+  const ratio = quota > 0 ? Math.round(current / quota * 100) : 0;
+  const tag = kind === 'exhausted' ? '🚨100%到達(送信停止)' : '⚠️' + ratio + '%到達';
+  const subject = '[Skeleton Alert] ' + salon + ' LINE通知 ' + tag;
+  const body = [
+    'Skeleton 客先LINE通知ツールから自動アラート',
+    '',
+    'サロン名: ' + salon,
+    '到達率: ' + ratio + '% (' + current + ' / ' + quota + '通)',
+    '月キー: ' + monthKey(),
+    '',
+    kind === 'exhausted'
+      ? '🚨 月次上限に到達。今月いっぱいLINE通知が止まる状態。'
+      : '⚠️ 月次上限の' + ratio + '%に到達。来週〜来月の予約数次第で枯渇可能性あり。',
+    '',
+    '推奨アクション:',
+    kind === 'exhausted'
+      ? '・即時プランアップグレード(Light: 月¥5,000 / 5,000通)'
+      : '・Lightプラン提案メールを客に送る(Jobs下書き作成済みのはず)',
+    '',
+    '-- Skeleton Inc. 自動巡回システム --'
+  ].join('\\n');
+  try {
+    MailApp.sendEmail(to, subject, body);
+  } catch (e) {
+    Logger.log('ベンダーアラート送信失敗: ' + e.message);
   }
 }
 
@@ -2594,7 +2640,7 @@ const STEPS = [
             </p>
             <div class="code-block-wrap">
               <button class="btn btn-copy code-block-copy" onclick="copyLatestFile('${n}', this)">📋 ${n} をコピー</button>
-              <pre class="code-block" id="code-${n}">${escapeHtml(GAS_FILES[n](state.lineToken, state.groupId, state.fromAddress || 'beauty.hotpepper.jp salonboard.com', state.contractPlan))}</pre>
+              <pre class="code-block" id="code-${n}">${escapeHtml(GAS_FILES[n](state.lineToken, state.groupId, state.fromAddress || 'beauty.hotpepper.jp salonboard.com', state.contractPlan, state.salonName))}</pre>
             </div>
           </div>
         `).join('')}
@@ -3340,7 +3386,7 @@ function copyCode(elementId, btn) {
 
 // アップデート用: GAS_FILES から直接生成したコードをクリップボードへ
 function copyLatestFile(fileName, btn) {
-  const code = GAS_FILES[fileName](state.lineToken, state.groupId, state.fromAddress, state.contractPlan);
+  const code = GAS_FILES[fileName](state.lineToken, state.groupId, state.fromAddress, state.contractPlan, state.salonName);
   navigator.clipboard.writeText(code).then(() => {
     const orig = btn.innerHTML;
     btn.innerHTML = '✓ コピーした！次はGASで貼り付け';
