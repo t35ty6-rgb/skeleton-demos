@@ -436,12 +436,39 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   font-family: 'Cinzel', serif; text-decoration: none;
 }
 .recording-item .dl-btn:hover { background: var(--gold-faint); }
+
+/* ── View switching: body[data-view] で active view 以外は確実に隠す ── */
+body[data-view="stock"]     #daily-view,
+body[data-view="stock"]     #live-view,
+body[data-view="stock"]     #analytics-view,
+body[data-view="daily"]     #app,
+body[data-view="daily"]     #live-view,
+body[data-view="daily"]     #analytics-view,
+body[data-view="live"]      #app,
+body[data-view="live"]      #daily-view,
+body[data-view="live"]      #analytics-view,
+body[data-view="analytics"] #app,
+body[data-view="analytics"] #daily-view,
+body[data-view="analytics"] #live-view {
+  display: none !important;
+}
+body[data-view="stock"] #app { display: grid !important; }
+
+/* view切替時のフェードイン */
+#daily-view, #live-view, #analytics-view {
+  animation: fadeInView .18s ease-out;
+}
+@keyframes fadeInView { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+/* footer KPI bar — analytics/live ビュー時は隠す (関連性ない情報なので) */
+body[data-view="live"]      .kpi-bar,
+body[data-view="analytics"] .kpi-bar { display:none !important; }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Cormorant+Garamond:wght@300;400&family=Noto+Serif+JP:wght@300;400;500&family=Shippori+Mincho:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
-<body>
+<body data-view="stock">
 
 <!-- ── Login Gate ── -->
 <div id="login-gate" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(180deg,#0E0B09,#15110D);display:none;align-items:center;justify-content:center;font-family:'Shippori Mincho',serif;">
@@ -846,25 +873,39 @@ function escapeHtml(s) {
 // ────────────────────────────────────────
 // View 切り替え (ネタ庫 / DAILY)
 // ────────────────────────────────────────
+// ビュー切替共通ヘルパー: タイマー停止 + 動的セクション削除 + nav状態 + body[data-view]
+function _enterView(name) {
+  // 録画中停止 (live離脱時)
+  if (typeof LIVE !== 'undefined' && LIVE.status === 'recording' && name !== 'live') {
+    try { stopRecording(); } catch(e){}
+  }
+  // 流入分析タイマー停止 (analytics離脱時)
+  if (typeof analyticsTimer !== 'undefined' && analyticsTimer && name !== 'analytics') {
+    clearInterval(analyticsTimer); analyticsTimer = null;
+  }
+  // 既存の動的ビューセクションを全削除 (残像対策)
+  document.querySelectorAll('#daily-view, #live-view, #analytics-view').forEach(el => el.remove());
+  // nav active 状態リセット
+  ['stock','daily','live','analytics'].forEach(n => {
+    const el = document.getElementById('nav-'+n);
+    if (el) el.classList.toggle('active', n === name);
+  });
+  // CSS の表示制御フラグ
+  document.body.setAttribute('data-view', name);
+  // app の inline display は使わない (CSS側で制御)
+  document.getElementById('app').style.display = '';
+}
+
 function showStockView() {
-  document.getElementById('nav-stock').classList.add('active');
-  document.getElementById('nav-daily').classList.remove('active');
-  document.getElementById('app').style.display = 'grid';
-  const dailyEl = document.getElementById('daily-view');
-  if (dailyEl) dailyEl.remove();
+  _enterView('stock');
 }
 
 function showDailyView() {
-  document.getElementById('nav-stock').classList.remove('active');
-  document.getElementById('nav-daily').classList.add('active');
-  document.getElementById('app').style.display = 'none';
-  let dailyEl = document.getElementById('daily-view');
-  if (!dailyEl) {
-    dailyEl = document.createElement('section');
-    dailyEl.id = 'daily-view';
-    dailyEl.className = 'daily-view';
-    document.querySelector('.app').insertAdjacentElement('afterend', dailyEl);
-  }
+  _enterView('daily');
+  const dailyEl = document.createElement('section');
+  dailyEl.id = 'daily-view';
+  dailyEl.className = 'daily-view';
+  document.querySelector('.app').insertAdjacentElement('afterend', dailyEl);
   dailyEl.innerHTML = '<div class="daily-loading">読み込み中…</div>';
   fetch('data/daily/latest.json?t=' + Date.now())
     .then(r => { if (!r.ok) return null; return r.text(); })
@@ -1176,12 +1217,7 @@ const LIVE = {
 };
 
 function showLiveView() {
-  document.getElementById('nav-stock').classList.remove('active');
-  document.getElementById('nav-daily').classList.remove('active');
-  document.getElementById('nav-live').classList.add('active');
-  document.getElementById('app').style.display = 'none';
-  document.querySelectorAll('#daily-view, #live-view').forEach(el => el.remove());
-
+  _enterView('live');
   const el = document.createElement('section');
   el.id = 'live-view';
   el.className = 'live-view';
@@ -1446,13 +1482,7 @@ const TRACK_API = 'https://holland-unit-fan-evans.trycloudflare.com';
 const TRACK_ACCOUNT = 'ideal-skin';
 
 function showAnalyticsView() {
-  document.getElementById('nav-stock').classList.remove('active');
-  document.getElementById('nav-daily').classList.remove('active');
-  document.getElementById('nav-live').classList.remove('active');
-  document.getElementById('nav-analytics').classList.add('active');
-  document.getElementById('app').style.display = 'none';
-  document.querySelectorAll('#daily-view, #live-view, #analytics-view').forEach(el => el.remove());
-
+  _enterView('analytics');
   const el = document.createElement('section');
   el.id = 'analytics-view';
   el.style.cssText = 'padding:24px 32px; background:var(--black); color:var(--text); min-height: calc(100vh - 72px);';
