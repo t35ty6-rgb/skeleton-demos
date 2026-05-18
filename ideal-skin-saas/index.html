@@ -1115,15 +1115,21 @@ function renderLiveView() {
         }
       </div>
       <div class="live-flow">
-        <b>金曜の使い方:</b><br>
-        ① Zoom講義を開いて、ヒカル先生の画面+音声が見える状態に<br>
+        <b>📁 初回セットアップ (1回だけ):</b><br>
+        ① Mac の Google Drive Desktop アプリ起動<br>
+        ② マイドライブ内に <b>「IDEAL SKIN 講義」</b> フォルダを作成<br>
+        ③ Chrome の設定 → ダウンロード → 保存先を <b>~/Google Drive/マイドライブ/IDEAL SKIN 講義/</b> に変更<br>
+        　→ これで録画ファイルが自動で Drive に同期される (=実質自動アップロード)<br>
+        <br>
+        <b>🔴 金曜の使い方:</b><br>
+        ① Zoom 講義を開いて、ヒカル先生の画面+音声が見える状態に<br>
         ② このページの「▶ 録画開始」を押す<br>
         ③ 画面共有ダイアログで「Zoomウィンドウ」or「画面全体」を選択<br>
-        ④ <b>「Share audio (音声も共有)」のチェックを忘れずに</b><br>
-        ⑤ 講義終了したら「⏹ 録画を停止」を押す<br>
-        ⑥ 自動でファイル ダウンロード (lecture_YYYY-MM-DD.webm) され、下の履歴にも記録<br>
-        ⑦ そのファイルを Claude Code チャットにドラッグ&ドロップして「分析してリール作って」と書いて送信<br>
-        ⑧ Jobs が文字起こし→重要ポイント抽出→3軸台本生成してSaaSに反映
+        ④ <b>「Share audio (音声も共有)」のチェック必須</b><br>
+        ⑤ 講義終了したら「⏹ 録画を停止」<br>
+        ⑥ 自動で <b>「IDEAL SKIN 講義_YYYY-MM-DD(曜)_HH-MM.webm」</b> 形式でDL → Drive同期<br>
+        ⑦ そのファイルを Claude Code チャットにドラッグ&ドロップして「分析してリール作って」<br>
+        ⑧ Jobs が文字起こし→重要ポイント抽出→3軸台本生成 → SaaS に反映
       </div>
     </div>
 
@@ -1136,8 +1142,9 @@ function renderLiveView() {
             <div>
               <div class="name">${escapeHtml(r.name)}</div>
               <div class="meta">${escapeHtml(r.date)} / ${escapeHtml(r.size)} / ${escapeHtml(r.duration||'')}</div>
+              ${r.drive_path ? `<div class="meta" style="color:var(--gold-deep);">📁 ${escapeHtml(r.drive_path)}</div>` : ''}
             </div>
-            <div style="color:var(--muted);font-size:10px;letter-spacing:1px;">ローカルダウンロード済</div>
+            <a class="dl-btn" href="https://drive.google.com/drive/u/0/my-drive" target="_blank" rel="noopener">📂 Drive で開く</a>
           </div>
         `).join('')
       }
@@ -1164,8 +1171,16 @@ async function startRecording() {
     LIVE.recorder.ondataavailable = e => { if (e.data.size > 0) LIVE.chunks.push(e.data); };
     LIVE.recorder.onstop = () => {
       const blob = new Blob(LIVE.chunks, { type: 'video/webm' });
-      const date = new Date().toISOString().slice(0,10);
-      const filename = `lecture_${date}.webm`;
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth()+1).padStart(2,'0');
+      const dd = String(now.getDate()).padStart(2,'0');
+      const hh = String(now.getHours()).padStart(2,'0');
+      const mi = String(now.getMinutes()).padStart(2,'0');
+      const weekdays = ['日','月','火','水','木','金','土'];
+      const wd = weekdays[now.getDay()];
+      // タイトル: 「IDEAL SKIN 講義_2026-05-22(金)_19-30.webm」
+      const filename = `IDEAL SKIN 講義_${yyyy}-${mm}-${dd}(${wd})_${hh}-${mi}.webm`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = filename; document.body.appendChild(a); a.click();
@@ -1175,7 +1190,12 @@ async function startRecording() {
       const dur = formatTime(elapsed);
       const size = (blob.size / (1024*1024)).toFixed(1) + ' MB';
       const recordings = JSON.parse(localStorage.getItem('live_recordings') || '[]');
-      recordings.unshift({ name: filename, date: new Date().toISOString().replace('T',' ').substring(0,16), size, duration: dur });
+      recordings.unshift({
+        name: filename,
+        date: `${yyyy}-${mm}-${dd}(${wd}) ${hh}:${mi}`,
+        size, duration: dur,
+        drive_path: `マイドライブ/IDEAL SKIN 講義/${filename}`
+      });
       localStorage.setItem('live_recordings', JSON.stringify(recordings.slice(0,30)));
 
       LIVE.stream.getTracks().forEach(t => t.stop());
@@ -1184,7 +1204,7 @@ async function startRecording() {
       LIVE.status = 'idle';
       const live = document.getElementById('live-view');
       if (live) { live.innerHTML = renderLiveView(); attachLiveHandlers(live); }
-      alert(`✓ 録画完了 (${dur}, ${size})\n${filename} をダウンロードした。\nClaude Code チャットにドラッグ&ドロップで分析依頼してね。`);
+      alert(`✓ 録画完了 (${dur}, ${size})\n\nファイル名: ${filename}\n\nChromeのダウンロード先を『マイドライブ/IDEAL SKIN 講義/』にしてれば、自動で Google Drive に同期される。\nClaude Code チャットにドラッグ&ドロップで分析依頼してね。`);
     };
     LIVE.recorder.start();
     LIVE.startTime = Date.now();
