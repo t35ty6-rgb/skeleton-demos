@@ -388,6 +388,54 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 }
 .queue-item .time { color: var(--muted); font-size: 10px; margin-right: 10px; font-family: 'Cormorant Garamond', serif;}
 .queue-item .status { float: right; font-size: 9px; letter-spacing: 1px; color: var(--gold-deep);}
+
+/* ── LIVE record view ── */
+.live-view { padding: 40px 56px; max-width: 980px; margin: 0 auto;}
+.live-head { border-bottom: 1px solid var(--gold-faint); padding-bottom: 18px; margin-bottom: 28px;}
+.live-head h1 { font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 5px; color: var(--gold); margin-bottom: 8px;}
+.live-head .sub { font-size: 12.5px; color: var(--muted); line-height: 1.8;}
+.live-controls {
+  background: var(--black-soft); border: 1px solid var(--gold-faint); padding: 36px;
+  text-align: center; margin-bottom: 24px;
+}
+.live-status {
+  font-family: 'Cinzel', serif; letter-spacing: 4px; font-size: 14px;
+  color: var(--muted); margin-bottom: 22px;
+}
+.live-status.recording { color: #e08585; }
+.live-status .timer {
+  display: block; font-family: 'Cormorant Garamond', serif; font-size: 36px;
+  letter-spacing: 2px; margin-top: 8px; color: var(--text);
+}
+.live-btn {
+  padding: 16px 48px; font-family: 'Cinzel', serif; letter-spacing: 4px;
+  font-size: 13px; cursor: pointer; border: 1px solid var(--gold);
+  background: transparent; color: var(--gold); transition: all .15s;
+}
+.live-btn:hover { background: var(--gold); color: var(--black);}
+.live-btn.stop { background: #c93636; color: white; border-color: #c93636;}
+.live-btn.stop:hover { background: #a02020; border-color: #a02020;}
+.live-btn:disabled { opacity: 0.4; cursor: not-allowed;}
+.live-flow {
+  background: var(--black); padding: 20px 24px; margin-top: 24px;
+  font-size: 12px; color: var(--muted); line-height: 2;
+  border-left: 2px solid var(--gold-faint);
+}
+.live-flow b { color: var(--gold); }
+.live-recordings { margin-top: 28px;}
+.recording-item {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--black-soft); padding: 14px 20px; margin-bottom: 8px;
+  border: 1px solid var(--line);
+}
+.recording-item .name { color: var(--text); font-size: 13px;}
+.recording-item .meta { color: var(--muted); font-size: 11px;}
+.recording-item .dl-btn {
+  background: transparent; border: 1px solid var(--gold-faint); color: var(--gold);
+  padding: 6px 16px; font-size: 10px; letter-spacing: 2px; cursor: pointer;
+  font-family: 'Cinzel', serif; text-decoration: none;
+}
+.recording-item .dl-btn:hover { background: var(--gold-faint); }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -404,8 +452,8 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   <nav class="topbar-nav">
     <a href="#" id="nav-stock" class="active">ネタ庫</a>
     <a href="#" id="nav-daily">📰 今日の提案</a>
+    <a href="#" id="nav-live">🔴 講義録画</a>
     <a href="#">投稿予約</a>
-    <a href="#">配信履歴</a>
     <a href="#">KPI</a>
   </nav>
   <div class="topbar-meta">
@@ -1018,6 +1066,153 @@ function attachDailyHandlers(dailyEl, d) {
 
 document.getElementById('nav-stock').addEventListener('click', e => { e.preventDefault(); showStockView(); });
 document.getElementById('nav-daily').addEventListener('click', e => { e.preventDefault(); showDailyView(); });
+document.getElementById('nav-live').addEventListener('click', e => { e.preventDefault(); showLiveView(); });
+
+// ────────────────────────────────────────
+// LIVE 録画 (ヒカル先生 金曜講義)
+// ────────────────────────────────────────
+const LIVE = {
+  stream: null, audioStream: null, recorder: null,
+  chunks: [], startTime: null, timerInterval: null,
+  status: 'idle' // idle | recording | stopped
+};
+
+function showLiveView() {
+  document.getElementById('nav-stock').classList.remove('active');
+  document.getElementById('nav-daily').classList.remove('active');
+  document.getElementById('nav-live').classList.add('active');
+  document.getElementById('app').style.display = 'none';
+  document.querySelectorAll('#daily-view, #live-view').forEach(el => el.remove());
+
+  const el = document.createElement('section');
+  el.id = 'live-view';
+  el.className = 'live-view';
+  document.querySelector('.app').insertAdjacentElement('afterend', el);
+  el.innerHTML = renderLiveView();
+  attachLiveHandlers(el);
+}
+
+function renderLiveView() {
+  const recordings = JSON.parse(localStorage.getItem('live_recordings') || '[]');
+  return `
+    <div class="live-head">
+      <h1>🔴 LIVE — ヒカル先生 講義録画</h1>
+      <div class="sub">
+        毎週金曜のれいか先生Zoom講義を、PCの画面＋音声ごとそのまま録画する仕組み。<br>
+        録画後はファイルがダウンロードできるので、Jobs (Claude Code チャット) に渡せば文字起こし→分析→リール台本生成まで自動で。
+      </div>
+    </div>
+
+    <div class="live-controls">
+      <div class="live-status ${LIVE.status==='recording'?'recording':''}" id="live-status">
+        ${LIVE.status === 'idle' ? '⚪ 待機中' : LIVE.status === 'recording' ? '🔴 録画中' : '⏹ 停止'}
+        <span class="timer" id="live-timer">00:00:00</span>
+      </div>
+      <div id="live-btn-area">
+        ${LIVE.status === 'recording'
+          ? `<button class="live-btn stop" id="live-stop">⏹ 録画を停止</button>`
+          : `<button class="live-btn" id="live-start">▶ 録画開始 (画面 + 音声)</button>`
+        }
+      </div>
+      <div class="live-flow">
+        <b>金曜の使い方:</b><br>
+        ① Zoom講義を開いて、ヒカル先生の画面+音声が見える状態に<br>
+        ② このページの「▶ 録画開始」を押す<br>
+        ③ 画面共有ダイアログで「Zoomウィンドウ」or「画面全体」を選択<br>
+        ④ <b>「Share audio (音声も共有)」のチェックを忘れずに</b><br>
+        ⑤ 講義終了したら「⏹ 録画を停止」を押す<br>
+        ⑥ 自動でファイル ダウンロード (lecture_YYYY-MM-DD.webm) され、下の履歴にも記録<br>
+        ⑦ そのファイルを Claude Code チャットにドラッグ&ドロップして「分析してリール作って」と書いて送信<br>
+        ⑧ Jobs が文字起こし→重要ポイント抽出→3軸台本生成してSaaSに反映
+      </div>
+    </div>
+
+    <div class="live-recordings">
+      <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:var(--gold);margin-bottom:10px;">📁 録画履歴 (このブラウザに保存)</div>
+      ${recordings.length === 0
+        ? `<div style="color:var(--muted);font-size:12px;padding:14px 0;">録画履歴なし。金曜の講義で「▶ 録画開始」を押すと、ここに残るよ。</div>`
+        : recordings.map(r => `
+          <div class="recording-item">
+            <div>
+              <div class="name">${escapeHtml(r.name)}</div>
+              <div class="meta">${escapeHtml(r.date)} / ${escapeHtml(r.size)} / ${escapeHtml(r.duration||'')}</div>
+            </div>
+            <div style="color:var(--muted);font-size:10px;letter-spacing:1px;">ローカルダウンロード済</div>
+          </div>
+        `).join('')
+      }
+    </div>
+  `;
+}
+
+function attachLiveHandlers(rootEl) {
+  const startBtn = rootEl.querySelector('#live-start');
+  if (startBtn) startBtn.addEventListener('click', startRecording);
+  const stopBtn = rootEl.querySelector('#live-stop');
+  if (stopBtn) stopBtn.addEventListener('click', stopRecording);
+}
+
+async function startRecording() {
+  try {
+    // 画面 + 音声 (Zoom音声を拾うため audio: true 必須)
+    LIVE.stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: { ideal: 15 } },
+      audio: true // ブラウザによっては「Share audio」のチェックが必要
+    });
+    LIVE.chunks = [];
+    LIVE.recorder = new MediaRecorder(LIVE.stream, { mimeType: 'video/webm;codecs=vp9,opus' });
+    LIVE.recorder.ondataavailable = e => { if (e.data.size > 0) LIVE.chunks.push(e.data); };
+    LIVE.recorder.onstop = () => {
+      const blob = new Blob(LIVE.chunks, { type: 'video/webm' });
+      const date = new Date().toISOString().slice(0,10);
+      const filename = `lecture_${date}.webm`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+
+      const elapsed = Math.floor((Date.now() - LIVE.startTime) / 1000);
+      const dur = formatTime(elapsed);
+      const size = (blob.size / (1024*1024)).toFixed(1) + ' MB';
+      const recordings = JSON.parse(localStorage.getItem('live_recordings') || '[]');
+      recordings.unshift({ name: filename, date: new Date().toISOString().replace('T',' ').substring(0,16), size, duration: dur });
+      localStorage.setItem('live_recordings', JSON.stringify(recordings.slice(0,30)));
+
+      LIVE.stream.getTracks().forEach(t => t.stop());
+      LIVE.stream = null; LIVE.recorder = null; LIVE.chunks = [];
+      clearInterval(LIVE.timerInterval); LIVE.timerInterval = null;
+      LIVE.status = 'idle';
+      const live = document.getElementById('live-view');
+      if (live) { live.innerHTML = renderLiveView(); attachLiveHandlers(live); }
+      alert(`✓ 録画完了 (${dur}, ${size})\n${filename} をダウンロードした。\nClaude Code チャットにドラッグ&ドロップで分析依頼してね。`);
+    };
+    LIVE.recorder.start();
+    LIVE.startTime = Date.now();
+    LIVE.status = 'recording';
+    LIVE.timerInterval = setInterval(() => {
+      const t = document.getElementById('live-timer');
+      if (t) t.textContent = formatTime(Math.floor((Date.now() - LIVE.startTime)/1000));
+    }, 1000);
+    const live = document.getElementById('live-view');
+    if (live) { live.innerHTML = renderLiveView(); attachLiveHandlers(live); }
+    // ユーザーが共有ダイアログでキャンセルしたら自動停止
+    LIVE.stream.getVideoTracks()[0].addEventListener('ended', stopRecording);
+  } catch (e) {
+    alert(`録画開始失敗: ${e.message}\n\nブラウザの画面共有ダイアログで「キャンセル」を押した可能性。\nもう一度試してみて。`);
+    LIVE.status = 'idle';
+  }
+}
+
+function stopRecording() {
+  if (LIVE.recorder && LIVE.recorder.state !== 'inactive') LIVE.recorder.stop();
+}
+
+function formatTime(sec) {
+  const h = String(Math.floor(sec/3600)).padStart(2,'0');
+  const m = String(Math.floor((sec%3600)/60)).padStart(2,'0');
+  const s = String(sec%60).padStart(2,'0');
+  return `${h}:${m}:${s}`;
+}
 </script>
 
 </body>
