@@ -115,6 +115,26 @@ function classify(cvr) {
   return 'bad';
 }
 
+// ad_id を 日本語の場所名に変換
+function placeLabel(campaign, ad) {
+  if (campaign === 'lp') {
+    if (ad === 'hero')   return 'LP・最上部CTA';
+    if (ad === 'final')  return 'LP・最終CTA';
+    if (ad === 'sticky') return 'LP・浮遊ボタン';
+    if (ad === 'qr')     return 'LP・QRコード';
+    if (ad && ad.startsWith('inline_')) return 'LP・中段'+ad.replace('inline_','');
+  }
+  if (campaign === 'instagram') {
+    if (ad === 'bio') return 'IGプロフィール欄';
+    if (ad && ad.startsWith('story_')) return 'IGストーリー'+ad.replace('story_','').toUpperCase();
+    if (ad && ad.startsWith('reel_'))  return 'IGリール'+ad.replace('reel_','');
+    return 'Instagram・'+ad;
+  }
+  if (campaign === 'smoketest' || campaign === 'demo') {
+    return 'テスト ('+(ad||'-')+')';
+  }
+  return (campaign||'-')+' / '+(ad||'-');
+}
 function fmtPct(v) { return (v*100).toFixed(1) + '%'; }
 function fmtTime(ts) {
   const d = new Date(ts);
@@ -193,7 +213,7 @@ async function refresh() {
     document.getElementById('topTable').querySelector('tbody').innerHTML = tops.length === 0
       ? '<tr><td colspan="4" style="text-align:center; color:#999; padding:14px">3クリック以上のad_idがまだ無い</td></tr>'
       : tops.map(a=>`<tr>
-          <td><code>${a.campaign_id||'-'}/${a.ad_id||'-'}</code></td>
+          <td>${placeLabel(a.campaign_id, a.ad_id)}</td>
           <td class="num">${a.clicks}</td>
           <td class="num">${a.follows}</td>
           <td class="cvr ${classify(a.cvr)}">${fmtPct(a.cvr)}</td>
@@ -206,10 +226,10 @@ async function refresh() {
       : events.map(e => `
         <div class="ev">
           <div>
-            <span class="badge ${e.type}">${e.type==='click'?'CLICK':'FOLLOW'}</span>
+            <span class="badge ${e.type}">${e.type==='click'?'👆 ボタンタップ':'✅ 友だち追加'}</span>
             ${e.type==='click'
-              ? `<code>${e.campaign_id||'-'}/${e.ad_id||'-'}</code>`
-              : `<code>user ${(e.user_id||'').slice(0,10)}…</code>`}
+              ? `${placeLabel(e.campaign_id, e.ad_id)} <span style="color:var(--muted)">→ LINE移動</span>`
+              : `<span style="color:var(--green)">LINE公式アカウントに追加完了</span>`}
           </div>
           <div class="t">${fmtTime(e.ts)}</div>
         </div>
