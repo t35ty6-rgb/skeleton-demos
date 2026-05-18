@@ -524,8 +524,8 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     <a href="#" id="nav-stock" class="active">ネタ庫</a>
     <a href="#" id="nav-daily">📰 今日の提案</a>
     <a href="#" id="nav-live">🔴 講義録画</a>
-    <a href="#">投稿予約</a>
-    <a href="#">KPI</a>
+    <a href="#" style="opacity:0.4;pointer-events:none;" title="準備中">投稿予約 <span style="font-size:8px;">SOON</span></a>
+    <a href="#" style="opacity:0.4;pointer-events:none;" title="準備中">KPI <span style="font-size:8px;">SOON</span></a>
   </nav>
   <div class="topbar-meta">
     <span>@hikaru_ideal_skin</span>
@@ -623,7 +623,10 @@ Promise.all([
   fetch('data/topics.json').then(r=>r.json()),
   fetch('data/scripts_index.json').then(r=>r.json())
 ]).then(([topicsData, manifest]) => {
-  STATE.topics = topicsData.items.map(t => ({...t, cat: categorize(t.title)}));
+  STATE.topics = topicsData.items.map(t => {
+    const title = (t.title||'').normalize('NFC');
+    return {...t, title, cat: categorize(title)};
+  });
   STATE.scriptsManifest = manifest.scripts || {};
   // デフォルト選択: 毛穴の黒ずみネタ (生成済の代表)
   const pore = STATE.topics.find(t => t.title.includes('毛穴の黒ずみ'));
@@ -725,7 +728,7 @@ function renderDetail() {
   detail.innerHTML = `
     <div class="detail-head">
       <div class="detail-nav">
-        <button id="back-stock-list">← ネタ一覧に絞る (生成済のみ)</button>
+        <button id="back-stock-list">← 生成済の一覧へ</button>
         <button id="back-daily">← 今日の提案へ</button>
       </div>
       <div class="breadcrumb">REIKA TOPICS &nbsp;/&nbsp; #${topic.id} &nbsp;/&nbsp; ${topic.cat.toUpperCase()}</div>
@@ -1013,8 +1016,8 @@ function renderDailyProposal(d) {
   return renderHelpBar() + `
     <div class="daily-head">
       <div class="badge">TODAY</div>
-      <div style="position:absolute; top:14px; right:18px;">
-        <button id="daily-to-stock" style="background:transparent;border:1px solid var(--gold-faint);color:var(--gold);padding:5px 12px;font-size:10px;letter-spacing:2px;cursor:pointer;font-family:'Cinzel',serif;">→ ネタ庫を見る</button>
+      <div style="position:absolute; top:14px; right:18px; display:flex; gap:8px;">
+        <button id="daily-to-stock" style="background:transparent;border:1px solid var(--gold-faint);color:var(--gold);padding:5px 12px;font-size:10px;letter-spacing:2px;cursor:pointer;font-family:'Cinzel',serif;">→ 生成済の台本を見る</button>
       </div>
       <h1>DAILY PROPOSAL</h1>
       <div class="date">${escapeHtml(date)}<span class="weekday">${wd ? '('+wd+')' : ''}</span></div>
