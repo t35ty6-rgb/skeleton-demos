@@ -306,6 +306,24 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .daily-loading { text-align: center; padding: 80px 30px; color: var(--muted); font-size: 12px; letter-spacing: 2px;}
 .daily-error { text-align: center; padding: 40px 30px; color: #c97a7a; font-size: 13px; line-height: 1.8;}
 
+/* ── help guide ── */
+.help-bar {
+  background: var(--black-soft); border: 1px solid var(--gold-faint);
+  padding: 18px 24px; margin-bottom: 24px; font-size: 12.5px; line-height: 1.8;
+  position: relative;
+}
+.help-bar h3 {
+  font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 4px;
+  color: var(--gold); margin-bottom: 10px;
+}
+.help-bar ol { padding-left: 22px; color: var(--text);}
+.help-bar ol li { margin-bottom: 6px;}
+.help-bar ol li b { color: var(--gold-deep); font-weight: 400;}
+.help-bar .close-help {
+  position: absolute; top: 12px; right: 14px; background: transparent;
+  border: none; color: var(--muted); cursor: pointer; font-size: 16px;
+}
+
 /* ── Jobs request form ── */
 .jobs-request {
   margin-top: 40px; padding: 28px 32px; background: var(--black-soft);
@@ -775,6 +793,24 @@ function attachJobsRequestHandlers(rootEl) {
   });
 }
 
+function renderHelpBar() {
+  if (localStorage.getItem('hide_help') === '1') return '';
+  return `
+    <div class="help-bar">
+      <button class="close-help" title="閉じる">✕</button>
+      <h3>📖 使い方</h3>
+      <ol>
+        <li><b>下の3本の提案を読む</b> — ニュース・掛け合わせネタ・フック試作・なぜ今日の理由が並んでる</li>
+        <li><b>気に入った提案の「✓ 採用して台本生成」ボタンを押す</b> — 新タブで GitHub Issue 画面が開くので「Submit new issue」をクリック</li>
+        <li><b>1時間以内に Jobs が3軸台本 (リール/ストーリー/Threads) を作成</b> — 完成したら左サイドの「✓生成済」フィルタに出現、内容クリックで台本見れる</li>
+      </ol>
+      <p style="margin-top:10px;color:var(--muted);font-size:11.5px;">
+        ピンとくる提案がなければ、ページ下の「<b style="color:var(--gold)">JOBS に依頼する</b>」フォームに自由に書いて送信もOK。
+      </p>
+    </div>
+  `;
+}
+
 function renderDailyProposal(d) {
   const date = d.date;
   const props = d.proposals || [];
@@ -783,7 +819,7 @@ function renderDailyProposal(d) {
   const wd = !isNaN(dt.getTime()) ? weekdays[dt.getDay()] : '';
   const states = JSON.parse(localStorage.getItem('daily_states') || '{}');
   const dayStates = states[date] || {};
-  return `
+  return renderHelpBar() + `
     <div class="daily-head">
       <div class="badge">TODAY</div>
       <h1>DAILY PROPOSAL</h1>
@@ -843,7 +879,16 @@ function renderDailyProposal(d) {
   `;
 }
 
+function attachHelpHandlers(dailyEl) {
+  const btn = dailyEl.querySelector('.help-bar .close-help');
+  if (btn) btn.addEventListener('click', () => {
+    localStorage.setItem('hide_help', '1');
+    btn.parentElement.style.display = 'none';
+  });
+}
+
 function attachDailyHandlers(dailyEl, d) {
+  attachHelpHandlers(dailyEl);
   // ネタ庫へジャンプ
   dailyEl.querySelectorAll('.linked').forEach(el => {
     el.addEventListener('click', () => {
@@ -868,13 +913,32 @@ function attachDailyHandlers(dailyEl, d) {
   dailyEl.querySelectorAll('[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       const action = btn.dataset.action;
-      const rank = btn.dataset.rank;
+      const rank = parseInt(btn.dataset.rank);
       const states = JSON.parse(localStorage.getItem('daily_states') || '{}');
       states[d.date] = states[d.date] || {};
       states[d.date][rank] = action === 'adopt' ? 'adopted' : 'skipped';
       localStorage.setItem('daily_states', JSON.stringify(states));
-      dailyEl.innerHTML = renderDailyProposal(d);
+
+      // 採用時: GitHub Issueを作って Jobs に台本生成を依頼する
+      if (action === 'adopt') {
+        const p = d.proposals.find(x => x.rank === rank);
+        if (p) {
+          const title = encodeURIComponent(`[依頼] DAILY#${rank} ${p.news_title.substring(0,40)}`);
+          const body = encodeURIComponent(`# DAILY 採用 → 3軸台本生成依頼\n\n` +
+            `## ニュース\n${p.news_title}\n出典: ${p.news_source}\n${p.news_url||''}\n\n` +
+            `## 掛け合わせ\n#${p.linked_topic_id} ${p.linked_topic_title}\n\n` +
+            `## 角度\n${p.angle||''}\n\n` +
+            `## フック試作 (起点)\n${p.hook_idea}\n\n` +
+            `## なぜ今日\n${p.why_now||''}\n\n---\n` +
+            `この内容を元にREEL/STORY/Threadsの3軸台本を生成してください。\nヒカル先生口調厳守。`);
+          const issueUrl = `https://github.com/t35ty6-rgb/skeleton-demos/issues/new?title=${title}&body=${body}&labels=ideal-skin,jobs-request`;
+          window.open(issueUrl, '_blank');
+          alert(`✓ 「${p.news_title.substring(0,30)}…」をJobsに依頼。\n新タブで開いたGitHub Issueの「Submit new issue」を押すと依頼完了。\n1時間以内にJobsが台本生成してSaaSに反映するよ。`);
+        }
+      }
+      dailyEl.innerHTML = renderDailyProposal(d) + renderJobsRequestForm();
       attachDailyHandlers(dailyEl, d);
+      attachJobsRequestHandlers(dailyEl);
     });
   });
 }
