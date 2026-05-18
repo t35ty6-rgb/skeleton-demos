@@ -304,6 +304,59 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .daily-empty p { font-size: 13px; line-height: 1.9; max-width: 540px; margin: 0 auto;}
 .daily-empty code { background: var(--black-soft); padding: 2px 8px; color: var(--gold); }
 .daily-loading { text-align: center; padding: 80px 30px; color: var(--muted); font-size: 12px; letter-spacing: 2px;}
+.daily-error { text-align: center; padding: 40px 30px; color: #c97a7a; font-size: 13px; line-height: 1.8;}
+
+/* ── Jobs request form ── */
+.jobs-request {
+  margin-top: 40px; padding: 28px 32px; background: var(--black-soft);
+  border: 1px solid var(--gold-faint); position: relative;
+}
+.jobs-request .badge {
+  position: absolute; top: -10px; left: 32px;
+  background: var(--gold-deep); color: var(--paper);
+  padding: 4px 14px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 4px;
+}
+.jobs-request h2 {
+  font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 4px;
+  color: var(--gold); margin-bottom: 6px; margin-top: 4px;
+}
+.jobs-request .desc { font-size: 12px; color: var(--muted); line-height: 1.8; margin-bottom: 18px;}
+.jobs-request textarea {
+  width: 100%; min-height: 120px; padding: 14px 16px;
+  background: var(--black); color: var(--text);
+  border: 1px solid var(--line); font-family: 'Shippori Mincho', serif;
+  font-size: 14px; line-height: 1.7; outline: none; resize: vertical;
+}
+.jobs-request textarea:focus { border-color: var(--gold-faint);}
+.jobs-request .send-row { display: flex; gap: 10px; margin-top: 12px; align-items: center;}
+.jobs-request .send-btn {
+  background: var(--gold); color: var(--black); border: none;
+  padding: 12px 28px; font-family: 'Cinzel', serif; letter-spacing: 3px; font-size: 11px;
+  cursor: pointer; flex-shrink: 0;
+}
+.jobs-request .send-btn:hover { background: var(--gold-deep); color: var(--paper);}
+.jobs-request .send-btn:disabled { opacity: 0.5; cursor: not-allowed;}
+.jobs-request .send-hint { font-size: 10px; color: var(--muted); letter-spacing: 1px;}
+.jobs-request .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;}
+.jobs-request .examples button {
+  background: transparent; border: 1px dashed var(--gold-faint);
+  color: var(--gold-deep); padding: 6px 12px; font-size: 11px; cursor: pointer;
+  font-family: inherit;
+}
+.jobs-request .examples button:hover { background: var(--gold-faint); color: var(--gold);}
+.jobs-request .queue {
+  margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line);
+}
+.jobs-request .queue-title {
+  font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 3px;
+  color: var(--gold-deep); margin-bottom: 10px;
+}
+.queue-item {
+  background: var(--black); padding: 10px 14px; margin-bottom: 6px;
+  border-left: 2px solid var(--gold-deep); font-size: 12px; line-height: 1.6;
+}
+.queue-item .time { color: var(--muted); font-size: 10px; margin-right: 10px; font-family: 'Cormorant Garamond', serif;}
+.queue-item .status { float: right; font-size: 9px; letter-spacing: 1px; color: var(--gold-deep);}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -612,7 +665,16 @@ function showDailyView() {
     document.querySelector('.app').insertAdjacentElement('afterend', dailyEl);
   }
   dailyEl.innerHTML = '<div class="daily-loading">読み込み中…</div>';
-  fetch('data/daily/latest.json?t=' + Date.now()).then(r => r.ok ? r.json() : null).then(data => {
+  fetch('data/daily/latest.json?t=' + Date.now())
+    .then(r => { if (!r.ok) return null; return r.text(); })
+    .then(txt => txt ? JSON.parse(txt) : null)
+    .catch(e => { console.error('latest.json parse error:', e.message); return 'PARSE_ERR'; })
+    .then(data => {
+      if (data === 'PARSE_ERR') {
+        dailyEl.innerHTML = `<div class="daily-error">⚠ latest.json の読み込みに失敗。<br>JSON フォーマット不整合の可能性あり。Jobs が次回ルーチンで修正します。</div>` + renderJobsRequestForm();
+        attachJobsRequestHandlers(dailyEl);
+        return;
+      }
     if (!data) {
       dailyEl.innerHTML = `
         <div class="daily-empty">
@@ -629,11 +691,87 @@ function showDailyView() {
             ルーチンID: <code>trig_01ETh2B3ZLYN9JfaaPkqwfBp</code><br>
             次回実行: 06:30 (Asia/Tokyo)
           </p>
-        </div>`;
+        </div>` + renderJobsRequestForm();
+      attachJobsRequestHandlers(dailyEl);
       return;
     }
-    dailyEl.innerHTML = renderDailyProposal(data);
+    dailyEl.innerHTML = renderDailyProposal(data) + renderJobsRequestForm();
     attachDailyHandlers(dailyEl, data);
+    attachJobsRequestHandlers(dailyEl);
+  });
+}
+
+// ────────────────────────────────────────
+// Jobsへの依頼フォーム
+// ────────────────────────────────────────
+function renderJobsRequestForm() {
+  const queue = JSON.parse(localStorage.getItem('jobs_request_queue') || '[]');
+  return `
+    <div class="jobs-request">
+      <div class="badge">▷ JOBS REQUEST</div>
+      <h2>JOBS に依頼する</h2>
+      <div class="desc">
+        「これについてリール作りたい」「このネタを掘り下げて」など、自由に書いて送信。<br>
+        Jobs が依頼を読んで、ネタ選定→3軸台本生成までやって、ここに反映する。
+      </div>
+      <div class="examples">
+        <button data-tpl="梅雨入りの肌荒れについて、原因と対策のリール作って">梅雨×肌荒れ</button>
+        <button data-tpl="自律神経とニキビの関係でリール考えて、夜更かしする人向け">自律神経×ニキビ</button>
+        <button data-tpl="40代女性の更年期と肌、本人に届く言い方で">40代更年期</button>
+        <button data-tpl="日焼け止め塗ってるのにシミ増える理由">UV×シミ</button>
+      </div>
+      <textarea id="jobs-req-text" placeholder="例: 『今週末イベントがあるから、毛穴と化粧ノリの話をリール&ストーリーで作りたい』 のように自由に書いて送って。Jobs が読んでネタ選定+台本生成までやるよ。"></textarea>
+      <div class="send-row">
+        <button class="send-btn" id="jobs-req-send">▷ Jobs に送る</button>
+        <span class="send-hint">送信先: GitHub Issue + Gmail通知 (オーナーへ CC)</span>
+      </div>
+      <div class="queue">
+        <div class="queue-title">過去の依頼 (このブラウザに保存)</div>
+        <div id="jobs-req-queue">${queue.length===0 ? '<div style="font-size:11px;color:var(--muted)">依頼履歴なし</div>' : queue.map(q=>`
+          <div class="queue-item">
+            <span class="time">${escapeHtml(q.time)}</span>
+            ${escapeHtml(q.text.substring(0,80))}${q.text.length>80?'…':''}
+            <span class="status">${escapeHtml(q.status||'SENT')}</span>
+          </div>`).join('')}</div>
+      </div>
+    </div>
+  `;
+}
+
+function attachJobsRequestHandlers(rootEl) {
+  // テンプレ
+  rootEl.querySelectorAll('.jobs-request .examples button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('jobs-req-text').value = btn.dataset.tpl;
+      document.getElementById('jobs-req-text').focus();
+    });
+  });
+  // 送信
+  const sendBtn = rootEl.querySelector('#jobs-req-send');
+  if (sendBtn) sendBtn.addEventListener('click', () => {
+    const txt = document.getElementById('jobs-req-text').value.trim();
+    if (!txt) { alert('依頼内容を書いて'); return; }
+    sendBtn.disabled = true; sendBtn.textContent = '送信中…';
+    // 1) localStorage に履歴保存
+    const queue = JSON.parse(localStorage.getItem('jobs_request_queue') || '[]');
+    const now = new Date().toISOString().replace('T',' ').substring(5,16);
+    queue.unshift({ time: now, text: txt, status: 'SENT' });
+    localStorage.setItem('jobs_request_queue', JSON.stringify(queue.slice(0,20)));
+    // 2) GitHub Issue 作成 (mailto Fallback + ガイダンス)
+    const title = encodeURIComponent('[依頼] ' + txt.substring(0,50) + (txt.length>50?'…':''));
+    const body = encodeURIComponent(`# IDEAL SKIN 投稿依頼\n\n${txt}\n\n---\n送信時刻: ${now}\n送信元: SaaS UI`);
+    const issueUrl = `https://github.com/t35ty6-rgb/skeleton-demos/issues/new?title=${title}&body=${body}&labels=ideal-skin,jobs-request`;
+    window.open(issueUrl, '_blank');
+    // 3) UI更新
+    document.getElementById('jobs-req-text').value = '';
+    sendBtn.disabled = false; sendBtn.textContent = '▷ Jobs に送る';
+    // queue 表示更新
+    document.getElementById('jobs-req-queue').innerHTML = queue.map(q=>`
+      <div class="queue-item">
+        <span class="time">${escapeHtml(q.time)}</span>
+        ${escapeHtml(q.text.substring(0,80))}${q.text.length>80?'…':''}
+        <span class="status">${escapeHtml(q.status||'SENT')}</span>
+      </div>`).join('');
   });
 }
 
