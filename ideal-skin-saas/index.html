@@ -443,6 +443,77 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 </head>
 <body>
 
+<!-- ── Login Gate ── -->
+<div id="login-gate" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(180deg,#0E0B09,#15110D);display:none;align-items:center;justify-content:center;font-family:'Shippori Mincho',serif;">
+  <div style="max-width:400px;width:100%;padding:48px 36px;background:rgba(21,17,13,0.6);border:1px solid rgba(197,164,114,0.3);text-align:center;">
+    <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:6px;color:#C5A472;margin-bottom:10px;">IDEAL SKIN</div>
+    <div style="width:24px;height:1px;background:#C5A472;margin:0 auto 28px;"></div>
+    <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:4px;color:#8E703F;margin-bottom:24px;">SIGN IN</div>
+    <input id="login-id" type="text" placeholder="ID" autocomplete="username" style="width:100%;padding:12px 14px;margin-bottom:10px;background:#0E0B09;color:#F5F0E6;border:1px solid rgba(245,240,230,0.12);font-family:inherit;font-size:14px;outline:none;">
+    <input id="login-pw" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;padding:12px 14px;margin-bottom:18px;background:#0E0B09;color:#F5F0E6;border:1px solid rgba(245,240,230,0.12);font-family:inherit;font-size:14px;outline:none;">
+    <button id="login-submit" style="width:100%;padding:14px;background:#C5A472;color:#0E0B09;border:none;font-family:'Cinzel',serif;letter-spacing:4px;font-size:12px;cursor:pointer;">SIGN IN</button>
+    <div id="login-err" style="color:#c97a7a;font-size:11px;margin-top:14px;display:none;">ID または パスワードが違います</div>
+    <div style="margin-top:32px;font-size:10px;color:rgba(245,240,230,0.4);letter-spacing:1px;">Skeleton Inc. / for invited members only</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ハッシュ: ID:Password を SHA-256
+  const VALID_HASHES = new Set([
+    'a6992708d599d658223df89acf889195d9d25432f6bcdf06c0249c013bd7e2b7', // tsukasa:skeleton2026
+    'd7c678d6d78bb998294756f563dbff0d35d2d6c6c2405f89cc49bf45d0b4c967'  // hikaru:idealskin2026
+  ]);
+  async function sha256(text) {
+    const buf = new TextEncoder().encode(text);
+    const hash = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  function showGate() {
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    document.getElementById('login-gate').style.display = 'flex';
+    setTimeout(() => document.getElementById('login-id').focus(), 100);
+  }
+  function hideGate() {
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+    document.getElementById('login-gate').style.display = 'none';
+  }
+  async function check() {
+    const id = document.getElementById('login-id').value.trim();
+    const pw = document.getElementById('login-pw').value;
+    if (!id || !pw) return;
+    const hash = await sha256(id + ':' + pw);
+    if (VALID_HASHES.has(hash)) {
+      sessionStorage.setItem('saas_auth', hash);
+      sessionStorage.setItem('saas_user', id);
+      hideGate();
+    } else {
+      document.getElementById('login-err').style.display = 'block';
+      document.getElementById('login-pw').value = '';
+    }
+  }
+  // 初期化: sessionStorage に有効ハッシュがあれば素通り
+  const saved = sessionStorage.getItem('saas_auth');
+  if (saved && VALID_HASHES.has(saved)) {
+    // 認証済、何もしない
+  } else {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', showGate);
+    } else {
+      showGate();
+    }
+  }
+  // イベント
+  document.addEventListener('DOMContentLoaded', function(){
+    document.getElementById('login-submit').addEventListener('click', check);
+    document.getElementById('login-pw').addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+    document.getElementById('login-id').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pw').focus(); });
+  });
+})();
+</script>
+
 <header class="topbar">
   <div class="brand">
     <span class="brand-mark">IDEAL SKIN</span>
@@ -458,8 +529,32 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   </nav>
   <div class="topbar-meta">
     <span>@hikaru_ideal_skin</span>
-    <span>v0.1 (mock)</span>
+    <span id="topbar-user" style="color:var(--gold);"></span>
+    <a href="#" id="logout-btn" style="color:var(--muted);text-decoration:none;letter-spacing:1px;">Sign out</a>
   </div>
+
+  <script>
+  (function(){
+    const u = sessionStorage.getItem('saas_user');
+    if (u) {
+      const setU = () => {
+        const el = document.getElementById('topbar-user');
+        if (el) el.textContent = u;
+      };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setU); else setU();
+    }
+    const setLogout = () => {
+      const el = document.getElementById('logout-btn');
+      if (el) el.addEventListener('click', e => {
+        e.preventDefault();
+        sessionStorage.removeItem('saas_auth');
+        sessionStorage.removeItem('saas_user');
+        location.reload();
+      });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setLogout); else setLogout();
+  })();
+  </script>
 </header>
 
 <div class="app" id="app">
