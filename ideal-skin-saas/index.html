@@ -551,6 +551,7 @@ body[data-view="analytics"] .kpi-bar { display:none !important; }
     <a href="#" id="nav-stock" class="active">ネタ庫</a>
     <a href="#" id="nav-daily">📰 今日の提案</a>
     <a href="#" id="nav-live">🔴 講義録画</a>
+    <a href="#" id="nav-analytics">📊 流入分析</a>
     <a href="#" style="opacity:0.4;pointer-events:none;" title="準備中">投稿予約 <span style="font-size:8px;">SOON</span></a>
     <a href="#" style="opacity:0.4;pointer-events:none;" title="準備中">KPI <span style="font-size:8px;">SOON</span></a>
   </nav>
@@ -873,7 +874,7 @@ function escapeHtml(s) {
 // ────────────────────────────────────────
 // View 切り替え (ネタ庫 / DAILY)
 // ────────────────────────────────────────
-// ビュー切替共通ヘルパー: タイマー停止 + 動的セクション削除 + nav状態 + body[data-view]
+// ビュー切替共通ヘルパー: タイマー停止 + 動的セクション削除 + nav状態 + 表示制御
 function _enterView(name) {
   // 録画中停止 (live離脱時)
   if (typeof LIVE !== 'undefined' && LIVE.status === 'recording' && name !== 'live') {
@@ -883,17 +884,19 @@ function _enterView(name) {
   if (typeof analyticsTimer !== 'undefined' && analyticsTimer && name !== 'analytics') {
     clearInterval(analyticsTimer); analyticsTimer = null;
   }
-  // 既存の動的ビューセクションを全削除 (残像対策)
+  // 既存の動的ビューセクションを全削除 (残像対策の本丸)
   document.querySelectorAll('#daily-view, #live-view, #analytics-view').forEach(el => el.remove());
   // nav active 状態リセット
   ['stock','daily','live','analytics'].forEach(n => {
     const el = document.getElementById('nav-'+n);
     if (el) el.classList.toggle('active', n === name);
   });
-  // CSS の表示制御フラグ
+  // CSS用フラグ + インライン display を両方セット (確実性確保)
   document.body.setAttribute('data-view', name);
-  // app の inline display は使わない (CSS側で制御)
-  document.getElementById('app').style.display = '';
+  const app = document.getElementById('app');
+  if (app) app.style.display = (name === 'stock') ? 'grid' : 'none';
+  const kpi = document.querySelector('.kpi-bar');
+  if (kpi) kpi.style.display = (name === 'live' || name === 'analytics') ? 'none' : '';
 }
 
 function showStockView() {
@@ -1206,6 +1209,7 @@ function attachDailyHandlers(dailyEl, d) {
 document.getElementById('nav-stock').addEventListener('click', e => { e.preventDefault(); showStockView(); });
 document.getElementById('nav-daily').addEventListener('click', e => { e.preventDefault(); showDailyView(); });
 document.getElementById('nav-live').addEventListener('click', e => { e.preventDefault(); showLiveView(); });
+document.getElementById('nav-analytics').addEventListener('click', e => { e.preventDefault(); showAnalyticsView(); });
 
 // ────────────────────────────────────────
 // LIVE 録画 (ヒカル先生 金曜講義)
