@@ -1219,7 +1219,8 @@ function renderLiveView() {
         ① Zoom 講義を開く<br>
         ② このページの「▶ 録画開始」を押す<br>
         ③ 画面共有ダイアログで「Zoomウィンドウ」or「画面全体」を選択<br>
-        ④ <b>「Share audio (音声も共有)」のチェック必須</b><br>
+        ④ <b>「Share audio (音声も共有)」のチェック必須</b> + マイク許可も求められたら『許可』<br>
+        　→ タブ音声 + マイク音声(PCスピーカー音保険) 両方を合成録音<br>
         ⑤ 講義終了したら「⏹ 録画を停止」<br>
         ⑥ 自動で <b>「IDEAL SKIN 講義_YYYY-MM-DD(曜)_HH-MM.webm」</b> でDL<br>
         　→ 30秒以内に Jobs が自動で Drive フォルダへ移動 → クラウド同期<br>
@@ -1234,12 +1235,18 @@ function renderLiveView() {
         ? `<div style="color:var(--muted);font-size:12px;padding:14px 0;">録画履歴なし。金曜の講義で「▶ 録画開始」を押すと、ここに残るよ。</div>`
         : recordings.map(r => `
           <div class="recording-item">
-            <div>
+            <div style="flex:1; min-width:0;">
               <div class="name">${escapeHtml(r.name)}</div>
               <div class="meta">${escapeHtml(r.date)} / ${escapeHtml(r.size)} / ${escapeHtml(r.duration||'')}</div>
               ${r.drive_path ? `<div class="meta" style="color:var(--gold-deep);">📁 ${escapeHtml(r.drive_path)}</div>` : ''}
+              ${r.drive_url ? `
+                <div class="meta" style="margin-top:6px;font-size:10px;">
+                  🔗 <a href="${escapeHtml(r.drive_url)}" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:underline;">${escapeHtml(r.drive_url)}</a>
+                  <button class="copy-url-btn" data-url="${escapeHtml(r.drive_url)}" style="margin-left:8px;background:transparent;border:1px solid var(--line);color:var(--muted);padding:2px 8px;font-size:9px;cursor:pointer;font-family:inherit;">📋 URLコピー</button>
+                </div>
+              ` : ''}
             </div>
-            <a class="dl-btn" href="https://drive.google.com/drive/u/0/my-drive" target="_blank" rel="noopener">📂 Drive で開く</a>
+            <a class="dl-btn" href="${escapeHtml(r.folder_url||'https://drive.google.com/drive/u/0/my-drive')}" target="_blank" rel="noopener" style="flex-shrink:0;margin-left:12px;">📂 フォルダを開く</a>
           </div>
         `).join('')
       }
@@ -1252,17 +1259,54 @@ function attachLiveHandlers(rootEl) {
   if (startBtn) startBtn.addEventListener('click', startRecording);
   const stopBtn = rootEl.querySelector('#live-stop');
   if (stopBtn) stopBtn.addEventListener('click', stopRecording);
+  rootEl.querySelectorAll('.copy-url-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      const url = b.dataset.url;
+      navigator.clipboard.writeText(url).then(() => {
+        const orig = b.textContent;
+        b.textContent = '✓ コピー済';
+        setTimeout(() => { b.textContent = orig; }, 1500);
+      });
+    });
+  });
 }
 
 async function startRecording() {
   try {
-    // 画面 + 音声 (Zoom音声を拾うため audio: true 必須)
+    // 画面 + タブ音声
     LIVE.stream = await navigator.mediaDevices.getDisplayMedia({
       video: { frameRate: { ideal: 15 } },
-      audio: true // ブラウザによっては「Share audio」のチェックが必要
+      audio: true // Chromeで「Share audio」を確実に有効化
     });
+    // マイクも常時オン (PCスピーカー音を物理的に拾う保険)
+    try {
+      LIVE.audioStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    } catch (micErr) {
+      console.warn('mic unavailable:', micErr.message);
+      LIVE.audioStream = null;
+    }
+    // 画面音声とマイク音声を合成して 1つのストリームに
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const dest = audioCtx.createMediaStreamDestination();
+    const tabAudio = LIVE.stream.getAudioTracks();
+    if (tabAudio.length > 0) {
+      const src = audioCtx.createMediaStreamSource(new MediaStream([tabAudio[0]]));
+      const gain = audioCtx.createGain(); gain.gain.value = 1.0;
+      src.connect(gain).connect(dest);
+    }
+    if (LIVE.audioStream) {
+      const src = audioCtx.createMediaStreamSource(LIVE.audioStream);
+      const gain = audioCtx.createGain(); gain.gain.value = 0.7; // マイクは少し抑え
+      src.connect(gain).connect(dest);
+    }
+    // 合成stream を録画対象に
+    const mixedStream = new MediaStream([
+      ...LIVE.stream.getVideoTracks(),
+      ...dest.stream.getAudioTracks()
+    ]);
+    LIVE.mixedStream = mixedStream;
     LIVE.chunks = [];
-    LIVE.recorder = new MediaRecorder(LIVE.stream, { mimeType: 'video/webm;codecs=vp9,opus' });
+    LIVE.recorder = new MediaRecorder(LIVE.mixedStream || LIVE.stream, { mimeType: 'video/webm;codecs=vp9,opus' });
     LIVE.recorder.ondataavailable = e => { if (e.data.size > 0) LIVE.chunks.push(e.data); };
     LIVE.recorder.onstop = () => {
       const blob = new Blob(LIVE.chunks, { type: 'video/webm' });
@@ -1285,16 +1329,23 @@ async function startRecording() {
       const dur = formatTime(elapsed);
       const size = (blob.size / (1024*1024)).toFixed(1) + ' MB';
       const recordings = JSON.parse(localStorage.getItem('live_recordings') || '[]');
+      // Drive 検索URL (Drive Desktop経由で同期されたファイルを検索で開ける)
+      const driveSearchUrl = `https://drive.google.com/drive/search?q=${encodeURIComponent(filename)}`;
+      const driveFolderUrl = `https://drive.google.com/drive/search?q=IDEAL%20SKIN%20%E8%AC%9B%E7%BE%A9`;
       recordings.unshift({
         name: filename,
         date: `${yyyy}-${mm}-${dd}(${wd}) ${hh}:${mi}`,
         size, duration: dur,
-        drive_path: `マイドライブ/IDEAL SKIN 講義/${filename}`
+        drive_path: `マイドライブ/IDEAL SKIN 講義/${filename}`,
+        drive_url: driveSearchUrl,
+        folder_url: driveFolderUrl
       });
       localStorage.setItem('live_recordings', JSON.stringify(recordings.slice(0,30)));
 
       LIVE.stream.getTracks().forEach(t => t.stop());
-      LIVE.stream = null; LIVE.recorder = null; LIVE.chunks = [];
+      if (LIVE.audioStream) LIVE.audioStream.getTracks().forEach(t => t.stop());
+      LIVE.stream = null; LIVE.audioStream = null; LIVE.mixedStream = null;
+      LIVE.recorder = null; LIVE.chunks = [];
       clearInterval(LIVE.timerInterval); LIVE.timerInterval = null;
       LIVE.status = 'idle';
       const live = document.getElementById('live-view');
