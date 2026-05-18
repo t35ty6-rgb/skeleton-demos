@@ -1435,6 +1435,204 @@ function formatTime(sec) {
   const s = String(sec%60).padStart(2,'0');
   return `${h}:${m}:${s}`;
 }
+
+// ────────────────────────────────────────
+// 📊 流入分析ビュー (Skeleton Track 連携)
+// ────────────────────────────────────────
+const TRACK_API = 'https://holland-unit-fan-evans.trycloudflare.com';
+const TRACK_ACCOUNT = 'ideal-skin';
+
+function showAnalyticsView() {
+  document.getElementById('nav-stock').classList.remove('active');
+  document.getElementById('nav-daily').classList.remove('active');
+  document.getElementById('nav-live').classList.remove('active');
+  document.getElementById('nav-analytics').classList.add('active');
+  document.getElementById('app').style.display = 'none';
+  document.querySelectorAll('#daily-view, #live-view, #analytics-view').forEach(el => el.remove());
+
+  const el = document.createElement('section');
+  el.id = 'analytics-view';
+  el.style.cssText = 'padding:24px 32px; background:var(--black); color:var(--text); min-height: calc(100vh - 72px);';
+  el.innerHTML = renderAnalyticsView();
+  document.querySelector('.app').insertAdjacentElement('afterend', el);
+  attachAnalyticsHandlers(el);
+  refreshAnalytics();
+}
+
+function renderAnalyticsView() {
+  return `
+    <h1 style="font-family:'Cinzel',serif; font-size:18px; letter-spacing:3px; color:var(--gold); margin-bottom:6px;">📊 流入分析</h1>
+    <p style="color:var(--muted); font-size:12px; margin-bottom:20px;">
+      Skeleton Track 経由のLINE友だち追加データ。LP/IGストーリーズ/QRから何人来たか可視化。
+    </p>
+
+    <div id="ana-err" style="margin-bottom:12px;"></div>
+
+    <div id="ana-tiles" style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:24px;"></div>
+
+    <div style="background:var(--black-soft); border:1px solid var(--gold-faint); border-radius:6px; padding:18px 22px; margin-bottom:24px;">
+      <h2 style="font-size:12px; letter-spacing:3px; color:var(--gold); margin-bottom:12px;">🔗 ストーリーズ用URL発行</h2>
+      <p style="color:var(--muted); font-size:11.5px; margin-bottom:14px; line-height:1.7;">
+        IGストーリーズに貼るURLを発行。ストーリーごとに違う「名前」を付けると、後で「どのストーリーから何人来たか」分かる。
+      </p>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <select id="ana-cat" style="background:var(--black); color:var(--text); border:1px solid var(--gold-faint); padding:8px 10px; font-family:inherit; font-size:12px;">
+          <option value="instagram">IGストーリー</option>
+          <option value="instagram-reel">IGリール</option>
+          <option value="instagram-bio">IGプロフィール欄</option>
+          <option value="threads">Threads</option>
+          <option value="x">X (Twitter)</option>
+          <option value="youtube">YouTube</option>
+          <option value="other">その他</option>
+        </select>
+        <input id="ana-name" placeholder="ストーリー名 (例: story_0518a)" style="background:var(--black); color:var(--text); border:1px solid var(--gold-faint); padding:8px 12px; font-family:inherit; font-size:12px; flex:1; min-width:200px;">
+        <button id="ana-gen" style="background:var(--gold); color:var(--black); border:none; padding:8px 16px; font-family:inherit; font-size:12px; letter-spacing:1px; cursor:pointer;">URL発行</button>
+      </div>
+      <div id="ana-url-out" style="margin-top:12px;"></div>
+    </div>
+
+    <div style="background:var(--black-soft); border:1px solid var(--gold-faint); border-radius:6px; padding:18px 22px; margin-bottom:24px;">
+      <h2 style="font-size:12px; letter-spacing:3px; color:var(--gold); margin-bottom:12px;">🏆 場所別ランキング</h2>
+      <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
+        <thead><tr style="color:var(--muted); font-size:10.5px; letter-spacing:1px;">
+          <th style="text-align:left; padding:8px; border-bottom:1px solid var(--gold-faint);">場所</th>
+          <th style="text-align:right; padding:8px; border-bottom:1px solid var(--gold-faint);">クリック</th>
+          <th style="text-align:right; padding:8px; border-bottom:1px solid var(--gold-faint);">友だち追加</th>
+          <th style="text-align:right; padding:8px; border-bottom:1px solid var(--gold-faint);">CVR</th>
+          <th style="text-align:left; padding:8px; border-bottom:1px solid var(--gold-faint);">判定</th>
+        </tr></thead>
+        <tbody id="ana-table"></tbody>
+      </table>
+    </div>
+
+    <div style="background:var(--black-soft); border:1px solid var(--gold-faint); border-radius:6px; padding:18px 22px;">
+      <h2 style="font-size:12px; letter-spacing:3px; color:var(--gold); margin-bottom:12px;">📋 最近の流入 (リアルタイム)</h2>
+      <div id="ana-feed" style="font-family:'Noto Serif JP',serif; font-size:12px;"></div>
+    </div>
+
+    <p style="color:var(--muted); font-size:10.5px; margin-top:16px; text-align:right;">
+      30秒ごと自動更新 · データ元: <span style="font-family:ui-monospace,Menlo,monospace;">${TRACK_API}</span>
+    </p>
+  `;
+}
+
+function placeLabelJP(campaign, ad) {
+  if (campaign === 'lp') {
+    if (ad === 'hero')   return 'LP・最上部CTA';
+    if (ad === 'final')  return 'LP・最終CTA';
+    if (ad === 'sticky') return 'LP・浮遊ボタン';
+    if (ad === 'qr')     return 'LP・QRコード';
+    if (ad && ad.startsWith('inline_')) return 'LP・中段'+ad.replace('inline_','');
+    return 'LP・'+ad;
+  }
+  if (campaign === 'instagram') {
+    if (ad === 'bio') return 'IGプロフィール欄';
+    if (ad && ad.startsWith('story_')) return 'IGストーリー: '+ad.replace('story_','');
+    if (ad && ad.startsWith('reel_'))  return 'IGリール: '+ad.replace('reel_','');
+    return 'Instagram: '+ad;
+  }
+  if (campaign === 'threads') return 'Threads: '+ad;
+  if (campaign === 'x')       return 'X(Twitter): '+ad;
+  if (campaign === 'youtube') return 'YouTube: '+ad;
+  if (campaign === 'smoketest' || campaign === 'demo') return 'テスト('+(ad||'-')+')';
+  return (campaign||'-')+' / '+(ad||'-');
+}
+
+function classifyCvr(cvr) {
+  if (cvr >= 0.6) return { label:'🟢 効く', color:'#9bd5a0' };
+  if (cvr >= 0.3) return { label:'🟡 普通', color:'#d4bc85' };
+  return { label:'🔴 見直し', color:'#e8a59c' };
+}
+
+let analyticsTimer = null;
+function attachAnalyticsHandlers(el) {
+  if (analyticsTimer) clearInterval(analyticsTimer);
+  analyticsTimer = setInterval(refreshAnalytics, 30000);
+
+  el.querySelector('#ana-gen').addEventListener('click', () => {
+    const cat = el.querySelector('#ana-cat').value;
+    const name = (el.querySelector('#ana-name').value || '').trim();
+    if (!name && cat !== 'instagram-bio') { alert('ストーリー名を入れて'); return; }
+    let campaign = cat;
+    let adId = name;
+    if (cat === 'instagram')      adId = name.startsWith('story_') ? name : 'story_' + name;
+    if (cat === 'instagram-reel') { campaign = 'instagram'; adId = name.startsWith('reel_') ? name : 'reel_' + name; }
+    if (cat === 'instagram-bio')  { campaign = 'instagram'; adId = 'bio'; }
+    const safe = (adId || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
+    const url = TRACK_API + '/c/' + TRACK_ACCOUNT + '/' + campaign + '/' + safe;
+    el.querySelector('#ana-url-out').innerHTML = `
+      <div style="background:var(--black); border:1px solid var(--gold); padding:10px 14px; border-radius:4px; display:flex; gap:10px; align-items:center;">
+        <input readonly value="${url}" style="background:transparent; color:var(--gold); border:none; flex:1; font-family:ui-monospace,Menlo,monospace; font-size:12px;" id="ana-url-text">
+        <button id="ana-url-copy" style="background:var(--gold); color:var(--black); border:none; padding:6px 12px; font-size:11px; cursor:pointer;">コピー</button>
+      </div>
+      <p style="color:var(--muted); font-size:11px; margin-top:8px;">
+        このURLをIGストーリーズに貼り付けて投稿。お客さんがタップ → 自動でLINE友だち追加画面 → 数字がここに反映される。
+      </p>
+    `;
+    document.getElementById('ana-url-copy').addEventListener('click', () => {
+      const t = document.getElementById('ana-url-text');
+      t.select(); navigator.clipboard.writeText(t.value);
+      document.getElementById('ana-url-copy').textContent = 'コピー済 ✓';
+    });
+  });
+}
+
+async function refreshAnalytics() {
+  const errBox = document.getElementById('ana-err');
+  if (!errBox) return;
+  try {
+    const [agg, recent] = await Promise.all([
+      fetch(TRACK_API + '/stats', { cache:'no-store' }).then(r => r.json()),
+      fetch(TRACK_API + '/stats/recent?limit=15', { cache:'no-store' }).then(r => r.json()),
+    ]);
+    errBox.innerHTML = '';
+
+    const ads = (agg.ads || []).filter(a => a.account_id === TRACK_ACCOUNT);
+    const totalClicks  = ads.reduce((s,a)=>s+(a.clicks||0),0);
+    const totalFollows = ads.reduce((s,a)=>s+(a.follows||0),0);
+    const cvr = totalClicks>0 ? totalFollows/totalClicks : 0;
+
+    const tileStyle = 'background:var(--black-soft); border:1px solid var(--gold-faint); border-radius:6px; padding:14px 16px;';
+    document.getElementById('ana-tiles').innerHTML = `
+      <div style="${tileStyle}"><div style="font-size:10.5px; color:var(--muted); letter-spacing:1px;">累計クリック</div><div style="font-size:24px; color:var(--gold); margin-top:4px;">${totalClicks.toLocaleString()}</div></div>
+      <div style="${tileStyle}"><div style="font-size:10.5px; color:var(--muted); letter-spacing:1px;">累計友だち追加</div><div style="font-size:24px; color:#9bd5a0; margin-top:4px;">${totalFollows.toLocaleString()}</div></div>
+      <div style="${tileStyle}"><div style="font-size:10.5px; color:var(--muted); letter-spacing:1px;">全体CVR</div><div style="font-size:24px; color:${classifyCvr(cvr).color}; margin-top:4px;">${(cvr*100).toFixed(1)}%</div></div>
+      <div style="${tileStyle}"><div style="font-size:10.5px; color:var(--muted); letter-spacing:1px;">場所数</div><div style="font-size:24px; color:var(--gold); margin-top:4px;">${ads.length}</div></div>
+    `;
+
+    const sorted = ads.slice().sort((a,b)=>(b.clicks||0)-(a.clicks||0));
+    document.getElementById('ana-table').innerHTML = sorted.length === 0
+      ? `<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--muted);">データなし</td></tr>`
+      : sorted.map(a => {
+          const r = a.clicks>0 ? a.follows/a.clicks : 0;
+          const c = classifyCvr(r);
+          return `<tr style="border-bottom:1px solid rgba(245,240,230,0.04);">
+            <td style="padding:8px;">${placeLabelJP(a.campaign_id, a.ad_id)}</td>
+            <td style="padding:8px; text-align:right; font-variant-numeric:tabular-nums;">${a.clicks}</td>
+            <td style="padding:8px; text-align:right; font-variant-numeric:tabular-nums; color:#9bd5a0;">${a.follows}</td>
+            <td style="padding:8px; text-align:right; color:${c.color};">${(r*100).toFixed(1)}%</td>
+            <td style="padding:8px; color:${c.color};">${c.label}</td>
+          </tr>`;
+        }).join('');
+
+    const events = (recent.events || []).filter(e => e.account_id === TRACK_ACCOUNT);
+    document.getElementById('ana-feed').innerHTML = events.length === 0
+      ? `<div style="text-align:center; padding:14px; color:var(--muted);">まだイベント無し</div>`
+      : events.map(e => {
+          const tt = new Date(e.ts).toLocaleString('ja-JP', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+          const isClick = e.type === 'click';
+          const labelHtml = isClick
+            ? `<span style="background:rgba(197,164,114,0.15); color:var(--gold); padding:2px 8px; border-radius:3px; font-size:10px;">👆 ボタンタップ</span> ${placeLabelJP(e.campaign_id, e.ad_id)} <span style="color:var(--muted);">→ LINE移動</span>`
+            : `<span style="background:rgba(155,213,160,0.15); color:#9bd5a0; padding:2px 8px; border-radius:3px; font-size:10px;">✅ 友だち追加</span> <span style="color:#9bd5a0;">LINE公式アカウントに追加完了</span>`;
+          return `<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(245,240,230,0.04);">
+            <div>${labelHtml}</div>
+            <div style="color:var(--muted); font-size:10.5px; white-space:nowrap;">${tt}</div>
+          </div>`;
+        }).join('');
+  } catch (err) {
+    errBox.innerHTML = '<div style="background:rgba(232,165,156,0.15); color:#e8a59c; padding:10px 14px; border:1px solid #e8a59c; border-radius:4px; font-size:12px;">Skeleton Track サーバ未接続: ' + err.message + '</div>';
+  }
+}
 </script>
 
 </body>
