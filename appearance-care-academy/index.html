@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Appearance Care Academy — 教材 (mock v0.1)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Noto+Sans+JP:wght@300;400;500;700&family=Shippori+Mincho:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF7F1;
+    --bg-card: #FFFFFF;
+    --bg-soft: #F4ECDE;
+    --line: #E6DCC9;
+    --line-soft: #EFE7D6;
+    --ink: #1E2A38;
+    --ink-soft: #4F5A66;
+    --ink-mute: #8A8170;
+    --accent: #B47B6A;
+    --accent-deep: #8C5848;
+    --sage: #7E9982;
+    --sage-deep: #4E6B57;
+    --warn: #C78E5D;
+    --serif: 'Shippori Mincho','Cormorant Garamond',serif;
+    --sans: 'Noto Sans JP', 'Inter', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+
+  /* ===== Login gate ===== */
+  #gate {
+    position: fixed; inset: 0; z-index: 9999;
+    background: linear-gradient(180deg, #1E2A38 0%, #2A3848 100%);
+    display: none; align-items: center; justify-content: center;
+    font-family: var(--sans);
+  }
+  #gate .panel {
+    max-width: 420px; width: calc(100% - 40px);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(180,123,106,0.35);
+    padding: 56px 40px 44px;
+    color: #F5EFE4;
+    text-align: center;
+  }
+  #gate .mark { font-family: var(--serif); font-size: 11px; letter-spacing: 6px; color: var(--accent); margin-bottom: 12px; }
+  #gate .rule { width: 28px; height: 1px; background: var(--accent); margin: 0 auto 24px; }
+  #gate h1 { font-family: var(--serif); font-weight: 500; font-size: 22px; margin: 0 0 8px; letter-spacing: .1em; }
+  #gate .sub { font-size: 12px; color: rgba(245,239,228,0.65); letter-spacing: .12em; margin-bottom: 32px; }
+  #gate label { display: block; text-align: left; font-size: 11px; letter-spacing: .15em; color: rgba(245,239,228,0.7); margin-bottom: 6px; }
+  #gate input { width: 100%; padding: 12px 14px; margin-bottom: 16px; background: rgba(0,0,0,0.25); color: #F5EFE4; border: 1px solid rgba(245,239,228,0.18); font-family: inherit; font-size: 14px; outline: none; }
+  #gate input:focus { border-color: var(--accent); }
+  #gate button { width: 100%; padding: 14px; background: var(--accent); color: #1E2A38; border: none; font-family: var(--serif); letter-spacing: .25em; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
+  #gate button:hover { background: var(--accent-deep); color: #F5EFE4; }
+  #gate .err { color: #E6A0A0; font-size: 12px; margin-top: 14px; min-height: 16px; }
+  #gate .foot { margin-top: 36px; font-size: 10px; color: rgba(245,239,228,0.4); letter-spacing: .15em; }
+
+  /* ===== Layout ===== */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(251,247,241,0.92); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 28px; display: flex; align-items: center; gap: 24px;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-mark { font-family: var(--serif); font-size: 11px; letter-spacing: .5em; color: var(--accent); }
+  .brand-bar { width: 1px; height: 18px; background: var(--line); }
+  .brand-name { font-family: var(--serif); font-size: 15px; letter-spacing: .15em; color: var(--ink); }
+  .brand-app { font-size: 11px; color: var(--ink-mute); letter-spacing: .1em; margin-left: 4px; }
+  .top-progress { margin-left: auto; display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--ink-soft); }
+  .top-progress .bar { width: 140px; height: 4px; background: var(--bg-soft); position: relative; overflow: hidden; }
+  .top-progress .bar > i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--sage); transition: width .3s ease; }
+  .top-user { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--ink-soft); }
+  .top-user .av { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-family: var(--serif); font-size: 13px; }
+  .top-user button { background: none; border: 1px solid var(--line); padding: 4px 10px; font-size: 11px; cursor: pointer; color: var(--ink-soft); letter-spacing: .1em; }
+  .top-user button:hover { border-color: var(--accent); color: var(--accent-deep); }
+
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 56px); }
+
+  /* ===== Sidebar ===== */
+  .side {
+    border-right: 1px solid var(--line);
+    background: linear-gradient(180deg, #FBF7F1 0%, #F6EFE0 100%);
+    padding: 28px 0;
+    overflow-y: auto;
+  }
+  .side h2 { font-family: var(--serif); font-size: 11px; letter-spacing: .35em; color: var(--ink-mute); margin: 0 28px 16px; text-transform: uppercase; }
+  .side ol { list-style: none; padding: 0; margin: 0; }
+  .side li { }
+  .side a {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 13px 28px; text-decoration: none; color: var(--ink-soft);
+    border-left: 3px solid transparent;
+    transition: background .15s, color .15s, border-color .15s;
+    cursor: pointer;
+  }
+  .side a:hover { background: rgba(180,123,106,0.06); color: var(--ink); }
+  .side a.active { background: rgba(180,123,106,0.1); color: var(--ink); border-left-color: var(--accent); }
+  .side .num { font-family: var(--serif); font-size: 12px; color: var(--accent); min-width: 22px; padding-top: 2px; }
+  .side .title { font-size: 13.5px; line-height: 1.55; letter-spacing: .02em; }
+  .side .check { margin-left: auto; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line); flex-shrink: 0; margin-top: 4px; }
+  .side a.done .check { background: var(--sage); border-color: var(--sage); position: relative; }
+  .side a.done .check::after { content:''; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .side-footer { padding: 24px 28px; font-size: 10px; color: var(--ink-mute); letter-spacing: .15em; border-top: 1px solid var(--line); margin-top: 24px; }
+
+  /* ===== Main ===== */
+  .main { padding: 56px 64px 120px; max-width: 880px; }
+  .breadcrumbs { font-size: 11px; letter-spacing: .15em; color: var(--ink-mute); margin-bottom: 16px; }
+  .breadcrumbs .accent { color: var(--accent); }
+  .lesson-head { border-bottom: 1px solid var(--line); padding-bottom: 28px; margin-bottom: 36px; }
+  .lesson-num { font-family: var(--serif); font-size: 12px; letter-spacing: .4em; color: var(--accent); margin-bottom: 10px; }
+  .lesson-title { font-family: var(--serif); font-size: 36px; font-weight: 500; line-height: 1.35; letter-spacing: .04em; margin: 0 0 14px; color: var(--ink); }
+  .lesson-lead { font-size: 15px; color: var(--ink-soft); line-height: 1.85; max-width: 640px; }
+  .lesson-body h3 { font-family: var(--serif); font-size: 22px; font-weight: 500; letter-spacing: .04em; margin: 48px 0 16px; color: var(--ink); position: relative; padding-left: 18px; }
+  .lesson-body h3::before { content: ''; position: absolute; left: 0; top: 14px; width: 8px; height: 8px; background: var(--accent); }
+  .lesson-body h4 { font-family: var(--serif); font-size: 16px; font-weight: 600; margin: 32px 0 10px; letter-spacing: .03em; color: var(--ink); }
+  .lesson-body p { margin: 0 0 16px; color: var(--ink); }
+  .lesson-body ul { padding-left: 1.2em; }
+  .lesson-body li { margin-bottom: 6px; }
+  .lesson-body em.q { font-style: normal; font-family: var(--serif); color: var(--accent-deep); font-weight: 500; }
+
+  .pull {
+    background: var(--bg-soft); border-left: 3px solid var(--accent);
+    padding: 20px 24px; margin: 28px 0; font-family: var(--serif); font-size: 17px; line-height: 1.85; color: var(--ink);
+  }
+  .pull .label { display: block; font-family: var(--sans); font-size: 10px; letter-spacing: .3em; color: var(--accent); margin-bottom: 8px; }
+
+  .note {
+    background: #F1F5EE; border-left: 3px solid var(--sage);
+    padding: 16px 20px; margin: 20px 0; font-size: 14px; color: var(--ink-soft);
+  }
+  .note .label { display: block; font-size: 10px; letter-spacing: .25em; color: var(--sage-deep); margin-bottom: 4px; font-weight: 600; }
+
+  /* 5領域カード */
+  .domain-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 24px 0 32px; }
+  .domain { background: var(--bg-card); border: 1px solid var(--line); padding: 22px 22px 24px; }
+  .domain .num { font-family: var(--serif); font-size: 11px; letter-spacing: .3em; color: var(--accent); margin-bottom: 6px; }
+  .domain .ttl { font-family: var(--serif); font-size: 18px; font-weight: 500; margin: 0 0 10px; }
+  .domain ul { font-size: 13px; color: var(--ink-soft); padding-left: 1em; margin: 0 0 12px; }
+  .domain ul li { margin-bottom: 2px; }
+  .domain .role { font-size: 11.5px; color: var(--sage-deep); letter-spacing: .04em; border-top: 1px dashed var(--line-soft); padding-top: 10px; }
+
+  /* サービス5本柱テーブル */
+  .service-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 14px; }
+  .service-table th, .service-table td { text-align: left; padding: 14px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  .service-table th { font-family: var(--serif); font-weight: 500; color: var(--accent-deep); font-size: 12px; letter-spacing: .15em; border-bottom: 2px solid var(--line); background: var(--bg-soft); }
+  .service-table .badge { display: inline-block; font-family: var(--serif); padding: 3px 8px; background: var(--accent); color: #fff; font-size: 11px; letter-spacing: .15em; margin-right: 6px; }
+  .service-table .price { font-family: var(--serif); color: var(--accent-deep); font-size: 13px; }
+
+  /* ジャーニー */
+  .journey { display: flex; flex-direction: column; gap: 0; margin: 24px 0 12px; position: relative; }
+  .journey-step { display: flex; gap: 20px; padding: 18px 0; border-bottom: 1px dashed var(--line); position: relative; }
+  .journey-step:last-child { border-bottom: none; }
+  .journey-step .stepnum { width: 38px; height: 38px; border: 1px solid var(--accent); color: var(--accent-deep); font-family: var(--serif); font-size: 14px; display: grid; place-items: center; flex-shrink: 0; background: var(--bg-card); }
+  .journey-step .stepbody { flex: 1; }
+  .journey-step .stepttl { font-family: var(--serif); font-size: 17px; font-weight: 500; margin-bottom: 4px; }
+  .journey-step .stepsub { font-size: 13px; color: var(--ink-soft); }
+  .journey-step .stepmeta { margin-top: 6px; font-size: 12px; color: var(--ink-mute); }
+
+  /* check list */
+  .checklist { background: var(--bg-card); border: 1px solid var(--line); padding: 20px 24px; margin: 24px 0; }
+  .checklist h4 { margin: 0 0 12px; font-family: var(--serif); font-size: 15px; font-weight: 600; color: var(--accent-deep); letter-spacing: .04em; }
+  .checklist label { display: flex; gap: 10px; padding: 6px 0; font-size: 13.5px; align-items: flex-start; cursor: pointer; }
+  .checklist input[type="checkbox"] { margin-top: 5px; accent-color: var(--sage); }
+
+  /* lesson footer */
+  .lesson-foot { margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .btn { font-family: var(--serif); letter-spacing: .15em; font-size: 12px; padding: 12px 22px; border: 1px solid var(--accent); background: transparent; color: var(--accent-deep); cursor: pointer; transition: all .15s; }
+  .btn:hover { background: var(--accent); color: #fff; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-deep); }
+  .btn.ghost { border-color: var(--line); color: var(--ink-soft); }
+  .btn.ghost:hover { border-color: var(--ink-soft); color: var(--ink); background: transparent; }
+  .btn.done { background: var(--sage); border-color: var(--sage); color: #fff; }
+  .nav-bar { margin-left: auto; display: flex; gap: 12px; }
+
+  /* mobile */
+  .menu-btn { display: none; }
+  @media (max-width: 880px) {
+    .layout { grid-template-columns: 1fr; }
+    .side { position: fixed; left: 0; top: 56px; bottom: 0; width: 86%; max-width: 320px; z-index: 40; transform: translateX(-100%); transition: transform .25s ease; box-shadow: 0 8px 24px rgba(30,42,56,0.12); }
+    .side.open { transform: translateX(0); }
+    .scrim { position: fixed; inset: 56px 0 0 0; background: rgba(30,42,56,0.35); z-index: 35; display: none; }
+    .scrim.show { display: block; }
+    .main { padding: 32px 22px 100px; }
+    .lesson-title { font-size: 26px; }
+    .topbar { padding: 12px 16px; gap: 12px; }
+    .menu-btn { display: inline-grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); background: var(--bg-card); cursor: pointer; }
+    .menu-btn svg { width: 18px; height: 18px; }
+    .top-progress .bar { width: 90px; }
+    .brand-app { display: none; }
+    .top-user .name { display: none; }
+  }
+  @media (max-width: 440px) {
+    .lesson-title { font-size: 22px; }
+    .topbar { padding: 10px 12px; }
+    .top-progress { gap: 8px; font-size: 11px; }
+    .top-progress .label { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Login Gate ===== -->
+<div id="gate">
+  <div class="panel">
+    <div class="mark">SKELETON INC.</div>
+    <div class="rule"></div>
+    <h1>Appearance Care Academy</h1>
+    <div class="sub">FOR INVITED MEMBERS ONLY</div>
+    <label for="g-id">ID</label>
+    <input id="g-id" type="text" autocomplete="username" autocapitalize="off">
+    <label for="g-pw">PASSWORD</label>
+    <input id="g-pw" type="password" autocomplete="current-password">
+    <button id="g-submit">SIGN IN</button>
+    <div class="err" id="g-err"></div>
+    <div class="foot">教材 mock v0.1 / Skeleton Inc.</div>
+  </div>
+</div>
+
+<!-- ===== Top bar ===== -->
+<header class="topbar">
+  <button class="menu-btn" id="menu-btn" aria-label="menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="brand">
+    <span class="brand-mark">APPEARANCE CARE</span>
+    <span class="brand-bar"></span>
+    <span class="brand-name">Academy</span>
+    <span class="brand-app">教材 mock v0.1</span>
+  </div>
+  <div class="top-progress">
+    <span class="label">受講進捗</span>
+    <div class="bar"><i id="pbar"></i></div>
+    <span id="ptext">0%</span>
+  </div>
+  <div class="top-user">
+    <div class="av" id="avatar">A</div>
+    <span class="name" id="username">guest</span>
+    <button id="signout">SIGN OUT</button>
+  </div>
+</header>
+
+<div class="scrim" id="scrim"></div>
+
+<div class="layout">
+
+  <!-- ===== Sidebar ===== -->
+  <aside class="side" id="side">
+    <h2>CURRICULUM</h2>
+    <ol id="lessons"></ol>
+    <div class="side-footer">
+      ASAKAWA × SKELETON<br>
+      © 2026 — for internal training
+    </div>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <main class="main" id="main">
+    <!-- Lesson rendered here -->
+  </main>
+</div>
+
+<!-- ===== Auth ===== -->
+<script>
+(function(){
+  const VALID = new Set([
+    'a6992708d599d658223df89acf889195d9d25432f6bcdf06c0249c013bd7e2b7', // tsukasa:skeleton2026
+    'd92ac4eda6000cfe5dc20925bc0c514eddae928e84a2fb3982e36ac6f3844ca6', // asakawa:appcare2026
+    '07f9fd18bcdc7fd3ce318d4abb7045916fecc2cedbc27f3145c53e630a47e27b'  // demo:demo2026
+  ]);
+  async function sha256(text){
+    const buf = new TextEncoder().encode(text);
+    const h = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  const gate = document.getElementById('gate');
+  function show(){ document.body.style.overflow='hidden'; gate.style.display='flex'; setTimeout(()=>document.getElementById('g-id').focus(),60); }
+  function hide(){ document.body.style.overflow=''; gate.style.display='none'; }
+  async function check(){
+    const id = document.getElementById('g-id').value.trim();
+    const pw = document.getElementById('g-pw').value;
+    if(!id || !pw) return;
+    const h = await sha256(id + ':' + pw);
+    if (VALID.has(h)) {
+      sessionStorage.setItem('aca_auth', h);
+      sessionStorage.setItem('aca_user', id);
+      document.getElementById('username').textContent = id;
+      document.getElementById('avatar').textContent = id[0].toUpperCase();
+      hide();
+    } else {
+      document.getElementById('g-err').textContent = 'ID または パスワードが違います';
+      document.getElementById('g-pw').value = '';
+    }
+  }
+  const saved = sessionStorage.getItem('aca_auth');
+  const savedUser = sessionStorage.getItem('aca_user');
+  if (saved && VALID.has(saved)) {
+    if (savedUser) {
+      document.getElementById('username').textContent = savedUser;
+      document.getElementById('avatar').textContent = savedUser[0].toUpperCase();
+    }
+  } else {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show); else show();
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    document.getElementById('g-submit').addEventListener('click', check);
+    document.getElementById('g-pw').addEventListener('keydown', e=>{ if(e.key==='Enter') check(); });
+    document.getElementById('g-id').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('g-pw').focus(); });
+    document.getElementById('signout').addEventListener('click', ()=>{
+      sessionStorage.removeItem('aca_auth'); sessionStorage.removeItem('aca_user'); location.reload();
+    });
+  });
+})();
+</script>
+
+<!-- ===== Content & app ===== -->
+<script>
+const LESSONS = [
+  {
+    id: 'intro',
+    num: 'CHAPTER 01',
+    title: 'はじめに — アピアランスケアとは',
+    lead: 'この教材は、がん患者さんとそのご家族に「自分らしさ」を取り戻していただくための、看護師による伴走ケアを学ぶための入門です。',
+    body: `
+      <h3>定義</h3>
+      <p>アピアランスケアとは、<strong>見た目だけでなく「人生全体の質（QOL）」を整える包括的ケア</strong>です。<br>
+      これは「美容」のためのケアではありません。<em class="q">"その人らしさ"</em> を支えるための、医療的知識と生活科学を持った看護師による伴走の総称です。</p>
+
+      <div class="pull">
+        <span class="label">FOUNDING IDEA</span>
+        病気になってしまっても、抗がん剤治療中であっても、手術をしても、<br>
+        『自分らしく』『今まで以上に軽やかに』人生を生きるお手伝いをする。
+      </div>
+
+      <h3>なぜ看護師なのか</h3>
+      <p>看護師は〝生活の科学〟です。一人ひとりの生活に寄り添いながら、医療的な知識と技術で、病気から起こるカラダと心の不調、治療の副作用を軽減していきます。患者さまを支えるご家族と一緒に寄り添い、治療が順調に進んでいけるように、人生を伴奏します。</p>
+
+      <h3>この教材で学ぶこと</h3>
+      <ul>
+        <li>アピアランスケアの 5 領域フレームワーク</li>
+        <li>顧客の心理ジャーニーと初回相談の組み立て</li>
+        <li>サービス 5 本柱（A〜E）の理解と提供方法</li>
+        <li>副作用予防・治療レジメカレンダーの活用</li>
+        <li>看護師の新しい働き方と認定制度</li>
+      </ul>
+
+      <div class="note">
+        <span class="label">READING NOTE</span>
+        各章末で「理解確認チェック」と「完了」ボタンがあります。完了するとサイドバーで進捗が記録されます（端末ローカル保存）。
+      </div>
+    `
+  },
+  {
+    id: 'domains',
+    num: 'CHAPTER 02',
+    title: '5 つのアピアランス領域',
+    lead: 'アピアランスケアの中核フレームワーク。見た目だけでなく、内面・心・経済・社会との繋がりまでを 5 領域で統合的に整えます。',
+    body: `
+      <h3>全体像</h3>
+      <p>5 つの領域は独立ではなく <strong>循環構造</strong> です。心が安定すれば外見にハリが戻り、外見が整えば社会に出る勇気が湧き、社会との接点ができれば経済不安が和らぐ。看護師は「どこから入っても全体を見る」という視点を持ちます。</p>
+
+      <div class="domain-grid">
+        <div class="domain">
+          <div class="num">DOMAIN 01</div>
+          <div class="ttl">見た目（外見）</div>
+          <ul><li>肌・髪・体型</li><li>清潔感・若々しさ</li><li>第一印象</li></ul>
+          <div class="role">▶ 社会との接点をつくる入口</div>
+        </div>
+        <div class="domain">
+          <div class="num">DOMAIN 02</div>
+          <div class="ttl">カラダの中身</div>
+          <ul><li>ホルモンバランス</li><li>血流・代謝</li><li>副作用の少ない身体づくり</li></ul>
+          <div class="role">▶ 外見の "土台"・治療を乗り越える基盤</div>
+        </div>
+        <div class="domain">
+          <div class="num">DOMAIN 03</div>
+          <div class="ttl">キモチ（心理・メンタル）</div>
+          <ul><li>自己肯定感</li><li>安心感</li><li>前向きな意欲（原田メソッド）</li></ul>
+          <div class="role">▶ 見た目と身体を支える "エネルギー"</div>
+        </div>
+        <div class="domain">
+          <div class="num">DOMAIN 04</div>
+          <div class="ttl">お金（将来・経済）</div>
+          <ul><li>治療費・生活費の安心</li><li>将来不安の軽減</li><li>働き方・収入の安定</li></ul>
+          <div class="role">▶ 心と身体の安定を支える基盤</div>
+        </div>
+        <div class="domain">
+          <div class="num">DOMAIN 05</div>
+          <div class="ttl">社会とのつながり</div>
+          <ul><li>家族・パートナー</li><li>仕事・役割</li><li>コミュニティ</li></ul>
+          <div class="role">▶ "孤独にしない" 支援</div>
+        </div>
+      </div>
+
+      <h3>看護師の問診マッピング</h3>
+      <p>初回相談で 5 領域すべてに 1〜2 問ずつ触れることで、お客さま自身が気づいていない「本当に困っていること」を可視化できます。施術や物販に偏ると見落とすため、領域チェックを必ず通します。</p>
+
+      <div class="checklist">
+        <h4>理解確認</h4>
+        <label><input type="checkbox" data-q="domains-1">「見た目」だけを扱うのは <em>アピアランスケアではない</em> と説明できる</label>
+        <label><input type="checkbox" data-q="domains-2">5 領域それぞれの「役割」を 1 行で言える</label>
+        <label><input type="checkbox" data-q="domains-3">領域同士が循環している関係性を理解した</label>
+      </div>
+    `
+  },
+  {
+    id: 'journey',
+    num: 'CHAPTER 03',
+    title: 'カスタマージャーニー',
+    lead: '入口は「美容」ではなく "安心" と "理解される感覚"。施術より先に「安心の設計」を作ります。',
+    body: `
+      <h3>5 ステップ</h3>
+      <div class="journey">
+        <div class="journey-step"><div class="stepnum">01</div><div class="stepbody">
+          <div class="stepttl">認知・入口</div>
+          <div class="stepsub">SNS／看護師勉強会／病院退院後サポート／患者会／がんサバイバーイベント／医療者向け講演／アピアランスケアセミナー</div>
+          <div class="stepmeta">世界観：「患者」ではなく <em>一人の人</em> として関わる</div>
+        </div></div>
+        <div class="journey-step"><div class="stepnum">02</div><div class="stepbody">
+          <div class="stepttl">出会い（集客導線）</div>
+          <div class="stepsub">「治療してくれる場所」ではなく「分かってもらえる場所」として認知される</div>
+        </div></div>
+        <div class="journey-step"><div class="stepnum">03</div><div class="stepbody">
+          <div class="stepttl">初回相談（無料 or 低価格）</div>
+          <div class="stepsub">"施術" より先に "安心の設計" を作るフェーズ</div>
+          <div class="stepmeta">問診：治療状況／副作用／不安／睡眠／食事／外見悩み／パートナー関係／仕事／心の状態</div>
+        </div></div>
+        <div class="journey-step"><div class="stepnum">04</div><div class="stepbody">
+          <div class="stepttl">個別プラン設計</div>
+          <div class="stepsub">5 領域フレームに沿って、いまの優先度（緊急度 × 影響度）で 1〜2 領域から始める</div>
+        </div></div>
+        <div class="journey-step"><div class="stepnum">05</div><div class="stepbody">
+          <div class="stepttl">サービス提供（A〜E）</div>
+          <div class="stepsub">伴走サブスク／施術／予防・対策／講座／プレミアム伴走 を組み合わせる</div>
+        </div></div>
+      </div>
+
+      <div class="pull">
+        <span class="label">CORE PHRASE</span>
+        「あなたを患者としてではなく、一人の人生として見ています」
+      </div>
+
+      <h3>初回相談で必ず伝えること</h3>
+      <ul>
+        <li>今日は「施術を売る場」ではなく <em>あなたの全体像を聴く場</em> であること</li>
+        <li>ここで話したことが家族や職場に伝わることはないこと</li>
+        <li>今日決めなくていい。「持ち帰って家族と話す」も選べる</li>
+      </ul>
+    `
+  },
+  {
+    id: 'services',
+    num: 'CHAPTER 04',
+    title: 'サービス 5 本柱（A〜E）',
+    lead: 'アピアランスケアは単発の施術ではなく、伴走・施術・予防・教育・プレミアムの 5 本立てで構成されます。',
+    body: `
+      <table class="service-table">
+        <thead><tr><th>ライン</th><th>内容</th><th>課金モデル</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge">A</span><br>看護師伴走<br>サポート</td>
+            <td>LINE相談／副作用相談／メンタルサポート／家族相談／治療中の生活支援</td>
+            <td class="price">月額サブスク</td>
+          </tr>
+          <tr>
+            <td><span class="badge">B</span><br>アピアランス<br>ケア施術</td>
+            <td>スキンケア／リンパケア／ヘッドケア／ホルモンケア（フェムケア・メンテック）／睡眠ケア／ボディケア<br><small>※メソッド開発中</small></td>
+            <td class="price">施術ベース</td>
+          </tr>
+          <tr>
+            <td><span class="badge">C</span><br>副作用<br>予防と対策</td>
+            <td>副作用の理解／予防と対策／オリジナル<em class="q">治療レジメカレンダー</em> 活用サポート</td>
+            <td class="price">プラン組込</td>
+          </tr>
+          <tr>
+            <td><span class="badge">D</span><br>講座・<br>セルフケア教育</td>
+            <td>セルフケア／家族向け／女性性・男性性ケア／ホルモン／QOL／退院後の生き方</td>
+            <td class="price">講座売上</td>
+          </tr>
+          <tr>
+            <td><span class="badge">E</span><br>プレミアム<br>伴走</td>
+            <td>"お抱え看護師"モデル：通院同行／主治医整理／家族支援／食事／外見／心理／泊込み一週間集中／リトリート</td>
+            <td class="price">高単価／自由診療</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>ライン同士の繋ぎ方</h3>
+      <p>新規のお客さまは <strong>A（伴走サブスク）</strong> または <strong>C（副作用予防）</strong> から入ることが多く、信頼が積み上がった段階で B（施術）や E（プレミアム伴走）に展開します。D（講座）は集客にも、既存顧客の家族取り込みにも使えます。</p>
+
+      <div class="note">
+        <span class="label">PRICING NOTE</span>
+        各サービスの具体的な価格レンジは「事業オーナー（淺川さん）× Skeleton」で確定予定。教材内では金額を伏せ、構造のみ理解する設計です。
+      </div>
+
+      <div class="checklist">
+        <h4>理解確認</h4>
+        <label><input type="checkbox" data-q="srv-1">A〜E の役割を 1 行で説明できる</label>
+        <label><input type="checkbox" data-q="srv-2">A／C から入って B／E に展開する典型導線を理解した</label>
+        <label><input type="checkbox" data-q="srv-3">D の講座が「集客」「家族取り込み」両方に効くことを理解した</label>
+      </div>
+    `
+  },
+  {
+    id: 'side-effects',
+    num: 'CHAPTER 05',
+    title: '副作用の予防と治療レジメカレンダー',
+    lead: '「知らない不安」を減らし、"事前に準備できる安心" をつくる。これがアピアランスケアの差別化の核です。',
+    body: `
+      <h3>この章のゴール</h3>
+      <p>抗がん剤治療では「いつ、どんな副作用が来るか」を <strong>レジメ（治療スケジュール）から逆算して予測</strong> できます。これを予め共有することで、患者さんは "備える" ことができ、家族も支え方が分かるようになります。</p>
+
+      <h3>3 つの提供価値</h3>
+      <ul>
+        <li><strong>理解：</strong>これから何が起こるかを医療者の言葉で噛み砕いて伝える</li>
+        <li><strong>予防：</strong>起きてからの対症療法ではなく、起こる前の生活調整</li>
+        <li><strong>対策：</strong>起きた時の対処法と、医療機関への連絡判断軸</li>
+      </ul>
+
+      <h3>治療レジメカレンダー（オリジナルツール）</h3>
+      <p>レジメに合わせて副作用の予測タイミングを可視化し、毎日のセルフケア指示と紐づけたカレンダー。施術や講座と組み合わせて使うことで、患者さんが <em class="q">自分の治療を理解しているという感覚</em> を得られます。</p>
+
+      <div class="pull">
+        <span class="label">VALUE</span>
+        副作用を理解し、予防と対策を行うことで、治療継続を支える。<br>
+        「治療を中断しない」ことが、結果として人生を取り戻す最短ルート。
+      </div>
+
+      <div class="note">
+        <span class="label">DEVELOPMENT</span>
+        現在は紙ベース／個別対応で運用。将来的にはアプリ／Webツール化を検討（Skeleton 開発側で要件整理）。
+      </div>
+    `
+  },
+  {
+    id: 'nurse',
+    num: 'CHAPTER 06',
+    title: '看護師の新しい働き方',
+    lead: '病院の中だけでなく、患者さんの人生に寄り添う「新しい看護の形」です。',
+    body: `
+      <h3>これまでの看護 vs これからの看護</h3>
+      <table class="service-table">
+        <thead><tr><th></th><th>従来の看護</th><th>アピアランスケア・ナーシング</th></tr></thead>
+        <tbody>
+          <tr><td>場所</td><td>病院／施設</td><td>クリニック外／オンライン／自宅／リトリート</td></tr>
+          <tr><td>関わる時間</td><td>入院・通院の点</td><td>告知〜治療後までの線</td></tr>
+          <tr><td>対象範囲</td><td>本人の症状</td><td>本人 ＋ 家族 ＋ 人生</td></tr>
+          <tr><td>働く価値</td><td>業務遂行</td><td>QOL を守る・人生に寄り添う</td></tr>
+        </tbody>
+      </table>
+
+      <h3>看護師に求められる素養</h3>
+      <ul>
+        <li>がん治療の基礎知識（レジメ／副作用／予後）</li>
+        <li>傾聴とコーチングスキル</li>
+        <li>家族システムの視点</li>
+        <li>自由診療における倫理感（営業色を出さない）</li>
+        <li>セルフケアの実践者であること</li>
+      </ul>
+
+      <div class="pull">
+        <span class="label">MESSAGE TO NURSES</span>
+        「やりがいはあるけれど消耗する仕事」から、<br>
+        「自分の経験と知識が一人の人生を変える仕事」へ。
+      </div>
+    `
+  },
+  {
+    id: 'cert',
+    num: 'CHAPTER 07',
+    title: '認定制度と研修カリキュラム',
+    lead: '質を担保するため、看護師には研修・実技試験・筆記試験を経て認定資格を発行します。',
+    body: `
+      <h3>研修カリキュラム（7 領域）</h3>
+      <ul>
+        <li>アピアランスケア概論</li>
+        <li>副作用理解（レジメ別）</li>
+        <li>心理支援（傾聴・コーチング）</li>
+        <li>コミュニケーション（家族／医師連携）</li>
+        <li>QOL 支援</li>
+        <li>ホルモンケア</li>
+        <li>タッチケア（リンパ・ヘッド・スキン）</li>
+      </ul>
+
+      <h3>認定プロセス</h3>
+      <div class="journey">
+        <div class="journey-step"><div class="stepnum">01</div><div class="stepbody"><div class="stepttl">講習受講</div><div class="stepsub">7 領域のオンライン／対面講習</div></div></div>
+        <div class="journey-step"><div class="stepnum">02</div><div class="stepbody"><div class="stepttl">実技研修</div><div class="stepsub">タッチケア・問診ロールプレイ</div></div></div>
+        <div class="journey-step"><div class="stepnum">03</div><div class="stepbody"><div class="stepttl">実技試験</div><div class="stepsub">標準患者を相手に施術＋面談</div></div></div>
+        <div class="journey-step"><div class="stepnum">04</div><div class="stepbody"><div class="stepttl">筆記試験</div><div class="stepsub">知識確認・倫理ケーススタディ</div></div></div>
+        <div class="journey-step"><div class="stepnum">05</div><div class="stepbody"><div class="stepttl">認定発行</div><div class="stepsub">称号付与・継続教育義務化</div></div></div>
+      </div>
+
+      <h3>将来的な資格化（構想）</h3>
+      <ul>
+        <li>アピアランスケア認定看護師</li>
+        <li>がん QOL 伴走ナーシング</li>
+        <li>がんサバイバーケアセラピスト</li>
+      </ul>
+
+      <div class="note">
+        <span class="label">NOTE</span>
+        制度設計の細部（合格基準・更新サイクル・受講料）は Phase 2 で確定。本章は枠組みの理解にとどめます。
+      </div>
+    `
+  },
+  {
+    id: 'partners',
+    num: 'CHAPTER 08',
+    title: '提携モデルと、事業の本質',
+    lead: 'この事業の本質は「美容事業」ではなく、"人生を取り戻す支援" です。提携先も、その本質に共鳴できる相手を選びます。',
+    body: `
+      <h3>提携先 8 カテゴリ</h3>
+      <div class="domain-grid">
+        <div class="domain"><div class="num">PARTNER</div><div class="ttl">病院</div><div class="role">主治医連携・退院後紹介</div></div>
+        <div class="domain"><div class="num">PARTNER</div><div class="ttl">クリニック</div><div class="role">自由診療連携・併診</div></div>
+        <div class="domain"><div class="num">PARTNER</div><div class="ttl">美容室</div><div class="role">ウィッグ前後のヘアケア</div></div>
+        <div class="domain"><div class="num">PARTNER</div><div class="ttl">ウィッグ会社</div><div class="role">フィッティング・アフター</div></div>
+        <div class="domain"><div class="num">PARTNER</div><div class="ttl">エステ</div><div class="role">退院後の身体ケア継続</div></div>
+        <div class="domain"><div class="num">PARTNER</div><div class="ttl">訪問看護</div><div class="role">在宅ケアとの連携</div></div>
+        <div class="domain"><div class="num">PARTNER</div><div class="ttl">保険外看護</div><div class="role">プレミアム伴走の互助</div></div>
+        <div class="domain"><div class="num">PARTNER</div><div class="ttl">企業</div><div class="role">福利厚生・治療と仕事の両立</div></div>
+      </div>
+
+      <h3>事業の本質</h3>
+      <div class="pull">
+        <span class="label">ESSENCE</span>
+        この事業は「美容事業」ではない。<br>
+        本質は <em class="q">"人生を取り戻す支援"</em>。<br>
+        治療中でも、<br>
+        ・女性でいたい<br>
+        ・男性でいたい<br>
+        ・母でいたい<br>
+        ・妻でいたい<br>
+        ・社会とつながっていたい<br>
+        その想いを支える事業。
+      </div>
+
+      <h3>私たちが目指す未来</h3>
+      <p>「がんになっても、自分らしく軽やかに生きていける」が当たり前になる社会。<br>
+      その実現のために、看護師という職能の可能性を広げ、患者さんとそのご家族が <em class="q">"孤独にされない"</em> 仕組みを作ります。</p>
+
+      <div class="checklist">
+        <h4>修了確認</h4>
+        <label><input type="checkbox" data-q="end-1">この事業が「美容事業ではない」と自分の言葉で言える</label>
+        <label><input type="checkbox" data-q="end-2">5 領域・5 本柱・認定制度の関係性が頭に入った</label>
+        <label><input type="checkbox" data-q="end-3">最初に動かしたい提携先カテゴリを 1 つ決められる</label>
+      </div>
+    `
+  }
+];
+
+const STORAGE_KEY = 'aca_progress_v1';
+let progress = {};
+try { progress = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){ progress = {}; }
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); }
+
+let currentIdx = parseInt(sessionStorage.getItem('aca_lesson') || '0', 10);
+if (currentIdx < 0 || currentIdx >= LESSONS.length) currentIdx = 0;
+
+function renderSidebar(){
+  const ol = document.getElementById('lessons');
+  ol.innerHTML = LESSONS.map((l, i) => `
+    <li>
+      <a data-i="${i}" class="${i===currentIdx?'active':''} ${progress[l.id]?'done':''}">
+        <span class="num">${String(i+1).padStart(2,'0')}</span>
+        <span class="title">${l.title}</span>
+        <span class="check"></span>
+      </a>
+    </li>
+  `).join('');
+  ol.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => { currentIdx = parseInt(a.dataset.i,10); sessionStorage.setItem('aca_lesson', currentIdx); render(); closeSide(); });
+  });
+}
+
+function renderProgress(){
+  const done = LESSONS.filter(l => progress[l.id]).length;
+  const pct = Math.round(done / LESSONS.length * 100);
+  document.getElementById('pbar').style.width = pct + '%';
+  document.getElementById('ptext').textContent = pct + '%';
+}
+
+function renderLesson(){
+  const l = LESSONS[currentIdx];
+  const isDone = !!progress[l.id];
+  document.getElementById('main').innerHTML = `
+    <div class="breadcrumbs">CURRICULUM <span class="accent">/</span> ${l.num}</div>
+    <div class="lesson-head">
+      <div class="lesson-num">${l.num}</div>
+      <h1 class="lesson-title">${l.title}</h1>
+      <p class="lesson-lead">${l.lead}</p>
+    </div>
+    <div class="lesson-body">${l.body}</div>
+    <div class="lesson-foot">
+      <button class="btn ${isDone?'done':'primary'}" id="markdone">${isDone?'✓ 受講済み':'この章を完了にする'}</button>
+      <div class="nav-bar">
+        <button class="btn ghost" id="prev" ${currentIdx===0?'disabled style="opacity:.4;cursor:not-allowed"':''}>← 前の章</button>
+        <button class="btn ghost" id="next" ${currentIdx===LESSONS.length-1?'disabled style="opacity:.4;cursor:not-allowed"':''}>次の章 →</button>
+      </div>
+    </div>
+  `;
+  // checkbox state restore
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(cb => {
+    const k = 'cb:' + cb.dataset.q;
+    if (progress[k]) cb.checked = true;
+    cb.addEventListener('change', () => { progress[k] = cb.checked; save(); });
+  });
+  document.getElementById('markdone').addEventListener('click', () => {
+    progress[l.id] = !progress[l.id];
+    save(); renderSidebar(); renderProgress(); renderLesson();
+  });
+  document.getElementById('prev').addEventListener('click', () => { if (currentIdx>0){ currentIdx--; sessionStorage.setItem('aca_lesson', currentIdx); render(); window.scrollTo({top:0,behavior:'smooth'}); }});
+  document.getElementById('next').addEventListener('click', () => { if (currentIdx<LESSONS.length-1){ currentIdx++; sessionStorage.setItem('aca_lesson', currentIdx); render(); window.scrollTo({top:0,behavior:'smooth'}); }});
+}
+
+function render(){ renderSidebar(); renderProgress(); renderLesson(); }
+
+// mobile drawer
+function openSide(){ document.getElementById('side').classList.add('open'); document.getElementById('scrim').classList.add('show'); }
+function closeSide(){ document.getElementById('side').classList.remove('open'); document.getElementById('scrim').classList.remove('show'); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  render();
+  document.getElementById('menu-btn').addEventListener('click', () => {
+    const open = document.getElementById('side').classList.contains('open');
+    open ? closeSide() : openSide();
+  });
+  document.getElementById('scrim').addEventListener('click', closeSide);
+});
+</script>
+
+</body>
+</html>
