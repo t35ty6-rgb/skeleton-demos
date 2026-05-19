@@ -552,6 +552,7 @@ body[data-view="analytics"] .kpi-bar { display:none !important; }
     <a href="#" id="nav-daily">📰 今日の提案</a>
     <a href="#" id="nav-live">🔴 講義録画</a>
     <a href="#" id="nav-analytics">📊 流入分析</a>
+    <a href="#" id="nav-archive">📚 資産庫</a>
     <a href="#" style="opacity:0.4;pointer-events:none;" title="準備中">投稿予約 <span style="font-size:8px;">SOON</span></a>
     <a href="#" style="opacity:0.4;pointer-events:none;" title="準備中">KPI <span style="font-size:8px;">SOON</span></a>
   </nav>
@@ -920,9 +921,9 @@ function _enterView(name) {
     clearInterval(analyticsTimer); analyticsTimer = null;
   }
   // 既存の動的ビューセクションを全削除 (残像対策の本丸)
-  document.querySelectorAll('#daily-view, #live-view, #analytics-view').forEach(el => el.remove());
+  document.querySelectorAll('#daily-view, #live-view, #analytics-view, #archive-view').forEach(el => el.remove());
   // nav active 状態リセット
-  ['stock','daily','live','analytics'].forEach(n => {
+  ['stock','daily','live','analytics','archive'].forEach(n => {
     const el = document.getElementById('nav-'+n);
     if (el) el.classList.toggle('active', n === name);
   });
@@ -931,7 +932,7 @@ function _enterView(name) {
   const app = document.getElementById('app');
   if (app) app.style.display = (name === 'stock') ? 'grid' : 'none';
   const kpi = document.querySelector('.kpi-bar');
-  if (kpi) kpi.style.display = (name === 'live' || name === 'analytics') ? 'none' : '';
+  if (kpi) kpi.style.display = (name === 'live' || name === 'analytics' || name === 'archive') ? 'none' : '';
 }
 
 function showStockView() {
@@ -1245,6 +1246,7 @@ document.getElementById('nav-stock').addEventListener('click', e => { e.preventD
 document.getElementById('nav-daily').addEventListener('click', e => { e.preventDefault(); showDailyView(); });
 document.getElementById('nav-live').addEventListener('click', e => { e.preventDefault(); showLiveView(); });
 document.getElementById('nav-analytics').addEventListener('click', e => { e.preventDefault(); showAnalyticsView(); });
+document.getElementById('nav-archive').addEventListener('click', e => { e.preventDefault(); showArchiveView(); });
 
 // ────────────────────────────────────────
 // LIVE 録画 (ヒカル先生 金曜講義)
@@ -1512,6 +1514,126 @@ function formatTime(sec) {
   const m = String(Math.floor((sec%3600)/60)).padStart(2,'0');
   const s = String(sec%60).padStart(2,'0');
   return `${h}:${m}:${s}`;
+}
+
+// ────────────────────────────────────────
+// 📚 資産庫ビュー (毎日生成された提案+台本の履歴)
+// ────────────────────────────────────────
+function showArchiveView() {
+  _enterView('archive');
+  const el = document.createElement('section');
+  el.id = 'archive-view';
+  el.style.cssText = 'padding:24px 32px; background:var(--black); color:var(--text); min-height: calc(100vh - 72px);';
+  el.innerHTML = `
+    <h1 style="font-family:'Cinzel',serif; font-size:18px; letter-spacing:3px; color:var(--gold); margin-bottom:6px;">📚 資産庫</h1>
+    <p style="color:var(--muted); font-size:12px; margin-bottom:20px;">毎日生成された提案・台本の履歴。タグで絞り込み可能。</p>
+    <div id="archive-filters" style="margin-bottom:18px; display:flex; gap:8px; flex-wrap:wrap;"></div>
+    <h2 style="font-size:12px; letter-spacing:3px; color:var(--gold); margin:24px 0 12px;">📅 日次提案 履歴</h2>
+    <div id="archive-daily" style="background:var(--black-soft); border:1px solid var(--gold-faint); border-radius:6px; padding:14px;">読込中...</div>
+    <h2 style="font-size:12px; letter-spacing:3px; color:var(--gold); margin:28px 0 12px;">🎬 生成済み3軸台本</h2>
+    <div id="archive-scripts" style="background:var(--black-soft); border:1px solid var(--gold-faint); border-radius:6px; padding:14px;">読込中...</div>
+  `;
+  document.querySelector('.app').insertAdjacentElement('afterend', el);
+  loadArchive();
+}
+
+let archiveState = { tagFilter: 'all', daily: [], scripts: [] };
+
+async function loadArchive() {
+  try {
+    const [archive, idx] = await Promise.all([
+      fetch('data/daily/archive_index.json?t=' + Date.now()).then(r => r.ok ? r.json() : { entries: [] }),
+      fetch('data/scripts_index.json?t=' + Date.now()).then(r => r.json()),
+    ]);
+    archiveState.daily = archive.entries || [];
+
+    // 各scriptを読んでタグ付きで保存
+    const scriptFiles = Object.entries(idx.scripts || {});
+    const scripts = await Promise.all(scriptFiles.map(async ([tid, fname]) => {
+      try {
+        const s = await fetch('data/' + fname + '?t=' + Date.now()).then(r => r.json());
+        return {
+          topic_id: tid,
+          file: fname,
+          title: s.source_title || `topic ${tid}`,
+          tags: s.tags || ['legacy'],
+          generated_date: s.generated_date || (s.generated_at || '').slice(0, 10),
+          audience: s.audience || 'unknown',
+          posted: s.posted || false,
+        };
+      } catch (e) { return null; }
+    }));
+    archiveState.scripts = scripts.filter(Boolean);
+    renderArchiveFilters();
+    renderArchiveLists();
+  } catch (e) {
+    document.getElementById('archive-daily').textContent = 'エラー: ' + e.message;
+  }
+}
+
+function renderArchiveFilters() {
+  const allTags = new Set();
+  archiveState.scripts.forEach(s => (s.tags || []).forEach(t => allTags.add(t)));
+  const tags = ['all', ...Array.from(allTags).sort()];
+  const html = tags.map(t => `
+    <button data-tag="${t}" style="background:${archiveState.tagFilter===t?'var(--gold)':'transparent'};
+      color:${archiveState.tagFilter===t?'var(--black)':'var(--gold)'};
+      border:1px solid var(--gold-faint); padding:6px 12px; font-family:inherit; font-size:11px;
+      letter-spacing:1px; cursor:pointer;">${t === 'all' ? 'ALL' : '#' + t}</button>
+  `).join('');
+  document.getElementById('archive-filters').innerHTML = html;
+  document.querySelectorAll('#archive-filters button').forEach(b => {
+    b.addEventListener('click', () => {
+      archiveState.tagFilter = b.dataset.tag;
+      renderArchiveFilters();
+      renderArchiveLists();
+    });
+  });
+}
+
+function renderArchiveLists() {
+  // Daily archive
+  const dailyHtml = archiveState.daily.length === 0
+    ? '<div style="color:var(--muted); padding:14px; text-align:center;">履歴なし</div>'
+    : archiveState.daily.map(d => `
+      <div style="border-bottom:1px solid rgba(245,240,230,0.04); padding:10px 0;">
+        <div style="color:var(--gold); font-size:12px; letter-spacing:1px; margin-bottom:4px;">${d.date}</div>
+        <div style="color:var(--text); font-size:11.5px; line-height:1.7;">
+          ${(d.topic_titles || []).map(t => `• ${t}`).join('<br>')}
+        </div>
+      </div>
+    `).join('');
+  document.getElementById('archive-daily').innerHTML = dailyHtml;
+
+  // Scripts archive (filter by tag)
+  const filtered = archiveState.tagFilter === 'all'
+    ? archiveState.scripts
+    : archiveState.scripts.filter(s => (s.tags || []).includes(archiveState.tagFilter));
+  const sorted = filtered.slice().sort((a, b) => (b.generated_date || '').localeCompare(a.generated_date || ''));
+  const scriptsHtml = sorted.length === 0
+    ? '<div style="color:var(--muted); padding:14px; text-align:center;">該当なし</div>'
+    : sorted.map(s => `
+      <div style="border-bottom:1px solid rgba(245,240,230,0.04); padding:12px 0; display:flex; justify-content:space-between; align-items:flex-start; gap:14px;">
+        <div style="flex:1;">
+          <div style="color:var(--text); font-size:13px; margin-bottom:4px;">${s.title}</div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            ${(s.tags || []).map(t => `<span style="background:rgba(197,164,114,0.15); color:var(--gold); padding:2px 8px; font-size:10px; letter-spacing:1px; border-radius:3px;">#${t}</span>`).join('')}
+            ${s.generated_date ? `<span style="color:var(--muted); font-size:10.5px;">${s.generated_date}</span>` : ''}
+            ${s.posted ? '<span style="color:#9bd5a0; font-size:10.5px;">✅ 投稿済</span>' : '<span style="color:var(--muted); font-size:10.5px;">未投稿</span>'}
+          </div>
+        </div>
+        <button data-tid="${s.topic_id}" class="archive-open" style="background:transparent; border:1px solid var(--gold); color:var(--gold); padding:6px 12px; font-size:11px; cursor:pointer; font-family:inherit; white-space:nowrap;">開く →</button>
+      </div>
+    `).join('');
+  document.getElementById('archive-scripts').innerHTML = scriptsHtml;
+  document.querySelectorAll('.archive-open').forEach(b => {
+    b.addEventListener('click', () => {
+      const tid = parseInt(b.dataset.tid);
+      showStockView();
+      STATE.selectedId = tid;
+      loadScriptIfNeeded(tid).then(() => { renderTopics(); renderDetail(); });
+    });
+  });
 }
 
 // ────────────────────────────────────────
