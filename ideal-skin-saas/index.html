@@ -1539,6 +1539,12 @@ function showArchiveView() {
 
 let archiveState = { tagFilter: 'all', daily: [], scripts: [] };
 
+const TAG_JP = {
+  all: 'すべて', skin: '肌', health: '健康', female: '女性身体',
+  family: '家族', mind: 'メンタル', uncategorized: 'その他', legacy: '過去',
+};
+function tagLabel(t) { return TAG_JP[t] || t; }
+
 async function loadArchive() {
   try {
     const [archive, idx] = await Promise.all([
@@ -1579,7 +1585,7 @@ function renderArchiveFilters() {
     <button data-tag="${t}" style="background:${archiveState.tagFilter===t?'var(--gold)':'transparent'};
       color:${archiveState.tagFilter===t?'var(--black)':'var(--gold)'};
       border:1px solid var(--gold-faint); padding:6px 12px; font-family:inherit; font-size:11px;
-      letter-spacing:1px; cursor:pointer;">${t === 'all' ? 'ALL' : '#' + t}</button>
+      letter-spacing:1px; cursor:pointer;">${t === 'all' ? 'すべて' : '#' + tagLabel(t)}</button>
   `).join('');
   document.getElementById('archive-filters').innerHTML = html;
   document.querySelectorAll('#archive-filters button').forEach(b => {
@@ -1617,7 +1623,7 @@ function renderArchiveLists() {
         <div style="flex:1;">
           <div style="color:var(--text); font-size:13px; margin-bottom:4px;">${s.title}</div>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
-            ${(s.tags || []).map(t => `<span style="background:rgba(197,164,114,0.15); color:var(--gold); padding:2px 8px; font-size:10px; letter-spacing:1px; border-radius:3px;">#${t}</span>`).join('')}
+            ${(s.tags || []).map(t => `<button data-tag-click="${t}" class="tag-chip" style="background:rgba(197,164,114,0.15); color:var(--gold); padding:2px 8px; font-size:10px; letter-spacing:1px; border-radius:3px; border:none; font-family:inherit; cursor:pointer;">#${tagLabel(t)}</button>`).join('')}
             ${s.generated_date ? `<span style="color:var(--muted); font-size:10.5px;">${s.generated_date}</span>` : ''}
             ${s.posted ? '<span style="color:#9bd5a0; font-size:10.5px;">✅ 投稿済</span>' : '<span style="color:var(--muted); font-size:10.5px;">未投稿</span>'}
           </div>
@@ -1632,6 +1638,14 @@ function renderArchiveLists() {
       showStockView();
       STATE.selectedId = tid;
       loadScriptIfNeeded(tid).then(() => { renderTopics(); renderDetail(); });
+    });
+  });
+  // インラインのタグchipクリックで絞り込み
+  document.querySelectorAll('.tag-chip').forEach(b => {
+    b.addEventListener('click', () => {
+      archiveState.tagFilter = b.dataset.tagClick;
+      renderArchiveFilters();
+      renderArchiveLists();
     });
   });
 }
