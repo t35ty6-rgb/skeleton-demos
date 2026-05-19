@@ -24,8 +24,13 @@
 
 <script>
 const params = new URLSearchParams(location.search);
-const code = params.get('spapi_oauth_code');
+// SP-API params
+const spCode = params.get('spapi_oauth_code');
 const sellingPartnerId = params.get('selling_partner_id');
+// Ads API / Generic LWA OAuth params
+const lwaCode = params.get('code');
+const scope = params.get('scope');
+// Common
 const state = params.get('state');
 const mwsAuthToken = params.get('mws_auth_token');
 const error = params.get('error');
@@ -34,33 +39,57 @@ const out = document.getElementById('out');
 
 if (error) {
   out.innerHTML = `<div class="box err"><strong>エラー:</strong> ${error}<br>${params.get('error_description') || ''}</div>`;
-} else if (code) {
+} else if (spCode) {
   out.innerHTML = `
     <div class="box">
-      <strong>認可成功 — 以下を Jobs に送ってください</strong>
+      <strong>SP-API 認可成功 — 以下を Jobs に送ってください</strong>
       <div class="label">spapi_oauth_code</div>
-      <div class="code" id="c1">${code}</div>
+      <div class="code" id="c1">${spCode}</div>
       <div class="label">selling_partner_id</div>
       <div class="code">${sellingPartnerId || '(なし)'}</div>
       <div class="label">state</div>
       <div class="code">${state || '(なし)'}</div>
       ${mwsAuthToken ? `<div class="label">mws_auth_token</div><div class="code">${mwsAuthToken}</div>` : ''}
       <div style="margin-top:16px">
-        <button onclick="copyAll()">全部コピー</button>
+        <button onclick="copySP()">全部コピー</button>
+        <span class="copied" id="copied">コピーしました</span>
+      </div>
+    </div>
+  `;
+} else if (lwaCode) {
+  out.innerHTML = `
+    <div class="box">
+      <strong>Ads API / LWA 認可成功 — 以下を Jobs に送ってください</strong>
+      <div class="label">code (Ads API authorization code)</div>
+      <div class="code" id="ac">${lwaCode}</div>
+      <div class="label">scope</div>
+      <div class="code">${scope || '(なし)'}</div>
+      <div class="label">state</div>
+      <div class="code">${state || '(なし)'}</div>
+      <div style="margin-top:16px">
+        <button onclick="copyAds()">全部コピー</button>
         <span class="copied" id="copied">コピーしました</span>
       </div>
     </div>
     <div class="box">
       <strong>次のステップ</strong><br>
-      上の情報を Jobs（Claude）に貼り付けてください。Jobs が refresh_token に交換して credentials を保存します。
+      上記の <code>code</code> を Jobs に貼り付けてください。Jobs が ads_refresh_token に交換して credentials.json に保存します。<br>
+      ※ code は10分以内に交換が必要です。
     </div>
   `;
 } else {
-  out.innerHTML = `<div class="box err">URLにコードがありません。Seller Central からの正規リダイレクトでアクセスしてください。</div>`;
+  out.innerHTML = `<div class="box err">URLにコードがありません。Seller Central or Amazon Advertising 経由の正規リダイレクトでアクセスしてください。</div>`;
 }
 
-function copyAll() {
-  const text = `spapi_oauth_code=${code}\nselling_partner_id=${sellingPartnerId}\nstate=${state}`;
+function copySP() {
+  const text = `spapi_oauth_code=${spCode}\nselling_partner_id=${sellingPartnerId}\nstate=${state}`;
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copied').style.display = 'inline';
+    setTimeout(() => document.getElementById('copied').style.display = 'none', 2000);
+  });
+}
+function copyAds() {
+  const text = `code=${lwaCode}\nscope=${scope}\nstate=${state}`;
   navigator.clipboard.writeText(text).then(() => {
     document.getElementById('copied').style.display = 'inline';
     setTimeout(() => document.getElementById('copied').style.display = 'none', 2000);
