@@ -237,9 +237,115 @@
     return (window.DUMMY_CLIENTS || []).filter(seg.filter);
   }
 
+  // ============================
+  // リード獲得導線 (友だち追加 → ステップ配信 → アンケート → Zoom予約 → CRM登録)
+  // ============================
+
+  // ステップ配信シナリオ
+  window.LEAD_SCENARIO = {
+    name: '初回相談獲得シナリオ',
+    trigger: 'LINE友だち追加',
+    enabled: true,
+    steps: [
+      { day: 0, time: '即時', title: 'ウェルカムメッセージ',
+        body: 'はじめまして！🌱\n友だち追加ありがとうございます。\n\n私はファイナンシャルプランナーの山田です。\nお金・保険・住宅・教育費・老後など、人生のお金の話を一緒に考えるパートナーです。\n\nまずは1分の自己紹介動画をどうぞ → {{intro_video}}' },
+      { day: 1, time: '10:00', title: 'お役立ち資料',
+        body: '昨日はありがとうございました📊\n\nまずは無料の「家計診断シート」をどうぞ。\nこれだけで月3万円浮く人もいます。\n\nダウンロード → {{sheet_url}}' },
+      { day: 3, time: '10:00', title: 'お悩みヒアリング',
+        body: '3問だけお伺いさせてください🙏\n\n回答してくれた方には、あなたに合うライフプラン無料相談 (60分・通常¥11,000) をプレゼント中です。\n\n回答する → {{form_url}}' },
+      { day: 5, time: '20:00', title: 'リマインド (未回答者のみ)',
+        body: '先日のアンケート、まだの方へ✋\n\n1分で終わります。\n回答完了で60分無料相談が受けられます。\n\n→ {{form_url}}' },
+      { day: 7, time: '10:00', title: '相談予約のご案内 (回答済のみ)',
+        body: 'アンケートのご回答ありがとうございました📩\n\n{{name}}様のお悩みを伺って、私からご提案できることが3つほどあります。\n\nZoomで60分、ご都合のよい日時を選んでください。\n→ {{booking_url}}' },
+    ],
+  };
+
+  // ヒアリングアンケート項目
+  window.LEAD_FORM = {
+    title: '無料相談前のヒアリング (1分)',
+    questions: [
+      { id: 'q1', type: 'choice', label: '一番気になっているテーマは?',
+        options: ['老後資金', '教育費・学資', '住宅購入・ローン', '保険見直し', '相続・贈与', 'NISA・投資', 'その他'] },
+      { id: 'q2', type: 'choice', label: 'ご年齢は?',
+        options: ['20代', '30代', '40代', '50代', '60代', '70代以上'] },
+      { id: 'q3', type: 'choice', label: 'ご家族構成は?',
+        options: ['独身', '夫婦のみ', '夫婦+子供', 'シングル+子供', 'シニア夫婦', 'その他'] },
+      { id: 'q4', type: 'choice', label: '世帯年収は?',
+        options: ['〜400万', '400〜700万', '700〜1000万', '1000〜1500万', '1500万〜', '回答しない'] },
+      { id: 'q5', type: 'text', label: '相談で解決したいこと (一言)' },
+    ],
+  };
+
+  // ファネル KPI (直近30日)
+  window.LEAD_FUNNEL = {
+    days: 30,
+    friendAdded: 42,
+    answeredSurvey: 18,
+    booked: 11,
+    completed: 8,
+    converted: 5,
+  };
+
+  // 直近の予約 (Zoom面談)
+  window.UPCOMING_BOOKINGS = [
+    { id: 'bk-1', name: '田村 美咲', date: '2026-05-28', time: '10:00', via: 'Zoom', status: 'confirmed',
+      answers: { q1: '教育費・学資', q2: '30代', q3: '夫婦+子供', q4: '700〜1000万', q5: '子供2人の大学資金が心配' },
+      addedToCrm: false },
+    { id: 'bk-2', name: '矢野 真由', date: '2026-05-29', time: '14:00', via: 'Zoom', status: 'confirmed',
+      answers: { q1: '老後資金', q2: '50代', q3: '夫婦のみ', q4: '1000〜1500万', q5: '退職金の運用方法を相談したい' },
+      addedToCrm: false },
+    { id: 'bk-3', name: '小川 翔太', date: '2026-05-31', time: '11:00', via: 'Zoom', status: 'confirmed',
+      answers: { q1: '住宅購入・ローン', q2: '30代', q3: '夫婦のみ', q4: '700〜1000万', q5: '頭金いくら入れるか迷ってる' },
+      addedToCrm: false },
+    { id: 'bk-4', name: '中島 久美', date: '2026-06-02', time: '13:00', via: 'Zoom', status: 'confirmed',
+      answers: { q1: 'NISA・投資', q2: '40代', q3: '夫婦+子供', q4: '700〜1000万', q5: 'NISA枠の使い方を整理したい' },
+      addedToCrm: false },
+  ];
+
+  // アンケート回答済・未予約 (ホットリード)
+  window.HOT_LEADS = [
+    { name: '木下 さおり', answeredAt: '2026-05-26 18:42',
+      answers: { q1: '相続・贈与', q2: '60代', q3: 'シニア夫婦', q4: '1500万〜', q5: '親の相続が発生、どこから手をつけるか' } },
+    { name: '高木 健太', answeredAt: '2026-05-26 12:15',
+      answers: { q1: '老後資金', q2: '40代', q3: '夫婦+子供', q4: '700〜1000万', q5: 'iDeCoとNISAの優先順位' } },
+    { name: '上田 美咲', answeredAt: '2026-05-25 21:08',
+      answers: { q1: '保険見直し', q2: '30代', q3: '夫婦+子供', q4: '400〜700万', q5: '今の保険が高すぎる気がする' } },
+  ];
+
   window.LineCRM = {
     evaluateSegment: evaluateSegment,
     upcomingBirthdays: upcomingBirthdays,
     TODAY: TODAY,
+    // 予約 → CRM新規顧客 自動登録
+    convertBookingToClient: function (booking) {
+      if (booking.addedToCrm) return null;
+      const newClient = {
+        id: 'c' + String(Date.now()).slice(-5),
+        name: booking.name,
+        kana: '',
+        birth: '1985-01-01', // アンケート年代から推定 (デモ)
+        gender: 'O',
+        occupation: '',
+        family: [],
+        source: 'LINE無料相談',
+        status: 'new',
+        aum: 0,
+        lastContact: booking.date,
+        proposals: [],
+        note: '【アンケート回答】\n' +
+              `テーマ: ${booking.answers.q1}\n` +
+              `年代: ${booking.answers.q2}\n` +
+              `家族: ${booking.answers.q3}\n` +
+              `年収: ${booking.answers.q4}\n` +
+              `お悩み: ${booking.answers.q5}\n\n` +
+              `Zoom面談: ${booking.date} ${booking.time}`,
+        lineFriendId: 'U-lead-' + booking.id,
+        lineSubscribed: true,
+      };
+      booking.addedToCrm = true;
+      (window.DUMMY_CLIENTS || []).push(newClient);
+      try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS)); } catch (e) {}
+      return newClient;
+    },
   };
 })();

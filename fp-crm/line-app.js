@@ -35,12 +35,249 @@
       v.classList.toggle('active', v.dataset.lineView === name);
     });
     if (name === 'dashboard') renderLineDashboard();
+    if (name === 'leadfunnel') renderLeadFunnel();
     if (name === 'segments') renderSegments();
     if (name === 'schedules') renderSchedules();
     if (name === 'templates') renderTemplates();
     if (name === 'birthdays') renderBirthdays();
     if (name === 'log') renderLog();
     if (name === 'settings') renderSettings();
+  }
+
+  // ============================
+  // 初回相談導線 (リードファネル)
+  // ============================
+  function renderLeadFunnel() {
+    const f = window.LEAD_FUNNEL;
+    const scenario = window.LEAD_SCENARIO;
+    const form = window.LEAD_FORM;
+    const bookings = window.UPCOMING_BOOKINGS;
+    const hotLeads = window.HOT_LEADS;
+
+    const conv = (a, b) => b === 0 ? 0 : Math.round(a / b * 100);
+
+    const html = `
+      <div style="background:linear-gradient(135deg,#fff8e1,#fff);border:1px solid #f0e1a6;border-radius:10px;padding:14px 18px;margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:600;color:#8a6f1e;margin-bottom:2px;">💡 商談での核心機能</div>
+        <div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;">
+          LINE友だち追加 → ステップ配信 → アンケート → Zoom面談予約 → CRM自動登録 まで全自動。<br>
+          FPがやることは「Zoom面談に出る」だけ。新規顧客獲得の手間がほぼゼロになる。
+        </div>
+      </div>
+
+      <div class="section-title">直近30日のリード獲得ファネル</div>
+      <div class="funnel-grid">
+        <div class="funnel-step">
+          <div class="funnel-icon">👋</div>
+          <div class="funnel-label">友だち追加</div>
+          <div class="funnel-value">${f.friendAdded}</div>
+          <div class="funnel-conv">—</div>
+        </div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-step">
+          <div class="funnel-icon">📝</div>
+          <div class="funnel-label">アンケート回答</div>
+          <div class="funnel-value">${f.answeredSurvey}</div>
+          <div class="funnel-conv">${conv(f.answeredSurvey, f.friendAdded)}%</div>
+        </div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-step">
+          <div class="funnel-icon">📅</div>
+          <div class="funnel-label">Zoom予約</div>
+          <div class="funnel-value">${f.booked}</div>
+          <div class="funnel-conv">${conv(f.booked, f.answeredSurvey)}%</div>
+        </div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-step">
+          <div class="funnel-icon">🎯</div>
+          <div class="funnel-label">面談実施</div>
+          <div class="funnel-value">${f.completed}</div>
+          <div class="funnel-conv">${conv(f.completed, f.booked)}%</div>
+        </div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-step highlight">
+          <div class="funnel-icon">⭐</div>
+          <div class="funnel-label">成約</div>
+          <div class="funnel-value">${f.converted}</div>
+          <div class="funnel-conv">${conv(f.converted, f.completed)}%</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:24px;">📅 今後の面談予約 (アンケート回答済)</div>
+      <div class="line-card">
+        ${bookings.length === 0 ? '<div class="empty">予約なし</div>' : bookings.map(b => `
+          <div class="booking-row" data-booking-id="${b.id}">
+            <div class="booking-when">
+              <div class="booking-date">${b.date.slice(5).replace('-','/')}</div>
+              <div class="booking-time">${b.time}</div>
+            </div>
+            <div class="booking-main">
+              <div class="booking-name">${escapeHtml(b.name)} <span class="status-pill new">未登録</span></div>
+              <div class="booking-meta">
+                ${escapeHtml(b.answers.q1)} / ${escapeHtml(b.answers.q2)} / ${escapeHtml(b.answers.q3)} / ${escapeHtml(b.answers.q4)}
+              </div>
+              <div class="booking-want">💭 ${escapeHtml(b.answers.q5)}</div>
+            </div>
+            <div class="booking-cta">
+              <button class="ghost" data-view-answers="${b.id}">回答詳細</button>
+              <button class="primary" data-convert="${b.id}" ${b.addedToCrm ? 'disabled style="opacity:0.5;"' : ''}>${b.addedToCrm ? '✓ 登録済' : '顧客登録'}</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="section-title" style="margin-top:24px;">🔥 ホットリード (回答済・未予約)</div>
+      <div class="line-card">
+        ${hotLeads.map(h => `
+          <div class="booking-row">
+            <div class="booking-when">
+              <div class="booking-time" style="font-size:11px;">${escapeHtml(h.answeredAt.slice(5, 16))}</div>
+              <div class="booking-date" style="font-size:10.5px;color:var(--muted);">回答済</div>
+            </div>
+            <div class="booking-main">
+              <div class="booking-name">${escapeHtml(h.name)}</div>
+              <div class="booking-meta">
+                ${escapeHtml(h.answers.q1)} / ${escapeHtml(h.answers.q2)} / ${escapeHtml(h.answers.q3)} / ${escapeHtml(h.answers.q4)}
+              </div>
+              <div class="booking-want">💭 ${escapeHtml(h.answers.q5)}</div>
+            </div>
+            <div class="booking-cta">
+              <button class="primary" disabled style="opacity:0.6;">予約URL再送</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:24px;">
+        <div>
+          <div class="section-title">⚙️ ステップ配信シナリオ</div>
+          <div class="line-card">
+            <div style="padding:10px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-weight:600;font-size:13.5px;">${escapeHtml(scenario.name)}</div>
+                <div style="font-size:11px;color:var(--muted);">トリガー: ${escapeHtml(scenario.trigger)}</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" ${scenario.enabled ? 'checked' : ''} disabled><span></span></label>
+            </div>
+            ${scenario.steps.map((s, i) => `
+              <div class="step-row">
+                <div class="step-no">${i + 1}</div>
+                <div class="step-main">
+                  <div class="step-head">
+                    <span class="step-day">${s.day === 0 ? '即時' : '+' + s.day + '日'}</span>
+                    <span class="step-time">${escapeHtml(s.time)}</span>
+                    <span class="step-title">${escapeHtml(s.title)}</span>
+                  </div>
+                  <div class="step-body">${nl2br(s.body)}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div>
+          <div class="section-title">📋 ヒアリングアンケート (LINE内回答)</div>
+          <div class="line-card">
+            <div style="padding:10px 14px;border-bottom:1px solid var(--line);">
+              <div style="font-weight:600;font-size:13.5px;">${escapeHtml(form.title)}</div>
+              <div style="font-size:11px;color:var(--muted);">回答結果が自動で顧客メモに反映される</div>
+            </div>
+            ${form.questions.map((q, i) => `
+              <div class="q-row">
+                <div class="q-no">Q${i + 1}</div>
+                <div class="q-main">
+                  <div class="q-label">${escapeHtml(q.label)}</div>
+                  ${q.type === 'choice' ? `<div class="q-opts">${q.options.map(o => `<span class="q-opt">${escapeHtml(o)}</span>`).join('')}</div>` : '<div class="q-opts" style="color:var(--muted);font-style:italic;">自由記述</div>'}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+    document.querySelector('[data-line-view="leadfunnel"]').innerHTML = html;
+
+    // 顧客登録ボタン
+    document.querySelectorAll('[data-convert]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.convert;
+        const booking = window.UPCOMING_BOOKINGS.find(b => b.id === id);
+        if (!booking || booking.addedToCrm) return;
+        const newClient = window.LineCRM.convertBookingToClient(booking);
+        if (newClient) {
+          btn.textContent = '✓ 登録済';
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+          // 確認モーダル
+          showConvertResult(newClient);
+        }
+      });
+    });
+    // 回答詳細表示
+    document.querySelectorAll('[data-view-answers]').forEach(btn => {
+      btn.addEventListener('click', () => showAnswersDetail(btn.dataset.viewAnswers));
+    });
+  }
+
+  function showAnswersDetail(bookingId) {
+    const b = window.UPCOMING_BOOKINGS.find(x => x.id === bookingId);
+    if (!b) return;
+    const form = window.LEAD_FORM;
+    const html = `
+      <div class="modal-header">
+        <h2>📝 アンケート回答 — ${escapeHtml(b.name)}</h2>
+        <button class="modal-close" id="ans-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#fafbfc;border:1px solid var(--line);border-radius:6px;padding:14px;">
+          ${form.questions.map((q, i) => `
+            <div style="margin-bottom:12px;">
+              <div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:3px;">Q${i + 1}. ${escapeHtml(q.label)}</div>
+              <div style="font-size:14px;font-weight:600;color:var(--ink);">${escapeHtml(b.answers[q.id] || '—')}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div style="margin-top:14px;font-size:12.5px;color:var(--muted);">
+          📅 面談予約: ${escapeHtml(b.date)} ${escapeHtml(b.time)} (${escapeHtml(b.via)})
+        </div>
+      </div>
+    `;
+    document.getElementById('modal-content').innerHTML = html;
+    document.getElementById('modal-overlay').style.display = 'flex';
+    document.getElementById('ans-close').addEventListener('click', () => {
+      document.getElementById('modal-overlay').style.display = 'none';
+    });
+  }
+
+  function showConvertResult(newClient) {
+    const html = `
+      <div class="modal-header">
+        <h2>✓ 新規顧客として登録しました</h2>
+        <button class="modal-close" id="conv-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#e6f7ee;border:1px solid #b8e3c8;border-radius:8px;padding:14px;margin-bottom:14px;">
+          <div style="font-weight:700;font-size:15px;color:#06873f;margin-bottom:4px;">${escapeHtml(newClient.name)} 様</div>
+          <div style="font-size:12.5px;color:var(--ink-2);">CRMの顧客一覧に追加されました。アンケート回答もメモに自動転記済み。</div>
+        </div>
+        <div style="background:#fafbfc;border:1px solid var(--line);border-radius:6px;padding:12px;">
+          <div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:4px;">自動登録された内容</div>
+          <div style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;white-space:pre-wrap;color:var(--ink-2);line-height:1.6;">${escapeHtml(newClient.note)}</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button class="primary" id="conv-open">顧客詳細を開く</button>
+          <button id="conv-close-btn">閉じる</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('modal-content').innerHTML = html;
+    document.getElementById('modal-overlay').style.display = 'flex';
+    function close() { document.getElementById('modal-overlay').style.display = 'none'; }
+    document.getElementById('conv-close').addEventListener('click', close);
+    document.getElementById('conv-close-btn').addEventListener('click', close);
+    document.getElementById('conv-open').addEventListener('click', () => {
+      close();
+      window.FpApp && window.FpApp.openClientModal && window.FpApp.openClientModal(newClient.id);
+    });
   }
 
   // ============================
