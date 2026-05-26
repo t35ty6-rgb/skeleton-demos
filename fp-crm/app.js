@@ -6,6 +6,18 @@
   const TODAY = window.LifeEvents.TODAY;
   const LS_KEY = 'fp-crm-state-v1';
 
+  // localStorage に保存済みの顧客があれば差し替え
+  try {
+    const raw = localStorage.getItem('fp-crm-clients-v1');
+    if (raw) {
+      const stored = JSON.parse(raw);
+      if (Array.isArray(stored) && stored.length > 0) {
+        clients.length = 0;
+        stored.forEach(c => clients.push(c));
+      }
+    }
+  } catch (e) {}
+
   const state = loadState();
 
   function loadState() {
@@ -61,6 +73,16 @@
     if (name === 'dashboard') renderDashboard();
     if (name === 'clients') renderClients();
     if (name === 'timeline') renderGlobalTimeline();
+    if (name === 'line') {
+      if (window.LineApp) {
+        if (!window._lineInited) {
+          window.LineApp.init();
+          window._lineInited = true;
+        } else {
+          window.LineApp.refresh();
+        }
+      }
+    }
   }
 
   // ============================
@@ -137,6 +159,209 @@
   }
 
   // ============================
+  // 顧客フォーム (新規/編集)
+  // ============================
+  function openClientForm(clientId) {
+    const isNew = !clientId;
+    const c = isNew ? {
+      id: 'c' + String(Date.now()).slice(-5),
+      name: '', kana: '', birth: '', gender: 'M',
+      occupation: '', family: [], source: '',
+      status: 'new', aum: 0, lastContact: TODAY.toISOString().slice(0, 10),
+      proposals: [], note: '',
+      lineFriendId: '', lineSubscribed: false,
+    } : JSON.parse(JSON.stringify(clients.find(x => x.id === clientId)));
+
+    function familyRowHtml(m, idx) {
+      return `
+        <div class="family-row" data-fidx="${idx}">
+          <select data-f="rel">
+            <option value="spouse" ${m.rel === 'spouse' ? 'selected' : ''}>配偶者</option>
+            <option value="child" ${m.rel === 'child' ? 'selected' : ''}>お子様</option>
+            <option value="parent" ${m.rel === 'parent' ? 'selected' : ''}>親</option>
+          </select>
+          <input type="text" placeholder="お名前" data-f="name" value="${escapeHtml(m.name || '')}">
+          <input type="date" data-f="birth" value="${m.birth || ''}">
+          <button class="ghost del-family">×</button>
+        </div>
+      `;
+    }
+
+    const html = `
+      <div class="modal-header">
+        <h2>${isNew ? '新規顧客の登録' : '顧客情報の編集'}</h2>
+        <button class="modal-close" id="form-close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-section">
+          <h3>基本情報</h3>
+          <div class="form-grid">
+            <div class="form-row"><label>お名前 *</label><input type="text" id="f-name" value="${escapeHtml(c.name)}" placeholder="例: 田中 健一"></div>
+            <div class="form-row"><label>フリガナ</label><input type="text" id="f-kana" value="${escapeHtml(c.kana)}" placeholder="たなか けんいち"></div>
+            <div class="form-row"><label>生年月日 *</label><input type="date" id="f-birth" value="${c.birth || ''}"></div>
+            <div class="form-row"><label>性別</label>
+              <select id="f-gender">
+                <option value="M" ${c.gender === 'M' ? 'selected' : ''}>男性</option>
+                <option value="F" ${c.gender === 'F' ? 'selected' : ''}>女性</option>
+                <option value="O" ${c.gender === 'O' ? 'selected' : ''}>その他</option>
+              </select>
+            </div>
+            <div class="form-row"><label>職業</label><input type="text" id="f-occupation" value="${escapeHtml(c.occupation)}" placeholder="例: 会社員 (IT)"></div>
+            <div class="form-row"><label>流入経路</label><input type="text" id="f-source" value="${escapeHtml(c.source)}" placeholder="例: 紹介・セミナー・Instagram"></div>
+            <div class="form-row"><label>ステータス</label>
+              <select id="f-status">
+                <option value="new" ${c.status === 'new' ? 'selected' : ''}>新規</option>
+                <option value="active" ${c.status === 'active' ? 'selected' : ''}>管理中</option>
+                <option value="important" ${c.status === 'important' ? 'selected' : ''}>重点</option>
+                <option value="dormant" ${c.status === 'dormant' ? 'selected' : ''}>休眠</option>
+              </select>
+            </div>
+            <div class="form-row"><label>管理資産 (円)</label><input type="number" id="f-aum" value="${c.aum || 0}" step="100000"></div>
+            <div class="form-row"><label>最終接触日</label><input type="date" id="f-last-contact" value="${c.lastContact || ''}"></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>家族構成 <button class="ghost" id="add-family-btn" style="margin-left:8px;">+ 追加</button></h3>
+          <div id="family-list">
+            ${(c.family || []).map((m, i) => familyRowHtml(m, i)).join('')}
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;">家族の生年月日を入れると、進学・退職などのライフイベントが自動でタイムラインに展開されます。</div>
+        </div>
+
+        <div class="form-section">
+          <h3>住宅ローン (任意)</h3>
+          <div class="form-grid">
+            <div class="form-row"><label>残り年数</label><input type="number" id="f-mort-years" value="${c.mortgage ? c.mortgage.remainingYears : ''}" placeholder="例: 25"></div>
+            <div class="form-row"><label>月返済額 (円)</label><input type="number" id="f-mort-monthly" value="${c.mortgage ? c.mortgage.monthly : ''}" step="1000" placeholder="例: 95000"></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>LINE公式連携</h3>
+          <div class="form-grid">
+            <div class="form-row"><label>LINE friend ID</label><input type="text" id="f-line-id" value="${escapeHtml(c.lineFriendId || '')}" placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"></div>
+            <div class="form-row"><label>連携状態</label>
+              <label class="toggle-switch" style="margin-top:4px;">
+                <input type="checkbox" id="f-line-sub" ${c.lineSubscribed ? 'checked' : ''}><span></span>
+              </label>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;">ONで配信対象に含まれます</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>メモ</h3>
+          <textarea id="f-note" rows="3" style="width:100%;resize:vertical;">${escapeHtml(c.note || '')}</textarea>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:18px;">
+          <button class="primary" id="form-save-btn">${isNew ? '登録' : '保存'}</button>
+          <button id="form-cancel-btn">キャンセル</button>
+          ${!isNew ? '<button id="form-delete-btn" style="margin-left:auto;border-color:var(--red);color:var(--red);">削除</button>' : ''}
+        </div>
+      </div>
+    `;
+    document.getElementById('form-content').innerHTML = html;
+    document.getElementById('form-overlay').style.display = 'flex';
+
+    let familyList = (c.family || []).slice();
+
+    function rerenderFamily() {
+      document.getElementById('family-list').innerHTML =
+        familyList.map((m, i) => familyRowHtml(m, i)).join('');
+      bindFamilyEvents();
+    }
+    function bindFamilyEvents() {
+      document.querySelectorAll('.family-row').forEach(row => {
+        const idx = parseInt(row.dataset.fidx, 10);
+        row.querySelectorAll('[data-f]').forEach(input => {
+          input.addEventListener('change', () => {
+            familyList[idx][input.dataset.f] = input.value;
+          });
+        });
+        row.querySelector('.del-family').addEventListener('click', () => {
+          familyList.splice(idx, 1);
+          rerenderFamily();
+        });
+      });
+    }
+    bindFamilyEvents();
+
+    document.getElementById('add-family-btn').addEventListener('click', () => {
+      familyList.push({ rel: 'child', name: '', birth: '' });
+      rerenderFamily();
+    });
+
+    function close() { document.getElementById('form-overlay').style.display = 'none'; }
+    document.getElementById('form-close-btn').addEventListener('click', close);
+    document.getElementById('form-cancel-btn').addEventListener('click', close);
+
+    document.getElementById('form-save-btn').addEventListener('click', () => {
+      const name = document.getElementById('f-name').value.trim();
+      const birth = document.getElementById('f-birth').value;
+      if (!name || !birth) {
+        alert('お名前と生年月日は必須です');
+        return;
+      }
+      c.name = name;
+      c.kana = document.getElementById('f-kana').value;
+      c.birth = birth;
+      c.gender = document.getElementById('f-gender').value;
+      c.occupation = document.getElementById('f-occupation').value;
+      c.source = document.getElementById('f-source').value;
+      c.status = document.getElementById('f-status').value;
+      c.aum = parseInt(document.getElementById('f-aum').value, 10) || 0;
+      c.lastContact = document.getElementById('f-last-contact').value;
+      c.note = document.getElementById('f-note').value;
+      c.lineFriendId = document.getElementById('f-line-id').value;
+      c.lineSubscribed = document.getElementById('f-line-sub').checked;
+      const mortYears = parseInt(document.getElementById('f-mort-years').value, 10);
+      const mortMonthly = parseInt(document.getElementById('f-mort-monthly').value, 10);
+      if (mortYears && mortMonthly) {
+        c.mortgage = { remainingYears: mortYears, monthly: mortMonthly };
+      } else {
+        delete c.mortgage;
+      }
+      c.family = familyList.filter(f => f.name && f.birth);
+
+      if (isNew) {
+        clients.push(c);
+      } else {
+        const idx = clients.findIndex(x => x.id === clientId);
+        if (idx >= 0) clients[idx] = c;
+      }
+      saveClientsToLS();
+      close();
+      // モーダルが開いていれば閉じる
+      document.getElementById('modal-overlay').style.display = 'none';
+      activateTab(state.activeTab);
+    });
+
+    const delBtn = document.getElementById('form-delete-btn');
+    if (delBtn) delBtn.addEventListener('click', () => {
+      if (!confirm('この顧客を削除しますか?')) return;
+      const idx = clients.findIndex(x => x.id === clientId);
+      if (idx >= 0) clients.splice(idx, 1);
+      saveClientsToLS();
+      close();
+      document.getElementById('modal-overlay').style.display = 'none';
+      activateTab(state.activeTab);
+    });
+  }
+
+  function saveClientsToLS() {
+    try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(clients)); } catch (e) {}
+  }
+  function loadClientsFromLS() {
+    try {
+      const raw = localStorage.getItem('fp-crm-clients-v1');
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+
+  // ============================
   // 顧客一覧
   // ============================
   function renderClients() {
@@ -191,68 +416,143 @@
   }
 
   // ============================
-  // 全体タイムライン (向こう15年、major イベントのみ)
+  // 全体タイムライン (月別グループ縦リスト)
   // ============================
   function renderGlobalTimeline() {
-    const horizon = 15;
-    const startY = TODAY.getFullYear();
-    const endY = startY + horizon;
+    const rangeOpt = state.timelineRange || '12m';
+    const catOpt = state.timelineCat || 'all';
 
-    // 顧客ごとに行を作る (顧客名 + その人のイベントを横軸に並べる)
-    // 重点 / 管理中 / 新規のみ。休眠は除く。
-    const visibleClients = clients
-      .filter(c => c.status !== 'dormant')
-      .map(c => ({ client: c, events: window.LifeEvents.generate(c).filter(ev => ev.date.getFullYear() <= endY) }))
-      .filter(x => x.events.length > 0)
-      // 直近イベントが早い順
-      .sort((a, b) => a.events[0].date - b.events[0].date);
+    const RANGE_MS = {
+      '6m': 180 * 86400 * 1000,
+      '12m': 365 * 86400 * 1000,
+      '36m': 365 * 86400 * 1000 * 3,
+      '120m': 365 * 86400 * 1000 * 10,
+      'all': 365 * 86400 * 1000 * 30,
+    };
+    const horizonMs = RANGE_MS[rangeOpt] || RANGE_MS['12m'];
+    const horizonDate = new Date(TODAY.getTime() + horizonMs);
 
-    // 年軸ヘッダ
-    const yearLabels = [];
-    for (let y = startY; y <= endY; y++) yearLabels.push(y);
+    // 全顧客のイベントを1つの配列に集める (休眠も含む)
+    const allEvents = [];
+    clients.forEach(c => {
+      const evs = window.LifeEvents.generate(c);
+      evs.forEach(ev => {
+        if (ev.date <= horizonDate && (catOpt === 'all' || ev.cat === catOpt)) {
+          allEvents.push({ ...ev, client: c });
+        }
+      });
+    });
+    allEvents.sort((a, b) => a.date - b.date);
 
-    const axisHtml = `
-      <div class="timeline-axis">
-        <div>顧客 (年齢)</div>
-        <div style="display:grid;grid-template-columns:repeat(${horizon + 1},1fr);font-size:10.5px;">
-          ${yearLabels.map(y => `<div style="text-align:center;">${y}</div>`).join('')}
+    // カテゴリピル
+    const cats = [
+      { key: 'all', label: 'すべて' },
+      { key: 'education', label: '教育' },
+      { key: 'retirement', label: '退職・年金' },
+      { key: 'health', label: '医療・介護' },
+      { key: 'inherit', label: '相続' },
+      { key: 'finance', label: '金融' },
+      { key: 'family', label: '家族' },
+    ];
+    const ranges = [
+      { key: '6m', label: '半年以内' },
+      { key: '12m', label: '1年以内' },
+      { key: '36m', label: '3年以内' },
+      { key: '120m', label: '10年以内' },
+      { key: 'all', label: '全期間' },
+    ];
+
+    const toolbarHtml = `
+      <div class="tl-toolbar">
+        <div class="tl-toolbar-row">
+          <span class="tl-label">期間:</span>
+          ${ranges.map(r => `<button class="tl-pill ${r.key === rangeOpt ? 'on' : ''}" data-range="${r.key}">${r.label}</button>`).join('')}
+        </div>
+        <div class="tl-toolbar-row">
+          <span class="tl-label">分類:</span>
+          ${cats.map(c => `<button class="tl-pill cat-${c.key} ${c.key === catOpt ? 'on' : ''}" data-cat="${c.key}">${c.label}</button>`).join('')}
+          <span class="tl-count">該当 ${allEvents.length} 件</span>
         </div>
       </div>
     `;
 
-    const rowsHtml = visibleClients.map(({ client, events }) => {
-      // 各イベントを左から % で配置
-      const evHtml = events.map(ev => {
-        const yearsFromNow = (ev.date - TODAY) / (365 * 24 * 60 * 60 * 1000);
-        const leftPct = (yearsFromNow / horizon) * 100;
-        if (leftPct < 0 || leftPct > 100) return '';
-        return `<div class="timeline-event ${ev.cat}${ev.major ? ' major' : ''}" style="left:${leftPct.toFixed(2)}%" title="${escapeHtml(ev.who)}: ${escapeHtml(ev.label)} (${fmtDate(ev.date)})">${escapeHtml(ev.label)}</div>`;
-      }).join('');
+    // 月別グループ
+    const byMonth = {};
+    allEvents.forEach(ev => {
+      const key = `${ev.date.getFullYear()}-${String(ev.date.getMonth() + 1).padStart(2, '0')}`;
+      (byMonth[key] = byMonth[key] || []).push(ev);
+    });
+
+    const monthsHtml = Object.keys(byMonth).sort().map(key => {
+      const [y, m] = key.split('-');
+      const monthEvents = byMonth[key];
+      const cardsHtml = monthEvents.map(ev => `
+        <div class="tl-card" data-client-id="${ev.client.id}">
+          <div class="tl-card-bar cat-${ev.cat}${ev.major ? ' major' : ''}"></div>
+          <div class="tl-card-body">
+            <div class="tl-card-head">
+              <span class="tl-card-date">${ev.date.getMonth() + 1}/${ev.date.getDate()}</span>
+              <span class="tl-card-label">${escapeHtml(ev.label)}${ev.major ? ' <span class="tl-major-tag">重要</span>' : ''}</span>
+            </div>
+            <div class="tl-card-sub">
+              <span class="tl-card-client">${escapeHtml(ev.client.name)} (${window.LifeEvents.currentAge(ev.client)}歳)</span>
+              <span class="tl-card-who">対象: ${escapeHtml(ev.who)}</span>
+            </div>
+          </div>
+          <div class="tl-card-cta">→</div>
+        </div>
+      `).join('');
+
+      const monthLabel = `${y}年${parseInt(m, 10)}月`;
+      const rel = monthRelative(parseInt(y, 10), parseInt(m, 10));
       return `
-        <div class="timeline-row" data-client-id="${client.id}" style="cursor:pointer;">
-          <div class="row-label">${escapeHtml(client.name)}<span class="age">${window.LifeEvents.currentAge(client)}歳</span></div>
-          <div class="timeline-events">${evHtml}</div>
+        <div class="tl-month-group">
+          <div class="tl-month-header">
+            <span class="tl-month-title">${monthLabel}</span>
+            <span class="tl-month-sub">${rel}</span>
+            <span class="tl-month-count">${monthEvents.length} 件</span>
+          </div>
+          <div class="tl-card-list">${cardsHtml}</div>
         </div>
       `;
     }).join('');
 
     document.getElementById('timeline-area').innerHTML = `
-      ${axisHtml}
-      ${rowsHtml || '<div class="empty">表示するイベントがありません</div>'}
-      <div class="legend">
-        <span class="legend-item"><span class="legend-swatch" style="background:var(--accent-soft)"></span>教育</span>
-        <span class="legend-item"><span class="legend-swatch" style="background:var(--yellow-soft)"></span>退職・年金</span>
-        <span class="legend-item"><span class="legend-swatch" style="background:var(--red-soft)"></span>医療・介護</span>
-        <span class="legend-item"><span class="legend-swatch" style="background:var(--purple-soft)"></span>相続</span>
-        <span class="legend-item"><span class="legend-swatch" style="background:var(--green-soft)"></span>金融</span>
-        <span class="legend-item"><span class="legend-swatch" style="background:#f0e8d8"></span>家族</span>
-        <span class="legend-item" style="margin-left:auto;">枠付き=重要イベント</span>
-      </div>
+      ${toolbarHtml}
+      ${monthsHtml || '<div class="empty">該当するイベントがありません。期間や分類を広げてみてください。</div>'}
     `;
 
-    document.querySelectorAll('#timeline-area .timeline-row').forEach(r => {
-      r.addEventListener('click', () => openClientModal(r.dataset.clientId));
+    // ピル
+    document.querySelectorAll('#timeline-area [data-range]').forEach(b => {
+      b.addEventListener('click', () => {
+        state.timelineRange = b.dataset.range;
+        saveState();
+        renderGlobalTimeline();
+      });
     });
+    document.querySelectorAll('#timeline-area [data-cat]').forEach(b => {
+      b.addEventListener('click', () => {
+        state.timelineCat = b.dataset.cat;
+        saveState();
+        renderGlobalTimeline();
+      });
+    });
+    // カードクリック
+    document.querySelectorAll('#timeline-area .tl-card').forEach(card => {
+      card.addEventListener('click', () => openClientModal(card.dataset.clientId));
+    });
+  }
+
+  function monthRelative(y, m) {
+    const target = new Date(y, m - 1, 1);
+    const cur = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+    const diffMonths = (target.getFullYear() - cur.getFullYear()) * 12 + (target.getMonth() - cur.getMonth());
+    if (diffMonths === 0) return '今月';
+    if (diffMonths === 1) return '来月';
+    if (diffMonths < 12) return `${diffMonths}ヶ月後`;
+    const years = Math.floor(diffMonths / 12);
+    const remMonths = diffMonths % 12;
+    return remMonths === 0 ? `${years}年後` : `${years}年${remMonths}ヶ月後`;
   }
 
   // ============================
@@ -320,7 +620,10 @@
           ${escapeHtml(c.name)}
           <span class="status-pill ${c.status}">${statusLabel(c.status)}</span>
         </h2>
-        <button class="modal-close" id="modal-close-btn">×</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button id="modal-edit-btn">編集</button>
+          <button class="modal-close" id="modal-close-btn">×</button>
+        </div>
       </div>
       <div class="modal-body">
         <div class="detail-grid">
@@ -365,6 +668,10 @@
     `;
     document.getElementById('modal-overlay').style.display = 'flex';
     document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+    document.getElementById('modal-edit-btn').addEventListener('click', () => {
+      closeModal();
+      openClientForm(c.id);
+    });
   }
 
   function closeModal() {
@@ -406,13 +713,28 @@
       renderClients();
     });
 
+    // 新規顧客ボタン
+    const addBtn = document.getElementById('add-client-btn');
+    if (addBtn) addBtn.addEventListener('click', () => openClientForm(null));
+
     // モーダル外クリックで閉じる
     document.getElementById('modal-overlay').addEventListener('click', e => {
       if (e.target.id === 'modal-overlay') closeModal();
     });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeModal();
+    document.getElementById('form-overlay').addEventListener('click', e => {
+      if (e.target.id === 'form-overlay') {
+        document.getElementById('form-overlay').style.display = 'none';
+      }
     });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        closeModal();
+        document.getElementById('form-overlay').style.display = 'none';
+      }
+    });
+
+    // line-app.js から呼び出せるように公開
+    window.FpApp = { openClientModal: openClientModal, openClientForm: openClientForm };
 
     activateTab(state.activeTab);
   });

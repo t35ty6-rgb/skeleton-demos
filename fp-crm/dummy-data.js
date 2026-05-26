@@ -27,7 +27,9 @@
         { date: daysAgo(180), title: '学資保険 (大翔様)', result: '成約' },
         { date: daysAgo(45), title: 'iDeCo拠出額見直し', result: '検討中' },
       ],
-      note: '長期積立に積極。来年マイホーム買い替え検討中。'
+      note: '長期積立に積極。来年マイホーム買い替え検討中。',
+      lineFriendId: 'U001a4b8e1f6c3d2e9001',
+      lineSubscribed: true,
     },
     {
       id: 'c002', name: '佐藤 由美', kana: 'さとう ゆみ',
@@ -42,7 +44,9 @@
         { date: daysAgo(400), title: '個人年金保険', result: '成約' },
         { date: daysAgo(95), title: '退職金準備プラン', result: '検討中' },
       ],
-      note: '夫婦とも医療職、退職後の資金プラン真剣に検討中。'
+      note: '夫婦とも医療職、退職後の資金プラン真剣に検討中。',
+      lineFriendId: 'U002a4b8e1f6c3d2e9002',
+      lineSubscribed: true,
     },
     {
       id: 'c003', name: '鈴木 大輔', kana: 'すずき だいすけ',
@@ -60,7 +64,9 @@
         { date: daysAgo(380), title: '事業保険', result: '成約' },
         { date: daysAgo(20), title: '子3名分の教育資金一括設計', result: '提案中' },
       ],
-      note: '紹介力強い。経営者向けセミナー誘致候補。'
+      note: '紹介力強い。経営者向けセミナー誘致候補。',
+      lineFriendId: 'U003a4b8e1f6c3d2e9003',
+      lineSubscribed: true,
     },
     {
       id: 'c004', name: '高橋 真理子', kana: 'たかはし まりこ',
@@ -74,7 +80,9 @@
         { date: daysAgo(500), title: '相続対策プラン', result: '成約' },
         { date: daysAgo(130), title: '生前贈与プラン', result: '検討中' },
       ],
-      note: '夫の退職金運用で初訪問。相続見据えた長期視点。'
+      note: '夫の退職金運用で初訪問。相続見据えた長期視点。',
+      lineFriendId: 'U004a4b8e1f6c3d2e9004',
+      lineSubscribed: true,
     },
     {
       id: 'c005', name: '伊藤 拓海', kana: 'いとう たくみ',
@@ -85,7 +93,9 @@
       proposals: [
         { date: daysAgo(10), title: 'NISA活用プラン', result: '提案中' },
       ],
-      note: '結婚予定あり。若年層リファラル候補。'
+      note: '結婚予定あり。若年層リファラル候補。',
+      lineFriendId: 'U005a4b8e1f6c3d2e9005',
+      lineSubscribed: true,
     },
     {
       id: 'c006', name: '渡辺 さくら', kana: 'わたなべ さくら',
@@ -100,7 +110,9 @@
       proposals: [
         { date: daysAgo(280), title: '住宅ローン団信見直し', result: '成約' },
       ],
-      note: '第2子検討中。教育資金プランの仮設計済。'
+      note: '第2子検討中。教育資金プランの仮設計済。',
+      lineFriendId: 'U006a4b8e1f6c3d2e9006',
+      lineSubscribed: true,
     },
     {
       id: 'c007', name: '山本 雄一', kana: 'やまもと ゆういち',
@@ -117,7 +129,9 @@
         { date: daysAgo(200), title: '退職金分散運用', result: '成約' },
         { date: daysAgo(15), title: '相続対策 法人活用', result: '提案中' },
       ],
-      note: '会社役員。事業承継・相続セットで継続案件化。'
+      note: '会社役員。事業承継・相続セットで継続案件化。',
+      lineFriendId: 'U007a4b8e1f6c3d2e9007',
+      lineSubscribed: true,
     },
     {
       id: 'c008', name: '中村 美穂', kana: 'なかむら みほ',
@@ -132,7 +146,9 @@
       proposals: [
         { date: daysAgo(380), title: '学資保険 (蓮様)', result: '見送り' },
       ],
-      note: '前回提案見送り。教育費負担増のタイミングで再アプローチ。'
+      note: '前回提案見送り。教育費負担増のタイミングで再アプローチ。',
+      lineFriendId: 'U008a4b8e1f6c3d2e9008',
+      lineSubscribed: true,
     },
     {
       id: 'c009', name: '小林 浩', kana: 'こばやし ひろし',
@@ -146,7 +162,9 @@
         { date: daysAgo(1100), title: '退職金一括運用', result: '成約' },
         { date: daysAgo(35), title: '相続税対策 (孫含む)', result: '提案中' },
       ],
-      note: '孫3名への暦年贈与継続中。後期高齢直前で総点検フェーズ。'
+      note: '孫3名への暦年贈与継続中。後期高齢直前で総点検フェーズ。',
+      lineFriendId: 'U009a4b8e1f6c3d2e9009',
+      lineSubscribed: true,
     },
     {
       id: 'c010', name: '加藤 麻衣', kana: 'かとう まい',
@@ -160,7 +178,9 @@
         { date: daysAgo(200), title: 'シングル世帯保障設計', result: '成約' },
         { date: daysAgo(75), title: 'NISA枠フル活用', result: '検討中' },
       ],
-      note: 'シングルマザー。万一時の保障厚めで設計済。'
+      note: 'シングルマザー。万一時の保障厚めで設計済。',
+      lineFriendId: 'U010a4b8e1f6c3d2e9010',
+      lineSubscribed: true,
     },
     {
       id: 'c011', name: '吉田 翔太', kana: 'よしだ しょうた',
@@ -173,7 +193,9 @@
       proposals: [
         { date: daysAgo(5), title: '結婚後の家計設計', result: '提案中' },
       ],
-      note: '新婚。第1子を1〜2年内に計画。'
+      note: '新婚。第1子を1〜2年内に計画。',
+      lineFriendId: 'U011a4b8e1f6c3d2e9011',
+      lineSubscribed: true,
     },
     {
       id: 'c012', name: '山田 智子', kana: 'やまだ ともこ',
@@ -189,7 +211,9 @@
         { date: daysAgo(600), title: '不動産投資', result: '成約' },
         { date: daysAgo(25), title: '大学進学資金 (陸様)', result: '提案中' },
       ],
-      note: '長男1年後に大学受験。理系想定で資金厚め。'
+      note: '長男1年後に大学受験。理系想定で資金厚め。',
+      lineFriendId: 'U012a4b8e1f6c3d2e9012',
+      lineSubscribed: true,
     },
     {
       id: 'c013', name: '佐々木 大樹', kana: 'ささき だいき',
@@ -205,7 +229,9 @@
         { date: daysAgo(300), title: '小規模企業共済', result: '成約' },
         { date: daysAgo(110), title: '事業保険見直し', result: '検討中' },
       ],
-      note: '飲食店2店舗経営。3店舗目検討中で資金繰り相談あり。'
+      note: '飲食店2店舗経営。3店舗目検討中で資金繰り相談あり。',
+      lineFriendId: 'U013a4b8e1f6c3d2e9013',
+      lineSubscribed: true,
     },
     {
       id: 'c014', name: '松本 ゆかり', kana: 'まつもと ゆかり',
@@ -219,7 +245,9 @@
       proposals: [
         { date: daysAgo(420), title: 'iDeCo加入', result: '見送り' },
       ],
-      note: '長く休眠。夫退職5年前で再アプローチタイミング。'
+      note: '長く休眠。夫退職5年前で再アプローチタイミング。',
+      lineFriendId: 'U014a4b8e1f6c3d2e9014',
+      lineSubscribed: true,
     },
     {
       id: 'c015', name: '井上 健', kana: 'いのうえ けん',
@@ -234,7 +262,9 @@
       proposals: [
         { date: daysAgo(350), title: '団信見直し+収入保障', result: '成約' },
       ],
-      note: '公務員夫婦で堅実。長期積立ベース。'
+      note: '公務員夫婦で堅実。長期積立ベース。',
+      lineFriendId: 'U015a4b8e1f6c3d2e9015',
+      lineSubscribed: true,
     },
     {
       id: 'c016', name: '木村 美月', kana: 'きむら みづき',
@@ -245,7 +275,9 @@
       proposals: [
         { date: daysAgo(18), title: '個人事業主向け保障', result: '提案中' },
       ],
-      note: '20代フリーランス。SNS経由若年層接点の試金石。'
+      note: '20代フリーランス。SNS経由若年層接点の試金石。',
+      lineFriendId: 'U016a4b8e1f6c3d2e9016',
+      lineSubscribed: true,
     },
     {
       id: 'c017', name: '林 浩二', kana: 'はやし こうじ',
@@ -261,7 +293,9 @@
         { date: daysAgo(900), title: '退職金一括運用', result: '成約' },
         { date: daysAgo(50), title: '老後生活費キャッシュフロー', result: '検討中' },
       ],
-      note: '再雇用65歳まで。年金繰下げ検討中。'
+      note: '再雇用65歳まで。年金繰下げ検討中。',
+      lineFriendId: 'U017a4b8e1f6c3d2e9017',
+      lineSubscribed: true,
     },
     {
       id: 'c018', name: '清水 由香', kana: 'しみず ゆか',
@@ -275,7 +309,9 @@
       proposals: [
         { date: daysAgo(420), title: '学資保険', result: '成約' },
       ],
-      note: '次年度第2子検討。教育資金プラン更新待ち。'
+      note: '次年度第2子検討。教育資金プラン更新待ち。',
+      lineFriendId: 'U018a4b8e1f6c3d2e9018',
+      lineSubscribed: true,
     },
     {
       id: 'c019', name: '森 慎一郎', kana: 'もり しんいちろう',
@@ -291,7 +327,9 @@
         { date: daysAgo(500), title: '退職金準備プラン', result: '成約' },
         { date: daysAgo(40), title: '大学費用ラストスパート', result: '検討中' },
       ],
-      note: '長女今年大学受験。教育費ピーク期。'
+      note: '長女今年大学受験。教育費ピーク期。',
+      lineFriendId: 'U019a4b8e1f6c3d2e9019',
+      lineSubscribed: true,
     },
     {
       id: 'c020', name: '池田 さやか', kana: 'いけだ さやか',
@@ -307,7 +345,9 @@
         { date: daysAgo(250), title: '共働き世帯保障設計', result: '成約' },
         { date: daysAgo(95), title: '中学受験資金', result: '提案中' },
       ],
-      note: '長女中学受験予定。短期資金需要あり。'
+      note: '長女中学受験予定。短期資金需要あり。',
+      lineFriendId: 'U020a4b8e1f6c3d2e9020',
+      lineSubscribed: true,
     },
     {
       id: 'c021', name: '橋本 隆志', kana: 'はしもと たかし',
@@ -322,7 +362,9 @@
       proposals: [
         { date: daysAgo(400), title: '繰上返済シミュレーション', result: '成約' },
       ],
-      note: '住宅ローン残14年。繰上 vs 運用バランス相談中。'
+      note: '住宅ローン残14年。繰上 vs 運用バランス相談中。',
+      lineFriendId: 'U021a4b8e1f6c3d2e9021',
+      lineSubscribed: true,
     },
     {
       id: 'c022', name: '阿部 理恵', kana: 'あべ りえ',
@@ -335,7 +377,9 @@
       proposals: [
         { date: daysAgo(180), title: '離婚後の家計再設計', result: '成約' },
       ],
-      note: 'シングルマザー。生活防衛資金最優先。'
+      note: 'シングルマザー。生活防衛資金最優先。',
+      lineFriendId: 'U022a4b8e1f6c3d2e9022',
+      lineSubscribed: true,
     },
     {
       id: 'c023', name: '岡田 雅人', kana: 'おかだ まさと',
@@ -349,7 +393,9 @@
         { date: daysAgo(620), title: '小規模企業共済+iDeCo', result: '成約' },
         { date: daysAgo(28), title: '事業承継/廃業選択肢比較', result: '提案中' },
       ],
-      note: '士業事務所単独経営。承継 or 廃業の決断時期。'
+      note: '士業事務所単独経営。承継 or 廃業の決断時期。',
+      lineFriendId: 'U023a4b8e1f6c3d2e9023',
+      lineSubscribed: true,
     },
     {
       id: 'c024', name: '前田 恵子', kana: 'まえだ けいこ',
@@ -363,7 +409,9 @@
         { date: daysAgo(700), title: '年金繰下げ判定', result: '成約' },
         { date: daysAgo(150), title: '介護費用準備', result: '検討中' },
       ],
-      note: '夫の介護リスク具体化。施設費の積立検討中。'
+      note: '夫の介護リスク具体化。施設費の積立検討中。',
+      lineFriendId: 'U024a4b8e1f6c3d2e9024',
+      lineSubscribed: true,
     },
     {
       id: 'c025', name: '長谷川 翔', kana: 'はせがわ しょう',
@@ -377,7 +425,9 @@
       proposals: [
         { date: daysAgo(220), title: '住宅購入資金プラン', result: '成約' },
       ],
-      note: 'マイホーム購入直前。FP伴走で住宅ローン確定。'
+      note: 'マイホーム購入直前。FP伴走で住宅ローン確定。',
+      lineFriendId: 'U025a4b8e1f6c3d2e9025',
+      lineSubscribed: true,
     },
     {
       id: 'c026', name: '近藤 真理', kana: 'こんどう まり',
@@ -391,7 +441,9 @@
       proposals: [
         { date: daysAgo(35), title: '高校卒業後の進路別資金比較', result: '提案中' },
       ],
-      note: '娘の進路 (大学or留学) 並行比較中。'
+      note: '娘の進路 (大学or留学) 並行比較中。',
+      lineFriendId: 'U026a4b8e1f6c3d2e9026',
+      lineSubscribed: true,
     },
     {
       id: 'c027', name: '坂本 直人', kana: 'さかもと なおと',
@@ -404,7 +456,9 @@
       proposals: [
         { date: daysAgo(12), title: '新婚世帯の家計棚卸し', result: '提案中' },
       ],
-      note: '結婚2年目。住宅 or 子育てどちら先か相談。'
+      note: '結婚2年目。住宅 or 子育てどちら先か相談。',
+      lineFriendId: 'U027a4b8e1f6c3d2e9027',
+      lineSubscribed: true,
     },
     {
       id: 'c028', name: '青木 美香', kana: 'あおき みか',
@@ -418,7 +472,9 @@
       proposals: [
         { date: daysAgo(85), title: '退職金事前シミュレーション', result: '検討中' },
       ],
-      note: '夫退職目前。退職金受け取り方法 (一時金 vs 年金)。'
+      note: '夫退職目前。退職金受け取り方法 (一時金 vs 年金)。',
+      lineFriendId: 'U028a4b8e1f6c3d2e9028',
+      lineSubscribed: true,
     },
     {
       id: 'c029', name: '杉山 健介', kana: 'すぎやま けんすけ',
@@ -434,7 +490,9 @@
       proposals: [
         { date: daysAgo(450), title: '教育資金 + 住宅ローン総合', result: '成約' },
       ],
-      note: '海外赴任の可能性あり。プラン全体見直し時期。'
+      note: '海外赴任の可能性あり。プラン全体見直し時期。',
+      lineFriendId: 'U029a4b8e1f6c3d2e9029',
+      lineSubscribed: true,
     },
     {
       id: 'c030', name: '原田 美咲', kana: 'はらだ みさき',
@@ -445,7 +503,9 @@
       proposals: [
         { date: daysAgo(7), title: '20代の貯蓄スタートプラン', result: '提案中' },
       ],
-      note: '社会人3年目。母世代経由の紹介起点として育てる。'
+      note: '社会人3年目。母世代経由の紹介起点として育てる。',
+      lineFriendId: 'U030a4b8e1f6c3d2e9030',
+      lineSubscribed: true,
     },
   ];
 })();
