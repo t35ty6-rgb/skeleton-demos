@@ -154,7 +154,7 @@
             <strong>${escapeHtml(t.topAction.action)}</strong>
             <div class="reason">${escapeHtml(t.topAction.reason)}</div>
           </div>
-          <div class="action-cta"><button class="primary">開く →</button></div>
+          <div class="action-cta"><button class="primary" data-hint="この顧客の詳細を開く (家族構成・タイムライン・提案履歴・紹介プログラム)">詳細を開く →</button></div>
         </div>
       `;
     }).join('');
@@ -636,9 +636,9 @@
           <span class="status-pill ${c.status}">${statusLabel(c.status)}</span>
         </h2>
         <div style="display:flex;gap:6px;align-items:center;">
-          <button id="modal-draft-btn" style="background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;font-weight:700;">✨ AI返信下書き</button>
-          <button id="modal-edit-btn">編集</button>
-          <button class="modal-close" id="modal-close-btn">×</button>
+          <button id="modal-draft-btn" data-hint="この顧客向けのLINE返信文をAIが自動で作る → 確認・編集してLINE送信できます" style="background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;font-weight:700;">✨ AI返信下書きを作る</button>
+          <button id="modal-edit-btn" data-hint="顧客情報・家族構成・住宅ローン・LINE連携などを編集">編集</button>
+          <button class="modal-close" id="modal-close-btn" data-hint="閉じる">×</button>
         </div>
       </div>
       <div class="modal-body">
@@ -772,10 +772,10 @@
         </div>
         <textarea id="draft-text" style="width:100%;min-height:280px;font-family:'Noto Sans JP',sans-serif;font-size:13.5px;line-height:1.85;padding:16px 18px;border:1px solid var(--line);border-radius:8px;background:#fff;letter-spacing:0.02em;">${escapeHtml(draft.body)}</textarea>
         <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
-          <button class="primary" id="draft-send">📨 この内容で LINE 送信</button>
-          <button id="draft-copy">📋 コピー</button>
-          <button id="draft-regen">🔄 別のトーンで生成</button>
-          <button id="draft-close-btn" style="margin-left:auto;">閉じる</button>
+          <button class="primary" id="draft-send" data-hint="このまま LINE 公式アカウントから本送信します (取消不可)">📨 この内容で LINE 送信</button>
+          <button id="draft-copy" data-hint="文面をクリップボードへ。送信せずに手動でLINEに貼るとき使用">📋 コピー</button>
+          <button id="draft-regen" data-hint="同じ顧客で別のトーン (丁寧/カジュアル/提案型) で再生成">🔄 別のトーンで生成</button>
+          <button id="draft-close-btn" style="margin-left:auto;" data-hint="閉じる">閉じる</button>
         </div>
         <div id="draft-msg" style="font-size:11.5px;color:var(--muted);margin-top:8px;text-align:center;letter-spacing:0.02em;"></div>
         <div style="margin-top:18px;padding:12px 16px;background:#fafbfc;border:1px solid var(--line);border-radius:8px;font-size:11.5px;color:var(--muted);line-height:1.7;">

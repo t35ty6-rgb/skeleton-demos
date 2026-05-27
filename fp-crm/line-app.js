@@ -83,10 +83,17 @@
     const allMapUrl = buildMapAllUrl(wantAddresses);
 
     const html = `
-      <div style="background:linear-gradient(135deg,#fff8e1,#fff);border:1px solid #f0e1a6;border-radius:12px;padding:18px 22px;margin-bottom:18px;">
-        <div style="font-size:13px;font-weight:700;color:#8a6f1e;letter-spacing:0.04em;margin-bottom:4px;">🎍 年末カレンダー配布</div>
-        <div style="font-size:12.5px;color:var(--ink-2);line-height:1.6;">
-          全友だちにLINEで一斉配信 → タップで「要/不要」回答 → 「要」と答えた方の住所を収集 → 配達ルートを Google マップで最適化
+      <div class="howto-banner">
+        <div class="howto-banner-head">
+          <span class="howto-banner-title">💡 年末カレンダー配布の流れ</span>
+          <span class="howto-banner-subtitle">毎年12月に既存客に手渡しカレンダー配るFP向け / 5ステップで完了</span>
+        </div>
+        <div class="howto-steps">
+          <div class="howto-step"><div class="howto-step-no">1</div><div>下の <span class="btn-hint">📨 友だち全員に一斉配信</span> を押す → 全LINE友だちに「カレンダー希望調査」が届く</div></div>
+          <div class="howto-step"><div class="howto-step-no">2</div><div>お客様は LINE で「🎁 受け取る / 不要」を1タップ</div></div>
+          <div class="howto-step"><div class="howto-step-no">3</div><div>「受け取る」を選んだ方には自動で住所入力URLが届く → 入力すると下のリストに反映</div></div>
+          <div class="howto-step"><div class="howto-step-no">4</div><div>FP は <span class="btn-hint">🚗 配達ルート最適化</span> でGoogle マップを開き、ナビで配達</div></div>
+          <div class="howto-step"><div class="howto-step-no">5</div><div>各住所行の <span class="btn-hint">📍 地図で見る</span> で個別位置確認も可能</div></div>
         </div>
       </div>
 
@@ -114,9 +121,9 @@
       </div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;margin-bottom:24px;">
-        <button class="primary" id="cal-blast-btn">📨 友だち全員に一斉配信</button>
-        <a class="ghost" href="${allMapUrl}" target="_blank" style="text-decoration:none;display:inline-block;padding:9px 18px;border:1px solid var(--line-2);border-radius:7px;color:var(--ink);${wantList.length===0?'pointer-events:none;opacity:0.4;':''}">🗺 全員の住所を地図表示</a>
-        <a class="ghost" href="${routeUrl}" target="_blank" style="text-decoration:none;display:inline-block;padding:9px 18px;border:1px solid var(--line-2);border-radius:7px;color:var(--ink);${wantList.length===0?'pointer-events:none;opacity:0.4;':''}">🚗 配達ルートを最適化 (Google マップ)</a>
+        <button class="primary" id="cal-blast-btn" data-hint="全LINE友だちに「カレンダー要りますか?」配信。年1回だけ押す想定">📨 友だち全員に一斉配信</button>
+        <a class="ghost" href="${allMapUrl}" target="_blank" data-hint="希望者の住所をGoogleマップ上に全部ピン表示" style="text-decoration:none;display:inline-block;padding:9px 18px;border:1px solid var(--line-2);border-radius:7px;color:var(--ink);${wantList.length===0?'pointer-events:none;opacity:0.4;':''}">🗺 全員の住所を地図表示</a>
+        <a class="ghost" href="${routeUrl}" target="_blank" data-hint="希望者全員を回る最適ルートをGoogleマップで生成。当日ナビとして使用" style="text-decoration:none;display:inline-block;padding:9px 18px;border:1px solid var(--line-2);border-radius:7px;color:var(--ink);${wantList.length===0?'pointer-events:none;opacity:0.4;':''}">🚗 配達ルートを最適化 (Google マップ)</a>
         <span id="cal-blast-msg" style="font-size:12px;color:var(--muted);align-self:center;margin-left:auto;"></span>
       </div>
 
@@ -248,11 +255,17 @@
     const conv = (a, b) => b === 0 ? 0 : Math.round(a / b * 100);
 
     const html = `
-      <div style="background:linear-gradient(135deg,#fff8e1,#fff);border:1px solid #f0e1a6;border-radius:10px;padding:14px 18px;margin-bottom:16px;">
-        <div style="font-size:13px;font-weight:600;color:#8a6f1e;margin-bottom:2px;">💡 商談での核心機能</div>
-        <div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;">
-          LINE友だち追加 → ステップ配信 → アンケート → Zoom面談予約 → CRM自動登録 まで全自動。<br>
-          FPがやることは「Zoom面談に出る」だけ。新規顧客獲得の手間がほぼゼロになる。
+      <div class="howto-banner">
+        <div class="howto-banner-head">
+          <span class="howto-banner-title">💡 このタブの使い方</span>
+          <span class="howto-banner-subtitle">新規相談 → Zoom面談 → 顧客化 までを自動化する場所</span>
+        </div>
+        <div class="howto-steps">
+          <div class="howto-step"><div class="howto-step-no">1</div><div>お客様が公式LINE追加 → 自動でステップ配信 → アンケート + 候補日3つ受信</div></div>
+          <div class="howto-step"><div class="howto-step-no">2</div><div>下の<strong>「公式LINEからの最新アンケート回答」</strong>に「確定待ち」のお客様が並ぶ</div></div>
+          <div class="howto-step"><div class="howto-step-no">3</div><div>候補日3つから1つ <span class="btn-hint">この日で確定 →</span> ボタンを押す</div></div>
+          <div class="howto-step"><div class="howto-step-no">4</div><div>瞬時に: Zoom URL自動発行 / お客様にLINE通知 / Googleカレンダー登録 が全部起きる</div></div>
+          <div class="howto-step"><div class="howto-step-no">5</div><div>面談当日は予約カードの <span class="btn-hint">● 録画ONでZoom開始</span> から入室 → 終了時 <span class="btn-hint">■ 録画停止</span> → <span class="btn-hint">✨ AI議事録を生成</span></div></div>
         </div>
       </div>
 
@@ -303,6 +316,7 @@
                     const slotStr = parts.slice(1).join(' ') || '';
                     return `<button class="slot-confirm-btn" data-slot-confirm
                       data-uid="${escapeHtml(s.userId)}" data-date="${escapeHtml(dateStr)}" data-slot="${escapeHtml(slotStr)}"
+                      data-hint="この日で確定 → ZoomURL自動発行・お客様にLINE通知・Googleカレンダー登録 が一括で動きます"
                       style="text-align:left;padding:10px 14px;background:#fff;border:1px solid var(--line);border-radius:6px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;align-items:center;font-family:inherit;">
                       <span><strong style="color:var(--accent);margin-right:8px;">第${idx + 1}希望</strong>${escapeHtml(slot)}</span>
                       <span style="font-size:11px;color:var(--green);font-weight:700;">この日で確定 →</span>
@@ -363,17 +377,17 @@
           const dateStr = (b.date || '').slice(5).replace('-','/');
           const recButtons = isLive && b.zoomUrl ? (
             rec === 'recording' ? `
-              <button class="btn-rec-stop" data-rec-stop="${escapeHtml(b.ts)}">■ 録画停止</button>
-              <a class="btn-mini" href="${escapeHtml(b.zoomUrl)}" target="_blank">Zoomを開く</a>
+              <button class="btn-rec-stop" data-rec-stop="${escapeHtml(b.ts)}" data-hint="面談終了時に押す。録画ファイルが Drive に保存される">■ 録画停止</button>
+              <a class="btn-mini" href="${escapeHtml(b.zoomUrl)}" target="_blank" data-hint="Zoom会議画面を別タブで開く">Zoomを開く</a>
             ` : rec === 'saved' ? `
-              <a class="btn-mini" href="${escapeHtml(b.driveUrl||'#')}" target="_blank">📁 録画を開く (Drive)</a>
-              <a class="btn-mini" href="${escapeHtml(b.zoomUrl)}" target="_blank">Zoomを開く</a>
+              <a class="btn-mini" href="${escapeHtml(b.driveUrl||'#')}" target="_blank" data-hint="Google Drive に保存された録画ファイルを開く">📁 録画を開く (Drive)</a>
+              <a class="btn-mini" href="${escapeHtml(b.zoomUrl)}" target="_blank" data-hint="同じZoom URLを再度開く (フォロー面談用)">Zoomを開く</a>
               ${b.transcript
-                ? `<button class="btn-mini" data-view-transcript="${escapeHtml(b.ts)}" style="background:#fff8e1;border-color:#f0d36b;color:#8a6f1e;font-weight:600;">📝 議事録を見る</button>`
-                : `<button class="btn-mini" data-gen-transcript="${escapeHtml(b.ts)}" style="background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;font-weight:700;">✨ AI議事録を生成</button>`}
+                ? `<button class="btn-mini" data-view-transcript="${escapeHtml(b.ts)}" data-hint="AIが作った議事録を表示・コピー" style="background:#fff8e1;border-color:#f0d36b;color:#8a6f1e;font-weight:600;">📝 議事録を見る</button>`
+                : `<button class="btn-mini" data-gen-transcript="${escapeHtml(b.ts)}" data-hint="アンケート回答と顧客情報から議事録テンプレを自動生成。面談後に押す" style="background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;font-weight:700;">✨ AI議事録を生成</button>`}
             ` : `
-              <button class="btn-rec-start" data-rec-start="${escapeHtml(b.ts)}" data-zoom="${escapeHtml(b.zoomUrl)}">● 録画ONでZoom開始</button>
-              <a class="btn-mini" href="${escapeHtml(b.zoomUrl)}" target="_blank">録画なしで開く</a>
+              <button class="btn-rec-start" data-rec-start="${escapeHtml(b.ts)}" data-zoom="${escapeHtml(b.zoomUrl)}" data-hint="面談直前に押す。Zoomが別タブで開き、録画状態が「録画中」に">● 録画ONでZoom開始</button>
+              <a class="btn-mini" href="${escapeHtml(b.zoomUrl)}" target="_blank" data-hint="録画せずにZoomだけ開く (簡易確認用)">録画なしで開く</a>
             `
           ) : '';
           return `
@@ -697,6 +711,17 @@
       .slice(0, 5);
 
     const html = `
+      <div class="howto-banner">
+        <div class="howto-banner-head">
+          <span class="howto-banner-title">💡 配信ダッシュボード</span>
+          <span class="howto-banner-subtitle">公式LINEの「いま動いてる仕組み」を一望する場所</span>
+        </div>
+        <div class="howto-steps">
+          <div class="howto-step"><div class="howto-step-no">1</div><div>4つの数字: <strong>友だち数 / 稼働シナリオ / 今月送信数 / 今日の誕生日</strong>で全体把握</div></div>
+          <div class="howto-step"><div class="howto-step-no">2</div><div>「今後の自動配信予定」で <strong>明日からどんな配信が出るか</strong> 確認</div></div>
+          <div class="howto-step"><div class="howto-step-no">3</div><div>新規シナリオ追加は「配信スケジュール」サブタブ / 単発配信は右上 <span class="btn-hint">テスト配信</span></div></div>
+        </div>
+      </div>
       <div class="kpi-row" style="grid-template-columns: repeat(4, 1fr);">
         <div class="kpi">
           <div class="kpi-label">LINE友だち数</div>
@@ -765,6 +790,20 @@
   // セグメント一覧
   // ============================
   function renderSegments() {
+    document.querySelector('[data-line-view="segments"]').innerHTML = `
+      <div class="howto-banner">
+        <div class="howto-banner-head">
+          <span class="howto-banner-title">💡 セグメントとは</span>
+          <span class="howto-banner-subtitle">お客様を「属性」で自動グループ分けする機能</span>
+        </div>
+        <div class="howto-steps">
+          <div class="howto-step"><div class="howto-step-no">1</div><div>例: 子育て世帯 13名、退職前世代 5名 など、CRM内のお客様を<strong>自動で分類</strong></div></div>
+          <div class="howto-step"><div class="howto-step-no">2</div><div>「配信スケジュール」サブタブで<strong>セグメント別に配信内容を変える</strong> (子育て世帯には教育費ニュース など)</div></div>
+          <div class="howto-step"><div class="howto-step-no">3</div><div>セグメントカードを<strong>タップ</strong>で該当者一覧を確認できる</div></div>
+        </div>
+      </div>
+      <div id="segment-cards-area"></div>
+    `;
     const cards = window.SEGMENTS.map(seg => {
       const list = window.LineCRM.evaluateSegment(seg.id);
       return `
@@ -784,9 +823,8 @@
       `;
     }).join('');
 
-    document.querySelector('[data-line-view="segments"]').innerHTML = `
+    document.getElementById('segment-cards-area').innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div style="font-size:13px;color:var(--muted);">顧客の属性で動的にセグメントを切る。配信スケジュールの宛先指定に使う。</div>
         <button class="primary" disabled style="opacity:0.6;cursor:not-allowed;">+ カスタムセグメント (v2)</button>
       </div>
       <div class="segment-grid">${cards}</div>
@@ -838,9 +876,20 @@
   // ============================
   function renderSchedules() {
     const html = `
+      <div class="howto-banner">
+        <div class="howto-banner-head">
+          <span class="howto-banner-title">💡 配信スケジュール</span>
+          <span class="howto-banner-subtitle">「いつ・誰に・何を」を一度組めば自動配信し続ける</span>
+        </div>
+        <div class="howto-steps">
+          <div class="howto-step"><div class="howto-step-no">1</div><div>例: 「子育て世帯 × 教育費お役立ち × 毎月15日10時」のように<strong>セグメント × テンプレ × タイミング</strong>を組む</div></div>
+          <div class="howto-step"><div class="howto-step-no">2</div><div><strong>左のトグル</strong>で稼働/停止を切替 (停止中は配信されません)</div></div>
+          <div class="howto-step"><div class="howto-step-no">3</div><div>編集は <span class="btn-hint">編集</span> ボタン、新規は右上の <span class="btn-hint">+ 新規スケジュール</span></div></div>
+        </div>
+      </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div style="font-size:13px;color:var(--muted);">セグメント × テンプレ × タイミングで自動配信を組む。トグルでON/OFF切替。</div>
-        <button class="primary" id="add-sched-btn">+ 新規スケジュール</button>
+        <span style="font-size:11.5px;color:var(--muted);">${window.LINE_SCHEDULES.length} 本のシナリオ</span>
+        <button class="primary" id="add-sched-btn" data-hint="新しい自動配信シナリオを作る">+ 新規スケジュール</button>
       </div>
       <table class="sched-table">
         <thead>
@@ -966,6 +1015,18 @@
   // メッセージテンプレ
   // ============================
   function renderTemplates() {
+    const tplHelp = `
+      <div class="howto-banner">
+        <div class="howto-banner-head">
+          <span class="howto-banner-title">💡 メッセージテンプレ</span>
+          <span class="howto-banner-subtitle">配信で使う文章ストック / 「{{name}}」は自動でお客様名に置換</span>
+        </div>
+        <div class="howto-steps">
+          <div class="howto-step"><div class="howto-step-no">1</div><div>テンプレは<strong>3種類</strong>: 季節挨拶 / イベント連動 (誕生日・退職前) / 定期配信 (月次レポート etc)</div></div>
+          <div class="howto-step"><div class="howto-step-no">2</div><div>「配信スケジュール」サブタブで <strong>どのテンプレをいつ送るか</strong> を組む</div></div>
+        </div>
+      </div>
+    `;
     const groups = { event: [], broadcast: [], season: [] };
     window.LINE_TEMPLATES.forEach(t => {
       (groups[t.cat] || (groups[t.cat] = [])).push(t);
@@ -973,8 +1034,9 @@
     const catLabel = { event: 'イベント連動', broadcast: '定期配信', season: '季節挨拶' };
 
     const html = `
+      ${tplHelp}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div style="font-size:13px;color:var(--muted);">テンプレ内の <code>{{name}}</code> はLINE配信時に各顧客名に自動置換されます。</div>
+        <span style="font-size:11.5px;color:var(--muted);">テンプレ内の <code>{{name}}</code> はLINE配信時に各顧客名に自動置換されます</span>
         <button class="primary" disabled style="opacity:0.6;cursor:not-allowed;">+ 新規テンプレ (v2)</button>
       </div>
       ${Object.keys(groups).map(cat => `
@@ -1028,8 +1090,16 @@
     }
 
     document.querySelector('[data-line-view="birthdays"]').innerHTML = `
-      <div style="margin-bottom:14px;">
-        <div style="font-size:13px;color:var(--muted);">本人・配偶者・お子様の誕生日を全自動検出。本人にお祝いメッセージを当日朝9:00に自動配信します。</div>
+      <div class="howto-banner">
+        <div class="howto-banner-head">
+          <span class="howto-banner-title">💡 誕生日リスト</span>
+          <span class="howto-banner-subtitle">本人 + 配偶者 + お子様の誕生日を90日先まで自動検出</span>
+        </div>
+        <div class="howto-steps">
+          <div class="howto-step"><div class="howto-step-no">1</div><div>配信スケジュールに「誕生日自動メッセージ」シナリオが既に組まれている (毎日9:00判定)</div></div>
+          <div class="howto-step"><div class="howto-step-no">2</div><div>顧客の家族の生年月日を CRM の顧客フォームで入れておくと、ここに自動で並ぶ</div></div>
+          <div class="howto-step"><div class="howto-step-no">3</div><div>当日になると<strong>本人</strong>にお祝いLINEが自動送信される</div></div>
+        </div>
       </div>
       ${renderGroup('今日 (' + (TODAY.getMonth() + 1) + '/' + TODAY.getDate() + ')', today, 'var(--red)')}
       ${renderGroup('今週 (1〜7日後)', week, 'var(--yellow)')}
@@ -1051,7 +1121,16 @@
   // ============================
   function renderLog() {
     const html = `
-      <div style="margin-bottom:12px;font-size:13px;color:var(--muted);">直近の自動配信履歴。クリックで詳細展開 (v2)。</div>
+      <div class="howto-banner">
+        <div class="howto-banner-head">
+          <span class="howto-banner-title">💡 送信ログ</span>
+          <span class="howto-banner-subtitle">配信スケジュールから飛んだメッセージの履歴 / 何件届いて何件失敗したか</span>
+        </div>
+        <div class="howto-steps">
+          <div class="howto-step"><div class="howto-step-no">1</div><div>失敗があった場合は「備考」列に理由が書かれる (ブロック解除待ち など)</div></div>
+          <div class="howto-step"><div class="howto-step-no">2</div><div>テスト配信 (右上「テスト配信」ボタン経由) もここに記録される</div></div>
+        </div>
+      </div>
       <table class="sched-table">
         <thead>
           <tr>
