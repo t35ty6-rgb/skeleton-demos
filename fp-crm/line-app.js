@@ -136,26 +136,46 @@
       ` : ''}
 
       ${surveysList.length > 0 ? `
-      <div class="section-title">📝 公式LINEからの最新アンケート回答</div>
-      <div class="line-card" style="margin-bottom:18px;">
-        ${surveysList.map(s => `
-          <div class="booking-row">
-            <div class="booking-when">
-              <div class="booking-time" style="font-size:11px;">${(s.ts || '').slice(5, 16).replace('T', ' ')}</div>
-              <div class="booking-date" style="font-size:10.5px;color:var(--muted);">回答済</div>
-            </div>
-            <div class="booking-main">
-              <div class="booking-name">userId: ${(s.userId || '').slice(0, 12)}…</div>
-              <div class="booking-meta">
-                ${escapeHtml(s.q1_テーマ || '-')} / ${escapeHtml(s.q2_年代 || '-')} / ${escapeHtml(s.q3_家族 || '-')} / ${escapeHtml(s.q4_年収 || '-')}
+      <div class="section-title">📝 公式LINEからの最新アンケート回答 (候補日3つ込み)</div>
+      <div style="display:grid;gap:10px;margin-bottom:18px;">
+        ${surveysList.map(s => {
+          const slots = [s.q6_候補1, s.q7_候補2, s.q8_候補3].filter(x => x);
+          const confirmed = s.confirmedSlot || '';
+          const uidShort = (s.userId || '').slice(0, 12);
+          return `
+          <div class="line-card" style="padding:14px 18px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:8px;">
+              <div>
+                <strong style="font-size:14px;">${escapeHtml(s.q1_テーマ || '-')}</strong>
+                <span style="font-size:11px;color:var(--muted);margin-left:8px;">${(s.ts || '').slice(5, 16).replace('T', ' ')}</span>
               </div>
-              <div class="booking-want">💭 ${escapeHtml(s.q5_悩み || '-')}</div>
+              ${confirmed
+                ? `<span class="status-pill active">✓ ${escapeHtml(confirmed)} 確定</span>`
+                : '<span class="status-pill new">確定待ち</span>'}
             </div>
-            <div class="booking-cta">
-              <span class="line-status-pill on">LIVE</span>
+            <div style="font-size:12px;color:var(--muted);letter-spacing:0.02em;margin-bottom:4px;">
+              ${escapeHtml(s.q2_年代 || '-')} ・ ${escapeHtml(s.q3_家族 || '-')} ・ ${escapeHtml(s.q4_年収 || '-')} ・ userId:${uidShort}…
             </div>
-          </div>
-        `).join('')}
+            <div style="font-size:13px;color:var(--ink-2);margin-bottom:10px;line-height:1.6;">💭 ${escapeHtml(s.q5_悩み || '-')}</div>
+            ${confirmed ? '' : (slots.length > 0 ? `
+              <div style="background:#fafbfc;border:1px solid var(--line);border-radius:7px;padding:10px 12px;">
+                <div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">候補日 (タップで確定 → 自動でZoom URL作成・LINE通知・カレンダー登録)</div>
+                <div style="display:grid;gap:6px;">
+                  ${slots.map((slot, idx) => {
+                    const parts = (slot || '').split(/\s+/);
+                    const dateStr = parts[0] || '';
+                    const slotStr = parts.slice(1).join(' ') || '';
+                    return `<button class="slot-confirm-btn" data-slot-confirm
+                      data-uid="${escapeHtml(s.userId)}" data-date="${escapeHtml(dateStr)}" data-slot="${escapeHtml(slotStr)}"
+                      style="text-align:left;padding:10px 14px;background:#fff;border:1px solid var(--line);border-radius:6px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;align-items:center;font-family:inherit;">
+                      <span><strong style="color:var(--accent);margin-right:8px;">第${idx + 1}希望</strong>${escapeHtml(slot)}</span>
+                      <span style="font-size:11px;color:var(--green);font-weight:700;">この日で確定 →</span>
+                    </button>`;
+                  }).join('')}
+                </div>
+              </div>` : '<div style="font-size:11.5px;color:var(--muted);">※ 候補日未取得 (旧バージョンのアンケート回答)</div>')}
+          </div>`;
+        }).join('')}
       </div>
       ` : ''}
 
@@ -362,6 +382,36 @@
           renderLeadFunnelInner();
         } catch (e) {
           alert('録画停止失敗: ' + e.message);
+          btn.disabled = false;
+        }
+      });
+    });
+    // 候補日確定
+    document.querySelectorAll('[data-slot-confirm]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const uid = btn.dataset.uid;
+        const dateStr = btn.dataset.date;
+        const slotStr = btn.dataset.slot;
+        if (!confirm(`${dateStr} ${slotStr} で確定し、お客様にZoom URLをLINE送信、Googleカレンダーに登録します。よろしいですか?`)) return;
+        btn.disabled = true;
+        btn.innerHTML = btn.innerHTML.replace('この日で確定 →', '処理中...');
+        try {
+          const r = await fetch(CLOUD_RUN_BASE + '/api/confirm-slot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: uid, dateStr: dateStr, slotStr: slotStr }),
+          });
+          const data = await r.json();
+          if (data.ok) {
+            alert('✅ 確定しました\n\nZoom URL: ' + data.zoomUrl + '\n\n• お客様LINEに通知済\n• Googleカレンダーに登録済' + (data.calendar ? '\n• カレンダーID: ' + (data.calendar.calendarId || '') : ''));
+            await fetchLiveData();
+            renderLeadFunnelInner();
+          } else {
+            alert('❌ 確定失敗: ' + (data.error || ''));
+            btn.disabled = false;
+          }
+        } catch (e) {
+          alert('❌ 確定失敗: ' + e.message);
           btn.disabled = false;
         }
       });

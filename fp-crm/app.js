@@ -772,7 +772,8 @@
         </div>
         <textarea id="draft-text" style="width:100%;min-height:280px;font-family:'Noto Sans JP',sans-serif;font-size:13.5px;line-height:1.85;padding:16px 18px;border:1px solid var(--line);border-radius:8px;background:#fff;letter-spacing:0.02em;">${escapeHtml(draft.body)}</textarea>
         <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
-          <button class="primary" id="draft-copy">📋 コピーして LINE で送信</button>
+          <button class="primary" id="draft-send">📨 この内容で LINE 送信</button>
+          <button id="draft-copy">📋 コピー</button>
           <button id="draft-regen">🔄 別のトーンで生成</button>
           <button id="draft-close-btn" style="margin-left:auto;">閉じる</button>
         </div>
@@ -790,7 +791,44 @@
     document.getElementById('draft-close-btn').addEventListener('click', () => openClientModal(client.id));
     document.getElementById('draft-copy').addEventListener('click', () => {
       navigator.clipboard.writeText(document.getElementById('draft-text').value);
-      document.getElementById('draft-msg').textContent = '✓ クリップボードにコピーしました — LINE 公式アカウントマネージャーの個別トークに貼り付けてください';
+      document.getElementById('draft-msg').textContent = '✓ クリップボードにコピーしました';
+    });
+    document.getElementById('draft-send').addEventListener('click', async () => {
+      const text = document.getElementById('draft-text').value;
+      const userId = client.lineFriendId || client.userId;
+      const sendBtn = document.getElementById('draft-send');
+      const msg = document.getElementById('draft-msg');
+      if (!userId) {
+        msg.textContent = '⚠ LINE friend ID が未設定のため送信できません (顧客編集で登録してください)';
+        msg.style.color = 'var(--red)';
+        return;
+      }
+      if (!confirm(client.name + ' 様 へ この内容で LINE 送信します。よろしいですか?')) return;
+      sendBtn.disabled = true;
+      sendBtn.textContent = '送信中...';
+      try {
+        const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/line/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: userId, text: text }),
+        });
+        const data = await r.json();
+        if (data.ok) {
+          msg.style.color = 'var(--green)';
+          msg.textContent = '✅ 送信完了 — ' + client.name + ' 様の LINE に届きました';
+          sendBtn.textContent = '✓ 送信済';
+        } else {
+          msg.style.color = 'var(--red)';
+          msg.textContent = '❌ 送信失敗: ' + (data.error || '原因不明');
+          sendBtn.disabled = false;
+          sendBtn.textContent = '📨 この内容で LINE 送信';
+        }
+      } catch (e) {
+        msg.style.color = 'var(--red)';
+        msg.textContent = '❌ 送信失敗: ' + e.message;
+        sendBtn.disabled = false;
+        sendBtn.textContent = '📨 この内容で LINE 送信';
+      }
     });
     document.getElementById('draft-regen').addEventListener('click', () => {
       toneIndex = (toneIndex + 1) % 3;
