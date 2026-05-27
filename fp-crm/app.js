@@ -636,6 +636,7 @@
           <span class="status-pill ${c.status}">${statusLabel(c.status)}</span>
         </h2>
         <div style="display:flex;gap:6px;align-items:center;">
+          <button id="modal-draft-btn" style="background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;font-weight:700;">✨ AI返信下書き</button>
           <button id="modal-edit-btn">編集</button>
           <button class="modal-close" id="modal-close-btn">×</button>
         </div>
@@ -687,6 +688,140 @@
       closeModal();
       openClientForm(c.id);
     });
+    document.getElementById('modal-draft-btn').addEventListener('click', () => {
+      openDraftReplyModal(c, events, recs);
+    });
+  }
+
+  // ============================
+  // AI返信下書き (LINE文面 自動生成)
+  // ============================
+  function openDraftReplyModal(client, events, recs) {
+    const draft = generateDraftReply(client, events, recs);
+    const html = `
+      <div class="modal-header">
+        <h2>✨ AI返信下書き — ${escapeHtml(client.name)} 様 宛</h2>
+        <button class="modal-close" id="draft-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--muted);margin-bottom:8px;letter-spacing:0.02em;">
+          <span style="background:linear-gradient(135deg,#fff8e1,#fff);border:1px solid #f0d36b;color:#8a6f1e;padding:2px 9px;border-radius:9px;font-weight:700;letter-spacing:0.04em;">${escapeHtml(draft.intent)}</span>
+          <span>${escapeHtml(draft.reason)}</span>
+        </div>
+        <textarea id="draft-text" style="width:100%;min-height:280px;font-family:'Noto Sans JP',sans-serif;font-size:13.5px;line-height:1.85;padding:16px 18px;border:1px solid var(--line);border-radius:8px;background:#fff;letter-spacing:0.02em;">${escapeHtml(draft.body)}</textarea>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+          <button class="primary" id="draft-copy">📋 コピーして LINE で送信</button>
+          <button id="draft-regen">🔄 別のトーンで生成</button>
+          <button id="draft-close-btn" style="margin-left:auto;">閉じる</button>
+        </div>
+        <div id="draft-msg" style="font-size:11.5px;color:var(--muted);margin-top:8px;text-align:center;letter-spacing:0.02em;"></div>
+        <div style="margin-top:18px;padding:12px 16px;background:#fafbfc;border:1px solid var(--line);border-radius:8px;font-size:11.5px;color:var(--muted);line-height:1.7;">
+          💡 AIがこの顧客のライフイベント・最終接触日・提案履歴を分析して生成しました。<br>
+          内容を確認・編集して、LINE公式アカウントの個別トークから送信してください。
+        </div>
+      </div>
+    `;
+    document.getElementById('modal-content').innerHTML = html;
+    document.getElementById('modal-overlay').style.display = 'flex';
+    let toneIndex = 0;
+    document.getElementById('draft-close').addEventListener('click', () => openClientModal(client.id));
+    document.getElementById('draft-close-btn').addEventListener('click', () => openClientModal(client.id));
+    document.getElementById('draft-copy').addEventListener('click', () => {
+      navigator.clipboard.writeText(document.getElementById('draft-text').value);
+      document.getElementById('draft-msg').textContent = '✓ クリップボードにコピーしました — LINE 公式アカウントマネージャーの個別トークに貼り付けてください';
+    });
+    document.getElementById('draft-regen').addEventListener('click', () => {
+      toneIndex = (toneIndex + 1) % 3;
+      const newDraft = generateDraftReply(client, events, recs, toneIndex);
+      document.getElementById('draft-text').value = newDraft.body;
+    });
+  }
+
+  function generateDraftReply(client, events, recs, toneIndex) {
+    toneIndex = toneIndex || 0;
+    const name = (client.name || 'お客').split(/\s+/)[0]; // 苗字
+    const dsl = daysSince(client.lastContact);
+    const topRec = (recs && recs[0]) || null;
+
+    // 直近の重要イベント (90日以内)
+    const nearby = (events || []).filter(ev => {
+      const days = (ev.date - TODAY) / 86400000;
+      return days >= 0 && days <= 90;
+    }).slice(0, 2);
+
+    // 提案フォロー漏れ
+    const stalledProp = (client.proposals || []).reverse().find(p =>
+      p.result === '提案中' || p.result === '検討中'
+    );
+
+    // インテント判定
+    let intent = '定期フォロー', reason = '', body = '';
+
+    if (dsl >= 365) {
+      intent = '1年以上未接触フォロー';
+      reason = `最終接触 ${dsl}日前`;
+    } else if (stalledProp) {
+      intent = '提案フォローアップ';
+      reason = `${stalledProp.title} が ${stalledProp.result}のまま`;
+    } else if (nearby.length > 0) {
+      intent = 'ライフイベント先取り';
+      reason = `${nearby[0].who} : ${nearby[0].label}`;
+    } else if (topRec) {
+      intent = topRec.action;
+      reason = topRec.reason;
+    } else {
+      intent = '定期フォロー';
+      reason = `最終接触 ${dsl}日前`;
+    }
+
+    // 3トーンのバリエーション
+    const tones = [
+      // トーン0: 標準・丁寧
+      () => {
+        let b = `${name}様\n\nご無沙汰しております、ファイナンシャルプランナーの福田です。\n\n`;
+        if (stalledProp) {
+          b += `先日ご提案させていただいた「${stalledProp.title}」の件、その後ご検討状況はいかがでしょうか。\n\nご質問やご懸念があれば、お気軽にお聞かせください。`;
+        } else if (nearby.length > 0) {
+          b += `${nearby[0].who}様の「${nearby[0].label}」が近づいてきました。\n\n資金準備や手続きについて、お話しできる機会があればと思い、ご連絡しました。お時間ある時にこのトークで返信いただけると嬉しいです。`;
+        } else if (dsl >= 365) {
+          b += `お変わりなくお過ごしでしょうか。\n\n前回お会いしてから少し時間が経ちましたので、ご家族の近況やお考えの変化など、近況伺いだけでもさせていただけたらと思います。`;
+        } else {
+          b += `最近のご様子はいかがですか。\n\nお時間ある時に、ライフプランの定期見直しをご一緒できればと思っております。`;
+        }
+        b += `\n\nどうぞよろしくお願いいたします。`;
+        return b;
+      },
+      // トーン1: カジュアル親しみ
+      () => {
+        let b = `${name}様、こんにちは!福田です🌸\n\n`;
+        if (stalledProp) {
+          b += `先日お話しした「${stalledProp.title}」、その後どうですか?\n\n「ここちょっと気になる」「もう少し詳しく聞きたい」などあれば、お気軽にどうぞ✨`;
+        } else if (nearby.length > 0) {
+          b += `${nearby[0].who}様の${nearby[0].label}が近づいていますね😊\n\n資金面の準備で気になることがあればお気軽に。\n少しでも安心して迎えられるようサポートします!`;
+        } else if (dsl >= 365) {
+          b += `お久しぶりです!ご家族みなさんお元気ですか?\n\n久しぶりに近況伺えると嬉しいです。お時間ある時にスタンプ1つでも☺️`;
+        } else {
+          b += `お元気ですか?\n\n季節の変わり目、家計やプランで気になることがあればお気軽にメッセージください!`;
+        }
+        return b;
+      },
+      // トーン2: 提案型・前向き
+      () => {
+        let b = `${name}様\n\n福田です。${name}様の状況を改めて整理していまして、ご提案したいことが出てきましたのでご連絡しました。\n\n`;
+        if (stalledProp) {
+          b += `①「${stalledProp.title}」 — 現在の市況だと、もう一段早めに決断するメリットが出てきています。\n② 関連で、税制改正の影響も併せてご説明できればと思います。\n\n15分のお電話か、Zoomで再度お時間いただけますか?`;
+        } else if (nearby.length > 0) {
+          b += `①「${nearby[0].label}」を見据えた資金準備プラン (3案)\n② 公的制度・税制を最大限活かす方法\n\nどちらか30分でも、お時間調整できればと思います。来週以降のご都合いかがでしょう?`;
+        } else if (dsl >= 365) {
+          b += `① ライフプランの定期見直し (年1回が理想)\n② 最新の税制改正・NISA枠の拡充への対応\n\n短時間で構いませんので、近況伺いも兼ねて1度お時間ください。`;
+        } else {
+          b += `① 直近の資産配分レビュー\n② ${name}様に合う新しい商品/制度のご紹介\n\nお気軽にこのトークか面談予約からどうぞ。`;
+        }
+        return b;
+      },
+    ];
+    body = tones[toneIndex % 3]();
+    return { intent, reason, body };
   }
 
   function closeModal() {
