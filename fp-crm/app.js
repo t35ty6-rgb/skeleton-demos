@@ -138,12 +138,17 @@
     }
     list.innerHTML = tops.map(t => {
       const p = t.topAction.priority;
+      const initial = (t.client.name || '?').replace(/\s+/g, '').slice(0, 1);
+      const avatarHue = (initial.charCodeAt(0) || 0) % 360;
       return `
         <div class="action-item" data-client-id="${t.client.id}">
           <div><span class="action-priority ${priorityClass(p)}">${priorityLabel(p)}</span></div>
           <div class="action-client">
-            ${escapeHtml(t.client.name)} <span class="status-pill ${t.client.status}">${statusLabel(t.client.status)}</span>
-            <div class="client-meta">${window.LifeEvents.currentAge(t.client)}歳 / ${escapeHtml(t.client.occupation)} / AUM ¥${fmtMoney(t.client.aum)}</div>
+            <span class="avatar" style="--avh:${avatarHue};">${escapeHtml(initial)}</span>
+            <div class="action-client-body">
+              <div class="action-client-name">${escapeHtml(t.client.name)} <span class="status-pill ${t.client.status}">${statusLabel(t.client.status)}</span></div>
+              <div class="client-meta">${window.LifeEvents.currentAge(t.client)}歳 / ${escapeHtml(t.client.occupation)} / AUM ¥${fmtMoney(t.client.aum)}</div>
+            </div>
           </div>
           <div class="action-detail">
             <strong>${escapeHtml(t.topAction.action)}</strong>
@@ -398,9 +403,19 @@
       const childCount = (c.family || []).filter(m => m.rel === 'child').length;
       const familyTxt = childCount > 0 ? `配偶者+子${childCount}` :
         ((c.family || []).find(m => m.rel === 'spouse') ? '夫婦' : '単身');
+      const initial = (c.name || '?').replace(/\s+/g, '').slice(0, 1);
+      const hue = (initial.charCodeAt(0) || 0) % 360;
       return `
         <tr data-client-id="${c.id}">
-          <td><strong>${escapeHtml(c.name)}</strong><div style="font-size:11px;color:var(--muted)">${escapeHtml(c.kana)}</div></td>
+          <td>
+            <div class="client-row-name">
+              <span class="avatar avatar-sm" style="--avh:${hue};">${escapeHtml(initial)}</span>
+              <div>
+                <strong>${escapeHtml(c.name)}</strong>
+                <div style="font-size:11px;color:var(--muted);letter-spacing:0.02em;">${escapeHtml(c.kana)}</div>
+              </div>
+            </div>
+          </td>
           <td>${window.LifeEvents.currentAge(c)}</td>
           <td class="hide-mobile">${escapeHtml(c.occupation)}</td>
           <td>${familyTxt}</td>
