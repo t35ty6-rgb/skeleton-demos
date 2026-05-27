@@ -48,7 +48,8 @@
   // 初回相談導線 (リードファネル)
   // ============================
   // Cloud Run のリアルデータ
-  const CLOUD_RUN_API = 'https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/bookings';
+  const CLOUD_RUN_BASE = 'https://fp-compass-webhook-527726449426.asia-northeast1.run.app';
+  const CLOUD_RUN_API = CLOUD_RUN_BASE + '/api/bookings';
   let liveData = null;
 
   async function fetchLiveData() {
@@ -93,6 +94,9 @@
         answers: { q1: '-', q2: '-', q3: '-', q4: '-', q5: '-' },
         addedToCrm: false,
         live: true,
+        ts: b.ts || '',
+        recordingStatus: b.recordingStatus || '',
+        driveUrl: b.driveUrl || '',
       }));
       if (live.length > 0) bookings = live.concat(bookings);
       surveysList = (liveData.survey_answers || []).slice().reverse().slice(0, 8);
@@ -193,26 +197,44 @@
       </div>
 
       <div class="section-title" style="margin-top:24px;">📅 今後の面談予約 (アンケート回答済)</div>
-      <div class="line-card">
-        ${bookings.length === 0 ? '<div class="empty">予約なし</div>' : bookings.map(b => `
+      <div>
+        ${bookings.length === 0 ? '<div class="line-card empty">予約なし</div>' : bookings.map(b => {
+          const isLive = b.live;
+          const rec = b.recordingStatus || '';
+          const recPill = rec === 'recording' ? '<span class="rec-pill recording">● 録画中</span>'
+                        : rec === 'saved' ? '<span class="rec-pill saved">📼 保存済</span>' : '';
+          const dateStr = (b.date || '').slice(5).replace('-','/');
+          const recButtons = isLive && b.zoomUrl ? (
+            rec === 'recording' ? `
+              <button class="btn-rec-stop" data-rec-stop="${escapeHtml(b.ts)}">■ 録画停止</button>
+              <a class="btn-mini" href="${escapeHtml(b.zoomUrl)}" target="_blank">Zoomを開く</a>
+            ` : rec === 'saved' ? `
+              <a class="btn-mini" href="${escapeHtml(b.driveUrl||'#')}" target="_blank">📁 録画を開く (Drive)</a>
+              <a class="btn-mini" href="${escapeHtml(b.zoomUrl)}" target="_blank">Zoomを開く</a>
+            ` : `
+              <button class="btn-rec-start" data-rec-start="${escapeHtml(b.ts)}" data-zoom="${escapeHtml(b.zoomUrl)}">● 録画ONでZoom開始</button>
+              <a class="btn-mini" href="${escapeHtml(b.zoomUrl)}" target="_blank">録画なしで開く</a>
+            `
+          ) : '';
+          return `
           <div class="booking-row" data-booking-id="${b.id}">
             <div class="booking-when">
-              <div class="booking-date">${b.date.slice(5).replace('-','/')}</div>
+              <div class="booking-date">${dateStr}</div>
               <div class="booking-time">${b.time}</div>
             </div>
             <div class="booking-main">
-              <div class="booking-name">${escapeHtml(b.name)} <span class="status-pill new">未登録</span></div>
-              <div class="booking-meta">
-                ${escapeHtml(b.answers.q1)} / ${escapeHtml(b.answers.q2)} / ${escapeHtml(b.answers.q3)} / ${escapeHtml(b.answers.q4)}
-              </div>
-              <div class="booking-want">💭 ${escapeHtml(b.answers.q5)}</div>
+              <div class="booking-name">${escapeHtml(b.name)} ${isLive ? '<span class="status-pill active">LIVE</span>' : '<span class="status-pill new">未登録</span>'} ${recPill}</div>
+              ${!isLive ? `<div class="booking-meta">${escapeHtml(b.answers.q1)} / ${escapeHtml(b.answers.q2)} / ${escapeHtml(b.answers.q3)} / ${escapeHtml(b.answers.q4)}</div>` : ''}
+              ${!isLive ? `<div class="booking-want">💭 ${escapeHtml(b.answers.q5)}</div>` : ''}
+              ${isLive ? `<div class="booking-want" style="font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-all;font-style:normal;">${escapeHtml(b.zoomUrl)}</div>` : ''}
+              ${recButtons ? `<div class="booking-rec-row">${recButtons}</div>` : ''}
             </div>
             <div class="booking-cta">
-              <button class="ghost" data-view-answers="${b.id}">回答詳細</button>
-              <button class="primary" data-convert="${b.id}" ${b.addedToCrm ? 'disabled style="opacity:0.5;"' : ''}>${b.addedToCrm ? '✓ 登録済' : '顧客登録'}</button>
+              ${!isLive ? `<button class="ghost" data-view-answers="${b.id}">回答詳細</button>
+              <button class="primary" data-convert="${b.id}" ${b.addedToCrm ? 'disabled style="opacity:0.5;"' : ''}>${b.addedToCrm ? '✓ 登録済' : '顧客登録'}</button>` : ''}
             </div>
-          </div>
-        `).join('')}
+          </div>`;
+        }).join('')}
       </div>
 
       <div class="section-title" style="margin-top:24px;">🔥 ホットリード (回答済・未予約)</div>
@@ -304,6 +326,41 @@
     // 回答詳細表示
     document.querySelectorAll('[data-view-answers]').forEach(btn => {
       btn.addEventListener('click', () => showAnswersDetail(btn.dataset.viewAnswers));
+    });
+    // Zoom録画開始
+    document.querySelectorAll('[data-rec-start]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const ts = btn.dataset.recStart;
+        const zoomUrl = btn.dataset.zoom;
+        btn.disabled = true;
+        btn.textContent = '...';
+        try {
+          await fetch(CLOUD_RUN_BASE + '/api/recording/start?ts=' + encodeURIComponent(ts), { method: 'POST' });
+          window.open(zoomUrl, '_blank');
+          await fetchLiveData();
+          renderLeadFunnelInner();
+        } catch (e) {
+          alert('録画開始失敗: ' + e.message);
+          btn.disabled = false;
+        }
+      });
+    });
+    // Zoom録画停止
+    document.querySelectorAll('[data-rec-stop]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('録画を停止して Drive に保存しますか?')) return;
+        const ts = btn.dataset.recStop;
+        btn.disabled = true;
+        btn.textContent = '...';
+        try {
+          await fetch(CLOUD_RUN_BASE + '/api/recording/stop?ts=' + encodeURIComponent(ts), { method: 'POST' });
+          await fetchLiveData();
+          renderLeadFunnelInner();
+        } catch (e) {
+          alert('録画停止失敗: ' + e.message);
+          btn.disabled = false;
+        }
+      });
     });
   }
 
