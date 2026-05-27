@@ -41,7 +41,143 @@
     if (name === 'templates') renderTemplates();
     if (name === 'birthdays') renderBirthdays();
     if (name === 'log') renderLog();
+    if (name === 'calendars') renderCalendars();
     if (name === 'settings') renderSettings();
+  }
+
+  // ============================
+  // 🎍 年末カレンダー配布
+  // ============================
+  function renderCalendars() {
+    fetchLiveData().then(() => { if (currentSubview === 'calendars') renderCalendarsInner(); });
+    renderCalendarsInner();
+  }
+
+  function renderCalendarsInner() {
+    const reqs = (liveData && liveData.calendar_requests) || [];
+    const wantList = reqs.filter(r => r.status === '要' && r.address);
+    const wantNoAddr = reqs.filter(r => r.status === '要' && !r.address);
+    const notWant = reqs.filter(r => r.status === '不要');
+    const total = reqs.length;
+    const cvr = total > 0 ? Math.round(wantList.length / total * 100) : 0;
+
+    // Google Maps ルートURL生成
+    const buildRouteUrl = (addresses) => {
+      if (addresses.length === 0) return '#';
+      const enc = addresses.map(a => encodeURIComponent(a));
+      const origin = enc[0];
+      const destination = enc[enc.length - 1];
+      const waypoints = enc.slice(1, -1).join('|');
+      let url = 'https://www.google.com/maps/dir/?api=1&origin=' + origin + '&destination=' + destination;
+      if (waypoints) url += '&waypoints=' + waypoints;
+      url += '&travelmode=driving';
+      return url;
+    };
+    const buildMapAllUrl = (addresses) => {
+      if (addresses.length === 0) return '#';
+      return 'https://www.google.com/maps/search/' + encodeURIComponent(addresses.join(' / '));
+    };
+
+    const wantAddresses = wantList.map(r => r.address).filter(x => x);
+    const routeUrl = buildRouteUrl(wantAddresses);
+    const allMapUrl = buildMapAllUrl(wantAddresses);
+
+    const html = `
+      <div style="background:linear-gradient(135deg,#fff8e1,#fff);border:1px solid #f0e1a6;border-radius:12px;padding:18px 22px;margin-bottom:18px;">
+        <div style="font-size:13px;font-weight:700;color:#8a6f1e;letter-spacing:0.04em;margin-bottom:4px;">🎍 年末カレンダー配布</div>
+        <div style="font-size:12.5px;color:var(--ink-2);line-height:1.6;">
+          全友だちにLINEで一斉配信 → タップで「要/不要」回答 → 「要」と答えた方の住所を収集 → 配達ルートを Google マップで最適化
+        </div>
+      </div>
+
+      <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);">
+        <div class="kpi">
+          <div class="kpi-label">回答総数</div>
+          <div class="kpi-value">${total}</div>
+          <div class="kpi-sub">人</div>
+        </div>
+        <div class="kpi good">
+          <div class="kpi-label">「要」(住所済)</div>
+          <div class="kpi-value">${wantList.length}</div>
+          <div class="kpi-sub">配達対象</div>
+        </div>
+        <div class="kpi warn">
+          <div class="kpi-label">「要」(住所未)</div>
+          <div class="kpi-value">${wantNoAddr.length}</div>
+          <div class="kpi-sub">住所待ち</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">希望率</div>
+          <div class="kpi-value">${cvr}<span class="unit">%</span></div>
+          <div class="kpi-sub">要 / 回答総数</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;margin-bottom:24px;">
+        <button class="primary" id="cal-blast-btn">📨 友だち全員に一斉配信</button>
+        <a class="ghost" href="${allMapUrl}" target="_blank" style="text-decoration:none;display:inline-block;padding:9px 18px;border:1px solid var(--line-2);border-radius:7px;color:var(--ink);${wantList.length===0?'pointer-events:none;opacity:0.4;':''}">🗺 全員の住所を地図表示</a>
+        <a class="ghost" href="${routeUrl}" target="_blank" style="text-decoration:none;display:inline-block;padding:9px 18px;border:1px solid var(--line-2);border-radius:7px;color:var(--ink);${wantList.length===0?'pointer-events:none;opacity:0.4;':''}">🚗 配達ルートを最適化 (Google マップ)</a>
+        <span id="cal-blast-msg" style="font-size:12px;color:var(--muted);align-self:center;margin-left:auto;"></span>
+      </div>
+
+      <div class="section-title">🎁 受け取り希望 (住所済) — ${wantList.length}名</div>
+      ${wantList.length === 0
+        ? '<div class="line-card" style="text-align:center;padding:30px;color:var(--muted);">まだ住所登録されたご希望はありません</div>'
+        : `<div style="display:grid;gap:8px;margin-bottom:24px;">
+            ${wantList.map((r, i) => `
+              <div class="line-card" style="padding:14px 18px;display:grid;grid-template-columns:36px 1fr 160px;gap:12px;align-items:center;">
+                <div style="background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;font-family:'Inter',sans-serif;">${i + 1}</div>
+                <div>
+                  <strong style="font-size:14px;">${escapeHtml(r.name) || '匿名'}</strong>
+                  <div style="font-size:12.5px;color:var(--ink-2);margin-top:3px;letter-spacing:0.01em;line-height:1.6;">📮 ${escapeHtml(r.address)}</div>
+                  ${r.phone ? `<div style="font-size:11.5px;color:var(--muted);margin-top:2px;">📞 ${escapeHtml(r.phone)}</div>` : ''}
+                  ${r.note ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">📝 ${escapeHtml(r.note)}</div>` : ''}
+                </div>
+                <div style="text-align:right;">
+                  <a href="https://www.google.com/maps/search/${encodeURIComponent(r.address)}" target="_blank" style="font-size:11.5px;color:var(--accent);text-decoration:none;background:var(--accent-soft);padding:4px 10px;border-radius:11px;display:inline-block;">📍 地図で見る</a>
+                </div>
+              </div>
+            `).join('')}
+          </div>`
+      }
+
+      ${wantNoAddr.length > 0 ? `
+        <div class="section-title" style="margin-top:24px;">⏳ 住所登録待ち — ${wantNoAddr.length}名</div>
+        <div style="display:grid;gap:6px;margin-bottom:24px;">
+          ${wantNoAddr.map(r => `
+            <div class="line-card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+              <strong style="font-size:13.5px;">${escapeHtml(r.name) || '匿名'}</strong>
+              <span style="font-size:11px;color:var(--muted);">住所入力URLを送信済 / 入力待ち</span>
+            </div>
+          `).join('')}
+        </div>` : ''}
+
+      ${notWant.length > 0 ? `
+        <div class="section-title" style="margin-top:24px;">✗ 不要 — ${notWant.length}名</div>
+        <div style="display:grid;gap:4px;font-size:12px;color:var(--muted);">
+          ${notWant.map(r => `<div style="padding:8px 14px;background:#fafbfc;border:1px solid var(--line);border-radius:6px;">${escapeHtml(r.name) || '匿名'}</div>`).join('')}
+        </div>` : ''}
+    `;
+    document.querySelector('[data-line-view="calendars"]').innerHTML = html;
+
+    document.getElementById('cal-blast-btn').addEventListener('click', async () => {
+      if (!confirm('LINE友だち全員に「カレンダー希望調査」を一斉配信します。よろしいですか?')) return;
+      const btn = document.getElementById('cal-blast-btn');
+      const msg = document.getElementById('cal-blast-msg');
+      btn.disabled = true; btn.textContent = '配信中...';
+      try {
+        const r = await fetch(CLOUD_RUN_BASE + '/api/cal-blast', { method: 'POST' });
+        const data = await r.json();
+        msg.textContent = data.ok ? `✓ ${data.sent}/${data.total}名 に送信完了` : '❌ 失敗: ' + (data.error || '');
+        msg.style.color = data.ok ? 'var(--green)' : 'var(--red)';
+        btn.disabled = false; btn.textContent = '📨 友だち全員に一斉配信';
+      } catch (e) {
+        msg.textContent = '❌ 失敗: ' + e.message;
+        msg.style.color = 'var(--red)';
+        btn.disabled = false;
+        btn.textContent = '📨 友だち全員に一斉配信';
+      }
+    });
   }
 
   // ============================
