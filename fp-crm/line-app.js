@@ -47,11 +47,61 @@
   // ============================
   // 初回相談導線 (リードファネル)
   // ============================
+  // Cloud Run のリアルデータ
+  const CLOUD_RUN_API = 'https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/bookings';
+  let liveData = null;
+
+  async function fetchLiveData() {
+    try {
+      const r = await fetch(CLOUD_RUN_API);
+      liveData = await r.json();
+      return liveData;
+    } catch (e) { console.error('liveData fail', e); return null; }
+  }
+
   function renderLeadFunnel() {
+    // 起動時 + 10秒ごとにライブデータ取得
+    fetchLiveData().then(() => { if (currentSubview === 'leadfunnel') renderLeadFunnelInner(); });
+    if (!window._leadFunnelInterval) {
+      window._leadFunnelInterval = setInterval(() => {
+        if (currentSubview === 'leadfunnel') {
+          fetchLiveData().then(() => renderLeadFunnelInner());
+        }
+      }, 10000);
+    }
+    renderLeadFunnelInner();
+  }
+
+  function renderLeadFunnelInner() {
     const f = window.LEAD_FUNNEL;
     const scenario = window.LEAD_SCENARIO;
     const form = window.LEAD_FORM;
-    const bookings = window.UPCOMING_BOOKINGS;
+
+    // Cloud Run の bookings/survey_answers を優先表示
+    let bookings = window.UPCOMING_BOOKINGS;
+    let surveysList = [];
+    let liveStats = null;
+    if (liveData) {
+      const live = (liveData.bookings || []).slice().reverse().slice(0, 10).map(b => ({
+        id: 'live-' + (b.userId || b.ts),
+        name: b.name || '匿名',
+        date: b.date || '',
+        time: b.time || '',
+        via: 'Zoom',
+        status: 'confirmed',
+        zoomUrl: b.zoomUrl || '',
+        answers: { q1: '-', q2: '-', q3: '-', q4: '-', q5: '-' },
+        addedToCrm: false,
+        live: true,
+      }));
+      if (live.length > 0) bookings = live.concat(bookings);
+      surveysList = (liveData.survey_answers || []).slice().reverse().slice(0, 8);
+      liveStats = {
+        users: (liveData.users || []).length,
+        surveys: (liveData.survey_answers || []).length,
+        bookings: (liveData.bookings || []).length,
+      };
+    }
     const hotLeads = window.HOT_LEADS;
 
     const conv = (a, b) => b === 0 ? 0 : Math.round(a / b * 100);
@@ -64,6 +114,45 @@
           FPがやることは「Zoom面談に出る」だけ。新規顧客獲得の手間がほぼゼロになる。
         </div>
       </div>
+
+      ${liveStats ? `
+      <div style="background:linear-gradient(135deg,#06873f,#06c755);color:#fff;border-radius:10px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;">
+          <span style="width:8px;height:8px;background:#fff;border-radius:50%;animation:pulse 1.5s infinite;"></span> LIVE
+        </div>
+        <div style="font-size:12px;opacity:0.9;">公式LINEから入った実データ</div>
+        <div style="margin-left:auto;display:flex;gap:16px;font-size:13px;">
+          <div>友だち <strong>${liveStats.users}</strong></div>
+          <div>回答 <strong>${liveStats.surveys}</strong></div>
+          <div>予約 <strong>${liveStats.bookings}</strong></div>
+        </div>
+      </div>
+      <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}</style>
+      ` : ''}
+
+      ${surveysList.length > 0 ? `
+      <div class="section-title">📝 公式LINEからの最新アンケート回答</div>
+      <div class="line-card" style="margin-bottom:18px;">
+        ${surveysList.map(s => `
+          <div class="booking-row">
+            <div class="booking-when">
+              <div class="booking-time" style="font-size:11px;">${(s.ts || '').slice(5, 16).replace('T', ' ')}</div>
+              <div class="booking-date" style="font-size:10.5px;color:var(--muted);">回答済</div>
+            </div>
+            <div class="booking-main">
+              <div class="booking-name">userId: ${(s.userId || '').slice(0, 12)}…</div>
+              <div class="booking-meta">
+                ${escapeHtml(s.q1_テーマ || '-')} / ${escapeHtml(s.q2_年代 || '-')} / ${escapeHtml(s.q3_家族 || '-')} / ${escapeHtml(s.q4_年収 || '-')}
+              </div>
+              <div class="booking-want">💭 ${escapeHtml(s.q5_悩み || '-')}</div>
+            </div>
+            <div class="booking-cta">
+              <span class="line-status-pill on">LIVE</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
 
       <div class="section-title">直近30日のリード獲得ファネル</div>
       <div class="funnel-grid">
