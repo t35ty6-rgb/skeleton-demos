@@ -680,6 +680,8 @@
           <h3>メモ</h3>
           <div style="background:#fafbfc;border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-size:13px;line-height:1.6;">${escapeHtml(c.note)}</div>
         </div>` : ''}
+
+        ${renderReferralBlock(c)}
       </div>
     `;
     document.getElementById('modal-overlay').style.display = 'flex';
@@ -691,6 +693,66 @@
     document.getElementById('modal-draft-btn').addEventListener('click', () => {
       openDraftReplyModal(c, events, recs);
     });
+    const refCopy = document.getElementById('ref-copy-url');
+    if (refCopy) {
+      refCopy.addEventListener('click', () => {
+        const url = `https://line.me/R/ti/p/@511thleq?ref=${c.id}`;
+        navigator.clipboard.writeText(url);
+        refCopy.textContent = '✓ コピーしました';
+        setTimeout(() => { refCopy.textContent = '📋 URLをコピー'; }, 2200);
+      });
+    }
+  }
+
+  // ============================
+  // 紹介プログラム (顧客詳細モーダル内のブロック)
+  // ============================
+  function renderReferralBlock(client) {
+    // この顧客が紹介で連れてきた人数を source 文字列からカウント
+    const lastName = (client.name || '').split(/\s+/)[0];
+    const referredByMe = clients.filter(c =>
+      c.id !== client.id && (c.source || '').includes(lastName + '様')
+    );
+    const referralUrl = `https://line.me/R/ti/p/@511thleq?ref=${client.id}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(referralUrl)}`;
+
+    const referredList = referredByMe.length === 0
+      ? `<div style="font-size:12.5px;color:var(--muted);padding:14px;text-align:center;background:#fafbfc;border-radius:6px;">まだ ${escapeHtml(client.name)} 様経由のご紹介はありません</div>`
+      : `<ul style="list-style:none;padding:0;margin:0;display:grid;gap:6px;">
+          ${referredByMe.map(c => `
+            <li style="padding:10px 14px;background:#fafbfc;border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;">
+              <span><strong>${escapeHtml(c.name)}</strong> <span style="font-size:11px;color:var(--muted);">${window.LifeEvents.currentAge(c)}歳 / AUM ¥${fmtMoney(c.aum)}</span></span>
+              <span class="status-pill ${c.status}">${statusLabel(c.status)}</span>
+            </li>
+          `).join('')}
+        </ul>`;
+
+    return `
+      <div class="detail-section">
+        <h3>🌱 紹介プログラム <span class="count-badge">${referredByMe.length} 名 ご紹介</span></h3>
+        <div style="display:grid;grid-template-columns:200px 1fr;gap:16px;background:linear-gradient(135deg,#fbf4e6,#fff);border:1px solid #f0d36b;border-radius:10px;padding:18px;align-items:start;">
+          <div style="text-align:center;">
+            <img src="${qrUrl}" alt="referral QR" style="width:180px;height:180px;background:#fff;padding:6px;border:1px solid var(--line);border-radius:8px;">
+            <div style="font-size:10.5px;color:var(--muted);margin-top:6px;letter-spacing:0.05em;font-weight:600;">${escapeHtml(client.name)} 様 専用QR</div>
+          </div>
+          <div>
+            <div style="font-size:12.5px;color:var(--ink-2);line-height:1.7;margin-bottom:10px;">
+              この方が新しいお客様をご紹介してくださる時、上のQRコードを共有していただきます。<br>
+              スキャンで友だち追加されると <strong>自動で紹介者が ${escapeHtml(client.name)} 様 と紐付き</strong>、お礼メッセージも自動送信されます。
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+              <button class="ghost" id="ref-copy-url" style="font-size:12px;">📋 URLをコピー</button>
+              <a class="ghost" href="${qrUrl}" download="referral-${client.id}.png" style="font-size:12px;text-decoration:none;display:inline-block;padding:7px 12px;border:1px solid var(--line-2);border-radius:7px;color:var(--ink);">📥 QRをダウンロード</a>
+            </div>
+            <div style="font-size:11px;color:var(--muted);font-family:ui-monospace,Menlo,monospace;background:#fff;padding:6px 10px;border-radius:5px;border:1px solid var(--line);word-break:break-all;">${escapeHtml(referralUrl)}</div>
+          </div>
+        </div>
+        <div style="margin-top:14px;">
+          <h4 style="font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px;font-weight:700;">この方からのご紹介</h4>
+          ${referredList}
+        </div>
+      </div>
+    `;
   }
 
   // ============================
