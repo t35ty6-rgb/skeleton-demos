@@ -97,6 +97,7 @@
         ts: b.ts || '',
         recordingStatus: b.recordingStatus || '',
         driveUrl: b.driveUrl || '',
+        transcript: b.transcript || '',
       }));
       if (live.length > 0) bookings = live.concat(bookings);
       surveysList = (liveData.survey_answers || []).slice().reverse().slice(0, 8);
@@ -211,6 +212,9 @@
             ` : rec === 'saved' ? `
               <a class="btn-mini" href="${escapeHtml(b.driveUrl||'#')}" target="_blank">📁 録画を開く (Drive)</a>
               <a class="btn-mini" href="${escapeHtml(b.zoomUrl)}" target="_blank">Zoomを開く</a>
+              ${b.transcript
+                ? `<button class="btn-mini" data-view-transcript="${escapeHtml(b.ts)}" style="background:#fff8e1;border-color:#f0d36b;color:#8a6f1e;font-weight:600;">📝 議事録を見る</button>`
+                : `<button class="btn-mini" data-gen-transcript="${escapeHtml(b.ts)}" style="background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;font-weight:700;">✨ AI議事録を生成</button>`}
             ` : `
               <button class="btn-rec-start" data-rec-start="${escapeHtml(b.ts)}" data-zoom="${escapeHtml(b.zoomUrl)}">● 録画ONでZoom開始</button>
               <a class="btn-mini" href="${escapeHtml(b.zoomUrl)}" target="_blank">録画なしで開く</a>
@@ -361,6 +365,70 @@
           btn.disabled = false;
         }
       });
+    });
+    // AI議事録 生成
+    document.querySelectorAll('[data-gen-transcript]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const ts = btn.dataset.genTranscript;
+        btn.disabled = true;
+        btn.textContent = '✨ 生成中...';
+        try {
+          const r = await fetch(CLOUD_RUN_BASE + '/api/transcript?ts=' + encodeURIComponent(ts), { method: 'POST' });
+          const data = await r.json();
+          if (data.ok && data.transcript) {
+            await fetchLiveData();
+            renderLeadFunnelInner();
+            showTranscriptModal(data.transcript, '✨ AI議事録 (自動生成)');
+          } else {
+            alert('議事録生成失敗: ' + (data.error || ''));
+            btn.disabled = false;
+            btn.textContent = '✨ AI議事録を生成';
+          }
+        } catch (e) {
+          alert('議事録生成失敗: ' + e.message);
+          btn.disabled = false;
+        }
+      });
+    });
+    // 議事録を見る
+    document.querySelectorAll('[data-view-transcript]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const ts = btn.dataset.viewTranscript;
+        // ライブデータから該当 booking の transcript を取得
+        const live = (liveData && liveData.bookings) || [];
+        const b = live.find(x => String(x.ts).slice(0,19) === String(ts).slice(0,19));
+        if (b && b.transcript) {
+          showTranscriptModal(b.transcript, '📝 議事録 — ' + (b.name || ''));
+        } else {
+          alert('議事録が見つかりません');
+        }
+      });
+    });
+  }
+
+  function showTranscriptModal(transcript, title) {
+    const html = `
+      <div class="modal-header">
+        <h2>${title || '議事録'}</h2>
+        <button class="modal-close" id="tr-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#fafbfc;border:1px solid var(--line);border-radius:8px;padding:18px 22px;font-family:'Noto Sans JP',monospace;font-size:12.5px;line-height:1.85;white-space:pre-wrap;max-height:600px;overflow-y:auto;letter-spacing:0.01em;">${escapeHtml(transcript)}</div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button class="primary" id="tr-copy">📋 全文をコピー</button>
+          <button id="tr-close-btn">閉じる</button>
+        </div>
+        <div id="tr-msg" style="font-size:11.5px;color:var(--muted);margin-top:8px;text-align:center;"></div>
+      </div>
+    `;
+    document.getElementById('modal-content').innerHTML = html;
+    document.getElementById('modal-overlay').style.display = 'flex';
+    const close = () => { document.getElementById('modal-overlay').style.display = 'none'; };
+    document.getElementById('tr-close').addEventListener('click', close);
+    document.getElementById('tr-close-btn').addEventListener('click', close);
+    document.getElementById('tr-copy').addEventListener('click', () => {
+      navigator.clipboard.writeText(transcript);
+      document.getElementById('tr-msg').textContent = '✓ クリップボードにコピーしました';
     });
   }
 
