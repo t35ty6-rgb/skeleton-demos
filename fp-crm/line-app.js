@@ -577,11 +577,31 @@
           </div>
         </div>`;
     }).join('');
-    // 末尾に完了済み件数表示
+    // 末尾に完了済み件数表示 — クリックで詳細リスト
     if (archivedCount > 0) {
-      target.innerHTML += `<div style="margin-top:14px;padding:10px 14px;background:#f8fafc;border:1px dashed #e5e7eb;border-radius:8px;text-align:center;font-size:12px;color:var(--muted);">✓ 完了済み <strong style="color:var(--ink);">${archivedCount}件</strong> はアーカイブ済み <a href="#" id="fp-show-archived" style="color:var(--accent);margin-left:6px;font-weight:600;">アーカイブを見る →</a></div>`;
+      const archivedItems = allBookings.filter(b => archived.has(b.ts));
+      const archivedNames = archivedItems.slice(0, 3).map(b => (b.name || '匿名') + '様').join(' / ');
+      const moreSuffix = archivedItems.length > 3 ? ` 他${archivedItems.length - 3}名` : '';
+      target.innerHTML += `
+        <div style="margin-top:14px;padding:14px 18px;background:linear-gradient(135deg,#dcfce7,#f0fdf4);border:1px solid #86efac;border-radius:10px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <span style="font-size:18px;">✅</span>
+            <strong style="font-size:13.5px;color:#166534;">完了済み ${archivedCount}件 — 顧客台帳に反映済み</strong>
+          </div>
+          <div style="font-size:12px;color:#365314;margin-left:28px;margin-bottom:8px;">${escapeHtml(archivedNames + moreSuffix)}</div>
+          <div style="margin-left:28px;display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="#" id="fp-jump-clients-tab" style="font-size:11.5px;padding:6px 12px;background:#fff;border:1px solid #86efac;color:#166534;border-radius:6px;text-decoration:none;font-weight:700;">→ 顧客台帳タブで確認</a>
+            <a href="#" id="fp-show-archived" style="font-size:11.5px;padding:6px 12px;background:transparent;border:1px solid transparent;color:#166534;text-decoration:none;font-weight:600;">アーカイブを見る →</a>
+          </div>
+        </div>`;
       const sa = document.getElementById('fp-show-archived');
-      if (sa) sa.addEventListener('click', (e) => { e.preventDefault(); showArchivedBookings(allBookings.filter(b => archived.has(b.ts))); });
+      if (sa) sa.addEventListener('click', (e) => { e.preventDefault(); showArchivedBookings(archivedItems); });
+      const jc = document.getElementById('fp-jump-clients-tab');
+      if (jc) jc.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tabBtn = document.querySelector('div.tab[data-tab="clients"]');
+        if (tabBtn) tabBtn.click();
+      });
     }
     bindBookingsButtons();
   }
@@ -927,17 +947,19 @@
 
   function ensureCalendarSidePanel() { /* 後方互換ダミー */ }
 
-  // ===== メモ → タスク自動抽出 (ドック型パネル: 右/左/下、リサイズ可) =====
+  // ===== メモ → タスク自動抽出 (ブラウザウィンドウ風: ヘッダードラッグ移動 + 縁リサイズ) =====
   function openMemoModal(booking, bookingTs) {
     const name = (booking && booking.name) || 'お客様';
     const memoKey = 'fp-memo-' + (bookingTs || '');
     const existingMemo = localStorage.getItem(memoKey) || '';
 
-    // 前回のドック位置とサイズを復元
-    const dock = localStorage.getItem('fp-memo-dock') || 'right';
-    const sizeStr = localStorage.getItem('fp-memo-size-' + dock);
-    const defaultSize = dock === 'bottom' ? 380 : 520;
-    const size = sizeStr ? parseInt(sizeStr, 10) : defaultSize;
+    // 前回の位置・サイズを復元
+    const savedPos = JSON.parse(localStorage.getItem('fp-memo-pos') || '{}');
+    const savedSize = JSON.parse(localStorage.getItem('fp-memo-size') || '{}');
+    const w = savedSize.w || 520;
+    const h = savedSize.h || Math.min(640, window.innerHeight - 100);
+    const left = (savedPos.left != null) ? savedPos.left : Math.max(40, window.innerWidth - w - 40);
+    const top = (savedPos.top != null) ? savedPos.top : 80;
 
     // 既存パネルがあれば閉じる
     const old = document.getElementById('fp-memo-panel');
@@ -945,46 +967,42 @@
 
     const panel = document.createElement('div');
     panel.id = 'fp-memo-panel';
-    panel.dataset.dock = dock;
-    applyDockStyles(panel, dock, size);
+    panel.style.cssText = `position:fixed;top:${top}px;left:${left}px;width:${w}px;height:${h}px;z-index:9998;background:#fff;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,0.18);border:1px solid #e5e7eb;display:flex;flex-direction:column;overflow:hidden;min-width:340px;min-height:280px;`;
 
     panel.innerHTML = `
-      <div id="fp-memo-resize-handle" style="position:absolute;background:transparent;z-index:2;"></div>
-      <div style="display:flex;flex-direction:column;height:100%;background:#fff;box-shadow:0 -4px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb;">
-        <div data-drag-handle style="padding:14px 18px 10px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px;background:#fafbfc;">
-          <div style="flex:1;min-width:0;">
-            <h2 style="margin:0 0 2px;font-family:'Noto Serif JP',serif;font-size:16px;">📝 面談メモ — ${escapeHtml(name)}様</h2>
-            <p style="margin:0;color:#6b7280;font-size:11px;line-height:1.4;">期限+動作を含めると自動でタスク化されます (○月○日に・来週・3ヶ月後 等)</p>
-          </div>
-          <div style="display:flex;gap:4px;flex-shrink:0;">
-            <button data-dock="float" title="フリー位置 (ウィンドウ風)" style="${dockBtnStyle(dock==='float')}">🪟</button>
-            <button data-dock="left" title="左ドック" style="${dockBtnStyle(dock==='left')}">⬅</button>
-            <button data-dock="right" title="右ドック" style="${dockBtnStyle(dock==='right')}">➡</button>
-            <button data-dock="bottom" title="下ドック" style="${dockBtnStyle(dock==='bottom')}">⬇</button>
-            <button id="fp-memo-close" title="閉じる" style="font-size:14px;width:32px;height:30px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;color:#6b7280;font-family:inherit;">✕</button>
-          </div>
+      <div id="fp-memo-titlebar" style="padding:12px 16px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#fafbfc,#f1f5f9);cursor:grab;user-select:none;">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span style="width:11px;height:11px;border-radius:50%;background:#ff5f57;"></span>
+          <span style="width:11px;height:11px;border-radius:50%;background:#febc2e;"></span>
+          <span style="width:11px;height:11px;border-radius:50%;background:#28c840;"></span>
         </div>
-        <div style="padding:14px 18px;overflow-y:auto;flex:1;">
-          <div style="background:#fffbf2;border:1px solid #f0d36b;border-radius:8px;padding:9px 13px;margin-bottom:12px;font-size:11px;color:#5e4d1a;line-height:1.5;">
-            <strong>書き方のコツ:</strong> 「○月○日までに XXする」「来週 △△を送る」「3ヶ月後に □□確認」
-          </div>
-          <textarea id="fp-memo-text" placeholder="例:&#10;・新NISAの最適配分シミュレーション資料を 来週中に送る&#10;・教育費見直し 3ヶ月後に再面談&#10;・iDeCo加入手続きの進捗を 2ヶ月後に確認" style="width:100%;min-height:180px;padding:13px 15px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:'Noto Sans JP',sans-serif;line-height:1.7;resize:vertical;box-sizing:border-box;">${escapeHtml(existingMemo)}</textarea>
-          <div id="fp-memo-tasks" style="margin-top:14px;display:none;"></div>
+        <div style="flex:1;min-width:0;text-align:center;">
+          <strong style="font-size:13px;font-family:'Noto Sans JP',sans-serif;">📝 面談メモ — ${escapeHtml(name)}様</strong>
         </div>
-        <div style="padding:12px 18px;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end;background:#fafbfc;">
-          <button id="fp-memo-save" style="font-size:13px;padding:9px 22px;background:linear-gradient(135deg,#b8893d,#d4a017);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-family:inherit;">💡 保存して タスク自動抽出</button>
+        <button id="fp-memo-close" title="閉じる" style="font-size:13px;width:26px;height:24px;background:#fff;border:1px solid #e5e7eb;border-radius:5px;cursor:pointer;color:#6b7280;font-family:inherit;">✕</button>
+      </div>
+      <div style="padding:14px 18px;overflow-y:auto;flex:1;">
+        <div style="background:#fffbf2;border:1px solid #f0d36b;border-radius:8px;padding:9px 13px;margin-bottom:12px;font-size:11px;color:#5e4d1a;line-height:1.5;">
+          <strong>書き方のコツ:</strong> 「○月○日までに XXする」「来週 △△を送る」「3ヶ月後に □□確認」
         </div>
-      </div>`;
+        <textarea id="fp-memo-text" placeholder="例:&#10;・新NISAの最適配分シミュレーション資料を 来週中に送る&#10;・教育費見直し 3ヶ月後に再面談&#10;・iDeCo加入手続きの進捗を 2ヶ月後に確認" style="width:100%;min-height:180px;padding:13px 15px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:'Noto Sans JP',sans-serif;line-height:1.7;resize:vertical;box-sizing:border-box;">${escapeHtml(existingMemo)}</textarea>
+        <div id="fp-memo-tasks" style="margin-top:14px;display:none;"></div>
+      </div>
+      <div style="padding:11px 18px;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end;background:#fafbfc;">
+        <button id="fp-memo-save" style="font-size:13px;padding:9px 22px;background:linear-gradient(135deg,#b8893d,#d4a017);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-family:inherit;">💡 保存して タスク自動抽出</button>
+      </div>
+      <!-- 四方リサイズハンドル -->
+      <div data-resize="e"  style="position:absolute;top:8px;right:0;bottom:8px;width:6px;cursor:ew-resize;"></div>
+      <div data-resize="w"  style="position:absolute;top:8px;left:0;bottom:8px;width:6px;cursor:ew-resize;"></div>
+      <div data-resize="s"  style="position:absolute;left:8px;right:8px;bottom:0;height:6px;cursor:ns-resize;"></div>
+      <div data-resize="n"  style="position:absolute;left:8px;right:8px;top:0;height:6px;cursor:ns-resize;"></div>
+      <div data-resize="se" style="position:absolute;right:0;bottom:0;width:14px;height:14px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 50%,rgba(184,137,61,0.5) 50%);"></div>
+      <div data-resize="sw" style="position:absolute;left:0;bottom:0;width:14px;height:14px;cursor:nesw-resize;"></div>
+      <div data-resize="ne" style="position:absolute;right:0;top:0;width:14px;height:14px;cursor:nesw-resize;"></div>
+      <div data-resize="nw" style="position:absolute;left:0;top:0;width:14px;height:14px;cursor:nwse-resize;"></div>
+    `;
     document.body.appendChild(panel);
 
-    // ドック切替
-    panel.querySelectorAll('[data-dock]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const newDock = btn.dataset.dock;
-        localStorage.setItem('fp-memo-dock', newDock);
-        openMemoModal(booking, bookingTs);
-      });
-    });
     document.getElementById('fp-memo-close').addEventListener('click', () => panel.remove());
     document.getElementById('fp-memo-save').addEventListener('click', () => {
       const memo = document.getElementById('fp-memo-text').value;
@@ -997,120 +1015,64 @@
       renderExtractedTasks(tasks);
     });
 
-    // フリー位置時はドラッグ移動+右下リサイズ、ドック時は端のリサイズ
-    if (dock === 'float') setupFreeDrag(panel);
-    else setupResizeHandle(panel, dock);
+    setupWindowDragAndResize(panel);
   }
 
-  function dockBtnStyle(active) {
-    return `font-size:13px;width:32px;height:30px;background:${active?'#1f2937':'#fff'};color:${active?'#fff':'#374151'};border:1px solid ${active?'#1f2937':'#e5e7eb'};border-radius:6px;cursor:pointer;font-family:inherit;`;
-  }
-
-  function applyDockStyles(panel, dock, size) {
-    const base = 'position:fixed;z-index:9998;display:flex;background:transparent;';
-    if (dock === 'left') {
-      panel.style.cssText = base + `top:0;left:0;bottom:0;width:${size}px;`;
-    } else if (dock === 'bottom') {
-      panel.style.cssText = base + `left:0;right:0;bottom:0;height:${size}px;`;
-    } else if (dock === 'float') {
-      // フリー位置 (ブラウザウィンドウ風)
-      const fp = JSON.parse(localStorage.getItem('fp-memo-float-pos') || '{}');
-      const fs = JSON.parse(localStorage.getItem('fp-memo-float-size') || '{}');
-      const left = fp.left ?? Math.max(40, window.innerWidth - 600);
-      const top = fp.top ?? 80;
-      const w = fs.w ?? 520;
-      const h = fs.h ?? Math.min(640, window.innerHeight - 120);
-      panel.style.cssText = base + `top:${top}px;left:${left}px;width:${w}px;height:${h}px;border-radius:12px;overflow:hidden;`;
-    } else {
-      panel.style.cssText = base + `top:0;right:0;bottom:0;width:${size}px;`;
-    }
-  }
-
-  // フリー位置: ヘッダーをドラッグで移動 + 右下隅でリサイズ
-  function setupFreeDrag(panel) {
-    const header = panel.querySelector('[data-drag-handle]');
-    if (!header) return;
+  function setupWindowDragAndResize(panel) {
+    const bar = panel.querySelector('#fp-memo-titlebar');
+    // タイトルバードラッグ → 移動
     let dragging = false, sx = 0, sy = 0, sLeft = 0, sTop = 0;
-    header.style.cursor = 'grab';
-    header.addEventListener('mousedown', (e) => {
-      if (e.target.closest('button,a')) return; // ボタンは除外
+    bar.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button')) return;
       dragging = true; sx = e.clientX; sy = e.clientY;
       const r = panel.getBoundingClientRect();
       sLeft = r.left; sTop = r.top;
-      header.style.cursor = 'grabbing';
+      bar.style.cursor = 'grabbing';
       document.body.style.userSelect = 'none';
       e.preventDefault();
     });
-    document.addEventListener('mousemove', (e) => {
-      if (!dragging) return;
-      const newLeft = Math.max(0, Math.min(window.innerWidth - 200, sLeft + (e.clientX - sx)));
-      const newTop = Math.max(0, Math.min(window.innerHeight - 60, sTop + (e.clientY - sy)));
-      panel.style.left = newLeft + 'px';
-      panel.style.top = newTop + 'px';
-      panel.style.right = 'auto'; panel.style.bottom = 'auto';
-      localStorage.setItem('fp-memo-float-pos', JSON.stringify({ left: newLeft, top: newTop }));
-    });
-    document.addEventListener('mouseup', () => {
-      if (dragging) { dragging = false; header.style.cursor = 'grab'; document.body.style.userSelect = ''; }
-    });
+    const onMove = (e) => {
+      if (dragging) {
+        const nl = Math.max(0, Math.min(window.innerWidth - 240, sLeft + (e.clientX - sx)));
+        const nt = Math.max(0, Math.min(window.innerHeight - 60, sTop + (e.clientY - sy)));
+        panel.style.left = nl + 'px';
+        panel.style.top = nt + 'px';
+        localStorage.setItem('fp-memo-pos', JSON.stringify({ left: nl, top: nt }));
+      }
+      if (resizing) {
+        const r = panel.getBoundingClientRect();
+        let nl = r.left, nt = r.top, nw = r.width, nh = r.height;
+        if (resizing.includes('e')) nw = Math.max(340, e.clientX - r.left);
+        if (resizing.includes('w')) { nw = Math.max(340, r.right - e.clientX); nl = e.clientX; }
+        if (resizing.includes('s')) nh = Math.max(280, e.clientY - r.top);
+        if (resizing.includes('n')) { nh = Math.max(280, r.bottom - e.clientY); nt = e.clientY; }
+        panel.style.width = nw + 'px';
+        panel.style.height = nh + 'px';
+        if (resizing.includes('w')) panel.style.left = nl + 'px';
+        if (resizing.includes('n')) panel.style.top = nt + 'px';
+        localStorage.setItem('fp-memo-size', JSON.stringify({ w: nw, h: nh }));
+        localStorage.setItem('fp-memo-pos', JSON.stringify({ left: nl, top: nt }));
+      }
+    };
+    const onUp = () => {
+      if (dragging) { dragging = false; bar.style.cursor = 'grab'; document.body.style.userSelect = ''; }
+      if (resizing) { resizing = null; document.body.style.userSelect = ''; }
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
 
-    // 右下リサイズハンドル
-    const corner = document.createElement('div');
-    corner.style.cssText = 'position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 50%,rgba(184,137,61,0.5) 50%);z-index:3;';
-    panel.appendChild(corner);
-    let resizing = false, rx = 0, ry = 0, rw = 0, rh = 0;
-    corner.addEventListener('mousedown', (e) => {
-      resizing = true; rx = e.clientX; ry = e.clientY;
-      const r = panel.getBoundingClientRect();
-      rw = r.width; rh = r.height;
-      document.body.style.userSelect = 'none';
-      e.preventDefault(); e.stopPropagation();
+    // 縁/隅リサイズ
+    let resizing = null;
+    panel.querySelectorAll('[data-resize]').forEach(h => {
+      h.addEventListener('mousedown', (e) => {
+        resizing = h.dataset.resize;
+        document.body.style.userSelect = 'none';
+        e.preventDefault(); e.stopPropagation();
+      });
     });
-    document.addEventListener('mousemove', (e) => {
-      if (!resizing) return;
-      const nw = Math.max(320, rw + (e.clientX - rx));
-      const nh = Math.max(280, rh + (e.clientY - ry));
-      panel.style.width = nw + 'px';
-      panel.style.height = nh + 'px';
-      localStorage.setItem('fp-memo-float-size', JSON.stringify({ w: nw, h: nh }));
-    });
-    document.addEventListener('mouseup', () => { if (resizing) { resizing = false; document.body.style.userSelect = ''; } });
   }
 
-  function setupResizeHandle(panel, dock) {
-    const handle = panel.querySelector('#fp-memo-resize-handle');
-    if (!handle) return;
-    const HANDLE_W = 6;
-    if (dock === 'right') {
-      handle.style.cssText += `top:0;bottom:0;left:0;width:${HANDLE_W}px;cursor:ew-resize;`;
-    } else if (dock === 'left') {
-      handle.style.cssText += `top:0;bottom:0;right:0;width:${HANDLE_W}px;cursor:ew-resize;`;
-    } else {
-      handle.style.cssText += `left:0;right:0;top:0;height:${HANDLE_W}px;cursor:ns-resize;`;
-    }
-    handle.style.background = 'rgba(184,137,61,0.0)';
-    handle.addEventListener('mouseenter', () => { handle.style.background = 'rgba(184,137,61,0.4)'; });
-    handle.addEventListener('mouseleave', () => { handle.style.background = 'rgba(184,137,61,0.0)'; });
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => {
-      dragging = true; e.preventDefault();
-      document.body.style.userSelect = 'none';
-    });
-    document.addEventListener('mousemove', (e) => {
-      if (!dragging) return;
-      let newSize;
-      if (dock === 'right') newSize = window.innerWidth - e.clientX;
-      else if (dock === 'left') newSize = e.clientX;
-      else newSize = window.innerHeight - e.clientY;
-      newSize = Math.max(300, Math.min(dock === 'bottom' ? window.innerHeight - 200 : window.innerWidth - 300, newSize));
-      if (dock === 'right' || dock === 'left') panel.style.width = newSize + 'px';
-      else panel.style.height = newSize + 'px';
-      localStorage.setItem('fp-memo-size-' + dock, String(newSize));
-    });
-    document.addEventListener('mouseup', () => {
-      if (dragging) { dragging = false; document.body.style.userSelect = ''; }
-    });
-  }
+
 
   // 自然言語メモ → タスク配列に変換 (ルールベース、外部API不要)
   function extractTasksFromMemo(memo, booking) {
