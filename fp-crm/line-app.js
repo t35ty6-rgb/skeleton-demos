@@ -364,8 +364,19 @@
       </section>
 
       <section class="board-section" id="section-recording">
-        <h2>💻 面談予約 と 録画・議事録</h2>
-        <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">確定済みの予約。面談直前に「● 録画ONでZoom開始」 → 終了時「■ 録画停止」 → 「✨ AI議事録を生成」 の順で進める。</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+          <h2 style="margin:0;">💻 面談予約 と 録画・議事録</h2>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);">
+            並び順:
+            <select id="fp-bookings-sort" style="font-size:12px;padding:5px 8px;border:1px solid #e5e7eb;border-radius:6px;font-family:inherit;background:#fff;">
+              <option value="date-desc">面談日 — 新しい順</option>
+              <option value="date-asc">面談日 — 古い順</option>
+              <option value="created-desc">予約日 — 新しい順</option>
+              <option value="name">お客様名 — あいうえお順</option>
+            </select>
+          </div>
+        </div>
+        <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">確定済みの予約。面談直前に「● 録画ONでZoom開始」 → 終了時「■ 録画停止」 → 終わったら「✓ 完了 (台帳へ)」 で顧客台帳に自動反映。</p>
         <div id="bookings-list"></div>
       </section>
 
@@ -460,9 +471,29 @@
     if (!target) return;
     // 完了アーカイブ済み bookingTs のセット (localStorage)
     const archived = new Set(JSON.parse(localStorage.getItem('fp-booking-archived') || '[]'));
-    const allBookings = ((liveData && liveData.bookings) || []).slice().reverse();
+    const sortMode = localStorage.getItem('fp-bookings-sort') || 'date-desc';
+    // 並び替え
+    const cmp = {
+      'date-desc': (a, b) => String(b.date || '').localeCompare(String(a.date || '')),
+      'date-asc':  (a, b) => String(a.date || '').localeCompare(String(b.date || '')),
+      'created-desc': (a, b) => String(b.ts || '').localeCompare(String(a.ts || '')),
+      'name': (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ja'),
+    }[sortMode] || ((a, b) => 0);
+    const allBookings = ((liveData && liveData.bookings) || []).slice().sort(cmp);
     const bookings = allBookings.filter(b => !archived.has(b.ts)).slice(0, 8);
     const archivedCount = allBookings.filter(b => archived.has(b.ts)).length;
+    // セレクトに現状値反映 + イベント
+    const sortSel = document.getElementById('fp-bookings-sort');
+    if (sortSel) {
+      sortSel.value = sortMode;
+      if (!sortSel._bound) {
+        sortSel.addEventListener('change', (e) => {
+          localStorage.setItem('fp-bookings-sort', e.target.value);
+          fillBookingsList();
+        });
+        sortSel._bound = true;
+      }
+    }
     if (bookings.length === 0) {
       target.innerHTML = `<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);font-size:13px;">まだ進行中の予約はありません${archivedCount > 0 ? ` <a href="#" id="fp-show-archived" style="color:var(--accent);margin-left:6px;">完了済み${archivedCount}件を見る</a>` : ''}</div>`;
       if (archivedCount > 0) {
@@ -553,6 +584,45 @@
       if (sa) sa.addEventListener('click', (e) => { e.preventDefault(); showArchivedBookings(allBookings.filter(b => archived.has(b.ts))); });
     }
     bindBookingsButtons();
+  }
+
+  function showCompletionToast(booking, client, isNew) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border-left:5px solid #06c755;border-radius:12px;padding:16px 20px;box-shadow:0 12px 36px rgba(0,0,0,0.18);z-index:10002;max-width:420px;font-family:inherit;';
+    t.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <div style="font-size:22px;">✅</div>
+        <strong style="font-size:14.5px;">面談完了 → 顧客台帳に反映しました</strong>
+      </div>
+      <div style="font-size:12.5px;color:#1f2937;line-height:1.7;margin-bottom:12px;">
+        ・<strong>${escapeHtml(booking.name||'お客様')}様</strong> ${isNew ? 'を <span style="color:#06c755;font-weight:700;">新規顧客として登録</span>' : 'の<strong>最終接触日を更新</strong>'}<br>
+        ・台帳: ${client ? `<strong>${escapeHtml(client.name)}</strong> (${client.status === 'new' ? '新規' : client.status === 'important' ? '重点' : client.status === 'active' ? '管理中' : '休眠'})` : '反映なし'}<br>
+        ・最終接触: ${client ? client.lastContact : '-'}
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button id="fp-jump-client" style="font-size:11.5px;padding:7px 12px;background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;border-radius:6px;cursor:pointer;font-weight:700;font-family:inherit;">→ 顧客台帳で確認</button>
+        <button id="fp-comp-close" style="font-size:11.5px;padding:7px 12px;background:#fff;border:1px solid #e5e7eb;color:#374151;border-radius:6px;cursor:pointer;font-family:inherit;">✕</button>
+      </div>`;
+    document.body.appendChild(t);
+    document.getElementById('fp-comp-close').addEventListener('click', () => t.remove());
+    document.getElementById('fp-jump-client').addEventListener('click', () => {
+      t.remove();
+      // 顧客台帳タブに切り替えて該当顧客の行をハイライト
+      const tabBtn = document.querySelector('div.tab[data-tab="clients"]');
+      if (tabBtn) tabBtn.click();
+      setTimeout(() => {
+        if (client && client.id) {
+          const row = document.querySelector(`[data-client-id="${client.id}"]`);
+          if (row) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            row.style.transition = 'all 0.4s';
+            row.style.background = '#fff8e1';
+            setTimeout(() => row.style.background = '', 2500);
+          }
+        }
+      }, 400);
+    });
+    setTimeout(() => t.remove(), 12000);
   }
 
   function showArchivedBookings(items) {
@@ -811,86 +881,51 @@
     setTimeout(() => toast.remove(), 30000);
   }
 
-  // ===== 候補日確定時の自分のGoogle カレンダー比較パネル (右半分) =====
+  // ===== Google カレンダーを別ポップアップウィンドウで右側に開く =====
+  // iframe 埋込は Google 側 X-Frame-Options で禁止されてるので、window.open で別窓を右半分に配置
+  let _fpCalPopup = null;
   function toggleCalendarSidePanel() {
-    const existing = document.getElementById('fp-cal-side');
-    if (existing) {
-      existing.remove();
-      document.body.style.paddingRight = '';
-      localStorage.setItem('fp-cal-side-open', '0');
+    if (_fpCalPopup && !_fpCalPopup.closed) {
+      _fpCalPopup.close();
+      _fpCalPopup = null;
       const btn = document.getElementById('fp-toggle-cal');
       if (btn) btn.textContent = '🗓 自分のGoogleカレンダーを並べて表示';
-    } else {
-      ensureCalendarSidePanel();
+      return;
     }
-  }
-
-  function ensureCalendarSidePanel() {
-    if (document.getElementById('fp-cal-side')) return;
-    const widthStr = localStorage.getItem('fp-cal-side-width');
-    const width = widthStr ? parseInt(widthStr, 10) : Math.floor(window.innerWidth * 0.42);
-
-    const panel = document.createElement('div');
-    panel.id = 'fp-cal-side';
-    panel.style.cssText = `position:fixed;top:0;right:0;bottom:0;width:${width}px;z-index:9997;background:#fff;border-left:1px solid #e5e7eb;box-shadow:-4px 0 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;`;
-    panel.innerHTML = `
-      <div id="fp-cal-resize" style="position:absolute;top:0;bottom:0;left:0;width:6px;cursor:ew-resize;z-index:2;background:transparent;"></div>
-      <div style="padding:12px 16px;border-bottom:1px solid #e5e7eb;background:#fafbfc;display:flex;align-items:center;gap:8px;">
-        <strong style="flex:1;font-size:13px;">🗓 自分の Google カレンダー (候補日と比較)</strong>
-        <a href="https://calendar.google.com/calendar/u/0/r" target="_blank" style="font-size:11px;padding:5px 10px;border:1px solid #e5e7eb;border-radius:6px;color:#374151;text-decoration:none;font-weight:600;">↗ 別窓で開く</a>
-        <button id="fp-cal-close" style="font-size:14px;width:28px;height:28px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;color:#6b7280;font-family:inherit;">✕</button>
-      </div>
-      <div id="fp-cal-frame-wrap" style="flex:1;position:relative;background:#f8fafc;">
-        <iframe id="fp-cal-frame" src="https://calendar.google.com/calendar/u/0/r/week" style="width:100%;height:100%;border:none;display:block;"></iframe>
-        <div id="fp-cal-fallback" style="display:none;position:absolute;inset:0;background:#fff;padding:32px;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
-          <div style="font-size:48px;margin-bottom:14px;">🗓</div>
-          <strong style="font-size:15px;margin-bottom:8px;">Google カレンダーが埋め込み表示できません</strong>
-          <p style="font-size:12.5px;color:#6b7280;line-height:1.7;margin:0 0 20px;max-width:340px;">Google 側のセキュリティ設定 (X-Frame-Options) により埋め込み不可です。<br>下のボタンから別窓で開いて、左右に並べて使ってください。</p>
-          <a href="https://calendar.google.com/calendar/u/0/r/week" target="_blank" style="font-size:13px;padding:11px 22px;background:linear-gradient(135deg,#b8893d,#d4a017);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;">↗ 別窓で Google カレンダーを開く</a>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(panel);
-    document.body.style.paddingRight = width + 'px';
-    localStorage.setItem('fp-cal-side-open', '1');
+    // 画面の右半分を計算してポップアップ
+    const sw = window.screen.availWidth || screen.width;
+    const sh = window.screen.availHeight || screen.height;
+    const w = Math.floor(sw / 2);
+    const h = sh - 60;
+    const left = sw - w;
+    const top = 20;
+    const features = `width=${w},height=${h},left=${left},top=${top},toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
+    _fpCalPopup = window.open('https://calendar.google.com/calendar/u/0/r/week', 'fp-cal-window', features);
+    if (!_fpCalPopup) {
+      alert('ポップアップがブロックされました。\n\nブラウザのアドレスバー右の 🚫 アイコンをクリック → 「このサイトのポップアップを常に許可」 → もう一度ボタンを押してください。');
+      return;
+    }
+    // ブラウザによっては既存タブにフォーカスを取られるので、メインウィンドウに戻す
+    try { window.focus(); } catch (_) {}
+    // 念のため自分のCRMウィンドウを左半分に寄せる
+    try {
+      window.moveTo(0, 20);
+      window.resizeTo(w, h);
+    } catch (_) { /* 一部ブラウザで禁止 */ }
     const btn = document.getElementById('fp-toggle-cal');
     if (btn) btn.textContent = '✕ カレンダーを閉じる';
-
-    // 閉じる
-    document.getElementById('fp-cal-close').addEventListener('click', toggleCalendarSidePanel);
-
-    // iframe が拒否されたら fallback 表示 (load イベントだけだとX-Frame拒否は検知しにくい→3秒後にURLが空白か確認)
-    const iframe = document.getElementById('fp-cal-frame');
-    iframe.addEventListener('error', () => showCalFallback());
-    setTimeout(() => {
-      // iframe の中身にアクセスできないなら正常にロード or 拒否、区別できないので一旦保留
-      try {
-        const doc = iframe.contentDocument;
-        if (!doc || !doc.body || !doc.body.innerHTML) showCalFallback();
-      } catch (e) { /* cross-origin = normal load */ }
-    }, 4000);
-
-    // リサイズハンドル
-    const handle = document.getElementById('fp-cal-resize');
-    handle.addEventListener('mouseenter', () => { handle.style.background = 'rgba(184,137,61,0.4)'; });
-    handle.addEventListener('mouseleave', () => { handle.style.background = 'transparent'; });
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; e.preventDefault(); document.body.style.userSelect = 'none'; });
-    document.addEventListener('mousemove', (e) => {
-      if (!dragging) return;
-      const w = Math.max(320, Math.min(window.innerWidth - 360, window.innerWidth - e.clientX));
-      panel.style.width = w + 'px';
-      document.body.style.paddingRight = w + 'px';
-      localStorage.setItem('fp-cal-side-width', String(w));
-    });
-    document.addEventListener('mouseup', () => { if (dragging) { dragging = false; document.body.style.userSelect = ''; } });
+    // ポップアップが閉じられたか定期チェック → ボタン文言戻す
+    const checkClosed = setInterval(() => {
+      if (!_fpCalPopup || _fpCalPopup.closed) {
+        clearInterval(checkClosed);
+        _fpCalPopup = null;
+        const b = document.getElementById('fp-toggle-cal');
+        if (b) b.textContent = '🗓 自分のGoogleカレンダーを並べて表示';
+      }
+    }, 1500);
   }
 
-  function showCalFallback() {
-    const fb = document.getElementById('fp-cal-fallback');
-    const fr = document.getElementById('fp-cal-frame');
-    if (fb && fr) { fb.style.display = 'flex'; fr.style.display = 'none'; }
-  }
+  function ensureCalendarSidePanel() { /* 後方互換ダミー */ }
 
   // ===== メモ → タスク自動抽出 (ドック型パネル: 右/左/下、リサイズ可) =====
   function openMemoModal(booking, bookingTs) {
@@ -1395,14 +1430,40 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         set.add(b.ts);
         localStorage.setItem('fp-booking-archived', JSON.stringify([...set]));
         // 顧客の lastContact を面談日に更新 (お客様マッチ)
+        let matched = null;
+        let createdNew = false;
         if (window.DUMMY_CLIENTS) {
-          const c = window.DUMMY_CLIENTS.find(x => x.lineFriendId === b.userId || x.name === b.name);
-          if (c) {
-            c.lastContact = String(b.date).slice(0, 10);
-            try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS)); } catch (_) {}
+          matched = window.DUMMY_CLIENTS.find(x => x.lineFriendId === b.userId || x.name === b.name);
+          if (matched) {
+            matched.lastContact = String(b.date).slice(0, 10);
+          } else {
+            // 既存顧客にいなければ新規追加
+            const newId = 'c' + String(Date.now()).slice(-5);
+            matched = {
+              id: newId,
+              name: b.name || 'お客様',
+              kana: '',
+              birth: '1985-01-01',
+              gender: 'O',
+              occupation: '',
+              family: [],
+              source: 'LINE無料相談',
+              status: 'new',
+              aum: 0,
+              lastContact: String(b.date).slice(0, 10),
+              proposals: [],
+              note: `LINE経由で初回面談 (${String(b.date).slice(0,10)})\nuserId: ${b.userId || ''}`,
+              lineFriendId: b.userId || '',
+              lineSubscribed: true,
+            };
+            window.DUMMY_CLIENTS.push(matched);
+            createdNew = true;
           }
+          try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS)); } catch (_) {}
         }
         fillBookingsList();
+        // 反映結果を分かりやすく表示
+        showCompletionToast(b, matched, createdNew);
       });
     });
   }
