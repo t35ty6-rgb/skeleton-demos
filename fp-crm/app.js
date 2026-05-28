@@ -23,9 +23,9 @@
   function loadState() {
     try {
       const raw = localStorage.getItem(LS_KEY);
-      return raw ? JSON.parse(raw) : { activeTab: 'dashboard', search: '', statusFilter: 'all' };
+      return raw ? JSON.parse(raw) : { activeTab: 'dashboard', search: '', statusFilter: 'all', contactFilter: 'all' };
     } catch (e) {
-      return { activeTab: 'dashboard', search: '', statusFilter: 'all' };
+      return { activeTab: 'dashboard', search: '', statusFilter: 'all', contactFilter: 'all' };
     }
   }
   function saveState() {
@@ -402,6 +402,43 @@
   // ============================
   // 顧客一覧
   // ============================
+  function renderContactFilterTabs(buckets) {
+    let bar = document.getElementById('contact-filter-bar');
+    if (!bar) {
+      // 顧客台帳のトップに動的に挿入
+      const toolbar = document.querySelector('.client-toolbar');
+      if (!toolbar) return;
+      bar = document.createElement('div');
+      bar.id = 'contact-filter-bar';
+      bar.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px;padding:10px 12px;background:linear-gradient(135deg,#fafbfc,#f1f5f9);border:1px solid var(--line);border-radius:10px;align-items:center;';
+      bar.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-right:6px;">📞 最終接触</span>';
+      toolbar.parentNode.insertBefore(bar, toolbar);
+    }
+    const tabs = [
+      { v: 'all', label: '全て', count: buckets.all, color: '' },
+      { v: 'lt30', label: '〜30日', count: buckets.lt30, color: '#06c755' },
+      { v: 'lt90', label: '31〜90日', count: buckets.lt90, color: '#0ea5e9' },
+      { v: 'lt180', label: '91〜180日', count: buckets.lt180, color: '#f59e0b' },
+      { v: 'lt365', label: '181〜365日', count: buckets.lt365, color: '#f97316' },
+      { v: 'gt365', label: '1年以上 未接触', count: buckets.gt365, color: '#d9264c' },
+    ];
+    bar.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-right:6px;">📞 最終接触</span>' +
+      tabs.map(t => {
+        const active = (state.contactFilter || 'all') === t.v;
+        const bg = active ? (t.color || '#1f2937') : '#fff';
+        const fg = active ? '#fff' : (t.color || '#374151');
+        const bd = active ? bg : '#e5e7eb';
+        return `<button data-cfilter="${t.v}" style="font-size:12px;padding:6px 12px;border-radius:18px;background:${bg};color:${fg};border:1.5px solid ${bd};cursor:pointer;font-weight:${active?'700':'500'};font-family:inherit;transition:all 0.15s;">${t.label} <span style="font-size:11px;opacity:0.85;margin-left:2px;">(${t.count})</span></button>`;
+      }).join('');
+    bar.querySelectorAll('[data-cfilter]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.contactFilter = btn.dataset.cfilter;
+        saveState();
+        renderClients();
+      });
+    });
+  }
+
   function renderClients() {
     const searchEl = document.getElementById('client-search');
     const filterEl = document.getElementById('status-filter');
@@ -420,8 +457,32 @@
         (c.occupation || '').toLowerCase().includes(q)
       );
     }
+    // 最終接触フィルタ
+    if (state.contactFilter && state.contactFilter !== 'all') {
+      list = list.filter(c => {
+        const d = daysSince(c.lastContact);
+        if (state.contactFilter === 'lt30') return d <= 30;
+        if (state.contactFilter === 'lt90') return d > 30 && d <= 90;
+        if (state.contactFilter === 'lt180') return d > 90 && d <= 180;
+        if (state.contactFilter === 'lt365') return d > 180 && d <= 365;
+        if (state.contactFilter === 'gt365') return d > 365;
+        return true;
+      });
+    }
     // 次接触必要 (lastContact が古い) 順
     list.sort((a, b) => daysSince(b.lastContact) - daysSince(a.lastContact));
+
+    // 各バケットのカウント (フィルタ前の母集団から)
+    const buckets = { all: clients.length, lt30: 0, lt90: 0, lt180: 0, lt365: 0, gt365: 0 };
+    clients.forEach(c => {
+      const d = daysSince(c.lastContact);
+      if (d <= 30) buckets.lt30++;
+      else if (d <= 90) buckets.lt90++;
+      else if (d <= 180) buckets.lt180++;
+      else if (d <= 365) buckets.lt365++;
+      else buckets.gt365++;
+    });
+    renderContactFilterTabs(buckets);
 
     document.getElementById('client-count').textContent = `${list.length} / ${clients.length} 名`;
 
@@ -433,6 +494,12 @@
     tbody.innerHTML = list.map(c => {
       const dsl = daysSince(c.lastContact);
       const contactCls = dsl >= 365 ? 'contact-stale' : (dsl >= 180 ? 'contact-warn' : '');
+      // 接触経過のラベル
+      const contactBg = dsl <= 30 ? '#dcfce7' : (dsl <= 90 ? '#dbeafe' : (dsl <= 180 ? '#fef3c7' : (dsl <= 365 ? '#fed7aa' : '#fecaca')));
+      const contactFg = dsl <= 30 ? '#166534' : (dsl <= 90 ? '#1e40af' : (dsl <= 180 ? '#92400e' : (dsl <= 365 ? '#9a3412' : '#991b1b')));
+      const contactLabel = dsl <= 30 ? '直近' : (dsl <= 90 ? '3ヶ月以内' : (dsl <= 180 ? '半年以内' : (dsl <= 365 ? '1年以内' : '1年超')));
+      // localStorage に保存されたタスク件数
+      const taskCount = (JSON.parse(localStorage.getItem('fp-tasks-' + (c.lineFriendId || c.id)) || '[]')).length;
       const childCount = (c.family || []).filter(m => m.rel === 'child').length;
       const familyTxt = childCount > 0 ? `配偶者+子${childCount}` :
         ((c.family || []).find(m => m.rel === 'spouse') ? '夫婦' : '単身');
@@ -452,9 +519,9 @@
           <td>${window.LifeEvents.currentAge(c)}</td>
           <td class="hide-mobile">${escapeHtml(c.occupation)}</td>
           <td>${familyTxt}</td>
-          <td><span class="status-pill ${c.status}">${statusLabel(c.status)}</span></td>
+          <td><span class="status-pill ${c.status}">${statusLabel(c.status)}</span>${taskCount > 0 ? `<span style="display:inline-block;margin-left:6px;font-size:10px;background:#fff8e1;color:#a08537;padding:2px 7px;border-radius:9px;font-weight:700;border:1px solid #f0d36b;">📝${taskCount}</span>` : ''}</td>
           <td class="num">¥${fmtMoney(c.aum)}</td>
-          <td class="${contactCls}">${dsl}日前</td>
+          <td class="${contactCls}"><div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start;"><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:${contactBg};color:${contactFg};">${contactLabel}</span><span style="font-size:11px;color:var(--muted);">${dsl}日前</span></div></td>
         </tr>
       `;
     }).join('');
