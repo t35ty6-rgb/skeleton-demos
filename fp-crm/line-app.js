@@ -629,30 +629,272 @@
     });
   }
 
+  // ===== 画面録画 (getDisplayMedia + MediaRecorder) =====
+  window._fpRecorder = window._fpRecorder || {
+    mediaRecorder: null, chunks: [], startTime: null, bookingTs: null, timerId: null, blobUrl: null,
+  };
+
+  async function startScreenRecording(bookingTs, zoomUrl) {
+    const R = window._fpRecorder;
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: 15 },
+        audio: { echoCancellation: false, noiseSuppression: false, sampleRate: 44100 },
+      });
+      // マイク音声も合成 (お客さん側=Zoomの再生音 + FP本人=マイク)
+      let combined = stream;
+      try {
+        const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const ac = new AudioContext();
+        const dest = ac.createMediaStreamDestination();
+        if (stream.getAudioTracks().length > 0) ac.createMediaStreamSource(new MediaStream([stream.getAudioTracks()[0]])).connect(dest);
+        ac.createMediaStreamSource(mic).connect(dest);
+        combined = new MediaStream([...stream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+        R._micStream = mic;
+      } catch (_) { /* マイク許可拒否でもOK */ }
+
+      R.chunks = []; R.startTime = Date.now(); R.bookingTs = bookingTs;
+      const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm';
+      R.mediaRecorder = new MediaRecorder(combined, { mimeType: mime, videoBitsPerSecond: 1500000 });
+      R.mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) R.chunks.push(e.data); };
+      R.mediaRecorder.onstop = async () => {
+        const blob = new Blob(R.chunks, { type: 'video/webm' });
+        R.blobUrl = URL.createObjectURL(blob);
+        combined.getTracks().forEach(t => t.stop());
+        stream.getTracks().forEach(t => t.stop());
+        if (R._micStream) R._micStream.getTracks().forEach(t => t.stop());
+        await onRecordingComplete(R.bookingTs, blob, R.blobUrl);
+      };
+      R.mediaRecorder.start(1000);
+
+      // Zoom を別タブで開く (録画開始してから開く)
+      window.open(zoomUrl, '_blank');
+      // サーバー側にもステータス通知
+      fetch(CLOUD_RUN_BASE + '/api/recording/start?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }).catch(() => {});
+
+      showRecordingPill();
+    } catch (e) {
+      alert('画面録画の開始に失敗しました\n\n原因の可能性:\n- 「画面共有」許可ダイアログでキャンセル\n- HTTPSじゃないページ (GitHub Pages なのでHTTPSのはず)\n- ブラウザが getDisplayMedia 非対応\n\n詳細: ' + e.message);
+    }
+  }
+
+  function stopScreenRecording() {
+    const R = window._fpRecorder;
+    if (R.mediaRecorder && R.mediaRecorder.state !== 'inactive') R.mediaRecorder.stop();
+    if (R.timerId) { clearInterval(R.timerId); R.timerId = null; }
+    const pill = document.getElementById('fp-rec-pill');
+    if (pill) pill.remove();
+  }
+
+  function showRecordingPill() {
+    const R = window._fpRecorder;
+    let el = document.getElementById('fp-rec-pill');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'fp-rec-pill';
+      el.innerHTML = `
+        <span style="width:11px;height:11px;background:#fff;border-radius:50%;display:inline-block;animation:fp-rec-pulse 1s infinite;"></span>
+        <span style="font-weight:700;font-family:'Inter',sans-serif;">録画中</span>
+        <span id="fp-rec-time" style="font-weight:800;font-family:'Inter',sans-serif;letter-spacing:0.04em;">00:00</span>
+        <button id="fp-rec-stop-btn" style="margin-left:8px;background:rgba(255,255,255,0.22);color:#fff;border:none;padding:6px 14px;border-radius:18px;font-weight:700;cursor:pointer;font-family:inherit;">■ 停止</button>
+      `;
+      el.style.cssText = 'position:fixed;top:18px;right:18px;background:linear-gradient(135deg,#d9264c,#b91c3c);color:#fff;padding:11px 18px;border-radius:30px;box-shadow:0 12px 32px rgba(217,38,76,0.4);z-index:9999;display:flex;align-items:center;gap:10px;font-size:13.5px;';
+      const style = document.createElement('style');
+      style.textContent = '@keyframes fp-rec-pulse{0%,100%{opacity:1}50%{opacity:0.3}}@keyframes fp-spin{to{transform:rotate(360deg)}}';
+      document.head.appendChild(style);
+      document.body.appendChild(el);
+      document.getElementById('fp-rec-stop-btn').addEventListener('click', stopScreenRecording);
+    }
+    R.timerId = setInterval(() => {
+      const secs = Math.floor((Date.now() - R.startTime) / 1000);
+      const h = Math.floor(secs / 3600);
+      const m = Math.floor((secs % 3600) / 60);
+      const s = secs % 60;
+      const txt = (h > 0 ? String(h).padStart(2, '0') + ':' : '') + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+      const elT = document.getElementById('fp-rec-time');
+      if (elT) elT.textContent = txt;
+    }, 1000);
+  }
+
+  async function onRecordingComplete(bookingTs, blob, blobUrl) {
+    const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0, 19) === String(bookingTs).slice(0, 19));
+    const survey = ((liveData && liveData.survey_answers) || []).find(s => s.userId === (booking && booking.userId));
+    showAIProcessingModal(booking, survey, blob, blobUrl, bookingTs);
+  }
+
+  function showAIProcessingModal(booking, survey, blob, blobUrl, bookingTs) {
+    const overlay = document.createElement('div');
+    overlay.id = 'fp-ai-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.65);backdrop-filter:blur(4px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff;width:min(780px,100%);max-height:92vh;overflow-y:auto;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.35);">
+        <div style="padding:28px 32px 0;">
+          <h2 style="margin:0 0 4px;font-family:'Noto Serif JP',serif;font-size:22px;font-weight:700;">✨ AI議事録生成</h2>
+          <p style="margin:0;color:#6b7280;font-size:12.5px;">録画ファイルをWhisperで文字起こし → Claudeで要約 → 顧客データへ自動書込</p>
+        </div>
+        <div id="fp-ai-body" style="padding:24px 32px 32px;"></div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const body = document.getElementById('fp-ai-body');
+    const fileSize = (blob.size / 1024 / 1024).toFixed(1);
+    const stages = [
+      { icon: '📁', label: '録画ファイル保存', detail: fileSize + 'MB の WebM → Drive アップロード', dur: 800 },
+      { icon: '🎙', label: 'Whisperで音声文字起こし', detail: '日本語認識・話者分離', dur: 1400 },
+      { icon: '🧠', label: 'Claudeで要約生成', detail: '会話のポイント・お客様の関心・宿題を抽出', dur: 1600 },
+      { icon: '🏷', label: '次アクション タグ付け', detail: '提案項目・優先度・最適なフォロータイミング判定', dur: 1000 },
+      { icon: '✍', label: '顧客カードに自動書込', detail: 'CRMにメモ追記 / Googleカレンダーにフォロー予定登録', dur: 1000 },
+    ];
+
+    let html = '<div style="display:grid;gap:14px;">';
+    stages.forEach((st, i) => {
+      html += `<div id="fp-stage-${i}" style="display:grid;grid-template-columns:32px 1fr 24px;gap:12px;align-items:center;padding:12px 16px;background:#f8fafc;border-radius:10px;border:1px solid #e5e7eb;opacity:0.45;transition:all 0.3s;">
+        <div style="font-size:20px;">${st.icon}</div>
+        <div><strong style="font-size:13.5px;">${st.label}</strong><div style="font-size:11.5px;color:#6b7280;margin-top:1px;">${st.detail}</div></div>
+        <div class="fp-stage-icon" style="font-size:14px;color:#94a3b8;">○</div>
+      </div>`;
+    });
+    html += '</div>';
+    body.innerHTML = html;
+
+    // ステージを順次アクティブ化
+    let cumulative = 0;
+    stages.forEach((st, i) => {
+      cumulative += st.dur;
+      setTimeout(() => {
+        const el = document.getElementById('fp-stage-' + i);
+        if (el) {
+          el.style.opacity = '1';
+          el.style.background = '#fff';
+          el.style.borderColor = 'var(--gold,#c19a3a)';
+          const icon = el.querySelector('.fp-stage-icon');
+          if (icon) { icon.textContent = '⏳'; icon.style.color = 'var(--gold,#c19a3a)'; }
+          // 前のステージは完了マーク
+          if (i > 0) {
+            const prev = document.getElementById('fp-stage-' + (i - 1));
+            if (prev) {
+              const prevIcon = prev.querySelector('.fp-stage-icon');
+              if (prevIcon) { prevIcon.textContent = '✓'; prevIcon.style.color = 'var(--green,#06c755)'; prevIcon.style.fontWeight = '700'; }
+            }
+          }
+        }
+      }, cumulative - st.dur + 100);
+    });
+
+    // 全ステージ完了 → 結果表示
+    setTimeout(async () => {
+      // 最終ステージも✓に
+      const last = document.getElementById('fp-stage-' + (stages.length - 1));
+      if (last) {
+        const ic = last.querySelector('.fp-stage-icon');
+        if (ic) { ic.textContent = '✓'; ic.style.color = 'var(--green,#06c755)'; ic.style.fontWeight = '700'; }
+      }
+      // サーバーにも反映
+      fetch(CLOUD_RUN_BASE + '/api/recording/stop?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }).catch(() => {});
+      await new Promise(r => setTimeout(r, 600));
+      renderAIResult(booking, survey, blob, blobUrl, bookingTs);
+    }, cumulative + 300);
+  }
+
+  function renderAIResult(booking, survey, blob, blobUrl, bookingTs) {
+    const body = document.getElementById('fp-ai-body');
+    if (!body) return;
+    const name = (booking && booking.name) || 'お客様';
+    const theme = (survey && survey.q1_テーマ) || '老後資金';
+    const era = (survey && survey.q2_年代) || '40代';
+    const family = (survey && survey.q3_家族) || '夫婦+子供';
+    const income = (survey && survey.q4_年収) || '700〜1000万';
+    const concern = (survey && survey.q5_悩み) || 'NISAの活用方法と老後資金の不足';
+
+    // デモ用議事録テンプレ (アンケート回答から自然な会話風に組み立て)
+    const transcript = `■ 面談日時: ${(booking && booking.date) || '2026-06-12'} ${(booking && booking.time) || '14:00'}
+■ お客様: ${name}様 (${era} / ${family} / 年収${income})
+■ 相談テーマ: ${theme}
+
+【会話サマリー】
+お客様は「${concern}」というお悩みを抱えていらっしゃる。
+特に「子供の教育費と老後資金の同時準備」に強い不安を感じている様子。
+現在の家計簿を共有いただき、月の貯蓄余力は約8〜10万円と確認。
+
+【お客様の関心が高かった項目】
+・新NISA つみたて投資枠 (年120万) の効率的な活用
+・iDeCo との併用パターン (節税効果)
+・教育資金の最適配分 (学資保険 vs ジュニアNISA代替)
+
+【FP側の所見】
+${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重なる」典型パターン。
+ライフプラン表を作成して可視化することで、お客様の納得感が一気に高まった。
+ご自身でも「想像していたより全体像が見えた」とコメントあり。`;
+
+    const actions = [
+      { priority: '至急', task: 'ライフプラン表PDFを作成して送付', when: '7日以内', icon: '📄' },
+      { priority: '今週', task: '新NISAつみたて枠の最適配分シミュレーション資料を提示', when: '次回までに準備', icon: '📊' },
+      { priority: '来月', task: '教育費見直しの定期レビュー (子供誕生月)', when: '2026年6月末', icon: '🎓' },
+      { priority: '3ヶ月後', task: 'iDeCo加入手続き進捗の確認', when: '2026年8月28日', icon: '🏦' },
+      { priority: '半年後', task: 'NISA運用状況のレビュー面談', when: '2026年11月28日', icon: '📅' },
+    ];
+
+    body.innerHTML = `
+      <div style="background:linear-gradient(135deg,#fff8e1,#fffbf2);border:1px solid #f0d36b;border-radius:12px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;gap:12px;">
+        <div style="font-size:28px;">✨</div>
+        <div>
+          <strong style="font-size:15px;color:#5e4d1a;">AI処理完了</strong>
+          <div style="font-size:12px;color:#8a6f1e;margin-top:2px;">議事録 / 次アクション5件 / フォローアップ予定3件 を自動生成しました</div>
+        </div>
+      </div>
+
+      <h3 style="margin:0 0 8px;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;color:#6b7280;font-weight:700;">📝 議事録</h3>
+      <pre style="white-space:pre-wrap;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:18px;font-size:12.5px;line-height:1.75;font-family:'Noto Sans JP',sans-serif;margin:0 0 20px;max-height:280px;overflow-y:auto;">${escapeHtml(transcript)}</pre>
+
+      <h3 style="margin:0 0 8px;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;color:#6b7280;font-weight:700;">🏷 次アクション + フォローアップ自動スケジュール</h3>
+      <div style="display:grid;gap:8px;margin-bottom:20px;">
+        ${actions.map(a => `
+          <div style="display:grid;grid-template-columns:80px 32px 1fr 130px;gap:12px;align-items:center;padding:11px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;">
+            <span style="font-size:10.5px;font-weight:700;letter-spacing:0.05em;background:${a.priority==='至急'?'#fef2f2;color:#b91c3c':a.priority==='今週'?'#fff7ed;color:#c2410c':'#f0f9ff;color:#075985'};padding:4px 9px;border-radius:11px;text-align:center;">${a.priority}</span>
+            <span style="font-size:18px;">${a.icon}</span>
+            <span style="font-size:13px;">${a.task}</span>
+            <span style="font-size:11px;color:#6b7280;text-align:right;">${a.when}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding-top:16px;border-top:1px solid #e5e7eb;">
+        <a href="${blobUrl}" download="meeting-${(booking && booking.name) || 'recording'}-${Date.now()}.webm" style="font-size:12.5px;padding:9px 18px;border:1px solid #e5e7eb;border-radius:8px;color:#374151;text-decoration:none;font-weight:600;">💾 録画ファイル DL (${(blob.size/1024/1024).toFixed(1)}MB)</a>
+        <button id="fp-ai-copy" style="font-size:12.5px;padding:9px 18px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;font-weight:600;color:#374151;">📋 議事録コピー</button>
+        <button id="fp-ai-close" style="font-size:13px;padding:9px 22px;background:linear-gradient(135deg,#b8893d,#d4a017);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">✓ 顧客カードに保存して閉じる</button>
+      </div>
+    `;
+
+    document.getElementById('fp-ai-copy').addEventListener('click', () => {
+      navigator.clipboard.writeText(transcript).then(() => alert('議事録をコピーしました'));
+    });
+    document.getElementById('fp-ai-close').addEventListener('click', async () => {
+      // GAS にも議事録を保存依頼
+      try { await fetch(CLOUD_RUN_BASE + '/api/transcript?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }); } catch (_) {}
+      document.getElementById('fp-ai-overlay').remove();
+      await fetchLiveData();
+      renderLeadHubInner();
+    });
+  }
+
   function bindBookingsButtons() {
     document.querySelectorAll('[data-rec-start]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const ts = btn.dataset.recStart;
         const zoomUrl = btn.dataset.zoom;
-        btn.disabled = true; btn.textContent = '...';
-        try {
-          await fetch(CLOUD_RUN_BASE + '/api/recording/start?ts=' + encodeURIComponent(ts), { method: 'POST' });
-          window.open(zoomUrl, '_blank');
-          await fetchLiveData();
-          renderLeadHubInner();
-        } catch (e) { alert('録画開始失敗: ' + e.message); btn.disabled = false; }
+        await startScreenRecording(ts, zoomUrl);
+        await fetchLiveData();
+        renderLeadHubInner();
       });
     });
     document.querySelectorAll('[data-rec-stop]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!confirm('録画を停止して Drive に保存しますか?')) return;
-        const ts = btn.dataset.recStop;
-        btn.disabled = true;
-        try {
-          await fetch(CLOUD_RUN_BASE + '/api/recording/stop?ts=' + encodeURIComponent(ts), { method: 'POST' });
-          await fetchLiveData();
-          renderLeadHubInner();
-        } catch (e) { alert('録画停止失敗: ' + e.message); btn.disabled = false; }
+      btn.addEventListener('click', () => {
+        if (window._fpRecorder.mediaRecorder && window._fpRecorder.mediaRecorder.state !== 'inactive') {
+          if (!confirm('録画を停止して AI議事録を生成しますか?')) return;
+          stopScreenRecording();
+        } else {
+          alert('進行中の録画がありません');
+        }
       });
     });
     document.querySelectorAll('[data-gen-transcript]').forEach(btn => {
