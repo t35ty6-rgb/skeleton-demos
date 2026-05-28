@@ -946,7 +946,24 @@
     panel.id = 'fp-cal-side-v3';
     panel.style.cssText = `position:fixed;top:0;right:0;bottom:0;width:${width}px;z-index:9997;background:#fff;border-left:1px solid #e5e7eb;box-shadow:-4px 0 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;`;
     // /calendar/embed は X-Frame-Options が無いので iframe で動く (週ビュー)
-    const calSrc = 'https://calendar.google.com/calendar/embed?mode=WEEK&showTitle=0&showPrint=0&showCalendars=0&showTabs=1&showNav=1&wkst=2&ctz=Asia%2FTokyo';
+    // 確定待ちの候補日リストを取得 (パネル上部に赤チップで表示するため)
+    const pendingSurveys = ((liveData && liveData.survey_answers) || []).filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3));
+    const allCandidates = [];
+    pendingSurveys.forEach(s => {
+      [s.q6_候補1, s.q7_候補2, s.q8_候補3].forEach((slot, idx) => {
+        if (!slot) return;
+        const parsed = parseSlotString(slot);
+        if (parsed.dateStr) allCandidates.push({
+          name: s.q1_テーマ ? s.q1_テーマ + '相談' : 'お客様',
+          customerHint: (s.userId || '').slice(0, 8),
+          dateStr: parsed.dateStr,
+          slotStr: parsed.slotStr,
+          rank: idx + 1,
+        });
+      });
+    });
+    const initialDate = allCandidates[0] ? allCandidates[0].dateStr.replace(/-/g, '') : '';
+    const calSrc = 'https://calendar.google.com/calendar/embed?mode=WEEK&showTitle=0&showPrint=0&showCalendars=0&showTabs=1&showNav=1&wkst=2&ctz=Asia%2FTokyo' + (initialDate ? '&dates=' + initialDate + '/' + initialDate : '');
     panel.innerHTML = `
       <div id="fp-cal-resize-v3" style="position:absolute;top:0;bottom:0;left:0;width:6px;cursor:ew-resize;z-index:2;background:transparent;"></div>
       <div style="padding:10px 14px;border-bottom:1px solid #e5e7eb;background:#fafbfc;display:flex;align-items:center;gap:8px;">
@@ -954,6 +971,20 @@
         <button id="fp-cal-popup-v3" title="別ウィンドウで開く" style="font-size:11px;padding:5px 10px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;color:#374151;font-weight:600;font-family:inherit;">↗ 別窓</button>
         <button id="fp-cal-close-v3" style="font-size:13px;width:26px;height:26px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;color:#6b7280;font-family:inherit;">✕</button>
       </div>
+      ${allCandidates.length > 0 ? `
+      <div id="fp-cal-candidates" style="padding:10px 12px;background:linear-gradient(135deg,#fef2f2,#fff5f5);border-bottom:2px solid #fca5a5;">
+        <div style="font-size:10.5px;color:#7f1d1d;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px;">🎯 お客様の希望日 (クリックで該当週へジャンプ + 空き判定)</div>
+        <div id="fp-cand-chips" style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${allCandidates.map((c, i) => `
+            <button data-cand-idx="${i}" data-date="${escapeHtml(c.dateStr)}" data-slot="${escapeHtml(c.slotStr)}"
+              style="padding:7px 11px;background:#fff;border:1.5px solid #fca5a5;border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;display:flex;flex-direction:column;gap:2px;min-width:130px;transition:all 0.15s;">
+              <span style="font-size:9.5px;color:#b91c3c;font-weight:700;">第${c.rank}希望</span>
+              <span style="font-size:12.5px;font-weight:700;color:#1f2937;">${escapeHtml(c.dateStr.slice(5).replace('-','/'))} ${escapeHtml(c.slotStr)}</span>
+              <span class="fp-cand-status" data-status="loading" style="font-size:10.5px;color:#9ca3af;">⏳ 空き判定中</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>` : ''}
       <iframe id="fp-cal-iframe-v3" src="${calSrc}" style="flex:1;width:100%;border:none;display:block;background:#f8fafc;" referrerpolicy="no-referrer-when-downgrade"></iframe>
     `;
     document.body.appendChild(panel);
@@ -968,6 +999,45 @@
       const pw = Math.floor(sw / 2);
       const ph = sh - 60;
       window.open('https://calendar.google.com/calendar/u/0/r/week', 'fp-cal-popup', `width=${pw},height=${ph},left=${sw-pw},top=20,toolbar=no`);
+    });
+
+    // 候補日チップ: クリックで iframe を該当週へ + 空き状況をAPIで判定
+    panel.querySelectorAll('[data-cand-idx]').forEach((chip, idx) => {
+      const dateStr = chip.dataset.date;
+      const slotStr = chip.dataset.slot;
+      // クリックでカレンダーを該当週に
+      chip.addEventListener('click', () => {
+        const dateOnly = dateStr.replace(/-/g, '');
+        const newSrc = 'https://calendar.google.com/calendar/embed?mode=WEEK&showTitle=0&showPrint=0&showCalendars=0&showTabs=1&showNav=1&wkst=2&ctz=Asia%2FTokyo&dates=' + dateOnly + '/' + dateOnly;
+        const iframe = document.getElementById('fp-cal-iframe-v3');
+        if (iframe) iframe.src = newSrc;
+        // 選択ハイライト
+        panel.querySelectorAll('[data-cand-idx]').forEach(c => { c.style.background = '#fff'; c.style.boxShadow = ''; });
+        chip.style.background = '#fef2f2';
+        chip.style.boxShadow = '0 0 0 3px #fca5a5';
+      });
+      // 空き判定 (バックグラウンド)
+      const statusEl = chip.querySelector('.fp-cand-status');
+      fetch(`${CLOUD_RUN_BASE}/api/check-slot?dateStr=${encodeURIComponent(dateStr)}&slotStr=${encodeURIComponent(slotStr)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (!statusEl) return;
+          if (data.ok && data.busy) {
+            statusEl.textContent = '🔴 予定あり: ' + (data.events.map(e => e.title).join(', ').slice(0, 30) || '...');
+            statusEl.style.color = '#b91c3c'; statusEl.style.fontWeight = '700';
+            chip.style.borderColor = '#fca5a5';
+          } else if (data.ok && !data.busy) {
+            statusEl.textContent = '🟢 空き';
+            statusEl.style.color = '#166534'; statusEl.style.fontWeight = '700';
+            chip.style.borderColor = '#86efac';
+          } else {
+            statusEl.textContent = '⚠ 判定不可';
+            statusEl.style.color = '#92400e';
+          }
+        })
+        .catch(() => {
+          if (statusEl) { statusEl.textContent = '⚠ 判定失敗'; statusEl.style.color = '#92400e'; }
+        });
     });
 
     // 4秒後に iframe ロード成否を確認 (cross-originなのでアクセスはできないが幅でestimate)
