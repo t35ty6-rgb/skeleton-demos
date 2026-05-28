@@ -972,8 +972,8 @@
         if (!slot) return;
         const parsed = parseSlotString(slot);
         if (parsed.dateStr) allCandidates.push({
-          name: s.q1_テーマ ? s.q1_テーマ + '相談' : 'お客様',
-          customerHint: (s.userId || '').slice(0, 8),
+          userId: s.userId,
+          customerName: s.q1_テーマ ? s.q1_テーマ + '相談' : 'お客様',
           dateStr: parsed.dateStr,
           slotStr: parsed.slotStr,
           rank: idx + 1,
@@ -990,16 +990,19 @@
         <button id="fp-cal-close-v3" style="font-size:13px;width:26px;height:26px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;color:#6b7280;font-family:inherit;">✕</button>
       </div>
       ${allCandidates.length > 0 ? `
-      <div id="fp-cal-candidates" style="padding:10px 12px;background:linear-gradient(135deg,#fef2f2,#fff5f5);border-bottom:2px solid #fca5a5;">
-        <div style="font-size:10.5px;color:#7f1d1d;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px;">🎯 お客様の希望日 (クリックで該当週へジャンプ + 空き判定)</div>
-        <div id="fp-cand-chips" style="display:flex;gap:6px;flex-wrap:wrap;">
+      <div id="fp-cal-candidates" style="padding:10px 12px;background:linear-gradient(135deg,#fef2f2,#fff5f5);border-bottom:2px solid #fca5a5;max-height:260px;overflow-y:auto;">
+        <div style="font-size:10.5px;color:#7f1d1d;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px;">🎯 お客様の希望日 (タップでカレンダー移動・✓で確定)</div>
+        <div id="fp-cand-chips" style="display:grid;gap:6px;">
           ${allCandidates.map((c, i) => `
-            <button data-cand-idx="${i}" data-date="${escapeHtml(c.dateStr)}" data-slot="${escapeHtml(c.slotStr)}"
-              style="padding:7px 11px;background:#fff;border:1.5px solid #fca5a5;border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;display:flex;flex-direction:column;gap:2px;min-width:130px;transition:all 0.15s;">
-              <span style="font-size:9.5px;color:#b91c3c;font-weight:700;">第${c.rank}希望</span>
-              <span style="font-size:12.5px;font-weight:700;color:#1f2937;">${escapeHtml(c.dateStr.slice(5).replace('-','/'))} ${escapeHtml(c.slotStr)}</span>
-              <span class="fp-cand-status" data-status="loading" style="font-size:10.5px;color:#9ca3af;">⏳ 空き判定中</span>
-            </button>
+            <div data-cand-row="${i}" data-uid="${escapeHtml(c.userId)}" data-name="${escapeHtml(c.customerName)}" data-date="${escapeHtml(c.dateStr)}" data-slot="${escapeHtml(c.slotStr)}"
+              style="padding:9px 12px;background:#fff;border:1.5px solid #fca5a5;border-radius:8px;font-family:inherit;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;transition:all 0.15s;">
+              <button class="fp-cand-jump" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;font-family:inherit;">
+                <span style="font-size:9.5px;color:#b91c3c;font-weight:700;">第${c.rank}希望</span>
+                <span style="font-size:11.5px;font-weight:700;color:#1f2937;">${escapeHtml(c.dateStr.slice(5).replace('-','/'))} ${escapeHtml(c.slotStr)}</span>
+              </button>
+              <span class="fp-cand-status" data-status="loading" style="font-size:10px;color:#9ca3af;text-align:right;">⏳ 判定中</span>
+              <button class="fp-cand-confirm" title="この日で予約確定" style="padding:6px 10px;background:linear-gradient(135deg,#06c755,#04a045);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;white-space:nowrap;">✓ 確定</button>
+            </div>
           `).join('')}
         </div>
       </div>` : ''}
@@ -1019,35 +1022,87 @@
       window.open('https://calendar.google.com/calendar/u/0/r/week', 'fp-cal-popup', `width=${pw},height=${ph},left=${sw-pw},top=20,toolbar=no`);
     });
 
-    // 候補日チップ: クリックで iframe を該当週へ + 空き状況をAPIで判定
-    panel.querySelectorAll('[data-cand-idx]').forEach((chip, idx) => {
-      const dateStr = chip.dataset.date;
-      const slotStr = chip.dataset.slot;
-      // クリックでカレンダーを該当週に
-      chip.addEventListener('click', () => {
+    // 候補日チップ: ジャンプ・空き判定・確定の3アクション
+    panel.querySelectorAll('[data-cand-row]').forEach((row, idx) => {
+      const dateStr = row.dataset.date;
+      const slotStr = row.dataset.slot;
+      const userId  = row.dataset.uid;
+      const name    = row.dataset.name;
+      // 日付/時間部分クリック → iframe ジャンプ
+      const jumpBtn = row.querySelector('.fp-cand-jump');
+      jumpBtn.addEventListener('click', () => {
         const dateOnly = dateStr.replace(/-/g, '');
         const newSrc = 'https://calendar.google.com/calendar/embed?mode=WEEK&showTitle=0&showPrint=0&showCalendars=0&showTabs=1&showNav=1&wkst=2&ctz=Asia%2FTokyo&dates=' + dateOnly + '/' + dateOnly;
         const iframe = document.getElementById('fp-cal-iframe-v3');
         if (iframe) iframe.src = newSrc;
         // 選択ハイライト
-        panel.querySelectorAll('[data-cand-idx]').forEach(c => { c.style.background = '#fff'; c.style.boxShadow = ''; });
-        chip.style.background = '#fef2f2';
-        chip.style.boxShadow = '0 0 0 3px #fca5a5';
+        panel.querySelectorAll('[data-cand-row]').forEach(c => { c.style.background = '#fff'; c.style.boxShadow = ''; });
+        row.style.background = '#fef2f2';
+        row.style.boxShadow = '0 0 0 3px #fca5a5';
+      });
+      // 確定ボタン → /api/confirm-slot
+      const confirmBtn = row.querySelector('.fp-cand-confirm');
+      confirmBtn.addEventListener('click', async () => {
+        if (!confirm(`${dateStr} ${slotStr} で予約確定します。\n\n• Zoom URL 自動発行\n• お客様の LINE に通知\n• Google カレンダーに登録\n\n進めますか?`)) return;
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '...';
+        const isDemo = userId && userId.indexOf('Udemo') === 0;
+        try {
+          if (isDemo) {
+            // デモuserId は擬似成功
+            await new Promise(r => setTimeout(r, 800));
+            alert('[デモモード] 確定処理完了 (本番では Zoom + LINE + カレンダー実行)');
+            confirmBtn.textContent = '✓ 確定済';
+            confirmBtn.style.background = '#94a3b8';
+            return;
+          }
+          const r = await fetch(CLOUD_RUN_BASE + '/api/confirm-slot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, dateStr, slotStr, name }),
+          });
+          const data = await r.json();
+          if (data.ok) {
+            confirmBtn.textContent = '✓ 確定済';
+            confirmBtn.style.background = '#94a3b8';
+            row.style.opacity = '0.5';
+            // 結果トースト
+            const t = document.createElement('div');
+            t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #06c755;border-radius:12px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10003;font-family:inherit;';
+            t.innerHTML = `<strong style="font-size:14px;">✅ 予約確定完了</strong><br><span style="font-size:12px;color:#6b7280;">${escapeHtml(dateStr)} ${escapeHtml(slotStr)} — Zoom + カレンダー + LINE 通知済み</span>`;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 6000);
+            // データ更新
+            await fetchLiveData();
+            renderLeadHubInner();
+          } else {
+            alert('失敗: ' + (data.error || '不明'));
+            confirmBtn.textContent = '✓ 確定';
+            confirmBtn.disabled = false;
+          }
+        } catch (e) {
+          alert('失敗: ' + e.message);
+          confirmBtn.textContent = '✓ 確定';
+          confirmBtn.disabled = false;
+        }
       });
       // 空き判定 (バックグラウンド)
-      const statusEl = chip.querySelector('.fp-cand-status');
+      const statusEl = row.querySelector('.fp-cand-status');
       fetch(`${CLOUD_RUN_BASE}/api/check-slot?dateStr=${encodeURIComponent(dateStr)}&slotStr=${encodeURIComponent(slotStr)}`)
         .then(r => r.json())
         .then(data => {
           if (!statusEl) return;
           if (data.ok && data.busy) {
-            statusEl.textContent = '🔴 予定あり: ' + (data.events.map(e => e.title).join(', ').slice(0, 30) || '...');
+            statusEl.innerHTML = `🔴 予定あり<br><span style="font-size:9.5px;font-weight:400;">${escapeHtml(data.events.map(e => e.title).join(', ').slice(0, 24))}</span>`;
             statusEl.style.color = '#b91c3c'; statusEl.style.fontWeight = '700';
-            chip.style.borderColor = '#fca5a5';
+            row.style.borderColor = '#fca5a5';
+            // 予定ありの場合は確定ボタンを警告色に
+            const cb = row.querySelector('.fp-cand-confirm');
+            if (cb) cb.title = '⚠ FPの予定とかぶってます。本当に確定しますか?';
           } else if (data.ok && !data.busy) {
             statusEl.textContent = '🟢 空き';
             statusEl.style.color = '#166534'; statusEl.style.fontWeight = '700';
-            chip.style.borderColor = '#86efac';
+            row.style.borderColor = '#86efac';
           } else {
             statusEl.textContent = '⚠ 判定不可';
             statusEl.style.color = '#92400e';
