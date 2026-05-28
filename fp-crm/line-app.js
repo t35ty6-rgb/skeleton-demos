@@ -526,10 +526,32 @@
         const uid = btn.dataset.uid;
         const dateStr = btn.dataset.date;
         const slotStr = btn.dataset.slot;
-        if (!confirm(`${dateStr} ${slotStr} で確定します。\n\nZoomURL発行 → お客様LINE通知 → Googleカレンダー登録 が同時に動きます。`)) return;
+        const isDemo = uid && uid.indexOf('Udemo') === 0;
+
+        const confirmMsg = isDemo
+          ? `[デモモード] ${dateStr} ${slotStr} で確定します。\n\n本番では以下が同時に動きます:\n• Zoom URL自動発行\n• お客様にLINE通知\n• Googleカレンダー登録\n\n進めますか?`
+          : `${dateStr} ${slotStr} で確定します。\n\nZoomURL発行 → お客様LINE通知 → Googleカレンダー登録 が同時に動きます。`;
+        if (!confirm(confirmMsg)) return;
+
         btn.disabled = true;
         const inner = btn.querySelector('span:last-child');
         if (inner) inner.textContent = '処理中...';
+
+        // ─── デモuserId は擬似成功 ───
+        if (isDemo) {
+          const fakeZoom = 'https://zoom.us/j/' + Math.floor(Math.random() * 9000000000 + 1000000000) + '?pwd=fpcompass';
+          setTimeout(() => {
+            alert('✅ 確定しました (デモモード)\n\n📅 ' + dateStr + ' ' + slotStr + '\n💻 Zoom URL: ' + fakeZoom + '\n\n本番ではこの瞬間に:\n  ・お客様の LINE にZoom URL通知\n  ・Googleカレンダーに60分予約イベント登録\n  ・スプレッドシートに予約記録\nが自動で動きます。');
+            // デモ確定したら DEMO データから該当を削除して再描画
+            if (window.SURVEY_DEMO) {
+              window.SURVEY_DEMO = window.SURVEY_DEMO.filter(s => s.userId !== uid);
+            }
+            renderLeadHubInner();
+          }, 600);
+          return;
+        }
+
+        // ─── 本物のLIVEデータは Cloud Run へ ───
         try {
           const r = await fetch(CLOUD_RUN_BASE + '/api/confirm-slot', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -540,8 +562,16 @@
             alert('✅ 確定\n\nZoom URL: ' + data.zoomUrl + '\nお客様にLINE通知済 + Googleカレンダー登録済');
             await fetchLiveData();
             renderLeadHubInner();
-          } else { alert('失敗: ' + (data.error || '')); btn.disabled = false; }
-        } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; }
+          } else {
+            alert('失敗: ' + (data.error || data.raw || '不明なエラー'));
+            btn.disabled = false;
+            if (inner) inner.textContent = 'この日で確定 →';
+          }
+        } catch (e) {
+          alert('失敗: ' + e.message);
+          btn.disabled = false;
+          if (inner) inner.textContent = 'この日で確定 →';
+        }
       });
     });
   }
