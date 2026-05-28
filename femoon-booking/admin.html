@@ -43,8 +43,10 @@
   <p>エディタ画面の中身を<strong>全部消してから</strong>、このコードをまるごと貼り付け→保存(⌘+S)。</p>
   <div class="codebox" id="codebox"><button class="copy-btn" onclick="copyCode()">📋 コピー</button><pre id="code">/**
  * FEMOON 予約フォーム バックエンド (GAS Web App)
+ * 予約→ ①Sheets書き込み ②Googleカレンダー登録 を同時実行
  */
 const SHEET_NAME = 'FEMOON 予約管理';
+const CALENDAR_TZ = 'Asia/Tokyo';
 
 function getSheet_(){
   const props = PropertiesService.getScriptProperties();
@@ -55,11 +57,11 @@ function getSheet_(){
     props.setProperty('SPREADSHEET_ID', id);
     const sheet = ss.getActiveSheet();
     sheet.setName('予約');
-    sheet.getRange(1,1,1,16).setValues([[
+    sheet.getRange(1,1,1,17).setValues([[
       '予約ID','受付日時','希望日','曜日','時間','コースID','コース名','所要時間','料金',
-      'お名前','フリガナ','電話','メール','来店回数','ご要望','状態'
+      'お名前','フリガナ','電話','メール','来店回数','ご要望','状態','カレンダーURL'
     ]]);
-    sheet.getRange(1,1,1,16).setFontWeight('bold').setBackground('#fbf0eb');
+    sheet.getRange(1,1,1,17).setFontWeight('bold').setBackground('#fbf0eb');
     sheet.setFrozenRows(1);
     const sm = ss.insertSheet('月次サマリー');
     sm.getRange(1,1,1,4).setValues([['月','予約件数','売上合計','コース内訳']]);
@@ -73,19 +75,44 @@ function getSheet_(){
   return SpreadsheetApp.openById(id).getSheetByName('予約');
 }
 
+function addToCalendar_(data, id){
+  try{
+    const cal = CalendarApp.getDefaultCalendar();
+    const [y,m,d] = data.date.split('-').map(Number);
+    const [hh,mm] = data.slot.split(':').map(Number);
+    const start = new Date(y, m-1, d, hh, mm, 0);
+    const end = new Date(start.getTime() + (data.duration||60)*60000);
+    const title = '【予約】' + data.course_name + ' / ' + data.name;
+    const desc = [
+      '予約ID: ' + id,
+      'お名前: ' + data.name + (data.kana?(' ('+data.kana+')'):''),
+      '電話: ' + data.tel,
+      'メール: ' + (data.email||'-'),
+      '来店回数: ' + data.visit,
+      'コース: ' + data.course_name + ' / ' + data.duration + '分 / ¥' + data.price,
+      'ご要望: ' + (data.notes||'-')
+    ].join('\n');
+    const event = cal.createEvent(title, start, end, {description: desc});
+    return event.getId() ? ('https://calendar.google.com/calendar/u/0/r/eventedit/' + Utilities.base64Encode(event.getId()).replace(/=+$/,'')) : '';
+  }catch(err){
+    return 'ERR: ' + err;
+  }
+}
+
 function doPost(e){
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try{
     const data = JSON.parse(e.postData.contents);
-    const sheet = getSheet_();
     const id = 'FM-' + new Date().getTime().toString(36).toUpperCase();
+    const calUrl = addToCalendar_(data, id);
+    const sheet = getSheet_();
     sheet.appendRow([
       id, new Date(), data.date, data.weekday, data.slot,
       data.course_id, data.course_name, data.duration, data.price,
-      data.name, data.kana, data.tel, data.email, data.visit, data.notes, '受付済'
+      data.name, data.kana, data.tel, data.email, data.visit, data.notes, '受付済', calUrl
     ]);
-    return ContentService.createTextOutput(JSON.stringify({ok:true,id:id}))
+    return ContentService.createTextOutput(JSON.stringify({ok:true,id:id,calendar:calUrl}))
       .setMimeType(ContentService.MimeType.JSON);
   }catch(err){
     return ContentService.createTextOutput(JSON.stringify({ok:false,error:String(err)}))
@@ -125,12 +152,13 @@ function doGet(){
 
 <div class="step">
   <h2><span class="n">5</span>完了 — 自動的に始まる</h2>
-  <p>1件目の予約が入った時点で、自動的にGoogleドライブに「<strong>FEMOON 予約管理</strong>」というスプレッドシートが作成されます。</p>
-  <p>このスプレッドシートには次の2タブが入ります:</p>
+  <p>1件目の予約が入った時点で、以下が自動的に発火します:</p>
   <ul>
-    <li><strong>予約</strong> — 1行 = 1予約のリスト</li>
-    <li><strong>月次サマリー</strong> — 月ごとの予約件数・売上合計・コース内訳を自動集計</li>
+    <li>✅ <strong>Googleドライブ</strong> に「FEMOON 予約管理」スプレッドシート自動作成</li>
+    <li>✅ <strong>Googleカレンダー</strong> (デフォルト)に予約イベント自動登録(コース名・お客様名・連絡先入り)</li>
+    <li>✅ <strong>月次サマリー</strong> シート(自動集計)</li>
   </ul>
+  <p style="margin-top:12px;font-size:13px;color:#7a5d5d">⚠ 初回 doPost 実行時にカレンダーへのアクセス許可を求められます。承認してください。</p>
 </div>
 
 <script>
