@@ -783,11 +783,13 @@
     const R = window._fpRecorder;
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 15 },
+        // ヒント: ピッカーで「ウィンドウ」タブをデフォルト選択 + タブ音声共有ON
+        video: { displaySurface: 'window', frameRate: 15 },
         audio: { echoCancellation: false, noiseSuppression: false, sampleRate: 44100 },
-        systemAudio: 'include', // ヒント: 「タブ音声を共有」チェックをデフォルトON
+        systemAudio: 'include',
         preferCurrentTab: false,
         surfaceSwitching: 'include',
+        selfBrowserSurface: 'exclude', // CRM自身は録画候補から除外
       });
       // マイク音声も合成 (お客さん側=Zoomの再生音 + FP本人=マイク)
       let combined = stream;
@@ -815,33 +817,29 @@
       };
       R.mediaRecorder.start(1000);
 
-      // ★ Zoom 2/3 + CRM(メモ) 1/3 のレイアウトをセット
-      // 1) CRM を画面左の 1/3 に縮小・移動
-      // 2) Zoom を画面右の 2/3 にポップアップで開く
-      // 3) CRM 内で該当booking のメモパネルを右下に自動展開
+      // ★ Zoom 3/4 + CRM(メモ) 1/4 のレイアウトをセット (画面いっぱい)
       const sw = window.screen.availWidth || screen.width;
       const sh = window.screen.availHeight || screen.height;
-      const crmW = Math.floor(sw / 3);
+      const crmW = Math.floor(sw / 4);
       const zoomW = sw - crmW;
-      try { window.moveTo(0, 20); window.resizeTo(crmW, sh - 60); } catch (_) {}
-      const zoomFeatures = `width=${zoomW},height=${sh - 60},left=${crmW},top=20,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
+      const fullH = sh;  // 画面いっぱい(タイトルバー込み)
+      try { window.moveTo(0, 0); window.resizeTo(crmW, fullH); } catch (_) {}
+      // Zoom URL を画面右 3/4 にポップアップ
+      const zoomFeatures = `width=${zoomW},height=${fullH},left=${crmW},top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
       const zoomWin = window.open(zoomUrl, 'fp-zoom-win', zoomFeatures);
-      if (!zoomWin) {
-        // ポップアップブロックされたら通常タブで開く
-        window.open(zoomUrl, '_blank');
-      }
-      // メモパネルを CRM 内に自動展開 — 縮小後の CRM 全体を覆うサイズに強制
-      // CRM が 1/3 幅に縮んだ後にウィンドウサイズを基準にポジショニング
+      if (!zoomWin) window.open(zoomUrl, '_blank');
+      // メモパネルを CRM 内に画面いっぱい展開
       setTimeout(() => {
-        // 既存の保存位置を上書きして「CRM 全体に広がる」状態にする
-        const padX = 12, padTop = 70;
-        const w = Math.max(340, window.innerWidth - padX * 2);
-        const h = Math.max(280, window.innerHeight - padTop - 40);
+        const padX = 8, padTop = 60;
+        const w = Math.max(320, window.innerWidth - padX * 2);
+        const h = Math.max(280, window.innerHeight - padTop - 30);
         localStorage.setItem('fp-memo-pos', JSON.stringify({ left: padX, top: padTop }));
         localStorage.setItem('fp-memo-size', JSON.stringify({ w, h }));
         const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
         openMemoModal(booking || { name: 'お客様', userId: bookingTs }, bookingTs);
-      }, 1000);
+      }, 800);
+      // 録画中であることが分かる「画面外周の赤い枠」 を表示
+      showRecordingBorder();
 
       // サーバー側にもステータス通知
       fetch(CLOUD_RUN_BASE + '/api/recording/start?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }).catch(() => {});
@@ -852,12 +850,32 @@
     }
   }
 
+  function showRecordingBorder() {
+    if (document.getElementById('fp-rec-border')) return;
+    const b = document.createElement('div');
+    b.id = 'fp-rec-border';
+    b.style.cssText = 'position:fixed;inset:0;border:5px solid #d9264c;border-radius:0;pointer-events:none;z-index:9996;box-shadow:inset 0 0 24px rgba(217,38,76,0.35);animation:fp-rec-border-pulse 1.6s ease-in-out infinite;';
+    document.body.appendChild(b);
+    if (!document.getElementById('fp-rec-border-style')) {
+      const s = document.createElement('style');
+      s.id = 'fp-rec-border-style';
+      s.textContent = '@keyframes fp-rec-border-pulse{0%,100%{border-color:#d9264c;box-shadow:inset 0 0 24px rgba(217,38,76,0.35)}50%{border-color:#ff4d6d;box-shadow:inset 0 0 36px rgba(217,38,76,0.55)}}';
+      document.head.appendChild(s);
+    }
+  }
+
+  function hideRecordingBorder() {
+    const b = document.getElementById('fp-rec-border');
+    if (b) b.remove();
+  }
+
   function stopScreenRecording() {
     const R = window._fpRecorder;
     if (R.mediaRecorder && R.mediaRecorder.state !== 'inactive') R.mediaRecorder.stop();
     if (R.timerId) { clearInterval(R.timerId); R.timerId = null; }
     const pill = document.getElementById('fp-rec-pill');
     if (pill) pill.remove();
+    hideRecordingBorder();
   }
 
   function showRecordingPill() {
