@@ -462,10 +462,11 @@
       const str = String(raw);
       if (/^\d{4}-\d{2}-\d{2}T/.test(str)) {
         const d = new Date(str);
-        const mm = d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: '2-digit' });
-        const dd = d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', day: '2-digit' });
-        const wd = d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', weekday: 'short' });
-        return { mmdd: `${mm}/${dd}`, weekday: `(${wd})` };
+        const mm = d.toLocaleString('en-CA', { timeZone: 'Asia/Tokyo', month: '2-digit' });
+        const dd = d.toLocaleString('en-CA', { timeZone: 'Asia/Tokyo', day: '2-digit' });
+        const wdEn = d.toLocaleString('en-US', { timeZone: 'Asia/Tokyo', weekday: 'short' });
+        const wdMap = { Sun: '日', Mon: '月', Tue: '火', Wed: '水', Thu: '木', Fri: '金', Sat: '土' };
+        return { mmdd: `${mm}/${dd}`, weekday: `(${wdMap[wdEn] || wdEn})` };
       }
       const m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
       if (m) {
