@@ -1313,8 +1313,14 @@ function pickTemplate(c){
   // 顧客状況に最適なテンプレを選択 (来店回数 × 経過日数で判定)
   const today = new Date(); today.setHours(0,0,0,0);
   const ms = 24*60*60*1000;
-  const days = c.lastVisit ? Math.floor((today - c.lastVisit)/ms) : 99999;
+  // 未来日が混じってる場合の防御: 0未満は0扱い
+  let days = c.lastVisit ? Math.floor((today - c.lastVisit)/ms) : 99999;
+  if(days < 0) days = 0;
   const visits = c.visits || 1;
+  // visits === 0 (未来予約のみで来店履歴なし) → 新規予約直前リマインド扱い
+  if(visits === 0){
+    return c.nextVisit ? 'reminder_prev_day' : 'new_thanks';
+  }
 
   // 90日以上空き
   if(days >= 90) return 'lapsed3m_any';
@@ -1365,20 +1371,29 @@ function setSegment(seg){
 }
 function aggregateCustomers(){
   // 電話番号でuniq
+  const today = new Date(); today.setHours(0,0,0,0);
   const map = {};
   DATA.forEach(r=>{
     if(r['状態']==='キャンセル') return;
     const tel = String(r['電話']||'').replace(/[-\s]/g,'');
     if(!tel) return;
-    if(!map[tel]) map[tel] = {tel:r['電話'], name:r['お名前'], kana:r['フリガナ'], email:r['メール'], visits:0, totalRev:0, lastVisit:null, firstVisit:null, courses:{}, history:[]};
+    if(!map[tel]) map[tel] = {tel:r['電話'], name:r['お名前'], kana:r['フリガナ'], email:r['メール'], visits:0, totalRev:0, lastVisit:null, firstVisit:null, nextVisit:null, courses:{}, history:[]};
     const pd = parseDate(r['希望日']);
-    if(pd && (!map[tel].lastVisit || pd>map[tel].lastVisit)) map[tel].lastVisit = pd;
-    if(pd && (!map[tel].firstVisit || pd<map[tel].firstVisit)) map[tel].firstVisit = pd;
-    map[tel].visits++;
-    map[tel].totalRev += Number(r['料金'])||0;
-    const c = r['コース名']||'';
-    map[tel].courses[c] = (map[tel].courses[c]||0)+1;
-    map[tel].history.push({date:pd, course:c, price:Number(r['料金'])||0, slot:fmtTime(r['時間']), status:r['状態']||'受付済', id:r['予約ID']||''});
+    if(!pd) return;
+    const isPast = pd <= today;
+    if(isPast){
+      // 来店実績 = 過去の予約のみ
+      if(!map[tel].lastVisit || pd>map[tel].lastVisit) map[tel].lastVisit = pd;
+      if(!map[tel].firstVisit || pd<map[tel].firstVisit) map[tel].firstVisit = pd;
+      map[tel].visits++;
+      map[tel].totalRev += Number(r['料金'])||0;
+      const c = r['コース名']||'';
+      map[tel].courses[c] = (map[tel].courses[c]||0)+1;
+    } else {
+      // 未来の予約 = 次回予約として別管理
+      if(!map[tel].nextVisit || pd<map[tel].nextVisit) map[tel].nextVisit = pd;
+    }
+    map[tel].history.push({date:pd, course:r['コース名']||'', price:Number(r['料金'])||0, slot:fmtTime(r['時間']), status:r['状態']||'受付済', id:r['予約ID']||'', isPast});
   });
   // 平均来店間隔・最終間隔の計算
   Object.values(map).forEach(c=>{
@@ -1455,16 +1470,29 @@ function renderCustomers(){
 }
 // ワンクリック: 推奨テンプレ即コピー+LINE起動
 async function quickLine(idx){
-  const c = window._CUST_ARR[idx];
-  if(!c) return;
-  const tplKey = pickTemplate(c);
-  const tpl = TEMPLATES[tplKey];
-  if(!tpl){alert('テンプレートが見つかりません');return}
-  const msg = fillTemplate(tpl.body, c);
-  try{ await navigator.clipboard.writeText(msg); }catch(e){}
-  window.open(LINE_OAM_CHAT,'_blank');
-  // toast表示
-  showToast(`✅ ${c.name} 様 (${c.tel}) 向けメッセージをコピー → LINE管理画面で貼付`);
+  try{
+    const c = window._CUST_ARR && window._CUST_ARR[idx];
+    if(!c){ alert('顧客データが見つかりません (再読み込み試してください)'); return; }
+    const tplKey = pickTemplate(c);
+    const tpl = TEMPLATES[tplKey];
+    if(!tpl){ alert('テンプレートが見つかりません: '+tplKey+'\n📝テンプレボタンから確認してください'); return; }
+    const msg = fillTemplate(tpl.body, c);
+    let copied = false;
+    try{ await navigator.clipboard.writeText(msg); copied = true; }
+    catch(e){
+      // fallback: textarea経由
+      const ta = document.createElement('textarea');
+      ta.value = msg; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); copied = true; }catch(e2){}
+      ta.remove();
+    }
+    window.open(LINE_OAM_CHAT,'_blank');
+    if(copied) showToast(`✅ ${c.name} 様向け「${tpl.label}」をコピー → LINE管理画面で貼付`);
+    else showToast(`⚠️ コピー失敗。メッセージ: ${msg.slice(0,50)}...`);
+  }catch(err){
+    alert('即連絡エラー: '+err.message);
+    console.error(err);
+  }
 }
 function showToast(msg){
   const t = document.createElement('div');
@@ -1474,11 +1502,18 @@ function showToast(msg){
   setTimeout(()=>t.remove(),3500);
 }
 function openCustomerLine(c){
-  // 既存LINEモーダルを流用
+  // 既存LINEモーダルを流用 + 推奨テンプレを自動入力
+  // Date復元 (JSON.stringify経由でstringになってる場合の保険)
+  if(c.lastVisit && !(c.lastVisit instanceof Date)) c.lastVisit = new Date(c.lastVisit);
+  if(c.firstVisit && !(c.firstVisit instanceof Date)) c.firstVisit = new Date(c.firstVisit);
   CURRENT_LINE_TARGET = {'お名前':c.name,'電話':c.tel,'希望日':c.lastVisit?c.lastVisit.toISOString():'','時間':'','コース名':''};
   document.getElementById('line-modal').classList.remove('hidden');
-  document.getElementById('line-target-info').innerHTML = `<strong>${c.name||'-'}</strong> 様 / ${c.tel||'-'}<br><span style="color:#7a5d5d;font-size:11.5px">最終来店 ${c.lastVisit?c.lastVisit.getMonth()+1+'/'+c.lastVisit.getDate():'-'} / 来店${c.visits}回 / 累計¥${c.totalRev.toLocaleString()}</span>`;
-  document.getElementById('line-msg-body').value = '';
+  const lastStr = c.lastVisit ? `${c.lastVisit.getMonth()+1}/${c.lastVisit.getDate()}` : '-';
+  document.getElementById('line-target-info').innerHTML = `<strong>${c.name||'-'}</strong> 様 / ${c.tel||'-'}<br><span style="color:#7a5d5d;font-size:11.5px">最終来店 ${lastStr} / 来店${c.visits}回 / 累計¥${(c.totalRev||0).toLocaleString()}</span>`;
+  // ★ 推奨テンプレを自動セット (編集してから送信できる)
+  const tplKey = pickTemplate(c);
+  const tpl = TEMPLATES[tplKey];
+  document.getElementById('line-msg-body').value = tpl ? fillTemplate(tpl.body, c) : '';
 }
 async function bulkLineSend(){
   const tmpl = document.getElementById('bulk-msg').value.trim();
