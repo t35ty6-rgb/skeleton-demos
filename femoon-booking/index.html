@@ -559,30 +559,43 @@ document.getElementById('submit-btn').addEventListener('click', async ()=>{
 
   showStep('loading');
 
-  // GASエンドポイント設定済なら送信、未設定なら localStorage に保存(MVP)
-  let ok = false;
+  // GASに送信 → サーバ側で重複/休業の最終チェックが入る (バッティング絶対防止)
+  let result = {ok:false, error:'unknown'};
   if(GAS_ENDPOINT){
     try{
-      // text/plain で CORS preflight回避 (GAS側は e.postData.contents で同じJSON文字列を受信)
       const r = await fetch(GAS_ENDPOINT,{
         method:'POST',
         headers:{'Content-Type':'text/plain;charset=utf-8'},
         body:JSON.stringify(payload)
       });
-      ok = r.ok;
-    }catch(e){ console.error(e); ok = false; }
-  }
-  if(!ok){
-    // フォールバック: localStorageに保存(オーナーが後で吸い上げ可能)
-    const all = JSON.parse(localStorage.getItem('femoon-bookings')||'[]');
-    payload._fallback = true;
-    all.push(payload);
-    localStorage.setItem('femoon-bookings',JSON.stringify(all));
+      result = await r.json();
+    }catch(e){ console.error(e); result = {ok:false, error:'network', message:'通信エラー。しばらくしてからお試しください。'}; }
   }
 
-  // 完了画面
-  const id = 'FM-' + Date.now().toString(36).toUpperCase();
-  document.getElementById('reservation-id').textContent = id;
+  if(!result.ok){
+    // 失敗 → エラー表示 + 最新の空き状況再取得 → STEP2に戻す
+    showStep(4);
+    const errEl = document.getElementById('err');
+    errEl.textContent = '❌ ' + (result.message || result.error || '予約に失敗しました');
+    errEl.classList.add('show');
+    // 最新の予約状況を再取得 → カレンダー更新
+    await refreshAvailability();
+    // 既にその時間が埋まってる場合、選択をクリアしてSTEP2へ戻す
+    if(result.error === 'duplicate' || result.error === 'closed'){
+      state.slot = ''; state.slotKey = '';
+      setTimeout(()=>{
+        errEl.classList.remove('show');
+        showStep(2);
+        document.getElementById('selected-bar').style.display='none';
+        document.getElementById('to-step3').disabled = true;
+        alert(result.message || 'この時間枠は予約できません。別の時間をお選びください。');
+      }, 1500);
+    }
+    return;
+  }
+
+  // 完了画面 (サーバから返ってきた予約IDを使う)
+  document.getElementById('reservation-id').textContent = result.id || ('FM-' + Date.now().toString(36).toUpperCase());
   showStep('done');
 });
 </script>
