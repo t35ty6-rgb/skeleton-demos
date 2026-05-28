@@ -158,9 +158,11 @@
     const total = reqs.length;
     const cvr = total > 0 ? Math.round(wantList.length / total * 100) : 0;
 
-    const buildRouteUrl = (adrs) => {
-      if (adrs.length === 0) return '#';
-      const enc = adrs.map(a => encodeURIComponent(a));
+    // Google Map は「名前 住所」を1つの検索クエリにすると、ピンに名前ラベルが表示される
+    const buildLabel = (r) => (r.name ? r.name + '様 ' : '') + r.address;
+    const buildRouteUrl = (items) => {
+      if (items.length === 0) return '#';
+      const enc = items.map(it => encodeURIComponent(buildLabel(it)));
       const origin = enc[0];
       const destination = enc[enc.length - 1];
       const waypoints = enc.slice(1, -1).join('|');
@@ -169,10 +171,9 @@
       url += '&travelmode=driving';
       return url;
     };
-    const buildMapAllUrl = (adrs) => adrs.length === 0 ? '#' : 'https://www.google.com/maps/search/' + encodeURIComponent(adrs.join(' / '));
-    const wantAddresses = wantList.map(r => r.address).filter(x => x);
-    const routeUrl = buildRouteUrl(wantAddresses);
-    const allMapUrl = buildMapAllUrl(wantAddresses);
+    const buildMapAllUrl = (items) => items.length === 0 ? '#' : 'https://www.google.com/maps/search/' + encodeURIComponent(items.map(buildLabel).join(' / '));
+    const routeUrl = buildRouteUrl(wantList);
+    const allMapUrl = buildMapAllUrl(wantList);
 
     v.innerHTML = `
       <h1 style="font-family:'Noto Serif JP',serif;font-size:26px;margin:0 0 4px;">🎍 年末カレンダー配布</h1>
@@ -232,7 +233,7 @@
                   ${r.note ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">📝 ${escapeHtml(r.note)}</div>` : ''}
                 </div>
                 <div style="text-align:right;">
-                  <a href="https://www.google.com/maps/search/${encodeURIComponent(r.address)}" target="_blank" style="font-size:11.5px;color:var(--accent);text-decoration:none;background:var(--accent-soft);padding:5px 12px;border-radius:11px;display:inline-block;font-weight:600;">📍 地図で見る</a>
+                  <a href="https://www.google.com/maps/search/${encodeURIComponent((r.name ? r.name + '様 ' : '') + r.address)}" target="_blank" style="font-size:11.5px;color:var(--accent);text-decoration:none;background:var(--accent-soft);padding:5px 12px;border-radius:11px;display:inline-block;font-weight:600;">📍 地図で見る</a>
                 </div>
               </div>
             `).join('') + '</div>'
@@ -455,11 +456,46 @@
       target.innerHTML = '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);font-size:13px;">まだ予約はありません</div>';
       return;
     }
+    // ISO日付 (Sheets自動変換) or "YYYY-MM-DD" 文字列を「MM/DD」と「曜日」に分割
+    const formatBookingDate = (raw) => {
+      if (!raw) return { mmdd: '-', weekday: '' };
+      const str = String(raw);
+      if (/^\d{4}-\d{2}-\d{2}T/.test(str)) {
+        const d = new Date(str);
+        const mm = d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: '2-digit' });
+        const dd = d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', day: '2-digit' });
+        const wd = d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', weekday: 'short' });
+        return { mmdd: `${mm}/${dd}`, weekday: `(${wd})` };
+      }
+      const m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) {
+        const d = new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+        const wd = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+        return { mmdd: `${m[2]}/${m[3]}`, weekday: `(${wd})` };
+      }
+      return { mmdd: str.slice(0, 10), weekday: '' };
+    };
+    // ISO時刻 or "午後 14:00" 風文字列を「14:00」+「午後」に分割
+    const formatBookingTime = (raw) => {
+      if (!raw) return '';
+      const str = String(raw);
+      if (/^\d{4}-\d{2}-\d{2}T/.test(str)) {
+        const d = new Date(str);
+        const hh = d.toLocaleString('en-CA', { timeZone: 'Asia/Tokyo', hour: '2-digit', hour12: false }).replace(/[^\d]/g, '').padStart(2, '0');
+        const mm = d.toLocaleString('en-CA', { timeZone: 'Asia/Tokyo', minute: '2-digit' }).replace(/[^\d]/g, '').padStart(2, '0');
+        const hhNum = parseInt(hh, 10);
+        const label = hhNum < 12 ? '午前' : hhNum < 18 ? '午後' : '夜';
+        return `${label} ${hh}:${mm}`;
+      }
+      return str;
+    };
+
     target.innerHTML = bookings.map(b => {
       const rec = b.recordingStatus || '';
       const tsEnc = encodeURIComponent(b.ts || '');
       const zUrl = escapeHtml(b.zoomUrl || '');
-      const dateStr = String(b.date || '').slice(5).replace('-', '/');
+      const dateInfo = formatBookingDate(b.date);
+      const timeStr = formatBookingTime(b.time);
       let cta = '';
       if (rec === 'recording') {
         cta = `<button class="btn-rec-stop" data-rec-stop="${tsEnc}">■ 録画停止</button>
@@ -477,18 +513,19 @@
       const recPill = rec === 'recording' ? '<span class="rec-pill recording">● 録画中</span>'
         : rec === 'saved' ? '<span class="rec-pill saved">📼 録画保存済</span>' : '';
       return `
-        <div style="background:var(--surface);border:1px solid var(--line);border-left:4px solid ${rec === 'recording' ? 'var(--red)' : 'var(--line-green)'};border-radius:10px;padding:18px 22px;margin-bottom:10px;box-shadow:var(--shadow-xs);display:grid;grid-template-columns:90px 1fr;gap:18px;">
-          <div>
-            <div style="font-size:19px;font-weight:700;font-family:'Inter',sans-serif;">${dateStr}</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHtml(b.time || '')}</div>
+        <div style="background:var(--surface);border:1px solid var(--line);border-left:4px solid ${rec === 'recording' ? 'var(--red)' : 'var(--line-green)'};border-radius:10px;padding:18px 22px;margin-bottom:10px;box-shadow:var(--shadow-xs);display:grid;grid-template-columns:104px 1fr;gap:18px;">
+          <div style="border-right:1px solid var(--line);padding-right:14px;">
+            <div style="font-size:22px;font-weight:800;font-family:'Inter',sans-serif;line-height:1.05;color:var(--ink);">${dateInfo.mmdd}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px;font-weight:600;">${dateInfo.weekday}</div>
+            <div style="font-size:13px;color:var(--accent);margin-top:6px;font-weight:600;">${escapeHtml(timeStr)}</div>
           </div>
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;">
-              <strong style="font-size:15px;">${escapeHtml(b.name || '匿名')} 様</strong>
+          <div style="min-width:0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+              <strong style="font-size:15.5px;">${escapeHtml(b.name || '匿名')} 様</strong>
               ${recPill}
             </div>
-            ${b.zoomUrl ? `<div style="font-size:11px;color:var(--muted);font-family:ui-monospace,Menlo,monospace;margin-bottom:10px;word-break:break-all;">${escapeHtml(b.zoomUrl)}</div>` : ''}
-            <div style="display:flex;gap:6px;flex-wrap:wrap;">${cta}</div>
+            ${b.zoomUrl ? `<div style="font-size:10.5px;color:var(--muted);font-family:ui-monospace,Menlo,monospace;margin-bottom:12px;word-break:break-all;line-height:1.5;">${escapeHtml(b.zoomUrl)}</div>` : ''}
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">${cta}</div>
           </div>
         </div>`;
     }).join('');
