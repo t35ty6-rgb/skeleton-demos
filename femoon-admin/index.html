@@ -511,9 +511,13 @@
       <div id="customer-list" style="max-height:50vh;overflow-y:auto"></div>
       <div style="margin-top:14px;padding:12px 16px;background:#fffaf6;border-radius:6px;border:1px dashed var(--rose)">
         <strong style="color:var(--rose-deep);font-size:13px">📩 該当 <span id="seg-count">0</span>名に一斉LINE送信</strong>
+        <div id="seg-breakdown" style="font-size:11px;color:var(--ink2);margin-top:4px"></div>
         <textarea id="bulk-msg" rows="3" placeholder="メッセージ本文。{NAME}でお名前自動挿入" style="width:100%;margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:3px;font-size:13px;font-family:inherit"></textarea>
-        <button class="btn green sm" onclick="bulkLineSend()" style="margin-top:6px">📋 全員分コピー & LINE開く</button>
-        <p style="font-size:11px;color:var(--ink2);margin:6px 0 0;line-height:1.6">※ 各顧客分のメッセージが順次クリップボードにコピーされます。LINE公式管理画面で1人ずつ友だち検索→ペースト送信してください。</p>
+        <select id="bulk-tpl-pick" onchange="applyBulkTpl(this.value)" style="width:100%;margin-top:6px;padding:7px 10px;border:1px solid var(--line);border-radius:3px;font-size:12px">
+          <option value="">▼ テンプレから挿入 (任意)</option>
+        </select>
+        <button class="btn green" onclick="bulkLineSend()" style="margin-top:8px;width:100%;padding:12px">📤 一斉送信を実行</button>
+        <p style="font-size:10.5px;color:var(--ink2);margin:6px 0 0;line-height:1.6">📲 直送可: 確認後 LINE Push APIで自動送信 / 📋 手動: クリップボードコピー → LINE管理画面で貼付</p>
       </div>
     </div>
     <div class="modal-footer">
@@ -1574,6 +1578,18 @@ function renderCustomers(){
   if(search) arr = arr.filter(c=>((c.name||'')+(c.tel||'')+(c.kana||'')).toLowerCase().includes(search));
   arr.sort((a,b)=>(b.lastVisit||0)-(a.lastVisit||0));
   document.getElementById('seg-count').textContent = arr.length;
+  // 直送可/手動の内訳
+  const direct = arr.filter(c=>c.lineUserId && c.lineUserId.startsWith('U')).length;
+  const manual = arr.length - direct;
+  const bd = document.getElementById('seg-breakdown');
+  if(bd) bd.innerHTML = `📲 直送可: <strong style="color:#06c755">${direct}</strong>名 / 📋 手動コピペ: <strong>${manual}</strong>名`;
+  // テンプレプルダウン埋め
+  const sel = document.getElementById('bulk-tpl-pick');
+  if(sel && sel.options.length<=1){
+    Object.entries(TEMPLATES).forEach(([k,v])=>{
+      sel.insertAdjacentHTML('beforeend', `<option value="${k}">${v.label}</option>`);
+    });
+  }
   document.getElementById('customer-summary').innerHTML = `該当 <strong>${arr.length}</strong>名 / 累計売上 <strong style="color:var(--rose-deep)">¥${arr.reduce((s,c)=>s+c.totalRev,0).toLocaleString()}</strong>`;
   if(arr.length===0){
     document.getElementById('customer-list').innerHTML = '<div style="text-align:center;padding:30px;color:var(--ink3);font-style:italic">該当なし</div>';
@@ -1677,22 +1693,63 @@ function openCustomerLine(c){
   const tpl = TEMPLATES[tplKey];
   document.getElementById('line-msg-body').value = tpl ? fillTemplate(tpl.body, c) : '';
 }
+function applyBulkTpl(key){
+  if(!key) return;
+  const tpl = TEMPLATES[key];
+  if(!tpl) return;
+  document.getElementById('bulk-msg').value = tpl.body;
+  document.getElementById('bulk-tpl-pick').value = '';
+}
 async function bulkLineSend(){
   const tmpl = document.getElementById('bulk-msg').value.trim();
   if(!tmpl){alert('メッセージを入力してください');return}
   const arr = getSegmentedCustomers();
   if(arr.length===0){alert('対象がいません');return}
-  if(!confirm(`${arr.length}名分のメッセージを順次クリップボードにコピーします。1人ずつLINE公式管理画面に貼り付けてください。続行しますか？`)) return;
-  // メッセージを順に1つずつコピー
-  for(let i=0;i<arr.length;i++){
-    const c = arr[i];
-    const msg = tmpl.replaceAll('{NAME}', (c.name||'').split(' ')[0]);
-    try{ await navigator.clipboard.writeText(msg); }catch(e){}
-    const continueOK = confirm(`(${i+1}/${arr.length})\n\n📋 コピー済: ${c.name} 様 (${c.tel})\n\n----- メッセージ -----\n${msg}\n----------\n\nOK: LINE公式管理画面を開いて貼り付け → 戻ったらここで「OK」で次へ\nキャンセル: 中止`);
-    if(!continueOK) break;
-    if(i===0) window.open(LINE_OAM_CHAT,'_blank');
+  // LINE userId持ってる人 (直送可) と それ以外に分類
+  const direct = arr.filter(c=>c.lineUserId && c.lineUserId.startsWith('U'));
+  const manual = arr.filter(c=>!c.lineUserId || !c.lineUserId.startsWith('U'));
+  let msg = `📩 一斉LINE送信 確認\n\n対象 ${arr.length}名:\n`;
+  msg += `  ・直送可 (LIFF経由予約): ${direct.length}名\n`;
+  msg += `  ・手動(LINE管理画面で操作): ${manual.length}名\n\n`;
+  if(direct.length>0) msg += `▶ 直送可 ${direct.length}名にはAPI経由で即時送信されます\n`;
+  if(manual.length>0) msg += `▶ 手動 ${manual.length}名はクリップボードに順次コピーされます\n`;
+  msg += `\n本当に送信しますか？`;
+  if(!confirm(msg)) return;
+
+  // 結果トラッキング
+  let okCount=0, ngCount=0; const ngList=[];
+
+  // 1) 直送可ユーザーへ LINE Push API
+  if(direct.length>0){
+    showToast(`📤 ${direct.length}名へAPI送信中...`);
+    for(let i=0;i<direct.length;i++){
+      const c = direct[i];
+      const body = tmpl.replaceAll('{NAME}', (c.name||'').split(' ')[0]);
+      try{
+        const r = await fetch(`${GAS_URL}?action=line_push&uid=${encodeURIComponent(c.lineUserId)}&msg=${encodeURIComponent(body)}&token=${encodeURIComponent(TOKEN)}`);
+        const j = await r.json();
+        if(j.ok){ okCount++; } else { ngCount++; ngList.push(c.name+'('+j.error+')'); }
+      }catch(e){ ngCount++; ngList.push(c.name+'(通信失敗)'); }
+    }
+    showToast(`✅ ${okCount}名 直送完了 / ${ngCount}名 失敗`);
   }
-  alert('一斉メッセージ作業 完了');
+
+  // 2) 手動ユーザー(userId無し)はクリップボードループ
+  if(manual.length>0){
+    if(!confirm(`✅ API直送 ${okCount}名完了\n${ngCount>0?'❌ 失敗 '+ngCount+'名: '+ngList.join(', ')+'\n\n':''}続けて、${manual.length}名分を1人ずつクリップボードコピー & LINE管理画面に貼付しますか？`)){
+      alert('完了\n直送: ' + okCount + '名\n失敗: ' + ngCount + '名');
+      return;
+    }
+    for(let i=0;i<manual.length;i++){
+      const c = manual[i];
+      const body = tmpl.replaceAll('{NAME}', (c.name||'').split(' ')[0]);
+      try{ await navigator.clipboard.writeText(body); }catch(e){}
+      const cont = confirm(`(${i+1}/${manual.length})\n\n📋 コピー済: ${c.name||'(名前なし)'} 様 (${c.tel||'-'})\n\n${body.slice(0,150)}...\n\nOK: LINE管理画面を開いて貼付 → ここで「OK」で次へ\nキャンセル: 中止`);
+      if(!cont) break;
+      if(i===0) window.open(LINE_OAM_CHAT,'_blank');
+    }
+  }
+  alert(`📊 一斉送信 完了\n✅ 直送成功: ${okCount}名\n${ngCount>0?'❌ 失敗: '+ngCount+'名\n':''}📋 手動コピー: ${manual.length}名`);
 }
 
 /* ========== モバイル: ボトムナビ ========== */
