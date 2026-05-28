@@ -378,6 +378,28 @@
     fillSurveysList();
   }
 
+  // Sheets が自動で日付型に変換してしまった ISO 文字列を JST の "YYYY-MM-DD / 帯+時間" に戻す
+  function parseSlotString(raw) {
+    if (!raw) return { dateStr: '', slotStr: '', display: '' };
+    const str = String(raw);
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(str)) {
+      const d = new Date(str);
+      const yyyy = d.toLocaleString('en-CA', { timeZone: 'Asia/Tokyo', year: 'numeric' });
+      const mm = d.toLocaleString('en-CA', { timeZone: 'Asia/Tokyo', month: '2-digit' });
+      const dd = d.toLocaleString('en-CA', { timeZone: 'Asia/Tokyo', day: '2-digit' });
+      const hh = parseInt(d.toLocaleString('en-CA', { timeZone: 'Asia/Tokyo', hour: '2-digit', hour12: false }), 10);
+      const min = d.toLocaleString('en-CA', { timeZone: 'Asia/Tokyo', minute: '2-digit' });
+      const taiLabel = hh < 12 ? '午前' : hh < 18 ? '午後' : '夜';
+      const slotStr = `${taiLabel} ${String(hh).padStart(2, '0')}:${min.padStart(2, '0')}`;
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      return { dateStr, slotStr, display: `${dateStr} ${slotStr}` };
+    }
+    const parts = str.split(/\s+/);
+    const dateStr = parts[0] || '';
+    const slotStr = parts.slice(1).join(' ') || '';
+    return { dateStr, slotStr, display: str };
+  }
+
   function fillConfirmList() {
     const target = document.getElementById('confirm-list');
     if (!target) return;
@@ -411,13 +433,11 @@
           <div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">候補日 (タップで即確定)</div>
           <div style="display:grid;gap:6px;">
             ${slots.map((slot, idx) => {
-              const parts = (slot || '').split(/\s+/);
-              const dateStr = parts[0] || '';
-              const slotStr = parts.slice(1).join(' ') || '';
+              const parsed = parseSlotString(slot);
               return `<button class="slot-confirm-btn" data-slot-confirm
-                data-uid="${escapeHtml(s.userId)}" data-date="${escapeHtml(dateStr)}" data-slot="${escapeHtml(slotStr)}"
+                data-uid="${escapeHtml(s.userId)}" data-date="${escapeHtml(parsed.dateStr)}" data-slot="${escapeHtml(parsed.slotStr)}"
                 style="text-align:left;padding:12px 16px;background:#fff;border:2px solid var(--line);border-radius:8px;cursor:pointer;font-size:14px;display:flex;justify-content:space-between;align-items:center;font-family:inherit;transition:all 0.15s;">
-                <span><strong style="color:var(--accent);margin-right:10px;">第${idx + 1}希望</strong>${escapeHtml(slot)}</span>
+                <span><strong style="color:var(--accent);margin-right:10px;">第${idx + 1}希望</strong>${escapeHtml(parsed.display)}</span>
                 <span style="font-size:12px;color:var(--green);font-weight:700;background:var(--line-green-soft);padding:4px 10px;border-radius:6px;">この日で確定 →</span>
               </button>`;
             }).join('')}
