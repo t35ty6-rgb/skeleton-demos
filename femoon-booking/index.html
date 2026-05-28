@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>ご予約 — 🌙フェムケアサロン FEMOON</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Noto+Serif+JP:wght@400;500;600&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fbf5f2; --bg2:#f5e1d8; --paper:#fff;
+    --ink:#3d2a2a; --ink2:#7a5d5d; --ink3:#a89090;
+    --rose:#c89d96; --rose-deep:#a4756d; --rose-soft:#fbf0eb;
+    --gold:#b08770; --line:#e8d8d0; --line-soft:#f1e2da;
+    --ok:#4a7a5a; --warn:#c0392b;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:linear-gradient(180deg,#fbf5f2 0%,#f8ebe5 100%);min-height:100vh;color:var(--ink);font-family:"Noto Sans JP",-apple-system,sans-serif;line-height:1.7;letter-spacing:.03em}
+  .wrap{max-width:560px;margin:0 auto;padding:0 18px 80px;position:relative}
+
+  /* ヘッダー */
+  .hd{padding:32px 0 24px;text-align:center;position:relative}
+  .hd .salon{font-family:"Cormorant Garamond",serif;font-size:11px;letter-spacing:.45em;color:var(--rose-deep);margin-bottom:8px;font-weight:500}
+  .hd h1{font-family:"Noto Serif JP",serif;font-size:23px;font-weight:500;margin:0 0 8px;letter-spacing:.1em;color:var(--ink)}
+  .hd .sub{font-size:12px;color:var(--ink2);letter-spacing:.08em}
+  .hd::after{content:"";display:block;width:48px;height:1px;background:var(--rose-deep);margin:18px auto 0}
+
+  /* ステップインジケータ */
+  .steps{display:flex;justify-content:center;gap:6px;margin:14px 0 28px}
+  .steps .s{display:flex;align-items:center;gap:6px;font-family:"Cormorant Garamond",serif;font-size:11px;letter-spacing:.15em;color:var(--ink3);text-transform:uppercase}
+  .steps .s.active{color:var(--rose-deep);font-weight:600}
+  .steps .s .n{width:22px;height:22px;border-radius:50%;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;font-family:"Noto Serif JP",serif}
+  .steps .s.active .n{background:var(--rose-deep);color:#fff;border-color:var(--rose-deep)}
+  .steps .s.done .n{background:var(--ok);color:#fff;border-color:var(--ok)}
+  .steps .arrow{color:var(--ink3);font-size:11px}
+
+  /* ステップカード */
+  .step-card{background:var(--paper);border-radius:8px;padding:24px 22px;box-shadow:0 4px 20px -8px rgba(164,117,109,.18);margin-bottom:16px;display:none;animation:fade .3s}
+  .step-card.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .step-card h2{font-family:"Noto Serif JP",serif;font-size:17px;font-weight:500;letter-spacing:.06em;margin:0 0 6px;color:var(--ink);display:flex;align-items:center;gap:10px}
+  .step-card h2::before{content:"";width:6px;height:18px;background:var(--rose-deep);border-radius:1px}
+  .step-card .help{font-size:12px;color:var(--ink2);margin:0 0 18px}
+
+  /* コースカード */
+  .courses{display:flex;flex-direction:column;gap:10px}
+  .course{border:1.5px solid var(--line);background:var(--paper);border-radius:6px;padding:14px 16px;cursor:pointer;transition:all .15s;position:relative}
+  .course:hover{border-color:var(--rose);background:#fffaf6}
+  .course.selected{border-color:var(--rose-deep);background:var(--rose-soft);box-shadow:0 0 0 2px rgba(164,117,109,.15)}
+  .course .tag{display:inline-block;background:var(--rose-deep);color:#fff;font-size:10px;padding:2px 10px;letter-spacing:.1em;border-radius:1px;margin-bottom:8px;font-family:"Cormorant Garamond",serif;font-weight:600}
+  .course .tag.popular{background:var(--gold)}
+  .course .name{font-family:"Noto Serif JP",serif;font-size:15px;font-weight:500;color:var(--ink);margin-bottom:6px;letter-spacing:.04em}
+  .course .meta{display:flex;gap:14px;font-size:12px;color:var(--ink2);margin-bottom:6px;flex-wrap:wrap}
+  .course .meta span{display:flex;align-items:center;gap:4px}
+  .course .desc{font-size:12px;color:var(--ink2);line-height:1.7}
+  .course .price{position:absolute;right:14px;top:14px;font-family:"Cormorant Garamond",serif;font-weight:600;color:var(--rose-deep);font-size:18px}
+  .course .price small{font-size:10px;color:var(--ink2);font-weight:400}
+  .course.selected::after{content:"✓";position:absolute;right:14px;bottom:12px;width:24px;height:24px;background:var(--rose-deep);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px}
+
+  /* 日時選択 */
+  .date-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .field-label{font-size:12px;color:var(--ink2);margin-bottom:6px;letter-spacing:.08em;font-weight:500}
+  .field-label .req{color:var(--rose-deep);font-size:10px;margin-left:4px}
+  .input,.select,.textarea{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:4px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink);transition:border-color .15s}
+  .input:focus,.select:focus,.textarea:focus{outline:none;border-color:var(--rose-deep);box-shadow:0 0 0 2px rgba(164,117,109,.1)}
+  .textarea{resize:vertical;min-height:80px}
+
+  /* 時間スロット */
+  .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+  .slot{padding:10px 4px;border:1px solid var(--line);background:#fff;border-radius:4px;font-size:13px;text-align:center;cursor:pointer;transition:all .15s;font-family:"Cormorant Garamond",serif;font-weight:500;letter-spacing:.05em}
+  .slot:hover{border-color:var(--rose);background:#fffaf6}
+  .slot.selected{background:var(--rose-deep);color:#fff;border-color:var(--rose-deep)}
+  .slot.disabled{color:var(--ink3);background:#f8f8f8;cursor:not-allowed;text-decoration:line-through;opacity:.5}
+
+  /* フォーム行 */
+  .form-row{margin-bottom:14px}
+  .form-row.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+  /* ナビボタン */
+  .nav{display:flex;gap:10px;justify-content:space-between;margin-top:24px}
+  .btn{padding:14px 28px;border-radius:4px;font-family:"Noto Serif JP",serif;font-weight:500;font-size:14px;letter-spacing:.1em;cursor:pointer;border:none;transition:all .15s;flex:1}
+  .btn-primary{background:var(--rose-deep);color:#fff}
+  .btn-primary:hover{background:#7a5651}
+  .btn-primary:disabled{background:var(--ink3);cursor:not-allowed}
+  .btn-secondary{background:#fff;color:var(--rose-deep);border:1px solid var(--rose-deep)}
+  .btn-secondary:hover{background:var(--rose-soft)}
+
+  /* 確認画面 */
+  .review-block{background:var(--rose-soft);border-radius:6px;padding:18px 20px;margin-bottom:14px}
+  .review-block h3{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--rose-deep);margin:0 0 10px;letter-spacing:.1em;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+  .review-block h3 .edit{font-size:11px;color:var(--rose-deep);cursor:pointer;text-decoration:underline;font-family:"Noto Sans JP",sans-serif;font-weight:400}
+  .review-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px dashed rgba(164,117,109,.2)}
+  .review-row:last-child{border-bottom:none}
+  .review-row .k{color:var(--ink2)}
+  .review-row .v{color:var(--ink);font-weight:500}
+  .total{background:linear-gradient(135deg,#a4756d,#c89d96);color:#fff;padding:18px 22px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .total .label{font-family:"Cormorant Garamond",serif;font-size:12px;letter-spacing:.2em}
+  .total .amount{font-family:"Cormorant Garamond",serif;font-size:24px;font-weight:600}
+  .total .amount small{font-size:12px;font-weight:400}
+
+  /* 完了画面 */
+  .done{text-align:center;padding:40px 24px}
+  .done .icon{width:64px;height:64px;background:var(--ok);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 20px}
+  .done h2{font-family:"Noto Serif JP",serif;font-size:20px;margin:0 0 12px;color:var(--ink)}
+  .done p{color:var(--ink2);font-size:13.5px;margin:0 0 8px}
+  .done .num{font-family:"Cormorant Garamond",serif;font-size:24px;color:var(--rose-deep);margin:20px 0;letter-spacing:.1em}
+
+  /* loading */
+  .loading{display:none;text-align:center;padding:30px;color:var(--ink2);font-size:13px}
+  .loading.show{display:block}
+  .spinner{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--rose-deep);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* error */
+  .err-msg{background:#fdf1f1;border-left:3px solid var(--warn);color:var(--warn);padding:10px 14px;border-radius:3px;font-size:13px;margin-bottom:14px;display:none}
+  .err-msg.show{display:block}
+
+  /* 一覧外フッタ */
+  .ftr{text-align:center;font-size:11px;color:var(--ink3);margin-top:30px;letter-spacing:.1em;font-family:"Cormorant Garamond",serif}
+
+  @media (max-width:380px){
+    .step-card{padding:20px 16px}
+    .hd h1{font-size:20px}
+    .slots{grid-template-columns:repeat(3,1fr)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hd">
+    <div class="salon">FEMOON</div>
+    <h1>🌙 フェムケアサロン</h1>
+    <div class="sub">福井市大宮 / 完全個室 / 完全予約制</div>
+  </header>
+
+  <div class="steps">
+    <div class="s active" data-step="1"><span class="n">1</span><span>Course</span></div>
+    <span class="arrow">›</span>
+    <div class="s" data-step="2"><span class="n">2</span><span>Date</span></div>
+    <span class="arrow">›</span>
+    <div class="s" data-step="3"><span class="n">3</span><span>Info</span></div>
+    <span class="arrow">›</span>
+    <div class="s" data-step="4"><span class="n">4</span><span>Confirm</span></div>
+  </div>
+
+  <!-- STEP 1: コース選択 -->
+  <section class="step-card show" data-card="1">
+    <h2>コースをお選びください</h2>
+    <p class="help">気になるメニューをタップで選択</p>
+    <div class="courses" id="courses"></div>
+    <div class="nav">
+      <button class="btn btn-primary" id="to-step2" disabled>日時を選ぶ ›</button>
+    </div>
+  </section>
+
+  <!-- STEP 2: 日時 -->
+  <section class="step-card" data-card="2">
+    <h2>ご希望の日時</h2>
+    <p class="help">日付を選んでから、空き時間をタップ</p>
+    <div class="date-row">
+      <div>
+        <div class="field-label">ご希望日<span class="req">必須</span></div>
+        <input type="date" class="input" id="date" min="">
+      </div>
+      <div>
+        <div class="field-label">曜日</div>
+        <input type="text" class="input" id="weekday" readonly placeholder="—">
+      </div>
+    </div>
+    <div class="field-label">時間帯<span class="req">必須</span></div>
+    <div class="slots" id="slots"></div>
+    <p style="font-size:11px;color:var(--ink3);margin-top:12px;line-height:1.6">※ 営業時間 月〜水・金・土 10:00〜19:00 / 日・祝 10:00〜21:00<br>※ 定休日 毎週木曜・第1日曜・第3水曜</p>
+    <div class="nav">
+      <button class="btn btn-secondary" data-back="1">‹ コース選択へ</button>
+      <button class="btn btn-primary" id="to-step3" disabled>お客様情報へ ›</button>
+    </div>
+  </section>
+
+  <!-- STEP 3: お客様情報 -->
+  <section class="step-card" data-card="3">
+    <h2>お客様情報のご入力</h2>
+    <p class="help">予約確定のご連絡にお使いします</p>
+    <div class="form-row two">
+      <div>
+        <div class="field-label">お名前(姓)<span class="req">必須</span></div>
+        <input type="text" class="input" id="lastname" placeholder="山田">
+      </div>
+      <div>
+        <div class="field-label">お名前(名)<span class="req">必須</span></div>
+        <input type="text" class="input" id="firstname" placeholder="花子">
+      </div>
+    </div>
+    <div class="form-row two">
+      <div>
+        <div class="field-label">フリガナ(姓)</div>
+        <input type="text" class="input" id="lastkana" placeholder="ヤマダ">
+      </div>
+      <div>
+        <div class="field-label">フリガナ(名)</div>
+        <input type="text" class="input" id="firstkana" placeholder="ハナコ">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field-label">お電話番号<span class="req">必須</span></div>
+      <input type="tel" class="input" id="tel" placeholder="090-1234-5678">
+    </div>
+    <div class="form-row">
+      <div class="field-label">メールアドレス</div>
+      <input type="email" class="input" id="email" placeholder="example@mail.com">
+    </div>
+    <div class="form-row">
+      <div class="field-label">ご来店回数<span class="req">必須</span></div>
+      <select class="select" id="visit-count">
+        <option value="">選択してください</option>
+        <option value="初回">初めて</option>
+        <option value="2〜3回">2〜3回目</option>
+        <option value="リピーター">4回以上(リピーター)</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="field-label">ご要望・気になること(任意)</div>
+      <textarea class="textarea" id="notes" placeholder="例)生理不順が気になります、産後ケアを希望です など"></textarea>
+    </div>
+    <div class="nav">
+      <button class="btn btn-secondary" data-back="2">‹ 日時へ戻る</button>
+      <button class="btn btn-primary" id="to-step4">内容確認へ ›</button>
+    </div>
+  </section>
+
+  <!-- STEP 4: 確認 -->
+  <section class="step-card" data-card="4">
+    <h2>ご予約内容の確認</h2>
+    <p class="help">この内容で送信します</p>
+
+    <div class="review-block">
+      <h3>コース<span class="edit" data-back="1">変更</span></h3>
+      <div id="rv-course"></div>
+    </div>
+    <div class="review-block">
+      <h3>日時<span class="edit" data-back="2">変更</span></h3>
+      <div id="rv-date"></div>
+    </div>
+    <div class="review-block">
+      <h3>お客様情報<span class="edit" data-back="3">変更</span></h3>
+      <div id="rv-info"></div>
+    </div>
+    <div class="total">
+      <div class="label">TOTAL</div>
+      <div class="amount" id="rv-total">— <small>円</small></div>
+    </div>
+    <div class="err-msg" id="err"></div>
+    <div class="nav">
+      <button class="btn btn-secondary" data-back="3">‹ 戻る</button>
+      <button class="btn btn-primary" id="submit-btn">この内容で予約する</button>
+    </div>
+  </section>
+
+  <!-- 送信中 -->
+  <section class="step-card" data-card="loading">
+    <div class="loading show">
+      <div class="spinner"></div>
+      送信中... しばらくお待ちください
+    </div>
+  </section>
+
+  <!-- 完了 -->
+  <section class="step-card" data-card="done">
+    <div class="done">
+      <div class="icon">✓</div>
+      <h2>ご予約ありがとうございます</h2>
+      <p>担当より確認のご連絡を差し上げます。<br>1営業日以内に折り返しいたします。</p>
+      <div class="num" id="reservation-id"></div>
+      <p style="font-size:11px;color:var(--ink3)">ご予約番号は確認の際にお使いください</p>
+    </div>
+  </section>
+
+  <div class="ftr">© 2026 FEMOON — powered by Skeleton Inc.</div>
+</div>
+
+<script>
+/* === コースデータ === */
+const COURSES = [
+  {id:'femcare-first',name:'フェムケア矯正 初回体験',duration:60,price:8000,tag:'初回限定',tagClass:'popular',desc:'骨盤矯正＋骨盤底筋刺激のお試しコース。フェムーンの基本メニューです。'},
+  {id:'femcare-regular',name:'フェムケア矯正 通常',duration:60,price:12000,desc:'2回目以降の方向け。骨盤矯正・骨盤底筋ケアで体の不調を根本改善。'},
+  {id:'period-care',name:'生理不調改善コース',duration:75,price:13000,desc:'生理痛・PMS・不順にお悩みの方へ。骨盤と自律神経を整えます。'},
+  {id:'postpartum',name:'産後骨盤ケア',duration:75,price:13000,desc:'産後の骨盤の歪み・尿漏れにアプローチ。育児疲れの方にも。'},
+  {id:'menopause',name:'更年期サポート',duration:75,price:13000,desc:'更年期の揺らぎ・ホットフラッシュ・睡眠の質低下に。'},
+  {id:'curaim',name:'韓国式CURAIM 育毛美肌',duration:60,price:11000,desc:'頭皮ケア＆顔のリフトアップで全身のめぐりを整えます。'},
+  {id:'consultation',name:'カウンセリングのみ',duration:30,price:0,tag:'無料',desc:'まずは話を聞いてみたい方向け。施術はしません。'}
+];
+
+/* === 状態 === */
+const state = {course:null,date:'',weekday:'',slot:'',info:{}};
+
+/* === コース描画 === */
+const coursesEl = document.getElementById('courses');
+COURSES.forEach(c=>{
+  const tag = c.tag ? `<span class="tag ${c.tagClass||''}">${c.tag}</span>` : '';
+  const priceTxt = c.price===0 ? `<div class="price">無料</div>` : `<div class="price">¥${c.price.toLocaleString()}<small>税込</small></div>`;
+  coursesEl.insertAdjacentHTML('beforeend',`
+    <div class="course" data-id="${c.id}">
+      ${tag}
+      ${priceTxt}
+      <div class="name">${c.name}</div>
+      <div class="meta"><span>⏱ ${c.duration}分</span></div>
+      <div class="desc">${c.desc}</div>
+    </div>
+  `);
+});
+coursesEl.addEventListener('click',e=>{
+  const card = e.target.closest('.course');
+  if(!card) return;
+  coursesEl.querySelectorAll('.course').forEach(c=>c.classList.remove('selected'));
+  card.classList.add('selected');
+  state.course = COURSES.find(c=>c.id===card.dataset.id);
+  document.getElementById('to-step2').disabled = false;
+});
+
+/* === 日付制御 === */
+const dateInput = document.getElementById('date');
+const today = new Date(); today.setDate(today.getDate()+1);
+dateInput.min = today.toISOString().split('T')[0];
+const SLOTS_REG = ['10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
+const SLOTS_SUN = ['10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'];
+const WD = ['日','月','火','水','木','金','土'];
+
+dateInput.addEventListener('change',()=>{
+  const d = new Date(dateInput.value);
+  const wd = d.getDay();
+  document.getElementById('weekday').value = WD[wd] + '曜日';
+  state.date = dateInput.value;
+  state.weekday = WD[wd];
+  renderSlots(wd, d);
+});
+function renderSlots(wd, d){
+  const slotsEl = document.getElementById('slots');
+  slotsEl.innerHTML = '';
+  // 定休日判定: 木曜・第1日曜・第3水曜
+  const dom = d.getDate();
+  const closedThu = wd===4;
+  const closedSun1 = wd===0 && dom<=7;
+  const closedWed3 = wd===3 && dom>=15 && dom<=21;
+  if(closedThu||closedSun1||closedWed3){
+    slotsEl.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:18px;color:var(--ink3);font-size:13px">この日は定休日です</div>`;
+    state.slot=''; document.getElementById('to-step3').disabled = true;
+    return;
+  }
+  const slots = (wd===0||wd===6) ? SLOTS_SUN : SLOTS_REG;
+  slots.forEach(t=>{
+    slotsEl.insertAdjacentHTML('beforeend',`<div class="slot" data-t="${t}">${t}</div>`);
+  });
+  slotsEl.querySelectorAll('.slot').forEach(s=>{
+    s.addEventListener('click',()=>{
+      slotsEl.querySelectorAll('.slot').forEach(x=>x.classList.remove('selected'));
+      s.classList.add('selected');
+      state.slot = s.dataset.t;
+      document.getElementById('to-step3').disabled = false;
+    });
+  });
+}
+
+/* === ステップ遷移 === */
+function showStep(n){
+  document.querySelectorAll('.step-card').forEach(c=>c.classList.remove('show'));
+  document.querySelector(`[data-card="${n}"]`).classList.add('show');
+  document.querySelectorAll('.steps .s').forEach(s=>{
+    const step = parseInt(s.dataset.step);
+    s.classList.toggle('active', step===parseInt(n));
+    s.classList.toggle('done', step<parseInt(n));
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.getElementById('to-step2').addEventListener('click',()=>showStep(2));
+document.getElementById('to-step3').addEventListener('click',()=>{
+  if(!state.date||!state.slot){alert('日付と時間を選んでください');return;}
+  showStep(3);
+});
+document.getElementById('to-step4').addEventListener('click',()=>{
+  const reqd = [['lastname','姓'],['firstname','名'],['tel','電話番号'],['visit-count','ご来店回数']];
+  for(const [id,lbl] of reqd){
+    if(!document.getElementById(id).value.trim()){
+      alert(lbl + 'を入力してください');
+      document.getElementById(id).focus();
+      return;
+    }
+  }
+  state.info = {
+    name: document.getElementById('lastname').value+' '+document.getElementById('firstname').value,
+    kana: document.getElementById('lastkana').value+' '+document.getElementById('firstkana').value,
+    tel: document.getElementById('tel').value,
+    email: document.getElementById('email').value,
+    visit: document.getElementById('visit-count').value,
+    notes: document.getElementById('notes').value
+  };
+  renderReview();
+  showStep(4);
+});
+document.querySelectorAll('[data-back]').forEach(b=>{
+  b.addEventListener('click',()=>showStep(b.dataset.back));
+});
+
+/* === 確認画面 === */
+function renderReview(){
+  document.getElementById('rv-course').innerHTML = `
+    <div class="review-row"><span class="k">メニュー</span><span class="v">${state.course.name}</span></div>
+    <div class="review-row"><span class="k">所要時間</span><span class="v">${state.course.duration}分</span></div>
+    <div class="review-row"><span class="k">料金</span><span class="v">${state.course.price===0?'無料':'¥'+state.course.price.toLocaleString()+' (税込)'}</span></div>
+  `;
+  document.getElementById('rv-date').innerHTML = `
+    <div class="review-row"><span class="k">日付</span><span class="v">${state.date} (${state.weekday})</span></div>
+    <div class="review-row"><span class="k">時間</span><span class="v">${state.slot}〜</span></div>
+  `;
+  document.getElementById('rv-info').innerHTML = `
+    <div class="review-row"><span class="k">お名前</span><span class="v">${state.info.name}</span></div>
+    ${state.info.kana.trim()?`<div class="review-row"><span class="k">フリガナ</span><span class="v">${state.info.kana}</span></div>`:''}
+    <div class="review-row"><span class="k">電話</span><span class="v">${state.info.tel}</span></div>
+    ${state.info.email?`<div class="review-row"><span class="k">メール</span><span class="v">${state.info.email}</span></div>`:''}
+    <div class="review-row"><span class="k">ご来店</span><span class="v">${state.info.visit}</span></div>
+    ${state.info.notes?`<div class="review-row"><span class="k">ご要望</span><span class="v" style="text-align:right;max-width:60%">${state.info.notes}</span></div>`:''}
+  `;
+  document.getElementById('rv-total').innerHTML = (state.course.price===0?'無料':'¥'+state.course.price.toLocaleString()) + ' <small>税込</small>';
+}
+
+/* === 送信 === */
+// GAS Web App エンドポイント — オーナーDeploy後に差し替え
+const GAS_ENDPOINT = window.GAS_ENDPOINT || '';
+
+document.getElementById('submit-btn').addEventListener('click', async ()=>{
+  const errEl = document.getElementById('err');
+  errEl.classList.remove('show');
+
+  const payload = {
+    timestamp: new Date().toISOString(),
+    course_id: state.course.id,
+    course_name: state.course.name,
+    duration: state.course.duration,
+    price: state.course.price,
+    date: state.date,
+    weekday: state.weekday,
+    slot: state.slot,
+    name: state.info.name,
+    kana: state.info.kana,
+    tel: state.info.tel,
+    email: state.info.email,
+    visit: state.info.visit,
+    notes: state.info.notes
+  };
+
+  showStep('loading');
+
+  // GASエンドポイント設定済なら送信、未設定なら localStorage に保存(MVP)
+  let ok = false;
+  if(GAS_ENDPOINT){
+    try{
+      const r = await fetch(GAS_ENDPOINT,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)
+      });
+      ok = r.ok;
+    }catch(e){ console.error(e); ok = false; }
+  }
+  if(!ok){
+    // フォールバック: localStorageに保存(オーナーが後で吸い上げ可能)
+    const all = JSON.parse(localStorage.getItem('femoon-bookings')||'[]');
+    payload._fallback = true;
+    all.push(payload);
+    localStorage.setItem('femoon-bookings',JSON.stringify(all));
+  }
+
+  // 完了画面
+  const id = 'FM-' + Date.now().toString(36).toUpperCase();
+  document.getElementById('reservation-id').textContent = id;
+  showStep('done');
+});
+</script>
+</body>
+</html>

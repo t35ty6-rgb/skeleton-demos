@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>FEMOON 予約API デプロイ手順 — オーナー専用</title>
+<style>
+  body{margin:0;background:#fbf5f2;color:#3d2a2a;font-family:-apple-system,"Hiragino Sans",sans-serif;line-height:1.85;padding:24px;max-width:900px;margin-left:auto;margin-right:auto}
+  h1{font-size:22px;margin:0 0 6px;color:#a4756d}
+  .lead{color:#7a5d5d;font-size:13.5px;margin-bottom:24px}
+  .step{background:#fff;border-radius:8px;padding:20px 24px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.04);border-left:5px solid #c89d96}
+  .step h2{margin:0 0 8px;font-size:16px;color:#a4756d;display:flex;align-items:center;gap:10px}
+  .step h2 .n{background:#a4756d;color:#fff;border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .step p{margin:6px 0;font-size:14px;color:#3d2a2a}
+  .step ul{margin:6px 0;padding-left:22px;font-size:14px}
+  .step a{color:#a4756d;font-weight:600}
+  .codebox{position:relative;background:#2a1f1f;color:#fbf5f2;padding:16px 18px;border-radius:6px;font-family:Menlo,monospace;font-size:12px;line-height:1.7;overflow-x:auto;max-height:400px;overflow-y:auto;margin:10px 0}
+  .copy-btn{position:absolute;top:8px;right:8px;background:#c89d96;color:#fff;border:none;padding:6px 14px;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;letter-spacing:.08em}
+  .copy-btn:hover{background:#a4756d}
+  .copy-btn.ok{background:#4a7a5a}
+  .urlbox{display:flex;gap:8px;margin:14px 0}
+  .urlbox input{flex:1;padding:12px 14px;border:1px solid #e8d8d0;border-radius:4px;font-size:13px;font-family:Menlo,monospace}
+  .urlbox button{padding:12px 20px;background:#a4756d;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600}
+  .urlbox button.ok{background:#4a7a5a}
+  .preview{background:#fbf0eb;padding:14px 18px;border-radius:6px;font-size:12.5px;color:#7a5d5d;margin-top:8px}
+  .badge{display:inline-block;background:#a4756d;color:#fff;padding:3px 10px;border-radius:3px;font-size:11px;letter-spacing:.08em}
+</style>
+</head>
+<body>
+
+<h1>🌙 FEMOON 予約フォーム — バックエンド接続手順</h1>
+<p class="lead">予約データをGoogleスプレッドシートに自動保存する仕組みを<strong>3分で</strong>セットアップします。</p>
+
+<div class="step">
+  <h2><span class="n">1</span>Google Apps Script を開く</h2>
+  <p><a href="https://script.google.com/home/projects/create" target="_blank">↗ https://script.google.com/home/projects/create</a></p>
+  <p>新しいプロジェクトが開きます。「無題のプロジェクト」というのを「<strong>FEMOON予約API</strong>」にリネーム(任意)。</p>
+</div>
+
+<div class="step">
+  <h2><span class="n">2</span>下のコードをコピーして、エディタに貼り付け</h2>
+  <p>エディタ画面の中身を<strong>全部消してから</strong>、このコードをまるごと貼り付け→保存(⌘+S)。</p>
+  <div class="codebox" id="codebox"><button class="copy-btn" onclick="copyCode()">📋 コピー</button><pre id="code">/**
+ * FEMOON 予約フォーム バックエンド (GAS Web App)
+ */
+const SHEET_NAME = 'FEMOON 予約管理';
+
+function getSheet_(){
+  const props = PropertiesService.getScriptProperties();
+  let id = props.getProperty('SPREADSHEET_ID');
+  if(!id){
+    const ss = SpreadsheetApp.create(SHEET_NAME);
+    id = ss.getId();
+    props.setProperty('SPREADSHEET_ID', id);
+    const sheet = ss.getActiveSheet();
+    sheet.setName('予約');
+    sheet.getRange(1,1,1,16).setValues([[
+      '予約ID','受付日時','希望日','曜日','時間','コースID','コース名','所要時間','料金',
+      'お名前','フリガナ','電話','メール','来店回数','ご要望','状態'
+    ]]);
+    sheet.getRange(1,1,1,16).setFontWeight('bold').setBackground('#fbf0eb');
+    sheet.setFrozenRows(1);
+    const sm = ss.insertSheet('月次サマリー');
+    sm.getRange(1,1,1,4).setValues([['月','予約件数','売上合計','コース内訳']]);
+    sm.getRange(1,1,1,4).setFontWeight('bold').setBackground('#fbf0eb');
+    sm.setFrozenRows(1);
+    sm.getRange(2,1).setFormula('=UNIQUE(TEXT(予約!C2:C,"YYYY-MM"))');
+    sm.getRange(2,2).setFormula('=ARRAYFORMULA(IF(LEN(A2:A)=0,,COUNTIF(TEXT(予約!C2:C,"YYYY-MM"),A2:A)))');
+    sm.getRange(2,3).setFormula('=ARRAYFORMULA(IF(LEN(A2:A)=0,,SUMIF(TEXT(予約!C2:C,"YYYY-MM"),A2:A,予約!I2:I)))');
+    sm.setColumnWidth(4,400);
+  }
+  return SpreadsheetApp.openById(id).getSheetByName('予約');
+}
+
+function doPost(e){
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try{
+    const data = JSON.parse(e.postData.contents);
+    const sheet = getSheet_();
+    const id = 'FM-' + new Date().getTime().toString(36).toUpperCase();
+    sheet.appendRow([
+      id, new Date(), data.date, data.weekday, data.slot,
+      data.course_id, data.course_name, data.duration, data.price,
+      data.name, data.kana, data.tel, data.email, data.visit, data.notes, '受付済'
+    ]);
+    return ContentService.createTextOutput(JSON.stringify({ok:true,id:id}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }catch(err){
+    return ContentService.createTextOutput(JSON.stringify({ok:false,error:String(err)}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }finally{
+    lock.releaseLock();
+  }
+}
+
+function doGet(){
+  return ContentService.createTextOutput(JSON.stringify({status:'ok',service:'FEMOON Booking API'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre></div>
+</div>
+
+<div class="step">
+  <h2><span class="n">3</span>ウェブアプリとしてデプロイ</h2>
+  <p>右上「<strong>デプロイ</strong>」→「<strong>新しいデプロイ</strong>」</p>
+  <ul>
+    <li>種類 → 「<strong>ウェブアプリ</strong>」を選択</li>
+    <li>説明 → FEMOON予約API</li>
+    <li>実行ユーザー → <strong>自分</strong></li>
+    <li>アクセスできるユーザー → <strong>全員</strong></li>
+  </ul>
+  <p>「デプロイ」ボタン押下 → アクセス許可ダイアログが出るので承認。</p>
+</div>
+
+<div class="step">
+  <h2><span class="n">4</span>発行されたウェブアプリURLを Jobs に貼る</h2>
+  <p>デプロイ完了画面に「<strong>ウェブアプリ URL</strong>」が表示されます。それをコピーして、チャットに貼って Jobs に送ってください。Jobs がフォームに繋ぎ込みます。</p>
+  <div class="urlbox">
+    <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/AKfy...../exec">
+    <button onclick="testUrl()" id="test-btn">疎通確認</button>
+  </div>
+  <div id="test-result" class="preview" style="display:none"></div>
+</div>
+
+<div class="step">
+  <h2><span class="n">5</span>完了 — 自動的に始まる</h2>
+  <p>1件目の予約が入った時点で、自動的にGoogleドライブに「<strong>FEMOON 予約管理</strong>」というスプレッドシートが作成されます。</p>
+  <p>このスプレッドシートには次の2タブが入ります:</p>
+  <ul>
+    <li><strong>予約</strong> — 1行 = 1予約のリスト</li>
+    <li><strong>月次サマリー</strong> — 月ごとの予約件数・売上合計・コース内訳を自動集計</li>
+  </ul>
+</div>
+
+<script>
+function copyCode(){
+  const txt = document.getElementById('code').innerText;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const b = document.querySelector('.copy-btn');
+    const orig = b.textContent;
+    b.textContent = '✓ コピー済';
+    b.classList.add('ok');
+    setTimeout(()=>{b.textContent = orig; b.classList.remove('ok')},1800);
+  });
+}
+async function testUrl(){
+  const url = document.getElementById('gas-url').value.trim();
+  const resEl = document.getElementById('test-result');
+  resEl.style.display='block';
+  if(!url){resEl.textContent='URLを入力してください';return;}
+  resEl.textContent='疎通確認中...';
+  try{
+    const r = await fetch(url);
+    const t = await r.text();
+    if(t.includes('Booking API')){
+      resEl.innerHTML = '✅ <strong>疎通成功</strong> — このURLをJobsに貼ってください';
+      resEl.style.background='#e8f5e9';
+      resEl.style.color='#2e7d32';
+    } else {
+      resEl.textContent = '⚠ 応答が予期と異なります: '+t.slice(0,100);
+    }
+  }catch(e){
+    resEl.textContent = '❌ エラー: '+e.message;
+    resEl.style.background='#fdf1f1';
+    resEl.style.color='#c62828';
+  }
+}
+</script>
+</body>
+</html>
