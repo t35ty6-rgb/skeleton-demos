@@ -73,8 +73,8 @@
     if (name === 'dashboard') renderDashboard();
     if (name === 'clients') renderClients();
     if (name === 'timeline') renderGlobalTimeline();
-    // LINE系メインタブ昇格: leadHub / distributionHub / eventsHub / settingsHub
-    if (['leadHub', 'distributionHub', 'eventsHub', 'settingsHub'].indexOf(name) >= 0) {
+    // LINE系メインタブ昇格
+    if (['leadHub', 'distributionHub', 'birthdayTab', 'calendarTab', 'settingsHub'].indexOf(name) >= 0) {
       if (window.LineApp) {
         if (!window._lineInited) {
           window.LineApp.init();

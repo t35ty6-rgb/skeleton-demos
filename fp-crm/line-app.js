@@ -36,8 +36,256 @@
     });
     if (name === 'leadHub') renderLeadHub();
     if (name === 'distributionHub') renderDistributionHub();
-    if (name === 'eventsHub') renderEventsHub();
+    if (name === 'birthdayTab') renderBirthdayTab();
+    if (name === 'calendarTab') renderCalendarTab();
     if (name === 'settingsHub') renderSettingsHub();
+  }
+
+  // ============================
+  // 🎂 誕生日メッセージタブ (独立)
+  // ============================
+  function renderBirthdayTab() {
+    fetchLiveData().then(() => { if (currentSubview === 'birthdayTab') renderBirthdayTabInner(); });
+    renderBirthdayTabInner();
+  }
+  function renderBirthdayTabInner() {
+    const v = document.querySelector('[data-line-view="birthdayTab"]');
+    if (!v) return;
+    const upcoming = window.LineCRM.upcomingBirthdays(90);
+    const today = upcoming.filter(b => b.daysAhead === 0);
+    const week = upcoming.filter(b => b.daysAhead > 0 && b.daysAhead <= 7);
+    const month = upcoming.filter(b => b.daysAhead > 7 && b.daysAhead <= 30);
+    const total = upcoming.length;
+
+    v.innerHTML = `
+      <h1 style="font-family:'Noto Serif JP',serif;font-size:26px;margin:0 0 4px;">🎂 誕生日メッセージ</h1>
+      <p style="color:var(--muted);font-size:13.5px;margin:0 0 24px;">お客様 + ご家族(配偶者・お子様) の誕生日を90日先まで自動検出 → 当日朝9時に自動でお祝いLINE送信</p>
+
+      <div class="task-board">
+        <div class="task-card ${today.length > 0 ? 'action' : 'muted'}">
+          <div class="task-icon">🎉</div>
+          <div class="task-label">${today.length > 0 ? '本日 自動送信' : '本日は無し'}</div>
+          <div class="task-count">${today.length}<span class="unit">名</span></div>
+          <div class="task-title">今日の誕生日</div>
+          <div class="task-desc">9:00 に自動でお祝いLINE送信予定</div>
+        </div>
+        <div class="task-card ${week.length > 0 ? 'urgent' : ''}">
+          <div class="task-icon">📅</div>
+          <div class="task-label">今週</div>
+          <div class="task-count">${week.length}<span class="unit">名</span></div>
+          <div class="task-title">1〜7日後の誕生日</div>
+          <div class="task-desc">直近対象 / 各日9:00に順次配信</div>
+        </div>
+        <div class="task-card">
+          <div class="task-icon">🗓️</div>
+          <div class="task-label">今月</div>
+          <div class="task-count">${month.length}<span class="unit">名</span></div>
+          <div class="task-title">8〜30日後の誕生日</div>
+          <div class="task-desc">スケジュール済</div>
+        </div>
+        <div class="task-card">
+          <div class="task-icon">📊</div>
+          <div class="task-label">概況</div>
+          <div class="task-count">${total}<span class="unit">名</span></div>
+          <div class="task-title">90日先までの総数</div>
+          <div class="task-desc">本人+配偶者+子供 すべて自動検出</div>
+        </div>
+      </div>
+
+      <section class="board-section">
+        <h2>🎉 本日のお祝い対象 (9:00 自動送信)</h2>
+        ${renderBirthdayGroup(today, '今日対象なし')}
+      </section>
+      <section class="board-section">
+        <h2>📅 今週 (1〜7日後)</h2>
+        ${renderBirthdayGroup(week, '今週はありません')}
+      </section>
+      <section class="board-section">
+        <h2>🗓️ 今月 (8〜30日後)</h2>
+        ${renderBirthdayGroup(month, '今月はありません')}
+      </section>
+    `;
+  }
+  function renderBirthdayGroup(list, emptyMsg) {
+    if (list.length === 0) {
+      return '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:24px;text-align:center;color:var(--muted);font-size:13px;">' + emptyMsg + '</div>';
+    }
+    return list.map(b => `
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:8px;display:grid;grid-template-columns:80px 1fr 140px;gap:16px;align-items:center;box-shadow:var(--shadow-xs);">
+        <div>
+          <div style="font-family:'Inter',sans-serif;font-size:18px;font-weight:700;letter-spacing:-0.01em;">${b.date.getMonth() + 1}/${b.date.getDate()}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:0.04em;">${b.daysAhead === 0 ? '本日' : '+' + b.daysAhead + '日'}</div>
+        </div>
+        <div>
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
+            <strong style="font-family:'Noto Sans JP',sans-serif;font-size:14.5px;">${escapeHtml(b.personName)}</strong>
+            <span class="status-pill ${b.rel === '本人' ? 'important' : 'new'}">${escapeHtml(b.rel)}</span>
+            <span style="font-size:11px;color:var(--muted);">${b.age}歳</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">顧客: ${escapeHtml(b.client.name)} 様</div>
+        </div>
+        <div style="text-align:right;">
+          ${b.daysAhead === 0
+            ? '<span class="status-pill active">✓ 9:00 送信予定</span>'
+            : '<span class="status-pill new">予約済</span>'}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ============================
+  // 🎍 カレンダー配布タブ (独立)
+  // ============================
+  function renderCalendarTab() {
+    fetchLiveData().then(() => { if (currentSubview === 'calendarTab') renderCalendarTabInner(); });
+    renderCalendarTabInner();
+  }
+  function renderCalendarTabInner() {
+    const v = document.querySelector('[data-line-view="calendarTab"]');
+    if (!v) return;
+    // ライブデータ or デモデータ
+    let reqs = (liveData && liveData.calendar_requests) || [];
+    let isDemo = false;
+    if (reqs.length === 0 && window.CALENDAR_DEMO) {
+      reqs = window.CALENDAR_DEMO;
+      isDemo = true;
+    }
+    const wantList = reqs.filter(r => r.status === '要' && r.address);
+    const wantNoAddr = reqs.filter(r => r.status === '要' && !r.address);
+    const notWant = reqs.filter(r => r.status === '不要');
+    const noReply = reqs.filter(r => !r.status);
+    const total = reqs.length;
+    const cvr = total > 0 ? Math.round(wantList.length / total * 100) : 0;
+
+    const buildRouteUrl = (adrs) => {
+      if (adrs.length === 0) return '#';
+      const enc = adrs.map(a => encodeURIComponent(a));
+      const origin = enc[0];
+      const destination = enc[enc.length - 1];
+      const waypoints = enc.slice(1, -1).join('|');
+      let url = 'https://www.google.com/maps/dir/?api=1&origin=' + origin + '&destination=' + destination;
+      if (waypoints) url += '&waypoints=' + waypoints;
+      url += '&travelmode=driving';
+      return url;
+    };
+    const buildMapAllUrl = (adrs) => adrs.length === 0 ? '#' : 'https://www.google.com/maps/search/' + encodeURIComponent(adrs.join(' / '));
+    const wantAddresses = wantList.map(r => r.address).filter(x => x);
+    const routeUrl = buildRouteUrl(wantAddresses);
+    const allMapUrl = buildMapAllUrl(wantAddresses);
+
+    v.innerHTML = `
+      <h1 style="font-family:'Noto Serif JP',serif;font-size:26px;margin:0 0 4px;">🎍 年末カレンダー配布</h1>
+      <p style="color:var(--muted);font-size:13.5px;margin:0 0 18px;">既存お客様にオリジナル卓上カレンダーを配布する企画 / LINE一斉配信→要不要回答→住所収集→Google地図でルート最適化</p>
+
+      ${isDemo ? '<div style="background:#fff8e1;border:1px solid #f0d36b;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:12.5px;color:#8a6f1e;">💡 表示中のお客様データはサンプル(デモ用)。本番では実際のLINE回答が並びます。</div>' : ''}
+
+      <div class="task-board">
+        <a href="#cal-want" class="task-card ${wantList.length > 0 ? 'action' : 'muted'}">
+          <div class="task-icon">🎁</div>
+          <div class="task-label">配達対象</div>
+          <div class="task-count">${wantList.length}<span class="unit">名</span></div>
+          <div class="task-title">要(住所済) — 配達リスト</div>
+          <div class="task-desc">下のリストでGoogleマップ ルート最適化</div>
+        </a>
+        <a href="#cal-waiting" class="task-card ${wantNoAddr.length > 0 ? 'urgent' : 'muted'}">
+          <div class="task-icon">⏳</div>
+          <div class="task-label">${wantNoAddr.length > 0 ? '住所待ち' : '待ちなし'}</div>
+          <div class="task-count">${wantNoAddr.length}<span class="unit">名</span></div>
+          <div class="task-title">要(住所未) — 住所入力待ち</div>
+          <div class="task-desc">入力URL送信済 / お客様の返信待ち</div>
+        </a>
+        <a href="#cal-noreply" class="task-card ${noReply.length > 0 ? 'urgent' : 'muted'}">
+          <div class="task-icon">📨</div>
+          <div class="task-label">未回答</div>
+          <div class="task-count">${noReply.length}<span class="unit">名</span></div>
+          <div class="task-title">未回答 — 再配信検討</div>
+          <div class="task-desc">配信後 まだ反応なし</div>
+        </a>
+        <div class="task-card">
+          <div class="task-icon">📊</div>
+          <div class="task-label">希望率</div>
+          <div class="task-count">${cvr}<span class="unit">%</span></div>
+          <div class="task-title">配達対象 / 回答総数</div>
+          <div class="task-desc">${total}名中 ${wantList.length + wantNoAddr.length}名希望</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin:24px 0;">
+        <button class="primary" id="cal-blast-btn" data-hint="全LINE友だちに『年末カレンダー要りますか?』配信。年1回だけ押す想定">📨 友だち全員に一斉配信</button>
+        <a class="ghost" href="${allMapUrl}" target="_blank" data-hint="希望者の住所をGoogleマップ上に全部ピン表示" style="text-decoration:none;display:inline-block;padding:9px 18px;border:1px solid var(--line-2);border-radius:7px;color:var(--ink);${wantList.length===0?'pointer-events:none;opacity:0.4;':''}">🗺 全員の住所を地図表示</a>
+        <a class="ghost" href="${routeUrl}" target="_blank" data-hint="希望者全員を回る最適ルートをGoogleマップで生成。当日ナビとして使用" style="text-decoration:none;display:inline-block;padding:9px 18px;border:1px solid var(--line-2);border-radius:7px;color:var(--ink);${wantList.length===0?'pointer-events:none;opacity:0.4;':''}">🚗 配達ルートを最適化 (Google マップ)</a>
+        <span id="cal-blast-msg" style="font-size:12px;color:var(--muted);align-self:center;margin-left:auto;"></span>
+      </div>
+
+      <section class="board-section" id="cal-want">
+        <h2>🎁 配達リスト (住所登録済) — ${wantList.length}名</h2>
+        ${wantList.length === 0
+          ? '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);">まだ住所登録なし</div>'
+          : '<div style="display:grid;gap:8px;">' + wantList.map((r, i) => `
+              <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;display:grid;grid-template-columns:36px 1fr 160px;gap:14px;align-items:center;box-shadow:var(--shadow-xs);">
+                <div style="background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;font-family:'Inter',sans-serif;">${i + 1}</div>
+                <div>
+                  <strong style="font-size:14.5px;">${escapeHtml(r.name) || '匿名'} 様</strong>
+                  <div style="font-size:13px;color:var(--ink-2);margin-top:3px;letter-spacing:0.01em;">📮 ${escapeHtml(r.address)}</div>
+                  ${r.phone ? `<div style="font-size:11.5px;color:var(--muted);margin-top:2px;">📞 ${escapeHtml(r.phone)}</div>` : ''}
+                  ${r.note ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">📝 ${escapeHtml(r.note)}</div>` : ''}
+                </div>
+                <div style="text-align:right;">
+                  <a href="https://www.google.com/maps/search/${encodeURIComponent(r.address)}" target="_blank" style="font-size:11.5px;color:var(--accent);text-decoration:none;background:var(--accent-soft);padding:5px 12px;border-radius:11px;display:inline-block;font-weight:600;">📍 地図で見る</a>
+                </div>
+              </div>
+            `).join('') + '</div>'
+        }
+      </section>
+
+      <section class="board-section" id="cal-waiting">
+        <h2>⏳ 住所入力待ち — ${wantNoAddr.length}名</h2>
+        ${wantNoAddr.length === 0
+          ? '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:24px;text-align:center;color:var(--muted);font-size:13px;">なし</div>'
+          : '<div style="display:grid;gap:6px;">' + wantNoAddr.map(r => `
+              <div style="background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+                <strong style="font-size:13.5px;">${escapeHtml(r.name) || '匿名'} 様</strong>
+                <span style="font-size:11px;color:var(--muted);">住所入力URLを送信済 / 入力待ち</span>
+              </div>
+            `).join('') + '</div>'
+        }
+      </section>
+
+      ${noReply.length > 0 ? `
+      <section class="board-section" id="cal-noreply">
+        <h2>📨 未回答 — ${noReply.length}名</h2>
+        <div style="display:grid;gap:4px;">
+          ${noReply.map(r => `<div style="padding:8px 14px;background:#fafbfc;border:1px solid var(--line);border-radius:6px;font-size:12.5px;">${escapeHtml(r.name) || '匿名'}</div>`).join('')}
+        </div>
+      </section>` : ''}
+
+      ${notWant.length > 0 ? `
+      <section class="board-section">
+        <h2>✗ 不要 — ${notWant.length}名</h2>
+        <div style="display:grid;gap:4px;font-size:12px;color:var(--muted);">
+          ${notWant.map(r => `<div style="padding:8px 14px;background:#fafbfc;border:1px solid var(--line);border-radius:6px;">${escapeHtml(r.name) || '匿名'}</div>`).join('')}
+        </div>
+      </section>` : ''}
+    `;
+
+    document.getElementById('cal-blast-btn').addEventListener('click', async () => {
+      if (!confirm('LINE友だち全員に「カレンダー希望調査」を一斉配信します。よろしいですか?')) return;
+      const btn = document.getElementById('cal-blast-btn');
+      const msg = document.getElementById('cal-blast-msg');
+      btn.disabled = true; btn.textContent = '配信中...';
+      try {
+        const r = await fetch(CLOUD_RUN_BASE + '/api/cal-blast', { method: 'POST' });
+        const data = await r.json();
+        msg.textContent = data.ok ? `✓ ${data.sent}/${data.total}名 に送信完了` : '❌ 失敗: ' + (data.error || '');
+        msg.style.color = data.ok ? 'var(--green)' : 'var(--red)';
+        btn.disabled = false; btn.textContent = '📨 友だち全員に一斉配信';
+      } catch (e) {
+        msg.textContent = '❌ 失敗: ' + e.message;
+        msg.style.color = 'var(--red)';
+        btn.disabled = false;
+        btn.textContent = '📨 友だち全員に一斉配信';
+      }
+    });
   }
 
   // ============================
