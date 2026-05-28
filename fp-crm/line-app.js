@@ -355,7 +355,10 @@
       </div>
 
       <section class="board-section" id="section-confirm">
-        <h2>📅 候補日確定 待ち</h2>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+          <h2 style="margin:0;">📅 候補日確定 待ち</h2>
+          <button id="fp-toggle-cal" style="font-size:12px;padding:7px 14px;background:#fff;border:1.5px solid var(--gold,#c19a3a);border-radius:7px;cursor:pointer;font-family:inherit;color:#5e4d1a;font-weight:700;">🗓 自分のGoogleカレンダーを並べて表示</button>
+        </div>
         <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">下のお客様の候補日のうち、ご都合よい1日を選んで「この日で確定 →」を押すだけ。Zoom URL発行・お客様LINE通知・Googleカレンダー登録が同時に動きます。</p>
         <div id="confirm-list"></div>
       </section>
@@ -374,6 +377,11 @@
     `;
     fillConfirmList();
     fillBookingsList();
+    // カレンダー比較トグル
+    const calBtn = document.getElementById('fp-toggle-cal');
+    if (calBtn) calBtn.addEventListener('click', toggleCalendarSidePanel);
+    // 起動時にも復元
+    if (localStorage.getItem('fp-cal-side-open') === '1') ensureCalendarSidePanel();
     fillFunnelArea();
     fillSurveysList();
   }
@@ -756,45 +764,207 @@
     setTimeout(() => toast.remove(), 30000);
   }
 
-  // ===== メモ → タスク自動抽出 =====
+  // ===== 候補日確定時の自分のGoogle カレンダー比較パネル (右半分) =====
+  function toggleCalendarSidePanel() {
+    const existing = document.getElementById('fp-cal-side');
+    if (existing) {
+      existing.remove();
+      document.body.style.paddingRight = '';
+      localStorage.setItem('fp-cal-side-open', '0');
+      const btn = document.getElementById('fp-toggle-cal');
+      if (btn) btn.textContent = '🗓 自分のGoogleカレンダーを並べて表示';
+    } else {
+      ensureCalendarSidePanel();
+    }
+  }
+
+  function ensureCalendarSidePanel() {
+    if (document.getElementById('fp-cal-side')) return;
+    const widthStr = localStorage.getItem('fp-cal-side-width');
+    const width = widthStr ? parseInt(widthStr, 10) : Math.floor(window.innerWidth * 0.42);
+
+    const panel = document.createElement('div');
+    panel.id = 'fp-cal-side';
+    panel.style.cssText = `position:fixed;top:0;right:0;bottom:0;width:${width}px;z-index:9997;background:#fff;border-left:1px solid #e5e7eb;box-shadow:-4px 0 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;`;
+    panel.innerHTML = `
+      <div id="fp-cal-resize" style="position:absolute;top:0;bottom:0;left:0;width:6px;cursor:ew-resize;z-index:2;background:transparent;"></div>
+      <div style="padding:12px 16px;border-bottom:1px solid #e5e7eb;background:#fafbfc;display:flex;align-items:center;gap:8px;">
+        <strong style="flex:1;font-size:13px;">🗓 自分の Google カレンダー (候補日と比較)</strong>
+        <a href="https://calendar.google.com/calendar/u/0/r" target="_blank" style="font-size:11px;padding:5px 10px;border:1px solid #e5e7eb;border-radius:6px;color:#374151;text-decoration:none;font-weight:600;">↗ 別窓で開く</a>
+        <button id="fp-cal-close" style="font-size:14px;width:28px;height:28px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;color:#6b7280;font-family:inherit;">✕</button>
+      </div>
+      <div id="fp-cal-frame-wrap" style="flex:1;position:relative;background:#f8fafc;">
+        <iframe id="fp-cal-frame" src="https://calendar.google.com/calendar/u/0/r/week" style="width:100%;height:100%;border:none;display:block;"></iframe>
+        <div id="fp-cal-fallback" style="display:none;position:absolute;inset:0;background:#fff;padding:32px;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+          <div style="font-size:48px;margin-bottom:14px;">🗓</div>
+          <strong style="font-size:15px;margin-bottom:8px;">Google カレンダーが埋め込み表示できません</strong>
+          <p style="font-size:12.5px;color:#6b7280;line-height:1.7;margin:0 0 20px;max-width:340px;">Google 側のセキュリティ設定 (X-Frame-Options) により埋め込み不可です。<br>下のボタンから別窓で開いて、左右に並べて使ってください。</p>
+          <a href="https://calendar.google.com/calendar/u/0/r/week" target="_blank" style="font-size:13px;padding:11px 22px;background:linear-gradient(135deg,#b8893d,#d4a017);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;">↗ 別窓で Google カレンダーを開く</a>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(panel);
+    document.body.style.paddingRight = width + 'px';
+    localStorage.setItem('fp-cal-side-open', '1');
+    const btn = document.getElementById('fp-toggle-cal');
+    if (btn) btn.textContent = '✕ カレンダーを閉じる';
+
+    // 閉じる
+    document.getElementById('fp-cal-close').addEventListener('click', toggleCalendarSidePanel);
+
+    // iframe が拒否されたら fallback 表示 (load イベントだけだとX-Frame拒否は検知しにくい→3秒後にURLが空白か確認)
+    const iframe = document.getElementById('fp-cal-frame');
+    iframe.addEventListener('error', () => showCalFallback());
+    setTimeout(() => {
+      // iframe の中身にアクセスできないなら正常にロード or 拒否、区別できないので一旦保留
+      try {
+        const doc = iframe.contentDocument;
+        if (!doc || !doc.body || !doc.body.innerHTML) showCalFallback();
+      } catch (e) { /* cross-origin = normal load */ }
+    }, 4000);
+
+    // リサイズハンドル
+    const handle = document.getElementById('fp-cal-resize');
+    handle.addEventListener('mouseenter', () => { handle.style.background = 'rgba(184,137,61,0.4)'; });
+    handle.addEventListener('mouseleave', () => { handle.style.background = 'transparent'; });
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; e.preventDefault(); document.body.style.userSelect = 'none'; });
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const w = Math.max(320, Math.min(window.innerWidth - 360, window.innerWidth - e.clientX));
+      panel.style.width = w + 'px';
+      document.body.style.paddingRight = w + 'px';
+      localStorage.setItem('fp-cal-side-width', String(w));
+    });
+    document.addEventListener('mouseup', () => { if (dragging) { dragging = false; document.body.style.userSelect = ''; } });
+  }
+
+  function showCalFallback() {
+    const fb = document.getElementById('fp-cal-fallback');
+    const fr = document.getElementById('fp-cal-frame');
+    if (fb && fr) { fb.style.display = 'flex'; fr.style.display = 'none'; }
+  }
+
+  // ===== メモ → タスク自動抽出 (ドック型パネル: 右/左/下、リサイズ可) =====
   function openMemoModal(booking, bookingTs) {
     const name = (booking && booking.name) || 'お客様';
-    const overlay = document.createElement('div');
-    overlay.id = 'fp-memo-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
-    // localStorage から既存メモを復元
     const memoKey = 'fp-memo-' + (bookingTs || '');
     const existingMemo = localStorage.getItem(memoKey) || '';
-    overlay.innerHTML = `
-      <div style="background:#fff;width:min(680px,100%);max-height:92vh;overflow-y:auto;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,0.35);">
-        <div style="padding:24px 28px 0;">
-          <h2 style="margin:0 0 4px;font-family:'Noto Serif JP',serif;font-size:20px;">📝 面談メモ — ${escapeHtml(name)}様</h2>
-          <p style="margin:0;color:#6b7280;font-size:12px;">面談内容のポイントを自由に書く → 保存時に「期限+タスク」が自動で抽出されて顧客カードに貼られます</p>
-        </div>
-        <div style="padding:20px 28px;">
-          <div style="background:#fffbf2;border:1px solid #f0d36b;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:#5e4d1a;line-height:1.65;">
-            <strong>書き方のコツ:</strong> 「<u>○月○日までに XXする</u>」「<u>来週 △△を送る</u>」「<u>3ヶ月後に □□確認</u>」 のように期限+動作を含めると自動でタスク化されます
+
+    // 前回のドック位置とサイズを復元
+    const dock = localStorage.getItem('fp-memo-dock') || 'right';
+    const sizeStr = localStorage.getItem('fp-memo-size-' + dock);
+    const defaultSize = dock === 'bottom' ? 380 : 520;
+    const size = sizeStr ? parseInt(sizeStr, 10) : defaultSize;
+
+    // 既存パネルがあれば閉じる
+    const old = document.getElementById('fp-memo-panel');
+    if (old) old.remove();
+
+    const panel = document.createElement('div');
+    panel.id = 'fp-memo-panel';
+    panel.dataset.dock = dock;
+    applyDockStyles(panel, dock, size);
+
+    panel.innerHTML = `
+      <div id="fp-memo-resize-handle" style="position:absolute;background:transparent;z-index:2;"></div>
+      <div style="display:flex;flex-direction:column;height:100%;background:#fff;box-shadow:0 -4px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb;">
+        <div style="padding:14px 18px 10px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px;background:#fafbfc;cursor:grab;">
+          <div style="flex:1;min-width:0;">
+            <h2 style="margin:0 0 2px;font-family:'Noto Serif JP',serif;font-size:16px;">📝 面談メモ — ${escapeHtml(name)}様</h2>
+            <p style="margin:0;color:#6b7280;font-size:11px;line-height:1.4;">期限+動作を含めると自動でタスク化されます (○月○日に・来週・3ヶ月後 等)</p>
           </div>
-          <textarea id="fp-memo-text" placeholder="例:&#10;・新NISAの最適配分シミュレーション資料を 来週中に送る&#10;・教育費見直し 3ヶ月後に再面談&#10;・iDeCo加入手続きの進捗を 2ヶ月後に確認&#10;・お孫さんの誕生で相続見直しの相談あり (急ぎではない)" style="width:100%;min-height:200px;padding:14px 16px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:13.5px;font-family:'Noto Sans JP',sans-serif;line-height:1.7;resize:vertical;box-sizing:border-box;">${escapeHtml(existingMemo)}</textarea>
+          <div style="display:flex;gap:4px;flex-shrink:0;">
+            <button data-dock="left" title="左ドック" style="${dockBtnStyle(dock==='left')}">⬅</button>
+            <button data-dock="right" title="右ドック" style="${dockBtnStyle(dock==='right')}">➡</button>
+            <button data-dock="bottom" title="下ドック" style="${dockBtnStyle(dock==='bottom')}">⬇</button>
+            <button id="fp-memo-close" title="閉じる" style="font-size:14px;width:32px;height:30px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;color:#6b7280;font-family:inherit;">✕</button>
+          </div>
         </div>
-        <div id="fp-memo-tasks" style="padding:0 28px 20px;display:none;"></div>
-        <div style="padding:16px 28px;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
-          <button id="fp-memo-cancel" style="font-size:13px;padding:9px 18px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;color:#374151;font-family:inherit;">キャンセル</button>
+        <div style="padding:14px 18px;overflow-y:auto;flex:1;">
+          <div style="background:#fffbf2;border:1px solid #f0d36b;border-radius:8px;padding:9px 13px;margin-bottom:12px;font-size:11px;color:#5e4d1a;line-height:1.5;">
+            <strong>書き方のコツ:</strong> 「○月○日までに XXする」「来週 △△を送る」「3ヶ月後に □□確認」
+          </div>
+          <textarea id="fp-memo-text" placeholder="例:&#10;・新NISAの最適配分シミュレーション資料を 来週中に送る&#10;・教育費見直し 3ヶ月後に再面談&#10;・iDeCo加入手続きの進捗を 2ヶ月後に確認" style="width:100%;min-height:180px;padding:13px 15px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:'Noto Sans JP',sans-serif;line-height:1.7;resize:vertical;box-sizing:border-box;">${escapeHtml(existingMemo)}</textarea>
+          <div id="fp-memo-tasks" style="margin-top:14px;display:none;"></div>
+        </div>
+        <div style="padding:12px 18px;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end;background:#fafbfc;">
           <button id="fp-memo-save" style="font-size:13px;padding:9px 22px;background:linear-gradient(135deg,#b8893d,#d4a017);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-family:inherit;">💡 保存して タスク自動抽出</button>
         </div>
       </div>`;
-    document.body.appendChild(overlay);
-    document.getElementById('fp-memo-cancel').addEventListener('click', () => overlay.remove());
+    document.body.appendChild(panel);
+
+    // ドック切替
+    panel.querySelectorAll('[data-dock]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const newDock = btn.dataset.dock;
+        localStorage.setItem('fp-memo-dock', newDock);
+        openMemoModal(booking, bookingTs);
+      });
+    });
+    document.getElementById('fp-memo-close').addEventListener('click', () => panel.remove());
     document.getElementById('fp-memo-save').addEventListener('click', () => {
       const memo = document.getElementById('fp-memo-text').value;
       localStorage.setItem(memoKey, memo);
       const tasks = extractTasksFromMemo(memo, booking);
-      // localStorage に顧客タスクとして保存
       const tasksKey = 'fp-tasks-' + ((booking && booking.userId) || bookingTs);
       const existing = JSON.parse(localStorage.getItem(tasksKey) || '[]');
       const merged = existing.concat(tasks.map(t => ({ ...t, createdAt: new Date().toISOString(), customerName: name, bookingTs: bookingTs })));
       localStorage.setItem(tasksKey, JSON.stringify(merged));
       renderExtractedTasks(tasks);
+    });
+
+    // リサイズハンドル
+    setupResizeHandle(panel, dock);
+  }
+
+  function dockBtnStyle(active) {
+    return `font-size:13px;width:32px;height:30px;background:${active?'#1f2937':'#fff'};color:${active?'#fff':'#374151'};border:1px solid ${active?'#1f2937':'#e5e7eb'};border-radius:6px;cursor:pointer;font-family:inherit;`;
+  }
+
+  function applyDockStyles(panel, dock, size) {
+    const base = 'position:fixed;z-index:9998;display:flex;background:transparent;';
+    if (dock === 'left') {
+      panel.style.cssText = base + `top:0;left:0;bottom:0;width:${size}px;`;
+    } else if (dock === 'bottom') {
+      panel.style.cssText = base + `left:0;right:0;bottom:0;height:${size}px;`;
+    } else {
+      panel.style.cssText = base + `top:0;right:0;bottom:0;width:${size}px;`;
+    }
+  }
+
+  function setupResizeHandle(panel, dock) {
+    const handle = panel.querySelector('#fp-memo-resize-handle');
+    if (!handle) return;
+    const HANDLE_W = 6;
+    if (dock === 'right') {
+      handle.style.cssText += `top:0;bottom:0;left:0;width:${HANDLE_W}px;cursor:ew-resize;`;
+    } else if (dock === 'left') {
+      handle.style.cssText += `top:0;bottom:0;right:0;width:${HANDLE_W}px;cursor:ew-resize;`;
+    } else {
+      handle.style.cssText += `left:0;right:0;top:0;height:${HANDLE_W}px;cursor:ns-resize;`;
+    }
+    handle.style.background = 'rgba(184,137,61,0.0)';
+    handle.addEventListener('mouseenter', () => { handle.style.background = 'rgba(184,137,61,0.4)'; });
+    handle.addEventListener('mouseleave', () => { handle.style.background = 'rgba(184,137,61,0.0)'; });
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => {
+      dragging = true; e.preventDefault();
+      document.body.style.userSelect = 'none';
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      let newSize;
+      if (dock === 'right') newSize = window.innerWidth - e.clientX;
+      else if (dock === 'left') newSize = e.clientX;
+      else newSize = window.innerHeight - e.clientY;
+      newSize = Math.max(300, Math.min(dock === 'bottom' ? window.innerHeight - 200 : window.innerWidth - 300, newSize));
+      if (dock === 'right' || dock === 'left') panel.style.width = newSize + 'px';
+      else panel.style.height = newSize + 'px';
+      localStorage.setItem('fp-memo-size-' + dock, String(newSize));
+    });
+    document.addEventListener('mouseup', () => {
+      if (dragging) { dragging = false; document.body.style.userSelect = ''; }
     });
   }
 
