@@ -68,12 +68,37 @@
   .input:focus,.select:focus,.textarea:focus{outline:none;border-color:var(--rose-deep);box-shadow:0 0 0 2px rgba(164,117,109,.1)}
   .textarea{resize:vertical;min-height:80px}
 
-  /* 時間スロット */
-  .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
-  .slot{padding:10px 4px;border:1px solid var(--line);background:#fff;border-radius:4px;font-size:13px;text-align:center;cursor:pointer;transition:all .15s;font-family:"Cormorant Garamond",serif;font-weight:500;letter-spacing:.05em}
-  .slot:hover{border-color:var(--rose);background:#fffaf6}
-  .slot.selected{background:var(--rose-deep);color:#fff;border-color:var(--rose-deep)}
-  .slot.disabled{color:var(--ink3);background:#f8f8f8;cursor:not-allowed;text-decoration:line-through;opacity:.5}
+  /* ホットペッパー風カレンダー */
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin:6px 0 12px;padding:0 4px}
+  .cal-arrow{width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid var(--line);color:var(--rose-deep);font-size:18px;cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;transition:all .15s}
+  .cal-arrow:hover{background:var(--rose-soft);border-color:var(--rose-deep)}
+  .cal-month{font-family:"Noto Serif JP",serif;font-size:15px;font-weight:500;letter-spacing:.08em;color:var(--ink)}
+  .cal-wrap{overflow-x:auto;margin:0 -4px;-webkit-overflow-scrolling:touch}
+  .cal-grid{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;min-width:480px}
+  .cal-grid th,.cal-grid td{padding:0;border:none;vertical-align:middle;text-align:center}
+  .cal-grid thead th{padding:6px 2px 8px;background:#fff;border-bottom:2px solid var(--line)}
+  .cal-grid thead th.time-head{background:transparent;border-bottom:none;width:54px}
+  .cal-grid thead .day{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--ink);font-weight:500}
+  .cal-grid thead .day.sat{color:#3a6ea5}
+  .cal-grid thead .day.sun{color:#c0392b}
+  .cal-grid thead .day .num{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:600;letter-spacing:.02em;display:block;line-height:1.1}
+  .cal-grid thead .day .wd{font-size:11px;letter-spacing:.05em;display:block;margin-top:2px}
+  .cal-grid thead .day.today{position:relative}
+  .cal-grid thead .day.today::after{content:"今日";position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);font-size:9px;background:var(--gold);color:#fff;padding:1px 6px;border-radius:1px;letter-spacing:.05em}
+  .cal-grid tbody tr:first-child td{padding-top:14px}
+  .cal-grid .time-col{font-family:"Cormorant Garamond",serif;font-size:12px;color:var(--ink2);font-weight:500;letter-spacing:.04em;text-align:right;padding:0 10px 0 0;width:54px;border-right:1px solid var(--line-soft)}
+  .cal-grid .cell{padding:8px 2px;border-bottom:1px solid var(--line-soft);cursor:pointer;font-family:"Noto Serif JP",serif;font-size:18px;line-height:1;transition:background .12s;user-select:none}
+  .cal-grid .cell.ok{color:var(--rose-deep)}
+  .cal-grid .cell.few{color:#c0392b}
+  .cal-grid .cell.req{color:var(--gold)}
+  .cal-grid .cell.ng{color:var(--ink3);cursor:not-allowed}
+  .cal-grid .cell.closed{color:var(--ink3);background:#f5f0ec;cursor:not-allowed;font-size:14px}
+  .cal-grid .cell:not(.ng):not(.closed):hover{background:var(--rose-soft)}
+  .cal-grid .cell.selected{background:var(--rose-deep) !important;color:#fff !important;font-weight:600}
+  .cal-grid .cell.selected::after{content:""}
+  .selected-bar{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#a4756d,#c89d96);color:#fff;padding:14px 18px;border-radius:6px;margin:18px 0 0}
+  .selected-bar .sb-label{font-family:"Cormorant Garamond",serif;font-size:11px;letter-spacing:.2em;opacity:.85}
+  .selected-bar .sb-val{font-family:"Noto Serif JP",serif;font-size:14px;font-weight:500;letter-spacing:.05em}
 
   /* フォーム行 */
   .form-row{margin-bottom:14px}
@@ -157,23 +182,31 @@
     </div>
   </section>
 
-  <!-- STEP 2: 日時 -->
+  <!-- STEP 2: 日時 (ホットペッパー風 グリッド) -->
   <section class="step-card" data-card="2">
     <h2>ご希望の日時</h2>
-    <p class="help">日付を選んでから、空き時間をタップ</p>
-    <div class="date-row">
-      <div>
-        <div class="field-label">ご希望日<span class="req">必須</span></div>
-        <input type="date" class="input" id="date" min="">
-      </div>
-      <div>
-        <div class="field-label">曜日</div>
-        <input type="text" class="input" id="weekday" readonly placeholder="—">
-      </div>
+    <p class="help">○ 空きあり ／ ◎ 残りわずか ／ △ お問い合わせ ／ × 受付終了</p>
+
+    <div class="cal-nav">
+      <button class="cal-arrow" id="cal-prev" aria-label="前の週">‹</button>
+      <div class="cal-month" id="cal-month">—</div>
+      <button class="cal-arrow" id="cal-next" aria-label="次の週">›</button>
     </div>
-    <div class="field-label">時間帯<span class="req">必須</span></div>
-    <div class="slots" id="slots"></div>
-    <p style="font-size:11px;color:var(--ink3);margin-top:12px;line-height:1.6">※ 営業時間 月〜水・金・土 10:00〜19:00 / 日・祝 10:00〜21:00<br>※ 定休日 毎週木曜・第1日曜・第3水曜</p>
+
+    <div class="cal-wrap">
+      <table class="cal-grid" id="cal-grid">
+        <thead><tr id="cal-head"></tr></thead>
+        <tbody id="cal-body"></tbody>
+      </table>
+    </div>
+
+    <p style="font-size:11px;color:var(--ink3);margin-top:14px;line-height:1.65">※ 営業時間 月〜水・金・土 10:00〜19:00 / 日・祝 10:00〜21:00<br>※ 定休日 毎週木曜・第1日曜・第3水曜</p>
+
+    <div class="selected-bar" id="selected-bar" style="display:none">
+      <div class="sb-label">選択中</div>
+      <div class="sb-val" id="sb-val">—</div>
+    </div>
+
     <div class="nav">
       <button class="btn btn-secondary" data-back="1">‹ コース選択へ</button>
       <button class="btn btn-primary" id="to-step3" disabled>お客様情報へ ›</button>
@@ -320,48 +353,96 @@ coursesEl.addEventListener('click',e=>{
   document.getElementById('to-step2').disabled = false;
 });
 
-/* === 日付制御 === */
-const dateInput = document.getElementById('date');
-const today = new Date(); today.setDate(today.getDate()+1);
-dateInput.min = today.toISOString().split('T')[0];
-const SLOTS_REG = ['10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
-const SLOTS_SUN = ['10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'];
+/* === ホットペッパー風カレンダー === */
 const WD = ['日','月','火','水','木','金','土'];
+const ALL_SLOTS = ['10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'];
+let calStart = new Date(); calStart.setDate(calStart.getDate()+1); calStart.setHours(0,0,0,0);
+const DAYS_COL = 7;
 
-dateInput.addEventListener('change',()=>{
-  const d = new Date(dateInput.value);
+function isClosed(d){
+  const wd = d.getDay(), dom = d.getDate();
+  if(wd===4) return true;
+  if(wd===0 && dom<=7) return true;
+  if(wd===3 && dom>=15 && dom<=21) return true;
+  return false;
+}
+function dayLastSlot(d){
   const wd = d.getDay();
-  document.getElementById('weekday').value = WD[wd] + '曜日';
-  state.date = dateInput.value;
-  state.weekday = WD[wd];
-  renderSlots(wd, d);
-});
-function renderSlots(wd, d){
-  const slotsEl = document.getElementById('slots');
-  slotsEl.innerHTML = '';
-  // 定休日判定: 木曜・第1日曜・第3水曜
-  const dom = d.getDate();
-  const closedThu = wd===4;
-  const closedSun1 = wd===0 && dom<=7;
-  const closedWed3 = wd===3 && dom>=15 && dom<=21;
-  if(closedThu||closedSun1||closedWed3){
-    slotsEl.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:18px;color:var(--ink3);font-size:13px">この日は定休日です</div>`;
-    state.slot=''; document.getElementById('to-step3').disabled = true;
-    return;
+  return (wd===0 || wd===6) ? '20:00' : '18:00';
+}
+function mockAvail(d, slot){
+  if(isClosed(d)) return 'closed';
+  if(slot > dayLastSlot(d)) return 'closed';
+  const seed = (d.getDate() + ALL_SLOTS.indexOf(slot)*3) % 10;
+  if(seed < 5) return 'ok';
+  if(seed < 7) return 'few';
+  if(seed < 8) return 'req';
+  return 'ng';
+}
+const SYM = {ok:'○',few:'◎',req:'△',ng:'×',closed:'休'};
+
+function renderCal(){
+  const head = document.getElementById('cal-head');
+  head.innerHTML = '<th class="time-head"></th>';
+  const days = [];
+  const today = new Date(); today.setHours(0,0,0,0);
+  for(let i=0;i<DAYS_COL;i++){
+    const d = new Date(calStart); d.setDate(calStart.getDate()+i);
+    days.push(d);
+    const wd = d.getDay();
+    const isToday = d.getTime()===today.getTime();
+    const cls = ['day'];
+    if(wd===6) cls.push('sat');
+    if(wd===0) cls.push('sun');
+    if(isToday) cls.push('today');
+    head.insertAdjacentHTML('beforeend',`<th><div class="${cls.join(' ')}"><span class="num">${d.getDate()}</span><span class="wd">${WD[wd]}</span></div></th>`);
   }
-  const slots = (wd===0||wd===6) ? SLOTS_SUN : SLOTS_REG;
-  slots.forEach(t=>{
-    slotsEl.insertAdjacentHTML('beforeend',`<div class="slot" data-t="${t}">${t}</div>`);
+  const sM = `${calStart.getFullYear()}年${calStart.getMonth()+1}月`;
+  const eD = days[days.length-1];
+  const eM = `${eD.getFullYear()}年${eD.getMonth()+1}月`;
+  document.getElementById('cal-month').textContent = sM === eM ? sM : `${sM} 〜 ${eM}`;
+  const body = document.getElementById('cal-body');
+  body.innerHTML = '';
+  ALL_SLOTS.forEach(t=>{
+    const tr = document.createElement('tr');
+    tr.insertAdjacentHTML('beforeend',`<td class="time-col">${t}</td>`);
+    days.forEach(d=>{
+      const av = mockAvail(d,t);
+      const sym = SYM[av];
+      const key = d.toISOString().split('T')[0] + '_' + t;
+      const cls = ['cell',av];
+      if(state.slotKey === key) cls.push('selected');
+      tr.insertAdjacentHTML('beforeend',`<td><div class="${cls.join(' ')}" data-key="${key}" data-date="${d.toISOString().split('T')[0]}" data-wd="${WD[d.getDay()]}" data-slot="${t}" data-av="${av}">${sym}</div></td>`);
+    });
+    body.appendChild(tr);
   });
-  slotsEl.querySelectorAll('.slot').forEach(s=>{
-    s.addEventListener('click',()=>{
-      slotsEl.querySelectorAll('.slot').forEach(x=>x.classList.remove('selected'));
-      s.classList.add('selected');
-      state.slot = s.dataset.t;
+  body.querySelectorAll('.cell').forEach(c=>{
+    if(c.dataset.av==='ng' || c.dataset.av==='closed') return;
+    c.addEventListener('click',()=>{
+      body.querySelectorAll('.cell.selected').forEach(x=>x.classList.remove('selected'));
+      c.classList.add('selected');
+      state.date = c.dataset.date;
+      state.weekday = c.dataset.wd;
+      state.slot = c.dataset.slot;
+      state.slotKey = c.dataset.key;
+      const d = new Date(state.date);
+      document.getElementById('sb-val').textContent = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 (${state.weekday}) ${state.slot}〜`;
+      document.getElementById('selected-bar').style.display = 'flex';
       document.getElementById('to-step3').disabled = false;
     });
   });
 }
+document.getElementById('cal-prev').addEventListener('click',()=>{
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1); tomorrow.setHours(0,0,0,0);
+  const next = new Date(calStart); next.setDate(calStart.getDate()-DAYS_COL);
+  calStart = next < tomorrow ? tomorrow : next;
+  renderCal();
+});
+document.getElementById('cal-next').addEventListener('click',()=>{
+  calStart = new Date(calStart); calStart.setDate(calStart.getDate()+DAYS_COL);
+  renderCal();
+});
+renderCal();
 
 /* === ステップ遷移 === */
 function showStep(n){
