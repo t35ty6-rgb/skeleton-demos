@@ -69,9 +69,11 @@
   <div class="codebox" id="codebox"><button class="copy-btn" onclick="copyCode()">📋 コピー</button><pre id="code">/**
  * FEMOON 予約フォーム バックエンド (GAS Web App)
  * 予約→ ①Sheets書き込み ②Googleカレンダー登録 を同時実行
+ * + オーナー専用ダッシュボードAPI (doGet)
  */
 const SHEET_NAME = 'FEMOON 予約管理';
 const CALENDAR_TZ = 'Asia/Tokyo';
+const ADMIN_TOKEN = '653566fda899ea7e9138aca1f67bcc4e';
 
 function getSheet_(){
   const props = PropertiesService.getScriptProperties();
@@ -147,8 +149,46 @@ function doPost(e){
   }
 }
 
-function doGet(){
-  return ContentService.createTextOutput(JSON.stringify({status:'ok',service:'FEMOON Booking API'}))
+function doGet(e){
+  const params = e.parameter || {};
+  const action = params.action || 'status';
+  // 認証
+  if(action !== 'status' && params.token !== ADMIN_TOKEN){
+    return ContentService.createTextOutput(JSON.stringify({ok:false,error:'unauthorized'}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if(action === 'status'){
+    return ContentService.createTextOutput(JSON.stringify({status:'ok',service:'FEMOON Booking API'}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if(action === 'list'){
+    const sheet = getSheet_();
+    const rng = sheet.getDataRange().getValues();
+    const hdr = rng[0];
+    const rows = rng.slice(1).filter(r=>r[0]).map(r=>{
+      const obj = {};
+      hdr.forEach((h,i)=>obj[h]=r[i]);
+      return obj;
+    });
+    return ContentService.createTextOutput(JSON.stringify({ok:true,rows:rows}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if(action === 'update'){
+    const sheet = getSheet_();
+    const id = params.id;
+    const status = params.status;
+    const data = sheet.getDataRange().getValues();
+    for(let i=1;i<data.length;i++){
+      if(data[i][0]===id){
+        sheet.getRange(i+1, 16).setValue(status);
+        return ContentService.createTextOutput(JSON.stringify({ok:true,id:id,status:status}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({ok:false,error:'not found'}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  return ContentService.createTextOutput(JSON.stringify({ok:false,error:'unknown action'}))
     .setMimeType(ContentService.MimeType.JSON);
 }</pre></div>
 </div>
