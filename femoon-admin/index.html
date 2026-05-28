@@ -332,7 +332,8 @@
           <select id="closed-to"></select>
         </div>
       </div>
-      <button class="btn green" style="width:100%;padding:12px" onclick="addClosedEntry()">+ この休業を追加</button>
+      <button class="btn green" id="closed-add-btn" style="width:100%;padding:12px" onclick="addClosedEntry()">+ この休業を追加</button>
+      <div id="closed-add-status" style="text-align:center;font-size:12px;margin-top:8px;min-height:18px;color:var(--ink2)"></div>
       <div class="field" style="margin-top:20px">
         <label>登録済みの休業</label>
         <div id="closed-list" style="background:var(--rose-soft);padding:14px;border-radius:4px;min-height:60px;font-size:13px;color:var(--ink)"></div>
@@ -523,8 +524,16 @@ function renderClosedList(){
 }
 async function addClosedEntry(){
   const date = document.getElementById('closed-date-input').value;
-  if(!date){alert('日付を選んでください');return}
+  const btn = document.getElementById('closed-add-btn');
+  const stat = document.getElementById('closed-add-status');
+  if(!date){stat.textContent='⚠️ 日付を選んでください'; stat.style.color='var(--warn)'; return}
   const allDay = document.getElementById('closed-allday').checked;
+  // UI: ボタン無効化+ローディング表示
+  btn.disabled = true;
+  const origText = btn.textContent;
+  btn.textContent = '更新中...';
+  btn.style.opacity = '.7';
+  stat.textContent = ''; stat.style.color = 'var(--ink2)';
   try{
     if(allDay){
       const r = await fetch(`${GAS_URL}?action=closed_add&date=${date}&token=${encodeURIComponent(TOKEN)}`);
@@ -536,8 +545,11 @@ async function addClosedEntry(){
       const to = document.getElementById('closed-to').value;
       const iFrom = SLOTS_ALL.indexOf(from);
       const iTo = to==='21:00' ? SLOTS_ALL.length : SLOTS_ALL.indexOf(to);
-      if(iFrom>=iTo){alert('終了時間は開始より後にしてください');return}
-      // 各スロット追加
+      if(iFrom>=iTo){
+        stat.textContent='⚠️ 終了時間は開始より後にしてください'; stat.style.color='var(--warn)';
+        btn.disabled=false; btn.textContent=origText; btn.style.opacity='1';
+        return;
+      }
       for(let i=iFrom; i<iTo; i++){
         const key = `${date}_${SLOTS_ALL[i]}`;
         const r = await fetch(`${GAS_URL}?action=closed_slot_add&key=${encodeURIComponent(key)}&token=${encodeURIComponent(TOKEN)}`);
@@ -547,20 +559,34 @@ async function addClosedEntry(){
     }
     document.getElementById('closed-date-input').value='';
     renderClosedList();
-  }catch(e){alert('追加失敗: '+e.message)}
+    stat.textContent = '✅ 追加しました。予約フォームにも反映されます';
+    stat.style.color = 'var(--green)';
+    setTimeout(()=>{stat.textContent=''},3000);
+  }catch(e){
+    stat.textContent = '❌ 追加失敗: '+e.message;
+    stat.style.color = 'var(--warn)';
+  } finally {
+    btn.disabled=false; btn.textContent=origText; btn.style.opacity='1';
+  }
 }
 async function removeClosed(date, allDay){
   if(!confirm(`${date} の休業を削除しますか？`)) return;
+  const stat = document.getElementById('closed-add-status');
+  stat.textContent='更新中...'; stat.style.color='var(--ink2)';
   try{
     const r = await fetch(`${GAS_URL}?action=closed_remove&date=${date}&token=${encodeURIComponent(TOKEN)}`);
     const j = await r.json();
     if(!j.ok) throw new Error(j.error||'failed');
     CLOSED_DATES = new Set(j.dates);
     renderClosedList();
-  }catch(e){alert('削除失敗: '+e.message)}
+    stat.textContent='✅ 削除しました'; stat.style.color='var(--green)';
+    setTimeout(()=>{stat.textContent=''},2500);
+  }catch(e){stat.textContent='❌ 削除失敗: '+e.message; stat.style.color='var(--warn)';}
 }
 async function removeSlotRange(keys){
   if(!confirm(`この時間範囲の休業を削除しますか？`)) return;
+  const stat = document.getElementById('closed-add-status');
+  stat.textContent='更新中...'; stat.style.color='var(--ink2)';
   try{
     for(const key of keys){
       const r = await fetch(`${GAS_URL}?action=closed_slot_remove&key=${encodeURIComponent(key)}&token=${encodeURIComponent(TOKEN)}`);
@@ -568,7 +594,9 @@ async function removeSlotRange(keys){
       if(j.ok) CLOSED_SLOTS = new Set(j.slots);
     }
     renderClosedList();
-  }catch(e){alert('削除失敗: '+e.message)}
+    stat.textContent='✅ 削除しました'; stat.style.color='var(--green)';
+    setTimeout(()=>{stat.textContent=''},2500);
+  }catch(e){stat.textContent='❌ 削除失敗: '+e.message; stat.style.color='var(--warn)';}
 }
 function reload(){fetchData()}
 
