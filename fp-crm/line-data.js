@@ -373,18 +373,20 @@
   ];
 
   // 年末カレンダー配布 デモデータ (実LIVEが空の時のみ表示)
+  // 住所は福井市内の Google マップで100%ヒットする実在地名のみ使用
   window.CALENDAR_DEMO = [
-    { name: '田中 健一', status: '要', address: '〒910-0833 福井県福井市最勝寺町12-3', phone: '090-1234-5678', note: '平日午前希望', userId: 'demo-1' },
-    { name: '佐藤 由美', status: '要', address: '〒910-0028 福井県福井市学園町2-4-1 サンライズマンション 302', phone: '080-2345-6789', note: '玄関前置きOK', userId: 'demo-2' },
-    { name: '鈴木 大輔', status: '要', address: '〒918-8014 福井県福井市花堂中1-12-5', phone: '', note: '土曜の午後がよい', userId: 'demo-3' },
-    { name: '高橋 真理子', status: '要', address: '〒910-0017 福井県福井市文京3-9-1 グランデュール文京 104', phone: '0776-22-3344', note: '', userId: 'demo-4' },
-    { name: '伊藤 拓海', status: '要', address: '', phone: '', note: '', userId: 'demo-5' },
-    { name: '渡辺 さくら', status: '要', address: '', phone: '', note: '', userId: 'demo-6' },
-    { name: '山本 雄一', status: '要', address: '〒910-0853 福井県福井市城東1-3-20', phone: '0776-12-3456', note: '', userId: 'demo-7' },
-    { name: '小林 浩', status: '不要', address: '', phone: '', note: '', userId: 'demo-8' },
-    { name: '加藤 麻衣', status: '不要', address: '', phone: '', note: '', userId: 'demo-9' },
-    { name: '吉田 翔太', status: '', address: '', phone: '', note: '', userId: 'demo-10' },
-    { name: '山田 智子', status: '', address: '', phone: '', note: '', userId: 'demo-11' },
+    { name: '田中 健一', status: '要', address: '福井県福井市中央1丁目1-1', phone: '090-1234-5678', note: '平日午前希望', userId: 'demo-1' },
+    { name: '佐藤 由美', status: '要', address: '福井県福井市大手3丁目10-1', phone: '080-2345-6789', note: '玄関前置きOK', userId: 'demo-2' },
+    { name: '鈴木 大輔', status: '要', address: '福井県福井市花堂南2丁目16-1', phone: '', note: '土曜の午後がよい', userId: 'demo-3' },
+    { name: '高橋 真理子', status: '要', address: '福井県福井市大和田2丁目1212', phone: '0776-22-3344', note: '', userId: 'demo-4' },
+    { name: '山本 雄一', status: '要', address: '福井県福井市田原1丁目13-6', phone: '0776-12-3456', note: '', userId: 'demo-5' },
+    { name: '中村 美穂', status: '要', address: '福井県福井市文京3丁目9-1', phone: '0776-33-4455', note: '在宅勤務日に', userId: 'demo-6' },
+    { name: '伊藤 拓海', status: '要', address: '', phone: '', note: '', userId: 'demo-7' },
+    { name: '渡辺 さくら', status: '要', address: '', phone: '', note: '', userId: 'demo-8' },
+    { name: '小林 浩', status: '不要', address: '', phone: '', note: '', userId: 'demo-9' },
+    { name: '加藤 麻衣', status: '不要', address: '', phone: '', note: '', userId: 'demo-10' },
+    { name: '吉田 翔太', status: '', address: '', phone: '', note: '', userId: 'demo-11' },
+    { name: '山田 智子', status: '', address: '', phone: '', note: '', userId: 'demo-12' },
   ];
 
   window.LineCRM = {
