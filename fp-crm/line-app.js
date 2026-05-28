@@ -901,48 +901,81 @@
     setTimeout(() => toast.remove(), 30000);
   }
 
-  // ===== Google カレンダーを別ポップアップウィンドウで右側に開く =====
-  // iframe 埋込は Google 側 X-Frame-Options で禁止されてるので、window.open で別窓を右半分に配置
-  let _fpCalPopup = null;
+  // ===== Google カレンダー右半分表示 v3 =====
+  // 戦略: 1) /calendar/embed は iframe で動く (XFOヘッダなし) → 優先利用
+  //       2) ボタンに「別ウィンドウで開く」副ボタンも常時表示
   function toggleCalendarSidePanel() {
-    if (_fpCalPopup && !_fpCalPopup.closed) {
-      _fpCalPopup.close();
-      _fpCalPopup = null;
+    const existing = document.getElementById('fp-cal-side-v3');
+    if (existing) {
+      existing.remove();
+      document.body.style.paddingRight = '';
       const btn = document.getElementById('fp-toggle-cal');
       if (btn) btn.textContent = '🗓 自分のGoogleカレンダーを並べて表示';
       return;
     }
-    // 画面の右半分を計算してポップアップ
-    const sw = window.screen.availWidth || screen.width;
-    const sh = window.screen.availHeight || screen.height;
-    const w = Math.floor(sw / 2);
-    const h = sh - 60;
-    const left = sw - w;
-    const top = 20;
-    const features = `width=${w},height=${h},left=${left},top=${top},toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
-    _fpCalPopup = window.open('https://calendar.google.com/calendar/u/0/r/week', 'fp-cal-window', features);
-    if (!_fpCalPopup) {
-      alert('ポップアップがブロックされました。\n\nブラウザのアドレスバー右の 🚫 アイコンをクリック → 「このサイトのポップアップを常に許可」 → もう一度ボタンを押してください。');
-      return;
-    }
-    // ブラウザによっては既存タブにフォーカスを取られるので、メインウィンドウに戻す
-    try { window.focus(); } catch (_) {}
-    // 念のため自分のCRMウィンドウを左半分に寄せる
-    try {
-      window.moveTo(0, 20);
-      window.resizeTo(w, h);
-    } catch (_) { /* 一部ブラウザで禁止 */ }
+    const widthStr = localStorage.getItem('fp-cal-side-width');
+    const width = widthStr ? parseInt(widthStr, 10) : Math.floor(window.innerWidth * 0.45);
+
+    const panel = document.createElement('div');
+    panel.id = 'fp-cal-side-v3';
+    panel.style.cssText = `position:fixed;top:0;right:0;bottom:0;width:${width}px;z-index:9997;background:#fff;border-left:1px solid #e5e7eb;box-shadow:-4px 0 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;`;
+    // /calendar/embed は X-Frame-Options が無いので iframe で動く (週ビュー)
+    const calSrc = 'https://calendar.google.com/calendar/embed?mode=WEEK&showTitle=0&showPrint=0&showCalendars=0&showTabs=1&showNav=1&wkst=2&ctz=Asia%2FTokyo';
+    panel.innerHTML = `
+      <div id="fp-cal-resize-v3" style="position:absolute;top:0;bottom:0;left:0;width:6px;cursor:ew-resize;z-index:2;background:transparent;"></div>
+      <div style="padding:10px 14px;border-bottom:1px solid #e5e7eb;background:#fafbfc;display:flex;align-items:center;gap:8px;">
+        <strong style="flex:1;font-size:12.5px;">🗓 Google カレンダー (週表示)</strong>
+        <button id="fp-cal-popup-v3" title="別ウィンドウで開く" style="font-size:11px;padding:5px 10px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;color:#374151;font-weight:600;font-family:inherit;">↗ 別窓</button>
+        <button id="fp-cal-close-v3" style="font-size:13px;width:26px;height:26px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;color:#6b7280;font-family:inherit;">✕</button>
+      </div>
+      <iframe id="fp-cal-iframe-v3" src="${calSrc}" style="flex:1;width:100%;border:none;display:block;background:#f8fafc;" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    `;
+    document.body.appendChild(panel);
+    document.body.style.paddingRight = width + 'px';
     const btn = document.getElementById('fp-toggle-cal');
     if (btn) btn.textContent = '✕ カレンダーを閉じる';
-    // ポップアップが閉じられたか定期チェック → ボタン文言戻す
-    const checkClosed = setInterval(() => {
-      if (!_fpCalPopup || _fpCalPopup.closed) {
-        clearInterval(checkClosed);
-        _fpCalPopup = null;
-        const b = document.getElementById('fp-toggle-cal');
-        if (b) b.textContent = '🗓 自分のGoogleカレンダーを並べて表示';
-      }
-    }, 1500);
+
+    document.getElementById('fp-cal-close-v3').addEventListener('click', toggleCalendarSidePanel);
+    document.getElementById('fp-cal-popup-v3').addEventListener('click', () => {
+      const sw = window.screen.availWidth || screen.width;
+      const sh = window.screen.availHeight || screen.height;
+      const pw = Math.floor(sw / 2);
+      const ph = sh - 60;
+      window.open('https://calendar.google.com/calendar/u/0/r/week', 'fp-cal-popup', `width=${pw},height=${ph},left=${sw-pw},top=20,toolbar=no`);
+    });
+
+    // 4秒後に iframe ロード成否を確認 (cross-originなのでアクセスはできないが幅でestimate)
+    setTimeout(() => {
+      const iframe = document.getElementById('fp-cal-iframe-v3');
+      if (!iframe) return;
+      try {
+        const ok = iframe.contentWindow && iframe.contentWindow.length > 0;
+        // 万一空白なら自動で別窓フォールバック
+        if (!ok && iframe.offsetHeight > 200) {
+          // 念のため画面に小さなヘルプを上に貼る
+          const helper = document.createElement('div');
+          helper.style.cssText = 'position:absolute;top:50px;left:14px;right:14px;background:#fffbf2;border:1px solid #f0d36b;border-radius:8px;padding:10px 14px;font-size:11.5px;color:#5e4d1a;z-index:3;line-height:1.5;';
+          helper.innerHTML = 'カレンダーが空白の場合: 上の <strong>↗ 別窓</strong> ボタンで別ウィンドウで開いてください。';
+          panel.appendChild(helper);
+          setTimeout(() => helper.remove(), 8000);
+        }
+      } catch (_) { /* cross-origin = normal */ }
+    }, 5000);
+
+    // リサイズ
+    const handle = document.getElementById('fp-cal-resize-v3');
+    handle.addEventListener('mouseenter', () => { handle.style.background = 'rgba(184,137,61,0.4)'; });
+    handle.addEventListener('mouseleave', () => { handle.style.background = 'transparent'; });
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; e.preventDefault(); document.body.style.userSelect = 'none'; });
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const w = Math.max(320, Math.min(window.innerWidth - 360, window.innerWidth - e.clientX));
+      panel.style.width = w + 'px';
+      document.body.style.paddingRight = w + 'px';
+      localStorage.setItem('fp-cal-side-width', String(w));
+    });
+    document.addEventListener('mouseup', () => { if (dragging) { dragging = false; document.body.style.userSelect = ''; } });
   }
 
   function ensureCalendarSidePanel() { /* 後方互換ダミー */ }
