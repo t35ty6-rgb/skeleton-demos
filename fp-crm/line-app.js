@@ -310,13 +310,8 @@
     const today = new Date('2026-05-28').toISOString().slice(0, 10);
     let surveys = (liveData && liveData.survey_answers) || [];
     const bookings = (liveData && liveData.bookings) || [];
-    // 候補日3つ入ったLIVE回答が無い場合は DEMOを追加 (古いテスト回答だけだと候補日無いので)
+    // デモfallback無効化 — オーナーがLINE実機テストする時のためにLIVEデータだけ表示
     let isDemo = false;
-    const hasLiveWithSlots = surveys.some(s => s.q6_候補1 || s.q7_候補2 || s.q8_候補3);
-    if (!hasLiveWithSlots && window.SURVEY_DEMO) {
-      surveys = surveys.concat(window.SURVEY_DEMO);
-      isDemo = true;
-    }
 
     const pendingConfirm = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3)).length;
     const recPending = bookings.filter(b => b.recordingStatus === 'saved' && !b.transcript).length;
@@ -387,29 +382,32 @@
     const target = document.getElementById('confirm-list');
     if (!target) return;
     let surveys = (liveData && liveData.survey_answers) || [];
-    const hasLiveWithSlots = surveys.some(s => s.q6_候補1 || s.q7_候補2 || s.q8_候補3);
-    if (!hasLiveWithSlots && window.SURVEY_DEMO) surveys = surveys.concat(window.SURVEY_DEMO);
     const pending = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3));
     if (pending.length === 0) {
-      target.innerHTML = '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);font-size:13px;">✓ すべての候補日を確定しました</div>';
+      target.innerHTML = '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);font-size:13px;">候補日確定待ちのお客様はいません。<br><span style="font-size:11.5px;">LINEからアンケート + 候補日3つに回答するとここに並びます。</span></div>';
       return;
     }
     target.innerHTML = pending.map(s => {
       const slots = [s.q6_候補1, s.q7_候補2, s.q8_候補3].filter(x => x);
       const uidShort = (s.userId || '').slice(0, 12);
+      // ts を JST に変換
+      const tsJst = s.ts ? new Date(s.ts).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
       return `
         <div style="background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;padding:18px 22px;margin-bottom:10px;box-shadow:var(--shadow-xs);">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px;">
             <div>
-              <strong style="font-size:15px;">${escapeHtml(s.q1_テーマ || '相談者')}</strong>
-              <span style="font-size:11.5px;color:var(--muted);margin-left:10px;">${(s.ts || '').slice(5, 16).replace('T', ' ')} 回答</span>
+              <strong style="font-size:16px;">${escapeHtml(s.q1_テーマ || '相談者')}</strong>
+              <span style="font-size:12px;color:var(--gold);margin-left:12px;font-weight:700;">📅 ${escapeHtml(tsJst)} 回答</span>
             </div>
             <span class="status-pill important">確定待ち</span>
           </div>
-          <div style="font-size:12px;color:var(--muted);letter-spacing:0.02em;margin-bottom:6px;">
+          <div style="font-size:12px;color:var(--muted);letter-spacing:0.02em;margin-bottom:10px;">
             ${escapeHtml(s.q2_年代 || '-')} / ${escapeHtml(s.q3_家族 || '-')} / ${escapeHtml(s.q4_年収 || '-')} / userId:${uidShort}…
           </div>
-          <div style="font-size:13px;color:var(--ink-2);margin-bottom:12px;line-height:1.6;">💭 ${escapeHtml(s.q5_悩み || '-')}</div>
+          <div style="background:#fffbf2;border:1px solid #f0d36b;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13.5px;color:#5e4d1a;line-height:1.6;">
+            <span style="font-size:11px;color:#a08537;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;display:block;margin-bottom:4px;">お客様からの一言</span>
+            💭 ${escapeHtml(s.q5_悩み || '(未記入)')}
+          </div>
           <div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">候補日 (タップで即確定)</div>
           <div style="display:grid;gap:6px;">
             ${slots.map((slot, idx) => {
@@ -501,8 +499,6 @@
     const target = document.getElementById('surveys-list');
     if (!target) return;
     let src = (liveData && liveData.survey_answers) || [];
-    const hasLive = src.some(s => s.q6_候補1 || s.q7_候補2 || s.q8_候補3);
-    if (!hasLive && window.SURVEY_DEMO) src = src.concat(window.SURVEY_DEMO);
     const list = src.slice().reverse().slice(0, 5);
     if (list.length === 0) { target.innerHTML = ''; return; }
     target.innerHTML = `
