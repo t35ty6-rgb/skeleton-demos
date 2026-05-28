@@ -158,11 +158,10 @@
     const total = reqs.length;
     const cvr = total > 0 ? Math.round(wantList.length / total * 100) : 0;
 
-    // Google Map は「名前 住所」を1つの検索クエリにすると、ピンに名前ラベルが表示される
-    const buildLabel = (r) => (r.name ? r.name + '様 ' : '') + r.address;
+    // Google マップ URL は addresses-only (名前ラベルは Google My Maps でないと不可)
     const buildRouteUrl = (items) => {
       if (items.length === 0) return '#';
-      const enc = items.map(it => encodeURIComponent(buildLabel(it)));
+      const enc = items.map(it => encodeURIComponent(it.address));
       const origin = enc[0];
       const destination = enc[enc.length - 1];
       const waypoints = enc.slice(1, -1).join('|');
@@ -171,7 +170,7 @@
       url += '&travelmode=driving';
       return url;
     };
-    const buildMapAllUrl = (items) => items.length === 0 ? '#' : 'https://www.google.com/maps/search/' + encodeURIComponent(items.map(buildLabel).join(' / '));
+    const buildMapAllUrl = (items) => items.length === 0 ? '#' : 'https://www.google.com/maps/search/' + encodeURIComponent(items.map(it => it.address).join(' / '));
     const routeUrl = buildRouteUrl(wantList);
     const allMapUrl = buildMapAllUrl(wantList);
 
@@ -233,7 +232,7 @@
                   ${r.note ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">📝 ${escapeHtml(r.note)}</div>` : ''}
                 </div>
                 <div style="text-align:right;">
-                  <a href="https://www.google.com/maps/search/${encodeURIComponent((r.name ? r.name + '様 ' : '') + r.address)}" target="_blank" style="font-size:11.5px;color:var(--accent);text-decoration:none;background:var(--accent-soft);padding:5px 12px;border-radius:11px;display:inline-block;font-weight:600;">📍 地図で見る</a>
+                  <a href="https://www.google.com/maps/search/${encodeURIComponent(r.address)}" target="_blank" style="font-size:11.5px;color:var(--accent);text-decoration:none;background:var(--accent-soft);padding:5px 12px;border-radius:11px;display:inline-block;font-weight:600;">📍 地図で見る</a>
                 </div>
               </div>
             `).join('') + '</div>'
