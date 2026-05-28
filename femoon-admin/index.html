@@ -272,7 +272,7 @@
 </div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzrj27u5Wcs9Vl0CigKDJUbfo6q6oUFwCBEJEzI6P-iFYwuYj3JoZza-oml_DWGBTJMHA/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwKZ0ulzBHf5PH5WTWNw7HQAL0JA3g_iqaYh7YNM-kP1dxdRZDV8uNRPIgRm_JiW1pf-g/exec';
 const LINE_OAM_CHAT = 'https://chat.line.biz/U540bzjri';
 
 let TOKEN = localStorage.getItem('femoon-admin-token') || '';
@@ -326,6 +326,13 @@ function parseDate(v){
   const d = new Date(v);
   return isNaN(d.getTime()) ? null : d;
 }
+function fmtTime(v){
+  if(!v) return '-';
+  if(typeof v==='string' && /^\d{1,2}:\d{2}/.test(v)) return v;
+  const d = new Date(v);
+  if(!isNaN(d.getTime())) return d.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Tokyo'});
+  return String(v);
+}
 function dayKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function isClosed(d){
   const wd=d.getDay(), dom=d.getDate();
@@ -346,7 +353,7 @@ function getDayBookings(d){
   return DATA.filter(r=>{
     const pd = parseDate(r['希望日']);
     return pd && dayKey(pd)===k;
-  }).sort((a,b)=>(a['時間']||'').localeCompare(b['時間']||''));
+  }).sort((a,b)=>fmtTime(a['時間']).localeCompare(fmtTime(b['時間'])));
 }
 
 function renderAll(){
@@ -408,7 +415,7 @@ function renderCal(){
     if(!isOther){
       bookings.slice(0,2).forEach(r=>{
         const name = (r['お名前']||'').split(' ')[0]||'予約';
-        evHtml += `<div class="ev"><span class="t">${r['時間']||''}</span>${name}</div>`;
+        evHtml += `<div class="ev"><span class="t">${fmtTime(r['時間'])}</span>${name}</div>`;
       });
       if(bookings.length>2) evHtml += `<div class="more">+${bookings.length-2}</div>`;
     }
@@ -458,7 +465,7 @@ function renderSide(){
     card.className = cls.join(' ');
     card.innerHTML = `
       <div class="row1">
-        <span class="time">${r['時間']||'-'}</span>
+        <span class="time">${fmtTime(r['時間'])}</span>
         <span class="tag ${status}">${status}</span>
       </div>
       <div class="course">${r['コース名']||'-'} <small style="color:#a89090">(${r['所要時間']||'?'}分)</small></div>
@@ -567,7 +574,7 @@ function useTemplate(btn){
   let msg = btn.textContent;
   msg = msg.replaceAll('{NAME}', (r['お名前']||'').split(' ')[0])
            .replaceAll('{DATE}', dateStr)
-           .replaceAll('{TIME}', r['時間']||'')
+           .replaceAll('{TIME}', fmtTime(r['時間']))
            .replaceAll('{COURSE}', r['コース名']||'');
   document.getElementById('line-msg-body').value = msg;
 }
