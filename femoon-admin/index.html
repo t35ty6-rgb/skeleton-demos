@@ -376,6 +376,8 @@
     <div class="modal-body">
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
         <button class="seg-btn active" data-seg="all" onclick="setSegment('all')">全員</button>
+        <button class="seg-btn" data-seg="today" onclick="setSegment('today')">🌟 本日の施術</button>
+        <button class="seg-btn" data-seg="tomorrow" onclick="setSegment('tomorrow')">明日来店予定</button>
         <button class="seg-btn" data-seg="lapsed1m" onclick="setSegment('lapsed1m')">1ヶ月以上未来店</button>
         <button class="seg-btn" data-seg="lapsed2m" onclick="setSegment('lapsed2m')">2ヶ月以上未来店</button>
         <button class="seg-btn" data-seg="lapsed3m" onclick="setSegment('lapsed3m')">3ヶ月以上未来店</button>
@@ -533,7 +535,7 @@
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwKZ0ulzBHf5PH5WTWNw7HQAL0JA3g_iqaYh7YNM-kP1dxdRZDV8uNRPIgRm_JiW1pf-g/exec';
-const LINE_OAM_CHAT = 'https://chat.line.biz/U540bzjri';
+const LINE_OAM_CHAT = 'https://chat.line.biz/';
 
 let TOKEN = localStorage.getItem('femoon-admin-token') || '';
 let DATA = [];
@@ -1313,6 +1315,13 @@ function pickTemplate(c){
   // 顧客状況に最適なテンプレを選択 (来店回数 × 経過日数で判定)
   const today = new Date(); today.setHours(0,0,0,0);
   const ms = 24*60*60*1000;
+  // 本日の予約がある場合は施術後お礼テンプレ
+  const todayBooking = c.history && c.history.some(h=>h.date && h.date.getTime()===today.getTime() && h.status!=='キャンセル');
+  if(todayBooking){
+    if(c.visits === 0) return 'new_thanks'; // 今日が初回
+    if(c.visits >= 5) return 'vip_thanks';
+    return 'rpt_thanks_2nd';
+  }
   // 未来日が混じってる場合の防御: 0未満は0扱い
   let days = c.lastVisit ? Math.floor((today - c.lastVisit)/ms) : 99999;
   if(days < 0) days = 0;
@@ -1415,10 +1424,18 @@ function aggregateCustomers(){
 function getSegmentedCustomers(){
   const all = aggregateCustomers();
   const today = new Date(); today.setHours(0,0,0,0);
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
   const ms = 24*60*60*1000;
   return all.filter(c=>{
     const lastDays = c.lastVisit ? Math.floor((today - c.lastVisit)/ms) : 99999;
     if(CURRENT_SEGMENT==='all') return true;
+    if(CURRENT_SEGMENT==='today'){
+      // 本日の予約がある (history内に今日の日付)
+      return c.history.some(h=>h.date && h.date.getTime()===today.getTime() && h.status!=='キャンセル');
+    }
+    if(CURRENT_SEGMENT==='tomorrow'){
+      return c.history.some(h=>h.date && h.date.getTime()===tomorrow.getTime() && h.status!=='キャンセル');
+    }
     if(CURRENT_SEGMENT==='lapsed1m') return lastDays>=30 && lastDays<60;
     if(CURRENT_SEGMENT==='lapsed2m') return lastDays>=60 && lastDays<90;
     if(CURRENT_SEGMENT==='lapsed3m') return lastDays>=90;
@@ -1811,11 +1828,23 @@ function openRevenueModal(){
   renderRevenue();
 }
 function closeRevenueModal(){document.getElementById('revenue-modal').classList.add('hidden')}
+function getEcRevenueByMonth(){
+  // Lea EC 月次物販売上 (オーナー手動入力、localStorageに保存)
+  try{ return JSON.parse(localStorage.getItem('femoon-ec-revenue')||'{}'); }catch(e){return {};}
+}
+function saveEcRevenue(map){ localStorage.setItem('femoon-ec-revenue', JSON.stringify(map)); }
+function updateEcRev(ym, value){
+  const map = getEcRevenueByMonth();
+  if(value===''||value===null) delete map[ym];
+  else map[ym] = Number(value)||0;
+  saveEcRevenue(map);
+  renderRevenue();
+}
 function renderRevenue(){
   const monthly = {};
   const courses = {};
   const today = new Date(); today.setHours(0,0,0,0);
-  let weekRev=0, monthRev=0, yearRev=0;
+  let weekRev=0, monthRev=0, yearRev=0, todayRev=0;
   const mStart = new Date(today.getFullYear(),today.getMonth(),1);
   const yStart = new Date(today.getFullYear(),0,1);
   const wStart = new Date(today); wStart.setDate(today.getDate()-today.getDay());
@@ -1832,26 +1861,63 @@ function renderRevenue(){
     courses[c] = courses[c] || {cnt:0,rev:0};
     courses[c].cnt++;
     courses[c].rev += rev;
+    if(pd.getTime()===today.getTime()) todayRev += rev;
     if(pd>=wStart) weekRev += rev;
     if(pd>=mStart) monthRev += rev;
     if(pd>=yStart) yearRev += rev;
   });
-  let html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
-    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:14px 16px"><div style="font-size:11px;color:var(--ink2);font-family:'Cormorant Garamond',serif;letter-spacing:.15em">今週</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--rose-deep);font-weight:600">¥${weekRev.toLocaleString()}</div></div>
-    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:14px 16px"><div style="font-size:11px;color:var(--ink2);font-family:'Cormorant Garamond',serif;letter-spacing:.15em">今月</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--rose-deep);font-weight:600">¥${monthRev.toLocaleString()}</div></div>
-    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:14px 16px"><div style="font-size:11px;color:var(--ink2);font-family:'Cormorant Garamond',serif;letter-spacing:.15em">今年累計</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--rose-deep);font-weight:600">¥${yearRev.toLocaleString()}</div></div>
+  const ecMap = getEcRevenueByMonth();
+  const thisYm = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const ecThisMonth = Number(ecMap[thisYm]||0);
+  const totalThisMonth = monthRev + ecThisMonth;
+  const treatRatio = totalThisMonth>0 ? Math.round(monthRev/totalThisMonth*100) : 0;
+  const ecRatio = 100 - treatRatio;
+
+  let html = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px 14px"><div style="font-size:10px;color:var(--ink2);font-family:'Cormorant Garamond',serif;letter-spacing:.15em">本日</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--rose-deep);font-weight:600">¥${todayRev.toLocaleString()}</div></div>
+    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px 14px"><div style="font-size:10px;color:var(--ink2);font-family:'Cormorant Garamond',serif;letter-spacing:.15em">今週</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--rose-deep);font-weight:600">¥${weekRev.toLocaleString()}</div></div>
+    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px 14px"><div style="font-size:10px;color:var(--ink2);font-family:'Cormorant Garamond',serif;letter-spacing:.15em">今月 (施術)</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--rose-deep);font-weight:600">¥${monthRev.toLocaleString()}</div></div>
+    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px 14px"><div style="font-size:10px;color:var(--ink2);font-family:'Cormorant Garamond',serif;letter-spacing:.15em">今年累計</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--rose-deep);font-weight:600">¥${yearRev.toLocaleString()}</div></div>
   </div>`;
-  // 月別
-  html += '<h4 style="font-family:\'Noto Serif JP\',serif;color:var(--ink);font-size:14px;margin:18px 0 8px;font-weight:500">月別推移</h4>';
-  const months = Object.keys(monthly).sort().reverse().slice(0,12);
-  if(months.length===0) html += '<div style="color:var(--ink3);font-size:13px">データなし</div>';
-  else {
-    const maxRev = Math.max(...months.map(k=>monthly[k].rev));
-    months.forEach(k=>{
-      const v = monthly[k];
-      html += `<div class="bar-line"><div class="lbl">${k}</div><div class="barr"><div style="width:${v.rev/maxRev*100}%"></div></div><div class="val">¥${v.rev.toLocaleString()}<br><small style="color:var(--ink2);font-size:10px">${v.cnt}件</small></div></div>`;
-    });
+
+  // 施術 vs 物販比率
+  html += `<div style="background:linear-gradient(135deg,#fff,var(--rose-soft));padding:14px 18px;border-radius:6px;margin-bottom:16px">
+    <div style="font-size:11px;color:var(--ink2);letter-spacing:.1em;margin-bottom:8px">📊 今月の売上構成 (施術 vs 物販)</div>
+    <div style="display:flex;height:24px;border-radius:3px;overflow:hidden;margin-bottom:8px;background:#eee">
+      <div style="width:${treatRatio}%;background:linear-gradient(135deg,var(--rose-deep),var(--rose));color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">${treatRatio>=12?treatRatio+'%':''}</div>
+      <div style="width:${ecRatio}%;background:linear-gradient(135deg,var(--gold),#d4a978);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">${ecRatio>=12?ecRatio+'%':''}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px">
+      <div><span style="display:inline-block;width:10px;height:10px;background:var(--rose-deep);border-radius:50%;vertical-align:middle;margin-right:4px"></span>施術 ¥${monthRev.toLocaleString()} (${treatRatio}%)</div>
+      <div><span style="display:inline-block;width:10px;height:10px;background:var(--gold);border-radius:50%;vertical-align:middle;margin-right:4px"></span>物販(Lea EC) ¥${ecThisMonth.toLocaleString()} (${ecRatio}%)</div>
+    </div>
+  </div>`;
+  // 月別 (施術+物販を統合表示)
+  html += '<h4 style="font-family:\'Noto Serif JP\',serif;color:var(--ink);font-size:14px;margin:18px 0 8px;font-weight:500">月別推移 (施術売上 + 物販売上)</h4>';
+  html += '<p style="font-size:11px;color:var(--ink2);margin:0 0 10px;line-height:1.7">💡 各月の物販売上 (Lea EC) は数値を入力してください → 自動で施術売上と並べて表示</p>';
+  // 過去12ヶ月分のキー生成 (空月も表示)
+  const monthKeys = [];
+  for(let i=0;i<12;i++){
+    const d = new Date(today.getFullYear(),today.getMonth()-i,1);
+    monthKeys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
   }
+  const maxRev = Math.max(1, ...monthKeys.map(k=>(monthly[k]?.rev||0) + (Number(ecMap[k]||0))));
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="padding:6px 8px;background:var(--rose-soft);color:var(--rose-deep);text-align:left;font-family:\'Cormorant Garamond\',serif;font-size:11px">月</th><th style="padding:6px 8px;background:var(--rose-soft);color:var(--rose-deep);text-align:right;font-family:\'Cormorant Garamond\',serif;font-size:11px">施術売上</th><th style="padding:6px 8px;background:var(--rose-soft);color:var(--rose-deep);text-align:right;font-family:\'Cormorant Garamond\',serif;font-size:11px">物販売上 (入力)</th><th style="padding:6px 8px;background:var(--rose-soft);color:var(--rose-deep);text-align:right;font-family:\'Cormorant Garamond\',serif;font-size:11px">合計</th><th style="padding:6px 8px;background:var(--rose-soft);color:var(--rose-deep);text-align:right;font-family:\'Cormorant Garamond\',serif;font-size:11px">物販比率</th></tr></thead><tbody>';
+  monthKeys.forEach(k=>{
+    const tr = monthly[k]?.rev || 0;
+    const ec = Number(ecMap[k]||0);
+    const sum = tr+ec;
+    const ratio = sum>0 ? Math.round(ec/sum*100) : 0;
+    html += `<tr style="border-bottom:1px solid var(--line-soft)">
+      <td style="padding:8px 10px;font-family:'Cormorant Garamond',serif;font-weight:600">${k}</td>
+      <td style="padding:8px 10px;text-align:right;color:var(--rose-deep);font-family:'Cormorant Garamond',serif;font-weight:500">¥${tr.toLocaleString()}<br><small style="font-size:9.5px;color:var(--ink2)">${monthly[k]?.cnt||0}件</small></td>
+      <td style="padding:6px 10px;text-align:right"><input type="number" value="${ec||''}" placeholder="0" onchange="updateEcRev('${k}',this.value)" style="width:90px;padding:4px 6px;border:1px solid var(--line);border-radius:3px;text-align:right;font-size:12px;font-family:'Cormorant Garamond',serif"></td>
+      <td style="padding:8px 10px;text-align:right;font-family:'Cormorant Garamond',serif;font-weight:600;color:var(--ink)">¥${sum.toLocaleString()}</td>
+      <td style="padding:8px 10px;text-align:right;color:var(--gold);font-family:'Cormorant Garamond',serif;font-weight:600">${ratio}%</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  html += `<p style="font-size:10.5px;color:var(--ink2);margin:10px 0 0;line-height:1.6">※ Lea EC月次売上はオーナーが毎月入力(自動連携は別途実装可)。<br>※ 物販比率の理想: 売上の30〜40%が物販だと事業安定 (ある程度施術が忙しい月でも収益確保)。</p>`;
   // コース別
   html += '<h4 style="font-family:\'Noto Serif JP\',serif;color:var(--ink);font-size:14px;margin:18px 0 8px;font-weight:500">コース別売上 (累計)</h4>';
   const cArr = Object.entries(courses).sort((a,b)=>b[1].rev-a[1].rev);
