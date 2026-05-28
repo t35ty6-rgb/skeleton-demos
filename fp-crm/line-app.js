@@ -815,8 +815,34 @@
       };
       R.mediaRecorder.start(1000);
 
-      // Zoom を別タブで開く (録画開始してから開く)
-      window.open(zoomUrl, '_blank');
+      // ★ Zoom 2/3 + CRM(メモ) 1/3 のレイアウトをセット
+      // 1) CRM を画面左の 1/3 に縮小・移動
+      // 2) Zoom を画面右の 2/3 にポップアップで開く
+      // 3) CRM 内で該当booking のメモパネルを右下に自動展開
+      const sw = window.screen.availWidth || screen.width;
+      const sh = window.screen.availHeight || screen.height;
+      const crmW = Math.floor(sw / 3);
+      const zoomW = sw - crmW;
+      try { window.moveTo(0, 20); window.resizeTo(crmW, sh - 60); } catch (_) {}
+      const zoomFeatures = `width=${zoomW},height=${sh - 60},left=${crmW},top=20,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
+      const zoomWin = window.open(zoomUrl, 'fp-zoom-win', zoomFeatures);
+      if (!zoomWin) {
+        // ポップアップブロックされたら通常タブで開く
+        window.open(zoomUrl, '_blank');
+      }
+      // メモパネルを CRM 内に自動展開 — 縮小後の CRM 全体を覆うサイズに強制
+      // CRM が 1/3 幅に縮んだ後にウィンドウサイズを基準にポジショニング
+      setTimeout(() => {
+        // 既存の保存位置を上書きして「CRM 全体に広がる」状態にする
+        const padX = 12, padTop = 70;
+        const w = Math.max(340, window.innerWidth - padX * 2);
+        const h = Math.max(280, window.innerHeight - padTop - 40);
+        localStorage.setItem('fp-memo-pos', JSON.stringify({ left: padX, top: padTop }));
+        localStorage.setItem('fp-memo-size', JSON.stringify({ w, h }));
+        const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
+        openMemoModal(booking || { name: 'お客様', userId: bookingTs }, bookingTs);
+      }, 1000);
+
       // サーバー側にもステータス通知
       fetch(CLOUD_RUN_BASE + '/api/recording/start?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }).catch(() => {});
 
