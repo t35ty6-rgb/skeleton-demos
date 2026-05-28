@@ -319,6 +319,103 @@ function getClosedDates_(){
 function getClosedSlots_(){
   const raw = PropertiesService.getScriptProperties().getProperty('CLOSED_SLOTS');
   try{ return raw ? JSON.parse(raw) : []; }catch(e){ return []; }
+}
+
+/**
+ * 自動リマインド送信 (時間トリガーで毎朝実行)
+ *
+ * 【トリガー設定方法】
+ * 1. GASエディタ左側「トリガー」アイコン (時計マーク) クリック
+ * 2. 右下「トリガーを追加」
+ * 3. 設定:
+ *    実行する関数: sendAutoReminders
+ *    イベントのソース: 時間主導型
+ *    時間ベースのトリガー: 日付ベースのタイマー
+ *    時刻: 午前8時〜9時
+ * 4. 保存
+ */
+function sendAutoReminders(){
+  const sheet = getSheet_();
+  const rng = sheet.getDataRange().getValues();
+  if(rng.length &lt; 2) return;
+  const hdr = rng[0];
+  const idxs = {
+    id: hdr.indexOf('予約ID'),
+    date: hdr.indexOf('希望日'),
+    slot: hdr.indexOf('時間'),
+    course: hdr.indexOf('コース名'),
+    name: hdr.indexOf('お名前'),
+    status: hdr.indexOf('状態'),
+    userId: hdr.indexOf('LINE userId')
+  };
+
+  // リマインド送信履歴 (Properties)
+  const sentKey = 'AUTO_REMINDER_SENT';
+  let sent = {};
+  try{ sent = JSON.parse(PropertiesService.getScriptProperties().getProperty(sentKey) || '{}'); }catch(e){}
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const ms = 24*60*60*1000;
+  let pushedCount = 0;
+
+  for(let i=1; i&lt;rng.length; i++){
+    const row = rng[i];
+    if(row[idxs.status] === 'キャンセル') continue;
+    const userId = row[idxs.userId];
+    if(!userId || String(userId).charAt(0) !== 'U') continue;
+
+    const pd = row[idxs.date] instanceof Date ? row[idxs.date] : new Date(row[idxs.date]);
+    if(isNaN(pd.getTime())) continue;
+    pd.setHours(0,0,0,0);
+
+    const daysFromToday = Math.floor((pd - today) / ms);
+    const id = row[idxs.id];
+    const name = String(row[idxs.name] || '').split(/\s+/)[0] || 'お客様';
+    const slot = row[idxs.slot] instanceof Date ? Utilities.formatDate(row[idxs.slot],'Asia/Tokyo','HH:mm') : String(row[idxs.slot]||'').slice(0,5);
+    const course = row[idxs.course] || '';
+    const mmdd = (pd.getMonth()+1) + '/' + pd.getDate();
+
+    let trigger = null;
+    let msg = null;
+    // 前日リマインド (明日来店)
+    if(daysFromToday === 1){
+      trigger = 'reminder_prev';
+      msg = name + '様\n\n明日のご予約のリマインドです🌙\n\n' + mmdd + ' ' + slot + '〜「' + course + '」のご予約を承っております。\n\nお気をつけてお越しくださいませ🌸\nFEMOON';
+    }
+    // 3日後フォロー (3日前に来店した人)
+    else if(daysFromToday === -3){
+      trigger = 'followup_3d';
+      msg = name + '様\n\nその後、お身体の調子はいかがでしょうか？\n施術から3日経ちましたが、なにか変化を感じていただけていれば嬉しいです🌸\n\nご質問・お悩みがあればお気軽にご返信くださいませ。\nFEMOON';
+    }
+    // 1ヶ月後リターン (30日前に来店した人)
+    else if(daysFromToday === -30){
+      trigger = 'return_30d';
+      msg = name + '様\n\nお久しぶりです🌙\n前回のご来店から1ヶ月が経ちました。\nお身体の調子はいかがでしょうか？\n\nそろそろメンテナンスのタイミングです🌸\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON';
+    }
+
+    if(!trigger || !msg) continue;
+    const sentMark = id + ':' + trigger;
+    if(sent[sentMark]) continue; // 二重送信防止
+
+    try{
+      const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+        method:'post',
+        contentType:'application/json',
+        headers:{'Authorization': 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN},
+        payload: JSON.stringify({to: userId, messages:[{type:'text', text: msg}]}),
+        muteHttpExceptions: true
+      });
+      if(res.getResponseCode() === 200){
+        sent[sentMark] = new Date().toISOString();
+        pushedCount++;
+      }
+    }catch(e){
+      Logger.log('Push失敗: ' + id + ' / ' + e);
+    }
+  }
+  PropertiesService.getScriptProperties().setProperty(sentKey, JSON.stringify(sent));
+  Logger.log('自動リマインド送信: ' + pushedCount + '件');
+  return pushedCount;
 }</pre></div>
 </div>
 

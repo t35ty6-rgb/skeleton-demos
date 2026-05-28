@@ -1794,10 +1794,22 @@ function openCustDetail(idx){
   </div>`;
 
   // 連絡先
-  html += `<div style="margin-bottom:18px;padding:12px 16px;background:#fafafa;border-radius:6px;font-size:13px">
-    <div>📞 ${c.tel||'-'} ｜ ✉️ ${c.email||'未登録'}</div>
+  html += `<div style="margin-bottom:14px;padding:12px 16px;background:#fafafa;border-radius:6px;font-size:13px">
+    <div>📞 ${c.tel||'-'} ｜ ✉️ ${c.email||'未登録'} ${c.lineUserId?'<span style="background:#06c755;color:#fff;font-size:9px;padding:1px 6px;border-radius:9px;margin-left:6px">📲LINE直送可</span>':''}</div>
     ${c.kana?`<div style="color:var(--ink2);font-size:11.5px;margin-top:3px">フリガナ: ${c.kana}</div>`:''}
     <div style="color:var(--ink2);font-size:11.5px;margin-top:3px">初回来店から ${totalDays}日 / 計${c.visits}回</div>
+  </div>`;
+
+  // 顧客カルテ (体調・施術メモ・次回提案などをオーナー入力)
+  const karteKey = 'femoon-karte-' + (c.tel||'');
+  const karte = localStorage.getItem(karteKey) || '';
+  html += `<div style="margin-bottom:18px;background:linear-gradient(135deg,#fffaf6,#fff);border:1px solid var(--line);border-radius:8px;padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <strong style="font-family:'Noto Serif JP',serif;font-size:13px;color:var(--rose-deep)">📋 カルテ・施術メモ</strong>
+      <span id="karte-saved" style="font-size:10px;color:var(--green);opacity:0">✓ 保存済</span>
+    </div>
+    <textarea id="karte-text" rows="5" placeholder="例)&#10;・体調: 腰痛強い、生理2日目&#10;・施術: フェムケア+肩リリース追加&#10;・次回提案: 1ヶ月後、骨盤底筋強化&#10;・特記: 妊娠希望、冷え強め&#10;・好み: 強めの圧、無香料希望" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:4px;font-size:12.5px;font-family:inherit;background:#fff;resize:vertical;line-height:1.7" onblur="saveKarte('${karteKey}',this.value)">${karte}</textarea>
+    <p style="font-size:10.5px;color:var(--ink2);margin:6px 0 0;line-height:1.6">💾 入力後タップを離せば自動保存。次回来店時に「📋カルテ」開いて見直し。</p>
   </div>`;
 
   // 来店履歴
@@ -1827,6 +1839,14 @@ function openCustDetail(idx){
   document.getElementById('cd-content').innerHTML = html;
 }
 function closeCustDetailModal(){document.getElementById('cust-detail-modal').classList.add('hidden')}
+function saveKarte(key, value){
+  localStorage.setItem(key, value);
+  const tag = document.getElementById('karte-saved');
+  if(tag){
+    tag.style.opacity = '1';
+    setTimeout(()=>{tag.style.opacity='0'}, 2000);
+  }
+}
 async function quickLineFromDetail(c){
   const tplKey = pickTemplate(c);
   const tpl = TEMPLATES[tplKey];
