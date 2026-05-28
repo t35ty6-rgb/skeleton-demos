@@ -74,6 +74,7 @@
 const SHEET_NAME = 'FEMOON 予約管理';
 const CALENDAR_TZ = 'Asia/Tokyo';
 const ADMIN_TOKEN = '653566fda899ea7e9138aca1f67bcc4e';
+const LINE_CHANNEL_ACCESS_TOKEN = 'SLePxx5CLw5nZuOUgfOqQoFaBOkAKMCQyhYemHHETh44mlK4Oi3ZjDdmvHXVfdYHRxuUYLT62zjJHvjSHPCIYcB9C2Yz2tmuHMh+++CLSukiYIAKLmhY8i6KxH1g/lxCCQ4EKxJR+H/JrdiUIXf2mwdB04t89/1O/w1cDnyilFU=';
 
 function getSheet_(){
   const props = PropertiesService.getScriptProperties();
@@ -84,11 +85,11 @@ function getSheet_(){
     props.setProperty('SPREADSHEET_ID', id);
     const sheet = ss.getActiveSheet();
     sheet.setName('予約');
-    sheet.getRange(1,1,1,17).setValues([[
+    sheet.getRange(1,1,1,19).setValues([[
       '予約ID','受付日時','希望日','曜日','時間','コースID','コース名','所要時間','料金',
-      'お名前','フリガナ','電話','メール','来店回数','ご要望','状態','カレンダーURL'
+      'お名前','フリガナ','電話','メール','来店回数','ご要望','状態','カレンダーURL','LINE userId','LINE表示名'
     ]]);
-    sheet.getRange(1,1,1,17).setFontWeight('bold').setBackground('#fbf0eb');
+    sheet.getRange(1,1,1,19).setFontWeight('bold').setBackground('#fbf0eb');
     sheet.setFrozenRows(1);
     const sm = ss.insertSheet('月次サマリー');
     sm.getRange(1,1,1,4).setValues([['月','予約件数','売上合計','コース内訳']]);
@@ -168,7 +169,8 @@ function doPost(e){
     sheet.appendRow([
       id, new Date(), data.date, data.weekday, data.slot,
       data.course_id, data.course_name, data.duration, data.price,
-      data.name, data.kana, data.tel, data.email, data.visit, data.notes, '受付済', calUrl
+      data.name, data.kana, data.tel, data.email, data.visit, data.notes, '受付済', calUrl,
+      data.line_user_id||'', data.line_display_name||''
     ]);
     return ContentService.createTextOutput(JSON.stringify({ok:true,id:id,calendar:calUrl}))
       .setMimeType(ContentService.MimeType.JSON);
@@ -265,6 +267,33 @@ function doGet(e){
     PropertiesService.getScriptProperties().setProperty('CLOSED_DATES', JSON.stringify(next));
     return ContentService.createTextOutput(JSON.stringify({ok:true,dates:next}))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+  // LINE Push API でメッセージ直接送信
+  if(action === 'line_push'){
+    const userId = params.uid;
+    const message = params.msg;
+    if(!userId || !message){
+      return ContentService.createTextOutput(JSON.stringify({ok:false,error:'uid と msg が必要'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    try{
+      const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+        method: 'post',
+        contentType: 'application/json',
+        headers: {'Authorization': 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN},
+        payload: JSON.stringify({
+          to: userId,
+          messages: [{type:'text', text: message}]
+        }),
+        muteHttpExceptions: true
+      });
+      const code = res.getResponseCode();
+      return ContentService.createTextOutput(JSON.stringify({ok: code===200, status:code, response: res.getContentText().slice(0,200)}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }catch(err){
+      return ContentService.createTextOutput(JSON.stringify({ok:false,error:String(err)}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
   }
   // 時間スロット単位の休業 ("YYYY-MM-DD_HH:MM" 形式)
   if(action === 'closed_slot_add' || action === 'closed_slot_remove'){

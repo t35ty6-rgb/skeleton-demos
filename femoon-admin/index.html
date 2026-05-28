@@ -1386,7 +1386,9 @@ function aggregateCustomers(){
     if(r['状態']==='キャンセル') return;
     const tel = String(r['電話']||'').replace(/[-\s]/g,'');
     if(!tel) return;
-    if(!map[tel]) map[tel] = {tel:r['電話'], name:r['お名前'], kana:r['フリガナ'], email:r['メール'], visits:0, totalRev:0, lastVisit:null, firstVisit:null, nextVisit:null, courses:{}, history:[]};
+    if(!map[tel]) map[tel] = {tel:r['電話'], name:r['お名前'], kana:r['フリガナ'], email:r['メール'], lineUserId:r['LINE userId']||'', lineDisplay:r['LINE表示名']||'', visits:0, totalRev:0, lastVisit:null, firstVisit:null, nextVisit:null, courses:{}, history:[]};
+    // userIdは最新のものを優先 (空でなければ更新)
+    if(r['LINE userId']) map[tel].lineUserId = r['LINE userId'];
     const pd = parseDate(r['希望日']);
     if(!pd) return;
     const isPast = pd <= today;
@@ -1468,7 +1470,7 @@ function renderCustomers(){
     const tplLabel = TEMPLATES[tplKey]?.label || '';
     return `<div class="${cls.join(' ')}">
       <div class="info" style="cursor:pointer" onclick="openCustDetail(${i})">
-        <div class="name">${c.name||'(名前なし)'} ${c.visits>=5?'<span style="background:var(--gold);color:#fff;font-size:9px;padding:1px 6px;border-radius:9px;margin-left:6px;letter-spacing:.1em">VIP</span>':''}<span style="font-size:10px;color:var(--rose-deep);margin-left:6px">▸ 詳細</span></div>
+        <div class="name">${c.name||'(名前なし)'} ${c.visits>=5?'<span style="background:var(--gold);color:#fff;font-size:9px;padding:1px 6px;border-radius:9px;margin-left:6px;letter-spacing:.1em">VIP</span>':''}${c.lineUserId?'<span style="background:#06c755;color:#fff;font-size:9px;padding:1px 6px;border-radius:9px;margin-left:6px;letter-spacing:.05em">📲LINE直送可</span>':''}<span style="font-size:10px;color:var(--rose-deep);margin-left:6px">▸ 詳細</span></div>
         <div class="meta">📞 ${c.tel||'-'} ｜ 最終 ${lastStr}${days!==null?` (${days}日前)`:''} ｜ 平均間隔 ${c.avgSpan?c.avgSpan+'日':'-'}</div>
         <div style="font-size:10.5px;color:var(--rose-deep);margin-top:3px">💡 推奨: ${tplLabel}</div>
       </div>
@@ -1485,31 +1487,52 @@ function renderCustomers(){
   // 配列を保持して quickLine から参照
   window._CUST_ARR = arr;
 }
-// ワンクリック: 推奨テンプレ即コピー+LINE起動
+// ワンクリック: userIdあれば直接送信、なければコピペフォールバック
 async function quickLine(idx){
   try{
     const c = window._CUST_ARR && window._CUST_ARR[idx];
-    if(!c){ alert('顧客データが見つかりません (再読み込み試してください)'); return; }
+    if(!c){ alert('顧客データが見つかりません'); return; }
     const tplKey = pickTemplate(c);
     const tpl = TEMPLATES[tplKey];
-    if(!tpl){ alert('テンプレートが見つかりません: '+tplKey+'\n📝テンプレボタンから確認してください'); return; }
+    if(!tpl){ alert('テンプレートが見つかりません: '+tplKey); return; }
     const msg = fillTemplate(tpl.body, c);
-    let copied = false;
-    try{ await navigator.clipboard.writeText(msg); copied = true; }
-    catch(e){
-      // fallback: textarea経由
-      const ta = document.createElement('textarea');
-      ta.value = msg; document.body.appendChild(ta); ta.select();
-      try{ document.execCommand('copy'); copied = true; }catch(e2){}
-      ta.remove();
+
+    // ★ LINE userId あれば 直接Push送信
+    if(c.lineUserId && c.lineUserId.startsWith('U')){
+      if(!confirm(`${c.name} 様に下記メッセージを送信します:\n\n${msg.slice(0,200)}\n\n送信しますか？`)) return;
+      showToast('📤 送信中...');
+      try{
+        const r = await fetch(`${GAS_URL}?action=line_push&uid=${encodeURIComponent(c.lineUserId)}&msg=${encodeURIComponent(msg)}&token=${encodeURIComponent(TOKEN)}`);
+        const j = await r.json();
+        if(j.ok){
+          showToast(`✅ ${c.name} 様にLINEで直接送信完了！`);
+        } else {
+          alert('送信失敗: '+(j.error||j.response||'unknown')+'\n\nLINE管理画面を開いて手動送信します。');
+          await fallbackCopy(msg, c);
+        }
+      }catch(e){
+        alert('送信エラー: '+e.message);
+        await fallbackCopy(msg, c);
+      }
+      return;
     }
-    window.open(LINE_OAM_CHAT,'_blank');
-    if(copied) showToast(`✅ ${c.name} 様向け「${tpl.label}」をコピー → LINE管理画面で貼付`);
-    else showToast(`⚠️ コピー失敗。メッセージ: ${msg.slice(0,50)}...`);
+
+    // userIdなし → 従来のコピー+LINE管理画面起動
+    await fallbackCopy(msg, c);
+    showToast(`📋 ${c.name} 様向け「${tpl.label}」をコピー → LINE管理画面で貼付 (※LINEから予約してくれた方は今後直送可)`);
   }catch(err){
     alert('即連絡エラー: '+err.message);
-    console.error(err);
   }
+}
+async function fallbackCopy(msg, c){
+  try{ await navigator.clipboard.writeText(msg); }
+  catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = msg; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); }catch(e2){}
+    ta.remove();
+  }
+  window.open(LINE_OAM_CHAT,'_blank');
 }
 function showToast(msg){
   const t = document.createElement('div');

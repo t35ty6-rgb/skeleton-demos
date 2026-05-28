@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <title>ご予約 — 🌙フェムケアサロン FEMOON</title>
+<!-- LINE LIFF SDK (LINE内で開かれた時のみuserIdを自動取得) -->
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Noto+Serif+JP:wght@400;500;600&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -520,6 +522,41 @@ function renderReview(){
 // GAS Web App エンドポイント (FEMOON 予約Calendar - 稼働中)
 const GAS_ENDPOINT = window.GAS_ENDPOINT || 'https://script.google.com/macros/s/AKfycbwKZ0ulzBHf5PH5WTWNw7HQAL0JA3g_iqaYh7YNM-kP1dxdRZDV8uNRPIgRm_JiW1pf-g/exec';
 
+// LIFF ID (LINE Developers Console で発行 → ここに貼る)
+const LIFF_ID = window.LIFF_ID || '__LIFF_ID_PLACEHOLDER__';
+let LIFF_USER = null; // {userId, displayName, pictureUrl} or null
+
+// LINEブラウザ内で開かれた時のみ初期化 (それ以外は通常Webフォームとして動作)
+(async()=>{
+  try{
+    if(typeof liff === 'undefined') return;
+    if(LIFF_ID.indexOf('PLACEHOLDER') !== -1) return;
+    await liff.init({liffId: LIFF_ID});
+    if(liff.isLoggedIn()){
+      const profile = await liff.getProfile();
+      LIFF_USER = {userId: profile.userId, displayName: profile.displayName, pictureUrl: profile.pictureUrl};
+      console.log('LIFF userId取得:', LIFF_USER.displayName);
+      // お客様名フィールドにLINEプロフィール名を自動入力 (姓名分離なので全体に)
+      const ln = document.getElementById('lastname');
+      if(ln && !ln.value && LIFF_USER.displayName){
+        // 1文字目を姓、それ以降を名 (緩い分解)
+        const parts = LIFF_USER.displayName.split(/\s+/);
+        if(parts.length>=2){
+          document.getElementById('lastname').value = parts[0];
+          document.getElementById('firstname').value = parts.slice(1).join(' ');
+        } else {
+          document.getElementById('lastname').value = LIFF_USER.displayName;
+        }
+      }
+    } else {
+      // 未ログイン時はLINEログインを促す
+      liff.login();
+    }
+  }catch(e){
+    console.warn('LIFF init failed (通常Webブラウザ扱い):', e.message);
+  }
+})();
+
 // 起動時に休業日+時間スロット休業+既存予約 を取得 → カレンダー反映
 // バッティング絶対防止: 既存予約がある時間は「×」表示
 function refreshAvailability(){
@@ -554,7 +591,9 @@ document.getElementById('submit-btn').addEventListener('click', async ()=>{
     tel: state.info.tel,
     email: state.info.email,
     visit: state.info.visit,
-    notes: state.info.notes
+    notes: state.info.notes,
+    line_user_id: LIFF_USER ? LIFF_USER.userId : '',
+    line_display_name: LIFF_USER ? LIFF_USER.displayName : ''
   };
 
   showStep('loading');
