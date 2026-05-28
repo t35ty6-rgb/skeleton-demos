@@ -41,13 +41,297 @@
   }
 
   // ============================
-  // 🆕 新規相談ハブ (leadfunnel をラップ)
+  // 🆕 新規相談ハブ (アクションカード型)
   // ============================
   function renderLeadHub() {
-    // ハブ自体に renderLeadFunnel を直接呼ぶ (leadfunnel内側 div を持つ)
+    fetchLiveData().then(() => { if (currentSubview === 'leadHub') renderLeadHubInner(); });
+    if (!window._leadHubInterval) {
+      window._leadHubInterval = setInterval(() => {
+        if (currentSubview === 'leadHub') {
+          fetchLiveData().then(() => renderLeadHubInner());
+        }
+      }, 15000);
+    }
+    renderLeadHubInner();
+  }
+
+  function renderLeadHubInner() {
     const v = document.querySelector('[data-line-view="leadHub"]');
-    v.innerHTML = '<div data-line-view="leadfunnel"></div>';
-    renderLeadFunnel();
+    if (!v) return;
+    const today = new Date('2026-05-28').toISOString().slice(0, 10);
+    const surveys = (liveData && liveData.survey_answers) || [];
+    const bookings = (liveData && liveData.bookings) || [];
+
+    const pendingConfirm = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3)).length;
+    const recPending = bookings.filter(b => b.recordingStatus === 'saved' && !b.transcript).length;
+    const recordingNow = bookings.filter(b => b.recordingStatus === 'recording').length;
+    const totalNewLeads = surveys.length;
+
+    v.innerHTML = `
+      <h1 style="font-family:'Noto Serif JP',serif;font-size:26px;letter-spacing:0.02em;margin:0 0 4px;">🆕 新規相談</h1>
+      <p style="color:var(--muted);font-size:13.5px;margin:0 0 24px;">公式LINEから入った新規お客様の予約・面談・議事録までの一連を管理</p>
+
+      <div class="task-board">
+        <a href="#section-confirm" class="task-card ${pendingConfirm > 0 ? 'urgent' : 'muted'}">
+          <div class="task-icon">📅</div>
+          <div class="task-label">${pendingConfirm > 0 ? 'アクション必要' : '対応待ちなし'}</div>
+          <div class="task-count">${pendingConfirm}<span class="unit">名</span></div>
+          <div class="task-title">候補日確定 待ち</div>
+          <div class="task-desc">アンケート回答済 / 1つ選んで確定するだけ</div>
+        </a>
+        <a href="#section-recording" class="task-card ${recordingNow > 0 ? 'action' : 'muted'}">
+          <div class="task-icon">🔴</div>
+          <div class="task-label">${recordingNow > 0 ? '今 録画中' : 'スタンバイ'}</div>
+          <div class="task-count">${recordingNow}<span class="unit">件</span></div>
+          <div class="task-title">録画中の面談</div>
+          <div class="task-desc">終了したら ■停止 を押す</div>
+        </a>
+        <a href="#section-recording" class="task-card ${recPending > 0 ? 'urgent' : 'muted'}">
+          <div class="task-icon">✨</div>
+          <div class="task-label">${recPending > 0 ? 'アクション必要' : '対応待ちなし'}</div>
+          <div class="task-count">${recPending}<span class="unit">件</span></div>
+          <div class="task-title">議事録 未生成</div>
+          <div class="task-desc">録画は終わったが議事録がまだ / AIで自動作成</div>
+        </a>
+        <a href="#section-funnel" class="task-card">
+          <div class="task-icon">📈</div>
+          <div class="task-label">概況</div>
+          <div class="task-count">${totalNewLeads}<span class="unit">件</span></div>
+          <div class="task-title">直近の問い合わせ総数</div>
+          <div class="task-desc">アンケート回答数 / ファネル詳細</div>
+        </a>
+      </div>
+
+      <section class="board-section" id="section-confirm">
+        <h2>📅 候補日確定 待ち</h2>
+        <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">下のお客様の候補日のうち、ご都合よい1日を選んで「この日で確定 →」を押すだけ。Zoom URL発行・お客様LINE通知・Googleカレンダー登録が同時に動きます。</p>
+        <div id="confirm-list"></div>
+      </section>
+
+      <section class="board-section" id="section-recording">
+        <h2>💻 面談予約 と 録画・議事録</h2>
+        <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">確定済みの予約。面談直前に「● 録画ONでZoom開始」 → 終了時「■ 録画停止」 → 「✨ AI議事録を生成」 の順で進める。</p>
+        <div id="bookings-list"></div>
+      </section>
+
+      <section class="board-section" id="section-funnel">
+        <h2>📈 直近のお問い合わせと、リード獲得ファネル</h2>
+        <div id="funnel-area"></div>
+        <div id="surveys-list" style="margin-top:18px;"></div>
+      </section>
+    `;
+    fillConfirmList();
+    fillBookingsList();
+    fillFunnelArea();
+    fillSurveysList();
+  }
+
+  function fillConfirmList() {
+    const target = document.getElementById('confirm-list');
+    if (!target) return;
+    const surveys = (liveData && liveData.survey_answers) || [];
+    const pending = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3));
+    if (pending.length === 0) {
+      target.innerHTML = '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);font-size:13px;">✓ すべての候補日を確定しました</div>';
+      return;
+    }
+    target.innerHTML = pending.map(s => {
+      const slots = [s.q6_候補1, s.q7_候補2, s.q8_候補3].filter(x => x);
+      const uidShort = (s.userId || '').slice(0, 12);
+      return `
+        <div style="background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;padding:18px 22px;margin-bottom:10px;box-shadow:var(--shadow-xs);">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px;">
+            <div>
+              <strong style="font-size:15px;">${escapeHtml(s.q1_テーマ || '相談者')}</strong>
+              <span style="font-size:11.5px;color:var(--muted);margin-left:10px;">${(s.ts || '').slice(5, 16).replace('T', ' ')} 回答</span>
+            </div>
+            <span class="status-pill important">確定待ち</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted);letter-spacing:0.02em;margin-bottom:6px;">
+            ${escapeHtml(s.q2_年代 || '-')} / ${escapeHtml(s.q3_家族 || '-')} / ${escapeHtml(s.q4_年収 || '-')} / userId:${uidShort}…
+          </div>
+          <div style="font-size:13px;color:var(--ink-2);margin-bottom:12px;line-height:1.6;">💭 ${escapeHtml(s.q5_悩み || '-')}</div>
+          <div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">候補日 (タップで即確定)</div>
+          <div style="display:grid;gap:6px;">
+            ${slots.map((slot, idx) => {
+              const parts = (slot || '').split(/\s+/);
+              const dateStr = parts[0] || '';
+              const slotStr = parts.slice(1).join(' ') || '';
+              return `<button class="slot-confirm-btn" data-slot-confirm
+                data-uid="${escapeHtml(s.userId)}" data-date="${escapeHtml(dateStr)}" data-slot="${escapeHtml(slotStr)}"
+                style="text-align:left;padding:12px 16px;background:#fff;border:2px solid var(--line);border-radius:8px;cursor:pointer;font-size:14px;display:flex;justify-content:space-between;align-items:center;font-family:inherit;transition:all 0.15s;">
+                <span><strong style="color:var(--accent);margin-right:10px;">第${idx + 1}希望</strong>${escapeHtml(slot)}</span>
+                <span style="font-size:12px;color:var(--green);font-weight:700;background:var(--line-green-soft);padding:4px 10px;border-radius:6px;">この日で確定 →</span>
+              </button>`;
+            }).join('')}
+          </div>
+        </div>`;
+    }).join('');
+    bindConfirmButtons();
+  }
+
+  function fillBookingsList() {
+    const target = document.getElementById('bookings-list');
+    if (!target) return;
+    const bookings = ((liveData && liveData.bookings) || []).slice().reverse().slice(0, 8);
+    if (bookings.length === 0) {
+      target.innerHTML = '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);font-size:13px;">まだ予約はありません</div>';
+      return;
+    }
+    target.innerHTML = bookings.map(b => {
+      const rec = b.recordingStatus || '';
+      const tsEnc = encodeURIComponent(b.ts || '');
+      const zUrl = escapeHtml(b.zoomUrl || '');
+      const dateStr = String(b.date || '').slice(5).replace('-', '/');
+      let cta = '';
+      if (rec === 'recording') {
+        cta = `<button class="btn-rec-stop" data-rec-stop="${tsEnc}">■ 録画停止</button>
+               <a class="btn-mini" href="${zUrl}" target="_blank">Zoomを開く</a>`;
+      } else if (rec === 'saved') {
+        const hasT = b.transcript;
+        cta = `${hasT
+          ? `<button class="btn-mini" data-view-transcript="${tsEnc}" style="background:#fff8e1;border-color:#f0d36b;color:#8a6f1e;font-weight:600;">📝 議事録を見る</button>`
+          : `<button class="btn-mini" data-gen-transcript="${tsEnc}" style="background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;font-weight:700;">✨ AI議事録を生成</button>`}
+          <a class="btn-mini" href="${escapeHtml(b.driveUrl||'#')}" target="_blank">📁 録画 (Drive)</a>`;
+      } else if (zUrl) {
+        cta = `<button class="btn-rec-start" data-rec-start="${tsEnc}" data-zoom="${zUrl}">● 録画ONでZoom開始</button>
+               <a class="btn-mini" href="${zUrl}" target="_blank">録画なしで開く</a>`;
+      }
+      const recPill = rec === 'recording' ? '<span class="rec-pill recording">● 録画中</span>'
+        : rec === 'saved' ? '<span class="rec-pill saved">📼 録画保存済</span>' : '';
+      return `
+        <div style="background:var(--surface);border:1px solid var(--line);border-left:4px solid ${rec === 'recording' ? 'var(--red)' : 'var(--line-green)'};border-radius:10px;padding:18px 22px;margin-bottom:10px;box-shadow:var(--shadow-xs);display:grid;grid-template-columns:90px 1fr;gap:18px;">
+          <div>
+            <div style="font-size:19px;font-weight:700;font-family:'Inter',sans-serif;">${dateStr}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHtml(b.time || '')}</div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;">
+              <strong style="font-size:15px;">${escapeHtml(b.name || '匿名')} 様</strong>
+              ${recPill}
+            </div>
+            ${b.zoomUrl ? `<div style="font-size:11px;color:var(--muted);font-family:ui-monospace,Menlo,monospace;margin-bottom:10px;word-break:break-all;">${escapeHtml(b.zoomUrl)}</div>` : ''}
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">${cta}</div>
+          </div>
+        </div>`;
+    }).join('');
+    bindBookingsButtons();
+  }
+
+  function fillFunnelArea() {
+    const target = document.getElementById('funnel-area');
+    if (!target) return;
+    const f = window.LEAD_FUNNEL;
+    const conv = (a, b) => b === 0 ? 0 : Math.round(a / b * 100);
+    target.innerHTML = `
+      <div class="funnel-grid">
+        <div class="funnel-step"><div class="funnel-icon">👋</div><div class="funnel-label">友だち追加</div><div class="funnel-value">${f.friendAdded}</div><div class="funnel-conv">—</div></div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-step"><div class="funnel-icon">📝</div><div class="funnel-label">アンケート</div><div class="funnel-value">${f.answeredSurvey}</div><div class="funnel-conv">${conv(f.answeredSurvey, f.friendAdded)}%</div></div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-step"><div class="funnel-icon">📅</div><div class="funnel-label">Zoom予約</div><div class="funnel-value">${f.booked}</div><div class="funnel-conv">${conv(f.booked, f.answeredSurvey)}%</div></div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-step"><div class="funnel-icon">🎯</div><div class="funnel-label">面談実施</div><div class="funnel-value">${f.completed}</div><div class="funnel-conv">${conv(f.completed, f.booked)}%</div></div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-step highlight"><div class="funnel-icon">⭐</div><div class="funnel-label">成約</div><div class="funnel-value">${f.converted}</div><div class="funnel-conv">${conv(f.converted, f.completed)}%</div></div>
+      </div>
+    `;
+  }
+
+  function fillSurveysList() {
+    const target = document.getElementById('surveys-list');
+    if (!target) return;
+    const list = ((liveData && liveData.survey_answers) || []).slice().reverse().slice(0, 5);
+    if (list.length === 0) { target.innerHTML = ''; return; }
+    target.innerHTML = `
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">最新のアンケート回答 (確定済も含む)</div>
+      ${list.map(s => `
+        <div style="background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin-bottom:6px;display:grid;grid-template-columns:1fr auto;gap:10px;font-size:12.5px;">
+          <div>
+            <strong>${escapeHtml(s.q1_テーマ || '-')}</strong>
+            <span style="color:var(--muted);margin-left:6px;font-size:11px;">${(s.ts || '').slice(5, 16).replace('T', ' ')}</span>
+            <div style="color:var(--muted);font-size:11px;margin-top:2px;">${escapeHtml(s.q2_年代 || '-')} / ${escapeHtml(s.q3_家族 || '-')} / ${escapeHtml(s.q4_年収 || '-')}</div>
+          </div>
+          <div>${s.confirmedSlot ? `<span class="status-pill active">確定済</span>` : '<span class="status-pill important">確定待ち</span>'}</div>
+        </div>
+      `).join('')}
+    `;
+  }
+
+  function bindConfirmButtons() {
+    document.querySelectorAll('[data-slot-confirm]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const uid = btn.dataset.uid;
+        const dateStr = btn.dataset.date;
+        const slotStr = btn.dataset.slot;
+        if (!confirm(`${dateStr} ${slotStr} で確定します。\n\nZoomURL発行 → お客様LINE通知 → Googleカレンダー登録 が同時に動きます。`)) return;
+        btn.disabled = true;
+        const inner = btn.querySelector('span:last-child');
+        if (inner) inner.textContent = '処理中...';
+        try {
+          const r = await fetch(CLOUD_RUN_BASE + '/api/confirm-slot', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: uid, dateStr: dateStr, slotStr: slotStr }),
+          });
+          const data = await r.json();
+          if (data.ok) {
+            alert('✅ 確定\n\nZoom URL: ' + data.zoomUrl + '\nお客様にLINE通知済 + Googleカレンダー登録済');
+            await fetchLiveData();
+            renderLeadHubInner();
+          } else { alert('失敗: ' + (data.error || '')); btn.disabled = false; }
+        } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; }
+      });
+    });
+  }
+
+  function bindBookingsButtons() {
+    document.querySelectorAll('[data-rec-start]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const ts = btn.dataset.recStart;
+        const zoomUrl = btn.dataset.zoom;
+        btn.disabled = true; btn.textContent = '...';
+        try {
+          await fetch(CLOUD_RUN_BASE + '/api/recording/start?ts=' + encodeURIComponent(ts), { method: 'POST' });
+          window.open(zoomUrl, '_blank');
+          await fetchLiveData();
+          renderLeadHubInner();
+        } catch (e) { alert('録画開始失敗: ' + e.message); btn.disabled = false; }
+      });
+    });
+    document.querySelectorAll('[data-rec-stop]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('録画を停止して Drive に保存しますか?')) return;
+        const ts = btn.dataset.recStop;
+        btn.disabled = true;
+        try {
+          await fetch(CLOUD_RUN_BASE + '/api/recording/stop?ts=' + encodeURIComponent(ts), { method: 'POST' });
+          await fetchLiveData();
+          renderLeadHubInner();
+        } catch (e) { alert('録画停止失敗: ' + e.message); btn.disabled = false; }
+      });
+    });
+    document.querySelectorAll('[data-gen-transcript]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const ts = btn.dataset.genTranscript;
+        btn.disabled = true; btn.textContent = '✨ 生成中...';
+        try {
+          const r = await fetch(CLOUD_RUN_BASE + '/api/transcript?ts=' + encodeURIComponent(ts), { method: 'POST' });
+          const data = await r.json();
+          if (data.ok) {
+            await fetchLiveData();
+            renderLeadHubInner();
+            showTranscriptModal(data.transcript, '✨ AI議事録 (自動生成)');
+          } else { alert('失敗: ' + (data.error || '')); btn.disabled = false; }
+        } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; }
+      });
+    });
+    document.querySelectorAll('[data-view-transcript]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ts = btn.dataset.viewTranscript;
+        const b = ((liveData && liveData.bookings) || []).find(x => String(x.ts).slice(0,19) === String(ts).slice(0,19));
+        if (b && b.transcript) showTranscriptModal(b.transcript, '📝 議事録 — ' + (b.name || ''));
+      });
+    });
   }
 
   // ============================

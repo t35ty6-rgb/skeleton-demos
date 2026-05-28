@@ -73,14 +73,14 @@
     if (name === 'dashboard') renderDashboard();
     if (name === 'clients') renderClients();
     if (name === 'timeline') renderGlobalTimeline();
-    if (name === 'line') {
+    // LINE系メインタブ昇格: leadHub / distributionHub / eventsHub / settingsHub
+    if (['leadHub', 'distributionHub', 'eventsHub', 'settingsHub'].indexOf(name) >= 0) {
       if (window.LineApp) {
         if (!window._lineInited) {
           window.LineApp.init();
           window._lineInited = true;
-        } else {
-          window.LineApp.refresh();
         }
+        window.LineApp.activateSubview(name);
       }
     }
   }
