@@ -540,14 +540,64 @@
           <td>${window.LifeEvents.currentAge(c)}</td>
           <td class="hide-mobile">${escapeHtml(c.occupation)}</td>
           <td>${familyTxt}</td>
-          <td><span class="status-pill ${c.status}">${statusLabel(c.status)}</span>${taskCount > 0 ? `<span style="display:inline-block;margin-left:6px;font-size:10px;background:#fff8e1;color:#a08537;padding:2px 7px;border-radius:9px;font-weight:700;border:1px solid #f0d36b;">📝${taskCount}</span>` : ''}</td>
+          <td><span class="status-pill ${c.status}">${statusLabel(c.status)}</span>${taskCount > 0 ? `<button class="fp-task-badge" data-task-cid="${escapeHtml(c.lineFriendId || c.id)}" data-task-name="${escapeHtml(c.name)}" style="display:inline-block;margin-left:6px;font-size:10px;background:#fff8e1;color:#a08537;padding:2px 7px;border-radius:9px;font-weight:700;border:1px solid #f0d36b;cursor:pointer;font-family:inherit;" title="タスク一覧を見る">📝${taskCount}</button>` : ''}</td>
           <td class="num">¥${fmtMoney(c.aum)}</td>
           <td class="${contactCls}"><div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start;"><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:${contactBg};color:${contactFg};">${contactLabel}</span><span style="font-size:11px;color:var(--muted);">${dsl}日前</span>${c.lastActionType ? `<span style="font-size:9.5px;color:var(--accent);font-weight:600;">📱 LINE: ${escapeHtml((c.lastActionType||'').split(':')[0])}</span>` : ''}</div></td>
         </tr>
       `;
     }).join('');
     tbody.querySelectorAll('tr').forEach(tr => {
-      tr.addEventListener('click', () => openClientModal(tr.dataset.clientId));
+      tr.addEventListener('click', (e) => {
+        if (e.target.closest('.fp-task-badge')) return; // バッジクリックは別処理
+        openClientModal(tr.dataset.clientId);
+      });
+    });
+    tbody.querySelectorAll('.fp-task-badge').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openTasksListModal(btn.dataset.taskCid, btn.dataset.taskName);
+      });
+    });
+  }
+
+  // 顧客のタスク一覧を表示
+  function openTasksListModal(customerKey, customerName) {
+    const tasksKey = 'fp-tasks-' + customerKey;
+    const tasks = JSON.parse(localStorage.getItem(tasksKey) || '[]');
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff;width:min(720px,100%);max-height:90vh;overflow-y:auto;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,0.35);">
+        <div style="padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:baseline;">
+          <h2 style="margin:0;font-family:'Noto Serif JP',serif;font-size:20px;">📝 ${escapeHtml(customerName)}様 のタスク一覧 (${tasks.length}件)</h2>
+          <button id="fp-tl-close" style="font-size:18px;width:32px;height:32px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;color:#6b7280;font-family:inherit;">✕</button>
+        </div>
+        <div style="padding:18px 24px;">
+          ${tasks.length === 0 ? '<div style="text-align:center;color:#9ca3af;padding:30px;">タスクなし</div>' :
+            '<div style="display:grid;gap:8px;">' + tasks.sort((a,b) => (a.due||'').localeCompare(b.due||'')).map((t,i) => `
+              <div style="display:grid;grid-template-columns:36px 90px 1fr 130px 32px;gap:10px;align-items:center;padding:10px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;">
+                <span style="font-size:18px;">${t.icon || '✅'}</span>
+                <span style="font-size:10.5px;font-weight:700;background:${t.priority==='至急'?'#fef2f2;color:#b91c3c':(t.priority==='今週'||t.priority==='2週間以内')?'#fff7ed;color:#c2410c':'#f0f9ff;color:#075985'};padding:4px 9px;border-radius:11px;text-align:center;">${t.priority||'-'}</span>
+                <span style="font-size:13px;">${escapeHtml(t.task||'')}</span>
+                <span style="font-size:11px;color:#6b7280;text-align:right;">${t.due||'-'}</span>
+                <button class="fp-task-del" data-idx="${i}" title="削除" style="background:#fff;border:1px solid #fecaca;color:#b91c3c;width:26px;height:26px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;">✕</button>
+              </div>
+            `).join('') + '</div>'
+          }
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#fp-tl-close').addEventListener('click', () => overlay.remove());
+    overlay.querySelectorAll('.fp-task-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        const arr = JSON.parse(localStorage.getItem(tasksKey) || '[]');
+        arr.splice(idx, 1);
+        localStorage.setItem(tasksKey, JSON.stringify(arr));
+        overlay.remove();
+        openTasksListModal(customerKey, customerName);
+        renderClients();
+      });
     });
   }
 

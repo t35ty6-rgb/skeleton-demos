@@ -458,9 +458,16 @@
   function fillBookingsList() {
     const target = document.getElementById('bookings-list');
     if (!target) return;
-    const bookings = ((liveData && liveData.bookings) || []).slice().reverse().slice(0, 8);
+    // 完了アーカイブ済み bookingTs のセット (localStorage)
+    const archived = new Set(JSON.parse(localStorage.getItem('fp-booking-archived') || '[]'));
+    const allBookings = ((liveData && liveData.bookings) || []).slice().reverse();
+    const bookings = allBookings.filter(b => !archived.has(b.ts)).slice(0, 8);
+    const archivedCount = allBookings.filter(b => archived.has(b.ts)).length;
     if (bookings.length === 0) {
-      target.innerHTML = '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);font-size:13px;">まだ予約はありません</div>';
+      target.innerHTML = `<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);font-size:13px;">まだ進行中の予約はありません${archivedCount > 0 ? ` <a href="#" id="fp-show-archived" style="color:var(--accent);margin-left:6px;">完了済み${archivedCount}件を見る</a>` : ''}</div>`;
+      if (archivedCount > 0) {
+        document.getElementById('fp-show-archived').addEventListener('click', (e) => { e.preventDefault(); showArchivedBookings(allBookings.filter(b => archived.has(b.ts))); });
+      }
       return;
     }
     // ISO日付 (Sheets自動変換) or "YYYY-MM-DD" 文字列を「MM/DD」と「曜日」に分割
@@ -512,11 +519,13 @@
         cta = `<button class="btn-rec-stop" data-rec-stop="${tsEnc}">■ 録画停止</button>
                <a class="btn-mini" href="${zUrl}" target="_blank">Zoomを開く</a>`;
       } else if (rec === 'saved') {
-        cta = `<button class="btn-mini" data-open-memo="${tsEnc}" style="background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;font-weight:700;">📝 メモ・タスク化${savedTasksCount > 0 ? ' ('+savedTasksCount+')' : ''}</button>`;
+        cta = `<button class="btn-mini" data-open-memo="${tsEnc}" style="background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;font-weight:700;">📝 メモ・タスク化${savedTasksCount > 0 ? ' ('+savedTasksCount+')' : ''}</button>
+               <button class="btn-mini" data-complete-booking="${tsEnc}" style="background:var(--line-green-soft,#dcfce7);color:#166534;border:1px solid #86efac;font-weight:700;">✓ 完了 (台帳へ)</button>`;
       } else if (zUrl) {
         cta = `<button class="btn-rec-start" data-rec-start="${tsEnc}" data-zoom="${zUrl}">● 録画ONでZoom開始</button>
                <a class="btn-mini" href="${zUrl}" target="_blank">録画なしで開く</a>
-               <button class="btn-mini" data-open-memo="${tsEnc}" style="background:#f8fafc;border:1px solid #e5e7eb;color:#374151;">📝 メモ${savedTasksCount > 0 ? ' ('+savedTasksCount+'件)' : ''}</button>`;
+               <button class="btn-mini" data-open-memo="${tsEnc}" style="background:#f8fafc;border:1px solid #e5e7eb;color:#374151;">📝 メモ${savedTasksCount > 0 ? ' ('+savedTasksCount+'件)' : ''}</button>
+               <button class="btn-mini" data-complete-booking="${tsEnc}" style="background:var(--line-green-soft,#dcfce7);color:#166534;border:1px solid #86efac;font-weight:700;">✓ 完了</button>`;
       }
       const recPill = rec === 'recording' ? '<span class="rec-pill recording">● 録画中</span>'
         : rec === 'saved' ? '<span class="rec-pill saved">📼 録画保存済</span>' : '';
@@ -537,7 +546,45 @@
           </div>
         </div>`;
     }).join('');
+    // 末尾に完了済み件数表示
+    if (archivedCount > 0) {
+      target.innerHTML += `<div style="margin-top:14px;padding:10px 14px;background:#f8fafc;border:1px dashed #e5e7eb;border-radius:8px;text-align:center;font-size:12px;color:var(--muted);">✓ 完了済み <strong style="color:var(--ink);">${archivedCount}件</strong> はアーカイブ済み <a href="#" id="fp-show-archived" style="color:var(--accent);margin-left:6px;font-weight:600;">アーカイブを見る →</a></div>`;
+      const sa = document.getElementById('fp-show-archived');
+      if (sa) sa.addEventListener('click', (e) => { e.preventDefault(); showArchivedBookings(allBookings.filter(b => archived.has(b.ts))); });
+    }
     bindBookingsButtons();
+  }
+
+  function showArchivedBookings(items) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff;width:min(680px,100%);max-height:90vh;overflow-y:auto;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,0.35);">
+        <div style="padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:baseline;">
+          <h2 style="margin:0;font-family:'Noto Serif JP',serif;font-size:18px;">✓ 完了済み面談 (${items.length}件)</h2>
+          <button id="fp-arc-close" style="font-size:18px;width:32px;height:32px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;">✕</button>
+        </div>
+        <div style="padding:18px 24px;display:grid;gap:8px;">
+          ${items.map(b => `
+            <div style="display:grid;grid-template-columns:90px 1fr auto;gap:12px;align-items:center;padding:12px 14px;background:#fafbfc;border:1px solid #e5e7eb;border-radius:8px;">
+              <div style="font-size:13px;font-weight:700;font-family:'Inter',sans-serif;">${escapeHtml(String(b.date||'').slice(5,10).replace('-','/'))}</div>
+              <div><strong style="font-size:13px;">${escapeHtml(b.name || '匿名')}様</strong><div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHtml(String(b.time||'').slice(0,5))}</div></div>
+              <button class="fp-arc-unar" data-ts="${escapeHtml(b.ts)}" style="font-size:11px;padding:6px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;font-family:inherit;">↩ 戻す</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#fp-arc-close').addEventListener('click', () => overlay.remove());
+    overlay.querySelectorAll('.fp-arc-unar').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const set = new Set(JSON.parse(localStorage.getItem('fp-booking-archived') || '[]'));
+        set.delete(btn.dataset.ts);
+        localStorage.setItem('fp-booking-archived', JSON.stringify([...set]));
+        overlay.remove();
+        fillBookingsList();
+      });
+    });
   }
 
   function fillFunnelArea() {
@@ -869,12 +916,13 @@
     panel.innerHTML = `
       <div id="fp-memo-resize-handle" style="position:absolute;background:transparent;z-index:2;"></div>
       <div style="display:flex;flex-direction:column;height:100%;background:#fff;box-shadow:0 -4px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb;">
-        <div style="padding:14px 18px 10px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px;background:#fafbfc;cursor:grab;">
+        <div data-drag-handle style="padding:14px 18px 10px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px;background:#fafbfc;">
           <div style="flex:1;min-width:0;">
             <h2 style="margin:0 0 2px;font-family:'Noto Serif JP',serif;font-size:16px;">📝 面談メモ — ${escapeHtml(name)}様</h2>
             <p style="margin:0;color:#6b7280;font-size:11px;line-height:1.4;">期限+動作を含めると自動でタスク化されます (○月○日に・来週・3ヶ月後 等)</p>
           </div>
           <div style="display:flex;gap:4px;flex-shrink:0;">
+            <button data-dock="float" title="フリー位置 (ウィンドウ風)" style="${dockBtnStyle(dock==='float')}">🪟</button>
             <button data-dock="left" title="左ドック" style="${dockBtnStyle(dock==='left')}">⬅</button>
             <button data-dock="right" title="右ドック" style="${dockBtnStyle(dock==='right')}">➡</button>
             <button data-dock="bottom" title="下ドック" style="${dockBtnStyle(dock==='bottom')}">⬇</button>
@@ -914,8 +962,9 @@
       renderExtractedTasks(tasks);
     });
 
-    // リサイズハンドル
-    setupResizeHandle(panel, dock);
+    // フリー位置時はドラッグ移動+右下リサイズ、ドック時は端のリサイズ
+    if (dock === 'float') setupFreeDrag(panel);
+    else setupResizeHandle(panel, dock);
   }
 
   function dockBtnStyle(active) {
@@ -928,9 +977,69 @@
       panel.style.cssText = base + `top:0;left:0;bottom:0;width:${size}px;`;
     } else if (dock === 'bottom') {
       panel.style.cssText = base + `left:0;right:0;bottom:0;height:${size}px;`;
+    } else if (dock === 'float') {
+      // フリー位置 (ブラウザウィンドウ風)
+      const fp = JSON.parse(localStorage.getItem('fp-memo-float-pos') || '{}');
+      const fs = JSON.parse(localStorage.getItem('fp-memo-float-size') || '{}');
+      const left = fp.left ?? Math.max(40, window.innerWidth - 600);
+      const top = fp.top ?? 80;
+      const w = fs.w ?? 520;
+      const h = fs.h ?? Math.min(640, window.innerHeight - 120);
+      panel.style.cssText = base + `top:${top}px;left:${left}px;width:${w}px;height:${h}px;border-radius:12px;overflow:hidden;`;
     } else {
       panel.style.cssText = base + `top:0;right:0;bottom:0;width:${size}px;`;
     }
+  }
+
+  // フリー位置: ヘッダーをドラッグで移動 + 右下隅でリサイズ
+  function setupFreeDrag(panel) {
+    const header = panel.querySelector('[data-drag-handle]');
+    if (!header) return;
+    let dragging = false, sx = 0, sy = 0, sLeft = 0, sTop = 0;
+    header.style.cursor = 'grab';
+    header.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button,a')) return; // ボタンは除外
+      dragging = true; sx = e.clientX; sy = e.clientY;
+      const r = panel.getBoundingClientRect();
+      sLeft = r.left; sTop = r.top;
+      header.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const newLeft = Math.max(0, Math.min(window.innerWidth - 200, sLeft + (e.clientX - sx)));
+      const newTop = Math.max(0, Math.min(window.innerHeight - 60, sTop + (e.clientY - sy)));
+      panel.style.left = newLeft + 'px';
+      panel.style.top = newTop + 'px';
+      panel.style.right = 'auto'; panel.style.bottom = 'auto';
+      localStorage.setItem('fp-memo-float-pos', JSON.stringify({ left: newLeft, top: newTop }));
+    });
+    document.addEventListener('mouseup', () => {
+      if (dragging) { dragging = false; header.style.cursor = 'grab'; document.body.style.userSelect = ''; }
+    });
+
+    // 右下リサイズハンドル
+    const corner = document.createElement('div');
+    corner.style.cssText = 'position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 50%,rgba(184,137,61,0.5) 50%);z-index:3;';
+    panel.appendChild(corner);
+    let resizing = false, rx = 0, ry = 0, rw = 0, rh = 0;
+    corner.addEventListener('mousedown', (e) => {
+      resizing = true; rx = e.clientX; ry = e.clientY;
+      const r = panel.getBoundingClientRect();
+      rw = r.width; rh = r.height;
+      document.body.style.userSelect = 'none';
+      e.preventDefault(); e.stopPropagation();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!resizing) return;
+      const nw = Math.max(320, rw + (e.clientX - rx));
+      const nh = Math.max(280, rh + (e.clientY - ry));
+      panel.style.width = nw + 'px';
+      panel.style.height = nh + 'px';
+      localStorage.setItem('fp-memo-float-size', JSON.stringify({ w: nw, h: nh }));
+    });
+    document.addEventListener('mouseup', () => { if (resizing) { resizing = false; document.body.style.userSelect = ''; } });
   }
 
   function setupResizeHandle(panel, dock) {
@@ -1273,6 +1382,27 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         const ts = btn.dataset.openMemo;
         const b = ((liveData && liveData.bookings) || []).find(x => String(x.ts).slice(0,19) === decodeURIComponent(ts).slice(0,19));
         openMemoModal(b || { name: 'お客様', userId: ts, date: new Date().toISOString().slice(0,10) }, ts);
+      });
+    });
+    document.querySelectorAll('[data-complete-booking]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tsEnc = btn.dataset.completeBooking;
+        const ts = decodeURIComponent(tsEnc);
+        const b = ((liveData && liveData.bookings) || []).find(x => String(x.ts).slice(0,19) === ts.slice(0,19));
+        if (!b) { alert('予約が見つかりません'); return; }
+        if (!confirm(`「${b.name||'お客様'}様」の面談を完了扱いにして顧客台帳に反映しますか?\n(取り消しは「アーカイブを見る → 戻す」から可能)`)) return;
+        const set = new Set(JSON.parse(localStorage.getItem('fp-booking-archived') || '[]'));
+        set.add(b.ts);
+        localStorage.setItem('fp-booking-archived', JSON.stringify([...set]));
+        // 顧客の lastContact を面談日に更新 (お客様マッチ)
+        if (window.DUMMY_CLIENTS) {
+          const c = window.DUMMY_CLIENTS.find(x => x.lineFriendId === b.userId || x.name === b.name);
+          if (c) {
+            c.lastContact = String(b.date).slice(0, 10);
+            try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS)); } catch (_) {}
+          }
+        }
+        fillBookingsList();
       });
     });
   }
