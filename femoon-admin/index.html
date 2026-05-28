@@ -240,6 +240,7 @@
       <button class="btn green" onclick="openAddModal()">+ 電話予約</button>
       <button class="btn alt" onclick="openReportModal()">📅 日次レポート</button>
       <button class="btn alt" onclick="openCustomerModal()">👥 顧客管理</button>
+      <button class="btn alt" onclick="openTemplateModal()">📝 テンプレ</button>
       <button class="btn alt" onclick="openRevenueModal()">📊 売上分析</button>
       <button class="btn alt" onclick="openClosedModal()">🌙 休業日</button>
       <button class="btn alt" onclick="reload()">↻ 更新</button>
@@ -392,6 +393,24 @@
     </div>
     <div class="modal-footer">
       <button class="btn alt" onclick="closeCustomerModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- テンプレ管理 Modal -->
+<div id="tpl-modal" class="modal-bg hidden">
+  <div class="modal" style="max-width:780px">
+    <div class="modal-head"><h3>📝 メッセージテンプレート管理</h3><button class="close" onclick="closeTemplateModal()">×</button></div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--ink2);margin:0 0 14px;line-height:1.7">
+        顧客の状態に応じてJobsが推奨テンプレを自動選択します。<br>
+        プレースホルダ: <code>{NAME}</code> = お名前 / <code>{DATE}</code> = 日付 / <code>{TIME}</code> = 時間 / <code>{COURSE}</code> = コース名
+      </p>
+      <div id="tpl-list"></div>
+      <button class="btn alt sm" onclick="resetTemplates()" style="margin-top:14px">↻ 初期テンプレに戻す</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn alt" onclick="closeTemplateModal()">閉じる</button>
     </div>
   </div>
 </div>
@@ -992,8 +1011,10 @@ function renderSide(){
           <option ${status==='完了'?'selected':''}>完了</option>
           <option ${status==='キャンセル'?'selected':''}>キャンセル</option>
         </select>
-        <button class="btn green sm" onclick='openLineModal(${JSON.stringify(r).replace(/'/g,"&apos;")})'>📩 LINE連絡</button>
-        <a class="btn alt sm" href="tel:${(r['電話']||'').replace(/-/g,'')}" style="text-decoration:none">📞 発信</a>
+        <button class="btn green sm" onclick='openLineModal(${JSON.stringify(r).replace(/'/g,"&apos;")})'>📩 LINE</button>
+        <a class="btn alt sm" href="tel:${String(r['電話']||'').replace(/-/g,'')}" style="text-decoration:none">📞 発信</a>
+        <button class="btn alt sm" onclick='generateReceipt(${JSON.stringify(r).replace(/'/g,"&apos;")})'>🧾 領収書</button>
+        <button class="btn alt sm" onclick='sendReceiptByEmail(${JSON.stringify(r).replace(/'/g,"&apos;")})'>✉️ 領収メール</button>
       </div>
     `;
     body.appendChild(card);
@@ -1165,6 +1186,75 @@ function renderReport(){
   document.getElementById('report-content').innerHTML = html;
 }
 
+/* ========== テンプレ管理 (リピート促進戦略) ========== */
+const DEFAULT_TEMPLATES = {
+  new: {
+    label:'新規初回後 (24時間以内)',
+    body:'{NAME}様\n\n本日はご来店いただきありがとうございました🌙\nお身体の変化、いかがでしょうか？\n\n施術後2〜3日は変化を感じやすい時期です。何か気になることがあればお気軽にご連絡くださいませ。\n\n次回は3〜4週間後がオススメです。お気をつけてお過ごしください🌸\n\nフェムケアサロン FEMOON'
+  },
+  followup3d: {
+    label:'施術3日後 フォロー',
+    body:'{NAME}様\n\nその後お変わりございませんでしょうか？\n施術から数日経ち、お身体の変化を実感いただけていれば嬉しいです🌸\n\nご質問やお悩みがあれば、お気軽にご返信くださいませ。\n\nフェムケアサロン FEMOON'
+  },
+  lapsed1m:{
+    label:'1ヶ月未来店',
+    body:'{NAME}様\n\nお久しぶりです🌙 FEMOONの担当です。\n前回のご来店から1ヶ月が経ちました。お身体の調子はいかがでしょうか？\n\n体のケアは継続が大切。お時間ある時にぜひお越しください。{NAME}様にぴったりのコースをご用意してお待ちしております🌸\n\nご予約はこちら↓\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/'
+  },
+  lapsed2m:{
+    label:'2ヶ月未来店 (リターン特典)',
+    body:'{NAME}様\n\nしばらくお会いできておらず気になっておりました🌙\n\nお身体の状態、戻りつつあるかもしれません。\n2ヶ月以上ぶりのご来店の方限定で、フェムケア矯正を¥1,000OFFでご案内中です。\n\nお気軽にご返信ください🌸\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/'
+  },
+  lapsed3m:{
+    label:'3ヶ月未来店 (復帰促進)',
+    body:'{NAME}様\n\nご無沙汰しております🌙 FEMOONの担当です。\n\n3ヶ月以上経ちましたが、お元気でいらっしゃいますか？\nお久しぶりの方限定で「リセットコース ¥2,000OFF」もご用意しております。\nまた{NAME}様にお会いできるのを心よりお待ちしております🌸\n\nご予約↓\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/'
+  },
+  vip:{
+    label:'VIP感謝メッセージ',
+    body:'{NAME}様\n\nいつもありがとうございます🌙\n大切なお客様限定で、新しいコースをご案内させていただきます。詳細はぜひこちらでお話させてくださいませ✨\n\nフェムケアサロン FEMOON'
+  },
+  reminder:{
+    label:'前日リマインド',
+    body:'{NAME}様\n\n明日のご予約のリマインドです🌙\n\n{DATE} {TIME}〜「{COURSE}」のご予約を承っております。\n\nお気をつけてお越しくださいませ🌸\nフェムケアサロン FEMOON'
+  },
+  thanks:{
+    label:'施術直後 お礼',
+    body:'{NAME}様\n\n本日はご来店誠にありがとうございました🌙\nお疲れさまでした。\n\n次回もぜひお気軽にご相談くださいませ🌸\nフェムケアサロン FEMOON'
+  }
+};
+let TEMPLATES = (()=>{
+  try{ return JSON.parse(localStorage.getItem('femoon-templates')) || DEFAULT_TEMPLATES; }
+  catch(e){ return DEFAULT_TEMPLATES; }
+})();
+function saveTemplates(){ localStorage.setItem('femoon-templates', JSON.stringify(TEMPLATES)); }
+function resetTemplates(){
+  if(!confirm('テンプレートを初期状態に戻しますか？')) return;
+  TEMPLATES = JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+  saveTemplates();
+  if(!document.getElementById('tpl-modal').classList.contains('hidden')) renderTemplates();
+}
+function pickTemplate(c){
+  // 顧客状況に最適なテンプレを選択
+  const today = new Date(); today.setHours(0,0,0,0);
+  const ms = 24*60*60*1000;
+  const days = c.lastVisit ? Math.floor((today - c.lastVisit)/ms) : 99999;
+  if(days >= 90) return 'lapsed3m';
+  if(days >= 60) return 'lapsed2m';
+  if(days >= 30) return 'lapsed1m';
+  if(c.visits >= 5) return 'vip';
+  if(c.visits === 1 && days <= 7) return 'new';
+  return 'thanks';
+}
+function fillTemplate(tplBody, c, extra){
+  let msg = tplBody;
+  msg = msg.replaceAll('{NAME}', (c.name||'').split(' ')[0]);
+  if(extra){
+    msg = msg.replaceAll('{DATE}', extra.date||'');
+    msg = msg.replaceAll('{TIME}', extra.time||'');
+    msg = msg.replaceAll('{COURSE}', extra.course||'');
+  }
+  return msg;
+}
+
 /* ========== 顧客管理 ========== */
 let CURRENT_SEGMENT = 'all';
 function openCustomerModal(){
@@ -1223,27 +1313,53 @@ function renderCustomers(){
   }
   const today = new Date(); today.setHours(0,0,0,0);
   const ms = 24*60*60*1000;
-  document.getElementById('customer-list').innerHTML = arr.map(c=>{
+  document.getElementById('customer-list').innerHTML = arr.map((c,i)=>{
     const days = c.lastVisit ? Math.floor((today-c.lastVisit)/ms) : null;
     const lastStr = c.lastVisit ? `${c.lastVisit.getMonth()+1}/${c.lastVisit.getDate()}` : '—';
     const cls = ['cust-card'];
     if(days>=90) cls.push('long-lapsed');
     else if(days>=30) cls.push('lapsed');
     if(c.visits>=5) cls.push('vip');
+    const tplKey = pickTemplate(c);
+    const tplLabel = TEMPLATES[tplKey]?.label || '';
     return `<div class="${cls.join(' ')}">
       <div class="info">
         <div class="name">${c.name||'(名前なし)'} ${c.visits>=5?'<span style="background:var(--gold);color:#fff;font-size:9px;padding:1px 6px;border-radius:9px;margin-left:6px;letter-spacing:.1em">VIP</span>':''}</div>
         <div class="meta">📞 ${c.tel||'-'} ｜ 最終来店 ${lastStr}${days!==null?` (${days}日前)`:''}</div>
+        <div style="font-size:10.5px;color:var(--rose-deep);margin-top:3px">💡 推奨: ${tplLabel}</div>
       </div>
       <div class="stat">
         <div><div class="v">${c.visits}<small>回</small></div></div>
         <div><div class="v">¥${c.totalRev.toLocaleString()}</div></div>
-        <div class="ctrl">
-          <button class="btn green sm" onclick='openCustomerLine(${JSON.stringify(c).replace(/'/g,"&apos;")})'>📩 LINE</button>
+        <div class="ctrl" style="flex-direction:column;gap:3px">
+          <button class="btn green sm" onclick="quickLine(${i})">📩 即連絡</button>
+          <button class="btn alt sm" onclick='openCustomerLine(${JSON.stringify(c).replace(/'/g,"&apos;")})' style="font-size:10px;padding:3px 8px">✏️ 編集</button>
         </div>
       </div>
     </div>`;
   }).join('');
+  // 配列を保持して quickLine から参照
+  window._CUST_ARR = arr;
+}
+// ワンクリック: 推奨テンプレ即コピー+LINE起動
+async function quickLine(idx){
+  const c = window._CUST_ARR[idx];
+  if(!c) return;
+  const tplKey = pickTemplate(c);
+  const tpl = TEMPLATES[tplKey];
+  if(!tpl){alert('テンプレートが見つかりません');return}
+  const msg = fillTemplate(tpl.body, c);
+  try{ await navigator.clipboard.writeText(msg); }catch(e){}
+  window.open(LINE_OAM_CHAT,'_blank');
+  // toast表示
+  showToast(`✅ ${c.name} 様 (${c.tel}) 向けメッセージをコピー → LINE管理画面で貼付`);
+}
+function showToast(msg){
+  const t = document.createElement('div');
+  t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--rose-deep);color:#fff;padding:12px 24px;border-radius:6px;font-size:13px;z-index:1000;box-shadow:0 4px 16px rgba(0,0,0,.2);max-width:90%';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
 }
 function openCustomerLine(c){
   // 既存LINEモーダルを流用
@@ -1268,6 +1384,84 @@ async function bulkLineSend(){
     if(i===0) window.open(LINE_OAM_CHAT,'_blank');
   }
   alert('一斉メッセージ作業 完了');
+}
+
+/* ========== テンプレ管理 Modal ========== */
+function openTemplateModal(){
+  document.getElementById('tpl-modal').classList.remove('hidden');
+  renderTemplates();
+}
+function closeTemplateModal(){document.getElementById('tpl-modal').classList.add('hidden')}
+function renderTemplates(){
+  const list = document.getElementById('tpl-list');
+  list.innerHTML = Object.entries(TEMPLATES).map(([k,v])=>{
+    return `<div style="background:#fafafa;border-radius:6px;padding:14px 16px;margin-bottom:10px;border-left:3px solid var(--rose-deep)">
+      <div style="font-family:'Noto Serif JP',serif;font-size:13px;color:var(--rose-deep);font-weight:500;margin-bottom:6px">${v.label}</div>
+      <textarea data-key="${k}" rows="5" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:3px;font-size:12.5px;font-family:inherit;background:#fff" onchange="updateTemplate(this)">${v.body}</textarea>
+    </div>`;
+  }).join('');
+}
+function updateTemplate(textarea){
+  const key = textarea.dataset.key;
+  if(TEMPLATES[key]){
+    TEMPLATES[key].body = textarea.value;
+    saveTemplates();
+    showToast('✅ テンプレ更新済');
+  }
+}
+
+/* ========== 領収書 ========== */
+function generateReceipt(r){
+  const id = r['予約ID']||'';
+  const pd = parseDate(r['希望日']);
+  const dateStr = pd ? `${pd.getFullYear()}年${pd.getMonth()+1}月${pd.getDate()}日` : '';
+  const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>領収書 ${id}</title>
+<style>
+@page{size:A4;margin:18mm}
+body{font-family:"Hiragino Sans","Noto Sans JP",sans-serif;color:#3d2a2a;padding:30px;max-width:680px;margin:0 auto}
+h1{font-family:"Noto Serif JP",serif;font-size:32px;text-align:center;margin:0 0 6px;letter-spacing:.5em;color:#a4756d;border-bottom:2px solid #a4756d;padding-bottom:14px}
+.meta{display:flex;justify-content:space-between;margin:24px 0;font-size:13px}
+.name{font-size:22px;border-bottom:1px solid #ccc;padding-bottom:6px;margin:30px 0 18px}
+.name small{font-size:13px;color:#7a5d5d}
+.amount{text-align:center;font-size:36px;font-family:"Noto Serif JP",serif;color:#a4756d;margin:30px 0;border:2px solid #a4756d;padding:18px;font-weight:600}
+.purpose{font-size:14px;line-height:2;background:#fbf0eb;padding:14px 18px;border-radius:4px}
+.foot{margin-top:60px;display:flex;justify-content:space-between;align-items:flex-end;font-size:12px}
+.stamp{border:2px solid #a4756d;color:#a4756d;padding:30px 18px;font-family:"Noto Serif JP",serif;font-weight:600;text-align:center;border-radius:50%}
+</style></head><body>
+<h1>領 収 書</h1>
+<div class="meta"><div>No. ${id}</div><div>発行日: ${new Date().toLocaleDateString('ja-JP')}</div></div>
+<div class="name">${r['お名前']||''} 様 <small>(${r['電話']||'-'})</small></div>
+<div class="amount">¥ ${Number(r['料金']||0).toLocaleString()} -</div>
+<div class="purpose">
+但し: <strong>${r['コース名']||'-'}</strong> (${r['所要時間']||'-'}分) ${dateStr} 施術代として<br>
+上記正に領収いたしました
+</div>
+<div class="foot">
+<div>
+<strong>フェムケアサロン FEMOON</strong><br>
+福井県福井市大宮3-13-9 パールコーポ1F<br>
+担当: 安西里帆
+</div>
+<div class="stamp">F E M O O N</div>
+</div>
+</body></html>`;
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>w.print(),500);
+}
+function sendReceiptByEmail(r){
+  const email = r['メール']||'';
+  if(!email){
+    if(confirm('メールアドレス未登録です。代わりにPDFを開いて手渡し・印刷しますか？')) generateReceipt(r);
+    return;
+  }
+  const id = r['予約ID']||'';
+  const pd = parseDate(r['希望日']);
+  const dateStr = pd ? `${pd.getFullYear()}年${pd.getMonth()+1}月${pd.getDate()}日` : '';
+  const subject = encodeURIComponent(`【FEMOON】領収書 ${id} ${r['お名前']||''}様`);
+  const body = encodeURIComponent(`${r['お名前']||''}様\n\n本日はご来店ありがとうございました。\n\n━━ 領収書 ━━\n発行: ${new Date().toLocaleDateString('ja-JP')}\nNo: ${id}\nお名前: ${r['お名前']||''} 様\n金額: ¥${Number(r['料金']||0).toLocaleString()} (税込)\n但し: ${r['コース名']||'-'} (${r['所要時間']||'-'}分) ${dateStr} 施術代として\n上記正に領収いたしました\n━━━━━━━━━\n\nフェムケアサロン FEMOON\n福井県福井市大宮3-13-9 パールコーポ1F`);
+  window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
 }
 
 /* ========== 売上分析 ========== */
