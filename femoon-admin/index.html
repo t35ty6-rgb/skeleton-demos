@@ -88,10 +88,10 @@
   .week-grid .tcol{background:#fafafa;text-align:right;padding:4px 8px 4px 4px;font-family:"Cormorant Garamond",serif;font-size:11.5px;color:var(--ink2);border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);min-height:38px;display:flex;align-items:flex-start;justify-content:flex-end;position:sticky;left:0;z-index:1}
   .week-grid .wcell{background:#fff;border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);min-height:38px;padding:2px;cursor:pointer;position:relative;transition:.12s}
   .week-grid .wcell:hover{background:#fffaf6}
-  .week-grid .wcell.closed{background:repeating-linear-gradient(45deg,#f5f0ec 0,#f5f0ec 4px,#ebe2db 4px,#ebe2db 8px);cursor:pointer}
-  .week-grid .wcell.closed::after{content:"休";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;color:var(--ink3);font-family:"Noto Serif JP",serif}
-  .week-grid .wcell.shop-closed{background:#f8f4f1;cursor:default}
-  .week-grid .wcell.shop-closed::after{content:"";display:none}
+  .week-grid .wcell.closed,
+  .week-grid .wcell.shop-closed{background:#f0e6e0;cursor:default}
+  .week-grid .wcell.closed::after,
+  .week-grid .wcell.shop-closed::after{content:"休";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;color:var(--ink3);font-family:"Noto Serif JP",serif}
   .week-grid .wcell.has-ev{padding:0}
   .week-grid .wev{position:absolute;left:1px;right:1px;background:linear-gradient(135deg,#c89d96,#a4756d);color:#fff;border-radius:2px;padding:2px 5px;font-size:10px;line-height:1.3;cursor:pointer;overflow:hidden;z-index:1}
   .week-grid .wev .t{font-family:"Cormorant Garamond",serif;font-weight:600;display:block;font-size:9.5px;letter-spacing:.04em;opacity:.95}
@@ -102,10 +102,10 @@
   .day-grid .dtcol{background:#fafafa;text-align:right;padding:6px 10px 6px 4px;font-family:"Cormorant Garamond",serif;font-size:12.5px;color:var(--ink2);border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);min-height:54px;display:flex;align-items:flex-start;justify-content:flex-end}
   .day-grid .dcell{background:#fff;border-bottom:1px solid var(--line-soft);min-height:54px;padding:4px;cursor:pointer;position:relative}
   .day-grid .dcell:hover{background:#fffaf6}
-  .day-grid .dcell.closed{background:repeating-linear-gradient(45deg,#f5f0ec 0,#f5f0ec 4px,#ebe2db 4px,#ebe2db 8px);cursor:pointer}
-  .day-grid .dcell.closed::after{content:"休業中";position:absolute;top:50%;left:14px;transform:translateY(-50%);font-size:11px;color:var(--ink3);font-family:"Noto Serif JP",serif}
-  .day-grid .dcell.shop-closed{background:#f8f4f1;cursor:default}
-  .day-grid .dcell.shop-closed::after{content:"";display:none}
+  .day-grid .dcell.closed,
+  .day-grid .dcell.shop-closed{background:#f0e6e0;cursor:default}
+  .day-grid .dcell.closed::after,
+  .day-grid .dcell.shop-closed::after{content:"休業";position:absolute;top:50%;left:14px;transform:translateY(-50%);font-size:11px;color:var(--ink3);font-family:"Noto Serif JP",serif}
   .day-grid .dev{background:linear-gradient(135deg,#c89d96,#a4756d);color:#fff;border-radius:3px;padding:5px 9px;margin:2px 0;cursor:pointer;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
   .day-grid .dev .l{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .day-grid .dev .l .t{font-family:"Cormorant Garamond",serif;font-weight:600;letter-spacing:.04em;margin-right:6px}
@@ -195,7 +195,7 @@
     <h1>🌙 フェムケアサロン FEMOON <span class="badge">予約管理</span></h1>
     <div class="right">
       <button class="btn green" onclick="openAddModal()">+ 電話予約を追加</button>
-      <button class="btn alt" onclick="openClosedModal()">🌙 定休日設定</button>
+      <button class="btn alt" onclick="openClosedModal()">🌙 休業日設定</button>
       <button class="btn alt" onclick="reload()">↻ 更新</button>
       <button class="btn alt" onclick="logout()">ログアウト</button>
     </div>
@@ -236,7 +236,7 @@
       <!-- 週ビュー -->
       <div id="view-week" class="week-view">
         <div class="hint" style="padding:8px 14px;font-size:11.5px;color:var(--ink2);background:#faf3f0;border-bottom:1px solid var(--line-soft)">
-          💡 セルをクリック: その時間を休業／解除 切替 ｜ 予約バーをクリック: 詳細を右パネルに表示
+          💡 予約バーをクリックすると詳細が右に表示されます。休業日の設定は右上「🌙休業日設定」から
         </div>
         <div class="week-grid" id="week-grid"></div>
       </div>
@@ -303,24 +303,36 @@
   </div>
 </div>
 
-<!-- 定休日設定 Modal -->
+<!-- 休業日設定 Modal -->
 <div id="closed-modal" class="modal-bg hidden">
-  <div class="modal">
-    <div class="modal-head"><h3>🌙 定休日 設定</h3><button class="close" onclick="closeClosedModal()">×</button></div>
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head"><h3>🌙 休業日設定</h3><button class="close" onclick="closeClosedModal()">×</button></div>
     <div class="modal-body">
       <p style="font-size:12.5px;color:var(--ink2);margin:0 0 14px;line-height:1.7">
-        毎週木曜・第1日曜・第3水曜は<strong>常時定休</strong>として設定済みです。<br>
-        その他、臨時休業や個別の休みは下から追加してください(予約フォーム側でもこの日が選べなくなります)。
+        毎週木曜・第1日曜・第3水曜は<strong>常時定休</strong>。<br>
+        その他の休業はここで追加。予約フォームからも選べなくなります。
       </p>
       <div class="field">
-        <label>新しい休業日を追加</label>
-        <div style="display:flex;gap:8px">
-          <input type="date" id="closed-date-input" style="flex:1">
-          <button class="btn green" onclick="addClosedDate()">+ 追加</button>
-        </div>
+        <label>日付<span class="req">必須</span></label>
+        <input type="date" id="closed-date-input">
       </div>
       <div class="field">
-        <label>登録済みの休業日</label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+          <input type="checkbox" id="closed-allday" checked onchange="toggleAllDay()" style="width:auto;margin:0">
+          <span>終日休業にする</span>
+        </label>
+      </div>
+      <div class="field-row" id="time-range-row" style="display:none">
+        <div class="field"><label>開始時間</label>
+          <select id="closed-from"></select>
+        </div>
+        <div class="field"><label>終了時間</label>
+          <select id="closed-to"></select>
+        </div>
+      </div>
+      <button class="btn green" style="width:100%;padding:12px" onclick="addClosedEntry()">+ この休業を追加</button>
+      <div class="field" style="margin-top:20px">
+        <label>登録済みの休業</label>
         <div id="closed-list" style="background:var(--rose-soft);padding:14px;border-radius:4px;min-height:60px;font-size:13px;color:var(--ink)"></div>
       </div>
     </div>
@@ -414,49 +426,145 @@ async function fetchData(){
   }
 }
 
-/* ===== 定休日設定 ===== */
+/* ===== 休業日設定 ===== */
 function openClosedModal(){
   document.getElementById('closed-modal').classList.remove('hidden');
+  // 時間プルダウン init
+  const fromEl = document.getElementById('closed-from');
+  const toEl = document.getElementById('closed-to');
+  if(fromEl.options.length === 0){
+    SLOTS_ALL.forEach(t=>{
+      fromEl.insertAdjacentHTML('beforeend',`<option value="${t}">${t}</option>`);
+    });
+    SLOTS_ALL.forEach((t,i)=>{
+      // 終了は +1時間 (最後の20:00の次は21:00)
+      const next = i<SLOTS_ALL.length-1 ? SLOTS_ALL[i+1] : '21:00';
+      toEl.insertAdjacentHTML('beforeend',`<option value="${next}">${next}</option>`);
+    });
+    fromEl.value = '10:00'; toEl.value = '11:00';
+  }
+  document.getElementById('closed-allday').checked = true;
+  toggleAllDay();
   renderClosedList();
 }
 function closeClosedModal(){
   document.getElementById('closed-modal').classList.add('hidden');
-  renderAll(); // カレンダーへ反映
+  renderAll();
+}
+function toggleAllDay(){
+  const allDay = document.getElementById('closed-allday').checked;
+  document.getElementById('time-range-row').style.display = allDay ? 'none' : 'grid';
 }
 function renderClosedList(){
-  const arr = [...CLOSED_DATES].sort();
-  if(arr.length===0){
+  // 終日休業
+  const dates = [...CLOSED_DATES].sort();
+  // 時間休業: 日付ごとにまとめる
+  const byDate = {};
+  [...CLOSED_SLOTS].forEach(k=>{
+    const [d, t] = k.split('_');
+    (byDate[d] = byDate[d]||[]).push(t);
+  });
+  // 連続する時間スロットを「14:00〜16:00」形式に集約
+  function rangeize(slots){
+    slots.sort();
+    const groups = []; let cur = null;
+    slots.forEach(t=>{
+      const idx = SLOTS_ALL.indexOf(t);
+      if(cur && SLOTS_ALL.indexOf(cur[cur.length-1])+1 === idx){
+        cur.push(t);
+      } else {
+        cur = [t]; groups.push(cur);
+      }
+    });
+    return groups.map(g=>{
+      const start = g[0];
+      const lastIdx = SLOTS_ALL.indexOf(g[g.length-1]);
+      const endTime = lastIdx<SLOTS_ALL.length-1 ? SLOTS_ALL[lastIdx+1] : '21:00';
+      return g.length===1 ? `${start}〜${endTime}` : `${start}〜${endTime}`;
+    });
+  }
+  const WD = ['日','月','火','水','木','金','土'];
+  const items = [];
+  // マージ: 終日 と 時間範囲 を日付順で
+  const allDates = new Set([...dates, ...Object.keys(byDate)]);
+  [...allDates].sort().forEach(date=>{
+    const d = new Date(date);
+    const wd = WD[d.getDay()];
+    if(CLOSED_DATES.has(date)){
+      items.push({date, label:`${date} (${wd}) 終日`, action:`removeClosed('${date}',true)`});
+    }
+    if(byDate[date]){
+      rangeize(byDate[date]).forEach(rng=>{
+        // 該当スロットkeyをまとめてremove
+        const keys = byDate[date].filter(t=>{
+          const startT = rng.split('〜')[0];
+          const endT = rng.split('〜')[1];
+          const iStart = SLOTS_ALL.indexOf(startT);
+          const iEnd = endT==='21:00' ? SLOTS_ALL.length : SLOTS_ALL.indexOf(endT);
+          const ti = SLOTS_ALL.indexOf(t);
+          return ti>=iStart && ti<iEnd;
+        }).map(t=>`${date}_${t}`);
+        items.push({date, label:`${date} (${wd}) ${rng}`, action:`removeSlotRange(${JSON.stringify(keys).replace(/"/g,'&quot;')})`});
+      });
+    }
+  });
+  if(items.length===0){
     document.getElementById('closed-list').innerHTML = '<div style="color:#a89090;font-style:italic">登録なし</div>';
     return;
   }
-  const WD = ['日','月','火','水','木','金','土'];
-  document.getElementById('closed-list').innerHTML = arr.map(date=>{
-    const d = new Date(date);
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed rgba(164,117,109,.2)">
-      <span>${date} (${WD[d.getDay()]})</span>
-      <button class="btn alt sm" onclick="removeClosedDate('${date}')">削除</button>
-    </div>`;
-  }).join('');
+  document.getElementById('closed-list').innerHTML = items.map(it=>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed rgba(164,117,109,.2)">
+      <span>${it.label}</span>
+      <button class="btn alt sm" onclick="${it.action}">削除</button>
+    </div>`
+  ).join('');
 }
-async function addClosedDate(){
+async function addClosedEntry(){
   const date = document.getElementById('closed-date-input').value;
   if(!date){alert('日付を選んでください');return}
+  const allDay = document.getElementById('closed-allday').checked;
   try{
-    const r = await fetch(`${GAS_URL}?action=closed_add&date=${date}&token=${encodeURIComponent(TOKEN)}`);
-    const j = await r.json();
-    if(!j.ok) throw new Error(j.error||'failed');
-    CLOSED_DATES = new Set(j.dates);
+    if(allDay){
+      const r = await fetch(`${GAS_URL}?action=closed_add&date=${date}&token=${encodeURIComponent(TOKEN)}`);
+      const j = await r.json();
+      if(!j.ok) throw new Error(j.error||'failed');
+      CLOSED_DATES = new Set(j.dates);
+    } else {
+      const from = document.getElementById('closed-from').value;
+      const to = document.getElementById('closed-to').value;
+      const iFrom = SLOTS_ALL.indexOf(from);
+      const iTo = to==='21:00' ? SLOTS_ALL.length : SLOTS_ALL.indexOf(to);
+      if(iFrom>=iTo){alert('終了時間は開始より後にしてください');return}
+      // 各スロット追加
+      for(let i=iFrom; i<iTo; i++){
+        const key = `${date}_${SLOTS_ALL[i]}`;
+        const r = await fetch(`${GAS_URL}?action=closed_slot_add&key=${encodeURIComponent(key)}&token=${encodeURIComponent(TOKEN)}`);
+        const j = await r.json();
+        if(j.ok) CLOSED_SLOTS = new Set(j.slots);
+      }
+    }
     document.getElementById('closed-date-input').value='';
     renderClosedList();
   }catch(e){alert('追加失敗: '+e.message)}
 }
-async function removeClosedDate(date){
-  if(!confirm(date+' を定休日から削除しますか？')) return;
+async function removeClosed(date, allDay){
+  if(!confirm(`${date} の休業を削除しますか？`)) return;
   try{
     const r = await fetch(`${GAS_URL}?action=closed_remove&date=${date}&token=${encodeURIComponent(TOKEN)}`);
     const j = await r.json();
     if(!j.ok) throw new Error(j.error||'failed');
     CLOSED_DATES = new Set(j.dates);
+    renderClosedList();
+  }catch(e){alert('削除失敗: '+e.message)}
+}
+async function removeSlotRange(keys){
+  if(!confirm(`この時間範囲の休業を削除しますか？`)) return;
+  try{
+    for(const key of keys){
+      const r = await fetch(`${GAS_URL}?action=closed_slot_remove&key=${encodeURIComponent(key)}&token=${encodeURIComponent(TOKEN)}`);
+      const j = await r.json();
+      if(j.ok) CLOSED_SLOTS = new Set(j.slots);
+    }
     renderClosedList();
   }catch(e){alert('削除失敗: '+e.message)}
 }
@@ -653,34 +761,17 @@ function renderWeek(){
     });
   });
   grid.innerHTML = html;
-  // cell click: トグル休業 (shop-closedは不可、予約あるセルは予約クリック)
-  grid.querySelectorAll('.wcell').forEach(c=>{
-    c.addEventListener('click', async (e)=>{
-      // 予約バーが押されたら詳細表示
-      const evDiv = e.target.closest('.wev');
-      if(evDiv){
-        const id = evDiv.dataset.id;
-        const row = DATA.find(r=>r['予約ID']===id);
-        if(row){
-          SELECTED_DAY = parseDate(row['希望日']);
-          SELECTED_DAY.setHours(0,0,0,0);
-          renderSide();
-        }
-        return;
+  // 予約バークリックで詳細表示のみ (休業切替は別UIに移動)
+  grid.querySelectorAll('.wev').forEach(ev=>{
+    ev.addEventListener('click',e=>{
+      e.stopPropagation();
+      const id = ev.dataset.id;
+      const row = DATA.find(r=>r['予約ID']===id);
+      if(row){
+        SELECTED_DAY = parseDate(row['希望日']);
+        SELECTED_DAY.setHours(0,0,0,0);
+        renderSide();
       }
-      if(c.classList.contains('shop-closed')) return;
-      if(c.querySelector('.wev')) return; // 予約あるとこは触らない
-      // toggle slot休業
-      const key = c.dataset.key;
-      const wasClosed = CLOSED_SLOTS.has(key);
-      const action = wasClosed ? 'closed_slot_remove' : 'closed_slot_add';
-      try{
-        const r = await fetch(`${GAS_URL}?action=${action}&key=${encodeURIComponent(key)}&token=${encodeURIComponent(TOKEN)}`);
-        const j = await r.json();
-        if(!j.ok) throw new Error(j.error);
-        CLOSED_SLOTS = new Set(j.slots);
-        renderWeek();
-      }catch(e){alert('更新失敗: '+e.message)}
     });
   });
 }
@@ -710,31 +801,16 @@ function renderDay(){
     html += `<div class="dtcol">${t}</div><div class="${cls.join(' ')}" data-key="${k}_${t}">${inner}</div>`;
   });
   grid.innerHTML = html;
-  grid.querySelectorAll('.dcell').forEach(c=>{
-    c.addEventListener('click', async(e)=>{
-      const evDiv = e.target.closest('.dev');
-      if(evDiv){
-        const id = evDiv.dataset.id;
-        const row = DATA.find(r=>r['予約ID']===id);
-        if(row){
-          SELECTED_DAY = parseDate(row['希望日']);
-          SELECTED_DAY.setHours(0,0,0,0);
-          renderSide();
-        }
-        return;
+  grid.querySelectorAll('.dev').forEach(ev=>{
+    ev.addEventListener('click',e=>{
+      e.stopPropagation();
+      const id = ev.dataset.id;
+      const row = DATA.find(r=>r['予約ID']===id);
+      if(row){
+        SELECTED_DAY = parseDate(row['希望日']);
+        SELECTED_DAY.setHours(0,0,0,0);
+        renderSide();
       }
-      if(c.classList.contains('shop-closed')) return;
-      if(c.querySelector('.dev')) return;
-      const key = c.dataset.key;
-      const wasClosed = CLOSED_SLOTS.has(key);
-      const action = wasClosed ? 'closed_slot_remove' : 'closed_slot_add';
-      try{
-        const r = await fetch(`${GAS_URL}?action=${action}&key=${encodeURIComponent(key)}&token=${encodeURIComponent(TOKEN)}`);
-        const j = await r.json();
-        if(!j.ok) throw new Error(j.error);
-        CLOSED_SLOTS = new Set(j.slots);
-        renderDay();
-      }catch(e){alert('更新失敗: '+e.message)}
     });
   });
 }
