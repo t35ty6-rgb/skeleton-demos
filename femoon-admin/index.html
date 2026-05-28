@@ -1494,8 +1494,10 @@ function fillTemplate(tplBody, c, extra){
 
 /* ========== 顧客管理 ========== */
 let CURRENT_SEGMENT = 'all';
-function openCustomerModal(){
+async function openCustomerModal(){
   document.getElementById('customer-modal').classList.remove('hidden');
+  // ★ 開くたびに最新データを取得 (新規予約をすぐ反映)
+  await fetchData();
   setSegment('all');
 }
 function closeCustomerModal(){document.getElementById('customer-modal').classList.add('hidden')}
@@ -1608,7 +1610,7 @@ function renderCustomers(){
     const tplLabel = TEMPLATES[tplKey]?.label || '';
     return `<div class="${cls.join(' ')}">
       <div class="info" style="cursor:pointer" onclick="openCustDetail(${i})">
-        <div class="name">${c.name||'(名前なし)'} ${c.visits>=5?'<span style="background:var(--gold);color:#fff;font-size:9px;padding:1px 6px;border-radius:9px;margin-left:6px;letter-spacing:.1em">VIP</span>':''}${c.lineUserId?'<span style="background:#06c755;color:#fff;font-size:9px;padding:1px 6px;border-radius:9px;margin-left:6px;letter-spacing:.05em">📲LINE直送可</span>':''}<span style="font-size:10px;color:var(--rose-deep);margin-left:6px">▸ 詳細</span></div>
+        <div class="name">${c.name||'(名前なし)'}${c.visits>=5?' <span style="background:var(--gold);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.1em;font-weight:600;vertical-align:middle">VIP</span>':''}${c.lineUserId?' <span style="background:#06c755;color:#fff;font-size:11px;padding:3px 10px;border-radius:10px;letter-spacing:.04em;font-weight:700;vertical-align:middle;margin-left:4px">📲 LINE直送</span>':' <span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:3px 8px;border-radius:10px;letter-spacing:.04em;font-weight:500;vertical-align:middle">📋 コピー送信</span>'}<span style="font-size:10px;color:var(--rose-deep);margin-left:6px">▸ 詳細</span></div>
         <div class="meta">📞 ${c.tel||'-'} ｜ 最終 ${lastStr}${days!==null?` (${days}日前)`:''} ｜ 平均間隔 ${c.avgSpan?c.avgSpan+'日':'-'}</div>
         <div style="font-size:10.5px;color:var(--rose-deep);margin-top:3px">💡 推奨: ${tplLabel}</div>
       </div>
@@ -1671,13 +1673,16 @@ async function fallbackCopy(msg, c){
     ta.remove();
   }
   window.open(LINE_OAM_CHAT,'_blank');
+  // 旧アラートをtoastに変更 (邪魔なポップアップを排除)
+  const phoneClean = String(c['電話']||c.tel||'').replace(/-/g,'');
+  showToast(`📋 コピー済 → LINE管理画面で電話「${phoneClean}」を検索→貼付`, 6000);
 }
-function showToast(msg){
+function showToast(msg, duration){
   const t = document.createElement('div');
-  t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--rose-deep);color:#fff;padding:12px 24px;border-radius:6px;font-size:13px;z-index:1000;box-shadow:0 4px 16px rgba(0,0,0,.2);max-width:90%';
+  t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--rose-deep);color:#fff;padding:14px 22px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:90%;line-height:1.6;text-align:center';
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(()=>t.remove(),3500);
+  setTimeout(()=>t.remove(), duration || 3500);
 }
 function openCustomerLine(c){
   // 既存LINEモーダルを流用 + 推奨テンプレを自動入力
