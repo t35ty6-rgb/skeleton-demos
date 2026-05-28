@@ -114,6 +114,47 @@
   .day-grid .dev .p{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:11px;opacity:.9}
   .day-grid .dthead{background:#fff;border-bottom:2px solid var(--rose-deep);padding:10px;text-align:center;font-family:"Noto Serif JP",serif;font-size:14px;color:var(--ink);font-weight:500;position:sticky;top:0;z-index:2}
 
+  /* セグメントボタン */
+  .seg-btn{background:#fff;border:1px solid var(--line);color:var(--ink2);padding:7px 14px;border-radius:18px;cursor:pointer;font-size:12px;font-weight:500}
+  .seg-btn:hover{border-color:var(--rose-deep);color:var(--rose-deep)}
+  .seg-btn.active{background:var(--rose-deep);color:#fff;border-color:var(--rose-deep)}
+
+  /* 顧客カード */
+  .cust-card{background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .cust-card .info{flex:1}
+  .cust-card .name{font-family:"Noto Serif JP",serif;font-size:14px;color:var(--ink);font-weight:500}
+  .cust-card .meta{font-size:11.5px;color:var(--ink2);margin-top:2px}
+  .cust-card .stat{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .cust-card .stat .v{font-family:"Cormorant Garamond",serif;font-weight:600;color:var(--rose-deep);font-size:15px}
+  .cust-card .stat .v small{color:var(--ink2);font-weight:400;font-size:10px;margin-left:2px}
+  .cust-card .ctrl{display:flex;gap:4px}
+  .cust-card.lapsed{border-left:3px solid var(--gold)}
+  .cust-card.long-lapsed{border-left:3px solid var(--warn)}
+  .cust-card.vip{background:linear-gradient(135deg,#fffaf6,#fff)}
+
+  /* レポートテーブル */
+  .rpt-tbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+  .rpt-tbl th,.rpt-tbl td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line-soft)}
+  .rpt-tbl th{background:var(--rose-soft);color:var(--rose-deep);font-family:"Cormorant Garamond",serif;font-weight:600;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+  .rpt-tbl td.price{color:var(--rose-deep);font-family:"Cormorant Garamond",serif;font-weight:600}
+  .rpt-tbl tr.total td{background:linear-gradient(135deg,#a4756d,#c89d96);color:#fff;font-weight:700}
+  .rpt-tbl tr.total td.price{color:#fff;font-size:16px}
+
+  /* バー(売上) */
+  .bar-line{display:grid;grid-template-columns:90px 1fr 80px;gap:10px;align-items:center;padding:5px 0;font-size:12.5px}
+  .bar-line .lbl{color:var(--ink2)}
+  .bar-line .barr{height:18px;background:#f1e2da;border-radius:2px;overflow:hidden}
+  .bar-line .barr>div{height:100%;background:linear-gradient(135deg,var(--rose-deep),var(--rose))}
+  .bar-line .val{text-align:right;font-family:"Cormorant Garamond",serif;font-weight:600;color:var(--rose-deep)}
+
+  @media print{
+    body{background:#fff}
+    .topbar,.kpis,.layout,.modal-footer,.modal-head .close,.modal-bg{background:transparent!important}
+    .modal-bg{position:static;display:block!important}
+    .modal{box-shadow:none;max-width:100%!important;border:none}
+    .modal-head{border:none}
+  }
+
   /* SidePanel */
   .sidepanel{background:#fff;border-radius:10px;box-shadow:var(--shadow);position:sticky;top:80px;max-height:calc(100vh - 100px);overflow-y:auto;align-self:start}
   .sp-head{padding:18px 22px;border-bottom:1px solid var(--line-soft);background:linear-gradient(135deg,var(--rose-soft),#fff)}
@@ -196,8 +237,11 @@
   <div class="topbar">
     <h1>🌙 フェムケアサロン FEMOON <span class="badge">予約管理</span></h1>
     <div class="right">
-      <button class="btn green" onclick="openAddModal()">+ 電話予約を追加</button>
-      <button class="btn alt" onclick="openClosedModal()">🌙 休業日設定</button>
+      <button class="btn green" onclick="openAddModal()">+ 電話予約</button>
+      <button class="btn alt" onclick="openReportModal()">📅 日次レポート</button>
+      <button class="btn alt" onclick="openCustomerModal()">👥 顧客管理</button>
+      <button class="btn alt" onclick="openRevenueModal()">📊 売上分析</button>
+      <button class="btn alt" onclick="openClosedModal()">🌙 休業日</button>
       <button class="btn alt" onclick="reload()">↻ 更新</button>
       <button class="btn alt" onclick="logout()">ログアウト</button>
     </div>
@@ -301,6 +345,67 @@
     <div class="modal-footer">
       <button class="btn alt" onclick="closeAddModal()">キャンセル</button>
       <button class="btn green" id="add-submit-btn" onclick="submitAdd()">予約を追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- 日次レポート Modal -->
+<div id="report-modal" class="modal-bg hidden">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-head"><h3>📅 日次レポート</h3><button class="close" onclick="closeReportModal()">×</button></div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field"><label>表示する日付</label><input type="date" id="report-date" onchange="renderReport()"></div>
+        <div class="field" style="align-self:flex-end"><button class="btn alt" onclick="reportToday()">今日</button> <button class="btn alt" onclick="reportPrev()">前日</button> <button class="btn alt" onclick="reportNext()">翌日</button></div>
+      </div>
+      <div id="report-content" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn alt" onclick="window.print()">🖨 印刷</button>
+      <button class="btn alt" onclick="closeReportModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 顧客管理 Modal -->
+<div id="customer-modal" class="modal-bg hidden">
+  <div class="modal" style="max-width:920px">
+    <div class="modal-head"><h3>👥 顧客管理・セグメント</h3><button class="close" onclick="closeCustomerModal()">×</button></div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="seg-btn active" data-seg="all" onclick="setSegment('all')">全員</button>
+        <button class="seg-btn" data-seg="lapsed1m" onclick="setSegment('lapsed1m')">1ヶ月以上未来店</button>
+        <button class="seg-btn" data-seg="lapsed2m" onclick="setSegment('lapsed2m')">2ヶ月以上未来店</button>
+        <button class="seg-btn" data-seg="lapsed3m" onclick="setSegment('lapsed3m')">3ヶ月以上未来店</button>
+        <button class="seg-btn" data-seg="new" onclick="setSegment('new')">初回のみ(リピート無)</button>
+        <button class="seg-btn" data-seg="vip" onclick="setSegment('vip')">VIP(5回以上)</button>
+      </div>
+      <input type="text" id="customer-search" placeholder="お名前・電話で検索" onkeyup="renderCustomers()" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:4px;margin-bottom:12px;font-size:13px">
+      <div id="customer-summary" style="background:var(--rose-soft);padding:10px 14px;border-radius:4px;margin-bottom:12px;font-size:13px;color:var(--ink)"></div>
+      <div id="customer-list" style="max-height:50vh;overflow-y:auto"></div>
+      <div style="margin-top:14px;padding:12px 16px;background:#fffaf6;border-radius:6px;border:1px dashed var(--rose)">
+        <strong style="color:var(--rose-deep);font-size:13px">📩 該当 <span id="seg-count">0</span>名に一斉LINE送信</strong>
+        <textarea id="bulk-msg" rows="3" placeholder="メッセージ本文。{NAME}でお名前自動挿入" style="width:100%;margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:3px;font-size:13px;font-family:inherit"></textarea>
+        <button class="btn green sm" onclick="bulkLineSend()" style="margin-top:6px">📋 全員分コピー & LINE開く</button>
+        <p style="font-size:11px;color:var(--ink2);margin:6px 0 0;line-height:1.6">※ 各顧客分のメッセージが順次クリップボードにコピーされます。LINE公式管理画面で1人ずつ友だち検索→ペースト送信してください。</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn alt" onclick="closeCustomerModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 売上分析 Modal -->
+<div id="revenue-modal" class="modal-bg hidden">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-head"><h3>📊 売上分析</h3><button class="close" onclick="closeRevenueModal()">×</button></div>
+    <div class="modal-body">
+      <div id="revenue-content"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn alt" onclick="window.print()">🖨 印刷</button>
+      <button class="btn alt" onclick="closeRevenueModal()">閉じる</button>
     </div>
   </div>
 </div>
@@ -994,6 +1099,235 @@ async function sendLineMsg(){
   window.open(LINE_OAM_CHAT, '_blank');
   closeLineModal();
   setTimeout(()=>alert('📋 コピーしました。LINE公式アカウントの画面で電話番号「'+(CURRENT_LINE_TARGET?CURRENT_LINE_TARGET['電話']:'')+'」で友だち検索→チャットを開いて貼り付け(⌘+V)してください'),200);
+}
+
+/* ========== 日次レポート ========== */
+function openReportModal(){
+  document.getElementById('report-modal').classList.remove('hidden');
+  const t = new Date();
+  document.getElementById('report-date').value = dayKey(t);
+  renderReport();
+}
+function closeReportModal(){document.getElementById('report-modal').classList.add('hidden')}
+function reportToday(){document.getElementById('report-date').value = dayKey(new Date()); renderReport()}
+function reportPrev(){const d = new Date(document.getElementById('report-date').value); d.setDate(d.getDate()-1); document.getElementById('report-date').value = dayKey(d); renderReport()}
+function reportNext(){const d = new Date(document.getElementById('report-date').value); d.setDate(d.getDate()+1); document.getElementById('report-date').value = dayKey(d); renderReport()}
+function renderReport(){
+  const ds = document.getElementById('report-date').value;
+  if(!ds) return;
+  const [y,m,dd] = ds.split('-').map(Number);
+  const d = new Date(y,m-1,dd);
+  const WD = ['日','月','火','水','木','金','土'];
+  const rows = DATA.filter(r=>{
+    const pd = parseDate(r['希望日']);
+    return pd && dayKey(pd)===ds;
+  }).sort((a,b)=>fmtTime(a['時間']).localeCompare(fmtTime(b['時間'])));
+  const active = rows.filter(r=>r['状態']!=='キャンセル');
+  const cancelled = rows.filter(r=>r['状態']==='キャンセル');
+  const totalRev = active.reduce((s,r)=>s+(Number(r['料金'])||0),0);
+  const courseCnt = {};
+  active.forEach(r=>{courseCnt[r['コース名']||'(未分類)'] = (courseCnt[r['コース名']||'(未分類)']||0)+1});
+
+  let html = `<div style="background:linear-gradient(135deg,var(--rose-soft),#fff);padding:18px 22px;border-radius:6px;margin-bottom:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
+    <div><div style="font-size:11px;color:var(--ink2);font-family:'Cormorant Garamond',serif;letter-spacing:.15em">DATE</div><div style="font-family:'Noto Serif JP',serif;font-size:18px;color:var(--ink);font-weight:500">${y}年${m}月${dd}日 (${WD[d.getDay()]})</div></div>
+    <div><div style="font-size:11px;color:var(--ink2);font-family:'Cormorant Garamond',serif;letter-spacing:.15em">RESERVATIONS</div><div style="font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--rose-deep);font-weight:600">${active.length}<small style="font-size:12px;color:var(--ink2);margin-left:4px">件${cancelled.length?` (キャンセル ${cancelled.length})`:''}</small></div></div>
+    <div><div style="font-size:11px;color:var(--ink2);font-family:'Cormorant Garamond',serif;letter-spacing:.15em">REVENUE</div><div style="font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--rose-deep);font-weight:600">¥${totalRev.toLocaleString()}</div></div>
+  </div>`;
+
+  if(active.length===0 && cancelled.length===0){
+    html += '<div style="text-align:center;padding:30px;color:var(--ink3);font-style:italic">この日は予約がありません</div>';
+  } else {
+    html += '<table class="rpt-tbl"><thead><tr><th>時間</th><th>お客様</th><th>電話</th><th>コース</th><th>来店</th><th>料金</th><th>状態</th></tr></thead><tbody>';
+    rows.forEach(r=>{
+      const isCxl = r['状態']==='キャンセル';
+      html += `<tr${isCxl?' style="opacity:.45;text-decoration:line-through"':''}>
+        <td>${fmtTime(r['時間'])}</td>
+        <td>${r['お名前']||'-'}</td>
+        <td>${r['電話']||'-'}</td>
+        <td>${r['コース名']||'-'}</td>
+        <td>${r['来店回数']||'-'}</td>
+        <td class="price">¥${Number(r['料金']||0).toLocaleString()}</td>
+        <td><span class="tag ${r['状態']||'受付済'}">${r['状態']||'受付済'}</span></td>
+      </tr>`;
+    });
+    html += `<tr class="total"><td colspan="5">合計 (${active.length}件)</td><td class="price">¥${totalRev.toLocaleString()}</td><td></td></tr>`;
+    html += '</tbody></table>';
+    // コース別
+    if(Object.keys(courseCnt).length>0){
+      html += '<div style="margin-top:18px"><strong style="font-family:\'Noto Serif JP\',serif;color:var(--rose-deep);font-size:13px;letter-spacing:.05em">コース内訳</strong>';
+      const max = Math.max(...Object.values(courseCnt));
+      Object.entries(courseCnt).sort((a,b)=>b[1]-a[1]).forEach(([c,n])=>{
+        html += `<div class="bar-line"><div class="lbl">${c}</div><div class="barr"><div style="width:${n/max*100}%"></div></div><div class="val">${n}件</div></div>`;
+      });
+      html += '</div>';
+    }
+  }
+  document.getElementById('report-content').innerHTML = html;
+}
+
+/* ========== 顧客管理 ========== */
+let CURRENT_SEGMENT = 'all';
+function openCustomerModal(){
+  document.getElementById('customer-modal').classList.remove('hidden');
+  setSegment('all');
+}
+function closeCustomerModal(){document.getElementById('customer-modal').classList.add('hidden')}
+function setSegment(seg){
+  CURRENT_SEGMENT = seg;
+  document.querySelectorAll('.seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.seg===seg));
+  renderCustomers();
+}
+function aggregateCustomers(){
+  // 電話番号でuniq
+  const map = {};
+  DATA.forEach(r=>{
+    if(r['状態']==='キャンセル') return;
+    const tel = String(r['電話']||'').replace(/[-\s]/g,'');
+    if(!tel) return;
+    if(!map[tel]) map[tel] = {tel:r['電話'], name:r['お名前'], kana:r['フリガナ'], email:r['メール'], visits:0, totalRev:0, lastVisit:null, firstVisit:null, courses:{}};
+    const pd = parseDate(r['希望日']);
+    if(pd && (!map[tel].lastVisit || pd>map[tel].lastVisit)) map[tel].lastVisit = pd;
+    if(pd && (!map[tel].firstVisit || pd<map[tel].firstVisit)) map[tel].firstVisit = pd;
+    map[tel].visits++;
+    map[tel].totalRev += Number(r['料金'])||0;
+    const c = r['コース名']||'';
+    map[tel].courses[c] = (map[tel].courses[c]||0)+1;
+  });
+  return Object.values(map);
+}
+function getSegmentedCustomers(){
+  const all = aggregateCustomers();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const ms = 24*60*60*1000;
+  return all.filter(c=>{
+    const lastDays = c.lastVisit ? Math.floor((today - c.lastVisit)/ms) : 99999;
+    if(CURRENT_SEGMENT==='all') return true;
+    if(CURRENT_SEGMENT==='lapsed1m') return lastDays>=30 && lastDays<60;
+    if(CURRENT_SEGMENT==='lapsed2m') return lastDays>=60 && lastDays<90;
+    if(CURRENT_SEGMENT==='lapsed3m') return lastDays>=90;
+    if(CURRENT_SEGMENT==='new') return c.visits===1;
+    if(CURRENT_SEGMENT==='vip') return c.visits>=5;
+    return true;
+  });
+}
+function renderCustomers(){
+  const search = (document.getElementById('customer-search').value||'').toLowerCase();
+  let arr = getSegmentedCustomers();
+  if(search) arr = arr.filter(c=>((c.name||'')+(c.tel||'')+(c.kana||'')).toLowerCase().includes(search));
+  arr.sort((a,b)=>(b.lastVisit||0)-(a.lastVisit||0));
+  document.getElementById('seg-count').textContent = arr.length;
+  document.getElementById('customer-summary').innerHTML = `該当 <strong>${arr.length}</strong>名 / 累計売上 <strong style="color:var(--rose-deep)">¥${arr.reduce((s,c)=>s+c.totalRev,0).toLocaleString()}</strong>`;
+  if(arr.length===0){
+    document.getElementById('customer-list').innerHTML = '<div style="text-align:center;padding:30px;color:var(--ink3);font-style:italic">該当なし</div>';
+    return;
+  }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const ms = 24*60*60*1000;
+  document.getElementById('customer-list').innerHTML = arr.map(c=>{
+    const days = c.lastVisit ? Math.floor((today-c.lastVisit)/ms) : null;
+    const lastStr = c.lastVisit ? `${c.lastVisit.getMonth()+1}/${c.lastVisit.getDate()}` : '—';
+    const cls = ['cust-card'];
+    if(days>=90) cls.push('long-lapsed');
+    else if(days>=30) cls.push('lapsed');
+    if(c.visits>=5) cls.push('vip');
+    return `<div class="${cls.join(' ')}">
+      <div class="info">
+        <div class="name">${c.name||'(名前なし)'} ${c.visits>=5?'<span style="background:var(--gold);color:#fff;font-size:9px;padding:1px 6px;border-radius:9px;margin-left:6px;letter-spacing:.1em">VIP</span>':''}</div>
+        <div class="meta">📞 ${c.tel||'-'} ｜ 最終来店 ${lastStr}${days!==null?` (${days}日前)`:''}</div>
+      </div>
+      <div class="stat">
+        <div><div class="v">${c.visits}<small>回</small></div></div>
+        <div><div class="v">¥${c.totalRev.toLocaleString()}</div></div>
+        <div class="ctrl">
+          <button class="btn green sm" onclick='openCustomerLine(${JSON.stringify(c).replace(/'/g,"&apos;")})'>📩 LINE</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function openCustomerLine(c){
+  // 既存LINEモーダルを流用
+  CURRENT_LINE_TARGET = {'お名前':c.name,'電話':c.tel,'希望日':c.lastVisit?c.lastVisit.toISOString():'','時間':'','コース名':''};
+  document.getElementById('line-modal').classList.remove('hidden');
+  document.getElementById('line-target-info').innerHTML = `<strong>${c.name||'-'}</strong> 様 / ${c.tel||'-'}<br><span style="color:#7a5d5d;font-size:11.5px">最終来店 ${c.lastVisit?c.lastVisit.getMonth()+1+'/'+c.lastVisit.getDate():'-'} / 来店${c.visits}回 / 累計¥${c.totalRev.toLocaleString()}</span>`;
+  document.getElementById('line-msg-body').value = '';
+}
+async function bulkLineSend(){
+  const tmpl = document.getElementById('bulk-msg').value.trim();
+  if(!tmpl){alert('メッセージを入力してください');return}
+  const arr = getSegmentedCustomers();
+  if(arr.length===0){alert('対象がいません');return}
+  if(!confirm(`${arr.length}名分のメッセージを順次クリップボードにコピーします。1人ずつLINE公式管理画面に貼り付けてください。続行しますか？`)) return;
+  // メッセージを順に1つずつコピー
+  for(let i=0;i<arr.length;i++){
+    const c = arr[i];
+    const msg = tmpl.replaceAll('{NAME}', (c.name||'').split(' ')[0]);
+    try{ await navigator.clipboard.writeText(msg); }catch(e){}
+    const continueOK = confirm(`(${i+1}/${arr.length})\n\n📋 コピー済: ${c.name} 様 (${c.tel})\n\n----- メッセージ -----\n${msg}\n----------\n\nOK: LINE公式管理画面を開いて貼り付け → 戻ったらここで「OK」で次へ\nキャンセル: 中止`);
+    if(!continueOK) break;
+    if(i===0) window.open(LINE_OAM_CHAT,'_blank');
+  }
+  alert('一斉メッセージ作業 完了');
+}
+
+/* ========== 売上分析 ========== */
+function openRevenueModal(){
+  document.getElementById('revenue-modal').classList.remove('hidden');
+  renderRevenue();
+}
+function closeRevenueModal(){document.getElementById('revenue-modal').classList.add('hidden')}
+function renderRevenue(){
+  const monthly = {};
+  const courses = {};
+  const today = new Date(); today.setHours(0,0,0,0);
+  let weekRev=0, monthRev=0, yearRev=0;
+  const mStart = new Date(today.getFullYear(),today.getMonth(),1);
+  const yStart = new Date(today.getFullYear(),0,1);
+  const wStart = new Date(today); wStart.setDate(today.getDate()-today.getDay());
+  DATA.forEach(r=>{
+    if(r['状態']==='キャンセル') return;
+    const pd = parseDate(r['希望日']);
+    if(!pd) return;
+    const rev = Number(r['料金'])||0;
+    const ym = `${pd.getFullYear()}-${String(pd.getMonth()+1).padStart(2,'0')}`;
+    monthly[ym] = monthly[ym] || {cnt:0,rev:0};
+    monthly[ym].cnt++;
+    monthly[ym].rev += rev;
+    const c = r['コース名']||'(未分類)';
+    courses[c] = courses[c] || {cnt:0,rev:0};
+    courses[c].cnt++;
+    courses[c].rev += rev;
+    if(pd>=wStart) weekRev += rev;
+    if(pd>=mStart) monthRev += rev;
+    if(pd>=yStart) yearRev += rev;
+  });
+  let html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
+    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:14px 16px"><div style="font-size:11px;color:var(--ink2);font-family:'Cormorant Garamond',serif;letter-spacing:.15em">今週</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--rose-deep);font-weight:600">¥${weekRev.toLocaleString()}</div></div>
+    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:14px 16px"><div style="font-size:11px;color:var(--ink2);font-family:'Cormorant Garamond',serif;letter-spacing:.15em">今月</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--rose-deep);font-weight:600">¥${monthRev.toLocaleString()}</div></div>
+    <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:14px 16px"><div style="font-size:11px;color:var(--ink2);font-family:'Cormorant Garamond',serif;letter-spacing:.15em">今年累計</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--rose-deep);font-weight:600">¥${yearRev.toLocaleString()}</div></div>
+  </div>`;
+  // 月別
+  html += '<h4 style="font-family:\'Noto Serif JP\',serif;color:var(--ink);font-size:14px;margin:18px 0 8px;font-weight:500">月別推移</h4>';
+  const months = Object.keys(monthly).sort().reverse().slice(0,12);
+  if(months.length===0) html += '<div style="color:var(--ink3);font-size:13px">データなし</div>';
+  else {
+    const maxRev = Math.max(...months.map(k=>monthly[k].rev));
+    months.forEach(k=>{
+      const v = monthly[k];
+      html += `<div class="bar-line"><div class="lbl">${k}</div><div class="barr"><div style="width:${v.rev/maxRev*100}%"></div></div><div class="val">¥${v.rev.toLocaleString()}<br><small style="color:var(--ink2);font-size:10px">${v.cnt}件</small></div></div>`;
+    });
+  }
+  // コース別
+  html += '<h4 style="font-family:\'Noto Serif JP\',serif;color:var(--ink);font-size:14px;margin:18px 0 8px;font-weight:500">コース別売上 (累計)</h4>';
+  const cArr = Object.entries(courses).sort((a,b)=>b[1].rev-a[1].rev);
+  if(cArr.length===0) html += '<div style="color:var(--ink3);font-size:13px">データなし</div>';
+  else {
+    const maxC = Math.max(...cArr.map(x=>x[1].rev));
+    cArr.forEach(([name,v])=>{
+      html += `<div class="bar-line"><div class="lbl">${name}</div><div class="barr"><div style="width:${maxC>0?v.rev/maxC*100:0}%"></div></div><div class="val">¥${v.rev.toLocaleString()}<br><small style="color:var(--ink2);font-size:10px">${v.cnt}件</small></div></div>`;
+    });
+  }
+  document.getElementById('revenue-content').innerHTML = html;
 }
 </script>
 </body>
