@@ -3,7 +3,7 @@
 
 (function () {
   const TODAY = window.LineCRM.TODAY;
-  let currentSubview = 'dashboard';
+  let currentSubview = 'leadHub';
 
   function fmtMoney(n) {
     if (n >= 100_000_000) return (n / 100_000_000).toFixed(2).replace(/\.?0+$/, '') + '億';
@@ -34,22 +34,140 @@
     document.querySelectorAll('.line-subview').forEach(v => {
       v.classList.toggle('active', v.dataset.lineView === name);
     });
-    if (name === 'dashboard') renderLineDashboard();
-    if (name === 'leadfunnel') renderLeadFunnel();
-    if (name === 'segments') renderSegments();
-    if (name === 'schedules') renderSchedules();
-    if (name === 'templates') renderTemplates();
-    if (name === 'birthdays') renderBirthdays();
-    if (name === 'log') renderLog();
-    if (name === 'calendars') renderCalendars();
-    if (name === 'settings') renderSettings();
+    if (name === 'leadHub') renderLeadHub();
+    if (name === 'distributionHub') renderDistributionHub();
+    if (name === 'eventsHub') renderEventsHub();
+    if (name === 'settingsHub') renderSettingsHub();
+  }
+
+  // ============================
+  // 🆕 新規相談ハブ (leadfunnel をラップ)
+  // ============================
+  function renderLeadHub() {
+    // ハブ自体に renderLeadFunnel を直接呼ぶ (leadfunnel内側 div を持つ)
+    const v = document.querySelector('[data-line-view="leadHub"]');
+    v.innerHTML = '<div data-line-view="leadfunnel"></div>';
+    renderLeadFunnel();
+  }
+
+  // ============================
+  // 📨 配信管理ハブ (ダッシュ + スケジュール + テンプレ + ログ を縦に)
+  // ============================
+  function renderDistributionHub() {
+    const v = document.querySelector('[data-line-view="distributionHub"]');
+    v.innerHTML = `
+      <div class="howto-banner">
+        <div class="howto-banner-head">
+          <span class="howto-banner-title">📨 配信管理</span>
+          <span class="howto-banner-subtitle">自動配信の全体を1画面で / 上から下にスクロール</span>
+        </div>
+        <div class="howto-steps">
+          <div class="howto-step"><div class="howto-step-no">1</div><div><strong>配信ダッシュボード</strong> — 全体KPIと今後の配信予定</div></div>
+          <div class="howto-step"><div class="howto-step-no">2</div><div><strong>配信スケジュール</strong> — どのテンプレをいつ・誰に配信するか管理</div></div>
+          <div class="howto-step"><div class="howto-step-no">3</div><div><strong>メッセージテンプレ</strong> — 配信に使う文章のストック</div></div>
+          <div class="howto-step"><div class="howto-step-no">4</div><div><strong>送信ログ</strong> — 過去配信の履歴・成功/失敗確認</div></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;font-size:11.5px;">
+        <a href="#dist-overview" class="quick-jump">📊 概況</a>
+        <a href="#dist-schedules" class="quick-jump">⏰ スケジュール</a>
+        <a href="#dist-templates" class="quick-jump">💬 テンプレ</a>
+        <a href="#dist-log" class="quick-jump">📋 ログ</a>
+      </div>
+      <section id="dist-overview">
+        <h2 class="hub-section-title">📊 配信ダッシュボード</h2>
+        <div data-line-view="dashboard"></div>
+      </section>
+      <section id="dist-schedules" style="margin-top:32px;">
+        <h2 class="hub-section-title">⏰ 配信スケジュール</h2>
+        <div data-line-view="schedules"></div>
+      </section>
+      <section id="dist-templates" style="margin-top:32px;">
+        <h2 class="hub-section-title">💬 メッセージテンプレ</h2>
+        <div data-line-view="templates"></div>
+      </section>
+      <section id="dist-log" style="margin-top:32px;">
+        <h2 class="hub-section-title">📋 送信ログ</h2>
+        <div data-line-view="log"></div>
+      </section>
+    `;
+    renderLineDashboard();
+    renderSchedules();
+    renderTemplates();
+    renderLog();
+  }
+
+  // ============================
+  // 🎁 イベント配信ハブ (誕生日 + 年末カレンダー)
+  // ============================
+  function renderEventsHub() {
+    const v = document.querySelector('[data-line-view="eventsHub"]');
+    v.innerHTML = `
+      <div class="howto-banner">
+        <div class="howto-banner-head">
+          <span class="howto-banner-title">🎁 イベント配信</span>
+          <span class="howto-banner-subtitle">記念日や季節企画のお客様タッチポイント</span>
+        </div>
+        <div class="howto-steps">
+          <div class="howto-step"><div class="howto-step-no">1</div><div><strong>誕生日リスト</strong> — 本人・配偶者・お子様の誕生日を90日先まで自動検出して当日朝9時にお祝いLINE送信</div></div>
+          <div class="howto-step"><div class="howto-step-no">2</div><div><strong>年末カレンダー配布</strong> — 12月にカレンダーを配るFP向け / LINE一斉配信 → 要不要 → 住所収集 → Google地図でルート最適化</div></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;font-size:11.5px;">
+        <a href="#evt-birthdays" class="quick-jump">🎂 誕生日</a>
+        <a href="#evt-calendar" class="quick-jump">🎍 年末カレンダー</a>
+      </div>
+      <section id="evt-birthdays">
+        <h2 class="hub-section-title">🎂 誕生日リスト (90日)</h2>
+        <div data-line-view="birthdays"></div>
+      </section>
+      <section id="evt-calendar" style="margin-top:32px;">
+        <h2 class="hub-section-title">🎍 年末カレンダー配布</h2>
+        <div data-line-view="calendars"></div>
+      </section>
+    `;
+    renderBirthdays();
+    renderCalendars();
+  }
+
+  // ============================
+  // ⚙️ 設定ハブ (LINE接続 + セグメント)
+  // ============================
+  function renderSettingsHub() {
+    const v = document.querySelector('[data-line-view="settingsHub"]');
+    v.innerHTML = `
+      <div class="howto-banner">
+        <div class="howto-banner-head">
+          <span class="howto-banner-title">⚙️ 設定</span>
+          <span class="howto-banner-subtitle">LINE接続情報 と セグメント定義</span>
+        </div>
+        <div class="howto-steps">
+          <div class="howto-step"><div class="howto-step-no">1</div><div><strong>LINE接続</strong> — チャネルトークン / FP情報 / レポートURL / マスター停止スイッチ</div></div>
+          <div class="howto-step"><div class="howto-step-no">2</div><div><strong>セグメント定義</strong> — お客様の自動グループ分け定義の確認</div></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;font-size:11.5px;">
+        <a href="#set-line" class="quick-jump">🔌 LINE接続</a>
+        <a href="#set-segments" class="quick-jump">👥 セグメント</a>
+      </div>
+      <section id="set-line">
+        <h2 class="hub-section-title">🔌 LINE 公式アカウント接続</h2>
+        <div data-line-view="settings"></div>
+      </section>
+      <section id="set-segments" style="margin-top:32px;">
+        <h2 class="hub-section-title">👥 セグメント定義</h2>
+        <div data-line-view="segments"></div>
+      </section>
+    `;
+    renderSettings();
+    renderSegments();
   }
 
   // ============================
   // 🎍 年末カレンダー配布
   // ============================
   function renderCalendars() {
-    fetchLiveData().then(() => { if (currentSubview === 'calendars') renderCalendarsInner(); });
+    fetchLiveData().then(() => { if (currentSubview === 'eventsHub') renderCalendarsInner(); });
     renderCalendarsInner();
   }
 
@@ -205,10 +323,10 @@
 
   function renderLeadFunnel() {
     // 起動時 + 10秒ごとにライブデータ取得
-    fetchLiveData().then(() => { if (currentSubview === 'leadfunnel') renderLeadFunnelInner(); });
+    fetchLiveData().then(() => { if (currentSubview === 'leadHub') renderLeadFunnelInner(); });
     if (!window._leadFunnelInterval) {
       window._leadFunnelInterval = setInterval(() => {
-        if (currentSubview === 'leadfunnel') {
+        if (currentSubview === 'leadHub') {
           fetchLiveData().then(() => renderLeadFunnelInner());
         }
       }, 10000);
@@ -1378,7 +1496,7 @@
       const btn = document.getElementById('line-test-send-btn');
       if (btn) btn.addEventListener('click', openTestSendDialog);
       updateHeroStatus();
-      activateSubview('dashboard');
+      activateSubview('leadHub');
     },
     refresh: function () {
       activateSubview(currentSubview);
