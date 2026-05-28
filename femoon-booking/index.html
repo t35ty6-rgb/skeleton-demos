@@ -360,14 +360,18 @@ let calStart = new Date(); calStart.setDate(calStart.getDate()+1); calStart.setH
 const DAYS_COL = 7;
 
 const EXTRA_CLOSED = new Set();
+const EXTRA_CLOSED_SLOTS = new Set();
+function dayKey2(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function isClosed(d){
   const wd = d.getDay(), dom = d.getDate();
   if(wd===4) return true;
   if(wd===0 && dom<=7) return true;
   if(wd===3 && dom>=15 && dom<=21) return true;
-  const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  if(EXTRA_CLOSED.has(k)) return true;
+  if(EXTRA_CLOSED.has(dayKey2(d))) return true;
   return false;
+}
+function isSlotBlocked(d, slot){
+  return EXTRA_CLOSED_SLOTS.has(dayKey2(d)+'_'+slot);
 }
 function dayLastSlot(d){
   const wd = d.getDay();
@@ -376,6 +380,7 @@ function dayLastSlot(d){
 function mockAvail(d, slot){
   if(isClosed(d)) return 'closed';
   if(slot > dayLastSlot(d)) return 'closed';
+  if(isSlotBlocked(d, slot)) return 'ng';
   const seed = (d.getDate() + ALL_SLOTS.indexOf(slot)*3) % 10;
   if(seed < 5) return 'ok';
   if(seed < 7) return 'few';
@@ -513,10 +518,11 @@ function renderReview(){
 // GAS Web App エンドポイント (FEMOON 予約Calendar - 稼働中)
 const GAS_ENDPOINT = window.GAS_ENDPOINT || 'https://script.google.com/macros/s/AKfycbwKZ0ulzBHf5PH5WTWNw7HQAL0JA3g_iqaYh7YNM-kP1dxdRZDV8uNRPIgRm_JiW1pf-g/exec';
 
-// 起動時に追加休業日を取得 (新版GASに更新後に有効化)
+// 起動時に追加休業日/時間スロットを取得 (新版GASに更新後に有効化)
 fetch(GAS_ENDPOINT + '?action=closed_list_public').then(r=>r.json()).then(j=>{
-  if(j && j.ok && Array.isArray(j.dates)){
-    j.dates.forEach(d=>EXTRA_CLOSED.add(d));
+  if(j && j.ok){
+    if(Array.isArray(j.dates)) j.dates.forEach(d=>EXTRA_CLOSED.add(d));
+    if(Array.isArray(j.slots)) j.slots.forEach(s=>EXTRA_CLOSED_SLOTS.add(s));
     if(typeof renderCal === 'function') renderCal();
   }
 }).catch(()=>{});

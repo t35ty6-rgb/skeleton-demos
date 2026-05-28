@@ -163,7 +163,7 @@ function doGet(e){
       .setMimeType(ContentService.MimeType.JSON);
   }
   if(action === 'closed_list_public'){
-    return ContentService.createTextOutput(JSON.stringify({ok:true,dates:getClosedDates_()}))
+    return ContentService.createTextOutput(JSON.stringify({ok:true,dates:getClosedDates_(),slots:getClosedSlots_()}))
       .setMimeType(ContentService.MimeType.JSON);
   }
   if(action === 'list'){
@@ -199,6 +199,10 @@ function doGet(e){
     return ContentService.createTextOutput(JSON.stringify({ok:true,dates:dates}))
       .setMimeType(ContentService.MimeType.JSON);
   }
+  if(action === 'closed_list'){
+    return ContentService.createTextOutput(JSON.stringify({ok:true,dates:getClosedDates_(),slots:getClosedSlots_()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   if(action === 'closed_add' || action === 'closed_remove'){
     const date = params.date;
     if(!date) return ContentService.createTextOutput(JSON.stringify({ok:false,error:'date required'}))
@@ -211,12 +215,29 @@ function doGet(e){
     return ContentService.createTextOutput(JSON.stringify({ok:true,dates:next}))
       .setMimeType(ContentService.MimeType.JSON);
   }
+  // 時間スロット単位の休業 ("YYYY-MM-DD_HH:MM" 形式)
+  if(action === 'closed_slot_add' || action === 'closed_slot_remove'){
+    const key = params.key;
+    if(!key) return ContentService.createTextOutput(JSON.stringify({ok:false,error:'key required'}))
+      .setMimeType(ContentService.MimeType.JSON);
+    const list = getClosedSlots_();
+    let next;
+    if(action === 'closed_slot_add') next = [...new Set([...list, key])].sort();
+    else next = list.filter(s=>s!==key);
+    PropertiesService.getScriptProperties().setProperty('CLOSED_SLOTS', JSON.stringify(next));
+    return ContentService.createTextOutput(JSON.stringify({ok:true,slots:next}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   return ContentService.createTextOutput(JSON.stringify({ok:false,error:'unknown action'}))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function getClosedDates_(){
   const raw = PropertiesService.getScriptProperties().getProperty('CLOSED_DATES');
+  try{ return raw ? JSON.parse(raw) : []; }catch(e){ return []; }
+}
+function getClosedSlots_(){
+  const raw = PropertiesService.getScriptProperties().getProperty('CLOSED_SLOTS');
   try{ return raw ? JSON.parse(raw) : []; }catch(e){ return []; }
 }</pre></div>
 </div>
