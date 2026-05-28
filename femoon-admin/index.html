@@ -1602,20 +1602,32 @@ function renderCustomers(){
   document.getElementById('customer-list').innerHTML = arr.map((c,i)=>{
     const days = c.lastVisit ? Math.floor((today-c.lastVisit)/ms) : null;
     const lastStr = c.lastVisit ? `${c.lastVisit.getMonth()+1}/${c.lastVisit.getDate()}` : '—';
+    const nextStr = c.nextVisit ? `${c.nextVisit.getMonth()+1}/${c.nextVisit.getDate()}` : null;
+    const nextDays = c.nextVisit ? Math.floor((c.nextVisit-today)/ms) : null;
     const cls = ['cust-card'];
     if(days>=90) cls.push('long-lapsed');
     else if(days>=30) cls.push('lapsed');
     if(c.visits>=5) cls.push('vip');
     const tplKey = pickTemplate(c);
     const tplLabel = TEMPLATES[tplKey]?.label || '';
+
+    // visits=0 (未来予約のみ、まだ来店してない) と既存来店者でメタ情報を分岐
+    let metaLine;
+    if(c.visits===0 && c.nextVisit){
+      metaLine = `📞 ${c.tel||'-'} ｜ <strong style="color:var(--rose-deep)">📅 次回 ${nextStr} (${nextDays}日後)</strong> ｜ <span style="background:#06c755;color:#fff;padding:1px 6px;border-radius:8px;font-size:9.5px">新規予約</span>`;
+    } else {
+      metaLine = `📞 ${c.tel||'-'} ｜ 最終 ${lastStr}${days!==null?` (${days}日前)`:''} ｜ 平均間隔 ${c.avgSpan?c.avgSpan+'日':'-'}`;
+      if(c.nextVisit) metaLine += ` ｜ <strong style="color:var(--rose-deep)">📅 次回 ${nextStr}</strong>`;
+    }
+
     return `<div class="${cls.join(' ')}">
       <div class="info" style="cursor:pointer" onclick="openCustDetail(${i})">
         <div class="name">${c.name||'(名前なし)'}${c.visits>=5?' <span style="background:var(--gold);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.1em;font-weight:600;vertical-align:middle">VIP</span>':''}${c.lineUserId?' <span style="background:#06c755;color:#fff;font-size:11px;padding:3px 10px;border-radius:10px;letter-spacing:.04em;font-weight:700;vertical-align:middle;margin-left:4px">📲 LINE直送</span>':' <span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:3px 8px;border-radius:10px;letter-spacing:.04em;font-weight:500;vertical-align:middle">📋 コピー送信</span>'}<span style="font-size:10px;color:var(--rose-deep);margin-left:6px">▸ 詳細</span></div>
-        <div class="meta">📞 ${c.tel||'-'} ｜ 最終 ${lastStr}${days!==null?` (${days}日前)`:''} ｜ 平均間隔 ${c.avgSpan?c.avgSpan+'日':'-'}</div>
+        <div class="meta">${metaLine}</div>
         <div style="font-size:10.5px;color:var(--rose-deep);margin-top:3px">💡 推奨: ${tplLabel}</div>
       </div>
       <div class="stat">
-        <div><div class="v">${c.visits}<small>回</small></div></div>
+        <div><div class="v">${c.visits}<small>回</small>${c.visits===0&&c.nextVisit?' <small style="color:var(--green)">(予約済)</small>':''}</div></div>
         <div><div class="v">¥${c.totalRev.toLocaleString()}</div></div>
         <div class="ctrl" style="flex-direction:column;gap:3px">
           <button class="btn green sm" onclick="quickLine(${i})">📩 即連絡</button>
