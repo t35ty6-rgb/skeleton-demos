@@ -496,19 +496,19 @@
       const zUrl = escapeHtml(b.zoomUrl || '');
       const dateInfo = formatBookingDate(b.date);
       const timeStr = formatBookingTime(b.time);
+      // ローカル保存タスク件数を表示
+      const tasksKey = 'fp-tasks-' + (b.userId || tsEnc);
+      const savedTasksCount = (JSON.parse(localStorage.getItem(tasksKey) || '[]')).length;
       let cta = '';
       if (rec === 'recording') {
         cta = `<button class="btn-rec-stop" data-rec-stop="${tsEnc}">■ 録画停止</button>
                <a class="btn-mini" href="${zUrl}" target="_blank">Zoomを開く</a>`;
       } else if (rec === 'saved') {
-        const hasT = b.transcript;
-        cta = `${hasT
-          ? `<button class="btn-mini" data-view-transcript="${tsEnc}" style="background:#fff8e1;border-color:#f0d36b;color:#8a6f1e;font-weight:600;">📝 議事録を見る</button>`
-          : `<button class="btn-mini" data-gen-transcript="${tsEnc}" style="background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;font-weight:700;">✨ AI議事録を生成</button>`}
-          <a class="btn-mini" href="${escapeHtml(b.driveUrl||'#')}" target="_blank">📁 録画 (Drive)</a>`;
+        cta = `<button class="btn-mini" data-open-memo="${tsEnc}" style="background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;font-weight:700;">📝 メモ・タスク化${savedTasksCount > 0 ? ' ('+savedTasksCount+')' : ''}</button>`;
       } else if (zUrl) {
         cta = `<button class="btn-rec-start" data-rec-start="${tsEnc}" data-zoom="${zUrl}">● 録画ONでZoom開始</button>
-               <a class="btn-mini" href="${zUrl}" target="_blank">録画なしで開く</a>`;
+               <a class="btn-mini" href="${zUrl}" target="_blank">録画なしで開く</a>
+               <button class="btn-mini" data-open-memo="${tsEnc}" style="background:#f8fafc;border:1px solid #e5e7eb;color:#374151;">📝 メモ${savedTasksCount > 0 ? ' ('+savedTasksCount+'件)' : ''}</button>`;
       }
       const recPill = rec === 'recording' ? '<span class="rec-pill recording">● 録画中</span>'
         : rec === 'saved' ? '<span class="rec-pill saved">📼 録画保存済</span>' : '';
@@ -640,6 +640,9 @@
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { frameRate: 15 },
         audio: { echoCancellation: false, noiseSuppression: false, sampleRate: 44100 },
+        systemAudio: 'include', // ヒント: 「タブ音声を共有」チェックをデフォルトON
+        preferCurrentTab: false,
+        surfaceSwitching: 'include',
       });
       // マイク音声も合成 (お客さん側=Zoomの再生音 + FP本人=マイク)
       let combined = stream;
@@ -718,11 +721,209 @@
 
   async function onRecordingComplete(bookingTs, blob, blobUrl) {
     const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0, 19) === String(bookingTs).slice(0, 19));
-    const survey = ((liveData && liveData.survey_answers) || []).find(s => s.userId === (booking && booking.userId));
-    showAIProcessingModal(booking, survey, blob, blobUrl, bookingTs);
+    // 録画完了の小さなトースト + ダウンロード/メモ動線
+    showRecordingDoneToast(booking, blob, blobUrl, bookingTs);
+    // サーバー側にも保存通知
+    try { await fetch(CLOUD_RUN_BASE + '/api/recording/stop?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }); } catch (_) {}
+    await fetchLiveData();
+    renderLeadHubInner();
   }
 
-  function showAIProcessingModal(booking, survey, blob, blobUrl, bookingTs) {
+  function showRecordingDoneToast(booking, blob, blobUrl, bookingTs) {
+    const name = (booking && booking.name) || 'お客様';
+    const sizeMB = (blob.size / 1024 / 1024).toFixed(1);
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border:1px solid var(--line,#e5e7eb);border-left:4px solid var(--green,#06c755);border-radius:12px;padding:16px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.18);z-index:9999;max-width:380px;font-family:inherit;';
+    toast.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <div style="font-size:20px;">✅</div>
+        <strong style="font-size:14px;">録画保存完了</strong>
+      </div>
+      <div style="font-size:12.5px;color:#4b5563;margin-bottom:12px;line-height:1.5;">${escapeHtml(name)}様の面談録画 (${sizeMB}MB)</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <a href="${blobUrl}" download="meeting-${escapeHtml(name)}-${Date.now()}.webm" style="font-size:11.5px;padding:7px 12px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;text-decoration:none;color:#1f2937;font-weight:600;">💾 ダウンロード</a>
+        <button id="fp-open-memo" style="font-size:11.5px;padding:7px 14px;background:linear-gradient(135deg,#b8893d,#d4a017);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-family:inherit;">📝 メモを書く</button>
+        <button id="fp-toast-close" style="font-size:11.5px;padding:7px 10px;background:transparent;border:none;color:#94a3b8;cursor:pointer;font-family:inherit;">✕</button>
+      </div>
+    `;
+    document.body.appendChild(toast);
+    document.getElementById('fp-toast-close').addEventListener('click', () => toast.remove());
+    document.getElementById('fp-open-memo').addEventListener('click', () => {
+      toast.remove();
+      openMemoModal(booking, bookingTs);
+    });
+    // 30秒で自動消去
+    setTimeout(() => toast.remove(), 30000);
+  }
+
+  // ===== メモ → タスク自動抽出 =====
+  function openMemoModal(booking, bookingTs) {
+    const name = (booking && booking.name) || 'お客様';
+    const overlay = document.createElement('div');
+    overlay.id = 'fp-memo-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
+    // localStorage から既存メモを復元
+    const memoKey = 'fp-memo-' + (bookingTs || '');
+    const existingMemo = localStorage.getItem(memoKey) || '';
+    overlay.innerHTML = `
+      <div style="background:#fff;width:min(680px,100%);max-height:92vh;overflow-y:auto;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,0.35);">
+        <div style="padding:24px 28px 0;">
+          <h2 style="margin:0 0 4px;font-family:'Noto Serif JP',serif;font-size:20px;">📝 面談メモ — ${escapeHtml(name)}様</h2>
+          <p style="margin:0;color:#6b7280;font-size:12px;">面談内容のポイントを自由に書く → 保存時に「期限+タスク」が自動で抽出されて顧客カードに貼られます</p>
+        </div>
+        <div style="padding:20px 28px;">
+          <div style="background:#fffbf2;border:1px solid #f0d36b;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:#5e4d1a;line-height:1.65;">
+            <strong>書き方のコツ:</strong> 「<u>○月○日までに XXする</u>」「<u>来週 △△を送る</u>」「<u>3ヶ月後に □□確認</u>」 のように期限+動作を含めると自動でタスク化されます
+          </div>
+          <textarea id="fp-memo-text" placeholder="例:&#10;・新NISAの最適配分シミュレーション資料を 来週中に送る&#10;・教育費見直し 3ヶ月後に再面談&#10;・iDeCo加入手続きの進捗を 2ヶ月後に確認&#10;・お孫さんの誕生で相続見直しの相談あり (急ぎではない)" style="width:100%;min-height:200px;padding:14px 16px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:13.5px;font-family:'Noto Sans JP',sans-serif;line-height:1.7;resize:vertical;box-sizing:border-box;">${escapeHtml(existingMemo)}</textarea>
+        </div>
+        <div id="fp-memo-tasks" style="padding:0 28px 20px;display:none;"></div>
+        <div style="padding:16px 28px;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+          <button id="fp-memo-cancel" style="font-size:13px;padding:9px 18px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;color:#374151;font-family:inherit;">キャンセル</button>
+          <button id="fp-memo-save" style="font-size:13px;padding:9px 22px;background:linear-gradient(135deg,#b8893d,#d4a017);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-family:inherit;">💡 保存して タスク自動抽出</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    document.getElementById('fp-memo-cancel').addEventListener('click', () => overlay.remove());
+    document.getElementById('fp-memo-save').addEventListener('click', () => {
+      const memo = document.getElementById('fp-memo-text').value;
+      localStorage.setItem(memoKey, memo);
+      const tasks = extractTasksFromMemo(memo, booking);
+      // localStorage に顧客タスクとして保存
+      const tasksKey = 'fp-tasks-' + ((booking && booking.userId) || bookingTs);
+      const existing = JSON.parse(localStorage.getItem(tasksKey) || '[]');
+      const merged = existing.concat(tasks.map(t => ({ ...t, createdAt: new Date().toISOString(), customerName: name, bookingTs: bookingTs })));
+      localStorage.setItem(tasksKey, JSON.stringify(merged));
+      renderExtractedTasks(tasks);
+    });
+  }
+
+  // 自然言語メモ → タスク配列に変換 (ルールベース、外部API不要)
+  function extractTasksFromMemo(memo, booking) {
+    if (!memo || !memo.trim()) return [];
+    const baseDate = (booking && booking.date) ? new Date(booking.date) : new Date('2026-05-28');
+    // 行ごとに走査 (・- や改行で区切る)
+    const lines = memo.split(/\n|・|・|✓|☐|□|■/).map(s => s.trim()).filter(s => s.length > 3);
+    return lines.map(line => parseTaskLine(line, baseDate)).filter(t => t);
+  }
+
+  function parseTaskLine(line, baseDate) {
+    if (!line) return null;
+    // 期限を推定
+    let due = null;
+    let priorityLabel = '来月';
+    const today = baseDate;
+
+    // 絶対日付パターン: "○月○日", "2026/7/15", "7月末"
+    let m = line.match(/(\d{1,2})月(\d{1,2})日/);
+    if (m) {
+      const mo = parseInt(m[1], 10);
+      const dd = parseInt(m[2], 10);
+      const year = today.getFullYear() + (mo < today.getMonth() + 1 ? 1 : 0);
+      due = new Date(year, mo - 1, dd);
+    }
+    if (!due) {
+      m = line.match(/(\d{1,2})月末/);
+      if (m) {
+        const mo = parseInt(m[1], 10);
+        const year = today.getFullYear() + (mo < today.getMonth() + 1 ? 1 : 0);
+        due = new Date(year, mo, 0); // 月末
+      }
+    }
+    if (!due && line.match(/今週中|今週/)) {
+      due = addDays(today, 7);
+      priorityLabel = '今週';
+    }
+    if (!due && line.match(/来週/)) {
+      due = addDays(today, 14);
+      priorityLabel = '今週';
+    }
+    if (!due && line.match(/3ヶ月後|3ヵ月後|三ヶ月後/)) {
+      due = addMonths(today, 3);
+      priorityLabel = '3ヶ月後';
+    }
+    if (!due && line.match(/2ヶ月後|2ヵ月後|二ヶ月後/)) {
+      due = addMonths(today, 2);
+      priorityLabel = '2ヶ月後';
+    }
+    if (!due && line.match(/半年後|6ヶ月後/)) {
+      due = addMonths(today, 6);
+      priorityLabel = '半年後';
+    }
+    if (!due && line.match(/1年後|来年/)) {
+      due = addMonths(today, 12);
+      priorityLabel = '来年';
+    }
+    if (!due && line.match(/明日|翌日/)) {
+      due = addDays(today, 1);
+      priorityLabel = '至急';
+    }
+    if (!due && line.match(/急ぎ|至急|今日中/)) {
+      due = today;
+      priorityLabel = '至急';
+    }
+    // 期限なし → 来月扱い
+    if (!due) {
+      due = addMonths(today, 1);
+      priorityLabel = '来月';
+    }
+    // タスクの動詞抽出 → アイコン
+    let icon = '✅';
+    if (line.match(/送(る|付|る)|送信/)) icon = '📤';
+    else if (line.match(/確認/)) icon = '👀';
+    else if (line.match(/電話|TEL|連絡/)) icon = '📞';
+    else if (line.match(/資料|PDF|レポート/)) icon = '📄';
+    else if (line.match(/面談|相談|ZOOM|Zoom/)) icon = '💻';
+    else if (line.match(/シミュ|シミュレーション/)) icon = '📊';
+
+    // 優先度の色分け
+    const daysToDue = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+    if (daysToDue <= 7) priorityLabel = '今週';
+    else if (daysToDue <= 14) priorityLabel = '2週間以内';
+    else if (daysToDue <= 30) priorityLabel = '来月';
+    else if (daysToDue <= 90) priorityLabel = '3ヶ月以内';
+    else priorityLabel = '半年以降';
+
+    return {
+      task: line.trim(),
+      due: formatDate(due),
+      priority: priorityLabel,
+      icon: icon,
+    };
+  }
+
+  function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function addMonths(d, n) { const x = new Date(d); x.setMonth(x.getMonth() + n); return x; }
+  function formatDate(d) {
+    const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0');
+    const wd = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+    return `${y}/${m}/${dd}(${wd})`;
+  }
+
+  function renderExtractedTasks(tasks) {
+    const target = document.getElementById('fp-memo-tasks');
+    if (!target) return;
+    target.style.display = 'block';
+    if (tasks.length === 0) {
+      target.innerHTML = `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px;font-size:12.5px;color:#991b1b;">タスクを抽出できませんでした。期限と動作を含む文章を書いてください。</div>`;
+      return;
+    }
+    target.innerHTML = `
+      <div style="background:linear-gradient(135deg,#fff8e1,#fffbf2);border:1px solid #f0d36b;border-radius:10px;padding:14px 18px;margin-bottom:12px;">
+        <strong style="font-size:13px;color:#5e4d1a;">✨ ${tasks.length}件のタスクを抽出 → 顧客カードに保存しました</strong>
+      </div>
+      <div style="display:grid;gap:7px;">
+        ${tasks.map(t => `
+          <div style="display:grid;grid-template-columns:90px 32px 1fr 130px;gap:12px;align-items:center;padding:11px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;">
+            <span style="font-size:10.5px;font-weight:700;letter-spacing:0.05em;background:${t.priority==='至急'?'#fef2f2;color:#b91c3c':(t.priority==='今週'||t.priority==='2週間以内')?'#fff7ed;color:#c2410c':'#f0f9ff;color:#075985'};padding:4px 9px;border-radius:11px;text-align:center;">${t.priority}</span>
+            <span style="font-size:18px;">${t.icon}</span>
+            <span style="font-size:13px;">${escapeHtml(t.task)}</span>
+            <span style="font-size:11px;color:#6b7280;text-align:right;">${t.due}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  function _UNUSED_showAIProcessingModal(booking, survey, blob, blobUrl, bookingTs) {
     const overlay = document.createElement('div');
     overlay.id = 'fp-ai-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.65);backdrop-filter:blur(4px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
@@ -796,7 +997,7 @@
     }, cumulative + 300);
   }
 
-  function renderAIResult(booking, survey, blob, blobUrl, bookingTs) {
+  function _UNUSED_renderAIResult(booking, survey, blob, blobUrl, bookingTs) {
     const body = document.getElementById('fp-ai-body');
     if (!body) return;
     const name = (booking && booking.name) || 'お客様';
@@ -890,33 +1091,18 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
     document.querySelectorAll('[data-rec-stop]').forEach(btn => {
       btn.addEventListener('click', () => {
         if (window._fpRecorder.mediaRecorder && window._fpRecorder.mediaRecorder.state !== 'inactive') {
-          if (!confirm('録画を停止して AI議事録を生成しますか?')) return;
+          if (!confirm('録画を停止して保存しますか?')) return;
           stopScreenRecording();
         } else {
           alert('進行中の録画がありません');
         }
       });
     });
-    document.querySelectorAll('[data-gen-transcript]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const ts = btn.dataset.genTranscript;
-        btn.disabled = true; btn.textContent = '✨ 生成中...';
-        try {
-          const r = await fetch(CLOUD_RUN_BASE + '/api/transcript?ts=' + encodeURIComponent(ts), { method: 'POST' });
-          const data = await r.json();
-          if (data.ok) {
-            await fetchLiveData();
-            renderLeadHubInner();
-            showTranscriptModal(data.transcript, '✨ AI議事録 (自動生成)');
-          } else { alert('失敗: ' + (data.error || '')); btn.disabled = false; }
-        } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; }
-      });
-    });
-    document.querySelectorAll('[data-view-transcript]').forEach(btn => {
+    document.querySelectorAll('[data-open-memo]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const ts = btn.dataset.viewTranscript;
-        const b = ((liveData && liveData.bookings) || []).find(x => String(x.ts).slice(0,19) === String(ts).slice(0,19));
-        if (b && b.transcript) showTranscriptModal(b.transcript, '📝 議事録 — ' + (b.name || ''));
+        const ts = btn.dataset.openMemo;
+        const b = ((liveData && liveData.bookings) || []).find(x => String(x.ts).slice(0,19) === decodeURIComponent(ts).slice(0,19));
+        openMemoModal(b || { name: 'お客様', userId: ts, date: new Date().toISOString().slice(0,10) }, ts);
       });
     });
   }
