@@ -242,6 +242,7 @@
       <button class="btn alt" onclick="openCustomerModal()">👥 顧客管理</button>
       <button class="btn alt" onclick="openTemplateModal()">📝 テンプレ</button>
       <button class="btn alt" onclick="openRevenueModal()">📊 売上分析</button>
+      <button class="btn alt" onclick="openTaxModal()">📑 税理士資料</button>
       <button class="btn alt" onclick="openClosedModal()">🌙 休業日</button>
       <button class="btn alt" onclick="reload()">↻ 更新</button>
       <button class="btn alt" onclick="logout()">ログアウト</button>
@@ -425,6 +426,41 @@
     <div class="modal-footer">
       <button class="btn alt" onclick="window.print()">🖨 印刷</button>
       <button class="btn alt" onclick="closeRevenueModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 税理士提出資料 Modal -->
+<div id="tax-modal" class="modal-bg hidden">
+  <div class="modal" style="max-width:880px">
+    <div class="modal-head"><h3>📑 税理士提出用 売上帳</h3><button class="close" onclick="closeTaxModal()">×</button></div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field"><label>対象年月</label><input type="month" id="tax-month" onchange="renderTax()"></div>
+        <div class="field" style="align-self:flex-end">
+          <button class="btn alt sm" onclick="taxMonthShift(-1)">‹ 前月</button>
+          <button class="btn alt sm" onclick="taxMonthShift(1)">翌月 ›</button>
+        </div>
+      </div>
+      <div id="tax-content" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn alt" onclick="downloadTaxCSV()">📥 CSVダウンロード</button>
+      <button class="btn green" onclick="printTax()">🖨 印刷</button>
+      <button class="btn alt" onclick="closeTaxModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 顧客詳細 Modal -->
+<div id="cust-detail-modal" class="modal-bg hidden">
+  <div class="modal" style="max-width:780px">
+    <div class="modal-head"><h3 id="cd-title">👤 顧客詳細</h3><button class="close" onclick="closeCustDetailModal()">×</button></div>
+    <div class="modal-body">
+      <div id="cd-content"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn alt" onclick="closeCustDetailModal()">閉じる</button>
     </div>
   </div>
 </div>
@@ -1188,37 +1224,78 @@ function renderReport(){
 
 /* ========== テンプレ管理 (リピート促進戦略) ========== */
 const DEFAULT_TEMPLATES = {
-  new: {
-    label:'新規初回後 (24時間以内)',
-    body:'{NAME}様\n\n本日はご来店いただきありがとうございました🌙\nお身体の変化、いかがでしょうか？\n\n施術後2〜3日は変化を感じやすい時期です。何か気になることがあればお気軽にご連絡くださいませ。\n\n次回は3〜4週間後がオススメです。お気をつけてお過ごしください🌸\n\nフェムケアサロン FEMOON'
+  // 🌱 初回さん専用 (1回目)
+  new_thanks: {
+    label:'【新規】初回当日 お礼 (1回目)',
+    body:'{NAME}様\n\n本日は初めてのご来店、誠にありがとうございました🌙\nお身体の状態を確認させていただき、{NAME}様のお悩みに寄り添うケアができたかなと思います。\n\n施術後の今夜〜明日は、水分多めに摂っていただくとより効果的です。何か気になることがあれば、いつでもこちらにご返信ください🌸\n\nフェムケアサロン FEMOON'
   },
-  followup3d: {
-    label:'施術3日後 フォロー',
-    body:'{NAME}様\n\nその後お変わりございませんでしょうか？\n施術から数日経ち、お身体の変化を実感いただけていれば嬉しいです🌸\n\nご質問やお悩みがあれば、お気軽にご返信くださいませ。\n\nフェムケアサロン FEMOON'
+  new_3day: {
+    label:'【新規】初回3日後 体の変化フォロー (1回目)',
+    body:'{NAME}様\n\nその後、お身体の調子はいかがでしょうか？\n初めての施術後、3日が経ちました。\n\n人によっては「軽くなった」「眠りが深くなった」「お腹が温かい」など実感されますが、変化を感じにくいこともあります。どんな小さなことでもお聞かせいただけると嬉しいです🌙\n\nFEMOON'
   },
-  lapsed1m:{
-    label:'1ヶ月未来店',
-    body:'{NAME}様\n\nお久しぶりです🌙 FEMOONの担当です。\n前回のご来店から1ヶ月が経ちました。お身体の調子はいかがでしょうか？\n\n体のケアは継続が大切。お時間ある時にぜひお越しください。{NAME}様にぴったりのコースをご用意してお待ちしております🌸\n\nご予約はこちら↓\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/'
+  new_week: {
+    label:'【新規】初回1週間後 体感確認 (1回目)',
+    body:'{NAME}様\n\n初回ご来店から1週間が経ちました🌸\n体の変化はいかがでしょうか？\n\nフェムケアは1回でも変化を感じる方が多いですが、本来の効果は「3回目から」が定説です。次回は3週間後あたりがベストタイミング。\n\n気になることがあればお気軽にご返信ください🌙\nFEMOON'
   },
-  lapsed2m:{
-    label:'2ヶ月未来店 (リターン特典)',
-    body:'{NAME}様\n\nしばらくお会いできておらず気になっておりました🌙\n\nお身体の状態、戻りつつあるかもしれません。\n2ヶ月以上ぶりのご来店の方限定で、フェムケア矯正を¥1,000OFFでご案内中です。\n\nお気軽にご返信ください🌸\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/'
+  new_next_propose: {
+    label:'【新規】初回2週間後 次回提案 (1回目)',
+    body:'{NAME}様\n\nお身体の調子いかがですか？\n初回から2週間ほど経ちますね🌙\n\n初めて来てくださった方限定で「2回目体験 ¥1,000OFF」のご案内中です。\n効果を本格的に実感されたい方は、ぜひお早めに👇\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
   },
-  lapsed3m:{
-    label:'3ヶ月未来店 (復帰促進)',
-    body:'{NAME}様\n\nご無沙汰しております🌙 FEMOONの担当です。\n\n3ヶ月以上経ちましたが、お元気でいらっしゃいますか？\nお久しぶりの方限定で「リセットコース ¥2,000OFF」もご用意しております。\nまた{NAME}様にお会いできるのを心よりお待ちしております🌸\n\nご予約↓\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/'
+
+  // 🌷 リピート促進 (2-4回目)
+  rpt_thanks_2nd: {
+    label:'【2回目】お礼 (前回からの変化を聞く)',
+    body:'{NAME}様\n\n本日は2回目のご来店ありがとうございました🌙\n前回からの体の変化はいかがでしたか？\n\n2回目は身体が「整い始める」段階。続けることで効果が積み上がります。次回も3週間以内がオススメです🌸\n\nFEMOON'
   },
-  vip:{
-    label:'VIP感謝メッセージ',
-    body:'{NAME}様\n\nいつもありがとうございます🌙\n大切なお客様限定で、新しいコースをご案内させていただきます。詳細はぜひこちらでお話させてくださいませ✨\n\nフェムケアサロン FEMOON'
+  rpt_3day: {
+    label:'【2-3回目】施術3日後 フォロー',
+    body:'{NAME}様\n\nその後お変わりございませんか？\n継続してケアいただきありがとうございます🌙\n\n何かお気づきの点、お困りごとがあればお気軽にご返信ください。{NAME}様の体調に合わせたアドバイスもさせていただきます🌸\n\nFEMOON'
   },
-  reminder:{
+  rpt_2week: {
+    label:'【2-3回目】2週間後 次回提案',
+    body:'{NAME}様\n\n前回から2週間ほど経ちましたね🌙\n効果を持続させるには、3〜4週間サイクルが理想です。\n\n来週・再来週でご都合の良い日はございますか？お気軽にお声がけくださいませ🌸\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
+  },
+
+  // 👑 常連VIP (5回以上)
+  vip_thanks: {
+    label:'【VIP】常連 感謝メッセージ',
+    body:'{NAME}様\n\nいつもありがとうございます🌙\n{NAME}様にお会いできるのが楽しみです。今日もお疲れさまでした。\n\n常連の{NAME}様限定で、後日特別なご案内もさせていただきますね✨\n\nFEMOON'
+  },
+  vip_intro: {
+    label:'【VIP】お友達紹介のご案内',
+    body:'{NAME}様\n\nいつもFEMOONをご愛顧くださりありがとうございます🌙\n\n{NAME}様限定で「お友達紹介キャンペーン」ご案内です。\n紹介された方→初回¥2,000OFF / {NAME}様→次回¥2,000OFF\n\n大切な方を、ぜひFEMOONにご紹介くださいませ🌸\nFEMOON'
+  },
+  vip_seasonal: {
+    label:'【VIP】季節限定コース案内',
+    body:'{NAME}様\n\nいつもありがとうございます🌙\nこの季節限定の特別コース、{NAME}様にぜひお試しいただきたいのでご案内です。\n\n詳しくはお返事いただければ、{NAME}様の体調に合わせてご相談させていただきます🌸\nFEMOON'
+  },
+
+  // 💔 掘り起こし (未来店期間別 × 来店回数別)
+  lapsed1m_new: {
+    label:'【掘り起こし】1ヶ月空き × 初回さん',
+    body:'{NAME}様\n\nお久しぶりです🌙\n初めてのご来店から1ヶ月経ちましたね。お身体の調子はいかがですか？\n\n初回の効果を持続させるには、2回目までが大事です🌸 来週・再来週でご都合いかがでしょうか？\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
+  },
+  lapsed1m_repeat: {
+    label:'【掘り起こし】1ヶ月空き × リピーター',
+    body:'{NAME}様\n\n前回から1ヶ月経ちました🌙\n継続いただいていた効果が薄れる時期です。\n\nそろそろメンテナンスのタイミング。来週・再来週でご都合の良い日があれば教えてくださいませ🌸\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
+  },
+  lapsed2m_any: {
+    label:'【掘り起こし】2ヶ月以上空き 全員 (¥1,000OFF)',
+    body:'{NAME}様\n\nお久しぶりです🌙\nしばらくお会いできておらず、少し心配しておりました。\n\nお身体の状態が気になる時期、ぜひ一度状態を見せていただけますと安心です。\n久しぶり限定で「フェムケア矯正 ¥1,000OFF」をご用意しております🌸\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
+  },
+  lapsed3m_any: {
+    label:'【掘り起こし】3ヶ月以上空き 復帰促進 (¥2,000OFF)',
+    body:'{NAME}様\n\nご無沙汰しております🌙 FEMOONです。\n3ヶ月以上経ちましたが、お元気でいらっしゃいますか？\n\nお久しぶりの方限定で「リセットコース ¥2,000OFF」をご用意。一度ゆっくり体を整えにいらしてくださいませ。\n{NAME}様にお会いできるのを楽しみにしております🌸\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
+  },
+
+  // 📅 リマインド
+  reminder_prev_day: {
     label:'前日リマインド',
-    body:'{NAME}様\n\n明日のご予約のリマインドです🌙\n\n{DATE} {TIME}〜「{COURSE}」のご予約を承っております。\n\nお気をつけてお越しくださいませ🌸\nフェムケアサロン FEMOON'
+    body:'{NAME}様\n\n明日のご予約のリマインドです🌙\n\n{DATE} {TIME}〜「{COURSE}」のご予約を承っております。\n\nお気をつけてお越しくださいませ🌸\nFEMOON'
   },
-  thanks:{
-    label:'施術直後 お礼',
-    body:'{NAME}様\n\n本日はご来店誠にありがとうございました🌙\nお疲れさまでした。\n\n次回もぜひお気軽にご相談くださいませ🌸\nフェムケアサロン FEMOON'
+  reminder_birthday: {
+    label:'お誕生月 特別ご案内',
+    body:'{NAME}様\n\nお誕生月おめでとうございます🎉🌙\n\nFEMOONからお祝いのご案内です。お誕生月の方限定で「全コース ¥2,000OFF」のプレゼント🌸\n\n素敵な1年になりますように、心からお祈り申し上げます。\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
   }
 };
 let TEMPLATES = (()=>{
@@ -1233,16 +1310,35 @@ function resetTemplates(){
   if(!document.getElementById('tpl-modal').classList.contains('hidden')) renderTemplates();
 }
 function pickTemplate(c){
-  // 顧客状況に最適なテンプレを選択
+  // 顧客状況に最適なテンプレを選択 (来店回数 × 経過日数で判定)
   const today = new Date(); today.setHours(0,0,0,0);
   const ms = 24*60*60*1000;
   const days = c.lastVisit ? Math.floor((today - c.lastVisit)/ms) : 99999;
-  if(days >= 90) return 'lapsed3m';
-  if(days >= 60) return 'lapsed2m';
-  if(days >= 30) return 'lapsed1m';
-  if(c.visits >= 5) return 'vip';
-  if(c.visits === 1 && days <= 7) return 'new';
-  return 'thanks';
+  const visits = c.visits || 1;
+
+  // 90日以上空き
+  if(days >= 90) return 'lapsed3m_any';
+  if(days >= 60) return 'lapsed2m_any';
+  // 30日以上空き × 回数
+  if(days >= 30){
+    return visits === 1 ? 'lapsed1m_new' : 'lapsed1m_repeat';
+  }
+  // 30日以内 × 回数別
+  if(visits === 1){
+    if(days <= 1) return 'new_thanks';
+    if(days <= 5) return 'new_3day';
+    if(days <= 10) return 'new_week';
+    return 'new_next_propose';
+  }
+  if(visits >= 5){
+    if(days <= 5) return 'vip_thanks';
+    if(days <= 21) return 'vip_seasonal';
+    return 'vip_intro';
+  }
+  // 2-4回目
+  if(visits === 2 && days <= 3) return 'rpt_thanks_2nd';
+  if(days <= 5) return 'rpt_3day';
+  return 'rpt_2week';
 }
 function fillTemplate(tplBody, c, extra){
   let msg = tplBody;
@@ -1274,7 +1370,7 @@ function aggregateCustomers(){
     if(r['状態']==='キャンセル') return;
     const tel = String(r['電話']||'').replace(/[-\s]/g,'');
     if(!tel) return;
-    if(!map[tel]) map[tel] = {tel:r['電話'], name:r['お名前'], kana:r['フリガナ'], email:r['メール'], visits:0, totalRev:0, lastVisit:null, firstVisit:null, courses:{}};
+    if(!map[tel]) map[tel] = {tel:r['電話'], name:r['お名前'], kana:r['フリガナ'], email:r['メール'], visits:0, totalRev:0, lastVisit:null, firstVisit:null, courses:{}, history:[]};
     const pd = parseDate(r['希望日']);
     if(pd && (!map[tel].lastVisit || pd>map[tel].lastVisit)) map[tel].lastVisit = pd;
     if(pd && (!map[tel].firstVisit || pd<map[tel].firstVisit)) map[tel].firstVisit = pd;
@@ -1282,6 +1378,22 @@ function aggregateCustomers(){
     map[tel].totalRev += Number(r['料金'])||0;
     const c = r['コース名']||'';
     map[tel].courses[c] = (map[tel].courses[c]||0)+1;
+    map[tel].history.push({date:pd, course:c, price:Number(r['料金'])||0, slot:fmtTime(r['時間']), status:r['状態']||'受付済', id:r['予約ID']||''});
+  });
+  // 平均来店間隔・最終間隔の計算
+  Object.values(map).forEach(c=>{
+    c.history.sort((a,b)=>(a.date||0)-(b.date||0));
+    if(c.history.length >= 2){
+      const ms = 24*60*60*1000;
+      const spans = [];
+      for(let i=1;i<c.history.length;i++){
+        if(c.history[i].date && c.history[i-1].date){
+          spans.push(Math.floor((c.history[i].date-c.history[i-1].date)/ms));
+        }
+      }
+      c.avgSpan = spans.length>0 ? Math.round(spans.reduce((a,b)=>a+b,0)/spans.length) : null;
+      c.lastSpan = spans.length>0 ? spans[spans.length-1] : null;
+    }
   });
   return Object.values(map);
 }
@@ -1323,9 +1435,9 @@ function renderCustomers(){
     const tplKey = pickTemplate(c);
     const tplLabel = TEMPLATES[tplKey]?.label || '';
     return `<div class="${cls.join(' ')}">
-      <div class="info">
-        <div class="name">${c.name||'(名前なし)'} ${c.visits>=5?'<span style="background:var(--gold);color:#fff;font-size:9px;padding:1px 6px;border-radius:9px;margin-left:6px;letter-spacing:.1em">VIP</span>':''}</div>
-        <div class="meta">📞 ${c.tel||'-'} ｜ 最終来店 ${lastStr}${days!==null?` (${days}日前)`:''}</div>
+      <div class="info" style="cursor:pointer" onclick="openCustDetail(${i})">
+        <div class="name">${c.name||'(名前なし)'} ${c.visits>=5?'<span style="background:var(--gold);color:#fff;font-size:9px;padding:1px 6px;border-radius:9px;margin-left:6px;letter-spacing:.1em">VIP</span>':''}<span style="font-size:10px;color:var(--rose-deep);margin-left:6px">▸ 詳細</span></div>
+        <div class="meta">📞 ${c.tel||'-'} ｜ 最終 ${lastStr}${days!==null?` (${days}日前)`:''} ｜ 平均間隔 ${c.avgSpan?c.avgSpan+'日':'-'}</div>
         <div style="font-size:10.5px;color:var(--rose-deep);margin-top:3px">💡 推奨: ${tplLabel}</div>
       </div>
       <div class="stat">
@@ -1384,6 +1496,200 @@ async function bulkLineSend(){
     if(i===0) window.open(LINE_OAM_CHAT,'_blank');
   }
   alert('一斉メッセージ作業 完了');
+}
+
+/* ========== 顧客詳細 Modal ========== */
+function openCustDetail(idx){
+  const c = window._CUST_ARR && window._CUST_ARR[idx];
+  if(!c) return;
+  document.getElementById('cust-detail-modal').classList.remove('hidden');
+  document.getElementById('cd-title').textContent = `👤 ${c.name||'(名無し)'} 様`;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const ms = 24*60*60*1000;
+  const days = c.lastVisit ? Math.floor((today-c.lastVisit)/ms) : null;
+  const totalDays = c.firstVisit ? Math.floor((today-c.firstVisit)/ms) : 0;
+  const tplKey = pickTemplate(c);
+  const tplLabel = TEMPLATES[tplKey]?.label || '';
+
+  let html = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px">
+    <div style="background:var(--rose-soft);padding:12px;border-radius:6px"><div style="font-size:10px;color:var(--ink2);letter-spacing:.1em">VISITS</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--rose-deep);font-weight:600">${c.visits}<small style="font-size:10px">回</small></div></div>
+    <div style="background:var(--rose-soft);padding:12px;border-radius:6px"><div style="font-size:10px;color:var(--ink2);letter-spacing:.1em">TOTAL</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--rose-deep);font-weight:600">¥${c.totalRev.toLocaleString()}</div></div>
+    <div style="background:var(--rose-soft);padding:12px;border-radius:6px"><div style="font-size:10px;color:var(--ink2);letter-spacing:.1em">AVG SPAN</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--rose-deep);font-weight:600">${c.avgSpan||'-'}<small style="font-size:10px">日</small></div></div>
+    <div style="background:var(--rose-soft);padding:12px;border-radius:6px"><div style="font-size:10px;color:var(--ink2);letter-spacing:.1em">LAST</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:${days>=60?'var(--warn)':days>=30?'var(--gold)':'var(--rose-deep)'};font-weight:600">${days!==null?days+'<small style="font-size:10px">日前</small>':'-'}</div></div>
+  </div>
+  <div style="margin-bottom:14px;padding:12px 16px;background:#fffaf6;border-radius:6px;border-left:3px solid var(--rose-deep)">
+    <div style="font-size:11px;color:var(--ink2);margin-bottom:4px">💡 この方への推奨アクション</div>
+    <div style="font-family:'Noto Serif JP',serif;color:var(--rose-deep);font-weight:500">${tplLabel}</div>
+    <button class="btn green sm" style="margin-top:8px" onclick='quickLineFromDetail(${JSON.stringify(c).replace(/'/g,"&apos;")})'>📩 このテンプレで即連絡</button>
+  </div>`;
+
+  // 連絡先
+  html += `<div style="margin-bottom:18px;padding:12px 16px;background:#fafafa;border-radius:6px;font-size:13px">
+    <div>📞 ${c.tel||'-'} ｜ ✉️ ${c.email||'未登録'}</div>
+    ${c.kana?`<div style="color:var(--ink2);font-size:11.5px;margin-top:3px">フリガナ: ${c.kana}</div>`:''}
+    <div style="color:var(--ink2);font-size:11.5px;margin-top:3px">初回来店から ${totalDays}日 / 計${c.visits}回</div>
+  </div>`;
+
+  // 来店履歴
+  html += '<h4 style="font-family:\'Noto Serif JP\',serif;color:var(--ink);font-size:13px;margin:0 0 8px;font-weight:500">来店履歴</h4>';
+  html += '<table class="rpt-tbl"><thead><tr><th>日付</th><th>時間</th><th>コース</th><th>料金</th><th>間隔</th><th>状態</th></tr></thead><tbody>';
+  let prevDate = null;
+  c.history.forEach(h=>{
+    let span = '';
+    if(prevDate && h.date){
+      span = Math.floor((h.date-prevDate)/ms) + '日';
+    }
+    prevDate = h.date;
+    const dStr = h.date ? `${h.date.getFullYear()}/${h.date.getMonth()+1}/${h.date.getDate()}` : '-';
+    html += `<tr><td>${dStr}</td><td>${h.slot||'-'}</td><td>${h.course||'-'}</td><td class="price">¥${h.price.toLocaleString()}</td><td>${span}</td><td><span class="tag ${h.status}">${h.status}</span></td></tr>`;
+  });
+  html += '</tbody></table>';
+
+  // コース内訳
+  if(Object.keys(c.courses).length>0){
+    html += '<h4 style="font-family:\'Noto Serif JP\',serif;color:var(--ink);font-size:13px;margin:18px 0 8px;font-weight:500">利用コース内訳</h4>';
+    const cEntries = Object.entries(c.courses).sort((a,b)=>b[1]-a[1]);
+    const maxC = Math.max(...cEntries.map(x=>x[1]));
+    cEntries.forEach(([name,cnt])=>{
+      html += `<div class="bar-line"><div class="lbl">${name}</div><div class="barr"><div style="width:${cnt/maxC*100}%"></div></div><div class="val">${cnt}回</div></div>`;
+    });
+  }
+  document.getElementById('cd-content').innerHTML = html;
+}
+function closeCustDetailModal(){document.getElementById('cust-detail-modal').classList.add('hidden')}
+async function quickLineFromDetail(c){
+  const tplKey = pickTemplate(c);
+  const tpl = TEMPLATES[tplKey];
+  if(!tpl) return;
+  const msg = fillTemplate(tpl.body, c);
+  try{ await navigator.clipboard.writeText(msg); }catch(e){}
+  window.open(LINE_OAM_CHAT,'_blank');
+  showToast(`✅ ${c.name} 様向け「${tpl.label}」をコピー → LINEに貼付`);
+}
+
+/* ========== 税理士資料 ========== */
+function openTaxModal(){
+  document.getElementById('tax-modal').classList.remove('hidden');
+  const t = new Date();
+  document.getElementById('tax-month').value = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}`;
+  renderTax();
+}
+function closeTaxModal(){document.getElementById('tax-modal').classList.add('hidden')}
+function taxMonthShift(delta){
+  const v = document.getElementById('tax-month').value;
+  if(!v) return;
+  const [y,m] = v.split('-').map(Number);
+  const d = new Date(y,m-1+delta,1);
+  document.getElementById('tax-month').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  renderTax();
+}
+function getTaxRows(){
+  const ym = document.getElementById('tax-month').value;
+  if(!ym) return [];
+  const [y,m] = ym.split('-').map(Number);
+  return DATA.filter(r=>{
+    if(r['状態']==='キャンセル') return false;
+    const pd = parseDate(r['希望日']);
+    return pd && pd.getFullYear()===y && pd.getMonth()===m-1;
+  }).sort((a,b)=>{
+    const pa = parseDate(a['希望日']);
+    const pb = parseDate(b['希望日']);
+    if(!pa||!pb) return 0;
+    return pa - pb;
+  });
+}
+function renderTax(){
+  const rows = getTaxRows();
+  const ym = document.getElementById('tax-month').value;
+  const [y,m] = ym.split('-').map(Number);
+  const total = rows.reduce((s,r)=>s+(Number(r['料金'])||0),0);
+
+  let html = `<div style="background:linear-gradient(135deg,#fff,var(--rose-soft));padding:18px 22px;border-radius:6px;margin-bottom:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+    <div><div style="font-size:10px;color:var(--ink2);letter-spacing:.15em">対象月</div><div style="font-family:'Noto Serif JP',serif;font-size:17px;font-weight:500">${y}年${m}月</div></div>
+    <div><div style="font-size:10px;color:var(--ink2);letter-spacing:.15em">売上件数</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--rose-deep);font-weight:600">${rows.length}<small style="font-size:11px">件</small></div></div>
+    <div><div style="font-size:10px;color:var(--ink2);letter-spacing:.15em">売上合計 (税込)</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--rose-deep);font-weight:600">¥${total.toLocaleString()}</div></div>
+  </div>`;
+
+  if(rows.length===0){
+    html += '<div style="text-align:center;padding:40px;color:var(--ink3);font-style:italic">この月の売上データはありません</div>';
+  } else {
+    html += '<table class="rpt-tbl"><thead><tr><th>No.</th><th>日付</th><th>予約ID</th><th>お客様</th><th>科目</th><th>摘要</th><th style="text-align:right">金額</th><th>支払方法</th></tr></thead><tbody>';
+    rows.forEach((r,i)=>{
+      const pd = parseDate(r['希望日']);
+      const dStr = pd ? `${pd.getFullYear()}/${String(pd.getMonth()+1).padStart(2,'0')}/${String(pd.getDate()).padStart(2,'0')}` : '-';
+      html += `<tr>
+        <td>${i+1}</td>
+        <td>${dStr}</td>
+        <td style="font-family:Menlo,monospace;font-size:11px">${r['予約ID']||'-'}</td>
+        <td>${r['お名前']||'-'}</td>
+        <td>売上高</td>
+        <td>${r['コース名']||'-'} (${r['所要時間']||'-'}分)</td>
+        <td class="price" style="text-align:right">¥${Number(r['料金']||0).toLocaleString()}</td>
+        <td>現金 / カード</td>
+      </tr>`;
+    });
+    html += `<tr class="total"><td colspan="6" style="text-align:right">${y}年${m}月 売上合計</td><td class="price" style="text-align:right">¥${total.toLocaleString()}</td><td></td></tr>`;
+    html += '</tbody></table>';
+    html += `<div style="margin-top:18px;padding:14px 18px;background:#fafafa;border-radius:6px;font-size:12px;color:var(--ink2);line-height:1.85">
+      <strong style="color:var(--ink)">📋 税理士提出時の補足</strong><br>
+      ・本資料はフェムケアサロン FEMOON の${y}年${m}月分 売上帳です。<br>
+      ・キャンセル分は除外しています。<br>
+      ・支払方法欄は実態に応じて手書きで補記してください (現金/カード/PayPay等)。<br>
+      ・領収書はお客様にお渡し済 (もしくは未発行)。<br>
+      ・発行: ${new Date().toLocaleString('ja-JP')}
+    </div>`;
+  }
+  document.getElementById('tax-content').innerHTML = html;
+}
+function downloadTaxCSV(){
+  const rows = getTaxRows();
+  if(rows.length===0){alert('データがありません');return}
+  const ym = document.getElementById('tax-month').value;
+  const headers = ['No.','日付','予約ID','お客様','科目','摘要','金額(税込)','支払方法'];
+  const csvLines = [headers.join(',')];
+  rows.forEach((r,i)=>{
+    const pd = parseDate(r['希望日']);
+    const dStr = pd ? `${pd.getFullYear()}/${String(pd.getMonth()+1).padStart(2,'0')}/${String(pd.getDate()).padStart(2,'0')}` : '';
+    csvLines.push([
+      i+1, dStr, r['予約ID']||'',
+      `"${(r['お名前']||'').replace(/"/g,'""')}"`,
+      '売上高',
+      `"${(r['コース名']||'').replace(/"/g,'""')} (${r['所要時間']||''}分)"`,
+      Number(r['料金']||0),
+      '現金/カード'
+    ].join(','));
+  });
+  const total = rows.reduce((s,r)=>s+(Number(r['料金'])||0),0);
+  csvLines.push(['','','','','合計','',total,''].join(','));
+  // BOM付きUTF-8
+  const blob = new Blob(['﻿'+csvLines.join('\n')],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `FEMOON_売上帳_${ym}.csv`;
+  a.click();
+  showToast('📥 CSVダウンロード完了');
+}
+function printTax(){
+  const w = window.open('','_blank');
+  const html = document.getElementById('tax-content').innerHTML;
+  const ym = document.getElementById('tax-month').value;
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>FEMOON 売上帳 ${ym}</title>
+<style>
+@page{size:A4;margin:14mm}
+body{font-family:"Hiragino Sans","Noto Sans JP",sans-serif;color:#3d2a2a;padding:20px}
+h1{font-family:"Noto Serif JP",serif;font-size:22px;text-align:center;letter-spacing:.4em;margin:0 0 6px;color:#a4756d;border-bottom:2px solid #a4756d;padding-bottom:10px}
+table{width:100%;border-collapse:collapse;font-size:11px;margin-top:14px}
+th,td{padding:6px 8px;border:1px solid #ddd;text-align:left}
+th{background:#fbf0eb;color:#a4756d;font-weight:600;font-size:10px}
+tr.total td{background:#f5e1d8;font-weight:bold}
+.foot{margin-top:14px;font-size:10px;line-height:1.6;color:#7a5d5d;padding:10px;background:#fafafa;border-radius:4px}
+</style></head><body>
+<h1>売 上 帳</h1>
+<div style="text-align:right;font-size:11px;color:#7a5d5d">フェムケアサロン FEMOON / 福井県福井市大宮3-13-9 パールコーポ1F<br>発行: ${new Date().toLocaleString('ja-JP')}</div>
+${html}
+</body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(),500);
 }
 
 /* ========== テンプレ管理 Modal ========== */
