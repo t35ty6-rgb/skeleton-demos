@@ -152,13 +152,18 @@ function doPost(e){
 function doGet(e){
   const params = e.parameter || {};
   const action = params.action || 'status';
-  // 認証
-  if(action !== 'status' &amp;&amp; params.token !== ADMIN_TOKEN){
+  // 認証 (一部のpublicアクションは除外)
+  const publicActions = ['status','closed_list_public'];
+  if(publicActions.indexOf(action) === -1 &amp;&amp; params.token !== ADMIN_TOKEN){
     return ContentService.createTextOutput(JSON.stringify({ok:false,error:'unauthorized'}))
       .setMimeType(ContentService.MimeType.JSON);
   }
   if(action === 'status'){
     return ContentService.createTextOutput(JSON.stringify({status:'ok',service:'FEMOON Booking API'}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if(action === 'closed_list_public'){
+    return ContentService.createTextOutput(JSON.stringify({ok:true,dates:getClosedDates_()}))
       .setMimeType(ContentService.MimeType.JSON);
   }
   if(action === 'list'){
@@ -188,8 +193,31 @@ function doGet(e){
     return ContentService.createTextOutput(JSON.stringify({ok:false,error:'not found'}))
       .setMimeType(ContentService.MimeType.JSON);
   }
+  // 定休日設定 (個別休業日)
+  if(action === 'closed_list'){
+    const dates = getClosedDates_();
+    return ContentService.createTextOutput(JSON.stringify({ok:true,dates:dates}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if(action === 'closed_add' || action === 'closed_remove'){
+    const date = params.date;
+    if(!date) return ContentService.createTextOutput(JSON.stringify({ok:false,error:'date required'}))
+      .setMimeType(ContentService.MimeType.JSON);
+    const list = getClosedDates_();
+    let next;
+    if(action === 'closed_add') next = [...new Set([...list, date])].sort();
+    else next = list.filter(d=>d!==date);
+    PropertiesService.getScriptProperties().setProperty('CLOSED_DATES', JSON.stringify(next));
+    return ContentService.createTextOutput(JSON.stringify({ok:true,dates:next}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   return ContentService.createTextOutput(JSON.stringify({ok:false,error:'unknown action'}))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getClosedDates_(){
+  const raw = PropertiesService.getScriptProperties().getProperty('CLOSED_DATES');
+  try{ return raw ? JSON.parse(raw) : []; }catch(e){ return []; }
 }</pre></div>
 </div>
 

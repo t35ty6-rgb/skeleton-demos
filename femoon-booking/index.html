@@ -359,13 +359,23 @@ const ALL_SLOTS = ['10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:0
 let calStart = new Date(); calStart.setDate(calStart.getDate()+1); calStart.setHours(0,0,0,0);
 const DAYS_COL = 7;
 
+const EXTRA_CLOSED = new Set();
 function isClosed(d){
   const wd = d.getDay(), dom = d.getDate();
   if(wd===4) return true;
   if(wd===0 && dom<=7) return true;
   if(wd===3 && dom>=15 && dom<=21) return true;
+  const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  if(EXTRA_CLOSED.has(k)) return true;
   return false;
 }
+// 起動時に追加休業日を取得 (認証なしで読めるpublicエンドポイント)
+fetch(GAS_ENDPOINT + '?action=closed_list_public').then(r=>r.json()).then(j=>{
+  if(j && j.ok && Array.isArray(j.dates)){
+    j.dates.forEach(d=>EXTRA_CLOSED.add(d));
+    if(typeof renderCal === 'function') renderCal();
+  }
+}).catch(()=>{});
 function dayLastSlot(d){
   const wd = d.getDay();
   return (wd===0 || wd===6) ? '20:00' : '18:00';

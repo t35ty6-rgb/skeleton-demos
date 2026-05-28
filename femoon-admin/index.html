@@ -157,6 +157,7 @@
     <h1>🌙 フェムケアサロン FEMOON <span class="badge">予約管理</span></h1>
     <div class="right">
       <button class="btn green" onclick="openAddModal()">+ 電話予約を追加</button>
+      <button class="btn alt" onclick="openClosedModal()">🌙 定休日設定</button>
       <button class="btn alt" onclick="reload()">↻ 更新</button>
       <button class="btn alt" onclick="logout()">ログアウト</button>
     </div>
@@ -245,6 +246,33 @@
   </div>
 </div>
 
+<!-- 定休日設定 Modal -->
+<div id="closed-modal" class="modal-bg hidden">
+  <div class="modal">
+    <div class="modal-head"><h3>🌙 定休日 設定</h3><button class="close" onclick="closeClosedModal()">×</button></div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--ink2);margin:0 0 14px;line-height:1.7">
+        毎週木曜・第1日曜・第3水曜は<strong>常時定休</strong>として設定済みです。<br>
+        その他、臨時休業や個別の休みは下から追加してください(予約フォーム側でもこの日が選べなくなります)。
+      </p>
+      <div class="field">
+        <label>新しい休業日を追加</label>
+        <div style="display:flex;gap:8px">
+          <input type="date" id="closed-date-input" style="flex:1">
+          <button class="btn green" onclick="addClosedDate()">+ 追加</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>登録済みの休業日</label>
+        <div id="closed-list" style="background:var(--rose-soft);padding:14px;border-radius:4px;min-height:60px;font-size:13px;color:var(--ink)"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn alt" onclick="closeClosedModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <!-- LINE Message Modal -->
 <div id="line-modal" class="modal-bg hidden">
   <div class="modal">
@@ -277,6 +305,7 @@ const LINE_OAM_CHAT = 'https://chat.line.biz/U540bzjri';
 
 let TOKEN = localStorage.getItem('femoon-admin-token') || '';
 let DATA = [];
+let CLOSED_DATES = new Set();
 let CAL_DATE = new Date(); CAL_DATE.setDate(1);
 let SELECTED_DAY = (()=>{const t=new Date();t.setHours(0,0,0,0);return t})();
 let CURRENT_LINE_TARGET = null;
@@ -306,17 +335,67 @@ async function boot(){
 
 async function fetchData(){
   try{
-    const r = await fetch(`${GAS_URL}?action=list&token=${encodeURIComponent(TOKEN)}`);
-    const j = await r.json();
-    if(!j.ok){
-      if(j.error==='unauthorized'){alert('トークンが無効');logout();return}
-      throw new Error(j.error||'failed');
+    const [listR, closedR] = await Promise.all([
+      fetch(`${GAS_URL}?action=list&token=${encodeURIComponent(TOKEN)}`).then(r=>r.json()),
+      fetch(`${GAS_URL}?action=closed_list&token=${encodeURIComponent(TOKEN)}`).then(r=>r.json()).catch(()=>({ok:true,dates:[]}))
+    ]);
+    if(!listR.ok){
+      if(listR.error==='unauthorized'){alert('トークンが無効');logout();return}
+      throw new Error(listR.error||'failed');
     }
-    DATA = j.rows;
+    DATA = listR.rows;
+    CLOSED_DATES = new Set(closedR.dates||[]);
     renderAll();
   }catch(e){
     document.getElementById('sp-body').innerHTML = `<div class="sp-empty">読み込み失敗: ${e.message}</div>`;
   }
+}
+
+/* ===== 定休日設定 ===== */
+function openClosedModal(){
+  document.getElementById('closed-modal').classList.remove('hidden');
+  renderClosedList();
+}
+function closeClosedModal(){
+  document.getElementById('closed-modal').classList.add('hidden');
+  renderAll(); // カレンダーへ反映
+}
+function renderClosedList(){
+  const arr = [...CLOSED_DATES].sort();
+  if(arr.length===0){
+    document.getElementById('closed-list').innerHTML = '<div style="color:#a89090;font-style:italic">登録なし</div>';
+    return;
+  }
+  const WD = ['日','月','火','水','木','金','土'];
+  document.getElementById('closed-list').innerHTML = arr.map(date=>{
+    const d = new Date(date);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed rgba(164,117,109,.2)">
+      <span>${date} (${WD[d.getDay()]})</span>
+      <button class="btn alt sm" onclick="removeClosedDate('${date}')">削除</button>
+    </div>`;
+  }).join('');
+}
+async function addClosedDate(){
+  const date = document.getElementById('closed-date-input').value;
+  if(!date){alert('日付を選んでください');return}
+  try{
+    const r = await fetch(`${GAS_URL}?action=closed_add&date=${date}&token=${encodeURIComponent(TOKEN)}`);
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||'failed');
+    CLOSED_DATES = new Set(j.dates);
+    document.getElementById('closed-date-input').value='';
+    renderClosedList();
+  }catch(e){alert('追加失敗: '+e.message)}
+}
+async function removeClosedDate(date){
+  if(!confirm(date+' を定休日から削除しますか？')) return;
+  try{
+    const r = await fetch(`${GAS_URL}?action=closed_remove&date=${date}&token=${encodeURIComponent(TOKEN)}`);
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||'failed');
+    CLOSED_DATES = new Set(j.dates);
+    renderClosedList();
+  }catch(e){alert('削除失敗: '+e.message)}
 }
 function reload(){fetchData()}
 
@@ -339,6 +418,7 @@ function isClosed(d){
   if(wd===4) return true;
   if(wd===0 && dom<=7) return true;
   if(wd===3 && dom>=15 && dom<=21) return true;
+  if(CLOSED_DATES.has(dayKey(d))) return true;
   return false;
 }
 function totalSlots(d){
