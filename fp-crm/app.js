@@ -106,6 +106,37 @@
     // 半年以上未接触
     const staleCount = clients.filter(c => daysSince(c.lastContact) >= 180).length;
 
+    // 確定待ち件数 (LIVE → demo フォールバック)
+    let surveys = [];
+    try {
+      // line-app.js の SURVEY_DEMO を参照 (CRM ホームでも候補日確定待ちを案内)
+      surveys = window.SURVEY_DEMO || [];
+    } catch (e) {}
+    const pendingConfirms = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3)).length;
+
+    const noticeArea = document.getElementById('notice-area');
+    if (noticeArea) {
+      if (pendingConfirms > 0) {
+        noticeArea.innerHTML = `
+          <a href="#" data-jump="leadHub" style="display:block;background:linear-gradient(135deg,#fff8e1,#fff);border:2px solid #f0d36b;border-radius:12px;padding:18px 22px;margin-bottom:22px;text-decoration:none;color:inherit;box-shadow:var(--shadow-sm);">
+            <div style="display:flex;align-items:center;gap:18px;">
+              <div style="font-size:38px;line-height:1;">📅</div>
+              <div style="flex:1;">
+                <div style="font-family:'Noto Sans JP',sans-serif;font-size:15.5px;font-weight:700;color:#8a6f1e;letter-spacing:0.02em;">候補日確定待ち ${pendingConfirms} 件</div>
+                <div style="font-size:12.5px;color:var(--ink-2);margin-top:3px;letter-spacing:0.01em;">公式LINEからアンケート+候補日3つを回答くれたお客様。「🆕 新規相談」タブで1つタップで確定 → Zoom URL自動発行 + LINE通知 + カレンダー登録 が一括で動きます。</div>
+              </div>
+              <div style="color:#8a6f1e;font-size:22px;font-weight:700;">→</div>
+            </div>
+          </a>`;
+        noticeArea.querySelector('[data-jump]').addEventListener('click', (e) => {
+          e.preventDefault();
+          activateTab('leadHub');
+        });
+      } else {
+        noticeArea.innerHTML = '';
+      }
+    }
+
     document.getElementById('kpi-area').innerHTML = `
       <div class="kpi">
         <div class="kpi-label">管理顧客数</div>

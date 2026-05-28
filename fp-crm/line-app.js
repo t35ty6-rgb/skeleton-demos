@@ -307,8 +307,14 @@
     const v = document.querySelector('[data-line-view="leadHub"]');
     if (!v) return;
     const today = new Date('2026-05-28').toISOString().slice(0, 10);
-    const surveys = (liveData && liveData.survey_answers) || [];
+    let surveys = (liveData && liveData.survey_answers) || [];
     const bookings = (liveData && liveData.bookings) || [];
+    // 実LIVEデータが無ければデモを使う
+    let isDemo = false;
+    if (surveys.length === 0 && window.SURVEY_DEMO) {
+      surveys = window.SURVEY_DEMO;
+      isDemo = true;
+    }
 
     const pendingConfirm = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3)).length;
     const recPending = bookings.filter(b => b.recordingStatus === 'saved' && !b.transcript).length;
@@ -317,7 +323,8 @@
 
     v.innerHTML = `
       <h1 style="font-family:'Noto Serif JP',serif;font-size:26px;letter-spacing:0.02em;margin:0 0 4px;">🆕 新規相談</h1>
-      <p style="color:var(--muted);font-size:13.5px;margin:0 0 24px;">公式LINEから入った新規お客様の予約・面談・議事録までの一連を管理</p>
+      <p style="color:var(--muted);font-size:13.5px;margin:0 0 18px;">お客様がLINEでアンケート + 候補日3つに回答すると、ここに並びます。<br><strong style="color:var(--accent);">FPがやることは「下の候補日3つから1つタップで確定」のみ</strong>です。</p>
+      ${isDemo ? '<div style="background:#fff8e1;border:1px solid #f0d36b;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:12.5px;color:#8a6f1e;">💡 表示中の候補日待ち4件はサンプル(デモ)。本番では実際のLINEアンケート回答が並びます。</div>' : ''}
 
       <div class="task-board">
         <a href="#section-confirm" class="task-card ${pendingConfirm > 0 ? 'urgent' : 'muted'}">
@@ -377,7 +384,8 @@
   function fillConfirmList() {
     const target = document.getElementById('confirm-list');
     if (!target) return;
-    const surveys = (liveData && liveData.survey_answers) || [];
+    let surveys = (liveData && liveData.survey_answers) || [];
+    if (surveys.length === 0 && window.SURVEY_DEMO) surveys = window.SURVEY_DEMO;
     const pending = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3));
     if (pending.length === 0) {
       target.innerHTML = '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);font-size:13px;">✓ すべての候補日を確定しました</div>';
@@ -489,7 +497,9 @@
   function fillSurveysList() {
     const target = document.getElementById('surveys-list');
     if (!target) return;
-    const list = ((liveData && liveData.survey_answers) || []).slice().reverse().slice(0, 5);
+    let src = (liveData && liveData.survey_answers) || [];
+    if (src.length === 0 && window.SURVEY_DEMO) src = window.SURVEY_DEMO;
+    const list = src.slice().reverse().slice(0, 5);
     if (list.length === 0) { target.innerHTML = ''; return; }
     target.innerHTML = `
       <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">最新のアンケート回答 (確定済も含む)</div>
