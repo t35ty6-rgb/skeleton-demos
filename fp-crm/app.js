@@ -399,6 +399,26 @@
     } catch (e) { return null; }
   }
 
+  // LINE 実アクション (lastActionAt) で顧客の lastContact を上書き
+  // lineFriendId == userId で照合 / より新しい方を採用
+  function mergeLineActivity() {
+    const liveUsers = (window.LineAppLiveData && window.LineAppLiveData.users) || [];
+    if (liveUsers.length === 0) return;
+    const byUid = {};
+    liveUsers.forEach(u => { if (u.userId) byUid[u.userId] = u; });
+    clients.forEach(c => {
+      const u = byUid[c.lineFriendId];
+      if (!u) return;
+      const liveTs = u.lastActionAt || u.addedAt;
+      if (!liveTs) return;
+      const liveDate = String(liveTs).slice(0, 10);
+      if (!c.lastContact || liveDate > c.lastContact) {
+        c.lastContact = liveDate;
+        c.lastActionType = u.lastActionType || '';
+      }
+    });
+  }
+
   // ============================
   // 顧客一覧
   // ============================
@@ -445,6 +465,7 @@
     if (searchEl.value !== state.search) searchEl.value = state.search;
     if (filterEl.value !== state.statusFilter) filterEl.value = state.statusFilter;
 
+    mergeLineActivity();
     const q = state.search.trim().toLowerCase();
     let list = clients.slice();
     if (state.statusFilter !== 'all') {
@@ -521,7 +542,7 @@
           <td>${familyTxt}</td>
           <td><span class="status-pill ${c.status}">${statusLabel(c.status)}</span>${taskCount > 0 ? `<span style="display:inline-block;margin-left:6px;font-size:10px;background:#fff8e1;color:#a08537;padding:2px 7px;border-radius:9px;font-weight:700;border:1px solid #f0d36b;">📝${taskCount}</span>` : ''}</td>
           <td class="num">¥${fmtMoney(c.aum)}</td>
-          <td class="${contactCls}"><div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start;"><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:${contactBg};color:${contactFg};">${contactLabel}</span><span style="font-size:11px;color:var(--muted);">${dsl}日前</span></div></td>
+          <td class="${contactCls}"><div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start;"><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:${contactBg};color:${contactFg};">${contactLabel}</span><span style="font-size:11px;color:var(--muted);">${dsl}日前</span>${c.lastActionType ? `<span style="font-size:9.5px;color:var(--accent);font-weight:600;">📱 LINE: ${escapeHtml((c.lastActionType||'').split(':')[0])}</span>` : ''}</div></td>
         </tr>
       `;
     }).join('');
