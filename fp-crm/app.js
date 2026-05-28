@@ -106,11 +106,13 @@
     // 半年以上未接触
     const staleCount = clients.filter(c => daysSince(c.lastContact) >= 180).length;
 
-    // 確定待ち件数 (LIVE → demo フォールバック)
+    // 確定待ち件数 (LIVE → demo 補完)
     let surveys = [];
     try {
-      // line-app.js の SURVEY_DEMO を参照 (CRM ホームでも候補日確定待ちを案内)
-      surveys = window.SURVEY_DEMO || [];
+      // Cloud Run /api/bookings の cache from line-app (CRM ホームでも候補日確定待ちを案内)
+      const liveSurveys = (window.LineAppLiveData && window.LineAppLiveData.survey_answers) || [];
+      const hasLive = liveSurveys.some(s => s.q6_候補1 || s.q7_候補2 || s.q8_候補3);
+      surveys = hasLive ? liveSurveys : (liveSurveys.concat(window.SURVEY_DEMO || []));
     } catch (e) {}
     const pendingConfirms = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3)).length;
 

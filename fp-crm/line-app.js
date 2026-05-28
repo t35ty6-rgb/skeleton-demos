@@ -143,11 +143,12 @@
   function renderCalendarTabInner() {
     const v = document.querySelector('[data-line-view="calendarTab"]');
     if (!v) return;
-    // ライブデータ or デモデータ
+    // ライブデータ + デモデータ補完 (LIVE が空 or 住所付きが0件ならデモ追加)
     let reqs = (liveData && liveData.calendar_requests) || [];
     let isDemo = false;
-    if (reqs.length === 0 && window.CALENDAR_DEMO) {
-      reqs = window.CALENDAR_DEMO;
+    const hasLiveCal = reqs.some(r => r.address || r.status);
+    if (!hasLiveCal && window.CALENDAR_DEMO) {
+      reqs = reqs.concat(window.CALENDAR_DEMO);
       isDemo = true;
     }
     const wantList = reqs.filter(r => r.status === '要' && r.address);
@@ -309,10 +310,11 @@
     const today = new Date('2026-05-28').toISOString().slice(0, 10);
     let surveys = (liveData && liveData.survey_answers) || [];
     const bookings = (liveData && liveData.bookings) || [];
-    // 実LIVEデータが無ければデモを使う
+    // 候補日3つ入ったLIVE回答が無い場合は DEMOを追加 (古いテスト回答だけだと候補日無いので)
     let isDemo = false;
-    if (surveys.length === 0 && window.SURVEY_DEMO) {
-      surveys = window.SURVEY_DEMO;
+    const hasLiveWithSlots = surveys.some(s => s.q6_候補1 || s.q7_候補2 || s.q8_候補3);
+    if (!hasLiveWithSlots && window.SURVEY_DEMO) {
+      surveys = surveys.concat(window.SURVEY_DEMO);
       isDemo = true;
     }
 
@@ -385,7 +387,8 @@
     const target = document.getElementById('confirm-list');
     if (!target) return;
     let surveys = (liveData && liveData.survey_answers) || [];
-    if (surveys.length === 0 && window.SURVEY_DEMO) surveys = window.SURVEY_DEMO;
+    const hasLiveWithSlots = surveys.some(s => s.q6_候補1 || s.q7_候補2 || s.q8_候補3);
+    if (!hasLiveWithSlots && window.SURVEY_DEMO) surveys = surveys.concat(window.SURVEY_DEMO);
     const pending = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3));
     if (pending.length === 0) {
       target.innerHTML = '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);font-size:13px;">✓ すべての候補日を確定しました</div>';
@@ -498,7 +501,8 @@
     const target = document.getElementById('surveys-list');
     if (!target) return;
     let src = (liveData && liveData.survey_answers) || [];
-    if (src.length === 0 && window.SURVEY_DEMO) src = window.SURVEY_DEMO;
+    const hasLive = src.some(s => s.q6_候補1 || s.q7_候補2 || s.q8_候補3);
+    if (!hasLive && window.SURVEY_DEMO) src = src.concat(window.SURVEY_DEMO);
     const list = src.slice().reverse().slice(0, 5);
     if (list.length === 0) { target.innerHTML = ''; return; }
     target.innerHTML = `
@@ -859,6 +863,7 @@
     try {
       const r = await fetch(CLOUD_RUN_API);
       liveData = await r.json();
+      window.LineAppLiveData = liveData;
       return liveData;
     } catch (e) { console.error('liveData fail', e); return null; }
   }
