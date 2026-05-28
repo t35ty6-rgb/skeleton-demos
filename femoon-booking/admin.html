@@ -163,7 +163,27 @@ function doGet(e){
       .setMimeType(ContentService.MimeType.JSON);
   }
   if(action === 'closed_list_public'){
-    return ContentService.createTextOutput(JSON.stringify({ok:true,dates:getClosedDates_(),slots:getClosedSlots_()}))
+    // 個人情報は一切返さず、休業日+既存予約の時間枠のみ返す (公開OKな最小情報)
+    const bookedSlots = [];
+    try{
+      const sheet = getSheet_();
+      const rng = sheet.getDataRange().getValues();
+      const hdr = rng[0];
+      const iDate = hdr.indexOf('希望日');
+      const iSlot = hdr.indexOf('時間');
+      const iStatus = hdr.indexOf('状態');
+      for(let i=1;i&lt;rng.length;i++){
+        if(rng[i][iStatus] === 'キャンセル') continue;
+        const d = rng[i][iDate];
+        const t = rng[i][iSlot];
+        if(d){
+          const ds = (d instanceof Date) ? Utilities.formatDate(d,'Asia/Tokyo','yyyy-MM-dd') : String(d);
+          const ts = (t instanceof Date) ? Utilities.formatDate(t,'Asia/Tokyo','HH:mm') : String(t).slice(0,5);
+          bookedSlots.push(ds+'_'+ts);
+        }
+      }
+    }catch(e){}
+    return ContentService.createTextOutput(JSON.stringify({ok:true,dates:getClosedDates_(),slots:getClosedSlots_(),booked:bookedSlots}))
       .setMimeType(ContentService.MimeType.JSON);
   }
   if(action === 'list'){

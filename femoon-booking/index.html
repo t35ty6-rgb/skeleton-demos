@@ -185,7 +185,7 @@
   <!-- STEP 2: 日時 (ホットペッパー風 グリッド) -->
   <section class="step-card" data-card="2">
     <h2>ご希望の日時</h2>
-    <p class="help">○ 空きあり ／ ◎ 残りわずか ／ △ お問い合わせ ／ × 受付終了</p>
+    <p class="help">○ 空きあり ／ × 予約不可</p>
 
     <div class="cal-nav">
       <button class="cal-arrow" id="cal-prev" aria-label="前の週">‹</button>
@@ -359,8 +359,9 @@ const ALL_SLOTS = ['10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:0
 let calStart = new Date(); calStart.setDate(calStart.getDate()+1); calStart.setHours(0,0,0,0);
 const DAYS_COL = 7;
 
-const EXTRA_CLOSED = new Set();
-const EXTRA_CLOSED_SLOTS = new Set();
+const EXTRA_CLOSED = new Set();      // 個別休業日 (終日)
+const EXTRA_CLOSED_SLOTS = new Set();// 時間スロット休業
+const BOOKED_SLOTS = new Set();       // 既存予約済み時間 (バッティング防止)
 function dayKey2(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function isClosed(d){
   const wd = d.getDay(), dom = d.getDate();
@@ -371,23 +372,22 @@ function isClosed(d){
   return false;
 }
 function isSlotBlocked(d, slot){
-  return EXTRA_CLOSED_SLOTS.has(dayKey2(d)+'_'+slot);
+  const k = dayKey2(d)+'_'+slot;
+  // 管理画面で休業設定された時間 or 既存予約あり = 予約不可
+  return EXTRA_CLOSED_SLOTS.has(k) || BOOKED_SLOTS.has(k);
 }
 function dayLastSlot(d){
   const wd = d.getDay();
   return (wd===0 || wd===6) ? '20:00' : '18:00';
 }
-function mockAvail(d, slot){
-  if(isClosed(d)) return 'closed';
-  if(slot > dayLastSlot(d)) return 'closed';
-  if(isSlotBlocked(d, slot)) return 'ng';
-  const seed = (d.getDate() + ALL_SLOTS.indexOf(slot)*3) % 10;
-  if(seed < 5) return 'ok';
-  if(seed < 7) return 'few';
-  if(seed < 8) return 'req';
-  return 'ng';
+function availability(d, slot){
+  // お客様視点では「○空きあり」or「×予約不可」のみで分かりやすく
+  if(isClosed(d)) return 'ng';           // 終日休業 (定休日/個別)
+  if(slot > dayLastSlot(d)) return 'ng'; // 営業時間外
+  if(isSlotBlocked(d, slot)) return 'ng'; // 時間スロット休業 or 既存予約あり
+  return 'ok';
 }
-const SYM = {ok:'○',few:'◎',req:'△',ng:'×',closed:'休'};
+const SYM = {ok:'○',ng:'×'};
 
 function renderCal(){
   const head = document.getElementById('cal-head');
@@ -415,7 +415,7 @@ function renderCal(){
     const tr = document.createElement('tr');
     tr.insertAdjacentHTML('beforeend',`<td class="time-col">${t}</td>`);
     days.forEach(d=>{
-      const av = mockAvail(d,t);
+      const av = availability(d,t);
       const sym = SYM[av];
       const dKey = dayKey2(d); // ローカル日付 (JST) — toISOStringだとUTC基準で1日ずれる
       const key = dKey + '_' + t;
@@ -434,8 +434,9 @@ function renderCal(){
       state.weekday = c.dataset.wd;
       state.slot = c.dataset.slot;
       state.slotKey = c.dataset.key;
-      const d = new Date(state.date);
-      document.getElementById('sb-val').textContent = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 (${state.weekday}) ${state.slot}〜`;
+      // state.date 文字列 "YYYY-MM-DD" を直接分解 (Date変換でTZズレ回避)
+      const [yy,mm,dd] = state.date.split('-').map(Number);
+      document.getElementById('sb-val').textContent = `${yy}年${mm}月${dd}日 (${state.weekday}) ${state.slot}〜`;
       document.getElementById('selected-bar').style.display = 'flex';
       document.getElementById('to-step3').disabled = false;
     });
@@ -519,14 +520,21 @@ function renderReview(){
 // GAS Web App エンドポイント (FEMOON 予約Calendar - 稼働中)
 const GAS_ENDPOINT = window.GAS_ENDPOINT || 'https://script.google.com/macros/s/AKfycbwKZ0ulzBHf5PH5WTWNw7HQAL0JA3g_iqaYh7YNM-kP1dxdRZDV8uNRPIgRm_JiW1pf-g/exec';
 
-// 起動時に追加休業日/時間スロットを取得 (新版GASに更新後に有効化)
-fetch(GAS_ENDPOINT + '?action=closed_list_public').then(r=>r.json()).then(j=>{
-  if(j && j.ok){
+// 起動時に休業日+時間スロット休業+既存予約 を取得 → カレンダー反映
+// バッティング絶対防止: 既存予約がある時間は「×」表示
+function refreshAvailability(){
+  return fetch(GAS_ENDPOINT + '?action=closed_list_public&t='+Date.now()).then(r=>r.json()).then(j=>{
+    if(!j || !j.ok) return;
+    EXTRA_CLOSED.clear();
+    EXTRA_CLOSED_SLOTS.clear();
+    BOOKED_SLOTS.clear();
     if(Array.isArray(j.dates)) j.dates.forEach(d=>EXTRA_CLOSED.add(d));
     if(Array.isArray(j.slots)) j.slots.forEach(s=>EXTRA_CLOSED_SLOTS.add(s));
+    if(Array.isArray(j.booked)) j.booked.forEach(b=>BOOKED_SLOTS.add(b));
     if(typeof renderCal === 'function') renderCal();
-  }
-}).catch(()=>{});
+  }).catch(()=>{});
+}
+refreshAvailability();
 
 document.getElementById('submit-btn').addEventListener('click', async ()=>{
   const errEl = document.getElementById('err');
