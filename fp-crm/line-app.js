@@ -779,122 +779,130 @@
     mediaRecorder: null, chunks: [], startTime: null, bookingTs: null, timerId: null, blobUrl: null,
   };
 
-  // ワンクリックで Zoom + メモを展開。ブラウザ録画はしない (Zoom自身のローカル録画を使う前提)
+  // 画面録画 → 停止時に Drive の顧客フォルダへ自動アップロード
   async function startScreenRecording(bookingTs, zoomUrl) {
-    const sw = window.screen.availWidth || screen.width;
-    const sh = window.screen.availHeight || screen.height;
-    const memoW = Math.floor(sw / 4);
-    const zoomW = sw - memoW;
-    // Zoom URL を /wc/join/ ブラウザ版に変換
-    const zoomBrowserUrl = (function() {
-      try {
-        const m = (zoomUrl || '').match(/zoom\.us\/j\/(\d+)(\?.*)?/);
-        if (!m) return zoomUrl;
-        const host = (zoomUrl.match(/^https?:\/\/([^\/]+)/) || ['', 'zoom.us'])[1];
-        return `https://${host}/wc/join/${m[1]}${m[2] || ''}`;
-      } catch (_) { return zoomUrl; }
-    })();
-    const zoomFeatures = `width=${zoomW},height=${sh},left=${memoW},top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
-    const zoomWin = window.open(zoomBrowserUrl, 'fp-zoom-win', zoomFeatures);
-    if (!zoomWin) {
-      alert('Zoom ポップアップがブロックされました。アドレスバー右の 🚫 → 常に許可。');
-      return;
-    }
-    // メモを左1/4 に固定展開
-    localStorage.setItem('fp-memo-pos', JSON.stringify({ left: 0, top: 0 }));
-    localStorage.setItem('fp-memo-size', JSON.stringify({ w: memoW, h: sh }));
-    localStorage.setItem('fp-memo-fullscreen', '1');
-    const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
-    setTimeout(() => openMemoModal(booking || { name: 'お客様', userId: bookingTs }, bookingTs), 400);
-
-    // サーバー側ステータス更新
-    fetch(CLOUD_RUN_BASE + '/api/recording/start?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }).catch(() => {});
-
-    // Zoom側で録画する案内 + 終了後のファイルドロップ案内
-    showZoomRecordGuide(bookingTs, booking);
-  }
-
-  function showZoomRecordGuide(bookingTs, booking) {
-    if (document.getElementById('fp-zoom-guide')) return;
-    const g = document.createElement('div');
-    g.id = 'fp-zoom-guide';
-    g.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #06c755;border-radius:14px;padding:16px 22px;box-shadow:0 16px 40px rgba(0,0,0,0.18);z-index:10003;max-width:620px;font-family:inherit;';
-    g.innerHTML = `
-      <div style="display:flex;gap:14px;align-items:flex-start;">
-        <div style="font-size:26px;">🎥</div>
-        <div style="flex:1;font-size:12.5px;line-height:1.65;color:#1f2937;">
-          <strong style="font-size:14px;display:block;margin-bottom:4px;">Zoom が開きました</strong>
-          画面右の Zoom 内で <strong style="color:#d9264c;">「録画」</strong> ボタンを押すと Zoom が高品質録画します<br>
-          面談終了後、保存された <code style="background:#f3f4f6;padding:1px 6px;border-radius:4px;font-size:11px;">.mp4</code> ファイルを下にドロップすれば Google Drive へ自動アップロード + 顧客カードに紐付け
-        </div>
-        <button id="fp-guide-close" style="font-size:11.5px;padding:5px 9px;background:#fff;border:1px solid #e5e7eb;color:#9ca3af;border-radius:6px;cursor:pointer;font-family:inherit;">✕</button>
-      </div>
-      <div id="fp-recording-drop" data-booking-ts="${escapeHtml(bookingTs)}" data-customer-name="${escapeHtml((booking && booking.name) || 'お客様')}" style="margin-top:12px;padding:18px;border:2.5px dashed #06c755;border-radius:10px;text-align:center;background:#f0fdf4;color:#166534;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;">
-        📁 ここに録画ファイル (.mp4) をドラッグ&ドロップ
-        <div style="font-size:10.5px;color:#365314;font-weight:400;margin-top:3px;">または クリックでファイル選択</div>
-        <input type="file" id="fp-recording-file" accept="video/*" style="display:none;">
-      </div>
-      <div id="fp-upload-status" style="margin-top:8px;font-size:11.5px;color:#6b7280;text-align:center;display:none;"></div>`;
-    document.body.appendChild(g);
-    document.getElementById('fp-guide-close').addEventListener('click', () => g.remove());
-    setupRecordingDropZone(bookingTs);
-  }
-
-  function setupRecordingDropZone(bookingTs) {
-    const dz = document.getElementById('fp-recording-drop');
-    const fi = document.getElementById('fp-recording-file');
-    if (!dz) return;
-    const triggerUpload = (file) => uploadRecordingFile(file, bookingTs);
-    dz.addEventListener('click', () => fi.click());
-    fi.addEventListener('change', (e) => { if (e.target.files[0]) triggerUpload(e.target.files[0]); });
-    ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, (e) => {
-      e.preventDefault(); e.stopPropagation();
-      dz.style.background = '#dcfce7'; dz.style.borderColor = '#15803d';
-    }));
-    ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, (e) => {
-      e.preventDefault(); e.stopPropagation();
-      dz.style.background = '#f0fdf4'; dz.style.borderColor = '#06c755';
-    }));
-    dz.addEventListener('drop', (e) => {
-      if (e.dataTransfer && e.dataTransfer.files[0]) triggerUpload(e.dataTransfer.files[0]);
-    });
-  }
-
-  async function uploadRecordingFile(file, bookingTs) {
-    const status = document.getElementById('fp-upload-status');
-    if (status) {
-      status.style.display = 'block';
-      status.textContent = `⏳ アップロード中... (${(file.size/1024/1024).toFixed(1)}MB)`;
-      status.style.color = '#0ea5e9';
-    }
+    const R = window._fpRecorder;
+    showPickerHint();
     try {
-      // File → base64
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: 'monitor', frameRate: 15 },
+        audio: { echoCancellation: false, noiseSuppression: false, sampleRate: 44100 },
+        systemAudio: 'include',
+        preferCurrentTab: false,
+      });
+      hidePickerHint();
+
+      // 共有OK → Zoom popup + メモ展開
+      const sw = window.screen.availWidth || screen.width;
+      const sh = window.screen.availHeight || screen.height;
+      const memoW = Math.floor(sw / 4);
+      const zoomW = sw - memoW;
+      const zoomBrowserUrl = (function() {
+        try {
+          const m = (zoomUrl || '').match(/zoom\.us\/j\/(\d+)(\?.*)?/);
+          if (!m) return zoomUrl;
+          const host = (zoomUrl.match(/^https?:\/\/([^\/]+)/) || ['', 'zoom.us'])[1];
+          return `https://${host}/wc/join/${m[1]}${m[2] || ''}`;
+        } catch (_) { return zoomUrl; }
+      })();
+      const zoomFeatures = `width=${zoomW},height=${sh},left=${memoW},top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
+      const zoomWin = window.open(zoomBrowserUrl, 'fp-zoom-win', zoomFeatures);
+      if (!zoomWin) window.open(zoomBrowserUrl, '_blank');
+      localStorage.setItem('fp-memo-pos', JSON.stringify({ left: 0, top: 0 }));
+      localStorage.setItem('fp-memo-size', JSON.stringify({ w: memoW, h: sh }));
+      localStorage.setItem('fp-memo-fullscreen', '1');
+      const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
+      setTimeout(() => openMemoModal(booking || { name: 'お客様', userId: bookingTs }, bookingTs), 500);
+
+      // マイク音声を合成
+      let combined = stream;
+      try {
+        const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const ac = new AudioContext();
+        const dest = ac.createMediaStreamDestination();
+        if (stream.getAudioTracks().length > 0) ac.createMediaStreamSource(new MediaStream([stream.getAudioTracks()[0]])).connect(dest);
+        ac.createMediaStreamSource(mic).connect(dest);
+        combined = new MediaStream([...stream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+        R._micStream = mic;
+      } catch (_) {}
+
+      R.chunks = []; R.startTime = Date.now(); R.bookingTs = bookingTs;
+      R.customerName = (booking && booking.name) || 'お客様';
+      const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm';
+      R.mediaRecorder = new MediaRecorder(combined, { mimeType: mime, videoBitsPerSecond: 1500000 });
+      R.mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) R.chunks.push(e.data); };
+      R.mediaRecorder.onstop = async () => {
+        const blob = new Blob(R.chunks, { type: 'video/webm' });
+        R.blobUrl = URL.createObjectURL(blob);
+        combined.getTracks().forEach(t => t.stop());
+        stream.getTracks().forEach(t => t.stop());
+        if (R._micStream) R._micStream.getTracks().forEach(t => t.stop());
+        // 停止 → 自動アップロード
+        await autoUploadRecording(blob, R.bookingTs, R.customerName, booking);
+        await onRecordingComplete(R.bookingTs, blob, R.blobUrl);
+      };
+      R.mediaRecorder.start(1000);
+
+      showRecordingBorder();
+      fetch(CLOUD_RUN_BASE + '/api/recording/start?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }).catch(() => {});
+      showRecordingPill();
+    } catch (e) {
+      hidePickerHint();
+      alert('画面録画の開始に失敗しました\n\n詳細: ' + e.message);
+      localStorage.removeItem('fp-memo-fullscreen');
+    }
+  }
+
+  async function autoUploadRecording(blob, bookingTs, customerName, booking) {
+    // アップロード中トースト
+    const t = document.createElement('div');
+    t.id = 'fp-upload-toast';
+    t.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border-left:5px solid #0ea5e9;border-radius:12px;padding:16px 22px;box-shadow:0 16px 40px rgba(0,0,0,0.18);z-index:10003;font-family:inherit;min-width:320px;';
+    t.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <div style="font-size:22px;">☁️</div>
+        <strong style="font-size:14px;">録画ファイルを Drive にアップロード中</strong>
+      </div>
+      <div id="fp-upload-detail" style="font-size:12px;color:#374151;line-height:1.55;">
+        ${escapeHtml(customerName)}様 専用フォルダを作成中... (${(blob.size/1024/1024).toFixed(1)}MB)
+      </div>`;
+    document.body.appendChild(t);
+    try {
       const reader = new FileReader();
       const base64 = await new Promise((res, rej) => {
         reader.onload = () => res(reader.result.split(',')[1]);
         reader.onerror = rej;
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(blob);
       });
+      const filename = `meeting-${(booking && booking.date) || new Date().toISOString().slice(0,10)}-${new Date().toISOString().slice(11,16).replace(':','')}.webm`;
       const r = await fetch(CLOUD_RUN_BASE + '/api/upload-recording', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ts: bookingTs, filename: file.name, mimeType: file.type, base64: base64 }),
+        body: JSON.stringify({
+          ts: bookingTs,
+          customerName: customerName,
+          filename: filename,
+          mimeType: 'video/webm',
+          base64: base64,
+        }),
       });
       const data = await r.json();
+      const detail = document.getElementById('fp-upload-detail');
       if (data.ok) {
-        if (status) {
-          status.innerHTML = `✅ アップロード完了 → <a href="${data.driveUrl}" target="_blank" style="color:#06c755;font-weight:700;">Drive で開く ↗</a>`;
-          status.style.color = '#166534';
-        }
-        await fetchLiveData();
-        renderLeadHubInner();
+        if (detail) detail.innerHTML = `✅ <a href="${data.driveUrl}" target="_blank" style="color:#0ea5e9;font-weight:700;">Drive で開く ↗</a><br><span style="font-size:10.5px;color:var(--muted);">📁 FP Compass 録画 / ${escapeHtml(customerName)}様 / ${escapeHtml(filename)}</span>`;
+        t.style.borderLeftColor = '#06c755';
       } else {
-        if (status) { status.textContent = '❌ 失敗: ' + (data.error || ''); status.style.color = '#b91c3c'; }
+        if (detail) detail.innerHTML = `❌ 失敗: ${escapeHtml(data.error || '')}`;
+        t.style.borderLeftColor = '#b91c3c';
       }
     } catch (e) {
-      if (status) { status.textContent = '❌ 失敗: ' + e.message; status.style.color = '#b91c3c'; }
+      const detail = document.getElementById('fp-upload-detail');
+      if (detail) detail.innerHTML = '❌ 失敗: ' + e.message;
+      t.style.borderLeftColor = '#b91c3c';
     }
+    setTimeout(() => t.remove(), 30000);
   }
+
 
   function showPickerHint() {
     if (document.getElementById('fp-picker-hint')) return;
