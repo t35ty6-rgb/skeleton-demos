@@ -817,24 +817,32 @@
       };
       R.mediaRecorder.start(1000);
 
-      // ★ Zoom 3/4 + CRM(メモ) 1/4 のレイアウトをセット (画面いっぱい)
+      // ★ Zoom 3/4 + メモ 1/4 のレイアウト
       const sw = window.screen.availWidth || screen.width;
       const sh = window.screen.availHeight || screen.height;
-      const crmW = Math.floor(sw / 4);
-      const zoomW = sw - crmW;
-      const fullH = sh;  // 画面いっぱい(タイトルバー込み)
-      try { window.moveTo(0, 0); window.resizeTo(crmW, fullH); } catch (_) {}
-      // Zoom URL を画面右 3/4 にポップアップ
-      const zoomFeatures = `width=${zoomW},height=${fullH},left=${crmW},top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
-      const zoomWin = window.open(zoomUrl, 'fp-zoom-win', zoomFeatures);
-      if (!zoomWin) window.open(zoomUrl, '_blank');
-      // メモパネルを CRM 内に画面いっぱい展開
+      const memoW = Math.floor(sw / 4);
+      const zoomW = sw - memoW;
+      // Zoom URL を 「ブラウザ版で開く」 形式 (/wc/join/) に変換
+      // 例: https://us05web.zoom.us/j/6704172869?pwd=XXX → /wc/join/6704172869?pwd=XXX
+      const zoomBrowserUrl = (function() {
+        try {
+          const m = (zoomUrl || '').match(/zoom\.us\/j\/(\d+)(\?.*)?/);
+          if (!m) return zoomUrl;
+          const host = (zoomUrl.match(/^https?:\/\/([^\/]+)/) || ['', 'zoom.us'])[1];
+          return `https://${host}/wc/join/${m[1]}${m[2] || ''}`;
+        } catch (_) { return zoomUrl; }
+      })();
+      // Zoom を画面右 3/4 にポップアップ (ブラウザ版を強制)
+      const zoomFeatures = `width=${zoomW},height=${sh},left=${memoW},top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
+      const zoomWin = window.open(zoomBrowserUrl, 'fp-zoom-win', zoomFeatures);
+      if (!zoomWin) window.open(zoomBrowserUrl, '_blank');
+      // CRM リサイズは試みる (大半のブラウザで禁止だが念のため)
+      try { window.moveTo(0, 0); window.resizeTo(memoW, sh); } catch (_) {}
+      // メモパネルを「画面左 1/4 に固定配置」 (CRMサイズに依存しない)
       setTimeout(() => {
-        const padX = 8, padTop = 60;
-        const w = Math.max(320, window.innerWidth - padX * 2);
-        const h = Math.max(280, window.innerHeight - padTop - 30);
-        localStorage.setItem('fp-memo-pos', JSON.stringify({ left: padX, top: padTop }));
-        localStorage.setItem('fp-memo-size', JSON.stringify({ w, h }));
+        localStorage.setItem('fp-memo-pos', JSON.stringify({ left: 0, top: 0 }));
+        localStorage.setItem('fp-memo-size', JSON.stringify({ w: memoW, h: sh }));
+        localStorage.setItem('fp-memo-fullscreen', '1'); // フラグ: 録画中は強制左1/4固定
         const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
         openMemoModal(booking || { name: 'お客様', userId: bookingTs }, bookingTs);
       }, 800);
@@ -876,6 +884,8 @@
     const pill = document.getElementById('fp-rec-pill');
     if (pill) pill.remove();
     hideRecordingBorder();
+    // 「画面左1/4 固定モード」 解除
+    localStorage.removeItem('fp-memo-fullscreen');
   }
 
   function showRecordingPill() {
@@ -1159,10 +1169,22 @@
     // 前回の位置・サイズを復元
     const savedPos = JSON.parse(localStorage.getItem('fp-memo-pos') || '{}');
     const savedSize = JSON.parse(localStorage.getItem('fp-memo-size') || '{}');
-    const w = savedSize.w || 520;
-    const h = savedSize.h || Math.min(640, window.innerHeight - 100);
-    const left = (savedPos.left != null) ? savedPos.left : Math.max(40, window.innerWidth - w - 40);
-    const top = (savedPos.top != null) ? savedPos.top : 80;
+    // 録画中の「画面左1/4固定」 モード — CRMサイズに関わらず screen を基準にする
+    const fullscreenMode = localStorage.getItem('fp-memo-fullscreen') === '1';
+    let w, h, left, top;
+    if (fullscreenMode) {
+      const sw = window.screen.availWidth || screen.width;
+      const sh = window.screen.availHeight || screen.height;
+      w = Math.floor(sw / 4);
+      h = sh;
+      left = 0;
+      top = 0;
+    } else {
+      w = savedSize.w || 520;
+      h = savedSize.h || Math.min(640, window.innerHeight - 100);
+      left = (savedPos.left != null) ? savedPos.left : Math.max(40, window.innerWidth - w - 40);
+      top = (savedPos.top != null) ? savedPos.top : 80;
+    }
 
     // 既存パネルがあれば閉じる
     const old = document.getElementById('fp-memo-panel');
