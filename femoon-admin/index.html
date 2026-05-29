@@ -639,22 +639,18 @@
     <div class="modal-head"><h3>📩 LINEでメッセージを送る</h3><button class="close" onclick="closeLineModal()">×</button></div>
     <div class="modal-body">
       <div class="field" id="line-target-info" style="background:var(--rose-soft);padding:12px 14px;border-radius:4px;font-size:12.5px;color:var(--ink);"></div>
-      <p style="font-size:12px;color:var(--ink2);margin:14px 0 8px">よく使うテンプレート (クリックでコピー)</p>
-      <div class="quick-msgs">
-        <button onclick="useTemplate(this)">こんにちは🌙 FEMOONです。ご予約ありがとうございます。{DATE}{TIME}〜のお時間でお待ちしております。</button>
-        <button onclick="useTemplate(this)">ご予約日時の確認です。{DATE}{TIME}〜「{COURSE}」のご予約を承っております。お気をつけてお越しください🌸</button>
-        <button onclick="useTemplate(this)">お疲れさまでした。本日はご来店ありがとうございました。次回は◯◯コースもおすすめです。お気軽にご相談くださいませ🌙</button>
-        <button onclick="useTemplate(this)">{NAME}様、いつもありがとうございます。お得な情報がございます。詳しくはこちらのメッセージで✨</button>
-        <button onclick="useTemplate(this)">恐れ入ります。{DATE}{TIME}〜のご予約について、確認のご連絡をさせていただきました。お時間ある際にご返信いただけますと幸いです。</button>
+      <div class="field" style="margin-top:14px">
+        <label>テンプレ選択 (用途別)</label>
+        <select id="line-tpl-pick" onchange="applyLineTpl(this.value)" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:4px;font-size:13px;background:#fff">
+          <option value="">— テンプレを選ぶと本文に挿入されます —</option>
+        </select>
       </div>
-      <div class="field"><label>メッセージ本文</label><textarea id="line-msg-body" rows="5"></textarea></div>
-      <p style="font-size:11.5px;color:var(--ink2);margin:0;line-height:1.7">
-        ※ <strong>送信ボタン</strong> を押すとメッセージ本文がコピーされ、LINE公式アカウント管理画面のチャット一覧が開きます。電話番号で友だち検索 → 貼り付けて送信してください。
-      </p>
+      <div class="field"><label>メッセージ本文 (自由に編集できます)</label><textarea id="line-msg-body" rows="6" placeholder="ここに自由に文章を書けます。テンプレを選ぶと自動で入ります。"></textarea></div>
+      <p id="line-modal-hint" style="font-size:11.5px;color:var(--ink2);margin:0;line-height:1.7"></p>
     </div>
     <div class="modal-footer">
       <button class="btn alt" onclick="closeLineModal()">閉じる</button>
-      <button class="btn green" onclick="sendLineMsg()">📋 コピー & LINEを開く</button>
+      <button class="btn green" id="line-send-btn" onclick="sendLineMsg()">📤 LINEで送信</button>
     </div>
   </div>
 </div>
@@ -1255,17 +1251,49 @@ async function submitAdd(){
 
 /* ========== LINE Message ========== */
 function openLineModal(row){
-  CURRENT_LINE_TARGET = row;
+  CURRENT_LINE_TARGET = Object.assign({}, row, {lineUserId: row['LINE userId']||''});
   document.getElementById('line-modal').classList.remove('hidden');
   const d = parseDate(row['希望日']);
   const dateStr = d ? `${d.getMonth()+1}/${d.getDate()}` : '';
+  const hasLine = (row['LINE userId']||'').startsWith('U');
   document.getElementById('line-target-info').innerHTML = `
-    <strong>${row['お名前']||'-'}</strong> 様 / ${row['電話']||'-'}<br>
+    <strong>${row['お名前']||'-'}</strong> 様 / ${row['電話']||'-'} ${hasLine?'<span style="background:#06c755;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📲 LINE直送可</span>':'<span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📋 コピー送信のみ</span>'}<br>
     <span style="color:#7a5d5d;font-size:11.5px">${dateStr} ${row['時間']||''} ${row['コース名']||''}</span>
   `;
   document.getElementById('line-msg-body').value = '';
+  populateLineTplDropdown();
+  updateLineSendBtnLabel(hasLine);
 }
 function closeLineModal(){document.getElementById('line-modal').classList.add('hidden')}
+
+// テンプレドロップダウンを TEMPLATES から動的生成
+function populateLineTplDropdown(){
+  const sel = document.getElementById('line-tpl-pick');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— テンプレを選ぶと本文に挿入されます —</option>';
+  Object.entries(TEMPLATES).forEach(([key, tpl])=>{
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = tpl.label || key;
+    sel.appendChild(opt);
+  });
+}
+
+// 送信ボタンラベル切替 (LINE直送可 vs コピーのみ)
+function updateLineSendBtnLabel(hasLine){
+  const btn = document.getElementById('line-send-btn');
+  const hint = document.getElementById('line-modal-hint');
+  if(!btn) return;
+  if(hasLine){
+    btn.textContent = '📤 LINE直送';
+    btn.style.background = '#06c755';
+    if(hint) hint.innerHTML = '✅ <strong style="color:#06c755">LINE直送可</strong>: ボタン押下でこのお客様のLINEに直接届きます。';
+  } else {
+    btn.textContent = '📋 コピー & LINE管理画面を開く';
+    btn.style.background = '';
+    if(hint) hint.innerHTML = '⚠ <strong>userId未取得</strong>: 送信ボタンでメッセージをコピー → LINE公式アカウント管理画面で電話番号検索して貼付してください。';
+  }
+}
 function useTemplate(btn){
   const r = CURRENT_LINE_TARGET || {};
   const d = parseDate(r['希望日']);
@@ -1280,10 +1308,48 @@ function useTemplate(btn){
 async function sendLineMsg(){
   const txt = document.getElementById('line-msg-body').value.trim();
   if(!txt){alert('メッセージを入力してください');return}
+  const t = CURRENT_LINE_TARGET || {};
+  const uid = t.lineUserId || '';
+  const name = t['お名前'] || 'お客様';
+
+  // LINE userId あり → API 直送
+  if(uid && uid.startsWith('U')){
+    if(!confirm(`${name} 様に下記内容で LINE 送信します:\n\n${txt.slice(0,300)}\n\nOK?`)) return;
+    showToast('📤 送信中...');
+    try{
+      const r = await fetch(`${GAS_URL}?action=line_push&uid=${encodeURIComponent(uid)}&msg=${encodeURIComponent(txt)}&token=${encodeURIComponent(TOKEN)}`);
+      const j = await r.json();
+      if(j.ok){
+        showToast(`✅ ${name} 様にLINE送信完了！`);
+        closeLineModal();
+        return;
+      }
+      alert('❌ 送信失敗\nreason: '+(j.error||j.response||'unknown')+'\n\n手動コピーに切替えます。');
+    }catch(e){ alert('❌ 通信エラー: '+e.message+'\n\n手動コピーに切替えます。'); }
+  }
+
+  // userIdなし or API失敗時 → 手動コピー + LINE管理画面起動
   try{ await navigator.clipboard.writeText(txt); }catch(e){}
   window.open(LINE_OAM_CHAT, '_blank');
   closeLineModal();
-  setTimeout(()=>alert('📋 コピーしました。LINE公式アカウントの画面で電話番号「'+(CURRENT_LINE_TARGET?CURRENT_LINE_TARGET['電話']:'')+'」で友だち検索→チャットを開いて貼り付け(⌘+V)してください'),200);
+  setTimeout(()=>alert('📋 メッセージをコピーしました。\nLINE公式アカウント管理画面で電話番号「'+(t['電話']||'')+'」で友だち検索→チャットを開いて貼り付け(⌘+V)してください'),200);
+}
+
+// テンプレ選択 → 本文に挿入
+function applyLineTpl(key){
+  if(!key) return;
+  const tpl = TEMPLATES[key];
+  if(!tpl){ alert('テンプレが見つかりません: '+key); return; }
+  // 顧客データ補完用に CURRENT_LINE_TARGET を渡す (visits/lastVisit 等が無くてもfillTemplate 側でガード)
+  const t = CURRENT_LINE_TARGET || {};
+  const cust = {
+    name: t['お名前'] || '',
+    tel: t['電話'] || '',
+    visits: t.visits || 0,
+    lastVisit: t.lastVisit ? new Date(t.lastVisit) : null,
+  };
+  document.getElementById('line-msg-body').value = fillTemplate(tpl.body, cust);
+  document.getElementById('line-tpl-pick').value = '';  // ドロップダウンをリセット
 }
 
 /* ========== 日次レポート ========== */
@@ -1630,8 +1696,7 @@ function renderCustomers(){
         <div><div class="v">${c.visits}<small>回</small>${c.visits===0&&c.nextVisit?' <small style="color:var(--green)">(予約済)</small>':''}</div></div>
         <div><div class="v">¥${c.totalRev.toLocaleString()}</div></div>
         <div class="ctrl" style="flex-direction:column;gap:3px">
-          <button class="btn green sm" onclick="quickLine(${i})">📩 即連絡</button>
-          <button class="btn alt sm" onclick='openCustomerLine(${JSON.stringify(c).replace(/'/g,"&apos;")})' style="font-size:10px;padding:3px 8px">✏️ 編集</button>
+          <button class="btn green sm" onclick="quickLine(${i})">📩 LINE送る</button>
         </div>
       </div>
     </div>`;
@@ -1640,40 +1705,17 @@ function renderCustomers(){
   window._CUST_ARR = arr;
 }
 // ワンクリック: userIdあれば直接送信、なければコピペフォールバック
+// 修正: 編集機会を確保するため、即連絡 押下時は line-modal を開いて編集可能にする
 async function quickLine(idx){
   try{
+    showToast('📩 起動中...', 1500);
     const c = window._CUST_ARR && window._CUST_ARR[idx];
-    if(!c){ alert('顧客データが見つかりません'); return; }
-    const tplKey = pickTemplate(c);
-    const tpl = TEMPLATES[tplKey];
-    if(!tpl){ alert('テンプレートが見つかりません: '+tplKey); return; }
-    const msg = fillTemplate(tpl.body, c);
-
-    // ★ LINE userId あれば 直接Push送信
-    if(c.lineUserId && c.lineUserId.startsWith('U')){
-      if(!confirm(`${c.name} 様に下記メッセージを送信します:\n\n${msg.slice(0,200)}\n\n送信しますか？`)) return;
-      showToast('📤 送信中...');
-      try{
-        const r = await fetch(`${GAS_URL}?action=line_push&uid=${encodeURIComponent(c.lineUserId)}&msg=${encodeURIComponent(msg)}&token=${encodeURIComponent(TOKEN)}`);
-        const j = await r.json();
-        if(j.ok){
-          showToast(`✅ ${c.name} 様にLINEで直接送信完了！`);
-        } else {
-          alert('送信失敗: '+(j.error||j.response||'unknown')+'\n\nLINE管理画面を開いて手動送信します。');
-          await fallbackCopy(msg, c);
-        }
-      }catch(e){
-        alert('送信エラー: '+e.message);
-        await fallbackCopy(msg, c);
-      }
-      return;
-    }
-
-    // userIdなし → 従来のコピー+LINE管理画面起動
-    await fallbackCopy(msg, c);
-    showToast(`📋 ${c.name} 様向け「${tpl.label}」をコピー → LINE管理画面で貼付 (※LINEから予約してくれた方は今後直送可)`);
+    if(!c){ alert('顧客データが見つかりません (idx='+idx+')'); return; }
+    if(!TOKEN){ alert('管理トークン未設定。再ログインしてください'); return; }
+    // 即連絡 = 編集モーダルを開く (テンプレ自動入力 + 編集 + 送信ボタンで直送 or コピー)
+    openCustomerLine(c);
   }catch(err){
-    alert('即連絡エラー: '+err.message);
+    alert('即連絡エラー: '+(err && err.message ? err.message : err));
   }
 }
 async function fallbackCopy(msg, c){
@@ -1701,10 +1743,13 @@ function openCustomerLine(c){
   // Date復元 (JSON.stringify経由でstringになってる場合の保険)
   if(c.lastVisit && !(c.lastVisit instanceof Date)) c.lastVisit = new Date(c.lastVisit);
   if(c.firstVisit && !(c.firstVisit instanceof Date)) c.firstVisit = new Date(c.firstVisit);
-  CURRENT_LINE_TARGET = {'お名前':c.name,'電話':c.tel,'希望日':c.lastVisit?c.lastVisit.toISOString():'','時間':'','コース名':''};
+  const hasLine = (c.lineUserId||'').startsWith('U');
+  CURRENT_LINE_TARGET = {'お名前':c.name,'電話':c.tel,'希望日':c.lastVisit?c.lastVisit.toISOString():'','時間':'','コース名':'', lineUserId: c.lineUserId||'', visits: c.visits, lastVisit: c.lastVisit};
   document.getElementById('line-modal').classList.remove('hidden');
   const lastStr = c.lastVisit ? `${c.lastVisit.getMonth()+1}/${c.lastVisit.getDate()}` : '-';
-  document.getElementById('line-target-info').innerHTML = `<strong>${c.name||'-'}</strong> 様 / ${c.tel||'-'}<br><span style="color:#7a5d5d;font-size:11.5px">最終来店 ${lastStr} / 来店${c.visits}回 / 累計¥${(c.totalRev||0).toLocaleString()}</span>`;
+  document.getElementById('line-target-info').innerHTML = `<strong>${c.name||'-'}</strong> 様 / ${c.tel||'-'} ${hasLine?'<span style="background:#06c755;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📲 LINE直送可</span>':'<span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📋 コピー送信のみ</span>'}<br><span style="color:#7a5d5d;font-size:11.5px">最終来店 ${lastStr} / 来店${c.visits}回 / 累計¥${(c.totalRev||0).toLocaleString()}</span>`;
+  populateLineTplDropdown();
+  updateLineSendBtnLabel(hasLine);
   // ★ 推奨テンプレを自動セット (編集してから送信できる)
   const tplKey = pickTemplate(c);
   const tpl = TEMPLATES[tplKey];
