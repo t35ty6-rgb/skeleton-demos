@@ -1029,7 +1029,7 @@
       const userId  = row.dataset.uid;
       const name    = row.dataset.name;
       const rank    = (allCandidates[idx] && allCandidates[idx].rank) || (idx + 1);
-      // 日付/時間部分クリック → iframe ジャンプ + 該当セル位置に赤マーカー
+      // 日付/時間部分クリック → iframe ジャンプ + 行ハイライト
       const jumpBtn = row.querySelector('.fp-cand-jump');
       jumpBtn.addEventListener('click', () => {
         const dateOnly = dateStr.replace(/-/g, '');
@@ -1040,8 +1040,6 @@
         panel.querySelectorAll('[data-cand-row]').forEach(c => { c.style.background = '#fff'; c.style.boxShadow = ''; });
         row.style.background = '#fef2f2';
         row.style.boxShadow = '0 0 0 3px #fca5a5';
-        // iframe 上に「ここだよ」マーカーをオーバーレイ
-        drawCalendarMarker(dateStr, slotStr, rank);
       });
       // 確定ボタン → /api/confirm-slot
       const confirmBtn = row.querySelector('.fp-cand-confirm');
@@ -1151,82 +1149,6 @@
   }
 
   function ensureCalendarSidePanel() { /* 後方互換ダミー */ }
-
-  // iframe (Google Calendar 週ビュー) の上に「ここだよ」マーカーを配置
-  // Google の内部レイアウトには触れないので、外側からのオーバーレイで近似位置を示す
-  function drawCalendarMarker(dateStr, slotStr, rank) {
-    // 既存マーカー削除
-    const existing = document.getElementById('fp-cal-marker');
-    if (existing) existing.remove();
-    const wrap = document.getElementById('fp-cal-iframe-v3');
-    if (!wrap || !wrap.parentNode) return;
-    const candPanel = document.getElementById('fp-cal-candidates');
-    const headerHeight = (candPanel ? candPanel.getBoundingClientRect().height : 0) + 46; // パネル先頭からのoffset
-
-    // 曜日インデックス (Mon=0,Tue=1,...,Sun=6) — wkst=2 (月始まり) の週ビュー前提
-    const [y, mo, d] = dateStr.split('-').map(Number);
-    const date = new Date(y, mo - 1, d);
-    const jsDay = date.getDay(); // Sun=0..Sat=6
-    const colIdx = (jsDay + 6) % 7; // Mon=0..Sun=6
-
-    // 時間インデックス
-    const m = (slotStr || '').match(/(\d{1,2}):(\d{2})/);
-    const hour = m ? parseInt(m[1], 10) : 14;
-    const min  = m ? parseInt(m[2], 10) : 0;
-
-    // iframe の物理位置を取得 (sidepanel 全体に対する rect)
-    const ifr = wrap.getBoundingClientRect();
-    const sidePanel = document.getElementById('fp-cal-side-v3');
-    const panelRect = sidePanel.getBoundingClientRect();
-
-    // Google Calendar embed の典型レイアウト (経験値・iframe 幅依存):
-    // - 左の時刻ガター: 約 46px
-    // - 上のヘッダー (日付タブ + 終日): 約 76px
-    // - 7曜日列がそれを 7等分
-    // - 1時間あたり高さ: (iframeHeight - 76) / 24 程度
-    const ifrW = ifr.width;
-    const ifrH = ifr.height;
-    const gutterX = 46;
-    const headerY = 76;
-    const colW   = (ifrW - gutterX) / 7;
-    const hourH  = (ifrH - headerY) / 24;
-
-    const cellLeft = ifr.left - panelRect.left + gutterX + colIdx * colW;
-    const cellTop  = ifr.top  - panelRect.top  + headerY + hour * hourH + (min / 60) * hourH;
-    const cellW    = colW;
-    const cellH    = Math.max(28, hourH); // 1時間枠 (最低28px)
-
-    const marker = document.createElement('div');
-    marker.id = 'fp-cal-marker';
-    marker.style.cssText = `position:absolute;left:${cellLeft}px;top:${cellTop}px;width:${cellW}px;height:${cellH}px;border:3px solid #d9264c;border-radius:6px;background:rgba(217,38,76,0.15);pointer-events:none;z-index:5;animation:fp-cal-marker-pulse 1.3s ease-in-out infinite;box-shadow:0 0 0 2px rgba(255,255,255,0.6),0 8px 24px rgba(217,38,76,0.35);`;
-    // ラベルバッジ
-    const badge = document.createElement('div');
-    badge.style.cssText = 'position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#d9264c;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;font-family:inherit;letter-spacing:0.04em;';
-    badge.textContent = `🎯 第${rank}希望 ここ`;
-    marker.appendChild(badge);
-    sidePanel.appendChild(marker);
-
-    // pulse animation
-    if (!document.getElementById('fp-cal-marker-style')) {
-      const s = document.createElement('style');
-      s.id = 'fp-cal-marker-style';
-      s.textContent = '@keyframes fp-cal-marker-pulse{0%,100%{box-shadow:0 0 0 2px rgba(255,255,255,0.6),0 8px 24px rgba(217,38,76,0.35)}50%{box-shadow:0 0 0 2px rgba(255,255,255,0.6),0 12px 32px rgba(217,38,76,0.6)}}';
-      document.head.appendChild(s);
-    }
-
-    // iframe ロード後にマーカーをもう一度同位置で再描画 (iframe のリロードで上書きされる対策)
-    setTimeout(() => {
-      const m2 = document.getElementById('fp-cal-marker');
-      if (!m2) return;
-      // resize iframe したら位置がズレるので、ResizeObserver で追従
-      if (!sidePanel._resizeWired) {
-        const ro = new ResizeObserver(() => drawCalendarMarker(dateStr, slotStr, rank));
-        ro.observe(sidePanel);
-        sidePanel._resizeWired = true;
-        sidePanel._resizeObserver = ro;
-      }
-    }, 100);
-  }
 
   // ===== メモ → タスク自動抽出 (ブラウザウィンドウ風: ヘッダードラッグ移動 + 縁リサイズ) =====
   function openMemoModal(booking, bookingTs) {
