@@ -620,25 +620,35 @@ document.getElementById('submit-btn').addEventListener('click', async ()=>{
     line_display_name: LIFF_USER ? LIFF_USER.displayName : ''
   };
 
-  // ★ 送信直前にLIFF再確認 (LIFF_USERが未設定なら最後にもう一度取りに行く)
+  // ★ 送信直前にLIFF詳細チェック (失敗時は原因を画面に表示)
+  let dbgInfo = [];
   try{
-    if(typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && (!payload.line_user_id)){
-      if(liff.isLoggedIn()){
-        const prof = await liff.getProfile();
-        if(prof && prof.userId){
-          payload.line_user_id = prof.userId;
-          payload.line_display_name = prof.displayName || '';
-          console.log('[LIFF] submit前再取得成功:', prof.userId);
-        }
+    dbgInfo.push('liff='+ (typeof liff !== 'undefined' ? 'OK' : 'undef'));
+    if(typeof liff !== 'undefined'){
+      const inClient = liff.isInClient ? liff.isInClient() : 'no_func';
+      dbgInfo.push('inClient='+inClient);
+      const loggedIn = liff.isLoggedIn ? liff.isLoggedIn() : 'no_func';
+      dbgInfo.push('loggedIn='+loggedIn);
+      if(loggedIn === true){
+        try{
+          const prof = await liff.getProfile();
+          dbgInfo.push('profile=OK');
+          dbgInfo.push('uid='+(prof.userId||'').slice(0,10)+'...');
+          if(prof && prof.userId){
+            payload.line_user_id = prof.userId;
+            payload.line_display_name = prof.displayName || '';
+          }
+        }catch(e2){ dbgInfo.push('profile_err='+e2.message); }
       }
     }
-  }catch(e){ console.warn('[LIFF] submit前再取得失敗:', e.message); }
-  // デバッグ用: 画面に取得状況を一瞬表示 (5秒)
+  }catch(e){ dbgInfo.push('outer_err='+e.message); }
+
+  // デバッグ表示 (8秒間)
   const dbg = document.createElement('div');
-  dbg.style.cssText='position:fixed;top:0;left:0;right:0;background:'+(payload.line_user_id?'#06c755':'#c0392b')+';color:#fff;text-align:center;padding:8px;font-size:11.5px;font-weight:600;z-index:99999';
-  dbg.textContent = payload.line_user_id ? '✅ userId取得: '+payload.line_user_id.slice(0,15)+'...' : '❌ userId取れず → 送信続行(灰バッジ)';
+  dbg.style.cssText='position:fixed;top:0;left:0;right:0;background:'+(payload.line_user_id?'#06c755':'#c0392b')+';color:#fff;padding:10px 12px;font-size:11px;font-weight:600;z-index:99999;line-height:1.5;word-break:break-all';
+  dbg.innerHTML = (payload.line_user_id ? '✅ userId取得:<br>' : '❌ userId取れず<br>') + dbgInfo.join(' | ');
   document.body.appendChild(dbg);
-  setTimeout(()=>dbg.remove(), 4000);
+  setTimeout(()=>dbg.remove(), 8000);
 
   showStep('loading');
 
