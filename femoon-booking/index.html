@@ -528,19 +528,41 @@ const LIFF_URL = 'https://liff.line.me/' + LIFF_ID;
 let LIFF_USER = null; // {userId, displayName, pictureUrl} or null
 
 // LINEブラウザ内で開かれた時のみ初期化 (それ以外は通常Webフォームとして動作)
+function showLiffStatus(text, color){
+  const bar = document.createElement('div');
+  bar.style.cssText = `position:fixed;top:0;left:0;right:0;background:${color};color:#fff;text-align:center;padding:8px 12px;font-size:12px;font-weight:600;z-index:9999;letter-spacing:.04em`;
+  bar.textContent = text;
+  document.body.appendChild(bar);
+  // ヘッダーを下にずらす
+  document.body.style.paddingTop = '36px';
+  setTimeout(()=>{
+    bar.style.transition = 'opacity .5s';
+    bar.style.opacity = '0';
+    setTimeout(()=>{bar.remove(); document.body.style.paddingTop='';}, 5000);
+  }, 6000);
+}
 (async()=>{
   try{
-    if(typeof liff === 'undefined') return;
-    if(LIFF_ID.indexOf('PLACEHOLDER') !== -1) return;
+    if(typeof liff === 'undefined'){
+      showLiffStatus('⚠ LIFF SDKが読み込まれていません (通常Web扱い)', '#f39c12');
+      return;
+    }
+    if(LIFF_ID.indexOf('PLACEHOLDER') !== -1){
+      showLiffStatus('⚠ LIFF IDが未設定', '#f39c12');
+      return;
+    }
     await liff.init({liffId: LIFF_ID});
+    if(!liff.isInClient()){
+      showLiffStatus('⚠ LINEアプリ外で開かれています (緑バッジが付きません)', '#f39c12');
+      return;
+    }
     if(liff.isLoggedIn()){
       const profile = await liff.getProfile();
       LIFF_USER = {userId: profile.userId, displayName: profile.displayName, pictureUrl: profile.pictureUrl};
       console.log('LIFF userId取得:', LIFF_USER.displayName);
-      // お客様名フィールドにLINEプロフィール名を自動入力 (姓名分離なので全体に)
+      showLiffStatus('✅ LINE経由で開いています (' + LIFF_USER.displayName + ' 様)', '#06c755');
       const ln = document.getElementById('lastname');
       if(ln && !ln.value && LIFF_USER.displayName){
-        // 1文字目を姓、それ以降を名 (緩い分解)
         const parts = LIFF_USER.displayName.split(/\s+/);
         if(parts.length>=2){
           document.getElementById('lastname').value = parts[0];
@@ -550,11 +572,12 @@ let LIFF_USER = null; // {userId, displayName, pictureUrl} or null
         }
       }
     } else {
-      // 未ログイン時はLINEログインを促す
+      showLiffStatus('⏳ LINEログインへリダイレクト...', '#06c755');
       liff.login();
     }
   }catch(e){
-    console.warn('LIFF init failed (通常Webブラウザ扱い):', e.message);
+    console.warn('LIFF init failed:', e.message);
+    showLiffStatus('❌ LIFF初期化失敗: ' + e.message, '#c0392b');
   }
 })();
 
