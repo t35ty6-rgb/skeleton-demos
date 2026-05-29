@@ -779,18 +779,19 @@
     mediaRecorder: null, chunks: [], startTime: null, bookingTs: null, timerId: null, blobUrl: null,
   };
 
-  // 1ステップフロー: ボタン1回で 画面全体共有ダイアログ → Zoom popup + メモ展開 → 録画開始
-  // ピッカーはブラウザ仕様で消せないが「画面全体」がデフォルト選択になるよう displaySurface:'monitor' をヒント
   async function startScreenRecording(bookingTs, zoomUrl) {
     const R = window._fpRecorder;
+    // 大きなヒント overlay を表示 (ピッカーが出たら何をクリックすべきか)
+    showPickerHint();
     try {
-      // 1) getDisplayMedia: 画面全体を録画 — ピッカーは「画面全体」がデフォルト選択
+      // ピッカーは消せない仕様。displaySurface:'monitor' で「画面全体」をデフォルト選択
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { displaySurface: 'monitor', frameRate: 15 },
         audio: { echoCancellation: false, noiseSuppression: false, sampleRate: 44100 },
         systemAudio: 'include',
         preferCurrentTab: false,
       });
+      hidePickerHint();
       // 2) ユーザーが「共有」を押した瞬間に Zoom popup + メモ を立ち上げる
       const sw = window.screen.availWidth || screen.width;
       const sh = window.screen.availHeight || screen.height;
@@ -844,9 +845,44 @@
       fetch(CLOUD_RUN_BASE + '/api/recording/start?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }).catch(() => {});
       showRecordingPill();
     } catch (e) {
+      hidePickerHint();
       alert('画面録画の開始に失敗しました\n\n原因の可能性:\n- 「画面共有」許可ダイアログでキャンセル\n- 共有するウィンドウを選ばずキャンセル\n- ブラウザが getDisplayMedia 非対応\n\n詳細: ' + e.message);
       localStorage.removeItem('fp-memo-fullscreen');
     }
+  }
+
+  function showPickerHint() {
+    if (document.getElementById('fp-picker-hint')) return;
+    const o = document.createElement('div');
+    o.id = 'fp-picker-hint';
+    o.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(2px);z-index:10004;display:flex;align-items:flex-start;justify-content:center;padding-top:80px;pointer-events:none;';
+    o.innerHTML = `
+      <div style="background:linear-gradient(135deg,#fff7ed,#fffbf2);border:3px solid #f59e0b;border-radius:20px;padding:28px 36px;max-width:560px;box-shadow:0 24px 64px rgba(0,0,0,0.35);font-family:inherit;animation:fp-hint-bounce 0.6s ease-out;">
+        <h2 style="margin:0 0 12px;font-size:18px;font-family:'Noto Serif JP',serif;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:28px;">👇</span> 画面共有ダイアログの操作方法
+        </h2>
+        <ol style="margin:0;padding-left:24px;font-size:14px;line-height:1.85;color:#1f2937;">
+          <li>上のタブから 「<strong style="color:#d9264c;">画面全体</strong>」 をクリック</li>
+          <li>表示されている <strong>モニター画像</strong> をクリックして選択</li>
+          <li>右下の <strong style="color:#06c755;">「共有」</strong> ボタンを押す</li>
+        </ol>
+        <div style="margin-top:14px;padding:10px 14px;background:#fffbf2;border:1px solid #f0d36b;border-radius:8px;font-size:12px;color:#5e4d1a;line-height:1.55;">
+          💡 「ウィンドウ」 や 「Chrome タブ」 ではなく <strong>「画面全体」</strong> を選んでください<br>
+          → 画面全体録画なので Zoom も メモも 全部1枚に収まります
+        </div>
+      </div>`;
+    document.body.appendChild(o);
+    if (!document.getElementById('fp-hint-style')) {
+      const s = document.createElement('style');
+      s.id = 'fp-hint-style';
+      s.textContent = '@keyframes fp-hint-bounce{0%{transform:translateY(-30px) scale(0.9);opacity:0}60%{transform:translateY(8px) scale(1.02);opacity:1}100%{transform:translateY(0) scale(1);opacity:1}}';
+      document.head.appendChild(s);
+    }
+  }
+
+  function hidePickerHint() {
+    const o = document.getElementById('fp-picker-hint');
+    if (o) o.remove();
   }
 
   function showRecordingBorder() {
