@@ -779,17 +779,77 @@
     mediaRecorder: null, chunks: [], startTime: null, bookingTs: null, timerId: null, blobUrl: null,
   };
 
+  // 2ステップ化: Step1=Zoom先に開く + メモ展開, Step2=録画開始(ユーザー再クリック)
   async function startScreenRecording(bookingTs, zoomUrl) {
+    // Step 0: Zoom を先に開く (URLを /wc/join/ ブラウザ版に変換)
+    const sw = window.screen.availWidth || screen.width;
+    const sh = window.screen.availHeight || screen.height;
+    const memoW = Math.floor(sw / 4);
+    const zoomW = sw - memoW;
+    const zoomBrowserUrl = (function() {
+      try {
+        const m = (zoomUrl || '').match(/zoom\.us\/j\/(\d+)(\?.*)?/);
+        if (!m) return zoomUrl;
+        const host = (zoomUrl.match(/^https?:\/\/([^\/]+)/) || ['', 'zoom.us'])[1];
+        return `https://${host}/wc/join/${m[1]}${m[2] || ''}`;
+      } catch (_) { return zoomUrl; }
+    })();
+    const zoomFeatures = `width=${zoomW},height=${sh},left=${memoW},top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
+    const zoomWin = window.open(zoomBrowserUrl, 'fp-zoom-win', zoomFeatures);
+    if (!zoomWin) {
+      alert('Zoom 用のポップアップがブロックされました。アドレスバー右の 🚫 で「常に許可」 → もう一度お試しください。');
+      return;
+    }
+
+    // メモを左1/4 固定で先に表示 (Zoom読み込み待ちの間に書き出せるように)
+    localStorage.setItem('fp-memo-pos', JSON.stringify({ left: 0, top: 0 }));
+    localStorage.setItem('fp-memo-size', JSON.stringify({ w: memoW, h: sh }));
+    localStorage.setItem('fp-memo-fullscreen', '1');
+    const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
+    openMemoModal(booking || { name: 'お客様', userId: bookingTs }, bookingTs);
+
+    // Step 1: Zoom が読み込まれるまで待機する案内バナーを表示。
+    // 「▶ 録画開始」 ボタンを押されたら getDisplayMedia (新しいユーザージェスチャ)
+    showWaitingForZoomBanner(bookingTs, zoomUrl);
+  }
+
+  function showWaitingForZoomBanner(bookingTs, zoomUrl) {
+    const existing = document.getElementById('fp-wait-zoom');
+    if (existing) existing.remove();
+    const b = document.createElement('div');
+    b.id = 'fp-wait-zoom';
+    b.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#fff7ed,#fff8e1);border:2px solid #f59e0b;border-radius:14px;padding:16px 26px;box-shadow:0 16px 40px rgba(0,0,0,0.18);z-index:10003;font-family:inherit;max-width:560px;';
+    b.innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="font-size:30px;">⏳</div>
+        <div style="flex:1;">
+          <strong style="font-size:14.5px;display:block;margin-bottom:3px;">Zoom が右側で開きました</strong>
+          <div style="font-size:12px;color:#92400e;line-height:1.5;">Zoom がカメラ・マイク許可を済ませて入室したら<br>下の <strong>「▶ 録画開始」</strong> を押してください<br><span style="font-size:10.5px;opacity:0.8;">→ 共有画面選択ダイアログで「Zoom Meeting」 ウィンドウを選んで「共有」</span></div>
+        </div>
+        <button id="fp-start-rec-now" style="font-size:14px;padding:11px 20px;background:linear-gradient(135deg,#d9264c,#b91c3c);color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:800;font-family:inherit;box-shadow:0 6px 18px rgba(217,38,76,0.35);white-space:nowrap;">▶ 録画開始</button>
+        <button id="fp-cancel-rec" style="font-size:11.5px;padding:7px 11px;background:#fff;border:1px solid #e5e7eb;color:#6b7280;border-radius:6px;cursor:pointer;font-family:inherit;">キャンセル</button>
+      </div>`;
+    document.body.appendChild(b);
+    document.getElementById('fp-cancel-rec').addEventListener('click', () => {
+      b.remove();
+      localStorage.removeItem('fp-memo-fullscreen');
+    });
+    document.getElementById('fp-start-rec-now').addEventListener('click', async () => {
+      b.remove();
+      await beginActualRecording(bookingTs);
+    });
+  }
+
+  async function beginActualRecording(bookingTs) {
     const R = window._fpRecorder;
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        // ヒント: ピッカーで「ウィンドウ」タブをデフォルト選択 + タブ音声共有ON
         video: { displaySurface: 'window', frameRate: 15 },
         audio: { echoCancellation: false, noiseSuppression: false, sampleRate: 44100 },
         systemAudio: 'include',
         preferCurrentTab: false,
         surfaceSwitching: 'include',
-        selfBrowserSurface: 'exclude', // CRM自身は録画候補から除外
+        selfBrowserSurface: 'exclude',
       });
       // マイク音声も合成 (お客さん側=Zoomの再生音 + FP本人=マイク)
       let combined = stream;
@@ -817,44 +877,13 @@
       };
       R.mediaRecorder.start(1000);
 
-      // ★ Zoom 3/4 + メモ 1/4 のレイアウト
-      const sw = window.screen.availWidth || screen.width;
-      const sh = window.screen.availHeight || screen.height;
-      const memoW = Math.floor(sw / 4);
-      const zoomW = sw - memoW;
-      // Zoom URL を 「ブラウザ版で開く」 形式 (/wc/join/) に変換
-      // 例: https://us05web.zoom.us/j/6704172869?pwd=XXX → /wc/join/6704172869?pwd=XXX
-      const zoomBrowserUrl = (function() {
-        try {
-          const m = (zoomUrl || '').match(/zoom\.us\/j\/(\d+)(\?.*)?/);
-          if (!m) return zoomUrl;
-          const host = (zoomUrl.match(/^https?:\/\/([^\/]+)/) || ['', 'zoom.us'])[1];
-          return `https://${host}/wc/join/${m[1]}${m[2] || ''}`;
-        } catch (_) { return zoomUrl; }
-      })();
-      // Zoom を画面右 3/4 にポップアップ (ブラウザ版を強制)
-      const zoomFeatures = `width=${zoomW},height=${sh},left=${memoW},top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
-      const zoomWin = window.open(zoomBrowserUrl, 'fp-zoom-win', zoomFeatures);
-      if (!zoomWin) window.open(zoomBrowserUrl, '_blank');
-      // CRM リサイズは試みる (大半のブラウザで禁止だが念のため)
-      try { window.moveTo(0, 0); window.resizeTo(memoW, sh); } catch (_) {}
-      // メモパネルを「画面左 1/4 に固定配置」 (CRMサイズに依存しない)
-      setTimeout(() => {
-        localStorage.setItem('fp-memo-pos', JSON.stringify({ left: 0, top: 0 }));
-        localStorage.setItem('fp-memo-size', JSON.stringify({ w: memoW, h: sh }));
-        localStorage.setItem('fp-memo-fullscreen', '1'); // フラグ: 録画中は強制左1/4固定
-        const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
-        openMemoModal(booking || { name: 'お客様', userId: bookingTs }, bookingTs);
-      }, 800);
-      // 録画中であることが分かる「画面外周の赤い枠」 を表示
+      // レイアウトは Step 0 ですでに済んでいる。録画中の視覚マーカーだけ追加
       showRecordingBorder();
-
-      // サーバー側にもステータス通知
       fetch(CLOUD_RUN_BASE + '/api/recording/start?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }).catch(() => {});
-
       showRecordingPill();
     } catch (e) {
-      alert('画面録画の開始に失敗しました\n\n原因の可能性:\n- 「画面共有」許可ダイアログでキャンセル\n- HTTPSじゃないページ (GitHub Pages なのでHTTPSのはず)\n- ブラウザが getDisplayMedia 非対応\n\n詳細: ' + e.message);
+      alert('画面録画の開始に失敗しました\n\n原因の可能性:\n- 「画面共有」許可ダイアログでキャンセル\n- 共有するウィンドウを選ばずキャンセル\n- ブラウザが getDisplayMedia 非対応\n\n詳細: ' + e.message);
+      localStorage.removeItem('fp-memo-fullscreen');
     }
   }
 
