@@ -433,22 +433,31 @@
           <h2 style="font-family:'Noto Serif JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">FP 作業フロー</h2>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:36px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;">
         ${[
-          { label: '候補日確定', value: pendingConfirm, unit: '名', target: '#section-confirm', accent: accents.urgent, active: pendingConfirm > 0, step: '01' },
-          { label: 'Zoom 待ち', value: upcomingZoomCount, unit: '件', target: '#section-recording', accent: accents.upcoming, active: upcomingZoomCount > 0, step: '02' },
-          { label: '録画 / 進行中', value: recordingNow, unit: '件', target: '#section-recording', accent: accents.active, active: recordingNow > 0, step: '03' },
-          { label: 'フォロー対象', value: aftercare.length, unit: '名', target: '#section-aftercare', accent: accents.followup, active: aftercare.length > 0, step: '04' },
+          { label: '候補日確定', desc: 'お客様の3候補から確定', value: pendingConfirm, unit: '名', target: '#section-confirm', accent: accents.urgent, active: pendingConfirm > 0, step: '01' },
+          { label: 'Zoom 打ち合わせ予定', desc: '確定済 / 面談日待ち', value: upcomingZoomCount, unit: '件', target: '#section-recording', accent: accents.upcoming, active: upcomingZoomCount > 0, step: '02' },
+          { label: '面談中 (録画ON)', desc: '今まさに録画してる面談', value: recordingNow, unit: '件', target: '#section-recording', accent: accents.active, active: recordingNow > 0, step: '03' },
+          { label: 'フォロー対象', desc: '途中で止まったお客様', value: aftercare.length, unit: '名', target: '#section-aftercare', accent: accents.followup, active: aftercare.length > 0, step: '04' },
         ].map(c => `
-          <a href="${c.target}" style="text-decoration:none;color:inherit;background:#fff;border:1px solid ${c.active ? c.accent.border + '55' : '#e8e2d4'};${c.active ? `border-top:2px solid ${c.accent.border};` : ''}border-radius:8px;padding:20px 18px;display:flex;flex-direction:column;gap:6px;transition:all 0.15s;${c.active ? `box-shadow:0 1px 3px rgba(15,23,42,0.04),0 6px 20px ${c.accent.border}1f;` : 'box-shadow:0 1px 2px rgba(15,23,42,0.03);'}">
+          <a href="${c.target}" style="text-decoration:none;color:inherit;background:#fff;border:1px solid ${c.active ? c.accent.border + '55' : '#e8e2d4'};${c.active ? `border-top:2px solid ${c.accent.border};` : ''}border-radius:8px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:4px;transition:all 0.15s;${c.active ? `box-shadow:0 1px 3px rgba(15,23,42,0.04),0 6px 20px ${c.accent.border}1f;` : 'box-shadow:0 1px 2px rgba(15,23,42,0.03);'}">
             <div style="display:flex;align-items:center;justify-content:space-between;">
               <span style="font-size:9.5px;font-weight:700;color:${c.active ? c.accent.fg : '#94a3b8'};letter-spacing:0.18em;font-family:'Inter',sans-serif;">${c.step}</span>
               ${c.active ? `<span style="width:6px;height:6px;background:${c.accent.dot};border-radius:50%;display:inline-block;"></span>` : ''}
             </div>
-            <div style="font-size:11.5px;color:#6b7280;font-weight:500;letter-spacing:0.02em;margin-top:2px;">${c.label}</div>
-            <div style="font-size:32px;font-weight:800;font-family:'Inter',sans-serif;color:${c.active ? c.accent.fg : '#1f2a3f'};line-height:1;letter-spacing:-0.02em;margin-top:2px;">${c.value}<span style="font-size:11px;color:#9ca3af;font-weight:600;margin-left:4px;">${c.unit}</span></div>
+            <div style="font-size:12px;color:#1f2a3f;font-weight:700;letter-spacing:0.02em;margin-top:2px;">${c.label}</div>
+            <div style="font-size:10.5px;color:#9ca3af;font-weight:500;letter-spacing:0.02em;line-height:1.4;">${c.desc}</div>
+            <div style="font-size:30px;font-weight:800;font-family:'Inter',sans-serif;color:${c.active ? c.accent.fg : '#1f2a3f'};line-height:1;letter-spacing:-0.02em;margin-top:4px;">${c.value}<span style="font-size:11px;color:#9ca3af;font-weight:600;margin-left:4px;">${c.unit}</span></div>
           </a>
         `).join('')}
+      </div>
+      <!-- フロー説明 -->
+      <div style="background:#fdfbf4;border:1px solid #e8d9a8;border-radius:8px;padding:14px 20px;margin-bottom:36px;font-size:11.5px;color:#5e4d1a;line-height:1.7;">
+        <div style="font-size:10px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:6px;">How it works</div>
+        <strong style="color:#1f2a3f;font-weight:700;">01</strong> アンケート回答+候補日3つが届いたら確定 →
+        <strong style="color:#1f2a3f;font-weight:700;">02</strong> Zoom URLが発行され面談日待ち →
+        <strong style="color:#1f2a3f;font-weight:700;">03</strong> 面談当日「録画ONでZoom開始」で録画中に →
+        <strong style="color:#1f2a3f;font-weight:700;">04</strong> 途中で止まったお客様は別途リスト化
       </div>
 
       <section class="board-section" id="section-confirm">
@@ -490,7 +499,16 @@
         </div>
         <p style="color:#6b7280;font-size:12.5px;margin:0 0 18px;line-height:1.65;letter-spacing:0.02em;">アンケート途中・候補日提示後・面談キャンセル等で止まっている方 / LINEで追加メッセージを送りましょう</p>
         <div id="aftercare-list">
-          ${aftercare.length === 0 ? '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:24px;text-align:center;color:var(--muted);font-size:13px;">フォロー必要な方はいません 🎉</div>' :
+          ${aftercare.length === 0 ? `<div style="background:#fff;border:1px dashed #e8e2d4;border-radius:8px;padding:28px 30px;color:#6b7280;font-size:12.5px;line-height:1.75;letter-spacing:0.02em;">
+            <strong style="color:#1f2a3f;font-weight:700;font-size:13.5px;display:block;margin-bottom:8px;">フォロー必要な方はいません</strong>
+            ここには <strong style="color:#1f2a3f;">途中で止まってる人</strong> が自動で並びます:<br>
+            ・友だち追加したがアンケート未回答 (3日以上)<br>
+            ・アンケート回答済みだが候補日を提示してない (5日以上)<br>
+            ・候補日提示済みだが FP が確定操作してない (3日以上)<br>
+            ・面談日が過ぎたが完了マークがついてない<br>
+            <br>
+            <span style="font-size:11px;color:#94a3b8;">該当者が出てきたら 「LINE 追撃」 ボタンでテンプレ自動入力 → ワンクリック送信できます</span>
+          </div>` :
             aftercare.map(a => `
               <div style="background:var(--surface);border:1px solid var(--line);border-left:4px solid ${a.stage==='completion-pending'?'#06c755':(a.days>=14?'#b91c3c':(a.days>=7?'#f59e0b':'#0ea5e9'))};border-radius:10px;padding:14px 18px;margin-bottom:8px;display:grid;grid-template-columns:36px 1fr auto;gap:14px;align-items:center;">
                 <div style="background:#06c755;color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;font-family:inherit;">L</div>
@@ -662,7 +680,14 @@
       }
     }
     if (bookings.length === 0) {
-      target.innerHTML = `<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);font-size:13px;">まだ進行中の予約はありません${archivedCount > 0 ? ` <a href="#" id="fp-show-archived" style="color:var(--accent);margin-left:6px;">完了済み${archivedCount}件を見る</a>` : ''}</div>`;
+      target.innerHTML = `<div style="background:#fff;border:1px dashed #e8e2d4;border-radius:8px;padding:28px 30px;color:#6b7280;font-size:12.5px;line-height:1.75;letter-spacing:0.02em;">
+        <strong style="color:#1f2a3f;font-weight:700;font-size:13.5px;display:block;margin-bottom:8px;">進行中の予約はありません</strong>
+        ここには <strong style="color:#1f2a3f;">確定済の Zoom 打ち合わせ</strong> が並びます:<br>
+        ・上の「候補日確定 待ち」 でお客様の希望日を確定すると、ここに追加されます<br>
+        ・面談当日: <strong style="color:#1f2a3f;">「録画ONでZoom開始」</strong> ボタンで Zoom 起動 + 自動録画開始<br>
+        ・面談後: <strong style="color:#1f2a3f;">「完了 (台帳へ)」</strong> ボタンで顧客台帳に反映
+        ${archivedCount > 0 ? `<br><br><a href="#" id="fp-show-archived" style="color:#1e3a5f;font-weight:700;">完了済み ${archivedCount}件 を見る →</a>` : ''}
+      </div>`;
       if (archivedCount > 0) {
         document.getElementById('fp-show-archived').addEventListener('click', (e) => { e.preventDefault(); showArchivedBookings(allBookings.filter(b => archived.has(b.ts))); });
       }
