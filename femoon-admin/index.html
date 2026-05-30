@@ -2136,21 +2136,54 @@ function openCustDetail(idx){
     <div style="color:var(--ink2);font-size:11.5px;margin-top:3px">初回来店から ${totalDays}日 / 計${c.visits}回</div>
   </div>`;
 
-  // 顧客カルテ (体調・施術メモ・次回提案などをオーナー入力)
-  const karteKey = 'femoon-karte-' + (c.tel||'');
-  const karte = localStorage.getItem(karteKey) || '';
+  // 顧客カルテ (日付付き履歴形式) — 旧シングル文字列形式から自動マイグレ
+  const tel = c.tel || '';
+  const entries = loadKarteEntries(tel);
+  const todayKey = dayKey(new Date());
+  let entriesHtml = '';
+  if(entries.length === 0){
+    entriesHtml = '<div style="color:var(--ink2);font-size:11.5px;text-align:center;padding:14px;background:#fff;border-radius:4px">過去のカルテはまだありません</div>';
+  } else {
+    entries.forEach((e, ei)=>{
+      const safe = (e.body||'').replace(/</g,'&lt;');
+      entriesHtml += `
+        <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <strong style="font-family:'Cormorant Garamond',serif;font-size:13px;color:var(--rose-deep);letter-spacing:.04em">${e.date || '日付不明'}</strong>
+            <div style="display:flex;gap:6px">
+              <button class="btn alt sm" style="font-size:10px;padding:2px 8px" onclick="editKarteEntry('${tel}', ${ei})">編集</button>
+              <button class="btn alt sm" style="font-size:10px;padding:2px 8px;color:var(--warn)" onclick="deleteKarteEntry('${tel}', ${ei})">削除</button>
+            </div>
+          </div>
+          <div style="font-size:12.5px;line-height:1.7;white-space:pre-wrap;color:var(--ink)">${safe}</div>
+        </div>`;
+    });
+  }
   html += `<div style="margin-bottom:18px;background:linear-gradient(135deg,#fffaf6,#fff);border:1px solid var(--line);border-radius:8px;padding:14px 16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <strong style="font-family:'Noto Serif JP',serif;font-size:13px;color:var(--rose-deep)">📋 カルテ・施術メモ</strong>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <strong style="font-family:'Noto Serif JP',serif;font-size:13px;color:var(--rose-deep)">📋 カルテ・施術メモ (${entries.length}件)</strong>
       <span id="karte-saved" style="font-size:10px;color:var(--green);opacity:0">✓ 保存済</span>
     </div>
-    <textarea id="karte-text" rows="5" placeholder="例)&#10;・体調: 腰痛強い、生理2日目&#10;・施術: フェムケア+肩リリース追加&#10;・次回提案: 1ヶ月後、骨盤底筋強化&#10;・特記: 妊娠希望、冷え強め&#10;・好み: 強めの圧、無香料希望" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:4px;font-size:12.5px;font-family:inherit;background:#fff;resize:vertical;line-height:1.7" onblur="saveKarte('${karteKey}',this.value)">${karte}</textarea>
-    <p style="font-size:10.5px;color:var(--ink2);margin:6px 0 0;line-height:1.6">💾 入力後タップを離せば自動保存。次回来店時に「📋カルテ」開いて見直し。</p>
+    <!-- 新規追加フォーム -->
+    <div style="background:#fff;border:1.5px solid var(--rose-deep);border-radius:6px;padding:10px 12px;margin-bottom:14px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+        <label style="font-size:11px;color:var(--ink2)">来店日</label>
+        <input type="date" id="karte-new-date" value="${todayKey}" style="padding:4px 8px;border:1px solid var(--line);border-radius:4px;font-size:12px">
+        <span style="font-size:10.5px;color:var(--ink2)">の施術メモ</span>
+      </div>
+      <textarea id="karte-new-body" rows="4" placeholder="例)&#10;・体調: 腰痛強い、生理2日目&#10;・施術: フェムケア+肩リリース追加&#10;・次回提案: 1ヶ月後、骨盤底筋強化&#10;・好み: 強めの圧、無香料希望" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:4px;font-size:12.5px;font-family:inherit;background:#fff;resize:vertical;line-height:1.7"></textarea>
+      <div style="margin-top:8px;text-align:right">
+        <button class="btn green sm" onclick="addKarteEntry('${tel}')">+ カルテに追加</button>
+      </div>
+    </div>
+    <!-- 過去履歴 -->
+    <div style="font-size:11px;color:var(--ink2);margin-bottom:6px;letter-spacing:.05em">過去の記録 (新しい順)</div>
+    <div id="karte-list">${entriesHtml}</div>
   </div>`;
 
   // 来店履歴
   html += '<h4 style="font-family:\'Noto Serif JP\',serif;color:var(--ink);font-size:13px;margin:0 0 8px;font-weight:500">来店履歴</h4>';
-  html += '<table class="rpt-tbl"><thead><tr><th>日付</th><th>時間</th><th>コース</th><th>料金</th><th>間隔</th><th>状態</th></tr></thead><tbody>';
+  html += '<table class="rpt-tbl"><thead><tr><th>日付</th><th>時間</th><th>コース</th><th>料金</th><th>間隔</th><th>状態</th><th>カルテ</th></tr></thead><tbody>';
   let prevDate = null;
   c.history.forEach(h=>{
     let span = '';
@@ -2159,7 +2192,9 @@ function openCustDetail(idx){
     }
     prevDate = h.date;
     const dStr = h.date ? `${h.date.getFullYear()}/${h.date.getMonth()+1}/${h.date.getDate()}` : '-';
-    html += `<tr><td>${dStr}</td><td>${h.slot||'-'}</td><td>${h.course||'-'}</td><td class="price">¥${h.price.toLocaleString()}</td><td>${span}</td><td><span class="tag ${h.status}">${h.status}</span></td></tr>`;
+    const dKey = h.date ? dayKey(h.date) : '';
+    const karteLink = dKey ? `<a href="javascript:void(0)" onclick="focusKarteEntryFor('${tel}','${dKey}')" style="color:var(--rose-deep);font-size:11px;text-decoration:underline">+ 書く</a>` : '-';
+    html += `<tr><td>${dStr}</td><td>${h.slot||'-'}</td><td>${h.course||'-'}</td><td class="price">¥${h.price.toLocaleString()}</td><td>${span}</td><td><span class="tag ${h.status}">${h.status}</span></td><td>${karteLink}</td></tr>`;
   });
   html += '</tbody></table>';
 
@@ -2198,11 +2233,89 @@ function openKarteByTel(tel){
   openCustDetail(idx);
 }
 function saveKarte(key, value){
+  // 旧シングル文字列形式のフォールバック (使わない)
   localStorage.setItem(key, value);
+}
+
+/* === カルテ (日付付き履歴形式) === */
+function karteEntriesKey(tel){ return 'femoon-karte-entries-' + (tel||''); }
+function legacyKarteKey(tel){ return 'femoon-karte-' + (tel||''); }
+
+function loadKarteEntries(tel){
+  if(!tel) return [];
+  const raw = localStorage.getItem(karteEntriesKey(tel));
+  if(raw){
+    try{
+      const arr = JSON.parse(raw);
+      return arr.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    }catch(e){}
+  }
+  // 旧シングル文字列カルテをマイグレ
+  const legacy = localStorage.getItem(legacyKarteKey(tel));
+  if(legacy && legacy.trim()){
+    const entry = {date:'(旧データ・日付不明)', body: legacy, updated: Date.now()};
+    saveKarteEntries(tel, [entry]);
+    return [entry];
+  }
+  return [];
+}
+
+function saveKarteEntries(tel, entries){
+  localStorage.setItem(karteEntriesKey(tel), JSON.stringify(entries));
+}
+
+function showKarteSavedTag(){
   const tag = document.getElementById('karte-saved');
-  if(tag){
-    tag.style.opacity = '1';
-    setTimeout(()=>{tag.style.opacity='0'}, 2000);
+  if(tag){ tag.style.opacity='1'; setTimeout(()=>{tag.style.opacity='0'}, 2000); }
+}
+
+function addKarteEntry(tel){
+  const date = document.getElementById('karte-new-date').value || dayKey(new Date());
+  const body = document.getElementById('karte-new-body').value.trim();
+  if(!body){ alert('施術メモを入力してください'); return; }
+  const entries = loadKarteEntries(tel);
+  entries.unshift({date, body, updated: Date.now()});
+  saveKarteEntries(tel, entries);
+  showKarteSavedTag();
+  reRenderCustDetail(tel);
+}
+
+function editKarteEntry(tel, idx){
+  const entries = loadKarteEntries(tel);
+  if(!entries[idx]) return;
+  const cur = entries[idx];
+  const newBody = prompt(`【${cur.date}】カルテ編集`, cur.body);
+  if(newBody === null) return;
+  entries[idx].body = newBody;
+  entries[idx].updated = Date.now();
+  saveKarteEntries(tel, entries);
+  showKarteSavedTag();
+  reRenderCustDetail(tel);
+}
+
+function deleteKarteEntry(tel, idx){
+  const entries = loadKarteEntries(tel);
+  if(!entries[idx]) return;
+  if(!confirm(`【${entries[idx].date}】のカルテを削除しますか？`)) return;
+  entries.splice(idx, 1);
+  saveKarteEntries(tel, entries);
+  reRenderCustDetail(tel);
+}
+
+function reRenderCustDetail(tel){
+  const cleanTel = String(tel||'').replace(/[-\s]/g,'');
+  const idx = (window._CUST_ARR||[]).findIndex(c=>String(c.tel||'').replace(/[-\s]/g,'')===cleanTel);
+  if(idx >= 0) openCustDetail(idx);
+}
+
+// 来店履歴行の「+ 書く」リンク用: その日付をカルテ新規入力欄にセット+スクロール
+function focusKarteEntryFor(tel, dateKey){
+  const dateInput = document.getElementById('karte-new-date');
+  const bodyInput = document.getElementById('karte-new-body');
+  if(dateInput) dateInput.value = dateKey;
+  if(bodyInput){
+    bodyInput.focus();
+    bodyInput.scrollIntoView({behavior:'smooth', block:'center'});
   }
 }
 async function quickLineFromDetail(c){
