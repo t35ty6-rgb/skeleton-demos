@@ -95,6 +95,11 @@
   .day-grid .dcell.selecting{background:#dff5e6 !important;box-shadow:inset 0 0 0 2px #06c755}
   .week-grid .wcell.selecting::after,
   .day-grid .dcell.selecting::after{content:"" !important}
+  /* iPhone Safari でドラッグ中にページがスクロールするのを防ぐ */
+  body.dragging-range{overflow:hidden;touch-action:none}
+  body.dragging-range .week-grid,
+  body.dragging-range .day-grid{touch-action:none}
+  body.dragging-range *{user-select:none;-webkit-user-select:none}
   .week-grid .wcell.closed,
   .week-grid .wcell.shop-closed{background:#f0e6e0;cursor:default}
   .week-grid .wcell.closed::after,
@@ -1240,6 +1245,7 @@ function renderSide(highlightId){
         </select>
         <button class="btn green sm" onclick='openLineModal(${JSON.stringify(r).replace(/'/g,"&apos;")})'>📩 LINE</button>
         <a class="btn alt sm" href="tel:${String(r['電話']||'').replace(/-/g,'')}" style="text-decoration:none">📞 発信</a>
+        <button class="btn alt sm" onclick='openKarteByTel(${JSON.stringify(String(r['電話']||''))})' style="background:#fffaf6;border-color:var(--rose-deep);color:var(--rose-deep)">📋 カルテ</button>
         <button class="btn alt sm" onclick='generateReceipt(${JSON.stringify(r).replace(/'/g,"&apos;")})'>🧾 領収書</button>
         <button class="btn alt sm" onclick='sendReceiptByEmail(${JSON.stringify(r).replace(/'/g,"&apos;")})'>✉️ 領収メール</button>
       </div>
@@ -1271,8 +1277,9 @@ async function updateStatus(id, status){
 }
 
 /* ========== ドラッグ範囲選択 (週/日ビュー) ========== */
-// 連続したスロットセルをドラッグ選択 → 予約 or 休み設定
-let RANGE_SEL = null; // {date, startIdx, endIdx, cellClass}
+// iPhone Safari でも確実に動くよう、pointerenter ではなく document.pointermove + elementFromPoint 方式
+let RANGE_SEL = null; // {date, startIdx, endIdx, cellClass, started, startX, startY}
+const DRAG_THRESHOLD = 8; // px - これ以上動いたら「ドラッグ開始」扱い (タップ誤反応防止)
 
 function rangeCellSelector(cellClass){ return cellClass === '.wcell' ? '.week-grid .wcell' : '.day-grid .dcell'; }
 
@@ -1296,8 +1303,11 @@ function applyRangeHighlight(){
 
 function attachRangeDrag(container, cellClass){
   if(!container) return;
+  // CSS でセルに touch-action: none を付与 (iPhone でドラッグ中スクロールを止める)
   container.querySelectorAll(cellClass).forEach(cell=>{
-    if(cell.classList.contains('has-ev') || cell.classList.contains('shop-closed') || cell.classList.contains('closed')) return;
+    if(cell.classList.contains('shop-closed') || cell.classList.contains('closed')) return;
+    if(cell.classList.contains('has-ev')) return; // 予約済みセルは選択不可
+    cell.style.touchAction = 'none';
     cell.addEventListener('pointerdown', e=>{
       if(e.button !== undefined && e.button !== 0) return;
       const slot = cell.dataset.slot;
@@ -1305,41 +1315,68 @@ function attachRangeDrag(container, cellClass){
       if(!slot || !date) return;
       const idx = SLOTS_ALL.indexOf(slot);
       if(idx < 0) return;
-      RANGE_SEL = {date, startIdx: idx, endIdx: idx, cellClass};
-      applyRangeHighlight();
-      try{ cell.setPointerCapture(e.pointerId); }catch(_){}
-    });
-    cell.addEventListener('pointerenter', e=>{
-      if(!RANGE_SEL) return;
-      if(cell.dataset.date !== RANGE_SEL.date) return;
-      if(!cell.dataset.slot) return;
-      if(cell.classList.contains('has-ev') || cell.classList.contains('shop-closed') || cell.classList.contains('closed')) return;
-      const idx = SLOTS_ALL.indexOf(cell.dataset.slot);
-      if(idx >= 0){
-        RANGE_SEL.endIdx = idx;
-        applyRangeHighlight();
-      }
+      RANGE_SEL = {date, startIdx: idx, endIdx: idx, cellClass, started:false, startX:e.clientX, startY:e.clientY};
+      // ハイライトはドラッグ判定後 (8px超え) に始める。タップは普通のclickに任せる
     });
   });
 }
 
-// document 全体で pointerup を listen → ドラッグ完了処理
+// document 全体で pointermove → elementFromPoint で実セル特定（iPhone でも確実）
+document.addEventListener('pointermove', e=>{
+  if(!RANGE_SEL) return;
+  // 移動距離が閾値超えるまでは「ただのタップ」として扱う (誤動作防止)
+  if(!RANGE_SEL.started){
+    const dx = Math.abs(e.clientX - RANGE_SEL.startX);
+    const dy = Math.abs(e.clientY - RANGE_SEL.startY);
+    if(dx < DRAG_THRESHOLD && dy < DRAG_THRESHOLD) return;
+    RANGE_SEL.started = true;
+    document.body.classList.add('dragging-range');
+    applyRangeHighlight(); // 開始セル ハイライト
+  }
+  // 現在ポインタ位置の cell を取得
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  if(!el) return;
+  const cell = el.closest(RANGE_SEL.cellClass === '.wcell' ? '.wcell' : '.dcell');
+  if(!cell) return;
+  if(cell.dataset.date !== RANGE_SEL.date) return;
+  if(!cell.dataset.slot) return;
+  if(cell.classList.contains('has-ev') || cell.classList.contains('shop-closed') || cell.classList.contains('closed')) return;
+  const idx = SLOTS_ALL.indexOf(cell.dataset.slot);
+  if(idx < 0) return;
+  if(idx === RANGE_SEL.endIdx) return; // 変化なし
+  RANGE_SEL.endIdx = idx;
+  applyRangeHighlight();
+});
+
+// document 全体で pointerup → ドラッグ完了
 document.addEventListener('pointerup', e=>{
   if(!RANGE_SEL) return;
+  const wasStarted = RANGE_SEL.started;
   const lo = Math.min(RANGE_SEL.startIdx, RANGE_SEL.endIdx);
   const hi = Math.max(RANGE_SEL.startIdx, RANGE_SEL.endIdx);
   const slots = SLOTS_ALL.slice(lo, hi+1);
-  // 単一セルクリックで予約済みやclosed セルは普通の openAddModal 動作維持済 (別ハンドラ)
-  // 範囲が1セルだけなら、既存の wcell:not(.has-ev) クリック → openAddModal が動くのでこっちは黙る
-  if(slots.length <= 1){
-    clearRangeHighlight();
+  const dt = RANGE_SEL.date;
+  document.body.classList.remove('dragging-range');
+  // タップのみ (ドラッグ動いてない) → 既存のクリックハンドラに任せる
+  if(!wasStarted){
     RANGE_SEL = null;
     return;
   }
-  // 範囲をモーダルに渡してアクション選択
-  const dt = RANGE_SEL.date;
-  RANGE_SEL = null; // クリック判定干渉を防ぐためここでクリア (highlight は modal閉じるまで残す)
+  // ドラッグでも 1セルだけになった場合 → openAddModal 直行
+  if(slots.length <= 1){
+    clearRangeHighlight();
+    RANGE_SEL = null;
+    openAddModal(dt, slots[0]);
+    return;
+  }
+  // 複数スロット範囲 → アクション選択モーダル
+  RANGE_SEL = null;
   showRangeActionModal(dt, slots);
+});
+document.addEventListener('pointercancel', ()=>{
+  if(RANGE_SEL) clearRangeHighlight();
+  document.body.classList.remove('dragging-range');
+  RANGE_SEL = null;
 });
 
 let RANGE_PENDING = null;
@@ -2138,6 +2175,28 @@ function openCustDetail(idx){
   document.getElementById('cd-content').innerHTML = html;
 }
 function closeCustDetailModal(){document.getElementById('cust-detail-modal').classList.add('hidden')}
+
+// 予約カードの「📋 カルテ」ボタン用: 電話番号から顧客一覧 _CUST_ARR を引いて openCustDetail を呼ぶ
+function openKarteByTel(tel){
+  if(!tel) return alert('電話番号がないお客様はカルテを開けません');
+  const cleanTel = String(tel).replace(/[-\s]/g,'');
+  // _CUST_ARR が未生成なら 顧客集約をトリガ
+  if(!window._CUST_ARR){
+    if(typeof openCustomerModal === 'function'){
+      openCustomerModal();
+      setTimeout(()=>openKarteByTel(tel), 600);
+      return;
+    }
+  }
+  const idx = (window._CUST_ARR||[]).findIndex(c=>{
+    return String(c.tel||'').replace(/[-\s]/g,'') === cleanTel;
+  });
+  if(idx < 0){
+    alert('顧客一覧にこの電話番号が見つかりませんでした: ' + tel);
+    return;
+  }
+  openCustDetail(idx);
+}
 function saveKarte(key, value){
   localStorage.setItem(key, value);
   const tag = document.getElementById('karte-saved');
