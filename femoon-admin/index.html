@@ -101,9 +101,12 @@
   body.dragging-range .day-grid{touch-action:none}
   body.dragging-range *{user-select:none;-webkit-user-select:none}
   .week-grid .wcell.closed,
-  .week-grid .wcell.shop-closed{background:#f0e6e0;cursor:default}
+  .week-grid .wcell.shop-closed{background:#f0e6e0}
+  .week-grid .wcell.closed{cursor:pointer}
+  .week-grid .wcell.shop-closed{cursor:default}
   .week-grid .wcell.closed::after,
   .week-grid .wcell.shop-closed::after{content:"休";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;color:var(--ink3);font-family:"Noto Serif JP",serif}
+  .week-grid .wcell.closed:not(.shop-closed):hover::after{content:"🔓 解除";font-size:9px;color:var(--rose-deep);font-family:inherit;font-weight:600}
   .week-grid .wcell.has-ev{padding:0}
   .week-grid .wev{position:absolute;left:1px;right:1px;background:linear-gradient(135deg,#c89d96,#a4756d);color:#fff;border-radius:2px;padding:2px 5px;font-size:10px;line-height:1.3;cursor:pointer;overflow:hidden;z-index:1}
   .week-grid .wev .t{font-family:"Cormorant Garamond",serif;font-weight:600;display:block;font-size:9.5px;letter-spacing:.04em;opacity:.95}
@@ -116,9 +119,12 @@
   .day-grid .dcell:hover{background:#fffaf6}
   .day-grid .dcell:not(.has-ev):not(.closed):not(.shop-closed):hover::after{content:"+ 予約追加";position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--rose-deep);font-size:11px;opacity:.5;pointer-events:none}
   .day-grid .dcell.closed,
-  .day-grid .dcell.shop-closed{background:#f0e6e0;cursor:default}
+  .day-grid .dcell.shop-closed{background:#f0e6e0}
+  .day-grid .dcell.closed{cursor:pointer}
+  .day-grid .dcell.shop-closed{cursor:default}
   .day-grid .dcell.closed::after,
   .day-grid .dcell.shop-closed::after{content:"休業";position:absolute;top:50%;left:14px;transform:translateY(-50%);font-size:11px;color:var(--ink3);font-family:"Noto Serif JP",serif}
+  .day-grid .dcell.closed:not(.shop-closed):hover::after{content:"🔓 タップで解除して予約OK";color:var(--rose-deep);font-weight:600;font-size:11px}
   .day-grid .dev{background:linear-gradient(135deg,#c89d96,#a4756d);color:#fff;border-radius:3px;padding:5px 9px;margin:2px 0;cursor:pointer;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
   .day-grid .dev .l{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .day-grid .dev .l .t{font-family:"Cormorant Garamond",serif;font-weight:600;letter-spacing:.04em;margin-right:6px}
@@ -1141,9 +1147,17 @@ function renderWeek(){
     cell.style.cursor = 'pointer';
     cell.addEventListener('click',e=>{
       e.stopPropagation();
-      // ドラッグで範囲選択した直後のpointerupは別ハンドラで処理してるので、ここはクリック単発のみ
       if(RANGE_SEL) return;
       openAddModal(cell.dataset.date, cell.dataset.slot);
+    });
+  });
+  // 休みセル(closed) クリック → 解除確認
+  grid.querySelectorAll('.wcell.closed:not(.shop-closed)').forEach(cell=>{
+    cell.style.cursor = 'pointer';
+    cell.style.touchAction = 'manipulation';
+    cell.addEventListener('click', e=>{
+      e.stopPropagation();
+      reopenSlot(cell.dataset.date, cell.dataset.slot);
     });
   });
   attachRangeDrag(grid, '.wcell');
@@ -1195,6 +1209,15 @@ function renderDay(){
       if(e.target.closest('.dev')) return;
       if(RANGE_SEL) return;
       openAddModal(cell.dataset.date, cell.dataset.slot);
+    });
+  });
+  // 休みセル(closed)クリック → 解除確認
+  grid.querySelectorAll('.dcell.closed:not(.shop-closed)').forEach(cell=>{
+    cell.style.cursor = 'pointer';
+    cell.style.touchAction = 'manipulation';
+    cell.addEventListener('click',e=>{
+      e.stopPropagation();
+      reopenSlot(cell.dataset.date, cell.dataset.slot);
     });
   });
   attachRangeDrag(grid, '.dcell');
@@ -1409,6 +1432,26 @@ function rangeActionAddBooking(){
   const {date, slots} = RANGE_PENDING;
   closeRangeActionModal();
   openAddModal(date, slots[0], slots.length * 30);
+}
+
+// 休みスロットを再開放 (1セル)
+async function reopenSlot(date, slot){
+  if(!date || !slot) return;
+  if(!confirm(`${date} ${slot} の休み設定を解除して、予約を受け付けられるようにしますか？`)) return;
+  showToast('🔓 休み解除中...');
+  try{
+    const url = `${GAS_URL}?action=closed_slot_remove&key=${encodeURIComponent(date+'_'+slot)}&token=${encodeURIComponent(TOKEN)}`;
+    const r = await fetch(url);
+    const j = await r.json();
+    if(j.ok){
+      showToast(`✅ ${date} ${slot} を解除しました`);
+      await fetchData();
+    } else {
+      alert('解除失敗: ' + (j.error||'unknown'));
+    }
+  }catch(e){
+    alert('通信エラー: ' + e.message);
+  }
 }
 
 async function rangeActionMarkClosed(){
@@ -2136,67 +2179,97 @@ function openCustDetail(idx){
     <div style="color:var(--ink2);font-size:11.5px;margin-top:3px">初回来店から ${totalDays}日 / 計${c.visits}回</div>
   </div>`;
 
-  // 顧客カルテ (日付付き履歴形式) — 旧シングル文字列形式から自動マイグレ
+  // 顧客カルテ + 来店履歴 統合表示
   const tel = c.tel || '';
-  const entries = loadKarteEntries(tel);
   const todayKey = dayKey(new Date());
-  let entriesHtml = '';
-  if(entries.length === 0){
-    entriesHtml = '<div style="color:var(--ink2);font-size:11.5px;text-align:center;padding:14px;background:#fff;border-radius:4px">過去のカルテはまだありません</div>';
-  } else {
-    entries.forEach((e, ei)=>{
-      const safe = (e.body||'').replace(/</g,'&lt;');
-      entriesHtml += `
-        <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:8px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <strong style="font-family:'Cormorant Garamond',serif;font-size:13px;color:var(--rose-deep);letter-spacing:.04em">${e.date || '日付不明'}</strong>
-            <div style="display:flex;gap:6px">
-              <button class="btn alt sm" style="font-size:10px;padding:2px 8px" onclick="editKarteEntry('${tel}', ${ei})">編集</button>
-              <button class="btn alt sm" style="font-size:10px;padding:2px 8px;color:var(--warn)" onclick="deleteKarteEntry('${tel}', ${ei})">削除</button>
-            </div>
+  const karteEntries = loadKarteEntries(tel);
+  // 日付ベースに index 化（YYYY-MM-DD → entry idx)
+  const karteByDate = {};
+  karteEntries.forEach((e, idx)=>{ if(e.date) karteByDate[e.date] = {entry:e, idx}; });
+  // 来店履歴 (新しい順)
+  const visits = (c.history||[]).slice().sort((a,b)=>(b.date?.getTime()||0)-(a.date?.getTime()||0));
+  const WD = ['日','月','火','水','木','金','土'];
+
+  let timeline = '';
+  // 1) 来店記録 (予約データ) + その日のカルテ
+  visits.forEach(v=>{
+    const k = v.date ? dayKey(v.date) : null;
+    const matched = k ? karteByDate[k] : null;
+    if(matched) delete karteByDate[k]; // この日付は使った
+    const dStr = v.date ? `${v.date.getMonth()+1}/${v.date.getDate()}(${WD[v.date.getDay()]})` : '日付不明';
+    const yr = v.date ? v.date.getFullYear() : '';
+    const statusTag = v.status ? `<span class="tag ${v.status}" style="font-size:10px">${v.status}</span>` : '';
+    const karteBody = matched ? (matched.entry.body||'').replace(/</g,'&lt;') : '';
+    const karteActions = matched
+      ? `<button class="btn alt sm" style="font-size:10px;padding:2px 8px" onclick="editKarteEntry('${tel}', ${matched.idx})">編集</button>
+         <button class="btn alt sm" style="font-size:10px;padding:2px 8px;color:var(--warn)" onclick="deleteKarteEntry('${tel}', ${matched.idx})">削除</button>`
+      : `<button class="btn green sm" style="font-size:10px;padding:3px 10px" onclick="focusKarteEntryFor('${tel}','${k||''}')">+ メモを書く</button>`;
+    timeline += `
+      <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px">
+          <div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:11px;color:var(--ink2);letter-spacing:.1em">${yr}</div>
+            <strong style="font-family:'Noto Serif JP',serif;font-size:15px;color:var(--rose-deep)">${dStr} ${v.slot||''}</strong>
+            ${statusTag}
           </div>
-          <div style="font-size:12.5px;line-height:1.7;white-space:pre-wrap;color:var(--ink)">${safe}</div>
-        </div>`;
-    });
-  }
+          <div style="text-align:right;font-size:11px;color:var(--ink2)">¥${(v.price||0).toLocaleString()}</div>
+        </div>
+        <div style="font-size:12px;color:var(--ink);margin-bottom:8px;padding:6px 10px;background:var(--rose-soft);border-radius:4px">
+          ▸ ${v.course || 'コース未指定'}
+        </div>
+        <div style="border-top:1px dashed var(--line);padding-top:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:11px;color:var(--ink2);letter-spacing:.05em">📋 この日のメモ</span>
+            <div style="display:flex;gap:6px">${karteActions}</div>
+          </div>
+          ${matched
+            ? `<div style="font-size:12.5px;line-height:1.7;white-space:pre-wrap;color:var(--ink);background:#fffef7;padding:8px 10px;border-radius:4px;border-left:2px solid var(--gold)">${karteBody}</div>`
+            : `<div style="font-size:11.5px;color:var(--ink3);font-style:italic">メモなし</div>`
+          }
+        </div>
+      </div>`;
+  });
+
+  // 2) 来店記録に紐づかないカルテ (旧データ・予約とdate不一致など)
+  const orphanKarteHtml = Object.values(karteByDate).map(({entry, idx})=>{
+    const safe = (entry.body||'').replace(/</g,'&lt;');
+    return `
+      <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <strong style="font-family:'Cormorant Garamond',serif;font-size:13px;color:var(--rose-deep)">${entry.date || '日付不明'}</strong>
+          <div style="display:flex;gap:6px">
+            <button class="btn alt sm" style="font-size:10px;padding:2px 8px" onclick="editKarteEntry('${tel}', ${idx})">編集</button>
+            <button class="btn alt sm" style="font-size:10px;padding:2px 8px;color:var(--warn)" onclick="deleteKarteEntry('${tel}', ${idx})">削除</button>
+          </div>
+        </div>
+        <div style="font-size:12.5px;line-height:1.7;white-space:pre-wrap;color:var(--ink)">${safe}</div>
+      </div>`;
+  }).join('');
+
   html += `<div style="margin-bottom:18px;background:linear-gradient(135deg,#fffaf6,#fff);border:1px solid var(--line);border-radius:8px;padding:14px 16px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <strong style="font-family:'Noto Serif JP',serif;font-size:13px;color:var(--rose-deep)">📋 カルテ・施術メモ (${entries.length}件)</strong>
+      <strong style="font-family:'Noto Serif JP',serif;font-size:13px;color:var(--rose-deep)">📋 施術履歴・カルテ (${visits.length}回来店 / カルテ${karteEntries.length}件)</strong>
       <span id="karte-saved" style="font-size:10px;color:var(--green);opacity:0">✓ 保存済</span>
     </div>
     <!-- 新規追加フォーム -->
     <div style="background:#fff;border:1.5px solid var(--rose-deep);border-radius:6px;padding:10px 12px;margin-bottom:14px">
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-        <label style="font-size:11px;color:var(--ink2)">来店日</label>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+        <label style="font-size:11px;color:var(--ink2)">日付</label>
         <input type="date" id="karte-new-date" value="${todayKey}" style="padding:4px 8px;border:1px solid var(--line);border-radius:4px;font-size:12px">
-        <span style="font-size:10.5px;color:var(--ink2)">の施術メモ</span>
+        <span style="font-size:10.5px;color:var(--ink2)">の施術メモを追加</span>
       </div>
       <textarea id="karte-new-body" rows="4" placeholder="例)&#10;・体調: 腰痛強い、生理2日目&#10;・施術: フェムケア+肩リリース追加&#10;・次回提案: 1ヶ月後、骨盤底筋強化&#10;・好み: 強めの圧、無香料希望" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:4px;font-size:12.5px;font-family:inherit;background:#fff;resize:vertical;line-height:1.7"></textarea>
       <div style="margin-top:8px;text-align:right">
         <button class="btn green sm" onclick="addKarteEntry('${tel}')">+ カルテに追加</button>
       </div>
     </div>
-    <!-- 過去履歴 -->
-    <div style="font-size:11px;color:var(--ink2);margin-bottom:6px;letter-spacing:.05em">過去の記録 (新しい順)</div>
-    <div id="karte-list">${entriesHtml}</div>
+    <!-- タイムライン (新しい順) -->
+    <div style="font-size:11px;color:var(--ink2);margin-bottom:8px;letter-spacing:.05em">来店記録 + メモ (新しい順)</div>
+    ${visits.length > 0 ? timeline : '<div style="color:var(--ink2);font-size:11.5px;text-align:center;padding:14px;background:#fff;border-radius:4px">来店記録はまだありません</div>'}
+    ${orphanKarteHtml ? `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)"><div style="font-size:11px;color:var(--ink2);margin-bottom:6px">来店記録に紐づかないメモ</div>${orphanKarteHtml}</div>` : ''}
   </div>`;
 
-  // 来店履歴
-  html += '<h4 style="font-family:\'Noto Serif JP\',serif;color:var(--ink);font-size:13px;margin:0 0 8px;font-weight:500">来店履歴</h4>';
-  html += '<table class="rpt-tbl"><thead><tr><th>日付</th><th>時間</th><th>コース</th><th>料金</th><th>間隔</th><th>状態</th><th>カルテ</th></tr></thead><tbody>';
-  let prevDate = null;
-  c.history.forEach(h=>{
-    let span = '';
-    if(prevDate && h.date){
-      span = Math.floor((h.date-prevDate)/ms) + '日';
-    }
-    prevDate = h.date;
-    const dStr = h.date ? `${h.date.getFullYear()}/${h.date.getMonth()+1}/${h.date.getDate()}` : '-';
-    const dKey = h.date ? dayKey(h.date) : '';
-    const karteLink = dKey ? `<a href="javascript:void(0)" onclick="focusKarteEntryFor('${tel}','${dKey}')" style="color:var(--rose-deep);font-size:11px;text-decoration:underline">+ 書く</a>` : '-';
-    html += `<tr><td>${dStr}</td><td>${h.slot||'-'}</td><td>${h.course||'-'}</td><td class="price">¥${h.price.toLocaleString()}</td><td>${span}</td><td><span class="tag ${h.status}">${h.status}</span></td><td>${karteLink}</td></tr>`;
-  });
-  html += '</tbody></table>';
+  // (旧「来店履歴」テーブルは上のカルテ・タイムラインに統合済みのため削除)
 
   // コース内訳
   if(Object.keys(c.courses).length>0){
