@@ -318,6 +318,28 @@
     const recordingNow = bookings.filter(b => b.recordingStatus === 'recording').length;
     const totalNewLeads = surveys.length;
 
+    // Zoom打ち合わせ待ち: 確定済みで面談日がまだ来てない / 来日でまだ録画していない
+    const archived = new Set(JSON.parse(localStorage.getItem('fp-booking-archived') || '[]'));
+    const now = new Date();
+    const upcomingZoom = bookings.filter(b => {
+      if (archived.has(b.ts)) return false;
+      if (b.recordingStatus === 'saved' || b.recordingStatus === 'recording') return false;
+      const meetDate = new Date(b.date);
+      if (isNaN(meetDate.getTime())) return false;
+      // 当日含めて未来
+      const diffDays = Math.floor((meetDate - now) / 86400000);
+      return diffDays >= 0;
+    });
+    const upcomingZoomCount = upcomingZoom.length;
+    // 最も近い面談を計算 (今日 / 明日 / N日後 表示用)
+    const nearestZoom = upcomingZoom.sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+    let nearestLabel = '';
+    if (nearestZoom) {
+      const md = new Date(nearestZoom.date);
+      const dd = Math.floor((md - new Date(now.toDateString())) / 86400000);
+      nearestLabel = dd === 0 ? '本日' : dd === 1 ? '明日' : `${dd}日後`;
+    }
+
     // フォローアップ必要: Zoomまで到達しなかった人を抽出
     // - 友だち追加したがアンケート未回答 (>3日)
     // - アンケート回答したが候補日空欄 (>5日)
@@ -355,70 +377,101 @@
     });
     aftercare.sort((a, b) => b.days - a.days);
 
-    // 最優先のアクションを判定 (ヒーローバナー用)
-    const hero = pendingConfirm > 0 ? { icon: '📅', title: `${pendingConfirm}名 のお客様が候補日確定を待っています`, sub: '下にスクロール → 第1〜第3希望から1つタップで確定', target: '#section-confirm', accent: '#d9264c' }
-      : recordingNow > 0 ? { icon: '🔴', title: `${recordingNow}件 録画中の面談があります`, sub: '面談が終わったら右上の「■停止」を押してください', target: '#section-recording', accent: '#06c755' }
-      : aftercare.length > 0 ? { icon: '📞', title: `${aftercare.length}名 がZoomまで到達してません`, sub: '下にスクロール → LINEで追撃メッセージを送りましょう', target: '#section-aftercare', accent: '#f59e0b' }
+    // 最優先のアクションを判定 (ヒーロー用)
+    const hero = pendingConfirm > 0 ? { title: 'お客様の候補日を確定する', count: pendingConfirm, unit: '名', sub: '第1〜第3希望から1つタップで予約確定 / Zoom URL・カレンダー登録・LINE通知が同時に走ります', target: '#section-confirm', kind: 'urgent' }
+      : recordingNow > 0 ? { title: '録画中の面談', count: recordingNow, unit: '件', sub: '面談終了後、右上の「停止」を押してください / Drive に自動アップロードされます', target: '#section-recording', kind: 'active' }
+      : upcomingZoomCount > 0 ? { title: `${nearestLabel} に Zoom 面談があります`, count: upcomingZoomCount, unit: '件', sub: '直近予約: ' + (nearestZoom ? (nearestZoom.name || '匿名') + '様 / ' + String(nearestZoom.date).slice(5, 10).replace('-', '/') + ' ' + String(nearestZoom.time || '').slice(0,5) : ''), target: '#section-recording', kind: 'upcoming' }
+      : aftercare.length > 0 ? { title: 'Zoom まで到達していないお客様', count: aftercare.length, unit: '名', sub: 'アンケート途中・候補日提示後で止まっている方に追撃メッセージを送りましょう', target: '#section-aftercare', kind: 'followup' }
       : null;
 
+    // 配色: 上品な navy / gold / cream トーン
+    const accents = {
+      urgent:   { fg: '#7a1530', bg: 'linear-gradient(135deg,#fdf2f4,#fafafa)', border: '#7a1530', dot: '#a23a55' },
+      active:   { fg: '#365314', bg: 'linear-gradient(135deg,#f0f7e8,#fafafa)', border: '#4d7c0f', dot: '#65a30d' },
+      upcoming: { fg: '#1e3a5f', bg: 'linear-gradient(135deg,#f0f4fa,#fafafa)', border: '#1e3a5f', dot: '#3b5c8f' },
+      followup: { fg: '#7c4a14', bg: 'linear-gradient(135deg,#fcf7eb,#fafafa)', border: '#9a5a18', dot: '#b8893d' },
+      ok:       { fg: '#5e4d1a', bg: 'linear-gradient(135deg,#fdfbf4,#fafafa)', border: '#c19a3a', dot: '#c19a3a' },
+    };
+    const heroColor = hero ? accents[hero.kind] : accents.ok;
+
     v.innerHTML = `
-      <h1 style="font-family:'Noto Serif JP',serif;font-size:26px;letter-spacing:0.02em;margin:0 0 4px;">🆕 新規相談</h1>
-      <p style="color:var(--muted);font-size:13.5px;margin:0 0 18px;">お客様の <strong style="color:var(--accent);">LINE → アンケート → 候補日 → Zoom面談 → 完了</strong> までの進行状況</p>
-      ${isDemo ? '<div style="background:#fff8e1;border:1px solid #f0d36b;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:12.5px;color:#8a6f1e;">💡 表示中の候補日待ち4件はサンプル(デモ)。本番では実際のLINEアンケート回答が並びます。</div>' : ''}
+      <div style="margin:0 0 28px;padding:0 0 16px;border-bottom:1px solid #e8e2d4;">
+        <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:6px;">New Consultation</div>
+        <h1 style="font-family:'Noto Serif JP',serif;font-size:28px;font-weight:700;letter-spacing:0.02em;margin:0 0 6px;color:#1f2a3f;">新規相談</h1>
+        <p style="color:#6b7280;font-size:13px;margin:0;line-height:1.6;">LINE — アンケート — 候補日 — Zoom面談 — 完了 までの進行状況</p>
+      </div>
+
+      ${isDemo ? '<div style="background:#fdfbf4;border:1px solid #e8d9a8;border-radius:6px;padding:11px 16px;margin-bottom:24px;font-size:12px;color:#5e4d1a;font-family:\'Noto Sans JP\',sans-serif;letter-spacing:0.02em;"><strong style="font-weight:700;">Note —</strong> 表示中の候補日待ち4件はサンプルです。本番では実際のLINEアンケート回答が並びます</div>' : ''}
 
       ${hero ? `
-      <a href="${hero.target}" style="text-decoration:none;color:inherit;display:block;background:linear-gradient(135deg,${hero.accent}11,${hero.accent}05);border:2px solid ${hero.accent};border-radius:14px;padding:20px 26px;margin-bottom:20px;display:grid;grid-template-columns:64px 1fr auto;gap:16px;align-items:center;box-shadow:0 8px 24px ${hero.accent}22;">
-        <div style="font-size:42px;text-align:center;">${hero.icon}</div>
+      <a href="${hero.target}" style="text-decoration:none;color:inherit;display:block;background:${heroColor.bg};border:1px solid ${heroColor.border}33;border-left:3px solid ${heroColor.border};border-radius:8px;padding:24px 28px;margin-bottom:32px;display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;box-shadow:0 1px 3px rgba(15,23,42,0.04),0 8px 24px rgba(15,23,42,0.06);transition:transform 0.15s,box-shadow 0.15s;">
         <div>
-          <div style="font-size:11px;font-weight:700;color:${hero.accent};letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">今やること</div>
-          <strong style="font-size:17px;display:block;line-height:1.4;">${hero.title}</strong>
-          <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">${hero.sub}</div>
+          <div style="font-size:10px;font-weight:700;color:${heroColor.fg};letter-spacing:0.2em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+            <span style="width:6px;height:6px;background:${heroColor.dot};border-radius:50%;display:inline-block;"></span>
+            Next Action
+          </div>
+          <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:8px;">
+            <div style="font-size:42px;font-weight:800;font-family:'Inter',sans-serif;color:${heroColor.fg};line-height:1;letter-spacing:-0.02em;">${hero.count}<span style="font-size:14px;color:#6b7280;font-weight:600;margin-left:4px;">${hero.unit}</span></div>
+            <div style="font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:#1f2a3f;line-height:1.35;">${hero.title}</div>
+          </div>
+          <div style="font-size:12.5px;color:#6b7280;line-height:1.6;letter-spacing:0.02em;">${hero.sub}</div>
         </div>
-        <div style="font-size:22px;color:${hero.accent};">→</div>
+        <div style="font-size:18px;color:${heroColor.fg};font-family:'Inter',sans-serif;font-weight:300;">→</div>
       </a>` : `
-      <div style="background:linear-gradient(135deg,#dcfce7,#f0fdf4);border:2px solid #86efac;border-radius:14px;padding:20px 26px;margin-bottom:20px;display:grid;grid-template-columns:64px 1fr;gap:16px;align-items:center;">
-        <div style="font-size:42px;text-align:center;">✨</div>
-        <div>
-          <strong style="font-size:17px;display:block;line-height:1.4;color:#166534;">今は対応待ちなし — 全て順調です</strong>
-          <div style="font-size:12.5px;color:#365314;margin-top:3px;">新しい LINE 流入があれば自動でここに表示されます</div>
+      <div style="background:${accents.ok.bg};border:1px solid ${accents.ok.border}33;border-left:3px solid ${accents.ok.border};border-radius:8px;padding:24px 28px;margin-bottom:32px;display:grid;grid-template-columns:1fr;gap:6px;box-shadow:0 1px 3px rgba(15,23,42,0.04);">
+        <div style="font-size:10px;font-weight:700;color:${accents.ok.fg};letter-spacing:0.2em;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+          <span style="width:6px;height:6px;background:${accents.ok.dot};border-radius:50%;display:inline-block;"></span>
+          Status
         </div>
+        <div style="font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:#1f2a3f;">対応待ちはありません</div>
+        <div style="font-size:12.5px;color:#6b7280;line-height:1.6;">新しい LINE 流入があれば自動でここに表示されます</div>
       </div>`}
 
-      <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px;">📊 FP作業フロー — 各ステップの件数</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:30px;align-items:stretch;">
-        <a href="#section-confirm" style="text-decoration:none;color:inherit;background:#fff;border:1.5px solid ${pendingConfirm > 0 ? '#d9264c' : '#e5e7eb'};border-radius:10px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;${pendingConfirm > 0 ? 'box-shadow:0 4px 12px rgba(217,38,76,0.18);' : ''}">
-          <div style="font-size:24px;line-height:1;">📅</div>
-          <div style="font-size:10.5px;color:#6b7280;font-weight:600;">① 確定待ち</div>
-          <div style="font-size:24px;font-weight:800;font-family:'Inter',sans-serif;color:${pendingConfirm > 0 ? '#d9264c' : '#1f2937'};line-height:1.1;">${pendingConfirm}<span style="font-size:11px;color:var(--muted);font-weight:600;margin-left:2px;">名</span></div>
-        </a>
-        <div style="display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted);">→</div>
-        <a href="#section-recording" style="text-decoration:none;color:inherit;background:#fff;border:1.5px solid ${recordingNow > 0 ? '#06c755' : '#e5e7eb'};border-radius:10px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;${recordingNow > 0 ? 'box-shadow:0 4px 12px rgba(6,199,85,0.18);' : ''}">
-          <div style="font-size:24px;line-height:1;">${recordingNow > 0 ? '🔴' : '💻'}</div>
-          <div style="font-size:10.5px;color:#6b7280;font-weight:600;">② 録画中</div>
-          <div style="font-size:24px;font-weight:800;font-family:'Inter',sans-serif;color:${recordingNow > 0 ? '#06c755' : '#1f2937'};line-height:1.1;">${recordingNow}<span style="font-size:11px;color:var(--muted);font-weight:600;margin-left:2px;">件</span></div>
-        </a>
-        <a href="#section-aftercare" style="text-decoration:none;color:inherit;background:#fff;border:1.5px solid ${aftercare.length > 0 ? '#f59e0b' : '#e5e7eb'};border-radius:10px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;${aftercare.length > 0 ? 'box-shadow:0 4px 12px rgba(245,158,11,0.18);' : ''}">
-          <div style="font-size:24px;line-height:1;">📞</div>
-          <div style="font-size:10.5px;color:#6b7280;font-weight:600;">フォロー</div>
-          <div style="font-size:24px;font-weight:800;font-family:'Inter',sans-serif;color:${aftercare.length > 0 ? '#f59e0b' : '#1f2937'};line-height:1.1;">${aftercare.length}<span style="font-size:11px;color:var(--muted);font-weight:600;margin-left:2px;">名</span></div>
-        </a>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #e8e2d4;">
+        <div>
+          <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">Pipeline</div>
+          <h2 style="font-family:'Noto Serif JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">FP 作業フロー</h2>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:36px;">
+        ${[
+          { label: '候補日確定', value: pendingConfirm, unit: '名', target: '#section-confirm', accent: accents.urgent, active: pendingConfirm > 0, step: '01' },
+          { label: 'Zoom 待ち', value: upcomingZoomCount, unit: '件', target: '#section-recording', accent: accents.upcoming, active: upcomingZoomCount > 0, step: '02' },
+          { label: '録画 / 進行中', value: recordingNow, unit: '件', target: '#section-recording', accent: accents.active, active: recordingNow > 0, step: '03' },
+          { label: 'フォロー対象', value: aftercare.length, unit: '名', target: '#section-aftercare', accent: accents.followup, active: aftercare.length > 0, step: '04' },
+        ].map(c => `
+          <a href="${c.target}" style="text-decoration:none;color:inherit;background:#fff;border:1px solid ${c.active ? c.accent.border + '55' : '#e8e2d4'};${c.active ? `border-top:2px solid ${c.accent.border};` : ''}border-radius:8px;padding:20px 18px;display:flex;flex-direction:column;gap:6px;transition:all 0.15s;${c.active ? `box-shadow:0 1px 3px rgba(15,23,42,0.04),0 6px 20px ${c.accent.border}1f;` : 'box-shadow:0 1px 2px rgba(15,23,42,0.03);'}">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:9.5px;font-weight:700;color:${c.active ? c.accent.fg : '#94a3b8'};letter-spacing:0.18em;font-family:'Inter',sans-serif;">${c.step}</span>
+              ${c.active ? `<span style="width:6px;height:6px;background:${c.accent.dot};border-radius:50%;display:inline-block;"></span>` : ''}
+            </div>
+            <div style="font-size:11.5px;color:#6b7280;font-weight:500;letter-spacing:0.02em;margin-top:2px;">${c.label}</div>
+            <div style="font-size:32px;font-weight:800;font-family:'Inter',sans-serif;color:${c.active ? c.accent.fg : '#1f2a3f'};line-height:1;letter-spacing:-0.02em;margin-top:2px;">${c.value}<span style="font-size:11px;color:#9ca3af;font-weight:600;margin-left:4px;">${c.unit}</span></div>
+          </a>
+        `).join('')}
       </div>
 
       <section class="board-section" id="section-confirm">
-        <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
-          <h2 style="margin:0;">📅 候補日確定 待ち</h2>
-          <button id="fp-toggle-cal" style="font-size:12px;padding:7px 14px;background:#fff;border:1.5px solid var(--gold,#c19a3a);border-radius:7px;cursor:pointer;font-family:inherit;color:#5e4d1a;font-weight:700;">🗓 自分のGoogleカレンダーを並べて表示</button>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #e8e2d4;">
+          <div>
+            <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">Action Required</div>
+            <h2 style="font-family:'Noto Serif JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">候補日確定 待ち ${pendingConfirm > 0 ? `<span style="font-size:11px;background:#7a1530;color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;font-family:'Inter',sans-serif;font-weight:700;letter-spacing:0.04em;">${pendingConfirm} 名</span>` : ''}</h2>
+          </div>
+          <button id="fp-toggle-cal" style="font-size:11.5px;padding:8px 14px;background:#fff;border:1px solid #c19a3a;border-radius:5px;cursor:pointer;font-family:inherit;color:#5e4d1a;font-weight:700;letter-spacing:0.04em;">自分の Google カレンダーを並べて表示</button>
         </div>
-        <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">下のお客様の候補日のうち、ご都合よい1日を選んで「この日で確定 →」を押すだけ。Zoom URL発行・お客様LINE通知・Googleカレンダー登録が同時に動きます。</p>
+        <p style="color:#6b7280;font-size:12.5px;margin:0 0 18px;line-height:1.65;letter-spacing:0.02em;">第1〜第3希望から1つタップで確定 / Zoom URL発行・LINE通知・Googleカレンダー登録が同時に動きます</p>
         <div id="confirm-list"></div>
       </section>
 
-      <section class="board-section" id="section-recording">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
-          <h2 style="margin:0;">💻 面談予約 と 録画・議事録</h2>
-          <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);">
-            並び順:
-            <select id="fp-bookings-sort" style="font-size:12px;padding:5px 8px;border:1px solid #e5e7eb;border-radius:6px;font-family:inherit;background:#fff;">
+      <section class="board-section" id="section-recording" style="margin-top:36px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #e8e2d4;">
+          <div>
+            <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">Upcoming &amp; Active</div>
+            <h2 style="font-family:'Noto Serif JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">Zoom 打ち合わせ ${upcomingZoomCount > 0 ? `<span style="font-size:11px;background:#1e3a5f;color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;font-family:'Inter',sans-serif;font-weight:700;letter-spacing:0.04em;">${upcomingZoomCount} 件 予約あり</span>` : ''}</h2>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:#6b7280;">
+            <span style="letter-spacing:0.05em;">並び順:</span>
+            <select id="fp-bookings-sort" style="font-size:12px;padding:6px 10px;border:1px solid #e8e2d4;border-radius:5px;font-family:inherit;background:#fff;color:#1f2a3f;">
               <option value="date-desc">面談日 — 新しい順</option>
               <option value="date-asc">面談日 — 古い順</option>
               <option value="created-desc">予約日 — 新しい順</option>
@@ -426,13 +479,16 @@
             </select>
           </div>
         </div>
-        <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">確定済みの予約。面談直前に「● 録画ONでZoom開始」 → 終了時「■ 録画停止」 → 終わったら「✓ 完了 (台帳へ)」 で顧客台帳に自動反映。</p>
+        <p style="color:#6b7280;font-size:12.5px;margin:0 0 18px;line-height:1.65;letter-spacing:0.02em;">確定済みの予約 / 当日になったら「録画ONでZoom開始」 → 終了時「録画停止」 → 終わったら「完了」 で顧客台帳に自動反映</p>
         <div id="bookings-list"></div>
       </section>
 
-      <section class="board-section" id="section-aftercare">
-        <h2>📞 フォローアップ必要 — Zoomまで到達してない人 (${aftercare.length}名)</h2>
-        <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">アンケート途中・候補日提示後・面談キャンセル等で止まってる方。LINEで追加メッセージを送ろう。</p>
+      <section class="board-section" id="section-aftercare" style="margin-top:36px;">
+        <div style="margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #e8e2d4;">
+          <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">Follow-up</div>
+          <h2 style="font-family:'Noto Serif JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">フォローアップ対象 ${aftercare.length > 0 ? `<span style="font-size:11px;background:#9a5a18;color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;font-family:'Inter',sans-serif;font-weight:700;letter-spacing:0.04em;">${aftercare.length} 名</span>` : ''}</h2>
+        </div>
+        <p style="color:#6b7280;font-size:12.5px;margin:0 0 18px;line-height:1.65;letter-spacing:0.02em;">アンケート途中・候補日提示後・面談キャンセル等で止まっている方 / LINEで追加メッセージを送りましょう</p>
         <div id="aftercare-list">
           ${aftercare.length === 0 ? '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:24px;text-align:center;color:var(--muted);font-size:13px;">フォロー必要な方はいません 🎉</div>' :
             aftercare.map(a => `
@@ -451,8 +507,11 @@
         </div>
       </section>
 
-      <section class="board-section" id="section-funnel">
-        <h2>📈 直近のお問い合わせと、リード獲得ファネル</h2>
+      <section class="board-section" id="section-funnel" style="margin-top:36px;">
+        <div style="margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #e8e2d4;">
+          <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">Analytics</div>
+          <h2 style="font-family:'Noto Serif JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">リード獲得ファネル</h2>
+        </div>
         <div id="funnel-area"></div>
         <div id="surveys-list" style="margin-top:18px;"></div>
       </section>
