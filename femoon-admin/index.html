@@ -437,11 +437,7 @@
     <div class="modal-head"><h3>選択した時間帯の操作</h3><button class="close" onclick="closeRangeActionModal()">×</button></div>
     <div class="modal-body">
       <div id="range-action-summary" style="background:var(--rose-soft);padding:14px 16px;border-radius:6px;font-size:13px;margin-bottom:14px;text-align:center"></div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <button class="btn green" onclick="rangeActionAddBooking()" style="padding:16px;font-size:14px">📅 この時間帯に予約を入れる</button>
-        <button class="btn alt" onclick="rangeActionMarkClosed()" style="padding:16px;font-size:14px;background:#fde7e7;color:#c0392b">🌙 この時間帯を休みにする</button>
-        <button class="btn alt" onclick="closeRangeActionModal()" style="padding:12px">キャンセル</button>
-      </div>
+      <div id="range-action-buttons" style="display:flex;flex-direction:column;gap:10px"></div>
     </div>
   </div>
 </div>
@@ -1318,7 +1314,8 @@ function applyRangeHighlight(){
   document.querySelectorAll(rangeCellSelector(RANGE_SEL.cellClass)).forEach(c=>{
     if(c.dataset.date !== RANGE_SEL.date) return;
     if(!c.dataset.slot) return;
-    if(c.classList.contains('has-ev') || c.classList.contains('shop-closed') || c.classList.contains('closed')) return;
+    // has-ev (予約済) と shop-closed (終日休) は選択対象外。closed (時間スロット休) は選択OK
+    if(c.classList.contains('has-ev') || c.classList.contains('shop-closed')) return;
     const idx = SLOTS_ALL.indexOf(c.dataset.slot);
     if(idx >= lo && idx <= hi) c.classList.add('selecting');
   });
@@ -1326,10 +1323,10 @@ function applyRangeHighlight(){
 
 function attachRangeDrag(container, cellClass){
   if(!container) return;
-  // CSS でセルに touch-action: none を付与 (iPhone でドラッグ中スクロールを止める)
   container.querySelectorAll(cellClass).forEach(cell=>{
-    if(cell.classList.contains('shop-closed') || cell.classList.contains('closed')) return;
+    if(cell.classList.contains('shop-closed')) return;
     if(cell.classList.contains('has-ev')) return; // 予約済みセルは選択不可
+    // 休み(closed) セルも選択可にして一括解除できるようにする
     cell.style.touchAction = 'none';
     cell.addEventListener('pointerdown', e=>{
       if(e.button !== undefined && e.button !== 0) return;
@@ -1339,7 +1336,6 @@ function attachRangeDrag(container, cellClass){
       const idx = SLOTS_ALL.indexOf(slot);
       if(idx < 0) return;
       RANGE_SEL = {date, startIdx: idx, endIdx: idx, cellClass, started:false, startX:e.clientX, startY:e.clientY};
-      // ハイライトはドラッグ判定後 (8px超え) に始める。タップは普通のclickに任せる
     });
   });
 }
@@ -1363,7 +1359,8 @@ document.addEventListener('pointermove', e=>{
   if(!cell) return;
   if(cell.dataset.date !== RANGE_SEL.date) return;
   if(!cell.dataset.slot) return;
-  if(cell.classList.contains('has-ev') || cell.classList.contains('shop-closed') || cell.classList.contains('closed')) return;
+  // has-ev/shop-closed は不可、closed (時間休) は可
+  if(cell.classList.contains('has-ev') || cell.classList.contains('shop-closed')) return;
   const idx = SLOTS_ALL.indexOf(cell.dataset.slot);
   if(idx < 0) return;
   if(idx === RANGE_SEL.endIdx) return; // 変化なし
@@ -1385,11 +1382,13 @@ document.addEventListener('pointerup', e=>{
     RANGE_SEL = null;
     return;
   }
-  // ドラッグでも 1セルだけになった場合 → openAddModal 直行
+  // ドラッグでも 1セルだけになった場合 → 種類で分岐
   if(slots.length <= 1){
+    const isClosed = CLOSED_SLOTS.has(dt+'_'+slots[0]);
     clearRangeHighlight();
     RANGE_SEL = null;
-    openAddModal(dt, slots[0]);
+    if(isClosed){ reopenSlot(dt, slots[0]); }
+    else { openAddModal(dt, slots[0]); }
     return;
   }
   // 複数スロット範囲 → アクション選択モーダル
@@ -1404,19 +1403,42 @@ document.addEventListener('pointercancel', ()=>{
 
 let RANGE_PENDING = null;
 function showRangeActionModal(date, slots){
-  RANGE_PENDING = {date, slots};
+  // 範囲内の各スロットを分類: 既に休み or 空き
+  const closedSlots = slots.filter(s => CLOSED_SLOTS.has(date+'_'+s));
+  const openSlots   = slots.filter(s => !CLOSED_SLOTS.has(date+'_'+s));
+  RANGE_PENDING = {date, slots, closedSlots, openSlots};
   const [y,m,d] = date.split('-').map(Number);
   const dateStr = `${y}年${m}月${d}日`;
   const startSlot = slots[0];
-  // 終了時刻 = 最終スロット + 30分
   const lastIdx = SLOTS_ALL.indexOf(slots[slots.length-1]);
   const endStr = SLOTS_ALL[lastIdx+1] || '営業終了';
   const duration = slots.length * 30;
+
+  let mix = '';
+  if(closedSlots.length > 0 && openSlots.length > 0){
+    mix = `<br><small style="color:var(--gold)">混在: 休み ${closedSlots.length}枠 / 空き ${openSlots.length}枠</small>`;
+  } else if(closedSlots.length > 0){
+    mix = `<br><small style="color:#c0392b">この時間帯はすべて休み設定中 (${closedSlots.length}枠)</small>`;
+  }
+
   document.getElementById('range-action-summary').innerHTML = `
     <strong style="font-family:'Noto Serif JP',serif;color:var(--rose-deep);font-size:14px">${dateStr}</strong><br>
     <span style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--ink);font-weight:600">${startSlot} 〜 ${endStr}</span><br>
-    <small style="color:var(--ink2)">${duration}分間 (${slots.length}スロット)</small>
+    <small style="color:var(--ink2)">${duration}分間 (${slots.length}スロット)</small>${mix}
   `;
+
+  // 状況に応じてボタンを出し分け
+  const btns = [];
+  if(openSlots.length > 0){
+    btns.push(`<button class="btn green" onclick="rangeActionAddBooking()" style="padding:16px;font-size:14px">📅 この時間帯に予約を入れる</button>`);
+    btns.push(`<button class="btn alt" onclick="rangeActionMarkClosed()" style="padding:16px;font-size:14px;background:#fde7e7;color:#c0392b">🌙 ${openSlots.length>0&&closedSlots.length>0?'空きを':'この時間帯を'}休みにする (${openSlots.length}枠)</button>`);
+  }
+  if(closedSlots.length > 0){
+    btns.push(`<button class="btn" onclick="rangeActionReopenClosed()" style="padding:16px;font-size:14px;background:#e8f5e8;color:#06a04a;border:1px solid #06a04a">🔓 休みを解除して予約OKにする (${closedSlots.length}枠)</button>`);
+  }
+  btns.push(`<button class="btn alt" onclick="closeRangeActionModal()" style="padding:12px">キャンセル</button>`);
+  document.getElementById('range-action-buttons').innerHTML = btns.join('');
+
   document.getElementById('range-action-modal').classList.remove('hidden');
 }
 
@@ -1456,11 +1478,14 @@ async function reopenSlot(date, slot){
 
 async function rangeActionMarkClosed(){
   if(!RANGE_PENDING) return;
-  const {date, slots} = RANGE_PENDING;
-  if(!confirm(`${date} の ${slots[0]} 〜 ${slots.length*30}分間 (${slots.length}スロット) を 休みに設定します。よろしいですか？`)) return;
-  showToast(`🌙 ${slots.length}スロット 休み登録中...`);
+  const {date, openSlots} = RANGE_PENDING;
+  // 既に休みのスロットは API 叩かない (openSlots だけが対象)
+  const target = openSlots && openSlots.length ? openSlots : RANGE_PENDING.slots;
+  if(target.length === 0){ alert('既に全部休みです'); return; }
+  if(!confirm(`${date} の ${target.length}スロット を休みに設定します。よろしいですか？`)) return;
+  showToast(`🌙 ${target.length}スロット 休み登録中...`);
   let ok=0, ng=0;
-  for(const slot of slots){
+  for(const slot of target){
     const key = `${date}_${slot}`;
     try{
       const url = `${GAS_URL}?action=closed_slot_add&key=${encodeURIComponent(key)}&token=${encodeURIComponent(TOKEN)}`;
@@ -1470,7 +1495,28 @@ async function rangeActionMarkClosed(){
     }catch(_){ ng++; }
   }
   closeRangeActionModal();
-  showToast(`✅ 休み登録: ${ok}件成功 / ${ng>0?ng+'件失敗':''}`);
+  showToast(`✅ 休み登録: ${ok}件成功${ng>0?` / ${ng}件失敗`:''}`);
+  await fetchData();
+}
+
+async function rangeActionReopenClosed(){
+  if(!RANGE_PENDING) return;
+  const {date, closedSlots} = RANGE_PENDING;
+  if(!closedSlots || closedSlots.length === 0){ alert('解除対象がありません'); return; }
+  if(!confirm(`${date} の 休みスロット ${closedSlots.length}枠 を解除して、予約OK状態にします。よろしいですか？`)) return;
+  showToast(`🔓 ${closedSlots.length}スロット 解除中...`);
+  let ok=0, ng=0;
+  for(const slot of closedSlots){
+    const key = `${date}_${slot}`;
+    try{
+      const url = `${GAS_URL}?action=closed_slot_remove&key=${encodeURIComponent(key)}&token=${encodeURIComponent(TOKEN)}`;
+      const r = await fetch(url);
+      const j = await r.json();
+      if(j.ok) ok++; else ng++;
+    }catch(_){ ng++; }
+  }
+  closeRangeActionModal();
+  showToast(`✅ 解除: ${ok}件成功${ng>0?` / ${ng}件失敗`:''}`);
   await fetchData();
 }
 
