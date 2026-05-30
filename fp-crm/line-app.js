@@ -1030,8 +1030,8 @@
       R.chunks = []; R.startTime = Date.now(); R.bookingTs = bookingTs;
       R.customerName = (booking && booking.name) || 'お客様';
       const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm';
-      // 低ビットレートで容量抑制 (1時間で~300MB → ~50MB)
-      R.mediaRecorder = new MediaRecorder(combined, { mimeType: mime, videoBitsPerSecond: 400000, audioBitsPerSecond: 96000 });
+      // 低ビットレートで容量抑制 (1時間 ≒ 30MB に収める)
+      R.mediaRecorder = new MediaRecorder(combined, { mimeType: mime, videoBitsPerSecond: 200000, audioBitsPerSecond: 64000 });
       R.mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) R.chunks.push(e.data); };
       R.mediaRecorder.onstop = async () => {
         const blob = new Blob(R.chunks, { type: 'video/webm' });
@@ -1677,13 +1677,35 @@
       priorityLabel = '来月';
     }
     // タスクの動詞抽出 → アイコン
-    let icon = '✅';
-    if (line.match(/送(る|付|る)|送信/)) icon = '📤';
-    else if (line.match(/確認/)) icon = '👀';
-    else if (line.match(/電話|TEL|連絡/)) icon = '📞';
-    else if (line.match(/資料|PDF|レポート/)) icon = '📄';
-    else if (line.match(/面談|相談|ZOOM|Zoom/)) icon = '💻';
-    else if (line.match(/シミュ|シミュレーション/)) icon = '📊';
+    let icon = '✅', recommendedAction = '', actionTemplate = '';
+    if (line.match(/送(る|付|る)|送信/)) {
+      icon = '📤';
+      recommendedAction = '資料添付付きで LINE 送信';
+      actionTemplate = 'お疲れ様です。先日お話した件、資料お送りします。ご確認の上、ご不明点あればお気軽にどうぞ。';
+    } else if (line.match(/確認/)) {
+      icon = '👀';
+      recommendedAction = '進捗確認の LINE を送信';
+      actionTemplate = 'お疲れ様です。その後いかがでしょうか?進捗ご確認させてください。';
+    } else if (line.match(/電話|TEL|連絡/)) {
+      icon = '📞';
+      recommendedAction = '電話 → ボイスメモ要約をCRMに保存';
+      actionTemplate = '';
+    } else if (line.match(/資料|PDF|レポート/)) {
+      icon = '📄';
+      recommendedAction = '資料作成 → PDF添付で LINE 送信';
+      actionTemplate = 'お疲れ様です。ご依頼の資料お送りします。ご確認お願いします。';
+    } else if (line.match(/面談|相談|ZOOM|Zoom/)) {
+      icon = '💻';
+      recommendedAction = '次回面談の候補日3つを LINE で打診';
+      actionTemplate = 'お疲れ様です。次回 Zoom 面談のご候補日3つお送りします。ご都合の良い日をお選びください。';
+    } else if (line.match(/シミュ|シミュレーション/)) {
+      icon = '📊';
+      recommendedAction = 'シミュレーション資料作成 → 共有';
+      actionTemplate = 'お疲れ様です。シミュレーション結果まとめましたのでご確認ください。';
+    } else {
+      recommendedAction = 'LINE で進捗のヒアリング';
+      actionTemplate = 'お疲れ様です。その後いかがでしょうか?お話進められたら嬉しいです。';
+    }
 
     // 優先度の色分け
     const daysToDue = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
@@ -1698,6 +1720,8 @@
       due: formatDate(due),
       priority: priorityLabel,
       icon: icon,
+      recommendedAction: recommendedAction,
+      actionTemplate: actionTemplate,
     };
   }
 

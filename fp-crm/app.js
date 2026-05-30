@@ -848,6 +848,8 @@
           <div class="client-timeline">${timelineHtml}</div>
         </div>
 
+        ${renderMeetingRecordsBlock(c)}
+
         <div class="detail-section">
           <h3>提案履歴 <span class="count-badge">${(c.proposals || []).length}</span></h3>
           <ul class="proposals-list">${proposalsHtml}</ul>
@@ -870,6 +872,27 @@
     document.getElementById('modal-draft-btn').addEventListener('click', () => {
       openDraftReplyModal(c, events, recs);
     });
+    // タスクの「LINEで送信」 ボタン
+    document.querySelectorAll('.fp-task-do-now').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const uid = btn.dataset.uid;
+        const msg = btn.dataset.msg;
+        if (!uid) { alert('このお客様は LINE 連携が確認できないため、自動送信できません'); return; }
+        const finalMsg = prompt('LINEで送るメッセージ (編集可)', msg);
+        if (!finalMsg) return;
+        btn.disabled = true; btn.textContent = '送信中...';
+        try {
+          const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/send-line', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: uid, text: finalMsg }),
+          });
+          const data = await r.json();
+          if (data.ok) { btn.textContent = '✓ 送信済'; btn.style.background = '#94a3b8'; }
+          else { alert('失敗: ' + (data.error || '')); btn.disabled = false; btn.textContent = '→ LINEで送信'; }
+        } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; btn.textContent = '→ LINEで送信'; }
+      });
+    });
     const refCopy = document.getElementById('ref-copy-url');
     if (refCopy) {
       refCopy.addEventListener('click', () => {
@@ -879,6 +902,74 @@
         setTimeout(() => { refCopy.textContent = '📋 URLをコピー'; }, 2200);
       });
     }
+  }
+
+  // ============================
+  // 面談記録ブロック (顧客詳細モーダル内 / 録画URL + メモ + タスク)
+  // ============================
+  function renderMeetingRecordsBlock(client) {
+    // この顧客に関連する bookings を liveData から探す
+    const liveBookings = (window.LineAppLiveData && window.LineAppLiveData.bookings) || [];
+    const myBookings = liveBookings.filter(b => b.userId === client.lineFriendId || b.name === client.name);
+
+    // localStorage から この顧客のメモ + タスクを取得
+    const tasksKey = 'fp-tasks-' + (client.lineFriendId || client.id);
+    const tasks = JSON.parse(localStorage.getItem(tasksKey) || '[]');
+    // 各 booking ごとにメモを取得
+    const bookingsWithMemo = myBookings.map(b => {
+      const memo = localStorage.getItem('fp-memo-' + b.ts) || '';
+      return { ...b, memo };
+    });
+
+    if (bookingsWithMemo.length === 0 && tasks.length === 0) return ''; // 何もない時は表示しない
+
+    return `
+      <div class="detail-section">
+        <h3>面談記録 <span class="count-badge">${bookingsWithMemo.length} 回</span></h3>
+        ${bookingsWithMemo.length === 0 ? '' :
+          '<div style="display:grid;gap:10px;margin-bottom:14px;">' +
+          bookingsWithMemo.slice().reverse().map(b => `
+            <div style="background:#fff;border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;padding:14px 18px;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+                <strong style="font-size:13.5px;">${escapeHtml(String(b.date||'').slice(0,10))} ${escapeHtml(String(b.time||'').slice(0,5))} 面談</strong>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  ${b.driveUrl ? `<a href="${escapeHtml(b.driveUrl)}" target="_blank" style="font-size:11px;padding:4px 10px;background:#0ea5e9;color:#fff;border-radius:5px;text-decoration:none;font-weight:600;">🎥 録画を見る</a>` : ''}
+                  ${b.zoomUrl ? `<a href="${escapeHtml(b.zoomUrl)}" target="_blank" style="font-size:11px;padding:4px 10px;background:#fff;color:#1f2a3f;border:1px solid var(--line);border-radius:5px;text-decoration:none;font-weight:600;">Zoom URL</a>` : ''}
+                </div>
+              </div>
+              ${b.memo ? `<div style="font-size:12px;line-height:1.65;color:#1f2a3f;background:#fafbfc;border:1px solid var(--line);border-radius:6px;padding:10px 13px;white-space:pre-wrap;">${escapeHtml(b.memo)}</div>`
+                : '<div style="font-size:11.5px;color:var(--muted);font-style:italic;">面談メモなし</div>'}
+            </div>
+          `).join('') + '</div>'
+        }
+
+        ${tasks.length === 0 ? '' : `
+          <h3 style="margin-top:16px;">フォロータスク <span class="count-badge">${tasks.length}</span></h3>
+          <div style="display:grid;gap:8px;">
+            ${tasks.slice().sort((a,b) => (a.due||'').localeCompare(b.due||'')).map((t, i) => {
+              const priColor = t.priority==='至急' ? '#fef2f2;color:#b91c3c' : (t.priority==='今週'||t.priority==='2週間以内') ? '#fff7ed;color:#c2410c' : '#f0f9ff;color:#075985';
+              return `
+                <div style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 16px;">
+                  <div style="display:grid;grid-template-columns:30px 90px 1fr 130px;gap:10px;align-items:center;margin-bottom:${t.recommendedAction?'8px':'0'};">
+                    <span style="font-size:16px;">${t.icon||'✅'}</span>
+                    <span style="font-size:10.5px;font-weight:700;background:${priColor};padding:3px 8px;border-radius:10px;text-align:center;letter-spacing:0.04em;">${escapeHtml(t.priority||'-')}</span>
+                    <span style="font-size:13px;">${escapeHtml(t.task||'')}</span>
+                    <span style="font-size:11px;color:var(--muted);text-align:right;font-family:'Inter',sans-serif;">${escapeHtml(t.due||'-')}</span>
+                  </div>
+                  ${t.recommendedAction ? `
+                    <div style="background:#fdfbf4;border:1px solid #e8d9a8;border-radius:6px;padding:8px 12px;font-size:11.5px;color:#5e4d1a;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;">
+                      <div>
+                        <strong style="color:#1f2a3f;letter-spacing:0.04em;">推奨アクション</strong>
+                        <span style="margin-left:6px;">${escapeHtml(t.recommendedAction)}</span>
+                      </div>
+                      ${t.actionTemplate ? `<button class="fp-task-do-now" data-uid="${escapeHtml(client.lineFriendId||'')}" data-name="${escapeHtml(client.name)}" data-msg="${escapeHtml(t.actionTemplate)}" style="font-size:11px;padding:5px 11px;background:#06c755;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;font-family:inherit;">→ LINEで送信</button>` : ''}
+                    </div>` : ''}
+                </div>`;
+            }).join('')}
+          </div>`
+        }
+      </div>
+    `;
   }
 
   // ============================
