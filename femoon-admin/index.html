@@ -90,6 +90,7 @@
   .week-grid .tcol{background:#fafafa;text-align:right;padding:4px 8px 4px 4px;font-family:"Cormorant Garamond",serif;font-size:11.5px;color:var(--ink2);border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);min-height:38px;display:flex;align-items:flex-start;justify-content:flex-end;position:sticky;left:0;z-index:1}
   .week-grid .wcell{background:#fff;border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);min-height:38px;padding:2px;cursor:pointer;position:relative;transition:.12s}
   .week-grid .wcell:hover{background:#fffaf6}
+  .week-grid .wcell:not(.has-ev):not(.closed):not(.shop-closed):hover::after{content:"+";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--rose-deep);font-size:16px;font-weight:600;opacity:.6;pointer-events:none}
   .week-grid .wcell.closed,
   .week-grid .wcell.shop-closed{background:#f0e6e0;cursor:default}
   .week-grid .wcell.closed::after,
@@ -104,6 +105,7 @@
   .day-grid .dtcol{background:#fafafa;text-align:right;padding:6px 10px 6px 4px;font-family:"Cormorant Garamond",serif;font-size:12.5px;color:var(--ink2);border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);min-height:54px;display:flex;align-items:flex-start;justify-content:flex-end}
   .day-grid .dcell{background:#fff;border-bottom:1px solid var(--line-soft);min-height:54px;padding:4px;cursor:pointer;position:relative}
   .day-grid .dcell:hover{background:#fffaf6}
+  .day-grid .dcell:not(.has-ev):not(.closed):not(.shop-closed):hover::after{content:"+ 予約追加";position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--rose-deep);font-size:11px;opacity:.5;pointer-events:none}
   .day-grid .dcell.closed,
   .day-grid .dcell.shop-closed{background:#f0e6e0;cursor:default}
   .day-grid .dcell.closed::after,
@@ -259,7 +261,8 @@
   .sp-head .stat .v{font-family:"Cormorant Garamond",serif;font-size:18px;color:var(--rose-deep);font-weight:600}
   .sp-body{padding:14px 18px}
   .sp-empty{padding:30px 20px;text-align:center;color:var(--ink3);font-size:13px;font-style:italic}
-  .booking-card{background:#fafafa;border-radius:6px;padding:12px 14px;margin-bottom:10px;border-left:3px solid var(--rose-deep);transition:.12s}
+  .booking-card{background:#fafafa;border-radius:6px;padding:12px 14px;margin-bottom:10px;border-left:3px solid var(--rose-deep);transition:.25s}
+  .booking-card.flash-highlight{background:#fff7d6;border-left-color:#f1c40f;box-shadow:0 0 0 3px rgba(241,196,15,.35)}
   .booking-card.cancelled{opacity:.5;border-left-color:var(--ink3)}
   .booking-card .row1{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
   .booking-card .time{font-family:"Cormorant Garamond",serif;font-size:16px;color:var(--rose-deep);font-weight:600}
@@ -1010,21 +1013,37 @@ function renderCal(){
     if(!isOther){
       bookings.slice(0,2).forEach(r=>{
         const name = (r['お名前']||'').split(' ')[0]||'予約';
-        evHtml += `<div class="ev"><span class="t">${fmtTime(r['時間'])}</span>${name}</div>`;
+        evHtml += `<div class="ev" data-id="${r['予約ID']}" style="cursor:pointer"><span class="t">${fmtTime(r['時間'])}</span>${name}</div>`;
       });
       if(bookings.length>2) evHtml += `<div class="more">+${bookings.length-2}</div>`;
     }
     const html = `<div class="${cls.join(' ')}" data-key="${dayKey(d)}"><div class="num ${dCls}">${d.getDate()}</div>${statusHtml}<div class="evs">${evHtml}</div></div>`;
     body.insertAdjacentHTML('beforeend', html);
   }
-  // クリック
+  // 月ビュー: セル全体クリックで日付選択
   body.querySelectorAll('.cell:not(.other)').forEach(c=>{
-    c.addEventListener('click',()=>{
+    c.addEventListener('click',e=>{
+      // 予約バーのクリックが先に来た場合は委譲しない
+      if(e.target.closest('.ev')) return;
       const k = c.dataset.key;
       const [yy,mm,dd] = k.split('-').map(Number);
       SELECTED_DAY = new Date(yy, mm-1, dd);
       renderCal();
       renderSide();
+    });
+  });
+  // 月ビュー: 予約バー(ev)クリック → 該当予約カードへ
+  body.querySelectorAll('.ev[data-id]').forEach(ev=>{
+    ev.addEventListener('click',e=>{
+      e.stopPropagation();
+      const id = ev.dataset.id;
+      const row = DATA.find(r=>r['予約ID']===id);
+      if(row){
+        SELECTED_DAY = parseDate(row['希望日']);
+        SELECTED_DAY.setHours(0,0,0,0);
+        renderCal();
+        renderSide(id);
+      }
     });
   });
 }
@@ -1080,7 +1099,7 @@ function renderWeek(){
     });
   });
   grid.innerHTML = html;
-  // 予約バークリックで詳細表示のみ (休業切替は別UIに移動)
+  // 予約バークリック → 該当予約カードに飛ばす + ハイライト
   grid.querySelectorAll('.wev').forEach(ev=>{
     ev.addEventListener('click',e=>{
       e.stopPropagation();
@@ -1089,8 +1108,16 @@ function renderWeek(){
       if(row){
         SELECTED_DAY = parseDate(row['希望日']);
         SELECTED_DAY.setHours(0,0,0,0);
-        renderSide();
+        renderSide(id);
       }
+    });
+  });
+  // 空きセルクリック → 新規予約モーダル (日付+時間プリセット)
+  grid.querySelectorAll('.wcell:not(.has-ev):not(.shop-closed):not(.closed)').forEach(cell=>{
+    cell.style.cursor = 'pointer';
+    cell.addEventListener('click',e=>{
+      e.stopPropagation();
+      openAddModal(cell.dataset.date, cell.dataset.slot);
     });
   });
 }
@@ -1113,11 +1140,12 @@ function renderDay(){
     const cls = ['dcell'];
     if(shopClosed) cls.push('shop-closed');
     else if(slotClosed) cls.push('closed');
+    if(evs.length>0) cls.push('has-ev');
     let inner = '';
     evs.forEach(r=>{
       inner += `<div class="dev" data-id="${r['予約ID']}"><div class="l"><span class="t">${fmtTime(r['時間'])}</span>${r['お名前']||''} / ${r['コース名']||''}</div><div class="p">¥${Number(r['料金']||0).toLocaleString()}</div></div>`;
     });
-    html += `<div class="dtcol">${t}</div><div class="${cls.join(' ')}" data-key="${k}_${t}">${inner}</div>`;
+    html += `<div class="dtcol">${t}</div><div class="${cls.join(' ')}" data-key="${k}_${t}" data-date="${k}" data-slot="${t}">${inner}</div>`;
   });
   grid.innerHTML = html;
   grid.querySelectorAll('.dev').forEach(ev=>{
@@ -1128,13 +1156,22 @@ function renderDay(){
       if(row){
         SELECTED_DAY = parseDate(row['希望日']);
         SELECTED_DAY.setHours(0,0,0,0);
-        renderSide();
+        renderSide(id);
       }
+    });
+  });
+  // 日ビュー: 空き時間スロットのクリック → 新規予約モーダル
+  grid.querySelectorAll('.dcell:not(.shop-closed):not(.closed)').forEach(cell=>{
+    if(cell.querySelector('.dev')) return; // 予約済みセルは除外
+    cell.style.cursor = 'pointer';
+    cell.addEventListener('click',e=>{
+      if(e.target.closest('.dev')) return;
+      openAddModal(cell.dataset.date, cell.dataset.slot);
     });
   });
 }
 
-function renderSide(){
+function renderSide(highlightId){
   if(!SELECTED_DAY){
     document.getElementById('sp-day').textContent = '日付を選択';
     document.getElementById('sp-count').textContent = '—';
@@ -1161,6 +1198,7 @@ function renderSide(){
     if(status==='キャンセル') cls.push('cancelled');
     const card = document.createElement('div');
     card.className = cls.join(' ');
+    card.dataset.bookingId = r['予約ID'];
     card.innerHTML = `
       <div class="row1">
         <span class="time">${fmtTime(r['時間'])}</span>
@@ -1185,6 +1223,18 @@ function renderSide(){
     body.appendChild(card);
   });
   body.insertAdjacentHTML('beforeend', `<div style="text-align:center;margin-top:10px"><button class="btn green sm" onclick="openAddModal('${dayKey(d)}')">+ この日に追加</button></div>`);
+
+  // ハイライト指定があれば該当カードへスクロール+一時ハイライト
+  if(highlightId){
+    requestAnimationFrame(()=>{
+      const tgt = body.querySelector(`[data-booking-id="${highlightId}"]`);
+      if(tgt){
+        tgt.scrollIntoView({behavior:'smooth', block:'center'});
+        tgt.classList.add('flash-highlight');
+        setTimeout(()=>tgt.classList.remove('flash-highlight'), 2000);
+      }
+    });
+  }
 }
 
 async function updateStatus(id, status){
@@ -1197,14 +1247,16 @@ async function updateStatus(id, status){
 }
 
 /* ========== 電話予約 追加 ========== */
-function openAddModal(dateKey){
+// 引数: dateKey ('YYYY-MM-DD') と slotTime ('HH:MM') を任意で受ける
+// カレンダーの空き時間枠から呼ぶ場合は両方プリセットされる
+function openAddModal(dateKey, slotTime){
   document.getElementById('add-modal').classList.remove('hidden');
   if(dateKey){document.getElementById('add-date').value = dateKey;}
   else{
     const t = new Date();
     document.getElementById('add-date').value = dayKey(t);
   }
-  document.getElementById('add-slot').value = '14:00';
+  document.getElementById('add-slot').value = slotTime || '14:00';
   ['add-course','add-name','add-tel','add-notes','add-price'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('add-visit').value = '初回';
 }
