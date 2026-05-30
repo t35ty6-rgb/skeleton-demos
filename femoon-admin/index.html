@@ -1589,9 +1589,11 @@ function aggregateCustomers(){
     if(r['状態']==='キャンセル') return;
     const tel = String(r['電話']||'').replace(/[-\s]/g,'');
     if(!tel) return;
-    if(!map[tel]) map[tel] = {tel:r['電話'], name:r['お名前'], kana:r['フリガナ'], email:r['メール'], lineUserId:r['LINE userId']||'', lineDisplay:r['LINE表示名']||'', visits:0, totalRev:0, lastVisit:null, firstVisit:null, nextVisit:null, courses:{}, history:[]};
-    // userIdは最新のものを優先 (空でなければ更新)
+    if(!map[tel]) map[tel] = {tel:r['電話'], name:r['お名前'], kana:r['フリガナ'], email:r['メール'], lineUserId:r['LINE userId']||'', lineDisplay:r['LINE表示名']||'', linePicture:r['LINE画像URL']||'', visits:0, totalRev:0, lastVisit:null, firstVisit:null, nextVisit:null, courses:{}, history:[]};
+    // userId/表示名/画像は最新の非空値を優先
     if(r['LINE userId']) map[tel].lineUserId = r['LINE userId'];
+    if(r['LINE表示名']) map[tel].lineDisplay = r['LINE表示名'];
+    if(r['LINE画像URL']) map[tel].linePicture = r['LINE画像URL'];
     const pd = parseDate(r['希望日']);
     if(!pd) return;
     const isPast = pd <= today;
@@ -1695,11 +1697,18 @@ function renderCustomers(){
       if(c.nextVisit) metaLine += ` ｜ <strong style="color:var(--rose-deep)">📅 次回 ${nextStr}</strong>`;
     }
 
+    // LINEプロフィール画像 (取得済みなら) / 未取得は初頭1文字のアバター
+    const avatar = c.linePicture
+      ? `<img src="${c.linePicture}" alt="" style="width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid #06c755;flex-shrink:0;margin-right:10px" onerror="this.style.display='none'">`
+      : `<div style="width:42px;height:42px;border-radius:50%;background:var(--rose-soft);color:var(--rose-deep);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;flex-shrink:0;margin-right:10px;border:2px solid var(--line)">${(c.name||'?').trim().charAt(0)}</div>`;
     return `<div class="${cls.join(' ')}">
-      <div class="info" style="cursor:pointer" onclick="openCustDetail(${i})">
+      <div class="info" style="cursor:pointer;display:flex;align-items:flex-start" onclick="openCustDetail(${i})">
+        ${avatar}
+        <div style="flex:1;min-width:0">
         <div class="name">${c.name||'(名前なし)'}${c.visits>=5?' <span style="background:var(--gold);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.1em;font-weight:600;vertical-align:middle">VIP</span>':''}${c.lineUserId?` <span style="background:#06c755;color:#fff;font-size:11px;padding:3px 10px;border-radius:10px;letter-spacing:.04em;font-weight:700;vertical-align:middle;margin-left:4px;display:inline-flex;align-items:center">${LINE_ICON_W} 直送</span>`:' <span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:3px 8px;border-radius:10px;letter-spacing:.04em;font-weight:500;vertical-align:middle">📋 コピー送信</span>'}<span style="font-size:10px;color:var(--rose-deep);margin-left:6px">▸ 詳細</span></div>
         <div class="meta">${metaLine}</div>
         <div style="font-size:10.5px;color:var(--rose-deep);margin-top:3px">💡 推奨: ${tplLabel}</div>
+        </div>
       </div>
       <div class="stat">
         <div><div class="v">${c.visits}<small>回</small>${c.visits===0&&c.nextVisit?' <small style="color:var(--green)">(予約済)</small>':''}</div></div>
@@ -1753,10 +1762,13 @@ function openCustomerLine(c){
   if(c.lastVisit && !(c.lastVisit instanceof Date)) c.lastVisit = new Date(c.lastVisit);
   if(c.firstVisit && !(c.firstVisit instanceof Date)) c.firstVisit = new Date(c.firstVisit);
   const hasLine = (c.lineUserId||'').startsWith('U');
-  CURRENT_LINE_TARGET = {'お名前':c.name,'電話':c.tel,'希望日':c.lastVisit?c.lastVisit.toISOString():'','時間':'','コース名':'', lineUserId: c.lineUserId||'', visits: c.visits, lastVisit: c.lastVisit};
+  CURRENT_LINE_TARGET = {'お名前':c.name,'電話':c.tel,'希望日':c.lastVisit?c.lastVisit.toISOString():'','時間':'','コース名':'', lineUserId: c.lineUserId||'', linePicture: c.linePicture||'', visits: c.visits, lastVisit: c.lastVisit};
   document.getElementById('line-modal').classList.remove('hidden');
   const lastStr = c.lastVisit ? `${c.lastVisit.getMonth()+1}/${c.lastVisit.getDate()}` : '-';
-  document.getElementById('line-target-info').innerHTML = `<strong>${c.name||'-'}</strong> 様 / ${c.tel||'-'} ${hasLine?`<span style="background:#06c755;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px;display:inline-flex;align-items:center">${LINE_ICON_W} 直送可</span>`:'<span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📋 コピー送信のみ</span>'}<br><span style="color:#7a5d5d;font-size:11.5px">最終来店 ${lastStr} / 来店${c.visits}回 / 累計¥${(c.totalRev||0).toLocaleString()}</span>`;
+  const avatarHtml = c.linePicture
+    ? `<img src="${c.linePicture}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #06c755;margin-right:10px;vertical-align:middle" onerror="this.style.display='none'">`
+    : '';
+  document.getElementById('line-target-info').innerHTML = `<div style="display:flex;align-items:center">${avatarHtml}<div><strong>${c.name||'-'}</strong> 様 / ${c.tel||'-'} ${hasLine?`<span style="background:#06c755;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px;display:inline-flex;align-items:center">${LINE_ICON_W} 直送可</span>`:'<span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📋 コピー送信のみ</span>'}<br><span style="color:#7a5d5d;font-size:11.5px">最終来店 ${lastStr} / 来店${c.visits}回 / 累計¥${(c.totalRev||0).toLocaleString()}</span></div></div>`;
   populateLineTplDropdown();
   updateLineSendBtnLabel(hasLine);
   // ★ 推奨テンプレを自動セット (編集してから送信できる)
