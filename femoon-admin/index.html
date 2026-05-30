@@ -2211,17 +2211,13 @@ function openCustDetail(idx){
 }
 function closeCustDetailModal(){document.getElementById('cust-detail-modal').classList.add('hidden')}
 
-// 予約カードの「📋 カルテ」ボタン用: 電話番号から顧客一覧 _CUST_ARR を引いて openCustDetail を呼ぶ
+// 予約カードの「📋 カルテ」ボタン用: 電話番号からカルテ詳細を直接開く (顧客一覧モーダルを開かない)
 function openKarteByTel(tel){
   if(!tel) return alert('電話番号がないお客様はカルテを開けません');
   const cleanTel = String(tel).replace(/[-\s]/g,'');
-  // _CUST_ARR が未生成なら 顧客集約をトリガ
-  if(!window._CUST_ARR){
-    if(typeof openCustomerModal === 'function'){
-      openCustomerModal();
-      setTimeout(()=>openKarteByTel(tel), 600);
-      return;
-    }
+  // _CUST_ARR が未生成 or 古い場合は その場で集約 (モーダルは開かない)
+  if(!window._CUST_ARR || window._CUST_ARR.length === 0){
+    window._CUST_ARR = aggregateCustomers();
   }
   const idx = (window._CUST_ARR||[]).findIndex(c=>{
     return String(c.tel||'').replace(/[-\s]/g,'') === cleanTel;
