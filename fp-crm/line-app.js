@@ -57,51 +57,48 @@
     const month = upcoming.filter(b => b.daysAhead > 7 && b.daysAhead <= 30);
     const total = upcoming.length;
 
-    v.innerHTML = `
-      <h1 style="font-family:'Noto Serif JP',serif;font-size:26px;margin:0 0 4px;">🎂 誕生日メッセージ</h1>
-      <p style="color:var(--muted);font-size:13.5px;margin:0 0 24px;">お客様 + ご家族(配偶者・お子様) の誕生日を90日先まで自動検出 → 当日朝9時に自動でお祝いLINE送信</p>
+    // SVG icons (line-art, monochrome)
+    const icoCake = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21V10a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11"/><path d="M4 13h16"/><path d="M8 8V5a2 2 0 1 1 4 0v3"/><path d="M16 8V5a2 2 0 1 1 4 0v3"/><circle cx="12" cy="4" r="1"/></svg>';
+    const icoCal = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+    const icoCal2 = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg>';
+    const icoChart = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20"/></svg>';
+    const accents = ['#c1272d', '#b8893d', '#1b2845', '#2d7d4e'];
 
-      <div class="task-board">
-        <div class="task-card ${today.length > 0 ? 'action' : 'muted'}">
-          <div class="task-icon">🎉</div>
-          <div class="task-label">${today.length > 0 ? '本日 自動送信' : '本日は無し'}</div>
-          <div class="task-count">${today.length}<span class="unit">名</span></div>
-          <div class="task-title">今日の誕生日</div>
-          <div class="task-desc">9:00 に自動でお祝いLINE送信予定</div>
-        </div>
-        <div class="task-card ${week.length > 0 ? 'urgent' : ''}">
-          <div class="task-icon">📅</div>
-          <div class="task-label">今週</div>
-          <div class="task-count">${week.length}<span class="unit">名</span></div>
-          <div class="task-title">1〜7日後の誕生日</div>
-          <div class="task-desc">直近対象 / 各日9:00に順次配信</div>
-        </div>
-        <div class="task-card">
-          <div class="task-icon">🗓️</div>
-          <div class="task-label">今月</div>
-          <div class="task-count">${month.length}<span class="unit">名</span></div>
-          <div class="task-title">8〜30日後の誕生日</div>
-          <div class="task-desc">スケジュール済</div>
-        </div>
-        <div class="task-card">
-          <div class="task-icon">📊</div>
-          <div class="task-label">概況</div>
-          <div class="task-count">${total}<span class="unit">名</span></div>
-          <div class="task-title">90日先までの総数</div>
-          <div class="task-desc">本人+配偶者+子供 すべて自動検出</div>
-        </div>
+    v.innerHTML = `
+      <div class="section-title" data-eyebrow="Birthday Auto-Message">誕生日メッセージ</div>
+      <p class="section-sub">お客様 + ご家族 (配偶者・お子様) の誕生日を90日先まで自動検出 → 当日朝9時に自動でお祝いLINE送信</p>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px;">
+        ${[
+          { ic: icoCake, label: 'Today', title: '今日の誕生日', count: today.length, unit: '名', desc: '9:00 に自動でお祝いLINE送信予定', accent: accents[0], active: today.length > 0 },
+          { ic: icoCal, label: 'This Week', title: '1〜7日後の誕生日', count: week.length, unit: '名', desc: '直近対象 / 各日9:00に順次配信', accent: accents[1], active: week.length > 0 },
+          { ic: icoCal2, label: 'This Month', title: '8〜30日後の誕生日', count: month.length, unit: '名', desc: 'スケジュール済', accent: accents[2], active: month.length > 0 },
+          { ic: icoChart, label: 'Total', title: '90日先までの総数', count: total, unit: '名', desc: '本人+配偶者+子供 すべて自動検出', accent: accents[3], active: total > 0 },
+        ].map(c => `
+          <div style="background:#fff;border:1px solid #e0d8c0;border-top:4px solid ${c.accent};padding:24px 22px 22px;box-shadow:0 2px 8px rgba(15,23,41,0.04),0 8px 24px rgba(15,23,41,0.04);position:relative;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;background:${c.accent}12;color:${c.accent};border:1px solid ${c.accent}33;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${c.ic.replace(/<svg[^>]*>/, '').replace('</svg>', '')}</svg>
+              </span>
+              <span style="font-family:'Inter',sans-serif;font-size:9.5px;font-weight:800;color:${c.accent};letter-spacing:0.22em;text-transform:uppercase;">${c.label}</span>
+            </div>
+            <div style="font-family:'Inter',sans-serif;font-size:36px;font-weight:900;line-height:1;letter-spacing:-0.03em;color:${c.active ? c.accent : '#0f1729'};">${c.count}<span style="font-size:13px;font-weight:600;color:#6b7280;margin-left:6px;">${c.unit}</span></div>
+            <div style="margin-top:12px;font-size:12.5px;color:#0f1729;font-weight:700;letter-spacing:0.02em;">${c.title}</div>
+            <div style="margin-top:4px;font-size:11px;color:#6b7280;line-height:1.55;">${c.desc}</div>
+          </div>
+        `).join('')}
       </div>
 
-      <section class="board-section">
-        <h2>🎉 本日のお祝い対象 (9:00 自動送信)</h2>
+      <section class="board-section" style="margin-top:36px;">
+        <div class="section-title" data-eyebrow="Today" style="margin-top:0 !important;">本日のお祝い対象 (9:00 自動送信)</div>
         ${renderBirthdayGroup(today, '今日対象なし')}
       </section>
       <section class="board-section">
-        <h2>📅 今週 (1〜7日後)</h2>
+        <div class="section-title" data-eyebrow="This Week">今週 (1〜7日後)</div>
         ${renderBirthdayGroup(week, '今週はありません')}
       </section>
       <section class="board-section">
-        <h2>🗓️ 今月 (8〜30日後)</h2>
+        <div class="section-title" data-eyebrow="This Month">今月 (8〜30日後)</div>
         ${renderBirthdayGroup(month, '今月はありません')}
       </section>
     `;
@@ -746,7 +743,6 @@
                <button class="btn-mini" data-complete-booking="${tsEnc}" style="background:var(--line-green-soft,#dcfce7);color:#166534;border:1px solid #86efac;font-weight:700;">✓ 完了 (台帳へ)</button>`;
       } else if (zUrl) {
         cta = `<button class="btn-rec-start" data-rec-start="${tsEnc}" data-zoom="${zUrl}">● 録画ONでZoom開始</button>
-               <a class="btn-mini" href="${zUrl}" target="_blank">録画なしで開く</a>
                <button class="btn-mini" data-open-memo="${tsEnc}" style="background:#f8fafc;border:1px solid #e5e7eb;color:#374151;">📝 メモ${savedTasksCount > 0 ? ' ('+savedTasksCount+'件)' : ''}</button>
                <button class="btn-mini" data-complete-booking="${tsEnc}" style="background:var(--line-green-soft,#dcfce7);color:#166534;border:1px solid #86efac;font-weight:700;">✓ 完了</button>`;
       }
@@ -1162,9 +1158,9 @@
           <span style="font-size:11px;color:#365314;">タスク${taskCount}件 + LINE下書き 生成済み</span>
         </div>
       </div>
-      <div style="display:flex;gap:6px;margin-top:10px;">
-        <button id="fp-show-result" style="flex:1;font-size:13px;padding:10px;background:linear-gradient(135deg,#06c755,#04a045);color:#fff;border:none;border-radius:7px;cursor:pointer;font-weight:800;font-family:inherit;letter-spacing:0.04em;">📋 結果を見る</button>
-        <button id="fp-progress-close" style="font-size:11.5px;padding:6px 12px;background:#fff;border:1px solid #e5e7eb;color:#6b7280;border-radius:7px;cursor:pointer;font-family:inherit;">後で</button>
+      <div style="display:grid;gap:6px;margin-top:10px;">
+        <button id="fp-show-result" style="font-size:13px;padding:11px;background:linear-gradient(135deg,#06c755,#04a045);color:#fff;border:none;border-radius:7px;cursor:pointer;font-weight:800;font-family:inherit;letter-spacing:0.04em;">📋 AI議事録を見る</button>
+        <button id="fp-progress-close" style="font-size:12px;padding:9px;background:#1b2845;color:#fff;border:none;border-radius:7px;cursor:pointer;font-weight:800;font-family:inherit;letter-spacing:0.08em;text-transform:uppercase;">✓ 面談を完了する (Zoom+メモ閉じる)</button>
       </div>`;
     document.getElementById('fp-show-result').addEventListener('click', () => {
       const r = window._fpAIResult;
@@ -1173,6 +1169,10 @@
     });
     document.getElementById('fp-progress-close').addEventListener('click', () => {
       const p = document.getElementById('fp-unified-progress'); if (p) p.remove();
+      // Zoom popup + メモ popup も一緒に閉じる + 完了マーク
+      try { if (window._fpZoomWin && !window._fpZoomWin.closed) window._fpZoomWin.close(); } catch (_) {}
+      try { if (window._fpMemoWin && !window._fpMemoWin.closed) window._fpMemoWin.close(); } catch (_) {}
+      const panel = document.getElementById('fp-memo-panel'); if (panel) panel.remove();
     });
   }
 
