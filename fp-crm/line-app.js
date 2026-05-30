@@ -1056,15 +1056,22 @@
         combined.getTracks().forEach(t => t.stop());
         stream.getTracks().forEach(t => t.stop());
         if (R._micStream) R._micStream.getTracks().forEach(t => t.stop());
-        // 停止 → Drive アップロード と AI解析 を 並行実行
-        const drivePromise = autoUploadRecording(blob, R.bookingTs, R.customerName, booking);
-        showAIProcessingToast(R.customerName, blob);
+        // 統一進行パネル開始 (Drive + AI 両方の進捗をここに集約)
+        showUnifiedProgressPanel(R.customerName, blob);
+        updateProgressStep('save', 'done');
+        updateProgressStep('drive', 'active');
+        updateProgressStep('ai', 'active');
+        // Drive と AI を並行実行
+        const drivePromise = autoUploadRecording(blob, R.bookingTs, R.customerName, booking)
+          .then(() => updateProgressStep('drive', 'done'))
+          .catch(() => updateProgressStep('drive', 'error'));
         const aiResult = await aiProcessRecording(blob, R.bookingTs, R.customerName, booking);
-        hideAIProcessingToast();
         if (aiResult && aiResult.ok) {
-          showAIResultModal(aiResult, R.customerName, booking);
-        } else if (aiResult && !aiResult.ok) {
-          showAIErrorToast(aiResult.error);
+          updateProgressStep('ai', 'done');
+          window._fpAIResult = { result: aiResult, customerName: R.customerName, booking: booking };
+          showProgressDoneAction();
+        } else {
+          updateProgressStep('ai', 'error', aiResult && aiResult.error);
         }
         await drivePromise;
         await onRecordingComplete(R.bookingTs, blob, R.blobUrl);
@@ -1081,38 +1088,95 @@
     }
   }
 
-  function showAIProcessingToast(customerName, blob) {
-    if (document.getElementById('fp-ai-processing')) return;
-    const t = document.createElement('div');
-    t.id = 'fp-ai-processing';
-    t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid #c19a3a;border-left:5px solid #c19a3a;border-radius:12px;padding:18px 26px;box-shadow:0 16px 40px rgba(0,0,0,0.2);z-index:10004;font-family:inherit;min-width:380px;max-width:480px;';
-    t.innerHTML = `
-      <div style="display:flex;align-items:center;gap:14px;">
-        <div style="width:32px;height:32px;border:3px solid #e8d9a8;border-top-color:#c19a3a;border-radius:50%;animation:fp-spin 1s linear infinite;"></div>
-        <div style="flex:1;">
-          <strong style="font-size:14px;display:block;margin-bottom:2px;">AI が面談を解析中</strong>
-          <div style="font-size:11.5px;color:#6b7280;line-height:1.5;">${escapeHtml(customerName)}様 (${(blob.size/1024/1024).toFixed(1)}MB) → 議事録 + タスク + 推奨アクション生成中... (30秒〜2分)</div>
+  // ===== 統一進行パネル (録画停止後の Drive + AI 進捗を1枚で集約) =====
+  function showUnifiedProgressPanel(customerName, blob) {
+    const existing = document.getElementById('fp-unified-progress');
+    if (existing) existing.remove();
+    const panel = document.createElement('div');
+    panel.id = 'fp-unified-progress';
+    panel.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border:1px solid #e8e2d4;border-radius:14px;box-shadow:0 18px 48px rgba(15,23,42,0.18);z-index:10003;font-family:inherit;width:380px;overflow:hidden;';
+    panel.innerHTML = `
+      <div style="background:linear-gradient(135deg,#fdfbf4,#fafaf6);padding:14px 18px;border-bottom:1px solid #e8e2d4;">
+        <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">Recording Stopped — Processing</div>
+        <strong style="font-size:14px;color:#1f2a3f;">${escapeHtml(customerName)}様 面談 (${(blob.size/1024/1024).toFixed(1)}MB)</strong>
+      </div>
+      <div style="padding:14px 18px;">
+        <div id="fp-progress-steps" style="display:grid;gap:10px;">
+          ${renderStep('save', '録画ファイル保存', '完了 / ローカルメモリに保持')}
+          ${renderStep('drive', 'Google Drive へアップロード', '顧客フォルダに自動振り分け')}
+          ${renderStep('ai', 'AI で議事録 + タスク生成', 'Whisper 文字起こし → Claude 解析')}
+        </div>
+        <div id="fp-progress-bottom" style="margin-top:14px;padding:11px 14px;background:#fdfbf4;border:1px dashed #c19a3a;border-radius:8px;font-size:11.5px;color:#5e4d1a;line-height:1.6;text-align:center;">
+          ⏳ そのまま <strong>1〜2分</strong> お待ちください<br>
+          <span style="font-size:10.5px;opacity:0.85;">他の操作は普通にできます</span>
         </div>
       </div>`;
-    document.body.appendChild(t);
-    if (!document.getElementById('fp-spin-style')) {
-      const s = document.createElement('style');
-      s.id = 'fp-spin-style';
-      s.textContent = '@keyframes fp-spin{to{transform:rotate(360deg)}}';
-      document.head.appendChild(s);
+    document.body.appendChild(panel);
+  }
+
+  function renderStep(id, title, desc) {
+    return `
+      <div id="fp-step-${id}" data-status="pending" style="display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:center;padding:9px 12px;background:#f8fafc;border:1px solid #e8e2d4;border-radius:7px;opacity:0.5;transition:all 0.3s;">
+        <div class="fp-step-ic" style="font-size:14px;text-align:center;color:#94a3b8;">○</div>
+        <div>
+          <strong style="font-size:12.5px;display:block;color:#1f2a3f;">${title}</strong>
+          <span class="fp-step-desc" style="font-size:10.5px;color:#6b7280;">${desc}</span>
+        </div>
+      </div>`;
+  }
+
+  function updateProgressStep(id, status, errorMsg) {
+    const el = document.getElementById('fp-step-' + id);
+    if (!el) return;
+    el.dataset.status = status;
+    const ic = el.querySelector('.fp-step-ic');
+    const desc = el.querySelector('.fp-step-desc');
+    if (status === 'active') {
+      el.style.opacity = '1'; el.style.background = '#fff'; el.style.borderColor = '#c19a3a';
+      ic.textContent = '⏳'; ic.style.color = '#c19a3a';
+      if (desc) desc.textContent = '処理中...';
+    } else if (status === 'done') {
+      el.style.opacity = '1'; el.style.background = '#f0fdf4'; el.style.borderColor = '#86efac';
+      ic.textContent = '✓'; ic.style.color = '#16a34a'; ic.style.fontWeight = '700';
+      if (desc) desc.textContent = '完了';
+    } else if (status === 'error') {
+      el.style.opacity = '1'; el.style.background = '#fef2f2'; el.style.borderColor = '#fca5a5';
+      ic.textContent = '✗'; ic.style.color = '#b91c3c'; ic.style.fontWeight = '700';
+      if (desc) desc.textContent = '失敗: ' + (errorMsg || '不明');
     }
   }
-  function hideAIProcessingToast() {
-    const t = document.getElementById('fp-ai-processing');
-    if (t) t.remove();
+
+  function showProgressDoneAction() {
+    const bottom = document.getElementById('fp-progress-bottom');
+    if (!bottom) return;
+    const r = (window._fpAIResult && window._fpAIResult.result) || {};
+    const taskCount = (r.tasks || []).length;
+    bottom.style.background = 'linear-gradient(135deg,#dcfce7,#f0fdf4)';
+    bottom.style.borderColor = '#86efac';
+    bottom.style.borderStyle = 'solid';
+    bottom.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;text-align:left;">
+        <div style="font-size:26px;">✨</div>
+        <div style="flex:1;">
+          <strong style="font-size:13px;color:#166534;display:block;">AI処理完了!</strong>
+          <span style="font-size:11px;color:#365314;">タスク${taskCount}件 + LINE下書き 生成済み</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <button id="fp-show-result" style="flex:1;font-size:13px;padding:10px;background:linear-gradient(135deg,#06c755,#04a045);color:#fff;border:none;border-radius:7px;cursor:pointer;font-weight:800;font-family:inherit;letter-spacing:0.04em;">📋 結果を見る</button>
+        <button id="fp-progress-close" style="font-size:11.5px;padding:6px 12px;background:#fff;border:1px solid #e5e7eb;color:#6b7280;border-radius:7px;cursor:pointer;font-family:inherit;">後で</button>
+      </div>`;
+    document.getElementById('fp-show-result').addEventListener('click', () => {
+      const r = window._fpAIResult;
+      if (r) showAIResultModal(r.result, r.customerName, r.booking);
+      const p = document.getElementById('fp-unified-progress'); if (p) p.remove();
+    });
+    document.getElementById('fp-progress-close').addEventListener('click', () => {
+      const p = document.getElementById('fp-unified-progress'); if (p) p.remove();
+    });
   }
-  function showAIErrorToast(err) {
-    const t = document.createElement('div');
-    t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #b91c3c;border-radius:10px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.18);z-index:10003;font-family:inherit;max-width:480px;';
-    t.innerHTML = `<strong style="font-size:13.5px;display:block;margin-bottom:4px;">AI 解析失敗</strong><div style="font-size:11.5px;color:#6b7280;line-height:1.5;">${escapeHtml(err || '不明なエラー')}</div>`;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 12000);
-  }
+
+  // (旧トースト系は unified progress panel に統合済み)
 
   // AI 議事録生成 (Drive アップロードと並行)
   async function aiProcessRecording(blob, bookingTs, customerName, booking) {
@@ -1244,63 +1308,24 @@
   async function autoUploadRecording(blob, bookingTs, customerName, booking) {
     const sizeMB = blob.size / 1024 / 1024;
     const filename = `meeting-${(booking && booking.date) || new Date().toISOString().slice(0,10)}-${new Date().toISOString().slice(11,16).replace(':','')}.webm`;
-    const blobUrl = URL.createObjectURL(blob);
-    // アップロード中トースト
-    const t = document.createElement('div');
-    t.id = 'fp-upload-toast';
-    t.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border-left:5px solid #0ea5e9;border-radius:12px;padding:16px 22px;box-shadow:0 16px 40px rgba(0,0,0,0.18);z-index:10003;font-family:inherit;min-width:360px;max-width:420px;';
-    t.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-        <div style="font-size:22px;">☁️</div>
-        <strong style="font-size:14px;">録画ファイルを Drive にアップロード中</strong>
-      </div>
-      <div id="fp-upload-detail" style="font-size:12px;color:#374151;line-height:1.55;">
-        ${escapeHtml(customerName)}様 専用フォルダ (${sizeMB.toFixed(1)}MB)
-      </div>`;
-    document.body.appendChild(t);
-
-    const showFallback = (reason) => {
-      const detail = document.getElementById('fp-upload-detail');
-      if (detail) {
-        detail.innerHTML = `❌ アップロード失敗 (${escapeHtml(reason)})<br>
-          <a href="${blobUrl}" download="${escapeHtml(filename)}" style="display:inline-block;margin-top:8px;padding:7px 14px;background:linear-gradient(135deg,#b8893d,#d4a017);color:#fff;text-decoration:none;border-radius:6px;font-size:12px;font-weight:700;">💾 ファイルをダウンロード</a><br>
-          <span style="font-size:10.5px;color:var(--muted);">→ ダウンロード後、Drive の「FP Compass 録画/${escapeHtml(customerName)}様」 フォルダに手動アップロード</span>`;
-      }
-      t.style.borderLeftColor = '#b91c3c';
-    };
-
-    // 50MB 超は Cloud Run の100MB制限超え可能性大 → 即フォールバック
-    if (sizeMB > 45) { showFallback(`ファイルが大きすぎます (${sizeMB.toFixed(1)}MB)`); return; }
-
-    try {
-      const reader = new FileReader();
-      const base64 = await new Promise((res, rej) => {
-        reader.onload = () => res(reader.result.split(',')[1]);
-        reader.onerror = rej;
-        reader.readAsDataURL(blob);
-      });
-      // タイムアウト付きで fetch (5分)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000);
-      const r = await fetch(CLOUD_RUN_BASE + '/api/upload-recording', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ts: bookingTs, customerName, filename, mimeType: 'video/webm', base64 }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      const data = await r.json();
-      const detail = document.getElementById('fp-upload-detail');
-      if (data.ok) {
-        if (detail) detail.innerHTML = `✅ <a href="${data.driveUrl}" target="_blank" style="color:#0ea5e9;font-weight:700;">Drive で開く ↗</a><br><span style="font-size:10.5px;color:var(--muted);">📁 FP Compass 録画 / ${escapeHtml(customerName)}様 / ${escapeHtml(filename)}</span>`;
-        t.style.borderLeftColor = '#06c755';
-      } else {
-        showFallback(data.error || 'GAS エラー');
-      }
-    } catch (e) {
-      showFallback(e.message);
-    }
-    setTimeout(() => t.remove(), 60000);
+    if (sizeMB > 45) throw new Error('ファイルが大きすぎます (' + sizeMB.toFixed(1) + 'MB)');
+    const reader = new FileReader();
+    const base64 = await new Promise((res, rej) => {
+      reader.onload = () => res(reader.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(blob);
+    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000);
+    const r = await fetch(CLOUD_RUN_BASE + '/api/upload-recording', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ts: bookingTs, customerName, filename, mimeType: 'video/webm', base64 }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error || 'Drive 保存失敗');
+    return data;
   }
 
 
