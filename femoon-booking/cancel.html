@@ -43,6 +43,9 @@
   .btn-danger{background:var(--warn);color:#fff}
   .btn-danger:hover{background:#a93223}
   .btn-danger:disabled{background:#ccc;cursor:wait}
+  .btn-primary{background:var(--rose-deep);color:#fff}
+  .btn-primary:hover{background:#8d5e57}
+  .btn-primary:disabled{background:#ccc;cursor:wait}
   .btn-alt{background:#fff;color:var(--ink);border:1px solid var(--line)}
   .btn-line{background:#06c755;color:#fff}
 
@@ -60,7 +63,7 @@
 <div class="wrap">
   <div class="hd">
     <div class="salon">FEMOON</div>
-    <h1>ご予約のキャンセル</h1>
+    <h1 id="page-title">ご予約のキャンセル</h1>
     <div class="sub">🌙 フェムケアサロン FEMOON</div>
   </div>
 
@@ -79,6 +82,8 @@ const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwKZ0ulzBHf5PH5WTW
 const params = new URLSearchParams(location.search);
 const RES_ID = params.get('id') || '';
 const TOKEN = params.get('t') || '';
+const MODE = params.get('mode') || 'cancel'; // 'cancel' | 'change'
+const LIFF_URL = 'https://liff.line.me/2010221463-e1PnCVCI';
 
 const root = document.getElementById('root');
 
@@ -123,32 +128,53 @@ async function loadPreview(){
 }
 
 function renderPreview(d){
+  // ページタイトル切替
+  document.getElementById('page-title').textContent =
+    MODE === 'change' ? '予約日時の変更' : 'ご予約のキャンセル';
+
   let html = summaryHtml(d);
   if(d.alreadyCancelled){
-    html += `<div class="status-banner status-neutral">このご予約はすでにキャンセル済みです</div>`;
+    html += `<div class="status-banner status-neutral">このご予約はすでにキャンセル済みです</div>
+      <a href="${LIFF_URL}" class="btn btn-line">🌙 新しく予約する</a>`;
   } else if(d.tooLate){
     const h = Math.max(0, Math.round(d.hoursUntil));
     html += `
       <div class="status-banner status-warn">
         ⚠ ご来店まで <strong>${h}時間</strong> を切っています<br>
-        セルフキャンセル受付期限 (24時間前) を過ぎているため、お手数ですが LINE 公式アカウントから<br>
-        直接ご連絡くださいませ。
+        ${MODE==='change'?'日時変更':'セルフキャンセル'}の受付期限 (24時間前) を過ぎているため、<br>
+        お手数ですが LINE 公式アカウントから直接ご連絡くださいませ。
       </div>
       <a href="https://line.me/R/ti/p/@511thleq" class="btn btn-line">📩 LINEでサロンに連絡する</a>
     `;
   } else if(d.canSelfCancel){
     const h = Math.round(d.hoursUntil);
-    html += `
-      <div class="status-banner status-ok">
-        ✅ キャンセル可能です (ご来店まで約${h}時間)
-      </div>
-      <div class="msg msg-info">
-        ボタンを押すと、ご予約が即時キャンセルされます。<br>
-        サロンにも同時に通知が届きます。
-      </div>
-      <button class="btn btn-danger" id="cancel-btn" onclick="doCancel()">この予約をキャンセルする</button>
-      <a href="https://line.me/R/ti/p/@511thleq" class="btn btn-alt">やめる(LINEに戻る)</a>
-    `;
+    if(MODE === 'change'){
+      html += `
+        <div class="status-banner status-ok">
+          ✅ 日時変更ができます (ご来店まで約${h}時間)
+        </div>
+        <div class="msg msg-info">
+          現在のご予約を一度キャンセルしてから、<br>
+          新しい日時で予約フォームを開きます。<br>
+          <small style="color:#7a5d5d">※ 続けて予約フォームに進むので、空き枠の確認もそこでできます。</small>
+        </div>
+        <button class="btn btn-primary" id="cancel-btn" onclick="doCancel()" style="background:#a4756d;color:#fff">📝 日時を変更する (新しい予約フォームへ)</button>
+        <a href="https://line.me/R/ti/p/@511thleq" class="btn btn-alt">やめる(LINEに戻る)</a>
+      `;
+    } else {
+      html += `
+        <div class="status-banner status-ok">
+          ✅ キャンセル可能です (ご来店まで約${h}時間)
+        </div>
+        <div class="msg msg-info">
+          ボタンを押すと、ご予約が即時キャンセルされます。<br>
+          サロンにも同時に通知が届きます。
+        </div>
+        <button class="btn btn-danger" id="cancel-btn" onclick="doCancel()">この予約をキャンセルする</button>
+        <a href="${LIFF_URL}" class="btn btn-alt" style="background:#fbf0eb;color:#a4756d">💡 日時を変更したい場合はこちら</a>
+        <a href="https://line.me/R/ti/p/@511thleq" class="btn btn-alt">やめる(LINEに戻る)</a>
+      `;
+    }
   } else {
     html += `<div class="status-banner status-warn">操作できない状態です</div>`;
   }
@@ -158,16 +184,33 @@ function renderPreview(d){
 async function doCancel(){
   const btn = document.getElementById('cancel-btn');
   if(!btn) return;
-  if(!confirm('本当にこのご予約をキャンセルしますか？\n\n(キャンセル後の取り消しはできません)')) return;
+  const isChange = (MODE === 'change');
+  const confirmMsg = isChange
+    ? '現在の予約を一度キャンセルして、新しい日時で予約フォームに進みます。よろしいですか？'
+    : '本当にこのご予約をキャンセルしますか？\n\n(キャンセル後の取り消しはできません)';
+  if(!confirm(confirmMsg)) return;
   btn.disabled = true;
-  btn.textContent = 'キャンセル処理中...';
+  btn.textContent = isChange ? '変更準備中...' : 'キャンセル処理中...';
   try{
     const r = await fetch(`${GAS_ENDPOINT}?action=cancel&id=${encodeURIComponent(RES_ID)}&t=${encodeURIComponent(TOKEN)}`);
     const j = await r.json();
     if(!j.ok){
-      alert('キャンセルできませんでした: ' + (j.error||'unknown') + '\n\nお手数ですがLINEで直接ご連絡ください。');
+      alert((isChange?'変更':'キャンセル')+'できませんでした: ' + (j.error||'unknown') + '\n\nお手数ですがLINEで直接ご連絡ください。');
       btn.disabled = false;
-      btn.textContent = 'この予約をキャンセルする';
+      btn.textContent = isChange ? '📝 日時を変更する (新しい予約フォームへ)' : 'この予約をキャンセルする';
+      return;
+    }
+    if(isChange){
+      root.innerHTML = `
+        <div class="status-banner status-ok" style="font-size:14px;padding:18px">
+          ✅ 元のご予約をキャンセルしました<br>
+          <small style="font-weight:400;color:#666;display:block;margin-top:6px">${fmtDate(j.date)} ${j.slot||''}〜</small>
+        </div>
+        <div class="msg msg-info">
+          続けて、新しい日時で予約フォームに移動します...
+        </div>
+      `;
+      setTimeout(()=>{ location.href = LIFF_URL; }, 1500);
       return;
     }
     root.innerHTML = `
@@ -178,12 +221,13 @@ async function doCancel(){
       <div class="msg msg-info">
         ご連絡ありがとうございました。<br>またのご予約を心よりお待ちしております🌙
       </div>
-      <a href="https://line.me/R/ti/p/@511thleq" class="btn btn-line">LINEに戻る</a>
+      <a href="${LIFF_URL}" class="btn btn-line">🌙 新しい予約をする</a>
+      <a href="https://line.me/R/ti/p/@511thleq" class="btn btn-alt">LINEに戻る</a>
     `;
   }catch(e){
     alert('通信エラー: ' + e.message);
     btn.disabled = false;
-    btn.textContent = 'この予約をキャンセルする';
+    btn.textContent = isChange ? '📝 日時を変更する (新しい予約フォームへ)' : 'この予約をキャンセルする';
   }
 }
 
