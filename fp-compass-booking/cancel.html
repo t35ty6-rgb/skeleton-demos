@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>ご予約のキャンセル — FP Compass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f7fb; --paper:#fff;
+    --ink:#1f2933; --ink2:#52606d; --ink3:#7b8794;
+    --primary:#2c5282; --primary-deep:#1a365d; --primary-soft:#ebf2fa;
+    --line:#dbe3ed;
+    --ok:#06a04a; --warn:#c0392b;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:linear-gradient(180deg,#f4f7fb 0%,#e6eff8 100%);min-height:100vh;color:var(--ink);font-family:"Noto Sans JP",-apple-system,sans-serif;line-height:1.7;letter-spacing:.02em}
+  .wrap{max-width:520px;margin:0 auto;padding:32px 18px 80px}
+  .hd{text-align:center;margin-bottom:24px}
+  .hd .salon{font-family:"Cormorant Garamond",serif;font-size:11px;letter-spacing:.45em;color:var(--primary);margin-bottom:8px}
+  .hd h1{font-family:"Noto Sans JP",serif;font-size:20px;font-weight:600;margin:0 0 6px;letter-spacing:.04em}
+  .hd .sub{font-size:12px;color:var(--ink2)}
+  .hd::after{content:"";display:block;width:48px;height:1px;background:var(--primary);margin:16px auto 0}
+
+  .card{background:var(--paper);border-radius:8px;padding:24px 22px;box-shadow:0 4px 20px -8px rgba(44,82,130,.18);margin-bottom:16px}
+
+  .summary{background:var(--primary-soft);padding:16px 18px;border-radius:6px;margin-bottom:18px}
+  .summary .row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(44,82,130,.12);font-size:13.5px}
+  .summary .row:last-child{border-bottom:none}
+  .summary .row .k{color:var(--ink2);font-size:12px}
+  .summary .row .v{color:var(--ink);font-weight:500}
+  .summary .row .v.big{font-family:"Noto Sans JP",serif;font-size:16px;color:var(--primary)}
+
+  .status-banner{padding:14px 16px;border-radius:6px;margin-bottom:16px;font-size:13px;font-weight:500;text-align:center;line-height:1.7}
+  .status-ok{background:#e8f5e8;color:var(--ok);border:1px solid var(--ok)}
+  .status-warn{background:#fff3e0;color:var(--warn);border:1px solid var(--warn)}
+  .status-neutral{background:#eee;color:#666}
+
+  .btn{display:block;width:100%;padding:16px;border:none;border-radius:6px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;letter-spacing:.05em;margin-bottom:10px;text-align:center;text-decoration:none}
+  .btn-danger{background:var(--warn);color:#fff}
+  .btn-danger:hover{background:#a93223}
+  .btn-danger:disabled{background:#ccc;cursor:wait}
+  .btn-alt{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn-line{background:#06c755;color:#fff}
+
+  .msg{padding:14px 16px;border-radius:6px;font-size:13px;line-height:1.7;margin-bottom:14px}
+  .msg-info{background:#eef5fb;color:#2c5282}
+
+  .loader{text-align:center;padding:30px;color:var(--ink2)}
+  .loader::after{content:"⋯";font-size:24px;animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+
+  .footer{text-align:center;font-size:11px;color:var(--ink3);margin-top:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">
+    <div class="salon">FP COMPASS</div>
+    <h1 id="page-title">ご予約のキャンセル</h1>
+    <div class="sub">ファイナンシャルプランナー Zoom 相談</div>
+  </div>
+
+  <div class="card" id="root">
+    <div class="loader">予約情報を確認中</div>
+  </div>
+
+  <div class="footer">
+    ご不明点は LINE 公式アカウントまでお気軽にどうぞ
+  </div>
+</div>
+
+<script>
+// FP Compass GAS Web App URL (deploy時に確定値で更新する)
+const GAS_ENDPOINT = window.GAS_ENDPOINT || 'https://script.google.com/macros/s/AKfycbyLNGMrDyEvPg0FBTiRdfAF3fEyhoW6mWBT2S81ytnRQl_b_trAP8GSJ8Alkg7zpFU7kw/exec';
+const LINE_FRIEND_URL = 'https://line.me/R/ti/p/@511thleq';
+
+const params = new URLSearchParams(location.search);
+const RES_ID = params.get('id') || '';
+const TOKEN = params.get('t') || '';
+
+const root = document.getElementById('root');
+
+function renderError(msg){
+  root.innerHTML = `<div class="status-banner status-warn">${msg}</div>
+    <a href="${LINE_FRIEND_URL}" class="btn btn-line">📩 LINEでサロンに連絡する</a>`;
+}
+
+function fmtDate(s){
+  if(!s) return '-';
+  const m = String(s).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(!m) return s;
+  const d = new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+  const WD = ['日','月','火','水','木','金','土'];
+  return `${m[1]}年${Number(m[2])}月${Number(m[3])}日(${WD[d.getDay()]})`;
+}
+
+function summaryHtml(d){
+  return `
+    <div class="summary">
+      <div class="row"><span class="k">お客様</span><span class="v">${d.name||'-'} 様</span></div>
+      <div class="row"><span class="k">日付</span><span class="v big">${fmtDate(d.date)}</span></div>
+      <div class="row"><span class="k">時間</span><span class="v big">${d.slot||'-'}〜</span></div>
+      <div class="row"><span class="k">形式</span><span class="v">Zoom オンライン相談</span></div>
+    </div>`;
+}
+
+async function loadPreview(){
+  if(!RES_ID || !TOKEN){ renderError('リンクが正しくありません (パラメータ不足)'); return; }
+  try{
+    const r = await fetch(`${GAS_ENDPOINT}?cmd=cancel_preview&id=${encodeURIComponent(RES_ID)}&t=${encodeURIComponent(TOKEN)}`, {redirect:'follow'});
+    const j = await r.json();
+    if(!j.ok){
+      if(j.error === 'invalid_token') renderError('リンクが正しくありません (無効なトークン)');
+      else if(j.error === 'not_found') renderError('予約が見つかりませんでした');
+      else renderError('読み込みエラー: ' + (j.error||'unknown'));
+      return;
+    }
+    renderPreview(j);
+  }catch(e){
+    renderError('通信エラー: ' + e.message);
+  }
+}
+
+function renderPreview(d){
+  let html = summaryHtml(d);
+  if(d.alreadyCancelled){
+    html += `<div class="status-banner status-neutral">このご予約はすでにキャンセル済みです</div>
+      <a href="${LINE_FRIEND_URL}" class="btn btn-line">LINEに戻る</a>`;
+  } else if(d.tooLate){
+    const h = Math.max(0, Math.round(d.hoursUntil));
+    html += `
+      <div class="status-banner status-warn">
+        ⚠ ご来談まで <strong>${h}時間</strong> を切っています<br>
+        セルフキャンセル受付期限 (24時間前) を過ぎているため、お手数ですが LINE 公式アカウントから<br>
+        直接ご連絡くださいませ。
+      </div>
+      <a href="${LINE_FRIEND_URL}" class="btn btn-line">📩 LINEで連絡する</a>
+    `;
+  } else if(d.canSelfCancel){
+    const h = Math.round(d.hoursUntil);
+    html += `
+      <div class="status-banner status-ok">
+        ✅ キャンセル可能です (ご来談まで約${h}時間)
+      </div>
+      <div class="msg msg-info">
+        ボタンを押すと、ご予約が即時キャンセルされます。<br>
+        担当FPにも同時に通知が届きます。
+      </div>
+      <button class="btn btn-danger" id="cancel-btn" onclick="doCancel()">この予約をキャンセルする</button>
+      <a href="${LINE_FRIEND_URL}" class="btn btn-alt">やめる(LINEに戻る)</a>
+    `;
+  } else {
+    html += `<div class="status-banner status-warn">操作できない状態です</div>`;
+  }
+  root.innerHTML = html;
+}
+
+async function doCancel(){
+  const btn = document.getElementById('cancel-btn');
+  if(!btn) return;
+  if(!confirm('本当にこのご予約をキャンセルしますか？\n\n(キャンセル後の取り消しはできません)')) return;
+  btn.disabled = true;
+  btn.textContent = 'キャンセル処理中...';
+  try{
+    const r = await fetch(`${GAS_ENDPOINT}?cmd=cancel&id=${encodeURIComponent(RES_ID)}&t=${encodeURIComponent(TOKEN)}`, {redirect:'follow'});
+    const j = await r.json();
+    if(!j.ok){
+      alert('キャンセルできませんでした: ' + (j.error||'unknown') + '\n\nお手数ですがLINEで直接ご連絡ください。');
+      btn.disabled = false;
+      btn.textContent = 'この予約をキャンセルする';
+      return;
+    }
+    root.innerHTML = `
+      <div class="status-banner status-ok" style="font-size:14px;padding:24px">
+        ✅ キャンセルを承りました<br>
+        <small style="font-weight:400;color:#666;display:block;margin-top:8px">${j.name||''} 様<br>${fmtDate(j.date)} ${j.slot||''}〜</small>
+      </div>
+      <div class="msg msg-info">
+        ご連絡ありがとうございました。<br>またのご予約を心よりお待ちしております。
+      </div>
+      <a href="${LINE_FRIEND_URL}" class="btn btn-line">LINEに戻る</a>
+    `;
+  }catch(e){
+    alert('通信エラー: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'この予約をキャンセルする';
+  }
+}
+
+loadPreview();
+</script>
+</body>
+</html>
