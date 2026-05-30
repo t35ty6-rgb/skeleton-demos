@@ -808,11 +808,20 @@
       const zoomFeatures = `width=${zoomW},height=${sh},left=${memoW},top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
       const zoomWin = window.open(zoomBrowserUrl, 'fp-zoom-win', zoomFeatures);
       if (!zoomWin) window.open(zoomBrowserUrl, '_blank');
-      localStorage.setItem('fp-memo-pos', JSON.stringify({ left: 0, top: 0 }));
-      localStorage.setItem('fp-memo-size', JSON.stringify({ w: memoW, h: sh }));
-      localStorage.setItem('fp-memo-fullscreen', '1');
       const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
-      setTimeout(() => openMemoModal(booking || { name: 'お客様', userId: bookingTs }, bookingTs), 500);
+      // メモを別ポップアップウィンドウとして開く (CRM とは別ウィンドウ=Zoomを隠さない)
+      const memoFeatures = `width=${memoW},height=${sh},left=0,top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
+      const memoKey = 'fp-memo-' + (bookingTs || '');
+      const tasksKey = 'fp-tasks-' + ((booking && booking.userId) || bookingTs);
+      const memoQuery = `?memoKey=${encodeURIComponent(memoKey)}&tasksKey=${encodeURIComponent(tasksKey)}&name=${encodeURIComponent((booking && booking.name) || 'お客様')}&baseDate=${encodeURIComponent((booking && booking.date) || '')}&bookingTs=${encodeURIComponent(bookingTs || '')}`;
+      window._fpMemoWin = window.open('memo-popup.html' + memoQuery, 'fp-memo-win', memoFeatures);
+      if (!window._fpMemoWin) {
+        // ポップアップブロック時はフォールバックで CRM 内モーダル
+        localStorage.setItem('fp-memo-pos', JSON.stringify({ left: 0, top: 0 }));
+        localStorage.setItem('fp-memo-size', JSON.stringify({ w: memoW, h: sh }));
+        localStorage.setItem('fp-memo-fullscreen', '1');
+        setTimeout(() => openMemoModal(booking || { name: 'お客様', userId: bookingTs }, bookingTs), 500);
+      }
 
       // マイク音声を合成
       let combined = stream;
@@ -829,7 +838,8 @@
       R.chunks = []; R.startTime = Date.now(); R.bookingTs = bookingTs;
       R.customerName = (booking && booking.name) || 'お客様';
       const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm';
-      R.mediaRecorder = new MediaRecorder(combined, { mimeType: mime, videoBitsPerSecond: 1500000 });
+      // 低ビットレートで容量抑制 (1時間で~300MB → ~50MB)
+      R.mediaRecorder = new MediaRecorder(combined, { mimeType: mime, videoBitsPerSecond: 400000, audioBitsPerSecond: 96000 });
       R.mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) R.chunks.push(e.data); };
       R.mediaRecorder.onstop = async () => {
         const blob = new Blob(R.chunks, { type: 'video/webm' });
@@ -854,19 +864,36 @@
   }
 
   async function autoUploadRecording(blob, bookingTs, customerName, booking) {
+    const sizeMB = blob.size / 1024 / 1024;
+    const filename = `meeting-${(booking && booking.date) || new Date().toISOString().slice(0,10)}-${new Date().toISOString().slice(11,16).replace(':','')}.webm`;
+    const blobUrl = URL.createObjectURL(blob);
     // アップロード中トースト
     const t = document.createElement('div');
     t.id = 'fp-upload-toast';
-    t.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border-left:5px solid #0ea5e9;border-radius:12px;padding:16px 22px;box-shadow:0 16px 40px rgba(0,0,0,0.18);z-index:10003;font-family:inherit;min-width:320px;';
+    t.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border-left:5px solid #0ea5e9;border-radius:12px;padding:16px 22px;box-shadow:0 16px 40px rgba(0,0,0,0.18);z-index:10003;font-family:inherit;min-width:360px;max-width:420px;';
     t.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
         <div style="font-size:22px;">☁️</div>
         <strong style="font-size:14px;">録画ファイルを Drive にアップロード中</strong>
       </div>
       <div id="fp-upload-detail" style="font-size:12px;color:#374151;line-height:1.55;">
-        ${escapeHtml(customerName)}様 専用フォルダを作成中... (${(blob.size/1024/1024).toFixed(1)}MB)
+        ${escapeHtml(customerName)}様 専用フォルダ (${sizeMB.toFixed(1)}MB)
       </div>`;
     document.body.appendChild(t);
+
+    const showFallback = (reason) => {
+      const detail = document.getElementById('fp-upload-detail');
+      if (detail) {
+        detail.innerHTML = `❌ アップロード失敗 (${escapeHtml(reason)})<br>
+          <a href="${blobUrl}" download="${escapeHtml(filename)}" style="display:inline-block;margin-top:8px;padding:7px 14px;background:linear-gradient(135deg,#b8893d,#d4a017);color:#fff;text-decoration:none;border-radius:6px;font-size:12px;font-weight:700;">💾 ファイルをダウンロード</a><br>
+          <span style="font-size:10.5px;color:var(--muted);">→ ダウンロード後、Drive の「FP Compass 録画/${escapeHtml(customerName)}様」 フォルダに手動アップロード</span>`;
+      }
+      t.style.borderLeftColor = '#b91c3c';
+    };
+
+    // 50MB 超は Cloud Run の100MB制限超え可能性大 → 即フォールバック
+    if (sizeMB > 45) { showFallback(`ファイルが大きすぎます (${sizeMB.toFixed(1)}MB)`); return; }
+
     try {
       const reader = new FileReader();
       const base64 = await new Promise((res, rej) => {
@@ -874,33 +901,28 @@
         reader.onerror = rej;
         reader.readAsDataURL(blob);
       });
-      const filename = `meeting-${(booking && booking.date) || new Date().toISOString().slice(0,10)}-${new Date().toISOString().slice(11,16).replace(':','')}.webm`;
+      // タイムアウト付きで fetch (5分)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000);
       const r = await fetch(CLOUD_RUN_BASE + '/api/upload-recording', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ts: bookingTs,
-          customerName: customerName,
-          filename: filename,
-          mimeType: 'video/webm',
-          base64: base64,
-        }),
+        body: JSON.stringify({ ts: bookingTs, customerName, filename, mimeType: 'video/webm', base64 }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       const data = await r.json();
       const detail = document.getElementById('fp-upload-detail');
       if (data.ok) {
         if (detail) detail.innerHTML = `✅ <a href="${data.driveUrl}" target="_blank" style="color:#0ea5e9;font-weight:700;">Drive で開く ↗</a><br><span style="font-size:10.5px;color:var(--muted);">📁 FP Compass 録画 / ${escapeHtml(customerName)}様 / ${escapeHtml(filename)}</span>`;
         t.style.borderLeftColor = '#06c755';
       } else {
-        if (detail) detail.innerHTML = `❌ 失敗: ${escapeHtml(data.error || '')}`;
-        t.style.borderLeftColor = '#b91c3c';
+        showFallback(data.error || 'GAS エラー');
       }
     } catch (e) {
-      const detail = document.getElementById('fp-upload-detail');
-      if (detail) detail.innerHTML = '❌ 失敗: ' + e.message;
-      t.style.borderLeftColor = '#b91c3c';
+      showFallback(e.message);
     }
-    setTimeout(() => t.remove(), 30000);
+    setTimeout(() => t.remove(), 60000);
   }
 
 
@@ -966,6 +988,8 @@
     hideRecordingBorder();
     // 「画面左1/4 固定モード」 解除
     localStorage.removeItem('fp-memo-fullscreen');
+    // メモ別ウィンドウは閉じない (FP が確認できるように残す)
+    // window._fpMemoWin?.close();
   }
 
   function showRecordingPill() {
