@@ -1000,6 +1000,23 @@
       const zoomFeatures = `width=${zoomW},height=${sh},left=${memoW},top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
       const zoomWin = window.open(zoomBrowserUrl, 'fp-zoom-win', zoomFeatures);
       if (!zoomWin) window.open(zoomBrowserUrl, '_blank');
+      // Zoom が閉じられたら自動で録画停止 (切り忘れ防止)
+      window._fpZoomWin = zoomWin;
+      window._fpZoomCloseWatcher = setInterval(() => {
+        if (zoomWin && zoomWin.closed) {
+          clearInterval(window._fpZoomCloseWatcher);
+          window._fpZoomCloseWatcher = null;
+          if (window._fpRecorder.mediaRecorder && window._fpRecorder.mediaRecorder.state !== 'inactive') {
+            // 自動停止トースト表示
+            const t = document.createElement('div');
+            t.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border-left:5px solid #f59e0b;border-radius:12px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.18);z-index:10004;font-family:inherit;max-width:380px;';
+            t.innerHTML = `<strong style="font-size:14px;display:block;margin-bottom:4px;">⏹ Zoom が閉じられました</strong><div style="font-size:12px;color:#6b7280;line-height:1.5;">録画を自動停止して AI 処理を開始します</div>`;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 6000);
+            stopScreenRecording();
+          }
+        }
+      }, 2000);
       const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
       // メモを別ポップアップウィンドウとして開く (CRM とは別ウィンドウ=Zoomを隠さない)
       const memoFeatures = `width=${memoW},height=${sh},left=0,top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
@@ -1039,8 +1056,17 @@
         combined.getTracks().forEach(t => t.stop());
         stream.getTracks().forEach(t => t.stop());
         if (R._micStream) R._micStream.getTracks().forEach(t => t.stop());
-        // 停止 → 自動アップロード
-        await autoUploadRecording(blob, R.bookingTs, R.customerName, booking);
+        // 停止 → Drive アップロード と AI解析 を 並行実行
+        const drivePromise = autoUploadRecording(blob, R.bookingTs, R.customerName, booking);
+        showAIProcessingToast(R.customerName, blob);
+        const aiResult = await aiProcessRecording(blob, R.bookingTs, R.customerName, booking);
+        hideAIProcessingToast();
+        if (aiResult && aiResult.ok) {
+          showAIResultModal(aiResult, R.customerName, booking);
+        } else if (aiResult && !aiResult.ok) {
+          showAIErrorToast(aiResult.error);
+        }
+        await drivePromise;
         await onRecordingComplete(R.bookingTs, blob, R.blobUrl);
       };
       R.mediaRecorder.start(1000);
@@ -1053,6 +1079,165 @@
       alert('画面録画の開始に失敗しました\n\n詳細: ' + e.message);
       localStorage.removeItem('fp-memo-fullscreen');
     }
+  }
+
+  function showAIProcessingToast(customerName, blob) {
+    if (document.getElementById('fp-ai-processing')) return;
+    const t = document.createElement('div');
+    t.id = 'fp-ai-processing';
+    t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid #c19a3a;border-left:5px solid #c19a3a;border-radius:12px;padding:18px 26px;box-shadow:0 16px 40px rgba(0,0,0,0.2);z-index:10004;font-family:inherit;min-width:380px;max-width:480px;';
+    t.innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="width:32px;height:32px;border:3px solid #e8d9a8;border-top-color:#c19a3a;border-radius:50%;animation:fp-spin 1s linear infinite;"></div>
+        <div style="flex:1;">
+          <strong style="font-size:14px;display:block;margin-bottom:2px;">AI が面談を解析中</strong>
+          <div style="font-size:11.5px;color:#6b7280;line-height:1.5;">${escapeHtml(customerName)}様 (${(blob.size/1024/1024).toFixed(1)}MB) → 議事録 + タスク + 推奨アクション生成中... (30秒〜2分)</div>
+        </div>
+      </div>`;
+    document.body.appendChild(t);
+    if (!document.getElementById('fp-spin-style')) {
+      const s = document.createElement('style');
+      s.id = 'fp-spin-style';
+      s.textContent = '@keyframes fp-spin{to{transform:rotate(360deg)}}';
+      document.head.appendChild(s);
+    }
+  }
+  function hideAIProcessingToast() {
+    const t = document.getElementById('fp-ai-processing');
+    if (t) t.remove();
+  }
+  function showAIErrorToast(err) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #b91c3c;border-radius:10px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.18);z-index:10003;font-family:inherit;max-width:480px;';
+    t.innerHTML = `<strong style="font-size:13.5px;display:block;margin-bottom:4px;">AI 解析失敗</strong><div style="font-size:11.5px;color:#6b7280;line-height:1.5;">${escapeHtml(err || '不明なエラー')}</div>`;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 12000);
+  }
+
+  // AI 議事録生成 (Drive アップロードと並行)
+  async function aiProcessRecording(blob, bookingTs, customerName, booking) {
+    const sizeMB = blob.size / 1024 / 1024;
+    // 大き過ぎる音声は Gemini API の inline limit (~20MB) 超えるのでスキップ
+    if (sizeMB > 18) return null;
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise((res, rej) => {
+        reader.onload = () => res(reader.result.split(',')[1]);
+        reader.onerror = rej;
+        reader.readAsDataURL(blob);
+      });
+      // 顧客コンテキスト (アンケート回答から組み立て)
+      const survey = ((liveData && liveData.survey_answers) || []).find(s => s.userId === (booking && booking.userId));
+      const ctx = survey ? `テーマ: ${survey.q1_テーマ} / 年代: ${survey.q2_年代} / 家族: ${survey.q3_家族} / 年収: ${survey.q4_年収} / 悩み: ${survey.q5_悩み}` : '';
+      const r = await fetch(CLOUD_RUN_BASE + '/api/process-recording', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          base64, mimeType: 'audio/webm', // 動画でも音声トラックは抽出してくれる
+          customerName, customerContext: ctx,
+          bookingTs, userId: booking && booking.userId,
+        }),
+      });
+      const data = await r.json();
+      return data;
+    } catch (e) {
+      console.error('AI fail', e);
+      return null;
+    }
+  }
+
+  function showAIResultModal(result, customerName, booking) {
+    if (!result || !result.ok) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'fp-ai-result';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);z-index:10003;display:flex;align-items:center;justify-content:center;padding:20px;';
+    const tasksHtml = (result.tasks || []).map(t => {
+      const priColor = t.priority === '至急' ? '#fef2f2;color:#b91c3c' : (t.priority === '今週') ? '#fff7ed;color:#c2410c' : '#f0f9ff;color:#075985';
+      return `
+        <div style="background:#fff;border:1px solid #e5e7eb;border-left:3px solid #c19a3a;border-radius:8px;padding:14px 18px;">
+          <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px;">
+            <span style="font-size:18px;">${t.icon || '✅'}</span>
+            <span style="font-size:10.5px;font-weight:700;background:${priColor};padding:3px 8px;border-radius:10px;letter-spacing:0.04em;">${escapeHtml(t.priority||'-')}</span>
+            <span style="font-size:11px;color:#6b7280;margin-left:auto;font-family:'Inter',sans-serif;">${escapeHtml(t.dueDate||'-')}</span>
+          </div>
+          <strong style="font-size:14px;display:block;margin-bottom:6px;">${escapeHtml(t.task||'')}</strong>
+          <div style="font-size:11.5px;color:#5e4d1a;background:#fdfbf4;border:1px solid #e8d9a8;border-radius:5px;padding:7px 11px;margin-bottom:8px;line-height:1.6;">${escapeHtml(t.recommendedAction||'')}</div>
+          ${t.lineDraft ? `
+            <div style="background:#dcfce7;border:1px solid #86efac;border-radius:5px;padding:9px 12px;font-size:12px;color:#166534;line-height:1.65;margin-bottom:6px;white-space:pre-wrap;">${escapeHtml(t.lineDraft)}</div>
+            <button class="fp-ai-send" data-uid="${escapeHtml((booking && booking.userId)||'')}" data-msg="${escapeHtml(t.lineDraft)}" style="font-size:11.5px;padding:6px 12px;background:#06c755;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;font-family:inherit;">→ このLINEを送信</button>
+          ` : ''}
+        </div>`;
+    }).join('');
+    overlay.innerHTML = `
+      <div style="background:#fff;width:min(820px,100%);max-height:92vh;overflow-y:auto;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,0.35);">
+        <div style="padding:20px 26px;border-bottom:1px solid #e8e2d4;display:flex;justify-content:space-between;align-items:baseline;">
+          <div>
+            <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">AI Meeting Summary</div>
+            <h2 style="font-family:'Noto Serif JP',serif;font-size:20px;margin:0;font-weight:600;color:#1f2a3f;">${escapeHtml(customerName)}様 面談 AI 議事録</h2>
+          </div>
+          <button id="fp-ai-close-modal" style="background:#fff;border:1px solid #e5e7eb;width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:18px;">✕</button>
+        </div>
+        <div style="padding:22px 26px;">
+          ${result.summary ? `
+            <div style="margin-bottom:22px;">
+              <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">議事録</div>
+              <div style="background:#fafbfc;border:1px solid #e8e2d4;border-radius:8px;padding:14px 18px;font-size:13px;line-height:1.75;white-space:pre-wrap;">${escapeHtml(result.summary)}</div>
+            </div>` : ''}
+          ${result.key_concerns && result.key_concerns.length > 0 ? `
+            <div style="margin-bottom:22px;">
+              <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">お客様の関心事</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                ${result.key_concerns.map(k => `<span style="background:#fff;border:1px solid #c19a3a;color:#5e4d1a;padding:5px 12px;border-radius:14px;font-size:12px;font-weight:600;">${escapeHtml(k)}</span>`).join('')}
+              </div>
+            </div>` : ''}
+          ${tasksHtml ? `
+            <div style="margin-bottom:22px;">
+              <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">FP が次にやるタスク (推奨)</div>
+              <div style="display:grid;gap:10px;">${tasksHtml}</div>
+            </div>` : ''}
+          ${result.next_meeting_suggestion ? `
+            <div style="background:#f0f4fa;border:1px solid #3b5c8f33;border-left:3px solid #3b5c8f;border-radius:6px;padding:12px 16px;font-size:12.5px;color:#1e3a5f;line-height:1.65;">
+              <strong>次回面談の提案:</strong> ${escapeHtml(result.next_meeting_suggestion)}
+            </div>` : ''}
+        </div>
+        <div style="padding:14px 26px;border-top:1px solid #e8e2d4;display:flex;justify-content:flex-end;gap:8px;">
+          <button id="fp-ai-save-tasks" style="font-size:13px;padding:9px 20px;background:linear-gradient(135deg,#b8893d,#d4a017);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;">タスクを顧客カードに保存して閉じる</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    document.getElementById('fp-ai-close-modal').addEventListener('click', () => overlay.remove());
+    document.getElementById('fp-ai-save-tasks').addEventListener('click', () => {
+      // タスクを localStorage に保存
+      const tasksKey = 'fp-tasks-' + ((booking && booking.userId) || (booking && booking.ts));
+      const existing = JSON.parse(localStorage.getItem(tasksKey) || '[]');
+      const newTasks = (result.tasks || []).map(t => ({
+        task: t.task, due: t.dueDate, priority: t.priority, icon: t.icon,
+        recommendedAction: t.recommendedAction, actionTemplate: t.lineDraft,
+        createdAt: new Date().toISOString(), customerName, bookingTs: booking && booking.ts,
+      }));
+      localStorage.setItem(tasksKey, JSON.stringify(existing.concat(newTasks)));
+      if (window.FPCrmRefreshClients) window.FPCrmRefreshClients();
+      overlay.remove();
+    });
+    overlay.querySelectorAll('.fp-ai-send').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const uid = btn.dataset.uid;
+        const msg = btn.dataset.msg;
+        if (!uid) { alert('LINE userId が無いため送信できません'); return; }
+        const finalMsg = prompt('LINEで送るメッセージ (編集可)', msg);
+        if (!finalMsg) return;
+        btn.disabled = true; btn.textContent = '送信中...';
+        try {
+          const r = await fetch(CLOUD_RUN_BASE + '/api/send-line', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: uid, text: finalMsg }),
+          });
+          const d = await r.json();
+          if (d.ok) { btn.textContent = '✓ 送信済'; btn.style.background = '#94a3b8'; }
+          else { alert('失敗: ' + (d.error || '')); btn.disabled = false; btn.textContent = '→ このLINEを送信'; }
+        } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; btn.textContent = '→ このLINEを送信'; }
+      });
+    });
   }
 
   async function autoUploadRecording(blob, bookingTs, customerName, booking) {
@@ -1178,10 +1363,9 @@
     const pill = document.getElementById('fp-rec-pill');
     if (pill) pill.remove();
     hideRecordingBorder();
-    // 「画面左1/4 固定モード」 解除
     localStorage.removeItem('fp-memo-fullscreen');
-    // メモ別ウィンドウは閉じない (FP が確認できるように残す)
-    // window._fpMemoWin?.close();
+    // Zoom 閉じ監視も停止
+    if (window._fpZoomCloseWatcher) { clearInterval(window._fpZoomCloseWatcher); window._fpZoomCloseWatcher = null; }
   }
 
   function showRecordingPill() {
