@@ -1281,6 +1281,20 @@
         createdAt: new Date().toISOString(), customerName, bookingTs: booking && booking.ts,
       }));
       localStorage.setItem(tasksKey, JSON.stringify(existing.concat(newTasks)));
+      // AI 全結果も顧客カードで参照できるように保存
+      const aiKey = 'fp-ai-' + ((booking && booking.userId) || (booking && booking.ts));
+      const aiHistory = JSON.parse(localStorage.getItem(aiKey) || '[]');
+      aiHistory.push({
+        bookingTs: booking && booking.ts,
+        date: booking && booking.date,
+        transcript: result.transcript || '',
+        summary: result.summary || '',
+        transcript_summary: result.transcript_summary || '',
+        key_concerns: result.key_concerns || [],
+        next_meeting_suggestion: result.next_meeting_suggestion || '',
+        createdAt: new Date().toISOString(),
+      });
+      localStorage.setItem(aiKey, JSON.stringify(aiHistory));
       if (window.FPCrmRefreshClients) window.FPCrmRefreshClients();
       overlay.remove();
     });

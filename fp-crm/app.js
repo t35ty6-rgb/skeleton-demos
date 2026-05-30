@@ -929,24 +929,58 @@
 
     if (bookingsWithMemo.length === 0 && tasks.length === 0) return ''; // 何もない時は表示しない
 
+    // AI 議事録データ (localStorage に保存されていれば)
+    const aiKey = 'fp-ai-' + (client.lineFriendId || client.id);
+    const aiResults = JSON.parse(localStorage.getItem(aiKey) || '[]');
+
     return `
       <div class="detail-section">
-        <h3>面談記録 <span class="count-badge">${bookingsWithMemo.length} 回</span></h3>
+        <h3>面談記録・AI議事録 <span class="count-badge">${bookingsWithMemo.length} 回</span></h3>
         ${bookingsWithMemo.length === 0 ? '' :
-          '<div style="display:grid;gap:10px;margin-bottom:14px;">' +
-          bookingsWithMemo.slice().reverse().map(b => `
-            <div style="background:#fff;border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;padding:14px 18px;">
-              <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
-                <strong style="font-size:13.5px;">${escapeHtml(String(b.date||'').slice(0,10))} ${escapeHtml(String(b.time||'').slice(0,5))} 面談</strong>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                  ${b.driveUrl ? `<a href="${escapeHtml(b.driveUrl)}" target="_blank" style="font-size:11px;padding:4px 10px;background:#0ea5e9;color:#fff;border-radius:5px;text-decoration:none;font-weight:600;">🎥 録画を見る</a>` : ''}
-                  ${b.zoomUrl ? `<a href="${escapeHtml(b.zoomUrl)}" target="_blank" style="font-size:11px;padding:4px 10px;background:#fff;color:#1f2a3f;border:1px solid var(--line);border-radius:5px;text-decoration:none;font-weight:600;">Zoom URL</a>` : ''}
+          '<div style="display:grid;gap:14px;margin-bottom:18px;">' +
+          bookingsWithMemo.slice().reverse().map(b => {
+            const aiData = aiResults.find(a => a.bookingTs === b.ts) || {};
+            return `
+            <div style="background:linear-gradient(135deg,#fff,#fdfbf4);border:1px solid #e0d8c0;border-left:5px solid #c1272d;padding:20px 24px;box-shadow:0 4px 16px rgba(15,23,41,0.06);">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e0d8c0;">
+                <div>
+                  <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#c1272d;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:4px;">Meeting Record</div>
+                  <strong style="font-family:'Noto Serif JP',serif;font-size:17px;color:#0f1729;">${escapeHtml(String(b.date||'').slice(0,10))} ${escapeHtml(String(b.time||'').slice(0,5))} 面談</strong>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  ${b.driveUrl ? `<a href="${escapeHtml(b.driveUrl)}" target="_blank" style="font-size:11px;padding:8px 14px;background:#1b2845;color:#fff;text-decoration:none;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;">🎥 録画を見る</a>` : ''}
+                  ${b.zoomUrl ? `<a href="${escapeHtml(b.zoomUrl)}" target="_blank" style="font-size:11px;padding:8px 14px;background:#fff;color:#0f1729;border:1px solid #e0d8c0;text-decoration:none;font-weight:700;letter-spacing:0.06em;">Zoom URL</a>` : ''}
                 </div>
               </div>
-              ${b.memo ? `<div style="font-size:12px;line-height:1.65;color:#1f2a3f;background:#fafbfc;border:1px solid var(--line);border-radius:6px;padding:10px 13px;white-space:pre-wrap;">${escapeHtml(b.memo)}</div>`
-                : '<div style="font-size:11.5px;color:var(--muted);font-style:italic;">面談メモなし</div>'}
+              ${aiData.transcript ? `
+                <div style="margin-bottom:14px;">
+                  <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#b8893d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">📝 AI 文字起こし (Whisper)</div>
+                  <details style="background:#fff;border:1px solid #e0d8c0;padding:0;">
+                    <summary style="padding:12px 16px;cursor:pointer;font-size:12px;color:#0f1729;font-weight:700;background:#fafaf6;border-bottom:1px solid #e0d8c0;">📜 全文を見る (${(aiData.transcript||'').length}文字)</summary>
+                    <div style="padding:14px 18px;font-size:12px;line-height:1.8;white-space:pre-wrap;max-height:300px;overflow-y:auto;">${escapeHtml(aiData.transcript)}</div>
+                  </details>
+                </div>` : ''}
+              ${aiData.summary ? `
+                <div style="margin-bottom:14px;">
+                  <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#b8893d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">🤖 AI 議事録 (Claude Sonnet)</div>
+                  <div style="font-size:12.5px;line-height:1.85;color:#0f1729;background:#fff;border:1px solid #e0d8c0;padding:14px 18px;white-space:pre-wrap;">${escapeHtml(aiData.summary)}</div>
+                </div>` : ''}
+              ${aiData.key_concerns && aiData.key_concerns.length > 0 ? `
+                <div style="margin-bottom:14px;">
+                  <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#b8893d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">🎯 お客様の関心事</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    ${aiData.key_concerns.map(k => `<span style="background:#1b2845;color:#fff;padding:5px 12px;font-size:11px;font-weight:700;letter-spacing:0.04em;">${escapeHtml(k)}</span>`).join('')}
+                  </div>
+                </div>` : ''}
+              ${b.memo ? `
+                <div style="margin-top:14px;">
+                  <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#6b7280;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">手書きメモ</div>
+                  <div style="font-size:12px;line-height:1.7;color:#0f1729;background:#fff;border:1px solid #e0d8c0;padding:12px 16px;white-space:pre-wrap;">${escapeHtml(b.memo)}</div>
+                </div>` : ''}
+              ${!aiData.transcript && !aiData.summary && !b.memo ? '<div style="font-size:12px;color:#6b7280;font-style:italic;text-align:center;padding:14px;">録画 + AI処理 or 面談メモがまだ追加されていません</div>' : ''}
             </div>
-          `).join('') + '</div>'
+          `;
+          }).join('') + '</div>'
         }
 
         ${tasks.length === 0 ? '' : `
