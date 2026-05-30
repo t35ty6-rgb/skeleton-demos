@@ -1172,11 +1172,12 @@
       <div style="background:#fff;width:min(820px,100%);max-height:92vh;overflow-y:auto;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,0.35);">
         <div style="padding:20px 26px;border-bottom:1px solid #e8e2d4;display:flex;justify-content:space-between;align-items:baseline;">
           <div>
-            <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">AI Meeting Summary</div>
+            <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">AI Meeting Summary${result.mock ? ' <span style="background:#fef2f2;color:#b91c3c;padding:1px 6px;border-radius:4px;font-size:9.5px;margin-left:4px;letter-spacing:0.02em;">DEMO MODE</span>' : ''}</div>
             <h2 style="font-family:'Noto Serif JP',serif;font-size:20px;margin:0;font-weight:600;color:#1f2a3f;">${escapeHtml(customerName)}様 面談 AI 議事録</h2>
           </div>
           <button id="fp-ai-close-modal" style="background:#fff;border:1px solid #e5e7eb;width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:18px;">✕</button>
         </div>
+        ${result.mock ? '<div style="background:#fff8e1;border-bottom:1px solid #f0d36b;padding:10px 26px;font-size:11.5px;color:#5e4d1a;">⚠ デモモード — Groq + Anthropic の API キーが未設定。実際の Zoom 音声ではなく、サンプル議事録を表示しています</div>' : ''}
         <div style="padding:22px 26px;">
           ${result.summary ? `
             <div style="margin-bottom:22px;">
