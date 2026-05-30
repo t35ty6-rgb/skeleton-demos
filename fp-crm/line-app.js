@@ -318,6 +318,43 @@
     const recordingNow = bookings.filter(b => b.recordingStatus === 'recording').length;
     const totalNewLeads = surveys.length;
 
+    // フォローアップ必要: Zoomまで到達しなかった人を抽出
+    // - 友だち追加したがアンケート未回答 (>3日)
+    // - アンケート回答したが候補日空欄 (>5日)
+    // - 候補日確定したが面談日が過ぎても録画なし
+    const liveUsers = (liveData && liveData.users) || [];
+    const todayMs = Date.now();
+    const aftercare = [];
+    liveUsers.forEach(u => {
+      const lastTs = u.lastActionAt || u.addedAt;
+      if (!lastTs) return;
+      const daysSinceAction = Math.floor((todayMs - new Date(lastTs).getTime()) / 86400000);
+      const userSurveys = surveys.filter(s => s.userId === u.userId);
+      const userBooking = bookings.find(b => b.userId === u.userId);
+      const survey = userSurveys[userSurveys.length - 1]; // 最新
+      // 友だち追加だけで放置
+      if (!survey && daysSinceAction >= 3 && u.status !== 'unfollowed') {
+        aftercare.push({ user: u, reason: '友だち追加後 アンケート未回答', stage: 'survey-pending', days: daysSinceAction, customerName: u.displayName || '匿名' });
+      }
+      // アンケート回答済み、候補日無し
+      else if (survey && !survey.q6_候補1 && !survey.q7_候補2 && !survey.q8_候補3 && daysSinceAction >= 5) {
+        aftercare.push({ user: u, reason: 'アンケート回答済み 候補日未提示', stage: 'slot-pending', days: daysSinceAction, customerName: u.displayName || '匿名', survey });
+      }
+      // 候補日提示済み、未確定
+      else if (survey && (survey.q6_候補1 || survey.q7_候補2 || survey.q8_候補3) && !survey.confirmedSlot && daysSinceAction >= 3) {
+        aftercare.push({ user: u, reason: '候補日提示済み 確定待ち', stage: 'confirm-pending', days: daysSinceAction, customerName: u.displayName || '匿名', survey });
+      }
+      // 確定済みで予定日が過ぎてるが完了マークなし
+      else if (userBooking && userBooking.status === 'confirmed' && !userBooking.recordingStatus) {
+        const meetDate = new Date(userBooking.date);
+        const daysSinceMeet = Math.floor((todayMs - meetDate.getTime()) / 86400000);
+        if (daysSinceMeet >= 1) {
+          aftercare.push({ user: u, reason: '面談日が過ぎたが完了マーク無し', stage: 'completion-pending', days: daysSinceMeet, customerName: u.displayName || userBooking.name || '匿名' });
+        }
+      }
+    });
+    aftercare.sort((a, b) => b.days - a.days);
+
     v.innerHTML = `
       <h1 style="font-family:'Noto Serif JP',serif;font-size:26px;letter-spacing:0.02em;margin:0 0 4px;">🆕 新規相談</h1>
       <p style="color:var(--muted);font-size:13.5px;margin:0 0 18px;">お客様がLINEでアンケート + 候補日3つに回答すると、ここに並びます。<br><strong style="color:var(--accent);">FPがやることは「下の候補日3つから1つタップで確定」のみ</strong>です。</p>
@@ -345,12 +382,12 @@
           <div class="task-title">議事録 未生成</div>
           <div class="task-desc">録画は終わったが議事録がまだ / AIで自動作成</div>
         </a>
-        <a href="#section-funnel" class="task-card">
-          <div class="task-icon">📈</div>
-          <div class="task-label">概況</div>
-          <div class="task-count">${totalNewLeads}<span class="unit">件</span></div>
-          <div class="task-title">直近の問い合わせ総数</div>
-          <div class="task-desc">アンケート回答数 / ファネル詳細</div>
+        <a href="#section-aftercare" class="task-card ${aftercare.length > 0 ? 'urgent' : 'muted'}">
+          <div class="task-icon">📞</div>
+          <div class="task-label">${aftercare.length > 0 ? 'フォロー必要' : 'なし'}</div>
+          <div class="task-count">${aftercare.length}<span class="unit">名</span></div>
+          <div class="task-title">Zoomまで到達してない人</div>
+          <div class="task-desc">LINE で追加メッセージや軽い後押しを送ろう</div>
         </a>
       </div>
 
@@ -380,6 +417,27 @@
         <div id="bookings-list"></div>
       </section>
 
+      <section class="board-section" id="section-aftercare">
+        <h2>📞 フォローアップ必要 — Zoomまで到達してない人 (${aftercare.length}名)</h2>
+        <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">アンケート途中・候補日提示後・面談キャンセル等で止まってる方。LINEで追加メッセージを送ろう。</p>
+        <div id="aftercare-list">
+          ${aftercare.length === 0 ? '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:24px;text-align:center;color:var(--muted);font-size:13px;">フォロー必要な方はいません 🎉</div>' :
+            aftercare.map(a => `
+              <div style="background:var(--surface);border:1px solid var(--line);border-left:4px solid ${a.stage==='completion-pending'?'#06c755':(a.days>=14?'#b91c3c':(a.days>=7?'#f59e0b':'#0ea5e9'))};border-radius:10px;padding:14px 18px;margin-bottom:8px;display:grid;grid-template-columns:36px 1fr auto;gap:14px;align-items:center;">
+                <div style="background:#06c755;color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;font-family:inherit;">L</div>
+                <div>
+                  <strong style="font-size:14px;">${escapeHtml(a.customerName)} 様</strong>
+                  <span style="font-size:10px;color:#06c755;background:#dcfce7;padding:1px 5px;border-radius:5px;margin-left:6px;font-weight:700;">LINE</span>
+                  <div style="font-size:12px;color:var(--ink-2);margin-top:3px;">📍 ${escapeHtml(a.reason)}</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px;">最終アクションから ${a.days}日経過</div>
+                </div>
+                <button data-aftercare-uid="${escapeHtml(a.user.userId)}" data-aftercare-name="${escapeHtml(a.customerName)}" data-aftercare-stage="${a.stage}" style="font-size:12px;padding:8px 14px;background:linear-gradient(135deg,#06c755,#04a045);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-family:inherit;">📨 LINE追撃</button>
+              </div>
+            `).join('')
+          }
+        </div>
+      </section>
+
       <section class="board-section" id="section-funnel">
         <h2>📈 直近のお問い合わせと、リード獲得ファネル</h2>
         <div id="funnel-area"></div>
@@ -388,6 +446,43 @@
     `;
     fillConfirmList();
     fillBookingsList();
+    // フォローアップ追撃ボタン
+    document.querySelectorAll('[data-aftercare-uid]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const uid = btn.dataset.aftercareUid;
+        const name = btn.dataset.aftercareName;
+        const stage = btn.dataset.aftercareStage;
+        const templates = {
+          'survey-pending': `${name}様\n\nお申し込みありがとうございました!\nまだアンケートにお答えいただいてないようなので、お時間ある時にぜひお願いします😊\n\n回答は3分で完了します✨`,
+          'slot-pending': `${name}様\n\nアンケート回答ありがとうございました!\nぜひ無料Zoom面談で詳しくお話しませんか?\nご都合の良い候補日を3つ教えていただけると、その中から1つを確定させていただきます😊`,
+          'confirm-pending': `${name}様\n\n候補日3つご提示いただきありがとうございます!\n本日中にFPから1つ選んで確定のご連絡をお送りします🙏`,
+          'completion-pending': `${name}様\n\n先日はZoom面談ありがとうございました!\nご相談内容で気になる点や追加でお聞きしたいこと、ぜひお知らせください😊`,
+        };
+        const msg = prompt('LINEで送るメッセージ', templates[stage] || `${name}様\n\nお元気でいらっしゃいますか?`);
+        if (!msg) return;
+        btn.disabled = true; btn.textContent = '送信中...';
+        try {
+          const r = await fetch(CLOUD_RUN_BASE + '/api/send-line', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: uid, text: msg }),
+          });
+          const data = await r.json();
+          if (data.ok) {
+            btn.textContent = '✓ 送信済';
+            btn.style.background = '#94a3b8';
+            await fetchLiveData();
+            renderLeadHubInner();
+          } else {
+            alert('送信失敗: ' + (data.error || ''));
+            btn.disabled = false; btn.textContent = '📨 LINE追撃';
+          }
+        } catch (e) {
+          alert('送信失敗: ' + e.message);
+          btn.disabled = false; btn.textContent = '📨 LINE追撃';
+        }
+      });
+    });
     // カレンダー比較トグル
     const calBtn = document.getElementById('fp-toggle-cal');
     if (calBtn) calBtn.addEventListener('click', toggleCalendarSidePanel);
@@ -1753,6 +1848,8 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
           try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS)); } catch (_) {}
         }
         fillBookingsList();
+        // 顧客台帳の再描画 (app.js から expose されたフック)
+        if (window.FPCrmRefreshClients) window.FPCrmRefreshClients();
         // 反映結果を分かりやすく表示
         showCompletionToast(b, matched, createdNew);
       });

@@ -422,6 +422,9 @@
   // ============================
   // 顧客一覧
   // ============================
+  // line-app.js から呼ばれる: 顧客台帳の再描画
+  window.FPCrmRefreshClients = function() { renderClients(); };
+
   function renderContactFilterTabs(buckets) {
     let bar = document.getElementById('contact-filter-bar');
     if (!bar) {
@@ -530,9 +533,9 @@
         <tr data-client-id="${c.id}">
           <td>
             <div class="client-row-name">
-              <span class="avatar avatar-sm" style="--avh:${hue};">${escapeHtml(initial)}</span>
+              <span class="avatar avatar-sm" style="--avh:${hue};position:relative;">${escapeHtml(initial)}${c.lineFriendId ? '<span title="LINE友だち" style="position:absolute;bottom:-3px;right:-3px;background:#06c755;color:#fff;width:14px;height:14px;border-radius:50%;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;font-family:inherit;">L</span>' : ''}</span>
               <div>
-                <strong>${escapeHtml(c.name)}</strong>
+                <strong>${escapeHtml(c.name)}</strong>${c.lineFriendId ? '<span style="font-size:9.5px;color:#06c755;font-weight:700;margin-left:5px;background:#dcfce7;padding:1px 5px;border-radius:6px;letter-spacing:0.05em;">LINE</span>' : ''}
                 <div style="font-size:11px;color:var(--muted);letter-spacing:0.02em;">${escapeHtml(c.kana)}</div>
               </div>
             </div>
