@@ -139,24 +139,30 @@
       }
     }
 
+    // SVG icons (line-art, currentColor)
+    const icoUsers = '<svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+    const icoCalendar = '<svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+    const icoAlert = '<svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    const icoCoin = '<svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
+
     document.getElementById('kpi-area').innerHTML = `
       <div class="kpi">
-        <div class="kpi-label">管理顧客数</div>
+        <div class="kpi-label">${icoUsers}<span>Total Clients</span></div>
         <div class="kpi-value">${totalClients}<span class="unit">名</span></div>
         <div class="kpi-sub">うち重点 ${importantCount} 名</div>
       </div>
-      <div class="kpi ${upcoming3m > 0 ? 'warn' : 'good'}">
-        <div class="kpi-label">3ヶ月以内の重要イベント</div>
-        <div class="kpi-value">${upcoming3m}<span class="unit">件</span></div>
+      <div class="kpi">
+        <div class="kpi-label">${icoCalendar}<span>Upcoming 3M</span></div>
+        <div class="kpi-value" style="${upcoming3m > 0 ? 'color:#9a5a18;' : ''}">${upcoming3m}<span class="unit">件</span></div>
         <div class="kpi-sub">大学入学・退職・相続など</div>
       </div>
-      <div class="kpi ${staleCount > 5 ? 'alert' : (staleCount > 0 ? 'warn' : 'good')}">
-        <div class="kpi-label">半年以上 未接触</div>
-        <div class="kpi-value">${staleCount}<span class="unit">名</span></div>
+      <div class="kpi">
+        <div class="kpi-label">${icoAlert}<span>Inactive 6M+</span></div>
+        <div class="kpi-value" style="${staleCount > 5 ? 'color:#7a1530;' : (staleCount > 0 ? 'color:#9a5a18;' : '')}">${staleCount}<span class="unit">名</span></div>
         <div class="kpi-sub">フォロー要</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">管理資産合計</div>
+        <div class="kpi-label">${icoCoin}<span>AUM Total</span></div>
         <div class="kpi-value">¥${fmtMoney(totalAum)}</div>
         <div class="kpi-sub">平均 ¥${fmtMoney(Math.round(totalAum / totalClients))}/名</div>
       </div>
