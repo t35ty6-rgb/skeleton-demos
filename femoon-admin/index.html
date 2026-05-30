@@ -671,6 +671,11 @@ const SLOTS_ALL = ['10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:0
 let SELECTED_DAY = (()=>{const t=new Date();t.setHours(0,0,0,0);return t})();
 let CURRENT_LINE_TARGET = null;
 
+// LINEブランド風アイコン (緑吹き出し + 白ドット3つ)
+const LINE_ICON_W = '<svg width="13" height="13" viewBox="0 0 32 32" fill="#fff" style="vertical-align:-2px;margin-right:3px;flex-shrink:0"><path d="M16 3C8.27 3 2 8.16 2 14.5c0 3.6 2.1 6.8 5.4 8.9l-1 4 4.5-2.5c1.6.4 3.3.6 5.1.6 7.73 0 14-5.16 14-11.5S23.73 3 16 3z"/><circle cx="11" cy="14" r="1.5" fill="#06c755"/><circle cx="16" cy="14" r="1.5" fill="#06c755"/><circle cx="21" cy="14" r="1.5" fill="#06c755"/></svg>';
+const LINE_ICON_G = '<svg width="13" height="13" viewBox="0 0 32 32" fill="#06c755" style="vertical-align:-2px;margin-right:3px;flex-shrink:0"><path d="M16 3C8.27 3 2 8.16 2 14.5c0 3.6 2.1 6.8 5.4 8.9l-1 4 4.5-2.5c1.6.4 3.3.6 5.1.6 7.73 0 14-5.16 14-11.5S23.73 3 16 3z"/><circle cx="11" cy="14" r="1.5" fill="#fff"/><circle cx="16" cy="14" r="1.5" fill="#fff"/><circle cx="21" cy="14" r="1.5" fill="#fff"/></svg>';
+const LINE_ICON_W_LG = LINE_ICON_W.replace('width="13" height="13"','width="16" height="16"');
+
 const SHOP_HOURS = {
   // 0:日 1:月 ... 6:土
   default_last:'18:00',
@@ -1257,7 +1262,7 @@ function openLineModal(row){
   const dateStr = d ? `${d.getMonth()+1}/${d.getDate()}` : '';
   const hasLine = (row['LINE userId']||'').startsWith('U');
   document.getElementById('line-target-info').innerHTML = `
-    <strong>${row['お名前']||'-'}</strong> 様 / ${row['電話']||'-'} ${hasLine?'<span style="background:#06c755;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📲 LINE直送可</span>':'<span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📋 コピー送信のみ</span>'}<br>
+    <strong>${row['お名前']||'-'}</strong> 様 / ${row['電話']||'-'} ${hasLine?`<span style="background:#06c755;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px;display:inline-flex;align-items:center">${LINE_ICON_W} 直送可</span>`:'<span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📋 コピー送信のみ</span>'}<br>
     <span style="color:#7a5d5d;font-size:11.5px">${dateStr} ${row['時間']||''} ${row['コース名']||''}</span>
   `;
   document.getElementById('line-msg-body').value = '';
@@ -1285,12 +1290,16 @@ function updateLineSendBtnLabel(hasLine){
   const hint = document.getElementById('line-modal-hint');
   if(!btn) return;
   if(hasLine){
-    btn.textContent = '📤 LINE直送';
+    btn.innerHTML = LINE_ICON_W_LG + ' 直送';
     btn.style.background = '#06c755';
-    if(hint) hint.innerHTML = '✅ <strong style="color:#06c755">LINE直送可</strong>: ボタン押下でこのお客様のLINEに直接届きます。';
+    btn.style.display = 'inline-flex';
+    btn.style.alignItems = 'center';
+    btn.style.justifyContent = 'center';
+    if(hint) hint.innerHTML = `✅ <strong style="color:#06c755">${LINE_ICON_G} LINE直送可</strong>: ボタン押下でこのお客様のLINEに直接届きます。`;
   } else {
     btn.textContent = '📋 コピー & LINE管理画面を開く';
     btn.style.background = '';
+    btn.style.display = '';
     if(hint) hint.innerHTML = '⚠ <strong>userId未取得</strong>: 送信ボタンでメッセージをコピー → LINE公式アカウント管理画面で電話番号検索して貼付してください。';
   }
 }
@@ -1650,7 +1659,7 @@ function renderCustomers(){
   const direct = arr.filter(c=>c.lineUserId && c.lineUserId.startsWith('U')).length;
   const manual = arr.length - direct;
   const bd = document.getElementById('seg-breakdown');
-  if(bd) bd.innerHTML = `📲 直送可: <strong style="color:#06c755">${direct}</strong>名 / 📋 手動コピペ: <strong>${manual}</strong>名`;
+  if(bd) bd.innerHTML = `${LINE_ICON_G} 直送可: <strong style="color:#06c755">${direct}</strong>名 / 📋 手動コピペ: <strong>${manual}</strong>名`;
   // テンプレプルダウン埋め
   const sel = document.getElementById('bulk-tpl-pick');
   if(sel && sel.options.length<=1){
@@ -1688,7 +1697,7 @@ function renderCustomers(){
 
     return `<div class="${cls.join(' ')}">
       <div class="info" style="cursor:pointer" onclick="openCustDetail(${i})">
-        <div class="name">${c.name||'(名前なし)'}${c.visits>=5?' <span style="background:var(--gold);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.1em;font-weight:600;vertical-align:middle">VIP</span>':''}${c.lineUserId?' <span style="background:#06c755;color:#fff;font-size:11px;padding:3px 10px;border-radius:10px;letter-spacing:.04em;font-weight:700;vertical-align:middle;margin-left:4px">📲 LINE直送</span>':' <span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:3px 8px;border-radius:10px;letter-spacing:.04em;font-weight:500;vertical-align:middle">📋 コピー送信</span>'}<span style="font-size:10px;color:var(--rose-deep);margin-left:6px">▸ 詳細</span></div>
+        <div class="name">${c.name||'(名前なし)'}${c.visits>=5?' <span style="background:var(--gold);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.1em;font-weight:600;vertical-align:middle">VIP</span>':''}${c.lineUserId?` <span style="background:#06c755;color:#fff;font-size:11px;padding:3px 10px;border-radius:10px;letter-spacing:.04em;font-weight:700;vertical-align:middle;margin-left:4px;display:inline-flex;align-items:center">${LINE_ICON_W} 直送</span>`:' <span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:3px 8px;border-radius:10px;letter-spacing:.04em;font-weight:500;vertical-align:middle">📋 コピー送信</span>'}<span style="font-size:10px;color:var(--rose-deep);margin-left:6px">▸ 詳細</span></div>
         <div class="meta">${metaLine}</div>
         <div style="font-size:10.5px;color:var(--rose-deep);margin-top:3px">💡 推奨: ${tplLabel}</div>
       </div>
@@ -1696,7 +1705,7 @@ function renderCustomers(){
         <div><div class="v">${c.visits}<small>回</small>${c.visits===0&&c.nextVisit?' <small style="color:var(--green)">(予約済)</small>':''}</div></div>
         <div><div class="v">¥${c.totalRev.toLocaleString()}</div></div>
         <div class="ctrl" style="flex-direction:column;gap:3px">
-          <button class="btn green sm" onclick="quickLine(${i})">📩 LINE送る</button>
+          <button class="btn green sm" onclick="quickLine(${i})" style="display:inline-flex;align-items:center;justify-content:center;gap:2px">${LINE_ICON_W} 送る</button>
         </div>
       </div>
     </div>`;
@@ -1747,7 +1756,7 @@ function openCustomerLine(c){
   CURRENT_LINE_TARGET = {'お名前':c.name,'電話':c.tel,'希望日':c.lastVisit?c.lastVisit.toISOString():'','時間':'','コース名':'', lineUserId: c.lineUserId||'', visits: c.visits, lastVisit: c.lastVisit};
   document.getElementById('line-modal').classList.remove('hidden');
   const lastStr = c.lastVisit ? `${c.lastVisit.getMonth()+1}/${c.lastVisit.getDate()}` : '-';
-  document.getElementById('line-target-info').innerHTML = `<strong>${c.name||'-'}</strong> 様 / ${c.tel||'-'} ${hasLine?'<span style="background:#06c755;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📲 LINE直送可</span>':'<span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📋 コピー送信のみ</span>'}<br><span style="color:#7a5d5d;font-size:11.5px">最終来店 ${lastStr} / 来店${c.visits}回 / 累計¥${(c.totalRev||0).toLocaleString()}</span>`;
+  document.getElementById('line-target-info').innerHTML = `<strong>${c.name||'-'}</strong> 様 / ${c.tel||'-'} ${hasLine?`<span style="background:#06c755;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px;display:inline-flex;align-items:center">${LINE_ICON_W} 直送可</span>`:'<span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📋 コピー送信のみ</span>'}<br><span style="color:#7a5d5d;font-size:11.5px">最終来店 ${lastStr} / 来店${c.visits}回 / 累計¥${(c.totalRev||0).toLocaleString()}</span>`;
   populateLineTplDropdown();
   updateLineSendBtnLabel(hasLine);
   // ★ 推奨テンプレを自動セット (編集してから送信できる)
@@ -1857,7 +1866,7 @@ function openCustDetail(idx){
 
   // 連絡先
   html += `<div style="margin-bottom:14px;padding:12px 16px;background:#fafafa;border-radius:6px;font-size:13px">
-    <div>📞 ${c.tel||'-'} ｜ ✉️ ${c.email||'未登録'} ${c.lineUserId?'<span style="background:#06c755;color:#fff;font-size:9px;padding:1px 6px;border-radius:9px;margin-left:6px">📲LINE直送可</span>':''}</div>
+    <div>📞 ${c.tel||'-'} ｜ ✉️ ${c.email||'未登録'} ${c.lineUserId?`<span style="background:#06c755;color:#fff;font-size:9px;padding:1px 6px;border-radius:9px;margin-left:6px;display:inline-flex;align-items:center">${LINE_ICON_W} 直送可</span>`:''}</div>
     ${c.kana?`<div style="color:var(--ink2);font-size:11.5px;margin-top:3px">フリガナ: ${c.kana}</div>`:''}
     <div style="color:var(--ink2);font-size:11.5px;margin-top:3px">初回来店から ${totalDays}日 / 計${c.visits}回</div>
   </div>`;
