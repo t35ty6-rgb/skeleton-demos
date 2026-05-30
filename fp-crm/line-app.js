@@ -1414,18 +1414,29 @@
     if (!el) {
       el = document.createElement('div');
       el.id = 'fp-rec-pill';
+      // 大型化 + メイン CTA を「録画を停止」 に絞る + 自動停止案内付き
       el.innerHTML = `
-        <span style="width:11px;height:11px;background:#fff;border-radius:50%;display:inline-block;animation:fp-rec-pulse 1s infinite;"></span>
-        <span style="font-weight:700;font-family:'Inter',sans-serif;">録画中</span>
-        <span id="fp-rec-time" style="font-weight:800;font-family:'Inter',sans-serif;letter-spacing:0.04em;">00:00</span>
-        <button id="fp-rec-stop-btn" style="margin-left:8px;background:rgba(255,255,255,0.22);color:#fff;border:none;padding:6px 14px;border-radius:18px;font-weight:700;cursor:pointer;font-family:inherit;">■ 停止</button>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="display:flex;align-items:center;gap:10px;padding-right:14px;border-right:1px solid rgba(255,255,255,0.3);">
+            <span style="width:14px;height:14px;background:#fff;border-radius:50%;display:inline-block;animation:fp-rec-pulse 1s infinite;box-shadow:0 0 12px rgba(255,255,255,0.8);"></span>
+            <div style="display:flex;flex-direction:column;line-height:1;gap:4px;">
+              <span style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.22em;opacity:0.85;">REC</span>
+              <span id="fp-rec-time" style="font-weight:900;font-family:'Inter',sans-serif;letter-spacing:0.04em;font-size:18px;font-variant-numeric:tabular-nums;">00:00</span>
+            </div>
+          </div>
+          <button id="fp-rec-stop-btn" style="background:#fff;color:#b91c3c;border:none;padding:11px 22px;border-radius:6px;font-weight:900;cursor:pointer;font-family:'Inter','Noto Sans JP',sans-serif;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;box-shadow:0 4px 12px rgba(0,0,0,0.15);">■ 録画を停止</button>
+        </div>
+        <div style="margin-top:8px;font-size:10.5px;color:rgba(255,255,255,0.92);text-align:center;letter-spacing:0.04em;">面談終わったら ▲ を押す / Zoom 閉じても自動停止</div>
       `;
-      el.style.cssText = 'position:fixed;top:18px;right:18px;background:linear-gradient(135deg,#d9264c,#b91c3c);color:#fff;padding:11px 18px;border-radius:30px;box-shadow:0 12px 32px rgba(217,38,76,0.4);z-index:9999;display:flex;align-items:center;gap:10px;font-size:13.5px;';
+      el.style.cssText = 'position:fixed;top:18px;right:18px;background:linear-gradient(135deg,#d9264c,#b91c3c);color:#fff;padding:14px 18px 12px;border-radius:14px;box-shadow:0 16px 40px rgba(217,38,76,0.45),0 0 0 4px rgba(255,255,255,0.6);z-index:9999;font-size:13.5px;min-width:280px;';
       const style = document.createElement('style');
       style.textContent = '@keyframes fp-rec-pulse{0%,100%{opacity:1}50%{opacity:0.3}}@keyframes fp-spin{to{transform:rotate(360deg)}}';
       document.head.appendChild(style);
       document.body.appendChild(el);
-      document.getElementById('fp-rec-stop-btn').addEventListener('click', stopScreenRecording);
+      document.getElementById('fp-rec-stop-btn').addEventListener('click', () => {
+        if (!confirm('録画を停止しますか?\n\n停止後、自動で:\n・Drive に録画アップロード\n・AI で議事録 + タスク生成')) return;
+        stopScreenRecording();
+      });
     }
     R.timerId = setInterval(() => {
       const secs = Math.floor((Date.now() - R.startTime) / 1000);

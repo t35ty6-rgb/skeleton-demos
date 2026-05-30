@@ -23,9 +23,9 @@
   function loadState() {
     try {
       const raw = localStorage.getItem(LS_KEY);
-      return raw ? JSON.parse(raw) : { activeTab: 'dashboard', search: '', statusFilter: 'all', contactFilter: 'all' };
+      return raw ? JSON.parse(raw) : { activeTab: 'dashboard', search: '', statusFilter: 'all', contactFilter: 'all', sortBy: 'contact-desc' };
     } catch (e) {
-      return { activeTab: 'dashboard', search: '', statusFilter: 'all', contactFilter: 'all' };
+      return { activeTab: 'dashboard', search: '', statusFilter: 'all', contactFilter: 'all', sortBy: 'contact-desc' };
     }
   }
   function saveState() {
@@ -500,8 +500,30 @@
         return true;
       });
     }
-    // 次接触必要 (lastContact が古い) 順
-    list.sort((a, b) => daysSince(b.lastContact) - daysSince(a.lastContact));
+    // 並び替え
+    const statusRank = { important: 0, active: 1, new: 2, dormant: 3 };
+    const sortMode = state.sortBy || 'contact-desc';
+    const sorter = {
+      'contact-desc': (a, b) => daysSince(b.lastContact) - daysSince(a.lastContact),
+      'contact-asc':  (a, b) => daysSince(a.lastContact) - daysSince(b.lastContact),
+      'aum-desc':     (a, b) => (b.aum || 0) - (a.aum || 0),
+      'aum-asc':      (a, b) => (a.aum || 0) - (b.aum || 0),
+      'age-desc':     (a, b) => window.LifeEvents.currentAge(b) - window.LifeEvents.currentAge(a),
+      'age-asc':      (a, b) => window.LifeEvents.currentAge(a) - window.LifeEvents.currentAge(b),
+      'name-asc':     (a, b) => String(a.kana || a.name || '').localeCompare(String(b.kana || b.name || ''), 'ja'),
+      'status':       (a, b) => (statusRank[a.status] ?? 9) - (statusRank[b.status] ?? 9),
+      'event-near':   (a, b) => {
+        const ea = window.LifeEvents.generate(a)[0];
+        const eb = window.LifeEvents.generate(b)[0];
+        const da = ea ? new Date(ea.date).getTime() : Infinity;
+        const db = eb ? new Date(eb.date).getTime() : Infinity;
+        return da - db;
+      },
+    }[sortMode] || ((a, b) => 0);
+    list.sort(sorter);
+    // sortBy セレクトに現状値反映
+    const sortEl = document.getElementById('sort-by');
+    if (sortEl && sortEl.value !== sortMode) sortEl.value = sortMode;
 
     // 各バケットのカウント (フィルタ前の母集団から)
     const buckets = { all: clients.length, lt30: 0, lt90: 0, lt180: 0, lt365: 0, gt365: 0 };
@@ -1270,6 +1292,14 @@
       saveState();
       renderClients();
     });
+    const sortByEl = document.getElementById('sort-by');
+    if (sortByEl) {
+      sortByEl.addEventListener('change', e => {
+        state.sortBy = e.target.value;
+        saveState();
+        renderClients();
+      });
+    }
 
     // 新規顧客ボタン
     const addBtn = document.getElementById('add-client-btn');
