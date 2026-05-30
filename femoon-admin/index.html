@@ -91,6 +91,10 @@
   .week-grid .wcell{background:#fff;border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);min-height:38px;padding:2px;cursor:pointer;position:relative;transition:.12s}
   .week-grid .wcell:hover{background:#fffaf6}
   .week-grid .wcell:not(.has-ev):not(.closed):not(.shop-closed):hover::after{content:"+";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--rose-deep);font-size:16px;font-weight:600;opacity:.6;pointer-events:none}
+  .week-grid .wcell.selecting,
+  .day-grid .dcell.selecting{background:#dff5e6 !important;box-shadow:inset 0 0 0 2px #06c755}
+  .week-grid .wcell.selecting::after,
+  .day-grid .dcell.selecting::after{content:"" !important}
   .week-grid .wcell.closed,
   .week-grid .wcell.shop-closed{background:#f0e6e0;cursor:default}
   .week-grid .wcell.closed::after,
@@ -416,6 +420,21 @@
   <button class="mn-item" data-target="report" onclick="mobileNav('report')"><span class="icon">📊</span><span class="label">レポート</span></button>
   <button class="mn-item" data-target="more" onclick="mobileNav('more')"><span class="icon">⋯</span><span class="label">メニュー</span></button>
 </nav>
+<!-- ドラッグ範囲選択後のアクション選択モーダル -->
+<div id="range-action-modal" class="modal-bg hidden">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-head"><h3>選択した時間帯の操作</h3><button class="close" onclick="closeRangeActionModal()">×</button></div>
+    <div class="modal-body">
+      <div id="range-action-summary" style="background:var(--rose-soft);padding:14px 16px;border-radius:6px;font-size:13px;margin-bottom:14px;text-align:center"></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn green" onclick="rangeActionAddBooking()" style="padding:16px;font-size:14px">📅 この時間帯に予約を入れる</button>
+        <button class="btn alt" onclick="rangeActionMarkClosed()" style="padding:16px;font-size:14px;background:#fde7e7;color:#c0392b">🌙 この時間帯を休みにする</button>
+        <button class="btn alt" onclick="closeRangeActionModal()" style="padding:12px">キャンセル</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- モバイル: FAB 電話予約追加 -->
 <button class="mobile-fab" onclick="openAddModal()" title="電話予約を追加">+</button>
 
@@ -1117,9 +1136,12 @@ function renderWeek(){
     cell.style.cursor = 'pointer';
     cell.addEventListener('click',e=>{
       e.stopPropagation();
+      // ドラッグで範囲選択した直後のpointerupは別ハンドラで処理してるので、ここはクリック単発のみ
+      if(RANGE_SEL) return;
       openAddModal(cell.dataset.date, cell.dataset.slot);
     });
   });
+  attachRangeDrag(grid, '.wcell');
 }
 
 /* ====== 日ビュー ====== */
@@ -1166,9 +1188,11 @@ function renderDay(){
     cell.style.cursor = 'pointer';
     cell.addEventListener('click',e=>{
       if(e.target.closest('.dev')) return;
+      if(RANGE_SEL) return;
       openAddModal(cell.dataset.date, cell.dataset.slot);
     });
   });
+  attachRangeDrag(grid, '.dcell');
 }
 
 function renderSide(highlightId){
@@ -1246,10 +1270,134 @@ async function updateStatus(id, status){
   }catch(e){alert('更新失敗: '+e.message)}
 }
 
+/* ========== ドラッグ範囲選択 (週/日ビュー) ========== */
+// 連続したスロットセルをドラッグ選択 → 予約 or 休み設定
+let RANGE_SEL = null; // {date, startIdx, endIdx, cellClass}
+
+function rangeCellSelector(cellClass){ return cellClass === '.wcell' ? '.week-grid .wcell' : '.day-grid .dcell'; }
+
+function clearRangeHighlight(){
+  document.querySelectorAll('.wcell.selecting, .dcell.selecting').forEach(c=>c.classList.remove('selecting'));
+}
+
+function applyRangeHighlight(){
+  clearRangeHighlight();
+  if(!RANGE_SEL) return;
+  const lo = Math.min(RANGE_SEL.startIdx, RANGE_SEL.endIdx);
+  const hi = Math.max(RANGE_SEL.startIdx, RANGE_SEL.endIdx);
+  document.querySelectorAll(rangeCellSelector(RANGE_SEL.cellClass)).forEach(c=>{
+    if(c.dataset.date !== RANGE_SEL.date) return;
+    if(!c.dataset.slot) return;
+    if(c.classList.contains('has-ev') || c.classList.contains('shop-closed') || c.classList.contains('closed')) return;
+    const idx = SLOTS_ALL.indexOf(c.dataset.slot);
+    if(idx >= lo && idx <= hi) c.classList.add('selecting');
+  });
+}
+
+function attachRangeDrag(container, cellClass){
+  if(!container) return;
+  container.querySelectorAll(cellClass).forEach(cell=>{
+    if(cell.classList.contains('has-ev') || cell.classList.contains('shop-closed') || cell.classList.contains('closed')) return;
+    cell.addEventListener('pointerdown', e=>{
+      if(e.button !== undefined && e.button !== 0) return;
+      const slot = cell.dataset.slot;
+      const date = cell.dataset.date;
+      if(!slot || !date) return;
+      const idx = SLOTS_ALL.indexOf(slot);
+      if(idx < 0) return;
+      RANGE_SEL = {date, startIdx: idx, endIdx: idx, cellClass};
+      applyRangeHighlight();
+      try{ cell.setPointerCapture(e.pointerId); }catch(_){}
+    });
+    cell.addEventListener('pointerenter', e=>{
+      if(!RANGE_SEL) return;
+      if(cell.dataset.date !== RANGE_SEL.date) return;
+      if(!cell.dataset.slot) return;
+      if(cell.classList.contains('has-ev') || cell.classList.contains('shop-closed') || cell.classList.contains('closed')) return;
+      const idx = SLOTS_ALL.indexOf(cell.dataset.slot);
+      if(idx >= 0){
+        RANGE_SEL.endIdx = idx;
+        applyRangeHighlight();
+      }
+    });
+  });
+}
+
+// document 全体で pointerup を listen → ドラッグ完了処理
+document.addEventListener('pointerup', e=>{
+  if(!RANGE_SEL) return;
+  const lo = Math.min(RANGE_SEL.startIdx, RANGE_SEL.endIdx);
+  const hi = Math.max(RANGE_SEL.startIdx, RANGE_SEL.endIdx);
+  const slots = SLOTS_ALL.slice(lo, hi+1);
+  // 単一セルクリックで予約済みやclosed セルは普通の openAddModal 動作維持済 (別ハンドラ)
+  // 範囲が1セルだけなら、既存の wcell:not(.has-ev) クリック → openAddModal が動くのでこっちは黙る
+  if(slots.length <= 1){
+    clearRangeHighlight();
+    RANGE_SEL = null;
+    return;
+  }
+  // 範囲をモーダルに渡してアクション選択
+  const dt = RANGE_SEL.date;
+  RANGE_SEL = null; // クリック判定干渉を防ぐためここでクリア (highlight は modal閉じるまで残す)
+  showRangeActionModal(dt, slots);
+});
+
+let RANGE_PENDING = null;
+function showRangeActionModal(date, slots){
+  RANGE_PENDING = {date, slots};
+  const [y,m,d] = date.split('-').map(Number);
+  const dateStr = `${y}年${m}月${d}日`;
+  const startSlot = slots[0];
+  // 終了時刻 = 最終スロット + 30分
+  const lastIdx = SLOTS_ALL.indexOf(slots[slots.length-1]);
+  const endStr = SLOTS_ALL[lastIdx+1] || '営業終了';
+  const duration = slots.length * 30;
+  document.getElementById('range-action-summary').innerHTML = `
+    <strong style="font-family:'Noto Serif JP',serif;color:var(--rose-deep);font-size:14px">${dateStr}</strong><br>
+    <span style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--ink);font-weight:600">${startSlot} 〜 ${endStr}</span><br>
+    <small style="color:var(--ink2)">${duration}分間 (${slots.length}スロット)</small>
+  `;
+  document.getElementById('range-action-modal').classList.remove('hidden');
+}
+
+function closeRangeActionModal(){
+  document.getElementById('range-action-modal').classList.add('hidden');
+  RANGE_PENDING = null;
+  RANGE_SEL = null;
+  clearRangeHighlight();
+}
+
+function rangeActionAddBooking(){
+  if(!RANGE_PENDING) return;
+  const {date, slots} = RANGE_PENDING;
+  closeRangeActionModal();
+  openAddModal(date, slots[0], slots.length * 30);
+}
+
+async function rangeActionMarkClosed(){
+  if(!RANGE_PENDING) return;
+  const {date, slots} = RANGE_PENDING;
+  if(!confirm(`${date} の ${slots[0]} 〜 ${slots.length*30}分間 (${slots.length}スロット) を 休みに設定します。よろしいですか？`)) return;
+  showToast(`🌙 ${slots.length}スロット 休み登録中...`);
+  let ok=0, ng=0;
+  for(const slot of slots){
+    const key = `${date}_${slot}`;
+    try{
+      const url = `${GAS_URL}?action=closed_slot_add&key=${encodeURIComponent(key)}&token=${encodeURIComponent(TOKEN)}`;
+      const r = await fetch(url);
+      const j = await r.json();
+      if(j.ok) ok++; else ng++;
+    }catch(_){ ng++; }
+  }
+  closeRangeActionModal();
+  showToast(`✅ 休み登録: ${ok}件成功 / ${ng>0?ng+'件失敗':''}`);
+  await fetchData();
+}
+
 /* ========== 電話予約 追加 ========== */
 // 引数: dateKey ('YYYY-MM-DD') と slotTime ('HH:MM') を任意で受ける
 // カレンダーの空き時間枠から呼ぶ場合は両方プリセットされる
-function openAddModal(dateKey, slotTime){
+function openAddModal(dateKey, slotTime, durationMin){
   document.getElementById('add-modal').classList.remove('hidden');
   if(dateKey){document.getElementById('add-date').value = dateKey;}
   else{
@@ -1259,6 +1407,22 @@ function openAddModal(dateKey, slotTime){
   document.getElementById('add-slot').value = slotTime || '14:00';
   ['add-course','add-name','add-tel','add-notes','add-price'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('add-visit').value = '初回';
+  // ドラッグ範囲選択経由で duration が指定されたら、近いコース時間をデフォ選択
+  if(durationMin){
+    const sel = document.getElementById('add-course');
+    let bestIdx = 0, bestDiff = Infinity;
+    Array.from(sel.options).forEach((opt,idx)=>{
+      const d = Number(opt.dataset.d||0);
+      if(d > 0){
+        const diff = Math.abs(d - durationMin);
+        if(diff < bestDiff){ bestDiff = diff; bestIdx = idx; }
+      }
+    });
+    sel.selectedIndex = bestIdx;
+    sel.dispatchEvent(new Event('change'));
+    // メモ欄に「ドラッグ選択 ○分」付記
+    document.getElementById('add-notes').value = `（カレンダードラッグ選択 ${durationMin}分）`;
+  }
 }
 function closeAddModal(){document.getElementById('add-modal').classList.add('hidden')}
 document.getElementById('add-course').addEventListener('change', e=>{
@@ -1753,11 +1917,11 @@ function renderCustomers(){
     const avatar = c.linePicture
       ? `<img src="${c.linePicture}" alt="" style="width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid #06c755;flex-shrink:0;margin-right:10px" onerror="this.style.display='none'">`
       : `<div style="width:42px;height:42px;border-radius:50%;background:var(--rose-soft);color:var(--rose-deep);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;flex-shrink:0;margin-right:10px;border:2px solid var(--line)">${(c.name||'?').trim().charAt(0)}</div>`;
-    return `<div class="${cls.join(' ')}">
-      <div class="info" style="cursor:pointer;display:flex;align-items:flex-start" onclick="openCustDetail(${i})">
+    return `<div class="${cls.join(' ')}" onclick="openCustDetail(${i})" style="cursor:pointer">
+      <div class="info" style="display:flex;align-items:flex-start">
         ${avatar}
         <div style="flex:1;min-width:0">
-        <div class="name">${c.name||'(名前なし)'}${c.visits>=5?' <span style="background:var(--gold);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.1em;font-weight:600;vertical-align:middle">VIP</span>':''}${c.lineUserId?` <span style="background:#06c755;color:#fff;font-size:11px;padding:3px 10px;border-radius:10px;letter-spacing:.04em;font-weight:700;vertical-align:middle;margin-left:4px;display:inline-flex;align-items:center">${LINE_ICON_W} 直送</span>`:' <span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:3px 8px;border-radius:10px;letter-spacing:.04em;font-weight:500;vertical-align:middle">📋 コピー送信</span>'}<span style="font-size:10px;color:var(--rose-deep);margin-left:6px">▸ 詳細</span></div>
+        <div class="name">${c.name||'(名前なし)'}${c.visits>=5?' <span style="background:var(--gold);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.1em;font-weight:600;vertical-align:middle">VIP</span>':''}${c.lineUserId?` <span style="background:#06c755;color:#fff;font-size:11px;padding:3px 10px;border-radius:10px;letter-spacing:.04em;font-weight:700;vertical-align:middle;margin-left:4px;display:inline-flex;align-items:center">${LINE_ICON_W} 直送</span>`:' <span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:3px 8px;border-radius:10px;letter-spacing:.04em;font-weight:500;vertical-align:middle">📋 コピー送信</span>'}<span style="font-size:10px;color:var(--rose-deep);margin-left:6px">▸ タップでカルテ・履歴</span></div>
         <div class="meta">${metaLine}</div>
         <div style="font-size:10.5px;color:var(--rose-deep);margin-top:3px">💡 推奨: ${tplLabel}</div>
         </div>
@@ -1766,7 +1930,7 @@ function renderCustomers(){
         <div><div class="v">${c.visits}<small>回</small>${c.visits===0&&c.nextVisit?' <small style="color:var(--green)">(予約済)</small>':''}</div></div>
         <div><div class="v">¥${c.totalRev.toLocaleString()}</div></div>
         <div class="ctrl" style="flex-direction:column;gap:3px">
-          <button class="btn green sm" onclick="quickLine(${i})" style="display:inline-flex;align-items:center;justify-content:center;gap:2px">${LINE_ICON_W} 送る</button>
+          <button class="btn green sm" onclick="event.stopPropagation();quickLine(${i})" style="display:inline-flex;align-items:center;justify-content:center;gap:2px">${LINE_ICON_W} 送る</button>
         </div>
       </div>
     </div>`;
