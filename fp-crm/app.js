@@ -399,8 +399,7 @@
     } catch (e) { return null; }
   }
 
-  // LINE 実アクション (lastActionAt) で顧客の lastContact を上書き
-  // lineFriendId == userId で照合 / より新しい方を採用
+  // LINE 実アクション (lastActionAt + pictureUrl) で顧客のフィールドを上書き
   function mergeLineActivity() {
     const liveUsers = (window.LineAppLiveData && window.LineAppLiveData.users) || [];
     if (liveUsers.length === 0) return;
@@ -410,12 +409,14 @@
       const u = byUid[c.lineFriendId];
       if (!u) return;
       const liveTs = u.lastActionAt || u.addedAt;
-      if (!liveTs) return;
-      const liveDate = String(liveTs).slice(0, 10);
-      if (!c.lastContact || liveDate > c.lastContact) {
-        c.lastContact = liveDate;
-        c.lastActionType = u.lastActionType || '';
+      if (liveTs) {
+        const liveDate = String(liveTs).slice(0, 10);
+        if (!c.lastContact || liveDate > c.lastContact) {
+          c.lastContact = liveDate;
+          c.lastActionType = u.lastActionType || '';
+        }
       }
+      if (u.pictureUrl) c.linePictureUrl = u.pictureUrl;
     });
   }
 
@@ -533,7 +534,9 @@
         <tr data-client-id="${c.id}">
           <td>
             <div class="client-row-name">
-              <span class="avatar avatar-sm" style="--avh:${hue};position:relative;">${escapeHtml(initial)}${c.lineFriendId ? '<span title="LINE友だち" style="position:absolute;bottom:-3px;right:-3px;background:#06c755;color:#fff;width:14px;height:14px;border-radius:50%;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;font-family:inherit;">L</span>' : ''}</span>
+              ${c.linePictureUrl
+                ? `<span class="avatar avatar-sm" style="position:relative;padding:0;background:none;border:1.5px solid #06c755;overflow:visible;"><img src="${escapeHtml(c.linePictureUrl)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentNode.innerHTML='${escapeHtml(initial)}';this.parentNode.style.background='hsl('+${hue}+',60%,55%)';this.parentNode.style.color='#fff';"><span title="LINE友だち" style="position:absolute;bottom:-3px;right:-3px;background:#06c755;color:#fff;width:14px;height:14px;border-radius:50%;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;font-family:inherit;">L</span></span>`
+                : `<span class="avatar avatar-sm" style="--avh:${hue};position:relative;">${escapeHtml(initial)}${c.lineFriendId ? '<span title="LINE友だち" style="position:absolute;bottom:-3px;right:-3px;background:#06c755;color:#fff;width:14px;height:14px;border-radius:50%;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;font-family:inherit;">L</span>' : ''}</span>`}
               <div>
                 <strong>${escapeHtml(c.name)}</strong>${c.lineFriendId ? '<span style="font-size:9.5px;color:#06c755;font-weight:700;margin-left:5px;background:#dcfce7;padding:1px 5px;border-radius:6px;letter-spacing:0.05em;">LINE</span>' : ''}
                 <div style="font-size:11px;color:var(--muted);letter-spacing:0.02em;">${escapeHtml(c.kana)}</div>
