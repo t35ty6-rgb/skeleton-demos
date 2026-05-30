@@ -355,39 +355,52 @@
     });
     aftercare.sort((a, b) => b.days - a.days);
 
+    // 最優先のアクションを判定 (ヒーローバナー用)
+    const hero = pendingConfirm > 0 ? { icon: '📅', title: `${pendingConfirm}名 のお客様が候補日確定を待っています`, sub: '下にスクロール → 第1〜第3希望から1つタップで確定', target: '#section-confirm', accent: '#d9264c' }
+      : recordingNow > 0 ? { icon: '🔴', title: `${recordingNow}件 録画中の面談があります`, sub: '面談が終わったら右上の「■停止」を押してください', target: '#section-recording', accent: '#06c755' }
+      : aftercare.length > 0 ? { icon: '📞', title: `${aftercare.length}名 がZoomまで到達してません`, sub: '下にスクロール → LINEで追撃メッセージを送りましょう', target: '#section-aftercare', accent: '#f59e0b' }
+      : null;
+
     v.innerHTML = `
       <h1 style="font-family:'Noto Serif JP',serif;font-size:26px;letter-spacing:0.02em;margin:0 0 4px;">🆕 新規相談</h1>
-      <p style="color:var(--muted);font-size:13.5px;margin:0 0 18px;">お客様がLINEでアンケート + 候補日3つに回答すると、ここに並びます。<br><strong style="color:var(--accent);">FPがやることは「下の候補日3つから1つタップで確定」のみ</strong>です。</p>
+      <p style="color:var(--muted);font-size:13.5px;margin:0 0 18px;">お客様の <strong style="color:var(--accent);">LINE → アンケート → 候補日 → Zoom面談 → 完了</strong> までの進行状況</p>
       ${isDemo ? '<div style="background:#fff8e1;border:1px solid #f0d36b;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:12.5px;color:#8a6f1e;">💡 表示中の候補日待ち4件はサンプル(デモ)。本番では実際のLINEアンケート回答が並びます。</div>' : ''}
 
-      <div class="task-board">
-        <a href="#section-confirm" class="task-card ${pendingConfirm > 0 ? 'urgent' : 'muted'}">
-          <div class="task-icon">📅</div>
-          <div class="task-label">${pendingConfirm > 0 ? 'アクション必要' : '対応待ちなし'}</div>
-          <div class="task-count">${pendingConfirm}<span class="unit">名</span></div>
-          <div class="task-title">候補日確定 待ち</div>
-          <div class="task-desc">アンケート回答済 / 1つ選んで確定するだけ</div>
+      ${hero ? `
+      <a href="${hero.target}" style="text-decoration:none;color:inherit;display:block;background:linear-gradient(135deg,${hero.accent}11,${hero.accent}05);border:2px solid ${hero.accent};border-radius:14px;padding:20px 26px;margin-bottom:20px;display:grid;grid-template-columns:64px 1fr auto;gap:16px;align-items:center;box-shadow:0 8px 24px ${hero.accent}22;">
+        <div style="font-size:42px;text-align:center;">${hero.icon}</div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:${hero.accent};letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">今やること</div>
+          <strong style="font-size:17px;display:block;line-height:1.4;">${hero.title}</strong>
+          <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">${hero.sub}</div>
+        </div>
+        <div style="font-size:22px;color:${hero.accent};">→</div>
+      </a>` : `
+      <div style="background:linear-gradient(135deg,#dcfce7,#f0fdf4);border:2px solid #86efac;border-radius:14px;padding:20px 26px;margin-bottom:20px;display:grid;grid-template-columns:64px 1fr;gap:16px;align-items:center;">
+        <div style="font-size:42px;text-align:center;">✨</div>
+        <div>
+          <strong style="font-size:17px;display:block;line-height:1.4;color:#166534;">今は対応待ちなし — 全て順調です</strong>
+          <div style="font-size:12.5px;color:#365314;margin-top:3px;">新しい LINE 流入があれば自動でここに表示されます</div>
+        </div>
+      </div>`}
+
+      <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px;">📊 FP作業フロー — 各ステップの件数</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:30px;align-items:stretch;">
+        <a href="#section-confirm" style="text-decoration:none;color:inherit;background:#fff;border:1.5px solid ${pendingConfirm > 0 ? '#d9264c' : '#e5e7eb'};border-radius:10px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;${pendingConfirm > 0 ? 'box-shadow:0 4px 12px rgba(217,38,76,0.18);' : ''}">
+          <div style="font-size:24px;line-height:1;">📅</div>
+          <div style="font-size:10.5px;color:#6b7280;font-weight:600;">① 確定待ち</div>
+          <div style="font-size:24px;font-weight:800;font-family:'Inter',sans-serif;color:${pendingConfirm > 0 ? '#d9264c' : '#1f2937'};line-height:1.1;">${pendingConfirm}<span style="font-size:11px;color:var(--muted);font-weight:600;margin-left:2px;">名</span></div>
         </a>
-        <a href="#section-recording" class="task-card ${recordingNow > 0 ? 'action' : 'muted'}">
-          <div class="task-icon">🔴</div>
-          <div class="task-label">${recordingNow > 0 ? '今 録画中' : 'スタンバイ'}</div>
-          <div class="task-count">${recordingNow}<span class="unit">件</span></div>
-          <div class="task-title">録画中の面談</div>
-          <div class="task-desc">終了したら ■停止 を押す</div>
+        <div style="display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted);">→</div>
+        <a href="#section-recording" style="text-decoration:none;color:inherit;background:#fff;border:1.5px solid ${recordingNow > 0 ? '#06c755' : '#e5e7eb'};border-radius:10px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;${recordingNow > 0 ? 'box-shadow:0 4px 12px rgba(6,199,85,0.18);' : ''}">
+          <div style="font-size:24px;line-height:1;">${recordingNow > 0 ? '🔴' : '💻'}</div>
+          <div style="font-size:10.5px;color:#6b7280;font-weight:600;">② 録画中</div>
+          <div style="font-size:24px;font-weight:800;font-family:'Inter',sans-serif;color:${recordingNow > 0 ? '#06c755' : '#1f2937'};line-height:1.1;">${recordingNow}<span style="font-size:11px;color:var(--muted);font-weight:600;margin-left:2px;">件</span></div>
         </a>
-        <a href="#section-recording" class="task-card ${recPending > 0 ? 'urgent' : 'muted'}">
-          <div class="task-icon">✨</div>
-          <div class="task-label">${recPending > 0 ? 'アクション必要' : '対応待ちなし'}</div>
-          <div class="task-count">${recPending}<span class="unit">件</span></div>
-          <div class="task-title">議事録 未生成</div>
-          <div class="task-desc">録画は終わったが議事録がまだ / AIで自動作成</div>
-        </a>
-        <a href="#section-aftercare" class="task-card ${aftercare.length > 0 ? 'urgent' : 'muted'}">
-          <div class="task-icon">📞</div>
-          <div class="task-label">${aftercare.length > 0 ? 'フォロー必要' : 'なし'}</div>
-          <div class="task-count">${aftercare.length}<span class="unit">名</span></div>
-          <div class="task-title">Zoomまで到達してない人</div>
-          <div class="task-desc">LINE で追加メッセージや軽い後押しを送ろう</div>
+        <a href="#section-aftercare" style="text-decoration:none;color:inherit;background:#fff;border:1.5px solid ${aftercare.length > 0 ? '#f59e0b' : '#e5e7eb'};border-radius:10px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;${aftercare.length > 0 ? 'box-shadow:0 4px 12px rgba(245,158,11,0.18);' : ''}">
+          <div style="font-size:24px;line-height:1;">📞</div>
+          <div style="font-size:10.5px;color:#6b7280;font-weight:600;">フォロー</div>
+          <div style="font-size:24px;font-weight:800;font-family:'Inter',sans-serif;color:${aftercare.length > 0 ? '#f59e0b' : '#1f2937'};line-height:1.1;">${aftercare.length}<span style="font-size:11px;color:var(--muted);font-weight:600;margin-left:2px;">名</span></div>
         </a>
       </div>
 
