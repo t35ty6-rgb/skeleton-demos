@@ -23,6 +23,7 @@
 <header>
   <span style="font-size:17px;">📝</span>
   <h1 id="title">面談メモ</h1>
+  <span id="autosave-ind" style="font-size:10.5px;color:#94a3b8;font-weight:600;letter-spacing:0.04em;">自動保存中...</span>
   <button id="close-btn" style="background:#fff;color:#6b7280;border:1px solid #e5e7eb;padding:5px 8px;font-size:11px;font-weight:600;">✕ 閉じる</button>
 </header>
 <div class="hint"><strong>書き方のコツ:</strong> 「○月○日までに XXする」「来週 △△を送る」「3ヶ月後に □□確認」 のように期限+動作を含めると自動でタスク化されます</div>
@@ -45,7 +46,21 @@ try {
   if (existing) document.getElementById('memo').value = existing;
 } catch (e) {}
 
-document.getElementById('close-btn').addEventListener('click', () => window.close());
+// 入力中も自動で localStorage に保存 (×で閉じても消えないように)
+let saveTimer = null;
+document.getElementById('memo').addEventListener('input', () => {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(memoKey, document.getElementById('memo').value); } catch (e) {}
+    const ind = document.getElementById('autosave-ind');
+    if (ind) { ind.textContent = '✓ 自動保存済 ' + new Date().toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'}); }
+  }, 300);
+});
+document.getElementById('close-btn').addEventListener('click', () => {
+  // 念のため最後の保存
+  try { localStorage.setItem(memoKey, document.getElementById('memo').value); } catch (e) {}
+  window.close();
+});
 
 document.getElementById('save-btn').addEventListener('click', () => {
   const memo = document.getElementById('memo').value;

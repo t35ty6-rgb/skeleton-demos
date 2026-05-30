@@ -1524,7 +1524,19 @@
     `;
     document.body.appendChild(panel);
 
-    document.getElementById('fp-memo-close').addEventListener('click', () => panel.remove());
+    // 入力中も自動で保存 (×で消失しないように)
+    let autoSaveTimer = null;
+    document.getElementById('fp-memo-text').addEventListener('input', (e) => {
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(() => {
+        try { localStorage.setItem(memoKey, e.target.value); } catch (_) {}
+      }, 300);
+    });
+    document.getElementById('fp-memo-close').addEventListener('click', () => {
+      // 最後の保存
+      try { localStorage.setItem(memoKey, document.getElementById('fp-memo-text').value); } catch (_) {}
+      panel.remove();
+    });
     document.getElementById('fp-memo-save').addEventListener('click', () => {
       const memo = document.getElementById('fp-memo-text').value;
       localStorage.setItem(memoKey, memo);
