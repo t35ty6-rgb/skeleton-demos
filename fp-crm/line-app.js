@@ -1034,7 +1034,7 @@
       const recStartTime = Date.now();
       window._fpZoomCloseWatcher = setInterval(() => {
         const elapsed = (Date.now() - recStartTime) / 1000;
-        if (elapsed < 30) return; // 最初の30秒は監視しない
+        if (elapsed < 60) return; // 最初の60秒は監視しない (誤検知防止)
         if (zoomWin && zoomWin.closed) {
           clearInterval(window._fpZoomCloseWatcher);
           window._fpZoomCloseWatcher = null;
