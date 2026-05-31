@@ -1031,23 +1031,8 @@
       // Zoom が閉じられたら自動で録画停止 (切り忘れ防止)
       // ただし最低30秒経過してから (誤検知防止)
       window._fpZoomWin = zoomWin;
-      const recStartTime = Date.now();
-      window._fpZoomCloseWatcher = setInterval(() => {
-        const elapsed = (Date.now() - recStartTime) / 1000;
-        if (elapsed < 60) return; // 最初の60秒は監視しない (誤検知防止)
-        if (zoomWin && zoomWin.closed) {
-          clearInterval(window._fpZoomCloseWatcher);
-          window._fpZoomCloseWatcher = null;
-          if (window._fpRecorder.mediaRecorder && window._fpRecorder.mediaRecorder.state !== 'inactive') {
-            const t = document.createElement('div');
-            t.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border-left:5px solid #f59e0b;border-radius:12px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.18);z-index:10004;font-family:inherit;max-width:380px;';
-            t.innerHTML = `<strong style="font-size:14px;display:block;margin-bottom:4px;">⏹ Zoom が閉じられました</strong><div style="font-size:12px;color:#6b7280;line-height:1.5;">録画を自動停止して AI 処理を開始します</div>`;
-            document.body.appendChild(t);
-            setTimeout(() => t.remove(), 6000);
-            stopScreenRecording();
-          }
-        }
-      }, 3000);
+      // ※ Zoom popup が閉じても自動停止しない (誤検知防止のため監視機能を撤廃)
+      // 停止は「Chrome 共有を停止」 or 「メモの完了ボタン」 でのみ実行
       const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
       // メモを別ポップアップウィンドウとして開く (CRM とは別ウィンドウ=Zoomを隠さない)
       const memoFeatures = `width=${memoW},height=${sh},left=0,top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
