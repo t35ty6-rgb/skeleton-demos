@@ -24,8 +24,17 @@
   <span style="font-size:17px;">📝</span>
   <h1 id="title">面談メモ</h1>
   <span id="autosave-ind" style="font-size:10.5px;color:#94a3b8;font-weight:600;letter-spacing:0.04em;">自動保存中...</span>
-  <button id="close-btn" style="background:#fff;color:#6b7280;border:1px solid #e5e7eb;padding:5px 8px;font-size:11px;font-weight:600;">✕ 閉じる</button>
+  <button id="close-btn" style="background:#fff;color:#6b7280;border:1px solid #e5e7eb;padding:5px 8px;font-size:11px;font-weight:600;">✕</button>
 </header>
+
+<!-- 大型の「面談を完了する」 固定ボタン (録画中は常時表示) -->
+<div id="finish-banner" style="background:linear-gradient(135deg,#c1272d,#8c1d22);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+  <div style="color:#fff;font-size:11.5px;line-height:1.4;">
+    <strong style="font-size:13px;letter-spacing:0.04em;">面談録画中</strong><br>
+    <span style="opacity:0.9;font-size:10.5px;">終わったら右のボタンで停止</span>
+  </div>
+  <button id="finish-meeting-btn" style="background:#fff;color:#c1272d;border:none;padding:13px 22px;font-family:'Inter','Noto Sans JP',sans-serif;font-size:13px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);white-space:nowrap;">■ 面談を完了</button>
+</div>
 <div class="hint"><strong>書き方のコツ:</strong> 「○月○日までに XXする」「来週 △△を送る」「3ヶ月後に □□確認」 のように期限+動作を含めると自動でタスク化されます</div>
 <textarea id="memo" placeholder="例:&#10;・新NISAの最適配分シミュレーション資料を 来週中に送る&#10;・教育費見直し 3ヶ月後に再面談&#10;・iDeCo加入手続きの進捗を 2ヶ月後に確認"></textarea>
 <div id="tasks"></div>
@@ -60,6 +69,22 @@ document.getElementById('close-btn').addEventListener('click', () => {
   // 念のため最後の保存
   try { localStorage.setItem(memoKey, document.getElementById('memo').value); } catch (e) {}
   window.close();
+});
+
+// 「面談を完了」 ボタン → CRM(opener) に postMessage で停止指示
+document.getElementById('finish-meeting-btn').addEventListener('click', () => {
+  if (!confirm('録画を停止して AI 議事録を生成しますか?\n(Zoom も自動で閉じます)')) return;
+  // メモ最終保存
+  try { localStorage.setItem(memoKey, document.getElementById('memo').value); } catch (e) {}
+  // CRM ウィンドウに通知
+  try {
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage({ type: 'fp-finish-meeting' }, '*');
+      window.opener.focus();
+    }
+  } catch (e) {}
+  // 自分も閉じる
+  setTimeout(() => window.close(), 200);
 });
 
 document.getElementById('save-btn').addEventListener('click', () => {

@@ -967,6 +967,18 @@
     mediaRecorder: null, chunks: [], startTime: null, bookingTs: null, timerId: null, blobUrl: null,
   };
 
+  // メモpopup からの「面談を完了」 メッセージ受信
+  if (!window._fpMessageWired) {
+    window._fpMessageWired = true;
+    window.addEventListener('message', (ev) => {
+      if (ev.data && ev.data.type === 'fp-finish-meeting') {
+        if (window._fpRecorder && window._fpRecorder.mediaRecorder && window._fpRecorder.mediaRecorder.state !== 'inactive') {
+          stopScreenRecording();
+        }
+      }
+    });
+  }
+
   // 画面録画 → 停止時に Drive の顧客フォルダへ自動アップロード
   async function startScreenRecording(bookingTs, zoomUrl) {
     const R = window._fpRecorder;
