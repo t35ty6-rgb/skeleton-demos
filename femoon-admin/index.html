@@ -335,6 +335,7 @@
     .topbar{padding:12px 16px}
   }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -1265,8 +1266,8 @@ function renderSide(highlightId){
         <button class="btn green sm" onclick='openLineModal(${JSON.stringify(r).replace(/'/g,"&apos;")})'>📩 LINE</button>
         <a class="btn alt sm" href="tel:${String(r['電話']||'').replace(/-/g,'')}" style="text-decoration:none">📞 発信</a>
         <button class="btn alt sm" onclick='openKarteByTel(${JSON.stringify(String(r['電話']||''))})' style="background:#fffaf6;border-color:var(--rose-deep);color:var(--rose-deep)">📋 カルテ</button>
-        <button class="btn alt sm" onclick='generateReceipt(${JSON.stringify(r).replace(/'/g,"&apos;")})'>🧾 領収書</button>
-        <button class="btn alt sm" onclick='sendReceiptByEmail(${JSON.stringify(r).replace(/'/g,"&apos;")})'>✉️ 領収メール</button>
+        <button class="btn alt sm" onclick='sendReceiptToLine(${JSON.stringify(r).replace(/'/g,"&apos;")})' style="background:#e8f5e8;border-color:#06a04a;color:#06a04a">🧾 領収書をLINEで送る</button>
+        <button class="btn alt sm" onclick='generateReceipt(${JSON.stringify(r).replace(/'/g,"&apos;")})' style="font-size:10px;padding:3px 8px">🖨 印刷</button>
       </div>
     `;
     body.appendChild(card);
@@ -1613,16 +1614,32 @@ function openLineModal(row){
 }
 function closeLineModal(){document.getElementById('line-modal').classList.add('hidden')}
 
-// テンプレドロップダウンを TEMPLATES から動的生成
+// テンプレドロップダウンを TEMPLATES から動的生成 (業態別 optgroup)
 function populateLineTplDropdown(){
   const sel = document.getElementById('line-tpl-pick');
   if(!sel) return;
   sel.innerHTML = '<option value="">— テンプレを選ぶと本文に挿入されます —</option>';
+  // カテゴリ別にグルーピング
+  const byCat = {};
   Object.entries(TEMPLATES).forEach(([key, tpl])=>{
-    const opt = document.createElement('option');
-    opt.value = key;
-    opt.textContent = tpl.label || key;
-    sel.appendChild(opt);
+    const cat = tpl.category || 'other';
+    if(!byCat[cat]) byCat[cat] = [];
+    byCat[cat].push([key, tpl]);
+  });
+  // 出力順: fem → depil → hair → intec → common → other
+  const order = ['fem','depil','hair','intec','common','other'];
+  order.forEach(cat=>{
+    if(!byCat[cat] || byCat[cat].length === 0) return;
+    const catLabel = (typeof TEMPLATE_CATEGORIES !== 'undefined' && TEMPLATE_CATEGORIES[cat] && TEMPLATE_CATEGORIES[cat].label) || cat;
+    const og = document.createElement('optgroup');
+    og.label = catLabel;
+    byCat[cat].forEach(([key, tpl])=>{
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = tpl.label || key;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
   });
 }
 
@@ -1768,77 +1785,136 @@ function renderReport(){
 }
 
 /* ========== テンプレ管理 (リピート促進戦略) ========== */
+// テンプレートの業態カテゴリ定義 (UIの optgroup ラベルにも使用)
+const TEMPLATE_CATEGORIES = {
+  fem:   { label: 'フェムケア' },
+  depil: { label: '脱毛' },
+  hair:  { label: '育毛' },
+  intec: { label: 'インテック' },
+  common:{ label: '共通 (リマインド・お誕生月など)' }
+};
+
 const DEFAULT_TEMPLATES = {
+  // === 🌷 フェムケア ===
   // 🌱 初回さん専用 (1回目)
   new_thanks: {
-    label:'【新規】初回当日 お礼 (1回目)',
+    category: 'fem',
+    label:'【フェム・新規】初回当日 お礼 (1回目)',
     body:'{NAME}様\n\n本日は初めてのご来店、誠にありがとうございました🌙\nお身体の状態を確認させていただき、{NAME}様のお悩みに寄り添うケアができたかなと思います。\n\n施術後の今夜〜明日は、水分多めに摂っていただくとより効果的です。何か気になることがあれば、いつでもこちらにご返信ください🌸\n\nフェムケアサロン FEMOON'
   },
-  new_3day: {
-    label:'【新規】初回3日後 体の変化フォロー (1回目)',
+  new_3day: { category:'fem',
+    label:'【フェム・新規】初回3日後 体の変化フォロー (1回目)',
     body:'{NAME}様\n\nその後、お身体の調子はいかがでしょうか？\n初めての施術後、3日が経ちました。\n\n人によっては「軽くなった」「眠りが深くなった」「お腹が温かい」など実感されますが、変化を感じにくいこともあります。どんな小さなことでもお聞かせいただけると嬉しいです🌙\n\nFEMOON'
   },
-  new_week: {
-    label:'【新規】初回1週間後 体感確認 (1回目)',
+  new_week: { category:'fem',
+    label:'【フェム・新規】初回1週間後 体感確認 (1回目)',
     body:'{NAME}様\n\n初回ご来店から1週間が経ちました🌸\n体の変化はいかがでしょうか？\n\nフェムケアは1回でも変化を感じる方が多いですが、本来の効果は「3回目から」が定説です。次回は3週間後あたりがベストタイミング。\n\n気になることがあればお気軽にご返信ください🌙\nFEMOON'
   },
-  new_next_propose: {
-    label:'【新規】初回2週間後 次回提案 (1回目)',
+  new_next_propose: { category:'fem',
+    label:'【フェム・新規】初回2週間後 次回提案 (1回目)',
     body:'{NAME}様\n\nお身体の調子いかがですか？\n初回から2週間ほど経ちますね🌙\n\n初めて来てくださった方限定で「2回目体験 ¥1,000OFF」のご案内中です。\n効果を本格的に実感されたい方は、ぜひお早めに👇\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
   },
-
-  // 🌷 リピート促進 (2-4回目)
-  rpt_thanks_2nd: {
-    label:'【2回目】お礼 (前回からの変化を聞く)',
+  rpt_thanks_2nd: { category:'fem',
+    label:'【フェム・2回目】お礼 (前回からの変化を聞く)',
     body:'{NAME}様\n\n本日は2回目のご来店ありがとうございました🌙\n前回からの体の変化はいかがでしたか？\n\n2回目は身体が「整い始める」段階。続けることで効果が積み上がります。次回も3週間以内がオススメです🌸\n\nFEMOON'
   },
-  rpt_3day: {
-    label:'【2-3回目】施術3日後 フォロー',
+  rpt_3day: { category:'fem',
+    label:'【フェム・2-3回目】施術3日後 フォロー',
     body:'{NAME}様\n\nその後お変わりございませんか？\n継続してケアいただきありがとうございます🌙\n\n何かお気づきの点、お困りごとがあればお気軽にご返信ください。{NAME}様の体調に合わせたアドバイスもさせていただきます🌸\n\nFEMOON'
   },
-  rpt_2week: {
-    label:'【2-3回目】2週間後 次回提案',
+  rpt_2week: { category:'fem',
+    label:'【フェム・2-3回目】2週間後 次回提案',
     body:'{NAME}様\n\n前回から2週間ほど経ちましたね🌙\n効果を持続させるには、3〜4週間サイクルが理想です。\n\n来週・再来週でご都合の良い日はございますか？お気軽にお声がけくださいませ🌸\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
   },
-
-  // 👑 常連VIP (5回以上)
-  vip_thanks: {
-    label:'【VIP】常連 感謝メッセージ',
+  vip_thanks: { category:'fem',
+    label:'【フェム・VIP】常連 感謝メッセージ',
     body:'{NAME}様\n\nいつもありがとうございます🌙\n{NAME}様にお会いできるのが楽しみです。今日もお疲れさまでした。\n\n常連の{NAME}様限定で、後日特別なご案内もさせていただきますね✨\n\nFEMOON'
   },
-  vip_intro: {
-    label:'【VIP】お友達紹介のご案内',
+  vip_intro: { category:'fem',
+    label:'【フェム・VIP】お友達紹介のご案内',
     body:'{NAME}様\n\nいつもFEMOONをご愛顧くださりありがとうございます🌙\n\n{NAME}様限定で「お友達紹介キャンペーン」ご案内です。\n紹介された方→初回¥2,000OFF / {NAME}様→次回¥2,000OFF\n\n大切な方を、ぜひFEMOONにご紹介くださいませ🌸\nFEMOON'
   },
-  vip_seasonal: {
-    label:'【VIP】季節限定コース案内',
+  vip_seasonal: { category:'fem',
+    label:'【フェム・VIP】季節限定コース案内',
     body:'{NAME}様\n\nいつもありがとうございます🌙\nこの季節限定の特別コース、{NAME}様にぜひお試しいただきたいのでご案内です。\n\n詳しくはお返事いただければ、{NAME}様の体調に合わせてご相談させていただきます🌸\nFEMOON'
   },
-
-  // 💔 掘り起こし (未来店期間別 × 来店回数別)
-  lapsed1m_new: {
-    label:'【掘り起こし】1ヶ月空き × 初回さん',
+  lapsed1m_new: { category:'fem',
+    label:'【フェム・掘り起こし】1ヶ月空き × 初回さん',
     body:'{NAME}様\n\nお久しぶりです🌙\n初めてのご来店から1ヶ月経ちましたね。お身体の調子はいかがですか？\n\n初回の効果を持続させるには、2回目までが大事です🌸 来週・再来週でご都合いかがでしょうか？\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
   },
-  lapsed1m_repeat: {
-    label:'【掘り起こし】1ヶ月空き × リピーター',
+  lapsed1m_repeat: { category:'fem',
+    label:'【フェム・掘り起こし】1ヶ月空き × リピーター',
     body:'{NAME}様\n\n前回から1ヶ月経ちました🌙\n継続いただいていた効果が薄れる時期です。\n\nそろそろメンテナンスのタイミング。来週・再来週でご都合の良い日があれば教えてくださいませ🌸\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
   },
-  lapsed2m_any: {
-    label:'【掘り起こし】2ヶ月以上空き 全員 (¥1,000OFF)',
+  lapsed2m_any: { category:'fem',
+    label:'【フェム・掘り起こし】2ヶ月以上空き (¥1,000OFF)',
     body:'{NAME}様\n\nお久しぶりです🌙\nしばらくお会いできておらず、少し心配しておりました。\n\nお身体の状態が気になる時期、ぜひ一度状態を見せていただけますと安心です。\n久しぶり限定で「フェムケア矯正 ¥1,000OFF」をご用意しております🌸\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
   },
-  lapsed3m_any: {
-    label:'【掘り起こし】3ヶ月以上空き 復帰促進 (¥2,000OFF)',
+  lapsed3m_any: { category:'fem',
+    label:'【フェム・掘り起こし】3ヶ月以上空き (¥2,000OFF)',
     body:'{NAME}様\n\nご無沙汰しております🌙 FEMOONです。\n3ヶ月以上経ちましたが、お元気でいらっしゃいますか？\n\nお久しぶりの方限定で「リセットコース ¥2,000OFF」をご用意。一度ゆっくり体を整えにいらしてくださいませ。\n{NAME}様にお会いできるのを楽しみにしております🌸\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
   },
 
-  // 📅 リマインド
-  reminder_prev_day: {
+  // === ✨ 脱毛 ===
+  depil_new_thanks: { category:'depil',
+    label:'【脱毛・新規】当日お礼 + アフターケア',
+    body:'{NAME}様\n\n本日は脱毛のご来店ありがとうございました✨\nお肌の状態を確認させていただき、安全に施術を進めることができました。\n\n【当日〜3日のケア】\n・湯船NG、シャワーのみ\n・激しい運動・飲酒は避けてください\n・保湿(ローション)をたっぷりめに\n\n気になる赤み等あればすぐご返信ください🌙\nFEMOON'
+  },
+  depil_aftercare: { category:'depil',
+    label:'【脱毛】施術1週間後 抜け始めフォロー',
+    body:'{NAME}様\n\n前回の脱毛から1週間が経ちました。\n部位によっては「自然にスルッと抜ける」感覚があるかと思います✨\n\n抜け落ちが目立ったタイミングで、軽く洗い流していただくと効果的です。次回は2-3週間後に毛周期が回るタイミングがオススメ🌙\n\nFEMOON'
+  },
+  depil_next_propose: { category:'depil',
+    label:'【脱毛】次回予約提案 (3週間目)',
+    body:'{NAME}様\n\n前回から3週間が経ちました✨\n脱毛は毛周期に合わせて回数を重ねることで効果が定着していきます。\n\nそろそろ次回の良いタイミング、いかがでしょうか？\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
+  },
+  depil_lapsed: { category:'depil',
+    label:'【脱毛・掘り起こし】2ヶ月以上空き',
+    body:'{NAME}様\n\nお久しぶりです✨ FEMOONです。\n前回のお手入れから少し時間が空きましたが、毛の状態はいかがですか？\n\n間隔が空いても効果はリセットされません。続けるほど毛量が減っていきますので、お時間あれば次回ぜひ🌙\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
+  },
+
+  // === 🌿 育毛 ===
+  hair_new_thanks: { category:'hair',
+    label:'【育毛・新規】初回お礼',
+    body:'{NAME}様\n\n本日は育毛ケアのご来店、ありがとうございました🌿\n頭皮の状態を確認させていただき、{NAME}様に合ったケアプランをご提案できたかと思います。\n\n育毛は継続が要。1サイクル(2〜3ヶ月)で確かな手応えが出てきます。今夜は頭皮を温めてお休みくださいね🌙\n\nFEMOON'
+  },
+  hair_followup: { category:'hair',
+    label:'【育毛】2週間後 ホームケア確認',
+    body:'{NAME}様\n\n前回の育毛ケアから2週間が経ちました🌿\nご自宅でのシャンプー&マッサージ、続けられていますか？\n\n育毛は「サロン×ご自宅」の両輪が重要です。\nわからないこと・続けにくいことがあればお気軽にご返信ください🌙\nFEMOON'
+  },
+  hair_next_propose: { category:'hair',
+    label:'【育毛】次回予約提案 (1ヶ月目)',
+    body:'{NAME}様\n\n前回から1ヶ月が経ちました🌿\n育毛サイクルでは「2〜4週間に1回」のサロンケアが推奨です。\n\n次回のご予約、いかがでしょうか？{NAME}様の頭皮状態に合わせて最適なメニューをご提案します。\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
+  },
+  hair_3month: { category:'hair',
+    label:'【育毛】3ヶ月目 効果実感確認',
+    body:'{NAME}様\n\n育毛ケア開始から3ヶ月が経ちました🌿\n発毛サイクル的に、ここからが大きな変化が見えてくるタイミングです。\n\n抜け毛の量、髪のハリ・コシ、頭皮の状態など、何か感じる変化があれば教えてください✨ 写真比較もご希望でしたら撮影します。\nFEMOON'
+  },
+
+  // === 💎 インテック ===
+  intec_new_thanks: { category:'intec',
+    label:'【インテック・新規】当日お礼',
+    body:'{NAME}様\n\n本日はインテックのご来店、誠にありがとうございました💎\nお肌のコンディションを整えるご施術、いかがでしたか？\n\n施術後は、いつもより肌が水分を吸収しやすい状態です。今夜の保湿ケアは念入りに🌙 翌日のメイクのりもぜひお確かめください✨\nFEMOON'
+  },
+  intec_followup: { category:'intec',
+    label:'【インテック】施術1週間後 肌状態確認',
+    body:'{NAME}様\n\nインテックから1週間が経ちました💎\n肌の状態はいかがですか？ ハリ・透明感・キメの整い具合、何か感じることがあれば教えてくださいませ。\n\nインテックは継続することで効果が定着します。次回は3週間以内がベストタイミング🌙\nFEMOON'
+  },
+  intec_next_propose: { category:'intec',
+    label:'【インテック】次回予約提案 (3週間目)',
+    body:'{NAME}様\n\n前回のインテックから3週間が経ちました💎\nお肌のターンオーバーに合わせ、そろそろ次回のメンテナンスのタイミングです。\n\n季節の変わり目はお肌が揺らぎやすい時期。続けるほど安定した状態がキープできます🌙\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
+  },
+  intec_lapsed: { category:'intec',
+    label:'【インテック・掘り起こし】2ヶ月以上空き',
+    body:'{NAME}様\n\nお久しぶりです💎 FEMOONです。\n前回のインテックから少し時間が空きましたが、お肌の調子はいかがですか？\n\n続けてケアいただいていた効果が薄れる時期。一度状態を見せていただければ、今のお肌に合わせたメニューをご提案できます🌙\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
+  },
+
+  // === 📅 共通 (リマインド・お誕生月) ===
+  reminder_prev_day: { category:'common',
     label:'前日リマインド',
     body:'{NAME}様\n\n明日のご予約のリマインドです🌙\n\n{DATE} {TIME}〜「{COURSE}」のご予約を承っております。\n\nお気をつけてお越しくださいませ🌸\nFEMOON'
   },
-  reminder_birthday: {
+  reminder_birthday: { category:'common',
     label:'お誕生月 特別ご案内',
     body:'{NAME}様\n\nお誕生月おめでとうございます🎉🌙\n\nFEMOONからお祝いのご案内です。お誕生月の方限定で「全コース ¥2,000OFF」のプレゼント🌸\n\n素敵な1年になりますように、心からお祈り申し上げます。\nhttps://t35ty6-rgb.github.io/skeleton-demos/femoon-booking/\n\nFEMOON'
   }
@@ -2632,6 +2708,93 @@ h1{font-family:"Noto Serif JP",serif;font-size:32px;text-align:center;margin:0 0
   w.document.close();
   setTimeout(()=>w.print(),500);
 }
+// 領収書を画像化 → GAS経由でLINE送信 (お客様のLINEに即着信)
+async function sendReceiptToLine(r){
+  const tel = String(r['電話']||'').replace(/[-\s]/g,'');
+  // uid を予約行 or 顧客集約から取得
+  let uid = r['LINE userId']||'';
+  if(!uid && tel){
+    if(!window._CUST_ARR || window._CUST_ARR.length === 0) window._CUST_ARR = aggregateCustomers();
+    const c = (window._CUST_ARR||[]).find(x => String(x.tel||'').replace(/[-\s]/g,'')===tel);
+    if(c && c.lineUserId) uid = c.lineUserId;
+  }
+  if(!uid || !String(uid).startsWith('U')){
+    if(confirm('このお客様のLINE userIdが未登録のため、LINE送信できません。\n代わりに印刷画面を開きますか？')) generateReceipt(r);
+    return;
+  }
+  if(typeof html2canvas === 'undefined'){
+    alert('html2canvas ライブラリが読込中です。少し待って再度お試しください。');
+    return;
+  }
+  if(!confirm(`${r['お名前']||'お客様'} 様 のLINEに 領収書 (¥${Number(r['料金']||0).toLocaleString()}) を送信します。よろしいですか？`)) return;
+
+  const id = r['予約ID']||'';
+  const pd = parseDate(r['希望日']);
+  const dateStr = pd ? `${pd.getFullYear()}年${pd.getMonth()+1}月${pd.getDate()}日` : '';
+  // 領収書の見た目 (generateReceipt と同等の本体部分のみ。隠しdivでレンダリング)
+  const receiptInner = `
+    <div style="font-family:'Hiragino Sans','Noto Sans JP',sans-serif;color:#3d2a2a;background:#fff;padding:30px;width:680px;box-sizing:border-box">
+      <h1 style="font-family:'Noto Serif JP',serif;font-size:32px;text-align:center;margin:0 0 6px;letter-spacing:.5em;color:#a4756d;border-bottom:2px solid #a4756d;padding-bottom:14px">領 収 書</h1>
+      <div style="display:flex;justify-content:space-between;margin:24px 0;font-size:13px">
+        <div>No. ${id}</div>
+        <div>発行日: ${new Date().toLocaleDateString('ja-JP')}</div>
+      </div>
+      <div style="font-size:22px;border-bottom:1px solid #ccc;padding-bottom:6px;margin:30px 0 18px">
+        ${r['お名前']||''} 様 <small style="font-size:13px;color:#7a5d5d">(${r['電話']||'-'})</small>
+      </div>
+      <div style="text-align:center;font-size:36px;font-family:'Noto Serif JP',serif;color:#a4756d;margin:30px 0;border:2px solid #a4756d;padding:18px;font-weight:600">
+        ¥ ${Number(r['料金']||0).toLocaleString()} -
+      </div>
+      <div style="font-size:14px;line-height:2;background:#fbf0eb;padding:14px 18px;border-radius:4px">
+        但し: <strong>${r['コース名']||'-'}</strong> (${r['所要時間']||'-'}分) ${dateStr} 施術代として<br>
+        上記正に領収いたしました
+      </div>
+      <div style="margin-top:60px;display:flex;justify-content:space-between;align-items:flex-end;font-size:12px">
+        <div>
+          <strong>フェムケアサロン FEMOON</strong><br>
+          福井県福井市大宮3-13-9 パールコーポ1F<br>
+          担当: 安西里帆
+        </div>
+        <div style="border:2px solid #a4756d;color:#a4756d;padding:30px 18px;font-family:'Noto Serif JP',serif;font-weight:600;text-align:center;border-radius:50%">F E M O O N</div>
+      </div>
+    </div>`;
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;z-index:-1';
+  wrap.innerHTML = receiptInner;
+  document.body.appendChild(wrap);
+  showToast('🧾 領収書を画像化中...');
+  try{
+    const canvas = await html2canvas(wrap.firstElementChild, {scale: 2, backgroundColor: '#ffffff', useCORS: true});
+    const dataUrl = canvas.toDataURL('image/png');
+    wrap.remove();
+    showToast('📤 LINE送信中...');
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'}, // CORS preflight回避
+      body: JSON.stringify({
+        action_post: 'line_receipt',
+        token: TOKEN,
+        uid: uid,
+        booking_id: id,
+        customer_name: r['お名前']||'',
+        price: Number(r['料金']||0),
+        course: r['コース名']||'',
+        date_str: dateStr,
+        image_base64: dataUrl
+      })
+    });
+    const j = await res.json();
+    if(j.ok){
+      showToast(`✅ ${r['お名前']||''} 様のLINEに領収書を送信しました`, 5000);
+    } else {
+      alert('LINE送信に失敗しました: ' + (j.error||'unknown') + '\n\n印刷ボタンから手渡し対応をお願いします。');
+    }
+  }catch(e){
+    try{ wrap.remove(); }catch(_){}
+    alert('領収書画像生成エラー: ' + e.message);
+  }
+}
+
 function sendReceiptByEmail(r){
   const email = r['メール']||'';
   if(!email){
