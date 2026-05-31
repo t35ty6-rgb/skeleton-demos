@@ -1060,28 +1060,42 @@
         R._micStream = mic;
       } catch (_) {}
 
-      R.chunks = []; R.startTime = Date.now(); R.bookingTs = bookingTs;
+      R.chunks = []; R.audioChunks = []; R.startTime = Date.now(); R.bookingTs = bookingTs;
       R.customerName = (booking && booking.name) || 'お客様';
       const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm';
-      // 低ビットレートで容量抑制 (1時間 ≒ 30MB に収める)
-      R.mediaRecorder = new MediaRecorder(combined, { mimeType: mime, videoBitsPerSecond: 200000, audioBitsPerSecond: 64000 });
+      // 動画+音声 (Drive用) — 超低ビットレート (100kbps) で1時間 ≒ 22MB に
+      R.mediaRecorder = new MediaRecorder(combined, { mimeType: mime, videoBitsPerSecond: 100000, audioBitsPerSecond: 48000 });
       R.mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) R.chunks.push(e.data); };
+      // 音声のみ (AI用) — 別レコーダーで並行記録、AI送信時はこちらを使うので軽い
+      try {
+        const audioOnlyStream = new MediaStream(combined.getAudioTracks());
+        const audioMime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+        R.audioRecorder = new MediaRecorder(audioOnlyStream, { mimeType: audioMime, audioBitsPerSecond: 64000 });
+        R.audioRecorder.ondataavailable = (e) => { if (e.data.size > 0) R.audioChunks.push(e.data); };
+        R.audioRecorder.start(1000);
+      } catch (_) { /* 音声のみ並行録音は best-effort */ }
       R.mediaRecorder.onstop = async () => {
+        // 音声のみレコーダーも停止
+        if (R.audioRecorder && R.audioRecorder.state !== 'inactive') {
+          await new Promise(resolve => { R.audioRecorder.onstop = resolve; R.audioRecorder.stop(); });
+        }
         const blob = new Blob(R.chunks, { type: 'video/webm' });
+        const audioBlob = R.audioChunks && R.audioChunks.length > 0 ? new Blob(R.audioChunks, { type: 'audio/webm' }) : blob;
         R.blobUrl = URL.createObjectURL(blob);
         combined.getTracks().forEach(t => t.stop());
         stream.getTracks().forEach(t => t.stop());
         if (R._micStream) R._micStream.getTracks().forEach(t => t.stop());
-        // 統一進行パネル開始 (Drive + AI 両方の進捗をここに集約)
+        // 統一進行パネル開始
         showUnifiedProgressPanel(R.customerName, blob);
         updateProgressStep('save', 'done');
         updateProgressStep('drive', 'active');
         updateProgressStep('ai', 'active');
-        // Drive と AI を並行実行
+        // Drive: 動画+音声 (低ビットレート) を upload
         const drivePromise = autoUploadRecording(blob, R.bookingTs, R.customerName, booking)
           .then(() => updateProgressStep('drive', 'done'))
           .catch(() => updateProgressStep('drive', 'error'));
-        const aiResult = await aiProcessRecording(blob, R.bookingTs, R.customerName, booking);
+        // AI: 音声のみ (軽い) を送信
+        const aiResult = await aiProcessRecording(audioBlob, R.bookingTs, R.customerName, booking);
         if (aiResult && aiResult.ok) {
           updateProgressStep('ai', 'done');
           window._fpAIResult = { result: aiResult, customerName: R.customerName, booking: booking };
@@ -1218,7 +1232,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          base64, mimeType: 'audio/webm', // 動画でも音声トラックは抽出してくれる
+          base64, mimeType: blob.type || 'audio/webm',
           customerName, customerContext: ctx,
           bookingTs, userId: booking && booking.userId,
         }),
