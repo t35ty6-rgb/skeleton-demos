@@ -219,25 +219,14 @@
   <section class="step-card" data-card="3">
     <h2>お客様情報のご入力</h2>
     <p class="help">予約確定のご連絡にお使いします</p>
-    <div class="form-row two">
-      <div>
-        <div class="field-label">お名前(姓)<span class="req">必須</span></div>
-        <input type="text" class="input" id="lastname" placeholder="山田">
-      </div>
-      <div>
-        <div class="field-label">お名前(名)<span class="req">必須</span></div>
-        <input type="text" class="input" id="firstname" placeholder="花子">
-      </div>
+    <div id="returning-banner" style="display:none;background:#e8f5e8;border-left:3px solid #06a04a;padding:10px 14px;border-radius:4px;margin-bottom:14px;font-size:13px;color:#06a04a"></div>
+    <div class="form-row">
+      <div class="field-label">お名前<span class="req">必須</span></div>
+      <input type="text" class="input" id="name" placeholder="山田 花子" autocomplete="name">
     </div>
-    <div class="form-row two">
-      <div>
-        <div class="field-label">フリガナ(姓)</div>
-        <input type="text" class="input" id="lastkana" placeholder="ヤマダ">
-      </div>
-      <div>
-        <div class="field-label">フリガナ(名)</div>
-        <input type="text" class="input" id="firstkana" placeholder="ハナコ">
-      </div>
+    <div class="form-row">
+      <div class="field-label">フリガナ</div>
+      <input type="text" class="input" id="kana" placeholder="ヤマダ ハナコ" autocomplete="off">
     </div>
     <div class="form-row">
       <div class="field-label">お電話番号<span class="req">必須</span></div>
@@ -473,7 +462,7 @@ document.getElementById('to-step3').addEventListener('click',()=>{
   showStep(3);
 });
 document.getElementById('to-step4').addEventListener('click',()=>{
-  const reqd = [['lastname','姓'],['firstname','名'],['tel','電話番号'],['visit-count','ご来店回数']];
+  const reqd = [['name','お名前'],['tel','電話番号'],['visit-count','ご来店回数']];
   for(const [id,lbl] of reqd){
     if(!document.getElementById(id).value.trim()){
       alert(lbl + 'を入力してください');
@@ -482,8 +471,8 @@ document.getElementById('to-step4').addEventListener('click',()=>{
     }
   }
   state.info = {
-    name: document.getElementById('lastname').value+' '+document.getElementById('firstname').value,
-    kana: document.getElementById('lastkana').value+' '+document.getElementById('firstkana').value,
+    name: document.getElementById('name').value.trim(),
+    kana: document.getElementById('kana').value.trim(),
     tel: document.getElementById('tel').value,
     email: document.getElementById('email').value,
     visit: document.getElementById('visit-count').value,
@@ -561,15 +550,38 @@ function showLiffStatus(text, color){
       LIFF_USER = {userId: profile.userId, displayName: profile.displayName, pictureUrl: profile.pictureUrl};
       console.log('LIFF userId取得:', LIFF_USER.displayName);
       showLiffStatus('✅ LINE経由で開いています (' + LIFF_USER.displayName + ' 様)', '#06c755');
-      const ln = document.getElementById('lastname');
-      if(ln && !ln.value && LIFF_USER.displayName){
-        const parts = LIFF_USER.displayName.split(/\s+/);
-        if(parts.length>=2){
-          document.getElementById('lastname').value = parts[0];
-          document.getElementById('firstname').value = parts.slice(1).join(' ');
+      // 過去予約者であれば自動入力 (lookup_by_uid)
+      try{
+        const lr = await fetch(GAS_ENDPOINT + '?action=lookup_by_uid&uid=' + encodeURIComponent(LIFF_USER.userId) + '&t=' + Date.now());
+        const j = await lr.json();
+        if(j && j.ok && j.found){
+          // 過去予約あり → 各フィールドに自動入力
+          const nm = document.getElementById('name'); if(nm && !nm.value && j.name) nm.value = j.name;
+          const kn = document.getElementById('kana'); if(kn && !kn.value && j.kana) kn.value = j.kana;
+          const tl = document.getElementById('tel'); if(tl && !tl.value && j.tel) tl.value = j.tel;
+          const em = document.getElementById('email'); if(em && !em.value && j.email) em.value = j.email;
+          const vc = document.getElementById('visit-count');
+          if(vc && j.visit_count){
+            // 来店回数 自動推定 (フェムケアの選択肢: 初回/2〜3回/リピーター)
+            const auto = j.visit_count >= 4 ? 'リピーター' : (j.visit_count >= 1 ? '2〜3回' : '初回');
+            // 既存オプションに一致するものを選択
+            for(const opt of vc.options){ if(opt.value === auto || opt.textContent.trim() === auto){ vc.value = opt.value; break; } }
+          }
+          const banner = document.getElementById('returning-banner');
+          if(banner){
+            banner.style.display = 'block';
+            banner.innerHTML = '🌙 お帰りなさい <strong>' + (j.name||'') + '</strong> 様（前回ご来店: ' + (j.last_date||'-') + ' / 通算 ' + (j.visit_count||0) + '回）<br><small style="color:#7a5d5d">前回の情報を呼び出しました。修正があればそのまま編集できます。</small>';
+          }
         } else {
-          document.getElementById('lastname').value = LIFF_USER.displayName;
+          // 新規 → LIFF displayName を name に流し込み
+          const nm = document.getElementById('name');
+          if(nm && !nm.value && LIFF_USER.displayName) nm.value = LIFF_USER.displayName;
         }
+      }catch(err){
+        console.warn('lookup_by_uid failed:', err.message);
+        // フォールバック: LIFF displayName を name に
+        const nm = document.getElementById('name');
+        if(nm && !nm.value && LIFF_USER.displayName) nm.value = LIFF_USER.displayName;
       }
     } else {
       showLiffStatus('⏳ LINEログインへリダイレクト...', '#06c755');
