@@ -1088,6 +1088,8 @@
         if (aiResult && aiResult.ok) {
           updateProgressStep('ai', 'done');
           window._fpAIResult = { result: aiResult, customerName: R.customerName, booking: booking };
+          // ★ AI 結果を自動で顧客カードに保存 (手動ボタン押下不要)
+          autoSaveAIResult(aiResult, R.customerName, booking);
           showProgressDoneAction();
         } else {
           updateProgressStep('ai', 'error', aiResult && aiResult.error);
@@ -1202,6 +1204,37 @@
 
   // (旧トースト系は unified progress panel に統合済み)
 
+  // AI 結果を自動で localStorage に保存 (手動ボタン押下不要)
+  function autoSaveAIResult(result, customerName, booking) {
+    if (!result || !result.ok) return;
+    const uid = (booking && booking.userId) || (booking && booking.ts);
+    if (!uid) return;
+    // タスク保存
+    const tasksKey = 'fp-tasks-' + uid;
+    const existing = JSON.parse(localStorage.getItem(tasksKey) || '[]');
+    const newTasks = (result.tasks || []).map(t => ({
+      task: t.task, due: t.dueDate, priority: t.priority, icon: t.icon,
+      recommendedAction: t.recommendedAction, actionTemplate: t.lineDraft,
+      createdAt: new Date().toISOString(), customerName, bookingTs: booking && booking.ts,
+    }));
+    localStorage.setItem(tasksKey, JSON.stringify(existing.concat(newTasks)));
+    // AI 全結果も顧客カードで参照できるように保存
+    const aiKey = 'fp-ai-' + uid;
+    const aiHistory = JSON.parse(localStorage.getItem(aiKey) || '[]');
+    aiHistory.push({
+      bookingTs: booking && booking.ts,
+      date: booking && booking.date,
+      transcript: result.transcript || '',
+      summary: result.summary || '',
+      transcript_summary: result.transcript_summary || '',
+      key_concerns: result.key_concerns || [],
+      next_meeting_suggestion: result.next_meeting_suggestion || '',
+      createdAt: new Date().toISOString(),
+    });
+    localStorage.setItem(aiKey, JSON.stringify(aiHistory));
+    if (window.FPCrmRefreshClients) window.FPCrmRefreshClients();
+  }
+
   // AI 議事録生成 (Drive アップロードと並行)
   async function aiProcessRecording(blob, bookingTs, customerName, booking) {
     const sizeMB = blob.size / 1024 / 1024;
@@ -1289,37 +1322,15 @@
               <strong>次回面談の提案:</strong> ${escapeHtml(result.next_meeting_suggestion)}
             </div>` : ''}
         </div>
-        <div style="padding:14px 26px;border-top:1px solid #e8e2d4;display:flex;justify-content:flex-end;gap:8px;">
-          <button id="fp-ai-save-tasks" style="font-size:13px;padding:9px 20px;background:linear-gradient(135deg,#b8893d,#d4a017);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;">タスクを顧客カードに保存して閉じる</button>
+        <div style="padding:14px 26px;border-top:1px solid #e8e2d4;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <span style="font-size:11.5px;color:#16a34a;font-weight:700;">✓ 顧客カードに自動保存済み</span>
+          <button id="fp-ai-save-tasks" style="font-size:13px;padding:9px 20px;background:linear-gradient(135deg,#1b2845,#0f1729);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;">閉じる</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
     document.getElementById('fp-ai-close-modal').addEventListener('click', () => overlay.remove());
     document.getElementById('fp-ai-save-tasks').addEventListener('click', () => {
-      // タスクを localStorage に保存
-      const tasksKey = 'fp-tasks-' + ((booking && booking.userId) || (booking && booking.ts));
-      const existing = JSON.parse(localStorage.getItem(tasksKey) || '[]');
-      const newTasks = (result.tasks || []).map(t => ({
-        task: t.task, due: t.dueDate, priority: t.priority, icon: t.icon,
-        recommendedAction: t.recommendedAction, actionTemplate: t.lineDraft,
-        createdAt: new Date().toISOString(), customerName, bookingTs: booking && booking.ts,
-      }));
-      localStorage.setItem(tasksKey, JSON.stringify(existing.concat(newTasks)));
-      // AI 全結果も顧客カードで参照できるように保存
-      const aiKey = 'fp-ai-' + ((booking && booking.userId) || (booking && booking.ts));
-      const aiHistory = JSON.parse(localStorage.getItem(aiKey) || '[]');
-      aiHistory.push({
-        bookingTs: booking && booking.ts,
-        date: booking && booking.date,
-        transcript: result.transcript || '',
-        summary: result.summary || '',
-        transcript_summary: result.transcript_summary || '',
-        key_concerns: result.key_concerns || [],
-        next_meeting_suggestion: result.next_meeting_suggestion || '',
-        createdAt: new Date().toISOString(),
-      });
-      localStorage.setItem(aiKey, JSON.stringify(aiHistory));
-      if (window.FPCrmRefreshClients) window.FPCrmRefreshClients();
+      // 自動保存済みなのでモーダルを閉じるだけ
       overlay.remove();
     });
     overlay.querySelectorAll('.fp-ai-send').forEach(btn => {
