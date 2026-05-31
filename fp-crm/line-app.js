@@ -991,7 +991,21 @@
         preferCurrentTab: false,
       });
       hidePickerHint();
-      // 音声チェック: 画面音声が取れてない場合は警告 (Whisper幻覚を防ぐ)
+      // ★ Chrome の「共有を停止」 バー (画面最下部に常時表示) で停止された時の検知
+      // → MediaRecorder.onstop が onended で自動発火する
+      stream.getVideoTracks().forEach(track => {
+        track.addEventListener('ended', () => {
+          if (window._fpRecorder.mediaRecorder && window._fpRecorder.mediaRecorder.state !== 'inactive') {
+            const t = document.createElement('div');
+            t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #06c755;border-radius:10px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10004;font-family:inherit;';
+            t.innerHTML = '<strong style="font-size:14px;display:block;">⏹ 画面共有が停止されました</strong><div style="font-size:12px;color:#6b7280;">録画停止 → AI 処理を開始します</div>';
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 6000);
+            stopScreenRecording();
+          }
+        });
+      });
+      // 音声チェック
       const audioTracks = stream.getAudioTracks();
       if (audioTracks.length === 0) {
         const ok = confirm('⚠ 「音声を共有」 が OFF のようです。\n\n録画はされますが、音声が無いと AI 議事録が生成できません。\n\n[OK] このまま録画する (音声無しで進める)\n[キャンセル] 一度キャンセル → やり直す');
