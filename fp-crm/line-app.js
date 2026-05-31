@@ -979,6 +979,12 @@
         preferCurrentTab: false,
       });
       hidePickerHint();
+      // 音声チェック: 画面音声が取れてない場合は警告 (Whisper幻覚を防ぐ)
+      const audioTracks = stream.getAudioTracks();
+      if (audioTracks.length === 0) {
+        const ok = confirm('⚠ 「音声を共有」 が OFF のようです。\n\n録画はされますが、音声が無いと AI 議事録が生成できません。\n\n[OK] このまま録画する (音声無しで進める)\n[キャンセル] 一度キャンセル → やり直す');
+        if (!ok) { stream.getTracks().forEach(t => t.stop()); return; }
+      }
 
       // 共有OK → Zoom popup + メモ展開
       const sw = window.screen.availWidth || screen.width;
@@ -1406,6 +1412,11 @@
     localStorage.removeItem('fp-memo-fullscreen');
     // Zoom 閉じ監視も停止
     if (window._fpZoomCloseWatcher) { clearInterval(window._fpZoomCloseWatcher); window._fpZoomCloseWatcher = null; }
+    // ★ Zoom popup + メモ popup を自動で閉じて CRM を前面に
+    try { if (window._fpZoomWin && !window._fpZoomWin.closed) window._fpZoomWin.close(); } catch (_) {}
+    try { if (window._fpMemoWin && !window._fpMemoWin.closed) window._fpMemoWin.close(); } catch (_) {}
+    const panel = document.getElementById('fp-memo-panel'); if (panel) panel.remove();
+    try { window.focus(); } catch (_) {}
   }
 
   function showRecordingPill() {
