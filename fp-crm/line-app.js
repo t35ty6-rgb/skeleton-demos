@@ -1003,13 +1003,16 @@
       const zoomWin = window.open(zoomBrowserUrl, 'fp-zoom-win', zoomFeatures);
       if (!zoomWin) window.open(zoomBrowserUrl, '_blank');
       // Zoom が閉じられたら自動で録画停止 (切り忘れ防止)
+      // ただし最低30秒経過してから (誤検知防止)
       window._fpZoomWin = zoomWin;
+      const recStartTime = Date.now();
       window._fpZoomCloseWatcher = setInterval(() => {
+        const elapsed = (Date.now() - recStartTime) / 1000;
+        if (elapsed < 30) return; // 最初の30秒は監視しない
         if (zoomWin && zoomWin.closed) {
           clearInterval(window._fpZoomCloseWatcher);
           window._fpZoomCloseWatcher = null;
           if (window._fpRecorder.mediaRecorder && window._fpRecorder.mediaRecorder.state !== 'inactive') {
-            // 自動停止トースト表示
             const t = document.createElement('div');
             t.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border-left:5px solid #f59e0b;border-radius:12px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.18);z-index:10004;font-family:inherit;max-width:380px;';
             t.innerHTML = `<strong style="font-size:14px;display:block;margin-bottom:4px;">⏹ Zoom が閉じられました</strong><div style="font-size:12px;color:#6b7280;line-height:1.5;">録画を自動停止して AI 処理を開始します</div>`;
@@ -1018,7 +1021,7 @@
             stopScreenRecording();
           }
         }
-      }, 2000);
+      }, 3000);
       const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
       // メモを別ポップアップウィンドウとして開く (CRM とは別ウィンドウ=Zoomを隠さない)
       const memoFeatures = `width=${memoW},height=${sh},left=0,top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
@@ -1083,6 +1086,7 @@
       showRecordingBorder();
       fetch(CLOUD_RUN_BASE + '/api/recording/start?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }).catch(() => {});
       showRecordingPill();
+      showFixedCompleteButton(); // 画面下に常時表示の完了ボタン
     } catch (e) {
       hidePickerHint();
       alert('画面録画の開始に失敗しました\n\n詳細: ' + e.message);
@@ -1383,6 +1387,30 @@
     if (o) o.remove();
   }
 
+  // 画面下に常時表示の「面談を完了する」 固定バー (録画中・処理中に出続ける)
+  function showFixedCompleteButton() {
+    if (document.getElementById('fp-fixed-complete')) return;
+    const bar = document.createElement('div');
+    bar.id = 'fp-fixed-complete';
+    bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:linear-gradient(180deg,#1b2845,#0f1729);color:#fff;padding:14px 24px;box-shadow:0 -8px 32px rgba(15,23,41,0.3);z-index:99999;display:flex;align-items:center;justify-content:space-between;gap:16px;font-family:inherit;';
+    bar.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;font-size:13px;">
+        <span style="width:10px;height:10px;background:#ff4d6d;border-radius:50%;animation:fp-rec-pulse 1s infinite;"></span>
+        <strong style="letter-spacing:0.04em;">面談中 — 終わったら右のボタンを押してください</strong>
+      </div>
+      <button id="fp-fixed-complete-btn" style="background:#fff;color:#1b2845;border:none;padding:14px 32px;font-size:14px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;font-family:'Inter','Noto Sans JP',sans-serif;box-shadow:0 4px 14px rgba(255,255,255,0.2);">■ 面談を完了する</button>
+    `;
+    document.body.appendChild(bar);
+    document.getElementById('fp-fixed-complete-btn').addEventListener('click', () => {
+      if (!confirm('録画を停止して AI 議事録を生成しますか?\n(Zoom と メモも一緒に閉じます)')) return;
+      stopScreenRecording();
+    });
+  }
+  function hideFixedCompleteButton() {
+    const b = document.getElementById('fp-fixed-complete');
+    if (b) b.remove();
+  }
+
   function showRecordingBorder() {
     if (document.getElementById('fp-rec-border')) return;
     const b = document.createElement('div');
@@ -1417,6 +1445,7 @@
     try { if (window._fpMemoWin && !window._fpMemoWin.closed) window._fpMemoWin.close(); } catch (_) {}
     const panel = document.getElementById('fp-memo-panel'); if (panel) panel.remove();
     try { window.focus(); } catch (_) {}
+    hideFixedCompleteButton();
   }
 
   function showRecordingPill() {
