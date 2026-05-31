@@ -557,7 +557,20 @@ function showLiffStatus(text, color){
         if(j && j.ok && j.found){
           // 過去予約あり → 各フィールドに自動入力
           const nm = document.getElementById('name'); if(nm && !nm.value && j.name) nm.value = j.name;
-          const kn = document.getElementById('kana'); if(kn && !kn.value && j.kana) kn.value = j.kana;
+          // フリガナ: 漢字が混ざってたら捨てる、ひらがななら カタカナ化して入れる
+          const kn = document.getElementById('kana');
+          if(kn && !kn.value && j.kana){
+            const raw = String(j.kana);
+            const hasKanji = /[一-龯]/.test(raw);
+            if(!hasKanji){
+              // ひらがな → カタカナ変換 (既存カタカナはそのまま)
+              const kata = raw.replace(/[ぁ-ゖ]/g, function(c){
+                return String.fromCharCode(c.charCodeAt(0) + 0x60);
+              });
+              kn.value = kata;
+            }
+            // 漢字含むなら空欄のまま (お客様自身に入力してもらう、placeholder案内表示)
+          }
           const tl = document.getElementById('tel'); if(tl && !tl.value && j.tel) tl.value = j.tel;
           const em = document.getElementById('email'); if(em && !em.value && j.email) em.value = j.email;
           const vc = document.getElementById('visit-count');
