@@ -230,8 +230,75 @@
     }
   }
 
+  // -----------------------------------------------------------
+  // KPI sparklines — tiny line charts under each KPI
+  // -----------------------------------------------------------
+  let sparkCharts = {};
+  function destroySparks() {
+    Object.values(sparkCharts).forEach(c => { try { c.destroy(); } catch(e){} });
+    sparkCharts = {};
+  }
+  function rnd(seed) { let x = Math.sin(seed) * 10000; return x - Math.floor(x); }
+  function seededTrend(seed, len, base, vol, dir) {
+    // dir: +1 up, -1 down, 0 flat
+    const arr = [];
+    let v = base;
+    for (let i = 0; i < len; i++) {
+      const noise = (rnd(seed + i) - 0.5) * vol;
+      const drift = dir * (i / len) * vol * 0.6;
+      v = Math.max(0, base + drift + noise);
+      arr.push(Number(v.toFixed(2)));
+    }
+    return arr;
+  }
+  const SPARK_PRESETS = {
+    clients: { seed: 11, base: 28,    vol: 1.5, dir: +1, color: INDIGO },
+    events:  { seed: 23, base: 2.5,   vol: 1.2, dir: 0,  color: INDIGO },
+    stale:   { seed: 41, base: 3,     vol: 1.0, dir: -1, color: INDIGO },
+    aum:     { seed: 57, base: 6.5,   vol: 0.18, dir: +1, color: INDIGO },
+  };
+  function renderSparklines() {
+    if (!window.Chart) return;
+    destroySparks();
+    document.querySelectorAll('canvas.kpi-spark').forEach(el => {
+      const kind = el.dataset.spark;
+      const preset = SPARK_PRESETS[kind] || SPARK_PRESETS.clients;
+      const data = seededTrend(preset.seed, 14, preset.base, preset.vol, preset.dir);
+      sparkCharts[kind] = new Chart(el, {
+        type: 'line',
+        data: {
+          labels: data.map((_, i) => i),
+          datasets: [{
+            data: data,
+            borderColor: preset.color,
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            tension: 0.35,
+            pointRadius: 0,
+            pointHoverRadius: 3,
+            fill: {
+              target: 'origin',
+              above: 'rgba(91,91,240,0.08)',
+            },
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          scales: {
+            x: { display: false },
+            y: { display: false, beginAtZero: false }
+          },
+          elements: { line: { cubicInterpolationMode: 'monotone' } },
+          animation: { duration: 400 }
+        }
+      });
+    });
+  }
+
   // Public
-  window.FPCharts = { render: render };
+  window.FPCharts = { render: render, renderSparklines: renderSparklines };
 
   // Auto-render: wait for dummy data + Chart.js + LifeEvents
   function tryRender(attempt) {

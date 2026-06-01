@@ -219,17 +219,17 @@
         <h2><i data-lucide="gift"></i><span>配達リスト (住所登録済) — ${wantList.length}名</span></h2>
         ${wantList.length === 0
           ? '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);">まだ住所登録なし</div>'
-          : '<div style="display:grid;gap:8px;">' + wantList.map((r, i) => `
-              <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;display:grid;grid-template-columns:36px 1fr 160px;gap:14px;align-items:center;box-shadow:var(--shadow-xs);">
-                <div style="background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;font-family:'Inter',sans-serif;">${i + 1}</div>
-                <div>
-                  <strong style="font-size:14.5px;">${escapeHtml(r.name) || '匿名'} 様</strong>
-                  <div style="font-size:13px;color:var(--ink-2);margin-top:3px;letter-spacing:0.01em;">📮 ${escapeHtml(r.address)}</div>
-                  ${r.phone ? `<div style="font-size:11.5px;color:var(--muted);margin-top:2px;">📞 ${escapeHtml(r.phone)}</div>` : ''}
-                  ${r.note ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">📝 ${escapeHtml(r.note)}</div>` : ''}
+          : '<div class="delivery-list">' + wantList.map((r, i) => `
+              <div class="delivery-row">
+                <div class="delivery-num">${i + 1}</div>
+                <div class="delivery-body">
+                  <strong class="delivery-name">${escapeHtml(r.name) || '匿名'} 様</strong>
+                  <div class="delivery-meta-row"><i data-lucide="map-pin"></i><span>${escapeHtml(r.address)}</span></div>
+                  ${r.phone ? `<div class="delivery-meta-row delivery-meta-sub"><i data-lucide="phone"></i><span>${escapeHtml(r.phone)}</span></div>` : ''}
+                  ${r.note ? `<div class="delivery-meta-row delivery-meta-sub delivery-meta-note"><i data-lucide="file-text"></i><span>${escapeHtml(r.note)}</span></div>` : ''}
                 </div>
-                <div style="text-align:right;">
-                  <a href="https://www.google.com/maps/search/${encodeURIComponent(r.address)}" target="_blank" style="font-size:11.5px;color:var(--accent);text-decoration:none;background:var(--accent-soft);padding:5px 12px;border-radius:11px;display:inline-block;font-weight:600;">📍 地図で見る</a>
+                <div class="delivery-action">
+                  <a href="https://www.google.com/maps/search/${encodeURIComponent(r.address)}" target="_blank" class="delivery-map-link"><i data-lucide="map"></i><span>地図で見る</span></a>
                 </div>
               </div>
             `).join('') + '</div>'

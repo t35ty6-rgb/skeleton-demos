@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="styles.css?v=20260531n">
 <link rel="stylesheet" href="styles-v2.css?v=20260531n">
 <link rel="stylesheet" href="styles-v3.css?v=20260531n">
-<link rel="stylesheet" href="styles-v8-workspace.css?v=20260601h">
+<link rel="stylesheet" href="styles-v8-workspace.css?v=20260601i">
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -125,6 +125,22 @@
               <span class="hero-eyebrow">今日のフォーカス</span>
               <h1 class="hero-title">おはよう、Tsukasa.</h1>
               <p class="hero-sub" id="hero-sub">今週のフォロー予定と直近イベントが揃ってます。優先度順にこなしましょう。</p>
+              <div class="hero-focus-row">
+                <div class="hero-focus-item">
+                  <span class="hero-focus-label">今週話す</span>
+                  <div class="hero-avatar-stack" id="hero-avatar-stack"></div>
+                </div>
+                <div class="hero-focus-divider"></div>
+                <div class="hero-focus-item">
+                  <span class="hero-focus-label">直近30日のイベント</span>
+                  <span class="hero-focus-value" id="hero-events-30d">—</span>
+                </div>
+                <div class="hero-focus-divider"></div>
+                <div class="hero-focus-item">
+                  <span class="hero-focus-label">未読LINE</span>
+                  <span class="hero-focus-value">3<span class="hero-focus-unit">件</span></span>
+                </div>
+              </div>
             </div>
             <div class="hero-actions">
               <button class="primary" id="hero-cta-new">
@@ -357,12 +373,46 @@
     document.querySelector('.tab[data-tab="distributionHub"]')?.click();
   });
 
-  // Nav count for clients (after dummy loaded)
-  setTimeout(() => {
-    if (window.DUMMY_CLIENTS) {
-      document.getElementById('nav-count-clients').textContent = window.DUMMY_CLIENTS.length;
+  // Nav count for clients (after dummy loaded) + Hero focus row
+  function hydrateHero() {
+    if (!window.DUMMY_CLIENTS) return false;
+    const navCount = document.getElementById('nav-count-clients');
+    if (navCount) navCount.textContent = window.DUMMY_CLIENTS.length;
+
+    // 30d upcoming events
+    if (window.LifeEvents) {
+      const today = new Date('2026-05-27');
+      const horizon = new Date(today); horizon.setDate(horizon.getDate() + 30);
+      let count = 0;
+      window.DUMMY_CLIENTS.forEach(c => {
+        const evs = window.LifeEvents.generate(c);
+        evs.forEach(ev => {
+          const ed = new Date(ev.date || ev.when || ev.d);
+          if (!isNaN(ed) && ed >= today && ed <= horizon) count++;
+        });
+      });
+      const el = document.getElementById('hero-events-30d');
+      if (el) el.innerHTML = count + '<span class="hero-focus-unit">件</span>';
     }
-  }, 800);
+
+    // Avatar stack — top 5 priority
+    const stack = document.getElementById('hero-avatar-stack');
+    if (stack && window.Recommender) {
+      const tops = window.Recommender.topAcrossClients(window.DUMMY_CLIENTS, 5);
+      stack.innerHTML = tops.map((t, i) => {
+        const name = (t.client.name || '?').replace(/\s+/g, '');
+        const initial = name.slice(0, 1);
+        return `<span class="hero-avatar" style="--idx:${i};" title="${name}">${initial}</span>`;
+      }).join('') + `<span class="hero-avatar-more">+${Math.max(0, window.DUMMY_CLIENTS.filter(c => c.status === 'important').length - 5)}</span>`;
+    }
+    return true;
+  }
+  let heroTries = 0;
+  function tryHero() {
+    if (hydrateHero()) return;
+    if (heroTries++ < 30) setTimeout(tryHero, 200);
+  }
+  setTimeout(tryHero, 400);
 </script>
 
 </body>

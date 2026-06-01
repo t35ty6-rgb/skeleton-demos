@@ -146,27 +146,32 @@
     const icoCoin = '<svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
 
     document.getElementById('kpi-area').innerHTML = `
-      <div class="kpi">
-        <div class="kpi-label">${icoUsers}<span>Total Clients</span></div>
+      <div class="kpi" data-tone="neutral">
+        <div class="kpi-label">${icoUsers}<span>顧客総数</span><span class="kpi-delta kpi-delta-up">+2</span></div>
         <div class="kpi-value">${totalClients}<span class="unit">名</span></div>
         <div class="kpi-sub">うち重点 ${importantCount} 名</div>
+        <canvas class="kpi-spark" data-spark="clients"></canvas>
       </div>
-      <div class="kpi">
-        <div class="kpi-label">${icoCalendar}<span>Upcoming 3M</span></div>
-        <div class="kpi-value" style="${upcoming3m > 0 ? 'color:#9a5a18;' : ''}">${upcoming3m}<span class="unit">件</span></div>
-        <div class="kpi-sub">大学入学・退職・相続など</div>
+      <div class="kpi" data-tone="${upcoming3m > 0 ? 'warn' : 'neutral'}">
+        <div class="kpi-label">${icoCalendar}<span>直近3ヶ月のイベント</span></div>
+        <div class="kpi-value">${upcoming3m}<span class="unit">件</span></div>
+        <div class="kpi-sub">大学入学 / 退職 / 相続 ほか</div>
+        <canvas class="kpi-spark" data-spark="events"></canvas>
       </div>
-      <div class="kpi">
-        <div class="kpi-label">${icoAlert}<span>Inactive 6M+</span></div>
-        <div class="kpi-value" style="${staleCount > 5 ? 'color:#7a1530;' : (staleCount > 0 ? 'color:#9a5a18;' : '')}">${staleCount}<span class="unit">名</span></div>
-        <div class="kpi-sub">フォロー要</div>
+      <div class="kpi" data-tone="${staleCount > 5 ? 'critical' : (staleCount > 0 ? 'warn' : 'positive')}">
+        <div class="kpi-label">${icoAlert}<span>半年以上未接触</span><span class="kpi-delta kpi-delta-down">要対応</span></div>
+        <div class="kpi-value">${staleCount}<span class="unit">名</span></div>
+        <div class="kpi-sub">フォロー対象</div>
+        <canvas class="kpi-spark" data-spark="stale"></canvas>
       </div>
-      <div class="kpi">
-        <div class="kpi-label">${icoCoin}<span>AUM Total</span></div>
+      <div class="kpi" data-tone="neutral">
+        <div class="kpi-label">${icoCoin}<span>管理資産総額</span><span class="kpi-delta kpi-delta-up">+3.2%</span></div>
         <div class="kpi-value">¥${fmtMoney(totalAum)}</div>
         <div class="kpi-sub">平均 ¥${fmtMoney(Math.round(totalAum / totalClients))}/名</div>
+        <canvas class="kpi-spark" data-spark="aum"></canvas>
       </div>
     `;
+    if (window.FPCharts && window.FPCharts.renderSparklines) window.FPCharts.renderSparklines();
 
     // 今週話すべき客 (top 8)
     const tops = window.Recommender.topAcrossClients(clients, 8);
