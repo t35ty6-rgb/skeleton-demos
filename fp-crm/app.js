@@ -1550,9 +1550,10 @@
                 <textarea id="draft-text" class="aib-textarea">${escapeHtml(draft.body)}</textarea>
               </div>
               <div class="aib-attach">
-                <label class="aib-attach-item"><input type="checkbox" checked> <i data-lucide="calendar-clock"></i><span>次回面談候補日3つを自動で添付</span></label>
-                <label class="aib-attach-item"><input type="checkbox"> <i data-lucide="paperclip"></i><span>関連資料 PDF を添付 (教育資金プラン)</span></label>
+                <label class="aib-attach-item"><input type="checkbox" id="aib-attach-slots" checked> <i data-lucide="calendar-clock"></i><span>次回面談候補日3つを自動で添付</span></label>
+                <label class="aib-attach-item"><input type="checkbox" id="aib-attach-pdf"> <i data-lucide="paperclip"></i><span>関連資料 PDF を添付 (教育資金プラン)</span></label>
               </div>
+              <div id="aib-preview-note" class="aib-preview-note"><i data-lucide="check"></i>候補日が文面に追加されています (▼下のテキストで確認・編集)</div>
             </div>
           </section>
 
@@ -1631,8 +1632,48 @@
     document.getElementById('draft-regen').addEventListener('click', () => {
       toneIndex = (toneIndex + 1) % 3;
       const newDraft = generateDraftReply(client, events, recs, toneIndex);
-      document.getElementById('draft-text').value = newDraft.body;
+      currentBaseBody = newDraft.body;
+      applyAttachments();
     });
+
+    // ===== Attachments: rebuild textarea on toggle =====
+    let currentBaseBody = draft.body;
+    function buildSlotBlock() {
+      // Generate next 3 business-day slots (skip weekends)
+      const slots = [];
+      const tries = 14;
+      const base = new Date(TODAY);
+      base.setDate(base.getDate() + 2); // start day after tomorrow
+      const wDay = ['日','月','火','水','木','金','土'];
+      const times = ['10:00〜11:00', '14:00〜15:00', '19:00〜20:00'];
+      let added = 0; let i = 0;
+      while (added < 3 && i < tries) {
+        const d = new Date(base); d.setDate(d.getDate() + i);
+        if (d.getDay() !== 0 && d.getDay() !== 6) {
+          slots.push(`【候補${added+1}】${d.getMonth()+1}月${d.getDate()}日(${wDay[d.getDay()]}) ${times[added]}`);
+          added++;
+        }
+        i++;
+      }
+      return ['', '────────', '◆ 次回面談 候補日 (どれかご都合よろしければ返信ください)', ...slots, '※ 上記が難しい場合は別日程をご提案ください。', '────────'].join('\n');
+    }
+    function buildPdfBlock() {
+      return '\n\n────────\n◆ 添付資料\n📎 教育資金プラン_山田様向け.pdf\n────────';
+    }
+    function applyAttachments() {
+      const slots = document.getElementById('aib-attach-slots')?.checked;
+      const pdf = document.getElementById('aib-attach-pdf')?.checked;
+      let body = currentBaseBody;
+      if (slots) body += '\n' + buildSlotBlock();
+      if (pdf) body += buildPdfBlock();
+      document.getElementById('draft-text').value = body;
+      const note = document.getElementById('aib-preview-note');
+      if (note) note.style.display = (slots || pdf) ? 'flex' : 'none';
+    }
+    document.getElementById('aib-attach-slots')?.addEventListener('change', applyAttachments);
+    document.getElementById('aib-attach-pdf')?.addEventListener('change', applyAttachments);
+    // Apply on open
+    applyAttachments();
   }
 
   function generateDraftReply(client, events, recs, toneIndex) {
