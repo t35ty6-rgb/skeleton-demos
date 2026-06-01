@@ -903,6 +903,20 @@
     return remMonths === 0 ? `${years}年後` : `${years}年${remMonths}ヶ月後`;
   }
 
+  // Event category label
+  function catLabel(cat) {
+    return {
+      'education':  '教育',
+      'retirement': '退職',
+      'pension':    '年金',
+      'mortgage':   '住宅',
+      'inheritance':'相続',
+      'elder':      '介護',
+      'health':     '健康',
+      'general':    'その他',
+    }[cat] || cat || 'その他';
+  }
+
   // ============================
   // 顧客詳細モーダル
   // ============================
@@ -962,61 +976,232 @@
       ? `<dt>住宅ローン</dt><dd>残${c.mortgage.remainingYears}年 / 月¥${c.mortgage.monthly.toLocaleString()}</dd>`
       : '';
 
+    // ====== NEW PREMIUM 2-COLUMN MODAL ======
+    const initial = (c.name || '?').replace(/\s+/g, '').slice(0, 1);
+    const age = window.LifeEvents.currentAge(c);
+    const childCount = (c.family || []).filter(m => m.rel === 'child').length;
+    const familyShort = childCount > 0 ? `配偶者 + 子${childCount}` :
+      ((c.family || []).find(m => m.rel === 'spouse') ? '夫婦' : '単身');
+    const days = daysSince(c.lastContact);
+    const aumDisp = c.aum >= 100000000 ? `¥${(c.aum/100000000).toFixed(2)}億` : `¥${Math.round(c.aum/10000).toLocaleString()}万`;
+    const topRec = recs[0] || null;
+    const futureEvs = events.filter(ev => new Date(ev.date) >= TODAY);
+    const nextEv = futureEvs[0];
+    const eventsByCat = events.reduce((acc, ev) => { acc[ev.cat] = (acc[ev.cat] || 0) + 1; return acc; }, {});
+
+    // Family avatar + meta list
+    const familyHtml2 = (c.family || []).length === 0
+      ? '<div class="cd-empty">単身</div>'
+      : (c.family || []).map(m => {
+          const relLabel = m.rel === 'spouse' ? '配偶者' : (m.rel === 'child' ? 'お子様' : m.rel);
+          const mAge = window.LifeEvents.currentAge({ birth: m.birth });
+          const mInit = (m.name || '?').replace(/\s+/g, '').slice(0, 1);
+          return `<div class="cd-family-row">
+            <span class="cd-family-avatar">${escapeHtml(mInit)}</span>
+            <div class="cd-family-body">
+              <div class="cd-family-name">${escapeHtml(m.name)}</div>
+              <div class="cd-family-meta">${relLabel} · ${mAge}歳</div>
+            </div>
+          </div>`;
+        }).join('');
+
+    // Timeline (clean)
+    const timelineHtml2 = events.length === 0
+      ? '<div class="cd-empty">向こう30年に予測イベントなし</div>'
+      : events.slice(0, 12).map(ev => {
+          const rel = window.LifeEvents.formatRelative(ev.date);
+          return `<div class="cd-tl-row">
+            <span class="cd-tl-dot cd-cat-${ev.cat}${ev.major ? ' major' : ''}"></span>
+            <span class="cd-tl-date">${fmtDate(ev.date)}</span>
+            <span class="cd-tl-label">${escapeHtml(ev.label)}</span>
+            <span class="cd-tl-who">${escapeHtml(ev.who || '')}</span>
+            <span class="cd-tl-rel">${rel}</span>
+          </div>`;
+        }).join('');
+
+    // Proposals
+    const proposalsHtml2 = (c.proposals || []).length === 0
+      ? '<div class="cd-empty">提案履歴なし</div>'
+      : (c.proposals || []).slice().reverse().map(p => `
+          <div class="cd-prop-row">
+            <span class="cd-prop-date">${p.date}</span>
+            <span class="cd-prop-title">${escapeHtml(p.title)}</span>
+            <span class="cd-prop-result cd-prop-result-${p.result}">${p.result}</span>
+          </div>
+        `).join('');
+
+    // Action recs (filtered top 4)
+    const actionsHtml2 = recs.length === 0
+      ? '<div class="cd-empty">直近の推奨アクションなし</div>'
+      : recs.slice(0, 4).map(r => `
+          <div class="cd-action-row">
+            <div class="cd-action-bullet"></div>
+            <div class="cd-action-body">
+              <div class="cd-action-text">${escapeHtml(r.action)}</div>
+              <div class="cd-action-reason">${escapeHtml(r.reason)}</div>
+            </div>
+            <span class="cd-action-pri">${priorityLabel(r.priority)}</span>
+          </div>
+        `).join('');
+
     document.getElementById('modal-content').innerHTML = `
-      <div class="modal-header">
-        <h2>
-          ${escapeHtml(c.name)}
-          <span class="status-pill ${c.status}">${statusLabel(c.status)}</span>
-        </h2>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <button id="modal-draft-btn" data-hint="この顧客向けのLINE返信文をAIが自動で作る → 確認・編集してLINE送信できます" style="background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;font-weight:700;">✨ AI返信下書きを作る</button>
-          <button id="modal-edit-btn" data-hint="顧客情報・家族構成・住宅ローン・LINE連携などを編集">編集</button>
-          <button class="modal-close" id="modal-close-btn" data-hint="閉じる">×</button>
-        </div>
-      </div>
-      <div class="modal-body">
-        <div class="detail-grid">
-          <div class="detail-block">
-            <h3>基本情報</h3>
-            <dl>
-              <dt>フリガナ</dt><dd>${escapeHtml(c.kana)}</dd>
-              <dt>生年月日</dt><dd>${c.birth} (${window.LifeEvents.currentAge(c)}歳)</dd>
-              <dt>職業</dt><dd>${escapeHtml(c.occupation)}</dd>
-              <dt>流入経路</dt><dd>${escapeHtml(c.source)}</dd>
-              <dt>管理資産</dt><dd>¥${fmtMoney(c.aum)}</dd>
-              ${mortgageHtml}
-              <dt>最終接触</dt><dd>${c.lastContact} (${daysSince(c.lastContact)}日前)</dd>
+      <div class="cd-modal">
+        <button class="cd-close" id="modal-close-btn" aria-label="閉じる"><i data-lucide="x"></i></button>
+
+        <!-- ============= LEFT: Profile column ============= -->
+        <aside class="cd-left">
+          <div class="cd-profile-head">
+            <div class="cd-profile-avatar">${escapeHtml(initial)}</div>
+            <div class="cd-profile-name">${escapeHtml(c.name)} <span class="cd-profile-honor">様</span></div>
+            <div class="cd-profile-kana">${escapeHtml(c.kana)}</div>
+            <div class="cd-profile-pills">
+              <span class="status-pill ${c.status}">${statusLabel(c.status)}</span>
+              ${c.lineFriendId ? '<span class="cd-line-pill"><i data-lucide="message-circle"></i>LINE連携</span>' : ''}
+            </div>
+          </div>
+
+          <div class="cd-quick-actions">
+            <button class="cd-qa-btn cd-qa-primary" id="cd-action-line"><i data-lucide="message-square-text"></i><span>LINE送信</span></button>
+            <button class="cd-qa-btn" id="cd-action-call"><i data-lucide="phone"></i><span>電話</span></button>
+            <button class="cd-qa-btn" id="cd-action-meet"><i data-lucide="video"></i><span>Zoom</span></button>
+            <button class="cd-qa-btn" id="cd-action-mail"><i data-lucide="mail"></i><span>メール</span></button>
+          </div>
+
+          <div class="cd-profile-stats">
+            <div class="cd-stat">
+              <div class="cd-stat-label">管理資産</div>
+              <div class="cd-stat-value">${aumDisp}</div>
+            </div>
+            <div class="cd-stat">
+              <div class="cd-stat-label">最終接触</div>
+              <div class="cd-stat-value">${days}<span class="cd-stat-unit">日前</span></div>
+              <div class="cd-stat-sub">${c.lastContact}</div>
+            </div>
+            <div class="cd-stat">
+              <div class="cd-stat-label">年齢 / 性別</div>
+              <div class="cd-stat-value">${age}<span class="cd-stat-unit">歳</span></div>
+              <div class="cd-stat-sub">${c.gender === 'F' ? '女性' : '男性'} · ${c.birth}</div>
+            </div>
+          </div>
+
+          <div class="cd-profile-section">
+            <div class="cd-section-label">プロフィール</div>
+            <dl class="cd-dl">
+              <dt>職業</dt><dd>${escapeHtml(c.occupation || '—')}</dd>
+              <dt>流入経路</dt><dd>${escapeHtml(c.source || '—')}</dd>
+              <dt>家族</dt><dd>${familyShort}</dd>
+              ${c.mortgage ? `<dt>住宅ローン</dt><dd>残${c.mortgage.remainingYears}年 / 月¥${c.mortgage.monthly.toLocaleString()}</dd>` : ''}
             </dl>
           </div>
-          <div class="detail-block">
-            <h3>家族構成</h3>
-            <ul class="family-list">${familyHtml}</ul>
+
+          <div class="cd-profile-section">
+            <div class="cd-section-label">家族構成</div>
+            <div class="cd-family-list">${familyHtml2}</div>
           </div>
-        </div>
 
-        <div class="detail-section">
-          <h3>次にやること <span class="count-badge">${recs.length}</span></h3>
-          <div class="actions-list">${actionsHtml}</div>
-        </div>
+          ${c.note ? `
+          <div class="cd-profile-section">
+            <div class="cd-section-label">メモ</div>
+            <div class="cd-note">${escapeHtml(c.note)}</div>
+          </div>` : ''}
+        </aside>
 
-        <div class="detail-section">
-          <h3>ライフイベント・タイムライン (向こう30年) <span class="count-badge">${events.length}</span></h3>
-          <div class="client-timeline">${timelineHtml}</div>
-        </div>
+        <!-- ============= RIGHT: Activity column ============= -->
+        <main class="cd-right">
 
-        ${renderMeetingRecordsBlock(c)}
+          <!-- AI Next Best Action ribbon -->
+          ${topRec ? `
+          <div class="cd-nba">
+            <div class="cd-nba-head">
+              <span class="cd-nba-rank"><i data-lucide="sparkles"></i>AI 推奨 NEXT BEST ACTION</span>
+              <span class="cd-nba-pri">${priorityLabel(topRec.priority)}</span>
+            </div>
+            <div class="cd-nba-title">${escapeHtml(topRec.action)}</div>
+            <div class="cd-nba-reason"><i data-lucide="info"></i><span>${escapeHtml(topRec.reason)}</span></div>
+            <div class="cd-nba-cta">
+              <button class="primary" id="modal-draft-btn"><i data-lucide="wand-2"></i><span>AI返信下書きを作る</span></button>
+              <button class="ghost-btn" id="modal-edit-btn"><i data-lucide="pencil"></i><span>顧客情報を編集</span></button>
+            </div>
+          </div>` : `
+          <div class="cd-nba cd-nba-empty">
+            <div class="cd-nba-head"><span class="cd-nba-rank">AI推奨</span></div>
+            <div class="cd-nba-title">直近の推奨アクションなし</div>
+            <div class="cd-nba-cta">
+              <button class="primary" id="modal-draft-btn"><i data-lucide="wand-2"></i><span>AI返信下書きを作る</span></button>
+              <button class="ghost-btn" id="modal-edit-btn"><i data-lucide="pencil"></i><span>顧客情報を編集</span></button>
+            </div>
+          </div>`}
 
-        <div class="detail-section">
-          <h3>提案履歴 <span class="count-badge">${(c.proposals || []).length}</span></h3>
-          <ul class="proposals-list">${proposalsHtml}</ul>
-        </div>
+          <!-- Tabs -->
+          <div class="cd-tabs" role="tablist">
+            <button class="cd-tab cd-tab-active" data-cdtab="overview">概観</button>
+            <button class="cd-tab" data-cdtab="timeline">タイムライン <span class="cd-tab-count">${events.length}</span></button>
+            <button class="cd-tab" data-cdtab="proposals">提案履歴 <span class="cd-tab-count">${(c.proposals || []).length}</span></button>
+            <button class="cd-tab" data-cdtab="meetings">面談録</button>
+          </div>
 
-        ${c.note ? `<div class="detail-section">
-          <h3>メモ</h3>
-          <div style="background:#fafbfc;border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-size:13px;line-height:1.6;">${escapeHtml(c.note)}</div>
-        </div>` : ''}
+          <div class="cd-tabpanels">
+            <!-- OVERVIEW -->
+            <div class="cd-tabpanel" data-cdpanel="overview">
+              <div class="cd-overview-grid">
+                <div class="cd-card">
+                  <div class="cd-card-head"><i data-lucide="alert-circle"></i><span>次にやること</span><span class="cd-card-badge">${Math.min(recs.length, 4)}</span></div>
+                  <div class="cd-card-body">${actionsHtml2}</div>
+                </div>
+                <div class="cd-card">
+                  <div class="cd-card-head"><i data-lucide="calendar-clock"></i><span>直近のイベント</span></div>
+                  <div class="cd-card-body">
+                    ${nextEv ? `
+                    <div class="cd-next-ev">
+                      <div class="cd-next-ev-rel">${window.LifeEvents.formatRelative(nextEv.date)}</div>
+                      <div class="cd-next-ev-label">${escapeHtml(nextEv.label)}</div>
+                      <div class="cd-next-ev-meta">${fmtDate(nextEv.date)} · 対象: ${escapeHtml(nextEv.who || '—')}</div>
+                    </div>
+                    ${futureEvs.slice(1, 4).map(ev => `
+                    <div class="cd-next-ev cd-next-ev-mini">
+                      <span class="cd-next-ev-mini-rel">${window.LifeEvents.formatRelative(ev.date)}</span>
+                      <span class="cd-next-ev-mini-label">${escapeHtml(ev.label)}</span>
+                    </div>`).join('')}
+                    ` : '<div class="cd-empty">予測イベントなし</div>'}
+                  </div>
+                </div>
+              </div>
 
-        ${renderReferralBlock(c)}
+              <div class="cd-card">
+                <div class="cd-card-head"><i data-lucide="bar-chart-3"></i><span>イベント分類サマリー</span></div>
+                <div class="cd-card-body">
+                  <div class="cd-cat-summary">
+                    ${Object.entries(eventsByCat).map(([cat, n]) => `
+                      <div class="cd-cat-chip cd-cat-${cat}">
+                        <span class="cd-cat-dot"></span>
+                        <span class="cd-cat-name">${catLabel(cat)}</span>
+                        <span class="cd-cat-count">${n}</span>
+                      </div>
+                    `).join('') || '<div class="cd-empty">なし</div>'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TIMELINE -->
+            <div class="cd-tabpanel" data-cdpanel="timeline" hidden>
+              <div class="cd-tl-list">${timelineHtml2}</div>
+              ${events.length > 12 ? `<div class="cd-tl-more">他 ${events.length - 12} 件...</div>` : ''}
+            </div>
+
+            <!-- PROPOSALS -->
+            <div class="cd-tabpanel" data-cdpanel="proposals" hidden>
+              <div class="cd-prop-list">${proposalsHtml2}</div>
+            </div>
+
+            <!-- MEETINGS -->
+            <div class="cd-tabpanel" data-cdpanel="meetings" hidden>
+              ${renderMeetingRecordsBlock(c) || '<div class="cd-empty">面談録なし</div>'}
+            </div>
+          </div>
+
+          ${renderReferralBlock(c)}
+        </main>
       </div>
     `;
     document.getElementById('modal-overlay').style.display = 'flex';
@@ -1028,6 +1213,26 @@
     document.getElementById('modal-draft-btn').addEventListener('click', () => {
       openDraftReplyModal(c, events, recs);
     });
+    // Tab switching inside new modal
+    document.querySelectorAll('.cd-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.cdtab;
+        document.querySelectorAll('.cd-tab').forEach(b => b.classList.toggle('cd-tab-active', b === btn));
+        document.querySelectorAll('.cd-tabpanel').forEach(p => {
+          if (p.dataset.cdpanel === key) p.removeAttribute('hidden');
+          else p.setAttribute('hidden', '');
+        });
+      });
+    });
+    // Quick action stubs
+    const qaStub = (id, label) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('click', () => alert(label + ': まだ実装してないけど、ここから ' + label + ' を起動します'));
+    };
+    qaStub('cd-action-line', 'LINE送信');
+    qaStub('cd-action-call', '電話発信');
+    qaStub('cd-action-meet', 'Zoom起動');
+    qaStub('cd-action-mail', 'メール作成');
     // タスクの「LINEで送信」 ボタン
     document.querySelectorAll('.fp-task-do-now').forEach(btn => {
       btn.addEventListener('click', async () => {
