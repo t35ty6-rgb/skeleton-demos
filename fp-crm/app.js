@@ -1636,17 +1636,18 @@
       applyAttachments();
     });
 
-    // ===== Attachments: rebuild textarea on toggle =====
+    // ===== Attachments: append/strip blocks while preserving user edits =====
     let currentBaseBody = draft.body;
+    const SLOT_RE = /\n*────────\n◆ 次回面談[\s\S]*?────────\n?/g;
+    const PDF_RE  = /\n*────────\n◆ 添付資料[\s\S]*?────────\n?/g;
     function buildSlotBlock() {
-      // Generate next 3 business-day slots (skip weekends)
       const slots = [];
       const tries = 14;
       const base = new Date(TODAY);
-      base.setDate(base.getDate() + 2); // start day after tomorrow
+      base.setDate(base.getDate() + 2);
       const wDay = ['日','月','火','水','木','金','土'];
       const times = ['10:00〜11:00', '14:00〜15:00', '19:00〜20:00'];
-      let added = 0; let i = 0;
+      let added = 0, i = 0;
       while (added < 3 && i < tries) {
         const d = new Date(base); d.setDate(d.getDate() + i);
         if (d.getDay() !== 0 && d.getDay() !== 6) {
@@ -1660,19 +1661,25 @@
     function buildPdfBlock() {
       return '\n\n────────\n◆ 添付資料\n📎 教育資金プラン_山田様向け.pdf\n────────';
     }
+    function stripBlocks(text) {
+      return text.replace(SLOT_RE, '').replace(PDF_RE, '').trimEnd();
+    }
     function applyAttachments() {
-      const slots = document.getElementById('aib-attach-slots')?.checked;
-      const pdf = document.getElementById('aib-attach-pdf')?.checked;
-      let body = currentBaseBody;
-      if (slots) body += '\n' + buildSlotBlock();
-      if (pdf) body += buildPdfBlock();
-      document.getElementById('draft-text').value = body;
+      const slotsOn = document.getElementById('aib-attach-slots')?.checked;
+      const pdfOn = document.getElementById('aib-attach-pdf')?.checked;
+      const ta = document.getElementById('draft-text');
+      if (!ta) return;
+      // Preserve user edits by stripping known blocks then re-appending
+      let body = stripBlocks(ta.value || currentBaseBody);
+      if (slotsOn) body += '\n' + buildSlotBlock();
+      if (pdfOn) body += buildPdfBlock();
+      ta.value = body;
       const note = document.getElementById('aib-preview-note');
-      if (note) note.style.display = (slots || pdf) ? 'flex' : 'none';
+      if (note) note.style.display = (slotsOn || pdfOn) ? 'flex' : 'none';
     }
     document.getElementById('aib-attach-slots')?.addEventListener('change', applyAttachments);
     document.getElementById('aib-attach-pdf')?.addEventListener('change', applyAttachments);
-    // Apply on open
+    // Apply once on open
     applyAttachments();
   }
 
