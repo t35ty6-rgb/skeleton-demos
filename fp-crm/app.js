@@ -1577,8 +1577,18 @@
                     </div>
                   </div>
                   <div class="aib-cal-right">
-                    <div class="aib-cal-subhead"><i data-lucide="calendar"></i><span>あなたの予定 (次の7日)</span></div>
+                    <div class="aib-cal-subhead">
+                      <i data-lucide="calendar"></i><span>あなたの予定 (次の7日)</span>
+                      <button class="aib-gcal-btn" id="aib-gcal-toggle"><i data-lucide="external-link"></i><span>Google Calendar を開く</span></button>
+                    </div>
                     <div class="aib-week" id="aib-week"></div>
+                    <details class="aib-gcal-embed">
+                      <summary><i data-lucide="monitor"></i><span>本物の Google Calendar を埋め込み表示</span></summary>
+                      <div class="aib-gcal-iframe-wrap">
+                        <iframe src="https://calendar.google.com/calendar/embed?showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=1&showCalendars=0&showTz=0&height=400&wkst=2&bgcolor=%23ffffff&src=ja.japanese%23holiday%40group.v.calendar.google.com&ctz=Asia%2FTokyo" style="border-width:0" width="100%" height="380" frameborder="0" scrolling="no"></iframe>
+                        <div class="aib-gcal-note">サンプル表示 (日本の祝日カレンダー)。本番では FP のメインカレンダーに切替。</div>
+                      </div>
+                    </details>
                   </div>
                 </div>
               </div>
@@ -1633,7 +1643,7 @@
       document.getElementById('draft-msg').textContent = '✓ クリップボードにコピーしました';
     });
     document.getElementById('draft-send').addEventListener('click', async () => {
-      const text = document.getElementById('draft-text').value;
+      const baseText = document.getElementById('draft-text').value;
       const userId = client.lineFriendId || client.userId;
       const sendBtn = document.getElementById('draft-send');
       const msg = document.getElementById('draft-msg');
@@ -1643,13 +1653,37 @@
         return;
       }
       if (!confirm(client.name + ' 様 へ この内容で LINE 送信します。よろしいですか?')) return;
+      // Compose final text: body + slot block (text fallback for cards) + pdf block
+      const slotsOn = document.getElementById('aib-attach-slots')?.checked;
+      const pdfOn = document.getElementById('aib-attach-pdf')?.checked;
+      let text = baseText.trimEnd();
+      if (slotsOn && slotsData.length) {
+        text += '\n\n────────\n◆ 次回面談 候補日 (どれかご都合よろしければ返信ください)';
+        slotsData.forEach((s, i) => {
+          text += `\n【候補${i+1}】${s.month}月${s.day}日(${s.wday}) ${s.time}`;
+        });
+        text += '\n※ 上記が難しい場合は別日程をご提案ください。\n────────';
+      }
+      if (pdfOn) {
+        text += '\n\n────────\n◆ 添付資料\n📎 教育資金プラン_山田様向け.pdf\n────────';
+      }
       sendBtn.disabled = true;
       sendBtn.textContent = '送信中...';
       try {
         const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/line/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: userId, text: text }),
+          body: JSON.stringify({
+            userId: userId,
+            text: text,
+            // Send structured payload too — backend can render as Flex Carousel when ready
+            slots: slotsOn && slotsData.length ? slotsData.map(s => ({
+              date: s.iso,
+              wday: s.wday,
+              time: s.time,
+              label: `候補 ${slotsData.indexOf(s) + 1}`
+            })) : null,
+          }),
         });
         const data = await r.json();
         if (data.ok) {
@@ -1951,22 +1985,92 @@
       }
     });
     document.getElementById('aib-cal-add')?.addEventListener('click', () => {
-      // Add the next available free slot
-      const all = weekData.flatMap(d => d.slots);
-      const usedKeys = new Set(slotsData.map(s => `${s.iso}::${s.start}`));
-      const next = all.find(s => !usedKeys.has(`${s.iso}::${s.start}`));
-      if (next) {
-        slotsData.push({
-          id: `s-${next.iso}-${next.startH}`,
-          month: next.month, day: next.day, wday: next.wday,
-          time: next.time, icon: next.icon, iso: next.iso, start: next.start,
-        });
+      openManualPickerModal();
+    });
+
+    function openManualPickerModal() {
+      const wrap = document.createElement('div');
+      wrap.className = 'aib-picker-overlay';
+      wrap.innerHTML = `
+        <div class="aib-picker">
+          <div class="aib-picker-head">
+            <i data-lucide="calendar-plus"></i>
+            <span>日時を手動で指定</span>
+            <button class="aib-picker-close" aria-label="閉じる">×</button>
+          </div>
+          <div class="aib-picker-body">
+            <label class="aib-picker-row">
+              <span class="aib-picker-label">日付</span>
+              <input type="date" id="aib-pick-date" value="${TODAY.toISOString().slice(0,10)}" min="${TODAY.toISOString().slice(0,10)}">
+            </label>
+            <label class="aib-picker-row">
+              <span class="aib-picker-label">開始時刻</span>
+              <select id="aib-pick-time">
+                ${Array.from({length:11}, (_,i)=>i+9).map(h => `<option value="${String(h).padStart(2,'0')}:00">${String(h).padStart(2,'0')}:00〜${String(h+1).padStart(2,'0')}:00</option>`).join('')}
+              </select>
+            </label>
+            <div class="aib-picker-note" id="aib-picker-note"></div>
+            <div class="aib-picker-cta">
+              <button class="primary aib-picker-confirm">この日時を候補に追加</button>
+              <button class="ghost-btn aib-picker-cancel">キャンセル</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(wrap);
+      if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': '1.6' } });
+      const close = () => wrap.remove();
+      wrap.querySelector('.aib-picker-close').addEventListener('click', close);
+      wrap.querySelector('.aib-picker-cancel').addEventListener('click', close);
+      wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
+      // Live check vs owner events
+      const note = wrap.querySelector('#aib-picker-note');
+      const dateInput = wrap.querySelector('#aib-pick-date');
+      const timeInput = wrap.querySelector('#aib-pick-time');
+      function checkConflict() {
+        const iso = dateInput.value;
+        const time = timeInput.value;
+        const startH = parseInt(time.split(':')[0], 10);
+        const conflict = ownerEvents.find(e => e.iso === iso && e.startH === startH);
+        if (conflict) {
+          note.innerHTML = `<i data-lucide="alert-triangle"></i><span>この時間は既に <strong>「${escapeHtml(conflict.title)}」</strong> の予定が入っています</span>`;
+          note.className = 'aib-picker-note aib-picker-note-warn';
+        } else {
+          note.innerHTML = `<i data-lucide="check"></i><span>このカレンダー上は空きです</span>`;
+          note.className = 'aib-picker-note aib-picker-note-ok';
+        }
+        if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': '1.6' } });
+      }
+      dateInput.addEventListener('change', checkConflict);
+      timeInput.addEventListener('change', checkConflict);
+      checkConflict();
+      wrap.querySelector('.aib-picker-confirm').addEventListener('click', () => {
+        const iso = dateInput.value;
+        const time = timeInput.value;
+        if (!iso || !time) return;
+        const startH = parseInt(time.split(':')[0], 10);
+        const d = new Date(iso);
+        const wday = ['日','月','火','水','木','金','土'][d.getDay()];
+        const newSlot = {
+          id: `s-${iso}-${startH}`,
+          month: d.getMonth()+1,
+          day: d.getDate(),
+          wday,
+          time: `${time}〜${String(startH+1).padStart(2,'0')}:00`,
+          icon: startH < 12 ? 'sunrise' : startH < 17 ? 'sun' : 'moon',
+          iso,
+          start: time,
+        };
+        // Replace oldest if 3+
+        if (slotsData.length >= 3) slotsData.shift();
+        slotsData.push(newSlot);
         slotsData.sort((a,b) => (a.iso+a.start).localeCompare(b.iso+b.start));
         renderOwnerWeek();
         renderCalendarSlots();
         renderPreview();
-      }
-    });
+        close();
+      });
+    }
 
     // Re-seed slotsData from weekData (free slots only, take first 3)
     const seedFreeSlots = weekData.flatMap(d => d.slots).slice(0, 3).map((s, i) => ({
