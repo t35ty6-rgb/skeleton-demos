@@ -1554,6 +1554,26 @@
                 <label class="aib-attach-item"><input type="checkbox" id="aib-attach-pdf"> <i data-lucide="paperclip"></i><span>関連資料 PDF を添付 (教育資金プラン)</span></label>
               </div>
 
+              <!-- FP-side: Google Calendar suggested slots -->
+              <div class="aib-cal" id="aib-cal">
+                <div class="aib-cal-head">
+                  <span class="aib-cal-eyebrow">
+                    <i data-lucide="calendar-check"></i>
+                    <span>あなたのカレンダーから空きを抽出</span>
+                    <span class="aib-cal-source">Google Calendar 連携中</span>
+                  </span>
+                  <div class="aib-cal-actions">
+                    <button class="aib-cal-btn" id="aib-cal-regen"><i data-lucide="refresh-cw"></i><span>別の3つ</span></button>
+                    <button class="aib-cal-btn" id="aib-cal-add"><i data-lucide="plus"></i><span>手動で追加</span></button>
+                  </div>
+                </div>
+                <div class="aib-cal-grid" id="aib-cal-grid"></div>
+                <div class="aib-cal-confirm">
+                  <i data-lucide="info"></i>
+                  <span>上記の3つでお客様にアポを取ります。よろしければ <strong>STEP 3 で送信</strong>してください。</span>
+                </div>
+              </div>
+
               <!-- LINE preview (Flex Message look) -->
               <div class="aib-preview" id="aib-preview-area">
                 <div class="aib-preview-head">
@@ -1647,36 +1667,44 @@
       applyAttachments();
     });
 
-    // ===== Slot generation =====
-    function generateSlots() {
-      const slots = [];
+    // ===== Slot pool: simulate FP's Google Calendar free slots =====
+    const TIME_POOL = [
+      { label: '10:00〜11:00', icon: 'sunrise' },
+      { label: '11:00〜12:00', icon: 'sunrise' },
+      { label: '13:00〜14:00', icon: 'sun' },
+      { label: '14:00〜15:00', icon: 'sun' },
+      { label: '15:00〜16:00', icon: 'sun' },
+      { label: '16:00〜17:00', icon: 'sun' },
+      { label: '18:00〜19:00', icon: 'moon' },
+      { label: '19:00〜20:00', icon: 'moon' },
+    ];
+    let slotPoolOffset = 2; // start offset from TODAY
+    let slotsData = []; // current 3 active slots
+    const wDayJp = ['日','月','火','水','木','金','土'];
+    function pickSlots(offsetStart) {
+      const out = [];
       const base = new Date(TODAY);
-      base.setDate(base.getDate() + 2);
-      const wDay = ['日','月','火','水','木','金','土'];
-      const times = [
-        { label: '10:00〜11:00', icon: 'sunrise' },
-        { label: '14:00〜15:00', icon: 'sun' },
-        { label: '19:00〜20:00', icon: 'moon' },
-      ];
-      let added = 0, i = 0;
-      while (added < 3 && i < 14) {
+      base.setDate(base.getDate() + offsetStart);
+      let i = 0;
+      while (out.length < 3 && i < 30) {
         const d = new Date(base); d.setDate(d.getDate() + i);
         if (d.getDay() !== 0 && d.getDay() !== 6) {
-          slots.push({
+          const t = TIME_POOL[(offsetStart + i + out.length) % TIME_POOL.length];
+          out.push({
+            id: `s-${d.getTime()}-${out.length}`,
             month: d.getMonth() + 1,
             day: d.getDate(),
-            wday: wDay[d.getDay()],
-            time: times[added].label,
-            icon: times[added].icon,
+            wday: wDayJp[d.getDay()],
+            time: t.label,
+            icon: t.icon,
             iso: d.toISOString().slice(0,10),
           });
-          added++;
         }
         i++;
       }
-      return slots;
+      return out;
     }
-    const slotsData = generateSlots();
+    slotsData = pickSlots(slotPoolOffset);
 
     // ===== Render LINE preview (Flex Message look) =====
     function renderPreview() {
@@ -1731,10 +1759,61 @@
     }
     window.__aibPayload = getAttachmentPayload;
 
-    document.getElementById('aib-attach-slots')?.addEventListener('change', renderPreview);
+    document.getElementById('aib-attach-slots')?.addEventListener('change', () => { renderCalendarSlots(); renderPreview(); });
     document.getElementById('aib-attach-pdf')?.addEventListener('change', renderPreview);
     document.getElementById('draft-text')?.addEventListener('input', renderPreview);
+
+    // ===== FP Calendar suggestion UI =====
+    function renderCalendarSlots() {
+      const grid = document.getElementById('aib-cal-grid');
+      const wrap = document.getElementById('aib-cal');
+      if (!grid || !wrap) return;
+      const enabled = document.getElementById('aib-attach-slots')?.checked;
+      wrap.style.display = enabled ? '' : 'none';
+      if (!enabled) return;
+      grid.innerHTML = slotsData.map((s, i) => `
+        <div class="aib-slot" data-slot-idx="${i}">
+          <div class="aib-slot-head">
+            <span class="aib-slot-num">候補 ${i+1}</span>
+            <button class="aib-slot-remove" data-remove-idx="${i}" title="この候補を外す"><i data-lucide="x"></i></button>
+          </div>
+          <div class="aib-slot-date">${s.month}/${s.day}<span class="aib-slot-wday">(${s.wday})</span></div>
+          <div class="aib-slot-time"><i data-lucide="${s.icon}"></i><span>${s.time}</span></div>
+          <div class="aib-slot-free"><i data-lucide="check"></i><span>カレンダー空き</span></div>
+        </div>
+      `).join('');
+      // remove handlers
+      grid.querySelectorAll('[data-remove-idx]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = parseInt(btn.dataset.removeIdx, 10);
+          slotsData.splice(idx, 1);
+          // Add a replacement from next pool position
+          const next = pickSlots(slotPoolOffset + slotsData.length + 3);
+          if (next[0]) slotsData.push(next[0]);
+          renderCalendarSlots();
+          renderPreview();
+        });
+      });
+      if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': '1.6' } });
+    }
+    document.getElementById('aib-cal-regen')?.addEventListener('click', () => {
+      slotPoolOffset = slotPoolOffset + 3;
+      slotsData = pickSlots(slotPoolOffset);
+      renderCalendarSlots();
+      renderPreview();
+    });
+    document.getElementById('aib-cal-add')?.addEventListener('click', () => {
+      const next = pickSlots(slotPoolOffset + slotsData.length + 5);
+      if (next[0]) {
+        slotsData.push(next[0]);
+        renderCalendarSlots();
+        renderPreview();
+      }
+    });
+
     // Initial paint
+    renderCalendarSlots();
     renderPreview();
   }
 
