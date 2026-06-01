@@ -172,35 +172,35 @@
     const allMapUrl = buildMapAllUrl(wantList);
 
     v.innerHTML = `
-      <h1 style="font-family:'Noto Serif JP',serif;font-size:26px;margin:0 0 4px;">🎍 年末カレンダー配布</h1>
-      <p style="color:var(--muted);font-size:13.5px;margin:0 0 18px;">既存お客様にオリジナル卓上カレンダーを配布する企画 / LINE一斉配信→要不要回答→住所収集→Google地図でルート最適化</p>
+      <h1 class="page-h1"><i data-lucide="calendar-days"></i><span>年末カレンダー配布</span></h1>
+      <p class="page-sub">既存お客様にオリジナル卓上カレンダーを配布する企画 / LINE一斉配信→要不要回答→住所収集→Google地図でルート最適化</p>
 
-      ${isDemo ? '<div style="background:#fff8e1;border:1px solid #f0d36b;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:12.5px;color:#8a6f1e;">💡 表示中のお客様データはサンプル(デモ用)。本番では実際のLINE回答が並びます。</div>' : ''}
+      ${isDemo ? '<div class="demo-notice"><i data-lucide="info"></i><span>表示中のお客様データはサンプル(デモ用)。本番では実際のLINE回答が並びます。</span></div>' : ''}
 
       <div class="task-board">
         <a href="#cal-want" class="task-card ${wantList.length > 0 ? 'action' : 'muted'}">
-          <div class="task-icon">🎁</div>
+          <div class="task-icon"><i data-lucide="gift"></i></div>
           <div class="task-label">配達対象</div>
           <div class="task-count">${wantList.length}<span class="unit">名</span></div>
           <div class="task-title">要(住所済) — 配達リスト</div>
           <div class="task-desc">下のリストでGoogleマップ ルート最適化</div>
         </a>
         <a href="#cal-waiting" class="task-card ${wantNoAddr.length > 0 ? 'urgent' : 'muted'}">
-          <div class="task-icon">⏳</div>
+          <div class="task-icon"><i data-lucide="hourglass"></i></div>
           <div class="task-label">${wantNoAddr.length > 0 ? '住所待ち' : '待ちなし'}</div>
           <div class="task-count">${wantNoAddr.length}<span class="unit">名</span></div>
           <div class="task-title">要(住所未) — 住所入力待ち</div>
           <div class="task-desc">入力URL送信済 / お客様の返信待ち</div>
         </a>
         <a href="#cal-noreply" class="task-card ${noReply.length > 0 ? 'urgent' : 'muted'}">
-          <div class="task-icon">📨</div>
+          <div class="task-icon"><i data-lucide="mail-question"></i></div>
           <div class="task-label">未回答</div>
           <div class="task-count">${noReply.length}<span class="unit">名</span></div>
           <div class="task-title">未回答 — 再配信検討</div>
           <div class="task-desc">配信後 まだ反応なし</div>
         </a>
         <div class="task-card">
-          <div class="task-icon">📊</div>
+          <div class="task-icon"><i data-lucide="trending-up"></i></div>
           <div class="task-label">希望率</div>
           <div class="task-count">${cvr}<span class="unit">%</span></div>
           <div class="task-title">配達対象 / 回答総数</div>
@@ -208,15 +208,15 @@
         </div>
       </div>
 
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin:24px 0;">
-        <button class="primary" id="cal-blast-btn" data-hint="全LINE友だちに『年末カレンダー要りますか?』配信。年1回だけ押す想定">📨 友だち全員に一斉配信</button>
-        <a class="ghost" href="${allMapUrl}" target="_blank" data-hint="希望者の住所をGoogleマップ上に全部ピン表示" style="text-decoration:none;display:inline-block;padding:9px 18px;border:1px solid var(--line-2);border-radius:7px;color:var(--ink);${wantList.length===0?'pointer-events:none;opacity:0.4;':''}">🗺 全員の住所を地図表示</a>
-        <a class="ghost" href="${routeUrl}" target="_blank" data-hint="希望者全員を回る最適ルートをGoogleマップで生成。当日ナビとして使用" style="text-decoration:none;display:inline-block;padding:9px 18px;border:1px solid var(--line-2);border-radius:7px;color:var(--ink);${wantList.length===0?'pointer-events:none;opacity:0.4;':''}">🚗 配達ルートを最適化 (Google マップ)</a>
+      <div class="cta-row">
+        <button class="primary" id="cal-blast-btn" data-hint="全LINE友だちに『年末カレンダー要りますか?』配信。年1回だけ押す想定"><i data-lucide="send"></i><span>友だち全員に一斉配信</span></button>
+        <a class="ghost-btn" href="${allMapUrl}" target="_blank" data-hint="希望者の住所をGoogleマップ上に全部ピン表示" ${wantList.length===0?'style="pointer-events:none;opacity:0.4;"':''}><i data-lucide="map"></i><span>全員の住所を地図表示</span></a>
+        <a class="ghost-btn" href="${routeUrl}" target="_blank" data-hint="希望者全員を回る最適ルートをGoogleマップで生成。当日ナビとして使用" ${wantList.length===0?'style="pointer-events:none;opacity:0.4;"':''}><i data-lucide="route"></i><span>配達ルートを最適化 (Google マップ)</span></a>
         <span id="cal-blast-msg" style="font-size:12px;color:var(--muted);align-self:center;margin-left:auto;"></span>
       </div>
 
       <section class="board-section" id="cal-want">
-        <h2>🎁 配達リスト (住所登録済) — ${wantList.length}名</h2>
+        <h2><i data-lucide="gift"></i><span>配達リスト (住所登録済) — ${wantList.length}名</span></h2>
         ${wantList.length === 0
           ? '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);">まだ住所登録なし</div>'
           : '<div style="display:grid;gap:8px;">' + wantList.map((r, i) => `
@@ -237,7 +237,7 @@
       </section>
 
       <section class="board-section" id="cal-waiting">
-        <h2>⏳ 住所入力待ち — ${wantNoAddr.length}名</h2>
+        <h2><i data-lucide="hourglass"></i><span>住所入力待ち — ${wantNoAddr.length}名</span></h2>
         ${wantNoAddr.length === 0
           ? '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:24px;text-align:center;color:var(--muted);font-size:13px;">なし</div>'
           : '<div style="display:grid;gap:6px;">' + wantNoAddr.map(r => `
@@ -251,7 +251,7 @@
 
       ${noReply.length > 0 ? `
       <section class="board-section" id="cal-noreply">
-        <h2>📨 未回答 — ${noReply.length}名</h2>
+        <h2><i data-lucide="mail-question"></i><span>未回答 — ${noReply.length}名</span></h2>
         <div style="display:grid;gap:4px;">
           ${noReply.map(r => `<div style="padding:8px 14px;background:#fafbfc;border:1px solid var(--line);border-radius:6px;font-size:12.5px;">${escapeHtml(r.name) || '匿名'}</div>`).join('')}
         </div>
@@ -259,7 +259,7 @@
 
       ${notWant.length > 0 ? `
       <section class="board-section">
-        <h2>✗ 不要 — ${notWant.length}名</h2>
+        <h2><i data-lucide="x-circle"></i><span>不要 — ${notWant.length}名</span></h2>
         <div style="display:grid;gap:4px;font-size:12px;color:var(--muted);">
           ${notWant.map(r => `<div style="padding:8px 14px;background:#fafbfc;border:1px solid var(--line);border-radius:6px;">${escapeHtml(r.name) || '匿名'}</div>`).join('')}
         </div>
@@ -276,12 +276,12 @@
         const data = await r.json();
         msg.textContent = data.ok ? `✓ ${data.sent}/${data.total}名 に送信完了` : '❌ 失敗: ' + (data.error || '');
         msg.style.color = data.ok ? 'var(--green)' : 'var(--red)';
-        btn.disabled = false; btn.textContent = '📨 友だち全員に一斉配信';
+        btn.disabled = false; btn.innerHTML = '<i data-lucide="send"></i><span>友だち全員に一斉配信</span>'; if (window.lucide) lucide.createIcons();
       } catch (e) {
         msg.textContent = '❌ 失敗: ' + e.message;
         msg.style.color = 'var(--red)';
         btn.disabled = false;
-        btn.textContent = '📨 友だち全員に一斉配信';
+        btn.innerHTML = '<i data-lucide="send"></i><span>友だち全員に一斉配信</span>'; if (window.lucide) lucide.createIcons();
       }
     });
   }
@@ -515,7 +515,7 @@
                   <div style="font-size:12px;color:var(--ink-2);margin-top:3px;">📍 ${escapeHtml(a.reason)}</div>
                   <div style="font-size:11px;color:var(--muted);margin-top:2px;">最終アクションから ${a.days}日経過</div>
                 </div>
-                <button data-aftercare-uid="${escapeHtml(a.user.userId)}" data-aftercare-name="${escapeHtml(a.customerName)}" data-aftercare-stage="${a.stage}" style="font-size:12px;padding:8px 14px;background:linear-gradient(135deg,#06c755,#04a045);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-family:inherit;">📨 LINE追撃</button>
+                <button data-aftercare-uid="${escapeHtml(a.user.userId)}" data-aftercare-name="${escapeHtml(a.customerName)}" data-aftercare-stage="${a.stage}" class="primary aftercare-btn"><i data-lucide="send"></i><span>LINE追撃</span></button>
               </div>
             `).join('')
           }
@@ -562,11 +562,11 @@
             renderLeadHubInner();
           } else {
             alert('送信失敗: ' + (data.error || ''));
-            btn.disabled = false; btn.textContent = '📨 LINE追撃';
+            btn.disabled = false; btn.innerHTML = '<i data-lucide="send"></i><span>LINE追撃</span>'; if (window.lucide) lucide.createIcons();
           }
         } catch (e) {
           alert('送信失敗: ' + e.message);
-          btn.disabled = false; btn.textContent = '📨 LINE追撃';
+          btn.disabled = false; btn.innerHTML = '<i data-lucide="send"></i><span>LINE追撃</span>'; if (window.lucide) lucide.createIcons();
         }
       });
     });
@@ -2478,7 +2478,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       </div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;margin-bottom:24px;">
-        <button class="primary" id="cal-blast-btn" data-hint="全LINE友だちに「カレンダー要りますか?」配信。年1回だけ押す想定">📨 友だち全員に一斉配信</button>
+        <button class="primary" id="cal-blast-btn" data-hint="全LINE友だちに「カレンダー要りますか?」配信。年1回だけ押す想定"><i data-lucide="send"></i><span>友だち全員に一斉配信</span></button>
         <a class="ghost" href="${allMapUrl}" target="_blank" data-hint="希望者の住所をGoogleマップ上に全部ピン表示" style="text-decoration:none;display:inline-block;padding:9px 18px;border:1px solid var(--line-2);border-radius:7px;color:var(--ink);${wantList.length===0?'pointer-events:none;opacity:0.4;':''}">🗺 全員の住所を地図表示</a>
         <a class="ghost" href="${routeUrl}" target="_blank" data-hint="希望者全員を回る最適ルートをGoogleマップで生成。当日ナビとして使用" style="text-decoration:none;display:inline-block;padding:9px 18px;border:1px solid var(--line-2);border-radius:7px;color:var(--ink);${wantList.length===0?'pointer-events:none;opacity:0.4;':''}">🚗 配達ルートを最適化 (Google マップ)</a>
         <span id="cal-blast-msg" style="font-size:12px;color:var(--muted);align-self:center;margin-left:auto;"></span>
@@ -2534,12 +2534,12 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         const data = await r.json();
         msg.textContent = data.ok ? `✓ ${data.sent}/${data.total}名 に送信完了` : '❌ 失敗: ' + (data.error || '');
         msg.style.color = data.ok ? 'var(--green)' : 'var(--red)';
-        btn.disabled = false; btn.textContent = '📨 友だち全員に一斉配信';
+        btn.disabled = false; btn.innerHTML = '<i data-lucide="send"></i><span>友だち全員に一斉配信</span>'; if (window.lucide) lucide.createIcons();
       } catch (e) {
         msg.textContent = '❌ 失敗: ' + e.message;
         msg.style.color = 'var(--red)';
         btn.disabled = false;
-        btn.textContent = '📨 友だち全員に一斉配信';
+        btn.innerHTML = '<i data-lucide="send"></i><span>友だち全員に一斉配信</span>'; if (window.lucide) lucide.createIcons();
       }
     });
   }
