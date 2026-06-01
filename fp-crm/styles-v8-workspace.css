@@ -1523,11 +1523,35 @@ table.clients [class*="avatar"],
 }
 .cd-line-pill i[data-lucide] { width: 11px !important; height: 11px !important; }
 
-.cd-quick-actions {
+/* Collapsed quick-actions (secondary contact channels) */
+.cd-qa-collapse {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  margin: 18px 0 22px;
+  overflow: hidden;
+}
+.cd-qa-summary {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 12.5px; font-weight: 600;
+  color: var(--ink-2);
+  list-style: none;
+}
+.cd-qa-summary::-webkit-details-marker { display: none; }
+.cd-qa-summary i[data-lucide], .cd-qa-summary svg.lucide {
+  width: 14px !important; height: 14px !important;
+  color: var(--ink-3);
+}
+.cd-qa-chev { margin-left: auto; transition: transform .2s; }
+.cd-qa-collapse[open] .cd-qa-chev { transform: rotate(180deg); }
+.cd-qa-inner {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  margin: 18px 0 22px;
+  padding: 0 12px 12px;
 }
 .cd-qa-btn {
   display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important;
@@ -1676,7 +1700,174 @@ table.clients [class*="avatar"],
   max-height: calc(100vh - 80px);
 }
 
-/* AI Next Best Action ribbon */
+/* ========== AI Flow: 3-step guided action (replaces .cd-nba) ========== */
+.cd-flow {
+  position: relative;
+  background-image: linear-gradient(135deg, #0F1117 0%, #1A1F2E 100%);
+  color: #fff;
+  border: 1px solid #232838;
+  border-radius: 16px;
+  padding: 22px 24px;
+  margin-bottom: 22px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(15,17,23,0.18);
+}
+.cd-flow::before {
+  content: ""; position: absolute;
+  right: -60px; top: -60px;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(91,91,240,0.30) 0%, transparent 65%);
+  pointer-events: none;
+}
+.cd-flow-eyebrow {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-bottom: 12px;
+  position: relative;
+}
+.cd-flow-eyebrow-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-display);
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: #A78BFA;
+  background: rgba(167,139,250,0.18);
+  border: 1px solid rgba(167,139,250,0.32);
+  padding: 4px 10px;
+  border-radius: 100px;
+}
+.cd-flow-eyebrow-pill i[data-lucide] { width: 12px !important; height: 12px !important; }
+.cd-flow-eyebrow-pri {
+  font-family: var(--font-display);
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  background: rgba(248,113,113,0.18);
+  color: #FCA5A5;
+  border: 1px solid rgba(248,113,113,0.32);
+  padding: 3px 9px;
+  border-radius: 4px;
+}
+.cd-flow-title {
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 22px;
+  letter-spacing: -0.028em;
+  margin-bottom: 6px;
+  position: relative;
+  color: #fff;
+}
+.cd-flow-reason {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: #B3B8C3;
+  line-height: 1.5;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+/* 3-step flow */
+.cd-flow-steps {
+  display: grid;
+  grid-template-columns: 1fr 16px 1fr 16px 1fr;
+  align-items: stretch;
+  gap: 4px;
+  position: relative;
+  margin-bottom: 14px;
+}
+.cd-flow-step {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: left;
+  font-family: var(--font-body);
+  cursor: default;
+  transition: background .15s, border-color .15s, transform .15s;
+  min-width: 0;
+}
+.cd-flow-step-active {
+  background-image: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  border-color: var(--accent-3);
+  cursor: pointer;
+  box-shadow:
+    0 8px 22px rgba(91,91,240,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.cd-flow-step-active:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(91,91,240,0.55), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.cd-flow-step-next { opacity: 0.55; }
+.cd-flow-step-no {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 13px;
+  color: #fff;
+  flex-shrink: 0;
+}
+.cd-flow-step-active .cd-flow-step-no {
+  background: #fff;
+  color: var(--accent);
+}
+.cd-flow-step-no i[data-lucide], .cd-flow-step-no svg.lucide {
+  width: 13px !important; height: 13px !important;
+}
+.cd-flow-step-body {
+  display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1;
+}
+.cd-flow-step-label {
+  font-family: var(--font-display);
+  font-weight: 700; font-size: 13px;
+  color: #fff;
+  letter-spacing: -0.005em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cd-flow-step-sub {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: rgba(255,255,255,0.65);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cd-flow-step-icon {
+  width: 16px !important; height: 16px !important;
+  color: rgba(255,255,255,0.85);
+  flex-shrink: 0;
+}
+.cd-flow-arrow {
+  width: 16px !important; height: 16px !important;
+  color: rgba(255,255,255,0.30);
+  align-self: center;
+}
+.cd-flow-edit {
+  margin-top: 4px;
+  background: rgba(255,255,255,0.06) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  display: inline-flex !important; align-items: center !important; gap: 6px !important;
+  padding: 8px 14px !important;
+  font-size: 12px !important;
+}
+.cd-flow-edit:hover {
+  background: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255,255,255,0.20) !important;
+}
+.cd-flow-edit i[data-lucide], .cd-flow-edit svg.lucide {
+  width: 13px !important; height: 13px !important;
+}
+.cd-flow-empty .cd-flow-title { font-size: 16px; color: #B3B8C3; font-weight: 600; }
+.cd-flow-empty .cd-flow-steps { grid-template-columns: 1fr; }
+
+@media (max-width: 800px) {
+  .cd-flow-steps {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .cd-flow-arrow { display: none; }
+}
+
+/* Legacy .cd-nba (kept harmless) */
 .cd-nba {
   position: relative;
   background-image: linear-gradient(135deg, #0F1117 0%, #1A1F2E 100%);

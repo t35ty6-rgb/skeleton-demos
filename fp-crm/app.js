@@ -1060,12 +1060,19 @@
             </div>
           </div>
 
-          <div class="cd-quick-actions">
-            <button class="cd-qa-btn cd-qa-primary" id="cd-action-line"><i data-lucide="message-square-text"></i><span>LINE送信</span></button>
-            <button class="cd-qa-btn" id="cd-action-call"><i data-lucide="phone"></i><span>電話</span></button>
-            <button class="cd-qa-btn" id="cd-action-meet"><i data-lucide="video"></i><span>Zoom</span></button>
-            <button class="cd-qa-btn" id="cd-action-mail"><i data-lucide="mail"></i><span>メール</span></button>
-          </div>
+          <details class="cd-qa-collapse">
+            <summary class="cd-qa-summary">
+              <i data-lucide="zap"></i>
+              <span>その他の連絡手段</span>
+              <i data-lucide="chevron-down" class="cd-qa-chev"></i>
+            </summary>
+            <div class="cd-qa-inner">
+              <button class="cd-qa-btn" id="cd-action-line"><i data-lucide="message-square-text"></i><span>LINE</span></button>
+              <button class="cd-qa-btn" id="cd-action-call"><i data-lucide="phone"></i><span>電話</span></button>
+              <button class="cd-qa-btn" id="cd-action-meet"><i data-lucide="video"></i><span>Zoom</span></button>
+              <button class="cd-qa-btn" id="cd-action-mail"><i data-lucide="mail"></i><span>メール</span></button>
+            </div>
+          </details>
 
           <div class="cd-profile-stats">
             <div class="cd-stat">
@@ -1109,27 +1116,59 @@
         <!-- ============= RIGHT: Activity column ============= -->
         <main class="cd-right">
 
-          <!-- AI Next Best Action ribbon -->
+          <!-- AI Next Best Action — 3-step guided flow -->
           ${topRec ? `
-          <div class="cd-nba">
-            <div class="cd-nba-head">
-              <span class="cd-nba-rank"><i data-lucide="sparkles"></i>AI 推奨 NEXT BEST ACTION</span>
-              <span class="cd-nba-pri">${priorityLabel(topRec.priority)}</span>
+          <div class="cd-flow">
+            <div class="cd-flow-eyebrow">
+              <span class="cd-flow-eyebrow-pill"><i data-lucide="sparkles"></i>AI 推奨</span>
+              <span class="cd-flow-eyebrow-pri">${priorityLabel(topRec.priority)}</span>
             </div>
-            <div class="cd-nba-title">${escapeHtml(topRec.action)}</div>
-            <div class="cd-nba-reason"><i data-lucide="info"></i><span>${escapeHtml(topRec.reason)}</span></div>
-            <div class="cd-nba-cta">
-              <button class="primary" id="modal-draft-btn"><i data-lucide="wand-2"></i><span>AI返信下書きを作る</span></button>
-              <button class="ghost-btn" id="modal-edit-btn"><i data-lucide="pencil"></i><span>顧客情報を編集</span></button>
+            <div class="cd-flow-title">${escapeHtml(topRec.action)}</div>
+            <div class="cd-flow-reason">${escapeHtml(topRec.reason)}</div>
+
+            <div class="cd-flow-steps">
+              <button class="cd-flow-step cd-flow-step-active" id="modal-draft-btn">
+                <span class="cd-flow-step-no">1</span>
+                <span class="cd-flow-step-body">
+                  <span class="cd-flow-step-label">下書きを作る</span>
+                  <span class="cd-flow-step-sub">AIが文面を生成</span>
+                </span>
+                <i data-lucide="wand-2" class="cd-flow-step-icon"></i>
+              </button>
+              <i data-lucide="chevron-right" class="cd-flow-arrow"></i>
+              <div class="cd-flow-step cd-flow-step-next">
+                <span class="cd-flow-step-no">2</span>
+                <span class="cd-flow-step-body">
+                  <span class="cd-flow-step-label">確認 / 編集</span>
+                  <span class="cd-flow-step-sub">必要なら手直し</span>
+                </span>
+              </div>
+              <i data-lucide="chevron-right" class="cd-flow-arrow"></i>
+              <div class="cd-flow-step cd-flow-step-next">
+                <span class="cd-flow-step-no">3</span>
+                <span class="cd-flow-step-body">
+                  <span class="cd-flow-step-label">LINE 送信</span>
+                  <span class="cd-flow-step-sub">ワンクリックで送付</span>
+                </span>
+              </div>
             </div>
+
+            <button class="cd-flow-edit ghost-btn" id="modal-edit-btn"><i data-lucide="pencil"></i><span>顧客情報を編集</span></button>
           </div>` : `
-          <div class="cd-nba cd-nba-empty">
-            <div class="cd-nba-head"><span class="cd-nba-rank">AI推奨</span></div>
-            <div class="cd-nba-title">直近の推奨アクションなし</div>
-            <div class="cd-nba-cta">
-              <button class="primary" id="modal-draft-btn"><i data-lucide="wand-2"></i><span>AI返信下書きを作る</span></button>
-              <button class="ghost-btn" id="modal-edit-btn"><i data-lucide="pencil"></i><span>顧客情報を編集</span></button>
+          <div class="cd-flow cd-flow-empty">
+            <div class="cd-flow-eyebrow"><span class="cd-flow-eyebrow-pill">AI推奨</span></div>
+            <div class="cd-flow-title">直近の推奨アクションなし</div>
+            <div class="cd-flow-reason">この方のライフイベントや接触状況からは、特に緊急のアクションはありません。</div>
+            <div class="cd-flow-steps">
+              <button class="cd-flow-step cd-flow-step-active" id="modal-draft-btn">
+                <span class="cd-flow-step-no"><i data-lucide="wand-2"></i></span>
+                <span class="cd-flow-step-body">
+                  <span class="cd-flow-step-label">AI返信下書きを作る</span>
+                  <span class="cd-flow-step-sub">挨拶や定期連絡を起案</span>
+                </span>
+              </button>
             </div>
+            <button class="cd-flow-edit ghost-btn" id="modal-edit-btn"><i data-lucide="pencil"></i><span>顧客情報を編集</span></button>
           </div>`}
 
           <!-- Tabs -->
