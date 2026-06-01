@@ -522,14 +522,7 @@
         </div>
       </section>
 
-      <section class="board-section" id="section-funnel" style="margin-top:36px;">
-        <div style="margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #e8e2d4;">
-          <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">Analytics</div>
-          <h2 style="font-family:'Noto Serif JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">リード獲得ファネル</h2>
-        </div>
-        <div id="funnel-area"></div>
-        <div id="surveys-list" style="margin-top:18px;"></div>
-      </section>
+      <div id="surveys-list" style="margin-top:18px;"></div>
     `;
     fillConfirmList();
     fillBookingsList();
@@ -2687,45 +2680,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       </div>
       ` : ''}
 
-      <div class="section-title">直近30日のリード獲得ファネル</div>
-      <div class="funnel-grid">
-        <div class="funnel-step">
-          <div class="funnel-icon">👋</div>
-          <div class="funnel-label">友だち追加</div>
-          <div class="funnel-value">${f.friendAdded}</div>
-          <div class="funnel-conv">—</div>
-        </div>
-        <div class="funnel-arrow">→</div>
-        <div class="funnel-step">
-          <div class="funnel-icon">📝</div>
-          <div class="funnel-label">アンケート回答</div>
-          <div class="funnel-value">${f.answeredSurvey}</div>
-          <div class="funnel-conv">${conv(f.answeredSurvey, f.friendAdded)}%</div>
-        </div>
-        <div class="funnel-arrow">→</div>
-        <div class="funnel-step">
-          <div class="funnel-icon">📅</div>
-          <div class="funnel-label">Zoom予約</div>
-          <div class="funnel-value">${f.booked}</div>
-          <div class="funnel-conv">${conv(f.booked, f.answeredSurvey)}%</div>
-        </div>
-        <div class="funnel-arrow">→</div>
-        <div class="funnel-step">
-          <div class="funnel-icon">🎯</div>
-          <div class="funnel-label">面談実施</div>
-          <div class="funnel-value">${f.completed}</div>
-          <div class="funnel-conv">${conv(f.completed, f.booked)}%</div>
-        </div>
-        <div class="funnel-arrow">→</div>
-        <div class="funnel-step highlight">
-          <div class="funnel-icon">⭐</div>
-          <div class="funnel-label">成約</div>
-          <div class="funnel-value">${f.converted}</div>
-          <div class="funnel-conv">${conv(f.converted, f.completed)}%</div>
-        </div>
-      </div>
-
-      <div class="section-title" style="margin-top:24px;">📅 今後の面談予約 (アンケート回答済)</div>
+      <div class="section-title" style="margin-top:24px;">今後の面談予約 (アンケート回答済)</div>
       <div>
         ${bookings.length === 0 ? '<div class="line-card empty">予約なし</div>' : bookings.map(b => {
           const isLive = b.live;
