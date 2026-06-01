@@ -1554,7 +1554,7 @@
                 <label class="aib-attach-item"><input type="checkbox" id="aib-attach-pdf"> <i data-lucide="paperclip"></i><span>関連資料 PDF を添付 (教育資金プラン)</span></label>
               </div>
 
-              <!-- FP-side: Google Calendar suggested slots -->
+              <!-- FP-side: Google Calendar suggested slots + week view -->
               <div class="aib-cal" id="aib-cal">
                 <div class="aib-cal-head">
                   <span class="aib-cal-eyebrow">
@@ -1567,10 +1567,19 @@
                     <button class="aib-cal-btn" id="aib-cal-add"><i data-lucide="plus"></i><span>手動で追加</span></button>
                   </div>
                 </div>
-                <div class="aib-cal-grid" id="aib-cal-grid"></div>
-                <div class="aib-cal-confirm">
-                  <i data-lucide="info"></i>
-                  <span>上記の3つでお客様にアポを取ります。よろしければ <strong>STEP 3 で送信</strong>してください。</span>
+                <div class="aib-cal-split">
+                  <div class="aib-cal-left">
+                    <div class="aib-cal-subhead">お客様に提示する候補</div>
+                    <div class="aib-cal-grid" id="aib-cal-grid"></div>
+                    <div class="aib-cal-confirm">
+                      <i data-lucide="info"></i>
+                      <span>上記でお客様にアポを取ります。よろしければ <strong>STEP 3 で送信</strong>。</span>
+                    </div>
+                  </div>
+                  <div class="aib-cal-right">
+                    <div class="aib-cal-subhead"><i data-lucide="calendar"></i><span>あなたの予定 (次の7日)</span></div>
+                    <div class="aib-week" id="aib-week"></div>
+                  </div>
                 </div>
               </div>
 
@@ -1705,6 +1714,7 @@
       return out;
     }
     slotsData = pickSlots(slotPoolOffset);
+    // weekData reseed runs at the bottom of init
 
     // ===== Render LINE preview (Flex Message look) =====
     function renderPreview() {
@@ -1763,6 +1773,135 @@
     document.getElementById('aib-attach-pdf')?.addEventListener('change', renderPreview);
     document.getElementById('draft-text')?.addEventListener('input', renderPreview);
 
+    // ===== Mock FP calendar — owner's busy events (Google Calendar mock) =====
+    function buildOwnerEvents() {
+      const seed = ['田中様 面談', '相続セミナー', '社内ミーティング', '佐藤様 面談', '社外研修', '保険会社訪問', '山田様 面談', '個別相談', 'パートナー打合せ'];
+      const evs = [];
+      const base = new Date(TODAY);
+      for (let i = 0; i < 10; i++) {
+        const d = new Date(base); d.setDate(d.getDate() + i);
+        if (d.getDay() === 0) continue; // skip Sun
+        const startHours = [10, 13, 15];
+        const n = (i + d.getDay()) % 3 + 1;
+        for (let k = 0; k < n; k++) {
+          const sh = startHours[(i + k * 2) % startHours.length];
+          evs.push({
+            iso: d.toISOString().slice(0,10),
+            month: d.getMonth() + 1,
+            day: d.getDate(),
+            wday: ['日','月','火','水','木','金','土'][d.getDay()],
+            start: `${String(sh).padStart(2,'0')}:00`,
+            startH: sh,
+            title: seed[(i * 3 + k) % seed.length],
+          });
+        }
+      }
+      return evs;
+    }
+    const ownerEvents = buildOwnerEvents();
+
+    // Generate week with both busy events and free 1-hour slots
+    function buildWeekData() {
+      const days = [];
+      const base = new Date(TODAY);
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(base); d.setDate(d.getDate() + i);
+        if (d.getDay() === 0 || d.getDay() === 6) continue; // weekdays only
+        const iso = d.toISOString().slice(0,10);
+        const dayEvents = ownerEvents.filter(e => e.iso === iso);
+        const busyHours = new Set(dayEvents.map(e => e.startH));
+        // Build hour timeline 10-20
+        const slots = [];
+        const hourPool = [10, 11, 13, 14, 15, 16, 18, 19];
+        hourPool.forEach(h => {
+          if (!busyHours.has(h)) {
+            slots.push({
+              iso,
+              month: d.getMonth() + 1,
+              day: d.getDate(),
+              wday: ['日','月','火','水','木','金','土'][d.getDay()],
+              start: `${String(h).padStart(2,'0')}:00`,
+              startH: h,
+              time: `${String(h).padStart(2,'0')}:00〜${String(h+1).padStart(2,'0')}:00`,
+              icon: h < 12 ? 'sunrise' : h < 17 ? 'sun' : 'moon',
+            });
+          }
+        });
+        days.push({ iso, month: d.getMonth()+1, day: d.getDate(), wday: ['日','月','火','水','木','金','土'][d.getDay()], events: dayEvents, slots });
+      }
+      return days;
+    }
+    const weekData = buildWeekData();
+
+    function isSelected(slot) {
+      return slotsData.some(s => s.iso === slot.iso && s.start === slot.start);
+    }
+    function toggleSlot(slot) {
+      const idx = slotsData.findIndex(s => s.iso === slot.iso && s.start === slot.start);
+      if (idx >= 0) {
+        // Remove
+        slotsData.splice(idx, 1);
+      } else {
+        // Add (replace oldest if already 3+)
+        if (slotsData.length >= 3) slotsData.shift();
+        slotsData.push({
+          id: `s-${slot.iso}-${slot.startH}`,
+          month: slot.month, day: slot.day, wday: slot.wday,
+          time: slot.time, icon: slot.icon, iso: slot.iso, start: slot.start,
+        });
+        // Reorder by date
+        slotsData.sort((a,b) => (a.iso+a.start).localeCompare(b.iso+b.start));
+      }
+      renderOwnerWeek();
+      renderCalendarSlots();
+      renderPreview();
+    }
+
+    function renderOwnerWeek() {
+      const wrap = document.getElementById('aib-week');
+      if (!wrap) return;
+      const todayIso = TODAY.toISOString().slice(0,10);
+      const html = weekData.map(day => {
+        const isToday = day.iso === todayIso;
+        const evHtml = day.events.map(e => `
+          <div class="aib-week-ev">
+            <span class="aib-week-ev-time">${e.start}</span>
+            <span class="aib-week-ev-title">${escapeHtml(e.title)}</span>
+          </div>
+        `).join('');
+        const slotsHtml = day.slots.map(s => {
+          const sel = isSelected(s);
+          return `<button class="aib-week-slot ${sel ? 'aib-week-slot-selected' : ''}" data-pick-iso="${s.iso}" data-pick-start="${s.start}">
+            <i data-lucide="${sel ? 'check' : 'plus'}"></i>
+            <span class="aib-week-slot-time">${s.start}</span>
+            <span class="aib-week-slot-label">${sel ? '候補' + (slotsData.findIndex(x => x.iso === s.iso && x.start === s.start) + 1) : '空き'}</span>
+          </button>`;
+        }).join('');
+        return `
+          <div class="aib-week-day ${isToday ? 'aib-week-today' : ''}">
+            <div class="aib-week-date">
+              <span class="aib-week-num">${day.month}/${day.day}</span>
+              <span class="aib-week-wday">${day.wday}</span>
+              ${isToday ? '<span class="aib-week-today-mark">今日</span>' : ''}
+            </div>
+            ${evHtml ? `<div class="aib-week-events">${evHtml}</div>` : ''}
+            <div class="aib-week-slots">${slotsHtml}</div>
+          </div>
+        `;
+      }).join('');
+      wrap.innerHTML = html;
+      // wire pick handlers
+      wrap.querySelectorAll('[data-pick-iso]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const iso = btn.dataset.pickIso;
+          const start = btn.dataset.pickStart;
+          const slot = weekData.flatMap(d => d.slots).find(s => s.iso === iso && s.start === start);
+          if (slot) toggleSlot(slot);
+        });
+      });
+      if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': '1.8' } });
+    }
+
     // ===== FP Calendar suggestion UI =====
     function renderCalendarSlots() {
       const grid = document.getElementById('aib-cal-grid');
@@ -1788,9 +1927,7 @@
           e.stopPropagation();
           const idx = parseInt(btn.dataset.removeIdx, 10);
           slotsData.splice(idx, 1);
-          // Add a replacement from next pool position
-          const next = pickSlots(slotPoolOffset + slotsData.length + 3);
-          if (next[0]) slotsData.push(next[0]);
+          renderOwnerWeek();
           renderCalendarSlots();
           renderPreview();
         });
@@ -1798,21 +1935,49 @@
       if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': '1.6' } });
     }
     document.getElementById('aib-cal-regen')?.addEventListener('click', () => {
-      slotPoolOffset = slotPoolOffset + 3;
-      slotsData = pickSlots(slotPoolOffset);
-      renderCalendarSlots();
-      renderPreview();
+      // Take next 3 free slots after current selection
+      const all = weekData.flatMap(d => d.slots);
+      const usedKeys = new Set(slotsData.map(s => `${s.iso}::${s.start}`));
+      const next = all.filter(s => !usedKeys.has(`${s.iso}::${s.start}`)).slice(0, 3);
+      if (next.length >= 3) {
+        slotsData = next.map(s => ({
+          id: `s-${s.iso}-${s.startH}`,
+          month: s.month, day: s.day, wday: s.wday,
+          time: s.time, icon: s.icon, iso: s.iso, start: s.start,
+        }));
+        renderOwnerWeek();
+        renderCalendarSlots();
+        renderPreview();
+      }
     });
     document.getElementById('aib-cal-add')?.addEventListener('click', () => {
-      const next = pickSlots(slotPoolOffset + slotsData.length + 5);
-      if (next[0]) {
-        slotsData.push(next[0]);
+      // Add the next available free slot
+      const all = weekData.flatMap(d => d.slots);
+      const usedKeys = new Set(slotsData.map(s => `${s.iso}::${s.start}`));
+      const next = all.find(s => !usedKeys.has(`${s.iso}::${s.start}`));
+      if (next) {
+        slotsData.push({
+          id: `s-${next.iso}-${next.startH}`,
+          month: next.month, day: next.day, wday: next.wday,
+          time: next.time, icon: next.icon, iso: next.iso, start: next.start,
+        });
+        slotsData.sort((a,b) => (a.iso+a.start).localeCompare(b.iso+b.start));
+        renderOwnerWeek();
         renderCalendarSlots();
         renderPreview();
       }
     });
 
+    // Re-seed slotsData from weekData (free slots only, take first 3)
+    const seedFreeSlots = weekData.flatMap(d => d.slots).slice(0, 3).map((s, i) => ({
+      id: `s-${s.iso}-${s.startH}`,
+      month: s.month, day: s.day, wday: s.wday,
+      time: s.time, icon: s.icon, iso: s.iso, start: s.start,
+    }));
+    if (seedFreeSlots.length === 3) slotsData = seedFreeSlots;
+
     // Initial paint
+    renderOwnerWeek();
     renderCalendarSlots();
     renderPreview();
   }
