@@ -173,35 +173,156 @@
     `;
     if (window.FPCharts && window.FPCharts.renderSparklines) window.FPCharts.renderSparklines();
 
-    // 今週話すべき客 (top 8)
+    // 今週話すべき客 (top 8) — Brief Card 階層 (1: mega / 2-3: medium / 4+: compact)
     const tops = window.Recommender.topAcrossClients(clients, 8);
     const list = document.getElementById('action-list');
     if (tops.length === 0) {
       list.innerHTML = '<div class="empty">今週の重点アクションはありません</div>';
       return;
     }
-    list.innerHTML = tops.map(t => {
+
+    const todayDate = window.LifeEvents.TODAY;
+    const fmtMoneyAum = (v) => v >= 100000000 ? `¥${(v/100000000).toFixed(2)}億` : `¥${Math.round(v/10000).toLocaleString()}万`;
+
+    const briefCardHtml = (t, rank) => {
+      const c = t.client;
       const p = t.topAction.priority;
-      const initial = (t.client.name || '?').replace(/\s+/g, '').slice(0, 1);
-      const avatarHue = (initial.charCodeAt(0) || 0) % 360;
-      return `
-        <div class="action-item" data-client-id="${t.client.id}">
-          <div><span class="action-priority ${priorityClass(p)}">${priorityLabel(p)}</span></div>
-          <div class="action-client">
-            <span class="avatar" style="--avh:${avatarHue};">${escapeHtml(initial)}</span>
-            <div class="action-client-body">
-              <div class="action-client-name">${escapeHtml(t.client.name)} <span class="status-pill ${t.client.status}">${statusLabel(t.client.status)}</span></div>
-              <div class="client-meta">${window.LifeEvents.currentAge(t.client)}歳 / ${escapeHtml(t.client.occupation)} / AUM ¥${fmtMoney(t.client.aum)}</div>
+      const initial = (c.name || '?').replace(/\s+/g, '').slice(0, 1);
+      const days = Math.max(0, Math.floor((todayDate - new Date(c.lastContact)) / 86400000));
+      const age = window.LifeEvents.currentAge(c);
+      const childCount = (c.family || []).filter(m => m.rel === 'child').length;
+      const family = childCount > 0 ? `配偶者 + 子${childCount}` :
+        ((c.family || []).find(m => m.rel === 'spouse') ? '夫婦' : '単身');
+
+      // Find next upcoming event
+      const evs = window.LifeEvents.generate(c);
+      const futureEv = evs.find(ev => new Date(ev.date) >= todayDate);
+      const nextEvent = futureEv ? {
+        title: futureEv.title || futureEv.kind || futureEv.name || 'イベント',
+        rel: window.LifeEvents.formatRelative(new Date(futureEv.date))
+      } : null;
+
+      // Channel suggestion (heuristic)
+      const channel = c.lineFriendId ? 'LINE' : '電話';
+      const minutes = days >= 365 ? '15分' : days >= 90 ? '10分' : '5分';
+      const priorityLabelText = priorityLabel(p);
+      const priorityCls = priorityClass(p);
+
+      // TIER 1 — Mega next-best-action card
+      if (rank === 0) {
+        return `
+        <div class="brief-card brief-card-mega" data-client-id="${c.id}">
+          <div class="brief-rank-badge"><i data-lucide="flame"></i><span>NEXT BEST ACTION · #${rank+1}</span></div>
+          <div class="brief-mega-grid">
+            <div class="brief-mega-left">
+              <div class="brief-mega-head">
+                <div class="brief-mega-avatar">${initial}</div>
+                <div>
+                  <div class="brief-mega-name">${escapeHtml(c.name)} 様 <span class="status-pill ${c.status}">${statusLabel(c.status)}</span></div>
+                  <div class="brief-mega-meta">${age}歳 / ${escapeHtml(c.occupation || '—')} / ${family}</div>
+                </div>
+              </div>
+              <div class="brief-mega-action">
+                <span class="brief-mega-action-label">いま取るべきアクション</span>
+                <div class="brief-mega-action-text">${escapeHtml(t.topAction.action)}</div>
+                <div class="brief-mega-reason"><i data-lucide="sparkles"></i><span>${escapeHtml(t.topAction.reason)}</span></div>
+              </div>
+              <div class="brief-mega-cta">
+                <button class="primary" data-brief-open="${c.id}"><i data-lucide="message-square-text"></i><span>${channel}で連絡する</span></button>
+                <button class="ghost-btn" data-brief-detail="${c.id}"><i data-lucide="user"></i><span>詳細</span></button>
+                <button class="ghost-btn" data-brief-snooze="${c.id}"><i data-lucide="clock"></i><span>後回し</span></button>
+                <span class="brief-time-hint"><i data-lucide="timer"></i> 所要約${minutes}</span>
+              </div>
+            </div>
+            <div class="brief-mega-right">
+              <div class="brief-stat">
+                <span class="brief-stat-label">優先度</span>
+                <span class="brief-stat-pill brief-pri ${priorityCls}">${priorityLabelText}</span>
+              </div>
+              <div class="brief-stat">
+                <span class="brief-stat-label">管理資産</span>
+                <span class="brief-stat-value">${fmtMoneyAum(c.aum)}</span>
+              </div>
+              <div class="brief-stat">
+                <span class="brief-stat-label">最終接触</span>
+                <span class="brief-stat-value">${days}<span class="brief-stat-unit">日前</span></span>
+              </div>
+              <div class="brief-stat">
+                <span class="brief-stat-label">次のイベント</span>
+                <span class="brief-stat-text">${nextEvent ? escapeHtml(nextEvent.title) : 'なし'}</span>
+                ${nextEvent ? `<span class="brief-stat-sub">${escapeHtml(nextEvent.rel)}</span>` : ''}
+              </div>
             </div>
           </div>
-          <div class="action-detail">
-            <strong>${escapeHtml(t.topAction.action)}</strong>
-            <div class="reason">${escapeHtml(t.topAction.reason)}</div>
+        </div>`;
+      }
+
+      // TIER 2 — Medium card (rank 1-2)
+      if (rank <= 2) {
+        return `
+        <div class="brief-card brief-card-medium" data-client-id="${c.id}">
+          <div class="brief-rank-medium">#${rank+1}</div>
+          <div class="brief-medium-head">
+            <div class="brief-medium-avatar">${initial}</div>
+            <div class="brief-medium-meta">
+              <div class="brief-medium-name">${escapeHtml(c.name)} 様 <span class="status-pill ${c.status}">${statusLabel(c.status)}</span></div>
+              <div class="brief-medium-sub">${age}歳 / ${escapeHtml(c.occupation || '—')} / ${fmtMoneyAum(c.aum)}</div>
+            </div>
+            <span class="brief-pri ${priorityCls}">${priorityLabelText}</span>
           </div>
-          <div class="action-cta"><button class="primary" data-hint="この顧客の詳細を開く (家族構成・タイムライン・提案履歴・紹介プログラム)">詳細を開く →</button></div>
-        </div>
-      `;
-    }).join('');
+          <div class="brief-medium-action">${escapeHtml(t.topAction.action)}</div>
+          <div class="brief-medium-reason"><i data-lucide="sparkles"></i><span>${escapeHtml(t.topAction.reason)}</span></div>
+          <div class="brief-medium-foot">
+            <div class="brief-medium-info"><i data-lucide="clock"></i> ${days}日未接触 ${nextEvent ? `· 次: ${escapeHtml(nextEvent.title)} (${escapeHtml(nextEvent.rel)})` : ''}</div>
+            <div class="brief-medium-cta">
+              <button class="ghost-btn brief-mini-btn" data-brief-detail="${c.id}"><i data-lucide="arrow-right"></i><span>開く</span></button>
+            </div>
+          </div>
+        </div>`;
+      }
+
+      // TIER 3 — Compact row (rank 3+)
+      return `
+        <div class="brief-compact" data-client-id="${c.id}">
+          <span class="brief-compact-rank">#${rank+1}</span>
+          <span class="brief-compact-avatar">${initial}</span>
+          <div class="brief-compact-body">
+            <div class="brief-compact-name">${escapeHtml(c.name)} 様 <span class="status-pill ${c.status}">${statusLabel(c.status)}</span></div>
+            <div class="brief-compact-action">${escapeHtml(t.topAction.action)}</div>
+          </div>
+          <span class="brief-compact-meta">${days}日 / ${fmtMoneyAum(c.aum)}</span>
+          <span class="brief-pri ${priorityCls}">${priorityLabelText}</span>
+          <button class="brief-mini-btn" data-brief-detail="${c.id}"><i data-lucide="chevron-right"></i></button>
+        </div>`;
+    };
+
+    list.innerHTML = `
+      <div class="brief-stack">
+        ${tops.map((t, i) => briefCardHtml(t, i)).join('')}
+      </div>
+    `;
+
+    // Wire actions
+    list.querySelectorAll('[data-brief-open], [data-brief-detail]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.briefOpen || btn.dataset.briefDetail;
+        openClientModal(id);
+      });
+    });
+    list.querySelectorAll('[data-brief-snooze]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const card = btn.closest('.brief-card, .brief-compact');
+        if (card) { card.style.opacity = '0.3'; card.style.pointerEvents = 'none'; }
+      });
+    });
+    list.querySelectorAll('.brief-card, .brief-compact').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        openClientModal(card.dataset.clientId);
+      });
+    });
     list.querySelectorAll('.action-item').forEach(el => {
       el.addEventListener('click', () => openClientModal(el.dataset.clientId));
     });
