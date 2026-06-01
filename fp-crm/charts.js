@@ -1,23 +1,23 @@
 // FP Compass — quiet premium charts (Chart.js 4.x)
 // Renders 3 dashboard charts: status doughnut, age × AUM bar, upcoming 12M events stacked bar.
 (function () {
-  const NAVY = '#1F2A44';
-  const NAVY_2 = '#2D3D5F';
+  const NAVY = '#0A0A0A';
+  const INDIGO = '#4F46E5';
   const INK_3 = '#6B6B6B';
   const HAIRLINE = '#ECECEA';
-  const FONT = '"Noto Sans JP", -apple-system, "Hiragino Sans", sans-serif';
+  const FONT = '"Manrope", "Noto Sans JP", -apple-system, "Hiragino Sans", sans-serif';
 
-  // Quiet palette — desaturated, mono-ish
-  const PALETTE = ['#1F2A44', '#5A6B8A', '#A0AEC5', '#D6DEEA']; // status: important / active / new / dormant
-  const AGE_COLOR = '#1F2A44';
+  // Indigo-centric palette with cool shades
+  const PALETTE = ['#4F46E5', '#818CF8', '#C7CDF5', '#E5E7F8']; // important / active / new / dormant
+  const AGE_COLOR = '#4F46E5';
   const EVENT_COLORS = {
-    '教育':   '#1F2A44',
-    '退職':   '#5A6B8A',
-    '住宅':   '#8B9AB5',
-    '相続':   '#B7C2D2',
-    '年金':   '#7884A0',
-    '介護':   '#A8B3C8',
-    'その他': '#D6DEEA',
+    '教育':   '#4F46E5',
+    '退職':   '#3730A3',
+    '年金':   '#7C84E8',
+    '住宅':   '#A5ADEF',
+    '相続':   '#C7CDF5',
+    '介護':   '#DEE2F8',
+    'その他': '#EEF1FE',
   };
 
   let charts = {};
