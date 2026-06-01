@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="styles.css?v=20260531n">
 <link rel="stylesheet" href="styles-v2.css?v=20260531n">
 <link rel="stylesheet" href="styles-v3.css?v=20260531n">
-<link rel="stylesheet" href="styles-v8-workspace.css?v=20260601m">
+<link rel="stylesheet" href="styles-v8-workspace.css?v=20260601n">
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -415,6 +415,48 @@
   document.addEventListener('DOMContentLoaded', () => {
     hydrateIcons();
     setInterval(hydrateIcons, 1200);
+  });
+
+  // Howto banner: collapse by default + dismissible + persisted
+  function howtoKey(banner) {
+    const view = banner.closest('.view, [data-view], [data-line-view]');
+    const viewId = view ? (view.dataset.view || view.dataset.lineView || 'global') : 'global';
+    const title = (banner.querySelector('.howto-banner-title')?.textContent || '').trim();
+    return `fpcrm-howto-${viewId}-${title}`;
+  }
+  function setupHowtoBanner(banner) {
+    if (banner.dataset.howtoReady) return;
+    banner.dataset.howtoReady = '1';
+    const key = howtoKey(banner);
+    if (localStorage.getItem(key + '::dismissed') === '1') {
+      banner.classList.add('is-dismissed');
+      return;
+    }
+    // Add dismiss button if missing
+    if (!banner.querySelector('.howto-banner-dismiss')) {
+      const btn = document.createElement('button');
+      btn.className = 'howto-banner-dismiss';
+      btn.title = 'もう表示しない';
+      btn.setAttribute('aria-label', '閉じる');
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        banner.classList.add('is-dismissed');
+        localStorage.setItem(key + '::dismissed', '1');
+      });
+      banner.appendChild(btn);
+    }
+    // Toggle on header click
+    const head = banner.querySelector('.howto-banner-head');
+    if (head) {
+      head.addEventListener('click', () => banner.classList.toggle('is-open'));
+    }
+  }
+  function scanHowtoBanners() {
+    document.querySelectorAll('.howto-banner').forEach(setupHowtoBanner);
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    scanHowtoBanners();
+    setInterval(scanHowtoBanners, 1500);
   });
 
   // Breadcrumb sync (current tab → top bar)
