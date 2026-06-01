@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="styles.css?v=20260531n">
 <link rel="stylesheet" href="styles-v2.css?v=20260531n">
 <link rel="stylesheet" href="styles-v3.css?v=20260531n">
-<link rel="stylesheet" href="styles-v8-workspace.css?v=20260601i">
+<link rel="stylesheet" href="styles-v8-workspace.css?v=20260601j">
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -119,41 +119,59 @@
 
         <!-- ===== ダッシュボード ===== -->
         <section class="view active" data-view="dashboard">
-          <!-- Hero / Focus -->
-          <div class="hero">
-            <div class="hero-text">
-              <span class="hero-eyebrow">今日のフォーカス</span>
-              <h1 class="hero-title">おはよう、Tsukasa.</h1>
-              <p class="hero-sub" id="hero-sub">今週のフォロー予定と直近イベントが揃ってます。優先度順にこなしましょう。</p>
-              <div class="hero-focus-row">
-                <div class="hero-focus-item">
-                  <span class="hero-focus-label">今週話す</span>
-                  <div class="hero-avatar-stack" id="hero-avatar-stack"></div>
+
+          <!-- ===== MEGA HERO ===== -->
+          <div class="mega-hero">
+            <div class="mega-hero-bg"></div>
+            <div class="mega-hero-grid">
+
+              <!-- Left: hero copy -->
+              <div class="mega-hero-left">
+                <div class="mega-hero-date" id="mega-hero-date">2026年5月27日 水曜日</div>
+                <h1 class="mega-hero-title">
+                  おはよう、<span class="mega-hero-name">Tsukasa</span>.<br>
+                  今日は <span class="mega-hero-highlight" id="mega-hero-num">—</span> 人のお客様が<br>あなたを必要としています。
+                </h1>
+                <p class="mega-hero-lead" id="mega-hero-lead">優先度の高い順に、AI が次に取るべきアクションをまとめました。</p>
+
+                <div class="mega-hero-stats">
+                  <div class="mega-hero-stat">
+                    <span class="mega-hero-stat-label">今週フォロー</span>
+                    <span class="mega-hero-stat-value" id="mh-stat-week">—</span>
+                  </div>
+                  <div class="mega-hero-stat">
+                    <span class="mega-hero-stat-label">30日以内のイベント</span>
+                    <span class="mega-hero-stat-value" id="mh-stat-events">—</span>
+                  </div>
+                  <div class="mega-hero-stat">
+                    <span class="mega-hero-stat-label">未読LINE</span>
+                    <span class="mega-hero-stat-value">3</span>
+                  </div>
                 </div>
-                <div class="hero-focus-divider"></div>
-                <div class="hero-focus-item">
-                  <span class="hero-focus-label">直近30日のイベント</span>
-                  <span class="hero-focus-value" id="hero-events-30d">—</span>
-                </div>
-                <div class="hero-focus-divider"></div>
-                <div class="hero-focus-item">
-                  <span class="hero-focus-label">未読LINE</span>
-                  <span class="hero-focus-value">3<span class="hero-focus-unit">件</span></span>
+
+                <div class="mega-hero-actions">
+                  <button class="primary primary-lg" id="hero-cta-new">
+                    <i data-lucide="user-plus"></i><span>新規顧客を登録</span>
+                  </button>
+                  <button class="ghost-btn ghost-btn-lg" id="hero-cta-broadcast">
+                    <i data-lucide="send"></i><span>一斉配信</span>
+                  </button>
                 </div>
               </div>
-            </div>
-            <div class="hero-actions">
-              <button class="primary" id="hero-cta-new">
-                <i data-lucide="user-plus"></i><span>新規顧客</span>
-              </button>
-              <button class="ghost-btn" id="hero-cta-broadcast">
-                <i data-lucide="send"></i><span>一斉配信</span>
-              </button>
+
+              <!-- Right: featured next client card -->
+              <div class="mega-hero-right">
+                <div class="featured-card" id="featured-card">
+                  <div class="featured-card-skeleton">読み込み中…</div>
+                </div>
+              </div>
+
             </div>
           </div>
 
           <div id="notice-area"></div>
 
+          <!-- ===== Below the fold: KPI + Charts + Action list ===== -->
           <div class="section-title" data-eyebrow="Overview">概況</div>
           <div class="kpi-row" id="kpi-area"></div>
 
@@ -373,37 +391,105 @@
     document.querySelector('.tab[data-tab="distributionHub"]')?.click();
   });
 
-  // Nav count for clients (after dummy loaded) + Hero focus row
+  // MEGA HERO hydration
   function hydrateHero() {
-    if (!window.DUMMY_CLIENTS) return false;
+    if (!window.DUMMY_CLIENTS || !window.Recommender || !window.LifeEvents) return false;
     const navCount = document.getElementById('nav-count-clients');
     if (navCount) navCount.textContent = window.DUMMY_CLIENTS.length;
 
-    // 30d upcoming events
-    if (window.LifeEvents) {
-      const today = new Date('2026-05-27');
-      const horizon = new Date(today); horizon.setDate(horizon.getDate() + 30);
-      let count = 0;
-      window.DUMMY_CLIENTS.forEach(c => {
-        const evs = window.LifeEvents.generate(c);
-        evs.forEach(ev => {
-          const ed = new Date(ev.date || ev.when || ev.d);
-          if (!isNaN(ed) && ed >= today && ed <= horizon) count++;
-        });
-      });
-      const el = document.getElementById('hero-events-30d');
-      if (el) el.innerHTML = count + '<span class="hero-focus-unit">件</span>';
-    }
+    const today = new Date('2026-05-27');
 
-    // Avatar stack — top 5 priority
-    const stack = document.getElementById('hero-avatar-stack');
-    if (stack && window.Recommender) {
-      const tops = window.Recommender.topAcrossClients(window.DUMMY_CLIENTS, 5);
-      stack.innerHTML = tops.map((t, i) => {
-        const name = (t.client.name || '?').replace(/\s+/g, '');
-        const initial = name.slice(0, 1);
-        return `<span class="hero-avatar" style="--idx:${i};" title="${name}">${initial}</span>`;
-      }).join('') + `<span class="hero-avatar-more">+${Math.max(0, window.DUMMY_CLIENTS.filter(c => c.status === 'important').length - 5)}</span>`;
+    // 30d events
+    const horizon = new Date(today); horizon.setDate(horizon.getDate() + 30);
+    let count30 = 0;
+    window.DUMMY_CLIENTS.forEach(c => {
+      window.LifeEvents.generate(c).forEach(ev => {
+        const ed = new Date(ev.date || ev.when || ev.d);
+        if (!isNaN(ed) && ed >= today && ed <= horizon) count30++;
+      });
+    });
+
+    // Top priority
+    const tops = window.Recommender.topAcrossClients(window.DUMMY_CLIENTS, 8);
+    const topCount = tops.length;
+    const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setText('mega-hero-num', topCount);
+    setText('mh-stat-week', topCount);
+    setText('mh-stat-events', count30);
+
+    // Date label
+    const W = ['日','月','火','水','木','金','土'];
+    const d = today;
+    setText('mega-hero-date', `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${W[d.getDay()]}曜日`);
+
+    // Featured card — top 1 client
+    if (topCount > 0) {
+      const t = tops[0];
+      const c = t.client;
+      const initial = (c.name || '?').replace(/\s+/g, '').slice(0, 1);
+      const reason = (t.reasons && t.reasons[0]) || (t.priorityLabel) || (t.label) || '優先対応';
+      const age = window.LifeEvents.currentAge(c);
+      const aumOku = (c.aum / 100000000).toFixed(2);
+      const aumMan = Math.round(c.aum / 10000);
+      const aumDisp = c.aum >= 100000000 ? `¥${aumOku}億` : `¥${aumMan.toLocaleString()}万`;
+      const childCount = (c.family || []).filter(m => m.rel === 'child').length;
+      const family = childCount > 0 ? `配偶者 + 子${childCount}` :
+        ((c.family || []).find(m => m.rel === 'spouse') ? '夫婦' : '単身');
+
+      // Next event
+      const evs = window.LifeEvents.generate(c);
+      const futureEv = evs.find(ev => new Date(ev.date) >= today);
+      const nextEvent = futureEv ? {
+        title: futureEv.title || futureEv.kind || futureEv.name || 'イベント',
+        rel: window.LifeEvents.formatRelative(new Date(futureEv.date))
+      } : null;
+
+      const daysFromContact = Math.max(0, Math.floor((today - new Date(c.lastContact)) / 86400000));
+
+      document.getElementById('featured-card').innerHTML = `
+        <div class="featured-rank">
+          <i data-lucide="flame"></i>
+          <span>NEXT BEST ACTION</span>
+        </div>
+        <div class="featured-head">
+          <div class="featured-avatar">${initial}</div>
+          <div class="featured-meta">
+            <div class="featured-name">${c.name} 様</div>
+            <div class="featured-sub">${age}歳 / ${c.occupation || '—'} / ${family}</div>
+          </div>
+          <div class="featured-aum">
+            <div class="featured-aum-label">管理資産</div>
+            <div class="featured-aum-value">${aumDisp}</div>
+          </div>
+        </div>
+        <div class="featured-reason">
+          <i data-lucide="sparkles"></i>
+          <span>${reason}</span>
+        </div>
+        <div class="featured-metrics">
+          <div class="featured-metric">
+            <span class="featured-metric-label">最終接触</span>
+            <span class="featured-metric-value">${daysFromContact}<span class="featured-metric-unit">日前</span></span>
+          </div>
+          <div class="featured-metric">
+            <span class="featured-metric-label">次のイベント</span>
+            <span class="featured-metric-value featured-metric-text">${nextEvent ? nextEvent.title : 'なし'}</span>
+            ${nextEvent ? `<span class="featured-metric-sub">${nextEvent.rel}</span>` : ''}
+          </div>
+        </div>
+        <button class="featured-cta primary" data-featured-open="${c.id}">
+          <i data-lucide="message-square-text"></i>
+          <span>この方の詳細を開く</span>
+        </button>
+      `;
+
+      document.querySelector('[data-featured-open]')?.addEventListener('click', () => {
+        document.querySelector('.tab[data-tab="clients"]')?.click();
+        setTimeout(() => {
+          const tr = document.querySelector(`tr[data-client-id="${c.id}"]`);
+          if (tr) tr.click();
+        }, 200);
+      });
     }
     return true;
   }
