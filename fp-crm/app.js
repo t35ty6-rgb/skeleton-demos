@@ -1550,10 +1550,21 @@
                 <textarea id="draft-text" class="aib-textarea">${escapeHtml(draft.body)}</textarea>
               </div>
               <div class="aib-attach">
-                <label class="aib-attach-item"><input type="checkbox" id="aib-attach-slots" checked> <i data-lucide="calendar-clock"></i><span>次回面談候補日3つを自動で添付</span></label>
+                <label class="aib-attach-item"><input type="checkbox" id="aib-attach-slots" checked> <i data-lucide="calendar-clock"></i><span>次回面談候補日3つを「予約カード」で送る</span></label>
                 <label class="aib-attach-item"><input type="checkbox" id="aib-attach-pdf"> <i data-lucide="paperclip"></i><span>関連資料 PDF を添付 (教育資金プラン)</span></label>
               </div>
-              <div id="aib-preview-note" class="aib-preview-note"><i data-lucide="check"></i>候補日が文面に追加されています (▼下のテキストで確認・編集)</div>
+
+              <!-- LINE preview (Flex Message look) -->
+              <div class="aib-preview" id="aib-preview-area">
+                <div class="aib-preview-head">
+                  <i data-lucide="smartphone"></i>
+                  <span>LINEで実際に届く見た目</span>
+                </div>
+                <div class="aib-preview-phone" id="aib-preview-phone">
+                  <div class="aib-preview-bubble" id="aib-preview-text"></div>
+                  <div class="aib-preview-carousel" id="aib-preview-carousel"></div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -1636,51 +1647,95 @@
       applyAttachments();
     });
 
-    // ===== Attachments: append/strip blocks while preserving user edits =====
-    let currentBaseBody = draft.body;
-    const SLOT_RE = /\n*────────\n◆ 次回面談[\s\S]*?────────\n?/g;
-    const PDF_RE  = /\n*────────\n◆ 添付資料[\s\S]*?────────\n?/g;
-    function buildSlotBlock() {
+    // ===== Slot generation =====
+    function generateSlots() {
       const slots = [];
-      const tries = 14;
       const base = new Date(TODAY);
       base.setDate(base.getDate() + 2);
       const wDay = ['日','月','火','水','木','金','土'];
-      const times = ['10:00〜11:00', '14:00〜15:00', '19:00〜20:00'];
+      const times = [
+        { label: '10:00〜11:00', icon: 'sunrise' },
+        { label: '14:00〜15:00', icon: 'sun' },
+        { label: '19:00〜20:00', icon: 'moon' },
+      ];
       let added = 0, i = 0;
-      while (added < 3 && i < tries) {
+      while (added < 3 && i < 14) {
         const d = new Date(base); d.setDate(d.getDate() + i);
         if (d.getDay() !== 0 && d.getDay() !== 6) {
-          slots.push(`【候補${added+1}】${d.getMonth()+1}月${d.getDate()}日(${wDay[d.getDay()]}) ${times[added]}`);
+          slots.push({
+            month: d.getMonth() + 1,
+            day: d.getDate(),
+            wday: wDay[d.getDay()],
+            time: times[added].label,
+            icon: times[added].icon,
+            iso: d.toISOString().slice(0,10),
+          });
           added++;
         }
         i++;
       }
-      return ['', '────────', '◆ 次回面談 候補日 (どれかご都合よろしければ返信ください)', ...slots, '※ 上記が難しい場合は別日程をご提案ください。', '────────'].join('\n');
+      return slots;
     }
-    function buildPdfBlock() {
-      return '\n\n────────\n◆ 添付資料\n📎 教育資金プラン_山田様向け.pdf\n────────';
-    }
-    function stripBlocks(text) {
-      return text.replace(SLOT_RE, '').replace(PDF_RE, '').trimEnd();
-    }
-    function applyAttachments() {
+    const slotsData = generateSlots();
+
+    // ===== Render LINE preview (Flex Message look) =====
+    function renderPreview() {
       const slotsOn = document.getElementById('aib-attach-slots')?.checked;
       const pdfOn = document.getElementById('aib-attach-pdf')?.checked;
-      const ta = document.getElementById('draft-text');
-      if (!ta) return;
-      // Preserve user edits by stripping known blocks then re-appending
-      let body = stripBlocks(ta.value || currentBaseBody);
-      if (slotsOn) body += '\n' + buildSlotBlock();
-      if (pdfOn) body += buildPdfBlock();
-      ta.value = body;
-      const note = document.getElementById('aib-preview-note');
-      if (note) note.style.display = (slotsOn || pdfOn) ? 'flex' : 'none';
+      const bodyText = document.getElementById('draft-text')?.value || draft.body;
+
+      // text bubble
+      const bubble = document.getElementById('aib-preview-text');
+      if (bubble) bubble.textContent = bodyText;
+
+      // carousel
+      const carousel = document.getElementById('aib-preview-carousel');
+      if (!carousel) return;
+      let cards = '';
+      if (slotsOn) {
+        cards += `<div class="lp-card lp-card-header">
+          <div class="lp-card-eyebrow"><i data-lucide="calendar-clock"></i><span>次回面談 候補</span></div>
+          <div class="lp-card-title">どれかタップで予約確定</div>
+        </div>`;
+        slotsData.forEach((s, i) => {
+          cards += `<div class="lp-card lp-card-slot">
+            <div class="lp-card-num">候補 ${i+1}</div>
+            <div class="lp-card-date">${s.month}/${s.day}<span class="lp-card-wday">(${s.wday})</span></div>
+            <div class="lp-card-time"><i data-lucide="${s.icon}"></i><span>${s.time}</span></div>
+            <button class="lp-card-btn">この日で予約</button>
+          </div>`;
+        });
+      }
+      if (pdfOn) {
+        cards += `<div class="lp-card lp-card-pdf">
+          <div class="lp-card-eyebrow"><i data-lucide="paperclip"></i><span>資料</span></div>
+          <div class="lp-card-title">教育資金プラン_山田様向け.pdf</div>
+          <button class="lp-card-btn lp-card-btn-secondary">PDF を見る</button>
+        </div>`;
+      }
+      carousel.innerHTML = cards;
+      carousel.style.display = (slotsOn || pdfOn) ? 'flex' : 'none';
+
+      const phone = document.getElementById('aib-preview-phone');
+      if (phone) phone.classList.toggle('aib-preview-phone-empty', !slotsOn && !pdfOn);
+
+      if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': '1.6' } });
     }
-    document.getElementById('aib-attach-slots')?.addEventListener('change', applyAttachments);
-    document.getElementById('aib-attach-pdf')?.addEventListener('change', applyAttachments);
-    // Apply once on open
-    applyAttachments();
+
+    // Track which slots will be sent as Flex Message (separate from text body)
+    function getAttachmentPayload() {
+      return {
+        slots: document.getElementById('aib-attach-slots')?.checked ? slotsData : null,
+        pdf: document.getElementById('aib-attach-pdf')?.checked ? { name: '教育資金プラン_山田様向け.pdf' } : null,
+      };
+    }
+    window.__aibPayload = getAttachmentPayload;
+
+    document.getElementById('aib-attach-slots')?.addEventListener('change', renderPreview);
+    document.getElementById('aib-attach-pdf')?.addEventListener('change', renderPreview);
+    document.getElementById('draft-text')?.addEventListener('input', renderPreview);
+    // Initial paint
+    renderPreview();
   }
 
   function generateDraftReply(client, events, recs, toneIndex) {
