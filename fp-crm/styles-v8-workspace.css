@@ -2233,6 +2233,359 @@ table.clients [class*="avatar"],
 .cd-prop-result-成約 { background: var(--positive-soft); color: var(--positive); border-color: #ABEFC6; }
 .cd-prop-result-検討中 { background: var(--warn-soft); color: var(--warn); border-color: #F7D8AE; }
 .cd-prop-result-見送り, .cd-prop-result-断り { background: var(--surface-2); color: var(--ink-3); border-color: var(--hairline-2); }
+
+/* ==================================================================
+   AI ACTION BRIEF MODAL — guided 3-step flow per client
+   ================================================================== */
+.aib-modal {
+  background: var(--surface);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+.aib-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  background-image: linear-gradient(135deg, #0F1117 0%, #1A1F2E 100%);
+  color: #fff;
+  padding: 28px 32px;
+  position: relative;
+  overflow: hidden;
+}
+.aib-header::before {
+  content: ""; position: absolute;
+  right: -80px; top: -80px;
+  width: 320px; height: 320px;
+  background: radial-gradient(circle, rgba(91,91,240,0.32) 0%, transparent 65%);
+  pointer-events: none;
+}
+.aib-header-left { position: relative; min-width: 0; flex: 1; }
+.aib-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-display);
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: #A78BFA;
+  background: rgba(167,139,250,0.18);
+  border: 1px solid rgba(167,139,250,0.32);
+  padding: 4px 11px;
+  border-radius: 100px;
+  margin-bottom: 12px;
+}
+.aib-eyebrow i[data-lucide] { width: 12px !important; height: 12px !important; }
+.aib-title {
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 26px;
+  letter-spacing: -0.028em;
+  color: #fff;
+  margin: 0 0 6px;
+  line-height: 1.15;
+}
+.aib-sub {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: #B3B8C3;
+  line-height: 1.55;
+}
+.aib-client-chip {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 10px 14px;
+  flex-shrink: 0;
+  position: relative;
+}
+.aib-client-avatar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  background-image: linear-gradient(135deg, var(--accent-3), var(--accent-2));
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 14px;
+  border-radius: 50%;
+}
+.aib-client-name {
+  font-family: var(--font-display);
+  font-weight: 700; font-size: 14px;
+  color: #fff;
+}
+.aib-client-meta {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.65);
+  margin-top: 2px;
+}
+
+.aib-body {
+  padding: 28px 32px 32px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+@media (max-width: 700px) {
+  .aib-header { flex-direction: column; align-items: flex-start; padding: 22px; }
+  .aib-body { padding: 20px 22px 22px; }
+  .aib-title { font-size: 22px; }
+}
+
+/* Steps */
+.aib-step {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+.aib-step-final {
+  background-image: linear-gradient(180deg, var(--accent-faint) 0%, var(--surface) 100%);
+  border-color: #C7CDF5;
+}
+.aib-step-head {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface);
+}
+.aib-step-final .aib-step-head { background: transparent; border-bottom-color: #DDE1FB; }
+.aib-step-no {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px var(--accent-glow);
+}
+.aib-step-head > div:nth-child(2) { flex: 1; min-width: 0; }
+.aib-step-title {
+  font-family: var(--font-display);
+  font-weight: 700; font-size: 15px;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+.aib-step-sub {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+.aib-step-status {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--font-display);
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 100px;
+  flex-shrink: 0;
+}
+.aib-step-status i[data-lucide] { width: 12px !important; height: 12px !important; }
+.aib-step-done {
+  background: var(--positive-soft);
+  color: var(--positive);
+  border: 1px solid #ABEFC6;
+}
+.aib-step-ready {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent-2);
+  animation: aib-pulse 1.8s ease-in-out infinite;
+}
+@keyframes aib-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(91,91,240,0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(91,91,240,0); }
+}
+.aib-step-body { padding: 18px 20px; }
+
+/* Verdict block (STEP 1) */
+.aib-verdict {
+  background: var(--accent-faint);
+  border: 1px solid #DDE1FB;
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+}
+.aib-verdict-label {
+  font-family: var(--font-display);
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent-2);
+  margin-bottom: 6px;
+}
+.aib-verdict-action {
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 18px;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.aib-verdict-reason {
+  display: flex; align-items: flex-start; gap: 6px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+.aib-verdict-reason i[data-lucide] {
+  width: 14px !important; height: 14px !important;
+  color: var(--accent); flex-shrink: 0; margin-top: 2px;
+}
+
+.aib-context {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  list-style: none;
+  margin: 0; padding: 0;
+}
+@media (max-width: 700px) { .aib-context { grid-template-columns: 1fr; } }
+.aib-context li {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  border: 1px solid var(--hairline);
+}
+.aib-context li strong { color: var(--ink); font-weight: 700; }
+.aib-context li i[data-lucide] {
+  width: 14px !important; height: 14px !important;
+  color: var(--ink-3); flex-shrink: 0;
+}
+
+/* Draft (STEP 2) */
+.aib-draft-meta {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.aib-intent {
+  font-family: var(--font-display);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  background: var(--warn-soft);
+  color: var(--warn);
+  border: 1px solid #F7D8AE;
+  padding: 3px 9px;
+  border-radius: 4px;
+}
+.aib-tone-label {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.aib-tone-btn {
+  margin-left: auto !important;
+  display: inline-flex !important; align-items: center !important; gap: 5px !important;
+  font-family: var(--font-body);
+  font-size: 11.5px !important; font-weight: 500;
+  background: var(--surface-2) !important;
+  border: 1px solid var(--hairline) !important;
+  color: var(--ink-2) !important;
+  padding: 5px 10px !important;
+  border-radius: 6px !important;
+}
+.aib-tone-btn i[data-lucide] { width: 12px !important; height: 12px !important; }
+.aib-tone-btn:hover { background: var(--surface) !important; border-color: var(--ink-3) !important; }
+
+.aib-textarea-wrap {
+  background: #FAFAF9;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.aib-textarea {
+  width: 100%;
+  min-height: 200px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13.5px;
+  line-height: 1.85;
+  padding: 16px 18px;
+  border: none;
+  background: transparent;
+  resize: vertical;
+  color: var(--ink);
+  outline: none;
+}
+.aib-textarea:focus { background: #fff; }
+
+.aib-attach {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.aib-attach-item {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+.aib-attach-item:hover { border-color: var(--hairline-2); }
+.aib-attach-item input[type="checkbox"] {
+  width: 14px; height: 14px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+.aib-attach-item i[data-lucide] {
+  width: 13px !important; height: 13px !important;
+  color: var(--ink-3);
+}
+.aib-attach-item input[type="checkbox"]:checked + i[data-lucide] {
+  color: var(--accent);
+}
+
+/* Post-send tasks (STEP 3) */
+.aib-postsend {
+  list-style: none; margin: 0 0 16px; padding: 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.aib-postsend li {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+}
+.aib-postsend li strong { color: var(--ink); font-weight: 700; }
+.aib-postsend li i[data-lucide] {
+  width: 15px !important; height: 15px !important;
+  color: var(--accent); flex-shrink: 0;
+}
+
+.aib-cta-row {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.aib-cta-row .primary,
+.aib-cta-row .ghost-btn {
+  display: inline-flex !important; align-items: center !important; gap: 7px !important;
+}
+.aib-cta-row .primary i[data-lucide],
+.aib-cta-row .ghost-btn i[data-lucide] {
+  width: 14px !important; height: 14px !important;
+}
+.aib-send {
+  padding: 12px 22px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+.aib-msg {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 10px;
+  min-height: 18px;
+  width: 100%;
+}
 .modal-header {
   background: var(--surface);
   border-bottom: 1px solid var(--hairline);

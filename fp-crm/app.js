@@ -1462,27 +1462,123 @@
   // ============================
   function openDraftReplyModal(client, events, recs) {
     const draft = generateDraftReply(client, events, recs);
+    const topRec = recs[0];
+    const initial = (client.name || '?').replace(/\s+/g, '').slice(0, 1);
+    const days = daysSince(client.lastContact);
+    const futureEvs = events.filter(ev => new Date(ev.date) >= TODAY);
+    const nextEv = futureEvs[0];
+
+    // Build context bullets
+    const contextItems = [];
+    contextItems.push({ icon: 'clock', text: `最終接触 <strong>${days}日前</strong> (${client.lastContact})` });
+    if (nextEv) {
+      contextItems.push({ icon: 'calendar', text: `次のライフイベント: <strong>${escapeHtml(nextEv.label)}</strong> (${window.LifeEvents.formatRelative(nextEv.date)})` });
+    }
+    contextItems.push({ icon: 'briefcase', text: `${escapeHtml(client.occupation || '—')} / AUM <strong>¥${fmtMoney(client.aum)}</strong>` });
+    const lastProp = (client.proposals || []).slice(-1)[0];
+    if (lastProp) {
+      contextItems.push({ icon: 'file-text', text: `直近提案: <strong>${escapeHtml(lastProp.title)}</strong> (${lastProp.result})` });
+    }
+
+    // Post-send task queue
+    const postSendTasks = [
+      { icon: 'check-circle-2', text: `「${escapeHtml(topRec ? topRec.action : draft.intent)}」を <strong>対応中</strong> に変更` },
+      { icon: 'bell', text: `<strong>7日後</strong>未返信なら自動リマインド` },
+      { icon: 'history', text: `顧客タイムラインに <strong>「${escapeHtml(draft.intent)} 送信」</strong> を記録` },
+    ];
+
     const html = `
-      <div class="modal-header">
-        <h2>✨ AI返信下書き — ${escapeHtml(client.name)} 様 宛</h2>
-        <button class="modal-close" id="draft-close">×</button>
-      </div>
-      <div class="modal-body">
-        <div style="display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--muted);margin-bottom:8px;letter-spacing:0.02em;">
-          <span style="background:linear-gradient(135deg,#fff8e1,#fff);border:1px solid #f0d36b;color:#8a6f1e;padding:2px 9px;border-radius:9px;font-weight:700;letter-spacing:0.04em;">${escapeHtml(draft.intent)}</span>
-          <span>${escapeHtml(draft.reason)}</span>
+      <div class="aib-modal">
+        <button class="cd-close" id="draft-close" aria-label="閉じる"><i data-lucide="x"></i></button>
+
+        <div class="aib-header">
+          <div class="aib-header-left">
+            <span class="aib-eyebrow"><i data-lucide="sparkles"></i>AI ACTION BRIEF</span>
+            <h2 class="aib-title">${escapeHtml(client.name)} 様 への対応プラン</h2>
+            <div class="aib-sub">AI がこの方の状況を分析して、いま送るべき文面まで一気に用意しました。</div>
+          </div>
+          <div class="aib-client-chip">
+            <span class="aib-client-avatar">${escapeHtml(initial)}</span>
+            <div>
+              <div class="aib-client-name">${escapeHtml(client.name)}</div>
+              <div class="aib-client-meta">${window.LifeEvents.currentAge(client)}歳 / ${escapeHtml(client.occupation || '—')}</div>
+            </div>
+          </div>
         </div>
-        <textarea id="draft-text" style="width:100%;min-height:280px;font-family:'Noto Sans JP',sans-serif;font-size:13.5px;line-height:1.85;padding:16px 18px;border:1px solid var(--line);border-radius:8px;background:#fff;letter-spacing:0.02em;">${escapeHtml(draft.body)}</textarea>
-        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
-          <button class="primary" id="draft-send" data-hint="このまま LINE 公式アカウントから本送信します (取消不可)">📨 この内容で LINE 送信</button>
-          <button id="draft-copy" data-hint="文面をクリップボードへ。送信せずに手動でLINEに貼るとき使用">📋 コピー</button>
-          <button id="draft-regen" data-hint="同じ顧客で別のトーン (丁寧/カジュアル/提案型) で再生成">🔄 別のトーンで生成</button>
-          <button id="draft-close-btn" style="margin-left:auto;" data-hint="閉じる">閉じる</button>
-        </div>
-        <div id="draft-msg" style="font-size:11.5px;color:var(--muted);margin-top:8px;text-align:center;letter-spacing:0.02em;"></div>
-        <div style="margin-top:18px;padding:12px 16px;background:#fafbfc;border:1px solid var(--line);border-radius:8px;font-size:11.5px;color:var(--muted);line-height:1.7;">
-          💡 AIがこの顧客のライフイベント・最終接触日・提案履歴を分析して生成しました。<br>
-          内容を確認・編集して、LINE公式アカウントの個別トークから送信してください。
+
+        <div class="aib-body">
+
+          <!-- STEP 1: AI Analysis -->
+          <section class="aib-step">
+            <div class="aib-step-head">
+              <span class="aib-step-no">1</span>
+              <div>
+                <div class="aib-step-title">AI が状況を分析</div>
+                <div class="aib-step-sub">優先度・タイミング・直近の動きから「いま動くべき」と判定</div>
+              </div>
+              <span class="aib-step-status aib-step-done"><i data-lucide="check"></i>完了</span>
+            </div>
+            <div class="aib-step-body">
+              <div class="aib-verdict">
+                <div class="aib-verdict-label">推奨アクション</div>
+                <div class="aib-verdict-action">${escapeHtml(topRec ? topRec.action : draft.intent)}</div>
+                <div class="aib-verdict-reason"><i data-lucide="lightbulb"></i><span>${escapeHtml(topRec ? topRec.reason : draft.reason)}</span></div>
+              </div>
+              <ul class="aib-context">
+                ${contextItems.map(c => `<li><i data-lucide="${c.icon}"></i><span>${c.text}</span></li>`).join('')}
+              </ul>
+            </div>
+          </section>
+
+          <!-- STEP 2: AI Generated Draft -->
+          <section class="aib-step">
+            <div class="aib-step-head">
+              <span class="aib-step-no">2</span>
+              <div>
+                <div class="aib-step-title">AI が文面を生成</div>
+                <div class="aib-step-sub">そのまま送れる LINE 文面。編集できます。</div>
+              </div>
+              <span class="aib-step-status aib-step-done"><i data-lucide="check"></i>生成済</span>
+            </div>
+            <div class="aib-step-body">
+              <div class="aib-draft-meta">
+                <span class="aib-intent">${escapeHtml(draft.intent)}</span>
+                <span class="aib-tone-label">トーン: 丁寧</span>
+                <button class="aib-tone-btn" id="draft-regen"><i data-lucide="refresh-cw"></i>別のトーンで再生成</button>
+              </div>
+              <div class="aib-textarea-wrap">
+                <textarea id="draft-text" class="aib-textarea">${escapeHtml(draft.body)}</textarea>
+              </div>
+              <div class="aib-attach">
+                <label class="aib-attach-item"><input type="checkbox" checked> <i data-lucide="calendar-clock"></i><span>次回面談候補日3つを自動で添付</span></label>
+                <label class="aib-attach-item"><input type="checkbox"> <i data-lucide="paperclip"></i><span>関連資料 PDF を添付 (教育資金プラン)</span></label>
+              </div>
+            </div>
+          </section>
+
+          <!-- STEP 3: Send + post-send tasks -->
+          <section class="aib-step aib-step-final">
+            <div class="aib-step-head">
+              <span class="aib-step-no">3</span>
+              <div>
+                <div class="aib-step-title">送信 → タスク自動化</div>
+                <div class="aib-step-sub">送信後、CRM が自動でやってくれること</div>
+              </div>
+              <span class="aib-step-status aib-step-ready">あと1クリック</span>
+            </div>
+            <div class="aib-step-body">
+              <ul class="aib-postsend">
+                ${postSendTasks.map(t => `<li><i data-lucide="${t.icon}"></i><span>${t.text}</span></li>`).join('')}
+              </ul>
+              <div class="aib-cta-row">
+                <button class="primary aib-send" id="draft-send"><i data-lucide="send"></i><span>この内容で LINE 送信</span></button>
+                <button class="ghost-btn" id="draft-copy"><i data-lucide="copy"></i><span>文面コピー</span></button>
+                <button class="ghost-btn" id="draft-close-btn"><i data-lucide="x"></i><span>キャンセル</span></button>
+              </div>
+              <div id="draft-msg" class="aib-msg"></div>
+            </div>
+          </section>
+
         </div>
       </div>
     `;
