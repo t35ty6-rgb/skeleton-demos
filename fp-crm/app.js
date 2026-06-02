@@ -1763,6 +1763,7 @@
     return `
       <div class="detail-section">
         <h3>面談記録・AI議事録 <span class="count-badge">${bookingsWithMemo.length} 回</span></h3>
+        ${window.FP_DEBUG ? `
         <details style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-family:Menlo,monospace;font-size:11px;">
           <summary style="cursor:pointer;color:#475569;font-weight:700;font-family:inherit;">🔧 デバッグ (AI議事録 lookup)</summary>
           <div style="margin-top:10px;line-height:1.7;color:#334155;">
@@ -1786,49 +1787,49 @@
             ${aiResults.slice(0,3).map((a,i) => `<div style="padding-left:12px;color:#16a34a;">[${i}] bookingTs=${escapeHtml(String(a.bookingTs||'').slice(0,19))} summary=${escapeHtml(String(a.summary||'').slice(0,60))}</div>`).join('')}
             <div style="margin-top:6px;"><strong>cache-bust 確認:</strong> ${escapeHtml((document.querySelector('script[src*="app.js"]')||{}).src||'').split('?')[1] || '(不明)'}</div>
           </div>
-        </details>
+        </details>` : ''}
         ${bookingsWithMemo.length === 0 ? '' :
           '<div style="display:grid;gap:14px;margin-bottom:18px;">' +
           bookingsWithMemo.slice().reverse().map(b => {
             const aiData = aiResults.find(a => a.bookingTs === b.ts) || {};
             return `
-            <div style="background:linear-gradient(135deg,#fff,#fdfbf4);border:1px solid #e0d8c0;border-left:5px solid #c1272d;padding:20px 24px;box-shadow:0 4px 16px rgba(15,23,41,0.06);">
-              <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e0d8c0;">
+            <div class="fp-meeting-card">
+              <div class="fp-meeting-card-head">
                 <div>
-                  <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#c1272d;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:4px;">Meeting Record</div>
-                  <strong style="font-family:'Noto Serif JP',serif;font-size:17px;color:#0f1729;">${escapeHtml(fmtDateRobust(b.date))} ${escapeHtml(fmtTimeRobust(b.time))} 面談</strong>
+                  <div class="fp-meeting-card-eyebrow">Meeting Record</div>
+                  <div class="fp-meeting-card-date">${escapeHtml(fmtDateRobust(b.date))} ${escapeHtml(fmtTimeRobust(b.time))} 面談</div>
                 </div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  ${b.driveUrl ? `<a href="${escapeHtml(b.driveUrl)}" target="_blank" style="font-size:11px;padding:8px 14px;background:#1b2845;color:#fff;text-decoration:none;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;">🎥 録画を見る</a>` : ''}
-                  ${b.zoomUrl ? `<a href="${escapeHtml(b.zoomUrl)}" target="_blank" style="font-size:11px;padding:8px 14px;background:#fff;color:#0f1729;border:1px solid #e0d8c0;text-decoration:none;font-weight:700;letter-spacing:0.06em;">Zoom URL</a>` : ''}
+                <div class="fp-meeting-card-actions">
+                  ${b.driveUrl ? `<a href="${escapeHtml(b.driveUrl)}" target="_blank" class="fp-btn fp-btn-sm fp-btn-gold">🎥 録画</a>` : ''}
+                  ${b.zoomUrl ? `<a href="${escapeHtml(b.zoomUrl)}" target="_blank" class="fp-btn fp-btn-sm fp-btn-secondary">Zoom URL</a>` : ''}
                 </div>
               </div>
               ${aiData.transcript ? `
-                <div style="margin-bottom:14px;">
-                  <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#b8893d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">📝 AI 文字起こし (Whisper)</div>
-                  <details style="background:#fff;border:1px solid #e0d8c0;padding:0;">
-                    <summary style="padding:12px 16px;cursor:pointer;font-size:12px;color:#0f1729;font-weight:700;background:#fafaf6;border-bottom:1px solid #e0d8c0;">📜 全文を見る (${(aiData.transcript||'').length}文字)</summary>
-                    <div style="padding:14px 18px;font-size:12px;line-height:1.8;white-space:pre-wrap;max-height:300px;overflow-y:auto;">${escapeHtml(aiData.transcript)}</div>
+                <div class="fp-meeting-block">
+                  <div class="fp-meeting-block-label">AI 文字起こし (Whisper)</div>
+                  <details style="background:#fff;border:1px solid var(--fp-line);">
+                    <summary style="padding:11px 16px;cursor:pointer;font-size:12px;color:var(--fp-ink);font-weight:700;background:var(--fp-paper);border-bottom:1px solid var(--fp-line);font-family:Manrope,sans-serif;letter-spacing:0.04em;">全文を見る (${(aiData.transcript||'').length}文字)</summary>
+                    <div style="padding:14px 18px;font-size:12.5px;line-height:1.95;white-space:pre-wrap;max-height:320px;overflow-y:auto;color:var(--fp-ink);">${escapeHtml(aiData.transcript)}</div>
                   </details>
                 </div>` : ''}
               ${aiData.summary ? `
-                <div style="margin-bottom:14px;">
-                  <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#b8893d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">🤖 AI 議事録 (Claude Sonnet)</div>
-                  <div style="font-size:12.5px;line-height:1.85;color:#0f1729;background:#fff;border:1px solid #e0d8c0;padding:14px 18px;white-space:pre-wrap;">${escapeHtml(aiData.summary)}</div>
+                <div class="fp-meeting-block">
+                  <div class="fp-meeting-block-label">AI 議事録 (Claude)</div>
+                  <div class="fp-meeting-body">${escapeHtml(aiData.summary)}</div>
                 </div>` : ''}
               ${aiData.key_concerns && aiData.key_concerns.length > 0 ? `
-                <div style="margin-bottom:14px;">
-                  <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#b8893d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">🎯 お客様の関心事</div>
+                <div class="fp-meeting-block">
+                  <div class="fp-meeting-block-label">お客様の関心事</div>
                   <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                    ${aiData.key_concerns.map(k => `<span style="background:#1b2845;color:#fff;padding:5px 12px;font-size:11px;font-weight:700;letter-spacing:0.04em;">${escapeHtml(k)}</span>`).join('')}
+                    ${aiData.key_concerns.map(k => `<span class="fp-concern-chip">${escapeHtml(k)}</span>`).join('')}
                   </div>
                 </div>` : ''}
               ${b.memo ? `
-                <div style="margin-top:14px;">
-                  <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#6b7280;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">手書きメモ</div>
-                  <div style="font-size:12px;line-height:1.7;color:#0f1729;background:#fff;border:1px solid #e0d8c0;padding:12px 16px;white-space:pre-wrap;">${escapeHtml(b.memo)}</div>
+                <div class="fp-meeting-block">
+                  <div class="fp-meeting-block-label">手書きメモ</div>
+                  <div class="fp-meeting-body">${escapeHtml(b.memo)}</div>
                 </div>` : ''}
-              ${!aiData.transcript && !aiData.summary && !b.memo ? '<div style="font-size:12px;color:#6b7280;font-style:italic;text-align:center;padding:14px;">録画 + AI処理 or 面談メモがまだ追加されていません</div>' : ''}
+              ${!aiData.transcript && !aiData.summary && !b.memo ? '<div style="font-size:12px;color:var(--fp-ink-3);font-style:italic;text-align:center;padding:18px;font-family:Noto Sans JP,sans-serif;">録画 + AI処理 もしくは 面談メモがまだ追加されていません</div>' : ''}
             </div>
           `;
           }).join('') + '</div>'
@@ -1842,31 +1843,31 @@
           if (orphan.length === 0) return '';
           return '<div style="display:grid;gap:14px;margin-bottom:18px;">' +
             orphan.slice().reverse().map(a => `
-              <div style="background:linear-gradient(135deg,#fff,#fdfbf4);border:1px solid #e0d8c0;border-left:5px solid #06c755;padding:20px 24px;box-shadow:0 4px 16px rgba(15,23,41,0.06);">
-                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e0d8c0;">
+              <div class="fp-meeting-card fp-meeting-card-orphan">
+                <div class="fp-meeting-card-head">
                   <div>
-                    <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#06c755;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:4px;">AI 議事録 (録画ベース)</div>
-                    <strong style="font-family:'Noto Serif JP',serif;font-size:17px;color:#0f1729;">${escapeHtml(fmtDateRobust(a.date) || String(a.bookingTs || a.createdAt || '').slice(0,10))} 面談</strong>
+                    <div class="fp-meeting-card-eyebrow">AI 議事録 (録画ベース)</div>
+                    <div class="fp-meeting-card-date">${escapeHtml(fmtDateRobust(a.date) || String(a.bookingTs || a.createdAt || '').slice(0,10))} 面談</div>
                   </div>
                 </div>
                 ${a.transcript ? `
-                  <div style="margin-bottom:14px;">
-                    <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#b8893d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">📝 AI 文字起こし (Whisper)</div>
-                    <details style="background:#fff;border:1px solid #e0d8c0;padding:0;">
-                      <summary style="padding:12px 16px;cursor:pointer;font-size:12px;color:#0f1729;font-weight:700;background:#fafaf6;border-bottom:1px solid #e0d8c0;">📜 全文を見る (${(a.transcript||'').length}文字)</summary>
-                      <div style="padding:14px 18px;font-size:12px;line-height:1.8;white-space:pre-wrap;max-height:300px;overflow-y:auto;">${escapeHtml(a.transcript)}</div>
+                  <div class="fp-meeting-block">
+                    <div class="fp-meeting-block-label">AI 文字起こし (Whisper)</div>
+                    <details style="background:#fff;border:1px solid var(--fp-line);">
+                      <summary style="padding:11px 16px;cursor:pointer;font-size:12px;color:var(--fp-ink);font-weight:700;background:var(--fp-paper);border-bottom:1px solid var(--fp-line);font-family:Manrope,sans-serif;letter-spacing:0.04em;">全文を見る (${(a.transcript||'').length}文字)</summary>
+                      <div style="padding:14px 18px;font-size:12.5px;line-height:1.95;white-space:pre-wrap;max-height:320px;overflow-y:auto;color:var(--fp-ink);">${escapeHtml(a.transcript)}</div>
                     </details>
                   </div>` : ''}
                 ${a.summary ? `
-                  <div style="margin-bottom:14px;">
-                    <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#b8893d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">🤖 AI 議事録 (Claude Sonnet)</div>
-                    <div style="font-size:12.5px;line-height:1.85;color:#0f1729;background:#fff;border:1px solid #e0d8c0;padding:14px 18px;white-space:pre-wrap;">${escapeHtml(a.summary)}</div>
+                  <div class="fp-meeting-block">
+                    <div class="fp-meeting-block-label">AI 議事録 (Claude)</div>
+                    <div class="fp-meeting-body">${escapeHtml(a.summary)}</div>
                   </div>` : ''}
                 ${a.key_concerns && a.key_concerns.length > 0 ? `
-                  <div style="margin-bottom:14px;">
-                    <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#b8893d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">🎯 お客様の関心事</div>
+                  <div class="fp-meeting-block">
+                    <div class="fp-meeting-block-label">お客様の関心事</div>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                      ${a.key_concerns.map(k => `<span style="background:#1b2845;color:#fff;padding:5px 12px;font-size:11px;font-weight:700;letter-spacing:0.04em;">${escapeHtml(k)}</span>`).join('')}
+                      ${a.key_concerns.map(k => `<span class="fp-concern-chip">${escapeHtml(k)}</span>`).join('')}
                     </div>
                   </div>` : ''}
               </div>
