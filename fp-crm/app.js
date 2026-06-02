@@ -1737,8 +1737,18 @@
             <div style="margin-top:6px;"><strong>lookup したキー (${aiCandidateKeys.size}):</strong></div>
             ${[...aiCandidateKeys].map(k => `<div style="padding-left:12px;color:${localStorage.getItem(k) ? '#16a34a' : '#94a3b8'};">${localStorage.getItem(k) ? '✓ ' : '× '}${escapeHtml(k)} (${(JSON.parse(localStorage.getItem(k)||'[]')).length}件)</div>`).join('')}
             <div style="margin-top:6px;"><strong>localStorage に実在する fp-ai-* キー全部 (${allKeys.length}):</strong></div>
-            ${allKeys.map(k => `<div style="padding-left:12px;color:#0f172a;">${escapeHtml(k)} (${(JSON.parse(localStorage.getItem(k)||'[]')).length}件)</div>`).join('') || '<div style="padding-left:12px;color:#dc2626;">(無し — 録画/AI処理が走ってないか保存失敗)</div>'}
-            <div style="margin-top:6px;"><strong>最終 aiResults 件数:</strong> ${aiResults.length}</div>
+            ${allKeys.map(k => {
+              const arr = JSON.parse(localStorage.getItem(k)||'[]');
+              return `<div style="padding-left:12px;color:#0f172a;margin-top:4px;">
+                <strong>${escapeHtml(k)} (${arr.length}件)</strong>
+                ${arr.map((a, i) => `<div style="padding-left:14px;color:#475569;border-left:2px solid #cbd5e1;margin:2px 0;">
+                  [${i}] userId=<code>${escapeHtml(a.userId || '(空)')}</code> customerName=<code>${escapeHtml(a.customerName || '(空)')}</code> bookingTs=<code>${escapeHtml(String(a.bookingTs || '').slice(0,19))}</code> summary=<code>${escapeHtml(String(a.summary || '').slice(0,40))}...</code>
+                </div>`).join('')}
+              </div>`;
+            }).join('') || '<div style="padding-left:12px;color:#dc2626;">(無し — 録画/AI処理が走ってないか保存失敗)</div>'}
+            <div style="margin-top:6px;"><strong>救済lookup 結果:</strong> aiResults ${aiResults.length}件</div>
+            ${aiResults.slice(0,3).map((a,i) => `<div style="padding-left:12px;color:#16a34a;">[${i}] bookingTs=${escapeHtml(String(a.bookingTs||'').slice(0,19))} summary=${escapeHtml(String(a.summary||'').slice(0,60))}</div>`).join('')}
+            <div style="margin-top:6px;"><strong>cache-bust 確認:</strong> ${escapeHtml((document.querySelector('script[src*="app.js"]')||{}).src||'').split('?')[1] || '(不明)'}</div>
           </div>
         </details>
         ${bookingsWithMemo.length === 0 ? '' :
