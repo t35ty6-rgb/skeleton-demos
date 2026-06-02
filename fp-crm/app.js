@@ -1193,6 +1193,7 @@
           <!-- Tabs -->
           <div class="cd-tabs" role="tablist">
             <button class="cd-tab cd-tab-active" data-cdtab="overview">概観</button>
+            <button class="cd-tab" data-cdtab="line">LINE履歴 <span class="cd-tab-count">${(c.lineHistory || []).length}</span></button>
             <button class="cd-tab" data-cdtab="timeline">タイムライン <span class="cd-tab-count">${events.length}</span></button>
             <button class="cd-tab" data-cdtab="proposals">提案履歴 <span class="cd-tab-count">${(c.proposals || []).length}</span></button>
             <button class="cd-tab" data-cdtab="meetings">面談録</button>
@@ -1239,6 +1240,29 @@
                   </div>
                 </div>
               </div>
+            </div>
+
+            <!-- LINE HISTORY -->
+            <div class="cd-tabpanel" data-cdpanel="line" hidden>
+              ${(c.lineHistory && c.lineHistory.length) ? `
+                <div class="cd-line-head">
+                  <div class="cd-line-stats">
+                    <span class="cd-line-stat"><i data-lucide="message-square"></i><strong>${c.lineHistory.length}</strong>件</span>
+                    <span class="cd-line-stat"><i data-lucide="arrow-down-left"></i>受信 <strong>${c.lineHistory.filter(m => m.direction === 'in').length}</strong></span>
+                    <span class="cd-line-stat"><i data-lucide="arrow-up-right"></i>送信 <strong>${c.lineHistory.filter(m => m.direction === 'out').length}</strong></span>
+                  </div>
+                  <button class="cd-line-new" data-line-new="${c.id}"><i data-lucide="plus"></i><span>新規送信</span></button>
+                </div>
+                <div class="cd-line-chat">
+                  ${c.lineHistory.map(m => `
+                    <div class="cd-line-msg ${m.direction === 'in' ? 'cd-line-in' : 'cd-line-out'}">
+                      ${m.label ? `<div class="cd-line-label">${escapeHtml(m.label)}</div>` : ''}
+                      <div class="cd-line-bubble">${escapeHtml(m.text).replace(/\n/g, '<br>')}</div>
+                      <div class="cd-line-ts">${escapeHtml(m.ts)}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : '<div class="cd-empty">LINE 履歴はまだありません</div>'}
             </div>
 
             <!-- TIMELINE -->
@@ -1291,6 +1315,10 @@
     qaStub('cd-action-call', '電話発信');
     qaStub('cd-action-meet', 'Zoom起動');
     qaStub('cd-action-mail', 'メール作成');
+    // 「新規送信」 → AI Action Brief を開く
+    document.querySelectorAll('[data-line-new]').forEach(btn => {
+      btn.addEventListener('click', () => openDraftReplyModal(c, events, recs));
+    });
     // タスクの「LINEで送信」 ボタン
     document.querySelectorAll('.fp-task-do-now').forEach(btn => {
       btn.addEventListener('click', async () => {

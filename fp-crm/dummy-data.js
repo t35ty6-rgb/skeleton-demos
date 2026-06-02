@@ -34,6 +34,17 @@
         { date: daysAgo(120), slot: '10:00〜11:00', reason: '今は忙しい' },
         { date: daysAgo(8), slot: '19:00〜20:00', reason: '日程が合わなかった' },
       ],
+      lineHistory: [
+        { direction: 'in', ts: daysAgo(180) + ' 10:23', text: 'ご連絡ありがとうございます、初めての相談で緊張しています。' },
+        { direction: 'out', ts: daysAgo(180) + ' 10:35', text: '田中様\n\nお問い合わせありがとうございます。FP福田です。緊張なさらず、率直なお話ができればと思います。アンケートのご回答お待ちしております。', label: '初回返信' },
+        { direction: 'in', ts: daysAgo(170) + ' 21:08', text: 'アンケートを回答しました。子供の大学資金が一番気になっています。' },
+        { direction: 'out', ts: daysAgo(169) + ' 09:42', text: '田中様\n\nアンケートありがとうございました。大翔様の大学進学(教育費ピーク)について資料をまとめました。下記候補で面談いかがでしょうか。', label: '面談案内' },
+        { direction: 'in', ts: daysAgo(165) + ' 12:11', text: '候補日3で予約します。' },
+        { direction: 'out', ts: daysAgo(165) + ' 12:12', text: '✅ ご予約承りました 6/1 14:00〜15:00 Zoom URL: https://zoom.us/...', label: '予約確定 (自動)' },
+        { direction: 'out', ts: daysAgo(45) + ' 11:00', text: '田中様\n\n先日ご提案させていただいた「iDeCo拠出額の見直し」、その後ご検討状況はいかがでしょうか。ご質問やご懸念があれば、お気軽にお聞かせください。', label: 'フォローアップ' },
+        { direction: 'in', ts: daysAgo(8) + ' 19:30', text: '6/5の面談キャンセルさせてください。' },
+        { direction: 'out', ts: daysAgo(8) + ' 19:35', text: '田中様\n\nキャンセル承りました。またご都合つけば日程ご相談ください。', label: 'キャンセル対応 (自動)' },
+      ],
     },
     {
       id: 'c002', name: '佐藤 由美', kana: 'さとう ゆみ',
@@ -53,6 +64,16 @@
       lineSubscribed: true,
       cancellations: [
         { date: daysAgo(50), slot: '14:00〜15:00', reason: '日程が合わなかった' },
+      ],
+      lineHistory: [
+        { direction: 'in', ts: daysAgo(400) + ' 14:08', text: 'セミナーありがとうございました。個人年金について詳しく聞きたいです。' },
+        { direction: 'out', ts: daysAgo(400) + ' 18:30', text: '佐藤様\n\nセミナーへのご参加ありがとうございました。個人年金保険、看護師の方の退職時期に合わせたプランをご提案できます。', label: '初回返信' },
+        { direction: 'out', ts: daysAgo(400) + ' 18:31', text: '【ご提案】個人年金保険プラン_佐藤様向け.pdf' , label: '資料送付' },
+        { direction: 'in', ts: daysAgo(95) + ' 21:15', text: '退職金準備プラン、内容まだ少し検討中です。' },
+        { direction: 'out', ts: daysAgo(95) + ' 22:00', text: '佐藤様\n\nお返事ありがとうございます。じっくりご検討ください。ご不明な点があればいつでもお声がけください。', label: 'フォローアップ' },
+        { direction: 'out', ts: daysAgo(50) + ' 10:00', text: '佐藤様\n\n6/2 14:00 で承りました。当日はよろしくお願いします。Zoom URL: https://zoom.us/...', label: '予約確定 (自動)' },
+        { direction: 'in', ts: daysAgo(50) + ' 13:50', text: '申し訳ない、急用が入ってしまいキャンセルさせてください。' },
+        { direction: 'out', ts: daysAgo(50) + ' 14:00', text: '佐藤様\n\nキャンセル承りました。また別日でも改めてご案内させてください。', label: 'キャンセル対応 (自動)' },
       ],
     },
     {
