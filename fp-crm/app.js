@@ -1106,6 +1106,25 @@
             <div class="cd-family-list">${familyHtml2}</div>
           </div>
 
+          ${(c.cancellations && c.cancellations.length) ? `
+          <div class="cd-profile-section">
+            <div class="cd-section-label cd-section-label-warn">
+              <i data-lucide="alert-triangle"></i>
+              <span>キャンセル履歴 (${c.cancellations.length})</span>
+            </div>
+            <div class="cd-cancel-list">
+              ${c.cancellations.slice().reverse().map(cc => {
+                const d = new Date(cc.date);
+                const daysFromCancel = Math.max(0, Math.floor((TODAY - d) / 86400000));
+                return `<div class="cd-cancel-row">
+                  <div class="cd-cancel-date">${cc.date}<span class="cd-cancel-rel">${daysFromCancel}日前</span></div>
+                  <div class="cd-cancel-slot">${escapeHtml(cc.slot || '')}</div>
+                  <div class="cd-cancel-reason"><i data-lucide="message-square"></i><span>${escapeHtml(cc.reason || '理由なし')}</span></div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>` : ''}
+
           ${c.note ? `
           <div class="cd-profile-section">
             <div class="cd-section-label">メモ</div>
@@ -1478,6 +1497,11 @@
     const lastProp = (client.proposals || []).slice(-1)[0];
     if (lastProp) {
       contextItems.push({ icon: 'file-text', text: `直近提案: <strong>${escapeHtml(lastProp.title)}</strong> (${lastProp.result})` });
+    }
+    if (client.cancellations && client.cancellations.length) {
+      const recent = client.cancellations[client.cancellations.length - 1];
+      const daysFromCancel = Math.max(0, Math.floor((TODAY - new Date(recent.date)) / 86400000));
+      contextItems.push({ icon: 'alert-triangle', text: `<strong>直近キャンセル ${daysFromCancel}日前</strong> (理由: ${escapeHtml(recent.reason || '不明')})` });
     }
 
     // Post-send task queue

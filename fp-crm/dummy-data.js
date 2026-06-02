@@ -30,6 +30,10 @@
       note: '長期積立に積極。来年マイホーム買い替え検討中。',
       lineFriendId: 'U001a4b8e1f6c3d2e9001',
       lineSubscribed: true,
+      cancellations: [
+        { date: daysAgo(120), slot: '10:00〜11:00', reason: '今は忙しい' },
+        { date: daysAgo(8), slot: '19:00〜20:00', reason: '日程が合わなかった' },
+      ],
     },
     {
       id: 'c002', name: '佐藤 由美', kana: 'さとう ゆみ',
@@ -47,6 +51,9 @@
       note: '夫婦とも医療職、退職後の資金プラン真剣に検討中。',
       lineFriendId: 'U002a4b8e1f6c3d2e9002',
       lineSubscribed: true,
+      cancellations: [
+        { date: daysAgo(50), slot: '14:00〜15:00', reason: '日程が合わなかった' },
+      ],
     },
     {
       id: 'c003', name: '鈴木 大輔', kana: 'すずき だいすけ',
