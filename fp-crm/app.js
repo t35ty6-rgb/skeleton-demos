@@ -1277,25 +1277,33 @@
 
             <!-- LINE HISTORY -->
             <div class="cd-tabpanel" data-cdpanel="line" hidden>
-              ${(c.lineHistory && c.lineHistory.length) ? `
-                <div class="cd-line-head">
-                  <div class="cd-line-stats">
-                    <span class="cd-line-stat"><i data-lucide="message-square"></i><strong>${c.lineHistory.length}</strong>件</span>
-                    <span class="cd-line-stat"><i data-lucide="arrow-down-left"></i>受信 <strong>${c.lineHistory.filter(m => m.direction === 'in').length}</strong></span>
-                    <span class="cd-line-stat"><i data-lucide="arrow-up-right"></i>送信 <strong>${c.lineHistory.filter(m => m.direction === 'out').length}</strong></span>
+              <div class="cd-line-head">
+                <div class="cd-line-stats">
+                  <span class="cd-line-stat"><i data-lucide="message-square"></i><strong id="cd-line-total">${(c.lineHistory || []).length}</strong>件</span>
+                  <span class="cd-line-stat"><i data-lucide="arrow-down-left"></i>受信 <strong id="cd-line-in">${(c.lineHistory || []).filter(m => m.direction === 'in').length}</strong></span>
+                  <span class="cd-line-stat"><i data-lucide="arrow-up-right"></i>送信 <strong id="cd-line-out">${(c.lineHistory || []).filter(m => m.direction === 'out').length}</strong></span>
+                </div>
+                <button class="cd-line-new" data-line-ai="${c.id}"><i data-lucide="wand-2"></i><span>AI下書き</span></button>
+              </div>
+              <div class="cd-line-chat" id="cd-line-chat">
+                ${(c.lineHistory || []).map(m => `
+                  <div class="cd-line-msg ${m.direction === 'in' ? 'cd-line-in' : 'cd-line-out'}">
+                    ${m.label ? `<div class="cd-line-label">${escapeHtml(m.label)}</div>` : ''}
+                    <div class="cd-line-bubble">${escapeHtml(m.text).replace(/\n/g, '<br>')}</div>
+                    <div class="cd-line-ts">${escapeHtml(m.ts)}</div>
                   </div>
-                  <button class="cd-line-new" data-line-new="${c.id}"><i data-lucide="plus"></i><span>新規送信</span></button>
+                `).join('') || '<div class="cd-line-empty">まだメッセージはありません</div>'}
+              </div>
+              <div class="cd-line-composer">
+                <textarea id="cd-line-input" placeholder="メッセージを入力... (Cmd+Enter で送信)"></textarea>
+                <div class="cd-line-composer-foot">
+                  <span class="cd-line-composer-meta">${c.lineFriendId ? '✓ LINE連携済' : '⚠ LINE friend ID 未登録'}</span>
+                  <button class="cd-line-send-btn" id="cd-line-send"${c.lineFriendId ? '' : ' disabled'}>
+                    <i data-lucide="send"></i><span>送信</span>
+                  </button>
                 </div>
-                <div class="cd-line-chat">
-                  ${c.lineHistory.map(m => `
-                    <div class="cd-line-msg ${m.direction === 'in' ? 'cd-line-in' : 'cd-line-out'}">
-                      ${m.label ? `<div class="cd-line-label">${escapeHtml(m.label)}</div>` : ''}
-                      <div class="cd-line-bubble">${escapeHtml(m.text).replace(/\n/g, '<br>')}</div>
-                      <div class="cd-line-ts">${escapeHtml(m.ts)}</div>
-                    </div>
-                  `).join('')}
-                </div>
-              ` : '<div class="cd-empty">LINE 履歴はまだありません</div>'}
+                <div id="cd-line-msg" class="cd-line-msg-status"></div>
+              </div>
             </div>
 
             <!-- TIMELINE -->
@@ -1348,10 +1356,77 @@
     qaStub('cd-action-call', '電話発信');
     qaStub('cd-action-meet', 'Zoom起動');
     qaStub('cd-action-mail', 'メール作成');
-    // 「新規送信」 → AI Action Brief を開く
-    document.querySelectorAll('[data-line-new]').forEach(btn => {
+    // 「AI下書き」 → AI Action Brief を開く
+    document.querySelectorAll('[data-line-ai]').forEach(btn => {
       btn.addEventListener('click', () => openDraftReplyModal(c, events, recs));
     });
+    // LINE 直接送信 (composer)
+    const sendBtn = document.getElementById('cd-line-send');
+    const input = document.getElementById('cd-line-input');
+    const statusEl = document.getElementById('cd-line-msg');
+    const chatEl = document.getElementById('cd-line-chat');
+    function appendLocalMessage(text) {
+      const ts = new Date();
+      const tsStr = ts.getFullYear() + '-' + String(ts.getMonth()+1).padStart(2,'0') + '-' + String(ts.getDate()).padStart(2,'0') + ' ' + String(ts.getHours()).padStart(2,'0') + ':' + String(ts.getMinutes()).padStart(2,'0');
+      c.lineHistory = c.lineHistory || [];
+      c.lineHistory.push({ direction: 'out', ts: tsStr, text: text, label: 'CRM直接送信' });
+      // empty placeholder remove
+      const empty = chatEl.querySelector('.cd-line-empty');
+      if (empty) empty.remove();
+      const div = document.createElement('div');
+      div.className = 'cd-line-msg cd-line-out';
+      div.innerHTML = `<div class="cd-line-label">CRM直接送信</div><div class="cd-line-bubble">${escapeHtml(text).replace(/\n/g, '<br>')}</div><div class="cd-line-ts">${tsStr}</div>`;
+      chatEl.appendChild(div);
+      chatEl.scrollTop = chatEl.scrollHeight;
+      // Update stats
+      document.getElementById('cd-line-total').textContent = c.lineHistory.length;
+      document.getElementById('cd-line-out').textContent = c.lineHistory.filter(m => m.direction === 'out').length;
+    }
+    if (sendBtn && input) {
+      const doSend = async () => {
+        const text = input.value.trim();
+        if (!text) return;
+        const userId = c.lineFriendId;
+        if (!userId) {
+          statusEl.textContent = '⚠ LINE friend ID 未登録のため送信できません';
+          statusEl.style.color = 'var(--critical)';
+          return;
+        }
+        sendBtn.disabled = true;
+        const orig = sendBtn.innerHTML;
+        sendBtn.innerHTML = '<span>送信中...</span>';
+        statusEl.textContent = '';
+        try {
+          const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/line/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, text }),
+          });
+          const data = await r.json().catch(() => ({}));
+          if (data.ok) {
+            statusEl.textContent = '✓ 送信完了';
+            statusEl.style.color = 'var(--positive)';
+            appendLocalMessage(text);
+            input.value = '';
+          } else {
+            statusEl.textContent = '✕ 送信失敗: ' + (data.error || '不明なエラー');
+            statusEl.style.color = 'var(--critical)';
+          }
+        } catch (e) {
+          statusEl.textContent = '✕ 通信エラー: ' + e.message;
+          statusEl.style.color = 'var(--critical)';
+        } finally {
+          sendBtn.disabled = false;
+          sendBtn.innerHTML = orig;
+          if (window.lucide) window.lucide.createIcons();
+          setTimeout(() => { statusEl.textContent = ''; }, 4000);
+        }
+      };
+      sendBtn.addEventListener('click', doSend);
+      input.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doSend(); }
+      });
+    }
     // タスクの「LINEで送信」 ボタン
     document.querySelectorAll('.fp-task-do-now').forEach(btn => {
       btn.addEventListener('click', async () => {
