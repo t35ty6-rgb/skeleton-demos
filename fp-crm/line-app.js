@@ -310,7 +310,8 @@
     // デモfallback無効化 — オーナーがLINE実機テストする時のためにLIVEデータだけ表示
     let isDemo = false;
 
-    const pendingConfirm = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3)).length;
+    const isRealLineUidHero = (uid) => /^U[a-f0-9]{32}$/i.test(String(uid || ''));
+    const pendingConfirm = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3) && isRealLineUidHero(s.userId)).length;
     const recPending = bookings.filter(b => b.recordingStatus === 'saved' && !b.transcript).length;
     const recordingNow = bookings.filter(b => b.recordingStatus === 'recording').length;
     const totalNewLeads = surveys.length;
@@ -598,7 +599,9 @@
     const target = document.getElementById('confirm-list');
     if (!target) return;
     let surveys = (liveData && liveData.survey_answers) || [];
-    const pending = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3));
+    // 本物 LINE userId (U + 32hex) でない古いテストデータ (uid=lf, SMOKE_*, anon-*) は除外
+    const isRealLineUid = (uid) => /^U[a-f0-9]{32}$/i.test(String(uid || ''));
+    const pending = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3) && isRealLineUid(s.userId));
     if (pending.length === 0) {
       target.innerHTML = '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);font-size:13px;">候補日確定待ちのお客様はいません。<br><span style="font-size:11.5px;">LINEからアンケート + 候補日3つに回答するとここに並びます。</span></div>';
       return;
@@ -1943,7 +1946,8 @@
     function buildPendingByCustomer() {
       const usersByUid = {};
       ((liveData && liveData.users) || []).forEach(u => { if (u.userId) usersByUid[u.userId] = u; });
-      const pendingSurveys = ((liveData && liveData.survey_answers) || []).filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3));
+      const isRealLineUid = (uid) => /^U[a-f0-9]{32}$/i.test(String(uid || ''));
+      const pendingSurveys = ((liveData && liveData.survey_answers) || []).filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3) && isRealLineUid(s.userId));
       return pendingSurveys.map(s => {
         const candidates = [s.q6_候補1, s.q7_候補2, s.q8_候補3].map((slot, idx) => {
           if (!slot) return null;

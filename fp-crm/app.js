@@ -142,7 +142,8 @@
       const hasLive = liveSurveys.some(s => s.q6_候補1 || s.q7_候補2 || s.q8_候補3);
       surveys = hasLive ? liveSurveys : (liveSurveys.concat(window.SURVEY_DEMO || []));
     } catch (e) {}
-    const pendingConfirms = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3)).length;
+    const isRealLineUidH = (uid) => /^U[a-f0-9]{32}$/i.test(String(uid || ''));
+    const pendingConfirms = surveys.filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3) && isRealLineUidH(s.userId)).length;
 
     const noticeArea = document.getElementById('notice-area');
     if (noticeArea) {
@@ -972,7 +973,45 @@
     if (!c) return;
     ensureLineHistory_(c);
     console.log('[client modal]', c.id, c.name, 'lineHistory:', (c.lineHistory || []).length, 'DUMMY_CLIENTS_VERSION:', window.DUMMY_CLIENTS_VERSION || '(missing)');
-    const events = window.LifeEvents.generate(c);
+    let events = window.LifeEvents.generate(c);
+    // 面談AI議事録をタイムラインに追加 (key_concerns + summary 要約)
+    try {
+      const liveBks = (window.LineAppLiveData && window.LineAppLiveData.bookings) || [];
+      const myBks = liveBks.filter(b => b.userId === c.lineFriendId || b.name === c.name);
+      const aiKeys = new Set();
+      if (c.lineFriendId) aiKeys.add('fp-ai-' + c.lineFriendId);
+      if (c.id)           aiKeys.add('fp-ai-' + c.id);
+      myBks.forEach(b => { if (b.userId) aiKeys.add('fp-ai-' + b.userId); if (b.ts) aiKeys.add('fp-ai-' + b.ts); });
+      const meetingEvents = [];
+      aiKeys.forEach(k => {
+        try {
+          const arr = JSON.parse(localStorage.getItem(k) || '[]');
+          arr.forEach(a => {
+            if (!a || (!a.summary && !a.key_concerns)) return;
+            const dateStr = a.date || String(a.bookingTs || '').slice(0, 10) || new Date(a.createdAt).toISOString().slice(0, 10);
+            const concerns = (a.key_concerns || []).slice(0, 3).join(' / ');
+            const label = '面談実施' + (concerns ? ' — ' + concerns : '');
+            meetingEvents.push({
+              date: new Date(dateStr),
+              kind: 'meeting',
+              cat: 'meeting',
+              label,
+              title: '面談',
+              major: true,
+            });
+          });
+        } catch (_) {}
+      });
+      // 同 date 重複除去
+      const seenDate = new Set();
+      const dedup = meetingEvents.filter(e => {
+        const k = e.date.toISOString().slice(0, 10);
+        if (seenDate.has(k)) return false;
+        seenDate.add(k);
+        return true;
+      });
+      events = dedup.concat(events).sort((a, b) => new Date(a.date) - new Date(b.date));
+    } catch (e) { console.warn('meeting events skipped:', e); }
     const recs = window.Recommender.forClient(c, events);
 
     const familyHtml = (c.family || []).length === 0
@@ -1518,8 +1557,26 @@
     if (bookingsWithMemo.length === 0 && tasks.length === 0) return ''; // 何もない時は表示しない
 
     // AI 議事録データ (localStorage に保存されていれば)
-    const aiKey = 'fp-ai-' + (client.lineFriendId || client.id);
-    const aiResults = JSON.parse(localStorage.getItem(aiKey) || '[]');
+    // 顧客の bookings から userId を全集めて、複数キーから議事録を集約する。
+    // client.lineFriendId が空でも、bookings の userId 経由で議事録が引ける。
+    const aiCandidateKeys = new Set();
+    if (client.lineFriendId) aiCandidateKeys.add('fp-ai-' + client.lineFriendId);
+    if (client.id)           aiCandidateKeys.add('fp-ai-' + client.id);
+    myBookings.forEach(b => {
+      if (b.userId) aiCandidateKeys.add('fp-ai-' + b.userId);
+      if (b.ts)     aiCandidateKeys.add('fp-ai-' + b.ts);
+    });
+    let aiResults = [];
+    aiCandidateKeys.forEach(k => {
+      try { aiResults = aiResults.concat(JSON.parse(localStorage.getItem(k) || '[]')); } catch (_) {}
+    });
+    // 同 bookingTs の重複を排除 (後者で上書き)
+    const seenTs = new Set();
+    aiResults = aiResults.filter(a => {
+      if (seenTs.has(a.bookingTs)) return false;
+      seenTs.add(a.bookingTs);
+      return true;
+    });
 
     return `
       <div class="detail-section">
