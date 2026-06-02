@@ -1013,6 +1013,7 @@
   function openClientModal(id) {
     const c = clients.find(x => x.id === id);
     if (!c) return;
+    window._fpCurrentClient = c;  // AI議事録モーダルの LINE 送信 fallback 用
     ensureLineHistory_(c);
     console.log('[client modal]', c.id, c.name, 'lineHistory:', (c.lineHistory || []).length, 'DUMMY_CLIENTS_VERSION:', window.DUMMY_CLIENTS_VERSION || '(missing)');
     let events = window.LifeEvents.generate(c);
@@ -1669,14 +1670,27 @@
     const myUids = new Set([client.lineFriendId].concat(myBookings.map(b => b.userId).filter(Boolean)));
     const myTs = new Set(myBookings.map(b => b.ts).filter(Boolean));
     const myNames = new Set([client.name].concat(myBookings.map(b => b.name).filter(Boolean)));
+    // 「fp-ai-お客様」 等の汎用 fallback キー → 録画時に客を特定できなかった分。
+    // 現在モーダルで開いてる客が唯一の LINE 連携客なら自動で吸収する。
+    const liveUsersForRescue = (window.LineAppLiveData && window.LineAppLiveData.users) || [];
+    const onlyOneLineClient = liveUsersForRescue.length === 1;
     allKeys.forEach(k => {
       if (aiCandidateKeys.has(k)) return;  // 既出
       try {
         const arr = JSON.parse(localStorage.getItem(k) || '[]');
         arr.forEach(a => {
-          if ((a.userId && myUids.has(a.userId)) ||
-              (a.bookingTs && myTs.has(a.bookingTs)) ||
-              (a.customerName && myNames.has(a.customerName))) {
+          const matchUser   = a.userId       && myUids.has(a.userId);
+          const matchTs     = a.bookingTs    && myTs.has(a.bookingTs);
+          const matchName   = a.customerName && myNames.has(a.customerName);
+          // 汎用 fallback: keyName='fp-ai-お客様' (録画時に客特定できなかった)
+          // → このCRMの LINE 連携客が1名のみなら、その客のものと推定
+          const genericFallback = (k === 'fp-ai-お客様' || a.customerName === 'お客様') &&
+                                  onlyOneLineClient &&
+                                  client.lineFriendId;
+          if (matchUser || matchTs || matchName || genericFallback) {
+            // userId 空なら現在の client.lineFriendId で補正してから push
+            if (!a.userId && client.lineFriendId) a.userId = client.lineFriendId;
+            if (!a.customerName || a.customerName === 'お客様') a.customerName = client.name;
             aiResults.push(a);
           }
         });

@@ -1425,7 +1425,17 @@
       } catch (_) {}
 
       R.chunks = []; R.startTime = Date.now(); R.bookingTs = bookingTs;
-      R.customerName = (booking && booking.name) || 'お客様';
+      // booking が見つからない時の fallback: liveData users から 唯一の LINE 連携客
+      let fallbackBooking = booking;
+      if (!fallbackBooking) {
+        const us = (window.LineAppLiveData && window.LineAppLiveData.users) || [];
+        if (us.length === 1) {
+          fallbackBooking = { userId: us[0].userId, name: us[0].displayName, ts: bookingTs };
+          console.log('[recording] booking 不在 → liveUsers[0] で fallback:', fallbackBooking);
+        }
+      }
+      R.booking = fallbackBooking;  // onstop で参照
+      R.customerName = (fallbackBooking && fallbackBooking.name) || 'お客様';
       // 音声のみで録音 (動画は不要、Drive用もAI用も同じ音声ファイル)
       // 1時間 ≒ 8MB に収まる
       const audioOnlyStream = new MediaStream(combined.getAudioTracks());
@@ -1443,17 +1453,19 @@
         updateProgressStep('save', 'done');
         updateProgressStep('drive', 'active');
         updateProgressStep('ai', 'active');
+        // booking が見つからなかった時の fallback (R.booking で保持済)
+        const effectiveBooking = booking || R.booking || null;
         // Drive: 音声ファイル (.webm) を upload
-        const drivePromise = autoUploadRecording(blob, R.bookingTs, R.customerName, booking)
+        const drivePromise = autoUploadRecording(blob, R.bookingTs, R.customerName, effectiveBooking)
           .then(() => updateProgressStep('drive', 'done'))
           .catch(() => updateProgressStep('drive', 'error'));
         // AI: 同じ音声ファイルを送信
-        const aiResult = await aiProcessRecording(blob, R.bookingTs, R.customerName, booking);
+        const aiResult = await aiProcessRecording(blob, R.bookingTs, R.customerName, effectiveBooking);
         if (aiResult && aiResult.ok) {
           updateProgressStep('ai', 'done');
-          window._fpAIResult = { result: aiResult, customerName: R.customerName, booking: booking };
+          window._fpAIResult = { result: aiResult, customerName: R.customerName, booking: effectiveBooking };
           // ★ AI 結果を自動で顧客カードに保存 (手動ボタン押下不要)
-          autoSaveAIResult(aiResult, R.customerName, booking);
+          autoSaveAIResult(aiResult, R.customerName, effectiveBooking);
           showProgressDoneAction();
         } else {
           updateProgressStep('ai', 'error', aiResult && aiResult.error);
@@ -1461,9 +1473,9 @@
           try {
             const errEntry = {
               bookingTs: R.bookingTs,
-              userId: (booking && booking.userId) || '',
+              userId: (effectiveBooking && effectiveBooking.userId) || '',
               customerName: R.customerName,
-              date: booking && booking.date,
+              date: effectiveBooking && effectiveBooking.date,
               summary: '⚠ AI処理が失敗しました\n\nエラー: ' + (aiResult && aiResult.error ? aiResult.error : '不明 (詳細はネットワークタブ確認)') + '\n\n録画ファイル自体は Drive に保存されています。',
               transcript: '',
               key_concerns: ['AI処理エラー'],
@@ -1471,7 +1483,7 @@
               createdAt: new Date().toISOString(),
               error: true,
             };
-            autoSaveAIResult({ ok: true, ...errEntry, tasks: [] }, R.customerName, booking);
+            autoSaveAIResult({ ok: true, ...errEntry, tasks: [] }, R.customerName, effectiveBooking);
             console.warn('[AI失敗ログを保存]', errEntry);
           } catch (e) { console.error('failure-log save fail', e); }
         }
@@ -1750,8 +1762,20 @@
     });
     overlay.querySelectorAll('.fp-ai-send').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const uid = btn.dataset.uid;
+        // dataset.uid が空 (booking 不在で保存された分) なら現在開いてる客 / liveData users から fallback
+        let uid = btn.dataset.uid;
         const msg = btn.dataset.msg;
+        if (!uid) {
+          // 1) 現在モーダル開いてる client から
+          const cur = window._fpCurrentClient;
+          if (cur && cur.lineFriendId) uid = cur.lineFriendId;
+        }
+        if (!uid) {
+          // 2) customerName と一致する LINE users から
+          const us = (window.LineAppLiveData && window.LineAppLiveData.users) || [];
+          const hit = us.find(u => u.displayName && customerName && u.displayName.indexOf(customerName) >= 0);
+          if (hit) uid = hit.userId;
+        }
         if (!uid) { showFriendAddPrompt(customerName, (booking && booking.id) || ''); return; }
         const finalMsg = prompt('LINEで送るメッセージ (編集可)', msg);
         if (!finalMsg) return;
@@ -3072,38 +3096,8 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
   let liveData = null;
 
   function showSyncIndicator(state, detail) {
-    // 全画面に薄いグレースケールフィルタ。同期中は全体トーン落ち、終わるとパッと明るくなる。
-    if (!document.getElementById('fp-sync-style')) {
-      const s = document.createElement('style');
-      s.id = 'fp-sync-style';
-      s.textContent = `
-        body.fp-syncing > *:not(#fp-sync-pill) { filter: grayscale(0.7) brightness(0.92); transition: filter 0.4s ease; }
-        body:not(.fp-syncing) > *:not(#fp-sync-pill) { filter: none; transition: filter 0.5s ease; }
-        #fp-sync-pill { position:fixed;top:14px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.92);color:#fff;padding:8px 18px;border-radius:999px;font-size:12.5px;font-family:inherit;font-weight:600;letter-spacing:0.04em;z-index:99999;display:flex;align-items:center;gap:10px;box-shadow:0 6px 24px rgba(0,0,0,0.18);opacity:0;transform-origin:center top;transition:opacity 0.3s ease;pointer-events:none; }
-        #fp-sync-pill.show { opacity: 1; }
-        @keyframes fp-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-      `;
-      document.head.appendChild(s);
-    }
-    let el = document.getElementById('fp-sync-pill');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'fp-sync-pill';
-      document.body.appendChild(el);
-    }
-    el.classList.add('show');
-    if (state === 'loading') {
-      document.body.classList.add('fp-syncing');
-      el.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:fp-spin 0.7s linear infinite;"></span><span>同期中</span>';
-    } else if (state === 'done') {
-      document.body.classList.remove('fp-syncing');
-      el.innerHTML = '<span style="color:#86efac;">✓</span><span>' + (detail || '完了') + '</span>';
-      setTimeout(() => { el.classList.remove('show'); }, 1800);
-    } else if (state === 'error') {
-      document.body.classList.remove('fp-syncing');
-      el.innerHTML = '<span style="color:#fca5a5;">⚠</span><span>同期失敗</span>';
-      setTimeout(() => { el.classList.remove('show'); }, 4000);
-    }
+    // 同期表示は撤廃 (オーナー fb: うっとうしい)。エラー時のみ静かに console。
+    if (state === 'error') console.warn('[sync error]', detail);
   }
 
   async function fetchLiveData() {
