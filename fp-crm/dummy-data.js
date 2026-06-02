@@ -2,6 +2,9 @@
 // 30人分。100人規模のリアルさが伝わるよう多様な家族構成・年齢・ステージを散らしている。
 
 (function () {
+  // Version marker — used by index.html diagnostic banner to detect stale cache
+  window.DUMMY_CLIENTS_VERSION = 'v2-line-history-20260602';
+
   const today = new Date('2026-05-27');
   const Y = today.getFullYear();
 

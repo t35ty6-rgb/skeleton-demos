@@ -923,6 +923,7 @@
   function openClientModal(id) {
     const c = clients.find(x => x.id === id);
     if (!c) return;
+    console.log('[client modal]', c.id, c.name, 'lineHistory:', (c.lineHistory || []).length, 'DUMMY_CLIENTS_VERSION:', window.DUMMY_CLIENTS_VERSION || '(missing)');
     const events = window.LifeEvents.generate(c);
     const recs = window.Recommender.forClient(c, events);
 
