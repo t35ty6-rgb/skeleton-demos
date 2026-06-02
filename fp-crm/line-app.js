@@ -4183,6 +4183,22 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
     },
     refresh: function () {
       activateSubview(currentSubview);
+    },
+    // 起動直後に外部から呼べる: タブに関わらず liveData を取って FPCrmRefreshClients を発火
+    bootLiveData: function () {
+      fetchLiveData();
+      // 30秒ごとに自動更新 (LINE 友だち追加や bookings 反映が常時走るよう)
+      if (!window._fpBootInterval) {
+        window._fpBootInterval = setInterval(fetchLiveData, 30000);
+      }
     }
   };
+
+  // 自動起動: app.js より後にロードされる line-app.js が IIFE 完了時に即 liveData fetch を開始
+  // → LineApp タブを開いてなくても顧客台帳に LINE 友だちが反映される
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => window.LineApp.bootLiveData());
+  } else {
+    window.LineApp.bootLiveData();
+  }
 })();
