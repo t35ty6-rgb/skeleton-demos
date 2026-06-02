@@ -1663,6 +1663,25 @@
     aiCandidateKeys.forEach(k => {
       try { aiResults = aiResults.concat(JSON.parse(localStorage.getItem(k) || '[]')); } catch (_) {}
     });
+    // 全 localStorage の fp-ai-* を走査し、エントリ内 userId / customerName / bookingTs が
+    // この顧客にマッチするものを吸収 (キー名が予期せぬ形式でも救済)
+    const allKeys = Object.keys(localStorage).filter(k => k.startsWith('fp-ai-'));
+    const myUids = new Set([client.lineFriendId].concat(myBookings.map(b => b.userId).filter(Boolean)));
+    const myTs = new Set(myBookings.map(b => b.ts).filter(Boolean));
+    const myNames = new Set([client.name].concat(myBookings.map(b => b.name).filter(Boolean)));
+    allKeys.forEach(k => {
+      if (aiCandidateKeys.has(k)) return;  // 既出
+      try {
+        const arr = JSON.parse(localStorage.getItem(k) || '[]');
+        arr.forEach(a => {
+          if ((a.userId && myUids.has(a.userId)) ||
+              (a.bookingTs && myTs.has(a.bookingTs)) ||
+              (a.customerName && myNames.has(a.customerName))) {
+            aiResults.push(a);
+          }
+        });
+      } catch (_) {}
+    });
     // GAS 永続化シートからも取得 (別ブラウザで保存された分)
     const liveAiResults = (window.LineAppLiveData && window.LineAppLiveData.ai_results) || [];
     liveAiResults.forEach(r => {
@@ -1696,6 +1715,20 @@
     return `
       <div class="detail-section">
         <h3>面談記録・AI議事録 <span class="count-badge">${bookingsWithMemo.length} 回</span></h3>
+        <details style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-family:Menlo,monospace;font-size:11px;">
+          <summary style="cursor:pointer;color:#475569;font-weight:700;font-family:inherit;">🔧 デバッグ (AI議事録 lookup)</summary>
+          <div style="margin-top:10px;line-height:1.7;color:#334155;">
+            <div><strong>client.lineFriendId:</strong> ${escapeHtml(client.lineFriendId || '(空)')}</div>
+            <div><strong>client.name:</strong> ${escapeHtml(client.name || '')}</div>
+            <div><strong>myBookings:</strong> ${myBookings.length} 件</div>
+            ${myBookings.slice(0,5).map((b,i) => `<div style="padding-left:12px;color:#64748b;">[${i}] ts=${escapeHtml(String(b.ts||'').slice(0,19))} userId=${escapeHtml(b.userId||'')} name=${escapeHtml(b.name||'')}</div>`).join('')}
+            <div style="margin-top:6px;"><strong>lookup したキー (${aiCandidateKeys.size}):</strong></div>
+            ${[...aiCandidateKeys].map(k => `<div style="padding-left:12px;color:${localStorage.getItem(k) ? '#16a34a' : '#94a3b8'};">${localStorage.getItem(k) ? '✓ ' : '× '}${escapeHtml(k)} (${(JSON.parse(localStorage.getItem(k)||'[]')).length}件)</div>`).join('')}
+            <div style="margin-top:6px;"><strong>localStorage に実在する fp-ai-* キー全部 (${allKeys.length}):</strong></div>
+            ${allKeys.map(k => `<div style="padding-left:12px;color:#0f172a;">${escapeHtml(k)} (${(JSON.parse(localStorage.getItem(k)||'[]')).length}件)</div>`).join('') || '<div style="padding-left:12px;color:#dc2626;">(無し — 録画/AI処理が走ってないか保存失敗)</div>'}
+            <div style="margin-top:6px;"><strong>最終 aiResults 件数:</strong> ${aiResults.length}</div>
+          </div>
+        </details>
         ${bookingsWithMemo.length === 0 ? '' :
           '<div style="display:grid;gap:14px;margin-bottom:18px;">' +
           bookingsWithMemo.slice().reverse().map(b => {
