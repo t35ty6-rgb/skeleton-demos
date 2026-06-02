@@ -16,6 +16,27 @@
 
   window.DUMMY_CLIENTS = [
     {
+      // ★テスト客 (オーナー自身) — 実LINE userIdで本物の送受信デモ可能
+      id: 'c000', name: '[テスト] 吉田 恭聡', kana: 'よしだ つかさ',
+      birth: ymd(Y - 35, 6, 15), gender: 'M', occupation: '会社経営 (IT)',
+      family: [
+        { rel: 'spouse', name: '吉田 美咲', birth: ymd(Y - 33, 3, 10) },
+      ],
+      source: 'デモテスト', status: 'important', aum: 12_000_000,
+      lastContact: daysAgo(45),
+      proposals: [
+        { date: daysAgo(60), title: '資産配分レビュー (NISA枠フル活用)', result: '検討中' },
+      ],
+      note: '★デモテスト用。本番フロー検証中。',
+      lineFriendId: 'U5b483d87fba587b07696daadda350693',
+      lineSubscribed: true,
+      cancellations: [],
+      lineHistory: [
+        { direction: 'in', ts: '2026-04-18 10:00', text: 'お世話になっております。資産運用のご相談したく、ご連絡しました。' },
+        { direction: 'out', ts: '2026-04-18 10:30', text: '吉田様\n\nご連絡ありがとうございます、FPの福田です。お話伺うのが楽しみです。アンケートよろしくお願いいたします。', label: '初回返信' },
+      ],
+    },
+    {
       id: 'c001', name: '田中 健一', kana: 'たなか けんいち',
       birth: ymd(Y - 38, 4, 12), gender: 'M', occupation: '会社員 (IT)',
       family: [

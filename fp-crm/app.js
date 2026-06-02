@@ -2,18 +2,46 @@
 // シングルページ。ダッシュボード / 顧客一覧 / タイムライン / 顧客詳細モーダル。
 
 (function () {
-  const clients = window.DUMMY_CLIENTS;
   const TODAY = window.LifeEvents.TODAY;
   const LS_KEY = 'fp-crm-state-v1';
+  const LS_REAL_MODE = 'fp-crm-real-mode';
+  const LS_REAL_CLIENTS = 'fp-crm-real-clients-v1';
 
-  // localStorage に保存済みの顧客があれば差し替え
+  // 客リスト = デモ客 (DUMMY_CLIENTS) + 実モード切替
+  const demoClients = (window.DUMMY_CLIENTS || []).slice();
+  function getRealClients() {
+    try {
+      const raw = localStorage.getItem(LS_REAL_CLIENTS);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+  function saveRealClients(arr) {
+    try { localStorage.setItem(LS_REAL_CLIENTS, JSON.stringify(arr)); } catch (e) {}
+  }
+  function isRealMode() {
+    return localStorage.getItem(LS_REAL_MODE) === '1';
+  }
+  function setRealMode(on) {
+    localStorage.setItem(LS_REAL_MODE, on ? '1' : '0');
+  }
+  function rebuildClients() {
+    // 実モード = 実客のみ / デモモード = デモ客 + 実客
+    const real = getRealClients();
+    const list = isRealMode() ? real : demoClients.concat(real);
+    window.DUMMY_CLIENTS = list;
+    return list;
+  }
+  let clients = rebuildClients();
+
+  // localStorage に保存済みの「編集中」顧客があれば差し替え (旧キー、互換のため残す)
   try {
     const raw = localStorage.getItem('fp-crm-clients-v1');
-    if (raw) {
+    if (raw && !isRealMode()) {
       const stored = JSON.parse(raw);
       if (Array.isArray(stored) && stored.length > 0) {
         clients.length = 0;
         stored.forEach(c => clients.push(c));
+        window.DUMMY_CLIENTS = clients;
       }
     }
   } catch (e) {}
@@ -906,6 +934,10 @@
   // ============================
   // Fallback LINE history (in case dummy-data.js is cached old)
   const LINE_HISTORY_FALLBACK = {
+    c000: [
+      { direction: 'in',  ts: '2026-04-18 10:00', text: 'お世話になっております。資産運用のご相談したく、ご連絡しました。' },
+      { direction: 'out', ts: '2026-04-18 10:30', text: '吉田様\n\nご連絡ありがとうございます、FPの福田です。お話伺うのが楽しみです。アンケートよろしくお願いいたします。', label: '初回返信' },
+    ],
     c001: [
       { direction: 'in',  ts: '2025-12-04 10:23', text: 'ご連絡ありがとうございます、初めての相談で緊張しています。' },
       { direction: 'out', ts: '2025-12-04 10:35', text: '田中様\n\nお問い合わせありがとうございます。FP福田です。緊張なさらず、率直なお話ができればと思います。アンケートのご回答お待ちしております。', label: '初回返信' },
@@ -2618,6 +2650,139 @@
     if (t) setTimeout(renderKpiBoard, 80);
   });
   setTimeout(renderKpiBoard, 1000);
+
+  // ============================
+  // 実モード ⇄ デモモード 切替
+  // ============================
+  function updateRealModeUi() {
+    const btn = document.getElementById('real-mode-btn');
+    const label = document.getElementById('real-mode-label');
+    if (!btn) return;
+    const on = isRealMode();
+    btn.classList.toggle('real-mode-on', on);
+    const realCount = getRealClients().length;
+    if (label) {
+      label.textContent = on
+        ? '実モード (' + realCount + '名)'
+        : 'デモモード (' + demoClients.length + '名)';
+    }
+  }
+  function reloadEverything() {
+    // 客リスト変更は再ロードで確実に反映
+    setTimeout(() => location.reload(), 50);
+  }
+  // expose
+  window.fpcRealMode = { isRealMode, setRealMode, getRealClients, reloadEverything };
+
+  function openRealModeDialog() {
+    const list = getRealClients();
+    const html = `
+      <div class="realmode-dialog">
+        <div class="realmode-head">
+          <h2>実モード設定</h2>
+          <button class="realmode-close" id="rm-close" aria-label="閉じる">×</button>
+        </div>
+        <div class="realmode-body">
+          <label class="realmode-toggle-row">
+            <input type="checkbox" id="rm-toggle" ${isRealMode() ? 'checked' : ''}>
+            <span class="realmode-toggle-label"><strong>デモ客 (${demoClients.length}名) を非表示にして、実客のみ表示</strong><br>OFF にすればすぐ元に戻ります。</span>
+          </label>
+
+          <div class="realmode-section-title">登録済みの実客 (${list.length}名)</div>
+          <div class="realmode-list" id="rm-list">
+            ${list.length === 0 ? '<div class="realmode-empty">まだ登録された実客はいません</div>' : list.map((c, i) => `
+              <div class="realmode-row">
+                <div class="realmode-row-info">
+                  <div class="realmode-row-name">${escapeHtml(c.name)} 様</div>
+                  <div class="realmode-row-meta">${(c.lineFriendId || '').slice(0, 12)}…</div>
+                </div>
+                <button class="realmode-row-del" data-rm-del="${i}"><i data-lucide="trash-2"></i></button>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="realmode-section-title">＋ 新しい実客を追加</div>
+          <div class="realmode-form">
+            <label>お名前 <input type="text" id="rm-name" placeholder="例: 鈴木 太郎"></label>
+            <label>フリガナ <input type="text" id="rm-kana" placeholder="例: すずき たろう"></label>
+            <label>年齢 <input type="number" id="rm-age" placeholder="例: 52" min="20" max="100"></label>
+            <label>職業 <input type="text" id="rm-job" placeholder="例: 会社員"></label>
+            <label>LINE userId <small>(Uで始まる文字列)</small> <input type="text" id="rm-uid" placeholder="例: U5b483d87fba587..."></label>
+            <label>管理資産 (万円) <input type="number" id="rm-aum" placeholder="例: 1500" min="0"></label>
+            <button class="realmode-add-btn" id="rm-add"><i data-lucide="plus"></i>追加する</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'flex';
+    overlay.innerHTML = `<div class="modal">${html}</div>`;
+    document.body.appendChild(overlay);
+    if (window.lucide) window.lucide.createIcons();
+
+    const close = () => overlay.remove();
+    overlay.querySelector('#rm-close').addEventListener('click', close);
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+    overlay.querySelector('#rm-toggle').addEventListener('change', e => {
+      setRealMode(e.target.checked);
+      reloadEverything();
+    });
+
+    overlay.querySelectorAll('[data-rm-del]').forEach(b => {
+      b.addEventListener('click', () => {
+        const idx = parseInt(b.dataset.rmDel, 10);
+        const arr = getRealClients();
+        arr.splice(idx, 1);
+        saveRealClients(arr);
+        close();
+        openRealModeDialog();
+        reloadEverything();
+      });
+    });
+
+    overlay.querySelector('#rm-add').addEventListener('click', () => {
+      const name = overlay.querySelector('#rm-name').value.trim();
+      const kana = overlay.querySelector('#rm-kana').value.trim();
+      const age = parseInt(overlay.querySelector('#rm-age').value, 10);
+      const job = overlay.querySelector('#rm-job').value.trim() || '未設定';
+      const uid = overlay.querySelector('#rm-uid').value.trim();
+      const aumMan = parseInt(overlay.querySelector('#rm-aum').value, 10) || 0;
+      if (!name || !age) {
+        alert('お名前と年齢は必須です');
+        return;
+      }
+      const cYear = TODAY.getFullYear();
+      const birth = (cYear - age) + '-01-01';
+      const id = 'r-' + Date.now().toString(36);
+      const newClient = {
+        id, name, kana,
+        birth, gender: 'M',
+        occupation: job,
+        family: [], source: '実客登録',
+        status: 'new',
+        aum: aumMan * 10000,
+        lastContact: TODAY.toISOString().slice(0, 10),
+        proposals: [],
+        note: '',
+        lineFriendId: uid || '',
+        lineSubscribed: !!uid,
+        cancellations: [],
+        lineHistory: [],
+      };
+      const arr = getRealClients();
+      arr.push(newClient);
+      saveRealClients(arr);
+      close();
+      // 即実モードへ
+      if (!isRealMode()) setRealMode(true);
+      openRealModeDialog();
+      reloadEverything();
+    });
+  }
+  document.getElementById('real-mode-btn')?.addEventListener('click', openRealModeDialog);
+  setTimeout(updateRealModeUi, 200);
 
   // ============================
   // util
