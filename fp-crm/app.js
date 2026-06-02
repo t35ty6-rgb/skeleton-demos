@@ -1181,7 +1181,9 @@
         <!-- ============= LEFT: Profile column ============= -->
         <aside class="cd-left">
           <div class="cd-profile-head">
-            <div class="cd-profile-avatar">${escapeHtml(initial)}</div>
+            <div class="cd-profile-avatar" style="${c.linePictureUrl ? 'background:none;padding:0;border:2px solid #06c755;overflow:hidden;' : ''}">${c.linePictureUrl
+              ? `<img src="${escapeHtml(c.linePictureUrl)}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">`
+              : escapeHtml(initial)}</div>
             <div class="cd-profile-name">${escapeHtml(c.name)} <span class="cd-profile-honor">様</span></div>
             <div class="cd-profile-kana">${escapeHtml(c.kana)}</div>
             <div class="cd-profile-pills">
@@ -1579,6 +1581,22 @@
     }
   }
 
+  // 日付・時刻の堅牢な整形 (Sheets が "1899-12-30T18:00:00.000Z" 形式で返す time セル対策)
+  function fmtTimeRobust(raw) {
+    if (!raw) return '';
+    const s = String(raw);
+    const isoMatch = s.match(/T(\d{1,2}):(\d{2})/);
+    if (isoMatch) return isoMatch[1].padStart(2, '0') + ':' + isoMatch[2];
+    const hmMatch = s.match(/^(\d{1,2}):(\d{2})/);
+    if (hmMatch) return hmMatch[1].padStart(2, '0') + ':' + hmMatch[2];
+    return '';
+  }
+  function fmtDateRobust(raw) {
+    if (!raw) return '';
+    const m = String(raw).match(/(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+  }
+
   // ============================
   // 面談記録ブロック (顧客詳細モーダル内 / 録画URL + メモ + タスク)
   // ============================
@@ -1632,7 +1650,7 @@
               <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e0d8c0;">
                 <div>
                   <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#c1272d;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:4px;">Meeting Record</div>
-                  <strong style="font-family:'Noto Serif JP',serif;font-size:17px;color:#0f1729;">${escapeHtml(String(b.date||'').slice(0,10))} ${escapeHtml(String(b.time||'').slice(0,5))} 面談</strong>
+                  <strong style="font-family:'Noto Serif JP',serif;font-size:17px;color:#0f1729;">${escapeHtml(fmtDateRobust(b.date))} ${escapeHtml(fmtTimeRobust(b.time))} 面談</strong>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                   ${b.driveUrl ? `<a href="${escapeHtml(b.driveUrl)}" target="_blank" style="font-size:11px;padding:8px 14px;background:#1b2845;color:#fff;text-decoration:none;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;">🎥 録画を見る</a>` : ''}
@@ -1669,6 +1687,44 @@
           `;
           }).join('') + '</div>'
         }
+
+        ${(() => {
+          // bookings に紐付かない AI 議事録 (録画 ts が一致しない、別経路で保存された分) を 別ブロックで表示
+          const usedTs = new Set(bookingsWithMemo.map(b => b.ts));
+          const orphan = aiResults.filter(a => a.bookingTs && !usedTs.has(a.bookingTs) && (a.summary || a.transcript || (a.key_concerns||[]).length));
+          if (orphan.length === 0) return '';
+          return '<div style="display:grid;gap:14px;margin-bottom:18px;">' +
+            orphan.slice().reverse().map(a => `
+              <div style="background:linear-gradient(135deg,#fff,#fdfbf4);border:1px solid #e0d8c0;border-left:5px solid #06c755;padding:20px 24px;box-shadow:0 4px 16px rgba(15,23,41,0.06);">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e0d8c0;">
+                  <div>
+                    <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#06c755;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:4px;">AI 議事録 (録画ベース)</div>
+                    <strong style="font-family:'Noto Serif JP',serif;font-size:17px;color:#0f1729;">${escapeHtml(fmtDateRobust(a.date) || String(a.bookingTs || a.createdAt || '').slice(0,10))} 面談</strong>
+                  </div>
+                </div>
+                ${a.transcript ? `
+                  <div style="margin-bottom:14px;">
+                    <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#b8893d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">📝 AI 文字起こし (Whisper)</div>
+                    <details style="background:#fff;border:1px solid #e0d8c0;padding:0;">
+                      <summary style="padding:12px 16px;cursor:pointer;font-size:12px;color:#0f1729;font-weight:700;background:#fafaf6;border-bottom:1px solid #e0d8c0;">📜 全文を見る (${(a.transcript||'').length}文字)</summary>
+                      <div style="padding:14px 18px;font-size:12px;line-height:1.8;white-space:pre-wrap;max-height:300px;overflow-y:auto;">${escapeHtml(a.transcript)}</div>
+                    </details>
+                  </div>` : ''}
+                ${a.summary ? `
+                  <div style="margin-bottom:14px;">
+                    <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#b8893d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">🤖 AI 議事録 (Claude Sonnet)</div>
+                    <div style="font-size:12.5px;line-height:1.85;color:#0f1729;background:#fff;border:1px solid #e0d8c0;padding:14px 18px;white-space:pre-wrap;">${escapeHtml(a.summary)}</div>
+                  </div>` : ''}
+                ${a.key_concerns && a.key_concerns.length > 0 ? `
+                  <div style="margin-bottom:14px;">
+                    <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;color:#b8893d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">🎯 お客様の関心事</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                      ${a.key_concerns.map(k => `<span style="background:#1b2845;color:#fff;padding:5px 12px;font-size:11px;font-weight:700;letter-spacing:0.04em;">${escapeHtml(k)}</span>`).join('')}
+                    </div>
+                  </div>` : ''}
+              </div>
+            `).join('') + '</div>';
+        })()}
 
         ${tasks.length === 0 ? '' : `
           <h3 style="margin-top:16px;">フォロータスク <span class="count-badge">${tasks.length}</span></h3>

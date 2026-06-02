@@ -1,0 +1,114 @@
+name: Sync Stripe Products → products.json
+
+# Stripe Dashboard で商品情報が編集されたら、定期的に商品一覧を
+# data/products.json に同期する。サイトは products.json を読み込んで
+# 商品情報・価格・画像を動的に表示するため、商工会議所側は Stripe を
+# 編集するだけで完結する。
+#
+# 必要なシークレット (Settings → Secrets and variables → Actions):
+#   STRIPE_RESTRICTED_KEY ... 読み取り専用の Restricted Key
+#     (Stripe Dashboard → Developers → API keys → Create restricted key で発行)
+#     付与する権限: Products READ / Prices READ / Payment Links READ のみ
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # 15分ごとに自動チェック
+  workflow_dispatch:          # 手動実行も可能（Stripe編集後すぐ反映したい時用）
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Fetch products from Stripe
+        env:
+          STRIPE_KEY: ${{ secrets.STRIPE_RESTRICTED_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${STRIPE_KEY:-}" ]; then
+            echo "::warning::STRIPE_RESTRICTED_KEY シークレット未設定。Stripeセットアップ完了後にGitHub Secretsに登録してください。"
+            exit 0
+          fi
+
+          mkdir -p mio-ec/data
+          UPDATED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          # Stripe API から有効商品のみ取得（最大100件）
+          curl -sS https://api.stripe.com/v1/products?active=true&limit=100 \
+            -u "${STRIPE_KEY}:" \
+            -o /tmp/stripe_products.json
+
+          # 商品 → MIO products.json 形式に変換
+          # metadata で MIO 固有フィールド (slug, category, maker等) を吸収
+          # 各商品の default_price → 単発価格 (一括) を取得
+          node <<'EOF'
+            const fs = require('fs');
+            const raw = JSON.parse(fs.readFileSync('/tmp/stripe_products.json','utf8'));
+            const items = raw.data || [];
+
+            const products = items.map((s, idx) => {
+              const m = s.metadata || {};
+              const price = parseInt(m.price_tax_excluded || m.price || '0', 10);
+              const specs = m.specs ? safeParse(m.specs) : [];
+              const thumbs = m.thumbnail_images ? m.thumbnail_images.split(',').map(x=>x.trim()) : (s.images || []);
+              return {
+                id: s.id,
+                slug: m.slug || s.id,
+                active: s.active,
+                name: s.name,
+                category: m.category || 'GOODS',
+                categoryJa: m.category_ja || '',
+                maker: m.maker || '',
+                shortDescription: m.short_description || '',
+                description: s.description || '',
+                priceTaxExcluded: price,
+                taxRate: parseFloat(m.tax_rate || '0.10'),
+                currency: m.currency || 'JPY',
+                shippingFee: parseInt(m.shipping_fee || '0', 10),
+                leadTimeText: m.lead_time || '',
+                tag: m.tag || '',
+                tagStyle: m.tag_style || 'ink',
+                badge: m.badge || '',
+                stockStatus: m.stock_status || 'available',
+                images: { main: s.images?.[0] || '', thumbs },
+                specs,
+                makerQuote: m.maker_quote_body ? { body: m.maker_quote_body, author: m.maker_quote_author || '' } : null,
+                note: m.note || '',
+                paymentLink: m.payment_link || '',
+                stripeProductId: s.id,
+                displayOrder: parseInt(m.display_order || String(idx+1), 10)
+              };
+            }).filter(p => p.priceTaxExcluded > 0);
+
+            const out = {
+              _meta: {
+                source: 'Stripe Products API (auto-generated)',
+                updatedAt: '__UPDATED__',
+                syncMode: 'auto',
+                stripeProductCount: items.length
+              },
+              shop: { freeShippingThreshold: 30000 },
+              products
+            };
+            fs.writeFileSync('mio-ec/data/products.json', JSON.stringify(out, null, 2));
+
+            function safeParse(s){ try { return JSON.parse(s); } catch(_) { return []; } }
+          EOF
+          sed -i "s|__UPDATED__|${UPDATED}|" mio-ec/data/products.json
+
+      - name: Commit & push if changed
+        run: |
+          if git diff --quiet mio-ec/data/products.json; then
+            echo "No product changes."
+          else
+            git config user.name 'mio-stripe-sync[bot]'
+            git config user.email 'mio-sync@users.noreply.github.com'
+            git add mio-ec/data/products.json
+            git commit -m "chore(mio): sync products from Stripe ($(date -u +%Y-%m-%dT%H:%MZ))"
+            git push
+          fi

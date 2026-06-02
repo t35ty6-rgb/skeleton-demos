@@ -223,7 +223,7 @@ ${p.makerQuote ? `
 
     // Footer SHOP links
     document.querySelectorAll('[data-mio-render="shop-links"]').forEach(el => {
-      el.innerHTML = '<a href="products.html">すべての商品</a>' + MioData.renderShopLinks();
+      el.innerHTML = '<h4>SHOP</h4><a href="products.html">すべての商品</a>' + MioData.renderShopLinks();
     });
 
     // PDP (single product)
