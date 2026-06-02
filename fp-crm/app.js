@@ -545,11 +545,13 @@
   }
 
   // LINE 実アクション (lastActionAt + pictureUrl) で顧客のフィールドを上書き
+  // + LINE 友だちで まだ clients に居ない人 を自動で顧客一覧に追加
   function mergeLineActivity() {
     const liveUsers = (window.LineAppLiveData && window.LineAppLiveData.users) || [];
     if (liveUsers.length === 0) return;
     const byUid = {};
     liveUsers.forEach(u => { if (u.userId) byUid[u.userId] = u; });
+    // 既存 client 更新
     clients.forEach(c => {
       const u = byUid[c.lineFriendId];
       if (!u) return;
@@ -562,6 +564,46 @@
         }
       }
       if (u.pictureUrl) c.linePictureUrl = u.pictureUrl;
+    });
+    // 新規 LINE 友だちを clients に追加 (未管理顧客として)
+    const isRealUid = (uid) => /^U[a-f0-9]{32}$/i.test(String(uid || ''));
+    const knownUids = new Set(clients.map(c => c.lineFriendId).filter(Boolean));
+    const knownNames = new Set(clients.map(c => String(c.name || '').trim()).filter(Boolean));
+    liveUsers.forEach(u => {
+      if (!isRealUid(u.userId)) return;
+      if (knownUids.has(u.userId)) return;
+      const name = (u.displayName || '').trim();
+      if (name && knownNames.has(name)) {
+        // displayName が一致する既存 client があれば lineFriendId だけ補完
+        const c = clients.find(x => String(x.name || '').trim() === name);
+        if (c && !c.lineFriendId) {
+          c.lineFriendId = u.userId;
+          if (u.pictureUrl) c.linePictureUrl = u.pictureUrl;
+        }
+        return;
+      }
+      // 完全新規 → クライアント追加
+      const newC = {
+        id: 'c-line-' + u.userId.slice(1, 9),
+        name: name || ('LINE友だち ' + u.userId.slice(1, 7)),
+        kana: '',
+        birth: '1985-01-01',  // 不明 → 仮40歳
+        gender: 'O',
+        occupation: '',
+        family: [],
+        proposals: [],
+        aum: 0,
+        status: 'new',
+        source: 'LINE友だち追加',
+        lineFriendId: u.userId,
+        linePictureUrl: u.pictureUrl || '',
+        lastContact: String(u.lastActionAt || u.addedAt || new Date().toISOString()).slice(0, 10),
+        lastActionType: u.lastActionType || '',
+        autoFromLine: true,  // 自動取込フラグ (識別用)
+      };
+      clients.push(newC);
+      knownUids.add(u.userId);
+      if (name) knownNames.add(name);
     });
   }
 
