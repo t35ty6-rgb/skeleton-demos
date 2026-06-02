@@ -2248,89 +2248,201 @@
 
   function generateDraftReply(client, events, recs, toneIndex) {
     toneIndex = toneIndex || 0;
-    const name = (client.name || 'お客').split(/\s+/)[0]; // 苗字
+    const fullName = client.name || 'お客';
+    const lastName = fullName.split(/\s+/)[0];
     const dsl = daysSince(client.lastContact);
+    const age = window.LifeEvents.currentAge(client);
     const topRec = (recs && recs[0]) || null;
 
-    // 直近の重要イベント (90日以内)
-    const nearby = (events || []).filter(ev => {
+    // === 状況分析 (context) ===
+    // 直近の重要イベント (90日 〜 18ヶ月)
+    const upcoming = (events || []).filter(ev => {
       const days = (ev.date - TODAY) / 86400000;
-      return days >= 0 && days <= 90;
-    }).slice(0, 2);
+      return days >= 0 && days <= 540;
+    }).slice(0, 3);
+    const nearestEv = upcoming[0];
 
     // 提案フォロー漏れ
-    const stalledProp = (client.proposals || []).reverse().find(p =>
+    const stalledProp = (client.proposals || []).slice().reverse().find(p =>
       p.result === '提案中' || p.result === '検討中'
     );
+    const lastSuccessProp = (client.proposals || []).slice().reverse().find(p => p.result === '成約');
 
-    // インテント判定
-    let intent = '定期フォロー', reason = '', body = '';
+    // 直近キャンセル
+    const lastCancel = (client.cancellations || []).slice().sort((a, b) =>
+      new Date(b.date) - new Date(a.date)
+    )[0];
+    const recentCancelDays = lastCancel ? daysSince(lastCancel.date) : 9999;
+    const recentCancel = recentCancelDays < 30 ? lastCancel : null;
 
-    if (dsl >= 365) {
-      intent = '1年以上未接触フォロー';
-      reason = `最終接触 ${dsl}日前`;
+    // 直近 LINE メッセージ
+    const lastIncoming = (client.lineHistory || []).slice().reverse().find(m => m.direction === 'in');
+    const lastIncomingDays = lastIncoming ? daysSince((lastIncoming.ts || '').slice(0, 10)) : 9999;
+
+    // 家族構成
+    const children = (client.family || []).filter(m => m.rel === 'child');
+    const spouse = (client.family || []).find(m => m.rel === 'spouse');
+
+    // 保有商品ギャップ
+    const owns = (client.products || []).map(p => p.toLowerCase());
+    const hasNisa = owns.some(p => p.includes('nisa'));
+    const hasIdeco = owns.some(p => p.includes('ideco') || p.includes('idecoまた'));
+
+    // === インテント判定 (優先度順) ===
+    let intent = '定期フォロー', reason = '', situation = '';
+
+    if (recentCancel) {
+      intent = 'キャンセル後の再アプローチ';
+      reason = `${recentCancelDays}日前にキャンセル (理由: ${recentCancel.reason || '不明'})`;
+      situation = `直前のキャンセル理由「${recentCancel.reason || '理由なし'}」を踏まえ、お客様の負担にならない柔らかい再提案`;
     } else if (stalledProp) {
-      intent = '提案フォローアップ';
-      reason = `${stalledProp.title} が ${stalledProp.result}のまま`;
-    } else if (nearby.length > 0) {
-      intent = 'ライフイベント先取り';
-      reason = `${nearby[0].who} : ${nearby[0].label}`;
+      const stalledDays = daysSince(stalledProp.date);
+      intent = `${stalledProp.title} のフォローアップ`;
+      reason = `${stalledDays}日前提案 / ${stalledProp.result}のまま`;
+      situation = `${stalledDays}日前にご提案した「${stalledProp.title}」がまだ${stalledProp.result}。今のタイミングで決断材料を追加して提示`;
+    } else if (nearestEv) {
+      const evDate = nearestEv.date;
+      const daysAway = Math.round((evDate - TODAY) / 86400000);
+      const monthsAway = Math.round(daysAway / 30);
+      intent = `${nearestEv.label} の事前準備提案`;
+      reason = `${monthsAway}ヶ月後に「${nearestEv.label}」(${nearestEv.who})`;
+      situation = `${nearestEv.who}様の「${nearestEv.label}」が${monthsAway}ヶ月後。今が準備のラストチャンス`;
+    } else if (dsl >= 365) {
+      intent = '1年以上未接触の近況伺い';
+      reason = `最終接触 ${dsl}日前`;
+      situation = `1年以上接触なし。ライフ状況に変化があったか伺いつつ再エンゲージ`;
     } else if (topRec) {
       intent = topRec.action;
       reason = topRec.reason;
+      situation = topRec.reason;
     } else {
       intent = '定期フォロー';
       reason = `最終接触 ${dsl}日前`;
+      situation = `特段の緊急事項なし。関係維持のための軽い連絡`;
     }
 
-    // 3トーンのバリエーション
-    const tones = [
-      // トーン0: 標準・丁寧
-      () => {
-        let b = `${name}様\n\nご無沙汰しております、ファイナンシャルプランナーの福田です。\n\n`;
-        if (stalledProp) {
-          b += `先日ご提案させていただいた「${stalledProp.title}」の件、その後ご検討状況はいかがでしょうか。\n\nご質問やご懸念があれば、お気軽にお聞かせください。`;
-        } else if (nearby.length > 0) {
-          b += `${nearby[0].who}様の「${nearby[0].label}」が近づいてきました。\n\n資金準備や手続きについて、お話しできる機会があればと思い、ご連絡しました。お時間ある時にこのトークで返信いただけると嬉しいです。`;
-        } else if (dsl >= 365) {
-          b += `お変わりなくお過ごしでしょうか。\n\n前回お会いしてから少し時間が経ちましたので、ご家族の近況やお考えの変化など、近況伺いだけでもさせていただけたらと思います。`;
+    // === 提案内容の組み立て (具体的) ===
+    function buildProposals() {
+      const props = [];
+      if (recentCancel) {
+        if (recentCancel.reason && recentCancel.reason.includes('日程')) {
+          props.push('改めて別日候補を3つご提案 (時間帯も柔軟に)');
+        } else if (recentCancel.reason && recentCancel.reason.includes('忙し')) {
+          props.push('ご都合つく時期を伺うだけのライト連絡');
         } else {
-          b += `最近のご様子はいかがですか。\n\nお時間ある時に、ライフプランの定期見直しをご一緒できればと思っております。`;
+          props.push('内容を整理した1ページ資料を先にお送り → ご都合つく時に面談');
         }
-        b += `\n\nどうぞよろしくお願いいたします。`;
+      } else if (stalledProp) {
+        props.push(`「${stalledProp.title}」の最新シミュレーション (前回からの市況変化を反映)`);
+        if (lastSuccessProp) {
+          props.push(`過去にご成約いただいた「${lastSuccessProp.title}」との組み合わせ最適化`);
+        }
+        props.push('15分のお電話 or Zoom で疑問点を即解消');
+      } else if (nearestEv) {
+        if (/教育|大学|入学/.test(nearestEv.label)) {
+          const childName = (children[0] && children[0].name) || `${nearestEv.who}`;
+          props.push(`${childName}様の教育資金、現状残額と必要額のギャップ計算`);
+          if (!hasNisa) props.push('NISA未活用なら、教育資金枠としての活用案');
+          props.push('奨学金との比較表 (学資保険 vs 投資信託 vs 奨学金)');
+        } else if (/退職|年金/.test(nearestEv.label)) {
+          props.push(`退職金の受取方法 (一時金 vs 年金) — 税制シミュレーション`);
+          if (!hasIdeco) props.push('iDeCo の出口戦略 (受給開始タイミング)');
+          props.push('公的年金の繰下げ判定 (繰下げで+0.7%/月)');
+        } else if (/相続/.test(nearestEv.label)) {
+          props.push('基礎控除と相続税シミュレーション (家族構成ベース)');
+          props.push('生前贈与の年110万円枠の活用案');
+        } else if (/住宅|ローン/.test(nearestEv.label)) {
+          props.push('繰上返済 vs 投資の比較 (金利と期待リターン)');
+          props.push('団信見直し (収入保障保険との重複チェック)');
+        } else {
+          props.push(`「${nearestEv.label}」に向けた資金準備プラン (3案)`);
+        }
+      } else if (dsl >= 365) {
+        props.push('ライフプランの定期見直し (年1回が理想)');
+        props.push('家計の現状チェックシート (5分で完了)');
+        if (!hasNisa || !hasIdeco) {
+          props.push('NISA・iDeCo の最新枠拡充に対応した配分見直し');
+        }
+      } else {
+        props.push('資産配分の年次レビュー');
+        props.push(`${age}歳のライフステージに合った新しい商品/制度のご紹介`);
+      }
+      return props.slice(0, 3);
+    }
+
+    const proposals = buildProposals();
+
+    // === トーン別 本文生成 ===
+    const tones = [
+      // トーン0: 標準・丁寧 — 具体提案つき
+      () => {
+        let b = `${lastName}様\n\nご無沙汰しております、ファイナンシャルプランナーの福田です。\n\n`;
+
+        // 状況把握の一文
+        if (recentCancel) {
+          b += `先日はご予約のキャンセルご連絡ありがとうございました。\nまたお時間つけば、ぜひ改めてご一緒できればと思っております。\n\n`;
+        } else if (stalledProp) {
+          b += `先日ご提案させていただいた「${stalledProp.title}」の件、その後ご検討状況はいかがでしょうか。\n\n`;
+        } else if (nearestEv) {
+          const monthsAway = Math.round((nearestEv.date - TODAY) / 86400000 / 30);
+          b += `${nearestEv.who}様の「${nearestEv.label}」まで${monthsAway}ヶ月となりました。\nこのタイミングで、いくつかご一緒に確認できればと思いご連絡しました。\n\n`;
+        } else if (dsl >= 365) {
+          b += `お変わりなくお過ごしでしょうか。\n前回ご相談から${Math.round(dsl/30)}ヶ月が経ち、ご家族や家計の状況に変化があるかもしれませんね。\n\n`;
+        } else if (lastIncoming && lastIncomingDays < 14) {
+          b += `先日はメッセージありがとうございました。\n${lastName}様の現状を踏まえて、改めて整理してみました。\n\n`;
+        } else {
+          b += `最近のご様子はいかがですか。\n\n`;
+        }
+
+        // 提案リスト
+        if (proposals.length > 0) {
+          b += `今、${lastName}様にお話しできそうな内容を整理しました:\n\n`;
+          proposals.forEach((p, i) => { b += `${i + 1}. ${p}\n`; });
+          b += `\n上記いずれかでも、ご興味ある内容があればお気軽にご返信ください。`;
+        }
+
+        b += `\n\nどうぞよろしくお願いいたします。\n— 福田`;
         return b;
       },
+
       // トーン1: カジュアル親しみ
       () => {
-        let b = `${name}様、こんにちは!福田です🌸\n\n`;
-        if (stalledProp) {
-          b += `先日お話しした「${stalledProp.title}」、その後どうですか?\n\n「ここちょっと気になる」「もう少し詳しく聞きたい」などあれば、お気軽にどうぞ✨`;
-        } else if (nearby.length > 0) {
-          b += `${nearby[0].who}様の${nearby[0].label}が近づいていますね😊\n\n資金面の準備で気になることがあればお気軽に。\n少しでも安心して迎えられるようサポートします!`;
+        let b = `${lastName}様、こんにちは!福田です😊\n\n`;
+
+        if (recentCancel) {
+          b += `先日のご都合つかなくて残念でした。\nまた良いタイミングがあればぜひ✨\n\n`;
+        } else if (stalledProp) {
+          b += `先日お話しした「${stalledProp.title}」、その後どうですか?\n気になる点があればお気軽に💬\n\n`;
+        } else if (nearestEv) {
+          b += `${nearestEv.who}様の${nearestEv.label}、いよいよ近づいてきましたね!\n\n`;
         } else if (dsl >= 365) {
-          b += `お久しぶりです!ご家族みなさんお元気ですか?\n\n久しぶりに近況伺えると嬉しいです。お時間ある時にスタンプ1つでも☺️`;
+          b += `お久しぶりです!ご家族みなさん元気にしていますか?\n\n`;
         } else {
-          b += `お元気ですか?\n\n季節の変わり目、家計やプランで気になることがあればお気軽にメッセージください!`;
+          b += `お元気ですか?\n\n`;
+        }
+
+        if (proposals.length > 0) {
+          b += `こんなトピックでお話できそうです:\n`;
+          proposals.forEach(p => { b += `・ ${p}\n`; });
+          b += `\n「これ気になる」があればスタンプ1つでもOKです👌`;
         }
         return b;
       },
-      // トーン2: 提案型・前向き
+
+      // トーン2: 提案型・具体アクション
       () => {
-        let b = `${name}様\n\n福田です。${name}様の状況を改めて整理していまして、ご提案したいことが出てきましたのでご連絡しました。\n\n`;
-        if (stalledProp) {
-          b += `①「${stalledProp.title}」 — 現在の市況だと、もう一段早めに決断するメリットが出てきています。\n② 関連で、税制改正の影響も併せてご説明できればと思います。\n\n15分のお電話か、Zoomで再度お時間いただけますか?`;
-        } else if (nearby.length > 0) {
-          b += `①「${nearby[0].label}」を見据えた資金準備プラン (3案)\n② 公的制度・税制を最大限活かす方法\n\nどちらか30分でも、お時間調整できればと思います。来週以降のご都合いかがでしょう?`;
-        } else if (dsl >= 365) {
-          b += `① ライフプランの定期見直し (年1回が理想)\n② 最新の税制改正・NISA枠の拡充への対応\n\n短時間で構いませんので、近況伺いも兼ねて1度お時間ください。`;
-        } else {
-          b += `① 直近の資産配分レビュー\n② ${name}様に合う新しい商品/制度のご紹介\n\nお気軽にこのトークか面談予約からどうぞ。`;
-        }
+        let b = `${lastName}様\n\n福田です。\n${situation}と考え、ご連絡しました。\n\n`;
+
+        b += `【ご提案 ${proposals.length}つ】\n`;
+        proposals.forEach((p, i) => { b += `${i + 1}. ${p}\n`; });
+
+        b += `\n所要 15〜30分のZoomで上記すべてカバーできます。\n下記の候補日でご都合いかがでしょうか?\n\n(本メッセージの後に候補日3つお送りします)`;
         return b;
       },
     ];
-    body = tones[toneIndex % 3]();
-    return { intent, reason, body };
+
+    const body = tones[toneIndex % 3]();
+    return { intent, reason, body, situation, proposals };
   }
 
   function closeModal() {
