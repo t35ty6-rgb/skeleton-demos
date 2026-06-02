@@ -603,21 +603,35 @@
       target.innerHTML = '<div style="background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--muted);font-size:13px;">候補日確定待ちのお客様はいません。<br><span style="font-size:11.5px;">LINEからアンケート + 候補日3つに回答するとここに並びます。</span></div>';
       return;
     }
+    // user lookup (avatar + displayName)
+    const usersByUid = {};
+    ((liveData && liveData.users) || []).forEach(u => { if (u.userId) usersByUid[u.userId] = u; });
     target.innerHTML = pending.map(s => {
       const slots = [s.q6_候補1, s.q7_候補2, s.q8_候補3].filter(x => x);
       const uidShort = (s.userId || '').slice(0, 12);
       // ts を JST に変換
       const tsJst = s.ts ? new Date(s.ts).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
-      const displayName = (s.name && String(s.name).trim()) || ((s.q1_テーマ && s.q1_テーマ.trim()) ? s.q1_テーマ + 'のお客様' : '相談者');
+      const u = usersByUid[s.userId] || {};
+      const displayName = (s.name && String(s.name).trim())
+        || (u.displayName && String(u.displayName).trim())
+        || ((s.q1_テーマ && s.q1_テーマ.trim()) ? s.q1_テーマ + 'のお客様' : '相談者');
+      const initial = (displayName || '?').replace(/\s+/g, '').slice(0, 1);
+      const avatarHtml = u.pictureUrl
+        ? `<img src="${escapeHtml(u.pictureUrl)}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.12);">`
+        : `<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.12);">${escapeHtml(initial)}</div>`;
       return `
         <div data-pending-card data-uid="${escapeHtml(s.userId || '')}" style="background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;padding:18px 22px;margin-bottom:10px;box-shadow:var(--shadow-xs);">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px;">
-            <div>
-              <strong style="font-size:16px;">${escapeHtml(displayName)}</strong>
-              <span style="font-size:12px;color:var(--gold);margin-left:12px;font-weight:700;">📅 ${escapeHtml(tsJst)} 回答</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+              ${avatarHtml}
+              <div style="min-width:0;">
+                <div><strong style="font-size:16px;">${escapeHtml(displayName)} 様</strong></div>
+                <div style="font-size:11.5px;color:var(--gold);font-weight:700;margin-top:2px;">📅 ${escapeHtml(tsJst)} 回答</div>
+              </div>
             </div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <button data-focus-cal="${escapeHtml(s.userId || '')}" style="font-size:11.5px;font-weight:700;padding:6px 12px;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:6px;cursor:pointer;font-family:inherit;">📅 この方を見る</button>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+              <button data-focus-cal="${escapeHtml(s.userId || '')}" data-name="${escapeHtml(displayName)}" style="font-size:11.5px;font-weight:700;padding:6px 12px;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:6px;cursor:pointer;font-family:inherit;">📅 この方を見る</button>
+              <button data-reschedule="${escapeHtml(s.userId || '')}" data-name="${escapeHtml(displayName)}" title="3つとも合わない時 → 改めて候補日を依頼" style="font-size:11.5px;font-weight:700;padding:6px 12px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:6px;cursor:pointer;font-family:inherit;">✕ 別日再調整</button>
               <span class="status-pill important">確定待ち</span>
             </div>
           </div>
@@ -653,6 +667,46 @@
           toggleCalendarSidePanel();
         } else if (window.fpFocusCustomerInCalendar) {
           window.fpFocusCustomerInCalendar(uid);
+        }
+      });
+    });
+    // 「✕ 別日再調整」ボタン → 候補日3つとも合わない時の依頼 LINE 送信
+    target.querySelectorAll('[data-reschedule]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const uid = btn.dataset.reschedule;
+        const name = btn.dataset.name || 'お客';
+        const note = prompt(`${name} 様 に「3つの候補日とも合わなかったので別日でお願いします」 LINE を送ります。\n\n FP からのひとこと (任意。空でも OK):\n例: 「来週でしたら空きが多いです」「土日でも可能です」など`, '');
+        if (note === null) return; // cancel
+        if (!confirm(`${name} 様 に再調整依頼の LINE を送信します。\n\n• 候補日 (お客様が選んだ3つ) は無効化\n• 別フォームのリンクで再度3つ選んでもらう\n\n送信しますか?`)) return;
+        btn.disabled = true;
+        const origText = btn.textContent;
+        btn.textContent = '送信中…';
+        try {
+          const r = await fetch(CLOUD_RUN_BASE + '/api/request-reschedule', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: uid, name: name, fpMessage: note || '' }),
+          });
+          const data = await r.json();
+          if (data.ok) {
+            const t = document.createElement('div');
+            t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #f59e0b;border-radius:12px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10003;font-family:inherit;';
+            t.innerHTML = `<strong style="font-size:14px;">↩ 再調整依頼を送信</strong><br><span style="font-size:12px;color:#6b7280;">${escapeHtml(name)} 様 に LINE で別日候補を依頼しました</span>`;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 6000);
+            await fetchLiveData();
+            renderLeadHubInner();
+            if (window.fpFocusCustomerInCalendar) window.fpFocusCustomerInCalendar(null);
+          } else {
+            alert('失敗: ' + (data.error || '不明'));
+            btn.textContent = origText;
+            btn.disabled = false;
+          }
+        } catch (e) {
+          alert('失敗: ' + e.message);
+          btn.textContent = origText;
+          btn.disabled = false;
         }
       });
     });
@@ -1581,6 +1635,8 @@
     panel.style.cssText = `position:fixed;top:0;right:0;bottom:0;width:${width}px;z-index:9997;background:#fff;border-left:1px solid #e5e7eb;box-shadow:-4px 0 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;`;
     // 確定待ちを顧客単位でグルーピング (1人ずつ集中モード)
     function buildPendingByCustomer() {
+      const usersByUid = {};
+      ((liveData && liveData.users) || []).forEach(u => { if (u.userId) usersByUid[u.userId] = u; });
       const pendingSurveys = ((liveData && liveData.survey_answers) || []).filter(s => !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3));
       return pendingSurveys.map(s => {
         const candidates = [s.q6_候補1, s.q7_候補2, s.q8_候補3].map((slot, idx) => {
@@ -1590,9 +1646,13 @@
           return { dateStr: parsed.dateStr, slotStr: parsed.slotStr, rank: idx + 1 };
         }).filter(Boolean);
         const userIdShort = (s.userId || '').slice(0, 8);
+        const u = usersByUid[s.userId] || {};
         return {
           userId: s.userId,
-          customerName: (s.name && String(s.name).trim()) || ((s.q1_テーマ && s.q1_テーマ.trim()) ? s.q1_テーマ + 'のお客様' : 'お客様 ' + userIdShort),
+          customerName: (s.name && String(s.name).trim())
+            || (u.displayName && String(u.displayName).trim())
+            || ((s.q1_テーマ && s.q1_テーマ.trim()) ? s.q1_テーマ + 'のお客様' : 'お客様 ' + userIdShort),
+          pictureUrl: u.pictureUrl || '',
           age: s.q1_年代 || s.q2_年代 || '',
           family: s.q3_家族 || '',
           income: s.q4_年収 || '',
@@ -1657,18 +1717,28 @@
       const cur = pendingByCustomer[currentIdx];
       window._fpCalFocusUid = cur.userId;
       const meta = [cur.age, cur.family, cur.income].filter(Boolean).join(' / ') || '—';
+      const initial = (cur.customerName || '?').replace(/\s+/g, '').slice(0, 1);
+      const avatarHtml = cur.pictureUrl
+        ? `<img src="${escapeHtml(cur.pictureUrl)}" alt="" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.15);">`
+        : `<div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.15);">${escapeHtml(initial)}</div>`;
       section.innerHTML = `
         <div style="padding:12px 14px;background:linear-gradient(135deg,#eef2ff,#fafaff);border-bottom:1px solid #c7d2fe;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
             <button id="fp-cal-prev" ${currentIdx === 0 ? 'disabled' : ''} style="padding:6px 10px;background:#fff;border:1px solid #c7d2fe;border-radius:6px;cursor:${currentIdx === 0 ? 'not-allowed' : 'pointer'};font-family:inherit;font-size:12px;font-weight:700;color:${currentIdx === 0 ? '#cbd5e1' : '#3730a3'};">← 前</button>
-            <div style="flex:1;text-align:center;">
-              <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:#6366f1;text-transform:uppercase;">確定待ち ${currentIdx + 1} / ${pendingByCustomer.length} 人目</div>
-              <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-top:2px;">${escapeHtml(cur.customerName)} 様</div>
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:10px;min-width:0;">
+              ${avatarHtml}
+              <div style="text-align:left;min-width:0;">
+                <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:#6366f1;text-transform:uppercase;">確定待ち ${currentIdx + 1} / ${pendingByCustomer.length} 人目</div>
+                <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(cur.customerName)} 様</div>
+              </div>
             </div>
             <button id="fp-cal-next" ${currentIdx >= pendingByCustomer.length - 1 ? 'disabled' : ''} style="padding:6px 10px;background:#fff;border:1px solid #c7d2fe;border-radius:6px;cursor:${currentIdx >= pendingByCustomer.length - 1 ? 'not-allowed' : 'pointer'};font-family:inherit;font-size:12px;font-weight:700;color:${currentIdx >= pendingByCustomer.length - 1 ? '#cbd5e1' : '#3730a3'};">次 →</button>
           </div>
           <div style="font-size:11px;color:#4b5563;line-height:1.5;">${escapeHtml(meta)}${cur.theme ? ' / テーマ: ' + escapeHtml(cur.theme) : ''}</div>
           ${cur.worry ? `<div style="margin-top:6px;padding:6px 9px;background:#fffbf2;border:1px solid #fde68a;border-radius:6px;font-size:11px;color:#5e4d1a;line-height:1.5;">💭 ${escapeHtml(cur.worry)}</div>` : ''}
+          <div style="margin-top:8px;text-align:right;">
+            <button id="fp-cal-reschedule" title="候補日3つとも合わない時 → 改めて候補日を依頼" style="font-size:10.5px;font-weight:700;padding:5px 10px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:6px;cursor:pointer;font-family:inherit;">✕ 3つとも合わない → 再調整依頼</button>
+          </div>
         </div>
         <div style="padding:10px 12px;background:#fef2f2;border-bottom:2px solid #fca5a5;">
           <div style="font-size:10.5px;color:#7f1d1d;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px;">🎯 この方の希望日 (タップでカレンダー移動 → ✓で確定)</div>
@@ -1691,6 +1761,49 @@
       const nextBtn = document.getElementById('fp-cal-next');
       if (prevBtn) prevBtn.addEventListener('click', () => { if (currentIdx > 0) { currentIdx--; renderFocusSection(); jumpIframeTo(cur); } });
       if (nextBtn) nextBtn.addEventListener('click', () => { if (currentIdx < pendingByCustomer.length - 1) { currentIdx++; renderFocusSection(); jumpIframeTo(pendingByCustomer[currentIdx]); } });
+      const reBtn = document.getElementById('fp-cal-reschedule');
+      if (reBtn) reBtn.addEventListener('click', async () => {
+        const note = prompt(`${cur.customerName} 様 に「3つの候補日とも合わなかったので別日でお願いします」 LINE を送ります。\n\n FP からのひとこと (任意。空でも OK):\n例: 「来週でしたら空きが多いです」「土日でも可能です」など`, '');
+        if (note === null) return;
+        if (!confirm(`${cur.customerName} 様 に再調整依頼の LINE を送信します。\n\n• 候補日 (お客様が選んだ3つ) は無効化\n• 別フォームのリンクで再度3つ選んでもらう\n\n送信しますか?`)) return;
+        reBtn.disabled = true;
+        reBtn.textContent = '送信中…';
+        const isDemo = cur.userId && cur.userId.indexOf('Udemo') === 0;
+        try {
+          if (isDemo) {
+            await new Promise(r => setTimeout(r, 800));
+            alert('[デモモード] 再調整依頼を送信 (本番では LINE 送信)');
+            return;
+          }
+          const r = await fetch(CLOUD_RUN_BASE + '/api/request-reschedule', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: cur.userId, name: cur.customerName, fpMessage: note || '' }),
+          });
+          const data = await r.json();
+          if (data.ok) {
+            const t = document.createElement('div');
+            t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #f59e0b;border-radius:12px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10003;font-family:inherit;';
+            t.innerHTML = `<strong style="font-size:14px;">↩ ${escapeHtml(cur.customerName)} 様 再調整依頼を送信</strong><br><span style="font-size:12px;color:#6b7280;">LINE で別日候補を依頼しました</span>`;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 6000);
+            await fetchLiveData();
+            pendingByCustomer = buildPendingByCustomer();
+            window._fpCalFocusUid = (pendingByCustomer[currentIdx] && pendingByCustomer[currentIdx].userId) || null;
+            renderFocusSection();
+            if (pendingByCustomer[currentIdx]) jumpIframeTo(pendingByCustomer[currentIdx]);
+            renderLeadHubInner();
+          } else {
+            alert('失敗: ' + (data.error || '不明'));
+            reBtn.textContent = '✕ 3つとも合わない → 再調整依頼';
+            reBtn.disabled = false;
+          }
+        } catch (e) {
+          alert('失敗: ' + e.message);
+          reBtn.textContent = '✕ 3つとも合わない → 再調整依頼';
+          reBtn.disabled = false;
+        }
+      });
       bindCandidateRows();
     }
     function jumpIframeTo(customer) {
