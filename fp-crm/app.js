@@ -1017,33 +1017,59 @@
     ensureLineHistory_(c);
     console.log('[client modal]', c.id, c.name, 'lineHistory:', (c.lineHistory || []).length, 'DUMMY_CLIENTS_VERSION:', window.DUMMY_CLIENTS_VERSION || '(missing)');
     let events = window.LifeEvents.generate(c);
-    // 面談AI議事録をタイムラインに追加 (key_concerns + summary 要約)
+    // 面談AI議事録をタイムラインに追加 (localStorage + GAS 両方)
     try {
       const liveBks = (window.LineAppLiveData && window.LineAppLiveData.bookings) || [];
       const myBks = liveBks.filter(b => b.userId === c.lineFriendId || b.name === c.name);
       const aiKeys = new Set();
       if (c.lineFriendId) aiKeys.add('fp-ai-' + c.lineFriendId);
       if (c.id)           aiKeys.add('fp-ai-' + c.id);
-      myBks.forEach(b => { if (b.userId) aiKeys.add('fp-ai-' + b.userId); if (b.ts) aiKeys.add('fp-ai-' + b.ts); });
+      if (c.name)         aiKeys.add('fp-ai-' + c.name);
+      myBks.forEach(b => { if (b.userId) aiKeys.add('fp-ai-' + b.userId); if (b.ts) aiKeys.add('fp-ai-' + b.ts); if (b.name) aiKeys.add('fp-ai-' + b.name); });
       const meetingEvents = [];
+      const collectFromEntry = (a) => {
+        if (!a || (!a.summary && !a.key_concerns && !(typeof a.key_concerns === 'string'))) return;
+        let dateStr = a.date || String(a.bookingTs || '').slice(0, 10);
+        if (!dateStr && a.createdAt) dateStr = String(a.createdAt).slice(0, 10);
+        if (!dateStr && a.ts) dateStr = String(a.ts).slice(0, 10);
+        if (!dateStr) dateStr = new Date().toISOString().slice(0, 10);
+        let kc = a.key_concerns;
+        if (typeof kc === 'string') { try { kc = JSON.parse(kc); } catch (_) { kc = []; } }
+        const concerns = (kc || []).slice(0, 3).join(' / ');
+        const label = '面談実施' + (concerns ? ' — ' + concerns : '');
+        meetingEvents.push({
+          date: new Date(dateStr),
+          kind: 'meeting',
+          cat: 'meeting',
+          label,
+          title: '面談',
+          major: true,
+        });
+      };
+      // 1) localStorage 全 fp-ai-* から徳佐拓朗系を吸う
       aiKeys.forEach(k => {
+        try { JSON.parse(localStorage.getItem(k) || '[]').forEach(collectFromEntry); } catch (_) {}
+      });
+      // さらに 全 fp-ai-* キー走査 + 汎用 fallback
+      const allLsKeys = Object.keys(localStorage).filter(k => k.startsWith('fp-ai-'));
+      allLsKeys.forEach(k => {
+        if (aiKeys.has(k)) return;
         try {
-          const arr = JSON.parse(localStorage.getItem(k) || '[]');
-          arr.forEach(a => {
-            if (!a || (!a.summary && !a.key_concerns)) return;
-            const dateStr = a.date || String(a.bookingTs || '').slice(0, 10) || new Date(a.createdAt).toISOString().slice(0, 10);
-            const concerns = (a.key_concerns || []).slice(0, 3).join(' / ');
-            const label = '面談実施' + (concerns ? ' — ' + concerns : '');
-            meetingEvents.push({
-              date: new Date(dateStr),
-              kind: 'meeting',
-              cat: 'meeting',
-              label,
-              title: '面談',
-              major: true,
-            });
+          JSON.parse(localStorage.getItem(k) || '[]').forEach(a => {
+            const ownMatch = (a.userId === c.lineFriendId) || (a.customerName === c.name);
+            const generic  = ((!a.customerName || a.customerName === 'お客様') && c.lineFriendId);
+            if (ownMatch || generic) collectFromEntry(a);
           });
         } catch (_) {}
+      });
+      // 2) GAS 永続化シート ai_results からも吸う
+      const liveAi = (window.LineAppLiveData && window.LineAppLiveData.ai_results) || [];
+      liveAi.forEach(r => {
+        const match = (r.userId && r.userId === c.lineFriendId) ||
+                      (r.customerName && r.customerName === c.name) ||
+                      myBks.some(b => b.ts === r.bookingTs || b.userId === r.userId) ||
+                      ((!r.customerName || r.customerName === 'お客様') && c.lineFriendId);
+        if (match) collectFromEntry(r);
       });
       // 同 date 重複除去
       const seenDate = new Set();
@@ -1707,11 +1733,18 @@
       // key_concerns は文字列で来てるので JSON.parse
       let kc = r.key_concerns;
       if (typeof kc === 'string') { try { kc = JSON.parse(kc); } catch (_) { kc = []; } }
+      // bookingTs 空なら myBookings の最新 ts で補完 (orphan filter を通すため)
+      let bookingTs = r.bookingTs;
+      if (!bookingTs && myBookings.length > 0) {
+        const latest = myBookings.slice().sort((a,b) => String(b.ts).localeCompare(String(a.ts)))[0];
+        bookingTs = (latest && latest.ts) || ('gas-' + (r.ts || r.createdAt || Date.now()));
+      }
+      if (!bookingTs) bookingTs = 'gas-' + (r.ts || r.createdAt || Date.now());
       aiResults.push({
-        bookingTs: r.bookingTs,
-        userId: r.userId,
-        customerName: r.customerName,
-        date: r.date,
+        bookingTs,
+        userId: r.userId || client.lineFriendId,
+        customerName: r.customerName || client.name,
+        date: r.date || (r.ts || '').slice(0,10),
         transcript: r.transcript || '',
         summary: r.summary || '',
         transcript_summary: r.transcript_summary || '',
@@ -1804,7 +1837,8 @@
         ${(() => {
           // bookings に紐付かない AI 議事録 (録画 ts が一致しない、別経路で保存された分) を 別ブロックで表示
           const usedTs = new Set(bookingsWithMemo.map(b => b.ts));
-          const orphan = aiResults.filter(a => a.bookingTs && !usedTs.has(a.bookingTs) && (a.summary || a.transcript || (a.key_concerns||[]).length));
+          // bookingTs 空でも summary/transcript/key_concerns があれば表示する
+          const orphan = aiResults.filter(a => !usedTs.has(a.bookingTs) && (a.summary || a.transcript || (a.key_concerns||[]).length));
           if (orphan.length === 0) return '';
           return '<div style="display:grid;gap:14px;margin-bottom:18px;">' +
             orphan.slice().reverse().map(a => `
