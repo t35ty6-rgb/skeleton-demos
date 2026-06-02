@@ -799,6 +799,10 @@
       const tasksKey = 'fp-tasks-' + (b.userId || tsEnc);
       const savedTasksCount = (JSON.parse(localStorage.getItem(tasksKey) || '[]')).length;
       let cta = '';
+      // キャンセルボタン (録画前のみ表示。録画開始したら出さない)
+      const cancelBtnHtml = (rec !== 'recording' && rec !== 'saved')
+        ? `<button class="btn-mini fp-cancel-booking" data-cancel-ts="${tsEnc}" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;font-weight:700;">✕ キャンセル</button>`
+        : '';
       if (rec === 'recording') {
         cta = `<button class="btn-rec-stop" data-rec-stop="${tsEnc}">■ 録画停止</button>
                <a class="btn-mini" href="${zUrl}" target="_blank">Zoomを開く</a>`;
@@ -808,7 +812,10 @@
       } else if (zUrl) {
         cta = `<button class="btn-rec-start" data-rec-start="${tsEnc}" data-zoom="${zUrl}">● 録画ONでZoom開始</button>
                <button class="btn-mini" data-open-memo="${tsEnc}" style="background:#f8fafc;border:1px solid #e5e7eb;color:#374151;">📝 メモ${savedTasksCount > 0 ? ' ('+savedTasksCount+'件)' : ''}</button>
-               <button class="btn-mini" data-complete-booking="${tsEnc}" style="background:var(--line-green-soft,#dcfce7);color:#166534;border:1px solid #86efac;font-weight:700;">✓ 完了</button>`;
+               <button class="btn-mini" data-complete-booking="${tsEnc}" style="background:var(--line-green-soft,#dcfce7);color:#166534;border:1px solid #86efac;font-weight:700;">✓ 完了</button>
+               ${cancelBtnHtml}`;
+      } else {
+        cta = cancelBtnHtml;
       }
       const recPill = rec === 'recording' ? '<span class="rec-pill recording">● 録画中</span>'
         : rec === 'saved' ? '<span class="rec-pill saved">📼 録画保存済</span>' : '';
@@ -1026,6 +1033,165 @@
     });
   }
 
+  // ===== LINE 友だち追加プロンプト (userId が無いお客様向け) =====
+  // フェムーン (FEMOON) 解法と同じ: 友だち追加URLに ?ref=clientId を埋めて
+  // ボットの handleFollow で受け取り → ref と userId を自動紐付ける流れ
+  function showFriendAddPrompt(customerName, clientId) {
+    const existing = document.getElementById('fp-friend-add-prompt');
+    if (existing) existing.remove();
+    const botId = '@511thleq'; // FP Compass デモ bot
+    const addUrl = `https://line.me/R/ti/p/${encodeURIComponent(botId)}` + (clientId ? `?ref=${encodeURIComponent(clientId)}` : '');
+    const overlay = document.createElement('div');
+    overlay.id = 'fp-friend-add-prompt';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);z-index:10010;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff;width:min(540px,100%);border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,0.35);overflow:hidden;font-family:inherit;">
+        <div style="padding:18px 22px;background:linear-gradient(135deg,#fef9c3,#fffbeb);border-bottom:1px solid #fde68a;display:flex;justify-content:space-between;align-items:baseline;">
+          <strong style="font-size:15px;color:#78350f;">⚠ ${escapeHtml(customerName || 'この方')} は LINE 友だち追加がまだです</strong>
+          <button id="fp-friend-add-close" style="background:#fff;border:1px solid #fde68a;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;color:#78350f;">✕</button>
+        </div>
+        <div style="padding:20px 22px;font-size:13px;line-height:1.75;color:#374151;">
+          <p style="margin:0 0 14px;">LINE Messaging API はお客様が <strong>こちらの公式LINEを友だち追加した時点で userId が発行される仕組み</strong> です。まだ追加していないため、こちらから直接送信できません。</p>
+          <p style="margin:0 0 14px;">下のリンクを SMS / メール / 名刺 QR などで送ってください。お客様が追加した瞬間、CRM に <strong>自動で userId が紐付き</strong>、こちらから LINE 送信できるようになります。</p>
+          <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px;margin:14px 0;">
+            <div style="font-size:10.5px;font-weight:700;color:#166534;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">友だち追加リンク (${escapeHtml(customerName || '匿名')} 様 専用)</div>
+            <code id="fp-friend-add-url" style="display:block;font-size:11.5px;color:#0f172a;background:#fff;border:1px solid #d1d5db;padding:10px 12px;border-radius:6px;word-break:break-all;font-family:Menlo,monospace;">${escapeHtml(addUrl)}</code>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button id="fp-friend-add-copy" style="flex:1;padding:9px;background:#06c755;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📋 URL をコピー</button>
+              <button id="fp-friend-add-open" style="flex:1;padding:9px;background:#fff;color:#0f172a;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">↗ 新タブで開く</button>
+            </div>
+          </div>
+          <p style="margin:0;font-size:11.5px;color:#6b7280;">※ ?ref=${escapeHtml(clientId || 'なし')} が末尾に付いてます。お客様が追加した時に この CRM の顧客カードと自動で紐付き、displayName と pictureUrl も自動取得されます。</p>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    document.getElementById('fp-friend-add-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.getElementById('fp-friend-add-copy').addEventListener('click', () => {
+      navigator.clipboard.writeText(addUrl);
+      const b = document.getElementById('fp-friend-add-copy');
+      b.textContent = '✓ コピー済';
+      setTimeout(() => { b.textContent = '📋 URL をコピー'; }, 2000);
+    });
+    document.getElementById('fp-friend-add-open').addEventListener('click', () => {
+      window.open(addUrl, '_blank', 'noopener');
+    });
+  }
+
+  // ===== Zoom 予約 キャンセル: テンプレ複数から選んで LINE 送信 =====
+  function showCancelTemplatePicker(booking) {
+    const existing = document.getElementById('fp-cancel-picker');
+    if (existing) existing.remove();
+    const name = (booking && booking.name) || 'お客';
+    const dateStr = String((booking && booking.date) || '').slice(0, 10);
+    const timeStr = String((booking && booking.time) || '').slice(0, 5);
+    const dateLabel = (dateStr ? dateStr.slice(5).replace('-', '/') : '') + ' ' + timeStr;
+    const templates = [
+      {
+        id: 'fp-emergency',
+        label: 'FP都合・急用で変更',
+        body: `${name}様\n\n大変申し訳ございません。${dateLabel} に予定しておりました面談ですが、FP側 急な用件が入りまして日程変更をお願いせざるを得ない状況です。\n\nご迷惑をおかけしますが、改めて候補日を3つお送りいただけますでしょうか?\n\n— 福田`,
+      },
+      {
+        id: 'customer-cancel',
+        label: 'お客様キャンセル受領',
+        body: `${name}様\n\n${dateLabel} の面談キャンセルご連絡、承知いたしました。\n\nまたタイミングが合いましたら、いつでもこちらの LINE からお声がけください。引き続きどうぞよろしくお願いいたします。\n\n— 福田`,
+      },
+      {
+        id: 'reschedule-soft',
+        label: '日程再調整 (お客様都合・延期)',
+        body: `${name}様\n\n${dateLabel} の面談、ご都合変更承りました。お忙しい中ありがとうございます。\n\n改めて候補日を3つお送りいただけますと、こちらで調整して Zoom URL をお送りいたします。よろしくお願いいたします。\n\n— 福田`,
+      },
+      {
+        id: 'illness',
+        label: '体調不良で延期',
+        body: `${name}様\n\nご体調いかがでしょうか。お大事になさってください。\n\n${dateLabel} の面談は一旦キャンセル扱いとさせていただきます。ご回復されてから改めて候補日3つをお知らせください。お待ちしております🙏\n\n— 福田`,
+      },
+      {
+        id: 'custom',
+        label: '✏️ 自由入力 (テンプレ無し)',
+        body: '',
+      },
+    ];
+    const overlay = document.createElement('div');
+    overlay.id = 'fp-cancel-picker';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);z-index:10010;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff;width:min(640px,100%);max-height:92vh;overflow-y:auto;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,0.35);font-family:inherit;">
+        <div style="padding:18px 22px;background:linear-gradient(135deg,#fef2f2,#fff5f5);border-bottom:1px solid #fecaca;display:flex;justify-content:space-between;align-items:baseline;">
+          <div>
+            <div style="font-size:10.5px;font-weight:700;color:#7f1d1d;letter-spacing:0.18em;text-transform:uppercase;">CANCEL BOOKING</div>
+            <strong style="font-size:15px;color:#0f1729;">${escapeHtml(name)} 様 / ${escapeHtml(dateLabel)} 面談 キャンセル</strong>
+          </div>
+          <button id="fp-cancel-close" style="background:#fff;border:1px solid #fecaca;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;color:#7f1d1d;">✕</button>
+        </div>
+        <div style="padding:18px 22px;">
+          <div style="font-size:11.5px;color:#6b7280;margin-bottom:12px;">キャンセル理由のテンプレを選んでください。「自由入力」を選ぶと空白から書けます。</div>
+          <div style="display:grid;gap:8px;margin-bottom:14px;">
+            ${templates.map((t, i) => `
+              <label style="display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:all 0.15s;">
+                <input type="radio" name="cancel-tpl" value="${t.id}" ${i === 0 ? 'checked' : ''} style="margin-top:3px;">
+                <div style="flex:1;font-size:13px;font-weight:600;color:#1f2937;">${escapeHtml(t.label)}</div>
+              </label>
+            `).join('')}
+          </div>
+          <div style="font-size:10.5px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">送信されるメッセージ (編集可)</div>
+          <textarea id="fp-cancel-msg" style="width:100%;min-height:200px;padding:12px 14px;font-size:13px;line-height:1.7;font-family:inherit;border:1.5px solid #d1d5db;border-radius:8px;resize:vertical;background:#fafbfc;">${escapeHtml(templates[0].body)}</textarea>
+          <div style="display:flex;gap:10px;margin-top:16px;">
+            <button id="fp-cancel-abort" style="flex:1;padding:11px;background:#fff;border:1.5px solid #d1d5db;color:#374151;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">キャンセル (送信しない)</button>
+            <button id="fp-cancel-send" style="flex:2;padding:11px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">📤 この内容で送信 + 予約をキャンセル</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    document.getElementById('fp-cancel-close').addEventListener('click', () => overlay.remove());
+    document.getElementById('fp-cancel-abort').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    // テンプレ切替で textarea を更新
+    overlay.querySelectorAll('input[name="cancel-tpl"]').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const t = templates.find(x => x.id === inp.value);
+        document.getElementById('fp-cancel-msg').value = t ? t.body : '';
+      });
+    });
+    // 送信
+    document.getElementById('fp-cancel-send').addEventListener('click', async () => {
+      const msg = document.getElementById('fp-cancel-msg').value.trim();
+      if (!msg) { alert('メッセージ本文を入力してください。'); return; }
+      const uid = booking && booking.userId;
+      if (!uid) { showFriendAddPrompt(name, ''); return; }
+      const btn = document.getElementById('fp-cancel-send');
+      btn.disabled = true; btn.textContent = '送信中…';
+      try {
+        // 1) LINE 送信
+        const r1 = await fetch(CLOUD_RUN_BASE + '/api/send-line', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: uid, text: msg }),
+        });
+        const d1 = await r1.json();
+        if (!d1.ok) throw new Error(d1.error || 'LINE 送信失敗');
+        // 2) 予約 status を cancelled に
+        if (booking.id || booking.ts) {
+          await fetch(CLOUD_RUN_BASE + '/api/cancel-booking', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bookingId: booking.id || '', ts: booking.ts || '', userId: uid }),
+          }).catch(() => {/* best effort */});
+        }
+        overlay.remove();
+        const t = document.createElement('div');
+        t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #dc2626;border-radius:12px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10010;font-family:inherit;';
+        t.innerHTML = `<strong style="font-size:14px;">✓ キャンセル LINE 送信完了</strong><br><span style="font-size:12px;color:#6b7280;">${escapeHtml(name)} 様 の ${escapeHtml(dateLabel)} 予約をキャンセル処理しました</span>`;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 6000);
+        await fetchLiveData();
+        renderLeadHubInner();
+      } catch (e) {
+        alert('失敗: ' + e.message);
+        btn.disabled = false; btn.textContent = '📤 この内容で送信 + 予約をキャンセル';
+      }
+    });
+  }
+
   // ===== 画面録画 (getDisplayMedia + MediaRecorder) =====
   window._fpRecorder = window._fpRecorder || {
     mediaRecorder: null, chunks: [], startTime: null, bookingTs: null, timerId: null, blobUrl: null,
@@ -1180,7 +1346,7 @@
     if (existing) existing.remove();
     const panel = document.createElement('div');
     panel.id = 'fp-unified-progress';
-    panel.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border:1px solid #e8e2d4;border-radius:14px;box-shadow:0 18px 48px rgba(15,23,42,0.18);z-index:10003;font-family:inherit;width:380px;overflow:hidden;';
+    panel.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border:1px solid #e8e2d4;border-radius:14px;box-shadow:0 18px 48px rgba(15,23,42,0.18);z-index:10010;font-family:inherit;width:380px;overflow:hidden;';
     panel.innerHTML = `
       <div style="background:linear-gradient(135deg,#fdfbf4,#fafaf6);padding:14px 18px;border-bottom:1px solid #e8e2d4;">
         <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">Recording Stopped — Processing</div>
@@ -1401,7 +1567,7 @@
       btn.addEventListener('click', async () => {
         const uid = btn.dataset.uid;
         const msg = btn.dataset.msg;
-        if (!uid) { alert('LINE userId が無いため送信できません'); return; }
+        if (!uid) { showFriendAddPrompt(customerName, (booking && booking.id) || ''); return; }
         const finalMsg = prompt('LINEで送るメッセージ (編集可)', msg);
         if (!finalMsg) return;
         btn.disabled = true; btn.textContent = '送信中...';
@@ -2432,6 +2598,16 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         const ts = btn.dataset.openMemo;
         const b = ((liveData && liveData.bookings) || []).find(x => String(x.ts).slice(0,19) === decodeURIComponent(ts).slice(0,19));
         openMemoModal(b || { name: 'お客様', userId: ts, date: new Date().toISOString().slice(0,10) }, ts);
+      });
+    });
+    // ✕ キャンセル → テンプレ選択モーダル
+    document.querySelectorAll('.fp-cancel-booking').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tsEnc = btn.dataset.cancelTs;
+        const ts = decodeURIComponent(tsEnc);
+        const b = ((liveData && liveData.bookings) || []).find(x => String(x.ts).slice(0,19) === ts.slice(0,19));
+        if (!b) { alert('予約が見つかりません'); return; }
+        showCancelTemplatePicker(b);
       });
     });
     document.querySelectorAll('[data-complete-booking]').forEach(btn => {
