@@ -173,7 +173,7 @@
     `;
     if (window.FPCharts && window.FPCharts.renderSparklines) window.FPCharts.renderSparklines();
 
-    // 今週話すべき客 (top 8) — Brief Card 階層 (1: mega / 2-3: medium / 4+: compact)
+    // 今週話すべき客 (top 8) — シニア向け統一カード (KPIバッジ + やる事 + 2ボタン)
     const tops = window.Recommender.topAcrossClients(clients, 8);
     const list = document.getElementById('action-list');
     if (tops.length === 0) {
@@ -184,15 +184,46 @@
     const todayDate = window.LifeEvents.TODAY;
     const fmtMoneyAum = (v) => v >= 100000000 ? `¥${(v/100000000).toFixed(2)}億` : `¥${Math.round(v/10000).toLocaleString()}万`;
 
+    // 各客に該当する KPI を判定
+    function getClientKpis(c) {
+      const days = Math.floor((todayDate - new Date(c.lastContact)) / 86400000);
+      const kpis = [];
+      // キャンセル後フォロー (30日以内)
+      const lastCancel = (c.cancellations || []).slice().sort((a,b) => new Date(b.date) - new Date(a.date))[0];
+      if (lastCancel && Math.floor((todayDate - new Date(lastCancel.date)) / 86400000) <= 30) {
+        kpis.push({ id: 'cancel', label: 'キャンセル後フォロー', tone: 'critical' });
+      }
+      // 提案検討中 (30日以上)
+      const stalled = (c.proposals || []).slice().reverse().find(p => (p.result === '検討中' || p.result === '提案中') && Math.floor((todayDate - new Date(p.date)) / 86400000) >= 30);
+      if (stalled) {
+        kpis.push({ id: 'stalled', label: '提案クロージング', tone: 'warn' });
+      }
+      // イベント先取り (60日以内 major)
+      const evs = window.LifeEvents.generate(c) || [];
+      const nearMajor = evs.find(ev => {
+        const d = (ev.date - todayDate) / 86400000;
+        return ev.major && d >= 0 && d <= 60;
+      });
+      if (nearMajor && days >= 21) {
+        kpis.push({ id: 'event', label: 'イベント先取り', tone: 'warn' });
+      }
+      // 休眠
+      if (c.status === 'dormant' || days >= 180) {
+        kpis.push({ id: 'dormant', label: '休眠の再エンゲージ', tone: 'critical' });
+      }
+      // 月1接触 (30日以上未接触・非休眠)
+      if (kpis.length === 0 && days >= 30 && c.status !== 'dormant') {
+        kpis.push({ id: 'untouched', label: '月1接触', tone: 'warn' });
+      }
+      return kpis;
+    }
+
     const briefCardHtml = (t, rank) => {
       const c = t.client;
       const p = t.topAction.priority;
       const initial = (c.name || '?').replace(/\s+/g, '').slice(0, 1);
       const days = Math.max(0, Math.floor((todayDate - new Date(c.lastContact)) / 86400000));
       const age = window.LifeEvents.currentAge(c);
-      const childCount = (c.family || []).filter(m => m.rel === 'child').length;
-      const family = childCount > 0 ? `配偶者 + 子${childCount}` :
-        ((c.family || []).find(m => m.rel === 'spouse') ? '夫婦' : '単身');
 
       // Find next upcoming event
       const evs = window.LifeEvents.generate(c);
@@ -202,102 +233,53 @@
         rel: window.LifeEvents.formatRelative(new Date(futureEv.date))
       } : null;
 
-      // Channel suggestion (heuristic)
-      const channel = c.lineFriendId ? 'LINE' : '電話';
-      const minutes = days >= 365 ? '15分' : days >= 90 ? '10分' : '5分';
       const priorityLabelText = priorityLabel(p);
       const priorityCls = priorityClass(p);
 
-      // TIER 1 — Mega next-best-action card
-      if (rank === 0) {
-        return `
-        <div class="brief-card brief-card-mega" data-client-id="${c.id}">
-          <div class="brief-rank-badge"><i data-lucide="flame"></i><span>NEXT BEST ACTION · #${rank+1}</span></div>
-          <div class="brief-mega-grid">
-            <div class="brief-mega-left">
-              <div class="brief-mega-head">
-                <div class="brief-mega-avatar">${initial}</div>
-                <div>
-                  <div class="brief-mega-name">${escapeHtml(c.name)} 様 <span class="status-pill ${c.status}">${statusLabel(c.status)}</span></div>
-                  <div class="brief-mega-meta">${age}歳 / ${escapeHtml(c.occupation || '—')} / ${family}</div>
-                </div>
-              </div>
-              <div class="brief-mega-action">
-                <span class="brief-mega-action-label">いま取るべきアクション</span>
-                <div class="brief-mega-action-text">${escapeHtml(t.topAction.action)}</div>
-                <div class="brief-mega-reason"><i data-lucide="sparkles"></i><span>${escapeHtml(t.topAction.reason)}</span></div>
-              </div>
-              <div class="brief-mega-cta">
-                <button class="primary" data-brief-open="${c.id}"><i data-lucide="message-square-text"></i><span>${channel}で連絡する</span></button>
-                <button class="ghost-btn" data-brief-detail="${c.id}"><i data-lucide="user"></i><span>詳細</span></button>
-                <button class="ghost-btn" data-brief-snooze="${c.id}"><i data-lucide="clock"></i><span>後回し</span></button>
-                <span class="brief-time-hint"><i data-lucide="timer"></i> 所要約${minutes}</span>
-              </div>
-            </div>
-            <div class="brief-mega-right">
-              <div class="brief-stat">
-                <span class="brief-stat-label">優先度</span>
-                <span class="brief-stat-pill brief-pri ${priorityCls}">${priorityLabelText}</span>
-              </div>
-              <div class="brief-stat">
-                <span class="brief-stat-label">管理資産</span>
-                <span class="brief-stat-value">${fmtMoneyAum(c.aum)}</span>
-              </div>
-              <div class="brief-stat">
-                <span class="brief-stat-label">最終接触</span>
-                <span class="brief-stat-value">${days}<span class="brief-stat-unit">日前</span></span>
-              </div>
-              <div class="brief-stat">
-                <span class="brief-stat-label">次のイベント</span>
-                <span class="brief-stat-text">${nextEvent ? escapeHtml(nextEvent.title) : 'なし'}</span>
-                ${nextEvent ? `<span class="brief-stat-sub">${escapeHtml(nextEvent.rel)}</span>` : ''}
-              </div>
-            </div>
-          </div>
-        </div>`;
-      }
+      const kpis = getClientKpis(c);
+      const kpiBadgeHtml = kpis.map(k => `<span class="senior-kpi-badge senior-kpi-${k.tone}"><i data-lucide="target"></i>${escapeHtml(k.label)}</span>`).join('');
 
-      // TIER 2 — Medium card (rank 1-2)
-      if (rank <= 2) {
-        return `
-        <div class="brief-card brief-card-medium" data-client-id="${c.id}">
-          <div class="brief-rank-medium">#${rank+1}</div>
-          <div class="brief-medium-head">
-            <div class="brief-medium-avatar">${initial}</div>
-            <div class="brief-medium-meta">
-              <div class="brief-medium-name">${escapeHtml(c.name)} 様 <span class="status-pill ${c.status}">${statusLabel(c.status)}</span></div>
-              <div class="brief-medium-sub">${age}歳 / ${escapeHtml(c.occupation || '—')} / ${fmtMoneyAum(c.aum)}</div>
-            </div>
-            <span class="brief-pri ${priorityCls}">${priorityLabelText}</span>
-          </div>
-          <div class="brief-medium-action">${escapeHtml(t.topAction.action)}</div>
-          <div class="brief-medium-reason"><i data-lucide="sparkles"></i><span>${escapeHtml(t.topAction.reason)}</span></div>
-          <div class="brief-medium-foot">
-            <div class="brief-medium-info"><i data-lucide="clock"></i> ${days}日未接触 ${nextEvent ? `· 次: ${escapeHtml(nextEvent.title)} (${escapeHtml(nextEvent.rel)})` : ''}</div>
-            <div class="brief-medium-cta">
-              <button class="ghost-btn brief-mini-btn" data-brief-detail="${c.id}"><i data-lucide="arrow-right"></i><span>開く</span></button>
-            </div>
-          </div>
-        </div>`;
-      }
+      const isTop = rank === 0;
 
-      // TIER 3 — Compact row (rank 3+)
       return `
-        <div class="brief-compact" data-client-id="${c.id}">
-          <span class="brief-compact-rank">#${rank+1}</span>
-          <span class="brief-compact-avatar">${initial}</span>
-          <div class="brief-compact-body">
-            <div class="brief-compact-name">${escapeHtml(c.name)} 様 <span class="status-pill ${c.status}">${statusLabel(c.status)}</span></div>
-            <div class="brief-compact-action">${escapeHtml(t.topAction.action)}</div>
+        <div class="senior-card ${isTop ? 'senior-card-top' : ''}" data-client-id="${c.id}">
+          <div class="senior-card-rank">${rank + 1}</div>
+          <div class="senior-card-head">
+            <div class="senior-card-avatar">${initial}</div>
+            <div class="senior-card-id">
+              <div class="senior-card-name">${escapeHtml(c.name)} <span class="senior-card-honor">様</span></div>
+              <div class="senior-card-sub">${age}歳 ・ ${escapeHtml(c.occupation || '—')} ・ AUM ${fmtMoneyAum(c.aum)}</div>
+            </div>
           </div>
-          <span class="brief-compact-meta">${days}日 / ${fmtMoneyAum(c.aum)}</span>
-          <span class="brief-pri ${priorityCls}">${priorityLabelText}</span>
-          <button class="brief-mini-btn" data-brief-detail="${c.id}"><i data-lucide="chevron-right"></i></button>
+
+          <div class="senior-card-kpi">
+            <div class="senior-kpi-label">この方に必要なフォロー</div>
+            <div class="senior-kpi-badges">${kpiBadgeHtml || '<span class="senior-kpi-badge senior-kpi-info"><i data-lucide="info"></i>定期フォロー</span>'}</div>
+          </div>
+
+          <div class="senior-card-action">
+            <div class="senior-action-label">やる事</div>
+            <div class="senior-action-text">${escapeHtml(t.topAction.action)}</div>
+            <div class="senior-action-reason">${escapeHtml(t.topAction.reason)}</div>
+            ${nextEvent ? `<div class="senior-action-event">📅 次のイベント: <strong>${escapeHtml(nextEvent.title)}</strong> (${escapeHtml(nextEvent.rel)})</div>` : ''}
+            <div class="senior-action-contact">⏰ 最終接触: <strong>${days}日前</strong></div>
+          </div>
+
+          <div class="senior-card-buttons">
+            <button class="senior-btn senior-btn-primary" data-brief-open="${c.id}">
+              <i data-lucide="message-square-text"></i>
+              <span>文面を作って送る</span>
+            </button>
+            <button class="senior-btn senior-btn-secondary" data-brief-detail="${c.id}">
+              <i data-lucide="user-round"></i>
+              <span>この方の詳細を見る</span>
+            </button>
+          </div>
         </div>`;
     };
 
     list.innerHTML = `
-      <div class="brief-stack">
+      <div class="senior-stack">
         ${tops.map((t, i) => briefCardHtml(t, i)).join('')}
       </div>
     `;
@@ -1092,6 +1074,29 @@
               ${c.lineFriendId ? '<span class="cd-line-pill"><i data-lucide="message-circle"></i>LINE連携</span>' : ''}
             </div>
           </div>
+
+          ${(function () {
+            const _days = daysSince(c.lastContact);
+            const _kpis = [];
+            const _lc = (c.cancellations || []).slice().sort((a,b) => new Date(b.date) - new Date(a.date))[0];
+            if (_lc && daysSince(_lc.date) <= 30) _kpis.push({ label: 'キャンセル後フォロー', tone: 'critical' });
+            const _stalled = (c.proposals || []).slice().reverse().find(p => (p.result === '検討中' || p.result === '提案中') && daysSince(p.date) >= 30);
+            if (_stalled) _kpis.push({ label: '提案クロージング', tone: 'warn' });
+            const _evs = window.LifeEvents.generate(c) || [];
+            const _ne = _evs.find(ev => { const d = (ev.date - TODAY) / 86400000; return ev.major && d >= 0 && d <= 60; });
+            if (_ne && _days >= 21) _kpis.push({ label: 'イベント先取り', tone: 'warn' });
+            if (c.status === 'dormant' || _days >= 180) _kpis.push({ label: '休眠の再エンゲージ', tone: 'critical' });
+            if (_kpis.length === 0 && _days >= 30 && c.status !== 'dormant') _kpis.push({ label: '月1接触', tone: 'warn' });
+            if (_kpis.length === 0) _kpis.push({ label: '緊急対応なし', tone: 'good' });
+            return `
+            <div class="cd-kpi-section">
+              <div class="cd-kpi-label">この方に必要なフォロー</div>
+              <div class="cd-kpi-badges">
+                ${_kpis.map(k => `<span class="senior-kpi-badge senior-kpi-${k.tone}"><i data-lucide="target"></i>${escapeHtml(k.label)}</span>`).join('')}
+              </div>
+            </div>
+            `;
+          })()}
 
           <details class="cd-qa-collapse">
             <summary class="cd-qa-summary">
