@@ -672,42 +672,12 @@
     });
     // 「✕ 別日再調整」ボタン → 候補日3つとも合わない時の依頼 LINE 送信
     target.querySelectorAll('[data-reschedule]').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
+      btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const uid = btn.dataset.reschedule;
-        const name = btn.dataset.name || 'お客';
-        const note = prompt(`${name} 様 に「3つの候補日とも合わなかったので別日でお願いします」 LINE を送ります。\n\n FP からのひとこと (任意。空でも OK):\n例: 「来週でしたら空きが多いです」「土日でも可能です」など`, '');
-        if (note === null) return; // cancel
-        if (!confirm(`${name} 様 に再調整依頼の LINE を送信します。\n\n• 候補日 (お客様が選んだ3つ) は無効化\n• 別フォームのリンクで再度3つ選んでもらう\n\n送信しますか?`)) return;
-        btn.disabled = true;
-        const origText = btn.textContent;
-        btn.textContent = '送信中…';
-        try {
-          const r = await fetch(CLOUD_RUN_BASE + '/api/request-reschedule', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: uid, name: name, fpMessage: note || '' }),
-          });
-          const data = await r.json();
-          if (data.ok) {
-            const t = document.createElement('div');
-            t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #f59e0b;border-radius:12px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10003;font-family:inherit;';
-            t.innerHTML = `<strong style="font-size:14px;">↩ 再調整依頼を送信</strong><br><span style="font-size:12px;color:#6b7280;">${escapeHtml(name)} 様 に LINE で別日候補を依頼しました</span>`;
-            document.body.appendChild(t);
-            setTimeout(() => t.remove(), 6000);
-            await fetchLiveData();
-            renderLeadHubInner();
-            if (window.fpFocusCustomerInCalendar) window.fpFocusCustomerInCalendar(null);
-          } else {
-            alert('失敗: ' + (data.error || '不明'));
-            btn.textContent = origText;
-            btn.disabled = false;
-          }
-        } catch (e) {
-          alert('失敗: ' + e.message);
-          btn.textContent = origText;
-          btn.disabled = false;
-        }
+        showRescheduleTemplatePicker({
+          userId: btn.dataset.reschedule,
+          customerName: btn.dataset.name || 'お客',
+        });
       });
     });
   }
@@ -1078,14 +1048,43 @@
     });
   }
 
+  // 日付・時刻の堅牢な整形 (Sheets が "1899-12-30T18:00:00.000Z" 形式で返す time セル対策)
+  function fmtTime_(raw) {
+    if (!raw) return '';
+    const s = String(raw);
+    // ISO datetime: "...T18:00:00..." → "18:00"
+    const isoMatch = s.match(/T(\d{1,2}):(\d{2})/);
+    if (isoMatch) return isoMatch[1].padStart(2, '0') + ':' + isoMatch[2];
+    // 普通の HH:mm / HH:mm:ss
+    const hmMatch = s.match(/^(\d{1,2}):(\d{2})/);
+    if (hmMatch) return hmMatch[1].padStart(2, '0') + ':' + hmMatch[2];
+    return '';
+  }
+  function fmtDateMMDD_(raw) {
+    if (!raw) return '';
+    const m = String(raw).match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return '';
+    return parseInt(m[2]) + '月' + parseInt(m[3]) + '日';
+  }
+  function fmtDateJa_(raw) {
+    const m = String(raw || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return '';
+    const d = new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+    const wd = ['日','月','火','水','木','金','土'][d.getDay()];
+    return parseInt(m[2]) + '月' + parseInt(m[3]) + '日(' + wd + ')';
+  }
+  function stripSama_(s) {
+    return String(s || '').replace(/\s*様$/, '').replace(/\s*さん$/, '').trim();
+  }
+
   // ===== Zoom 予約 キャンセル: テンプレ複数から選んで LINE 送信 =====
   function showCancelTemplatePicker(booking) {
     const existing = document.getElementById('fp-cancel-picker');
     if (existing) existing.remove();
-    const name = (booking && booking.name) || 'お客';
-    const dateStr = String((booking && booking.date) || '').slice(0, 10);
-    const timeStr = String((booking && booking.time) || '').slice(0, 5);
-    const dateLabel = (dateStr ? dateStr.slice(5).replace('-', '/') : '') + ' ' + timeStr;
+    const name = stripSama_((booking && booking.name) || 'お客');
+    const dateJa = fmtDateJa_((booking && booking.date) || '');
+    const timeOk = fmtTime_((booking && booking.time) || '');
+    const dateLabel = (dateJa && timeOk) ? (dateJa + ' ' + timeOk) : (dateJa || timeOk || '(日時未設定)');
     const templates = [
       {
         id: 'fp-emergency',
@@ -1188,6 +1187,126 @@
       } catch (e) {
         alert('失敗: ' + e.message);
         btn.disabled = false; btn.textContent = '📤 この内容で送信 + 予約をキャンセル';
+      }
+    });
+  }
+
+  // ===== 候補日3つ合わない時の 再調整依頼: テンプレ複数 + 自動URL付き =====
+  function showRescheduleTemplatePicker(customer) {
+    // customer = { userId, customerName, ts } など
+    const existing = document.getElementById('fp-reschedule-picker');
+    if (existing) existing.remove();
+    const name = stripSama_(customer.customerName || customer.name || 'お客');
+    const uid = customer.userId || '';
+    const bookingBase = 'https://fp-compass-webhook-527726449426.asia-northeast1.run.app';
+    const rebookingUrl = bookingBase + '/booking/' + encodeURIComponent(uid);
+    const fp = '福田'; // FP_NAME
+    const tail = `\n\n▼ お手数ですが、改めて候補日を 3 つお選びください\n${rebookingUrl}\n\nよろしくお願いいたします。\n— ${fp}`;
+    const templates = [
+      {
+        id: 'fp-busy',
+        label: 'FP都合 (3つとも先約あり)',
+        body: `🙏 ${name}様\n\nアンケート + 候補日のご回答ありがとうございました。\n\n大変申し訳ございません、${name}様にご提示いただいた候補日3つとも ${fp} の先約と重なっており、調整が難しい状況です。${tail}`,
+      },
+      {
+        id: 'fp-week-suggest',
+        label: '来週でしたら空きが多い',
+        body: `🙏 ${name}様\n\nアンケート + 候補日のご回答ありがとうございました。\n\n大変申し訳ございません、ご提示いただいた候補日3つとも先約と重なっておりました。\n\n💡 来週でしたら空き枠が多くございますので、その辺りでご検討いただけますと幸いです。${tail}`,
+      },
+      {
+        id: 'fp-weekend',
+        label: '土日でも対応可能',
+        body: `🙏 ${name}様\n\nアンケート + 候補日のご回答ありがとうございました。\n\n大変申し訳ございません、平日の候補日3つは先約と重なっておりまして…\n\n💡 もし土日のご都合がよろしければ、土日も対応可能です。改めてお選びいただけますでしょうか?${tail}`,
+      },
+      {
+        id: 'fp-evening',
+        label: '夕方以降の枠を提案',
+        body: `🙏 ${name}様\n\nアンケート + 候補日のご回答ありがとうございました。\n\n大変申し訳ございません、いただいた候補日3つは先約と重なっておりました。\n\n💡 19:00 / 20:00 の夕方〜夜の枠でしたら比較的空きがございます。可能でしたらその時間帯でご検討ください。${tail}`,
+      },
+      {
+        id: 'custom',
+        label: '✏️ 自由入力 (テンプレ無し・URLは自動付加)',
+        body: `🙏 ${name}様\n\n${tail.trim()}`,
+      },
+    ];
+    const overlay = document.createElement('div');
+    overlay.id = 'fp-reschedule-picker';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);z-index:10010;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff;width:min(680px,100%);max-height:92vh;overflow-y:auto;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,0.35);font-family:inherit;">
+        <div style="padding:18px 22px;background:linear-gradient(135deg,#fef9c3,#fffbeb);border-bottom:1px solid #fde68a;display:flex;justify-content:space-between;align-items:baseline;">
+          <div>
+            <div style="font-size:10.5px;font-weight:700;color:#78350f;letter-spacing:0.18em;text-transform:uppercase;">REQUEST RESCHEDULE</div>
+            <strong style="font-size:15px;color:#0f1729;">${escapeHtml(name)} 様 / 候補日3つとも合わない → 別日を依頼</strong>
+          </div>
+          <button id="fp-resched-close" style="background:#fff;border:1px solid #fde68a;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;color:#78350f;">✕</button>
+        </div>
+        <div style="padding:18px 22px;">
+          <div style="font-size:11.5px;color:#6b7280;margin-bottom:12px;">FP からのひとことテンプレを選んでください。送信文末に <strong>再選択フォームのURL</strong>が自動で付きます。</div>
+          <div style="display:grid;gap:8px;margin-bottom:14px;">
+            ${templates.map((t, i) => `
+              <label style="display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:all 0.15s;">
+                <input type="radio" name="resched-tpl" value="${t.id}" ${i === 0 ? 'checked' : ''} style="margin-top:3px;">
+                <div style="flex:1;font-size:13px;font-weight:600;color:#1f2937;">${escapeHtml(t.label)}</div>
+              </label>
+            `).join('')}
+          </div>
+          <div style="font-size:10.5px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">送信されるメッセージ (編集可)</div>
+          <textarea id="fp-resched-msg" style="width:100%;min-height:220px;padding:12px 14px;font-size:13px;line-height:1.7;font-family:inherit;border:1.5px solid #d1d5db;border-radius:8px;resize:vertical;background:#fafbfc;">${escapeHtml(templates[0].body)}</textarea>
+          <div style="margin-top:8px;font-size:11px;color:#16a34a;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:8px 12px;">✓ お客様がこのURLから3つ選び直すと、CRMの「候補日確定待ち」に再度上がってきます。</div>
+          <div style="display:flex;gap:10px;margin-top:16px;">
+            <button id="fp-resched-abort" style="flex:1;padding:11px;background:#fff;border:1.5px solid #d1d5db;color:#374151;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">キャンセル (送信しない)</button>
+            <button id="fp-resched-send" style="flex:2;padding:11px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">📤 この内容で送信 + 候補日3つを無効化</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    document.getElementById('fp-resched-close').addEventListener('click', () => overlay.remove());
+    document.getElementById('fp-resched-abort').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    overlay.querySelectorAll('input[name="resched-tpl"]').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const t = templates.find(x => x.id === inp.value);
+        document.getElementById('fp-resched-msg').value = t ? t.body : '';
+      });
+    });
+    document.getElementById('fp-resched-send').addEventListener('click', async () => {
+      const msg = document.getElementById('fp-resched-msg').value.trim();
+      if (!msg) { alert('メッセージ本文を入力してください。'); return; }
+      if (!uid) { showFriendAddPrompt(name, ''); return; }
+      const isDemo = uid.indexOf('Udemo') === 0;
+      const btn = document.getElementById('fp-resched-send');
+      btn.disabled = true; btn.textContent = '送信中…';
+      try {
+        if (isDemo) {
+          await new Promise(r => setTimeout(r, 600));
+          overlay.remove();
+          alert('[デモモード] 再調整依頼を送信 (本番では LINE 送信)');
+          return;
+        }
+        const r = await fetch(CLOUD_RUN_BASE + '/api/request-reschedule', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: uid, name: name, fullMessage: msg }),
+        });
+        const data = await r.json();
+        if (data.ok) {
+          overlay.remove();
+          const t = document.createElement('div');
+          t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #f59e0b;border-radius:12px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10010;font-family:inherit;';
+          t.innerHTML = `<strong style="font-size:14px;">↩ ${escapeHtml(name)} 様 再調整依頼を送信</strong><br><span style="font-size:12px;color:#6b7280;">再選択URL付き LINE 送信 / 候補日3つを無効化</span>`;
+          document.body.appendChild(t);
+          setTimeout(() => t.remove(), 6000);
+          await fetchLiveData();
+          renderLeadHubInner();
+          // カレンダーパネル側も更新
+          if (window.fpFocusCustomerInCalendar) window.fpFocusCustomerInCalendar(null);
+        } else {
+          alert('失敗: ' + (data.error || '不明'));
+          btn.disabled = false; btn.textContent = '📤 この内容で送信 + 候補日3つを無効化';
+        }
+      } catch (e) {
+        alert('失敗: ' + e.message);
+        btn.disabled = false; btn.textContent = '📤 この内容で送信 + 候補日3つを無効化';
       }
     });
   }
@@ -1928,47 +2047,8 @@
       if (prevBtn) prevBtn.addEventListener('click', () => { if (currentIdx > 0) { currentIdx--; renderFocusSection(); jumpIframeTo(cur); } });
       if (nextBtn) nextBtn.addEventListener('click', () => { if (currentIdx < pendingByCustomer.length - 1) { currentIdx++; renderFocusSection(); jumpIframeTo(pendingByCustomer[currentIdx]); } });
       const reBtn = document.getElementById('fp-cal-reschedule');
-      if (reBtn) reBtn.addEventListener('click', async () => {
-        const note = prompt(`${cur.customerName} 様 に「3つの候補日とも合わなかったので別日でお願いします」 LINE を送ります。\n\n FP からのひとこと (任意。空でも OK):\n例: 「来週でしたら空きが多いです」「土日でも可能です」など`, '');
-        if (note === null) return;
-        if (!confirm(`${cur.customerName} 様 に再調整依頼の LINE を送信します。\n\n• 候補日 (お客様が選んだ3つ) は無効化\n• 別フォームのリンクで再度3つ選んでもらう\n\n送信しますか?`)) return;
-        reBtn.disabled = true;
-        reBtn.textContent = '送信中…';
-        const isDemo = cur.userId && cur.userId.indexOf('Udemo') === 0;
-        try {
-          if (isDemo) {
-            await new Promise(r => setTimeout(r, 800));
-            alert('[デモモード] 再調整依頼を送信 (本番では LINE 送信)');
-            return;
-          }
-          const r = await fetch(CLOUD_RUN_BASE + '/api/request-reschedule', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: cur.userId, name: cur.customerName, fpMessage: note || '' }),
-          });
-          const data = await r.json();
-          if (data.ok) {
-            const t = document.createElement('div');
-            t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #f59e0b;border-radius:12px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10003;font-family:inherit;';
-            t.innerHTML = `<strong style="font-size:14px;">↩ ${escapeHtml(cur.customerName)} 様 再調整依頼を送信</strong><br><span style="font-size:12px;color:#6b7280;">LINE で別日候補を依頼しました</span>`;
-            document.body.appendChild(t);
-            setTimeout(() => t.remove(), 6000);
-            await fetchLiveData();
-            pendingByCustomer = buildPendingByCustomer();
-            window._fpCalFocusUid = (pendingByCustomer[currentIdx] && pendingByCustomer[currentIdx].userId) || null;
-            renderFocusSection();
-            if (pendingByCustomer[currentIdx]) jumpIframeTo(pendingByCustomer[currentIdx]);
-            renderLeadHubInner();
-          } else {
-            alert('失敗: ' + (data.error || '不明'));
-            reBtn.textContent = '✕ 3つとも合わない → 再調整依頼';
-            reBtn.disabled = false;
-          }
-        } catch (e) {
-          alert('失敗: ' + e.message);
-          reBtn.textContent = '✕ 3つとも合わない → 再調整依頼';
-          reBtn.disabled = false;
-        }
+      if (reBtn) reBtn.addEventListener('click', () => {
+        showRescheduleTemplatePicker({ userId: cur.userId, customerName: cur.customerName });
       });
       bindCandidateRows();
     }
