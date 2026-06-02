@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="styles.css?v=20260531n">
 <link rel="stylesheet" href="styles-v2.css?v=20260531n">
 <link rel="stylesheet" href="styles-v3.css?v=20260531n">
-<link rel="stylesheet" href="styles-v8-workspace.css?v=20260603a-wamoderne">
+<link rel="stylesheet" href="styles-v8-workspace.css?v=20260603b-uxpro-pass">
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -446,7 +446,7 @@
 <script src="life-events.js?v=20260602a"></script>
 <script src="recommender.js?v=20260602a"></script>
 <script src="line-data.js?v=20260602a"></script>
-<script src="app.js?v=20260603a-wamoderne"></script>
+<script src="app.js?v=20260603b-uxpro-pass"></script>
 <script src="line-app.js?v=20260602m-no-sync-fallback-uid"></script>
 <script src="charts.js?v=20260602a"></script>
 <script>
@@ -560,26 +560,19 @@
     } else {
       console.log('[FP Compass] DUMMY_CLIENTS_VERSION:', window.DUMMY_CLIENTS_VERSION);
     }
-    // Always-on diagnostic chip (画面右下に常時表示・デバッグ用)
-    try {
-      var c1 = (window.DUMMY_CLIENTS || []).find(function (x) { return x.id === 'c001'; });
-      var lhLen = (c1 && c1.lineHistory || []).length;
-      var lhKeys = c1 ? Object.keys(c1).filter(function (k) { return k.indexOf('line') >= 0; }).join(',') : 'no-c001';
-      var chip = document.createElement('div');
-      chip.id = 'fpc-debug-chip';
-      chip.style.cssText = 'position:fixed;bottom:8px;right:8px;z-index:9998;background:#0F1117;color:#A5B4FC;padding:6px 10px;border-radius:6px;font-family:ui-monospace,monospace;font-size:10.5px;border:1px solid #1E2330;opacity:0.85;cursor:pointer;';
-      chip.title = 'タップでデバッグ情報';
-      chip.textContent = 'v=' + (window.DUMMY_CLIENTS_VERSION || 'none') + ' / c001.lh=' + lhLen + ' / keys=[' + lhKeys + ']';
-      chip.addEventListener('click', function () {
-        alert('FP Compass Debug\n' +
-          'DUMMY_CLIENTS_VERSION: ' + (window.DUMMY_CLIENTS_VERSION || '(未定義)') + '\n' +
-          'DUMMY_CLIENTS.length: ' + (window.DUMMY_CLIENTS || []).length + '\n' +
-          'c001 (田中健一) lineHistory.length: ' + lhLen + '\n' +
-          'c001 line系フィールド: ' + lhKeys + '\n\n' +
-          'URL: ' + location.href);
-      });
-      document.body.appendChild(chip);
-    } catch (e) { console.error('debug chip err', e); }
+    // ⚠ デバッグチップは window.FP_DEBUG=true の時のみ
+    if (window.FP_DEBUG) {
+      try {
+        var c1 = (window.DUMMY_CLIENTS || []).find(function (x) { return x.id === 'c001'; });
+        var lhLen = (c1 && c1.lineHistory || []).length;
+        var lhKeys = c1 ? Object.keys(c1).filter(function (k) { return k.indexOf('line') >= 0; }).join(',') : 'no-c001';
+        var chip = document.createElement('div');
+        chip.id = 'fpc-debug-chip';
+        chip.style.cssText = 'position:fixed;bottom:8px;right:8px;z-index:9998;background:#0F1117;color:#A5B4FC;padding:6px 10px;border-radius:6px;font-family:ui-monospace,monospace;font-size:10.5px;border:1px solid #1E2330;opacity:0.85;cursor:pointer;';
+        chip.textContent = 'v=' + (window.DUMMY_CLIENTS_VERSION || 'none') + ' / c001.lh=' + lhLen;
+        document.body.appendChild(chip);
+      } catch (e) {}
+    }
   }, 1500);
 
   // Sidebar nav counts: 動的に計算
