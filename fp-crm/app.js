@@ -1606,8 +1606,41 @@
     const myBookings = liveBookings.filter(b => b.userId === client.lineFriendId || b.name === client.name);
 
     // localStorage から この顧客のメモ + タスクを取得
-    const tasksKey = 'fp-tasks-' + (client.lineFriendId || client.id);
-    const tasks = JSON.parse(localStorage.getItem(tasksKey) || '[]');
+    // タスクも localStorage + GAS の両方から集約
+    const taskKeys = new Set();
+    if (client.lineFriendId) taskKeys.add('fp-tasks-' + client.lineFriendId);
+    if (client.id)           taskKeys.add('fp-tasks-' + client.id);
+    if (client.name)         taskKeys.add('fp-tasks-' + client.name);
+    myBookings.forEach(b => {
+      if (b.userId) taskKeys.add('fp-tasks-' + b.userId);
+      if (b.ts)     taskKeys.add('fp-tasks-' + b.ts);
+      if (b.name)   taskKeys.add('fp-tasks-' + b.name);
+    });
+    let tasks = [];
+    taskKeys.forEach(k => {
+      try { tasks = tasks.concat(JSON.parse(localStorage.getItem(k) || '[]')); } catch (_) {}
+    });
+    // GAS 永続化シートからも
+    const liveTasks = (window.LineAppLiveData && window.LineAppLiveData.ai_tasks) || [];
+    liveTasks.forEach(t => {
+      const match = (t.userId && t.userId === client.lineFriendId) ||
+                    (t.customerName && t.customerName === client.name) ||
+                    myBookings.some(b => b.ts === t.bookingTs || b.userId === t.userId);
+      if (!match) return;
+      tasks.push({
+        task: t.task, due: t.due, priority: t.priority, icon: t.icon,
+        recommendedAction: t.recommendedAction, actionTemplate: t.actionTemplate,
+        bookingTs: t.bookingTs, customerName: t.customerName,
+      });
+    });
+    // 重複排除 (task+bookingTs 単位)
+    const seenTask = new Set();
+    tasks = tasks.filter(t => {
+      const k = (t.bookingTs || '') + '|' + (t.task || '');
+      if (seenTask.has(k)) return false;
+      seenTask.add(k);
+      return true;
+    });
     // 各 booking ごとにメモを取得
     const bookingsWithMemo = myBookings.map(b => {
       const memo = localStorage.getItem('fp-memo-' + b.ts) || '';
@@ -1616,19 +1649,41 @@
 
     if (bookingsWithMemo.length === 0 && tasks.length === 0) return ''; // 何もない時は表示しない
 
-    // AI 議事録データ (localStorage に保存されていれば)
-    // 顧客の bookings から userId を全集めて、複数キーから議事録を集約する。
-    // client.lineFriendId が空でも、bookings の userId 経由で議事録が引ける。
+    // AI 議事録データ (localStorage + GAS 永続化シートの両方から集約)
     const aiCandidateKeys = new Set();
     if (client.lineFriendId) aiCandidateKeys.add('fp-ai-' + client.lineFriendId);
     if (client.id)           aiCandidateKeys.add('fp-ai-' + client.id);
+    if (client.name)         aiCandidateKeys.add('fp-ai-' + client.name);
     myBookings.forEach(b => {
       if (b.userId) aiCandidateKeys.add('fp-ai-' + b.userId);
       if (b.ts)     aiCandidateKeys.add('fp-ai-' + b.ts);
+      if (b.name)   aiCandidateKeys.add('fp-ai-' + b.name);
     });
     let aiResults = [];
     aiCandidateKeys.forEach(k => {
       try { aiResults = aiResults.concat(JSON.parse(localStorage.getItem(k) || '[]')); } catch (_) {}
+    });
+    // GAS 永続化シートからも取得 (別ブラウザで保存された分)
+    const liveAiResults = (window.LineAppLiveData && window.LineAppLiveData.ai_results) || [];
+    liveAiResults.forEach(r => {
+      const match = (r.userId && (r.userId === client.lineFriendId)) ||
+                    (r.customerName && r.customerName === client.name) ||
+                    myBookings.some(b => b.ts === r.bookingTs || b.userId === r.userId);
+      if (!match) return;
+      // key_concerns は文字列で来てるので JSON.parse
+      let kc = r.key_concerns;
+      if (typeof kc === 'string') { try { kc = JSON.parse(kc); } catch (_) { kc = []; } }
+      aiResults.push({
+        bookingTs: r.bookingTs,
+        userId: r.userId,
+        customerName: r.customerName,
+        date: r.date,
+        transcript: r.transcript || '',
+        summary: r.summary || '',
+        transcript_summary: r.transcript_summary || '',
+        key_concerns: kc || [],
+        next_meeting_suggestion: r.next_meeting_suggestion || '',
+      });
     });
     // 同 bookingTs の重複を排除 (後者で上書き)
     const seenTs = new Set();

@@ -1568,29 +1568,42 @@
 
   // (旧トースト系は unified progress panel に統合済み)
 
-  // AI 結果を自動で localStorage に保存 (手動ボタン押下不要)
-  // 同じ bookingTs 既存エントリは上書き (重複 push で「古い議事録に上書きされた」ように
-  // 見えるバグを防ぐ。タスクは bookingTs 単位で reset + append)
+  // AI 結果を localStorage にマルチキー保存 (userId / ts / customerName 全部に同じデータ)
+  // + GAS にも永続化送信 (別ブラウザでも見えるよう)
   function autoSaveAIResult(result, customerName, booking) {
     if (!result || !result.ok) return;
-    const uid = (booking && booking.userId) || (booking && booking.ts);
-    if (!uid) return;
-    const bookingTs = booking && booking.ts;
-    // タスク: 同じ bookingTs のものは消してから新規追加 (重複防止)
-    const tasksKey = 'fp-tasks-' + uid;
-    const existingTasks = JSON.parse(localStorage.getItem(tasksKey) || '[]')
-      .filter(t => t.bookingTs !== bookingTs);
+    const bookingTs = (booking && booking.ts) || '';
+    const userId   = (booking && booking.userId) || '';
+    const nameKey  = customerName || (booking && booking.name) || '';
+    // 保存先キーを全部 (どのキーで lookup されても拾える)
+    const keys = new Set();
+    if (userId) keys.add('fp-ai-' + userId);
+    if (bookingTs) keys.add('fp-ai-' + bookingTs);
+    if (nameKey) keys.add('fp-ai-' + nameKey);
+    if (keys.size === 0) {
+      console.warn('autoSaveAIResult: no key candidates', { customerName, booking });
+      return;
+    }
+    const taskKeys = new Set();
+    if (userId) taskKeys.add('fp-tasks-' + userId);
+    if (bookingTs) taskKeys.add('fp-tasks-' + bookingTs);
+    if (nameKey) taskKeys.add('fp-tasks-' + nameKey);
+    // タスクを 全キーに upsert (bookingTs 単位で重複排除)
     const newTasks = (result.tasks || []).map(t => ({
       task: t.task, due: t.dueDate, priority: t.priority, icon: t.icon,
       recommendedAction: t.recommendedAction, actionTemplate: t.lineDraft,
-      createdAt: new Date().toISOString(), customerName, bookingTs,
+      createdAt: new Date().toISOString(), customerName: nameKey, bookingTs,
     }));
-    localStorage.setItem(tasksKey, JSON.stringify(existingTasks.concat(newTasks)));
-    // AI 全結果: 同じ bookingTs があれば置換 (上書き)、無ければ追加
-    const aiKey = 'fp-ai-' + uid;
-    const aiHistory = JSON.parse(localStorage.getItem(aiKey) || '[]');
+    taskKeys.forEach(k => {
+      const existing = JSON.parse(localStorage.getItem(k) || '[]')
+        .filter(t => t.bookingTs !== bookingTs);
+      localStorage.setItem(k, JSON.stringify(existing.concat(newTasks)));
+    });
+    // 議事録を 全キーに upsert (bookingTs 単位で置換)
     const entry = {
       bookingTs,
+      userId,
+      customerName: nameKey,
       date: booking && booking.date,
       transcript: result.transcript || '',
       summary: result.summary || '',
@@ -1599,9 +1612,21 @@
       next_meeting_suggestion: result.next_meeting_suggestion || '',
       createdAt: new Date().toISOString(),
     };
-    const idx = aiHistory.findIndex(a => a.bookingTs === bookingTs);
-    if (idx >= 0) aiHistory[idx] = entry; else aiHistory.push(entry);
-    localStorage.setItem(aiKey, JSON.stringify(aiHistory));
+    keys.forEach(k => {
+      const hist = JSON.parse(localStorage.getItem(k) || '[]');
+      const idx = hist.findIndex(a => a.bookingTs === bookingTs);
+      if (idx >= 0) hist[idx] = entry; else hist.push(entry);
+      localStorage.setItem(k, JSON.stringify(hist));
+    });
+    // GAS 永続化 (best-effort、失敗してもローカルに残ってるので無視)
+    try {
+      fetch(CLOUD_RUN_BASE + '/api/save-ai-result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entry, tasks: newTasks }),
+      }).catch(() => {});
+    } catch (_) {}
+    console.log('[autoSaveAIResult] saved keys:', [...keys, ...taskKeys].join(', '));
     if (window.FPCrmRefreshClients) window.FPCrmRefreshClients();
   }
 
