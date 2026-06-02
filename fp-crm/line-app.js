@@ -759,12 +759,21 @@
       return str;
     };
 
+    // user lookup (avatar + displayName) — fp-crm bookings リストにも反映
+    const usersByUidBk = {};
+    ((liveData && liveData.users) || []).forEach(u => { if (u.userId) usersByUidBk[u.userId] = u; });
     target.innerHTML = bookings.map(b => {
       const rec = b.recordingStatus || '';
       const tsEnc = encodeURIComponent(b.ts || '');
       const zUrl = escapeHtml(b.zoomUrl || '');
       const dateInfo = formatBookingDate(b.date);
       const timeStr = formatBookingTime(b.time);
+      const u = usersByUidBk[b.userId] || {};
+      const displayName = stripSama_(b.name || u.displayName || '匿名');
+      const initial = (displayName || '?').replace(/\s+/g, '').slice(0, 1);
+      const avatarHtml = u.pictureUrl
+        ? `<img src="${escapeHtml(u.pictureUrl)}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1.5px solid #06c755;flex-shrink:0;">`
+        : `<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.12);flex-shrink:0;">${escapeHtml(initial)}</div>`;
       // ローカル保存タスク件数を表示
       const tasksKey = 'fp-tasks-' + (b.userId || tsEnc);
       const savedTasksCount = (JSON.parse(localStorage.getItem(tasksKey) || '[]')).length;
@@ -798,7 +807,10 @@
           </div>
           <div style="min-width:0;">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-              <strong style="font-size:15.5px;">${escapeHtml(b.name || '匿名')} 様</strong>
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                ${avatarHtml}
+                <strong style="font-size:15.5px;">${escapeHtml(displayName)} 様</strong>
+              </div>
               ${recPill}
             </div>
             ${b.zoomUrl ? `<div style="font-size:10.5px;color:var(--muted);font-family:ui-monospace,Menlo,monospace;margin-bottom:12px;word-break:break-all;line-height:1.5;">${escapeHtml(b.zoomUrl)}</div>` : ''}
@@ -1554,24 +1566,28 @@
   // (旧トースト系は unified progress panel に統合済み)
 
   // AI 結果を自動で localStorage に保存 (手動ボタン押下不要)
+  // 同じ bookingTs 既存エントリは上書き (重複 push で「古い議事録に上書きされた」ように
+  // 見えるバグを防ぐ。タスクは bookingTs 単位で reset + append)
   function autoSaveAIResult(result, customerName, booking) {
     if (!result || !result.ok) return;
     const uid = (booking && booking.userId) || (booking && booking.ts);
     if (!uid) return;
-    // タスク保存
+    const bookingTs = booking && booking.ts;
+    // タスク: 同じ bookingTs のものは消してから新規追加 (重複防止)
     const tasksKey = 'fp-tasks-' + uid;
-    const existing = JSON.parse(localStorage.getItem(tasksKey) || '[]');
+    const existingTasks = JSON.parse(localStorage.getItem(tasksKey) || '[]')
+      .filter(t => t.bookingTs !== bookingTs);
     const newTasks = (result.tasks || []).map(t => ({
       task: t.task, due: t.dueDate, priority: t.priority, icon: t.icon,
       recommendedAction: t.recommendedAction, actionTemplate: t.lineDraft,
-      createdAt: new Date().toISOString(), customerName, bookingTs: booking && booking.ts,
+      createdAt: new Date().toISOString(), customerName, bookingTs,
     }));
-    localStorage.setItem(tasksKey, JSON.stringify(existing.concat(newTasks)));
-    // AI 全結果も顧客カードで参照できるように保存
+    localStorage.setItem(tasksKey, JSON.stringify(existingTasks.concat(newTasks)));
+    // AI 全結果: 同じ bookingTs があれば置換 (上書き)、無ければ追加
     const aiKey = 'fp-ai-' + uid;
     const aiHistory = JSON.parse(localStorage.getItem(aiKey) || '[]');
-    aiHistory.push({
-      bookingTs: booking && booking.ts,
+    const entry = {
+      bookingTs,
       date: booking && booking.date,
       transcript: result.transcript || '',
       summary: result.summary || '',
@@ -1579,7 +1595,9 @@
       key_concerns: result.key_concerns || [],
       next_meeting_suggestion: result.next_meeting_suggestion || '',
       createdAt: new Date().toISOString(),
-    });
+    };
+    const idx = aiHistory.findIndex(a => a.bookingTs === bookingTs);
+    if (idx >= 0) aiHistory[idx] = entry; else aiHistory.push(entry);
     localStorage.setItem(aiKey, JSON.stringify(aiHistory));
     if (window.FPCrmRefreshClients) window.FPCrmRefreshClients();
   }
@@ -1645,7 +1663,10 @@
             <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">AI Meeting Summary${result.mock ? ' <span style="background:#fef2f2;color:#b91c3c;padding:1px 6px;border-radius:4px;font-size:9.5px;margin-left:4px;letter-spacing:0.02em;">DEMO MODE</span>' : ''}</div>
             <h2 style="font-family:'Noto Serif JP',serif;font-size:20px;margin:0;font-weight:600;color:#1f2a3f;">${escapeHtml(customerName)}様 面談 AI 議事録</h2>
           </div>
-          <button id="fp-ai-close-modal" style="background:#fff;border:1px solid #e5e7eb;width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:18px;">✕</button>
+          <button id="fp-ai-close-modal" title="保存済み・閉じる" style="background:#dcfce7;border:1px solid #86efac;color:#166534;width:auto;height:32px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;padding:0 12px;font-family:inherit;">✓ 保存済 ✕</button>
+        </div>
+        <div style="background:#f0fdf4;border-bottom:1px solid #bbf7d0;padding:8px 26px;font-size:11.5px;color:#166534;font-weight:600;">
+          ✓ この議事録・タスク・関心事はすでに <strong>顧客カード&gt;面談録</strong> に自動保存されています。✕ や 閉じる ボタンを押しても消えません。
         </div>
         ${result.mock ? '<div style="background:#fff8e1;border-bottom:1px solid #f0d36b;padding:10px 26px;font-size:11.5px;color:#5e4d1a;">⚠ デモモード — Groq + Anthropic の API キーが未設定。実際の Zoom 音声ではなく、サンプル議事録を表示しています</div>' : ''}
         <div style="padding:22px 26px;">
@@ -1672,8 +1693,8 @@
             </div>` : ''}
         </div>
         <div style="padding:14px 26px;border-top:1px solid #e8e2d4;display:flex;justify-content:space-between;align-items:center;gap:8px;">
-          <span style="font-size:11.5px;color:#16a34a;font-weight:700;">✓ 顧客カードに自動保存済み</span>
-          <button id="fp-ai-save-tasks" style="font-size:13px;padding:9px 20px;background:linear-gradient(135deg,#1b2845,#0f1729);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;">閉じる</button>
+          <span style="font-size:11.5px;color:#16a34a;font-weight:700;">✓ 顧客カード「面談録」タブに自動保存済み — どちらの閉じるボタンを押しても消えません</span>
+          <button id="fp-ai-save-tasks" style="font-size:13px;padding:9px 20px;background:linear-gradient(135deg,#1b2845,#0f1729);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;">閉じる (保存済)</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
