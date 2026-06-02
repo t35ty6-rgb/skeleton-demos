@@ -3034,6 +3034,10 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       const r = await fetch(CLOUD_RUN_API);
       liveData = await r.json();
       window.LineAppLiveData = liveData;
+      // 顧客台帳の再描画 (新規 LINE 友だちを clients に取り込むため)
+      if (window.FPCrmRefreshClients) {
+        try { window.FPCrmRefreshClients(); } catch (_) {}
+      }
       return liveData;
     } catch (e) { console.error('liveData fail', e); return null; }
   }
