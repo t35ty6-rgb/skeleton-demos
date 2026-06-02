@@ -3072,28 +3072,37 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
   let liveData = null;
 
   function showSyncIndicator(state, detail) {
-    let el = document.getElementById('fp-sync-indicator');
+    // 全画面に薄いグレースケールフィルタ。同期中は全体トーン落ち、終わるとパッと明るくなる。
+    if (!document.getElementById('fp-sync-style')) {
+      const s = document.createElement('style');
+      s.id = 'fp-sync-style';
+      s.textContent = `
+        body.fp-syncing > *:not(#fp-sync-pill) { filter: grayscale(0.7) brightness(0.92); transition: filter 0.4s ease; }
+        body:not(.fp-syncing) > *:not(#fp-sync-pill) { filter: none; transition: filter 0.5s ease; }
+        #fp-sync-pill { position:fixed;top:14px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.92);color:#fff;padding:8px 18px;border-radius:999px;font-size:12.5px;font-family:inherit;font-weight:600;letter-spacing:0.04em;z-index:99999;display:flex;align-items:center;gap:10px;box-shadow:0 6px 24px rgba(0,0,0,0.18);opacity:0;transform-origin:center top;transition:opacity 0.3s ease;pointer-events:none; }
+        #fp-sync-pill.show { opacity: 1; }
+        @keyframes fp-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+      `;
+      document.head.appendChild(s);
+    }
+    let el = document.getElementById('fp-sync-pill');
     if (!el) {
       el = document.createElement('div');
-      el.id = 'fp-sync-indicator';
-      el.style.cssText = 'position:fixed;top:14px;right:14px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 14px;font-size:12px;font-family:inherit;box-shadow:0 4px 12px rgba(0,0,0,0.08);z-index:9000;display:flex;align-items:center;gap:8px;transition:opacity 0.3s;';
+      el.id = 'fp-sync-pill';
       document.body.appendChild(el);
     }
+    el.classList.add('show');
     if (state === 'loading') {
-      el.style.opacity = '1';
-      el.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid #cbd5e1;border-top-color:#3b82f6;border-radius:50%;animation:fp-spin 0.7s linear infinite;"></span><span style="color:#475569;font-weight:600;">同期中…</span>';
-      if (!document.getElementById('fp-spin-keyframes')) {
-        const s = document.createElement('style');
-        s.id = 'fp-spin-keyframes';
-        s.textContent = '@keyframes fp-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}';
-        document.head.appendChild(s);
-      }
+      document.body.classList.add('fp-syncing');
+      el.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:fp-spin 0.7s linear infinite;"></span><span>同期中</span>';
     } else if (state === 'done') {
-      el.innerHTML = '<span style="color:#16a34a;font-weight:700;">✓ 同期完了</span><span style="color:#64748b;font-size:11px;">' + (detail || '') + '</span>';
-      setTimeout(() => { el.style.opacity = '0'; }, 2500);
+      document.body.classList.remove('fp-syncing');
+      el.innerHTML = '<span style="color:#86efac;">✓</span><span>' + (detail || '完了') + '</span>';
+      setTimeout(() => { el.classList.remove('show'); }, 1800);
     } else if (state === 'error') {
-      el.innerHTML = '<span style="color:#dc2626;font-weight:700;">⚠ 同期失敗</span><span style="color:#64748b;font-size:11px;">' + (detail || '') + '</span>';
-      setTimeout(() => { el.style.opacity = '0'; }, 6000);
+      document.body.classList.remove('fp-syncing');
+      el.innerHTML = '<span style="color:#fca5a5;">⚠</span><span>同期失敗</span>';
+      setTimeout(() => { el.classList.remove('show'); }, 4000);
     }
   }
 
