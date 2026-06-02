@@ -1457,6 +1457,23 @@
           showProgressDoneAction();
         } else {
           updateProgressStep('ai', 'error', aiResult && aiResult.error);
+          // AI失敗時も「失敗ログ」を localStorage に保存しておく (デバッグ追跡可能に)
+          try {
+            const errEntry = {
+              bookingTs: R.bookingTs,
+              userId: (booking && booking.userId) || '',
+              customerName: R.customerName,
+              date: booking && booking.date,
+              summary: '⚠ AI処理が失敗しました\n\nエラー: ' + (aiResult && aiResult.error ? aiResult.error : '不明 (詳細はネットワークタブ確認)') + '\n\n録画ファイル自体は Drive に保存されています。',
+              transcript: '',
+              key_concerns: ['AI処理エラー'],
+              next_meeting_suggestion: '',
+              createdAt: new Date().toISOString(),
+              error: true,
+            };
+            autoSaveAIResult({ ok: true, ...errEntry, tasks: [] }, R.customerName, booking);
+            console.warn('[AI失敗ログを保存]', errEntry);
+          } catch (e) { console.error('failure-log save fail', e); }
         }
         await drivePromise;
         await onRecordingComplete(R.bookingTs, blob, R.blobUrl);
@@ -3054,17 +3071,51 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
   const CLOUD_RUN_API = CLOUD_RUN_BASE + '/api/bookings';
   let liveData = null;
 
+  function showSyncIndicator(state, detail) {
+    let el = document.getElementById('fp-sync-indicator');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'fp-sync-indicator';
+      el.style.cssText = 'position:fixed;top:14px;right:14px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 14px;font-size:12px;font-family:inherit;box-shadow:0 4px 12px rgba(0,0,0,0.08);z-index:9000;display:flex;align-items:center;gap:8px;transition:opacity 0.3s;';
+      document.body.appendChild(el);
+    }
+    if (state === 'loading') {
+      el.style.opacity = '1';
+      el.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid #cbd5e1;border-top-color:#3b82f6;border-radius:50%;animation:fp-spin 0.7s linear infinite;"></span><span style="color:#475569;font-weight:600;">同期中…</span>';
+      if (!document.getElementById('fp-spin-keyframes')) {
+        const s = document.createElement('style');
+        s.id = 'fp-spin-keyframes';
+        s.textContent = '@keyframes fp-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}';
+        document.head.appendChild(s);
+      }
+    } else if (state === 'done') {
+      el.innerHTML = '<span style="color:#16a34a;font-weight:700;">✓ 同期完了</span><span style="color:#64748b;font-size:11px;">' + (detail || '') + '</span>';
+      setTimeout(() => { el.style.opacity = '0'; }, 2500);
+    } else if (state === 'error') {
+      el.innerHTML = '<span style="color:#dc2626;font-weight:700;">⚠ 同期失敗</span><span style="color:#64748b;font-size:11px;">' + (detail || '') + '</span>';
+      setTimeout(() => { el.style.opacity = '0'; }, 6000);
+    }
+  }
+
   async function fetchLiveData() {
+    showSyncIndicator('loading');
     try {
       const r = await fetch(CLOUD_RUN_API);
       liveData = await r.json();
       window.LineAppLiveData = liveData;
+      const detail = (liveData.users ? liveData.users.length + 'ユーザー' : '') +
+                     (liveData.bookings ? ' / ' + liveData.bookings.length + '予約' : '');
+      showSyncIndicator('done', detail);
       // 顧客台帳の再描画 (新規 LINE 友だちを clients に取り込むため)
       if (window.FPCrmRefreshClients) {
         try { window.FPCrmRefreshClients(); } catch (_) {}
       }
       return liveData;
-    } catch (e) { console.error('liveData fail', e); return null; }
+    } catch (e) {
+      console.error('liveData fail', e);
+      showSyncIndicator('error', e.message || '');
+      return null;
+    }
   }
 
   function renderLeadFunnel() {
