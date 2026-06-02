@@ -1626,7 +1626,8 @@
     liveTasks.forEach(t => {
       const match = (t.userId && t.userId === client.lineFriendId) ||
                     (t.customerName && t.customerName === client.name) ||
-                    myBookings.some(b => b.ts === t.bookingTs || b.userId === t.userId);
+                    myBookings.some(b => b.ts === t.bookingTs || b.userId === t.userId) ||
+                    ((!t.customerName || t.customerName === 'お客様') && client.lineFriendId);
       if (!match) return;
       tasks.push({
         task: t.task, due: t.due, priority: t.priority, icon: t.icon,
@@ -1699,7 +1700,9 @@
     liveAiResults.forEach(r => {
       const match = (r.userId && (r.userId === client.lineFriendId)) ||
                     (r.customerName && r.customerName === client.name) ||
-                    myBookings.some(b => b.ts === r.bookingTs || b.userId === r.userId);
+                    myBookings.some(b => b.ts === r.bookingTs || b.userId === r.userId) ||
+                    // 汎用 fallback: customerName が 'お客様' or 空 → LINE連携客なら吸収
+                    ((!r.customerName || r.customerName === 'お客様') && client.lineFriendId);
       if (!match) return;
       // key_concerns は文字列で来てるので JSON.parse
       let kc = r.key_concerns;
