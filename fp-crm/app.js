@@ -1671,9 +1671,9 @@
     const myTs = new Set(myBookings.map(b => b.ts).filter(Boolean));
     const myNames = new Set([client.name].concat(myBookings.map(b => b.name).filter(Boolean)));
     // 「fp-ai-お客様」 等の汎用 fallback キー → 録画時に客を特定できなかった分。
-    // 現在モーダルで開いてる客が唯一の LINE 連携客なら自動で吸収する。
-    const liveUsersForRescue = (window.LineAppLiveData && window.LineAppLiveData.users) || [];
-    const onlyOneLineClient = liveUsersForRescue.length === 1;
+    // 開いてる客が LINE 連携客なら、無条件で汎用 fallback を吸収する。
+    // (複数人 LINE 友だちがいて誤紐付けされても、後で別客カードで「これ違う」と
+    //  分かれば手動で消せばいい。空白で見えないより遥かにマシ。)
     allKeys.forEach(k => {
       if (aiCandidateKeys.has(k)) return;  // 既出
       try {
@@ -1682,11 +1682,9 @@
           const matchUser   = a.userId       && myUids.has(a.userId);
           const matchTs     = a.bookingTs    && myTs.has(a.bookingTs);
           const matchName   = a.customerName && myNames.has(a.customerName);
-          // 汎用 fallback: keyName='fp-ai-お客様' (録画時に客特定できなかった)
-          // → このCRMの LINE 連携客が1名のみなら、その客のものと推定
-          const genericFallback = (k === 'fp-ai-お客様' || a.customerName === 'お客様') &&
-                                  onlyOneLineClient &&
-                                  client.lineFriendId;
+          // 汎用 fallback: 録画時に客特定できなかった分
+          const isGeneric = (k === 'fp-ai-お客様' || a.customerName === 'お客様' || !a.customerName);
+          const genericFallback = isGeneric && client.lineFriendId;
           if (matchUser || matchTs || matchName || genericFallback) {
             // userId 空なら現在の client.lineFriendId で補正してから push
             if (!a.userId && client.lineFriendId) a.userId = client.lineFriendId;
