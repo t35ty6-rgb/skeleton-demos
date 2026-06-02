@@ -2450,6 +2450,169 @@
   }
 
   // ============================
+  // KPI / タスク 管理
+  // ============================
+  function getKpiDefinitions() {
+    const today = TODAY;
+    const days = (d) => Math.floor((today - new Date(d)) / 86400000);
+    return [
+      {
+        id: 'kpi-untouched',
+        icon: 'phone-missed',
+        title: 'アクティブ顧客 月1接触',
+        goal: '全顧客に月1回以上の接触',
+        unit: '名',
+        targetCount: () => clients.filter(c => c.status !== 'dormant').length,
+        targetClients: () => clients.filter(c => c.status !== 'dormant' && days(c.lastContact) >= 30),
+        intent: '30日以上未接触のため、軽い近況伺いを送る',
+      },
+      {
+        id: 'kpi-stalled',
+        icon: 'clock',
+        title: '提案検討中のクロージング',
+        goal: '90日以内に成約 / 見送り判定',
+        unit: '名',
+        targetCount: () => clients.filter(c => (c.proposals || []).some(p => p.result === '検討中' || p.result === '提案中')).length,
+        targetClients: () => clients.filter(c => {
+          const p = (c.proposals || []).slice().reverse().find(p => p.result === '検討中' || p.result === '提案中');
+          return p && days(p.date) >= 30;
+        }),
+        intent: '提案が検討中のまま停滞。決断材料を追加して push',
+      },
+      {
+        id: 'kpi-event',
+        icon: 'calendar-clock',
+        title: 'ライフイベント先取り',
+        goal: 'イベント前60日以内に必ず1接触',
+        unit: '名',
+        targetCount: () => clients.length,
+        targetClients: () => clients.filter(c => {
+          if (!window.LifeEvents) return false;
+          const evs = window.LifeEvents.generate(c) || [];
+          const near = evs.find(ev => {
+            const d = (ev.date - today) / 86400000;
+            return ev.major && d >= 0 && d <= 60;
+          });
+          return !!near && days(c.lastContact) >= 21;
+        }),
+        intent: '60日以内のライフイベント前 / 21日以上未接触',
+      },
+      {
+        id: 'kpi-dormant',
+        icon: 'moon',
+        title: '休眠客の再エンゲージ',
+        goal: '月3名以上を起こす',
+        unit: '名',
+        targetCount: () => 3,
+        targetClients: () => clients.filter(c => c.status === 'dormant' || days(c.lastContact) >= 180).slice(0, 8),
+        intent: '180日以上未接触 / 休眠ステータス。軽いトピックで再開',
+      },
+      {
+        id: 'kpi-cancel-recovery',
+        icon: 'rotate-ccw',
+        title: 'キャンセル後の再アプローチ',
+        goal: 'キャンセル後7日以内に必ずフォロー',
+        unit: '名',
+        targetCount: () => clients.filter(c => (c.cancellations || []).length > 0).length,
+        targetClients: () => clients.filter(c => {
+          const last = (c.cancellations || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+          return last && days(last.date) <= 30 && days(c.lastContact) > days(last.date) - 1;
+        }),
+        intent: '直近キャンセル / フォロー未実施',
+      },
+    ];
+  }
+
+  function renderKpiBoard() {
+    const wrap = document.getElementById('kpi-board');
+    if (!wrap) return;
+    const defs = getKpiDefinitions();
+
+    const totalRemaining = defs.reduce((s, d) => s + d.targetClients().length, 0);
+    const navCount = document.getElementById('nav-count-kpi');
+    if (navCount) navCount.textContent = totalRemaining || '';
+
+    wrap.innerHTML = defs.map(def => {
+      const clientsList = def.targetClients();
+      const total = def.targetCount();
+      const remaining = clientsList.length;
+      const done = Math.max(0, total - remaining);
+      const pct = total > 0 ? Math.round(done / total * 100) : 100;
+      const status = remaining === 0 ? 'good' : (remaining > total * 0.5 ? 'critical' : 'warn');
+
+      const tasksHtml = clientsList.slice(0, 10).map(c => {
+        const dsl = Math.floor((TODAY - new Date(c.lastContact)) / 86400000);
+        const initial = (c.name || '?').replace(/\s+/g, '').slice(0, 1);
+        return `
+          <div class="kpi-task" data-kpi-client="${c.id}">
+            <div class="kpi-task-avatar">${escapeHtml(initial)}</div>
+            <div class="kpi-task-body">
+              <div class="kpi-task-name">${escapeHtml(c.name)} 様 <span class="status-pill ${c.status}">${statusLabel(c.status)}</span></div>
+              <div class="kpi-task-meta">最終接触 ${dsl}日前 / ${escapeHtml(c.occupation || '—')} / AUM ¥${fmtMoney(c.aum)}</div>
+            </div>
+            <button class="kpi-task-btn primary" data-kpi-ai="${c.id}">
+              <i data-lucide="wand-2"></i><span>AI下書き → 送信</span>
+            </button>
+          </div>
+        `;
+      }).join('') || '<div class="kpi-empty"><i data-lucide="check-circle-2"></i><span>このKPIは今月達成済みです 🎉</span></div>';
+
+      return `
+        <div class="kpi-card kpi-tone-${status}">
+          <div class="kpi-card-head">
+            <div class="kpi-card-icon"><i data-lucide="${def.icon}"></i></div>
+            <div class="kpi-card-meta">
+              <div class="kpi-card-title">${escapeHtml(def.title)}</div>
+              <div class="kpi-card-goal">${escapeHtml(def.goal)}</div>
+            </div>
+            <div class="kpi-card-stats">
+              <div class="kpi-stat-num">${remaining}<span class="kpi-stat-unit">${def.unit}</span></div>
+              <div class="kpi-stat-label">未対応</div>
+            </div>
+          </div>
+          <div class="kpi-card-progress">
+            <div class="kpi-progress-bar"><div class="kpi-progress-fill" style="width:${pct}%"></div></div>
+            <div class="kpi-progress-meta">対応済 <strong>${done}</strong> / 目標 <strong>${total}</strong> (${pct}%)</div>
+          </div>
+          <div class="kpi-card-intent">
+            <i data-lucide="info"></i>
+            <span>${escapeHtml(def.intent)}</span>
+          </div>
+          <div class="kpi-task-list">
+            ${tasksHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Wire actions
+    wrap.querySelectorAll('[data-kpi-ai]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const cid = btn.dataset.kpiAi;
+        const c = clients.find(x => x.id === cid);
+        if (!c) return;
+        const evs = window.LifeEvents.generate(c);
+        const recs = window.Recommender.forClient(c, evs);
+        openDraftReplyModal(c, evs, recs);
+      });
+    });
+    wrap.querySelectorAll('[data-kpi-client]').forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        openClientModal(row.dataset.kpiClient);
+      });
+    });
+  }
+
+  // Render on tab switch
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('.tab[data-tab="kpi"]');
+    if (t) setTimeout(renderKpiBoard, 80);
+  });
+  setTimeout(renderKpiBoard, 1000);
+
+  // ============================
   // util
   // ============================
   function escapeHtml(s) {
