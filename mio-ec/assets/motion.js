@@ -103,6 +103,35 @@
     }, {passive: true});
   }
 
+  /* PDP sticky buy bar: appear after user scrolls past the main buynow block */
+  function hookStickyBuy(){
+    const bar = document.querySelector('[data-pdp-sticky]');
+    if (!bar) return;
+    const buynow = document.querySelector('.pdp-buynow');
+    if (!buynow){ bar.classList.add('is-visible'); return; }
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        // bar visible when buynow is NOT in viewport (scrolled past or before)
+        // we only want to show after scrolling past, so check intersection ratio + position
+        const rect = e.target.getBoundingClientRect();
+        const scrolledPast = rect.bottom < 60;
+        bar.classList.toggle('is-visible', scrolledPast);
+      });
+    }, { threshold: [0, 0.1, 0.5, 1] });
+    io.observe(buynow);
+    // also re-check on scroll for safety
+    let raf = false;
+    window.addEventListener('scroll', () => {
+      if (raf) return;
+      requestAnimationFrame(() => {
+        const rect = buynow.getBoundingClientRect();
+        bar.classList.toggle('is-visible', rect.bottom < 60);
+        raf = false;
+      });
+      raf = true;
+    }, {passive:true});
+  }
+
   /* Smooth anchor links */
   function hookSmoothAnchors(){
     document.addEventListener('click', e => {
@@ -126,9 +155,9 @@
     hookParallax();
     hookSmoothAnchors();
     attachAll();
-    // Re-scan after dynamic content (products) renders
-    setTimeout(attachAll, 250);
-    setTimeout(attachAll, 1000);
+    // Re-scan after dynamic content (products / PDP) renders
+    setTimeout(() => { attachAll(); hookStickyBuy(); }, 250);
+    setTimeout(() => { attachAll(); hookStickyBuy(); }, 1000);
     // Also observe DOM mutations for late renders
     const mo = new MutationObserver(() => attachAll());
     mo.observe(document.body, { childList: true, subtree: true });

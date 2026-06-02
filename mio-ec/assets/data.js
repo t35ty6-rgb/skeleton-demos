@@ -129,6 +129,22 @@
       <span class="tax">送料別</span>
     </div>
 
+    <div class="pdp-buynow">
+      <div class="pdp-qty">
+        <button aria-label="数量を減らす">−</button>
+        <span>1</span>
+        <button aria-label="数量を増やす">＋</button>
+      </div>
+      <div class="pdp-actions">
+        <a class="btn-cart" href="${escapeHtml(p.paymentLink || '#')}">この商品を注文する →</a>
+        <button class="btn-fav" aria-label="お気に入りに追加">♡</button>
+      </div>
+      <div class="pdp-meta-inline">
+        <span>製作 ${escapeHtml(p.leadTimeText || '—')}</span>
+        <span>${escapeHtml(shippingHtml)}</span>
+      </div>
+    </div>
+
     <div class="pdp-desc">${nl2br(p.description)}</div>
 
     <div class="pdp-spec">
@@ -137,19 +153,19 @@
       <dl><dt>送料</dt><dd>${escapeHtml(shippingHtml)}</dd></dl>
     </div>
 
-    <div class="pdp-qty">
-      <button>−</button>
-      <span>1</span>
-      <button>＋</button>
-    </div>
-    <div class="pdp-actions">
-      <a class="btn-cart" href="${escapeHtml(p.paymentLink || '#')}">この商品を注文する →</a>
-      <button class="btn-fav">♡</button>
-    </div>
-
     ${p.note ? `<div class="pdp-note">${p.note}</div>` : ''}
   </div>
 </section>
+
+<div class="pdp-sticky" data-pdp-sticky>
+  <div class="pdp-sticky-inner">
+    <div class="pdp-sticky-info">
+      <div class="pdp-sticky-name">${escapeHtml(p.name)}</div>
+      <div class="pdp-sticky-price"><strong>${yen(p.priceTaxExcluded)}</strong><span>税抜</span></div>
+    </div>
+    <a class="pdp-sticky-cta" href="${escapeHtml(p.paymentLink || '#')}">注文する →</a>
+  </div>
+</div>
 
 ${p.makerQuote ? `
 <section style="background:var(--sky-pale);padding:100px 24px">
