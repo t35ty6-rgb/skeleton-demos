@@ -283,6 +283,8 @@
         ${tops.map((t, i) => briefCardHtml(t, i)).join('')}
       </div>
     `;
+    const cnt = document.getElementById('senior-counter');
+    if (cnt) cnt.textContent = tops.length + ' 名';
 
     // Wire actions
     list.querySelectorAll('[data-brief-open], [data-brief-detail]').forEach(btn => {
