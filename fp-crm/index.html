@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="styles.css?v=20260531n">
 <link rel="stylesheet" href="styles-v2.css?v=20260531n">
 <link rel="stylesheet" href="styles-v3.css?v=20260531n">
-<link rel="stylesheet" href="styles-v8-workspace.css?v=20260602o">
+<link rel="stylesheet" href="styles-v8-workspace.css?v=20260602p">
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -60,12 +60,11 @@
         <div class="tab active" data-tab="dashboard">
           <i data-lucide="home"></i>
           <span>ホーム</span>
-          <span class="nav-count nav-count-alert">8</span>
         </div>
         <div class="tab" data-tab="clients">
           <i data-lucide="users"></i>
           <span>顧客台帳</span>
-          <span class="nav-count" id="nav-count-clients">—</span>
+          <span class="nav-count" id="nav-count-clients"></span>
         </div>
         <div class="tab" data-tab="timeline">
           <i data-lucide="git-commit-horizontal"></i>
@@ -73,7 +72,7 @@
         </div>
         <div class="tab" data-tab="kpi">
           <i data-lucide="target"></i>
-          <span>KPI / タスク</span>
+          <span>KPI / 目標</span>
           <span class="nav-count nav-count-alert" id="nav-count-kpi"></span>
         </div>
       </nav>
@@ -87,7 +86,7 @@
         <div class="tab tab-line" data-tab="leadHub">
           <i data-lucide="user-plus"></i>
           <span>新規相談</span>
-          <span class="nav-count nav-count-alert">4</span>
+          <span class="nav-count nav-count-alert" id="nav-count-lead"></span>
         </div>
 
         <div class="tab tab-line" data-tab="distributionHub">
@@ -97,12 +96,12 @@
         <div class="tab tab-line" data-tab="birthdayTab">
           <i data-lucide="cake"></i>
           <span>誕生日</span>
-          <span class="nav-count">2</span>
+          <span class="nav-count" id="nav-count-bday"></span>
         </div>
         <div class="tab tab-line" data-tab="calendarTab">
           <i data-lucide="calendar-days"></i>
-          <span>カレンダー</span>
-          <span class="nav-count nav-count-alert">4</span>
+          <span>年末配布</span>
+          <span class="nav-count nav-count-alert" id="nav-count-cal"></span>
         </div>
         <div class="tab tab-line" data-tab="settingsHub">
           <i data-lucide="settings"></i>
@@ -443,11 +442,11 @@
   <div class="modal" id="modal-content"></div>
 </div>
 
-<script src="dummy-data.js?v=20260602o"></script>
+<script src="dummy-data.js?v=20260602p"></script>
 <script src="life-events.js?v=20260602a"></script>
 <script src="recommender.js?v=20260602a"></script>
 <script src="line-data.js?v=20260602a"></script>
-<script src="app.js?v=20260602o"></script>
+<script src="app.js?v=20260602p"></script>
 <script src="line-app.js?v=20260602a"></script>
 <script src="charts.js?v=20260602a"></script>
 <script>
@@ -582,6 +581,35 @@
       document.body.appendChild(chip);
     } catch (e) { console.error('debug chip err', e); }
   }, 1500);
+
+  // Sidebar nav counts: 動的に計算
+  function updateNavCounts() {
+    const clients = window.DUMMY_CLIENTS || [];
+    if (!clients.length) return;
+    const today = (window.LifeEvents && window.LifeEvents.TODAY) || new Date('2026-05-27');
+    const daysFn = (d) => Math.floor((today - new Date(d)) / 86400000);
+    const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || ''; };
+    setText('nav-count-clients', clients.length);
+    // KPI/タスク: アクション必要
+    let kpiAlert = 0;
+    clients.forEach(c => {
+      const dsl = daysFn(c.lastContact);
+      const lastCancel = (c.cancellations || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+      if (lastCancel && daysFn(lastCancel.date) <= 30) { kpiAlert++; return; }
+      const stalled = (c.proposals || []).find(p => (p.result === '検討中' || p.result === '提案中') && daysFn(p.date) >= 30);
+      if (stalled) { kpiAlert++; return; }
+      if (c.status === 'dormant' || dsl >= 180) { kpiAlert++; return; }
+      if (dsl >= 30 && c.status !== 'dormant') { kpiAlert++; }
+    });
+    setText('nav-count-kpi', kpiAlert);
+    setText('nav-count-lead', clients.length > 0 ? Math.min(4, clients.length) : '');
+    const m = today.getMonth() + 1;
+    const bdayCount = clients.filter(c => c.birth && (new Date(c.birth).getMonth() + 1) === m).length;
+    setText('nav-count-bday', bdayCount);
+    setText('nav-count-cal', clients.length > 5 ? 4 : '');
+  }
+  setTimeout(updateNavCounts, 800);
+  setInterval(updateNavCounts, 5000);
 
   // MEGA HERO hydration
   function hydrateHero() {
