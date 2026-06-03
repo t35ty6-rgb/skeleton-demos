@@ -3556,12 +3556,18 @@
               <span class="aib-step-status aib-step-done"><i data-lucide="check"></i>生成済</span>
             </div>
             <div class="aib-step-body">
-              <div class="aib-draft-meta">
+              <div class="aib-draft-meta" style="flex-wrap:wrap;gap:8px;">
                 <span class="aib-intent">${escapeHtml(draft.intent)}</span>
                 <span class="aib-tone-label">トーン: 丁寧</span>
                 <button class="aib-tone-btn" id="draft-regen"><i data-lucide="refresh-cw"></i>別のトーンで再生成</button>
+                <button class="aib-tone-btn" id="draft-claude-regen" style="background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;border-color:#5B5BF0;font-weight:800;letter-spacing:0.04em;">✨ Claude で この方専用に超個別化生成</button>
               </div>
-              <div class="aib-textarea-wrap">
+              <div class="aib-textarea-wrap" style="position:relative;">
+                <div id="draft-claude-overlay" style="display:none;position:absolute;inset:0;background:rgba(255,255,255,0.92);z-index:5;align-items:center;justify-content:center;flex-direction:column;gap:14px;border-radius:8px;">
+                  <div style="width:46px;height:46px;border:4px solid #C7D2FE;border-top-color:#5B5BF0;border-radius:50%;animation:fp-ai-spin 0.9s linear infinite;"></div>
+                  <div style="font-weight:800;color:#5B5BF0;font-size:14px;">✨ Claude が ${escapeHtml(client.name)} 様 専用に下書きを生成中</div>
+                  <div style="font-size:11px;color:#64748B;text-align:center;line-height:1.6;">家族構成・最終接触・議事録・提案履歴・LINE 履歴・<br>ライフイベント を全て読み込んで、本気の下書きを生成しています (10-20秒)</div>
+                </div>
                 <textarea id="draft-text" class="aib-textarea">${escapeHtml(draft.body)}</textarea>
               </div>
               <div class="aib-attach">
@@ -3723,6 +3729,116 @@
       const newDraft = generateDraftReply(client, events, recs, toneIndex);
       currentBaseBody = newDraft.body;
       applyAttachments();
+    });
+
+    // ★ オーナーfb「AI下書きをめちゃくちゃ強化、この人に最適化」
+    // Claude に顧客の全文脈を渡して本気の下書き生成
+    document.getElementById('draft-claude-regen').addEventListener('click', async () => {
+      const btn = document.getElementById('draft-claude-regen');
+      const overlay = document.getElementById('draft-claude-overlay');
+      btn.disabled = true; btn.style.opacity = '0.6';
+      overlay.style.display = 'flex';
+      // 全文脈収集
+      const ageDisp = window.LifeEvents.currentAge(client);
+      const familyDisp = (client.family || []).map(m => {
+        const r = m.rel === 'spouse' ? '配偶者' : (m.rel === 'child' ? 'お子様' : m.rel);
+        const a = window.LifeEvents.currentAge({ birth: m.birth });
+        return `${r}${m.name}(${a || '-'}歳)`;
+      }).join(' / ') || '単身';
+      const dsl = daysSince(client.lastContact);
+      const lastProps = (client.proposals || []).slice(-3).map(p => `${p.date} ${p.title}(${p.result})`).join(' / ') || 'なし';
+      const lastCancels = (client.cancellations || []).slice(-2).map(c => `${c.date}キャンセル(${c.reason || '理由不明'})`).join(' / ') || 'なし';
+      const recentLine = (client.lineHistory || []).slice(-6).map(m => `${m.direction === 'in' ? '客' : 'FP'}: ${(m.text || '').slice(0, 80)}`).join('\n') || 'なし';
+      const upcomingEvs = (events || []).filter(ev => new Date(ev.date) >= TODAY).slice(0, 4).map(ev => `${(new Date(ev.date)).toLocaleDateString('ja-JP')} ${ev.label}`).join(' / ') || 'なし';
+      // 最新 AI議事録 (key_concerns 含む)
+      let aiCtx = '';
+      try {
+        const aiKeys = Object.keys(localStorage).filter(k => k.startsWith('fp-ai-'));
+        let latestA = null;
+        aiKeys.forEach(k => {
+          try { JSON.parse(localStorage.getItem(k) || '[]').forEach(a => {
+            const m = (a.userId === client.lineFriendId) || (a.customerName === client.name);
+            if (m && (!latestA || new Date(a.createdAt || 0) > new Date(latestA.createdAt || 0))) latestA = a;
+          }); } catch (_) {}
+        });
+        ((window.LineAppLiveData && window.LineAppLiveData.ai_results) || []).forEach(r => {
+          const m = (r.userId === client.lineFriendId) || (r.customerName === client.name);
+          if (m && (!latestA || new Date(r.ts || 0) > new Date(latestA.createdAt || 0))) latestA = { summary: r.summary, key_concerns: r.key_concerns, createdAt: r.ts };
+        });
+        if (latestA) {
+          let kc = latestA.key_concerns;
+          if (typeof kc === 'string') { try { kc = JSON.parse(kc); } catch (_) { kc = []; } }
+          aiCtx = `最新議事録: ${String(latestA.summary || '').slice(0, 600)}\n関心事: ${(kc || []).join(', ')}`;
+        }
+      } catch (_) {}
+
+      const taskTitle = `LINE 個別下書き 生成 — 以下は全文脈です:
+
+【顧客プロファイル】
+${client.name}様 / ${ageDisp || '?'}歳 / ${client.occupation || '職業不明'} / 家族: ${familyDisp}
+管理資産: ¥${(client.aum || 0).toLocaleString()} / 最終接触: ${dsl}日前 (${client.lastContact})
+
+【提案履歴】
+${lastProps}
+
+【キャンセル/トラブル】
+${lastCancels}
+
+【直近 LINE 会話】
+${recentLine}
+
+【今後のライフイベント (90日以内)】
+${upcomingEvs}
+
+【面談議事録】
+${aiCtx || 'なし'}
+
+【現在のインテント (AI 判定)】
+${draft.intent} — ${draft.reason}
+
+【依頼】
+上記すべてを踏まえ、${client.name}様に "いま" 送るべき LINE 下書きを 1つ 生成してください。
+- 文体: 丁寧かつ温かい (テンプレ感ゼロ)
+- 冒頭: 「${client.name}様、お世話になっております」では始めない (定型禁止)
+- 必ず: 議事録から1つ、提案履歴から1つ、家族構成から1つ の固有要素を盛り込む
+- 末尾: 次に取るべき具体行動を1つ提示 (「いつまでに何を」)
+- 長さ: 200-350字
+- 出力: <div class="fp-deliv-content"><p>本文ここ</p></div> の HTML 形式`;
+
+      try {
+        const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/generate-deliverable', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'custom', clientName: client.name, clientCtx: `${ageDisp || '?'}歳 / ${client.occupation || ''} / ${familyDisp}`, summary: aiCtx, transcript: '', taskTitle }),
+        });
+        const d = await r.json();
+        overlay.style.display = 'none';
+        btn.disabled = false; btn.style.opacity = '1';
+        if (d.ok && d.html) {
+          // HTML から plain text 抽出
+          const tmp = document.createElement('div');
+          tmp.innerHTML = d.html;
+          const text = (tmp.textContent || tmp.innerText || '').trim();
+          if (text && text.length > 30) {
+            document.getElementById('draft-text').value = text;
+            currentBaseBody = text;
+            applyAttachments();
+            // 成功トースト
+            const t = document.createElement('div');
+            t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #5B5BF0;border-radius:10px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:99999;font-family:inherit;';
+            t.innerHTML = `<strong style="font-size:14px;color:#5B5BF0;">✨ ${escapeHtml(client.name)} 様 専用 下書き 生成完了</strong><div style="font-size:11.5px;color:#6b7280;margin-top:3px;">議事録・家族・LINE履歴 すべてを踏まえた本気の下書き</div>`;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 5000);
+          } else {
+            alert('Claude の返答が空でした。もう一度お試しください。');
+          }
+        } else {
+          alert('生成失敗: ' + (d.error || '不明'));
+        }
+      } catch (e) {
+        overlay.style.display = 'none';
+        btn.disabled = false; btn.style.opacity = '1';
+        alert('通信失敗: ' + e.message);
+      }
     });
 
     // ===== Slot pool: simulate FP's Google Calendar free slots =====
