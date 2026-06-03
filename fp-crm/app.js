@@ -1424,15 +1424,42 @@
         return '<span style="background:#e5e7eb;color:#6b7280;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:800;letter-spacing:0.04em;">○ 未着手</span>';
       };
 
-      const kpiRows = kpis.map(k => `
+      // KPI 名 → アクション ID マッピング (未着手なら「→ 今やる」ボタンで対応操作起動)
+      const kpiActionMap = {
+        '日程確定': 'open-line-slot',
+        '事前アンケート回収': 'send-survey-line',
+        'Zoom URL 発行': 'open-line-slot',
+        '事前リマインド': 'send-reminder-line',
+        '初回 議事録 生成': 'open-recording-tab',
+        'お礼/感想ヒアリング LINE': 'send-thanks-line',
+        'お客様からの返信あり': 'send-followup-line',
+        '2回目 候補日 提示': 'send-slot-line',
+        'ヒアリング深掘り (3項目以上)': 'open-hearing-sheet',
+        '2回目 議事録 生成': 'open-recording-tab',
+        'ライフプラン作成': 'make-deliv-lifeplan',
+        'シミュレーション 3パターン': 'make-deliv-cashflow',
+        '提案商品 候補絞り込み': 'make-deliv-nisa',
+        '3回目 (提案) 日程確定': 'send-slot-line',
+        '提案資料 送付済': 'make-deliv-custom',
+        '質問対応 完了': 'send-followup-line',
+        '契約意向 確認': 'send-followup-line',
+        '契約 or 次回 見直し設定': 'send-slot-line',
+      };
+      const kpiRows = kpis.map(k => {
+        const action = kpiActionMap[k.name];
+        const isPending = k.status === 'todo' || k.status === 'risk' || k.status === 'progress';
+        const actionBtn = (action && isPending) ? `<button class="fp-kpi-do" data-kpi-action="${action}" data-kpi-name="${escapeHtml(k.name)}" data-client-id="${escapeHtml(c.id)}" style="font-size:11px;padding:6px 12px;background:#5B5BF0;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:800;font-family:inherit;letter-spacing:0.02em;margin-top:4px;">→ 今やる</button>` : '';
+        return `
         <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);">
           <div>
             <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:3px;">${escapeHtml(k.name)}</div>
             <div style="font-size:11px;color:var(--muted);line-height:1.5;">↳ ${escapeHtml(k.howTo)}</div>
+            ${actionBtn}
           </div>
           <div style="align-self:flex-start;">${statusBadge(k.status)}</div>
         </div>
-      `).join('');
+      `;
+      }).join('');
 
       const headerHtml = `
         <div style="background:linear-gradient(135deg,${stageColor},#1b2845);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:14px;">
@@ -1915,6 +1942,25 @@
         } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; btn.textContent = '→ LINEで送信'; }
       });
     });
+    // ★ 生成済 資料 の「再開 / 削除」 ボタン
+    document.querySelectorAll('.fp-deliv-open').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const clientId = btn.dataset.clientId;
+        const target = clients.find(x => String(x.id) === String(clientId)) || c;
+        const type = btn.dataset.type || 'custom';
+        const title = btn.dataset.title || '';
+        openDeliverableDraftModal(target, title, type);
+      });
+    });
+    document.querySelectorAll('.fp-deliv-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.delivKey;
+        if (!confirm('この生成済成果物を削除しますか? (元に戻せません)')) return;
+        try { localStorage.removeItem(key); } catch (_) {}
+        const row = btn.closest('div[style*="background:#fff"]');
+        if (row) row.remove();
+      });
+    });
     // ★ オーナーfb「成果物もJobsが作って一緒に送る + こっちで編集」 ワンクリック導線
     document.querySelectorAll('.fp-task-make-deliv').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1922,8 +1968,58 @@
         const targetClient = clients.find(x => String(x.id) === String(clientId)) || c;
         const type = btn.dataset.type || 'custom';
         const taskTitle = btn.dataset.task || '';
-        // openDeliverableDraftModal で type + taskTitle で起動 → AI生成 → 編集 → LINE送信
         openDeliverableDraftModal(targetClient, taskTitle, type);
+      });
+    });
+    // ★ オーナーfb「未着手KPIもタイムラインから操作できるように」
+    document.querySelectorAll('.fp-kpi-do').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.kpiAction;
+        const kpiName = btn.dataset.kpiName;
+        const clientId = btn.dataset.clientId;
+        const target = clients.find(x => String(x.id) === String(clientId)) || c;
+        const uid = target.lineFriendId;
+        // ----- 個別アクション ハンドラ -----
+        if (action === 'send-thanks-line') {
+          if (!uid) { alert('LINE 連携未完了'); return; }
+          const msg = `${target.name}様\n\n本日はお時間いただきありがとうございました。\n\n面談でお話した内容を整理して、次回までに必要な資料を準備してお持ちします。\n\nお忙しいところ恐縮ですが、本日の面談の感想や、追加でご質問あれば このトークから気軽にお聞かせください 🙏`;
+          openLineSendModal(target, msg, kpiName);
+        } else if (action === 'send-followup-line') {
+          if (!uid) { alert('LINE 連携未完了'); return; }
+          const msg = `${target.name}様\n\nその後いかがお過ごしでしょうか。\n\n先日お送りした資料、ご家族でご確認いただけましたか?\n\nご不明点や追加のご質問があれば、お気軽にお聞かせください。`;
+          openLineSendModal(target, msg, kpiName);
+        } else if (action === 'send-reminder-line') {
+          if (!uid) { alert('LINE 連携未完了'); return; }
+          const msg = `${target.name}様\n\n明日の Zoom 面談のリマインドです。\n\n📅 明日 時間: ●●:●●〜\n🔗 Zoom URL: (本番では予約済URLが自動挿入されます)\n\n変更ありましたらお早めにお知らせください。`;
+          openLineSendModal(target, msg, kpiName);
+        } else if (action === 'send-survey-line') {
+          if (!uid) { alert('LINE 連携未完了'); return; }
+          const msg = `${target.name}様\n\n事前アンケート(全5問・3分)のご記入をお願いします:\n\n(本番ではLIFFフォームURLが自動挿入されます)\n\nご記入後、候補日3つを自動でお送りします。`;
+          openLineSendModal(target, msg, kpiName);
+        } else if (action === 'send-slot-line') {
+          if (!uid) { alert('LINE 連携未完了'); return; }
+          const msg = `${target.name}様\n\n次回 Zoom 面談の候補日3つです:\n\n📅 候補1: ●月●日 (●) 14:00-15:00\n📅 候補2: ●月●日 (●) 19:00-20:00\n📅 候補3: ●月●日 (●) 10:00-11:00\n\nご都合の良い日時を1つお選びください。タップ確定で Zoom URL + カレンダー登録が自動で完了します。`;
+          openLineSendModal(target, msg, kpiName);
+        } else if (action === 'open-line-slot') {
+          // 公式LINE 候補日3つ送付 (上と同じテンプレ)
+          if (!uid) { alert('LINE 連携未完了'); return; }
+          const msg = `${target.name}様\n\nご相談ありがとうございます。\n\n初回 Zoom 面談の候補日3つです:\n\n📅 候補1: ●月●日 (●) 14:00-15:00\n📅 候補2: ●月●日 (●) 19:00-20:00\n📅 候補3: ●月●日 (●) 10:00-11:00\n\nご都合の良い日時を1つお選びください。タップ確定で Zoom URL が自動発行されます。`;
+          openLineSendModal(target, msg, kpiName);
+        } else if (action === 'open-recording-tab') {
+          alert('「面談記録・AI議事録」タブで該当 Zoom予約の[● 録画ONでZoom開始]ボタンから開始してください。');
+          // タブ自動切替
+          const tlTab = document.querySelector('[data-cdtab="aimeeting"]') || document.querySelector('[data-cdtab="meeting"]');
+          if (tlTab) tlTab.click();
+        } else if (action === 'open-hearing-sheet') {
+          if (typeof openHearingSheetModal === 'function') {
+            openHearingSheetModal(target);
+          } else {
+            alert('ヒアリングシート機能はまだ実装されていません');
+          }
+        } else if (action && action.startsWith('make-deliv-')) {
+          const type = action.replace('make-deliv-', '');
+          openDeliverableDraftModal(target, kpiName, type);
+        }
       });
     });
     const refCopy = document.getElementById('ref-copy-url');
@@ -2202,6 +2298,41 @@
             `).join('') + '</div>';
         })()}
 
+        ${(function(){
+          // ★ オーナーfb「終了後どこに保存されてるかわかりづらい」 → 生成済成果物 一覧
+          const delivPrefix = `fp-deliv-edit-${client.id || client.lineFriendId || client.name}-`;
+          const delivKeys = Object.keys(localStorage).filter(k => k.startsWith(delivPrefix));
+          if (delivKeys.length === 0) return '';
+          const items = delivKeys.map(k => {
+            const rest = k.substring(delivPrefix.length); // type-taskTitle
+            const dash = rest.indexOf('-');
+            const type = dash > 0 ? rest.substring(0, dash) : rest;
+            const title = dash > 0 ? rest.substring(dash + 1) : '';
+            const content = localStorage.getItem(k) || '';
+            const sizeKb = (content.length / 1024).toFixed(1);
+            return { key: k, type, title, sizeKb };
+          });
+          return `
+            <h3 style="margin-top:18px;">📁 ${escapeHtml(client.name)} 様 専用 生成済 資料 <span class="count-badge">${items.length}</span></h3>
+            <div style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:8px;padding:8px 12px;font-size:11px;color:#4338CA;margin-bottom:8px;">
+              💾 編集済成果物はブラウザに自動保存され、いつでも再オープン・LINE再送信できます
+            </div>
+            <div style="display:grid;gap:6px;">
+              ${items.map(it => `
+                <div style="background:#fff;border:1px solid var(--line);border-radius:7px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:700;color:var(--ink);">${escapeHtml(it.title || it.type)}</div>
+                    <div style="font-size:10.5px;color:var(--muted);">タイプ: ${escapeHtml(it.type)} · サイズ: ${it.sizeKb}KB</div>
+                  </div>
+                  <div style="display:flex;gap:5px;">
+                    <button class="fp-deliv-open" data-deliv-key="${escapeHtml(it.key)}" data-type="${escapeHtml(it.type)}" data-title="${escapeHtml(it.title)}" data-client-id="${escapeHtml(client.id)}" style="font-size:11px;padding:6px 12px;background:#5B5BF0;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;font-family:inherit;">📝 再開</button>
+                    <button class="fp-deliv-del" data-deliv-key="${escapeHtml(it.key)}" style="font-size:11px;padding:6px 10px;background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:5px;cursor:pointer;font-weight:700;font-family:inherit;">🗑</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        })()}
         ${tasks.length === 0 ? '' : `
           <h3 style="margin-top:16px;">フォロータスク <span class="count-badge">${tasks.length}</span></h3>
           <div style="display:grid;gap:8px;">
@@ -2446,6 +2577,58 @@
         }
       }, 100);
     }
+  }
+
+  // ★ KPI 操作用: シンプルな LINE 送信モーダル (テンプレ prefill + 編集 + 送信)
+  function openLineSendModal(client, prefillText, contextLabel) {
+    const uid = client.lineFriendId;
+    if (!uid) { alert('この方は LINE 連携未完了'); return; }
+    const ex = document.getElementById('fp-line-send-modal');
+    if (ex) ex.remove();
+    const ov = document.createElement('div');
+    ov.id = 'fp-line-send-modal';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:10020;display:flex;align-items:center;justify-content:center;padding:20px;';
+    ov.innerHTML = `
+      <div style="background:#fff;width:min(520px,100%);border-radius:14px;font-family:'Noto Sans JP',sans-serif;overflow:hidden;">
+        <div style="padding:16px 22px;background:#06C755;color:#fff;display:flex;justify-content:space-between;align-items:center;">
+          <strong style="font-size:14px;">📨 LINE 送信 — ${escapeHtml(contextLabel || 'KPI 達成アクション')}</strong>
+          <button id="fp-lsm-close" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;width:28px;height:28px;border-radius:5px;cursor:pointer;">✕</button>
+        </div>
+        <div style="padding:18px 22px;">
+          <div style="font-size:12px;color:#64748B;margin-bottom:10px;">送信先: <strong>${escapeHtml(client.name)} 様</strong></div>
+          <div style="font-size:10.5px;color:#5B5BF0;background:#EEF2FF;border:1px solid #C7D2FE;border-radius:6px;padding:8px 12px;margin-bottom:10px;line-height:1.55;">💡 テンプレを編集してご送信ください。送信後、このKPIは自動で「✓ 達成」になります</div>
+          <textarea id="fp-lsm-msg" style="width:100%;min-height:240px;border:1.5px solid #E2E8F0;border-radius:8px;padding:12px;font-family:inherit;font-size:13px;line-height:1.75;">${escapeHtml(prefillText)}</textarea>
+          <div style="display:flex;gap:10px;margin-top:14px;">
+            <button id="fp-lsm-cancel" style="flex:1;padding:11px;background:#fff;border:1.5px solid #CBD5E1;color:#475569;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;">キャンセル</button>
+            <button id="fp-lsm-send" style="flex:2;padding:11px;background:#06C755;color:#fff;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit;">📤 LINE 送信</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(ov);
+    document.getElementById('fp-lsm-close').addEventListener('click', () => ov.remove());
+    document.getElementById('fp-lsm-cancel').addEventListener('click', () => ov.remove());
+    document.getElementById('fp-lsm-send').addEventListener('click', async () => {
+      const text = document.getElementById('fp-lsm-msg').value.trim();
+      if (!text) { alert('本文を入力してください'); return; }
+      const btn = document.getElementById('fp-lsm-send');
+      btn.disabled = true; btn.textContent = '送信中…';
+      try {
+        const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/send-line', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: uid, text }),
+        });
+        const d = await r.json();
+        if (d.ok) {
+          ov.remove();
+          const t = document.createElement('div');
+          t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #06C755;border-radius:10px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10030;';
+          t.innerHTML = `<strong style="font-size:14px;">✓ ${escapeHtml(client.name)} 様 に送信完了</strong><div style="font-size:12px;color:#6b7280;margin-top:4px;">KPI 達成状況は次回モーダル再表示時に更新されます</div>`;
+          document.body.appendChild(t);
+          setTimeout(() => t.remove(), 4000);
+        } else { alert('失敗: ' + (d.error || '')); btn.disabled = false; btn.textContent = '📤 LINE 送信'; }
+      } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; btn.textContent = '📤 LINE 送信'; }
+    });
   }
 
   // 成果物 → LINE送信モーダル (本文 prefill + 編集 + 送信)
