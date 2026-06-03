@@ -691,7 +691,14 @@
     if (!target) return;
     // 完了アーカイブ済み bookingTs のセット (localStorage)
     const archived = new Set(JSON.parse(localStorage.getItem('fp-booking-archived') || '[]'));
-    const sortMode = localStorage.getItem('fp-bookings-sort') || 'upcoming';
+    // ⚠ 旧 default (date-desc) が localStorage に固定されてる古いユーザを
+    //   新 default (upcoming) に migrate
+    let sortMode = localStorage.getItem('fp-bookings-sort') || 'upcoming';
+    if (!localStorage.getItem('fp-sort-migrated-v2')) {
+      sortMode = 'upcoming';
+      localStorage.setItem('fp-bookings-sort', 'upcoming');
+      localStorage.setItem('fp-sort-migrated-v2', '1');
+    }
     // 並び替え
     const todayIso = new Date().toISOString().slice(0, 10);
     const cmp = {
@@ -1359,6 +1366,27 @@
   // 画面録画 → 停止時に Drive の顧客フォルダへ自動アップロード
   async function startScreenRecording(bookingTs, zoomUrl) {
     const R = window._fpRecorder;
+    // ★ 順序: 先に Zoom を新ウィンドウで開く → ユーザが Zoom 入室準備中に画面共有ダイアログ
+    // (オーナーfb「Zoomが開かない」対策。先に開けば共有時に Zoom画面を選択しやすい)
+    const sw0 = window.screen.availWidth || screen.width;
+    const sh0 = window.screen.availHeight || screen.height;
+    const memoW0 = Math.floor(sw0 / 4);
+    const zoomW0 = sw0 - memoW0;
+    const zoomBrowserUrl0 = (function() {
+      try {
+        const m = (zoomUrl || '').match(/zoom\.us\/j\/(\d+)(\?.*)?/);
+        if (!m) return zoomUrl;
+        const host = (zoomUrl.match(/^https?:\/\/([^\/]+)/) || ['', 'zoom.us'])[1];
+        return `https://${host}/wc/join/${m[1]}${m[2] || ''}`;
+      } catch (_) { return zoomUrl; }
+    })();
+    const zf0 = `width=${zoomW0},height=${sh0},left=${memoW0},top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
+    const zoomWinEarly = window.open(zoomBrowserUrl0, 'fp-zoom-win', zf0);
+    if (!zoomWinEarly) {
+      // ポップアップブロック時は新タブで
+      window.open(zoomBrowserUrl0, '_blank');
+    }
+    window._fpZoomWin = zoomWinEarly;
     showPickerHint();
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -1511,7 +1539,10 @@
       showFixedCompleteButton(); // 画面下に常時表示の完了ボタン
     } catch (e) {
       hidePickerHint();
-      alert('画面録画の開始に失敗しました\n\n詳細: ' + e.message);
+      const msg = (e && e.name === 'NotAllowedError')
+        ? '画面共有がキャンセルされました。\n\nZoom は別ウィンドウで開かれています。\n録画したい場合はもう一度「録画ON」ボタンを押し、\nChrome のダイアログで「タブ」 → Zoom タブを選択 → 「音声を共有」 にチェック → 「共有」 を押してください。'
+        : '画面録画の開始に失敗しました\n\n詳細: ' + (e && e.message);
+      alert(msg);
       localStorage.removeItem('fp-memo-fullscreen');
     }
   }
