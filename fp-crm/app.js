@@ -1868,13 +1868,14 @@
             <div class="cd-flow-title">直近の推奨アクションなし</div>
             <div class="cd-flow-reason">この方のライフイベントや接触状況からは、特に緊急のアクションはありません。</div>
             <div class="cd-flow-steps">
-              <button class="cd-flow-step cd-flow-step-active" id="modal-draft-btn">
-                <span class="cd-flow-step-no"><i data-lucide="wand-2"></i></span>
+              <button class="cd-flow-step cd-flow-step-active fp-draft-cta" id="modal-draft-btn" style="background:linear-gradient(135deg,#5B5BF0 0%,#7C3AED 50%,#5B5BF0 100%);background-size:200% 200%;color:#fff !important;border:none;animation:fp-draft-cta-pulse 1.8s ease-in-out infinite,fp-draft-cta-gradient 3s linear infinite;box-shadow:0 8px 24px rgba(91,91,240,0.45),0 0 0 4px rgba(255,255,255,0.5);">
+                <span class="cd-flow-step-no" style="color:#fff;background:rgba(255,255,255,0.22);"><i data-lucide="wand-2"></i></span>
                 <span class="cd-flow-step-body">
-                  <span class="cd-flow-step-label">AI返信下書きを作る</span>
-                  <span class="cd-flow-step-sub">挨拶や定期連絡を起案</span>
+                  <span class="cd-flow-step-label" style="color:#fff !important;font-weight:900;letter-spacing:0.04em;">✨ AI返信下書きを作る</span>
+                  <span class="cd-flow-step-sub" style="color:rgba(255,255,255,0.92) !important;font-weight:600;">挨拶や定期連絡を起案 — 押すと自動で生成</span>
                 </span>
               </button>
+              <style>@keyframes fp-draft-cta-pulse{0%,100%{transform:translateY(0) scale(1);box-shadow:0 8px 24px rgba(91,91,240,0.45),0 0 0 4px rgba(255,255,255,0.5)}50%{transform:translateY(-2px) scale(1.015);box-shadow:0 14px 32px rgba(91,91,240,0.6),0 0 0 6px rgba(255,255,255,0.55)}}@keyframes fp-draft-cta-gradient{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}</style>
             </div>
             <button class="cd-flow-edit ghost-btn" id="modal-edit-btn"><i data-lucide="pencil"></i><span>顧客情報を編集</span></button>
           </div>`}
@@ -3829,15 +3830,24 @@ ${draft.intent} — ${draft.reason}
 
 【依頼】
 ${isLoop
-  ? '上記の会話ループ履歴を踏まえ、お客様から返信がまだ来てない / 来たことを想定して、自然に次の一手の LINE 下書きを 1つ 生成してください。例:「Jobs の方で1点確認しておきたいことがあるんですが…」のように、前の文脈に紐づく形で。'
-  : `${client.name}様に "いま" 送るべき LINE 下書きを 1つ 生成してください。例:「Jobs の方で1点確認しておきたいことがあるんですが…」のように、最初の1手として自然に踏み込む。`
+  ? '上記の会話ループ履歴を踏まえ、お客様から返信がまだ来てない / 来たことを想定して、自然に次の一手の LINE 下書きを 1つ 生成。'
+  : `${client.name}様に "いま" 送るべき LINE 下書きを 1つ 生成。最初の1手として自然に踏み込む。`
 }
-- 文体: 丁寧かつ温かい (テンプレ感ゼロ)
+
+【LINE 本文の要件】
+- 文体: 丁寧かつ温かい (テンプレ感ゼロ・絵文字を適度に使う ✨📌🌸👶💡 等)
 - 冒頭: 「${client.name}様、お世話になっております」では始めない (定型禁止)
+- 改行: 段落ごとに空行入れて読みやすく (LINE 画面で読む前提)
 - 必ず: 議事録から1つ、提案履歴から1つ、家族構成から1つ の固有要素を盛り込む
 - 末尾: 次に取るべき具体行動を1つ提示 (「いつまでに何を」)
 - 長さ: 150-300字
-- 出力: <div class="fp-deliv-content"><p>本文ここ</p></div> の HTML 形式`;
+
+【出力形式 (厳密に以下の JSON のみ、code fence ・前置き禁止)】
+{
+  "lineBody": "LINE 本文 (改行は実改行で。絵文字適度に使う)",
+  "jobsAdvice": "Jobs からのワンポイントアドバイス: なぜこの文面を送るか、何を狙ってるか (60-120字)",
+  "intent": "この LINE の戦略意図を 1単語で (例: 信頼構築 / 情報収集 / 提案前ヒアリング / 関係再活性 等)"
+}`;
 
       try {
         const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/generate-deliverable', {
@@ -3848,15 +3858,52 @@ ${isLoop
         overlay.style.display = 'none';
         btn.disabled = false; btn.style.opacity = '1';
         if (d.ok && d.html) {
-          // HTML から plain text 抽出
-          const tmp = document.createElement('div');
-          tmp.innerHTML = d.html;
-          const text = (tmp.textContent || tmp.innerText || '').trim();
-          if (text && text.length > 30) {
-            document.getElementById('draft-text').value = text;
-            currentBaseBody = text;
+          // ★ オーナーfb「HTMLタグがそのまま出る」: Claude の返答から JSON 抽出
+          let parsed = null;
+          try {
+            // 1) 直接 JSON.parse 試行
+            const raw = d.html.replace(/^```(?:json|html)?\s*/i, '').replace(/```\s*$/, '').trim();
+            const jsonMatch = raw.match(/\{[\s\S]*\}/);
+            if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+          } catch (_) {}
+          // フォールバック: <p> 内テキストを改行付きで結合
+          if (!parsed || !parsed.lineBody) {
+            const tmp = document.createElement('div'); tmp.innerHTML = d.html;
+            const ps = tmp.querySelectorAll('p');
+            const bodyText = ps.length > 0
+              ? Array.from(ps).map(p => p.textContent.trim()).filter(Boolean).join('\n\n')
+              : (tmp.textContent || '').trim();
+            // markdown code fence 残骸除去
+            const cleaned = bodyText.replace(/^```(?:html|json)?\s*/gi, '').replace(/```\s*$/g, '').trim();
+            parsed = { lineBody: cleaned, jobsAdvice: '', intent: '' };
+          }
+          if (parsed.lineBody && parsed.lineBody.length > 20) {
+            document.getElementById('draft-text').value = parsed.lineBody;
+            currentBaseBody = parsed.lineBody;
+            // Jobs ワンポイントアドバイス 表示
+            let adviceEl = document.getElementById('jobs-advice-box');
+            if (!adviceEl) {
+              adviceEl = document.createElement('div');
+              adviceEl.id = 'jobs-advice-box';
+              adviceEl.style.cssText = 'margin:10px 0 14px;padding:12px 16px;background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border:2px solid #F59E0B;border-radius:10px;font-family:inherit;';
+              const wrap = document.querySelector('.aib-textarea-wrap');
+              if (wrap && wrap.parentElement) wrap.parentElement.insertBefore(adviceEl, wrap);
+            }
+            if (parsed.jobsAdvice) {
+              adviceEl.innerHTML = `
+                <div style="display:flex;align-items:flex-start;gap:10px;">
+                  <div style="font-size:22px;flex-shrink:0;">💡</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:10.5px;font-weight:800;letter-spacing:0.1em;color:#92400E;text-transform:uppercase;margin-bottom:4px;">JOBS の ワンポイントアドバイス${parsed.intent ? ' · 戦略意図: ' + escapeHtml(parsed.intent) : ''}</div>
+                    <div style="font-size:13px;color:#78350F;line-height:1.65;font-weight:600;">${escapeHtml(parsed.jobsAdvice)}</div>
+                  </div>
+                </div>
+              `;
+              adviceEl.style.display = 'block';
+            } else {
+              adviceEl.style.display = 'none';
+            }
             try { renderPreview(); } catch(_){}
-            // 成功トースト
             const t = document.createElement('div');
             t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #5B5BF0;border-radius:10px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:99999;font-family:inherit;';
             t.innerHTML = `<strong style="font-size:14px;color:#5B5BF0;">✨ ${escapeHtml(client.name)} 様 専用 下書き 生成完了</strong><div style="font-size:11.5px;color:#6b7280;margin-top:3px;">議事録・家族・LINE履歴 すべてを踏まえた本気の下書き</div>`;
