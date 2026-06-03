@@ -1425,8 +1425,10 @@
       const memoFeatures = `width=${memoW},height=${sh},left=0,top=0,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes`;
       const memoKey = 'fp-memo-' + (bookingTs || '');
       const tasksKey = 'fp-tasks-' + ((booking && booking.userId) || bookingTs);
-      const memoQuery = `?v=20260603u-stop-btn&memoKey=${encodeURIComponent(memoKey)}&tasksKey=${encodeURIComponent(tasksKey)}&name=${encodeURIComponent((booking && booking.name) || 'お客様')}&baseDate=${encodeURIComponent((booking && booking.date) || '')}&bookingTs=${encodeURIComponent(bookingTs || '')}`;
-      window._fpMemoWin = window.open('memo-popup.html' + memoQuery, 'fp-memo-win', memoFeatures);
+      const memoQuery = `?v=${Date.now()}&memoKey=${encodeURIComponent(memoKey)}&tasksKey=${encodeURIComponent(tasksKey)}&name=${encodeURIComponent((booking && booking.name) || 'お客様')}&baseDate=${encodeURIComponent((booking && booking.date) || '')}&bookingTs=${encodeURIComponent(bookingTs || '')}`;
+      // 既存メモウィンドウがあれば一旦 close して 強制的に新HTMLを再読込
+      try { if (window._fpMemoWin && !window._fpMemoWin.closed) window._fpMemoWin.close(); } catch (_) {}
+      window._fpMemoWin = window.open('memo-popup.html' + memoQuery, '_blank', memoFeatures);
       if (!window._fpMemoWin) {
         // ポップアップブロック時はフォールバックで CRM 内モーダル
         localStorage.setItem('fp-memo-pos', JSON.stringify({ left: 0, top: 0 }));
