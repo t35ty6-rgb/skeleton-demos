@@ -3595,7 +3595,18 @@
           </div>
         </div>
 
-        <div class="aib-body">
+        <div class="aib-body" style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start;">
+          <!-- 左カラム: 議事録ペイン (常時表示) -->
+          <aside id="aib-minutes-pane" style="position:sticky;top:14px;max-height:calc(100vh - 100px);overflow-y:auto;background:#FAFBFC;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 16px;font-size:12px;line-height:1.6;color:#0F172A;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #E2E8F0;">
+              <span style="font-size:18px;">📋</span>
+              <strong style="font-size:13px;letter-spacing:0.02em;">議事録 (左) を見ながら LINE (右) を編集</strong>
+            </div>
+            <div id="aib-minutes-body" style="font-size:12px;color:#475569;">
+              <div style="text-align:center;padding:20px;color:#94A3B8;">📡 議事録 読み込み中…</div>
+            </div>
+          </aside>
+          <div class="aib-body-right">
 
           <!-- STEP 1: AI Analysis -->
           <section class="aib-step">
@@ -3725,11 +3736,79 @@
             </div>
           </section>
 
+          </div><!-- /aib-body-right -->
         </div>
       </div>
     `;
     document.getElementById('modal-content').innerHTML = html;
     document.getElementById('modal-overlay').style.display = 'flex';
+
+    // ★ オーナーfb「議事録を横に広げて確認しながら LINE 編集」
+    // 左ペインに 全fp-ai-* + ai_results から見つかる議事録を強力 fallback で表示
+    (function() {
+      const body = document.getElementById('aib-minutes-body');
+      if (!body) return;
+      const myUids = new Set([client.lineFriendId].filter(Boolean));
+      const myBks = ((window.LineAppLiveData && window.LineAppLiveData.bookings) || [])
+        .filter(b => (b.userId && b.userId === client.lineFriendId) || (b.name && b.name === client.name));
+      myBks.forEach(b => { if (b.userId) myUids.add(b.userId); });
+      const myTs = new Set(myBks.map(b => b.ts).filter(Boolean));
+      const myNames = new Set([client.name].concat(myBks.map(b => b.name).filter(Boolean)));
+      const found = [];
+      const consider = (a, srcKey) => {
+        if (!a || (!a.summary && !a.transcript)) return;
+        const matchUser   = a.userId && myUids.has(a.userId);
+        const matchTs     = a.bookingTs && myTs.has(a.bookingTs);
+        const matchName   = a.customerName && myNames.has(a.customerName);
+        const isGeneric   = (!a.customerName || a.customerName === 'お客様');
+        const genericFallback = isGeneric && client.lineFriendId;
+        const score = matchUser ? 3 : matchTs ? 3 : matchName ? 2 : genericFallback ? 1 : 0;
+        if (score > 0) {
+          let kc = a.key_concerns;
+          if (typeof kc === 'string') { try { kc = JSON.parse(kc); } catch (_) { kc = []; } }
+          found.push({ source: srcKey, score, summary: a.summary || '', concerns: kc || [], ts: a.createdAt || a.ts || a.bookingTs || '', cust: a.customerName || '(空)' });
+        }
+      };
+      Object.keys(localStorage).filter(k => k.startsWith('fp-ai-')).forEach(k => {
+        try { JSON.parse(localStorage.getItem(k) || '[]').forEach(a => consider(a, k)); } catch (_) {}
+      });
+      ((window.LineAppLiveData && window.LineAppLiveData.ai_results) || []).forEach(r => consider(r, 'GAS:ai_results'));
+      // 重複除去 + 最新順
+      const seen = new Set();
+      const uniq = found.filter(f => {
+        const k = (f.summary || '').slice(0, 100);
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      }).sort((a, b) => b.score - a.score || String(b.ts).localeCompare(String(a.ts)));
+      window._fpDraftMinutesFound = uniq;
+      if (uniq.length === 0) {
+        body.innerHTML = `
+          <div style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:8px;padding:10px 12px;color:#7F1D1D;font-size:11.5px;line-height:1.6;">
+            <strong>議事録 見つかりません</strong><br>
+            この顧客 (${escapeHtml(client.name)}) の lineFriendId = "${escapeHtml(client.lineFriendId || '空')}" でマッチする AI議事録が無いです。<br><br>
+            <strong>localStorage 全 fp-ai-* キー:</strong><br>
+            ${Object.keys(localStorage).filter(k => k.startsWith('fp-ai-')).map(k => `<code style="font-size:10px;background:#fff;padding:1px 4px;border-radius:3px;display:inline-block;margin:1px;">${escapeHtml(k)}</code>`).join('') || '<em>(なし)</em>'}
+          </div>
+        `;
+        return;
+      }
+      body.innerHTML = uniq.map((f, i) => `
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:10.5px;font-weight:800;color:#5B5BF0;letter-spacing:0.04em;">議事録 #${i + 1}${f.score >= 3 ? ' (確定)' : f.score >= 2 ? ' (名前一致)' : ' (推定)'}</span>
+            <span style="font-size:10px;color:#94A3B8;">${escapeHtml(String(f.ts).slice(0, 16))}</span>
+          </div>
+          ${f.concerns.length > 0 ? `
+          <div style="margin-bottom:6px;">
+            ${f.concerns.slice(0, 5).map(k => `<span style="display:inline-block;background:#EEF2FF;color:#4338CA;font-size:10.5px;padding:2px 7px;border-radius:9px;margin:1px;font-weight:600;">${escapeHtml(k)}</span>`).join('')}
+          </div>
+          ` : ''}
+          <div style="font-size:12px;color:#334155;line-height:1.55;white-space:pre-line;">${escapeHtml(String(f.summary).slice(0, 500))}${f.summary.length > 500 ? '…' : ''}</div>
+        </div>
+      `).join('');
+      console.log('[minutes-pane] found', uniq.length, 'minutes for', client.name);
+    })();
     let toneIndex = 0;
     document.getElementById('draft-close').addEventListener('click', () => openClientModal(client.id));
     document.getElementById('draft-close-btn').addEventListener('click', () => openClientModal(client.id));
@@ -3883,41 +3962,16 @@
       const lastCancels = (client.cancellations || []).slice(-2).map(c => `${c.date}キャンセル(${c.reason || '理由不明'})`).join(' / ') || 'なし';
       const recentLine = (client.lineHistory || []).slice(-6).map(m => `${m.direction === 'in' ? '客' : 'FP'}: ${(m.text || '').slice(0, 80)}`).join('\n') || 'なし';
       const upcomingEvs = (events || []).filter(ev => new Date(ev.date) >= TODAY).slice(0, 4).map(ev => `${(new Date(ev.date)).toLocaleDateString('ja-JP')} ${ev.label}`).join(' / ') || 'なし';
-      // ★ 最新 AI議事録 lookup 強化 (openClientModal と同じ強力 fallback)
-      // 旧コードは userId or customerName 完全一致のみ → fp-ai-お客様 等の汎用 fallback で
-      // 議事録が「お客様」名義で保存されてると見落とす → 「議事録なし」誤判定。
+      // ★ 議事録 lookup: 左ペインで判定済の _fpDraftMinutesFound を使う (同じロジック)
       let aiCtx = '';
       try {
-        const myUids = new Set([client.lineFriendId].filter(Boolean));
-        const myBks = ((window.LineAppLiveData && window.LineAppLiveData.bookings) || [])
-          .filter(b => (b.userId && b.userId === client.lineFriendId) || (b.name && b.name === client.name));
-        myBks.forEach(b => { if (b.userId) myUids.add(b.userId); });
-        const myTs = new Set(myBks.map(b => b.ts).filter(Boolean));
-        const myNames = new Set([client.name].concat(myBks.map(b => b.name).filter(Boolean)));
-        let latestA = null;
-        const consider = (a) => {
-          const matchUser   = a.userId       && myUids.has(a.userId);
-          const matchTs     = a.bookingTs    && myTs.has(a.bookingTs);
-          const matchName   = a.customerName && myNames.has(a.customerName);
-          const isGeneric   = (!a.customerName || a.customerName === 'お客様');
-          const genericFallback = isGeneric && client.lineFriendId;
-          if (matchUser || matchTs || matchName || genericFallback) {
-            const tsVal = new Date(a.createdAt || a.ts || 0).getTime();
-            const curVal = latestA ? new Date(latestA.createdAt || latestA.ts || 0).getTime() : 0;
-            if (!latestA || tsVal > curVal) latestA = a;
+        const found = window._fpDraftMinutesFound || [];
+        if (found.length > 0) {
+          const top = found[0];
+          aiCtx = `最新議事録 (${found.length}件中の最上位 / 信頼度 score ${top.score}/3): \n${top.summary.slice(0, 1000)}\n\n関心事: ${(top.concerns || []).join(', ')}`;
+          if (found.length > 1) {
+            aiCtx += `\n\n--- 追加議事録 ---\n` + found.slice(1, 3).map((f, i) => `[#${i+2}] ${String(f.summary).slice(0, 300)}`).join('\n');
           }
-        };
-        Object.keys(localStorage).filter(k => k.startsWith('fp-ai-')).forEach(k => {
-          try { JSON.parse(localStorage.getItem(k) || '[]').forEach(consider); } catch (_) {}
-        });
-        ((window.LineAppLiveData && window.LineAppLiveData.ai_results) || []).forEach(consider);
-        if (latestA) {
-          let kc = latestA.key_concerns;
-          if (typeof kc === 'string') { try { kc = JSON.parse(kc); } catch (_) { kc = []; } }
-          aiCtx = `最新議事録: ${String(latestA.summary || '').slice(0, 800)}\n関心事: ${(kc || []).join(', ')}`;
-          console.log('[draft] latestAi found for', client.name, '→ summary len:', String(latestA.summary || '').length);
-        } else {
-          console.log('[draft] no AI 議事録 found for', client.name, '(lineFriendId:', client.lineFriendId || '空', ')');
         }
       } catch (_) {}
 
