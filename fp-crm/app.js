@@ -1026,6 +1026,8 @@
     const c = clients.find(x => x.id === id);
     if (!c) return;
     window._fpCurrentClient = c;  // AI議事録モーダルの LINE 送信 fallback 用
+    // AI BRIEF で拡大した modal-content の幅を通常に戻す
+    try { document.getElementById('modal-content').style.maxWidth = ''; } catch (_) {}
     ensureLineHistory_(c);
     console.log('[client modal]', c.id, c.name, 'lineHistory:', (c.lineHistory || []).length, 'DUMMY_CLIENTS_VERSION:', window.DUMMY_CLIENTS_VERSION || '(missing)');
     let events = window.LifeEvents.generate(c);
@@ -3595,18 +3597,21 @@
           </div>
         </div>
 
-        <div class="aib-body" style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start;">
-          <!-- 左カラム: 議事録ペイン (常時表示) -->
-          <aside id="aib-minutes-pane" style="position:sticky;top:14px;max-height:calc(100vh - 100px);overflow-y:auto;background:#FAFBFC;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 16px;font-size:12px;line-height:1.6;color:#0F172A;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #E2E8F0;">
-              <span style="font-size:18px;">📋</span>
-              <strong style="font-size:13px;letter-spacing:0.02em;">議事録 (左) を見ながら LINE (右) を編集</strong>
+        <div class="aib-body" style="display:grid !important;grid-template-columns:400px 1fr !important;gap:18px;align-items:start;padding:24px 28px 28px !important;">
+          <!-- 左カラム: 議事録ペイン (常時表示・自然スクロール) -->
+          <aside id="aib-minutes-pane" style="background:linear-gradient(180deg,#F8FAFC,#FFFFFF);border:2px solid #5B5BF0;border-radius:12px;padding:16px 18px;font-size:12px;line-height:1.6;color:#0F172A;box-shadow:0 8px 24px rgba(91,91,240,0.15);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid #C7D2FE;">
+              <span style="font-size:20px;">📋</span>
+              <div style="flex:1;">
+                <strong style="font-size:13.5px;letter-spacing:0.02em;color:#3730A3;display:block;">議事録 (左) を見ながら LINE (右) を編集</strong>
+                <span style="font-size:10.5px;color:#64748B;">Jobs の提案が議事録に合ってるか この場で確認</span>
+              </div>
             </div>
             <div id="aib-minutes-body" style="font-size:12px;color:#475569;">
               <div style="text-align:center;padding:20px;color:#94A3B8;">📡 議事録 読み込み中…</div>
             </div>
           </aside>
-          <div class="aib-body-right">
+          <div class="aib-body-right" style="display:flex;flex-direction:column;gap:18px;min-width:0;">
 
           <!-- STEP 1: AI Analysis -->
           <section class="aib-step">
@@ -3740,7 +3745,10 @@
         </div>
       </div>
     `;
-    document.getElementById('modal-content').innerHTML = html;
+    const mc = document.getElementById('modal-content');
+    mc.innerHTML = html;
+    // AI BRIEF だけ幅広 (議事録 + LINE 編集の2カラム用)
+    mc.style.maxWidth = '1500px';
     document.getElementById('modal-overlay').style.display = 'flex';
 
     // ★ オーナーfb「議事録を横に広げて確認しながら LINE 編集」
