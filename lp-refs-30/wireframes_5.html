@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>5枚 完全再現ワイヤーフレーム</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Noto Sans JP',sans-serif;background:#e8e8e8;color:#1a1a1a;padding:20px;line-height:1.5}
+  h1{font-size:22px;font-weight:900;margin-bottom:6px}
+  .lead{color:#5a5a5a;font-size:12px;margin-bottom:20px}
+  .row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:18px}
+  .card{background:#fff;border:1px solid #1a1a1a;display:flex;flex-direction:column}
+  .card-head{padding:8px 12px;background:#1a1a1a;color:#fff;font-size:11px;display:flex;justify-content:space-between}
+  .card-meta{padding:8px 12px;background:#fafafa;font-size:10px;border-bottom:1px solid #1a1a1a}
+  .card-meta strong{font-size:11px;display:block;margin-bottom:2px}
+  .wire-area{padding:14px;background:#9a9a9a;display:flex;justify-content:center;align-items:center}
+
+  /* ===== 共通: A4縦キャンバス (グレー背景, 中身は白オブジェクト) ===== */
+  .wire{
+    width:100%;aspect-ratio:210/297;background:#9a9a9a;border:2px solid #1a1a1a;
+    padding:14px;display:flex;flex-direction:column;gap:10px;
+    position:relative;color:#1a1a1a;font-weight:700
+  }
+
+  /* ============== 01: lp-ref-105 子供の鉄分不足 ============== */
+  .w105-banner{background:#fff;border:1px solid #1a1a1a;padding:4px 10px;text-align:center;font-size:10px;font-weight:700}
+  .w105-sub{background:#fff;border:1px solid #1a1a1a;padding:4px 10px;text-align:center;font-size:9px}
+  .w105-main{background:#fff;border:1px solid #1a1a1a;padding:14px 8px;text-align:center;font-size:18px;font-weight:900;line-height:1.2;font-family:'Noto Serif JP',serif}
+  .w105-body{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1}
+  .w105-photo{background:#fff;border:1px solid #1a1a1a;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+  .w105-right{display:flex;flex-direction:column;gap:8px}
+  .w105-ribbon{background:#fff;border:1px solid #1a1a1a;border-radius:50%/30%;padding:8px 4px;text-align:center;font-size:8px;font-weight:700;line-height:1.2}
+  .w105-bubble{background:#fff;border:1px solid #1a1a1a;border-radius:10px;padding:8px 4px;text-align:center;font-size:9px;font-weight:700;line-height:1.2}
+  .w105-product{background:#fff;border:1px solid #1a1a1a;display:flex;align-items:center;justify-content:center;font-size:8px;flex:1}
+  .w105-circles{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+  .w105-circle{background:#fff;border:1px solid #1a1a1a;border-radius:50%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:7px;font-weight:700;line-height:1.15;padding:2px}
+
+  /* ============== 02: lp-ref-168 朝までぐっすり ============== */
+  .w168-circles-bg{background:#fff;border:1px solid #1a1a1a;padding:6px;position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+  .w168-sub{font-size:9px;font-weight:700}
+  .w168-main{font-size:18px;font-weight:900;font-family:'Noto Serif JP',serif;padding:6px 4px}
+  .w168-photo{background:#fff;border:1px solid #1a1a1a;flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;position:relative;min-height:90px}
+  .w168-pouch{position:absolute;right:6px;bottom:8px;background:#fff;border:1px solid #1a1a1a;border-radius:14px;padding:6px 8px;font-size:8px;font-weight:700}
+  .w168-logo{background:#fff;border:1px solid #1a1a1a;padding:8px;text-align:center;font-size:13px;font-weight:900;font-family:'Noto Serif JP',serif}
+  .w168-3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+  .w168-cell{background:#fff;border:1px solid #1a1a1a;padding:7px 4px;text-align:center;font-size:8px;font-weight:700;line-height:1.2}
+  .w168-bottom{display:grid;grid-template-columns:0.6fr 1.4fr;gap:5px}
+  .w168-circle{background:#fff;border:1px solid #1a1a1a;border-radius:50%/40%;padding:5px 4px;text-align:center;font-size:8px;font-weight:700;line-height:1.2;display:flex;flex-direction:column;justify-content:center}
+  .w168-no1row{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
+  .w168-no1{background:#fff;border:1px solid #1a1a1a;border-radius:50%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:900}
+
+  /* ============== 03: lp-ref-271 家族のおでかけ必需品 ============== */
+  .w271-top{display:grid;grid-template-columns:0.6fr 1fr 0.7fr;gap:6px;align-items:start}
+  .w271-logo{background:#fff;border:1px solid #1a1a1a;padding:4px 6px;text-align:center;font-size:9px;font-weight:700;font-family:'Noto Serif JP',serif}
+  .w271-sub-c{background:#fff;border:1px solid #1a1a1a;padding:6px 4px;text-align:center;font-size:8px;font-weight:700;line-height:1.2}
+  .w271-rb{background:#fff;border:1px solid #1a1a1a;border-radius:50%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:7px;font-weight:700;line-height:1.15;padding:4px}
+  .w271-main{background:#fff;border:1px solid #1a1a1a;padding:10px 8px;text-align:center;font-size:24px;font-weight:900;font-family:'Noto Serif JP',serif;line-height:1}
+  .w271-strip{background:#fff;border:1px solid #1a1a1a;padding:5px;text-align:center;font-size:10px;font-weight:700}
+  .w271-body{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1}
+  .w271-photo{background:#fff;border:1px solid #1a1a1a;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+  .w271-rh{display:flex;flex-direction:column;gap:5px}
+  .w271-no1{background:#fff;border:1px solid #1a1a1a;border-radius:50%/40%;padding:7px 4px;text-align:center;font-size:8px;font-weight:700;line-height:1.2}
+  .w271-2col{background:#fff;border:1px solid #1a1a1a;padding:5px 4px;font-size:7px;font-weight:700;text-align:center;line-height:1.2}
+  .w271-feat{background:#fff;border:1px solid #1a1a1a;display:grid;grid-template-columns:0.4fr 1fr;padding:5px;gap:4px;align-items:center}
+  .w271-feat-l{font-size:14px;font-weight:900;font-family:'Noto Serif JP',serif;text-align:center}
+  .w271-feat-r{font-size:8px;font-weight:700;line-height:1.2}
+  .w271-mag{display:grid;grid-template-columns:0.5fr 1fr;gap:5px}
+  .w271-magphoto{background:#fff;border:1px solid #1a1a1a;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700}
+  .w271-media{background:#fff;border:1px solid #1a1a1a;padding:8px 4px;text-align:center;font-size:8px;font-weight:700;line-height:1.3;display:flex;flex-direction:column;justify-content:center}
+
+  /* ============== 04: lp-ref-279 目元ケアの常識を超える ============== */
+  .w279-top{display:grid;grid-template-columns:1fr 0.4fr;gap:6px;align-items:start}
+  .w279-logo{background:#fff;border:1px solid #1a1a1a;padding:5px;text-align:center;font-size:10px;font-weight:700;font-family:'Noto Serif JP',serif}
+  .w279-jp{background:#fff;border:1px solid #1a1a1a;border-radius:50%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;font-weight:900;font-family:'Noto Serif JP',serif;padding:6px}
+  .w279-catch{background:#fff;border:1px solid #1a1a1a;padding:10px;text-align:center;font-size:16px;font-weight:900;font-family:'Noto Serif JP',serif;line-height:1.15;writing-mode:vertical-rl;align-self:start;justify-self:start;width:auto;max-height:120px}
+  .w279-mid{display:grid;grid-template-columns:0.35fr 1fr;gap:6px;flex:1}
+  .w279-mainphoto{background:#fff;border:1px solid #1a1a1a;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;position:relative}
+  .w279-stamp{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid #1a1a1a;border-radius:50%/40%;padding:4px 8px;font-size:7px;font-weight:700;text-align:center}
+  .w279-product{position:absolute;right:6px;bottom:30px;background:#fff;border:1px solid #1a1a1a;padding:4px;font-size:7px;font-weight:700;width:38px}
+  .w279-points{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+  .w279-hex{background:#fff;border:1px solid #1a1a1a;padding:8px 3px;text-align:center;font-size:7px;font-weight:700;line-height:1.2;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+  .w279-hex-no{font-size:9px;font-weight:900;display:block;margin-bottom:2px;font-family:'Noto Serif JP',serif}
+
+  /* ============== 05: lp-ref-81 QLAXIS比較表 ============== */
+  .w81-title{background:#fff;border:1px solid #1a1a1a;padding:10px 6px;text-align:center;font-size:14px;font-weight:900;font-family:'Noto Serif JP',serif;line-height:1.2}
+  .w81-table{background:#fff;border:1px solid #1a1a1a;flex:1;display:grid;grid-template-rows:auto repeat(7,1fr);font-size:7px}
+  .w81-tr{display:grid;grid-template-columns:0.8fr 1fr 0.8fr 0.8fr;border-bottom:1px solid #1a1a1a}
+  .w81-tr:last-child{border-bottom:none}
+  .w81-tc{padding:4px 3px;border-right:1px solid #1a1a1a;text-align:center;font-weight:700;font-size:8px;display:flex;align-items:center;justify-content:center}
+  .w81-tc:last-child{border-right:none}
+  .w81-tc.label{background:#e4e4e4;font-weight:700;justify-content:flex-start;padding-left:5px}
+  .w81-tc.own{background:#d4d4d4;font-weight:900}
+  .w81-tr.header .w81-tc{background:#1a1a1a;color:#fff;font-size:8px}
+  .w81-tr.header .w81-tc.own{background:#1a1a1a}
+  .w81-bottom{background:#fff;border:1px solid #1a1a1a;padding:7px 6px;display:grid;grid-template-columns:1fr 0.4fr;gap:6px;align-items:center}
+  .w81-promise{font-size:10px;font-weight:900;text-align:center;line-height:1.3;font-family:'Noto Serif JP',serif}
+  .w81-cs{background:#fff;border:1px solid #1a1a1a;border-radius:50%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;text-align:center;padding:4px}
+</style>
+</head>
+<body>
+
+<h1>Amazon LP 定石 ─ 完全再現ワイヤーフレーム (代表5枚)</h1>
+<p class="lead">グレー背景＋白オブジェクト。実物のエンブレム数・形状・配置を1個ずつ正確に再現</p>
+
+<div class="row">
+
+  <!-- 01 -->
+  <div class="card">
+    <div class="card-head"><span>01 lp-ref-105</span><span>★91</span></div>
+    <div class="card-meta">
+      <strong>子供の鉄分不足 解消できました！</strong>
+      P1ファーストビュー／型5お悩み3シリーズ／感情×権威×ベネフィット未来
+    </div>
+    <div class="wire-area">
+      <div class="wire">
+        <div class="w105-banner">管理栄養士 × 25万フォロワー企業 が考案</div>
+        <div class="w105-sub">＼生後半年から使えて、料理に入れるだけ！／</div>
+        <div class="w105-main">子供の鉄分不足<br>解消できました！</div>
+        <div class="w105-body">
+          <div class="w105-photo">モデル女性<br>写真</div>
+          <div class="w105-right">
+            <div class="w105-ribbon">累計販売本数<br>100万本突破!!</div>
+            <div class="w105-bubble">1本に1日分の鉄分<br>4.5mg配合</div>
+            <div class="w105-product">製品スティック<br>にこにこ鉄分</div>
+          </div>
+        </div>
+        <div class="w105-circles">
+          <div class="w105-circle">ヘム鉄の<br>124%<br>吸収率</div>
+          <div class="w105-circle">無味無臭<br>どんな料理<br>にも使用可</div>
+          <div class="w105-circle">タンパク質<br>亜鉛<br>カルシウム</div>
+          <div class="w105-circle">赤ちゃん<br>でも安心<br>無添加</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 02 -->
+  <div class="card">
+    <div class="card-head"><span>02 lp-ref-168</span><span>★91</span></div>
+    <div class="card-meta">
+      <strong>朝までぐっすり</strong>
+      P1ファーストビュー／型3ストレスゼロ／感情訴求＋ベネフィット未来
+    </div>
+    <div class="wire-area">
+      <div class="wire">
+        <div class="w168-circles-bg">
+          <div class="w168-sub">モロー反射を防いで</div>
+          <div class="w168-main">朝までぐっすり</div>
+        </div>
+        <div class="w168-photo">
+          赤ちゃん安眠写真（大）
+          <div class="w168-pouch">巾着<br>ポーチ付き</div>
+        </div>
+        <div class="w168-logo">merry / スワドルメリー</div>
+        <div class="w168-3">
+          <div class="w168-cell">おててが<br>出せる</div>
+          <div class="w168-cell">IHDI<br>認証済み</div>
+          <div class="w168-cell">助産師<br>推薦</div>
+        </div>
+        <div class="w168-bottom">
+          <div class="w168-circle">工場出荷数<br>15万着<br>突破</div>
+          <div class="w168-no1row">
+            <div class="w168-no1">No.1</div>
+            <div class="w168-no1">No.1</div>
+            <div class="w168-no1">No.1</div>
+            <div class="w168-no1">No.1</div>
+            <div class="w168-no1">No.1</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 -->
+  <div class="card">
+    <div class="card-head"><span>03 lp-ref-271</span><span>★91</span></div>
+    <div class="card-meta">
+      <strong>家族のおでかけ必需品 軽×楽 コンパクトチェア</strong>
+      P1ファーストビュー／型4身近物比較／機能直球×ベネフィット未来
+    </div>
+    <div class="wire-area">
+      <div class="wire">
+        <div class="w271-top">
+          <div class="w271-logo">mimire</div>
+          <div class="w271-sub-c">家族の<br>おでかけ必需品</div>
+          <div class="w271-rb">JAPAN<br>日本<br>共同開発</div>
+        </div>
+        <div class="w271-main">軽 × 楽</div>
+        <div class="w271-strip">コンパクトチェア</div>
+        <div class="w271-body">
+          <div class="w271-photo">ファミリー<br>キャンプ写真</div>
+          <div class="w271-rh">
+            <div class="w271-no1">No.1獲得</div>
+            <div class="w271-2col">2冠達成!!<br>新着1位／売れ筋1位</div>
+            <div class="w271-feat">
+              <div class="w271-feat-l">軽</div>
+              <div class="w271-feat-r">重さたったの<br>0.7kg</div>
+            </div>
+            <div class="w271-feat">
+              <div class="w271-feat-l">楽</div>
+              <div class="w271-feat-r">設置も回収も<br>1秒</div>
+            </div>
+            <div class="w271-feat">
+              <div class="w271-feat-l">強</div>
+              <div class="w271-feat-r">耐荷重<br>200kg</div>
+            </div>
+          </div>
+        </div>
+        <div class="w271-mag">
+          <div class="w271-magphoto">世田谷ベース<br>表紙</div>
+          <div class="w271-media">MEDIA<br>所ジョージの世田谷ベース<br>に掲載されました</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="row">
+
+  <!-- 04 -->
+  <div class="card">
+    <div class="card-head"><span>04 lp-ref-279</span><span>★91</span></div>
+    <div class="card-meta">
+      <strong>目元ケアの常識を超える</strong>
+      P1ファーストビュー／型1進化型／権威 × 機能直球
+    </div>
+    <div class="wire-area">
+      <div class="wire">
+        <div class="w279-top">
+          <div class="w279-logo">NIPLUX</div>
+          <div class="w279-jp">日本<br>初</div>
+        </div>
+        <div class="w279-mid">
+          <div class="w279-catch">目元ケアの<br>常識を超える</div>
+          <div class="w279-mainphoto">
+            モデル使用<br>シーン<br>(顔アップ・LED光)
+            <div class="w279-product">製品</div>
+            <div class="w279-stamp">シリーズ累計<br>168万台突破</div>
+          </div>
+        </div>
+        <div class="w279-points">
+          <div class="w279-hex"><span class="w279-hex-no">POINT 01</span>独自波形<br>EMS<br>DBN</div>
+          <div class="w279-hex"><span class="w279-hex-no">POINT 02</span>高出力<br>光LED<br>3色</div>
+          <div class="w279-hex"><span class="w279-hex-no">POINT 03</span>高速振動<br>×<br>急速温熱</div>
+          <div class="w279-hex"><span class="w279-hex-no">POINT 04</span>360°<br>回転ヘッド<br>広範囲</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 05 -->
+  <div class="card">
+    <div class="card-head"><span>05 lp-ref-81</span><span>★91</span></div>
+    <div class="card-meta">
+      <strong>QLAXISのストレッチサポーターはここが違う！</strong>
+      P5比較表／差別化直球型
+    </div>
+    <div class="wire-area">
+      <div class="wire">
+        <div class="w81-title">QLAXISの<br>ストレッチサポーターは<br>ここが違う！</div>
+        <div class="w81-table">
+          <div class="w81-tr header">
+            <div class="w81-tc"></div>
+            <div class="w81-tc own">QLAXIS</div>
+            <div class="w81-tc">固定式</div>
+            <div class="w81-tc">ネックピロー</div>
+          </div>
+          <div class="w81-tr"><div class="w81-tc label">ストレッチ機能</div><div class="w81-tc own">あり</div><div class="w81-tc">なし</div><div class="w81-tc">なし</div></div>
+          <div class="w81-tr"><div class="w81-tc label">サイズ調整</div><div class="w81-tc own">あり</div><div class="w81-tc">なし</div><div class="w81-tc">なし</div></div>
+          <div class="w81-tr"><div class="w81-tc label">固定度</div><div class="w81-tc own">◎</div><div class="w81-tc">○</div><div class="w81-tc">×</div></div>
+          <div class="w81-tr"><div class="w81-tc label">監修</div><div class="w81-tc own">整骨院院長</div><div class="w81-tc">記載なし</div><div class="w81-tc">簡易のみ</div></div>
+          <div class="w81-tr"><div class="w81-tc label">実店舗販売</div><div class="w81-tc own">市原整骨院</div><div class="w81-tc">×</div><div class="w81-tc">×</div></div>
+          <div class="w81-tr"><div class="w81-tc label">素材</div><div class="w81-tc own">高品質スウェード</div><div class="w81-tc">ポリエステル</div><div class="w81-tc">アクリル</div></div>
+          <div class="w81-tr"><div class="w81-tc label">圧縮</div><div class="w81-tc own">圧縮可能</div><div class="w81-tc">圧縮不可</div><div class="w81-tc">×</div></div>
+        </div>
+        <div class="w81-bottom">
+          <div class="w81-promise">日本人スタッフ対応<br>30日間 安心保証付</div>
+          <div class="w81-cs">CS<br>女性</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 番号合わせ用空きセル -->
+  <div></div>
+
+</div>
+
+</body>
+</html>
