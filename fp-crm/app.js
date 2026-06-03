@@ -3923,23 +3923,47 @@ ${draft.intent} — ${draft.reason}
 
 【依頼】
 ${isLoop
-  ? '上記の会話ループ履歴を踏まえ、お客様から返信がまだ来てない / 来たことを想定して、自然に次の一手の LINE 下書きを 1つ 生成。'
-  : `${client.name}様に "いま" 送るべき LINE 下書きを 1つ 生成。最初の1手として自然に踏み込む。`
+  ? '上記の会話ループ履歴を踏まえ、自然に次の一手の LINE 下書きを 1つ 生成。'
+  : `${client.name}様に "いま" 送るべき LINE 下書きを 1つ 生成。`
 }
 
-【LINE 本文の要件】
-- 文体: 丁寧かつ温かい (テンプレ感ゼロ・絵文字を適度に使う ✨📌🌸👶💡 等)
-- 冒頭: 「${client.name}様、お世話になっております」では始めない (定型禁止)
-- 改行: 段落ごとに空行入れて読みやすく (LINE 画面で読む前提)
-- 必ず: 議事録から1つ、提案履歴から1つ、家族構成から1つ の固有要素を盛り込む
-- 末尾: 次に取るべき具体行動を1つ提示 (「いつまでに何を」)
-- 長さ: 150-300字
+【🔥 絶対 NG (これをやったら不採用)】
+1. ❌ 既知情報の単純羅列禁止 →「41歳で自営業のあなたは / 3歳と0歳のお子様がいらっしゃる」みたいに顧客台帳に書いてる事を 説明風に並べない。情報は "見せる" のではなく "活かす"
+2. ❌ お世辞禁止 →「素晴らしい / 見事 / さすが / 立派 / 視野が広い」等は使わない
+3. ❌ 絵文字 過剰禁止 → 1通の中で最大2個まで (絵文字で華やかさを演出するのは素人)
+4. ❌ 「ヒアリングシート送ります」だけの予告 NG → なぜ今このタイミングか/シートで何が見えるかを 1つ value として示す
+5. ❌ "いつでもご相談ください/ご不明点あれば" 等の汎用締め NG
+6. ❌ "教育資金/老後/iDeCo/小規模企業共済" 等の用語列挙 NG → 1通には 1つの論点のみ
+7. ❌ 「次に取るべき行動を貴方が決めるべき」を曖昧にする NG
+
+【✅ 必須要素 (これが無いと不採用)】
+A. **気付き提示 1つ** — FPだからこそ言える "お客様が見落としてる事実" を 1つ specifically 指摘
+   例: 「3歳と0歳だと、お兄ちゃんの小学校入学までもう3年。学童保育+習い事の固定費増がここで一段上がります」
+   例: 「自営業の場合 iDeCo より小規模企業共済の方が今の年収帯では節税効果大きいケースあります」
+B. **具体的な質問 1つ** — Yes/No or 数字で答えられる質問。これに答えてもらえば次の動きが決まる質問
+   例: 「ざっくりでOK ですが、月の事業利益は手取りで30万以上ですか?以下ですか?ここで初手シミュ精度が大きく変わります」
+   例: 「奥様の8月開業、初月の見込売上は 何万円想定でしょう?」
+C. **次の動き** — お客様が返信したらどう動くかを 1行で明示
+   例: 「これさえ教えていただければ、明日中に教育費 vs 事業資金 のバランス案 3パターン作って送ります」
+
+【📐 文体・量】
+- 冒頭: 「${client.name}様、お世話になっております」「先日はありがとうございました」では始めない (定型禁止)
+- 改行: 段落ごとに空行 (LINE 1スクロール想定)
+- 絵文字: ${isLoop ? '0-1個' : '1-2個'} (これ以上は素人感)
+- 長さ: 120-180字 (短いほど読まれる)
+- 既知情報の羅列ではなく "値の高い質問" or "気付き" で勝負
 
 【出力形式 (厳密に以下の JSON のみ、code fence ・前置き禁止)】
 {
-  "lineBody": "LINE 本文 (改行は実改行で。絵文字適度に使う)",
-  "jobsAdvice": "Jobs からのワンポイントアドバイス: なぜこの文面を送るか、何を狙ってるか (60-120字)",
-  "intent": "この LINE の戦略意図を 1単語で (例: 信頼構築 / 情報収集 / 提案前ヒアリング / 関係再活性 等)"
+  "lineBody": "LINE 本文 (改行は実改行で。気付き or 質問 が含まれていること)",
+  "jobsAdvice": "Jobs からのワンポイントアドバイス: なぜこの文面か / 何を引き出したいか (60-120字)",
+  "intent": "この LINE の戦略意図 1単語 (例: 関心事の掘り下げ / 数値取得 / 信頼形成 / 提案準備 / 関係再活性)",
+  "qualityCheck": {
+    "hasInsight": true/false,
+    "hasQuestion": true/false,
+    "noFlattery": true/false,
+    "underWordLimit": true/false
+  }
 }`;
 
       try {
@@ -3982,6 +4006,16 @@ ${isLoop
               const wrap = document.querySelector('.aib-textarea-wrap');
               if (wrap && wrap.parentElement) wrap.parentElement.insertBefore(adviceEl, wrap);
             }
+            // ★ クオリティチェック 視覚化
+            const qc = parsed.qualityCheck || {};
+            const qcBadge = (label, ok) => `<span style="background:${ok ? '#10B981' : '#94A3B8'};color:#fff;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:8px;letter-spacing:0.04em;margin-right:4px;">${ok ? '✓' : '○'} ${label}</span>`;
+            const qcRow = `
+              <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:3px;">
+                ${qcBadge('気付き', qc.hasInsight)}
+                ${qcBadge('質問', qc.hasQuestion)}
+                ${qcBadge('お世辞なし', qc.noFlattery)}
+                ${qcBadge('文字数OK', qc.underWordLimit)}
+              </div>`;
             if (parsed.jobsAdvice) {
               adviceEl.innerHTML = `
                 <div style="display:flex;align-items:flex-start;gap:10px;">
@@ -3989,6 +4023,7 @@ ${isLoop
                   <div style="flex:1;min-width:0;">
                     <div style="font-size:10.5px;font-weight:800;letter-spacing:0.1em;color:#92400E;text-transform:uppercase;margin-bottom:4px;">JOBS の ワンポイントアドバイス${parsed.intent ? ' · 戦略意図: ' + escapeHtml(parsed.intent) : ''}</div>
                     <div style="font-size:13px;color:#78350F;line-height:1.65;font-weight:600;">${escapeHtml(parsed.jobsAdvice)}</div>
+                    ${qcRow}
                   </div>
                 </div>
               `;
