@@ -1262,6 +1262,53 @@
         `;
       }
     } catch (e) { console.warn('next-action block skipped:', e); }
+    // ★ オーナーfb「返信なかったら追撃ラインを見える化」
+    // localStorage の fp-draft-tracking から「この客で送信済 + 返信待ち」を判定
+    try {
+      const tracking = JSON.parse(localStorage.getItem('fp-draft-tracking') || '{}');
+      const t = tracking[c.id];
+      if (t && t.awaitingReply && t.lastSentAt) {
+        const daysSinceSent = Math.floor((Date.now() - new Date(t.lastSentAt).getTime()) / 86400000);
+        // 客から返信あったかチェック (lineHistory で送信時刻以降に from='user' があれば返信あり)
+        const replied = (c.lineHistory || []).some(m => {
+          const isUser = (m.from === 'user' || m.direction === 'in');
+          return isUser && m.ts && new Date(m.ts).getTime() > new Date(t.lastSentAt).getTime();
+        });
+        if (replied) {
+          // 返信受領 → tracking フラグ解除
+          tracking[c.id].awaitingReply = false;
+          tracking[c.id].repliedAt = new Date().toISOString();
+          try { localStorage.setItem('fp-draft-tracking', JSON.stringify(tracking)); } catch (_) {}
+          const replyBanner = `
+            <div style="background:linear-gradient(135deg,#10B981,#059669);color:#fff;padding:12px 16px;border-radius:10px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+              <div style="font-size:22px;">💬</div>
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:800;">お客様から返信が来ました</div>
+                <div style="font-size:11.5px;opacity:0.9;margin-top:2px;">「${escapeHtml(t.lastSentText.slice(0, 50))}…」の返答 → Claude が次の提案を作成可</div>
+              </div>
+              <button id="fp-track-next" data-cid="${escapeHtml(c.id)}" style="background:#fff;color:#059669;border:none;padding:8px 14px;border-radius:6px;font-weight:800;cursor:pointer;font-size:12px;font-family:inherit;">✨ 次の提案を作る</button>
+            </div>
+          `;
+          nextActionHtml = replyBanner + (nextActionHtml || '');
+        } else if (daysSinceSent >= 3) {
+          // 3日以上経過で返信なし → 追撃提案バナー
+          const urgency = daysSinceSent >= 7 ? '🔥 1週間以上' : '⏰ ' + daysSinceSent + '日';
+          const bg = daysSinceSent >= 7 ? 'linear-gradient(135deg,#dc2626,#991b1b)' : 'linear-gradient(135deg,#F97316,#EA580C)';
+          const followupBanner = `
+            <div style="background:${bg};color:#fff;padding:12px 16px;border-radius:10px;margin-bottom:12px;display:flex;align-items:center;gap:10px;animation:fp-followup-pulse 2.2s ease-in-out infinite;">
+              <div style="font-size:22px;">📨</div>
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:800;">${urgency}前送信 — 返信なし (追撃 ${t.followupCount}回目)</div>
+                <div style="font-size:11.5px;opacity:0.92;margin-top:2px;line-height:1.45;">「${escapeHtml(t.lastSentText.slice(0, 60))}…」<br>${daysSinceSent >= 7 ? '関係維持リスク — 別アプローチの追撃推奨' : '柔らかい追撃で返信率UP'}</div>
+              </div>
+              <button id="fp-track-followup" data-cid="${escapeHtml(c.id)}" style="background:#fff;color:${daysSinceSent >= 7 ? '#dc2626' : '#EA580C'};border:none;padding:8px 14px;border-radius:6px;font-weight:800;cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap;">✨ 追撃ライン 作成</button>
+            </div>
+            <style>@keyframes fp-followup-pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0.5)}50%{box-shadow:0 0 0 8px rgba(249,115,22,0)}}</style>
+          `;
+          nextActionHtml = followupBanner + (nextActionHtml || '');
+        }
+      }
+    } catch (e) { console.warn('tracking banner skipped:', e); }
     // ★ オーナーfb「Jobs 候補のワークフロー + 今動いてるワークフローも表示」
     try {
       // 同日複数 AI議事録 を 1 meeting に dedup (KPI ステージと整合)
@@ -1993,6 +2040,24 @@
     });
     const draftBtn = document.getElementById('modal-draft-btn');
     if (draftBtn) draftBtn.addEventListener('click', () => {
+      openDraftReplyModal(c, events, recs);
+    });
+    // ★ 追撃ライン作成 / 次の提案作成 ボタン (返信トラッキング)
+    const followupBtn = document.getElementById('fp-track-followup');
+    if (followupBtn) followupBtn.addEventListener('click', () => {
+      window._fpDraftLoopMode = true; // 追撃モード = 既送信履歴を踏まえる
+      try {
+        const tracking = JSON.parse(localStorage.getItem('fp-draft-tracking') || '{}');
+        if (tracking[c.id]) {
+          tracking[c.id].followupCount = (tracking[c.id].followupCount || 0) + 1;
+          localStorage.setItem('fp-draft-tracking', JSON.stringify(tracking));
+        }
+      } catch (_) {}
+      openDraftReplyModal(c, events, recs);
+    });
+    const nextBtn = document.getElementById('fp-track-next');
+    if (nextBtn) nextBtn.addEventListener('click', () => {
+      window._fpDraftLoopMode = true;
       openDraftReplyModal(c, events, recs);
     });
     // ⑤ 「📎 資料を作成」ボタン → AIで成果物draft (キャッシュフロー表/シミュ等)
@@ -3715,7 +3780,23 @@
           // ★ オーナーfb「送信後また Claude が次の最適提案 (ループ)」
           // 送信履歴に append + Claude に再投入
           if (!window._fpDraftConversation) window._fpDraftConversation = [];
-          window._fpDraftConversation.push({ role: 'fp', text: bodyText, ts: new Date().toISOString() });
+          const sentText = document.getElementById('draft-text')?.value || text;
+          window._fpDraftConversation.push({ role: 'fp', text: sentText, ts: new Date().toISOString(), clientId: client.id });
+          // ★ 客毎の追撃トラッキング (localStorage に保存 → 返信待ちダッシュボード表示)
+          try {
+            const trackKey = 'fp-draft-tracking';
+            const tracking = JSON.parse(localStorage.getItem(trackKey) || '{}');
+            tracking[client.id] = {
+              clientId: client.id,
+              clientName: client.name,
+              lineFriendId: client.lineFriendId || '',
+              lastSentText: sentText.slice(0, 120),
+              lastSentAt: new Date().toISOString(),
+              awaitingReply: true,
+              followupCount: (tracking[client.id]?.followupCount || 0),
+            };
+            localStorage.setItem(trackKey, JSON.stringify(tracking));
+          } catch (_) {}
           // 「お客様の返信を待つ → 次の提案」UI
           const nextLoopUi = document.createElement('div');
           nextLoopUi.style.cssText = 'margin-top:14px;padding:14px 18px;background:linear-gradient(135deg,#EEF2FF,#FAFBFF);border:2px solid #5B5BF0;border-radius:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;';
@@ -3796,11 +3877,23 @@
         }
       } catch (_) {}
 
-      // 会話ループ履歴 (送信済 + 返信受信) を蓄積
-      const convHist = (window._fpDraftConversation || []).slice(-8).map(c =>
-        `${c.role === 'fp' ? '【前回 FP送信】' : '【お客様返信】'} ${(c.text || '').slice(0, 200)}`
-      ).join('\n') || 'なし (初回)';
-      const isLoop = window._fpDraftLoopMode === true;
+      // ★ 会話ループ履歴 (送信済 + 返信受信) を時系列で merge
+      // - FP 送信: window._fpDraftConversation (この客分のみ)
+      // - 客返信: c.lineHistory の from='user' / direction='in'
+      const fpSent = (window._fpDraftConversation || [])
+        .filter(m => !m.clientId || m.clientId === client.id)
+        .map(m => ({ role: 'fp', text: m.text, ts: m.ts }));
+      const userReplies = (client.lineHistory || [])
+        .filter(m => m.direction === 'in' || m.from === 'user')
+        .map(m => ({ role: 'user', text: m.text || m.message || '', ts: m.ts || m.date || '' }));
+      const allMsgs = fpSent.concat(userReplies)
+        .filter(m => m.text && m.ts)
+        .sort((a, b) => new Date(a.ts) - new Date(b.ts))
+        .slice(-10);
+      const convHist = allMsgs.length === 0 ? 'なし (初回)' : allMsgs.map(m =>
+        `${m.role === 'fp' ? '【FP送信】' : '【お客様返信】'} (${String(m.ts).slice(0,10)}) ${(m.text || '').slice(0, 200)}`
+      ).join('\n');
+      const isLoop = window._fpDraftLoopMode === true || allMsgs.length > 0;
       const taskTitle = `LINE 個別下書き 生成 — 以下は全文脈です:
 
 【顧客プロファイル】
