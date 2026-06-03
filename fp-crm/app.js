@@ -1915,6 +1915,17 @@
         } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; btn.textContent = '→ LINEで送信'; }
       });
     });
+    // ★ オーナーfb「成果物もJobsが作って一緒に送る + こっちで編集」 ワンクリック導線
+    document.querySelectorAll('.fp-task-make-deliv').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const clientId = btn.dataset.clientId;
+        const targetClient = clients.find(x => String(x.id) === String(clientId)) || c;
+        const type = btn.dataset.type || 'custom';
+        const taskTitle = btn.dataset.task || '';
+        // openDeliverableDraftModal で type + taskTitle で起動 → AI生成 → 編集 → LINE送信
+        openDeliverableDraftModal(targetClient, taskTitle, type);
+      });
+    });
     const refCopy = document.getElementById('ref-copy-url');
     if (refCopy) {
       refCopy.addEventListener('click', () => {
@@ -2196,6 +2207,20 @@
           <div style="display:grid;gap:8px;">
             ${tasks.slice().sort((a,b) => (a.due||'').localeCompare(b.due||'')).map((t, i) => {
               const priColor = t.priority==='至急' ? '#fef2f2;color:#b91c3c' : (t.priority==='今週'||t.priority==='2週間以内') ? '#fff7ed;color:#c2410c' : '#f0f9ff;color:#075985';
+              // タスク文から成果物 type 自動推定
+              const taskTxt = t.task || '';
+              let delivType = 'custom';
+              if (/教育|進学|学費|大学|高校/.test(taskTxt)) delivType = 'education';
+              else if (/ライフプラン/.test(taskTxt)) delivType = 'lifeplan';
+              else if (/キャッシュフロー|収支|家計/.test(taskTxt)) delivType = 'cashflow';
+              else if (/NISA|つみたて|積立投資|配分/i.test(taskTxt)) delivType = 'nisa';
+              else if (/保険|保障/.test(taskTxt)) delivType = 'insurance';
+              else if (/老後|退職|年金/.test(taskTxt)) delivType = 'retire';
+              else if (/相続|贈与|遺産/.test(taskTxt)) delivType = 'inherit';
+              else if (/ヒアリング/.test(taskTxt)) delivType = 'hearing';
+              else if (/iDeCo/i.test(taskTxt)) delivType = 'nisa';
+              else if (/節税|所得控除|確定申告/.test(taskTxt)) delivType = 'kakutei';
+              else if (/住宅|繰上/.test(taskTxt)) delivType = 'mortgage';
               return `
                 <div style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 16px;">
                   <div style="display:grid;grid-template-columns:30px 90px 1fr 130px;gap:10px;align-items:center;margin-bottom:${t.recommendedAction?'8px':'0'};">
@@ -2205,13 +2230,17 @@
                     <span style="font-size:11px;color:var(--muted);text-align:right;font-family:'Inter',sans-serif;">${escapeHtml(t.due||'-')}</span>
                   </div>
                   ${t.recommendedAction ? `
-                    <div style="background:#fdfbf4;border:1px solid #e8d9a8;border-radius:6px;padding:8px 12px;font-size:11.5px;color:#5e4d1a;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;">
+                    <div style="background:#fdfbf4;border:1px solid #e8d9a8;border-radius:6px;padding:8px 12px;font-size:11.5px;color:#5e4d1a;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-bottom:8px;">
                       <div>
                         <strong style="color:#1f2a3f;letter-spacing:0.04em;">推奨アクション</strong>
                         <span style="margin-left:6px;">${escapeHtml(t.recommendedAction)}</span>
                       </div>
                       ${t.actionTemplate ? `<button class="fp-task-do-now" data-uid="${escapeHtml(client.lineFriendId||'')}" data-name="${escapeHtml(client.name)}" data-msg="${escapeHtml(t.actionTemplate)}" style="font-size:11px;padding:5px 11px;background:#06c755;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;font-family:inherit;">→ LINEで送信</button>` : ''}
                     </div>` : ''}
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <button class="fp-task-make-deliv" data-task="${escapeHtml(taskTxt)}" data-type="${delivType}" data-client-id="${escapeHtml(client.id||'')}" style="font-size:11.5px;padding:6px 14px;background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:800;font-family:inherit;letter-spacing:0.02em;">✨ Jobs に資料作成依頼 → 編集 → LINE送信</button>
+                    <span style="font-size:10.5px;color:var(--muted);align-self:center;">推定タイプ: ${delivType}</span>
+                  </div>
                 </div>`;
             }).join('')}
           </div>`
@@ -2337,7 +2366,8 @@
   }
 
   // ⑤ 成果物 draft モーダル (キャッシュフロー表 / シミュ表 等)
-  function openDeliverableDraftModal(client, taskTitle) {
+  // preselectedType: タスクから推定した type を渡すと、即 AI生成まで一気に走る (ワンクリック導線)
+  function openDeliverableDraftModal(client, taskTitle, preselectedType) {
     const existing = document.getElementById('fp-deliv-modal');
     if (existing) existing.remove();
     const overlay = document.createElement('div');
@@ -2366,6 +2396,8 @@
     document.body.appendChild(overlay);
     document.getElementById('fp-deliv-close').addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    // ★ preselectedType 指定時はワンクリック導線: 該当タイプを自動選択 → AI生成まで一気に発火
+    let _delivAutoFire = !!preselectedType;
     overlay.querySelectorAll('.fp-deliv-type').forEach(b => {
       b.addEventListener('click', () => {
         const type = b.dataset.type;
@@ -2400,32 +2432,59 @@
         });
       });
     });
+    // ワンクリック導線: preselectedType に対応するボタンを自動クリックして AI 生成までジャンプ
+    if (preselectedType) {
+      setTimeout(() => {
+        const target = overlay.querySelector(`.fp-deliv-type[data-type="${preselectedType}"]`);
+        if (target) {
+          target.click();
+          // 続けて AI生成ボタンも自動発火
+          setTimeout(() => {
+            const aiBtn = document.getElementById('fp-deliv-ai');
+            if (aiBtn) aiBtn.click();
+          }, 300);
+        }
+      }, 100);
+    }
   }
 
   // 成果物 → LINE送信モーダル (本文 prefill + 編集 + 送信)
-  function openDeliverableSendModal(client, type, taskTitle) {
+  // finalHtml: 編集後の成果物 HTML (添付プレビュー表示用)
+  function openDeliverableSendModal(client, type, taskTitle, finalHtml) {
     const uid = client.lineFriendId;
     if (!uid) { alert('この方は LINE 友だち追加が完了してないので送信できません。'); return; }
     const typeName = ({cashflow:'キャッシュフロー表', lifeplan:'ライフプラン表', nisa:'NISA/iDeCo配分シミュ', insurance:'保険見直しレポート', hearing:'ヒアリングシート', custom:'資料'}[type]) || '資料';
-    const prefill = `${client.name}様\n\nお世話になっております。FP Compass の${(window.LineAppLiveData?.users?.[0]?.displayName) || '担当'}です。\n\n面談でお話した「${taskTitle}」に関する${typeName}をお送りします。\n\nご家族でご確認いただき、不明点があれば このトークから気軽にお問い合わせください 🙏\n\n(資料URLは別途お送りします)`;
+    const hasAttachment = !!(finalHtml && finalHtml.length > 100);
+    const prefill = `${client.name}様\n\nお世話になっております。FP Compass の${(window.LineAppLiveData?.users?.[0]?.displayName) || '担当'}です。\n\n面談でお話した「${taskTitle}」に関する${typeName}をお送りします。\n\nご家族でご確認いただき、不明点があれば このトークから気軽にお問い合わせください 🙏${hasAttachment ? `\n\n📎 添付: ${typeName} (編集後の最終版)` : ''}`;
     const ex = document.getElementById('fp-deliv-send-modal');
     if (ex) ex.remove();
     const ov = document.createElement('div');
     ov.id = 'fp-deliv-send-modal';
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:10020;display:flex;align-items:center;justify-content:center;padding:20px;';
+    const attachmentBlock = hasAttachment ? `
+      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;margin-bottom:14px;overflow:hidden;">
+        <div style="padding:8px 12px;background:#5B5BF0;color:#fff;font-size:11px;font-weight:800;letter-spacing:0.06em;display:flex;justify-content:space-between;align-items:center;">
+          <span>📎 添付資料プレビュー (編集後の最終版)</span>
+          <span style="opacity:0.85;font-weight:600;">${(finalHtml.length / 1000).toFixed(1)}KB</span>
+        </div>
+        <div style="max-height:200px;overflow:auto;padding:12px 14px;font-size:11px;background:#fff;">${finalHtml.slice(0, 4000)}${finalHtml.length > 4000 ? '<div style="text-align:center;color:#94A3B8;font-size:10px;margin-top:8px;">(以下省略 — 送信時は全文添付)</div>' : ''}</div>
+      </div>
+    ` : '';
     ov.innerHTML = `
-      <div style="background:#fff;width:min(560px,100%);border-radius:14px;font-family:'Noto Sans JP',sans-serif;overflow:hidden;">
-        <div style="padding:16px 22px;background:#06C755;color:#fff;display:flex;justify-content:space-between;align-items:center;">
-          <strong style="font-size:14px;">📤 ${escapeHtml(typeName)} を LINEで送信</strong>
+      <div style="background:#fff;width:min(680px,100%);max-height:90vh;border-radius:14px;font-family:'Noto Sans JP',sans-serif;overflow:hidden;display:flex;flex-direction:column;">
+        <div style="padding:16px 22px;background:#06C755;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+          <strong style="font-size:14px;">📤 ${escapeHtml(typeName)} を LINEで送信${hasAttachment ? ' (本文+資料同梱)' : ''}</strong>
           <button id="fp-ds-close" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;width:28px;height:28px;border-radius:5px;cursor:pointer;">✕</button>
         </div>
-        <div style="padding:18px 22px;">
+        <div style="padding:18px 22px;overflow-y:auto;flex:1;">
           <div style="font-size:12px;color:#64748B;margin-bottom:10px;">送信先: <strong>${escapeHtml(client.name)} 様</strong></div>
-          <textarea id="fp-ds-msg" style="width:100%;min-height:200px;border:1.5px solid #E2E8F0;border-radius:8px;padding:12px;font-family:inherit;font-size:13px;line-height:1.75;">${escapeHtml(prefill)}</textarea>
-          <div style="display:flex;gap:10px;margin-top:14px;">
-            <button id="fp-ds-cancel" style="flex:1;padding:11px;background:#fff;border:1.5px solid #CBD5E1;color:#475569;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;">キャンセル</button>
-            <button id="fp-ds-send" style="flex:2;padding:11px;background:#06C755;color:#fff;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit;">📤 LINEで送信</button>
-          </div>
+          ${attachmentBlock}
+          <div style="font-size:11px;font-weight:700;color:#64748B;letter-spacing:0.06em;margin-bottom:6px;text-transform:uppercase;">💬 LINE本文 (編集可)</div>
+          <textarea id="fp-ds-msg" style="width:100%;min-height:160px;border:1.5px solid #E2E8F0;border-radius:8px;padding:12px;font-family:inherit;font-size:13px;line-height:1.75;">${escapeHtml(prefill)}</textarea>
+        </div>
+        <div style="padding:14px 22px;border-top:1px solid #E2E8F0;background:#FAFBFC;display:flex;gap:10px;flex-shrink:0;">
+          <button id="fp-ds-cancel" style="flex:1;padding:11px;background:#fff;border:1.5px solid #CBD5E1;color:#475569;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;">キャンセル</button>
+          <button id="fp-ds-send" style="flex:2;padding:11px;background:#06C755;color:#fff;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit;">📤 ${hasAttachment ? '本文+資料を' : ''}LINEで送信</button>
         </div>
       </div>
     `;
@@ -2440,7 +2499,7 @@
       try {
         const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/send-line', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: uid, text }),
+          body: JSON.stringify({ userId: uid, text, deliverableHtml: hasAttachment ? finalHtml : undefined, deliverableType: type, deliverableTitle: taskTitle, customerName: client.name }),
         });
         const d = await r.json();
         if (d.ok) {
@@ -2504,31 +2563,120 @@
         if (old) {
           const wrap = document.createElement('div');
           wrap.innerHTML = d.html;
-          // header (印刷/送信ボタン付き) を追加
+          // 編集状態保存キー (顧客×type×task 単位)
+          const editKey = `fp-deliv-edit-${client.id || client.lineFriendId || client.name}-${type}-${(taskTitle || '').slice(0, 20)}`;
           const newContent = wrap.querySelector('.fp-deliv-content') || wrap;
           newContent.classList.add('fp-deliv-content');
-          const header = `<div style="background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;padding:12px 16px;border-radius:8px 8px 0 0;display:flex;justify-content:space-between;align-items:center;margin-bottom:0;">
-            <div><strong style="font-size:13px;letter-spacing:0.04em;">✨ AI個別生成 — ${escapeHtml(client.name)}様 専用</strong><div style="font-size:11px;opacity:0.85;margin-top:2px;">議事録+台帳データから ${new Date().toLocaleString('ja-JP')} 生成</div></div>
-            <div style="display:flex;gap:6px;"><button data-deliv-print style="background:rgba(255,255,255,0.22);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:5px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">🖨 印刷/PDF</button><button data-deliv-send style="background:#06C755;border:1px solid #06C755;color:#fff;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:800;cursor:pointer;">📤 LINE送信</button></div>
+          // ★ オーナーfb「Jobs が作ったやつを元に編集できる」
+          // 既存保存内容あれば優先復元、無ければ AI生成版
+          let restoredHtml = newContent.outerHTML;
+          try {
+            const saved = localStorage.getItem(editKey);
+            if (saved && saved.length > 100) restoredHtml = saved;
+          } catch (_) {}
+          const header = `<div style="background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;padding:12px 16px;border-radius:8px 8px 0 0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+              <div><strong style="font-size:13px;letter-spacing:0.04em;">✨ AI個別生成 — ${escapeHtml(client.name)}様 専用</strong><div style="font-size:11px;opacity:0.85;margin-top:2px;">議事録+台帳データから ${new Date().toLocaleString('ja-JP')} 生成 · <span data-deliv-save-status style="color:#A7F3D0;font-weight:700;">✓ 編集保存済</span></div></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button data-deliv-ai-edit style="background:rgba(255,255,255,0.22);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">✨ AI修正指示</button>
+                <button data-deliv-reset style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:5px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;">↩ AI版に戻す</button>
+                <button data-deliv-print style="background:rgba(255,255,255,0.22);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:5px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">🖨 印刷/PDF</button>
+                <button data-deliv-send style="background:#06C755;border:1px solid #06C755;color:#fff;padding:5px 14px;border-radius:5px;font-size:11px;font-weight:800;cursor:pointer;">📤 編集後 LINE送信</button>
+              </div>
+            </div>
+            <div style="margin-top:8px;padding:6px 10px;background:rgba(255,255,255,0.12);border-radius:5px;font-size:10.5px;letter-spacing:0.04em;">📝 表のセル・数値・文章を直接クリックで編集可。変更は自動保存され、LINE送信時はこの最終版が送られます</div>
           </div>`;
-          old.outerHTML = '<div class="fp-deliv-content" style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">' + header + newContent.outerHTML + '</div>';
-          // 印刷/送信ボタン再bind
+          // contenteditable 化: AI生成HTML をラップして直編集可能に
+          old.outerHTML = '<div class="fp-deliv-content" style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">' + header
+            + '<div data-deliv-editable contenteditable="true" spellcheck="false" style="padding:16px 18px;outline:none;min-height:200px;background:#fff;">'
+            + (restoredHtml.includes('fp-deliv-content') ? wrap.innerHTML : restoredHtml)
+            + '</div></div>';
+
+          // 自動保存 (input 300ms debounce)
+          const editable = resultEl.querySelector('[data-deliv-editable]');
+          const statusEl = resultEl.querySelector('[data-deliv-save-status]');
+          let saveTimer = null;
+          if (editable) {
+            editable.addEventListener('input', () => {
+              clearTimeout(saveTimer);
+              if (statusEl) statusEl.textContent = '… 保存中';
+              saveTimer = setTimeout(() => {
+                try { localStorage.setItem(editKey, editable.innerHTML); } catch (_) {}
+                if (statusEl) statusEl.textContent = '✓ 編集保存済 ' + new Date().toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'});
+              }, 300);
+            });
+          }
+
+          // 印刷
           const printBtn = resultEl.querySelector('[data-deliv-print]');
           if (printBtn) printBtn.addEventListener('click', () => {
-            const h = resultEl.querySelector('.fp-deliv-content').outerHTML;
+            const h = editable ? editable.innerHTML : resultEl.querySelector('.fp-deliv-content').outerHTML;
             const w = window.open('', '_blank');
             w.document.write(`<!doctype html><html><head><title>${escapeHtml(taskTitle)} - ${escapeHtml(client.name)}</title><style>body{font-family:'Noto Sans JP',sans-serif;padding:30px;color:#0F172A;}table{border-collapse:collapse;width:100%;}th,td{padding:8px 12px;border:1px solid #E2E8F0;font-size:12px;text-align:left;}th{background:#F8FAFC;}</style></head><body>${h}</body></html>`);
             w.document.close();
             setTimeout(() => w.print(), 300);
           });
+
+          // LINE送信 (編集後 HTML を渡す)
           const sendBtn = resultEl.querySelector('[data-deliv-send]');
-          if (sendBtn) sendBtn.addEventListener('click', () => openDeliverableSendModal(client, type, taskTitle));
+          if (sendBtn) sendBtn.addEventListener('click', () => {
+            const finalHtml = editable ? editable.innerHTML : '';
+            try { localStorage.setItem(editKey, finalHtml); } catch (_) {}
+            openDeliverableSendModal(client, type, taskTitle, finalHtml);
+          });
+
+          // AI 修正指示
+          const aiEditBtn = resultEl.querySelector('[data-deliv-ai-edit]');
+          if (aiEditBtn) aiEditBtn.addEventListener('click', async () => {
+            const instr = prompt('Claude にどう修正させたいか指示してください:\n\n例:\n・もっと保守的なシミュに\n・教育費の表に大学院の費用も追加\n・全体的にもう少しシンプルに\n・金額は税込みで表示\n・お子様の年齢を強調');
+            if (!instr || !instr.trim()) return;
+            aiEditBtn.disabled = true; aiEditBtn.textContent = '✨ AI修正中…';
+            try {
+              const currentHtml = editable ? editable.innerHTML : '';
+              const rr = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/generate-deliverable', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'custom',
+                  clientName: client.name,
+                  clientCtx,
+                  summary: (latestAi && latestAi.summary) || '',
+                  transcript: (latestAi && latestAi.transcript) || '',
+                  taskTitle: '【修正指示】' + instr + '\n\n【元の成果物HTML】\n' + currentHtml.slice(0, 8000),
+                }),
+              });
+              const dd = await rr.json();
+              if (dd.ok && dd.html) {
+                const w2 = document.createElement('div'); w2.innerHTML = dd.html;
+                const nc = w2.querySelector('.fp-deliv-content') || w2;
+                if (editable) {
+                  editable.innerHTML = nc.innerHTML;
+                  try { localStorage.setItem(editKey, editable.innerHTML); } catch (_) {}
+                  if (statusEl) statusEl.textContent = '✓ AI修正反映済';
+                }
+              } else {
+                alert('AI修正失敗: ' + (dd.error || '不明'));
+              }
+            } catch (e) {
+              alert('通信失敗: ' + e.message);
+            }
+            aiEditBtn.disabled = false; aiEditBtn.textContent = '✨ AI修正指示';
+          });
+
+          // リセット (AI元版に戻す)
+          const resetBtn = resultEl.querySelector('[data-deliv-reset]');
+          if (resetBtn) resetBtn.addEventListener('click', () => {
+            if (!confirm('編集内容を破棄し、最初のAI生成版に戻しますか?')) return;
+            try { localStorage.removeItem(editKey); } catch (_) {}
+            if (editable) editable.innerHTML = wrap.innerHTML;
+            if (statusEl) statusEl.textContent = '↩ AI版に戻しました';
+          });
+
           // 成功トースト
           const t = document.createElement('div');
           t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #5B5BF0;border-radius:10px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10030;font-family:inherit;';
-          t.innerHTML = `<strong style="font-size:14px;">✨ AI個別生成完了</strong><br><span style="font-size:12px;color:#6b7280;">${escapeHtml(client.name)} 様 固有の数値で再生成しました</span>`;
+          t.innerHTML = `<strong style="font-size:14px;">✨ AI個別生成完了 — 編集モード ON</strong><br><span style="font-size:12px;color:#6b7280;">表のセルや数値を直接クリックで編集可・自動保存・LINE送信は編集後の最終版</span>`;
           document.body.appendChild(t);
-          setTimeout(() => t.remove(), 4000);
+          setTimeout(() => t.remove(), 5000);
         }
         // ai-bar 撤去
         const aiBar = resultEl.querySelector('#fp-deliv-ai')?.parentElement;
