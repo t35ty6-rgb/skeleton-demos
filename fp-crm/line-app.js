@@ -2919,17 +2919,18 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       <div class="howto-banner">
         <div class="howto-banner-head">
           <span class="howto-banner-title">⚙️ 設定</span>
-          <span class="howto-banner-subtitle">LINE接続情報 と セグメント定義</span>
-        </div>
-        <div class="howto-steps">
-          <div class="howto-step"><div class="howto-step-no">1</div><div><strong>LINE接続</strong> — チャネルトークン / FP情報 / レポートURL / マスター停止スイッチ</div></div>
-          <div class="howto-step"><div class="howto-step-no">2</div><div><strong>セグメント定義</strong> — お客様の自動グループ分け定義の確認</div></div>
+          <span class="howto-banner-subtitle">FP切替 / LINE接続情報 / セグメント定義</span>
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;font-size:11.5px;">
+        <a href="#set-tenant" class="quick-jump">🏢 FP切替・新規追加</a>
         <a href="#set-line" class="quick-jump">🔌 LINE接続</a>
         <a href="#set-segments" class="quick-jump">👥 セグメント</a>
       </div>
+      <section id="set-tenant" style="margin-bottom:32px;">
+        <h2 class="hub-section-title">🏢 FP切替・新規追加 (マルチテナント)</h2>
+        <div data-line-view="tenant"></div>
+      </section>
       <section id="set-line">
         <h2 class="hub-section-title">🔌 LINE 公式アカウント接続</h2>
         <div data-line-view="settings"></div>
@@ -2939,8 +2940,106 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         <div data-line-view="segments"></div>
       </section>
     `;
+    renderTenantUI();
     renderSettings();
     renderSegments();
+  }
+
+  // FP切替・新規登録UI
+  async function renderTenantUI() {
+    const v = document.querySelector('[data-line-view="tenant"]');
+    if (!v) return;
+    const cur = currentFpId();
+    v.innerHTML = '<div style="padding:20px;color:#94a3b8;">読込中…</div>';
+    let list = [];
+    try {
+      const r = await fetch(CLOUD_RUN_BASE + '/api/fp-list');
+      list = await r.json();
+    } catch (e) { list = []; }
+    v.innerHTML = `
+      <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:20px 24px;">
+        <div style="font-size:12.5px;color:#475569;margin-bottom:14px;line-height:1.7;">
+          現在の FP: <strong style="color:#5B5BF0;">${escapeHtml(cur)}</strong><br>
+          1つのシステムで 複数 FP の顧客データを完全分離管理します。
+        </div>
+        <div style="display:grid;gap:8px;margin-bottom:18px;">
+          ${list.map(f => `
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid ${f.fpId === cur ? '#5B5BF0' : '#E2E8F0'};border-radius:8px;background:${f.fpId === cur ? '#EEF1FE' : '#fff'};">
+              <div style="flex:1;">
+                <div style="font-weight:700;font-size:13.5px;color:#0F172A;">${escapeHtml(f.fpName || '(未設定)')} <span style="font-family:Manrope,monospace;font-size:10.5px;color:#94A3B8;">${escapeHtml(f.fpId)}</span></div>
+                <div style="font-size:11.5px;color:#64748B;margin-top:2px;">${escapeHtml(f.email || '')} ・ plan: ${escapeHtml(f.plan || '-')} ・ ${escapeHtml(f.status || '-')}</div>
+              </div>
+              ${f.fpId === cur ? '<span style="background:#5B5BF0;color:#fff;padding:5px 12px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:0.06em;">CURRENT</span>'
+                : `<button data-switch-fp="${escapeHtml(f.fpId)}" style="background:#fff;border:1.5px solid #CBD5E1;color:#475569;padding:6px 14px;border-radius:6px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;">切替</button>`}
+            </div>
+          `).join('')}
+        </div>
+        <button id="fp-add-new" style="background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;border:none;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:0.04em;box-shadow:0 4px 12px rgba(91,91,240,0.3);">+ 新規 FP を登録</button>
+      </div>
+    `;
+    v.querySelectorAll('[data-switch-fp]').forEach(b => {
+      b.addEventListener('click', () => {
+        if (confirm(b.dataset.switchFp + ' に切り替えますか? (ページ再読込)')) setCurrentFpId(b.dataset.switchFp);
+      });
+    });
+    document.getElementById('fp-add-new').addEventListener('click', openFpRegisterWizard);
+  }
+
+  function openFpRegisterWizard() {
+    const ex = document.getElementById('fp-reg-modal'); if (ex) ex.remove();
+    const o = document.createElement('div');
+    o.id = 'fp-reg-modal';
+    o.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(3px);z-index:10010;display:flex;align-items:center;justify-content:center;padding:20px;';
+    o.innerHTML = `
+      <div style="background:#fff;width:min(560px,100%);max-height:90vh;overflow-y:auto;border-radius:14px;font-family:'Noto Sans JP',sans-serif;">
+        <div style="padding:18px 22px;background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;display:flex;justify-content:space-between;align-items:center;">
+          <strong style="font-size:15px;">🏢 新規 FP 登録ウィザード</strong>
+          <button id="fp-reg-close" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;width:28px;height:28px;border-radius:5px;cursor:pointer;">✕</button>
+        </div>
+        <div style="padding:22px;">
+          <div style="font-size:11.5px;color:#64748B;line-height:1.7;margin-bottom:14px;background:#FFFBEB;border:1px solid #FBBF24;border-radius:6px;padding:10px 14px;color:#78350F;">
+            ⚠ 事前に Skeleton 運営側で 各FP用の LINE Channel + LIFF + Zoom 鍵を取得しておく必要があります。
+          </div>
+          <form id="fp-reg-form" style="display:grid;gap:12px;">
+            <label style="font-size:12px;color:#475569;font-weight:700;">FP 表示名 *<br><input name="fpName" required style="width:100%;padding:9px;border:1.5px solid #CBD5E1;border-radius:6px;font-family:inherit;margin-top:4px;" placeholder="例: 山田 太郎 (FP)"></label>
+            <label style="font-size:12px;color:#475569;font-weight:700;">メールアドレス *<br><input name="email" type="email" required style="width:100%;padding:9px;border:1.5px solid #CBD5E1;border-radius:6px;font-family:inherit;margin-top:4px;"></label>
+            <label style="font-size:12px;color:#475569;font-weight:700;">LINE Channel Access Token<br><input name="lineChannelAccessToken" style="width:100%;padding:9px;border:1.5px solid #CBD5E1;border-radius:6px;font-family:inherit;margin-top:4px;font-family:Menlo,monospace;font-size:11px;" placeholder="Messaging API 長期トークン"></label>
+            <label style="font-size:12px;color:#475569;font-weight:700;">LIFF ID<br><input name="liffId" style="width:100%;padding:9px;border:1.5px solid #CBD5E1;border-radius:6px;font-family:inherit;margin-top:4px;font-family:Menlo,monospace;font-size:11px;" placeholder="例: 2010266648-iX5kooZe"></label>
+            <label style="font-size:12px;color:#475569;font-weight:700;">Zoom Account ID<br><input name="zoomAccountId" style="width:100%;padding:9px;border:1.5px solid #CBD5E1;border-radius:6px;font-family:inherit;margin-top:4px;font-family:Menlo,monospace;font-size:11px;"></label>
+            <label style="font-size:12px;color:#475569;font-weight:700;">プラン<br><select name="plan" style="width:100%;padding:9px;border:1.5px solid #CBD5E1;border-radius:6px;font-family:inherit;margin-top:4px;"><option value="trial">トライアル (30日無料)</option><option value="pro" selected>Pro (月¥29,800)</option><option value="enterprise">Enterprise (応相談)</option></select></label>
+            <div style="display:flex;gap:10px;margin-top:8px;">
+              <button type="button" id="fp-reg-cancel" style="flex:1;padding:11px;background:#fff;border:1.5px solid #CBD5E1;color:#475569;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;">キャンセル</button>
+              <button type="submit" style="flex:2;padding:11px;background:#5B5BF0;color:#fff;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:0.04em;">+ 登録</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(o);
+    document.getElementById('fp-reg-close').addEventListener('click', () => o.remove());
+    document.getElementById('fp-reg-cancel').addEventListener('click', () => o.remove());
+    o.addEventListener('click', e => { if (e.target === o) o.remove(); });
+    document.getElementById('fp-reg-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const payload = {};
+      fd.forEach((v, k) => payload[k] = v);
+      try {
+        const r = await fetch(CLOUD_RUN_BASE + '/api/fp-register', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const d = await r.json();
+        if (d.ok) {
+          alert('✓ 登録完了! fpId: ' + d.fpId + '\n\n切替も自動で行います。');
+          setCurrentFpId(d.fpId);
+        } else {
+          alert('失敗: ' + (d.error || ''));
+        }
+      } catch (err) {
+        alert('通信失敗: ' + err.message);
+      }
+    });
   }
 
   // ============================
