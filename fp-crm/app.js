@@ -3711,6 +3711,29 @@
           msg.style.color = 'var(--green)';
           msg.textContent = '✅ 送信完了 — ' + client.name + ' 様の LINE に届きました';
           sendBtn.textContent = '✓ 送信済';
+          // ★ オーナーfb「送信後また Claude が次の最適提案 (ループ)」
+          // 送信履歴に append + Claude に再投入
+          if (!window._fpDraftConversation) window._fpDraftConversation = [];
+          window._fpDraftConversation.push({ role: 'fp', text: bodyText, ts: new Date().toISOString() });
+          // 「お客様の返信を待つ → 次の提案」UI
+          const nextLoopUi = document.createElement('div');
+          nextLoopUi.style.cssText = 'margin-top:14px;padding:14px 18px;background:linear-gradient(135deg,#EEF2FF,#FAFBFF);border:2px solid #5B5BF0;border-radius:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;';
+          nextLoopUi.innerHTML = `
+            <div style="flex:1;min-width:200px;">
+              <div style="font-size:13px;font-weight:800;color:#3730A3;">📨 送信完了 → 次のステップ</div>
+              <div style="font-size:11.5px;color:#475569;margin-top:3px;line-height:1.5;">お客様から返信があったら自動で次の最適提案を生成 / または「今すぐ次の提案」で先に下書きを準備</div>
+            </div>
+            <button id="aib-next-loop" style="background:#5B5BF0;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:800;font-size:12px;font-family:inherit;letter-spacing:0.04em;">✨ 今すぐ 次の提案を生成</button>
+          `;
+          msg.parentElement.appendChild(nextLoopUi);
+          document.getElementById('aib-next-loop').addEventListener('click', () => {
+            // 自動再生成: Claude regen をループモードで発火
+            window._fpDraftLoopMode = true;
+            sendBtn.disabled = false; sendBtn.textContent = '📨 この内容で LINE 送信';
+            msg.textContent = '';
+            nextLoopUi.remove();
+            document.getElementById('draft-claude-regen').click();
+          });
         } else {
           msg.style.color = 'var(--red)';
           msg.textContent = '❌ 送信失敗: ' + (data.error || '原因不明');
@@ -3728,7 +3751,7 @@
       toneIndex = (toneIndex + 1) % 3;
       const newDraft = generateDraftReply(client, events, recs, toneIndex);
       currentBaseBody = newDraft.body;
-      applyAttachments();
+      try { renderPreview(); } catch(_){}
     });
 
     // ★ オーナーfb「AI下書きをめちゃくちゃ強化、この人に最適化」
@@ -3772,11 +3795,19 @@
         }
       } catch (_) {}
 
+      // 会話ループ履歴 (送信済 + 返信受信) を蓄積
+      const convHist = (window._fpDraftConversation || []).slice(-8).map(c =>
+        `${c.role === 'fp' ? '【前回 FP送信】' : '【お客様返信】'} ${(c.text || '').slice(0, 200)}`
+      ).join('\n') || 'なし (初回)';
+      const isLoop = window._fpDraftLoopMode === true;
       const taskTitle = `LINE 個別下書き 生成 — 以下は全文脈です:
 
 【顧客プロファイル】
 ${client.name}様 / ${ageDisp || '?'}歳 / ${client.occupation || '職業不明'} / 家族: ${familyDisp}
 管理資産: ¥${(client.aum || 0).toLocaleString()} / 最終接触: ${dsl}日前 (${client.lastContact})
+
+【会話ループ履歴 (※あれば、これに続けて自然に次の一手を生成)】
+${convHist}
 
 【提案履歴】
 ${lastProps}
@@ -3797,12 +3828,15 @@ ${aiCtx || 'なし'}
 ${draft.intent} — ${draft.reason}
 
 【依頼】
-上記すべてを踏まえ、${client.name}様に "いま" 送るべき LINE 下書きを 1つ 生成してください。
+${isLoop
+  ? '上記の会話ループ履歴を踏まえ、お客様から返信がまだ来てない / 来たことを想定して、自然に次の一手の LINE 下書きを 1つ 生成してください。例:「Jobs の方で1点確認しておきたいことがあるんですが…」のように、前の文脈に紐づく形で。'
+  : `${client.name}様に "いま" 送るべき LINE 下書きを 1つ 生成してください。例:「Jobs の方で1点確認しておきたいことがあるんですが…」のように、最初の1手として自然に踏み込む。`
+}
 - 文体: 丁寧かつ温かい (テンプレ感ゼロ)
 - 冒頭: 「${client.name}様、お世話になっております」では始めない (定型禁止)
 - 必ず: 議事録から1つ、提案履歴から1つ、家族構成から1つ の固有要素を盛り込む
 - 末尾: 次に取るべき具体行動を1つ提示 (「いつまでに何を」)
-- 長さ: 200-350字
+- 長さ: 150-300字
 - 出力: <div class="fp-deliv-content"><p>本文ここ</p></div> の HTML 形式`;
 
       try {
@@ -3821,7 +3855,7 @@ ${draft.intent} — ${draft.reason}
           if (text && text.length > 30) {
             document.getElementById('draft-text').value = text;
             currentBaseBody = text;
-            applyAttachments();
+            try { renderPreview(); } catch(_){}
             // 成功トースト
             const t = document.createElement('div');
             t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #5B5BF0;border-radius:10px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:99999;font-family:inherit;';
@@ -3937,6 +3971,12 @@ ${draft.intent} — ${draft.reason}
     document.getElementById('aib-attach-slots')?.addEventListener('change', () => { renderCalendarSlots(); renderPreview(); });
     document.getElementById('aib-attach-pdf')?.addEventListener('change', renderPreview);
     document.getElementById('draft-text')?.addEventListener('input', renderPreview);
+
+    // ★ オーナーfb「一発目で この人に最適なのが既にあるように」: モーダル open 直後に自動 Claude 発火
+    setTimeout(() => {
+      const ar = document.getElementById('draft-claude-regen');
+      if (ar) ar.click();
+    }, 350);
 
     // ===== Mock FP calendar — owner's busy events (Google Calendar mock) =====
     function buildOwnerEvents() {
