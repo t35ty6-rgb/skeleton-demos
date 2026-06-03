@@ -1250,6 +1250,86 @@
         `;
       }
     } catch (e) { console.warn('next-action block skipped:', e); }
+    // ★ オーナーfb「Jobs 候補のワークフロー + 今動いてるワークフローも表示」
+    try {
+      const pastMs = events.filter(e => e.kind === 'meeting' && new Date(e.date) <= TODAY).length;
+      const futureMs = events.filter(e => e.kind === 'meeting' && new Date(e.date) > TODAY).length;
+      const stages = [
+        { key: 'lead',    label: '初回接触', icon: '👋' },
+        { key: 'first',   label: '1回目 Zoom', icon: '💻' },
+        { key: 'second',  label: '2回目 Zoom', icon: '🔄' },
+        { key: 'propose', label: '3回目 提案', icon: '📊' },
+        { key: 'close',   label: 'クロージング', icon: '🎯' },
+      ];
+      const currentStageIdx = Math.min(pastMs + (futureMs > 0 ? 0 : 0), stages.length - 1);
+      const nextStageIdx = Math.min(currentStageIdx + 1, stages.length - 1);
+      // いま動いてるアクション抽出 (進行中 = 「最近メール送った/録画した/AI生成した」)
+      const _lineMsgs = (c.lineHistory || []);
+      const recentMs = _lineMsgs.slice(-3).reverse();
+      const activeActions = [];
+      if (futureMs > 0) activeActions.push({ icon: '📅', label: '次回 Zoom 確定済', tone: 'done' });
+      if (latestAi && latestAi.summary) activeActions.push({ icon: '🤖', label: 'AI議事録 生成済', tone: 'done' });
+      const ongoingAiPills = document.querySelectorAll('[id^="fp-ai-pill-"]');
+      if (ongoingAiPills.length > 0) activeActions.push({ icon: '⚡', label: 'Jobs が資料生成中 (' + ongoingAiPills.length + '件)', tone: 'active' });
+      if (recentMs.length > 0) {
+        const lastMsg = recentMs[0];
+        if (lastMsg && lastMsg.from === 'fp') activeActions.push({ icon: '📨', label: 'LINE 送信 (返信待ち)', tone: 'wait' });
+        else if (lastMsg && lastMsg.from === 'user') activeActions.push({ icon: '💬', label: 'お客様 返信あり (要対応)', tone: 'todo' });
+      }
+      // Jobs 候補 = 未達成 KPI 上位
+      const jobsCandidates = [];
+      const stageMap = { 0: '0->1', 1: '1->2', 2: '2->3', 3: '3->close' };
+      const stageKey = stageMap[Math.min(pastMs, 3)] || '3->close';
+      const kpiHintsMap = {
+        '0->1': ['日程確定 LINE 送付', '事前アンケート確認', 'Zoom URL 発行'],
+        '1->2': ['お礼/感想ヒアリング LINE', '2回目候補日 提示', '初回議事録から資料3点作成'],
+        '2->3': ['ライフプラン作成', 'シミュ3パターン', '提案商品 絞込'],
+        '3->close': ['提案資料 送付', '契約意向 確認', '次回見直し設定'],
+      };
+      (kpiHintsMap[stageKey] || []).forEach(h => jobsCandidates.push(h));
+      const workflowHtml = `
+        <div style="background:linear-gradient(135deg,#0f1729,#1b2845);color:#fff;border-radius:12px;padding:14px 18px;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.16em;opacity:0.8;">📍 WORKFLOW — このお客様の現在地</div>
+            <div style="font-size:10.5px;opacity:0.85;">面談 ${pastMs}回 / 次予約 ${futureMs}件</div>
+          </div>
+          <!-- 進捗フローチャート -->
+          <div style="display:flex;gap:4px;align-items:center;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;">
+            ${stages.map((s, i) => `
+              <div style="flex:1;min-width:90px;text-align:center;padding:8px 6px;border-radius:8px;background:${i < currentStageIdx ? 'rgba(16,185,129,0.25)' : i === currentStageIdx ? 'linear-gradient(135deg,#f59e0b,#ea580c)' : 'rgba(255,255,255,0.08)'};border:1.5px solid ${i < currentStageIdx ? '#10b981' : i === currentStageIdx ? '#f59e0b' : 'rgba(255,255,255,0.2)'};${i === currentStageIdx ? 'animation:fp-stage-pulse 2s ease-in-out infinite;' : ''}">
+                <div style="font-size:18px;">${i < currentStageIdx ? '✓' : s.icon}</div>
+                <div style="font-size:10px;font-weight:700;margin-top:3px;${i > currentStageIdx ? 'opacity:0.55;' : ''}">${escapeHtml(s.label)}</div>
+              </div>
+              ${i < stages.length - 1 ? '<div style="font-size:14px;opacity:0.5;">→</div>' : ''}
+            `).join('')}
+          </div>
+          <style>@keyframes fp-stage-pulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0.5)}50%{box-shadow:0 0 0 8px rgba(245,158,11,0)}}</style>
+          <!-- 2カラム: いま動いてる + Jobs候補 -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11.5px;">
+            <div style="background:rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;">
+              <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">🔄 いま動いてる</div>
+              ${activeActions.length === 0 ? '<div style="font-size:11px;opacity:0.6;">なし — 次のアクション待ち</div>' : activeActions.map(a => `
+                <div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11.5px;">
+                  <span>${a.icon}</span>
+                  <span style="flex:1;">${escapeHtml(a.label)}</span>
+                  <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:${a.tone === 'done' ? '#10b981' : a.tone === 'active' ? '#5B5BF0' : a.tone === 'wait' ? '#f59e0b' : '#dc2626'};color:#fff;font-weight:800;letter-spacing:0.04em;">${a.tone === 'done' ? '完了' : a.tone === 'active' ? '進行' : a.tone === 'wait' ? '待ち' : '要対応'}</span>
+                </div>
+              `).join('')}
+            </div>
+            <div style="background:rgba(91,91,240,0.18);border:1px solid rgba(91,91,240,0.4);border-radius:8px;padding:10px 12px;">
+              <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:#C7D2FE;margin-bottom:6px;text-transform:uppercase;">⚡ Jobs候補 → 次やるべき (${escapeHtml(stages[nextStageIdx].label)} 達成のため)</div>
+              ${jobsCandidates.map((j, idx) => `
+                <div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11.5px;">
+                  <span style="background:#5B5BF0;color:#fff;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;">${idx + 1}</span>
+                  <span style="flex:1;">${escapeHtml(j)}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+      nextActionHtml = workflowHtml + nextActionHtml;
+    } catch (e) { console.warn('workflow block skipped:', e); }
     window._fpNextActionHtml = nextActionHtml;
     const recs = window.Recommender.forClient(c, events);
 
@@ -2982,15 +3062,22 @@
           </div>`;
           // contenteditable 化: AI生成HTML をラップして直編集可能に
           old.outerHTML = '<div class="fp-deliv-content" style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">' + header
-            + '<div data-deliv-editable contenteditable="true" spellcheck="false" style="padding:16px 18px;outline:none;min-height:200px;background:#fff;">'
+            + '<div data-deliv-editable contenteditable="true" spellcheck="false" style="padding:16px 18px;outline:2px dashed #C7D2FE;outline-offset:-6px;min-height:200px;background:#fff;cursor:text;border-radius:6px;" title="クリックで編集モード。表のセル・数値・文字を直接書き換え可能">'
             + (restoredHtml.includes('fp-deliv-content') ? wrap.innerHTML : restoredHtml)
             + '</div></div>';
 
-          // 自動保存 (input 300ms debounce)
+          // 自動保存 (input 300ms debounce) + フォーカス確実化
           const editable = resultEl.querySelector('[data-deliv-editable]');
           const statusEl = resultEl.querySelector('[data-deliv-save-status]');
           let saveTimer = null;
           if (editable) {
+            // ★ オーナーfb「編集できない」: 内部の table/td/p 全てに contenteditable 継承を明示
+            // (一部ブラウザで table セルがデフォルトで編集不可になる罠への対策)
+            editable.querySelectorAll('td, th, p, h1, h2, h3, h4, h5, h6, span, div, li').forEach(el => {
+              if (!el.hasAttribute('contenteditable')) el.setAttribute('contenteditable', 'true');
+            });
+            editable.addEventListener('focus', () => { editable.style.background = '#FAFBFF'; }, true);
+            editable.addEventListener('blur', () => { editable.style.background = '#fff'; }, true);
             editable.addEventListener('input', () => {
               clearTimeout(saveTimer);
               if (statusEl) statusEl.textContent = '… 保存中';
@@ -2998,6 +3085,13 @@
                 try { localStorage.setItem(editKey, editable.innerHTML); } catch (_) {}
                 if (statusEl) statusEl.textContent = '✓ 編集保存済 ' + new Date().toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'});
               }, 300);
+            });
+            // クリックされた箇所に強制フォーカス
+            editable.addEventListener('click', (ev) => {
+              const target = ev.target.closest('td, th, p, h1, h2, h3, h4, h5, h6, span, div, li') || editable;
+              if (target && target !== editable && target.hasAttribute('contenteditable')) {
+                try { target.focus(); } catch(_){}
+              }
             });
           }
 
