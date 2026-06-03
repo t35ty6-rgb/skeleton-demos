@@ -1968,9 +1968,12 @@
               <span id="fp-rec-time" style="font-weight:900;font-family:'Inter',sans-serif;letter-spacing:0.04em;font-size:18px;font-variant-numeric:tabular-nums;">00:00</span>
             </div>
           </div>
-          <button id="fp-rec-stop-btn" style="background:#fff;color:#b91c3c;border:none;padding:11px 22px;border-radius:6px;font-weight:900;cursor:pointer;font-family:'Inter','Noto Sans JP',sans-serif;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;box-shadow:0 4px 12px rgba(0,0,0,0.15);">■ 録画を停止</button>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button id="fp-rec-stop-btn" style="background:#fff;color:#b91c3c;border:none;padding:11px 22px;border-radius:6px;font-weight:900;cursor:pointer;font-family:'Inter','Noto Sans JP',sans-serif;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;box-shadow:0 4px 12px rgba(0,0,0,0.15);">■ 録画を停止</button>
+            <button id="fp-zoom-close-btn" style="background:rgba(255,255,255,0.18);color:#fff;border:1.5px solid rgba(255,255,255,0.7);padding:7px 14px;border-radius:6px;font-weight:700;cursor:pointer;font-family:'Inter','Noto Sans JP',sans-serif;font-size:11.5px;letter-spacing:0.06em;">× Zoom を閉じる</button>
+          </div>
         </div>
-        <div style="margin-top:8px;font-size:10.5px;color:rgba(255,255,255,0.92);text-align:center;letter-spacing:0.04em;">面談終わったら ▲ を押す / Zoom 閉じても自動停止</div>
+        <div style="margin-top:8px;font-size:10.5px;color:rgba(255,255,255,0.92);text-align:center;letter-spacing:0.04em;">面談終わったら ■ を押す / Zoom 閉じても自動停止</div>
       `;
       el.style.cssText = 'position:fixed;top:18px;right:18px;background:linear-gradient(135deg,#d9264c,#b91c3c);color:#fff;padding:14px 18px 12px;border-radius:14px;box-shadow:0 16px 40px rgba(217,38,76,0.45),0 0 0 4px rgba(255,255,255,0.6);z-index:9999;font-size:13.5px;min-width:280px;';
       const style = document.createElement('style');
@@ -1980,6 +1983,15 @@
       document.getElementById('fp-rec-stop-btn').addEventListener('click', () => {
         if (!confirm('録画を停止しますか?\n\n停止後、自動で:\n・Drive に録画アップロード\n・AI で議事録 + タスク生成')) return;
         stopScreenRecording();
+      });
+      document.getElementById('fp-zoom-close-btn').addEventListener('click', () => {
+        try { if (window._fpZoomWin && !window._fpZoomWin.closed) window._fpZoomWin.close(); } catch (_) {}
+        window._fpZoomWin = null;
+        const t = document.createElement('div');
+        t.style.cssText = 'position:fixed;top:120px;right:18px;background:#0f1729;color:#fff;padding:10px 16px;border-radius:8px;z-index:10005;font-size:12px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.3);';
+        t.textContent = '✓ Zoom を閉じました (録画は継続中)';
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3000);
       });
     }
     R.timerId = setInterval(() => {
