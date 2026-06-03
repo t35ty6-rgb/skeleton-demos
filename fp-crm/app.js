@@ -1487,11 +1487,20 @@
         </div>
       `;
 
-      // ★ オーナーfb「フォロータスクとタイムライン統合」: タスクを KPI 下に集約
+      // ★ オーナーfb「フォロータスクとタイムライン統合」+「優先順位を色とポップで」
       const taskEvents = events.filter(e => e.kind === 'task').slice(0, 8);
-      const renderTaskRow = (ev) => {
+      // 優先度判定: 残日数で 5段階
+      const calcPri = (date) => {
+        const days = Math.ceil((new Date(date) - TODAY) / 86400000);
+        if (days < 0)   return { tier: 'overdue', label: '🔥 期限超過', bg: 'linear-gradient(135deg,#dc2626,#991b1b)', border: '#dc2626', textColor: '#fff', days };
+        if (days <= 7)  return { tier: 'now',     label: '🔥 NOW (今週)', bg: 'linear-gradient(135deg,#f97316,#ea580c)', border: '#f97316', textColor: '#fff', days };
+        if (days <= 21) return { tier: 'next',    label: '⏭ NEXT (2-3週)', bg: '#fef3c7', border: '#fbbf24', textColor: '#92400e', days };
+        if (days <= 60) return { tier: 'soon',    label: '📅 SOON (来月)', bg: '#dbeafe', border: '#60a5fa', textColor: '#1e40af', days };
+        return { tier: 'later', label: '📌 LATER', bg: '#f1f5f9', border: '#cbd5e1', textColor: '#475569', days };
+      };
+      const renderTaskRow = (ev, idx) => {
+        const pri = calcPri(ev.date);
         const rel = window.LifeEvents.formatRelative(ev.date);
-        // ラベルから純粋なタスク文 + 推定 type 抽出
         const rawLabel = String(ev.label || '').replace(/^[📋⏰]\s*/, '').replace(/\s*\[[^\]]+\]$/, '');
         let dt = 'custom';
         if (/教育|進学|学費|大学|高校/.test(rawLabel)) dt = 'education';
@@ -1502,21 +1511,42 @@
         else if (/老後|退職|年金/.test(rawLabel)) dt = 'retire';
         else if (/相続|贈与|遺産/.test(rawLabel)) dt = 'inherit';
         else if (/ヒアリング/.test(rawLabel)) dt = 'hearing';
-        return `<div style="background:#fff;border:1px solid var(--line);border-radius:7px;padding:10px 14px;margin-bottom:6px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;">
-            <div style="font-size:13px;font-weight:600;color:var(--ink);line-height:1.4;">${escapeHtml(ev.label)}</div>
-            <div style="font-size:11px;color:var(--muted);white-space:nowrap;">${fmtDate(ev.date)} · ${rel}</div>
+        const isTop = idx === 0;
+        const isHot = pri.tier === 'now' || pri.tier === 'overdue';
+        const ringStyle = isHot ? `box-shadow:0 0 0 3px ${pri.border}33,0 8px 22px ${pri.border}44;` : '';
+        const pulseStyle = (isTop && isHot) ? 'animation:fp-task-pulse 2s ease-in-out infinite;' : '';
+        return `<div style="background:#fff;border:2px solid ${pri.border};border-radius:10px;padding:12px 14px;margin-bottom:8px;${ringStyle}${pulseStyle}position:relative;">
+          ${isTop ? `<div style="position:absolute;top:-10px;right:14px;background:${isHot ? pri.bg : '#5B5BF0'};color:#fff;font-size:10px;font-weight:900;padding:3px 10px;border-radius:10px;letter-spacing:0.08em;box-shadow:0 4px 10px rgba(0,0,0,0.18);">⚡ 最優先で着手</div>` : ''}
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+            <div style="background:${pri.bg};color:${pri.textColor};font-size:10px;font-weight:900;padding:4px 10px;border-radius:10px;letter-spacing:0.06em;white-space:nowrap;">${escapeHtml(pri.label)}</div>
+            <div style="font-size:11px;color:var(--muted);font-family:'Inter',sans-serif;font-weight:700;">#${idx + 1}位</div>
+            <div style="margin-left:auto;font-size:11px;color:var(--muted);white-space:nowrap;">${fmtDate(ev.date)} · ${rel}</div>
           </div>
-          <button class="fp-task-make-deliv" data-task="${escapeHtml(rawLabel)}" data-type="${dt}" data-client-id="${escapeHtml(c.id||'')}" style="font-size:11px;padding:6px 12px;background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:800;font-family:inherit;">✨ Jobs に資料作成依頼 → 編集 → LINE送信</button>
+          <div style="font-size:14px;font-weight:700;color:var(--ink);line-height:1.45;margin-bottom:10px;">${escapeHtml(rawLabel)}</div>
+          <button class="fp-task-make-deliv" data-task="${escapeHtml(rawLabel)}" data-type="${dt}" data-client-id="${escapeHtml(c.id||'')}" style="font-size:11.5px;padding:7px 14px;background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:800;font-family:inherit;letter-spacing:0.02em;box-shadow:0 4px 10px rgba(91,91,240,0.25);">✨ Jobs に資料作成依頼 → 編集 → LINE送信</button>
         </div>`;
       };
+      // 段階別件数
+      const tierCounts = { overdue: 0, now: 0, next: 0, soon: 0, later: 0 };
+      taskEvents.forEach(e => tierCounts[calcPri(e.date).tier]++);
+      const tierSummary = `
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;">
+          ${tierCounts.overdue > 0 ? `<span style="background:#dc2626;color:#fff;padding:4px 10px;border-radius:10px;font-weight:800;">🔥 期限超過 ${tierCounts.overdue}</span>` : ''}
+          ${tierCounts.now > 0 ?     `<span style="background:#f97316;color:#fff;padding:4px 10px;border-radius:10px;font-weight:800;">🔥 NOW ${tierCounts.now}</span>` : ''}
+          ${tierCounts.next > 0 ?    `<span style="background:#fef3c7;color:#92400e;padding:4px 10px;border-radius:10px;font-weight:800;border:1px solid #fbbf24;">⏭ NEXT ${tierCounts.next}</span>` : ''}
+          ${tierCounts.soon > 0 ?    `<span style="background:#dbeafe;color:#1e40af;padding:4px 10px;border-radius:10px;font-weight:800;border:1px solid #60a5fa;">📅 SOON ${tierCounts.soon}</span>` : ''}
+          ${tierCounts.later > 0 ?   `<span style="background:#f1f5f9;color:#475569;padding:4px 10px;border-radius:10px;font-weight:700;border:1px solid #cbd5e1;">📌 LATER ${tierCounts.later}</span>` : ''}
+        </div>
+      `;
       const taskListHtml = taskEvents.length === 0 ? '' : `
+        <style>@keyframes fp-task-pulse{0%,100%{transform:translateY(0);box-shadow:0 0 0 3px rgba(249,115,22,0.22),0 8px 22px rgba(249,115,22,0.3)}50%{transform:translateY(-1px);box-shadow:0 0 0 5px rgba(249,115,22,0.3),0 12px 28px rgba(249,115,22,0.45)}}</style>
         <div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
-            <span>📋 議事録から抽出された具体タスク</span>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+            <span>📋 議事録から抽出された具体タスク (優先度順)</span>
             <span style="font-size:10.5px;color:#94a3b8;text-transform:none;letter-spacing:0;">フォロータスクと統合</span>
           </div>
-          ${taskEvents.map(renderTaskRow).join('')}
+          ${tierSummary}
+          ${taskEvents.slice().sort((a,b) => new Date(a.date) - new Date(b.date)).map((e,i) => renderTaskRow(e,i)).join('')}
         </div>
       `;
 
@@ -2829,14 +2859,25 @@
       return `${r}${m.name}(${a}歳)`;
     }).join('/') || '単身';
     const clientCtx = `${age}歳 / ${client.occupation || '職業不明'} / 家族: ${family} / 管理資産¥${(client.aum || 0).toLocaleString()}`;
+    // ★ Claude API "invalid high surrogate" 対策: lone surrogate を除去 + 非可印字 制御文字を除去
+    // 議事録/transcript に半端な絵文字 or 制御文字が混入してると Claude が JSON parse 失敗で 400 返す
+    const sanitizeForJson = (s) => {
+      if (typeof s !== 'string') return s;
+      return s
+        .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '') // lone high surrogate
+        .replace(/(^|[^\uD800-\uDBFF])([\uDC00-\uDFFF])/g, '$1') // lone low surrogate
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ''); // 非可印字制御文字 (改行/タブは温存)
+    };
     try {
       const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/generate-deliverable', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type, clientName: client.name, clientCtx,
-          summary: (latestAi && latestAi.summary) || '',
-          transcript: (latestAi && latestAi.transcript) || '',
-          taskTitle,
+          type,
+          clientName: sanitizeForJson(client.name),
+          clientCtx: sanitizeForJson(clientCtx),
+          summary: sanitizeForJson((latestAi && latestAi.summary) || ''),
+          transcript: sanitizeForJson((latestAi && latestAi.transcript) || ''),
+          taskTitle: sanitizeForJson(taskTitle),
         }),
       });
       const d = await r.json();
