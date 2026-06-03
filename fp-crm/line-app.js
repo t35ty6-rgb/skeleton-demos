@@ -2859,7 +2859,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
               id: newId,
               name: b.name || 'お客様',
               kana: '',
-              birth: '1985-01-01',
+              birth: '', // ★ 空にする (旧: '1985-01-01' 全員41歳になる元凶)
               gender: 'O',
               occupation: '',
               family: [],

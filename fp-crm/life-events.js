@@ -3,7 +3,9 @@
 // FPの「次に何を話すか」が一目で分かることを目的とする。
 
 (function () {
-  const TODAY = new Date('2026-05-27');
+  // ★ オーナーfb「最終接触 -6日」「全員41歳」バグ修正:
+  // 過去ハードコード '2026-05-27' が原因 → 動的に「今日」を取得
+  const TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
 
   // 年齢別のライフイベントテンプレ
   const SELF_EVENTS = [
@@ -137,7 +139,9 @@
   }
 
   function currentAge(client) {
-    return age(client.birth, TODAY);
+    if (!client || !client.birth) return null;
+    const a = age(client.birth, TODAY);
+    return isNaN(a) ? null : a;
   }
 
   window.LifeEvents = {

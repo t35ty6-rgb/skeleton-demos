@@ -45,6 +45,18 @@
       }
     }
   } catch (e) {}
+  // ★ オーナーfb「全員41歳」 birth='1985-01-01' (LINE経由クライアント生成のデフォルト) を空に migration
+  try {
+    if (!localStorage.getItem('fp-birth-migrated-v1')) {
+      let changed = 0;
+      clients.forEach(c => { if (c.birth === '1985-01-01') { c.birth = ''; changed++; } });
+      if (changed > 0) {
+        try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(clients)); } catch (_) {}
+        console.log('[migration] cleared default birth on', changed, 'clients');
+      }
+      localStorage.setItem('fp-birth-migrated-v1', '1');
+    }
+  } catch (e) {}
 
   const state = loadState();
 
@@ -754,7 +766,7 @@
               </div>
             </div>
           </td>
-          <td>${window.LifeEvents.currentAge(c)}</td>
+          <td>${window.LifeEvents.currentAge(c) ?? '<span style="color:var(--muted);">-</span>'}</td>
           <td class="hide-mobile">${escapeHtml(c.occupation)}</td>
           <td>${familyTxt}</td>
           <td><span class="status-pill ${c.status}">${statusLabel(c.status)}</span>${taskCount > 0 ? `<button class="fp-task-badge" data-task-cid="${escapeHtml(c.lineFriendId || c.id)}" data-task-name="${escapeHtml(c.name)}" style="display:inline-block;margin-left:6px;font-size:10px;background:#fff8e1;color:#a08537;padding:2px 7px;border-radius:9px;font-weight:700;border:1px solid #f0d36b;cursor:pointer;font-family:inherit;" title="タスク一覧を見る">📝${taskCount}</button>` : ''}</td>
@@ -2616,9 +2628,10 @@
     if (existing) existing.remove();
     const overlay = document.createElement('div');
     overlay.id = 'fp-deliv-modal';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(3px);z-index:10010;display:flex;align-items:center;justify-content:center;padding:20px;';
+    // ★ オーナーfb「編集画面が小さくて編集しづらい」 → 画面のほぼ全域に拡大 (1280px / 96vh)
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(3px);z-index:10010;display:flex;align-items:center;justify-content:center;padding:12px;';
     overlay.innerHTML = `
-      <div style="background:#fff;width:min(620px,100%);max-height:88vh;overflow-y:auto;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,0.35);font-family:'Noto Sans JP',sans-serif;">
+      <div style="background:#fff;width:min(1280px,100%);height:96vh;overflow-y:auto;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,0.35);font-family:'Noto Sans JP',sans-serif;">
         <div style="padding:20px 24px;background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;display:flex;justify-content:space-between;align-items:start;">
           <div>
             <div style="font-family:Manrope,sans-serif;font-size:10.5px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;opacity:0.85;">📎 成果物 ドラフト</div>
@@ -3062,7 +3075,7 @@
           </div>`;
           // contenteditable 化: AI生成HTML をラップして直編集可能に
           old.outerHTML = '<div class="fp-deliv-content" style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">' + header
-            + '<div data-deliv-editable contenteditable="true" spellcheck="false" style="padding:16px 18px;outline:2px dashed #C7D2FE;outline-offset:-6px;min-height:200px;background:#fff;cursor:text;border-radius:6px;" title="クリックで編集モード。表のセル・数値・文字を直接書き換え可能">'
+            + '<div data-deliv-editable contenteditable="true" spellcheck="false" style="padding:24px 30px;outline:2px dashed #C7D2FE;outline-offset:-8px;min-height:500px;background:#fff;cursor:text;border-radius:8px;font-size:14px;line-height:1.7;" title="クリックで編集モード。表のセル・数値・文字を直接書き換え可能">'
             + (restoredHtml.includes('fp-deliv-content') ? wrap.innerHTML : restoredHtml)
             + '</div></div>';
 
