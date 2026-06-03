@@ -3241,20 +3241,59 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
   let liveData = null;
 
   function showSyncIndicator(state, detail) {
-    // 同期表示は撤廃 (オーナー fb: うっとうしい)。エラー時のみ静かに console。
-    if (state === 'error') console.warn('[sync error]', detail);
+    // 控えめな細い進行バー (右下、3px、indigo)。loading 中だけ表示。
+    let bar = document.getElementById('fp-sync-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'fp-sync-bar';
+      bar.style.cssText = 'position:fixed;bottom:0;right:0;height:3px;width:0;background:linear-gradient(90deg,#5B5BF0,#06B6D4);z-index:9998;transition:width 0.4s ease,opacity 0.3s;border-radius:2px 0 0 0;pointer-events:none;';
+      document.body.appendChild(bar);
+    }
+    if (state === 'loading') {
+      bar.style.opacity = '1';
+      bar.style.width = '40%';
+      // 90% で stuck (擬似プログレス、完了で 100%)
+      setTimeout(() => { if (bar.style.opacity === '1') bar.style.width = '85%'; }, 600);
+    } else if (state === 'done') {
+      bar.style.width = '100%';
+      setTimeout(() => { bar.style.opacity = '0'; bar.style.width = '0'; }, 400);
+    } else if (state === 'error') {
+      console.warn('[sync error]', detail);
+      bar.style.background = '#E11D48';
+      bar.style.width = '100%';
+      setTimeout(() => { bar.style.opacity = '0'; bar.style.background = 'linear-gradient(90deg,#5B5BF0,#06B6D4)'; bar.style.width = '0'; }, 1200);
+    }
   }
 
+  const LIVE_CACHE_KEY = 'fp-livedata-cache-v1';
+
   async function fetchLiveData() {
+    // ① キャッシュがあれば即座に画面へ反映 (体感ゼロ秒)
+    if (!liveData) {
+      try {
+        const cached = localStorage.getItem(LIVE_CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && (parsed.users || parsed.bookings)) {
+            liveData = parsed;
+            window.LineAppLiveData = liveData;
+            if (window.FPCrmRefreshClients) {
+              try { window.FPCrmRefreshClients(); } catch (_) {}
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    // ② network fetch (バックグラウンドで最新化)
     showSyncIndicator('loading');
     try {
       const r = await fetch(CLOUD_RUN_API);
       liveData = await r.json();
       window.LineAppLiveData = liveData;
+      try { localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify(liveData)); } catch (_) {}
       const detail = (liveData.users ? liveData.users.length + 'ユーザー' : '') +
                      (liveData.bookings ? ' / ' + liveData.bookings.length + '予約' : '');
       showSyncIndicator('done', detail);
-      // 顧客台帳の再描画 (新規 LINE 友だちを clients に取り込むため)
       if (window.FPCrmRefreshClients) {
         try { window.FPCrmRefreshClients(); } catch (_) {}
       }
@@ -3262,7 +3301,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
     } catch (e) {
       console.error('liveData fail', e);
       showSyncIndicator('error', e.message || '');
-      return null;
+      return liveData; // キャッシュがあれば返す
     }
   }
 
