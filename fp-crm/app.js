@@ -1185,9 +1185,9 @@
         const sugg = latestAi && (latestAi.next_meeting_suggestion || (latestAi.summary || '').split('\n')[0]);
         nextActionHtml = `
           <div class="fp-next-action">
-            <div class="fp-next-action-eyebrow">
-              <i data-lucide="zap" style="width:14px;height:14px;"></i>
-              <span>NEXT ACTION — この方への次の一手</span>
+            <div class="fp-next-action-eyebrow" style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="display:flex;align-items:center;gap:8px;"><i data-lucide="zap" style="width:14px;height:14px;"></i>NEXT ACTION — この方への次の一手</span>
+              <button data-open-hearing="${escapeHtml(c.id)}" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.32);color:#fff;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:0.04em;">📋 ヒアリングシート</button>
             </div>
             ${sugg ? `<div class="fp-next-action-title">${escapeHtml(sugg)}</div>` : '<div class="fp-next-action-title">優先タスク</div>'}
             ${latestAi && latestAi.summary ? `<div class="fp-next-action-body">${escapeHtml(latestAi.summary.split('\n').slice(0, 3).join('\n'))}</div>` : ''}
@@ -1618,6 +1618,10 @@
         const taskTitle = btn.dataset.makeDeliverable;
         openDeliverableDraftModal(c, taskTitle);
       });
+    });
+    // 📋 ヒアリングシートボタン
+    document.querySelectorAll('[data-open-hearing]').forEach(btn => {
+      btn.addEventListener('click', () => openHearingSheetModal(c));
     });
     // Tab switching inside new modal
     document.querySelectorAll('.cd-tab').forEach(btn => {
@@ -2090,6 +2094,68 @@
   // ============================
   // AI返信下書き (LINE文面 自動生成)
   // ============================
+  // ⑥ ヒアリングシート モーダル (アンケート回答 + 顧客台帳情報をまとめた印刷用シート)
+  function openHearingSheetModal(client) {
+    const existing = document.getElementById('fp-hearing-modal');
+    if (existing) existing.remove();
+    // 顧客の survey_answers を取得
+    const surveys = (window.LineAppLiveData && window.LineAppLiveData.survey_answers) || [];
+    const s = surveys.find(x => x.userId === client.lineFriendId || x.name === client.name) || {};
+    const age = window.LifeEvents.currentAge(client);
+    const overlay = document.createElement('div');
+    overlay.id = 'fp-hearing-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(3px);z-index:10010;display:flex;align-items:center;justify-content:center;padding:20px;';
+    const row = (label, val) => `<tr><th style="text-align:left;padding:9px 14px;background:#F8FAFC;font-size:11.5px;color:#475569;font-weight:700;letter-spacing:0.04em;width:38%;border-bottom:1px solid #E2E8F0;">${label}</th><td style="padding:9px 14px;font-size:13px;color:#0F172A;border-bottom:1px solid #E2E8F0;">${val || '<span style="color:#94A3B8;">未回答</span>'}</td></tr>`;
+    const familyTxt = (client.family || []).map(m => {
+      const r = m.rel === 'spouse' ? '配偶者' : (m.rel === 'child' ? 'お子様' : m.rel);
+      const a = window.LifeEvents.currentAge({ birth: m.birth });
+      return `${r} ${escapeHtml(m.name)} (${a}歳)`;
+    }).join(' / ') || '単身';
+    overlay.innerHTML = `
+      <div style="background:#fff;width:min(720px,100%);max-height:90vh;overflow-y:auto;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,0.35);font-family:'Noto Sans JP',sans-serif;">
+        <div style="padding:20px 24px;background:linear-gradient(135deg,#0EA5E9,#22D3EE);color:#fff;display:flex;justify-content:space-between;align-items:start;">
+          <div>
+            <div style="font-family:Manrope,sans-serif;font-size:10.5px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;opacity:0.9;">📋 HEARING SHEET</div>
+            <div style="font-size:19px;font-weight:800;margin-top:4px;letter-spacing:-0.01em;">FP相談 事前ヒアリングシート</div>
+            <div style="font-size:12px;opacity:0.92;margin-top:3px;">${escapeHtml(client.name)} 様 / ${age}歳 / 作成 ${new Date().toISOString().slice(0,10)}</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button id="fp-hearing-print" title="印刷 / PDF" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.32);color:#fff;width:36px;height:30px;border-radius:6px;cursor:pointer;font-size:14px;">🖨</button>
+            <button id="fp-hearing-close" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.32);color:#fff;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:16px;">✕</button>
+          </div>
+        </div>
+        <div id="fp-hearing-body" style="padding:24px 28px;">
+          <table style="width:100%;border-collapse:collapse;border-top:1px solid #E2E8F0;">
+            <tbody>
+              ${row('お名前', escapeHtml(client.name) + ' 様')}
+              ${row('年代', escapeHtml(s.q1_年代 || ''))}
+              ${row('ご職業', escapeHtml(s.q2_職業 || client.occupation || ''))}
+              ${row('ご家族構成', escapeHtml(s.q3_家族 || familyTxt))}
+              ${row('世帯年収', escapeHtml(s.q4_年収 || ''))}
+              ${row('住居形態', escapeHtml(s.q5_住居 || ''))}
+              ${row('金融資産', escapeHtml(s.q6_資産 || ''))}
+              ${row('保有商品', escapeHtml(s.q7_保有 || ''))}
+              ${row('相談テーマ', escapeHtml(s.q8_テーマ || ''))}
+              ${row('具体的な相談内容', escapeHtml(s.q9_悩み || ''))}
+              ${row('連絡しやすい時間帯', escapeHtml(s.q10_連絡時間 || ''))}
+            </tbody>
+          </table>
+          <div style="margin-top:18px;font-size:11px;color:#94A3B8;text-align:right;">© Skeleton Inc. / FP Compass</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('fp-hearing-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.getElementById('fp-hearing-print').addEventListener('click', () => {
+      const html = document.getElementById('fp-hearing-body').outerHTML;
+      const w = window.open('', '_blank');
+      w.document.write(`<!doctype html><html><head><title>ヒアリングシート ${client.name}</title><style>body{font-family:'Noto Sans JP',sans-serif;padding:30px;}</style></head><body>${html}</body></html>`);
+      w.document.close();
+      setTimeout(() => w.print(), 300);
+    });
+  }
+
   // ⑤ 成果物 draft モーダル (キャッシュフロー表 / シミュ表 等)
   function openDeliverableDraftModal(client, taskTitle) {
     const existing = document.getElementById('fp-deliv-modal');
@@ -2161,16 +2227,147 @@
         const type = b.dataset.type;
         const result = document.getElementById('fp-deliv-result');
         result.style.display = 'block';
-        result.innerHTML = `
-          <div style="background:#ECFDF5;border:1px solid #86efac;border-radius:8px;padding:14px 18px;">
-            <div style="font-size:13px;color:#065F46;font-weight:700;margin-bottom:8px;">✓ ${escapeHtml(type)} ドラフト準備</div>
-            <div style="font-size:12px;color:#047857;line-height:1.7;">
-              現在 開発中。次フェーズで Claude + 顧客データ から自動生成→ Drive にPDF保存→ 顧客カードに添付→ LINE送信、までフロー化します。
-            </div>
-          </div>
-        `;
+        result.innerHTML = renderDeliverablePreview(type, client);
+        // 印刷ボタン
+        const printBtn = result.querySelector('[data-deliv-print]');
+        if (printBtn) printBtn.addEventListener('click', () => {
+          const html = result.querySelector('.fp-deliv-content').outerHTML;
+          const w = window.open('', '_blank');
+          w.document.write(`<!doctype html><html><head><title>${escapeHtml(taskTitle)} - ${escapeHtml(client.name)}</title><style>body{font-family:'Noto Sans JP',sans-serif;padding:30px;color:#0F172A;}table{border-collapse:collapse;width:100%;}th,td{padding:8px 12px;border:1px solid #E2E8F0;font-size:12px;text-align:left;}th{background:#F8FAFC;}</style></head><body>${html}</body></html>`);
+          w.document.close();
+          setTimeout(() => w.print(), 300);
+        });
+        // 📤 LINE送信ボタン
+        const sendBtn = result.querySelector('[data-deliv-send]');
+        if (sendBtn) sendBtn.addEventListener('click', () => {
+          openDeliverableSendModal(client, type, taskTitle);
+        });
       });
     });
+  }
+
+  // 成果物 → LINE送信モーダル (本文 prefill + 編集 + 送信)
+  function openDeliverableSendModal(client, type, taskTitle) {
+    const uid = client.lineFriendId;
+    if (!uid) { alert('この方は LINE 友だち追加が完了してないので送信できません。'); return; }
+    const typeName = ({cashflow:'キャッシュフロー表', lifeplan:'ライフプラン表', nisa:'NISA/iDeCo配分シミュ', insurance:'保険見直しレポート', hearing:'ヒアリングシート', custom:'資料'}[type]) || '資料';
+    const prefill = `${client.name}様\n\nお世話になっております。FP Compass の${(window.LineAppLiveData?.users?.[0]?.displayName) || '担当'}です。\n\n面談でお話した「${taskTitle}」に関する${typeName}をお送りします。\n\nご家族でご確認いただき、不明点があれば このトークから気軽にお問い合わせください 🙏\n\n(資料URLは別途お送りします)`;
+    const ex = document.getElementById('fp-deliv-send-modal');
+    if (ex) ex.remove();
+    const ov = document.createElement('div');
+    ov.id = 'fp-deliv-send-modal';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:10020;display:flex;align-items:center;justify-content:center;padding:20px;';
+    ov.innerHTML = `
+      <div style="background:#fff;width:min(560px,100%);border-radius:14px;font-family:'Noto Sans JP',sans-serif;overflow:hidden;">
+        <div style="padding:16px 22px;background:#06C755;color:#fff;display:flex;justify-content:space-between;align-items:center;">
+          <strong style="font-size:14px;">📤 ${escapeHtml(typeName)} を LINEで送信</strong>
+          <button id="fp-ds-close" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;width:28px;height:28px;border-radius:5px;cursor:pointer;">✕</button>
+        </div>
+        <div style="padding:18px 22px;">
+          <div style="font-size:12px;color:#64748B;margin-bottom:10px;">送信先: <strong>${escapeHtml(client.name)} 様</strong></div>
+          <textarea id="fp-ds-msg" style="width:100%;min-height:200px;border:1.5px solid #E2E8F0;border-radius:8px;padding:12px;font-family:inherit;font-size:13px;line-height:1.75;">${escapeHtml(prefill)}</textarea>
+          <div style="display:flex;gap:10px;margin-top:14px;">
+            <button id="fp-ds-cancel" style="flex:1;padding:11px;background:#fff;border:1.5px solid #CBD5E1;color:#475569;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;">キャンセル</button>
+            <button id="fp-ds-send" style="flex:2;padding:11px;background:#06C755;color:#fff;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit;">📤 LINEで送信</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(ov);
+    document.getElementById('fp-ds-close').addEventListener('click', () => ov.remove());
+    document.getElementById('fp-ds-cancel').addEventListener('click', () => ov.remove());
+    document.getElementById('fp-ds-send').addEventListener('click', async () => {
+      const text = document.getElementById('fp-ds-msg').value.trim();
+      if (!text) { alert('本文を入力してください'); return; }
+      const btn = document.getElementById('fp-ds-send');
+      btn.disabled = true; btn.textContent = '送信中…';
+      try {
+        const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/send-line', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: uid, text }),
+        });
+        const d = await r.json();
+        if (d.ok) {
+          ov.remove();
+          const t = document.createElement('div');
+          t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #06C755;border-radius:10px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10030;';
+          t.innerHTML = `<strong style="font-size:14px;">✓ ${escapeHtml(client.name)} 様 に送信完了</strong>`;
+          document.body.appendChild(t);
+          setTimeout(() => t.remove(), 4000);
+        } else { alert('失敗: ' + (d.error || '')); btn.disabled = false; btn.textContent = '📤 LINEで送信'; }
+      } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; btn.textContent = '📤 LINEで送信'; }
+    });
+  }
+
+  // 成果物プレビュー HTML 生成 (タイプ別)
+  function renderDeliverablePreview(type, client) {
+    const baseYear = new Date().getFullYear();
+    const age = window.LifeEvents.currentAge(client);
+    const surveys = (window.LineAppLiveData && window.LineAppLiveData.survey_answers) || [];
+    const s = surveys.find(x => x.userId === client.lineFriendId || x.name === client.name) || {};
+    const inc = (s.q4_年収 || '').includes('1000') ? 900 : (s.q4_年収 || '').includes('700') ? 700 : 500;
+    const hd = `<div style="background:linear-gradient(135deg,#10B981,#34D399);color:#fff;padding:14px 18px;border-radius:8px 8px 0 0;display:flex;justify-content:space-between;align-items:center;">
+      <div><strong style="font-size:14px;letter-spacing:0.04em;">{TITLE}</strong><div style="font-size:11px;opacity:0.9;margin-top:2px;">${escapeHtml(client.name)} 様 / ${age}歳 / 作成 ${new Date().toISOString().slice(0,10)}</div></div>
+      <div style="display:flex;gap:6px;"><button data-deliv-print style="background:rgba(255,255,255,0.22);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:5px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">🖨 印刷/PDF</button><button data-deliv-send style="background:#06C755;border:1px solid #06C755;color:#fff;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:800;cursor:pointer;">📤 LINE送信</button></div>
+    </div>`;
+    if (type === 'cashflow') {
+      const rows = [];
+      for (let i = 0; i <= 10; i++) {
+        const y = baseYear + i;
+        const a = age + i;
+        const income = Math.round(inc * (a >= 65 ? 0.4 : 1));  // 65以降は年金想定
+        const expense = Math.round(income * 0.7);
+        const save = income - expense;
+        rows.push(`<tr><td>${y}</td><td>${a}</td><td>¥${income}万</td><td>¥${expense}万</td><td style="color:${save>0?'#047857':'#B91C1C'};font-weight:700;">¥${save}万</td></tr>`);
+      }
+      return `<div class="fp-deliv-content" style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+        ${hd.replace('{TITLE}', '📊 キャッシュフロー表 (向こう10年)')}
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:#F8FAFC;"><th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:left;">西暦</th><th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:left;">年齢</th><th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:left;">年収</th><th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:left;">支出</th><th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:left;">貯蓄</th></tr></thead>
+          <tbody>${rows.map(r => r.replace(/<td>/g, '<td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;">')).join('')}</tbody>
+        </table>
+        <div style="padding:12px 18px;background:#F8FAFC;font-size:11px;color:#64748B;border-top:1px solid #E2E8F0;">⚠ ドラフト: 年収/支出は概算。次フェーズで Claude が顧客データから精緻化。</div>
+      </div>`;
+    }
+    if (type === 'lifeplan') {
+      const evs = (window.LifeEvents.generate(client) || []).slice(0, 12);
+      return `<div class="fp-deliv-content" style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+        ${hd.replace('{TITLE}', '📈 ライフプラン表 (主要イベント12件)')}
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:#F8FAFC;"><th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:left;">時期</th><th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:left;">イベント</th><th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:left;">対象</th></tr></thead>
+          <tbody>${evs.map(e => `<tr><td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;">${new Date(e.date).toISOString().slice(0,10)}</td><td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;">${escapeHtml(e.label)}</td><td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">${escapeHtml(e.who || '—')}</td></tr>`).join('') || '<tr><td colspan="3" style="padding:16px;text-align:center;color:#94A3B8;">予測イベントなし</td></tr>'}</tbody>
+        </table>
+      </div>`;
+    }
+    if (type === 'nisa') {
+      const propA = { 株式: 70, 債券: 20, REIT: 10 }, propB = { 株式: 50, 債券: 40, REIT: 10 }, propC = { 株式: 30, 債券: 60, REIT: 10 };
+      const bar = (lbl, p, c) => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11.5px;"><span style="width:60px;color:#475569;">${lbl}</span><div style="flex:1;height:18px;background:#F1F5F9;border-radius:4px;overflow:hidden;"><div style="width:${p}%;height:100%;background:${c};"></div></div><span style="width:36px;text-align:right;font-weight:700;">${p}%</span></div>`;
+      return `<div class="fp-deliv-content" style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+        ${hd.replace('{TITLE}', '💹 NISA / iDeCo 配分シミュレーション')}
+        <div style="padding:18px;">
+          ${[['積極型 (年齢40未満)', propA, '#EF4444'], ['標準型 (年齢40-55)', propB, '#5B5BF0'], ['安定型 (年齢55以降)', propC, '#10B981']].map(([t, p, c]) =>
+            `<div style="margin-bottom:14px;"><div style="font-weight:800;font-size:12.5px;margin-bottom:6px;color:#0F172A;">${t}</div>${bar('株式', p.株式, c)}${bar('債券', p.債券, '#94A3B8')}${bar('REIT', p.REIT, '#F59E0B')}</div>`
+          ).join('')}
+        </div>
+      </div>`;
+    }
+    if (type === 'insurance') {
+      const rows = [['死亡保障', '5,000万', '3,000万', '-2,000万', '不足'], ['医療保障 (日額)', '15,000円', '8,000円', '-7,000円', '不足'], ['就業不能保障', '20万/月', '0', '-20万', '完全不足'], ['がん保障 (一時金)', '300万', '100万', '-200万', '不足']];
+      return `<div class="fp-deliv-content" style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+        ${hd.replace('{TITLE}', '🛡 保険 見直しレポート (必要 vs 現状)')}
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:#F8FAFC;"><th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:left;">保障項目</th><th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:right;">必要</th><th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:right;">現状</th><th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:right;">差分</th><th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:right;">判定</th></tr></thead>
+          <tbody>${rows.map(r => `<tr><td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;">${r[0]}</td><td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;text-align:right;">${r[1]}</td><td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;text-align:right;">${r[2]}</td><td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;text-align:right;color:#B91C1C;font-weight:700;">${r[3]}</td><td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;text-align:right;"><span style="background:#FEF2F2;color:#B91C1C;padding:2px 8px;border-radius:99px;font-size:10.5px;font-weight:700;">${r[4]}</span></td></tr>`).join('')}</tbody>
+        </table>
+      </div>`;
+    }
+    // custom
+    return `<div class="fp-deliv-content" style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+      ${hd.replace('{TITLE}', '✏️ カスタム資料')}
+      <div style="padding:18px;">
+        <textarea style="width:100%;min-height:200px;font-family:'Noto Sans JP',sans-serif;font-size:13px;line-height:1.7;padding:12px;border:1px solid #E2E8F0;border-radius:6px;" placeholder="このお客様向けに作成したい資料の内容を記入..."></textarea>
+      </div>
+    </div>`;
   }
 
   function openDraftReplyModal(client, events, recs) {
