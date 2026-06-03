@@ -2909,16 +2909,13 @@
         });
         const d = await r.json();
         if (d.ok) {
-          // ★ lineHistory 即 append (Jobs が次の提案で参照可)
+          // ★ lineHistory 即 append + 全顧客台帳保存 (リロードで消失バグ修正)
           try {
             if (!Array.isArray(client.lineHistory)) client.lineHistory = [];
             const iso = new Date().toISOString();
             client.lineHistory.push({ from: 'fp', direction: 'out', text: text, message: text, ts: iso, date: iso.slice(0,10), source: 'fp-crm-kpi' });
             client.lastContact = iso.slice(0, 10);
-            const stored = JSON.parse(localStorage.getItem('fp-crm-clients-v1') || '[]');
-            const idx = stored.findIndex(x => String(x.id) === String(client.id));
-            if (idx >= 0) stored[idx] = client; else stored.push(client);
-            localStorage.setItem('fp-crm-clients-v1', JSON.stringify(stored));
+            localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS || []));
           } catch (_) {}
           ov.remove();
           const t = document.createElement('div');
@@ -3794,8 +3791,9 @@
           const sentText = document.getElementById('draft-text')?.value || text;
           const nowIso = new Date().toISOString();
           window._fpDraftConversation.push({ role: 'fp', text: sentText, ts: nowIso, clientId: client.id });
-          // ★ オーナーfb「LINE 送ったのに lineHistory に反映されない → Jobs が次の提案に活かせない」
-          // 送信成功時に client.lineHistory に即 append + 永続化
+          // ★ オーナーfb「LINE 送ったのに lineHistory 反映されない + リロードで履歴消える」
+          // 真因: 旧コードは stored=[] で開始 → 1人だけ含めて保存 → 全 DUMMY_CLIENTS 消失
+          // 修正: window.DUMMY_CLIENTS 全体を localStorage に保存
           try {
             if (!Array.isArray(client.lineHistory)) client.lineHistory = [];
             client.lineHistory.push({
@@ -3807,24 +3805,10 @@
               date: nowIso.slice(0, 10),
               source: 'fp-crm-draft',
             });
-            // localStorage の顧客台帳を更新
-            const stored = JSON.parse(localStorage.getItem('fp-crm-clients-v1') || '[]');
-            const idx = stored.findIndex(x => String(x.id) === String(client.id));
-            if (idx >= 0) {
-              stored[idx] = client;
-            } else {
-              stored.push(client);
-            }
-            localStorage.setItem('fp-crm-clients-v1', JSON.stringify(stored));
-            // 同じく lastContact も更新
             client.lastContact = nowIso.slice(0, 10);
-            try {
-              const storedClients = window.DUMMY_CLIENTS || [];
-              const ci = storedClients.findIndex(x => String(x.id) === String(client.id));
-              if (ci >= 0) storedClients[ci] = client;
-            } catch (_) {}
-            localStorage.setItem('fp-crm-clients-v1', JSON.stringify(stored));
-            console.log('[lineHistory] appended fp message →', client.name, 'history len:', client.lineHistory.length);
+            // 全顧客台帳を保存 (1人だけ じゃなく全部)
+            localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS || []));
+            console.log('[lineHistory] appended fp message →', client.name, 'history len:', client.lineHistory.length, 'total saved:', (window.DUMMY_CLIENTS || []).length);
           } catch (he) { console.warn('lineHistory append fail:', he); }
           // ★ 客毎の追撃トラッキング (localStorage に保存 → 返信待ちダッシュボード表示)
           try {
@@ -3899,25 +3883,41 @@
       const lastCancels = (client.cancellations || []).slice(-2).map(c => `${c.date}キャンセル(${c.reason || '理由不明'})`).join(' / ') || 'なし';
       const recentLine = (client.lineHistory || []).slice(-6).map(m => `${m.direction === 'in' ? '客' : 'FP'}: ${(m.text || '').slice(0, 80)}`).join('\n') || 'なし';
       const upcomingEvs = (events || []).filter(ev => new Date(ev.date) >= TODAY).slice(0, 4).map(ev => `${(new Date(ev.date)).toLocaleDateString('ja-JP')} ${ev.label}`).join(' / ') || 'なし';
-      // 最新 AI議事録 (key_concerns 含む)
+      // ★ 最新 AI議事録 lookup 強化 (openClientModal と同じ強力 fallback)
+      // 旧コードは userId or customerName 完全一致のみ → fp-ai-お客様 等の汎用 fallback で
+      // 議事録が「お客様」名義で保存されてると見落とす → 「議事録なし」誤判定。
       let aiCtx = '';
       try {
-        const aiKeys = Object.keys(localStorage).filter(k => k.startsWith('fp-ai-'));
+        const myUids = new Set([client.lineFriendId].filter(Boolean));
+        const myBks = ((window.LineAppLiveData && window.LineAppLiveData.bookings) || [])
+          .filter(b => (b.userId && b.userId === client.lineFriendId) || (b.name && b.name === client.name));
+        myBks.forEach(b => { if (b.userId) myUids.add(b.userId); });
+        const myTs = new Set(myBks.map(b => b.ts).filter(Boolean));
+        const myNames = new Set([client.name].concat(myBks.map(b => b.name).filter(Boolean)));
         let latestA = null;
-        aiKeys.forEach(k => {
-          try { JSON.parse(localStorage.getItem(k) || '[]').forEach(a => {
-            const m = (a.userId === client.lineFriendId) || (a.customerName === client.name);
-            if (m && (!latestA || new Date(a.createdAt || 0) > new Date(latestA.createdAt || 0))) latestA = a;
-          }); } catch (_) {}
+        const consider = (a) => {
+          const matchUser   = a.userId       && myUids.has(a.userId);
+          const matchTs     = a.bookingTs    && myTs.has(a.bookingTs);
+          const matchName   = a.customerName && myNames.has(a.customerName);
+          const isGeneric   = (!a.customerName || a.customerName === 'お客様');
+          const genericFallback = isGeneric && client.lineFriendId;
+          if (matchUser || matchTs || matchName || genericFallback) {
+            const tsVal = new Date(a.createdAt || a.ts || 0).getTime();
+            const curVal = latestA ? new Date(latestA.createdAt || latestA.ts || 0).getTime() : 0;
+            if (!latestA || tsVal > curVal) latestA = a;
+          }
+        };
+        Object.keys(localStorage).filter(k => k.startsWith('fp-ai-')).forEach(k => {
+          try { JSON.parse(localStorage.getItem(k) || '[]').forEach(consider); } catch (_) {}
         });
-        ((window.LineAppLiveData && window.LineAppLiveData.ai_results) || []).forEach(r => {
-          const m = (r.userId === client.lineFriendId) || (r.customerName === client.name);
-          if (m && (!latestA || new Date(r.ts || 0) > new Date(latestA.createdAt || 0))) latestA = { summary: r.summary, key_concerns: r.key_concerns, createdAt: r.ts };
-        });
+        ((window.LineAppLiveData && window.LineAppLiveData.ai_results) || []).forEach(consider);
         if (latestA) {
           let kc = latestA.key_concerns;
           if (typeof kc === 'string') { try { kc = JSON.parse(kc); } catch (_) { kc = []; } }
-          aiCtx = `最新議事録: ${String(latestA.summary || '').slice(0, 600)}\n関心事: ${(kc || []).join(', ')}`;
+          aiCtx = `最新議事録: ${String(latestA.summary || '').slice(0, 800)}\n関心事: ${(kc || []).join(', ')}`;
+          console.log('[draft] latestAi found for', client.name, '→ summary len:', String(latestA.summary || '').length);
+        } else {
+          console.log('[draft] no AI 議事録 found for', client.name, '(lineFriendId:', client.lineFriendId || '空', ')');
         }
       } catch (_) {}
 
