@@ -2227,7 +2227,19 @@
         const type = b.dataset.type;
         const result = document.getElementById('fp-deliv-result');
         result.style.display = 'block';
+        // 1) まず テンプレ プレビューを表示 (即時)
         result.innerHTML = renderDeliverablePreview(type, client);
+        // 2) 「✨ AIで このお客様用に個別作成」 ボタンを追加
+        const aiBar = document.createElement('div');
+        aiBar.style.cssText = 'margin-top:10px;display:flex;gap:8px;align-items:center;background:#EEF1FE;border:1px solid #C7D2FE;border-radius:8px;padding:10px 14px;';
+        aiBar.innerHTML = `
+          <span style="font-size:11.5px;color:#3730A3;flex:1;">↑ これは汎用テンプレ。<strong>議事録 + 台帳データ</strong> からこのお客様用にカスタムする?</span>
+          <button id="fp-deliv-ai" style="background:#5B5BF0;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:0.04em;font-family:inherit;">✨ AIで個別作成</button>
+        `;
+        result.appendChild(aiBar);
+        document.getElementById('fp-deliv-ai').addEventListener('click', async () => {
+          await generateDeliverableWithAI(type, taskTitle, client, result);
+        });
         // 印刷ボタン
         const printBtn = result.querySelector('[data-deliv-print]');
         if (printBtn) printBtn.addEventListener('click', () => {
@@ -2297,6 +2309,94 @@
         } else { alert('失敗: ' + (d.error || '')); btn.disabled = false; btn.textContent = '📤 LINEで送信'; }
       } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; btn.textContent = '📤 LINEで送信'; }
     });
+  }
+
+  // AI個別生成: 議事録 + 顧客台帳 → Claude → このお客様用 HTML
+  async function generateDeliverableWithAI(type, taskTitle, client, resultEl) {
+    const btn = document.getElementById('fp-deliv-ai');
+    if (btn) { btn.disabled = true; btn.textContent = '✨ Claude 生成中… (30〜60秒)'; }
+    // 議事録+台帳データ集める
+    const myBks = ((window.LineAppLiveData && window.LineAppLiveData.bookings) || []).filter(b => b.userId === client.lineFriendId || b.name === client.name);
+    let latestAi = null;
+    const allKeys = Object.keys(localStorage).filter(k => k.startsWith('fp-ai-'));
+    allKeys.forEach(k => {
+      try {
+        JSON.parse(localStorage.getItem(k) || '[]').forEach(a => {
+          const match = (a.userId === client.lineFriendId) || (a.customerName === client.name) ||
+                        ((!a.customerName || a.customerName === 'お客様') && client.lineFriendId);
+          if (match && (!latestAi || new Date(a.createdAt || 0) > new Date(latestAi.createdAt || 0))) latestAi = a;
+        });
+      } catch (_) {}
+    });
+    ((window.LineAppLiveData && window.LineAppLiveData.ai_results) || []).forEach(r => {
+      const match = (r.userId === client.lineFriendId) || (r.customerName === client.name) ||
+                    ((!r.customerName || r.customerName === 'お客様') && client.lineFriendId);
+      if (!match) return;
+      if (!latestAi || (r.ts || '') > (latestAi.createdAt || '')) {
+        latestAi = { summary: r.summary, transcript: r.transcript, createdAt: r.ts };
+      }
+    });
+    const age = window.LifeEvents.currentAge(client);
+    const family = (client.family || []).map(m => {
+      const r = m.rel === 'spouse' ? '配偶者' : (m.rel === 'child' ? 'お子様' : m.rel);
+      const a = window.LifeEvents.currentAge({ birth: m.birth });
+      return `${r}${m.name}(${a}歳)`;
+    }).join('/') || '単身';
+    const clientCtx = `${age}歳 / ${client.occupation || '職業不明'} / 家族: ${family} / 管理資産¥${(client.aum || 0).toLocaleString()}`;
+    try {
+      const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/generate-deliverable', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type, clientName: client.name, clientCtx,
+          summary: (latestAi && latestAi.summary) || '',
+          transcript: (latestAi && latestAi.transcript) || '',
+          taskTitle,
+        }),
+      });
+      const d = await r.json();
+      if (d.ok && d.html) {
+        // 既存テンプレを AI 生成版で置換
+        const old = resultEl.querySelector('.fp-deliv-content');
+        if (old) {
+          const wrap = document.createElement('div');
+          wrap.innerHTML = d.html;
+          // header (印刷/送信ボタン付き) を追加
+          const newContent = wrap.querySelector('.fp-deliv-content') || wrap;
+          newContent.classList.add('fp-deliv-content');
+          const header = `<div style="background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;padding:12px 16px;border-radius:8px 8px 0 0;display:flex;justify-content:space-between;align-items:center;margin-bottom:0;">
+            <div><strong style="font-size:13px;letter-spacing:0.04em;">✨ AI個別生成 — ${escapeHtml(client.name)}様 専用</strong><div style="font-size:11px;opacity:0.85;margin-top:2px;">議事録+台帳データから ${new Date().toLocaleString('ja-JP')} 生成</div></div>
+            <div style="display:flex;gap:6px;"><button data-deliv-print style="background:rgba(255,255,255,0.22);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:5px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">🖨 印刷/PDF</button><button data-deliv-send style="background:#06C755;border:1px solid #06C755;color:#fff;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:800;cursor:pointer;">📤 LINE送信</button></div>
+          </div>`;
+          old.outerHTML = '<div class="fp-deliv-content" style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">' + header + newContent.outerHTML + '</div>';
+          // 印刷/送信ボタン再bind
+          const printBtn = resultEl.querySelector('[data-deliv-print]');
+          if (printBtn) printBtn.addEventListener('click', () => {
+            const h = resultEl.querySelector('.fp-deliv-content').outerHTML;
+            const w = window.open('', '_blank');
+            w.document.write(`<!doctype html><html><head><title>${escapeHtml(taskTitle)} - ${escapeHtml(client.name)}</title><style>body{font-family:'Noto Sans JP',sans-serif;padding:30px;color:#0F172A;}table{border-collapse:collapse;width:100%;}th,td{padding:8px 12px;border:1px solid #E2E8F0;font-size:12px;text-align:left;}th{background:#F8FAFC;}</style></head><body>${h}</body></html>`);
+            w.document.close();
+            setTimeout(() => w.print(), 300);
+          });
+          const sendBtn = resultEl.querySelector('[data-deliv-send]');
+          if (sendBtn) sendBtn.addEventListener('click', () => openDeliverableSendModal(client, type, taskTitle));
+          // 成功トースト
+          const t = document.createElement('div');
+          t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #5B5BF0;border-radius:10px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10030;font-family:inherit;';
+          t.innerHTML = `<strong style="font-size:14px;">✨ AI個別生成完了</strong><br><span style="font-size:12px;color:#6b7280;">${escapeHtml(client.name)} 様 固有の数値で再生成しました</span>`;
+          document.body.appendChild(t);
+          setTimeout(() => t.remove(), 4000);
+        }
+        // ai-bar 撤去
+        const aiBar = resultEl.querySelector('#fp-deliv-ai')?.parentElement;
+        if (aiBar) aiBar.remove();
+      } else {
+        alert('AI生成失敗: ' + (d.error || '不明'));
+        if (btn) { btn.disabled = false; btn.textContent = '✨ AIで個別作成'; }
+      }
+    } catch (e) {
+      alert('通信失敗: ' + e.message);
+      if (btn) { btn.disabled = false; btn.textContent = '✨ AIで個別作成'; }
+    }
   }
 
   // 成果物プレビュー HTML 生成 (タイプ別)
