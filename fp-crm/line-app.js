@@ -479,8 +479,9 @@
           <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:#6b7280;">
             <span style="letter-spacing:0.05em;">並び順:</span>
             <select id="fp-bookings-sort" style="font-size:12px;padding:6px 10px;border:1px solid #e8e2d4;border-radius:5px;font-family:inherit;background:#fff;color:#1f2a3f;">
-              <option value="date-desc">面談日 — 新しい順</option>
+              <option value="upcoming">予定が近い順 (今日 → 未来 → 過去)</option>
               <option value="date-asc">面談日 — 古い順</option>
+              <option value="date-desc">面談日 — 新しい順</option>
               <option value="created-desc">予約日 — 新しい順</option>
               <option value="name">お客様名 — あいうえお順</option>
             </select>
@@ -690,9 +691,21 @@
     if (!target) return;
     // 完了アーカイブ済み bookingTs のセット (localStorage)
     const archived = new Set(JSON.parse(localStorage.getItem('fp-booking-archived') || '[]'));
-    const sortMode = localStorage.getItem('fp-bookings-sort') || 'date-desc';
+    const sortMode = localStorage.getItem('fp-bookings-sort') || 'upcoming';
     // 並び替え
+    const todayIso = new Date().toISOString().slice(0, 10);
     const cmp = {
+      // 予定が近い順: 今日以降の未来昇順 → その後 過去降順
+      'upcoming': (a, b) => {
+        const ad = String(a.date || '').slice(0, 10);
+        const bd = String(b.date || '').slice(0, 10);
+        const aFut = ad >= todayIso;
+        const bFut = bd >= todayIso;
+        if (aFut && !bFut) return -1;  // a が未来 → a が先
+        if (!aFut && bFut) return 1;   // b が未来 → b が先
+        if (aFut && bFut) return ad.localeCompare(bd);  // 両方未来 → 近い順 (昇順)
+        return bd.localeCompare(ad);   // 両方過去 → 新しい順 (降順)
+      },
       'date-desc': (a, b) => String(b.date || '').localeCompare(String(a.date || '')),
       'date-asc':  (a, b) => String(a.date || '').localeCompare(String(b.date || '')),
       'created-desc': (a, b) => String(b.ts || '').localeCompare(String(a.ts || '')),
