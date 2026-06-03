@@ -3649,7 +3649,7 @@
               </div>
               <div class="aib-attach">
                 <label class="aib-attach-item"><input type="checkbox" id="aib-attach-slots" checked> <i data-lucide="calendar-clock"></i><span>次回面談候補日3つを「予約カード」で送る</span></label>
-                <label class="aib-attach-item"><input type="checkbox" id="aib-attach-pdf"> <i data-lucide="paperclip"></i><span>関連資料 PDF を添付 (教育資金プラン)</span></label>
+                <label class="aib-attach-item"><input type="checkbox" id="aib-attach-pdf"> <i data-lucide="paperclip"></i><span>関連資料 PDF を添付 (${escapeHtml(client.name || 'お客様')}様向け)</span></label>
               </div>
 
               <!-- FP-side: Google Calendar suggested slots + week view -->
@@ -3763,7 +3763,7 @@
         text += '\n※ 上記が難しい場合は別日程をご提案ください。\n────────';
       }
       if (pdfOn) {
-        text += '\n\n────────\n◆ 添付資料\n📎 教育資金プラン_山田様向け.pdf\n────────';
+        text += '\n\n────────\n◆ 添付資料\n📎 ' + (client.name || 'お客様') + '様向け_資料.pdf\n────────';
       }
       sendBtn.disabled = true;
       sendBtn.textContent = '送信中...';
@@ -3984,9 +3984,15 @@ ${isLoop
 A. **気付き提示 1つ** — FPだからこそ言える "お客様が見落としてる事実" を 1つ specifically 指摘
    例: 「3歳と0歳だと、お兄ちゃんの小学校入学までもう3年。学童保育+習い事の固定費増がここで一段上がります」
    例: 「自営業の場合 iDeCo より小規模企業共済の方が今の年収帯では節税効果大きいケースあります」
-B. **具体的な質問 1つ** — Yes/No or 数字で答えられる質問。これに答えてもらえば次の動きが決まる質問
-   例: 「ざっくりでOK ですが、月の事業利益は手取りで30万以上ですか?以下ですか?ここで初手シミュ精度が大きく変わります」
-   例: 「奥様の8月開業、初月の見込売上は 何万円想定でしょう?」
+B. **答えるストレスゼロの質問 1つ** — お客様が "1秒で迷わず答えられる" 形に必ずする
+   ❌ 答えにくい NG例: 「月の固定費 ざっくり何万円?」(合計を計算/思い出させる)
+   ❌ 答えにくい NG例: 「家計の不安は何ですか?」(オープンすぎる)
+   ❌ 答えにくい NG例: 「どう思いますか?」(漠然)
+   ✅ 答えやすい OK例 (二択): 「家賃は 10万以上ですか? 以下ですか?」
+   ✅ 答えやすい OK例 (選択肢): 「お子様の進学方針: ①公立中心 / ②私立含む / ③未定 のどれが近いですか?」
+   ✅ 答えやすい OK例 (Yes/No): 「奥様が開業されてから 売上記録は付け始めていますか?」
+   ✅ 答えやすい OK例 (範囲選択): 「月の事業利益は: A 30万未満 / B 30-50万 / C 50万以上 のどこですか?」
+   **絶対ルール**: 数字を厳密に求めない。計算/記憶のストレスを与えない。必ず "選ぶ" or "Yes/No" の形にする
 C. **次の動き** — お客様が返信したらどう動くかを 1行で明示
    例: 「これさえ教えていただければ、明日中に教育費 vs 事業資金 のバランス案 3パターン作って送ります」
 
@@ -4165,7 +4171,7 @@ C. **次の動き** — お客様が返信したらどう動くかを 1行で明
       if (pdfOn) {
         cards += `<div class="lp-card lp-card-pdf">
           <div class="lp-card-eyebrow"><i data-lucide="paperclip"></i><span>資料</span></div>
-          <div class="lp-card-title">教育資金プラン_山田様向け.pdf</div>
+          <div class="lp-card-title">${escapeHtml(client.name || 'お客様')}様向け_資料.pdf</div>
           <button class="lp-card-btn lp-card-btn-secondary">PDF を見る</button>
         </div>`;
       }
@@ -4182,7 +4188,7 @@ C. **次の動き** — お客様が返信したらどう動くかを 1行で明
     function getAttachmentPayload() {
       return {
         slots: document.getElementById('aib-attach-slots')?.checked ? slotsData : null,
-        pdf: document.getElementById('aib-attach-pdf')?.checked ? { name: '教育資金プラン_山田様向け.pdf' } : null,
+        pdf: document.getElementById('aib-attach-pdf')?.checked ? { name: (client.name || 'お客様') + '様向け_資料.pdf' } : null,
       };
     }
     window.__aibPayload = getAttachmentPayload;
