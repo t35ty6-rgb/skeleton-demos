@@ -1264,8 +1264,14 @@
     } catch (e) { console.warn('next-action block skipped:', e); }
     // ★ オーナーfb「Jobs 候補のワークフロー + 今動いてるワークフローも表示」
     try {
-      const pastMs = events.filter(e => e.kind === 'meeting' && new Date(e.date) <= TODAY).length;
-      const futureMs = events.filter(e => e.kind === 'meeting' && new Date(e.date) > TODAY).length;
+      // 同日複数 AI議事録 を 1 meeting に dedup (KPI ステージと整合)
+      const _wfDedup = (arr) => {
+        const seen = new Set(); const out = [];
+        arr.forEach(e => { const k = new Date(e.date).toISOString().slice(0, 10); if (!seen.has(k)) { seen.add(k); out.push(e); } });
+        return out;
+      };
+      const pastMs = _wfDedup(events.filter(e => e.kind === 'meeting' && new Date(e.date) <= TODAY)).length;
+      const futureMs = _wfDedup(events.filter(e => e.kind === 'meeting' && new Date(e.date) > TODAY)).length;
       const stages = [
         { key: 'lead',    label: '初回接触', icon: '👋' },
         { key: 'first',   label: '1回目 Zoom', icon: '💻' },
@@ -1427,9 +1433,23 @@
     // Timeline (次Zoom繋ぎ KPI 達成率方式 — オーナーfb「1回目→2回目に繋ぐKPI / 2回目→3回目に繋ぐKPI」)
     const timelineHtml2 = (function () {
       const TODAY = new Date(); TODAY.setHours(0,0,0,0);
-      const futureMeetings = events.filter(e => e.kind === 'meeting' && new Date(e.date) > TODAY);
-      const pastMeetings   = events.filter(e => e.kind === 'meeting' && new Date(e.date) <= TODAY)
-                                   .sort((a,b)=> new Date(b.date) - new Date(a.date));
+      // ★ オーナーfb「1回目Zoomしかしてないのに 2回目議事録 KPI 出る」バグ修正:
+      //    同じ日に AI議事録 が 複数 (label違い) あると別 meeting として cnt されてた
+      //    → 「同じ日 = 1回の面談」として dedup
+      const _futM = events.filter(e => e.kind === 'meeting' && new Date(e.date) > TODAY);
+      const _pastM = events.filter(e => e.kind === 'meeting' && new Date(e.date) <= TODAY)
+                           .sort((a,b)=> new Date(b.date) - new Date(a.date));
+      const _dedupByDate = (arr) => {
+        const seen = new Set();
+        return arr.filter(e => {
+          const k = new Date(e.date).toISOString().slice(0, 10);
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        });
+      };
+      const futureMeetings = _dedupByDate(_futM);
+      const pastMeetings   = _dedupByDate(_pastM);
       const lastMeeting    = pastMeetings[0];
       const meetingsSoFar  = pastMeetings.length;
 
@@ -3079,32 +3099,22 @@
             + (restoredHtml.includes('fp-deliv-content') ? wrap.innerHTML : restoredHtml)
             + '</div></div>';
 
-          // 自動保存 (input 300ms debounce) + フォーカス確実化
+          // 自動保存 (input 1500ms debounce) — オーナーfb「カクつく」対策で軽量化
+          // ① 全要素 contenteditable 再帰 setAttribute → 削除 (親 div の contenteditable=true は子に継承される)
+          // ② focus/blur 背景色変更 → 削除 (capture true で何百回も発火していた)
+          // ③ click 強制focus → 削除 (ブラウザ標準で十分)
+          // ④ debounce 300→1500ms (キータイプ毎の localStorage.setItem を抑制)
           const editable = resultEl.querySelector('[data-deliv-editable]');
           const statusEl = resultEl.querySelector('[data-deliv-save-status]');
           let saveTimer = null;
           if (editable) {
-            // ★ オーナーfb「編集できない」: 内部の table/td/p 全てに contenteditable 継承を明示
-            // (一部ブラウザで table セルがデフォルトで編集不可になる罠への対策)
-            editable.querySelectorAll('td, th, p, h1, h2, h3, h4, h5, h6, span, div, li').forEach(el => {
-              if (!el.hasAttribute('contenteditable')) el.setAttribute('contenteditable', 'true');
-            });
-            editable.addEventListener('focus', () => { editable.style.background = '#FAFBFF'; }, true);
-            editable.addEventListener('blur', () => { editable.style.background = '#fff'; }, true);
             editable.addEventListener('input', () => {
               clearTimeout(saveTimer);
               if (statusEl) statusEl.textContent = '… 保存中';
               saveTimer = setTimeout(() => {
                 try { localStorage.setItem(editKey, editable.innerHTML); } catch (_) {}
                 if (statusEl) statusEl.textContent = '✓ 編集保存済 ' + new Date().toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'});
-              }, 300);
-            });
-            // クリックされた箇所に強制フォーカス
-            editable.addEventListener('click', (ev) => {
-              const target = ev.target.closest('td, th, p, h1, h2, h3, h4, h5, h6, span, div, li') || editable;
-              if (target && target !== editable && target.hasAttribute('contenteditable')) {
-                try { target.focus(); } catch(_){}
-              }
+              }, 1500);
             });
           }
 
