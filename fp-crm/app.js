@@ -1071,7 +1071,13 @@
                       ((!r.customerName || r.customerName === 'お客様') && c.lineFriendId);
         if (match) collectFromEntry(r);
       });
-      // ④ タイムライン細分化: AI議事録から抽出したタスク (due日) も中間イベント化
+      // ④ タイムライン細分化: AI議事録から抽出したタスク (due日) を中間イベント化
+      //    ★ 品質改善 (オーナーfb「ただ書いてるだけで実用的でない」):
+      //      - ヒアリング内容 (「〜したい」「歳」「子供が」等) は除外
+      //      - 動詞 (作成・送付・確認・面談・連絡・提案) が無いものは除外
+      //      - 類似タスク (教育資金資料 系) は1つに統合
+      //      - 過去日タスクは「⏰ 期限超過」マーク
+      //      - 優先度は実残日数から再計算
       try {
         const taskKeysTL = new Set();
         if (c.lineFriendId) taskKeysTL.add('fp-tasks-' + c.lineFriendId);
@@ -1080,41 +1086,80 @@
         myBks.forEach(b => { if (b.userId) taskKeysTL.add('fp-tasks-' + b.userId); if (b.ts) taskKeysTL.add('fp-tasks-' + b.ts); if (b.name) taskKeysTL.add('fp-tasks-' + b.name); });
         const allTaskKeys = Object.keys(localStorage).filter(k => k.startsWith('fp-tasks-'));
         allTaskKeys.forEach(k => taskKeysTL.add(k));
-        const tlSeen = new Set();
+
+        // タスク収集 (フィルタ前)
+        const rawTasks = [];
         taskKeysTL.forEach(k => {
-          try {
-            const arr = JSON.parse(localStorage.getItem(k) || '[]');
-            arr.forEach(t => {
-              if (!t.due) return;
-              const id = (t.due || '') + '|' + (t.task || '');
-              if (tlSeen.has(id)) return;
-              tlSeen.add(id);
-              meetingEvents.push({
-                date: new Date(t.due),
-                kind: 'task', cat: 'contact',
-                label: '📋 ' + (t.task || 'タスク') + (t.priority ? ' [' + t.priority + ']' : ''),
-                title: 'タスク',
-                major: t.priority === '至急' || t.priority === '今週',
-              });
-            });
-          } catch (_) {}
+          try { JSON.parse(localStorage.getItem(k) || '[]').forEach(t => { if (t.due && t.task) rawTasks.push(t); }); } catch (_) {}
         });
-        // GAS ai_tasks も
         ((window.LineAppLiveData && window.LineAppLiveData.ai_tasks) || []).forEach(t => {
           const match = (t.userId && t.userId === c.lineFriendId) ||
                         (t.customerName && t.customerName === c.name) ||
                         myBks.some(b => b.ts === t.bookingTs || b.userId === t.userId) ||
                         ((!t.customerName || t.customerName === 'お客様') && c.lineFriendId);
-          if (!match || !t.due) return;
-          const id = (t.due || '') + '|' + (t.task || '');
-          if (tlSeen.has(id)) return;
-          tlSeen.add(id);
+          if (match && t.due && t.task) rawTasks.push(t);
+        });
+
+        // ★ フィルタ1: ヒアリング系を除外 (タスクではなく事実/希望)
+        const isHearingNoise = (txt) => {
+          const s = String(txt || '').trim();
+          if (s.length < 5) return true;
+          // 「〜したい/〜である/〜です」+ 動作主が顧客 = ヒアリング内容
+          if (/(したい|やりたい|なりたい|あります|あった|になる|である|です。|だ。)$/.test(s)) return true;
+          // 「年齢は●歳」「子供が●歳」「収入が●」等の状態描写
+          if (/^(年齢は|子供が|子どもが|収入が|貯金が|資産が|現在|今は|今の|私は|私が|妻は|夫は)/.test(s)) return true;
+          // 数字+歳/万円 だけの記述
+          if (/^(\d+歳|\d+万円|\d+円|約\d)/.test(s) && s.length < 30) return true;
+          return false;
+        };
+        // ★ フィルタ2: 動詞 (アクション) を含まないものは除外
+        const hasActionVerb = (txt) => /(作成|送付|送信|送る|確認|連絡|架電|電話|面談|相談|提案|準備|手配|登録|申込|契約|配送|納品|納入|シミュ|レポート|提示|案内|フォロー|ヒアリング|見直し)/.test(txt);
+
+        const filtered = rawTasks.filter(t => !isHearingNoise(t.task) && hasActionVerb(t.task));
+
+        // ★ 重複統合: 類似タスク (キーワード単位) を 最も早い due に統合
+        const groupKey = (txt) => {
+          const s = String(txt || '');
+          if (/教育/.test(s) && /(資料|シミュ|プラン|試算)/.test(s)) return 'edu_doc';
+          if (/老後/.test(s) && /(資料|プラン|シミュ|提案|iDeCo|小規模)/.test(s)) return 'retire_doc';
+          if (/(家計|収支)/.test(s) && /(ヒアリング|シート|資料)/.test(s)) return 'household_doc';
+          if (/(ライフプラン|ライフ\s*プラン)/.test(s)) return 'lifeplan_doc';
+          if (/(節税|所得控除)/.test(s)) return 'tax_doc';
+          if (/(保険|事業用保険)/.test(s) && /(見直|確認|提案)/.test(s)) return 'insurance_doc';
+          if (/(開業|事業資金)/.test(s)) return 'biz_doc';
+          if (/(NISA)/i.test(s)) return 'nisa_doc';
+          return 'task_' + s.slice(0, 12);
+        };
+
+        const grouped = {};
+        filtered.forEach(t => {
+          const k = groupKey(t.task);
+          if (!grouped[k] || new Date(t.due) < new Date(grouped[k].due)) grouped[k] = t;
+        });
+
+        // 優先度を実残日数から再計算
+        const TODAY_MS = Date.now();
+        const recalcPriority = (dueStr) => {
+          const days = Math.ceil((new Date(dueStr).getTime() - TODAY_MS) / 86400000);
+          if (days < 0) return '⏰期限超過';
+          if (days <= 3) return '至急';
+          if (days <= 7) return '今週';
+          if (days <= 14) return '2週間以内';
+          if (days <= 30) return '今月';
+          if (days <= 90) return '3ヶ月以内';
+          return '来期以降';
+        };
+
+        Object.values(grouped).forEach(t => {
+          const pri = recalcPriority(t.due);
+          const isOverdue = pri === '⏰期限超過';
           meetingEvents.push({
             date: new Date(t.due),
-            kind: 'task', cat: 'contact',
-            label: '📋 ' + (t.task || 'タスク') + (t.priority ? ' [' + t.priority + ']' : ''),
+            kind: 'task',
+            cat: isOverdue ? 'critical' : 'contact',
+            label: (isOverdue ? '⏰ ' : '📋 ') + t.task + ' [' + pri + ']',
             title: 'タスク',
-            major: t.priority === '至急' || t.priority === '今週',
+            major: pri === '至急' || pri === '今週' || isOverdue,
           });
         });
       } catch (e) { console.warn('task timeline merge skipped:', e); }
@@ -1287,19 +1332,96 @@
           </div>`;
         }).join('');
 
-    // Timeline (clean)
-    const timelineHtml2 = events.length === 0
-      ? '<div class="cd-empty">向こう30年に予測イベントなし</div>'
-      : events.slice(0, 12).map(ev => {
-          const rel = window.LifeEvents.formatRelative(ev.date);
-          return `<div class="cd-tl-row">
-            <span class="cd-tl-dot cd-cat-${ev.cat}${ev.major ? ' major' : ''}"></span>
-            <span class="cd-tl-date">${fmtDate(ev.date)}</span>
-            <span class="cd-tl-label">${escapeHtml(ev.label)}</span>
-            <span class="cd-tl-who">${escapeHtml(ev.who || '')}</span>
-            <span class="cd-tl-rel">${rel}</span>
-          </div>`;
-        }).join('');
+    // Timeline (マイルストーン軸 — オーナーfb「タスク羅列じゃなく次のZoom/提案に向けて」)
+    const timelineHtml2 = (function () {
+      if (events.length === 0) return '<div class="cd-empty">向こう30年に予測イベントなし</div>';
+
+      const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+      const futureMeetings = events.filter(e => e.kind === 'meeting' && new Date(e.date) > TODAY);
+      const pastMeetings   = events.filter(e => e.kind === 'meeting' && new Date(e.date) <= TODAY)
+                                   .sort((a,b)=> new Date(b.date) - new Date(a.date));
+      const lastMeeting    = pastMeetings[0];
+
+      // ★ 次のマイルストーンを判定
+      let milestone = null;
+      if (futureMeetings.length > 0) {
+        milestone = { date: new Date(futureMeetings[0].date), label: '第' + (pastMeetings.length + 1) + '回 Zoom面談', kind: 'meeting' };
+      } else if (lastMeeting) {
+        // 最終面談から経過した日数で次マイルストーン推定
+        const last = new Date(lastMeeting.date);
+        const daysSinceLast = Math.floor((TODAY - last) / 86400000);
+        const meetingsSoFar = pastMeetings.length;
+        if (meetingsSoFar === 1) {
+          // 初回終わったばかり → 第2回 Zoom (2週間後目安)
+          const d = new Date(last); d.setDate(d.getDate() + 14);
+          milestone = { date: d, label: '第2回 Zoom面談 (目安: 初回+2週)', kind: 'meeting', dashed: true };
+        } else if (meetingsSoFar === 2) {
+          // 2回目終了 → 提案プレゼン
+          const d = new Date(last); d.setDate(d.getDate() + 14);
+          milestone = { date: d, label: '提案プレゼン (目安: 2回目+2週)', kind: 'proposal', dashed: true };
+        } else {
+          // 3回目以降 → クロージング or 定期見直し
+          const d = new Date(last); d.setDate(d.getDate() + 30);
+          milestone = { date: d, label: meetingsSoFar >= 4 ? '定期見直し面談' : '提案クロージング', kind: 'closing', dashed: true };
+        }
+      }
+
+      // タスクを「マイルストーン日まで」と「それ以降」に分ける
+      const tasks = events.filter(e => e.kind === 'task');
+      const beforeMs = milestone
+        ? tasks.filter(t => new Date(t.date) <= new Date(milestone.date))
+        : tasks.slice(0, 5);
+      const afterMs = milestone
+        ? tasks.filter(t => new Date(t.date) > new Date(milestone.date))
+        : tasks.slice(5);
+
+      const top = beforeMs.slice(0, 5);
+      const rest = beforeMs.slice(5).concat(afterMs);
+
+      const renderRow = (ev, opts) => {
+        const rel = window.LifeEvents.formatRelative(ev.date);
+        const dashedCls = opts && opts.dashed ? ' cd-tl-row-dashed' : '';
+        return `<div class="cd-tl-row${dashedCls}">
+          <span class="cd-tl-dot cd-cat-${ev.cat}${ev.major ? ' major' : ''}"></span>
+          <span class="cd-tl-date">${fmtDate(ev.date)}</span>
+          <span class="cd-tl-label">${escapeHtml(ev.label)}</span>
+          <span class="cd-tl-who">${escapeHtml(ev.who || '')}</span>
+          <span class="cd-tl-rel">${rel}</span>
+        </div>`;
+      };
+
+      // マイルストーン ヘッダー
+      let milestoneHtml = '';
+      if (milestone) {
+        const days = Math.ceil((new Date(milestone.date) - TODAY) / 86400000);
+        const dateLabel = fmtDate(milestone.date);
+        const kindIcon = milestone.kind === 'meeting' ? '🎯' : milestone.kind === 'proposal' ? '📊' : '✍️';
+        milestoneHtml = `
+          <div style="background:linear-gradient(135deg,#1b2845,#0f1729);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:14px;">
+            <div style="font-size:10.5px;font-weight:700;letter-spacing:0.14em;opacity:0.7;margin-bottom:4px;">NEXT MILESTONE</div>
+            <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+              <div style="font-size:17px;font-weight:800;">${kindIcon} ${escapeHtml(milestone.label)}</div>
+              <div style="font-size:13px;opacity:0.85;">${dateLabel} <span style="margin-left:6px;color:#fbbf24;font-weight:700;">(あと${days}日)</span></div>
+              ${milestone.dashed ? '<div style="font-size:10.5px;color:#94a3b8;">※ 目安日</div>' : ''}
+            </div>
+            <div style="margin-top:8px;font-size:11.5px;opacity:0.8;">↓ それまでに済ませる事 (${top.length}件)</div>
+          </div>
+        `;
+      }
+
+      const beforeHtml = top.length === 0
+        ? '<div class="cd-empty" style="font-size:12px;color:var(--muted);padding:14px 0;">マイルストーンまでのタスクなし</div>'
+        : top.map(t => renderRow(t)).join('');
+
+      const restHtml = rest.length === 0 ? '' : `
+        <details style="margin-top:14px;">
+          <summary style="cursor:pointer;font-size:12px;color:var(--muted);font-weight:700;letter-spacing:0.06em;padding:8px 0;border-top:1px dashed var(--line);">📅 その後の予定 (${rest.length}件)</summary>
+          <div style="margin-top:8px;">${rest.slice(0, 10).map(r => renderRow(r, {dashed:true})).join('')}</div>
+        </details>
+      `;
+
+      return milestoneHtml + beforeHtml + restHtml;
+    })();
 
     // Proposals
     const proposalsHtml2 = (c.proposals || []).length === 0

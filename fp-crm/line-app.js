@@ -3340,7 +3340,28 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
     let surveysList = [];
     let liveStats = null;
     if (liveData) {
-      const live = (liveData.bookings || []).slice().reverse().slice(0, 10).map(b => ({
+      // 「終わった面談」自動クリーンアップ:
+      //  ① 録画 saved (= 終了済) で 24h 経過したもの
+      //  ② 録画 saved で zoomUrl 削除 (= 手動で終了マーク)
+      //  ③ 開始予定日から 24h 以上経過してるもの (録画なしで終わったケース)
+      const NOW_MS = Date.now();
+      const ONE_DAY = 86400000;
+      const isFinishedBooking = (b) => {
+        const recDone = b.recordingStatus === 'saved' || b.recordingStatus === 'completed';
+        const zoomGone = !b.zoomUrl || b.zoomUrl === '';
+        if (recDone && zoomGone) return true;
+        if (recDone) {
+          const recAge = b.ts ? (NOW_MS - new Date(b.ts).getTime()) : 0;
+          if (recAge > ONE_DAY) return true;
+        }
+        // 日付過ぎてるもの (24h 以上前)
+        if (b.date) {
+          const d = new Date(b.date + ' ' + (b.time || '23:59'));
+          if (!isNaN(d.getTime()) && (NOW_MS - d.getTime()) > ONE_DAY) return true;
+        }
+        return false;
+      };
+      const liveAll = (liveData.bookings || []).slice().reverse().slice(0, 20).map(b => ({
         id: 'live-' + (b.userId || b.ts),
         name: b.name || '匿名',
         date: b.date || '',
@@ -3356,6 +3377,8 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         driveUrl: b.driveUrl || '',
         transcript: b.transcript || '',
       }));
+      const live = liveAll.filter(b => !isFinishedBooking(b)).slice(0, 10);
+      window._fpFinishedBookings = liveAll.filter(isFinishedBooking).slice(0, 5);
       if (live.length > 0) bookings = live.concat(bookings);
       surveysList = (liveData.survey_answers || []).slice().reverse().slice(0, 8);
       liveStats = {
