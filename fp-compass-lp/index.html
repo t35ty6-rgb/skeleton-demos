@@ -177,6 +177,24 @@
   .line-msg.from .line-msg-time{color:rgba(255,255,255,0.7);}
   .line-msg-time-left{font-size:9.5px;color:rgba(255,255,255,0.85);margin:0 4px;align-self:flex-end;order:2;}
 
+  /* 同時実行 結果 3枚カード (Zoom / Calendar / LINE) */
+  .auto-card{background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .auto-card-zoom{border-left:3px solid #2D8CFF;}
+  .auto-card-cal{border-left:3px solid #4285F4;}
+  .auto-card-line{border-left:3px solid #06C755;}
+  .auto-card-hd{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #F1F5F9;}
+  .auto-ico{width:26px;height:26px;border-radius:6px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;}
+  .auto-card-hd strong{display:block;font-size:12.5px;color:var(--ink);font-weight:800;}
+  .auto-sub{display:block;font-size:10px;color:var(--ink-3);margin-top:1px;font-family:Manrope,sans-serif;letter-spacing:0.04em;}
+  .auto-tag{margin-left:auto;background:#ECFDF5;color:#065F46;font-family:Manrope,sans-serif;font-size:9.5px;font-weight:800;letter-spacing:0.06em;padding:3px 8px;border-radius:99px;}
+  .auto-body{padding:10px 12px;}
+
+  /* Google カレンダー風 行 */
+  .cal-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:5px;font-size:11.5px;margin-bottom:3px;}
+  .cal-row:not([style*="opacity"]){background:#4285F4;color:#fff;font-weight:700;}
+  .cal-time{font-family:Manrope,sans-serif;font-weight:800;font-size:11px;min-width:48px;letter-spacing:0.02em;}
+  .cal-title{flex:1;}
+
   /* ── A Day Timeline ── */
   .day-timeline{position:relative;padding-left:30px;}
   .day-timeline::before{content:'';position:absolute;left:6px;top:8px;bottom:8px;width:2px;background:linear-gradient(180deg,var(--indigo),var(--pink),var(--orange),var(--green));}
@@ -867,27 +885,53 @@ function renderDemo1(reset) {
     </div>`).join('')}</div>
     <div id="d1-result"></div>`;
   el.querySelectorAll('.md-slot').forEach(b => {
-    b.addEventListener('click', () => {
+    b.addEventListener('click', async () => {
       el.querySelectorAll('.md-slot').forEach(x => { x.classList.remove('selected'); x.classList.remove('md-pulse-orange'); });
       b.classList.add('selected');
       const date = b.dataset.date;
-      document.getElementById('d1-result').innerHTML = `
-        <div class="md-result" style="margin-bottom:10px;">
-          <strong>✓ ${date} で確定 同時に走った3つの自動処理:</strong>
-          ・Zoom URL 発行 (S2S OAuth)<br>
-          ・Google カレンダー 60分予約 登録<br>
-          ・お客様 LINE に↓のメッセージを自動送信
+      const r = document.getElementById('d1-result');
+      r.innerHTML = `
+        <div class="md-result" style="margin-bottom:12px;">
+          <strong>✓ ${date} で確定 — 3つの自動処理 同時実行:</strong>
         </div>
-        <div class="line-mock">
-          <div class="line-mock-hd">
-            <div class="line-mock-hd-avatar">山</div>
-            <div><div class="line-mock-hd-name">山田FP 公式LINE</div><div class="line-mock-hd-sub">面談確定通知</div></div>
-          </div>
-          <div class="line-mock-body">
-            <div class="line-msg"><div class="line-msg-time-left">14:32</div><div class="line-msg-avatar">山</div><div class="line-msg-bubble"><strong>✅ ご予約確定</strong><br>📅 ${date}<br>💻 60分 (Zoom)<br>🔗 <span style="text-decoration:underline;color:#06C755;">https://zoom.us/j/9876543210</span><br><br>当日よろしくお願いします 🙏</div></div>
-          </div>
-        </div>
-        <button class="md-btn md-btn-secondary" style="margin-top:10px;padding:6px 14px;font-size:11px;" onclick="renderDemo1(true)">↺ もう一度試す</button>`;
+        <div id="d1-trio" style="display:grid;gap:8px;"></div>
+        <button class="md-btn md-btn-secondary" style="margin-top:12px;padding:6px 14px;font-size:11px;" onclick="renderDemo1(true)">↺ もう一度試す</button>`;
+      const trio = document.getElementById('d1-trio');
+      const cards = [
+        { delay: 300, html: `
+          <div class="auto-card auto-card-zoom">
+            <div class="auto-card-hd"><span class="auto-ico" style="background:#2D8CFF;">Z</span><span><strong>Zoom URL 発行</strong><span class="auto-sub">Server-to-Server OAuth</span></span><span class="auto-tag">✓ 完了</span></div>
+            <div class="auto-body">
+              <code style="background:#F0F9FF;border:1px solid #BAE6FD;color:#0369A1;padding:5px 8px;border-radius:5px;font-size:11px;display:block;font-family:Menlo,monospace;">https://zoom.us/j/9876543210?pwd=xxx</code>
+              <div style="font-size:10.5px;color:#64748B;margin-top:6px;">パスコード: 1234 / 待機室: ON</div>
+            </div>
+          </div>` },
+        { delay: 700, html: `
+          <div class="auto-card auto-card-cal">
+            <div class="auto-card-hd"><span class="auto-ico" style="background:#4285F4;">📅</span><span><strong>Google カレンダー 登録</strong><span class="auto-sub">FP の primary カレンダー</span></span><span class="auto-tag">✓ 完了</span></div>
+            <div class="auto-body">
+              <div class="cal-row"><span class="cal-time">${date.replace('(', ' (').split(' ')[2] || '14:00'}</span><span class="cal-title">山田 太郎様 / FP相談 60min</span></div>
+              <div class="cal-row" style="opacity:0.55;"><span class="cal-time">15:00</span><span class="cal-title">— 空き枠 —</span></div>
+              <div class="cal-row" style="opacity:0.55;"><span class="cal-time">16:00</span><span class="cal-title">— 空き枠 —</span></div>
+            </div>
+          </div>` },
+        { delay: 1100, html: `
+          <div class="auto-card auto-card-line">
+            <div class="auto-card-hd"><span class="auto-ico" style="background:#06C755;">L</span><span><strong>お客様 LINE に確定通知</strong><span class="auto-sub">Messaging API push</span></span><span class="auto-tag">✓ 送信済</span></div>
+            <div class="auto-body" style="padding:0;background:#7B96B2;">
+              <div style="padding:8px 10px;">
+                <div class="line-msg"><div class="line-msg-time-left">14:32</div><div class="line-msg-avatar">山</div><div class="line-msg-bubble" style="font-size:11.5px;"><strong>✅ ご予約確定</strong><br>📅 ${date}<br>💻 60分 (Zoom)<br>🔗 <span style="text-decoration:underline;">https://zoom.us/j/9876543210</span></div></div>
+              </div>
+            </div>
+          </div>` },
+      ];
+      for (const c of cards) {
+        await new Promise(rsv => setTimeout(rsv, c.delay));
+        const div = document.createElement('div');
+        div.style.cssText = 'animation:fadein 0.4s ease;';
+        div.innerHTML = c.html;
+        trio.appendChild(div);
+      }
     });
   });
 }
@@ -983,8 +1027,25 @@ function renderDemo3() {
         r.innerHTML = `<div class="md-result"><strong>✓ ${b.textContent} — 山田様専用</strong>
           <table class="md-table"><thead><tr>${d.head.map(h => `<th>${h}</th>`).join('')}</tr></thead>
           <tbody>${d.rows.map(row => `<tr>${row.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>
-          <div style="display:flex;gap:6px;margin-top:8px;"><button class="md-btn md-btn-secondary" style="padding:6px 12px;font-size:11px;">🖨 PDF</button><button class="md-btn" style="padding:6px 12px;font-size:11px;">📤 LINE送信</button></div>
-        </div>`;
+          <div style="display:flex;gap:6px;margin-top:8px;"><button class="md-btn md-btn-secondary" style="padding:6px 12px;font-size:11px;">🖨 PDF</button><button class="md-btn md-pulse" style="padding:6px 12px;font-size:11px;" id="d3-send">📤 LINE送信</button></div>
+        </div>
+        <div id="d3-line-result" style="margin-top:10px;"></div>`;
+        document.getElementById('d3-send').addEventListener('click', () => {
+          const sb = document.getElementById('d3-send');
+          sb.disabled = true; sb.classList.remove('md-pulse'); sb.textContent = '⏳ 送信中…';
+          setTimeout(() => {
+            sb.textContent = '✓ 送信済';
+            document.getElementById('d3-line-result').innerHTML = `
+              <div class="auto-card auto-card-line" style="margin-top:8px;">
+                <div class="auto-card-hd"><span class="auto-ico" style="background:#06C755;">L</span><span><strong>お客様 LINE に資料 送信</strong><span class="auto-sub">PDF Drive URL添付</span></span><span class="auto-tag">✓ 送信済</span></div>
+                <div class="auto-body" style="padding:0;background:#7B96B2;">
+                  <div style="padding:8px 10px;">
+                    <div class="line-msg"><div class="line-msg-time-left">15:08</div><div class="line-msg-avatar">山</div><div class="line-msg-bubble" style="font-size:11.5px;">山田様<br><br>本日はありがとうございました。<br>面談でお話した <strong>${b.textContent}</strong> を作成しました。<br><br>📎 <span style="text-decoration:underline;">drive.google.com/.../cashflow_yamada.pdf</span></div></div>
+                  </div>
+                </div>
+              </div>`;
+          }, 700);
+        });
       }, 700);
     });
   });
