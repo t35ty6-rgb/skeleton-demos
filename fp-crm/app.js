@@ -2909,10 +2909,21 @@
         });
         const d = await r.json();
         if (d.ok) {
+          // ★ lineHistory 即 append (Jobs が次の提案で参照可)
+          try {
+            if (!Array.isArray(client.lineHistory)) client.lineHistory = [];
+            const iso = new Date().toISOString();
+            client.lineHistory.push({ from: 'fp', direction: 'out', text: text, message: text, ts: iso, date: iso.slice(0,10), source: 'fp-crm-kpi' });
+            client.lastContact = iso.slice(0, 10);
+            const stored = JSON.parse(localStorage.getItem('fp-crm-clients-v1') || '[]');
+            const idx = stored.findIndex(x => String(x.id) === String(client.id));
+            if (idx >= 0) stored[idx] = client; else stored.push(client);
+            localStorage.setItem('fp-crm-clients-v1', JSON.stringify(stored));
+          } catch (_) {}
           ov.remove();
           const t = document.createElement('div');
           t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #06C755;border-radius:10px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10030;';
-          t.innerHTML = `<strong style="font-size:14px;">✓ ${escapeHtml(client.name)} 様 に送信完了</strong><div style="font-size:12px;color:#6b7280;margin-top:4px;">KPI 達成状況は次回モーダル再表示時に更新されます</div>`;
+          t.innerHTML = `<strong style="font-size:14px;">✓ ${escapeHtml(client.name)} 様 に送信完了</strong><div style="font-size:12px;color:#6b7280;margin-top:4px;">LINE 履歴に追加済 — 次の提案で Jobs が参照します</div>`;
           document.body.appendChild(t);
           setTimeout(() => t.remove(), 4000);
         } else { alert('失敗: ' + (d.error || '')); btn.disabled = false; btn.textContent = '📤 LINE 送信'; }
@@ -3781,7 +3792,40 @@
           // 送信履歴に append + Claude に再投入
           if (!window._fpDraftConversation) window._fpDraftConversation = [];
           const sentText = document.getElementById('draft-text')?.value || text;
-          window._fpDraftConversation.push({ role: 'fp', text: sentText, ts: new Date().toISOString(), clientId: client.id });
+          const nowIso = new Date().toISOString();
+          window._fpDraftConversation.push({ role: 'fp', text: sentText, ts: nowIso, clientId: client.id });
+          // ★ オーナーfb「LINE 送ったのに lineHistory に反映されない → Jobs が次の提案に活かせない」
+          // 送信成功時に client.lineHistory に即 append + 永続化
+          try {
+            if (!Array.isArray(client.lineHistory)) client.lineHistory = [];
+            client.lineHistory.push({
+              from: 'fp',
+              direction: 'out',
+              text: sentText,
+              message: sentText,
+              ts: nowIso,
+              date: nowIso.slice(0, 10),
+              source: 'fp-crm-draft',
+            });
+            // localStorage の顧客台帳を更新
+            const stored = JSON.parse(localStorage.getItem('fp-crm-clients-v1') || '[]');
+            const idx = stored.findIndex(x => String(x.id) === String(client.id));
+            if (idx >= 0) {
+              stored[idx] = client;
+            } else {
+              stored.push(client);
+            }
+            localStorage.setItem('fp-crm-clients-v1', JSON.stringify(stored));
+            // 同じく lastContact も更新
+            client.lastContact = nowIso.slice(0, 10);
+            try {
+              const storedClients = window.DUMMY_CLIENTS || [];
+              const ci = storedClients.findIndex(x => String(x.id) === String(client.id));
+              if (ci >= 0) storedClients[ci] = client;
+            } catch (_) {}
+            localStorage.setItem('fp-crm-clients-v1', JSON.stringify(stored));
+            console.log('[lineHistory] appended fp message →', client.name, 'history len:', client.lineHistory.length);
+          } catch (he) { console.warn('lineHistory append fail:', he); }
           // ★ 客毎の追撃トラッキング (localStorage に保存 → 返信待ちダッシュボード表示)
           try {
             const trackKey = 'fp-draft-tracking';
@@ -3791,7 +3835,7 @@
               clientName: client.name,
               lineFriendId: client.lineFriendId || '',
               lastSentText: sentText.slice(0, 120),
-              lastSentAt: new Date().toISOString(),
+              lastSentAt: nowIso,
               awaitingReply: true,
               followupCount: (tracking[client.id]?.followupCount || 0),
             };
