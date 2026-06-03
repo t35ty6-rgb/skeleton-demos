@@ -2178,43 +2178,7 @@
             この資料を AIで自動生成 → 顧客カードに添付して LINE 送信できます。<br>
             生成内容を選んでください:
           </div>
-          <div style="display:grid;gap:10px;">
-            <button class="fp-deliv-type" data-type="cashflow" style="background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 18px;text-align:left;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;">
-              <span style="font-size:24px;">📊</span>
-              <div>
-                <div style="font-weight:800;font-size:13.5px;color:#0F172A;">キャッシュフロー表 (30年)</div>
-                <div style="font-size:11.5px;color:#64748b;margin-top:2px;">家族構成・収入・支出から自動生成。Excel/PDF出力可</div>
-              </div>
-            </button>
-            <button class="fp-deliv-type" data-type="lifeplan" style="background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 18px;text-align:left;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;">
-              <span style="font-size:24px;">📈</span>
-              <div>
-                <div style="font-weight:800;font-size:13.5px;color:#0F172A;">ライフプラン表</div>
-                <div style="font-size:11.5px;color:#64748b;margin-top:2px;">教育費ピーク・住宅・退職金まで時系列で可視化</div>
-              </div>
-            </button>
-            <button class="fp-deliv-type" data-type="nisa" style="background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 18px;text-align:left;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;">
-              <span style="font-size:24px;">💹</span>
-              <div>
-                <div style="font-weight:800;font-size:13.5px;color:#0F172A;">NISA / iDeCo 配分シミュレーション</div>
-                <div style="font-size:11.5px;color:#64748b;margin-top:2px;">年齢・年収・リスク許容度から最適配分を3パターン提示</div>
-              </div>
-            </button>
-            <button class="fp-deliv-type" data-type="insurance" style="background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 18px;text-align:left;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;">
-              <span style="font-size:24px;">🛡</span>
-              <div>
-                <div style="font-weight:800;font-size:13.5px;color:#0F172A;">保険 見直しレポート</div>
-                <div style="font-size:11.5px;color:#64748b;margin-top:2px;">現在の保障と必要保障額のギャップ分析</div>
-              </div>
-            </button>
-            <button class="fp-deliv-type" data-type="custom" style="background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 18px;text-align:left;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;">
-              <span style="font-size:24px;">✏️</span>
-              <div>
-                <div style="font-weight:800;font-size:13.5px;color:#0F172A;">その他 (自由入力)</div>
-                <div style="font-size:11.5px;color:#64748b;margin-top:2px;">タスク内容に応じて AI が独自に作成</div>
-              </div>
-            </button>
-          </div>
+          ${renderDeliverableMenu()}
           <div id="fp-deliv-result" style="margin-top:14px;display:none;"></div>
         </div>
       </div>
@@ -2399,6 +2363,60 @@
     }
   }
 
+  // 16種テンプレ メニュー (6カテゴリ)
+  function renderDeliverableMenu() {
+    const cats = [
+      { name: '💰 資産・収支', items: [
+        ['cashflow', '📊', 'キャッシュフロー表 (10年)', '年齢×収入×支出×貯蓄'],
+        ['emergency', '🆘', '緊急予備資金 計算書', '失職時に必要な最低資金 (生活費6ヶ月)'],
+        ['kakei', '🏠', '家計診断シート', '固定費/変動費の最適化判定'],
+      ]},
+      { name: '🎓 ライフプラン・教育', items: [
+        ['lifeplan', '📈', 'ライフプラン表', '主要イベント+コスト時系列'],
+        ['education', '🎒', '教育費シミュレーション', '進路別 (公立〜私立) 必要総額'],
+        ['mortgage', '🏡', '住宅ローン 繰上 vs 運用 判定', '3軸 (金利/残期間/控除残)'],
+      ]},
+      { name: '💹 投資・資産運用', items: [
+        ['nisa', '💹', 'NISA / iDeCo 配分シミュ', '3パターン (積極/標準/安定)'],
+        ['risk', '🎯', 'リスク許容度 診断シート', '15問で投資スタンス判定'],
+      ]},
+      { name: '🛡 保険・リスク管理', items: [
+        ['insurance', '🛡', '保険 見直しレポート', '必要vs現状ギャップ'],
+        ['hoshougaku', '💉', '必要保障額 詳細計算', '末子独立まで遺族生活費'],
+      ]},
+      { name: '👴 老後・退職', items: [
+        ['retire', '🏖', '老後資金 必要額計算書', '月額×老後年数−年金見込'],
+        ['taishokukin', '💼', '退職金 受取最適化シミュ', '一時金vs年金 税金比較'],
+        ['kaigo', '🏥', '老後の医療・介護費 試算', '介護度別の月額負担'],
+      ]},
+      { name: '👨‍👩‍👧 相続・税金', items: [
+        ['inherit', '👴', '相続 基礎控除 計算書', '3000万+600万×法定相続人'],
+        ['zoyo', '🎁', '生前贈与 簡易シミュ', '年110万×7年加算ルール反映'],
+        ['kakutei', '📄', '確定申告 簡易チェック (自営)', '青色控除/小規模共済/iDeCo'],
+      ]},
+      { name: '✏️ その他', items: [
+        ['hearing', '📋', 'ヒアリングシート', 'アンケート10問まとめ'],
+        ['custom', '✏️', '自由入力', 'タスク内容で AI が独自作成'],
+      ]},
+    ];
+    return cats.map(cat => `
+      <div style="margin-bottom:14px;">
+        <div style="font-family:Manrope,sans-serif;font-size:10.5px;font-weight:800;letter-spacing:0.15em;color:#64748B;margin-bottom:6px;text-transform:uppercase;">${cat.name}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          ${cat.items.map(([t, ico, ttl, sub]) => `
+            <button class="fp-deliv-type" data-type="${t}" style="background:#fff;border:1.5px solid #E2E8F0;border-radius:8px;padding:11px 14px;text-align:left;cursor:pointer;font-family:inherit;display:flex;align-items:flex-start;gap:9px;transition:border-color 0.15s,background 0.15s;">
+              <span style="font-size:18px;line-height:1;">${ico}</span>
+              <div style="min-width:0;">
+                <div style="font-weight:700;font-size:12px;color:#0F172A;line-height:1.3;">${ttl}</div>
+                <div style="font-size:10.5px;color:#94A3B8;margin-top:2px;line-height:1.4;">${sub}</div>
+              </div>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
   // 成果物プレビュー HTML 生成 (タイプ別)
   function renderDeliverablePreview(type, client) {
     const baseYear = new Date().getFullYear();
@@ -2460,6 +2478,148 @@
           <tbody>${rows.map(r => `<tr><td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;">${r[0]}</td><td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;text-align:right;">${r[1]}</td><td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;text-align:right;">${r[2]}</td><td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;text-align:right;color:#B91C1C;font-weight:700;">${r[3]}</td><td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;text-align:right;"><span style="background:#FEF2F2;color:#B91C1C;padding:2px 8px;border-radius:99px;font-size:10.5px;font-weight:700;">${r[4]}</span></td></tr>`).join('')}</tbody>
         </table>
       </div>`;
+    }
+    // ---- 追加 11 種 ----
+    const wrap = (title, inner) => `<div class="fp-deliv-content" style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">${hd.replace('{TITLE}', title)}<div style="padding:18px;">${inner}</div></div>`;
+    const tbl = (head, rows) => `<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#F8FAFC;">${head.map(h => `<th style="padding:8px 10px;border-bottom:1px solid #E2E8F0;text-align:left;">${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td style="padding:7px 10px;border-bottom:1px solid #F1F5F9;">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+
+    if (type === 'emergency') {
+      const monthlyExp = Math.round(inc * 0.55 / 12);  // 月支出推定
+      const recommend = monthlyExp * 6;
+      return wrap('🆘 緊急予備資金 計算書',
+        `<div style="font-size:13px;line-height:1.85;margin-bottom:14px;">失職・病気・災害時、生活を維持する最低限資金 (推奨: 月支出×6ヶ月)</div>
+         ${tbl(['項目','金額'],[['推定月支出',`¥${monthlyExp}万`],['推奨残高 (6ヶ月)',`<strong style="color:#5B5BF0;">¥${recommend}万</strong>`],['推奨残高 (安心 12ヶ月)',`¥${recommend*2}万`],['預入推奨先','普通預金 50% / 1年定期 50%']])}`);
+    }
+    if (type === 'kakei') {
+      return wrap('🏠 家計診断シート',
+        `${tbl(['カテゴリ','月額目安','収入比','判定'],[
+          ['住居費 (家賃/ローン)','15万','25%','適正'],
+          ['食費','7万','12%','適正'],
+          ['通信費','2万','3%','削減余地'],
+          ['保険料','3万','5%','適正'],
+          ['交通費','2万','3%','適正'],
+          ['趣味・交際','5万','8%','過剰'],
+          ['貯蓄・投資','12万','20%','理想25%'],
+        ])}<div style="margin-top:12px;background:#FEF3C7;border:1px solid #FBBF24;border-radius:6px;padding:10px 14px;font-size:12px;color:#78350F;">💡 通信費削減 + 趣味交際見直しで月5万浮かせます</div>`);
+    }
+    if (type === 'education') {
+      return wrap('🎒 教育費シミュレーション (進路別)',
+        tbl(['進路パターン','幼〜大学 総額','中受時必要貯金','備考'],[
+          ['すべて公立','¥1,000万','¥0','王道'],
+          ['高校から私立','¥1,500万','¥100万',''],
+          ['中受 (私立中高一貫)','¥2,500万','¥500万','学費年100万'],
+          ['小受 (私立小→私立大)','¥3,500万','¥1,000万',''],
+          ['海外留学 (大学)','¥4,000万〜','¥1,500万','円安リスク'],
+        ]));
+    }
+    if (type === 'mortgage') {
+      return wrap('🏡 住宅ローン 繰上 vs 運用 判定',
+        `${tbl(['判定軸','繰上有利','運用有利'],[
+          ['金利水準','1%超 →繰上','1%未満 →運用'],
+          ['ローン残期間','長い (20年+)','短い (10年-)'],
+          ['住宅ローン控除 残期間','5年未満','10年以上'],
+          ['手元現金','十分 (6ヶ月+)','少ない'],
+        ])}<div style="margin-top:12px;background:#ECFDF5;border:1px solid #6EE7B7;border-radius:6px;padding:10px 14px;font-size:12px;color:#065F46;">✓ 判定: 3軸中 2軸が運用優位 → <strong>NISAつみたて投資推奨</strong></div>`);
+    }
+    if (type === 'risk') {
+      return wrap('🎯 リスク許容度 診断シート',
+        `<div style="font-size:13px;line-height:1.85;margin-bottom:12px;">下記15問でリスク許容度判定 (1問1〜5点で計算)</div>
+         ${tbl(['No','質問','現在の点'],[
+          ['1','投資経験 (0/1年/3年/5年+/10年+)','3'],
+          ['2','元本割れ許容範囲 (0/-10/-20/-30/-50%)','3'],
+          ['3','投資期間 (1年/3/5/10/20年+)','4'],
+          ['4','収入の安定性','4'],
+          ['5','緊急予備資金の有無','3'],
+        ])}<div style="margin-top:12px;background:#EEF1FE;border:1px solid #C7D2FE;border-radius:6px;padding:10px 14px;font-size:12px;color:#3730A3;">合計17点 → <strong>標準型 (株式50% / 債券40% / REIT 10%)</strong></div>`);
+    }
+    if (type === 'hoshougaku') {
+      return wrap('💉 必要保障額 詳細計算',
+        tbl(['項目','金額','算出根拠'],[
+          ['遺族生活費 (末子独立まで)','¥6,000万','月25万×20年'],
+          ['住宅費 (団信なし想定)','¥2,000万',''],
+          ['教育費 (公立想定)','¥1,500万','子2人'],
+          ['葬儀費','¥300万',''],
+          ['小計 (必要保障額)','<strong>¥9,800万</strong>',''],
+          ['遺族年金 見込','-¥3,500万','月15万×20年'],
+          ['配偶者就労収入','-¥4,800万','月20万×20年'],
+          ['<strong>純必要保障</strong>','<strong style="color:#B91C1C;">¥1,500万</strong>','現契約と差分確認'],
+        ]));
+    }
+    if (type === 'retire') {
+      const yearsRetire = 30; const monthly = 25;
+      const needed = monthly * 12 * yearsRetire;
+      const pension = 2400;
+      return wrap('🏖 老後資金 必要額計算書',
+        `${tbl(['項目','金額'],[
+          ['毎月の必要額',`月¥${monthly}万`],
+          ['老後年数',`${yearsRetire}年`],
+          ['総必要額',`¥${needed}万`],
+          ['公的年金 見込',`-¥${pension}万`],
+          ['<strong>不足額</strong>',`<strong style="color:#B91C1C;">¥${needed-pension}万</strong>`],
+        ])}<div style="margin-top:12px;background:#FEF3C7;border:1px solid #FBBF24;border-radius:6px;padding:10px 14px;font-size:12px;color:#78350F;">💡 30代から月3万積立 (年利4%) で達成可能</div>`);
+    }
+    if (type === 'taishokukin') {
+      return wrap('💼 退職金 受取最適化シミュ',
+        `${tbl(['受取方法','手取り','税負担','備考'],[
+          ['全額一時金','¥1,950万','¥50万','退職所得控除フル活用'],
+          ['全額年金','¥1,750万','¥250万','公的年金等控除のみ'],
+          ['一時金70% + 年金30%','<strong>¥1,920万</strong>','¥80万','<strong>推奨</strong>'],
+        ])}<div style="margin-top:12px;background:#ECFDF5;border:1px solid #6EE7B7;border-radius:6px;padding:10px 14px;font-size:12px;color:#065F46;">✓ 一時金主体が税優遇大。年金枠を一部使い 控除上限まで取る</div>`);
+    }
+    if (type === 'kaigo') {
+      return wrap('🏥 老後の医療・介護費 試算',
+        tbl(['想定','月額負担','年負担','備考'],[
+          ['健康な高齢期','¥3万','¥36万','医療費のみ'],
+          ['要介護1〜2 (在宅)','¥10万','¥120万','訪問介護+デイ'],
+          ['要介護3〜5 (施設)','¥15〜25万','¥180〜300万','特養 or 有料老人ホーム'],
+          ['認知症 (グループホーム)','¥15万','¥180万','+食費光熱費'],
+        ]));
+    }
+    if (type === 'inherit') {
+      const heirs = (client.family || []).filter(m => m.rel !== 'self').length || 2;
+      const base = 3000 + 600 * heirs;
+      return wrap('👴 相続 基礎控除 計算書',
+        `${tbl(['項目','金額'],[
+          ['基礎控除額','¥3,000万 + 600万×法定相続人数'],
+          ['法定相続人数 (推定)',`${heirs}名`],
+          ['<strong>当家 基礎控除</strong>',`<strong style="color:#5B5BF0;">¥${base}万</strong>`],
+          ['配偶者控除','¥1.6億 or 法定相続分'],
+        ])}<div style="margin-top:12px;background:#EEF1FE;border:1px solid #C7D2FE;border-radius:6px;padding:10px 14px;font-size:12px;color:#3730A3;">💡 ¥${base}万以下なら相続税ゼロ。超える分は10〜55%課税</div>`);
+    }
+    if (type === 'zoyo') {
+      return wrap('🎁 生前贈与 簡易シミュ',
+        `${tbl(['制度','非課税枠','備考'],[
+          ['暦年贈与','年110万/人','7年加算ルール (2024〜)'],
+          ['相続時精算課税','2,500万累計','その後の暦年×'],
+          ['教育資金一括','1,500万/孫','30歳まで'],
+          ['結婚・子育て一括','1,000万','50歳まで'],
+          ['住宅取得資金','500〜1,000万',''],
+        ])}<div style="margin-top:12px;background:#FEF3C7;border:1px solid #FBBF24;border-radius:6px;padding:10px 14px;font-size:12px;color:#78350F;">💡 配偶者+子2人 → 暦年贈与年330万を10年で<strong>3,300万非課税移転</strong>可能</div>`);
+    }
+    if (type === 'kakutei') {
+      return wrap('📄 確定申告 簡易チェック (自営業)',
+        `<div style="font-size:13px;line-height:1.85;margin-bottom:12px;">事業所得 ¥800万の場合の節税余地</div>
+         ${tbl(['節税策','年間節税額','加入難易度'],[
+          ['青色申告特別控除','¥10〜21万','★'],
+          ['小規模企業共済 (満額)','¥21万','★★'],
+          ['iDeCo (月6.8万)','¥18万','★★'],
+          ['倒産防止共済 (月20万)','¥36万','★★★'],
+          ['国民年金基金','¥8万','★★'],
+          ['<strong>合計</strong>','<strong style="color:#5B5BF0;">約¥80〜100万</strong>','—'],
+        ])}`);
+    }
+    if (type === 'hearing') {
+      return wrap('📋 ヒアリングシート (アンケート総括)',
+        `<div style="font-size:13px;color:#64748B;margin-bottom:14px;">「📋ヒアリングシート」ボタンから 印刷可能版が開きます</div>
+         ${tbl(['項目','回答'],[
+          ['年代', s.q1_年代 || '—'],
+          ['職業', s.q2_職業 || '—'],
+          ['家族', s.q3_家族 || '—'],
+          ['年収', s.q4_年収 || '—'],
+          ['資産', s.q6_資産 || '—'],
+          ['テーマ', s.q8_テーマ || '—'],
+          ['悩み', s.q9_悩み || '—'],
+        ])}`);
     }
     // custom
     return `<div class="fp-deliv-content" style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
