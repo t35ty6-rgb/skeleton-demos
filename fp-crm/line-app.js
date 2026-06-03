@@ -3090,7 +3090,11 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
   // ============================
   // Cloud Run のリアルデータ
   const CLOUD_RUN_BASE = 'https://fp-compass-webhook-527726449426.asia-northeast1.run.app';
-  const CLOUD_RUN_API = CLOUD_RUN_BASE + '/api/bookings';
+  // マルチテナント: 現在の FP (localStorage で永続、default fp001)
+  function currentFpId() { return localStorage.getItem('fp-current-fpid') || 'fp001'; }
+  function setCurrentFpId(id) { localStorage.setItem('fp-current-fpid', id); location.reload(); }
+  window.FpTenant = { current: currentFpId, set: setCurrentFpId };
+  const CLOUD_RUN_API = CLOUD_RUN_BASE + '/api/bookings?fpId=' + encodeURIComponent(currentFpId());
   let liveData = null;
 
   function showSyncIndicator(state, detail) {
