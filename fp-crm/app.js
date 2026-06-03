@@ -2548,9 +2548,62 @@
           <button id="fp-deliv-close" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.32);color:#fff;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:16px;">✕</button>
         </div>
         <div style="padding:22px 24px;">
+          ${(function(){
+            // ★ オーナーfb「Jobsが必要な複数資料を判断して作れるように」
+            // タスク文 + 顧客台帳 から 関連性の高い type 複数を推奨
+            const t = String(taskTitle || '');
+            const recs = [];
+            const add = (type, ico, label, reason) => { if (!recs.find(r => r.type === type)) recs.push({type, ico, label, reason}); };
+            // 主推奨 (preselectedType)
+            if (preselectedType) {
+              const labelMap = {hearing:['📋','ヒアリングシート'], cashflow:['📊','キャッシュフロー表'], lifeplan:['📈','ライフプラン表'], education:['🎒','教育費シミュ'], nisa:['💹','NISA/iDeCo配分'], insurance:['🛡','保険見直し'], retire:['🏖','老後資金計算'], inherit:['👴','相続控除計算'], mortgage:['🏡','住宅ローン判定'], kakei:['🏠','家計診断'], custom:['✏️','カスタム']};
+              const m = labelMap[preselectedType] || ['📄', preselectedType];
+              add(preselectedType, m[0], m[1], 'タスク文からの自動判定 (主)');
+            }
+            // 関連推奨 (キーワード連鎖)
+            if (/家計|収支|貯蓄|貯金/.test(t)) { add('kakei','🏠','家計診断シート','「家計収支」関連 → 固定費見直し前提'); add('cashflow','📊','キャッシュフロー表','「貯蓄状況」関連 → 10年先まで可視化'); }
+            if (/ヒアリング/.test(t))  { add('hearing','📋','ヒアリングシート','「ヒアリング」関連 → 10問テンプレ'); }
+            if (/教育|進学|学費|大学/.test(t)) { add('education','🎒','教育費シミュ','「教育」関連 → 進路別必要総額'); add('lifeplan','📈','ライフプラン表','教育費ピーク + 退職タイミング可視化'); }
+            if (/老後|退職|年金/.test(t)) { add('retire','🏖','老後資金計算','「老後」関連'); add('nisa','💹','NISA/iDeCo配分','老後準備に直結'); }
+            if (/NISA|iDeCo|配分|積立/i.test(t)) { add('nisa','💹','NISA/iDeCo配分','「投資」関連 → 3パターン提示'); add('risk','🎯','リスク許容度診断','配分前のヒアリング'); }
+            if (/保険|保障/.test(t))    { add('insurance','🛡','保険見直し','「保険」関連'); add('hoshougaku','💉','必要保障額','遺族生活費まで'); }
+            if (/相続|贈与|遺産/.test(t)) { add('inherit','👴','相続控除計算','「相続」関連'); add('zoyo','🎁','生前贈与シミュ','年110万×7年加算'); }
+            if (/住宅|繰上|ローン/.test(t)) { add('mortgage','🏡','住宅ローン判定','「住宅」関連'); }
+            if (/節税|所得控除|確定申告/.test(t)) { add('kakutei','📄','確定申告チェック','「節税」関連 (自営)'); }
+            if (/自営|個人事業/.test(client.occupation || '')) { add('kakutei','📄','確定申告チェック','顧客台帳: 自営業 → 青色控除/iDeCo提案'); add('emergency','🆘','緊急予備資金','自営は収入変動リスク大'); }
+            if (recs.length === 0) return '';
+            const main = recs[0];
+            const subs = recs.slice(1, 5);
+            return `
+              <div style="background:linear-gradient(135deg,#EEF2FF,#FAFBFF);border:2px solid #5B5BF0;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+                <div style="font-size:10.5px;font-weight:800;letter-spacing:0.12em;color:#3730A3;margin-bottom:8px;text-transform:uppercase;">💡 Jobs からの提案 — このタスクには複数の資料が役立ちます</div>
+                <div style="font-size:12.5px;color:#1F2937;line-height:1.6;margin-bottom:10px;">
+                  タスク「<strong>${escapeHtml(t.slice(0, 40))}${t.length>40?'…':''}</strong>」に対して、<strong style="color:#5B5BF0;">${recs.length}つの資料</strong>を推奨します。
+                </div>
+                <div style="display:grid;gap:6px;">
+                  <button class="fp-deliv-rec" data-type="${escapeHtml(main.type)}" style="background:#5B5BF0;color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer;font-family:inherit;text-align:left;display:flex;align-items:center;gap:10px;font-weight:800;">
+                    <span style="font-size:18px;">${main.ico}</span>
+                    <div style="flex:1;">
+                      <div style="font-size:13px;">${escapeHtml(main.label)} <span style="background:rgba(255,255,255,0.25);font-size:9.5px;padding:2px 7px;border-radius:8px;margin-left:6px;letter-spacing:0.06em;">主推奨</span></div>
+                      <div style="font-size:10.5px;opacity:0.85;font-weight:500;margin-top:1px;">${escapeHtml(main.reason)}</div>
+                    </div>
+                  </button>
+                  ${subs.map(s => `
+                    <button class="fp-deliv-rec" data-type="${escapeHtml(s.type)}" style="background:#fff;color:#1F2937;border:1.5px solid #C7D2FE;padding:9px 12px;border-radius:7px;cursor:pointer;font-family:inherit;text-align:left;display:flex;align-items:center;gap:10px;font-weight:600;">
+                      <span style="font-size:16px;">${s.ico}</span>
+                      <div style="flex:1;">
+                        <div style="font-size:12.5px;font-weight:700;">${escapeHtml(s.label)}</div>
+                        <div style="font-size:10.5px;color:#64748B;font-weight:500;margin-top:1px;">${escapeHtml(s.reason)}</div>
+                      </div>
+                    </button>
+                  `).join('')}
+                </div>
+                <div style="font-size:10.5px;color:#6B7280;margin-top:10px;line-height:1.55;">↑ 上を押すと該当テンプレが選択され、AI生成までジャンプ。下の全テンプレリストからも選べます</div>
+              </div>
+            `;
+          })()}
           <div style="font-size:12.5px;color:#475569;line-height:1.7;margin-bottom:14px;">
-            この資料を AIで自動生成 → 顧客カードに添付して LINE 送信できます。<br>
-            生成内容を選んでください:
+            または以下から手動選択:
           </div>
           ${renderDeliverableMenu()}
           <div id="fp-deliv-result" style="margin-top:14px;display:none;"></div>
@@ -2560,14 +2613,38 @@
     document.body.appendChild(overlay);
     document.getElementById('fp-deliv-close').addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    // ★ Jobs 提案バッジから直接タイプ選択
+    overlay.querySelectorAll('.fp-deliv-rec').forEach(b => {
+      b.addEventListener('click', () => {
+        const type = b.dataset.type;
+        const target = overlay.querySelector(`.fp-deliv-type[data-type="${type}"]`);
+        if (target) {
+          target.click();
+          // 該当ボタンまで自動スクロール
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    });
     // ★ preselectedType 指定時はワンクリック導線: 該当タイプを自動選択 → AI生成まで一気に発火
     let _delivAutoFire = !!preselectedType;
     overlay.querySelectorAll('.fp-deliv-type').forEach(b => {
       b.addEventListener('click', () => {
         const type = b.dataset.type;
+        // ★ オーナーfb「選んだやつが分かるように色変える」: active 状態を見せる
+        overlay.querySelectorAll('.fp-deliv-type').forEach(o => {
+          o.style.borderColor = '#E2E8F0';
+          o.style.background = '#fff';
+          o.style.boxShadow = 'none';
+          o.style.opacity = '0.55';
+          o.querySelectorAll('div').forEach(d => { d.style.color = ''; });
+        });
+        b.style.borderColor = '#5B5BF0';
+        b.style.background = 'linear-gradient(135deg,#5B5BF0,#6D6DEF)';
+        b.style.boxShadow = '0 8px 22px rgba(91,91,240,0.35)';
+        b.style.opacity = '1';
+        b.querySelectorAll('div').forEach(d => { d.style.color = '#fff'; });
         const result = document.getElementById('fp-deliv-result');
         result.style.display = 'block';
-        // 1) まず テンプレ プレビューを表示 (即時)
         result.innerHTML = renderDeliverablePreview(type, client);
         // 2) 「✨ AIで このお客様用に個別作成」 ボタンを追加
         const aiBar = document.createElement('div');
@@ -2738,7 +2815,8 @@
     if (pill) pill.remove();
     pill = document.createElement('div');
     pill.id = jobId;
-    pill.style.cssText = 'position:fixed;right:18px;bottom:18px;background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;padding:14px 20px;border-radius:14px;box-shadow:0 16px 40px rgba(91,91,240,0.45),0 0 0 4px rgba(255,255,255,0.6);z-index:9999;font-family:inherit;min-width:280px;cursor:default;';
+    // ★ z-index 10100: モーダル overlay (10010-10030) の更に上に出す (オーナーfb「後ろに隠れて読めない」対策)
+    pill.style.cssText = 'position:fixed;right:18px;bottom:18px;background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;padding:14px 20px;border-radius:14px;box-shadow:0 16px 40px rgba(91,91,240,0.55),0 0 0 4px #fff,0 0 0 6px #5B5BF0;z-index:10100;font-family:inherit;min-width:310px;cursor:default;';
     pill.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;">
         <div style="width:36px;height:36px;border:3px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:fp-ai-spin 0.9s linear infinite;flex-shrink:0;"></div>
@@ -2776,7 +2854,7 @@
             <div style="flex:1;min-width:0;">
               <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.22em;opacity:0.9;">AI 生成 完了 (${elapsed}秒)</div>
               <div style="font-size:13px;font-weight:800;margin-top:2px;">${escapeHtml(client.name)} 様 / ${escapeHtml(type)}</div>
-              <div style="font-size:11px;opacity:0.92;margin-top:2px;">→ クリックで開いて編集</div>
+              <div style="font-size:11px;opacity:0.92;margin-top:2px;">→ クリックで開いて編集 (📁 顧客モーダル > 面談記録タブ にも保管)</div>
             </div>
             <button style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;width:24px;height:24px;border-radius:5px;cursor:pointer;font-size:13px;" data-pill-close>✕</button>
           </div>
