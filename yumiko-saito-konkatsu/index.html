@@ -490,7 +490,7 @@ body{
   transform:rotate(-10deg);
   clip-path:polygon(0 0, 100% 0, 100% 75%, 50% 100%, 0 75%);
 }
-/* キラッと光るシャイン */
+/* キラッと光るシャイン（ループアニメ） */
 .book-emblem .shine{
   position:absolute;
   top:14%;
@@ -502,6 +502,44 @@ body{
   transform:rotate(-30deg);
   pointer-events:none;
   filter:blur(2px);
+  animation:emblemShineLoop 4s 3s infinite ease-in-out;
+}
+@keyframes emblemShineLoop{
+  0%,80%,100%{opacity:.45; transform:rotate(-30deg) scale(1)}
+  10%{opacity:1; transform:rotate(-30deg) scale(1.25)}
+  20%{opacity:.7; transform:rotate(-30deg) scale(1.1)}
+}
+
+/* スパークル（メダルの周りでキラっと光る星） */
+.book-emblem .sparkle{
+  position:absolute;
+  width:8px; height:8px;
+  background:
+    linear-gradient(transparent 47%, rgba(255,255,200,.9) 47% 53%, transparent 53%),
+    linear-gradient(90deg, transparent 47%, rgba(255,255,200,.9) 47% 53%, transparent 53%);
+  pointer-events:none;
+  opacity:0;
+  filter:drop-shadow(0 0 4px rgba(255,230,140,.9));
+}
+.book-emblem .sparkle.s1{
+  top:-8px; right:18px;
+  animation:sparkleFlash 3s 3.5s infinite ease-in-out;
+}
+.book-emblem .sparkle.s2{
+  top:24px; right:-10px;
+  width:6px; height:6px;
+  animation:sparkleFlash 3s 4.8s infinite ease-in-out;
+}
+.book-emblem .sparkle.s3{
+  bottom:8px; left:-6px;
+  width:7px; height:7px;
+  animation:sparkleFlash 3s 6s infinite ease-in-out;
+}
+@keyframes sparkleFlash{
+  0%,100%{opacity:0; transform:scale(.4) rotate(0)}
+  15%{opacity:1; transform:scale(1.2) rotate(45deg)}
+  30%{opacity:.6; transform:scale(.8) rotate(90deg)}
+  45%{opacity:0; transform:scale(.4) rotate(135deg)}
 }
 @keyframes emblemStamp{
   0%{opacity:0; transform:scale(2.6) rotate(-28deg)}
@@ -2577,16 +2615,40 @@ input, textarea, select{font-size:16px !important}
   margin-top:4px;
 }
 .benefit-col .delta{
-  display:inline-block;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
   margin-top:8px;
-  padding:3px 9px;
+  padding:4px 11px 4px 9px;
   font-family:'Cinzel',serif;
-  font-size:9.5px;
-  letter-spacing:.16em;
+  font-size:10px;
+  letter-spacing:.14em;
   font-weight:800;
   border-radius:0;
   white-space:nowrap;
+  position:relative;
 }
+.benefit-col .delta::before{
+  font-size:11px;
+  line-height:1;
+  font-weight:900;
+  font-family:'Italiana',serif;
+  letter-spacing:0;
+}
+.benefit-col .delta.up::before{content:"▲"}
+.benefit-col .delta.down::before{content:"▼"}
+.benefit-col .delta.up{
+  background:linear-gradient(135deg, #2D6B45 0%, #1F4E32 100%);
+  color:#E8F5DD;
+  box-shadow:0 3px 8px -2px rgba(45,107,69,.5);
+}
+.benefit-col .delta.up::before{color:#A8E895}
+.benefit-col .delta.down{
+  background:linear-gradient(135deg, var(--seal-bright), var(--seal-deep));
+  color:var(--cream);
+  box-shadow:0 3px 8px -2px rgba(176,57,43,.5);
+}
+.benefit-col .delta.down::before{color:#FFD0C0}
 
 /* BEFOREカード：muted・くすんだ */
 .benefit-col.before{
@@ -3057,12 +3119,6 @@ input, textarea, select{font-size:16px !important}
     <source src="assets/hero-video.mp4" type="video/mp4">
   </video>
   <div class="vh-overlay">
-    <h1 class="vh-pain">会員はいるのに、<br>成婚が出ない…</h1>
-    <div class="vh-divider">
-      <span class="vh-divider-line"></span>
-      <span class="vh-divider-mark">⟡</span>
-      <span class="vh-divider-line"></span>
-    </div>
     <h2 class="vh-solve">そのお悩み、<br><span class="em">解決できます。</span></h2>
     <p class="vh-sub">30年、自社相談所を経営し続けた仲人が、<br>あなたの相談所運営に向き合います。</p>
     <div class="vh-cta-wrap">
@@ -3096,6 +3152,9 @@ input, textarea, select{font-size:16px !important}
         <span class="lbl-big">SELLER</span>
         <span class="lbl-bottom">CPEED<br>BOOKS 2026</span>
         <span class="shine"></span>
+        <span class="sparkle s1"></span>
+        <span class="sparkle s2"></span>
+        <span class="sparkle s3"></span>
       </div>
     </div>
   </div>
@@ -3302,7 +3361,7 @@ input, textarea, select{font-size:16px !important}
           <div class="stage">After</div>
           <div class="figure"><span class="num">25</span><span class="unit">%</span></div>
           <div class="metric">年間成婚率</div>
-          <span class="delta">+15 pt</span>
+          <span class="delta up">+15 pt</span>
         </div>
       </div>
       <div class="benefit-desc">仲人としての見立てを再点検し、成婚パターンに合わせた会員対応に切り替えることで、入会後1年以内の成婚率が大きく改善します。</div>
@@ -3327,7 +3386,7 @@ input, textarea, select{font-size:16px !important}
           <div class="stage">After</div>
           <div class="figure"><span class="num">20</span><span class="unit">万</span></div>
           <div class="metric">月の広告費</div>
-          <span class="delta">-30 万円</span>
+          <span class="delta down">-30 万円</span>
         </div>
       </div>
       <div class="benefit-desc">広告依存をやめ、紹介と継続会員の循環を作る運営に切り替えると、新規広告費を抑えながら入会数を維持できます。</div>
@@ -3352,7 +3411,7 @@ input, textarea, select{font-size:16px !important}
           <div class="stage">After</div>
           <div class="figure"><span class="num">20</span><span class="unit">%</span></div>
           <div class="metric">半年退会率</div>
-          <span class="delta">-20 pt</span>
+          <span class="delta down">-20 pt</span>
         </div>
       </div>
       <div class="benefit-desc">退会の兆候を早期に拾い、運営側からの能動的なフォロー設計を入れると、半年継続率が大きく伸び、利益が手元に残ります。</div>

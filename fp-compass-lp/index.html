@@ -77,7 +77,41 @@
   .demo-cap-mini{font-family:Manrope,sans-serif;font-size:9.5px;font-weight:800;letter-spacing:0.22em;background:rgba(255,255,255,0.18);padding:3px 9px;border-radius:99px;white-space:nowrap;}
   .demo-cap-title{font-family:'Noto Serif JP',serif;font-weight:700;font-size:14px;line-height:1.45;letter-spacing:0.01em;}
   .demo-result{background:#ECFDF5;color:#065F46;padding:10px 18px;font-size:12px;font-weight:700;border-top:1px solid #6EE7B7;flex-shrink:0;}
-  .mini-demo{padding:18px;background:#FAFBFC;flex:1;display:flex;flex-direction:column;max-height:520px;overflow-y:auto;}
+  .mini-demo{padding:18px;background:#FAFBFC;flex:1;display:flex;flex-direction:column;min-height:380px;max-height:540px;overflow-y:auto;}
+
+  /* 「押せます」 アピール pulse */
+  @keyframes mdPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(91,91,240,0.55), 0 4px 12px rgba(91,91,240,0.25); transform: scale(1); }
+    50%      { box-shadow: 0 0 0 10px rgba(91,91,240,0), 0 6px 18px rgba(91,91,240,0.35); transform: scale(1.04); }
+  }
+  @keyframes mdPulseOrange {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.55), 0 4px 12px rgba(245,158,11,0.25); transform: scale(1); }
+    50%      { box-shadow: 0 0 0 10px rgba(245,158,11,0), 0 6px 18px rgba(245,158,11,0.35); transform: scale(1.04); }
+  }
+  @keyframes mdNudge {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.025); }
+  }
+  .md-pulse{animation:mdPulse 1.6s ease-in-out infinite;position:relative;z-index:1;}
+  .md-pulse-orange{animation:mdPulseOrange 1.6s ease-in-out infinite;position:relative;}
+  .md-nudge{animation:mdNudge 1.6s ease-in-out infinite;}
+  .md-pulse::after, .md-pulse-orange::after{
+    content:'👈'; position:absolute; left:calc(100% + 10px); top:50%; transform:translateY(-50%);
+    font-size:18px; animation:mdNudge 1.6s ease-in-out infinite;
+    pointer-events:none;
+  }
+
+  /* TRY ME 「ここから押して!」 マーカー */
+  .md-tryme{
+    display:inline-flex;align-items:center;gap:6px;
+    background:linear-gradient(135deg,#F59E0B,#EAB308);color:#fff;
+    padding:5px 10px;border-radius:99px;
+    font-family:Manrope,sans-serif;font-size:10.5px;font-weight:800;letter-spacing:0.08em;
+    margin-bottom:10px;
+    box-shadow:0 3px 10px rgba(245,158,11,0.3);
+    align-self:flex-start;
+  }
+  .md-tryme::before{content:'👉';font-size:11px;}
   .md-customer{display:flex;align-items:center;gap:10px;padding:9px 13px;background:#fff;border:1px solid var(--line);border-radius:8px;margin-bottom:12px;flex-shrink:0;}
   .md-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),var(--pink));color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-weight:700;font-size:15px;flex-shrink:0;}
   .md-name{font-weight:800;font-size:12.5px;color:var(--ink);}
@@ -751,15 +785,16 @@ function renderDemo1(reset) {
     { rank: 3, date: '6月14日(土) 10:00' },
   ];
   el.innerHTML = custCard() + `
+    <div class="md-tryme">押して試す</div>
     <div class="md-text">↓ お客様の希望3つから 1つタップ</div>
-    <div id="d1-slots">${slots.map(s => `<div class="md-slot" data-rank="${s.rank}" data-date="${s.date}">
+    <div id="d1-slots">${slots.map((s, i) => `<div class="md-slot${i === 0 ? ' md-pulse-orange' : ''}" data-rank="${s.rank}" data-date="${s.date}">
       <div><div class="md-slot-rank">第${s.rank}希望</div><div class="md-slot-date">${s.date}</div></div>
       <div class="md-slot-cta">✓ この日で確定 →</div>
     </div>`).join('')}</div>
     <div id="d1-result"></div>`;
   el.querySelectorAll('.md-slot').forEach(b => {
     b.addEventListener('click', () => {
-      el.querySelectorAll('.md-slot').forEach(x => x.classList.remove('selected'));
+      el.querySelectorAll('.md-slot').forEach(x => { x.classList.remove('selected'); x.classList.remove('md-pulse-orange'); });
       b.classList.add('selected');
       const date = b.dataset.date;
       document.getElementById('d1-result').innerHTML = `
@@ -778,14 +813,16 @@ function renderDemo1(reset) {
 function renderDemo2() {
   const el = document.getElementById('mini-demo-2'); if (!el) return;
   el.innerHTML = custCard() + `
+    <div class="md-tryme">押して試す</div>
     <div class="md-text">↓ ボタン押すと録画開始 → AI議事録 完成まで シミュレート</div>
-    <div style="text-align:center;margin:8px 0;">
-      <button class="md-btn" id="d2-start">● 録画ONでZoom開始</button>
+    <div style="text-align:center;margin:14px 0;">
+      <button class="md-btn md-pulse" id="d2-start">● 録画ONでZoom開始</button>
     </div>
     <div id="d2-progress"></div>`;
   document.getElementById('d2-start').addEventListener('click', async () => {
-    document.getElementById('d2-start').disabled = true;
-    document.getElementById('d2-start').textContent = '⏺ 録画中…';
+    const btn = document.getElementById('d2-start');
+    btn.disabled = true; btn.classList.remove('md-pulse');
+    btn.textContent = '⏺ 録画中…';
     const steps = [
       { label: '🎬 Zoom 起動 + 録画ON', delay: 600 },
       { label: '🎤 面談中… (音声収集中)', delay: 1400 },
@@ -825,12 +862,13 @@ function renderDemo3() {
   const el = document.getElementById('mini-demo-3'); if (!el) return;
   const tpls = [['cashflow','📊 キャッシュフロー表'],['education','🎒 教育費シミュ'],['nisa','💹 NISA配分'],['insurance','🛡 保険見直し']];
   el.innerHTML = custCard() + `
+    <div class="md-tryme">押して試す</div>
     <div class="md-text">↓ 18種テンプレから 1つ選択</div>
-    <div class="md-tpls">${tpls.map(t => `<button class="md-tpl" data-tpl="${t[0]}">${t[1]}</button>`).join('')}</div>
+    <div class="md-tpls">${tpls.map((t, i) => `<button class="md-tpl${i === 0 ? ' md-nudge' : ''}" data-tpl="${t[0]}">${t[1]}</button>`).join('')}</div>
     <div id="d3-result"></div>`;
   el.querySelectorAll('.md-tpl').forEach(b => {
     b.addEventListener('click', () => {
-      el.querySelectorAll('.md-tpl').forEach(x => x.classList.remove('selected'));
+      el.querySelectorAll('.md-tpl').forEach(x => { x.classList.remove('selected'); x.classList.remove('md-nudge'); });
       b.classList.add('selected');
       const tpl = b.dataset.tpl;
       const r = document.getElementById('d3-result');
@@ -891,13 +929,14 @@ function drawD4() {
   const el = document.getElementById('mini-demo-4');
   const all = [...D4_BASE, ...D4_NEW.slice(0, d4Step)].sort((a,b) => a.date.localeCompare(b.date));
   el.innerHTML = custCard() + `
+    ${d4Step === 0 ? '<div class="md-tryme">押して試す</div>' : ''}
     <div class="md-text">↓ 「議事録から抽出」ボタンを押すと、抽出されたタスクが自動で時系列挿入</div>
     <div class="md-tl">${all.map(e => `<div class="md-tl-item${D4_NEW.slice(0,d4Step).includes(e) && d4Step > 0 && D4_NEW[d4Step-1].date === e.date ? ' new' : ''}">
       <div class="md-tl-date">${e.date}</div>
       <div class="md-tl-label">${e.label}</div>
     </div>`).join('')}</div>
-    <div style="display:flex;gap:8px;margin-top:12px;">
-      ${d4Step < D4_NEW.length ? `<button class="md-btn" id="d4-next">+ 議事録から抽出</button>` : ''}
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:center;">
+      ${d4Step < D4_NEW.length ? `<button class="md-btn md-pulse" id="d4-next">+ 議事録から抽出</button>` : ''}
       ${d4Step > 0 ? `<button class="md-btn md-btn-secondary" style="font-size:11px;padding:8px 14px;" onclick="renderDemo4()">↺ リセット</button>` : ''}
     </div>`;
   const nb = document.getElementById('d4-next');
