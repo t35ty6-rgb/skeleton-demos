@@ -2887,27 +2887,18 @@
   async function generateDeliverableWithAI(type, taskTitle, client, resultEl) {
     const btn = document.getElementById('fp-deliv-ai');
     if (btn) { btn.disabled = true; btn.textContent = '✨ Claude 生成中… (30〜60秒)'; }
-    // ★ オーナーfb「生成中も別作業できるように + 目立つポップアップ」
-    // モーダル右上に「━ 最小化」ボタン追加 (生成中はずっと表示)
+    // ★ オーナーfb「生成中ピルが overlay の後ろに隠れて見えない」+ 「緑タップで再生成バグ」
+    // → 生成開始と同時にモーダルを即 hide。pill だけ前面に。完了クリックは display:flex で復元のみ (新規生成しない)
     const dModal = document.getElementById('fp-deliv-modal');
-    if (dModal && !dModal.querySelector('[data-deliv-min]')) {
-      const closeBtn = dModal.querySelector('#fp-deliv-close');
-      if (closeBtn && closeBtn.parentElement) {
-        const minBtn = document.createElement('button');
-        minBtn.dataset.delivMin = '1';
-        minBtn.style.cssText = 'background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.32);color:#fff;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:14px;margin-right:6px;';
-        minBtn.innerHTML = '━';
-        minBtn.title = '最小化 (別作業しながら生成を待つ)';
-        minBtn.addEventListener('click', () => { dModal.style.display = 'none'; });
-        closeBtn.parentElement.insertBefore(minBtn, closeBtn);
-      }
-    }
-    // 進捗フローティングピル表示 (モーダル閉じても見える)
+    if (dModal) dModal.style.display = 'none';
     const progressPill = showAiProgressPill(client, type, taskTitle, () => {
-      // 完了後クリック: モーダル復元 + 結果反映済の状態に
+      // 完了 pill クリック: 既存モーダルの display を戻すだけ (再生成しない)
       const m = document.getElementById('fp-deliv-modal');
-      if (m) m.style.display = 'flex';
-      else openDeliverableDraftModal(client, taskTitle, type);
+      if (m) {
+        m.style.display = 'flex';
+        // resultEl まで自動スクロール (結果が見えるように)
+        setTimeout(() => { try { resultEl.scrollIntoView({behavior:'smooth', block:'start'}); } catch(_){} }, 100);
+      }
     });
     // 議事録+台帳データ集める
     const myBks = ((window.LineAppLiveData && window.LineAppLiveData.bookings) || []).filter(b => b.userId === client.lineFriendId || b.name === client.name);
