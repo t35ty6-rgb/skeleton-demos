@@ -1597,42 +1597,20 @@
 
   // (旧トースト系は unified progress panel に統合済み)
 
-  // AI 結果を localStorage にマルチキー保存 (userId / ts / customerName 全部に同じデータ)
-  // + GAS にも永続化送信 (別ブラウザでも見えるよう)
+  // AI 結果保存: GAS を一次ソース、localStorage は network失敗時のbackupのみ
+  // (旧マルチキー localStorage 散らばりを廃止、データの真実は GAS シートに一本化)
   function autoSaveAIResult(result, customerName, booking) {
     if (!result || !result.ok) return;
     const bookingTs = (booking && booking.ts) || '';
     const userId   = (booking && booking.userId) || '';
     const nameKey  = customerName || (booking && booking.name) || '';
-    // 保存先キーを全部 (どのキーで lookup されても拾える)
-    const keys = new Set();
-    if (userId) keys.add('fp-ai-' + userId);
-    if (bookingTs) keys.add('fp-ai-' + bookingTs);
-    if (nameKey) keys.add('fp-ai-' + nameKey);
-    if (keys.size === 0) {
-      console.warn('autoSaveAIResult: no key candidates', { customerName, booking });
-      return;
-    }
-    const taskKeys = new Set();
-    if (userId) taskKeys.add('fp-tasks-' + userId);
-    if (bookingTs) taskKeys.add('fp-tasks-' + bookingTs);
-    if (nameKey) taskKeys.add('fp-tasks-' + nameKey);
-    // タスクを 全キーに upsert (bookingTs 単位で重複排除)
     const newTasks = (result.tasks || []).map(t => ({
       task: t.task, due: t.dueDate, priority: t.priority, icon: t.icon,
       recommendedAction: t.recommendedAction, actionTemplate: t.lineDraft,
       createdAt: new Date().toISOString(), customerName: nameKey, bookingTs,
     }));
-    taskKeys.forEach(k => {
-      const existing = JSON.parse(localStorage.getItem(k) || '[]')
-        .filter(t => t.bookingTs !== bookingTs);
-      localStorage.setItem(k, JSON.stringify(existing.concat(newTasks)));
-    });
-    // 議事録を 全キーに upsert (bookingTs 単位で置換)
     const entry = {
-      bookingTs,
-      userId,
-      customerName: nameKey,
+      bookingTs, userId, customerName: nameKey,
       date: booking && booking.date,
       transcript: result.transcript || '',
       summary: result.summary || '',
@@ -1641,22 +1619,42 @@
       next_meeting_suggestion: result.next_meeting_suggestion || '',
       createdAt: new Date().toISOString(),
     };
-    keys.forEach(k => {
-      const hist = JSON.parse(localStorage.getItem(k) || '[]');
-      const idx = hist.findIndex(a => a.bookingTs === bookingTs);
-      if (idx >= 0) hist[idx] = entry; else hist.push(entry);
-      localStorage.setItem(k, JSON.stringify(hist));
+    // GAS シート 一次保存 (成功すれば fetchLiveData で全ブラウザ反映)
+    fetch(CLOUD_RUN_BASE + '/api/save-ai-result', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entry, tasks: newTasks }),
+    }).then(r => r.json()).then(d => {
+      if (d.ok) {
+        console.log('[autoSaveAIResult] GAS 保存 OK');
+        // 成功時のみ localStorage に最低限の backup (1キー = bookingTs単位)
+        try {
+          const k = 'fp-ai-backup-' + (bookingTs || userId || nameKey || Date.now());
+          localStorage.setItem(k, JSON.stringify({ entry, tasks: newTasks }));
+        } catch (_) {}
+        // 顧客台帳再描画 (GAS から取り直す)
+        fetchLiveData().catch(() => {});
+      } else {
+        // GAS 失敗時のみ localStorage に多重保存 (オフライン耐性)
+        console.warn('[autoSaveAIResult] GAS 失敗→localStorage backup', d);
+        saveAIToLocalBackup(entry, newTasks);
+      }
+    }).catch(e => {
+      console.warn('[autoSaveAIResult] network失敗→localStorage backup', e);
+      saveAIToLocalBackup(entry, newTasks);
     });
-    // GAS 永続化 (best-effort、失敗してもローカルに残ってるので無視)
+  }
+
+  // GAS到達不能時の localStorage backup (network回復時に再送する未来用)
+  function saveAIToLocalBackup(entry, tasks) {
     try {
-      fetch(CLOUD_RUN_BASE + '/api/save-ai-result', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entry, tasks: newTasks }),
-      }).catch(() => {});
+      const pending = JSON.parse(localStorage.getItem('fp-ai-pending-sync') || '[]');
+      pending.push({ entry, tasks, queuedAt: new Date().toISOString() });
+      localStorage.setItem('fp-ai-pending-sync', JSON.stringify(pending));
+      // 表示用backup も
+      const k = 'fp-ai-backup-' + (entry.bookingTs || entry.userId || Date.now());
+      localStorage.setItem(k, JSON.stringify({ entry, tasks }));
     } catch (_) {}
-    console.log('[autoSaveAIResult] saved keys:', [...keys, ...taskKeys].join(', '));
-    if (window.FPCrmRefreshClients) window.FPCrmRefreshClients();
   }
 
   // AI 議事録生成 (Drive アップロードと並行)
