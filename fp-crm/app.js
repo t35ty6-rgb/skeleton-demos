@@ -1868,14 +1868,14 @@
             <div class="cd-flow-title">直近の推奨アクションなし</div>
             <div class="cd-flow-reason">この方のライフイベントや接触状況からは、特に緊急のアクションはありません。</div>
             <div class="cd-flow-steps">
-              <button class="cd-flow-step cd-flow-step-active fp-draft-cta" id="modal-draft-btn" style="background:linear-gradient(135deg,#5B5BF0 0%,#7C3AED 50%,#5B5BF0 100%);background-size:200% 200%;color:#fff !important;border:none;animation:fp-draft-cta-pulse 1.8s ease-in-out infinite,fp-draft-cta-gradient 3s linear infinite;box-shadow:0 8px 24px rgba(91,91,240,0.45),0 0 0 4px rgba(255,255,255,0.5);">
-                <span class="cd-flow-step-no" style="color:#fff;background:rgba(255,255,255,0.22);"><i data-lucide="wand-2"></i></span>
+              <button class="cd-flow-step cd-flow-step-active fp-draft-cta" id="modal-draft-btn" style="background:linear-gradient(135deg,#F97316 0%,#EA580C 50%,#F97316 100%);background-size:200% 200%;color:#fff !important;border:none;animation:fp-draft-cta-pulse 1.6s ease-in-out infinite,fp-draft-cta-gradient 2.5s linear infinite;box-shadow:0 8px 24px rgba(249,115,22,0.55),0 0 0 4px rgba(255,255,255,0.5);">
+                <span class="cd-flow-step-no" style="color:#fff;background:rgba(255,255,255,0.25);"><i data-lucide="wand-2"></i></span>
                 <span class="cd-flow-step-body">
-                  <span class="cd-flow-step-label" style="color:#fff !important;font-weight:900;letter-spacing:0.04em;">✨ AI返信下書きを作る</span>
-                  <span class="cd-flow-step-sub" style="color:rgba(255,255,255,0.92) !important;font-weight:600;">挨拶や定期連絡を起案 — 押すと自動で生成</span>
+                  <span class="cd-flow-step-label" style="color:#fff !important;font-weight:900;letter-spacing:0.04em;">👉 ✨ AI返信下書きを作る</span>
+                  <span class="cd-flow-step-sub" style="color:rgba(255,255,255,0.95) !important;font-weight:600;">挨拶や定期連絡を起案 — 押すと自動で生成</span>
                 </span>
               </button>
-              <style>@keyframes fp-draft-cta-pulse{0%,100%{transform:translateY(0) scale(1);box-shadow:0 8px 24px rgba(91,91,240,0.45),0 0 0 4px rgba(255,255,255,0.5)}50%{transform:translateY(-2px) scale(1.015);box-shadow:0 14px 32px rgba(91,91,240,0.6),0 0 0 6px rgba(255,255,255,0.55)}}@keyframes fp-draft-cta-gradient{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}</style>
+              <style>@keyframes fp-draft-cta-pulse{0%,100%{transform:translateY(0) scale(1);box-shadow:0 8px 24px rgba(249,115,22,0.55),0 0 0 4px rgba(255,255,255,0.5)}50%{transform:translateY(-2.5px) scale(1.025);box-shadow:0 16px 36px rgba(249,115,22,0.72),0 0 0 7px rgba(255,255,255,0.6)}}@keyframes fp-draft-cta-gradient{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}</style>
             </div>
             <button class="cd-flow-edit ghost-btn" id="modal-edit-btn"><i data-lucide="pencil"></i><span>顧客情報を編集</span></button>
           </div>`}
