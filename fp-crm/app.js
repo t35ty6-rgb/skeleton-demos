@@ -1332,95 +1332,153 @@
           </div>`;
         }).join('');
 
-    // Timeline (マイルストーン軸 — オーナーfb「タスク羅列じゃなく次のZoom/提案に向けて」)
+    // Timeline (次Zoom繋ぎ KPI 達成率方式 — オーナーfb「1回目→2回目に繋ぐKPI / 2回目→3回目に繋ぐKPI」)
     const timelineHtml2 = (function () {
-      if (events.length === 0) return '<div class="cd-empty">向こう30年に予測イベントなし</div>';
-
       const TODAY = new Date(); TODAY.setHours(0,0,0,0);
       const futureMeetings = events.filter(e => e.kind === 'meeting' && new Date(e.date) > TODAY);
       const pastMeetings   = events.filter(e => e.kind === 'meeting' && new Date(e.date) <= TODAY)
                                    .sort((a,b)=> new Date(b.date) - new Date(a.date));
       const lastMeeting    = pastMeetings[0];
+      const meetingsSoFar  = pastMeetings.length;
 
-      // ★ 次のマイルストーンを判定
-      let milestone = null;
-      if (futureMeetings.length > 0) {
-        milestone = { date: new Date(futureMeetings[0].date), label: '第' + (pastMeetings.length + 1) + '回 Zoom面談', kind: 'meeting' };
-      } else if (lastMeeting) {
-        // 最終面談から経過した日数で次マイルストーン推定
-        const last = new Date(lastMeeting.date);
-        const daysSinceLast = Math.floor((TODAY - last) / 86400000);
-        const meetingsSoFar = pastMeetings.length;
-        if (meetingsSoFar === 1) {
-          // 初回終わったばかり → 第2回 Zoom (2週間後目安)
-          const d = new Date(last); d.setDate(d.getDate() + 14);
-          milestone = { date: d, label: '第2回 Zoom面談 (目安: 初回+2週)', kind: 'meeting', dashed: true };
-        } else if (meetingsSoFar === 2) {
-          // 2回目終了 → 提案プレゼン
-          const d = new Date(last); d.setDate(d.getDate() + 14);
-          milestone = { date: d, label: '提案プレゼン (目安: 2回目+2週)', kind: 'proposal', dashed: true };
-        } else {
-          // 3回目以降 → クロージング or 定期見直し
-          const d = new Date(last); d.setDate(d.getDate() + 30);
-          milestone = { date: d, label: meetingsSoFar >= 4 ? '定期見直し面談' : '提案クロージング', kind: 'closing', dashed: true };
-        }
+      // ★ KPIエンジン: ステージ別の「次回に繋ぐ」達成指標を定義
+      // 評価軸:
+      //  - status: 'done'(達成) / 'progress'(進行中) / 'todo'(未着手) / 'risk'(期限超過)
+      //  - howTo: 達成方法 (FPがやること)
+      const hasAiResult = ((window.LineAppLiveData && window.LineAppLiveData.ai_results) || [])
+        .some(r => (r.userId === c.lineFriendId) || (r.customerName === c.name));
+      const lineMsgs = (c.lineHistory || []);
+      const fpMsgsAfterLast = lastMeeting
+        ? lineMsgs.filter(m => m.from === 'fp' && new Date(m.ts || m.date) > new Date(lastMeeting.date))
+        : [];
+      const userReplyAfterLast = lastMeeting
+        ? lineMsgs.some(m => m.from === 'user' && new Date(m.ts || m.date) > new Date(lastMeeting.date))
+        : false;
+      const hasFutureBooking = futureMeetings.length > 0;
+      const hasRecentProposal = (c.proposals || []).some(p => new Date(p.date) > new Date(Date.now() - 30*86400000));
+      const aiResultsForC = ((window.LineAppLiveData && window.LineAppLiveData.ai_results) || [])
+        .filter(r => (r.userId === c.lineFriendId) || (r.customerName === c.name));
+      const latestAi = aiResultsForC.sort((a,b)=> new Date(b.ts||0) - new Date(a.ts||0))[0];
+      const hearingDepth = latestAi ? ((typeof latestAi.key_concerns === 'string' ? JSON.parse(latestAi.key_concerns || '[]') : (latestAi.key_concerns || [])).length) : 0;
+
+      // ★ ステージ判定
+      let stage, stageLabel, nextStageLabel, stageColor;
+      if (meetingsSoFar === 0) {
+        stage = '0->1'; stageLabel = '初回 Zoom 前'; nextStageLabel = '初回 Zoom 実施'; stageColor = '#7c3aed';
+      } else if (meetingsSoFar === 1) {
+        stage = '1->2'; stageLabel = '1回目 終了'; nextStageLabel = '2回目 Zoom'; stageColor = '#0ea5e9';
+      } else if (meetingsSoFar === 2) {
+        stage = '2->3'; stageLabel = '2回目 終了'; nextStageLabel = '3回目 (提案プレゼン)'; stageColor = '#f59e0b';
+      } else {
+        stage = '3->close'; stageLabel = (meetingsSoFar) + '回目 終了'; nextStageLabel = 'クロージング/契約'; stageColor = '#10b981';
       }
 
-      // タスクを「マイルストーン日まで」と「それ以降」に分ける
-      const tasks = events.filter(e => e.kind === 'task');
-      const beforeMs = milestone
-        ? tasks.filter(t => new Date(t.date) <= new Date(milestone.date))
-        : tasks.slice(0, 5);
-      const afterMs = milestone
-        ? tasks.filter(t => new Date(t.date) > new Date(milestone.date))
-        : tasks.slice(5);
+      // ★ KPI 定義 (ステージ毎)
+      const kpiSets = {
+        '0->1': [
+          { name: '日程確定', status: hasFutureBooking ? 'done' : 'todo', howTo: 'LINE で候補日3つ送って → お客様タップで自動確定' },
+          { name: '事前アンケート回収', status: ((c.surveys && c.surveys.length > 0) || (window.LineAppLiveData && (window.LineAppLiveData.survey_answers || []).some(s => s.userId === c.lineFriendId))) ? 'done' : 'todo', howTo: '公式LINE登録時に自動配信 → 5項目回答' },
+          { name: 'Zoom URL 発行', status: hasFutureBooking ? 'done' : 'todo', howTo: '候補日確定と同時に自動発行 (S2S OAuth)' },
+          { name: '事前リマインド', status: hasFutureBooking && fpMsgsAfterLast.length > 0 ? 'done' : 'todo', howTo: '前日に LINE で「明日XX時 Zoom です」自動送信' },
+        ],
+        '1->2': [
+          { name: '初回 議事録 生成', status: hasAiResult ? 'done' : 'todo', howTo: 'Zoom録画 → ■停止 → AI議事録自動生成' },
+          { name: 'お礼/感想ヒアリング LINE', status: fpMsgsAfterLast.some(m => /ありがとう|お礼|感想|いかが/.test(m.text||'')) ? 'done' : 'todo', howTo: '面談終了2-3h以内に「本日はありがとうございました」+感想質問' },
+          { name: 'お客様からの返信あり', status: userReplyAfterLast ? 'done' : (fpMsgsAfterLast.length > 0 ? 'progress' : 'todo'), howTo: '返信なければ3日後にもう一度短文 LINE で繋ぐ' },
+          { name: '2回目 候補日 提示', status: hasFutureBooking ? 'done' : 'todo', howTo: 'LINE で候補日3つ → お客様タップで自動確定' },
+          { name: 'ヒアリング深掘り (3項目以上)', status: hearingDepth >= 3 ? 'done' : (hearingDepth >= 1 ? 'progress' : 'todo'), howTo: 'AI議事録の key_concerns が 3個以上抽出されてればOK' },
+        ],
+        '2->3': [
+          { name: '2回目 議事録 生成', status: aiResultsForC.length >= 2 ? 'done' : 'todo', howTo: 'Zoom録画 → ■停止 → AI議事録自動生成' },
+          { name: 'ライフプラン作成', status: (c.deliverables || []).some(d => /ライフプラン/.test(d.title||'')) ? 'done' : 'todo', howTo: '成果物タブ → ライフプラン テンプレ → AI下書き → 送付' },
+          { name: 'シミュレーション 3パターン', status: (c.deliverables || []).filter(d => /シミュ|試算/.test(d.title||'')).length >= 1 ? 'progress' : 'todo', howTo: '保守的/標準/積極の3パターン → 提案プレゼンの主役' },
+          { name: '提案商品 候補絞り込み', status: hasRecentProposal ? 'done' : 'todo', howTo: 'NISA/iDeCo/保険 から お客様に最適な 1-3商品を選定' },
+          { name: '3回目 (提案) 日程確定', status: hasFutureBooking ? 'done' : 'todo', howTo: 'LINE で候補日 → 提案資料は前日までに送付' },
+        ],
+        '3->close': [
+          { name: '提案資料 送付済', status: hasRecentProposal ? 'done' : 'todo', howTo: '提案プレゼン前日までに PDF を LINE で先出し' },
+          { name: '質問対応 完了', status: userReplyAfterLast ? 'progress' : 'todo', howTo: 'お客様の懸念事項を1つ1つ潰す (LINE or 短時間 Zoom)' },
+          { name: '契約意向 確認', status: 'todo', howTo: '「次のステップ」を明示 (申込書送付 / 比較検討期間)' },
+          { name: '契約 or 次回 見直し設定', status: 'todo', howTo: '契約 → 申込手続き / 検討 → 1ヶ月後 再面談セット' },
+        ],
+      };
+      const kpis = kpiSets[stage] || [];
+      const doneCount = kpis.filter(k => k.status === 'done').length;
+      const progressCount = kpis.filter(k => k.status === 'progress').length;
+      const pct = kpis.length === 0 ? 0 : Math.round((doneCount + progressCount * 0.5) / kpis.length * 100);
 
-      const top = beforeMs.slice(0, 5);
-      const rest = beforeMs.slice(5).concat(afterMs);
+      // ★ マイルストーン日 (次の Zoom 予定 or 推定)
+      let msDate = null, msIsActual = false;
+      if (futureMeetings.length > 0) { msDate = new Date(futureMeetings[0].date); msIsActual = true; }
+      else if (lastMeeting) {
+        const offset = stage === '2->3' ? 14 : (stage === '3->close' ? 30 : 14);
+        msDate = new Date(lastMeeting.date); msDate.setDate(msDate.getDate() + offset);
+      }
+      const daysToMs = msDate ? Math.ceil((msDate - TODAY) / 86400000) : null;
 
-      const renderRow = (ev, opts) => {
+      // ★ KPI カード レンダリング
+      const statusBadge = (s) => {
+        if (s === 'done')     return '<span style="background:#10b981;color:#fff;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:800;letter-spacing:0.04em;">✓ 達成</span>';
+        if (s === 'progress') return '<span style="background:#f59e0b;color:#fff;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:800;letter-spacing:0.04em;">⏳ 進行中</span>';
+        if (s === 'risk')     return '<span style="background:#dc2626;color:#fff;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:800;letter-spacing:0.04em;">⚠ 要対応</span>';
+        return '<span style="background:#e5e7eb;color:#6b7280;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:800;letter-spacing:0.04em;">○ 未着手</span>';
+      };
+
+      const kpiRows = kpis.map(k => `
+        <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:3px;">${escapeHtml(k.name)}</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">↳ ${escapeHtml(k.howTo)}</div>
+          </div>
+          <div style="align-self:flex-start;">${statusBadge(k.status)}</div>
+        </div>
+      `).join('');
+
+      const headerHtml = `
+        <div style="background:linear-gradient(135deg,${stageColor},#1b2845);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+            <div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:0.14em;opacity:0.75;">STAGE: ${escapeHtml(stageLabel)} → ${escapeHtml(nextStageLabel)}</div>
+              <div style="font-size:16px;font-weight:800;margin-top:2px;">繋ぎ KPI 達成率 ${pct}%</div>
+            </div>
+            ${msDate ? `<div style="text-align:right;">
+              <div style="font-size:10.5px;opacity:0.75;font-weight:700;letter-spacing:0.08em;">${msIsActual ? 'NEXT ZOOM' : '目安日'}</div>
+              <div style="font-size:14px;font-weight:800;">${fmtDate(msDate)}</div>
+              <div style="font-size:11px;opacity:0.85;">あと ${daysToMs} 日</div>
+            </div>` : ''}
+          </div>
+          <div style="background:rgba(255,255,255,0.18);border-radius:99px;height:6px;overflow:hidden;">
+            <div style="background:#fff;height:100%;width:${pct}%;transition:width 0.4s;"></div>
+          </div>
+          <div style="margin-top:8px;font-size:11px;opacity:0.85;">${doneCount}/${kpis.length} 達成 ${progressCount > 0 ? ' · ' + progressCount + ' 進行中' : ''}</div>
+        </div>
+      `;
+
+      const kpiHtml = `
+        <div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 14px 10px;margin-bottom:14px;">
+          ${kpiRows}
+        </div>
+      `;
+
+      // 参考: 既存タスク/イベント (折り畳み)
+      const renderRow = (ev) => {
         const rel = window.LifeEvents.formatRelative(ev.date);
-        const dashedCls = opts && opts.dashed ? ' cd-tl-row-dashed' : '';
-        return `<div class="cd-tl-row${dashedCls}">
+        return `<div class="cd-tl-row">
           <span class="cd-tl-dot cd-cat-${ev.cat}${ev.major ? ' major' : ''}"></span>
           <span class="cd-tl-date">${fmtDate(ev.date)}</span>
           <span class="cd-tl-label">${escapeHtml(ev.label)}</span>
-          <span class="cd-tl-who">${escapeHtml(ev.who || '')}</span>
           <span class="cd-tl-rel">${rel}</span>
         </div>`;
       };
-
-      // マイルストーン ヘッダー
-      let milestoneHtml = '';
-      if (milestone) {
-        const days = Math.ceil((new Date(milestone.date) - TODAY) / 86400000);
-        const dateLabel = fmtDate(milestone.date);
-        const kindIcon = milestone.kind === 'meeting' ? '🎯' : milestone.kind === 'proposal' ? '📊' : '✍️';
-        milestoneHtml = `
-          <div style="background:linear-gradient(135deg,#1b2845,#0f1729);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:14px;">
-            <div style="font-size:10.5px;font-weight:700;letter-spacing:0.14em;opacity:0.7;margin-bottom:4px;">NEXT MILESTONE</div>
-            <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
-              <div style="font-size:17px;font-weight:800;">${kindIcon} ${escapeHtml(milestone.label)}</div>
-              <div style="font-size:13px;opacity:0.85;">${dateLabel} <span style="margin-left:6px;color:#fbbf24;font-weight:700;">(あと${days}日)</span></div>
-              ${milestone.dashed ? '<div style="font-size:10.5px;color:#94a3b8;">※ 目安日</div>' : ''}
-            </div>
-            <div style="margin-top:8px;font-size:11.5px;opacity:0.8;">↓ それまでに済ませる事 (${top.length}件)</div>
-          </div>
-        `;
-      }
-
-      const beforeHtml = top.length === 0
-        ? '<div class="cd-empty" style="font-size:12px;color:var(--muted);padding:14px 0;">マイルストーンまでのタスクなし</div>'
-        : top.map(t => renderRow(t)).join('');
-
-      const restHtml = rest.length === 0 ? '' : `
-        <details style="margin-top:14px;">
-          <summary style="cursor:pointer;font-size:12px;color:var(--muted);font-weight:700;letter-spacing:0.06em;padding:8px 0;border-top:1px dashed var(--line);">📅 その後の予定 (${rest.length}件)</summary>
-          <div style="margin-top:8px;">${rest.slice(0, 10).map(r => renderRow(r, {dashed:true})).join('')}</div>
+      const allEvents = events.slice(0, 15);
+      const eventsFold = allEvents.length === 0 ? '' : `
+        <details>
+          <summary style="cursor:pointer;font-size:12px;color:var(--muted);font-weight:700;letter-spacing:0.06em;padding:8px 0;border-top:1px dashed var(--line);">📅 イベント/タスク 全件 (${allEvents.length}件)</summary>
+          <div style="margin-top:8px;">${allEvents.map(renderRow).join('')}</div>
         </details>
       `;
 
-      return milestoneHtml + beforeHtml + restHtml;
+      return headerHtml + kpiHtml + eventsFold;
     })();
 
     // Proposals
