@@ -1071,16 +1071,141 @@
                       ((!r.customerName || r.customerName === 'お客様') && c.lineFriendId);
         if (match) collectFromEntry(r);
       });
+      // ④ タイムライン細分化: AI議事録から抽出したタスク (due日) も中間イベント化
+      try {
+        const taskKeysTL = new Set();
+        if (c.lineFriendId) taskKeysTL.add('fp-tasks-' + c.lineFriendId);
+        if (c.id)           taskKeysTL.add('fp-tasks-' + c.id);
+        if (c.name)         taskKeysTL.add('fp-tasks-' + c.name);
+        myBks.forEach(b => { if (b.userId) taskKeysTL.add('fp-tasks-' + b.userId); if (b.ts) taskKeysTL.add('fp-tasks-' + b.ts); if (b.name) taskKeysTL.add('fp-tasks-' + b.name); });
+        const allTaskKeys = Object.keys(localStorage).filter(k => k.startsWith('fp-tasks-'));
+        allTaskKeys.forEach(k => taskKeysTL.add(k));
+        const tlSeen = new Set();
+        taskKeysTL.forEach(k => {
+          try {
+            const arr = JSON.parse(localStorage.getItem(k) || '[]');
+            arr.forEach(t => {
+              if (!t.due) return;
+              const id = (t.due || '') + '|' + (t.task || '');
+              if (tlSeen.has(id)) return;
+              tlSeen.add(id);
+              meetingEvents.push({
+                date: new Date(t.due),
+                kind: 'task', cat: 'contact',
+                label: '📋 ' + (t.task || 'タスク') + (t.priority ? ' [' + t.priority + ']' : ''),
+                title: 'タスク',
+                major: t.priority === '至急' || t.priority === '今週',
+              });
+            });
+          } catch (_) {}
+        });
+        // GAS ai_tasks も
+        ((window.LineAppLiveData && window.LineAppLiveData.ai_tasks) || []).forEach(t => {
+          const match = (t.userId && t.userId === c.lineFriendId) ||
+                        (t.customerName && t.customerName === c.name) ||
+                        myBks.some(b => b.ts === t.bookingTs || b.userId === t.userId) ||
+                        ((!t.customerName || t.customerName === 'お客様') && c.lineFriendId);
+          if (!match || !t.due) return;
+          const id = (t.due || '') + '|' + (t.task || '');
+          if (tlSeen.has(id)) return;
+          tlSeen.add(id);
+          meetingEvents.push({
+            date: new Date(t.due),
+            kind: 'task', cat: 'contact',
+            label: '📋 ' + (t.task || 'タスク') + (t.priority ? ' [' + t.priority + ']' : ''),
+            title: 'タスク',
+            major: t.priority === '至急' || t.priority === '今週',
+          });
+        });
+      } catch (e) { console.warn('task timeline merge skipped:', e); }
+
       // 同 date 重複除去
       const seenDate = new Set();
       const dedup = meetingEvents.filter(e => {
-        const k = e.date.toISOString().slice(0, 10);
+        const k = e.date.toISOString().slice(0, 10) + '|' + (e.label || '');
         if (seenDate.has(k)) return false;
         seenDate.add(k);
         return true;
       });
       events = dedup.concat(events).sort((a, b) => new Date(a.date) - new Date(b.date));
     } catch (e) { console.warn('meeting events skipped:', e); }
+
+    // ③ 「次の一手」ブロック用データ抽出 (最新 AI 議事録 + 未完了タスク 上位3件)
+    let nextActionHtml = '';
+    try {
+      const allFpAi = Object.keys(localStorage).filter(k => k.startsWith('fp-ai-'));
+      let latestAi = null;
+      allFpAi.forEach(k => {
+        const arr = JSON.parse(localStorage.getItem(k) || '[]');
+        arr.forEach(a => {
+          const match = (a.userId === c.lineFriendId) || (a.customerName === c.name) ||
+                        ((!a.customerName || a.customerName === 'お客様') && c.lineFriendId);
+          if (!match) return;
+          if (!latestAi || new Date(a.createdAt || 0) > new Date(latestAi.createdAt || 0)) latestAi = a;
+        });
+      });
+      ((window.LineAppLiveData && window.LineAppLiveData.ai_results) || []).forEach(r => {
+        const match = (r.userId === c.lineFriendId) || (r.customerName === c.name) ||
+                      ((!r.customerName || r.customerName === 'お客様') && c.lineFriendId);
+        if (!match) return;
+        if (!latestAi || new Date(r.ts || r.createdAt || 0) > new Date(latestAi.createdAt || 0)) {
+          latestAi = { summary: r.summary, next_meeting_suggestion: r.next_meeting_suggestion, createdAt: r.ts };
+        }
+      });
+      const taskCandidates = [];
+      const tkeys = new Set();
+      if (c.lineFriendId) tkeys.add('fp-tasks-' + c.lineFriendId);
+      if (c.id) tkeys.add('fp-tasks-' + c.id);
+      if (c.name) tkeys.add('fp-tasks-' + c.name);
+      Object.keys(localStorage).filter(k => k.startsWith('fp-tasks-')).forEach(k => tkeys.add(k));
+      const seenT = new Set();
+      tkeys.forEach(k => {
+        try {
+          JSON.parse(localStorage.getItem(k) || '[]').forEach(t => {
+            const id = (t.due || '') + '|' + (t.task || '');
+            if (seenT.has(id)) return; seenT.add(id);
+            taskCandidates.push(t);
+          });
+        } catch (_) {}
+      });
+      ((window.LineAppLiveData && window.LineAppLiveData.ai_tasks) || []).forEach(t => {
+        const match = (t.userId === c.lineFriendId) || (t.customerName === c.name) ||
+                      ((!t.customerName || t.customerName === 'お客様') && c.lineFriendId);
+        if (!match) return;
+        const id = (t.due || '') + '|' + (t.task || '');
+        if (seenT.has(id)) return; seenT.add(id);
+        taskCandidates.push(t);
+      });
+      // 上位3件 (日付近い順)
+      const topTasks = taskCandidates
+        .filter(t => t.task)
+        .sort((a, b) => String(a.due || '9999').localeCompare(String(b.due || '9999')))
+        .slice(0, 3);
+      if (latestAi || topTasks.length > 0) {
+        const sugg = latestAi && (latestAi.next_meeting_suggestion || (latestAi.summary || '').split('\n')[0]);
+        nextActionHtml = `
+          <div class="fp-next-action">
+            <div class="fp-next-action-eyebrow">
+              <i data-lucide="zap" style="width:14px;height:14px;"></i>
+              <span>NEXT ACTION — この方への次の一手</span>
+            </div>
+            ${sugg ? `<div class="fp-next-action-title">${escapeHtml(sugg)}</div>` : '<div class="fp-next-action-title">優先タスク</div>'}
+            ${latestAi && latestAi.summary ? `<div class="fp-next-action-body">${escapeHtml(latestAi.summary.split('\n').slice(0, 3).join('\n'))}</div>` : ''}
+            ${topTasks.length > 0 ? `<div class="fp-next-action-tasks">
+              ${topTasks.map(t => `
+                <div class="fp-next-action-task">
+                  <span class="fp-next-action-task-icon">${t.icon || '✅'}</span>
+                  <span class="fp-next-action-task-title">${escapeHtml(t.task || '')}</span>
+                  <span class="fp-next-action-task-due">${escapeHtml(t.due || '期日未定')}</span>
+                  <button class="fp-next-action-task-make" data-make-deliverable="${escapeHtml(t.task || '')}" data-client-id="${escapeHtml(c.id)}">📎 資料を作成</button>
+                </div>
+              `).join('')}
+            </div>` : ''}
+          </div>
+        `;
+      }
+    } catch (e) { console.warn('next-action block skipped:', e); }
+    window._fpNextActionHtml = nextActionHtml;
     const recs = window.Recommender.forClient(c, events);
 
     const familyHtml = (c.family || []).length === 0
@@ -1384,6 +1509,7 @@
           <div class="cd-tabpanels">
             <!-- OVERVIEW -->
             <div class="cd-tabpanel" data-cdpanel="overview">
+              ${window._fpNextActionHtml || ''}
               <div class="cd-overview-grid">
                 <div class="cd-card">
                   <div class="cd-card-head"><i data-lucide="alert-circle"></i><span>次にやること</span><span class="cd-card-badge">${Math.min(recs.length, 4)}</span></div>
@@ -1482,8 +1608,16 @@
       closeModal();
       openClientForm(c.id);
     });
-    document.getElementById('modal-draft-btn').addEventListener('click', () => {
+    const draftBtn = document.getElementById('modal-draft-btn');
+    if (draftBtn) draftBtn.addEventListener('click', () => {
       openDraftReplyModal(c, events, recs);
+    });
+    // ⑤ 「📎 資料を作成」ボタン → AIで成果物draft (キャッシュフロー表/シミュ等)
+    document.querySelectorAll('[data-make-deliverable]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const taskTitle = btn.dataset.makeDeliverable;
+        openDeliverableDraftModal(c, taskTitle);
+      });
     });
     // Tab switching inside new modal
     document.querySelectorAll('.cd-tab').forEach(btn => {
@@ -1957,6 +2091,89 @@
   // ============================
   // AI返信下書き (LINE文面 自動生成)
   // ============================
+  // ⑤ 成果物 draft モーダル (キャッシュフロー表 / シミュ表 等)
+  function openDeliverableDraftModal(client, taskTitle) {
+    const existing = document.getElementById('fp-deliv-modal');
+    if (existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'fp-deliv-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(3px);z-index:10010;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff;width:min(620px,100%);max-height:88vh;overflow-y:auto;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,0.35);font-family:'Noto Sans JP',sans-serif;">
+        <div style="padding:20px 24px;background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;display:flex;justify-content:space-between;align-items:start;">
+          <div>
+            <div style="font-family:Manrope,sans-serif;font-size:10.5px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;opacity:0.85;">📎 成果物 ドラフト</div>
+            <div style="font-size:17px;font-weight:800;margin-top:4px;letter-spacing:-0.01em;">${escapeHtml(taskTitle)}</div>
+            <div style="font-size:12px;opacity:0.85;margin-top:3px;">${escapeHtml(client.name)} 様 専用</div>
+          </div>
+          <button id="fp-deliv-close" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.32);color:#fff;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:16px;">✕</button>
+        </div>
+        <div style="padding:22px 24px;">
+          <div style="font-size:12.5px;color:#475569;line-height:1.7;margin-bottom:14px;">
+            この資料を AIで自動生成 → 顧客カードに添付して LINE 送信できます。<br>
+            生成内容を選んでください:
+          </div>
+          <div style="display:grid;gap:10px;">
+            <button class="fp-deliv-type" data-type="cashflow" style="background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 18px;text-align:left;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;">
+              <span style="font-size:24px;">📊</span>
+              <div>
+                <div style="font-weight:800;font-size:13.5px;color:#0F172A;">キャッシュフロー表 (30年)</div>
+                <div style="font-size:11.5px;color:#64748b;margin-top:2px;">家族構成・収入・支出から自動生成。Excel/PDF出力可</div>
+              </div>
+            </button>
+            <button class="fp-deliv-type" data-type="lifeplan" style="background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 18px;text-align:left;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;">
+              <span style="font-size:24px;">📈</span>
+              <div>
+                <div style="font-weight:800;font-size:13.5px;color:#0F172A;">ライフプラン表</div>
+                <div style="font-size:11.5px;color:#64748b;margin-top:2px;">教育費ピーク・住宅・退職金まで時系列で可視化</div>
+              </div>
+            </button>
+            <button class="fp-deliv-type" data-type="nisa" style="background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 18px;text-align:left;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;">
+              <span style="font-size:24px;">💹</span>
+              <div>
+                <div style="font-weight:800;font-size:13.5px;color:#0F172A;">NISA / iDeCo 配分シミュレーション</div>
+                <div style="font-size:11.5px;color:#64748b;margin-top:2px;">年齢・年収・リスク許容度から最適配分を3パターン提示</div>
+              </div>
+            </button>
+            <button class="fp-deliv-type" data-type="insurance" style="background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 18px;text-align:left;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;">
+              <span style="font-size:24px;">🛡</span>
+              <div>
+                <div style="font-weight:800;font-size:13.5px;color:#0F172A;">保険 見直しレポート</div>
+                <div style="font-size:11.5px;color:#64748b;margin-top:2px;">現在の保障と必要保障額のギャップ分析</div>
+              </div>
+            </button>
+            <button class="fp-deliv-type" data-type="custom" style="background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 18px;text-align:left;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;">
+              <span style="font-size:24px;">✏️</span>
+              <div>
+                <div style="font-weight:800;font-size:13.5px;color:#0F172A;">その他 (自由入力)</div>
+                <div style="font-size:11.5px;color:#64748b;margin-top:2px;">タスク内容に応じて AI が独自に作成</div>
+              </div>
+            </button>
+          </div>
+          <div id="fp-deliv-result" style="margin-top:14px;display:none;"></div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('fp-deliv-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    overlay.querySelectorAll('.fp-deliv-type').forEach(b => {
+      b.addEventListener('click', () => {
+        const type = b.dataset.type;
+        const result = document.getElementById('fp-deliv-result');
+        result.style.display = 'block';
+        result.innerHTML = `
+          <div style="background:#ECFDF5;border:1px solid #86efac;border-radius:8px;padding:14px 18px;">
+            <div style="font-size:13px;color:#065F46;font-weight:700;margin-bottom:8px;">✓ ${escapeHtml(type)} ドラフト準備</div>
+            <div style="font-size:12px;color:#047857;line-height:1.7;">
+              現在 開発中。次フェーズで Claude + 顧客データ から自動生成→ Drive にPDF保存→ 顧客カードに添付→ LINE送信、までフロー化します。
+            </div>
+          </div>
+        `;
+      });
+    });
+  }
+
   function openDraftReplyModal(client, events, recs) {
     const draft = generateDraftReply(client, events, recs);
     const topRec = recs[0];
