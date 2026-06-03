@@ -1487,8 +1487,41 @@
         </div>
       `;
 
-      // 参考: 既存タスク/イベント (折り畳み)
-      const renderRow = (ev) => {
+      // ★ オーナーfb「フォロータスクとタイムライン統合」: タスクを KPI 下に集約
+      const taskEvents = events.filter(e => e.kind === 'task').slice(0, 8);
+      const renderTaskRow = (ev) => {
+        const rel = window.LifeEvents.formatRelative(ev.date);
+        // ラベルから純粋なタスク文 + 推定 type 抽出
+        const rawLabel = String(ev.label || '').replace(/^[📋⏰]\s*/, '').replace(/\s*\[[^\]]+\]$/, '');
+        let dt = 'custom';
+        if (/教育|進学|学費|大学|高校/.test(rawLabel)) dt = 'education';
+        else if (/ライフプラン/.test(rawLabel)) dt = 'lifeplan';
+        else if (/キャッシュフロー|収支|家計/.test(rawLabel)) dt = 'cashflow';
+        else if (/NISA|つみたて|積立投資|配分|iDeCo/i.test(rawLabel)) dt = 'nisa';
+        else if (/保険|保障/.test(rawLabel)) dt = 'insurance';
+        else if (/老後|退職|年金/.test(rawLabel)) dt = 'retire';
+        else if (/相続|贈与|遺産/.test(rawLabel)) dt = 'inherit';
+        else if (/ヒアリング/.test(rawLabel)) dt = 'hearing';
+        return `<div style="background:#fff;border:1px solid var(--line);border-radius:7px;padding:10px 14px;margin-bottom:6px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;">
+            <div style="font-size:13px;font-weight:600;color:var(--ink);line-height:1.4;">${escapeHtml(ev.label)}</div>
+            <div style="font-size:11px;color:var(--muted);white-space:nowrap;">${fmtDate(ev.date)} · ${rel}</div>
+          </div>
+          <button class="fp-task-make-deliv" data-task="${escapeHtml(rawLabel)}" data-type="${dt}" data-client-id="${escapeHtml(c.id||'')}" style="font-size:11px;padding:6px 12px;background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:800;font-family:inherit;">✨ Jobs に資料作成依頼 → 編集 → LINE送信</button>
+        </div>`;
+      };
+      const taskListHtml = taskEvents.length === 0 ? '' : `
+        <div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+            <span>📋 議事録から抽出された具体タスク</span>
+            <span style="font-size:10.5px;color:#94a3b8;text-transform:none;letter-spacing:0;">フォロータスクと統合</span>
+          </div>
+          ${taskEvents.map(renderTaskRow).join('')}
+        </div>
+      `;
+
+      // 全イベント (面談+タスク) 折り畳み
+      const renderEventRow = (ev) => {
         const rel = window.LifeEvents.formatRelative(ev.date);
         return `<div class="cd-tl-row">
           <span class="cd-tl-dot cd-cat-${ev.cat}${ev.major ? ' major' : ''}"></span>
@@ -1500,12 +1533,12 @@
       const allEvents = events.slice(0, 15);
       const eventsFold = allEvents.length === 0 ? '' : `
         <details>
-          <summary style="cursor:pointer;font-size:12px;color:var(--muted);font-weight:700;letter-spacing:0.06em;padding:8px 0;border-top:1px dashed var(--line);">📅 イベント/タスク 全件 (${allEvents.length}件)</summary>
-          <div style="margin-top:8px;">${allEvents.map(renderRow).join('')}</div>
+          <summary style="cursor:pointer;font-size:12px;color:var(--muted);font-weight:700;letter-spacing:0.06em;padding:8px 0;border-top:1px dashed var(--line);">📅 全イベント (面談+タスク) (${allEvents.length}件)</summary>
+          <div style="margin-top:8px;">${allEvents.map(renderEventRow).join('')}</div>
         </details>
       `;
 
-      return headerHtml + kpiHtml + eventsFold;
+      return headerHtml + kpiHtml + taskListHtml + eventsFold;
     })();
 
     // Proposals
@@ -2334,45 +2367,15 @@
           `;
         })()}
         ${tasks.length === 0 ? '' : `
-          <h3 style="margin-top:16px;">フォロータスク <span class="count-badge">${tasks.length}</span></h3>
-          <div style="display:grid;gap:8px;">
+          <div style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:8px;padding:10px 14px;margin-top:14px;font-size:12px;color:#4338CA;display:flex;align-items:center;gap:8px;">
+            <span style="font-size:16px;">↗️</span>
+            <span><strong>フォロータスク は タイムラインタブに統合されました</strong> — 「📋 議事録から抽出された具体タスク」セクションで操作してください</span>
+          </div>
+          <div style="display:none;">
             ${tasks.slice().sort((a,b) => (a.due||'').localeCompare(b.due||'')).map((t, i) => {
-              const priColor = t.priority==='至急' ? '#fef2f2;color:#b91c3c' : (t.priority==='今週'||t.priority==='2週間以内') ? '#fff7ed;color:#c2410c' : '#f0f9ff;color:#075985';
-              // タスク文から成果物 type 自動推定
+              const priColor = '#f0f9ff;color:#075985';
               const taskTxt = t.task || '';
-              let delivType = 'custom';
-              if (/教育|進学|学費|大学|高校/.test(taskTxt)) delivType = 'education';
-              else if (/ライフプラン/.test(taskTxt)) delivType = 'lifeplan';
-              else if (/キャッシュフロー|収支|家計/.test(taskTxt)) delivType = 'cashflow';
-              else if (/NISA|つみたて|積立投資|配分/i.test(taskTxt)) delivType = 'nisa';
-              else if (/保険|保障/.test(taskTxt)) delivType = 'insurance';
-              else if (/老後|退職|年金/.test(taskTxt)) delivType = 'retire';
-              else if (/相続|贈与|遺産/.test(taskTxt)) delivType = 'inherit';
-              else if (/ヒアリング/.test(taskTxt)) delivType = 'hearing';
-              else if (/iDeCo/i.test(taskTxt)) delivType = 'nisa';
-              else if (/節税|所得控除|確定申告/.test(taskTxt)) delivType = 'kakutei';
-              else if (/住宅|繰上/.test(taskTxt)) delivType = 'mortgage';
-              return `
-                <div style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 16px;">
-                  <div style="display:grid;grid-template-columns:30px 90px 1fr 130px;gap:10px;align-items:center;margin-bottom:${t.recommendedAction?'8px':'0'};">
-                    <span style="font-size:16px;">${t.icon||'✅'}</span>
-                    <span style="font-size:10.5px;font-weight:700;background:${priColor};padding:3px 8px;border-radius:10px;text-align:center;letter-spacing:0.04em;">${escapeHtml(t.priority||'-')}</span>
-                    <span style="font-size:13px;">${escapeHtml(t.task||'')}</span>
-                    <span style="font-size:11px;color:var(--muted);text-align:right;font-family:'Inter',sans-serif;">${escapeHtml(t.due||'-')}</span>
-                  </div>
-                  ${t.recommendedAction ? `
-                    <div style="background:#fdfbf4;border:1px solid #e8d9a8;border-radius:6px;padding:8px 12px;font-size:11.5px;color:#5e4d1a;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-bottom:8px;">
-                      <div>
-                        <strong style="color:#1f2a3f;letter-spacing:0.04em;">推奨アクション</strong>
-                        <span style="margin-left:6px;">${escapeHtml(t.recommendedAction)}</span>
-                      </div>
-                      ${t.actionTemplate ? `<button class="fp-task-do-now" data-uid="${escapeHtml(client.lineFriendId||'')}" data-name="${escapeHtml(client.name)}" data-msg="${escapeHtml(t.actionTemplate)}" style="font-size:11px;padding:5px 11px;background:#06c755;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;font-family:inherit;">→ LINEで送信</button>` : ''}
-                    </div>` : ''}
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                    <button class="fp-task-make-deliv" data-task="${escapeHtml(taskTxt)}" data-type="${delivType}" data-client-id="${escapeHtml(client.id||'')}" style="font-size:11.5px;padding:6px 14px;background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:800;font-family:inherit;letter-spacing:0.02em;">✨ Jobs に資料作成依頼 → 編集 → LINE送信</button>
-                    <span style="font-size:10.5px;color:var(--muted);align-self:center;">推定タイプ: ${delivType}</span>
-                  </div>
-                </div>`;
+              return `<div data-legacy-task="1"></div>`;
             }).join('')}
           </div>`
         }
@@ -2698,9 +2701,106 @@
   }
 
   // AI個別生成: 議事録 + 顧客台帳 → Claude → このお客様用 HTML
+  // ★ 進捗フローティングピル: モーダル閉じても進行状況が見える + 完了時にクリックで復元
+  function showAiProgressPill(client, type, taskTitle, onClickWhenDone) {
+    const jobId = `fp-ai-pill-${client.id || client.lineFriendId || client.name}-${type}`;
+    let pill = document.getElementById(jobId);
+    if (pill) pill.remove();
+    pill = document.createElement('div');
+    pill.id = jobId;
+    pill.style.cssText = 'position:fixed;right:18px;bottom:18px;background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;padding:14px 20px;border-radius:14px;box-shadow:0 16px 40px rgba(91,91,240,0.45),0 0 0 4px rgba(255,255,255,0.6);z-index:9999;font-family:inherit;min-width:280px;cursor:default;';
+    pill.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:36px;height:36px;border:3px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:fp-ai-spin 0.9s linear infinite;flex-shrink:0;"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.22em;opacity:0.85;">AI 生成中</div>
+          <div style="font-size:13px;font-weight:800;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(client.name)} 様 / ${escapeHtml(type)}</div>
+          <div style="font-size:11px;opacity:0.85;margin-top:2px;"><span class="fp-pill-timer" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;">0</span> 秒経過 — 別作業 続けて OK</div>
+        </div>
+      </div>
+    `;
+    if (!document.getElementById('fp-ai-spin-style')) {
+      const s = document.createElement('style');
+      s.id = 'fp-ai-spin-style';
+      s.textContent = '@keyframes fp-ai-spin{to{transform:rotate(360deg)}}@keyframes fp-pill-done-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}';
+      document.head.appendChild(s);
+    }
+    document.body.appendChild(pill);
+    const startMs = Date.now();
+    const timerEl = pill.querySelector('.fp-pill-timer');
+    const timerId = setInterval(() => {
+      const s = Math.floor((Date.now() - startMs) / 1000);
+      if (timerEl) timerEl.textContent = String(s);
+    }, 500);
+    pill._fpTimerId = timerId;
+    pill._fpDone = (ok, err) => {
+      clearInterval(timerId);
+      const elapsed = Math.floor((Date.now() - startMs) / 1000);
+      if (ok) {
+        pill.style.background = 'linear-gradient(135deg,#10B981,#059669)';
+        pill.style.cursor = 'pointer';
+        pill.style.animation = 'fp-pill-done-pulse 1.4s ease-in-out infinite';
+        pill.innerHTML = `
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:36px;height:36px;background:rgba(255,255,255,0.22);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">✓</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.22em;opacity:0.9;">AI 生成 完了 (${elapsed}秒)</div>
+              <div style="font-size:13px;font-weight:800;margin-top:2px;">${escapeHtml(client.name)} 様 / ${escapeHtml(type)}</div>
+              <div style="font-size:11px;opacity:0.92;margin-top:2px;">→ クリックで開いて編集</div>
+            </div>
+            <button style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;width:24px;height:24px;border-radius:5px;cursor:pointer;font-size:13px;" data-pill-close>✕</button>
+          </div>
+        `;
+        pill.addEventListener('click', (ev) => {
+          if (ev.target.dataset.pillClose !== undefined) { pill.remove(); return; }
+          if (typeof onClickWhenDone === 'function') onClickWhenDone();
+          pill.remove();
+        });
+      } else {
+        pill.style.background = 'linear-gradient(135deg,#DC2626,#B91C1C)';
+        pill.innerHTML = `
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="font-size:22px;flex-shrink:0;">⚠</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.22em;opacity:0.9;">AI 生成 失敗</div>
+              <div style="font-size:13px;font-weight:800;margin-top:2px;">${escapeHtml(client.name)} 様 / ${escapeHtml(type)}</div>
+              <div style="font-size:11px;opacity:0.92;margin-top:2px;">${escapeHtml(err || '不明エラー')}</div>
+            </div>
+            <button style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;width:24px;height:24px;border-radius:5px;cursor:pointer;font-size:13px;" data-pill-close>✕</button>
+          </div>
+        `;
+        pill.querySelector('[data-pill-close]').addEventListener('click', () => pill.remove());
+        setTimeout(() => { if (document.body.contains(pill)) pill.remove(); }, 12000);
+      }
+    };
+    return pill;
+  }
+
   async function generateDeliverableWithAI(type, taskTitle, client, resultEl) {
     const btn = document.getElementById('fp-deliv-ai');
     if (btn) { btn.disabled = true; btn.textContent = '✨ Claude 生成中… (30〜60秒)'; }
+    // ★ オーナーfb「生成中も別作業できるように + 目立つポップアップ」
+    // モーダル右上に「━ 最小化」ボタン追加 (生成中はずっと表示)
+    const dModal = document.getElementById('fp-deliv-modal');
+    if (dModal && !dModal.querySelector('[data-deliv-min]')) {
+      const closeBtn = dModal.querySelector('#fp-deliv-close');
+      if (closeBtn && closeBtn.parentElement) {
+        const minBtn = document.createElement('button');
+        minBtn.dataset.delivMin = '1';
+        minBtn.style.cssText = 'background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.32);color:#fff;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:14px;margin-right:6px;';
+        minBtn.innerHTML = '━';
+        minBtn.title = '最小化 (別作業しながら生成を待つ)';
+        minBtn.addEventListener('click', () => { dModal.style.display = 'none'; });
+        closeBtn.parentElement.insertBefore(minBtn, closeBtn);
+      }
+    }
+    // 進捗フローティングピル表示 (モーダル閉じても見える)
+    const progressPill = showAiProgressPill(client, type, taskTitle, () => {
+      // 完了後クリック: モーダル復元 + 結果反映済の状態に
+      const m = document.getElementById('fp-deliv-modal');
+      if (m) m.style.display = 'flex';
+      else openDeliverableDraftModal(client, taskTitle, type);
+    });
     // 議事録+台帳データ集める
     const myBks = ((window.LineAppLiveData && window.LineAppLiveData.bookings) || []).filter(b => b.userId === client.lineFriendId || b.name === client.name);
     let latestAi = null;
@@ -2740,6 +2840,7 @@
         }),
       });
       const d = await r.json();
+      if (progressPill && progressPill._fpDone) progressPill._fpDone(d.ok && d.html, d.ok ? null : (d.error || '生成失敗'));
       if (d.ok && d.html) {
         // 既存テンプレを AI 生成版で置換
         const old = resultEl.querySelector('.fp-deliv-content');
@@ -2869,7 +2970,8 @@
         if (btn) { btn.disabled = false; btn.textContent = '✨ AIで個別作成'; }
       }
     } catch (e) {
-      alert('通信失敗: ' + e.message);
+      if (progressPill && progressPill._fpDone) progressPill._fpDone(false, e.message);
+      console.error('AI deliv comm fail:', e);
       if (btn) { btn.disabled = false; btn.textContent = '✨ AIで個別作成'; }
     }
   }
