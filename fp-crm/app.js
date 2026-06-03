@@ -1934,8 +1934,7 @@
                   <div class="fp-meeting-card-date">${escapeHtml(fmtDateRobust(b.date))} ${escapeHtml(fmtTimeRobust(b.time))} 面談</div>
                 </div>
                 <div class="fp-meeting-card-actions">
-                  ${b.driveUrl ? `<a href="${escapeHtml(b.driveUrl)}" target="_blank" class="fp-btn fp-btn-sm fp-btn-gold">🎥 録画</a>` : ''}
-                  ${b.zoomUrl ? `<a href="${escapeHtml(b.zoomUrl)}" target="_blank" class="fp-btn fp-btn-sm fp-btn-secondary">Zoom URL</a>` : ''}
+                  ${b.driveUrl ? `<a href="${escapeHtml(b.driveUrl)}" target="_blank" class="fp-btn fp-btn-sm fp-btn-gold">🎥 録画を見る</a>` : ''}
                 </div>
               </div>
               ${aiData.transcript ? `
