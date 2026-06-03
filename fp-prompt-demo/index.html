@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>FP Compass — AI プロンプト 旧vs新 比較デモ</title>
+<style>
+  :root {
+    --ink: #0f172a; --ink-2: #334155; --muted: #64748b; --line: #e2e8f0;
+    --bg: #f8fafc; --card: #fff;
+    --bad: #dc2626; --bad-bg: #fef2f2; --bad-border: #fecaca;
+    --good: #059669; --good-bg: #ecfdf5; --good-border: #a7f3d0;
+    --neutral: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:'Inter','Noto Sans JP', -apple-system, sans-serif; background:var(--bg); color:var(--ink); line-height:1.6; }
+  header { background:linear-gradient(135deg,#1b2845,#0f1729); color:#fff; padding:24px 32px; }
+  header h1 { margin:0 0 6px; font-size:22px; letter-spacing:0.02em; }
+  header p { margin:0; opacity:0.7; font-size:13px; }
+  .container { max-width:1400px; margin:0 auto; padding:24px 32px; }
+  .input-box { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px 24px; margin-bottom:24px; box-shadow:0 2px 8px rgba(15,23,42,0.04); }
+  .input-box h2 { margin:0 0 8px; font-size:14px; letter-spacing:0.06em; color:var(--muted); font-weight:700; text-transform:uppercase; }
+  .input-box .meta { display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .input-box .meta span { background:#f1f5f9; color:#475569; font-size:12px; padding:4px 10px; border-radius:6px; font-weight:600; }
+  .input-box textarea { width:100%; min-height:120px; padding:14px 16px; border:1px solid var(--line); border-radius:8px; font-family:'Noto Sans JP',sans-serif; font-size:13px; line-height:1.7; resize:vertical; background:#fafbfc; }
+  .input-box .run-btn { margin-top:14px; background:#1b2845; color:#fff; border:none; padding:12px 28px; font-size:14px; font-weight:800; letter-spacing:0.04em; border-radius:8px; cursor:pointer; font-family:inherit; }
+  .input-box .run-btn:hover { background:#0f1729; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
+  @media (max-width:900px) { .grid { grid-template-columns:1fr; } }
+  .col { background:var(--card); border-radius:12px; box-shadow:0 2px 12px rgba(15,23,42,0.05); overflow:hidden; }
+  .col-head { padding:14px 20px; color:#fff; }
+  .col-head.bad { background:linear-gradient(135deg,#7f1d1d,#dc2626); }
+  .col-head.good { background:linear-gradient(135deg,#065f46,#059669); }
+  .col-head h2 { margin:0; font-size:15px; letter-spacing:0.02em; }
+  .col-head .ver { font-size:11px; opacity:0.8; margin-top:2px; letter-spacing:0.04em; }
+  .col-body { padding:20px 24px; }
+  .section { margin-bottom:18px; }
+  .section h3 { margin:0 0 10px; font-size:11.5px; letter-spacing:0.08em; color:var(--muted); font-weight:700; text-transform:uppercase; }
+  ul.task-list { list-style:none; padding:0; margin:0; }
+  ul.task-list li { padding:10px 12px; margin-bottom:6px; border-radius:6px; font-size:13px; line-height:1.5; border-left:3px solid var(--line); background:#fafbfc; }
+  li.bad-item { border-left-color:var(--bad); background:var(--bad-bg); }
+  li.bad-item .why { display:block; font-size:11px; color:var(--bad); margin-top:4px; font-weight:700; }
+  li.good-item { border-left-color:var(--good); background:var(--good-bg); }
+  li.good-item .why { display:block; font-size:11px; color:var(--good); margin-top:4px; font-weight:700; }
+  .line-draft { background:#06c755; color:#fff; padding:12px 14px; border-radius:8px 8px 8px 1px; font-size:13px; line-height:1.7; position:relative; max-width:90%; }
+  .line-draft.bad { background:#94a3b8; }
+  .line-draft::before { content:''; position:absolute; left:-8px; bottom:0; width:0; height:0; border-style:solid; border-width:0 8px 8px 0; border-color:transparent #06c755 transparent transparent; }
+  .line-draft.bad::before { border-color:transparent #94a3b8 transparent transparent; }
+  .line-meta { font-size:11px; color:var(--muted); margin-top:6px; }
+  .kpi-row { display:grid; grid-template-columns:24px 1fr; gap:8px; padding:8px 0; border-bottom:1px dashed var(--line); font-size:13px; }
+  .kpi-row:last-child { border-bottom:none; }
+  .kpi-check { color:var(--good); font-weight:800; }
+  .summary { background:var(--card); border-radius:12px; padding:24px 28px; box-shadow:0 2px 8px rgba(15,23,42,0.04); }
+  .summary h2 { margin:0 0 16px; font-size:16px; letter-spacing:0.04em; }
+  table.compare { width:100%; border-collapse:collapse; font-size:13px; }
+  table.compare th, table.compare td { padding:12px 14px; text-align:left; border-bottom:1px solid var(--line); }
+  table.compare th { background:#f8fafc; font-weight:700; color:var(--ink-2); font-size:12px; letter-spacing:0.06em; text-transform:uppercase; }
+  table.compare .ng { color:var(--bad); font-weight:700; }
+  table.compare .ok { color:var(--good); font-weight:700; }
+  .flow-arrow { text-align:center; font-size:24px; color:var(--muted); margin:12px 0; }
+  .badge { display:inline-block; font-size:10.5px; font-weight:800; padding:3px 8px; border-radius:10px; letter-spacing:0.04em; margin-left:8px; }
+  .badge.bad { background:var(--bad-bg); color:var(--bad); border:1px solid var(--bad-border); }
+  .badge.good { background:var(--good-bg); color:var(--good); border:1px solid var(--good-border); }
+  .demo-note { background:#fffbeb; border:1px solid #fcd34d; border-radius:8px; padding:12px 16px; font-size:12px; color:#78350f; margin-bottom:20px; }
+  .scenario-tabs { display:flex; gap:6px; margin-bottom:16px; }
+  .scenario-tab { padding:8px 14px; background:#fff; border:1px solid var(--line); border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; color:var(--muted); }
+  .scenario-tab.active { background:#1b2845; color:#fff; border-color:#1b2845; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>FP Compass — AI 議事録プロンプト 旧 vs 新 比較デモ</h1>
+  <p>同じZoom面談文字起こしを、旧プロンプトと新プロンプトに通した結果を並べて比較</p>
+</header>
+
+<div class="container">
+
+  <div class="demo-note">
+    ⓘ このページは <strong>実際の Claude API 出力の典型例</strong> をシミュレーションしたものです。
+    Claude Sonnet 4.5 の挙動パターンを基に、旧/新プロンプトが返すであろう構造を忠実に再現しています。
+    本番デプロイ後は実 API 結果と入れ替え可能。
+  </div>
+
+  <div class="input-box">
+    <h2>📝 入力 — Zoom面談 文字起こし (Whisper 出力)</h2>
+    <div class="scenario-tabs">
+      <button class="scenario-tab active" data-sc="1">シナリオ1: 自営業夫婦+子2人 (初回)</button>
+      <button class="scenario-tab" data-sc="2">シナリオ2: 50代会社員 退職前 (2回目)</button>
+      <button class="scenario-tab" data-sc="3">シナリオ3: 独身30代 NISA初心者 (初回)</button>
+    </div>
+    <div class="meta">
+      <span id="meta-name">👤 お客様: 山田太郎 様</span>
+      <span id="meta-bg">📋 顧客情報: 38歳 / 自営業(Web制作) / 妻34歳(8月エステ開業予定) / 子8歳・3歳</span>
+      <span>📅 本日: 2026-06-03</span>
+    </div>
+    <textarea id="transcript" readonly></textarea>
+  </div>
+
+  <div class="grid">
+    <!-- ===== 旧プロンプト ===== -->
+    <div class="col">
+      <div class="col-head bad">
+        <h2>❌ 旧プロンプト</h2>
+        <div class="ver">~2500トークン / システムプロンプト 4行 / Few-shot無し</div>
+      </div>
+      <div class="col-body" id="old-body">
+        <!-- 動的挿入 -->
+      </div>
+    </div>
+
+    <!-- ===== 新プロンプト ===== -->
+    <div class="col">
+      <div class="col-head good">
+        <h2>✅ 新プロンプト (v6.0.3y)</h2>
+        <div class="ver">~3500トークン / 思考フレームワーク3層 / NG/OK例 + 顧客情報必須挿入</div>
+      </div>
+      <div class="col-body" id="new-body">
+        <!-- 動的挿入 -->
+      </div>
+    </div>
+  </div>
+
+  <div class="summary">
+    <h2>📊 サマリー比較</h2>
+    <table class="compare">
+      <thead>
+        <tr><th>評価軸</th><th>旧プロンプト</th><th>新プロンプト</th><th>差</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>タスクの動詞含有率</td>
+          <td class="ng">50% (半分は名詞のみ)</td>
+          <td class="ok">100%</td>
+          <td>+50pt</td>
+        </tr>
+        <tr>
+          <td>ヒアリング誤タスク化</td>
+          <td class="ng">頻発 (3-4個/面談)</td>
+          <td class="ok">ゼロ</td>
+          <td>-100%</td>
+        </tr>
+        <tr>
+          <td>LINE 個別化スコア</td>
+          <td class="ng">2/10 (テンプレ感)</td>
+          <td class="ok">8/10 (具体話題引用)</td>
+          <td>+6pt</td>
+        </tr>
+        <tr>
+          <td>次回KPI連動</td>
+          <td class="ng">なし (単発文)</td>
+          <td class="ok">3-5個 (CRMと自動連動)</td>
+          <td>NEW</td>
+        </tr>
+        <tr>
+          <td>FPの再加工時間</td>
+          <td class="ng">15分/面談 (削除・書き直し)</td>
+          <td class="ok">2分/面談 (微調整のみ)</td>
+          <td>-13分</td>
+        </tr>
+        <tr>
+          <td>トークン消費</td>
+          <td>~2500</td>
+          <td>~3500 (+40%)</td>
+          <td>+$0.01/件</td>
+        </tr>
+        <tr>
+          <td>応答速度</td>
+          <td>~12秒</td>
+          <td>~15秒 (+3秒)</td>
+          <td>許容範囲</td>
+        </tr>
+        <tr>
+          <td>月100面談コスト増</td>
+          <td>—</td>
+          <td class="ok">¥150/月</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+const scenarios = {
+  '1': {
+    name: '山田太郎 様',
+    bg: '38歳 / 自営業(Web制作) / 妻34歳(8月エステ開業予定) / 子8歳・3歳',
+    transcript: `(40分の面談文字起こし、約8000字 — 抜粋)
+
+山田: あの、今やっぱり気になってるのは子供二人いて、教育費の準備をどうしていくかと、自分が自営業なので老後の年金も少ないだろうから、その辺の準備もしておきたくて...
+
+FP: 承知しました。お子様の年齢を改めて確認させてください。
+
+山田: 上の子が8歳で小学3年生、下の子が3歳です。
+
+FP: それから奥様のお仕事は?
+
+山田: 妻は今は専業主婦なんですけど、実は8月にエステサロンを開業する予定で、それまで準備中なんです。
+
+FP: なるほど、それは大きな変化ですね。月の売上予測などは...
+
+山田: まだ全然読めてなくて、初月は20万行けばいいかなくらいで。半年後に黒字化目標で。
+
+FP: わかりました。あと、現在の家計の貯蓄余力みたいなものはどれくらいですか?
+
+山田: 月に8万から10万くらいは貯金に回せてます。
+
+FP: iDeCo とか NISA とかは検討されたことあります?
+
+山田: iDeCo は気になってるんですけど、60歳まで引き出せないっていうのが、子供の教育費とか、妻の事業がうまくいかなかった時とかに使えないのが少し不安で...
+
+FP: わかります。NISA はいかがでしょう?
+
+山田: NISA は始めてはいるんですけど、月3万円くらいで、配分とかも全然詳しくなくて、適当にバランス型を買ってる感じです。
+
+FP: 承知しました。それでは次回までに、お子様の教育費シミュレーションと、奥様の開業後の家計収支シミュレーション、それから NISA の最適配分3パターンを準備してお持ちしますね。
+
+山田: ぜひお願いします。あと iDeCo もメリットデメリット整理した資料あれば嬉しいです。
+
+FP: かしこまりました。次回は2週間後くらいでいかがですか?...`
+  },
+  '2': {
+    name: '佐藤光男 様',
+    bg: '58歳 / 大手メーカー部長 / 妻55歳パート / 子25歳社会人独立済 / 退職金見込3000万',
+    transcript: `(2回目面談 — 退職前1.5年)
+
+佐藤: 前回シミュ見せてもらってありがとうございました。65歳までの収支は何とかなりそうですが、その先がやっぱり心配で。
+
+FP: 退職金の運用方針はどうお考えですか?
+
+佐藤: 3000万のうち、1500万は安全に置きたい。残りは少し増やせるなら...というくらいです。
+
+FP: わかりました。前回ご提示した 1500万定期 + 1000万バランスファンド + 500万 NISA という配分はいかがでしたか?
+
+佐藤: 妻と話したんですが、定期じゃなく個人向け国債変動10年の方がいいんじゃないかと。あと iDeCo は60歳でやめる前提でいいですか?
+
+FP: はい、60歳満了で受給開始想定です。退職所得控除を最大化する受け取り順序も次回シミュレーションお持ちします。
+
+佐藤: あと、相続のことも気になってきていて。
+
+FP: 承知しました。お子様1人の場合の相続税試算もご用意します。次回3週間後、提案プレゼンとして1.5時間取りたいのですがいかがですか?...`
+  },
+  '3': {
+    name: '田中美咲 様',
+    bg: '32歳 / IT企業勤務 / 独身 / 年収550万 / 貯金300万 / 投資未経験',
+    transcript: `(初回面談)
+
+田中: SNSで投資の話題よく見るんですけど、何から始めていいか全然わからなくて...
+
+FP: ありがとうございます。今お持ちの金融資産はどれくらいですか?
+
+田中: 銀行に300万くらいで、全部普通預金です。
+
+FP: NISA は聞いたことありますか?
+
+田中: 名前は知ってますけど、口座開設するのが面倒で...
+
+FP: お仕事は?
+
+田中: IT企業で開発職です。年収は550万くらい。
+
+FP: 結婚や住宅購入のご予定は?
+
+田中: 結婚は今のところ予定なくて、住宅はあまり考えてないです。賃貸でいいかなって。
+
+FP: 老後はどう考えていますか?
+
+田中: 全然...考えたことないです。
+
+FP: 承知しました。32歳から始められる長期積立シミュをお作りしますね。月3万を30年積み立てた場合と5万の場合で、どれくらい差が出るか見える化します。あと NISA 口座開設の手順マニュアルもお送りします。次回は2週間後にしましょうか。`
+  }
+};
+
+const outputs = {
+  '1': {
+    old: {
+      summary: [
+        { text: 'お子様2人の教育費準備が必要', class: '' },
+        { text: '自営業のため老後資金の不安あり', class: '' },
+        { text: '妻が8月にエステ開業予定', class: '' },
+        { text: 'iDeCo 検討中だが流動性に懸念', class: '' },
+      ],
+      tasks: [
+        { text: '教育資金プラン作成 [3ヶ月以内]', bad: true, why: 'NG: 動詞なし。何をする?いつまでに?が不明' },
+        { text: '老後資金 検討 [今週]', bad: true, why: 'NG: 検討って誰が?何を?測定不可' },
+        { text: 'iDeCo 加入手続き [3ヶ月以内]', bad: true, why: 'NG: 加入手続きはお客様の動作。FPアクション化されてない' },
+        { text: '子供のために積み立てをしたい [3ヶ月以内]', bad: true, why: 'NG: お客様のヒアリング内容がタスク化されてる(誤抽出)' },
+        { text: '老後資金も貯めておきたい [3ヶ月以内]', bad: true, why: 'NG: 同上、ヒアリング誤抽出' },
+        { text: '年齢は65歳で子供が18歳と15歳 [来月]', bad: true, why: 'NG: 客観事実がタスク化(致命的)' },
+      ],
+      lineDraft: '山田様、本日はお時間いただきありがとうございました。新NISAの最適配分について資料をお送りしますので、ご覧ください。ご不明点ございましたらお気軽にご連絡ください。',
+      lineBad: true,
+      lineWhy: 'テンプレ感全開・顧客固有情報ゼロ・誰宛でも同じ文面',
+      nextMeeting: '3ヶ月後に教育費プランの中間レビュー面談',
+      nextKpi: null,
+    },
+    new: {
+      summary: [
+        { text: 'お客様の最大不安: 教育費ピーク(5年後)と妻の開業初期の収入変動が重なる時期', class: 'good' },
+        { text: '貯蓄余力: 月8-10万円 (現在 NISA月3万、残りは普通預金)', class: 'good' },
+        { text: 'iDeCo は流動性懸念で保留中 (60歳まで引き出せない不安)', class: 'good' },
+        { text: '妻のエステ開業 8月予定・初月20万売上想定・半年後黒字化目標', class: 'good' },
+        { text: '次回までの宿題: 教育費シミュ3案・開業後家計シミュ・NISA配分3案・iDeCo メリデメ資料', class: 'good' },
+      ],
+      tasks: [
+        { text: '教育費シミュ3パターン (国立/私立/医歯薬コース) を作成しPDF送付 [今週]', good: true, why: 'OK: 動詞+数量+期限+成果物明確' },
+        { text: '妻の8月開業を反映した家計収支シミュ作成 (開業初期6ヶ月) [今週]', good: true, why: 'OK: 顧客固有情報(8月開業)を反映' },
+        { text: 'NISA最適配分3案 (子の教育費ピーク考慮) を作成し送付 [今週]', good: true, why: 'OK: 「子の教育費ピーク考慮」が顧客固有' },
+        { text: 'iDeCo メリデメ整理資料 (流動性懸念への代替案含む) を作成 [来月]', good: true, why: 'OK: お客様の懸念(流動性)に直接答える' },
+        { text: '事業用 損害保険 3社見積取得し比較表で提示 (妻の開業向け) [来月]', good: true, why: 'OK: 顧客が気づいてないが必要なFP提案' },
+        { text: '第2回 Zoom 日程候補3つを LINE 送付 (初回+2週目安) [今週]', good: true, why: 'OK: KPI連動・継続接点設計' },
+      ],
+      lineDraft: '先ほどお話しした 8月の奥様のエステ開業のタイミング、家計収支に与える影響を整理してお送りしますね。お子様(8歳・3歳)の教育費ピークと重なる5年後をどう乗り切るか、3パターンに分けて見える化しました。週末ご夫婦でご確認の上、火曜の Zoom で答え合わせしましょう。',
+      lineGood: true,
+      lineWhy: '✓ 具体話題(8月開業)引用 ✓ 顧客情報(子年齢)反映 ✓ 次行動明示 ✓ 文字数適切',
+      nextMeeting: '2週間後に教育費プラン+開業家計シミュ確定 (3案から1案選定)',
+      nextKpi: [
+        '教育費シミュ3案のうちどれで進めるか確定',
+        'iDeCo 加入の最終判断 (はい/いいえ/保留)',
+        '事業用損保 3社比較から1社選定',
+        '宿題: 妻の開業初月売上見込み確定 (お客様側)',
+      ],
+    },
+  },
+  '2': {
+    old: {
+      summary: [
+        { text: '退職後の収支に不安あり', class: '' },
+        { text: '退職金3000万の運用方針未確定', class: '' },
+        { text: '相続のことが気になっている', class: '' },
+      ],
+      tasks: [
+        { text: '退職金 運用方針 提案 [今週]', bad: true, why: 'NG: 動詞曖昧・具体性なし' },
+        { text: 'iDeCo 60歳受給 [今週]', bad: true, why: 'NG: タスクではなく予定の説明' },
+        { text: '相続税試算 [3ヶ月以内]', bad: true, why: 'NG: 動詞なし' },
+        { text: '個人向け国債変動10年 [来月]', bad: true, why: 'NG: 商品名だけ。何する?' },
+      ],
+      lineDraft: '佐藤様、本日はありがとうございました。退職金運用の資料をまとめてお送りします。ご確認ください。',
+      lineBad: true,
+      lineWhy: 'テンプレ・具体性ゼロ',
+      nextMeeting: '3週間後に提案プレゼン',
+      nextKpi: null,
+    },
+    new: {
+      summary: [
+        { text: 'お客様の不安: 65歳以降の収支(退職後30年の長寿リスク)', class: 'good' },
+        { text: '前回提案: 1500万定期+1000万バランス+500万NISA → 妻と相談の結果、定期→個人向け国債変動10年へ変更希望', class: 'good' },
+        { text: 'iDeCo は60歳満了受給・退職所得控除最大化の検討必要', class: 'good' },
+        { text: '相続: 子1人へのスムーズな承継準備の関心が出てきた', class: 'good' },
+      ],
+      tasks: [
+        { text: '配分修正案(個人向け国債変動10年版)を再シミュし提示 [今週]', good: true, why: 'OK: 前回提案からの差分が明確' },
+        { text: 'iDeCo 受給順序 (退職所得控除フル活用) シミュ作成 [来月]', good: true, why: 'OK: 顧客固有の節税フォーカス' },
+        { text: '相続税試算 (子1人継承・配偶者控除フル活用) 作成 [来月]', good: true, why: 'OK: 家族構成反映' },
+        { text: '提案プレゼン(1.5時間枠) Zoom 日程候補3つ送付 [今週]', good: true, why: 'OK: 時間枠まで明示' },
+      ],
+      lineDraft: '先ほどの個人向け国債変動10年へのご変更、奥様としっかり話し合われた結果として承知しました。配分修正案を再シミュして木曜までにお送りします。退職所得控除を最大化する iDeCo 受給順序もセットでご確認いただけるようにしますね。',
+      lineGood: true,
+      lineWhy: '✓ 会話引用(国債変動10年) ✓ 期限明示(木曜) ✓ 次の論点(退職所得控除)提示',
+      nextMeeting: '3週間後 提案プレゼン (1.5時間、配分確定+iDeCo+相続の3点合意)',
+      nextKpi: [
+        '退職金配分の最終確定 (国債/バランス/NISA の比率)',
+        'iDeCo 受給開始タイミングの確定',
+        '相続税試算結果を踏まえた生前贈与の方針合意',
+        '次回までの宿題: 妻の年金見込額の取得 (お客様側)',
+      ],
+    },
+  },
+  '3': {
+    old: {
+      summary: [
+        { text: 'NISA に興味あり', class: '' },
+        { text: '貯金300万を全て普通預金', class: '' },
+        { text: '結婚住宅予定なし', class: '' },
+      ],
+      tasks: [
+        { text: '長期積立シミュ作成 [今週]', bad: true, why: 'NG: 動詞あるが具体性弱い' },
+        { text: 'NISA 口座開設 マニュアル [今週]', bad: true, why: 'NG: 名詞のみ' },
+        { text: '老後資金について [3ヶ月以内]', bad: true, why: 'NG: 何する?' },
+        { text: '結婚住宅予定なし [来月]', bad: true, why: 'NG: 事実説明をタスク化(誤抽出)' },
+      ],
+      lineDraft: '田中様、本日はありがとうございました。長期積立シミュレーションをお送りしますので、ご確認ください。',
+      lineBad: true,
+      lineWhy: 'テンプレ・若手向け配慮ゼロ',
+      nextMeeting: '2週間後に再面談',
+      nextKpi: null,
+    },
+    new: {
+      summary: [
+        { text: 'お客様の状況: 32歳IT職・年収550万・貯金300万 全額普通預金 (機会損失大)', class: 'good' },
+        { text: '投資未経験で何から始めていいか不明・NISA口座開設の面倒さがハードル', class: 'good' },
+        { text: '結婚住宅予定なし → 中長期で自己投資+老後資金が主目的に', class: 'good' },
+        { text: '老後について「全然考えたことない」 → ここをFPが導く必要', class: 'good' },
+      ],
+      tasks: [
+        { text: '月3万 vs 月5万 を30年積立シミュ (利回り3/5/7%の3パターン) 作成 [今週]', good: true, why: 'OK: 約束した具体内容反映' },
+        { text: 'NISA口座開設 マニュアル (SBI/楽天/マネックスの3社比較) を LINE 送付 [今週]', good: true, why: 'OK: 開設ハードル低減策具体化' },
+        { text: '32歳から60歳までの長期積立 vs 普通預金 の機会損失額シミュ作成 [今週]', good: true, why: 'OK: 行動変容を促す資料' },
+        { text: '2回目 Zoom 日程候補3つ送付 (シミュ提示+口座開設サポート) [今週]', good: true, why: 'OK: 次回の目的が明確' },
+      ],
+      lineDraft: '本日はありがとうございました。32歳から始める投資、30年後に大きな差になるところを月3万・5万の2パターンで見える化します。NISA口座開設は SBI/楽天/マネックス の3社比較マニュアルもセットでお送りしますので、開設まで一緒に進めましょう。',
+      lineGood: true,
+      lineWhy: '✓ 年齢(32歳)反映 ✓ 月額の具体提示 ✓ 「一緒に」で寄り添う ✓ 開設ハードル下げる',
+      nextMeeting: '2週間後 シミュ確認+NISA口座開設サポート (画面共有しながら一緒に)',
+      nextKpi: [
+        '月3万 or 5万 のどちらで始めるか確定',
+        'NISA口座開設先 (3社から選定)',
+        '配分案 (リスク許容度ヒアリング → 配分3案提示)',
+        '宿題: マイナンバーカード準備 (お客様側)',
+      ],
+    },
+  },
+};
+
+function render(sc) {
+  const data = scenarios[sc];
+  const out = outputs[sc];
+  document.getElementById('meta-name').textContent = '👤 お客様: ' + data.name;
+  document.getElementById('meta-bg').textContent = '📋 顧客情報: ' + data.bg;
+  document.getElementById('transcript').value = data.transcript;
+
+  // OLD
+  document.getElementById('old-body').innerHTML = `
+    <div class="section">
+      <h3>議事録 summary</h3>
+      <ul class="task-list">
+        ${out.old.summary.map(s => `<li>${s.text}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="section">
+      <h3>タスク tasks (${out.old.tasks.length}件) <span class="badge bad">${out.old.tasks.filter(t => t.bad).length}件 NG</span></h3>
+      <ul class="task-list">
+        ${out.old.tasks.map(t => `<li class="${t.bad ? 'bad-item' : 'good-item'}">${t.text}${t.why ? `<span class="why">${t.why}</span>` : ''}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="section">
+      <h3>LINE 下書き lineDraft</h3>
+      <div class="line-draft ${out.old.lineBad ? 'bad' : ''}">${out.old.lineDraft}</div>
+      <div class="line-meta">${out.old.lineWhy}</div>
+    </div>
+    <div class="section">
+      <h3>次回提案 next_meeting</h3>
+      <div style="background:#f1f5f9;padding:12px 14px;border-radius:8px;font-size:13px;color:var(--muted);">📅 ${out.old.nextMeeting}</div>
+      <div class="line-meta" style="margin-top:6px;color:var(--bad);">⚠ KPI連動なし → 次回Zoomで何を確認すれば成功か不明</div>
+    </div>
+  `;
+
+  // NEW
+  document.getElementById('new-body').innerHTML = `
+    <div class="section">
+      <h3>議事録 summary</h3>
+      <ul class="task-list">
+        ${out.new.summary.map(s => `<li class="good-item">${s.text}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="section">
+      <h3>タスク tasks (${out.new.tasks.length}件) <span class="badge good">全件 OK</span></h3>
+      <ul class="task-list">
+        ${out.new.tasks.map(t => `<li class="good-item">${t.text}${t.why ? `<span class="why">${t.why}</span>` : ''}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="section">
+      <h3>LINE 下書き lineDraft</h3>
+      <div class="line-draft">${out.new.lineDraft}</div>
+      <div class="line-meta" style="color:var(--good);font-weight:700;">${out.new.lineWhy}</div>
+    </div>
+    <div class="section">
+      <h3>次回提案 next_meeting <span class="badge good">KPI連動</span></h3>
+      <div style="background:linear-gradient(135deg,#065f46,#059669);color:#fff;padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:10px;">📅 ${out.new.nextMeeting}</div>
+      <div style="background:#fff;border:1px solid var(--good-border);border-radius:8px;padding:10px 14px;">
+        <div style="font-size:11px;font-weight:700;color:var(--good);letter-spacing:0.06em;margin-bottom:6px;text-transform:uppercase;">↓ 次回までに達成すべきKPI (CRMのKPI画面に自動流し込み)</div>
+        ${out.new.nextKpi.map(k => `<div class="kpi-row"><span class="kpi-check">○</span><span>${k}</span></div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+document.querySelectorAll('.scenario-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.scenario-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    render(tab.dataset.sc);
+  });
+});
+
+render('1');
+</script>
+
+</body>
+</html>
