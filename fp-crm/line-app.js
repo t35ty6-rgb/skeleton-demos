@@ -3303,6 +3303,36 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       liveData = await r.json();
       window.LineAppLiveData = liveData;
       try { localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify(liveData)); } catch (_) {}
+      // ★ オーナーfb「客返信が CRM に反映されない」: line_messages を各顧客 lineHistory にマージ
+      try {
+        const msgs = liveData.line_messages || [];
+        if (msgs.length > 0 && window.DUMMY_CLIENTS) {
+          let merged = 0;
+          msgs.forEach(m => {
+            if (!m.userId || !m.text) return;
+            const c = window.DUMMY_CLIENTS.find(x => x.lineFriendId === m.userId);
+            if (!c) return;
+            if (!Array.isArray(c.lineHistory)) c.lineHistory = [];
+            const ts = String(m.ts || '').slice(0, 19);
+            const seen = c.lineHistory.some(h => String(h.ts || '').slice(0, 19) === ts && (h.text || h.message) === m.text);
+            if (seen) return;
+            const entry = { from: 'user', direction: 'in', text: m.text, message: m.text, ts: m.ts, date: String(m.ts || '').slice(0, 10), source: 'gas-webhook' };
+            c.lineHistory.push(entry);
+            // 独立キーにも保存 (リロード耐性)
+            try {
+              const key = 'fp-line-history-' + c.id;
+              const arr = JSON.parse(localStorage.getItem(key) || '[]');
+              arr.push(entry);
+              localStorage.setItem(key, JSON.stringify(arr));
+            } catch (_) {}
+            merged++;
+          });
+          if (merged > 0) {
+            localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS));
+            console.log('[line_messages] merged', merged, 'incoming msgs to client.lineHistory');
+          }
+        }
+      } catch (mergeErr) { console.warn('line_messages merge fail:', mergeErr); }
       const detail = (liveData.users ? liveData.users.length + 'ユーザー' : '') +
                      (liveData.bookings ? ' / ' + liveData.bookings.length + '予約' : '');
       showSyncIndicator('done', detail);

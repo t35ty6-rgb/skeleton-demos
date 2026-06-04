@@ -1951,7 +1951,7 @@
             <div class="cd-flow-title">直近の推奨アクションなし</div>
             <div class="cd-flow-reason">この方のライフイベントや接触状況からは、特に緊急のアクションはありません。</div>
             <div class="cd-flow-steps">
-              <button class="cd-flow-step cd-flow-step-active fp-draft-cta" id="modal-draft-btn" style="background:linear-gradient(135deg,#F97316 0%,#EA580C 50%,#F97316 100%);background-size:200% 200%;color:#fff !important;border:none;animation:fp-draft-cta-pulse 1.6s ease-in-out infinite,fp-draft-cta-gradient 2.5s linear infinite;box-shadow:0 8px 24px rgba(249,115,22,0.55),0 0 0 4px rgba(255,255,255,0.5);">
+              <button class="cd-flow-step cd-flow-step-active fp-draft-cta" id="modal-draft-btn">
                 <span class="cd-flow-step-no" style="color:#fff;background:rgba(255,255,255,0.25);"><i data-lucide="wand-2"></i></span>
                 <span class="cd-flow-step-body">
                   <span class="cd-flow-step-label" style="color:#fff !important;font-weight:900;letter-spacing:0.04em;">👉 ✨ AI返信下書きを作る</span>
