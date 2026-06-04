@@ -3307,6 +3307,20 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       try {
         const msgs = liveData.line_messages || [];
         if (msgs.length > 0 && window.DUMMY_CLIENTS) {
+          // (前段) liveData.users から「実 LINE userId」を取得し、同名 client の lineFriendId を実値に補正
+          // dummy-data の架空 lineFriendId と Webhook の実 userId の不一致を解消
+          try {
+            const liveUsers = liveData.users || [];
+            liveUsers.forEach(u => {
+              if (!u.userId || !u.displayName) return;
+              const c = window.DUMMY_CLIENTS.find(x => String(x.name || '').trim() === u.displayName.trim());
+              if (c && c.lineFriendId !== u.userId) {
+                console.log('[lineFix] overwrite', c.name, ':', c.lineFriendId, '→', u.userId);
+                c.lineFriendId = u.userId;
+              }
+            });
+            localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS));
+          } catch (fixErr) { console.warn('lineFriendId 補正 fail:', fixErr); }
           let merged = 0;
           msgs.forEach(m => {
             if (!m.userId || !m.text) return;

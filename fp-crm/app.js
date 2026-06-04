@@ -586,10 +586,14 @@
       if (knownUids.has(u.userId)) return;
       const name = (u.displayName || '').trim();
       if (name && knownNames.has(name)) {
-        // displayName が一致する既存 client があれば lineFriendId だけ補完
+        // 同名既存 client があれば 実 LINE userId に上書き (架空のdummy lineFriendId を実値で置換)
+        // 真因: dummy-data の架空 lineFriendId (U5b483...) と GAS Webhook の実 userId (Ub85fb...) が違って merge 失敗してた
         const c = clients.find(x => String(x.name || '').trim() === name);
-        if (c && !c.lineFriendId) {
-          c.lineFriendId = u.userId;
+        if (c) {
+          if (c.lineFriendId !== u.userId) {
+            console.log('[mergeLine] overwrite lineFriendId for', name, ':', c.lineFriendId, '→', u.userId);
+            c.lineFriendId = u.userId;
+          }
           if (u.pictureUrl) c.linePictureUrl = u.pictureUrl;
         }
         return;
