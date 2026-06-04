@@ -5467,6 +5467,43 @@ ${client.name}さん、ありがとうございます。
 
     activateTab(state.activeTab);
 
+    // ★ デモ用「全データリセット」ボタン
+    const resetBtn = document.getElementById('fp-reset-all-data');
+    if (resetBtn) resetBtn.addEventListener('click', () => {
+      const msg = '⚠ 全データを削除します。\n\n削除対象:\n・全顧客台帳 (実 + デモ)\n・LINE 履歴 (送受信)\n・AI 議事録\n・成果物 編集中\n・追撃トラッキング\n・ライブキャッシュ\n\n⚠ この操作は元に戻せません。\n\n本当に削除しますか?';
+      if (!confirm(msg)) return;
+      if (!confirm('もう一度確認: 全削除しますか?')) return;
+      try {
+        // 関連 localStorage キーを全削除
+        const keysToDel = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k) continue;
+          if (k.startsWith('fp-crm-') ||
+              k.startsWith('fp-line-history-') ||
+              k.startsWith('fp-ai-') ||
+              k.startsWith('fp-deliv-edit-') ||
+              k.startsWith('fp-line-read-') ||
+              k === 'fp-draft-tracking' ||
+              k === 'fp-livedata-cache-v1' ||
+              k === 'fp-last-open-client' ||
+              k === 'fp-last-open-mode' ||
+              k === 'fp-dedup-migrated-v1' ||
+              k === 'fp-birth-migrated-v1' ||
+              k === 'fp-sort-migrated-v2') {
+            keysToDel.push(k);
+          }
+        }
+        keysToDel.forEach(k => localStorage.removeItem(k));
+        window._fpDraftConversation = [];
+        window._fpReadyDeliverable = null;
+        window._fpAutoDelivStarted = false;
+        alert('✓ 全データ削除完了 (' + keysToDel.length + ' 個のキー)\n\nページをリロードします。');
+        location.reload();
+      } catch (e) {
+        alert('削除失敗: ' + e.message);
+      }
+    });
     // ★ mergeLineActivity を 30秒毎に強制実行 (ページ重さ対策、5秒→30秒 緩和)
     setInterval(() => {
       try { mergeLineActivity(); } catch (e) { console.warn('mergeLineActivity periodic fail:', e); }
