@@ -1016,6 +1016,23 @@
     ],
   };
   function ensureLineHistory_(c) {
+    // ★ オーナーfb「リロードで履歴 0件」: 独立キーから常に補完
+    // 顧客台帳が何かで壊れても、fp-line-history-{id} に保存した送信履歴は残してマージ
+    try {
+      const histKey = 'fp-line-history-' + c.id;
+      const standalone = JSON.parse(localStorage.getItem(histKey) || '[]');
+      if (standalone.length > 0) {
+        if (!Array.isArray(c.lineHistory)) c.lineHistory = [];
+        // 重複除去 (ts ベース)
+        const seenTs = new Set(c.lineHistory.map(m => m.ts).filter(Boolean));
+        standalone.forEach(m => {
+          if (!m.ts || !seenTs.has(m.ts)) { c.lineHistory.push(m); seenTs.add(m.ts); }
+        });
+        // 時系列ソート
+        c.lineHistory.sort((a, b) => String(a.ts || '').localeCompare(String(b.ts || '')));
+        console.log('[ensureLineHistory] merged standalone for', c.name, '+', standalone.length, '→ total', c.lineHistory.length);
+      }
+    } catch (_) {}
     if (!c.lineHistory || c.lineHistory.length === 0) {
       const fb = LINE_HISTORY_FALLBACK[c.id];
       if (fb) c.lineHistory = fb;
@@ -2911,13 +2928,18 @@
         });
         const d = await r.json();
         if (d.ok) {
-          // ★ lineHistory 即 append + 全顧客台帳保存 (リロードで消失バグ修正)
+          // ★ lineHistory 二重保存 (顧客台帳 + 独立キー)
           try {
             if (!Array.isArray(client.lineHistory)) client.lineHistory = [];
             const iso = new Date().toISOString();
-            client.lineHistory.push({ from: 'fp', direction: 'out', text: text, message: text, ts: iso, date: iso.slice(0,10), source: 'fp-crm-kpi' });
+            const newMsg = { from: 'fp', direction: 'out', text: text, message: text, ts: iso, date: iso.slice(0,10), source: 'fp-crm-kpi' };
+            client.lineHistory.push(newMsg);
             client.lastContact = iso.slice(0, 10);
             localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS || []));
+            const histKey = 'fp-line-history-' + client.id;
+            const existHist = JSON.parse(localStorage.getItem(histKey) || '[]');
+            existHist.push(newMsg);
+            localStorage.setItem(histKey, JSON.stringify(existHist));
           } catch (_) {}
           ov.remove();
           const t = document.createElement('div');
@@ -3883,7 +3905,7 @@
           // 修正: window.DUMMY_CLIENTS 全体を localStorage に保存
           try {
             if (!Array.isArray(client.lineHistory)) client.lineHistory = [];
-            client.lineHistory.push({
+            const newMsg = {
               from: 'fp',
               direction: 'out',
               text: sentText,
@@ -3891,11 +3913,16 @@
               ts: nowIso,
               date: nowIso.slice(0, 10),
               source: 'fp-crm-draft',
-            });
+            };
+            client.lineHistory.push(newMsg);
             client.lastContact = nowIso.slice(0, 10);
-            // 全顧客台帳を保存 (1人だけ じゃなく全部)
+            // ★ 二重保存: ①顧客台帳全体 ②lineHistory を顧客毎の独立キーに (顧客台帳が壊れても LINE 履歴は残す)
             localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS || []));
-            console.log('[lineHistory] appended fp message →', client.name, 'history len:', client.lineHistory.length, 'total saved:', (window.DUMMY_CLIENTS || []).length);
+            const histKey = 'fp-line-history-' + client.id;
+            const existHist = JSON.parse(localStorage.getItem(histKey) || '[]');
+            existHist.push(newMsg);
+            localStorage.setItem(histKey, JSON.stringify(existHist));
+            console.log('[lineHistory] saved →', client.name, 'len:', client.lineHistory.length, '/ standalone key:', histKey, '→', existHist.length);
           } catch (he) { console.warn('lineHistory append fail:', he); }
           // ★ 客毎の追撃トラッキング (localStorage に保存 → 返信待ちダッシュボード表示)
           try {
