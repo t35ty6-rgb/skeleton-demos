@@ -1055,6 +1055,11 @@
     const c = clients.find(x => x.id === id);
     if (!c) return;
     window._fpCurrentClient = c;  // AI議事録モーダルの LINE 送信 fallback 用
+    // ★ オーナーfb「リロードでトップに戻る」: 最後に開いてた顧客IDを localStorage
+    try {
+      localStorage.setItem('fp-last-open-client', id);
+      localStorage.setItem('fp-last-open-mode', 'client');
+    } catch (_) {}
     // AI BRIEF で拡大した modal-content の幅を通常に戻す
     try { document.getElementById('modal-content').style.maxWidth = ''; } catch (_) {}
     ensureLineHistory_(c);
@@ -3804,6 +3809,8 @@
     // AI BRIEF だけ幅広 (議事録 + LINE 編集の2カラム用)
     mc.style.maxWidth = '1500px';
     document.getElementById('modal-overlay').style.display = 'flex';
+    // ★ リロード復元用: AI BRIEF 開いてることを記録
+    try { localStorage.setItem('fp-last-open-mode', 'brief'); localStorage.setItem('fp-last-open-client', client.id); } catch (_) {}
 
     // ★ オーナーfb「議事録を横に広げて確認しながら LINE 編集」
     // 左ペインに 全fp-ai-* + ai_results から見つかる議事録を強力 fallback で表示
@@ -3819,12 +3826,12 @@
       const found = [];
       const consider = (a, srcKey) => {
         if (!a || (!a.summary && !a.transcript)) return;
-        const matchUser   = a.userId && myUids.has(a.userId);
+        // ★ オーナーfb「全員同じ議事録」: 汎用 fallback (お客様 → 全員) 削除
+        // この顧客との明示的な紐付けのみ採用
+        const matchUser   = a.userId && client.lineFriendId && a.userId === client.lineFriendId;
         const matchTs     = a.bookingTs && myTs.has(a.bookingTs);
-        const matchName   = a.customerName && myNames.has(a.customerName);
-        const isGeneric   = (!a.customerName || a.customerName === 'お客様');
-        const genericFallback = isGeneric && client.lineFriendId;
-        const score = matchUser ? 3 : matchTs ? 3 : matchName ? 2 : genericFallback ? 1 : 0;
+        const matchName   = a.customerName && a.customerName === client.name; // 完全一致のみ (myNames は LINE経由予約名も含むのでズレる)
+        const score = matchUser ? 3 : matchTs ? 3 : matchName ? 2 : 0;
         if (score > 0) {
           let kc = a.key_concerns;
           if (typeof kc === 'string') { try { kc = JSON.parse(kc); } catch (_) { kc = []; } }
@@ -4843,6 +4850,11 @@ C. **次の動き** — お客様が返信したらどう動くか 1行で明示
 
   function closeModal() {
     document.getElementById('modal-overlay').style.display = 'none';
+    // ★ 閉じたら復元 flag クリア
+    try {
+      localStorage.removeItem('fp-last-open-client');
+      localStorage.removeItem('fp-last-open-mode');
+    } catch (_) {}
   }
 
   // ============================
@@ -5208,5 +5220,25 @@ C. **次の動き** — お客様が返信したらどう動くか 1行で明示
     window.FpApp = { openClientModal: openClientModal, openClientForm: openClientForm };
 
     activateTab(state.activeTab);
+
+    // ★ オーナーfb「リロードで顧客台帳トップに戻る」: 最後に開いてた顧客モーダル復元
+    try {
+      const lastClient = localStorage.getItem('fp-last-open-client');
+      const lastMode = localStorage.getItem('fp-last-open-mode');
+      if (lastClient && lastMode) {
+        setTimeout(() => {
+          const c = clients.find(x => x.id === lastClient);
+          if (!c) return;
+          openClientModal(lastClient);
+          if (lastMode === 'brief') {
+            setTimeout(() => {
+              const events = window.LifeEvents.generate(c);
+              const recs = window.Recommender.forClient(c, events);
+              openDraftReplyModal(c, events, recs);
+            }, 200);
+          }
+        }, 500);
+      }
+    } catch (_) {}
   });
 })();
