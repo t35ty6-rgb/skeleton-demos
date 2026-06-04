@@ -558,8 +558,48 @@
 
   // LINE 実アクション (lastActionAt + pictureUrl) で顧客のフィールドを上書き
   // + LINE 友だちで まだ clients に居ない人 を自動で顧客一覧に追加
+  // + line_messages を各 client.lineHistory にマージ (オーナーfb「客返信反映されない」)
   function mergeLineActivity() {
-    const liveUsers = (window.LineAppLiveData && window.LineAppLiveData.users) || [];
+    const liveData = window.LineAppLiveData || {};
+    const liveUsers = liveData.users || [];
+    const liveMsgs = liveData.line_messages || [];
+    // ★ STEP 0: liveData.users から displayName 一致 client の lineFriendId を実値に補正
+    if (liveUsers.length > 0) {
+      liveUsers.forEach(u => {
+        if (!u.userId || !u.displayName) return;
+        const c = clients.find(x => String(x.name || '').trim() === u.displayName.trim());
+        if (c && c.lineFriendId !== u.userId) {
+          console.log('[mergeLine] lineFriendId 補正', c.name, ':', c.lineFriendId, '→', u.userId);
+          c.lineFriendId = u.userId;
+        }
+      });
+    }
+    // ★ STEP 0.5: line_messages を各 client.lineHistory に重複除去マージ
+    if (liveMsgs.length > 0) {
+      let merged = 0;
+      liveMsgs.forEach(m => {
+        if (!m.userId || !m.text) return;
+        const c = clients.find(x => x.lineFriendId === m.userId);
+        if (!c) return;
+        if (!Array.isArray(c.lineHistory)) c.lineHistory = [];
+        const ts = String(m.ts || '').slice(0, 19);
+        const seen = c.lineHistory.some(h => String(h.ts || '').slice(0, 19) === ts && (h.text || h.message) === m.text);
+        if (seen) return;
+        const entry = { from: 'user', direction: 'in', text: m.text, message: m.text, ts: m.ts, date: String(m.ts || '').slice(0, 10), source: 'gas-webhook' };
+        c.lineHistory.push(entry);
+        try {
+          const key = 'fp-line-history-' + c.id;
+          const arr = JSON.parse(localStorage.getItem(key) || '[]');
+          arr.push(entry);
+          localStorage.setItem(key, JSON.stringify(arr));
+        } catch (_) {}
+        merged++;
+      });
+      if (merged > 0) {
+        try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS || clients)); } catch (_) {}
+        console.log('[mergeLine] line_messages merged', merged, 'msgs');
+      }
+    }
     if (liveUsers.length === 0) return;
     const byUid = {};
     liveUsers.forEach(u => { if (u.userId) byUid[u.userId] = u; });
