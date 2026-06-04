@@ -25,6 +25,11 @@
     localStorage.setItem(LS_REAL_MODE, on ? '1' : '0');
   }
   function rebuildClients() {
+    // ★ オーナーfb「リセット後 何回かリロードで dummy が復活」: cleared flag で強制クリーン
+    if (localStorage.getItem('fp-cleared-permanently') === '1') {
+      window.DUMMY_CLIENTS = [];
+      return [];
+    }
     // 実モード = 実客のみ / デモモード = デモ客 + 実客
     const real = getRealClients();
     const list = isRealMode() ? real : demoClients.concat(real);
@@ -624,6 +629,10 @@
 
   function saveClientsToLS() {
     try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(clients)); } catch (e) {}
+    // 顧客が1人以上いれば cleared flag 解除 (新規登録した時点で通常運用に戻す)
+    if (clients.length > 0) {
+      try { localStorage.removeItem('fp-cleared-permanently'); } catch (_) {}
+    }
   }
   function loadClientsFromLS() {
     try {
@@ -5480,7 +5489,8 @@ ${client.name}さん、ありがとうございます。
         // localStorage 完全クリア (全部消す、シンプル)
         const before = localStorage.length;
         localStorage.clear();
-        // dummy デモ客 30人が復活しないよう「実モード」フラグだけ立てる
+        // ★ 永続クリア flag → 何回リロードしても dummy 復活させない (rebuildClients でガード)
+        localStorage.setItem('fp-cleared-permanently', '1');
         localStorage.setItem('fp-crm-real-mode', '1');
         localStorage.setItem('fp-crm-real-clients-v1', '[]');
         // sessionStorage も念のため
