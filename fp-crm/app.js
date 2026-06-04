@@ -3353,6 +3353,19 @@
       const d = await r.json();
       if (progressPill && progressPill._fpDone) progressPill._fpDone(d.ok && d.html, d.ok ? null : (d.error || '生成失敗'));
       if (d.ok && d.html) {
+        // ★ AI下書きフェーズ2の並列生成完了 → グローバルに格納して送信時に自動添付
+        try {
+          window._fpReadyDeliverable = { html: d.html, type, taskTitle, clientId: client.id, customerName: client.name };
+          // AI BRIEF が開いてれば draft-text の上に「✅ 資料準備完了」表示
+          const draftWrap = document.querySelector('.aib-textarea-wrap');
+          if (draftWrap && !document.getElementById('fp-auto-deliv-ready')) {
+            const readyEl = document.createElement('div');
+            readyEl.id = 'fp-auto-deliv-ready';
+            readyEl.style.cssText = 'margin:8px 0 10px;padding:10px 14px;background:linear-gradient(135deg,#10B981,#059669);color:#fff;border-radius:8px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px;';
+            readyEl.innerHTML = `<span style="font-size:18px;">📎</span><div style="flex:1;">✅ 資料を作成完了 — 送信時に自動添付されます (${(d.html.length/1024).toFixed(1)}KB)</div>`;
+            draftWrap.parentElement.insertBefore(readyEl, draftWrap);
+          }
+        } catch (_) {}
         // 既存テンプレを AI 生成版で置換
         const old = resultEl.querySelector('.fp-deliv-content');
         if (old) {
@@ -4069,6 +4082,9 @@
       }
       sendBtn.disabled = true;
       sendBtn.textContent = '送信中...';
+      // ★ オーナーfb「資料も並列生成 → 送信時に自動添付」: window._fpReadyDeliverable があれば添付
+      const ready = window._fpReadyDeliverable;
+      const hasAutoDeliv = ready && ready.clientId === client.id && ready.html && ready.html.length > 100;
       try {
         const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/line/send', {
           method: 'POST',
@@ -4076,13 +4092,16 @@
           body: JSON.stringify({
             userId: userId,
             text: text,
-            // Send structured payload too — backend can render as Flex Carousel when ready
             slots: slotsOn && slotsData.length ? slotsData.map(s => ({
               date: s.iso,
               wday: s.wday,
               time: s.time,
               label: `候補 ${slotsData.indexOf(s) + 1}`
             })) : null,
+            deliverableHtml: hasAutoDeliv ? ready.html : undefined,
+            deliverableType: hasAutoDeliv ? ready.type : undefined,
+            deliverableTitle: hasAutoDeliv ? ready.taskTitle : undefined,
+            customerName: hasAutoDeliv ? ready.customerName : undefined,
           }),
         });
         const data = await r.json();
@@ -4317,40 +4336,39 @@ ${client.name}さん、1つだけ確認させてください。
 【フェーズ2 = 客返信あり後の LINE】 ${isLoop ? '※今はこのフェーズ' : '※今は該当しない'}
 ═══════════════════════════════════════════
 
-目的: 客返信で得た主役論点に対する **成果物 + Zoom 日程3つ提示**。
-ここで Zoom 予約を確実に取る。これ以上 LINE で質問しない。
+目的: **成果物は既に作って添付した前提** + Zoom 日程は別添カードで送る。
+本文は超短くシンプルに。質問は厳禁。
 
-✅ 必須:
-A. **価値先出しコミット** — 客選択を踏まえた成果物を具体的に予告
-   例: 客①回答 → 「教育費が一番膨らむ時期 (お子様 3歳/0歳の進路パターン別) を A4 1枚にまとめます」
-   例: 客②回答 → 「自営業の年金不足額シミュを 3パターンで作ります」
+✅ 必須 (本文構成):
+1行目: 「${client.name}さん、ありがとうございます。」
+2-3行目: **資料を既に "作りました"** (時制: 完了形必須)
+   例: 「①の教育費、お子様 (3歳・0歳) の進路パターン別試算 A4 1枚、作って添付しました」
+   例: 「②の老後資金、自営業の年金不足額シミュ 3パターン、作って添付しました」
+4-5行目: 「内容を30分の Zoom で一緒に見ながら整理しませんか? 候補日は別添カードでお送りします」
 
-B. **30分 Zoom 候補日 3つ** — 提示 (タップで返信できる形式)
-   形式:
-   ┌─ 例 ─┐
-   ${client.name}さん、ありがとうございます。
+⚠ 絶対 NG:
+- 「○月○日までに作ります」「来週送ります」← 未来形は遅すぎる
+- LINE 本文内に「① 6/8 14:00 ② 6/10 19:30 ③ 6/15 10:00」みたいに **日程を文章で列挙** ← 別添カードで送るので不要
+- 質問追加 (もう客は ①と答えた、これ以上質問しない)
 
-   ① の教育費、お子様の進路パターン別 (公立/私立/医学部) の
-   試算 A4 1枚を ${'<本日+2日>'} までに作ります。
+✅ OK 例 (短く、完了形、日程はカード):
+${client.name}さん、ありがとうございます。
 
-   できた資料を 30分の Zoom で一緒に見ませんか?
+①の教育費、お子様 (3歳・0歳) の進路別試算
+(公立/私立/医学部) を A4 1枚にまとめました。
+資料添付しています。
 
-   ① ${'<本日+5日 (土)>'} 14:00-14:30
-   ② ${'<本日+7日 (月)>'} 19:30-20:00
-   ③ ${'<本日+10日 (土)>'} 10:00-10:30
-
-   ①②③ のどれかを返信ください。
-   └────┘
-
-⚠ 質問は厳禁。客はもう ①を選んだ → 次は Zoom 確定だけ。
+これを 30分 Zoom で一緒に整理しませんか?
+候補日3つを別カードでお送りします。
+タップで選んでください。
 
 ═══════════════════════════════════════════
 【共通絶対ルール】
 ═══════════════════════════════════════════
-- 日時は議事録の本日 (${today}) + 3-10日後、平日19-20時 / 土日午前 を組み合わせ
-- Zoom枠は 30分 厳守 (1時間は客が引く)
-- 「ご都合悪ければ別日も」みたいな逃げ NG (3つ全部ダメな客は脈なし)
+- 本文に日時を**書かない** (別添カードで送るので)
+- 「作ります (未来形)」絶対禁止 → 「作りました (完了形)」
 - フェーズ1で **既に1回質問** している ⇒ フェーズ2で 2回目の質問は絶対しない
+- 本文長さ: 80-150字 (短いほど良い)
 
 【📐 文章の構成 (これ厳守)】
 - 1行目: 短い呼びかけ + 「1つだけ確認させてください」 (25-40字)
@@ -4414,6 +4432,32 @@ B. **30分 Zoom 候補日 3つ** — 提示 (タップで返信できる形式)
           if (parsed.lineBody && parsed.lineBody.length > 20) {
             document.getElementById('draft-text').value = parsed.lineBody;
             currentBaseBody = parsed.lineBody;
+            // ★ オーナーfb「資料も並列で先に作って添付」: フェーズ2なら客返信から type 推定して成果物を裏で並列生成
+            if (isLoop) {
+              try {
+                const lastReply = ((client.lineHistory || []).slice().reverse().find(m => (m.from === 'user' || m.direction === 'in')) || {}).text || '';
+                let autoType = null;
+                if (/教育|進学|学費|大学|公立|私立|医学/.test(lastReply)) autoType = 'education';
+                else if (/老後|退職|年金|iDeCo|共済/i.test(lastReply)) autoType = 'retire';
+                else if (/開業|事業|奥様.*開業|家計/.test(lastReply)) autoType = 'cashflow';
+                else if (/NISA|つみたて|配分|積立/i.test(lastReply)) autoType = 'nisa';
+                else if (/保険|保障/.test(lastReply)) autoType = 'insurance';
+                else if (/相続|贈与/.test(lastReply)) autoType = 'inherit';
+                if (autoType && !window._fpAutoDelivStarted) {
+                  window._fpAutoDelivStarted = true;
+                  // バックグラウンドで成果物生成 (進捗ピル → 完了時に自動添付)
+                  console.log('[autoDeliv] starting for type:', autoType, 'based on reply:', lastReply.slice(0, 80));
+                  setTimeout(() => {
+                    try {
+                      const taskTitle = `客返信「${lastReply.slice(0, 50)}」を踏まえた成果物`;
+                      openDeliverableDraftModal(client, taskTitle, autoType);
+                      // 1秒後にモーダルを即 hide してフローティングピルで継続
+                      setTimeout(() => { const dm = document.getElementById('fp-deliv-modal'); if (dm) dm.style.display = 'none'; }, 1500);
+                    } catch (_) {}
+                  }, 800);
+                }
+              } catch (_) {}
+            }
             // Jobs ワンポイントアドバイス 表示
             let adviceEl = document.getElementById('jobs-advice-box');
             if (!adviceEl) {
