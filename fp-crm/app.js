@@ -5467,42 +5467,28 @@ ${client.name}さん、ありがとうございます。
 
     activateTab(state.activeTab);
 
-    // ★ デモ用「全データリセット」ボタン (サイドバー版 + ヘッダー版 両方に bind)
+    // ★ オーナーfb「全部一旦リセット (システムは残す、データだけ全部消す)」
     const resetHandler = () => {
-      const msg = '⚠ 全データを削除します。\n\n削除対象:\n・全顧客台帳 (実 + デモ)\n・LINE 履歴 (送受信)\n・AI 議事録\n・成果物 編集中\n・追撃トラッキング\n・ライブキャッシュ\n\n⚠ この操作は元に戻せません。\n\n本当に削除しますか?';
-      if (!confirm(msg)) return;
-      if (!confirm('もう一度確認: 全削除しますか?')) return;
+      if (!confirm('⚠ 全データを削除して 0人状態にします。\n\n顧客台帳・LINE履歴・AI議事録・成果物 すべて消えます。\n\n本当にリセットしますか?')) return;
       try {
-        // 関連 localStorage キーを全削除
-        const keysToDel = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (!k) continue;
-          if (k.startsWith('fp-crm-') ||
-              k.startsWith('fp-line-history-') ||
-              k.startsWith('fp-ai-') ||
-              k.startsWith('fp-deliv-edit-') ||
-              k.startsWith('fp-line-read-') ||
-              k === 'fp-draft-tracking' ||
-              k === 'fp-livedata-cache-v1' ||
-              k === 'fp-last-open-client' ||
-              k === 'fp-last-open-mode' ||
-              k === 'fp-dedup-migrated-v1' ||
-              k === 'fp-birth-migrated-v1' ||
-              k === 'fp-sort-migrated-v2') {
-            keysToDel.push(k);
-          }
-        }
-        keysToDel.forEach(k => localStorage.removeItem(k));
-        // ★ dummy デモ客 30人がリロード時に復活しないよう「実モード」に切替
-        //   (デモモードなら起動時に demoClients を必ず concat するため)
+        // localStorage 完全クリア (全部消す、シンプル)
+        const before = localStorage.length;
+        localStorage.clear();
+        // dummy デモ客 30人が復活しないよう「実モード」フラグだけ立てる
         localStorage.setItem('fp-crm-real-mode', '1');
         localStorage.setItem('fp-crm-real-clients-v1', '[]');
+        // sessionStorage も念のため
+        try { sessionStorage.clear(); } catch (_) {}
+        // ServiceWorker キャッシュも (もしあれば) クリア
+        try {
+          if ('caches' in window) caches.keys().then(ks => ks.forEach(k => caches.delete(k)));
+        } catch (_) {}
         window._fpDraftConversation = [];
         window._fpReadyDeliverable = null;
         window._fpAutoDelivStarted = false;
-        alert('✓ 全データ削除完了 (' + keysToDel.length + ' 個のキー) + 実モードに切替\n\nページをリロードします。');
-        location.reload();
+        alert('✓ ' + before + '個 のデータ削除完了。\n\nリロードします。');
+        // キャッシュバスト付きでリロード
+        location.href = location.pathname + '?nocache=' + Date.now();
       } catch (e) {
         alert('削除失敗: ' + e.message);
       }
