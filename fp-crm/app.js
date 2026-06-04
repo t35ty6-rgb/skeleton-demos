@@ -2045,6 +2045,24 @@
                 </div>
                 <button class="cd-line-new" data-line-ai="${c.id}"><i data-lucide="wand-2"></i><span>AI下書き</span></button>
               </div>
+              ${(function(){
+                // ★ オーナーfb「客返信に対する AI 生成 ボタンが分かりづらい」: LINE履歴タブ内に大きな AI返信案ボタン
+                const lastMsg = (c.lineHistory || []).slice().reverse()[0];
+                const lastIsUser = lastMsg && (lastMsg.direction === 'in' || lastMsg.from === 'user');
+                if (!lastIsUser) return '';
+                return `
+                  <div style="background:linear-gradient(135deg,#DC2626,#991B1B);color:#fff;padding:14px 18px;border-radius:12px;margin:10px 0 14px;box-shadow:0 8px 28px rgba(220,38,38,0.45),0 0 0 4px rgba(255,255,255,0.5);animation:fp-reply-pulse 1.6s ease-in-out infinite;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+                      <div style="font-size:24px;">⚠️</div>
+                      <div style="flex:1;">
+                        <div style="font-size:11px;font-weight:800;letter-spacing:0.16em;opacity:0.9;text-transform:uppercase;">最新が客返信 / FP 未返信</div>
+                        <div style="font-size:14px;font-weight:900;margin-top:2px;">この方への返事がまだです — Jobs と一緒に作りましょう</div>
+                      </div>
+                    </div>
+                    <button class="fp-line-tab-reply" data-cid="${escapeHtml(c.id)}" style="width:100%;background:#fff;color:#991B1B;border:none;padding:13px 18px;border-radius:8px;font-weight:900;cursor:pointer;font-size:14px;font-family:inherit;letter-spacing:0.04em;box-shadow:0 4px 14px rgba(0,0,0,0.18);">✨ Jobs と返信案を作る → 編集 → 送信</button>
+                  </div>
+                `;
+              })()}
               <div class="cd-line-chat" id="cd-line-chat">
                 ${(c.lineHistory || []).map(m => `
                   <div class="cd-line-msg ${m.direction === 'in' ? 'cd-line-in' : 'cd-line-out'}">
@@ -2114,6 +2132,13 @@
     if (nextBtn) nextBtn.addEventListener('click', () => {
       window._fpDraftLoopMode = true;
       openDraftReplyModal(c, events, recs);
+    });
+    // LINE 履歴タブ内の AI 返信案ボタン
+    document.querySelectorAll('.fp-line-tab-reply').forEach(btn => {
+      btn.addEventListener('click', () => {
+        window._fpDraftLoopMode = true;
+        openDraftReplyModal(c, events, recs);
+      });
     });
     // ⑤ 「📎 資料を作成」ボタン → AIで成果物draft (キャッシュフロー表/シミュ等)
     document.querySelectorAll('[data-make-deliverable]').forEach(btn => {
