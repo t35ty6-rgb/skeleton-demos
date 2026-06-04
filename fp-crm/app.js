@@ -5310,10 +5310,10 @@ C. **次の動き** — お客様が返信したらどう動くか 1行で明示
 
     activateTab(state.activeTab);
 
-    // ★ mergeLineActivity を 5秒毎に強制実行 (renderClients 経由に依存せず確実にmerge)
+    // ★ mergeLineActivity を 30秒毎に強制実行 (ページ重さ対策、5秒→30秒 緩和)
     setInterval(() => {
       try { mergeLineActivity(); } catch (e) { console.warn('mergeLineActivity periodic fail:', e); }
-    }, 5000);
+    }, 30000);
     // 起動直後も実行 (3秒待ってfetchLiveData完了を見越す)
     setTimeout(() => { try { mergeLineActivity(); } catch (_) {} }, 3000);
 
