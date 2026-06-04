@@ -5494,10 +5494,14 @@ ${client.name}さん、ありがとうございます。
           }
         }
         keysToDel.forEach(k => localStorage.removeItem(k));
+        // ★ dummy デモ客 30人がリロード時に復活しないよう「実モード」に切替
+        //   (デモモードなら起動時に demoClients を必ず concat するため)
+        localStorage.setItem('fp-crm-real-mode', '1');
+        localStorage.setItem('fp-crm-real-clients-v1', '[]');
         window._fpDraftConversation = [];
         window._fpReadyDeliverable = null;
         window._fpAutoDelivStarted = false;
-        alert('✓ 全データ削除完了 (' + keysToDel.length + ' 個のキー)\n\nページをリロードします。');
+        alert('✓ 全データ削除完了 (' + keysToDel.length + ' 個のキー) + 実モードに切替\n\nページをリロードします。');
         location.reload();
       } catch (e) {
         alert('削除失敗: ' + e.message);
