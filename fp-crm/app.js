@@ -3826,12 +3826,16 @@
       const found = [];
       const consider = (a, srcKey) => {
         if (!a || (!a.summary && !a.transcript)) return;
-        // ★ オーナーfb「全員同じ議事録」: 汎用 fallback (お客様 → 全員) 削除
-        // この顧客との明示的な紐付けのみ採用
+        // ★ 顧客モーダル「面談録」タブと同じ lookup ロジック (汎用 fallback 含む)
+        // 「お客様」名義で保存された議事録は lineFriendId 持つ客全員に表示されるが、
+        // score を低めにして「推定」マーク。明示マッチ (userId/bookingTs/name) があれば
+        // それを優先表示するソートで対応。
         const matchUser   = a.userId && client.lineFriendId && a.userId === client.lineFriendId;
         const matchTs     = a.bookingTs && myTs.has(a.bookingTs);
-        const matchName   = a.customerName && a.customerName === client.name; // 完全一致のみ (myNames は LINE経由予約名も含むのでズレる)
-        const score = matchUser ? 3 : matchTs ? 3 : matchName ? 2 : 0;
+        const matchName   = a.customerName && a.customerName === client.name;
+        const isGeneric   = (!a.customerName || a.customerName === 'お客様');
+        const genericFallback = isGeneric && client.lineFriendId;
+        const score = matchUser ? 3 : matchTs ? 3 : matchName ? 2 : genericFallback ? 1 : 0;
         if (score > 0) {
           let kc = a.key_concerns;
           if (typeof kc === 'string') { try { kc = JSON.parse(kc); } catch (_) { kc = []; } }
