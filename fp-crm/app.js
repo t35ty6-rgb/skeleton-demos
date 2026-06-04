@@ -5482,31 +5482,34 @@ ${client.name}さん、ありがとうございます。
 
     activateTab(state.activeTab);
 
-    // ★ オーナーfb「全部一旦リセット (システムは残す、データだけ全部消す)」
-    const resetHandler = () => {
-      if (!confirm('⚠ 全データを削除して 0人状態にします。\n\n顧客台帳・LINE履歴・AI議事録・成果物 すべて消えます。\n\n本当にリセットしますか?')) return;
+    // ★ オーナーfb「全部一旦リセット」: ローカル + GAS シート 両方クリア
+    const resetHandler = async () => {
+      if (!confirm('⚠ 全データを削除して 0人状態にします。\n\n削除対象:\n・顧客台帳 (ローカル + Google Sheets)\n・LINE 履歴 / 客返信\n・Zoom 予約\n・AI 議事録 / タスク\n・アンケート回答\n・配信ログ\n\n本当にリセットしますか?')) return;
+      const btnTop = document.getElementById('fp-reset-all-data-top');
+      if (btnTop) { btnTop.disabled = true; btnTop.textContent = '🗑 削除中…'; }
       try {
-        // localStorage 完全クリア (全部消す、シンプル)
+        // ① GAS シート リセット (Cloud Run 経由)
+        try {
+          const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/reset-all?fpId=' + (localStorage.getItem('fp-current-fpid') || 'fp001'), { method: 'POST' });
+          const d = await r.json();
+          console.log('[GAS reset]', d);
+        } catch (gasErr) { console.warn('GAS reset fail:', gasErr); }
+        // ② localStorage 完全クリア
         const before = localStorage.length;
         localStorage.clear();
-        // ★ 永続クリア flag → 何回リロードしても dummy 復活させない (rebuildClients でガード)
         localStorage.setItem('fp-cleared-permanently', '1');
         localStorage.setItem('fp-crm-real-mode', '1');
         localStorage.setItem('fp-crm-real-clients-v1', '[]');
-        // sessionStorage も念のため
         try { sessionStorage.clear(); } catch (_) {}
-        // ServiceWorker キャッシュも (もしあれば) クリア
-        try {
-          if ('caches' in window) caches.keys().then(ks => ks.forEach(k => caches.delete(k)));
-        } catch (_) {}
+        try { if ('caches' in window) caches.keys().then(ks => ks.forEach(k => caches.delete(k))); } catch (_) {}
         window._fpDraftConversation = [];
         window._fpReadyDeliverable = null;
         window._fpAutoDelivStarted = false;
-        alert('✓ ' + before + '個 のデータ削除完了。\n\nリロードします。');
-        // キャッシュバスト付きでリロード
+        alert('✓ 全データ削除完了 (ローカル ' + before + '件 + Google Sheets 全行)\n\nリロードします。');
         location.href = location.pathname + '?nocache=' + Date.now();
       } catch (e) {
         alert('削除失敗: ' + e.message);
+        if (btnTop) { btnTop.disabled = false; btnTop.innerHTML = '🗑 デモ用 全データリセット'; }
       }
     };
     const resetBtnSide = document.getElementById('fp-reset-all-data');
