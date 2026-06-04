@@ -3301,6 +3301,10 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
     try {
       const r = await fetch(CLOUD_RUN_API);
       liveData = await r.json();
+      // ★ オーナーfb「リセットしても Zoom 予約や客が残る」: cleared flag があれば全配列空に上書き
+      if (localStorage.getItem('fp-cleared-permanently') === '1') {
+        liveData = { users: [], bookings: [], survey_answers: [], step_log: [], calendar_requests: [], ai_results: [], ai_tasks: [], line_messages: [] };
+      }
       window.LineAppLiveData = liveData;
       try { localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify(liveData)); } catch (_) {}
       // ★ オーナーfb「客返信が CRM に反映されない」: line_messages を各顧客 lineHistory にマージ
