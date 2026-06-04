@@ -5467,9 +5467,8 @@ ${client.name}さん、ありがとうございます。
 
     activateTab(state.activeTab);
 
-    // ★ デモ用「全データリセット」ボタン
-    const resetBtn = document.getElementById('fp-reset-all-data');
-    if (resetBtn) resetBtn.addEventListener('click', () => {
+    // ★ デモ用「全データリセット」ボタン (サイドバー版 + ヘッダー版 両方に bind)
+    const resetHandler = () => {
       const msg = '⚠ 全データを削除します。\n\n削除対象:\n・全顧客台帳 (実 + デモ)\n・LINE 履歴 (送受信)\n・AI 議事録\n・成果物 編集中\n・追撃トラッキング\n・ライブキャッシュ\n\n⚠ この操作は元に戻せません。\n\n本当に削除しますか?';
       if (!confirm(msg)) return;
       if (!confirm('もう一度確認: 全削除しますか?')) return;
@@ -5503,7 +5502,11 @@ ${client.name}さん、ありがとうございます。
       } catch (e) {
         alert('削除失敗: ' + e.message);
       }
-    });
+    };
+    const resetBtnSide = document.getElementById('fp-reset-all-data');
+    if (resetBtnSide) resetBtnSide.addEventListener('click', resetHandler);
+    const resetBtnTop = document.getElementById('fp-reset-all-data-top');
+    if (resetBtnTop) resetBtnTop.addEventListener('click', resetHandler);
     // ★ mergeLineActivity を 30秒毎に強制実行 (ページ重さ対策、5秒→30秒 緩和)
     setInterval(() => {
       try { mergeLineActivity(); } catch (e) { console.warn('mergeLineActivity periodic fail:', e); }
