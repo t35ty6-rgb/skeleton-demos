@@ -58,6 +58,83 @@
     }
   } catch (e) {}
 
+  // ★ オーナーfb「[テスト] xxx dummy 削除 + 同名顧客の自動統合」
+  // 1回限り migration
+  try {
+    if (!localStorage.getItem('fp-dedup-migrated-v1')) {
+      let removedTest = 0;
+      let mergedDup = 0;
+      // (1) [テスト] で始まる名前を削除
+      for (let i = clients.length - 1; i >= 0; i--) {
+        const n = String(clients[i].name || '');
+        if (/^\[テスト\]/.test(n) || /^\[test\]/i.test(n)) {
+          clients.splice(i, 1);
+          removedTest++;
+        }
+      }
+      // (2) 同名で複数いる場合、lineFriendId 持ってる方に統合
+      const byNorm = {};
+      clients.forEach((c, idx) => {
+        const norm = String(c.name || '').replace(/\s+/g, '').toLowerCase();
+        if (!norm) return;
+        if (!byNorm[norm]) byNorm[norm] = [];
+        byNorm[norm].push(idx);
+      });
+      const toRemove = new Set();
+      Object.keys(byNorm).forEach(norm => {
+        const idxs = byNorm[norm];
+        if (idxs.length < 2) return;
+        // lineFriendId 持ってる方を主、無い方を統合先 (dummy)
+        const groups = idxs.map(i => clients[i]);
+        const winner = groups.find(c => c.lineFriendId) || groups[0];
+        groups.forEach(c => {
+          if (c === winner) return;
+          // 統合: lineHistory merge / lastContact 新しい方 / familyなど winner 既存優先
+          if (!Array.isArray(winner.lineHistory)) winner.lineHistory = [];
+          if (Array.isArray(c.lineHistory)) {
+            c.lineHistory.forEach(m => {
+              const ts = String(m.ts || '').slice(0, 19);
+              const seen = winner.lineHistory.some(h => String(h.ts || '').slice(0, 19) === ts && (h.text || h.message) === (m.text || m.message));
+              if (!seen) winner.lineHistory.push(m);
+            });
+          }
+          // 補完: 空欄のみ dummy 値で埋める
+          if (!winner.occupation && c.occupation) winner.occupation = c.occupation;
+          if (!winner.birth && c.birth) winner.birth = c.birth;
+          if (!winner.family || winner.family.length === 0) winner.family = c.family || [];
+          if (!winner.aum && c.aum) winner.aum = c.aum;
+          if (!winner.lastContact && c.lastContact) winner.lastContact = c.lastContact;
+          else if (c.lastContact && String(c.lastContact).localeCompare(winner.lastContact) > 0) winner.lastContact = c.lastContact;
+          // 旧 lineHistory 独立キーも merge
+          try {
+            const oldKey = 'fp-line-history-' + c.id;
+            const newKey = 'fp-line-history-' + winner.id;
+            const oldArr = JSON.parse(localStorage.getItem(oldKey) || '[]');
+            const newArr = JSON.parse(localStorage.getItem(newKey) || '[]');
+            oldArr.forEach(m => {
+              const ts = String(m.ts || '').slice(0, 19);
+              const seen = newArr.some(h => String(h.ts || '').slice(0, 19) === ts && (h.text || h.message) === (m.text || m.message));
+              if (!seen) newArr.push(m);
+            });
+            if (oldArr.length > 0) localStorage.setItem(newKey, JSON.stringify(newArr));
+            localStorage.removeItem(oldKey);
+          } catch (_) {}
+          toRemove.add(c.id);
+          mergedDup++;
+        });
+      });
+      // 削除実行
+      for (let i = clients.length - 1; i >= 0; i--) {
+        if (toRemove.has(clients[i].id)) clients.splice(i, 1);
+      }
+      if (removedTest > 0 || mergedDup > 0) {
+        try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(clients)); } catch (_) {}
+        console.log('[dedup] removed', removedTest, 'test dummy / merged', mergedDup, 'dup-name clients');
+      }
+      localStorage.setItem('fp-dedup-migrated-v1', '1');
+    }
+  } catch (e) { console.warn('dedup migration fail:', e); }
+
   const state = loadState();
 
   function loadState() {
