@@ -25,11 +25,6 @@
     localStorage.setItem(LS_REAL_MODE, on ? '1' : '0');
   }
   function rebuildClients() {
-    // ★ オーナーfb「リセット後 何回かリロードで dummy が復活」: cleared flag で強制クリーン
-    if (localStorage.getItem('fp-cleared-permanently') === '1') {
-      window.DUMMY_CLIENTS = [];
-      return [];
-    }
     // 実モード = 実客のみ / デモモード = デモ客 + 実客
     const real = getRealClients();
     const list = isRealMode() ? real : demoClients.concat(real);
@@ -629,10 +624,6 @@
 
   function saveClientsToLS() {
     try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(clients)); } catch (e) {}
-    // 顧客が1人以上いれば cleared flag 解除 (新規登録した時点で通常運用に戻す)
-    if (clients.length > 0) {
-      try { localStorage.removeItem('fp-cleared-permanently'); } catch (_) {}
-    }
   }
   function loadClientsFromLS() {
     try {
@@ -703,12 +694,6 @@
       }
       if (u.pictureUrl) c.linePictureUrl = u.pictureUrl;
     });
-    // ★ オーナーfb「リセット後に LINE 友達が自動復活する」: 実モード時は自動追加スキップ
-    // (FP が「顧客追加」ボタンで明示的に追加する想定)
-    if (isRealMode()) {
-      if (liveUsers.length === 0) return;
-      return;
-    }
     // 新規 LINE 友だちを clients に追加 (未管理顧客として)
     const isRealUid = (uid) => /^U[a-f0-9]{32}$/i.test(String(uid || ''));
     const knownUids = new Set(clients.map(c => c.lineFriendId).filter(Boolean));
@@ -5482,40 +5467,8 @@ ${client.name}さん、ありがとうございます。
 
     activateTab(state.activeTab);
 
-    // ★ オーナーfb「全部一旦リセット」: ローカル + GAS シート 両方クリア
-    const resetHandler = async () => {
-      if (!confirm('⚠ 全データを削除して 0人状態にします。\n\n削除対象:\n・顧客台帳 (ローカル + Google Sheets)\n・LINE 履歴 / 客返信\n・Zoom 予約\n・AI 議事録 / タスク\n・アンケート回答\n・配信ログ\n\n本当にリセットしますか?')) return;
-      const btnTop = document.getElementById('fp-reset-all-data-top');
-      if (btnTop) { btnTop.disabled = true; btnTop.textContent = '🗑 削除中…'; }
-      try {
-        // ① GAS シート リセット (Cloud Run 経由)
-        try {
-          const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/reset-all?fpId=' + (localStorage.getItem('fp-current-fpid') || 'fp001'), { method: 'POST' });
-          const d = await r.json();
-          console.log('[GAS reset]', d);
-        } catch (gasErr) { console.warn('GAS reset fail:', gasErr); }
-        // ② localStorage 完全クリア
-        const before = localStorage.length;
-        localStorage.clear();
-        localStorage.setItem('fp-cleared-permanently', '1');
-        localStorage.setItem('fp-crm-real-mode', '1');
-        localStorage.setItem('fp-crm-real-clients-v1', '[]');
-        try { sessionStorage.clear(); } catch (_) {}
-        try { if ('caches' in window) caches.keys().then(ks => ks.forEach(k => caches.delete(k))); } catch (_) {}
-        window._fpDraftConversation = [];
-        window._fpReadyDeliverable = null;
-        window._fpAutoDelivStarted = false;
-        alert('✓ 全データ削除完了 (ローカル ' + before + '件 + Google Sheets 全行)\n\nリロードします。');
-        location.href = location.pathname + '?nocache=' + Date.now();
-      } catch (e) {
-        alert('削除失敗: ' + e.message);
-        if (btnTop) { btnTop.disabled = false; btnTop.innerHTML = '🗑 デモ用 全データリセット'; }
-      }
-    };
-    const resetBtnSide = document.getElementById('fp-reset-all-data');
-    if (resetBtnSide) resetBtnSide.addEventListener('click', resetHandler);
-    const resetBtnTop = document.getElementById('fp-reset-all-data-top');
-    if (resetBtnTop) resetBtnTop.addEventListener('click', resetHandler);
+    // 残存 cleared flag を解除 (前回までの残骸)
+    try { localStorage.removeItem('fp-cleared-permanently'); } catch (_) {}
     // ★ mergeLineActivity を 30秒毎に強制実行 (ページ重さ対策、5秒→30秒 緩和)
     setInterval(() => {
       try { mergeLineActivity(); } catch (e) { console.warn('mergeLineActivity periodic fail:', e); }
