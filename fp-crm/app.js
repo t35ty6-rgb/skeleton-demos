@@ -5310,6 +5310,13 @@ C. **次の動き** — お客様が返信したらどう動くか 1行で明示
 
     activateTab(state.activeTab);
 
+    // ★ mergeLineActivity を 5秒毎に強制実行 (renderClients 経由に依存せず確実にmerge)
+    setInterval(() => {
+      try { mergeLineActivity(); } catch (e) { console.warn('mergeLineActivity periodic fail:', e); }
+    }, 5000);
+    // 起動直後も実行 (3秒待ってfetchLiveData完了を見越す)
+    setTimeout(() => { try { mergeLineActivity(); } catch (_) {} }, 3000);
+
     // ★ オーナーfb「リロードで顧客台帳トップに戻る」: 最後に開いてた顧客モーダル復元
     try {
       const lastClient = localStorage.getItem('fp-last-open-client');
