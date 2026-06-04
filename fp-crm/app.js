@@ -782,7 +782,7 @@
               return isUser && ts > lastRead;
             }).length;
             const unreadBadge = unreadCount > 0
-              ? `<span class="fp-unread-badge" style="display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#DC2626,#B91C1C);color:#fff;font-size:10px;font-weight:900;min-width:18px;height:18px;padding:0 5px;border-radius:9px;margin-right:6px;box-shadow:0 2px 6px rgba(220,38,38,0.4);animation:fp-unread-pulse 1.6s ease-in-out infinite;letter-spacing:0;">${unreadCount > 99 ? '99+' : unreadCount}</span>`
+              ? `<span class="fp-unread-badge" style="display:inline-flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#DC2626,#991B1B);color:#fff;font-size:10px;font-weight:900;padding:3px 9px;border-radius:11px;margin-right:6px;box-shadow:0 4px 12px rgba(220,38,38,0.55),0 0 0 2px rgba(255,255,255,0.5);animation:fp-unread-pulse 1.4s ease-in-out infinite;letter-spacing:0.06em;white-space:nowrap;">⚠ 要返事 ${unreadCount > 99 ? '99+' : unreadCount}</span>`
               : '';
             return `${unreadBadge}<span class="status-pill ${c.status}">${statusLabel(c.status)}</span>${taskCount > 0 ? `<button class="fp-task-badge" data-task-cid="${escapeHtml(c.lineFriendId || c.id)}" data-task-name="${escapeHtml(c.name)}" style="display:inline-block;margin-left:6px;font-size:10px;background:#fff8e1;color:#a08537;padding:2px 7px;border-radius:9px;font-weight:700;border:1px solid #f0d36b;cursor:pointer;font-family:inherit;" title="タスク一覧を見る">📝${taskCount}</button>` : ''}`;
           })()}</td>
@@ -1315,19 +1315,26 @@
           return isUser && m.ts && new Date(m.ts).getTime() > new Date(t.lastSentAt).getTime();
         });
         if (replied) {
-          // 返信受領 → tracking フラグ解除
+          // ★ オーナーfb「客返信あり FP未返信 → 赤い目立つバナー + 自動で Jobs が返信案生成」
           tracking[c.id].awaitingReply = false;
           tracking[c.id].repliedAt = new Date().toISOString();
           try { localStorage.setItem('fp-draft-tracking', JSON.stringify(tracking)); } catch (_) {}
+          // 最新の客返信内容を抽出
+          const lastReply = (c.lineHistory || []).slice().reverse().find(m => (m.from === 'user' || m.direction === 'in'));
+          const replyText = lastReply ? (lastReply.text || lastReply.message || '') : '';
           const replyBanner = `
-            <div style="background:linear-gradient(135deg,#10B981,#059669);color:#fff;padding:12px 16px;border-radius:10px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
-              <div style="font-size:22px;">💬</div>
-              <div style="flex:1;">
-                <div style="font-size:13px;font-weight:800;">お客様から返信が来ました</div>
-                <div style="font-size:11.5px;opacity:0.9;margin-top:2px;">「${escapeHtml(t.lastSentText.slice(0, 50))}…」の返答 → Claude が次の提案を作成可</div>
+            <div style="background:linear-gradient(135deg,#DC2626,#991B1B);color:#fff;padding:16px 18px;border-radius:12px;margin-bottom:14px;box-shadow:0 8px 28px rgba(220,38,38,0.45),0 0 0 4px rgba(255,255,255,0.5);animation:fp-reply-pulse 1.6s ease-in-out infinite;">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+                <div style="font-size:28px;">⚠️</div>
+                <div style="flex:1;">
+                  <div style="font-size:11px;font-weight:800;letter-spacing:0.18em;opacity:0.9;text-transform:uppercase;">客返信あり / FP 未返信</div>
+                  <div style="font-size:15px;font-weight:900;margin-top:2px;letter-spacing:0.02em;">この方への返事がまだです</div>
+                </div>
               </div>
-              <button id="fp-track-next" data-cid="${escapeHtml(c.id)}" style="background:#fff;color:#059669;border:none;padding:8px 14px;border-radius:6px;font-weight:800;cursor:pointer;font-size:12px;font-family:inherit;">✨ 次の提案を作る</button>
+              ${replyText ? `<div style="background:rgba(255,255,255,0.18);border-left:3px solid #fff;padding:10px 14px;border-radius:6px;margin-bottom:10px;font-size:13px;line-height:1.55;">💬 ${escapeHtml(replyText.slice(0, 200))}${replyText.length > 200 ? '…' : ''}</div>` : ''}
+              <button id="fp-track-next" data-cid="${escapeHtml(c.id)}" style="width:100%;background:#fff;color:#991B1B;border:none;padding:12px 18px;border-radius:8px;font-weight:900;cursor:pointer;font-size:14px;font-family:inherit;letter-spacing:0.04em;box-shadow:0 4px 14px rgba(0,0,0,0.15);">✨ Jobs と返信案を一緒に作る → 即送信</button>
             </div>
+            <style>@keyframes fp-reply-pulse{0%,100%{box-shadow:0 8px 28px rgba(220,38,38,0.45),0 0 0 4px rgba(255,255,255,0.5)}50%{box-shadow:0 14px 38px rgba(220,38,38,0.65),0 0 0 8px rgba(255,255,255,0.55)}}</style>
           `;
           nextActionHtml = replyBanner + (nextActionHtml || '');
         } else if (daysSinceSent >= 3) {
@@ -4103,7 +4110,16 @@ ${draft.intent} — ${draft.reason}
 
 【依頼】
 ${isLoop
-  ? '上記の会話ループ履歴を踏まえ、自然に次の一手の LINE 下書きを 1つ 生成。'
+  ? `上記の会話ループ履歴の **直近のお客様返信** を読み、その意図を汲み取って次の一手 LINE 下書きを 1つ 生成。
+
+  【お客様返信への応答 必須ルール】
+  - お客様返信が「① ② ③」等の選択肢回答なら、その選択に応じた **具体的なネクストアクション** を提示
+    例: 客返信「① 2人で相談したい」→ 応答「奥様にも分かりやすいよう図解多めの資料を月内に作ります。ご相談しやすいタイミングで」
+    例: 客返信「② 自分主導」→ 応答「では本気の試算 PDF を週内にお送りします。ご質問は LINE でいつでも」
+  - 客返信が短くても、必ず **具体的な次行動 + 提供価値** を含める
+  - NG: 「ご返信ありがとうございます」「承知しました」だけの礼文
+  - NG: 同じ選択肢をもう一度繰り返し聞く (返事もらった選択肢は捨てて次の論点へ)
+  - 質問するなら **次の論点** の選択肢に進む (例: 主役確定 → 次は意思決定スタイル or 緊急度)`
   : `${client.name}様に "いま" 送るべき LINE 下書きを 1つ 生成。`
 }
 
