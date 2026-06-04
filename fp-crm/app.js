@@ -694,6 +694,12 @@
       }
       if (u.pictureUrl) c.linePictureUrl = u.pictureUrl;
     });
+    // ★ オーナーfb「リセット後に LINE 友達が自動復活する」: 実モード時は自動追加スキップ
+    // (FP が「顧客追加」ボタンで明示的に追加する想定)
+    if (isRealMode()) {
+      if (liveUsers.length === 0) return;
+      return;
+    }
     // 新規 LINE 友だちを clients に追加 (未管理顧客として)
     const isRealUid = (uid) => /^U[a-f0-9]{32}$/i.test(String(uid || ''));
     const knownUids = new Set(clients.map(c => c.lineFriendId).filter(Boolean));
