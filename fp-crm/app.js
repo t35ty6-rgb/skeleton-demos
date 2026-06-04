@@ -2072,7 +2072,10 @@
               </div>
             </div>
 
-            <button class="cd-flow-edit ghost-btn" id="modal-edit-btn"><i data-lucide="pencil"></i><span>顧客情報を編集</span></button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="cd-flow-edit ghost-btn" id="modal-edit-btn"><i data-lucide="pencil"></i><span>顧客情報を編集</span></button>
+              <button id="modal-delete-btn" style="background:#fff;color:#dc2626;border:1px solid #fecaca;padding:8px 14px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i><span>この顧客を削除</span></button>
+            </div>
           </div>` : `
           <div class="cd-flow cd-flow-empty">
             <div class="cd-flow-eyebrow"><span class="cd-flow-eyebrow-pill">AI推奨</span></div>
@@ -2088,7 +2091,10 @@
               </button>
               <style>@keyframes fp-draft-cta-pulse{0%,100%{transform:translateY(0) scale(1);box-shadow:0 8px 24px rgba(249,115,22,0.55),0 0 0 4px rgba(255,255,255,0.5)}50%{transform:translateY(-2.5px) scale(1.025);box-shadow:0 16px 36px rgba(249,115,22,0.72),0 0 0 7px rgba(255,255,255,0.6)}}@keyframes fp-draft-cta-gradient{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}</style>
             </div>
-            <button class="cd-flow-edit ghost-btn" id="modal-edit-btn"><i data-lucide="pencil"></i><span>顧客情報を編集</span></button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="cd-flow-edit ghost-btn" id="modal-edit-btn"><i data-lucide="pencil"></i><span>顧客情報を編集</span></button>
+              <button id="modal-delete-btn" style="background:#fff;color:#dc2626;border:1px solid #fecaca;padding:8px 14px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i><span>この顧客を削除</span></button>
+            </div>
           </div>`}
 
           <!-- Tabs -->
@@ -2224,6 +2230,59 @@
     `;
     document.getElementById('modal-overlay').style.display = 'flex';
     document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+    // ★ 顧客削除ボタン
+    const delBtn = document.getElementById('modal-delete-btn');
+    if (delBtn) delBtn.addEventListener('click', async () => {
+      if (!confirm('⚠ ' + c.name + ' さんを削除します。\n\nこの顧客に関連するすべてのデータ:\n・LINE 履歴 / 客返信\n・Zoom 予約\n・AI 議事録 / タスク\n・成果物 編集中\n・アンケート回答\n\nを削除します。元に戻せません。\n\n本当に削除しますか?')) return;
+      delBtn.disabled = true; delBtn.innerHTML = '削除中…';
+      try {
+        // ① GAS 側の関連データ削除 (Cloud Run 経由)
+        if (c.lineFriendId) {
+          try {
+            await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/delete-customer?userId=' + encodeURIComponent(c.lineFriendId), { method: 'POST' });
+          } catch (gasErr) { console.warn('GAS delete fail:', gasErr); }
+        }
+        // ② localStorage 関連キー削除 (LINE履歴/議事録/成果物/既読/トラッキング)
+        const cid = c.id;
+        const lfid = c.lineFriendId;
+        const cname = c.name;
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k) continue;
+          if (k === 'fp-line-history-' + cid ||
+              k === 'fp-line-read-' + cid ||
+              k.startsWith('fp-deliv-edit-' + cid + '-') ||
+              k === 'fp-ai-' + cid ||
+              (lfid && k === 'fp-ai-' + lfid) ||
+              k === 'fp-ai-' + cname ||
+              k === 'fp-tasks-' + cid ||
+              (lfid && k === 'fp-tasks-' + lfid) ||
+              k === 'fp-tasks-' + cname) {
+            keysToRemove.push(k);
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        // tracking 内 該当客削除
+        try {
+          const tr = JSON.parse(localStorage.getItem('fp-draft-tracking') || '{}');
+          delete tr[cid];
+          localStorage.setItem('fp-draft-tracking', JSON.stringify(tr));
+        } catch (_) {}
+        // ③ clients から除外 + 永続化
+        const idx = clients.findIndex(x => x.id === cid);
+        if (idx >= 0) clients.splice(idx, 1);
+        try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS || clients)); } catch (_) {}
+        // ④ モーダル閉じる + 一覧再描画
+        closeModal();
+        if (window.FPCrmRefreshClients) window.FPCrmRefreshClients();
+        alert('✓ ' + cname + ' さん を削除しました。\n(localStorage ' + keysToRemove.length + '件 + GAS関連データ)');
+      } catch (e) {
+        alert('削除失敗: ' + e.message);
+        delBtn.disabled = false;
+        delBtn.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;"></i><span>この顧客を削除</span>';
+      }
+    });
     document.getElementById('modal-edit-btn').addEventListener('click', () => {
       closeModal();
       openClientForm(c.id);
