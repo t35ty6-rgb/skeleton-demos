@@ -769,7 +769,19 @@
           <td>${window.LifeEvents.currentAge(c) ?? '<span style="color:var(--muted);">-</span>'}</td>
           <td class="hide-mobile">${escapeHtml(c.occupation)}</td>
           <td>${familyTxt}</td>
-          <td><span class="status-pill ${c.status}">${statusLabel(c.status)}</span>${taskCount > 0 ? `<button class="fp-task-badge" data-task-cid="${escapeHtml(c.lineFriendId || c.id)}" data-task-name="${escapeHtml(c.name)}" style="display:inline-block;margin-left:6px;font-size:10px;background:#fff8e1;color:#a08537;padding:2px 7px;border-radius:9px;font-weight:700;border:1px solid #f0d36b;cursor:pointer;font-family:inherit;" title="タスク一覧を見る">📝${taskCount}</button>` : ''}</td>
+          <td>${(function(){
+            // ★ オーナーfb「客返信あったら赤バッジ」: 未読カウント
+            const lastRead = parseInt(localStorage.getItem('fp-line-read-' + c.id) || '0', 10);
+            const unreadCount = (c.lineHistory || []).filter(m => {
+              const isUser = (m.from === 'user' || m.direction === 'in');
+              const ts = new Date(m.ts || m.date || 0).getTime();
+              return isUser && ts > lastRead;
+            }).length;
+            const unreadBadge = unreadCount > 0
+              ? `<span class="fp-unread-badge" style="display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#DC2626,#B91C1C);color:#fff;font-size:10px;font-weight:900;min-width:18px;height:18px;padding:0 5px;border-radius:9px;margin-right:6px;box-shadow:0 2px 6px rgba(220,38,38,0.4);animation:fp-unread-pulse 1.6s ease-in-out infinite;letter-spacing:0;">${unreadCount > 99 ? '99+' : unreadCount}</span>`
+              : '';
+            return `${unreadBadge}<span class="status-pill ${c.status}">${statusLabel(c.status)}</span>${taskCount > 0 ? `<button class="fp-task-badge" data-task-cid="${escapeHtml(c.lineFriendId || c.id)}" data-task-name="${escapeHtml(c.name)}" style="display:inline-block;margin-left:6px;font-size:10px;background:#fff8e1;color:#a08537;padding:2px 7px;border-radius:9px;font-weight:700;border:1px solid #f0d36b;cursor:pointer;font-family:inherit;" title="タスク一覧を見る">📝${taskCount}</button>` : ''}`;
+          })()}</td>
           <td class="num">¥${fmtMoney(c.aum)}</td>
           <td class="${contactCls}"><div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start;"><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:${contactBg};color:${contactFg};">${contactLabel}</span><span style="font-size:11px;color:var(--muted);">${dayDisplay}</span>${c.lastActionType ? `<span style="font-size:9.5px;color:var(--accent);font-weight:600;">📱 LINE: ${escapeHtml((c.lastActionType||'').split(':')[0])}</span>` : ''}</div></td>
         </tr>
@@ -1949,7 +1961,15 @@
           <!-- Tabs -->
           <div class="cd-tabs" role="tablist">
             <button class="cd-tab cd-tab-active" data-cdtab="overview">概観</button>
-            <button class="cd-tab" data-cdtab="line">LINE履歴 <span class="cd-tab-count">${(c.lineHistory || []).length}</span></button>
+            <button class="cd-tab" data-cdtab="line">LINE履歴 <span class="cd-tab-count">${(c.lineHistory || []).length}</span>${(function(){
+              const lr = parseInt(localStorage.getItem('fp-line-read-' + c.id) || '0', 10);
+              const uc = (c.lineHistory || []).filter(m => {
+                const isU = (m.from === 'user' || m.direction === 'in');
+                const ts = new Date(m.ts || m.date || 0).getTime();
+                return isU && ts > lr;
+              }).length;
+              return uc > 0 ? `<span style="display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#DC2626,#B91C1C);color:#fff;font-size:10px;font-weight:900;min-width:18px;height:18px;padding:0 5px;border-radius:9px;margin-left:5px;box-shadow:0 2px 6px rgba(220,38,38,0.45);animation:fp-unread-pulse 1.6s ease-in-out infinite;letter-spacing:0;">${uc > 99 ? '99+' : uc}</span>` : '';
+            })()}</button>
             <button class="cd-tab" data-cdtab="timeline">タイムライン <span class="cd-tab-count">${events.length}</span></button>
             <button class="cd-tab" data-cdtab="proposals">提案履歴 <span class="cd-tab-count">${(c.proposals || []).length}</span></button>
             <button class="cd-tab" data-cdtab="meetings">面談録</button>
@@ -2099,6 +2119,18 @@
           if (p.dataset.cdpanel === key) p.removeAttribute('hidden');
           else p.setAttribute('hidden', '');
         });
+        // ★ LINE 履歴タブ開いたら「既読」マーク
+        if (key === 'line') {
+          try {
+            localStorage.setItem('fp-line-read-' + c.id, Date.now().toString());
+            // タブ内の赤バッジを消す
+            btn.querySelectorAll('span').forEach(s => {
+              if (s.textContent && /^\d+$/.test(s.textContent.trim()) && s.style.background && s.style.background.includes('DC2626')) {
+                s.remove();
+              }
+            });
+          } catch(_) {}
+        }
       });
     });
     // Quick action stubs
