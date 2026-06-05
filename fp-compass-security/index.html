@@ -4,253 +4,280 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>FP Compass — 認証 / セキュリティ 設計提案書</title>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Serif+JP:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<title>FP Compass — ログインと安全対策 (1分でわかる)</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Serif+JP:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--green-deep:#1F6B3A;--green-mid:#2D8C4F;--green-soft:#E8F3EC;--green-line:#B5D4BF;--ink:#0F1A12;--ink-2:#2C3A30;--muted:#6F7C72;--paper:#FCFDFC;--paper-cream:#FAFBF7;--line:#D9DDD6;--warn-bg:#FFF7E6;--warn-border:#E6CF8B;--warn-text:#5E4A1B;--crit-bg:#FFF0F0;--crit-border:#F2B5B5;--crit-text:#7A1F1F;}
-*{box-sizing:border-box}html,body{margin:0;padding:0;font-family:'Noto Sans JP',sans-serif;color:var(--ink);background:#EEF0EC;line-height:1.7}
-.page{max-width:920px;margin:32px auto;background:var(--paper);padding:56px 64px 48px;border:1px solid var(--line);box-shadow:0 24px 64px rgba(15,26,18,0.10);position:relative}
-.page::before{content:'';position:absolute;top:0;left:0;right:0;height:6px;background:linear-gradient(90deg,var(--green-deep) 0%,var(--green-mid) 50%,var(--green-deep) 100%)}
-header{display:grid;grid-template-columns:1fr auto;gap:24px;padding-bottom:28px;border-bottom:2px solid var(--ink);margin-bottom:32px;align-items:end}
-.h-title{font-family:'Noto Serif JP',serif;font-weight:600;font-size:28px;letter-spacing:0.04em;color:var(--ink);margin:0;line-height:1.3}
-.h-sub{font-family:'Manrope',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.32em;color:var(--green-deep);text-transform:uppercase;margin-bottom:6px}
-.h-product{font-size:13px;color:var(--muted);margin-top:8px}
-.h-meta{text-align:right;font-size:12px;line-height:1.9;color:var(--ink-2)}.h-meta strong{color:var(--ink);font-weight:700}
-.summary{background:linear-gradient(180deg,var(--paper-cream),var(--paper));border:1px solid var(--green-line);border-radius:10px;padding:22px 28px;margin-bottom:32px}
-.summary-label{font-size:10.5px;font-weight:800;letter-spacing:0.18em;color:var(--green-deep);text-transform:uppercase;margin-bottom:10px}
-.summary-text{font-size:13.5px;line-height:1.85;color:var(--ink-2)}.summary-text strong{color:var(--ink);font-weight:700}
-section{margin-bottom:36px;page-break-inside:avoid}
-h2{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--ink);margin:0 0 18px;padding-bottom:10px;border-bottom:1px solid var(--green-line);display:flex;align-items:baseline;gap:12px;letter-spacing:0.04em}
-h2::before{content:'';width:4px;height:18px;background:var(--green-deep);border-radius:2px}
-h2 .h2-no{font-family:'Manrope',sans-serif;font-size:11px;font-weight:800;color:var(--green-deep);letter-spacing:0.18em}
-h3{font-family:'Noto Serif JP',serif;font-size:14px;font-weight:600;color:var(--ink);margin:22px 0 10px;padding-left:12px;border-left:3px solid var(--green-mid)}
-p{font-size:13px;line-height:1.85;color:var(--ink-2);margin:0 0 14px}strong{color:var(--ink);font-weight:700}
-.arch{background:var(--paper-cream);border:1px dashed var(--green-line);border-radius:8px;padding:18px 22px;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.85;color:var(--ink-2);white-space:pre;overflow-x:auto;margin:12px 0}
-.arch .acc{color:var(--green-deep);font-weight:600}
-table{width:100%;border-collapse:collapse;font-size:12.5px;margin:12px 0}
-table thead th{background:var(--green-soft);color:var(--green-deep);font-weight:700;padding:10px 12px;text-align:left;border-bottom:1.5px solid var(--green-line);letter-spacing:0.04em;font-size:11px;text-transform:uppercase}
-table tbody td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.65}
-table tbody tr:last-child td{border-bottom:none}
-table tbody td.lead{font-weight:700;color:var(--ink)}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
-.card{background:var(--paper-cream);border:1px solid var(--green-line);border-radius:8px;padding:16px 18px}
-.card-label{font-size:10px;font-weight:800;letter-spacing:0.16em;color:var(--green-deep);text-transform:uppercase;margin-bottom:8px}
-.card-value{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--ink);margin-bottom:4px}
-.card-desc{font-size:11.5px;color:var(--ink-2);line-height:1.6}
-.warn{background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:6px;padding:14px 18px;font-size:12px;line-height:1.75;color:var(--warn-text);margin:12px 0}
-.crit{background:var(--crit-bg);border:1px solid var(--crit-border);border-radius:6px;padding:14px 18px;font-size:12px;line-height:1.75;color:var(--crit-text);margin:12px 0}
-.pill{display:inline-block;font-size:10px;font-weight:700;padding:3px 8px;border-radius:9px;letter-spacing:0.04em}
-.pill-rec{background:var(--green-soft);color:var(--green-deep);border:1px solid var(--green-line)}
-.pill-opt{background:var(--warn-bg);color:var(--warn-text);border:1px solid var(--warn-border)}
-.pill-ng{background:var(--crit-bg);color:var(--crit-text);border:1px solid var(--crit-border)}
-footer{margin-top:48px;padding-top:28px;border-top:2px solid var(--ink);display:grid;grid-template-columns:1fr auto;gap:32px;align-items:end}
-.vendor-label{font-size:10.5px;color:var(--muted);letter-spacing:0.18em;font-weight:700;margin-bottom:8px}
-.vendor-name{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:var(--ink);margin-bottom:4px}
-.vendor-en{font-family:'Manrope',sans-serif;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.06em;margin-bottom:10px}
-.vendor-detail{font-size:11.5px;line-height:1.8;color:var(--ink-2)}
-.seal{width:88px;height:88px;border:2px solid var(--green-deep);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:13px;font-weight:700;color:var(--green-deep);letter-spacing:0.08em;text-align:center;line-height:1.3}
-@media print{body{background:#fff}.page{box-shadow:none;border:none;margin:0;max-width:none;padding:28px 36px}}
-.print-btn{position:fixed;bottom:28px;right:28px;background:var(--green-deep);color:#fff;border:none;padding:12px 22px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 8px 24px rgba(15,26,18,0.18)}
-.print-btn:hover{background:var(--green-mid)}@media print{.print-btn{display:none}}
+  :root {
+    --green:#1F6B3A; --green-mid:#2D8C4F; --green-soft:#E8F3EC; --green-line:#B5D4BF;
+    --ink:#0F1A12; --muted:#6F7C72; --paper:#FCFDFC; --line:#D9DDD6;
+    --gold:#C99A3D; --gold-soft:#FBF1D9;
+    --red:#C8392F; --red-soft:#FBE5E2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Noto Sans JP',sans-serif;background:#EEF0EC;color:var(--ink);line-height:1.65;-webkit-font-smoothing:antialiased}
+  .page{max-width:960px;margin:24px auto;background:var(--paper);box-shadow:0 24px 64px rgba(15,26,18,0.10);border-radius:4px;overflow:hidden}
+
+  /* HERO */
+  .hero{background:linear-gradient(135deg,#103820 0%,#1F6B3A 60%,#2D8C4F 100%);color:#fff;padding:48px 56px;position:relative;overflow:hidden}
+  .hero::after{content:'';position:absolute;right:-80px;top:-80px;width:320px;height:320px;background:radial-gradient(circle,rgba(255,255,255,0.12) 0%,transparent 65%);pointer-events:none}
+  .hero-eyebrow{font-family:'Manrope',sans-serif;font-size:11px;letter-spacing:0.3em;text-transform:uppercase;opacity:0.85;margin-bottom:12px;font-weight:700}
+  .hero-title{font-family:'Noto Serif JP',serif;font-size:36px;font-weight:500;line-height:1.3;letter-spacing:0.02em;margin-bottom:14px}
+  .hero-title strong{color:#FFE9A8;font-weight:700}
+  .hero-sub{font-size:14px;opacity:0.9;max-width:680px;line-height:1.85}
+  .hero-meta{margin-top:24px;display:flex;gap:20px;font-size:11.5px;opacity:0.75;letter-spacing:0.04em}
+
+  /* CONTENT */
+  .body{padding:48px 56px}
+
+  /* QUESTION SECTION */
+  .q-section{margin-bottom:48px}
+  .q-eyebrow{font-family:'Manrope',sans-serif;font-size:10.5px;letter-spacing:0.2em;color:var(--green);text-transform:uppercase;font-weight:700;margin-bottom:8px}
+  .q-title{font-family:'Noto Serif JP',serif;font-size:24px;font-weight:600;color:var(--ink);margin-bottom:6px;letter-spacing:0.02em}
+  .q-lead{font-size:13.5px;color:var(--muted);margin-bottom:24px;line-height:1.8}
+
+  /* FLOW STEPS — large visual flow */
+  .flow{display:grid;grid-template-columns:1fr 24px 1fr 24px 1fr;gap:0;align-items:stretch}
+  @media(max-width:760px){.flow{grid-template-columns:1fr;gap:14px}.flow-arrow{display:none}}
+  .step-card{background:linear-gradient(180deg,#fff,#FAFBFA);border:1px solid var(--green-line);border-radius:12px;padding:22px 20px;position:relative;display:flex;flex-direction:column;gap:10px}
+  .step-no{font-family:'Manrope',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.16em;color:var(--green);text-transform:uppercase}
+  .step-icon{font-size:32px;line-height:1}
+  .step-title{font-family:'Noto Serif JP',serif;font-weight:600;font-size:15px;color:var(--ink);letter-spacing:0.02em;line-height:1.4}
+  .step-desc{font-size:12px;color:var(--muted);line-height:1.7}
+  .flow-arrow{display:flex;align-items:center;justify-content:center;color:var(--green);font-size:20px;font-weight:600}
+
+  /* COMPARISON */
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:20px}
+  @media(max-width:760px){.compare{grid-template-columns:1fr}}
+  .compare-card{padding:22px 24px;border-radius:12px;position:relative;overflow:hidden}
+  .compare-card.good{background:linear-gradient(135deg,#F3FAF5,#E8F3EC);border:2px solid var(--green)}
+  .compare-card.bad{background:linear-gradient(135deg,#FCF4F2,#F8EAE7);border:1px solid #E8C5BF}
+  .compare-label{font-family:'Manrope',sans-serif;font-size:10.5px;letter-spacing:0.16em;font-weight:800;text-transform:uppercase;margin-bottom:10px}
+  .compare-card.good .compare-label{color:var(--green)}
+  .compare-card.bad .compare-label{color:#9A4439}
+  .compare-title{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;margin-bottom:10px;color:var(--ink);letter-spacing:0.02em}
+  .compare-body{font-size:12.5px;color:#465049;line-height:1.85}
+  .compare-body strong{color:var(--ink)}
+  .compare-tag{display:inline-block;font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:0.06em;margin-bottom:14px}
+  .compare-tag.good{background:var(--green);color:#fff}
+  .compare-tag.bad{background:#fff;color:#9A4439;border:1px solid #E8C5BF}
+
+  /* SAFE BOX (DATA SAFETY) */
+  .safe-box{background:linear-gradient(180deg,#FAFBFA,#fff);border:1px solid var(--green-line);border-radius:14px;padding:32px 36px;margin-top:8px}
+  .safe-diagram{display:grid;grid-template-columns:1fr auto 1fr;gap:24px;align-items:center;margin-bottom:24px}
+  @media(max-width:760px){.safe-diagram{grid-template-columns:1fr}}
+  .safe-box-card{text-align:center;padding:24px 20px;background:#fff;border:1px dashed var(--green-line);border-radius:12px}
+  .safe-emoji{font-size:38px;margin-bottom:8px;display:block}
+  .safe-name{font-family:'Noto Serif JP',serif;font-weight:600;font-size:14px;color:var(--ink);margin-bottom:4px}
+  .safe-detail{font-size:11.5px;color:var(--muted);line-height:1.65}
+  .safe-arrow{font-size:32px;color:var(--green);text-align:center;font-weight:300}
+  .safe-points{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  @media(max-width:760px){.safe-points{grid-template-columns:1fr}}
+  .safe-point{padding:18px 18px;background:var(--green-soft);border-radius:10px;display:flex;flex-direction:column;gap:6px}
+  .safe-point-icon{font-size:22px}
+  .safe-point-title{font-family:'Noto Serif JP',serif;font-weight:600;font-size:13px;color:var(--green);letter-spacing:0.02em}
+  .safe-point-desc{font-size:11.5px;color:#3A4D40;line-height:1.7}
+
+  /* CONTRACT 3 */
+  .contracts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:760px){.contracts{grid-template-columns:1fr}}
+  .contract-card{background:linear-gradient(180deg,#FFFCF5,var(--gold-soft));border:1px solid #E8D29A;border-radius:12px;padding:20px 22px;position:relative}
+  .contract-no{font-family:'Manrope',sans-serif;font-weight:800;font-size:10.5px;letter-spacing:0.18em;color:#9C7E3A;text-transform:uppercase;margin-bottom:10px}
+  .contract-title{font-family:'Noto Serif JP',serif;font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:6px;letter-spacing:0.02em}
+  .contract-detail{font-size:11.5px;color:#5E4F2B;line-height:1.7}
+
+  /* DECISION BOX */
+  .decision{background:linear-gradient(135deg,#103820,#1F6B3A);color:#fff;border-radius:16px;padding:36px 40px;margin-top:8px}
+  .decision-eyebrow{font-family:'Manrope',sans-serif;font-size:10.5px;letter-spacing:0.22em;opacity:0.85;text-transform:uppercase;font-weight:700;margin-bottom:14px}
+  .decision-title{font-family:'Noto Serif JP',serif;font-weight:600;font-size:22px;margin-bottom:24px;letter-spacing:0.02em}
+  .decision-list{display:grid;gap:14px}
+  .decision-q{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:16px 20px;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center}
+  .decision-no{font-family:'Manrope',sans-serif;font-weight:800;font-size:14px;color:#FFE9A8;letter-spacing:0.06em}
+  .decision-body{font-size:13.5px;line-height:1.7}
+  .decision-body strong{color:#FFE9A8;font-weight:700}
+  .decision-yn{font-family:'Manrope',sans-serif;font-weight:700;font-size:11.5px;color:#fff;background:rgba(255,255,255,0.18);padding:6px 14px;border-radius:99px;letter-spacing:0.06em;border:1px solid rgba(255,255,255,0.3);white-space:nowrap}
+
+  /* FOOT */
+  .foot{padding:32px 56px;background:#FAFBFA;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--muted)}
+  .foot-brand{font-family:'Noto Serif JP',serif;font-weight:600;font-size:13px;color:var(--ink)}
+
+  /* PRINT */
+  @media print{body{background:#fff}.page{box-shadow:none;border-radius:0;margin:0;max-width:none}.body,.hero,.foot{padding:24px 28px}.print-btn{display:none}}
+  .print-btn{position:fixed;bottom:24px;right:24px;background:var(--green);color:#fff;border:none;padding:12px 22px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 8px 24px rgba(15,26,18,0.18);letter-spacing:0.04em}
+  .print-btn:hover{background:var(--green-mid)}
 </style>
 </head>
 <body>
 <div class="page">
-  <header>
-    <div>
-      <div class="h-sub">Authentication & Security Architecture</div>
-      <h1 class="h-title">FP Compass — 認証 / セキュリティ 設計 提案書</h1>
-      <div class="h-product">個人情報 / 金融情報を扱う SaaS の責任ある運用基盤</div>
-    </div>
-    <div class="h-meta">
-      <div><strong>FPC-SEC-2026-001</strong></div>
-      <div>2026 年 6 月 5 日</div>
-      <div>策定: 吉田 恭聡</div>
-    </div>
-  </header>
 
-  <div class="summary">
-    <div class="summary-label">エグゼクティブ サマリー</div>
-    <div class="summary-text">
-      FP Compass は<strong>個人の年収 / 資産 / 家族構成 / 健康状態</strong>等の <strong>要配慮個人情報に準ずる金融情報</strong> を扱う SaaS である。本書では (1) FP がログインする<strong>認証方式</strong> (2) FP 顧客の <strong>個人情報を守るセキュリティ対策</strong> (3) <strong>法的責任の整理</strong> を提案する。推奨は <strong>Google OAuth + Magic Link バックアップ</strong>、データ保管は <strong>各 FP 専用 Google Workspace</strong> 内に隔離、規約 / 同意は <strong>業務委託契約 + 個人情報取扱同意書</strong> をセットで締結する。
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">For Owner — Plain Language Edition</div>
+    <h1 class="hero-title">FP さんが<strong>安心して使える</strong>仕組みを<br>3 つの絵で説明します。</h1>
+    <div class="hero-sub">専門用語なし、1 分で読めます。最後に「Yes か No」で 3 つだけ答えてもらえれば、Jobs 側で作業を進めます。</div>
+    <div class="hero-meta">
+      <span>FPC-SEC-2026-001</span>
+      <span>2026 年 6 月 5 日</span>
+      <span>策定: 吉田 恭聡</span>
     </div>
   </div>
 
-  <section>
-    <h2><span class="h2-no">01</span> 認証方式 — どうやってログインするか</h2>
-    <h3>1-1. 4 つの選択肢 比較</h3>
-    <table>
-      <thead><tr><th>方式</th><th>採点</th><th>長所</th><th>短所</th></tr></thead>
-      <tbody>
-        <tr><td class="lead">Google OAuth</td><td><span class="pill pill-rec">推奨</span></td><td>パスワード不要 / 漏洩リスク低 / FP の Workspace と相性◎</td><td>Google アカウント必須 (FP の 70% 以上が利用)</td></tr>
-        <tr><td class="lead">Magic Link (Email)</td><td><span class="pill pill-rec">推奨 (補助)</span></td><td>パスワード不要 / メールさえあれば誰でも</td><td>受信遅延 / メールフィルタリング懸念</td></tr>
-        <tr><td class="lead">Email + Password</td><td><span class="pill pill-opt">条件付</span></td><td>慣れた形式</td><td>パスワード忘れ / 漏洩 / リセット運用負荷</td></tr>
-        <tr><td class="lead">LINE Login</td><td><span class="pill pill-ng">非推奨</span></td><td>FP は LINE 習熟</td><td>業務ツールでの違和感 / Bot 連携と混乱 / 個人 LINE と FP 用が混在しやすい</td></tr>
-      </tbody>
-    </table>
+  <div class="body">
 
-    <h3>1-2. 推奨フロー</h3>
-    <div class="arch">
-[FP に招待メール送付]  ← Skeleton 営業担当が個別配信
-     <span class="acc">▼</span>  招待リンク (有効期限 7 日 / ワンタイム)
-[Google OAuth ログイン]
-     <span class="acc">▼</span>  OAuth 2.0 / scope: email, profile
-[テナント作成 (1事務所 = 1テナント)]
-     <span class="acc">▼</span>  専用 Google Drive folder + 専用 Spreadsheet 自動プロビジョン
-[専用 CRM URL でログイン状態維持 (Cookie HttpOnly + Secure)]
-     <span class="acc">▼</span>
-[再アクセス時は自動ログイン (Refresh Token + 30日)]</div>
+    <!-- Q1. ログイン -->
+    <section class="q-section">
+      <div class="q-eyebrow">Question 01 — Login</div>
+      <h2 class="q-title">FP さんはどうやってログインする?</h2>
+      <p class="q-lead">パスワードを覚えてもらうのは大変で、忘れると問い合わせが増えます。なので<strong>パスワード不要</strong>の方法を採用したい、というのが推奨です。</p>
 
-    <h3>1-3. パスワード方式が必要な場合 (補助オプション)</h3>
-    <p>Google アカウント未保有 FP 向けに <strong>Magic Link</strong> (メール内クリックでログイン、パスワード不要) を補助提供。Magic Link の有効期限は <strong>10 分</strong>、使用後は即無効化。</p>
+      <div class="flow">
+        <div class="step-card">
+          <div class="step-no">STEP 01</div>
+          <span class="step-icon">📨</span>
+          <div class="step-title">こちらから招待メールを送る</div>
+          <div class="step-desc">FP さんに「専用 URL + ログインボタン」入りのメールを 1 通お送りします。</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="step-card">
+          <div class="step-no">STEP 02</div>
+          <span class="step-icon">🟢</span>
+          <div class="step-title">Google ボタンで ログイン</div>
+          <div class="step-desc">FP さんは普段の Gmail アカウントを 1 回押すだけ。パスワード入力ゼロ。</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="step-card">
+          <div class="step-no">STEP 03</div>
+          <span class="step-icon">✨</span>
+          <div class="step-title">あとは自動で使える</div>
+          <div class="step-desc">30 日間ログイン状態が続きます。次回からブックマークを 1 タップで開けます。</div>
+        </div>
+      </div>
 
-    <h3>1-4. 多要素認証 (MFA) — Pro プラン以上で必須</h3>
-    <p>金融情報を扱う本質上、<strong>Pro プラン以上は MFA 必須</strong>。Google Authenticator / Authy / SMS のいずれか。Standard プランは推奨だが任意。</p>
-  </section>
+      <div class="compare">
+        <div class="compare-card good">
+          <span class="compare-tag good">★ 推奨</span>
+          <div class="compare-label">Google でログイン</div>
+          <div class="compare-title">Google ボタン 1 回で OK</div>
+          <div class="compare-body">
+            ・パスワード覚えなくていい<br>
+            ・FP さんの 7 割以上が既に Gmail を使用<br>
+            ・Google が乗っ取り対策してくれる
+          </div>
+        </div>
+        <div class="compare-card bad">
+          <span class="compare-tag bad">非推奨</span>
+          <div class="compare-label">パスワード方式</div>
+          <div class="compare-title">パスワード忘れの問い合わせが日常茶飯事</div>
+          <div class="compare-body">
+            ・忘れる FP さんが必ず出る<br>
+            ・漏れたら全顧客情報が危険<br>
+            ・対応で Jobs / オーナーの時間が削られる
+          </div>
+        </div>
+      </div>
+    </section>
 
-  <section>
-    <h2><span class="h2-no">02</span> セキュリティ — 個人情報をどう守るか</h2>
-    <h3>2-1. 多層防御 アーキテクチャ</h3>
-    <table>
-      <thead><tr><th style="width:140px;">レイヤー</th><th>対策</th><th>実装状態</th></tr></thead>
-      <tbody>
-        <tr><td class="lead">通信</td><td>全通信 HTTPS (TLS 1.2 以上) / HSTS</td><td><span class="pill pill-rec">済</span> GitHub Pages / Cloud Run / GAS 全て自動 TLS</td></tr>
-        <tr><td class="lead">認証</td><td>Google OAuth / Magic Link / MFA</td><td><span class="pill pill-opt">Phase 2 実装</span></td></tr>
-        <tr><td class="lead">認可</td><td>テナント (fpId) 行レベル分離 + 専用 Sheet 物理分離</td><td><span class="pill pill-rec">fpId 済 / 専用 Sheet Phase 2</span></td></tr>
-        <tr><td class="lead">データ保管</td><td>各 FP の Google Workspace 内 (Google 側で AES-256 暗号化)</td><td><span class="pill pill-rec">済</span></td></tr>
-        <tr><td class="lead">入力検証</td><td>XSS 対策 (escapeHtml) / SQL Injection 不存在 (Sheet 直書き)</td><td><span class="pill pill-rec">済</span></td></tr>
-        <tr><td class="lead">API 鍵保管</td><td>Cloud Run 環境変数 / Google Secret Manager 移行</td><td><span class="pill pill-opt">Phase 2 Secret Manager 化</span></td></tr>
-        <tr><td class="lead">Rate Limiting</td><td>Cloud Run 自動 / Express middleware で API毎制限</td><td><span class="pill pill-opt">Phase 2 細粒度化</span></td></tr>
-        <tr><td class="lead">監査ログ</td><td>全ログイン / 顧客アクセス / データ削除 を BigQuery 集約</td><td><span class="pill pill-opt">Phase 3 実装</span></td></tr>
-      </tbody>
-    </table>
+    <!-- Q2. データ安全 -->
+    <section class="q-section">
+      <div class="q-eyebrow">Question 02 — Data Safety</div>
+      <h2 class="q-title">FP さんが入れた顧客情報はどこに保管される?</h2>
+      <p class="q-lead">FP さんが入力した顧客の名前 / 年収 / 家族構成は <strong>うち (Skeleton) のサーバには保存しません</strong>。FP さん自身の Google ドライブに直接入ります。これが一番安全です。</p>
 
-    <h3>2-2. テナント分離 (越境防止)</h3>
-    <p>顧客 A の FP が誤ってでも顧客 B のデータを見れない構造にする。実装:</p>
-    <div class="arch">
-[FP A ログイン] → fpId = fp001
-   ↓ アプリ層で fpId を Cookie / Session に保存
-[API 呼出]      → 全リクエストに自動で fpId 付与
-   ↓
-[GAS / Cloud Run] → 受信した fpId と Cookie の fpId が一致しなければ <span class="acc">403</span>
-   ↓
-[Sheet レイヤー] → fpId カラムでフィルタ (二重チェック)
-   ↓
-[Phase 2 以降]   → fpId 毎に <span class="acc">専用 Spreadsheet ID + 専用 Drive Folder ID</span> を発行し、アプリは自分のテナントの ID のみアクセス可</div>
+      <div class="safe-box">
+        <div class="safe-diagram">
+          <div class="safe-box-card">
+            <span class="safe-emoji">👨‍💼</span>
+            <div class="safe-name">FP さんが顧客情報を入力</div>
+            <div class="safe-detail">名前・年収・家族構成 など</div>
+          </div>
+          <div class="safe-arrow">→</div>
+          <div class="safe-box-card">
+            <span class="safe-emoji">📁</span>
+            <div class="safe-name">FP さんの Google ドライブ</div>
+            <div class="safe-detail">Skeleton のサーバには保存されない<br>(うちは橋渡しするだけ)</div>
+          </div>
+        </div>
+        <div class="safe-points">
+          <div class="safe-point">
+            <span class="safe-point-icon">🔒</span>
+            <div class="safe-point-title">通信は全部暗号化</div>
+            <div class="safe-point-desc">FP さん〜うち〜Google の間は すべて鍵付きで通信。</div>
+          </div>
+          <div class="safe-point">
+            <span class="safe-point-icon">🏢</span>
+            <div class="safe-point-title">FP さん同士の情報は完全に分離</div>
+            <div class="safe-point-desc">A 社の FP は B 社の顧客情報を絶対に見れない仕組み。</div>
+          </div>
+          <div class="safe-point">
+            <span class="safe-point-icon">🗑️</span>
+            <div class="safe-point-title">解約したら 30 日で完全消去</div>
+            <div class="safe-point-desc">解約申請の 30 日後に Google ドライブごと自動削除 + 削除証明書発行。</div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <h3>2-3. データの場所</h3>
-    <div class="grid-3">
-      <div class="card"><div class="card-label">顧客台帳</div><div class="card-value">Google Sheets</div><div class="card-desc">各 FP の Google Workspace 内 (Phase 2: 専用 Sheet 隔離)</div></div>
-      <div class="card"><div class="card-label">議事録 / 録画</div><div class="card-value">Google Drive</div><div class="card-desc">各 FP の専用フォルダ「FP Compass / 顧客名簿」配下</div></div>
-      <div class="card"><div class="card-label">API 鍵 / 秘密情報</div><div class="card-value">Secret Manager</div><div class="card-desc">Google Cloud (Phase 2)。コードには含まれない</div></div>
+    <!-- Q3. 法的責任 -->
+    <section class="q-section">
+      <div class="q-eyebrow">Question 03 — Legal</div>
+      <h2 class="q-title">法律で必要な書類は 3 つだけ</h2>
+      <p class="q-lead">「個人情報保護法」という法律で、これだけは絶対に必要、というのが 3 つあります。それ以外は<strong>あったらいい程度</strong>なので、まずはこの 3 つから。</p>
+
+      <div class="contracts">
+        <div class="contract-card">
+          <div class="contract-no">必須 01</div>
+          <div class="contract-title">利用規約</div>
+          <div class="contract-detail">サービスを使ってもらう時のルール。誰でも書ける、ネットの雛形を Jobs が起草。</div>
+        </div>
+        <div class="contract-card">
+          <div class="contract-no">必須 02</div>
+          <div class="contract-title">プライバシーポリシー</div>
+          <div class="contract-detail">「お預かりした情報をこう扱います」という方針。webサイトに公開する。</div>
+        </div>
+        <div class="contract-card">
+          <div class="contract-no">必須 03</div>
+          <div class="contract-title">業務委託契約</div>
+          <div class="contract-detail">FP さんの顧客情報を、うちが代わりに処理することの正式な合意。1 社毎に。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DECISION -->
+    <div class="decision">
+      <div class="decision-eyebrow">Yes / No で答えてください</div>
+      <div class="decision-title">オーナーに判断してほしい 3 つ</div>
+      <div class="decision-list">
+        <div class="decision-q">
+          <div class="decision-no">01</div>
+          <div class="decision-body"><strong>ログイン方法</strong> — Google ボタン 1 つで入れる方式 (パスワードなし) で進めて OK?</div>
+          <div class="decision-yn">Yes / No</div>
+        </div>
+        <div class="decision-q">
+          <div class="decision-no">02</div>
+          <div class="decision-body"><strong>データの場所</strong> — FP さんの Google ドライブに直接保管 (うちのサーバに置かない) 方針で OK?</div>
+          <div class="decision-yn">Yes / No</div>
+        </div>
+        <div class="decision-q">
+          <div class="decision-no">03</div>
+          <div class="decision-body"><strong>契約書</strong> — 利用規約 / プライバシーポリシー / 業務委託契約 の 3 つを Jobs が起草して、最終確認のみオーナーで承認、で OK?</div>
+          <div class="decision-yn">Yes / No</div>
+        </div>
+      </div>
     </div>
-    <p>顧客の個人情報は <strong>FP の Google Workspace 内に留まる</strong>。Skeleton 側のサーバ (Cloud Run) は<strong>処理の経由地</strong>であり、データを保存しない。これにより責任分界が明確になる。</p>
 
-    <h3>2-4. インシデント対応 (漏洩時)</h3>
-    <table>
-      <thead><tr><th style="width:90px;">時間</th><th>アクション</th></tr></thead>
-      <tbody>
-        <tr><td class="lead">0 〜 1 時間</td><td>影響範囲特定 / 該当機能即停止 / 監査ログ保全</td></tr>
-        <tr><td class="lead">1 〜 4 時間</td><td>FP 顧客に第一報 (メール + LINE) / 個人情報保護委員会への報告準備</td></tr>
-        <tr><td class="lead">4 〜 24 時間</td><td>個人情報保護委員会へ報告 (法律上必須) / 影響を受けたエンドユーザへの通知</td></tr>
-        <tr><td class="lead">24 時間以降</td><td>原因究明 / 再発防止策策定 / 公式発表 / 補償判断</td></tr>
-      </tbody>
-    </table>
-  </section>
+  </div>
 
-  <section>
-    <h2><span class="h2-no">03</span> 法的責任 — 何を書面で守るか</h2>
-    <h3>3-1. 必要な書類 4 点セット</h3>
-    <table>
-      <thead><tr><th>書類</th><th>用途</th><th>誰が誰に</th></tr></thead>
-      <tbody>
-        <tr><td class="lead">① 利用規約</td><td>サービス提供の条件</td><td>Skeleton → FP</td></tr>
-        <tr><td class="lead">② プライバシーポリシー</td><td>個人情報の取扱方針 (公開)</td><td>Skeleton → 全員</td></tr>
-        <tr><td class="lead">③ 業務委託契約書</td><td>FP のエンドユーザ情報を Skeleton が処理することの委託</td><td>Skeleton ⇔ FP</td></tr>
-        <tr><td class="lead">④ 個人情報取扱同意書</td><td>FP のエンドユーザ向け同意取得テンプレ</td><td>FP → エンドユーザ</td></tr>
-      </tbody>
-    </table>
-
-    <h3>3-2. 個人情報保護法 (改正法 / 令和 4 年施行) 対応</h3>
-    <div class="warn">
-      <strong>重要 5 義務:</strong><br>
-      ① 利用目的の特定・通知 (顧客台帳 / AI議事録の用途を明示)<br>
-      ② 安全管理措置 (本書 2 章の多層防御で対応)<br>
-      ③ 第三者提供制限 (Anthropic / Google への提供は委託扱いとして整理)<br>
-      ④ 開示・訂正・削除請求への対応 (オフボーディング 30日完全削除で対応)<br>
-      ⑤ 漏えい時の報告義務 (本書 2-4 のインシデント対応で対応)
-    </div>
-
-    <h3>3-3. データ削除権 (Right to be Forgotten)</h3>
-    <p>FP が解約した場合、または FP のエンドユーザが削除を要求した場合、以下のルールで対応:</p>
-    <table>
-      <tbody>
-        <tr><td class="lead">解約申請</td><td>D 日</td><td>FP の管理画面から解約 → データエクスポート (Sheet + Drive zip) を交付</td></tr>
-        <tr><td class="lead">猶予期間</td><td>D + 30日</td><td>誤操作 / 再契約のため保持 (再契約時に即復元)</td></tr>
-        <tr><td class="lead">完全削除</td><td>D + 30日</td><td>Sheet / Drive / バックアップから完全削除 / 削除証明書発行</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section>
-    <h2><span class="h2-no">04</span> オンボーディング — 新規 FP がログインするまで</h2>
-    <div class="arch">
-[1] 申込フォーム submit (skeleton-inc.jp/fp-compass/apply)
-       <span class="acc">▼</span>
-[2] Skeleton 内部審査 (1営業日) — 反社チェック / 与信
-       <span class="acc">▼</span>
-[3] 業務委託契約書 + 利用規約 の電子締結 (CloudSign 等)
-       <span class="acc">▼</span>
-[4] Stripe 決済 (14日トライアル無料)
-       <span class="acc">▼</span>
-[5] 招待メール送信 — 専用 CRM URL + 初回ログインリンク
-       <span class="acc">▼</span>
-[6] FP が Google OAuth でログイン
-       <span class="acc">▼</span>
-[7] テナント自動プロビジョン
-       ├ 専用 Google Drive folder 作成
-       ├ 専用 Spreadsheet 作成
-       └ 専用 LINE 公式アカウント連携手順 PDF 送付
-       <span class="acc">▼</span>
-[8] 初回 1on1 Zoom オンボーディング (30分)
-       <span class="acc">▼</span>
-[9] 本番利用開始</div>
-  </section>
-
-  <section>
-    <h2><span class="h2-no">05</span> 実装ロードマップ (セキュリティ観点)</h2>
-    <table>
-      <thead><tr><th>Phase</th><th>項目</th><th>所要</th></tr></thead>
-      <tbody>
-        <tr><td class="lead">Phase 1 (今月)</td><td>本番用 URL 分離 (デモ機能撤去) / プライバシーポリシー / 利用規約 ドラフト</td><td>1 週間</td></tr>
-        <tr><td class="lead">Phase 2 (1-2ヶ月)</td><td>Google OAuth + Magic Link 実装 / テナント別 Sheet 分離 / Secret Manager 移行</td><td>1 ヶ月</td></tr>
-        <tr><td class="lead">Phase 3 (3ヶ月)</td><td>MFA / 監査ログ BigQuery 集約 / 漏洩検知</td><td>1 ヶ月</td></tr>
-        <tr><td class="lead">Phase 4 (6ヶ月)</td><td>個人情報保護委員会への事業者登録 (推奨) / 第三者監査 (年1回)</td><td>2 ヶ月</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section>
-    <h2><span class="h2-no">06</span> 今すぐ オーナーに 判断してほしい 3 点</h2>
-    <div class="crit">
-      <strong>① 認証方式:</strong> Google OAuth + Magic Link で進めて OK か?<br>
-      <strong>② プラン区分:</strong> MFA を Pro プラン以上で必須にして OK か? (Standard は任意)<br>
-      <strong>③ 法的責任:</strong> 業務委託契約 + 個人情報取扱同意書 を Phase 1 で締結する方針で OK か?
-    </div>
-    <p>Yes / No だけ判断いただければ、Jobs 側で Phase 1〜4 を順次実装します。書類のドラフトは Phase 1 で Jobs が起草、最終確認のみオーナーで承認いただきます。</p>
-  </section>
-
-  <footer>
+  <div class="foot">
     <div>
-      <div class="vendor-label">本書作成</div>
-      <div class="vendor-name">スケルトン株式会社</div>
-      <div class="vendor-en">Skeleton Inc.</div>
-      <div class="vendor-detail">〒910-0833 福井県福井市<br>代表 吉田 恭聡 / support@skeleton-inc.jp<br>skeleton-inc.jp</div>
+      <div class="foot-brand">スケルトン株式会社 / Skeleton Inc.</div>
+      <div>〒910-0833 福井県福井市 / support@skeleton-inc.jp</div>
     </div>
-    <div class="seal">設計<br>承認印</div>
-  </footer>
+    <div style="text-align:right">
+      FPC-SEC-2026-001<br>v 1.0 — 2026.06.05
+    </div>
+  </div>
+
 </div>
-<button class="print-btn" onclick="window.print()">🖨 印刷 / PDF 出力</button>
+
+<button class="print-btn" onclick="window.print()">🖨 印刷 / PDF</button>
 </body>
 </html>
