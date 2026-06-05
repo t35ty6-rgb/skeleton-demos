@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>FP Compass — Owner Console (内部管理)</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Serif+JP:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--green:#1F6B3A;--green-mid:#2D8C4F;--green-soft:#E8F3EC;--green-line:#B5D4BF;--ink:#0F1A12;--ink-2:#2C3A30;--muted:#6F7C72;--paper:#FCFDFC;--paper-cream:#FAFBF7;--line:#D9DDD6;--gold:#B89A4E;--red:#C8392F;--red-soft:#FBE5E2}
+*{box-sizing:border-box}body{margin:0;font-family:'Noto Sans JP',sans-serif;background:#F2F4F1;color:var(--ink);line-height:1.65;-webkit-font-smoothing:antialiased}
+.shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.sidebar{background:linear-gradient(180deg,#0E1F14,#163525);color:#fff;padding:24px 20px;display:flex;flex-direction:column;gap:8px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{padding:8px 4px 24px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:16px}
+.brand-name{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;letter-spacing:0.04em}
+.brand-en{font-family:'Manrope',sans-serif;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;opacity:0.7;margin-top:2px}
+.brand-badge{display:inline-block;background:#FFE9A8;color:#5E4A1B;font-size:9px;font-weight:800;letter-spacing:0.08em;padding:2px 7px;border-radius:99px;margin-top:8px}
+.nav-label{font-family:'Manrope',sans-serif;font-size:9.5px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.5);font-weight:700;margin:14px 4px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:7px;font-size:13px;color:rgba(255,255,255,0.85);cursor:pointer;transition:all 0.15s;text-decoration:none}
+.nav-item:hover{background:rgba(255,255,255,0.06);color:#fff}
+.nav-item.active{background:rgba(74,159,96,0.2);color:#fff;font-weight:700}
+.nav-item-icon{font-size:14px;width:18px;text-align:center;opacity:0.85}
+.nav-bottom{margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1);font-size:11px;color:rgba(255,255,255,0.6);line-height:1.7}
+.main{padding:32px 40px}
+.topbar{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.crumb{font-family:'Manrope',sans-serif;font-size:11px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;font-weight:700}
+.crumb strong{color:var(--ink)}
+.now{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+
+.h1{font-family:'Noto Serif JP',serif;font-size:30px;font-weight:600;letter-spacing:0.02em;margin-bottom:4px}
+.h1-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+
+/* KPI cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
+.kpi-label{font-family:'Manrope',sans-serif;font-size:10.5px;letter-spacing:0.16em;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:8px}
+.kpi-value{font-family:'Noto Serif JP',serif;font-size:30px;font-weight:600;color:var(--ink);letter-spacing:0.01em;line-height:1.1}
+.kpi-unit{font-family:'Manrope',sans-serif;font-size:13px;color:var(--muted);font-weight:600;margin-left:4px}
+.kpi-delta{font-size:11.5px;color:var(--green);margin-top:6px;font-weight:600}
+.kpi-delta.down{color:var(--red)}
+
+/* Section */
+.section{margin-bottom:32px}
+.section-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.section-title{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;letter-spacing:0.02em}
+.section-action{font-family:'Manrope',sans-serif;font-size:11px;color:var(--green);font-weight:700;letter-spacing:0.06em;text-decoration:none;text-transform:uppercase}
+
+/* Customer Table */
+.table-wrap{background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead th{background:var(--paper-cream);font-family:'Manrope',sans-serif;font-size:10.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:14px 16px;text-align:left;border-bottom:1px solid var(--line)}
+tbody td{padding:14px 16px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink-2);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--paper-cream)}
+.client-cell{display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--green),var(--green-mid));color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;font-family:'Noto Serif JP',serif}
+.client-name{font-weight:700;color:var(--ink);font-size:13px}
+.client-meta{font-size:10.5px;color:var(--muted)}
+
+.plan-pill{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;letter-spacing:0.06em}
+.plan-pill.std{background:var(--green-soft);color:var(--green);border:1px solid var(--green-line)}
+.plan-pill.pro{background:#FBF1D9;color:var(--gold);border:1px solid #E8D29A}
+.plan-pill.ent{background:#0F1A12;color:#fff}
+.plan-pill.trial{background:#E8EEF8;color:#3D5A8A;border:1px solid #BCD0E8}
+
+.status-pill{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;letter-spacing:0.06em}
+.status-pill.active{background:#E8F3EC;color:var(--green)}
+.status-pill.warn{background:#FFF1D6;color:#8C6B16}
+.status-pill.churn{background:var(--red-soft);color:var(--red)}
+
+.bar{display:inline-flex;align-items:center;gap:8px;width:120px}
+.bar-track{flex:1;height:6px;background:var(--green-soft);border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;background:var(--green);border-radius:99px}
+.bar-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);font-weight:600;min-width:40px}
+
+/* Alert box */
+.alerts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px}
+@media(max-width:900px){.alerts{grid-template-columns:1fr}}
+.alert{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px 22px;border-left:4px solid var(--green)}
+.alert.warn{border-left-color:#E2A93B}
+.alert.crit{border-left-color:var(--red)}
+.alert-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.alert-icon{font-size:18px}
+.alert-title{font-family:'Noto Serif JP',serif;font-weight:600;font-size:14px;color:var(--ink);letter-spacing:0.02em}
+.alert-body{font-size:12px;color:var(--ink-2);line-height:1.7}
+.alert-body strong{color:var(--ink)}
+
+/* MRR Chart placeholder */
+.chart-card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:24px}
+.chart-bars{display:flex;align-items:flex-end;gap:14px;height:160px;margin-top:18px;padding-bottom:24px;border-bottom:1px solid var(--line);position:relative}
+.bar-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px}
+.bar-vis{width:80%;background:linear-gradient(180deg,var(--green-mid),var(--green));border-radius:6px 6px 0 0;position:relative;min-height:8px}
+.bar-vis-num{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;color:var(--ink);white-space:nowrap}
+.bar-label{font-family:'Manrope',sans-serif;font-size:10px;letter-spacing:0.08em;color:var(--muted);font-weight:700}
+
+.footer-note{margin-top:24px;padding:14px 18px;background:var(--paper-cream);border-radius:8px;font-size:11.5px;color:var(--muted);line-height:1.7;text-align:center}
+.footer-note strong{color:var(--ink)}
+
+/* MOCK ONLY pill at top */
+.mock-banner{background:#FFE9A8;color:#5E4A1B;padding:8px 16px;font-size:11px;font-weight:700;text-align:center;letter-spacing:0.08em;font-family:'Manrope',sans-serif}
+</style>
+</head>
+<body>
+<div class="mock-banner">🛠 MOCK / Internal Preview — Phase 2 で実データ接続予定</div>
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-name">FP Compass</div>
+      <div class="brand-en">Owner Console</div>
+      <div class="brand-badge">INTERNAL</div>
+    </div>
+    <div class="nav-label">Overview</div>
+    <a class="nav-item active"><span class="nav-item-icon">▣</span><span>ダッシュボード</span></a>
+    <a class="nav-item"><span class="nav-item-icon">📊</span><span>売上 / MRR</span></a>
+    <a class="nav-item"><span class="nav-item-icon">⚡</span><span>稼働状況</span></a>
+
+    <div class="nav-label">Customers</div>
+    <a class="nav-item"><span class="nav-item-icon">👥</span><span>顧客 (FP 事務所) 一覧</span></a>
+    <a class="nav-item"><span class="nav-item-icon">📈</span><span>利用統計</span></a>
+    <a class="nav-item"><span class="nav-item-icon">⚠</span><span>解約予兆 アラート</span></a>
+
+    <div class="nav-label">Operations</div>
+    <a class="nav-item"><span class="nav-item-icon">🎯</span><span>機能フラグ 管理</span></a>
+    <a class="nav-item"><span class="nav-item-icon">📋</span><span>サポート チケット</span></a>
+    <a class="nav-item"><span class="nav-item-icon">📜</span><span>監査ログ</span></a>
+    <a class="nav-item"><span class="nav-item-icon">⚙</span><span>システム設定</span></a>
+
+    <div class="nav-bottom">
+      Skeleton Inc.<br>
+      Owner: 吉田 恭聡<br>
+      Build v0.1 — Mock
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="crumb">FP Compass · <strong>Owner Console</strong> · ダッシュボード</div>
+      <div class="now">2026-06-05 09:24 JST</div>
+    </div>
+
+    <h1 class="h1">こんにちは、Tsukasa。</h1>
+    <div class="h1-sub">FP 事務所 全体の運用状況を一画面で。気になる動きは右上のアラートで自動通知されます。</div>
+
+    <!-- KPI -->
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">契約 FP 事務所</div>
+        <div class="kpi-value">5<span class="kpi-unit">社</span></div>
+        <div class="kpi-delta">↑ 今月 +3 社</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">MRR (月次経常収益)</div>
+        <div class="kpi-value">¥149,000</div>
+        <div class="kpi-delta">↑ 前月比 +¥89,400</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">稼働率 (今月)</div>
+        <div class="kpi-value">99.8<span class="kpi-unit">%</span></div>
+        <div class="kpi-delta">SLA 達成 (目標 99.5%)</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">解約予兆</div>
+        <div class="kpi-value">0<span class="kpi-unit">社</span></div>
+        <div class="kpi-delta">直近 30 日 異常なし</div>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="alerts">
+      <div class="alert">
+        <div class="alert-head"><span class="alert-icon">✓</span><div class="alert-title">障害なし</div></div>
+        <div class="alert-body">過去 24 時間、システム全体に異常はありません。Cloud Run、GAS、LINE Webhook いずれも稼働中。</div>
+      </div>
+      <div class="alert warn">
+        <div class="alert-head"><span class="alert-icon">💡</span><div class="alert-title">推奨アクション</div></div>
+        <div class="alert-body"><strong>○○ FP 事務所</strong> が今月 28 件の AI 議事録を生成 (上位 1%)。Pro プランへのアップグレード打診のタイミング。</div>
+      </div>
+    </div>
+
+    <!-- MRR -->
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title">MRR 推移 (直近 6 ヶ月)</div>
+        <a class="section-action" href="#">詳細を見る →</a>
+      </div>
+      <div class="chart-card">
+        <div class="chart-bars">
+          <div class="bar-item"><div class="bar-vis" style="height:18%;"><span class="bar-vis-num">¥29.8k</span></div><div class="bar-label">2026/01</div></div>
+          <div class="bar-item"><div class="bar-vis" style="height:32%;"><span class="bar-vis-num">¥59.6k</span></div><div class="bar-label">2026/02</div></div>
+          <div class="bar-item"><div class="bar-vis" style="height:32%;"><span class="bar-vis-num">¥59.6k</span></div><div class="bar-label">2026/03</div></div>
+          <div class="bar-item"><div class="bar-vis" style="height:32%;"><span class="bar-vis-num">¥59.6k</span></div><div class="bar-label">2026/04</div></div>
+          <div class="bar-item"><div class="bar-vis" style="height:32%;"><span class="bar-vis-num">¥59.6k</span></div><div class="bar-label">2026/05</div></div>
+          <div class="bar-item"><div class="bar-vis" style="height:80%;"><span class="bar-vis-num">¥149k</span></div><div class="bar-label">2026/06</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customer table -->
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title">契約 FP 事務所 一覧</div>
+        <a class="section-action" href="#">全件 / フィルタ →</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>事務所</th>
+              <th>プラン</th>
+              <th>契約日</th>
+              <th>顧客数</th>
+              <th>今月議事録</th>
+              <th>直近ログイン</th>
+              <th>状態</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="client-cell"><div class="avatar">福</div><div><div class="client-name">福田 FP 事務所</div><div class="client-meta">福井県 · 所長 福田 幸博</div></div></div></td>
+              <td><span class="plan-pill std">Standard</span></td>
+              <td>2026/03/14</td>
+              <td>23</td>
+              <td><div class="bar"><div class="bar-track"><div class="bar-fill" style="width:78%"></div></div><span class="bar-num">12/30</span></div></td>
+              <td>今日 09:14</td>
+              <td><span class="status-pill active">✓ 順調</span></td>
+            </tr>
+            <tr>
+              <td><div class="client-cell"><div class="avatar">徳</div><div><div class="client-name">徳佐 FP 株式会社</div><div class="client-meta">東京都 · 代表 徳佐 拓朗</div></div></div></td>
+              <td><span class="plan-pill pro">Pro</span></td>
+              <td>2026/04/02</td>
+              <td>47</td>
+              <td><div class="bar"><div class="bar-track"><div class="bar-fill" style="width:92%"></div></div><span class="bar-num">28/30</span></div></td>
+              <td>今日 08:42</td>
+              <td><span class="status-pill active">✓ 順調</span></td>
+            </tr>
+            <tr>
+              <td><div class="client-cell"><div class="avatar">山</div><div><div class="client-name">山田ライフプランニング</div><div class="client-meta">大阪府 · 所長 山田 龍二</div></div></div></td>
+              <td><span class="plan-pill std">Standard</span></td>
+              <td>2026/05/22</td>
+              <td>9</td>
+              <td><div class="bar"><div class="bar-track"><div class="bar-fill" style="width:33%"></div></div><span class="bar-num">5/30</span></div></td>
+              <td>昨日 18:30</td>
+              <td><span class="status-pill warn">⚠ 立上げ中</span></td>
+            </tr>
+            <tr>
+              <td><div class="client-cell"><div class="avatar">鈴</div><div><div class="client-name">鈴木総合 FP 事務所</div><div class="client-meta">愛知県 · 所長 鈴木 大輔</div></div></div></td>
+              <td><span class="plan-pill trial">Trial</span></td>
+              <td>2026/06/01</td>
+              <td>2</td>
+              <td><div class="bar"><div class="bar-track"><div class="bar-fill" style="width:13%"></div></div><span class="bar-num">1/30</span></div></td>
+              <td>2 日前</td>
+              <td><span class="status-pill warn">⚠ Trial 残 9 日</span></td>
+            </tr>
+            <tr>
+              <td><div class="client-cell"><div class="avatar">藤</div><div><div class="client-name">Fujita Wealth Advisory</div><div class="client-meta">神奈川県 · 代表 藤田 健</div></div></div></td>
+              <td><span class="plan-pill ent">Enterprise</span></td>
+              <td>2026/05/10</td>
+              <td>112</td>
+              <td><div class="bar"><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="bar-num">38/—</span></div></td>
+              <td>今日 07:55</td>
+              <td><span class="status-pill active">✓ 順調</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      <strong>Owner Console:</strong> 本画面は Skeleton 内部運用ツールです (顧客の FP には公開されません)。Phase 2 で実データ接続、Phase 3 で機能フラグ / 監査ログ UI を追加予定。
+    </div>
+
+  </main>
+</div>
+</body>
+</html>
