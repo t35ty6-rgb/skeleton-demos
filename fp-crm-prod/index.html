@@ -26,6 +26,64 @@
     }
   })();
 </script>
+
+<style id="fp-gate-css">
+#fp-gate-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#0E1F14 0%,#1F6B3A 60%,#2D8C4F 100%);z-index:2147483647;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans JP','Manrope',sans-serif;color:#fff}
+#fp-gate-card{max-width:420px;width:90%;background:rgba(255,255,255,0.06);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.18);border-radius:16px;padding:42px 38px;box-shadow:0 24px 64px rgba(0,0,0,0.4)}
+#fp-gate-brand{font-family:'Manrope',sans-serif;font-size:11px;letter-spacing:0.32em;text-transform:uppercase;opacity:0.85;margin-bottom:14px;font-weight:700}
+#fp-gate-title{font-family:'Noto Serif JP',serif;font-size:26px;font-weight:600;letter-spacing:0.02em;margin-bottom:8px;line-height:1.35}
+#fp-gate-sub{font-size:13px;opacity:0.88;margin-bottom:28px;line-height:1.75}
+#fp-gate-input{width:100%;background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.3);border-radius:8px;padding:13px 16px;font-size:14px;color:#fff;font-family:'JetBrains Mono','Manrope',monospace;letter-spacing:0.04em;outline:none;margin-bottom:14px}
+#fp-gate-input::placeholder{color:rgba(255,255,255,0.45)}
+#fp-gate-input:focus{border-color:#FFE9A8;background:rgba(255,255,255,0.12)}
+#fp-gate-btn{width:100%;background:#FFE9A8;color:#0E1F14;border:none;border-radius:8px;padding:14px;font-size:14px;font-weight:800;letter-spacing:0.08em;cursor:pointer;font-family:'Manrope',sans-serif;text-transform:uppercase;transition:all 0.15s}
+#fp-gate-btn:hover{background:#fff;transform:translateY(-1px)}
+#fp-gate-msg{margin-top:14px;font-size:12px;color:#FFB5B5;min-height:18px;text-align:center}
+#fp-gate-help{margin-top:24px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.12);font-size:11.5px;opacity:0.75;line-height:1.75}
+#fp-gate-help a{color:#FFE9A8;text-decoration:none}
+</style>
+<div id="fp-gate-overlay">
+  <div id="fp-gate-card">
+    <div id="fp-gate-brand">FP COMPASS — SIGN IN</div>
+    <div id="fp-gate-title">ようこそ</div>
+    <div id="fp-gate-sub">招待メールに記載の<strong style="color:#FFE9A8">アクセスキー</strong>を入力してください。<br>(初回 1 回のみ。次回からこのブラウザでは省略されます)</div>
+    <input id="fp-gate-input" type="password" placeholder="FPC-xxxx-xxxx" autocomplete="off" spellcheck="false" autofocus>
+    <button id="fp-gate-btn">サインイン</button>
+    <div id="fp-gate-msg"></div>
+    <div id="fp-gate-help">アクセスキーをお忘れの場合 → <a href="mailto:support@skeleton-inc.jp">support@skeleton-inc.jp</a><br>※ 本格運用版では Google アカウントログイン (パスワード不要) に切替予定</div>
+  </div>
+</div>
+<script>
+(function(){
+  // SHA-256 hash of valid password (replace per FP at provisioning)
+  var VALID_HASH = "c67ca75e729214f7d3b1e16e0fc716b6f2df2c664f67abf72fb1c6eb245ef77f";
+  function sha256(s){
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(s))
+      .then(function(b){return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,"0")}).join("")});
+  }
+  function pass(){
+    document.getElementById("fp-gate-overlay").remove();
+    var st=document.getElementById("fp-gate-css"); if(st) st.remove();
+    try{localStorage.setItem("fp-auth-key-passed","1")}catch(_){}
+  }
+  // 既に通過済ならスキップ (タブ閉じても残る)
+  try{ if(localStorage.getItem("fp-auth-key-passed")==="1"){ pass(); return; } }catch(_){}
+  var inp=document.getElementById("fp-gate-input");
+  var btn=document.getElementById("fp-gate-btn");
+  var msg=document.getElementById("fp-gate-msg");
+  function check(){
+    var v=inp.value.trim();
+    if(!v){msg.textContent="アクセスキーを入力してください";return;}
+    btn.disabled=true; btn.textContent="確認中...";
+    sha256(v).then(function(h){
+      if(h===VALID_HASH){ pass(); }
+      else { msg.textContent="アクセスキーが一致しません"; btn.disabled=false; btn.textContent="サインイン"; inp.select(); }
+    });
+  }
+  btn.addEventListener("click", check);
+  inp.addEventListener("keydown", function(e){ if(e.key==="Enter") check(); });
+})();
+</script>
 </head>
 <body data-prod="1">
 
