@@ -66,7 +66,7 @@ async function doLogin() {
 // ============ 認証状態の監視 ============
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    loginEl.style.display = "";
+    loginEl.style.display = "grid";
     appEl.style.display = "none";
     return;
   }
@@ -78,7 +78,7 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
   if (!userDoc.exists()) {
-    loginEl.style.display = "";
+    loginEl.style.display = "grid";
     msg("err", `${user.email} は Skeleton 側にまだ登録されていません。管理者にご連絡ください。`);
     await signOut(auth);
     return;
@@ -87,7 +87,7 @@ onAuthStateChanged(auth, async (user) => {
   const tenantId = userData.tenantId;
 
   loginEl.style.display = "none";
-  appEl.style.display = "";
+  appEl.style.display = "block";
 
   $("user-email").textContent = user.email;
   $("user-tenant").textContent = tenantId.toUpperCase();
