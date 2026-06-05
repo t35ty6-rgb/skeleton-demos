@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>FP Compass — 100社運用 設計提案書</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Serif+JP:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green-deep: #1F6B3A;
+    --green-mid: #2D8C4F;
+    --green-soft: #E8F3EC;
+    --green-line: #B5D4BF;
+    --ink: #0F1A12;
+    --ink-2: #2C3A30;
+    --muted: #6F7C72;
+    --paper: #FCFDFC;
+    --paper-cream: #FAFBF7;
+    --line: #D9DDD6;
+    --warn-bg: #FFF7E6;
+    --warn-border: #E6CF8B;
+    --warn-text: #5E4A1B;
+    --crit-bg: #FFF0F0;
+    --crit-border: #F2B5B5;
+    --crit-text: #7A1F1F;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; font-family: 'Noto Sans JP', sans-serif; color: var(--ink); background: #EEF0EC; line-height: 1.7; }
+  .page {
+    max-width: 920px;
+    margin: 32px auto;
+    background: var(--paper);
+    padding: 56px 64px 48px;
+    border: 1px solid var(--line);
+    box-shadow: 0 24px 64px rgba(15,26,18,0.10);
+    position: relative;
+  }
+  .page::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--green-deep) 0%, var(--green-mid) 50%, var(--green-deep) 100%);
+  }
+  header { display: grid; grid-template-columns: 1fr auto; gap: 24px; padding-bottom: 28px; border-bottom: 2px solid var(--ink); margin-bottom: 32px; align-items: end; }
+  .h-title { font-family: 'Noto Serif JP', serif; font-weight: 600; font-size: 30px; letter-spacing: 0.04em; color: var(--ink); margin: 0; line-height: 1.3; }
+  .h-sub { font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.32em; color: var(--green-deep); text-transform: uppercase; margin-bottom: 6px; }
+  .h-product { font-size: 13px; color: var(--muted); margin-top: 8px; letter-spacing: 0.02em; }
+  .h-meta { text-align: right; font-size: 12px; line-height: 1.9; color: var(--ink-2); }
+  .h-meta strong { color: var(--ink); font-weight: 700; }
+  .summary { background: linear-gradient(180deg, var(--paper-cream), var(--paper)); border: 1px solid var(--green-line); border-radius: 10px; padding: 22px 28px; margin-bottom: 32px; }
+  .summary-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.18em; color: var(--green-deep); text-transform: uppercase; margin-bottom: 10px; }
+  .summary-text { font-size: 13.5px; line-height: 1.85; color: var(--ink-2); }
+  .summary-text strong { color: var(--ink); font-weight: 700; }
+  section { margin-bottom: 36px; page-break-inside: avoid; }
+  h2 { font-family: 'Noto Serif JP', serif; font-size: 18px; font-weight: 600; color: var(--ink); margin: 0 0 18px; padding-bottom: 10px; border-bottom: 1px solid var(--green-line); display: flex; align-items: baseline; gap: 12px; letter-spacing: 0.04em; }
+  h2::before { content: ''; width: 4px; height: 18px; background: var(--green-deep); border-radius: 2px; }
+  h2 .h2-no { font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 800; color: var(--green-deep); letter-spacing: 0.18em; }
+  h3 { font-family: 'Noto Serif JP', serif; font-size: 14px; font-weight: 600; color: var(--ink); margin: 22px 0 10px; padding-left: 12px; border-left: 3px solid var(--green-mid); }
+  p { font-size: 13px; line-height: 1.85; color: var(--ink-2); margin: 0 0 14px; }
+  strong { color: var(--ink); font-weight: 700; }
+  .arch { background: var(--paper-cream); border: 1px dashed var(--green-line); border-radius: 8px; padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; line-height: 1.85; color: var(--ink-2); white-space: pre; overflow-x: auto; margin: 12px 0; }
+  .arch .acc { color: var(--green-deep); font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 12px 0; }
+  table thead th { background: var(--green-soft); color: var(--green-deep); font-weight: 700; padding: 10px 12px; text-align: left; border-bottom: 1.5px solid var(--green-line); letter-spacing: 0.04em; font-size: 11px; text-transform: uppercase; }
+  table tbody td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.65; }
+  table tbody tr:last-child td { border-bottom: none; }
+  table tbody td.lead { font-weight: 700; color: var(--ink); }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .card { background: var(--paper-cream); border: 1px solid var(--green-line); border-radius: 8px; padding: 16px 18px; }
+  .card-label { font-size: 10px; font-weight: 800; letter-spacing: 0.16em; color: var(--green-deep); text-transform: uppercase; margin-bottom: 8px; }
+  .card-value { font-family: 'Noto Serif JP', serif; font-size: 18px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .card-desc { font-size: 11.5px; color: var(--ink-2); line-height: 1.6; }
+  .warn { background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 6px; padding: 14px 18px; font-size: 12px; line-height: 1.75; color: var(--warn-text); margin: 12px 0; }
+  .crit { background: var(--crit-bg); border: 1px solid var(--crit-border); border-radius: 6px; padding: 14px 18px; font-size: 12px; line-height: 1.75; color: var(--crit-text); margin: 12px 0; }
+  ol.phase { padding-left: 0; list-style: none; counter-reset: phaseC; }
+  ol.phase > li { counter-increment: phaseC; padding: 16px 0 16px 64px; border-bottom: 1px dashed var(--line); position: relative; }
+  ol.phase > li:last-child { border-bottom: none; }
+  ol.phase > li::before { content: 'Phase ' counter(phaseC); position: absolute; left: 0; top: 16px; width: 52px; height: 52px; background: var(--green-deep); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 10px; line-height: 1.2; text-align: center; }
+  .phase-title { font-family: 'Noto Serif JP', serif; font-weight: 600; font-size: 15px; color: var(--ink); margin-bottom: 4px; }
+  .phase-meta { font-size: 11px; color: var(--green-deep); font-weight: 700; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .phase-body { font-size: 12.5px; line-height: 1.75; color: var(--ink-2); }
+  .pill { display: inline-block; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 9px; letter-spacing: 0.04em; }
+  .pill-must { background: var(--crit-bg); color: var(--crit-text); border: 1px solid var(--crit-border); }
+  .pill-should { background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn-border); }
+  .pill-nice { background: var(--green-soft); color: var(--green-deep); border: 1px solid var(--green-line); }
+  footer { margin-top: 48px; padding-top: 28px; border-top: 2px solid var(--ink); display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: end; }
+  .vendor-label { font-size: 10.5px; color: var(--muted); letter-spacing: 0.18em; font-weight: 700; margin-bottom: 8px; }
+  .vendor-name { font-family: 'Noto Serif JP', serif; font-size: 18px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .vendor-en { font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; margin-bottom: 10px; }
+  .vendor-detail { font-size: 11.5px; line-height: 1.8; color: var(--ink-2); }
+  .seal { width: 88px; height: 88px; border: 2px solid var(--green-deep); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif JP', serif; font-size: 13px; font-weight: 700; color: var(--green-deep); letter-spacing: 0.08em; text-align: center; line-height: 1.3; }
+  @media print {
+    body { background: #fff; }
+    .page { box-shadow: none; border: none; margin: 0; max-width: none; padding: 28px 36px; }
+  }
+  .print-btn { position: fixed; bottom: 28px; right: 28px; background: var(--green-deep); color: #fff; border: none; padding: 12px 22px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; box-shadow: 0 8px 24px rgba(15,26,18,0.18); }
+  .print-btn:hover { background: var(--green-mid); }
+  @media print { .print-btn { display: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div>
+      <div class="h-sub">Operations Architecture Proposal</div>
+      <h1 class="h-title">FP Compass — 100社 運用 設計 提案書</h1>
+      <div class="h-product">継続的アップデート × 顧客満足の両立を担保する SaaS 運用基盤の構築計画</div>
+    </div>
+    <div class="h-meta">
+      <div><strong>FPC-OPS-2026-001</strong></div>
+      <div>2026 年 6 月 5 日</div>
+      <div>策定: 吉田 恭聡</div>
+    </div>
+  </header>
+  <div class="summary">
+    <div class="summary-label">エグゼクティブ サマリー</div>
+    <div class="summary-text">
+      本書は FP Compass を <strong>100 社規模で運用</strong> しながら、<strong>開発を継続的に進める</strong> ための運用基盤の設計提案である。現状の 1 環境 + 1 デプロイ構成では、1 社向けの修正が全社に瞬時に波及し、不具合発生時のリスクが累積的に増大する。本提案では <strong>環境分離 / 自動テスト / 段階展開 / 監視 / 顧客管理基盤</strong> の 5 領域 を 4 フェーズに分けて段階構築し、売上拡大と品質保証を両立する。実装期間は Phase 1〜4 で <strong>6〜9 ヶ月</strong>、初期投資 <strong>120〜180 万円相当</strong> (Jobs内製) と試算する。
+    </div>
+  </div>
+  <section>
+    <h2><span class="h2-no">01</span> 現状リスクと基本方針</h2>
+    <p>現在は 1 つの本番 URL を全顧客が共有する単一環境構成。顧客データは <code>fpId</code> による行レベル分離が実装済だが、<strong>アプリケーションコードは全顧客共通</strong> のため、特定顧客向けの修正・実験的機能・プロンプト変更が他顧客に予期せぬ影響を与えるリスクがある。</p>
+    <table>
+      <thead><tr><th style="width:50px;">優先</th><th>主要リスク</th><th>顧客から見える症状</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill pill-must">必須</span></td><td class="lead">破壊的デプロイ</td><td>全社が同時にエラー / 機能停止 / 顧客対応中に画面崩れ</td></tr>
+        <tr><td><span class="pill pill-must">必須</span></td><td class="lead">プロンプト変更による品質劣化</td><td>AI 議事録 / 下書きの精度が突如低下 / 出力フォーマット崩れ</td></tr>
+        <tr><td><span class="pill pill-must">必須</span></td><td class="lead">障害の検知遅延</td><td>顧客が「使えない」と通報するまで Jobs が気付けない</td></tr>
+        <tr><td><span class="pill pill-should">推奨</span></td><td class="lead">単一顧客の負荷スパイク</td><td>1 社の大量処理が他社のレスポンスを劣化させる</td></tr>
+        <tr><td><span class="pill pill-should">推奨</span></td><td class="lead">設定変更のヒューマンエラー</td><td>環境変数・シークレット誤更新で全社停止</td></tr>
+        <tr><td><span class="pill pill-nice">将来</span></td><td class="lead">データ漏洩 / 越境</td><td>fpId フィルタの実装漏れで他社データが見える</td></tr>
+      </tbody>
+    </table>
+    <div class="warn"><strong>基本方針:</strong> 「変更による影響を本番に届くまでに 3 段階でフィルタする」「機能フラグで顧客毎にロールアウトを制御する」「全イベントを監視し、24 時間以内に検知する」。</div>
+  </section>
+  <section>
+    <h2><span class="h2-no">02</span> 4 環境分離 × 段階デプロイ</h2>
+    <p>開発から本番までを 4 つの環境に分離。コード変更は必ず <strong>Local → Preview → Staging → Production</strong> の 4 段階を経由する。Production への適用は週 1〜2 回まとめて行い、緊急修正以外は不定期デプロイを禁止する。</p>
+    <div class="arch">[Local 開発]              Jobs 環境 / hot reload / 自由に試行錯誤
+   <span class="acc">▼</span>  PR 作成 (GitHub)
+[Preview]                 PR 毎にユニーク URL 自動発行 (Cloudflare Pages preview)
+   <span class="acc">▼</span>  オーナー or レビュアーが手元で動作確認
+[Staging]                 fp-crm-stg/  常設 / 1 ダミー顧客で 24〜48h 実地検証
+   <span class="acc">▼</span>  E2E テスト 全件 PASS + ステークホルダー承認
+[Production]              fp-crm/  100 社が利用 / 週次 or 隔週リリース</div>
+    <h3>段階ロールアウト戦略 (Feature Flag)</h3>
+    <p>新機能は <strong>機能フラグ</strong> で顧客毎に ON/OFF 制御。Production に適用後も、最初は Jobs 内部 → パイロット 3 社 → ベータ 10 社 → 一般展開 (GA) の順で段階開放する。想定外の挙動が発生した時点で、ロールバックではなく <strong>フラグを切るだけで全顧客から無効化</strong> できる。</p>
+    <h3>Blue / Green デプロイ (Cloud Run)</h3>
+    <p>バックエンドの Cloud Run は新 revision を deploy 後、最初は <strong>traffic 5%</strong> にのみ振り分け、5〜30 分のモニタリングでエラー率に異常が無いことを確認してから 100% に切替。問題発生時は <strong>30 秒で旧 revision に traffic を戻す</strong>。</p>
+  </section>
+  <section>
+    <h2><span class="h2-no">03</span> CI/CD と 自動テスト</h2>
+    <table>
+      <thead><tr><th style="width:140px;">レイヤー</th><th>テスト内容</th><th style="width:110px;">実行頻度</th></tr></thead>
+      <tbody>
+        <tr><td class="lead">構文 / Lint</td><td><code>node -c</code> / ESLint / Prettier</td><td>PR 作成時</td></tr>
+        <tr><td class="lead">ユニットテスト</td><td>純粋関数 (extractTasks / formatRelative 等)</td><td>PR 作成時</td></tr>
+        <tr><td class="lead">統合テスト</td><td>Cloud Run エンドポイントへの curl smoke test</td><td>main マージ時</td></tr>
+        <tr><td class="lead">E2E (Playwright)</td><td>主要動線 15 件 (顧客一覧 → モーダル → 各タブ → AI下書き → 送信)</td><td>main マージ + リリース前</td></tr>
+        <tr><td class="lead">Synthetic Monitoring</td><td>主要 URL を 5 分毎に外部から叩き、200 + 応答時間チェック</td><td>5 分間隔 (常時)</td></tr>
+        <tr><td class="lead">AI 出力レグレッション</td><td>サンプル議事録 10 件で生成し、出力 JSON の構造妥当性検証</td><td>プロンプト変更時</td></tr>
+      </tbody>
+    </table>
+    <p><strong>GitHub Actions</strong> で全工程を自動化。PR 時点でテスト失敗があれば main へのマージをブロック。main へのマージで Staging に自動デプロイ、Production への昇格は <strong>手動承認制</strong> とする。</p>
+  </section>
+  <section>
+    <h2><span class="h2-no">04</span> 監視 / 障害対応 / SLA</h2>
+    <div class="grid-3">
+      <div class="card"><div class="card-label">監視ツール</div><div class="card-value">3 層体制</div><div class="card-desc">Cloud Logging (内部) + UptimeRobot (外形) + Sentry (フロント例外)</div></div>
+      <div class="card"><div class="card-label">通知</div><div class="card-value">即時 LINE</div><div class="card-desc">障害検知 → Jobs / オーナー に LINE Push (1 分以内)</div></div>
+      <div class="card"><div class="card-label">ステータスページ</div><div class="card-value">公開URL</div><div class="card-desc">status.skeleton-inc.jp で稼働状況を顧客へリアルタイム開示</div></div>
+    </div>
+    <h3>サービスレベルアグリーメント (SLA 案)</h3>
+    <table>
+      <thead><tr><th>指標</th><th>目標値</th><th>違反時 対応</th></tr></thead>
+      <tbody>
+        <tr><td class="lead">月次稼働率</td><td>99.5% (≒ 月 3.6 時間以内のダウン)</td><td>月額料金の 10% 返金</td></tr>
+        <tr><td class="lead">重大障害 復旧時間</td><td>4 時間以内</td><td>無料延長 1 週間</td></tr>
+        <tr><td class="lead">通信 (障害発生から第一報)</td><td>1 時間以内</td><td>月次定例で再発防止策報告</td></tr>
+        <tr><td class="lead">サポート初動</td><td>営業時間内 1 営業日以内 / 緊急時 4 時間以内</td><td>担当アサイン</td></tr>
+      </tbody>
+    </table>
+    <h3>30 秒 ロールバック手順 (障害発生時)</h3>
+    <div class="arch">1. <span class="acc">git revert HEAD &amp;&amp; git push</span>   ← CRM 直前バージョンに戻す (1〜2 分で反映)
+2. <span class="acc">gcloud run services update-traffic --to-revisions=&lt;旧&gt;=100</span>  ← Cloud Run (30 秒)
+3. <span class="acc">clasp deploy -i &lt;旧 deployment id&gt;</span>      ← GAS Web App (30 秒)
+4. <span class="acc">ステータスページ更新</span>                       ← 顧客への通知 (3 分)</div>
+  </section>
+  <section>
+    <h2><span class="h2-no">05</span> 顧客管理基盤 (Tenant Admin)</h2>
+    <h3>5-1. 認証 / アカウント</h3>
+    <p>Google OAuth (FP 業界は Google Workspace 普及率 70% 超) でログイン。<strong>1 事務所 = 1 テナント</strong>。複数ユーザ (所長 / アシスタント) 登録可、ロールは Owner / Admin / Staff の 3 段階。</p>
+    <h3>5-2. データ隔離 (テナンシ)</h3>
+    <p>既存実装の <code>fpId</code> 行レベル分離を強化し、<strong>テナントごとに専用 Google Drive フォルダ + 専用 Spreadsheet</strong> を自動プロビジョニング。アプリケーションコードからは「自分のテナントの Sheet ID」のみアクセス可能とし、相互参照を物理的に不可とする。</p>
+    <h3>5-3. 課金 / 契約管理 (Stripe Subscription)</h3>
+    <table>
+      <thead><tr><th>プラン</th><th>月額 (税別)</th><th>対象</th><th>制限</th></tr></thead>
+      <tbody>
+        <tr><td class="lead">Free Trial</td><td>無料 14 日</td><td>新規申込</td><td>顧客 5 名 / 議事録 3 件</td></tr>
+        <tr><td class="lead">Standard</td><td>¥29,800</td><td>個人 FP</td><td>顧客 50 名 / 議事録 月 30 件</td></tr>
+        <tr><td class="lead">Pro</td><td>¥49,800</td><td>小規模事務所 (〜3 名)</td><td>顧客 200 名 / 議事録 月 100 件</td></tr>
+        <tr><td class="lead">Enterprise</td><td>応相談 (¥98,000〜)</td><td>中規模事務所</td><td>無制限 + 専用カスタマイズ</td></tr>
+      </tbody>
+    </table>
+    <p>Stripe で月次自動課金 / 請求書 PDF 自動発行 / 解約時のデータエクスポート (Sheet + Drive zip 一括ダウンロード)。</p>
+    <h3>5-4. オーナー側 管理ダッシュボード</h3>
+    <p>Jobs / オーナーのみがアクセス可能な内部ツールとして以下を整備:</p>
+    <table>
+      <thead><tr><th>機能</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td class="lead">全顧客 一覧</td><td>契約プラン / 直近ログイン / 月次面談数 / API 使用量 / 障害履歴</td></tr>
+        <tr><td class="lead">利用統計</td><td>機能別利用率 / AI 議事録生成数 / LINE 送信数 / Zoom 実施回数</td></tr>
+        <tr><td class="lead">解約予兆検知</td><td>30 日連続ログインなし / 機能利用が平均の 30% 未満 → アラート</td></tr>
+        <tr><td class="lead">売上 / 粗利推移</td><td>MRR (月次経常収益) / 解約率 / 平均契約期間 / 粗利率</td></tr>
+        <tr><td class="lead">機能フラグ管理</td><td>顧客毎に新機能 ON/OFF (GUI で切替)</td></tr>
+        <tr><td class="lead">障害履歴</td><td>各社毎の障害発生・復旧記録 / SLA 違反履歴</td></tr>
+      </tbody>
+    </table>
+    <h3>5-5. オンボーディング / オフボーディング</h3>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">オンボーディング (新規)</div>
+        <div class="card-value">5 ステップ</div>
+        <div class="card-desc">① 申込フォーム (skeleton-inc.jp/fp-compass)<br>② Stripe 決済 (14 日トライアル)<br>③ 専用 Drive + Sheet 自動生成<br>④ LINE / Zoom 連携手順 PDF<br>⑤ 初回 1on1 Zoom (30 分)</div>
+      </div>
+      <div class="card">
+        <div class="card-label">オフボーディング (解約)</div>
+        <div class="card-value">30 日 完全削除</div>
+        <div class="card-desc">解約申請 → データ全件エクスポート (Sheet + Drive zip) を顧客に交付 → 30 日間の復旧猶予 (再契約特典) → 期限経過で完全削除 + 削除証明書発行</div>
+      </div>
+    </div>
+  </section>
+  <section>
+    <h2><span class="h2-no">06</span> 4 フェーズ ロードマップ</h2>
+    <ol class="phase">
+      <li>
+        <div class="phase-title">基盤整備 (現状 〜 5 社)</div>
+        <div class="phase-meta">期間: 1 ヶ月 / 工数: 約 30h / 投資: 15 万円相当</div>
+        <div class="phase-body">① 3 環境分離 (Preview / Staging / Production)<br>② Playwright スモークテスト 15 件構築<br>③ GitHub Actions による CI/CD 基本パイプライン<br>④ ロールバック手順書 整備 (PDF 化 + 印刷 + 屋内掲示)<br>⑤ UptimeRobot による外形監視 (5 分間隔)</div>
+      </li>
+      <li>
+        <div class="phase-title">顧客管理基盤 (5 社 → 20 社)</div>
+        <div class="phase-meta">期間: 2 ヶ月 / 工数: 約 80h / 投資: 40 万円相当</div>
+        <div class="phase-body">① Google OAuth ログイン + テナント設計<br>② Stripe Subscription 連携 (4 プラン)<br>③ オーナー側 管理ダッシュボード (全顧客一覧 / 利用統計 / 機能フラグ)<br>④ オンボーディング自動化 (Drive / Sheet プロビジョニング Script)<br>⑤ ステータスページ 公開</div>
+      </li>
+      <li>
+        <div class="phase-title">品質保証 強化 (20 社 → 50 社)</div>
+        <div class="phase-meta">期間: 2 ヶ月 / 工数: 約 60h / 投資: 30 万円相当</div>
+        <div class="phase-body">① Blue / Green デプロイ (Cloud Run traffic splitting)<br>② Sentry によるフロント例外 自動収集<br>③ AI 出力 レグレッション テスト (サンプル議事録 10 件)<br>④ 機能フラグ 完全実装 (顧客毎 / ロール毎 / 段階開放)<br>⑤ サポートチケットシステム (LINE / Slack 統合)</div>
+      </li>
+      <li>
+        <div class="phase-title">スケール対応 (50 社 → 100 社)</div>
+        <div class="phase-meta">期間: 3 ヶ月 / 工数: 約 100h / 投資: 50 万円相当</div>
+        <div class="phase-body">① CS (カスタマーサクセス) 担当 1 名採用 / 教育<br>② 月次定例レポート 自動生成 (各顧客の利用統計を PDF 自動配信)<br>③ SRE 自動化 (障害時の自動 Rollback / 自動 Re-Provisioning)<br>④ プラン別 機能差別化 (Enterprise 専用機能の独立コードパス)<br>⑤ アカウント拡張 (代理店プログラム / 紹介報酬制度)</div>
+      </li>
+    </ol>
+    <table style="margin-top:20px;">
+      <thead><tr><th style="width:120px;">フェーズ合計</th><th>期間</th><th>工数</th><th>初期投資</th><th>到達売上 (MRR)</th></tr></thead>
+      <tbody><tr><td class="lead">Phase 1〜4</td><td>8 ヶ月</td><td>約 270 時間</td><td>135 万円相当</td><td>月 298 万円 (年 3,580 万円)</td></tr></tbody>
+    </table>
+  </section>
+  <section>
+    <h2><span class="h2-no">07</span> 主要リスクと緩和策</h2>
+    <table>
+      <thead><tr><th>リスク</th><th>発生確率</th><th>影響</th><th>緩和策</th></tr></thead>
+      <tbody>
+        <tr><td class="lead">外部 API 障害 (Anthropic / LINE / Zoom)</td><td>中</td><td>該当機能停止</td><td>Status Page で顧客通知 / 退避手順案内 / 代替プロバイダー検討</td></tr>
+        <tr><td class="lead">プロンプト変更による品質低下</td><td>中</td><td>顧客満足度低下</td><td>レグレッションテスト + パイロット 3 社で 24h 検証後に GA</td></tr>
+        <tr><td class="lead">Cloud Run / GAS の料金高騰</td><td>低</td><td>粗利率 圧迫</td><td>従量課金プラン移行 / キャッシュ最適化</td></tr>
+        <tr><td class="lead">セキュリティインシデント</td><td>低</td><td>顧客信頼失墜</td><td>外部監査 (年 1 回) / WAF 導入 / インシデント対応計画整備</td></tr>
+        <tr><td class="lead">主要顧客の大量解約</td><td>低</td><td>売上急減</td><td>解約予兆検知 + リテンション施策 + 30 日返金保証</td></tr>
+        <tr><td class="lead">運用人員 (Jobs) のボトルネック</td><td>高</td><td>機能追加遅延</td><td>Phase 4 で CS 採用 / 外注パートナー確保 / ドキュメント整備</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section>
+    <h2><span class="h2-no">08</span> 直近 30 日でやること (アクションプラン)</h2>
+    <table>
+      <thead><tr><th style="width:50px;">優先</th><th>項目</th><th style="width:100px;">期限</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill pill-must">必須</span></td><td>3 環境分離 (Preview / Staging / Production)</td><td>D + 7日</td></tr>
+        <tr><td><span class="pill pill-must">必須</span></td><td>Playwright スモークテスト 15 件 + GitHub Actions CI</td><td>D + 10日</td></tr>
+        <tr><td><span class="pill pill-must">必須</span></td><td>ロールバック手順書 PDF 化 + Jobs / オーナー 両者保管</td><td>D + 3日</td></tr>
+        <tr><td><span class="pill pill-should">推奨</span></td><td>UptimeRobot 設定 (主要 URL × 5 分間隔)</td><td>D + 7日</td></tr>
+        <tr><td><span class="pill pill-should">推奨</span></td><td>顧客向け SLA 同意書 ドラフト 作成</td><td>D + 14日</td></tr>
+        <tr><td><span class="pill pill-should">推奨</span></td><td>Status Page (status.skeleton-inc.jp) 立上げ</td><td>D + 21日</td></tr>
+        <tr><td><span class="pill pill-nice">将来</span></td><td>Phase 2 設計詳細 (OAuth / Stripe 連携)</td><td>D + 30日</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <footer>
+    <div>
+      <div class="vendor-label">本書作成</div>
+      <div class="vendor-name">スケルトン株式会社</div>
+      <div class="vendor-en">Skeleton Inc.</div>
+      <div class="vendor-detail">〒910-0833 福井県福井市<br>代表 吉田 恭聡 / support@skeleton-inc.jp<br>skeleton-inc.jp</div>
+    </div>
+    <div class="seal">運用設計<br>承認印</div>
+  </footer>
+</div>
+<button class="print-btn" onclick="window.print()">🖨 印刷 / PDF 出力</button>
+</body>
+</html>
