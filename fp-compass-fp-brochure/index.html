@@ -3,534 +3,1367 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FP Compass — FP事業者の方へ | Skeleton Inc.</title>
+<title>FP Compass — 顧客の本音が、こぼれない仕事に | Skeleton Inc.</title>
+<meta name="description" content="LINE履歴・面談議事録・AI推奨を一つの顧客カードに集約する、FP事業者専用の顧客管理ツール。月額¥19,800。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=Manrope:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400;9..144,700;9..144,900&family=Shippori+Mincho:wght@500;700;800;900&family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink:#2A2316;
-    --ink-2:#5C513F;
-    --ink-3:#8B7E66;
-    --paper:#FBF7EE;
-    --paper-2:#F2EBD8;
-    --paper-3:#E8DEC2;
-    --gold:#A07432;
-    --gold-2:#7A5520;
-    --indigo:#3A4571;
-    --crimson:#A33B3B;
-    --line:rgba(42,35,22,0.12);
+    --ink:        #0B0F1A;
+    --ink-2:      #2A3142;
+    --ink-3:      #4A5165;
+    --ink-soft:   #7B8499;
+    --paper:      #F7F2E2;
+    --paper-2:    #EFE7CE;
+    --paper-3:    #E5D9B6;
+    --paper-warm: #FDF9EF;
+    --brass:      #B8895D;
+    --brass-deep: #8A5F38;
+    --brass-glow: #D6A878;
+    --signal:     #C73E3E;
+    --signal-deep:#9A2F2F;
+    --line:       rgba(11,15,26,0.12);
+    --line-2:     rgba(11,15,26,0.06);
   }
   *,*::before,*::after { box-sizing:border-box; }
+  html { scroll-behavior:smooth; -webkit-font-smoothing:antialiased; }
   body {
-    margin:0; font-family:'Noto Sans JP',sans-serif;
-    background:var(--paper); color:var(--ink);
-    line-height:1.85; font-feature-settings:"palt";
-    -webkit-font-smoothing:antialiased;
+    margin:0;
+    font-family:'Manrope','Noto Sans JP',sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.7;
+    font-feature-settings:"palt", "ss01";
+    overflow-x:hidden;
   }
-  .mincho { font-family:'Shippori Mincho','Noto Serif JP',serif; letter-spacing:-0.01em; }
+  body::before {
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:1;
+    background-image:
+      radial-gradient(rgba(11,15,26,0.025) 1px, transparent 1px),
+      radial-gradient(rgba(11,15,26,0.018) 1px, transparent 1px);
+    background-size:24px 24px, 8px 8px;
+    background-position:0 0, 12px 12px;
+    mix-blend-mode:multiply;
+    opacity:0.5;
+  }
+
+  /* ============ Typography ============ */
+  .serif {
+    font-family:'Fraunces','Shippori Mincho','Noto Serif JP',serif;
+    font-variation-settings:"opsz" 144, "SOFT" 30;
+    letter-spacing:-0.025em;
+  }
+  .ital {
+    font-style:italic;
+    font-variation-settings:"opsz" 144, "SOFT" 100;
+  }
+  .jp-display {
+    font-family:'Shippori Mincho','Noto Serif JP',serif;
+    font-weight:900; letter-spacing:-0.015em;
+  }
   .mono { font-family:'JetBrains Mono',monospace; }
-  .manrope { font-family:'Manrope',sans-serif; }
-
-  .wrap { max-width:880px; margin:0 auto; }
-
-  /* ===== Hero ===== */
-  .hero {
-    padding:80px 48px 56px;
-    background:linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
-    border-bottom:1px solid var(--line);
-    position:relative; overflow:hidden;
+  .label {
+    font-family:'Manrope',sans-serif; font-weight:700;
+    font-size:10.5px; letter-spacing:0.32em;
+    text-transform:uppercase; color:var(--brass-deep);
   }
-  .hero::before {
-    content:""; position:absolute; top:-100px; right:-100px;
-    width:500px; height:500px; border-radius:50%;
-    background:radial-gradient(circle, rgba(160,116,50,0.10) 0%, transparent 70%);
+
+  a { color:inherit; text-decoration:none; }
+  button { font-family:inherit; cursor:pointer; }
+
+  /* ============ Sticky Banner (top) ============ */
+  .stickybar {
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    background:var(--ink); color:var(--paper);
+    padding:14px 28px;
+    display:grid; grid-template-columns:auto 1fr auto; gap:24px;
+    align-items:center;
+    box-shadow:0 8px 32px rgba(11,15,26,0.18);
+    transition:padding .25s ease;
+  }
+  .stickybar.shrunk { padding:10px 28px; }
+  .stickybar::after {
+    content:""; position:absolute; bottom:-1px; left:0; right:0; height:1px;
+    background:linear-gradient(90deg, transparent, var(--brass), transparent);
+  }
+  .sb-brand {
+    display:flex; align-items:center; gap:10px;
+    font-family:'Fraunces',serif; font-weight:700; font-size:14px;
+    letter-spacing:-0.005em;
+  }
+  .sb-brand-mark {
+    width:24px; height:24px; border-radius:50%;
+    background:linear-gradient(135deg, var(--brass), var(--brass-deep));
+    display:grid; place-items:center;
+    font-family:'Fraunces',serif; font-weight:900; font-size:12px; color:var(--paper);
+  }
+  .sb-brand small {
+    display:block; font-family:'Manrope',sans-serif; font-weight:500;
+    font-size:9.5px; opacity:0.7; letter-spacing:0.16em; text-transform:uppercase; margin-top:1px;
+  }
+  .sb-tagline {
+    text-align:center;
+    font-size:12px; opacity:0.75; letter-spacing:0.02em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .sb-tagline b { color:var(--brass-glow); font-weight:600; }
+  .sb-cta {
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--signal); color:var(--paper);
+    padding:9px 18px; border-radius:2px;
+    font-family:'Manrope',sans-serif; font-weight:800; font-size:13px;
+    letter-spacing:0.04em;
+    box-shadow:0 4px 14px rgba(199,62,62,0.36);
+    transition:background .15s, transform .15s, box-shadow .15s;
+    text-decoration:none;
+    border:none;
+  }
+  .sb-cta:hover {
+    background:var(--signal-deep); transform:translateY(-1px);
+    box-shadow:0 8px 22px rgba(199,62,62,0.46);
+  }
+  .sb-cta::after { content:"→"; font-size:14px; }
+  @media (max-width:680px) {
+    .stickybar { padding:10px 16px; grid-template-columns:auto auto; gap:12px; }
+    .sb-tagline { display:none; }
+    .sb-brand small { display:none; }
+    .sb-cta { padding:8px 14px; font-size:12px; }
+  }
+
+  /* ============ Floating CTA (bottom-right) ============ */
+  .floating-cta {
+    position:fixed; bottom:24px; right:24px; z-index:99;
+    background:var(--ink); color:var(--paper);
+    padding:18px 24px; border-radius:4px;
+    box-shadow:0 16px 48px rgba(11,15,26,0.32), 0 0 0 1px rgba(184,137,93,0.25);
+    max-width:280px;
+    opacity:0; transform:translateY(20px);
+    transition:opacity .4s ease, transform .4s ease;
     pointer-events:none;
   }
-  .hero-brand {
-    font-family:'Manrope',sans-serif; font-weight:700; font-size:11px;
-    letter-spacing:0.32em; color:var(--gold-2);
-    margin-bottom:24px; display:flex; align-items:center; gap:14px;
+  .floating-cta.visible {
+    opacity:1; transform:translateY(0); pointer-events:auto;
   }
-  .hero-brand::before { content:""; width:32px; height:1px; background:var(--gold-2); }
-  .hero-tag {
-    font-family:'Shippori Mincho',serif; font-weight:500; font-size:14px;
-    color:var(--ink-2); margin-bottom:18px; letter-spacing:0.02em;
+  .floating-cta::before {
+    content:""; position:absolute; top:-2px; left:-2px; right:-2px; height:2px;
+    background:linear-gradient(90deg, var(--brass), var(--brass-glow), var(--brass));
   }
-  .hero h1 {
+  .fc-label {
+    font-family:'Manrope',sans-serif; font-weight:700;
+    font-size:9.5px; letter-spacing:0.24em; color:var(--brass-glow);
+    text-transform:uppercase; margin-bottom:6px;
+  }
+  .fc-h {
+    font-family:'Shippori Mincho',serif; font-weight:700;
+    font-size:16px; line-height:1.4; margin:0 0 12px; letter-spacing:-0.005em;
+  }
+  .fc-cta {
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--signal); color:var(--paper);
+    padding:10px 16px; border-radius:2px;
+    font-family:'Manrope',sans-serif; font-weight:800; font-size:12.5px;
+    letter-spacing:0.04em;
+    transition:background .15s;
+  }
+  .fc-cta:hover { background:var(--signal-deep); }
+  .fc-cta::after { content:"→"; }
+  @media (max-width:680px) {
+    .floating-cta { bottom:12px; right:12px; left:12px; max-width:none; padding:14px 18px; }
+    .fc-h { font-size:14px; }
+  }
+
+  /* ============ Main container ============ */
+  main { position:relative; z-index:2; }
+  .container { max-width:1180px; margin:0 auto; padding:0 32px; }
+
+  /* ============ HERO ============ */
+  .hero {
+    padding-top:120px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero-grid {
+    display:grid; grid-template-columns:1.05fr 0.95fr; gap:64px;
+    align-items:end; padding-bottom:80px;
+    border-bottom:1px solid var(--line);
+  }
+  .hero-left { position:relative; padding-top:24px; }
+  .hero-eyebrow {
+    font-family:'Manrope',sans-serif; font-weight:700;
+    font-size:11px; letter-spacing:0.36em; color:var(--brass-deep);
+    text-transform:uppercase;
+    margin-bottom:32px;
+    display:inline-flex; align-items:center; gap:14px;
+    opacity:0; animation:fadeUp .8s ease .15s forwards;
+  }
+  .hero-eyebrow::before { content:""; width:28px; height:1px; background:var(--brass-deep); }
+  .hero-title {
     font-family:'Shippori Mincho','Noto Serif JP',serif;
     font-weight:900;
-    font-size:clamp(40px, 6.5vw, 64px); line-height:1.18;
-    letter-spacing:-0.015em; margin:0 0 28px;
+    font-size:clamp(54px, 8vw, 110px); line-height:0.96;
+    letter-spacing:-0.04em;
+    margin:0 0 32px;
     color:var(--ink);
+    opacity:0; animation:fadeUp .9s ease .3s forwards;
   }
-  .hero h1 em {
-    font-style:normal; color:var(--gold-2);
-    border-bottom:3px solid var(--gold);
-    padding-bottom:2px;
+  .hero-title em {
+    font-style:normal;
+    background:linear-gradient(180deg, transparent 60%, rgba(184,137,93,0.4) 60%, rgba(184,137,93,0.4) 90%, transparent 90%);
+    padding:0 4px;
+  }
+  .hero-title .accent {
+    color:var(--brass-deep); font-style:italic;
+    font-family:'Fraunces',serif;
+    font-variation-settings:"opsz" 144, "SOFT" 100;
   }
   .hero-sub {
-    font-size:16px; line-height:1.95; color:var(--ink-2);
-    max-width:680px; margin:0 0 32px;
+    font-size:17px; line-height:1.9; color:var(--ink-2);
+    max-width:520px; margin:0 0 40px;
+    opacity:0; animation:fadeUp 1s ease .5s forwards;
   }
   .hero-sub b { color:var(--ink); font-weight:700; }
 
-  .hero-author {
-    margin-top:36px; padding:18px 22px;
-    background:rgba(255,255,255,0.5);
-    border:1px solid var(--line); border-radius:4px;
-    display:flex; gap:18px; align-items:center;
-    font-size:13px; line-height:1.7; color:var(--ink-2);
+  .hero-cta-row {
+    display:flex; gap:18px; align-items:center; flex-wrap:wrap;
+    opacity:0; animation:fadeUp 1s ease .65s forwards;
   }
-  .hero-author-icon {
-    width:48px; height:48px; border-radius:50%;
-    background:linear-gradient(135deg, var(--gold), var(--gold-2));
-    color:#fff; display:grid; place-items:center;
-    font-family:'Shippori Mincho',serif; font-weight:900; font-size:18px;
-    flex-shrink:0;
+  .btn-primary {
+    display:inline-flex; align-items:center; gap:12px;
+    padding:18px 36px; background:var(--signal); color:var(--paper);
+    border-radius:2px; font-family:'Manrope',sans-serif;
+    font-weight:800; font-size:14.5px; letter-spacing:0.06em;
+    box-shadow:0 14px 32px rgba(199,62,62,0.34), 0 0 0 1px rgba(199,62,62,0.5) inset;
+    transition:background .15s, transform .15s, box-shadow .15s;
+    text-transform:uppercase;
   }
-  .hero-author b { color:var(--ink); }
+  .btn-primary:hover {
+    background:var(--signal-deep); transform:translateY(-2px);
+    box-shadow:0 18px 42px rgba(199,62,62,0.44);
+  }
+  .btn-primary::after { content:"→"; font-size:18px; }
+  .btn-ghost {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:16px 20px; color:var(--ink);
+    font-family:'Manrope',sans-serif; font-weight:700; font-size:13.5px;
+    border-bottom:2px solid var(--ink);
+    letter-spacing:0.04em;
+  }
 
-  /* ===== Section base ===== */
-  section { padding:80px 48px; border-bottom:1px solid var(--line); }
+  /* Right: product preview with Ken Burns ===== */
+  .hero-right {
+    position:relative;
+    aspect-ratio: 4 / 3;
+    border-radius:6px; overflow:hidden;
+    box-shadow:
+      0 30px 80px rgba(11,15,26,0.28),
+      0 0 0 1px rgba(11,15,26,0.06),
+      0 0 0 12px var(--paper-2);
+    background:var(--ink);
+    opacity:0; transform:translateY(40px);
+    animation:fadeUpRight 1.2s ease .4s forwards;
+  }
+  .hero-screen {
+    width:100%; height:100%;
+    background-image:url('../fp-compass-customer-guide/screenshots/09-after-login-crm.png');
+    background-size:cover; background-position:left center;
+    animation:kenBurns 18s ease-in-out infinite alternate;
+  }
+  @keyframes kenBurns {
+    0%   { transform:scale(1.04) translate(0%, 0%); }
+    50%  { transform:scale(1.14) translate(-3%, -2%); }
+    100% { transform:scale(1.08) translate(2%, -1%); }
+  }
+  .hero-badge {
+    position:absolute; top:18px; right:18px;
+    background:rgba(247,242,226,0.94); backdrop-filter:blur(6px);
+    padding:8px 14px; border-radius:2px;
+    font-family:'Manrope',sans-serif; font-weight:700; font-size:10.5px;
+    letter-spacing:0.18em; color:var(--ink); text-transform:uppercase;
+  }
+  .hero-badge::before {
+    content:"●"; color:#10B981; margin-right:6px; font-size:8px;
+    animation:pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.5; transform:scale(0.85); }
+  }
+
+  /* Hero stats row ===== */
+  .hero-meta {
+    margin-top:40px;
+    display:grid; grid-template-columns:repeat(4, 1fr); gap:0;
+    border-top:1px solid var(--line); padding-top:36px;
+  }
+  .hm-item {
+    padding-right:32px; border-right:1px solid var(--line);
+  }
+  .hm-item:last-child { border-right:none; padding-right:0; }
+  .hm-num {
+    font-family:'Fraunces',serif; font-weight:900;
+    font-variation-settings:"opsz" 144;
+    font-size:42px; line-height:1; letter-spacing:-0.035em;
+    color:var(--ink);
+  }
+  .hm-num small { font-size:14px; opacity:0.6; font-weight:500; }
+  .hm-label {
+    font-family:'Manrope',sans-serif; font-weight:700;
+    font-size:10.5px; letter-spacing:0.18em; color:var(--ink-3);
+    text-transform:uppercase; margin-top:8px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(24px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+  @keyframes fadeUpRight {
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  /* ============ Section base ============ */
+  section { padding:120px 0; position:relative; }
   .sec-eyebrow {
     font-family:'Manrope',sans-serif; font-weight:700;
-    font-size:11px; letter-spacing:0.32em; color:var(--gold-2);
-    text-transform:uppercase; margin-bottom:18px;
+    font-size:11px; letter-spacing:0.32em; color:var(--brass-deep);
+    text-transform:uppercase; margin-bottom:24px;
+    display:inline-flex; align-items:center; gap:14px;
   }
+  .sec-eyebrow::before { content:""; width:28px; height:1px; background:var(--brass-deep); }
   .sec-h {
     font-family:'Shippori Mincho','Noto Serif JP',serif; font-weight:900;
-    font-size:clamp(28px,3.8vw,42px); line-height:1.25;
-    letter-spacing:-0.015em; margin:0 0 24px;
+    font-size:clamp(36px, 5vw, 64px); line-height:1.08;
+    letter-spacing:-0.025em; margin:0 0 24px;
+    max-width:920px;
   }
-  .sec-h em { font-style:normal; color:var(--gold-2);
-    border-bottom:2.5px solid var(--gold); padding-bottom:2px; }
-  .sec-lead { font-size:15px; line-height:1.95; color:var(--ink-2); max-width:680px; }
+  .sec-h em {
+    font-style:normal;
+    background:linear-gradient(180deg, transparent 62%, rgba(184,137,93,0.4) 62%, rgba(184,137,93,0.4) 90%, transparent 90%);
+    padding:0 4px;
+  }
+  .sec-h .accent { color:var(--brass-deep); font-style:italic;
+    font-family:'Fraunces',serif;
+    font-variation-settings:"opsz" 144, "SOFT" 100; }
+  .sec-lead {
+    font-size:16px; line-height:1.9; color:var(--ink-2); max-width:760px;
+  }
+  .sec-lead b { color:var(--ink); font-weight:700; }
 
-  /* ===== Stories (3 cards) ===== */
-  .stories { margin-top:40px; display:grid; gap:20px; }
-  .story {
-    background:#fff; border:1px solid var(--line); border-radius:4px;
-    padding:32px 36px; position:relative;
+  /* ============ PAIN POINTS ============ */
+  .pain-grid {
+    margin-top:56px;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:24px;
   }
-  .story-num {
-    font-family:'Shippori Mincho',serif; font-weight:900;
-    font-size:48px; line-height:1; color:var(--paper-3);
-    position:absolute; top:24px; right:32px;
+  .pain-card {
+    background:var(--paper-warm);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:40px 36px;
+    position:relative;
+    transition:transform .3s ease, box-shadow .3s ease;
   }
-  .story-h {
-    font-family:'Shippori Mincho',serif; font-weight:700;
-    font-size:20px; line-height:1.4; margin:0 0 14px;
-    padding-right:60px;
+  .pain-card:hover {
+    transform:translateY(-4px);
+    box-shadow:0 24px 48px rgba(11,15,26,0.10);
   }
-  .story-p { font-size:14px; line-height:1.9; color:var(--ink-2); margin:0; }
-  .story-p b { color:var(--ink); font-weight:700; }
-  .story-quote {
-    margin-top:18px; padding-top:14px; border-top:1px dashed var(--line);
+  .pain-num {
+    font-family:'Fraunces',serif; font-weight:900; font-style:italic;
+    font-variation-settings:"opsz" 144, "SOFT" 80;
+    font-size:72px; line-height:1; letter-spacing:-0.05em;
+    color:var(--brass);
+    opacity:0.45;
+    position:absolute; top:28px; right:32px;
+  }
+  .pain-h {
+    font-family:'Shippori Mincho',serif; font-weight:800;
+    font-size:22px; line-height:1.35; margin:0 0 18px;
+    padding-right:64px;
+    letter-spacing:-0.01em;
+  }
+  .pain-p {
+    font-size:14px; line-height:1.95; color:var(--ink-2); margin:0;
+  }
+  .pain-p b { color:var(--ink); font-weight:700; }
+  .pain-quote {
+    margin-top:24px; padding-top:18px; border-top:1px dashed var(--line);
     font-family:'Shippori Mincho',serif; font-style:normal;
-    color:var(--gold-2); font-size:13.5px; line-height:1.75;
+    color:var(--brass-deep); font-size:13.5px; line-height:1.75;
   }
-  .story-quote::before { content:"——"; margin-right:8px; }
+  .pain-quote::before { content:"——"; margin-right:8px; opacity:0.6; }
 
-  /* ===== Features grid ===== */
-  .features { margin-top:48px; display:grid; grid-template-columns:1fr 1fr; gap:18px; }
-  .feat {
-    background:var(--paper-2); border-radius:4px; padding:24px 28px;
-    border-left:3px solid var(--gold);
+  /* ============ CTA Block (between sections) ============ */
+  .cta-block {
+    background:var(--ink); color:var(--paper);
+    padding:72px 64px;
+    border-radius:6px;
+    margin:80px 0;
+    position:relative; overflow:hidden;
+    display:grid; grid-template-columns:1fr auto; gap:48px;
+    align-items:center;
   }
-  .feat-h {
-    font-family:'Manrope',sans-serif; font-weight:800; font-size:14px;
-    margin:0 0 6px; letter-spacing:-0.005em;
-  }
-  .feat-p { font-size:13px; line-height:1.85; color:var(--ink-2); margin:0; }
-
-  /* ===== Comparison table ===== */
-  .compare {
-    margin-top:40px; background:#fff; border:1px solid var(--line);
-    border-radius:4px; overflow:hidden;
-  }
-  .compare-row {
-    display:grid; grid-template-columns:1.4fr 1fr 1fr;
-    padding:18px 24px; border-bottom:1px solid var(--line);
-    font-size:13.5px; align-items:center;
-  }
-  .compare-row:last-child { border-bottom:none; }
-  .compare-row.head {
-    background:var(--ink); color:#fff;
-    font-family:'Manrope',sans-serif; font-weight:700; font-size:11px;
-    letter-spacing:0.18em; text-transform:uppercase; padding:14px 24px;
-  }
-  .compare-row.head > * { color:#fff; }
-  .compare-row b { font-weight:700; }
-  .compare-cell-now { color:var(--crimson); font-weight:600; }
-  .compare-cell-after { color:var(--gold-2); font-weight:700; }
-  .compare-row.total {
-    background:var(--paper-2); font-weight:700;
-    border-top:2px solid var(--ink); margin-top:0;
-  }
-  .compare-row.total .compare-cell-after { font-size:16px; }
-
-  /* ===== Pricing block ===== */
-  .price-block {
-    background:linear-gradient(180deg, var(--ink) 0%, #1A1408 100%);
-    color:var(--paper); border-radius:4px; padding:56px 48px;
-    margin-top:40px; position:relative; overflow:hidden;
-  }
-  .price-block::before {
+  .cta-block::before {
     content:""; position:absolute; inset:0;
-    background:radial-gradient(ellipse 500px 250px at 100% 0%, rgba(160,116,50,0.20), transparent 60%);
+    background:
+      radial-gradient(ellipse 600px 300px at 0% 100%, rgba(184,137,93,0.22), transparent 60%),
+      radial-gradient(ellipse 400px 200px at 100% 0%, rgba(199,62,62,0.18), transparent 60%);
     pointer-events:none;
   }
-  .price-tag {
-    font-family:'Manrope',sans-serif; font-weight:800; font-size:11px;
-    letter-spacing:0.32em; color:var(--gold); margin-bottom:18px; position:relative;
+  .cta-block::after {
+    content:""; position:absolute; top:0; right:0;
+    width:300px; height:100%;
+    background-image:
+      linear-gradient(rgba(184,137,93,0.10) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(184,137,93,0.10) 1px, transparent 1px);
+    background-size:40px 40px;
+    mask-image:linear-gradient(90deg, transparent, black);
+    pointer-events:none;
   }
-  .price-amount {
+  .cta-text { position:relative; z-index:1; }
+  .cta-text-eyebrow {
+    font-family:'Manrope',sans-serif; font-weight:800;
+    font-size:11px; letter-spacing:0.32em; color:var(--brass-glow);
+    text-transform:uppercase; margin-bottom:14px;
+  }
+  .cta-text-h {
     font-family:'Shippori Mincho',serif; font-weight:900;
-    font-size:88px; line-height:0.95; letter-spacing:-0.04em;
-    color:var(--paper); position:relative;
-    display:flex; align-items:flex-start; gap:6px;
+    font-size:36px; line-height:1.2; letter-spacing:-0.02em;
+    margin:0 0 12px;
   }
-  .price-amount .yen { font-size:36px; font-weight:700; margin-top:14px; opacity:0.8; }
-  .price-amount .per { font-family:'Manrope',sans-serif; font-size:14px; font-weight:600;
-    letter-spacing:0.08em; margin-top:56px; opacity:0.6; }
-  .price-note { margin-top:24px; font-size:14px; line-height:1.85; opacity:0.85; position:relative; }
-  .price-note b { color:var(--gold); font-weight:700; }
-  .price-discount {
-    margin-top:24px; padding:20px 24px; background:rgba(255,255,255,0.06);
-    border:1px solid rgba(255,255,255,0.14); border-radius:4px;
+  .cta-text-h em { color:var(--brass-glow); font-style:normal; }
+  .cta-text-p { font-size:14px; line-height:1.85; opacity:0.78; margin:0; max-width:560px; }
+
+  .cta-action { position:relative; z-index:1; display:grid; gap:12px; }
+  .cta-action .btn-primary {
+    background:var(--signal); padding:20px 36px;
+    box-shadow:0 16px 36px rgba(199,62,62,0.42);
+  }
+  .cta-action-note {
+    font-family:'JetBrains Mono',monospace; font-size:10.5px;
+    color:var(--ink-soft); letter-spacing:0.08em; text-align:center;
+  }
+
+  @media (max-width:780px) {
+    .cta-block { grid-template-columns:1fr; padding:48px 32px; gap:32px; }
+    .cta-text-h { font-size:28px; }
+  }
+
+  /* ============ Product Showcase ============ */
+  .showcase {
+    background:linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+    padding:120px 0;
+  }
+  .showcase-frame {
+    margin-top:64px;
+    background:var(--ink);
+    border-radius:8px;
+    padding:14px;
+    box-shadow:0 60px 120px rgba(11,15,26,0.30), 0 0 0 1px rgba(184,137,93,0.18);
     position:relative;
   }
-  .price-discount-h {
-    font-family:'Manrope',sans-serif; font-weight:800; font-size:11px;
-    letter-spacing:0.22em; color:var(--gold); margin-bottom:10px;
+  .showcase-chrome {
+    display:flex; align-items:center; gap:12px;
+    padding:6px 12px 12px;
   }
-  .price-discount-p { font-size:13.5px; line-height:1.85; opacity:0.92; margin:0; }
-  .price-discount-p b { color:var(--gold); font-weight:700; }
-
-  /* ===== Concerns ===== */
-  .concerns { margin-top:40px; display:grid; gap:16px; }
-  .concern {
-    background:#fff; border:1px solid var(--line); border-radius:4px;
-    padding:24px 28px;
-  }
-  .concern-q {
-    font-family:'Shippori Mincho',serif; font-weight:700; font-size:16px;
-    margin:0 0 12px; padding-left:32px; position:relative;
-  }
-  .concern-q::before {
-    content:"問"; position:absolute; left:0; top:1px;
-    width:24px; height:24px; border-radius:50%;
-    background:var(--ink); color:#fff;
-    display:grid; place-items:center;
-    font-size:12px; font-weight:700;
-  }
-  .concern-a { font-size:13.5px; line-height:1.95; color:var(--ink-2); margin:0;
-    padding-left:32px; position:relative; }
-  .concern-a::before {
-    content:"答"; position:absolute; left:0; top:1px;
-    width:24px; height:24px; border-radius:50%;
-    background:var(--gold-2); color:#fff;
-    display:grid; place-items:center;
-    font-size:12px; font-weight:700;
-  }
-  .concern-a b { color:var(--ink); font-weight:700; }
-
-  /* ===== Closing ===== */
-  .closing {
-    background:linear-gradient(180deg, var(--paper-2) 0%, var(--paper-3) 100%);
-    padding:100px 48px 80px; text-align:center;
-    border-bottom:none;
-  }
-  .closing h2 {
-    font-family:'Shippori Mincho',serif; font-weight:900;
-    font-size:clamp(32px,5vw,52px); line-height:1.25;
-    letter-spacing:-0.02em; margin:0 0 24px;
-  }
-  .closing h2 em {
-    font-style:normal; color:var(--gold-2);
-    border-bottom:3px solid var(--gold); padding-bottom:3px;
-  }
-  .closing-p { font-size:15px; line-height:1.95; color:var(--ink-2);
-    max-width:560px; margin:0 auto 40px; }
-  .closing-cta {
-    display:inline-flex; align-items:center; gap:12px;
-    padding:18px 36px; background:var(--ink); color:var(--paper);
-    text-decoration:none; border-radius:4px;
-    font-family:'Manrope',sans-serif; font-weight:800; font-size:14px;
-    letter-spacing:0.04em;
-    box-shadow:0 12px 32px rgba(42,35,22,0.28);
-    transition:transform .15s, box-shadow .15s;
-  }
-  .closing-cta:hover { transform:translateY(-2px);
-    box-shadow:0 16px 40px rgba(42,35,22,0.38); }
-  .closing-cta::after { content:"→"; font-size:18px; }
-
-  .closing-foot {
-    margin-top:40px; padding-top:24px;
-    border-top:1px dashed var(--line);
+  .chrome-dots { display:flex; gap:6px; }
+  .chrome-dot { width:10px; height:10px; border-radius:50%; background:#4A5165; }
+  .chrome-dot:nth-child(1) { background:#E8908B; }
+  .chrome-dot:nth-child(2) { background:#E8C56B; }
+  .chrome-dot:nth-child(3) { background:#97C4A2; }
+  .chrome-url {
+    flex:1; padding:6px 12px;
+    background:rgba(247,242,226,0.10);
+    border-radius:3px;
     font-family:'JetBrains Mono',monospace; font-size:11px;
-    color:var(--ink-3); letter-spacing:0.12em;
+    color:rgba(247,242,226,0.7); text-align:center;
+  }
+  .showcase-img {
+    width:100%; display:block; border-radius:4px;
   }
 
+  /* Showcase callouts overlay */
+  .showcase-wrap { position:relative; }
+  .callout-pin {
+    position:absolute; background:var(--signal); color:var(--paper);
+    padding:8px 14px; border-radius:24px;
+    font-family:'Manrope',sans-serif; font-weight:800; font-size:11px;
+    letter-spacing:0.06em;
+    box-shadow:0 8px 18px rgba(199,62,62,0.45);
+    display:flex; align-items:center; gap:8px;
+    animation:bounce 2s ease-in-out infinite;
+  }
+  .callout-pin::before {
+    content:""; width:8px; height:8px; border-radius:50%;
+    background:var(--paper); box-shadow:0 0 0 4px rgba(255,255,255,0.3);
+  }
+  @keyframes bounce {
+    0%,100% { transform:translateY(0); }
+    50% { transform:translateY(-6px); }
+  }
+  .pin-1 { top:8%; left:8%; animation-delay:0s; }
+  .pin-2 { top:38%; right:6%; animation-delay:0.4s; }
+  .pin-3 { bottom:10%; left:38%; animation-delay:0.8s; }
+  @media (max-width:680px) { .callout-pin { display:none; } }
+
+  .showcase-annotations {
+    margin-top:64px;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:32px;
+  }
+  .anno {
+    border-top:2px solid var(--ink);
+    padding-top:18px;
+  }
+  .anno-num {
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:11px;
+    letter-spacing:0.18em; color:var(--brass-deep); margin-bottom:10px;
+  }
+  .anno-h {
+    font-family:'Shippori Mincho',serif; font-weight:800;
+    font-size:18px; line-height:1.4; margin:0 0 10px;
+    letter-spacing:-0.01em;
+  }
+  .anno-p { font-size:13.5px; line-height:1.85; color:var(--ink-2); margin:0; }
+
+  /* ============ Workflow / How it works ============ */
+  .workflow { background:var(--paper-warm); padding:120px 0; }
+  .workflow-steps {
+    margin-top:64px;
+    display:grid; gap:32px;
+  }
+  .wf-step {
+    display:grid; grid-template-columns:auto 320px 1fr; gap:48px;
+    align-items:center;
+    padding:32px 36px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:6px;
+    position:relative;
+    transition:transform .3s ease, box-shadow .3s ease;
+  }
+  .wf-step:hover {
+    transform:translateX(4px);
+    box-shadow:-8px 8px 0 var(--brass);
+  }
+  .wf-num {
+    font-family:'Fraunces',serif; font-weight:900;
+    font-variation-settings:"opsz" 144;
+    font-size:68px; line-height:1; letter-spacing:-0.04em;
+    color:var(--brass-deep);
+  }
+  .wf-img-wrap {
+    aspect-ratio: 16/10;
+    background:var(--ink); border-radius:4px; overflow:hidden;
+    position:relative;
+    box-shadow:0 12px 28px rgba(11,15,26,0.18);
+  }
+  .wf-img-wrap img {
+    width:100%; height:100%; object-fit:cover;
+    transition:transform .5s ease;
+  }
+  .wf-step:hover .wf-img-wrap img { transform:scale(1.04); }
+  .wf-img-overlay {
+    position:absolute; bottom:8px; left:8px;
+    background:rgba(11,15,26,0.85); backdrop-filter:blur(4px);
+    color:var(--paper); padding:5px 10px; border-radius:2px;
+    font-family:'Manrope',sans-serif; font-weight:700; font-size:9.5px;
+    letter-spacing:0.18em; text-transform:uppercase;
+  }
+  .wf-text { }
+  .wf-h {
+    font-family:'Shippori Mincho',serif; font-weight:800;
+    font-size:24px; line-height:1.35; margin:0 0 12px;
+    letter-spacing:-0.01em;
+  }
+  .wf-p {
+    font-size:14.5px; line-height:1.85; color:var(--ink-2); margin:0;
+  }
+  .wf-p b { color:var(--ink); font-weight:700; }
+  @media (max-width:880px) {
+    .wf-step { grid-template-columns:1fr; gap:20px; padding:28px; }
+    .wf-num { font-size:48px; }
+  }
+
+  /* ============ Stats (count-up) ============ */
+  .stats {
+    background:var(--ink); color:var(--paper); padding:140px 0;
+    position:relative; overflow:hidden;
+  }
+  .stats::before {
+    content:""; position:absolute; inset:0;
+    background:
+      radial-gradient(ellipse 800px 400px at 30% 0%, rgba(184,137,93,0.20), transparent 60%),
+      radial-gradient(ellipse 600px 300px at 100% 100%, rgba(199,62,62,0.14), transparent 60%);
+    pointer-events:none;
+  }
+  .stats-grid {
+    margin-top:80px;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:0;
+    position:relative;
+  }
+  .stat {
+    padding:0 40px; border-right:1px solid rgba(184,137,93,0.22);
+  }
+  .stat:last-child { border-right:none; }
+  .stat-label-jp {
+    font-family:'Shippori Mincho',serif; font-weight:500;
+    font-size:14px; color:var(--brass-glow); margin-bottom:14px;
+    letter-spacing:0.04em;
+  }
+  .stat-num {
+    font-family:'Fraunces',serif; font-weight:900;
+    font-variation-settings:"opsz" 144;
+    font-size:clamp(56px, 8vw, 108px); line-height:0.92; letter-spacing:-0.045em;
+    color:var(--paper);
+    display:flex; align-items:flex-start; gap:6px;
+  }
+  .stat-num small {
+    font-size:0.35em; font-weight:600; opacity:0.6;
+    margin-top:0.55em; letter-spacing:0.04em;
+    font-family:'Manrope',sans-serif;
+  }
+  .stat-desc {
+    margin-top:22px; padding-top:18px;
+    border-top:1px dashed rgba(184,137,93,0.4);
+    font-size:13.5px; line-height:1.85; opacity:0.78;
+  }
+  @media (max-width:780px) {
+    .stats-grid { grid-template-columns:1fr; gap:48px; }
+    .stat { padding:0; border-right:none; border-bottom:1px solid rgba(184,137,93,0.22); padding-bottom:32px; }
+    .stat:last-child { border-bottom:none; padding-bottom:0; }
+  }
+
+  /* ============ Before/After ============ */
+  .ba-grid {
+    margin-top:56px;
+    background:var(--paper-warm);
+    border:1px solid var(--line);
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .ba-row {
+    display:grid; grid-template-columns:1.5fr 1fr 1fr;
+    padding:22px 32px; border-bottom:1px solid var(--line-2);
+    align-items:center; gap:24px;
+    font-size:14.5px;
+  }
+  .ba-row.head {
+    background:var(--ink); color:var(--paper);
+    font-family:'Manrope',sans-serif; font-weight:700;
+    font-size:10.5px; letter-spacing:0.22em; text-transform:uppercase;
+    padding:18px 32px;
+  }
+  .ba-row.total {
+    background:var(--paper-2);
+    font-weight:700; padding:26px 32px;
+    border-top:2px solid var(--ink); border-bottom:none;
+  }
+  .ba-row:last-of-type { border-bottom:none; }
+  .ba-task { font-weight:600; }
+  .ba-task b { font-weight:800; }
+  .ba-before { font-family:'Fraunces',serif; font-weight:700; font-size:18px;
+    color:var(--signal-deep); letter-spacing:-0.01em; }
+  .ba-after { font-family:'Fraunces',serif; font-weight:700; font-size:18px;
+    color:var(--brass-deep); letter-spacing:-0.01em; }
+  .ba-row.total .ba-before { font-size:22px; }
+  .ba-row.total .ba-after { font-size:22px; }
+
+  /* ============ Pricing ============ */
+  .pricing-block {
+    background:linear-gradient(135deg, var(--ink) 0%, #1A2336 100%);
+    color:var(--paper);
+    border-radius:8px;
+    padding:80px;
+    position:relative; overflow:hidden;
+    margin-top:64px;
+  }
+  .pricing-block::before {
+    content:""; position:absolute; inset:0;
+    background:
+      radial-gradient(ellipse 700px 350px at 90% 0%, rgba(184,137,93,0.25), transparent 60%),
+      radial-gradient(ellipse 500px 250px at 0% 100%, rgba(199,62,62,0.15), transparent 60%);
+    pointer-events:none;
+  }
+  .pricing-grid {
+    display:grid; grid-template-columns:1fr auto; gap:80px; align-items:center;
+    position:relative;
+  }
+  .pricing-label {
+    font-family:'Manrope',sans-serif; font-weight:800;
+    font-size:11px; letter-spacing:0.32em; color:var(--brass-glow);
+    text-transform:uppercase; margin-bottom:20px;
+  }
+  .pricing-h {
+    font-family:'Shippori Mincho',serif; font-weight:900;
+    font-size:34px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 18px;
+  }
+  .pricing-h em { color:var(--brass-glow); font-style:normal; }
+  .pricing-p {
+    font-size:14.5px; line-height:1.85; opacity:0.82; margin:0 0 24px;
+  }
+  .pricing-features {
+    display:grid; grid-template-columns:repeat(2,1fr); gap:8px;
+    font-size:13px; line-height:1.7;
+  }
+  .pricing-features li {
+    list-style:none; padding-left:22px; position:relative; opacity:0.88;
+  }
+  .pricing-features li::before {
+    content:"✓"; position:absolute; left:0; color:var(--brass-glow); font-weight:800;
+  }
+
+  .price-amount {
+    font-family:'Fraunces',serif; font-weight:900;
+    font-variation-settings:"opsz" 144;
+    font-size:128px; line-height:0.9; letter-spacing:-0.05em;
+    display:flex; align-items:flex-start; gap:6px;
+    color:var(--paper);
+  }
+  .price-amount .yen { font-size:48px; font-weight:600; margin-top:16px; opacity:0.85; }
+  .price-amount .per {
+    font-family:'Manrope',sans-serif;
+    font-size:14px; font-weight:600; letter-spacing:0.08em;
+    margin-top:84px; margin-left:6px; opacity:0.6;
+    text-transform:uppercase;
+  }
+  .price-cta-row {
+    margin-top:24px; display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+  }
+  .price-cta-row .btn-primary {
+    background:var(--brass); color:var(--ink);
+    box-shadow:0 14px 32px rgba(184,137,93,0.45);
+  }
+  .price-cta-row .btn-primary:hover { background:var(--brass-glow); }
+
+  @media (max-width:880px) {
+    .pricing-block { padding:48px 32px; }
+    .pricing-grid { grid-template-columns:1fr; gap:48px; }
+    .price-amount { font-size:88px; }
+    .price-amount .per { margin-top:58px; }
+    .pricing-features { grid-template-columns:1fr; }
+  }
+
+  /* ============ FAQ ============ */
+  .faq-list { margin-top:56px; max-width:880px; }
+  .faq-item {
+    border-bottom:1px solid var(--line);
+    padding:28px 0;
+    cursor:pointer;
+  }
+  .faq-item summary {
+    font-family:'Shippori Mincho',serif; font-weight:700; font-size:18px;
+    list-style:none; display:flex; justify-content:space-between; align-items:center;
+    padding-right:14px;
+    letter-spacing:-0.005em;
+  }
+  .faq-item summary::-webkit-details-marker { display:none; }
+  .faq-item summary::after {
+    content:"+"; font-family:'Fraunces',serif; font-weight:900;
+    font-size:28px; color:var(--brass-deep);
+    transition:transform .3s; line-height:1;
+  }
+  .faq-item[open] summary::after { transform:rotate(45deg); }
+  .faq-item p {
+    margin:18px 0 0; font-size:14.5px; line-height:1.95; color:var(--ink-2);
+    padding-right:30px;
+  }
+  .faq-item p b { color:var(--ink); font-weight:700; }
+
+  /* ============ Final CTA ============ */
+  .final {
+    background:var(--ink); color:var(--paper);
+    padding:140px 32px 100px;
+    position:relative; overflow:hidden;
+    text-align:center;
+  }
+  .final::before {
+    content:""; position:absolute; inset:0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 50% 0%, rgba(184,137,93,0.22), transparent 70%),
+      radial-gradient(ellipse 800px 400px at 50% 100%, rgba(199,62,62,0.16), transparent 70%);
+    pointer-events:none;
+  }
+  .final-eyebrow {
+    font-family:'Manrope',sans-serif; font-weight:700;
+    font-size:11px; letter-spacing:0.36em; color:var(--brass-glow);
+    text-transform:uppercase; margin-bottom:32px;
+    position:relative;
+  }
+  .final h2 {
+    font-family:'Shippori Mincho','Noto Serif JP',serif; font-weight:900;
+    font-size:clamp(48px, 7vw, 96px); line-height:1.0;
+    letter-spacing:-0.035em;
+    margin:0 0 32px; position:relative;
+  }
+  .final h2 em {
+    font-style:normal; color:var(--brass-glow);
+  }
+  .final-p {
+    font-size:17px; line-height:1.9; opacity:0.85;
+    max-width:580px; margin:0 auto 48px; position:relative;
+  }
+  .final .btn-primary {
+    padding:22px 48px; font-size:15px;
+    position:relative;
+  }
+  .final-note {
+    margin-top:32px; font-family:'JetBrains Mono',monospace;
+    font-size:11px; letter-spacing:0.12em;
+    color:var(--ink-soft); position:relative;
+  }
+
+  /* ============ Footer ============ */
+  footer {
+    background:var(--ink); color:var(--paper);
+    padding:40px 32px;
+    border-top:1px solid rgba(184,137,93,0.18);
+    display:grid; grid-template-columns:1fr auto; gap:32px;
+    align-items:center; position:relative; z-index:2;
+  }
+  .ft-brand {
+    font-family:'Fraunces',serif; font-weight:700; font-size:14px;
+  }
+  .ft-brand small { display:block; opacity:0.55; font-family:'Manrope',sans-serif;
+    font-weight:500; font-size:10.5px; letter-spacing:0.18em; margin-top:4px; }
+  .ft-links {
+    display:flex; gap:28px;
+    font-family:'JetBrains Mono',monospace; font-size:11px;
+    color:rgba(247,242,226,0.6); letter-spacing:0.06em;
+  }
+  .ft-links a:hover { color:var(--paper); }
   @media (max-width:680px) {
-    .hero, section, .closing { padding-left:24px; padding-right:24px; }
-    .hero { padding-top:56px; padding-bottom:40px; }
-    section, .closing { padding-top:56px; padding-bottom:56px; }
-    .hero h1 { font-size:32px; }
-    .hero-author { flex-direction:column; align-items:flex-start; gap:12px; }
-    .features { grid-template-columns:1fr; }
-    .compare-row { grid-template-columns:1fr; padding:14px 18px; gap:6px; }
-    .compare-row.head { display:none; }
-    .compare-row > div { padding:3px 0; }
-    .compare-cell-now::before { content:"現状: "; color:var(--ink-3); font-weight:500; }
-    .compare-cell-after::before { content:"導入後: "; color:var(--ink-3); font-weight:500; }
-    .price-block { padding:40px 28px; }
-    .price-amount { font-size:64px; }
-    .price-amount .per { margin-top:42px; }
+    footer { grid-template-columns:1fr; gap:20px; }
+    .ft-links { flex-wrap:wrap; gap:14px 22px; }
+  }
+
+  /* ============ Responsive ============ */
+  @media (max-width:980px) {
+    .hero-grid { grid-template-columns:1fr; gap:48px; padding-bottom:56px; }
+    .hero-meta { grid-template-columns:1fr 1fr; gap:18px 0; }
+    .hm-item:nth-child(2) { border-right:none; }
+    .pain-grid { grid-template-columns:1fr; }
+    .showcase-annotations { grid-template-columns:1fr; }
+    section { padding:80px 0; }
+    .container { padding:0 22px; }
+  }
+  @media (max-width:680px) {
+    .hero { padding-top:80px; }
+    .hero-title { font-size:48px; }
+    .hero-right { aspect-ratio: 4/3; box-shadow:0 16px 40px rgba(11,15,26,0.20), 0 0 0 6px var(--paper-2); }
+    .sec-h { font-size:32px; }
+    .pricing-block { padding:48px 28px; }
+    .pain-num { font-size:48px; top:20px; right:24px; }
+    .pain-card { padding:28px; }
   }
 </style>
 </head>
 <body>
 
-<!-- HERO -->
-<header class="hero">
-  <div class="wrap">
-    <div class="hero-brand">SKELETON INC. · FP COMPASS</div>
-    <div class="hero-tag">FP事業者の方へ — ご紹介資料</div>
-    <h1>顧客の <em>本音</em> が、<br>こぼれない仕事に。</h1>
-    <p class="hero-sub">
-      FP の現場で「あの方の相談、 次は何を提案すべきだったか」 と眠れない夜を過ごす方へ。
-      LINE 履歴、 面談議事録、 家族構成、 過去の提案 ── <b>顧客の声を 1 人ずつ束ねて AI が次の一手を示す</b> 顧客管理ツール、 FP Compass のご紹介です。
-    </p>
+<!-- ============ STICKY TOP BANNER ============ -->
+<div class="stickybar" id="stickybar">
+  <div class="sb-brand">
+    <span class="sb-brand-mark">S</span>
+    <span>FP Compass<small>Skeleton Inc.</small></span>
+  </div>
+  <div class="sb-tagline">
+    顧客の本音が、 こぼれない仕事に。 <b>月¥19,800</b> · LINE × AI × 議事録自動化
+  </div>
+  <a class="sb-cta" href="https://app.skeleton-inc.jp/">申込はこちら</a>
+</div>
 
-    <div class="hero-author">
-      <div class="hero-author-icon">S</div>
-      <div>
-        <b>スケルトン株式会社</b> (福井県大野市)<br>
-        本資料は、 FP 事業者の方の業務改善を目的に作成された ご紹介資料です。 月額¥19,800 から、 紹介経由でのご加入をお勧めしています。
+<!-- ============ FLOATING CTA (right bottom) ============ -->
+<div class="floating-cta" id="floatingCta">
+  <div class="fc-label">登録に進む</div>
+  <h3 class="fc-h">5分で運用開始。<br>月¥19,800 ・全機能込み。</h3>
+  <a class="fc-cta" href="https://app.skeleton-inc.jp/">申込はこちら</a>
+</div>
+
+<main>
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <div class="container">
+      <div class="hero-grid">
+        <div class="hero-left">
+          <div class="hero-eyebrow">FOR FINANCIAL PLANNERS · ご紹介資料</div>
+          <h1 class="hero-title">
+            顧客の <em>本音</em> が、<br>
+            こぼれない<br>
+            <span class="accent">仕事</span> に。
+          </h1>
+          <p class="hero-sub">
+            LINE 履歴、 面談議事録、 家族構成、 過去の提案 ──
+            顧客の声を 1 人ずつ束ねて <b>AI が「次の一手」を示す</b> 顧客管理ツール。
+            紙の整理に追われる夜から、 顧客のために考える夜へ。
+          </p>
+          <div class="hero-cta-row">
+            <a class="btn-primary" href="https://app.skeleton-inc.jp/">申込はこちら</a>
+            <a class="btn-ghost" href="#showcase">デモを見る</a>
+          </div>
+        </div>
+
+        <div class="hero-right">
+          <div class="hero-screen"></div>
+          <div class="hero-badge">LIVE PREVIEW</div>
+        </div>
+      </div>
+
+      <div class="hero-meta">
+        <div class="hm-item">
+          <div class="hm-num"><span class="js-count" data-target="19800" data-prefix="¥">¥0</span><small>/月</small></div>
+          <div class="hm-label">月額・全機能込み</div>
+        </div>
+        <div class="hm-item">
+          <div class="hm-num"><span class="js-count" data-target="41">0</span><small>時間</small></div>
+          <div class="hm-label">月あたり業務削減</div>
+        </div>
+        <div class="hm-item">
+          <div class="hm-num"><span class="js-count" data-target="5">0</span><small>分</small></div>
+          <div class="hm-label">登録から運用開始</div>
+        </div>
+        <div class="hm-item">
+          <div class="hm-num">A+</div>
+          <div class="hm-label">企業級セキュリティ</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ 01 PAIN POINTS ============ -->
+  <section>
+    <div class="container">
+      <div class="sec-eyebrow">01 — なぜ今、 FP Compass か</div>
+      <h2 class="sec-h">FP の <span class="accent">三つの夜</span>。</h2>
+      <p class="sec-lead">担当顧客が増えるほど、 整理に時間が取られ、 提案準備が後回しに。
+        多くの FP が共通して抱える 3 つの「眠れない夜」、 まずは点検してみてください。</p>
+
+      <div class="pain-grid">
+        <article class="pain-card">
+          <div class="pain-num">壱</div>
+          <h3 class="pain-h">LINE の海から、<br>大事な一言を探す夜</h3>
+          <p class="pain-p">「3 年前、 第二子が生まれた時のあの相談、 どこにあったっけ」 ──
+            数百件のスクロールを延々続け、 重要な発言が流れていく。
+            <b>気づいた時には、 提案のチャンスを逃している</b>。</p>
+          <div class="pain-quote">3 年前の会話を探すのに 30 分かかった</div>
+        </article>
+
+        <article class="pain-card">
+          <div class="pain-num">弐</div>
+          <h3 class="pain-h">議事録を Word に保存して、<br>終わる夜</h3>
+          <p class="pain-p">面談で熱く語った顧客の希望も、 ファイルにしまえば二度と読み返さない。
+            次の面談で <b>「前回どこまで話したか」 を思い出せず</b>、 同じ説明を繰り返してしまう。
+            顧客にも 「機械的に感じる」 と言われ始めた。</p>
+          <div class="pain-quote">前回の話、 全然覚えてもらえなかった</div>
+        </article>
+
+        <article class="pain-card">
+          <div class="pain-num">参</div>
+          <h3 class="pain-h">勘で提案を、<br>投げ続ける夜</h3>
+          <p class="pain-p">「学資保険、 どうですか」 を全員に投げて、 反応を見て次を考える。
+            顧客の本音 (家計の不安、 将来の理想) を読み取れず、 <b>提案がワンパターンに</b>。
+            本当はもっと深く知っているのに、 整理が追いつかない。</p>
+          <div class="pain-quote">この方は今、 何を一番気にしているのか</div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CTA BLOCK 1 ============ -->
+  <div class="container">
+    <div class="cta-block">
+      <div class="cta-text">
+        <div class="cta-text-eyebrow">↓ INTERMISSION</div>
+        <h3 class="cta-text-h">この <em>三つの夜</em>、<br>もう少し短くしませんか。</h3>
+        <p class="cta-text-p">FP Compass は、 顧客 1 人ずつの情報を「カード」 にまとめ、 AI が「次の一手」 を提案します。
+          月¥19,800、 5 分の登録で運用開始。</p>
+      </div>
+      <div class="cta-action">
+        <a class="btn-primary" href="https://app.skeleton-inc.jp/">いますぐ申込</a>
+        <div class="cta-action-note">月¥19,800 · 解約はいつでも可</div>
       </div>
     </div>
   </div>
-</header>
 
-<!-- ===== 01 三つの困りごと ===== -->
-<section>
-  <div class="wrap">
-    <div class="sec-eyebrow">01 — なぜ今、 FP Compass か</div>
-    <h2 class="sec-h">FP の <em>三つの夜</em>。</h2>
-    <p class="sec-lead">担当顧客が増えるほど、 整理に時間が取られ、 提案準備が後回しに。
-      多くの FP が共通して抱える 3 つの「眠れない夜」、 まずは点検してみてください。</p>
+  <!-- ============ 02 SHOWCASE ============ -->
+  <section class="showcase" id="showcase">
+    <div class="container">
+      <div class="sec-eyebrow">02 — 実画面プレビュー</div>
+      <h2 class="sec-h">これが、 あなたの <span class="accent">朝</span> です。</h2>
+      <p class="sec-lead">ログインすると、 AI が今日の優先顧客を提示します。
+        「LINE で最近キャンセル」「ライフイベント直前」「過去提案フォロー必要」 を自動で判定。
+        <b>毎朝、 何をすべきかが既に整っている</b> 状態でスタートできます。</p>
 
-    <div class="stories">
-      <article class="story">
-        <div class="story-num">壱</div>
-        <h3 class="story-h">LINE の海から、 大事な一言を探す夜</h3>
-        <p class="story-p">「3 年前、 第二子が生まれた時のあの相談、 どこにあったっけ」 ──
-          数百件のスクロールを延々続け、 重要な発言が流れていく。
-          <b>気づいた時には、 提案のチャンスを逃している</b>。</p>
-        <div class="story-quote">3 年前の会話を探すのに 30 分かかった</div>
-      </article>
-
-      <article class="story">
-        <div class="story-num">弐</div>
-        <h3 class="story-h">議事録を Word に保存して、 終わる夜</h3>
-        <p class="story-p">面談で熱く語った顧客の希望も、 ファイルにしまえば二度と読み返さない。
-          次の面談で 「前回どこまで話したか」 を思い出せず、 同じ説明を繰り返してしまう。
-          <b>顧客にも 「機械的に感じる」 と言われ始めた</b>。</p>
-        <div class="story-quote">前回の話、 全然覚えてもらえなかった、 と</div>
-      </article>
-
-      <article class="story">
-        <div class="story-num">参</div>
-        <h3 class="story-h">勘で提案を投げ続ける夜</h3>
-        <p class="story-p">「学資保険、 どうですか」 を全員に投げて、 反応を見て次を考える。
-          顧客の本音 (家計の不安、 将来の理想) を読み取れず、 提案がワンパターンに。
-          <b>本当はもっと深く知っているのに、 整理が追いつかない</b>。</p>
-        <div class="story-quote">この方は今、 何を一番気にしているのか</div>
-      </article>
-    </div>
-  </div>
-</section>
-
-<!-- ===== 02 仕組み ===== -->
-<section style="background:var(--paper-2);">
-  <div class="wrap">
-    <div class="sec-eyebrow">02 — どんな仕組みか</div>
-    <h2 class="sec-h">顧客の <em>声</em> を、<br>1 人ずつ、 束ねる。</h2>
-    <p class="sec-lead">LINE、 面談議事録、 家族構成、 過去の提案 ── 全部を 「顧客カード」 1 枚に集約。
-      AI が読んで、 次に提案すべきものを示します。 ベテランの勘を、 すべての FP に。</p>
-
-    <div class="features">
-      <div class="feat">
-        <h4 class="feat-h">LINE 履歴 自動取り込み</h4>
-        <p class="feat-p">LINE 公式アカウントと連携。 顧客とのチャットが顧客カードに時系列で自動保存。 過去の発言を秒で検索。</p>
+      <div class="showcase-frame">
+        <div class="showcase-chrome">
+          <div class="chrome-dots">
+            <span class="chrome-dot"></span>
+            <span class="chrome-dot"></span>
+            <span class="chrome-dot"></span>
+          </div>
+          <div class="chrome-url">https://app.skeleton-inc.jp/</div>
+        </div>
+        <div class="showcase-wrap">
+          <img class="showcase-img" src="../fp-compass-customer-guide/screenshots/09-after-login-crm.png" alt="FP Compass ダッシュボード実画面">
+          <div class="callout-pin pin-1">AI が今日の優先を提示</div>
+          <div class="callout-pin pin-2">LINE 連動 + ライフイベント</div>
+          <div class="callout-pin pin-3">顧客カード 1クリックで詳細</div>
+        </div>
       </div>
-      <div class="feat">
-        <h4 class="feat-h">Zoom 議事録 AI 要約</h4>
-        <p class="feat-p">面談を Zoom で行えば、 自動文字起こし → AI が要点 5 行に要約。 「何を気にしてるか」 を見える化。</p>
-      </div>
-      <div class="feat">
-        <h4 class="feat-h">AI 推奨 — 次の一手</h4>
-        <p class="feat-p">家族構成・年齢・過去の提案履歴・LINE 発言を全部読んで、 次に提案すべき商品を AI が示唆。</p>
-      </div>
-      <div class="feat">
-        <h4 class="feat-h">家族マップ + ライフイベント</h4>
-        <p class="feat-p">「子供が大学進学する 12 年後」 「住宅ローン完済 28 年後」 を自動でカレンダー化。 先を見据えた提案が組める。</p>
-      </div>
-      <div class="feat">
-        <h4 class="feat-h">解約予兆検知</h4>
-        <p class="feat-p">面談キャンセルが続く顧客に AI が早期警告。 離脱シグナルが出る前にフォローアップを促す。</p>
-      </div>
-      <div class="feat">
-        <h4 class="feat-h">スマホ完全対応</h4>
-        <p class="feat-p">外出先でも顧客カード閲覧・LINE 返信。 オフィス縛りなし、 移動中の隙間時間が稼働時間に。</p>
+
+      <div class="showcase-annotations">
+        <div class="anno">
+          <div class="anno-num">A · AI 推奨セクション</div>
+          <h4 class="anno-h">「今日は1人のお客様があなたを必要としています」</h4>
+          <p class="anno-p">AI が顧客の状態を分析し、 今日連絡すべき顧客と理由を提示します。 朝の 10 分で全顧客の優先度が把握できます。</p>
+        </div>
+        <div class="anno">
+          <div class="anno-num">B · 顧客カード一覧</div>
+          <h4 class="anno-h">「今日話すべき方」 から優先表示</h4>
+          <p class="anno-p">山田 智子・47歳・医師。 過去の提案・LINE 履歴・家族構成、 全部 1 クリックで開けます。 ナビ不要、 直感で運用可能。</p>
+        </div>
+        <div class="anno">
+          <div class="anno-num">C · サイドナビゲーション</div>
+          <h4 class="anno-h">顧客台帳・ライフイベント・KPI を統合</h4>
+          <p class="anno-p">ホーム、 顧客台帳、 ライフイベント、 KPI / 設備、 LINE オートメーション、 新規相談、 配信、 全機能を 1 画面に統合。</p>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- ===== 03 Before / After ===== -->
-<section>
-  <div class="wrap">
-    <div class="sec-eyebrow">03 — 業務がこう変わる</div>
-    <h2 class="sec-h">面談 1 件あたりの <em>準備時間</em>、 8 割削減。</h2>
-    <p class="sec-lead">紙とフォルダ、 Excel と Word で運用している標準的な FP 事業者を想定した、 業務時間の試算です。
-      実際には個人差がありますが、 おおむね同じレベルの改善を期待できます。</p>
+  <!-- ============ 03 WORKFLOW ============ -->
+  <section class="workflow">
+    <div class="container">
+      <div class="sec-eyebrow">03 — 1 日のワークフロー</div>
+      <h2 class="sec-h"><span class="accent">朝 10 分</span> で、<br>その日の準備が終わる。</h2>
+      <p class="sec-lead">FP Compass を使うと、 朝の 10 分でその日の面談・連絡相手・優先項目が把握できます。
+        以下は標準的な FP の 1 日のワークフロー例。</p>
 
-    <div class="compare">
-      <div class="compare-row head">
-        <div>業務</div>
-        <div>現状</div>
-        <div>導入後</div>
-      </div>
-      <div class="compare-row">
-        <div>面談前の顧客情報整理</div>
-        <div class="compare-cell-now">30 分</div>
-        <div class="compare-cell-after">5 分</div>
-      </div>
-      <div class="compare-row">
-        <div>LINE 履歴からの過去発言検索</div>
-        <div class="compare-cell-now">15 分</div>
-        <div class="compare-cell-after">10 秒</div>
-      </div>
-      <div class="compare-row">
-        <div>面談議事録の作成・保存</div>
-        <div class="compare-cell-now">40 分</div>
-        <div class="compare-cell-after">5 分 (AI要約)</div>
-      </div>
-      <div class="compare-row">
-        <div>次回提案商品の選定</div>
-        <div class="compare-cell-now">20 分 (勘)</div>
-        <div class="compare-cell-after">2 分 (AI推奨)</div>
-      </div>
-      <div class="compare-row total">
-        <div><b>面談 1 件あたり合計</b></div>
-        <div class="compare-cell-now">約 1 時間 45 分</div>
-        <div class="compare-cell-after">約 22 分</div>
+      <div class="workflow-steps">
+        <div class="wf-step">
+          <div class="wf-num">1</div>
+          <div class="wf-img-wrap">
+            <img src="../fp-compass-customer-guide/screenshots/09-after-login-crm.png" alt="ダッシュボード">
+            <div class="wf-img-overlay">08 : 30 / DASHBOARD</div>
+          </div>
+          <div class="wf-text">
+            <h3 class="wf-h">朝、 ログインで「今日の優先」 が出ている</h3>
+            <p class="wf-p">PC かスマホからログイン。 AI が「LINEで最近キャンセル」「ライフイベント直前」 等を自動で判定し、 <b>今日連絡すべき顧客を上位表示</b>。</p>
+          </div>
+        </div>
+
+        <div class="wf-step">
+          <div class="wf-num">2</div>
+          <div class="wf-img-wrap">
+            <img src="../fp-compass-customer-guide/screenshots/02-lp-features.png" alt="顧客カード詳細">
+            <div class="wf-img-overlay">09 : 00 / CLIENT CARD</div>
+          </div>
+          <div class="wf-text">
+            <h3 class="wf-h">顧客カードを開く → LINE 履歴 + 議事録 + AI 推奨</h3>
+            <p class="wf-p">「田中 健一」 さんカードをクリック。 過去の LINE 9 件全部時系列、 議事録 AI 要約、 家族構成、 ライフイベント、 <b>過去提案履歴と次のおすすめ提案 が同じ画面に</b>。</p>
+          </div>
+        </div>
+
+        <div class="wf-step">
+          <div class="wf-num">3</div>
+          <div class="wf-img-wrap">
+            <img src="../fp-compass-customer-guide/screenshots/03-lp-pricing.png" alt="LINE 連携">
+            <div class="wf-img-overlay">10 : 30 / LINE REPLY</div>
+          </div>
+          <div class="wf-text">
+            <h3 class="wf-h">そのまま LINE 返信、 自動で履歴に記録</h3>
+            <p class="wf-p">顧客カードから直接 LINE 返信。 送ったメッセージは <b>自動で顧客カードに時系列保存</b>。 別アプリを開く必要なし、 全部 FP Compass の中で完結。</p>
+          </div>
+        </div>
+
+        <div class="wf-step">
+          <div class="wf-num">4</div>
+          <div class="wf-img-wrap">
+            <img src="../fp-compass-customer-guide/screenshots/11-referral-dashboard.png" alt="議事録 AI 要約">
+            <div class="wf-img-overlay">14 : 00 / MEETING SUMMARY</div>
+          </div>
+          <div class="wf-text">
+            <h3 class="wf-h">Zoom 面談後、 AI が議事録を 5 行に要約</h3>
+            <p class="wf-p">面談を Zoom で実施 → 終了後自動で文字起こし → <b>AI が「お客様が一番気にしていること」 を 5 行で要約</b>。 顧客カードの議事録欄に自動追加されます。</p>
+          </div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <p class="sec-lead" style="margin-top:28px;">
-      月 30 件の面談で換算すると、 <b style="color:var(--gold-2);">月 約 41 時間の節約</b> ──
-      それは、 もう 1 名の顧客を担当できる時間、 新規開拓に使える時間、 家族と過ごせる時間です。
-    </p>
-  </div>
-</section>
+  <!-- ============ STATS ============ -->
+  <section class="stats">
+    <div class="container">
+      <div class="sec-eyebrow" style="color:var(--brass-glow);">04 — 数字で見る</div>
+      <h2 class="sec-h" style="color:var(--paper);">月額に対する、<br><span style="color:var(--brass-glow);font-style:italic;font-family:'Fraunces',serif;font-variation-settings:'opsz' 144,'SOFT' 100;">対 価</span>。</h2>
+      <p class="sec-lead" style="color:rgba(247,242,226,0.78);">月額¥19,800 を払う対価として、 何が手に入るか。 標準的な FP 事業者の試算です。</p>
 
-<!-- ===== 04 料金 ===== -->
-<section style="background:var(--paper-2);">
-  <div class="wrap">
-    <div class="sec-eyebrow">04 — 料金</div>
-    <h2 class="sec-h">月額 <em>¥19,800</em>。<br>シンプル一本。</h2>
-    <p class="sec-lead">無料プランも段階制もありません。 月額 ¥19,800 (税込) で全機能、 顧客数無制限。
-      他の FP を紹介すれば月額が下がる仕組みもあります。</p>
-
-    <div class="price-block">
-      <div class="price-tag">FP Compass · 月額プラン</div>
-      <div class="price-amount">
-        <span class="yen">¥</span>
-        <span>19,800</span>
-        <span class="per">/ 月 (税込)</span>
+      <div class="stats-grid">
+        <div class="stat">
+          <div class="stat-label-jp">毎月節約される時間</div>
+          <div class="stat-num">
+            <span class="js-count" data-target="41">0</span>
+            <small>時間/月</small>
+          </div>
+          <div class="stat-desc">面談前準備・LINE検索・議事録作成・提案選定 4 業務の削減合計。 月 30 件面談ベース。</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label-jp">運用開始までの時間</div>
+          <div class="stat-num">
+            <span class="js-count" data-target="5">0</span>
+            <small>分</small>
+          </div>
+          <div class="stat-desc">登録 → カード入力 → 顧客管理画面オープン まで。 初日からそのまま運用可能。</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label-jp">顧客データ保管</div>
+          <div class="stat-num">
+            <span class="js-count" data-target="99.99">0</span>
+            <small>%</small>
+          </div>
+          <div class="stat-desc">SLA 稼働率。 Google Cloud 東京リージョン + 3 層バックアップ (PITR/Daily/Weekly)。</div>
+        </div>
       </div>
-      <p class="price-note">
-        全機能込み、 顧客数無制限。 登録後すぐ運用開始、 解約はいつでも管理画面からワンクリック。
-        登録には<b>クレジットカード</b>が必要です (初回登録時に当月分が決済されます)。
+    </div>
+  </section>
+
+  <!-- ============ 05 BEFORE / AFTER ============ -->
+  <section>
+    <div class="container">
+      <div class="sec-eyebrow">05 — Before / After</div>
+      <h2 class="sec-h">面談 1 件あたりの <span class="accent">準備時間</span>、 8 割削減。</h2>
+      <p class="sec-lead">紙とフォルダ、 Excel と Word で運用している標準的な FP 事業者を想定した、 業務時間の試算です。
+        実際には個人差がありますが、 おおむね同じレベルの改善を期待できます。</p>
+
+      <div class="ba-grid">
+        <div class="ba-row head">
+          <div>業務</div>
+          <div>現状</div>
+          <div>FP Compass 導入後</div>
+        </div>
+        <div class="ba-row">
+          <div class="ba-task">面談前の顧客情報整理</div>
+          <div class="ba-before">30 分</div>
+          <div class="ba-after">5 分</div>
+        </div>
+        <div class="ba-row">
+          <div class="ba-task">LINE 履歴からの過去発言検索</div>
+          <div class="ba-before">15 分</div>
+          <div class="ba-after">10 秒</div>
+        </div>
+        <div class="ba-row">
+          <div class="ba-task">面談議事録の作成・保存</div>
+          <div class="ba-before">40 分</div>
+          <div class="ba-after">5 分 <small style="opacity:0.6;">(AI 要約)</small></div>
+        </div>
+        <div class="ba-row">
+          <div class="ba-task">次回提案商品の選定</div>
+          <div class="ba-before">20 分 <small style="opacity:0.6;">(勘)</small></div>
+          <div class="ba-after">2 分 <small style="opacity:0.6;">(AI 推奨)</small></div>
+        </div>
+        <div class="ba-row total">
+          <div class="ba-task"><b>面談 1 件あたり合計</b></div>
+          <div class="ba-before">約 1 時間 45 分</div>
+          <div class="ba-after">約 22 分</div>
+        </div>
+      </div>
+
+      <p class="sec-lead" style="margin-top:32px;">
+        月 30 件の面談で換算すると、 <b>月 約 41 時間の節約</b> ──
+        それは、 もう 1 名の顧客を担当できる時間、 新規開拓に使える時間、 家族と過ごせる時間です。
       </p>
-      <div class="price-discount">
-        <div class="price-discount-h">紹介者へお願い</div>
-        <p class="price-discount-p">
-          ご紹介者 (FP / 代理店) のリンクからご登録いただくと、
-          紹介者側にも貢献の記録が残ります。 ご紹介者経由のご登録を推奨します。<br>
-          ご自身が他の FP をご紹介された場合は、 <b>1 人につき月額が ¥3,500 ずつ下がり、 最大 6 人で永久無料</b> となります (紹介相手が継続契約中の間)。
-        </p>
+    </div>
+  </section>
+
+  <!-- ============ CTA BLOCK 2 ============ -->
+  <div class="container">
+    <div class="cta-block">
+      <div class="cta-text">
+        <div class="cta-text-eyebrow">↓ NEXT STEP</div>
+        <h3 class="cta-text-h">「迷っている時間」 こそ、<br><em>失われる 41 時間</em>。</h3>
+        <p class="cta-text-p">考えてから決めても、 動いてから考えても、 結果は同じ。 だったら今日から動かしてみませんか。 月¥19,800、 いつでも解約可能。</p>
+      </div>
+      <div class="cta-action">
+        <a class="btn-primary" href="https://app.skeleton-inc.jp/">5 分で申込</a>
+        <div class="cta-action-note">月¥19,800 · クレカ登録 · 即日運用開始</div>
       </div>
     </div>
   </div>
-</section>
 
-<!-- ===== 05 不安解消 ===== -->
-<section>
-  <div class="wrap">
-    <div class="sec-eyebrow">05 — 不安への答え</div>
-    <h2 class="sec-h">よく頂く <em>ご質問</em>。</h2>
-    <p class="sec-lead">FP 業務は顧客の機密情報を扱う仕事。 セキュリティ・解約・データ管理について、 よく頂くご質問にお答えします。</p>
+  <!-- ============ 06 PRICING ============ -->
+  <section>
+    <div class="container">
+      <div class="sec-eyebrow">06 — 料金</div>
+      <h2 class="sec-h">月額 <span class="accent">¥19,800</span>。 シンプル一本。</h2>
+      <p class="sec-lead">無料プランも段階制もありません。 月額 ¥19,800 (税込) で全機能、 顧客数無制限。
+        他の FP を紹介すれば月額が下がる仕組みもあります。</p>
 
-    <div class="concerns">
-      <div class="concern">
-        <h3 class="concern-q">顧客の個人情報は安全に保管されますか?</h3>
-        <p class="concern-a">
-          はい。 データは Google Cloud (Firestore 東京リージョン) に保管され、
-          通信は TLS 1.3、 パスワードは SCRYPT で暗号化されます。 また、 各 FP 事業者ごとに <b>テナント分離</b> されており、 他の FP が貴方のデータを閲覧することは技術的に不可能です。 さらに、 3 層バックアップ (PITR / Daily / Weekly) で誤削除にも備えています。
-        </p>
-      </div>
-      <div class="concern">
-        <h3 class="concern-q">解約したらデータはどうなりますか?</h3>
-        <p class="concern-a">
-          解約後 <b>30 日間データを保管</b>し、 期間中はいつでも JSON 形式で全データをダウンロードできます (個人情報保護法第 33 条 開示請求権に対応)。 30 日経過後に完全削除します。
-        </p>
-      </div>
-      <div class="concern">
-        <h3 class="concern-q">LINE 公式アカウントを持っていなくても使えますか?</h3>
-        <p class="concern-a">
-          もちろん使えます。 LINE 連携は <b>任意機能</b>で、 顧客管理・議事録 AI・提案準備という主要機能は LINE なしで完結します。 後から LINE 連携を追加することもできます。
-        </p>
-      </div>
-      <div class="concern">
-        <h3 class="concern-q">私の業界経験が浅いのですが、 使いこなせますか?</h3>
-        <p class="concern-a">
-          むしろ経験が浅い方ほど効果的です。 <b>AI が「ベテランならこう提案する」を示唆</b>するため、 経験不足を補えます。 経験ある FP の方は、 整理の手間が劇的に減り、 より多くの顧客に向き合えます。
-        </p>
-      </div>
-      <div class="concern">
-        <h3 class="concern-q">スマホだけで使えますか? 事務所にいなくても?</h3>
-        <p class="concern-a">
-          はい。 iPhone / Android のブラウザでフル機能利用可能。 顧客カード閲覧、 LINE 返信、 議事録確認、 全部移動中にできます。 専用アプリ不要、 ブックマークから開くだけです。
-        </p>
-      </div>
-      <div class="concern">
-        <h3 class="concern-q">サポートはありますか?</h3>
-        <p class="concern-a">
-          平日 10-18 時、 メール (support@skeleton-inc.jp) で対応します。 AI チャットボット (24 時間) で基本的な質問は即時回答。 重要なトラブルは Skeleton 代表が直接対応します。
-        </p>
+      <div class="pricing-block">
+        <div class="pricing-grid">
+          <div>
+            <div class="pricing-label">FP Compass · 月額プラン</div>
+            <h3 class="pricing-h">全機能・<em>顧客数無制限</em>・<br>登録後すぐ運用開始。</h3>
+            <p class="pricing-p">
+              紹介経由でご登録いただくと、 紹介者 (FP / 代理店) にも貢献記録が残ります。
+              ご自身が他の FP をご紹介された場合、 <b style="color:var(--brass-glow);">1 人あたり月額が ¥3,500 ずつ下がり、 6 人で永久無料</b>。
+            </p>
+            <ul class="pricing-features">
+              <li>LINE 履歴 自動取り込み</li>
+              <li>Zoom 議事録 AI 要約</li>
+              <li>AI 推奨 / 次の一手</li>
+              <li>家族マップ + ライフイベント</li>
+              <li>スマホ・PC 完全対応</li>
+              <li>SCRYPT 暗号化 / テナント分離</li>
+              <li>3 層バックアップ (PITR/Daily/Weekly)</li>
+              <li>解約・データ DL いつでも可能</li>
+            </ul>
+            <div class="price-cta-row">
+              <a class="btn-primary" href="https://app.skeleton-inc.jp/">申込はこちら</a>
+            </div>
+          </div>
+          <div>
+            <div class="price-amount">
+              <span class="yen">¥</span>
+              <span>19,800</span>
+              <span class="per">/ 月 (税込)</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+  </section>
+
+  <!-- ============ 07 FAQ ============ -->
+  <section style="background:var(--paper-2);">
+    <div class="container">
+      <div class="sec-eyebrow">07 — よくあるご質問</div>
+      <h2 class="sec-h">不安への <span class="accent">答え</span>。</h2>
+      <p class="sec-lead">FP 業務は顧客の機密情報を扱う仕事。 セキュリティ・解約・データ管理について、 よく頂くご質問にお答えします。</p>
+
+      <div class="faq-list">
+        <details class="faq-item" open>
+          <summary>顧客の個人情報は安全に保管されますか?</summary>
+          <p>
+            はい。 データは <b>Google Cloud (Firestore 東京リージョン)</b> に保管されます。
+            通信は TLS 1.3、 パスワードは SCRYPT 暗号化、 保存データは AES-256 暗号化。
+            各 FP 事業者ごとに <b>テナント分離</b> されており、 他の FP が貴方のデータを閲覧することは技術的に不可能です。
+            さらに、 3 層バックアップ (PITR 7日 / Daily 7日 / Weekly 12週) で誤削除にも備えています。
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>解約したらデータはどうなりますか?</summary>
+          <p>
+            解約後 <b>30 日間データを保管</b>し、 期間中はいつでも JSON 形式で全データをダウンロードできます
+            (個人情報保護法第 33 条 開示請求権に対応)。 30 日経過後に完全削除します。
+            アカウント設定画面 (/account) からワンクリックで DL 可能。
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>LINE 公式アカウントを持っていなくても使えますか?</summary>
+          <p>
+            もちろん使えます。 LINE 連携は <b>任意機能</b> で、 顧客管理・議事録 AI・提案準備という主要機能は LINE なしで完結します。 後から LINE 連携を追加することもできます。
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>パソコン苦手、 使いこなせる自信ない</summary>
+          <p>
+            <b>LINE を使ったことがあれば 100% 使えます</b>。 設計が「LINE と同じ感覚」 で作られています。
+            困った時は AI チャットボット (24 時間) で即解決、 重要なトラブルは Skeleton 代表が直接対応します。
+            50 代以上の FP の方には、 画面が大きく文字が読みやすい設計です。
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>AI が間違った提案したら、 責任は?</summary>
+          <p>
+            <b>AI は「推奨」 までで、 最終提案は FP が判断します</b>。 自動送信したりはしません。
+            AI の役割は「見落としを減らす」 こと。 ベテラン FP の助手として使うイメージです。
+            最終的な金融商品の提案・販売は、 これまで通り FP のご判断で行ってください。
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>料金は月¥19,800 だけですか?</summary>
+          <p>
+            <b>はい、 月額¥19,800 (税込) のみ</b>。 初期費用なし、 オプション課金なし、 顧客数無制限。
+            紹介経由でご登録いただいた方が、 他の FP をご紹介すれば <b>月¥3,500 ずつ下がり、 6 人で永久無料</b> となります (紹介相手が継続契約中の間)。
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>サポート体制は?</summary>
+          <p>
+            平日 10-18 時、 メール (support@skeleton-inc.jp) で対応します。 AI チャットボット (24 時間) で基本的な質問は即時回答。
+            重要なトラブルは Skeleton 代表が直接対応します。
+          </p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FINAL CTA ============ -->
+  <section class="final">
+    <div class="container">
+      <div class="final-eyebrow">↓ START — FP COMPASS</div>
+      <h2>顧客の <em>本音</em> を、<br>溜める仕事に。</h2>
+      <p class="final-p">
+        紙の整理に追われる夜から、 顧客のために考える夜へ。
+        5 分の登録で、 明日からの 1 日が変わります。
+      </p>
+      <a class="btn-primary" href="https://app.skeleton-inc.jp/">FP Compass を申し込む</a>
+      <div class="final-note">月¥19,800 (税込) · クレジットカード必要 · 解約はいつでもワンクリック</div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="ft-brand">
+    Skeleton Inc.
+    <small>FP COMPASS · BROCHURE v2.0 · 2026</small>
   </div>
-</section>
-
-<!-- ===== Closing ===== -->
-<footer class="closing">
-  <div class="wrap">
-    <h2>顧客の <em>本音</em> を、<br>溜める仕事に変える。</h2>
-    <p class="closing-p">
-      紙の整理に追われる夜から、 顧客のために考える夜へ。
-      まずは下のリンクから、 5 分でご登録ください。
-    </p>
-    <a class="closing-cta" href="https://app.skeleton-inc.jp/">FP Compass を使い始める</a>
-
-    <div class="closing-foot">SKELETON INC. · FP COMPASS · 紹介資料 v1.0 · 2026.06</div>
+  <div class="ft-links">
+    <a href="https://app.skeleton-inc.jp/legal/privacy.html">プライバシー</a>
+    <a href="https://app.skeleton-inc.jp/legal/specified-commercial.html">特商法</a>
+    <a href="https://app.skeleton-inc.jp/status.html">ステータス</a>
+    <a href="mailto:support@skeleton-inc.jp">サポート</a>
   </div>
 </footer>
 
+<script>
+  // ===== Sticky bar shrink on scroll =====
+  const sb = document.getElementById('stickybar');
+  const fc = document.getElementById('floatingCta');
+  let lastScroll = 0;
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    if (y > 60) sb.classList.add('shrunk'); else sb.classList.remove('shrunk');
+    // Floating CTA appears after first scroll past hero (~600px) and stays
+    if (y > 600) fc.classList.add('visible'); else fc.classList.remove('visible');
+    lastScroll = y;
+  });
+
+  // ===== Count-up animation (on viewport enter) =====
+  const counters = document.querySelectorAll('.js-count');
+  const easeOutQuad = t => t * (2 - t);
+  function animateCount(el) {
+    const target = parseFloat(el.dataset.target);
+    const prefix = el.dataset.prefix || '';
+    const isDec = (target % 1) !== 0;
+    const duration = 1600;
+    const start = performance.now();
+    function tick(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const v = target * easeOutQuad(t);
+      el.textContent = prefix + (isDec ? v.toFixed(2) : Math.floor(v)).toLocaleString();
+      if (t < 1) requestAnimationFrame(tick);
+      else el.textContent = prefix + (isDec ? target.toFixed(2) : target).toLocaleString();
+    }
+    requestAnimationFrame(tick);
+  }
+  const countObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        animateCount(e.target);
+        countObserver.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.4 });
+  counters.forEach(c => countObserver.observe(c));
+</script>
 </body>
 </html>
