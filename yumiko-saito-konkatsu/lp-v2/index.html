@@ -10,8 +10,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Serif+JP:wght@500;700;900&family=Yusei+Magic&display=swap" rel="stylesheet">
 <style>
 :root{
-  --frame:#F1ECDF;          /* 周囲 暖紙 */
-  --paper:#FFFFFF;
+  --frame:#2A211B;          /* 周囲 ダーク木目 (高級感の額装) */
+  --frame-2:#3A2D24;
+  --paper:#FBF6E8;          /* 紙 ナチュラル和紙トーン */
+  --paper-edge:#E8DEC2;     /* 紙の縁 焼け */
   --ink:#1A1612;
   --ink-2:#3F3F3F;
   --ink-3:#6F6F6F;
@@ -40,23 +42,45 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 body{
-  background:var(--frame);
+  background:
+    /* 木目 縦筋 */
+    repeating-linear-gradient(90deg,
+      transparent 0 38px,
+      rgba(255,230,180,0.02) 38px 39px,
+      transparent 39px 78px,
+      rgba(0,0,0,0.05) 78px 79px),
+    /* 焼け */
+    radial-gradient(circle at 50% 0%, rgba(255,210,150,0.06), transparent 60%),
+    linear-gradient(180deg, var(--frame), var(--frame-2) 50%, var(--frame));
   font-family:'Shippori Mincho','Noto Serif JP','ヒラギノ明朝 ProN W6','Hiragino Mincho ProN','HG明朝E','MS P明朝',serif;
   color:var(--ink);
   font-size:16px;
   line-height:1.85;
   font-feature-settings:"palt";
-  padding-bottom:calc(86px + var(--safe-bottom));
+  padding:20px 16px calc(86px + var(--safe-bottom));
 }
+@media (max-width:520px){body{padding:10px 8px calc(86px + var(--safe-bottom))}}
 img{max-width:100%;display:block}
 
 .body{
-  background:var(--paper);
+  background:
+    /* 用紙のシミ・焼け */
+    radial-gradient(ellipse at 8% 14%, rgba(180,140,80,0.07) 0%, transparent 18%),
+    radial-gradient(ellipse at 92% 86%, rgba(180,140,80,0.06) 0%, transparent 22%),
+    radial-gradient(ellipse at 85% 8%, rgba(120,80,30,0.05) 0%, transparent 12%),
+    /* 紙の縁 焼け */
+    linear-gradient(180deg, var(--paper-edge) 0%, var(--paper) 4%, var(--paper) 96%, var(--paper-edge) 100%),
+    var(--paper);
   max-width:790px;
   margin:0 auto;
-  border:solid var(--hairline);
-  border-width:0 1px 1px;
+  border:1px solid rgba(120,90,40,0.45);
   position:relative;
+  /* 紙の浮遊感: 多層shadow */
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.4),
+    0 12px 24px -8px rgba(0,0,0,0.55),
+    0 32px 60px -16px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.4);
 }
 .wrapper{padding:0 26px}
 @media (max-width:520px){.wrapper{padding:0 16px}}
@@ -66,10 +90,29 @@ img{max-width:100%;display:block}
 .body::before{
   content:"";
   position:absolute;inset:0;
-  background-image:
-    radial-gradient(circle at 12% 18%, rgba(180,140,80,0.03) 0%, transparent 28%),
-    radial-gradient(circle at 88% 72%, rgba(180,140,80,0.025) 0%, transparent 32%);
   pointer-events:none;z-index:0;
+  background-image:
+    /* 細かいファイバー */
+    radial-gradient(circle at 12% 18%, rgba(180,140,80,0.05) 0%, transparent 28%),
+    radial-gradient(circle at 88% 72%, rgba(180,140,80,0.04) 0%, transparent 32%),
+    radial-gradient(circle at 50% 50%, rgba(0,0,0,0.012) 0%, transparent 70%),
+    /* 微細grain */
+    repeating-linear-gradient(115deg,
+      rgba(120,80,30,0.012) 0 2px,
+      transparent 2px 5px),
+    repeating-linear-gradient(25deg,
+      rgba(80,50,20,0.01) 0 1px,
+      transparent 1px 4px);
+}
+/* 内側 朱色 二重hairline (賞状/証書感) */
+.body::after{
+  content:"";
+  position:absolute;
+  top:8px;left:8px;right:8px;bottom:8px;
+  border:1px solid rgba(163,18,28,0.18);
+  outline:1px solid rgba(163,18,28,0.10);
+  outline-offset:2px;
+  pointer-events:none;z-index:2;
 }
 .body > *{position:relative;z-index:1}
 
