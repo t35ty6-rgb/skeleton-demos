@@ -150,9 +150,10 @@
   }
 
   function fmtMoney(n) {
+    if (n == null || isNaN(n)) return '—';
     if (n >= 100_000_000) return (n / 100_000_000).toFixed(2).replace(/\.?0+$/, '') + '億';
     if (n >= 10_000) return Math.round(n / 10_000).toLocaleString() + '万';
-    return n.toLocaleString();
+    return Number(n).toLocaleString();
   }
   function fmtDate(d) {
     if (typeof d === 'string') d = new Date(d);
@@ -1124,7 +1125,7 @@
   const LINE_HISTORY_FALLBACK = {
     c000: [
       { direction: 'in',  ts: '2026-04-18 10:00', text: 'お世話になっております。資産運用のご相談したく、ご連絡しました。' },
-      { direction: 'out', ts: '2026-04-18 10:30', text: '吉田様\n\nご連絡ありがとうございます、FPの福田です。お話伺うのが楽しみです。アンケートよろしくお願いいたします。', label: '初回返信' },
+      { direction: 'out', ts: '2026-04-18 10:30', text: 'サンプル様\n\nご連絡ありがとうございます、FPの福田です。お話伺うのが楽しみです。アンケートよろしくお願いいたします。', label: '初回返信' },
     ],
     c001: [
       { direction: 'in',  ts: '2025-12-04 10:23', text: 'ご連絡ありがとうございます、初めての相談で緊張しています。' },
@@ -1883,15 +1884,17 @@
           <span class="cd-tl-rel">${rel}</span>
         </div>`;
       };
-      const allEvents = events.slice(0, 15);
+      const allEvents = events.slice(0, 30);
       const eventsFold = allEvents.length === 0 ? '' : `
-        <details>
-          <summary style="cursor:pointer;font-size:12px;color:var(--muted);font-weight:700;letter-spacing:0.06em;padding:8px 0;border-top:1px dashed var(--line);">📅 全イベント (面談+タスク) (${allEvents.length}件)</summary>
-          <div style="margin-top:8px;">${allEvents.map(renderEventRow).join('')}</div>
-        </details>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-top:8px;">
+          <div style="font-size:12px;color:var(--muted);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">📅 タイムライン (面談 + タスク + ライフイベント · ${allEvents.length}件)</div>
+          <div style="position:relative;padding-left:16px;border-left:2px solid var(--line);">${allEvents.map(renderEventRow).join('')}</div>
+        </div>
       `;
 
-      return headerHtml + kpiHtml + taskListHtml + eventsFold;
+      // ★ シンプル化: 「繋ぎKPI 達成率」(定型ステップ) + 「議事録抽出タスク」(NEXT ACTION と重複) 削除
+      // → headerHtml (面談記録カウント) + eventsFold (全イベント折りたたみ) のみ表示
+      return headerHtml + eventsFold;
     })();
 
     // Proposals
@@ -2199,6 +2202,7 @@
                 <textarea id="cd-line-input" placeholder="メッセージを入力... (Cmd+Enter で送信)"></textarea>
                 <div class="cd-line-composer-foot">
                   <span class="cd-line-composer-meta">${c.lineFriendId ? '✓ LINE連携済' : '⚠ LINE friend ID 未登録'}</span>
+                  <button class="cd-line-ai-quick" id="cd-line-ai-quick" data-cid="${escapeHtml(c.id)}" title="AI が直近の履歴から返信案を生成 → textarea に挿入 → 編集して送信" style="background:linear-gradient(135deg,#6366F1,#4338CA);color:#fff;border:none;padding:8px 14px;border-radius:6px;font-weight:800;cursor:pointer;font-size:12.5px;font-family:inherit;letter-spacing:0.04em;margin-right:8px;">✨ AI で返信案</button>
                   <button class="cd-line-send-btn" id="cd-line-send"${c.lineFriendId ? '' : ' disabled'}>
                     <i data-lucide="send"></i><span>送信</span>
                   </button>
@@ -2363,6 +2367,52 @@
     document.querySelectorAll('[data-line-ai]').forEach(btn => {
       btn.addEventListener('click', () => openDraftReplyModal(c, events, recs));
     });
+    // ★ AI で返信案 を 1 クリック生成 (textarea に挿入、 編集して送信)
+    const aiQuickBtn = document.getElementById('cd-line-ai-quick');
+    if (aiQuickBtn) {
+      aiQuickBtn.addEventListener('click', async () => {
+        const tArea = document.getElementById('cd-line-input');
+        const status = document.getElementById('cd-line-msg');
+        const origLabel = aiQuickBtn.innerHTML;
+        aiQuickBtn.disabled = true;
+        aiQuickBtn.innerHTML = '✨ 生成中…';
+        if (status) { status.className = 'cd-line-msg-status'; status.textContent = ''; }
+        try {
+          if (!window.__fp?.functions) throw new Error('functions 未初期化');
+          const { httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js');
+          const fn = httpsCallable(window.__fp.functions, 'generateLineReply');
+          // 顧客コンテキスト組み立て
+          const ctxParts = [];
+          if (c.birth) ctxParts.push(`生年: ${c.birth}`);
+          if (c.occupation) ctxParts.push(`職業: ${c.occupation}`);
+          if (c.family?.length) ctxParts.push(`家族: ${c.family.map(f => f.rel + ' ' + (f.name||'')).join(' / ')}`);
+          if (c.aum) ctxParts.push(`AUM: ¥${(c.aum/10000).toFixed(0)}万`);
+          if (c.note) ctxParts.push(`メモ: ${c.note.slice(0,200)}`);
+          const result = await fn({
+            customerId: c.id,
+            customerName: c.name || 'お客様',
+            customerContext: ctxParts.join(' / '),
+            lineHistory: (c.lineHistory || []).slice(-12),
+            hint: (tArea && tArea.value.trim()) || null,  // textarea に何か書いてあれば 意図ヒントとして使う
+          });
+          const reply = result.data?.reply;
+          if (!reply) throw new Error('AI 応答が空です');
+          if (tArea) {
+            tArea.value = reply;
+            tArea.focus();
+            tArea.setSelectionRange(reply.length, reply.length);
+          }
+          if (status) { status.className = 'cd-line-msg-status ok'; status.textContent = '✓ AI 返信案を生成しました (編集して送信してください)'; }
+        } catch (e) {
+          console.error('[generateLineReply]', e);
+          if (status) { status.className = 'cd-line-msg-status err'; status.textContent = '生成失敗: ' + (e.message || e.code); }
+        } finally {
+          aiQuickBtn.disabled = false;
+          aiQuickBtn.innerHTML = origLabel;
+        }
+      });
+    }
+
     // LINE 直接送信 (composer)
     const sendBtn = document.getElementById('cd-line-send');
     const input = document.getElementById('cd-line-input');
@@ -2632,24 +2682,17 @@
     const myTs = new Set(myBookings.map(b => b.ts).filter(Boolean));
     const myNames = new Set([client.name].concat(myBookings.map(b => b.name).filter(Boolean)));
     // 「fp-ai-お客様」 等の汎用 fallback キー → 録画時に客を特定できなかった分。
-    // 開いてる客が LINE 連携客なら、無条件で汎用 fallback を吸収する。
-    // (複数人 LINE 友だちがいて誤紐付けされても、後で別客カードで「これ違う」と
-    //  分かれば手動で消せばいい。空白で見えないより遥かにマシ。)
+    // ★ 旧仕様: LINE 連携客なら無条件で吸収 → A様の議事録が全員に表示される 重大データ漏れ
+    // ★ 新仕様: userId / bookingTs / customerName のいずれか strict 一致のみ吸収 (= 紐付け失敗時は表示しない)
     allKeys.forEach(k => {
       if (aiCandidateKeys.has(k)) return;  // 既出
       try {
         const arr = JSON.parse(localStorage.getItem(k) || '[]');
         arr.forEach(a => {
-          const matchUser   = a.userId       && myUids.has(a.userId);
-          const matchTs     = a.bookingTs    && myTs.has(a.bookingTs);
-          const matchName   = a.customerName && myNames.has(a.customerName);
-          // 汎用 fallback: 録画時に客特定できなかった分
-          const isGeneric = (k === 'fp-ai-お客様' || a.customerName === 'お客様' || !a.customerName);
-          const genericFallback = isGeneric && client.lineFriendId;
-          if (matchUser || matchTs || matchName || genericFallback) {
-            // userId 空なら現在の client.lineFriendId で補正してから push
-            if (!a.userId && client.lineFriendId) a.userId = client.lineFriendId;
-            if (!a.customerName || a.customerName === 'お客様') a.customerName = client.name;
+          const matchUser = a.userId       && myUids.has(a.userId);
+          const matchTs   = a.bookingTs    && myTs.has(a.bookingTs);
+          const matchName = a.customerName && a.customerName !== 'お客様' && myNames.has(a.customerName);
+          if (matchUser || matchTs || matchName) {
             aiResults.push(a);
           }
         });
@@ -2658,11 +2701,10 @@
     // GAS 永続化シートからも取得 (別ブラウザで保存された分)
     const liveAiResults = (window.LineAppLiveData && window.LineAppLiveData.ai_results) || [];
     liveAiResults.forEach(r => {
-      const match = (r.userId && (r.userId === client.lineFriendId)) ||
-                    (r.customerName && r.customerName === client.name) ||
-                    myBookings.some(b => b.ts === r.bookingTs || b.userId === r.userId) ||
-                    // 汎用 fallback: customerName が 'お客様' or 空 → LINE連携客なら吸収
-                    ((!r.customerName || r.customerName === 'お客様') && client.lineFriendId);
+      // ★ strict 一致のみ (顧客名不明=「お客様」/空 の議事録は表示しない、 データ漏れ防止)
+      const match = (r.userId && client.lineFriendId && r.userId === client.lineFriendId) ||
+                    (r.customerName && r.customerName !== 'お客様' && r.customerName === client.name) ||
+                    myBookings.some(b => (b.ts && b.ts === r.bookingTs) || (b.userId && r.userId && b.userId === r.userId));
       if (!match) return;
       // key_concerns は文字列で来てるので JSON.parse
       let kc = r.key_concerns;
@@ -3214,36 +3256,71 @@
     const ov = document.createElement('div');
     ov.id = 'fp-deliv-send-modal';
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:10020;display:flex;align-items:center;justify-content:center;padding:20px;';
+    // ★ 大きい二段組レイアウト: 左=添付資料プレビュー(編集可) / 右=LINE本文
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.7);z-index:10020;display:flex;align-items:center;justify-content:center;padding:16px;';
     const attachmentBlock = hasAttachment ? `
-      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;margin-bottom:14px;overflow:hidden;">
-        <div style="padding:8px 12px;background:#5B5BF0;color:#fff;font-size:11px;font-weight:800;letter-spacing:0.06em;display:flex;justify-content:space-between;align-items:center;">
-          <span>📎 添付資料プレビュー (編集後の最終版)</span>
-          <span style="opacity:0.85;font-weight:600;">${(finalHtml.length / 1000).toFixed(1)}KB</span>
+      <div style="flex:1.6;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;display:flex;flex-direction:column;overflow:hidden;min-width:0;">
+        <div style="padding:10px 14px;background:#5B5BF0;color:#fff;font-size:11.5px;font-weight:800;letter-spacing:0.06em;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+          <span>📎 添付資料プレビュー <span style="opacity:0.85;font-weight:600;font-size:10.5px;margin-left:8px;">直接クリックで編集可</span></span>
+          <span style="opacity:0.85;font-weight:600;" id="fp-ds-size">${(finalHtml.length / 1000).toFixed(1)}KB</span>
         </div>
-        <div style="max-height:200px;overflow:auto;padding:12px 14px;font-size:11px;background:#fff;">${finalHtml.slice(0, 4000)}${finalHtml.length > 4000 ? '<div style="text-align:center;color:#94A3B8;font-size:10px;margin-top:8px;">(以下省略 — 送信時は全文添付)</div>' : ''}</div>
+        <div id="fp-ds-preview" contenteditable="true" style="flex:1;overflow:auto;padding:18px 22px;font-size:13px;background:#fff;line-height:1.75;outline:none;">${finalHtml}</div>
+        <div style="padding:8px 14px;background:#FAFBFC;border-top:1px solid #E2E8F0;font-size:10.5px;color:#64748B;display:flex;justify-content:space-between;flex-shrink:0;">
+          <span>✏️ クリック → 編集 → 自動保存 → そのまま送信</span>
+          <span id="fp-ds-edit-status">編集モード ON</span>
+        </div>
       </div>
     ` : '';
     ov.innerHTML = `
-      <div style="background:#fff;width:min(680px,100%);max-height:90vh;border-radius:14px;font-family:'Noto Sans JP',sans-serif;overflow:hidden;display:flex;flex-direction:column;">
-        <div style="padding:16px 22px;background:#06C755;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-          <strong style="font-size:14px;">📤 ${escapeHtml(typeName)} を LINEで送信${hasAttachment ? ' (本文+資料同梱)' : ''}</strong>
-          <button id="fp-ds-close" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;width:28px;height:28px;border-radius:5px;cursor:pointer;">✕</button>
+      <div style="background:#fff;width:min(1400px,98vw);height:min(900px,94vh);border-radius:14px;font-family:'Noto Sans JP',sans-serif;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 28px 70px rgba(15,23,42,0.45);">
+        <div style="padding:16px 24px;background:#06C755;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+          <strong style="font-size:15px;">📤 ${escapeHtml(typeName)} を LINEで送信${hasAttachment ? ' (本文+資料同梱)' : ''}</strong>
+          <div style="display:flex;align-items:center;gap:14px;font-size:12.5px;opacity:0.95;">
+            <span>送信先: <strong>${escapeHtml(client.name)} 様</strong></span>
+            <button id="fp-ds-close" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;width:30px;height:30px;border-radius:5px;cursor:pointer;font-size:14px;">✕</button>
+          </div>
         </div>
-        <div style="padding:18px 22px;overflow-y:auto;flex:1;">
-          <div style="font-size:12px;color:#64748B;margin-bottom:10px;">送信先: <strong>${escapeHtml(client.name)} 様</strong></div>
+        <div style="padding:18px 22px;flex:1;display:flex;gap:18px;min-height:0;${hasAttachment ? '' : 'flex-direction:column;'}">
           ${attachmentBlock}
-          <div style="font-size:11px;font-weight:700;color:#64748B;letter-spacing:0.06em;margin-bottom:6px;text-transform:uppercase;">💬 LINE本文 (編集可)</div>
-          <textarea id="fp-ds-msg" style="width:100%;min-height:160px;border:1.5px solid #E2E8F0;border-radius:8px;padding:12px;font-family:inherit;font-size:13px;line-height:1.75;">${escapeHtml(prefill)}</textarea>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0;${hasAttachment ? 'max-width:420px;' : ''}">
+            <div style="font-size:11px;font-weight:700;color:#64748B;letter-spacing:0.06em;margin-bottom:6px;text-transform:uppercase;">💬 LINE本文 (編集可)</div>
+            <textarea id="fp-ds-msg" style="flex:1;width:100%;min-height:280px;border:1.5px solid #E2E8F0;border-radius:8px;padding:14px;font-family:inherit;font-size:13.5px;line-height:1.85;resize:none;">${escapeHtml(prefill)}</textarea>
+          </div>
         </div>
-        <div style="padding:14px 22px;border-top:1px solid #E2E8F0;background:#FAFBFC;display:flex;gap:10px;flex-shrink:0;">
-          <button id="fp-ds-cancel" style="flex:1;padding:11px;background:#fff;border:1.5px solid #CBD5E1;color:#475569;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;">キャンセル</button>
-          <button id="fp-ds-send" style="flex:2;padding:11px;background:#06C755;color:#fff;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit;">📤 ${hasAttachment ? '本文+資料を' : ''}LINEで送信</button>
+        <div style="padding:14px 24px;border-top:1px solid #E2E8F0;background:#FAFBFC;display:flex;gap:12px;flex-shrink:0;">
+          <button id="fp-ds-cancel" style="flex:1;padding:13px;background:#fff;border:1.5px solid #CBD5E1;color:#475569;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13.5px;">キャンセル</button>
+          <button id="fp-ds-send" style="flex:3;padding:13px;background:#06C755;color:#fff;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit;font-size:13.5px;">📤 ${hasAttachment ? '本文+(編集後の)資料を ' : ''}LINEで送信</button>
         </div>
       </div>
     `;
     document.body.appendChild(ov);
     document.getElementById('fp-ds-close').addEventListener('click', () => ov.remove());
     document.getElementById('fp-ds-cancel').addEventListener('click', () => ov.remove());
+    // 編集後の HTML を保持する変数 + プレビューでの編集を自動キャプチャ
+    let editedHtml = finalHtml;
+    const previewEl = document.getElementById('fp-ds-preview');
+    const editStatus = document.getElementById('fp-ds-edit-status');
+    const sizeEl = document.getElementById('fp-ds-size');
+    if (previewEl) {
+      previewEl.addEventListener('input', () => {
+        editedHtml = previewEl.innerHTML;
+        if (sizeEl) sizeEl.textContent = (editedHtml.length / 1000).toFixed(1) + 'KB';
+        if (editStatus) { editStatus.textContent = '✓ 編集中…'; editStatus.style.color = '#16A34A'; }
+        // localStorage に自動保存 (同じ顧客 + type で開いた時 復元)
+        try { localStorage.setItem('fp-deliv-edit-' + client.id + '-' + type, editedHtml); } catch (_) {}
+      });
+      // 過去の編集 復元
+      try {
+        const saved = localStorage.getItem('fp-deliv-edit-' + client.id + '-' + type);
+        if (saved && saved.length > 100 && saved !== finalHtml) {
+          if (confirm('前回の編集内容が保存されています。 復元しますか?\n\n(キャンセル = AI生成の最新版を使う)')) {
+            previewEl.innerHTML = saved;
+            editedHtml = saved;
+            if (sizeEl) sizeEl.textContent = (editedHtml.length / 1000).toFixed(1) + 'KB';
+          }
+        }
+      } catch (_) {}
+    }
     document.getElementById('fp-ds-send').addEventListener('click', async () => {
       const text = document.getElementById('fp-ds-msg').value.trim();
       if (!text) { alert('本文を入力してください'); return; }
@@ -3252,7 +3329,7 @@
       try {
         const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/send-line', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: uid, text, deliverableHtml: hasAttachment ? finalHtml : undefined, deliverableType: type, deliverableTitle: taskTitle, customerName: client.name }),
+          body: JSON.stringify({ userId: uid, text, deliverableHtml: hasAttachment ? editedHtml : undefined, deliverableType: type, deliverableTitle: taskTitle, customerName: client.name }),
         });
         const d = await r.json();
         if (d.ok) {
@@ -4051,16 +4128,11 @@
       const found = [];
       const consider = (a, srcKey) => {
         if (!a || (!a.summary && !a.transcript)) return;
-        // ★ 顧客モーダル「面談録」タブと同じ lookup ロジック (汎用 fallback 含む)
-        // 「お客様」名義で保存された議事録は lineFriendId 持つ客全員に表示されるが、
-        // score を低めにして「推定」マーク。明示マッチ (userId/bookingTs/name) があれば
-        // それを優先表示するソートで対応。
-        const matchUser   = a.userId && client.lineFriendId && a.userId === client.lineFriendId;
-        const matchTs     = a.bookingTs && myTs.has(a.bookingTs);
-        const matchName   = a.customerName && a.customerName === client.name;
-        const isGeneric   = (!a.customerName || a.customerName === 'お客様');
-        const genericFallback = isGeneric && client.lineFriendId;
-        const score = matchUser ? 3 : matchTs ? 3 : matchName ? 2 : genericFallback ? 1 : 0;
+        // ★ strict match のみ (汎用 fallback 廃止: 「お客様」名義は他客へ漏れるためAI prompt にも使わない)
+        const matchUser = a.userId && client.lineFriendId && a.userId === client.lineFriendId;
+        const matchTs   = a.bookingTs && myTs.has(a.bookingTs);
+        const matchName = a.customerName && a.customerName !== 'お客様' && a.customerName === client.name;
+        const score = matchUser ? 3 : matchTs ? 3 : matchName ? 2 : 0;
         if (score > 0) {
           let kc = a.key_concerns;
           if (typeof kc === 'string') { try { kc = JSON.parse(kc); } catch (_) { kc = []; } }
@@ -4352,8 +4424,9 @@ LINE のやり取りは **「次の Zoom 面談予約を獲得する」** ため
 【🔥 絶対 NG (これをやったら不採用)】
 1. ❌ 既知情報の単純羅列 NG →「41歳で自営業のあなたは / 3歳と0歳のお子様が」
 2. ❌ お世辞 NG →「素晴らしい / 見事 / さすが / 立派 / 視野が広い」
-3. ❌ 絵文字 過剰 NG → 1通 最大2個まで
+3. ❌ 絵文字 過剰 NG → 1通 最大2個まで (😊 🗓 📋 ✨ など。✅🔥💪 はビジネス感ありすぎNG)
 4. ❌ 質問の繰り返し連発 NG → 客に「① ② ③ どれですか?」を毎回投げて答えさせるな。客は疲れる
+4-2. ❌ 「○○について確認させてください」「気になるのは?」テンプレ事務的フレーズ禁止 → 「ちょっと聞かせてください!」「いま いちばん気になってるの どれですか?」など親しみある言い方
 5. ❌ "ヒアリングシート送ります" だけの予告 NG → 必ず Zoom 日程提示までセット
 6. ❌ 三人称化 NG →「41歳単身の方の場合〜」「自営業の方には〜」
 7. ❌ 統計風煽り NG →「8割が」「ケースが多い」
@@ -4371,25 +4444,35 @@ LINE は **2 段階で Zoom 予約を取る** ことだけ考える。それ以�
 【フェーズ1 = 初回 LINE (まだ客返信なし)】 ${isLoop ? '※今は該当しない' : '※今はこのフェーズ'}
 ═══════════════════════════════════════════
 
-目的: 客が **1秒で答えられる質問 1つ** で、関心の主役を確定する。
+目的: 議事録から読み取った **具体的な提案** で 次の Zoom を取りに行く。 質問形式は最終手段。
 
-✅ 必須:
-- 1行目: 「${client.name}さん、1つだけ確認させてください」程度の短い冒頭
-- 質問本体 = ①②③ の番号付き選択肢 (議事録から固有名詞で書き起こし)
-- 末尾: 「お返事に合わせて、それに特化した資料を作って次の Zoom でお見せします」程度
-- 長さ: 100-160字
+✅ 推奨パターン (議事録から仕入れた情報を活かす):
+**A. 提案型 (議事録から論点が明確な場合 = 推奨)**
+  「議事録で○○の話が出てたので、 △△の試算を作って 次の Zoom で一緒に見ませんか」
+  → 具体名詞・数値・固有事情を盛り込む (一般論禁止)
 
-例 (吉田さん想定):
-${client.name}さん、1つだけ確認させてください。
+**B. 一点絞り型 (論点が複数ある場合だけ)**
+  「○○ / △△ / □□ の中で 今いちばん気になるのは?」と 短く絞り込み
 
-今、一番気になってるのは?
+NG: 議事録に触れず テンプレ質問だけ (= 客は「ちゃんと聞いてもらってない」 と感じる)
+NG: 「① ② ③ から選んで」 ばかりを毎回繰り返す
+長さ: 100-180字 (短いほど良い)
 
-① お子様 (3歳・0歳) の教育費
-② 自営業の老後資金 (年金少ない問題)
-③ 奥様の8月開業の家計影響
+✅ 例 1 (提案型 — 推奨):
+${client.name}さん、お疲れさまでした!
 
-選んでもらえれば、その論点に絞った A4 1枚資料を
-作って、次の Zoom で一緒に見ながら整理します。
+先日お話に出てた「お子様 3歳・0歳の進路 (公立/私立/医学部)」
+の試算、 A4 1枚にまとめて 次の Zoom で一緒に見ませんか? 😊
+
+候補日は別カードでお送りしますね 🗓
+
+✅ 例 2 (一点絞り型 — 論点が散ってる時のみ):
+${client.name}さん、ちょっとだけ聞かせてください!
+
+教育費 / 老後資金 / 奥様の事業の中で
+いま いちばん気になってるの どれですか?
+
+それに絞った資料 作って 次の Zoom でお見せしますね 😊
 
 ═══════════════════════════════════════════
 【フェーズ2 = 客返信あり後の LINE】 ${isLoop ? '※今はこのフェーズ' : '※今は該当しない'}
@@ -4429,21 +4512,33 @@ ${client.name}さん、ありがとうございます。
 - フェーズ1で **既に1回質問** している ⇒ フェーズ2で 2回目の質問は絶対しない
 - 本文長さ: 80-150字 (短いほど良い)
 
-【📐 文章の構成 (これ厳守)】
-- 1行目: 短い呼びかけ + 「1つだけ確認させてください」 (25-40字)
+【📐 文章の構成 (フレキシブル — 議事録の中身に合わせて選ぶ)】
+
+**A型 (提案型 = 強く推奨): 議事録に具体ネタがある時はこっち**
+- 1行目: 親しい呼びかけ (例: 「${client.name}さん、お疲れさまでした!」「${client.name}さん、ありがとうございました 😊」)
 - 1行空ける
-- 2行目: 質問本文 (15-30字)
+- 2-3行目: 議事録ネタを1つ拾って、それに対する具体提案 (例: 「先日お話に出てた○○の件、△△の試算 A4 1枚にまとめて 次の Zoom で一緒に見ませんか?」)
 - 1行空ける
-- 選択肢: ① ② ③ ④ を **縦並びで** (各15-30字)
-- 1行空ける
-- 最終行: 返信後の動き (20-40字)
+- 最終行: Zoom 候補日を別カードで送る予告 (例: 「候補日は別カードでお送りしますね 🗓」)
+
+**B型 (一点絞り型 = 論点が散ってる時だけ): ①②③ を使うのはここだけ**
+- 1行目: 親しい呼びかけ + ライトな前置き (例: 「${client.name}さん、ちょっとだけ聞かせてください!」)
+- 質問本文 (柔らかく — 例: 「いま いちばん気になってるの どれですか?」)
+- ① ② ③ ④ を 縦並びで (各15-30字)
+- 最終行: 返信後の動き
+
+**B型を使うのは「議事録に複数論点が並列で出てて優先順位が不明」な時のみ**。
+議事録に具体ネタが1つでもあれば A型を選ぶ。
 
 【📐 文体・量】
-- 冒頭: 「${client.name}様、お世話になっております」「先日はありがとうございました」では始めない
+- 冒頭: 「${client.name}様、お世話になっております」「先日はありがとうございました」では始めない (硬すぎ)
 - 二人称: 必ず「${client.name}さん」(様じゃなく さん で親近感)
-- 絵文字: 0-1個 (絶対1個以下)
-- 長さ: 全体 120-200字 (選択肢含む)
-- 統計/煽り/お世辞 排除し、選択肢の明快さで勝負
+- ✅ 「!」(感嘆符) を 1-2個 使ってOK (例: 「お疲れさまでした!」「楽しみにしてます!」)
+- ✅ 絵文字 1-2個 までOK (😊 🗓 📋 ✨ など FP らしい控えめなもの。✅, 🔥, 💪 はNG)
+- ❌ 「確認させてください」「気になるのは?」のような事務的・教科書的フレーズ禁止
+- ❌ 「気になってるの どれですか?」「いちばん引っかかってるの どこですか?」など 親しみある聞き方にする
+- 長さ: A型なら 80-150字 / B型なら 120-200字 (選択肢含む)
+- 統計/煽り/お世辞 排除
 
 【出力形式 (厳密に以下の JSON のみ、code fence ・前置き禁止)】
 {

@@ -4,6 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FP Compass — ファイナンシャルプランナー向け 顧客管理 SaaS</title>
+<meta name="description" content="FP事業者特化型の顧客管理SaaS。議事録自動化・LINE統合・AI推奨提案で月¥19,800、業務時間7割削減。">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="apple-touch-icon" href="./favicon.svg">
+<meta name="theme-color" content="#0E1116">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://app.skeleton-inc.jp/">
+<meta property="og:title" content="FP Compass — FP事業者特化型 顧客管理 SaaS">
+<meta property="og:description" content="議事録自動化・LINE統合・AI推奨提案で月¥19,800。業務時間7割削減。Skeleton Inc.">
+<meta property="og:site_name" content="FP Compass">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="FP Compass — FP事業者特化型 顧客管理 SaaS">
+<meta name="twitter:description" content="議事録自動化・LINE統合・AI推奨提案で月¥19,800。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -71,10 +84,27 @@
       <label class="fp-gate-label" for="fp-pwconfirm-input">パスワード (確認)</label>
       <input id="fp-pwconfirm-input" type="password" class="fp-gate-input" placeholder="もう一度入力" autocomplete="new-password">
     </div>
+    <div id="fp-row-terms" style="display:none;margin-top:14px;padding:12px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12px;line-height:1.65;opacity:0.95;">
+        <input id="fp-terms-check" type="checkbox" style="margin-top:3px;width:16px;height:16px;flex-shrink:0;accent-color:#E63946;cursor:pointer;">
+        <span>
+          <a href="./legal/specified-commercial.html" target="_blank" style="color:#FFE9A8;text-decoration:underline;">特商法表記</a>・<a href="./legal/privacy.html" target="_blank" style="color:#FFE9A8;text-decoration:underline;">プライバシーポリシー</a>・<a href="./legal/index.html" target="_blank" style="color:#FFE9A8;text-decoration:underline;">利用規約</a>を確認し、 同意します
+        </span>
+      </label>
+    </div>
+    <div id="fp-row-forgot" style="text-align:right;margin-top:8px;">
+      <a id="fp-forgot-link" href="#" style="font-size:11.5px;color:rgba(255,255,255,0.75);text-decoration:underline;cursor:pointer;">パスワードを忘れた方</a>
+    </div>
 
     <button id="fp-gate-btn">ログイン</button>
     <div id="fp-gate-msg"></div>
     <div id="fp-gate-help">サポート → <a href="mailto:support@skeleton-inc.jp">support@skeleton-inc.jp</a></div>
+    <div id="fp-gate-legal" style="margin-top:14px;font-size:11px;opacity:0.65;text-align:center;line-height:1.7;">
+      申込前に必ずご確認ください:
+      <a href="./legal/specified-commercial.html" style="color:rgba(255,255,255,0.85);text-decoration:underline;margin:0 4px;">特商法表記</a>·
+      <a href="./legal/privacy.html" style="color:rgba(255,255,255,0.85);text-decoration:underline;margin:0 4px;">プライバシー</a>·
+      <a href="./legal/index.html" style="color:rgba(255,255,255,0.85);text-decoration:underline;margin:0 4px;">利用規約</a>
+    </div>
   </div>
 </div>
 
@@ -91,7 +121,16 @@
     getFunctions, httpsCallable,
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js";
 
-  const firebaseConfig = {
+  // 環境自動切替: hostname に "staging" 含まれてれば staging プロジェクトに接続
+  const __isStaging = /staging|skeleton-fp-compass-staging/.test(location.hostname);
+  const firebaseConfig = __isStaging ? {
+    apiKey: "AIzaSyAV9SEZZ5Tqu8pHUmmjMZ3RhrN_jFgMevs",
+    authDomain: "skeleton-fp-compass-staging.firebaseapp.com",
+    projectId: "skeleton-fp-compass-staging",
+    storageBucket: "skeleton-fp-compass-staging.firebasestorage.app",
+    messagingSenderId: "991197809601",
+    appId: "1:991197809601:web:6f59df4d7c505e16bc3d40",
+  } : {
     apiKey: "AIzaSyAmVAEe9l9e1Yo_dzzJdbTVU35wWKd2sH4",
     authDomain: "skeleton-fp-compass-632026.firebaseapp.com",
     projectId: "skeleton-fp-compass-632026",
@@ -99,6 +138,7 @@
     messagingSenderId: "833972948597",
     appId: "1:833972948597:web:b7310cc22ce41d9738f23c",
   };
+  if (__isStaging) console.log("[FP Compass] STAGING 環境で接続中:", firebaseConfig.projectId);
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -184,6 +224,8 @@
     $("fp-tab-signup").classList.toggle("on", m === "signup");
     $("fp-row-fpname").style.display = m === "signup" ? "" : "none";
     $("fp-row-pwconfirm").style.display = m === "signup" ? "" : "none";
+    $("fp-row-terms").style.display = m === "signup" ? "" : "none";
+    $("fp-row-forgot").style.display = m === "signup" ? "none" : "";
     $("fp-gate-btn").textContent = m === "signup" ? "アカウント作成" : "ログイン";
     $("fp-pw-input").setAttribute("autocomplete", m === "signup" ? "new-password" : "current-password");
     $("fp-gate-sub").textContent = $("fp-gate-sub").dataset[m];
@@ -191,6 +233,31 @@
   }
   $("fp-tab-login").addEventListener("click", () => setMode("login"));
   $("fp-tab-signup").addEventListener("click", () => setMode("signup"));
+
+  // パスワードリセット導線
+  $("fp-forgot-link").addEventListener("click", async (e) => {
+    e.preventDefault();
+    const filled = $("fp-email-input").value.trim();
+    const target = filled || prompt("登録したメアドを入力:") || "";
+    if (!target.includes("@")) {
+      msg("err", "メアドの形式が正しくありません");
+      return;
+    }
+    msg("", "再設定メール送信中…");
+    try {
+      // Resend経由のCloud Function (Firebase デフォルト送信元が Gmail で silent drop される問題を回避)
+      const sendReset = httpsCallable(functions, "sendBrandedPasswordReset");
+      await sendReset({ email: target });
+      msg("ok", `✓ ${target} に再設定メールを送信しました。 メールのリンクから新しいパスワードを設定してください (届かない場合は迷惑メールフォルダもご確認ください)`);
+    } catch (e) {
+      const map = {
+        "functions/invalid-argument": "メアドの形式が正しくありません",
+        "functions/failed-precondition": "メール送信が未設定です。 管理者へお問い合わせください",
+        "functions/internal": "送信失敗、 少し時間をおいて再試行を",
+      };
+      msg("err", map[e.code] || (e.message || e.code));
+    }
+  });
 
   async function submit() {
     const email = $("fp-email-input").value.trim();
@@ -206,6 +273,10 @@
         if (!fpName) throw { code: "_", message: "FP事務所名を入力してください" };
         if (pw.length < 8) throw { code: "_", message: "パスワードは8文字以上" };
         if (pw !== pwc) throw { code: "_", message: "パスワード確認が一致しません" };
+        if (!$("fp-terms-check").checked) {
+          throw { code: "_", message: "特商法表記・プライバシーポリシー・利用規約 への同意 が必要です" };
+        }
+        const termsAcceptedAt = new Date().toISOString();
 
         const cred = await createUserWithEmailAndPassword(auth, email, pw);
         const slug = email.split("@")[0].toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0,24) || "tenant";
@@ -219,6 +290,7 @@
           referralSource: agent ? "agent" : (ref ? "fp_referral" : "direct"),
           referredByAgent: agent || null,
           referredByFp: agent ? null : (ref || null),
+          termsAcceptedAt: termsAcceptedAt,
           billing: {
             baseMonthly: 19800, discountPerReferral: 3500,
             currentDiscount: 0, nextMonthAmount: 19800,
@@ -226,6 +298,15 @@
             status: "trial", trialEndsAt: null,
           },
         });
+        // 約款同意のaudit_logs記録 (改正民法548条の2 約款合意要件のため法的証跡として永続保存)
+        try {
+          await addDoc(collection(db, "audit_logs"), {
+            uid: cred.user.uid, email,
+            action: "terms_accepted",
+            detail: { tenantId, termsAcceptedAt, userAgent: navigator.userAgent.slice(0,200), referrer: document.referrer || null },
+            timestamp: serverTimestamp(),
+          });
+        } catch (e) { console.warn("audit log failed:", e); }
         await setDoc(doc(db, "users", cred.user.uid), {
           email, role: "fp_owner", tenantId, createdAt: serverTimestamp(),
         });
@@ -273,7 +354,20 @@
         "auth/too-many-requests": "試行回数超過、 少し時間をおいて再試行を",
         "auth/network-request-failed": "ネットワーク接続を確認してください",
       };
-      msg("err", map[e.code] || (e.message || e.code));
+      if (e.code === "auth/email-already-in-use") {
+        // 既存メアドの場合、ログインタブに 1 クリック切替できるボタンを表示
+        msgEl.className = "err";
+        msgEl.innerHTML = '既に登録済のメアドです。 <button id="fp-switch-login" style="margin-left:8px;background:#fff;color:#0E1116;border:none;padding:6px 14px;border-radius:4px;font-weight:700;font-size:12px;cursor:pointer;">→ ログインタブに切替</button>';
+        $("fp-switch-login").addEventListener("click", () => {
+          setMode("login");
+          // email と pw は保持されたまま、 PW 確認だけ消す
+          $("fp-pwconfirm-input").value = "";
+          msg("", "");
+          $("fp-pw-input").focus();
+        });
+      } else {
+        msg("err", map[e.code] || (e.message || e.code));
+      }
       btn.disabled = false; btn.textContent = mode === "signup" ? "アカウント作成" : "ログイン";
     }
   }
@@ -299,6 +393,56 @@
     }
     return list;
   }
+  function showBillingGate(status, tenantId) {
+    // 既存ゲートがあれば消す
+    const existing = document.getElementById("fp-billing-gate");
+    if (existing) existing.remove();
+    const label = {
+      "trial": { title: "決済が完了していません", sub: "アカウント作成は完了していますが、 決済手続きが未完了のため 管理画面を ご利用 いただけません。" },
+      "canceled": { title: "サブスクは解約済みです", sub: "再加入手続き で 引き続き ご利用いただけます (データは保持されています)。" },
+      "deleted": { title: "アカウントは削除されました", sub: "30 日間 のデータ保管期限が過ぎたため、 全データを削除済みです。 新規登録から お申込みください。" },
+    }[status || "trial"] || { title: "決済 状態を確認できません", sub: "サブスクの状態が確認できないため アクセスを 制限しています。 support@skeleton-inc.jp までご連絡ください。" };
+    const overlay = document.createElement("div");
+    overlay.id = "fp-billing-gate";
+    overlay.style.cssText = "position:fixed;inset:0;background:linear-gradient(135deg,#0F172A 0%,#1B2658 60%,#3838CC 100%);z-index:2147483647;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans JP','Manrope',sans-serif;color:#fff;padding:24px;";
+    overlay.innerHTML = `
+      <div style="max-width:480px;width:100%;background:rgba(255,255,255,0.06);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.18);border-radius:16px;padding:36px 32px;box-shadow:0 24px 64px rgba(0,0,0,0.4);">
+        <div style="font-family:'Manrope',sans-serif;font-size:10.5px;letter-spacing:0.28em;text-transform:uppercase;color:#FFE9A8;margin-bottom:14px;font-weight:800;">サブスク 未契約</div>
+        <h2 style="font-family:'Noto Sans JP',sans-serif;font-weight:900;font-size:22px;line-height:1.35;margin:0 0 12px;letter-spacing:-0.01em;">${label.title}</h2>
+        <p style="font-size:13.5px;line-height:1.85;opacity:0.92;margin:0 0 24px;">${label.sub}</p>
+        <button id="fp-bgate-pay" style="width:100%;background:#E63946;color:#fff;border:none;border-radius:8px;padding:14px;font-size:14px;font-weight:800;letter-spacing:0.06em;cursor:pointer;font-family:'Manrope',sans-serif;text-transform:uppercase;transition:all 0.15s;">${status === "canceled" ? "サブスク再加入する" : "決済画面に進む"}</button>
+        <button id="fp-bgate-logout" style="width:100%;background:transparent;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.22);border-radius:8px;padding:11px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif;margin-top:10px;">別のアカウントで ログイン</button>
+        <div id="fp-bgate-msg" style="margin-top:14px;font-size:11.5px;text-align:center;min-height:16px;line-height:1.6;"></div>
+        <div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.12);font-size:11px;opacity:0.65;text-align:center;line-height:1.7;">
+          サポート → <a href="mailto:support@skeleton-inc.jp" style="color:#FFE9A8;text-decoration:none;">support@skeleton-inc.jp</a>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const payBtn = document.getElementById("fp-bgate-pay");
+    const logoutBtn = document.getElementById("fp-bgate-logout");
+    const msgEl = document.getElementById("fp-bgate-msg");
+    payBtn.addEventListener("click", async () => {
+      payBtn.disabled = true; payBtn.textContent = "決済画面を準備中…";
+      try {
+        const fnName = status === "canceled" ? "resumeSubscription" : "createCheckoutSession";
+        const fn = httpsCallable(functions, fnName);
+        const result = await fn();
+        if (result.data?.url) location.href = result.data.url;
+        else throw new Error("URL 取得失敗");
+      } catch (e) {
+        msgEl.style.color = "#FFB5B5";
+        msgEl.textContent = "失敗: " + (e.message || e.code);
+        payBtn.disabled = false;
+        payBtn.textContent = status === "canceled" ? "サブスク再加入する" : "決済画面に進む";
+      }
+    });
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+      location.reload();
+    });
+  }
+
   async function fetchUserDocWithRetry(uid, maxRetries) {
     for (let i = 0; i < maxRetries; i++) {
       const snap = await getDoc(doc(db, "users", uid));
@@ -310,6 +454,22 @@
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) { return; }
+    // ★ テナント分離: 別 uid (= 別 FP事務所) が同じブラウザでログインしたら 前のFP の
+    // localStorage キャッシュ (顧客 / タスク / メモ / 既読等) を全消去 → データ leak 防止
+    try {
+      const lastUid = localStorage.getItem("fp-last-uid");
+      if (lastUid && lastUid !== user.uid) {
+        console.log("[fp] テナント切替検知 → localStorage 全クリア:", lastUid, "→", user.uid);
+        const wipeKeys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && /^fp[-:_]/.test(k) && k !== "fp-last-uid") wipeKeys.push(k);
+        }
+        wipeKeys.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+      }
+      localStorage.setItem("fp-last-uid", user.uid);
+    } catch (_) {}
+
     const uDoc = await fetchUserDocWithRetry(user.uid, 4);
     if (!uDoc) {
       msg("err", `${user.email} は登録されていません。`);
@@ -325,6 +485,12 @@
       window.__fp.tenantId = userData.tenantId;
       const tDoc = await getDoc(doc(db, "tenants", userData.tenantId));
       window.__fp.tenantName = tDoc.exists() ? (tDoc.data().name || userData.tenantId) : userData.tenantId;
+      // ★ 決済 ゲート: billing.status='active' 以外は 管理画面 アクセス禁止 (決済バイパス防止)
+      const billingStatus = tDoc.exists() ? (tDoc.data().billing?.status || null) : null;
+      if (billingStatus !== "active" && billingStatus !== "past_due") {
+        showBillingGate(billingStatus, userData.tenantId);
+        return;
+      }
     }
     window.__fp.userEmail = user.email;
     msg("ok", `${window.__fp.tenantName} のデータを読み込み中…`);
@@ -345,6 +511,18 @@
       if (typeof window.fpReadyAfterAuth === "function") window.fpReadyAfterAuth();
       // top bar に user 情報表示 + ログアウトボタン挿入
       setTimeout(() => attachUserBar(), 200);
+      // sidebar の user-name / avatar を Firestore tenant.name で更新
+      try {
+        const tn = window.__fp.tenantName || (t.name || 'FP事業者');
+        const nameEl = document.getElementById('sidebar-user-name');
+        const avEl = document.getElementById('sidebar-avatar');
+        if (nameEl) nameEl.textContent = tn;
+        if (avEl) {
+          // 名前から先頭2文字 (英数or漢字) を avatar に
+          const initials = tn.replace(/\s+/g,'').slice(0,2);
+          avEl.textContent = initials;
+        }
+      } catch (_) {}
     } catch (e) {
       console.error(e);
       msg("err", "データ取得失敗: " + e.message);
@@ -360,6 +538,7 @@
       <span style="font-weight:600;">${window.__fp.userEmail || ""}</span>
       <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.08em;color:#FFE9A8;">${(window.__fp.tenantId || "").toUpperCase()}</span>
       <a href="./referral.html" style="background:rgba(255,233,168,0.18);color:#FFE9A8;padding:4px 10px;border-radius:6px;text-decoration:none;font-weight:700;font-size:11px;">🎁 紹介</a>
+      <a href="./account.html" style="background:rgba(255,255,255,0.1);color:#fff;padding:4px 10px;border-radius:6px;text-decoration:none;font-weight:700;font-size:11px;">⚙ アカウント</a>
       <button id="fp-logout-btn" style="background:transparent;color:#FFB5B5;border:1px solid rgba(255,181,181,0.3);padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:600;">ログアウト</button>
     `;
     document.body.appendChild(bar);
@@ -470,11 +649,11 @@
       </button>
       <div class="sidebar-user">
         <div class="user-avatar-wrap">
-          <div class="user-avatar">YT</div>
+          <div class="user-avatar" id="sidebar-avatar">—</div>
           <span class="user-status-dot"></span>
         </div>
         <div class="user-text">
-          <div class="user-name">吉田 恭聡</div>
+          <div class="user-name" id="sidebar-user-name">FP事業者</div>
           <div class="user-role"><i data-lucide="shield-check"></i><span>Owner</span></div>
         </div>
         <i data-lucide="chevrons-up-down" class="user-chevron"></i>
@@ -793,7 +972,20 @@
 window.fpReadyAfterAuth = function() {
   if (window.__fpScriptsLoaded) return;
   window.__fpScriptsLoaded = true;
-  const ver = "20260606A-firestore";
+
+  // ★ デモデータ leak 防止 — 認証済テナントは Firestore が信頼の単一ソース。
+  // 過去のデモモード由来で localStorage に 吉田恭聡 / 田中健一 等が残ると
+  // 新規 FP の 空テナント に 該当顧客が leak する → 明示的にクリア。
+  const legacyDemoKeys = [
+    'fp-crm-clients-v1',       // app.js が 起動時 読込む 顧客リストキャッシュ
+    'fp-crm-real-clients-v1',  // 旧 real-mode 顧客キャッシュ
+    'fp-crm-real-mode',         // 旧 real-mode フラグ
+    'fp-crm-state-v1',          // 旧アプリ状態キャッシュ
+    'fp-cleared-permanently',   // 旧クリアフラグ
+  ];
+  legacyDemoKeys.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+
+  const ver = "20260608I-friendly-tone";
   const scripts = [
     "life-events.js?v=" + ver,
     "recommender.js?v=" + ver,
@@ -804,6 +996,14 @@ window.fpReadyAfterAuth = function() {
   ];
   function load(i) {
     if (i >= scripts.length) {
+      // ★ line-data.js が UPCOMING_BOOKINGS/HOT_LEADS/LEAD_FUNNEL を demo 値で
+      // 上書きするので、 認証済テナントでは Firestore データに即差し替え。
+      // (現状 Firestore に bookings/leads サブコレクション無いので空配列で確定)
+      window.UPCOMING_BOOKINGS = [];
+      window.HOT_LEADS = [];
+      window.LEAD_FUNNEL = { added: 0, surveyed: 0, booked: 0, completed: 0 };
+      window.LEAD_SCENARIO = {};
+      window.LEAD_FORM = {};
       // 全部終わったら DOMContentLoaded を擬似発火 (app.js が listening)
       document.dispatchEvent(new Event('DOMContentLoaded'));
       return;
@@ -1082,5 +1282,36 @@ window.fpReadyAfterAuth = function() {
   setTimeout(tryHero, 400);
 </script>
 
+<!-- Version badge (キャッシュ確認用): 強制リロードで反映されたか オーナーが目視可能に -->
+<script>
+(function(){
+  // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
+  const FP_VERSION = "20260608I-friendly-tone";
+  const loadTime = new Date();
+  const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
+  const dateLabel = (FP_VERSION.match(/^(\d{4})(\d{2})(\d{2})/) || []).slice(1).join('/').replace(/^(\d{4})\//,'$1/').replace(/\/(\d{2})\/(\d{2})$/,'/$1/$2') || FP_VERSION;
+  const badge = document.createElement('div');
+  badge.id = 'fp-version-badge';
+  badge.style.cssText = 'position:fixed;bottom:8px;right:10px;z-index:2147483646;background:rgba(15,23,42,0.78);color:rgba(255,255,255,0.92);padding:5px 11px;border-radius:5px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:10.5px;letter-spacing:0.04em;line-height:1.4;backdrop-filter:blur(6px);cursor:pointer;user-select:none;box-shadow:0 4px 14px rgba(0,0,0,0.18);';
+  badge.innerHTML = '<span style="color:#FFE9A8;font-weight:700;">v ' + FP_VERSION.slice(0,9) + '</span> · 読込 ' + hhmm;
+  badge.title = '完全版: ' + FP_VERSION + ' / 強制リロード: Cmd+Shift+R';
+  badge.addEventListener('click', () => {
+    const detail = document.getElementById('fp-version-detail');
+    if (detail) { detail.remove(); return; }
+    const d = document.createElement('div');
+    d.id = 'fp-version-detail';
+    d.style.cssText = 'position:fixed;bottom:42px;right:10px;z-index:2147483646;background:#0E1116;color:#fff;padding:14px 18px;border-radius:8px;font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;line-height:1.7;max-width:280px;box-shadow:0 14px 36px rgba(0,0,0,0.32);';
+    d.innerHTML = '<div style="font-size:10px;letter-spacing:0.2em;color:#FFE9A8;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Version Info</div>' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11.5px;margin-bottom:4px;"><strong>' + FP_VERSION + '</strong></div>' +
+      '<div style="opacity:0.7;font-size:11px;">この画面を読み込んだ時刻: ' + loadTime.toLocaleString('ja-JP') + '</div>' +
+      '<button onclick="location.reload(true)" style="margin-top:10px;background:#E63946;color:#fff;border:none;padding:7px 14px;border-radius:5px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;">強制リロード</button>' +
+      '<div style="opacity:0.5;font-size:10.5px;margin-top:8px;line-height:1.6;">Jobs から「最新 v XXXX」 と言われたら<br>ここの v と一致してれば 反映済</div>';
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 12000);
+  });
+  document.addEventListener('DOMContentLoaded', () => document.body.appendChild(badge));
+  if (document.readyState !== 'loading') document.body.appendChild(badge);
+})();
+</script>
 </body>
 </html>
