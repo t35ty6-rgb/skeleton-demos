@@ -102,6 +102,8 @@
     /* === Detail (PDP) rendering === */
     renderPDP(p){
       const price = priceParts(p);
+      // 決済リンクが未設定 (空 / 「REPLACE_」 placeholder) なら CTA を無効化して 「準備中」 表示にする
+      const isLinkReady = p.paymentLink && !/REPLACE_/.test(p.paymentLink) && p.paymentLink !== '#';
       const specsHtml = (p.specs || []).map(s =>
         `<dl><dt>${escapeHtml(s.label)}</dt><dd>${escapeHtml(s.value)}</dd></dl>`
       ).join('');
@@ -147,7 +149,9 @@
         <button aria-label="数量を増やす">＋</button>
       </div>
       <div class="pdp-actions">
-        <a class="btn-cart" href="${escapeHtml(p.paymentLink || '#')}">この商品を注文する →</a>
+        ${isLinkReady
+          ? `<a class="btn-cart" href="${escapeHtml(p.paymentLink)}">この商品を注文する →</a>`
+          : `<button class="btn-cart btn-cart-disabled" disabled title="決済リンクが商工会議所より発行され次第、注文可能になります">準備中 — まもなく販売開始</button>`}
         <button class="btn-fav" aria-label="お気に入りに追加">♡</button>
       </div>
       <div class="pdp-meta-inline">
@@ -174,7 +178,9 @@
       <div class="pdp-sticky-name">${escapeHtml(p.name)}</div>
       <div class="pdp-sticky-price"><strong>${yen(price.incl)}</strong><span>税込</span></div>
     </div>
-    <a class="pdp-sticky-cta" href="${escapeHtml(p.paymentLink || '#')}">注文する →</a>
+    ${isLinkReady
+      ? `<a class="pdp-sticky-cta" href="${escapeHtml(p.paymentLink)}">注文する →</a>`
+      : `<button class="pdp-sticky-cta pdp-sticky-cta-disabled" disabled>準備中</button>`}
   </div>
 </div>
 
