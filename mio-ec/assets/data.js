@@ -11,6 +11,15 @@
   function yen(n){ return '¥' + n.toLocaleString('ja-JP'); }
   function withTax(p){ return Math.round(p * (1 + p.taxRate ? p.taxRate : 0.10)); }
   function calcTaxIncluded(price, rate){ return Math.round(price * (1 + (rate||0.10))); }
+  // Returns {incl, excl, taxAmount}. priceTaxIncluded が正、無ければ excl × (1+tax) で計算。
+  function priceParts(p){
+    const rate = p.taxRate || 0.10;
+    const incl = (p.priceTaxIncluded != null) ? p.priceTaxIncluded
+               : Math.round(p.priceTaxExcluded * (1 + rate));
+    const excl = (p.priceTaxExcluded != null) ? p.priceTaxExcluded
+               : Math.round(incl / (1 + rate));
+    return { incl, excl, taxAmount: incl - excl };
+  }
   function escapeHtml(s){
     if (!s) return '';
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -50,6 +59,7 @@
       const tagClass = p.tagStyle === 'shu' ? 'prod-tag shu' : 'prod-tag';
       const tagHtml = p.tag ? `<div class="${tagClass}">${escapeHtml(p.tag)}</div>` : '';
       const detailUrl = `product.html?slug=${encodeURIComponent(p.slug)}`;
+      const price = priceParts(p);
       return `
 <a href="${detailUrl}" class="prod">
   <div class="prod-img">
@@ -62,7 +72,7 @@
     <div class="prod-maker">${escapeHtml(p.maker)}</div>
     <div class="prod-desc">${escapeHtml(p.shortDescription || '')}</div>
     <div class="prod-bottom">
-      <div class="prod-price"><strong>${yen(p.priceTaxExcluded)}</strong><span>税抜</span></div>
+      <div class="prod-price"><strong>${yen(price.incl)}</strong><span>税込</span></div>
       <span class="prod-arrow">→</span>
     </div>
   </div>
@@ -84,15 +94,14 @@
     <div class="prod-cat">${escapeHtml(p.category)}</div>
     <div class="prod-name">${escapeHtml(p.name)}</div>
     <div class="prod-maker">${escapeHtml(p.maker)}</div>
-    <div class="prod-bottom"><div class="prod-price"><strong>${yen(p.priceTaxExcluded)}</strong><span>税抜</span></div><span class="prod-arrow">→</span></div>
+    <div class="prod-bottom"><div class="prod-price"><strong>${yen(priceParts(p).incl)}</strong><span>税込</span></div><span class="prod-arrow">→</span></div>
   </div>
 </a>`;
     },
 
     /* === Detail (PDP) rendering === */
     renderPDP(p){
-      const taxIncluded = calcTaxIncluded(p.priceTaxExcluded, p.taxRate);
-      const taxAmount = taxIncluded - p.priceTaxExcluded;
+      const price = priceParts(p);
       const specsHtml = (p.specs || []).map(s =>
         `<dl><dt>${escapeHtml(s.label)}</dt><dd>${escapeHtml(s.value)}</dd></dl>`
       ).join('');
@@ -126,8 +135,8 @@
     <div class="pdp-maker">${escapeHtml(p.maker)}</div>
 
     <div class="pdp-price">
-      <strong>${yen(p.priceTaxExcluded)}</strong>
-      <span class="unit">税抜（消費税 ${yen(taxAmount)}）</span>
+      <strong>${yen(price.incl)}</strong>
+      <span class="unit">税込（うち消費税 ${yen(price.taxAmount)} ／ 税抜 ${yen(price.excl)}）</span>
       <span class="tax">送料別</span>
     </div>
 
@@ -163,7 +172,7 @@
   <div class="pdp-sticky-inner">
     <div class="pdp-sticky-info">
       <div class="pdp-sticky-name">${escapeHtml(p.name)}</div>
-      <div class="pdp-sticky-price"><strong>${yen(p.priceTaxExcluded)}</strong><span>税抜</span></div>
+      <div class="pdp-sticky-price"><strong>${yen(price.incl)}</strong><span>税込</span></div>
     </div>
     <a class="pdp-sticky-cta" href="${escapeHtml(p.paymentLink || '#')}">注文する →</a>
   </div>
@@ -177,8 +186,8 @@ ${p.makerQuote ? `
       <h2 class="section-title">作り手から、ひとこと。</h2>
     </div>
     <div style="max-width:780px;margin:0 auto;font-family:var(--serif);font-size:15px;line-height:2.4;color:var(--ink-sub);text-align:center">
-      <p style="margin-bottom:24px">${nl2br(p.makerQuote.body)}</p>
-      <p style="margin-top:32px;letter-spacing:.2em;font-size:13px;color:var(--ink)">— ${escapeHtml(p.makerQuote.author)}</p>
+      <p style="margin-bottom:24px">${nl2br(p.makerQuote.body || '')}</p>
+      ${p.makerQuote.author ? `<p style="margin-top:32px;letter-spacing:.2em;font-size:13px;color:var(--ink)">— ${escapeHtml(p.makerQuote.author)}</p>` : ''}
     </div>
   </div>
 </section>` : ''}
