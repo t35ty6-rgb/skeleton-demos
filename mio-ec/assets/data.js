@@ -96,8 +96,9 @@
       const specsHtml = (p.specs || []).map(s =>
         `<dl><dt>${escapeHtml(s.label)}</dt><dd>${escapeHtml(s.value)}</dd></dl>`
       ).join('');
-      const thumbsHtml = (p.images.thumbs || [p.images.main]).map(src =>
-        `<div><img src="${escapeHtml(src)}" alt=""></div>`
+      const thumbList = (p.images.thumbs || [p.images.main]);
+      const thumbsHtml = thumbList.map((src,i) =>
+        `<div class="pdp-thumb${i===0?' active':''}" data-src="${escapeHtml(src)}"><img src="${escapeHtml(src)}" alt=""></div>`
       ).join('');
       const badgeHtml = p.badge ? `<div class="badge">${escapeHtml(p.badge)}</div>` : '';
       const shippingHtml = p.shippingFee ? `全国一律 ¥${p.shippingFee.toLocaleString('ja-JP')}（地域により異なる場合あり）` : 'お問い合わせください';
@@ -111,9 +112,10 @@
 
 <section class="pdp">
   <div class="pdp-gallery">
-    <div class="pdp-main">
+    <div class="pdp-main" id="pdp-main">
       ${badgeHtml}
-      <img src="${escapeHtml(p.images.main)}" alt="${escapeHtml(p.name)}">
+      <img id="pdp-main-img" src="${escapeHtml(p.images.main)}" alt="${escapeHtml(p.name)}">
+      <button type="button" class="pdp-zoom-btn" id="pdp-zoom-btn" aria-label="拡大表示">⛶</button>
     </div>
     <div class="pdp-thumbs">${thumbsHtml}</div>
   </div>
@@ -253,6 +255,37 @@ ${p.makerQuote ? `
       }
       document.title = `${p.name} ／ ${p.maker} ｜ MIO`;
       pdpEl.innerHTML = MioData.renderPDP(p) + MioData.renderRelated(p.slug, data.products);
+
+      // === PDP thumb click → swap main image + lightbox open ===
+      const mainImg = document.getElementById('pdp-main-img');
+      const thumbs = document.querySelectorAll('.pdp-thumb');
+      thumbs.forEach(t => {
+        t.addEventListener('click', () => {
+          const src = t.getAttribute('data-src');
+          if (mainImg && src){
+            mainImg.src = src;
+            thumbs.forEach(x => x.classList.remove('active'));
+            t.classList.add('active');
+          }
+        });
+      });
+
+      // Lightbox (main image click or zoom btn → fullscreen view)
+      const openLightbox = () => {
+        if (!mainImg) return;
+        const lb = document.createElement('div');
+        lb.className = 'pdp-lightbox';
+        lb.innerHTML = `<button class="pdp-lightbox-close" aria-label="閉じる">×</button><img src="${mainImg.src}" alt=""><div class="pdp-lightbox-hint">クリックまたは ESC で閉じる</div>`;
+        document.body.appendChild(lb);
+        document.body.style.overflow = 'hidden';
+        const close = () => { lb.remove(); document.body.style.overflow=''; document.removeEventListener('keydown', onKey); };
+        const onKey = e => { if (e.key === 'Escape') close(); };
+        lb.addEventListener('click', close);
+        document.addEventListener('keydown', onKey);
+      };
+      if (mainImg) mainImg.addEventListener('click', openLightbox);
+      const zoomBtn = document.getElementById('pdp-zoom-btn');
+      if (zoomBtn) zoomBtn.addEventListener('click', e => { e.stopPropagation(); openLightbox(); });
     }
   });
 })();
