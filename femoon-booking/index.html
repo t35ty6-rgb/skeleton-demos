@@ -542,7 +542,7 @@ function showLiffStatus(text, color){
     }
     await liff.init({liffId: LIFF_ID});
     if(!liff.isInClient()){
-      showLiffStatus('⚠ LINEアプリ外で開かれています (緑バッジが付きません)', '#f39c12');
+      // 外部ブラウザでは警告を出さず、通常のWeb予約フォームとして静かに動作する
       return;
     }
     if(liff.isLoggedIn()){
@@ -670,12 +670,8 @@ document.getElementById('submit-btn').addEventListener('click', async ()=>{
     }
   }catch(e){ dbgInfo.push('outer_err='+e.message); }
 
-  // デバッグ表示 (8秒間)
-  const dbg = document.createElement('div');
-  dbg.style.cssText='position:fixed;top:0;left:0;right:0;background:'+(payload.line_user_id?'#06c755':'#c0392b')+';color:#fff;padding:10px 12px;font-size:11px;font-weight:600;z-index:99999;line-height:1.5;word-break:break-all';
-  dbg.innerHTML = (payload.line_user_id ? '✅ userId取得:<br>' : '❌ userId取れず<br>') + dbgInfo.join(' | ');
-  document.body.appendChild(dbg);
-  setTimeout(()=>dbg.remove(), 8000);
+  // (開発用デバッグ表示は本番では非表示。userIdはLINE内起動時のみ取得し、無くても予約は成立する)
+  console.log('LIFF状態:', dbgInfo.join(' | '), 'userId=', payload.line_user_id || '(なし)');
 
   showStep('loading');
 
