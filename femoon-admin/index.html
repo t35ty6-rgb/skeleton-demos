@@ -1617,7 +1617,7 @@ function openLineModal(row){
   const hasLine = (uid||'').startsWith('U');
   document.getElementById('line-target-info').innerHTML = `
     <strong>${row['お名前']||'-'}</strong> 様 / ${row['電話']||'-'} ${hasLine?`<span style="background:#06c755;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px;display:inline-flex;align-items:center">${LINE_ICON_W} 直送可</span>`:'<span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📋 コピー送信のみ</span>'}<br>
-    <span style="color:#7a5d5d;font-size:11.5px">${dateStr} ${row['時間']||''} ${row['コース名']||''}</span>
+    <span style="color:#7a5d5d;font-size:11.5px">${dateStr} ${fmtTime(row['時間'])||''} ${row['コース名']||''}</span>
   `;
   document.getElementById('line-msg-body').value = '';
   populateLineTplDropdown();
@@ -2521,13 +2521,9 @@ function focusKarteEntryFor(tel, dateKey){
   }
 }
 async function quickLineFromDetail(c){
-  const tplKey = pickTemplate(c);
-  const tpl = TEMPLATES[tplKey];
-  if(!tpl) return;
-  const msg = fillTemplate(tpl.body, c);
-  try{ await navigator.clipboard.writeText(msg); }catch(e){}
-  window.open(LINE_OAM_CHAT,'_blank');
-  showToast(`✅ ${c.name} 様向け「${tpl.label}」をコピー → LINEに貼付`);
+  // 予約からの 📩 LINE と同じ line-modal を流用 (テンプレ自動入力 + 編集 + 直送/コピー)
+  // 旧実装は無条件コピー+LINE管理画面起動で 直送できる人にも 直送できない退化があった
+  openCustomerLine(c);
 }
 
 /* ========== 税理士資料 ========== */
