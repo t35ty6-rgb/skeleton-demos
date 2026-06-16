@@ -1686,32 +1686,33 @@ function useTemplate(btn){
 }
 async function sendLineMsg(){
   const txt = document.getElementById('line-msg-body').value.trim();
-  if(!txt){alert('メッセージを入力してください');return}
+  if(!txt){ showToast('⚠ メッセージを入力してください'); return; }
   const t = CURRENT_LINE_TARGET || {};
   const uid = t.lineUserId || '';
   const name = t['お名前'] || 'お客様';
+  const phoneClean = String(t['電話']||'').replace(/-/g,'');
 
-  // LINE userId あり → API 直送
+  // LINE userId あり → API 直送（友だち登録済の人にのみ届く）
   if(uid && uid.startsWith('U')){
-    if(!confirm(`${name} 様に下記内容で LINE 送信します:\n\n${txt.slice(0,300)}\n\nOK?`)) return;
-    showToast('📤 送信中...');
+    showToast(`📤 ${name} 様 へ送信中...`);
     try{
       const r = await fetch(`${GAS_URL}?action=line_push&uid=${encodeURIComponent(uid)}&msg=${encodeURIComponent(txt)}&token=${encodeURIComponent(TOKEN)}`);
       const j = await r.json();
       if(j.ok){
-        showToast(`✅ ${name} 様にLINE送信完了！`);
+        showToast(`✅ ${name} 様の LINE に届きました`, 4000);
         closeLineModal();
         return;
       }
-      alert('❌ 送信失敗\nreason: '+(j.error||j.response||'unknown')+'\n\n手動コピーに切替えます。');
-    }catch(e){ alert('❌ 通信エラー: '+e.message+'\n\n手動コピーに切替えます。'); }
+      // API失敗 (友だち未登録 / token切れ等) → 手動転送モードに無音フォールバック
+      console.warn('[line_push] failed:', j);
+    }catch(e){ console.warn('[line_push] network:', e); }
   }
 
-  // userIdなし or API失敗時 → 手動コピー + LINE管理画面起動
+  // userId なし or API失敗時 → 手動コピー + LINE管理画面起動 (商談デモではこの導線がメイン)
   try{ await navigator.clipboard.writeText(txt); }catch(e){}
   window.open(LINE_OAM_CHAT, '_blank');
   closeLineModal();
-  setTimeout(()=>alert('📋 メッセージをコピーしました。\nLINE公式アカウント管理画面で電話番号「'+(t['電話']||'')+'」で友だち検索→チャットを開いて貼り付け(⌘+V)してください'),200);
+  showToast(`📋 メッセージをコピー済 → LINE管理画面で「${phoneClean}」を検索 → チャットに貼付(⌘+V)`, 7000);
 }
 
 // テンプレ選択 → 本文に挿入
