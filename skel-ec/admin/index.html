@@ -3,812 +3,511 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Skel·EC / Admin</title>
+<title>Skel·EC / 管理画面</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=Noto+Sans+JP:wght@400;500;600;700&family=Shippori+Mincho+B1:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=M+PLUS+Rounded+1c:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
+/* ============================================================
+   Skel·EC 管理画面 — Lea-inspired friendly SaaS (v1.0)
+   Reference: admin.lea-market.com 実観察
+   = orange #F97316 primary + LINE green secondary
+   = top nav with icon-illustrations
+   = card-grid based sections (NOT data-table heavy)
+   = bold rounded Japanese typography
+   = mascot character for warmth
+   ============================================================ */
 :root{
-  /* === Data-Dense Dashboard / Operations Command Center palette === */
-  /* skill 推奨: cool slate-50 bg + deep blue primary + amber (sparingly, alerts only) */
-  --bg: #F8FAFC;                              /* slate-50 — cool off-white */
+  /* Palette — Lea忠実 */
+  --bg: #F4F6F9;                    /* 薄いブルーグレー (Lea背景) */
   --surface: #FFFFFF;
-  --sidebar: #F1F5F9;                         /* slate-100 */
-  --ink: #0F172A;                             /* slate-900 — deep navy ink */
-  --ink-2: #334155;                           /* slate-700 */
-  --ink-3: #64748B;                           /* slate-500 */
-  --ink-4: #94A3B8;                           /* slate-400 */
-  --rule: #E2E8F0;                            /* slate-200 */
-  --rule-soft: #F1F5F9;                       /* slate-100 */
-  --hover: #F1F5F9;                           /* slate-100 */
-  --accent: #1E40AF;                          /* deep blue (Bloomberg/Datadog operations) */
-  --accent-deep: #1E3A8A;                     /* darker still */
-  --accent-tint: #EFF6FF;                     /* blue-50 */
-  --accent-line: #BFDBFE;                     /* blue-200 */
-  --accent-2: #3B82F6;                        /* blue-500 (links, secondary) */
-  --pos: #16A34A;                             /* green-600 */
-  --pos-tint: #F0FDF4;                        /* green-50 */
-  --warn: #D97706;                            /* amber-600 (warnings/critical only) */
-  --warn-tint: #FFFBEB;                       /* amber-50 */
-  --neg: #DC2626;                             /* red-600 */
-  --neg-tint: #FEF2F2;                        /* red-50 */
-  --info: #0284C7;                            /* sky-600 */
-  --info-tint: #F0F9FF;                       /* sky-50 */
-  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04);
-  --shadow-md: 0 4px 16px -4px rgb(15 23 42 / 0.08), 0 1px 2px rgb(15 23 42 / 0.04);
-  --shadow-lg: 0 20px 40px -12px rgb(15 23 42 / 0.18);
-  --r-sm: 4px;                                /* sharper, more architectural */
-  --r: 6px;
-  --r-lg: 8px;
-  /* === Typography signature: Fira Code mono = ALL headings/titles/labels ===
-     This is the differentiator — operations command center identity */
-  --mono: 'Fira Code', ui-monospace, monospace;
-  --sans: 'Fira Sans', 'Noto Sans JP', -apple-system, system-ui, sans-serif;
-  --jp:   'Noto Sans JP', 'Fira Sans', sans-serif;
-  --display: 'Fira Code', monospace;          /* headings use mono — signature */
-  --serif: 'Instrument Serif', 'Shippori Mincho B1', serif;
+  --surface-2: #FCFCFC;
+  --ink: #2C2C2C;
+  --ink-2: #555555;
+  --ink-3: #8C8C8C;
+  --ink-4: #BBBBBB;
+  --rule: #ECECEC;
+  --rule-strong: #DCDCDC;
+  --hover: #F8F8F8;
+
+  /* Primary = Lea Orange */
+  --pri: #F97316;
+  --pri-deep: #EA580C;
+  --pri-soft: #FED7AA;
+  --pri-tint: #FFF7ED;
+  --pri-line: #FDBA74;
+
+  /* Secondary = LINE Green */
+  --line: #06C755;
+  --line-deep: #04A648;
+  --line-tint: #DFF7E5;
+
+  /* Misc semantic */
+  --pos: #16A34A;
+  --pos-tint: #DCFCE7;
+  --warn: #F59E0B;
+  --warn-tint: #FEF3C7;
+  --neg: #DC2626;
+  --neg-tint: #FEE2E2;
+  --info: #3B82F6;
+  --info-tint: #DBEAFE;
+
+  /* Plan badge purple (Lea uses this for contract info) */
+  --plan: #8B5CF6;
+  --plan-tint: #EDE9FE;
+
+  /* Shadows — Lea uses soft surface shadows */
+  --shadow-card: 0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.03);
+  --shadow-hover: 0 4px 12px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.04);
+  --shadow-modal: 0 24px 60px rgba(0,0,0,.18), 0 8px 24px rgba(0,0,0,.08);
+
+  --r-sm: 6px;
+  --r: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+
+  --jp: 'Noto Sans JP', system-ui, sans-serif;
+  --display: 'M PLUS Rounded 1c', 'Noto Sans JP', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
 }
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum','calt','liga';font-variant-numeric:tabular-nums slashed-zero}
-h1,h2,h3,h4,h5,h6{font-family:var(--display);font-weight:600;letter-spacing:-.02em}
-.brand .name, .crumbs, .shop-card .info .n, .shop-card .info .s, nav.sect h6, .side-foot,
-.tbl thead th, .tbl .id, .tbl .num, .id, .num,
-.sec-h h3, .page-title, .page-sub,
-.kpi .lab, .kpi-mos .kp .k, .kpi-mos .kp .v, .kpi-mos .kp .meta .delta, .kpi-mos .kp .meta .vs, .kpi-mos .kp .v .unit,
-.activity-h h3, .activity-item .time,
-.dvc-h h4, .rank li .rk, .rank li .val, .inv-row .stk, .steps-mini .stp .n, .steps-mini .stp .v,
-.editorial-hero h1, .editorial-hero .ctx .it .v, .editorial-hero .ctx .it .k,
-.chip, .chip .cnt, .bd, .btn, .btn-primary,
-.field label, .smcaps, .ch-svg text,
-.modal-h h2, .tl-item .t, .tl-item .m,
-.bulk-bar, .toast, .cmdk-h input, .cmdk-grp,
-.tele, .tele .it, .tele .it .k, .tele .it .v, .tele .lab, .tele .right
-{font-family:var(--display);letter-spacing:-.01em}
-.ja-display, .editorial-hero h1.ja, .activity-item .body, .tbl tbody td,
-.field input, .field textarea, .field select, .modal-body, .sec-body,
-.act-item .body, .inv-row .nm, .rank li .nm, .steps-mini .stp .t,
-.q-card .who .n, .q-card .who .r{font-family:var(--sans)}
-.q-card .q, .quote-pull{font-family:var(--serif)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--jp);font-size:14px;line-height:1.7;-webkit-font-smoothing:antialiased;font-feature-settings:'palt'}
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
-input,select,textarea{font-family:inherit;font-size:13px;color:inherit}
+input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 svg{display:block}
+img{max-width:100%;display:block}
 
-/* ===== Layout ===== */
-.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
-@media(max-width:960px){.app{grid-template-columns:1fr}}
+/* ============================================================
+   Top Navigation Bar (Lea structure)
+   ============================================================ */
+.nav-top{background:var(--surface);border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:50;box-shadow:0 1px 2px rgba(0,0,0,.02)}
+.nav-inner{max-width:1320px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:6px;height:70px}
+@media(max-width:900px){.nav-inner{padding:0 14px;gap:0;height:64px}}
 
-/* ===== Sidebar ===== */
-.side{background:var(--sidebar);border-right:1px solid var(--rule);position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
-.scrim{display:none}
-@media(max-width:960px){
-  .side{position:fixed;top:0;left:-260px;width:240px;z-index:50;transition:left .22s cubic-bezier(.2,.8,.2,1)}
-  .side.open{left:0;box-shadow:var(--shadow-lg)}
-  .scrim{position:fixed;inset:0;background:oklch(0.20 0.012 250 / 0.5);z-index:40;backdrop-filter:blur(2px)}
-  .scrim.on{display:block}
+/* Brand mark */
+.brand{display:flex;align-items:center;gap:10px;padding:0 14px 0 0;border-right:1px solid var(--rule);height:46px;margin-right:8px;flex-shrink:0}
+.brand .logo{width:42px;height:42px;display:grid;place-items:center;background:linear-gradient(135deg, var(--pri) 0%, var(--pri-deep) 100%);border-radius:12px;color:#fff;font-family:var(--display);font-weight:900;font-size:18px;letter-spacing:-.04em;box-shadow:0 4px 10px rgba(249,115,22,.28), inset 0 1px 0 rgba(255,255,255,.3)}
+.brand .meta{display:flex;flex-direction:column;line-height:1.1}
+.brand .name{font-family:var(--display);font-weight:900;font-size:16px;letter-spacing:-.02em;color:var(--ink)}
+.brand .name em{font-style:normal;color:var(--pri)}
+.brand .sub{font-size:9.5px;color:var(--ink-3);letter-spacing:.12em;font-family:var(--mono);margin-top:1px}
+@media(max-width:900px){.brand .meta{display:none}.brand{padding:0;border:0;margin:0}}
+
+/* Nav items */
+.nav-items{display:flex;align-items:center;gap:2px;flex:1;justify-content:center;min-width:0}
+.nav-items a{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 12px;border-radius:10px;color:var(--ink-2);font-size:11.5px;font-weight:700;letter-spacing:.02em;transition:background .15s, color .15s;min-width:62px}
+.nav-items a:hover{background:var(--hover);color:var(--ink)}
+.nav-items a.on{color:var(--pri)}
+.nav-items a.on::after{content:'';position:absolute;bottom:-23px;left:14%;right:14%;height:3px;background:var(--pri);border-radius:2px 2px 0 0}
+.nav-items a .ic{width:30px;height:30px;display:grid;place-items:center;position:relative}
+.nav-items a .ic svg{width:24px;height:24px}
+.nav-items a .ic .badge{position:absolute;top:-3px;right:-6px;min-width:18px;height:18px;background:var(--pri);color:#fff;border-radius:9px;font-family:var(--mono);font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 5px;box-shadow:0 1px 4px rgba(249,115,22,.4);border:2px solid var(--surface)}
+.nav-items a .ic .badge.line{background:var(--line);box-shadow:0 1px 4px rgba(6,199,85,.35)}
+@media(max-width:900px){
+  .nav-items{display:none}
+  .nav-items.open{display:flex;position:absolute;top:64px;left:0;right:0;background:var(--surface);flex-direction:column;padding:8px;border-bottom:1px solid var(--rule);box-shadow:var(--shadow-card)}
+  .nav-items.open a{flex-direction:row;width:100%;padding:10px 16px;justify-content:flex-start}
+  .nav-items.open a .ic{width:24px;height:24px;margin-right:4px}
+  .nav-items.open a .ic svg{width:20px;height:20px}
+  .nav-items.open a.on::after{display:none}
 }
-.brand{padding:14px 18px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--rule)}
-.brand .mark{width:24px;height:24px;border-radius:6px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:700;font-size:13px;letter-spacing:-.02em}
-.brand .name{font-weight:600;font-size:14px;letter-spacing:-.01em}
-.brand .name span{color:var(--ink-3);font-weight:500}
 
-.shop-card{margin:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);display:flex;align-items:center;gap:10px;cursor:pointer}
-.shop-card:hover{border-color:var(--ink-4)}
-.shop-card .av{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:600;font-size:12px;letter-spacing:-.02em}
-.shop-card .info{flex:1;min-width:0}
-.shop-card .info .n{font-size:13px;font-weight:600;line-height:1.2;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.shop-card .info .s{font-size:10.5px;color:var(--ink-3);font-weight:500;line-height:1.4;margin-top:1px}
-.shop-card svg{color:var(--ink-3);flex-shrink:0;width:14px;height:14px}
+/* Right side buttons */
+.nav-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.btn-pill{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:12.5px;font-weight:700;border-radius:99px;border:1.5px solid;transition:all .15s;letter-spacing:.02em;white-space:nowrap}
+.btn-pill svg{width:13px;height:13px}
+.btn-pill.pri-out{color:var(--pri);border-color:var(--pri-line);background:var(--surface)}
+.btn-pill.pri-out:hover{background:var(--pri-tint);border-color:var(--pri)}
+.btn-pill.line-out{color:var(--line-deep);border-color:var(--line);background:var(--surface)}
+.btn-pill.line-out:hover{background:var(--line-tint)}
+.btn-pill.pri-fill{color:#fff;background:var(--pri);border-color:var(--pri)}
+.btn-pill.pri-fill:hover{background:var(--pri-deep);border-color:var(--pri-deep)}
+@media(max-width:900px){.btn-pill{padding:7px 11px;font-size:11.5px}.btn-pill.pri-out span,.btn-pill.line-out span{display:none}}
 
-nav.sect{padding:6px 8px;flex:1}
-nav.sect h6{font-size:10.5px;letter-spacing:.04em;color:var(--ink-3);font-weight:600;padding:14px 12px 4px;margin:0}
-nav.sect a{display:flex;align-items:center;gap:10px;padding:6px 11px;color:var(--ink-2);font-size:13px;border-radius:var(--r-sm);margin-bottom:1px;font-weight:500;transition:background .12s}
-nav.sect a:hover{background:var(--hover);color:var(--ink)}
-nav.sect a.active{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:var(--shadow-sm),inset 0 0 0 1px var(--rule)}
-nav.sect a svg{width:16px;height:16px;color:var(--ink-3);flex-shrink:0}
-nav.sect a.active svg{color:var(--accent)}
-nav.sect a .badge{margin-left:auto;background:var(--accent-tint);color:var(--accent-deep);font-size:10.5px;padding:1px 6px;border-radius:9px;font-family:var(--mono);font-weight:600;min-width:18px;text-align:center}
-nav.sect a.active .badge{background:var(--accent);color:#fff}
+/* Avatar (top right) */
+.avt{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg, var(--pri) 0%, var(--pri-deep) 100%);color:#fff;display:grid;place-items:center;font-family:var(--display);font-weight:900;font-size:16px;letter-spacing:-.04em;cursor:pointer;position:relative;box-shadow:0 2px 6px rgba(249,115,22,.25), inset 0 1px 0 rgba(255,255,255,.25)}
+.avt::after{content:'';position:absolute;right:0;bottom:0;width:11px;height:11px;border-radius:50%;background:var(--pos);border:2px solid var(--surface)}
 
-.side-foot{border-top:1px solid var(--rule);padding:10px 12px;display:flex;align-items:center;gap:9px;color:var(--ink-3);font-size:11.5px}
-.side-foot svg{width:14px;height:14px}
-.side-foot .live{display:inline-flex;align-items:center;gap:5px}
-.side-foot .pulse{width:6px;height:6px;background:var(--pos);border-radius:50%;animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* Mobile hamburger */
+.hamb{display:none;width:38px;height:38px;border-radius:8px;align-items:center;justify-content:center;color:var(--ink-2)}
+.hamb:hover{background:var(--hover)}
+.hamb svg{width:22px;height:22px}
+@media(max-width:900px){.hamb{display:flex}}
 
-/* ===== Top bar ===== */
-.main{min-width:0;display:flex;flex-direction:column;background:var(--bg)}
-.topbar{display:flex;align-items:center;gap:12px;padding:11px 24px;background:var(--bg);border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:20}
-.ham{display:none;width:32px;height:32px;border-radius:var(--r-sm);align-items:center;justify-content:center;color:var(--ink-2)}
-.ham:hover{background:var(--hover)}
-@media(max-width:960px){.ham{display:flex}.topbar{padding:10px 14px}}
-.crumbs{flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-3);font-weight:500;overflow:hidden}
-.crumbs .root{color:var(--ink-3)}
-.crumbs .sep{color:var(--ink-4)}
-.crumbs .cur{color:var(--ink);font-weight:600}
-.search{flex:0 1 320px;display:flex;align-items:center;gap:7px;border:1px solid var(--rule);padding:6px 10px;border-radius:var(--r-sm);background:var(--surface);color:var(--ink-3)}
-.search:focus-within{border-color:var(--ink-4);box-shadow:0 0 0 3px oklch(0.93 0.004 250)}
-.search svg{width:14px;height:14px}
-.search input{border:0;outline:0;flex:1;background:transparent;color:var(--ink);font-size:13px}
-.search input::placeholder{color:var(--ink-4)}
-.search .kbd{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);background:var(--bg);border:1px solid var(--rule);padding:0 4px;border-radius:3px;font-weight:500}
-@media(max-width:960px){.search{display:none}}
-.iconbtn{width:32px;height:32px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;color:var(--ink-2);position:relative}
-.iconbtn:hover{background:var(--hover);color:var(--ink)}
-.iconbtn .dot{position:absolute;top:7px;right:8px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
-.iconbtn svg{width:16px;height:16px}
-.btn-primary{padding:7px 13px;background:var(--ink);color:var(--bg);border-radius:var(--r-sm);font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:background .12s}
-.btn-primary:hover{background:oklch(0.30 0.015 250)}
-.btn-primary svg{width:14px;height:14px}
+/* ============================================================
+   Page Header
+   ============================================================ */
+.page{max-width:1320px;margin:0 auto;padding:18px 24px 80px;position:relative}
+@media(max-width:900px){.page{padding:14px 14px 80px}}
 
-.view{padding:22px 24px 80px;max-width:1320px}
-@media(max-width:960px){.view{padding:16px 14px 80px}}
+.page-h{display:flex;align-items:center;gap:11px;margin-bottom:18px}
+.page-h .ico{width:30px;height:30px;display:grid;place-items:center;color:var(--pri);background:var(--pri-tint);border-radius:8px;border:1px solid var(--pri-soft)}
+.page-h .ico svg{width:18px;height:18px}
+.page-h h1{font-family:var(--display);font-weight:900;font-size:22px;letter-spacing:-.01em;color:var(--ink)}
+.page-h .sub{font-size:12px;color:var(--ink-3);margin-left:auto;font-weight:500}
+@media(max-width:900px){.page-h h1{font-size:18px}}
 
-/* ===== Headings & Titles ===== */
-.page-title{font-size:20px;font-weight:600;letter-spacing:-.015em;line-height:1.3;color:var(--ink);margin-bottom:3px}
-.page-sub{font-size:13px;color:var(--ink-3);font-weight:400;margin-bottom:22px}
+/* ============================================================
+   Card primitive — Lea のメインボキャブラリ
+   ============================================================ */
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);box-shadow:var(--shadow-card);overflow:hidden;transition:box-shadow .2s, transform .2s}
+.card.hover{cursor:pointer}
+.card.hover:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px)}
+.card-h{display:flex;align-items:center;gap:11px;padding:18px 22px;border-bottom:1px solid var(--rule)}
+.card-h .ic{width:34px;height:34px;display:grid;place-items:center;background:var(--pri-tint);color:var(--pri);border-radius:9px;flex-shrink:0;border:1px solid var(--pri-soft)}
+.card-h .ic svg{width:18px;height:18px}
+.card-h h2{font-family:var(--display);font-weight:900;font-size:14px;color:var(--pri);letter-spacing:-.005em}
+.card-h .chev{margin-left:auto;color:var(--ink-3);width:20px;height:20px;display:grid;place-items:center;transition:transform .2s}
+.card-h.open .chev{transform:rotate(180deg)}
+.card-body{padding:6px 0}
 
-/* ===== KPI strip ===== */
-.kpi-lead{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:22px 24px;display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:32px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
-@media(max-width:980px){.kpi-lead{grid-template-columns:1fr 1fr;gap:24px}}
-@media(max-width:520px){.kpi-lead{grid-template-columns:1fr 1fr}}
-.kpi{display:flex;flex-direction:column;gap:5px}
-.kpi.primary{border-right:1px solid var(--rule);padding-right:32px}
-@media(max-width:980px){.kpi.primary{border-right:0;padding-right:0;grid-column:span 2;padding-bottom:18px;border-bottom:1px solid var(--rule);margin-bottom:6px}}
-.kpi .lab{font-size:12px;color:var(--ink-3);font-weight:500;display:flex;align-items:center;gap:5px}
-.kpi .lab svg{width:13px;height:13px;color:var(--ink-4)}
-.kpi .num{font-family:var(--mono);font-weight:600;font-size:26px;letter-spacing:-.025em;color:var(--ink);line-height:1.1}
-.kpi.primary .num{font-size:38px}
-.kpi .delta{font-size:11.5px;display:inline-flex;align-items:center;gap:4px;font-weight:500;color:var(--pos)}
-.kpi .delta.dn{color:var(--neg)}
-.kpi .delta svg{width:11px;height:11px}
-.kpi .delta .vs{color:var(--ink-3);font-weight:400;margin-left:3px}
-.kpi .spark{margin-top:6px}
+/* Setting menu items (Lea style nested links) */
+.set-list{padding:6px 0 14px}
+.set-list a{display:flex;align-items:center;padding:10px 22px;font-size:13.5px;font-weight:500;color:var(--ink);transition:background .12s}
+.set-list a:hover{background:var(--hover);color:var(--pri)}
+.set-list a::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--ink-4);margin-right:11px;flex-shrink:0;transition:background .15s}
+.set-list a:hover::before{background:var(--pri)}
 
-/* ===== Card / Section ===== */
-.sec{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);margin-bottom:14px;overflow:hidden;box-shadow:var(--shadow-sm)}
-.sec-h{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--rule)}
-.sec-h h3{font-size:14px;font-weight:600;margin:0;letter-spacing:-.01em;color:var(--ink)}
-.sec-h .sp{flex:1}
-.sec-h .meta{font-size:12px;color:var(--ink-3)}
-.sec-body{padding:18px 20px}
-.sec-body.flush{padding:0}
+/* Setting grid (the 6-card layout) */
+.set-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:1000px){.set-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.set-grid{grid-template-columns:1fr}}
 
-/* ===== Dashboard grid ===== */
-.dash-row{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:14px}
-@media(max-width:1080px){.dash-row{grid-template-columns:1fr}}
-.chart-wrap{padding:14px 18px 16px}
-.chart-wrap canvas{width:100%;height:240px;display:block}
-.chart-legend{display:flex;gap:18px;font-size:11.5px;color:var(--ink-3);margin-top:10px;font-weight:500}
-.chart-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
+/* ============================================================
+   Mypage / Dashboard widgets
+   ============================================================ */
+.section-title{display:flex;align-items:baseline;gap:11px;padding:6px 4px;margin:18px 0 12px}
+.section-title h3{font-family:var(--display);font-weight:900;font-size:15px;color:var(--ink);letter-spacing:-.005em}
+.section-title .meta{font-size:11px;color:var(--ink-3);font-weight:500}
+.section-title .more{margin-left:auto;font-size:11.5px;color:var(--pri);font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:3px}
+.section-title .more svg{width:11px;height:11px}
 
-.tasklist{list-style:none;margin:0;padding:0}
-.tasklist li{padding:11px 18px;border-bottom:1px solid var(--rule-soft);display:flex;gap:11px;align-items:center}
-.tasklist li:last-child{border-bottom:0}
-.tasklist li:hover{background:var(--hover)}
-.tasklist .ico{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
-.tasklist .ico.warn{background:var(--warn-tint);color:var(--warn)}
-.tasklist .ico.neg{background:var(--neg-tint);color:var(--neg)}
-.tasklist .ico.info{background:var(--info-tint);color:var(--info)}
-.tasklist .ico.accent{background:var(--accent-tint);color:var(--accent-deep)}
-.tasklist .ico svg{width:14px;height:14px}
-.tasklist .body{flex:1;min-width:0}
-.tasklist .body .t{font-weight:600;font-size:13px;color:var(--ink);line-height:1.3}
-.tasklist .body .m{font-size:11.5px;color:var(--ink-3);margin-top:1px}
-.tasklist .act{font-size:11.5px;color:var(--ink-3);font-weight:500;display:inline-flex;align-items:center;gap:3px}
-.tasklist .act:hover{color:var(--accent)}
-.tasklist .act svg{width:11px;height:11px}
+/* Gamified level cards (mypage signature) */
+.lvl-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:8px}
+@media(max-width:900px){.lvl-cards{grid-template-columns:1fr}}
+.lvl{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:18px;box-shadow:var(--shadow-card);display:flex;gap:16px;align-items:flex-start;position:relative;overflow:hidden}
+.lvl .mascot{width:78px;height:78px;flex-shrink:0;background:var(--pri-tint);border-radius:14px;display:grid;place-items:center;border:1px solid var(--pri-soft);overflow:hidden}
+.lvl .mascot svg{width:64px;height:64px}
+.lvl .body{flex:1;min-width:0}
+.lvl .title{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
+.lvl .title h4{font-family:var(--display);font-weight:900;font-size:14px;color:var(--ink)}
+.lvl .title .lvln{font-family:var(--mono);font-weight:700;font-size:11px;color:var(--pri);background:var(--pri-tint);padding:2px 7px;border-radius:8px;border:1px solid var(--pri-soft)}
+.lvl .hint{font-size:11px;color:var(--ink-3);margin-bottom:7px}
+.lvl .val-row{display:flex;align-items:baseline;gap:6px;margin-bottom:8px}
+.lvl .val{font-family:var(--display);font-weight:900;font-size:22px;color:var(--pri);letter-spacing:-.02em}
+.lvl .of{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.lvl .bar{height:7px;background:var(--pri-tint);border-radius:4px;overflow:hidden;border:1px solid var(--pri-soft)}
+.lvl .bar i{display:block;height:100%;background:linear-gradient(90deg, var(--pri) 0%, var(--pri-deep) 100%);border-radius:4px;transition:width 1s cubic-bezier(.2,.8,.2,1)}
+.lvl .cap{font-size:11px;color:var(--ink-2);margin-top:6px;font-weight:500}
+.lvl .cap b{color:var(--pri)}
 
-/* ===== Table ===== */
-.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
-.tbl thead th{background:var(--bg);color:var(--ink-3);text-align:left;padding:9px 16px;border-bottom:1px solid var(--rule);font-size:11.5px;font-weight:600}
-.tbl tbody td{padding:11px 16px;border-bottom:1px solid var(--rule-soft);vertical-align:middle;color:var(--ink-2)}
-.tbl tbody tr:last-child td{border-bottom:0}
-.tbl tbody tr{transition:background .1s}
+/* Info table (mypage 顧客情報 style) */
+.info-tbl{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-card);margin-bottom:16px}
+.info-tbl-h{padding:14px 22px;border-bottom:1px solid var(--rule);font-family:var(--display);font-weight:900;font-size:14px;color:var(--ink);display:flex;align-items:center;gap:8px}
+.info-tbl-h::before{content:'';width:4px;height:18px;background:var(--pri);border-radius:2px}
+.info-row{display:grid;grid-template-columns:200px 1fr auto;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid var(--rule-soft);font-size:13.5px}
+.info-row:last-child{border-bottom:0}
+.info-row .k{color:var(--ink-3);font-weight:500;font-size:12.5px}
+.info-row .v{color:var(--ink);font-weight:500;display:flex;align-items:center;gap:7px}
+.info-row .v .edit{width:18px;height:18px;display:grid;place-items:center;color:var(--pri);background:var(--pri-tint);border-radius:5px;cursor:pointer;border:1px solid var(--pri-soft)}
+.info-row .v .edit svg{width:11px;height:11px}
+.info-row .v .edit:hover{background:var(--pri);color:#fff}
+.info-row .act{font-size:12px;color:var(--pri);font-weight:700;cursor:pointer}
+@media(max-width:640px){.info-row{grid-template-columns:1fr;gap:4px}}
+
+/* LINE quota bar (mypage signature) */
+.quota{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:20px 22px;box-shadow:var(--shadow-card);margin-bottom:16px}
+.quota-h{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.quota-h .ico{width:30px;height:30px;background:var(--line-tint);color:var(--line-deep);border-radius:8px;display:grid;place-items:center;flex-shrink:0;border:1px solid var(--line)}
+.quota-h .ico svg{width:17px;height:17px}
+.quota-h h3{font-family:var(--display);font-weight:900;font-size:14px;color:var(--ink);flex:1}
+.quota-h .nums{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--ink-2)}
+.quota-h .nums em{font-style:normal;color:var(--line-deep);font-size:18px}
+.quota-bar{height:11px;background:var(--line-tint);border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.quota-bar i{display:block;height:100%;background:linear-gradient(90deg, var(--line) 0%, var(--line-deep) 100%);border-radius:6px;transition:width 1s cubic-bezier(.2,.8,.2,1)}
+
+/* Plan button (purple - Lea contract style) */
+.btn-plan{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--plan);color:#fff;border-radius:8px;font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.btn-plan:hover{background:#7C3AED}
+.btn-plan svg{width:13px;height:13px}
+
+/* ============================================================
+   KPI / metric tiles (dashboard)
+   ============================================================ */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:18px 20px;box-shadow:var(--shadow-card);position:relative;overflow:hidden}
+.kpi .k{font-size:12px;color:var(--ink-3);font-weight:700;margin-bottom:7px;display:flex;align-items:center;gap:6px}
+.kpi .k .icp{width:24px;height:24px;display:grid;place-items:center;border-radius:7px;background:var(--pri-tint);color:var(--pri);border:1px solid var(--pri-soft)}
+.kpi .k .icp svg{width:14px;height:14px}
+.kpi .k .icp.line{background:var(--line-tint);color:var(--line-deep);border-color:var(--line)}
+.kpi .k .icp.warn{background:var(--warn-tint);color:var(--warn);border-color:#FCD34D}
+.kpi .k .icp.pos{background:var(--pos-tint);color:var(--pos);border-color:#86EFAC}
+.kpi .v{font-family:var(--display);font-weight:900;font-size:28px;color:var(--ink);letter-spacing:-.02em;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi .v .unit{font-family:var(--jp);font-size:13px;color:var(--ink-3);font-weight:500;margin-left:3px}
+.kpi .meta{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11.5px;font-weight:600}
+.kpi .meta .delta{color:var(--pos);display:inline-flex;align-items:center;gap:3px}
+.kpi .meta .delta.dn{color:var(--warn)}
+.kpi .meta .vs{color:var(--ink-3);font-weight:500}
+
+/* ============================================================
+   Tables (orders, products, customers list)
+   ============================================================ */
+.tbl-wrap{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-card);margin-bottom:14px}
+.tbl-h{padding:14px 22px;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:10px}
+.tbl-h::before{content:'';width:4px;height:18px;background:var(--pri);border-radius:2px}
+.tbl-h h3{font-family:var(--display);font-weight:900;font-size:14px;color:var(--ink);flex:1}
+.tbl-scroll{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl thead th{background:#FAFAFA;color:var(--ink-2);text-align:left;padding:11px 16px;border-bottom:1px solid var(--rule);font-size:11.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.tbl tbody td{padding:13px 16px;border-bottom:1px solid var(--rule-soft);vertical-align:middle;color:var(--ink-2);font-weight:500}
 .tbl tbody tr:hover{background:var(--hover);cursor:pointer}
-.tbl .num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
-.tbl .center{text-align:center}
-.tbl .id{font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
-.tbl .strong{color:var(--ink);font-weight:600}
+.tbl tbody tr:last-child td{border-bottom:0}
+.tbl .id{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);font-weight:600}
+.tbl .num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.tbl .strong{font-weight:700;color:var(--ink)}
 .tbl .nowrap{white-space:nowrap}
-.tbl .empty{padding:50px;text-align:center;color:var(--ink-3)}
-.tbl .thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;background:var(--bg);display:block;border:1px solid var(--rule-soft)}
+.tbl .thumb{width:38px;height:38px;border-radius:7px;object-fit:cover;background:var(--hover);border:1px solid var(--rule-soft)}
 .tbl .row-name{display:flex;align-items:center;gap:11px}
 .tbl .row-name .meta{min-width:0}
-.tbl .row-name .n{color:var(--ink);font-weight:600;font-size:13px;line-height:1.3}
+.tbl .row-name .n{color:var(--ink);font-weight:700;font-size:13px}
 .tbl .row-name .s{font-size:11px;color:var(--ink-3);margin-top:1px}
-.scroll-x{overflow-x:auto}
+.tbl .empty{padding:60px 20px;text-align:center;color:var(--ink-3)}
 
-.cust-mini{display:flex;align-items:center;gap:9px}
-.cust-mini .av{width:28px;height:28px;border-radius:50%;background:var(--accent-tint);color:var(--accent-deep);display:grid;place-items:center;font-size:11.5px;font-weight:600;flex-shrink:0}
-.cust-mini .n{color:var(--ink);font-weight:600}
-.cust-mini .s{font-size:10.5px;color:var(--ink-3);font-family:var(--mono)}
+/* Customer avatar */
+.cust{display:flex;align-items:center;gap:10px}
+.cust .av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg, var(--pri) 0%, var(--pri-deep) 100%);color:#fff;display:grid;place-items:center;font-family:var(--display);font-weight:900;font-size:13px;flex-shrink:0;box-shadow:0 2px 4px rgba(249,115,22,.2)}
+.cust .av.line{background:linear-gradient(135deg, var(--line) 0%, var(--line-deep) 100%);box-shadow:0 2px 4px rgba(6,199,85,.2)}
+.cust .info .n{color:var(--ink);font-weight:700;font-size:13px}
+.cust .info .s{font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
 
-/* ===== Badges ===== */
-.bd{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;font-size:11px;border-radius:9px;font-weight:600;line-height:1.5;white-space:nowrap}
-.bd::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
-.bd.ok{background:var(--pos-tint);color:var(--pos)}
-.bd.warn{background:var(--warn-tint);color:var(--warn)}
-.bd.neg{background:var(--neg-tint);color:var(--neg)}
-.bd.info{background:var(--info-tint);color:var(--info)}
-.bd.accent{background:var(--accent-tint);color:var(--accent-deep)}
-.bd.draft{background:var(--hover);color:var(--ink-3)}
-.bd.bare{padding:1px 6px}
-.bd.bare::before{display:none}
+/* Badges (Lea pill style) */
+.bd{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;font-size:11px;border-radius:99px;font-weight:700;line-height:1.5;white-space:nowrap;border:1px solid}
+.bd.ok{background:var(--pos-tint);color:var(--pos);border-color:#86EFAC}
+.bd.warn{background:var(--warn-tint);color:var(--warn);border-color:#FCD34D}
+.bd.neg{background:var(--neg-tint);color:var(--neg);border-color:#FCA5A5}
+.bd.info{background:var(--info-tint);color:var(--info);border-color:#93C5FD}
+.bd.pri{background:var(--pri-tint);color:var(--pri);border-color:var(--pri-line)}
+.bd.line{background:var(--line-tint);color:var(--line-deep);border-color:var(--line)}
+.bd.plan{background:var(--plan-tint);color:var(--plan);border-color:#C4B5FD}
+.bd.draft{background:#F1F1F1;color:var(--ink-3);border-color:var(--rule-strong)}
 
-/* ===== Buttons ===== */
-.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--surface);color:var(--ink-2);border:1px solid var(--rule);border-radius:var(--r-sm);font-size:12.5px;font-weight:500}
-.btn:hover{border-color:var(--ink-4);background:var(--hover);color:var(--ink)}
-.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.btn.primary:hover{background:oklch(0.30 0.015 250);border-color:oklch(0.30 0.015 250)}
-.btn.accent{background:var(--accent);color:#fff;border-color:var(--accent)}
-.btn.accent:hover{background:var(--accent-deep);border-color:var(--accent-deep)}
+/* Filter chips (rounded pill) */
+.actbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.actbar .sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;background:var(--surface);border:1.5px solid var(--rule-strong);border-radius:99px;font-size:12px;color:var(--ink-2);font-weight:700;cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--pri);color:var(--pri)}
+.chip.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.chip .cnt{font-family:var(--mono);opacity:.7;font-size:10.5px}
+.chip.on .cnt{opacity:1}
+
+/* Search inline (rounded) */
+.search-pill{display:inline-flex;align-items:center;gap:7px;background:var(--surface);border:1.5px solid var(--rule-strong);border-radius:99px;padding:7px 14px;min-width:220px}
+.search-pill:focus-within{border-color:var(--pri)}
+.search-pill svg{width:14px;height:14px;color:var(--ink-3)}
+.search-pill input{border:0;outline:0;flex:1;background:transparent;font-size:13px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface);border:1.5px solid var(--rule-strong);border-radius:8px;font-size:12.5px;font-weight:700;color:var(--ink-2);cursor:pointer;transition:all .15s;letter-spacing:.01em}
+.btn:hover{border-color:var(--pri);color:var(--pri)}
+.btn.pri{background:var(--pri);color:#fff;border-color:var(--pri);box-shadow:0 2px 6px rgba(249,115,22,.25)}
+.btn.pri:hover{background:var(--pri-deep);border-color:var(--pri-deep)}
+.btn.line-fill{background:var(--line);color:#fff;border-color:var(--line);box-shadow:0 2px 6px rgba(6,199,85,.25)}
+.btn.line-fill:hover{background:var(--line-deep);border-color:var(--line-deep)}
 .btn.ghost{background:transparent;border-color:transparent;color:var(--ink-3)}
 .btn.ghost:hover{background:var(--hover);color:var(--ink)}
-.btn.sm{padding:3px 9px;font-size:11.5px}
+.btn.sm{padding:5px 11px;font-size:11.5px}
 .btn svg{width:13px;height:13px}
-.btn-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
 
-/* ===== Filter chips ===== */
-.actbar{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
-.actbar .sp{flex:1}
-.chip{padding:5px 11px;background:var(--surface);border:1px solid var(--rule);font-size:12px;border-radius:14px;color:var(--ink-2);font-weight:500;display:inline-flex;align-items:center;gap:5px}
-.chip:hover{border-color:var(--ink-4);color:var(--ink)}
-.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.chip .cnt{font-family:var(--mono);font-size:10.5px;opacity:.7;font-weight:600}
-.chip.on .cnt{opacity:1}
-.search-inline{display:flex;align-items:center;gap:6px;border:1px solid var(--rule);padding:5px 10px;border-radius:var(--r-sm);background:var(--surface);min-width:220px;color:var(--ink-3)}
-.search-inline:focus-within{border-color:var(--ink-4)}
-.search-inline svg{width:14px;height:14px}
-.search-inline input{border:0;outline:0;flex:1;background:transparent;color:var(--ink);font-size:12.5px}
-
-/* ===== Forms ===== */
-.field{display:block;margin-bottom:13px}
-.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:5px}
-.field label .req{color:var(--accent);margin-left:3px}
-.field input[type=text],.field input[type=number],.field select,.field textarea{
-  width:100%;border:1px solid var(--rule);background:var(--surface);padding:8px 11px;border-radius:var(--r-sm);color:var(--ink);font-size:13px
-}
-.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+/* Forms */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--ink-2);margin-bottom:5px}
+.field label .req{color:var(--neg);margin-left:3px}
+.field input[type=text],.field input[type=number],.field input[type=email],.field input[type=tel],.field select,.field textarea{width:100%;border:1.5px solid var(--rule-strong);background:var(--surface);padding:10px 13px;border-radius:8px;font-size:13.5px;color:var(--ink);transition:border-color .15s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-tint)}
 .field .hint{font-size:11px;color:var(--ink-3);margin-top:4px}
-.field-row{display:grid;grid-template-columns:repeat(2,1fr);gap:13px}
+.field-row{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
 @media(max-width:600px){.field-row{grid-template-columns:1fr}}
 
-/* ===== Modal ===== */
-.modal{display:none;position:fixed;inset:0;background:oklch(0.20 0.012 250 / 0.6);z-index:80;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px)}
-.modal.on{display:flex}
-.modal-inner{background:var(--surface);border-radius:var(--r-lg);max-width:780px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:modal-in .18s cubic-bezier(.2,.8,.2,1)}
-@keyframes modal-in{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
-.modal-h{display:flex;align-items:center;padding:16px 22px;border-bottom:1px solid var(--rule);gap:10px}
-.modal-h h2{font-size:16px;font-weight:600;margin:0;flex:1;letter-spacing:-.01em}
-.modal-h .x{width:28px;height:28px;border-radius:var(--r-sm);display:grid;place-items:center;color:var(--ink-3)}
+/* Modal */
+.modal{display:none;position:fixed;inset:0;background:rgba(44,44,44,.55);z-index:80;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal.on{display:flex;animation:fadeIn .15s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-inner{background:var(--surface);border-radius:var(--r-xl);max-width:780px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-modal);animation:modalIn .25s cubic-bezier(.2,.8,.2,1)}
+@keyframes modalIn{from{transform:translateY(20px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+.modal-h{display:flex;align-items:center;padding:18px 22px;border-bottom:1px solid var(--rule);gap:10px}
+.modal-h h2{font-family:var(--display);font-weight:900;font-size:16px;margin:0;flex:1;color:var(--ink)}
+.modal-h .x{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--ink-3)}
 .modal-h .x:hover{background:var(--hover);color:var(--ink)}
-.modal-body{padding:20px 22px}
+.modal-body{padding:22px}
 .modal-foot{padding:14px 22px;border-top:1px solid var(--rule);display:flex;gap:8px;justify-content:flex-end;background:var(--bg)}
 
-/* ===== Order detail timeline ===== */
-.tl{position:relative;padding-left:28px;margin:12px 0}
-.tl::before{content:'';position:absolute;left:10px;top:10px;bottom:10px;width:1px;background:var(--rule)}
-.tl-item{position:relative;padding-bottom:14px}
-.tl-item::before{content:'';position:absolute;left:-22px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--surface);border:2px solid var(--ink-4)}
+/* Timeline (order detail) */
+.tl{position:relative;padding-left:28px;margin:14px 0}
+.tl::before{content:'';position:absolute;left:9px;top:10px;bottom:10px;width:2px;background:var(--rule)}
+.tl-item{position:relative;padding-bottom:16px}
+.tl-item::before{content:'';position:absolute;left:-23px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--surface);border:2px solid var(--rule-strong)}
 .tl-item.done::before{background:var(--pos);border-color:var(--pos)}
-.tl-item.cur::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
-.tl-item .t{font-size:12.5px;font-weight:600;color:var(--ink)}
-.tl-item .m{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+.tl-item.cur::before{background:var(--pri);border-color:var(--pri);box-shadow:0 0 0 4px var(--pri-tint)}
+.tl-item .t{font-size:13.5px;font-weight:700;color:var(--ink)}
+.tl-item .m{font-size:11.5px;color:var(--ink-3);margin-top:2px}
 
-/* ===== Richmenu editor ===== */
-.rm-grid{display:grid;gap:3px;background:var(--rule);padding:3px;border:1px solid var(--rule);border-radius:var(--r-sm);max-width:540px;aspect-ratio:25/16}
-.rm-grid .cell{background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink-2);position:relative;cursor:pointer;text-align:center;padding:8px;font-weight:500;flex-direction:column;gap:3px;border-radius:var(--r-sm)}
-.rm-grid .cell:hover{background:var(--hover)}
-.rm-grid .cell.on{background:var(--accent-tint);color:var(--accent-deep)}
-.rm-grid .cell .num{position:absolute;top:6px;left:8px;font-family:var(--mono);font-size:10px;color:var(--ink-3);font-weight:600}
-.rm-grid .cell svg{width:18px;height:18px}
-.rm-grid.layout-2x3{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr)}
-.rm-grid.layout-1x3{grid-template-columns:repeat(3,1fr);grid-template-rows:1fr;aspect-ratio:25/8}
-.rm-grid.layout-2x2{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);max-width:360px}
-.rm-grid.layout-1x2{grid-template-columns:repeat(2,1fr);grid-template-rows:1fr;max-width:360px;aspect-ratio:25/8}
+/* ============================================================
+   Foot bar (Lea bottom bar style)
+   ============================================================ */
+.foot{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--rule);padding:10px 24px;display:flex;align-items:center;gap:14px;z-index:40;box-shadow:0 -2px 8px rgba(0,0,0,.04)}
+.foot .mascot{position:absolute;left:18px;bottom:6px;width:64px;height:64px}
+.foot .quota-mini{margin-left:88px;font-size:12.5px;color:var(--ink-2);font-weight:500}
+.foot .quota-mini em{font-style:normal;font-family:var(--mono);font-weight:700;color:var(--line-deep)}
+.foot .sp{flex:1}
+.foot .help{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;background:var(--pri);color:#fff;border-radius:99px;font-size:12.5px;font-weight:700;letter-spacing:.02em;box-shadow:0 3px 10px rgba(249,115,22,.3)}
+.foot .help:hover{background:var(--pri-deep)}
+.foot .help svg{width:14px;height:14px}
+.foot .powered{font-family:var(--mono);font-size:10px;color:var(--ink-3);font-weight:600;letter-spacing:.04em}
+.foot .powered em{font-style:normal;color:var(--pri)}
+@media(max-width:900px){.foot{padding:10px 14px;gap:8px}.foot .mascot{display:none}.foot .quota-mini{margin-left:0;font-size:11.5px}.foot .powered{display:none}.foot .help{padding:8px 14px;font-size:11.5px}}
 
-/* ===== Foot ===== */
-.foot{padding:24px 0;font-size:11px;color:var(--ink-4);text-align:center;font-family:var(--mono)}
+/* Spacer for fixed foot */
+.foot-spacer{height:80px}
 
-/* ===== utility ===== */
+/* ============================================================
+   Mascot character (Lea-equivalent cat)
+   ============================================================ */
+/* Will be inlined SVG */
+
+/* Utility */
 .muted{color:var(--ink-3)}
 .tiny{font-size:11px}
-.mb{margin-bottom:12px}
-.mt{margin-top:12px}
-.hide-sm{display:initial}
+.center{text-align:center}
+.mb{margin-bottom:14px}
+.mt{margin-top:14px}
+.hstack{display:flex;align-items:center;gap:8px}
 .flex-1{flex:1}
-@media(max-width:600px){.hide-sm{display:none}}
-.divider{height:1px;background:var(--rule);margin:14px 0}
-
-/* =====================================================================
-   Premium SaaS detail layer (v0.3)
-   ===================================================================== */
-
-/* ----- Avatar with status pulse ----- */
-.av-status{position:relative}
-.av-status::after{content:'';position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;background:var(--pos);border:2px solid var(--surface);box-shadow:0 0 0 0 oklch(0.55 0.15 152 / 0.5);animation:pulse-dot 2.6s ease-out infinite}
-@keyframes pulse-dot{0%{box-shadow:0 0 0 0 oklch(0.55 0.15 152 / 0.6)}80%,100%{box-shadow:0 0 0 8px oklch(0.55 0.15 152 / 0)}}
-.av-status.live::after{background:var(--accent);animation-name:pulse-dot-accent}
-@keyframes pulse-dot-accent{0%{box-shadow:0 0 0 0 oklch(0.45 0.19 18 / 0.6)}80%,100%{box-shadow:0 0 0 8px oklch(0.45 0.19 18 / 0)}}
-
-/* ----- Custom checkbox ----- */
-.chk{position:relative;display:inline-grid;place-items:center;width:18px;height:18px;border-radius:5px;border:1px solid var(--rule);background:var(--surface);cursor:pointer;transition:border-color .15s, background .15s}
-.chk input{position:absolute;inset:0;opacity:0;cursor:pointer;margin:0}
-.chk svg{width:11px;height:11px;color:#fff;opacity:0;transform:scale(.6);transition:opacity .15s, transform .15s cubic-bezier(.2,.8,.2,1)}
-.chk:hover{border-color:var(--ink-4)}
-.chk.on{background:var(--accent);border-color:var(--accent)}
-.chk.on svg{opacity:1;transform:scale(1)}
-.chk.partial{background:var(--accent);border-color:var(--accent)}
-.chk.partial::before{content:'';position:absolute;width:9px;height:2px;background:#fff;border-radius:1px}
-
-/* ----- Custom toggle ----- */
-.toggle{position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0;cursor:pointer}
-.toggle input{position:absolute;inset:0;opacity:0;cursor:pointer;margin:0}
-.toggle .track{position:absolute;inset:0;background:var(--rule);border-radius:99px;transition:background .25s}
-.toggle .thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px oklch(0.18 0.012 250 / 0.18), 0 0 0 1px oklch(0.18 0.012 250 / 0.06);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
-.toggle.on .track{background:var(--accent)}
-.toggle.on .thumb{transform:translateX(16px)}
-
-/* ----- Custom select wrapper (overrides browser default) ----- */
-.field select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a5a66' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");background-repeat:no-repeat;background-position:right 11px center;padding-right:32px}
-
-/* ----- Field with floating help icon ----- */
-.field label .hlp{display:inline-grid;place-items:center;width:14px;height:14px;border-radius:50%;background:var(--rule-soft);color:var(--ink-3);font-size:9px;font-weight:600;font-family:var(--mono);margin-left:5px;cursor:help;border:1px solid var(--rule)}
-.field label .hlp:hover{background:var(--accent-tint);color:var(--accent-deep);border-color:var(--accent-line)}
-
-/* ----- kbd shortcut hint ----- */
-.kbd{font-family:var(--mono);font-size:10px;color:var(--ink-3);background:var(--bg);border:1px solid var(--rule);padding:0 5px;border-radius:3px;font-weight:600;line-height:1.6;box-shadow:0 1px 0 var(--rule)}
-
-/* ----- Row hover quick actions (3-dot menu) ----- */
-.tbl tbody td{position:relative}
-.tbl .qa{position:absolute;right:14px;top:50%;transform:translateY(-50%) translateX(8px);opacity:0;transition:opacity .15s, transform .15s;display:flex;gap:3px;background:linear-gradient(90deg, transparent, var(--surface) 30%);padding:6px 0 6px 30px;pointer-events:none}
-.tbl tbody tr:hover .qa{opacity:1;transform:translateY(-50%);pointer-events:auto}
-.tbl .qa-btn{width:26px;height:26px;border-radius:5px;display:grid;place-items:center;color:var(--ink-2);background:var(--surface);border:1px solid var(--rule);transition:background .12s, border-color .12s}
-.tbl .qa-btn:hover{background:var(--accent-tint);border-color:var(--accent-line);color:var(--accent-deep)}
-.tbl .qa-btn svg{width:13px;height:13px}
-
-/* ----- Bulk action bar (slides up when rows selected) ----- */
-.bulk-bar{position:fixed;left:50%;bottom:24px;transform:translate(-50%, 80px);z-index:60;background:oklch(0.16 0.012 250 / 0.96);backdrop-filter:blur(12px);color:#fff;padding:10px 14px 10px 18px;border-radius:99px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px -8px oklch(0 0 0 / 0.45), 0 4px 12px -2px oklch(0 0 0 / 0.25), 0 0 0 1px oklch(1 0 0 / 0.08), inset 0 1px 0 oklch(1 0 0 / 0.1);transition:transform .3s cubic-bezier(.2,.8,.2,1), opacity .25s;opacity:0;pointer-events:none}
-.bulk-bar.on{transform:translate(-50%, 0);opacity:1;pointer-events:auto}
-.bulk-bar .cnt{font-family:var(--mono);font-weight:600;font-size:13px;display:flex;align-items:center;gap:7px}
-.bulk-bar .cnt .num{display:inline-grid;place-items:center;min-width:22px;height:22px;border-radius:11px;background:var(--accent);color:#fff;font-size:11.5px;padding:0 7px}
-.bulk-bar .sep{width:1px;height:20px;background:oklch(1 0 0 / 0.12)}
-.bulk-bar .b-act{padding:6px 12px;background:oklch(1 0 0 / 0.06);color:#fff;border-radius:6px;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:background .15s}
-.bulk-bar .b-act:hover{background:oklch(1 0 0 / 0.12)}
-.bulk-bar .b-act svg{width:13px;height:13px}
-.bulk-bar .b-act.danger{color:oklch(0.78 0.10 25)}
-.bulk-bar .b-act.danger:hover{background:oklch(0.45 0.19 18 / 0.2);color:oklch(0.92 0.06 18)}
-.bulk-bar .b-clear{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:var(--ink-4);background:transparent;border:0;cursor:pointer}
-.bulk-bar .b-clear:hover{color:#fff;background:oklch(1 0 0 / 0.08)}
-.bulk-bar .b-clear svg{width:14px;height:14px}
-
-/* ----- Sticky save bar (form footer) ----- */
-.save-bar{position:sticky;bottom:0;background:oklch(1 0 0 / 0.96);backdrop-filter:blur(10px);border:1px solid var(--rule);border-radius:var(--r-lg);padding:11px 18px;display:flex;align-items:center;gap:12px;margin-top:18px;box-shadow:0 -1px 0 var(--rule), 0 16px 40px -10px oklch(0.18 0.012 250 / 0.15), inset 0 1px 0 #fff}
-.save-bar .indicator{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);font-weight:500}
-.save-bar .indicator .dot{width:8px;height:8px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 0 oklch(0.62 0.15 70 / 0.4);animation:pulse-dot 2s ease-out infinite}
-.save-bar .indicator.saved .dot{background:var(--pos);animation:none}
-.save-bar .last{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-left:auto;display:flex;align-items:center;gap:5px}
-.save-bar .last svg{width:11px;height:11px}
-
-/* ----- Activity timeline widget ----- */
-.act-list{padding:6px 0}
-.act-item{display:flex;gap:12px;padding:10px 18px;align-items:start;position:relative}
-.act-item:not(:last-child)::before{content:'';position:absolute;left:30px;top:34px;bottom:-6px;width:1px;background:var(--rule)}
-.act-item .ic{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;background:var(--accent-tint);color:var(--accent-deep);z-index:1;border:2px solid var(--surface)}
-.act-item.pos .ic{background:var(--pos-tint);color:var(--pos)}
-.act-item.warn .ic{background:var(--warn-tint);color:var(--warn)}
-.act-item.info .ic{background:var(--info-tint);color:var(--info)}
-.act-item .ic svg{width:14px;height:14px}
-.act-item .body{flex:1;min-width:0;padding-top:5px}
-.act-item .h{font-size:13px;color:var(--ink);font-weight:500;line-height:1.4}
-.act-item .h b{color:var(--ink);font-weight:600}
-.act-item .h .accent{color:var(--accent-deep);font-weight:600}
-.act-item .m{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:3px}
-
-/* ----- Command palette overlay ----- */
-.cmdk-back{position:fixed;inset:0;background:oklch(0.16 0.012 250 / 0.5);z-index:90;backdrop-filter:blur(8px);display:none;align-items:flex-start;justify-content:center;padding-top:120px;animation:fadeIn .15s ease}
-.cmdk-back.on{display:flex}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.cmdk{width:min(560px, 90vw);background:var(--surface);border-radius:var(--r-lg);box-shadow:0 30px 70px -10px oklch(0 0 0 / 0.35), 0 0 0 1px oklch(0.18 0.012 250 / 0.08);overflow:hidden;animation:cmdk-in .22s cubic-bezier(.2,.8,.2,1)}
-@keyframes cmdk-in{from{transform:translateY(-8px) scale(.98);opacity:0}to{transform:none;opacity:1}}
-.cmdk-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--rule)}
-.cmdk-h svg{width:16px;height:16px;color:var(--ink-3)}
-.cmdk-h input{flex:1;border:0;outline:0;background:transparent;font-size:14.5px;color:var(--ink);font-weight:500}
-.cmdk-h input::placeholder{color:var(--ink-4)}
-.cmdk-h .esc{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);background:var(--bg);border:1px solid var(--rule);padding:1px 7px;border-radius:4px;font-weight:600}
-.cmdk-list{max-height:380px;overflow-y:auto;padding:6px}
-.cmdk-grp{padding:6px 12px 2px;font-family:var(--mono);font-size:10px;color:var(--ink-3);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
-.cmdk-item{display:flex;align-items:center;gap:11px;padding:8px 12px;border-radius:var(--r-sm);font-size:13px;color:var(--ink-2);cursor:pointer;font-weight:500}
-.cmdk-item:hover, .cmdk-item.sel{background:var(--accent-tint);color:var(--accent-deep)}
-.cmdk-item svg{width:15px;height:15px;color:var(--ink-3);flex-shrink:0}
-.cmdk-item:hover svg, .cmdk-item.sel svg{color:var(--accent-deep)}
-.cmdk-item .lab{flex:1;min-width:0}
-.cmdk-item .lab .sub{font-size:11px;color:var(--ink-4);margin-top:1px}
-.cmdk-item .kbd{margin-left:auto;flex-shrink:0}
-
-/* ----- Toast container ----- */
-.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:100;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.toast{background:oklch(0.16 0.012 250 / 0.96);backdrop-filter:blur(10px);color:#fff;padding:11px 16px;border-radius:var(--r);display:flex;align-items:center;gap:11px;box-shadow:0 14px 40px -8px oklch(0 0 0 / 0.4), 0 0 0 1px oklch(1 0 0 / 0.08), inset 0 1px 0 oklch(1 0 0 / 0.1);min-width:240px;animation:toast-in .35s cubic-bezier(.2,.8,.2,1);font-size:13px;font-weight:500;pointer-events:auto}
-@keyframes toast-in{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
-.toast .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;background:var(--pos);color:#fff}
-.toast .ic svg{width:13px;height:13px}
-.toast .body{flex:1;min-width:0}
-.toast .undo{font-family:var(--mono);font-size:11px;color:var(--accent-line);font-weight:600;background:transparent;border:0;cursor:pointer}
-.toast .undo:hover{color:oklch(0.92 0.06 18)}
-
-/* ----- KPI tooltip on hover (canvas chart) ----- */
-.chart-tooltip{position:absolute;background:oklch(0.16 0.012 250 / 0.95);color:#fff;padding:8px 11px;border-radius:6px;font-size:12px;pointer-events:none;transform:translate(-50%, -110%);box-shadow:0 8px 24px -6px oklch(0 0 0 / 0.45);opacity:0;transition:opacity .12s;backdrop-filter:blur(8px)}
-.chart-tooltip.on{opacity:1}
-.chart-tooltip .d{font-family:var(--mono);font-size:10px;color:oklch(1 0 0 / 0.6);margin-bottom:2px}
-.chart-tooltip .v{font-family:var(--mono);font-weight:600;font-size:13px}
-.chart-tooltip .v .l{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
-
-/* ----- Skeleton loading shimmer ----- */
-.sk{background:linear-gradient(90deg, var(--bg) 0%, var(--hover) 50%, var(--bg) 100%);background-size:200% 100%;animation:shimmer 1.6s infinite;border-radius:var(--r-sm)}
-@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-
-/* ----- Quick filter saved presets ----- */
-.preset-row{display:flex;gap:6px;flex-wrap:wrap;padding:8px 18px;border-bottom:1px solid var(--rule);background:var(--bg)}
-.preset{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:var(--surface);border:1px solid var(--rule);border-radius:99px;font-size:11.5px;color:var(--ink-2);cursor:pointer;font-weight:500}
-.preset:hover{border-color:var(--ink-4);color:var(--ink)}
-.preset.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-.preset .ic{width:6px;height:6px;border-radius:50%}
-.preset .ic.warn{background:var(--warn)}
-.preset .ic.pos{background:var(--pos)}
-.preset .ic.neg{background:var(--neg)}
-.preset .ic.info{background:var(--info)}
-
-/* ----- Sticky table header (when scrolling) ----- */
-.tbl thead th{position:sticky;top:0;z-index:5}
-.scroll-x .tbl thead th{background:var(--bg);box-shadow:inset 0 -1px 0 var(--rule)}
-
-/* ----- Inline edit cell ----- */
-.tbl td.edit{position:relative}
-.tbl td.edit::after{content:'';position:absolute;right:6px;top:50%;transform:translateY(-50%);width:0;height:0;border:4px solid transparent;border-top-color:var(--ink-4);opacity:0;transition:opacity .12s}
-.tbl tr:hover td.edit::after{opacity:1}
-
-/* ----- Section "small caps" treatment for premium accents ----- */
-.smcaps{font-family:var(--sans);font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--ink-3);font-feature-settings:'smcp'}
-
-/* ----- Refined empty state ----- */
-.empty-pro{padding:60px 20px;text-align:center}
-.empty-pro .icn{display:inline-grid;place-items:center;width:54px;height:54px;border-radius:50%;background:var(--accent-tint);color:var(--accent-deep);margin-bottom:14px;border:1px solid var(--accent-line)}
-.empty-pro .icn svg{width:22px;height:22px}
-.empty-pro h4{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:4px;letter-spacing:-.005em}
-.empty-pro p{font-size:12.5px;color:var(--ink-3);max-width:36ch;margin:0 auto 18px}
-.empty-pro .cta{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:var(--ink);color:#fff;border-radius:var(--r-sm);font-size:12.5px;font-weight:600}
-.empty-pro .cta svg{width:13px;height:13px}
-
-/* ----- Sidebar pinned shortcuts ----- */
-.cmd-trigger{margin:auto 12px 12px;padding:9px 12px;background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-sm);display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-3);cursor:pointer;font-weight:500;transition:border-color .12s, background .12s}
-.cmd-trigger:hover{border-color:var(--ink-4);color:var(--ink);background:var(--hover)}
-.cmd-trigger svg{width:14px;height:14px}
-.cmd-trigger .kbd{margin-left:auto}
-
-/* =====================================================================
-   v0.4 — signature redesign (telemetry / editorial hero / custom viz)
-   ===================================================================== */
-
-/* ----- Telemetry strip (top, live ticker) ----- */
-.tele{display:flex;align-items:center;height:28px;background:oklch(0.14 0.018 245);color:oklch(0.85 0.012 245);font-family:var(--mono);font-size:11px;font-weight:500;border-bottom:1px solid oklch(1 0 0 / 0.06);overflow:hidden;position:sticky;top:0;z-index:30;letter-spacing:.01em}
-.tele .lab{padding:0 12px;background:linear-gradient(90deg, oklch(0.36 0.09 245), oklch(0.26 0.07 245));color:#fff;height:100%;display:flex;align-items:center;gap:6px;font-weight:600;font-size:10px;letter-spacing:.04em;position:relative}
-.tele .lab .pul{width:6px;height:6px;border-radius:50%;background:oklch(0.85 0.18 145);box-shadow:0 0 8px oklch(0.85 0.18 145 / 0.8);animation:pul-tele 1.8s ease-in-out infinite}
-@keyframes pul-tele{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.7)}}
-.tele .lab::after{content:'';position:absolute;right:-16px;top:0;bottom:0;width:16px;background:linear-gradient(135deg, oklch(0.26 0.07 245) 50%, transparent 50%)}
-.tele .feed{flex:1;display:flex;align-items:center;gap:22px;padding:0 22px 0 28px;overflow:hidden;mask-image:linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 80px), transparent 100%);-webkit-mask-image:linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 80px), transparent 100%)}
-.tele .it{display:flex;align-items:center;gap:8px;white-space:nowrap;color:oklch(0.85 0.012 245)}
-.tele .it .k{color:oklch(0.62 0.014 245);font-size:10px}
-.tele .it .v{color:#fff;font-weight:600}
-.tele .it .v em{font-style:normal;color:oklch(0.85 0.18 145)}
-.tele .it .v em.dn{color:oklch(0.74 0.16 25)}
-.tele .it .sep{width:1px;height:12px;background:oklch(1 0 0 / 0.08);margin:0 4px}
-.tele .right{padding:0 16px;color:oklch(0.62 0.014 245);font-size:10px;border-left:1px solid oklch(1 0 0 / 0.06);height:100%;display:flex;align-items:center;gap:7px}
-.tele .right .dot{width:5px;height:5px;border-radius:50%;background:oklch(0.85 0.18 145);animation:pul-tele 2.2s ease-in-out infinite}
-
-/* Reposition app sticky after telemetry */
-.app{padding-top:0}
-.app .side{height:calc(100vh - 28px);top:28px}
-.app .main .topbar{top:0}
-
-/* ----- Operations command center header (Bloomberg/Datadog style) ----- */
-.ops-header{margin-bottom:18px}
-.ops-route{display:inline-flex;align-items:center;gap:9px;padding:4px 9px;background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-sm);font-family:var(--mono);font-size:10.5px;font-weight:600;margin-bottom:14px;box-shadow:var(--shadow-sm)}
-.ops-route .rt-k{color:var(--ink-3);letter-spacing:.04em}
-.ops-route .rt-v{color:var(--ink)}
-.ops-bar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:30px;padding:18px 22px;background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
-.ops-bar::before{content:'';position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 50%, var(--pos) 100%)}
-.ops-date{display:flex;align-items:baseline;font-family:var(--mono);font-weight:700;font-size:42px;letter-spacing:-.04em;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums slashed-zero}
-.ops-date .dy{}
-.ops-date .sl{margin:0 6px;color:var(--ink-4);font-weight:400}
-.ops-date .dow{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-left:16px;font-weight:600;letter-spacing:.06em;align-self:center;padding:3px 8px;background:var(--bg);border-radius:3px;border:1px solid var(--rule)}
-.ops-status{display:grid;grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));gap:0;border-left:1px solid var(--rule);padding-left:30px;align-self:stretch;align-items:center}
-.ops-status .st{padding:0 16px;border-right:1px dashed var(--rule);min-width:0}
-.ops-status .st:last-child{border-right:0}
-.ops-status .st .k{font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--ink-3);letter-spacing:.06em;display:flex;align-items:center;gap:5px;margin-bottom:4px;text-transform:uppercase}
-.ops-status .st .k .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.ops-status .st .k .dot.pos{background:var(--pos);box-shadow:0 0 8px var(--pos);animation:pulse-dot 2s ease-out infinite}
-.ops-status .st .k .dot.warn{background:var(--warn)}
-.ops-status .st .v{font-family:var(--mono);font-weight:600;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums slashed-zero;letter-spacing:-.01em}
-.ops-actions{align-self:start}
-@media(max-width:1080px){.ops-bar{grid-template-columns:1fr;gap:18px}.ops-status{border-left:0;padding-left:0;border-top:1px solid var(--rule);padding-top:14px}}
-@media(max-width:780px){.ops-date{font-size:32px}}
-
-/* ----- Asymmetric dashboard grid ----- */
-.dash-asy{display:grid;grid-template-columns:minmax(0, 1.55fr) minmax(0, 1fr);gap:14px;margin-bottom:14px}
-@media(max-width:1080px){.dash-asy{grid-template-columns:1fr}}
-
-/* ----- Tabbed timeframe selector ----- */
-.tf-tabs{display:inline-flex;align-items:center;background:var(--bg);border:1px solid var(--rule);border-radius:var(--r-sm);padding:2px;position:relative;font-size:11.5px;font-weight:500}
-.tf-tabs .tf{padding:4px 11px;color:var(--ink-3);border-radius:4px;cursor:pointer;transition:color .15s;font-family:var(--mono);position:relative;z-index:2}
-.tf-tabs .tf.on{color:var(--ink)}
-.tf-tabs .marker{position:absolute;top:2px;bottom:2px;background:var(--surface);border-radius:4px;transition:left .35s cubic-bezier(.34,1.56,.64,1), width .35s cubic-bezier(.34,1.56,.64,1);box-shadow:0 1px 2px oklch(0.18 0.012 250 / 0.06), inset 0 0 0 1px var(--rule)}
-
-/* ----- KPI mosaic (replaces hero-metric template) ----- */
-.kpi-mos{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--rule);border-radius:var(--r-lg);overflow:hidden;background:var(--surface);box-shadow:var(--shadow-sm)}
-@media(max-width:760px){.kpi-mos{grid-template-columns:repeat(2,1fr)}}
-.kpi-mos .kp{padding:18px 20px;border-right:1px solid var(--rule);position:relative;overflow:hidden}
-.kpi-mos .kp:last-child{border-right:0}
-@media(max-width:760px){.kpi-mos .kp{border-right:0;border-bottom:1px solid var(--rule)}.kpi-mos .kp:nth-child(2),.kpi-mos .kp:last-child{border-right:0}.kpi-mos .kp:nth-child(odd){border-right:1px solid var(--rule)}}
-.kpi-mos .kp .k{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:5px}
-.kpi-mos .kp .k .live{width:6px;height:6px;border-radius:50%;background:var(--pos);box-shadow:0 0 8px oklch(0.55 0.15 152 / 0.5);animation:pulse-dot 2.4s ease-out infinite}
-.kpi-mos .kp .v{font-family:var(--serif);font-weight:400;font-size:36px;line-height:1.05;color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums;font-feature-settings:'ss01'}
-.kpi-mos .kp .v .unit{font-family:var(--sans);font-size:13px;color:var(--ink-3);font-weight:500;margin-left:5px}
-.kpi-mos .kp .v .em{color:var(--accent);font-style:italic}
-.kpi-mos .kp .meta{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:11px}
-.kpi-mos .kp .meta .delta{font-family:var(--mono);font-weight:600;color:var(--pos);display:inline-flex;align-items:center;gap:3px}
-.kpi-mos .kp .meta .delta.dn{color:var(--neg)}
-.kpi-mos .kp .meta .delta svg{width:9px;height:9px}
-.kpi-mos .kp .meta .vs{color:var(--ink-3);font-size:10.5px}
-.kpi-mos .kp .spark{position:absolute;bottom:0;left:0;right:0;height:34px;opacity:.92}
-
-/* ----- Custom area chart ----- */
-.ch-wrap{position:relative;padding:14px 20px 18px}
-.ch-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
-.ch-head .legend{display:flex;gap:14px;font-size:11.5px;color:var(--ink-2)}
-.ch-head .legend .it{display:inline-flex;align-items:center;gap:6px}
-.ch-head .legend .it::before{content:'';width:9px;height:9px;border-radius:2px;background:currentColor}
-.ch-head .legend .rev{color:var(--accent)}
-.ch-head .legend .ord{color:var(--ink)}
-.ch-svg{width:100%;height:240px;display:block}
-.ch-svg .area{fill:url(#chArea);opacity:.45}
-.ch-svg .line{fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.ch-svg .bars rect{fill:oklch(0.18 0.012 250 / 0.08)}
-.ch-svg .axis text{font-family:var(--mono);font-size:10px;fill:var(--ink-3)}
-.ch-svg .grid line{stroke:var(--rule);stroke-width:.6}
-.ch-svg .dot{fill:var(--accent)}
-.ch-svg .dot-inner{fill:var(--surface)}
-.ch-svg .cross{stroke:var(--ink-2);stroke-width:1;stroke-dasharray:2 3;opacity:0;transition:opacity .15s}
-.ch-svg .cross.on{opacity:1}
-.ch-tip{position:absolute;background:oklch(0.16 0.012 250 / 0.96);color:#fff;padding:9px 12px;border-radius:6px;font-size:11.5px;pointer-events:none;transform:translate(-50%, -110%);box-shadow:0 8px 24px -6px oklch(0 0 0 / 0.45), inset 0 1px 0 oklch(1 0 0 / 0.08);backdrop-filter:blur(8px);opacity:0;transition:opacity .15s, transform .15s;white-space:nowrap;z-index:5;border:1px solid oklch(1 0 0 / 0.08);font-weight:500}
-.ch-tip.on{opacity:1}
-.ch-tip .d{font-family:var(--mono);font-size:10px;color:oklch(1 0 0 / 0.6);margin-bottom:2px}
-.ch-tip .row{display:flex;align-items:center;gap:8px;font-family:var(--mono);margin-top:1px}
-.ch-tip .row .lbl{color:oklch(1 0 0 / 0.6);font-size:10px}
-.ch-tip .row .val{font-weight:600;font-size:13px}
-.ch-tip .row .lbl::before{content:'';display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px;vertical-align:1px}
-.ch-tip .row.rev .lbl::before{background:var(--accent)}
-.ch-tip .row.ord .lbl::before{background:#fff}
-
-/* ----- Live activity ticker (replaces task list) ----- */
-.activity{padding:0}
-.activity-h{display:flex;align-items:center;gap:8px;padding:14px 20px;border-bottom:1px solid var(--rule)}
-.activity-h h3{font-size:14px;font-weight:600;margin:0}
-.activity-h .live{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10.5px;color:var(--pos);font-weight:600}
-.activity-h .live .dot{width:6px;height:6px;border-radius:50%;background:var(--pos);box-shadow:0 0 0 0 oklch(0.55 0.15 152 / 0.5);animation:pulse-dot 1.8s ease-out infinite}
-.activity-list{padding:4px 0;max-height:340px;overflow-y:auto}
-.activity-item{display:flex;gap:12px;padding:11px 20px;position:relative;align-items:start}
-.activity-item:not(:last-child)::after{content:'';position:absolute;left:32px;top:38px;bottom:-6px;width:1px;background:var(--rule)}
-.activity-item .ic{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;background:var(--accent-tint);color:var(--accent-deep);font-family:var(--mono);font-size:10px;font-weight:700;border:2px solid var(--surface);z-index:1}
-.activity-item.pos .ic{background:var(--pos-tint);color:var(--pos)}
-.activity-item.warn .ic{background:var(--warn-tint);color:var(--warn)}
-.activity-item.info .ic{background:var(--info-tint);color:var(--info)}
-.activity-item .body{flex:1;min-width:0;font-size:12.5px;color:var(--ink);line-height:1.5;padding-top:2px}
-.activity-item .body b{color:var(--ink);font-weight:600}
-.activity-item .body .accent{color:var(--accent-deep);font-weight:600}
-.activity-item .time{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);white-space:nowrap;padding-top:5px}
-
-/* ----- Inline data viz blocks (below chart row) ----- */
-.dvblock{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}
-@media(max-width:980px){.dvblock{grid-template-columns:1fr}}
-.dvc{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:18px 20px;box-shadow:var(--shadow-sm)}
-.dvc-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.dvc-h h4{font-size:13px;font-weight:600;color:var(--ink);margin:0}
-.dvc-h .see{font-family:var(--mono);font-size:10.5px;color:var(--accent);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:3px;text-decoration:none}
-.dvc-h .see:hover{color:var(--accent-deep)}
-.dvc-h .see svg{width:11px;height:11px}
-
-/* ranking list */
-.rank{padding:0;margin:0;list-style:none}
-.rank li{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:12.5px;border-bottom:1px solid var(--rule-soft)}
-.rank li:last-child{border-bottom:0}
-.rank li .rk{width:18px;font-family:var(--mono);color:var(--ink-3);font-weight:600;font-size:10.5px}
-.rank li.top .rk{color:var(--accent);font-weight:700}
-.rank li .nm{flex:1;color:var(--ink);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rank li .val{font-family:var(--mono);font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
-.rank li .bar{height:3px;background:var(--bg);border-radius:2px;margin-top:5px;width:100%;overflow:hidden}
-.rank li .bar i{display:block;height:100%;background:var(--accent);border-radius:2px}
-.rank.bars li{flex-direction:column;align-items:stretch;gap:0;padding:8px 0}
-.rank.bars li .row{display:flex;align-items:center;gap:10px}
-
-/* inventory alerts */
-.inv-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--rule-soft);font-size:12.5px}
-.inv-row:last-child{border-bottom:0}
-.inv-row img{width:28px;height:28px;border-radius:4px;object-fit:cover;background:var(--bg);border:1px solid var(--rule-soft)}
-.inv-row .nm{flex:1;color:var(--ink);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.inv-row .stk{font-family:var(--mono);font-weight:700}
-.inv-row .stk.crit{color:var(--neg)}
-.inv-row .stk.warn{color:var(--warn)}
-
-/* step distribution */
-.steps-mini .stp{display:flex;align-items:center;gap:11px;padding:7px 0;border-bottom:1px solid var(--rule-soft);font-size:12px}
-.steps-mini .stp:last-child{border-bottom:0}
-.steps-mini .stp .n{font-family:var(--mono);font-size:10px;color:var(--ink-3);width:32px}
-.steps-mini .stp .t{flex:1;color:var(--ink);font-weight:500}
-.steps-mini .stp .gauge{flex:1.4;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
-.steps-mini .stp .gauge i{display:block;height:100%;background:linear-gradient(90deg, var(--accent), var(--accent-deep));border-radius:3px;position:relative}
-.steps-mini .stp .gauge i::after{content:'';position:absolute;right:0;top:-2px;width:2px;height:10px;background:var(--accent)}
-.steps-mini .stp .v{font-family:var(--mono);font-weight:600;color:var(--ink);font-size:11px;width:50px;text-align:right}
-
-/* Focus ring (custom) — replaces browser default */
-:focus-visible{outline:none}
-button:focus-visible, a:focus-visible, .chip:focus-visible{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--accent);border-radius:var(--r-sm)}
-.field input:focus, .field select:focus, .field textarea:focus, .search input:focus, .search-inline input:focus{outline:none}
-
-/* Number rendering polish */
-.tbl .num, .kpi-mos .kp .v, .ch-svg text, .activity-item .time, .rank li .val, .inv-row .stk, .steps-mini .stp .v, .ch-tip .row .val, .ch-tip .d{font-variant-numeric:tabular-nums;font-feature-settings:'ss01','zero'}
-
-/* Page-load staggered reveal */
-@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.stg{opacity:0;animation:rise .55s cubic-bezier(.2,.8,.2,1) forwards}
-@media (prefers-reduced-motion: reduce){.stg{opacity:1;animation:none}}
 
 </style>
 </head>
 <body>
-<div class="tele">
-  <div class="lab"><span class="pul"></span>LIVE</div>
-  <div class="feed">
-    <span class="it"><span class="k">本日売上</span><span class="v">¥27,170 <em>+24.3%</em></span></span>
-    <span class="sep"></span>
-    <span class="it"><span class="k">注文</span><span class="v">2 件 <em>+1</em></span></span>
-    <span class="sep"></span>
-    <span class="it"><span class="k">未発送</span><span class="v">2 件 <em class="dn">要対応</em></span></span>
-    <span class="sep"></span>
-    <span class="it"><span class="k">友だち増</span><span class="v">+4 <em>14日</em></span></span>
-    <span class="sep"></span>
-    <span class="it"><span class="k">クーポン使用</span><span class="v">566</span></span>
-    <span class="sep"></span>
-    <span class="it"><span class="k">配信開封</span><span class="v">73.4%</span></span>
-    <span class="sep"></span>
-    <span class="it"><span class="k">在庫薄</span><span class="v">1 件</span></span>
+
+<!-- ============ Top Nav ============ -->
+<nav class="nav-top">
+  <div class="nav-inner">
+    <button class="hamb" id="hamb" aria-label="メニュー">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+
+    <a href="#/home" class="brand">
+      <div class="logo">SK</div>
+      <div class="meta">
+        <div class="name">Skel<em>·</em>EC</div>
+        <div class="sub">LINE COMMERCE</div>
+      </div>
+    </a>
+
+    <div class="nav-items" id="navItems"></div>
+
+    <div class="nav-right">
+      <button class="btn-pill pri-out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6l2 16h12l-2-10H6"/></svg><span>ショップを見る</span></button>
+      <button class="btn-pill line-out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg><span>LINEアカウント</span></button>
+      <div class="avt">司</div>
+    </div>
   </div>
-  <div class="right"><span class="dot"></span>同期 4分前</div>
-</div>
-<div class="app">
-  <div class="scrim" id="scrim"></div>
+</nav>
 
-  <aside class="side" id="side">
-    <div class="brand">
-      <div class="mark">S</div>
-      <div class="name">Skel<span>·EC</span></div>
-    </div>
-    <div class="shop-card">
-      <div class="av av-status live">D</div>
-      <div class="info">
-        <div class="n">Demo Shop</div>
-        <div class="s">PRO PLAN · 切替</div>
-      </div>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-    </div>
-    <nav class="sect" id="nav"></nav>
-    <div class="side-foot">
-      <span class="live"><span class="pulse"></span>API稼働中</span>
-      <span class="sp" style="flex:1"></span>
-      <span>v0.2</span>
-    </div>
-  </aside>
+<!-- ============ Main Area ============ -->
+<main class="page" id="page"></main>
 
-  <main class="main">
-    <div class="topbar">
-      <button class="ham" id="ham" aria-label="メニュー">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div class="crumbs" id="crumbs"></div>
-      <div class="search hide-sm">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input placeholder="注文番号 / お客様 / 商品 を検索">
-        <span class="kbd">⌘K</span>
-      </div>
-      <button class="iconbtn" aria-label="通知">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <span class="dot"></span>
-      </button>
-      <button class="btn-primary" id="newBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        <span id="newBtnLabel">商品を追加</span>
-      </button>
-    </div>
-    <div class="view" id="view"></div>
-    <div class="foot">© Skeleton Inc. · LINE EC Platform v0.2</div>
-  </main>
+<div class="foot-spacer"></div>
+
+<!-- ============ Foot Bar ============ -->
+<div class="foot">
+  <svg class="mascot" viewBox="0 0 100 100">
+    <!-- Cat mascot inline (Skel-EC's friendly character) -->
+    <defs><linearGradient id="catG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff7ed"/><stop offset="1" stop-color="#fed7aa"/></linearGradient></defs>
+    <ellipse cx="50" cy="80" rx="36" ry="16" fill="#FFEDD5" opacity=".7"/>
+    <path d="M22 32 L28 16 L40 28 Z" fill="url(#catG)" stroke="#EA580C" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M78 32 L72 16 L60 28 Z" fill="url(#catG)" stroke="#EA580C" stroke-width="2" stroke-linejoin="round"/>
+    <ellipse cx="50" cy="48" rx="32" ry="30" fill="url(#catG)" stroke="#EA580C" stroke-width="2.5"/>
+    <circle cx="38" cy="44" r="3" fill="#2C2C2C"/>
+    <circle cx="62" cy="44" r="3" fill="#2C2C2C"/>
+    <circle cx="38.5" cy="43" r="1" fill="#fff"/>
+    <circle cx="62.5" cy="43" r="1" fill="#fff"/>
+    <ellipse cx="32" cy="54" rx="6" ry="3" fill="#FDBA74" opacity=".6"/>
+    <ellipse cx="68" cy="54" rx="6" ry="3" fill="#FDBA74" opacity=".6"/>
+    <path d="M48 54 L52 54 L50 58 Z" fill="#F97316"/>
+    <path d="M44 62 Q50 66 56 62" fill="none" stroke="#2C2C2C" stroke-width="2" stroke-linecap="round"/>
+    <line x1="22" y1="50" x2="32" y2="50" stroke="#2C2C2C" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="22" y1="54" x2="32" y2="54" stroke="#2C2C2C" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="68" y1="50" x2="78" y2="50" stroke="#2C2C2C" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="68" y1="54" x2="78" y2="54" stroke="#2C2C2C" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>
+  <div class="quota-mini">LINE公式 残り <em>200</em> 通 / 200</div>
+  <div class="sp"></div>
+  <button class="help">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+    お問合せはこちらをクリック
+  </button>
+  <div class="powered">POWERED BY <em>SKELETON</em></div>
 </div>
 
+<!-- Modal -->
 <div class="modal" id="modal"><div class="modal-inner" id="modalInner"></div></div>
 
 <script>
-/* ====================================================================
-   Skeleton LINE EC — Admin SPA  v0.2 (Linear / Stripe-grade)
-   ==================================================================== */
+/* ================================================================
+   Skel·EC 管理画面 — Lea-style friendly SaaS
+   ================================================================ */
 
 const icons = {
-  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2 7-7 7 7 2 2"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg>',
-  orders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
-  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-  send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
-  pkg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
-  tag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
-  ticket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>',
-  grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
-  smartphone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
-  store: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 1.5-5h17L22 7"/><path d="M19 11V21a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11"/><path d="M2 7c0 2.2 1.8 4 4 4s4-1.8 4-4c0 2.2 1.8 4 4 4s4-1.8 4-4c0 2.2 1.8 4 4 4"/></svg>',
-  truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h11v13"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
-  yen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4 4 8 12 8-12"/><path d="M5 14h14"/><path d="M5 18h14"/><path d="M12 14v6"/></svg>',
-  doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>',
-  trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
-  trendDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>',
-  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-  arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
-  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
-  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
-  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12 5 10 12 3 19 10 21 12"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg>',
+  users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  box:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+  cart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1.5"/><circle cx="20" cy="21" r="1.5"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>',
+  send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9 22 2Z"/></svg>',
+  promo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>',
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  help:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  yen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 4 8 12 8-12"/><path d="M5 14h14"/><path d="M5 18h14"/><path d="M12 14v6"/></svg>',
+  line:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>',
+  trend:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+  alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  arr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+  paint:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>',
+  truck:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h11v13"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  staff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  card:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>'
 };
 
 const NAV = [
-  {sect:'運営', items:[
-    {key:'dashboard', ic:'home',   label:'ダッシュボード'},
-    {key:'orders',    ic:'orders', label:'注文', badge:'2'},
-    {key:'customers', ic:'users',  label:'顧客 (友だち)'},
-    {key:'messages',  ic:'send',   label:'メッセージ配信'}
-  ]},
-  {sect:'カタログ', items:[
-    {key:'products',  ic:'pkg',    label:'商品'},
-    {key:'categories',ic:'grid',   label:'カテゴリ'},
-    {key:'coupons',   ic:'ticket', label:'クーポン'}
-  ]},
-  {sect:'LINE OA', items:[
-    {key:'richmenu',  ic:'tag',    label:'リッチメニュー'},
-    {key:'liff',      ic:'smartphone', label:'LIFF 設定'}
-  ]},
-  {sect:'店舗設定', items:[
-    {key:'shop',      ic:'store',  label:'店舗情報'},
-    {key:'shipping',  ic:'truck',  label:'配送・送料'},
-    {key:'payment',   ic:'yen',    label:'決済'},
-    {key:'tokushou',  ic:'doc',    label:'特定商取引法'}
-  ]}
+  {key:'home', ic:'home', label:'ホーム'},
+  {key:'customers', ic:'users', label:'顧客管理'},
+  {key:'products', ic:'box', label:'商品管理'},
+  {key:'orders', ic:'cart', label:'注文状況', badge:'2'},
+  {key:'messages', ic:'send', label:'配信'},
+  {key:'promo', ic:'promo', label:'販売促進'},
+  {key:'settings', ic:'gear', label:'設定'},
+  {key:'support', ic:'help', label:'サポート', badge:'12', badgeKind:'line'}
 ];
 
 const TITLES = {
-  dashboard:['ダッシュボード','今日の数字'],
-  orders:['注文','注文一覧'],
-  customers:['顧客','友だち / 購入履歴'],
-  messages:['メッセージ配信','一斉 / ステップ / セグメント'],
-  products:['商品','商品マスタ'],
-  categories:['カテゴリ',''],
-  coupons:['クーポン',''],
-  richmenu:['リッチメニュー','LINE OA トーク下部'],
-  liff:['LIFF',''],
-  shop:['店舗情報',''],
-  shipping:['配送・送料',''],
-  payment:['決済',''],
-  tokushou:['特定商取引法','']
+  home:['ホーム', 'マイページ'],
+  customers:['顧客管理', '友だち / セグメント'],
+  products:['商品管理', '商品マスタ / カテゴリ'],
+  orders:['注文状況', '一覧 / 未発送 / 発送済'],
+  messages:['配信', '一斉 / ステップ / セグメント'],
+  promo:['販売促進', 'クーポン / リッチメニュー'],
+  settings:['設定', 'ショップカスタマイズ設定'],
+  support:['サポート', 'お問合せ / FAQ']
 };
 
 let products=[], orders=[], customers=[], categories=[], coupons=[], messages=[];
 
 const yen = n => '¥' + Number(n||0).toLocaleString('ja-JP');
-const dt  = s => { if(!s) return '-'; const d=new Date(s); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
-const day = s => { if(!s) return '-'; const d=new Date(s); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; };
+const dt  = s => { if(!s) return '-'; const d=new Date(s); return `${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+const day = s => { if(!s) return '-'; const d=new Date(s); return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`; };
 
 async function loadData(){
   const f = async p => fetch(p).then(r=>r.json()).catch(()=>[]);
@@ -823,16 +522,11 @@ async function loadData(){
 }
 
 function renderNav(active){
-  const el = document.getElementById('nav');
-  el.innerHTML = NAV.map(s=>`
-    <h6>${s.sect}</h6>
-    ${s.items.map(it=>`
-      <a href="#/${it.key}" data-key="${it.key}" class="${it.key===active?'active':''}">
-        ${icons[it.ic]}
-        <span>${it.label}</span>
-        ${it.badge?`<span class="badge">${it.badge}</span>`:''}
-      </a>
-    `).join('')}
+  document.getElementById('navItems').innerHTML = NAV.map(it=>`
+    <a href="#/${it.key}" data-key="${it.key}" class="${it.key===active?'on':''}">
+      <span class="ic">${icons[it.ic]}${it.badge?`<span class="badge ${it.badgeKind||''}">${it.badge}</span>`:''}</span>
+      <span>${it.label}</span>
+    </a>
   `).join('');
 }
 
@@ -845,522 +539,285 @@ document.getElementById('modal').addEventListener('click', e => { if(e.target.id
 
 function statusBadge(s){
   const m={
-    '公開':'ok','下書き':'draft','終了':'draft','有効':'ok','稼働中':'ok',
+    '公開':'ok','下書き':'draft','終了':'draft','有効':'ok','稼働中':'line',
     '送信済':'info','送信予約':'warn',
     '決済済':'ok','未決済':'warn','未発送':'warn','発送準備中':'warn',
-    '発送済':'ok','キャンセル':'neg','表示中':'ok','非表示':'draft'
+    '発送済':'ok','キャンセル':'neg'
   };
   return `<span class="bd ${m[s]||'draft'}">${s}</span>`;
 }
 
-function miniSparkSvg(data, color='var(--accent)'){
-  const w = 220, h = 34, max = Math.max(...data), min = Math.min(...data), r = max-min || 1;
-  const stepX = w/(data.length-1);
-  const pts = data.map((v,i)=>[i*stepX, h - 4 - ((v-min)/r)*(h-8)]);
-  const linePath = pts.map((p,i)=> `${i===0?'M':'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
-  const areaPath = `${linePath} L${w},${h} L0,${h} Z`;
-  const id = 'sp' + Math.random().toString(36).slice(2,8);
-  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <defs><linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0" stop-color="${color}" stop-opacity=".22"/><stop offset="1" stop-color="${color}" stop-opacity="0"/>
-    </linearGradient></defs>
-    <path d="${areaPath}" fill="url(#${id})"/>
-    <path d="${linePath}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
+function pageHead(icIc, title, sub){
+  return `<div class="page-h"><div class="ico">${icons[icIc]}</div><h1>${title}</h1>${sub?`<div class="sub">${sub}</div>`:''}</div>`;
 }
 
-function chartSvg(rev, ord){
-  const W = 800, H = 240, padL = 48, padR = 12, padT = 14, padB = 28;
-  const max = Math.max(...rev), maxO = Math.max(...ord);
-  const n = rev.length, gx = (W-padL-padR)/(n-1);
-  const yRev = v => H-padB - ((H-padT-padB) * v/max);
-  const yOrd = v => H-padB - ((H-padT-padB)*0.55) * v/maxO;
+/* ========== Mascot cat illustrations (3 variants for level cards) ========== */
+const catMascot = (variant) => {
+  if(variant === 1) return `<svg viewBox="0 0 80 80"><defs><linearGradient id="c1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff7ed"/><stop offset="1" stop-color="#fed7aa"/></linearGradient></defs><path d="M18 26 L24 12 L34 24 Z" fill="url(#c1)" stroke="#EA580C" stroke-width="1.8" stroke-linejoin="round"/><path d="M62 26 L56 12 L46 24 Z" fill="url(#c1)" stroke="#EA580C" stroke-width="1.8" stroke-linejoin="round"/><ellipse cx="40" cy="42" rx="26" ry="24" fill="url(#c1)" stroke="#EA580C" stroke-width="2"/><circle cx="30" cy="40" r="2.5" fill="#2C2C2C"/><circle cx="50" cy="40" r="2.5" fill="#2C2C2C"/><circle cx="30.5" cy="39" r=".8" fill="#fff"/><circle cx="50.5" cy="39" r=".8" fill="#fff"/><ellipse cx="25" cy="50" rx="4.5" ry="2" fill="#FDBA74" opacity=".6"/><ellipse cx="55" cy="50" rx="4.5" ry="2" fill="#FDBA74" opacity=".6"/><path d="M38 49 L42 49 L40 52 Z" fill="#F97316"/><path d="M35 56 Q40 60 45 56" fill="none" stroke="#2C2C2C" stroke-width="1.6" stroke-linecap="round"/><rect x="56" y="56" width="14" height="11" rx="2" fill="#fff" stroke="#2C2C2C" stroke-width="1.5"/><line x1="58" y1="60" x2="68" y2="60" stroke="#94A3B8" stroke-width="1"/><line x1="58" y1="63" x2="64" y2="63" stroke="#94A3B8" stroke-width="1"/></svg>`;
+  if(variant === 2) return `<svg viewBox="0 0 80 80"><defs><linearGradient id="c2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff7ed"/><stop offset="1" stop-color="#fed7aa"/></linearGradient></defs><rect x="20" y="42" width="40" height="28" rx="4" fill="#FED7AA" stroke="#EA580C" stroke-width="1.8"/><path d="M20 42 L40 30 L60 42" fill="#FB923C" stroke="#EA580C" stroke-width="1.8" stroke-linejoin="round"/><path d="M28 14 L32 6 L38 18 Z" fill="url(#c2)" stroke="#EA580C" stroke-width="1.6" stroke-linejoin="round"/><path d="M52 14 L48 6 L42 18 Z" fill="url(#c2)" stroke="#EA580C" stroke-width="1.6" stroke-linejoin="round"/><ellipse cx="40" cy="26" rx="14" ry="13" fill="url(#c2)" stroke="#EA580C" stroke-width="1.8"/><circle cx="34" cy="25" r="1.7" fill="#2C2C2C"/><circle cx="46" cy="25" r="1.7" fill="#2C2C2C"/><path d="M39 30 L41 30 L40 32 Z" fill="#F97316"/><path d="M37 34 Q40 36 43 34" fill="none" stroke="#2C2C2C" stroke-width="1.3" stroke-linecap="round"/><circle cx="40" cy="56" r="3" fill="#F97316"/><path d="M28 48 L32 52 M52 48 L48 52" stroke="#EA580C" stroke-width="1.4" stroke-linecap="round"/></svg>`;
+  return `<svg viewBox="0 0 80 80"><defs><linearGradient id="c3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff7ed"/><stop offset="1" stop-color="#fed7aa"/></linearGradient></defs><ellipse cx="40" cy="58" rx="32" ry="14" fill="#FED7AA" opacity=".7"/><path d="M18 30 L24 18 L34 28 Z" fill="url(#c3)" stroke="#EA580C" stroke-width="1.8" stroke-linejoin="round"/><path d="M62 30 L56 18 L46 28 Z" fill="url(#c3)" stroke="#EA580C" stroke-width="1.8" stroke-linejoin="round"/><ellipse cx="40" cy="44" rx="28" ry="22" fill="url(#c3)" stroke="#EA580C" stroke-width="2"/><circle cx="30" cy="42" r="2.5" fill="#2C2C2C"/><circle cx="50" cy="42" r="2.5" fill="#2C2C2C"/><circle cx="30.5" cy="41" r=".8" fill="#fff"/><circle cx="50.5" cy="41" r=".8" fill="#fff"/><path d="M38 50 L42 50 L40 53 Z" fill="#F97316"/><path d="M35 56 Q40 60 45 56" fill="none" stroke="#2C2C2C" stroke-width="1.6" stroke-linecap="round"/><path d="M68 50 Q76 48 74 56" fill="none" stroke="#EA580C" stroke-width="2" stroke-linecap="round"/></svg>`;
+};
 
-  const pts = rev.map((v,i)=>[padL+i*gx, yRev(v)]);
-  const linePath = pts.map((p,i)=> `${i===0?'M':'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
-  const areaPath = `${linePath} L${(padL+(n-1)*gx).toFixed(1)},${H-padB} L${padL},${H-padB} Z`;
-
-  let bars = '';
-  ord.forEach((v,i)=>{
-    const x = padL+i*gx, h = (H-padB) - yOrd(v);
-    bars += `<rect x="${(x-9).toFixed(1)}" y="${yOrd(v).toFixed(1)}" width="18" height="${h.toFixed(1)}" rx="2"/>`;
-  });
-
-  let grid = '';
-  for(let i=0;i<=4;i++){
-    const y = padT + (H-padT-padB)*(i/4);
-    grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}"/>`;
-  }
-
-  let yLabels = '';
-  for(let i=0;i<=4;i++){
-    const val = Math.round(max*(1-i/4)/1000);
-    const y = padT + (H-padT-padB)*(i/4);
-    yLabels += `<text x="${padL-8}" y="${(y+3.5).toFixed(1)}" text-anchor="end">¥${val}k</text>`;
-  }
-
-  let xLabels = '';
-  for(let i=0;i<n;i++){
-    if(i%2===0 || i===n-1){
-      const x = padL+i*gx;
-      const d = new Date(2026, 5, 3+i);
-      xLabels += `<text x="${x.toFixed(1)}" y="${H-8}" text-anchor="middle">${d.getMonth()+1}/${d.getDate()}</text>`;
-    }
-  }
-
-  let dots = '';
-  pts.forEach(p=>{
-    dots += `<circle class="dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.2"/><circle class="dot-inner" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="1.3"/>`;
-  });
-
-  // hover targets (invisible rects per column)
-  let hover = '';
-  for(let i=0;i<n;i++){
-    const x = padL + i*gx;
-    const left = i===0 ? padL : x - gx/2;
-    const right = i===n-1 ? W-padR : x + gx/2;
-    hover += `<rect class="hov" data-i="${i}" x="${left.toFixed(1)}" y="${padT}" width="${(right-left).toFixed(1)}" height="${H-padT-padB}" fill="transparent"/>`;
-  }
-
-  return `<svg class="ch-svg" id="chSvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-    <defs><linearGradient id="chArea" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0" stop-color="var(--accent)" stop-opacity=".28"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
-    </linearGradient></defs>
-    <g class="grid">${grid}</g>
-    <g class="bars">${bars}</g>
-    <path class="area" d="${areaPath}"/>
-    <path class="line" d="${linePath}"/>
-    <g>${dots}</g>
-    <g class="axis">${yLabels}${xLabels}</g>
-    <line class="cross" id="chCross" x1="0" y1="${padT}" x2="0" y2="${H-padB}"/>
-    <g id="chHover">${hover}</g>
-  </svg>`;
-}
-
-function setupChart(rev, ord){
-  const svg = document.getElementById('chSvg'); if(!svg) return;
-  const tip = document.getElementById('chTip');
-  const cross = document.getElementById('chCross');
-  const W = 800, padL = 48, padR = 12, padT = 14, padB = 28;
-  const n = rev.length, gx = (W-padL-padR)/(n-1);
-
-  svg.querySelectorAll('.hov').forEach(el => {
-    el.addEventListener('mouseenter', () => {
-      const i = +el.dataset.i;
-      const x = padL + i*gx;
-      cross.setAttribute('x1', x); cross.setAttribute('x2', x);
-      cross.classList.add('on');
-      const d = new Date(2026, 5, 3+i);
-      tip.querySelector('.d').textContent = `2026.06.${String(d.getDate()).padStart(2,'0')} ${['日','月','火','水','木','金','土'][d.getDay()]}`;
-      tip.querySelectorAll('.row .val')[0].textContent = '¥' + rev[i].toLocaleString('ja-JP');
-      tip.querySelectorAll('.row .val')[1].textContent = ord[i] + ' 件';
-      tip.classList.add('on');
-      const rect = svg.getBoundingClientRect();
-      const wrapRect = tip.parentElement.getBoundingClientRect();
-      const scale = rect.width / W;
-      tip.style.left = (x * scale + (rect.left - wrapRect.left)) + 'px';
-      tip.style.top = (60) + 'px';
-    });
-  });
-  svg.addEventListener('mouseleave', () => {
-    cross.classList.remove('on');
-    tip.classList.remove('on');
-  });
-}
-
-function setupTfTabs(){
-  const wrap = document.getElementById('tfTabs'); if(!wrap) return;
-  const marker = wrap.querySelector('.marker');
-  const tabs = wrap.querySelectorAll('.tf');
-  const update = el => {
-    tabs.forEach(t=>t.classList.remove('on'));
-    el.classList.add('on');
-    const r = el.getBoundingClientRect();
-    const wr = wrap.getBoundingClientRect();
-    marker.style.left = (r.left - wr.left) + 'px';
-    marker.style.width = r.width + 'px';
-  };
-  tabs.forEach(t => t.addEventListener('click', ()=>update(t)));
-  // initial position
-  requestAnimationFrame(()=>{ const on = wrap.querySelector('.tf.on'); if(on) update(on); });
-}
-
-function sparkline(data, w=80, h=24, color='var(--accent)'){
-  const max = Math.max(...data), min = Math.min(...data), r = max-min || 1;
-  const pts = data.map((v,i)=>{
-    const x = (i/(data.length-1))*w;
-    const y = h - ((v-min)/r)*h;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-}
-
+/* ================ Views ================ */
 const views = {
 
-  dashboard(){
-    const today = orders.filter(o=>o.ordered_at.startsWith('2026-06-16'));
-    const todaySales = today.filter(o=>o.fulfillment!=='キャンセル').reduce((s,o)=>s+o.total,0);
+  /* --------- ホーム / マイページ風 --------- */
+  home(){
+    const todaySales = orders.filter(o=>o.ordered_at.startsWith('2026-06-16') && o.fulfillment!=='キャンセル').reduce((s,o)=>s+o.total,0);
+    const total14 = orders.filter(o=>o.fulfillment!=='キャンセル').reduce((s,o)=>s+o.total,0);
     const unshipped = orders.filter(o=>o.fulfillment==='未発送'||o.fulfillment==='発送準備中').length;
-    const newFriends = customers.filter(c=>(Date.now()-new Date(c.first_followed).getTime())/86400000 < 14).length;
-    const total14 = 187460;
-    const revSeries = [12400,8200,15600,21000,9800,17200,13400,8900,24300,19800,11200,16800,22400,30360];
-    const ordSeries = [2,1,2,3,1,2,2,1,3,3,2,2,3,4];
+    const friendsLv = Math.min(10, Math.floor(customers.length / 2));
+    const salesLv = Math.min(4, Math.floor(total14 / 50000) + 1);
+    const consumeLv = Math.min(3, Math.floor((orders.filter(o=>o.fulfillment==='発送済').length / orders.length) * 4) + 1);
 
-    // build product ranking from orders
-    const prodRank = {};
-    orders.forEach(o => o.items.forEach(it => {
-      if(!prodRank[it.product_id]) prodRank[it.product_id] = {qty:0, rev:0, name:it.name};
-      prodRank[it.product_id].qty += it.qty;
-      prodRank[it.product_id].rev += it.price*it.qty;
-    }));
-    const ranked = Object.values(prodRank).sort((a,b)=>b.rev-a.rev).slice(0,4);
-    const maxRev = ranked[0]?.rev || 1;
+    document.getElementById('page').innerHTML = `
+      ${pageHead('home', 'マイページ')}
 
-    const lowStock = products.filter(p=>p.stock<=p.stock_alert && p.status==='公開').sort((a,b)=>a.stock-b.stock);
-
-    document.getElementById('view').innerHTML = `
-      <section class="ops-header stg">
-        <div class="ops-route">
-          <span class="rt-k">ROUTE</span>
-          <span class="rt-v">/ DASHBOARD / OVERVIEW</span>
-        </div>
-        <div class="ops-bar">
-          <div class="ops-date">
-            <span class="dy">2026</span><span class="sl">/</span><span class="dy">06</span><span class="sl">/</span><span class="dy">16</span>
-            <span class="dow">FRI</span>
-          </div>
-          <div class="ops-status">
-            <div class="st"><span class="dot pos"></span><span class="k">SYSTEM</span><span class="v">OK</span></div>
-            <div class="st"><span class="k">LAST_SYNC</span><span class="v">4m AGO</span></div>
-            <div class="st"><span class="k">INVENTORY</span><span class="v">${products.reduce((s,p)=>s+p.stock,0)}</span></div>
-            <div class="st"><span class="k">14D_GROSS</span><span class="v">¥${(total14).toLocaleString('ja-JP')}</span></div>
-            <div class="st"><span class="k">TOTAL_ORD</span><span class="v">${orders.length}</span></div>
-          </div>
-          <div class="ops-actions">
-            <div class="tf-tabs" id="tfTabs">
-              <span class="marker" style="left:2px;width:42px"></span>
-              <div class="tf on" data-tf="1d">1D</div>
-              <div class="tf" data-tf="7d">7D</div>
-              <div class="tf" data-tf="14d">14D</div>
-              <div class="tf" data-tf="30d">30D</div>
-              <div class="tf" data-tf="90d">90D</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div class="kpi-mos stg" style="animation-delay:.08s">
-        <div class="kp">
-          <div class="k"><span class="live"></span>本日売上</div>
-          <div class="v">¥27,170</div>
-          <div class="meta"><span class="delta">${icons.trend} +24.3%</span><span class="vs">vs 昨日</span></div>
-          ${miniSparkSvg(revSeries.slice(-7), 'var(--accent)')}
-        </div>
-        <div class="kp">
-          <div class="k">注文数</div>
-          <div class="v">${today.length}<span class="unit">件 / 本日</span></div>
-          <div class="meta"><span class="delta">${icons.trend} +1</span><span class="vs">vs 昨日</span></div>
-          ${miniSparkSvg(ordSeries.slice(-7), 'var(--ink)')}
-        </div>
-        <div class="kp">
-          <div class="k">未発送</div>
-          <div class="v">${unshipped}<span class="unit">件</span></div>
-          <div class="meta"><span class="delta dn">${icons.alert} 要対応</span><span class="vs">本日中</span></div>
-          ${miniSparkSvg([1,1,2,1,2,2,3], 'var(--warn)')}
-        </div>
-        <div class="kp">
-          <div class="k">新規友だち</div>
-          <div class="v">${newFriends}<span class="unit">人 / 14日</span></div>
-          <div class="meta"><span class="delta">${icons.trend} +12%</span><span class="vs">vs 前週</span></div>
-          ${miniSparkSvg([1,1,2,3,3,4,4], 'var(--pos)')}
-        </div>
+      <div class="section-title">
+        <h3>ショップレベル</h3>
+        <div class="meta">↑ 友だち数レベル: ${friendsLv}</div>
       </div>
 
-      <div class="dash-asy stg" style="animation-delay:.16s">
-        <div class="sec">
-          <div class="sec-h"><h3>売上 × 注文 推移</h3><span class="sp"></span><span class="meta">直近14日 · 日次集計</span></div>
-          <div class="ch-wrap">
-            <div class="ch-head">
-              <div class="legend"><span class="it rev">売上 (¥)</span><span class="it ord">注文件数</span></div>
-            </div>
-            ${chartSvg(revSeries, ordSeries)}
-            <div class="ch-tip" id="chTip">
-              <div class="d">—</div>
-              <div class="row rev"><span class="lbl">売上</span><span class="val">—</span></div>
-              <div class="row ord"><span class="lbl">注文</span><span class="val">—</span></div>
-            </div>
+      <div class="lvl-cards">
+        <div class="lvl">
+          <div class="mascot">${catMascot(1)}</div>
+          <div class="body">
+            <div class="title"><h4>ユーザーログイン</h4><span class="lvln">Lv.1</span></div>
+            <div class="hint">☆ 全部で 5段階</div>
+            <div class="val-row"><span class="val">3</span><span class="of">/ 30 日</span></div>
+            <div class="bar"><i style="width:10%"></i></div>
+            <div class="cap">次のレベルまで、あと： <b>0日連続ログイン！</b></div>
           </div>
         </div>
-        <div class="sec activity">
-          <div class="activity-h">
-            <h3>アクティビティ</h3>
-            <span class="sp" style="flex:1"></span>
-            <span class="live"><span class="dot"></span>LIVE</span>
+
+        <div class="lvl">
+          <div class="mascot">${catMascot(2)}</div>
+          <div class="body">
+            <div class="title"><h4>ショップ売り上げ</h4><span class="lvln">Lv.${salesLv}</span></div>
+            <div class="hint">☆ 全部で 4段階</div>
+            <div class="val-row"><span class="val">${yen(total14)}</span><span class="of">/ ¥100,000</span></div>
+            <div class="bar"><i style="width:${Math.min(100, total14/1000)}%"></i></div>
+            <div class="cap">次のレベルまで、あと： <b>${yen(Math.max(0,100000-total14))} 達成！</b></div>
           </div>
-          <div class="activity-list">
-            <div class="activity-item pos"><div class="ic">¥</div><div class="body"><b>佐藤 美月</b> 様の注文 <span class="accent">#20260616-0007</span> 決済完了 (¥9,350)</div><div class="time">09:42</div></div>
-            <div class="activity-item"><div class="ic">+</div><div class="body">新しい友だち追加 — <b>森 由香</b> 様 (LINE経由)</div><div class="time">08:18</div></div>
-            <div class="activity-item pos"><div class="ic">¥</div><div class="body"><b>田中 沙織</b> 様 スターターセット購入 (¥17,820)</div><div class="time">08:15</div></div>
-            <div class="activity-item warn"><div class="ic">!</div><div class="body">在庫アラート — <b>エラスチン&コラーゲン</b> 残 <span class="accent">12</span></div><div class="time">07:30</div></div>
-            <div class="activity-item info"><div class="ic">✎</div><div class="body">配信「ステップ3: 初回10%OFF」 <b>14件</b> に送信</div><div class="time">07:00</div></div>
-            <div class="activity-item"><div class="ic">↻</div><div class="body">商品マスタを同期しました (5件)</div><div class="time">06:45</div></div>
-            <div class="activity-item pos"><div class="ic">¥</div><div class="body"><b>山本 真央</b> 様 3ヶ月分購入 (¥43,230)</div><div class="time">昨夜</div></div>
+        </div>
+
+        <div class="lvl">
+          <div class="mascot">${catMascot(3)}</div>
+          <div class="body">
+            <div class="title"><h4>注文の消化率</h4><span class="lvln">Lv.${consumeLv}</span></div>
+            <div class="hint">☆ 全部で 3段階</div>
+            <div class="val-row"><span class="val">${Math.round(orders.filter(o=>o.fulfillment==='発送済').length/orders.length*100)}</span><span class="of">/ 100 %</span></div>
+            <div class="bar"><i style="width:${Math.round(orders.filter(o=>o.fulfillment==='発送済').length/orders.length*100)}%"></i></div>
+            <div class="cap">全ての注文を処理しました！ <b>お疲れ様です！</b></div>
           </div>
         </div>
       </div>
 
-      <div class="dvblock stg" style="animation-delay:.24s">
-        <div class="dvc">
-          <div class="dvc-h"><h4>売上ランキング</h4><a href="#/products" class="see">商品を見る ${icons.arrow}</a></div>
-          <ul class="rank bars">
-            ${ranked.map((r,i)=>`
-              <li class="${i===0?'top':''}">
-                <div class="row"><span class="rk">${String(i+1).padStart(2,'0')}</span><span class="nm">${r.name}</span><span class="val">${yen(r.rev)}</span></div>
-                <div class="bar"><i style="width:${Math.round(r.rev/maxRev*100)}%"></i></div>
-              </li>
-            `).join('')}
-          </ul>
+      <div class="quota">
+        <div class="quota-h">
+          <div class="ico">${icons.line}</div>
+          <h3>6月の送信可能数</h3>
+          <div class="nums"><em>200</em> 通 / 200</div>
         </div>
+        <div class="quota-bar"><i style="width:100%"></i></div>
+      </div>
 
-        <div class="dvc">
-          <div class="dvc-h"><h4>在庫アラート</h4><a href="#/products" class="see">補充 ${icons.arrow}</a></div>
-          ${lowStock.length ? lowStock.slice(0,5).map(p=>`
-            <div class="inv-row">
-              <img src="${p.thumbnail}" alt="">
-              <span class="nm">${p.name}</span>
-              <span class="stk ${p.stock===0?'crit':'warn'}">${p.stock}</span>
-            </div>
-          `).join('') : '<div style="padding:18px 0;text-align:center;color:var(--ink-3);font-size:12px">在庫薄なし</div>'}
+      <div class="info-tbl">
+        <div class="info-tbl-h">顧客情報</div>
+        <div class="info-row">
+          <div class="k">会社名</div>
+          <div class="v"><span>スケルトン株式会社</span><button class="edit">${icons.edit}</button></div>
+          <div></div>
         </div>
-
-        <div class="dvc">
-          <div class="dvc-h"><h4>配信ステップ 開封率</h4><a href="#/messages" class="see">配信を見る ${icons.arrow}</a></div>
-          <div class="steps-mini">
-            <div class="stp"><span class="n">+0d</span><span class="t">ステップ1</span><div class="gauge"><i style="width:92%"></i></div><span class="v">92.2%</span></div>
-            <div class="stp"><span class="n">+3d</span><span class="t">ステップ2</span><div class="gauge"><i style="width:76%"></i></div><span class="v">76.0%</span></div>
-            <div class="stp"><span class="n">+7d</span><span class="t">ステップ3</span><div class="gauge"><i style="width:75%"></i></div><span class="v">75.0%</span></div>
-            <div class="stp"><span class="n">7d-</span><span class="t">セグメント</span><div class="gauge"><i style="width:94%"></i></div><span class="v">94.7%</span></div>
-          </div>
+        <div class="info-row">
+          <div class="k">メールアドレス</div>
+          <div class="v"><span>t3.5ty6@gmail.com</span><button class="edit">${icons.edit}</button></div>
+          <div></div>
         </div>
       </div>
 
-      <div class="sec stg" style="animation-delay:.32s">
-        <div class="sec-h">
-          <h3>直近の注文</h3>
-          <span class="sp"></span>
-          <a href="#/orders" class="btn sm">すべて見る ${icons.arrow}</a>
+      <div class="info-tbl">
+        <div class="info-tbl-h">契約情報</div>
+        <div class="info-row">
+          <div class="k">契約開始日</div>
+          <div class="v">2025年12月25日 14時44分30秒</div>
+          <div></div>
         </div>
-        <div class="sec-body flush scroll-x">
-          <table class="tbl">
-            <thead><tr><th>注文番号</th><th>日時</th><th>お客様</th><th>商品</th><th class="num">合計</th><th>決済</th><th>発送</th></tr></thead>
-            <tbody>${orders.slice(0,6).map(o=>{
-              const c = customers.find(x=>x.id===o.customer_id);
-              return `<tr onclick="openOrderModal('${o.id}')">
-                <td class="id">${o.id}</td>
-                <td class="nowrap">${dt(o.ordered_at)}</td>
-                <td><div class="cust-mini"><div class="av">${(c?.name||o.customer_name).slice(0,1)}</div><div><div class="n">${o.customer_name}</div><div class="s">${o.line_id}</div></div></div></td>
-                <td>${o.items[0].name}${o.items.length>1?` <span class="muted">+${o.items.length-1}</span>`:''}</td>
-                <td class="num strong">${yen(o.total)}</td>
-                <td>${statusBadge(o.payment_status)}</td>
-                <td>${statusBadge(o.fulfillment)}</td>
-              </tr>`;
-            }).join('')}</tbody>
-          </table>
+        <div class="info-row">
+          <div class="k">無料トライアル終了日</div>
+          <div class="v">2026年01月08日 14時44分30秒</div>
+          <div></div>
+        </div>
+        <div class="info-row">
+          <div class="k">契約の更新日時</div>
+          <div class="v">2026年07月08日 14時44分30秒</div>
+          <div><button class="btn-plan">${icons.card}契約情報を確認・変更する</button></div>
+        </div>
+      </div>
+
+      <div class="info-tbl">
+        <div class="info-tbl-h">通知設定</div>
+        <div class="info-row">
+          <div class="k">最新情報</div>
+          <div class="v">通知する</div>
+          <div></div>
+        </div>
+        <div class="info-row">
+          <div class="k">アップデート情報</div>
+          <div class="v">通知する</div>
+          <div><button class="btn pri sm">${icons.edit}編集</button></div>
         </div>
       </div>
     `;
-
-    setupChart(revSeries, ordSeries);
-    setupTfTabs();
   },
 
+  /* --------- 設定 (Lea style 6-card grid) --------- */
+  settings(){
+    document.getElementById('page').innerHTML = `
+      ${pageHead('gear', '設定')}
+
+      <div class="section-title">
+        <h3>ショップカスタマイズ設定</h3>
+      </div>
+
+      <div class="set-grid">
+        <div class="card">
+          <div class="card-h open"><div class="ic">${icons.line}</div><h2>LINE設定</h2><div class="chev">${icons.chev}</div></div>
+          <div class="card-body"><div class="set-list">
+            <a href="#/settings/richmenu">リッチメニュー設定</a>
+            <a href="#/settings/bot">ボット設定</a>
+            <a href="#/settings/notify">通知設定</a>
+          </div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-h open"><div class="ic">${icons.paint}</div><h2>デザイン設定</h2><div class="chev">${icons.chev}</div></div>
+          <div class="card-body"><div class="set-list">
+            <a href="#/settings/template">テンプレート設定</a>
+            <a href="#/settings/icon">アイコン設定</a>
+            <a href="#/settings/theme">テーマカラー設定</a>
+          </div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-h open"><div class="ic">${icons.truck}</div><h2>受取方法設定</h2><div class="chev">${icons.chev}</div></div>
+          <div class="card-body"><div class="set-list">
+            <a href="#/settings/delivery">配送設定</a>
+            <a href="#/settings/pickup">店頭受取設定</a>
+            <a href="#/settings/pickup-time">店頭受取可能時間設定</a>
+          </div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-h open"><div class="ic">${icons.card}</div><h2>決済方法設定</h2><div class="chev">${icons.chev}</div></div>
+          <div class="card-body"><div class="set-list">
+            <a href="#/settings/payment">決済方法設定</a>
+            <a href="#/settings/stripe">Stripe設定</a>
+          </div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-h open"><div class="ic">${icons.shield}</div><h2>制限設定</h2><div class="chev">${icons.chev}</div></div>
+          <div class="card-body"><div class="set-list">
+            <a href="#/settings/restrict">顧客制限設定</a>
+          </div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-h open"><div class="ic">${icons.staff}</div><h2>スタッフ管理</h2><div class="chev">${icons.chev}</div></div>
+          <div class="card-body"><div class="set-list">
+            <a href="#/settings/staff">スタッフ一覧</a>
+            <a href="#/settings/staff-new">スタッフ登録</a>
+          </div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-h open"><div class="ic">${icons.gear}</div><h2>レア設定</h2><div class="chev">${icons.chev}</div></div>
+          <div class="card-body"><div class="set-list">
+            <a href="#/settings/shop">ショップ基本設定</a>
+            <a href="#/settings/tokushou">特定商取引法</a>
+          </div></div>
+        </div>
+      </div>
+    `;
+  },
+
+  /* --------- 商品管理 --------- */
   products(){
-    document.getElementById('view').innerHTML = `
-      <div class="page-title">商品マスタ</div>
-      <div class="page-sub">${products.length}件 · 公開 ${products.filter(p=>p.status==='公開').length} · 下書き ${products.filter(p=>p.status==='下書き').length}</div>
+    document.getElementById('page').innerHTML = `
+      ${pageHead('box', '商品管理', `${products.length}件 · 公開 ${products.filter(p=>p.status==='公開').length} · 下書き ${products.filter(p=>p.status==='下書き').length}`)}
 
       <div class="actbar">
-        <div class="search-inline">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="pq" placeholder="商品名・SKUで検索">
-        </div>
-        <span class="chip on" data-fp="all">全て <span class="cnt">${products.length}</span></span>
+        <div class="search-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input id="pq" placeholder="商品名・SKUで検索"></div>
+        <span class="chip on" data-fp="all">すべて <span class="cnt">${products.length}</span></span>
         <span class="chip" data-fp="公開">公開 <span class="cnt">${products.filter(p=>p.status==='公開').length}</span></span>
         <span class="chip" data-fp="下書き">下書き <span class="cnt">${products.filter(p=>p.status==='下書き').length}</span></span>
         <span class="chip" data-fp="low">在庫薄 <span class="cnt">${products.filter(p=>p.stock<=p.stock_alert).length}</span></span>
-        <span class="sp"></span>
-        <button class="btn" onclick="openBulkUpload()">${icons.upload}CSV/ZIP 一括</button>
+        <div class="sp"></div>
+        <button class="btn">CSV/ZIP 一括</button>
+        <button class="btn pri">＋ 商品追加</button>
       </div>
 
-      <div class="sec">
-        <div class="sec-body flush scroll-x">
+      <div class="tbl-wrap">
+        <div class="tbl-h"><h3>商品一覧</h3></div>
+        <div class="tbl-scroll">
           <table class="tbl">
-            <thead><tr><th>商品</th><th>SKU</th><th>カテゴリ</th><th class="num">価格</th><th class="num">会員</th><th class="num">在庫</th><th class="num">販売数</th><th>状態</th><th></th></tr></thead>
+            <thead><tr><th>商品</th><th>SKU</th><th>カテゴリ</th><th class="num">価格</th><th class="num">会員</th><th class="num">在庫</th><th class="num">販売数</th><th>状態</th></tr></thead>
             <tbody id="ptbody"></tbody>
           </table>
         </div>
       </div>
     `;
-    const tbody = document.getElementById('ptbody');
     const draw = () => {
       const q = (document.getElementById('pq').value||'').toLowerCase();
       const fp = document.querySelector('.chip.on').dataset.fp;
       const list = products.filter(p=>{
-        if(q && !(p.name+(p.name_en||'')+p.sku).toLowerCase().includes(q)) return false;
+        if(q && !(p.name+p.sku).toLowerCase().includes(q)) return false;
         if(fp==='公開' && p.status!=='公開') return false;
         if(fp==='下書き' && p.status!=='下書き') return false;
         if(fp==='low' && p.stock>p.stock_alert) return false;
         return true;
       });
-      if(!list.length){ tbody.innerHTML='<tr><td colspan="9" class="empty">該当する商品がありません</td></tr>'; return; }
-      tbody.innerHTML = list.map(p=>`
-        <tr onclick="route('#/products/${p.id}')">
-          <td>
-            <div class="row-name">
-              <img class="thumb" src="${p.thumbnail}" alt="" onerror="this.style.background='var(--accent-tint)'">
-              <div class="meta">
-                <div class="n">${p.name}</div>
-                <div class="s">${p.summary}</div>
-              </div>
-            </div>
-          </td>
+      document.getElementById('ptbody').innerHTML = list.length ? list.map(p=>`
+        <tr>
+          <td><div class="row-name"><img class="thumb" src="${p.thumbnail}" alt="" onerror="this.style.background='var(--pri-tint)'"><div class="meta"><div class="n">${p.name}</div><div class="s">${p.summary}</div></div></div></td>
           <td class="id">${p.sku}</td>
           <td>${p.category}</td>
           <td class="num strong">${yen(p.price)}</td>
           <td class="num muted">${yen(p.price_member)}</td>
-          <td class="num" style="${p.stock<=p.stock_alert?'color:var(--neg);font-weight:600':''}">${p.stock}</td>
+          <td class="num" style="${p.stock<=p.stock_alert?'color:var(--neg)':''}">${p.stock}</td>
           <td class="num">${p.sold}</td>
           <td>${statusBadge(p.status)}</td>
-          <td><button class="btn sm ghost" aria-label="編集">${icons.edit}</button></td>
         </tr>
-      `).join('');
+      `).join('') : '<tr><td colspan="8" class="empty">該当する商品はありません</td></tr>';
     };
     document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));el.classList.add('on');draw();});
     document.getElementById('pq').oninput = draw;
     draw();
   },
 
-  productEdit(id){
-    const isNew = id === 'new';
-    const p = isNew ? {id:'', sku:'', name:'', category_id:'C01', category:'デリケートケア', price:0, price_member:0, stock:0, stock_alert:5, status:'下書き', tax_type:'内税', shipping_class:'通常', weight_g:100, thumbnail:'', images:[], summary:'', description:'', tags:[], sold:0, variants:[]} : products.find(x=>x.id===id);
-    if(!p){ document.getElementById('view').innerHTML='<div class="sec"><div class="sec-body">商品が見つかりません</div></div>'; return; }
-    document.getElementById('view').innerHTML = `
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-        <a href="#/products" class="btn sm ghost">← 商品一覧</a>
-        <span class="muted tiny id" style="font-family:var(--mono)">${p.sku||'(新規)'}</span>
-      </div>
-      <div class="page-title">${isNew?'新規商品':p.name}</div>
-      <div class="page-sub">${isNew?'下書きで作成 → 公開で LIFF に反映':p.category+' · '+p.summary}</div>
-
-      <div style="display:grid;grid-template-columns:1fr 300px;gap:14px;align-items:start">
-        <div>
-          <div class="sec">
-            <div class="sec-h"><h3>基本情報</h3></div>
-            <div class="sec-body">
-              <div class="field"><label>商品名 <span class="req">*</span></label><input type="text" value="${p.name}"></div>
-              <div class="field"><label>キャッチコピー</label><input type="text" value="${p.summary}"></div>
-              <div class="field"><label>商品説明</label><textarea rows="5">${p.description||''}</textarea></div>
-              <div class="field-row">
-                <div class="field"><label>SKU</label><input type="text" value="${p.sku}"></div>
-                <div class="field"><label>カテゴリ</label>
-                  <select>${categories.map(c=>`<option value="${c.id}" ${c.id===p.category_id?'selected':''}>${c.name}</option>`).join('')}</select>
-                </div>
-              </div>
-              <div class="field"><label>タグ</label><input type="text" value="${(p.tags||[]).join(', ')}"><div class="hint">カンマ区切り</div></div>
-            </div>
-          </div>
-
-          <div class="sec">
-            <div class="sec-h"><h3>価格と在庫</h3></div>
-            <div class="sec-body">
-              <div class="field-row">
-                <div class="field"><label>販売価格 <span class="req">*</span></label><input type="number" value="${p.price}"></div>
-                <div class="field"><label>会員価格</label><input type="number" value="${p.price_member}"></div>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>在庫</label><input type="number" value="${p.stock}"></div>
-                <div class="field"><label>在庫アラート閾値</label><input type="number" value="${p.stock_alert}"></div>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>税種別</label><select><option ${p.tax_type==='内税'?'selected':''}>内税</option><option ${p.tax_type==='外税'?'selected':''}>外税</option></select></div>
-                <div class="field"><label>配送区分</label><select><option ${p.shipping_class==='通常'?'selected':''}>通常</option><option>冷蔵</option><option>ゆうパケット</option></select></div>
-              </div>
-            </div>
-          </div>
-
-          ${p.variants && p.variants.length ? `
-          <div class="sec">
-            <div class="sec-h"><h3>バリエーション</h3><span class="sp"></span><button class="btn sm">+ 追加</button></div>
-            <div class="sec-body flush scroll-x">
-              <table class="tbl">
-                <thead><tr><th>名称</th><th class="num">価格</th><th class="num">在庫</th><th class="num">SKU枝番</th><th></th></tr></thead>
-                <tbody>${p.variants.map(v=>`<tr><td class="strong">${v.label}</td><td class="num">${yen(v.price)}</td><td class="num">${v.stock}</td><td class="id">${v.id}</td><td><button class="btn sm ghost">${icons.edit}</button></td></tr>`).join('')}</tbody>
-              </table>
-            </div>
-          </div>` : ''}
-        </div>
-
-        <div>
-          <div class="sec">
-            <div class="sec-h"><h3>画像</h3><span class="sp"></span><span class="meta">${(p.images||[]).length}/10</span></div>
-            <div class="sec-body">
-              ${p.thumbnail ? `<img src="${p.thumbnail}" style="width:100%;border-radius:var(--r);border:1px solid var(--rule-soft);aspect-ratio:1/1;object-fit:cover">` : '<div style="aspect-ratio:1/1;background:var(--bg);border-radius:var(--r);border:1px dashed var(--rule);display:grid;place-items:center;color:var(--ink-3);font-size:12px">画像なし</div>'}
-              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px">
-                ${(p.images||[]).slice(1).map(img=>`<img src="${img}" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:5px;border:1px solid var(--rule-soft)">`).join('')}
-                <button class="btn sm" style="aspect-ratio:1/1;justify-content:center;color:var(--ink-3)">+</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="sec">
-            <div class="sec-h"><h3>公開状態</h3></div>
-            <div class="sec-body">
-              <div class="field"><label>公開状態</label><select><option ${p.status==='公開'?'selected':''}>公開</option><option ${p.status==='下書き'?'selected':''}>下書き</option></select></div>
-              <div class="btn-row" style="display:flex;gap:7px;margin-top:6px">
-                <button class="btn" style="flex:1">プレビュー</button>
-                <button class="btn primary" style="flex:1">保存</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="sec">
-            <div class="sec-h"><h3>パフォーマンス</h3></div>
-            <div class="sec-body">
-              <div style="display:flex;gap:12px;margin-bottom:6px">
-                <div><div class="muted tiny">販売数</div><div style="font-family:var(--mono);font-size:18px;font-weight:600">${p.sold}</div></div>
-                <div><div class="muted tiny">評価</div><div style="font-family:var(--mono);font-size:18px;font-weight:600">${p.rating||'—'}</div></div>
-                <div><div class="muted tiny">レビュー</div><div style="font-family:var(--mono);font-size:18px;font-weight:600">${p.review_count}</div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  },
-
+  /* --------- 注文状況 --------- */
   orders(){
-    document.getElementById('view').innerHTML = `
-      <div class="page-title">注文</div>
-      <div class="page-sub">${orders.length}件 · 未発送 ${orders.filter(o=>o.fulfillment==='未発送').length} · 発送済 ${orders.filter(o=>o.fulfillment==='発送済').length}</div>
+    document.getElementById('page').innerHTML = `
+      ${pageHead('cart', '注文状況', `${orders.length}件 · 未発送 ${orders.filter(o=>o.fulfillment==='未発送').length}`)}
 
       <div class="actbar">
-        <div class="search-inline">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="oq" placeholder="注文番号・お客様">
-        </div>
-        <span class="chip on" data-fp="all">全て <span class="cnt">${orders.length}</span></span>
+        <div class="search-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input id="oq" placeholder="注文番号・お客様"></div>
+        <span class="chip on" data-fp="all">すべて <span class="cnt">${orders.length}</span></span>
         <span class="chip" data-fp="未発送">未発送 <span class="cnt">${orders.filter(o=>o.fulfillment==='未発送').length}</span></span>
         <span class="chip" data-fp="発送準備中">準備中 <span class="cnt">${orders.filter(o=>o.fulfillment==='発送準備中').length}</span></span>
         <span class="chip" data-fp="発送済">発送済 <span class="cnt">${orders.filter(o=>o.fulfillment==='発送済').length}</span></span>
         <span class="chip" data-fp="キャンセル">キャンセル <span class="cnt">${orders.filter(o=>o.fulfillment==='キャンセル').length}</span></span>
-        <span class="sp"></span>
-        <button class="btn">${icons.download}CSV出力</button>
+        <div class="sp"></div>
+        <button class="btn">CSV出力</button>
+        <button class="btn pri">送り状一括印刷</button>
       </div>
 
-      <div class="sec">
-        <div class="sec-body flush scroll-x">
+      <div class="tbl-wrap">
+        <div class="tbl-h"><h3>注文一覧</h3></div>
+        <div class="tbl-scroll">
           <table class="tbl">
-            <thead><tr><th>注文番号</th><th>日時</th><th>お客様</th><th>商品</th><th class="num">小計</th><th class="num">合計</th><th>決済</th><th>発送</th></tr></thead>
+            <thead><tr><th>注文番号</th><th>日時</th><th>お客様</th><th>商品</th><th class="num">合計</th><th>決済</th><th>発送</th></tr></thead>
             <tbody id="otbody"></tbody>
           </table>
         </div>
@@ -1370,7 +827,7 @@ const views = {
       const q = (document.getElementById('oq').value||'').toLowerCase();
       const fp = document.querySelector('.chip.on').dataset.fp;
       const list = orders.filter(o=>{
-        if(q && !((o.id+o.customer_name).toLowerCase().includes(q))) return false;
+        if(q && !(o.id+o.customer_name).toLowerCase().includes(q)) return false;
         if(fp!=='all' && o.fulfillment!==fp) return false;
         return true;
       });
@@ -1378,40 +835,37 @@ const views = {
         <tr onclick="openOrderModal('${o.id}')">
           <td class="id strong">${o.id}</td>
           <td class="nowrap">${dt(o.ordered_at)}</td>
-          <td><div class="cust-mini"><div class="av">${o.customer_name.slice(0,1)}</div><div><div class="n">${o.customer_name}</div><div class="s">${o.line_id}</div></div></div></td>
+          <td><div class="cust"><div class="av line">${o.customer_name.slice(0,1)}</div><div class="info"><div class="n">${o.customer_name}</div><div class="s">${o.line_id}</div></div></div></td>
           <td>${o.items[0].name}${o.items.length>1?` <span class="muted">+${o.items.length-1}</span>`:''}</td>
-          <td class="num">${yen(o.subtotal)}</td>
           <td class="num strong">${yen(o.total)}</td>
           <td>${statusBadge(o.payment_status)}</td>
           <td>${statusBadge(o.fulfillment)}</td>
         </tr>
-      `).join('') : '<tr><td colspan="8" class="empty">該当する注文がありません</td></tr>';
+      `).join('') : '<tr><td colspan="7" class="empty">該当する注文はありません</td></tr>';
     };
     document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));el.classList.add('on');draw();});
     document.getElementById('oq').oninput = draw;
     draw();
   },
 
+  /* --------- 顧客管理 --------- */
   customers(){
-    document.getElementById('view').innerHTML = `
-      <div class="page-title">顧客 / LINE友だち</div>
-      <div class="page-sub">${customers.length}人 · VIP ${customers.filter(c=>c.tags.includes('VIP')).length} · 平均LTV ${yen(Math.round(customers.reduce((s,c)=>s+c.ltv,0)/customers.length))}</div>
+    document.getElementById('page').innerHTML = `
+      ${pageHead('users', '顧客管理', `${customers.length}人 · VIP ${customers.filter(c=>c.tags.includes('VIP')).length} · 平均LTV ${yen(Math.round(customers.reduce((s,c)=>s+c.ltv,0)/customers.length))}`)}
 
       <div class="actbar">
-        <div class="search-inline">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="cq" placeholder="お客様名・LINE ID">
-        </div>
-        <span class="chip on" data-fp="all">全て <span class="cnt">${customers.length}</span></span>
+        <div class="search-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input id="cq" placeholder="お客様名・LINE ID"></div>
+        <span class="chip on" data-fp="all">すべて <span class="cnt">${customers.length}</span></span>
         <span class="chip" data-fp="VIP">VIP <span class="cnt">${customers.filter(c=>c.tags.includes('VIP')).length}</span></span>
         <span class="chip" data-fp="新規">新規 <span class="cnt">${customers.filter(c=>c.tags.includes('新規')).length}</span></span>
         <span class="chip" data-fp="未購入">未購入 <span class="cnt">${customers.filter(c=>c.tags.includes('未購入')).length}</span></span>
-        <span class="sp"></span>
-        <button class="btn primary">この絞込で配信</button>
+        <div class="sp"></div>
+        <button class="btn pri">この絞込で配信</button>
       </div>
 
-      <div class="sec">
-        <div class="sec-body flush scroll-x">
+      <div class="tbl-wrap">
+        <div class="tbl-h"><h3>友だち一覧</h3></div>
+        <div class="tbl-scroll">
           <table class="tbl">
             <thead><tr><th>お客様</th><th>タグ</th><th>友だち追加</th><th>最終接触</th><th class="num">注文数</th><th class="num">LTV</th></tr></thead>
             <tbody id="ctbody"></tbody>
@@ -1423,14 +877,14 @@ const views = {
       const q = (document.getElementById('cq').value||'').toLowerCase();
       const fp = document.querySelector('.chip.on').dataset.fp;
       const list = customers.filter(c=>{
-        if(q && !((c.name+c.line_id).toLowerCase().includes(q))) return false;
+        if(q && !(c.name+c.line_id).toLowerCase().includes(q)) return false;
         if(fp!=='all' && !c.tags.includes(fp)) return false;
         return true;
       });
       document.getElementById('ctbody').innerHTML = list.map(c=>`
         <tr onclick="openCustomerModal('${c.id}')">
-          <td><div class="cust-mini"><div class="av">${c.name.slice(0,1)}</div><div><div class="n">${c.name}</div><div class="s">${c.line_id}</div></div></div></td>
-          <td>${c.tags.map(t=>`<span class="bd ${t==='VIP'?'accent':t==='新規'?'ok':'draft'} bare">${t}</span>`).join(' ')}</td>
+          <td><div class="cust"><div class="av line">${c.name.slice(0,1)}</div><div class="info"><div class="n">${c.name}</div><div class="s">${c.line_id}</div></div></div></td>
+          <td>${c.tags.map(t=>`<span class="bd ${t==='VIP'?'pri':t==='新規'?'line':'draft'}">${t}</span>`).join(' ')}</td>
           <td class="nowrap">${day(c.first_followed)}</td>
           <td class="nowrap">${dt(c.last_message)}</td>
           <td class="num strong">${c.orders}</td>
@@ -1443,33 +897,35 @@ const views = {
     draw();
   },
 
+  /* --------- 配信 --------- */
   messages(){
-    document.getElementById('view').innerHTML = `
-      <div class="page-title">メッセージ配信</div>
-      <div class="page-sub">${messages.length}件 · 稼働中ステップ ${messages.filter(m=>m.status==='稼働中').length} · 注文転換数累計 ${messages.reduce((s,m)=>s+m.ordered,0)}</div>
+    document.getElementById('page').innerHTML = `
+      ${pageHead('send', '配信', `${messages.length}件 · 稼働中 ${messages.filter(m=>m.status==='稼働中').length} · 注文転換累計 ${messages.reduce((s,m)=>s+m.ordered,0)}`)}
 
       <div class="actbar">
-        <span class="chip on">全て <span class="cnt">${messages.length}</span></span>
+        <span class="chip on">すべて <span class="cnt">${messages.length}</span></span>
         <span class="chip">一斉 <span class="cnt">${messages.filter(m=>m.type==='一斉配信').length}</span></span>
         <span class="chip">ステップ <span class="cnt">${messages.filter(m=>m.type==='ステップ配信').length}</span></span>
         <span class="chip">セグメント <span class="cnt">${messages.filter(m=>m.type==='セグメント配信').length}</span></span>
-        <span class="sp"></span>
+        <div class="sp"></div>
         <button class="btn">テンプレート</button>
+        <button class="btn pri">＋ 新規配信</button>
       </div>
 
-      <div class="sec">
-        <div class="sec-body flush scroll-x">
+      <div class="tbl-wrap">
+        <div class="tbl-h"><h3>配信一覧</h3></div>
+        <div class="tbl-scroll">
           <table class="tbl">
             <thead><tr><th>タイトル</th><th>タイプ</th><th>対象 / トリガー</th><th class="num">送信</th><th class="num">開封</th><th class="num">クリック</th><th class="num">注文</th><th>状態</th></tr></thead>
             <tbody>${messages.map(m=>`
               <tr>
                 <td class="strong">${m.title}</td>
                 <td>${m.type}</td>
-                <td><div class="n" style="color:var(--ink);font-size:12.5px">${m.audience}</div>${m.trigger?`<div class="s muted tiny">${m.trigger}</div>`:m.sent_at?`<div class="s muted tiny">${dt(m.sent_at)}</div>`:''}</td>
+                <td><div class="n" style="font-size:12.5px">${m.audience}</div>${m.trigger?`<div class="muted tiny">${m.trigger}</div>`:m.sent_at?`<div class="muted tiny">${dt(m.sent_at)}</div>`:''}</td>
                 <td class="num">${m.sent.toLocaleString()}</td>
-                <td class="num">${m.opened.toLocaleString()}<div class="tiny muted">${m.sent?Math.round(m.opened/m.sent*100):0}%</div></td>
-                <td class="num">${m.clicked.toLocaleString()}<div class="tiny muted">${m.sent?Math.round(m.clicked/m.sent*100):0}%</div></td>
-                <td class="num strong" style="color:var(--accent)">${m.ordered.toLocaleString()}</td>
+                <td class="num">${m.opened.toLocaleString()}<div class="muted tiny">${m.sent?Math.round(m.opened/m.sent*100):0}%</div></td>
+                <td class="num">${m.clicked.toLocaleString()}<div class="muted tiny">${m.sent?Math.round(m.clicked/m.sent*100):0}%</div></td>
+                <td class="num strong" style="color:var(--pri)">${m.ordered.toLocaleString()}</td>
                 <td>${statusBadge(m.status)}</td>
               </tr>
             `).join('')}</tbody>
@@ -1479,210 +935,82 @@ const views = {
     `;
   },
 
-  categories(){
-    document.getElementById('view').innerHTML = `
-      <div class="page-title">カテゴリ</div>
-      <div class="page-sub">${categories.length}カテゴリ · 表示中 ${categories.filter(c=>c.visible).length}</div>
-      <div class="actbar"><span class="sp"></span></div>
-      <div class="sec">
-        <div class="sec-body flush scroll-x">
-          <table class="tbl">
-            <thead><tr><th class="num">並び</th><th>カテゴリ名</th><th>slug</th><th class="num">商品数</th><th>表示</th><th></th></tr></thead>
-            <tbody>${categories.map(c=>`
-              <tr>
-                <td class="num">${c.sort}</td>
-                <td class="strong">${c.name}</td>
-                <td class="id">${c.slug}</td>
-                <td class="num">${c.products}</td>
-                <td>${statusBadge(c.visible?'表示中':'非表示')}</td>
-                <td><button class="btn sm ghost">${icons.edit}</button></td>
-              </tr>
-            `).join('')}</tbody>
-          </table>
+  /* --------- 販売促進 (クーポン+リッチメニュー) --------- */
+  promo(){
+    document.getElementById('page').innerHTML = `
+      ${pageHead('promo', '販売促進', 'クーポン / リッチメニュー / セール')}
+
+      <div class="set-grid">
+        <div class="card">
+          <div class="card-h open"><div class="ic">${icons.promo}</div><h2>クーポン</h2><div class="chev">${icons.chev}</div></div>
+          <div class="card-body"><div class="set-list">
+            <a href="#/coupons">クーポン一覧 (${coupons.length}件)</a>
+            <a href="#/coupons-new">＋ 新規クーポン発行</a>
+          </div></div>
+        </div>
+        <div class="card">
+          <div class="card-h open"><div class="ic">${icons.line}</div><h2>リッチメニュー</h2><div class="chev">${icons.chev}</div></div>
+          <div class="card-body"><div class="set-list">
+            <a href="#/richmenu">リッチメニュー編集</a>
+            <a href="#/richmenu-templates">テンプレートから選ぶ</a>
+          </div></div>
+        </div>
+        <div class="card">
+          <div class="card-h open"><div class="ic">${icons.trend}</div><h2>セール / キャンペーン</h2><div class="chev">${icons.chev}</div></div>
+          <div class="card-body"><div class="set-list">
+            <a href="#/sale">セール設定</a>
+            <a href="#/campaign">キャンペーン一覧</a>
+          </div></div>
         </div>
       </div>
-    `;
-  },
 
-  coupons(){
-    document.getElementById('view').innerHTML = `
-      <div class="page-title">クーポン</div>
-      <div class="page-sub">${coupons.length}件 · 有効 ${coupons.filter(c=>c.status==='有効').length} · 利用累計 ${coupons.reduce((s,c)=>s+c.uses,0).toLocaleString()}</div>
-      <div class="actbar">
-        <span class="chip on">全て <span class="cnt">${coupons.length}</span></span>
-        <span class="chip">有効 <span class="cnt">${coupons.filter(c=>c.status==='有効').length}</span></span>
-        <span class="chip">終了 <span class="cnt">${coupons.filter(c=>c.status==='終了').length}</span></span>
-        <span class="sp"></span>
-      </div>
-      <div class="sec">
-        <div class="sec-body flush scroll-x">
+      <div class="section-title mt"><h3>有効なクーポン</h3></div>
+      <div class="tbl-wrap">
+        <div class="tbl-scroll">
           <table class="tbl">
-            <thead><tr><th>クーポンコード</th><th>割引</th><th class="num">最低注文額</th><th class="num">利用 / 上限</th><th>有効期限</th><th>状態</th></tr></thead>
-            <tbody>${coupons.map(c=>{
-              const pct = Math.round(c.uses/c.limit*100);
-              return `<tr>
-                <td class="id strong" style="color:var(--ink);font-size:13px">${c.code}</td>
-                <td><span class="bd accent bare">${c.type==='%'?c.value+'% OFF':yen(c.value)+' OFF'}</span></td>
+            <thead><tr><th>コード</th><th>割引</th><th class="num">最低注文額</th><th class="num">利用 / 上限</th><th>期限</th><th>状態</th></tr></thead>
+            <tbody>${coupons.map(c=>`
+              <tr>
+                <td class="id strong" style="font-size:13px;color:var(--ink)">${c.code}</td>
+                <td><span class="bd pri">${c.type==='%'?c.value+'% OFF':yen(c.value)+' OFF'}</span></td>
                 <td class="num">${yen(c.min_order)}〜</td>
-                <td class="num">${c.uses.toLocaleString()} / ${c.limit.toLocaleString()}<div style="height:3px;background:var(--rule);border-radius:2px;margin-top:3px;width:90px;margin-left:auto"><div style="height:100%;width:${Math.min(100,pct)}%;background:var(--accent);border-radius:2px"></div></div></td>
+                <td class="num">${c.uses.toLocaleString()} / ${c.limit.toLocaleString()}</td>
                 <td class="nowrap">${day(c.expires)}</td>
                 <td>${statusBadge(c.status)}</td>
-              </tr>`;
-            }).join('')}</tbody>
+              </tr>`).join('')}</tbody>
           </table>
         </div>
       </div>
     `;
   },
 
-  richmenu(){
-    const labs = [['商品一覧','pkg'],['新着','tag'],['カテゴリ','grid'],['クーポン','ticket'],['注文履歴','orders'],['お問合せ','send']];
-    document.getElementById('view').innerHTML = `
-      <div class="page-title">リッチメニュー</div>
-      <div class="page-sub">LINE OA トーク画面下部メニュー · 現在公開中: 2×3 レイアウト</div>
+  /* --------- サポート --------- */
+  support(){
+    document.getElementById('page').innerHTML = `
+      ${pageHead('help', 'サポート', 'お困りごとはこちら')}
 
-      <div style="display:grid;grid-template-columns:1fr 320px;gap:14px;align-items:start">
-        <div class="sec">
-          <div class="sec-h"><h3>レイアウト</h3><span class="sp"></span>
-            <div class="btn-row">
-              <span class="chip on" data-rm="layout-2x3">2×3</span>
-              <span class="chip" data-rm="layout-1x3">1×3</span>
-              <span class="chip" data-rm="layout-2x2">2×2</span>
-              <span class="chip" data-rm="layout-1x2">1×2</span>
-            </div>
-          </div>
-          <div class="sec-body">
-            <div class="rm-grid layout-2x3" id="rmgrid"></div>
-            <div class="mt btn-row" style="margin-top:14px"><button class="btn">下書き保存</button><button class="btn accent">LINE OAに反映</button></div>
-          </div>
-        </div>
-        <div class="sec">
-          <div class="sec-h"><h3>セル A</h3><span class="bd accent bare">編集中</span></div>
-          <div class="sec-body">
-            <div class="field"><label>アクション種別</label><select><option>商品一覧を開く</option><option>カテゴリを開く</option><option>テキスト送信</option><option>URL を開く</option><option>クーポン配布</option></select></div>
-            <div class="field"><label>表示ラベル</label><input value="商品一覧"></div>
-            <div class="field"><label>リンク先 (LIFF)</label><input value="liff://shop/products"></div>
-            <div class="field"><label>アナリティクスタグ</label><input value="rm_a_products"></div>
-          </div>
-        </div>
+      <div class="set-grid">
+        <div class="card hover"><div class="card-h"><div class="ic">${icons.line}</div><h2>LINEで相談</h2></div><div class="card-body" style="padding:14px 22px 18px"><p style="font-size:13px;color:var(--ink-2);line-height:1.8">サポート担当者と LINE でやり取りができます。最短15分で返信。</p><button class="btn line-fill mt">LINE で相談する</button></div></div>
+        <div class="card hover"><div class="card-h"><div class="ic">${icons.help}</div><h2>よくある質問</h2></div><div class="card-body" style="padding:14px 22px 18px"><p style="font-size:13px;color:var(--ink-2);line-height:1.8">商品登録・配信・決済など、よく頂くご質問の回答集。</p><button class="btn mt">FAQ を見る</button></div></div>
+        <div class="card hover"><div class="card-h"><div class="ic">${icons.send}</div><h2>メール問合せ</h2></div><div class="card-body" style="padding:14px 22px 18px"><p style="font-size:13px;color:var(--ink-2);line-height:1.8">メールで詳細をお送りいただけます。営業時間内に返信。</p><button class="btn mt">メールフォーム</button></div></div>
       </div>
-    `;
-    const draw = () => {
-      const grid = document.getElementById('rmgrid');
-      const n = grid.classList.contains('layout-2x3')?6 : grid.classList.contains('layout-1x3')?3 : grid.classList.contains('layout-2x2')?4 : 2;
-      grid.innerHTML = Array.from({length:n}).map((_,i)=>`<div class="cell ${i===0?'on':''}"><span class="num">${String.fromCharCode(65+i)}</span>${icons[labs[i][1]]}<span>${labs[i][0]}</span></div>`).join('');
-    };
-    draw();
-    document.querySelectorAll('[data-rm]').forEach(el=>el.onclick=()=>{
-      document.querySelectorAll('[data-rm]').forEach(x=>x.classList.remove('on'));el.classList.add('on');
-      document.getElementById('rmgrid').className='rm-grid '+el.dataset.rm; draw();
-    });
-  },
 
-  liff(){
-    document.getElementById('view').innerHTML = `
-      <div class="page-title">LIFF 設定</div>
-      <div class="page-sub">LINE Front-end Framework アプリ設定</div>
-      <div class="sec">
-        <div class="sec-h"><h3>アプリ設定</h3><span class="bd ok bare">疎通OK</span></div>
-        <div class="sec-body">
-          <div class="field-row">
-            <div class="field"><label>LIFF ID</label><input value="2010266648-XYZabc12"></div>
-            <div class="field"><label>サイズ</label><select><option>Full</option><option>Tall</option><option>Compact</option></select></div>
-          </div>
-          <div class="field"><label>エンドポイントURL</label><input value="https://lune.skeleton-inc.jp/shop/"></div>
-          <div class="field-row">
-            <div class="field"><label>LINEログイン Channel ID</label><input value="2010266648"></div>
-            <div class="field"><label>Messaging API Channel ID</label><input value="2007112233"></div>
-          </div>
-          <div class="field"><label>Channel Access Token</label><input value="•••••••••••••••• (保存済)"></div>
-          <div class="btn-row mt"><button class="btn">疎通テスト</button><button class="btn primary">保存</button></div>
+      <div class="section-title mt"><h3>新着のお知らせ <span class="bd pri" style="margin-left:6px">12 件</span></h3></div>
+      <div class="info-tbl">
+        <div class="info-row">
+          <div class="k">2026.06.15</div>
+          <div class="v"><span>【重要】 7月のメンテナンスについて</span></div>
+          <div></div>
         </div>
-      </div>
-    `;
-  },
-
-  shop(){
-    document.getElementById('view').innerHTML = `
-      <div class="page-title">店舗情報</div>
-      <div class="page-sub">公開LIFFに表示される店舗データ</div>
-      <div class="sec">
-        <div class="sec-h"><h3>基本情報</h3></div>
-        <div class="sec-body">
-          <div class="field-row">
-            <div class="field"><label>店舗名</label><input value="Lune by Skeleton"></div>
-            <div class="field"><label>URL slug</label><input value="lune"></div>
-          </div>
-          <div class="field"><label>キャッチコピー</label><input value="フェムケアから始まる、私の上質"></div>
-          <div class="field"><label>店舗紹介</label><textarea rows="3">膣×子宮革命をコンセプトに、フェムケアを起点とした全身美容を提案するLuneブランドの公式LINE EC。サロン併用前提のプレミアムケアアイテム。</textarea></div>
-          <div class="field-row">
-            <div class="field"><label>店舗代表者</label><input value="吉田 恭聡"></div>
-            <div class="field"><label>連絡先メール</label><input value="t3.5ty6@gmail.com"></div>
-          </div>
-          <div class="btn-row mt"><button class="btn primary">保存</button></div>
+        <div class="info-row">
+          <div class="k">2026.06.10</div>
+          <div class="v"><span>リッチメニューのテンプレートを追加しました</span></div>
+          <div></div>
         </div>
-      </div>
-    `;
-  },
-
-  shipping(){
-    document.getElementById('view').innerHTML = `
-      <div class="page-title">配送・送料</div>
-      <div class="page-sub">配送方法と送料表</div>
-      <div class="actbar"><span class="sp"></span><button class="btn primary">+ 配送方法</button></div>
-      <div class="sec">
-        <div class="sec-body flush scroll-x">
-          <table class="tbl">
-            <thead><tr><th>配送方法</th><th>区分</th><th class="num">送料</th><th class="num">送料無料ライン</th><th>配達日数</th><th></th></tr></thead>
-            <tbody>
-              <tr><td class="strong">ヤマト宅急便</td><td>通常</td><td class="num">¥770</td><td class="num">¥10,000〜</td><td>翌-翌々日</td><td><button class="btn sm ghost">${icons.edit}</button></td></tr>
-              <tr><td class="strong">ヤマトクール便</td><td>冷蔵</td><td class="num">¥1,210</td><td class="num">¥15,000〜</td><td>翌-翌々日</td><td><button class="btn sm ghost">${icons.edit}</button></td></tr>
-              <tr><td class="strong">ゆうパケットポスト</td><td>ゆうパケット</td><td class="num">¥215</td><td class="num">—</td><td>3〜5日</td><td><button class="btn sm ghost">${icons.edit}</button></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  },
-
-  payment(){
-    document.getElementById('view').innerHTML = `
-      <div class="page-title">決済</div>
-      <div class="page-sub">決済プロバイダ連携</div>
-      <div class="sec">
-        <div class="sec-body flush">
-          <table class="tbl">
-            <thead><tr><th>決済方法</th><th>プロバイダ</th><th>状態</th><th class="num">手数料</th><th></th></tr></thead>
-            <tbody>
-              <tr><td class="strong">クレジットカード</td><td>Stripe (live)</td><td>${statusBadge('稼働中')}</td><td class="num">3.6%</td><td><button class="btn sm">設定</button></td></tr>
-              <tr><td class="strong">代金引換</td><td>ヤマト運輸</td><td>${statusBadge('稼働中')}</td><td class="num">¥330</td><td><button class="btn sm">設定</button></td></tr>
-              <tr><td class="strong">NP後払い</td><td>NP後払い</td><td>${statusBadge('下書き')}</td><td class="num">2.9%</td><td><button class="btn sm">連携</button></td></tr>
-              <tr><td class="strong">LINE Pay</td><td>LINE Pay</td><td>${statusBadge('下書き')}</td><td class="num">3.45%</td><td><button class="btn sm">連携</button></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  },
-
-  tokushou(){
-    document.getElementById('view').innerHTML = `
-      <div class="page-title">特定商取引法</div>
-      <div class="page-sub">LIFFフッターに自動表示</div>
-      <div class="sec">
-        <div class="sec-body">
-          <div class="field-row">
-            <div class="field"><label>事業者名</label><input value="スケルトン株式会社"></div>
-            <div class="field"><label>代表者</label><input value="吉田 恭聡"></div>
-          </div>
-          <div class="field"><label>所在地</label><input value="〒910-0833 福井県福井市新保北1-203"></div>
-          <div class="field-row">
-            <div class="field"><label>電話番号</label><input value="非公開 (請求あり次第開示)"></div>
-            <div class="field"><label>メール</label><input value="info@skeleton-inc.jp"></div>
-          </div>
-          <div class="field"><label>販売価格</label><input value="各商品ページに記載"></div>
-          <div class="field"><label>返品・交換</label><textarea rows="3">商品到着後8日以内、未開封・未使用に限り受付。お客様都合の返品は送料お客様負担。</textarea></div>
-          <div class="btn-row mt"><button class="btn primary">保存</button></div>
+        <div class="info-row">
+          <div class="k">2026.06.01</div>
+          <div class="v"><span>Stripe 決済の API バージョンアップのご案内</span></div>
+          <div></div>
         </div>
       </div>
     `;
@@ -1690,6 +1018,7 @@ const views = {
 
 };
 
+/* ================ Modals ================ */
 window.openOrderModal = id => {
   const o = orders.find(x=>x.id===id); if(!o) return;
   const c = customers.find(x=>x.id===o.customer_id);
@@ -1702,45 +1031,37 @@ window.openOrderModal = id => {
   openModal(`
     <div class="modal-h">
       <h2>注文 ${o.id}</h2>
-      <span class="bd ${o.fulfillment==='キャンセル'?'neg':'ok'} bare">${o.fulfillment}</span>
-      <button class="x" onclick="closeModal()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      <span class="bd ${o.fulfillment==='キャンセル'?'neg':'ok'}">${o.fulfillment}</span>
+      <button class="x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="modal-body">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:18px">
         <div>
-          <div class="muted tiny" style="margin-bottom:2px">お客様</div>
-          <div class="cust-mini" style="margin-bottom:10px"><div class="av">${o.customer_name.slice(0,1)}</div><div><div class="n">${o.customer_name}</div><div class="s">${o.line_id}</div></div></div>
-          ${c ? `<div style="display:flex;gap:14px;margin-top:6px;font-size:11.5px"><div><span class="muted">注文数</span> <span class="strong">${c.orders}</span></div><div><span class="muted">LTV</span> <span class="strong">${yen(c.ltv)}</span></div></div>` : ''}
+          <div class="muted tiny mb">お客様</div>
+          <div class="cust mb"><div class="av line">${o.customer_name.slice(0,1)}</div><div class="info"><div class="n">${o.customer_name}</div><div class="s">${o.line_id}</div></div></div>
         </div>
         <div>
-          <div class="muted tiny" style="margin-bottom:2px">配送先</div>
-          <div style="font-size:12.5px;line-height:1.7">
-            〒${o.address.zip}<br>${o.address.addr1}${o.address.addr2?' '+o.address.addr2:''}<br><span class="strong">${o.address.name} 様</span> · ${o.address.tel}
-          </div>
+          <div class="muted tiny mb">配送先</div>
+          <div style="font-size:13px;line-height:1.8">〒${o.address.zip}<br>${o.address.addr1}${o.address.addr2?' '+o.address.addr2:''}<br><strong>${o.address.name} 様</strong> · ${o.address.tel}</div>
         </div>
       </div>
 
       <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:22px">
         <div>
-          <div class="muted tiny" style="margin-bottom:8px">商品</div>
-          <table class="tbl" style="border:1px solid var(--rule);border-radius:var(--r);overflow:hidden">
+          <div class="muted tiny mb">商品</div>
+          <div class="tbl-wrap" style="margin-bottom:14px"><div class="tbl-scroll"><table class="tbl">
             <thead><tr><th>商品</th><th class="num">単価</th><th class="num">数</th><th class="num">金額</th></tr></thead>
-            <tbody>
-              ${o.items.map(it=>`<tr><td class="strong">${it.name}</td><td class="num">${yen(it.price)}</td><td class="num">${it.qty}</td><td class="num strong">${yen(it.price*it.qty)}</td></tr>`).join('')}
-            </tbody>
-          </table>
-          <div style="margin-top:12px;padding:11px 14px;background:var(--bg);border-radius:var(--r);font-size:12.5px">
-            <div style="display:flex;justify-content:space-between;padding:2px 0"><span class="muted">小計</span><span style="font-family:var(--mono)">${yen(o.subtotal)}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:2px 0"><span class="muted">送料</span><span style="font-family:var(--mono)">${yen(o.shipping)}</span></div>
-            ${o.discount?`<div style="display:flex;justify-content:space-between;padding:2px 0"><span class="muted">割引</span><span style="font-family:var(--mono);color:var(--accent)">-${yen(o.discount)}</span></div>`:''}
-            <div style="display:flex;justify-content:space-between;padding:6px 0 0;border-top:1px solid var(--rule);margin-top:5px;font-weight:600;font-size:14px"><span>合計</span><span style="font-family:var(--mono)">${yen(o.total)}</span></div>
+            <tbody>${o.items.map(it=>`<tr><td class="strong">${it.name}</td><td class="num">${yen(it.price)}</td><td class="num">${it.qty}</td><td class="num strong">${yen(it.price*it.qty)}</td></tr>`).join('')}</tbody>
+          </table></div></div>
+          <div style="padding:14px;background:var(--bg);border-radius:10px;font-size:13px">
+            <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="muted">小計</span><span style="font-family:var(--mono);font-weight:700">${yen(o.subtotal)}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="muted">送料</span><span style="font-family:var(--mono);font-weight:700">${yen(o.shipping)}</span></div>
+            ${o.discount?`<div style="display:flex;justify-content:space-between;padding:3px 0"><span class="muted">割引</span><span style="font-family:var(--mono);font-weight:700;color:var(--pri)">-${yen(o.discount)}</span></div>`:''}
+            <div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid var(--rule);margin-top:6px;font-weight:900;font-size:15px"><span>合計</span><span style="font-family:var(--mono)">${yen(o.total)}</span></div>
           </div>
-          ${o.memo?`<div style="margin-top:12px"><div class="muted tiny">メモ</div><div style="font-size:12.5px;margin-top:3px">${o.memo}</div></div>`:''}
         </div>
         <div>
-          <div class="muted tiny" style="margin-bottom:8px">ステータス</div>
+          <div class="muted tiny mb">ステータス</div>
           <div class="tl">
             ${steps.map(s=>`<div class="tl-item ${s.done?'done':''} ${s.cur?'cur':''}"><div class="t">${s.t}</div><div class="m">${s.m}</div></div>`).join('')}
           </div>
@@ -1750,8 +1071,8 @@ window.openOrderModal = id => {
     <div class="modal-foot">
       <button class="btn" onclick="closeModal()">閉じる</button>
       <button class="btn">送り状印刷</button>
-      <button class="btn">LINEで連絡</button>
-      ${o.fulfillment==='未発送'||o.fulfillment==='発送準備中'?'<button class="btn primary">発送済にする</button>':''}
+      <button class="btn line-fill">LINEで連絡</button>
+      ${o.fulfillment==='未発送'||o.fulfillment==='発送準備中'?'<button class="btn pri">発送済にする</button>':''}
     </div>
   `);
 };
@@ -1762,149 +1083,52 @@ window.openCustomerModal = id => {
   openModal(`
     <div class="modal-h">
       <h2>${c.name}</h2>
-      ${c.tags.map(t=>`<span class="bd ${t==='VIP'?'accent':t==='新規'?'ok':'draft'} bare">${t}</span>`).join(' ')}
-      <span class="sp" style="flex:1"></span>
-      <button class="x" onclick="closeModal()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      ${c.tags.map(t=>`<span class="bd ${t==='VIP'?'pri':t==='新規'?'line':'draft'}">${t}</span>`).join(' ')}
+      <span style="flex:1"></span>
+      <button class="x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="modal-body">
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;padding:14px;background:var(--bg);border-radius:var(--r)">
-        <div><div class="muted tiny">注文数</div><div style="font-family:var(--mono);font-size:20px;font-weight:600">${c.orders}</div></div>
-        <div><div class="muted tiny">LTV</div><div style="font-family:var(--mono);font-size:20px;font-weight:600">${yen(c.ltv)}</div></div>
-        <div><div class="muted tiny">追加日</div><div style="font-family:var(--mono);font-size:13px;font-weight:500;margin-top:5px">${day(c.first_followed)}</div></div>
-        <div><div class="muted tiny">最終接触</div><div style="font-family:var(--mono);font-size:13px;font-weight:500;margin-top:5px">${dt(c.last_message)}</div></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;padding:16px;background:var(--bg);border-radius:10px">
+        <div><div class="muted tiny">注文数</div><div style="font-family:var(--display);font-size:20px;font-weight:900;color:var(--pri)">${c.orders}</div></div>
+        <div><div class="muted tiny">LTV</div><div style="font-family:var(--display);font-size:20px;font-weight:900;color:var(--pri)">${yen(c.ltv)}</div></div>
+        <div><div class="muted tiny">追加日</div><div style="font-size:13px;font-weight:700;margin-top:5px">${day(c.first_followed)}</div></div>
+        <div><div class="muted tiny">最終接触</div><div style="font-size:13px;font-weight:700;margin-top:5px">${dt(c.last_message)}</div></div>
       </div>
-      <div class="muted tiny" style="margin-bottom:5px">LINE ID</div>
-      <div class="id strong" style="margin-bottom:14px">${c.line_id}</div>
-      ${c.memo?`<div class="muted tiny" style="margin-bottom:3px">担当者メモ</div><div style="font-size:12.5px;margin-bottom:14px">${c.memo}</div>`:''}
-      <div class="muted tiny" style="margin-bottom:8px">注文履歴</div>
-      <table class="tbl" style="border:1px solid var(--rule);border-radius:var(--r);overflow:hidden">
+      ${c.memo?`<div class="mb"><div class="muted tiny">担当者メモ</div><div style="font-size:13px;line-height:1.7;margin-top:3px">${c.memo}</div></div>`:''}
+      <div class="muted tiny mb">注文履歴</div>
+      <div class="tbl-wrap"><div class="tbl-scroll"><table class="tbl">
         <thead><tr><th>注文番号</th><th>日時</th><th class="num">合計</th><th>状態</th></tr></thead>
         <tbody>${myOrders.length ? myOrders.map(o=>`<tr><td class="id">${o.id}</td><td>${dt(o.ordered_at)}</td><td class="num strong">${yen(o.total)}</td><td>${statusBadge(o.fulfillment)}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">注文履歴なし</td></tr>'}</tbody>
-      </table>
+      </table></div></div>
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal()">閉じる</button>
       <button class="btn">タグ編集</button>
-      <button class="btn primary">LINEで連絡</button>
+      <button class="btn line-fill">LINEで連絡</button>
     </div>
   `);
 };
 
-window.openBulkUpload = () => {
-  openModal(`
-    <div class="modal-h"><h2>CSV / ZIP 一括登録</h2><span class="sp" style="flex:1"></span><button class="x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
-    <div class="modal-body">
-      <ol style="padding-left:22px;line-height:2.0;font-size:13px">
-        <li>テンプレートCSV をダウンロード <a class="btn sm" style="margin-left:5px">products_template.csv</a></li>
-        <li>画像は ZIP に SKU 名で固める (例: <span class="id">lune-love-me-oil-30.jpg</span>)</li>
-        <li>CSV と ZIP を同時アップロード → プレビュー → 一括反映</li>
-      </ol>
-      <div class="field mt"><label>商品CSV</label><input type="file" accept=".csv"></div>
-      <div class="field"><label>画像ZIP</label><input type="file" accept=".zip"></div>
-      <div class="muted tiny">UTF-8 BOM・カンマ区切り。商品名は30文字以内推奨。</div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn" onclick="closeModal()">キャンセル</button>
-      <button class="btn primary">プレビュー</button>
-    </div>
-  `);
-};
-
-function drawChart(){
-  const canvas = document.getElementById('chart'); if(!canvas) return;
-  const ratio = window.devicePixelRatio||1;
-  const W = canvas.clientWidth, H = canvas.clientHeight;
-  canvas.width = W*ratio; canvas.height = H*ratio;
-  const c = canvas.getContext('2d'); c.scale(ratio,ratio);
-  const data = [12400,8200,15600,21000,9800,17200,13400,8900,24300,19800,11200,16800,22400,30360];
-  const orderCounts = [2,1,2,3,1,2,2,1,3,3,2,2,3,4];
-  const max = Math.max(...data); const padL=44, padR=12, padT=14, padB=24;
-  const gx = (W-padL-padR)/(data.length-1);
-  // grid lines
-  c.strokeStyle = 'oklch(0.93 0.004 250)'; c.lineWidth = 1;
-  for(let i=0;i<=4;i++){
-    const y = padT + (H-padT-padB)*(i/4);
-    c.beginPath(); c.moveTo(padL,y); c.lineTo(W-padR,y); c.stroke();
-  }
-  // y-axis labels
-  c.fillStyle='oklch(0.60 0.008 250)';c.font='10px JetBrains Mono';c.textAlign='right';
-  for(let i=0;i<=4;i++){
-    const val = Math.round(max*(1-i/4)/1000)+'k';
-    const y = padT + (H-padT-padB)*(i/4);
-    c.fillText('¥'+val, padL-6, y+3);
-  }
-  // bars
-  data.forEach((v,i)=>{
-    const x = padL + i*gx; const h = (H-padT-padB) * (v/max);
-    c.fillStyle = 'oklch(0.20 0.012 250 / 0.08)';
-    c.fillRect(x-7, H-padB-h, 14, h);
-  });
-  // accent line
-  c.strokeStyle='oklch(0.36 0.09 245)'; c.lineWidth=2;
-  c.beginPath();
-  data.forEach((v,i)=>{
-    const x = padL + i*gx; const y = H-padB - (H-padT-padB)*(v/max);
-    if(i===0) c.moveTo(x,y); else c.lineTo(x,y);
-  });
-  c.stroke();
-  // dots
-  data.forEach((v,i)=>{
-    const x = padL + i*gx; const y = H-padB - (H-padT-padB)*(v/max);
-    c.fillStyle='oklch(0.36 0.09 245)';
-    c.beginPath(); c.arc(x,y,3,0,Math.PI*2); c.fill();
-    c.fillStyle='oklch(1 0 0)'; c.beginPath(); c.arc(x,y,1.2,0,Math.PI*2); c.fill();
-  });
-  // x labels (every 3 days)
-  c.fillStyle='oklch(0.60 0.008 250)';c.textAlign='center';c.font='10px JetBrains Mono';
-  data.forEach((_,i)=>{
-    if(i%2===0 || i===data.length-1){
-      const x = padL + i*gx;
-      const d = new Date(2026, 5, 3+i);
-      c.fillText(`${d.getMonth()+1}/${d.getDate()}`, x, H-6);
-    }
-  });
-}
-
+/* ================ Router ================ */
 function route(hash){
   if(hash) location.hash = hash;
-  const h = (location.hash || '#/dashboard').replace(/^#\//,'');
-  const parts = h.split('/');
-  const key = parts[0] || 'dashboard';
-  const sub = parts[1];
+  const h = (location.hash || '#/home').replace(/^#\//,'');
+  const key = h.split('/')[0] || 'home';
 
   renderNav(key);
-  const t = TITLES[key] || [key,''];
-  document.getElementById('crumbs').innerHTML = `<span class="root">Skel·EC</span><span class="sep">›</span><span class="cur">${t[0]}</span>${t[1]?`<span class="sep">·</span><span class="muted">${t[1]}</span>`:''}`;
+  document.getElementById('navItems').classList.remove('open');
 
-  if(key==='products' && sub==='new') views.productEdit('new');
-  else if(key==='products' && sub) views.productEdit(sub);
-  else if(views[key]) views[key]();
-  else views.dashboard();
+  if(views[key]) views[key]();
+  else views.home();
 
-  document.getElementById('side').classList.remove('open');
-  document.getElementById('scrim').classList.remove('on');
-
-  const nb = document.getElementById('newBtn');
-  const lab = document.getElementById('newBtnLabel');
-  if(key==='orders'){ lab.textContent='受注追加'; nb.onclick=()=>{}; }
-  else if(key==='customers'){ lab.textContent='友だち追加'; nb.onclick=()=>{}; }
-  else if(key==='messages'){ lab.textContent='配信を作成'; nb.onclick=()=>{}; }
-  else if(key==='coupons'){ lab.textContent='クーポン発行'; nb.onclick=()=>{}; }
-  else if(key==='categories'){ lab.textContent='カテゴリ追加'; nb.onclick=()=>{}; }
-  else { lab.textContent='商品を追加'; nb.onclick=()=>route('#/products/new'); }
+  window.scrollTo(0,0);
 }
+
 window.addEventListener('hashchange', ()=>route());
-window.addEventListener('resize', ()=>{ if(location.hash.startsWith('#/dashboard')) drawChart(); });
 window.route = route;
-document.getElementById('ham').onclick = ()=>{
-  document.getElementById('side').classList.toggle('open');
-  document.getElementById('scrim').classList.toggle('on');
-};
-document.getElementById('scrim').onclick = ()=>{
-  document.getElementById('side').classList.remove('open');
-  document.getElementById('scrim').classList.remove('on');
+
+document.getElementById('hamb').onclick = () => {
+  document.getElementById('navItems').classList.toggle('open');
 };
 
 loadData().then(()=>route());
