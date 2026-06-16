@@ -7,714 +7,548 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
-  body{font-family:'Noto Sans JP',sans-serif;background:#F5F2EC;color:#0A0A0A;line-height:1.85;padding:48px 20px;font-feature-settings:"palt"}
-  .wrap{max-width:920px;margin:0 auto}
+  body{font-family:'Noto Sans JP',sans-serif;background:#F5F2EC;color:#0A0A0A;line-height:1.85;padding:0 0 80px;font-feature-settings:"palt"}
+  .wrap{max-width:920px;margin:0 auto;padding:24px 20px}
 
-  .hero{background:#0A0A0A;color:#fff;padding:54px 48px;border-radius:24px;margin-bottom:36px;position:relative;overflow:hidden}
+  /* === 進捗バー (sticky top) === */
+  .progress-bar{position:sticky;top:0;z-index:100;background:#0A0A0A;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:18px;border-bottom:2px solid #06C755;box-shadow:0 4px 20px rgba(0,0,0,0.15)}
+  .progress-label{font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.15em;color:#06C755;font-weight:700;flex-shrink:0}
+  .progress-track{flex:1;height:8px;background:#262626;border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,#06C755,#A7F3D0);border-radius:99px;width:0%;transition:width 0.4s cubic-bezier(0.22,1,0.36,1)}
+  .progress-num{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#fff;min-width:50px;text-align:right}
+  .reset-btn{background:transparent;border:1px solid #525252;color:#A1A1AA;padding:5px 10px;border-radius:5px;font-size:10.5px;cursor:pointer;font-family:'JetBrains Mono',monospace}
+
+  /* === HERO === */
+  .hero{background:#0A0A0A;color:#fff;padding:48px 40px;border-radius:24px;margin-bottom:28px;position:relative;overflow:hidden}
   .hero::before{content:'';position:absolute;top:-80px;right:-80px;width:300px;height:300px;background:radial-gradient(circle,#06C755 0%,transparent 65%);opacity:0.25}
-  .hero::after{content:'';position:absolute;bottom:-120px;left:-60px;width:260px;height:260px;background:radial-gradient(circle,#FFD700 0%,transparent 65%);opacity:0.12}
-  .hero .brand{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#06C755;letter-spacing:0.35em;font-weight:700;margin-bottom:14px}
-  .hero h1{font-family:'Noto Serif JP',serif;font-size:42px;font-weight:900;letter-spacing:0.01em;line-height:1.25;margin-bottom:18px;position:relative}
+  .hero .brand{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#06C755;letter-spacing:0.35em;font-weight:700;margin-bottom:12px}
+  .hero h1{font-family:'Noto Serif JP',serif;font-size:38px;font-weight:900;letter-spacing:0.01em;line-height:1.25;margin-bottom:16px;position:relative}
   .hero h1 .accent{color:#06C755}
-  .hero .lead{font-size:15px;color:#D4D4D8;line-height:1.85;max-width:580px;position:relative}
-  .hero .meta{margin-top:30px;display:flex;gap:32px;font-size:12px;color:#A1A1AA;flex-wrap:wrap;position:relative}
-  .hero .meta span{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace}
+  .hero .lead{font-size:14.5px;color:#D4D4D8;line-height:1.85;max-width:560px;position:relative}
+  .hero .meta{margin-top:24px;display:flex;gap:24px;font-size:11.5px;color:#A1A1AA;flex-wrap:wrap;position:relative}
+  .hero .meta span{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace}
   .hero .meta strong{color:#FAFAFA;font-weight:700;font-family:'Noto Sans JP',sans-serif}
 
-  .chap-nav{background:#fff;border-radius:16px;padding:28px 32px;margin-bottom:24px;box-shadow:0 1px 0 #E5E5E5}
-  .chap-nav-ttl{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#737373;letter-spacing:0.25em;font-weight:700;margin-bottom:14px}
-  .chap-list{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:13.5px}
-  .chap-list a{color:#171717;text-decoration:none;padding:6px 0;display:flex;gap:10px;align-items:baseline}
-  .chap-list a:hover{color:#06C755}
-  .chap-list .n{font-family:'JetBrains Mono',monospace;font-size:11px;color:#06C755;font-weight:700}
+  /* === STEP CARD === */
+  .step-card{background:#fff;border-radius:20px;padding:0;margin-bottom:20px;box-shadow:0 1px 0 #E5E5E5;border:2px solid transparent;transition:border-color 0.2s,box-shadow 0.2s;scroll-margin-top:80px;overflow:hidden}
+  .step-card.active{border-color:#06C755;box-shadow:0 12px 40px rgba(6,199,85,0.18)}
+  .step-card.done{opacity:0.7}
+  .step-card.done .step-head .step-num{background:#06C755;color:#fff}
+  .step-card.done .step-head .step-num::after{content:'✓';position:absolute;font-size:28px}
+  .step-card.done .step-num-text{display:none}
 
-  section{background:#fff;border-radius:20px;padding:48px;margin-bottom:24px;box-shadow:0 1px 0 #E5E5E5}
-  .sec-meta{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
-  .sec-n{font-family:'JetBrains Mono',monospace;font-size:11px;color:#737373;letter-spacing:0.28em;font-weight:700}
-  .sec-time{font-family:'JetBrains Mono',monospace;font-size:11px;color:#06C755;letter-spacing:0.1em;font-weight:700;padding:4px 10px;background:rgba(6,199,85,0.08);border-radius:4px}
-  h2{font-family:'Noto Serif JP',serif;font-size:30px;font-weight:700;color:#0A0A0A;margin-bottom:8px;letter-spacing:0.01em;line-height:1.3}
-  .h2-sub{font-size:14px;color:#737373;margin-bottom:32px;line-height:1.75}
+  .step-head{display:flex;align-items:center;gap:18px;padding:24px 32px 0}
+  .step-num{flex-shrink:0;width:58px;height:58px;background:#0A0A0A;color:#06C755;border-radius:18px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:900;font-size:24px;position:relative;transition:all 0.3s}
+  .step-num-text{display:inline-block}
+  .step-head-text{flex:1}
+  .step-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#737373;letter-spacing:0.2em;font-weight:700;margin-bottom:3px}
+  .step-title{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:700;color:#0A0A0A;line-height:1.35}
+  .step-time{font-family:'JetBrains Mono',monospace;font-size:11px;color:#06C755;font-weight:700;padding:4px 10px;background:rgba(6,199,85,0.08);border-radius:5px;letter-spacing:0.1em;flex-shrink:0}
 
-  .step{display:grid;grid-template-columns:60px 1fr;gap:22px;padding:26px 0;border-bottom:1px solid #F4F4F5;align-items:start}
-  .step:first-child{padding-top:0}
-  .step:last-child{border:none;padding-bottom:0}
-  .step-n{width:52px;height:52px;background:#0A0A0A;color:#06C755;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;flex-shrink:0}
-  .step-body{flex:1;min-width:0}
-  .step-title{font-family:'Noto Serif JP',serif;font-size:19px;font-weight:700;color:#0A0A0A;margin-bottom:10px;line-height:1.4}
-  .step-desc{font-size:14px;color:#404040;line-height:1.85;margin-bottom:14px}
-  .step-desc strong{color:#0A0A0A;font-weight:700;background:linear-gradient(180deg,transparent 60%,#FFF59D 60%);padding:0 2px}
+  .step-body{padding:18px 32px 28px}
+  .step-desc{font-size:14px;color:#404040;line-height:1.85;margin-bottom:18px}
+  .step-desc strong{color:#0A0A0A;font-weight:700;background:linear-gradient(180deg,transparent 60%,#FFF59D 60%);padding:0 3px}
 
-  .url-link{display:inline-flex;align-items:center;gap:10px;background:#0A0A0A;color:#06C755;padding:10px 18px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;text-decoration:none;border:1px solid #262626;margin:6px 0}
-  .url-link::before{content:'↗';color:#06C755;font-weight:700}
+  /* === ACTION BLOCK (the thing to do RIGHT NOW) === */
+  .do-now{background:#F0FDF4;border:2px solid #06C755;border-radius:14px;padding:20px 22px;margin:14px 0}
+  .do-now-label{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#065F46;font-weight:700;letter-spacing:0.15em;margin-bottom:12px}
+  .do-now-label::before{content:'→';color:#06C755;font-weight:900;font-size:18px}
+  .do-now-body{font-size:14.5px;color:#0A0A0A;line-height:1.85}
+  .do-now-body strong{color:#065F46;font-weight:700}
 
-  .action{background:#F0FDF4;border-left:4px solid #06C755;padding:14px 20px;border-radius:0 10px 10px 0;font-size:13.5px;color:#14532D;margin:14px 0;line-height:1.8}
-  .action::before{content:'✓ クリック / 入力: ';font-weight:900;color:#06C755;letter-spacing:0.02em}
-  .action code{font-family:'JetBrains Mono',monospace;background:#fff;padding:3px 9px;border-radius:4px;font-size:12px;color:#0A0A0A;border:1px solid #BBF7D0;font-weight:700}
+  /* === COPY-URL BLOCK === */
+  .copy-block{background:#0A0A0A;color:#fff;border-radius:12px;padding:14px 18px;margin:12px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:12.5px}
+  .copy-block .url-txt{flex:1;color:#06C755;font-weight:600;word-break:break-all;min-width:200px}
+  .copy-block .copy-btn{background:#06C755;color:#0A0A0A;border:none;padding:9px 18px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:0.05em;flex-shrink:0;transition:all 0.15s}
+  .copy-block .copy-btn:hover{background:#A7F3D0}
+  .copy-block .copy-btn.copied{background:#FFD700;color:#0A0A0A}
+  .copy-block .open-btn{background:transparent;color:#06C755;border:1px solid #06C755;padding:9px 16px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11.5px;cursor:pointer;text-decoration:none;flex-shrink:0}
+  .copy-block .open-btn:hover{background:#06C755;color:#0A0A0A}
 
-  .expect{background:#F0F9FF;border-left:4px solid #0EA5E9;padding:14px 20px;border-radius:0 10px 10px 0;font-size:13.5px;color:#075985;margin:10px 0;line-height:1.8}
-  .expect::before{content:'👁 こうなったら 成功: ';font-weight:900;color:#0EA5E9;letter-spacing:0.02em}
+  /* === EXPECTED RESULT === */
+  .expect{background:#F0F9FF;border-left:4px solid #0EA5E9;padding:14px 20px;border-radius:0 10px 10px 0;font-size:13.5px;color:#075985;margin:14px 0;line-height:1.8}
+  .expect::before{content:'👁 こうなったら 成功:  ';font-weight:900;color:#0EA5E9;letter-spacing:0.02em}
 
-  .warn{background:#FEF3C7;border-left:4px solid #F59E0B;padding:14px 20px;border-radius:0 10px 10px 0;font-size:13px;color:#78350F;margin:14px 0;line-height:1.8}
-  .warn::before{content:'⚠ 注意: ';font-weight:900;color:#D97706;letter-spacing:0.02em}
+  /* === WARNING === */
+  .warn{background:#FEF3C7;border-left:4px solid #F59E0B;padding:13px 18px;border-radius:0 10px 10px 0;font-size:12.5px;color:#78350F;margin:12px 0;line-height:1.75}
+  .warn::before{content:'⚠ 注意:  ';font-weight:900;color:#D97706}
 
-  /* 実スクショ */
-  .real{background:#FAFAFA;border:1px solid #E5E5E5;border-radius:14px;padding:16px;margin:18px 0}
-  .real-bar{background:#171717;padding:10px 14px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:8px}
-  .real-bar i{width:10px;height:10px;border-radius:50%}
-  .real-bar i:nth-child(1){background:#FF5F57}
-  .real-bar i:nth-child(2){background:#FEBC2E}
-  .real-bar i:nth-child(3){background:#28C840}
-  .real-bar .u{margin-left:12px;background:#262626;padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#A1A1AA;flex:1}
-  .real img{display:block;width:100%;height:auto;border-radius:0 0 8px 8px;border:1px solid #E5E5E5}
-  .real-cap{font-size:11.5px;color:#525252;margin-top:10px;text-align:center;font-style:italic;font-family:'Noto Serif JP',serif}
-  .real-cap strong{font-style:normal;color:#0A0A0A}
-  .real-tag{display:inline-block;background:#06C755;color:#fff;padding:3px 9px;border-radius:99px;font-size:10px;font-weight:700;letter-spacing:0.1em;margin-bottom:8px}
-  .real-tag.mock{background:#A78BFA}
+  /* === COMPLETE BUTTON === */
+  .complete-row{display:flex;gap:12px;align-items:center;margin-top:22px;padding-top:18px;border-top:1px dashed #E5E5E5}
+  .complete-btn{flex:1;background:#0A0A0A;color:#fff;border:none;padding:14px 20px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.15s}
+  .complete-btn::before{content:'✓';color:#06C755;font-size:18px;font-weight:900}
+  .complete-btn:hover{background:#171717}
+  .complete-btn.done{background:#06C755;color:#fff}
+  .complete-btn.done::before{content:'✓ 完了'}
+  .skip-link{font-size:12px;color:#737373;text-decoration:none}
+  .skip-link:hover{color:#0A0A0A}
 
-  /* mock UI */
-  .mock{background:#FAFAFA;border:1px solid #E5E5E5;border-radius:14px;padding:0;margin:18px 0;overflow:hidden}
-  .mock-bar{background:#171717;padding:10px 14px;display:flex;align-items:center;gap:8px}
-  .mock-bar i{width:10px;height:10px;border-radius:50%}
+  /* === MOCK SCREEN === */
+  .mock{background:#FAFAFA;border:1px solid #E5E5E5;border-radius:12px;padding:0;margin:14px 0;overflow:hidden}
+  .mock-bar{background:#171717;padding:9px 14px;display:flex;align-items:center;gap:6px}
+  .mock-bar i{width:9px;height:9px;border-radius:50%}
   .mock-bar i:nth-child(1){background:#FF5F57}
   .mock-bar i:nth-child(2){background:#FEBC2E}
   .mock-bar i:nth-child(3){background:#28C840}
-  .mock-bar .u{margin-left:12px;background:#262626;padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#A1A1AA;flex:1}
-  .mock-body{background:#fff;padding:28px 28px;border:1px solid #F4F4F5;border-top:none}
-  .mock-h{font-family:'Noto Sans JP',sans-serif;font-size:15px;font-weight:700;color:#0A0A0A;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #F4F4F5;display:flex;align-items:center;gap:10px}
-  .mock-h .tab{padding:6px 14px;font-size:12.5px;font-weight:600;color:#737373;border-bottom:2px solid transparent;cursor:pointer}
-  .mock-h .tab.active{color:#0A0A0A;border-bottom-color:#06C755}
-  .mock-row{display:flex;justify-content:space-between;padding:11px 0;font-size:13px;color:#525252;border-bottom:1px dotted #E5E5E5;align-items:center;gap:14px}
-  .mock-row:last-child{border:none}
-  .mock-row .lbl{font-weight:600;color:#404040;min-width:160px}
-  .mock-row .val{flex:1;font-family:'JetBrains Mono',monospace;font-size:12px;color:#0A0A0A;background:#F9FAFB;padding:6px 12px;border-radius:4px;border:1px solid #F0F0F0}
+  .mock-bar .u{margin-left:10px;background:#262626;padding:3px 9px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#A1A1AA;flex:1}
+  .mock-body{background:#fff;padding:22px 26px}
+  .mock-h{font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;color:#0A0A0A;margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid #F4F4F5}
+  .mock-row{display:flex;justify-content:space-between;padding:9px 0;font-size:12.5px;color:#525252;border-bottom:1px dotted #E5E5E5;align-items:center;gap:14px}
+  .mock-row .lbl{font-weight:600;color:#404040;min-width:130px}
+  .mock-row .val{flex:1;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#0A0A0A;background:#F9FAFB;padding:5px 10px;border-radius:4px;border:1px solid #F0F0F0}
   .mock-row .val.highlight{background:#FFF59D;border-color:#F59E0B}
-  .mock-row .copy{background:#262626;color:#fff;font-size:11px;padding:5px 12px;border-radius:5px;font-weight:600}
-  .mock-row .issue{background:#06C755;color:#fff;font-size:12px;padding:7px 16px;border-radius:5px;font-weight:700}
-  .mock-btn{display:inline-block;background:#06C755;color:#fff;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;margin-top:14px}
-  .mock-btn.secondary{background:#262626;margin-right:8px}
-  .mock-btn.disabled{background:#D1D5DB;color:#9CA3AF}
-  .mock-input{background:#fff;border:2px solid #E5E5E5;border-radius:6px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#0A0A0A;width:100%;margin-top:6px}
-  .mock-input.filled{border-color:#06C755}
-  .mock-input.empty::before{content:'-';color:#9CA3AF}
-  .mock-label{font-size:11.5px;color:#525252;font-weight:600;margin-bottom:2px;display:block}
-  .mock-chip{display:inline-block;background:#FEF3C7;color:#78350F;padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;letter-spacing:0.04em;margin-left:8px}
+  .mock-row .copy{background:#262626;color:#fff;font-size:10.5px;padding:5px 11px;border-radius:4px;font-weight:600}
+  .mock-row .issue{background:#06C755;color:#fff;font-size:11.5px;padding:6px 14px;border-radius:5px;font-weight:700}
+  .mock-btn{display:inline-block;background:#06C755;color:#fff;padding:8px 20px;border-radius:6px;font-size:12.5px;font-weight:700;margin-top:12px}
 
-  .annotation{position:relative;margin:18px 0}
-  .annotation .pin{position:absolute;background:#DC2626;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;z-index:5;box-shadow:0 4px 12px rgba(220,38,38,0.4);border:2px solid #fff}
-  .annotation .legend{margin-top:10px;font-size:12px;color:#525252;line-height:1.85;background:#FFFBEB;padding:14px 18px;border-radius:8px;border:1px solid rgba(245,158,11,0.3)}
-  .annotation .legend ol{margin:0;padding-left:20px}
-  .annotation .legend li{margin:4px 0}
-  .annotation .legend strong{color:#DC2626;background:#FEE2E2;padding:1px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;margin-right:6px}
+  /* === REAL screenshot === */
+  .real{background:#FAFAFA;border:1px solid #E5E5E5;border-radius:12px;padding:14px;margin:14px 0}
+  .real-tag{display:inline-block;background:#06C755;color:#fff;padding:2px 8px;border-radius:99px;font-size:9.5px;font-weight:700;letter-spacing:0.1em;margin-bottom:8px}
+  .real img{display:block;width:100%;height:auto;border-radius:6px;border:1px solid #E5E5E5}
+  .real-cap{font-size:11px;color:#525252;margin-top:8px;text-align:center;font-style:italic}
+  .real-cap strong{font-style:normal;color:#0A0A0A;font-weight:700}
 
-  .copy-tip{background:#FFFBEB;border:2px dashed #F59E0B;padding:18px 22px;border-radius:12px;margin:18px 0}
-  .copy-tip .ti{font-family:'Noto Serif JP',serif;font-size:14px;font-weight:700;color:#78350F;margin-bottom:8px;display:flex;align-items:center;gap:8px}
-  .copy-tip .ds{font-size:12.5px;color:#92400E;line-height:1.85}
-  .copy-tip code{background:#fff;padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#78350F;border:1px solid rgba(245,158,11,0.3);font-weight:700}
+  /* === SURVEY TABLE === */
+  .survey-grid{display:grid;grid-template-columns:36px 1fr 130px;gap:8px 14px;font-size:13px;color:#404040;line-height:1.7;margin:14px 0;background:#FAFAFA;padding:18px 22px;border-radius:10px;border:1px solid #E5E5E5}
+  .survey-grid .qn{color:#06C755;font-weight:700;font-family:'JetBrains Mono',monospace}
+  .survey-grid .qd{color:#737373;font-size:11px}
 
-  .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px}
-  .card{background:#FAFAFA;border:1px solid #E5E5E5;border-radius:12px;padding:24px}
-  .card .ic{font-size:24px;margin-bottom:10px;display:block}
-  .card .ti{font-weight:700;font-size:14.5px;color:#0A0A0A;margin-bottom:6px;font-family:'Noto Serif JP',serif}
-  .card .ds{font-size:12.5px;color:#525252;line-height:1.75}
+  /* === DONE banner (after all complete) === */
+  .all-done{background:linear-gradient(135deg,#065F46,#047857);color:#fff;padding:40px 36px;border-radius:24px;margin:32px 0;text-align:center;display:none}
+  .all-done.show{display:block;animation:slidein 0.5s cubic-bezier(0.22,1,0.36,1)}
+  @keyframes slidein{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .all-done h2{font-family:'Noto Serif JP',serif;font-size:32px;font-weight:900;margin-bottom:14px;color:#fff}
+  .all-done p{font-size:14px;color:#D1FAE5;line-height:1.85}
 
-  details{background:#FAFAFA;border:1px solid #E5E5E5;border-radius:10px;padding:18px 22px;margin-bottom:10px;cursor:pointer}
-  details[open]{background:#fff;border-color:#06C755}
-  summary{font-weight:700;font-size:14px;color:#0A0A0A;list-style:none;display:flex;justify-content:space-between;align-items:center}
-  summary::after{content:'+';font-size:22px;color:#06C755;font-weight:300;transition:transform 0.2s}
-  details[open] summary::after{transform:rotate(45deg)}
-  details p{font-size:13.5px;color:#525252;margin-top:12px;line-height:1.85}
+  /* === SUPPORT === */
+  .support{background:#0A0A0A;color:#fff;padding:30px 36px;border-radius:18px;margin-top:30px}
+  .support h3{font-family:'Noto Serif JP',serif;font-size:20px;font-weight:700;margin-bottom:8px}
+  .support p{font-size:13px;color:#D4D4D8;line-height:1.85;margin-bottom:14px}
+  .support-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+  .support-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:14px 18px}
+  .support-card .lbl{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#06C755;letter-spacing:0.18em;font-weight:700;margin-bottom:3px}
+  .support-card .val{font-size:14px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px;justify-content:space-between}
+  .support-card .val .copy{background:#06C755;color:#0A0A0A;border:none;padding:4px 10px;border-radius:4px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:'JetBrains Mono',monospace}
 
-  .support{background:linear-gradient(135deg,#0A0A0A,#1A1A1A);color:#fff;padding:36px 40px;border-radius:20px;margin-top:32px;position:relative;overflow:hidden}
-  .support::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,#06C755 0%,transparent 70%);opacity:0.2}
-  .support h3{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:700;margin-bottom:8px;position:relative}
-  .support p{font-size:13.5px;color:#D4D4D8;line-height:1.85;margin-bottom:14px;position:relative}
-  .support-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px;position:relative}
-  .support-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:18px 20px}
-  .support-card .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;color:#06C755;letter-spacing:0.2em;font-weight:700;margin-bottom:4px}
-  .support-card .val{font-size:15px;font-weight:700;color:#fff}
-
-  .ft{text-align:center;margin-top:40px;color:#A3A3A3;font-size:11.5px;letter-spacing:0.06em;font-family:'JetBrains Mono',monospace}
-  .ft strong{color:#0A0A0A;font-family:'Noto Sans JP',sans-serif;font-weight:700}
+  /* === KEY VAULT (Token/Secret stash) === */
+  .vault{background:#FFFBEB;border:2px dashed #F59E0B;padding:20px 24px;border-radius:14px;margin:14px 0}
+  .vault-h{font-family:'Noto Serif JP',serif;font-size:15px;font-weight:700;color:#78350F;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .vault-sub{font-size:12px;color:#92400E;line-height:1.75;margin-bottom:14px}
+  .vault-field{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+  .vault-field .lbl{flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;color:#78350F;min-width:24px}
+  .vault-field input{flex:1;min-width:200px;padding:10px 14px;border:1.5px solid #F59E0B;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;background:#fff}
+  .vault-field .copy{background:#78350F;color:#fff;border:none;padding:9px 16px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;cursor:pointer}
+  .vault-field .copy.copied{background:#06C755}
+  .vault-status{font-size:11px;color:#92400E;text-align:right;font-family:'JetBrains Mono',monospace}
 
   @media (max-width:700px){
-    body{padding:24px 14px}
-    .hero,section{padding:30px 24px}
-    .hero h1{font-size:30px}
-    h2{font-size:22px}
-    .chap-list{grid-template-columns:1fr}
-    .step{grid-template-columns:1fr;gap:14px}
-    .step-n{width:44px;height:44px;font-size:15px}
-    .support-grid{grid-template-columns:1fr}
+    .hero,.step-head,.step-body{padding-left:22px;padding-right:22px}
+    .hero h1{font-size:28px}
+    .step-title{font-size:18px}
+    .progress-bar{padding:10px 16px;gap:10px}
+    .progress-label{font-size:10px}
+    .step-num{width:46px;height:46px;font-size:18px;border-radius:14px}
   }
 </style>
 </head>
 <body>
+
+<!-- 進捗バー (sticky) -->
+<div class="progress-bar">
+  <div class="progress-label">PROGRESS</div>
+  <div class="progress-track"><div class="progress-fill" id="pfill"></div></div>
+  <div class="progress-num" id="pnum">0 / 10</div>
+  <button class="reset-btn" id="reset-btn" title="進捗をリセット">RESET</button>
+</div>
+
 <div class="wrap">
 
 <div class="hero">
-  <div class="brand">FP COMPASS · OFFICIAL LINE INTEGRATION GUIDE</div>
-  <h1>公式LINE を <span class="accent">FP Compass</span><br>と つなぐ ための ガイド</h1>
-  <p class="lead">15分 で 完了 します。 LINE Developers での 設定 と、 FP Compass 側 への 入力 を 1ステップずつ 案内 します。 初めて の方 でも 迷わず 設定できます。</p>
+  <div class="brand">FP COMPASS · OFFICIAL LINE SETUP · v3.0</div>
+  <h1>公式LINE を <span class="accent">FP Compass</span><br>と つなぐ 完全ガイド</h1>
+  <p class="lead">15分 で 完了。 各ステップ ① 「やること」 ② 「期待結果」 ③ 「次へ」 の 順 に 進めるだけ。 URL は <strong style="color:#06C755;">緑の「コピー」ボタン</strong> で 一発 コピー。 進捗 は 自動保存 されます。</p>
   <div class="meta">
-    <span>⏱ <strong>所要時間</strong> 約15分</span>
-    <span>💰 <strong>追加料金</strong> 0円</span>
-    <span>📞 <strong>サポート</strong> support@skeleton-inc.jp</span>
+    <span>⏱ <strong>15分</strong></span>
+    <span>💰 <strong>0円</strong></span>
+    <span>🪜 <strong>10ステップ</strong></span>
+    <span>📞 <strong>support@skeleton-inc.jp</strong></span>
   </div>
 </div>
 
-<nav class="chap-nav">
-  <div class="chap-nav-ttl">CONTENTS · 全9章</div>
-  <div class="chap-list">
-    <a href="#s1"><span class="n">01</span> 全体の流れ (5分で 理解)</a>
-    <a href="#s2"><span class="n">02</span> 準備するもの</a>
-    <a href="#s3"><span class="n">03</span> LINE Developers ログイン</a>
-    <a href="#s4"><span class="n">04</span> Provider (事業者) 作成</a>
-    <a href="#s5"><span class="n">05</span> Messaging API チャネル 作成</a>
-    <a href="#s6"><span class="n">06</span> Channel access token 発行</a>
-    <a href="#s7"><span class="n">07</span> Channel secret 取得</a>
-    <a href="#s8"><span class="n">08</span> FP Compass に 入力</a>
-    <a href="#s9"><span class="n">09</span> 動作確認 + QR配布</a>
-    <a href="#s10"><span class="n">10</span> アンケート の 中身 (15問)</a>
-  </div>
-</nav>
-
-<section id="s1">
-  <div class="sec-meta"><div class="sec-n">SECTION 01</div></div>
-  <h2>全体 の 流れ</h2>
-  <div class="h2-sub">何を やるか、 ザックリ 把握 してから 始めると 迷いません。</div>
-  <p style="font-size:14.5px;color:#374151;line-height:1.95;margin-bottom:14px;">
-    FP Compass と お客様 を 「公式LINE」 でつなぎます。 やる事 は 大きく <strong>3つ</strong> だけ:
-  </p>
-  <div class="card-grid">
-    <div class="card">
-      <span class="ic">①</span>
-      <div class="ti">LINE Developers で 鍵 を 作る</div>
-      <div class="ds">無料で プロバイダー → チャネル を 作って、 <strong>Token と Secret の 2つ の 鍵</strong> を 取得。</div>
+<!-- STEP 1 -->
+<div class="step-card" id="step-1" data-step="1">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">1</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 01 / 10</div>
+      <div class="step-title">LINE Developers を 開く</div>
     </div>
-    <div class="card">
-      <span class="ic">②</span>
-      <div class="ti">FP Compass に 鍵 を 貼る</div>
-      <div class="ds">取得した 2つ の 鍵 を FP Compass の 設定画面 に 貼り付け。 後の 設定 (Webhook URL / リッチメニュー / アンケート埋込) は <strong>FP Compass が 全部 自動で やってくれます</strong>。</div>
-    </div>
-    <div class="card">
-      <span class="ic">③</span>
-      <div class="ti">QR を お客様 に 渡す</div>
-      <div class="ds">FP Compass が 生成 した QR を 名刺・チラシ等 に 載せる。 お客様 が 友だち追加 → アンケート 回答 で 自動で 顧客台帳 に 登録。</div>
-    </div>
+    <div class="step-time">1分</div>
   </div>
-  <div class="warn">アンケート URL や Webhook URL は <strong>FP Compass が 自動で 生成</strong> します。 あなた が 手で 作る 必要は ありません。</div>
-</section>
-
-<section id="s2">
-  <div class="sec-meta"><div class="sec-n">SECTION 02</div><div class="sec-time">⏱ 1 分</div></div>
-  <h2>準備するもの</h2>
-  <div class="h2-sub">作業前 に 3つ 揃ってるか 確認 してください。</div>
-  <div class="card-grid">
-    <div class="card"><span class="ic">💻</span><div class="ti">PC 1台</div><div class="ds">Mac / Windows どちらでも OK。 Chrome 推奨。</div></div>
-    <div class="card"><span class="ic">📱</span><div class="ti">スマホ の LINE アプリ</div><div class="ds">ログイン時 に 2段階認証 で 4桁番号 を 入力。 普段使ってる LINE で OK。</div></div>
-    <div class="card"><span class="ic">🪪</span><div class="ti">事業所名 + 担当者名</div><div class="ds">例: 「田中ファイナンシャル」 / 「田中 太郎」</div></div>
-  </div>
-  <div class="warn">事前 に <strong>LINE 公式アカウント</strong> を 作っておく 必要 は ありません。 このガイド の 中で 一緒に 作ります。</div>
-</section>
-
-<section id="s3">
-  <div class="sec-meta"><div class="sec-n">SECTION 03</div><div class="sec-time">⏱ 2 分</div></div>
-  <h2>LINE Developers に ログイン</h2>
-  <div class="h2-sub">普段の LINE アカウント で 入れます。 新規アカウント 作成 不要。</div>
-
-  <div class="step">
-    <div class="step-n">1</div>
-    <div class="step-body">
-      <div class="step-title">下の URL を 開く</div>
-      <div class="step-desc">PC の Chrome で 新しい タブ を 開き、 下の URL を コピー して 開いてください。</div>
-      <a class="url-link" href="https://developers.line.biz/console/" target="_blank">https://developers.line.biz/console/</a>
-      <div class="expect">「LINEヤフー Business ID」 という ログイン 選択画面 が 表示される</div>
-      <div class="mock">
-        <div class="mock-bar"><i></i><i></i><i></i><div class="u">account.line.biz/login</div></div>
-        <div class="mock-body" style="text-align:center;padding:40px 28px;">
-          <div style="font-size:11px;font-weight:700;color:#9CA3AF;letter-spacing:0.15em;margin-bottom:6px;">LINEヤフー</div>
-          <div style="font-family:'Noto Serif JP',serif;font-size:30px;font-weight:700;margin-bottom:20px;">Business ID</div>
-          <div style="font-size:12.5px;color:#525252;margin-bottom:20px;">設定済みのログイン方法でログインしてください。</div>
-          <div style="background:#06C755;color:#fff;padding:14px;border-radius:8px;font-weight:700;font-size:14px;margin-bottom:10px;">LINEアカウント</div>
-          <div style="background:#fff;color:#1D4ED8;border:1.5px solid #1D4ED8;padding:14px;border-radius:8px;font-weight:700;font-size:14px;margin-bottom:10px;">ビジネスアカウント</div>
-          <div style="background:#1D4ED8;color:#fff;padding:14px;border-radius:8px;font-weight:700;font-size:14px;">Yahoo! JAPAN ID</div>
-        </div>
-        <div class="real-cap" style="padding:10px 14px;background:#F4F4F5;font-family:'Noto Sans JP',sans-serif;font-style:normal;border-top:1px solid #E5E5E5;font-size:12px;">想定画面 イメージ — 実際の画面 では こんな 配色 + ボタン 配置</div>
+  <div class="step-body">
+    <div class="step-desc">PC の <strong>Chrome</strong> で 下の URL を 開く。 「コピー」 ボタン を 押す → アドレスバー に ⌘+V (Mac) / Ctrl+V (Win) → Enter。</div>
+    <div class="do-now">
+      <div class="do-now-label">やること</div>
+      <div class="do-now-body">この URL を コピー → Chrome の 新しいタブ で 開く</div>
+      <div class="copy-block">
+        <div class="url-txt">https://developers.line.biz/console/</div>
+        <button class="copy-btn" data-copy="https://developers.line.biz/console/">コピー</button>
+        <a class="open-btn" href="https://developers.line.biz/console/" target="_blank">↗ 開く</a>
       </div>
     </div>
-  </div>
-
-  <div class="step">
-    <div class="step-n">2</div>
-    <div class="step-body">
-      <div class="step-title">「LINEアカウント」 を クリック</div>
-      <div class="step-desc">緑色 の 一番上 の ボタン。</div>
-      <div class="action">緑ボタン <code>LINEアカウント</code> を クリック</div>
-      <div class="expect">メアド + パスワード の 入力フォーム が 出る</div>
+    <div class="expect">「LINEヤフー Business ID」 という ログイン選択画面 が 出る</div>
+    <div class="complete-row">
+      <button class="complete-btn" data-done="1">このステップ 完了 → 次へ</button>
     </div>
   </div>
+</div>
 
-  <div class="step">
-    <div class="step-n">3</div>
-    <div class="step-body">
-      <div class="step-title">普段 使ってる LINE の メアド と パスワード を 入力</div>
-      <div class="action">メアド <code>あなたの LINE アカウント</code> + パスワード を 入力 → ログイン</div>
-      <div class="expect">「認証番号で本人確認」 という 4桁番号 (例: <code>7149</code>) が 出る</div>
-      <div class="warn">LINE の メアド / パスワード を 忘れた 場合 — スマホ の LINE アプリ で 「設定 → アカウント → メールアドレス / パスワード」 で 再設定可能。</div>
+<!-- STEP 2 -->
+<div class="step-card" id="step-2" data-step="2">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">2</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 02 / 10</div>
+      <div class="step-title">LINE アカウント で ログイン</div>
     </div>
+    <div class="step-time">2分</div>
   </div>
-
-  <div class="step">
-    <div class="step-n">4</div>
-    <div class="step-body">
-      <div class="step-title">スマホ の LINE で 4桁番号 入力</div>
-      <div class="step-desc">PC 画面 に 出た 4桁番号 を、 スマホ の LINE アプリ で 入力 (本人確認)。</div>
-      <div class="action">スマホ LINE 開く → 通知 をタップ → 4桁 入力 (3分以内)</div>
-      <div class="expect">PC 画面が 自動で <code>https://developers.line.biz/console/</code> に 遷移 → コンソール 画面 が 出る</div>
-    </div>
-  </div>
-</section>
-
-<section id="s4">
-  <div class="sec-meta"><div class="sec-n">SECTION 04</div><div class="sec-time">⏱ 1 分</div></div>
-  <h2>Provider (事業者枠) を 作る</h2>
-  <div class="h2-sub">あなた の 事業 を 識別する 「箱」 を 作ります。 後から 変更可能。</div>
-
-  <div class="step">
-    <div class="step-n">1</div>
-    <div class="step-body">
-      <div class="step-title">画面 を 確認</div>
-      <div class="step-desc">ログイン 直後 の コンソール 画面。 <strong>「プロバイダー」</strong> の リスト が 並びます。 まだ 何も無い 状態 でも OK。</div>
-      <div class="real">
-        <span class="real-tag">REAL · 実画面</span>
-        <div class="real-bar"><i></i><i></i><i></i><div class="u">developers.line.biz/console/</div></div>
-        <img src="real-console-home.png" alt="LINE Developers Console ホーム">
-        <div class="real-cap"><strong>LINE Developers Console ホーム</strong> · 左に サイドバー、 中央に Provider 一覧、 右上に 緑 「作成」 ボタン</div>
+  <div class="step-body">
+    <div class="step-desc">3つ並んだ ログイン方法 の <strong>緑色 一番上</strong> 「LINEアカウント」 を 押す。 普段 使ってる LINE の メアド + パスワード を 入れて ログイン。</div>
+    <div class="do-now">
+      <div class="do-now-label">やること</div>
+      <div class="do-now-body">
+        ① <strong>緑ボタン</strong> 「LINEアカウント」 をクリック<br>
+        ② メアド + パスワード 入力 → ログイン<br>
+        ③ <strong>4桁番号</strong> が 出る → スマホ の LINE アプリ で その 番号 を 入力 (本人確認)
       </div>
     </div>
-  </div>
-
-  <div class="step">
-    <div class="step-n">2</div>
-    <div class="step-body">
-      <div class="step-title">緑色 の 「作成」 ボタン を クリック</div>
-      <div class="step-desc">画面中央 上 「プロバイダー (○)」 の 右隣 にある 緑ボタン。</div>
-      <div class="action">緑の <code>作成</code> ボタン を クリック</div>
-      <div class="expect">画面中央 に <strong>「新規プロバイダー作成」</strong> ダイアログ が 開く</div>
+    <div class="expect">画面 が 自動で <code style="font-family:'JetBrains Mono',monospace;background:#F0F9FF;padding:2px 8px;border-radius:4px;font-size:11.5px;">developers.line.biz/console/</code> に 遷移 → Provider 一覧 が 出る</div>
+    <div class="warn">LINE の パスワード を 忘れた 場合 — スマホ LINE アプリ → 「設定 → アカウント → メール/パスワード」 で 再設定 可能</div>
+    <div class="complete-row">
+      <button class="complete-btn" data-done="2">このステップ 完了 → 次へ</button>
     </div>
   </div>
+</div>
 
-  <div class="step">
-    <div class="step-n">3</div>
-    <div class="step-body">
-      <div class="step-title">事業所名 を 入力 → 「作成」</div>
-      <div class="step-desc">「プロバイダー名」 の 入力欄 に、 <strong>あなたの 事業所名</strong> を 入力。 例: <code>田中ファイナンシャル</code></div>
-      <div class="real">
-        <span class="real-tag">REAL · 実画面</span>
-        <div class="real-bar"><i></i><i></i><i></i><div class="u">developers.line.biz/console/</div></div>
-        <img src="real-provider-modal.png" alt="新規プロバイダー作成 ダイアログ">
-        <div class="real-cap"><strong>新規プロバイダー作成 ダイアログ</strong> · 入力欄 に 事業所名 を 入れる / 緑「作成」 ボタン で 確定</div>
+<!-- STEP 3 -->
+<div class="step-card" id="step-3" data-step="3">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">3</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 03 / 10</div>
+      <div class="step-title">Provider (事業者枠) を 作る</div>
+    </div>
+    <div class="step-time">1分</div>
+  </div>
+  <div class="step-body">
+    <div class="step-desc">画面 中央 「プロバイダー (○)」 の <strong>右隣 の 緑ボタン 「作成」</strong> を 押す → ダイアログ で 事業所名 を 入力 → 緑「作成」。</div>
+    <div class="real">
+      <span class="real-tag">REAL · 実画面</span>
+      <img src="real-console-home.png" alt="LINE Developers Console">
+      <div class="real-cap"><strong>緑「作成」ボタン</strong> を 押す</div>
+    </div>
+    <div class="do-now">
+      <div class="do-now-label">やること</div>
+      <div class="do-now-body">
+        ① 緑「作成」 ボタン (画面上部) を クリック<br>
+        ② ダイアログ の 「プロバイダー名」 欄 に <strong>事業所名</strong> を 入力 (例: 田中ファイナンシャル)<br>
+        ③ 右下 緑「作成」 を クリック
       </div>
-      <div class="annotation">
-        <div class="legend">
-          <ol>
-            <li><strong>1.</strong> 「プロバイダー名」 の 横の <strong>空欄 (placeholder: -)</strong> に 事業所名 を 入力</li>
-            <li><strong>2.</strong> 100文字 以内 / 絵文字 等 特殊文字 不可</li>
-            <li><strong>3.</strong> 入力後 右下 <strong>緑「作成」</strong> ボタン (グレーアウト 解除) を クリック</li>
-          </ol>
-        </div>
-      </div>
-      <div class="action">事業所名 を 入力 → 緑 <code>作成</code> ボタン</div>
-      <div class="expect">作成した Provider の 画面 (3つ の アイコン: Messaging API / LINE Login / その他) に 遷移</div>
+    </div>
+    <div class="real">
+      <span class="real-tag">REAL · 実画面</span>
+      <img src="real-provider-modal.png" alt="新規プロバイダー作成">
+      <div class="real-cap"><strong>「プロバイダー名」 入力欄</strong> に 事業所名 を 入れる</div>
+    </div>
+    <div class="expect">作成した Provider の 画面 (3つ の アイコン: Messaging API / LINE Login / その他) に 遷移</div>
+    <div class="complete-row">
+      <button class="complete-btn" data-done="3">このステップ 完了 → 次へ</button>
     </div>
   </div>
-</section>
+</div>
 
-<section id="s5">
-  <div class="sec-meta"><div class="sec-n">SECTION 05</div><div class="sec-time">⏱ 3 分</div></div>
-  <h2>Messaging API チャネル を 作る</h2>
-  <div class="h2-sub">お客様 と やりとり する LINE の 入口。</div>
-
-  <div class="step">
-    <div class="step-n">1</div>
-    <div class="step-body">
-      <div class="step-title">「Messaging API」 を 選ぶ</div>
-      <div class="step-desc">Provider 作成 直後 の 画面。 3つ アイコン が 並んでる 中の <strong>「Create a Messaging API channel」</strong> (一番 左) を クリック。</div>
-      <div class="mock">
-        <div class="mock-bar"><i></i><i></i><i></i><div class="u">developers.line.biz/console/provider/.../</div></div>
-        <div class="mock-body">
-          <div style="font-family:'Noto Serif JP',serif;font-size:16px;font-weight:700;margin-bottom:18px;">田中ファイナンシャル <span style="color:#9CA3AF;font-weight:400;font-size:13px;">(あなたの事業所)</span></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
-            <div style="border:2px solid #06C755;border-radius:10px;padding:20px;text-align:center;background:#F0FDF4;">
-              <div style="font-size:30px;margin-bottom:6px;">💬</div>
-              <div style="font-weight:700;font-size:13px;color:#0A0A0A;">Messaging API</div>
-              <div style="font-size:11px;color:#525252;margin-top:4px;">これを 選ぶ</div>
-            </div>
-            <div style="border:1px solid #E5E5E5;border-radius:10px;padding:20px;text-align:center;opacity:0.5;">
-              <div style="font-size:30px;margin-bottom:6px;">🔐</div>
-              <div style="font-weight:700;font-size:13px;color:#525252;">LINE Login</div>
-              <div style="font-size:11px;color:#525252;margin-top:4px;">使わない</div>
-            </div>
-            <div style="border:1px solid #E5E5E5;border-radius:10px;padding:20px;text-align:center;opacity:0.5;">
-              <div style="font-size:30px;margin-bottom:6px;">📦</div>
-              <div style="font-weight:700;font-size:13px;color:#525252;">その他</div>
-              <div style="font-size:11px;color:#525252;margin-top:4px;">使わない</div>
-            </div>
-          </div>
-        </div>
+<!-- STEP 4 -->
+<div class="step-card" id="step-4" data-step="4">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">4</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 04 / 10</div>
+      <div class="step-title">Messaging API チャネル を 作る</div>
+    </div>
+    <div class="step-time">3分</div>
+  </div>
+  <div class="step-body">
+    <div class="step-desc">3つ の アイコン の <strong>一番 左 「Messaging API」</strong> をクリック → 必須項目 を 入力 → 規約 2つ にチェック → 緑「作成」。</div>
+    <div class="do-now">
+      <div class="do-now-label">やること</div>
+      <div class="do-now-body">
+        ① <strong>左の Messaging API アイコン</strong> をクリック<br>
+        ② チャネル名 = <strong>あなたの 事業所名</strong> (例: 田中ファイナンシャル)<br>
+        ③ チャネル説明 = <strong>お客様サポート用 公式LINE</strong> など<br>
+        ④ 大業種 = <strong>金融</strong> / 小業種 = <strong>その他金融</strong><br>
+        ⑤ メアド = <strong>あなたの メアド</strong><br>
+        ⑥ 規約 2つ にチェック<br>
+        ⑦ 緑「作成」 ボタン
       </div>
-      <div class="action">左の <strong>緑枠 「Messaging API」</strong> アイコン を クリック</div>
+    </div>
+    <div class="mock">
+      <div class="mock-bar"><i></i><i></i><i></i><div class="u">developers.line.biz/console/channel/new</div></div>
+      <div class="mock-body">
+        <div class="mock-h">新規チャネル作成</div>
+        <div class="mock-row"><div class="lbl">チャネル名 *</div><div class="val highlight">田中ファイナンシャル</div></div>
+        <div class="mock-row"><div class="lbl">チャネル説明 *</div><div class="val">お客様サポート用 公式LINE</div></div>
+        <div class="mock-row"><div class="lbl">大業種 *</div><div class="val">金融</div></div>
+        <div class="mock-row"><div class="lbl">小業種 *</div><div class="val">その他金融</div></div>
+        <div class="mock-row"><div class="lbl">メアド *</div><div class="val">あなたのメアド</div></div>
+        <div style="margin-top:12px;font-size:12px;color:#525252;">☑ LINE公式アカウント 利用規約 / ☑ Messaging API 利用規約</div>
+        <div class="mock-btn">作成</div>
+      </div>
+    </div>
+    <div class="expect">「チャネルを作成しますか?」 確認 → 「OK」 → チャネル管理画面 に 遷移</div>
+    <div class="warn">アイコン画像 は 任意。 後で 設定可。 飛ばして OK。</div>
+    <div class="complete-row">
+      <button class="complete-btn" data-done="4">このステップ 完了 → 次へ</button>
     </div>
   </div>
+</div>
 
-  <div class="step">
-    <div class="step-n">2</div>
-    <div class="step-body">
-      <div class="step-title">チャネル情報 を 入力</div>
-      <div class="step-desc">下の 5項目 を 入力。 他 は デフォルト のまま で OK。</div>
-      <div class="mock">
-        <div class="mock-bar"><i></i><i></i><i></i><div class="u">developers.line.biz/console/channel/new</div></div>
-        <div class="mock-body">
-          <div class="mock-h">新規チャネル作成</div>
-          <div class="mock-row">
-            <div class="lbl">チャネル名 <span style="color:#DC2626;">*</span></div>
-            <div class="val highlight">田中ファイナンシャル</div>
-          </div>
-          <div class="mock-row">
-            <div class="lbl">チャネル説明 <span style="color:#DC2626;">*</span></div>
-            <div class="val">お客様サポート 用 公式LINE</div>
-          </div>
-          <div class="mock-row">
-            <div class="lbl">大業種 <span style="color:#DC2626;">*</span></div>
-            <div class="val">金融</div>
-          </div>
-          <div class="mock-row">
-            <div class="lbl">小業種 <span style="color:#DC2626;">*</span></div>
-            <div class="val">その他金融</div>
-          </div>
-          <div class="mock-row">
-            <div class="lbl">メールアドレス <span style="color:#DC2626;">*</span></div>
-            <div class="val">あなたのメアド</div>
-          </div>
-          <div style="margin-top:14px;font-size:12.5px;color:#525252;">
-            <span style="color:#06C755;font-weight:700;">☑</span> LINE公式アカウント 利用規約 に 同意します<br>
-            <span style="color:#06C755;font-weight:700;">☑</span> LINE Official Account API 利用規約 に 同意します
-          </div>
-          <div class="mock-btn" style="margin-top:18px;">作成</div>
-        </div>
-      </div>
-      <div class="action">5項目 入力 + 規約 2つ にチェック → <code>作成</code> ボタン</div>
-      <div class="expect">「チャネルを作成しますか?」 確認 ダイアログ → 「OK」 → チャネル 管理画面 に 遷移</div>
-      <div class="warn"><strong>アイコン画像</strong> は 任意。 後で 設定 可能。 飛ばして OK。</div>
+<!-- STEP 5 -->
+<div class="step-card" id="step-5" data-step="5">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">5</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 05 / 10</div>
+      <div class="step-title">Channel access token (鍵 ①) を 発行</div>
     </div>
+    <div class="step-time">2分</div>
   </div>
-</section>
-
-<section id="s6">
-  <div class="sec-meta"><div class="sec-n">SECTION 06</div><div class="sec-time">⏱ 2 分</div></div>
-  <h2>Channel access token (鍵 ①) を 発行</h2>
-  <div class="h2-sub">FP Compass に 渡す 2つ の 鍵 の 1つ目。</div>
-
-  <div class="step">
-    <div class="step-n">1</div>
-    <div class="step-body">
-      <div class="step-title">「Messaging API設定」 タブ を 開く</div>
-      <div class="step-desc">チャネル 管理画面 の 上部 タブ。 <strong>「チャネル基本設定 / Messaging API設定 / Liff / セキュリティ」</strong> と 並ぶ 中の <strong>「Messaging API設定」</strong>。</div>
-      <div class="mock">
-        <div class="mock-bar"><i></i><i></i><i></i><div class="u">developers.line.biz/console/channel/.../messaging-api</div></div>
-        <div class="mock-body">
-          <div class="mock-h">
-            <div class="tab">チャネル基本設定</div>
-            <div class="tab active">Messaging API設定</div>
-            <div class="tab">LIFF</div>
-            <div class="tab">セキュリティ</div>
-          </div>
-          <div style="font-size:13.5px;color:#525252;margin-bottom:14px;">QRコード / Webhook URL / 応答メッセージ / チャネルアクセストークン の 設定。</div>
+  <div class="step-body">
+    <div class="step-desc">画面 上 タブ 「<strong>Messaging API設定</strong>」 を クリック → 一番 下 「チャネルアクセストークン (長期)」 の <strong>緑「発行」</strong> ボタン → <strong>200文字 以上</strong> の トークン が 出る → 「コピー」 → 下の <strong>① の枠 に 貼り付け</strong>。</div>
+    <div class="mock">
+      <div class="mock-bar"><i></i><i></i><i></i><div class="u">.../channel/.../messaging-api</div></div>
+      <div class="mock-body">
+        <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">チャネルアクセストークン (長期)</div>
+        <div class="mock-row" style="background:#FFFBEB;padding:14px;border-radius:8px;border:1px solid #F59E0B;">
+          <div class="val highlight" style="word-break:break-all;line-height:1.7;">qwerty12345LongTokenAbcDef67890Xyz……（200文字以上）</div>
+          <div class="copy">コピー</div>
         </div>
       </div>
     </div>
-  </div>
-
-  <div class="step">
-    <div class="step-n">2</div>
-    <div class="step-body">
-      <div class="step-title">下に スクロール → 「チャネルアクセストークン (長期)」 の 欄</div>
-      <div class="step-desc">画面 一番 下 の セクション。 「発行」 ボタン が ある。</div>
-      <div class="mock">
-        <div class="mock-bar"><i></i><i></i><i></i><div class="u">developers.line.biz/.../messaging-api</div></div>
-        <div class="mock-body">
-          <div style="font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;color:#0A0A0A;margin-bottom:8px;">チャネルアクセストークン (長期)</div>
-          <div style="font-size:12px;color:#737373;margin-bottom:14px;line-height:1.7;">チャネルへのアクセスに使用される長期トークン。 一度発行すれば 期限切れ なし。</div>
-          <div class="mock-row" style="background:#F9FAFB;padding:14px;border-radius:8px;border:1px solid #E5E5E5;">
-            <div class="val empty" style="flex:1;color:#9CA3AF;background:transparent;border:none;padding:0;">未発行</div>
-            <div class="issue">発行</div>
-          </div>
-        </div>
+    <div class="vault">
+      <div class="vault-h">🔑 ここに 貼り付け (① 鍵を 保管)</div>
+      <div class="vault-sub">LINE Developers で 「コピー」 を 押した直後、 ここに 貼り付け。 次の STEP 8 で FP Compass に 入れる時 に 使います。</div>
+      <div class="vault-field">
+        <span class="lbl">①</span>
+        <input id="vault-token" placeholder="qwerty12345... (ここに 貼り付け)" autocomplete="off">
+        <button class="copy" data-copy-target="vault-token">📋 再コピー</button>
       </div>
-      <div class="action">緑の <code>発行</code> ボタン を クリック</div>
+      <div class="vault-status" id="vault-token-status"></div>
+    </div>
+    <div class="warn">この トークン は パスワード と同じ。 メール や SNS で 送らない。 ここの 入力欄 は ブラウザ内 のみ で 保存 (sessionStorage)。</div>
+    <div class="complete-row">
+      <button class="complete-btn" data-done="5">このステップ 完了 → 次へ</button>
     </div>
   </div>
+</div>
 
-  <div class="step">
-    <div class="step-n">3</div>
-    <div class="step-body">
-      <div class="step-title">長い 文字列 が 表示 → コピー</div>
-      <div class="step-desc">「発行」 を 押すと <strong>200文字 以上 の 長い 文字列</strong> が 表示。 横の <strong>「コピー」</strong> ボタン を クリック。</div>
-      <div class="mock">
-        <div class="mock-bar"><i></i><i></i><i></i><div class="u">developers.line.biz/.../messaging-api</div></div>
-        <div class="mock-body">
-          <div style="font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;color:#0A0A0A;margin-bottom:8px;">チャネルアクセストークン (長期)</div>
-          <div class="mock-row" style="background:#FFFBEB;padding:14px;border-radius:8px;border:1px solid #F59E0B;">
-            <div class="val highlight" style="flex:1;word-break:break-all;font-size:11.5px;line-height:1.7;">qwertyAsdfgh12345LongTokenAbcDef67890XyZxxxxxxxxxxxxxxx……（200文字以上）</div>
-            <div class="copy">コピー</div>
-          </div>
-        </div>
-      </div>
-      <div class="copy-tip">
-        <div class="ti">📋 メモ帳 に 貼り付け (① と書く)</div>
-        <div class="ds"><code>コピー</code> ボタン を 押したら、 すぐに メモ帳 (テキストエディット) を 開いて 「①」 と書いて 貼り付け。 後で FP Compass に 入力します。</div>
-      </div>
-      <div class="warn">この トークン は <strong>パスワード と同じ</strong>。 第三者 に 知られない ように メール や SNS で 送らない。</div>
+<!-- STEP 6 -->
+<div class="step-card" id="step-6" data-step="6">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">6</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 06 / 10</div>
+      <div class="step-title">Channel secret (鍵 ②) を 取得</div>
     </div>
+    <div class="step-time">1分</div>
   </div>
-</section>
-
-<section id="s7">
-  <div class="sec-meta"><div class="sec-n">SECTION 07</div><div class="sec-time">⏱ 1 分</div></div>
-  <h2>Channel secret (鍵 ②) を 取得</h2>
-  <div class="h2-sub">2つ目 の 鍵。 こちら は 32文字 の 短い 文字列。</div>
-
-  <div class="step">
-    <div class="step-n">1</div>
-    <div class="step-body">
-      <div class="step-title">画面 上 「チャネル基本設定」 タブ に 戻る</div>
-      <div class="step-desc">先ほど の 「Messaging API設定」 の 隣 (左) の タブ。</div>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-n">2</div>
-    <div class="step-body">
-      <div class="step-title">「チャネルシークレット」 の 欄 を 探す</div>
-      <div class="step-desc">中段 あたり。 32文字 の 英数字 が 表示 されてる。 横 に コピー ボタン あり。</div>
-      <div class="mock">
-        <div class="mock-bar"><i></i><i></i><i></i><div class="u">developers.line.biz/.../basic-info</div></div>
-        <div class="mock-body">
-          <div class="mock-h">
-            <div class="tab active">チャネル基本設定</div>
-            <div class="tab">Messaging API設定</div>
-          </div>
-          <div class="mock-row"><div class="lbl">チャネルID</div><div class="val">2007123456</div></div>
-          <div class="mock-row"><div class="lbl">チャネル名</div><div class="val">田中ファイナンシャル</div></div>
-          <div class="mock-row" style="background:#FFFBEB;padding:10px 14px;border-radius:8px;border:1px solid #F59E0B;margin-top:8px;">
-            <div class="lbl">チャネルシークレット</div>
-            <div class="val highlight" style="font-size:12px;">a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6</div>
-            <div class="copy">コピー</div>
-          </div>
-        </div>
-      </div>
-      <div class="copy-tip">
-        <div class="ti">📋 メモ帳 に 貼り付け (② と書く)</div>
-        <div class="ds">①トークン の 下 に 「②」 と書いて 貼り付け。 ①②両方 揃ったら 次へ。</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section id="s8">
-  <div class="sec-meta"><div class="sec-n">SECTION 08</div><div class="sec-time">⏱ 2 分</div></div>
-  <h2>FP Compass に 入力</h2>
-  <div class="h2-sub">取得した 2つ の 鍵 を FP Compass の 設定画面 に 貼り付け。 残り の 設定 は 自動。</div>
-
-  <div class="step">
-    <div class="step-n">1</div>
-    <div class="step-body">
-      <div class="step-title">FP Compass に ログイン</div>
-      <a class="url-link" href="https://app.skeleton-inc.jp" target="_blank">https://app.skeleton-inc.jp</a>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-n">2</div>
-    <div class="step-body">
-      <div class="step-title">「アカウント設定」 → 「LINE 連携」 タブ</div>
-      <div class="step-desc">画面 右上 の あなたの名前 を クリック → 「アカウント設定」 → 「LINE 連携」 タブ。</div>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-n">3</div>
-    <div class="step-body">
-      <div class="step-title">2つ の 鍵 を 貼り付け → 「接続テスト + 保存」</div>
-      <div class="mock">
-        <div class="mock-bar"><i></i><i></i><i></i><div class="u">app.skeleton-inc.jp/account.html</div></div>
-        <div class="mock-body">
-          <div class="mock-h">LINE 連携 設定</div>
-          <div class="mock-label">① チャネルアクセストークン (長期)</div>
-          <div class="mock-input filled">qwertyAsdfgh12345LongToken……（貼り付け）</div>
-          <div style="height:14px;"></div>
-          <div class="mock-label">② チャネルシークレット</div>
-          <div class="mock-input filled">a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6</div>
-          <div class="mock-btn" style="margin-top:18px;">接続テスト + 保存</div>
-        </div>
-      </div>
-      <div class="action">① / ② を ペースト → 緑 <code>接続テスト + 保存</code> ボタン</div>
-      <div class="expect">「✓ LINE と 接続できました」 + 「リッチメニュー (アンケート ボタン) 作成完了」 + Webhook URL 自動設定 + QRコード 表示 (約30秒)</div>
-    </div>
-  </div>
-
-  <div class="warn"><strong>自動で やる事</strong> (FP Compass が 裏で 全部):<br>
-    ・お客様 専用 アンケート URL の 生成<br>
-    ・リッチメニュー (アンケート / 相談予約 ボタン) の 作成 + LINE への 配信<br>
-    ・Webhook URL の 設定 (LINE → FP Compass の 自動通信路)<br>
-    ・自動応答 / あいさつメッセージ の OFF<br>
-    あなた が やる事 は 鍵 2つ の 貼り付け <strong>だけ</strong>。
-  </div>
-</section>
-
-<section id="s9">
-  <div class="sec-meta"><div class="sec-n">SECTION 09</div><div class="sec-time">⏱ 3 分</div></div>
-  <h2>動作確認 + QR を お客様 に 配布</h2>
-
-  <div class="step">
-    <div class="step-n">1</div>
-    <div class="step-body">
-      <div class="step-title">スマホ で 自分の QR を 読み取り</div>
-      <div class="step-desc">FP Compass の 「LINE 連携」 画面 に 表示 されてる <strong>友だち追加 用 QR</strong> を スマホ の LINE アプリ で 読み取り。</div>
-      <div class="expect">あなたの 公式アカウント が 友だち に 追加 + リッチメニュー 表示 (「アンケート」 「相談予約」 等 の ボタン)</div>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-n">2</div>
-    <div class="step-body">
-      <div class="step-title">アンケート ボタン を タップ</div>
-      <div class="step-desc">リッチメニュー の 「アンケート」 を タップ → 質問 (年代・職業・家族構成・年収・住居・資産・テーマ 等) に 回答 → 送信。</div>
-      <div class="expect">数秒後 FP Compass の <strong>「顧客台帳」</strong> に あなた の 回答 が 自動 登録 される</div>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-n">3</div>
-    <div class="step-body">
-      <div class="step-title">QR を お客様 に 配布</div>
-      <div class="step-desc">同じ QR を 印刷 / 画像保存 / 名刺裏 等 で お客様 に 渡す。 お客様 が 友だち追加 → アンケート 回答 → 自動で 顧客台帳 入り。</div>
-      <div class="action">QR を 名刺 / メール / 紹介資料 等 に 貼り付け</div>
-    </div>
-  </div>
-</section>
-
-<section id="s10">
-  <div class="sec-meta"><div class="sec-n">SECTION 10</div><div class="sec-time">📋 既設定</div></div>
-  <h2>アンケート の 中身 (15問 標準装備)</h2>
-  <div class="h2-sub">FP Compass に <strong>最初から セット済</strong>。 FP が 質問を 作る 必要 は ありません。</div>
-
-  <div class="warn"><strong>結論</strong>: あなた が やる事 は <strong>ゼロ</strong>。 LINE連携 設定 した瞬間、 リッチメニュー の 「アンケート」 ボタン が この 15問 に 紐付き、 お客様 が 答えた 内容 が <strong>FP Compass の 顧客台帳 に 自動登録</strong> されます。</div>
-
-  <h3 style="font-family:'Noto Serif JP',serif;font-size:18px;margin-top:24px;margin-bottom:14px;">アンケート 質問 一覧</h3>
-  <div class="mock">
-    <div class="mock-bar"><i></i><i></i><i></i><div class="u">fp.skeleton-inc.jp/survey?tenant=...</div></div>
-    <div class="mock-body" style="padding:24px 28px;">
-      <div style="font-family:'Noto Serif JP',serif;font-size:18px;font-weight:700;margin-bottom:6px;">事前 アンケート</div>
-      <div style="font-size:12.5px;color:#737373;margin-bottom:20px;">面談 前 に 教えてください (約 3分)</div>
-      <div style="display:grid;grid-template-columns:30px 1fr 110px;gap:8px 14px;font-size:13px;color:#404040;line-height:1.7;">
-        <div style="color:#06C755;font-weight:700;">Q1</div><div>年代</div><div style="color:#737373;font-size:11.5px;">20代〜70代以上</div>
-        <div style="color:#06C755;font-weight:700;">Q2</div><div>職業</div><div style="color:#737373;font-size:11.5px;">会社員 / 自営 / 公務員 等</div>
-        <div style="color:#06C755;font-weight:700;">Q3</div><div>家族構成</div><div style="color:#737373;font-size:11.5px;">配偶者 / 子の人数</div>
-        <div style="color:#06C755;font-weight:700;">Q4</div><div>世帯年収</div><div style="color:#737373;font-size:11.5px;">8段階 から 選択</div>
-        <div style="color:#06C755;font-weight:700;">Q5</div><div>住居形態</div><div style="color:#737373;font-size:11.5px;">持ち家 / 賃貸 / 社宅 等</div>
-        <div style="color:#06C755;font-weight:700;">Q6</div><div>金融資産 額</div><div style="color:#737373;font-size:11.5px;">100万 未満 〜 3000万 以上</div>
-        <div style="color:#06C755;font-weight:700;">Q7</div><div>保有商品</div><div style="color:#737373;font-size:11.5px;">NISA / iDeCo / 保険 等 複数選択</div>
-        <div style="color:#06C755;font-weight:700;">Q8</div><div>相談したい テーマ</div><div style="color:#737373;font-size:11.5px;">資産運用 / 老後 / 教育費 等</div>
-        <div style="color:#06C755;font-weight:700;">Q9</div><div>具体的な 悩み</div><div style="color:#737373;font-size:11.5px;">自由記述</div>
-        <div style="color:#06C755;font-weight:700;">Q10</div><div>生年月日</div><div style="color:#737373;font-size:11.5px;">ライフプラン 計算 用</div>
-        <div style="color:#06C755;font-weight:700;">Q11</div><div>第一希望 面談 日</div><div style="color:#737373;font-size:11.5px;">日時 候補</div>
-        <div style="color:#06C755;font-weight:700;">Q12</div><div>第二希望 面談 日</div><div style="color:#737373;font-size:11.5px;">日時 候補</div>
-        <div style="color:#06C755;font-weight:700;">Q13</div><div>第三希望 面談 日</div><div style="color:#737373;font-size:11.5px;">日時 候補</div>
-        <div style="color:#06C755;font-weight:700;">Q14</div><div>理想 の 未来</div><div style="color:#737373;font-size:11.5px;">自由記述</div>
-        <div style="color:#06C755;font-weight:700;">Q15</div><div>緊急度</div><div style="color:#737373;font-size:11.5px;">すぐ / 半年以内 / 1年以内 / じっくり</div>
-      </div>
-      <div style="margin-top:18px;padding-top:14px;border-top:1px solid #F4F4F5;text-align:center;">
-        <div class="mock-btn">回答 を 送信</div>
-      </div>
-    </div>
-  </div>
-
-  <h3 style="font-family:'Noto Serif JP',serif;font-size:18px;margin-top:30px;margin-bottom:14px;">URL の 仕組み</h3>
-  <div class="step">
-    <div class="step-n">A</div>
-    <div class="step-body">
-      <div class="step-title">FP ごと に 自動で URL が 変わる</div>
-      <div class="step-desc">FP Compass が LINE 連携 設定時 に <strong>tenantId 付き の URL</strong> を 自動 生成 → リッチメニュー に 埋込。</div>
-      <div class="mock">
-        <div class="mock-body" style="font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.95;padding:18px 22px;">
-          <div style="color:#737373;margin-bottom:4px;">FP・A (田中ファイナンシャル) の URL:</div>
-          <div style="background:#F0FDF4;padding:8px 12px;border-radius:4px;color:#0A0A0A;margin-bottom:14px;border:1px solid #BBF7D0;">
-            fp.skeleton-inc.jp/survey?tenant=<span style="background:#FFF59D;padding:1px 6px;border-radius:3px;">tanaka-xxx</span>
-          </div>
-          <div style="color:#737373;margin-bottom:4px;">FP・B (佐藤保険事務所) の URL:</div>
-          <div style="background:#F0F9FF;padding:8px 12px;border-radius:4px;color:#0A0A0A;border:1px solid #BFDBFE;">
-            fp.skeleton-inc.jp/survey?tenant=<span style="background:#FFF59D;padding:1px 6px;border-radius:3px;">sato-yyy</span>
-          </div>
-          <div style="font-family:'Noto Sans JP',sans-serif;margin-top:14px;font-size:12.5px;color:#525252;">↑ <strong>tenant=</strong> の値 で 「どの FP の お客様 か」 を 自動 判定 → 正しい 顧客台帳 に 振分</div>
+  <div class="step-body">
+    <div class="step-desc">画面 上 タブ 「<strong>チャネル基本設定</strong>」 に 戻る → 中段 「チャネルシークレット」 (32文字 の 英数字) の <strong>横の コピー ボタン</strong> → 下の <strong>② の枠 に 貼り付け</strong>。</div>
+    <div class="mock">
+      <div class="mock-bar"><i></i><i></i><i></i><div class="u">.../channel/.../basic-info</div></div>
+      <div class="mock-body">
+        <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">チャネル基本設定</div>
+        <div class="mock-row" style="background:#FFFBEB;padding:10px 14px;border-radius:6px;border:1px solid #F59E0B;">
+          <div class="lbl">チャネルシークレット</div>
+          <div class="val highlight" style="font-size:11.5px;">a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6</div>
+          <div class="copy">コピー</div>
         </div>
       </div>
     </div>
-  </div>
-
-  <div class="step">
-    <div class="step-n">B</div>
-    <div class="step-body">
-      <div class="step-title">お客様 が 回答 すると?</div>
-      <div class="step-desc">数秒 で FP Compass の <strong>顧客台帳</strong> に 新規 顧客 として 自動登録。 Q1〜Q15 の 回答 内容 が 全部 そのまま 顧客カード に 反映。</div>
-      <div class="action">FP は 何もしない / お客様 が 答えた 直後 顧客台帳 に 自動で 出現</div>
+    <div class="vault">
+      <div class="vault-h">🔑 ここに 貼り付け (② 鍵を 保管)</div>
+      <div class="vault-field">
+        <span class="lbl">②</span>
+        <input id="vault-secret" placeholder="a1b2c3d4... (32文字)" autocomplete="off">
+        <button class="copy" data-copy-target="vault-secret">📋 再コピー</button>
+      </div>
+      <div class="vault-status" id="vault-secret-status"></div>
+    </div>
+    <div class="complete-row">
+      <button class="complete-btn" data-done="6">このステップ 完了 → 次へ</button>
     </div>
   </div>
+</div>
 
-  <h3 style="font-family:'Noto Serif JP',serif;font-size:18px;margin-top:30px;margin-bottom:14px;">質問内容 を 変えたい 場合</h3>
-  <div class="warn">
-    <strong>v1.0 時点</strong>: 質問 の カスタマイズ は 不可。 全FP 共通 の 15問 で 運用。<br>
-    <strong>v2.0 予定</strong> (今後): FP が 自分で 質問を 追加 / 編集 できる 機能 を 実装予定。<br>
-    現時点 で 「この 質問 も 入れたい」 という ご要望 ある場合 は support@skeleton-inc.jp まで。
+<!-- STEP 7 -->
+<div class="step-card" id="step-7" data-step="7">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">7</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 07 / 10</div>
+      <div class="step-title">FP Compass を 開く</div>
+    </div>
+    <div class="step-time">1分</div>
   </div>
-</section>
+  <div class="step-body">
+    <div class="step-desc">いったん LINE Developers の タブ は そのまま (閉じない)。 新しいタブ で FP Compass を 開く → ログイン。</div>
+    <div class="do-now">
+      <div class="do-now-label">やること</div>
+      <div class="do-now-body">この URL を コピー → 新しいタブ で 開く → 普段の メアド + パスワード で ログイン</div>
+      <div class="copy-block">
+        <div class="url-txt">https://app.skeleton-inc.jp</div>
+        <button class="copy-btn" data-copy="https://app.skeleton-inc.jp">コピー</button>
+        <a class="open-btn" href="https://app.skeleton-inc.jp" target="_blank">↗ 開く</a>
+      </div>
+    </div>
+    <div class="expect">CRM 画面 (顧客台帳) に 入れる</div>
+    <div class="complete-row">
+      <button class="complete-btn" data-done="7">このステップ 完了 → 次へ</button>
+    </div>
+  </div>
+</div>
 
-<section>
-  <div class="sec-meta"><div class="sec-n">FAQ</div></div>
-  <h2>よくある 質問</h2>
-  <details>
-    <summary>LINE の 利用料 は かかりますか?</summary>
-    <p>月 500通 まで 無料 (LINE公式アカウント Free プラン)。 通常 の FP Compass 利用 では 500通 を 超える ケース は ほぼ ない。</p>
-  </details>
-  <details>
-    <summary>Channel access token は 期限切れ しますか?</summary>
-    <p>「長期」 トークン は 期限 なし。 再発行 すると 古い トークン は 即無効 になる ので、 再発行 時 は FP Compass にも 新トークン を 入れ直す。</p>
-  </details>
-  <details>
-    <summary>既に LINE 公式アカウント を 持ってます。 それ で 使えますか?</summary>
-    <p>使えます。 Section 04 (Provider 作成) を 飛ばして、 既存 Provider 配下 で <strong>新規 Messaging API チャネル</strong> を 作って ください。 既存チャネル の 流用 は 設定 競合 の リスク あり ので 新規 推奨。</p>
-  </details>
-  <details>
-    <summary>誤って トークン を 公開して しまった!</summary>
-    <p>すぐ LINE Developers の 「Messaging API設定」 で 「再発行」 → 古いトークン は 即 無効 化。 新トークン を FP Compass に 入れ直す。</p>
-  </details>
-  <details>
-    <summary>1人 の FP で 複数 の LINE 公式アカウント を 紐付け できますか?</summary>
-    <p>v1.0 時点 は 1FP = 1LINE。 複数 LINE は 順次 対応 予定。</p>
-  </details>
-  <details>
-    <summary>お客様 と 個別 に やりとり できますか?</summary>
-    <p>はい。 FP Compass の 顧客台帳 → 「LINE」 タブ から 1対1 で メッセージ 送受信。 AI による 返信案 自動生成。</p>
-  </details>
-</section>
+<!-- STEP 8 -->
+<div class="step-card" id="step-8" data-step="8">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">8</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 08 / 10</div>
+      <div class="step-title">FP Compass の 「公式LINE 連携」 を 開く</div>
+    </div>
+    <div class="step-time">1分</div>
+  </div>
+  <div class="step-body">
+    <div class="step-desc">画面 右上 メニュー → 「アカウント設定」 → ページ下 にスクロール → <strong>「公式LINE 連携」</strong> セクション。</div>
+    <div class="do-now">
+      <div class="do-now-label">やること</div>
+      <div class="do-now-body">この URL を コピー → 既に開いてる FP Compass の タブ で 開く (直接 アカウント設定 に飛ぶ)</div>
+      <div class="copy-block">
+        <div class="url-txt">https://app.skeleton-inc.jp/account.html</div>
+        <button class="copy-btn" data-copy="https://app.skeleton-inc.jp/account.html">コピー</button>
+        <a class="open-btn" href="https://app.skeleton-inc.jp/account.html" target="_blank">↗ 開く</a>
+      </div>
+    </div>
+    <div class="expect">「公式LINE 連携」 セクション が 表示 / Token と Secret の 入力欄 が 出る</div>
+    <div class="complete-row">
+      <button class="complete-btn" data-done="8">このステップ 完了 → 次へ</button>
+    </div>
+  </div>
+</div>
 
+<!-- STEP 9 -->
+<div class="step-card" id="step-9" data-step="9">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">9</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 09 / 10</div>
+      <div class="step-title">鍵 ① ② を 貼り付け → 「接続テスト + 保存」</div>
+    </div>
+    <div class="step-time">1分</div>
+  </div>
+  <div class="step-body">
+    <div class="step-desc">「公式LINE 連携」 セクション の ① の枠 に <strong>STEP 5 の トークン</strong>、 ② の枠 に <strong>STEP 6 の シークレット</strong> を 貼り付け → 緑「🔗 接続テスト + 保存 (自動セットアップ)」 ボタン。</div>
+    <div class="do-now">
+      <div class="do-now-label">やること</div>
+      <div class="do-now-body">
+        ① <strong>上の保管庫</strong> の ① 鍵 の 「再コピー」 を押す → FP Compass の ① 欄 に ⌘+V<br>
+        ② <strong>上の保管庫</strong> の ② 鍵 の 「再コピー」 を押す → FP Compass の ② 欄 に ⌘+V<br>
+        ③ 緑「🔗 接続テスト + 保存」 ボタン を クリック (約30秒待つ)
+      </div>
+    </div>
+    <div class="mock">
+      <div class="mock-bar"><i></i><i></i><i></i><div class="u">app.skeleton-inc.jp/account.html</div></div>
+      <div class="mock-body">
+        <div class="mock-h">公式LINE 連携</div>
+        <div class="mock-row"><div class="lbl">① Channel access token</div><div class="val highlight" style="font-size:11px;">qwerty12345…（貼り付け）</div></div>
+        <div class="mock-row"><div class="lbl">② Channel secret</div><div class="val highlight" style="font-size:11px;">a1b2c3d4e5f6…</div></div>
+        <div class="mock-btn">🔗 接続テスト + 保存 (自動セットアップ)</div>
+      </div>
+    </div>
+    <div class="expect">「✓ 接続完了 / 自動セットアップ済」 緑カード が出る + 友だち追加 QR が 表示 + アンケートURL リンク 表示</div>
+    <div class="warn"><strong>自動で やる事 (Jobs が裏で)</strong>:<br>
+      ・お客様 専用 アンケートURL の 生成 (?tenant=xxx)<br>
+      ・リッチメニュー (アンケート + 相談予約) の 自動作成<br>
+      ・Webhook URL の 自動設定<br>
+      ・自動応答 / あいさつメッセージ の OFF<br>
+      あなたが やる事 は <strong>鍵 2つ の 貼り付け だけ</strong>。
+    </div>
+    <div class="complete-row">
+      <button class="complete-btn" data-done="9">このステップ 完了 → 次へ</button>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 10 -->
+<div class="step-card" id="step-10" data-step="10">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">10</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 10 / 10</div>
+      <div class="step-title">動作確認 → QR を お客様 に 配布</div>
+    </div>
+    <div class="step-time">3分</div>
+  </div>
+  <div class="step-body">
+    <div class="step-desc">画面 に 表示 された <strong>QR コード</strong> を スマホ で 読み取り → 友だち追加 → リッチメニュー の 「アンケート」 タップ → 15問 回答 → 送信。 数秒 で 顧客台帳 に 自動登録。</div>
+    <div class="survey-grid">
+      <div class="qn">Q1</div><div>年代</div><div class="qd">20代〜70代以上</div>
+      <div class="qn">Q2</div><div>職業</div><div class="qd">会社員 / 自営 等</div>
+      <div class="qn">Q3</div><div>家族構成</div><div class="qd">配偶者 / 子の数</div>
+      <div class="qn">Q4</div><div>世帯年収</div><div class="qd">8段階</div>
+      <div class="qn">Q5</div><div>住居形態</div><div class="qd">持ち家 / 賃貸</div>
+      <div class="qn">Q6</div><div>金融資産</div><div class="qd">100万〜3000万+</div>
+      <div class="qn">Q7</div><div>保有商品</div><div class="qd">NISA/iDeCo/保険</div>
+      <div class="qn">Q8</div><div>相談テーマ</div><div class="qd">資産運用/老後/教育</div>
+      <div class="qn">Q9</div><div>悩み</div><div class="qd">自由記述</div>
+      <div class="qn">Q10</div><div>生年月日</div><div class="qd">ライフプラン用</div>
+      <div class="qn">Q11-13</div><div>面談 希望日 ×3</div><div class="qd">日時 候補</div>
+      <div class="qn">Q14</div><div>理想 の 未来</div><div class="qd">自由記述</div>
+      <div class="qn">Q15</div><div>緊急度</div><div class="qd">すぐ / 半年 / 1年 / じっくり</div>
+    </div>
+    <div class="do-now">
+      <div class="do-now-label">やること</div>
+      <div class="do-now-body">
+        ① 画面 の QR を スマホ LINE で 読取<br>
+        ② リッチメニュー 「アンケート」 タップ → 15問 回答 → 送信<br>
+        ③ FP Compass の 顧客台帳 に 自動登録 されてる か 確認<br>
+        ④ 同じ QR を 印刷 / 名刺裏 / メール 添付 で <strong>お客様 に 配布</strong>
+      </div>
+    </div>
+    <div class="expect">あなたの 名前 + Q1〜Q15 の 回答 が 顧客カード に 自動登録 / お客様 も 同じ流れ で 自動登録 される</div>
+    <div class="complete-row">
+      <button class="complete-btn" data-done="10">このステップ 完了 → 設定終了</button>
+    </div>
+  </div>
+</div>
+
+<!-- ALL DONE banner -->
+<div class="all-done" id="all-done">
+  <h2>🎉 設定 完了 です</h2>
+  <p>これで お客様 が QR から 友だち追加 → アンケート 回答 すると 自動で 顧客台帳 に 入ります。 何か 困った時 は 下の サポート まで。</p>
+</div>
+
+<!-- SUPPORT -->
 <div class="support">
-  <h3>困った時 は 連絡 ください</h3>
-  <p>30秒 で 返信。 設定 中 詰まった 画面の スクショ を 送って もらえれば 即 解決方法 を 案内。</p>
+  <h3>困った時 は ご連絡 ください</h3>
+  <p>30秒 で 返信 します。 詰まった 画面 の スクショ を 送って もらえば 即 解決方法 案内。</p>
   <div class="support-grid">
     <div class="support-card">
       <div class="lbl">EMAIL</div>
-      <div class="val">support@skeleton-inc.jp</div>
+      <div class="val">
+        <span>support@skeleton-inc.jp</span>
+        <button class="copy" data-copy="support@skeleton-inc.jp">コピー</button>
+      </div>
     </div>
     <div class="support-card">
       <div class="lbl">担当者</div>
@@ -723,8 +557,113 @@
   </div>
 </div>
 
-<div class="ft">FP Compass · 公式LINE 接続ガイド v2.1 · <strong>SKELETON INC.</strong></div>
-
 </div>
+
+<script>
+const TOTAL = 10;
+const KEY = 'fp-line-guide-progress';
+
+function getProgress() {
+  try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; }
+}
+function setProgress(p) {
+  localStorage.setItem(KEY, JSON.stringify(p));
+  updateUI();
+}
+function updateUI() {
+  const p = getProgress();
+  let done = 0;
+  for (let i = 1; i <= TOTAL; i++) {
+    const card = document.getElementById('step-' + i);
+    const btn = card?.querySelector('.complete-btn');
+    if (p[i]) {
+      card.classList.add('done');
+      if (btn) { btn.classList.add('done'); btn.textContent = '完了済'; }
+      done++;
+    } else {
+      card.classList.remove('done');
+      if (btn) { btn.classList.remove('done'); btn.innerHTML = ''; const t = document.createTextNode(i === TOTAL ? 'このステップ 完了 → 設定終了' : 'このステップ 完了 → 次へ'); btn.appendChild(t); }
+    }
+  }
+  const pct = (done / TOTAL * 100).toFixed(0);
+  document.getElementById('pfill').style.width = pct + '%';
+  document.getElementById('pnum').textContent = done + ' / ' + TOTAL;
+  document.getElementById('all-done').classList.toggle('show', done === TOTAL);
+}
+function complete(n) {
+  const p = getProgress();
+  p[n] = true;
+  setProgress(p);
+  // 次のステップ に スクロール
+  const next = document.getElementById('step-' + (Number(n) + 1));
+  if (next) {
+    setTimeout(() => next.scrollIntoView({ behavior: 'smooth', block: 'start' }), 280);
+    setTimeout(() => { next.classList.add('active'); setTimeout(() => next.classList.remove('active'), 2400); }, 600);
+  } else {
+    document.getElementById('all-done').scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+document.querySelectorAll('.complete-btn').forEach(btn => {
+  btn.addEventListener('click', () => complete(btn.dataset.done));
+});
+
+// === COPY (general) ===
+async function doCopy(text, btn) {
+  try {
+    await navigator.clipboard.writeText(text);
+    if (btn) {
+      const orig = btn.textContent;
+      btn.classList.add('copied');
+      btn.textContent = '✓ コピー済';
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1500);
+    }
+  } catch (e) {
+    alert('コピー失敗: ' + e.message);
+  }
+}
+document.querySelectorAll('[data-copy]').forEach(b => {
+  b.addEventListener('click', () => doCopy(b.dataset.copy, b));
+});
+document.querySelectorAll('[data-copy-target]').forEach(b => {
+  b.addEventListener('click', () => {
+    const v = document.getElementById(b.dataset.copyTarget)?.value || '';
+    if (!v) { alert('まず 値を 入力 してください'); return; }
+    doCopy(v, b);
+  });
+});
+
+// === VAULT auto-save (sessionStorage) ===
+['vault-token', 'vault-secret'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const saved = sessionStorage.getItem(id);
+  if (saved) {
+    el.value = saved;
+    const stat = document.getElementById(id + '-status');
+    if (stat) stat.textContent = '保管中 (' + saved.length + '文字)';
+  }
+  el.addEventListener('input', () => {
+    sessionStorage.setItem(id, el.value);
+    const stat = document.getElementById(id + '-status');
+    if (stat) stat.textContent = el.value ? '保管中 (' + el.value.length + '文字)' : '';
+  });
+});
+
+// === RESET ===
+document.getElementById('reset-btn').addEventListener('click', () => {
+  if (!confirm('進捗 を リセット しますか? (保管中の 鍵 も 消えます)')) return;
+  localStorage.removeItem(KEY);
+  sessionStorage.removeItem('vault-token');
+  sessionStorage.removeItem('vault-secret');
+  document.getElementById('vault-token').value = '';
+  document.getElementById('vault-secret').value = '';
+  updateUI();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+updateUI();
+</script>
+
 </body>
 </html>
