@@ -2719,7 +2719,11 @@ async function sendReceiptToLine(r){
     if(c && c.lineUserId) uid = c.lineUserId;
   }
   if(!uid || !String(uid).startsWith('U')){
-    if(confirm('このお客様のLINE userIdが未登録のため、LINE送信できません。\n代わりに印刷画面を開きますか？')) generateReceipt(r);
+    // userId 未取得 → 領収書プレビューを新タブ + LINE管理画面を新タブで開いて手動転送に逃がす
+    generateReceipt(r);
+    window.open(LINE_OAM_CHAT, '_blank');
+    const phoneClean = String(r['電話']||'').replace(/-/g,'');
+    showToast(`📋 領収書プレビュー & LINE管理画面 起動 → 電話「${phoneClean}」で友だち検索 → 領収書スクショを貼付`, 7000);
     return;
   }
   if(typeof html2canvas === 'undefined'){
