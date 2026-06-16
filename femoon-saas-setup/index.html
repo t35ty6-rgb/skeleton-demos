@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FEMOON SaaS · サロン管理画面 セットアップ ガイド</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+  body{font-family:'Noto Sans JP',sans-serif;background:#F5F2EC;color:#0A0A0A;line-height:1.75;padding:0 0 80px;font-feature-settings:"palt"}
+  .wrap{max-width:920px;margin:0 auto;padding:24px 20px}
+
+  .progress-bar{position:sticky;top:0;z-index:100;background:#0A0A0A;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px;border-bottom:3px solid #f4823c;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
+  .progress-label{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.15em;color:#f4823c;font-weight:700;flex-shrink:0}
+  .progress-track{flex:1;height:10px;background:#262626;border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,#f4823c,#fcd34d);border-radius:99px;width:0%;transition:width 0.5s cubic-bezier(0.22,1,0.36,1)}
+  .progress-num{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:900;color:#fff;min-width:60px;text-align:right}
+  .reset-btn{background:transparent;border:1px solid #525252;color:#A1A1AA;padding:5px 10px;border-radius:5px;font-size:10.5px;cursor:pointer;font-family:'JetBrains Mono',monospace}
+
+  .hero{background:#0A0A0A;color:#fff;padding:44px 36px;border-radius:24px;margin-bottom:24px;position:relative;overflow:hidden}
+  .hero::before{content:'';position:absolute;top:-80px;right:-80px;width:300px;height:300px;background:radial-gradient(circle,#f4823c 0%,transparent 65%);opacity:0.3}
+  .hero .brand{font-family:'JetBrains Mono',monospace;font-size:10px;color:#f4823c;letter-spacing:0.35em;font-weight:700;margin-bottom:12px}
+  .hero h1{font-family:'Noto Serif JP',serif;font-size:38px;font-weight:900;letter-spacing:0.01em;line-height:1.25;margin-bottom:14px;position:relative}
+  .hero h1 .accent{color:#f4823c}
+  .hero .lead{font-size:14px;color:#D4D4D8;line-height:1.85;max-width:560px;position:relative}
+  .hero .visual-promise{margin-top:24px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;position:relative}
+  .vp{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px}
+  .vp .ic{font-size:24px;margin-bottom:6px}
+  .vp .t{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#f4823c;letter-spacing:0.18em;font-weight:700;margin-bottom:3px}
+  .vp .d{font-size:13px;font-weight:700;color:#fff;line-height:1.4}
+
+  .step-card{background:#fff;border-radius:20px;padding:0;margin-bottom:20px;box-shadow:0 1px 0 #E5E5E5;border:2px solid transparent;transition:all 0.2s;scroll-margin-top:90px;overflow:hidden;position:relative}
+  .step-card.done{opacity:0.55}
+  .step-card.done .step-num{background:#f4823c;color:#fff}
+  .step-card.done .step-num::after{content:'✓';position:absolute;font-size:30px}
+  .step-card.done .step-num-text{display:none}
+
+  .step-head{display:flex;align-items:center;gap:16px;padding:22px 28px;background:#0A0A0A;color:#fff;position:relative}
+  .step-num{flex-shrink:0;width:58px;height:58px;background:#f4823c;color:#0A0A0A;border-radius:18px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:900;font-size:26px;position:relative;transition:all 0.3s}
+  .step-head-text{flex:1}
+  .step-eyebrow{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#f4823c;letter-spacing:0.22em;font-weight:700;margin-bottom:3px}
+  .step-title{font-family:'Noto Serif JP',serif;font-size:24px;font-weight:900;color:#fff;line-height:1.3}
+  .step-time{font-family:'JetBrains Mono',monospace;font-size:11px;color:#fed7aa;font-weight:700;padding:5px 11px;background:rgba(244,130,60,0.18);border-radius:5px;letter-spacing:0.1em;flex-shrink:0}
+
+  .step-body{padding:24px 28px}
+
+  .big-action{background:linear-gradient(135deg,#f4823c,#c2410c);color:#fff;border-radius:16px;padding:24px 28px;margin-bottom:18px;position:relative;overflow:hidden}
+  .big-action::before{content:'→';position:absolute;top:50%;left:-12px;transform:translateY(-50%);font-size:80px;color:rgba(255,255,255,0.08);font-weight:900;line-height:1}
+  .big-action .verb{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#fed7aa;letter-spacing:0.25em;font-weight:700;margin-bottom:6px;position:relative}
+  .big-action .what{font-family:'Noto Serif JP',serif;font-size:21px;font-weight:900;color:#fff;line-height:1.4;position:relative}
+  .big-action .what strong{background:#FFD700;color:#0A0A0A;padding:1px 10px;border-radius:5px;font-style:normal;font-weight:900}
+
+  .copy-block{background:#0A0A0A;color:#fff;border-radius:12px;padding:14px 18px;margin:12px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:12.5px}
+  .copy-block .url-txt{flex:1;color:#f4823c;font-weight:600;word-break:break-all;min-width:200px}
+  .copy-block .copy-btn{background:#f4823c;color:#0A0A0A;border:none;padding:10px 20px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-weight:900;font-size:12px;cursor:pointer;letter-spacing:0.05em;flex-shrink:0;transition:all 0.15s}
+  .copy-block .copy-btn:hover{background:#fed7aa;transform:translateY(-1px)}
+  .copy-block .copy-btn.copied{background:#FFD700;color:#0A0A0A}
+  .copy-block .open-btn{background:transparent;color:#f4823c;border:1.5px solid #f4823c;padding:9px 16px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11.5px;cursor:pointer;text-decoration:none;flex-shrink:0}
+  .copy-block .open-btn:hover{background:#f4823c;color:#0A0A0A}
+
+  .annot{position:relative;background:#1A1A1A;border-radius:14px;padding:14px;margin:18px 0;border:2px solid #FBBF24}
+  .annot-tag{position:absolute;top:-12px;left:18px;background:#FBBF24;color:#0A0A0A;padding:3px 12px;border-radius:99px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:900;letter-spacing:0.15em;z-index:10}
+  .annot-wrap{position:relative;display:inline-block;width:100%}
+  .annot-wrap img{display:block;width:100%;height:auto;border-radius:8px}
+  .annot-pin{position:absolute;width:50px;height:50px;background:#DC2626;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:900;font-size:22px;box-shadow:0 8px 24px rgba(220,38,38,0.5),0 0 0 6px rgba(220,38,38,0.2);border:4px solid #fff;z-index:5;animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+  .annot-arrow{position:absolute;font-size:48px;color:#DC2626;font-weight:900;text-shadow:0 2px 8px rgba(0,0,0,0.5),0 0 0 4px #fff;z-index:4;line-height:1;animation:bounce 1.6s ease-in-out infinite}
+  @keyframes bounce{0%,100%{transform:translateX(0)}50%{transform:translateX(8px)}}
+  .annot-arrow.down{animation:bouncedown 1.6s ease-in-out infinite}
+  @keyframes bouncedown{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+  .annot-circle{position:absolute;border:5px solid #DC2626;border-radius:50%;box-shadow:0 0 0 8px rgba(220,38,38,0.15),0 8px 24px rgba(220,38,38,0.3);animation:pulseRing 2s ease-in-out infinite;z-index:3}
+  @keyframes pulseRing{0%,100%{box-shadow:0 0 0 8px rgba(220,38,38,0.15),0 8px 24px rgba(220,38,38,0.3)}50%{box-shadow:0 0 0 14px rgba(220,38,38,0.08),0 8px 24px rgba(220,38,38,0.4)}}
+  .annot-cap{margin-top:10px;color:#fed7aa;font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.04em;text-align:center;background:rgba(255,255,255,0.04);padding:8px;border-radius:6px}
+  .annot-cap strong{color:#FBBF24;font-family:'Noto Sans JP',sans-serif;font-weight:700}
+
+  .expect{background:#FFF7ED;border-left:5px solid #f4823c;padding:14px 18px;border-radius:0 10px 10px 0;font-size:13.5px;color:#7c2d12;margin:14px 0;line-height:1.75;font-weight:600}
+  .expect strong{background:#FEF3C7;color:#92400E;padding:0 6px;border-radius:3px}
+  .expect::before{content:'👁 こうなったら 成功';display:block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.15em;margin-bottom:6px;color:#9a3412}
+
+  .warn{background:#FFFBEB;border-left:5px solid #F59E0B;padding:13px 18px;border-radius:0 10px 10px 0;font-size:13px;color:#78350F;margin:14px 0;line-height:1.75;font-weight:600}
+  .warn::before{content:'⚠️ メモ';display:block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.15em;margin-bottom:6px;color:#92400E}
+
+  .input-spec{background:#F9FAFB;border:1.5px dashed #D1D5DB;border-radius:12px;padding:14px 18px;margin:14px 0}
+  .input-spec .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.18em;color:#6B7280;font-weight:700;margin-bottom:6px}
+  .input-spec .val{font-family:'JetBrains Mono',monospace;font-size:13px;color:#0A0A0A;background:#fff;padding:8px 12px;border-radius:6px;border:1px solid #E5E7EB;word-break:break-all;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .input-spec .val .copy{background:#0A0A0A;color:#f4823c;border:none;padding:6px 12px;border-radius:4px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:'JetBrains Mono',monospace;flex-shrink:0}
+
+  .complete-row{margin-top:18px;text-align:right}
+  .complete-btn{background:#0A0A0A;color:#f4823c;border:none;padding:11px 22px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-weight:900;font-size:12px;letter-spacing:0.08em;cursor:pointer}
+  .complete-btn:hover{background:#262626;color:#fcd34d}
+
+  .support{background:#0A0A0A;color:#fff;border-radius:20px;padding:30px;margin-top:40px}
+  .support h3{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:900;margin-bottom:14px;color:#fff}
+  .support p{font-size:13px;color:#D4D4D8;line-height:1.85;margin-bottom:14px}
+
+  @media (max-width:700px){
+    .hero,.step-head,.step-body{padding-left:22px;padding-right:22px}
+    .hero h1{font-size:28px}
+    .step-title{font-size:18px}
+    .progress-bar{padding:10px 16px;gap:10px}
+    .hero .visual-promise{grid-template-columns:1fr}
+    .step-num{width:50px;height:50px;font-size:22px;border-radius:14px}
+    .big-action .what{font-size:17px}
+    .annot-pin{width:42px;height:42px;font-size:18px;border-width:3px}
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar">
+  <div class="progress-label">PROGRESS</div>
+  <div class="progress-track"><div class="progress-fill" id="pfill"></div></div>
+  <div class="progress-num" id="pnum">0 / 10</div>
+  <button class="reset-btn" id="reset-btn">RESET</button>
+</div>
+
+<div class="wrap">
+
+<div class="hero">
+  <div class="brand">FEMOON · SALON SAAS · SETUP GUIDE · v1.0</div>
+  <h1>サロン管理画面<br><span class="accent">完全セットアップ</span></h1>
+  <p class="lead">画像 と 矢印 で <strong style="color:#f4823c;">「次に どこを 押すか」</strong> を 1ステップ ずつ お見せ します。 文字 が 苦手 でも OK。</p>
+  <div class="visual-promise">
+    <div class="vp"><div class="ic">⏱</div><div class="t">TIME</div><div class="d">15分</div></div>
+    <div class="vp"><div class="ic">💰</div><div class="t">COST</div><div class="d">¥0</div></div>
+    <div class="vp"><div class="ic">📚</div><div class="t">KNOWLEDGE</div><div class="d">不要</div></div>
+  </div>
+</div>
+
+<!-- STEP 1 -->
+<div class="step-card" id="step-1" data-step="1">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">1</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 01 / 10</div>
+      <div class="step-title">SaaS の トップページ を 開く</div>
+    </div>
+    <div class="step-time">1分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">下の <strong>緑「コピー」</strong> → Chrome に 貼り付け → Enter</div>
+    </div>
+    <div class="copy-block">
+      <div class="url-txt">https://skeleton-femoon-saas.web.app/</div>
+      <button class="copy-btn" data-copy="https://skeleton-femoon-saas.web.app/">コピー</button>
+      <a class="open-btn" href="https://skeleton-femoon-saas.web.app/" target="_blank">↗ 開く</a>
+    </div>
+    <div class="annot">
+      <div class="annot-tag">実画面</div>
+      <div class="annot-wrap">
+        <img src="setup-01-login.png" alt="SaaS ログイン画面">
+        <div class="annot-circle" style="top:25%;left:30%;width:40%;height:55%"></div>
+      </div>
+      <div class="annot-cap">この <strong>「FEMOON SALON SAAS」</strong> 画面 が 出れば OK</div>
+    </div>
+    <div class="expect">真ん中 に <strong>ログイン / 新規サロン登録</strong> の タブ が 出ている</div>
+    <div class="complete-row"><button class="complete-btn" data-done="1">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 2 -->
+<div class="step-card" id="step-2" data-step="2">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">2</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 02 / 10</div>
+      <div class="step-title">「新規サロン登録」 タブ を 押す</div>
+    </div>
+    <div class="step-time">30秒</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">右側 の <strong>「新規サロン登録」</strong> タブ を クリック</div>
+    </div>
+    <div class="annot">
+      <div class="annot-tag">実画面</div>
+      <div class="annot-wrap">
+        <img src="setup-02-signup.png" alt="新規サロン登録タブ">
+        <div class="annot-pin" style="top:33%;left:60%;">1</div>
+        <div class="annot-arrow down" style="top:25%;left:62%;">↓</div>
+      </div>
+      <div class="annot-cap">右側 の <strong>「新規サロン登録」</strong> を 押す → サロン名 / メアド / パスワード の 欄 が 出る</div>
+    </div>
+    <div class="expect">「サロン名」 「メールアドレス」 「パスワード」 「パスワード(確認用)」 の 4つ が 出る</div>
+    <div class="complete-row"><button class="complete-btn" data-done="2">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 3 -->
+<div class="step-card" id="step-3" data-step="3">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">3</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 03 / 10</div>
+      <div class="step-title">4つ 埋めて 「アカウント作成」</div>
+    </div>
+    <div class="step-time">1分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">① サロン名 ② メアド ③ パスワード(8文字以上) ④ 確認 → <strong>「アカウント作成」</strong></div>
+    </div>
+    <div class="input-spec">
+      <div class="lbl">RECOMMENDED INPUT EXAMPLE</div>
+      <div class="val">サロン名 = フェムケアサロン FEMOON</div>
+      <div class="val" style="margin-top:6px">メアド = サロン代表アドレス</div>
+      <div class="val" style="margin-top:6px">パスワード = 英数字 8文字以上 (例: salon2026!)</div>
+    </div>
+    <div class="warn">パスワード は 後から ログイン に 使う ので 必ず メモ する</div>
+    <div class="expect">2-3秒 で 自動 で <strong>管理画面</strong> に 移動 する。 上 に 黒い バー、 下 に カレンダー の 表 が 出る</div>
+    <div class="complete-row"><button class="complete-btn" data-done="3">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 4 -->
+<div class="step-card" id="step-4" data-step="4">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">4</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 04 / 10</div>
+      <div class="step-title">「設定」 タブ に 移動</div>
+    </div>
+    <div class="step-time">10秒</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">上 の メニュー の <strong>「設定」</strong> を クリック</div>
+    </div>
+    <div class="annot">
+      <div class="annot-tag">実画面</div>
+      <div class="annot-wrap">
+        <img src="setup-03-admin-empty.png" alt="初回管理画面">
+        <div class="annot-pin" style="top:6%;left:38%;">1</div>
+        <div class="annot-arrow down" style="top:1%;left:39%;">↓</div>
+      </div>
+      <div class="annot-cap">上部 ナビ の 一番右 <strong>「設定」</strong> を 押す</div>
+    </div>
+    <div class="expect">「サロン設定」 という タイトル + 「基本情報」 「LINE 連携」 「スタッフ」 「コース・料金」 の セクション が 出る</div>
+    <div class="complete-row"><button class="complete-btn" data-done="4">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 5 -->
+<div class="step-card" id="step-5" data-step="5">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">5</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 05 / 10</div>
+      <div class="step-title">基本情報 + 営業時間 + 定休日</div>
+    </div>
+    <div class="step-time">2分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">① 電話番号 ② 住所 ③ 営業時間 ④ 定休日(曜日ボタン) を 埋める</div>
+    </div>
+    <div class="annot">
+      <div class="annot-tag">実画面</div>
+      <div class="annot-wrap">
+        <img src="setup-05-settings-hours.png" alt="基本情報 + 営業時間">
+        <div class="annot-pin" style="top:14%;left:65%;">1</div>
+        <div class="annot-pin" style="top:19%;left:65%;">2</div>
+        <div class="annot-pin" style="top:25%;left:30%;">3</div>
+        <div class="annot-pin" style="top:31%;left:30%;">4</div>
+        <div class="annot-pin" style="top:37%;left:45%;">5</div>
+      </div>
+      <div class="annot-cap">①電話 ②住所 ③営業 開始 ④終了 ⑤定休日 (赤い ボタン が ON)</div>
+    </div>
+    <div class="expect">定休日の 曜日ボタン が <strong>赤色</strong> に 切り替わる</div>
+    <div class="complete-row"><button class="complete-btn" data-done="5">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 6 -->
+<div class="step-card" id="step-6" data-step="6">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">6</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 06 / 10</div>
+      <div class="step-title">LINE連携 3項目 を 入力</div>
+    </div>
+    <div class="step-time">3分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">① <strong>Messaging API トークン</strong> ② <strong>公式アカウントID</strong> ③ <strong>通知先 LINE userId</strong> を 入れる</div>
+    </div>
+    <div class="annot">
+      <div class="annot-tag">実画面</div>
+      <div class="annot-wrap">
+        <img src="setup-06-settings-line.png" alt="LINE連携">
+        <div class="annot-pin" style="top:48%;left:65%;">1</div>
+        <div class="annot-pin" style="top:55%;left:65%;">2</div>
+        <div class="annot-pin" style="top:67%;left:65%;">3</div>
+      </div>
+      <div class="annot-cap">①トークン (長い文字列) ②@xxxxxx (公式アカウントID) ③Uxxxxx (通知先 userId)</div>
+    </div>
+    <div class="warn">トークン と userId の 取得 方法 が 分からない 時 — 別 ガイド (LINE Developers セットアップ) を 参照。 もしくは Jobs に「教えて」 で 即返答</div>
+    <div class="expect">3つ全部 入力後、 右上 の <strong>オレンジ「保存」</strong> を 押す → トースト で 「✅ サロン設定を保存しました」 が 出る</div>
+    <div class="complete-row"><button class="complete-btn" data-done="6">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 7 -->
+<div class="step-card" id="step-7" data-step="7">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">7</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 07 / 10</div>
+      <div class="step-title">スタッフ を 登録 する</div>
+    </div>
+    <div class="step-time">3分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">スタッフ セクション の <strong>「＋ スタッフ追加」</strong> ボタン → モーダル で 名前/役職/カラー</div>
+    </div>
+    <div class="annot">
+      <div class="annot-tag">実画面</div>
+      <div class="annot-wrap">
+        <img src="setup-07-staff-modal.png" alt="スタッフ追加モーダル">
+        <div class="annot-pin" style="top:40%;left:50%;">1</div>
+        <div class="annot-pin" style="top:50%;left:50%;">2</div>
+        <div class="annot-pin" style="top:62%;left:50%;">3</div>
+        <div class="annot-pin" style="top:80%;left:80%;">4</div>
+      </div>
+      <div class="annot-cap">①お名前 ②役職 ③表示カラー (10色から選択) ④オレンジ「保存」</div>
+    </div>
+    <div class="warn">デフォルトで 5名 (鈴木/田中/山田/佐藤/渡辺) 入ってる → 実店舗の スタッフ名 に <strong>「編集」</strong> ボタン で 変更</div>
+    <div class="expect">表 に 新スタッフ が 1行 追加される + 予約タブ の 列 に カラー付きで 出る</div>
+    <div class="complete-row"><button class="complete-btn" data-done="7">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 8 -->
+<div class="step-card" id="step-8" data-step="8">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">8</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 08 / 10</div>
+      <div class="step-title">コース・料金 を 登録 する</div>
+    </div>
+    <div class="step-time">3分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">「＋ コース追加」 → 名前/所要時間/料金 を 入れる → 「保存」</div>
+    </div>
+    <div class="input-spec">
+      <div class="lbl">RECOMMENDED COURSE EXAMPLE (フェムケアサロン)</div>
+      <div class="val">フェムケア初回体験 / 60分 / ¥4,000</div>
+      <div class="val" style="margin-top:6px">骨盤底筋ケア / 90分 / ¥9,000</div>
+      <div class="val" style="margin-top:6px">VIPフルコース / 120分 / ¥15,000</div>
+    </div>
+    <div class="expect">コース表 に 行 が 追加される + 予約モーダル の コース選択 に 反映 + お客様用 予約フォーム にも 自動 反映</div>
+    <div class="complete-row"><button class="complete-btn" data-done="8">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 9 -->
+<div class="step-card" id="step-9" data-step="9">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">9</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 09 / 10</div>
+      <div class="step-title">予約フォームURL を コピー</div>
+    </div>
+    <div class="step-time">30秒</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">設定の <strong>「予約フォームURL」</strong> 欄 の <strong>📋 コピー</strong> ボタン を クリック</div>
+    </div>
+    <div class="annot">
+      <div class="annot-tag">実画面</div>
+      <div class="annot-wrap">
+        <img src="setup-09-booking-url.png" alt="予約フォームURL">
+        <div class="annot-pin" style="top:50%;left:78%;">1</div>
+        <div class="annot-arrow" style="top:50%;left:88%;">→</div>
+      </div>
+      <div class="annot-cap"><strong>「📋 コピー」</strong> ボタン を 押す → トースト 「✅ 予約フォームURLをコピーしました」</div>
+    </div>
+    <div class="expect">クリップボード に お客様用 予約URL が 入る。 隣 の <strong>「👁 確認」</strong> ボタン で 別タブ プレビュー も できる</div>
+    <div class="complete-row"><button class="complete-btn" data-done="9">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 10 -->
+<div class="step-card" id="step-10" data-step="10">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">10</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 10 / 10</div>
+      <div class="step-title">お客様 に URL を 共有</div>
+    </div>
+    <div class="step-time">2分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">コピーした URL を <strong>LINE / Instagram / 名刺 / HP</strong> に 貼る → お客様 が タップ で 予約 開始</div>
+    </div>
+    <div class="annot">
+      <div class="annot-tag">お客様 視点 (iPhone)</div>
+      <div class="annot-wrap">
+        <img src="setup-11-book-top.png" alt="お客様用予約フォーム">
+        <div class="annot-pin" style="top:14%;left:46%;">1</div>
+      </div>
+      <div class="annot-cap">お客様 が この 画面 を 開く → コース 選択 → 日付 → 時間 → 名前 → 確定</div>
+    </div>
+    <div class="expect">お客様 が 予約 完了 → サロン側 LINE に 通知 → 管理画面 の タイムテーブル に リアルタイム で 反映</div>
+    <div class="complete-row"><button class="complete-btn" data-done="10">完了 → セットアップ 完了!</button></div>
+  </div>
+</div>
+
+<div class="support">
+  <h3>困った時 は ジョブズ に 聞く</h3>
+  <p>このガイド を 見て分からない 箇所、 詰まった 画面、 設定 ミス、 何でも 即 サポート する。<br>「ここで 止まった」 と LINE で 連絡 → 1分以内 で 回答 する。</p>
+  <p style="margin-top:18px;font-size:11.5px;color:#A1A1AA;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em">FEMOON SaaS SETUP GUIDE · POWERED BY SKELETON INC.</p>
+</div>
+
+</div>
+
+<script>
+const STORAGE = 'femoon-saas-setup-progress';
+let done = new Set(JSON.parse(localStorage.getItem(STORAGE) || '[]'));
+
+function applyDone() {
+  document.querySelectorAll('.step-card').forEach(card => {
+    const id = card.dataset.step;
+    card.classList.toggle('done', done.has(id));
+    const btn = card.querySelector('.complete-btn');
+    if (btn) btn.textContent = done.has(id) ? '✓ 完了済み' : btn.dataset.label || '完了 → 次へ';
+  });
+  const total = document.querySelectorAll('.step-card').length;
+  document.getElementById('pnum').textContent = `${done.size} / ${total}`;
+  document.getElementById('pfill').style.width = `${(done.size/total)*100}%`;
+}
+
+document.querySelectorAll('.complete-btn').forEach(btn => {
+  btn.dataset.label = btn.textContent;
+  btn.addEventListener('click', () => {
+    const id = btn.dataset.done;
+    if (done.has(id)) { done.delete(id); }
+    else { done.add(id); }
+    localStorage.setItem(STORAGE, JSON.stringify([...done]));
+    applyDone();
+    if (done.has(id)) {
+      const next = document.getElementById(`step-${Number(id)+1}`);
+      if (next) next.scrollIntoView({ behavior:'smooth', block:'start' });
+    }
+  });
+});
+
+document.querySelectorAll('.copy-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(btn.dataset.copy);
+      btn.textContent = '✓ コピー済';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 1500);
+    } catch(e) { alert('コピー失敗: ' + e.message); }
+  });
+});
+
+document.querySelectorAll('.input-spec .copy').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const val = btn.previousSibling.textContent;
+    try { await navigator.clipboard.writeText(val); btn.textContent = '✓'; setTimeout(()=>btn.textContent='COPY',1500); } catch(e) {}
+  });
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  if (confirm('進捗をリセットしますか?')) {
+    done = new Set();
+    localStorage.removeItem(STORAGE);
+    applyDone();
+  }
+});
+
+applyDone();
+</script>
+
+</body>
+</html>
