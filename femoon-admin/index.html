@@ -1599,11 +1599,22 @@ async function submitAdd(){
 
 /* ========== LINE Message ========== */
 function openLineModal(row){
-  CURRENT_LINE_TARGET = Object.assign({}, row, {lineUserId: row['LINE userId']||''});
+  // 予約行に userId が無い場合は aggregateCustomers から 電話一致で引き直す
+  // (同一顧客の他予約・LIFF経由で取得済の userId を漏れなく使う / API直送経路の退化防止)
+  let uid = row['LINE userId']||'';
+  if(!uid || !String(uid).startsWith('U')){
+    const tel = String(row['電話']||'').replace(/[-\s]/g,'');
+    if(tel){
+      if(!window._CUST_ARR || window._CUST_ARR.length === 0) window._CUST_ARR = aggregateCustomers();
+      const c = (window._CUST_ARR||[]).find(x => String(x.tel||'').replace(/[-\s]/g,'')===tel);
+      if(c && c.lineUserId) uid = c.lineUserId;
+    }
+  }
+  CURRENT_LINE_TARGET = Object.assign({}, row, {lineUserId: uid});
   document.getElementById('line-modal').classList.remove('hidden');
   const d = parseDate(row['希望日']);
   const dateStr = d ? `${d.getMonth()+1}/${d.getDate()}` : '';
-  const hasLine = (row['LINE userId']||'').startsWith('U');
+  const hasLine = (uid||'').startsWith('U');
   document.getElementById('line-target-info').innerHTML = `
     <strong>${row['お名前']||'-'}</strong> 様 / ${row['電話']||'-'} ${hasLine?`<span style="background:#06c755;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px;display:inline-flex;align-items:center">${LINE_ICON_W} 直送可</span>`:'<span style="background:#f0e6e0;color:#7a5d5d;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px">📋 コピー送信のみ</span>'}<br>
     <span style="color:#7a5d5d;font-size:11.5px">${dateStr} ${row['時間']||''} ${row['コース名']||''}</span>
