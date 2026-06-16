@@ -2,306 +2,426 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
-<title>Skeleton LINE EC / 管理画面</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Skel·EC / Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700;800&family=BIZ+UDPGothic:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#15151a;
-  --ink-soft:#5a5a66;
-  --ink-faint:#9999a3;
-  --paper:#faf8f3;
-  --paper-card:#ffffff;
-  --paper-tinted:#f3efe5;
-  --paper-sunk:#ecebe3;
-  --rule:#e0dcce;
-  --rule-soft:#eae6d7;
-  --accent:#c8412e;
-  --accent-soft:#f6dcd6;
-  --accent-deep:#8e2a1c;
-  --ok:#2b6e3f;
-  --warn:#a8770a;
-  --bad:#a92424;
-  --line-green:#06c755;
-  --shadow:0 1px 0 rgba(20,20,30,.04);
-  --serif:'Shippori Mincho B1', serif;
-  --sans:'BIZ UDPGothic', system-ui, sans-serif;
-  --mono:'JetBrains Mono', monospace;
+  --bg: oklch(0.99 0 0);
+  --surface: oklch(1 0 0);
+  --sidebar: oklch(0.975 0.002 250);
+  --ink: oklch(0.20 0.012 250);
+  --ink-2: oklch(0.42 0.008 250);
+  --ink-3: oklch(0.60 0.008 250);
+  --ink-4: oklch(0.76 0.006 250);
+  --rule: oklch(0.93 0.004 250);
+  --rule-soft: oklch(0.965 0.003 250);
+  --hover: oklch(0.97 0.005 250);
+  --accent: oklch(0.45 0.19 18);
+  --accent-deep: oklch(0.36 0.17 18);
+  --accent-tint: oklch(0.96 0.04 18);
+  --accent-line: oklch(0.85 0.10 18);
+  --pos: oklch(0.55 0.15 152);
+  --pos-tint: oklch(0.96 0.04 152);
+  --warn: oklch(0.62 0.15 70);
+  --warn-tint: oklch(0.96 0.05 80);
+  --neg: oklch(0.55 0.18 26);
+  --neg-tint: oklch(0.96 0.05 26);
+  --info: oklch(0.55 0.13 245);
+  --info-tint: oklch(0.96 0.03 245);
+  --line-green: oklch(0.72 0.18 148);
+  --shadow-sm: 0 1px 2px oklch(0.20 0.012 250 / 0.05);
+  --shadow-md: 0 4px 16px -4px oklch(0.20 0.012 250 / 0.08), 0 1px 2px oklch(0.20 0.012 250 / 0.05);
+  --shadow-lg: 0 20px 40px -12px oklch(0.20 0.012 250 / 0.18);
+  --r-sm: 5px;
+  --r: 7px;
+  --r-lg: 10px;
+  --sans: 'Inter Tight', 'Noto Sans JP', -apple-system, system-ui, sans-serif;
+  --jp: 'Noto Sans JP', 'Inter Tight', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;font-feature-settings:'cv11','ss01';font-variant-numeric:tabular-nums}
 a{color:inherit;text-decoration:none}
-button{font-family:inherit;cursor:pointer}
-input,select,textarea{font-family:inherit;font-size:14px}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:13px;color:inherit}
+svg{display:block}
 
-/* ===== 全体グリッド ===== */
-.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-@media(max-width:900px){.app{grid-template-columns:1fr}}
+/* ===== Layout ===== */
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+@media(max-width:960px){.app{grid-template-columns:1fr}}
 
-/* ===== サイドナビ ===== */
-.side{background:var(--paper-tinted);border-right:1px solid var(--rule);padding:18px 0 60px;position:sticky;top:0;height:100vh;overflow-y:auto}
+/* ===== Sidebar ===== */
+.side{background:var(--sidebar);border-right:1px solid var(--rule);position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
 .scrim{display:none}
-@media(max-width:900px){
-  .side{position:fixed;top:0;left:-260px;width:240px;z-index:50;transition:left .25s;height:100vh}
-  .side.open{left:0;box-shadow:6px 0 24px rgba(0,0,0,.18)}
-  .scrim{position:fixed;inset:0;background:rgba(20,20,30,.4);z-index:40}
+@media(max-width:960px){
+  .side{position:fixed;top:0;left:-260px;width:240px;z-index:50;transition:left .22s cubic-bezier(.2,.8,.2,1)}
+  .side.open{left:0;box-shadow:var(--shadow-lg)}
+  .scrim{position:fixed;inset:0;background:oklch(0.20 0.012 250 / 0.5);z-index:40;backdrop-filter:blur(2px)}
   .scrim.on{display:block}
 }
-.brand{padding:8px 22px 14px;border-bottom:1px solid var(--rule);margin-bottom:10px}
-.brand .mark{font-family:var(--serif);font-weight:800;font-size:22px;letter-spacing:.06em;color:var(--ink)}
-.brand .mark em{font-style:normal;color:var(--accent)}
-.brand .sub{font-size:10px;letter-spacing:.32em;color:var(--ink-soft);margin-top:2px;text-transform:uppercase}
-.shop-pill{margin:12px 16px;padding:10px 12px;background:#fff;border:1px solid var(--rule);border-radius:4px;display:flex;align-items:center;gap:10px}
-.shop-pill .avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#c8412e,#8e2a1c);color:#fff;display:grid;place-items:center;font-family:var(--serif);font-weight:700}
-.shop-pill .meta{flex:1;min-width:0}
-.shop-pill .name{font-size:12px;font-weight:700;line-height:1.2;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.shop-pill .plan{font-size:10px;color:var(--ink-soft);letter-spacing:.1em}
-nav.sect{padding:6px 0 0}
-nav.sect h6{font-size:10px;letter-spacing:.28em;color:var(--ink-faint);margin:14px 22px 4px;font-weight:700;text-transform:uppercase}
-nav.sect a{display:flex;align-items:center;gap:10px;padding:7px 22px;color:var(--ink-soft);font-size:13px;border-left:2px solid transparent}
-nav.sect a:hover{color:var(--ink);background:rgba(0,0,0,.025)}
-nav.sect a.active{color:var(--ink);background:#fff;border-left-color:var(--accent);font-weight:700}
-nav.sect a .ic{width:18px;text-align:center;font-size:14px;opacity:.8}
-nav.sect a .badge{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;padding:0 6px;border-radius:8px;font-family:var(--mono);font-weight:600}
+.brand{padding:14px 18px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--rule)}
+.brand .mark{width:24px;height:24px;border-radius:6px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:700;font-size:13px;letter-spacing:-.02em}
+.brand .name{font-weight:600;font-size:14px;letter-spacing:-.01em}
+.brand .name span{color:var(--ink-3);font-weight:500}
 
-/* ===== メインエリア ===== */
-.main{min-width:0;display:flex;flex-direction:column}
-.topbar{display:flex;align-items:center;gap:14px;padding:14px 28px;background:#fff;border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:20}
-.hamburger{display:none;background:none;border:1px solid var(--rule);width:36px;height:34px;border-radius:3px;font-size:18px}
-@media(max-width:900px){.hamburger{display:block}.topbar{padding:12px 16px}}
-.crumbs{font-family:var(--serif);font-size:18px;font-weight:700;letter-spacing:.04em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.crumbs .sub{font-family:var(--sans);font-weight:400;color:var(--ink-soft);font-size:12px;margin-left:8px;letter-spacing:0}
-.topbar .search{flex:0 0 280px;display:flex;align-items:center;gap:6px;border:1px solid var(--rule);padding:6px 10px;border-radius:3px;background:#fff}
-.topbar .search input{border:0;outline:0;flex:1;background:transparent}
-.topbar .search .kbd{font-family:var(--mono);font-size:10px;border:1px solid var(--rule);padding:1px 5px;border-radius:3px;color:var(--ink-faint)}
-@media(max-width:900px){.topbar .search{display:none}}
-.topbar .topbtn{padding:7px 12px;background:#fff;border:1px solid var(--rule);font-size:12px;color:var(--ink-soft);border-radius:3px}
-.topbar .topbtn:hover{background:var(--paper-tinted)}
-.topbar .accent-btn{padding:8px 14px;background:var(--ink);color:#fff;border:0;font-size:12px;font-weight:700;letter-spacing:.08em;border-radius:3px}
-.topbar .accent-btn:hover{background:var(--accent)}
+.shop-card{margin:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);display:flex;align-items:center;gap:10px;cursor:pointer}
+.shop-card:hover{border-color:var(--ink-4)}
+.shop-card .av{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:600;font-size:12px;letter-spacing:-.02em}
+.shop-card .info{flex:1;min-width:0}
+.shop-card .info .n{font-size:13px;font-weight:600;line-height:1.2;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shop-card .info .s{font-size:10.5px;color:var(--ink-3);font-weight:500;line-height:1.4;margin-top:1px}
+.shop-card svg{color:var(--ink-3);flex-shrink:0;width:14px;height:14px}
 
-.view{padding:24px 28px 80px;max-width:1280px}
-@media(max-width:900px){.view{padding:18px 16px 80px}}
+nav.sect{padding:6px 8px;flex:1}
+nav.sect h6{font-size:10.5px;letter-spacing:.04em;color:var(--ink-3);font-weight:600;padding:14px 12px 4px;margin:0}
+nav.sect a{display:flex;align-items:center;gap:10px;padding:6px 11px;color:var(--ink-2);font-size:13px;border-radius:var(--r-sm);margin-bottom:1px;font-weight:500;transition:background .12s}
+nav.sect a:hover{background:var(--hover);color:var(--ink)}
+nav.sect a.active{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:var(--shadow-sm),inset 0 0 0 1px var(--rule)}
+nav.sect a svg{width:16px;height:16px;color:var(--ink-3);flex-shrink:0}
+nav.sect a.active svg{color:var(--accent)}
+nav.sect a .badge{margin-left:auto;background:var(--accent-tint);color:var(--accent-deep);font-size:10.5px;padding:1px 6px;border-radius:9px;font-family:var(--mono);font-weight:600;min-width:18px;text-align:center}
+nav.sect a.active .badge{background:var(--accent);color:#fff}
 
-/* ===== KPI カード ===== */
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
-@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
-.kpi{background:var(--paper-card);border:1px solid var(--rule);border-radius:3px;padding:14px 16px}
-.kpi .lab{font-size:10px;letter-spacing:.24em;color:var(--ink-faint);text-transform:uppercase;font-weight:700}
-.kpi .num{font-family:var(--serif);font-size:30px;font-weight:700;margin-top:6px;line-height:1.1}
-.kpi .num .unit{font-family:var(--sans);font-size:12px;color:var(--ink-soft);font-weight:400;margin-left:4px}
-.kpi .delta{font-family:var(--mono);font-size:11px;margin-top:4px;color:var(--ok)}
-.kpi .delta.dn{color:var(--bad)}
-.kpi .delta .vs{color:var(--ink-faint);margin-left:6px}
+.side-foot{border-top:1px solid var(--rule);padding:10px 12px;display:flex;align-items:center;gap:9px;color:var(--ink-3);font-size:11.5px}
+.side-foot svg{width:14px;height:14px}
+.side-foot .live{display:inline-flex;align-items:center;gap:5px}
+.side-foot .pulse{width:6px;height:6px;background:var(--pos);border-radius:50%;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-/* ===== セクション ===== */
-.sec{background:var(--paper-card);border:1px solid var(--rule);border-radius:3px;margin-bottom:18px}
-.sec-h{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--rule)}
-.sec-h h3{font-family:var(--serif);font-size:16px;font-weight:700;margin:0;letter-spacing:.04em;flex:1}
-.sec-h .sub{font-size:11px;color:var(--ink-soft);letter-spacing:.08em}
-.sec-body{padding:14px 18px}
+/* ===== Top bar ===== */
+.main{min-width:0;display:flex;flex-direction:column;background:var(--bg)}
+.topbar{display:flex;align-items:center;gap:12px;padding:11px 24px;background:var(--bg);border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:20}
+.ham{display:none;width:32px;height:32px;border-radius:var(--r-sm);align-items:center;justify-content:center;color:var(--ink-2)}
+.ham:hover{background:var(--hover)}
+@media(max-width:960px){.ham{display:flex}.topbar{padding:10px 14px}}
+.crumbs{flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-3);font-weight:500;overflow:hidden}
+.crumbs .root{color:var(--ink-3)}
+.crumbs .sep{color:var(--ink-4)}
+.crumbs .cur{color:var(--ink);font-weight:600}
+.search{flex:0 1 320px;display:flex;align-items:center;gap:7px;border:1px solid var(--rule);padding:6px 10px;border-radius:var(--r-sm);background:var(--surface);color:var(--ink-3)}
+.search:focus-within{border-color:var(--ink-4);box-shadow:0 0 0 3px oklch(0.93 0.004 250)}
+.search svg{width:14px;height:14px}
+.search input{border:0;outline:0;flex:1;background:transparent;color:var(--ink);font-size:13px}
+.search input::placeholder{color:var(--ink-4)}
+.search .kbd{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);background:var(--bg);border:1px solid var(--rule);padding:0 4px;border-radius:3px;font-weight:500}
+@media(max-width:960px){.search{display:none}}
+.iconbtn{width:32px;height:32px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;color:var(--ink-2);position:relative}
+.iconbtn:hover{background:var(--hover);color:var(--ink)}
+.iconbtn .dot{position:absolute;top:7px;right:8px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.iconbtn svg{width:16px;height:16px}
+.btn-primary{padding:7px 13px;background:var(--ink);color:var(--bg);border-radius:var(--r-sm);font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:background .12s}
+.btn-primary:hover{background:oklch(0.30 0.015 250)}
+.btn-primary svg{width:14px;height:14px}
+
+.view{padding:22px 24px 80px;max-width:1320px}
+@media(max-width:960px){.view{padding:16px 14px 80px}}
+
+/* ===== Headings & Titles ===== */
+.page-title{font-size:20px;font-weight:600;letter-spacing:-.015em;line-height:1.3;color:var(--ink);margin-bottom:3px}
+.page-sub{font-size:13px;color:var(--ink-3);font-weight:400;margin-bottom:22px}
+
+/* ===== KPI strip ===== */
+.kpi-lead{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:22px 24px;display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:32px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
+@media(max-width:980px){.kpi-lead{grid-template-columns:1fr 1fr;gap:24px}}
+@media(max-width:520px){.kpi-lead{grid-template-columns:1fr 1fr}}
+.kpi{display:flex;flex-direction:column;gap:5px}
+.kpi.primary{border-right:1px solid var(--rule);padding-right:32px}
+@media(max-width:980px){.kpi.primary{border-right:0;padding-right:0;grid-column:span 2;padding-bottom:18px;border-bottom:1px solid var(--rule);margin-bottom:6px}}
+.kpi .lab{font-size:12px;color:var(--ink-3);font-weight:500;display:flex;align-items:center;gap:5px}
+.kpi .lab svg{width:13px;height:13px;color:var(--ink-4)}
+.kpi .num{font-family:var(--mono);font-weight:600;font-size:26px;letter-spacing:-.025em;color:var(--ink);line-height:1.1}
+.kpi.primary .num{font-size:38px}
+.kpi .delta{font-size:11.5px;display:inline-flex;align-items:center;gap:4px;font-weight:500;color:var(--pos)}
+.kpi .delta.dn{color:var(--neg)}
+.kpi .delta svg{width:11px;height:11px}
+.kpi .delta .vs{color:var(--ink-3);font-weight:400;margin-left:3px}
+.kpi .spark{margin-top:6px}
+
+/* ===== Card / Section ===== */
+.sec{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);margin-bottom:14px;overflow:hidden;box-shadow:var(--shadow-sm)}
+.sec-h{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--rule)}
+.sec-h h3{font-size:14px;font-weight:600;margin:0;letter-spacing:-.01em;color:var(--ink)}
+.sec-h .sp{flex:1}
+.sec-h .meta{font-size:12px;color:var(--ink-3)}
+.sec-body{padding:18px 20px}
 .sec-body.flush{padding:0}
 
-/* ===== テーブル ===== */
-.tbl{width:100%;border-collapse:collapse;font-size:13px}
-.tbl thead th{background:var(--paper-sunk);color:var(--ink-soft);text-align:left;padding:9px 14px;border-bottom:1px solid var(--rule);font-size:11px;letter-spacing:.14em;font-weight:700;text-transform:uppercase}
-.tbl tbody td{padding:11px 14px;border-bottom:1px solid var(--rule-soft);vertical-align:middle}
-.tbl tbody tr:hover{background:#fbfaf3;cursor:pointer}
+/* ===== Dashboard grid ===== */
+.dash-row{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:1080px){.dash-row{grid-template-columns:1fr}}
+.chart-wrap{padding:14px 18px 16px}
+.chart-wrap canvas{width:100%;height:240px;display:block}
+.chart-legend{display:flex;gap:18px;font-size:11.5px;color:var(--ink-3);margin-top:10px;font-weight:500}
+.chart-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
+
+.tasklist{list-style:none;margin:0;padding:0}
+.tasklist li{padding:11px 18px;border-bottom:1px solid var(--rule-soft);display:flex;gap:11px;align-items:center}
+.tasklist li:last-child{border-bottom:0}
+.tasklist li:hover{background:var(--hover)}
+.tasklist .ico{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
+.tasklist .ico.warn{background:var(--warn-tint);color:var(--warn)}
+.tasklist .ico.neg{background:var(--neg-tint);color:var(--neg)}
+.tasklist .ico.info{background:var(--info-tint);color:var(--info)}
+.tasklist .ico.accent{background:var(--accent-tint);color:var(--accent-deep)}
+.tasklist .ico svg{width:14px;height:14px}
+.tasklist .body{flex:1;min-width:0}
+.tasklist .body .t{font-weight:600;font-size:13px;color:var(--ink);line-height:1.3}
+.tasklist .body .m{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+.tasklist .act{font-size:11.5px;color:var(--ink-3);font-weight:500;display:inline-flex;align-items:center;gap:3px}
+.tasklist .act:hover{color:var(--accent)}
+.tasklist .act svg{width:11px;height:11px}
+
+/* ===== Table ===== */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl thead th{background:var(--bg);color:var(--ink-3);text-align:left;padding:9px 16px;border-bottom:1px solid var(--rule);font-size:11.5px;font-weight:600}
+.tbl tbody td{padding:11px 16px;border-bottom:1px solid var(--rule-soft);vertical-align:middle;color:var(--ink-2)}
+.tbl tbody tr:last-child td{border-bottom:0}
+.tbl tbody tr{transition:background .1s}
+.tbl tbody tr:hover{background:var(--hover);cursor:pointer}
 .tbl .num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
 .tbl .center{text-align:center}
-.tbl .id{font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
-.tbl .strong{font-weight:700}
+.tbl .id{font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+.tbl .strong{color:var(--ink);font-weight:600}
 .tbl .nowrap{white-space:nowrap}
-.tbl .thumb{width:36px;height:36px;border-radius:3px;object-fit:cover;background:var(--paper-tinted);display:inline-block;vertical-align:middle;margin-right:8px}
-.tbl .empty{padding:40px;text-align:center;color:var(--ink-faint)}
+.tbl .empty{padding:50px;text-align:center;color:var(--ink-3)}
+.tbl .thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;background:var(--bg);display:block;border:1px solid var(--rule-soft)}
+.tbl .row-name{display:flex;align-items:center;gap:11px}
+.tbl .row-name .meta{min-width:0}
+.tbl .row-name .n{color:var(--ink);font-weight:600;font-size:13px;line-height:1.3}
+.tbl .row-name .s{font-size:11px;color:var(--ink-3);margin-top:1px}
 .scroll-x{overflow-x:auto}
 
-/* ===== バッジ ===== */
-.bd{display:inline-block;padding:1px 7px;font-size:11px;font-family:var(--mono);border-radius:2px;letter-spacing:.04em;font-weight:600;line-height:1.55}
-.bd.ok{background:#e3f0e7;color:var(--ok)}
-.bd.warn{background:#fbf1d8;color:var(--warn)}
-.bd.bad{background:#f7dada;color:var(--bad)}
-.bd.draft{background:var(--paper-sunk);color:var(--ink-soft)}
-.bd.line{background:#dff6e3;color:#03a648}
-.bd.accent{background:var(--accent-soft);color:var(--accent-deep)}
-.bd.cool{background:#dee9f4;color:#264e7a}
+.cust-mini{display:flex;align-items:center;gap:9px}
+.cust-mini .av{width:28px;height:28px;border-radius:50%;background:var(--accent-tint);color:var(--accent-deep);display:grid;place-items:center;font-size:11.5px;font-weight:600;flex-shrink:0}
+.cust-mini .n{color:var(--ink);font-weight:600}
+.cust-mini .s{font-size:10.5px;color:var(--ink-3);font-family:var(--mono)}
 
-/* ===== ボタン ===== */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;color:var(--ink);border:1px solid var(--rule);border-radius:3px;font-size:12px;font-weight:600;letter-spacing:.06em;cursor:pointer}
-.btn:hover{background:var(--paper-tinted)}
-.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
-.btn.primary:hover{background:var(--accent);border-color:var(--accent)}
+/* ===== Badges ===== */
+.bd{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;font-size:11px;border-radius:9px;font-weight:600;line-height:1.5;white-space:nowrap}
+.bd::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.bd.ok{background:var(--pos-tint);color:var(--pos)}
+.bd.warn{background:var(--warn-tint);color:var(--warn)}
+.bd.neg{background:var(--neg-tint);color:var(--neg)}
+.bd.info{background:var(--info-tint);color:var(--info)}
+.bd.accent{background:var(--accent-tint);color:var(--accent-deep)}
+.bd.draft{background:var(--hover);color:var(--ink-3)}
+.bd.bare{padding:1px 6px}
+.bd.bare::before{display:none}
+
+/* ===== Buttons ===== */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--surface);color:var(--ink-2);border:1px solid var(--rule);border-radius:var(--r-sm);font-size:12.5px;font-weight:500}
+.btn:hover{border-color:var(--ink-4);background:var(--hover);color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.primary:hover{background:oklch(0.30 0.015 250);border-color:oklch(0.30 0.015 250)}
 .btn.accent{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn.accent:hover{background:var(--accent-deep);border-color:var(--accent-deep)}
-.btn.ghost{background:transparent;border-color:transparent;color:var(--ink-soft)}
-.btn.ghost:hover{color:var(--ink);background:var(--paper-tinted)}
-.btn.sm{padding:4px 9px;font-size:11px}
-.btn-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--ink-3)}
+.btn.ghost:hover{background:var(--hover);color:var(--ink)}
+.btn.sm{padding:3px 9px;font-size:11.5px}
+.btn svg{width:13px;height:13px}
+.btn-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
 
-/* ===== フォーム ===== */
-.field{display:block;margin-bottom:14px}
-.field label{display:block;font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--ink-soft);margin-bottom:4px;text-transform:uppercase}
+/* ===== Filter chips ===== */
+.actbar{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+.actbar .sp{flex:1}
+.chip{padding:5px 11px;background:var(--surface);border:1px solid var(--rule);font-size:12px;border-radius:14px;color:var(--ink-2);font-weight:500;display:inline-flex;align-items:center;gap:5px}
+.chip:hover{border-color:var(--ink-4);color:var(--ink)}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip .cnt{font-family:var(--mono);font-size:10.5px;opacity:.7;font-weight:600}
+.chip.on .cnt{opacity:1}
+.search-inline{display:flex;align-items:center;gap:6px;border:1px solid var(--rule);padding:5px 10px;border-radius:var(--r-sm);background:var(--surface);min-width:220px;color:var(--ink-3)}
+.search-inline:focus-within{border-color:var(--ink-4)}
+.search-inline svg{width:14px;height:14px}
+.search-inline input{border:0;outline:0;flex:1;background:transparent;color:var(--ink);font-size:12.5px}
+
+/* ===== Forms ===== */
+.field{display:block;margin-bottom:13px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:5px}
 .field label .req{color:var(--accent);margin-left:3px}
 .field input[type=text],.field input[type=number],.field select,.field textarea{
-  width:100%;border:1px solid var(--rule);background:#fff;padding:8px 10px;border-radius:3px;color:var(--ink)
+  width:100%;border:1px solid var(--rule);background:var(--surface);padding:8px 11px;border-radius:var(--r-sm);color:var(--ink);font-size:13px
 }
-.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.field .hint{font-size:11px;color:var(--ink-faint);margin-top:4px}
-.field-row{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.field .hint{font-size:11px;color:var(--ink-3);margin-top:4px}
+.field-row{display:grid;grid-template-columns:repeat(2,1fr);gap:13px}
 @media(max-width:600px){.field-row{grid-template-columns:1fr}}
 
-/* ===== モーダル ===== */
-.modal{display:none;position:fixed;inset:0;background:rgba(20,20,30,.55);z-index:80;align-items:center;justify-content:center;padding:24px}
+/* ===== Modal ===== */
+.modal{display:none;position:fixed;inset:0;background:oklch(0.20 0.012 250 / 0.6);z-index:80;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px)}
 .modal.on{display:flex}
-.modal-inner{background:#fff;border-radius:4px;max-width:760px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--rule)}
-.modal-h{display:flex;align-items:center;padding:16px 22px;border-bottom:1px solid var(--rule)}
-.modal-h h2{font-family:var(--serif);font-size:20px;font-weight:700;margin:0;flex:1}
-.modal-h .x{background:none;border:0;font-size:22px;color:var(--ink-soft);cursor:pointer}
+.modal-inner{background:var(--surface);border-radius:var(--r-lg);max-width:780px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:modal-in .18s cubic-bezier(.2,.8,.2,1)}
+@keyframes modal-in{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+.modal-h{display:flex;align-items:center;padding:16px 22px;border-bottom:1px solid var(--rule);gap:10px}
+.modal-h h2{font-size:16px;font-weight:600;margin:0;flex:1;letter-spacing:-.01em}
+.modal-h .x{width:28px;height:28px;border-radius:var(--r-sm);display:grid;place-items:center;color:var(--ink-3)}
+.modal-h .x:hover{background:var(--hover);color:var(--ink)}
 .modal-body{padding:20px 22px}
-.modal-foot{padding:14px 22px;border-top:1px solid var(--rule);display:flex;gap:8px;justify-content:flex-end;background:var(--paper-tinted)}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--rule);display:flex;gap:8px;justify-content:flex-end;background:var(--bg)}
 
-/* ===== 行内 アクション ===== */
-.actbar{display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
-.actbar .sp{flex:1}
-.filter-pill{padding:5px 11px;background:#fff;border:1px solid var(--rule);font-size:12px;border-radius:14px;cursor:pointer;color:var(--ink-soft)}
-.filter-pill.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-.search-inline{display:flex;align-items:center;gap:6px;border:1px solid var(--rule);padding:5px 9px;border-radius:3px;background:#fff;min-width:200px}
-.search-inline input{border:0;outline:0;flex:1;background:transparent;font-size:13px}
+/* ===== Order detail timeline ===== */
+.tl{position:relative;padding-left:28px;margin:12px 0}
+.tl::before{content:'';position:absolute;left:10px;top:10px;bottom:10px;width:1px;background:var(--rule)}
+.tl-item{position:relative;padding-bottom:14px}
+.tl-item::before{content:'';position:absolute;left:-22px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--surface);border:2px solid var(--ink-4)}
+.tl-item.done::before{background:var(--pos);border-color:var(--pos)}
+.tl-item.cur::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.tl-item .t{font-size:12.5px;font-weight:600;color:var(--ink)}
+.tl-item .m{font-size:11.5px;color:var(--ink-3);margin-top:1px}
 
-/* ===== ダッシュボード 専用 ===== */
-.dash-grid{display:grid;grid-template-columns:2fr 1fr;gap:18px}
-@media(max-width:1000px){.dash-grid{grid-template-columns:1fr}}
-.chart-wrap{padding:14px 18px}
-.chart-wrap canvas{width:100%;height:240px;display:block}
-.chart-legend{display:flex;gap:16px;font-size:11px;color:var(--ink-soft);margin-top:8px}
-.chart-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
-.tasklist{list-style:none;margin:0;padding:0}
-.tasklist li{padding:10px 14px;border-bottom:1px solid var(--rule-soft);display:flex;gap:10px;align-items:center;font-size:13px}
-.tasklist li:last-child{border-bottom:0}
-.tasklist .ico{width:30px;height:30px;border-radius:50%;background:var(--accent-soft);color:var(--accent-deep);display:grid;place-items:center;font-size:14px;font-weight:700}
-.tasklist .body{flex:1;min-width:0}
-.tasklist .body .t{font-weight:700}
-.tasklist .body .m{font-size:11px;color:var(--ink-soft)}
+/* ===== Richmenu editor ===== */
+.rm-grid{display:grid;gap:3px;background:var(--rule);padding:3px;border:1px solid var(--rule);border-radius:var(--r-sm);max-width:540px;aspect-ratio:25/16}
+.rm-grid .cell{background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink-2);position:relative;cursor:pointer;text-align:center;padding:8px;font-weight:500;flex-direction:column;gap:3px;border-radius:var(--r-sm)}
+.rm-grid .cell:hover{background:var(--hover)}
+.rm-grid .cell.on{background:var(--accent-tint);color:var(--accent-deep)}
+.rm-grid .cell .num{position:absolute;top:6px;left:8px;font-family:var(--mono);font-size:10px;color:var(--ink-3);font-weight:600}
+.rm-grid .cell svg{width:18px;height:18px}
+.rm-grid.layout-2x3{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr)}
+.rm-grid.layout-1x3{grid-template-columns:repeat(3,1fr);grid-template-rows:1fr;aspect-ratio:25/8}
+.rm-grid.layout-2x2{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);max-width:360px}
+.rm-grid.layout-1x2{grid-template-columns:repeat(2,1fr);grid-template-rows:1fr;max-width:360px;aspect-ratio:25/8}
 
-/* ===== リッチメニュー エディタ ===== */
-.rm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--rule);padding:2px;border:1px solid var(--rule);max-width:520px}
-.rm-grid .cell{background:#fff;aspect-ratio:1.2/1;display:grid;place-items:center;font-size:11px;color:var(--ink-soft);position:relative;cursor:pointer;text-align:center;padding:6px}
-.rm-grid .cell:hover{background:var(--paper-tinted)}
-.rm-grid .cell .num{position:absolute;top:4px;left:6px;font-family:var(--mono);font-size:10px;color:var(--accent);font-weight:700}
-.rm-grid.layout-2x3{grid-template-columns:repeat(3,1fr)}
-.rm-grid.layout-1x2{grid-template-columns:repeat(2,1fr);max-width:340px}
-.rm-grid.layout-2x2{grid-template-columns:repeat(2,1fr);max-width:340px}
-.rm-grid.layout-1x3{grid-template-columns:repeat(3,1fr);max-width:520px}
+/* ===== Foot ===== */
+.foot{padding:24px 0;font-size:11px;color:var(--ink-4);text-align:center;font-family:var(--mono)}
 
-/* ===== ヘッドラインフッター ===== */
-.foot{padding:30px 0;font-size:11px;color:var(--ink-faint);text-align:center;font-family:var(--mono);letter-spacing:.1em}
-.foot em{font-style:normal;color:var(--accent)}
-
-/* ===== utilities ===== */
-.hstack{display:flex;align-items:center;gap:8px}
-.spread{display:flex;align-items:center;gap:8px}.spread .sp{flex:1}
-.mt{margin-top:14px}
-.mb{margin-bottom:14px}
-.muted{color:var(--ink-soft)}
+/* ===== utility ===== */
+.muted{color:var(--ink-3)}
 .tiny{font-size:11px}
-.divider{height:1px;background:var(--rule);margin:14px 0}
+.mb{margin-bottom:12px}
+.mt{margin-top:12px}
 .hide-sm{display:initial}
+.flex-1{flex:1}
 @media(max-width:600px){.hide-sm{display:none}}
-
+.divider{height:1px;background:var(--rule);margin:14px 0}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="scrim" id="scrim"></div>
+
   <aside class="side" id="side">
     <div class="brand">
-      <div class="mark">SKEL<em>·</em>EC</div>
-      <div class="sub">LINE COMMERCE PLATFORM</div>
+      <div class="mark">S</div>
+      <div class="name">Skel<span>·EC</span></div>
     </div>
-    <div class="shop-pill">
-      <div class="avatar">L</div>
-      <div class="meta">
-        <div class="name">Lune by Skeleton</div>
-        <div class="plan">PRO PLAN</div>
+    <div class="shop-card">
+      <div class="av">L</div>
+      <div class="info">
+        <div class="n">Lune by Skeleton</div>
+        <div class="s">PRO PLAN · LIVE</div>
       </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     <nav class="sect" id="nav"></nav>
+    <div class="side-foot">
+      <span class="live"><span class="pulse"></span>API稼働中</span>
+      <span class="sp" style="flex:1"></span>
+      <span>v0.2</span>
+    </div>
   </aside>
+
   <main class="main">
     <div class="topbar">
-      <button class="hamburger" id="ham">≡</button>
-      <div class="crumbs" id="crumbs">ダッシュボード</div>
+      <button class="ham" id="ham" aria-label="メニュー">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="crumbs" id="crumbs"></div>
       <div class="search hide-sm">
-        <span class="muted">⌕</span>
-        <input placeholder="注文番号・お客様名・商品で検索">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input placeholder="注文番号 / お客様 / 商品 を検索">
         <span class="kbd">⌘K</span>
       </div>
-      <button class="topbtn hide-sm">通知</button>
-      <button class="accent-btn" id="newBtn">＋ 商品追加</button>
+      <button class="iconbtn" aria-label="通知">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="dot"></span>
+      </button>
+      <button class="btn-primary" id="newBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span id="newBtnLabel">商品を追加</span>
+      </button>
     </div>
     <div class="view" id="view"></div>
-    <div class="foot">© Skeleton Inc. <em>·</em> LINE EC たたき台 v0.1</div>
+    <div class="foot">© Skeleton Inc. · LINE EC Platform v0.2</div>
   </main>
 </div>
 
-<!-- モーダル -->
-<div class="modal" id="modal">
-  <div class="modal-inner" id="modalInner"></div>
-</div>
+<div class="modal" id="modal"><div class="modal-inner" id="modalInner"></div></div>
 
 <script>
-/* ============================================================
-   Skeleton LINE EC — admin SPA
-   完全コピー(構造) + Skeleton design
-   ============================================================ */
+/* ====================================================================
+   Skeleton LINE EC — Admin SPA  v0.2 (Linear / Stripe-grade)
+   ==================================================================== */
+
+const icons = {
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2 7-7 7 7 2 2"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg>',
+  orders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
+  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
+  pkg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+  tag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
+  ticket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>',
+  grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+  smartphone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+  store: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 1.5-5h17L22 7"/><path d="M19 11V21a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11"/><path d="M2 7c0 2.2 1.8 4 4 4s4-1.8 4-4c0 2.2 1.8 4 4 4s4-1.8 4-4c0 2.2 1.8 4 4 4"/></svg>',
+  truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h11v13"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
+  yen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4 4 8 12 8-12"/><path d="M5 14h14"/><path d="M5 18h14"/><path d="M12 14v6"/></svg>',
+  doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>',
+  trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+  trendDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
+  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+};
 
 const NAV = [
   {sect:'運営', items:[
-    {key:'dashboard', icon:'◐', label:'ダッシュボード'},
-    {key:'orders', icon:'▤', label:'注文管理', badge:'2'},
-    {key:'customers', icon:'☻', label:'顧客 (友だち)'},
-    {key:'messages', icon:'✎', label:'メッセージ配信'}
+    {key:'dashboard', ic:'home',   label:'ダッシュボード'},
+    {key:'orders',    ic:'orders', label:'注文', badge:'2'},
+    {key:'customers', ic:'users',  label:'顧客 (友だち)'},
+    {key:'messages',  ic:'send',   label:'メッセージ配信'}
   ]},
-  {sect:'商品', items:[
-    {key:'products', icon:'▦', label:'商品マスタ'},
-    {key:'categories', icon:'▫', label:'カテゴリ'},
-    {key:'coupons', icon:'%', label:'クーポン'}
+  {sect:'カタログ', items:[
+    {key:'products',  ic:'pkg',    label:'商品'},
+    {key:'categories',ic:'grid',   label:'カテゴリ'},
+    {key:'coupons',   ic:'ticket', label:'クーポン'}
   ]},
-  {sect:'LINE', items:[
-    {key:'richmenu', icon:'▥', label:'リッチメニュー'},
-    {key:'liff', icon:'◷', label:'LIFF 設定'}
+  {sect:'LINE OA', items:[
+    {key:'richmenu',  ic:'tag',    label:'リッチメニュー'},
+    {key:'liff',      ic:'smartphone', label:'LIFF 設定'}
   ]},
   {sect:'店舗設定', items:[
-    {key:'shop', icon:'⌂', label:'店舗情報'},
-    {key:'shipping', icon:'➤', label:'配送・送料'},
-    {key:'payment', icon:'¥', label:'決済設定'},
-    {key:'tokushou', icon:'§', label:'特定商取引法'}
+    {key:'shop',      ic:'store',  label:'店舗情報'},
+    {key:'shipping',  ic:'truck',  label:'配送・送料'},
+    {key:'payment',   ic:'yen',    label:'決済'},
+    {key:'tokushou',  ic:'doc',    label:'特定商取引法'}
   ]}
 ];
 
 const TITLES = {
-  dashboard:['ダッシュボード','本日の運営状況'],
-  orders:['注文管理','注文一覧'],
-  customers:['顧客 (友だち)','LINE友だち一覧'],
-  messages:['メッセージ配信','一斉配信・ステップ配信'],
-  products:['商品マスタ','商品一覧'],
-  categories:['カテゴリ','商品カテゴリ管理'],
-  coupons:['クーポン','クーポン管理'],
-  richmenu:['リッチメニュー','LINE OA リッチメニュー'],
-  liff:['LIFF 設定','LIFFアプリ設定'],
-  shop:['店舗情報','店舗基本設定'],
-  shipping:['配送・送料','配送方法・送料表'],
-  payment:['決済設定','決済プロバイダ'],
-  tokushou:['特定商取引法','特商法表記']
+  dashboard:['ダッシュボード','今日の数字'],
+  orders:['注文','注文一覧'],
+  customers:['顧客','友だち / 購入履歴'],
+  messages:['メッセージ配信','一斉 / ステップ / セグメント'],
+  products:['商品','商品マスタ'],
+  categories:['カテゴリ',''],
+  coupons:['クーポン',''],
+  richmenu:['リッチメニュー','LINE OA トーク下部'],
+  liff:['LIFF',''],
+  shop:['店舗情報',''],
+  shipping:['配送・送料',''],
+  payment:['決済',''],
+  tokushou:['特定商取引法','']
 };
 
-// ========== state ==========
 let products=[], orders=[], customers=[], categories=[], coupons=[], messages=[];
+
 const yen = n => '¥' + Number(n||0).toLocaleString('ja-JP');
 const dt  = s => { if(!s) return '-'; const d=new Date(s); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
-const day = s => { if(!s) return '-'; const d=new Date(s); return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`; };
+const day = s => { if(!s) return '-'; const d=new Date(s); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; };
 
 async function loadData(){
   const f = async p => fetch(p).then(r=>r.json()).catch(()=>[]);
@@ -315,14 +435,13 @@ async function loadData(){
   ]);
 }
 
-// ========== nav ==========
 function renderNav(active){
   const el = document.getElementById('nav');
   el.innerHTML = NAV.map(s=>`
     <h6>${s.sect}</h6>
     ${s.items.map(it=>`
       <a href="#/${it.key}" data-key="${it.key}" class="${it.key===active?'active':''}">
-        <span class="ic">${it.icon}</span>
+        ${icons[it.ic]}
         <span>${it.label}</span>
         ${it.badge?`<span class="badge">${it.badge}</span>`:''}
       </a>
@@ -330,104 +449,158 @@ function renderNav(active){
   `).join('');
 }
 
-// ========== modal ==========
 function openModal(html){
   document.getElementById('modalInner').innerHTML = html;
   document.getElementById('modal').classList.add('on');
 }
 function closeModal(){ document.getElementById('modal').classList.remove('on'); }
-document.getElementById('modal').addEventListener('click', e => {
-  if(e.target.id==='modal') closeModal();
-});
+document.getElementById('modal').addEventListener('click', e => { if(e.target.id==='modal') closeModal(); });
 
-// ========== badge helpers ==========
 function statusBadge(s){
   const m={
-    '公開':'ok','下書き':'draft','終了':'draft','有効':'ok','稼働中':'line',
-    '送信済':'cool','送信予約':'warn',
+    '公開':'ok','下書き':'draft','終了':'draft','有効':'ok','稼働中':'ok',
+    '送信済':'info','送信予約':'warn',
     '決済済':'ok','未決済':'warn','未発送':'warn','発送準備中':'warn',
-    '発送済':'ok','キャンセル':'bad'
+    '発送済':'ok','キャンセル':'neg','表示中':'ok','非表示':'draft'
   };
   return `<span class="bd ${m[s]||'draft'}">${s}</span>`;
 }
 
-// ========== views ==========
+function sparkline(data, w=80, h=24, color='var(--accent)'){
+  const max = Math.max(...data), min = Math.min(...data), r = max-min || 1;
+  const pts = data.map((v,i)=>{
+    const x = (i/(data.length-1))*w;
+    const y = h - ((v-min)/r)*h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
 const views = {
 
-  // ---------- ダッシュボード ----------
   dashboard(){
-    const todayOrders = orders.filter(o=>o.ordered_at.startsWith('2026-06-16'));
-    const todaySales  = orders.filter(o=>o.ordered_at.startsWith('2026-06-16') && o.fulfillment!=='キャンセル').reduce((s,o)=>s+o.total,0);
-    const unshipped   = orders.filter(o=>o.fulfillment==='未発送' || o.fulfillment==='発送準備中').length;
-    const newFriends  = customers.filter(c=>{const d=new Date(c.first_followed);return (Date.now()-d.getTime())/86400000 < 14}).length;
-    const html = `
-      <div class="kpi-row">
-        <div class="kpi"><div class="lab">本日の売上</div><div class="num">${yen(todaySales)}</div><div class="delta">▲ +24% <span class="vs">前日比</span></div></div>
-        <div class="kpi"><div class="lab">本日の注文</div><div class="num">${todayOrders.length}<span class="unit">件</span></div><div class="delta">▲ +1 <span class="vs">前日比</span></div></div>
-        <div class="kpi"><div class="lab">未発送</div><div class="num">${unshipped}<span class="unit">件</span></div><div class="delta dn">▼ 要対応</div></div>
-        <div class="kpi"><div class="lab">2週間の新規友だち</div><div class="num">${newFriends}<span class="unit">人</span></div><div class="delta">▲ +12% <span class="vs">前週比</span></div></div>
+    const today = orders.filter(o=>o.ordered_at.startsWith('2026-06-16'));
+    const todaySales = today.filter(o=>o.fulfillment!=='キャンセル').reduce((s,o)=>s+o.total,0);
+    const unshipped = orders.filter(o=>o.fulfillment==='未発送'||o.fulfillment==='発送準備中').length;
+    const newFriends = customers.filter(c=>(Date.now()-new Date(c.first_followed).getTime())/86400000 < 14).length;
+    const total14 = 187460;
+
+    document.getElementById('view').innerHTML = `
+      <div class="page-title">こんにちは, 吉田さん</div>
+      <div class="page-sub">2026.06.16 火曜 · 直近14日の売上 <strong style="color:var(--ink)">${yen(total14)}</strong> / 注文 <strong style="color:var(--ink)">${orders.length}件</strong></div>
+
+      <div class="kpi-lead">
+        <div class="kpi primary">
+          <div class="lab">本日の売上</div>
+          <div class="num">${yen(todaySales)}</div>
+          <div class="delta">${icons.trend} +24.3% <span class="vs">前日比</span></div>
+          <div class="spark">${sparkline([12400,8200,15600,21000,9800,17200,13400,8900,24300,19800,11200,16800,22400,30360], 220, 36)}</div>
+        </div>
+        <div class="kpi">
+          <div class="lab">本日の注文</div>
+          <div class="num">${today.length}<span style="font-family:var(--sans);font-size:14px;color:var(--ink-3);font-weight:500;margin-left:5px">件</span></div>
+          <div class="delta">${icons.trend} +1 <span class="vs">前日</span></div>
+        </div>
+        <div class="kpi">
+          <div class="lab">未発送</div>
+          <div class="num">${unshipped}<span style="font-family:var(--sans);font-size:14px;color:var(--ink-3);font-weight:500;margin-left:5px">件</span></div>
+          <div class="delta dn">${icons.alert} 要対応</div>
+        </div>
+        <div class="kpi">
+          <div class="lab">2週の新規友だち</div>
+          <div class="num">${newFriends}<span style="font-family:var(--sans);font-size:14px;color:var(--ink-3);font-weight:500;margin-left:5px">人</span></div>
+          <div class="delta">${icons.trend} +12% <span class="vs">前週</span></div>
+        </div>
       </div>
 
-      <div class="dash-grid">
+      <div class="dash-row">
         <div class="sec">
-          <div class="sec-h"><h3>売上推移</h3><span class="sub muted">直近14日</span><span class="sp" style="flex:1"></span><span class="bd accent">¥187,460 / 14日</span></div>
+          <div class="sec-h"><h3>売上推移</h3><span class="sp"></span><span class="meta">直近14日 · 日次</span></div>
           <div class="chart-wrap">
             <canvas id="chart"></canvas>
-            <div class="chart-legend"><span><i style="background:var(--accent)"></i>売上</span><span><i style="background:var(--ink)"></i>注文数</span></div>
+            <div class="chart-legend">
+              <span><i style="background:var(--accent)"></i>売上 (¥)</span>
+              <span><i style="background:var(--ink)"></i>注文件数</span>
+            </div>
           </div>
         </div>
         <div class="sec">
-          <div class="sec-h"><h3>本日のタスク</h3></div>
+          <div class="sec-h"><h3>今日のタスク</h3><span class="sp"></span><span class="meta">4件</span></div>
           <ul class="tasklist">
-            <li><div class="ico">!</div><div class="body"><div class="t">未発送 ${unshipped} 件</div><div class="m">注文管理 → 発送準備</div></div><a href="#/orders" class="btn sm">確認</a></li>
-            <li><div class="ico">¥</div><div class="body"><div class="t">代引未決済 1 件</div><div class="m">中村 葵 様 ¥26,400</div></div><a href="#/orders" class="btn sm">確認</a></li>
-            <li><div class="ico">▼</div><div class="body"><div class="t">在庫不足アラート 1件</div><div class="m">エラスチン&コラーゲン 残12</div></div><a href="#/products" class="btn sm">補充</a></li>
-            <li><div class="ico">✎</div><div class="body"><div class="t">下書き配信 1件</div><div class="m">父の日キャンペーン</div></div><a href="#/messages" class="btn sm">編集</a></li>
+            <li>
+              <div class="ico warn">${icons.pkg}</div>
+              <div class="body"><div class="t">未発送 ${unshipped} 件</div><div class="m">本日中の出荷推奨</div></div>
+              <a href="#/orders" class="act">確認 ${icons.arrow}</a>
+            </li>
+            <li>
+              <div class="ico warn">${icons.yen}</div>
+              <div class="body"><div class="t">代引未決済</div><div class="m">中村 葵 様 · ¥26,400</div></div>
+              <a href="#/orders" class="act">確認 ${icons.arrow}</a>
+            </li>
+            <li>
+              <div class="ico neg">${icons.alert}</div>
+              <div class="body"><div class="t">在庫不足アラート</div><div class="m">エラスチン&コラーゲン · 残12</div></div>
+              <a href="#/products" class="act">補充 ${icons.arrow}</a>
+            </li>
+            <li>
+              <div class="ico info">${icons.edit}</div>
+              <div class="body"><div class="t">下書き配信</div><div class="m">父の日キャンペーン</div></div>
+              <a href="#/messages" class="act">編集 ${icons.arrow}</a>
+            </li>
           </ul>
         </div>
       </div>
 
       <div class="sec">
-        <div class="sec-h"><h3>最近の注文</h3><span class="sp" style="flex:1"></span><a href="#/orders" class="btn sm">すべて見る ➔</a></div>
+        <div class="sec-h">
+          <h3>直近の注文</h3>
+          <span class="sp"></span>
+          <a href="#/orders" class="btn sm">すべて見る ${icons.arrow}</a>
+        </div>
         <div class="sec-body flush scroll-x">
           <table class="tbl">
-            <thead><tr><th>注文番号</th><th>日時</th><th>お客様</th><th>商品</th><th class="num">合計</th><th>決済</th><th>配送</th></tr></thead>
-            <tbody>${orders.slice(0,5).map(o=>`
-              <tr onclick="route('#/orders')">
+            <thead><tr><th>注文番号</th><th>日時</th><th>お客様</th><th>商品</th><th class="num">合計</th><th>決済</th><th>発送</th></tr></thead>
+            <tbody>${orders.slice(0,6).map(o=>{
+              const c = customers.find(x=>x.id===o.customer_id);
+              return `<tr onclick="openOrderModal('${o.id}')">
                 <td class="id">${o.id}</td>
                 <td class="nowrap">${dt(o.ordered_at)}</td>
-                <td class="strong">${o.customer_name}</td>
-                <td>${o.items[0].name}${o.items.length>1?` <span class="muted">他 ${o.items.length-1}点</span>`:''}</td>
+                <td><div class="cust-mini"><div class="av">${(c?.name||o.customer_name).slice(0,1)}</div><div><div class="n">${o.customer_name}</div><div class="s">${o.line_id}</div></div></div></td>
+                <td>${o.items[0].name}${o.items.length>1?` <span class="muted">+${o.items.length-1}</span>`:''}</td>
                 <td class="num strong">${yen(o.total)}</td>
                 <td>${statusBadge(o.payment_status)}</td>
                 <td>${statusBadge(o.fulfillment)}</td>
-              </tr>
-            `).join('')}</tbody>
+              </tr>`;
+            }).join('')}</tbody>
           </table>
         </div>
       </div>
     `;
-    document.getElementById('view').innerHTML = html;
     drawChart();
   },
 
-  // ---------- 商品マスタ ----------
   products(){
     document.getElementById('view').innerHTML = `
+      <div class="page-title">商品マスタ</div>
+      <div class="page-sub">${products.length}件 · 公開 ${products.filter(p=>p.status==='公開').length} · 下書き ${products.filter(p=>p.status==='下書き').length}</div>
+
       <div class="actbar">
-        <div class="search-inline"><span class="muted">⌕</span><input id="pq" placeholder="商品名・SKU で検索"></div>
-        <span class="filter-pill on" data-fp="all">全て (${products.length})</span>
-        <span class="filter-pill" data-fp="公開">公開 (${products.filter(p=>p.status==='公開').length})</span>
-        <span class="filter-pill" data-fp="下書き">下書き (${products.filter(p=>p.status==='下書き').length})</span>
-        <span class="filter-pill" data-fp="low">在庫薄 (${products.filter(p=>p.stock<=p.stock_alert).length})</span>
-        <div class="sp" style="flex:1"></div>
-        <button class="btn" onclick="openBulkUpload()">CSV/ZIP一括登録</button>
-        <button class="btn primary" onclick="route('#/products/new')">＋ 商品追加</button>
+        <div class="search-inline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="pq" placeholder="商品名・SKUで検索">
+        </div>
+        <span class="chip on" data-fp="all">全て <span class="cnt">${products.length}</span></span>
+        <span class="chip" data-fp="公開">公開 <span class="cnt">${products.filter(p=>p.status==='公開').length}</span></span>
+        <span class="chip" data-fp="下書き">下書き <span class="cnt">${products.filter(p=>p.status==='下書き').length}</span></span>
+        <span class="chip" data-fp="low">在庫薄 <span class="cnt">${products.filter(p=>p.stock<=p.stock_alert).length}</span></span>
+        <span class="sp"></span>
+        <button class="btn" onclick="openBulkUpload()">${icons.upload}CSV/ZIP 一括</button>
       </div>
+
       <div class="sec">
         <div class="sec-body flush scroll-x">
           <table class="tbl">
-            <thead><tr><th></th><th>商品名</th><th>SKU</th><th>カテゴリ</th><th class="num">価格</th><th class="num">会員価格</th><th class="num">在庫</th><th class="num">販売数</th><th>状態</th><th></th></tr></thead>
+            <thead><tr><th>商品</th><th>SKU</th><th>カテゴリ</th><th class="num">価格</th><th class="num">会員</th><th class="num">在庫</th><th class="num">販売数</th><th>状態</th><th></th></tr></thead>
             <tbody id="ptbody"></tbody>
           </table>
         </div>
@@ -436,70 +609,61 @@ const views = {
     const tbody = document.getElementById('ptbody');
     const draw = () => {
       const q = (document.getElementById('pq').value||'').toLowerCase();
-      const fp = document.querySelector('.filter-pill.on').dataset.fp;
+      const fp = document.querySelector('.chip.on').dataset.fp;
       const list = products.filter(p=>{
-        if(q && !(p.name+p.sku).toLowerCase().includes(q)) return false;
+        if(q && !(p.name+(p.name_en||'')+p.sku).toLowerCase().includes(q)) return false;
         if(fp==='公開' && p.status!=='公開') return false;
         if(fp==='下書き' && p.status!=='下書き') return false;
         if(fp==='low' && p.stock>p.stock_alert) return false;
         return true;
       });
-      if(!list.length){ tbody.innerHTML='<tr><td colspan="10" class="empty">該当する商品がありません</td></tr>'; return; }
+      if(!list.length){ tbody.innerHTML='<tr><td colspan="9" class="empty">該当する商品がありません</td></tr>'; return; }
       tbody.innerHTML = list.map(p=>`
         <tr onclick="route('#/products/${p.id}')">
-          <td><img class="thumb" src="${p.thumbnail}" alt=""></td>
-          <td class="strong">${p.name}<div class="tiny muted">${p.summary}</div></td>
+          <td>
+            <div class="row-name">
+              <img class="thumb" src="${p.thumbnail}" alt="" onerror="this.style.background='var(--accent-tint)'">
+              <div class="meta">
+                <div class="n">${p.name}</div>
+                <div class="s">${p.summary}</div>
+              </div>
+            </div>
+          </td>
           <td class="id">${p.sku}</td>
           <td>${p.category}</td>
-          <td class="num">${yen(p.price)}</td>
-          <td class="num">${yen(p.price_member)}</td>
-          <td class="num ${p.stock<=p.stock_alert?'strong':''}" style="${p.stock<=p.stock_alert?'color:var(--bad)':''}">${p.stock}</td>
+          <td class="num strong">${yen(p.price)}</td>
+          <td class="num muted">${yen(p.price_member)}</td>
+          <td class="num" style="${p.stock<=p.stock_alert?'color:var(--neg);font-weight:600':''}">${p.stock}</td>
           <td class="num">${p.sold}</td>
           <td>${statusBadge(p.status)}</td>
-          <td><button class="btn sm">編集</button></td>
+          <td><button class="btn sm ghost" aria-label="編集">${icons.edit}</button></td>
         </tr>
       `).join('');
     };
-    document.querySelectorAll('.filter-pill').forEach(el=>el.onclick=()=>{
-      document.querySelectorAll('.filter-pill').forEach(x=>x.classList.remove('on'));
-      el.classList.add('on'); draw();
-    });
+    document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));el.classList.add('on');draw();});
     document.getElementById('pq').oninput = draw;
     draw();
   },
 
-  // ---------- 商品 新規/編集 ----------
   productEdit(id){
     const isNew = id === 'new';
-    const p = isNew ? {
-      id:'(新規)', sku:'', name:'', category_id:'C01', category:'デリケートケア',
-      price:0, price_member:0, stock:0, stock_alert:5, status:'下書き',
-      tax_type:'内税', shipping_class:'通常', weight_g:100,
-      thumbnail:'https://placehold.jp/24/9999a3/ffffff/600x600.png?text=NEW',
-      summary:'', description:'', tags:[], sold:0
-    } : products.find(x=>x.id===id);
+    const p = isNew ? {id:'', sku:'', name:'', category_id:'C01', category:'デリケートケア', price:0, price_member:0, stock:0, stock_alert:5, status:'下書き', tax_type:'内税', shipping_class:'通常', weight_g:100, thumbnail:'', images:[], summary:'', description:'', tags:[], sold:0, variants:[]} : products.find(x=>x.id===id);
     if(!p){ document.getElementById('view').innerHTML='<div class="sec"><div class="sec-body">商品が見つかりません</div></div>'; return; }
     document.getElementById('view').innerHTML = `
-      <div class="sec">
-        <div class="sec-h">
-          <h3>${isNew?'商品を追加':'商品を編集'}</h3>
-          <span class="sub muted">${isNew?'':p.sku}</span>
-          <span class="sp" style="flex:1"></span>
-          <button class="btn" onclick="route('#/products')">← 一覧へ</button>
-          ${isNew?'':'<button class="btn">複製</button>'}
-          <button class="btn primary">保存</button>
-        </div>
-        <div class="sec-body">
-          <div style="display:grid;grid-template-columns:200px 1fr;gap:24px">
-            <div>
-              <img src="${p.thumbnail}" style="width:100%;border:1px solid var(--rule);border-radius:3px">
-              <div class="btn-row mt"><button class="btn sm">画像を変更</button><button class="btn sm ghost">削除</button></div>
-              <div class="divider"></div>
-              <div class="tiny muted">画像は1商品最大10枚。1枚目がサムネ。</div>
-            </div>
-            <div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+        <a href="#/products" class="btn sm ghost">← 商品一覧</a>
+        <span class="muted tiny id" style="font-family:var(--mono)">${p.sku||'(新規)'}</span>
+      </div>
+      <div class="page-title">${isNew?'新規商品':p.name}</div>
+      <div class="page-sub">${isNew?'下書きで作成 → 公開で LIFF に反映':p.category+' · '+p.summary}</div>
+
+      <div style="display:grid;grid-template-columns:1fr 300px;gap:14px;align-items:start">
+        <div>
+          <div class="sec">
+            <div class="sec-h"><h3>基本情報</h3></div>
+            <div class="sec-body">
               <div class="field"><label>商品名 <span class="req">*</span></label><input type="text" value="${p.name}"></div>
-              <div class="field"><label>キャッチコピー（一覧表示）</label><input type="text" value="${p.summary}"></div>
+              <div class="field"><label>キャッチコピー</label><input type="text" value="${p.summary}"></div>
               <div class="field"><label>商品説明</label><textarea rows="5">${p.description||''}</textarea></div>
               <div class="field-row">
                 <div class="field"><label>SKU</label><input type="text" value="${p.sku}"></div>
@@ -507,6 +671,13 @@ const views = {
                   <select>${categories.map(c=>`<option value="${c.id}" ${c.id===p.category_id?'selected':''}>${c.name}</option>`).join('')}</select>
                 </div>
               </div>
+              <div class="field"><label>タグ</label><input type="text" value="${(p.tags||[]).join(', ')}"><div class="hint">カンマ区切り</div></div>
+            </div>
+          </div>
+
+          <div class="sec">
+            <div class="sec-h"><h3>価格と在庫</h3></div>
+            <div class="sec-body">
               <div class="field-row">
                 <div class="field"><label>販売価格 <span class="req">*</span></label><input type="number" value="${p.price}"></div>
                 <div class="field"><label>会員価格</label><input type="number" value="${p.price_member}"></div>
@@ -517,50 +688,84 @@ const views = {
               </div>
               <div class="field-row">
                 <div class="field"><label>税種別</label><select><option ${p.tax_type==='内税'?'selected':''}>内税</option><option ${p.tax_type==='外税'?'selected':''}>外税</option></select></div>
-                <div class="field"><label>配送区分</label><select><option ${p.shipping_class==='通常'?'selected':''}>通常</option><option ${p.shipping_class==='冷蔵'?'selected':''}>冷蔵</option><option ${p.shipping_class==='ゆうパケット'?'selected':''}>ゆうパケット</option></select></div>
+                <div class="field"><label>配送区分</label><select><option ${p.shipping_class==='通常'?'selected':''}>通常</option><option>冷蔵</option><option>ゆうパケット</option></select></div>
               </div>
-              <div class="field-row">
-                <div class="field"><label>商品重量 (g)</label><input type="number" value="${p.weight_g}"></div>
-                <div class="field"><label>公開状態</label><select><option ${p.status==='公開'?'selected':''}>公開</option><option ${p.status==='下書き'?'selected':''}>下書き</option></select></div>
-              </div>
-              <div class="field"><label>タグ</label><input type="text" value="${(p.tags||[]).join(', ')}"><div class="hint">カンマ区切り。LIFFでフィルタ・絞り込みに使う</div></div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div class="sec">
-        <div class="sec-h"><h3>バリエーション (容量・色・サイズ)</h3><span class="sp" style="flex:1"></span><button class="btn sm">＋ 追加</button></div>
-        <div class="sec-body flush scroll-x">
-          <table class="tbl">
-            <thead><tr><th>名称</th><th class="num">価格</th><th class="num">在庫</th><th class="num">SKU枝番</th><th></th></tr></thead>
-            <tbody>${(p.variants||[]).map(v=>`
-              <tr><td>${v.label}</td><td class="num">${yen(v.price)}</td><td class="num">${v.stock}</td><td class="id">${v.id}</td><td><button class="btn sm ghost">編集</button></td></tr>
-            `).join('') || '<tr><td colspan="5" class="empty">バリエーションなし</td></tr>'}</tbody>
-          </table>
+          ${p.variants && p.variants.length ? `
+          <div class="sec">
+            <div class="sec-h"><h3>バリエーション</h3><span class="sp"></span><button class="btn sm">+ 追加</button></div>
+            <div class="sec-body flush scroll-x">
+              <table class="tbl">
+                <thead><tr><th>名称</th><th class="num">価格</th><th class="num">在庫</th><th class="num">SKU枝番</th><th></th></tr></thead>
+                <tbody>${p.variants.map(v=>`<tr><td class="strong">${v.label}</td><td class="num">${yen(v.price)}</td><td class="num">${v.stock}</td><td class="id">${v.id}</td><td><button class="btn sm ghost">${icons.edit}</button></td></tr>`).join('')}</tbody>
+              </table>
+            </div>
+          </div>` : ''}
+        </div>
+
+        <div>
+          <div class="sec">
+            <div class="sec-h"><h3>画像</h3><span class="sp"></span><span class="meta">${(p.images||[]).length}/10</span></div>
+            <div class="sec-body">
+              ${p.thumbnail ? `<img src="${p.thumbnail}" style="width:100%;border-radius:var(--r);border:1px solid var(--rule-soft);aspect-ratio:1/1;object-fit:cover">` : '<div style="aspect-ratio:1/1;background:var(--bg);border-radius:var(--r);border:1px dashed var(--rule);display:grid;place-items:center;color:var(--ink-3);font-size:12px">画像なし</div>'}
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px">
+                ${(p.images||[]).slice(1).map(img=>`<img src="${img}" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:5px;border:1px solid var(--rule-soft)">`).join('')}
+                <button class="btn sm" style="aspect-ratio:1/1;justify-content:center;color:var(--ink-3)">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sec">
+            <div class="sec-h"><h3>公開状態</h3></div>
+            <div class="sec-body">
+              <div class="field"><label>公開状態</label><select><option ${p.status==='公開'?'selected':''}>公開</option><option ${p.status==='下書き'?'selected':''}>下書き</option></select></div>
+              <div class="btn-row" style="display:flex;gap:7px;margin-top:6px">
+                <button class="btn" style="flex:1">プレビュー</button>
+                <button class="btn primary" style="flex:1">保存</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sec">
+            <div class="sec-h"><h3>パフォーマンス</h3></div>
+            <div class="sec-body">
+              <div style="display:flex;gap:12px;margin-bottom:6px">
+                <div><div class="muted tiny">販売数</div><div style="font-family:var(--mono);font-size:18px;font-weight:600">${p.sold}</div></div>
+                <div><div class="muted tiny">評価</div><div style="font-family:var(--mono);font-size:18px;font-weight:600">${p.rating||'—'}</div></div>
+                <div><div class="muted tiny">レビュー</div><div style="font-family:var(--mono);font-size:18px;font-weight:600">${p.review_count}</div></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     `;
   },
 
-  // ---------- 注文管理 ----------
   orders(){
     document.getElementById('view').innerHTML = `
+      <div class="page-title">注文</div>
+      <div class="page-sub">${orders.length}件 · 未発送 ${orders.filter(o=>o.fulfillment==='未発送').length} · 発送済 ${orders.filter(o=>o.fulfillment==='発送済').length}</div>
+
       <div class="actbar">
-        <div class="search-inline"><span class="muted">⌕</span><input id="oq" placeholder="注文番号・お客様名"></div>
-        <span class="filter-pill on" data-fp="all">全て (${orders.length})</span>
-        <span class="filter-pill" data-fp="未発送">未発送 (${orders.filter(o=>o.fulfillment==='未発送').length})</span>
-        <span class="filter-pill" data-fp="発送準備中">準備中 (${orders.filter(o=>o.fulfillment==='発送準備中').length})</span>
-        <span class="filter-pill" data-fp="発送済">発送済 (${orders.filter(o=>o.fulfillment==='発送済').length})</span>
-        <span class="filter-pill" data-fp="キャンセル">キャンセル (${orders.filter(o=>o.fulfillment==='キャンセル').length})</span>
-        <div class="sp" style="flex:1"></div>
-        <button class="btn">CSV出力</button>
-        <button class="btn">送り状一括印刷</button>
+        <div class="search-inline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="oq" placeholder="注文番号・お客様">
+        </div>
+        <span class="chip on" data-fp="all">全て <span class="cnt">${orders.length}</span></span>
+        <span class="chip" data-fp="未発送">未発送 <span class="cnt">${orders.filter(o=>o.fulfillment==='未発送').length}</span></span>
+        <span class="chip" data-fp="発送準備中">準備中 <span class="cnt">${orders.filter(o=>o.fulfillment==='発送準備中').length}</span></span>
+        <span class="chip" data-fp="発送済">発送済 <span class="cnt">${orders.filter(o=>o.fulfillment==='発送済').length}</span></span>
+        <span class="chip" data-fp="キャンセル">キャンセル <span class="cnt">${orders.filter(o=>o.fulfillment==='キャンセル').length}</span></span>
+        <span class="sp"></span>
+        <button class="btn">${icons.download}CSV出力</button>
       </div>
+
       <div class="sec">
         <div class="sec-body flush scroll-x">
           <table class="tbl">
-            <thead><tr><th>注文番号</th><th>日時</th><th>お客様</th><th>商品</th><th class="num">小計</th><th class="num">合計</th><th>決済</th><th>配送</th><th></th></tr></thead>
+            <thead><tr><th>注文番号</th><th>日時</th><th>お客様</th><th>商品</th><th class="num">小計</th><th class="num">合計</th><th>決済</th><th>発送</th></tr></thead>
             <tbody id="otbody"></tbody>
           </table>
         </div>
@@ -568,7 +773,7 @@ const views = {
     `;
     const draw = () => {
       const q = (document.getElementById('oq').value||'').toLowerCase();
-      const fp = document.querySelector('.filter-pill.on').dataset.fp;
+      const fp = document.querySelector('.chip.on').dataset.fp;
       const list = orders.filter(o=>{
         if(q && !((o.id+o.customer_name).toLowerCase().includes(q))) return false;
         if(fp!=='all' && o.fulfillment!==fp) return false;
@@ -578,41 +783,42 @@ const views = {
         <tr onclick="openOrderModal('${o.id}')">
           <td class="id strong">${o.id}</td>
           <td class="nowrap">${dt(o.ordered_at)}</td>
-          <td class="strong">${o.customer_name}<div class="tiny muted">${o.line_id}</div></td>
+          <td><div class="cust-mini"><div class="av">${o.customer_name.slice(0,1)}</div><div><div class="n">${o.customer_name}</div><div class="s">${o.line_id}</div></div></div></td>
           <td>${o.items[0].name}${o.items.length>1?` <span class="muted">+${o.items.length-1}</span>`:''}</td>
           <td class="num">${yen(o.subtotal)}</td>
           <td class="num strong">${yen(o.total)}</td>
-          <td>${statusBadge(o.payment_status)}<div class="tiny muted">${o.payment}</div></td>
+          <td>${statusBadge(o.payment_status)}</td>
           <td>${statusBadge(o.fulfillment)}</td>
-          <td><button class="btn sm">詳細</button></td>
         </tr>
-      `).join('') : '<tr><td colspan="9" class="empty">該当する注文がありません</td></tr>';
+      `).join('') : '<tr><td colspan="8" class="empty">該当する注文がありません</td></tr>';
     };
-    document.querySelectorAll('.filter-pill').forEach(el=>el.onclick=()=>{
-      document.querySelectorAll('.filter-pill').forEach(x=>x.classList.remove('on'));
-      el.classList.add('on'); draw();
-    });
+    document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));el.classList.add('on');draw();});
     document.getElementById('oq').oninput = draw;
     draw();
   },
 
-  // ---------- 顧客 ----------
   customers(){
     document.getElementById('view').innerHTML = `
+      <div class="page-title">顧客 / LINE友だち</div>
+      <div class="page-sub">${customers.length}人 · VIP ${customers.filter(c=>c.tags.includes('VIP')).length} · 平均LTV ${yen(Math.round(customers.reduce((s,c)=>s+c.ltv,0)/customers.length))}</div>
+
       <div class="actbar">
-        <div class="search-inline"><span class="muted">⌕</span><input id="cq" placeholder="お客様名・LINE ID"></div>
-        <span class="filter-pill on" data-fp="all">全て (${customers.length})</span>
-        <span class="filter-pill" data-fp="VIP">VIP (${customers.filter(c=>c.tags.includes('VIP')).length})</span>
-        <span class="filter-pill" data-fp="新規">新規 (${customers.filter(c=>c.tags.includes('新規')).length})</span>
-        <span class="filter-pill" data-fp="未購入">未購入 (${customers.filter(c=>c.tags.includes('未購入')).length})</span>
-        <div class="sp" style="flex:1"></div>
-        <button class="btn">タグ一括付与</button>
+        <div class="search-inline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="cq" placeholder="お客様名・LINE ID">
+        </div>
+        <span class="chip on" data-fp="all">全て <span class="cnt">${customers.length}</span></span>
+        <span class="chip" data-fp="VIP">VIP <span class="cnt">${customers.filter(c=>c.tags.includes('VIP')).length}</span></span>
+        <span class="chip" data-fp="新規">新規 <span class="cnt">${customers.filter(c=>c.tags.includes('新規')).length}</span></span>
+        <span class="chip" data-fp="未購入">未購入 <span class="cnt">${customers.filter(c=>c.tags.includes('未購入')).length}</span></span>
+        <span class="sp"></span>
         <button class="btn primary">この絞込で配信</button>
       </div>
+
       <div class="sec">
         <div class="sec-body flush scroll-x">
           <table class="tbl">
-            <thead><tr><th>お客様</th><th>LINE ID</th><th>タグ</th><th>友だち追加</th><th>最終接触</th><th class="num">注文数</th><th class="num">LTV</th><th></th></tr></thead>
+            <thead><tr><th>お客様</th><th>タグ</th><th>友だち追加</th><th>最終接触</th><th class="num">注文数</th><th class="num">LTV</th></tr></thead>
             <tbody id="ctbody"></tbody>
           </table>
         </div>
@@ -620,7 +826,7 @@ const views = {
     `;
     const draw = () => {
       const q = (document.getElementById('cq').value||'').toLowerCase();
-      const fp = document.querySelector('.filter-pill.on').dataset.fp;
+      const fp = document.querySelector('.chip.on').dataset.fp;
       const list = customers.filter(c=>{
         if(q && !((c.name+c.line_id).toLowerCase().includes(q))) return false;
         if(fp!=='all' && !c.tags.includes(fp)) return false;
@@ -628,51 +834,47 @@ const views = {
       });
       document.getElementById('ctbody').innerHTML = list.map(c=>`
         <tr onclick="openCustomerModal('${c.id}')">
-          <td class="strong">${c.icon} ${c.name}</td>
-          <td class="id">${c.line_id}</td>
-          <td>${c.tags.map(t=>`<span class="bd ${t==='VIP'?'accent':t==='新規'?'line':'draft'}">${t}</span>`).join(' ')}</td>
+          <td><div class="cust-mini"><div class="av">${c.name.slice(0,1)}</div><div><div class="n">${c.name}</div><div class="s">${c.line_id}</div></div></div></td>
+          <td>${c.tags.map(t=>`<span class="bd ${t==='VIP'?'accent':t==='新規'?'ok':'draft'} bare">${t}</span>`).join(' ')}</td>
           <td class="nowrap">${day(c.first_followed)}</td>
           <td class="nowrap">${dt(c.last_message)}</td>
-          <td class="num">${c.orders}</td>
+          <td class="num strong">${c.orders}</td>
           <td class="num strong">${yen(c.ltv)}</td>
-          <td><button class="btn sm">詳細</button></td>
         </tr>
       `).join('');
     };
-    document.querySelectorAll('.filter-pill').forEach(el=>el.onclick=()=>{
-      document.querySelectorAll('.filter-pill').forEach(x=>x.classList.remove('on'));
-      el.classList.add('on'); draw();
-    });
+    document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));el.classList.add('on');draw();});
     document.getElementById('cq').oninput = draw;
     draw();
   },
 
-  // ---------- メッセージ配信 ----------
   messages(){
     document.getElementById('view').innerHTML = `
+      <div class="page-title">メッセージ配信</div>
+      <div class="page-sub">${messages.length}件 · 稼働中ステップ ${messages.filter(m=>m.status==='稼働中').length} · 注文転換数累計 ${messages.reduce((s,m)=>s+m.ordered,0)}</div>
+
       <div class="actbar">
-        <span class="filter-pill on">全て (${messages.length})</span>
-        <span class="filter-pill">一斉配信 (${messages.filter(m=>m.type==='一斉配信').length})</span>
-        <span class="filter-pill">ステップ配信 (${messages.filter(m=>m.type==='ステップ配信').length})</span>
-        <span class="filter-pill">セグメント配信 (${messages.filter(m=>m.type==='セグメント配信').length})</span>
-        <div class="sp" style="flex:1"></div>
-        <button class="btn">テンプレ</button>
-        <button class="btn primary">＋ 新規配信</button>
+        <span class="chip on">全て <span class="cnt">${messages.length}</span></span>
+        <span class="chip">一斉 <span class="cnt">${messages.filter(m=>m.type==='一斉配信').length}</span></span>
+        <span class="chip">ステップ <span class="cnt">${messages.filter(m=>m.type==='ステップ配信').length}</span></span>
+        <span class="chip">セグメント <span class="cnt">${messages.filter(m=>m.type==='セグメント配信').length}</span></span>
+        <span class="sp"></span>
+        <button class="btn">テンプレート</button>
       </div>
+
       <div class="sec">
         <div class="sec-body flush scroll-x">
           <table class="tbl">
-            <thead><tr><th>タイトル</th><th>タイプ</th><th>配信対象</th><th>トリガー / 日時</th><th class="num">送信</th><th class="num">開封</th><th class="num">クリック</th><th class="num">注文</th><th>状態</th></tr></thead>
+            <thead><tr><th>タイトル</th><th>タイプ</th><th>対象 / トリガー</th><th class="num">送信</th><th class="num">開封</th><th class="num">クリック</th><th class="num">注文</th><th>状態</th></tr></thead>
             <tbody>${messages.map(m=>`
               <tr>
                 <td class="strong">${m.title}</td>
                 <td>${m.type}</td>
-                <td>${m.audience}</td>
-                <td class="tiny">${m.trigger||(m.sent_at?dt(m.sent_at):'-')}</td>
+                <td><div class="n" style="color:var(--ink);font-size:12.5px">${m.audience}</div>${m.trigger?`<div class="s muted tiny">${m.trigger}</div>`:m.sent_at?`<div class="s muted tiny">${dt(m.sent_at)}</div>`:''}</td>
                 <td class="num">${m.sent.toLocaleString()}</td>
                 <td class="num">${m.opened.toLocaleString()}<div class="tiny muted">${m.sent?Math.round(m.opened/m.sent*100):0}%</div></td>
                 <td class="num">${m.clicked.toLocaleString()}<div class="tiny muted">${m.sent?Math.round(m.clicked/m.sent*100):0}%</div></td>
-                <td class="num strong">${m.ordered.toLocaleString()}</td>
+                <td class="num strong" style="color:var(--accent)">${m.ordered.toLocaleString()}</td>
                 <td>${statusBadge(m.status)}</td>
               </tr>
             `).join('')}</tbody>
@@ -682,25 +884,23 @@ const views = {
     `;
   },
 
-  // ---------- カテゴリ ----------
   categories(){
     document.getElementById('view').innerHTML = `
-      <div class="actbar">
-        <div class="sp" style="flex:1"></div>
-        <button class="btn primary">＋ カテゴリ追加</button>
-      </div>
+      <div class="page-title">カテゴリ</div>
+      <div class="page-sub">${categories.length}カテゴリ · 表示中 ${categories.filter(c=>c.visible).length}</div>
+      <div class="actbar"><span class="sp"></span></div>
       <div class="sec">
         <div class="sec-body flush scroll-x">
           <table class="tbl">
-            <thead><tr><th>並び順</th><th>カテゴリ名</th><th>slug</th><th class="num">商品数</th><th>表示</th><th></th></tr></thead>
+            <thead><tr><th class="num">並び</th><th>カテゴリ名</th><th>slug</th><th class="num">商品数</th><th>表示</th><th></th></tr></thead>
             <tbody>${categories.map(c=>`
               <tr>
                 <td class="num">${c.sort}</td>
                 <td class="strong">${c.name}</td>
                 <td class="id">${c.slug}</td>
                 <td class="num">${c.products}</td>
-                <td>${c.visible?'<span class="bd ok">表示中</span>':'<span class="bd draft">非表示</span>'}</td>
-                <td><button class="btn sm">編集</button></td>
+                <td>${statusBadge(c.visible?'表示中':'非表示')}</td>
+                <td><button class="btn sm ghost">${icons.edit}</button></td>
               </tr>
             `).join('')}</tbody>
           </table>
@@ -709,91 +909,87 @@ const views = {
     `;
   },
 
-  // ---------- クーポン ----------
   coupons(){
     document.getElementById('view').innerHTML = `
+      <div class="page-title">クーポン</div>
+      <div class="page-sub">${coupons.length}件 · 有効 ${coupons.filter(c=>c.status==='有効').length} · 利用累計 ${coupons.reduce((s,c)=>s+c.uses,0).toLocaleString()}</div>
       <div class="actbar">
-        <span class="filter-pill on">全て (${coupons.length})</span>
-        <span class="filter-pill">有効 (${coupons.filter(c=>c.status==='有効').length})</span>
-        <span class="filter-pill">終了 (${coupons.filter(c=>c.status==='終了').length})</span>
-        <div class="sp" style="flex:1"></div>
-        <button class="btn primary">＋ クーポン発行</button>
+        <span class="chip on">全て <span class="cnt">${coupons.length}</span></span>
+        <span class="chip">有効 <span class="cnt">${coupons.filter(c=>c.status==='有効').length}</span></span>
+        <span class="chip">終了 <span class="cnt">${coupons.filter(c=>c.status==='終了').length}</span></span>
+        <span class="sp"></span>
       </div>
       <div class="sec">
         <div class="sec-body flush scroll-x">
           <table class="tbl">
-            <thead><tr><th>クーポンコード</th><th>割引</th><th class="num">最低注文額</th><th class="num">利用 / 上限</th><th>有効期限</th><th>状態</th><th></th></tr></thead>
-            <tbody>${coupons.map(c=>`
-              <tr>
-                <td class="id strong">${c.code}</td>
-                <td><span class="bd accent">${c.type==='%'?c.value+'% OFF':yen(c.value)+' OFF'}</span></td>
+            <thead><tr><th>クーポンコード</th><th>割引</th><th class="num">最低注文額</th><th class="num">利用 / 上限</th><th>有効期限</th><th>状態</th></tr></thead>
+            <tbody>${coupons.map(c=>{
+              const pct = Math.round(c.uses/c.limit*100);
+              return `<tr>
+                <td class="id strong" style="color:var(--ink);font-size:13px">${c.code}</td>
+                <td><span class="bd accent bare">${c.type==='%'?c.value+'% OFF':yen(c.value)+' OFF'}</span></td>
                 <td class="num">${yen(c.min_order)}〜</td>
-                <td class="num">${c.uses.toLocaleString()} / ${c.limit.toLocaleString()}</td>
+                <td class="num">${c.uses.toLocaleString()} / ${c.limit.toLocaleString()}<div style="height:3px;background:var(--rule);border-radius:2px;margin-top:3px;width:90px;margin-left:auto"><div style="height:100%;width:${Math.min(100,pct)}%;background:var(--accent);border-radius:2px"></div></div></td>
                 <td class="nowrap">${day(c.expires)}</td>
                 <td>${statusBadge(c.status)}</td>
-                <td><button class="btn sm">編集</button></td>
-              </tr>
-            `).join('')}</tbody>
+              </tr>`;
+            }).join('')}</tbody>
           </table>
         </div>
       </div>
     `;
   },
 
-  // ---------- リッチメニュー ----------
   richmenu(){
+    const labs = [['商品一覧','pkg'],['新着','tag'],['カテゴリ','grid'],['クーポン','ticket'],['注文履歴','orders'],['お問合せ','send']];
     document.getElementById('view').innerHTML = `
-      <div class="sec">
-        <div class="sec-h"><h3>リッチメニュー</h3><span class="sub muted">LINE OA トーク画面の下部メニュー</span></div>
-        <div class="sec-body">
-          <div style="display:grid;grid-template-columns:1fr 320px;gap:30px">
-            <div>
-              <div class="field"><label>レイアウト</label>
-                <div class="btn-row">
-                  <span class="filter-pill on" data-rm="layout-2x3">2×3</span>
-                  <span class="filter-pill" data-rm="layout-1x3">1×3</span>
-                  <span class="filter-pill" data-rm="layout-2x2">2×2</span>
-                  <span class="filter-pill" data-rm="layout-1x2">1×2</span>
-                </div>
-              </div>
-              <div class="rm-grid layout-2x3" id="rmgrid"></div>
-              <div class="mt btn-row"><button class="btn">下書き保存</button><button class="btn primary">LINE OAに反映</button></div>
+      <div class="page-title">リッチメニュー</div>
+      <div class="page-sub">LINE OA トーク画面下部メニュー · 現在公開中: 2×3 レイアウト</div>
+
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:14px;align-items:start">
+        <div class="sec">
+          <div class="sec-h"><h3>レイアウト</h3><span class="sp"></span>
+            <div class="btn-row">
+              <span class="chip on" data-rm="layout-2x3">2×3</span>
+              <span class="chip" data-rm="layout-1x3">1×3</span>
+              <span class="chip" data-rm="layout-2x2">2×2</span>
+              <span class="chip" data-rm="layout-1x2">1×2</span>
             </div>
-            <div>
-              <div class="sec" style="margin:0">
-                <div class="sec-h"><h3 style="font-size:14px">セルA</h3></div>
-                <div class="sec-body">
-                  <div class="field"><label>アクション種別</label><select><option>商品一覧を開く</option><option>カテゴリを開く</option><option>テキスト送信</option><option>URL を開く</option><option>クーポン配布</option></select></div>
-                  <div class="field"><label>ラベル</label><input value="🛍 商品一覧"></div>
-                  <div class="field"><label>リンク先</label><input value="liff://app/shop/products"></div>
-                </div>
-              </div>
-            </div>
+          </div>
+          <div class="sec-body">
+            <div class="rm-grid layout-2x3" id="rmgrid"></div>
+            <div class="mt btn-row" style="margin-top:14px"><button class="btn">下書き保存</button><button class="btn accent">LINE OAに反映</button></div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h3>セル A</h3><span class="bd accent bare">編集中</span></div>
+          <div class="sec-body">
+            <div class="field"><label>アクション種別</label><select><option>商品一覧を開く</option><option>カテゴリを開く</option><option>テキスト送信</option><option>URL を開く</option><option>クーポン配布</option></select></div>
+            <div class="field"><label>表示ラベル</label><input value="商品一覧"></div>
+            <div class="field"><label>リンク先 (LIFF)</label><input value="liff://shop/products"></div>
+            <div class="field"><label>アナリティクスタグ</label><input value="rm_a_products"></div>
           </div>
         </div>
       </div>
     `;
-    const labs=['🛍 商品一覧','✦ 新着','◐ カテゴリ','🎁 クーポン','▤ 注文履歴','☎ お問合せ'];
     const draw = () => {
       const grid = document.getElementById('rmgrid');
       const n = grid.classList.contains('layout-2x3')?6 : grid.classList.contains('layout-1x3')?3 : grid.classList.contains('layout-2x2')?4 : 2;
-      grid.innerHTML = Array.from({length:n}).map((_,i)=>`<div class="cell"><span class="num">${String.fromCharCode(65+i)}</span>${labs[i]||'未設定'}</div>`).join('');
+      grid.innerHTML = Array.from({length:n}).map((_,i)=>`<div class="cell ${i===0?'on':''}"><span class="num">${String.fromCharCode(65+i)}</span>${icons[labs[i][1]]}<span>${labs[i][0]}</span></div>`).join('');
     };
     draw();
     document.querySelectorAll('[data-rm]').forEach(el=>el.onclick=()=>{
-      document.querySelectorAll('[data-rm]').forEach(x=>x.classList.remove('on'));
-      el.classList.add('on');
-      const grid = document.getElementById('rmgrid');
-      grid.className = 'rm-grid '+el.dataset.rm;
-      draw();
+      document.querySelectorAll('[data-rm]').forEach(x=>x.classList.remove('on'));el.classList.add('on');
+      document.getElementById('rmgrid').className='rm-grid '+el.dataset.rm; draw();
     });
   },
 
-  // ---------- LIFF 設定 ----------
   liff(){
     document.getElementById('view').innerHTML = `
+      <div class="page-title">LIFF 設定</div>
+      <div class="page-sub">LINE Front-end Framework アプリ設定</div>
       <div class="sec">
-        <div class="sec-h"><h3>LIFF アプリ設定</h3></div>
+        <div class="sec-h"><h3>アプリ設定</h3><span class="bd ok bare">疎通OK</span></div>
         <div class="sec-body">
           <div class="field-row">
             <div class="field"><label>LIFF ID</label><input value="2010266648-XYZabc12"></div>
@@ -811,11 +1007,12 @@ const views = {
     `;
   },
 
-  // ---------- 店舗情報 ----------
   shop(){
     document.getElementById('view').innerHTML = `
+      <div class="page-title">店舗情報</div>
+      <div class="page-sub">公開LIFFに表示される店舗データ</div>
       <div class="sec">
-        <div class="sec-h"><h3>店舗基本設定</h3></div>
+        <div class="sec-h"><h3>基本情報</h3></div>
         <div class="sec-body">
           <div class="field-row">
             <div class="field"><label>店舗名</label><input value="Lune by Skeleton"></div>
@@ -833,18 +1030,19 @@ const views = {
     `;
   },
 
-  // ---------- 配送 ----------
   shipping(){
     document.getElementById('view').innerHTML = `
+      <div class="page-title">配送・送料</div>
+      <div class="page-sub">配送方法と送料表</div>
+      <div class="actbar"><span class="sp"></span><button class="btn primary">+ 配送方法</button></div>
       <div class="sec">
-        <div class="sec-h"><h3>配送方法・送料表</h3><span class="sp" style="flex:1"></span><button class="btn primary">＋ 配送方法</button></div>
         <div class="sec-body flush scroll-x">
           <table class="tbl">
             <thead><tr><th>配送方法</th><th>区分</th><th class="num">送料</th><th class="num">送料無料ライン</th><th>配達日数</th><th></th></tr></thead>
             <tbody>
-              <tr><td class="strong">ヤマト宅急便</td><td>通常</td><td class="num">¥770</td><td class="num">¥10,000以上</td><td>翌-翌々日</td><td><button class="btn sm">編集</button></td></tr>
-              <tr><td class="strong">ヤマトクール便</td><td>冷蔵</td><td class="num">¥1,210</td><td class="num">¥15,000以上</td><td>翌-翌々日</td><td><button class="btn sm">編集</button></td></tr>
-              <tr><td class="strong">ゆうパケットポスト</td><td>ゆうパケット</td><td class="num">¥215</td><td class="num">−</td><td>3〜5日</td><td><button class="btn sm">編集</button></td></tr>
+              <tr><td class="strong">ヤマト宅急便</td><td>通常</td><td class="num">¥770</td><td class="num">¥10,000〜</td><td>翌-翌々日</td><td><button class="btn sm ghost">${icons.edit}</button></td></tr>
+              <tr><td class="strong">ヤマトクール便</td><td>冷蔵</td><td class="num">¥1,210</td><td class="num">¥15,000〜</td><td>翌-翌々日</td><td><button class="btn sm ghost">${icons.edit}</button></td></tr>
+              <tr><td class="strong">ゆうパケットポスト</td><td>ゆうパケット</td><td class="num">¥215</td><td class="num">—</td><td>3〜5日</td><td><button class="btn sm ghost">${icons.edit}</button></td></tr>
             </tbody>
           </table>
         </div>
@@ -852,18 +1050,18 @@ const views = {
     `;
   },
 
-  // ---------- 決済 ----------
   payment(){
     document.getElementById('view').innerHTML = `
+      <div class="page-title">決済</div>
+      <div class="page-sub">決済プロバイダ連携</div>
       <div class="sec">
-        <div class="sec-h"><h3>決済プロバイダ</h3></div>
         <div class="sec-body flush">
           <table class="tbl">
             <thead><tr><th>決済方法</th><th>プロバイダ</th><th>状態</th><th class="num">手数料</th><th></th></tr></thead>
             <tbody>
               <tr><td class="strong">クレジットカード</td><td>Stripe (live)</td><td>${statusBadge('稼働中')}</td><td class="num">3.6%</td><td><button class="btn sm">設定</button></td></tr>
               <tr><td class="strong">代金引換</td><td>ヤマト運輸</td><td>${statusBadge('稼働中')}</td><td class="num">¥330</td><td><button class="btn sm">設定</button></td></tr>
-              <tr><td class="strong">後払い (NP)</td><td>NP後払い</td><td>${statusBadge('下書き')}</td><td class="num">2.9%</td><td><button class="btn sm">連携</button></td></tr>
+              <tr><td class="strong">NP後払い</td><td>NP後払い</td><td>${statusBadge('下書き')}</td><td class="num">2.9%</td><td><button class="btn sm">連携</button></td></tr>
               <tr><td class="strong">LINE Pay</td><td>LINE Pay</td><td>${statusBadge('下書き')}</td><td class="num">3.45%</td><td><button class="btn sm">連携</button></td></tr>
             </tbody>
           </table>
@@ -872,11 +1070,11 @@ const views = {
     `;
   },
 
-  // ---------- 特商法 ----------
   tokushou(){
     document.getElementById('view').innerHTML = `
+      <div class="page-title">特定商取引法</div>
+      <div class="page-sub">LIFFフッターに自動表示</div>
       <div class="sec">
-        <div class="sec-h"><h3>特定商取引法に基づく表記</h3></div>
         <div class="sec-body">
           <div class="field-row">
             <div class="field"><label>事業者名</label><input value="スケルトン株式会社"></div>
@@ -897,41 +1095,62 @@ const views = {
 
 };
 
-// ========== 注文 modal ==========
 window.openOrderModal = id => {
-  const o = orders.find(x=>x.id===id);
-  if(!o) return;
+  const o = orders.find(x=>x.id===id); if(!o) return;
+  const c = customers.find(x=>x.id===o.customer_id);
+  const steps = [
+    {t:'注文受付', m:dt(o.ordered_at), done:true},
+    {t:'決済', m:o.payment_status==='決済済'?o.payment+' · 完了':'保留', done:o.payment_status==='決済済'},
+    {t:'発送準備', m:o.fulfillment==='発送準備中'?'準備中':o.fulfillment==='発送済'||o.fulfillment==='キャンセル'?'完了':'未着手', done:['発送準備中','発送済','キャンセル'].includes(o.fulfillment), cur:o.fulfillment==='発送準備中'},
+    {t:'発送', m:o.tracking?`伝票 ${o.tracking}`:'未発送', done:o.fulfillment==='発送済', cur:o.fulfillment==='未発送'}
+  ];
   openModal(`
-    <div class="modal-h"><h2>注文 ${o.id}</h2><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-h">
+      <h2>注文 ${o.id}</h2>
+      <span class="bd ${o.fulfillment==='キャンセル'?'neg':'ok'} bare">${o.fulfillment}</span>
+      <button class="x" onclick="closeModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
     <div class="modal-body">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:18px">
         <div>
-          <div class="tiny muted">注文日時</div><div class="strong">${dt(o.ordered_at)}</div>
-          <div class="tiny muted mt">お客様</div><div class="strong">${o.customer_name}</div>
-          <div class="tiny muted">${o.line_id}</div>
+          <div class="muted tiny" style="margin-bottom:2px">お客様</div>
+          <div class="cust-mini" style="margin-bottom:10px"><div class="av">${o.customer_name.slice(0,1)}</div><div><div class="n">${o.customer_name}</div><div class="s">${o.line_id}</div></div></div>
+          ${c ? `<div style="display:flex;gap:14px;margin-top:6px;font-size:11.5px"><div><span class="muted">注文数</span> <span class="strong">${c.orders}</span></div><div><span class="muted">LTV</span> <span class="strong">${yen(c.ltv)}</span></div></div>` : ''}
         </div>
         <div>
-          <div class="tiny muted">配送先</div>
-          <div>〒${o.address.zip}</div>
-          <div>${o.address.addr1} ${o.address.addr2}</div>
-          <div>${o.address.name} 様 / ${o.address.tel}</div>
+          <div class="muted tiny" style="margin-bottom:2px">配送先</div>
+          <div style="font-size:12.5px;line-height:1.7">
+            〒${o.address.zip}<br>${o.address.addr1}${o.address.addr2?' '+o.address.addr2:''}<br><span class="strong">${o.address.name} 様</span> · ${o.address.tel}
+          </div>
         </div>
       </div>
-      <table class="tbl">
-        <thead><tr><th>商品</th><th class="num">単価</th><th class="num">数量</th><th class="num">金額</th></tr></thead>
-        <tbody>
-          ${o.items.map(it=>`<tr><td>${it.name}</td><td class="num">${yen(it.price)}</td><td class="num">${it.qty}</td><td class="num strong">${yen(it.price*it.qty)}</td></tr>`).join('')}
-          <tr><td colspan="3" class="num">小計</td><td class="num">${yen(o.subtotal)}</td></tr>
-          <tr><td colspan="3" class="num">送料</td><td class="num">${yen(o.shipping)}</td></tr>
-          ${o.discount?`<tr><td colspan="3" class="num">割引</td><td class="num" style="color:var(--accent)">-${yen(o.discount)}</td></tr>`:''}
-          <tr><td colspan="3" class="num strong">合計</td><td class="num strong" style="font-size:16px;font-family:var(--serif)">${yen(o.total)}</td></tr>
-        </tbody>
-      </table>
-      <div class="mt">
-        <span class="muted">決済:</span> ${statusBadge(o.payment_status)} ${o.payment}<br>
-        <span class="muted">配送:</span> ${statusBadge(o.fulfillment)} ${o.tracking?`<span class="id">伝票番号: ${o.tracking}</span>`:''}
+
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:22px">
+        <div>
+          <div class="muted tiny" style="margin-bottom:8px">商品</div>
+          <table class="tbl" style="border:1px solid var(--rule);border-radius:var(--r);overflow:hidden">
+            <thead><tr><th>商品</th><th class="num">単価</th><th class="num">数</th><th class="num">金額</th></tr></thead>
+            <tbody>
+              ${o.items.map(it=>`<tr><td class="strong">${it.name}</td><td class="num">${yen(it.price)}</td><td class="num">${it.qty}</td><td class="num strong">${yen(it.price*it.qty)}</td></tr>`).join('')}
+            </tbody>
+          </table>
+          <div style="margin-top:12px;padding:11px 14px;background:var(--bg);border-radius:var(--r);font-size:12.5px">
+            <div style="display:flex;justify-content:space-between;padding:2px 0"><span class="muted">小計</span><span style="font-family:var(--mono)">${yen(o.subtotal)}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0"><span class="muted">送料</span><span style="font-family:var(--mono)">${yen(o.shipping)}</span></div>
+            ${o.discount?`<div style="display:flex;justify-content:space-between;padding:2px 0"><span class="muted">割引</span><span style="font-family:var(--mono);color:var(--accent)">-${yen(o.discount)}</span></div>`:''}
+            <div style="display:flex;justify-content:space-between;padding:6px 0 0;border-top:1px solid var(--rule);margin-top:5px;font-weight:600;font-size:14px"><span>合計</span><span style="font-family:var(--mono)">${yen(o.total)}</span></div>
+          </div>
+          ${o.memo?`<div style="margin-top:12px"><div class="muted tiny">メモ</div><div style="font-size:12.5px;margin-top:3px">${o.memo}</div></div>`:''}
+        </div>
+        <div>
+          <div class="muted tiny" style="margin-bottom:8px">ステータス</div>
+          <div class="tl">
+            ${steps.map(s=>`<div class="tl-item ${s.done?'done':''} ${s.cur?'cur':''}"><div class="t">${s.t}</div><div class="m">${s.m}</div></div>`).join('')}
+          </div>
+        </div>
       </div>
-      ${o.memo?`<div class="mt"><div class="tiny muted">メモ</div>${o.memo}</div>`:''}
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal()">閉じる</button>
@@ -943,27 +1162,31 @@ window.openOrderModal = id => {
 };
 
 window.openCustomerModal = id => {
-  const c = customers.find(x=>x.id===id);
-  if(!c) return;
+  const c = customers.find(x=>x.id===id); if(!c) return;
   const myOrders = orders.filter(o=>o.customer_id===id);
   openModal(`
-    <div class="modal-h"><h2>${c.icon} ${c.name}</h2><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-h">
+      <h2>${c.name}</h2>
+      ${c.tags.map(t=>`<span class="bd ${t==='VIP'?'accent':t==='新規'?'ok':'draft'} bare">${t}</span>`).join(' ')}
+      <span class="sp" style="flex:1"></span>
+      <button class="x" onclick="closeModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
     <div class="modal-body">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:16px">
-        <div><div class="tiny muted">LINE ID</div><div class="id">${c.line_id}</div></div>
-        <div><div class="tiny muted">タグ</div>${c.tags.map(t=>`<span class="bd ${t==='VIP'?'accent':t==='新規'?'line':'draft'}">${t}</span>`).join(' ')}</div>
-        <div><div class="tiny muted">友だち追加</div>${day(c.first_followed)}</div>
-        <div><div class="tiny muted">最終接触</div>${dt(c.last_message)}</div>
-        <div><div class="tiny muted">注文数</div><div class="strong">${c.orders}</div></div>
-        <div><div class="tiny muted">LTV</div><div class="strong">${yen(c.ltv)}</div></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;padding:14px;background:var(--bg);border-radius:var(--r)">
+        <div><div class="muted tiny">注文数</div><div style="font-family:var(--mono);font-size:20px;font-weight:600">${c.orders}</div></div>
+        <div><div class="muted tiny">LTV</div><div style="font-family:var(--mono);font-size:20px;font-weight:600">${yen(c.ltv)}</div></div>
+        <div><div class="muted tiny">追加日</div><div style="font-family:var(--mono);font-size:13px;font-weight:500;margin-top:5px">${day(c.first_followed)}</div></div>
+        <div><div class="muted tiny">最終接触</div><div style="font-family:var(--mono);font-size:13px;font-weight:500;margin-top:5px">${dt(c.last_message)}</div></div>
       </div>
-      ${c.memo?`<div class="mb"><div class="tiny muted">メモ</div>${c.memo}</div>`:''}
-      <div class="tiny muted">過去の注文</div>
-      <table class="tbl mt">
-        <thead><tr><th>注文番号</th><th>日付</th><th class="num">合計</th><th>状態</th></tr></thead>
-        <tbody>${myOrders.length ? myOrders.map(o=>`
-          <tr><td class="id">${o.id}</td><td>${dt(o.ordered_at)}</td><td class="num strong">${yen(o.total)}</td><td>${statusBadge(o.fulfillment)}</td></tr>
-        `).join('') : '<tr><td colspan="4" class="empty">注文履歴なし</td></tr>'}</tbody>
+      <div class="muted tiny" style="margin-bottom:5px">LINE ID</div>
+      <div class="id strong" style="margin-bottom:14px">${c.line_id}</div>
+      ${c.memo?`<div class="muted tiny" style="margin-bottom:3px">担当者メモ</div><div style="font-size:12.5px;margin-bottom:14px">${c.memo}</div>`:''}
+      <div class="muted tiny" style="margin-bottom:8px">注文履歴</div>
+      <table class="tbl" style="border:1px solid var(--rule);border-radius:var(--r);overflow:hidden">
+        <thead><tr><th>注文番号</th><th>日時</th><th class="num">合計</th><th>状態</th></tr></thead>
+        <tbody>${myOrders.length ? myOrders.map(o=>`<tr><td class="id">${o.id}</td><td>${dt(o.ordered_at)}</td><td class="num strong">${yen(o.total)}</td><td>${statusBadge(o.fulfillment)}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">注文履歴なし</td></tr>'}</tbody>
       </table>
     </div>
     <div class="modal-foot">
@@ -976,16 +1199,16 @@ window.openCustomerModal = id => {
 
 window.openBulkUpload = () => {
   openModal(`
-    <div class="modal-h"><h2>CSV / ZIP 一括登録</h2><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-h"><h2>CSV / ZIP 一括登録</h2><span class="sp" style="flex:1"></span><button class="x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body">
-      <ol style="padding-left:20px;line-height:1.9">
-        <li>テンプレートCSV をダウンロード <button class="btn sm">products_template.csv</button></li>
+      <ol style="padding-left:22px;line-height:2.0;font-size:13px">
+        <li>テンプレートCSV をダウンロード <a class="btn sm" style="margin-left:5px">products_template.csv</a></li>
         <li>画像は ZIP に SKU 名で固める (例: <span class="id">lune-love-me-oil-30.jpg</span>)</li>
-        <li>CSV と ZIP を同時アップ → プレビュー → 一括反映</li>
+        <li>CSV と ZIP を同時アップロード → プレビュー → 一括反映</li>
       </ol>
       <div class="field mt"><label>商品CSV</label><input type="file" accept=".csv"></div>
       <div class="field"><label>画像ZIP</label><input type="file" accept=".zip"></div>
-      <div class="tiny muted">UTF-8 BOM・カンマ区切り。商品名30文字以内推奨。</div>
+      <div class="muted tiny">UTF-8 BOM・カンマ区切り。商品名は30文字以内推奨。</div>
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal()">キャンセル</button>
@@ -994,51 +1217,61 @@ window.openBulkUpload = () => {
   `);
 };
 
-// ========== chart (canvas) ==========
 function drawChart(){
-  const canvas = document.getElementById('chart');
-  if(!canvas) return;
+  const canvas = document.getElementById('chart'); if(!canvas) return;
   const ratio = window.devicePixelRatio||1;
   const W = canvas.clientWidth, H = canvas.clientHeight;
   canvas.width = W*ratio; canvas.height = H*ratio;
-  const c = canvas.getContext('2d');
-  c.scale(ratio,ratio);
+  const c = canvas.getContext('2d'); c.scale(ratio,ratio);
   const data = [12400,8200,15600,21000,9800,17200,13400,8900,24300,19800,11200,16800,22400,30360];
-  const max = Math.max(...data);
-  const pad = 24, gx = (W-pad*2)/(data.length-1);
-  // axis
-  c.strokeStyle='#e0dcce'; c.lineWidth=1;
-  for(let i=0;i<5;i++){
-    const y = pad + (H-pad*2)*(i/4);
-    c.beginPath(); c.moveTo(pad,y); c.lineTo(W-pad,y); c.stroke();
+  const orderCounts = [2,1,2,3,1,2,2,1,3,3,2,2,3,4];
+  const max = Math.max(...data); const padL=44, padR=12, padT=14, padB=24;
+  const gx = (W-padL-padR)/(data.length-1);
+  // grid lines
+  c.strokeStyle = 'oklch(0.93 0.004 250)'; c.lineWidth = 1;
+  for(let i=0;i<=4;i++){
+    const y = padT + (H-padT-padB)*(i/4);
+    c.beginPath(); c.moveTo(padL,y); c.lineTo(W-padR,y); c.stroke();
   }
-  // bars (orders) - background
+  // y-axis labels
+  c.fillStyle='oklch(0.60 0.008 250)';c.font='10px JetBrains Mono';c.textAlign='right';
+  for(let i=0;i<=4;i++){
+    const val = Math.round(max*(1-i/4)/1000)+'k';
+    const y = padT + (H-padT-padB)*(i/4);
+    c.fillText('¥'+val, padL-6, y+3);
+  }
+  // bars
   data.forEach((v,i)=>{
-    const x = pad + i*gx;
-    const h = (H-pad*2) * (v/max) * 0.5;
-    c.fillStyle = '#15151a';
-    c.fillRect(x-3, H-pad-h, 6, h);
+    const x = padL + i*gx; const h = (H-padT-padB) * (v/max);
+    c.fillStyle = 'oklch(0.20 0.012 250 / 0.08)';
+    c.fillRect(x-7, H-padB-h, 14, h);
   });
-  // line
-  c.strokeStyle='#c8412e'; c.lineWidth=2.5;
+  // accent line
+  c.strokeStyle='oklch(0.45 0.19 18)'; c.lineWidth=2;
   c.beginPath();
   data.forEach((v,i)=>{
-    const x = pad + i*gx;
-    const y = H-pad - (H-pad*2)*(v/max);
+    const x = padL + i*gx; const y = H-padB - (H-padT-padB)*(v/max);
     if(i===0) c.moveTo(x,y); else c.lineTo(x,y);
   });
   c.stroke();
   // dots
   data.forEach((v,i)=>{
-    const x = pad + i*gx;
-    const y = H-pad - (H-pad*2)*(v/max);
-    c.fillStyle='#c8412e';
-    c.beginPath(); c.arc(x,y,3.5,0,Math.PI*2); c.fill();
-    c.fillStyle='#fff'; c.beginPath(); c.arc(x,y,1.5,0,Math.PI*2); c.fill();
+    const x = padL + i*gx; const y = H-padB - (H-padT-padB)*(v/max);
+    c.fillStyle='oklch(0.45 0.19 18)';
+    c.beginPath(); c.arc(x,y,3,0,Math.PI*2); c.fill();
+    c.fillStyle='oklch(1 0 0)'; c.beginPath(); c.arc(x,y,1.2,0,Math.PI*2); c.fill();
+  });
+  // x labels (every 3 days)
+  c.fillStyle='oklch(0.60 0.008 250)';c.textAlign='center';c.font='10px JetBrains Mono';
+  data.forEach((_,i)=>{
+    if(i%2===0 || i===data.length-1){
+      const x = padL + i*gx;
+      const d = new Date(2026, 5, 3+i);
+      c.fillText(`${d.getMonth()+1}/${d.getDate()}`, x, H-6);
+    }
   });
 }
 
-// ========== router ==========
 function route(hash){
   if(hash) location.hash = hash;
   const h = (location.hash || '#/dashboard').replace(/^#\//,'');
@@ -1048,41 +1281,37 @@ function route(hash){
 
   renderNav(key);
   const t = TITLES[key] || [key,''];
-  document.getElementById('crumbs').innerHTML = `${t[0]} <span class="sub">${t[1]||''}</span>`;
+  document.getElementById('crumbs').innerHTML = `<span class="root">Skel·EC</span><span class="sep">›</span><span class="cur">${t[0]}</span>${t[1]?`<span class="sep">·</span><span class="muted">${t[1]}</span>`:''}`;
 
   if(key==='products' && sub==='new') views.productEdit('new');
   else if(key==='products' && sub) views.productEdit(sub);
   else if(views[key]) views[key]();
   else views.dashboard();
 
-  // close drawer on mobile
   document.getElementById('side').classList.remove('open');
   document.getElementById('scrim').classList.remove('on');
 
-  // newBtn behavior
   const nb = document.getElementById('newBtn');
-  if(key==='orders'){ nb.textContent = '＋ 受注追加'; }
-  else if(key==='customers'){ nb.textContent = '＋ 友だち追加'; }
-  else if(key==='messages'){ nb.textContent = '＋ 配信作成'; }
-  else if(key==='coupons'){ nb.textContent = '＋ クーポン発行'; }
-  else { nb.textContent = '＋ 商品追加'; nb.onclick = ()=>route('#/products/new'); return; }
-  nb.onclick = ()=>{};
+  const lab = document.getElementById('newBtnLabel');
+  if(key==='orders'){ lab.textContent='受注追加'; nb.onclick=()=>{}; }
+  else if(key==='customers'){ lab.textContent='友だち追加'; nb.onclick=()=>{}; }
+  else if(key==='messages'){ lab.textContent='配信を作成'; nb.onclick=()=>{}; }
+  else if(key==='coupons'){ lab.textContent='クーポン発行'; nb.onclick=()=>{}; }
+  else if(key==='categories'){ lab.textContent='カテゴリ追加'; nb.onclick=()=>{}; }
+  else { lab.textContent='商品を追加'; nb.onclick=()=>route('#/products/new'); }
 }
 window.addEventListener('hashchange', ()=>route());
 window.addEventListener('resize', ()=>{ if(location.hash.startsWith('#/dashboard')) drawChart(); });
 window.route = route;
-
-// ham
-document.getElementById('ham').onclick = () => {
+document.getElementById('ham').onclick = ()=>{
   document.getElementById('side').classList.toggle('open');
   document.getElementById('scrim').classList.toggle('on');
 };
-document.getElementById('scrim').onclick = () => {
+document.getElementById('scrim').onclick = ()=>{
   document.getElementById('side').classList.remove('open');
   document.getElementById('scrim').classList.remove('on');
 };
 
-// boot
 loadData().then(()=>route());
 </script>
 </body>
