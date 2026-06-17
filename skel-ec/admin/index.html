@@ -3039,6 +3039,7 @@ window.openLineAccount = () => {
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn" onclick="lineConnTest()" ${connected?'':'disabled'}>疎通テスト</button>
         <button class="btn pri" onclick="route('#/settings/line/notice');closeModal()">通知設定を開く</button>
+        ${connected?`<button class="btn line-fill" onclick="autoSetupTenant()" style="margin-left:auto">🚀 本番モードに自動セットアップ</button>`:''}
       </div>
     </div>
     <div class="modal-foot">
@@ -3046,6 +3047,87 @@ window.openLineAccount = () => {
       <button class="btn" onclick="closeModal()">閉じる</button>
     </div>
   `);
+};
+
+/* === 1クリック本番化: webhook URL 自動登録 + Firestore tenant doc 作成 === */
+window.autoSetupTenant = async () => {
+  const slug = settings.shop.slug || '';
+  if(!slug || !/^[a-z0-9-]{2,40}$/.test(slug)){
+    toast('まず ショップ設定で URL slug を設定してください (英小文字/数字/ハイフン)', 'error');
+    return;
+  }
+  const l = settings.line;
+  if(!l.access_token){ toast('LINE access_token が未入力', 'error'); return; }
+
+  toast('本番セットアップ中... 30秒ほどお待ちください', 'info');
+
+  try {
+    const r = await fetch('https://asia-northeast1-skeleton-skel-ec-2606.cloudfunctions.net/setupTenant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: slug,
+        line: { channel_id: l.channel_id, channel_secret: l.channel_secret, access_token: l.access_token },
+        stripe: settings.payment.stripe.sk ? settings.payment.stripe : null,
+        shop: settings.shop
+      })
+    });
+    const data = await r.json();
+
+    if(data.ok){
+      // 取得した stripe webhook secret を保存
+      if(data.stripe_webhook_secret){
+        settings.payment.stripe.webhook_secret = data.stripe_webhook_secret;
+        saveStore();
+      }
+      openModal(`
+        <div class="modal-h"><h2>🎉 本番セットアップ完了</h2><button class="x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+        <div class="modal-body">
+          <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--pos-tint);border:1px solid var(--pos);border-radius:10px;margin-bottom:18px">
+            <div style="width:48px;height:48px;border-radius:12px;background:var(--pos);color:#fff;display:grid;place-items:center;font-size:22px">✓</div>
+            <div style="flex:1"><div style="font-weight:900;font-size:15px;color:var(--ink)">サロン 「${slug}」 本番運用開始</div><div style="font-size:12px;color:var(--pos);margin-top:3px">${data.steps.filter(s=>s.ok===true).length}/${data.steps.length} ステップ成功</div></div>
+          </div>
+          <div style="font-size:12.5px;color:var(--ink-3);font-weight:700;margin-bottom:8px">セットアップ結果</div>
+          <div style="display:grid;gap:6px;margin-bottom:14px">
+            ${data.steps.map(s=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:${s.ok===true?'var(--pos-tint)':s.ok==='skipped'?'#FAFAFA':'var(--neg-tint)'};border:1px solid ${s.ok===true?'var(--pos)':s.ok==='skipped'?'var(--rule)':'var(--neg)'};border-radius:6px;font-size:12.5px">
+              <span style="width:20px;height:20px;border-radius:50%;background:${s.ok===true?'var(--pos)':s.ok==='skipped'?'var(--ink-4)':'var(--neg)'};color:#fff;display:grid;place-items:center;font-size:11px;font-weight:900">${s.ok===true?'✓':s.ok==='skipped'?'-':'✕'}</span>
+              <span style="flex:1;font-weight:600">${s.step}</span>
+              ${s.error?`<span style="font-size:10.5px;color:var(--neg);font-family:var(--mono)">${s.error}</span>`:''}
+              ${s.url?`<span style="font-size:10px;color:var(--ink-3);font-family:var(--mono)">${s.url.slice(0,40)}...</span>`:''}
+            </div>`).join('')}
+          </div>
+
+          <div style="padding:12px 14px;background:var(--line-tint);border:1px solid var(--line);border-radius:8px;font-size:12.5px;color:var(--line-deep);line-height:1.7"><b>これで動作可能になったこと:</b><br>
+          ✓ サロンの公式LINE に <b>友だちが追加</b> されると自動で顧客リストに登録<br>
+          ✓ 「営業時間」 等のキーワードに <b>自動応答</b><br>
+          ✓ <b>商品が売れたら</b> LINE で注文確認通知 + admin に即反映<br>
+          ${data.stripe_webhook_secret?'✓ Stripe決済完了 → 注文記録 + LINE通知 が自動連携':''}
+          </div>
+
+          <div style="margin-top:14px;padding:12px;background:var(--bg);border:1px solid var(--rule);border-radius:8px;font-size:11.5px;font-family:var(--mono);color:var(--ink-3);line-height:1.7;word-break:break-all"><b style="color:var(--ink)">登録された Webhook URL:</b><br>LINE: ${data.line_webhook_url}<br>${data.stripe_webhook_url?`Stripe: ${data.stripe_webhook_url}`:''}</div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn" onclick="closeModal()">閉じる</button>
+          <a href="https://line.me/R/ti/p/${l.oa_basic_id||'@demo-shop'}" target="_blank" class="btn line-fill">LINE で友だち追加して試す</a>
+        </div>
+      `);
+    } else {
+      openModal(`
+        <div class="modal-h"><h2>⚠️ 一部失敗</h2><button class="x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+        <div class="modal-body">
+          <div style="padding:14px;background:var(--warn-tint);border:1px solid var(--warn);border-radius:10px;margin-bottom:14px;font-size:13px;color:var(--warn)"><b>${data.errors.length}箇所で問題発生</b><br>下のステップを確認して修正してから再実行してください</div>
+          <div style="display:grid;gap:6px">${data.steps.map(s=>`<div style="display:flex;gap:8px;padding:8px 12px;background:${s.ok===true?'var(--pos-tint)':s.ok==='skipped'?'#FAFAFA':'var(--neg-tint)'};border-radius:6px;font-size:12.5px;align-items:center">
+            <span>${s.ok===true?'✓':s.ok==='skipped'?'—':'✕'}</span>
+            <b style="flex:1">${s.step}</b>
+            ${s.error?`<span style="font-family:var(--mono);font-size:10.5px;color:var(--neg)">${s.error}</span>`:''}
+          </div>`).join('')}</div>
+        </div>
+        <div class="modal-foot"><button class="btn pri" onclick="closeModal()">閉じる</button></div>
+      `);
+    }
+  } catch(e){
+    toast('通信エラー: '+e.message, 'error');
+  }
 };
 
 window.lineEditField = (key, label, isSecret) => {
