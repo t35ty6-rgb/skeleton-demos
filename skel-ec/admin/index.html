@@ -558,6 +558,17 @@ img{max-width:100%;display:block}
 .img-add:hover .lib{color:var(--pri)}
 .img-add input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
 
+/* LINE account modal rows */
+.line-row{background:var(--surface);border:1.5px solid var(--rule);border-radius:10px;padding:14px 16px;margin-bottom:10px;transition:.15s}
+.line-row[data-key]:hover{border-color:var(--pri-line)}
+.line-row-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.line-row-label{font-weight:900;font-size:13.5px;color:var(--ink);display:flex;align-items:center;gap:8px}
+.line-row-label .num-tag{display:inline-grid;place-items:center;width:24px;height:24px;background:var(--pri);color:#fff;border-radius:50%;font-family:var(--mono);font-size:11px;font-weight:900}
+.line-row-val{display:flex;align-items:center;gap:10px}
+.line-row-display{flex:1;font-family:var(--mono);font-size:12.5px;color:var(--ink);background:var(--bg);padding:8px 12px;border-radius:6px;border:1px solid var(--rule);word-break:break-all;font-weight:700}
+.line-row-empty{flex:1;font-size:12px;color:var(--ink-4);font-style:italic;padding:8px 12px;border:1px dashed var(--rule-strong);border-radius:6px;background:#FAFAFA}
+.line-row-hint{font-size:11px;color:var(--ink-3);margin-top:6px;line-height:1.6}
+
 /* image lightbox */
 .lb-back{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:120;display:none;align-items:center;justify-content:center;padding:30px;backdrop-filter:blur(4px)}
 .lb-back.on{display:flex;animation:fadeIn .2s ease}
@@ -800,6 +811,11 @@ const defaultSettings = {
   theme: { dark:false, header:'#FFFFFF', primary:'#F97316', save:'#FBBF24', danger:'#F87171', success:'#22C55E' },
   shop: { name:'Demo Shop', slug:'demo-shop', tagline:'LINEで簡単・気軽にショッピング', description:'小さな魅力的なショップです。新しいお客様、リピーター様、どちらもお待ちしております。', owner_name:'吉田 恭聡', email:'t3.5ty6@gmail.com', phone:'0776-XX-XXXX' },
   line: {
+    channel_id: '',                       // LINE Developers ① Channel ID
+    channel_secret: '',                   // LINE Developers ② Channel secret
+    access_token: '',                     // LINE Developers ③ Channel access token
+    oa_name: 'Demo Shop',                 // 公式アカウント表示名
+    oa_basic_id: '@demo-shop',            // 公式アカウントID @xxx
     rich_menu_active: 'メインメニュー',
     rich_menu_cells: [
       {label:'商品一覧', action:'カテゴリ', link:'#/p'},
@@ -2914,29 +2930,88 @@ window.closeAllDropdowns = () => {
   document.querySelectorAll('.dropdown').forEach(d => d.remove());
 };
 
-/* LINE Account modal */
+/* LINE Account modal — editable で 3つの credentials + OA情報を入力 */
 window.openLineAccount = () => {
+  const l = settings.line;
+  const connected = l.channel_id && l.channel_secret && l.access_token;
+  const tenantSlug = settings.shop.slug || 'demo-shop';
+  const row = (key, label, opts={}) => {
+    const val = l[key] || '';
+    const isSecret = opts.secret;
+    const display = val ? (isSecret ? '••••••••••••' + val.slice(-6) : val) : '';
+    return `<div class="line-row" data-key="${key}">
+      <div class="line-row-h">
+        <div class="line-row-label">${opts.numTag?`<span class="num-tag">${opts.numTag}</span>`:''}${label}</div>
+        ${val ? `<span class="bd ok">保存済</span>` : `<span class="bd warn">未設定</span>`}
+      </div>
+      <div class="line-row-val" id="lineVal_${key}">
+        ${val ? `<span class="line-row-display">${display}</span>` : `<span class="line-row-empty">${opts.placeholder||'未入力'}</span>`}
+        <button class="btn sm pri" onclick="lineEditField('${key}','${label}',${opts.secret?'true':'false'})">${val?'変更':'入力'}</button>
+      </div>
+      ${opts.hint?`<div class="line-row-hint">${opts.hint}</div>`:''}
+    </div>`;
+  };
+
   openModal(`
     <div class="modal-h"><h2>LINE 公式アカウント連携</h2><button class="x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body">
-      <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--line-tint);border:1px solid var(--line);border-radius:10px;margin-bottom:18px">
-        <div style="width:48px;height:48px;border-radius:12px;background:var(--line);color:#fff;display:grid;place-items:center">${icons.line}</div>
-        <div style="flex:1"><div style="font-weight:900;font-size:15px;color:var(--ink)">Demo Shop (公式アカウント)</div><div style="font-family:var(--mono);font-size:12px;color:var(--line-deep)">@demo-shop · 友だち ${C().length}人</div></div>
-        <span class="bd line">接続済</span>
+      <div style="display:flex;align-items:center;gap:14px;padding:14px;background:${connected?'var(--line-tint)':'var(--warn-tint)'};border:1px solid ${connected?'var(--line)':'var(--warn)'};border-radius:10px;margin-bottom:18px">
+        <div style="width:48px;height:48px;border-radius:12px;background:${connected?'var(--line)':'var(--warn)'};color:#fff;display:grid;place-items:center">${icons.line}</div>
+        <div style="flex:1">
+          <div style="font-weight:900;font-size:15px;color:var(--ink)">${l.oa_name||'公式アカウント'} <button onclick="editTextSetting('line.oa_name','公式アカウント名')" style="background:transparent;border:0;color:var(--pri);cursor:pointer;font-size:11px;margin-left:4px">編集</button></div>
+          <div style="font-family:var(--mono);font-size:12px;color:${connected?'var(--line-deep)':'var(--warn)'}">${l.oa_basic_id||'@(未設定)'} <button onclick="editTextSetting('line.oa_basic_id','LINE Basic ID')" style="background:transparent;border:0;color:var(--pri);cursor:pointer;font-size:10px">編集</button> · 友だち ${C().length}人</div>
+        </div>
+        <span class="bd ${connected?'line':'warn'}">${connected?'接続済':'未接続'}</span>
       </div>
 
-      <div class="set-tbl-row" style="border-radius:8px;border:1px solid var(--rule);margin-bottom:10px;grid-template-columns:1fr auto"><div class="k">Channel ID</div><div class="v" style="font-family:var(--mono);font-size:12.5px">2010266648</div></div>
-      <div class="set-tbl-row" style="border-radius:8px;border:1px solid var(--rule);margin-bottom:10px;grid-template-columns:1fr auto"><div class="k">Channel Access Token</div><div class="v"><span class="bd ok">保存済</span></div></div>
-      <div class="set-tbl-row" style="border-radius:8px;border:1px solid var(--rule);margin-bottom:10px;grid-template-columns:1fr auto"><div class="k">Webhook URL</div><div class="v" style="font-family:var(--mono);font-size:11.5px">https://demo-shop.skel.ec/api/line/webhook</div></div>
-      <div class="set-tbl-row" style="border-radius:8px;border:1px solid var(--rule);margin-bottom:10px;grid-template-columns:1fr auto"><div class="k">残り送信可能数 (今月)</div><div class="v"><b style="font-family:var(--mono);font-weight:900;color:var(--line-deep)">200</b> / 200 通</div></div>
+      <div style="padding:12px 14px;background:var(--pri-tint);border:1px dashed var(--pri-line);border-radius:8px;margin-bottom:14px;font-size:12.5px;color:var(--ink-2);line-height:1.7">
+        <b style="color:var(--pri-deep)">📖 入力するもの:</b> LINE Developers Console の <b>「Basic settings」</b> から ① ②、 <b>「Messaging API」</b> から ③ をコピー → 下にペースト。<br>
+        <a href="https://t35ty6-rgb.github.io/skeleton-demos/skel-ec-setup/" target="_blank" style="display:inline-block;margin-top:6px;color:var(--pri);font-weight:700;text-decoration:underline">▶ 画面付きセットアップガイドを開く</a>
+      </div>
 
-      <div style="margin-top:14px;display:flex;gap:8px"><button class="btn" onclick="toast('LINE Webhook 疎通テスト 成功')">疎通テスト</button><button class="btn pri" onclick="route('#/settings/line/notice');closeModal()">通知設定を開く</button></div>
+      ${row('channel_id', 'Channel ID', {numTag:'①', placeholder:'10桁の数字 (例: 1234567890)'})}
+      ${row('channel_secret', 'Channel secret', {numTag:'②', placeholder:'32桁の英数字', secret:true})}
+      ${row('access_token', 'Channel Access Token', {numTag:'③', placeholder:'100文字以上の長い英数字', secret:true, hint:'※ Messaging API タブで発行 → コピー'})}
+
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)">
+        <div style="font-size:11.5px;color:var(--ink-3);font-weight:700;margin-bottom:8px">自動設定 (お客様 LINE EC 用)</div>
+        <div class="set-tbl-row" style="border-radius:6px;border:1px solid var(--rule);margin-bottom:8px;grid-template-columns:120px 1fr;padding:10px 14px">
+          <div class="k">Webhook URL</div>
+          <div class="v" style="font-family:var(--mono);font-size:11px;color:var(--ink-3);word-break:break-all">https://${tenantSlug}.skel.ec/api/line/webhook</div>
+        </div>
+        <div style="font-size:11px;color:var(--ink-3);line-height:1.7">↑ LINE Developers Console の Messaging API タブ → Webhook URL に この URL を貼り付けて 「Verify」 → 「Use webhook」 を ON にすると配信開始</div>
+      </div>
+
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="lineConnTest()" ${connected?'':'disabled'}>疎通テスト</button>
+        <button class="btn pri" onclick="route('#/settings/line/notice');closeModal()">通知設定を開く</button>
+      </div>
     </div>
     <div class="modal-foot">
       <a href="https://manager.line.biz/" target="_blank" class="btn line-fill">LINE Official Manager を開く</a>
       <button class="btn" onclick="closeModal()">閉じる</button>
     </div>
   `);
+};
+
+window.lineEditField = (key, label, isSecret) => {
+  const cur = settings.line[key] || '';
+  openFormModal(label + ' を入力', [
+    {name:'value', label: label + (isSecret?' (機密情報)':''), value: cur, required:true, type:isSecret?'textarea':'text', rows:3, placeholder: isSecret ? '貼り付けてください (Ctrl+V / ⌘+V)' : ''}
+  ], (data)=>{
+    settings.line[key] = data.value.trim();
+    saveStore();
+    toast(label + ' を保存しました');
+    openLineAccount(); // re-open with new state
+  });
+};
+
+window.lineConnTest = () => {
+  const l = settings.line;
+  if(!l.channel_id || !l.channel_secret || !l.access_token){
+    toast('まず ①②③ をすべて入力してください', 'error'); return;
+  }
+  toast('LINE Webhook 疎通テスト 成功 (✓ 200 OK)');
 };
 
 /* Message broadcast composer */
