@@ -851,7 +851,13 @@ const defaultSettings = {
       {name:'NP後払い', provider:'NP', fee:'2.9%', enabled:false},
       {name:'LINE Pay', provider:'LINE Pay', fee:'3.45%', enabled:false}
     ],
-    stripe: { account:'acct_•••••••••••XjGa', pk_live:'pk_live_••••••••••', sk_saved:true, webhook_saved:true }
+    stripe: {
+      mode: 'test',                  // 'test' or 'live'
+      account_id: '',                // acct_xxxx
+      pk: '',                        // pk_test_xxx or pk_live_xxx
+      sk: '',                        // sk_test_xxx or sk_live_xxx (機密)
+      webhook_secret: ''             // whsec_xxx (機密)
+    }
   },
   limit: { cancel_max:5, return_rate_max:40 },
   app: {
@@ -2050,20 +2056,68 @@ const settingsSubs = {
   },
 
   'payment/stripe'(){
+    const s = settings.payment.stripe;
+    const isLive = s.mode === 'live';
+    const connected = s.account_id && s.pk && s.sk;
+    const row = (key, label, opts={}) => {
+      const val = s[key] || '';
+      const isSecret = opts.secret;
+      const display = val ? (isSecret ? '••••••••' + val.slice(-6) : val) : '';
+      return `<div class="line-row" data-key="${key}">
+        <div class="line-row-h">
+          <div class="line-row-label">${opts.numTag?`<span class="num-tag">${opts.numTag}</span>`:''}${label}</div>
+          ${val ? `<span class="bd ok">保存済</span>` : `<span class="bd warn">未設定</span>`}
+        </div>
+        <div class="line-row-val">
+          ${val ? `<span class="line-row-display">${display}</span>` : `<span class="line-row-empty">${opts.placeholder||'未入力'}</span>`}
+          <button class="btn sm pri" onclick="stripeEditField('${key}','${label}',${isSecret?'true':'false'})">${val?'変更':'入力'}</button>
+        </div>
+        ${opts.hint?`<div class="line-row-hint">${opts.hint}</div>`:''}
+      </div>`;
+    };
+
     document.getElementById('page').innerHTML = `
       ${bc(['設定','#/settings'], ['決済方法設定','#/settings'], ['Stripe設定'])}
-      ${subHead('card', 'Stripe設定')}
+      ${subHead('card', 'Stripe設定', `<a href="https://dashboard.stripe.com/${isLive?'apikeys':'test/apikeys'}" target="_blank" class="btn">Stripe Dashboard を開く ↗</a>`)}
 
-      <div class="set-tbl">
-        ${setRow('連携状態', '<span class="bd ok">本番モード稼働中</span>')}
-        ${setRow('Stripe Account ID', '<span style="font-family:var(--mono);font-size:12.5px">acct_•••••••••••XjGa</span>')}
-        ${setRow('Publishable Key (本番)', '<span style="font-family:var(--mono);font-size:12px">pk_live_••••••••••••</span>')}
-        ${setRow('Secret Key (本番)', '<span class="bd ok">保存済</span>')}
-        ${setRow('Webhook Signing Secret', '<span class="bd ok">保存済</span>')}
-        ${setRow('対応決済', 'クレジットカード / Apple Pay / Google Pay')}
+      <div style="display:flex;align-items:center;gap:14px;padding:14px;background:${connected?'var(--pos-tint)':'var(--warn-tint)'};border:1px solid ${connected?'var(--pos)':'var(--warn)'};border-radius:10px;margin-bottom:18px">
+        <div style="width:48px;height:48px;border-radius:12px;background:${connected?'var(--pos)':'var(--warn)'};color:#fff;display:grid;place-items:center;font-weight:900;font-size:14px">S</div>
+        <div style="flex:1">
+          <div style="font-weight:900;font-size:15px;color:var(--ink)">Stripe ${isLive?'本番':'テスト'}モード</div>
+          <div style="font-size:11.5px;color:var(--ink-3);margin-top:3px">クレジットカード / Apple Pay / Google Pay 対応</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;color:var(--ink-3);font-weight:700;margin-bottom:4px;text-align:right">モード切替</div>
+          <div style="display:flex;background:var(--bg);border:1px solid var(--rule);border-radius:8px;padding:2px">
+            <button onclick="settings.payment.stripe.mode='test';saveStore();route()" style="padding:5px 11px;font-size:11px;font-weight:700;border-radius:5px;border:0;cursor:pointer;background:${!isLive?'var(--warn)':'transparent'};color:${!isLive?'#fff':'var(--ink-3)'}">テスト</button>
+            <button onclick="settings.payment.stripe.mode='live';saveStore();route()" style="padding:5px 11px;font-size:11px;font-weight:700;border-radius:5px;border:0;cursor:pointer;background:${isLive?'var(--pos)':'transparent'};color:${isLive?'#fff':'var(--ink-3)'}">本番</button>
+          </div>
+        </div>
       </div>
 
-      <div style="margin-top:18px"><button class="btn">テスト決済を実行</button> <button class="btn pri">設定を更新</button></div>
+      <div style="padding:12px 14px;background:var(--pri-tint);border:1px dashed var(--pri-line);border-radius:8px;margin-bottom:14px;font-size:12.5px;color:var(--ink-2);line-height:1.7">
+        <b style="color:var(--pri-deep)">📖 入力するもの:</b> Stripe Dashboard ( <a href="https://dashboard.stripe.com/${isLive?'apikeys':'test/apikeys'}" target="_blank" style="color:var(--pri);font-weight:700">${isLive?'本番':'テスト'}モード</a> ) → 「開発者」 → 「APIキー」 から:<br>
+        ① Account ID (右上の 「acct_xxx」 か 「アカウント詳細」)<br>
+        ② 公開可能キー (Publishable key) — <code>${isLive?'pk_live_':'pk_test_'}xxxxx</code><br>
+        ③ シークレットキー (Secret key) — <code>${isLive?'sk_live_':'sk_test_'}xxxxx</code> ※「キーを表示」 をクリック<br>
+        ④ Webhook 署名シークレット — Webhook エンドポイント作成後に発行される <code>whsec_xxxxx</code>
+      </div>
+
+      ${row('account_id', 'Stripe Account ID', {numTag:'①', placeholder:'acct_xxxxx (20文字程度)'})}
+      ${row('pk', isLive?'Publishable Key (pk_live_)':'Publishable Key (pk_test_)', {numTag:'②', placeholder:isLive?'pk_live_xxxxx':'pk_test_xxxxx'})}
+      ${row('sk', isLive?'Secret Key (sk_live_)':'Secret Key (sk_test_)', {numTag:'③', placeholder:isLive?'sk_live_xxxxx':'sk_test_xxxxx', secret:true, hint:'※ 機密情報。 「キーを表示」 後にコピー'})}
+      ${row('webhook_secret', 'Webhook Signing Secret', {numTag:'④', placeholder:'whsec_xxxxx', secret:true, hint:'※ Webhook エンドポイント設定後に発行'})}
+
+      <div style="margin-top:14px;padding:12px 14px;background:#FAFAFA;border:1px solid var(--rule);border-radius:8px;font-size:11.5px;color:var(--ink-3);line-height:1.7">
+        <b style="color:var(--ink)">Webhook エンドポイント URL:</b><br>
+        <code style="font-family:var(--mono);background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--rule);word-break:break-all">https://${settings.shop.slug || 'demo-shop'}.skel.ec/api/stripe/webhook</code><br>
+        ↑ この URL を Stripe Dashboard → 「Webhook」 → 「エンドポイント追加」 で登録 → 発行される whsec_ を ④ に貼る
+      </div>
+
+      <div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="stripeTestPayment()" ${connected?'':'disabled'}>テスト決済を実行</button>
+        <button class="btn pri" onclick="toast('Stripe設定を保存しました')">設定を更新</button>
+      </div>
     `;
   },
 
@@ -3004,6 +3058,24 @@ window.lineEditField = (key, label, isSecret) => {
     toast(label + ' を保存しました');
     openLineAccount(); // re-open with new state
   });
+};
+
+window.stripeEditField = (key, label, isSecret) => {
+  const cur = settings.payment.stripe[key] || '';
+  openFormModal(label + ' を入力', [
+    {name:'value', label: label + (isSecret?' (機密情報)':''), value: cur, required:true, type:isSecret?'textarea':'text', rows:3, placeholder: 'Stripe Dashboard からコピーして貼り付けてください'}
+  ], (data)=>{
+    settings.payment.stripe[key] = data.value.trim();
+    saveStore();
+    toast(label + ' を保存しました');
+    route();
+  });
+};
+
+window.stripeTestPayment = () => {
+  const s = settings.payment.stripe;
+  if(!s.sk){ toast('Secret Key を入力してください', 'error'); return; }
+  toast(s.mode==='live' ? 'テスト決済 ¥100 を本番モードで実行しました (✓ 成功)' : 'テスト決済 ¥100 をテストモードで実行しました (✓ 成功)');
 };
 
 window.lineConnTest = () => {
