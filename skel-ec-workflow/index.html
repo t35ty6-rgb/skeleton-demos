@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Skel·EC 提案→導入→運用 フロー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=M+PLUS+Rounded+1c:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;color:#2C2C2C;line-height:1.8;font-feature-settings:'palt'}
+.wrap{max-width:1080px;margin:0 auto;padding:40px 24px 100px}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,#F97316 0%,#EA580C 100%);color:#fff;padding:36px 32px;border-radius:18px;margin-bottom:30px;box-shadow:0 10px 28px rgba(249,115,22,.25);position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50px;right:-50px;width:260px;height:260px;background:rgba(255,255,255,.08);border-radius:50%}
+.hero .badge{display:inline-block;font-family:'JetBrains Mono';font-size:11px;font-weight:700;letter-spacing:.1em;padding:4px 10px;background:rgba(255,255,255,.2);border-radius:99px;margin-bottom:10px;position:relative}
+.hero h1{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:30px;letter-spacing:-.02em;margin-bottom:6px;position:relative;line-height:1.3}
+.hero p{font-size:14px;opacity:.95;position:relative;line-height:1.7}
+
+/* Legend */
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:28px;font-size:12px;font-weight:700}
+.legend-item{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;background:#fff;border-radius:99px;border:1.5px solid;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.legend-item.owner{border-color:#F97316;color:#EA580C}
+.legend-item.jobs{border-color:#06C755;color:#04A648}
+.legend-item.salon{border-color:#8B5CF6;color:#7C3AED}
+.legend-item .dot{width:9px;height:9px;border-radius:50%}
+.legend-item.owner .dot{background:#F97316}
+.legend-item.jobs .dot{background:#06C755}
+.legend-item.salon .dot{background:#8B5CF6}
+
+/* Phase */
+.phase{position:relative;margin-bottom:28px}
+.phase-bar{display:flex;align-items:center;gap:14px;margin-bottom:18px;padding:0 4px}
+.phase-bar .num{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#F97316,#EA580C);color:#fff;display:grid;place-items:center;font-family:'M PLUS Rounded 1c';font-weight:900;font-size:22px;flex-shrink:0;box-shadow:0 4px 10px rgba(249,115,22,.28)}
+.phase-bar h2{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:22px;color:#2C2C2C;letter-spacing:-.01em;flex:1}
+.phase-bar h2 em{font-style:normal;font-size:13px;color:#666;font-weight:500;margin-left:8px}
+.phase-bar .duration{font-family:'JetBrains Mono';font-size:11.5px;font-weight:700;color:#EA580C;background:#FFF7ED;padding:5px 12px;border-radius:99px;border:1px solid #FED7AA;flex-shrink:0}
+
+/* Two-column layout */
+.split{display:grid;grid-template-columns:1fr 60px 1fr;gap:0;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.03);position:relative}
+.col{padding:20px 24px}
+.col.owner{background:linear-gradient(180deg,#FFF7ED 0%,#fff 100%);border-right:1px dashed #FED7AA}
+.col.jobs{background:linear-gradient(180deg,#F0FDF4 0%,#fff 100%);border-left:1px dashed #86EFAC}
+.col.salon{background:linear-gradient(180deg,#EDE9FE 0%,#fff 100%);border-right:1px dashed #C4B5FD}
+.col-h{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.col-h .lab{font-family:'JetBrains Mono';font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:3px 9px;border-radius:99px}
+.col.owner .col-h .lab{background:#F97316;color:#fff}
+.col.jobs .col-h .lab{background:#06C755;color:#fff}
+.col.salon .col-h .lab{background:#8B5CF6;color:#fff}
+.col-h .ttl{font-weight:900;font-size:14px;color:#2C2C2C}
+.col ul{list-style:none;padding:0}
+.col ul li{position:relative;padding:6px 0 6px 20px;font-size:13.5px;color:#444;line-height:1.7}
+.col ul li::before{content:'';position:absolute;left:0;top:14px;width:7px;height:7px;border-radius:50%}
+.col.owner ul li::before{background:#F97316}
+.col.jobs ul li::before{background:#06C755}
+.col.salon ul li::before{background:#8B5CF6}
+.col ul li b{color:#EA580C;font-weight:700}
+.col.jobs ul li b{color:#04A648}
+.col.salon ul li b{color:#7C3AED}
+
+/* Handoff arrow */
+.hand{display:flex;align-items:center;justify-content:center;background:#FFFAF0;position:relative}
+.hand svg{width:36px;height:36px;color:#F97316;animation:slideArrow 1.8s ease-in-out infinite}
+.hand.j-to-o svg{transform:rotate(180deg);color:#06C755}
+.hand.o-to-j svg{color:#F97316}
+@keyframes slideArrow{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+.hand .lab{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono';font-size:9.5px;font-weight:700;color:#666;background:#fff;padding:2px 6px;border-radius:99px;border:1px solid #DDD;white-space:nowrap}
+
+/* Single phase (only one party) */
+.split.single{grid-template-columns:1fr}
+.split.single .hand{display:none}
+
+@media(max-width:760px){
+  .split{grid-template-columns:1fr;gap:0}
+  .col.owner,.col.salon{border-right:0;border-bottom:1px dashed #FED7AA}
+  .col.jobs{border-left:0;border-top:1px dashed #86EFAC}
+  .hand{padding:14px;background:transparent}
+  .hand svg{transform:rotate(90deg)}
+  .hand.j-to-o svg{transform:rotate(270deg)}
+}
+
+/* Connector between phases */
+.connector{display:flex;justify-content:center;padding:6px 0;color:#FBA94B;font-size:24px}
+
+/* Hand-off ribbon (what flows across) */
+.handoff-data{background:#FFFBF5;border:1.5px dashed #FBA94B;border-radius:8px;padding:9px 14px;margin:14px 0;font-size:12.5px;color:#7C4A1A;display:flex;align-items:center;gap:8px;font-weight:600}
+.handoff-data .ic{font-size:14px}
+.handoff-data b{color:#EA580C;font-weight:900;font-family:'JetBrains Mono'}
+
+/* Summary footer */
+.summary{background:#fff;border-radius:16px;padding:30px 32px;margin-top:36px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.summary h2{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:20px;color:#2C2C2C;margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.summary h2::before{content:'';width:6px;height:22px;background:linear-gradient(180deg,#F97316,#EA580C);border-radius:3px}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.metric{background:#FAFAFA;border:1px solid #EEE;border-radius:12px;padding:18px 20px;position:relative;overflow:hidden}
+.metric::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#F97316,#EA580C)}
+.metric.jobs::before{background:linear-gradient(90deg,#06C755,#04A648)}
+.metric .lab{font-size:11px;color:#888;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px}
+.metric .val{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:28px;color:#EA580C;letter-spacing:-.02em;line-height:1.1}
+.metric.jobs .val{color:#04A648}
+.metric .sub{font-size:11.5px;color:#666;margin-top:4px;font-weight:500}
+
+/* Inline tags */
+.kbd{display:inline-block;font-family:'JetBrains Mono';font-size:11px;background:#F4F6F9;color:#444;padding:2px 7px;border-radius:4px;border:1px solid #DDD;font-weight:700;margin:0 2px}
+.kbd.line{background:#DFF7E5;color:#04A648;border-color:#06C755}
+.kbd.pri{background:#FFF7ED;color:#EA580C;border-color:#FED7AA}
+
+.foot{text-align:center;margin-top:40px;font-size:11px;color:#999;font-family:'JetBrains Mono';letter-spacing:.06em}
+.foot em{font-style:normal;color:#F97316}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <span class="badge">SKEL·EC WORKFLOW</span>
+    <h1>提案 → 導入 → 運用<br><span style="font-size:18px;opacity:.85">役割分担と受け渡しフロー</span></h1>
+    <p>サロン (お客) との商談から、 オーナーが渡すもの、 Jobs が自動でやること、 引き渡し後の継続運用まで。 各フェーズで「誰がどこまでやるか」 を明確化。</p>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item salon"><span class="dot"></span>サロン (お客様)</div>
+    <div class="legend-item owner"><span class="dot"></span>オーナー (吉田)</div>
+    <div class="legend-item jobs"><span class="dot"></span>Jobs (自動・Cloud Functions)</div>
+  </div>
+
+  <!-- ===== Phase 1: 提案・商談 ===== -->
+  <div class="phase">
+    <div class="phase-bar">
+      <div class="num">1</div>
+      <h2>提案・商談 <em>サロン発掘 → ヒアリング → デモ提示</em></h2>
+      <span class="duration">1〜3日</span>
+    </div>
+    <div class="split">
+      <div class="col salon">
+        <div class="col-h"><span class="lab">SALON</span><span class="ttl">サロン側</span></div>
+        <ul>
+          <li>LINE 公式アカウントは持ってる、 EC は <b>まだ未着手</b></li>
+          <li>「LINE で売れたら…」 の漠然とした希望</li>
+          <li>知り合い経由 or 広告経由で <b>オーナーと接点</b></li>
+        </ul>
+      </div>
+      <div class="hand o-to-j"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="lab">商談</span></div>
+      <div class="col owner">
+        <div class="col-h"><span class="lab">OWNER</span><span class="ttl">オーナー (吉田)</span></div>
+        <ul>
+          <li>Skel·EC <b>デモ画面</b> を見せる (https://t35ty6-rgb.github.io/skeleton-demos/skel-ec/)</li>
+          <li>商材ヒアリング (何売るか / 客層 / 予算)</li>
+          <li>料金提示・契約締結</li>
+          <li>サロン名 → <b>URL slug 仮決め</b> (例: <span class="kbd pri">hikari-salon</span>)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector -->
+  <div class="connector">⇣</div>
+
+  <!-- ===== Phase 2: Credentials 受領 ===== -->
+  <div class="phase">
+    <div class="phase-bar">
+      <div class="num">2</div>
+      <h2>Credentials 受領 <em>LINE と Stripe の鍵を集める</em></h2>
+      <span class="duration">10〜15分</span>
+    </div>
+    <div class="split">
+      <div class="col owner">
+        <div class="col-h"><span class="lab">OWNER</span><span class="ttl">オーナー</span></div>
+        <ul>
+          <li>サロンに <b>セットアップガイドURL</b> を送る (https://t35ty6-rgb.github.io/skeleton-demos/skel-ec-setup/)</li>
+          <li>サロンが ①②③ をコピペして返してきたら、 一旦預かる</li>
+          <li>Stripe は (使うなら) <b>Skeleton 法人 sk_live</b> を使うか、 サロンが新規作成して取得</li>
+        </ul>
+      </div>
+      <div class="hand o-to-j"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="lab">credentials</span></div>
+      <div class="col salon">
+        <div class="col-h"><span class="lab">SALON</span><span class="ttl">サロン側</span></div>
+        <ul>
+          <li>ガイドを見ながら <b>LINE Developers Console</b> を開く</li>
+          <li>①Channel ID / ②Channel secret / ③Access token をコピー → オーナーに送る (LINEで全く問題なし)</li>
+          <li>所要 <b>約 10分</b>。 PC が苦手な店主でも画面付きガイドで進められる</li>
+        </ul>
+      </div>
+    </div>
+    <div class="handoff-data"><span class="ic">📋</span>オーナー → Jobs に渡るもの: <b>① Channel ID</b> / <b>② Channel secret</b> / <b>③ Access token</b> / <b>サロン slug</b> / (任意) Stripe sk</div>
+  </div>
+
+  <div class="connector">⇣</div>
+
+  <!-- ===== Phase 3: 自動セットアップ ===== -->
+  <div class="phase">
+    <div class="phase-bar">
+      <div class="num">3</div>
+      <h2>自動セットアップ <em>1クリックで本番モード起動</em></h2>
+      <span class="duration">30秒</span>
+    </div>
+    <div class="split">
+      <div class="col owner">
+        <div class="col-h"><span class="lab">OWNER</span><span class="ttl">オーナー</span></div>
+        <ul>
+          <li>admin で受け取った credentials を <b>各欄に貼り付け</b> (5箇所、 2分)</li>
+          <li>ショップ設定で <b>サロン slug を確定</b> (例: <span class="kbd pri">hikari-salon</span>)</li>
+          <li><b>「🚀 本番モードに自動セットアップ」</b> ボタンを押す</li>
+          <li>30秒待つ → 「🎉 本番セットアップ完了」 モーダル確認</li>
+        </ul>
+      </div>
+      <div class="hand o-to-j"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="lab">setupTenant API</span></div>
+      <div class="col jobs">
+        <div class="col-h"><span class="lab">JOBS</span><span class="ttl">Jobs (Cloud Functions)</span></div>
+        <ul>
+          <li>① LINE webhook URL を <b>LINE API に自動登録</b></li>
+          <li>② LINE Use webhook を <b>ON 化</b></li>
+          <li>③ LINE → 自社サーバー の <b>疎通テスト</b></li>
+          <li>④ Stripe webhook endpoint を <b>自動作成</b> (4イベント購読)</li>
+          <li>⑤ Stripe webhook secret を <b>admin に自動保存</b></li>
+          <li>⑥ Firestore に <b>tenant doc 作成</b> (creds 暗号化保管)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">⇣</div>
+
+  <!-- ===== Phase 4: 動作確認 ===== -->
+  <div class="phase">
+    <div class="phase-bar">
+      <div class="num">4</div>
+      <h2>動作確認 <em>友だち追加 → 通知 → 決済 までスループット</em></h2>
+      <span class="duration">5分</span>
+    </div>
+    <div class="split">
+      <div class="col owner">
+        <div class="col-h"><span class="lab">OWNER</span><span class="ttl">オーナー</span></div>
+        <ul>
+          <li>自分の LINE で サロン公式アカウントを <b>友だち追加</b></li>
+          <li>admin 顧客一覧で <b>自分が出るか</b> 確認</li>
+          <li>「営業時間」 と送ってみて 自動応答が返るか確認</li>
+          <li>shop URL から テスト商品を カートに入れて 決済テスト (Stripe テストカード <span class="kbd">4242 4242 4242 4242</span>)</li>
+          <li>注文が admin に出るか + LINE に通知来るか 確認</li>
+        </ul>
+      </div>
+      <div class="hand j-to-o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="lab">webhook受信</span></div>
+      <div class="col jobs">
+        <div class="col-h"><span class="lab">JOBS</span><span class="ttl">Jobs</span></div>
+        <ul>
+          <li>友だち追加 follow イベント → <b>顧客 doc 作成</b> + ウェルカム送信</li>
+          <li>メッセージ受信 → キーワード判定 → <b>自動応答</b></li>
+          <li>Stripe決済完了 webhook → <b>注文作成</b> + LINE通知</li>
+          <li>admin リアルタイム反映</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">⇣</div>
+
+  <!-- ===== Phase 5: 引き渡し ===== -->
+  <div class="phase">
+    <div class="phase-bar">
+      <div class="num">5</div>
+      <h2>サロンへ引き渡し <em>admin の操作レク + URLとパスワード送付</em></h2>
+      <span class="duration">30分</span>
+    </div>
+    <div class="split">
+      <div class="col owner">
+        <div class="col-h"><span class="lab">OWNER</span><span class="ttl">オーナー</span></div>
+        <ul>
+          <li>サロンに <b>admin URL</b> を送る (例: <span class="kbd pri">https://admin.skel.ec/hikari-salon</span>)</li>
+          <li>サロン用 <b>ログイン情報</b> を発行 (メアド + 初回パスワード)</li>
+          <li>30分 オンラインレクチャ:
+            <ul style="padding-left:14px;margin-top:4px">
+              <li>商品登録の仕方</li>
+              <li>注文受付後の発送ステータス変更</li>
+              <li>配信 (キャンペーン送信)</li>
+              <li>顧客タグの使い方</li>
+            </ul>
+          </li>
+          <li>サロンの最初の商品 <b>3〜5点</b> を一緒に登録</li>
+        </ul>
+      </div>
+      <div class="hand o-to-j"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="lab">ログイン</span></div>
+      <div class="col salon">
+        <div class="col-h"><span class="lab">SALON</span><span class="ttl">サロン側</span></div>
+        <ul>
+          <li>admin URL にログイン</li>
+          <li>商品マスタを見ながら <b>残りの商品を順次登録</b></li>
+          <li>公式LINE の リッチメニュー に <b>「ショップ」 ボタン</b> 追加 (admin から)</li>
+          <li>友だちに <b>「LINEからショップ開けます」 とお知らせ配信</b></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">⇣</div>
+
+  <!-- ===== Phase 6: 運用 (継続) ===== -->
+  <div class="phase">
+    <div class="phase-bar">
+      <div class="num">6</div>
+      <h2>運用継続 <em>サロンが日々使う / Jobs は裏で動き続ける</em></h2>
+      <span class="duration">継続的</span>
+    </div>
+    <div class="split">
+      <div class="col salon">
+        <div class="col-h"><span class="lab">SALON</span><span class="ttl">サロン側 (日々)</span></div>
+        <ul>
+          <li>admin で <b>注文確認 → 発送 → ステータス更新</b></li>
+          <li>新商品追加 / 在庫管理</li>
+          <li>月数回 <b>キャンペーン配信</b></li>
+          <li>顧客対応 (LINE で個別返信)</li>
+        </ul>
+      </div>
+      <div class="hand j-to-o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="lab">24/7</span></div>
+      <div class="col jobs">
+        <div class="col-h"><span class="lab">JOBS</span><span class="ttl">Jobs (24/7 自動)</span></div>
+        <ul>
+          <li>全 LINE イベント (友だち / メッセージ / postback) を 自動処理</li>
+          <li>全 Stripe決済を自動的に 注文化 + 通知</li>
+          <li>Firestore リアルタイム同期</li>
+          <li>毎月 LINE / Stripe 残り送信通数を集計</li>
+          <li><b>異常検知 → オーナーに LINE通知</b> (オーナーは 「あ、 これ調べる」 だけ)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="split single" style="margin-top:14px">
+      <div class="col owner" style="border-right:0">
+        <div class="col-h"><span class="lab">OWNER</span><span class="ttl">オーナー (月1)</span></div>
+        <ul>
+          <li>各サロンの <b>運用状況確認</b> (admin / Firestore で多店舗一覧)</li>
+          <li>請求書発行 (Skeleton 月額/従量モデル)</li>
+          <li>サロンからの拡張要望 → Jobs に依頼 → 反映</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Summary ===== -->
+  <div class="summary">
+    <h2>数字で見るオーナー作業量</h2>
+    <div class="metric-grid">
+      <div class="metric">
+        <div class="lab">1サロン あたり</div>
+        <div class="val">約 1 時間</div>
+        <div class="sub">提案〜引き渡しまで オーナーが手を動かす時間 (レク 30分込み)</div>
+      </div>
+      <div class="metric">
+        <div class="lab">10サロン受注時</div>
+        <div class="val">10 時間</div>
+        <div class="sub">繰り返し作業のみ、 設定ノウハウは全部 Jobs 側</div>
+      </div>
+      <div class="metric jobs">
+        <div class="lab">Jobs の作業時間</div>
+        <div class="val">30 秒/サロン</div>
+        <div class="sub">setupTenant API 呼び出し時間のみ、 残りは無人で 24/7</div>
+      </div>
+      <div class="metric jobs">
+        <div class="lab">運用後の Jobs 障害対応</div>
+        <div class="val">自走</div>
+        <div class="sub">異常検知 → オーナー LINE で報告 → 修正提案 まで自動</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">SKEL·EC WORKFLOW <em>·</em> v1.0 <em>·</em> 2026.06.18</div>
+</div>
+</body>
+</html>
