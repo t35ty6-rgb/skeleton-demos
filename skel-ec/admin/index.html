@@ -3078,12 +3078,105 @@ window.stripeTestPayment = () => {
   toast(s.mode==='live' ? 'テスト決済 ¥100 を本番モードで実行しました (✓ 成功)' : 'テスト決済 ¥100 をテストモードで実行しました (✓ 成功)');
 };
 
-window.lineConnTest = () => {
+window.lineConnTest = async () => {
   const l = settings.line;
-  if(!l.channel_id || !l.channel_secret || !l.access_token){
-    toast('まず ①②③ をすべて入力してください', 'error'); return;
+  if(!l.access_token){
+    toast('まず Channel Access Token を入力してください', 'error'); return;
   }
-  toast('LINE Webhook 疎通テスト 成功 (✓ 200 OK)');
+  toast('LINE API に問い合わせ中...', 'info');
+  try {
+    const r = await fetch('https://asia-northeast1-skeleton-skel-ec-2606.cloudfunctions.net/lineVerify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ access_token: l.access_token })
+    });
+    const data = await r.json();
+    if(data.ok){
+      const bot = data.bot;
+      openModal(`
+        <div class="modal-h"><h2>✅ 接続成功</h2><button class="x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+        <div class="modal-body">
+          <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--pos-tint);border:1px solid var(--pos);border-radius:10px;margin-bottom:18px">
+            <div style="width:48px;height:48px;border-radius:12px;background:var(--pos);color:#fff;display:grid;place-items:center;font-size:22px">✓</div>
+            <div style="flex:1"><div style="font-weight:900;font-size:15px;color:var(--ink)">LINE Messaging API 接続済</div><div style="font-size:12px;color:var(--pos);margin-top:3px">サロンの 公式LINE と通信できています</div></div>
+          </div>
+          <div class="set-tbl">
+            ${bot.basicId?`<div class="set-tbl-row"><div class="k">公式アカウントID</div><div class="v" style="font-family:var(--mono)">${bot.basicId}</div><div></div></div>`:''}
+            ${bot.displayName?`<div class="set-tbl-row"><div class="k">表示名</div><div class="v">${bot.displayName}</div><div></div></div>`:''}
+            ${bot.userId?`<div class="set-tbl-row"><div class="k">Bot User ID</div><div class="v" style="font-family:var(--mono);font-size:11.5px;word-break:break-all">${bot.userId}</div><div></div></div>`:''}
+            ${bot.chatMode?`<div class="set-tbl-row"><div class="k">チャットモード</div><div class="v">${bot.chatMode}</div><div></div></div>`:''}
+            ${bot.markAsReadMode?`<div class="set-tbl-row"><div class="k">既読モード</div><div class="v">${bot.markAsReadMode}</div><div></div></div>`:''}
+          </div>
+          ${bot.basicId && bot.displayName ? `<div style="margin-top:14px;padding:12px 14px;background:var(--line-tint);border:1px solid var(--line);border-radius:8px;font-size:12.5px;color:var(--line-deep);line-height:1.7"><b>次のステップ:</b> サロンの公式アカウント情報を保存する? <button class="btn sm pri" onclick="settings.line.oa_name='${(bot.displayName||'').replace(/'/g,'')}';settings.line.oa_basic_id='${bot.basicId||''}';saveStore();toast('公式アカウント情報を保存しました');closeModal()" style="margin-left:8px">保存</button></div>` : ''}
+        </div>
+        <div class="modal-foot"><button class="btn pri" onclick="closeModal()">閉じる</button></div>
+      `);
+    } else {
+      openModal(`
+        <div class="modal-h"><h2>❌ 接続失敗</h2><button class="x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+        <div class="modal-body">
+          <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--neg-tint);border:1px solid var(--neg);border-radius:10px;margin-bottom:18px">
+            <div style="width:48px;height:48px;border-radius:12px;background:var(--neg);color:#fff;display:grid;place-items:center;font-size:22px">✕</div>
+            <div style="flex:1"><div style="font-weight:900;font-size:15px;color:var(--ink)">LINE API への接続に失敗</div><div style="font-size:12px;color:var(--neg);margin-top:3px">${data.status?`HTTP ${data.status}`:'通信エラー'}</div></div>
+          </div>
+          <div style="padding:12px 14px;background:#FAFAFA;border:1px solid var(--rule);border-radius:8px;font-size:12px;color:var(--ink-2);font-family:var(--mono);word-break:break-all;line-height:1.6">${data.error||'不明なエラー'}</div>
+          <div style="margin-top:14px;font-size:12.5px;color:var(--ink-2);line-height:1.7"><b>確認ポイント:</b><br>① Channel Access Token を正しくコピー&ペーストしたか<br>② Token の前後にスペースや改行が混じってないか<br>③ LINE Developers Console で Token が 「無効化」 されてないか</div>
+        </div>
+        <div class="modal-foot"><button class="btn" onclick="closeModal()">閉じる</button><button class="btn pri" onclick="closeModal();openLineAccount()">再入力する</button></div>
+      `);
+    }
+  } catch(e){
+    toast('通信エラー: '+e.message, 'error');
+  }
+};
+
+window.stripeTestPayment = async () => {
+  const s = settings.payment.stripe;
+  if(!s.sk){ toast('Secret Key を入力してください', 'error'); return; }
+  toast('Stripe API に問い合わせ中...', 'info');
+  try {
+    const r = await fetch('https://asia-northeast1-skeleton-skel-ec-2606.cloudfunctions.net/stripeVerify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sk: s.sk })
+    });
+    const data = await r.json();
+    if(data.ok){
+      const a = data.account;
+      openModal(`
+        <div class="modal-h"><h2>✅ Stripe 接続成功</h2><button class="x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+        <div class="modal-body">
+          <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--pos-tint);border:1px solid var(--pos);border-radius:10px;margin-bottom:18px">
+            <div style="width:48px;height:48px;border-radius:12px;background:var(--pos);color:#fff;display:grid;place-items:center;font-size:22px">✓</div>
+            <div style="flex:1"><div style="font-weight:900;font-size:15px;color:var(--ink)">Stripe Account 接続済</div><div style="font-size:12px;color:var(--pos);margin-top:3px">${s.mode==='live'?'本番':'テスト'}モードで API key が有効です</div></div>
+          </div>
+          <div class="set-tbl">
+            <div class="set-tbl-row"><div class="k">Account ID</div><div class="v" style="font-family:var(--mono);font-size:12.5px">${a.id}</div><div></div></div>
+            ${a.email?`<div class="set-tbl-row"><div class="k">メール</div><div class="v" style="font-family:var(--mono);font-size:12px">${a.email}</div><div></div></div>`:''}
+            ${a.country?`<div class="set-tbl-row"><div class="k">国</div><div class="v">${a.country}</div><div></div></div>`:''}
+            ${a.business_profile?.name?`<div class="set-tbl-row"><div class="k">事業者名</div><div class="v">${a.business_profile.name}</div><div></div></div>`:''}
+            <div class="set-tbl-row"><div class="k">決済可否</div><div class="v">${a.charges_enabled?'<span class="bd ok">有効</span>':'<span class="bd warn">未承認</span>'}</div><div></div></div>
+          </div>
+          ${a.id ? `<div style="margin-top:14px;padding:12px 14px;background:var(--pri-tint);border:1px solid var(--pri-line);border-radius:8px;font-size:12.5px;color:var(--ink-2);line-height:1.7"><b>Account ID 自動保存:</b> <button class="btn sm pri" onclick="settings.payment.stripe.account_id='${a.id}';saveStore();toast('Account ID を保存しました');closeModal();route()" style="margin-left:8px">保存</button></div>` : ''}
+        </div>
+        <div class="modal-foot"><button class="btn pri" onclick="closeModal()">閉じる</button></div>
+      `);
+    } else {
+      openModal(`
+        <div class="modal-h"><h2>❌ Stripe 接続失敗</h2><button class="x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+        <div class="modal-body">
+          <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--neg-tint);border:1px solid var(--neg);border-radius:10px;margin-bottom:18px">
+            <div style="width:48px;height:48px;border-radius:12px;background:var(--neg);color:#fff;display:grid;place-items:center;font-size:22px">✕</div>
+            <div style="flex:1"><div style="font-weight:900;font-size:15px;color:var(--ink)">Secret Key が無効</div></div>
+          </div>
+          <div style="padding:12px 14px;background:#FAFAFA;border:1px solid var(--rule);border-radius:8px;font-size:12px;color:var(--ink-2);font-family:var(--mono);word-break:break-all">${data.error||'不明なエラー'}</div>
+        </div>
+        <div class="modal-foot"><button class="btn" onclick="closeModal()">閉じる</button></div>
+      `);
+    }
+  } catch(e){
+    toast('通信エラー: '+e.message, 'error');
+  }
 };
 
 /* Message broadcast composer */
