@@ -87,6 +87,29 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
 .foot{text-align:center;margin-top:30px;font-size:11px;color:#999;font-family:'JetBrains Mono';letter-spacing:.06em}
 .foot em{font-style:normal;color:#F97316}
 
+/* ============= 用語補足の吹き出し ============= */
+.bubble{position:relative;background:#FFF7ED;border:1.5px solid #FED7AA;border-radius:14px;padding:14px 16px 14px 50px;margin:14px 0;font-size:12.5px;color:#7C2D12;line-height:1.85;box-shadow:0 2px 6px rgba(234,88,12,.08)}
+.bubble::before{content:'💡';position:absolute;left:14px;top:13px;font-size:22px;line-height:1}
+.bubble.q{background:#EFF6FF;border-color:#BFDBFE;color:#1E3A8A}
+.bubble.q::before{content:'❓'}
+.bubble.tip{background:#F0FDF4;border-color:#BBF7D0;color:#14532D}
+.bubble.tip::before{content:'🌱'}
+.bubble.warn{background:#FEF3C7;border-color:#FCD34D;color:#78350F}
+.bubble.warn::before{content:'⚠️'}
+.bubble.salon{background:#EDE9FE;border-color:#C4B5FD;color:#5B21B6}
+.bubble.salon::before{content:'💇'}
+.bubble.jobs{background:#DFF7E5;border-color:#86EFAC;color:#065F46}
+.bubble.jobs::before{content:'⚙️'}
+.bubble b{font-weight:900;color:inherit}
+.bubble .tag{display:inline-block;font-family:'JetBrains Mono';font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:rgba(0,0,0,.06);margin-right:6px;letter-spacing:.04em;vertical-align:1px}
+.bubble code{font-family:'JetBrains Mono';font-size:11px;background:rgba(0,0,0,.06);padding:1px 6px;border-radius:4px}
+
+.term{position:relative;display:inline-block;border-bottom:1.5px dotted #F97316;color:#EA580C;font-weight:700;cursor:help;padding:0 2px}
+.term:hover .term-tip,.term:focus .term-tip,.term.open .term-tip{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+.term-tip{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%) translateY(4px);background:#1F2937;color:#fff;font-weight:500;font-size:11.5px;line-height:1.7;padding:9px 13px;border-radius:8px;width:240px;text-align:left;opacity:0;visibility:hidden;transition:.2s;z-index:50;box-shadow:0 6px 18px rgba(0,0,0,.25);pointer-events:none}
+.term-tip::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#1F2937}
+.term-tip b{color:#FCD34D;font-weight:700}
+
 @media(max-width:600px){
   .phase{padding:18px 18px}
   .phase-h h2{font-size:16px}
@@ -94,8 +117,19 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
   .step-body{font-size:12px}
   .steps{padding-left:24px}
   .step::before{left:-20px}
+  .term-tip{width:200px}
 }
 </style>
+<script>
+document.addEventListener('click', e => {
+  if(e.target.classList?.contains('term')){
+    document.querySelectorAll('.term.open').forEach(t => { if(t!==e.target) t.classList.remove('open'); });
+    e.target.classList.toggle('open');
+  } else {
+    document.querySelectorAll('.term.open').forEach(t => t.classList.remove('open'));
+  }
+});
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -110,6 +144,24 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
     <span class="legend-item salon"><span class="dot"></span>サロン</span>
     <span class="legend-item owner"><span class="dot"></span>オーナー</span>
     <span class="legend-item jobs"><span class="dot"></span>Jobs (自動)</span>
+  </div>
+
+  <div class="bubble tip"><span class="tag">読み方</span><b>3 色のアクター</b> で 「誰が動いてるか」 が分かる: <span class="actor salon" style="vertical-align:middle"><span class="dot"></span>SALON</span> = サロン側、 <span class="actor owner" style="vertical-align:middle"><span class="dot"></span>OWNER</span> = 吉田、 <span class="actor jobs" style="vertical-align:middle"><span class="dot"></span>JOBS</span> = 自動 (Cloud Function)。 オーナーは <b>赤い吹き出しが付いた瞬間だけ</b> 動けば OK。 緑は機械が裏でやってくれてる。</div>
+
+  <!-- 用語早見表 -->
+  <div class="phase" style="background:linear-gradient(180deg,#FFF7ED 0%,#fff 100%)">
+    <div class="phase-h" style="border-bottom-color:#FED7AA">
+      <div class="num" style="background:linear-gradient(135deg,#3B82F6,#1D4ED8);box-shadow:0 3px 8px rgba(59,130,246,.25)">📚</div>
+      <h2>本文に入る前に: この資料に出てくる用語</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
+      <div class="bubble" style="margin:0"><span class="tag">用語</span><b>サロン slug (スラッグ)</b><br>= サロンの "名札"。 英小文字+数字+ハイフン。 例 <code>hikari-salon</code>。 URL や 内部の名前に使う。 サロン名「IDEAL by Hikaru」 を URL に乗せる用に短くしたもの。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語</span><b>Channel ID / Channel secret / Access token</b><br>= LINE が発行する <b>3点セットの鍵</b>。 サロンが LINE Developers Console から取得して オーナーに渡す。 サロンごとに別物。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語</span><b>Webhook (ウェブフック)</b><br>= "通知 専用 URL"。 LINE で誰かが友だち追加 した瞬間、 LINE が Skel·EC に「ピンポーン」 と知らせるための インターホン。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語</span><b>Stripe webhook secret</b><br>= 決済代行 Stripe 側の 専用ハンコ。 「これは本物の Stripe からの通知」 を確認するため。 自動セットアップで Stripe API から取得して 保存。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語</span><b>Firestore (ファイヤストア)</b><br>= Google が運営する クラウドデータベース。 顧客 / 注文 / 商品 すべての保存先。 サロンごとに 物理的に別フォルダ で保存。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語</span><b>Cloud Function</b><br>= 自動処理 プログラム。 「友だち追加された」 「決済された」 等のイベントが来た時だけ 一瞬起動して処理。 普段は休んでて 月¥0〜。</div>
+    </div>
   </div>
 
   <!-- ============ Day 1 ============ -->
@@ -136,7 +188,8 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
           <span class="step-time">30 分後</span>
           <span class="step-title">「やりたい」 と判断 → 契約締結</span>
         </div>
-        <div class="step-body">月額プラン or 初期費用プラン を選択。 オーナーが <b>サロン slug を仮決め</b> (例: <span class="kbd">hikari-salon</span>)</div>
+        <div class="step-body">月額プラン or 初期費用プラン を選択。 オーナーが <b>サロン <span class="term">slug<span class="term-tip"><b>slug (スラッグ)</b> = サロンの "短い名札"。 URL に使うので 英小文字+数字+ハイフン のみ。 例「IDEAL by Hikaru」 → <code>hikari-salon</code>。 これが全ての処理の キー になる。</span></span> を仮決め</b> (例: <span class="kbd">hikari-salon</span>)</div>
+        <div class="bubble q" style="margin-top:8px"><span class="tag">なぜ仮決め?</span>後でサロンが「やっぱりこの名前嫌」 と言ったら 変えやすいので、 セットアップ直前に確定。 オーナーが提案して サロンの 一言 OK で確定。</div>
       </div>
 
       <div class="step">
@@ -181,10 +234,11 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
           <span class="step-title">① ② ③ をコピー → オーナーに LINE で送る</span>
         </div>
         <div class="step-body">テキストで貼り付け:<br>
-        ① Channel ID: 1234567890<br>
-        ② Channel secret: abc123...<br>
-        ③ Access token: aBcDe...<br>
+        ① <span class="term">Channel ID<span class="term-tip"><b>Channel ID</b> = LINE 公式アカウントの "口座番号" のようなもの。 10桁の数字。 サロン公式アカウントを LINE 内で識別する 番号。</span></span>: 1234567890<br>
+        ② <span class="term">Channel secret<span class="term-tip"><b>Channel secret</b> = LINE が発行する "サロン専用ハンコ"。 通知が本物か確認するため。 漏れたら 偽通知作れちゃうので 厳重管理。</span></span>: abc123...<br>
+        ③ <span class="term">Access token<span class="term-tip"><b>Access token</b> = LINE で "サロン名義で送る権限"。 これを Skel·EC が使って、 サロンの代理でメッセージを送る。</span></span>: aBcDe...<br>
         サロン名: hikari-salon</div>
+        <div class="bubble salon"><span class="tag">サロン作業</span>サロンは <b>ガイドの 1〜11 を そのままタップ</b> していくだけ。 「Channel ID って何?」 と思わなくて OK。 ガイド内で 「ここをコピー」 と指示があるから 押してコピペするだけ。 オーナー向けの ID 解説は 上の用語早見表で十分。</div>
       </div>
 
       <div class="step">
@@ -252,7 +306,7 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
 
       <div class="parallel-block">
         <ul>
-          <li><b>LINE webhook URL</b> を LINE API に自動登録</li>
+          <li><b>LINE <span class="term">webhook<span class="term-tip"><b>Webhook</b> = LINE → Skel·EC への "通知の窓口 URL"。 友だち追加されたら ここに通知が飛んでくる。 自動セットアップは サロン用 URL を 自動で LINE に登録する。</span></span> URL</b> を LINE API に自動登録</li>
           <li><b>Use webhook ON</b> を LINE API に自動設定</li>
           <li><b>LINE 疎通テスト</b> 自動実行</li>
           <li><b>Stripe webhook endpoint</b> を Stripe API に自動作成</li>
@@ -260,6 +314,7 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
           <li><b>Firestore tenant doc</b> 作成 (credentials 暗号化保管)</li>
         </ul>
       </div>
+      <div class="bubble jobs"><span class="tag">自動の内訳</span>この 6 ステップを <b>クリック1回で 30秒</b> でやる。 手動でやると サロンごとに 1時間かかる作業。 (各 API への登録 + テスト + 保存)。 オーナーが触らないので ヒューマンエラーゼロ。</div>
 
       <div class="step jobs">
         <div class="step-top">
@@ -301,9 +356,10 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
         <div class="step-top">
           <span class="actor jobs"><span class="dot"></span>JOBS</span>
           <span class="step-time">2 秒</span>
-          <span class="step-title">follow イベント受信 → 顧客 doc 作成 + ウェルカム自動送信</span>
+          <span class="step-title"><span class="term">follow イベント<span class="term-tip"><b>follow イベント</b> = LINE が出す「友だち追加されたよ」 という 種類の 通知。 他に message (発話) / unfollow (ブロック) / postback (ボタン押下) など。 種類ごとに 違う処理。</span></span> 受信 → 顧客 doc 作成 + ウェルカム自動送信</div>
         </div>
-        <div class="step-body"><b>勝手に</b> Firestore に顧客記録 + LINE で「ご登録ありがとうございます」 メッセージ届く。</div>
+        <div class="step-body"><b>勝手に</b> <span class="term">Firestore<span class="term-tip"><b>Firestore</b> = Google クラウド DB。 サロン専用フォルダ <code>/tenants/hikari-salon/customers/</code> に 顧客レコード が 1秒以内に作成される。</span></span> に顧客記録 + LINE で「ご登録ありがとうございます」 メッセージ届く。</div>
+        <div class="bubble jobs"><span class="tag">なぜ "勝手に" 動くか</span>LINE は 友だち追加イベント を <b>事前に登録された webhook URL</b> に飛ばす。 自動セットアップで 「サロンA の webhook = Skel·EC のサロンA用URL」 を登録済みなので、 サロンA のイベントだけ サロンA の処理に流れる。 サロンB には絶対飛ばない。</div>
       </div>
 
       <div class="step">

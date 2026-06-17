@@ -100,12 +100,56 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
 .foot{text-align:center;margin-top:30px;font-size:11px;color:#999;font-family:'JetBrains Mono';letter-spacing:.06em}
 .foot em{font-style:normal;color:#F97316}
 
+/* ============= 用語補足の吹き出し ============= */
+.bubble{position:relative;background:#FFF7ED;border:1.5px solid #FED7AA;border-radius:14px;padding:14px 16px 14px 50px;margin:14px 0;font-size:12.5px;color:#7C2D12;line-height:1.85;box-shadow:0 2px 6px rgba(234,88,12,.08)}
+.bubble::before{content:'💡';position:absolute;left:14px;top:13px;font-size:22px;line-height:1}
+.bubble.q{background:#EFF6FF;border-color:#BFDBFE;color:#1E3A8A}
+.bubble.q::before{content:'❓'}
+.bubble.tip{background:#F0FDF4;border-color:#BBF7D0;color:#14532D}
+.bubble.tip::before{content:'🌱'}
+.bubble.warn{background:#FEF3C7;border-color:#FCD34D;color:#78350F}
+.bubble.warn::before{content:'⚠️'}
+.bubble b{font-weight:900;color:inherit}
+.bubble .tag{display:inline-block;font-family:'JetBrains Mono';font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:rgba(0,0,0,.05);margin-right:6px;letter-spacing:.04em;vertical-align:1px}
+.bubble code{font-family:'JetBrains Mono';font-size:11px;background:rgba(0,0,0,.05);padding:1px 6px;border-radius:4px}
+
+/* 専門用語: 点線下線 + ホバー吹き出し */
+.term{position:relative;display:inline-block;border-bottom:1.5px dotted #F97316;color:#EA580C;font-weight:700;cursor:help;padding:0 2px}
+.term:hover .term-tip,.term:focus .term-tip,.term.open .term-tip{opacity:1;visibility:visible;transform:translateY(0)}
+.term-tip{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%) translateY(4px);background:#1F2937;color:#fff;font-weight:500;font-size:11.5px;line-height:1.7;padding:9px 13px;border-radius:8px;width:240px;text-align:left;opacity:0;visibility:hidden;transition:.2s;z-index:50;box-shadow:0 6px 18px rgba(0,0,0,.25);pointer-events:none}
+.term-tip::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#1F2937}
+.term-tip b{color:#FCD34D;font-weight:700}
+
+/* 日常例えカード (アナロジー) */
+.analogy{display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:12px;overflow:hidden;border:1px solid #E5E7EB;margin:14px 0;background:#fff}
+@media(max-width:560px){.analogy{grid-template-columns:1fr}}
+.analogy>div{padding:14px 16px}
+.analogy .real{background:#FFF7ED;border-right:1px dashed #FED7AA}
+.analogy .tech{background:#F0F9FF;border-left:1px dashed #BFDBFE}
+@media(max-width:560px){.analogy .real{border-right:0;border-bottom:1px dashed #FED7AA}}
+.analogy h5{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:11.5px;color:#666;margin-bottom:6px;letter-spacing:.04em}
+.analogy .real h5{color:#EA580C}
+.analogy .tech h5{color:#2563EB}
+.analogy p{font-size:12.5px;color:#333;line-height:1.75}
+
 @media(max-width:600px){
   .hero h1{font-size:22px}
   .sec{padding:20px 22px}
   .sec h2{font-size:16px}
+  .term-tip{width:200px}
 }
 </style>
+<script>
+// クリックで吹き出しピン留め (モバイル対応)
+document.addEventListener('click', e => {
+  if(e.target.classList?.contains('term')){
+    document.querySelectorAll('.term.open').forEach(t => { if(t!==e.target) t.classList.remove('open'); });
+    e.target.classList.toggle('open');
+  } else {
+    document.querySelectorAll('.term.open').forEach(t => t.classList.remove('open'));
+  }
+});
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -116,6 +160,24 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
     <p>このドキュメントは、 オーナー (吉田) と Jobs (Cloud Functions) の間で 引き継ぎが エラーなく動くか、 サロンA の情報が サロンB に絶対漏れないか、 を技術的に保証する仕組みを説明します。</p>
   </div>
 
+  <div class="bubble tip"><span class="tag">読み方ガイド</span><b>このページの オレンジ色の点線下線</b> は 専門用語。 マウスを乗せる/タップ すると <b>3秒で分かる解説</b> がポップアップ。 セクションごとに 💡黄色 / ❓青 / 🌱緑 の吹き出しで補足。 「全部読み込まなくても 用語だけ拾えば全体像が掴める」 設計にしてあります。</div>
+
+  <!-- ============ 用語の前提知識 (5秒で読める一覧) ============ -->
+  <div class="sec">
+    <h2>📚 出てくる用語の早見表</h2>
+    <p style="font-size:13px;color:#444;margin-bottom:12px">本文に入る前に、 これだけ押さえておけば 70% 分かる用語 8個:</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px">
+      <div class="bubble" style="margin:0"><span class="tag">用語1</span><b>テナント (tenant)</b><br>= 1サロン分の専用エリア。 マンションの 1室と同じ。 サロンが増えても 部屋を増やすだけ。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語2</span><b>tenantId</b><br>= サロン の名札。 例 <code>hikari-salon</code>。 URL・データ保存先 すべてに付く。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語3</span><b>Webhook (ウェブフック)</b><br>= サーバー同士の 呼び鈴。 LINE で 友だち追加された瞬間、 LINE が Skel·EC に「ピンポーン」 と知らせる仕組み。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語4</span><b>Cloud Function</b><br>= 通知が来た時だけ起動する 受付プログラム。 普段は休んでて、 必要時だけ動くので 月額ほぼ¥0。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語5</span><b>Firestore (ファイヤストア)</b><br>= Google の クラウドデータベース。 商品・顧客・注文 全部ここに保存。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語6</span><b>access_token / channel_secret</b><br>= LINE が発行する 鍵。 サロン名義で メッセージを送る権限 + ハンコ照合用。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語7</span><b>Stripe sk</b><br>= 決済代行 Stripe の 鍵。 <code>sk_live_xxxxx</code>。 サロン名義で 決済を作る権限。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語8</span><b>べき等 (idempotent)</b><br>= 何度押しても 結果が同じ。 セットアップを 連打しても 状態は壊れない。</div>
+    </div>
+  </div>
+
   <!-- ============== 心配 1: お客のデータが混ざらないか ============== -->
   <div class="sec">
     <h2>心配 1: サロンA と サロンB のデータが 混ざらないか?</h2>
@@ -124,8 +186,10 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
 
     <div class="answer"><span class="ic">✓</span><div><b>答え:</b> <b>絶対に起きません</b>。 4層のテナント分離で物理的に防いでます。 以下の仕組みで保証されてます。</div></div>
 
-    <h3>📁 Firestore のデータ構造</h3>
-    <p style="font-size:13px;color:#444">各サロンのデータは、 <b>サロン名 (tenantId)</b> で完全に分かれた "フォルダ" に保存されてます:</p>
+    <div class="bubble"><span class="tag">用語</span><b>「テナント (tenant)」</b> って何?<br>テナント = <b>1サロン分の専用エリア</b>。 ビルで言うと「101号室」「102号室」。 同じビルに住んでても部屋は完全に別。 Skel·EC では 1サロン = 1テナント。 サロンA は <code>hikari-salon</code>、 サロンB は <code>momoi-salon</code> という名札 (これを <b>tenantId</b> と呼ぶ)。</div>
+
+    <h3>📁 <span class="term">Firestore<span class="term-tip"><b>Firestore</b> = Google が提供する クラウドデータベース。 商品/顧客/注文 など 全データの 保存先。 大手SaaS (LINE 公式アカウント Manager 等) も同系統を使用。</span></span> のデータ構造</h3>
+    <p style="font-size:13px;color:#444">各サロンのデータは、 <b>サロン名 (<span class="term">tenantId<span class="term-tip"><b>tenantId</b> = サロンを識別する短い名前 (英小文字+数字+ハイフン)。 例: <code>hikari-salon</code>。 URL や データ保存先 すべてに使われる "サロン名札"。</span></span>)</b> で完全に分かれた "フォルダ" に保存されてます:</p>
 
     <div class="tree">
 <span class="path">📂 /tenants/</span><br>
@@ -148,28 +212,40 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="path">...</span>
     </div>
 
-    <p style="font-size:12.5px;color:#555;margin-top:14px"><b style="color:#EA580C">物理的に別フォルダ</b>なので、 hikari-salon の処理コードが momoi-salon のデータに 触れることが <b>そもそも不可能</b>。 Cloud Function は毎回 「どのサロンの依頼か」 を URL/イベントから判別してから、 そのサロンのフォルダだけ操作します。</p>
+    <p style="font-size:12.5px;color:#555;margin-top:14px"><b style="color:#EA580C">物理的に別フォルダ</b>なので、 hikari-salon の処理コードが momoi-salon のデータに 触れることが <b>そもそも不可能</b>。 <span class="term">Cloud Function<span class="term-tip"><b>Cloud Function</b> = サロンから「友だち追加されたよ」「商品が買われたよ」 という通知が来た時に、 一瞬だけ起動して処理する "受付プログラム"。 普段は休んでて、 必要な時だけ動くから 月¥0〜数百円で済む。</span></span> は毎回 「どのサロンの依頼か」 を URL/イベントから判別してから、 そのサロンのフォルダだけ操作します。</p>
+
+    <div class="analogy">
+      <div class="real">
+        <h5>🏠 ホテル の場合</h5>
+        <p>101号室 のお客様が頼んだルームサービスは <b>必ず 101号室に</b> 届く。 102号室には絶対届かない。 ホテル名: <b>部屋番号</b> で識別してるから。</p>
+      </div>
+      <div class="tech">
+        <h5>💻 Skel·EC の場合</h5>
+        <p>サロンA に送られた LINE 友だち追加 は <b>必ず サロンA の顧客リスト</b> に追加される。 サロンB には絶対追加されない。 名札: <b>tenantId</b> で識別してるから。</p>
+      </div>
+    </div>
 
     <h3>🔐 アクセス分離の 4層</h3>
+    <div class="bubble q"><span class="tag">補足</span><b>「4層」 って何?</b><br>1個の壁で守るんじゃなくて、 <b>4枚の壁</b> を重ねて守る設計。 1枚突破されても 残り3枚で止まる。 銀行の金庫が 「ドア → ガラス → センサー → 警報」 と多重防御してるのと同じ。 1枚抜けただけで全滅 にならない。</div>
     <div class="layers">
       <div class="layer">
         <span class="n">層 1</span>
         <h4><span class="ic">🌐</span>URL レベル</h4>
-        <p>Webhook URL に <code>/サロン名/</code> が必ず付く<br>例: <code>/lineWebhook/<b style="color:#EA580C">hikari-salon</b></code></p>
+        <p><span class="term">Webhook<span class="term-tip"><b>Webhook</b> = サーバー同士の「呼び鈴」。 LINE で誰かが友だち追加すると、 LINE が Skel·EC に「ピンポーン、追加されたよ」 と自動で通知する 専用URL。</span></span> URL に <code>/サロン名/</code> が必ず付く<br>例: <code>/lineWebhook/<b style="color:#EA580C">hikari-salon</b></code></p>
       </div>
       <div class="layer">
         <span class="n">層 2</span>
-        <h4><span class="ic">🔑</span>署名検証</h4>
-        <p>LINE からの通信は<b>そのサロン専用の channel_secret</b>で署名検証。 別サロンの token では検証 NG</p>
+        <h4><span class="ic">🔑</span><span class="term">署名検証<span class="term-tip"><b>署名検証</b> = 「これ本物?」 の確認。 LINE は秘密のハンコ (channel_secret) で 通知に印鑑を押す。 Skel·EC 側で同じハンコで照合。 偽通知は弾く。</span></span></h4>
+        <p>LINE からの通信は<b>そのサロン専用の <span class="term">channel_secret<span class="term-tip"><b>channel_secret</b> = LINE が発行する 各サロン専用の "ハンコの形"。 これでハンコが押されてる 通知 だけ 本物と認める。 サロンごとに別々で、 オーナーが LINE Console から取得して Skel·EC に登録する。</span></span></b>で署名検証。 別サロンの token では検証 NG</p>
       </div>
       <div class="layer">
         <span class="n">層 3</span>
-        <h4><span class="ic">🏷</span>メタデータ</h4>
+        <h4><span class="ic">🏷</span><span class="term">メタデータ<span class="term-tip"><b>メタデータ (metadata)</b> = 決済に付ける "タグ"。 Stripe で 決済が走るたびに「これは hikari-salon の決済」 という ラベル を必ず貼る。 ラベルなしの決済は 偽物として無視。</span></span></h4>
         <p>Stripe イベントには必ず <code>metadata.tenantId</code> 付与。 ない決済は無視される</p>
       </div>
       <div class="layer">
         <span class="n">層 4</span>
-        <h4><span class="ic">🛡</span>Firestore Rules</h4>
+        <h4><span class="ic">🛡</span><span class="term">Firestore Rules<span class="term-tip"><b>Firestore Rules</b> = データベース側の "通行証チェック"。 「あなたは hikari-salon のオーナー? じゃあ hikari-salon のフォルダしか読み書きできません」 と DB自体が拒否。 アプリのバグでうっかり別フォルダに触っても DB が止める。</span></span></h4>
         <p>admin ユーザーは 自分が所属する <b>tenantId のフォルダしか読めない</b> (DB側で強制)</p>
       </div>
     </div>
@@ -206,7 +282,10 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
 
     <div class="answer"><span class="ic">✓</span><div><b>答え:</b> 各ステップごとに <b>成功/失敗を個別に記録</b> + 失敗ステップだけ再実行可能 + すべて<b>べき等 (何度押しても同じ結果)</b> な設計。</div></div>
 
+    <div class="bubble"><span class="tag">用語</span><b>「べき等 (idempotent)」</b> って何?<br>難しい言葉だけど、 意味はシンプル: <b>何度ボタンを押しても 結果が変わらない</b> こと。 エレベーターのボタンを 5回連打しても 1回しか来ない (= べき等)。 セットアップを 5回押しても 設定が 5倍積み重なる事はなく、 必ず "正しい1回分の状態" になる。 連打しても壊れない安心設計。</div>
+
     <h3>自動セットアップの 6 ステップ (チェックポイント方式)</h3>
+    <div class="bubble q"><span class="tag">補足</span><b>「チェックポイント方式」</b> = ゲームのセーブポイントと同じ。 ④で失敗しても、 ①②③ の セーブデータは残ってるから、 そこから再開できる。 最初からやり直さなくていい。</div>
     <ul class="flow-chain">
       <li class="ok">
         <div class="step-title">① LINE webhook URL を LINE 側に登録</div>
@@ -249,7 +328,10 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
 
     <div class="answer"><span class="ic">✓</span><div><b>答え:</b> イベントを受け取るたびに <b>URL から tenantId を抽出 → そのサロンの設定を Firestore から読む → そのサロンのトークンで応答</b> という流れ。 別サロンの設定を読むコード自体がありません。</div></div>
 
+    <div class="bubble tip"><span class="tag">考え方</span><b>「URL から判別」 = 郵便配達と同じ</b><br>郵便配達員は 宛名 (住所) を見てから その家のポストに入れる。 配達員が勝手に隣の家に入れる事はない。 Skel·EC も同じ: 通知が来たら まず URL の宛名 (<code>/lineWebhook/<b>hikari-salon</b></code>) を見てから、 hikari-salon フォルダにだけ書き込む。</div>
+
     <h3>Cloud Function のコード抜粋 (友だち追加処理)</h3>
+    <div class="bubble q"><span class="tag">補足</span><b>「コード」 が読めなくても OK</b>。 大事なのは下のコード内に <b style="color:#EA580C">tenantId</b> という言葉が 4回出てくる事。 それぞれが「どのサロンか」 を毎回チェックしてる証拠。 別のサロンに触る道がコードに無い、 ということを目で確認するための表示。</div>
     <div class="code">
 <span class="kw">exports</span>.lineWebhook = onRequest(<span class="kw">async</span> (req, res) => {<br>
 &nbsp;&nbsp;<span class="com">// 1) URL から tenantId を抽出 (例: /lineWebhook/hikari-salon → 'hikari-salon')</span><br>
@@ -284,6 +366,9 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
 
     <div class="answer"><span class="ic">✓</span><div><b>答え:</b> Jobs は credentials を受け取った瞬間に <b>5項目バリデーション</b> + <b>本番セットアップ前に LINE/Stripe に試し問い合わせ</b>。 ミスがあれば 何も保存せず エラー報告。</div></div>
 
+    <div class="bubble"><span class="tag">用語</span><b>「<span class="term">credentials<span class="term-tip"><b>credentials</b> = 「認証情報」 のかたまり。 LINE の channel ID/secret/access_token、 Stripe の sk_live_xxxxx 等、 サロンを特定する <b>鍵束</b>。 オーナーが LINE Console / Stripe Dashboard から取得して Jobs に渡す。</span></span>」</b> = 鍵束。 LINE Channel の3点セット (ID / secret / access token) + Stripe sk。 これがないと LINE/Stripe を サロン専用で動かせない。</div>
+    <div class="bubble q"><span class="tag">補足</span><b>「<span class="term">slug<span class="term-tip"><b>slug</b> (スラッグ) = URL に使える短い識別子。 英小文字+数字+ハイフンのみ。 サロン名「IDEAL by Hikaru」 → slug「<code>hikari-salon</code>」 みたいに 変換して使う。 tenantId と同義。</span></span>」</b> = URL に使える "短い名札"。 「IDEAL by Hikaru」 → <code>hikari-salon</code> の様に変換。 これを間違えると 違うサロンの URL に登録されちゃうから厳密にチェック。</div>
+
     <h3>受け取った瞬間にする確認</h3>
     <ul class="flow-chain">
       <li class="ok">
@@ -295,11 +380,11 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
         <div class="step-body">10桁数字か? 改行混入? → NG なら即返却</div>
       </li>
       <li class="ok">
-        <div class="step-title">access_token 有効性チェック</div>
+        <div class="step-title"><span class="term">access_token<span class="term-tip"><b>access_token</b> = LINE が発行する "代理メッセージ送信権"。 これを使って Skel·EC が サロン名義で メッセージを送れる。 つまり これが正しくないと 友だちに何も送れない。</span></span> 有効性チェック</div>
         <div class="step-body">LINE API <code>GET /v2/bot/info</code> に問い合わせ → 200 OK 返ってこなければ token 無効 / 期限切れ と判定 → 保存せずエラー報告</div>
       </li>
       <li class="ok">
-        <div class="step-title">Stripe sk 有効性チェック</div>
+        <div class="step-title"><span class="term">Stripe sk<span class="term-tip"><b>Stripe sk (Secret Key)</b> = Stripe の "サロン専用 鍵"。 <code>sk_live_xxxxx</code> で始まる文字列。 これで Skel·EC が サロン名義で 決済を作れる。 漏れたら 別人が決済できちゃうので 厳重管理。</span></span> 有効性チェック</div>
         <div class="step-body">Stripe API <code>accounts.retrieve</code> に問い合わせ → エラー返れば sk 無効と判定</div>
       </li>
       <li class="ok">

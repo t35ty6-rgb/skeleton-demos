@@ -144,8 +144,37 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
 .foot{text-align:center;margin-top:30px;font-size:11px;color:#999;font-family:'JetBrains Mono',monospace;letter-spacing:.06em}
 .foot em{font-style:normal;color:#F97316}
 
-@media(max-width:700px){.hero h1{font-size:22px} .prov-grid{grid-template-columns:1fr} .form-row{grid-template-columns:1fr}}
+/* ============= 用語補足の吹き出し ============= */
+.bubble{position:relative;background:#FFF7ED;border:1.5px solid #FED7AA;border-radius:14px;padding:14px 16px 14px 50px;margin:14px 0;font-size:13px;color:#7C2D12;line-height:1.85;box-shadow:0 2px 6px rgba(234,88,12,.08)}
+.bubble::before{content:'💡';position:absolute;left:14px;top:13px;font-size:22px;line-height:1}
+.bubble.q{background:#EFF6FF;border-color:#BFDBFE;color:#1E3A8A}
+.bubble.q::before{content:'❓'}
+.bubble.tipx{background:#F0FDF4;border-color:#BBF7D0;color:#14532D}
+.bubble.tipx::before{content:'🌱'}
+.bubble.why{background:#F5F3FF;border-color:#C4B5FD;color:#4C1D95}
+.bubble.why::before{content:'🎯'}
+.bubble b{font-weight:900;color:inherit}
+.bubble .tag{display:inline-block;font-family:'JetBrains Mono';font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:rgba(0,0,0,.06);margin-right:6px;letter-spacing:.04em;vertical-align:1px}
+.bubble code{font-family:'JetBrains Mono';font-size:11px;background:rgba(0,0,0,.06);padding:1px 6px;border-radius:4px}
+
+.term{position:relative;display:inline-block;border-bottom:1.5px dotted #F97316;color:#EA580C;font-weight:700;cursor:help;padding:0 2px}
+.term:hover .term-tip,.term:focus .term-tip,.term.open .term-tip{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+.term-tip{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%) translateY(4px);background:#1F2937;color:#fff;font-weight:500;font-size:11.5px;line-height:1.7;padding:9px 13px;border-radius:8px;width:240px;text-align:left;opacity:0;visibility:hidden;transition:.2s;z-index:50;box-shadow:0 6px 18px rgba(0,0,0,.25);pointer-events:none}
+.term-tip::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#1F2937}
+.term-tip b{color:#FCD34D;font-weight:700}
+
+@media(max-width:700px){.hero h1{font-size:22px} .prov-grid{grid-template-columns:1fr} .form-row{grid-template-columns:1fr} .term-tip{width:200px}}
 </style>
+<script>
+document.addEventListener('click', e => {
+  if(e.target.classList?.contains('term')){
+    document.querySelectorAll('.term.open').forEach(t => { if(t!==e.target) t.classList.remove('open'); });
+    e.target.classList.toggle('open');
+  } else {
+    document.querySelectorAll('.term.open').forEach(t => t.classList.remove('open'));
+  }
+});
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -156,6 +185,10 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
     <p>各ステップで実際のLINE Developers Console の画面を再現してます。「ここをクリック」 マーカーの場所だけ押せばOK。</p>
     <span class="time">⏱ 約 10〜15 分</span>
   </div>
+
+  <div class="bubble why"><span class="tag">なぜこの作業?</span><b>サロンの LINE 公式アカウントを、 EC として動かす ための "鍵" を取得する作業</b>。 LINE が用意してる 専用の管理画面 (<span class="term">LINE Developers Console<span class="term-tip"><b>LINE Developers Console</b> = LINE 公式アカウントの "管理者専用ページ"。 鍵の発行/設定 はここからしかできない。 LINE アプリ と同じアカウントで ログイン。</span></span>) から、 3つの ID をコピーして 渡してください。 これがあれば あとは Jobs が裏で 全部つないでくれます (10〜15分で終わる作業)。</div>
+
+  <div class="bubble q"><span class="tag">読み方</span><b>オレンジの点線下線が引かれた言葉</b> (例: <span class="term">Channel ID<span class="term-tip"><b>Channel ID</b> = LINE 公式アカウントの "口座番号"。 10桁の数字。 上に乗せると 説明が出る。</span></span>) は タップ/マウスを乗せる と 説明が出ます。 専門用語の意味を 全部 覚える必要は無い。 「あれ何だっけ?」 と思った時だけ 見れば OK。</div>
 
   <!-- ============ STEP 1: Console を開く ============ -->
   <div class="phase-h"><div class="num">1</div><h2>LINE Developers Console を開く</h2></div>
@@ -211,7 +244,9 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
         </div>
       </div>
 
-      <div class="tip"><span class="ic">💡</span><b>Provider とは:</b> LINE 公式アカウントや Messaging API を束ねる入れ物。 普通は会社名 or サロン名で作られてる。</div>
+      <div class="tip"><span class="ic">💡</span><b><span class="term">Provider<span class="term-tip"><b>Provider</b> = サロンの「グループ」 のような入れ物。 1つの Provider の中に、 公式LINE / Login / Messaging API 等の Channel が複数入る。 大抵 会社名やサロン名で作られてる。</span></span> とは:</b> LINE 公式アカウントや <span class="term">Messaging API<span class="term-tip"><b>Messaging API</b> = LINE 公式アカウントを 外部プログラム (Skel·EC) と連携 させるための 専用機能。 これを有効にすると 自動応答 や 配信 が プログラム経由で 出来るようになる。</span></span> を束ねる入れ物。 普通は会社名 or サロン名で作られてる。</div>
+
+      <div class="bubble"><span class="tag">補足</span>「Provider が複数ある」 サロン: <b>サロン公式アカウントが入ってる 方</b> を選ぶ。 分からなかったら、 1つずつ開いて中の Channel に「Messaging API」 があるかを確認。</div>
     </div>
   </div>
 
@@ -267,6 +302,8 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
       </div>
 
       <div class="warn"><b>⚠️ 注意:</b> 「LINE Login」 や 「ミニアプリ」 ではなく、 必ず <b>「Messaging API」</b> のカードを選んでください (緑の吹き出しアイコン 💬)。</div>
+
+      <div class="bubble q"><span class="tag">なぜ Messaging API?</span>LINE には 3種類の Channel があります: <b>① Messaging API</b> = メッセージを自動で送受信できる本命、 <b>② LINE Login</b> = ログイン用、 <b>③ ミニアプリ</b> = LIFF アプリ。 EC として動かすには ① のみ必須。 ②③ は別物なので 触らない。</div>
     </div>
   </div>
 
@@ -276,7 +313,8 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
   <div class="step">
     <div class="step-h"><div class="n">4</div><h3>「Basic settings」 タブで Channel ID と Secret を コピー</h3></div>
     <div class="step-body">
-      <p>Channel のページに入ると、 <b>「Basic settings」</b> タブが最初に開いてます。 ここを下にスクロールすると <b>Channel ID</b> と <b>Channel secret</b> があります。 それぞれ <b>右の 📋 マーク</b> をクリックでコピー。</p>
+      <p>Channel のページに入ると、 <b>「Basic settings」</b> タブが最初に開いてます。 ここを下にスクロールすると <span class="term">Channel ID<span class="term-tip"><b>Channel ID</b> = サロン公式アカウントの "口座番号"。 10桁の数字。 LINE 内で アカウントを識別する 番号。 公開しても OK。</span></span> と <span class="term">Channel secret<span class="term-tip"><b>Channel secret</b> = サロン公式アカウントの "ハンコの形"。 32桁の英数字。 これで LINE から来た通知が本物か照合。 <b style="color:#fff;background:#DC2626;padding:1px 5px;border-radius:3px">非公開</b>。 Twitter 等に絶対貼らない。</span></span> があります。 それぞれ <b>右の 📋 マーク</b> をクリックでコピー。</p>
+      <div class="bubble"><span class="tag">2つの違い</span><b>Channel ID</b> = 表札 (公開OK)、 <b>Channel secret</b> = 印鑑 (非公開)。 銀行で言うと "口座番号" と "通帳印"。 印鑑は 漏れたら 不正利用される可能性 があるので、 Jobs とのチャット以外には 貼らない。</div>
 
       <div class="scr">
         <div class="scr-chrome">
@@ -397,6 +435,8 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
       </div>
 
       <div class="tip"><span class="ic">💡</span><b>既に発行済みの場合:</b> 「(まだ発行されていません)」 の代わりに <b>長い英数字の文字列</b> が表示されてます。 その場合は新規発行不要、 <b>右端の 📋 マーク</b> で その文字列をコピーするだけでOK。</div>
+
+      <div class="bubble q"><span class="tag">用語</span><b><span class="term">access token<span class="term-tip"><b>access token</b> = サロン名義で LINE にメッセージを送る "代理権限"。 これを Skel·EC に渡すと サロンの代わりに 自動応答 / 配信 が出来るようになる。 サロン本人が LINE アプリで送る場合は不要。 自動化する場合だけ必要。</span></span></b> って何?<br>= 「サロン名義で メッセージを送って良いよ」 という <b>代理権限の鍵</b>。 これを Skel·EC が持つことで、 友だち追加された人に サロン名義で 自動でウェルカム送信 が出来る。 サロン本人が LINE アプリから送る分には不要。 <b>自動応答を動かすためだけに</b> 必要。</div>
     </div>
   </div>
 
@@ -457,6 +497,14 @@ html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;col
       </div>
 
       <div class="tip"><span class="ic">🔒</span><b>セキュリティ:</b> これらは機密情報ですが、 Jobs と1対1のチャットなら安全です。 公開する場所 (Twitter とか公開Slack) には絶対に貼らないこと。</div>
+
+      <div class="bubble why"><span class="tag">渡した後 何が起きる?</span>Jobs が ①②③ を受け取った瞬間、 自動で:<br>
+      ❶ Channel ID / secret / token が <b>本物か</b> LINE API に問い合わせて検証<br>
+      ❷ サロン専用の <span class="term">Webhook URL<span class="term-tip"><b>Webhook URL</b> = LINE → Skel·EC への "通知の窓口"。 サロンA だけの専用 URL を発行 → LINE に登録 → サロンA の友だち追加 が Skel·EC のサロンA処理 に流れる。</span></span> (<code>/lineWebhook/hikari-salon</code>) を LINE 側に登録<br>
+      ❸ <b>Use webhook を ON</b> に切替<br>
+      ❹ <b>疎通テスト</b> を実行 (LINE → 自社サーバー が繋がるか)<br>
+      ❺ Firestore のサロン専用フォルダ <code>/tenants/hikari-salon/</code> を作成<br>
+      所要時間 <b>30秒</b>。 完了したら オーナーから「動いてます」 連絡が来る。</div>
     </div>
   </div>
 
