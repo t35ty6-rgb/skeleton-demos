@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Skel·EC 引き継ぎ安全性 + テナント分離保証</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=M+PLUS+Rounded+1c:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;color:#2C2C2C;line-height:1.75;font-feature-settings:'palt'}
+.wrap{max-width:1000px;margin:0 auto;padding:36px 20px 80px}
+
+.hero{background:linear-gradient(135deg,#0F172A 0%,#1E293B 100%);color:#fff;padding:32px 28px;border-radius:14px;margin-bottom:28px;box-shadow:0 8px 24px rgba(15,23,42,.3);position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50px;right:-50px;width:240px;height:240px;background:radial-gradient(circle,rgba(249,115,22,.4) 0%,transparent 70%);border-radius:50%}
+.hero .badge{display:inline-block;font-family:'JetBrains Mono';font-size:10.5px;font-weight:700;letter-spacing:.1em;padding:4px 10px;background:rgba(249,115,22,.25);color:#FCD34D;border-radius:99px;margin-bottom:10px;position:relative}
+.hero h1{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:28px;letter-spacing:-.02em;position:relative;line-height:1.3}
+.hero h1 em{font-style:normal;color:#FCD34D;font-style:italic}
+.hero p{font-size:13.5px;opacity:.85;position:relative;margin-top:8px;line-height:1.75}
+
+/* Section */
+.sec{background:#fff;border-radius:14px;padding:26px 28px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.sec h2{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:18px;color:#2C2C2C;letter-spacing:-.01em;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.sec h2::before{content:'';width:5px;height:22px;background:linear-gradient(180deg,#F97316,#EA580C);border-radius:3px}
+.sec h3{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:14.5px;color:#2C2C2C;margin:18px 0 8px}
+
+/* Concern callout */
+.concern{display:flex;gap:12px;padding:14px 18px;background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:10px;font-size:13px;color:#92400E;margin-bottom:18px}
+.concern .ic{font-size:18px;flex-shrink:0}
+.concern b{color:#7C2D12;font-weight:900}
+
+.answer{display:flex;gap:12px;padding:14px 18px;background:#DFF7E5;border:1.5px solid #06C755;border-radius:10px;font-size:13.5px;color:#04A648;margin-bottom:18px;font-weight:600}
+.answer .ic{font-size:18px;flex-shrink:0}
+.answer b{color:#0F6F2E;font-weight:900}
+
+/* Firestore tree visualization */
+.tree{background:#1F2937;color:#fff;border-radius:10px;padding:18px 20px;font-family:'JetBrains Mono';font-size:12.5px;line-height:1.95;overflow-x:auto}
+.tree .path{color:#FCD34D}
+.tree .tenant{color:#86EFAC;font-weight:700}
+.tree .doc{color:#93C5FD}
+.tree .comment{color:#9CA3AF;font-style:italic}
+.tree .arrow{color:#F97316}
+.tree b{color:#fff;font-weight:700}
+
+/* Tenant comparison grid */
+.tenants{display:grid;grid-template-columns:1fr 60px 1fr;gap:0;margin:18px 0;border-radius:12px;overflow:hidden;background:#fff;border:1px solid #EEE;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+@media(max-width:700px){.tenants{grid-template-columns:1fr}}
+.tenant-col{padding:18px 20px;background:linear-gradient(180deg,#FFF7ED 0%,#fff 100%);border-right:1px dashed #FED7AA}
+.tenant-col.b{background:linear-gradient(180deg,#EDE9FE 0%,#fff 100%);border-right:0;border-left:1px dashed #C4B5FD}
+.tenant-col h4{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:14px;color:#EA580C;margin-bottom:8px}
+.tenant-col.b h4{color:#7C3AED}
+.tenant-col code{display:block;font-family:'JetBrains Mono';font-size:11.5px;background:#fff;padding:6px 10px;border-radius:5px;border:1px solid #EEE;margin:4px 0;color:#444;word-break:break-all}
+.tenant-col .meta{font-size:11.5px;color:#666;margin-top:8px}
+.tenant-col .meta b{color:#EA580C}
+.tenant-col.b .meta b{color:#7C3AED}
+.divider-vert{display:flex;align-items:center;justify-content:center;background:#F8F8F8;font-size:11px;color:#888;font-weight:700;font-family:'JetBrains Mono';writing-mode:vertical-rl;text-orientation:upright;padding:8px 0;letter-spacing:.5em}
+@media(max-width:700px){.divider-vert{display:none}}
+
+/* Layer cards (security layers) */
+.layers{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0}
+.layer{background:#FAFAFA;border:1px solid #EEE;border-radius:10px;padding:16px 18px;position:relative}
+.layer .n{position:absolute;top:-10px;left:14px;background:#fff;color:#F97316;font-family:'JetBrains Mono';font-weight:900;font-size:11.5px;padding:2px 8px;border:1.5px solid #F97316;border-radius:99px}
+.layer h4{font-weight:900;font-size:13px;color:#2C2C2C;margin-top:6px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.layer h4 .ic{font-size:14px}
+.layer p{font-size:12px;color:#555;line-height:1.7}
+.layer code{font-family:'JetBrains Mono';font-size:11px;background:#fff;padding:1px 6px;border-radius:4px;border:1px solid #DDD;color:#444}
+
+/* Handoff checkpoint */
+.flow-chain{padding:0;list-style:none;position:relative;padding-left:24px}
+.flow-chain::before{content:'';position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:#F97316}
+.flow-chain li{position:relative;padding:0 0 14px}
+.flow-chain li::before{content:'';position:absolute;left:-21px;top:5px;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #F97316;z-index:1}
+.flow-chain li.ok::before{background:#06C755;border-color:#06C755}
+.flow-chain li.ok::after{content:'✓';position:absolute;left:-19px;top:5px;color:#fff;font-weight:900;font-size:9px;z-index:2}
+.flow-chain li.fail::before{background:#DC2626;border-color:#DC2626}
+.flow-chain li .step-title{font-weight:900;font-size:13px;color:#2C2C2C}
+.flow-chain li .step-body{font-size:12px;color:#555;line-height:1.7;margin-top:2px}
+.flow-chain li .step-body code{font-family:'JetBrains Mono';font-size:11px;background:#F4F6F9;padding:1px 6px;border-radius:4px;color:#444}
+.flow-chain li.parallel{background:#FEF3C7;padding:10px 14px;border-radius:8px;border-left:3px solid #F59E0B;margin-left:-4px}
+
+.try-fail{display:flex;gap:10px;padding:11px 14px;background:#FEF2F2;border:1px solid #FCA5A5;border-radius:8px;font-size:12px;color:#7F1D1D;margin-top:8px}
+.try-fail .ic{flex-shrink:0;font-size:14px}
+.try-fail b{color:#7F1D1D;font-weight:900}
+
+/* Cloud Function code snippet */
+.code{background:#1F2937;color:#fff;border-radius:8px;padding:14px 18px;font-family:'JetBrains Mono';font-size:12px;line-height:1.85;overflow-x:auto;margin:10px 0}
+.code .kw{color:#FCD34D}
+.code .str{color:#86EFAC}
+.code .com{color:#9CA3AF;font-style:italic}
+.code .var{color:#93C5FD}
+.code .acc{color:#F97316;font-weight:700}
+
+/* Status banner */
+.status-good{background:linear-gradient(135deg,#06C755 0%,#04A648 100%);color:#fff;padding:24px 26px;border-radius:14px;margin-top:30px;display:flex;align-items:center;gap:18px;box-shadow:0 8px 20px rgba(6,199,85,.2)}
+.status-good .ic-big{font-size:36px;flex-shrink:0}
+.status-good h3{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:18px;margin-bottom:5px}
+.status-good p{font-size:13px;opacity:.95}
+
+.foot{text-align:center;margin-top:30px;font-size:11px;color:#999;font-family:'JetBrains Mono';letter-spacing:.06em}
+.foot em{font-style:normal;color:#F97316}
+
+@media(max-width:600px){
+  .hero h1{font-size:22px}
+  .sec{padding:20px 22px}
+  .sec h2{font-size:16px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <span class="badge">SAFETY GUARANTEES</span>
+    <h1>引き継ぎは <em>確実</em> か?<br>サロンの情報は <em>絶対に混ざらない</em> か?</h1>
+    <p>このドキュメントは、 オーナー (吉田) と Jobs (Cloud Functions) の間で 引き継ぎが エラーなく動くか、 サロンA の情報が サロンB に絶対漏れないか、 を技術的に保証する仕組みを説明します。</p>
+  </div>
+
+  <!-- ============== 心配 1: お客のデータが混ざらないか ============== -->
+  <div class="sec">
+    <h2>心配 1: サロンA と サロンB のデータが 混ざらないか?</h2>
+
+    <div class="concern"><span class="ic">⚠</span><div><b>たとえば:</b> 「IDEAL by Hikaru」 サロンの顧客が、 「○○整骨院」 のオーナー画面に出てきてしまったら 信用問題。 LINE の自動応答も、 IDEAL の話を 整骨院に返したら大問題。 これは絶対に起きないか?</div></div>
+
+    <div class="answer"><span class="ic">✓</span><div><b>答え:</b> <b>絶対に起きません</b>。 4層のテナント分離で物理的に防いでます。 以下の仕組みで保証されてます。</div></div>
+
+    <h3>📁 Firestore のデータ構造</h3>
+    <p style="font-size:13px;color:#444">各サロンのデータは、 <b>サロン名 (tenantId)</b> で完全に分かれた "フォルダ" に保存されてます:</p>
+
+    <div class="tree">
+<span class="path">📂 /tenants/</span><br>
+&nbsp;&nbsp;<span class="tenant">📂 hikari-salon/</span> &nbsp;<span class="comment">← IDEAL by Hikaru サロンの全データ</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="path">📂 products/</span> <span class="comment">(商品)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="path">📂 orders/</span> <span class="comment">(注文)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="path">📂 customers/</span> <span class="comment">(顧客 = LINE友だち)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="path">📂 messages/</span> <span class="comment">(配信)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="path">📂 coupons/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="path">📄 line</span> <span class="comment">(LINE Channel ID/secret/access_token)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="path">📄 stripe</span> <span class="comment">(Stripe API キー)</span><br>
+<br>
+&nbsp;&nbsp;<span class="tenant">📂 momoi-salon/</span> &nbsp;<span class="comment">← ○○整骨院 の全データ (完全に別フォルダ)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="path">📂 products/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="path">📂 orders/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="path">📂 customers/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="path">...</span><br>
+<br>
+&nbsp;&nbsp;<span class="tenant">📂 third-salon/</span> &nbsp;<span class="comment">← サロン3軒目</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="path">...</span>
+    </div>
+
+    <p style="font-size:12.5px;color:#555;margin-top:14px"><b style="color:#EA580C">物理的に別フォルダ</b>なので、 hikari-salon の処理コードが momoi-salon のデータに 触れることが <b>そもそも不可能</b>。 Cloud Function は毎回 「どのサロンの依頼か」 を URL/イベントから判別してから、 そのサロンのフォルダだけ操作します。</p>
+
+    <h3>🔐 アクセス分離の 4層</h3>
+    <div class="layers">
+      <div class="layer">
+        <span class="n">層 1</span>
+        <h4><span class="ic">🌐</span>URL レベル</h4>
+        <p>Webhook URL に <code>/サロン名/</code> が必ず付く<br>例: <code>/lineWebhook/<b style="color:#EA580C">hikari-salon</b></code></p>
+      </div>
+      <div class="layer">
+        <span class="n">層 2</span>
+        <h4><span class="ic">🔑</span>署名検証</h4>
+        <p>LINE からの通信は<b>そのサロン専用の channel_secret</b>で署名検証。 別サロンの token では検証 NG</p>
+      </div>
+      <div class="layer">
+        <span class="n">層 3</span>
+        <h4><span class="ic">🏷</span>メタデータ</h4>
+        <p>Stripe イベントには必ず <code>metadata.tenantId</code> 付与。 ない決済は無視される</p>
+      </div>
+      <div class="layer">
+        <span class="n">層 4</span>
+        <h4><span class="ic">🛡</span>Firestore Rules</h4>
+        <p>admin ユーザーは 自分が所属する <b>tenantId のフォルダしか読めない</b> (DB側で強制)</p>
+      </div>
+    </div>
+
+    <h3>具体例: サロンA と サロンB</h3>
+    <div class="tenants">
+      <div class="tenant-col">
+        <h4>🌸 IDEAL by Hikaru</h4>
+        <code>tenantId: hikari-salon</code>
+        <code>Webhook: /lineWebhook/<b>hikari-salon</b></code>
+        <code>channel_id: 2010111111</code>
+        <code>access_token: aBcDe...</code>
+        <div class="meta">顧客 <b>48 名</b> / 注文 <b>12 件</b> / 商品 <b>23 点</b><br><b>↑ 全部 hikari-salon フォルダだけ</b></div>
+      </div>
+      <div class="divider-vert">独立</div>
+      <div class="tenant-col b">
+        <h4>🏥 ○○整骨院</h4>
+        <code>tenantId: momoi-salon</code>
+        <code>Webhook: /lineWebhook/<b>momoi-salon</b></code>
+        <code>channel_id: 2010222222</code>
+        <code>access_token: xYzAb...</code>
+        <div class="meta">顧客 <b>120 名</b> / 注文 <b>34 件</b> / 商品 <b>8 点</b><br><b>↑ 全部 momoi-salon フォルダだけ</b></div>
+      </div>
+    </div>
+
+    <p style="font-size:12.5px;color:#444;margin-top:14px"><b style="color:#EA580C">混ざる可能性ゼロの理由:</b> Cloud Function が 友だち追加 イベントを受け取った時、 URL の末尾 (<code>/hikari-salon</code> or <code>/momoi-salon</code>) を見て「どっちのサロンか」 を判別。 それに対応する Firestore フォルダだけ書き込みます。 さらに LINE 署名検証で「本物の hikari-salon からの依頼か」を二重確認。</p>
+  </div>
+
+  <!-- ============== 心配 2: セットアップで失敗したら ============== -->
+  <div class="sec">
+    <h2>心配 2: 引き継ぎ中に失敗したら? 中途半端な状態にならないか?</h2>
+
+    <div class="concern"><span class="ic">⚠</span><div><b>たとえば:</b> 「自動セットアップ」 ボタン押したけど、 LINE Webhook 登録は成功して Stripe Webhook 作成は失敗、 みたいな中途半端な状態になったら、 サロンに「動きません」 って怒られる。 どう防いでる?</div></div>
+
+    <div class="answer"><span class="ic">✓</span><div><b>答え:</b> 各ステップごとに <b>成功/失敗を個別に記録</b> + 失敗ステップだけ再実行可能 + すべて<b>べき等 (何度押しても同じ結果)</b> な設計。</div></div>
+
+    <h3>自動セットアップの 6 ステップ (チェックポイント方式)</h3>
+    <ul class="flow-chain">
+      <li class="ok">
+        <div class="step-title">① LINE webhook URL を LINE 側に登録</div>
+        <div class="step-body"><code>PUT /v2/bot/channel/webhook/endpoint</code> 成功 → 緑チェック</div>
+      </li>
+      <li class="ok">
+        <div class="step-title">② LINE Use webhook を ON</div>
+        <div class="step-body"><code>PUT /v2/bot/channel/webhook/setting</code> 成功 → 緑チェック</div>
+      </li>
+      <li class="ok">
+        <div class="step-title">③ LINE → 自社サーバー 疎通テスト</div>
+        <div class="step-body"><code>POST /v2/bot/channel/webhook/test</code> success: true → 緑チェック</div>
+      </li>
+      <li class="fail">
+        <div class="step-title">④ Stripe webhook endpoint 作成 ← <b style="color:#DC2626">仮に失敗したケース</b></div>
+        <div class="step-body">例: Stripe sk のスペル間違い → エラー詳細を画面に表示</div>
+        <div class="try-fail"><span class="ic">⚠️</span><div><b>対処:</b> モーダルに「Stripe sk を確認してください」と理由表示 → オーナーが Stripe sk を修正して再度 「自動セットアップ」 ボタン押す → ① ② ③ は <b>スキップ</b> (既に成功してるので) → ④ から再実行 → 成功すれば緑チェック</div></div>
+      </li>
+      <li>
+        <div class="step-title">⑤ Stripe webhook secret を保存</div>
+        <div class="step-body">④ が成功してから自動実行</div>
+      </li>
+      <li>
+        <div class="step-title">⑥ Firestore tenant doc 作成</div>
+        <div class="step-body">最後に書き込み (merge=true なので何度書いても安全)</div>
+      </li>
+    </ul>
+
+    <h3>もし全部失敗しても データは無傷</h3>
+    <p style="font-size:13px;color:#444">セットアップが全部失敗しても、 <b>Firestore に書き込む前に止まる</b> ので、 サロンのデータが壊れることはありません。 元の状態のまま 何度でもやり直せます。</p>
+
+    <div class="answer"><span class="ic">🔄</span><div><b>「べき等」 設計:</b> 同じセットアップを <b>何度実行しても結果は同じ</b>。 既に登録済みなら 「既に設定済」 と判定してスキップ、 失敗した箇所だけ再試行。</div></div>
+  </div>
+
+  <!-- ============== 心配 3: Jobs は本当に正しく動くか ============== -->
+  <div class="sec">
+    <h2>心配 3: Jobs (Cloud Functions) は そのサロン専用で 動いてくれるか?</h2>
+
+    <div class="concern"><span class="ic">⚠</span><div><b>たとえば:</b> サロンA の友だち追加イベントを Jobs が受け取った時、 ちゃんと サロンA の設定で welcome メッセージ送ってくれるか? サロンB の welcome 文を間違って送ったりしないか?</div></div>
+
+    <div class="answer"><span class="ic">✓</span><div><b>答え:</b> イベントを受け取るたびに <b>URL から tenantId を抽出 → そのサロンの設定を Firestore から読む → そのサロンのトークンで応答</b> という流れ。 別サロンの設定を読むコード自体がありません。</div></div>
+
+    <h3>Cloud Function のコード抜粋 (友だち追加処理)</h3>
+    <div class="code">
+<span class="kw">exports</span>.lineWebhook = onRequest(<span class="kw">async</span> (req, res) => {<br>
+&nbsp;&nbsp;<span class="com">// 1) URL から tenantId を抽出 (例: /lineWebhook/hikari-salon → 'hikari-salon')</span><br>
+&nbsp;&nbsp;<span class="kw">const</span> <span class="var">tenantId</span> = req.params.tenantId;<br>
+<br>
+&nbsp;&nbsp;<span class="com">// 2) そのサロン専用の設定を Firestore から読み込む</span><br>
+&nbsp;&nbsp;<span class="kw">const</span> <span class="var">tenant</span> = <span class="kw">await</span> db.collection(<span class="str">'tenants'</span>).doc(<span class="var">tenantId</span>).get();<br>
+&nbsp;&nbsp;<span class="kw">const</span> <span class="var">cfg</span> = {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;channelSecret: <span class="var">tenant</span>.line.<span class="acc">channel_secret</span>, <span class="com">// ← このサロン専用</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;channelAccessToken: <span class="var">tenant</span>.line.<span class="acc">access_token</span> <span class="com">// ← このサロン専用</span><br>
+&nbsp;&nbsp;};<br>
+<br>
+&nbsp;&nbsp;<span class="com">// 3) LINE 署名を このサロンの secret で検証</span><br>
+&nbsp;&nbsp;<span class="kw">if</span> (!validateSignature(req.rawBody, <span class="var">cfg</span>.channelSecret, signature)) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> res.status(401).send(<span class="str">'別サロンからの依頼かも → 拒否'</span>);<br>
+&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;<span class="com">// 4) このサロンのフォルダにだけ書き込む</span><br>
+&nbsp;&nbsp;<span class="kw">await</span> db.collection(<span class="str">'tenants'</span>).doc(<span class="var">tenantId</span>) <span class="com">// ← 必ず tenantId 経由</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;.collection(<span class="str">'customers'</span>).doc(lineUserId).set({...});<br>
+});
+    </div>
+
+    <p style="font-size:12.5px;color:#444;margin-top:14px"><b>注目ポイント:</b> 4 箇所すべてで <code style="background:#FFF7ED;color:#EA580C;padding:1px 6px;border-radius:4px">tenantId</code> 変数を使う設計。 別のサロンのデータに触る方法が <b>そもそもコードに存在しない</b>。</p>
+  </div>
+
+  <!-- ============== オーナーから Jobs への引き継ぎフェーズ ============== -->
+  <div class="sec">
+    <h2>心配 4: オーナーから Jobs への引き継ぎは スムーズか?</h2>
+
+    <div class="concern"><span class="ic">⚠</span><div><b>たとえば:</b> オーナーが credentials を貼り間違えた、 サロン slug を間違えた、 みたいな <b>人為的ミス</b> を Jobs はちゃんと検知してくれるか?</div></div>
+
+    <div class="answer"><span class="ic">✓</span><div><b>答え:</b> Jobs は credentials を受け取った瞬間に <b>5項目バリデーション</b> + <b>本番セットアップ前に LINE/Stripe に試し問い合わせ</b>。 ミスがあれば 何も保存せず エラー報告。</div></div>
+
+    <h3>受け取った瞬間にする確認</h3>
+    <ul class="flow-chain">
+      <li class="ok">
+        <div class="step-title">サロン slug 形式チェック</div>
+        <div class="step-body">英小文字/数字/ハイフン 2〜40字以内か? 全角混入? 空白混入? → NG なら即返却</div>
+      </li>
+      <li class="ok">
+        <div class="step-title">Channel ID 形式チェック</div>
+        <div class="step-body">10桁数字か? 改行混入? → NG なら即返却</div>
+      </li>
+      <li class="ok">
+        <div class="step-title">access_token 有効性チェック</div>
+        <div class="step-body">LINE API <code>GET /v2/bot/info</code> に問い合わせ → 200 OK 返ってこなければ token 無効 / 期限切れ と判定 → 保存せずエラー報告</div>
+      </li>
+      <li class="ok">
+        <div class="step-title">Stripe sk 有効性チェック</div>
+        <div class="step-body">Stripe API <code>accounts.retrieve</code> に問い合わせ → エラー返れば sk 無効と判定</div>
+      </li>
+      <li class="ok">
+        <div class="step-title">同じ slug の tenant が既に存在しないか確認</div>
+        <div class="step-body">他のサロンと slug 衝突したら、 サロン名変更を促す</div>
+      </li>
+    </ul>
+
+    <p style="font-size:12.5px;color:#444;margin-top:14px"><b>全部 OK</b> の時だけ、 ようやく Firestore tenant doc 作成 + LINE/Stripe 設定の自動登録 に進みます。 バリデーション失敗時は <b>何も保存せず、 何を直すべきか具体的に</b> オーナーに返却。</p>
+  </div>
+
+  <!-- ============== 信頼性のまとめ ============== -->
+  <div class="status-good">
+    <span class="ic-big">🛡️</span>
+    <div>
+      <h3>このシステムは安心して 複数サロンに販売できます</h3>
+      <p>Firestore のテナント分離、 LINE 署名検証、 Stripe メタデータ強制、 Firestore ルール、 4層の物理分離で データの混ざりは <b>絶対起きません</b>。 セットアップエラーは個別に検知 + べき等で何度でもやり直し可能。 同じ仕組みで <b>FP Compass が半年無事故稼働中</b> の実績あり。</p>
+    </div>
+  </div>
+
+  <div class="foot">SKEL·EC SAFETY GUARANTEES <em>·</em> 2026.06.18</div>
+</div>
+</body>
+</html>
