@@ -194,7 +194,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA_gNc45qCXgzJWv26kr873bwIUvv7cj4Q",
@@ -619,6 +619,16 @@ function updateNav(q){
 
 function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
 
+// 16文字 ランダム ID (申込番号 兼 onboarding_requests/{id}) — 大文字英数字 で 視認性 重視
+function generateShortId(){
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // 紛らわしい 0,1,I,O 除外
+  let s = '';
+  const ar = new Uint32Array(16);
+  crypto.getRandomValues(ar);
+  for (let i = 0; i < 16; i++) s += chars[ar[i] % chars.length];
+  return s;
+}
+
 // 不定休ルール chips helpers
 function readNthwdRules(){
   return Array.from(document.querySelectorAll('#nth-chips .nthwd-chip')).map(el => ({
@@ -719,9 +729,11 @@ async function sendToFirestore(){
     submittedAt: serverTimestamp(),
   };
 
+  // 16文字 短ID を 上で 発行 (signup時 doc.id 直叩き で 引ける ように)
+  const shortId = generateShortId();
   try {
-    const ref = await addDoc(collection(db, 'onboarding_requests'), payload);
-    state._doneId = ref.id.slice(0,12).toUpperCase();
+    await setDoc(doc(db, 'onboarding_requests', shortId), payload);
+    state._doneId = shortId;
     saveState();
     return true;
   } catch(e){
