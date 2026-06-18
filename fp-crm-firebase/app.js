@@ -3415,9 +3415,16 @@
       return true;
     });
 
+    // ★ 件数 内訳 (オーナーfb: 「議事録 何件溜まってるか分かるように」)
+    const aiCount = aiResults.filter(a => a.summary || a.transcript || (a.key_concerns||[]).length).length;
+    const memoCount = bookingsWithMemo.filter(b => b.memo).length;
     return `
       <div class="detail-section">
-        <h3>面談記録・AI議事録 <span class="count-badge">${bookingsWithMemo.length} 回</span></h3>
+        <h3>面談記録 <span class="count-badge">${bookingsWithMemo.length} 件</span>
+          <span style="font-size:11.5px;font-weight:600;color:#64748b;margin-left:8px;letter-spacing:0.04em;">
+            📋 AI議事録 ${aiCount}件 ${memoCount > 0 ? ` / ✍ 手書きメモ ${memoCount}件` : ''}
+          </span>
+        </h3>
         ${window.FP_DEBUG ? `
         <details style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-family:Menlo,monospace;font-size:11px;">
           <summary style="cursor:pointer;color:#475569;font-weight:700;font-family:inherit;">🔧 デバッグ (AI議事録 lookup)</summary>
@@ -3447,12 +3454,32 @@
           '<div style="display:grid;gap:14px;margin-bottom:18px;">' +
           bookingsWithMemo.slice().reverse().map(b => {
             const aiData = aiResults.find(a => a.bookingTs === b.ts) || {};
+            // ★ 当時年齢計算 (オーナーfb: 「誰々が何歳の時 みたいに 分かりやすく」)
+            let ageLabel = '';
+            try {
+              if (client.birth && b.date) {
+                const birthDt = new Date(client.birth);
+                const meetDt = new Date(b.date);
+                if (!isNaN(birthDt) && !isNaN(meetDt)) {
+                  let age = meetDt.getFullYear() - birthDt.getFullYear();
+                  const m = meetDt.getMonth() - birthDt.getMonth();
+                  if (m < 0 || (m === 0 && meetDt.getDate() < birthDt.getDate())) age--;
+                  if (age >= 0 && age < 120) ageLabel = `${age}歳`;
+                }
+              }
+            } catch (_) {}
             return `
             <div class="fp-meeting-card">
               <div class="fp-meeting-card-head">
                 <div>
                   <div class="fp-meeting-card-eyebrow">Meeting Record</div>
-                  <div class="fp-meeting-card-date">${escapeHtml(fmtDateRobust(b.date))} ${escapeHtml(fmtTimeRobust(b.time))} 面談</div>
+                  <div class="fp-meeting-card-date">
+                    <strong>${escapeHtml(client.name || 'お客様')}</strong> さん
+                    ${ageLabel ? `<span style="font-size:12.5px;color:#92400e;background:#FEF3C7;padding:2px 8px;border-radius:9999px;margin-left:6px;font-weight:700;">${ageLabel}</span>` : ''}
+                    <span style="display:inline-block;margin-left:8px;font-size:12.5px;color:#475569;font-weight:600;">
+                      ${escapeHtml(fmtDateRobust(b.date))} ${escapeHtml(fmtTimeRobust(b.time))} 面談
+                    </span>
+                  </div>
                 </div>
                 <div class="fp-meeting-card-actions">
                   ${b.driveUrl ? `<a href="${escapeHtml(b.driveUrl)}" target="_blank" class="fp-btn fp-btn-sm fp-btn-gold">🎥 録画を見る</a>` : ''}
