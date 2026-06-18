@@ -2856,7 +2856,7 @@
               <div class="cd-line-composer">
                 <textarea id="cd-line-input" placeholder="メッセージを入力... (Cmd+Enter で送信)"></textarea>
                 <div class="cd-line-composer-foot">
-                  <span class="cd-line-composer-meta">${c.lineFriendId ? '✓ LINE連携済' : '⚠ LINE friend ID 未登録'}</span>
+                  ${c.lineFriendId ? '<span class="cd-line-composer-meta">✓ LINE連携済</span>' : `<button class="cd-line-composer-meta" id="cd-line-fix-friendid" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:5px 12px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;">⚠ LINE friend ID 未登録 — タップで 登録 →</button>`}
                   <button class="cd-line-ai-quick" id="cd-line-ai-quick" data-cid="${escapeHtml(c.id)}" title="AI が直近の履歴から返信案を生成 → textarea に挿入 → 編集して送信" style="background:linear-gradient(135deg,#6366F1,#4338CA);color:#fff;border:none;padding:8px 14px;border-radius:6px;font-weight:800;cursor:pointer;font-size:12.5px;font-family:inherit;letter-spacing:0.04em;margin-right:8px;">✨ AI で返信案</button>
                   <button class="cd-line-send-btn" id="cd-line-send"${c.lineFriendId ? '' : ' disabled'}>
                     <i data-lucide="send"></i><span>送信</span>
@@ -3156,6 +3156,24 @@
     const input = document.getElementById('cd-line-input');
     const statusEl = document.getElementById('cd-line-msg');
     const chatEl = document.getElementById('cd-line-chat');
+    // ★ 「LINE friend ID 未登録」 タップ → 編集モーダル 即open
+    const fixIdBtn = document.getElementById('cd-line-fix-friendid');
+    if (fixIdBtn) {
+      fixIdBtn.addEventListener('click', () => {
+        const editBtn = document.getElementById('modal-edit-btn');
+        if (editBtn) {
+          editBtn.click();
+          setTimeout(() => {
+            const lineIdInput = document.getElementById('f-line-id');
+            if (lineIdInput) {
+              lineIdInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              lineIdInput.focus();
+              lineIdInput.style.boxShadow = '0 0 0 3px #fbbf24';
+            }
+          }, 400);
+        }
+      });
+    }
     function appendLocalMessage(text) {
       const ts = new Date();
       const tsStr = ts.getFullYear() + '-' + String(ts.getMonth()+1).padStart(2,'0') + '-' + String(ts.getDate()).padStart(2,'0') + ' ' + String(ts.getHours()).padStart(2,'0') + ':' + String(ts.getMinutes()).padStart(2,'0');
