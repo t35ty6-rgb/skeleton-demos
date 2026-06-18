@@ -610,7 +610,13 @@
         <div class="form-section">
           <h3>LINE公式連携</h3>
           <div class="form-grid">
-            <div class="form-row"><label>LINE friend ID</label><input type="text" id="f-line-id" value="${escapeHtml(c.lineFriendId || '')}" placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"></div>
+            <div class="form-row">
+              <label>LINE friend ID</label>
+              <input type="text" id="f-line-id" value="${escapeHtml(c.lineFriendId || c.userId || '')}" placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxx (LINE 公式アカウント 友だち一覧 から コピー)">
+              <div style="font-size:11px;color:#64748b;line-height:1.7;margin-top:6px;padding:8px 12px;background:#f1f5f9;border-radius:6px;">
+                📍 取得方法: <strong>LINE Official Account Manager</strong> (manager.line.biz) → 友だち一覧 → 該当のお客様 → 詳細 (User ID 欄) → Uから始まる 32桁を コピー
+              </div>
+            </div>
             <div class="form-row"><label>連携状態</label>
               <label class="toggle-switch" style="margin-top:4px;">
                 <input type="checkbox" id="f-line-sub" ${c.lineSubscribed ? 'checked' : ''}><span></span>
@@ -667,7 +673,7 @@
     document.getElementById('form-close-btn').addEventListener('click', close);
     document.getElementById('form-cancel-btn').addEventListener('click', close);
 
-    document.getElementById('form-save-btn').addEventListener('click', () => {
+    document.getElementById('form-save-btn').addEventListener('click', async () => {
       const name = document.getElementById('f-name').value.trim();
       const birth = document.getElementById('f-birth').value;
       if (!name || !birth) {
@@ -702,6 +708,30 @@
         if (idx >= 0) clients[idx] = c;
       }
       saveClientsToLS();
+      // ★ Firestore 多テナント customer (source==='line_survey' or _fsCustomerId付き) は Firestore も更新
+      try {
+        const tenantId = window.__fp && window.__fp.tenantId;
+        const fsDocId = c._fsCustomerId || (c.source === 'line_survey' ? c.id : null);
+        if (tenantId && fsDocId && tenantId !== 'demo') {
+          const { getFirestore, doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
+          const { getApps } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js');
+          const app = getApps()[0];
+          if (app) {
+            await updateDoc(doc(getFirestore(app), 'tenants', tenantId, 'customers', fsDocId), {
+              lineFriendId: c.lineFriendId || '',
+              userId: c.lineFriendId || '',
+              name: c.name,
+              birth: c.birth,
+              occupation: c.occupation,
+              note: c.note,
+              aum: c.aum,
+              lastContact: c.lastContact,
+              family: c.family || [],
+            });
+            console.log('[customer edit] Firestore 更新 OK', fsDocId);
+          }
+        }
+      } catch (e) { console.warn('[customer edit] Firestore update fail:', e); }
       close();
       // モーダルが開いていれば閉じる
       document.getElementById('modal-overlay').style.display = 'none';
