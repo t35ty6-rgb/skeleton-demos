@@ -631,9 +631,10 @@
           <textarea id="f-note" rows="3" style="width:100%;resize:vertical;">${escapeHtml(c.note || '')}</textarea>
         </div>
 
-        <div style="display:flex;gap:8px;margin-top:18px;">
+        <div style="display:flex;gap:8px;margin-top:18px;align-items:center;">
           <button class="primary" id="form-save-btn">${isNew ? '登録' : '保存'}</button>
           <button id="form-cancel-btn">キャンセル</button>
+          ${!isNew ? `<button id="form-delete-btn" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:8px 16px;border-radius:6px;font-weight:700;cursor:pointer;margin-left:auto;font-family:inherit;">🗑 この顧客を削除</button>` : ''}
           ${!isNew ? '<button id="form-delete-btn" style="margin-left:auto;border-color:var(--red);color:var(--red);">削除</button>' : ''}
         </div>
       </div>
@@ -672,6 +673,53 @@
     function close() { document.getElementById('form-overlay').style.display = 'none'; }
     document.getElementById('form-close-btn').addEventListener('click', close);
     document.getElementById('form-cancel-btn').addEventListener('click', close);
+    // ★ 削除ボタン (新規時 出ない)
+    const deleteBtn = document.getElementById('form-delete-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async () => {
+        if (!confirm(`「${c.name}」 さんを 完全に削除します。\n戻せません。 本当に削除しますか?\n\n(議事録 / LINE履歴 / 確定済予約 含めて 全部 消えます)`)) return;
+        deleteBtn.disabled = true; deleteBtn.textContent = '⏳ 削除中...';
+        try {
+          // Firestore customer (multi-tenant) の場合
+          const tenantId = window.__fp && window.__fp.tenantId;
+          const fsDocId = c._fsCustomerId || (c.source === 'line_survey' || c.source === 'line_follow' ? c.id : null);
+          if (tenantId && fsDocId && tenantId !== 'demo') {
+            const { getApps, initializeApp } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js');
+            const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js');
+            const app = getApps()[0] || initializeApp({ apiKey: 'AIzaSyAmVAEe9l9e1Yo_dzzJdbTVU35wWKd2sH4', authDomain: 'skeleton-fp-compass-632026.firebaseapp.com', projectId: 'skeleton-fp-compass-632026' });
+            await httpsCallable(getFunctions(app, 'asia-northeast1'), 'deleteCustomer')({ customerId: fsDocId });
+          }
+          // localStorage (DUMMY_CLIENTS) からも削除
+          if (window.DUMMY_CLIENTS) {
+            const idx = window.DUMMY_CLIENTS.findIndex(x => x.id === c.id);
+            if (idx >= 0) window.DUMMY_CLIENTS.splice(idx, 1);
+            try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS)); } catch (_) {}
+          }
+          // 議事録 backup も 削除 (customerName 一致)
+          Object.keys(localStorage).filter(k => k.startsWith('fp-ai-')).forEach(k => {
+            try {
+              const raw = JSON.parse(localStorage.getItem(k) || 'null');
+              const entries = Array.isArray(raw) ? raw : (raw && raw.entry ? [raw.entry] : []);
+              if (entries.some(e => e.customerName === c.name || e.userId === c.lineFriendId)) {
+                localStorage.removeItem(k);
+              }
+            } catch (_) {}
+          });
+          close();
+          document.getElementById('modal-overlay').style.display = 'none';
+          activateTab(state.activeTab);
+          // トースト
+          const t = document.createElement('div');
+          t.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border-left:5px solid #06c755;border-radius:10px;padding:14px 20px;box-shadow:0 12px 32px rgba(0,0,0,0.18);z-index:10010;font-family:inherit;';
+          t.innerHTML = `<strong style="font-size:14px;color:#0a0a0a;">🗑 削除完了</strong><div style="font-size:12px;color:#475569;margin-top:4px;">${escapeHtml(c.name)} さんを 完全に削除しました</div>`;
+          document.body.appendChild(t);
+          setTimeout(() => t.remove(), 5000);
+        } catch (e) {
+          alert('削除失敗: ' + (e.message || e));
+          deleteBtn.disabled = false; deleteBtn.textContent = '🗑 この顧客を削除';
+        }
+      });
+    }
 
     document.getElementById('form-save-btn').addEventListener('click', async () => {
       const name = document.getElementById('f-name').value.trim();
