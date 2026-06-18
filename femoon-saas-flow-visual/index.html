@@ -326,10 +326,6 @@
     transition:transform .2s ease,border-color .2s ease,background .2s ease;
     overflow:hidden;
   }
-  .story-cell::before{
-    content:"";position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.04),transparent 60%);
-  }
   .story-cell:hover{transform:translateY(-2px);border-color:var(--line-strong)}
   .story-cell[data-role="sk"]{border-color:rgba(251,191,36,.30)}
   .story-cell[data-role="sa"]{border-color:rgba(6,199,85,.30)}
@@ -391,35 +387,47 @@
   .story-arrow[data-from="sa"][data-to="cu"] svg{color:var(--customer)}
   .story-arrow[data-from="sk"][data-to="cu"] svg{color:var(--customer)}
 
-  /* Desktop: 矢印は inline で各セル間 / U 字曲げず グリッドにフラットに並べる */
+  /* Desktop: 矢印は ::after で水平ライン + chevron で表現 */
   @media (min-width:768px){
     .story-arrow{display:none} /* mobile 専用 */
     .storyboard{position:relative}
-    /* 行間/列間に絶対配置の矢印ガイド線 */
     .story-cell{position:relative}
+    /* 横ライン (cell → next cell) */
     .story-cell::after{
       content:"";position:absolute;
-      width:28px;height:2px;
-      right:-28px;top:50%;transform:translateY(-50%);
-      background:linear-gradient(90deg,var(--ink-dim),transparent);
-      opacity:.55;
+      width:36px;height:0;
+      right:-36px;top:50%;
+      border-top:2px dashed currentColor;
+      color:var(--ink-dim);
+      opacity:.75;
+      z-index:1;
+    }
+    /* chevron (右向き三角) */
+    .story-cell::before{
+      content:"";position:absolute;
+      right:-22px;top:50%;
+      transform:translateY(-50%);
+      width:0;height:0;
+      border-left:8px solid currentColor;
+      border-top:5px solid transparent;
+      border-bottom:5px solid transparent;
+      color:var(--ink-dim);
+      z-index:3;
+      background:none;
+      opacity:.9;
     }
     /* 3列目の右側は矢印不要 */
-    .story-cell:nth-of-type(3n)::after{display:none}
-    /* ジグザグ用: 行末→次行先頭の縦/折返し矢印は overlay SVG で表現 */
-    .story-arrow-svg{
-      position:absolute;color:var(--ink-dim);pointer-events:none;
-      opacity:.65;
-    }
-  }
+    .story-cell:nth-of-type(3n)::after,
+    .story-cell:nth-of-type(3n)::before{display:none}
+    /* 役割色 移行 矢印強調: cell の data-role と "次の cell の役割" は CSS では捉えられないので、 各 cell の右矢印の色 を「次のセル の役割」で 上書き する class を 個別指定 */
+    .story-cell.to-sa::after,.story-cell.to-sa::before{color:var(--salon);opacity:1}
+    .story-cell.to-sk::after,.story-cell.to-sk::before{color:var(--skeleton);opacity:1}
+    .story-cell.to-cu::after,.story-cell.to-cu::before{color:var(--customer);opacity:1}
 
-  /* 矢印 chevron は overlay span で */
-  .chev{
-    display:none;
-  }
-  @media (min-width:768px){
-    .story-cell{}
-    /* chevron は inline span として storyboard 子に並べる必要があるが、 storyboard は grid。 矢印は不要派は ::after の方向グラデで動線として認識される */
+    /* 9番目 (最後) を 4行目中央列に配置 */
+    .story-cell.is-last{
+      grid-column:2 / 3;
+    }
   }
 
   /* 役割色 移行 矢印強調 */
@@ -512,7 +520,7 @@
     <div class="storyboard" role="list">
 
       <!-- 0: QR 発行 (Skeleton) -->
-      <a class="story-cell" data-role="sk" href="#stage-0" role="listitem" aria-label="段階0 QR発行">
+      <a class="story-cell to-sa" data-role="sk" href="#stage-0" role="listitem" aria-label="段階0 QR発行">
         <span class="story-num">0</span><span class="story-dot" aria-hidden="true"></span>
         <span class="story-svg" aria-hidden="true">
           <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -542,7 +550,7 @@
       </span>
 
       <!-- 1: スマホ で QR 読み取り (Salon) -->
-      <a class="story-cell" data-role="sa" href="#stage-1" role="listitem" aria-label="段階1 QRスキャン">
+      <a class="story-cell to-sa" data-role="sa" href="#stage-1" role="listitem" aria-label="段階1 QRスキャン">
         <span class="story-num">1</span><span class="story-dot" aria-hidden="true"></span>
         <span class="story-svg" aria-hidden="true">
           <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -576,7 +584,7 @@
       </span>
 
       <!-- 2: クレカ + 銀行 (Stripe決済) -->
-      <a class="story-cell" data-role="sa" href="#stage-2" role="listitem" aria-label="段階2 Stripe決済">
+      <a class="story-cell to-sa" data-role="sa" href="#stage-2" role="listitem" aria-label="段階2 Stripe決済">
         <span class="story-num">2</span><span class="story-dot" aria-hidden="true"></span>
         <span class="story-svg" aria-hidden="true">
           <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -625,7 +633,7 @@
       </span>
 
       <!-- 3: 書類 + ペン (申込フォーム) -->
-      <a class="story-cell" data-role="sa" href="#stage-3" role="listitem" aria-label="段階3 申込フォーム">
+      <a class="story-cell to-sk" data-role="sa" href="#stage-3" role="listitem" aria-label="段階3 申込フォーム">
         <span class="story-num">3</span><span class="story-dot" aria-hidden="true"></span>
         <span class="story-svg" aria-hidden="true">
           <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -667,7 +675,7 @@
       </span>
 
       <!-- 4: 歯車 + サーバー (Skeleton自動セットアップ) -->
-      <a class="story-cell" data-role="sk" href="#stage-4" role="listitem" aria-label="段階4 自動セットアップ">
+      <a class="story-cell to-sa" data-role="sk" href="#stage-4" role="listitem" aria-label="段階4 自動セットアップ">
         <span class="story-num">4</span><span class="story-dot" aria-hidden="true"></span>
         <span class="story-svg" aria-hidden="true">
           <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -730,7 +738,7 @@
       </span>
 
       <!-- 5: 封筒 + 鍵 + URL (完了メール) -->
-      <a class="story-cell" data-role="sa" href="#stage-5" role="listitem" aria-label="段階5 完了メール">
+      <a class="story-cell to-sa" data-role="sa" href="#stage-5" role="listitem" aria-label="段階5 完了メール">
         <span class="story-num">5</span><span class="story-dot" aria-hidden="true"></span>
         <span class="story-svg" aria-hidden="true">
           <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -765,7 +773,7 @@
       </span>
 
       <!-- 6: LINE 公式アカウント バブル -->
-      <a class="story-cell" data-role="sa" href="#stage-6" role="listitem" aria-label="段階6 LINE公式アカウント開設">
+      <a class="story-cell to-sa" data-role="sa" href="#stage-6" role="listitem" aria-label="段階6 LINE公式アカウント開設">
         <span class="story-num">6</span><span class="story-dot" aria-hidden="true"></span>
         <span class="story-svg" aria-hidden="true">
           <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -793,7 +801,7 @@
       </span>
 
       <!-- 7: 歯車 + LIFF タグ + チェーン -->
-      <a class="story-cell" data-role="sa" href="#stage-7" role="listitem" aria-label="段階7 LIFF作成">
+      <a class="story-cell to-sk" data-role="sa" href="#stage-7" role="listitem" aria-label="段階7 LIFF作成">
         <span class="story-num">7</span><span class="story-dot" aria-hidden="true"></span>
         <span class="story-svg" aria-hidden="true">
           <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -839,7 +847,7 @@
       </span>
 
       <!-- 8: 管理画面 + 完了ボタン -->
-      <a class="story-cell" data-role="sk" href="#stage-8" role="listitem" aria-label="段階8 最終仕上げ">
+      <a class="story-cell to-cu" data-role="sk" href="#stage-8" role="listitem" aria-label="段階8 最終仕上げ">
         <span class="story-num">8</span><span class="story-dot" aria-hidden="true"></span>
         <span class="story-svg" aria-hidden="true">
           <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -877,7 +885,7 @@
       </span>
 
       <!-- 9: iPhone 3枚 + ベル + カレンダー (お客様予約) -->
-      <a class="story-cell" data-role="cu" href="#stage-9" role="listitem" aria-label="段階9 お客様予約スタート">
+      <a class="story-cell is-last" data-role="cu" href="#stage-9" role="listitem" aria-label="段階9 お客様予約スタート">
         <span class="story-num">9</span><span class="story-dot" aria-hidden="true"></span>
         <span class="story-svg" aria-hidden="true">
           <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
