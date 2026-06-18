@@ -1379,6 +1379,59 @@ function renderNewGrid(){
 syncCustomToProdInfo();
 renderNewGrid();
 
+/* ============ HEART FAVORITES ============ */
+let FAVS = [];
+try{FAVS = JSON.parse(localStorage.getItem('alice_favorites')||'[]')}catch(e){}
+function syncHeartUI(){
+  document.querySelectorAll('.item-card').forEach(c=>{
+    const nm = (c.querySelector('.nm')?.textContent||'').trim().replace(/【.*?】/g,'').split(/[\n\r]/)[0].trim();
+    const h = c.querySelector('.heart');
+    if(!h) return;
+    const isFav = FAVS.includes(nm);
+    h.style.color = isFav?'var(--red)':'';
+    h.style.background = isFav?'#fff':'';
+    h.querySelector('svg').style.fill = isFav?'var(--red)':'none';
+  });
+}
+function toggleFav(nm){
+  const i = FAVS.indexOf(nm);
+  if(i>=0) FAVS.splice(i,1); else FAVS.unshift(nm);
+  localStorage.setItem('alice_favorites', JSON.stringify(FAVS));
+  syncHeartUI();
+  // Show small toast
+  const t = document.createElement('div');
+  t.style.cssText='position:fixed;bottom:90px;right:20px;z-index:300;background:'+(i>=0?'var(--ink)':'var(--red)')+';color:#fff;padding:10px 18px;font-size:12px;font-weight:600;letter-spacing:.06em;box-shadow:0 10px 24px -8px rgba(0,0,0,.3)';
+  t.textContent = i>=0?'「'+nm+'」をお気に入りから外しました':'「'+nm+'」をお気に入りに追加 ★';
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2500);
+}
+// Wire heart clicks (use event delegation on document)
+document.addEventListener('click',e=>{
+  const h = e.target.closest('.item-card .heart');
+  if(h){
+    e.preventDefault();e.stopPropagation();
+    const card = h.closest('.item-card');
+    const nm = (card?.querySelector('.nm')?.textContent||'').trim().replace(/【.*?】/g,'').split(/[\n\r]/)[0].trim();
+    if(nm) toggleFav(nm);
+  }
+});
+// Sync after grid renders
+const _origRenderNewGrid = renderNewGrid;
+renderNewGrid = function(){_origRenderNewGrid();syncHeartUI()};
+syncHeartUI();
+
+/* ============ Hash-based open from seijin.html or external link ============ */
+function checkHashOpen(){
+  const m = location.hash.match(/booking=([^&]+)/);
+  if(m){
+    const nm = decodeURIComponent(m[1]);
+    setTimeout(()=>openByName(nm), 800);
+    history.replaceState(null,'',location.pathname+location.search);
+  }
+}
+window.addEventListener('hashchange',checkHashOpen);
+checkHashOpen();
+
 // Listen for admin inventory updates
 window.addEventListener('storage', e=>{
   if(e.key === 'alice_inventory'){

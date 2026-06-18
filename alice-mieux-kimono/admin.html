@@ -1224,6 +1224,275 @@ window.addEventListener('storage', e=>{
   }
 });
 
+/* ============ TOPBAR SEARCH ============ */
+const searchInput = document.querySelector('.topbar .search');
+if(searchInput){
+  searchInput.addEventListener('input', e=>{
+    const q = e.target.value.trim();
+    // Filter current visible section's table
+    const active = document.querySelector('.section.on');
+    if(!active) return;
+    const tbody = active.querySelector('tbody');
+    if(!tbody) return;
+    [...tbody.children].forEach(tr=>{
+      if(!q){tr.style.display='';return}
+      const txt = tr.innerText.toLowerCase();
+      tr.style.display = txt.includes(q.toLowerCase())?'':'none';
+    });
+  });
+}
+
+/* ============ NEW BOOKING (admin input) ============ */
+const NEW_BOOK_HTML = `
+<div id="nb-back" style="position:fixed;inset:0;z-index:62;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto">
+  <div style="background:#fff;max-width:680px;width:100%;margin:auto;box-shadow:0 24px 64px -16px rgba(0,0,0,.5)">
+    <div style="padding:18px 24px;border-bottom:1px solid var(--line);background:var(--bg-3);display:flex;justify-content:space-between;align-items:center">
+      <h3 style="font-family:var(--serif);font-weight:600;font-size:16px;letter-spacing:.1em">＋ 電話/来店からの新規予約を入力<small style="font-family:var(--ui);font-size:9.5px;letter-spacing:.26em;color:var(--ink-3);margin-left:10px;font-weight:600;text-transform:uppercase">MANUAL BOOKING</small></h3>
+      <button id="nb-close" style="font-size:16px;color:var(--ink-3);width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--line);background:#fff;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:24px 28px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div><label style="display:block;font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;font-family:var(--ui)">お客様 姓 <span style="color:var(--red)">*</span></label><input id="nb-lname" type="text" placeholder="例：吉田" style="width:100%;padding:11px 13px;font-size:14px;border:1px solid var(--line)"></div>
+        <div><label style="display:block;font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;font-family:var(--ui)">お客様 名 <span style="color:var(--red)">*</span></label><input id="nb-fname" type="text" placeholder="例：花子" style="width:100%;padding:11px 13px;font-size:14px;border:1px solid var(--line)"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+        <div><label style="display:block;font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;font-family:var(--ui)">お電話 <span style="color:var(--red)">*</span></label><input id="nb-tel" type="tel" placeholder="090-XXXX-XXXX" style="width:100%;padding:11px 13px;font-size:14px;border:1px solid var(--line)"></div>
+        <div><label style="display:block;font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;font-family:var(--ui)">メール</label><input id="nb-mail" type="email" placeholder="example@mail.com" style="width:100%;padding:11px 13px;font-size:14px;border:1px solid var(--line)"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+        <div><label style="display:block;font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;font-family:var(--ui)">お品 <span style="color:var(--red)">*</span></label><select id="nb-kim" style="width:100%;padding:11px 13px;font-size:14px;border:1px solid var(--line)"></select></div>
+        <div><label style="display:block;font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;font-family:var(--ui)">ご利用シーン</label><select id="nb-scene" style="width:100%;padding:11px 13px;font-size:14px;border:1px solid var(--line)"><option>二十歳のつどい</option><option>ご結婚</option><option>ご結婚 ご親族</option><option>ご卒入学</option><option>お茶会・お食事会</option><option>夏のお祭り</option><option>その他</option></select></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+        <div><label style="display:block;font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;font-family:var(--ui)">ご試着 日 <span style="color:var(--red)">*</span></label><input id="nb-date" type="date" style="width:100%;padding:11px 13px;font-size:14px;border:1px solid var(--line)"></div>
+        <div><label style="display:block;font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;font-family:var(--ui)">ご試着 時刻</label><input id="nb-time" type="time" value="14:00" style="width:100%;padding:11px 13px;font-size:14px;border:1px solid var(--line)"></div>
+      </div>
+      <div style="margin-top:14px"><label style="display:block;font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;font-family:var(--ui)">特記事項・メモ</label><textarea id="nb-memo" rows="3" placeholder="例：ご家族同時お仕度ご希望" style="width:100%;padding:11px 13px;font-size:14px;border:1px solid var(--line);font-family:var(--sans);resize:vertical;line-height:1.7"></textarea></div>
+    </div>
+    <div style="padding:14px 24px;border-top:1px solid var(--line);background:var(--bg-3);display:flex;justify-content:flex-end;gap:10px">
+      <button id="nb-cancel" style="padding:10px 24px;font-size:12px;font-weight:600;background:#fff;color:var(--ink-2);border:1px solid var(--line);cursor:pointer">キャンセル</button>
+      <button id="nb-save" style="padding:10px 24px;font-size:12px;font-weight:700;background:var(--red);color:#fff;border:0;cursor:pointer">＋ 登録する</button>
+    </div>
+  </div>
+</div>`;
+document.body.insertAdjacentHTML('beforeend', NEW_BOOK_HTML);
+function openNewBooking(){
+  // populate kimono select
+  const sel = document.getElementById('nb-kim');
+  sel.innerHTML = INVENTORY.map(i=>`<option value="${i.nm}|${i.cat}|${i.price}">${i.nm}（${i.cat}）${i.price}</option>`).join('');
+  ['nb-lname','nb-fname','nb-tel','nb-mail','nb-memo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('nb-back').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+document.querySelector('.topbar button.btn').addEventListener('click',openNewBooking);
+document.getElementById('nb-close').addEventListener('click',()=>{document.getElementById('nb-back').style.display='none';document.body.style.overflow=''});
+document.getElementById('nb-cancel').addEventListener('click',()=>{document.getElementById('nb-back').style.display='none';document.body.style.overflow=''});
+document.getElementById('nb-save').addEventListener('click',()=>{
+  const lname = document.getElementById('nb-lname').value.trim();
+  const fname = document.getElementById('nb-fname').value.trim();
+  const tel = document.getElementById('nb-tel').value.trim();
+  const dt = document.getElementById('nb-date').value;
+  if(!lname||!fname||!tel||!dt){alert('必須項目をご入力ください');return}
+  const [kimNm, kimCat, kimPrice] = document.getElementById('nb-kim').value.split('|');
+  const time = document.getElementById('nb-time').value || '14:00';
+  const ref = 'AM-2026-'+Math.floor(1000+Math.random()*9000);
+  const booking = {
+    id: ref, name: lname+' '+fname+'さま', kana:'(管理画面より)',
+    kim: kimNm, cat: kimCat, price: kimPrice,
+    scene: document.getElementById('nb-scene').value,
+    try: dt+' '+time,
+    use:'―', tel, mail: document.getElementById('nb-mail').value||'―',
+    addr:'―', h:'―', foot:'―', mama:'―',
+    msg: document.getElementById('nb-memo').value||'',
+    stt:'wait', submitted: new Date().toISOString().slice(0,16).replace('T',' '),
+    ts: Date.now(), from:'admin'
+  };
+  BOOKINGS.unshift(booking);
+  persistAndRefresh();
+  document.getElementById('nb-back').style.display='none';
+  document.body.style.overflow='';
+  showToast('「'+booking.name+'」のご予約を登録しました');
+});
+
+/* ============ CUSTOMER DETAIL ============ */
+const CUST_DRAWER_HTML = `
+<div id="cd-back" style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.4);display:none"></div>
+<div id="cd-drawer" style="position:fixed;top:0;right:0;bottom:0;z-index:51;width:min(480px,100%);background:#fff;transform:translateX(100%);transition:transform .35s;display:flex;flex-direction:column;box-shadow:-10px 0 30px -10px rgba(0,0,0,.2)">
+  <div style="padding:18px 22px;border-bottom:1px solid var(--line);background:var(--bg-3);display:flex;justify-content:space-between;align-items:center">
+    <h3 id="cd-name" style="font-family:var(--serif);font-weight:600;font-size:15px;letter-spacing:.08em">お客様詳細</h3>
+    <button id="cd-close" style="font-size:16px;color:var(--ink-3);width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--line);background:#fff;cursor:pointer">✕</button>
+  </div>
+  <div style="padding:24px 22px;flex:1;overflow-y:auto" id="cd-body"></div>
+</div>`;
+document.body.insertAdjacentHTML('beforeend', CUST_DRAWER_HTML);
+function openCustomer(c){
+  document.getElementById('cd-name').textContent = c.name+' さま';
+  // related bookings
+  const related = BOOKINGS.filter(b=>b.name.includes(c.name)||b.tel===c.tel);
+  document.getElementById('cd-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:18px">
+      <div style="width:54px;height:54px;border-radius:50%;background:var(--gold);color:#fff;display:grid;place-items:center;font-family:var(--serif);font-weight:600;font-size:20px">${c.name[0]}</div>
+      <div>
+        <b style="font-family:var(--serif);font-size:17px;letter-spacing:.04em;color:var(--ink)">${c.name} さま</b>
+        <div style="font-size:12px;color:var(--ink-3);margin-top:3px">${c.kana}</div>
+      </div>
+    </div>
+    <dl style="display:grid;grid-template-columns:100px 1fr;gap:10px 14px;font-size:13px">
+      <dt style="color:var(--ink-3);font-weight:600;font-family:var(--ui);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;padding-top:3px">ID</dt><dd>${c.id}</dd>
+      <dt style="color:var(--ink-3);font-weight:600;font-family:var(--ui);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;padding-top:3px">お電話</dt><dd><a href="tel:${c.tel}" style="color:var(--red)">${c.tel}</a></dd>
+      <dt style="color:var(--ink-3);font-weight:600;font-family:var(--ui);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;padding-top:3px">メール</dt><dd><a href="mailto:${c.mail}" style="color:var(--red)">${c.mail}</a></dd>
+      <dt style="color:var(--ink-3);font-weight:600;font-family:var(--ui);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;padding-top:3px">利用回数</dt><dd style="font-family:var(--serif);font-weight:700;font-size:18px;color:var(--ink)">${c.cnt}<small style="font-size:11px;color:var(--ink-3);font-family:var(--sans);font-weight:500;margin-left:2px">回</small></dd>
+      <dt style="color:var(--ink-3);font-weight:600;font-family:var(--ui);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;padding-top:3px">累計</dt><dd style="font-family:var(--serif);font-weight:700;font-size:18px;color:var(--red)">${c.total}</dd>
+      <dt style="color:var(--ink-3);font-weight:600;font-family:var(--ui);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;padding-top:3px">最終来店</dt><dd>${c.last}</dd>
+    </dl>
+    <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--line)">
+      <h4 style="font-family:var(--serif);font-weight:600;font-size:13px;letter-spacing:.08em;margin-bottom:12px">ご予約履歴 (${related.length})</h4>
+      ${related.length===0?'<p style="font-size:12px;color:var(--ink-3)">該当のご予約はございません</p>':related.map(b=>`<div style="padding:10px 12px;background:var(--bg-3);margin-bottom:8px;font-size:12px;cursor:pointer" onclick="closeCustDrawer();openBookingDetail('${b.id}')"><b style="font-family:var(--serif);font-size:13px;color:var(--ink);letter-spacing:.04em">${b.kim}</b> <span class="stt ${b.stt}" style="margin-left:6px">${STT_LABEL[b.stt]}</span><div style="margin-top:4px;color:var(--ink-3);font-size:11.5px">${b.try} ・ ${b.price}</div></div>`).join('')}
+    </div>
+    <div style="margin-top:20px;display:flex;gap:8px">
+      <a href="tel:${c.tel}" style="flex:1;padding:11px;text-align:center;background:var(--green);color:#fff;font-weight:600;font-size:12px;letter-spacing:.04em">お電話する</a>
+      <a href="mailto:${c.mail}" style="flex:1;padding:11px;text-align:center;background:var(--ink);color:#fff;font-weight:600;font-size:12px;letter-spacing:.04em">メール送信</a>
+    </div>
+  `;
+  document.getElementById('cd-back').style.display='block';
+  document.getElementById('cd-drawer').style.transform='translateX(0)';
+  document.body.style.overflow='hidden';
+}
+function closeCustDrawer(){
+  document.getElementById('cd-back').style.display='none';
+  document.getElementById('cd-drawer').style.transform='translateX(100%)';
+  document.body.style.overflow='';
+}
+document.getElementById('cd-close').addEventListener('click',closeCustDrawer);
+document.getElementById('cd-back').addEventListener('click',closeCustDrawer);
+// Wire customer rows
+document.querySelectorAll('#cust-tbl tbody tr').forEach((tr,i)=>{
+  tr.style.cursor='pointer';
+  tr.addEventListener('click',()=>openCustomer(CUSTOMERS[i]));
+});
+
+/* ============ NEWS MANAGEMENT ============ */
+const NEWS_MODAL_HTML = `
+<div id="nm-back" style="position:fixed;inset:0;z-index:62;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;padding:24px">
+  <div style="background:#fff;max-width:560px;width:100%;margin:auto;box-shadow:0 24px 64px -16px rgba(0,0,0,.5)">
+    <div style="padding:18px 24px;border-bottom:1px solid var(--line);background:var(--bg-3);display:flex;justify-content:space-between">
+      <h3 id="nm-ttl" style="font-family:var(--serif);font-weight:600;font-size:16px;letter-spacing:.1em">＋ 新規お知らせ投稿</h3>
+      <button id="nm-close" style="font-size:16px;color:var(--ink-3);width:30px;height:30px;border:1px solid var(--line);background:#fff;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:24px 28px">
+      <div><label style="display:block;font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;font-family:var(--ui)">公開日 <span style="color:var(--red)">*</span></label><input id="nm-date" type="date" style="width:100%;padding:11px 13px;font-size:14px;border:1px solid var(--line)"></div>
+      <div style="margin-top:14px"><label style="display:block;font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;font-family:var(--ui)">タイトル <span style="color:var(--red)">*</span></label><input id="nm-title" type="text" placeholder="例：2027年新作振袖入荷" style="width:100%;padding:11px 13px;font-size:14px;border:1px solid var(--line)"></div>
+      <div style="margin-top:14px"><label style="display:block;font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;font-family:var(--ui)">本文</label><textarea id="nm-body" rows="4" style="width:100%;padding:11px 13px;font-size:14px;border:1px solid var(--line);font-family:var(--sans);resize:vertical;line-height:1.7"></textarea></div>
+    </div>
+    <div style="padding:14px 24px;border-top:1px solid var(--line);background:var(--bg-3);display:flex;justify-content:flex-end;gap:10px">
+      <button id="nm-cancel" style="padding:10px 24px;font-size:12px;font-weight:600;background:#fff;color:var(--ink-2);border:1px solid var(--line);cursor:pointer">キャンセル</button>
+      <button id="nm-save" style="padding:10px 24px;font-size:12px;font-weight:700;background:var(--red);color:#fff;border:0;cursor:pointer">＋ 投稿する</button>
+    </div>
+  </div>
+</div>`;
+document.body.insertAdjacentHTML('beforeend', NEWS_MODAL_HTML);
+let editingNewsIdx = -1;
+function openNewsModal(idx){
+  editingNewsIdx = idx;
+  document.getElementById('nm-ttl').textContent = idx>=0?'お知らせ編集':'＋ 新規お知らせ投稿';
+  if(idx>=0){
+    const n = NEWS[idx];
+    document.getElementById('nm-date').value = n.date.replace(/\//g,'-');
+    document.getElementById('nm-title').value = n.ttl;
+    document.getElementById('nm-body').value = n.body||'';
+  } else {
+    document.getElementById('nm-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('nm-title').value = '';
+    document.getElementById('nm-body').value = '';
+  }
+  document.getElementById('nm-back').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeNewsModal(){document.getElementById('nm-back').style.display='none';document.body.style.overflow=''}
+document.getElementById('nm-close').addEventListener('click',closeNewsModal);
+document.getElementById('nm-cancel').addEventListener('click',closeNewsModal);
+document.getElementById('nm-save').addEventListener('click',()=>{
+  const date = document.getElementById('nm-date').value.replace(/-/g,'/');
+  const ttl = document.getElementById('nm-title').value.trim();
+  if(!date||!ttl){alert('公開日とタイトルは必須でございます');return}
+  const body = document.getElementById('nm-body').value;
+  if(editingNewsIdx>=0){NEWS[editingNewsIdx]={...NEWS[editingNewsIdx],date,ttl,body}}
+  else {NEWS.unshift({date,ttl,body,stt:'公開',custom:true})}
+  localStorage.setItem('alice_news', JSON.stringify(NEWS.filter(n=>n.custom)));
+  renderNewsTbl();
+  closeNewsModal();
+  showToast(editingNewsIdx>=0?'お知らせを更新しました':'新規お知らせを投稿しました');
+});
+function renderNewsTbl(){
+  document.getElementById('news-tbl').innerHTML = `
+    <thead><tr><th>公開日</th><th>タイトル</th><th>状態</th><th></th></tr></thead>
+    <tbody>${NEWS.map((n,i)=>`
+      <tr>
+        <td><b>${n.date}</b></td>
+        <td>${n.ttl}</td>
+        <td><span class="stt ${n.stt==='公開'?'ok':'cancel'}">${n.stt}</span></td>
+        <td class="acts"><button onclick="openNewsModal(${i})">編集</button><button onclick="NEWS[${i}].stt=NEWS[${i}].stt==='公開'?'非公開':'公開';renderNewsTbl()">${n.stt==='公開'?'非公開':'公開'}</button></td>
+      </tr>
+    `).join('')}</tbody>
+  `;
+}
+// + 新規投稿 button - defer to ensure NEWS const is initialized
+setTimeout(()=>{
+  document.querySelector('#sec-news .card-h .right a')?.addEventListener('click',e=>{e.preventDefault();openNewsModal(-1)});
+  renderNewsTbl();
+}, 0);
+
+/* ============ SETTINGS EDIT ============ */
+const DEFAULT_SETTINGS = {
+  name:'Hair atelier Alice mieux',
+  addr:'福井県あわら市二面 55-22-1',
+  tel:'0776 - XX - XXXX',
+  line:'@alice-mieux',
+  hour:'9:00 〜 18:00（お仕度日は早朝より）',
+  closed:'毎週月曜日・第1火曜日・第3日曜日・第5日曜日'
+};
+let SETTINGS;
+try{SETTINGS = {...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('alice_settings')||'{}')}}catch(e){SETTINGS=DEFAULT_SETTINGS}
+function renderSettings(editing){
+  const html = editing?`
+    <dl style="display:grid;grid-template-columns:160px 1fr;gap:14px 24px;font-size:13px;line-height:1.85;max-width:680px">
+      <dt style="color:var(--ink-3);font-weight:600;padding-top:10px">屋号</dt><dd><input id="st-name" value="${SETTINGS.name}" style="width:100%;padding:9px 12px;font-size:13.5px;border:1px solid var(--line)"></dd>
+      <dt style="color:var(--ink-3);font-weight:600;padding-top:10px">所在地</dt><dd><input id="st-addr" value="${SETTINGS.addr}" style="width:100%;padding:9px 12px;font-size:13.5px;border:1px solid var(--line)"></dd>
+      <dt style="color:var(--ink-3);font-weight:600;padding-top:10px">お電話</dt><dd><input id="st-tel" value="${SETTINGS.tel}" style="width:100%;padding:9px 12px;font-size:13.5px;border:1px solid var(--line)"></dd>
+      <dt style="color:var(--ink-3);font-weight:600;padding-top:10px">LINE</dt><dd><input id="st-line" value="${SETTINGS.line}" style="width:100%;padding:9px 12px;font-size:13.5px;border:1px solid var(--line)"></dd>
+      <dt style="color:var(--ink-3);font-weight:600;padding-top:10px">営業時間</dt><dd><input id="st-hour" value="${SETTINGS.hour}" style="width:100%;padding:9px 12px;font-size:13.5px;border:1px solid var(--line)"></dd>
+      <dt style="color:var(--ink-3);font-weight:600;padding-top:10px">定休日</dt><dd><input id="st-closed" value="${SETTINGS.closed}" style="width:100%;padding:9px 12px;font-size:13.5px;border:1px solid var(--line)"></dd>
+    </dl>
+    <div style="margin-top:24px;display:flex;gap:10px">
+      <button class="btn" id="st-save" style="background:var(--red);color:#fff;padding:10px 24px;font-size:12.5px;font-weight:700;letter-spacing:.04em">保存する</button>
+      <button id="st-cancel" style="background:#fff;color:var(--ink-2);border:1px solid var(--line);padding:10px 24px;font-size:12.5px;font-weight:600">キャンセル</button>
+    </div>
+  `:`
+    <dl style="display:grid;grid-template-columns:160px 1fr;gap:14px 24px;font-size:13px;line-height:1.85;max-width:680px">
+      <dt style="color:var(--ink-3);font-weight:600">屋号</dt><dd>${SETTINGS.name}</dd>
+      <dt style="color:var(--ink-3);font-weight:600">所在地</dt><dd>${SETTINGS.addr}</dd>
+      <dt style="color:var(--ink-3);font-weight:600">お電話</dt><dd>${SETTINGS.tel}</dd>
+      <dt style="color:var(--ink-3);font-weight:600">LINE</dt><dd>${SETTINGS.line}</dd>
+      <dt style="color:var(--ink-3);font-weight:600">営業時間</dt><dd>${SETTINGS.hour}</dd>
+      <dt style="color:var(--ink-3);font-weight:600">定休日</dt><dd>${SETTINGS.closed}</dd>
+    </dl>
+    <div style="margin-top:24px"><button class="btn" id="st-edit" style="background:var(--ink);color:#fff;padding:10px 24px;font-size:12.5px;font-weight:600">編集する</button></div>
+  `;
+  document.querySelector('#sec-settings .card-b').innerHTML = '<div style="padding:22px 26px">'+html+'</div>';
+  if(editing){
+    document.getElementById('st-save').addEventListener('click',()=>{
+      ['name','addr','tel','line','hour','closed'].forEach(k=>SETTINGS[k]=document.getElementById('st-'+k).value);
+      localStorage.setItem('alice_settings', JSON.stringify(SETTINGS));
+      renderSettings(false);
+      showToast('設定を保存しました');
+    });
+    document.getElementById('st-cancel').addEventListener('click',()=>renderSettings(false));
+  } else {
+    document.getElementById('st-edit').addEventListener('click',()=>renderSettings(true));
+  }
+}
+renderSettings(false);
+
 /* ====== REVIEWS ====== */
 const REVIEWS = [
   {who:'S 様',kana:'匿名希望',stars:5,scene:'二十歳のつどい',title:'振袖と髪型と帯結びまで一緒に考えてくださり、ばたばたせず一日を過ごせました',body:'娘の二十歳のつどいで、貸衣装店を三軒回りましたが、決め手に欠けておりました。Alice mieux さまでは、お振袖のお見立てから当日のお仕度まで...',date:'2026/06/17',stt:'wait'},
