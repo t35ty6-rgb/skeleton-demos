@@ -1360,7 +1360,22 @@
     bindBookingsButtons();
   }
 
-  function showCompletionToast(booking, client, isNew) {
+  // ★ Zoom 終了ボタン横に 一瞬出る ピル (オーナーfb: ボタンの横で何時に閉じたか視認)
+  function showZoomEndPill(anchorBtn, endLabel) {
+    if (!anchorBtn || !endLabel) return;
+    const rect = anchorBtn.getBoundingClientRect();
+    const pill = document.createElement('div');
+    pill.style.cssText = `position:fixed;left:${rect.right + 8}px;top:${rect.top}px;background:#0f172a;color:#fff;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:0.04em;font-family:inherit;box-shadow:0 8px 24px rgba(0,0,0,0.28);z-index:10003;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;animation:fp-zoom-end-pop 0.28s ease-out;`;
+    pill.innerHTML = `<span style="font-size:13px;">✓</span><span>Zoom 終了 ${escapeHtml(endLabel)}</span>`;
+    const st = document.createElement('style');
+    st.textContent = '@keyframes fp-zoom-end-pop{0%{transform:scale(0.6);opacity:0}60%{transform:scale(1.05);opacity:1}100%{transform:scale(1);opacity:1}}';
+    document.body.appendChild(st);
+    document.body.appendChild(pill);
+    setTimeout(() => { pill.style.transition = 'opacity 0.5s'; pill.style.opacity = '0'; }, 4500);
+    setTimeout(() => { pill.remove(); st.remove(); }, 5200);
+  }
+
+  function showCompletionToast(booking, client, isNew, zoomEndLabel) {
     const t = document.createElement('div');
     t.style.cssText = 'position:fixed;top:18px;right:18px;background:#fff;border-left:5px solid #06c755;border-radius:12px;padding:16px 20px;box-shadow:0 12px 36px rgba(0,0,0,0.18);z-index:10002;max-width:420px;font-family:inherit;';
     t.innerHTML = `
@@ -1371,7 +1386,7 @@
       <div style="font-size:12.5px;color:#1f2937;line-height:1.7;margin-bottom:12px;">
         ・<strong>${escapeHtml(booking.name||'お客様')}様</strong> ${isNew ? 'を <span style="color:#06c755;font-weight:700;">新規顧客として登録</span>' : 'の<strong>最終接触日を更新</strong>'}<br>
         ・台帳: ${client ? `<strong>${escapeHtml(client.name)}</strong> (${client.status === 'new' ? '新規' : client.status === 'important' ? '重点' : client.status === 'active' ? '管理中' : '休眠'})` : '反映なし'}<br>
-        ・最終接触: ${client ? client.lastContact : '-'}
+        ・最終接触: ${client ? client.lastContact : '-'}${zoomEndLabel ? `<br>・<strong>Zoom 終了時刻: <span style="color:#0f172a;">${escapeHtml(zoomEndLabel)}</span></strong>` : ''}
       </div>
       <div style="display:flex;gap:6px;">
         <button id="fp-jump-client" style="font-size:11.5px;padding:7px 12px;background:linear-gradient(135deg,#b8893d,#d4a017);border:none;color:#fff;border-radius:6px;cursor:pointer;font-weight:700;font-family:inherit;">→ 顧客台帳で確認</button>
@@ -1975,7 +1990,19 @@
       window._fpZoomWin = zoomWin;
       // ※ Zoom popup が閉じても自動停止しない (誤検知防止のため監視機能を撤廃)
       // 停止は「Chrome 共有を停止」 or 「メモの完了ボタン」 でのみ実行
-      const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
+      // ★ ただし クローズ時刻 だけは 受動的に記録 (完了ボタン押下時の表示用)
+      try {
+        const _zoomEndKey = 'fp-zoom-end-' + String(bookingTs || '').slice(0, 19);
+        if (window._fpZoomCloseWatcher) clearInterval(window._fpZoomCloseWatcher);
+        window._fpZoomCloseWatcher = setInterval(() => {
+          if (!zoomWin || zoomWin.closed) {
+            localStorage.setItem(_zoomEndKey, String(Date.now()));
+            clearInterval(window._fpZoomCloseWatcher);
+            window._fpZoomCloseWatcher = null;
+          }
+        }, 3000);
+      } catch (_) {}
+      const booking = findBookingByTs(bookingTs) || ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
       // ★ オーナーfb: popup ウィンドウだと Zoom と z-order 競合で潜る。物理タブ (同じ Chrome ウィンドウ内の新タブ) に変更。
       // tab だと Chrome のタブストリップから手動で切り替え or ドラッグでウィンドウ分離可能。CRM 親と同じウィンドウなので focus 問題ゼロ。
       const memoKey = 'fp-memo-' + (bookingTs || '');
@@ -3561,6 +3588,32 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
     });
   }
 
+  // ★ booking lookup ヘルパ: legacy bookings + Firestore 確定済 を 横断検索
+  function findBookingByTs(rawTs) {
+    const ts = decodeURIComponent(String(rawTs || ''));
+    const norm = ts.slice(0, 19);
+    const legacy = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === norm);
+    if (legacy) return legacy;
+    const fs = (window._fpFirestoreConfirmed || []).find(c => {
+      const cts = c.confirmedAt?.toDate?.()?.toISOString?.() || c.createdAt?.toDate?.()?.toISOString?.() || '';
+      return String(cts).slice(0,19) === norm;
+    });
+    if (fs) {
+      const [d, t] = String(fs.confirmedSlot || '').split(' ');
+      return {
+        _fsCustomerId: fs.docId,
+        userId: 'fs:' + fs.docId,
+        name: fs.name,
+        date: d || '',
+        time: t || '',
+        zoomUrl: fs.zoomUrl,
+        ts: fs.confirmedAt?.toDate?.()?.toISOString?.() || ts,
+        status: 'confirmed',
+      };
+    }
+    return null;
+  }
+
   function bindBookingsButtons() {
     document.querySelectorAll('[data-rec-start]').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -3604,16 +3657,14 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
     document.querySelectorAll('[data-open-memo]').forEach(btn => {
       btn.addEventListener('click', () => {
         const ts = btn.dataset.openMemo;
-        const b = ((liveData && liveData.bookings) || []).find(x => String(x.ts).slice(0,19) === decodeURIComponent(ts).slice(0,19));
+        const b = findBookingByTs(ts);
         openMemoModal(b || { name: 'お客様', userId: ts, date: new Date().toISOString().slice(0,10) }, ts);
       });
     });
     // ✕ キャンセル → テンプレ選択モーダル
     document.querySelectorAll('.fp-cancel-booking').forEach(btn => {
       btn.addEventListener('click', () => {
-        const tsEnc = btn.dataset.cancelTs;
-        const ts = decodeURIComponent(tsEnc);
-        const b = ((liveData && liveData.bookings) || []).find(x => String(x.ts).slice(0,19) === ts.slice(0,19));
+        const b = findBookingByTs(btn.dataset.cancelTs);
         if (!b) { alert('予約が見つかりません'); return; }
         showCancelTemplatePicker(b);
       });
@@ -3622,9 +3673,15 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       btn.addEventListener('click', () => {
         const tsEnc = btn.dataset.completeBooking;
         const ts = decodeURIComponent(tsEnc);
-        const b = ((liveData && liveData.bookings) || []).find(x => String(x.ts).slice(0,19) === ts.slice(0,19));
+        const b = findBookingByTs(tsEnc);
         if (!b) { alert('予約が見つかりません'); return; }
-        if (!confirm(`「${b.name||'お客様'}様」の面談を完了扱いにして顧客台帳に反映しますか?\n(取り消しは「アーカイブを見る → 戻す」から可能)`)) return;
+        // ★ Zoom クローズ時刻 を 読んで 確認ダイアログに表示
+        const zoomEndAt = localStorage.getItem('fp-zoom-end-' + ts.slice(0,19));
+        const endTimeLabel = zoomEndAt
+          ? new Date(parseInt(zoomEndAt, 10)).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+          : null;
+        const endLine = endTimeLabel ? `\n\n✓ Zoom 終了: ${endTimeLabel}` : '';
+        if (!confirm(`「${b.name||'お客様'}様」の面談を完了扱いにして顧客台帳に反映しますか?${endLine}\n(取り消しは「アーカイブを見る → 戻す」から可能)`)) return;
         const set = new Set(JSON.parse(localStorage.getItem('fp-booking-archived') || '[]'));
         set.add(b.ts);
         localStorage.setItem('fp-booking-archived', JSON.stringify([...set]));
@@ -3660,11 +3717,13 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
           }
           try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS)); } catch (_) {}
         }
+        // ★ Zoom 終了時刻 ピル を ボタン横に 即表示 (fillBookingsList で消える前に)
+        if (endTimeLabel) showZoomEndPill(btn, endTimeLabel);
         fillBookingsList();
         // 顧客台帳の再描画 (app.js から expose されたフック)
         if (window.FPCrmRefreshClients) window.FPCrmRefreshClients();
         // 反映結果を分かりやすく表示
-        showCompletionToast(b, matched, createdNew);
+        showCompletionToast(b, matched, createdNew, endTimeLabel);
       });
     });
   }
