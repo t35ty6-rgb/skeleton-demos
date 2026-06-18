@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FEMOON SaaS · 一問一答 セットアップ</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+  :root{
+    --bg:#0A0A0A; --ink:#FAFAFA; --muted:#A1A1AA; --line:#27272A;
+    --amber:#FBBF24; --green:#06C755; --pink:#EC4899;
+  }
+  html,body{height:100%}
+  body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);line-height:1.7;font-feature-settings:"palt";overflow-x:hidden}
+
+  /* progress bar */
+  .progress{position:fixed;top:0;left:0;right:0;z-index:50;height:4px;background:rgba(255,255,255,0.06)}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--amber),var(--green));width:0%;transition:width 0.5s cubic-bezier(0.22,1,0.36,1)}
+  .top-meta{position:fixed;top:14px;left:0;right:0;z-index:49;display:flex;justify-content:space-between;align-items:center;padding:0 22px;pointer-events:none}
+  .meta-left{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.14em;font-weight:700}
+  .meta-right{display:flex;gap:8px;pointer-events:auto}
+  .meta-btn{background:rgba(255,255,255,0.06);border:1px solid var(--line);color:var(--muted);padding:6px 12px;border-radius:99px;font-family:'JetBrains Mono',monospace;font-size:10.5px;cursor:pointer;font-weight:700;letter-spacing:0.06em}
+  .meta-btn:hover{color:var(--ink);border-color:var(--amber)}
+
+  /* ref banner (when QR-scanned) */
+  .ref-banner{position:fixed;top:30px;left:50%;transform:translateX(-50%);z-index:48;background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#0A0A0A;padding:8px 18px;border-radius:99px;font-size:12px;font-weight:700;display:none;box-shadow:0 6px 18px rgba(251,191,36,0.3)}
+  .ref-banner.show{display:block}
+
+  /* slide container */
+  .slides{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:80px 24px 120px;position:relative}
+  .slide{display:none;width:100%;max-width:640px;animation:slidein 0.5s cubic-bezier(0.22,1,0.36,1)}
+  .slide.active{display:block}
+  @keyframes slidein{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){ .slide{animation:none} .progress-fill{transition:none} }
+
+  /* question */
+  .q-num{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--amber);letter-spacing:0.2em;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .q-num .dot{width:8px;height:8px;border-radius:50%;background:var(--amber)}
+  .q-title{font-family:'Noto Serif JP',serif;font-size:30px;font-weight:900;line-height:1.4;margin-bottom:14px;letter-spacing:0.005em;text-wrap:balance}
+  .q-hint{font-size:14px;color:var(--muted);margin-bottom:30px;line-height:1.8}
+  .q-hint strong{color:var(--ink)}
+
+  /* input field */
+  .field{margin-bottom:24px}
+  input[type=text], input[type=tel], input[type=email], input[type=number], textarea, select{
+    width:100%;background:transparent;border:none;border-bottom:2px solid var(--line);
+    color:var(--ink);font-family:inherit;font-size:24px;padding:14px 0;outline:none;
+    transition:border-color 0.2s
+  }
+  input:focus, textarea:focus, select:focus{border-bottom-color:var(--amber)}
+  input::placeholder, textarea::placeholder{color:#52525B}
+  textarea{min-height:90px;resize:vertical;font-size:18px;line-height:1.7}
+  select{appearance:none;-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23FBBF24' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;padding-right:32px}
+  select option{background:var(--bg);color:var(--ink)}
+
+  /* weekday picker */
+  .wd-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .wd-btn{flex:1;min-width:54px;padding:18px 6px;border:1.5px solid var(--line);background:transparent;color:var(--ink);font-family:inherit;font-size:16px;font-weight:700;border-radius:10px;cursor:pointer;transition:all 0.15s}
+  .wd-btn.on{background:var(--amber);color:#0A0A0A;border-color:var(--amber)}
+
+  /* dynamic list (courses/staff) */
+  .dyn-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+  .dyn-item{display:grid;gap:8px;background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:12px;padding:14px 14px 14px 18px;position:relative}
+  .dyn-item.course{grid-template-columns:1fr 90px 110px 36px;align-items:center}
+  .dyn-item.staff{grid-template-columns:1fr 1fr 36px;align-items:center}
+  .dyn-item input, .dyn-item select{font-size:15px;padding:6px 0;border-bottom-width:1px}
+  .dyn-item .del{background:transparent;border:1px solid var(--line);color:var(--muted);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px}
+  .dyn-item .del:hover{color:var(--pink);border-color:var(--pink)}
+  .add-btn{background:transparent;border:1.5px dashed var(--line);color:var(--muted);padding:14px;width:100%;border-radius:12px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;transition:all 0.15s}
+  .add-btn:hover{border-color:var(--amber);color:var(--amber)}
+  @media (max-width:560px){
+    .dyn-item.course{grid-template-columns:1fr 80px 100px;grid-template-areas:"name name name" "dur price del";gap:8px}
+    .dyn-item.course .c-name{grid-area:name} .dyn-item.course .c-dur{grid-area:dur} .dyn-item.course .c-price{grid-area:price} .dyn-item.course .del{grid-area:del;justify-self:end}
+    .dyn-item.staff{grid-template-columns:1fr 1fr 36px}
+  }
+
+  /* nav */
+  .nav{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(10,10,10,0.95) 30%);padding:18px 22px 28px;display:flex;justify-content:space-between;align-items:center;gap:12px;z-index:40}
+  .btn-back{background:transparent;border:1px solid var(--line);color:var(--muted);padding:14px 22px;border-radius:99px;font-family:inherit;font-size:14px;cursor:pointer;font-weight:700;transition:all 0.15s}
+  .btn-back:hover:not(:disabled){color:var(--ink);border-color:var(--muted)}
+  .btn-back:disabled{opacity:0.3;cursor:not-allowed}
+  .btn-next{flex:1;max-width:280px;background:linear-gradient(135deg,var(--amber),#F59E0B);color:#0A0A0A;border:none;padding:18px 28px;border-radius:99px;font-family:inherit;font-size:16px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform 0.15s,box-shadow 0.2s;letter-spacing:0.04em}
+  .btn-next:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(251,191,36,0.35)}
+  .btn-next:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
+  .btn-next .ic{font-family:'JetBrains Mono',monospace;font-size:18px}
+  .kbd-hint{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.1em;white-space:nowrap}
+
+  .err{color:#F87171;font-size:13px;margin-top:8px;font-weight:600;display:none}
+  .err.show{display:block}
+
+  /* intro slide */
+  .intro .q-title{font-size:42px;line-height:1.25}
+  .intro .q-num{color:var(--green)}
+  .intro .q-num .dot{background:var(--green)}
+  .intro-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:30px;margin-bottom:36px}
+  .im{background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:14px;padding:16px 14px;text-align:center}
+  .im .k{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--amber);letter-spacing:0.18em;font-weight:700;margin-bottom:4px}
+  .im .v{font-family:'Noto Serif JP',serif;font-size:17px;font-weight:900;line-height:1.3}
+
+  /* review slide */
+  .review-list{background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:24px;max-height:50vh;overflow-y:auto}
+  .review-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dotted var(--line);font-size:13.5px;gap:14px}
+  .review-row:last-child{border-bottom:none}
+  .review-row .k{color:var(--muted);font-weight:600;min-width:130px;flex-shrink:0;font-size:12px}
+  .review-row .v{color:var(--ink);font-weight:700;text-align:right;word-break:break-word}
+  .review-row .v.empty{color:#52525B;font-weight:500}
+  .review-row .edit{background:transparent;border:none;color:var(--amber);font-size:11px;cursor:pointer;padding:2px 6px;border-radius:4px;font-family:inherit;font-weight:700}
+  .review-row .edit:hover{background:rgba(251,191,36,0.1)}
+
+  /* done slide */
+  .done .q-title{font-size:36px}
+  .done-id{background:#0A0A0A;border:2px solid var(--green);border-radius:14px;padding:18px 22px;margin:18px 0 24px;display:flex;align-items:center;gap:14px}
+  .done-id .lbl{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);letter-spacing:0.2em;font-weight:700}
+  .done-id .v{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:900;color:var(--ink);margin-left:auto;letter-spacing:0.05em}
+  .done .q-num{color:var(--green)} .done .q-num .dot{background:var(--green)}
+
+  @media (max-width:560px){
+    .q-title{font-size:24px}
+    .intro .q-title{font-size:30px}
+    input, textarea{font-size:20px}
+    .btn-next{font-size:14px;padding:16px 22px}
+    .btn-back{padding:12px 16px;font-size:12px}
+    .nav{padding:14px 16px 20px}
+    .intro-meta{grid-template-columns:repeat(3,1fr);gap:8px}
+    .im .v{font-size:14px}
+  }
+</style>
+</head>
+<body>
+
+<div class="progress"><div class="progress-fill" id="pfill"></div></div>
+<div class="top-meta">
+  <div class="meta-left" id="meta-num">0 / 0</div>
+  <div class="meta-right">
+    <button class="meta-btn" id="reset-btn" title="最初から">RESET</button>
+  </div>
+</div>
+<div class="ref-banner" id="ref-banner">🏷 <span id="ref-label">—</span></div>
+
+<div class="slides" id="slides"></div>
+
+<div class="nav">
+  <button class="btn-back" id="back-btn" disabled>← 戻る</button>
+  <button class="btn-next" id="next-btn">次へ <span class="ic">→</span></button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA_gNc45qCXgzJWv26kr873bwIUvv7cj4Q",
+  authDomain: "skeleton-femoon-saas.firebaseapp.com",
+  projectId: "skeleton-femoon-saas",
+  storageBucket: "skeleton-femoon-saas.firebasestorage.app",
+  messagingSenderId: "404643820136",
+  appId: "1:404643820136:web:bc29111a80ac56567a01dd",
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const STORAGE_KEY = 'femoon-wizard-state-v1';
+
+// === Question definition ===
+const QUESTIONS = [
+  { id:'_intro', type:'intro', title:'FEMOON SaaS<br>セットアップ', sub:'ひと問ずつ 答える だけ で 全部 完了 します。 途中保存 で 戻ってきても OK。' },
+  { id:'salonName', type:'text', title:'お店 の 名前 を 教えてください', hint:'看板 や チラシ に 出している 正式名称 で OK', placeholder:'例) ヘアサロン Lune', required:true },
+  { id:'industry', type:'select', title:'どんな 業種 ですか?', hint:'近い もの を 選んでください', options:['ヘアサロン','フェムケアサロン','エステサロン','整体・リラク','ネイルサロン','まつげエクステ','その他'], required:true },
+  { id:'address', type:'text', title:'お店 の 住所 は?', hint:'郵便番号 から 番地 まで 全部', placeholder:'福井県福井市...', required:true },
+  { id:'tel', type:'tel', title:'お店 の 電話番号', hint:'お客様 に 表示 されます', placeholder:'0776-XX-XXXX', required:true },
+  { id:'contactName', type:'text', title:'担当者 の お名前', hint:'設定 や 連絡 で 使います', placeholder:'例) 山田 花子', required:true },
+  { id:'email', type:'email', title:'担当者 の メアド', hint:'<strong>あなた専用 SaaSアカウント の ID</strong> に なります。 ログイン情報 と 予約URL は ここ に 届きます', placeholder:'contact@example.com', required:true },
+  { id:'openHour', type:'select', title:'お店 の 開店時間', hint:'お客様 が 予約 できる 一番 早い 時間', options:Array.from({length:14},(_,i)=>String(7+i)).map(h=>({v:h,t:`${h}:00`})), default:'10', required:true },
+  { id:'closeHour', type:'select', title:'お店 の 閉店時間', hint:'お客様 が 予約 できる 一番 遅い 時間', options:Array.from({length:14},(_,i)=>String(15+i)).map(h=>({v:h,t:`${h}:00`})), default:'20', required:true },
+  { id:'weeklyClosed', type:'weekday', title:'定休日 は どの 曜日?', hint:'毎週 休む 曜日 を タップ (複数選択 OK)。 なければ 何も 押さず に 次へ' },
+  { id:'closedRule', type:'textarea', title:'不定休 ルール は ありますか?', hint:'例: <strong>「第1火曜・第3日曜 も休み」</strong> と 書くと 予約カレンダー が 自動 で 休業日 に します。 なければ 空欄 で OK', placeholder:'例: 月曜定休 / 加えて 第1火曜・第3日曜 も 休業' },
+  { id:'closedDates', type:'textarea', title:'年末年始 / GW など 特定日 の 休み', hint:'YYYY-MM-DD カンマ区切り。 例: 2026-12-31, 2027-01-01。 なければ 空欄 で OK', placeholder:'2026-12-31, 2027-01-01' },
+  { id:'courses', type:'courses', title:'提供 する コース と 料金', hint:'お客様 が 予約時 に 選ぶ メニュー。 <strong>最低 1個</strong> (推奨 3個)', required:true },
+  { id:'staffs', type:'staffs', title:'スタッフ 一覧', hint:'施術 を 担当 する 人。 <strong>最低 1人</strong>', required:true },
+  { id:'_review', type:'review', title:'最終 確認', sub:'内容 を 確認 して 「送信」 を 押してください。 修正 したい 項目 は 「直す」 で その質問 に 戻れます' },
+];
+
+// === State ===
+let state = loadState();
+let currentIdx = state._lastIdx || 0;
+
+function loadState(){
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){ return {}; }
+}
+function saveState(){
+  state._lastIdx = currentIdx;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// === Render ===
+function render(){
+  const slides = document.getElementById('slides');
+  slides.innerHTML = '';
+  const q = QUESTIONS[currentIdx];
+  if (!q) return;
+  const slide = document.createElement('div');
+  slide.className = 'slide active' + (q.type === 'intro' ? ' intro' : '') + (q.type === 'review' ? ' review' : '');
+  slide.innerHTML = renderQuestion(q);
+  slides.appendChild(slide);
+  attachHandlers(q);
+  updateProgress();
+  updateNav(q);
+}
+
+function renderQuestion(q){
+  const qnum = q.type === 'intro' || q.type === 'review' || q.type === 'done' ? '' : `<div class="q-num"><span class="dot"></span>QUESTION ${realQNum(currentIdx)} / ${realQTotal()}</div>`;
+  let body = '';
+  switch(q.type){
+    case 'intro':
+      body = `
+        <div class="q-num"><span class="dot"></span>START</div>
+        <div class="q-title">${q.title}</div>
+        <div class="q-hint">${q.sub}</div>
+        <div class="intro-meta">
+          <div class="im"><div class="k">所要</div><div class="v">10分</div></div>
+          <div class="im"><div class="k">質問数</div><div class="v">${realQTotal()}問</div></div>
+          <div class="im"><div class="k">途中保存</div><div class="v">自動</div></div>
+        </div>
+      `;
+      break;
+    case 'text':
+    case 'tel':
+    case 'email': {
+      const v = state[q.id] || '';
+      body = qnum + `<div class="q-title">${q.title}</div><div class="q-hint">${q.hint||''}</div>
+        <div class="field"><input type="${q.type}" id="ipt" placeholder="${q.placeholder||''}" value="${escapeHtml(v)}" autocomplete="off"></div>
+        <div class="err" id="err"></div>`;
+      break;
+    }
+    case 'select': {
+      const v = state[q.id] || q.default || '';
+      const opts = q.options.map(o => {
+        const ov = typeof o === 'object' ? o.v : o;
+        const ot = typeof o === 'object' ? o.t : o;
+        return `<option value="${escapeHtml(ov)}" ${String(ov)===String(v)?'selected':''}>${escapeHtml(ot)}</option>`;
+      }).join('');
+      body = qnum + `<div class="q-title">${q.title}</div><div class="q-hint">${q.hint||''}</div>
+        <div class="field"><select id="ipt"><option value="">— 選択 —</option>${opts}</select></div>
+        <div class="err" id="err"></div>`;
+      break;
+    }
+    case 'textarea': {
+      const v = state[q.id] || '';
+      body = qnum + `<div class="q-title">${q.title}</div><div class="q-hint">${q.hint||''}</div>
+        <div class="field"><textarea id="ipt" placeholder="${q.placeholder||''}">${escapeHtml(v)}</textarea></div>
+        <div class="err" id="err"></div>`;
+      break;
+    }
+    case 'weekday': {
+      const sel = new Set(state[q.id] || []);
+      const WD = ['日','月','火','水','木','金','土'];
+      body = qnum + `<div class="q-title">${q.title}</div><div class="q-hint">${q.hint||''}</div>
+        <div class="wd-row" id="wd-row">${WD.map((d,i) => `<button type="button" class="wd-btn ${sel.has(i)?'on':''}" data-i="${i}">${d}</button>`).join('')}</div>`;
+      break;
+    }
+    case 'courses': {
+      const list = state.courses || [{name:'',dur:'60',price:''}];
+      body = qnum + `<div class="q-title">${q.title}</div><div class="q-hint">${q.hint||''}</div>
+        <div class="dyn-list" id="dyn-list">${list.map(courseRow).join('')}</div>
+        <button type="button" class="add-btn" id="add-c">＋ コース を 追加</button>
+        <div class="err" id="err"></div>`;
+      break;
+    }
+    case 'staffs': {
+      const list = state.staffs || [{name:'',role:''}];
+      body = qnum + `<div class="q-title">${q.title}</div><div class="q-hint">${q.hint||''}</div>
+        <div class="dyn-list" id="dyn-list">${list.map(staffRow).join('')}</div>
+        <button type="button" class="add-btn" id="add-s">＋ スタッフ を 追加</button>
+        <div class="err" id="err"></div>`;
+      break;
+    }
+    case 'review': {
+      body = `<div class="q-num"><span class="dot"></span>REVIEW</div>
+        <div class="q-title">${q.title}</div><div class="q-hint">${q.sub}</div>
+        <div class="review-list" id="review-list">${renderReview()}</div>
+        <div class="err" id="err"></div>`;
+      break;
+    }
+    case 'done': {
+      body = `<div class="q-num"><span class="dot"></span>COMPLETE</div>
+        <div class="q-title">送信完了 🎉</div>
+        <div class="q-hint">Skeleton社 が <strong>30分以内</strong> に セットアップ を 完了 して <strong>${escapeHtml(state.email||'登録メアド')}</strong> に ログイン情報 と 予約URL を 送ります。</div>
+        <div class="done-id">
+          <div class="lbl">申込番号</div>
+          <div class="v">${escapeHtml(state._doneId||'')}</div>
+        </div>
+        <div class="q-hint" style="margin-top:0">この画面 は 閉じて OK です。 メール が 届く まで コーヒー で 一息 どうぞ。</div>`;
+      break;
+    }
+  }
+  return body;
+}
+
+function courseRow(c={}){
+  return `<div class="dyn-item course">
+    <input type="text" class="c-name" placeholder="コース名" value="${escapeHtml(c.name||'')}">
+    <select class="c-dur">${[30,45,60,75,90,105,120,150,180].map(m=>`<option value="${m}" ${String(m)===String(c.dur||60)?'selected':''}>${m}分</option>`).join('')}</select>
+    <input type="number" class="c-price" placeholder="料金 (円)" value="${escapeHtml(c.price||'')}">
+    <button type="button" class="del" onclick="this.closest('.dyn-item').remove()">×</button>
+  </div>`;
+}
+function staffRow(s={}){
+  return `<div class="dyn-item staff">
+    <input type="text" class="s-name" placeholder="お名前" value="${escapeHtml(s.name||'')}">
+    <input type="text" class="s-role" placeholder="役職 (例: 店長)" value="${escapeHtml(s.role||'')}">
+    <button type="button" class="del" onclick="this.closest('.dyn-item').remove()">×</button>
+  </div>`;
+}
+function renderReview(){
+  const labels = {
+    salonName:'店名', industry:'業種', address:'住所', tel:'電話', contactName:'担当者', email:'メアド',
+    openHour:'開店', closeHour:'閉店', weeklyClosed:'定休', closedRule:'不定休ルール', closedDates:'臨時休業',
+    courses:'コース', staffs:'スタッフ',
+  };
+  const WD = ['日','月','火','水','木','金','土'];
+  return Object.keys(labels).map(k => {
+    let v = state[k]; let display = '';
+    if (k === 'weeklyClosed') display = (v && v.length) ? v.map(i=>WD[i]).join(',') : '—';
+    else if (k === 'courses') display = (v && v.length) ? v.map(c => `${c.name} ${c.dur}分 ¥${c.price}`).join(' / ') : '—';
+    else if (k === 'staffs') display = (v && v.length) ? v.map(s => `${s.name}(${s.role||'-'})`).join(' / ') : '—';
+    else if (k === 'openHour' || k === 'closeHour') display = v ? v + ':00' : '—';
+    else display = v || '—';
+    const empty = display === '—';
+    const targetIdx = QUESTIONS.findIndex(q => q.id === k);
+    return `<div class="review-row">
+      <div class="k">${labels[k]}</div>
+      <div class="v ${empty?'empty':''}">${escapeHtml(display)}</div>
+      <button class="edit" onclick="window._jumpTo(${targetIdx})">直す</button>
+    </div>`;
+  }).join('');
+}
+
+function attachHandlers(q){
+  if (['text','tel','email','textarea','select'].includes(q.type)){
+    const el = document.getElementById('ipt');
+    el && el.focus();
+    if (el && el.tagName === 'INPUT'){
+      el.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); next(); } });
+    }
+  }
+  if (q.type === 'weekday'){
+    document.querySelectorAll('#wd-row .wd-btn').forEach(b => {
+      b.addEventListener('click', () => b.classList.toggle('on'));
+    });
+  }
+  if (q.type === 'courses'){
+    document.getElementById('add-c').addEventListener('click', () => {
+      document.getElementById('dyn-list').insertAdjacentHTML('beforeend', courseRow({}));
+    });
+  }
+  if (q.type === 'staffs'){
+    document.getElementById('add-s').addEventListener('click', () => {
+      document.getElementById('dyn-list').insertAdjacentHTML('beforeend', staffRow({}));
+    });
+  }
+}
+
+function readCurrentAnswer(){
+  const q = QUESTIONS[currentIdx];
+  if (!q) return null;
+  switch(q.type){
+    case 'intro': case 'review': case 'done': return undefined;
+    case 'text': case 'tel': case 'email': case 'textarea': case 'select':
+      return document.getElementById('ipt').value.trim();
+    case 'weekday':
+      return Array.from(document.querySelectorAll('#wd-row .wd-btn.on')).map(b => Number(b.dataset.i));
+    case 'courses':
+      return Array.from(document.querySelectorAll('#dyn-list .dyn-item.course')).map(el => ({
+        name: el.querySelector('.c-name').value.trim(),
+        dur: el.querySelector('.c-dur').value,
+        price: el.querySelector('.c-price').value.trim(),
+      })).filter(c => c.name);
+    case 'staffs':
+      return Array.from(document.querySelectorAll('#dyn-list .dyn-item.staff')).map(el => ({
+        name: el.querySelector('.s-name').value.trim(),
+        role: el.querySelector('.s-role').value.trim() || 'スタッフ',
+      })).filter(s => s.name);
+  }
+}
+
+function validate(q, val){
+  if (q.type === 'intro' || q.type === 'review' || q.type === 'done') return null;
+  if (q.required){
+    if (Array.isArray(val) && !val.length) return '1個以上 入力 してください';
+    if (!val) return '入力 してください';
+  }
+  if (q.type === 'email' && val && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val)) return 'メアド の 形式 を 確認してください';
+  if (q.type === 'tel' && val && val.replace(/[^0-9]/g,'').length < 9) return '電話番号 の 桁数 を 確認してください';
+  return null;
+}
+
+function next(){
+  const q = QUESTIONS[currentIdx];
+  if (q.type === 'review'){ submit(); return; }
+  if (q.type === 'done') return;
+  const val = readCurrentAnswer();
+  const err = validate(q, val);
+  if (err){
+    const el = document.getElementById('err'); if (el){ el.textContent = err; el.classList.add('show'); }
+    return;
+  }
+  if (val !== undefined) state[q.id] = val;
+  saveState();
+  if (currentIdx < QUESTIONS.length - 1){
+    currentIdx++;
+    render();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+}
+function back(){
+  if (currentIdx > 0){
+    // Save current input non-validated
+    const val = readCurrentAnswer();
+    const q = QUESTIONS[currentIdx];
+    if (val !== undefined && q.type !== 'review' && q.type !== 'intro') state[q.id] = val;
+    saveState();
+    currentIdx--;
+    render();
+  }
+}
+window._jumpTo = function(idx){
+  if (idx >= 0 && idx < QUESTIONS.length){
+    currentIdx = idx;
+    render();
+  }
+};
+
+function realQNum(idx){ return QUESTIONS.slice(0, idx+1).filter(q => !['intro','review','done'].includes(q.type)).length; }
+function realQTotal(){ return QUESTIONS.filter(q => !['intro','review','done'].includes(q.type)).length; }
+
+function updateProgress(){
+  const pct = (currentIdx / (QUESTIONS.length - 1)) * 100;
+  document.getElementById('pfill').style.width = pct + '%';
+  const q = QUESTIONS[currentIdx];
+  if (['intro','review','done'].includes(q.type)){
+    document.getElementById('meta-num').textContent = q.type.toUpperCase();
+  } else {
+    document.getElementById('meta-num').textContent = `Q ${realQNum(currentIdx)} / ${realQTotal()}`;
+  }
+}
+function updateNav(q){
+  document.getElementById('back-btn').disabled = currentIdx === 0;
+  const nextBtn = document.getElementById('next-btn');
+  if (q.type === 'done'){ nextBtn.style.display = 'none'; document.getElementById('back-btn').style.display = 'none'; return; }
+  nextBtn.style.display = ''; document.getElementById('back-btn').style.display = '';
+  nextBtn.innerHTML = q.type === 'review' ? '送信 する <span class="ic">✓</span>' : (q.type === 'intro' ? 'はじめる <span class="ic">→</span>' : '次へ <span class="ic">→</span>');
+}
+
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+async function submit(){
+  const nextBtn = document.getElementById('next-btn');
+  nextBtn.disabled = true;
+  nextBtn.innerHTML = '送信中... <span class="ic">⋯</span>';
+
+  const closedDatesStr = state.closedDates || '';
+  const closedDatesArr = closedDatesStr
+    ? closedDatesStr.split(/[,、\s]+/).map(s=>s.trim()).filter(s=>/^\d{4}-\d{2}-\d{2}$/.test(s)) : [];
+
+  const u = new URLSearchParams(window.location.search);
+  const referralCode = (u.get('ref') || u.get('r') || '').slice(0, 64);
+  const salonHint = (u.get('salon') || '').slice(0, 80);
+
+  const payload = {
+    status: 'pending',
+    source: 'wizard',
+    referralCode, salonHint, referralReferer: document.referrer || '',
+    salonName: state.salonName || '',
+    industry: state.industry || '',
+    address: state.address || '',
+    tel: state.tel || '',
+    contactName: state.contactName || '',
+    email: state.email || '',
+    openHour: Number(state.openHour) || 10,
+    closeHour: Number(state.closeHour) || 20,
+    weeklyClosed: state.weeklyClosed || [],
+    closedDates: closedDatesArr,
+    closedDatesRaw: closedDatesStr,
+    closedRuleMemo: state.closedRule || '',
+    courses: (state.courses||[]).map((c,i)=>({ id:i+1, name:c.name, duration:Number(c.dur)||60, price:Number(c.price)||0 })),
+    staffs: (state.staffs||[]).map((s,i)=>({ id:i+1, name:s.name, role:s.role })),
+    submittedAt: serverTimestamp(),
+  };
+
+  try {
+    const ref = await addDoc(collection(db, 'onboarding_requests'), payload);
+    state._doneId = ref.id.slice(0,12).toUpperCase();
+    QUESTIONS.push({ id:'_done', type:'done' });
+    currentIdx = QUESTIONS.length - 1;
+    saveState();
+    render();
+    window.scrollTo({top:0,behavior:'smooth'});
+  } catch(e){
+    nextBtn.disabled = false;
+    nextBtn.innerHTML = '送信 する <span class="ic">✓</span>';
+    const el = document.getElementById('err');
+    if (el){ el.textContent = '送信失敗: ' + (e.code || e.message) + '。 もう一度 押してください'; el.classList.add('show'); }
+  }
+}
+
+// === Init ===
+document.getElementById('next-btn').addEventListener('click', next);
+document.getElementById('back-btn').addEventListener('click', back);
+document.getElementById('reset-btn').addEventListener('click', () => {
+  if (confirm('全部の入力を消して最初から始めますか?')){
+    localStorage.removeItem(STORAGE_KEY);
+    state = {}; currentIdx = 0; render();
+  }
+});
+
+// ref banner
+(() => {
+  const u = new URLSearchParams(window.location.search);
+  const ref = u.get('ref') || u.get('r') || '';
+  const salonHint = u.get('salon') || '';
+  if (ref || salonHint){
+    document.getElementById('ref-banner').classList.add('show');
+    document.getElementById('ref-label').textContent = salonHint ? `${salonHint} (${ref})` : ref;
+    if (salonHint && !state.salonName) state.salonName = salonHint;
+  }
+})();
+
+render();
+</script>
+
+</body>
+</html>
