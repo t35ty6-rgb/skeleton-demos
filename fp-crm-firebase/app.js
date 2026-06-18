@@ -3612,7 +3612,10 @@
                   <div class="fp-meeting-block" data-minutes-block="${escapeHtml(aiData.bookingTs || '')}-${idx}">
                     <div class="fp-meeting-block-label" style="display:flex;justify-content:space-between;align-items:center;">
                       <span>AI 議事録 (Claude)</span>
-                      <button class="fp-edit-minutes-btn" data-edit-minutes-key="${escapeHtml(aiData._storageKey || '')}" data-booking-ts="${escapeHtml(aiData.bookingTs || '')}" data-created-at="${escapeHtml(aiData.createdAt || '')}" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:3px 10px;border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">✏ 編集</button>
+                      <div style="display:flex;gap:6px;">
+                        <button class="fp-edit-minutes-btn" data-edit-minutes-key="${escapeHtml(aiData._storageKey || '')}" data-booking-ts="${escapeHtml(aiData.bookingTs || '')}" data-created-at="${escapeHtml(aiData.createdAt || '')}" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:3px 10px;border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">✏ 編集</button>
+                        <button class="fp-delete-minutes-btn" data-delete-minutes-key="${escapeHtml(aiData._storageKey || '')}" data-booking-ts="${escapeHtml(aiData.bookingTs || '')}" data-created-at="${escapeHtml(aiData.createdAt || '')}" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:3px 10px;border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">🗑</button>
+                      </div>
                     </div>
                     <div class="fp-meeting-body fp-minutes-display">${escapeHtml(aiData.summary)}</div>
                   </div>` : ''}
@@ -6743,6 +6746,31 @@ ${client.name}さん、ありがとうございます。
     const t = e.target.closest('.tab[data-tab="kpi"]');
     if (t) setTimeout(renderKpiBoard, 80);
 
+    // ★ 議事録 削除 ボタン (delegated)
+    const delMinutesBtn = e.target.closest('.fp-delete-minutes-btn');
+    if (delMinutesBtn) {
+      if (!confirm('この 議事録 1本を 削除します。 戻せません。 OK?')) return;
+      const storageKey = delMinutesBtn.dataset.deleteMinutesKey;
+      const bookingTs = delMinutesBtn.dataset.bookingTs;
+      const createdAt = delMinutesBtn.dataset.createdAt;
+      try {
+        const raw = JSON.parse(localStorage.getItem(storageKey) || 'null');
+        if (Array.isArray(raw)) {
+          const filtered = raw.filter(a => !(a.bookingTs === bookingTs && (a.createdAt || '') === createdAt));
+          if (filtered.length === 0) localStorage.removeItem(storageKey);
+          else localStorage.setItem(storageKey, JSON.stringify(filtered));
+        } else if (raw && (raw.entry || raw.summary)) {
+          // wrapped or 単体 → key自体 削除
+          localStorage.removeItem(storageKey);
+        }
+        // 再描画
+        const closeBtn = document.querySelector('.cd-modal .cd-close, .modal-overlay .cd-close');
+        const lastId = window._fpCurrentClient?.id;
+        if (closeBtn) closeBtn.click();
+        setTimeout(() => { if (lastId) document.querySelector(`[data-customer-id="${lastId}"], [data-client-id="${lastId}"]`)?.click(); }, 300);
+      } catch (err) { alert('削除失敗: ' + err.message); }
+      return;
+    }
     // ★ 議事録 編集 ボタン (delegated)
     const editBtn = e.target.closest('.fp-edit-minutes-btn');
     if (editBtn) {
