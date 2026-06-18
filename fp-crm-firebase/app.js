@@ -3140,20 +3140,41 @@
         sendBtn.innerHTML = '<span>送信中...</span>';
         statusEl.textContent = '';
         try {
-          const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/line/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, text }),
-          });
-          const data = await r.json().catch(() => ({}));
-          if (data.ok) {
-            statusEl.textContent = '✓ 送信完了';
-            statusEl.style.color = 'var(--positive)';
-            appendLocalMessage(text);
-            input.value = '';
+          // ★ Firestore customer or multi-tenant 環境 → Cloud Function sendLineMessage 経由
+          //   legacy customer (lineFriendId 設定済 で source !== 'line_survey') → 既存 GAS proxy
+          const isFsCustomer = c.source === 'line_survey' || c._fsCustomerId;
+          if (isFsCustomer || (window.__fp && window.__fp.tenantId && window.__fp.tenantId !== 'demo')) {
+            const { getApps, initializeApp } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js');
+            const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js');
+            const app = getApps()[0] || initializeApp({ apiKey: 'AIzaSyAmVAEe9l9e1Yo_dzzJdbTVU35wWKd2sH4', authDomain: 'skeleton-fp-compass-632026.firebaseapp.com', projectId: 'skeleton-fp-compass-632026' });
+            const fn = httpsCallable(getFunctions(app, 'asia-northeast1'), 'sendLineMessage');
+            const res = await fn({ customerId: c._fsCustomerId || c.id, text, lineFriendId: userId });
+            if (res.data?.ok) {
+              statusEl.textContent = '✓ 送信完了 (multi-tenant Cloud Function)';
+              statusEl.style.color = 'var(--positive)';
+              appendLocalMessage(text);
+              input.value = '';
+            } else {
+              statusEl.textContent = '✕ 送信失敗';
+              statusEl.style.color = 'var(--critical)';
+            }
           } else {
-            statusEl.textContent = '✕ 送信失敗: ' + (data.error || '不明なエラー');
-            statusEl.style.color = 'var(--critical)';
+            // legacy single-tenant proxy
+            const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/line/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId, text }),
+            });
+            const data = await r.json().catch(() => ({}));
+            if (data.ok) {
+              statusEl.textContent = '✓ 送信完了';
+              statusEl.style.color = 'var(--positive)';
+              appendLocalMessage(text);
+              input.value = '';
+            } else {
+              statusEl.textContent = '✕ 送信失敗: ' + (data.error || '不明なエラー');
+              statusEl.style.color = 'var(--critical)';
+            }
           }
         } catch (e) {
           statusEl.textContent = '✕ 通信エラー: ' + e.message;
