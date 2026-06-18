@@ -3453,7 +3453,10 @@
         ${bookingsWithMemo.length === 0 ? '' :
           '<div style="display:grid;gap:14px;margin-bottom:18px;">' +
           bookingsWithMemo.slice().reverse().map(b => {
-            const aiData = aiResults.find(a => a.bookingTs === b.ts) || {};
+            // ★ オーナーfb: 同じ booking で 2回 録画 → 2件 残るように find→filter
+            const aiList = aiResults
+              .filter(a => a.bookingTs === b.ts)
+              .sort((x, y) => String(x.createdAt || '').localeCompare(String(y.createdAt || '')));
             // ★ 当時年齢計算 (オーナーfb: 「誰々が何歳の時 みたいに 分かりやすく」)
             let ageLabel = '';
             try {
@@ -3479,38 +3482,43 @@
                     <span style="display:inline-block;margin-left:8px;font-size:12.5px;color:#475569;font-weight:600;">
                       ${escapeHtml(fmtDateRobust(b.date))} ${escapeHtml(fmtTimeRobust(b.time))} 面談
                     </span>
+                    ${aiList.length > 1 ? `<span style="display:inline-block;margin-left:8px;font-size:11px;color:#1E40AF;background:#DBEAFE;padding:2px 8px;border-radius:9999px;font-weight:700;">議事録 ${aiList.length}本</span>` : ''}
                   </div>
                 </div>
                 <div class="fp-meeting-card-actions">
                   ${b.driveUrl ? `<a href="${escapeHtml(b.driveUrl)}" target="_blank" class="fp-btn fp-btn-sm fp-btn-gold">🎥 録画を見る</a>` : ''}
                 </div>
               </div>
-              ${aiData.transcript ? `
-                <div class="fp-meeting-block">
-                  <div class="fp-meeting-block-label">AI 文字起こし (Whisper)</div>
-                  <details style="background:#fff;border:1px solid var(--fp-line);">
-                    <summary style="padding:11px 16px;cursor:pointer;font-size:12px;color:var(--fp-ink);font-weight:700;background:var(--fp-paper);border-bottom:1px solid var(--fp-line);font-family:Manrope,sans-serif;letter-spacing:0.04em;">全文を見る (${(aiData.transcript||'').length}文字)</summary>
-                    <div style="padding:14px 18px;font-size:12.5px;line-height:1.95;white-space:pre-wrap;max-height:320px;overflow-y:auto;color:var(--fp-ink);">${escapeHtml(aiData.transcript)}</div>
-                  </details>
-                </div>` : ''}
-              ${aiData.summary ? `
-                <div class="fp-meeting-block">
-                  <div class="fp-meeting-block-label">AI 議事録 (Claude)</div>
-                  <div class="fp-meeting-body">${escapeHtml(aiData.summary)}</div>
-                </div>` : ''}
-              ${aiData.key_concerns && aiData.key_concerns.length > 0 ? `
-                <div class="fp-meeting-block">
-                  <div class="fp-meeting-block-label">お客様の関心事</div>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                    ${aiData.key_concerns.map(k => `<span class="fp-concern-chip">${escapeHtml(k)}</span>`).join('')}
-                  </div>
-                </div>` : ''}
+              ${aiList.map((aiData, idx) => `
+                ${aiList.length > 1 ? `<div style="font-size:11px;color:#475569;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin:14px 0 6px;padding-top:10px;border-top:1px solid var(--fp-line);">📋 議事録 ${idx + 1} 本目 ${aiData.createdAt ? `<span style="font-weight:500;color:#94a3b8;margin-left:6px;">${escapeHtml(String(aiData.createdAt).slice(0, 16).replace('T', ' '))}</span>` : ''}</div>` : ''}
+                ${aiData.transcript ? `
+                  <div class="fp-meeting-block">
+                    <div class="fp-meeting-block-label">AI 文字起こし (Whisper)</div>
+                    <details style="background:#fff;border:1px solid var(--fp-line);">
+                      <summary style="padding:11px 16px;cursor:pointer;font-size:12px;color:var(--fp-ink);font-weight:700;background:var(--fp-paper);border-bottom:1px solid var(--fp-line);font-family:Manrope,sans-serif;letter-spacing:0.04em;">全文を見る (${(aiData.transcript||'').length}文字)</summary>
+                      <div style="padding:14px 18px;font-size:12.5px;line-height:1.95;white-space:pre-wrap;max-height:320px;overflow-y:auto;color:var(--fp-ink);">${escapeHtml(aiData.transcript)}</div>
+                    </details>
+                  </div>` : ''}
+                ${aiData.summary ? `
+                  <div class="fp-meeting-block">
+                    <div class="fp-meeting-block-label">AI 議事録 (Claude)</div>
+                    <div class="fp-meeting-body">${escapeHtml(aiData.summary)}</div>
+                  </div>` : ''}
+                ${aiData.key_concerns && aiData.key_concerns.length > 0 ? `
+                  <div class="fp-meeting-block">
+                    <div class="fp-meeting-block-label">お客様の関心事</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                      ${aiData.key_concerns.map(k => `<span class="fp-concern-chip">${escapeHtml(k)}</span>`).join('')}
+                    </div>
+                  </div>` : ''}
+              `).join('')}
+              ${aiList.length === 0 ? '' : ''}
               ${b.memo ? `
                 <div class="fp-meeting-block">
                   <div class="fp-meeting-block-label">手書きメモ</div>
                   <div class="fp-meeting-body">${escapeHtml(b.memo)}</div>
                 </div>` : ''}
-              ${!aiData.transcript && !aiData.summary && !b.memo ? '<div style="font-size:12px;color:var(--fp-ink-3);font-style:italic;text-align:center;padding:18px;font-family:Noto Sans JP,sans-serif;">録画 + AI処理 もしくは 面談メモがまだ追加されていません</div>' : ''}
+              ${aiList.length === 0 && !b.memo ? '<div style="font-size:12px;color:var(--fp-ink-3);font-style:italic;text-align:center;padding:18px;font-family:Noto Sans JP,sans-serif;">録画 + AI処理 もしくは 面談メモがまだ追加されていません</div>' : ''}
             </div>
           `;
           }).join('') + '</div>'

@@ -2304,7 +2304,9 @@
         console.log('[autoSaveAIResult] GAS 保存 OK');
         // 成功時のみ localStorage に最低限の backup (1キー = bookingTs単位)
         try {
-          const k = 'fp-ai-backup-' + (bookingTs || userId || nameKey || Date.now());
+          // ★ key を 時刻ベース ユニーク化 (オーナーfb: 2回目録画で 1回目 上書きされて 2件残らない 修正)
+          //   entry.bookingTs / entry.createdAt は 検索 / 紐付け 用に保持、 keyは単に コリジョン避け
+          const k = 'fp-ai-backup-' + Date.now() + '-' + (bookingTs || userId || nameKey || 'na');
           localStorage.setItem(k, JSON.stringify({ entry, tasks: newTasks }));
         } catch (_) {}
         // 顧客台帳再描画 (GAS から取り直す)
@@ -2326,8 +2328,8 @@
       const pending = JSON.parse(localStorage.getItem('fp-ai-pending-sync') || '[]');
       pending.push({ entry, tasks, queuedAt: new Date().toISOString() });
       localStorage.setItem('fp-ai-pending-sync', JSON.stringify(pending));
-      // 表示用backup も
-      const k = 'fp-ai-backup-' + (entry.bookingTs || entry.userId || Date.now());
+      // 表示用backup も (時刻ベース ユニーク化)
+      const k = 'fp-ai-backup-' + Date.now() + '-' + (entry.bookingTs || entry.userId || 'na');
       localStorage.setItem(k, JSON.stringify({ entry, tasks }));
     } catch (_) {}
   }
