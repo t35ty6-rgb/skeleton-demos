@@ -1788,9 +1788,9 @@
 
     // ③ 「次の一手」ブロック用データ抽出 (最新 AI 議事録 + 未完了タスク 上位3件)
     let nextActionHtml = '';
+    let latestAi = null;
     try {
       const allFpAi = Object.keys(localStorage).filter(k => k.startsWith('fp-ai-'));
-      let latestAi = null;
       allFpAi.forEach(k => {
         const arr = JSON.parse(localStorage.getItem(k) || '[]');
         arr.forEach(a => {
