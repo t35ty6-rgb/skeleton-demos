@@ -57,6 +57,26 @@
   select{appearance:none;-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230F0F0F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 4px center;padding-right:32px}
   select option{background:var(--surface);color:var(--ink)}
 
+  /* nthwd picker (不定休 第N週x曜日) */
+  .nthwd-pickers{display:flex;gap:10px;margin-bottom:14px;align-items:flex-end}
+  .nthwd-pickers .col{flex:1}
+  .nthwd-pickers label{display:block;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);letter-spacing:0.18em;font-weight:600;margin-bottom:6px;text-transform:uppercase}
+  .nthwd-pickers select{width:100%;font-size:18px;padding:12px 0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font-family:inherit;font-weight:500;outline:none}
+  .nthwd-pickers select:focus{border-bottom-color:var(--ink);border-bottom-width:2px}
+  .nthwd-add{background:var(--ink);color:var(--bg);border:none;padding:13px 22px;border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:0.02em;transition:transform 0.15s,background 0.15s;flex-shrink:0}
+  .nthwd-add:hover{background:#1F1F23;transform:translateY(-1px)}
+  .nthwd-add:disabled{opacity:0.35;cursor:not-allowed;transform:none}
+  .nthwd-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;min-height:36px}
+  .nthwd-chip{background:var(--surface);border:1px solid var(--line);color:var(--ink);padding:8px 14px 8px 16px;border-radius:99px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .nthwd-chip .x{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:0;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .nthwd-chip .x:hover{background:var(--err);color:#fff}
+  .nthwd-empty{font-size:13px;color:#A1A1AA;font-style:italic}
+  @media (max-width:560px){
+    .nthwd-pickers{flex-wrap:wrap}
+    .nthwd-pickers .col{flex:1;min-width:0}
+    .nthwd-add{width:100%;margin-top:6px}
+  }
+
   /* weekday picker */
   .wd-row{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
   .wd-btn{flex:1;min-width:54px;padding:18px 6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:inherit;font-size:15px;font-weight:600;border-radius:8px;cursor:pointer;transition:all 0.15s}
@@ -194,8 +214,7 @@ const QUESTIONS = [
   { id:'openHour', type:'select', title:'お店 の 開店時間', hint:'お客様 が 予約 できる 一番 早い 時間', options:Array.from({length:14},(_,i)=>String(7+i)).map(h=>({v:h,t:`${h}:00`})), default:'10', required:true },
   { id:'closeHour', type:'select', title:'お店 の 閉店時間', hint:'お客様 が 予約 できる 一番 遅い 時間', options:Array.from({length:14},(_,i)=>String(15+i)).map(h=>({v:h,t:`${h}:00`})), default:'20', required:true },
   { id:'weeklyClosed', type:'weekday', title:'定休日 は どの 曜日?', hint:'毎週 休む 曜日 を タップ (複数選択 OK)。 なければ 何も 押さず に 次へ' },
-  { id:'closedRule', type:'textarea', title:'不定休 ルール は ありますか?', hint:'例: <strong>「第1火曜・第3日曜 も休み」</strong> と 書くと 予約カレンダー が 自動 で 休業日 に します。 なければ 空欄 で OK', placeholder:'例: 月曜定休 / 加えて 第1火曜・第3日曜 も 休業' },
-  { id:'closedDates', type:'textarea', title:'年末年始 / GW など 特定日 の 休み', hint:'YYYY-MM-DD カンマ区切り。 例: 2026-12-31, 2027-01-01。 なければ 空欄 で OK', placeholder:'2026-12-31, 2027-01-01' },
+  { id:'closedRules', type:'nthwd', title:'不定休 が ありますか?', hint:'たとえば 第1火曜 や 第3日曜 が 休み の 場合 は ここ で 追加。 なければ そのまま 次へ。 <strong>あとから admin で 変更 できる</strong> ので まずは ざっくり で OK。' },
   { id:'courses', type:'courses', title:'提供 する コース と 料金', hint:'お客様 が 予約時 に 選ぶ メニュー。 <strong>最低 1個</strong> (推奨 3個)', required:true },
   { id:'staffs', type:'staffs', title:'スタッフ 一覧', hint:'施術 を 担当 する 人。 <strong>最低 1人</strong>', required:true },
   { id:'_review', type:'review', title:'最終 確認', sub:'内容 を 確認 して 「次へ」 を 押すと 決済 へ 進みます。 修正 したい 項目 は 「直す」 で その質問 に 戻れます' },
@@ -297,6 +316,24 @@ function renderQuestion(q){
         <div class="wd-row" id="wd-row">${WD.map((d,i) => `<button type="button" class="wd-btn ${sel.has(i)?'on':''}" data-i="${i}">${d}</button>`).join('')}</div>`;
       break;
     }
+    case 'nthwd': {
+      const WD = ['日','月','火','水','木','金','土'];
+      const chips = (state[q.id] || []).map(r =>
+        `<span class="nthwd-chip" data-n="${r.n}" data-w="${r.wd}">第${r.n}${WD[r.wd]}曜<button type="button" class="x" aria-label="削除">×</button></span>`
+      ).join('');
+      body = qnum + `<div class="q-title">${q.title}</div><div class="q-hint">${q.hint||''}</div>
+        <div class="nthwd-pickers">
+          <div class="col"><label>第何週</label><select id="nth-n">
+            ${[1,2,3,4,5].map(n => `<option value="${n}">第${n}</option>`).join('')}
+          </select></div>
+          <div class="col"><label>曜日</label><select id="nth-w">
+            ${WD.map((d,i) => `<option value="${i}">${d}曜</option>`).join('')}
+          </select></div>
+          <button type="button" class="nthwd-add" id="nth-add">＋ 追加</button>
+        </div>
+        <div class="nthwd-chips" id="nth-chips">${chips || '<span class="nthwd-empty">追加 した ルール が ここ に 並びます</span>'}</div>`;
+      break;
+    }
     case 'courses': {
       const list = state.courses || [{name:'',dur:'60',price:''}];
       body = qnum + `<div class="q-title">${q.title}</div><div class="q-hint">${q.hint||''}</div>
@@ -373,13 +410,14 @@ function staffRow(s={}){
 function renderReview(){
   const labels = {
     salonName:'店名', industry:'業種', address:'住所', tel:'電話', contactName:'担当者', email:'メアド',
-    openHour:'開店', closeHour:'閉店', weeklyClosed:'定休', closedRule:'不定休ルール', closedDates:'臨時休業',
+    openHour:'開店', closeHour:'閉店', weeklyClosed:'定休', closedRules:'不定休',
     courses:'コース', staffs:'スタッフ',
   };
   const WD = ['日','月','火','水','木','金','土'];
   return Object.keys(labels).map(k => {
     let v = state[k]; let display = '';
     if (k === 'weeklyClosed') display = (v && v.length) ? v.map(i=>WD[i]).join(',') : '—';
+    else if (k === 'closedRules') display = (v && v.length) ? v.map(r => `第${r.n}${WD[r.wd]}曜`).join('・') : '—';
     else if (k === 'courses') display = (v && v.length) ? v.map(c => `${c.name} ${c.dur}分 ¥${c.price}`).join(' / ') : '—';
     else if (k === 'staffs') display = (v && v.length) ? v.map(s => `${s.name}(${s.role||'-'})`).join(' / ') : '—';
     else if (k === 'openHour' || k === 'closeHour') display = v ? v + ':00' : '—';
@@ -415,6 +453,28 @@ function attachHandlers(q){
       b.addEventListener('click', () => b.classList.toggle('on'));
     });
   }
+  if (q.type === 'nthwd'){
+    const chipsEl = document.getElementById('nth-chips');
+    const refresh = () => {
+      const WD = ['日','月','火','水','木','金','土'];
+      const rules = readNthwdRules();
+      if (!rules.length){ chipsEl.innerHTML = '<span class="nthwd-empty">追加 した ルール が ここ に 並びます</span>'; return; }
+      chipsEl.innerHTML = rules.map(r =>
+        `<span class="nthwd-chip" data-n="${r.n}" data-w="${r.wd}">第${r.n}${WD[r.wd]}曜<button type="button" class="x" aria-label="削除">×</button></span>`
+      ).join('');
+      attachNthwdChipX(chipsEl);
+    };
+    attachNthwdChipX(chipsEl);
+    document.getElementById('nth-add').addEventListener('click', () => {
+      const n = Number(document.getElementById('nth-n').value);
+      const wd = Number(document.getElementById('nth-w').value);
+      const cur = readNthwdRules();
+      if (cur.some(r => r.n===n && r.wd===wd)) return; // 重複は無視
+      cur.push({ n, wd });
+      writeNthwdRules(cur);
+      refresh();
+    });
+  }
   if (q.type === 'courses'){
     document.getElementById('add-c').addEventListener('click', () => {
       document.getElementById('dyn-list').insertAdjacentHTML('beforeend', courseRow({}));
@@ -436,6 +496,8 @@ function readCurrentAnswer(){
       return document.getElementById('ipt').value.trim();
     case 'weekday':
       return Array.from(document.querySelectorAll('#wd-row .wd-btn.on')).map(b => Number(b.dataset.i));
+    case 'nthwd':
+      return readNthwdRules();
     case 'courses':
       return Array.from(document.querySelectorAll('#dyn-list .dyn-item.course')).map(el => ({
         name: el.querySelector('.c-name').value.trim(),
@@ -530,6 +592,36 @@ function updateNav(q){
 
 function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
 
+// 不定休ルール chips helpers
+function readNthwdRules(){
+  return Array.from(document.querySelectorAll('#nth-chips .nthwd-chip')).map(el => ({
+    n: Number(el.dataset.n), wd: Number(el.dataset.w),
+  }));
+}
+function writeNthwdRules(rules){
+  // 一時的にchipsを書き換える (refresh()が呼ばれる前提)
+  const chipsEl = document.getElementById('nth-chips');
+  const WD = ['日','月','火','水','木','金','土'];
+  chipsEl.innerHTML = rules.length
+    ? rules.map(r => `<span class="nthwd-chip" data-n="${r.n}" data-w="${r.wd}">第${r.n}${WD[r.wd]}曜<button type="button" class="x" aria-label="削除">×</button></span>`).join('')
+    : '<span class="nthwd-empty">追加 した ルール が ここ に 並びます</span>';
+}
+function attachNthwdChipX(chipsEl){
+  chipsEl.querySelectorAll('.nthwd-chip .x').forEach(x => {
+    x.addEventListener('click', () => {
+      const chip = x.closest('.nthwd-chip');
+      chip.remove();
+      if (!chipsEl.querySelector('.nthwd-chip')){
+        chipsEl.innerHTML = '<span class="nthwd-empty">追加 した ルール が ここ に 並びます</span>';
+      }
+    });
+  });
+}
+function nthwdRulesToString(rules){
+  const WD = ['日','月','火','水','木','金','土'];
+  return rules.map(r => `第${r.n}${WD[r.wd]}曜`).join('・');
+}
+
 async function submitThenPayment(){
   // Firestore に申込 → 成功したら payment slide へ
   const nextBtn = document.getElementById('next-btn');
@@ -569,13 +661,14 @@ async function sendToFirestore(){
   // 既送信 (申込番号あり) ならスキップ
   if (state._doneId) return true;
 
-  const closedDatesStr = state.closedDates || '';
-  const closedDatesArr = closedDatesStr
-    ? closedDatesStr.split(/[,、\s]+/).map(s=>s.trim()).filter(s=>/^\d{4}-\d{2}-\d{2}$/.test(s)) : [];
-
   const u = new URLSearchParams(window.location.search);
   const referralCode = (u.get('ref') || u.get('r') || '').slice(0, 64);
   const salonHint = (u.get('salon') || '').slice(0, 80);
+
+  // 不定休ルール: 構造化配列 + 派生文字列 (book.html パーサ互換)
+  const closedRules = state.closedRules || [];
+  const WD = ['日','月','火','水','木','金','土'];
+  const closedRuleMemo = closedRules.map(r => `第${r.n}${WD[r.wd]}曜`).join('・');
 
   const payload = {
     status: 'pending',
@@ -590,9 +683,9 @@ async function sendToFirestore(){
     openHour: Number(state.openHour) || 10,
     closeHour: Number(state.closeHour) || 20,
     weeklyClosed: state.weeklyClosed || [],
-    closedDates: closedDatesArr,
-    closedDatesRaw: closedDatesStr,
-    closedRuleMemo: state.closedRule || '',
+    closedDates: [],
+    closedRules,        // 構造化 [{n,wd}, ...]
+    closedRuleMemo,     // 派生文字列 "第1火曜・第3日曜"
     courses: (state.courses||[]).map((c,i)=>({ id:i+1, name:c.name, duration:Number(c.dur)||60, price:Number(c.price)||0 })),
     staffs: (state.staffs||[]).map((s,i)=>({ id:i+1, name:s.name, role:s.role })),
     submittedAt: serverTimestamp(),
