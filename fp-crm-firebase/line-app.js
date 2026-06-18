@@ -1988,35 +1988,24 @@
       // Zoom が閉じられたら自動で録画停止 (切り忘れ防止)
       // ただし最低30秒経過してから (誤検知防止)
       window._fpZoomWin = zoomWin;
-      // ★ Zoom popup クローズ 検知 → 終了時刻 記録 + 録画自動停止 + 予約 自動完了
-      // (オーナーfb: 「Zoomが終わったら勝手に完了にすればいいよ」)
-      try {
-        const _zoomEndKey = 'fp-zoom-end-' + String(bookingTs || '').slice(0, 19);
-        const _startedAt = Date.now();
-        if (window._fpZoomCloseWatcher) clearInterval(window._fpZoomCloseWatcher);
-        window._fpZoomCloseWatcher = setInterval(() => {
-          if (!zoomWin || zoomWin.closed) {
-            // 起動 30秒以内 の クローズ は 誤検知 (open直後 popup blocker など) として無視
-            if (Date.now() - _startedAt < 30000) {
-              clearInterval(window._fpZoomCloseWatcher);
-              window._fpZoomCloseWatcher = null;
-              return;
-            }
-            localStorage.setItem(_zoomEndKey, String(Date.now()));
-            clearInterval(window._fpZoomCloseWatcher);
-            window._fpZoomCloseWatcher = null;
-            // 録画 自動停止 → MediaRecorder.onstop → AI議事録自動保存 が走る
-            try {
-              if (window._fpRecorder && window._fpRecorder.mediaRecorder && window._fpRecorder.mediaRecorder.state !== 'inactive') {
-                stopScreenRecording();
-              }
-            } catch (_) {}
-            // 5秒 待ってから 自動 完了 (AI 保存 と 競合 しないよう 別途 直接 archive)
-            setTimeout(() => { try { autoCompleteBooking(bookingTs); } catch (_) {} }, 5000);
-          }
-        }, 3000);
-      } catch (_) {}
-      const booking = findBookingByTs(bookingTs) || ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
+      // ※ Zoom popup が閉じても自動停止しない (誤検知防止のため監視機能を撤廃)
+      // 停止は「Chrome 共有を停止」 or 「録画停止 / 完了ボタン」 でのみ実行
+      // ★ オーナーfb「Zoom 終わったら 勝手に完了」 → 録画停止 押下時に autoCompleteBooking 呼ぶ path に統一
+      //   (startScreenRecording 内に setInterval 仕込むと Zoom 起動シーケンス へ 退化リスク)
+      window._fpCurrentBookingTs = bookingTs;
+      // legacy lookup を そのまま 温存 (Zoom 起動 path に 余計なコード 入れない)
+      let booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
+      // legacy で見つからなければ Firestore 確定済を チェック (boundary 安全)
+      if (!booking) {
+        const fs = (window._fpFirestoreConfirmed || []).find(c => {
+          const cts = c.confirmedAt?.toDate?.()?.toISOString?.() || c.createdAt?.toDate?.()?.toISOString?.() || '';
+          return String(cts).slice(0,19) === String(bookingTs).slice(0,19);
+        });
+        if (fs) {
+          const [d, t] = String(fs.confirmedSlot || '').split(' ');
+          booking = { _fsCustomerId: fs.docId, userId: 'fs:'+fs.docId, name: fs.name, date: d||'', time: t||'', zoomUrl: fs.zoomUrl, ts: bookingTs };
+        }
+      }
       // ★ オーナーfb: popup ウィンドウだと Zoom と z-order 競合で潜る。物理タブ (同じ Chrome ウィンドウ内の新タブ) に変更。
       // tab だと Chrome のタブストリップから手動で切り替え or ドラッグでウィンドウ分離可能。CRM 親と同じウィンドウなので focus 問題ゼロ。
       const memoKey = 'fp-memo-' + (bookingTs || '');
@@ -3705,8 +3694,16 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
     document.querySelectorAll('[data-rec-stop]').forEach(btn => {
       btn.addEventListener('click', () => {
         if (window._fpRecorder.mediaRecorder && window._fpRecorder.mediaRecorder.state !== 'inactive') {
-          if (!confirm('録画を停止して保存しますか?')) return;
+          if (!confirm('録画を停止して 面談 完了に しますか?\n(議事録 は バックグラウンドで 生成 → 顧客カードへ 反映)')) return;
+          // 終了時刻 記録 (ボタン横ピル + 完了トースト 用)
+          const bookingTs = window._fpCurrentBookingTs || btn.dataset.recStop || '';
+          if (bookingTs) {
+            try { localStorage.setItem('fp-zoom-end-' + String(bookingTs).slice(0,19), String(Date.now())); } catch (_) {}
+          }
           stopScreenRecording();
+          // ★ 自動完了 (オーナーfb「Zoom 終わったら勝手に完了」)
+          // AI議事録は MediaRecorder.onstop で 非同期に生成 → localStorage に追加保存 → 次描画で表示
+          if (bookingTs) setTimeout(() => { try { autoCompleteBooking(bookingTs); } catch (_) {} }, 500);
         } else {
           alert('進行中の録画がありません');
         }
