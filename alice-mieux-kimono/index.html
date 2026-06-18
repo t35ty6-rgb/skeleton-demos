@@ -1202,11 +1202,11 @@ img{display:block;max-width:100%}
             </div>
           </div>
           <div class="opt">
-            <label>レンタル日数</label>
-            <div class="chips">
-              <button class="chip on">3日</button>
-              <button class="chip">5日</button>
-              <button class="chip">7日</button>
+            <label>レンタル日数 <small id="p0-mult" style="font-family:var(--ui);font-size:10px;color:var(--ink-3);letter-spacing:.06em;text-transform:none;font-weight:500;margin-left:6px"></small></label>
+            <div class="chips" id="p0-days-chips">
+              <button class="chip on" data-d="3" data-m="1">3日</button>
+              <button class="chip" data-d="5" data-m="1.15">5日 <small style="color:var(--red);font-size:10px;font-weight:600;margin-left:2px">+15%</small></button>
+              <button class="chip" data-d="7" data-m="1.3">7日 <small style="color:var(--red);font-size:10px;font-weight:600;margin-left:2px">+30%</small></button>
             </div>
           </div>
           <div class="opt">
@@ -1482,7 +1482,7 @@ const PROD_INFO = {
   '藤娘':{cat:'HOUMONGI ・ 訪問着',en:'FUJIMUSUME',price:'¥36,000',rate:'4.7',rev:26,img:'k04.jpg',desc:'藤の花の優美な文様。春から夏のお祝いの場に。'},
   '帯結び':{cat:'OBI ・ 帯セット',en:'OBIMUSUBI',price:'¥8,800',rate:'4.9',rev:48,img:'k02.jpg',desc:'ご自宅の振袖と合わせる帯・小物セット。'},
 };
-const M = {open:false,step:0,kim:null,selDate:null,selTime:null,calYear:0,calMonth:0};
+const M = {open:false,step:0,kim:null,selDate:null,selTime:null,calYear:0,calMonth:0,selDays:3,selMult:1,basePriceNum:0,finalPriceStr:'',basePriceStr:''};
 const DOW = ['日','月','火','水','木','金','土'];
 function isClosed(d){
   const dow=d.getDay(), date=d.getDate(), nth=Math.ceil(date/7);
@@ -1515,13 +1515,45 @@ function openBooking(kim){
     document.getElementById('p0-name').innerHTML = `${kim.nm}<small>${info.en}</small>`;
     document.getElementById('p0-rate').textContent = info.rate;
     document.getElementById('p0-rev').textContent = info.rev;
-    document.getElementById('p0-price').innerHTML = `${info.price}<small>(税込)</small>`;
+    // Parse base price for multiplier
+    M.basePriceStr = info.price;
+    const m = (info.price+'').match(/¥?([0-9,]+)/);
+    M.basePriceNum = m ? parseInt(m[1].replace(/,/g,'')) : 0;
+    M.selDays = 3;
+    M.selMult = 1;
+    updatePriceDisplay();
     document.getElementById('p0-desc').textContent = info.desc;
+    // Reset day chip selection
+    document.querySelectorAll('#p0-days-chips button').forEach(b=>b.classList.toggle('on', b.dataset.d==='3'));
   }
   const back=document.getElementById('modal');
   back.classList.add('on');back.setAttribute('aria-hidden','false');
   document.body.style.overflow='hidden';
   renderCal();showStep(0);
+}
+
+// Module-level: update price display based on M state
+function updatePriceDisplay(){
+  const daysEl = document.getElementById('p0-days');
+  const priceEl = document.getElementById('p0-price');
+  if(!daysEl || !priceEl) return;
+  daysEl.textContent = M.selDays;
+  if(M.basePriceNum > 0){
+    const final = Math.round(M.basePriceNum * M.selMult);
+    M.finalPriceStr = '¥' + final.toLocaleString('en-US');
+    let html = `${M.finalPriceStr}<small>(税込)</small>`;
+    if(M.selMult !== 1){
+      html = `<span style="text-decoration:line-through;color:var(--ink-3);font-size:18px;font-weight:500;margin-right:8px">¥${M.basePriceNum.toLocaleString('en-US')}</span>${html}`;
+    }
+    priceEl.innerHTML = html;
+    const mult = document.getElementById('p0-mult');
+    if(mult) mult.textContent = M.selDays>3?`(3日基準 × ${M.selMult.toFixed(2)})`:'';
+  } else {
+    M.finalPriceStr = M.basePriceStr;
+    priceEl.innerHTML = `${M.basePriceStr}<small>(税込)</small>`;
+    const mult = document.getElementById('p0-mult');
+    if(mult) mult.textContent = '';
+  }
 }
 // Wire chip selectors on step 0
 document.querySelectorAll('#step0 .opt .chips').forEach(g=>{
@@ -1529,6 +1561,12 @@ document.querySelectorAll('#step0 .opt .chips').forEach(g=>{
     b.addEventListener('click',()=>{
       g.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
       b.classList.add('on');
+      // If it's the day chips, update price
+      if(g.id==='p0-days-chips'){
+        M.selDays = parseInt(b.dataset.d);
+        M.selMult = parseFloat(b.dataset.m);
+        updatePriceDisplay();
+      }
     });
   });
 });
@@ -1619,7 +1657,7 @@ document.getElementById('m-next').addEventListener('click',()=>{
   if(M.step===0) showStep(1);
   else if(M.step===1) showStep(2);
   else if(M.step===2){
-    document.getElementById('r-item').textContent=`${M.kim.nm}(${M.kim.cat}・N° ${M.kim.no})`;
+    document.getElementById('r-item').innerHTML=`${M.kim.nm}（${M.kim.cat}・N° ${M.kim.no}）<small style="display:block;font-family:var(--ui);font-size:10.5px;color:var(--ink-3);letter-spacing:.08em;margin-top:4px;text-transform:uppercase;font-weight:600">RENTAL ${M.selDays}日間 ・ <span style="color:var(--red);font-family:var(--serif);font-size:14px;font-weight:700">${M.finalPriceStr}</span> (税込)</small>`;
     document.getElementById('r-when').textContent=`${fmtDate(M.selDate)} ${M.selTime}〜`;
     document.getElementById('r-name').textContent=`${document.getElementById('f-lname').value} ${document.getElementById('f-fname').value} さま`;
     document.getElementById('r-mail').textContent=document.getElementById('f-mail').value;
@@ -1647,7 +1685,10 @@ document.getElementById('m-next').addEventListener('click',()=>{
       kana: '(LPより)',
       kim: M.kim.nm,
       cat: M.kim.cat,
-      price: priceStr,
+      price: M.finalPriceStr || priceStr,
+      basePrice: M.basePriceStr,
+      days: M.selDays,
+      mult: M.selMult,
       scene: document.getElementById('f-scene').value,
       try: ymd(M.selDate) + ' ' + M.selTime,
       use: document.getElementById('f-use').value || '―',
