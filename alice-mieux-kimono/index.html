@@ -1562,6 +1562,41 @@ document.getElementById('m-next').addEventListener('click',()=>{
     showStep(3);
   } else if(M.step===3){
     const ref='AM-2026-'+Math.floor(1000+Math.random()*9000);
+    // ★ 管理画面と連動: localStorage に永続化
+    const lname = document.getElementById('f-lname').value.trim();
+    const fname = document.getElementById('f-fname').value.trim();
+    const kimImg = (M.kim.img||'').replace(/^.*\//,'');
+    const priceNum = parseInt((M.kim.price+'').replace(/[^0-9]/g,''))||0;
+    const priceStr = priceNum>0?('¥'+priceNum.toLocaleString('en-US')):'ご相談';
+    const booking = {
+      id: ref,
+      name: lname + ' ' + fname + 'さま',
+      kana: '(LPより)',
+      kim: M.kim.nm,
+      cat: M.kim.cat,
+      price: priceStr,
+      scene: document.getElementById('f-scene').value,
+      try: ymd(M.selDate) + ' ' + M.selTime,
+      use: document.getElementById('f-use').value || '―',
+      tel: document.getElementById('f-tel').value,
+      mail: document.getElementById('f-mail').value,
+      addr: [document.getElementById('f-zip').value,document.getElementById('f-pref').value,document.getElementById('f-addr').value].filter(Boolean).join(' ') || '―',
+      h: document.getElementById('f-h').value || '―',
+      foot: document.getElementById('f-foot').value || '―',
+      mama: document.getElementById('f-mama').value || '―',
+      msg: document.getElementById('f-msg').value || '',
+      stt: 'new',
+      submitted: new Date().toISOString().slice(0,16).replace('T',' '),
+      ts: Date.now(),
+      from: 'LP'
+    };
+    try{
+      const existing = JSON.parse(localStorage.getItem('alice_bookings')||'[]');
+      existing.unshift(booking);
+      localStorage.setItem('alice_bookings', JSON.stringify(existing));
+      // Also broadcast for any open admin tab to listen
+      window.dispatchEvent(new StorageEvent('storage',{key:'alice_bookings',newValue:JSON.stringify(existing)}));
+    }catch(e){console.warn('booking save failed',e)}
     document.getElementById('r-ref').textContent=ref;showStep(4);
   }
 });

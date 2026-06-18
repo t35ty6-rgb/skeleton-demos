@@ -311,6 +311,9 @@ img{max-width:100%;display:block}
     <h1 id="page-title">ダッシュボード<small id="page-sub">DASHBOARD</small></h1>
     <div class="actions">
       <input type="text" class="search" placeholder="お客様名・予約番号で検索">
+      <button class="ic" title="LPからの新規予約を取込" onclick="refreshFromLP()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M23 4v6h-6M1 20v-6h6M3.5 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.65 4.36A9 9 0 0 0 20.5 15"/></svg>
+      </button>
       <a class="ic" title="お知らせ">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>
       </a>
@@ -554,11 +557,26 @@ const BOOKINGS = [
   {id:'AM-2026-1098',name:'加藤 沙耶さま',kana:'かとう さや',kim:'藤娘',cat:'訪問着',price:'¥36,000',scene:'ご入学',try:'2026-04-05 14:00',use:'2026-04-10',tel:'090-9012-3456',mail:'saya@example.com',addr:'福井県坂井市',h:162,foot:24,mama:'',msg:'',stt:'done',submitted:'2026-03-01 10:00',ts:Date.now()-7257600000},
   {id:'AM-2026-0987',name:'田中 美穂さま',kana:'たなか みほ',kim:'紅薔薇',cat:'訪問着',price:'¥32,000',scene:'ご結婚',try:'2026-03-10 11:00',use:'2026-04-20',tel:'090-0123-4567',mail:'miho@example.com',addr:'福井県あわら市',h:165,foot:24.5,mama:'',msg:'',stt:'done',submitted:'2026-02-15 13:00',ts:Date.now()-9676800000},
 ];
-// Load LP-submitted bookings from localStorage
-try{
-  const lpBookings = JSON.parse(localStorage.getItem('alice_bookings')||'[]');
-  lpBookings.forEach(b=>BOOKINGS.unshift(b));
-}catch(e){}
+// Load LP-submitted bookings from localStorage (merge with demo data, dedup by id)
+function loadLPBookings(){
+  try{
+    const lp = JSON.parse(localStorage.getItem('alice_bookings')||'[]');
+    // Build merged set: LP entries (most recent first) + demo entries not already in LP
+    const lpIds = new Set(lp.map(b=>b.id));
+    const merged = [...lp, ...BOOKINGS.filter(b=>!lpIds.has(b.id))];
+    return merged;
+  }catch(e){return BOOKINGS}
+}
+function saveBookings(){
+  try{
+    const lp = BOOKINGS.filter(b=>b.from==='LP' || b.from==='admin');
+    localStorage.setItem('alice_bookings', JSON.stringify(lp));
+  }catch(e){}
+}
+// Replace BOOKINGS with merged set
+const _baseDemo = [...BOOKINGS];
+BOOKINGS.length = 0;
+loadLPBookings().forEach(b=>BOOKINGS.push(b));
 
 const STT_LABEL = {new:'新規',wait:'対応中',ok:'確定',done:'完了',cancel:'キャンセル'};
 
@@ -720,14 +738,127 @@ function openBookingDetail(id){
 function closeDrawer(){document.getElementById('bk-drawer').classList.remove('on');document.getElementById('bk-back').classList.remove('on');document.body.style.overflow=''}
 document.getElementById('dh-close').addEventListener('click',closeDrawer);
 document.getElementById('bk-back').addEventListener('click',closeDrawer);
+// Drawer action buttons
+let currentBookingId = null;
+const _orig_openBookingDetail = openBookingDetail;
+openBookingDetail = function(id){currentBookingId=id;_orig_openBookingDetail(id)};
+document.getElementById('dh-confirm').addEventListener('click',()=>{
+  if(currentBookingId) changeStatus(currentBookingId,'ok','確定');
+});
+document.getElementById('dh-cancel').addEventListener('click',()=>{
+  if(currentBookingId && confirm('このご予約をキャンセル扱いにいたしますか？')) changeStatus(currentBookingId,'cancel','キャンセル');
+});
+document.getElementById('dh-line').addEventListener('click',()=>{
+  if(currentBookingId){
+    const b = BOOKINGS.find(x=>x.id===currentBookingId);
+    if(b){
+      // Move to 対応中 if currently new
+      if(b.stt==='new'){b.stt='wait';persistAndRefresh()}
+      showToast('「'+b.name+'」へ LINE 返信に進みます (プロトタイプ)');
+    }
+  }
+});
+function persistAndRefresh(){
+  // Save LP/admin bookings back to localStorage
+  try{
+    const persist = BOOKINGS.filter(b=>b.from==='LP'||b.from==='admin'||b.from===undefined && false); // only keep LP entries
+    // Actually save ALL bookings now so admin updates also stick
+    localStorage.setItem('alice_bookings', JSON.stringify(BOOKINGS));
+  }catch(e){}
+  // Recompute counts
+  ['new','wait','ok','done','cancel'].forEach(st=>{
+    const c = BOOKINGS.filter(b=>b.stt===st).length;
+    const el = document.getElementById('cnt-'+st);
+    if(el) el.textContent = c;
+  });
+  const newCnt = BOOKINGS.filter(b=>b.stt==='new').length;
+  document.getElementById('badge-new').textContent = newCnt;
+  // Redraw current tab
+  const curSt = document.querySelector('#bk-tabs .on')?.dataset.st || 'new';
+  renderBookingsTbl(curSt);
+  renderRecentBookings();
+  renderCalendar();
+  // Update KPI today count
+  const today = new Date().toISOString().slice(0,10);
+  const todayCount = BOOKINGS.filter(b=>b.try && b.try.startsWith(today)).length;
+  const todayEl = document.getElementById('kpi-today');
+  if(todayEl) todayEl.innerHTML = todayCount+'<small>件</small>';
+  const waitCount = BOOKINGS.filter(b=>b.stt==='new'||b.stt==='wait').length;
+  const waitEl = document.getElementById('kpi-wait');
+  if(waitEl) waitEl.innerHTML = waitCount+'<small>件</small>';
+}
 function quickConfirm(id){
   const b = BOOKINGS.find(x=>x.id===id);
   if(!b) return;
   b.stt='ok';
-  alert('「'+b.name+'」のご予約を 確定 に変更しました。\n(プロトタイプ: 実装では自動LINE返信)');
-  renderBookingsTbl(document.querySelector('#bk-tabs .on')?.dataset.st||'new');
-  renderRecentBookings();
+  showToast('「'+b.name+'」のご予約を 確定 に変更しました');
+  persistAndRefresh();
 }
+function changeStatus(id, newStt, label){
+  const b = BOOKINGS.find(x=>x.id===id);
+  if(!b) return;
+  b.stt=newStt;
+  closeDrawer();
+  showToast('「'+b.name+'」のご予約を '+label+' に変更しました');
+  persistAndRefresh();
+}
+
+/* Listen for storage events from LP submissions (other tabs) */
+window.addEventListener('storage', e=>{
+  if(e.key === 'alice_bookings'){
+    try{
+      const lp = JSON.parse(e.newValue||'[]');
+      // Merge: keep admin-side changes + add new LP entries
+      const known = new Set(BOOKINGS.map(b=>b.id));
+      const newOnes = lp.filter(b=>!known.has(b.id));
+      newOnes.forEach(b=>BOOKINGS.unshift(b));
+      if(newOnes.length>0){
+        showToast(newOnes.length+'件の新しいご予約を受信しました', 'new');
+      }
+      persistAndRefresh();
+    }catch(err){}
+  }
+});
+
+/* Toast notification */
+const toastEl = document.createElement('div');
+toastEl.style.cssText='position:fixed;top:20px;right:20px;z-index:200;display:none;background:var(--ink);color:#fff;padding:14px 22px;font-size:13px;letter-spacing:.04em;box-shadow:0 14px 32px -10px rgba(0,0,0,.3);max-width:340px;font-weight:500';
+document.body.appendChild(toastEl);
+function showToast(msg, type){
+  toastEl.textContent = msg;
+  toastEl.style.background = type==='new'?'var(--red)':'var(--ink)';
+  toastEl.style.display='block';
+  toastEl.style.opacity='1';
+  toastEl.style.transform='translateY(0)';
+  toastEl.style.transition='opacity .25s, transform .25s';
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(()=>{
+    toastEl.style.opacity='0';
+    toastEl.style.transform='translateY(-8px)';
+    setTimeout(()=>{toastEl.style.display='none'},300);
+  }, 3500);
+}
+
+/* Manual refresh (in case storage event missed across tabs) */
+function refreshFromLP(){
+  try{
+    const lp = JSON.parse(localStorage.getItem('alice_bookings')||'[]');
+    const known = new Set(BOOKINGS.map(b=>b.id));
+    let added = 0;
+    lp.forEach(b=>{
+      if(!known.has(b.id)){
+        BOOKINGS.unshift(b);
+        added++;
+      } else {
+        // Update existing from LP (LP may have changed something - unlikely but safe)
+      }
+    });
+    if(added>0) showToast(added+'件の新しいご予約を受信しました', 'new');
+    persistAndRefresh();
+  }catch(e){}
+}
+// Auto-poll every 4 seconds (covers same-tab updates not triggering storage event)
+setInterval(refreshFromLP, 4000);
 
 /* ====== CALENDAR ====== */
 let cY = 2026, cM = 5; // June 2026
