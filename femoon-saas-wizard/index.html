@@ -226,7 +226,7 @@ function render(){
 }
 
 function renderQuestion(q){
-  const qnum = q.type === 'intro' || q.type === 'review' || q.type === 'done' ? '' : `<div class="q-num"><span class="dot"></span>QUESTION ${realQNum(currentIdx)} / ${realQTotal()}</div>`;
+  const qnum = ['intro','review','payment','done'].includes(q.type) ? '' : `<div class="q-num"><span class="dot"></span>QUESTION ${realQNum(currentIdx)} / ${realQTotal()}</div>`;
   let body = '';
   switch(q.type){
     case 'intro':
@@ -420,7 +420,7 @@ function readCurrentAnswer(){
 }
 
 function validate(q, val){
-  if (q.type === 'intro' || q.type === 'review' || q.type === 'done') return null;
+  if (['intro','review','payment','done'].includes(q.type)) return null;
   if (q.required){
     if (Array.isArray(val) && !val.length) return '1個以上 入力 してください';
     if (!val) return '入力 してください';
@@ -475,14 +475,14 @@ window._jumpTo = function(idx){
   }
 };
 
-function realQNum(idx){ return QUESTIONS.slice(0, idx+1).filter(q => !['intro','review','done'].includes(q.type)).length; }
-function realQTotal(){ return QUESTIONS.filter(q => !['intro','review','done'].includes(q.type)).length; }
+function realQNum(idx){ return QUESTIONS.slice(0, idx+1).filter(q => !['intro','review','payment','done'].includes(q.type)).length; }
+function realQTotal(){ return QUESTIONS.filter(q => !['intro','review','payment','done'].includes(q.type)).length; }
 
 function updateProgress(){
   const pct = (currentIdx / (QUESTIONS.length - 1)) * 100;
   document.getElementById('pfill').style.width = pct + '%';
   const q = QUESTIONS[currentIdx];
-  if (['intro','review','done'].includes(q.type)){
+  if (['intro','review','payment','done'].includes(q.type)){
     document.getElementById('meta-num').textContent = q.type.toUpperCase();
   } else {
     document.getElementById('meta-num').textContent = `Q ${realQNum(currentIdx)} / ${realQTotal()}`;
