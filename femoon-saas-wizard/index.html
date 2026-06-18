@@ -115,6 +115,18 @@
   .done-id .v{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:900;color:var(--ink);margin-left:auto;letter-spacing:0.05em}
   .done .q-num{color:var(--green)} .done .q-num .dot{background:var(--green)}
 
+  /* payment slide */
+  .payment .q-num{color:var(--pink)} .payment .q-num .dot{background:var(--pink)}
+  .pay-card{background:rgba(255,255,255,0.04);border:1.5px solid var(--line);border-radius:18px;padding:22px 24px;margin:18px 0 16px}
+  .pay-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px dotted var(--line)}
+  .pay-row:last-child{border-bottom:none}
+  .pay-row .pay-k{color:var(--muted);font-size:13px;font-weight:600}
+  .pay-row .pay-v{color:var(--ink);font-size:15px;font-weight:700}
+  .pay-row .pay-amount{font-family:'Noto Serif JP',serif;font-size:36px;font-weight:900;color:var(--amber);line-height:1}
+  .pay-row .pay-amount .pay-unit{font-size:14px;color:var(--muted);font-weight:500;margin-left:6px;font-family:'Noto Sans JP',sans-serif}
+  .pay-trust{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;justify-content:center}
+  .pay-trust-item{background:rgba(255,255,255,0.04);border:1px solid var(--line);color:var(--muted);font-size:11px;font-weight:600;padding:6px 12px;border-radius:99px;letter-spacing:0.04em}
+
   @media (max-width:560px){
     .q-title{font-size:24px}
     .intro .q-title{font-size:30px}
@@ -178,8 +190,13 @@ const QUESTIONS = [
   { id:'closedDates', type:'textarea', title:'年末年始 / GW など 特定日 の 休み', hint:'YYYY-MM-DD カンマ区切り。 例: 2026-12-31, 2027-01-01。 なければ 空欄 で OK', placeholder:'2026-12-31, 2027-01-01' },
   { id:'courses', type:'courses', title:'提供 する コース と 料金', hint:'お客様 が 予約時 に 選ぶ メニュー。 <strong>最低 1個</strong> (推奨 3個)', required:true },
   { id:'staffs', type:'staffs', title:'スタッフ 一覧', hint:'施術 を 担当 する 人。 <strong>最低 1人</strong>', required:true },
-  { id:'_review', type:'review', title:'最終 確認', sub:'内容 を 確認 して 「送信」 を 押してください。 修正 したい 項目 は 「直す」 で その質問 に 戻れます' },
+  { id:'_review', type:'review', title:'最終 確認', sub:'内容 を 確認 して 「次へ」 を 押すと 決済 へ 進みます。 修正 したい 項目 は 「直す」 で その質問 に 戻れます' },
+  { id:'_payment', type:'payment', title:'お 支払い', sub:'月額 <strong>¥3,000</strong> (税込)。 初回 のみ 即時 課金 → 翌月 以降 自動 引き落とし。 いつでも 1クリック で 解約 可。 30日 全額返金 保証 付き。' },
 ];
+
+// Stripe Payment Link URL (Stripe Dashboard で 月額 ¥3,000 product 作成後 ここ に 埋める)
+// 暫定: TEST mode の リンク or 設定前 placeholder。 本番化は STRIPE_INTEGRATION.md 参照
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/test_PLACEHOLDER_REPLACE_AFTER_STRIPE_SETUP';
 
 // === State ===
 let state = loadState();
@@ -279,6 +296,24 @@ function renderQuestion(q){
       body = `<div class="q-num"><span class="dot"></span>REVIEW</div>
         <div class="q-title">${q.title}</div><div class="q-hint">${q.sub}</div>
         <div class="review-list" id="review-list">${renderReview()}</div>
+        <div class="err" id="err"></div>`;
+      break;
+    }
+    case 'payment': {
+      body = `<div class="q-num"><span class="dot"></span>PAYMENT</div>
+        <div class="q-title">${q.title}</div><div class="q-hint">${q.sub}</div>
+        <div class="pay-card">
+          <div class="pay-row"><div class="pay-k">プラン</div><div class="pay-v">FEMOON SaaS / 月額</div></div>
+          <div class="pay-row"><div class="pay-k">料金</div><div class="pay-v pay-amount">¥3,000<span class="pay-unit">/ 月</span></div></div>
+          <div class="pay-row"><div class="pay-k">課金日</div><div class="pay-v">今日 → 翌月 同日 自動</div></div>
+          <div class="pay-row"><div class="pay-k">解約</div><div class="pay-v">いつでも 1クリック</div></div>
+          <div class="pay-row"><div class="pay-k">保証</div><div class="pay-v">30日 全額 返金</div></div>
+        </div>
+        <div class="pay-trust">
+          <span class="pay-trust-item">🔒 Stripe 決済</span>
+          <span class="pay-trust-item">VISA / Master / JCB / AMEX</span>
+          <span class="pay-trust-item">SSL 暗号化</span>
+        </div>
         <div class="err" id="err"></div>`;
       break;
     }
@@ -397,7 +432,16 @@ function validate(q, val){
 
 function next(){
   const q = QUESTIONS[currentIdx];
-  if (q.type === 'review'){ submit(); return; }
+  if (q.type === 'review'){
+    // Review通過 → 即送信 + payment slide へ
+    submitThenPayment();
+    return;
+  }
+  if (q.type === 'payment'){
+    // Stripe Checkout に遷移
+    goPayment();
+    return;
+  }
   if (q.type === 'done') return;
   const val = readCurrentAnswer();
   const err = validate(q, val);
@@ -449,15 +493,49 @@ function updateNav(q){
   const nextBtn = document.getElementById('next-btn');
   if (q.type === 'done'){ nextBtn.style.display = 'none'; document.getElementById('back-btn').style.display = 'none'; return; }
   nextBtn.style.display = ''; document.getElementById('back-btn').style.display = '';
-  nextBtn.innerHTML = q.type === 'review' ? '送信 する <span class="ic">✓</span>' : (q.type === 'intro' ? 'はじめる <span class="ic">→</span>' : '次へ <span class="ic">→</span>');
+  nextBtn.innerHTML = q.type === 'review' ? '次へ (決済) <span class="ic">→</span>' : (q.type === 'payment' ? '¥3,000 を 支払う <span class="ic">🔒</span>' : (q.type === 'intro' ? 'はじめる <span class="ic">→</span>' : '次へ <span class="ic">→</span>'));
 }
 
 function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
 
-async function submit(){
+async function submitThenPayment(){
+  // Firestore に申込 → 成功したら payment slide へ
   const nextBtn = document.getElementById('next-btn');
   nextBtn.disabled = true;
   nextBtn.innerHTML = '送信中... <span class="ic">⋯</span>';
+  const ok = await sendToFirestore();
+  if (ok){
+    currentIdx++;
+    render();
+    window.scrollTo({top:0,behavior:'smooth'});
+  } else {
+    nextBtn.disabled = false;
+    nextBtn.innerHTML = '次へ (決済) <span class="ic">→</span>';
+  }
+}
+
+function goPayment(){
+  // Stripe Payment Link (まだ未設定なら 警告ダイアログ で 説明 → submit 同等の done)
+  if (STRIPE_PAYMENT_LINK.includes('PLACEHOLDER')){
+    alert('Stripe 決済リンク は 営業 (Skeleton社) 側 で 準備中 です。 申込 は 受付済 なので、 後日 メール で 決済リンク を お送りします。');
+    // 申込番号は既に発行済なので done へ
+    QUESTIONS.push({ id:'_done', type:'done' });
+    currentIdx = QUESTIONS.length - 1;
+    saveState();
+    render();
+    return;
+  }
+  // 本番: Stripe Checkout に メアド + 申込ID を プリフィル で 飛ばす
+  const params = new URLSearchParams({
+    prefilled_email: state.email || '',
+    client_reference_id: state._doneId || '',
+  });
+  window.location.href = STRIPE_PAYMENT_LINK + '?' + params.toString();
+}
+
+async function sendToFirestore(){
+  // 既送信 (申込番号あり) ならスキップ
+  if (state._doneId) return true;
 
   const closedDatesStr = state.closedDates || '';
   const closedDatesArr = closedDatesStr
@@ -491,16 +569,12 @@ async function submit(){
   try {
     const ref = await addDoc(collection(db, 'onboarding_requests'), payload);
     state._doneId = ref.id.slice(0,12).toUpperCase();
-    QUESTIONS.push({ id:'_done', type:'done' });
-    currentIdx = QUESTIONS.length - 1;
     saveState();
-    render();
-    window.scrollTo({top:0,behavior:'smooth'});
+    return true;
   } catch(e){
-    nextBtn.disabled = false;
-    nextBtn.innerHTML = '送信 する <span class="ic">✓</span>';
     const el = document.getElementById('err');
     if (el){ el.textContent = '送信失敗: ' + (e.code || e.message) + '。 もう一度 押してください'; el.classList.add('show'); }
+    return false;
   }
 }
 
