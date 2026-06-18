@@ -4925,7 +4925,7 @@ STEP C: 結果報告
         <div style="background:linear-gradient(135deg,#10B981,#059669);color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
           <div>
             <div style="font-size:10px;font-weight:800;letter-spacing:0.22em;opacity:0.85;">FP → CUSTOMER</div>
-            <h3 style="margin:4px 0 0 0;font-size:16px;font-weight:900;">✍ ${escapeHtml(client.name)}様 への LINE 下書き (Claude Code)</h3>
+            <h3 style="margin:4px 0 0 0;font-size:16px;font-weight:900;">✍ ${escapeHtml(client.name)}様 への LINE 下書き (AI 自動生成)</h3>
           </div>
           <button id="fp-brief-close" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:34px;height:34px;border-radius:6px;cursor:pointer;font-size:18px;">✕</button>
         </div>
@@ -4935,31 +4935,11 @@ STEP C: 結果報告
             <textarea id="fp-brief-input" rows="3" placeholder="例: 相続のテーマで来月会いたい / 新NISAの配分見直しを提案したい / お子様の進学費用シミュ作ってある旨を伝えたい" style="width:100%;padding:12px 14px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13.5px;font-family:inherit;line-height:1.7;resize:vertical;box-sizing:border-box;"></textarea>
             <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
               <div style="font-size:10.5px;color:#94A3B8;">${escapeHtml(client.name)}様の 家族 / 議事録 / LINE履歴 / アンケート回答 を Claude が 踏まえて 整えます</div>
-              <button id="fp-brief-gen" style="background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:0.04em;box-shadow:0 4px 14px rgba(16,185,129,0.35);">✨ Claude Code で下書き作る</button>
+              <button id="fp-brief-gen" style="background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:0.04em;box-shadow:0 4px 14px rgba(16,185,129,0.35);">✨ AI で 下書き 生成</button>
             </div>
           </div>
 
-          <div id="fp-brief-after" style="display:none;">
-            <div style="background:linear-gradient(135deg,#F0FDF4,#fff);border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;margin-bottom:12px;font-size:12.5px;color:#065F46;">
-              ✅ プロンプトを <strong>クリップボードに自動コピー</strong> しました。 prompt.txt も 念のため ダウンロード済。
-            </div>
-            <div style="background:#1F1A12;color:#FFE9A8;border-radius:10px;padding:18px;margin-bottom:10px;">
-              <div style="font-family:'Inter',sans-serif;font-size:10px;letter-spacing:0.22em;color:#C5A268;font-weight:700;margin-bottom:4px;">STEP 1</div>
-              <div style="font-family:'Noto Serif JP',serif;font-size:15px;font-weight:700;margin-bottom:10px;">Claude を開きます</div>
-              <button id="fp-brief-open-claude" style="background:#FFE9A8;color:#1F1A12;border:none;padding:11px 22px;border-radius:7px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:0.04em;">🌐 Claude を開く</button>
-            </div>
-            <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:16px;margin-bottom:10px;">
-              <div style="font-family:'Inter',sans-serif;font-size:10px;letter-spacing:0.22em;color:#94A3B8;font-weight:700;margin-bottom:4px;">STEP 2</div>
-              <div style="font-family:'Noto Serif JP',serif;font-size:15px;font-weight:700;color:#1F1A12;margin-bottom:6px;">Cmd + V → Enter</div>
-              <div style="font-size:12px;color:#475569;line-height:1.7;">Claude の 入力欄 に 貼り付け (Cmd+V) → Enter で 送信。 <strong>${escapeHtml(client.name)}様 専用</strong> の 自然な LINE 文面 が 出ます。</div>
-            </div>
-            <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:16px;">
-              <div style="font-family:'Inter',sans-serif;font-size:10px;letter-spacing:0.22em;color:#94A3B8;font-weight:700;margin-bottom:4px;">STEP 3</div>
-              <div style="font-family:'Noto Serif JP',serif;font-size:15px;font-weight:700;color:#1F1A12;margin-bottom:6px;">Claude の 出力 を コピー → LINE に 貼って 送信</div>
-              <div style="font-size:12px;color:#475569;line-height:1.7;">Claude が 出した 文面 を コピー → このモーダルを閉じて、 LINE 履歴 タブの 下の <strong>送信欄</strong> に 貼って 「送信」 ボタンで お送り下さい。</div>
-            </div>
-            <div id="fp-brief-msg" style="margin-top:10px;font-size:12px;font-weight:700;text-align:center;"></div>
-          </div>
+          <div id="fp-brief-after" style="display:none;"></div>
         </div>
       </div>
     `;
