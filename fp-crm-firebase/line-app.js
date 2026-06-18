@@ -1975,7 +1975,18 @@
       window._fpZoomWin = zoomWin;
       // ※ Zoom popup が閉じても自動停止しない (誤検知防止のため監視機能を撤廃)
       // 停止は「Chrome 共有を停止」 or 「メモの完了ボタン」 でのみ実行
-      const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
+      // ★ multi-tenant: legacy bookings + Firestore 確定済 を 横断検索 (customerName='お客様' 化 防止)
+      let booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
+      if (!booking) {
+        const _fs = (window._fpFirestoreConfirmed || []).find(c => {
+          const cts = c.confirmedAt?.toDate?.()?.toISOString?.() || c.createdAt?.toDate?.()?.toISOString?.() || '';
+          return String(cts).slice(0,19) === String(bookingTs).slice(0,19);
+        });
+        if (_fs) {
+          const [_d, _t] = String(_fs.confirmedSlot || '').split(' ');
+          booking = { _fsCustomerId: _fs.docId, userId: 'fs:'+_fs.docId, name: _fs.name, date: _d||'', time: _t||'', zoomUrl: _fs.zoomUrl, ts: bookingTs };
+        }
+      }
       // ★ オーナーfb: popup ウィンドウだと Zoom と z-order 競合で潜る。物理タブ (同じ Chrome ウィンドウ内の新タブ) に変更。
       // tab だと Chrome のタブストリップから手動で切り替え or ドラッグでウィンドウ分離可能。CRM 親と同じウィンドウなので focus 問題ゼロ。
       const memoKey = 'fp-memo-' + (bookingTs || '');
