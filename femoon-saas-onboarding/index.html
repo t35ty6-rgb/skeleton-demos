@@ -168,7 +168,8 @@
       <label>定休日 (複数 選択 可)</label>
       <div class="weekday-picker" id="weekday-picker"></div>
     </div>
-    <div class="field"><label>臨時 休業日 (任意)<span class="hint">YYYY-MM-DD カンマ区切り 例: 2026-12-31, 2027-01-01</span></label><textarea id="closed-dates" placeholder="2026-12-31, 2027-01-01"></textarea></div>
+    <div class="field"><label>臨時 休業日 (任意)<span class="hint">具体的 な 日付 のみ。 YYYY-MM-DD カンマ区切り 例: 2026-12-31, 2027-01-01</span></label><textarea id="closed-dates" placeholder="2026-12-31, 2027-01-01"></textarea></div>
+    <div class="field"><label>📝 不定休 ルール (任意)<span class="hint">「第1火曜・第3日曜 も休み」 等 の 規則的 な 休み方 を 自由 に 記入。 Skeleton 社 が 読んで 半年分 の 休業日 を 予約カレンダー に 反映 します</span></label><textarea id="closed-rule" placeholder="例: 月曜定休 / 加えて 第1火曜・第3日曜・第5日曜 も 休業&#10;例: 毎月 第2水曜 は 全日 研修 で 受付不可" style="min-height:80px"></textarea></div>
   </div>
 </div>
 
@@ -357,11 +358,14 @@ document.getElementById('form').addEventListener('submit', async (e) => {
     color: ['#4a7fbf','#5fa3d1','#6db7a8','#c79a3e','#b8709a','#7ac794','#e07b6f','#6a89cc','#a78bfa','#fb923c'][i % 10],
   })).filter(s => s.name);
 
-  // 臨時休業日
+  // 臨時休業日 (具体的日付のみ抽出)
   const closedDatesStr = document.getElementById('closed-dates').value.trim();
   const closedDates = closedDatesStr
     ? closedDatesStr.split(/[,、\s]+/).map(s => s.trim()).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s))
     : [];
+  // 自由テキストで書かれた全部 (規則的休業を含む) はメモとして別保存
+  const closedDatesRaw = closedDatesStr;
+  const closedRuleMemo = document.getElementById('closed-rule').value.trim();
 
   const payload = {
     status: 'pending',
@@ -375,6 +379,8 @@ document.getElementById('form').addEventListener('submit', async (e) => {
     closeHour: Number(document.getElementById('close-hour').value),
     weeklyClosed: [...weeklyClosed],
     closedDates,
+    closedDatesRaw,
+    closedRuleMemo,
     courses,
     staffs,
     submittedAt: serverTimestamp(),
