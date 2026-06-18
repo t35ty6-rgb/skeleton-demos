@@ -3663,9 +3663,15 @@
                     </details>
                   </div>` : ''}
                 ${a.summary ? `
-                  <div class="fp-meeting-block">
-                    <div class="fp-meeting-block-label">AI 議事録 (Claude)</div>
-                    <div class="fp-meeting-body">${escapeHtml(a.summary)}</div>
+                  <div class="fp-meeting-block" data-minutes-block="orphan-${escapeHtml(a.bookingTs || '')}">
+                    <div class="fp-meeting-block-label" style="display:flex;justify-content:space-between;align-items:center;">
+                      <span>AI 議事録 (Claude)</span>
+                      <div style="display:flex;gap:6px;">
+                        <button class="fp-edit-minutes-btn" data-edit-minutes-key="${escapeHtml(a._storageKey || '')}" data-booking-ts="${escapeHtml(a.bookingTs || '')}" data-created-at="${escapeHtml(a.createdAt || '')}" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:3px 10px;border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">✏ 編集</button>
+                        <button class="fp-delete-minutes-btn" data-delete-minutes-key="${escapeHtml(a._storageKey || '')}" data-booking-ts="${escapeHtml(a.bookingTs || '')}" data-created-at="${escapeHtml(a.createdAt || '')}" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:3px 10px;border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">🗑</button>
+                      </div>
+                    </div>
+                    <div class="fp-meeting-body fp-minutes-display">${escapeHtml(a.summary)}</div>
                   </div>` : ''}
                 ${a.key_concerns && a.key_concerns.length > 0 ? `
                   <div class="fp-meeting-block">
