@@ -71,6 +71,13 @@
   .nthwd-chip .x{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:0;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center}
   .nthwd-chip .x:hover{background:var(--err);color:#fff}
   .nthwd-empty{font-size:13px;color:#A1A1AA;font-style:italic}
+  .nthwd-more-hint{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:10px;letter-spacing:0.04em}
+  .nthwd-note-block{margin-top:32px;padding-top:24px;border-top:1px solid var(--line)}
+  .nthwd-note-label{display:block;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.18em;font-weight:600;margin-bottom:10px;text-transform:uppercase}
+  .nthwd-note-block textarea{width:100%;min-height:70px;background:transparent;border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-family:inherit;font-size:15px;color:var(--ink);outline:none;line-height:1.6;resize:vertical;transition:border-color 0.15s}
+  .nthwd-note-block textarea:focus{border-color:var(--ink)}
+  .nthwd-note-block textarea::placeholder{color:#A1A1AA}
+  .nthwd-note-hint{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.6}
   @media (max-width:560px){
     .nthwd-pickers{flex-wrap:wrap}
     .nthwd-pickers .col{flex:1;min-width:0}
@@ -321,6 +328,7 @@ function renderQuestion(q){
       const chips = (state[q.id] || []).map(r =>
         `<span class="nthwd-chip" data-n="${r.n}" data-w="${r.wd}">第${r.n}${WD[r.wd]}曜<button type="button" class="x" aria-label="削除">×</button></span>`
       ).join('');
+      const noteVal = state.closedRulesNote || '';
       body = qnum + `<div class="q-title">${q.title}</div><div class="q-hint">${q.hint||''}</div>
         <div class="nthwd-pickers">
           <div class="col"><label>第何週</label><select id="nth-n">
@@ -331,7 +339,13 @@ function renderQuestion(q){
           </select></div>
           <button type="button" class="nthwd-add" id="nth-add">＋ 追加</button>
         </div>
-        <div class="nthwd-chips" id="nth-chips">${chips || '<span class="nthwd-empty">追加 した ルール が ここ に 並びます</span>'}</div>`;
+        <div class="nthwd-chips" id="nth-chips">${chips || '<span class="nthwd-empty">追加 した ルール が ここ に 並びます</span>'}</div>
+        <div class="nthwd-more-hint" id="nth-more-hint" style="display:${chips?'block':'none'}">↑ もっと あれば 続けて 追加 OK (何件 でも)</div>
+        <div class="nthwd-note-block">
+          <label class="nthwd-note-label">📝 その他 補足 (picker で 拾えない 不定休 を ここ に)</label>
+          <textarea id="nth-note" placeholder="例) 毎月15日 / GW期間中 / 第2日曜と第4日曜 など 自由 に" autocomplete="off">${escapeHtml(noteVal)}</textarea>
+          <div class="nthwd-note-hint">この欄 に 書いた もの は Skeleton社 が 読んで admin で 個別 反映 します</div>
+        </div>`;
       break;
     }
     case 'courses': {
@@ -455,16 +469,13 @@ function attachHandlers(q){
   }
   if (q.type === 'nthwd'){
     const chipsEl = document.getElementById('nth-chips');
-    const refresh = () => {
-      const WD = ['日','月','火','水','木','金','土'];
-      const rules = readNthwdRules();
-      if (!rules.length){ chipsEl.innerHTML = '<span class="nthwd-empty">追加 した ルール が ここ に 並びます</span>'; return; }
-      chipsEl.innerHTML = rules.map(r =>
-        `<span class="nthwd-chip" data-n="${r.n}" data-w="${r.wd}">第${r.n}${WD[r.wd]}曜<button type="button" class="x" aria-label="削除">×</button></span>`
-      ).join('');
-      attachNthwdChipX(chipsEl);
+    const moreHint = document.getElementById('nth-more-hint');
+    const updateHint = () => {
+      if (!moreHint) return;
+      moreHint.style.display = chipsEl.querySelector('.nthwd-chip') ? 'block' : 'none';
     };
     attachNthwdChipX(chipsEl);
+    updateHint();
     document.getElementById('nth-add').addEventListener('click', () => {
       const n = Number(document.getElementById('nth-n').value);
       const wd = Number(document.getElementById('nth-w').value);
@@ -472,8 +483,21 @@ function attachHandlers(q){
       if (cur.some(r => r.n===n && r.wd===wd)) return; // 重複は無視
       cur.push({ n, wd });
       writeNthwdRules(cur);
-      refresh();
+      attachNthwdChipX(chipsEl);
+      // 連続追加 しやすく プルダウン を デフォルト に 戻す
+      document.getElementById('nth-n').value = '1';
+      document.getElementById('nth-w').value = '0';
+      updateHint();
     });
+    // 削除時 も hint 更新
+    const mo = new MutationObserver(updateHint);
+    mo.observe(chipsEl, { childList:true });
+    // 自由補足欄 の 値 を localStorage に 即時保存 (state 経由)
+    const noteEl = document.getElementById('nth-note');
+    if (noteEl){
+      noteEl.value = state.closedRulesNote || '';
+      noteEl.addEventListener('input', () => { state.closedRulesNote = noteEl.value; saveState(); });
+    }
   }
   if (q.type === 'courses'){
     document.getElementById('add-c').addEventListener('click', () => {
@@ -686,6 +710,7 @@ async function sendToFirestore(){
     closedDates: [],
     closedRules,        // 構造化 [{n,wd}, ...]
     closedRuleMemo,     // 派生文字列 "第1火曜・第3日曜"
+    closedRulesNote: state.closedRulesNote || '', // picker で 拾えない 自由補足
     courses: (state.courses||[]).map((c,i)=>({ id:i+1, name:c.name, duration:Number(c.dur)||60, price:Number(c.price)||0 })),
     staffs: (state.staffs||[]).map((s,i)=>({ id:i+1, name:s.name, role:s.role })),
     submittedAt: serverTimestamp(),
