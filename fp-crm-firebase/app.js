@@ -5045,17 +5045,79 @@ ${JSON.stringify(jsonPayload, null, 2)}
     overlay.querySelector('#fp-brief-gen').addEventListener('click', async () => {
       const brief = overlay.querySelector('#fp-brief-input').value.trim();
       if (!brief) { alert('伝えたいこと を 入力してください'); return; }
+      const genBtn = overlay.querySelector('#fp-brief-gen');
+      const origText = genBtn.textContent;
+      genBtn.disabled = true;
+      genBtn.textContent = '✨ AI が 下書き中...';
       const prompt = buildBriefPrompt(client, brief);
-      try { await navigator.clipboard.writeText(prompt); } catch (e) { console.warn('clipboard fail:', e.message); }
-      const customerSlug = String(client.name || 'customer').replace(/[\/\\\s]+/g, '_');
-      const stamp = new Date().toISOString().slice(0, 10);
-      downloadAsFile(`${customerSlug}_brief-prompt_${stamp}.txt`, prompt, 'text/plain');
-      overlay.querySelector('#fp-brief-step1').style.display = 'none';
-      overlay.querySelector('#fp-brief-after').style.display = 'block';
-    });
-    overlay.querySelector('#fp-brief-after').addEventListener('click', (e) => {
-      if (e.target.closest('#fp-brief-open-claude')) {
-        window.open('https://claude.ai/new', '_blank');
+      try {
+        // ★ Anthropic API 直接呼出 (Cloud Function: generateBriefDraft)
+        const { getApps, initializeApp } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js');
+        const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js');
+        const app = getApps()[0] || initializeApp({
+          apiKey: 'AIzaSyAmVAEe9l9e1Yo_dzzJdbTVU35wWKd2sH4',
+          authDomain: 'skeleton-fp-compass-632026.firebaseapp.com',
+          projectId: 'skeleton-fp-compass-632026',
+        });
+        const fn = httpsCallable(getFunctions(app, 'asia-northeast1'), 'generateBriefDraft');
+        const res = await fn({ prompt });
+        const reply = (res.data && res.data.reply) || '';
+        if (!reply) throw new Error('空 reply');
+        // step1 隠して 結果表示
+        overlay.querySelector('#fp-brief-step1').style.display = 'none';
+        overlay.querySelector('#fp-brief-after').innerHTML = `
+          <div style="background:linear-gradient(135deg,#F0FDF4,#fff);border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12.5px;color:#065F46;">
+            ✨ <strong>Jobs (AI) が ${escapeHtml(client.name)}様 専用 の LINE 下書き を 作成しました</strong>
+          </div>
+          <div style="background:#fff;border:2px solid #10B981;border-radius:10px;padding:18px 22px;margin-bottom:12px;">
+            <div style="font-family:'Inter',sans-serif;font-size:10px;letter-spacing:0.22em;color:#059669;font-weight:800;margin-bottom:10px;">📝 LINE 下書き</div>
+            <textarea id="fp-brief-result" rows="9" style="width:100%;border:1px solid #E2E8F0;border-radius:6px;padding:12px 14px;font-size:13.5px;font-family:inherit;line-height:1.85;resize:vertical;box-sizing:border-box;color:#0F172A;">${escapeHtml(reply)}</textarea>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button id="fp-brief-regen" style="background:#fff;border:1px solid #E2E8F0;color:#475569;padding:10px 18px;border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">↻ もう一度 生成</button>
+            <button id="fp-brief-copy" style="background:#1F1A12;color:#FFE9A8;border:none;padding:10px 18px;border-radius:7px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:0.04em;">📋 コピー</button>
+            <button id="fp-brief-tosend" style="background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;padding:11px 22px;border-radius:7px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:0.04em;box-shadow:0 4px 14px rgba(16,185,129,0.35);">→ LINE 送信欄に セット</button>
+          </div>
+          <div id="fp-brief-msg" style="margin-top:10px;font-size:12px;font-weight:700;text-align:center;"></div>
+        `;
+        overlay.querySelector('#fp-brief-after').style.display = 'block';
+        // 再生成
+        overlay.querySelector('#fp-brief-regen').addEventListener('click', () => {
+          overlay.querySelector('#fp-brief-step1').style.display = 'block';
+          overlay.querySelector('#fp-brief-after').style.display = 'none';
+          genBtn.disabled = false;
+          genBtn.textContent = origText;
+        });
+        // コピー
+        overlay.querySelector('#fp-brief-copy').addEventListener('click', async () => {
+          const text = overlay.querySelector('#fp-brief-result').value;
+          try { await navigator.clipboard.writeText(text); overlay.querySelector('#fp-brief-msg').textContent = '✅ クリップボードに コピー しました'; overlay.querySelector('#fp-brief-msg').style.color = '#059669'; } catch (_) {}
+        });
+        // LINE 送信欄に セット
+        overlay.querySelector('#fp-brief-tosend').addEventListener('click', () => {
+          const text = overlay.querySelector('#fp-brief-result').value;
+          const lineInput = document.getElementById('cd-line-input');
+          if (lineInput) {
+            lineInput.value = text;
+            lineInput.dispatchEvent(new Event('input', { bubbles: true }));
+            overlay.remove();
+            // LINE タブ に スクロール + 送信ボタン ハイライト
+            const lineTab = document.querySelector('[data-cdtab="line"]');
+            if (lineTab) lineTab.click();
+            setTimeout(() => {
+              lineInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              lineInput.focus();
+            }, 300);
+          } else {
+            overlay.querySelector('#fp-brief-msg').textContent = '⚠ LINE送信欄が見つかりません。 LINE履歴 タブ を 開いてから 試してください';
+            overlay.querySelector('#fp-brief-msg').style.color = '#dc2626';
+          }
+        });
+      } catch (e) {
+        console.error('[generateBriefDraft] err:', e);
+        genBtn.disabled = false;
+        genBtn.textContent = origText;
+        alert('AI 生成失敗: ' + (e.message || e));
       }
     });
     setTimeout(() => overlay.querySelector('#fp-brief-input').focus(), 100);
