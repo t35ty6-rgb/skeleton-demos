@@ -3452,7 +3452,11 @@
     const _flatAiPayload = (raw) => Array.isArray(raw) ? raw : (raw && raw.entry ? [raw.entry] : (raw && (raw.summary || raw.key_concerns) ? [raw] : []));
     let aiResults = [];
     aiCandidateKeys.forEach(k => {
-      try { aiResults = aiResults.concat(_flatAiPayload(JSON.parse(localStorage.getItem(k) || 'null'))); } catch (_) {}
+      try {
+        const arr = _flatAiPayload(JSON.parse(localStorage.getItem(k) || 'null'));
+        arr.forEach(a => { a._storageKey = k; });
+        aiResults = aiResults.concat(arr);
+      } catch (_) {}
     });
     // 全 localStorage の fp-ai-* を走査し、エントリ内 userId / customerName / bookingTs が
     // この顧客にマッチするものを吸収 (キー名が予期せぬ形式でも救済)
@@ -3468,6 +3472,7 @@
       try {
         const arr = _flatAiPayload(JSON.parse(localStorage.getItem(k) || 'null'));
         arr.forEach(a => {
+          a._storageKey = k;
           const matchUser = a.userId       && myUids.has(a.userId);
           const matchTs   = a.bookingTs    && myTs.has(a.bookingTs);
           const matchName = a.customerName && a.customerName !== 'お客様' && myNames.has(a.customerName);
@@ -3604,9 +3609,12 @@
                     </details>
                   </div>` : ''}
                 ${aiData.summary ? `
-                  <div class="fp-meeting-block">
-                    <div class="fp-meeting-block-label">AI 議事録 (Claude)</div>
-                    <div class="fp-meeting-body">${escapeHtml(aiData.summary)}</div>
+                  <div class="fp-meeting-block" data-minutes-block="${escapeHtml(aiData.bookingTs || '')}-${idx}">
+                    <div class="fp-meeting-block-label" style="display:flex;justify-content:space-between;align-items:center;">
+                      <span>AI 議事録 (Claude)</span>
+                      <button class="fp-edit-minutes-btn" data-edit-minutes-key="${escapeHtml(aiData._storageKey || '')}" data-booking-ts="${escapeHtml(aiData.bookingTs || '')}" data-created-at="${escapeHtml(aiData.createdAt || '')}" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:3px 10px;border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">✏ 編集</button>
+                    </div>
+                    <div class="fp-meeting-body fp-minutes-display">${escapeHtml(aiData.summary)}</div>
                   </div>` : ''}
                 ${aiData.key_concerns && aiData.key_concerns.length > 0 ? `
                   <div class="fp-meeting-block">
@@ -6734,6 +6742,63 @@ ${client.name}さん、ありがとうございます。
   document.addEventListener('click', (e) => {
     const t = e.target.closest('.tab[data-tab="kpi"]');
     if (t) setTimeout(renderKpiBoard, 80);
+
+    // ★ 議事録 編集 ボタン (delegated)
+    const editBtn = e.target.closest('.fp-edit-minutes-btn');
+    if (editBtn) {
+      const storageKey = editBtn.dataset.editMinutesKey;
+      const bookingTs = editBtn.dataset.bookingTs;
+      const createdAt = editBtn.dataset.createdAt;
+      const block = editBtn.closest('[data-minutes-block]');
+      const displayDiv = block?.querySelector('.fp-minutes-display');
+      if (!displayDiv) return;
+      const currentText = displayDiv.textContent || '';
+      // 編集 textarea に置換
+      const editId = 'fp-mins-edit-' + Date.now();
+      displayDiv.outerHTML = `
+        <textarea id="${editId}" rows="6" style="width:100%;padding:12px 14px;font-size:13px;font-family:inherit;line-height:1.85;border:1.5px solid #fbbf24;border-radius:6px;box-sizing:border-box;background:#fffbeb;">${escapeHtml(currentText)}</textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end;">
+          <button id="${editId}-cancel" style="background:#fff;border:1px solid #e5e7eb;color:#475569;padding:6px 14px;border-radius:5px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;">キャンセル</button>
+          <button id="${editId}-save" style="background:linear-gradient(135deg,#06c755,#04a045);border:none;color:#fff;padding:7px 16px;border-radius:5px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;">✓ 保存</button>
+        </div>
+      `;
+      editBtn.style.display = 'none';
+      document.getElementById(editId).focus();
+      // キャンセル → reload
+      document.getElementById(editId + '-cancel').addEventListener('click', () => {
+        // モーダル再描画
+        const closeBtn = document.querySelector('.cd-modal .cd-close, .modal-overlay .cd-close');
+        if (closeBtn) { closeBtn.click(); setTimeout(() => {
+          const lastId = window._fpCurrentClient?.id;
+          if (lastId) document.querySelector(`[data-customer-id="${lastId}"], [data-client-id="${lastId}"]`)?.click();
+        }, 300); }
+      });
+      // 保存
+      document.getElementById(editId + '-save').addEventListener('click', () => {
+        const newText = document.getElementById(editId).value;
+        try {
+          const raw = JSON.parse(localStorage.getItem(storageKey) || 'null');
+          if (Array.isArray(raw)) {
+            const targetIdx = raw.findIndex(a => a.bookingTs === bookingTs && (a.createdAt || '') === createdAt);
+            if (targetIdx >= 0) { raw[targetIdx].summary = newText; raw[targetIdx].editedAt = new Date().toISOString(); }
+            localStorage.setItem(storageKey, JSON.stringify(raw));
+          } else if (raw && raw.entry) {
+            raw.entry.summary = newText;
+            raw.entry.editedAt = new Date().toISOString();
+            localStorage.setItem(storageKey, JSON.stringify(raw));
+          } else if (raw && (raw.summary || raw.key_concerns)) {
+            raw.summary = newText; raw.editedAt = new Date().toISOString();
+            localStorage.setItem(storageKey, JSON.stringify(raw));
+          }
+          // モーダル再描画
+          const closeBtn = document.querySelector('.cd-modal .cd-close, .modal-overlay .cd-close');
+          if (closeBtn) { closeBtn.click(); setTimeout(() => {
+            const lastId = window._fpCurrentClient?.id;
+            if (lastId) document.querySelector(`[data-customer-id="${lastId}"], [data-client-id="${lastId}"]`)?.click();
+          }, 300); }
+        } catch (err) { alert('保存失敗: ' + err.message); }
+      });
+    }
   });
   setTimeout(renderKpiBoard, 1000);
 
