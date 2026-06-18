@@ -1293,8 +1293,8 @@ document.getElementById('prev').addEventListener('click',()=>show(slideIdx-1));
 document.getElementById('next').addEventListener('click',()=>show(slideIdx+1));
 setInterval(()=>show(slideIdx+1), 7000);
 
-/* ============ NEW ITEMS GRID ============ */
-const NEW_ITEMS = [
+/* ============ NEW ITEMS GRID (admin連動) ============ */
+const NEW_ITEMS_DEFAULT = [
   {nm:'桜霞',pref:'【2026年新作】',sub:'振袖',img:'v1-poster.jpg',price:'ご相談',new:true,motion:true},
   {nm:'紅華',pref:'【2026年新作】',sub:'振袖',img:'v3-poster.jpg',price:'¥78,000',new:true,motion:true},
   {nm:'波千鳥',pref:'【2026年新作】',sub:'訪問着',img:'v2-poster.jpg',price:'¥38,000',new:true,motion:true},
@@ -1306,29 +1306,102 @@ const NEW_ITEMS = [
   {nm:'夕霞',pref:'',sub:'紬',img:'k07.jpg',price:'¥28,000',new:false},
   {nm:'帯結び',pref:'',sub:'帯 ・ 小物セット',img:'k02.jpg',price:'¥8,800',new:false},
 ];
-function fmtPic(it){
-  if(it.img.endsWith('.mp4')){
-    return `<video src="assets/kimono/${it.img}" muted loop playsinline preload="metadata"></video>`;
-  }
-  return `<img src="assets/kimono/${it.img}" alt="${it.nm}">`;
+function loadCustomInv(){
+  try{return JSON.parse(localStorage.getItem('alice_inventory')||'[]');}catch(e){return []}
 }
-document.getElementById('new-grid').innerHTML = NEW_ITEMS.map(it=>`
-  <article class="item-card" data-kim='${JSON.stringify({no:'X',nm:it.nm,cat:it.sub,price:0,img:it.img})}'>
-    <div class="pic">
-      ${fmtPic(it)}
-      ${it.new?'<span class="new">NEW</span>':''}
-      <span class="heart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 10c0 5.65-7 10-7 10z"/></svg></span>
-      ${it.motion?'<span class="motion-tag">360° MOTION</span>':''}
-    </div>
-    <div class="meta">
-      <div class="nm"><span class="pref">${it.pref}</span>${it.nm}<br><span class="pref">${it.sub}</span></div>
-      <div class="price">${it.price}<small>(税込)</small></div>
-    </div>
-  </article>
-`).join('');
-document.querySelectorAll('.item-card').forEach(c=>{
-  c.addEventListener('click',()=>openBooking(JSON.parse(c.dataset.kim)));
+function buildNewItems(){
+  const custom = loadCustomInv();
+  // Convert custom to NEW_ITEMS shape
+  const customNew = custom.map(c=>({
+    nm: c.nm, pref: c.new?'【2026年新作】':'', sub: c.cat, img: c.img, price: c.price,
+    new: !!c.new, motion: !!c.motion, _custom:true, _isDataUrl:c.isDataUrl, _isVideo:c.isVideo
+  }));
+  // Custom items first
+  return [...customNew, ...NEW_ITEMS_DEFAULT];
+}
+let NEW_ITEMS = buildNewItems();
+// Also inject custom kimonos into PROD_INFO so booking modal works
+function syncCustomToProdInfo(){
+  const custom = loadCustomInv();
+  custom.forEach(c=>{
+    PROD_INFO[c.nm] = {
+      cat: c.cat.includes('・')?c.cat:('KIMONO ・ '+c.cat),
+      en: c.en||c.nm.toUpperCase(),
+      price: c.price,
+      rate: '5.0',
+      rev: 0,
+      award: c.award,
+      motion: c.motion,
+      vid: c.isVideo?c.img:null,
+      poster: c.isDataUrl&&!c.isVideo?c.img:(c.isVideo?'':null),
+      img: !c.isVideo?c.img:null,
+      desc: c.desc || '入荷したばかりの新作でございます。'
+    };
+  });
+}
+function fmtPic(it){
+  const src = it.img||'';
+  // Custom (data URL or absolute path)
+  if(src.startsWith('data:') || src.startsWith('http')){
+    if(it._isVideo || src.startsWith('data:video')) return `<video src="${src}" muted loop autoplay playsinline preload="metadata"></video>`;
+    return `<img src="${src}" alt="${it.nm}">`;
+  }
+  if(src.endsWith('.mp4')){
+    return `<video src="assets/kimono/${src}" muted loop playsinline preload="metadata"></video>`;
+  }
+  return `<img src="assets/kimono/${src}" alt="${it.nm}">`;
+}
+function renderNewGrid(){
+  NEW_ITEMS = buildNewItems();
+  document.getElementById('new-grid').innerHTML = NEW_ITEMS.map(it=>{
+    const kim = {no:it._custom?'C':'X',nm:it.nm,cat:it.sub,price:0,img:it.img};
+    return `
+    <article class="item-card" data-kim='${JSON.stringify(kim).replace(/'/g,"&#39;")}'>
+      <div class="pic">
+        ${fmtPic(it)}
+        ${it.new?'<span class="new">NEW</span>':''}
+        <span class="heart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 10c0 5.65-7 10-7 10z"/></svg></span>
+        ${it.motion?'<span class="motion-tag">360° MOTION</span>':''}
+      </div>
+      <div class="meta">
+        <div class="nm"><span class="pref">${it.pref}</span>${it.nm}<br><span class="pref">${it.sub}</span></div>
+        <div class="price">${it.price}<small>(税込)</small></div>
+      </div>
+    </article>
+    `;
+  }).join('');
+  document.querySelectorAll('.item-card').forEach(c=>{
+    c.addEventListener('click',()=>{
+      try{openBooking(JSON.parse(c.dataset.kim))}catch(e){console.warn(e)}
+    });
+  });
+}
+syncCustomToProdInfo();
+renderNewGrid();
+
+// Listen for admin inventory updates
+window.addEventListener('storage', e=>{
+  if(e.key === 'alice_inventory'){
+    syncCustomToProdInfo();
+    renderNewGrid();
+    // Show toast
+    const t = document.createElement('div');
+    t.style.cssText='position:fixed;top:20px;right:20px;z-index:200;background:var(--red);color:#fff;padding:14px 22px;font-size:13px;font-weight:600;box-shadow:0 14px 32px -10px rgba(0,0,0,.3)';
+    t.textContent='新しいきものが入荷しました ★';
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(), 4000);
+  }
 });
+// Poll every 4 seconds (same-tab not triggered by storage event)
+let lastInvHash = JSON.stringify(loadCustomInv());
+setInterval(()=>{
+  const h = JSON.stringify(loadCustomInv());
+  if(h !== lastInvHash){
+    lastInvHash = h;
+    syncCustomToProdInfo();
+    renderNewGrid();
+  }
+}, 4000);
 
 /* ============ RANKING TABS ============ */
 const RANK = {
