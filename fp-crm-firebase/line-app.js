@@ -2249,8 +2249,48 @@
               addedAt: new Date().toISOString(),
             });
           });
+          // ★ 議事録 summary/transcript から 家族構成 自動抽出 → c.family 更新
+          //   (オーナーfb: 「夫が60歳の時 / 妻が何歳の時 / 子供が中学校入学の時 みたいに 家族イベントを 議事録 から 自動更新」)
+          try {
+            const blob = String(entry.summary || '') + '\n' + String(entry.transcript || '');
+            const currentYear = new Date().getFullYear();
+            const ensureMember = (rel, label) => {
+              if (!Array.isArray(c.family)) c.family = [];
+              let m = c.family.find(x => x.rel === rel);
+              if (!m) { m = { rel, name: label, birth: null }; c.family.push(m); }
+              return m;
+            };
+            // 配偶者 年齢抽出 (「妻 50歳」「夫45歳」「配偶者 N歳」)
+            const spouseAge = (blob.match(/(?:妻|夫|配偶者|奥さん|旦那)[\s、，は が](\d{1,2})歳/) || [])[1];
+            if (spouseAge) {
+              const m = ensureMember('spouse', '配偶者');
+              const newBirth = `${currentYear - parseInt(spouseAge)}-06-15`;
+              if (!m.birth || m.birth.length < 4) m.birth = newBirth;
+            }
+            // 子供 抽出 (「子供 N歳」「長男 N歳」「長女 N歳」「次男/次女」)
+            const childPatterns = [
+              { regex: /(?:長男|長女)[\s、，は が]*(\d{1,2})歳/g, name: '長子' },
+              { regex: /(?:次男|次女)[\s、，は が]*(\d{1,2})歳/g, name: '次子' },
+              { regex: /(?:子供|子ども|お子さん|お子様)[\s、，は が]*(\d{1,2})歳/g, name: 'お子様' },
+            ];
+            childPatterns.forEach(p => {
+              let mt;
+              let idx = 0;
+              while ((mt = p.regex.exec(blob)) !== null) {
+                idx++;
+                const age = parseInt(mt[1]);
+                if (!Array.isArray(c.family)) c.family = [];
+                // child rel + name で 一意
+                const childName = p.name + (idx > 1 ? idx : '');
+                let m = c.family.find(x => x.rel === 'child' && x.name === childName);
+                if (!m) { m = { rel: 'child', name: childName, birth: null }; c.family.push(m); }
+                const newBirth = `${currentYear - age}-06-15`;
+                if (!m.birth) m.birth = newBirth;
+              }
+            });
+          } catch (e) { console.warn('family 自動抽出 fail:', e); }
           try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS)); } catch (_) {}
-          console.log('[lifeEvent抽出]', cands.length, 'candidates → customEvents on', c.name);
+          console.log('[lifeEvent抽出]', cands.length, 'candidates → customEvents on', c.name, '/ family:', c.family);
         }
       }
     } catch (e) { console.warn('lifeEventCandidates merge fail:', e); }
