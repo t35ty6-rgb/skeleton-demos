@@ -4,7 +4,7 @@
 
 ## 現状
 - `index.html` の `STRIPE_PAYMENT_LINK` 定数が placeholder
-- placeholder のまま「¥3,000 を 支払う」 を 押すと「営業側で 準備中」 アラート → done画面 へ
+- placeholder のまま「¥9,800 を 支払う」 を 押すと「営業側で 準備中」 アラート → done画面 へ
 - 申込データ自体は Stripe前 に Firestore送信済 (Skeleton側で受信可能)
 
 ## 設定手順 (10分)
@@ -12,7 +12,7 @@
 ### 1. Stripe Dashboard で月額プラン作成
 1. https://dashboard.stripe.com/ にログイン (live mode)
 2. **商品 → 商品を追加** → 名前「FEMOON SaaS / 月額」
-3. **価格** → ¥3,000 / 月 (subscription, JPY)
+3. **価格** → ¥9,800 / 月 (subscription, JPY)
 4. **保存**
 
 ### 2. Payment Link 発行
@@ -39,7 +39,7 @@ git push
 ```
 
 ## 動作確認
-- ウィザード末尾まで進む → 「お支払い」 slide → 「¥3,000 を 支払う」 → Stripe Checkout 画面
+- ウィザード末尾まで進む → 「お支払い」 slide → 「¥9,800 を 支払う」 → Stripe Checkout 画面
 - メアド と 申込番号 が プリフィル されている
 - テスト決済: VISAテストカード `4242 4242 4242 4242` / 任意有効期限 / 任意CVC
 

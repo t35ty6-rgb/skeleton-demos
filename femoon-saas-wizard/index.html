@@ -535,12 +535,12 @@ function goPayment(){
     render();
     return;
   }
-  // 本番: Stripe Checkout に メアド + 申込ID を プリフィル で 飛ばす
-  const params = new URLSearchParams({
-    prefilled_email: state.email || '',
-    client_reference_id: state._doneId || '',
-  });
-  window.location.href = STRIPE_PAYMENT_LINK + '?' + params.toString();
+  // 本番: Stripe Checkout に メアド + 申込ID を プリフィル で 飛ばす (空値は付けない)
+  const params = new URLSearchParams();
+  if (state.email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(state.email)) params.set('prefilled_email', state.email);
+  if (state._doneId) params.set('client_reference_id', state._doneId);
+  const url = params.toString() ? `${STRIPE_PAYMENT_LINK}?${params.toString()}` : STRIPE_PAYMENT_LINK;
+  window.location.href = url;
 }
 
 async function sendToFirestore(){
