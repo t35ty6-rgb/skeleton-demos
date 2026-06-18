@@ -3366,7 +3366,8 @@
       return { ...b, memo };
     });
 
-    if (bookingsWithMemo.length === 0 && tasks.length === 0) return ''; // 何もない時は表示しない
+    // ★ 早期 return は aiResults も無い時のみ (orphan議事録 が ある時は セクション描画 必要)
+    // bookingsWithMemo 空でも aiResults > 0 なら orphan として 表示
 
     // AI 議事録データ (localStorage + GAS 永続化シートの両方から集約)
     const aiCandidateKeys = new Set();
@@ -3450,6 +3451,8 @@
     // ★ 件数 内訳 (オーナーfb: 「議事録 何件溜まってるか分かるように」)
     const aiCount = aiResults.filter(a => a.summary || a.transcript || (a.key_concerns||[]).length).length;
     const memoCount = bookingsWithMemo.filter(b => b.memo).length;
+    // ★ 3つとも 0なら 非表示 (旧 早期return は aiResults 計算前で 誤検知してたので 移動)
+    if (bookingsWithMemo.length === 0 && tasks.length === 0 && aiCount === 0) return '';
     return `
       <div class="detail-section">
         <h3>面談記録 <span class="count-badge">${bookingsWithMemo.length} 件</span>
