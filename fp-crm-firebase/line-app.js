@@ -3572,7 +3572,9 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
   function bindBookingsButtons() {
     document.querySelectorAll('[data-rec-start]').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const ts = btn.dataset.recStart;
+        // ★ tsEnc は fillBookingsList で encodeURIComponent されて 属性セット → ここで decode 統一
+        //   (decode しないと 議事録 entry.bookingTs が encoded → renderMeetingRecordsBlock の b.ts と 紐付け失敗 で「議事録 内容 出ない」)
+        const ts = decodeURIComponent(btn.dataset.recStart || '');
         const zoomUrl = btn.dataset.zoom;
         // ★ オーナーfb (v AH): Zoom pre-open popup が画面共有ダイアログを覆ってた。
         // 修正: pre-open は 画面外/極小 で 開いて 即 blur + CRM focus 戻し。 ユーザには見えないように。
@@ -4504,7 +4506,9 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
     // Zoom録画開始
     document.querySelectorAll('[data-rec-start]').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const ts = btn.dataset.recStart;
+        // ★ tsEnc は fillBookingsList で encodeURIComponent されて 属性セット → ここで decode 統一
+        //   (decode しないと 議事録 entry.bookingTs が encoded → renderMeetingRecordsBlock の b.ts と 紐付け失敗 で「議事録 内容 出ない」)
+        const ts = decodeURIComponent(btn.dataset.recStart || '');
         const zoomUrl = btn.dataset.zoom;
         btn.disabled = true;
         btn.textContent = '...';
