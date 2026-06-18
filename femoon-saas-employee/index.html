@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FEMOON SaaS · 従業員ガイド (受注後セットアップ)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  :root{
+    --bg:#FAFAF7; --surface:#FFFFFF; --ink:#0F0F0F; --ink-soft:#3F3F46;
+    --muted:#737373; --line:#E5E5E5;
+    --amber:#B45309; --amber-soft:#FCE7C0;
+    --owner:#0F0F0F; --salon:#0F766E; --customer:#BE185D; --jobs:#B45309;
+    --ok:#0F766E; --warn:#B45309; --err:#B91C1C;
+  }
+  body{font-family:'Inter','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);line-height:1.7;font-feature-settings:"palt";padding:0 0 120px;letter-spacing:0.005em}
+  .wrap{max-width:820px;margin:0 auto;padding:48px 28px}
+
+  /* hero */
+  .hero{margin-bottom:64px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.22em;font-weight:600;text-transform:uppercase;margin-bottom:18px}
+  h1{font-family:'Noto Serif JP',serif;font-size:48px;font-weight:700;line-height:1.2;letter-spacing:-0.01em;margin-bottom:20px;text-wrap:balance}
+  .lead{font-size:17px;color:var(--ink-soft);max-width:620px;line-height:1.75}
+  .lead strong{color:var(--ink);font-weight:600}
+
+  /* TOC */
+  .toc{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:48px}
+  .toc-title{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.18em;font-weight:600;margin-bottom:14px;text-transform:uppercase}
+  .toc ol{list-style:none;counter-reset:tc;padding:0}
+  .toc li{counter-increment:tc;padding:8px 0;border-bottom:1px dotted var(--line);font-size:14.5px;display:flex;align-items:center;gap:14px}
+  .toc li:last-child{border-bottom:none}
+  .toc li::before{content:counter(tc, decimal-leading-zero);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:0.06em;min-width:30px}
+  .toc li a{color:var(--ink);text-decoration:none;font-weight:500;flex:1}
+  .toc li a:hover{color:var(--amber)}
+  .toc li .min{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);font-weight:600}
+
+  /* chapter */
+  .ch{margin:72px 0 32px;padding-top:32px;border-top:2px solid var(--ink);scroll-margin-top:24px}
+  .ch-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--amber);letter-spacing:0.25em;font-weight:600;margin-bottom:10px;text-transform:uppercase}
+  .ch h2{font-family:'Noto Serif JP',serif;font-size:32px;font-weight:700;line-height:1.3;letter-spacing:-0.005em;margin-bottom:14px;text-wrap:balance}
+  .ch-lead{font-size:15.5px;color:var(--ink-soft);line-height:1.75;margin-bottom:32px;max-width:600px}
+
+  p{font-size:15px;line-height:1.85;margin-bottom:16px;color:var(--ink-soft)}
+  p strong{color:var(--ink);font-weight:600}
+
+  /* cast cards */
+  .cast{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:32px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .cast-c{padding:22px 20px;border-right:1px solid var(--line)}
+  .cast-c:last-child{border-right:none}
+  .cast-c .role{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.2em;font-weight:600;margin-bottom:6px;text-transform:uppercase}
+  .cast-c .name{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:700;line-height:1.2;margin-bottom:8px}
+  .cast-c .desc{font-size:13px;color:var(--muted);line-height:1.6}
+  .cast-c.owner .name{color:var(--owner)}
+  .cast-c.salon .name{color:var(--salon)}
+  .cast-c.customer .name{color:var(--customer)}
+
+  /* flow diagram */
+  .flow{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px;margin:24px 0 32px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.9;color:var(--ink);overflow-x:auto;white-space:pre}
+
+  /* step */
+  .step{display:grid;grid-template-columns:64px 1fr;gap:24px;margin-bottom:40px;align-items:start}
+  .step-num{font-family:'Noto Serif JP',serif;font-size:48px;font-weight:700;line-height:1;letter-spacing:-0.02em;color:var(--ink)}
+  .step-body{padding-top:6px}
+  .step-tag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.2em;font-weight:600;margin-bottom:6px;text-transform:uppercase;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;background:rgba(15,15,15,0.04)}
+  .step-tag.auto{color:var(--ok);background:rgba(15,118,110,0.06)}
+  .step-tag.me{color:var(--amber);background:var(--amber-soft)}
+  .step-tag.salon{color:var(--salon);background:rgba(15,118,110,0.06)}
+  .step-tag.owner{color:var(--owner)}
+  .step h3{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:700;line-height:1.35;margin:6px 0 10px;text-wrap:balance}
+  .step .desc{font-size:14.5px;color:var(--ink-soft);line-height:1.75;margin-bottom:14px}
+  .step .desc strong{color:var(--ink);font-weight:600}
+  @media (max-width:560px){
+    .step{grid-template-columns:1fr;gap:8px}
+    .step-num{font-size:40px}
+    .ch h2{font-size:26px}
+    h1{font-size:36px}
+    .cast{grid-template-columns:1fr;border-bottom:1px solid var(--line)}
+    .cast-c{border-right:none;border-bottom:1px solid var(--line)}
+    .cast-c:last-child{border-bottom:none}
+  }
+
+  /* action box */
+  .action{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin:12px 0;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .action .label{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);letter-spacing:0.18em;font-weight:600;text-transform:uppercase;min-width:80px}
+  .action .url{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink);flex:1;word-break:break-all;min-width:200px;font-weight:500}
+  .action .open{background:var(--ink);color:var(--bg);border:none;padding:9px 18px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
+  .action .open:hover{background:#1F1F23}
+
+  /* template */
+  .tmpl{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 22px;margin:14px 0;font-size:14px;line-height:1.75;color:var(--ink-soft);position:relative}
+  .tmpl::before{content:'📋 そのまま LINE で 送る 例文';display:block;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--amber);letter-spacing:0.16em;font-weight:600;margin-bottom:10px;text-transform:uppercase}
+  .tmpl em{color:var(--ink);font-style:normal;background:var(--amber-soft);padding:0 6px;border-radius:3px;font-weight:600}
+  .tmpl .copy{margin-top:12px;background:transparent;border:1px solid var(--line);color:var(--muted);padding:5px 12px;border-radius:99px;font-family:'JetBrains Mono',monospace;font-size:10.5px;cursor:pointer;font-weight:600;letter-spacing:0.04em}
+  .tmpl .copy:hover{border-color:var(--ink);color:var(--ink)}
+  .tmpl .copy.copied{background:var(--amber-soft);border-color:var(--amber);color:var(--amber)}
+
+  /* mockup */
+  .mock{background:#0A0A0A;border-radius:12px;padding:14px;margin:18px 0;position:relative}
+  .mock-tag{position:absolute;top:-10px;left:18px;background:var(--amber);color:#0A0A0A;padding:3px 12px;border-radius:99px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.16em}
+  .mock-bar{background:#171717;padding:7px 12px;display:flex;align-items:center;gap:6px;border-radius:8px 8px 0 0}
+  .mock-bar i{width:9px;height:9px;border-radius:50%}
+  .mock-bar i:nth-child(1){background:#FF5F57}
+  .mock-bar i:nth-child(2){background:#FEBC2E}
+  .mock-bar i:nth-child(3){background:#28C840}
+  .mock-bar .u{margin-left:10px;background:#262626;padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#A1A1AA;flex:1}
+  .mock-body{background:#fff;padding:18px 22px;border-radius:0 0 8px 8px;color:var(--ink);font-size:14px;line-height:1.7}
+  .mock-body .h{font-family:'Noto Serif JP',serif;font-size:16px;font-weight:700;margin-bottom:10px;color:var(--ink)}
+  .mock-body .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dotted var(--line);font-size:13px}
+  .mock-body .row .k{color:var(--muted);font-weight:500}
+  .mock-body .row .v{color:var(--ink);font-weight:600;font-family:'JetBrains Mono',monospace;font-size:12px}
+
+  /* note */
+  .note{background:transparent;border-left:3px solid var(--line);padding:10px 16px;margin:14px 0;font-size:13.5px;color:var(--muted);line-height:1.7}
+  .note strong{color:var(--ink-soft);font-weight:600}
+  .note.warn{border-left-color:var(--warn);background:rgba(180,83,9,0.04)}
+  .note.warn::before{content:'⚠️ ';color:var(--warn);font-weight:700}
+  .note.ok{border-left-color:var(--ok);background:rgba(15,118,110,0.04)}
+  .note.ok::before{content:'✓ ';color:var(--ok);font-weight:700}
+
+  /* FAQ */
+  details{border:1px solid var(--line);border-radius:10px;padding:0;margin-bottom:10px;background:var(--surface);overflow:hidden}
+  details summary{padding:18px 22px;cursor:pointer;font-size:15px;font-weight:600;color:var(--ink);list-style:none;display:flex;align-items:center;gap:12px}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:'?';font-family:'Noto Serif JP',serif;font-size:18px;font-weight:700;color:var(--amber);background:var(--amber-soft);width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  details[open] summary{border-bottom:1px solid var(--line)}
+  details .det-body{padding:18px 22px;font-size:14px;line-height:1.75;color:var(--ink-soft)}
+  details .det-body strong{color:var(--ink);font-weight:600}
+  details .det-body code{background:rgba(15,15,15,0.05);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12.5px}
+
+  .checklist{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 26px;margin:18px 0}
+  .checklist h4{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.18em;color:var(--amber);font-weight:600;margin-bottom:12px;text-transform:uppercase}
+  .checklist ul{list-style:none;padding:0}
+  .checklist li{display:flex;align-items:flex-start;gap:12px;padding:8px 0;font-size:14px;line-height:1.6;color:var(--ink-soft)}
+  .checklist li::before{content:'';width:18px;height:18px;border:1.5px solid var(--line);border-radius:4px;flex-shrink:0;margin-top:3px}
+  .checklist li strong{color:var(--ink);font-weight:600}
+
+  .end{background:var(--ink);color:var(--bg);border-radius:16px;padding:40px 32px;margin-top:80px;text-align:center}
+  .end .eyebrow{color:var(--amber-soft);margin-bottom:14px}
+  .end h2{font-family:'Noto Serif JP',serif;font-size:30px;font-weight:700;margin-bottom:14px;line-height:1.3}
+  .end p{font-size:14px;color:#D4D4D8;line-height:1.85;max-width:560px;margin:0 auto}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">FEMOON SaaS · 従業員 セットアップ ガイド · v1.0</div>
+  <h1>「このサロン、<br>セットアップ お願い」<br>と 言われた時の 手順。</h1>
+  <p class="lead">受注 した サロン を 動く 状態 に する まで、 <strong>あなた</strong> が 何 を いつ どう やる か。 商品 を 知らない 状態 から ゼロベース で 説明 します。 上 から 順 に 読めば、 1サロン あたり <strong>実作業 5分</strong> で 終わる ように なります。</p>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">目次</div>
+  <ol>
+    <li><a href="#what">FEMOON SaaS って 何?</a><span class="min">3分</span></li>
+    <li><a href="#cast">登場人物 3人 と 役割</a><span class="min">2分</span></li>
+    <li><a href="#flow">全体 の 流れ</a><span class="min">3分</span></li>
+    <li><a href="#your-job">あなた が やる こと</a><span class="min">10分 読む / 5分 作業</span></li>
+    <li><a href="#line-setup">LINE 接続 を 仕上げる (難所)</a><span class="min">15分 作業</span></li>
+    <li><a href="#verify">動作 確認</a><span class="min">5分</span></li>
+    <li><a href="#troubles">困った時 (FAQ)</a><span class="min">参照用</span></li>
+  </ol>
+</nav>
+
+<!-- ============ CH 1 ============ -->
+<section class="ch" id="what">
+  <div class="ch-num">CHAPTER 01</div>
+  <h2>FEMOON SaaS って 何?</h2>
+  <p class="ch-lead">サロン (美容院・エステ・整体 など) が お客様 から LINE 経由 で 予約 を 受け、 売上 を 管理 する ため の 月額課金型 クラウドサービス。 料金 は <strong>月額 ¥9,800 (税込)</strong>。</p>
+
+  <p>サロン は ふだん 「ホットペッパー」 や 「サロンボード」 で 予約 を 受けて いるけど、 LINE で 直接 予約 を 取りたい、 顧客 と LINE で やり とり したい、 という ニーズ に 応える プロダクト。</p>
+
+  <div class="checklist">
+    <h4>サロン に 提供 する 機能</h4>
+    <ul>
+      <li><strong>予約フォーム</strong> (LINE リッチメニュー から 開ける、 お客様 が 日時・コース を 選んで 予約)</li>
+      <li><strong>管理画面 (admin)</strong> (サロン側 で 予約状況・顧客情報 を 一覧 で 管理)</li>
+      <li><strong>LINE 通知</strong> (予約 入る たび に サロン と お客様 両方 の LINE に カード型 通知)</li>
+      <li><strong>カレンダー追加</strong> (お客様 が 通知 から ワンタップ で Google カレンダー に 登録)</li>
+      <li><strong>不定休 対応</strong> (「第1火曜 休み」 等 の パターン を 予約カレンダー が 自動 認識)</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ CH 2 ============ -->
+<section class="ch" id="cast">
+  <div class="ch-num">CHAPTER 02</div>
+  <h2>登場人物 3人</h2>
+  <p class="ch-lead">この サービス に 関わる 人 は 3種類。 それぞれ 役割 と やる こと が 違う。</p>
+
+  <div class="cast">
+    <div class="cast-c owner">
+      <div class="role">役者 A</div>
+      <div class="name">オーナー</div>
+      <div class="desc">Skeleton 社 代表。 サロン に 営業 して 受注 取る。 受注後 の セットアップ は あなた に 依頼 する。</div>
+    </div>
+    <div class="cast-c salon">
+      <div class="role">役者 B</div>
+      <div class="name">サロン</div>
+      <div class="desc">SaaS を 月額 ¥9,800 で 買う 顧客。 美容院・エステ など の 経営者。 お店 の 営業時間 や メニュー を 持って いる。</div>
+    </div>
+    <div class="cast-c customer">
+      <div class="role">役者 C</div>
+      <div class="name">お客様</div>
+      <div class="desc">サロン に 通う エンドユーザー。 LINE から 予約 する。 あなた が 直接 やり取り する こと は ない。</div>
+    </div>
+  </div>
+
+  <p><strong>あなた</strong> は この 3人 の どこ に も 属さない、 裏方 セットアップ 担当。 LINE で オーナー から 指示 を 受けて、 サロン に 完成品 を 渡す のが 仕事。</p>
+</section>
+
+<!-- ============ CH 3 ============ -->
+<section class="ch" id="flow">
+  <div class="ch-num">CHAPTER 03</div>
+  <h2>全体 の 流れ</h2>
+  <p class="ch-lead">時間軸 で 並べた フロー。 あなた が 動く タイミング は <strong>STEP 4 と STEP 7</strong> の 2回 だけ。</p>
+
+  <div class="flow">[STEP 1] オーナー → サロン に 営業 → 契約合意
+   ↓
+[STEP 2] オーナー が QR発行ツール で サロン専用URL 生成 → LINE で サロンに 送る
+   ↓
+[STEP 3] サロン が ウィザード (12問+決済) を 完走 → ¥9,800 課金 確定
+   ↓ (約60秒後 自動)
+[STEP 4] watcher が 自動 で セットアップ + オーナーの LINE に「開通キット」通知
+         ↑ ← あなたが 受け取って 内容 確認
+   ↓
+[STEP 5] あなた が LINE 開通キット を サロン に 転送
+   ↓
+[STEP 6] サロン が パスワード設定リンク クリック → パス決定 → admin ログイン
+   ↓
+[STEP 7] サロン から LINE OA の チャネルアクセストークン 等 を 預かる
+         ↑ ← あなたが admin 設定タブ に 入力 + リッチメニュー アップ
+   ↓
+[STEP 8] 動作確認 (テスト予約 入れて 通知 届くか) → サロン に 「使えます」 連絡
+   ↓
+[完了] サロン が お客様 から 予約 受け始める</div>
+
+  <div class="note ok"><strong>watcher</strong> は Mac mini で 24時間 動いてる 自動化プログラム。 サロン が ウィザード 完走 した 60秒後 に 自動的 に サロン用 環境 を 作って、 オーナー の LINE に 「次これ送って」 メッセージ を 流す。 あなた が 起動 したり 監視 する 必要 は ない。</div>
+</section>
+
+<!-- ============ CH 4 ============ -->
+<section class="ch" id="your-job">
+  <div class="ch-num">CHAPTER 04</div>
+  <h2>あなた が やる こと (STEP 4-6)</h2>
+  <p class="ch-lead">オーナー から 「○○サロン セットアップ お願い」 と 言われた 時点 で、 すでに watcher が 9割 終わらせて いる。 あなた の 仕事 は <strong>「LINE で 届いた 開通キット を サロン に 転送 する」</strong> こと。</p>
+
+  <!-- STEP 4 -->
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-tag auto">自動</div>
+      <h3>watcher が 出した 「開通キット」 LINE を 探す</h3>
+      <div class="desc">オーナー の LINE に <strong>「🎉 ○○サロン 開通完了」</strong> で 始まる メッセージ が 届いて いる はず。 オーナー から 「これ あなた が 引き継いで」 と 転送 される か、 直接 LINE 共有 を 受ける。</div>
+      <div class="mock">
+        <div class="mock-tag">LINE メッセージ 例</div>
+        <div class="mock-bar"><i></i><i></i><i></i><div class="u">LINE / オーナー トーク</div></div>
+        <div class="mock-body">
+          <div class="h">🎉 ヘアサロン Lune 開通完了</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:10px">下を そのまま サロンに 転送してください:</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;background:#FAFAF7;padding:10px;border-radius:6px;line-height:1.7">─────────────<br>ヘアサロン Lune 様<br><br>SaaS の セットアップ が 完了 しました。<br><br>▼ パスワード 設定 (初回 のみ)<br>https://skeleton-femoon-saas.firebaseapp.com/...<br><br>▼ 管理画面<br>https://skeleton-femoon-saas.web.app/admin/?tenant=lune-abc12<br>ログインID: lune@example.com<br><br>▼ お客様 用 予約フォームURL<br>https://skeleton-femoon-saas.web.app/book/lune-abc12<br>─────────────</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:10px">[内部メモ] tenantId: lune-abc12 / 決済: ✓ paid</div>
+        </div>
+      </div>
+      <div class="note"><strong>受け取れない場合:</strong> 「watcher 落ちてる?」 と オーナー (or Jobs) に 確認。 Mac mini が 起動 して いれば 自動 復旧 する。</div>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-tag me">あなた</div>
+      <h3>サロン の LINE に 「<span style="background:var(--amber-soft);color:var(--amber);padding:0 6px;border-radius:3px">─────</span>」 で 囲まれた 部分 を そのまま コピペ</h3>
+      <div class="desc">開通キット の 中央 <strong>「─────」 から 「─────」 まで</strong> が サロン へ 送る 本文。 そこ だけ 選択 → コピー → サロン の トーク に 貼り付け → 送信。 <strong>「内部メモ」 行 は サロン に は 送らない</strong>。</div>
+      <div class="tmpl">
+        <em>○○サロン 様</em><br><br>
+        SaaS の セットアップ が 完了 しました。<br><br>
+        ▼ パスワード 設定 (初回 のみ)<br>
+        <em>(リンク)</em><br><br>
+        ▼ 管理画面<br>
+        <em>(URL)</em><br>
+        ログインID: <em>(メアド)</em><br><br>
+        ▼ お客様 用 予約フォームURL<br>
+        <em>(URL)</em><br><br>
+        LINE 連携 (リッチメニュー / 通知) は こちらで 仕上げますので、 サロンの LINE公式アカウント の チャネルアクセストークン を お知らせ ください。
+      </div>
+      <div class="note ok">この メッセージ が <strong>サロン に 渡す 最初 で 最後 の セットアップ依頼</strong>。 サロン側 で やる の は パスワード 設定 だけ。</div>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-tag salon">サロン側</div>
+      <h3>サロン が パスワード を 設定 する の を 待つ</h3>
+      <div class="desc">サロン が リンク を 押して パスワード を 決める と Firebase Auth に 反映 される。 数分 〜 数時間 かかる こと もある。 急かさない。</div>
+      <div class="note"><strong>確認したい時:</strong> Firebase Console &gt; Authentication &gt; Users で 該当 メアド の <strong>「最終 ログイン」</strong> 欄 を 見る。 タイムスタンプ が 入って いたら ログイン済。</div>
+      <div class="action">
+        <div class="label">Firebase</div>
+        <div class="url">https://console.firebase.google.com/project/skeleton-femoon-saas/authentication/users</div>
+        <a class="open" href="https://console.firebase.google.com/project/skeleton-femoon-saas/authentication/users" target="_blank">↗ 開く</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CH 5 ============ -->
+<section class="ch" id="line-setup">
+  <div class="ch-num">CHAPTER 05</div>
+  <h2>LINE 接続 を 仕上げる (難所)</h2>
+  <p class="ch-lead">ここ だけ は 完全 自動化 できて いない。 サロン が 持って いる <strong>LINE 公式 アカウント の 「鍵」</strong> 4種類 を 預かって、 admin に 入れる。 1サロン 15分 くらい かかる。</p>
+
+  <div class="checklist">
+    <h4>サロン から 預かる 4つ の 鍵</h4>
+    <ul>
+      <li><strong>チャネルアクセストークン (長期)</strong> — 英数字 200文字 ぐらい の 長い 文字列</li>
+      <li><strong>公式アカウント ID</strong> — 例 <code>@062yzmhp</code></li>
+      <li><strong>LIFF ID</strong> — 例 <code>2010266648-iX5kooZe</code> (これ だけ サロン側 で 新規作成 が 必要)</li>
+      <li><strong>通知先 LINE userId</strong> — オーナー本人 の userId、 「U」 で 始まる 32文字</li>
+    </ul>
+  </div>
+
+  <!-- 5-1 -->
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-tag salon">サロン側 (依頼)</div>
+      <h3>サロン に LINE で 「鍵 4つ 教えて ください」 と 依頼</h3>
+      <div class="desc">サロン が 自分で LINE Developers Console を 開いて 取得 する 必要 が ある。 手順書 を 送る:</div>
+      <div class="tmpl">
+        LINE 連携 の 仕上げ に <em>4つ の 情報</em> が 必要 です。 下記 の 手順書 通り に 取って お知らせ ください:<br><br>
+        📘 取得手順 (10分): <em>https://t35ty6-rgb.github.io/skeleton-demos/femoon-saas-setup/</em><br><br>
+        ① チャネルアクセストークン<br>
+        ② 公式アカウント ID (@xxxxxx)<br>
+        ③ LIFF ID (2010xxxxxx-xxxxxxxx)<br>
+        ④ 通知先 LINE userId (オーナー様 ご本人)<br><br>
+        ※ 質問 あれば 何でも 聞いて ください。
+      </div>
+    </div>
+  </div>
+
+  <!-- 5-2 -->
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-tag me">あなた</div>
+      <h3>サロン から 4つ 届いたら admin に 入れる</h3>
+      <div class="desc">サロン の admin (https://skeleton-femoon-saas.web.app/admin/?tenant=○○○) に サロン の Email + パス で ログイン → 上部タブ <strong>「設定」</strong> → <strong>「LINE 連携」</strong> セクション。</div>
+      <div class="note warn"><strong>サロン の パスワード は あなた も 知らない</strong>。 設定 入力 だけ なら オーナー が 「臨時 で パス 教えて ください」 と サロン に LINE で 確認 する。 入力後 サロン側 で パス変更 して もらう。</div>
+      <p>または <strong>Firestore 直 編集</strong>: Firebase Console &gt; Firestore &gt; <code>tenants/{tenantId}</code> の 下記 フィールド を 直接 書き換える 方が 安全:</p>
+      <div class="checklist">
+        <h4>tenants/{tenantId} に 書き込む 4 fields</h4>
+        <ul>
+          <li><code>lineMessagingToken</code> ← チャネルアクセストークン</li>
+          <li><code>lineOfficialAccountId</code> ← 公式アカウントID</li>
+          <li><code>liffId</code> ← LIFF ID</li>
+          <li><code>ownerLineUid</code> ← 通知先 userId</li>
+        </ul>
+      </div>
+      <p><strong>同時 に</strong> <code>tenants/{tenantId}/public_config/meta</code> の <code>lineMessagingToken</code> / <code>ownerLineUid</code> / <code>liffId</code> も 同じ値 で 更新 (予約フォーム 側 が ここ を 読む)。</p>
+    </div>
+  </div>
+
+  <!-- 5-3 -->
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-tag me">あなた</div>
+      <h3>サロン の LINE リッチメニュー に 予約URL を 紐付ける</h3>
+      <div class="desc">サロン から <strong>LINE Official Account Manager</strong> の 一時 ログイン情報 を 預かる か、 LINE で 画面共有 しながら 一緒に 操作 する。</div>
+      <p>手順 (3分):</p>
+      <div class="checklist">
+        <h4>リッチメニュー設定</h4>
+        <ul>
+          <li><strong>https://manager.line.biz/</strong> に サロン の LINE アカウント で ログイン</li>
+          <li>該当 公式アカウント 選択 → 左 「リッチメニュー」</li>
+          <li>「作成」 → 画像 アップ (デフォルト 画像 で OK、 後で 変更可)</li>
+          <li>テンプレ 「大」 → 左セル に <strong>「リンク」 アクション</strong> 設定 → URL に <code>https://liff.line.me/{LIFF ID}</code> を 貼る</li>
+          <li>表示テキスト 「ご予約」 / 上書 / 即時 ON で 保存</li>
+        </ul>
+      </div>
+      <div class="note warn"><strong>LIFF URL ではなく 予約フォーム URL を 直接 貼っちゃダメ</strong>。 LINE 内 で 開くのは <code>liff.line.me/...</code> 形式 だけ。 これで お客様 の LINE userId が 自動 で 取れて、 予約完了通知 が 届く ように なる。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CH 6 ============ -->
+<section class="ch" id="verify">
+  <div class="ch-num">CHAPTER 06</div>
+  <h2>動作 確認 (5分)</h2>
+  <p class="ch-lead">セットアップ が 終わったら 必ず テスト 予約 を 入れて 通知 が 届く か 自分 の 目 で 確認。 サロン に 渡す 前 の 最終 関門。</p>
+
+  <div class="checklist">
+    <h4>確認チェックリスト</h4>
+    <ul>
+      <li><strong>自分の LINE で</strong> サロン の 公式アカウント を 友達追加</li>
+      <li>リッチメニュー 左の 「ご予約」 ボタン タップ → 予約フォーム が <strong>LINE 内 で</strong> 開く (Safari/Chrome で 開いたら NG → LIFF URL 設定 ミス)</li>
+      <li>テスト予約 を 1件 入れる (お名前 「テスト」 等)</li>
+      <li>確定後 <strong>自分の LINE</strong> に カード型 「ご予約 ありがとうございます」 通知 が 届く</li>
+      <li>カード の 「カレンダー に 追加」 ボタン タップ → Google カレンダー の イベント追加 画面 が 開く</li>
+      <li>同時 に サロン (オーナー指定 userId) にも 「新規 予約 が 入りました」 通知 が 届いて いる</li>
+      <li>admin にログイン → 予約タブ で テスト予約 が 表示 されて いる</li>
+    </ul>
+  </div>
+
+  <p>全部 ✓ ついたら サロン に 「LINE 連携 完了 しました、 使えます」 と 連絡。 テスト予約 は 後で キャンセル で 消す。</p>
+</section>
+
+<!-- ============ CH 7 ============ -->
+<section class="ch" id="troubles">
+  <div class="ch-num">CHAPTER 07</div>
+  <h2>困った時 (FAQ)</h2>
+  <p class="ch-lead">よくある 詰まり ポイント と 対処。 解決 しない 時 は オーナー or Jobs に LINE で 「申込番号 ○○ の ここ で 詰まった」 と 投げる。</p>
+
+  <details>
+    <summary>watcher の LINE通知 が 届かない</summary>
+    <div class="det-body">
+      Mac mini が 起動 してる か 確認 (LaunchAgent <code>com.skeleton.femoon-watcher</code>)。 起動 して いれば 60秒 以内 に 新規 申込 を 拾う。 Mac mini が 落ちて いる 場合 は 復旧後 まとめて 処理 される。 申込 データ 自体 は Firestore に 残って いる ので 失われない。
+    </div>
+  </details>
+
+  <details>
+    <summary>サロン が 「パスワード設定 リンク 開けない」 と 言ってきた</summary>
+    <div class="det-body">
+      リンク は <strong>1回 のみ 有効 (1時間)</strong>。 期限切れ なら 再発行: Firebase Console &gt; Authentication で 該当 ユーザー の 「︙」 → 「パスワード再設定 リンク 送信」。 または スクリプト <code>node ~/.skeleton-femoon-watcher/regen-reset-link.mjs &lt;email&gt;</code> で 再発行 可。
+    </div>
+  </details>
+
+  <details>
+    <summary>サロン が 「ログイン できない」 と 言ってきた</summary>
+    <div class="det-body">
+      まず <strong>メアド を 確認</strong> (申込時 と admin ログイン に 使う メアド は 同じ?)。 typo の 可能性 が 一番 高い。 次 に admin ログイン画面 の <strong>「パスワード を お忘れ の方 は こちら」</strong> リンク を 押して もらう → サロン の メアド に リセット メール が 自動 で 飛ぶ → メール の リンク から パス 再設定。
+    </div>
+  </details>
+
+  <details>
+    <summary>テスト予約 入れたけど 通知 来ない</summary>
+    <div class="det-body">
+      99% は <strong>LINE 4つ の 鍵 の どれか が 間違って いる</strong>。 admin 設定タブ で:<br>
+      ① チャネルアクセストークン は サロン に 最新 を 出し直し もらう (古い と 失効してる 可能性)<br>
+      ② ownerLineUid が 「U」 で 始まる 32文字 か<br>
+      ③ public_config/meta にも 同じ token が 入って いる か<br>
+      で 確認。 サロン が 友達追加 してない LINE OA から は 送れない (404) ので、 通知先 userId の 人 が 公式 アカウント を 友達追加 してる か も 要確認。
+    </div>
+  </details>
+
+  <details>
+    <summary>決済 が 「unpaid」 のまま</summary>
+    <div class="det-body">
+      サロン が Stripe Checkout 画面 まで 行って カード入力 せず に 抜けた 状態。 オーナー が サロン に LINE で 「決済 まだ 完了 してない みたい、 もう一度 ウィザード 末尾 から 試して」 と 連絡。 tenant は 既に 作成 されてる ので 同じ メアド で 再ログイン すれば そのまま 使える、 決済 だけ Stripe で 完了 すれば <code>tenants/{id}.billing.status</code> が <code>active</code> に なる。
+    </div>
+  </details>
+
+  <details>
+    <summary>サロン が LIFF を 自分で 作れない / 詰まった</summary>
+    <div class="det-body">
+      LIFF 作成 は 一番 詰まり やすい。 詳細手順書 <a href="https://t35ty6-rgb.github.io/skeleton-demos/femoon-saas-liff-setup/" target="_blank" style="color:var(--amber);font-weight:600">femoon-saas-liff-setup</a> を 送る。 それでも 詰まったら オーナー が サロン と Zoom で 画面共有 で 一緒 に やる。 LIFF だけ は 完全代行 が 難しい (LINE アカウント の 持ち主 しか 操作できない 仕様)。
+    </div>
+  </details>
+
+  <details>
+    <summary>サロン から 「解約 したい」 と 言われた</summary>
+    <div class="det-body">
+      Stripe Dashboard &gt; Subscriptions で 該当 サブスク を 探して 「キャンセル」 (期間末 か 即時 か 確認)。 同時 に <code>tenants/{tenantId}.status</code> を <code>'canceled'</code> に 変更。 サロン の admin は 月末 まで 使える (Stripe 仕様)。
+    </div>
+  </details>
+</section>
+
+<div class="end">
+  <div class="eyebrow">完</div>
+  <h2>これで 1サロン 開通 完了。</h2>
+  <p>分からない こと が 残って いれば <strong>絶対 に サロン に 渡す 前 に</strong> オーナー / Jobs に 確認。 半端 な 状態 で サロン に 渡す と 信頼 が 落ちる。 5分 待って もらえば 解決 する。</p>
+</div>
+
+</div>
+
+<script>
+document.querySelectorAll('.tmpl .copy').forEach(b => {
+  b.addEventListener('click', () => {
+    const txt = b.closest('.tmpl').innerText.replace(/📋[^\n]+\n/,'').replace(/コピー$/,'').trim();
+    navigator.clipboard.writeText(txt).then(() => {
+      const o = b.textContent;
+      b.classList.add('copied'); b.textContent = '✓ コピー しました';
+      setTimeout(()=>{ b.classList.remove('copied'); b.textContent = o; }, 1600);
+    });
+  });
+});
+</script>
+
+</body>
+</html>
