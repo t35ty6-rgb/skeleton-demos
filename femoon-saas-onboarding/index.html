@@ -95,6 +95,10 @@
 <div class="hero">
   <div class="brand">FEMOON · SALON SAAS · ONBOARDING · v1.0</div>
   <h1>サロン導入<br><span class="accent">申込書</span></h1>
+  <div id="ref-banner" style="display:none;background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#0A0A0A;padding:12px 18px;border-radius:10px;margin-bottom:14px;font-weight:700;font-size:13px;line-height:1.6">
+    🏷 サロン識別子: <span id="ref-label" style="font-family:'JetBrains Mono',monospace;background:#0A0A0A;color:#FBBF24;padding:3px 10px;border-radius:5px;margin-left:6px">—</span>
+    <div style="font-size:11px;font-weight:500;margin-top:6px;opacity:0.85">このQRコード経由 で 受付 します。 他サロン と 混ざらない よう 紐付け 済</div>
+  </div>
   <p class="lead">下記 を 埋めて 送信 すると、 Skeleton 社 が <strong style="color:#f4823c;">LINE公式アカウント / Token / システム設定</strong> 全部 を 裏で セットアップ し、 <strong style="color:#f4823c;">完成 した ログイン情報 + 予約フォームURL</strong> を 後ほど お送り します。</p>
   <div class="visual-promise">
     <div class="vp"><div class="t">あなたの 入力</div><div class="d">10分</div></div>
@@ -306,6 +310,26 @@ window.addCourse = function(c) {
 };
 COURSE_SAMPLE.forEach(c => addCourse(c));
 
+// ?ref= / ?salon= があれば 識別子バナー を 表示
+(() => {
+  const u = new URLSearchParams(window.location.search);
+  const ref = u.get('ref') || u.get('r') || '';
+  const salonHint = u.get('salon') || '';
+  if (ref || salonHint) {
+    const b = document.getElementById('ref-banner');
+    const lab = document.getElementById('ref-label');
+    if (b && lab) {
+      lab.textContent = salonHint ? `${salonHint} (${ref})` : ref;
+      b.style.display = 'block';
+    }
+    // サロン名 を 自動入力 (任意 hint)
+    if (salonHint) {
+      const sn = document.getElementById('salon-name');
+      if (sn && !sn.value) sn.value = salonHint;
+    }
+  }
+})();
+
 // スタッフ 動的追加
 const STAFF_SAMPLE = [
   { name: '鈴木', role: '店長' },
@@ -367,8 +391,16 @@ document.getElementById('form').addEventListener('submit', async (e) => {
   const closedDatesRaw = closedDatesStr;
   const closedRuleMemo = document.getElementById('closed-rule').value.trim();
 
+  // QR経由のサロン識別子 (?ref=XXX) を payload に
+  const urlParams = new URLSearchParams(window.location.search);
+  const referralCode = (urlParams.get('ref') || urlParams.get('r') || '').slice(0, 64);
+  const salonHint = (urlParams.get('salon') || '').slice(0, 80);
+
   const payload = {
     status: 'pending',
+    referralCode,
+    salonHint,
+    referralReferer: document.referrer || '',
     salonName: document.getElementById('salon-name').value.trim(),
     industry: document.getElementById('industry').value,
     tel: document.getElementById('tel').value.trim(),

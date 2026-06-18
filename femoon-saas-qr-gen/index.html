@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FEMOON SaaS · サロン別 QR 発行ツール (営業用)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+  body{font-family:'Noto Sans JP',sans-serif;background:#F5F2EC;color:#0A0A0A;line-height:1.7;padding:0 0 80px;font-feature-settings:"palt"}
+  .wrap{max-width:920px;margin:0 auto;padding:24px 20px}
+
+  .hero{background:#0A0A0A;color:#fff;padding:36px 32px;border-radius:24px;margin-bottom:24px;position:relative;overflow:hidden}
+  .hero::before{content:'';position:absolute;top:-60px;right:-60px;width:260px;height:260px;background:radial-gradient(circle,#FBBF24 0%,transparent 65%);opacity:0.25}
+  .hero .brand{font-family:'JetBrains Mono',monospace;font-size:10px;color:#FBBF24;letter-spacing:0.32em;font-weight:700;margin-bottom:12px}
+  .hero h1{font-family:'Noto Serif JP',serif;font-size:32px;font-weight:900;letter-spacing:0.01em;line-height:1.25;margin-bottom:12px}
+  .hero h1 .accent{color:#FBBF24}
+  .hero .lead{font-size:13.5px;color:#D4D4D8;line-height:1.85;max-width:600px}
+
+  .card{background:#fff;border-radius:18px;padding:26px 28px;margin-bottom:20px;box-shadow:0 1px 0 #E5E5E5}
+  .card h2{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:900;margin-bottom:14px;color:#0A0A0A;display:flex;align-items:center;gap:10px}
+  .card h2 .nm{background:#FBBF24;color:#0A0A0A;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:900}
+
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;font-weight:700;color:#404040;margin-bottom:6px;letter-spacing:0.04em}
+  .field label .req{color:#DC2626;margin-left:4px}
+  .field input,.field select{width:100%;padding:11px 14px;border:1.5px solid #D4D4D8;border-radius:8px;font-size:14px;font-family:inherit;background:#fff;transition:border-color 0.2s}
+  .field input:focus,.field select:focus{outline:none;border-color:#FBBF24;box-shadow:0 0 0 3px rgba(251,191,36,0.18)}
+  .field .hint{font-size:11px;color:#737373;margin-top:4px}
+
+  .btn-primary{background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#0A0A0A;border:none;padding:14px 28px;border-radius:10px;font-family:inherit;font-weight:900;font-size:14px;cursor:pointer;letter-spacing:0.06em;width:100%;margin-top:8px;transition:transform 0.15s,box-shadow 0.2s}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(251,191,36,0.4)}
+  .btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+
+  .result{background:#0A0A0A;color:#fff;border-radius:18px;padding:28px 30px;margin-bottom:20px;display:none}
+  .result.show{display:block;animation:fadein 0.3s ease}
+  @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .result h3{font-family:'Noto Serif JP',serif;font-size:17px;color:#FBBF24;margin-bottom:18px}
+
+  .qr-row{display:grid;grid-template-columns:200px 1fr;gap:24px;align-items:start}
+  @media (max-width:640px){ .qr-row{grid-template-columns:1fr;text-align:center} }
+  .qr-img{background:#fff;border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:center;min-height:200px}
+  .qr-img img{width:170px;height:170px;display:block}
+
+  .url-block{background:rgba(255,255,255,0.06);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#FBBF24;word-break:break-all;margin-bottom:10px}
+
+  .copy-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .copy-row .btn{background:transparent;color:#FBBF24;border:1.5px solid #FBBF24;padding:9px 16px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;cursor:pointer;transition:all 0.15s}
+  .copy-row .btn:hover{background:#FBBF24;color:#0A0A0A}
+  .copy-row .btn.primary{background:#FBBF24;color:#0A0A0A}
+  .copy-row .btn.primary:hover{background:#F59E0B}
+
+  .meta-row{margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.1);display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px}
+  .meta-row .k{color:#A1A1AA;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.15em;font-weight:700;text-transform:uppercase;margin-bottom:3px}
+  .meta-row .v{color:#fff;font-weight:700;word-break:break-all}
+
+  .history{background:#fff;border-radius:18px;padding:24px 26px;box-shadow:0 1px 0 #E5E5E5}
+  .history h2{font-family:'Noto Serif JP',serif;font-size:16px;font-weight:900;margin-bottom:14px}
+  .history table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .history th{background:#F4F4F5;padding:8px 10px;text-align:left;font-weight:700;color:#404040;font-size:11px;letter-spacing:0.05em;border-bottom:1px solid #E5E5E5}
+  .history td{padding:9px 10px;border-bottom:1px dotted #E5E5E5;color:#525252}
+  .history td .link{color:#1D4ED8;text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:11px}
+  .history td .link:hover{text-decoration:underline}
+  .history td .del{background:transparent;border:1px solid #DC2626;color:#DC2626;padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;font-family:inherit}
+  .history-empty{color:#9CA3AF;font-size:13px;text-align:center;padding:18px}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#0A0A0A;color:#FBBF24;padding:12px 22px;border-radius:99px;font-size:13px;font-weight:700;box-shadow:0 12px 32px rgba(0,0,0,0.3);transition:transform 0.3s;z-index:99}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<div class="hero">
+  <div class="brand">FEMOON SAAS · SALES KIT · QR 発行ツール · v1.0</div>
+  <h1>サロン別 申込フォーム の<br><span class="accent">QR と URL を 発行</span></h1>
+  <p class="lead">商談相手 ごと に 固有 の 申込フォームURL を 作って QR画像 を 渡す。 サロンA / サロンB / サロンC が 同時に 申込 しても、 受信側 (Skeleton社) で どの 商談 から の レスポンス か 1発 で 判別 可能。</p>
+</div>
+
+<div class="card">
+  <h2><span class="nm">1</span> サロン情報 を 入力</h2>
+  <div class="field">
+    <label>サロン名 <span class="req">*</span></label>
+    <input type="text" id="salon-name" placeholder="例) フェムケアサロン Lune" autocomplete="off">
+    <div class="hint">商談相手 の サロン名。 フォーム上部 に 「🏷 識別子: サロン名 (コード)」 で 表示される</div>
+  </div>
+  <div class="field">
+    <label>担当者 / 商談メモ (任意)</label>
+    <input type="text" id="memo" placeholder="例) 鈴木店長 紹介 / 2026-06-18 訪問" autocomplete="off">
+    <div class="hint">QR履歴 の 区別 用。 サーバー には 送らない、 ローカル保存 のみ</div>
+  </div>
+  <button class="btn-primary" id="gen-btn" onclick="generate()">QR と URL を 発行</button>
+</div>
+
+<div class="result" id="result">
+  <h3>🎁 発行 完了 — 下記 を サロン に 渡す</h3>
+  <div class="qr-row">
+    <div class="qr-img"><img id="qr-img" src="" alt="QRコード"></div>
+    <div>
+      <div class="url-block" id="result-url">—</div>
+      <div class="copy-row">
+        <button class="btn primary" onclick="copyText('result-url')">📋 URL コピー</button>
+        <button class="btn" onclick="downloadQR()">💾 QR画像 保存</button>
+        <button class="btn" onclick="openUrl()">↗ プレビュー</button>
+      </div>
+      <div class="meta-row">
+        <div>
+          <div class="k">識別子 (ref)</div>
+          <div class="v" id="result-ref">—</div>
+        </div>
+        <div>
+          <div class="k">発行 日時</div>
+          <div class="v" id="result-time">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="history">
+  <h2>📋 過去 発行 履歴 (この PC のみ・ローカル保存)</h2>
+  <div id="history-body"></div>
+</div>
+
+</div>
+
+<div class="toast" id="toast">コピー しました</div>
+
+<script>
+const BASE = 'https://t35ty6-rgb.github.io/skeleton-demos/femoon-saas-onboarding/';
+const KEY = 'femoon-saas-qr-history-v1';
+let CURRENT = null;
+
+function makeRef(salonName){
+  // サロン名 → URL safe slug + ランダム
+  const slug = (salonName || 'salon').toLowerCase()
+    .replace(/[^a-z0-9一-龯ぁ-んァ-ヶー]/g, '')
+    .slice(0, 10) || 'salon';
+  const rand = Math.random().toString(36).slice(2, 7);
+  const dt = new Date();
+  const ymd = `${String(dt.getFullYear()).slice(2)}${String(dt.getMonth()+1).padStart(2,'0')}${String(dt.getDate()).padStart(2,'0')}`;
+  return `${slug}-${ymd}-${rand}`;
+}
+
+function buildUrl(ref, salonName){
+  const u = new URL(BASE);
+  u.searchParams.set('ref', ref);
+  if (salonName) u.searchParams.set('salon', salonName);
+  return u.toString();
+}
+
+function qrApiUrl(targetUrl){
+  return `https://api.qrserver.com/v1/create-qr-code/?size=340x340&margin=12&data=${encodeURIComponent(targetUrl)}`;
+}
+
+function generate(){
+  const salonName = document.getElementById('salon-name').value.trim();
+  if (!salonName){ alert('サロン名 を 入力 してください'); return; }
+  const memo = document.getElementById('memo').value.trim();
+  const ref = makeRef(salonName);
+  const url = buildUrl(ref, salonName);
+  const qrUrl = qrApiUrl(url);
+  const now = new Date();
+
+  document.getElementById('result-url').textContent = url;
+  document.getElementById('result-ref').textContent = ref;
+  document.getElementById('result-time').textContent = now.toLocaleString('ja-JP');
+  document.getElementById('qr-img').src = qrUrl;
+  document.getElementById('result').classList.add('show');
+
+  CURRENT = { salonName, memo, ref, url, qrUrl, createdAt: now.toISOString() };
+  saveHistory(CURRENT);
+  renderHistory();
+
+  document.getElementById('result').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function loadHistory(){
+  try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e){ return []; }
+}
+function saveHistory(item){
+  const all = loadHistory();
+  all.unshift(item);
+  localStorage.setItem(KEY, JSON.stringify(all.slice(0, 50)));
+}
+function deleteHistory(ref){
+  if (!confirm('この履歴 を 消しますか? (発行済みQR は 引き続き 動作 します)')) return;
+  const all = loadHistory().filter(x => x.ref !== ref);
+  localStorage.setItem(KEY, JSON.stringify(all));
+  renderHistory();
+}
+function renderHistory(){
+  const all = loadHistory();
+  const body = document.getElementById('history-body');
+  if (!all.length){ body.innerHTML = '<div class="history-empty">まだ 発行 してません</div>'; return; }
+  body.innerHTML = `<table>
+    <thead><tr><th>サロン名</th><th>識別子</th><th>メモ</th><th>発行</th><th>URL</th><th></th></tr></thead>
+    <tbody>${all.map(x => `
+      <tr>
+        <td><strong>${escapeHtml(x.salonName)}</strong></td>
+        <td><code style="background:#FEF3C7;padding:2px 6px;border-radius:3px;font-size:11px">${escapeHtml(x.ref)}</code></td>
+        <td>${escapeHtml(x.memo || '—')}</td>
+        <td>${new Date(x.createdAt).toLocaleDateString('ja-JP')}</td>
+        <td><a class="link" href="${escapeHtml(x.url)}" target="_blank">↗ 開く</a></td>
+        <td><button class="del" onclick="deleteHistory('${escapeHtml(x.ref)}')">削除</button></td>
+      </tr>
+    `).join('')}</tbody>
+  </table>`;
+}
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+async function copyText(elId){
+  const t = document.getElementById(elId).textContent;
+  try { await navigator.clipboard.writeText(t); toast('URL を コピー しました'); } catch(e){ alert('コピー失敗'); }
+}
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1800);
+}
+async function downloadQR(){
+  if (!CURRENT) return;
+  try {
+    const res = await fetch(CURRENT.qrUrl);
+    const blob = await res.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `femoon-qr-${CURRENT.ref}.png`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 800);
+    toast('QR画像 を ダウンロード しました');
+  } catch(e){ alert('保存失敗: ' + e.message); }
+}
+function openUrl(){
+  if (!CURRENT) return;
+  window.open(CURRENT.url, '_blank');
+}
+
+renderHistory();
+</script>
+</body>
+</html>
