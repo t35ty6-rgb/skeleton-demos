@@ -207,7 +207,15 @@ const QUESTIONS = [
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/4gMfZhgjC0Bgctc0NSbjW00';
 
 // === State ===
+// URL の ref / salon が 前回と違う or 前回が _doneId 持ち (送信完了済) なら 状態リセット
+const _initParams = new URLSearchParams(window.location.search);
+const _curRef = (_initParams.get('ref') || _initParams.get('r') || '');
+const _prev = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){ return {}; } })();
+if (_prev._ref !== _curRef || _prev._doneId) {
+  localStorage.removeItem(STORAGE_KEY);
+}
 let state = loadState();
+state._ref = _curRef;
 let currentIdx = state._lastIdx || 0;
 
 function loadState(){
