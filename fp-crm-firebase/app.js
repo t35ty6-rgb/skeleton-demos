@@ -1660,16 +1660,24 @@
           major: true,
         });
       };
+      // ★ localStorage payload は 2形式混在: 配列 [...] と wrapped {entry, tasks} (autoSaveAIResult が wrap で保存)
+      const flattenAi = (raw) => {
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw;
+        if (raw.entry) return [raw.entry];
+        if (raw.summary || raw.key_concerns) return [raw]; // 直書き 1件
+        return [];
+      };
       // 1) localStorage 全 fp-ai-* から徳佐拓朗系を吸う
       aiKeys.forEach(k => {
-        try { JSON.parse(localStorage.getItem(k) || '[]').forEach(collectFromEntry); } catch (_) {}
+        try { flattenAi(JSON.parse(localStorage.getItem(k) || 'null')).forEach(collectFromEntry); } catch (_) {}
       });
       // さらに 全 fp-ai-* キー走査 (★ genericFallback 撤去 — 厳密一致のみ)
       const allLsKeys = Object.keys(localStorage).filter(k => k.startsWith('fp-ai-'));
       allLsKeys.forEach(k => {
         if (aiKeys.has(k)) return;
         try {
-          JSON.parse(localStorage.getItem(k) || '[]').forEach(a => {
+          flattenAi(JSON.parse(localStorage.getItem(k) || 'null')).forEach(a => {
             const ownMatch = (a.userId && a.userId === c.lineFriendId) || (a.customerName && a.customerName === c.name);
             if (ownMatch) collectFromEntry(a);
           });
@@ -1791,8 +1799,9 @@
     let latestAi = null;
     try {
       const allFpAi = Object.keys(localStorage).filter(k => k.startsWith('fp-ai-'));
+      const _flatAi = (raw) => Array.isArray(raw) ? raw : (raw && raw.entry ? [raw.entry] : (raw && (raw.summary || raw.key_concerns) ? [raw] : []));
       allFpAi.forEach(k => {
-        const arr = JSON.parse(localStorage.getItem(k) || '[]');
+        const arr = _flatAi(JSON.parse(localStorage.getItem(k) || 'null'));
         arr.forEach(a => {
           // ★ オーナーfb: NEXT ACTION が全顧客で同一に。genericFallback 撤去、厳密一致のみ
           const match = (a.userId && a.userId === c.lineFriendId) || (a.customerName && a.customerName === c.name);
@@ -3313,9 +3322,11 @@
       if (b.ts)     aiCandidateKeys.add('fp-ai-' + b.ts);
       if (b.name)   aiCandidateKeys.add('fp-ai-' + b.name);
     });
+    // ★ localStorage payload は 2形式: 配列 [...] と wrapped {entry, tasks}
+    const _flatAiPayload = (raw) => Array.isArray(raw) ? raw : (raw && raw.entry ? [raw.entry] : (raw && (raw.summary || raw.key_concerns) ? [raw] : []));
     let aiResults = [];
     aiCandidateKeys.forEach(k => {
-      try { aiResults = aiResults.concat(JSON.parse(localStorage.getItem(k) || '[]')); } catch (_) {}
+      try { aiResults = aiResults.concat(_flatAiPayload(JSON.parse(localStorage.getItem(k) || 'null'))); } catch (_) {}
     });
     // 全 localStorage の fp-ai-* を走査し、エントリ内 userId / customerName / bookingTs が
     // この顧客にマッチするものを吸収 (キー名が予期せぬ形式でも救済)
@@ -3329,7 +3340,7 @@
     allKeys.forEach(k => {
       if (aiCandidateKeys.has(k)) return;  // 既出
       try {
-        const arr = JSON.parse(localStorage.getItem(k) || '[]');
+        const arr = _flatAiPayload(JSON.parse(localStorage.getItem(k) || 'null'));
         arr.forEach(a => {
           const matchUser = a.userId       && myUids.has(a.userId);
           const matchTs   = a.bookingTs    && myTs.has(a.bookingTs);
@@ -5211,7 +5222,11 @@ ${JSON.stringify(jsonPayload, null, 2)}
         }
       };
       Object.keys(localStorage).filter(k => k.startsWith('fp-ai-')).forEach(k => {
-        try { JSON.parse(localStorage.getItem(k) || '[]').forEach(a => consider(a, k)); } catch (_) {}
+        try {
+          const raw = JSON.parse(localStorage.getItem(k) || 'null');
+          const arr = Array.isArray(raw) ? raw : (raw && raw.entry ? [raw.entry] : (raw && (raw.summary || raw.key_concerns) ? [raw] : []));
+          arr.forEach(a => consider(a, k));
+        } catch (_) {}
       });
       ((window.LineAppLiveData && window.LineAppLiveData.ai_results) || []).forEach(r => consider(r, 'GAS:ai_results'));
       // 重複除去 + 最新順

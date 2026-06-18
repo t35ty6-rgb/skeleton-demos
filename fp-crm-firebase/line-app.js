@@ -1988,17 +1988,31 @@
       // Zoom が閉じられたら自動で録画停止 (切り忘れ防止)
       // ただし最低30秒経過してから (誤検知防止)
       window._fpZoomWin = zoomWin;
-      // ※ Zoom popup が閉じても自動停止しない (誤検知防止のため監視機能を撤廃)
-      // 停止は「Chrome 共有を停止」 or 「メモの完了ボタン」 でのみ実行
-      // ★ ただし クローズ時刻 だけは 受動的に記録 (完了ボタン押下時の表示用)
+      // ★ Zoom popup クローズ 検知 → 終了時刻 記録 + 録画自動停止 + 予約 自動完了
+      // (オーナーfb: 「Zoomが終わったら勝手に完了にすればいいよ」)
       try {
         const _zoomEndKey = 'fp-zoom-end-' + String(bookingTs || '').slice(0, 19);
+        const _startedAt = Date.now();
         if (window._fpZoomCloseWatcher) clearInterval(window._fpZoomCloseWatcher);
         window._fpZoomCloseWatcher = setInterval(() => {
           if (!zoomWin || zoomWin.closed) {
+            // 起動 30秒以内 の クローズ は 誤検知 (open直後 popup blocker など) として無視
+            if (Date.now() - _startedAt < 30000) {
+              clearInterval(window._fpZoomCloseWatcher);
+              window._fpZoomCloseWatcher = null;
+              return;
+            }
             localStorage.setItem(_zoomEndKey, String(Date.now()));
             clearInterval(window._fpZoomCloseWatcher);
             window._fpZoomCloseWatcher = null;
+            // 録画 自動停止 → MediaRecorder.onstop → AI議事録自動保存 が走る
+            try {
+              if (window._fpRecorder && window._fpRecorder.mediaRecorder && window._fpRecorder.mediaRecorder.state !== 'inactive') {
+                stopScreenRecording();
+              }
+            } catch (_) {}
+            // 5秒 待ってから 自動 完了 (AI 保存 と 競合 しないよう 別途 直接 archive)
+            setTimeout(() => { try { autoCompleteBooking(bookingTs); } catch (_) {} }, 5000);
           }
         }, 3000);
       } catch (_) {}
@@ -3586,6 +3600,50 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       await fetchLiveData();
       renderLeadHubInner();
     });
+  }
+
+  // ★ Zoom 自動完了: Zoom popup 閉じた時に booking を 完了扱いに する (オーナーfb)
+  function autoCompleteBooking(bookingTs) {
+    if (!bookingTs) return;
+    const b = findBookingByTs(bookingTs);
+    if (!b || !b.ts) { console.warn('[autoComplete] booking 見つからず', bookingTs); return; }
+    const archivedSet = new Set(JSON.parse(localStorage.getItem('fp-booking-archived') || '[]'));
+    if (archivedSet.has(b.ts)) return; // 既に完了済
+    archivedSet.add(b.ts);
+    localStorage.setItem('fp-booking-archived', JSON.stringify([...archivedSet]));
+    // 顧客 lastContact 更新
+    let matched = null;
+    let createdNew = false;
+    if (window.DUMMY_CLIENTS) {
+      matched = window.DUMMY_CLIENTS.find(x => x.lineFriendId === b.userId || x.name === b.name);
+      if (matched) {
+        matched.lastContact = String(b.date).slice(0, 10);
+      } else {
+        const newId = 'c' + String(Date.now()).slice(-5);
+        matched = {
+          id: newId,
+          name: b.name || 'お客様',
+          kana: '', birth: '', gender: 'O', occupation: '', family: [],
+          source: 'LINE無料相談', status: 'new', aum: 0,
+          lastContact: String(b.date).slice(0, 10),
+          proposals: [],
+          note: `Zoom自動完了 (${String(b.date).slice(0,10)})\nuserId: ${b.userId || ''}`,
+          lineFriendId: b.userId || '', lineSubscribed: true,
+        };
+        window.DUMMY_CLIENTS.push(matched);
+        createdNew = true;
+      }
+      try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS)); } catch (_) {}
+    }
+    try { fillBookingsList(); } catch (_) {}
+    if (window.FPCrmRefreshClients) window.FPCrmRefreshClients();
+    // 完了 トースト
+    const zoomEndAt = localStorage.getItem('fp-zoom-end-' + String(bookingTs).slice(0, 19));
+    const endLabel = zoomEndAt
+      ? new Date(parseInt(zoomEndAt, 10)).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+      : null;
+    showCompletionToast(b, matched, createdNew, endLabel);
+    console.log('[autoComplete] 完了', b.ts, endLabel);
   }
 
   // ★ booking lookup ヘルパ: legacy bookings + Firestore 確定済 を 横断検索
