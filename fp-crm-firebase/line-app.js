@@ -701,9 +701,10 @@
     const today = new Date('2026-05-28').toISOString().slice(0, 10);
     let surveys = (liveData && liveData.survey_answers) || [];
     // ★ Firestore 多テナント 確定済 を bookings に 合流
+    // ホスト権限 で 開く ため hostZoomUrl (start_url) 優先、 無ければ legacy zoomUrl (join_url) fallback
     const fsConfirmedHero = (window._fpFirestoreConfirmed || []).map(c => {
       const [d, t] = String(c.confirmedSlot || '').split(' ');
-      return { _fsCustomerId: c.docId, userId: 'fs:'+c.docId, name: c.name, date: d || '', time: t || '', zoomUrl: c.zoomUrl, ts: c.confirmedAt?.toDate?.()?.toISOString?.() || '', status: 'confirmed' };
+      return { _fsCustomerId: c.docId, userId: 'fs:'+c.docId, name: c.name, date: d || '', time: t || '', zoomUrl: c.hostZoomUrl || c.zoomUrl, ts: c.confirmedAt?.toDate?.()?.toISOString?.() || '', status: 'confirmed' };
     });
     const bookings = ((liveData && liveData.bookings) || []).concat(fsConfirmedHero);
     const fsPendingHeroCount = (window._fpFirestoreCustomers || []).length;
@@ -1202,7 +1203,7 @@
         name: c.name,
         date: d || '',
         time: t || '',
-        zoomUrl: c.zoomUrl,
+        zoomUrl: c.hostZoomUrl || c.zoomUrl, // FP は host で 入る (start_url 優先)
         ts: c.confirmedAt?.toDate?.()?.toISOString?.() || c.createdAt?.toDate?.()?.toISOString?.() || '',
         status: 'confirmed',
         recordingStatus: null,
@@ -1984,7 +1985,7 @@
         });
         if (_fs) {
           const [_d, _t] = String(_fs.confirmedSlot || '').split(' ');
-          booking = { _fsCustomerId: _fs.docId, userId: 'fs:'+_fs.docId, name: _fs.name, date: _d||'', time: _t||'', zoomUrl: _fs.zoomUrl, ts: bookingTs };
+          booking = { _fsCustomerId: _fs.docId, userId: 'fs:'+_fs.docId, name: _fs.name, date: _d||'', time: _t||'', zoomUrl: _fs.hostZoomUrl || _fs.zoomUrl, ts: bookingTs };
         }
       }
       // ★ オーナーfb: popup ウィンドウだと Zoom と z-order 競合で潜る。物理タブ (同じ Chrome ウィンドウ内の新タブ) に変更。
