@@ -1,0 +1,1358 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>絵でわかる FEMOON SaaS 導入フロー | Skeleton Inc.</title>
+<meta name="description" content="QR発行から公開まで、FEMOON SaaS 導入の全9段階を1ページで俯瞰。誰が何をやるかを役割色で見える化。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  /* ============ Reset / base ============ */
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{
+    background:#0A0A0A;
+    color:#F5F4F1;
+    font-family:"Noto Sans JP",system-ui,-apple-system,"Helvetica Neue",sans-serif;
+    font-size:15px;
+    line-height:1.7;
+    letter-spacing:.01em;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  img,svg{display:block;max-width:100%;height:auto}
+  a{color:inherit;text-decoration:none}
+  button,input{font:inherit}
+
+  :root{
+    --bg:#0A0A0A;
+    --bg-soft:#121212;
+    --bg-card:#161616;
+    --bg-card-2:#1c1c1c;
+    --line:rgba(255,255,255,.10);
+    --line-strong:rgba(255,255,255,.22);
+    --ink:#F5F4F1;
+    --ink-mute:#A8A29E;
+    --ink-dim:#6F6A65;
+
+    --skeleton:#FBBF24;  /* amber */
+    --skeleton-ink:#08070A;
+    --salon:#06C755;     /* line green */
+    --salon-ink:#03210E;
+    --customer:#EC4899;  /* pink */
+    --customer-ink:#3B0A22;
+
+    --serif:"Noto Serif JP",ui-serif,Georgia,"Times New Roman",serif;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+
+  /* ============ Layout ============ */
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+  @media (min-width:1024px){.wrap{padding:0 40px}}
+
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--ink-mute);
+  }
+
+  /* ============ Top bar ============ */
+  .topbar{
+    position:sticky;top:0;z-index:50;
+    background:rgba(10,10,10,.78);
+    backdrop-filter:saturate(160%) blur(10px);
+    -webkit-backdrop-filter:saturate(160%) blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar-in{display:flex;align-items:center;justify-content:space-between;gap:16px;height:54px}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-weight:900;font-size:14px;letter-spacing:.04em}
+  .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--skeleton)}
+  .topbar nav{display:flex;gap:18px;font-size:12px;color:var(--ink-mute)}
+  .topbar nav a:hover{color:var(--ink)}
+  @media (max-width:720px){.topbar nav{display:none}}
+
+  /* ============ Hero ============ */
+  .hero{
+    position:relative;
+    padding:72px 0 56px;
+    border-bottom:1px solid var(--line);
+    overflow:hidden;
+  }
+  .hero::before{
+    content:"";position:absolute;inset:0;
+    background:
+      radial-gradient(800px 360px at 85% 0%,rgba(251,191,36,.10),transparent 60%),
+      radial-gradient(700px 340px at 0% 100%,rgba(6,199,85,.07),transparent 60%);
+    pointer-events:none;
+  }
+  .hero-in{position:relative}
+  .hero h1{
+    font-family:var(--serif);font-weight:900;
+    font-size:clamp(34px,7.2vw,68px);
+    line-height:1.05;letter-spacing:.01em;
+    margin:18px 0 22px;color:var(--ink);
+  }
+  .hero h1 .hl-y{color:var(--skeleton)}
+  .hero h1 .hl-g{color:var(--salon)}
+  .hero h1 .hl-p{color:var(--customer)}
+  .hero .lead{
+    max-width:640px;font-size:16px;line-height:1.85;color:var(--ink-mute);margin:0 0 36px;
+  }
+  .hero .meta{
+    display:flex;flex-wrap:wrap;gap:10px;margin-bottom:36px;
+  }
+  .meta-chip{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:8px 14px;border:1px solid var(--line-strong);border-radius:999px;
+    font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--ink);
+  }
+  .meta-chip b{color:var(--skeleton);font-weight:700}
+
+  /* Character legend */
+  .legend{
+    display:grid;grid-template-columns:1fr;gap:14px;
+    padding:24px;background:var(--bg-card);border:1px solid var(--line);border-radius:18px;
+  }
+  @media (min-width:720px){.legend{grid-template-columns:repeat(3,1fr)}}
+  .lg-card{display:flex;gap:14px;align-items:flex-start}
+  .lg-avatar{
+    flex:0 0 56px;width:56px;height:56px;border-radius:50%;
+    display:grid;place-items:center;font-family:var(--serif);font-weight:900;font-size:22px;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.2);
+  }
+  .lg-avatar.sk{background:var(--skeleton);color:var(--skeleton-ink)}
+  .lg-avatar.sa{background:var(--salon);color:#fff}
+  .lg-avatar.cu{background:var(--customer);color:#fff}
+  .lg-body h4{margin:0 0 4px;font-family:var(--serif);font-weight:700;font-size:16px;color:var(--ink)}
+  .lg-body p{margin:0;font-size:13px;color:var(--ink-mute);line-height:1.65}
+  .lg-tag{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--ink-dim);display:block;margin-bottom:2px;text-transform:uppercase}
+
+  /* ============ Mini summary timeline ============ */
+  .section{padding:80px 0;border-bottom:1px solid var(--line)}
+  .section-head{margin-bottom:40px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  .section-head h2{
+    font-family:var(--serif);font-weight:900;font-size:clamp(26px,4vw,42px);
+    line-height:1.15;margin:8px 0 0;color:var(--ink);
+  }
+  .section-head .eyebrow{display:block;margin-bottom:6px}
+  .section-head p{max-width:520px;color:var(--ink-mute);font-size:14px;margin:0;line-height:1.8}
+
+  .mini-list{display:grid;grid-template-columns:1fr;gap:14px}
+  .mini-card{
+    display:grid;grid-template-columns:80px 1fr auto;gap:16px;align-items:center;
+    padding:18px 18px;background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+    transition:border-color .2s ease,background .2s ease,transform .2s ease;
+  }
+  .mini-card:hover{border-color:var(--line-strong);background:var(--bg-card-2);transform:translateY(-1px)}
+  .mini-num{
+    font-family:var(--serif);font-weight:900;font-size:46px;line-height:1;color:var(--ink);
+    display:flex;align-items:baseline;gap:6px;
+  }
+  .mini-num .role{
+    width:10px;height:10px;border-radius:50%;
+  }
+  .mini-num .role.sk{background:var(--skeleton)}
+  .mini-num .role.sa{background:var(--salon)}
+  .mini-num .role.cu{background:var(--customer)}
+  .mini-body h4{margin:0 0 4px;font-family:var(--serif);font-weight:700;font-size:15px;color:var(--ink);letter-spacing:.02em}
+  .mini-body p{margin:0;font-size:13px;color:var(--ink-mute);line-height:1.55}
+  .mini-meta{text-align:right;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--ink-dim);white-space:nowrap}
+  .mini-meta b{display:block;color:var(--ink);font-size:13px;letter-spacing:.05em;margin-bottom:2px;font-family:var(--serif);font-weight:700}
+  @media (max-width:560px){
+    .mini-card{grid-template-columns:64px 1fr;grid-template-rows:auto auto;gap:8px 14px}
+    .mini-num{font-size:36px}
+    .mini-meta{grid-column:2;text-align:left}
+  }
+
+  /* ============ Stage blocks ============ */
+  .stage{padding:72px 0;border-bottom:1px solid var(--line);position:relative}
+  .stage[data-role="sk"]{background:linear-gradient(180deg,#0A0A0A 0%,#0E0C06 100%)}
+  .stage[data-role="sa"]{background:linear-gradient(180deg,#0A0A0A 0%,#06100A 100%)}
+  .stage[data-role="cu"]{background:linear-gradient(180deg,#0A0A0A 0%,#100610 100%)}
+  .stage[data-role="mix"]{background:linear-gradient(180deg,#0A0A0A 0%,#0a0a0a 100%)}
+
+  .stage-head{display:flex;gap:18px;align-items:flex-start;margin-bottom:36px;flex-wrap:wrap}
+  .stage-num{
+    font-family:var(--serif);font-weight:900;font-size:84px;line-height:.85;
+    padding:8px 18px 14px;border-radius:18px;
+    color:var(--ink);
+    border:1px solid var(--line-strong);
+    background:rgba(255,255,255,.02);
+    min-width:120px;text-align:center;
+  }
+  .stage[data-role="sk"] .stage-num{color:var(--skeleton);border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.06)}
+  .stage[data-role="sa"] .stage-num{color:var(--salon);border-color:rgba(6,199,85,.35);background:rgba(6,199,85,.06)}
+  .stage[data-role="cu"] .stage-num{color:var(--customer);border-color:rgba(236,72,153,.35);background:rgba(236,72,153,.06)}
+
+  .stage-title{flex:1;min-width:240px}
+  .stage-role{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:5px 12px;border-radius:999px;
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--ink);
+    margin-bottom:10px;
+  }
+  .stage-role .dot{width:8px;height:8px;border-radius:50%}
+  .stage-role.sk .dot{background:var(--skeleton)} .stage-role.sk{color:var(--skeleton);border-color:rgba(251,191,36,.4)}
+  .stage-role.sa .dot{background:var(--salon)} .stage-role.sa{color:var(--salon);border-color:rgba(6,199,85,.4)}
+  .stage-role.cu .dot{background:var(--customer)} .stage-role.cu{color:var(--customer);border-color:rgba(236,72,153,.4)}
+  .stage-role.mix{color:var(--ink)}
+  .stage-role.mix .dot{background:linear-gradient(90deg,var(--salon),var(--customer));width:10px;height:8px;border-radius:3px}
+
+  .stage h3{
+    font-family:var(--serif);font-weight:900;font-size:clamp(24px,3.4vw,36px);
+    line-height:1.2;margin:0 0 8px;color:var(--ink);
+  }
+  .stage .lede{font-size:14px;color:var(--ink-mute);max-width:680px;margin:0;line-height:1.85}
+
+  .stage-grid{display:grid;grid-template-columns:1fr;gap:28px;margin-top:8px}
+  @media (min-width:960px){.stage-grid{grid-template-columns:1.05fr 1fr;gap:40px}}
+
+  /* "4要素" cards */
+  .four-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .four-card{
+    padding:18px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025);
+  }
+  .four-card .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:8px;display:block}
+  .four-card .val{font-size:13.5px;color:var(--ink);line-height:1.65;font-weight:500}
+  .four-card.who .lbl{color:var(--skeleton)}
+  .stage[data-role="sa"] .four-card.who .lbl{color:var(--salon)}
+  .stage[data-role="cu"] .four-card.who .lbl{color:var(--customer)}
+  @media (max-width:560px){.four-grid{grid-template-columns:1fr}}
+
+  /* Mock frame (image or svg) */
+  .mock{
+    border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#0E0E0E;
+    box-shadow:0 30px 60px -30px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.02);
+    position:relative;
+  }
+  .mock-cap{
+    display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);
+    background:rgba(255,255,255,.02);
+    font-family:var(--mono);font-size:11px;color:var(--ink-mute);letter-spacing:.06em;
+  }
+  .mock-cap .dots{display:inline-flex;gap:5px}
+  .mock-cap .dots i{width:9px;height:9px;border-radius:50%;background:#3a3a3a;display:inline-block}
+  .mock-cap .dots i:nth-child(1){background:#ff5f57}
+  .mock-cap .dots i:nth-child(2){background:#febc2e}
+  .mock-cap .dots i:nth-child(3){background:#28c840}
+  .mock-cap .url{color:var(--ink);opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mock-body{padding:0;background:#fff}
+  .mock-body.dark{background:#0E0E0E}
+  .mock-body img{display:block;width:100%;height:auto}
+
+  .next-arrow{
+    display:flex;align-items:center;justify-content:center;
+    margin:36px auto 0;color:var(--ink-dim);
+  }
+  .next-arrow svg{display:block}
+
+  /* Tip / Note */
+  .note{
+    margin-top:16px;padding:12px 14px;border-radius:10px;
+    background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.28);
+    font-size:12.5px;color:#FCD68A;line-height:1.65;
+  }
+  .note.salon{background:rgba(6,199,85,.07);border-color:rgba(6,199,85,.28);color:#8DEFB6}
+  .note.warn{background:rgba(236,72,153,.07);border-color:rgba(236,72,153,.28);color:#F9B4D2}
+
+  /* CTA block */
+  .cta{padding:88px 0 110px;background:radial-gradient(900px 400px at 50% 0%,rgba(251,191,36,.08),transparent 60%)}
+  .cta-in{text-align:center}
+  .cta h2{
+    font-family:var(--serif);font-weight:900;font-size:clamp(28px,4.6vw,44px);
+    line-height:1.2;margin:8px 0 16px;color:var(--ink)
+  }
+  .cta p{color:var(--ink-mute);max-width:540px;margin:0 auto 32px;font-size:14.5px;line-height:1.85}
+  .btn-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:16px 26px;border-radius:14px;
+    font-weight:700;font-size:14px;letter-spacing:.04em;
+    border:1px solid transparent;transition:transform .15s ease,filter .15s ease;
+    min-height:44px;
+  }
+  .btn:hover{transform:translateY(-1px);filter:brightness(1.05)}
+  .btn:focus-visible{outline:2px solid var(--skeleton);outline-offset:3px}
+  .btn-primary{background:var(--skeleton);color:var(--skeleton-ink)}
+  .btn-ghost{background:transparent;color:var(--ink);border-color:var(--line-strong)}
+  .btn svg{flex-shrink:0}
+
+  /* Footer */
+  footer{padding:36px 0 64px;border-top:1px solid var(--line);color:var(--ink-dim);font-size:12px}
+  .foot-in{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+
+  /* SVG mock helpers (Stripe etc.) */
+  .svg-mock{display:block;width:100%;height:auto;background:#0E0E0E}
+
+  /* Three-scene grid for stage 9 */
+  .triple{display:grid;grid-template-columns:1fr;gap:16px}
+  @media (min-width:760px){.triple{grid-template-columns:repeat(3,1fr)}}
+  .scene{border:1px solid var(--line);border-radius:18px;background:#0E0E0E;overflow:hidden;display:flex;flex-direction:column}
+  .scene .cap{padding:10px 14px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);border-bottom:1px solid var(--line)}
+  .scene .body{flex:1;padding:14px;display:flex;justify-content:center;align-items:flex-start;background:#0a0a0a}
+
+  /* anchor offset for sticky topbar */
+  [id^="stage-"]{scroll-margin-top:64px}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ Top bar ============ -->
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <div class="brand"><span class="dot"></span> FEMOON SaaS Flow</div>
+    <nav aria-label="主要セクション">
+      <a href="#summary">全段階</a>
+      <a href="#stage-0">段階別</a>
+      <a href="#cta">詳細 19ステップへ</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ Hero ============ -->
+<section class="hero">
+  <div class="wrap hero-in">
+    <span class="eyebrow">FEMOON SaaS / Visual Onboarding Map</span>
+    <h1>
+      絵で わかる<br>
+      <span class="hl-y">FEMOON</span> SaaS<br>
+      導入 <span class="hl-g">フロー</span>。
+    </h1>
+    <p class="lead">
+      QR を スキャンして から、 LINE 公式アカウントで お客様が 予約 できるように なるまで。
+      全 <b style="color:var(--ink)">9段階</b> を 1ページ で 俯瞰。 誰 が・ 何を・ どこで やるか、 役割色 で 一目 で 分かります。
+    </p>
+
+    <div class="meta">
+      <span class="meta-chip"><b>9</b> 段階</span>
+      <span class="meta-chip">所要 <b>約60分</b> (待ち時間 含む)</span>
+      <span class="meta-chip">サロン操作 <b>4箇所</b> のみ</span>
+    </div>
+
+    <div class="legend" aria-label="登場人物 凡例">
+      <div class="lg-card">
+        <div class="lg-avatar sk" aria-hidden="true">S</div>
+        <div class="lg-body">
+          <span class="lg-tag">Skeleton Inc.</span>
+          <h4>Skeleton社 (営業 / Jobs)</h4>
+          <p>QR発行・裏側のサーバー設定・LINE紐付け・E2E動作確認 まで担当。 営業 と 開発 が 同じチーム。</p>
+        </div>
+      </div>
+      <div class="lg-card">
+        <div class="lg-avatar sa" aria-hidden="true">S</div>
+        <div class="lg-body">
+          <span class="lg-tag">Salon Owner</span>
+          <h4>サロンオーナー</h4>
+          <p>QR読取・申込フォーム記入・決済・LINE公式 と LIFF の 開設 が 主な作業。 合計 約30分。</p>
+        </div>
+      </div>
+      <div class="lg-card">
+        <div class="lg-avatar cu" aria-hidden="true">C</div>
+        <div class="lg-body">
+          <span class="lg-tag">End Customer</span>
+          <h4>お客様 (サロンの予約客)</h4>
+          <p>LINEで 友達追加 → リッチメニューから 予約 → 自動で 通知 と カレンダー登録。 来店までスムーズ。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Summary timeline ============ -->
+<section class="section" id="summary">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">B. Summary / 全段階 俯瞰</span>
+        <h2>9段階 を 1スクロール で。</h2>
+      </div>
+      <p>各段階 の カードを タップ すると 詳細セクション へ ジャンプ します。 左の 役割色 で 「誰の作業 か」 が 一目 で 分かります。</p>
+    </div>
+
+    <div class="mini-list" role="list">
+      <a class="mini-card" href="#stage-0" role="listitem">
+        <div class="mini-num">0<span class="role sk" aria-hidden="true"></span></div>
+        <div class="mini-body"><h4>Skeleton社 が サロン用 QR を 発行</h4><p>営業前 に サロン名 を 入れて 固有URL と QR を 出力。</p></div>
+        <div class="mini-meta"><b>2分</b>Skeleton</div>
+      </a>
+      <a class="mini-card" href="#stage-1" role="listitem">
+        <div class="mini-num">1<span class="role sa" aria-hidden="true"></span></div>
+        <div class="mini-body"><h4>サロン が QR スキャン → フォーム TOP</h4><p>カメラ で QR 読取。 黄色 バナー に サロン名 表示。</p></div>
+        <div class="mini-meta"><b>1分</b>Salon</div>
+      </a>
+      <a class="mini-card" href="#stage-2" role="listitem">
+        <div class="mini-num">2<span class="role sa" aria-hidden="true"></span></div>
+        <div class="mini-body"><h4>Stripe 決済 (¥3,000 初月 + 月額)</h4><p>カード情報 を 入れて 「お支払い」。 即時 決済 成功。</p></div>
+        <div class="mini-meta"><b>2分</b>Salon</div>
+      </a>
+      <a class="mini-card" href="#stage-3" role="listitem">
+        <div class="mini-num">3<span class="role sa" aria-hidden="true"></span></div>
+        <div class="mini-body"><h4>申込フォーム 1ページ 記入 → 送信</h4><p>店名 / 営業時間 / コース を 入れて 緑「送信する」。</p></div>
+        <div class="mini-meta"><b>10分</b>Salon</div>
+      </a>
+      <a class="mini-card" href="#stage-4" role="listitem">
+        <div class="mini-num">4<span class="role sk" aria-hidden="true"></span></div>
+        <div class="mini-body"><h4>Skeleton社 が 裏で SaaS 全自動セットアップ</h4><p>tenant 作成 / ログイン情報発行 / 案内メール 送信。</p></div>
+        <div class="mini-meta"><b>30分</b>Skeleton</div>
+      </a>
+      <a class="mini-card" href="#stage-5" role="listitem">
+        <div class="mini-num">5<span class="role sa" aria-hidden="true"></span></div>
+        <div class="mini-body"><h4>サロン が 完了メール 受信 → ログイン</h4><p>予約URL を コピー + 管理画面 ログイン リンク タップ。</p></div>
+        <div class="mini-meta"><b>2分</b>Salon</div>
+      </a>
+      <a class="mini-card" href="#stage-6" role="listitem">
+        <div class="mini-num">6<span class="role sa" aria-hidden="true"></span></div>
+        <div class="mini-body"><h4>サロン が LINE 公式アカウント を 開設</h4><p>OA Manager で アカウント名 / 業種 入力 → 作成。</p></div>
+        <div class="mini-meta"><b>3分</b>Salon</div>
+      </a>
+      <a class="mini-card" href="#stage-7" role="listitem">
+        <div class="mini-num">7<span class="role sa" aria-hidden="true"></span></div>
+        <div class="mini-body"><h4>サロン が LIFF を 作成 → LIFF ID 取得</h4><p>LINE Developers で ログインチャネル + LIFF 追加。</p></div>
+        <div class="mini-meta"><b>10分</b>Salon</div>
+      </a>
+      <a class="mini-card" href="#stage-8" role="listitem">
+        <div class="mini-num">8<span class="role sk" aria-hidden="true"></span></div>
+        <div class="mini-body"><h4>Skeleton社 が 最終仕上げ (リッチメニュー + E2E)</h4><p>LIFF URL 紐付け / 動作確認 / 完了報告 まで一括。</p></div>
+        <div class="mini-meta"><b>15分</b>Skeleton</div>
+      </a>
+      <a class="mini-card" href="#stage-9" role="listitem">
+        <div class="mini-num">9<span class="role cu" aria-hidden="true"></span></div>
+        <div class="mini-body"><h4>お客様が LINE で 予約 → 双方 自動通知</h4><p>友達追加 → リッチメニュー → 予約 → カードで通知。</p></div>
+        <div class="mini-meta"><b>サービス開始</b>Customer</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- Stage 0 : Skeleton 社 QR 発行 -->
+<!-- ====================================================== -->
+<section class="stage" id="stage-0" data-role="sk">
+  <div class="wrap">
+    <div class="stage-head">
+      <div class="stage-num">0</div>
+      <div class="stage-title">
+        <span class="stage-role sk"><span class="dot"></span>Skeleton社 (営業)</span>
+        <h3>サロン用 QR を 発行する。</h3>
+        <p class="lede">商談前 に 営業担当 が サロン名 を 入れて 固有URL + QR PNG を 出力。 サロン側 は スキャンするだけ で 自分専用 の 申込フォーム に 到達できる。</p>
+      </div>
+    </div>
+
+    <div class="stage-grid">
+      <div>
+        <div class="four-grid">
+          <div class="four-card who">
+            <span class="lbl">Who / 誰が</span>
+            <span class="val">Skeleton社 営業担当</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">What / 何を</span>
+            <span class="val">サロン名 を 入力 → 固有URL と QR コード を 発行</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Where / どこで</span>
+            <span class="val">QR発行ツール (femoon-saas-qr-gen)</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Next / 次に</span>
+            <span class="val">QR画像 を サロン に 渡す → 商談で 説明</span>
+          </div>
+        </div>
+        <div class="note">所要 約2分。 1サロン につき 1回 だけ 発行。 QR は 商談スライド や 印刷物 に そのまま 貼れる。</div>
+      </div>
+
+      <div>
+        <div class="mock">
+          <div class="mock-cap">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="url">t35ty6-rgb.github.io/skeleton-demos/femoon-saas-qr-gen/</span>
+          </div>
+          <div class="mock-body">
+            <img src="shots/qr-02-generated.png" alt="QR発行ツール で サロン名 を 入力し QR と URL が 生成された 状態" loading="lazy" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="next-arrow" aria-hidden="true">
+      <svg width="40" height="56" viewBox="0 0 40 56" fill="none"><path d="M20 0 L20 46 M8 36 L20 48 L32 36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- Stage 1 : サロン QR スキャン -->
+<!-- ====================================================== -->
+<section class="stage" id="stage-1" data-role="sa">
+  <div class="wrap">
+    <div class="stage-head">
+      <div class="stage-num">1</div>
+      <div class="stage-title">
+        <span class="stage-role sa"><span class="dot"></span>サロンオーナー</span>
+        <h3>QR を スキャン → 申込フォーム を 開く。</h3>
+        <p class="lede">サロン側 は スマホカメラ で QR を 読み取る だけ。 フォーム TOP の 上部 に 「黄色 バナー で サロン名」 が 出るので 「自分専用 の フォーム である」 と 一目 で 確認 できる。</p>
+      </div>
+    </div>
+
+    <div class="stage-grid">
+      <div>
+        <div class="four-grid">
+          <div class="four-card who">
+            <span class="lbl">Who / 誰が</span>
+            <span class="val">サロンオーナー</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">What / 何を</span>
+            <span class="val">スマホカメラ で QR スキャン → ブラウザ 起動</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Where / どこで</span>
+            <span class="val">スマホ (iOS / Android、 標準カメラ アプリ)</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Next / 次に</span>
+            <span class="val">フォーム TOP → そのまま 申込 ボタン に 進む</span>
+          </div>
+        </div>
+        <div class="note salon">上部 の 黄色 バナー 「🏷 サロン識別子: サロン名」 が 表示 されていれば 正しい URL に 到達 できている 証拠。</div>
+      </div>
+
+      <div>
+        <div class="mock">
+          <div class="mock-cap">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="url">femoon-saas-onboarding/?ref=...</span>
+          </div>
+          <div class="mock-body">
+            <img src="shots/form-with-ref.png" alt="QR から到達 した 申込フォーム TOP。 上部 に サロン識別子 が 黄色バナー で 表示されている" loading="lazy" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="next-arrow" aria-hidden="true">
+      <svg width="40" height="56" viewBox="0 0 40 56" fill="none"><path d="M20 0 L20 46 M8 36 L20 48 L32 36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- Stage 2 : Stripe 決済 -->
+<!-- ====================================================== -->
+<section class="stage" id="stage-2" data-role="sa">
+  <div class="wrap">
+    <div class="stage-head">
+      <div class="stage-num">2</div>
+      <div class="stage-title">
+        <span class="stage-role sa"><span class="dot"></span>サロンオーナー</span>
+        <h3>Stripe で 決済 する (¥3,000 / 月)。</h3>
+        <p class="lede">申込フォーム を 送信 する 直前 に Stripe Checkout が モーダル で ポップアップ。 カード番号 を 入力 して 「お支払い」 を タップ → 即時 決済成功 → そのまま フォーム送信 へ 戻る。</p>
+      </div>
+    </div>
+
+    <div class="stage-grid">
+      <div>
+        <div class="four-grid">
+          <div class="four-card who">
+            <span class="lbl">Who / 誰が</span>
+            <span class="val">サロンオーナー</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">What / 何を</span>
+            <span class="val">カード番号 / 有効期限 / CVC 入力 → お支払い</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Where / どこで</span>
+            <span class="val">Stripe Checkout (PCI 準拠 ホスト)</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Next / 次に</span>
+            <span class="val">決済成功 → フォーム送信 が アンロック</span>
+          </div>
+        </div>
+        <div class="note warn">⚠ 現状 Stripe バックエンド は 実装中。 本ビジュアル は 「組み込み 後 の あるべき 姿」 を 描いている。 本番化 までは テストカード <span style="font-family:var(--mono)">4242 4242 4242 4242</span> で 動作確認 可能。</div>
+      </div>
+
+      <div>
+        <div class="mock">
+          <div class="mock-cap">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="url">checkout.stripe.com / skeleton-inc</span>
+          </div>
+          <div class="mock-body dark">
+            <!-- Stripe Checkout SVG mock -->
+            <svg class="svg-mock" viewBox="0 0 520 540" role="img" aria-label="Stripe Checkout モーダル の モック画像">
+              <defs>
+                <linearGradient id="bgGrad" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stop-color="#0F1115"/>
+                  <stop offset="1" stop-color="#0A0C10"/>
+                </linearGradient>
+                <linearGradient id="payBtn" x1="0" x2="1" y1="0" y2="0">
+                  <stop offset="0" stop-color="#06C755"/>
+                  <stop offset="1" stop-color="#0BB251"/>
+                </linearGradient>
+              </defs>
+              <rect width="520" height="540" fill="url(#bgGrad)"/>
+              <!-- Window chrome -->
+              <rect x="20" y="20" width="480" height="500" rx="14" fill="#13161C" stroke="#262A33"/>
+              <!-- Header brand -->
+              <g transform="translate(40,46)">
+                <rect width="28" height="28" rx="7" fill="#FBBF24"/>
+                <text x="14" y="20" text-anchor="middle" font-family="Noto Serif JP" font-weight="900" font-size="16" fill="#08070A">S</text>
+                <text x="42" y="20" font-family="Noto Sans JP" font-weight="700" font-size="14" fill="#F5F4F1">Skeleton Inc.</text>
+                <text x="42" y="36" font-family="JetBrains Mono" font-size="10" fill="#6F6A65" letter-spacing="1.4">FEMOON SAAS · ONBOARDING</text>
+              </g>
+              <!-- amount -->
+              <g transform="translate(40,112)">
+                <text font-family="Noto Sans JP" font-size="12" fill="#A8A29E">月額 (初月)</text>
+                <text y="36" font-family="Noto Serif JP" font-weight="900" font-size="40" fill="#F5F4F1">¥3,000</text>
+                <text x="120" y="36" font-family="Noto Sans JP" font-size="13" fill="#A8A29E">/ 月 · 税込</text>
+              </g>
+              <!-- Divider -->
+              <line x1="40" y1="178" x2="480" y2="178" stroke="#262A33"/>
+              <!-- Card fields -->
+              <g transform="translate(40,200)">
+                <text font-family="JetBrains Mono" font-size="10" fill="#6F6A65" letter-spacing="1.2">CARD NUMBER</text>
+                <rect y="14" width="440" height="44" rx="8" fill="#0A0C10" stroke="#2A2F38"/>
+                <text x="14" y="42" font-family="JetBrains Mono" font-size="15" fill="#F5F4F1" letter-spacing="3">4242  4242  4242  4242</text>
+                <!-- Visa/MC icons -->
+                <rect x="376" y="22" width="22" height="14" rx="2" fill="#1A1F2A" stroke="#2A2F38"/>
+                <text x="387" y="33" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#A8A29E">VISA</text>
+                <rect x="404" y="22" width="22" height="14" rx="2" fill="#1A1F2A" stroke="#2A2F38"/>
+                <circle cx="411" cy="29" r="4" fill="#EB001B" opacity=".8"/>
+                <circle cx="419" cy="29" r="4" fill="#F79E1B" opacity=".8"/>
+              </g>
+              <g transform="translate(40,278)">
+                <text font-family="JetBrains Mono" font-size="10" fill="#6F6A65" letter-spacing="1.2">EXPIRY</text>
+                <rect y="14" width="210" height="44" rx="8" fill="#0A0C10" stroke="#2A2F38"/>
+                <text x="14" y="42" font-family="JetBrains Mono" font-size="15" fill="#F5F4F1" letter-spacing="2">12 / 28</text>
+                <text x="230" font-family="JetBrains Mono" font-size="10" fill="#6F6A65" letter-spacing="1.2">CVC</text>
+                <rect x="230" y="14" width="210" height="44" rx="8" fill="#0A0C10" stroke="#2A2F38"/>
+                <text x="244" y="42" font-family="JetBrains Mono" font-size="15" fill="#F5F4F1" letter-spacing="3">•••</text>
+              </g>
+              <g transform="translate(40,356)">
+                <text font-family="JetBrains Mono" font-size="10" fill="#6F6A65" letter-spacing="1.2">CARDHOLDER NAME</text>
+                <rect y="14" width="440" height="44" rx="8" fill="#0A0C10" stroke="#2A2F38"/>
+                <text x="14" y="42" font-family="Noto Sans JP" font-size="14" fill="#F5F4F1">SALON OWNER</text>
+              </g>
+              <!-- Pay button -->
+              <g transform="translate(40,438)">
+                <rect width="440" height="52" rx="10" fill="url(#payBtn)"/>
+                <text x="220" y="33" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="15" fill="#fff">¥3,000 を お支払い</text>
+              </g>
+              <!-- Powered by -->
+              <text x="260" y="510" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6F6A65" letter-spacing="1.6">POWERED BY STRIPE · PCI DSS LEVEL 1</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="next-arrow" aria-hidden="true">
+      <svg width="40" height="56" viewBox="0 0 40 56" fill="none"><path d="M20 0 L20 46 M8 36 L20 48 L32 36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- Stage 3 : 申込フォーム 記入 → 送信 -->
+<!-- ====================================================== -->
+<section class="stage" id="stage-3" data-role="sa">
+  <div class="wrap">
+    <div class="stage-head">
+      <div class="stage-num">3</div>
+      <div class="stage-title">
+        <span class="stage-role sa"><span class="dot"></span>サロンオーナー</span>
+        <h3>申込フォーム を 1ページ で 記入 → 送信。</h3>
+        <p class="lede">店名 / 業種 / 営業時間 / コース など を 上から 順 に 入力。 一番下 の 緑 「送信する」 ボタン で 完了。 別画面 への 遷移 は ゼロ、 1スクロール で 終わる 設計。</p>
+      </div>
+    </div>
+
+    <div class="stage-grid">
+      <div>
+        <div class="four-grid">
+          <div class="four-card who">
+            <span class="lbl">Who / 誰が</span>
+            <span class="val">サロンオーナー</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">What / 何を</span>
+            <span class="val">店舗情報 / コース / スタッフ を 1ページ 記入</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Where / どこで</span>
+            <span class="val">申込フォーム (femoon-saas-onboarding)</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Next / 次に</span>
+            <span class="val">送信 → Skeleton社 側 へ 申込通知 が 飛ぶ</span>
+          </div>
+        </div>
+        <div class="note salon">所要 約10分。 後から 管理画面 でも 編集 可能 なので、 とりあえず 最低限 入れて 送信 でOK。</div>
+      </div>
+
+      <div>
+        <div class="mock">
+          <div class="mock-cap">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="url">femoon-saas-onboarding/ — 送信 直前</span>
+          </div>
+          <div class="mock-body">
+            <img src="shots/form-06-submit.annot.png" alt="申込フォーム の 最下部、 「送信する」 ボタン が 赤丸 で 強調 された 状態" loading="lazy" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="next-arrow" aria-hidden="true">
+      <svg width="40" height="56" viewBox="0 0 40 56" fill="none"><path d="M20 0 L20 46 M8 36 L20 48 L32 36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- Stage 4 : Skeleton 社 裏セットアップ -->
+<!-- ====================================================== -->
+<section class="stage" id="stage-4" data-role="sk">
+  <div class="wrap">
+    <div class="stage-head">
+      <div class="stage-num">4</div>
+      <div class="stage-title">
+        <span class="stage-role sk"><span class="dot"></span>Skeleton社 (Jobs)</span>
+        <h3>裏 で SaaS 設定 を 全自動 セットアップ する。</h3>
+        <p class="lede">申込通知 を 受けた Skeleton 社側 が tenant 作成 → ログイン情報 発行 → 案内メール 送信 を 自動 で 一気通貫 で 実行。 サロン側 は 寝てて OK・コーヒー で 一息 つけば 完了。</p>
+      </div>
+    </div>
+
+    <div class="stage-grid">
+      <div>
+        <div class="four-grid">
+          <div class="four-card who">
+            <span class="lbl">Who / 誰が</span>
+            <span class="val">Skeleton社 (Jobs 自動化)</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">What / 何を</span>
+            <span class="val">tenant 作成 / 認証ユーザー / 予約URL 発行 / メール</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Where / どこで</span>
+            <span class="val">Firestore + Cloud Functions + SendGrid</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Next / 次に</span>
+            <span class="val">サロン に セットアップ完了メール が 届く</span>
+          </div>
+        </div>
+        <div class="note">所要 約30分。 サロン側 は この間 待機 のみ。 完了 すると 自動 で 次の メール が 飛ぶ。</div>
+      </div>
+
+      <div>
+        <div class="mock">
+          <div class="mock-cap">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="url">Skeleton Inc. — internal automation</span>
+          </div>
+          <div class="mock-body dark">
+            <svg class="svg-mock" viewBox="0 0 520 420" role="img" aria-label="裏セットアップ の フロー図。 Tenant 作成 / ログイン発行 / メール送信 が 接続線 で つながっている">
+              <rect width="520" height="420" fill="#0E0E0E"/>
+              <!-- Title -->
+              <text x="40" y="44" font-family="JetBrains Mono" font-size="11" fill="#6F6A65" letter-spacing="1.6">BACKEND PIPELINE · 30 MIN</text>
+              <text x="40" y="74" font-family="Noto Serif JP" font-weight="900" font-size="22" fill="#F5F4F1">サロン側 は 待機 中。</text>
+
+              <!-- Box 1: Tenant -->
+              <g transform="translate(40,120)">
+                <rect width="130" height="130" rx="14" fill="#161616" stroke="rgba(251,191,36,.4)"/>
+                <g transform="translate(65,42)">
+                  <rect x="-22" y="-18" width="44" height="36" rx="6" fill="#FBBF24"/>
+                  <rect x="-16" y="-12" width="32" height="6" rx="1.5" fill="#08070A"/>
+                  <rect x="-16" y="-2" width="20" height="4" rx="1" fill="#08070A" opacity=".6"/>
+                  <rect x="-16" y="6" width="26" height="4" rx="1" fill="#08070A" opacity=".6"/>
+                </g>
+                <text x="65" y="100" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="13" fill="#F5F4F1">Tenant 作成</text>
+                <text x="65" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#A8A29E">FIRESTORE</text>
+              </g>
+
+              <!-- Arrow 1 -->
+              <g stroke="#FBBF24" stroke-width="1.5" fill="none">
+                <path d="M174 185 L220 185" stroke-linecap="round"/>
+                <path d="M214 180 L222 185 L214 190" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
+
+              <!-- Box 2: Auth -->
+              <g transform="translate(225,120)">
+                <rect width="130" height="130" rx="14" fill="#161616" stroke="rgba(251,191,36,.4)"/>
+                <g transform="translate(65,42)" stroke="#FBBF24" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M-14 -4 a14 14 0 0 1 28 0 v8"/>
+                  <rect x="-18" y="4" width="36" height="22" rx="3" fill="#FBBF24" stroke="none"/>
+                  <circle cx="0" cy="14" r="2.2" fill="#08070A"/>
+                </g>
+                <text x="65" y="100" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="13" fill="#F5F4F1">ログイン情報 発行</text>
+                <text x="65" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#A8A29E">FIREBASE AUTH</text>
+              </g>
+
+              <!-- Arrow 2 -->
+              <g stroke="#FBBF24" stroke-width="1.5" fill="none">
+                <path d="M359 185 L405 185" stroke-linecap="round"/>
+                <path d="M399 180 L407 185 L399 190" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
+
+              <!-- Box 3: Mail -->
+              <g transform="translate(410,120)">
+                <rect width="70" height="130" rx="14" fill="#161616" stroke="rgba(251,191,36,.4)"/>
+                <g transform="translate(35,46)" stroke="#FBBF24" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="-18" y="-12" width="36" height="24" rx="3" fill="#FBBF24" stroke="none"/>
+                  <path d="M-16 -10 L0 4 L16 -10" stroke="#08070A"/>
+                </g>
+                <text x="35" y="100" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="12" fill="#F5F4F1">メール</text>
+                <text x="35" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#A8A29E">SENDGRID</text>
+              </g>
+
+              <!-- Status -->
+              <g transform="translate(40,290)">
+                <rect width="440" height="78" rx="12" fill="rgba(251,191,36,.08)" stroke="rgba(251,191,36,.3)"/>
+                <text x="20" y="30" font-family="JetBrains Mono" font-size="10" fill="#FCD68A" letter-spacing="1.4">PROGRESS · ALL AUTOMATED</text>
+                <text x="20" y="56" font-family="Noto Sans JP" font-size="13" fill="#F5F4F1">tenant <tspan font-family="JetBrains Mono">f-XX-2026</tspan> 作成 → 認証ユーザー 発行 → 案内メール 送信 完了</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="next-arrow" aria-hidden="true">
+      <svg width="40" height="56" viewBox="0 0 40 56" fill="none"><path d="M20 0 L20 46 M8 36 L20 48 L32 36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- Stage 5 : サロン メール 受信 → ログイン -->
+<!-- ====================================================== -->
+<section class="stage" id="stage-5" data-role="sa">
+  <div class="wrap">
+    <div class="stage-head">
+      <div class="stage-num">5</div>
+      <div class="stage-title">
+        <span class="stage-role sa"><span class="dot"></span>サロンオーナー</span>
+        <h3>セットアップ完了 メール を 受信 → ログイン。</h3>
+        <p class="lede">タイトル 「FEMOON SaaS セットアップ完了」 の メール を 開く。 中に 予約URL と 管理画面 ログイン用 の パスワード が 入っている。 予約URL は コピー しておく。</p>
+      </div>
+    </div>
+
+    <div class="stage-grid">
+      <div>
+        <div class="four-grid">
+          <div class="four-card who">
+            <span class="lbl">Who / 誰が</span>
+            <span class="val">サロンオーナー</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">What / 何を</span>
+            <span class="val">予約URL コピー + 管理画面 ログイン</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Where / どこで</span>
+            <span class="val">メールアプリ → ブラウザ</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Next / 次に</span>
+            <span class="val">LINE 公式アカウント 開設 (段階 6) へ</span>
+          </div>
+        </div>
+        <div class="note salon">予約URL は 後の 段階 7 で LIFF の エンドポイント に 使う。 メモ帳 / Notes に 貼って おくと スムーズ。</div>
+      </div>
+
+      <div>
+        <div class="mock">
+          <div class="mock-cap">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="url">受信トレイ — Skeleton Inc.</span>
+          </div>
+          <div class="mock-body dark">
+            <svg class="svg-mock" viewBox="0 0 520 560" role="img" aria-label="セットアップ完了メール の モック。 予約URL と ログイン情報 が ハイライトされている">
+              <rect width="520" height="560" fill="#0E0E0E"/>
+              <!-- mail card -->
+              <rect x="20" y="20" width="480" height="520" rx="14" fill="#fff"/>
+              <!-- Header -->
+              <g transform="translate(40,46)">
+                <rect width="40" height="40" rx="20" fill="#FBBF24"/>
+                <text x="20" y="27" text-anchor="middle" font-family="Noto Serif JP" font-weight="900" font-size="18" fill="#08070A">S</text>
+                <text x="56" y="20" font-family="Noto Sans JP" font-weight="700" font-size="13" fill="#0A0A0A">Skeleton Inc.</text>
+                <text x="56" y="38" font-family="Noto Sans JP" font-size="11" fill="#6F6A65">noreply@skeleton-inc.jp · 12:34</text>
+              </g>
+              <!-- Subject -->
+              <text x="40" y="120" font-family="Noto Serif JP" font-weight="700" font-size="18" fill="#0A0A0A">【FEMOON SaaS】 セットアップ 完了 の お知らせ</text>
+              <line x1="40" y1="138" x2="480" y2="138" stroke="#E5E5E5"/>
+              <!-- Body -->
+              <g font-family="Noto Sans JP" font-size="13" fill="#1f1f1f">
+                <text x="40" y="170">サロン名: 株式会社 サンプル サロン 様</text>
+                <text x="40" y="194">お申込み ありがとう ございます。 セットアップ が 完了 しました。</text>
+              </g>
+              <!-- Reservation URL box -->
+              <g transform="translate(40,222)">
+                <rect width="440" height="88" rx="10" fill="#FFF8E1" stroke="#FBBF24"/>
+                <text x="16" y="22" font-family="JetBrains Mono" font-size="10" fill="#7A5A00" letter-spacing="1.2">RESERVATION URL · 段階 7 で 使用</text>
+                <text x="16" y="50" font-family="JetBrains Mono" font-size="13" fill="#0A0A0A">https://femoon-booking.app/t/f-XX-2026</text>
+                <g transform="translate(390,32)">
+                  <rect width="36" height="32" rx="6" fill="#FBBF24"/>
+                  <text x="18" y="21" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="10" fill="#08070A">コピー</text>
+                </g>
+                <text x="16" y="72" font-family="Noto Sans JP" font-size="11" fill="#6F6A65">このURL を コピー して 保存 してください。</text>
+              </g>
+              <!-- Login info box -->
+              <g transform="translate(40,328)">
+                <rect width="440" height="100" rx="10" fill="#F3F4F6" stroke="#D1D5DB"/>
+                <text x="16" y="22" font-family="JetBrains Mono" font-size="10" fill="#374151" letter-spacing="1.2">ADMIN LOGIN</text>
+                <text x="16" y="46" font-family="Noto Sans JP" font-size="12" fill="#0A0A0A">ID: salon@example.com</text>
+                <text x="16" y="66" font-family="Noto Sans JP" font-size="12" fill="#0A0A0A">PW: temp-***************</text>
+                <text x="16" y="86" font-family="Noto Sans JP" font-size="11" fill="#6F6A65">初回ログイン後 に パスワード を 変更 してください。</text>
+              </g>
+              <!-- Login button -->
+              <g transform="translate(40,446)">
+                <rect width="200" height="48" rx="10" fill="#06C755"/>
+                <text x="100" y="30" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="14" fill="#fff">管理画面 へ ログイン →</text>
+              </g>
+              <!-- Foot -->
+              <text x="40" y="520" font-family="Noto Sans JP" font-size="10.5" fill="#6F6A65">ご不明点 は support@skeleton-inc.jp まで。</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="next-arrow" aria-hidden="true">
+      <svg width="40" height="56" viewBox="0 0 40 56" fill="none"><path d="M20 0 L20 46 M8 36 L20 48 L32 36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- Stage 6 : LINE 公式アカウント 開設 -->
+<!-- ====================================================== -->
+<section class="stage" id="stage-6" data-role="sa">
+  <div class="wrap">
+    <div class="stage-head">
+      <div class="stage-num">6</div>
+      <div class="stage-title">
+        <span class="stage-role sa"><span class="dot"></span>サロンオーナー</span>
+        <h3>LINE 公式アカウント を 開設する (3分)。</h3>
+        <p class="lede">LINE Official Account Manager で 「アカウント開設」 → アカウント名 / 業種 を 入力 → 「作成」。 既に LINE 公式 を 持っている サロン は この段階 を スキップ できる。</p>
+      </div>
+    </div>
+
+    <div class="stage-grid">
+      <div>
+        <div class="four-grid">
+          <div class="four-card who">
+            <span class="lbl">Who / 誰が</span>
+            <span class="val">サロンオーナー</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">What / 何を</span>
+            <span class="val">アカウント名 / 業種 入力 → 作成 ボタン</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Where / どこで</span>
+            <span class="val">LINE Official Account Manager (manager.line.biz)</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Next / 次に</span>
+            <span class="val">公式アカウントID と Messaging API トークン を 取得</span>
+          </div>
+        </div>
+        <div class="note salon">既に LINE公式 を 持っている 場合 は 段階 6 を スキップ し、 段階 7 (LIFF作成) に 直接 進む。</div>
+      </div>
+
+      <div>
+        <div class="mock">
+          <div class="mock-cap">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="url">manager.line.biz</span>
+          </div>
+          <div class="mock-body">
+            <img src="shots/real-console-home.png" alt="LINE Official Account Manager の トップ画面。 アカウント開設 ボタン が 中央 に 表示" loading="lazy" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="next-arrow" aria-hidden="true">
+      <svg width="40" height="56" viewBox="0 0 40 56" fill="none"><path d="M20 0 L20 46 M8 36 L20 48 L32 36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- Stage 7 : LIFF 作成 -->
+<!-- ====================================================== -->
+<section class="stage" id="stage-7" data-role="sa">
+  <div class="wrap">
+    <div class="stage-head">
+      <div class="stage-num">7</div>
+      <div class="stage-title">
+        <span class="stage-role sa"><span class="dot"></span>サロンオーナー</span>
+        <h3>LIFF を 作成 → LIFF ID を 取得する (10分)。</h3>
+        <p class="lede">LINE Developers Console で プロバイダー を 選び → 新規 LINEログイン チャネル を 作成 → 中で LIFF を 追加 → エンドポイントURL に 段階 5 で コピー した 予約URL を 貼る → 生成 された LIFF ID を 控える。</p>
+      </div>
+    </div>
+
+    <div class="stage-grid">
+      <div>
+        <div class="four-grid">
+          <div class="four-card who">
+            <span class="lbl">Who / 誰が</span>
+            <span class="val">サロンオーナー</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">What / 何を</span>
+            <span class="val">LINEログイン チャネル 作成 → LIFF 追加 → ID 取得</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Where / どこで</span>
+            <span class="val">LINE Developers Console (developers.line.biz)</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Next / 次に</span>
+            <span class="val">LIFF ID を Skeleton社 に LINE で 送付</span>
+          </div>
+        </div>
+        <div class="note salon">注意: Messaging API チャネル に LIFF は 紐づけ できない。 必ず LINEログイン チャネル を 選ぶ。 (詳細19ステップ 指示書 参照)</div>
+      </div>
+
+      <div>
+        <div class="mock">
+          <div class="mock-cap">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="url">developers.line.biz / LIFF</span>
+          </div>
+          <div class="mock-body">
+            <img src="shots/liff-03-channel-type.annot.png" alt="LINE Developers Console で チャネルタイプ 選択画面。 LINEログイン を 選ぶ 場面 が 赤丸 で 強調" loading="lazy" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="next-arrow" aria-hidden="true">
+      <svg width="40" height="56" viewBox="0 0 40 56" fill="none"><path d="M20 0 L20 46 M8 36 L20 48 L32 36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- Stage 8 : Skeleton 仕上げ -->
+<!-- ====================================================== -->
+<section class="stage" id="stage-8" data-role="sk">
+  <div class="wrap">
+    <div class="stage-head">
+      <div class="stage-num">8</div>
+      <div class="stage-title">
+        <span class="stage-role sk"><span class="dot"></span>Skeleton社 (Jobs)</span>
+        <h3>最終仕上げ: リッチメニュー差替 + E2E 動作確認 (15分)。</h3>
+        <p class="lede">サロン から 受領 した LIFF ID を 元 に、 リッチメニュー画像 を 当て込み → LIFF URL を タップ領域 に 紐付け → Playwright で E2E 動作確認 → サロン に 「セットアップ完了」 を LINE で 通知。</p>
+      </div>
+    </div>
+
+    <div class="stage-grid">
+      <div>
+        <div class="four-grid">
+          <div class="four-card who">
+            <span class="lbl">Who / 誰が</span>
+            <span class="val">Skeleton社 (Jobs)</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">What / 何を</span>
+            <span class="val">リッチメニュー登録 + LIFF URL 紐付け + E2E test</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Where / どこで</span>
+            <span class="val">LINE OA Manager API + Playwright</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Next / 次に</span>
+            <span class="val">サロン に 完了報告 → サービス 開始</span>
+          </div>
+        </div>
+        <div class="note">所要 約15分。 全工程 を Jobs が 自動 で 回し、 失敗 した 場合 は リトライ。 完了 時 は LINE で サロン に 通知 + 動作確認用 URL を 送付。</div>
+      </div>
+
+      <div>
+        <div class="mock">
+          <div class="mock-cap">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="url">Skeleton Internal — Final QA</span>
+          </div>
+          <div class="mock-body dark">
+            <svg class="svg-mock" viewBox="0 0 520 440" role="img" aria-label="リッチメニュー差替 + LIFF URL 紐付け + Playwright E2E の 仕上げフロー図">
+              <rect width="520" height="440" fill="#0E0E0E"/>
+              <!-- header -->
+              <text x="40" y="38" font-family="JetBrains Mono" font-size="11" fill="#6F6A65" letter-spacing="1.6">FINAL QA · 15 MIN</text>
+              <text x="40" y="66" font-family="Noto Serif JP" font-weight="900" font-size="20" fill="#F5F4F1">リッチメニュー差替 → E2E確認</text>
+
+              <!-- Rich menu mock -->
+              <g transform="translate(40,100)">
+                <rect width="200" height="130" rx="10" fill="#161616" stroke="rgba(251,191,36,.4)"/>
+                <line x1="100" y1="0" x2="100" y2="130" stroke="rgba(251,191,36,.4)"/>
+                <line x1="0" y1="65" x2="200" y2="65" stroke="rgba(251,191,36,.4)"/>
+                <text x="50" y="38" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="11" fill="#FBBF24">ご予約</text>
+                <text x="150" y="38" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="11" fill="#F5F4F1">メニュー</text>
+                <text x="50" y="103" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="11" fill="#F5F4F1">クーポン</text>
+                <text x="150" y="103" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="11" fill="#F5F4F1">店舗情報</text>
+                <text x="100" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#A8A29E" letter-spacing="1.2">RICH MENU 2x2</text>
+              </g>
+
+              <!-- arrow -->
+              <g stroke="#FBBF24" stroke-width="1.5" fill="none">
+                <path d="M250 165 L290 165" stroke-linecap="round"/>
+                <path d="M284 160 L292 165 L284 170" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
+
+              <!-- LIFF URL bind -->
+              <g transform="translate(300,100)">
+                <rect width="180" height="130" rx="10" fill="#161616" stroke="rgba(251,191,36,.4)"/>
+                <text x="14" y="26" font-family="JetBrains Mono" font-size="9" fill="#6F6A65" letter-spacing="1.4">LIFF URL BIND</text>
+                <text x="14" y="50" font-family="JetBrains Mono" font-size="11" fill="#F5F4F1">「ご予約」</text>
+                <text x="14" y="68" font-family="JetBrains Mono" font-size="10" fill="#FBBF24">→ liff.line.me/...</text>
+                <text x="14" y="92" font-family="Noto Sans JP" font-size="11" fill="#A8A29E">タップ → 予約フォーム 起動</text>
+                <text x="14" y="112" font-family="JetBrains Mono" font-size="9" fill="#06C755">✓ BOUND</text>
+              </g>
+
+              <!-- Console log -->
+              <g transform="translate(40,260)">
+                <rect width="440" height="150" rx="10" fill="#0A0A0A" stroke="#262A33"/>
+                <text x="14" y="24" font-family="JetBrains Mono" font-size="10" fill="#6F6A65" letter-spacing="1.2">PLAYWRIGHT · E2E TEST</text>
+                <g font-family="JetBrains Mono" font-size="11" fill="#A8A29E">
+                  <text x="14" y="48"><tspan fill="#06C755">✓</tspan> LIFF 起動 (390x844)</text>
+                  <text x="14" y="68"><tspan fill="#06C755">✓</tspan> 予約フォーム 表示</text>
+                  <text x="14" y="88"><tspan fill="#06C755">✓</tspan> 日時選択 → 確定</text>
+                  <text x="14" y="108"><tspan fill="#06C755">✓</tspan> 双方 LINE 通知 受信</text>
+                  <text x="14" y="128"><tspan fill="#FBBF24">→</tspan> サロン に 完了報告 送信</text>
+                </g>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="next-arrow" aria-hidden="true">
+      <svg width="40" height="56" viewBox="0 0 40 56" fill="none"><path d="M20 0 L20 46 M8 36 L20 48 L32 36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- Stage 9 : お客様 体験 -->
+<!-- ====================================================== -->
+<section class="stage" id="stage-9" data-role="cu">
+  <div class="wrap">
+    <div class="stage-head">
+      <div class="stage-num">9</div>
+      <div class="stage-title">
+        <span class="stage-role mix"><span class="dot"></span>サロン + お客様 + システム</span>
+        <h3>お客様 が LINE で 予約 → 双方 に 自動通知。</h3>
+        <p class="lede">サロン が お客様 に 公式アカウント の QR を 案内 → お客様 が 友達追加 → リッチメニュー の 「ご予約」 タップ → LIFF で 予約完了 → サロン と お客様 両方 の LINE に Flex Message 通知 + 「カレンダーに追加」 ボタン。</p>
+      </div>
+    </div>
+
+    <div class="triple" style="margin-top:8px">
+      <!-- Scene 1: Friend add + Rich menu -->
+      <div class="scene">
+        <div class="cap">SCENE 1 · 友達追加 → リッチメニュー</div>
+        <div class="body">
+          <svg viewBox="0 0 220 440" width="100%" style="max-width:200px" role="img" aria-label="LINE スマホ画面: お客様 が 友達追加 し、 リッチメニュー が 表示された 状態">
+            <!-- phone frame -->
+            <rect x="2" y="2" width="216" height="436" rx="26" fill="#1c1c1c" stroke="#333"/>
+            <rect x="10" y="14" width="200" height="412" rx="20" fill="#F5F6F8"/>
+            <!-- status bar -->
+            <text x="20" y="30" font-family="JetBrains Mono" font-size="9" fill="#0A0A0A">9:41</text>
+            <circle cx="190" cy="27" r="3" fill="#06C755"/>
+            <!-- header -->
+            <rect x="10" y="38" width="200" height="38" fill="#fff"/>
+            <text x="22" y="60" font-family="Noto Sans JP" font-weight="700" font-size="11" fill="#0A0A0A">サンプル サロン</text>
+            <text x="22" y="72" font-family="Noto Sans JP" font-size="8" fill="#888">公式アカウント · 友達追加 済</text>
+            <!-- chat area -->
+            <rect x="10" y="76" width="200" height="240" fill="#A6BCD2"/>
+            <!-- bubble -->
+            <rect x="22" y="92" width="150" height="40" rx="8" fill="#fff"/>
+            <text x="30" y="108" font-family="Noto Sans JP" font-size="9" fill="#0A0A0A">友達追加 ありがとう</text>
+            <text x="30" y="121" font-family="Noto Sans JP" font-size="9" fill="#0A0A0A">ございます！</text>
+            <!-- Rich menu (bottom of chat area) -->
+            <g>
+              <rect x="10" y="316" width="200" height="86" fill="#0E0E0E"/>
+              <line x1="110" y1="316" x2="110" y2="402" stroke="#FBBF24" stroke-width=".7"/>
+              <line x1="10" y1="359" x2="210" y2="359" stroke="#FBBF24" stroke-width=".7"/>
+              <text x="60" y="340" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="9" fill="#FBBF24">ご予約</text>
+              <text x="160" y="340" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="9" fill="#F5F4F1">メニュー</text>
+              <text x="60" y="384" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="9" fill="#F5F4F1">クーポン</text>
+              <text x="160" y="384" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="9" fill="#F5F4F1">店舗</text>
+              <!-- tap highlight -->
+              <rect x="11" y="317" width="98" height="42" fill="none" stroke="#EC4899" stroke-width="2" rx="2"/>
+              <circle cx="60" cy="340" r="14" fill="none" stroke="#EC4899" stroke-width="1.5" opacity=".6"/>
+            </g>
+            <text x="110" y="420" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#0A0A0A" letter-spacing="1">TAP ご予約 →</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Scene 2: LIFF reservation -->
+      <div class="scene">
+        <div class="cap">SCENE 2 · LIFF で 予約 入力</div>
+        <div class="body">
+          <svg viewBox="0 0 220 440" width="100%" style="max-width:200px" role="img" aria-label="LINE スマホ画面: LIFF が 起動して 予約フォーム が 表示された 状態">
+            <rect x="2" y="2" width="216" height="436" rx="26" fill="#1c1c1c" stroke="#333"/>
+            <rect x="10" y="14" width="200" height="412" rx="20" fill="#fff"/>
+            <text x="20" y="30" font-family="JetBrains Mono" font-size="9" fill="#0A0A0A">9:42</text>
+            <!-- header -->
+            <rect x="10" y="38" width="200" height="32" fill="#0E0E0E"/>
+            <text x="110" y="58" text-anchor="middle" font-family="Noto Serif JP" font-weight="700" font-size="11" fill="#FBBF24">ご予約</text>
+            <text x="22" y="58" font-family="Noto Sans JP" font-size="11" fill="#A8A29E">×</text>
+            <!-- service select -->
+            <text x="22" y="92" font-family="JetBrains Mono" font-size="8" fill="#6F6A65" letter-spacing="1">MENU</text>
+            <rect x="22" y="100" width="176" height="36" rx="6" fill="#F5F4F1" stroke="#E5E5E5"/>
+            <text x="32" y="123" font-family="Noto Sans JP" font-size="10" fill="#0A0A0A">フェイシャル 60分 ¥6,800</text>
+            <!-- date select -->
+            <text x="22" y="156" font-family="JetBrains Mono" font-size="8" fill="#6F6A65" letter-spacing="1">DATE</text>
+            <g font-family="Noto Sans JP" font-size="9" fill="#0A0A0A">
+              <rect x="22" y="164" width="40" height="32" rx="6" fill="#F5F4F1" stroke="#E5E5E5"/>
+              <text x="42" y="178" text-anchor="middle" font-size="7" fill="#888">水</text>
+              <text x="42" y="190" text-anchor="middle" font-weight="700">19</text>
+              <rect x="68" y="164" width="40" height="32" rx="6" fill="#FBBF24"/>
+              <text x="88" y="178" text-anchor="middle" font-size="7" fill="#08070A">木</text>
+              <text x="88" y="190" text-anchor="middle" font-weight="700" fill="#08070A">20</text>
+              <rect x="114" y="164" width="40" height="32" rx="6" fill="#F5F4F1" stroke="#E5E5E5"/>
+              <text x="134" y="178" text-anchor="middle" font-size="7" fill="#888">金</text>
+              <text x="134" y="190" text-anchor="middle" font-weight="700">21</text>
+              <rect x="160" y="164" width="38" height="32" rx="6" fill="#F5F4F1" stroke="#E5E5E5"/>
+              <text x="179" y="178" text-anchor="middle" font-size="7" fill="#888">土</text>
+              <text x="179" y="190" text-anchor="middle" font-weight="700">22</text>
+            </g>
+            <!-- time slots -->
+            <text x="22" y="218" font-family="JetBrains Mono" font-size="8" fill="#6F6A65" letter-spacing="1">TIME</text>
+            <g font-family="JetBrains Mono" font-size="10" fill="#0A0A0A">
+              <rect x="22" y="226" width="54" height="28" rx="6" fill="#F5F4F1" stroke="#E5E5E5"/>
+              <text x="49" y="244" text-anchor="middle">10:00</text>
+              <rect x="82" y="226" width="54" height="28" rx="6" fill="#0E0E0E"/>
+              <text x="109" y="244" text-anchor="middle" fill="#FBBF24">11:30</text>
+              <rect x="142" y="226" width="54" height="28" rx="6" fill="#F5F4F1" stroke="#E5E5E5"/>
+              <text x="169" y="244" text-anchor="middle">13:00</text>
+            </g>
+            <!-- name -->
+            <text x="22" y="276" font-family="JetBrains Mono" font-size="8" fill="#6F6A65" letter-spacing="1">NAME</text>
+            <rect x="22" y="284" width="176" height="28" rx="6" fill="#F5F4F1" stroke="#E5E5E5"/>
+            <text x="32" y="303" font-family="Noto Sans JP" font-size="10" fill="#0A0A0A">山田 花子</text>
+            <!-- submit -->
+            <rect x="22" y="350" width="176" height="44" rx="10" fill="#06C755"/>
+            <text x="110" y="378" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="12" fill="#fff">予約 を 確定 する</text>
+            <text x="110" y="414" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#0A0A0A" letter-spacing="1">LIFF · 予約フォーム</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Scene 3: Notification card -->
+      <div class="scene">
+        <div class="cap">SCENE 3 · 双方 に Flex 通知</div>
+        <div class="body">
+          <svg viewBox="0 0 220 440" width="100%" style="max-width:200px" role="img" aria-label="LINE スマホ画面: 予約完了 を 通知 する Flex Message カード と 「カレンダーに追加」 ボタン">
+            <rect x="2" y="2" width="216" height="436" rx="26" fill="#1c1c1c" stroke="#333"/>
+            <rect x="10" y="14" width="200" height="412" rx="20" fill="#A6BCD2"/>
+            <text x="20" y="30" font-family="JetBrains Mono" font-size="9" fill="#0A0A0A">9:43</text>
+            <!-- header -->
+            <rect x="10" y="38" width="200" height="32" fill="#fff"/>
+            <text x="22" y="58" font-family="Noto Sans JP" font-weight="700" font-size="10" fill="#0A0A0A">サンプル サロン</text>
+            <!-- Flex card -->
+            <g transform="translate(22,90)">
+              <rect width="172" height="240" rx="10" fill="#fff"/>
+              <!-- top color band -->
+              <rect width="172" height="56" rx="10" fill="#FBBF24"/>
+              <rect y="46" width="172" height="10" fill="#FBBF24"/>
+              <text x="14" y="26" font-family="JetBrains Mono" font-size="9" fill="#08070A" letter-spacing="1">CONFIRMED</text>
+              <text x="14" y="46" font-family="Noto Serif JP" font-weight="700" font-size="13" fill="#08070A">ご予約 完了</text>
+              <!-- details -->
+              <g font-family="Noto Sans JP" font-size="10" fill="#0A0A0A">
+                <text x="14" y="80">📅 6月 20日 (木)</text>
+                <text x="14" y="98">⏰ 11:30 〜 12:30</text>
+                <text x="14" y="116">💆 フェイシャル 60分</text>
+                <text x="14" y="134">🏠 サンプル サロン</text>
+              </g>
+              <line x1="14" y1="148" x2="158" y2="148" stroke="#E5E5E5"/>
+              <!-- buttons -->
+              <rect x="14" y="158" width="144" height="32" rx="6" fill="#06C755"/>
+              <text x="86" y="178" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="10" fill="#fff">カレンダーに追加</text>
+              <rect x="14" y="196" width="144" height="32" rx="6" fill="#fff" stroke="#E5E5E5"/>
+              <text x="86" y="216" text-anchor="middle" font-family="Noto Sans JP" font-weight="700" font-size="10" fill="#0A0A0A">予約 を 変更 する</text>
+            </g>
+            <!-- echo bubble -->
+            <rect x="22" y="346" width="172" height="32" rx="8" fill="#fff"/>
+            <text x="30" y="366" font-family="Noto Sans JP" font-size="10" fill="#0A0A0A">サロン側 にも 同じ 通知 →</text>
+            <text x="110" y="414" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#0A0A0A" letter-spacing="1">FLEX MESSAGE · 双方 同時</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage-grid" style="margin-top:36px">
+      <div>
+        <div class="four-grid">
+          <div class="four-card who" style="grid-column:span 2">
+            <span class="lbl" style="color:var(--customer)">Who / 誰が</span>
+            <span class="val">サロン (案内) → お客様 (友達追加 + 予約) → システム (通知)</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">What / 何を</span>
+            <span class="val">QR案内 → 友達追加 → リッチメニュー → 予約 → 通知</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Where / どこで</span>
+            <span class="val">LINE アプリ (お客様 スマホ) + LIFF</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Next / 次に</span>
+            <span class="val">来店 → サービス 提供 → リピート 化</span>
+          </div>
+          <div class="four-card">
+            <span class="lbl">Bonus / 自動化</span>
+            <span class="val">Google Calendar 1タップ追加 + 前日 リマインド</span>
+          </div>
+        </div>
+        <div class="note salon" style="margin-top:16px">この 段階9 が 始まる ことが 「サービス 開始」 そのもの。 ここまで 来たら 営業 として は 納品 完了。</div>
+      </div>
+      <div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="cta" id="cta">
+  <div class="wrap cta-in">
+    <span class="eyebrow">D. Next Step / 詳細 に 進む</span>
+    <h2>全体像 を 掴んだら、 詳細 19ステップ で 手を動かす。</h2>
+    <p>本ページ は 営業 が サロン に 全体イメージ を 説明する ため の 俯瞰図。 実際 の セットアップ は、 1ステップ ずつ 手順 と 画面 を 載せた 詳細ガイド を 参照 してください。</p>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="/skeleton-demos/femoon-saas-setup/">
+        詳細 19ステップ 指示書 へ
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a class="btn btn-ghost" href="/skeleton-demos/femoon-saas-qr-gen/">QR発行ツール</a>
+      <a class="btn btn-ghost" href="/skeleton-demos/femoon-saas-onboarding/">申込フォーム</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <div>© Skeleton Inc. — FEMOON SaaS Visual Flow</div>
+    <div>v1.0 · 2026-06-18</div>
+  </div>
+</footer>
+
+</body>
+</html>
