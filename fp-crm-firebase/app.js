@@ -3407,11 +3407,13 @@
         next_meeting_suggestion: r.next_meeting_suggestion || '',
       });
     });
-    // 同 bookingTs の重複を排除 (後者で上書き)
+    // ★ オーナーfb: 同じ booking で 2回 録画 = 2本残す
+    // dedupe キーを bookingTs + createdAt (or summary 先頭) で 厳密化
     const seenTs = new Set();
     aiResults = aiResults.filter(a => {
-      if (seenTs.has(a.bookingTs)) return false;
-      seenTs.add(a.bookingTs);
+      const k = (a.bookingTs || '') + '|' + (a.createdAt || (a.summary || '').slice(0, 50));
+      if (seenTs.has(k)) return false;
+      seenTs.add(k);
       return true;
     });
 
