@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Skel·EC × Stripe Connect セットアップ ガイド (小学生でも分かる)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=M+PLUS+Rounded+1c:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Noto Sans JP',system-ui,sans-serif;background:#F4F6F9;color:#2C2C2C;line-height:1.85;font-feature-settings:'palt'}
+.wrap{max-width:920px;margin:0 auto;padding:36px 24px 100px}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,#635BFF 0%,#5469D4 60%,#3B30D4 100%);color:#fff;padding:36px 30px;border-radius:18px;margin-bottom:30px;box-shadow:0 12px 40px rgba(99,91,255,.30);position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50px;right:-60px;width:280px;height:280px;background:radial-gradient(circle,rgba(255,255,255,.18) 0%,transparent 70%);border-radius:50%}
+.hero::after{content:'';position:absolute;bottom:-40px;left:-40px;width:220px;height:220px;background:radial-gradient(circle,rgba(255,182,103,.25) 0%,transparent 70%);border-radius:50%}
+.hero .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.14em;padding:5px 12px;background:rgba(255,255,255,.18);border-radius:99px;margin-bottom:11px;position:relative}
+.hero h1{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:30px;letter-spacing:-.02em;margin-bottom:8px;position:relative;line-height:1.3}
+.hero h1 em{font-style:normal;color:#FCD34D}
+.hero p{font-size:14px;opacity:.95;position:relative;line-height:1.75;max-width:660px}
+.hero .meta{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;position:relative}
+.hero .meta .pill{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.18);padding:6px 13px;border-radius:99px;font-size:12.5px;font-weight:700;backdrop-filter:blur(8px)}
+
+/* === Bookmarks (top URL一覧) === */
+.bookmarks{background:#fff;border:2px solid #635BFF;border-radius:18px;padding:22px 26px;margin-bottom:28px;box-shadow:0 6px 18px rgba(99,91,255,.10)}
+.bookmarks h3{font-family:'M PLUS Rounded 1c';font-size:17px;font-weight:900;color:#3B30D4;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.bookmarks .sub{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;color:#6772E5;font-weight:700;margin-bottom:14px}
+.bm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(max-width:680px){.bm-grid{grid-template-columns:1fr}}
+.bm-item{background:#F5F4FF;border:1.5px solid #C7C2FF;border-radius:10px;padding:12px 14px;text-decoration:none;color:#0A0A0A;transition:all .15s;display:block}
+.bm-item:hover{background:#EAE7FF;border-color:#635BFF;transform:translateY(-1px);box-shadow:0 4px 12px rgba(99,91,255,.2)}
+.bm-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.15em;font-weight:700;color:#fff;padding:2px 8px;border-radius:99px;margin-bottom:6px;background:#635BFF}
+.bm-tag.main{background:#DC2626}
+.bm-tag.req{background:#06C755}
+.bm-tag.tool{background:#F97316}
+.bm-tag.ref{background:#64748B}
+.bm-tag.contact{background:#0F766E}
+.bm-name{font-family:'M PLUS Rounded 1c';font-size:14px;font-weight:900;color:#0A0A0A;margin-bottom:3px;line-height:1.4}
+.bm-desc{font-size:11.5px;color:#525252;line-height:1.55}
+.bm-url{font-family:'JetBrains Mono',monospace;font-size:10px;color:#3B30D4;margin-top:5px;word-break:break-all;line-height:1.4}
+
+/* Phase headers */
+.phase-h{display:flex;align-items:center;gap:14px;padding:0 4px;margin:38px 0 18px}
+.phase-h .num{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,#635BFF,#5469D4);color:#fff;display:grid;place-items:center;font-family:'M PLUS Rounded 1c';font-weight:900;font-size:22px;flex-shrink:0;box-shadow:0 4px 10px rgba(99,91,255,.30)}
+.phase-h .num.owner{background:linear-gradient(135deg,#F97316,#EA580C);box-shadow:0 4px 10px rgba(249,115,22,.30)}
+.phase-h .num.jobs{background:linear-gradient(135deg,#06C755,#04A648);box-shadow:0 4px 10px rgba(6,199,85,.30)}
+.phase-h .num.salon{background:linear-gradient(135deg,#8B5CF6,#7C3AED);box-shadow:0 4px 10px rgba(139,92,246,.30)}
+.phase-h h2{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:22px;color:#2C2C2C;letter-spacing:-.01em;flex:1}
+.phase-h .who{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:99px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;flex-shrink:0;border:1.5px solid}
+.phase-h .who.owner{background:#FFF7ED;color:#EA580C;border-color:#F97316}
+.phase-h .who.jobs{background:#DFF7E5;color:#04A648;border-color:#06C755}
+.phase-h .who.salon{background:#EDE9FE;color:#7C3AED;border-color:#8B5CF6}
+
+/* Step card */
+.step{background:#fff;border-radius:14px;padding:24px 28px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.03)}
+.step-h{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.step-h .n{width:36px;height:36px;border-radius:50%;background:#635BFF;color:#fff;display:grid;place-items:center;font-family:'M PLUS Rounded 1c';font-weight:900;font-size:16px;flex-shrink:0;box-shadow:0 2px 6px rgba(99,91,255,.25)}
+.step-h h3{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:18px;color:#2C2C2C;letter-spacing:-.005em;flex:1}
+.step-body p{font-size:14px;color:#444;margin-bottom:10px;line-height:1.85}
+.step-body b{color:#3B30D4}
+
+.action{display:inline-flex;align-items:center;gap:7px;background:linear-gradient(180deg,#635BFF,#5469D4);color:#fff;padding:10px 20px;border-radius:99px;text-decoration:none;font-size:13px;font-weight:900;margin:8px 0;box-shadow:0 4px 12px rgba(99,91,255,.30);letter-spacing:.02em;border:0;cursor:pointer;font-family:inherit;transition:.15s}
+.action:hover{box-shadow:0 6px 16px rgba(99,91,255,.40);transform:translateY(-1px)}
+.action.green{background:linear-gradient(180deg,#06C755,#04A648);box-shadow:0 4px 12px rgba(6,199,85,.30)}
+.action.green:hover{box-shadow:0 6px 16px rgba(6,199,85,.40)}
+
+/* ============= Stripe Dashboard mockup ============= */
+.scr{position:relative;background:#F6F9FC;border:1px solid #DDD;border-radius:12px;margin:16px 0;overflow:hidden;box-shadow:0 10px 36px rgba(60,66,87,.12), 0 2px 6px rgba(0,0,0,.04)}
+.scr-chrome{background:#E8E8E8;padding:8px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #D0D0D0}
+.scr-chrome .dots{display:flex;gap:5px}
+.scr-chrome .dots i{width:11px;height:11px;border-radius:50%;display:block}
+.scr-chrome .dots .r{background:#FF5F57}
+.scr-chrome .dots .y{background:#FEBC2E}
+.scr-chrome .dots .g{background:#28C840}
+.scr-chrome .url-bar{flex:1;background:#fff;padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#666;display:flex;align-items:center;gap:6px;border:1px solid #D8D8D8}
+.scr-chrome .url-bar::before{content:'🔒';font-size:10px}
+.scr-chrome .url-bar b{color:#635BFF;font-weight:700}
+
+.scr-body{background:#fff;min-height:280px;position:relative}
+
+/* Stripe top nav */
+.sp-head{background:#fff;border-bottom:1px solid #E3E8EE;padding:12px 24px;display:flex;align-items:center;gap:18px;font-family:'Noto Sans JP'}
+.sp-head .logo{font-family:'JetBrains Mono',monospace;font-weight:900;font-size:18px;color:#635BFF;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.sp-head .logo::before{content:'';width:24px;height:24px;background:linear-gradient(135deg,#635BFF,#5469D4);border-radius:7px;display:inline-block;box-shadow:0 2px 4px rgba(99,91,255,.3)}
+.sp-head .mode-pill{font-family:'JetBrains Mono';font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;letter-spacing:.06em}
+.sp-head .mode-pill.test{background:#FFF6BB;color:#8C5800;border:1px solid #F0CB5F}
+.sp-head nav{display:flex;gap:18px;font-size:12.5px;color:#697386;flex:1}
+.sp-head nav a{color:#697386;text-decoration:none;font-weight:500}
+.sp-head nav a.on{color:#0A2540;font-weight:700;position:relative}
+.sp-head nav a.on::after{content:'';position:absolute;bottom:-13px;left:0;right:0;height:2px;background:#635BFF}
+.sp-head .right{display:flex;align-items:center;gap:10px;font-size:12px;color:#697386}
+.sp-head .right .av{width:28px;height:28px;border-radius:50%;background:#635BFF;color:#fff;display:grid;place-items:center;font-weight:900;font-size:11px}
+
+/* Stripe left sidebar */
+.sp-layout{display:grid;grid-template-columns:200px 1fr;gap:0;min-height:300px}
+.sp-side{background:#FAFBFC;border-right:1px solid #E3E8EE;padding:14px 0}
+.sp-side .group{padding:8px 0 4px;font-size:10px;color:#8898AA;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding-left:20px}
+.sp-side a{display:flex;align-items:center;gap:9px;padding:7px 20px;font-size:12.5px;color:#425466;text-decoration:none;font-weight:500}
+.sp-side a:hover{background:#F0F4F8}
+.sp-side a.on{background:#E8EAF6;color:#3B30D4;font-weight:700;border-left:3px solid #635BFF;padding-left:17px}
+.sp-side a .ic{width:14px;height:14px;display:inline-block}
+
+.sp-content{padding:22px 28px;background:#fff;min-height:280px}
+.sp-bread{font-size:11.5px;color:#8898AA;margin-bottom:8px;font-family:'JetBrains Mono'}
+.sp-content h2.scr-title{font-size:22px;font-weight:700;color:#0A2540;margin-bottom:14px;font-family:'Noto Sans JP'}
+.sp-content .desc{font-size:13px;color:#425466;margin-bottom:18px}
+
+/* Stripe form */
+.sp-form{display:flex;flex-direction:column;gap:14px}
+.sp-field{display:flex;flex-direction:column;gap:5px}
+.sp-field .lab{font-size:12.5px;color:#425466;font-weight:600}
+.sp-field input{width:100%;padding:9px 12px;border:1px solid #E3E8EE;border-radius:6px;font-size:13px;color:#0A2540;font-family:'JetBrains Mono';background:#fff;box-shadow:inset 0 1px 0 rgba(0,0,0,.02)}
+.sp-field input:focus{outline:none;border-color:#635BFF;box-shadow:0 0 0 3px rgba(99,91,255,.15)}
+.sp-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(180deg,#635BFF,#5469D4);color:#fff;padding:9px 18px;border-radius:6px;font-weight:700;font-size:13px;border:0;cursor:pointer;box-shadow:0 1px 3px rgba(50,50,93,.10),0 1px 0 rgba(0,0,0,.10);align-self:flex-start;font-family:inherit}
+.sp-btn.large{padding:13px 28px;font-size:14px}
+
+/* Stripe API key block */
+.sp-keyrow{display:grid;grid-template-columns:160px 1fr 110px;gap:12px;padding:14px 0;border-bottom:1px solid #F0F4F8;align-items:center;font-size:13px}
+.sp-keyrow .lab{font-weight:600;color:#425466}
+.sp-keyrow .val{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#F6F9FC;padding:7px 11px;border-radius:5px;border:1px solid #E3E8EE;color:#425466;word-break:break-all;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sp-keyrow .val.target{border-color:#FF3B30;background:#FFF5F5;color:#0A2540;font-weight:700}
+.sp-keyrow .copy{width:24px;height:24px;display:grid;place-items:center;cursor:pointer;color:#635BFF;font-size:13px}
+.sp-keyrow .reveal{font-size:11px;color:#635BFF;cursor:pointer;font-weight:600}
+.sp-keyrow .reveal.target{background:#FFF;border:2px dashed #FF3B30;border-radius:6px;padding:4px 10px;color:#FF3B30;font-weight:900}
+
+/* Connect onboarding screen */
+.sp-onboard-card{background:#fff;border:1px solid #E3E8EE;border-radius:10px;padding:24px 28px;max-width:560px;margin:0 auto;box-shadow:0 4px 12px rgba(50,50,93,.06)}
+.sp-onboard-card h3{font-size:18px;font-weight:700;color:#0A2540;margin-bottom:8px}
+.sp-onboard-card .desc{font-size:13px;color:#425466;margin-bottom:18px}
+.sp-onboard-card .field{margin-bottom:13px;display:flex;flex-direction:column;gap:4px}
+.sp-onboard-card .field .lab{font-size:12px;color:#425466;font-weight:600}
+.sp-onboard-card .field input{padding:10px 12px;border:1px solid #E3E8EE;border-radius:6px;font-size:13px;font-family:inherit}
+.sp-onboard-card .progress{display:flex;gap:6px;margin-bottom:16px}
+.sp-onboard-card .progress i{flex:1;height:4px;background:#E3E8EE;border-radius:2px}
+.sp-onboard-card .progress i.on{background:#635BFF}
+
+/* ============== Annotation overlays ============== */
+.ann-circle{position:absolute;border:3px dashed #FF3B30;border-radius:50%;animation:annPulse 1.6s ease infinite;pointer-events:none;box-shadow:0 0 0 4px rgba(255,59,48,.1)}
+@keyframes annPulse{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.06);opacity:1}}
+.ann-callout{position:absolute;background:#FF3B30;color:#fff;padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:900;letter-spacing:.04em;font-family:'M PLUS Rounded 1c';white-space:nowrap;box-shadow:0 6px 16px rgba(255,59,48,.4);pointer-events:none;z-index:5;animation:annBounce 1.4s ease infinite}
+@keyframes annBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.ann-callout::before{content:'👆';margin-right:5px}
+.ann-callout::after{content:'';position:absolute;width:0;height:0;border:6px solid transparent}
+.ann-callout.up::after{top:-12px;left:50%;transform:translateX(-50%);border-bottom-color:#FF3B30}
+.ann-callout.down::after{bottom:-12px;left:50%;transform:translateX(-50%);border-top-color:#FF3B30}
+.ann-callout.left::after{left:-12px;top:50%;transform:translateY(-50%);border-right-color:#FF3B30}
+.ann-callout.right::after{right:-12px;top:50%;transform:translateY(-50%);border-left-color:#FF3B30}
+
+/* ============= 用語補足の吹き出し ============= */
+.bubble{position:relative;background:#F5F4FF;border:1.5px solid #C7C2FF;border-radius:14px;padding:14px 16px 14px 50px;margin:14px 0;font-size:13px;color:#3B30D4;line-height:1.85;box-shadow:0 2px 6px rgba(99,91,255,.08)}
+.bubble::before{content:'💡';position:absolute;left:14px;top:13px;font-size:22px;line-height:1}
+.bubble.q{background:#EFF6FF;border-color:#BFDBFE;color:#1E3A8A}
+.bubble.q::before{content:'❓'}
+.bubble.why{background:#FDF4FF;border-color:#E9D5FF;color:#6B21A8}
+.bubble.why::before{content:'🎯'}
+.bubble.tipx{background:#F0FDF4;border-color:#BBF7D0;color:#14532D}
+.bubble.tipx::before{content:'🌱'}
+.bubble.warn{background:#FEF3C7;border-color:#FCD34D;color:#78350F}
+.bubble.warn::before{content:'⚠️'}
+.bubble.role-jobs{background:#DFF7E5;border-color:#86EFAC;color:#065F46}
+.bubble.role-jobs::before{content:'🤖'}
+.bubble.role-owner{background:#FFF7ED;border-color:#FED7AA;color:#7C2D12}
+.bubble.role-owner::before{content:'👨‍💼'}
+.bubble.role-salon{background:#EDE9FE;border-color:#C4B5FD;color:#5B21B6}
+.bubble.role-salon::before{content:'💇'}
+.bubble b{font-weight:900;color:inherit}
+.bubble .tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:rgba(0,0,0,.06);margin-right:6px;letter-spacing:.04em;vertical-align:1px}
+.bubble code{font-family:'JetBrains Mono',monospace;font-size:11px;background:rgba(0,0,0,.06);padding:1px 6px;border-radius:4px}
+
+.term{position:relative;display:inline-block;border-bottom:1.5px dotted #635BFF;color:#3B30D4;font-weight:700;cursor:help;padding:0 2px}
+.term:hover .term-tip,.term:focus .term-tip,.term.open .term-tip{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+.term-tip{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%) translateY(4px);background:#1F2937;color:#fff;font-weight:500;font-size:11.5px;line-height:1.7;padding:9px 13px;border-radius:8px;width:240px;text-align:left;opacity:0;visibility:hidden;transition:.2s;z-index:50;box-shadow:0 6px 18px rgba(0,0,0,.25);pointer-events:none}
+.term-tip::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#1F2937}
+.term-tip b{color:#FCD34D;font-weight:700}
+
+/* Misc info boxes */
+.tip{background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;padding:14px 18px;margin:14px 0;font-size:13px;color:#15803D;line-height:1.75}
+.tip b{color:#0F6F2E;font-weight:900}
+.tip .ic{display:inline-block;font-size:16px;margin-right:6px}
+.warn{background:#FEF2F2;border:1.5px solid #FCA5A5;border-radius:10px;padding:14px 18px;margin:14px 0;font-size:13px;color:#991B1B;line-height:1.75}
+.warn b{color:#7F1D1D;font-weight:900}
+
+.copy-strip{background:#1F2937;color:#fff;border-radius:8px;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:13px;margin:12px 0;display:flex;align-items:center;gap:10px;position:relative;flex-wrap:wrap}
+.copy-strip .num-tag{background:#635BFF;color:#fff;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:900;flex-shrink:0;font-family:'M PLUS Rounded 1c'}
+.copy-strip .field-name{color:#FCD34D;font-weight:700;font-size:13px}
+.copy-strip .field-len{font-size:10.5px;color:#9CA3AF;margin-left:auto;flex-shrink:0}
+.copy-strip .sample{font-size:11px;color:#6B7280;width:100%;margin-top:6px;padding-top:6px;border-top:1px solid #374151}
+
+/* 役割分担 マトリクス */
+.role-matrix{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}
+@media(max-width:680px){.role-matrix{grid-template-columns:1fr}}
+.role-card{padding:14px 16px;border-radius:12px;border:2px solid;position:relative}
+.role-card.owner{background:#FFF7ED;border-color:#F97316}
+.role-card.jobs{background:#DFF7E5;border-color:#06C755}
+.role-card.salon{background:#EDE9FE;border-color:#8B5CF6}
+.role-card .who{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono';font-size:10px;font-weight:900;letter-spacing:.06em;padding:3px 9px;border-radius:99px;color:#fff;margin-bottom:8px}
+.role-card.owner .who{background:#F97316}
+.role-card.jobs .who{background:#06C755}
+.role-card.salon .who{background:#8B5CF6}
+.role-card h4{font-family:'M PLUS Rounded 1c';font-size:14px;font-weight:900;color:#2C2C2C;margin-bottom:8px}
+.role-card ul{list-style:none;padding:0;display:grid;gap:6px}
+.role-card li{font-size:12px;color:#444;line-height:1.65;padding-left:18px;position:relative}
+.role-card li::before{content:'✓';position:absolute;left:0;font-weight:900;font-family:'M PLUS Rounded 1c'}
+.role-card.owner li::before{color:#EA580C}
+.role-card.jobs li::before{color:#04A648}
+.role-card.salon li::before{color:#7C3AED}
+
+/* DEMO interactive button */
+.demo-wrap{background:linear-gradient(135deg,#FAFBFF,#F0EFFF);border:2px dashed #635BFF;border-radius:14px;padding:18px 20px;margin:16px 0;position:relative}
+.demo-wrap::before{content:'🎮 デモ — 実際に押してみよう';position:absolute;top:-13px;left:18px;background:#fff;padding:2px 12px;font-size:11px;color:#635BFF;font-weight:900;border-radius:99px;border:1.5px solid #635BFF;letter-spacing:.04em;font-family:'M PLUS Rounded 1c'}
+.demo-wrap .demo-action{margin-top:6px}
+.demo-result{margin-top:14px;padding:14px 16px;background:#fff;border:1.5px solid #C7C2FF;border-radius:10px;font-size:12.5px;color:#3B30D4;display:none}
+.demo-result.show{display:block;animation:demoShow .3s ease}
+@keyframes demoShow{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.demo-result b{color:#3B30D4}
+
+/* FAQ */
+.faq{background:#fff;border-radius:14px;padding:26px 28px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-top:36px}
+.faq h2{font-family:'M PLUS Rounded 1c';font-weight:900;font-size:18px;margin-bottom:14px}
+.faq-item{padding:12px 0;border-bottom:1px dashed #EEE}
+.faq-item:last-child{border-bottom:0}
+.faq-item .q{font-weight:700;font-size:13.5px;color:#2C2C2C;margin-bottom:3px}
+.faq-item .q::before{content:'Q. ';color:#635BFF;font-family:'JetBrains Mono';font-weight:900}
+.faq-item .a{font-size:13px;color:#555;line-height:1.85}
+.faq-item .a::before{content:'A. ';color:#06C755;font-family:'JetBrains Mono';font-weight:900;font-size:14px}
+
+/* Cards grid for the timeline */
+.timeline{display:grid;gap:10px;margin:14px 0}
+.tl-row{display:grid;grid-template-columns:50px 1fr;gap:14px;align-items:flex-start}
+.tl-marker{width:50px;text-align:center;font-family:'JetBrains Mono';font-size:10.5px;color:#697386;font-weight:700;background:#F6F9FC;border:1px solid #E3E8EE;padding:6px 0;border-radius:6px}
+.tl-marker.owner{background:#FFF7ED;border-color:#F97316;color:#EA580C}
+.tl-marker.jobs{background:#DFF7E5;border-color:#06C755;color:#04A648}
+.tl-row .body{font-size:13px;color:#425466;line-height:1.75;padding-top:4px}
+.tl-row .body b{color:#0A2540}
+
+.foot{text-align:center;margin-top:32px;font-size:11px;color:#999;font-family:'JetBrains Mono',monospace;letter-spacing:.06em}
+.foot em{font-style:normal;color:#635BFF}
+
+@media(max-width:700px){
+  .hero h1{font-size:22px}
+  .sp-layout{grid-template-columns:1fr}
+  .sp-side{display:none}
+  .sp-keyrow{grid-template-columns:1fr}
+  .term-tip{width:200px}
+  .phase-h h2{font-size:18px}
+  .step{padding:18px 20px}
+  .step-h h3{font-size:16px}
+}
+</style>
+<script>
+document.addEventListener('click', e => {
+  if(e.target.classList?.contains('term')){
+    document.querySelectorAll('.term.open').forEach(t => { if(t!==e.target) t.classList.remove('open'); });
+    e.target.classList.toggle('open');
+  } else if(!e.target.closest('.term')) {
+    document.querySelectorAll('.term.open').forEach(t => t.classList.remove('open'));
+  }
+});
+function demoFire(id, resultHtml){
+  const r = document.getElementById(id);
+  if(!r) return;
+  r.innerHTML = resultHtml;
+  r.classList.add('show');
+  // Scroll into view if needed
+  setTimeout(() => r.scrollIntoView({behavior:'smooth', block:'nearest'}), 100);
+}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <span class="badge">SKEL·EC × STRIPE · SETUP</span>
+    <h1>Skel·EC で <em>本物の決済</em> を 使えるようにする<br><span style="font-size:18px;opacity:.8;font-weight:700">— 小学生でも わかる Stripe Connect セットアップ —</span></h1>
+    <p>Skel·EC で 「実際にクレジットカードで お買物が出来る」 ようにするには、 <b>Stripe (ストライプ)</b> という 決済システムと 繋ぐ必要があります。 このガイドは その作業を 順番に 写真付きで 説明します。 1度やれば 何個サロンが増えても 1クリックで繋がる仕組みです。</p>
+    <div class="meta">
+      <span class="pill">⏱ 約 10〜15 分</span>
+      <span class="pill">📋 1度だけ</span>
+      <span class="pill">💴 無料 (テストモード)</span>
+    </div>
+  </div>
+
+  <!-- 全体ストーリー -->
+  <div style="background:#fff;border:1.5px solid #E3E8EE;border-radius:14px;padding:20px 24px;margin-bottom:24px">
+    <h2 style="font-family:'M PLUS Rounded 1c';font-weight:900;font-size:16px;color:#0A2540;margin-bottom:10px">📖 これから何をするか (全体像)</h2>
+    <p style="font-size:13.5px;color:#425466;line-height:1.85;margin-bottom:14px">
+      Skel·EC は <span class="term">Stripe Connect<span class="term-tip"><b>Stripe Connect</b> = 「複数のお店を 1個の親アカウントから まとめて 管理する仕組み」。 Skeleton が 親、 各サロンが 子。 売上は Stripe が 各サロンの口座に 直接振込む。</span></span> という仕組みを 使います。 これにより:
+    </p>
+    <div class="role-matrix">
+      <div class="role-card owner">
+        <span class="who">OWNER 吉田</span>
+        <h4>1度だけ やる事</h4>
+        <ul>
+          <li>Stripe アカウント作成</li>
+          <li>テストキー (sk_test_) を Jobs に渡す</li>
+          <li>Connect 機能を 有効化</li>
+        </ul>
+      </div>
+      <div class="role-card jobs">
+        <span class="who">🤖 JOBS</span>
+        <h4>自動で やる事</h4>
+        <ul>
+          <li>テストキーを サーバーに セット</li>
+          <li>各サロン用の Connect 子アカウント 自動作成</li>
+          <li>決済 webhook 自動接続</li>
+        </ul>
+      </div>
+      <div class="role-card salon">
+        <span class="who">SALON 各店</span>
+        <h4>サロンごとに やる事</h4>
+        <ul>
+          <li>admin から 「🚀 Stripe で接続」ボタン 押す</li>
+          <li>本人確認・口座番号 入力 (5分)</li>
+          <li>完了 → 即 決済受付開始</li>
+        </ul>
+      </div>
+    </div>
+    <div class="bubble q"><span class="tag">ポイント</span><b>10店舗 = 10回 sk を集める</b> という ダサい方式 ではなく、 <b>1度 Skeleton側 を セットアップしたら、 サロン側 は admin の 1クリック で完了</b> する作りです。 これは Lea / Shopify / L-Message が やってる定石。</div>
+  </div>
+
+  <!-- 📌 関連URL一覧 -->
+  <div class="bookmarks">
+    <h3>📌 関連URL 一覧 (このページ ブックマークしておけば 全部 飛べる)</h3>
+    <div class="sub">ALL BOOKMARKS · KEEP THIS PAGE OPEN</div>
+    <div class="bm-grid">
+
+      <a class="bm-item" href="https://t35ty6-rgb.github.io/skeleton-demos/skel-ec-stripe-setup/" target="_blank">
+        <div class="bm-tag main">この指示書</div>
+        <div class="bm-name">Skel·EC × Stripe セットアップガイド (このページ)</div>
+        <div class="bm-desc">作業中 常に開いておく。 ブックマーク推奨。</div>
+        <div class="bm-url">t35ty6-rgb.github.io/skeleton-demos/skel-ec-stripe-setup/</div>
+      </a>
+
+      <a class="bm-item" href="https://dashboard.stripe.com/register" target="_blank">
+        <div class="bm-tag req">登録 必須</div>
+        <div class="bm-name">Stripe 新規登録</div>
+        <div class="bm-desc">Skel·EC 用に <b>新規アカウント</b> を作成 (Mio や FP とは別物に)</div>
+        <div class="bm-url">dashboard.stripe.com/register</div>
+      </a>
+
+      <a class="bm-item" href="https://dashboard.stripe.com/test/apikeys" target="_blank">
+        <div class="bm-tag req">登録 必須</div>
+        <div class="bm-name">Stripe テスト用 API キー</div>
+        <div class="bm-desc">sk_test_xxxx をコピー → Jobs に渡す (STEP 4)</div>
+        <div class="bm-url">dashboard.stripe.com/test/apikeys</div>
+      </a>
+
+      <a class="bm-item" href="https://dashboard.stripe.com/test/connect/onboarding/get-started" target="_blank">
+        <div class="bm-tag req">設定 必須</div>
+        <div class="bm-name">Stripe Connect 有効化</div>
+        <div class="bm-desc">「Get started」 ボタンを 押すだけ (STEP 5)</div>
+        <div class="bm-url">dashboard.stripe.com/test/connect/onboarding/get-started</div>
+      </a>
+
+      <a class="bm-item" href="https://skeleton-skel-ec-2606.web.app/admin/" target="_blank">
+        <div class="bm-tag tool">Skel·EC ツール</div>
+        <div class="bm-name">Skel·EC admin (管理画面)</div>
+        <div class="bm-desc">サロン用の管理画面。 Stripe 接続が完了すれば 「🚀 Stripe で接続」 ボタンが押せる。</div>
+        <div class="bm-url">skeleton-skel-ec-2606.web.app/admin/</div>
+      </a>
+
+      <a class="bm-item" href="https://t35ty6-rgb.github.io/skeleton-demos/skel-ec-setup/" target="_blank">
+        <div class="bm-tag ref">姉妹資料</div>
+        <div class="bm-name">LINE Developers 設定ガイド</div>
+        <div class="bm-desc">LINE と繋ぐ手順 (Stripe より 先に やっておく)</div>
+        <div class="bm-url">t35ty6-rgb.github.io/skeleton-demos/skel-ec-setup/</div>
+      </a>
+
+      <a class="bm-item" href="https://stripe.com/jp/connect" target="_blank">
+        <div class="bm-tag ref">参考</div>
+        <div class="bm-name">Stripe Connect 公式説明</div>
+        <div class="bm-desc">仕組みを 詳しく知りたい時 (読まなくてOK)</div>
+        <div class="bm-url">stripe.com/jp/connect</div>
+      </a>
+
+      <a class="bm-item" href="mailto:info@skeleton-inc.jp?subject=Skel-EC Stripe sk_test 送付&body=sk_test_:%0A">
+        <div class="bm-tag contact">送信先</div>
+        <div class="bm-name">取得した sk_test_ の 送り先 (メール)</div>
+        <div class="bm-desc">取得した テストキー (sk_test_xxxxx) を ここに 送る</div>
+        <div class="bm-url">info@skeleton-inc.jp</div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- 用語早見表 -->
+  <div style="background:#fff;border:1.5px solid #E3E8EE;border-radius:14px;padding:20px 24px;margin-bottom:28px">
+    <h2 style="font-family:'M PLUS Rounded 1c';font-weight:900;font-size:16px;color:#0A2540;margin-bottom:8px">📚 出てくる用語の早見表 (7つだけ)</h2>
+    <p style="font-size:12px;color:#697386;margin-bottom:12px">わからない言葉が出てきたら ここに戻って 見れば OK。 本文中の <span class="term">オレンジ下線<span class="term-tip">こんな感じで タップ/マウス を 乗せると 説明が 出てくる仕組みです。</span></span> も 用語解説。</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
+      <div class="bubble" style="margin:0"><span class="tag">用語1</span><b>Stripe (ストライプ)</b><br>= 世界で使われてる 決済代行サービス。 月額¥0、 1取引ごと 3.6%。 ジャパネット / Mercari / Shopify が 全部 使ってる。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語2</span><b>Connect (コネクト)</b><br>= Stripe の 「複数店舗を 親アカ から まとめる」 機能。 Skeleton が 親、 サロンが 子。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語3</span><b>Express (エクスプレス)</b><br>= Connect の 「簡単モード」。 サロンは 5分の フォーム入力 だけで OK。 KYC は Stripe側 が やってくれる。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語4</span><b>オンボーディング</b><br>= 「お店を 登録する 一連の作業」。 名前 / 住所 / 銀行口座 / 本人確認書類 を Stripe に 渡すこと。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語5</span><b>sk_test_xxxxx</b><br>= テスト用の 「秘密キー」。 これ で 開発中の決済を テスト可能。 本物カードは 通らない。 漏れても 大丈夫。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語6</span><b>sk_live_xxxxx</b><br>= 本番用の 秘密キー。 これ が 漏れると マジで 危ない。 本番開始 する時 だけ 使う。</div>
+      <div class="bubble" style="margin:0"><span class="tag">用語7</span><b>本人確認 (KYC)</b><br>= 「あなたが 本当に お店の人 か」 確認する 作業。 マイナンバーカード や 免許証 写真を Stripe に 送る。</div>
+    </div>
+  </div>
+
+  <!-- ============ PHASE 1: Stripe アカウント作成 ============ -->
+  <div class="phase-h"><div class="num owner">1</div><h2>STEP 1 — Stripe アカウント を 作る</h2><span class="who owner">OWNER 吉田</span></div>
+
+  <div class="step">
+    <div class="step-h"><div class="n">1</div><h3>下の URL を 開く (新規登録ページ)</h3></div>
+    <div class="step-body">
+      <a class="action" href="https://dashboard.stripe.com/register" target="_blank">dashboard.stripe.com/register を開く ↗</a>
+      <p>新しいタブで Stripe の 登録ページ が 開きます。</p>
+      <div class="bubble warn"><span class="tag">注意</span>もし Mio EC や FP Compass で 既に Stripe を 使ってる場合でも、 <b>Skel·EC 用に 新しいアカウントを作って</b> ください。 会計が 混ざると 確定申告 で 大変なので 分離するのが お作法。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-h"><div class="n">2</div><h3>メール / 名前 / パスワード を 入力</h3></div>
+    <div class="step-body">
+      <p>こんな画面に なります。 <b>3つの欄を 埋めて</b>、 下の青いボタン <b>「アカウントを作成」</b> を 押します。</p>
+
+      <div class="scr">
+        <div class="scr-chrome">
+          <div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="url-bar">https://<b>dashboard.stripe.com</b>/register</div>
+        </div>
+        <div class="scr-body" style="position:relative;padding:32px;background:linear-gradient(180deg,#F6F9FC,#fff)">
+          <div class="sp-onboard-card" style="position:relative">
+            <h3>Stripe アカウント を 作成</h3>
+            <div class="desc">Skel·EC を 動かすため の 親アカウントです</div>
+            <div class="field"><span class="lab">メールアドレス</span><input type="text" value="info@skeleton-inc.jp" readonly></div>
+            <div class="field"><span class="lab">氏名 (お店の代表者)</span><input type="text" value="吉田 恭聡" readonly></div>
+            <div class="field"><span class="lab">国</span><input type="text" value="日本" readonly></div>
+            <div class="field"><span class="lab">パスワード (10文字以上)</span><input type="password" value="••••••••••••" readonly></div>
+            <button class="sp-btn large" style="margin-top:14px;width:100%;position:relative">
+              アカウントを作成
+              <div class="ann-callout right" style="right:-130px;top:50%;transform:translateY(-50%)">ここをクリック</div>
+              <div class="ann-circle" style="left:-6px;top:-6px;right:-6px;bottom:-6px;border-radius:8px"></div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bubble"><span class="tag">補足</span><b>メールアドレスの 確認</b> が来ます。 メール内の リンクを クリック して 確認 完了。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-h"><div class="n">3</div><h3>事業情報 (お店の名前) は とりあえず スキップ可</h3></div>
+    <div class="step-body">
+      <p>登録後、 「事業情報を 入力してください」 と 出ることがあります。 ここは 後で 編集できる ので、 <b>「あとで」</b> リンクで OK。 sk_test_ の取得 を 先に やります。</p>
+      <div class="bubble tipx"><span class="tag">理由</span>事業情報 (法人番号 / 住所 / 銀行口座 等) は <b>本番モードで 決済を 開始する 時</b> だけ 必須。 テストモードで 動作確認する間は 不要。</div>
+    </div>
+  </div>
+
+  <!-- ============ PHASE 2: sk_test_ を 取得 ============ -->
+  <div class="phase-h"><div class="num owner">2</div><h2>STEP 2 — テスト用 シークレットキー を コピー</h2><span class="who owner">OWNER 吉田</span></div>
+
+  <div class="step">
+    <div class="step-h"><div class="n">4</div><h3>左メニュー 「開発者」 → 「API キー」 を クリック</h3></div>
+    <div class="step-body">
+      <p>Stripe Dashboard の 左メニュー から、 下の方の <b>「開発者」</b> をクリック → 開いた中の <b>「API キー」</b> を クリック。</p>
+
+      <div class="scr">
+        <div class="scr-chrome">
+          <div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="url-bar">https://<b>dashboard.stripe.com</b>/test/apikeys</div>
+        </div>
+        <div class="scr-body" style="position:relative">
+          <div class="sp-head">
+            <div class="logo">stripe</div>
+            <span class="mode-pill test">テストモード</span>
+            <nav><a>ホーム</a><a>支払い</a><a>残高</a><a>顧客</a><a class="on">開発者</a></nav>
+            <div class="right"><div class="av">司</div></div>
+          </div>
+          <div class="sp-layout">
+            <div class="sp-side">
+              <div class="group">開発者</div>
+              <a class="on" style="position:relative">
+                🔑 API キー
+                <div class="ann-callout left" style="left:-130px;top:50%;transform:translateY(-50%)">ここをクリック</div>
+              </a>
+              <a>📡 Webhook</a>
+              <a>📊 ログ</a>
+              <a>🧪 テストデータ</a>
+            </div>
+            <div class="sp-content">
+              <div class="sp-bread">開発者 › API キー</div>
+              <h2 class="scr-title">API キー</h2>
+              <p class="desc">Stripe API を 呼び出す ための キー です。 シークレットキー は サーバー側 でのみ 使用してください。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bubble q"><span class="tag">補足</span>上にある <span class="term">テストモード<span class="term-tip"><b>テストモード</b> = 偽のクレジットカード番号 (例: <code>4242 4242 4242 4242</code>) で 決済テストできるモード。 本物のお金は 動かない。 開発中は ずっと テストモード。</span></span> の 黄色いバッジ が ついてる事を 確認。 黒い 「本番モード」 になってたら 切り替えてください (右上の トグル)。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-h"><div class="n">5</div><h3>「シークレットキー」 の 「キーを表示」 を クリック → 出てきた sk_test_xxx を コピー</h3></div>
+    <div class="step-body">
+      <p>API キー一覧 に 2つ並んでます。 下の <b>「シークレットキー」</b> の 右の <b>「キーを表示」</b> ボタン を 押す → 文字列が 出てくる → コピー。</p>
+
+      <div class="scr">
+        <div class="scr-chrome">
+          <div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="url-bar">https://<b>dashboard.stripe.com</b>/test/apikeys</div>
+        </div>
+        <div class="scr-body">
+          <div class="sp-head">
+            <div class="logo">stripe</div>
+            <span class="mode-pill test">テストモード</span>
+            <nav><a>ホーム</a><a>支払い</a><a class="on">開発者</a></nav>
+            <div class="right"><div class="av">司</div></div>
+          </div>
+          <div class="sp-content" style="padding:24px 32px">
+            <div class="sp-bread">開発者 › API キー</div>
+            <h2 class="scr-title">標準キー</h2>
+            <div style="margin-top:10px">
+              <div class="sp-keyrow">
+                <div class="lab">公開可能 キー</div>
+                <div class="val"><span>pk_test_51N···············</span><span class="copy">📋</span></div>
+                <div></div>
+              </div>
+              <div class="sp-keyrow">
+                <div class="lab" style="color:#FF3B30;font-weight:900">シークレット キー</div>
+                <div class="val target"><span style="color:#666;font-style:italic">クリックすると 表示</span></div>
+                <div style="position:relative">
+                  <span class="reveal target">👁 キーを表示</span>
+                  <div class="ann-callout right" style="right:-130px;top:50%;transform:translateY(-50%);white-space:nowrap">ここをクリック</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bubble warn"><span class="tag">⚠️ 重要</span><b>シークレットキー (sk_test_) は 機密情報</b>。 SNS や 公開 GitHub に 絶対 貼らない。 Jobs との 1対1 チャット なら OK。 漏れても テストモード なら 危険性は ほぼ 0 だが、 本番用 (sk_live_) は 漏れると 不正決済 され得る。</div>
+
+      <div class="copy-strip">
+        <span class="num-tag">①</span><span class="field-name">sk_test_xxxxxx</span><span class="field-len">100文字以上</span>
+        <div class="sample">サンプル: sk_test_51N···SVA···XXXX··· (めちゃくちゃ 長い英数字)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PHASE 3: Connect 有効化 ============ -->
+  <div class="phase-h"><div class="num owner">3</div><h2>STEP 3 — Connect 機能 を 「ON」 にする</h2><span class="who owner">OWNER 吉田</span></div>
+
+  <div class="step">
+    <div class="step-h"><div class="n">6</div><h3>下の URL を 開く → 「Get started」 を 押す</h3></div>
+    <div class="step-body">
+      <a class="action" href="https://dashboard.stripe.com/test/connect/onboarding/get-started" target="_blank">dashboard.stripe.com/test/connect/onboarding/get-started を開く ↗</a>
+      <p>Connect 機能 (複数店舗を 親アカ から 管理する 機能) を 「使います」 と Stripe に 伝える 画面 です。 ボタン押すだけ。</p>
+
+      <div class="scr">
+        <div class="scr-chrome">
+          <div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="url-bar">https://<b>dashboard.stripe.com</b>/test/connect/onboarding/get-started</div>
+        </div>
+        <div class="scr-body" style="padding:40px;background:linear-gradient(180deg,#F6F9FC,#fff);text-align:center">
+          <div style="max-width:520px;margin:0 auto">
+            <div style="font-size:38px;margin-bottom:14px">🔗</div>
+            <h2 style="font-family:'Noto Sans JP';font-size:22px;font-weight:700;color:#0A2540;margin-bottom:10px">Stripe Connect を 始めましょう</h2>
+            <p style="font-size:13.5px;color:#425466;margin-bottom:24px;line-height:1.75">プラットフォーム として 複数の販売者を 管理し、 売上を 自動で 振り分ける ことができます。</p>
+            <div style="position:relative;display:inline-block">
+              <button class="sp-btn large">Get started</button>
+              <div class="ann-callout right" style="right:-130px;top:50%;transform:translateY(-50%)">ここをクリック</div>
+              <div class="ann-circle" style="left:-6px;top:-6px;right:-6px;bottom:-6px;border-radius:8px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bubble"><span class="tag">補足</span>クリック後、 <b>「プラットフォームの種類」</b> 等 何個か 質問されたら:<br>
+      ・プラットフォーム名: <code>Skel·EC</code><br>
+      ・国: 日本<br>
+      ・販売者の所在地: 日本<br>
+      ・タイプ: <b>Express</b> (これ重要、 サロンが 楽な モード)<br>
+      → 「保存」 で 完了。</div>
+    </div>
+  </div>
+
+  <!-- ============ PHASE 4: Jobs に 渡す ============ -->
+  <div class="phase-h"><div class="num owner">4</div><h2>STEP 4 — sk_test_ を Jobs (Skel·EC サーバー) に渡す</h2><span class="who owner">OWNER 吉田</span></div>
+
+  <div class="step">
+    <div class="step-h"><div class="n">7</div><h3>取得した sk_test_xxx を チャット で 送る</h3></div>
+    <div class="step-body">
+      <p>Skel·EC の サーバー に sk を セットすると、 各サロンが admin で 「🚀 Stripe で接続」 ボタンを 押せる ようになります。 オーナー (吉田) は 1度だけ コレを やれば OK。</p>
+
+      <div style="background:#1F2937;color:#fff;border-radius:8px;padding:14px 16px;font-family:'JetBrains Mono';font-size:12px;line-height:1.9;margin-top:8px">
+sk_test_: sk_test_51N···YOUR_KEY···XXX<br>
+プラットフォーム名: Skel·EC<br>
+Connect: 有効化済
+      </div>
+
+      <div class="bubble role-jobs"><span class="tag">JOBS 側 の 作業</span>受信後 <b>10秒</b> で:<br>
+      ❶ <code>firebase functions:config:set stripe.platform_sk=sk_test_xxx</code> 実行<br>
+      ❷ Cloud Functions 再デプロイ (sk を 認識させる)<br>
+      ❸ webhook URL を Stripe Dashboard に登録<br>
+      → 「設定完了、 各サロン の admin から 接続ボタン 押せます」 と 返信</div>
+
+      <div class="tip"><span class="ic">🔒</span><b>セキュリティ:</b> これは 機密情報 ですが、 オーナーと Jobs の 1対1 チャット なら 安全。 公開する場所 (Twitter / 公開Slack) には 貼らない。 メール の場合は <code>info@skeleton-inc.jp</code> 宛て。</div>
+    </div>
+  </div>
+
+  <!-- ============ PHASE 5: サロン側 の オンボーディング ============ -->
+  <div class="phase-h"><div class="num salon">5</div><h2>STEP 5 — サロンが admin で 「🚀 接続」 押す (自動)</h2><span class="who salon">SALON 各店</span></div>
+
+  <div class="step">
+    <div class="step-h"><div class="n">8</div><h3>これは オーナーが やる事 では無い (各サロンが 1クリック するだけ)</h3></div>
+    <div class="step-body">
+      <p>ここから先は <b>各サロン (お客様)</b> が admin で やる事。 オーナー側は 何もしなくて OK。 「サロンに admin URL を 渡す」 だけ。</p>
+
+      <div class="bubble role-salon"><span class="tag">サロン側</span>サロン admin (<code>https://&lt;サロン名&gt;.skel.ec/admin/</code>) を開く<br>
+      → 「設定 → 決済方法設定 → Stripe」 を 開く<br>
+      → 紫の <b>「🚀 Stripe で 接続を開始」</b> ボタン を クリック<br>
+      → 新しい タブで Stripe オンボーディングが 開く<br>
+      → 名前 / 住所 / 銀行口座 / 本人確認書類 を 入力 (5〜10分)<br>
+      → 完了 → 自動的に admin に戻ってくる → 「✓ 決済 準備完了」 になる</div>
+
+      <!-- ライブデモ -->
+      <div class="demo-wrap">
+        <p style="font-size:12.5px;color:#425466;margin-bottom:10px;font-weight:600">↓ 本物 と 同じ ボタン (押しても 何も起きません、 動きの 確認だけ):</p>
+        <button class="sp-btn large demo-action" style="background:linear-gradient(180deg,#635BFF,#5469D4)" onclick="demoFire('demo-r1','✓ 別タブで <b>Stripe オンボーディング ページ</b> が 開いた はず → サロンが KYC フォーム を 入力 → 完了 → 自動で admin に戻ってくる')">🚀 Stripe で 接続を開始</button>
+        <div class="demo-result" id="demo-r1"></div>
+      </div>
+
+      <div class="scr">
+        <div class="scr-chrome">
+          <div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="url-bar">https://connect.stripe.com/express/<b>hooks/onboarding/...</b></div>
+        </div>
+        <div class="scr-body" style="background:linear-gradient(180deg,#F6F9FC,#fff);padding:30px">
+          <div class="sp-onboard-card">
+            <div class="progress">
+              <i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i>
+            </div>
+            <h3>あなた の お店 について 教えて ください</h3>
+            <div class="desc">3 / 5 ステップ</div>
+            <div class="field"><span class="lab">事業名 (サロン名)</span><input type="text" value="IDEAL by Hikaru" readonly></div>
+            <div class="field"><span class="lab">事業のウェブサイト</span><input type="text" value="https://hikari-salon.skel.ec/shop/" readonly></div>
+            <div class="field"><span class="lab">商品・サービスの説明</span><input type="text" value="美容整体 + 物販 (LINE EC)" readonly></div>
+            <button class="sp-btn large" style="margin-top:14px;width:100%">次へ →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bubble q"><span class="tag">補足</span><b>「Express」 という モード</b> なので、 サロンが 入力する 項目は <b>最小限</b>。 全部入れても 5〜10分。 銀行口座 / マイナンバーカード 写真 / 開業届のコピー 等 が必要。</div>
+    </div>
+  </div>
+
+  <!-- ============ 完了後の動き ============ -->
+  <div class="phase-h"><div class="num jobs">⌬</div><h2>完了後 — 何が 起きるか</h2><span class="who jobs">JOBS 自動</span></div>
+
+  <div class="step">
+    <div class="step-body">
+      <h3 style="font-family:'M PLUS Rounded 1c';font-weight:900;font-size:15px;margin-bottom:14px;color:#0A2540">⏱ 時系列 (店ごと の イメージ)</h3>
+      <div class="timeline">
+        <div class="tl-row"><div class="tl-marker salon" style="background:#EDE9FE;border:1px solid #8B5CF6;color:#7C3AED">0:00</div><div class="body"><b>サロンが</b> admin で 🚀 ボタン 押す</div></div>
+        <div class="tl-row"><div class="tl-marker jobs">0:02</div><div class="body"><b>Jobs</b> が Stripe API で Express アカウント を 作成 → onboarding URL を 発行 → 別タブで開く</div></div>
+        <div class="tl-row"><div class="tl-marker salon" style="background:#EDE9FE;border:1px solid #8B5CF6;color:#7C3AED">0:03〜10分</div><div class="body"><b>サロンが</b> Stripe の KYC フォーム を 入力 (本人確認 / 銀行口座)</div></div>
+        <div class="tl-row"><div class="tl-marker jobs">10:00</div><div class="body"><b>Stripe</b> が webhook で 「アカウント 有効化済」 と Jobs に通知</div></div>
+        <div class="tl-row"><div class="tl-marker jobs">10:01</div><div class="body"><b>Jobs</b> が Firestore に「決済受付可」 と 記録</div></div>
+        <div class="tl-row"><div class="tl-marker salon" style="background:#EDE9FE;border:1px solid #8B5CF6;color:#7C3AED">10:02</div><div class="body"><b>サロン</b> admin に 戻る → 「✓ 決済 準備完了」 表示 → 完成 🎉</div></div>
+      </div>
+
+      <div class="bubble tipx"><span class="tag">これ で 何が できる ?</span>このサロンの shop で お客様が 商品 を 買うと:<br>
+      ❶ Stripe Checkout 画面 が 開く<br>
+      ❷ お客様 が カード 入力 → 決済<br>
+      ❸ 売上 から <b>Skeleton 手数料 (3.6% + ¥50)</b> を 差し引いた額 を Stripe が <b>サロンの 銀行口座 に 自動で 振込み</b><br>
+      ❹ 注文記録 が Skel·EC に 自動作成 + サロンの LINE に 「ご注文ありがとうございます」 が 飛ぶ<br>
+      Skeleton は 1円も 触らない。 Stripe が 中継 + 自動振分け。</div>
+    </div>
+  </div>
+
+  <!-- ============ 10店舗 隔離 の 説明 ============ -->
+  <div class="phase-h"><div class="num">🛡</div><h2>10店舗 でも 決済 が 混ざらない 仕組み</h2></div>
+
+  <div class="step">
+    <div class="step-body">
+      <p>オーナーが 気にしてた 「10店舗 の 決済 が 混ざらないか」 の 答え:</p>
+      <div class="bubble"><span class="tag">仕組み</span>各サロン に <b>専用 の Stripe Connect アカウント (acct_xxx)</b> が 作られる。 1サロン = 1アカウント。 <br>
+      決済が走るたびに <code>metadata.tenantId = "サロン名"</code> が 自動で 付く。<br>
+      Stripe webhook が 受け取った時 <b>metadata 見て 「サロンA の 決済 だ」 と 判定 → サロンA の 注文記録 に だけ 追加</b>。<br>
+      別サロンには <b>絶対</b> 紛れない。</div>
+
+      <div class="scr">
+        <div class="scr-chrome">
+          <div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="url-bar">Stripe Dashboard › 接続済 アカウント 一覧</div>
+        </div>
+        <div class="scr-body" style="padding:20px 28px">
+          <div style="font-family:'Noto Sans JP';font-size:11px;color:#697386;margin-bottom:10px;letter-spacing:.06em">接続済 アカウント (CONNECT)</div>
+          <div style="display:grid;gap:8px" id="connectAccountList"></div>
+          <script>
+          (function(){
+            const slugs = ['hikari-salon','momoi-seikotsu','ideal-skin','cafe-2026','lune-shop','ec-aoyama','bake-honjo','wood-craft','flower-yuzu','jewelry-lin'];
+            const colors = ['F97316','06C755','EC4899','06B6D4','8B5CF6','F59E0B','EF4444','10B981','D946EF','F97316'];
+            const sales = [482300, 723850, 156400, 891200, 334750, 612900, 245680, 768420, 401530, 558210];
+            const acctSuffix = ['ABCDEFGHIJ','BCDEFGHIJK','CDEFGHIJKL','DEFGHIJKLM','EFGHIJKLMN','FGHIJKLMNO','GHIJKLMNOP','HIJKLMNOPQ','IJKLMNOPQR','JKLMNOPQRS'];
+            const host = document.getElementById('connectAccountList');
+            host.innerHTML = slugs.map((slug, i) => `
+              <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:14px;align-items:center;padding:9px 14px;background:#fff;border:1px solid #E3E8EE;border-radius:7px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#635BFF,#${colors[i]});color:#fff;display:grid;place-items:center;font-weight:900;font-size:10px;font-family:'JetBrains Mono'">${i+1}</div>
+                  <div>
+                    <div style="font-weight:700;font-size:12.5px;color:#0A2540">${slug}</div>
+                    <div style="font-family:'JetBrains Mono';font-size:10px;color:#697386">acct_1${acctSuffix[i].slice(0,1)}${(Math.random().toString(36)+Math.random().toString(36)).slice(2,16)}</div>
+                  </div>
+                </div>
+                <div style="font-size:11px;color:#06C755;font-weight:700">✓ 有効</div>
+                <div style="font-family:'JetBrains Mono';font-size:11px;color:#425466">¥${sales[i].toLocaleString()}</div>
+                <div style="font-size:10px;color:#697386;font-family:'JetBrains Mono'">今月</div>
+              </div>
+            `).join('');
+          })();
+          </script>
+          <div style="font-size:11px;color:#697386;margin-top:10px;font-style:italic">↑ 10店舗 全部 別アカウント · 売上 も 入金先 も 全部 別 · 物理的に 隔離</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FAQ ============ -->
+  <div class="faq">
+    <h2>📋 よくある質問</h2>
+    <div class="faq-item"><div class="q">既に Stripe アカウント 持ってる場合 は ?</div><div class="a">Skel·EC 用に <b>新規アカウント を 作る</b> ことを 推奨。 既存 (Mio EC / FP Compass 等) と 混ぜると 確定申告 が ややこしい。 同じメールでも 別アカウント 作成可。</div></div>
+    <div class="faq-item"><div class="q">本番モード (sk_live_) は いつ 使う ?</div><div class="a">1〜2店舗 で テストモード で 動作確認 が 取れた後。 sk_live_ への 切替は <b>1コマンド</b>。 既存サロン は そのまま 動く。</div></div>
+    <div class="faq-item"><div class="q">サロン が 本人確認 で 詰まった 場合 は ?</div><div class="a">サロンが Stripe Dashboard に Stripe ID で ログイン → 「追加で 必要な書類」 を 確認 して 追加 アップロード。 完了したら 自動で Skel·EC admin に 反映。</div></div>
+    <div class="faq-item"><div class="q">Skeleton 手数料 (3.6% + ¥50) は 変更できる ?</div><div class="a">変更可。 <code>firebase functions:config:set stripe.platform_fee_pct=2.5</code> で 即変更。 各サロン の 売上 から 自動で 差し引かれる。</div></div>
+    <div class="faq-item"><div class="q">サロン から 「決済 が 動かない」 と クレーム が 来たら ?</div><div class="a">admin の Stripe設定 で 「最新状態を 取得」 ボタン を 押す → 「未完了」 と 出れば KYC 残ってる。 「✓ 決済 準備完了」 なら Stripe 側 で エラー (Stripe Dashboard で エラーログ確認)。</div></div>
+    <div class="faq-item"><div class="q">テスト決済 を 試す には ?</div><div class="a">shop で 商品を カート に入れ → 注文画面 で カード番号 <code>4242 4242 4242 4242</code> / 有効期限 任意未来 / CVC 任意3桁 で 決済。 本物の お金は動かない。</div></div>
+  </div>
+
+  <div class="foot">SKEL·EC × STRIPE CONNECT SETUP <em>·</em> v1.0 <em>·</em> 2026.06.18</div>
+
+</div>
+</body>
+</html>
