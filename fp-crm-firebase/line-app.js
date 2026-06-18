@@ -685,13 +685,9 @@
       try { window.refreshFirestoreCustomers(); } catch (_) {}
     }
     fetchLiveData().then(() => { if (currentSubview === 'leadHub') renderLeadHubInner(); });
-    if (!window._leadHubInterval) {
-      window._leadHubInterval = setInterval(() => {
-        if (currentSubview === 'leadHub') {
-          fetchLiveData().then(() => renderLeadHubInner());
-        }
-      }, 15000);
-    }
+    // ★ オーナーfb「ボタン押そうとすると 一瞬で消える」 = 15秒 setInterval の renderLeadHubInner が click を 奪う
+    // → 自動 polling 撤去。 タブ切替 / Firestore 操作 後のみ 手動 再描画
+    if (window._leadHubInterval) { clearInterval(window._leadHubInterval); window._leadHubInterval = null; }
     renderLeadHubInner();
   }
 
