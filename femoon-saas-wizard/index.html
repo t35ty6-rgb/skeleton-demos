@@ -217,7 +217,7 @@ const QUESTIONS = [
   { id:'address', type:'text', title:'お店 の 住所 は?', hint:'郵便番号 から 番地 まで 全部', placeholder:'福井県福井市...', required:true },
   { id:'tel', type:'tel', title:'お店 の 電話番号', hint:'お客様 に 表示 されます', placeholder:'0776-XX-XXXX', required:true },
   { id:'contactName', type:'text', title:'担当者 の お名前', hint:'設定 や 連絡 で 使います', placeholder:'例) 山田 花子', required:true },
-  { id:'email', type:'email', title:'担当者 の メアド', hint:'<strong>サロン admin の ログインID</strong> に なります。 パスワード を 忘れた時 の 再設定 メール も ここ に 届く ので、 普段 使う メアド を 入れて ください。', placeholder:'salon@example.com', required:true },
+  { id:'email', type:'email', title:'担当者 の メアド (任意)', hint:'お困り の 時 に Skeleton社 から ご連絡 する 用。 ログイン情報 とは <strong>別</strong>。 ログイン用 メアド/パス は 申込 完了後 の 画面 で <strong>サロン側 で 自由 に 設定</strong> していただきます。', placeholder:'salon@example.com (任意)' },
   { id:'openHour', type:'select', title:'お店 の 開店時間', hint:'お客様 が 予約 できる 一番 早い 時間', options:Array.from({length:14},(_,i)=>String(7+i)).map(h=>({v:h,t:`${h}:00`})), default:'10', required:true },
   { id:'closeHour', type:'select', title:'お店 の 閉店時間', hint:'お客様 が 予約 できる 一番 遅い 時間', options:Array.from({length:14},(_,i)=>String(15+i)).map(h=>({v:h,t:`${h}:00`})), default:'20', required:true },
   { id:'weeklyClosed', type:'weekday', title:'定休日 は どの 曜日?', hint:'毎週 休む 曜日 を タップ (複数選択 OK)。 なければ 何も 押さず に 次へ' },
@@ -392,14 +392,17 @@ function renderQuestion(q){
       break;
     }
     case 'done': {
+      const signupUrl = `https://skeleton-femoon-saas.web.app/?ref=${encodeURIComponent(state._doneId||'')}`;
       body = `<div class="q-num"><span class="dot"></span>COMPLETE</div>
         <div class="q-title">送信完了 🎉</div>
-        <div class="q-hint">Skeleton社 が 内容 を 確認 して、 お店専用 の <strong>予約フォーム + LINE設定</strong> を 仕上げます。 完了したら <strong>LINE 公式アカウント の 設定担当者 (お店オーナー)</strong> に 直接 リッチメニュー 用 URL を お渡しします。</div>
+        <div class="q-hint">あと もう一歩。 ご自身 で <strong>ログイン用 の メアド と パスワード</strong> を 決めて 管理画面 の アカウント を 作って ください (1分)。</div>
         <div class="done-id">
           <div class="lbl">申込番号</div>
           <div class="v">${escapeHtml(state._doneId||'')}</div>
         </div>
-        <div class="q-hint" style="margin-top:0">この画面 は 閉じて OK です。 申込番号 は Skeleton社 と やりとり する 時 の 識別 に 使えます。</div>`;
+        <a href="${signupUrl}" class="btn-cta" style="display:block;background:var(--ink);color:var(--bg);text-decoration:none;text-align:center;padding:18px 24px;border-radius:8px;font-weight:600;font-size:15px;letter-spacing:0.01em;margin:20px 0 8px">アカウント を 作成 する →</a>
+        <div class="q-hint" style="margin-top:14px;font-size:13.5px">リンク先 の 「新規 サロン 登録」 タブ で メアド と パスワード を 入力 → 完了。 申込番号 は 自動 で 引き継ぎ ます。</div>
+        <div class="q-hint" style="margin-top:12px;font-size:12.5px;color:var(--muted)">あとで 設定 する 場合 は この 申込番号 (${escapeHtml(state._doneId||'')}) を Skeleton社 に お伝え ください。</div>`;
       break;
     }
   }
