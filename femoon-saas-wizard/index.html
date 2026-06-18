@@ -261,8 +261,11 @@ function renderQuestion(q){
     case 'tel':
     case 'email': {
       const v = state[q.id] || '';
+      const autoMap = { tel:'tel-national', email:'email', salonName:'organization', address:'street-address', contactName:'name' };
+      const ac = autoMap[q.id] || 'off';
+      const nm = `q-${q.id}-${Math.random().toString(36).slice(2,8)}`;
       body = qnum + `<div class="q-title">${q.title}</div><div class="q-hint">${q.hint||''}</div>
-        <div class="field"><input type="${q.type}" id="ipt" placeholder="${q.placeholder||''}" value="${escapeHtml(v)}" autocomplete="off"></div>
+        <div class="field"><input type="${q.type}" id="ipt" name="${nm}" placeholder="${q.placeholder||''}" value="${escapeHtml(v)}" autocomplete="${ac}" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
         <div class="err" id="err"></div>`;
       break;
     }
@@ -273,15 +276,17 @@ function renderQuestion(q){
         const ot = typeof o === 'object' ? o.t : o;
         return `<option value="${escapeHtml(ov)}" ${String(ov)===String(v)?'selected':''}>${escapeHtml(ot)}</option>`;
       }).join('');
+      const nm = `q-${q.id}-${Math.random().toString(36).slice(2,8)}`;
       body = qnum + `<div class="q-title">${q.title}</div><div class="q-hint">${q.hint||''}</div>
-        <div class="field"><select id="ipt"><option value="">— 選択 —</option>${opts}</select></div>
+        <div class="field"><select id="ipt" name="${nm}" autocomplete="off"><option value="">— 選択 —</option>${opts}</select></div>
         <div class="err" id="err"></div>`;
       break;
     }
     case 'textarea': {
       const v = state[q.id] || '';
+      const nm = `q-${q.id}-${Math.random().toString(36).slice(2,8)}`;
       body = qnum + `<div class="q-title">${q.title}</div><div class="q-hint">${q.hint||''}</div>
-        <div class="field"><textarea id="ipt" placeholder="${q.placeholder||''}">${escapeHtml(v)}</textarea></div>
+        <div class="field"><textarea id="ipt" name="${nm}" placeholder="${q.placeholder||''}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">${escapeHtml(v)}</textarea></div>
         <div class="err" id="err"></div>`;
       break;
     }
@@ -392,7 +397,15 @@ function renderReview(){
 function attachHandlers(q){
   if (['text','tel','email','textarea','select'].includes(q.type)){
     const el = document.getElementById('ipt');
-    el && el.focus();
+    if (el){
+      // ブラウザ autofill が 走った後 に state の値で強制上書き (rogue autofill 対策)
+      const expected = state[q.id] || (q.type === 'select' ? (q.default || '') : '');
+      requestAnimationFrame(() => {
+        if (el.value !== expected) el.value = expected;
+      });
+      setTimeout(() => { if (el.value !== expected && !el.matches(':focus')) el.value = expected; }, 150);
+      el.focus();
+    }
     if (el && el.tagName === 'INPUT'){
       el.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); next(); } });
     }
