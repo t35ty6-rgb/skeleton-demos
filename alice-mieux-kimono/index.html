@@ -1366,7 +1366,7 @@ function renderRanking(key){
   document.getElementById('rank-grid').innerHTML = items.map((it,i)=>{
     const numClass = i===0?'gold':i===1?'silver':i===2?'bronze':'';
     return `
-      <article class="rank-card">
+      <article class="rank-card" data-kim='${JSON.stringify({no:'R'+(i+1),nm:it.nm,cat:it.sub.split('・').pop().trim(),price:0,img:it.img})}'>
         <span class="num ${numClass}">${i+1}</span>
         <div class="pic"><img src="assets/kimono/${it.img}" alt="${it.nm}"></div>
         <div class="meta">
@@ -1377,6 +1377,16 @@ function renderRanking(key){
     `;
   }).join('');
 }
+function wireRankingClicks(){
+  document.querySelectorAll('#rank-grid .rank-card').forEach(c=>{
+    c.style.cursor='pointer';
+    c.addEventListener('click',()=>{
+      try{openBooking(JSON.parse(c.dataset.kim))}catch(e){}
+    });
+  });
+}
+const _origRR = renderRanking;
+renderRanking = function(k){_origRR(k);wireRankingClicks();};
 renderRanking('furi');
 document.querySelectorAll('.rank-tabs button').forEach(b=>{
   b.addEventListener('click',()=>{
@@ -1560,6 +1570,179 @@ document.getElementById('m-next').addEventListener('click',()=>{
 const styleX = document.createElement('style');
 styleX.textContent = '@media(max-width:680px){.prod-step{padding:18px}.prod-step .grid{grid-template-columns:1fr;gap:18px}.prod-step .info h3{font-size:20px}.prod-step .info .price-block .amt{font-size:24px}.modal-box.wide{max-width:760px}}';
 document.head.appendChild(styleX);
+
+/* ============ WIRE UP ALL DEAD CLICKS ============ */
+// Helper: open booking from product name
+function openByName(name){
+  const info = PROD_INFO[name];
+  if(!info) return alert('「'+name+'」の詳細情報を準備中です。LINEまたはお電話でお問い合わせください。');
+  openBooking({no:'X', nm:name, cat:info.cat.split('・').pop().trim(), price:0, img:info.poster||info.img});
+}
+
+// 1. Pickup cards (feat3): click on whole card opens booking
+document.querySelectorAll('.feat3 .it').forEach(c=>{
+  c.style.cursor='pointer';
+  const kim = JSON.parse(c.dataset.kim);
+  c.addEventListener('click',e=>{
+    if(e.target.closest('button')) return;
+    openBooking(kim);
+  });
+});
+
+// 2. Category circles (8): map to default kimono
+const CAT_DEFAULTS = {'振袖':'紅華','訪問着':'波千鳥','留袖':'松鶴','小紋':'若葉','紬':'夕霞','浴衣':'瑠璃花扇','ブライダル':'波千鳥','七五三':'若葉'};
+document.querySelectorAll('.cat').forEach(c=>{
+  c.style.cursor='pointer';
+  const label = c.querySelector('.lab')?.firstChild?.textContent?.trim();
+  c.addEventListener('click',e=>{
+    e.preventDefault();
+    if(label==='振袖'||label==='ブライダル'){ location.href='seijin.html'; return; }
+    const def = CAT_DEFAULTS[label];
+    if(def) openByName(def);
+    else openInfo('カテゴリ「'+label+'」', 'こちらのカテゴリの一覧ページは準備中でございます。気になるお品は今月の三着、または新着商品からご覧ください。');
+  });
+});
+
+// 3. Scene cards (着用シーン): wire to seijin.html / info
+const SCENE_TARGET = {
+  '二十歳のつどい':'seijin.html',
+  'ご結婚 / 和装挙式':'open:波千鳥',
+  'ご親族の装い':'open:紅薔薇',
+  'ご卒入学':'open:藤娘',
+  '七五三':'info:七五三のお仕度は、ご相談の上お一着ずつご用意いたします。LINEまたはお電話でお問い合わせください。',
+  '夏のお祭り':'open:瑠璃花扇',
+};
+document.querySelectorAll('.scene-c').forEach(c=>{
+  const label = c.querySelector('.lab')?.firstChild?.textContent?.trim();
+  if(c.getAttribute('href')) return; // already linked
+  c.style.cursor='pointer';
+  c.addEventListener('click',e=>{
+    e.preventDefault();
+    const act = SCENE_TARGET[label];
+    if(!act) return;
+    if(act.startsWith('open:')) openByName(act.slice(5));
+    else if(act.startsWith('info:')) openInfo('シーン「'+label+'」', act.slice(5));
+    else location.href=act;
+  });
+});
+
+// 4. Campaign banners: open info modal with details
+const CAMP_DETAILS = {
+  '振袖 早期予約割': {ttl:'振袖 早期予約割 5% OFF', body:'お式の1年前までのお申し込みで、振袖レンタル料金が5% OFF となります。お母さまのご来店でも先着10名様の限定特典でございます。', cta:'振袖を見る', ctaTo:'seijin.html'},
+  '新規会員登録で': {ttl:'新規会員登録で 300円OFFクーポン', body:'はじめてのご来店時に、ご利用いただけるクーポンを300円分プレゼントいたします。会員登録（無料）後すぐにご利用いただけます。', cta:'会員登録へ', ctaTo:'#'},
+  '浴衣ペア割': {ttl:'浴衣 ペア割 10% OFF', body:'お母さまとご一緒に2着以上のご利用で、合計から10% OFF となります。夏のお祭り・花火大会のお仕度に。', cta:'浴衣を見る', ctaTo:'open:瑠璃花扇'},
+  'レビュー投稿で': {ttl:'レビュー投稿で 300ポイント還元', body:'お式の後にレビューをお寄せいただいたお客さまへ、300ポイント（300円分）をプレゼントいたします。次回のレンタルにご利用いただけます。', cta:'お客さまの声を見る', ctaTo:'#'},
+};
+document.querySelectorAll('.camp-c').forEach(c=>{
+  const title = c.querySelector('h3')?.innerText?.trim().split('\n')[0];
+  if(!title) return;
+  c.style.cursor='pointer';
+  c.addEventListener('click',e=>{
+    e.preventDefault();
+    const key = Object.keys(CAMP_DETAILS).find(k=>title.includes(k));
+    const d = CAMP_DETAILS[key];
+    if(d) openInfo(d.ttl, d.body, d.cta, d.ctaTo);
+  });
+});
+
+// 5. News rows: open info modal
+document.querySelectorAll('.news-list .row').forEach(r=>{
+  r.style.cursor='pointer';
+  r.addEventListener('click',()=>{
+    const d = r.querySelector('.d')?.innerText;
+    const t = r.querySelector('.t')?.innerText;
+    openInfo(d+' お知らせ', t+'\n\n詳細はLINEまたはお電話 0776-XX-XXXX までお問い合わせください。','LINE で詳しく','#');
+  });
+});
+
+// 6. "X 一覧" 赤大ボタン: scroll to相応 section or jump page
+document.querySelectorAll('.sec-cta a').forEach(a=>{
+  const txt = (a.innerText||'').trim();
+  a.style.cursor='pointer';
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    if(txt.includes('今月の三着')) document.getElementById('ranking').scrollIntoView({behavior:'smooth'});
+    else if(txt.includes('新着')) location.href='seijin.html#furi';
+    else if(txt.includes('人気')) location.href='seijin.html#furi';
+    else if(txt.includes('Q&A')) document.getElementById('qa').scrollIntoView({behavior:'smooth'});
+    else if(txt.includes('お客さま')) openInfo('お客さまのお声 一覧', 'お客さまから頂戴したお声を、当アトリエにて常時更新してまいります。Instagram @alice_mieux でもご紹介しております。','Instagram を見る','#');
+    else openInfo('一覧ページ', 'こちらの一覧は準備中でございます。気になるお品は LINE またはお電話 (0776-XX-XXXX) でお問い合わせください。');
+  });
+});
+
+// 7. 「着物の種類から選ぶ」 赤大 CTA: open category panel
+const catBtn = document.querySelector('.cat-btn');
+if(catBtn){
+  catBtn.style.cursor='pointer';
+  catBtn.addEventListener('click',e=>{
+    e.preventDefault();
+    document.querySelector('.cats').scrollIntoView({behavior:'smooth',block:'start'});
+  });
+}
+
+// 8. Insta cards: open modal with kimono name
+document.querySelectorAll('.insta-c').forEach(c=>{
+  c.style.cursor='pointer';
+  const cap = (c.querySelector('.cap')?.innerText||'').trim();
+  c.addEventListener('click',e=>{
+    e.preventDefault();
+    // match kimono name from caption
+    const found = Object.keys(PROD_INFO).find(k=>cap.includes(k));
+    if(found) openByName(found);
+    else openInfo('Instagram', cap+'\n\nInstagram @alice_mieux にてお仕度の様子をご紹介しております。','Instagram を見る','#');
+  });
+});
+
+// 9. Mobile FAB: open booking with default kimono
+document.querySelector('.fab')?.addEventListener('click',e=>{
+  e.preventDefault();
+  openByName('紅華');
+});
+
+/* ============ INFO MODAL (for news/campaign/category placeholder) ============ */
+const infoModalHTML = `
+<div class="info-back" id="info-back" style="position:fixed;inset:0;z-index:90;background:rgba(26,19,16,.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:24px">
+  <div class="info-box" style="background:#fff;max-width:520px;width:100%;padding:28px 32px;box-shadow:0 24px 64px -16px rgba(0,0,0,.4)">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)">
+      <h3 id="info-ttl" style="font-family:var(--serif);font-weight:600;font-size:17px;letter-spacing:.08em;color:var(--ink);line-height:1.5"></h3>
+      <button id="info-close" style="font-size:16px;color:var(--ink-3);width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--line);background:#fff;cursor:pointer">✕</button>
+    </div>
+    <p id="info-body" style="font-family:var(--serif);font-size:14px;color:var(--ink-2);line-height:2;letter-spacing:.04em;white-space:pre-line"></p>
+    <div id="info-actions" style="margin-top:24px;display:flex;gap:10px;justify-content:flex-end">
+      <button id="info-cancel" style="padding:10px 22px;font-size:12px;color:var(--ink-2);border:1px solid var(--line);background:#fff;font-weight:600;letter-spacing:.04em;cursor:pointer">閉じる</button>
+      <a id="info-cta" style="padding:10px 24px;font-size:12px;color:#fff;background:var(--red);font-weight:700;letter-spacing:.08em;cursor:pointer">LINE で詳しく ›</a>
+    </div>
+  </div>
+</div>`;
+document.body.insertAdjacentHTML('beforeend', infoModalHTML);
+function openInfo(ttl, body, ctaTxt, ctaTo){
+  document.getElementById('info-ttl').textContent = ttl;
+  document.getElementById('info-body').textContent = body;
+  const ctaEl = document.getElementById('info-cta');
+  if(ctaTxt && ctaTo){
+    ctaEl.textContent = ctaTxt + ' ›';
+    ctaEl.style.display = '';
+    ctaEl.onclick = (e)=>{
+      e.preventDefault();
+      closeInfo();
+      if(ctaTo.startsWith('open:')) openByName(ctaTo.slice(5));
+      else if(ctaTo.startsWith('seijin')) location.href=ctaTo;
+      else if(ctaTo !== '#') location.href=ctaTo;
+    };
+  } else {
+    ctaEl.style.display='none';
+  }
+  const back = document.getElementById('info-back');
+  back.style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeInfo(){
+  document.getElementById('info-back').style.display='none';
+  document.body.style.overflow='';
+}
+document.getElementById('info-close').addEventListener('click',closeInfo);
+document.getElementById('info-cancel').addEventListener('click',closeInfo);
+document.getElementById('info-back').addEventListener('click',e=>{if(e.target.id==='info-back') closeInfo()});
 </script>
 </body>
 </html>
