@@ -301,6 +301,138 @@
   @media (prefers-reduced-motion:reduce){
     *{animation:none!important;transition:none!important}
   }
+
+  /* ============ Storyboard (B. Summary) ============ */
+  .storyboard{
+    --sk:var(--skeleton); --sa:var(--salon); --cu:var(--customer);
+    display:grid;grid-template-columns:1fr;gap:18px;
+  }
+  @media (min-width:768px){
+    .storyboard{
+      grid-template-columns:repeat(3,1fr);
+      gap:22px 28px;
+      align-items:stretch;
+    }
+  }
+  .story-cell{
+    position:relative;
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    gap:10px;
+    padding:22px 18px 20px;
+    border:1px solid var(--line);border-radius:18px;
+    background:linear-gradient(180deg,#121212 0%,#0E0E0E 100%);
+    text-align:center;color:inherit;text-decoration:none;
+    min-height:240px;
+    transition:transform .2s ease,border-color .2s ease,background .2s ease;
+    overflow:hidden;
+  }
+  .story-cell::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.04),transparent 60%);
+  }
+  .story-cell:hover{transform:translateY(-2px);border-color:var(--line-strong)}
+  .story-cell[data-role="sk"]{border-color:rgba(251,191,36,.30)}
+  .story-cell[data-role="sa"]{border-color:rgba(6,199,85,.30)}
+  .story-cell[data-role="cu"]{border-color:rgba(236,72,153,.30)}
+  .story-cell[data-role="sk"]:hover{border-color:rgba(251,191,36,.6)}
+  .story-cell[data-role="sa"]:hover{border-color:rgba(6,199,85,.6)}
+  .story-cell[data-role="cu"]:hover{border-color:rgba(236,72,153,.6)}
+
+  /* SVG ステージ */
+  .story-svg{
+    width:100%;max-width:160px;height:130px;
+    display:flex;align-items:center;justify-content:center;
+    margin-top:4px;
+  }
+  .story-svg svg{display:block;width:100%;height:100%}
+
+  /* Number + meta */
+  .story-num{
+    position:absolute;top:10px;left:14px;
+    font-family:var(--serif);font-weight:900;font-size:28px;line-height:1;color:var(--ink);
+    letter-spacing:-.02em;opacity:.85;
+  }
+  .story-cell[data-role="sk"] .story-num{color:var(--sk)}
+  .story-cell[data-role="sa"] .story-num{color:var(--sa)}
+  .story-cell[data-role="cu"] .story-num{color:var(--cu)}
+  .story-dot{
+    position:absolute;top:18px;right:14px;
+    width:10px;height:10px;border-radius:50%;
+  }
+  .story-cell[data-role="sk"] .story-dot{background:var(--sk);box-shadow:0 0 0 4px rgba(251,191,36,.14)}
+  .story-cell[data-role="sa"] .story-dot{background:var(--sa);box-shadow:0 0 0 4px rgba(6,199,85,.14)}
+  .story-cell[data-role="cu"] .story-dot{background:var(--cu);box-shadow:0 0 0 4px rgba(236,72,153,.14)}
+
+  .story-title{
+    font-family:var(--serif);font-weight:700;font-size:15px;line-height:1.3;
+    color:var(--ink);margin:6px 0 0;letter-spacing:.01em;
+  }
+  .story-tag{
+    font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-dim);
+  }
+  .story-time{
+    font-family:var(--serif);font-weight:700;font-size:13px;letter-spacing:.05em;
+    color:var(--ink);margin-top:2px;
+  }
+  .story-cell[data-role="sk"] .story-time{color:var(--sk)}
+  .story-cell[data-role="sa"] .story-time{color:var(--sa)}
+  .story-cell[data-role="cu"] .story-time{color:var(--cu)}
+
+  /* 矢印 — mobile (下向き) */
+  .story-arrow{
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink-dim);
+    height:28px;
+  }
+  .story-arrow svg{width:18px;height:24px;display:block}
+  .story-arrow[data-from="sk"][data-to="sa"] svg{color:var(--salon)}
+  .story-arrow[data-from="sa"][data-to="sk"] svg{color:var(--skeleton)}
+  .story-arrow[data-from="sa"][data-to="cu"] svg{color:var(--customer)}
+  .story-arrow[data-from="sk"][data-to="cu"] svg{color:var(--customer)}
+
+  /* Desktop: 矢印は inline で各セル間 / U 字曲げず グリッドにフラットに並べる */
+  @media (min-width:768px){
+    .story-arrow{display:none} /* mobile 専用 */
+    .storyboard{position:relative}
+    /* 行間/列間に絶対配置の矢印ガイド線 */
+    .story-cell{position:relative}
+    .story-cell::after{
+      content:"";position:absolute;
+      width:28px;height:2px;
+      right:-28px;top:50%;transform:translateY(-50%);
+      background:linear-gradient(90deg,var(--ink-dim),transparent);
+      opacity:.55;
+    }
+    /* 3列目の右側は矢印不要 */
+    .story-cell:nth-of-type(3n)::after{display:none}
+    /* ジグザグ用: 行末→次行先頭の縦/折返し矢印は overlay SVG で表現 */
+    .story-arrow-svg{
+      position:absolute;color:var(--ink-dim);pointer-events:none;
+      opacity:.65;
+    }
+  }
+
+  /* 矢印 chevron は overlay span で */
+  .chev{
+    display:none;
+  }
+  @media (min-width:768px){
+    .story-cell{}
+    /* chevron は inline span として storyboard 子に並べる必要があるが、 storyboard は grid。 矢印は不要派は ::after の方向グラデで動線として認識される */
+  }
+
+  /* 役割色 移行 矢印強調 */
+  @media (min-width:768px){
+    /* cell 0(sk) → 1(sa) : 緑 */
+    .story-cell[data-role="sk"] + .story-cell[data-role="sa"]{
+      /* prev cell ::after は 緑 にしたい → CSS では prev に作用しないので overlay 不要、 既存 fallback */
+    }
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .story-cell:hover{transform:none}
+  }
 </style>
 </head>
 <body>
@@ -377,57 +509,416 @@
       <p>各段階 の カードを タップ すると 詳細セクション へ ジャンプ します。 左の 役割色 で 「誰の作業 か」 が 一目 で 分かります。</p>
     </div>
 
-    <div class="mini-list" role="list">
-      <a class="mini-card" href="#stage-0" role="listitem">
-        <div class="mini-num">0<span class="role sk" aria-hidden="true"></span></div>
-        <div class="mini-body"><h4>Skeleton社 が サロン用 QR を 発行</h4><p>営業前 に サロン名 を 入れて 固有URL と QR を 出力。</p></div>
-        <div class="mini-meta"><b>2分</b>Skeleton</div>
+    <div class="storyboard" role="list">
+
+      <!-- 0: QR 発行 (Skeleton) -->
+      <a class="story-cell" data-role="sk" href="#stage-0" role="listitem" aria-label="段階0 QR発行">
+        <span class="story-num">0</span><span class="story-dot" aria-hidden="true"></span>
+        <span class="story-svg" aria-hidden="true">
+          <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- laptop -->
+            <rect x="14" y="22" width="112" height="68" rx="6" fill="#0E0E0E" stroke="#FBBF24" stroke-width="1.8"/>
+            <rect x="22" y="30" width="96" height="52" rx="3" fill="#161616" stroke="#3a3a3a" stroke-width="1"/>
+            <!-- qr inside screen -->
+            <g transform="translate(54 38)" fill="#F5F4F1">
+              <rect x="0" y="0" width="6" height="6"/><rect x="8" y="0" width="6" height="6"/><rect x="24" y="0" width="6" height="6"/>
+              <rect x="0" y="8" width="6" height="6"/><rect x="16" y="8" width="6" height="6"/><rect x="24" y="8" width="6" height="6"/>
+              <rect x="8" y="16" width="6" height="6"/><rect x="16" y="16" width="6" height="6"/>
+              <rect x="0" y="24" width="6" height="6"/><rect x="24" y="24" width="6" height="6"/>
+              <rect x="0" y="32" width="6" height="6"/><rect x="16" y="32" width="6" height="6"/><rect x="24" y="32" width="6" height="6"/>
+            </g>
+            <!-- laptop base -->
+            <path d="M6 94 L134 94 L128 106 L12 106 Z" fill="#1c1c1c" stroke="#FBBF24" stroke-width="1.5"/>
+            <rect x="58" y="98" width="24" height="3" rx="1.5" fill="#FBBF24" opacity=".5"/>
+          </svg>
+        </span>
+        <span class="story-title">QR を 発行</span>
+        <span class="story-tag">店ごと固有URL</span>
+        <span class="story-time">2分</span>
       </a>
-      <a class="mini-card" href="#stage-1" role="listitem">
-        <div class="mini-num">1<span class="role sa" aria-hidden="true"></span></div>
-        <div class="mini-body"><h4>サロン が QR スキャン → フォーム TOP</h4><p>カメラ で QR 読取。 黄色 バナー に サロン名 表示。</p></div>
-        <div class="mini-meta"><b>1分</b>Salon</div>
+
+      <span class="story-arrow" data-from="sk" data-to="sa" aria-hidden="true">
+        <svg viewBox="0 0 18 24" fill="none"><path d="M9 2 L9 18 M3 13 L9 19 L15 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+
+      <!-- 1: スマホ で QR 読み取り (Salon) -->
+      <a class="story-cell" data-role="sa" href="#stage-1" role="listitem" aria-label="段階1 QRスキャン">
+        <span class="story-num">1</span><span class="story-dot" aria-hidden="true"></span>
+        <span class="story-svg" aria-hidden="true">
+          <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- iphone -->
+            <rect x="40" y="14" width="60" height="100" rx="10" fill="#0E0E0E" stroke="#06C755" stroke-width="2"/>
+            <rect x="44" y="22" width="52" height="78" rx="3" fill="#0a0a0a" stroke="#222" stroke-width=".8"/>
+            <!-- camera frame on screen -->
+            <path d="M52 36 L52 28 L60 28 M88 28 L96 28 L96 36 M52 84 L52 92 L60 92 M88 92 L96 92 L96 84" stroke="#06C755" stroke-width="1.8" stroke-linecap="round"/>
+            <!-- mini qr inside frame -->
+            <g transform="translate(60 46)" fill="#06C755">
+              <rect x="0" y="0" width="4" height="4"/><rect x="6" y="0" width="4" height="4"/><rect x="16" y="0" width="4" height="4"/>
+              <rect x="0" y="6" width="4" height="4"/><rect x="10" y="6" width="4" height="4"/>
+              <rect x="6" y="12" width="4" height="4"/><rect x="16" y="12" width="4" height="4"/>
+              <rect x="0" y="18" width="4" height="4"/><rect x="10" y="18" width="4" height="4"/><rect x="16" y="18" width="4" height="4"/>
+            </g>
+            <!-- scan beam -->
+            <line x1="52" y1="60" x2="96" y2="60" stroke="#06C755" stroke-width="1.5" opacity=".75" stroke-dasharray="2 3"/>
+            <!-- speaker -->
+            <rect x="62" y="18" width="16" height="2" rx="1" fill="#1f1f1f"/>
+            <!-- home indicator -->
+            <rect x="62" y="106" width="16" height="2" rx="1" fill="#06C755" opacity=".6"/>
+          </svg>
+        </span>
+        <span class="story-title">QR スキャン</span>
+        <span class="story-tag">カメラで読取</span>
+        <span class="story-time">1分</span>
       </a>
-      <a class="mini-card" href="#stage-2" role="listitem">
-        <div class="mini-num">2<span class="role sa" aria-hidden="true"></span></div>
-        <div class="mini-body"><h4>Stripe 決済 (¥3,000 初月 + 月額)</h4><p>カード情報 を 入れて 「お支払い」。 即時 決済 成功。</p></div>
-        <div class="mini-meta"><b>2分</b>Salon</div>
+
+      <span class="story-arrow" data-from="sa" data-to="sa" aria-hidden="true">
+        <svg viewBox="0 0 18 24" fill="none"><path d="M9 2 L9 18 M3 13 L9 19 L15 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+
+      <!-- 2: クレカ + 銀行 (Stripe決済) -->
+      <a class="story-cell" data-role="sa" href="#stage-2" role="listitem" aria-label="段階2 Stripe決済">
+        <span class="story-num">2</span><span class="story-dot" aria-hidden="true"></span>
+        <span class="story-svg" aria-hidden="true">
+          <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="card-grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#06C755"/>
+                <stop offset="1" stop-color="#024d22"/>
+              </linearGradient>
+            </defs>
+            <!-- bank building behind -->
+            <g opacity=".4" stroke="#06C755" stroke-width="1.5" fill="none">
+              <path d="M88 28 L116 28 L116 36 L88 36 Z"/>
+              <line x1="92" y1="36" x2="92" y2="64"/>
+              <line x1="100" y1="36" x2="100" y2="64"/>
+              <line x1="108" y1="36" x2="108" y2="64"/>
+              <line x1="86" y1="64" x2="118" y2="64"/>
+              <path d="M102 28 L88 22 L116 22 Z" fill="#06C755" opacity=".3"/>
+            </g>
+            <!-- credit card front -->
+            <rect x="14" y="44" width="86" height="54" rx="6" fill="url(#card-grad)" stroke="#06C755" stroke-width="1.2"/>
+            <!-- chip -->
+            <rect x="22" y="56" width="14" height="11" rx="2" fill="#FBBF24" opacity=".9"/>
+            <rect x="24" y="58" width="10" height="2" fill="#aa7d10" opacity=".6"/>
+            <rect x="24" y="62" width="10" height="2" fill="#aa7d10" opacity=".6"/>
+            <!-- card number dots -->
+            <g fill="#F5F4F1" opacity=".95">
+              <circle cx="24" cy="78" r="1.6"/><circle cx="28" cy="78" r="1.6"/><circle cx="32" cy="78" r="1.6"/><circle cx="36" cy="78" r="1.6"/>
+              <circle cx="44" cy="78" r="1.6"/><circle cx="48" cy="78" r="1.6"/><circle cx="52" cy="78" r="1.6"/><circle cx="56" cy="78" r="1.6"/>
+              <circle cx="64" cy="78" r="1.6"/><circle cx="68" cy="78" r="1.6"/><circle cx="72" cy="78" r="1.6"/><circle cx="76" cy="78" r="1.6"/>
+              <rect x="82" y="76" width="14" height="5" rx="1" fill="#F5F4F1"/>
+            </g>
+            <!-- visa-ish mark -->
+            <text x="85" y="92" font-family="serif" font-size="8" font-weight="700" fill="#F5F4F1" opacity=".85">VISA</text>
+            <!-- yen mark hover -->
+            <circle cx="118" cy="78" r="12" fill="#0a0a0a" stroke="#06C755" stroke-width="1.5"/>
+            <text x="118" y="82" text-anchor="middle" font-family="serif" font-size="14" font-weight="900" fill="#06C755">¥</text>
+          </svg>
+        </span>
+        <span class="story-title">カードで 決済</span>
+        <span class="story-tag">Stripe / 即時</span>
+        <span class="story-time">2分</span>
       </a>
-      <a class="mini-card" href="#stage-3" role="listitem">
-        <div class="mini-num">3<span class="role sa" aria-hidden="true"></span></div>
-        <div class="mini-body"><h4>申込フォーム 1ページ 記入 → 送信</h4><p>店名 / 営業時間 / コース を 入れて 緑「送信する」。</p></div>
-        <div class="mini-meta"><b>10分</b>Salon</div>
+
+      <span class="story-arrow" data-from="sa" data-to="sa" aria-hidden="true">
+        <svg viewBox="0 0 18 24" fill="none"><path d="M9 2 L9 18 M3 13 L9 19 L15 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+
+      <!-- 3: 書類 + ペン (申込フォーム) -->
+      <a class="story-cell" data-role="sa" href="#stage-3" role="listitem" aria-label="段階3 申込フォーム">
+        <span class="story-num">3</span><span class="story-dot" aria-hidden="true"></span>
+        <span class="story-svg" aria-hidden="true">
+          <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- paper -->
+            <path d="M28 14 L98 14 L112 28 L112 110 L28 110 Z" fill="#F5F4F1" stroke="#06C755" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M98 14 L98 28 L112 28" stroke="#06C755" stroke-width="1.5" fill="none"/>
+            <!-- form rows with checks -->
+            <g>
+              <line x1="38" y1="40" x2="98" y2="40" stroke="#bbb" stroke-width="1"/>
+              <path d="M38 38 L42 42 L48 34" stroke="#06C755" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="52" y="36" width="44" height="3" rx="1" fill="#444"/>
+
+              <line x1="38" y1="56" x2="98" y2="56" stroke="#bbb" stroke-width="1"/>
+              <path d="M38 54 L42 58 L48 50" stroke="#06C755" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="52" y="52" width="38" height="3" rx="1" fill="#444"/>
+
+              <line x1="38" y1="72" x2="98" y2="72" stroke="#bbb" stroke-width="1"/>
+              <path d="M38 70 L42 74 L48 66" stroke="#06C755" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="52" y="68" width="34" height="3" rx="1" fill="#444"/>
+            </g>
+            <!-- send button -->
+            <rect x="60" y="84" width="40" height="14" rx="3" fill="#06C755"/>
+            <text x="80" y="94" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#F5F4F1">送信</text>
+            <!-- pen -->
+            <g transform="rotate(35 96 70)">
+              <rect x="92" y="48" width="8" height="40" rx="2" fill="#1c1c1c" stroke="#06C755" stroke-width="1.2"/>
+              <path d="M92 88 L96 96 L100 88 Z" fill="#FBBF24"/>
+              <rect x="92" y="48" width="8" height="6" fill="#06C755"/>
+            </g>
+          </svg>
+        </span>
+        <span class="story-title">フォーム 記入</span>
+        <span class="story-tag">店名 / 営業時間</span>
+        <span class="story-time">10分</span>
       </a>
-      <a class="mini-card" href="#stage-4" role="listitem">
-        <div class="mini-num">4<span class="role sk" aria-hidden="true"></span></div>
-        <div class="mini-body"><h4>Skeleton社 が 裏で SaaS 全自動セットアップ</h4><p>tenant 作成 / ログイン情報発行 / 案内メール 送信。</p></div>
-        <div class="mini-meta"><b>30分</b>Skeleton</div>
+
+      <span class="story-arrow" data-from="sa" data-to="sk" aria-hidden="true">
+        <svg viewBox="0 0 18 24" fill="none"><path d="M9 2 L9 18 M3 13 L9 19 L15 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+
+      <!-- 4: 歯車 + サーバー (Skeleton自動セットアップ) -->
+      <a class="story-cell" data-role="sk" href="#stage-4" role="listitem" aria-label="段階4 自動セットアップ">
+        <span class="story-num">4</span><span class="story-dot" aria-hidden="true"></span>
+        <span class="story-svg" aria-hidden="true">
+          <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- server rack -->
+            <rect x="18" y="22" width="68" height="78" rx="4" fill="#0E0E0E" stroke="#FBBF24" stroke-width="1.6"/>
+            <g stroke="#FBBF24" stroke-width="1" opacity=".85">
+              <rect x="24" y="30" width="56" height="14" rx="2" fill="rgba(251,191,36,.06)"/>
+              <rect x="24" y="50" width="56" height="14" rx="2" fill="rgba(251,191,36,.06)"/>
+              <rect x="24" y="70" width="56" height="14" rx="2" fill="rgba(251,191,36,.06)"/>
+            </g>
+            <!-- LED dots -->
+            <circle cx="30" cy="37" r="1.6" fill="#FBBF24"/>
+            <circle cx="36" cy="37" r="1.6" fill="#06C755"/>
+            <circle cx="30" cy="57" r="1.6" fill="#FBBF24"/>
+            <circle cx="36" cy="57" r="1.6" fill="#06C755"/>
+            <circle cx="30" cy="77" r="1.6" fill="#FBBF24"/>
+            <circle cx="36" cy="77" r="1.6" fill="#06C755"/>
+            <!-- motion lines -->
+            <g stroke="#FBBF24" stroke-width="1.4" stroke-linecap="round" opacity=".55">
+              <line x1="90" y1="40" x2="98" y2="40"/>
+              <line x1="90" y1="50" x2="102" y2="50"/>
+              <line x1="90" y1="60" x2="96" y2="60"/>
+            </g>
+            <!-- big gear -->
+            <g transform="translate(112 62)">
+              <g fill="#FBBF24">
+                <path d="M0 -28 L4 -22 L-4 -22 Z"/>
+                <path d="M0 28 L4 22 L-4 22 Z"/>
+                <path d="M-28 0 L-22 4 L-22 -4 Z"/>
+                <path d="M28 0 L22 4 L22 -4 Z"/>
+                <path d="M-20 -20 L-14 -18 L-18 -14 Z"/>
+                <path d="M20 -20 L18 -14 L14 -18 Z"/>
+                <path d="M-20 20 L-18 14 L-14 18 Z"/>
+                <path d="M20 20 L14 18 L18 14 Z"/>
+              </g>
+              <circle r="20" fill="#0E0E0E" stroke="#FBBF24" stroke-width="2.2"/>
+              <circle r="7" fill="#FBBF24"/>
+              <circle r="3" fill="#0E0E0E"/>
+            </g>
+            <!-- small gear -->
+            <g transform="translate(112 28)" opacity=".75">
+              <g fill="#FBBF24">
+                <path d="M0 -12 L2 -8 L-2 -8 Z"/>
+                <path d="M0 12 L2 8 L-2 8 Z"/>
+                <path d="M-12 0 L-8 2 L-8 -2 Z"/>
+                <path d="M12 0 L8 2 L8 -2 Z"/>
+              </g>
+              <circle r="8" fill="#0E0E0E" stroke="#FBBF24" stroke-width="1.5"/>
+              <circle r="2.5" fill="#FBBF24"/>
+            </g>
+          </svg>
+        </span>
+        <span class="story-title">裏で 全自動 構築</span>
+        <span class="story-tag">tenant 作成</span>
+        <span class="story-time">30分</span>
       </a>
-      <a class="mini-card" href="#stage-5" role="listitem">
-        <div class="mini-num">5<span class="role sa" aria-hidden="true"></span></div>
-        <div class="mini-body"><h4>サロン が 完了メール 受信 → ログイン</h4><p>予約URL を コピー + 管理画面 ログイン リンク タップ。</p></div>
-        <div class="mini-meta"><b>2分</b>Salon</div>
+
+      <span class="story-arrow" data-from="sk" data-to="sa" aria-hidden="true">
+        <svg viewBox="0 0 18 24" fill="none"><path d="M9 2 L9 18 M3 13 L9 19 L15 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+
+      <!-- 5: 封筒 + 鍵 + URL (完了メール) -->
+      <a class="story-cell" data-role="sa" href="#stage-5" role="listitem" aria-label="段階5 完了メール">
+        <span class="story-num">5</span><span class="story-dot" aria-hidden="true"></span>
+        <span class="story-svg" aria-hidden="true">
+          <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- envelope back -->
+            <rect x="20" y="44" width="100" height="60" rx="4" fill="#161616" stroke="#06C755" stroke-width="1.8"/>
+            <!-- envelope flap opened -->
+            <path d="M20 44 L70 80 L120 44" stroke="#06C755" stroke-width="1.8" fill="rgba(6,199,85,.05)" stroke-linejoin="round"/>
+            <!-- URL ribbon flying out -->
+            <g>
+              <rect x="44" y="14" width="68" height="20" rx="3" fill="#F5F4F1" stroke="#06C755" stroke-width="1.2" transform="rotate(-6 78 24)"/>
+              <text x="78" y="28" text-anchor="middle" font-family="monospace" font-size="7" fill="#08070A" transform="rotate(-6 78 24)">https://...</text>
+            </g>
+            <!-- key icon flying out left -->
+            <g transform="translate(28 22) rotate(-20)">
+              <circle cx="0" cy="0" r="8" fill="none" stroke="#FBBF24" stroke-width="2.4"/>
+              <circle cx="0" cy="0" r="2.5" fill="#FBBF24"/>
+              <rect x="6" y="-2" width="22" height="4" fill="#FBBF24"/>
+              <rect x="22" y="2" width="3" height="6" fill="#FBBF24"/>
+              <rect x="16" y="2" width="3" height="4" fill="#FBBF24"/>
+            </g>
+            <!-- bottom triangle (envelope front fold) -->
+            <path d="M20 104 L70 70 L120 104 Z" fill="none" stroke="#06C755" stroke-width="1" opacity=".4"/>
+          </svg>
+        </span>
+        <span class="story-title">メール 受領 → ログイン</span>
+        <span class="story-tag">URL + 鍵 配送</span>
+        <span class="story-time">2分</span>
       </a>
-      <a class="mini-card" href="#stage-6" role="listitem">
-        <div class="mini-num">6<span class="role sa" aria-hidden="true"></span></div>
-        <div class="mini-body"><h4>サロン が LINE 公式アカウント を 開設</h4><p>OA Manager で アカウント名 / 業種 入力 → 作成。</p></div>
-        <div class="mini-meta"><b>3分</b>Salon</div>
+
+      <span class="story-arrow" data-from="sa" data-to="sa" aria-hidden="true">
+        <svg viewBox="0 0 18 24" fill="none"><path d="M9 2 L9 18 M3 13 L9 19 L15 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+
+      <!-- 6: LINE 公式アカウント バブル -->
+      <a class="story-cell" data-role="sa" href="#stage-6" role="listitem" aria-label="段階6 LINE公式アカウント開設">
+        <span class="story-num">6</span><span class="story-dot" aria-hidden="true"></span>
+        <span class="story-svg" aria-hidden="true">
+          <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- big chat bubble (LINE-ish) -->
+            <path d="M22 26 Q22 16 32 16 L108 16 Q118 16 118 26 L118 70 Q118 80 108 80 L62 80 L46 96 L48 80 L32 80 Q22 80 22 70 Z" fill="#06C755" stroke="#06C755" stroke-width="1.5"/>
+            <!-- "LINE" letters inside -->
+            <text x="70" y="52" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="900" fill="#F5F4F1" letter-spacing="2">LINE</text>
+            <!-- verified badge (shield + check) -->
+            <g transform="translate(106 80)">
+              <path d="M0 -14 L12 -10 L12 4 Q12 12 0 18 Q-12 12 -12 4 L-12 -10 Z" fill="#FBBF24" stroke="#0E0E0E" stroke-width="1.5"/>
+              <path d="M-5 0 L-1 5 L6 -4" stroke="#0E0E0E" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <!-- "official account" tag below -->
+            <rect x="34" y="100" width="72" height="12" rx="6" fill="#0E0E0E" stroke="#06C755" stroke-width="1"/>
+            <text x="70" y="109" text-anchor="middle" font-family="monospace" font-size="7" fill="#06C755" letter-spacing=".15em">OFFICIAL</text>
+          </svg>
+        </span>
+        <span class="story-title">LINE 公式 開設</span>
+        <span class="story-tag">OA Manager</span>
+        <span class="story-time">3分</span>
       </a>
-      <a class="mini-card" href="#stage-7" role="listitem">
-        <div class="mini-num">7<span class="role sa" aria-hidden="true"></span></div>
-        <div class="mini-body"><h4>サロン が LIFF を 作成 → LIFF ID 取得</h4><p>LINE Developers で ログインチャネル + LIFF 追加。</p></div>
-        <div class="mini-meta"><b>10分</b>Salon</div>
+
+      <span class="story-arrow" data-from="sa" data-to="sa" aria-hidden="true">
+        <svg viewBox="0 0 18 24" fill="none"><path d="M9 2 L9 18 M3 13 L9 19 L15 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+
+      <!-- 7: 歯車 + LIFF タグ + チェーン -->
+      <a class="story-cell" data-role="sa" href="#stage-7" role="listitem" aria-label="段階7 LIFF作成">
+        <span class="story-num">7</span><span class="story-dot" aria-hidden="true"></span>
+        <span class="story-svg" aria-hidden="true">
+          <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- back gear -->
+            <g transform="translate(36 56)">
+              <g fill="#06C755" opacity=".9">
+                <path d="M0 -26 L4 -20 L-4 -20 Z"/>
+                <path d="M0 26 L4 20 L-4 20 Z"/>
+                <path d="M-26 0 L-20 4 L-20 -4 Z"/>
+                <path d="M26 0 L20 4 L20 -4 Z"/>
+                <path d="M-18 -18 L-12 -16 L-16 -12 Z"/>
+                <path d="M18 -18 L16 -12 L12 -16 Z"/>
+                <path d="M-18 18 L-16 12 L-12 16 Z"/>
+                <path d="M18 18 L12 16 L16 12 Z"/>
+              </g>
+              <circle r="18" fill="#0E0E0E" stroke="#06C755" stroke-width="2"/>
+              <circle r="6" fill="#06C755"/>
+              <circle r="2.5" fill="#0E0E0E"/>
+            </g>
+            <!-- LIFF tag plate (front) -->
+            <g transform="translate(72 28)">
+              <rect x="0" y="0" width="60" height="30" rx="5" fill="#F5F4F1" stroke="#06C755" stroke-width="1.8"/>
+              <text x="30" y="20" text-anchor="middle" font-family="serif" font-size="14" font-weight="900" fill="#08070A" letter-spacing="2">LIFF</text>
+            </g>
+            <!-- chain link -->
+            <g transform="translate(76 78)" stroke="#FBBF24" stroke-width="2.5" fill="none" stroke-linecap="round">
+              <rect x="0" y="-6" width="18" height="12" rx="6"/>
+              <rect x="14" y="-6" width="18" height="12" rx="6"/>
+              <line x1="38" y1="-8" x2="48" y2="-18" stroke-width="2"/>
+              <line x1="42" y1="-4" x2="52" y2="-14" stroke-width="2"/>
+            </g>
+            <!-- connector line gear->tag -->
+            <path d="M52 50 Q62 40 72 38" stroke="#06C755" stroke-width="1.2" stroke-dasharray="2 3" fill="none" opacity=".7"/>
+          </svg>
+        </span>
+        <span class="story-title">LIFF を 作成</span>
+        <span class="story-tag">LIFF ID 取得</span>
+        <span class="story-time">10分</span>
       </a>
-      <a class="mini-card" href="#stage-8" role="listitem">
-        <div class="mini-num">8<span class="role sk" aria-hidden="true"></span></div>
-        <div class="mini-body"><h4>Skeleton社 が 最終仕上げ (リッチメニュー + E2E)</h4><p>LIFF URL 紐付け / 動作確認 / 完了報告 まで一括。</p></div>
-        <div class="mini-meta"><b>15分</b>Skeleton</div>
+
+      <span class="story-arrow" data-from="sa" data-to="sk" aria-hidden="true">
+        <svg viewBox="0 0 18 24" fill="none"><path d="M9 2 L9 18 M3 13 L9 19 L15 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+
+      <!-- 8: 管理画面 + 完了ボタン -->
+      <a class="story-cell" data-role="sk" href="#stage-8" role="listitem" aria-label="段階8 最終仕上げ">
+        <span class="story-num">8</span><span class="story-dot" aria-hidden="true"></span>
+        <span class="story-svg" aria-hidden="true">
+          <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- dashboard frame -->
+            <rect x="14" y="20" width="112" height="80" rx="6" fill="#0E0E0E" stroke="#FBBF24" stroke-width="1.8"/>
+            <rect x="14" y="20" width="112" height="14" rx="6 6 0 0" fill="rgba(251,191,36,.12)"/>
+            <circle cx="22" cy="27" r="2" fill="#ff5f57"/>
+            <circle cx="30" cy="27" r="2" fill="#febc2e"/>
+            <circle cx="38" cy="27" r="2" fill="#28c840"/>
+            <!-- sidebar -->
+            <rect x="20" y="40" width="28" height="54" rx="3" fill="rgba(251,191,36,.06)"/>
+            <line x1="24" y1="48" x2="44" y2="48" stroke="#FBBF24" stroke-width="1.5" opacity=".7"/>
+            <line x1="24" y1="56" x2="40" y2="56" stroke="#FBBF24" stroke-width="1" opacity=".4"/>
+            <line x1="24" y1="64" x2="42" y2="64" stroke="#FBBF24" stroke-width="1" opacity=".4"/>
+            <line x1="24" y1="72" x2="38" y2="72" stroke="#FBBF24" stroke-width="1" opacity=".4"/>
+            <!-- main panel: completion check + button -->
+            <circle cx="78" cy="58" r="14" fill="rgba(6,199,85,.18)" stroke="#06C755" stroke-width="2"/>
+            <path d="M71 58 L76 64 L86 52" stroke="#06C755" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="58" y="80" width="56" height="14" rx="3" fill="#FBBF24"/>
+            <text x="86" y="90" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#08070A">完了</text>
+            <!-- magic wand -->
+            <g transform="translate(112 42) rotate(30)">
+              <rect x="-1" y="0" width="2" height="22" fill="#FBBF24"/>
+              <path d="M0 -2 L2 -6 L-2 -6 Z M-6 0 L-10 -2 L-10 2 Z M6 0 L10 -2 L10 2 Z" fill="#FBBF24"/>
+            </g>
+          </svg>
+        </span>
+        <span class="story-title">最終 仕上げ</span>
+        <span class="story-tag">紐付け + E2E</span>
+        <span class="story-time">15分</span>
       </a>
-      <a class="mini-card" href="#stage-9" role="listitem">
-        <div class="mini-num">9<span class="role cu" aria-hidden="true"></span></div>
-        <div class="mini-body"><h4>お客様が LINE で 予約 → 双方 自動通知</h4><p>友達追加 → リッチメニュー → 予約 → カードで通知。</p></div>
-        <div class="mini-meta"><b>サービス開始</b>Customer</div>
+
+      <span class="story-arrow" data-from="sk" data-to="cu" aria-hidden="true">
+        <svg viewBox="0 0 18 24" fill="none"><path d="M9 2 L9 18 M3 13 L9 19 L15 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+
+      <!-- 9: iPhone 3枚 + ベル + カレンダー (お客様予約) -->
+      <a class="story-cell" data-role="cu" href="#stage-9" role="listitem" aria-label="段階9 お客様予約スタート">
+        <span class="story-num">9</span><span class="story-dot" aria-hidden="true"></span>
+        <span class="story-svg" aria-hidden="true">
+          <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- phone fan: back two phones tilted -->
+            <g transform="translate(28 36) rotate(-12)">
+              <rect x="0" y="0" width="32" height="58" rx="6" fill="#0E0E0E" stroke="#EC4899" stroke-width="1.4" opacity=".75"/>
+              <rect x="3" y="6" width="26" height="46" rx="2" fill="#1a0a14"/>
+            </g>
+            <g transform="translate(86 36) rotate(12)">
+              <rect x="0" y="0" width="32" height="58" rx="6" fill="#0E0E0E" stroke="#EC4899" stroke-width="1.4" opacity=".75"/>
+              <rect x="3" y="6" width="26" height="46" rx="2" fill="#1a0a14"/>
+            </g>
+            <!-- front phone -->
+            <g transform="translate(54 28)">
+              <rect x="0" y="0" width="34" height="70" rx="7" fill="#0E0E0E" stroke="#EC4899" stroke-width="1.8"/>
+              <rect x="3" y="8" width="28" height="54" rx="2" fill="#0a0a0a"/>
+              <!-- calendar card on screen -->
+              <rect x="6" y="12" width="22" height="20" rx="2" fill="#F5F4F1"/>
+              <rect x="6" y="12" width="22" height="6" rx="2 2 0 0" fill="#EC4899"/>
+              <text x="17" y="17" text-anchor="middle" font-family="monospace" font-size="4" font-weight="700" fill="#F5F4F1">予約</text>
+              <text x="17" y="27" text-anchor="middle" font-family="serif" font-size="9" font-weight="900" fill="#08070A">14</text>
+              <!-- bottom check -->
+              <circle cx="17" cy="46" r="6" fill="rgba(236,72,153,.25)" stroke="#EC4899" stroke-width="1.2"/>
+              <path d="M14 46 L16 48 L20 44" stroke="#EC4899" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- home indicator -->
+              <rect x="12" y="66" width="10" height="1.5" rx="1" fill="#EC4899" opacity=".6"/>
+            </g>
+            <!-- bell -->
+            <g transform="translate(112 18)">
+              <path d="M0 0 Q-8 0 -8 8 L-8 18 Q-10 20 -10 22 L10 22 Q10 20 8 18 L8 8 Q8 0 0 0 Z" fill="#EC4899"/>
+              <circle cx="0" cy="26" r="3" fill="#EC4899"/>
+              <circle cx="6" cy="-2" r="5" fill="#FBBF24" stroke="#0E0E0E" stroke-width="1.2"/>
+              <text x="6" y="1" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="900" fill="#0E0E0E">!</text>
+            </g>
+          </svg>
+        </span>
+        <span class="story-title">お客様 が 予約</span>
+        <span class="story-tag">双方 自動 通知</span>
+        <span class="story-time">サービス開始</span>
       </a>
+
     </div>
   </div>
 </section>
