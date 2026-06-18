@@ -1633,8 +1633,17 @@
     const pureLifeEventCount = events.length; // ★ CTA条件 用: 議事録 events 追加前 の 純粋ライフイベント数
     // 面談AI議事録をタイムラインに追加 (localStorage + GAS 両方)
     try {
+      // ★ legacy bookings + Firestore confirmed 合流 (Firestore customer の議事録反映漏れ防止)
       const liveBks = (window.LineAppLiveData && window.LineAppLiveData.bookings) || [];
-      const myBks = liveBks.filter(b => b.userId === c.lineFriendId || b.name === c.name);
+      const fsBks = (window._fpFirestoreConfirmed || []).map(fc => {
+        const [_d, _t] = String(fc.confirmedSlot || '').split(' ');
+        return { _fsCustomerId: fc.docId, userId: 'fs:'+fc.docId, name: fc.name, date: _d||'', time: _t||'', ts: fc.confirmedAt?.toDate?.()?.toISOString?.() || fc.createdAt?.toDate?.()?.toISOString?.() || '' };
+      });
+      const myBks = liveBks.concat(fsBks).filter(b =>
+        (b.userId && b.userId === c.lineFriendId) ||
+        (b.name && b.name === c.name) ||
+        (b._fsCustomerId && b._fsCustomerId === c.id)
+      );
       const aiKeys = new Set();
       if (c.lineFriendId) aiKeys.add('fp-ai-' + c.lineFriendId);
       if (c.id)           aiKeys.add('fp-ai-' + c.id);
@@ -3263,9 +3272,26 @@
   // 面談記録ブロック (顧客詳細モーダル内 / 録画URL + メモ + タスク)
   // ============================
   function renderMeetingRecordsBlock(client) {
-    // この顧客に関連する bookings を liveData から探す
+    // この顧客に関連する bookings を liveData + Firestore 確定済 両方から探す
     const liveBookings = (window.LineAppLiveData && window.LineAppLiveData.bookings) || [];
-    const myBookings = liveBookings.filter(b => b.userId === client.lineFriendId || b.name === client.name);
+    // ★ Firestore 多テナント 確定済 booking も合流 (これ無いと Firestore customer で 議事録 反映なし)
+    const fsBookings = (window._fpFirestoreConfirmed || []).map(c => {
+      const [d, t] = String(c.confirmedSlot || '').split(' ');
+      return {
+        _fsCustomerId: c.docId,
+        userId: 'fs:' + c.docId,
+        name: c.name,
+        date: d || '',
+        time: t || '',
+        ts: c.confirmedAt?.toDate?.()?.toISOString?.() || c.createdAt?.toDate?.()?.toISOString?.() || '',
+      };
+    });
+    const allBookings = liveBookings.concat(fsBookings);
+    const myBookings = allBookings.filter(b =>
+      (b.userId && b.userId === client.lineFriendId) ||
+      (b.name && b.name === client.name) ||
+      (b._fsCustomerId && b._fsCustomerId === client.id) // Firestore docId 直接マッチ
+    );
 
     // localStorage から この顧客のメモ + タスクを取得
     // タスクも localStorage + GAS の両方から集約
@@ -4526,8 +4552,17 @@ STEP C: 結果報告
         setTimeout(() => { try { resultEl.scrollIntoView({behavior:'smooth', block:'start'}); } catch(_){} }, 100);
       }
     });
-    // 議事録+台帳データ集める
-    const myBks = ((window.LineAppLiveData && window.LineAppLiveData.bookings) || []).filter(b => b.userId === client.lineFriendId || b.name === client.name);
+    // 議事録+台帳データ集める (Firestore confirmed も合流)
+    const _liveBks0 = (window.LineAppLiveData && window.LineAppLiveData.bookings) || [];
+    const _fsBks0 = (window._fpFirestoreConfirmed || []).map(fc => {
+      const [_d, _t] = String(fc.confirmedSlot || '').split(' ');
+      return { _fsCustomerId: fc.docId, userId: 'fs:'+fc.docId, name: fc.name, date: _d||'', time: _t||'', ts: fc.confirmedAt?.toDate?.()?.toISOString?.() || fc.createdAt?.toDate?.()?.toISOString?.() || '' };
+    });
+    const myBks = _liveBks0.concat(_fsBks0).filter(b =>
+      (b.userId && b.userId === client.lineFriendId) ||
+      (b.name && b.name === client.name) ||
+      (b._fsCustomerId && b._fsCustomerId === client.id)
+    );
     let latestAi = null;
     const allKeys = Object.keys(localStorage).filter(k => k.startsWith('fp-ai-'));
     allKeys.forEach(k => {
@@ -5202,8 +5237,17 @@ ${JSON.stringify(jsonPayload, null, 2)}
       const body = document.getElementById('aib-minutes-body');
       if (!body) return;
       const myUids = new Set([client.lineFriendId].filter(Boolean));
-      const myBks = ((window.LineAppLiveData && window.LineAppLiveData.bookings) || [])
-        .filter(b => (b.userId && b.userId === client.lineFriendId) || (b.name && b.name === client.name));
+      // ★ legacy + Firestore confirmed 合流
+      const _liveBks1 = (window.LineAppLiveData && window.LineAppLiveData.bookings) || [];
+      const _fsBks1 = (window._fpFirestoreConfirmed || []).map(fc => {
+        const [_d, _t] = String(fc.confirmedSlot || '').split(' ');
+        return { _fsCustomerId: fc.docId, userId: 'fs:'+fc.docId, name: fc.name, ts: fc.confirmedAt?.toDate?.()?.toISOString?.() || fc.createdAt?.toDate?.()?.toISOString?.() || '' };
+      });
+      const myBks = _liveBks1.concat(_fsBks1).filter(b =>
+        (b.userId && b.userId === client.lineFriendId) ||
+        (b.name && b.name === client.name) ||
+        (b._fsCustomerId && b._fsCustomerId === client.id)
+      );
       myBks.forEach(b => { if (b.userId) myUids.add(b.userId); });
       const myTs = new Set(myBks.map(b => b.ts).filter(Boolean));
       const myNames = new Set([client.name].concat(myBks.map(b => b.name).filter(Boolean)));
