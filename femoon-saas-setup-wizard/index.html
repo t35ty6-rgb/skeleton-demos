@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FEMOON SaaS · LINE接続 一問一答 セットアップ</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  :root{
+    --bg:#FAFAF7; --surface:#FFFFFF; --ink:#0F0F0F; --ink-soft:#3F3F46;
+    --muted:#737373; --line:#E5E5E5;
+    --amber:#B45309; --amber-soft:#FCE7C0;
+    --ok:#0F766E; --err:#B91C1C;
+  }
+  html,body{height:100%}
+  body{font-family:'Inter','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);line-height:1.65;font-feature-settings:"palt";overflow-x:hidden;letter-spacing:0.005em}
+
+  .progress{position:fixed;top:0;left:0;right:0;z-index:50;height:2px;background:transparent}
+  .progress-fill{height:100%;background:var(--ink);width:0%;transition:width 0.5s cubic-bezier(0.22,1,0.36,1)}
+  .top-meta{position:fixed;top:20px;left:0;right:0;z-index:49;display:flex;justify-content:space-between;align-items:center;padding:0 32px;pointer-events:none}
+  .meta-left{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.18em;font-weight:600;text-transform:uppercase}
+  .meta-right{pointer-events:auto}
+  .meta-btn{background:transparent;border:none;color:var(--muted);padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:0.08em}
+  .meta-btn:hover{color:var(--ink)}
+
+  .slides{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:120px 28px 160px;position:relative}
+  .slide{display:none;width:100%;max-width:620px;animation:slidein 0.55s cubic-bezier(0.22,1,0.36,1)}
+  .slide.active{display:block}
+  @keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){ .slide{animation:none} .progress-fill{transition:none} }
+
+  .q-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.22em;font-weight:600;margin-bottom:20px;display:flex;align-items:center;gap:8px;text-transform:uppercase}
+  .q-num .dot{width:5px;height:5px;border-radius:50%;background:var(--ink)}
+  .q-title{font-family:'Noto Serif JP',serif;font-size:32px;font-weight:700;line-height:1.4;letter-spacing:-0.005em;margin-bottom:14px;text-wrap:balance;color:var(--ink)}
+  .q-hint{font-size:15px;color:var(--ink-soft);margin-bottom:24px;line-height:1.75;max-width:560px}
+  .q-hint strong{color:var(--ink);font-weight:600}
+  .q-hint code{background:rgba(15,15,15,0.05);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px}
+
+  .action-box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:16px 0;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .action-box .label{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);letter-spacing:0.18em;font-weight:600;text-transform:uppercase}
+  .action-box .url{flex:1;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--ink);word-break:break-all;min-width:200px;font-weight:500}
+  .action-box .open-btn{background:var(--ink);color:var(--bg);border:none;padding:11px 20px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;transition:transform 0.15s, background 0.15s}
+  .action-box .open-btn:hover{background:#1F1F23;transform:translateY(-1px)}
+
+  .tmpl-box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:16px 0;font-size:14px;line-height:1.85;color:var(--ink-soft);position:relative}
+  .tmpl-box::before{content:'📋 コピペ 文例';display:block;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--amber);letter-spacing:0.18em;font-weight:600;margin-bottom:10px;text-transform:uppercase}
+  .tmpl-box em{font-style:normal;background:var(--amber-soft);color:var(--amber);padding:0 6px;border-radius:3px;font-weight:600}
+  .tmpl-box .copy-btn{margin-top:10px;background:transparent;border:1px solid var(--line);color:var(--muted);padding:6px 14px;border-radius:99px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:0.04em}
+  .tmpl-box .copy-btn:hover{border-color:var(--ink);color:var(--ink)}
+  .tmpl-box .copy-btn.copied{background:var(--amber-soft);border-color:var(--amber);color:var(--amber)}
+
+  .note{background:transparent;border-left:3px solid var(--line);padding:10px 16px;margin:14px 0;font-size:13.5px;color:var(--muted);line-height:1.75;border-radius:0 8px 8px 0}
+  .note strong{color:var(--ink-soft);font-weight:600}
+  .note.warn{border-left-color:var(--amber);background:rgba(180,83,9,0.05)}
+  .note.warn::before{content:'⚠️ ';color:var(--amber)}
+  .note.ok{border-left-color:var(--ok);background:rgba(15,118,110,0.05)}
+  .note.ok::before{content:'✓ ';color:var(--ok)}
+
+  .mini-list{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:16px 0}
+  .mini-list ul{list-style:none;padding:0}
+  .mini-list li{display:flex;align-items:flex-start;gap:12px;padding:8px 0;font-size:14px;line-height:1.7;color:var(--ink-soft)}
+  .mini-list li::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--ink);flex-shrink:0;margin-top:9px}
+  .mini-list li strong{color:var(--ink);font-weight:600}
+  .mini-list li code{background:rgba(15,15,15,0.05);padding:1px 6px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:12.5px}
+
+  .nav{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(180deg,rgba(250,250,247,0) 0%, var(--bg) 40%);padding:24px 28px 32px;display:flex;justify-content:space-between;align-items:center;gap:14px;z-index:40}
+  .btn-back{background:transparent;border:none;color:var(--muted);padding:14px 18px;font-family:inherit;font-size:14px;cursor:pointer;font-weight:500;transition:color 0.15s}
+  .btn-back:hover:not(:disabled){color:var(--ink)}
+  .btn-back:disabled{opacity:0.3;cursor:not-allowed}
+  .btn-next{flex:1;max-width:340px;background:var(--ink);color:var(--bg);border:none;padding:18px 32px;border-radius:8px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform 0.15s, background 0.15s}
+  .btn-next:hover{background:#1F1F23;transform:translateY(-1px)}
+  .btn-next .ic{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:500}
+
+  .intro .q-title{font-size:42px;line-height:1.2}
+  .intro .meta{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:30px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .intro .im{padding:18px 16px;border-right:1px solid var(--line)}
+  .intro .im:last-child{border-right:none}
+  .intro .im .k{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.18em;font-weight:600;margin-bottom:4px;text-transform:uppercase}
+  .intro .im .v{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:700;color:var(--ink)}
+
+  .done .q-title{font-size:36px}
+  .done .check{background:var(--ok);color:#fff;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;margin-bottom:18px}
+
+  @media (max-width:560px){
+    .slides{padding:96px 22px 140px}
+    .q-title{font-size:24px}
+    .intro .q-title{font-size:30px}
+    .btn-next{font-size:14px;padding:16px 22px;max-width:none}
+    .btn-back{padding:12px 14px;font-size:13px}
+    .nav{padding:18px 18px 26px}
+    .top-meta{padding:0 18px}
+  }
+</style>
+</head>
+<body>
+
+<div class="progress"><div class="progress-fill" id="pfill"></div></div>
+<div class="top-meta">
+  <div class="meta-left" id="meta-num">0 / 0</div>
+  <div class="meta-right">
+    <button class="meta-btn" id="reset-btn">RESET</button>
+  </div>
+</div>
+
+<div class="slides" id="slides"></div>
+
+<div class="nav">
+  <button class="btn-back" id="back-btn" disabled>← 戻る</button>
+  <button class="btn-next" id="next-btn">次へ <span class="ic">→</span></button>
+</div>
+
+<script>
+const STORAGE_KEY = 'femoon-setup-progress-v1';
+
+const STEPS = [
+  { kind:'intro',
+    title:'LINE 接続<br>セットアップ',
+    sub:'サロン admin に LINE 鍵 4つ を 入れる → リッチメニュー 作る → 動作確認 まで、 ぜんぶ で 18ステップ。 上 から 順 に 「次へ」 を 押す だけ。' },
+
+  { kind:'step', title:'これ は 何 を する マニュアル?',
+    body:`<p>サロン の <strong>LINE 公式アカウント</strong> と FEMOON SaaS を 繋いで、 お客様 が LINE で 予約 できる ように する 作業 を、 1ステップ ずつ やります。</p>`,
+    note:'対象: サロン に LINE OA は ある (or 一緒に開設した) が、 まだ 予約フォーム と 紐付いて ない 状態' },
+
+  { kind:'step', title:'サロン から 鍵 4つ を 預かる',
+    body:`<p>下記 を そのまま LINE で サロン に 送って、 4つ の 値 を 教えて もらう。</p>`,
+    tmpl:`LINE 連携 の 仕上げ に <em>4つ の 情報</em> が 必要 です。 下記 を そのまま お知らせ ください:<br><br>
+① <em>チャネルアクセストークン</em> (200文字 くらい の 長い 文字列)<br>
+② <em>公式アカウント ID</em> (@xxxxxx)<br>
+③ <em>LIFF ID</em> (2010xxxxxx-xxxxxxxx)<br>
+④ <em>通知先 LINE userId</em> (U で 始まる 32文字、 オーナー様 ご本人 の)<br><br>
+取得手順 が ご不明 でしたら Zoom で 一緒に やります、 ご連絡 を。`,
+    note:'4つ 揃う まで 次 に 進めない。 サロン から 返信 待ち' },
+
+  { kind:'step', title:'admin URL を 開く',
+    body:`<p>サロン の admin URL を 開く。 URL末尾 の <code>?tenant=○○○</code> は サロン専用ID。</p>`,
+    action:{ label:'開く', url:'https://skeleton-femoon-saas.web.app/admin/', href:'https://skeleton-femoon-saas.web.app/admin/?tenant=○○○' },
+    note:'tenantId が 分からない 時 は サロン の メアド で 普通 に ログイン すれば 自動 で 自分の tenant に 入る' },
+
+  { kind:'step', title:'admin に ログイン',
+    body:`<p>サロン の <strong>メアド</strong> と <strong>パスワード</strong> で ログイン。 (サロン から 借りる、 または サロン に Zoom 同席 で やって もらう)</p>`,
+    note:'パス 分からない 場合 は 「パスワード を お忘れ の方 は こちら」 → リセット メール 送信 → サロン に 一時的 に パス 教えて もらう' },
+
+  { kind:'step', title:'上部 タブ 「設定」 を クリック',
+    body:`<p>ログイン後 上部 タブ に 「予約 / 顧客 / メッセージ / 売上 / <strong>設定</strong>」 と 並ぶ。 一番右 の <strong>設定</strong> を クリック。</p>` },
+
+  { kind:'step', title:'「LINE 連携」 セクション まで スクロール',
+    body:`<p>設定タブ は 縦長 で 何セクション か 入ってる。 中段 に <strong>「LINE 連携」</strong> セクション が ある。 そこ まで スクロール。</p>`,
+    note:'セクション 内 に 4つ の 入力欄 が 並んで る' },
+
+  { kind:'step', title:'① チャネルアクセストークン を 貼る',
+    body:`<p><strong>「Messaging API トークン」</strong> 欄 に サロン から 預かった トークン (200文字 ぐらい) を 貼り付け。</p>`,
+    note:'長い ので コピペ ミス 注意。 先頭/末尾 に 余分な 空白 入れ ない' },
+
+  { kind:'step', title:'② 公式アカウント ID を 貼る',
+    body:`<p><strong>「公式アカウント ID」</strong> 欄 に <code>@xxxxxx</code> 形式 で 貼り付け。 @ 含めて。</p>` },
+
+  { kind:'step', title:'③ LIFF ID を 貼る',
+    body:`<p><strong>「LIFF ID」</strong> 欄 に <code>2010xxxxxx-xxxxxxxx</code> 形式 で 貼り付け。</p>`,
+    note:'これ が 一番 大事。 LIFF ID が 入って ない と お客様 LINE に 通知 飛ば ない (← 過去 の バグ ポイント)' },
+
+  { kind:'step', title:'④ 通知先 LINE userId を 貼る',
+    body:`<p><strong>「通知先 LINE userId」</strong> 欄 に <code>U</code> で 始まる 32文字 を 貼り付け。 これ は サロン オーナー 本人 の LINE userId (予約が入った時 に 通知 飛ぶ 先)。</p>` },
+
+  { kind:'step', title:'右下 「保存」 ボタン を クリック',
+    body:`<p>4欄 全部 埋めた ら 右下 の <strong>「保存」</strong> ボタン (オレンジ系) を クリック。</p>`,
+    ok:'トースト 「✅ サロン設定 を 保存 しました」 が 出れば OK。 admin が <code>tenants/{id}</code> と <code>public_config/meta</code> 両方 に 同時 書込 する' },
+
+  { kind:'step', title:'LINE Official Account Manager を 開く',
+    body:`<p>次 は リッチメニュー の 設定。 サロン の LINE アカウント で manager.line.biz に ログイン。 (サロン に やって もらう or Zoom 画面共有 で 一緒に)</p>`,
+    action:{ label:'開く', url:'https://manager.line.biz/', href:'https://manager.line.biz/' } },
+
+  { kind:'step', title:'該当 公式アカウント を 選ぶ',
+    body:`<p>ログイン後 アカウント 一覧 が 出る。 サロン の 公式アカウント (今 接続 した やつ) を クリック。</p>` },
+
+  { kind:'step', title:'左メニュー 「リッチメニュー」 → 「作成」',
+    body:`<p>左サイド メニュー の <strong>「リッチメニュー」</strong> を クリック → 右上 の <strong>「作成」</strong> ボタン。</p>` },
+
+  { kind:'step', title:'テンプレート 「大」 を 選択 + 画像 アップ',
+    body:`<p>テンプレ は <strong>「大」</strong> (大きい バナー型) を 選ぶ。 画像 は デフォルト の 黒バナー で OK (後で 差替可)。</p>`,
+    note:'画像 サイズ: 2500×1686px / 1200×810px / 800×540px 推奨 (LINE 公式)' },
+
+  { kind:'step', title:'左セル に 「リンク」 アクション 設定',
+    body:`<p>テンプレ の 左セル を クリック → 「タイプ」 で <strong>「リンク」</strong> 選択 → URL に 下記 を 貼る (LIFF ID は 先ほど 入力 した やつ):</p>`,
+    tmpl:`https://liff.line.me/<em>{LIFF ID}</em>`,
+    warn:'LIFF URL 形式 (liff.line.me/...) 必須。 予約フォームURL を 直貼り すると お客様 の LINE userId 取れず 通知 飛ば ない' },
+
+  { kind:'step', title:'「ご予約」 表示テキスト で 即時公開',
+    body:`<p>「アクションラベル」 に <strong>「ご予約」</strong> を 入力 → 上部 「メニューバー」 の 表示 を ON → 右下 <strong>「保存」</strong> → 確認ダイアログ で 「公開」。</p>` },
+
+  { kind:'step', title:'動作確認 — 自分の LINE で 友達追加',
+    body:`<p>サロン の 公式アカウント を 自分の LINE で <strong>友達追加</strong>。 トーク を 開く と 下半分 に リッチメニュー (「ご予約」 ボタン入り) が 出てる はず。</p>` },
+
+  { kind:'step', title:'「ご予約」 タップ → 予約フォーム が LINE内 で 開く',
+    body:`<p>リッチメニュー の <strong>「ご予約」</strong> を タップ → LIFF が 起動 → 予約フォーム が <strong>LINE内 で</strong> 開く こと を 確認。</p>`,
+    warn:'Safari/Chrome の 通常 ブラウザ で 開いたら NG → LIFF URL の 設定 ミス。 ステップ 17 に 戻って 確認' },
+
+  { kind:'step', title:'テスト予約 を 1件 入れる',
+    body:`<p>適当 な コース / 日時 を 選んで、 お名前 「テスト」 / 電話 「000」 等 で <strong>予約 確定</strong>。</p>` },
+
+  { kind:'step', title:'お客様 LINE に Flex通知 が 届く',
+    body:`<p>予約確定 直後、 <strong>自分の LINE</strong> に カード型 「🌙 ご予約 を 承りました」 が 届く はず。 カード内 の 「📅 カレンダー に 追加」 ボタン も 動く。</p>`,
+    ok:'届けば LIFF + Messaging API が 完全に 噛み合った 証拠。 完成' },
+
+  { kind:'step', title:'サロン (オーナー) の LINE に も 通知 届く',
+    body:`<p>同時 に、 <strong>通知先 LINE userId</strong> で 指定した サロン オーナー の LINE に 「🌙 新規予約: ◯◯様」 カード が 届く。</p>`,
+    note:'届かない 場合 は ④ userId の typo / その人が 公式アカウント を まだ 友達追加 してない (未友達 だと LINE Bot から push 拒否) を 確認' },
+
+  { kind:'done',
+    title:'完了。<br>LINE 接続 OK。',
+    sub:'これ で サロン は 営業 開始 できる 状態。 テスト予約 は 後で キャンセル で 消して、 サロン に 「LINE 連携 完了 しました」 と 一報 送って 終了。' },
+];
+
+// === State ===
+let state = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){ return {}; } })();
+let currentIdx = state._lastIdx || 0;
+function saveState(){ state._lastIdx = currentIdx; localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+function render(){
+  const s = STEPS[currentIdx];
+  if (!s) return;
+  const slidesEl = document.getElementById('slides');
+  let body = '';
+  if (s.kind === 'intro'){
+    body = `<div class="slide active intro">
+      <div class="q-num"><span class="dot"></span>START</div>
+      <h1 class="q-title">${s.title}</h1>
+      <p class="q-hint">${s.sub}</p>
+      <div class="meta">
+        <div class="im"><div class="k">所要</div><div class="v">15分</div></div>
+        <div class="im"><div class="k">ステップ</div><div class="v">${STEPS.filter(x=>x.kind==='step').length}</div></div>
+        <div class="im"><div class="k">途中保存</div><div class="v">自動</div></div>
+      </div>
+    </div>`;
+  } else if (s.kind === 'done'){
+    body = `<div class="slide active done">
+      <div class="check">✓</div>
+      <div class="q-num" style="color:var(--ok)"><span class="dot" style="background:var(--ok)"></span>COMPLETE</div>
+      <h1 class="q-title">${s.title}</h1>
+      <p class="q-hint">${s.sub}</p>
+    </div>`;
+  } else {
+    const stepIdx = STEPS.slice(0, currentIdx+1).filter(x => x.kind==='step').length;
+    const stepTotal = STEPS.filter(x => x.kind==='step').length;
+    let mid = `<div class="q-num"><span class="dot"></span>STEP ${String(stepIdx).padStart(2,'0')} / ${stepTotal}</div>
+      <h1 class="q-title">${s.title}</h1>
+      ${s.body||''}`;
+    if (s.action){
+      mid += `<div class="action-box">
+        <div class="label">${escHtml(s.action.label)}</div>
+        <div class="url">${escHtml(s.action.url)}</div>
+        <a class="open-btn" href="${escHtml(s.action.href)}" target="_blank">↗ 開く</a>
+      </div>`;
+    }
+    if (s.tmpl){
+      mid += `<div class="tmpl-box">${s.tmpl}<br><button class="copy-btn" data-tmpl="${escAttr(stripTags(s.tmpl))}">📋 コピー</button></div>`;
+    }
+    if (s.note) mid += `<div class="note">${s.note}</div>`;
+    if (s.warn) mid += `<div class="note warn">${s.warn}</div>`;
+    if (s.ok) mid += `<div class="note ok">${s.ok}</div>`;
+    body = `<div class="slide active">${mid}</div>`;
+  }
+  slidesEl.innerHTML = body;
+  document.querySelectorAll('.copy-btn[data-tmpl]').forEach(b => {
+    b.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(b.dataset.tmpl);
+        const t = b.textContent; b.classList.add('copied'); b.textContent='✓ コピー しました';
+        setTimeout(()=>{ b.classList.remove('copied'); b.textContent=t; }, 1600);
+      } catch(e){ alert('コピー 失敗'); }
+    });
+  });
+  document.getElementById('back-btn').disabled = currentIdx === 0;
+  const nb = document.getElementById('next-btn');
+  if (s.kind === 'done'){ nb.style.display='none'; } else { nb.style.display=''; }
+  nb.innerHTML = s.kind === 'intro' ? 'はじめる <span class="ic">→</span>' : '次へ <span class="ic">→</span>';
+  document.getElementById('pfill').style.width = ((currentIdx/(STEPS.length-1))*100) + '%';
+  if (s.kind === 'intro') document.getElementById('meta-num').textContent='INTRO';
+  else if (s.kind === 'done') document.getElementById('meta-num').textContent='DONE';
+  else {
+    const idx = STEPS.slice(0,currentIdx+1).filter(x=>x.kind==='step').length;
+    const tot = STEPS.filter(x=>x.kind==='step').length;
+    document.getElementById('meta-num').textContent = `STEP ${idx} / ${tot}`;
+  }
+}
+
+function next(){ if (currentIdx < STEPS.length-1){ currentIdx++; saveState(); render(); window.scrollTo({top:0,behavior:'smooth'}); } }
+function back(){ if (currentIdx > 0){ currentIdx--; saveState(); render(); window.scrollTo({top:0,behavior:'smooth'}); } }
+
+function escHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function escAttr(s){ return escHtml(s); }
+function stripTags(s){ return String(s||'').replace(/<[^>]+>/g,'').replace(/&lt;[^&]+&gt;/g,''); }
+
+document.getElementById('next-btn').addEventListener('click', next);
+document.getElementById('back-btn').addEventListener('click', back);
+document.getElementById('reset-btn').addEventListener('click', () => {
+  if (confirm('進捗 を 最初 から に 戻しますか?')){
+    localStorage.removeItem(STORAGE_KEY); currentIdx=0; state={}; render();
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); next(); }
+  if (e.key === 'ArrowLeft' || e.key === 'Backspace') back();
+});
+
+render();
+</script>
+
+</body>
+</html>
