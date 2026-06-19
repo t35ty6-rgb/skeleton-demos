@@ -146,47 +146,57 @@
       a:not([class]):hover { color:var(--fp-mint-dark) !important; }
 
       /* ============================================================ */
-      /* ★★★ 50-60代 FP 向け 1から構造再設計 (BQ→さらに刷新) ★★★      */
+      /* ★★★ ゼロベース リアウト: 1カラム mobile風 mint hero + pill tab */
       /* ============================================================ */
-      /* モーダル全体 — 左右2カラム廃止 → 上下stack + 余白 大幅 拡大 */
-      #modal-content { max-width:920px !important; max-height:92vh !important; border-radius:28px !important; }
-      .cd-modal { display:block !important; grid-template-columns:none !important; padding:0 !important; }
-      .cd-modal aside.cd-left, .cd-modal .cd-left { display:none !important; }
-      .cd-modal main.cd-right, .cd-modal .cd-right { padding:0 !important; background:var(--fp-mint-paper) !important; }
-      /* ★ 上部ヘッダ (顧客名 + アバター + 状態) — mint hero 統合 */
-      .cd-modal main.cd-right::before {
-        content:''; display:block;
-        background:linear-gradient(135deg,var(--fp-mint) 0%,var(--fp-mint-dark) 100%) !important;
-        height:140px;
-        border-radius:0 !important;
-      }
-      /* タブ — 巨大化 + アイコン強調 */
-      .cd-modal .cd-tabs { background:#fff !important; padding:0 18px !important; gap:0 !important; border-bottom:2px solid var(--fp-line) !important; position:sticky !important; top:0 !important; z-index:5 !important; box-shadow:0 2px 8px rgba(15,31,29,0.04) !important; }
-      .cd-modal .cd-tab { font-size:17px !important; font-weight:800 !important; padding:22px 26px !important; min-height:64px !important; }
-      .cd-modal .cd-tab.cd-tab-active { background:var(--fp-mint-faint) !important; border-bottom-color:var(--fp-mint) !important; border-bottom-width:4px !important; }
-      .cd-modal .cd-tab .cd-tab-count { min-width:30px !important; height:28px !important; font-size:13.5px !important; padding:0 11px !important; }
-      .cd-modal .cd-tabpanels { padding:28px 32px 40px !important; background:var(--fp-mint-paper) !important; }
-      /* カード — もっと大きく + 余白拡張 */
-      .cd-modal .detail-section { padding:30px 32px !important; border-radius:24px !important; margin-bottom:22px !important; }
-      .cd-modal .detail-section h3 { font-size:13.5px !important; margin-bottom:24px !important; }
-      /* メインCTA — 横幅一杯 + 巨大 */
-      body .cd-modal .fp-draft-cta#modal-draft-btn, .cd-modal .fp-draft-cta#modal-draft-btn { width:100% !important; min-height:88px !important; border-radius:24px !important; padding:24px 28px !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-label { font-size:21px !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-sub { font-size:14px !important; margin-top:4px !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-no { width:42px !important; height:42px !important; font-size:18px !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-icon { width:28px !important; height:28px !important; }
-      /* サブボタン — 大きく */
-      .cd-modal .modal-brief-btn, .cd-modal #modal-edit-btn, .cd-modal .cd-flow-edit, .cd-modal button[data-open-hearing] { padding:16px 32px !important; font-size:16px !important; min-height:56px !important; }
-      .cd-modal #fp-fam-ai, .cd-modal #fp-fam-add { padding:16px 32px !important; font-size:16px !important; min-height:56px !important; }
-      /* 議事録カード head — もっと大きく */
-      .cd-modal .fp-meeting-card { padding:26px 30px !important; }
-      .cd-modal .fp-meeting-card-date { font-size:22px !important; }
-      .cd-modal .fp-meeting-card-eyebrow { font-size:14px !important; }
-      .cd-modal .fp-meeting-body { font-size:15.5px !important; line-height:1.95 !important; }
-      /* 家族カード — もっと大きく */
-      .cd-modal .fp-fam-card { padding:22px 22px !important; min-width:200px !important; border-radius:20px !important; }
-      .cd-modal .fp-fam-name { font-size:20px !important; }
-      .cd-modal .fp-fam-age { font-size:14px !important; margin-top:6px !important; }
+      /* モーダル コンテナ */
+      #modal-overlay { background:rgba(15,31,29,0.55) !important; align-items:flex-start !important; padding:32px 16px !important; }
+      #modal-content { max-width:780px !important; width:100% !important; max-height:calc(100vh - 64px) !important; border-radius:32px !important; overflow:hidden !important; box-shadow:0 32px 80px rgba(15,31,29,0.32) !important; background:#fff !important; padding:0 !important; display:flex !important; flex-direction:column !important; }
+      .cd-modal { display:block !important; grid-template-columns:none !important; padding:0 !important; background:#fff !important; }
+      /* 左右2カラム → 廃止 (1カラム) */
+      .cd-modal aside.cd-left, .cd-modal .cd-left { display:contents !important; }
+      .cd-modal main.cd-right, .cd-modal .cd-right { padding:0 !important; background:#fff !important; display:flex !important; flex-direction:column !important; }
+      /* ★★ 上部 mint hero (元画像 Send Money 風) ★★ */
+      /*   既存 .cd-left ヘッダ要素 (avatar/name) を 上部に再配置 */
+      .cd-modal .cd-left > * { display:none !important; }
+      .cd-modal .cd-left .cd-profile-head,
+      .cd-modal .cd-left .cd-profile-section:first-child { display:block !important; background:linear-gradient(155deg,var(--fp-mint) 0%,var(--fp-mint-dark) 100%) !important; color:#fff !important; padding:40px 32px 36px !important; text-align:center !important; border-radius:0 !important; box-shadow:none !important; border:none !important; margin:0 !important; order:-100 !important; position:relative !important; }
+      .cd-modal .cd-left .avatar, .cd-modal .cd-left .avatar-lg { background:rgba(255,255,255,0.22) !important; border:4px solid rgba(255,255,255,0.4) !important; width:92px !important; height:92px !important; font-size:34px !important; margin:0 auto 14px !important; display:flex !important; align-items:center !important; justify-content:center !important; border-radius:50% !important; color:#fff !important; font-weight:800 !important; box-shadow:0 8px 24px rgba(0,0,0,0.18) !important; }
+      .cd-modal .cd-left h2, .cd-modal .cd-left .cd-profile-name { color:#fff !important; font-size:28px !important; font-weight:800 !important; letter-spacing:-0.015em !important; margin:0 0 6px !important; }
+      .cd-modal .cd-left .cd-profile-kana { color:rgba(255,255,255,0.85) !important; font-size:14px !important; }
+      .cd-modal .cd-left .status-pill { display:inline-block !important; background:rgba(255,255,255,0.24) !important; color:#fff !important; padding:6px 16px !important; border-radius:999px !important; font-size:12.5px !important; font-weight:800 !important; margin-top:14px !important; }
+      /* ★ pill タブ (横並び 中央寄せ) */
+      .cd-modal .cd-tabs { background:#fff !important; padding:24px 24px 12px !important; gap:8px !important; border-bottom:none !important; display:flex !important; flex-wrap:wrap !important; justify-content:center !important; }
+      .cd-modal .cd-tab { background:#F4FAF9 !important; color:var(--fp-ink-mid) !important; font-size:15px !important; font-weight:800 !important; padding:12px 22px !important; min-height:48px !important; border:1.5px solid var(--fp-line) !important; border-radius:999px !important; border-bottom:1.5px solid var(--fp-line) !important; }
+      .cd-modal .cd-tab:hover { background:var(--fp-mint-faint) !important; border-color:var(--fp-mint-soft) !important; color:var(--fp-mint-darker) !important; }
+      .cd-modal .cd-tab.cd-tab-active { background:var(--fp-mint) !important; color:#fff !important; border-color:var(--fp-mint) !important; box-shadow:0 6px 18px rgba(91,191,181,0.32) !important; }
+      .cd-modal .cd-tab .cd-tab-count { background:rgba(255,255,255,0.24) !important; color:#fff !important; min-width:24px !important; padding:0 8px !important; height:22px !important; margin-left:6px !important; }
+      .cd-modal .cd-tab:not(.cd-tab-active) .cd-tab-count { background:#fff !important; color:var(--fp-ink-soft) !important; border:1px solid var(--fp-line) !important; }
+      /* タブ パネル */
+      .cd-modal .cd-tabpanels { padding:8px 24px 36px !important; background:#fff !important; overflow-y:auto !important; flex:1 !important; }
+      /* セクション (overview パネル内) — カード 控え目 + 余白拡大 */
+      .cd-modal .detail-section, .cd-modal .cd-profile-section { background:#fff !important; border:1px solid var(--fp-line) !important; border-radius:20px !important; padding:24px 26px !important; margin-bottom:16px !important; box-shadow:var(--fp-card-shadow-soft) !important; }
+      .cd-modal .detail-section h3 { font-size:12px !important; margin-bottom:18px !important; }
+      /* ★ メインCTA — 横幅一杯 巨大 pill (画面下に固定風) */
+      body .cd-modal .fp-draft-cta#modal-draft-btn, .cd-modal .fp-draft-cta#modal-draft-btn { width:100% !important; min-height:76px !important; border-radius:24px !important; padding:18px 28px !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-label { font-size:19px !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-sub { font-size:13px !important; margin-top:3px !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-no { width:36px !important; height:36px !important; font-size:15px !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-icon { width:24px !important; height:24px !important; }
+      /* サブボタン pill 統一 */
+      .cd-modal .modal-brief-btn, .cd-modal #modal-edit-btn, .cd-modal .cd-flow-edit, .cd-modal button[data-open-hearing], .cd-modal #fp-fam-ai, .cd-modal #fp-fam-add { padding:14px 26px !important; font-size:15px !important; min-height:52px !important; border-radius:999px !important; }
+      /* 議事録 / 家族カード */
+      .cd-modal .fp-meeting-card { padding:22px 24px !important; border-radius:18px !important; }
+      .cd-modal .fp-meeting-card-date { font-size:18px !important; }
+      .cd-modal .fp-meeting-card-eyebrow { font-size:12.5px !important; }
+      .cd-modal .fp-meeting-body { font-size:15px !important; line-height:1.9 !important; }
+      .cd-modal .fp-fam-card { padding:18px 20px !important; min-width:170px !important; border-radius:16px !important; }
+      .cd-modal .fp-fam-name { font-size:18px !important; }
+      .cd-modal .fp-fam-age { font-size:13px !important; margin-top:5px !important; }
+      /* WORKFLOW ブロック compact */
+      .cd-modal .cd-flow { padding:18px 20px !important; border-radius:18px !important; }
+      .cd-modal .cd-flow-title { font-size:16px !important; }
+      /* 概観タブ 上部 紹介 紙 → mint hero と 統合表示 */
+      .cd-modal #cd-tags-section, .cd-modal .cd-profile-section[id*="tags"] { border:none !important; box-shadow:none !important; background:transparent !important; padding:8px 0 !important; }
 
       /* ============================================================ */
       /* ★ 顧客台帳 — table廃止 → カード grid (1人 = 1大型カード) */
