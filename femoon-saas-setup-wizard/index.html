@@ -119,8 +119,36 @@ const STEPS = [
     sub:'サロン admin に LINE 鍵 4つ を 入れる → リッチメニュー 作る → 動作確認 まで、 ぜんぶ で 18ステップ。 上 から 順 に 「次へ」 を 押す だけ。' },
 
   { kind:'step', title:'これ は 何 を する マニュアル?',
-    body:`<p>サロン の <strong>LINE 公式アカウント</strong> と FEMOON SaaS を 繋いで、 お客様 が LINE で 予約 できる ように する 作業 を、 1ステップ ずつ やります。</p>`,
-    note:'対象: サロン に LINE OA は ある (or 一緒に開設した) が、 まだ 予約フォーム と 紐付いて ない 状態' },
+    body:`<p>サロン が ウィザード で 答えた 内容 (店名・コース・休日 等) を <strong>予約フォーム</strong> に 反映 → サロン の <strong>LINE 公式アカウント</strong> と 繋いで、 お客様 が LINE で 予約 できる ように する 作業 を、 1ステップ ずつ やります。</p>`,
+    note:'2部 構成: PART A (予約フォーム 確認、 5ステップ) + PART B (LINE接続、 17ステップ)' },
+
+  { kind:'step', title:'【PART A】 まず 予約フォーム を 確認',
+    body:`<p>サロン が ウィザード で 答えた 内容 は、 すでに <strong>予約フォーム に 反映済み</strong>。 まず 自分で 開いて 中身 を 確認 します。</p>`,
+    note:'ここ で 確認 OK なら LINE接続 (PART B) に 進む。 NG なら admin で 編集' },
+
+  { kind:'step', title:'予約フォーム URL を 開く',
+    body:`<p>サロン専用 の 予約フォーム URL は <code>https://skeleton-femoon-saas.web.app/book/{tenantId}</code>。 tenantId は サロン申込 完了時 に 自動 発行 されてる。</p>`,
+    action:{ label:'予約フォーム', url:'/book/{tenantId}', href:'https://skeleton-femoon-saas.web.app/admin/' },
+    note:'tenantId は admin に ログイン後 URL末尾 ?tenant=○○○ で 確認 できる。 例: <code>?tenant=i-sxyzd</code> なら 予約URL は <code>.../book/i-sxyzd</code>' },
+
+  { kind:'step', title:'予約フォーム の 内容 を 確認',
+    body:`<p>開いた フォーム で 下記 が <strong>申込時 の 内容</strong> と 合って いる か 目視:</p>`,
+    list:[
+      '<strong>サロン名</strong> が 上部 に 表示',
+      '<strong>コース</strong> (名前・所要時間・料金) が ウィザード で 答えた 通り',
+      '<strong>営業時間</strong> (○○:00 〜 ○○:00) が 正しい',
+      '<strong>定休日</strong> の 曜日 が 「休」 表示',
+      '<strong>不定休</strong> (第N週X曜日) が ある 場合 も 「休」 表示'
+    ],
+    ok:'全部 合って いれば PART A 完了。 次へ' },
+
+  { kind:'step', title:'内容 が 違う 場合 は admin 「設定」 で 編集',
+    body:`<p>もし 表示内容 が 違う 場合 (例: コース 抜けてる、 営業時間 違う) は サロン に 連絡 し、 admin の <strong>設定タブ</strong> 内 で 編集 → 保存 し直し。 編集後 すぐ 予約フォーム に 反映。</p>`,
+    note:'コース は 「コース・料金」 セクション、 スタッフ は 「スタッフ」 セクション、 営業時間 は 「営業時間」 セクション で それぞれ 編集' },
+
+  { kind:'step', title:'【PART B】 LINE接続 に 進む',
+    body:`<p>予約フォーム 内容 OK なら、 ここ から <strong>LINE 公式アカウント</strong> と FEMOON SaaS の 紐付け を やります。 残り 17ステップ。</p>`,
+    note:'サロン に LINE OA が まだ 無い 場合 は、 先に 開設 (Zoom画面共有 で 一緒に) 推奨。 詳細 は femoon-saas-employee guide CH11 参照' },
 
   { kind:'step', title:'サロン から 鍵 4つ を 預かる',
     body:`<p>下記 を そのまま LINE で サロン に 送って、 4つ の 値 を 教えて もらう。</p>`,
@@ -254,6 +282,9 @@ function render(){
     }
     if (s.tmpl){
       mid += `<div class="tmpl-box">${s.tmpl}<br><button class="copy-btn" data-tmpl="${escAttr(stripTags(s.tmpl))}">📋 コピー</button></div>`;
+    }
+    if (s.list && Array.isArray(s.list)){
+      mid += `<div class="mini-list"><ul>${s.list.map(i => `<li>${i}</li>`).join('')}</ul></div>`;
     }
     if (s.note) mid += `<div class="note">${s.note}</div>`;
     if (s.warn) mid += `<div class="note warn">${s.warn}</div>`;
