@@ -2,6 +2,71 @@
 // シングルページ。ダッシュボード / 顧客一覧 / タイムライン / 顧客詳細モーダル。
 
 (function () {
+  // ★ mint/teal フィンテック skin (50-60代 FP 向け / オーナー承認デザイン) — CSS injection
+  //   既存 styles-v8-workspace.css を 上書き、 顧客モーダル + 顧客台帳 のみ
+  (function injectFintechSkin(){
+    if (document.getElementById('fp-fintech-skin')) return;
+    const st = document.createElement('style');
+    st.id = 'fp-fintech-skin';
+    st.textContent = `
+      :root {
+        --fp-mint: #4DB6AC;
+        --fp-mint-dark: #00897B;
+        --fp-mint-soft: #B2DFDB;
+        --fp-mint-faint: #E0F2F1;
+        --fp-ink-strong: #0F172A;
+        --fp-ink-mid: #475569;
+        --fp-ink-soft: #94A3B8;
+        --fp-card-bg: #FFFFFF;
+        --fp-card-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.06);
+        --fp-radius-card: 16px;
+        --fp-radius-pill: 999px;
+      }
+      .cd-modal { background:#F8FAFB !important; font-family:'Noto Sans JP','Inter',-apple-system,sans-serif !important; }
+      .cd-modal .cd-tabs { border-bottom:1px solid #E2E8F0 !important; padding:4px 4px 0 !important; gap:2px !important; }
+      .cd-modal .cd-tab { font-size:15px !important; font-weight:700 !important; color:var(--fp-ink-mid) !important; padding:14px 18px !important; border:none !important; background:transparent !important; border-bottom:3px solid transparent !important; border-radius:0 !important; }
+      .cd-modal .cd-tab:hover { color:var(--fp-mint-dark) !important; background:transparent !important; }
+      .cd-modal .cd-tab.cd-tab-active { color:var(--fp-mint-dark) !important; border-bottom-color:var(--fp-mint) !important; background:transparent !important; }
+      .cd-modal .cd-tab .cd-tab-count { display:inline-flex !important; align-items:center !important; justify-content:center !important; min-width:24px !important; height:22px !important; padding:0 8px !important; margin-left:6px !important; background:var(--fp-mint-faint) !important; color:var(--fp-mint-dark) !important; border-radius:11px !important; font-size:12px !important; font-weight:800 !important; }
+      .cd-modal .cd-tab.cd-tab-active .cd-tab-count { background:var(--fp-mint) !important; color:#fff !important; }
+      .cd-modal .detail-section, .cd-modal .cd-profile-section, .cd-modal .cd-card { background:var(--fp-card-bg) !important; border:1px solid #ECEEF1 !important; border-radius:var(--fp-radius-card) !important; box-shadow:var(--fp-card-shadow) !important; padding:20px 22px !important; margin-bottom:14px !important; }
+      .cd-modal .detail-section h3 { font-size:17px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; margin:0 0 14px !important; letter-spacing:-0.005em !important; }
+      .cd-modal .count-badge { background:var(--fp-mint-faint) !important; color:var(--fp-mint-dark) !important; padding:3px 10px !important; border-radius:var(--fp-radius-pill) !important; font-size:12px !important; font-weight:800 !important; margin-left:8px !important; vertical-align:middle !important; }
+      .cd-modal .fp-meeting-card { background:#fff !important; border:1px solid #ECEEF1 !important; border-radius:var(--fp-radius-card) !important; box-shadow:0 1px 3px rgba(15,23,42,0.04) !important; padding:18px 20px !important; }
+      .cd-modal .fp-meeting-card-eyebrow { font-size:13px !important; font-weight:800 !important; color:var(--fp-mint-dark) !important; }
+      .cd-modal .fp-meeting-card-date { font-size:15px !important; font-weight:700 !important; color:var(--fp-ink-strong) !important; margin-top:3px !important; }
+      .cd-modal .fp-fam-card { background:#fff !important; border:1px solid #E2E8F0 !important; border-radius:14px !important; padding:14px 16px !important; min-width:148px !important; box-shadow:0 1px 2px rgba(15,23,42,0.04) !important; }
+      .cd-modal .fp-fam-name { font-size:15px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; }
+      .cd-modal .fp-fam-age { font-size:12.5px !important; color:var(--fp-ink-mid) !important; }
+      .cd-modal #fp-fam-ai { background:var(--fp-mint) !important; color:#fff !important; border:none !important; padding:13px 22px !important; border-radius:12px !important; font-size:15px !important; font-weight:800 !important; }
+      .cd-modal #fp-fam-add { background:#fff !important; border:1.5px solid #CBD5E1 !important; color:var(--fp-ink-mid) !important; padding:13px 22px !important; border-radius:12px !important; font-size:15px !important; font-weight:700 !important; }
+      .cd-modal [data-open-hearing] { background:var(--fp-mint-dark) !important; color:#fff !important; border:none !important; padding:12px 20px !important; border-radius:12px !important; font-size:15px !important; font-weight:700 !important; box-shadow:0 4px 12px rgba(0,137,123,0.22) !important; }
+      .cd-modal .fp-draft-cta { background:var(--fp-mint) !important; border-radius:14px !important; box-shadow:0 8px 20px rgba(77,182,172,0.32) !important; padding:16px 20px !important; min-height:64px !important; }
+      .cd-modal .fp-draft-cta .cd-flow-step-label { font-size:16px !important; font-weight:800 !important; }
+      .cd-modal .modal-brief-btn { background:#fff !important; color:var(--fp-mint-dark) !important; border:1.5px solid var(--fp-mint) !important; padding:12px 20px !important; border-radius:12px !important; font-size:15px !important; font-weight:800 !important; }
+      .cd-modal .cd-flow-edit { background:#fff !important; color:var(--fp-ink-mid) !important; border:1.5px solid #E2E8F0 !important; padding:12px 20px !important; border-radius:12px !important; font-size:15px !important; font-weight:700 !important; }
+      .cd-modal #modal-delete-btn { background:transparent !important; color:var(--fp-ink-soft) !important; border:none !important; font-size:13px !important; text-decoration:underline !important; padding:12px 8px !important; }
+      .cd-modal .cd-stat { background:#fff !important; border:1px solid #ECEEF1 !important; border-radius:14px !important; padding:14px 16px !important; }
+      .cd-modal .cd-stat-value { font-size:26px !important; font-weight:900 !important; color:var(--fp-mint-dark) !important; letter-spacing:-0.02em !important; }
+      .cd-modal .cd-stat-label { font-size:11.5px !important; font-weight:700 !important; color:var(--fp-ink-soft) !important; letter-spacing:0.06em !important; text-transform:uppercase !important; }
+      .cd-modal .cd-stat-unit { font-size:14px !important; color:var(--fp-ink-mid) !important; margin-left:3px !important; }
+      .cd-modal .cd-stat-sub { font-size:12.5px !important; color:var(--fp-ink-mid) !important; margin-top:4px !important; }
+      .cd-modal .status-pill.active { background:var(--fp-mint-faint) !important; color:var(--fp-mint-dark) !important; }
+      /* 顧客台帳 row */
+      #client-tbody tr { background:#fff !important; border-bottom:1px solid #F1F5F9 !important; transition:background 0.15s ease !important; }
+      #client-tbody tr:hover { background:#F8FAFB !important; cursor:pointer !important; }
+      #client-tbody td { padding:18px 18px !important; font-size:14.5px !important; vertical-align:middle !important; }
+      #client-tbody .client-row-name strong { font-size:15.5px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; }
+      #client-tbody .avatar { background:var(--fp-mint-soft) !important; color:var(--fp-mint-dark) !important; font-weight:800 !important; }
+      #client-tbody .status-pill.active { background:var(--fp-mint-faint) !important; color:var(--fp-mint-dark) !important; padding:5px 12px !important; border-radius:var(--fp-radius-pill) !important; font-size:12px !important; font-weight:800 !important; }
+      #client-tbody .status-pill.new { background:#FEF3C7 !important; color:#92400E !important; padding:5px 12px !important; border-radius:var(--fp-radius-pill) !important; font-size:12px !important; font-weight:800 !important; }
+      @media (prefers-reduced-motion: reduce) {
+        #client-tbody tr { transition:none !important; }
+      }
+    `;
+    document.head.appendChild(st);
+  })();
+
   const TODAY = window.LifeEvents.TODAY;
   const LS_KEY = 'fp-crm-state-v1';
   const LS_REAL_MODE = 'fp-crm-real-mode';
