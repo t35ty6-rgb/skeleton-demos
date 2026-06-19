@@ -685,9 +685,13 @@
       try { window.refreshFirestoreCustomers(); } catch (_) {}
     }
     fetchLiveData().then(() => { if (currentSubview === 'leadHub') renderLeadHubInner(); });
-    // ★ オーナーfb「ボタン押そうとすると 一瞬で消える」 = 15秒 setInterval の renderLeadHubInner が click を 奪う
-    // → 自動 polling 撤去。 タブ切替 / Firestore 操作 後のみ 手動 再描画
-    if (window._leadHubInterval) { clearInterval(window._leadHubInterval); window._leadHubInterval = null; }
+    if (!window._leadHubInterval) {
+      window._leadHubInterval = setInterval(() => {
+        if (currentSubview === 'leadHub') {
+          fetchLiveData().then(() => renderLeadHubInner());
+        }
+      }, 15000);
+    }
     renderLeadHubInner();
   }
 
@@ -697,10 +701,9 @@
     const today = new Date('2026-05-28').toISOString().slice(0, 10);
     let surveys = (liveData && liveData.survey_answers) || [];
     // ★ Firestore 多テナント 確定済 を bookings に 合流
-    // ホスト権限 で 開く ため hostZoomUrl (start_url) 優先、 無ければ legacy zoomUrl (join_url) fallback
     const fsConfirmedHero = (window._fpFirestoreConfirmed || []).map(c => {
       const [d, t] = String(c.confirmedSlot || '').split(' ');
-      return { _fsCustomerId: c.docId, userId: 'fs:'+c.docId, name: c.name, date: d || '', time: t || '', zoomUrl: c.hostZoomUrl || c.zoomUrl, ts: c.confirmedAt?.toDate?.()?.toISOString?.() || '', status: 'confirmed' };
+      return { _fsCustomerId: c.docId, userId: 'fs:'+c.docId, name: c.name, date: d || '', time: t || '', zoomUrl: c.zoomUrl, ts: c.confirmedAt?.toDate?.()?.toISOString?.() || '', status: 'confirmed' };
     });
     const bookings = ((liveData && liveData.bookings) || []).concat(fsConfirmedHero);
     const fsPendingHeroCount = (window._fpFirestoreCustomers || []).length;
@@ -1199,7 +1202,7 @@
         name: c.name,
         date: d || '',
         time: t || '',
-        zoomUrl: c.hostZoomUrl || c.zoomUrl, // FP は host で 入る (start_url 優先)
+        zoomUrl: c.zoomUrl,
         ts: c.confirmedAt?.toDate?.()?.toISOString?.() || c.createdAt?.toDate?.()?.toISOString?.() || '',
         status: 'confirmed',
         recordingStatus: null,
@@ -1972,18 +1975,7 @@
       window._fpZoomWin = zoomWin;
       // ※ Zoom popup が閉じても自動停止しない (誤検知防止のため監視機能を撤廃)
       // 停止は「Chrome 共有を停止」 or 「メモの完了ボタン」 でのみ実行
-      // ★ multi-tenant: legacy bookings + Firestore 確定済 を 横断検索 (customerName='お客様' 化 防止)
-      let booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
-      if (!booking) {
-        const _fs = (window._fpFirestoreConfirmed || []).find(c => {
-          const cts = c.confirmedAt?.toDate?.()?.toISOString?.() || c.createdAt?.toDate?.()?.toISOString?.() || '';
-          return String(cts).slice(0,19) === String(bookingTs).slice(0,19);
-        });
-        if (_fs) {
-          const [_d, _t] = String(_fs.confirmedSlot || '').split(' ');
-          booking = { _fsCustomerId: _fs.docId, userId: 'fs:'+_fs.docId, name: _fs.name, date: _d||'', time: _t||'', zoomUrl: _fs.hostZoomUrl || _fs.zoomUrl, ts: bookingTs };
-        }
-      }
+      const booking = ((liveData && liveData.bookings) || []).find(b => String(b.ts).slice(0,19) === String(bookingTs).slice(0,19));
       // ★ オーナーfb: popup ウィンドウだと Zoom と z-order 競合で潜る。物理タブ (同じ Chrome ウィンドウ内の新タブ) に変更。
       // tab だと Chrome のタブストリップから手動で切り替え or ドラッグでウィンドウ分離可能。CRM 親と同じウィンドウなので focus 問題ゼロ。
       const memoKey = 'fp-memo-' + (bookingTs || '');
@@ -2249,48 +2241,8 @@
               addedAt: new Date().toISOString(),
             });
           });
-          // ★ 議事録 summary/transcript から 家族構成 自動抽出 → c.family 更新
-          //   (オーナーfb: 「夫が60歳の時 / 妻が何歳の時 / 子供が中学校入学の時 みたいに 家族イベントを 議事録 から 自動更新」)
-          try {
-            const blob = String(entry.summary || '') + '\n' + String(entry.transcript || '');
-            const currentYear = new Date().getFullYear();
-            const ensureMember = (rel, label) => {
-              if (!Array.isArray(c.family)) c.family = [];
-              let m = c.family.find(x => x.rel === rel);
-              if (!m) { m = { rel, name: label, birth: null }; c.family.push(m); }
-              return m;
-            };
-            // 配偶者 年齢抽出 (「妻 50歳」「夫45歳」「配偶者 N歳」)
-            const spouseAge = (blob.match(/(?:妻|夫|配偶者|奥さん|旦那)[\s、，は が](\d{1,2})歳/) || [])[1];
-            if (spouseAge) {
-              const m = ensureMember('spouse', '配偶者');
-              const newBirth = `${currentYear - parseInt(spouseAge)}-06-15`;
-              if (!m.birth || m.birth.length < 4) m.birth = newBirth;
-            }
-            // 子供 抽出 (「子供 N歳」「長男 N歳」「長女 N歳」「次男/次女」)
-            const childPatterns = [
-              { regex: /(?:長男|長女)[\s、，は が]*(\d{1,2})歳/g, name: '長子' },
-              { regex: /(?:次男|次女)[\s、，は が]*(\d{1,2})歳/g, name: '次子' },
-              { regex: /(?:子供|子ども|お子さん|お子様)[\s、，は が]*(\d{1,2})歳/g, name: 'お子様' },
-            ];
-            childPatterns.forEach(p => {
-              let mt;
-              let idx = 0;
-              while ((mt = p.regex.exec(blob)) !== null) {
-                idx++;
-                const age = parseInt(mt[1]);
-                if (!Array.isArray(c.family)) c.family = [];
-                // child rel + name で 一意
-                const childName = p.name + (idx > 1 ? idx : '');
-                let m = c.family.find(x => x.rel === 'child' && x.name === childName);
-                if (!m) { m = { rel: 'child', name: childName, birth: null }; c.family.push(m); }
-                const newBirth = `${currentYear - age}-06-15`;
-                if (!m.birth) m.birth = newBirth;
-              }
-            });
-          } catch (e) { console.warn('family 自動抽出 fail:', e); }
           try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS)); } catch (_) {}
-          console.log('[lifeEvent抽出]', cands.length, 'candidates → customEvents on', c.name, '/ family:', c.family);
+          console.log('[lifeEvent抽出]', cands.length, 'candidates → customEvents on', c.name);
         }
       }
     } catch (e) { console.warn('lifeEventCandidates merge fail:', e); }
@@ -2304,9 +2256,7 @@
         console.log('[autoSaveAIResult] GAS 保存 OK');
         // 成功時のみ localStorage に最低限の backup (1キー = bookingTs単位)
         try {
-          // ★ key を 時刻ベース ユニーク化 (オーナーfb: 2回目録画で 1回目 上書きされて 2件残らない 修正)
-          //   entry.bookingTs / entry.createdAt は 検索 / 紐付け 用に保持、 keyは単に コリジョン避け
-          const k = 'fp-ai-backup-' + Date.now() + '-' + (bookingTs || userId || nameKey || 'na');
+          const k = 'fp-ai-backup-' + (bookingTs || userId || nameKey || Date.now());
           localStorage.setItem(k, JSON.stringify({ entry, tasks: newTasks }));
         } catch (_) {}
         // 顧客台帳再描画 (GAS から取り直す)
@@ -2328,8 +2278,8 @@
       const pending = JSON.parse(localStorage.getItem('fp-ai-pending-sync') || '[]');
       pending.push({ entry, tasks, queuedAt: new Date().toISOString() });
       localStorage.setItem('fp-ai-pending-sync', JSON.stringify(pending));
-      // 表示用backup も (時刻ベース ユニーク化)
-      const k = 'fp-ai-backup-' + Date.now() + '-' + (entry.bookingTs || entry.userId || 'na');
+      // 表示用backup も
+      const k = 'fp-ai-backup-' + (entry.bookingTs || entry.userId || Date.now());
       localStorage.setItem(k, JSON.stringify({ entry, tasks }));
     } catch (_) {}
   }
@@ -2810,14 +2760,16 @@
       if (idx >= 0) currentIdx = idx;
     }
 
+    // 日付を ローカル(JST)で YYYY-MM-DD に整形 (toISOString は UTC で 1日ずれる罠を回避)
+    const fmtLocalDate = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     // 起点日(候補日1つ目)の週初め (月曜) を計算
     const startDate = pendingByCustomer[currentIdx] && pendingByCustomer[currentIdx].candidates[0]
-      ? new Date(pendingByCustomer[currentIdx].candidates[0].dateStr)
+      ? new Date(pendingByCustomer[currentIdx].candidates[0].dateStr + 'T00:00:00')
       : new Date();
     const dow = startDate.getDay();
     const monOffset = (dow === 0 ? -6 : 1 - dow);
     const weekStart = new Date(startDate); weekStart.setDate(startDate.getDate() + monOffset); weekStart.setHours(0,0,0,0);
-    panel.dataset.weekStart = weekStart.toISOString().slice(0,10);
+    panel.dataset.weekStart = fmtLocalDate(weekStart);
 
     panel.innerHTML = `
       <div id="fp-cal-resize-v3" style="position:absolute;top:0;bottom:0;left:0;width:6px;cursor:ew-resize;z-index:2;background:transparent;"></div>
@@ -2844,8 +2796,8 @@
       if (!root) return;
       const ws = new Date(panel.dataset.weekStart + 'T00:00:00');
       const we = new Date(ws); we.setDate(ws.getDate() + 6); we.setHours(23,59,59,999);
-      const fromStr = ws.toISOString().slice(0,10);
-      const toStr = we.toISOString().slice(0,10);
+      const fromStr = fmtLocalDate(ws);
+      const toStr = fmtLocalDate(we);
       const wkLabel = `${ws.getMonth()+1}月${ws.getDate()}日 〜 ${we.getMonth()+1}月${we.getDate()}日`;
       root.innerHTML = `<div style="text-align:center;padding:8px;font-size:12px;color:#6b7280;font-weight:600;letter-spacing:0.04em;">${wkLabel}<span style="margin-left:8px;color:#9ca3af;font-weight:400;">読み込み中…</span></div>`;
       try {
@@ -2865,15 +2817,15 @@
         const wdLabel = ['月','火','水','木','金','土','日'];
         const today = new Date(); today.setHours(0,0,0,0);
         const eventsByDay = days.map(d => {
-          const dKey = d.toISOString().slice(0,10);
+          const dKey = fmtLocalDate(d);
           return (data.events || []).filter(ev => {
-            const evDate = new Date(ev.start).toISOString().slice(0,10);
+            const evDate = fmtLocalDate(new Date(ev.start));
             return evDate === dKey;
           });
         });
         let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 6px 14px;">';
         days.forEach((d, i) => {
-          const dKey = d.toISOString().slice(0,10);
+          const dKey = fmtLocalDate(d);
           const isToday = d.getTime() === today.getTime();
           const isCandidate = candidateSet.has(dKey);
           const evs = eventsByDay[i];
@@ -2906,13 +2858,13 @@
     document.getElementById('fp-cal-prev-v3').addEventListener('click', () => {
       const d = new Date(panel.dataset.weekStart + 'T00:00:00');
       d.setDate(d.getDate() - 7);
-      panel.dataset.weekStart = d.toISOString().slice(0,10);
+      panel.dataset.weekStart = fmtLocalDate(d);
       renderWeekView();
     });
     document.getElementById('fp-cal-next-v3').addEventListener('click', () => {
       const d = new Date(panel.dataset.weekStart + 'T00:00:00');
       d.setDate(d.getDate() + 7);
-      panel.dataset.weekStart = d.toISOString().slice(0,10);
+      panel.dataset.weekStart = fmtLocalDate(d);
       renderWeekView();
     });
     document.getElementById('fp-cal-today-v3').addEventListener('click', () => {
@@ -2920,7 +2872,7 @@
       const dow = t.getDay();
       const monOff = (dow === 0 ? -6 : 1 - dow);
       t.setDate(t.getDate() + monOff);
-      panel.dataset.weekStart = t.toISOString().slice(0,10);
+      panel.dataset.weekStart = fmtLocalDate(t);
       renderWeekView();
     });
     renderWeekView();
@@ -2997,11 +2949,11 @@
     function jumpIframeTo(customer) {
       if (!customer || !customer.candidates[0]) return;
       // 候補日の週へ ジャンプ (自前 週ビュー)
-      const d = new Date(customer.candidates[0].dateStr);
+      const d = new Date(customer.candidates[0].dateStr + 'T00:00:00');
       const dow = d.getDay();
       const monOffset = (dow === 0 ? -6 : 1 - dow);
       d.setDate(d.getDate() + monOffset); d.setHours(0,0,0,0);
-      panel.dataset.weekStart = d.toISOString().slice(0,10);
+      panel.dataset.weekStart = fmtLocalDate(d);
       if (typeof renderWeekView === 'function') renderWeekView();
     }
     function bindCandidateRows() {
@@ -3016,11 +2968,11 @@
         const jumpBtn = row.querySelector('.fp-cand-jump');
         jumpBtn.addEventListener('click', () => {
           // 候補日の週へ ジャンプ (自前 週ビュー)
-          const d = new Date(dateStr);
+          const d = new Date(dateStr + 'T00:00:00');
           const dow = d.getDay();
           const monOffset = (dow === 0 ? -6 : 1 - dow);
           d.setDate(d.getDate() + monOffset); d.setHours(0,0,0,0);
-          panel.dataset.weekStart = d.toISOString().slice(0,10);
+          panel.dataset.weekStart = fmtLocalDate(d);
           if (typeof renderWeekView === 'function') renderWeekView();
           panel.querySelectorAll('[data-cand-row]').forEach(c => { c.style.background = '#fff'; c.style.boxShadow = ''; });
           row.style.background = '#fef2f2';
@@ -3614,9 +3566,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
   function bindBookingsButtons() {
     document.querySelectorAll('[data-rec-start]').forEach(btn => {
       btn.addEventListener('click', async () => {
-        // ★ tsEnc は fillBookingsList で encodeURIComponent されて 属性セット → ここで decode 統一
-        //   (decode しないと 議事録 entry.bookingTs が encoded → renderMeetingRecordsBlock の b.ts と 紐付け失敗 で「議事録 内容 出ない」)
-        const ts = decodeURIComponent(btn.dataset.recStart || '');
+        const ts = btn.dataset.recStart;
         const zoomUrl = btn.dataset.zoom;
         // ★ オーナーfb (v AH): Zoom pre-open popup が画面共有ダイアログを覆ってた。
         // 修正: pre-open は 画面外/極小 で 開いて 即 blur + CRM focus 戻し。 ユーザには見えないように。
@@ -4081,7 +4031,9 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
   // Cloud Run のリアルデータ
   const CLOUD_RUN_BASE = 'https://fp-compass-webhook-527726449426.asia-northeast1.run.app';
   // マルチテナント: 現在の FP (localStorage で永続、default fp001)
-  function currentFpId() { return localStorage.getItem('fp-current-fpid') || 'fp001'; }
+  // ★ デフォルト 'fp001' (= 旧 GAS データ 吉田恭聡 等 含む) を 撤去 — 旧テスト顧客 が 誤注入される 元凶
+  //   明示的に localStorage に セット された 場合 のみ GAS フェッチ 有効
+  function currentFpId() { return localStorage.getItem('fp-current-fpid') || ''; }
   function setCurrentFpId(id) { localStorage.setItem('fp-current-fpid', id); location.reload(); }
   window.FpTenant = { current: currentFpId, set: setCurrentFpId };
   const CLOUD_RUN_API = CLOUD_RUN_BASE + '/api/bookings?fpId=' + encodeURIComponent(currentFpId());
@@ -4115,6 +4067,13 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
   const LIVE_CACHE_KEY = 'fp-livedata-cache-v1';
 
   async function fetchLiveData() {
+    // ★ fpId が 未設定 (= 旧 GAS データ 誤注入 防止) なら GAS フェッチ スキップ
+    if (!currentFpId()) {
+      console.log('[fetchLiveData] skipped (no fpId set in localStorage)');
+      liveData = liveData || { users: [], bookings: [], survey_answers: [], line_messages: [] };
+      window.LineAppLiveData = liveData;
+      return;
+    }
     // ★ v20260608Y で全 GAS 遮断していたが、オーナーの実予約も消えてしまうので解除。
     // GAS は ?fpId=xxx で URL レベルで tenant 分離されている (CLOUD_RUN_API)。
     // demo テナントには dummy-data.js 由来の demo 客が出るのは変わらず (loadTenantData の別経路)。
@@ -4548,9 +4507,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
     // Zoom録画開始
     document.querySelectorAll('[data-rec-start]').forEach(btn => {
       btn.addEventListener('click', async () => {
-        // ★ tsEnc は fillBookingsList で encodeURIComponent されて 属性セット → ここで decode 統一
-        //   (decode しないと 議事録 entry.bookingTs が encoded → renderMeetingRecordsBlock の b.ts と 紐付け失敗 で「議事録 内容 出ない」)
-        const ts = decodeURIComponent(btn.dataset.recStart || '');
+        const ts = btn.dataset.recStart;
         const zoomUrl = btn.dataset.zoom;
         btn.disabled = true;
         btn.textContent = '...';

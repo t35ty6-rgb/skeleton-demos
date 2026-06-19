@@ -121,7 +121,7 @@
     onAuthStateChanged, signOut, setPersistence, browserSessionPersistence,
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
   import {
-    getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, getDocs, getDocsFromServer, addDoc,
+    getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, getDocs, addDoc,
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
   import {
     getFunctions, httpsCallable,
@@ -299,7 +299,9 @@
     $("fp-row-pwconfirm").style.display = m === "signup" ? "" : "none";
     $("fp-row-terms").style.display = m === "signup" ? "" : "none";
     $("fp-row-forgot").style.display = m === "signup" ? "none" : "";
-    $("fp-row-demo").style.display = m === "signup" ? "" : "none";
+    // ★ 本番では ¥0デモボタン 完全非表示 (オーナーfb: 本番=¥19,800一律、デモはクーポンコード DEMOFREE/DEMO9800 で対応)
+    const _hideDemoBtn = location.host === 'app.skeleton-inc.jp';
+    $("fp-row-demo").style.display = (m === "signup" && !_hideDemoBtn) ? "" : "none";
     $("fp-gate-btn").textContent = m === "signup" ? "アカウント作成" : "ログイン";
     $("fp-pw-input").setAttribute("autocomplete", m === "signup" ? "new-password" : "current-password");
     $("fp-gate-sub").textContent = $("fp-gate-sub").dataset[m];
@@ -465,12 +467,13 @@
   // ===== 認証状態の監視 + Firestore からデータ読み込み =====
   let signupInProgress = false;
   async function loadTenantData(tenantId) {
-    // ★ getDocsFromServer = キャッシュ無視 で 必ず サーバー から 取得
-    //   (オーナーが Jobs/Admin で 削除 した後、 ブラウザ Firestore offline cache が 古い顧客 を 抱えてた 問題 対策)
-    const snap = await getDocsFromServer(collection(db, "tenants", tenantId, "customers"));
+    const snap = await getDocs(collection(db, "tenants", tenantId, "customers"));
     const list = [];
     for (const d of snap.docs) {
       const c = { id: d.id, ...d.data() };
+      // ★ pictureUrl (webhook 由来 / Profile API) を linePictureUrl (UI 表示用) に コピー
+      //   UI 側 は c.linePictureUrl を 参照する仕様。 webhook で 取得した pictureUrl が UI に 反映されない 問題を 修正
+      if (c.pictureUrl && !c.linePictureUrl) c.linePictureUrl = c.pictureUrl;
       // 各 customer のサブコレを並列で読む (line_messages, cancellations)
       const [lineSnap, cxlSnap] = await Promise.all([
         getDocs(collection(db, "tenants", tenantId, "customers", d.id, "line_messages")).catch(() => null),
@@ -610,24 +613,6 @@
       console.log("[fp diag] loadTenantData start", { tenantId: window.__fp.tenantId, uid: user.uid });
       const clients = await loadTenantData(window.__fp.tenantId);
       console.log("[fp diag] loadTenantData success", { count: clients.length });
-      // ★ テナント切替検知: 別 tenant で ログインしてた残骸 localStorage を 物理的に削除
-      //   (前 tenant の 吉田司 等が 新 tenant 画面に ゴースト表示される 致命的バグ 対策)
-      try {
-        const last = localStorage.getItem('fp-last-tenant');
-        if (last && last !== window.__fp.tenantId) {
-          console.log('[fp tenant-switch]', last, '→', window.__fp.tenantId, ': purge legacy localStorage');
-          ['fp-crm-clients-v1', 'fp-crm-real-clients-v1', 'fp-crm-real-mode', 'fp-crm-state-v1',
-           'fp-dedup-migrated-v1', 'fp-ai-お客様-cleanup-v1'].forEach(k => localStorage.removeItem(k));
-          // fp-deliv-edit-* 等 顧客ID 紐付き localStorage も 全削除
-          for (let i = localStorage.length - 1; i >= 0; i--) {
-            const k = localStorage.key(i);
-            if (k && (k.startsWith('fp-deliv-') || k.startsWith('fp-minutes-') || k.startsWith('fp-line-'))) {
-              localStorage.removeItem(k);
-            }
-          }
-        }
-        localStorage.setItem('fp-last-tenant', window.__fp.tenantId);
-      } catch (e) { console.warn('[fp tenant-switch] purge fail:', e.message); }
       window.DUMMY_CLIENTS = clients;
       window.DUMMY_CLIENTS_VERSION = `firestore-${window.__fp.tenantId}`;
       window.UPCOMING_BOOKINGS = window.UPCOMING_BOOKINGS || [];
@@ -1167,17 +1152,31 @@ window.fpReadyAfterAuth = function() {
       const msg = String(e?.message || '');
       if (/ResizeObserver|Loading.*chunk|Loading CSS chunk|Script error\.?$/i.test(msg)) return;
       console.error('[errorBoundary]', e);
-      showRecoveryScreen();
+      // ★ 緩和: window.error 即発火 → 復旧画面 だと チャットbot等で 軽微エラー あっただけで 落ちる
+      //   3秒待って 画面要素 (ログイン/メイン) どっちも 無ければ 発火 (= 本当に 真っ白 時のみ)
+      setTimeout(() => {
+        const hasTabs = !!document.querySelector('.tab');
+        const hasLogin = !!document.querySelector('input[type="email"], #login, .login-card');
+        const hasMainContent = !!document.querySelector('.main, main, #app, .client-card, .sidebar');
+        if (!hasTabs && !hasLogin && !hasMainContent) showRecoveryScreen();
+      }, 3000);
     });
     window.addEventListener('unhandledrejection', (e) => {
       const r = e?.reason; const msg = String(r?.message || r || '');
       if (/AbortError|NetworkError when attempting/i.test(msg)) return;
       console.error('[errorBoundary] unhandled rejection:', r);
-      setTimeout(() => { if (!document.querySelector('.tab')) showRecoveryScreen(); }, 2000);
+      // ★ 緩和 (オーナーfb): 2秒→15秒 + 「.tab も #login も 両方無い」 = 本当に 画面真っ白 時のみ
+      //   従来は チャットbot fetch失敗 / Firebase load遅延 で すぐ 復旧画面 = 誤検知
+      setTimeout(() => {
+        const hasTabs = !!document.querySelector('.tab');
+        const hasLogin = !!document.querySelector('input[type="email"], #login, .login-card');
+        const hasMainContent = !!document.querySelector('.main, main, #app, .client-card, .sidebar');
+        if (!hasTabs && !hasLogin && !hasMainContent) showRecoveryScreen();
+      }, 15000);
     });
   })();
 
-  const ver = "20260619AS-clear-cache-stg-only";
+  const ver = "20260618H-reschedule-and-zoom-list-fix";
   const scripts = [
     "life-events.js?v=" + ver,
     "recommender.js?v=" + ver,
@@ -1216,87 +1215,9 @@ window.fpReadyAfterAuth = function() {
       window.lucide.createIcons({ attrs: { 'stroke-width': '1.6' } });
     }
   }
-  // ★ window.confirm を 即true に override
-  //   オーナー環境 で system confirm dialog が 「一瞬で消える」 (Chrome設定 等)
-  //   → 全 confirm を skip して 直接実行。 結果は inline toast / banner で feedback (実装側で対応済)
-  //   誤クリック リスク低い (取り消し可能な操作のみ confirm 使ってる前提)
-  window.confirm = msg => { try { console.log('[confirm bypass]', String(msg).slice(0, 80)); } catch (_) {} return true; };
-
-  // ★ 観測性: オーナー実機 の 状態 / 操作 / エラー を Firestore に push (Jobs が リアルタイム把握用)
-  window._fpObsBuffer = [];
-  window._fpObsLog = function(type, payload) {
-    try {
-      window._fpObsBuffer.push({ ts: new Date().toISOString(), type, payload, url: location.href.slice(0, 120) });
-      if (window._fpObsBuffer.length > 80) window._fpObsBuffer.shift();
-    } catch (_) {}
-  };
-  window.addEventListener('error', e => window._fpObsLog('error', { msg: e.message, file: e.filename, line: e.lineno }));
-  window.addEventListener('unhandledrejection', e => window._fpObsLog('unhandled-rejection', { msg: String(e.reason).slice(0, 200) }));
-  document.addEventListener('click', e => {
-    const t = e.target.closest('button, [data-tab], [data-cdtab], [data-customer-id], [data-line-brief], [data-rec-start], [data-rec-stop], [data-complete-booking]');
-    if (t) {
-      window._fpObsLog('click', {
-        text: (t.textContent || '').trim().slice(0, 40), id: t.id || null,
-        cls: (t.className || '').slice(0, 60),
-        dataset: Object.fromEntries(Object.entries(t.dataset || {}).slice(0, 5)),
-      });
-    }
-  }, true);
-  const origErr = console.error, origWarn = console.warn;
-  console.error = function() { try { window._fpObsLog('console-error', { msg: Array.from(arguments).map(a => String(a).slice(0, 200)).join(' ').slice(0, 400) }); } catch (_) {} origErr.apply(console, arguments); };
-  console.warn  = function() { try { window._fpObsLog('console-warn',  { msg: Array.from(arguments).map(a => String(a).slice(0, 200)).join(' ').slice(0, 400) }); } catch (_) {} origWarn.apply(console, arguments); };
-  async function flushObservability() {
-    try {
-      const tenantId = window.__fp && window.__fp.tenantId;
-      const uid = window.__fp && window.__fp.uid;
-      if (!tenantId || tenantId === 'demo' || !uid) return;
-      if (!window._fpObsBuffer.length) return;
-      const { getApps } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js');
-      const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
-      const app = getApps()[0]; if (!app) return;
-      await setDoc(doc(getFirestore(app), 'tenants', tenantId, 'debug', 'observability'), {
-        url: location.href.slice(0, 200),
-        version: typeof FP_VERSION !== 'undefined' ? FP_VERSION : null,
-        tenantId, uid,
-        clientsCount: (window.DUMMY_CLIENTS || []).length,
-        fsConfirmedCount: (window._fpFirestoreConfirmed || []).length,
-        fsCustomersCount: (window._fpFirestoreCustomers || []).length,
-        lsKeys: Object.keys(localStorage).filter(k => k.startsWith('fp-')).length,
-        userAgent: navigator.userAgent.slice(0, 200),
-        lastUpdated: new Date().toISOString(),
-        recentEvents: window._fpObsBuffer.slice(-30),
-      });
-    } catch (_) {}
-  }
-  setInterval(flushObservability, 30000);
-  document.addEventListener('click', () => { setTimeout(flushObservability, 800); }, true);
-  window.addEventListener('beforeunload', flushObservability);
-  setTimeout(flushObservability, 5000);
-
   document.addEventListener('DOMContentLoaded', () => {
     hydrateIcons();
     setInterval(hydrateIcons, 1200);
-    // ★ legacy ゴミ議事録 cleanup (customerName='お客様' / 空 = booking 紐付け失敗 残骸)
-    //   1回だけ走る (フラグ立てる)
-    try {
-      if (!localStorage.getItem('fp-ai-legacy-cleanup-v1')) {
-        let removed = 0;
-        Object.keys(localStorage).filter(k => k.startsWith('fp-ai-')).forEach(k => {
-          try {
-            const raw = JSON.parse(localStorage.getItem(k) || 'null');
-            const entries = Array.isArray(raw) ? raw : (raw && raw.entry ? [raw.entry] : (raw && (raw.summary || raw.key_concerns) ? [raw] : []));
-            if (entries.length === 0) return;
-            const allTrash = entries.every(e => {
-              const n = (e.customerName || '').trim();
-              return (n === 'お客様' || n === '' || n === '匿名') && (!e.summary || e.summary.length < 30);
-            });
-            if (allTrash) { localStorage.removeItem(k); removed++; }
-          } catch (_) {}
-        });
-        localStorage.setItem('fp-ai-legacy-cleanup-v1', new Date().toISOString());
-        if (removed > 0) console.log('[cleanup] legacy 議事録 残骸 削除:', removed, '件');
-      }
-    } catch (e) { console.warn('cleanup fail:', e); }
   });
 
   // Howto banner: collapse by default + dismissible + persisted
@@ -1571,7 +1492,7 @@ window.fpReadyAfterAuth = function() {
 <script>
 (function(){
   // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
-  const FP_VERSION = "20260619BC-getDocsFromServer+full-cache-purge";
+  const FP_VERSION = "20260618H-reschedule-and-zoom-list-fix";
   const loadTime = new Date();
   const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
   const dateLabel = (FP_VERSION.match(/^(\d{4})(\d{2})(\d{2})/) || []).slice(1).join('/').replace(/^(\d{4})\//,'$1/').replace(/\/(\d{2})\/(\d{2})$/,'/$1/$2') || FP_VERSION;
@@ -1594,225 +1515,300 @@ window.fpReadyAfterAuth = function() {
     document.body.appendChild(d);
     setTimeout(() => d.remove(), 12000);
   });
-  document.addEventListener('DOMContentLoaded', () => document.body.appendChild(badge));
-  if (document.readyState !== 'loading') document.body.appendChild(badge);
+  // ★ 本番では バッジ非表示 (stg のみ)。 オーナーfb: 「お客様 見える 場所 に Jobs の内部情報 出さない」
+  const isProd = location.host === 'app.skeleton-inc.jp';
+  if (!isProd) {
+    document.addEventListener('DOMContentLoaded', () => document.body.appendChild(badge));
+    if (document.readyState !== 'loading') document.body.appendChild(badge);
+  }
 })();
 </script>
 
-<!-- ★ 診断 オーバーレイ: stg or ?diag=1 で 表示。 オーナーが スクショ撮るだけで Firestore件数 / localStorage件数 / 不一致 が 一目で 分かる -->
-<script type="module">
-(async function diagOverlay() {
-  // 表示条件: stg.app.skeleton-inc.jp / localhost / ?diag=1 のみ (本番は 出ない)
-  const showAlways = location.host === 'stg.app.skeleton-inc.jp' || location.host.startsWith('localhost') || new URLSearchParams(location.search).get('diag') === '1';
-  if (!showAlways) return;
-
-  // 位置 保存 (LS) 取得
-  const POS_KEY = 'fp-diag-pos-v1';
-  const COLLAPSED_KEY = 'fp-diag-collapsed-v1';
-  const savedPos = (() => { try { return JSON.parse(localStorage.getItem(POS_KEY) || '{"top":54,"left":10}'); } catch(_){ return {top:54,left:10}; } })();
-
-  // overlay 構築 (即 表示, データ は あとから 流し込む)
-  const box = document.createElement('div');
-  box.id = 'fp-diag-overlay';
-  box.style.cssText = 'position:fixed;top:'+savedPos.top+'px;left:'+savedPos.left+'px;z-index:2147483640;background:rgba(15,23,42,0.93);color:#E2E8F0;padding:0;border-radius:10px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;line-height:1.7;max-width:380px;box-shadow:0 8px 28px rgba(0,0,0,0.32);backdrop-filter:blur(8px);border:1px solid rgba(255,233,168,0.22);';
-  box.innerHTML = '<div id="fp-diag-header" style="cursor:grab;padding:10px 16px 8px;border-bottom:1px solid rgba(255,255,255,0.10);display:flex;align-items:center;justify-content:space-between;gap:10px;user-select:none;"><div style="font-size:9px;letter-spacing:0.22em;color:#FFE9A8;font-weight:700;">🔬 DIAG · STG · ドラッグで移動</div><div style="display:flex;gap:4px;"><button id="fp-diag-collapse" title="最小化" style="background:transparent;color:#94A3B8;border:none;padding:0;cursor:pointer;font-size:14px;line-height:1;width:20px;height:20px;display:flex;align-items:center;justify-content:center;">_</button></div></div><div id="fp-diag-body" style="padding:10px 16px 12px;"><div id="fp-diag-content" style="opacity:0.5;">読込中…</div><div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.12);display:flex;gap:6px;flex-wrap:wrap;"><button id="fp-diag-refresh" style="background:#3B82F6;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 FS再取得</button><button id="fp-diag-hardreload" style="background:#F59E0B;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">🔁 ハードリロード</button><button id="fp-diag-purge" style="background:#DC2626;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">🧹 全削除+再起動</button></div></div>';
-  (document.body || document.documentElement).appendChild(box);
-
-  // 最小化ピル (隠した時 / 折りたたみ時 に 出る 小さい復活ボタン)
-  const pill = document.createElement('div');
-  pill.id = 'fp-diag-pill';
-  pill.style.cssText = 'position:fixed;top:54px;left:10px;z-index:2147483640;background:#0E1116;color:#FFE9A8;padding:6px 12px;border-radius:99px;font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.28);border:1px solid rgba(255,233,168,0.32);display:none;';
-  pill.textContent = '🔬 DIAG';
-  pill.addEventListener('click', () => {
-    box.style.display = 'block';
-    pill.style.display = 'none';
-    localStorage.removeItem(COLLAPSED_KEY);
-  });
-  (document.body || document.documentElement).appendChild(pill);
-
-  // 復元: 折りたたみ状態
-  if (localStorage.getItem(COLLAPSED_KEY) === '1') {
-    box.style.display = 'none';
-    pill.style.display = 'block';
-    pill.style.top = savedPos.top + 'px';
-    pill.style.left = savedPos.left + 'px';
+<!-- ====================================================== -->
+<!-- 🌱 芽吹くん チャットボット (右下フローティング) v1.0     -->
+<!-- ====================================================== -->
+<style>
+  .mb-fab{position:fixed;right:24px;bottom:24px;z-index:9990;cursor:pointer;display:flex;flex-direction:column;align-items:center;user-select:none;animation:mbFabFloat 3s ease-in-out infinite;}
+  /* マークダウン 装飾 */
+  .mb-bubble strong, .mb-bubble b{color:#DC2626;font-weight:900;}
+  .mb-bubble em, .mb-bubble i{color:#0F766E;font-style:normal;font-weight:700;background:linear-gradient(transparent 60%, rgba(20,184,166,0.18) 60%);padding:0 2px;}
+  .mb-bubble h1,.mb-bubble h2,.mb-bubble h3{font-size:14.5px;font-weight:900;margin:10px 0 6px;color:#0F172A;border-left:4px solid #14B8A6;padding-left:8px;line-height:1.4;}
+  .mb-bubble h1{font-size:15.5px;color:#0F766E;}
+  .mb-bubble h2{font-size:14.5px;}
+  .mb-bubble h3{font-size:13.5px;border-left-color:#34D399;}
+  .mb-bubble ul,.mb-bubble ol{margin:6px 0 8px 22px;padding:0;}
+  .mb-bubble li{margin:4px 0;line-height:1.7;}
+  .mb-bubble ul li::marker{color:#14B8A6;font-weight:900;}
+  .mb-bubble ol li::marker{color:#DC2626;font-weight:900;}
+  .mb-bubble hr{margin:10px 0;border:0;border-top:2px dashed #CFFAFE;}
+  .mb-bubble code{background:#F1F5F9;padding:2px 6px;border-radius:4px;font-size:12px;color:#0F766E;font-family:'JetBrains Mono',monospace;}
+  .mb-bubble blockquote{margin:8px 0;padding:8px 14px;background:#FEF3C7;border-left:4px solid #F59E0B;color:#78350F;border-radius:0 6px 6px 0;font-weight:600;}
+  .mb-bubble p{margin:6px 0;line-height:1.75;}
+  .mb-bubble p:first-child{margin-top:0;}
+  .mb-bubble p:last-child{margin-bottom:0;}
+  .mb-bubble .hl-key{background:#FEF3C7;padding:1px 6px;border-radius:4px;font-weight:800;color:#92400E;}
+  .mb-bubble .hl-num{color:#DC2626;font-weight:900;font-size:14px;}
+  /* リサイズ ハンドル */
+  .mb-resize{position:absolute;top:-3px;left:-3px;width:18px;height:18px;cursor:nwse-resize;z-index:10;background:linear-gradient(135deg,#14B8A6 0%,#14B8A6 30%,transparent 30%,transparent 50%,#14B8A6 50%,#14B8A6 60%,transparent 60%);opacity:0.7;border-radius:4px 0 0 0;}
+  .mb-resize:hover{opacity:1;}
+  .mb-panel.resizing{user-select:none;}
+  @keyframes mbFabFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .mb-fab-avatar{position:relative;width:96px;height:96px;background:radial-gradient(ellipse at 50% 60%, #fff 0%, #ECFEFF 70%, #CFFAFE 100%);border-radius:50%;box-shadow:0 10px 28px rgba(20,184,166,0.30),0 4px 10px rgba(15,23,42,0.20),inset 0 -4px 8px rgba(20,184,166,0.10);display:flex;align-items:center;justify-content:center;overflow:visible;border:3px solid #14B8A6;}
+  .mb-fab-img{width:80px;height:80px;object-fit:contain;border-radius:50%;display:block;}
+  .mb-fab-pulse{position:absolute;inset:-8px;border:3px solid #14B8A6;border-radius:50%;opacity:0;animation:mbPulse 2.2s ease-out infinite;pointer-events:none;}
+  @keyframes mbPulse{0%{transform:scale(0.85);opacity:0.7}100%{transform:scale(1.4);opacity:0}}
+  .mb-fab-badge{position:absolute;top:-4px;right:6px;width:26px;height:26px;background:#FBBF24;color:#0F172A;border:2px solid #fff;border-radius:50%;font-weight:900;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.30);animation:mbBadgePop 1.6s ease-in-out infinite;z-index:1;}
+  @keyframes mbBadgePop{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+  .mb-fab-label{margin-top:6px;background:#0F766E;color:#ECFEFF;padding:4px 10px;border-radius:12px;font-size:10.5px;font-weight:800;letter-spacing:0.08em;box-shadow:0 4px 12px rgba(15,23,42,0.30);}
+  .mb-fab-hint{position:absolute;right:114px;top:18px;background:#FBBF24;color:#0F172A;padding:10px 14px;border-radius:14px;font-size:12px;font-weight:800;line-height:1.35;box-shadow:0 6px 18px rgba(15,23,42,0.25);white-space:nowrap;animation:mbHintWiggle 2.8s ease-in-out infinite;}
+  @keyframes mbHintWiggle{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}
+  .mb-fab-hint::after{content:'';position:absolute;right:-10px;top:50%;transform:translateY(-50%);width:0;height:0;border-left:12px solid #FBBF24;border-top:10px solid transparent;border-bottom:10px solid transparent;}
+  .mb-fab.hidden{display:none;}
+  @media (max-width:600px){
+    .mb-fab{right:14px;bottom:14px;}
+    .mb-fab-avatar{width:76px;height:76px;border-width:2px;}
+    .mb-fab-img{width:62px;height:62px;}
+    .mb-fab-badge{width:22px;height:22px;font-size:12px;}
+    .mb-fab-hint{display:none;}
   }
+  .mb-panel{position:fixed;right:24px;bottom:24px;z-index:9995;width:460px;min-width:320px;max-width:calc(100vw - 32px);height:600px;min-height:400px;max-height:calc(100vh - 32px);background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(15,23,42,0.40),0 0 0 1px rgba(20,184,166,0.20);display:none;flex-direction:column;overflow:hidden;animation:mbPanelIn .22s cubic-bezier(.34,1.6,.64,1) both;font-family:'Noto Sans JP',sans-serif;}
+  @keyframes mbPanelIn{from{opacity:0;transform:scale(0.85) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+  .mb-panel.open{display:flex;}
+  @media (max-width:600px){.mb-panel{right:8px;bottom:8px;width:calc(100vw - 16px);max-height:85vh;}}
+  .mb-head{display:flex;align-items:center;gap:12px;padding:12px 16px;background:linear-gradient(135deg,#0F766E 0%,#0E7490 100%);color:#F0FDFA;border-bottom:1px solid #14B8A6;}
+  .mb-head-avatar{position:relative;width:42px;height:42px;background:radial-gradient(ellipse at 50% 60%, #fff 0%, #CFFAFE 100%);border:2px solid #14B8A6;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}
+  .mb-head-img{width:36px;height:36px;object-fit:contain;display:block;}
+  .mb-title-wrap{flex:1;min-width:0;}
+  .mb-title{font-size:14px;font-weight:800;letter-spacing:0.02em;color:#F0FDFA;display:block;}
+  .mb-sub{font-size:10.5px;color:#A7F3D0;margin-top:2px;font-family:'JetBrains Mono',monospace;display:block;}
+  .mb-status-dot{display:inline-block;width:7px;height:7px;background:#34D399;border-radius:50%;margin-right:6px;box-shadow:0 0 0 3px rgba(52,211,153,0.20);}
+  .mb-close{width:30px;height:30px;background:transparent;color:#A7F3D0;border:1px solid #115E59;border-radius:6px;font-size:16px;cursor:pointer;font-family:inherit;}
+  .mb-close:hover{background:#DC2626;color:#fff;border-color:#DC2626;}
+  .mb-messages{padding:14px 16px;flex:1;overflow-y:auto;background:#FAFAFA;display:flex;flex-direction:column;gap:10px;}
+  .mb-msg{max-width:92%;animation:mbIn .25s ease-out both;}
+  @keyframes mbIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .mb-msg-bot{margin-right:auto;}
+  .mb-msg-user{margin-left:auto;}
+  .mb-bubble{padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.65;color:#1F2937;white-space:pre-wrap;}
+  .mb-msg-bot .mb-bubble{background:#fff;border:1px solid #E5E7EB;border-left:3px solid #14B8A6;}
+  .mb-msg-user .mb-bubble{background:#0F766E;color:#F0FDFA;text-align:right;}
+  .mb-typing{display:inline-flex;gap:4px;padding:4px 0;}
+  .mb-typing span{width:6px;height:6px;background:#14B8A6;border-radius:50%;animation:mbBounce 1.2s ease-in-out infinite;}
+  .mb-typing span:nth-child(2){animation-delay:0.15s;}
+  .mb-typing span:nth-child(3){animation-delay:0.3s;}
+  @keyframes mbBounce{0%,80%,100%{transform:translateY(0);opacity:0.4}40%{transform:translateY(-4px);opacity:1}}
+  .mb-quick{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;background:#fff;border-top:1px dashed #E5E7EB;}
+  .mb-q{padding:6px 10px;background:#ECFEFF;border:1px solid #67E8F9;color:#0E7490;border-radius:99px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;}
+  .mb-q:hover{background:#14B8A6;color:#fff;border-color:#14B8A6;}
+  .mb-input-row{display:flex;gap:8px;padding:10px 12px;background:#fff;border-top:1px solid #E5E7EB;}
+  .mb-input{flex:1;min-height:38px;max-height:120px;padding:8px 12px;border:1px solid #D1D5DB;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;}
+  .mb-input:focus{outline:0;border-color:#14B8A6;box-shadow:0 0 0 2px rgba(20,184,166,0.15);}
+  .mb-send{padding:0 18px;height:38px;background:#14B8A6;color:#fff;border:0;border-radius:6px;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:0.04em;font-family:inherit;}
+  .mb-send:hover{background:#0F766E;}
+  .mb-send:disabled{background:#9CA3AF;cursor:not-allowed;}
+</style>
 
-  // ドラッグ 機能
-  const header = box.querySelector('#fp-diag-header');
-  let dragStart = null;
-  header.addEventListener('mousedown', (e) => {
-    if (e.target.tagName === 'BUTTON') return;
-    dragStart = { x: e.clientX, y: e.clientY, top: box.offsetTop, left: box.offsetLeft };
-    header.style.cursor = 'grabbing';
-    e.preventDefault();
-  });
-  window.addEventListener('mousemove', (e) => {
-    if (!dragStart) return;
-    const nt = Math.max(0, Math.min(window.innerHeight - 50, dragStart.top + (e.clientY - dragStart.y)));
-    const nl = Math.max(0, Math.min(window.innerWidth - 100, dragStart.left + (e.clientX - dragStart.x)));
-    box.style.top = nt + 'px';
-    box.style.left = nl + 'px';
-  });
-  window.addEventListener('mouseup', () => {
-    if (!dragStart) return;
-    header.style.cursor = 'grab';
-    try { localStorage.setItem(POS_KEY, JSON.stringify({ top: box.offsetTop, left: box.offsetLeft })); } catch(_) {}
-    dragStart = null;
-  });
-  // タッチ 対応 (スマホ)
-  header.addEventListener('touchstart', (e) => {
-    if (e.target.tagName === 'BUTTON') return;
-    const t = e.touches[0];
-    dragStart = { x: t.clientX, y: t.clientY, top: box.offsetTop, left: box.offsetLeft };
-  });
-  window.addEventListener('touchmove', (e) => {
-    if (!dragStart) return;
-    const t = e.touches[0];
-    const nt = Math.max(0, Math.min(window.innerHeight - 50, dragStart.top + (t.clientY - dragStart.y)));
-    const nl = Math.max(0, Math.min(window.innerWidth - 100, dragStart.left + (t.clientX - dragStart.x)));
-    box.style.top = nt + 'px';
-    box.style.left = nl + 'px';
-    e.preventDefault();
-  }, { passive: false });
-  window.addEventListener('touchend', () => {
-    if (!dragStart) return;
-    try { localStorage.setItem(POS_KEY, JSON.stringify({ top: box.offsetTop, left: box.offsetLeft })); } catch(_) {}
-    dragStart = null;
-  });
+<div class="mb-fab" id="mbFab" title="コンパちゃん に 業務相談 する">
+  <div class="mb-fab-hint" id="mbFabHint"><span>業務のこと<br>何でも聞いてね♪</span></div>
+  <div class="mb-fab-avatar">
+    <img class="mb-fab-img" src="/img/mebuki-kun-400.jpg" alt="コンパちゃん">
+    <span class="mb-fab-pulse"></span>
+    <span class="mb-fab-badge">?</span>
+  </div>
+  <span class="mb-fab-label">コンパちゃん</span>
+</div>
 
-  // 折りたたみ
-  document.getElementById('fp-diag-collapse')?.addEventListener('click', () => {
-    box.style.display = 'none';
-    pill.style.display = 'block';
-    pill.style.top = box.offsetTop + 'px';
-    pill.style.left = box.offsetLeft + 'px';
-    try { localStorage.setItem(COLLAPSED_KEY, '1'); } catch(_) {}
-  });
+<div class="mb-panel" id="mbPanel">
+  <div class="mb-resize" id="mbResize" title="ドラッグで サイズ変更"></div>
+  <div class="mb-head">
+    <div class="mb-head-avatar"><img class="mb-head-img" src="/img/mebuki-kun-400.jpg" alt="コンパちゃん"></div>
+    <div class="mb-title-wrap">
+      <span class="mb-title">コンパちゃん</span>
+      <span class="mb-sub"><span class="mb-status-dot"></span>オンライン / FP業務 全部 把握 🌱</span>
+    </div>
+    <button class="mb-close" id="mbClose" title="閉じる">×</button>
+  </div>
+  <div class="mb-messages" id="mbMessages">
+    <div class="mb-msg mb-msg-bot">
+      <div class="mb-bubble">こんにちは、 <strong>コンパちゃん</strong> だよ 🌱<br><br>FP業務 で 困った時 は 何でも 聞いてね。 お客様 説明用 の 文言 そのまま 出すよ ♪<br><br><b>こういう質問 ↓</b><br>・「40代主婦 教育費 提案 どうする?」<br>・「新NISA 配分 (30代会社員)」<br>・「保険見直し 切返し 文言」</div>
+    </div>
+  </div>
+  <div class="mb-quick">
+    <button class="mb-q" data-q="40代主婦・子供2人 (中学生・小学生) の 教育費 提案 のポイント を 3つ">教育費 40代</button>
+    <button class="mb-q" data-q="新NISA の 配分 を 30代会社員 (年収600万) の 場合 で 教えて">NISA 30代</button>
+    <button class="mb-q" data-q="50代経営者 に iDeCo を 勧めるべき? 切返し 文言">iDeCo 50代</button>
+    <button class="mb-q" data-q="保険見直し で 「今のままで いいや」 と 言う お客様 への 切返し">保険 切返し</button>
+  </div>
+  <div class="mb-input-row">
+    <textarea class="mb-input" id="mbInput" placeholder="聞きたいこと を 入力 (Cmd+Enter で 送信)" rows="1"></textarea>
+    <button class="mb-send" id="mbSend">▶ 送る</button>
+  </div>
+</div>
 
-  async function fetchFirestoreCount(tenantId) {
-    try {
-      const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js');
-      const { getFirestore, collection, getDocsFromServer } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
-      let app;
-      try { app = getApp(); } catch (_) { app = initializeApp({ apiKey:'AIzaSyAmVAEe9l9e1Yo_dzzJdbTVU35wWKd2sH4', authDomain:'skeleton-fp-compass-632026.firebaseapp.com', projectId:'skeleton-fp-compass-632026' }); }
-      const db = getFirestore(app);
-      // ★ getDocsFromServer = キャッシュ無視で 必ず サーバー から 最新値 取得
-      const snap = await getDocsFromServer(collection(db, 'tenants/'+tenantId+'/customers'));
-      return { count: snap.size, sample: snap.docs.slice(0,5).map(d => { const x = d.data(); return (x.name||'?')+' ('+ (x.source||'-')+')' }) };
-    } catch (e) { return { err: e.message }; }
+<script>
+(function () {
+  try {
+  const CF_URL = 'https://asia-northeast1-skeleton-fp-compass-632026.cloudfunctions.net/chatFpCounselor';
+  const fab = document.getElementById('mbFab');
+  const hint = document.getElementById('mbFabHint');
+  const panel = document.getElementById('mbPanel');
+  const closeBtn = document.getElementById('mbClose');
+  const messages = document.getElementById('mbMessages');
+  const input = document.getElementById('mbInput');
+  const send = document.getElementById('mbSend');
+  if (!fab || !panel || !messages || !input || !send) {
+    console.warn('[mebuki] elements not found, skip init');
+    return;
   }
+  const history = [];
 
-  async function render() {
-    const c = document.getElementById('fp-diag-content');
-    if (!c) return;
-    c.style.opacity = '0.6';
-    c.innerHTML = '取得中…';
-    const tenantId = window.__fp?.tenantId || '(未取得)';
-    const userEmail = window.__fp?.userEmail || '(未ログイン)';
-    const dummyLen = window.DUMMY_CLIENTS?.length;
-    const dummyVer = window.DUMMY_CLIENTS_VERSION || '(unset)';
-    const lsLegacy = (localStorage.getItem('fp-crm-clients-v1') || '');
-    const lsReal = (localStorage.getItem('fp-crm-real-clients-v1') || '');
-    const isReal = localStorage.getItem('fp-crm-real-mode') === '1';
-    let lsLegacyCount = 0, lsRealCount = 0;
-    try { lsLegacyCount = JSON.parse(lsLegacy || '[]').length; } catch(_){}
-    try { lsRealCount = JSON.parse(lsReal || '[]').length; } catch(_){}
-    let fsInfo = { count: '?', sample: [], err: null };
-    if (window.__fp?.tenantId) {
-      fsInfo = await fetchFirestoreCount(window.__fp.tenantId);
-    }
-    const dom = document.querySelectorAll('.client-card, .customer-card, [data-customer-id], [data-client-id]').length;
-    // DUMMY_CLIENTS は loadTenantData で Firestore の値 で 上書き される ので、 "demo データ" とは 別物
-    // 期待値 = DUMMY_CLIENTS (= Firestore + cached demo) と DOM が 同じ なら 正常
-    const mismatch = (dummyLen !== undefined) && (dom !== dummyLen);
-    const fsMismatch = (fsInfo.count !== '?') && (fsInfo.count !== dummyLen);
-    const warnColor = (mismatch || fsMismatch) ? '#EF4444' : '#22C55E';
-    // DOM の カード名 を 列挙 (誰が表示されてるか 即把握)
-    const domCustomers = Array.from(document.querySelectorAll('.client-card, .customer-card, [data-customer-id], [data-client-id]')).slice(0,5).map(el => {
-      const name = el.querySelector('.client-name, .customer-name, .name, h3, .ttl')?.textContent?.trim() || el.textContent.trim().slice(0, 30);
-      return name;
+  fab.addEventListener('click', () => {
+    panel.classList.add('open');
+    fab.classList.add('hidden');
+    setTimeout(() => input.focus(), 100);
+  });
+  closeBtn.addEventListener('click', () => {
+    panel.classList.remove('open');
+    fab.classList.remove('hidden');
+  });
+
+  // ★ リサイズ ハンドル (左上 ドラッグ で 拡縮)
+  const resize = document.getElementById('mbResize');
+  if (resize) {
+    let drag = null;
+    resize.addEventListener('mousedown', (e) => {
+      drag = { x: e.clientX, y: e.clientY, w: panel.offsetWidth, h: panel.offsetHeight, l: panel.offsetLeft, t: panel.offsetTop };
+      panel.classList.add('resizing');
+      e.preventDefault();
     });
-    c.style.opacity = '1';
-    c.innerHTML = '<div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px;align-items:center;">' +
-      '<div style="color:#94A3B8;">tenant:</div><div><b style="color:#FFE9A8;">' + tenantId + '</b></div>' +
-      '<div style="color:#94A3B8;">user:</div><div>' + userEmail + '</div>' +
-      '<div style="color:#94A3B8;">FS count (live):</div><div><b style="color:' + warnColor + ';">' + fsInfo.count + '</b>' + (fsInfo.err ? ' (err: '+fsInfo.err.slice(0,40)+')' : '') + '</div>' +
-      '<div style="color:#94A3B8;">DOM cards:</div><div><b style="color:' + warnColor + ';">' + dom + '</b></div>' +
-      '<div style="color:#94A3B8;">DUMMY len (cached):</div><div>' + dummyLen + ' (' + dummyVer + ')</div>' +
-      '<div style="color:#94A3B8;">LS legacy:</div><div>' + lsLegacyCount + ' 件</div>' +
-      '<div style="color:#94A3B8;">LS real:</div><div>' + lsRealCount + ' 件</div>' +
-      '<div style="color:#94A3B8;">real mode:</div><div>' + (isReal ? 'ON' : 'OFF') + '</div>' +
-      '</div>' +
-      (domCustomers.length ? '<div style="margin-top:8px;color:#FFE9A8;font-size:10px;">DOM に 出てる customer:</div><div style="font-size:10px;opacity:0.9;line-height:1.7;">' + domCustomers.map(s => '• ' + s).join('<br>') + '</div>' : '') +
-      (fsInfo.sample.length ? '<div style="margin-top:6px;color:#FFE9A8;font-size:10px;">Firestore に 実在:</div><div style="font-size:10px;opacity:0.85;line-height:1.7;">' + fsInfo.sample.map(s => '• ' + s).join('<br>') + '</div>' : '<div style="margin-top:6px;color:#22C55E;font-size:10px;">Firestore は 0件 (削除済 / クリーン)</div>') +
-      (fsMismatch ? '<div style="margin-top:8px;padding:6px 8px;background:rgba(239,68,68,0.18);border-radius:5px;color:#FCA5A5;font-size:10.5px;line-height:1.6;">⚠ FS(' + fsInfo.count + ') ≠ DUMMY(' + dummyLen + ')<br>= 初回ロード後 に Firestore で 変化 した 状態<br>→ 「🔁 ハードリロード」 で 反映</div>' : '<div style="margin-top:8px;color:#22C55E;font-size:10.5px;">✓ FS = DUMMY (キャッシュ整合)</div>');
-  }
-  document.getElementById('fp-diag-refresh')?.addEventListener('click', render);
-  async function purgeAllClientCaches() {
-    const log = [];
-    // 1. localStorage / sessionStorage
-    try { localStorage.clear(); log.push('localStorage cleared'); } catch (e) { log.push('LS err: ' + e.message); }
-    try { sessionStorage.clear(); log.push('sessionStorage cleared'); } catch (e) { log.push('SS err: ' + e.message); }
-    // 2. ★ Firestore offline cache (IndexedDB) を 含む 全 IndexedDB 削除
+    window.addEventListener('mousemove', (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      const dy = e.clientY - drag.y;
+      const newW = Math.max(320, Math.min(window.innerWidth - 16, drag.w - dx));
+      const newH = Math.max(400, Math.min(window.innerHeight - 16, drag.h - dy));
+      panel.style.width = newW + 'px';
+      panel.style.height = newH + 'px';
+    });
+    window.addEventListener('mouseup', () => {
+      if (!drag) return;
+      panel.classList.remove('resizing');
+      try { localStorage.setItem('mb-panel-size', JSON.stringify({ w: panel.offsetWidth, h: panel.offsetHeight })); } catch (_) {}
+      drag = null;
+    });
+    // 復元
     try {
-      if (indexedDB.databases) {
-        const dbs = await indexedDB.databases();
-        for (const d of dbs) {
-          if (d.name) {
-            await new Promise((resolve) => {
-              const req = indexedDB.deleteDatabase(d.name);
-              req.onsuccess = () => { log.push('IDB deleted: ' + d.name); resolve(); };
-              req.onerror = () => { log.push('IDB err: ' + d.name); resolve(); };
-              req.onblocked = () => { log.push('IDB blocked: ' + d.name); resolve(); };
-            });
-          }
-        }
-      } else {
-        // Safari fallback: 既知DB を name で delete (firebaseLocalStorageDb, firestore/[default])
-        for (const name of ['firebaseLocalStorageDb', 'firestore/[DEFAULT]/skeleton-fp-compass-632026/main']) {
-          try { indexedDB.deleteDatabase(name); log.push('IDB del (fallback): ' + name); } catch(_) {}
-        }
+      const saved = JSON.parse(localStorage.getItem('mb-panel-size') || 'null');
+      if (saved && saved.w && saved.h) {
+        panel.style.width = saved.w + 'px';
+        panel.style.height = saved.h + 'px';
       }
-    } catch (e) { log.push('IDB scan err: ' + e.message); }
-    // 3. Service Worker キャッシュ (もしあれば)
-    try {
-      if (window.caches) {
-        const names = await caches.keys();
-        for (const n of names) { await caches.delete(n); log.push('SW cache deleted: ' + n); }
-      }
-    } catch (e) { log.push('SW err: ' + e.message); }
-    return log;
+    } catch (_) {}
   }
-  async function hardReloadWithPurge(includeAuth) {
-    const c = document.getElementById('fp-diag-content');
-    if (c) c.innerHTML = '<div style="color:#FCA5A5;">🧹 全キャッシュ削除中...</div>';
-    const log = await purgeAllClientCaches();
-    console.log('[diag purge] ', log);
-    // Auth セッションも 削除する場合 (再ログイン 必要に なる)
-    if (!includeAuth) {
-      // Auth 情報 (Firebase Auth IDB) は 復活させる
-      // → Auth 情報の 削除 を 別途 復元 する 方法ない なので、 includeAuth=false でも 全部消える
+
+  // ★ 簡易 マークダウン パーサ (太字 / 見出し / リスト / コード / blockquote / 強調)
+  function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+  function md2html(text) {
+    let s = escapeHtml(String(text || ''));
+    // 見出し (###, ##, #)
+    s = s.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    s = s.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    s = s.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    // 引用 (>)
+    s = s.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+    // 水平線 (---)
+    s = s.replace(/^---+$/gm, '<hr>');
+    // コード (`xxx`)
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // 太字 (**xxx** or __xxx__) — 赤くする
+    s = s.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+    // 斜体 (*xxx* or _xxx_) — 緑マーカー
+    s = s.replace(/(^|[^\*])\*([^\*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+    // 数字+万円/円 → 赤強調 (FP特有)
+    s = s.replace(/(\d{1,3}(?:,\d{3})*(?:\.\d+)?(?:万円|億|万|円|％|%))/g, '<span class="hl-num">$1</span>');
+    // 順序リスト (1. 2. 3.)
+    s = s.replace(/^(?:\d+\.\s+(.+)(?:\n|$))+/gm, function(block) {
+      const items = block.trim().split(/\n/).map(l => l.replace(/^\d+\.\s+/, '<li>') + '</li>').join('');
+      return '<ol>' + items + '</ol>';
+    });
+    // 箇条書き (- xxx, ・xxx)
+    s = s.replace(/^(?:[-・]\s+(.+)(?:\n|$))+/gm, function(block) {
+      const items = block.trim().split(/\n/).map(l => l.replace(/^[-・]\s+/, '<li>') + '</li>').join('');
+      return '<ul>' + items + '</ul>';
+    });
+    // 段落 (連続改行 → <p>)
+    s = s.split(/\n\n+/).map(p => {
+      if (/^<(h\d|ul|ol|hr|blockquote)/.test(p.trim())) return p;
+      return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
+    }).join('');
+    return s;
+  }
+  // ヒント 自動消去 (5秒後)
+  setTimeout(() => { if (hint) hint.style.display = 'none'; }, 5000);
+
+  document.querySelectorAll('.mb-q').forEach(b => {
+    b.addEventListener('click', () => {
+      input.value = b.dataset.q;
+      doSend();
+    });
+  });
+
+  send.addEventListener('click', doSend);
+  input.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doSend(); }
+  });
+
+  function addMsg(role, text, isTyping) {
+    const wrap = document.createElement('div');
+    wrap.className = 'mb-msg ' + (role === 'user' ? 'mb-msg-user' : 'mb-msg-bot');
+    const bubble = document.createElement('div');
+    bubble.className = 'mb-bubble';
+    if (isTyping) bubble.innerHTML = '<span class="mb-typing"><span></span><span></span><span></span></span>';
+    else if (role === 'bot') bubble.innerHTML = md2html(text);
+    else bubble.textContent = text;
+    wrap.appendChild(bubble);
+    messages.appendChild(wrap);
+    messages.scrollTop = messages.scrollHeight;
+    return bubble;
+  }
+
+  async function doSend() {
+    const q = input.value.trim();
+    if (!q) return;
+    addMsg('user', q);
+    history.push({ role: 'user', content: q });
+    input.value = '';
+    send.disabled = true;
+    const bubble = addMsg('bot', '', true);
+    try {
+      const res = await fetch(CF_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: { message: q, history: history.slice(-11, -1) } }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.result?.ok) {
+        throw new Error(json?.error?.message || json?.result?.error || res.status);
+      }
+      const reply = json.result.reply || '(空の返答)';
+      bubble.innerHTML = md2html(reply);
+      history.push({ role: 'assistant', content: reply });
+    } catch (e) {
+      bubble.innerHTML = '<span style="color:#DC2626;">⚠ エラー: ' + (e.message || e) + '</span>';
+      history.pop();
+    } finally {
+      send.disabled = false;
+      input.focus();
     }
-    const u = new URL(location.href);
-    u.searchParams.set('nocache', Math.random().toString(36).slice(2,9));
-    // 少し 待って から reload (削除が 完了 する 時間)
-    setTimeout(() => location.replace(u.toString()), 500);
   }
-  document.getElementById('fp-diag-hardreload')?.addEventListener('click', async () => {
-    if (!confirm('全キャッシュ (localStorage + Firestore IndexedDB + ServiceWorker) を 削除して 再起動します。\n再ログイン が 必要 になる 可能性あり。 OK?')) return;
-    await hardReloadWithPurge(true);
-  });
-  document.getElementById('fp-diag-purge')?.addEventListener('click', async () => {
-    if (!confirm('localStorage / sessionStorage / IndexedDB を 全削除して 再起動します。 OK?')) return;
-    await hardReloadWithPurge(true);
-  });
-  // 初回 render (auth完了 待ち)
-  setTimeout(render, 2500);
-  // window.__fp 更新時 もう一度
-  let attempts = 0;
-  const ivl = setInterval(() => { attempts++; if (window.__fp?.tenantId || attempts > 10) { clearInterval(ivl); render(); } }, 1500);
+  } catch (e) {
+    // ★ チャットbot 内 エラー は 親 ページ に 伝播させない (errorBoundary 巻添え 防止)
+    console.error('[mebuki] init failed (chatbot disabled):', e);
+  }
 })();
 </script>
+<!-- ====== /芽吹くん チャットボット ====== -->
+
 </body>
 </html>
