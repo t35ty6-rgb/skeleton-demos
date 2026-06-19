@@ -5001,8 +5001,7 @@ STEP C: 結果報告
       if (!match) return;
       if (!latestAi || (r.ts || '') > (latestAi.createdAt || '')) latestAi = { summary: r.summary, transcript: r.transcript, createdAt: r.ts };
     });
-    const sanitize = (s) => typeof s !== 'string' ? s : s.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '').replace(/(^|[^\uD800-\uDBFF])([\uDC00-\uDFFF])/g, '$1').replace(/[
-
+    const sanitize = (s) => typeof s !== 'string' ? s : s.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '').replace(/(^|[^\uD800-\uDBFF])([\uDC00-\uDFFF])/g, '$1').replace(/[ -]/g, '');
     try {
       const result = await generateDeliverableViaMacMini({ type, client, clientCtx, taskTitle, latestAi, sanitize });
       const d = await result.json();
