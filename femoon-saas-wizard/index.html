@@ -245,13 +245,16 @@ if (!_isPaidReturn && (_prev._ref !== _curRef || _prev._doneId)) {
 let state = loadState();
 if (!_isPaidReturn) state._ref = _curRef;
 let currentIdx = state._lastIdx || 0;
-// Stripe 戻り: done slide を 動的に追加 して 表示
+// Stripe 戻り: 即 signup画面 に 転送 (申込番号 引き継ぎ)
 if (_isPaidReturn && state._doneId){
-  if (!QUESTIONS.find(q => q.id === '_done')){
-    QUESTIONS.push({ id:'_done', type:'done' });
+  const targetUrl = `https://skeleton-femoon-saas.web.app/?ref=${encodeURIComponent(state._doneId)}&paid=1`;
+  // 安全弁: 短時間 で 同じ URL に 戻らないよう sessionStorage に マーク
+  if (!sessionStorage.getItem('redirected_to_signup')){
+    sessionStorage.setItem('redirected_to_signup', '1');
+    window.location.replace(targetUrl);
+    // 以降の wizard 描画 を 止めるため throw
+    throw new Error('redirecting to signup');
   }
-  currentIdx = QUESTIONS.length - 1;
-  state._paid = true;
 }
 
 function loadState(){
