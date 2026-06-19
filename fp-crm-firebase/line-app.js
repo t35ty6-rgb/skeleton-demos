@@ -2737,8 +2737,8 @@
         return {
           userId: 'fs:' + c.docId,
           _fsCustomerId: c.docId,
-          customerName: c.name || 'お客様',
-          pictureUrl: '',
+          customerName: c.name || c.lineDisplayName || 'お客様',
+          pictureUrl: c.pictureUrl || c.linePictureUrl || '',
           age: c.surveyAnswers?.q1_年代 || '',
           family: c.surveyAnswers?.q3_家族 || '',
           income: c.surveyAnswers?.q4_年収 || '',
