@@ -371,17 +371,36 @@
     <div class="head">
       <div class="num">6</div>
       <div>
-        <h2>LINE Manager で 3つ 設定</h2>
-        <div class="sub">自動応答 を OFF / Webhook を ON にする</div>
+        <h2>LINE 側 で 3つ 設定</h2>
+        <div class="sub">Webhook URL 入力 + ON / 自動応答 OFF / あいさつ OFF</div>
       </div>
     </div>
     <div class="body">
-      <p>LINE Official Account Manager を 開いて <span class="hl">「応答設定」</span> ページ で 3つ の トグル を 設定。</p>
+
+      <div style="background:#FFFAE6;border:3px solid var(--yellow);border-radius:18px;padding:18px 20px;margin-bottom:18px;">
+        <div style="font-weight:900;font-size:14px;color:var(--ink);margin-bottom:10px;">📌 まず Webhook URL を 入れる</div>
+        <p style="font-size:13.5px;color:#444;line-height:1.7;margin-bottom:10px;font-weight:500;">
+          LINE Developers Console → 作った Messaging API チャネル → <b>「Messaging API設定」 タブ</b> → <b>「Webhook URL」</b> 欄 に 下の URL を 貼り付け → 「更新」 → 「検証」 で OK が 出る こと を 確認。
+        </p>
+        <div style="background:#fff;border:2px solid var(--line-2);border-radius:10px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink);word-break:break-all;line-height:1.5;position:relative;">
+          <span id="webhook-url-text">https://asia-northeast1-skeleton-fp-compass-632026.cloudfunctions.net/lineWebhook</span>
+          <button id="copy-webhook-btn" type="button" style="position:absolute;right:6px;top:6px;background:var(--blue);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:900;cursor:pointer;font-family:inherit;">コピー</button>
+        </div>
+        <p style="font-size:11.5px;color:#666;margin-top:10px;line-height:1.6;font-weight:500;">
+          💡 「検証」 で 200 OK が 出れば 接続成功。 まだ tenant 未紐付け なので イベント は ログ に 残らないだけ で エラー には ならない。
+        </p>
+      </div>
+
+      <p>次に <span class="hl">LINE Official Account Manager</span> を 開いて 「応答設定」 ページ で 残り 3つ の トグル を 設定。</p>
       <a class="openlink" href="https://manager.line.biz/" target="_blank">LINE Official Account Manager →</a>
       <div class="checks">
         <label class="check-item">
+          <input type="checkbox" data-check="url">
+          <span class="ctxt">✅ <b>Webhook URL</b> を 上の 1行 で 入れて 「検証 OK」 が 出た</span>
+        </label>
+        <label class="check-item">
           <input type="checkbox" data-check="webhook">
-          <span class="ctxt">✅ Webhook = <span class="blue">ON</span> に した</span>
+          <span class="ctxt">✅ <b>Webhook の利用</b> = <span class="blue">ON</span> に した</span>
         </label>
         <label class="check-item">
           <input type="checkbox" data-check="response">
@@ -400,7 +419,7 @@
       </p>
       <div class="nav">
         <button class="back" data-go="5">← 戻る</button>
-        <button class="next" data-go="7" id="next-6" disabled>3つ全部 ✓ で 次へ →</button>
+        <button class="next" data-go="7" id="next-6" disabled>4つ全部 ✓ で 次へ →</button>
       </div>
     </div>
   </div>
@@ -523,6 +542,16 @@
     const allChecked = Array.from(checks).every(x => x.checked);
     document.getElementById('next-6').disabled = !allChecked;
   }));
+  // copy webhook URL button
+  document.getElementById('copy-webhook-btn')?.addEventListener('click', async (e) => {
+    const txt = document.getElementById('webhook-url-text').textContent.trim();
+    try {
+      await navigator.clipboard.writeText(txt);
+      e.target.textContent = '✓ コピー済';
+      e.target.style.background = 'var(--green)';
+      setTimeout(() => { e.target.textContent = 'コピー'; e.target.style.background = 'var(--blue)'; }, 1500);
+    } catch (err) { alert('コピー失敗: ' + err.message); }
+  });
 
   // auth status
   let currentUser = null;
@@ -563,36 +592,46 @@
     }
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>実行中…';
-    resultBox.innerHTML = '<div class="result-box"><h3>🔄 セットアップ 進行中…</h3><div class="row">① Token 検証 → ② basicId 取得 → ③ Firestore 保存 → ④ Webhook 自動設定…</div></div>';
+    resultBox.innerHTML = '<div class="result-box"><h3>🔄 セットアップ 進行中…</h3><div class="row">① Token 検証 → ② basicId 取得 → ③ Firestore 保存 → ④ Webhook 自動設定 → ⑤ リッチメニュー 生成…</div></div>';
     try {
-      // 1. saveLineCredentials (token検証 + basicId取得 + webhook自動設定)
+      // saveLineCredentials = token検証 + basicId取得 + Firestore保存 + webhook自動設定 + リッチメニュー作成 + QR生成 を 全部やる
       const saveFn = httpsCallable(fnRegion, 'saveLineCredentials');
       const saveRes = await saveFn({ channelAccessToken: state.access_token, channelSecret: state.channel_secret });
-      console.log('saveLineCredentials:', saveRes.data);
-      // 2. regenerateRichMenu (リッチメニュー自動生成)
-      const rmFn = httpsCallable(fnRegion, 'regenerateRichMenu');
-      let rmRes = null;
-      try {
-        rmRes = await rmFn({});
-        console.log('regenerateRichMenu:', rmRes.data);
-      } catch (rmErr) {
-        console.warn('richmenu err:', rmErr);
-      }
-      const d = rmRes?.data || saveRes.data || {};
+      console.log('saveLineCredentials response:', saveRes.data);
+      const d = saveRes.data || {};
       const basicId = d.basicId || '';
       const addFriendUrl = d.addFriendUrl || (basicId ? `https://line.me/R/ti/p/${basicId.replace(/^@?/,'@')}` : null);
       const qrImgUrl = d.qrImgUrl || (addFriendUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(addFriendUrl)}` : null);
       const surveyUrl = d.surveyUrl || null;
-      // success
-      resultBox.innerHTML = '<div class="result-box success"><h3>✓ 全部 完了 🎉</h3><div class="row"><b>basicId:</b> ' + (basicId || '取得失敗') + '</div></div>';
-      // populate done step
+      const log = Array.isArray(d.log) ? d.log : [];
+
+      if (!basicId) {
+        // basicId 取れなかった → 問題あり。 log 全部出して 診断 する
+        resultBox.innerHTML = `
+          <div class="result-box error">
+            <h3>⚠ basicId 取得失敗 — 原因 を 診断</h3>
+            <div class="row" style="margin-top:8px;font-weight:700;">考えられる原因 (一番上 が 一番 多い):</div>
+            <div class="row">① <b>Token が Messaging API ではない</b>: LINE Login チャネル の token を 貼った可能性。 Messaging API チャネル の Token を 再取得 して 戻る</div>
+            <div class="row">② <b>公式LINE と チャネル が 別プロバイダ</b>: Messaging API チャネル を 公式LINE と 同じ プロバイダ で 作り直し</div>
+            <div class="row">③ <b>Token が 期限切れ</b>: 「再発行」 で 新しい token を 貼る</div>
+            <div class="row" style="margin-top:10px;font-weight:700;">▼ Cloud Function ログ (上から 順に 実行):</div>
+            <div class="row" style="font-family:'JetBrains Mono',monospace;font-size:11.5px;background:#FAFAFB;padding:10px;border-radius:6px;line-height:1.7;">${log.length ? log.map(l => '・ ' + l).join('<br>') : '(ログなし)'}</div>
+            <div class="row" style="margin-top:10px;font-size:12px;color:#666;">↑ ログ を LINE で Jobs に そのまま 送って → 詳しく診断する</div>
+          </div>`;
+        btn.disabled = false;
+        btn.innerHTML = '🚀 自動セットアップ 実行';
+        return;
+      }
+
+      // ✓ 全部成功
+      resultBox.innerHTML = '<div class="result-box success"><h3>✓ 全部 完了 🎉</h3><div class="row"><b>basicId:</b> ' + basicId + '</div><div class="row" style="font-size:11.5px;color:#666;font-family:JetBrains Mono,monospace;line-height:1.6;">' + log.map(l => '・ ' + l).join('<br>') + '</div></div>';
       const doneBody = document.getElementById('done-body');
       doneBody.innerHTML = `
         <p>セットアップ 完了。 下の URL で 自分の スマホ で 友だち追加 → ウェルカム 2通 が 届けば 完成。</p>
         ${qrImgUrl ? `<div class="qr-block"><img src="${qrImgUrl}" alt="QR"><div style="font-size:12px;color:#666;font-weight:600;margin-top:6px;">↑ QR を スマホ で 撮影</div></div>` : ''}
         <div class="result-box success">
           <h3>📲 友だち追加 URL</h3>
-          <div class="row"><b>${addFriendUrl || '(取得失敗)'}</b></div>
+          <div class="row"><a href="${addFriendUrl}" target="_blank" style="color:var(--line-green);font-weight:900;text-decoration:none;">${addFriendUrl}</a></div>
         </div>
         ${surveyUrl ? `<div class="result-box"><h3>📝 アンケート URL (お客様 共有用)</h3><div class="row"><b>${surveyUrl}</b></div></div>` : ''}
         <div class="result-box">
@@ -605,13 +644,21 @@
         <p style="font-size:12.5px;color:#777;margin-top:14px;">⚠ 上記 4ステップ 全部 OK なら 完成。 ダメな点 あれば LINE で 教えて。</p>
       `;
       showStep(8);
-      // clear sensitive state
       delete state.access_token;
       delete state.channel_secret;
       save();
     } catch (e) {
       console.error('setup err:', e);
-      resultBox.innerHTML = '<div class="result-box error"><h3>✗ エラー</h3><div class="row">' + (e.message || e.code || 'unknown') + '</div><div class="row" style="font-size:12px;color:#666;">Token/Secret の 入力ミス が 多い。 戻って 再確認 してください。</div></div>';
+      resultBox.innerHTML = `
+        <div class="result-box error">
+          <h3>✗ エラー — Cloud Function 失敗</h3>
+          <div class="row"><b>${e.code || 'unknown'}</b>: ${e.message || 'unknown'}</div>
+          <div class="row" style="font-size:12px;color:#666;margin-top:8px;">よくある原因:</div>
+          <div class="row" style="font-size:12px;color:#666;">・ Token が 短すぎる (50文字未満) → STEP 4 戻って 全部 コピー し直し</div>
+          <div class="row" style="font-size:12px;color:#666;">・ Secret が 短すぎる (16文字未満) → STEP 5 戻って 32文字 全部 コピー</div>
+          <div class="row" style="font-size:12px;color:#666;">・ Token が Messaging API ではない (LINE Login の token) → STEP 4 で Messaging API設定 タブ から 取得</div>
+          <div class="row" style="font-size:12px;color:#666;">・ ログイン してる アカウント が 違う → 上 の メアド 確認</div>
+        </div>`;
     }
     btn.disabled = false;
     btn.innerHTML = '🚀 自動セットアップ 実行';
