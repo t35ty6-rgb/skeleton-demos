@@ -927,13 +927,7 @@ img{display:block;max-width:100%}
   <div class="news-h">
     <h2>お知らせ<small>INFORMATION</small></h2>
   </div>
-  <div class="news-list">
-    <div class="row"><span class="d">2026.06.18</span><span class="t">2026年はたちのつどい振袖、京都友禅大賞受賞作品入荷</span><span class="a">+</span></div>
-    <div class="row"><span class="d">2026.06.01</span><span class="t">夏の浴衣レンタル、ペア割・トリプル割キャンペーン開始</span><span class="a">+</span></div>
-    <div class="row"><span class="d">2026.05.28</span><span class="t">『きもの最旬おすすめナビ』 にて当アトリエが紹介されました</span><span class="a">+</span></div>
-    <div class="row"><span class="d">2026.05.27</span><span class="t">『THANKS MOVIE』 にて当アトリエが紹介されました</span><span class="a">+</span></div>
-    <div class="row"><span class="d">2026.05.20</span><span class="t">2027年はたちのつどい振袖、ご予約承り中（早期割 5% OFF）</span><span class="a">+</span></div>
-  </div>
+  <div class="news-list" id="news-list"></div>
 </section>
 
 <!-- 8. PICKUP / FEATURED 3 -->
@@ -1568,8 +1562,27 @@ function renderNewGrid(){
     });
   });
 }
-syncCustomToProdInfo();
+/* syncCustomToProdInfo() は PROD_INFO 定義後に呼ぶ (TDZ回避) */
 renderNewGrid();
+
+/* ============ NEWS (alice_news 連動) ============ */
+function loadNews(){
+  try{ return JSON.parse(localStorage.getItem('alice_news')||'[]'); }catch(e){return [];}
+}
+function renderNews(){
+  const el = document.getElementById('news-list');
+  if(!el) return;
+  const news = loadNews();
+  if(news.length === 0){
+    el.innerHTML = '<div class="row" style="color:var(--ink-3);justify-content:center"><span style="grid-column:1/-1;text-align:center;padding:8px 0">お知らせの掲載準備中でございます。</span></div>';
+    return;
+  }
+  el.innerHTML = news.map(n=>`
+    <div class="row"><span class="d">${n.d||''}</span><span class="t">${n.t||''}</span><span class="a">+</span></div>
+  `).join('');
+}
+renderNews();
+window.addEventListener('storage', e => { if(e.key === 'alice_news') renderNews(); });
 
 /* ============ MONTHLY PICK 3着 (動的レンダー) ============ */
 function renderFeat3(){
@@ -1749,6 +1762,8 @@ KIMONO_BASELINE.forEach(it=>{
     desc: 'モデル着用イメージと 360°回転動画でご確認いただけます。',
   };
 });
+/* PROD_INFO 定義後に custom items も同期 (admin 追加分の booking 用) */
+syncCustomToProdInfo();
 const M = {open:false,step:0,kim:null,selDate:null,selTime:null,calYear:0,calMonth:0,selDays:3,selMult:1,basePriceNum:0,finalPriceStr:'',basePriceStr:''};
 const DOW = ['日','月','火','水','木','金','土'];
 function isClosed(d){
