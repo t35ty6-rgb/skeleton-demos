@@ -1569,7 +1569,7 @@ window.fpReadyAfterAuth = function() {
 <script>
 (function(){
   // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
-  const FP_VERSION = "20260619BA-diag-overlay-v2-customer-list";
+  const FP_VERSION = "20260619BB-diag-draggable+pill";
   const loadTime = new Date();
   const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
   const dateLabel = (FP_VERSION.match(/^(\d{4})(\d{2})(\d{2})/) || []).slice(1).join('/').replace(/^(\d{4})\//,'$1/').replace(/\/(\d{2})\/(\d{2})$/,'/$1/$2') || FP_VERSION;
@@ -1604,12 +1604,89 @@ window.fpReadyAfterAuth = function() {
   const showAlways = location.host === 'stg.app.skeleton-inc.jp' || location.host.startsWith('localhost') || new URLSearchParams(location.search).get('diag') === '1';
   if (!showAlways) return;
 
+  // 位置 保存 (LS) 取得
+  const POS_KEY = 'fp-diag-pos-v1';
+  const COLLAPSED_KEY = 'fp-diag-collapsed-v1';
+  const savedPos = (() => { try { return JSON.parse(localStorage.getItem(POS_KEY) || '{"top":54,"left":10}'); } catch(_){ return {top:54,left:10}; } })();
+
   // overlay 構築 (即 表示, データ は あとから 流し込む)
   const box = document.createElement('div');
   box.id = 'fp-diag-overlay';
-  box.style.cssText = 'position:fixed;top:54px;left:10px;z-index:2147483640;background:rgba(15,23,42,0.93);color:#E2E8F0;padding:12px 16px;border-radius:10px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;line-height:1.7;max-width:380px;box-shadow:0 8px 28px rgba(0,0,0,0.32);backdrop-filter:blur(8px);border:1px solid rgba(255,233,168,0.22);';
-  box.innerHTML = '<div style="font-size:9px;letter-spacing:0.22em;color:#FFE9A8;font-weight:700;margin-bottom:8px;">🔬 DIAGNOSTIC PANEL · STG ONLY</div><div id="fp-diag-content" style="opacity:0.5;">読込中…</div><div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.12);display:flex;gap:6px;flex-wrap:wrap;"><button id="fp-diag-refresh" style="background:#3B82F6;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 FS再取得</button><button id="fp-diag-hardreload" style="background:#F59E0B;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">🔁 ハードリロード</button><button id="fp-diag-purge" style="background:#DC2626;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">🧹 全削除+再起動</button><button id="fp-diag-hide" style="background:#374151;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">隠す</button></div>';
+  box.style.cssText = 'position:fixed;top:'+savedPos.top+'px;left:'+savedPos.left+'px;z-index:2147483640;background:rgba(15,23,42,0.93);color:#E2E8F0;padding:0;border-radius:10px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;line-height:1.7;max-width:380px;box-shadow:0 8px 28px rgba(0,0,0,0.32);backdrop-filter:blur(8px);border:1px solid rgba(255,233,168,0.22);';
+  box.innerHTML = '<div id="fp-diag-header" style="cursor:grab;padding:10px 16px 8px;border-bottom:1px solid rgba(255,255,255,0.10);display:flex;align-items:center;justify-content:space-between;gap:10px;user-select:none;"><div style="font-size:9px;letter-spacing:0.22em;color:#FFE9A8;font-weight:700;">🔬 DIAG · STG · ドラッグで移動</div><div style="display:flex;gap:4px;"><button id="fp-diag-collapse" title="最小化" style="background:transparent;color:#94A3B8;border:none;padding:0;cursor:pointer;font-size:14px;line-height:1;width:20px;height:20px;display:flex;align-items:center;justify-content:center;">_</button></div></div><div id="fp-diag-body" style="padding:10px 16px 12px;"><div id="fp-diag-content" style="opacity:0.5;">読込中…</div><div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.12);display:flex;gap:6px;flex-wrap:wrap;"><button id="fp-diag-refresh" style="background:#3B82F6;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 FS再取得</button><button id="fp-diag-hardreload" style="background:#F59E0B;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">🔁 ハードリロード</button><button id="fp-diag-purge" style="background:#DC2626;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">🧹 全削除+再起動</button></div></div>';
   (document.body || document.documentElement).appendChild(box);
+
+  // 最小化ピル (隠した時 / 折りたたみ時 に 出る 小さい復活ボタン)
+  const pill = document.createElement('div');
+  pill.id = 'fp-diag-pill';
+  pill.style.cssText = 'position:fixed;top:54px;left:10px;z-index:2147483640;background:#0E1116;color:#FFE9A8;padding:6px 12px;border-radius:99px;font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.28);border:1px solid rgba(255,233,168,0.32);display:none;';
+  pill.textContent = '🔬 DIAG';
+  pill.addEventListener('click', () => {
+    box.style.display = 'block';
+    pill.style.display = 'none';
+    localStorage.removeItem(COLLAPSED_KEY);
+  });
+  (document.body || document.documentElement).appendChild(pill);
+
+  // 復元: 折りたたみ状態
+  if (localStorage.getItem(COLLAPSED_KEY) === '1') {
+    box.style.display = 'none';
+    pill.style.display = 'block';
+    pill.style.top = savedPos.top + 'px';
+    pill.style.left = savedPos.left + 'px';
+  }
+
+  // ドラッグ 機能
+  const header = box.querySelector('#fp-diag-header');
+  let dragStart = null;
+  header.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    dragStart = { x: e.clientX, y: e.clientY, top: box.offsetTop, left: box.offsetLeft };
+    header.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!dragStart) return;
+    const nt = Math.max(0, Math.min(window.innerHeight - 50, dragStart.top + (e.clientY - dragStart.y)));
+    const nl = Math.max(0, Math.min(window.innerWidth - 100, dragStart.left + (e.clientX - dragStart.x)));
+    box.style.top = nt + 'px';
+    box.style.left = nl + 'px';
+  });
+  window.addEventListener('mouseup', () => {
+    if (!dragStart) return;
+    header.style.cursor = 'grab';
+    try { localStorage.setItem(POS_KEY, JSON.stringify({ top: box.offsetTop, left: box.offsetLeft })); } catch(_) {}
+    dragStart = null;
+  });
+  // タッチ 対応 (スマホ)
+  header.addEventListener('touchstart', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    const t = e.touches[0];
+    dragStart = { x: t.clientX, y: t.clientY, top: box.offsetTop, left: box.offsetLeft };
+  });
+  window.addEventListener('touchmove', (e) => {
+    if (!dragStart) return;
+    const t = e.touches[0];
+    const nt = Math.max(0, Math.min(window.innerHeight - 50, dragStart.top + (t.clientY - dragStart.y)));
+    const nl = Math.max(0, Math.min(window.innerWidth - 100, dragStart.left + (t.clientX - dragStart.x)));
+    box.style.top = nt + 'px';
+    box.style.left = nl + 'px';
+    e.preventDefault();
+  }, { passive: false });
+  window.addEventListener('touchend', () => {
+    if (!dragStart) return;
+    try { localStorage.setItem(POS_KEY, JSON.stringify({ top: box.offsetTop, left: box.offsetLeft })); } catch(_) {}
+    dragStart = null;
+  });
+
+  // 折りたたみ
+  document.getElementById('fp-diag-collapse')?.addEventListener('click', () => {
+    box.style.display = 'none';
+    pill.style.display = 'block';
+    pill.style.top = box.offsetTop + 'px';
+    pill.style.left = box.offsetLeft + 'px';
+    try { localStorage.setItem(COLLAPSED_KEY, '1'); } catch(_) {}
+  });
 
   async function fetchFirestoreCount(tenantId) {
     try {
@@ -1682,7 +1759,6 @@ window.fpReadyAfterAuth = function() {
     u.searchParams.set('nocache', Math.random().toString(36).slice(2,9));
     location.replace(u.toString());
   });
-  document.getElementById('fp-diag-hide')?.addEventListener('click', () => box.style.display = 'none');
   // 初回 render (auth完了 待ち)
   setTimeout(render, 2500);
   // window.__fp 更新時 もう一度
