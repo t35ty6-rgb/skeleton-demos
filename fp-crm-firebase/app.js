@@ -2169,39 +2169,36 @@
       };
       (kpiHintsMap[stageKey] || []).forEach(h => jobsCandidates.push(h));
       const workflowHtml = `
-        <div style="background:linear-gradient(135deg,#0f1729,#1b2845);color:#fff;border-radius:12px;padding:14px 18px;margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.16em;opacity:0.8;">📍 WORKFLOW — このお客様の現在地</div>
-            <div style="font-size:10.5px;opacity:0.85;">面談 ${pastMs}回 / 次予約 ${futureMs}件</div>
+        <div style="background:#fff;color:#0F172A;border:1px solid #ECEEF1;border-radius:16px;padding:18px 22px;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,0.04),0 4px 12px rgba(15,23,42,0.06);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:#00897B;text-transform:uppercase;">📍 現在地</div>
+            <div style="font-size:12px;color:#475569;font-weight:600;">面談 ${pastMs}回 / 次予約 ${futureMs}件</div>
           </div>
-          <!-- 進捗フローチャート -->
-          <div style="display:flex;gap:4px;align-items:center;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;">
+          <div style="display:flex;gap:6px;align-items:center;overflow-x:auto;padding-bottom:6px;margin-bottom:14px;">
             ${stages.map((s, i) => `
-              <div style="flex:1;min-width:90px;text-align:center;padding:8px 6px;border-radius:8px;background:${i < currentStageIdx ? 'rgba(16,185,129,0.25)' : i === currentStageIdx ? 'linear-gradient(135deg,#f59e0b,#ea580c)' : 'rgba(255,255,255,0.08)'};border:1.5px solid ${i < currentStageIdx ? '#10b981' : i === currentStageIdx ? '#f59e0b' : 'rgba(255,255,255,0.2)'};">
-                <div style="font-size:18px;">${i < currentStageIdx ? '✓' : s.icon}</div>
-                <div style="font-size:10px;font-weight:700;margin-top:3px;${i > currentStageIdx ? 'opacity:0.55;' : ''}">${escapeHtml(s.label)}</div>
+              <div style="flex:1;min-width:88px;text-align:center;padding:10px 6px;border-radius:12px;background:${i < currentStageIdx ? '#E0F2F1' : i === currentStageIdx ? '#4DB6AC' : '#F8FAFB'};border:1.5px solid ${i < currentStageIdx ? '#4DB6AC' : i === currentStageIdx ? '#00897B' : '#E2E8F0'};color:${i === currentStageIdx ? '#fff' : i < currentStageIdx ? '#00897B' : '#94A3B8'};">
+                <div style="font-size:20px;">${i < currentStageIdx ? '✓' : s.icon}</div>
+                <div style="font-size:11px;font-weight:800;margin-top:4px;">${escapeHtml(s.label)}</div>
               </div>
-              ${i < stages.length - 1 ? '<div style="font-size:14px;opacity:0.5;">→</div>' : ''}
+              ${i < stages.length - 1 ? '<div style="font-size:14px;color:#CBD5E1;">→</div>' : ''}
             `).join('')}
           </div>
-          <style>@keyframes fp-stage-pulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0.5)}50%{box-shadow:0 0 0 8px rgba(245,158,11,0)}}</style>
-          <!-- 2カラム: いま動いてる + Jobs候補 -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11.5px;">
-            <div style="background:rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;">
-              <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">🔄 いま動いてる</div>
-              ${activeActions.length === 0 ? '<div style="font-size:11px;opacity:0.6;">なし — 次のアクション待ち</div>' : activeActions.map(a => `
-                <div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11.5px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="background:#F8FAFB;border:1px solid #ECEEF1;border-radius:12px;padding:14px 16px;">
+              <div style="font-size:11px;font-weight:800;letter-spacing:0.06em;color:#94A3B8;margin-bottom:8px;text-transform:uppercase;">🔄 いま動いてる</div>
+              ${activeActions.length === 0 ? '<div style="font-size:12.5px;color:#94A3B8;">次のアクション待ち</div>' : activeActions.map(a => `
+                <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;color:#0F172A;">
                   <span>${a.icon}</span>
                   <span style="flex:1;">${escapeHtml(a.label)}</span>
-                  <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:${a.tone === 'done' ? '#10b981' : a.tone === 'active' ? '#5B5BF0' : a.tone === 'wait' ? '#f59e0b' : '#dc2626'};color:#fff;font-weight:800;letter-spacing:0.04em;">${a.tone === 'done' ? '完了' : a.tone === 'active' ? '進行' : a.tone === 'wait' ? '待ち' : '要対応'}</span>
+                  <span style="font-size:10.5px;padding:3px 9px;border-radius:999px;background:${a.tone === 'done' ? '#E0F2F1' : a.tone === 'active' ? '#E0F2F1' : a.tone === 'wait' ? '#FEF3C7' : '#FEE2E2'};color:${a.tone === 'done' ? '#00897B' : a.tone === 'active' ? '#00897B' : a.tone === 'wait' ? '#92400E' : '#991B1B'};font-weight:800;">${a.tone === 'done' ? '完了' : a.tone === 'active' ? '進行' : a.tone === 'wait' ? '待ち' : '要対応'}</span>
                 </div>
               `).join('')}
             </div>
-            <div style="background:rgba(91,91,240,0.18);border:1px solid rgba(91,91,240,0.4);border-radius:8px;padding:10px 12px;">
-              <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:#C7D2FE;margin-bottom:6px;text-transform:uppercase;">⚡ Jobs候補 → 次やるべき (${escapeHtml(stages[nextStageIdx].label)} 達成のため)</div>
+            <div style="background:#E0F2F1;border:1px solid #B2DFDB;border-radius:12px;padding:14px 16px;">
+              <div style="font-size:11px;font-weight:800;letter-spacing:0.06em;color:#00897B;margin-bottom:8px;text-transform:uppercase;">⚡ 次やる (${escapeHtml(stages[nextStageIdx].label)})</div>
               ${jobsCandidates.map((j, idx) => `
-                <div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11.5px;">
-                  <span style="background:#5B5BF0;color:#fff;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;">${idx + 1}</span>
+                <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;color:#0F172A;">
+                  <span style="background:#4DB6AC;color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">${idx + 1}</span>
                   <span style="flex:1;">${escapeHtml(j)}</span>
                 </div>
               `).join('')}
@@ -2790,13 +2787,13 @@
             <div class="cd-flow-reason">${escapeHtml(topRec.reason)}</div>
 
             <div class="cd-flow-steps">
-              <button class="cd-flow-step cd-flow-step-active fp-draft-cta" id="modal-draft-btn" style="background:linear-gradient(135deg,#F97316,#EA580C) !important;border:none !important;color:#fff !important;box-shadow:0 6px 18px rgba(249,115,22,0.42) !important;padding:14px 18px !important;min-height:56px !important;">
-                <span class="cd-flow-step-no" style="background:rgba(255,255,255,0.28) !important;color:#fff !important;border:1px solid rgba(255,255,255,0.4) !important;font-size:14px !important;">1</span>
-                <span class="cd-flow-step-body" style="min-width:0 !important;flex:1 !important;">
-                  <span class="cd-flow-step-label" style="color:#fff !important;font-weight:800 !important;font-size:15px !important;letter-spacing:0.02em !important;white-space:normal !important;line-height:1.35 !important;display:block !important;">✨ AI で 下書き を 作る</span>
-                  <span class="cd-flow-step-sub" style="color:rgba(255,255,255,0.92) !important;font-weight:500 !important;font-size:12px !important;white-space:normal !important;line-height:1.4 !important;display:block !important;margin-top:2px !important;">押すと AI が LINE 文面 を 自動 生成</span>
+              <button class="cd-flow-step cd-flow-step-active fp-draft-cta" id="modal-draft-btn">
+                <span class="cd-flow-step-no">1</span>
+                <span class="cd-flow-step-body">
+                  <span class="cd-flow-step-label">✨ AI で 下書き を 作る</span>
+                  <span class="cd-flow-step-sub">押すと AI が LINE 文面 を 自動 生成</span>
                 </span>
-                <i data-lucide="wand-2" class="cd-flow-step-icon" style="color:#fff !important;flex-shrink:0 !important;"></i>
+                <i data-lucide="wand-2" class="cd-flow-step-icon"></i>
               </button>
               <style>@keyframes fp-draft-cta-pulse{0%,100%{transform:translateY(0) scale(1);box-shadow:0 8px 24px rgba(249,115,22,0.55),0 0 0 4px rgba(255,255,255,0.5)}50%{transform:translateY(-2.5px) scale(1.025);box-shadow:0 16px 36px rgba(249,115,22,0.72),0 0 0 7px rgba(255,255,255,0.6)}}@keyframes fp-draft-cta-gradient{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}</style>
             </div>
