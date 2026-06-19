@@ -238,6 +238,7 @@ const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/4gMfZhgjC0Bgctc0NSbjW00';
 const _initParams = new URLSearchParams(window.location.search);
 const _curRef = (_initParams.get('ref') || _initParams.get('r') || '');
 const _isPaidReturn = _initParams.get('paid') === '1';
+const _isDemo = _initParams.get('demo') === '1';
 const _prev = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){ return {}; } })();
 if (!_isPaidReturn && (_prev._ref !== _curRef || _prev._doneId)) {
   localStorage.removeItem(STORAGE_KEY);
@@ -385,23 +386,39 @@ function renderQuestion(q){
       break;
     }
     case 'payment': {
-      body = `<div class="q-num"><span class="dot"></span>Payment</div>
-        <div class="q-title">${q.title}</div><div class="q-hint">${q.sub}</div>
-        <div class="pay-card">
-          <div class="pay-amount-block">
-            <div><span class="pay-amount">¥9,800</span><span class="pay-amount-unit">/ 月 (税込)</span></div>
-            <div class="pay-amount-sub">FEMOON SaaS · 月額 プラン</div>
+      if (_isDemo){
+        body = `<div class="q-num" style="color:#0F766E"><span class="dot" style="background:#0F766E"></span>Demo</div>
+          <div class="q-title">デモモード</div>
+          <div class="q-hint">本番 では ここで <strong>¥9,800/月</strong> の Stripe決済 画面 が 出ます。 デモ では 課金 を スキップ して 次 (アカウント作成) に 進みます。</div>
+          <div class="pay-card">
+            <div class="pay-amount-block">
+              <div><span class="pay-amount" style="color:#0F766E">¥0</span><span class="pay-amount-unit">DEMO</span></div>
+              <div class="pay-amount-sub">課金 されません</div>
+            </div>
+            <div class="pay-row"><div class="pay-k">本番 料金</div><div class="pay-v">¥9,800 / 月 (税込)</div></div>
+            <div class="pay-row"><div class="pay-k">デモ料金</div><div class="pay-v">¥0 (スキップ)</div></div>
+            <div class="pay-row"><div class="pay-k">次の画面</div><div class="pay-v">アカウント作成</div></div>
           </div>
-          <div class="pay-row"><div class="pay-k">課金日</div><div class="pay-v">今日 → 翌月 同日 自動</div></div>
-          <div class="pay-row"><div class="pay-k">解約</div><div class="pay-v">いつでも 1クリック</div></div>
-          <div class="pay-row"><div class="pay-k">返金</div><div class="pay-v">30日 全額 返金 保証</div></div>
-        </div>
-        <div class="pay-trust">
-          <span class="pay-trust-item">Powered by Stripe</span>
-          <span class="pay-trust-item">VISA / Master / JCB / AMEX</span>
-          <span class="pay-trust-item">SSL 暗号化</span>
-        </div>
-        <div class="err" id="err"></div>`;
+          <div class="err" id="err"></div>`;
+      } else {
+        body = `<div class="q-num"><span class="dot"></span>Payment</div>
+          <div class="q-title">${q.title}</div><div class="q-hint">${q.sub}</div>
+          <div class="pay-card">
+            <div class="pay-amount-block">
+              <div><span class="pay-amount">¥9,800</span><span class="pay-amount-unit">/ 月 (税込)</span></div>
+              <div class="pay-amount-sub">FEMOON SaaS · 月額 プラン</div>
+            </div>
+            <div class="pay-row"><div class="pay-k">課金日</div><div class="pay-v">今日 → 翌月 同日 自動</div></div>
+            <div class="pay-row"><div class="pay-k">解約</div><div class="pay-v">いつでも 1クリック</div></div>
+            <div class="pay-row"><div class="pay-k">返金</div><div class="pay-v">30日 全額 返金 保証</div></div>
+          </div>
+          <div class="pay-trust">
+            <span class="pay-trust-item">Powered by Stripe</span>
+            <span class="pay-trust-item">VISA / Master / JCB / AMEX</span>
+            <span class="pay-trust-item">SSL 暗号化</span>
+          </div>
+          <div class="err" id="err"></div>`;
+      }
       break;
     }
     case 'done': {
@@ -627,7 +644,7 @@ function updateNav(q){
   if (q.type === 'done'){ nextBtn.style.display = 'none'; document.getElementById('back-btn').style.display = 'none'; return; }
   nextBtn.style.display = ''; document.getElementById('back-btn').style.display = '';
   nextBtn.disabled = false; // 前画面 で disabled 残った場合 リセット
-  nextBtn.innerHTML = q.type === 'review' ? '次へ (決済) <span class="ic">→</span>' : (q.type === 'payment' ? '¥9,800 を 支払う <span class="ic">→</span>' : (q.type === 'intro' ? 'はじめる <span class="ic">→</span>' : '次へ <span class="ic">→</span>'));
+  nextBtn.innerHTML = q.type === 'review' ? (_isDemo ? '次へ <span class="ic">→</span>' : '次へ (決済) <span class="ic">→</span>') : (q.type === 'payment' ? (_isDemo ? 'デモ続行 (¥0) <span class="ic">→</span>' : '¥9,800 を 支払う <span class="ic">→</span>') : (q.type === 'intro' ? 'はじめる <span class="ic">→</span>' : '次へ <span class="ic">→</span>'));
 }
 
 function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
@@ -689,10 +706,16 @@ async function submitThenPayment(){
 }
 
 function goPayment(){
+  // demo モード: 決済 スキップ → 即 signup に 飛ばす
+  if (_isDemo){
+    sessionStorage.setItem('redirected_to_signup', '1');
+    const targetUrl = `https://skeleton-femoon-saas.web.app/?ref=${encodeURIComponent(state._doneId||'')}&demo=1`;
+    window.location.href = targetUrl;
+    return;
+  }
   // Stripe Payment Link (まだ未設定なら 警告ダイアログ で 説明 → submit 同等の done)
   if (STRIPE_PAYMENT_LINK.includes('PLACEHOLDER')){
     alert('Stripe 決済リンク は 営業 (Skeleton社) 側 で 準備中 です。 申込 は 受付済 なので、 後日 メール で 決済リンク を お送りします。');
-    // 申込番号は既に発行済なので done へ
     QUESTIONS.push({ id:'_done', type:'done' });
     currentIdx = QUESTIONS.length - 1;
     saveState();
