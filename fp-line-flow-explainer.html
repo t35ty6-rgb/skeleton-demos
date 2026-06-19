@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>FP Compass · LINE 連携 と アンケート の 仕組み</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --red:#FF3B47;
+    --blue:#2D7AF6;
+    --green:#1FC179;
+    --yellow:#F9C20D;
+    --ink:#1A1A1A;
+    --paper:#FFFFFF;
+    --soft:#F3F5F7;
+    --line:#E5E8EC;
+  }
+  html,body{font-family:'M PLUS Rounded 1c',sans-serif;background:var(--soft);color:var(--ink);-webkit-font-smoothing:antialiased}
+  body{padding:24px 14px 80px}
+  .wrap{max-width:820px;margin:0 auto}
+  code{background:#fff;padding:2px 8px;border-radius:4px;border:1px solid #ddd;font-size:0.92em}
+  b{font-weight:900}
+
+  /* ── hero ──*/
+  .hero{
+    background:var(--paper);
+    border-radius:28px;
+    padding:32px 28px 30px;
+    box-shadow:0 6px 24px -8px rgba(0,0,0,0.10);
+    margin-bottom:26px;
+    text-align:center;
+    position:relative;overflow:hidden;
+  }
+  .hero::before{content:"";position:absolute;top:-30px;right:-30px;width:160px;height:160px;background:#06C755;border-radius:50%;opacity:0.10}
+  .hero::after{content:"";position:absolute;bottom:-40px;left:-40px;width:140px;height:140px;background:var(--blue);border-radius:50%;opacity:0.10}
+  .hero .stamp{display:inline-block;background:var(--green);color:#fff;font-weight:900;font-size:13px;letter-spacing:0.12em;padding:6px 16px;border-radius:99px;margin-bottom:14px;position:relative;z-index:2}
+  .hero h1{font-size:28px;font-weight:900;line-height:1.45;position:relative;z-index:2}
+  .hero p{margin-top:14px;font-size:14.5px;font-weight:500;color:#555;position:relative;z-index:2;line-height:1.7}
+
+  /* ── question card ──*/
+  .qcard{
+    background:var(--paper);border-radius:24px;
+    padding:22px 24px 22px;margin-bottom:22px;
+    box-shadow:0 6px 24px -8px rgba(0,0,0,0.10);
+    border-left:8px solid var(--yellow);
+  }
+  .qcard .qlabel{
+    display:inline-block;background:var(--yellow);color:var(--ink);
+    font-weight:900;font-size:11.5px;letter-spacing:0.12em;
+    padding:4px 12px;border-radius:99px;margin-bottom:8px;
+  }
+  .qcard h2{font-size:18px;font-weight:900;margin-bottom:10px;line-height:1.55}
+  .qcard p{font-size:13.5px;color:#555;font-weight:500;line-height:1.75}
+
+  /* ── flow ──*/
+  .flow{
+    background:var(--paper);border-radius:28px;
+    padding:26px 24px 28px;margin-bottom:26px;
+    box-shadow:0 6px 24px -8px rgba(0,0,0,0.10);
+  }
+  .flow-head{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+  .flow-head .num{
+    width:46px;height:46px;border-radius:50%;
+    background:var(--green);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:900;font-size:22px;
+    box-shadow:0 4px 0 rgba(0,0,0,0.08);
+  }
+  .flow-head h2{font-size:20px;font-weight:900;line-height:1.4}
+  .flow-head .sub{font-size:12px;color:#777;font-weight:500;margin-top:3px}
+
+  .stage{
+    display:grid;grid-template-columns:90px 1fr;gap:14px;
+    margin-bottom:12px;
+  }
+  .stage-icon{
+    background:var(--soft);border-radius:18px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:42px;
+    padding:14px 0;
+  }
+  .stage-body{
+    background:var(--soft);border-radius:18px;
+    padding:14px 18px;
+  }
+  .stage-title{font-size:15.5px;font-weight:900;margin-bottom:6px;line-height:1.4}
+  .stage-text{font-size:13px;color:#444;line-height:1.7;font-weight:500}
+  .stage-text .hl{background:linear-gradient(transparent 55%, rgba(31,193,121,0.25) 55%);padding:0 3px;font-weight:700}
+  .stage-text .red{color:var(--red);font-weight:700}
+  .stage-text .blue{color:var(--blue);font-weight:700}
+  .stage-text .green{color:var(--green);font-weight:700}
+
+  .down{
+    text-align:center;font-size:32px;color:#CFD2D7;
+    margin:2px 0 2px 30px;font-weight:900;
+  }
+
+  .verdict{
+    background:#E8F8EF;border:3px solid var(--green);
+    border-radius:18px;padding:16px 20px;margin-top:18px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .verdict.bad{background:#FEEAEC;border-color:var(--red)}
+  .verdict .vicon{
+    width:42px;height:42px;border-radius:50%;background:var(--green);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;
+    flex:0 0 auto;
+  }
+  .verdict.bad .vicon{background:var(--red)}
+  .verdict .vtext{font-size:14px;font-weight:700;line-height:1.6}
+
+  /* ── settings table ──*/
+  .settings{
+    background:var(--paper);border-radius:28px;
+    padding:26px 24px 28px;margin-bottom:26px;
+    box-shadow:0 6px 24px -8px rgba(0,0,0,0.10);
+  }
+  .settings-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+  .settings-head .num{
+    width:46px;height:46px;border-radius:50%;
+    background:var(--blue);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:900;font-size:22px;
+    box-shadow:0 4px 0 rgba(0,0,0,0.08);
+  }
+  .settings-head h2{font-size:20px;font-weight:900}
+  .settings-grid{display:grid;gap:10px;grid-template-columns:1fr}
+  .settings-row{
+    display:grid;grid-template-columns:50px 1fr;gap:14px;
+    background:var(--soft);border-radius:14px;padding:14px 16px;
+  }
+  .settings-row .step{
+    width:36px;height:36px;border-radius:50%;
+    background:var(--ink);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:900;font-size:16px;
+  }
+  .settings-row .label{font-size:14px;font-weight:900;margin-bottom:4px}
+  .settings-row .desc{font-size:12.5px;color:#444;font-weight:500;line-height:1.65}
+
+  /* ── plan ──*/
+  .plan{
+    background:#FFF8DC;border:3px dashed var(--yellow);
+    border-radius:24px;padding:24px 24px 26px;margin-bottom:26px;
+  }
+  .plan h2{font-size:20px;font-weight:900;margin-bottom:12px}
+  .plan .row{
+    background:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;
+    display:grid;grid-template-columns:46px 1fr;gap:14px;align-items:center;
+  }
+  .plan .row .ic{
+    width:38px;height:38px;border-radius:50%;background:var(--yellow);
+    display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:var(--ink);
+  }
+  .plan .row.now .ic{background:var(--green);color:#fff}
+  .plan .row.todo .ic{background:#FF8C42;color:#fff}
+  .plan .row .ttl{font-weight:900;font-size:14px;margin-bottom:3px}
+  .plan .row .dsc{font-size:12px;color:#555;font-weight:500;line-height:1.6}
+
+  .cta{
+    background:var(--ink);color:#fff;
+    border-radius:24px;padding:24px;text-align:center;
+  }
+  .cta h2{font-size:18px;font-weight:900;margin-bottom:8px}
+  .cta p{font-size:13px;font-weight:500;color:#bbb;line-height:1.7}
+  .cta .btns{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+  .cta .btn{
+    display:inline-block;background:#fff;color:var(--ink);
+    font-weight:900;font-size:13px;padding:12px 22px;border-radius:99px;
+    text-decoration:none;
+  }
+  .cta .btn.outline{background:transparent;color:#fff;border:2px solid #fff}
+  .cta .btn:hover{transform:translateY(-2px)}
+
+  @media (max-width:560px){
+    .hero h1{font-size:22px}
+    .stage{grid-template-columns:64px 1fr}
+    .stage-icon{font-size:30px;padding:10px 0}
+    .flow-head h2,.settings-head h2,.plan h2{font-size:17px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="stamp">LINE × CRM × アンケート の 全体図</div>
+    <h1>結局 LINE の 情報 は<br>取れてるの？ 送れるの？</h1>
+    <p>3つの 疑問 に 順番に 答える。<br>絵を 見ながら 5分 で わかる。</p>
+  </div>
+
+  <!-- 質問サマリー -->
+  <div class="qcard">
+    <div class="qlabel">3つの 疑問</div>
+    <h2>① デフォルト 13問 も 編集 できる の？</h2>
+    <p>「カスタム質問 = デフォルト + 追加」 だけど、 デフォルト の 13問 も 不要なら 消したい / 文言 変えたい。</p>
+  </div>
+  <div class="qcard">
+    <h2>② お客様 の LINE 情報 (userId / 名前 / アイコン) は 取れてる の？</h2>
+    <p>取れてないと、 「Failed to send messages」 みたいに、 CRM から お客様 に LINE 送信 できない 問題 の 真因。</p>
+  </div>
+  <div class="qcard">
+    <h2>③ CRM から LINE 送信 / 返信 は できるの？</h2>
+    <p>過去「送信失敗」 で 止まってた 問題、 ちゃんと 直ってる？</p>
+  </div>
+
+  <!-- ===== Flow: ②③の 答え ===== -->
+  <div class="flow">
+    <div class="flow-head">
+      <div class="num">A</div>
+      <div>
+        <h2>絵で わかる: ②③ は こうやって 解決済</h2>
+        <div class="sub">お客様 友だち追加 → 完全自動で CRM に 全部 入る</div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-icon">📱</div>
+      <div class="stage-body">
+        <div class="stage-title">1. お客様 が 公式LINE を 友だち追加</div>
+        <div class="stage-text">QR コード or 友だち追加URL を スキャン / タップ。 → LINE 公式が <b>follow イベント</b> を Skelton サーバー に 送信。</div>
+      </div>
+    </div>
+    <div class="down">▼</div>
+
+    <div class="stage">
+      <div class="stage-icon">⚙️</div>
+      <div class="stage-body">
+        <div class="stage-title">2. Skelton webhook が 受信 + LINE API で 情報取得</div>
+        <div class="stage-text"><span class="hl">userId</span> (LINE が お客様 を 区別する ID) を 受信。 <br>すぐ LINE Profile API を 叩いて、 <span class="hl">名前 (displayName)</span> と <span class="hl">アイコン (pictureUrl)</span> を 取得。</div>
+      </div>
+    </div>
+    <div class="down">▼</div>
+
+    <div class="stage">
+      <div class="stage-icon">💾</div>
+      <div class="stage-body">
+        <div class="stage-title">3. CRM の 顧客台帳 に 自動 で 作成</div>
+        <div class="stage-text">顧客カード が 自動で 1人 増える。 <span class="green">名前 / アイコン / userId 全部 入った 状態</span>。 「未登録」 や 「匿名」 で 入らない。</div>
+      </div>
+    </div>
+    <div class="down">▼</div>
+
+    <div class="stage">
+      <div class="stage-icon">💬</div>
+      <div class="stage-body">
+        <div class="stage-title">4. 公式LINE から ウェルカム + アンケートURL を 自動 push</div>
+        <div class="stage-text">お客様 の LINE に 2通 自動で 届く:<br>1️⃣ 「ご登録ありがとうございます！」<br>2️⃣ 「📝 事前アンケート: https://… <code>?uid=Uxxx</code> 付き」</div>
+      </div>
+    </div>
+    <div class="down">▼</div>
+
+    <div class="stage">
+      <div class="stage-icon">✏️</div>
+      <div class="stage-body">
+        <div class="stage-title">5. お客様 が アンケート 回答 → 同じ 顧客カード に merge</div>
+        <div class="stage-text">URL の <code>uid</code> で 「これは ステップ3 で 作った カード」 と わかる ので、 <span class="green">新規作成せず 既存カード に 上書き</span>。 = 重複 ゼロ。</div>
+      </div>
+    </div>
+    <div class="down">▼</div>
+
+    <div class="stage">
+      <div class="stage-icon">✉️</div>
+      <div class="stage-body">
+        <div class="stage-title">6. CRM から 返信 / push が <span class="green">100% 成功</span> する</div>
+        <div class="stage-text">送信 に 使う <code>userId</code> は <span class="hl">この公式LINE の bot 自身 が 取った</span> もの。 だから <span class="green">push 権限 は 必ず ある</span>。 → 「Failed to send messages」 は 構造的に 出ない。</div>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="vicon">✓</div>
+      <div class="vtext">
+        ② <b style="color:var(--green)">userId / 名前 / アイコン</b> は 友だち追加 した瞬間 に <b>全部 自動で</b> CRM に 入る。<br>
+        ③ <b style="color:var(--green)">送信 / 返信</b> は その userId で 通る ので 構造的に 「Failed to send messages」 は 出なくなる。
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 設定方法 (Jobs が やる) ===== -->
+  <div class="settings">
+    <div class="settings-head">
+      <div class="num">B</div>
+      <div>
+        <h2>各 FP 事業者 の 設定 (Jobs が 代行)</h2>
+        <div class="sub">FP に やらせる作業 ゼロ。 全部 Jobs 側で セットアップ → 完成品 を 渡す</div>
+      </div>
+    </div>
+    <div class="settings-grid">
+      <div class="settings-row">
+        <div class="step">1</div>
+        <div>
+          <div class="label">LINE Developers Console で プロバイダ 作成</div>
+          <div class="desc">「FP事業者名」 で 新規 プロバイダ 1個。 Messaging API チャネル を 1個 作成。</div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="step">2</div>
+        <div>
+          <div class="label">Channel access token / Channel secret を コピー</div>
+          <div class="desc">access token = 長文字列。 secret = 32文字。 stg管理画面 「公式LINE 連携」 セクション に 貼って 「接続テスト＋保存」。</div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="step">3</div>
+        <div>
+          <div class="label">Webhook URL を 設定</div>
+          <div class="desc"><code>https://asia-northeast1-skeleton-fp-compass-632026.cloudfunctions.net/lineWebhook?t={tenantId}</code> を LINE Console の Messaging API → Webhook 設定欄 に 貼る。 「Webhook の利用」 を ON。</div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="step">4</div>
+        <div>
+          <div class="label">あいさつメッセージ を OFF</div>
+          <div class="desc">LINE Official Account Manager の 設定。 Skelton webhook 側 で 自前送信する ので、 LINE標準の あいさつ は 切る。</div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="step">5</div>
+        <div>
+          <div class="label">リッチメニュー を 自動生成</div>
+          <div class="desc">管理画面 で 「リッチメニュー 再生成 (本番向け)」 ボタン を 押すだけ。 Jobs が 仕込んだ API が 自動 で 1分以内 に 配信。</div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="step">6</div>
+        <div>
+          <div class="label">QR / 友だち追加URL を FP に 渡す</div>
+          <div class="desc">これだけ FP に 渡せば 営業活動 で 配るだけ。 → 上の Aの 流れ が 自動で 全部 回る。</div>
+        </div>
+      </div>
+    </div>
+    <div class="verdict">
+      <div class="vicon">✓</div>
+      <div class="vtext"><b>LIFF / LINE Login チャネル 作成は 不要</b>。 1テナント の セットアップ は Jobs 側 で <b>5分</b>。</div>
+    </div>
+  </div>
+
+  <!-- ===== ①の 答え: アンケート 全質問 編集 ===== -->
+  <div class="plan">
+    <h2>① の 答え: 「デフォルト 13問 も 編集」 これから 作る</h2>
+    <p style="margin-bottom:14px;font-size:13.5px;font-weight:500;color:#555;line-height:1.7">
+      今の カスタム質問 は 「デフォルト 13問 + 追加 5問」 だけ。 <b>デフォルト の 削除 / 編集 は できない</b>。<br>
+      → オーナー指摘 の 通り 改修 する。 作業 イメージ:
+    </p>
+
+    <div class="row now">
+      <div class="ic">✓</div>
+      <div>
+        <div class="ttl">今 動いてる: 追加 5問 だけ</div>
+        <div class="dsc">「+質問を追加」 で 末尾 に 1問ずつ。 タイプ = 選択肢式 / 複数選択 / 自由記入。</div>
+      </div>
+    </div>
+
+    <div class="row todo">
+      <div class="ic">→</div>
+      <div>
+        <div class="ttl">これから: デフォルト 13問 を 全部 編集可能 に</div>
+        <div class="dsc">管理画面で 「デフォルト 13問 を 読み込み」 ボタン → 13個の カード が 出る → 削除 ボタン / 文言 編集 / 並び替え 全部 可能。 「初期状態に戻す」 ボタン も 付ける。</div>
+      </div>
+    </div>
+
+    <div class="row todo">
+      <div class="ic">⚙</div>
+      <div>
+        <div class="ttl">技術的に やる作業 (Jobs 側)</div>
+        <div class="dsc">
+          ① survey/index.html の HTML hardcode を 撤廃 → 全 JS 駆動 に。<br>
+          ② tenant.surveyConfig.allQuestions[] (空 = デフォルト 適用)。<br>
+          ③ 管理画面 editor を 拡張 (デフォルト読み込み + 全質問編集 + reorder)。<br>
+          ④ 既存 テナント への 影響なし で migrate。
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="ic">⏱</div>
+      <div>
+        <div class="ttl">所要時間 と 順番</div>
+        <div class="dsc">実装 + stg 反映 + E2E まで 90分。 オーナー OK もらってから 着手。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CTA ===== -->
+  <div class="cta">
+    <h2>判断 お願い</h2>
+    <p>
+      A・B (②③ の 答え + 設定方法) は OK か?<br>
+      ① (デフォルト 13問 編集 化) は GO で いい か?
+    </p>
+    <div class="btns">
+      <a class="btn" href="#" onclick="alert('LINE で 「① GO + 今のは OK」 と 投げて → 90分で実装。');return false;">① GO で 着手</a>
+      <a class="btn outline" href="#" onclick="alert('LINE で 「何が違う」 と 投げて → 修正します。');return false;">違う / 質問ある</a>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
