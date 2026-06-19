@@ -115,40 +115,94 @@ const STORAGE_KEY = 'femoon-setup-progress-v1';
 
 const STEPS = [
   { kind:'intro',
-    title:'LINE 接続<br>セットアップ',
-    sub:'サロン admin に LINE 鍵 4つ を 入れる → リッチメニュー 作る → 動作確認 まで、 ぜんぶ で 18ステップ。 上 から 順 に 「次へ」 を 押す だけ。' },
+    title:'FEMOON SaaS<br>1から 完了 まで',
+    sub:'サロン申込 → 決済 → アカウント作成 → 予約フォーム確認 → LINE接続 → 動作確認 まで、 全部 で 30ステップ。 上 から 順 に 「次へ」 を 押す だけ で 完了 まで 到達 します。' },
 
   { kind:'step', title:'これ は 何 を する マニュアル?',
-    body:`<p>サロン が ウィザード で 答えた 内容 (店名・コース・休日 等) を <strong>予約フォーム</strong> に 反映 → サロン の <strong>LINE 公式アカウント</strong> と 繋いで、 お客様 が LINE で 予約 できる ように する 作業 を、 1ステップ ずつ やります。</p>`,
-    note:'2部 構成: PART A (予約フォーム 確認、 5ステップ) + PART B (LINE接続、 17ステップ)' },
+    body:`<p>1サロン を <strong>受注 から 営業開始 まで</strong> 全部 通す ガイド。 5パート 構成 で、 各パート で 何 を やる か は 順番 に 案内 します。</p>`,
+    list:[
+      '<strong>PART A</strong>: サロン申込 ウィザード (5ステップ)',
+      '<strong>PART B</strong>: 決済 (2ステップ)',
+      '<strong>PART C</strong>: アカウント作成 (3ステップ)',
+      '<strong>PART D</strong>: 予約フォーム 確認 (3ステップ)',
+      '<strong>PART E</strong>: LINE 接続 (17ステップ)'
+    ],
+    note:'実作業 30〜40分。 サロン側 と あなた (オペレーター) が 共同 で やる ステップ あり' },
 
-  { kind:'step', title:'【PART A】 まず 予約フォーム を 確認',
-    body:`<p>サロン が ウィザード で 答えた 内容 は、 すでに <strong>予約フォーム に 反映済み</strong>。 まず 自分で 開いて 中身 を 確認 します。</p>`,
-    note:'ここ で 確認 OK なら LINE接続 (PART B) に 進む。 NG なら admin で 編集' },
+  { kind:'step', title:'【PART A】 サロン に 申込 ウィザード を 開いて もらう',
+    body:`<p>まず サロン が <strong>FEMOON SaaS 申込 ウィザード</strong> に 12問 答えて、 店名・コース・休日 等 を 登録 します。 サロン に 下の URL を LINE で 送る (or 自分で デモ する 場合 は 開く)。</p>`,
+    action:{ label:'申込ウィザード', url:'/femoon-saas-wizard/', href:'https://t35ty6-rgb.github.io/skeleton-demos/femoon-saas-wizard/?ref=demo&salon=デモサロン&demo=1' },
+    note:'リンク末尾 <code>&demo=1</code> 付き = デモモード (¥0課金スキップ)。 本番 サロン に 送る 時 は qr-gen ツール で 専用QR 発行 して、 demo=1 は つけない' },
 
-  { kind:'step', title:'予約フォーム URL を 開く',
-    body:`<p>サロン専用 の 予約フォーム URL は <code>https://skeleton-femoon-saas.web.app/book/{tenantId}</code>。 tenantId は サロン申込 完了時 に 自動 発行 されてる。</p>`,
+  { kind:'step', title:'サロン が 12問 答える (店名/コース/休日 等)',
+    body:`<p>サロン が ウィザード 内 で 答える 内容:</p>`,
+    list:[
+      'サロン名 / 業種 / 住所 / 電話 / 担当者',
+      'メアド (任意 — 後で 自分で 設定可)',
+      '営業時間 (開店 / 閉店)',
+      '定休日 の 曜日',
+      '不定休 (第N週X曜日 プルダウン式)',
+      'コース (名前・所要時間・料金) × 必要数',
+      'スタッフ (名前・役職) × 必要数'
+    ],
+    note:'サロン 側 の 作業。 オペレーター は ここ で 待つ。 申込 内容 は Firestore <code>onboarding_requests</code> に 保存 され、 後 で 自動 引き当て' },
+
+  { kind:'step', title:'最終確認 → 「次へ (決済)」 を 押す',
+    body:`<p>サロン が 入力 完了後、 ウィザード の 「最終確認」 画面 で 入力内容 を チェック。 OK なら <strong>「次へ (決済)」</strong> ボタン で 決済画面 に 進む。</p>`,
+    note:'各項目 横 の 「直す」 ボタン で その質問 に 戻れる' },
+
+  { kind:'step', title:'【PART B】 決済 (¥9,800/月 or デモ ¥0)',
+    body:`<p>Stripe Checkout が 自動 で 開く。 本番 は ¥9,800/月 サブスク、 デモモード (<code>?demo=1</code>) なら <strong>¥0 スキップ</strong>。</p>`,
+    list:[
+      '本番: クレカ番号 + 有効期限 + CVC + 名義 入力 → 「Subscribe」',
+      'デモ: 「デモ続行 (¥0)」 ボタン → 即 signup画面 へ'
+    ],
+    note:'本番 でも 30日全額返金保証 つき。 解約 は Stripe Dashboard で 即時' },
+
+  { kind:'step', title:'決済完了 → 自動 で signup画面 に 飛ぶ',
+    body:`<p>Stripe決済 完了 (or デモスキップ) 後、 <strong>https://skeleton-femoon-saas.web.app/?ref=申込番号&paid=1</strong> に 自動転送。 SaaS ログイン画面 が 「新規 サロン 登録」 タブ で 開く。</p>`,
+    note:'申込番号 は wizard で 発行された 16文字 ID (例: KGW3PA48HRMT9F4N)。 URL に 引き継がれて、 signup 時 に 申込内容 を 自動 引き当て' },
+
+  { kind:'step', title:'【PART C】 サロン名 が 自動表示 されている',
+    body:`<p>signup画面 の 上部 に <strong>黄色 バナー</strong> で 「○○サロン の 申込 が 引き当たり ました」 と 表示。 サロン名 欄 も 自動入力 済。</p>`,
+    ok:'バナー 出てれば 申込 引き当て 成功。 出ない 場合 は URL に ?ref=申込番号 が 付いてる か 確認' },
+
+  { kind:'step', title:'メアド と パスワード を 入力',
+    body:`<p>サロン側 で 下記 を 自分で 決めて 入力:</p>`,
+    list:[
+      '<strong>メールアドレス</strong> (admin ログイン用、 普段 使う もの)',
+      '<strong>パスワード</strong> (8文字以上)',
+      '<strong>パスワード 再入力</strong>'
+    ],
+    note:'パスワード は サロン本人 が 設定 → Skeleton側 に は 渡らない (安全)。 忘れた 時 は ログイン画面 の 「パスワード を お忘れ の方 は こちら」 で 自走 復旧' },
+
+  { kind:'step', title:'「アカウント作成」 → admin に 自動ログイン',
+    body:`<p>緑 の <strong>「アカウント作成」</strong> ボタン → Firebase Auth 作成 → 同時 に tenant ドキュメント が 申込内容 で 初期化 → admin (予約管理画面) に 自動転送。</p>`,
+    ok:'admin の 上部 に サロン名 表示 + 予約タブ 開いた 状態 になれば PART C 完了' },
+
+  { kind:'step', title:'【PART D】 予約フォーム を 自分 で 開いて 確認',
+    body:`<p>admin URL の <code>?tenant=○○○</code> 部分 が サロン専用ID。 これ を 使って <strong>予約フォーム URL</strong> を 組み立て: <code>https://skeleton-femoon-saas.web.app/book/{tenantId}</code></p>`,
     action:{ label:'予約フォーム', url:'/book/{tenantId}', href:'https://skeleton-femoon-saas.web.app/admin/' },
-    note:'tenantId は admin に ログイン後 URL末尾 ?tenant=○○○ で 確認 できる。 例: <code>?tenant=i-sxyzd</code> なら 予約URL は <code>.../book/i-sxyzd</code>' },
+    note:'例: admin が <code>?tenant=demosalon-abc12</code> なら、 予約URL は <code>/book/demosalon-abc12</code>' },
 
-  { kind:'step', title:'予約フォーム の 内容 を 確認',
-    body:`<p>開いた フォーム で 下記 が <strong>申込時 の 内容</strong> と 合って いる か 目視:</p>`,
+  { kind:'step', title:'予約フォーム の 内容 が 申込通り か 確認',
+    body:`<p>開いた フォーム で 下記 が 申込時 と 合って いる か 目視:</p>`,
     list:[
       '<strong>サロン名</strong> が 上部 に 表示',
-      '<strong>コース</strong> (名前・所要時間・料金) が ウィザード で 答えた 通り',
+      '<strong>コース</strong> (名前・所要時間・料金) が 全て 表示',
       '<strong>営業時間</strong> (○○:00 〜 ○○:00) が 正しい',
       '<strong>定休日</strong> の 曜日 が 「休」 表示',
       '<strong>不定休</strong> (第N週X曜日) が ある 場合 も 「休」 表示'
     ],
-    ok:'全部 合って いれば PART A 完了。 次へ' },
+    ok:'全部 合って いれば PART D 完了' },
 
-  { kind:'step', title:'内容 が 違う 場合 は admin 「設定」 で 編集',
-    body:`<p>もし 表示内容 が 違う 場合 (例: コース 抜けてる、 営業時間 違う) は サロン に 連絡 し、 admin の <strong>設定タブ</strong> 内 で 編集 → 保存 し直し。 編集後 すぐ 予約フォーム に 反映。</p>`,
-    note:'コース は 「コース・料金」 セクション、 スタッフ は 「スタッフ」 セクション、 営業時間 は 「営業時間」 セクション で それぞれ 編集' },
+  { kind:'step', title:'違う 場合 は admin 「設定」 タブ で 編集 → 保存',
+    body:`<p>もし 表示内容 違う 場合 (例: コース 抜けてる、 営業時間 違う) は admin の <strong>設定タブ</strong> 内 で 編集 → 右下 「保存」 で 即時反映。</p>`,
+    note:'コース は 「コース・料金」 セクション、 スタッフ は 「スタッフ」 セクション、 営業時間 は 「営業時間」 セクション で それぞれ 編集 可能' },
 
-  { kind:'step', title:'【PART B】 LINE接続 に 進む',
-    body:`<p>予約フォーム 内容 OK なら、 ここ から <strong>LINE 公式アカウント</strong> と FEMOON SaaS の 紐付け を やります。 残り 17ステップ。</p>`,
-    note:'サロン に LINE OA が まだ 無い 場合 は、 先に 開設 (Zoom画面共有 で 一緒に) 推奨。 詳細 は femoon-saas-employee guide CH11 参照' },
+  { kind:'step', title:'【PART E】 LINE 接続 を 仕上げる',
+    body:`<p>残り は サロン の <strong>LINE 公式アカウント</strong> と 紐付け。 4つ の 鍵 を 預かって admin に 入力 + リッチメニュー 設定 + 動作確認 まで 17ステップ。</p>`,
+    note:'サロン に LINE OA が 無い 場合 は 先 に 開設 (Zoom同席 で 一緒に) 推奨。 詳細 は femoon-saas-employee guide CH11 参照' },
 
   { kind:'step', title:'サロン から 鍵 4つ を 預かる',
     body:`<p>下記 を そのまま LINE で サロン に 送って、 4つ の 値 を 教えて もらう。</p>`,
