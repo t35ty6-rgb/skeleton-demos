@@ -891,7 +891,38 @@
   </div>
   <div class="note warn">サロン の LINE Business ID は 個人 LINE と 紐付き が 強い ため、 完全代行 でも 最初 の ログイン だけ サロン側 で やって もらう 場面 が ある (SMS 認証 等)。 Zoom 同席 で 通過 する。</div>
 
-  <p style="margin-top:32px"><strong>3パターン 共通 で 鍵 4つ 揃ったら:</strong> Firebase Console &gt; Firestore &gt; <code>tenants/{tenantId}</code> の 4 fields に 書き込む。 同時 に <code>tenants/{tenantId}/public_config/meta</code> の <code>lineMessagingToken</code> / <code>ownerLineUid</code> / <code>liffId</code> も 同じ値 で 更新 (予約フォーム 側 が ここ を 読む)。</p>
+  <h3 class="sub me" style="margin-top:48px">▼ 鍵 4つ が 揃ったら admin に 入力 する 手順 (推奨経路)</h3>
+  <p>サロン の <strong>admin の 設定タブ</strong> に 4つ を 貼り付け → 「保存」。 これ で <code>tenants/{id}</code> と <code>public_config/meta</code> 両方 に 同時 書込 されて、 予約フォーム が LIFF経由 で 開ける ように なる。</p>
+
+  <div class="checklist">
+    <h4>admin 設定タブ 入力 4ステップ</h4>
+    <ul>
+      <li>サロン admin URL を 開く → メアド+パス で ログイン (例: <code>https://skeleton-femoon-saas.web.app/admin/?tenant=○○○</code>)</li>
+      <li>上部 タブ <strong>「設定」</strong> → 中段 <strong>「LINE 連携」</strong> セクション に スクロール</li>
+      <li>下記 4欄 に サロン から 預かった 値 を 貼り付け:
+        <ul style="margin-top:8px;padding-left:18px">
+          <li><code>Messaging API トークン</code> ← チャネルアクセストークン (200字くらい)</li>
+          <li><code>公式アカウント ID</code> ← <code>@xxxxxx</code></li>
+          <li><code>LIFF ID</code> ← <code>2010xxxxxx-xxxxxxxx</code></li>
+          <li><code>通知先 LINE userId</code> ← <code>U</code> で 始まる 32文字</li>
+        </ul>
+      </li>
+      <li>右下 <strong>「保存」</strong> ボタン → トースト 「✅ サロン設定 を 保存 しました」 確認</li>
+    </ul>
+  </div>
+
+  <div class="note ok"><strong>2026-06 修正済:</strong> 以前 は admin 保存時 に <code>liffId</code> が <code>public_config</code> に 反映されず、 LIFF init が 走らない バグ が ありました。 現在 は 「保存」 1回 で <strong>両方 同時 更新</strong> されます。 過去 設定済 の tenant も バックフィル 完了済 (29件)。</div>
+
+  <h3 class="sub" style="margin-top:36px">▼ 代替経路: Firestore Console 直編集</h3>
+  <p>サロン に admin の パス を 借りれない 時 等 は Firestore 直編集 でも OK (Skeleton社 メンバー のみ アクセス可)。</p>
+  <div class="checklist">
+    <h4>Firestore 直編集 (2箇所 同時 必須)</h4>
+    <ul>
+      <li><strong>tenants/{tenantId}</strong> に <code>lineMessagingToken</code> / <code>lineOfficialAccountId</code> / <code>liffId</code> / <code>ownerLineUid</code></li>
+      <li><strong>tenants/{tenantId}/public_config/meta</strong> に <strong>同じ 4 field</strong> を 入力</li>
+      <li>※ 片方 のみ だと 予約フォーム の LIFF init が 走らない / 通知 が 飛ばない</li>
+    </ul>
+  </div>
 
   <div class="action">
     <div class="label">Firestore</div>
@@ -899,7 +930,20 @@
     <a class="open" href="https://console.firebase.google.com/project/skeleton-femoon-saas/firestore/data/~2Ftenants" target="_blank">↗ 開く</a>
   </div>
 
-  <div class="done"><span><strong>完了 判定:</strong> Firestore <code>tenants/{id}.line.channelAccessToken</code> 等 4 field が 全部 埋まり、 リッチメニュー が サロン LINE OA に 即時公開 されて いる 状態。</span></div>
+  <h3 class="sub me" style="margin-top:36px">▼ リッチメニュー 設定 (サロン LINE OA Manager)</h3>
+  <p>サロン に <strong>LINE Official Account Manager</strong> を 開いて もらう (or Zoom 画面共有)。</p>
+  <div class="checklist">
+    <h4>リッチメニュー作成 5ステップ</h4>
+    <ul>
+      <li><strong>https://manager.line.biz/</strong> に サロン の LINE アカウント で ログイン</li>
+      <li>該当 公式アカウント 選択 → 左メニュー 「リッチメニュー」 → 「作成」</li>
+      <li>画像 アップ (デフォルト 黒バナー で OK、 後で 差替可) + テンプレ 「大」</li>
+      <li>左セル に <strong>「リンク」 アクション</strong> 設定 → URL に <code>https://liff.line.me/{LIFF ID}</code> (← LIFF URL 形式 必須、 予約フォームURL 直貼り NG)</li>
+      <li>表示テキスト 「ご予約」 / メニューバー上書 / 即時 ON で 保存</li>
+    </ul>
+  </div>
+
+  <div class="done"><span><strong>完了 判定:</strong> サロン admin 設定タブ の 4欄 全部 埋まる + リッチメニュー 即時公開 → 次 の PHASE 11 (動作確認) で テスト予約 通知 が 自分の LINE に 届く こと。</span></div>
 </section>
 
 <!-- ============ CH 12 = PHASE 10 ============ -->
