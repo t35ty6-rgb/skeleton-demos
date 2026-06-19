@@ -608,6 +608,24 @@
       console.log("[fp diag] loadTenantData start", { tenantId: window.__fp.tenantId, uid: user.uid });
       const clients = await loadTenantData(window.__fp.tenantId);
       console.log("[fp diag] loadTenantData success", { count: clients.length });
+      // ★ テナント切替検知: 別 tenant で ログインしてた残骸 localStorage を 物理的に削除
+      //   (前 tenant の 吉田司 等が 新 tenant 画面に ゴースト表示される 致命的バグ 対策)
+      try {
+        const last = localStorage.getItem('fp-last-tenant');
+        if (last && last !== window.__fp.tenantId) {
+          console.log('[fp tenant-switch]', last, '→', window.__fp.tenantId, ': purge legacy localStorage');
+          ['fp-crm-clients-v1', 'fp-crm-real-clients-v1', 'fp-crm-real-mode', 'fp-crm-state-v1',
+           'fp-dedup-migrated-v1', 'fp-ai-お客様-cleanup-v1'].forEach(k => localStorage.removeItem(k));
+          // fp-deliv-edit-* 等 顧客ID 紐付き localStorage も 全削除
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && (k.startsWith('fp-deliv-') || k.startsWith('fp-minutes-') || k.startsWith('fp-line-'))) {
+              localStorage.removeItem(k);
+            }
+          }
+        }
+        localStorage.setItem('fp-last-tenant', window.__fp.tenantId);
+      } catch (e) { console.warn('[fp tenant-switch] purge fail:', e.message); }
       window.DUMMY_CLIENTS = clients;
       window.DUMMY_CLIENTS_VERSION = `firestore-${window.__fp.tenantId}`;
       window.UPCOMING_BOOKINGS = window.UPCOMING_BOOKINGS || [];
@@ -1551,7 +1569,7 @@ window.fpReadyAfterAuth = function() {
 <script>
 (function(){
   // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
-  const FP_VERSION = "20260619AS-clear-cache-stg-only";
+  const FP_VERSION = "20260619AT-tenant-switch-purge";
   const loadTime = new Date();
   const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
   const dateLabel = (FP_VERSION.match(/^(\d{4})(\d{2})(\d{2})/) || []).slice(1).join('/').replace(/^(\d{4})\//,'$1/').replace(/\/(\d{2})\/(\d{2})$/,'/$1/$2') || FP_VERSION;
