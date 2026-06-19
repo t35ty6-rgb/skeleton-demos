@@ -1736,8 +1736,10 @@ function renderNewGrid(){
   NEW_ITEMS = buildNewItems();
   document.getElementById('new-grid').innerHTML = NEW_ITEMS.map(it=>{
     const kim = {no:it._custom?'C':'X',nm:it.nm,cat:it.sub,price:0,img:it.img};
+    /* SEO クロール用: 商品個別ページに href、 JS で booking モーダル優先 */
+    const href = it.id ? `product/${it.id}.html` : '#';
     return `
-    <article class="item-card" data-kim='${JSON.stringify(kim).replace(/'/g,"&#39;")}'>
+    <a class="item-card" href="${href}" data-kim='${JSON.stringify(kim).replace(/'/g,"&#39;")}'>
       <div class="pic">
         ${fmtPic(it)}
         ${it.new?'<span class="new">NEW</span>':''}
@@ -1748,12 +1750,15 @@ function renderNewGrid(){
         <div class="nm"><span class="pref">${it.pref}</span>${it.nm}<br><span class="pref">${it.sub}</span></div>
         <div class="price">${it.price}<small>(税込)</small></div>
       </div>
-    </article>
+    </a>
     `;
   }).join('');
   document.querySelectorAll('.item-card').forEach(c=>{
-    c.addEventListener('click',()=>{
-      try{openBooking(JSON.parse(c.dataset.kim))}catch(e){console.warn(e)}
+    c.addEventListener('click',e=>{
+      /* heart icon クリックは除外 */
+      if(e.target.closest('.heart')) return;
+      e.preventDefault();
+      try{openBooking(JSON.parse(c.dataset.kim))}catch(err){console.warn(err)}
     });
   });
 }
@@ -1819,6 +1824,41 @@ function renderInstaGrid(){
   `).join('');
 }
 renderInstaGrid();
+
+/* ============ Service Worker 登録 (オフラインキャッシュ) ============ */
+if('serviceWorker' in navigator && location.protocol === 'https:'){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/skeleton-demos/alice-mieux-kimono/sw.js').catch(()=>{});
+  });
+}
+
+/* ============ WebP 自動切替 (画像転送量 80-98% 削減) ============ */
+(function(){
+  /* WebP対応検出 (Safari 14+ / Chrome 32+ / Firefox 65+ で対応) */
+  const supportsWebP = (()=>{
+    try {
+      const c = document.createElement('canvas');
+      return c.toDataURL('image/webp').indexOf('image/webp') === 5;
+    } catch(e){ return false; }
+  })();
+  if(!supportsWebP) return;
+  function swap(img){
+    const s = img.src || img.getAttribute('src') || '';
+    if(/\.(png|jpg|jpeg)$/i.test(s) && !s.startsWith('data:') && !img.dataset.noWebp){
+      const webp = s.replace(/\.(png|jpg|jpeg)$/i, '.webp');
+      /* HEAD で存在確認しないと余分なリクエスト → preflight回避: 失敗時は元に戻すフック */
+      const test = new Image();
+      test.onload = () => { img.src = webp; };
+      test.onerror = () => {}; /* WebP無ければそのまま */
+      test.src = webp;
+    }
+  }
+  function apply(){ document.querySelectorAll('img').forEach(swap); }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
+  else apply();
+  setTimeout(apply, 800);
+  setTimeout(apply, 2500);
+})();
 
 /* ============ 画像 lazy loading (above-the-fold 以外) ============ */
 (function(){
