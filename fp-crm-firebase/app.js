@@ -41,14 +41,14 @@
       .cd-modal #fp-fam-ai { background:var(--fp-mint) !important; color:#fff !important; border:none !important; padding:13px 22px !important; border-radius:12px !important; font-size:15px !important; font-weight:800 !important; }
       .cd-modal #fp-fam-add { background:#fff !important; border:1.5px solid #CBD5E1 !important; color:var(--fp-ink-mid) !important; padding:13px 22px !important; border-radius:12px !important; font-size:15px !important; font-weight:700 !important; }
       .cd-modal [data-open-hearing] { background:var(--fp-mint-dark) !important; color:#fff !important; border:none !important; padding:12px 20px !important; border-radius:12px !important; font-size:15px !important; font-weight:700 !important; box-shadow:0 4px 12px rgba(0,137,123,0.22) !important; }
-      /* ★ inline style="background:linear-gradient(...,#F97316,#EA580C) !important" を 強引に override */
-      .cd-modal button.fp-draft-cta[style], .cd-modal .fp-draft-cta { background:var(--fp-mint) !important; background-image:none !important; border-radius:14px !important; box-shadow:0 8px 20px rgba(77,182,172,0.32) !important; padding:16px 20px !important; min-height:64px !important; border:none !important; }
-      .cd-modal .fp-draft-cta .cd-flow-step-label,
-      .cd-modal .fp-draft-cta .cd-flow-step-label[style] { font-size:16px !important; font-weight:800 !important; color:#fff !important; }
-      .cd-modal .fp-draft-cta .cd-flow-step-no,
-      .cd-modal .fp-draft-cta .cd-flow-step-no[style] { background:rgba(255,255,255,0.28) !important; border:1px solid rgba(255,255,255,0.4) !important; color:#fff !important; }
-      .cd-modal .fp-draft-cta .cd-flow-step-sub,
-      .cd-modal .fp-draft-cta .cd-flow-step-sub[style] { color:rgba(255,255,255,0.92) !important; }
+      /* ★ styles-v8 .fp-draft-cta#modal-draft-btn (id+class) を上回る specificity で mint化 */
+      body .cd-modal .fp-draft-cta#modal-draft-btn,
+      body .cd-modal button.fp-draft-cta#modal-draft-btn,
+      .cd-modal .fp-draft-cta#modal-draft-btn { background:var(--fp-mint) !important; background-image:none !important; background-color:var(--fp-mint) !important; border-radius:14px !important; box-shadow:0 8px 20px rgba(77,182,172,0.32) !important; padding:16px 20px !important; min-height:64px !important; border:none !important; animation:none !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-label { font-size:16px !important; font-weight:800 !important; color:#fff !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-no { background:rgba(255,255,255,0.28) !important; border:1px solid rgba(255,255,255,0.4) !important; color:#fff !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-sub { color:rgba(255,255,255,0.92) !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-icon { color:#fff !important; }
       /* AI推奨 ブロック (cd-flow) — 青紫 hardcode bg → 白カード */
       .cd-modal .cd-flow, .cd-modal .cd-flow[style] { background:#fff !important; background-image:none !important; border:1px solid #ECEEF1 !important; border-radius:var(--fp-radius-card) !important; box-shadow:var(--fp-card-shadow) !important; padding:22px 24px !important; color:var(--fp-ink-strong) !important; }
       .cd-modal .cd-flow-title { color:var(--fp-ink-strong) !important; font-size:18px !important; font-weight:800 !important; }
