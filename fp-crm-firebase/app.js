@@ -120,6 +120,30 @@
       @media (prefers-reduced-motion: reduce) {
         #client-tbody tr { transition:none !important; }
       }
+      /* ===== 全画面 mint化 (ホーム / サイドバー / ヘッダ 等) ===== */
+      body { background:var(--fp-mint-paper) !important; }
+      /* 左サイドバー */
+      aside, nav.sidebar, .sidebar, .side-nav, [class*="sidebar"], [class*="SideNav"] { background:#fff !important; border-right:1px solid var(--fp-line) !important; }
+      aside .nav-item.active, aside .nav-item[data-active], .sidebar .nav-item.active, .side-nav .nav-item.active { background:var(--fp-mint-faint) !important; color:var(--fp-mint-darker) !important; border-left:3px solid var(--fp-mint) !important; }
+      /* ホーム ヘッダ (おはようございます ... ダーク bg → mint hero) */
+      .home-hero, .dashboard-hero, .greeting-card, [class*="hero"][class*="dark"], [style*="background:linear-gradient(135deg,#0F172A"], [style*="background:linear-gradient(135deg,#1B2658"], [style*="background:linear-gradient(135deg,#1b2845"] { background:linear-gradient(135deg,var(--fp-mint),var(--fp-mint-dark)) !important; background-image:linear-gradient(135deg,var(--fp-mint),var(--fp-mint-dark)) !important; color:#fff !important; border-radius:24px !important; box-shadow:0 16px 40px rgba(91,191,181,0.32) !important; border:none !important; }
+      /* 「次のステップを見る」 等 紺ボタン */
+      button[style*="background:#1B2658"], button[style*="background:#0F172A"], button[style*="background:linear-gradient(135deg,#1B"], .home-cta-primary, .dashboard-cta-primary { background:#fff !important; background-image:none !important; color:var(--fp-mint-darker) !important; border:none !important; padding:14px 28px !important; border-radius:var(--fp-radius-button) !important; font-weight:800 !important; box-shadow:0 6px 18px rgba(255,255,255,0.32) !important; }
+      /* 紺紫アクセント button 全般 → mint */
+      button[style*="background:#5B5BF0"], button[style*="background:linear-gradient(135deg,#5B5BF0"], button[style*="background:#3730A3"] { background:var(--fp-mint) !important; background-image:none !important; color:#fff !important; border:none !important; }
+      /* メインカード/コンテナ 全般 */
+      .board-section, .home-section, .dashboard-card, [class*="card-section"] { background:#fff !important; border:1px solid var(--fp-line) !important; border-radius:var(--fp-radius-card) !important; box-shadow:var(--fp-card-shadow-soft) !important; }
+      /* ヘッダ h1/h2 */
+      h1, h2 { color:var(--fp-ink-strong) !important; letter-spacing:-0.015em !important; }
+      /* タブnav (ホーム / 顧客台帳 / ライフイベント 等の上部) */
+      [data-tab].active, [data-tab][aria-selected="true"], .tab.active { color:var(--fp-mint-darker) !important; border-bottom-color:var(--fp-mint) !important; }
+      /* 「新規顧客を登録」 等 primary button */
+      button[style*="background:#1B2658"], #add-client-btn, .btn-primary, button.btn-primary { background:var(--fp-mint) !important; background-image:none !important; color:#fff !important; border:none !important; border-radius:var(--fp-radius-button) !important; padding:13px 26px !important; font-weight:800 !important; box-shadow:0 6px 18px rgba(91,191,181,0.32) !important; }
+      /* 状態 chip (LINE 緑 / 紫 等) → mint系 */
+      .status-pill.active, .badge.active, [class*="badge"][class*="success"] { background:var(--fp-mint-faint) !important; color:var(--fp-mint-darker) !important; }
+      /* リンク */
+      a:not([class]) { color:var(--fp-mint-darker) !important; }
+      a:not([class]):hover { color:var(--fp-mint-dark) !important; }
     `;
     document.head.appendChild(st);
   })();
