@@ -234,15 +234,25 @@ const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/4gMfZhgjC0Bgctc0NSbjW00';
 
 // === State ===
 // URL の ref / salon が 前回と違う or 前回が _doneId 持ち (送信完了済) なら 状態リセット
+// ただし ?paid=1 (Stripe 戻り) の 場合 は リセットせず done画面 へ
 const _initParams = new URLSearchParams(window.location.search);
 const _curRef = (_initParams.get('ref') || _initParams.get('r') || '');
+const _isPaidReturn = _initParams.get('paid') === '1';
 const _prev = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){ return {}; } })();
-if (_prev._ref !== _curRef || _prev._doneId) {
+if (!_isPaidReturn && (_prev._ref !== _curRef || _prev._doneId)) {
   localStorage.removeItem(STORAGE_KEY);
 }
 let state = loadState();
-state._ref = _curRef;
+if (!_isPaidReturn) state._ref = _curRef;
 let currentIdx = state._lastIdx || 0;
+// Stripe 戻り: done slide を 動的に追加 して 表示
+if (_isPaidReturn && state._doneId){
+  if (!QUESTIONS.find(q => q.id === '_done')){
+    QUESTIONS.push({ id:'_done', type:'done' });
+  }
+  currentIdx = QUESTIONS.length - 1;
+  state._paid = true;
+}
 
 function loadState(){
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){ return {}; }
