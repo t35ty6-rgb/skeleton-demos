@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FEMOON SaaS · デモ手順 (5ステップ)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  :root{
+    --bg:#FAFAF7; --surface:#FFFFFF; --ink:#0F0F0F; --ink-soft:#3F3F46;
+    --muted:#737373; --line:#E5E5E5;
+    --amber:#B45309; --amber-soft:#FCE7C0; --amber-bright:#F59E0B;
+    --salon:#0F766E; --salon-soft:#CCFBF1;
+    --customer:#BE185D; --customer-soft:#FCE7F3;
+    --tap:#2563EB; --tap-soft:#DBEAFE;
+    --input:#B45309; --input-soft:#FCE7C0;
+    --wait:#737373; --wait-soft:#F4F4F5;
+    --ok:#15803D; --ok-soft:#DCFCE7;
+    --rose:#E11D48;
+  }
+  body{font-family:'Inter','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;font-feature-settings:"palt";padding:0 0 120px;letter-spacing:0.005em;overflow-x:hidden}
+  .wrap{max-width:880px;margin:0 auto;padding:48px 24px}
+
+  /* paper texture overlay */
+  body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle at 1px 1px, rgba(15,15,15,0.04) 1px, transparent 0);background-size:24px 24px;pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1}
+
+  /* === HERO === */
+  .hero{margin-bottom:88px;position:relative;text-align:center;padding:32px 0 16px}
+  .hero .stamp{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--amber);letter-spacing:0.32em;font-weight:700;background:var(--amber-soft);padding:7px 14px;border-radius:99px;margin-bottom:24px;text-transform:uppercase;transform:rotate(-2deg)}
+  .hero h1{font-family:'Noto Serif JP',serif;font-size:64px;font-weight:900;line-height:1.1;letter-spacing:-0.015em;margin-bottom:18px;text-wrap:balance;position:relative;display:inline-block}
+  .hero h1 .big{font-size:120px;color:var(--amber);font-weight:900;letter-spacing:-0.04em;display:inline-block;transform:translateY(8px);text-shadow:6px 6px 0 var(--amber-soft)}
+  .hero h1 .arrow{display:inline-block;font-size:48px;color:var(--ink);margin:0 8px;font-weight:400}
+  .hero .sub{font-size:18px;color:var(--ink-soft);max-width:540px;margin:0 auto;line-height:1.7;font-weight:500}
+  .hero .meta{margin-top:34px;display:flex;gap:24px;justify-content:center;flex-wrap:wrap;align-items:center}
+  .hero .meta .pill{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.18em;font-weight:600;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+  .hero .meta .pill::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--ink)}
+  @media (max-width:560px){
+    .hero h1{font-size:40px}
+    .hero h1 .big{font-size:80px}
+    .hero h1 .arrow{font-size:32px}
+    .hero .sub{font-size:15px}
+  }
+
+  /* === STEP === */
+  .step{margin-bottom:88px;position:relative}
+  .step-head{display:grid;grid-template-columns:auto 1fr;gap:32px;align-items:start;margin-bottom:32px}
+  .step-num{font-family:'Noto Serif JP',serif;font-size:200px;font-weight:900;line-height:0.85;letter-spacing:-0.05em;color:var(--ink);position:relative}
+  .step-num::after{content:'';position:absolute;bottom:8px;left:0;right:0;height:8px;background:var(--amber);opacity:0.18;transform:skew(-12deg)}
+  .step-text{padding-top:18px}
+  .step-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--amber);letter-spacing:0.22em;font-weight:700;margin-bottom:10px;text-transform:uppercase}
+  .step-title{font-family:'Noto Serif JP',serif;font-size:36px;font-weight:700;line-height:1.25;letter-spacing:-0.01em;text-wrap:balance;color:var(--ink);margin-bottom:6px}
+  .step-sub{font-size:15px;color:var(--muted);line-height:1.7;max-width:420px}
+  @media (max-width:680px){
+    .step-head{grid-template-columns:1fr;gap:8px}
+    .step-num{font-size:140px}
+    .step-title{font-size:26px}
+  }
+
+  /* === VISUAL ROW === */
+  .visual{display:grid;grid-template-columns:1fr auto;gap:36px;align-items:center;margin-top:24px}
+  @media (max-width:680px){.visual{grid-template-columns:1fr}}
+
+  /* phone mockup */
+  .phone{width:280px;height:560px;margin:0 auto;background:var(--ink);border-radius:42px;padding:8px;position:relative;box-shadow:0 32px 60px -16px rgba(15,15,15,0.25), 0 0 0 2px rgba(15,15,15,0.06);transform:rotate(-2deg);transition:transform 0.4s ease}
+  .phone:hover{transform:rotate(0deg) scale(1.02)}
+  .phone .notch{position:absolute;top:18px;left:50%;transform:translateX(-50%);width:90px;height:24px;background:var(--ink);border-radius:99px;z-index:2}
+  .phone .screen{width:100%;height:100%;border-radius:34px;background:#FAFAF7;overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .phone .status{height:32px;display:flex;justify-content:space-between;align-items:center;padding:12px 22px 0;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink);font-weight:600}
+  .phone .screen-body{flex:1;padding:24px 20px;display:flex;flex-direction:column;font-family:'Inter','Noto Sans JP',sans-serif}
+
+  /* phone variants */
+  .ph-wizard .screen{background:#FAFAF7}
+  .ph-stripe .screen{background:#fff}
+  .ph-signup .screen{background:#fff}
+  .ph-admin .screen{background:#f5f7fa}
+
+  /* phone content presets */
+  .ph-eyebrow{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.2em;font-weight:600;text-transform:uppercase;margin-top:24px;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+  .ph-eyebrow::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--ink)}
+  .ph-h1{font-family:'Noto Serif JP',serif;font-size:24px;font-weight:700;line-height:1.3;letter-spacing:-0.01em;color:var(--ink);margin-bottom:14px;text-wrap:balance}
+  .ph-hint{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:18px}
+  .ph-input{width:100%;border:none;border-bottom:1.5px solid var(--ink);background:transparent;font-size:18px;padding:8px 0;font-family:inherit;font-weight:500;color:var(--ink);outline:none}
+  .ph-input::placeholder{color:#A1A1AA}
+  .ph-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:20px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .ph-meta .m{padding:10px 6px;border-right:1px solid var(--line);text-align:left}
+  .ph-meta .m:last-child{border-right:none}
+  .ph-meta .k{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:0.18em;font-weight:600;margin-bottom:3px;text-transform:uppercase}
+  .ph-meta .v{font-family:'Noto Serif JP',serif;font-size:14px;font-weight:700;color:var(--ink)}
+  .ph-btn{margin-top:auto;background:var(--ink);color:var(--bg);padding:14px;border-radius:8px;text-align:center;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;letter-spacing:0.01em}
+
+  /* arrows between steps */
+  .down-arrow{display:flex;justify-content:center;margin:-32px 0 24px;color:var(--amber);font-size:48px;font-weight:300;animation:bob 2.4s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+  @media (prefers-reduced-motion: reduce){ .down-arrow{animation:none} }
+
+  /* action badges */
+  .actions{display:flex;flex-direction:column;gap:14px;margin-top:24px}
+  .act{display:grid;grid-template-columns:64px 1fr;gap:16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px;position:relative}
+  .act-ico{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-weight:700}
+  .act-ico.tap{background:var(--tap)}
+  .act-ico.input{background:var(--input)}
+  .act-ico.wait{background:var(--wait)}
+  .act-ico.ok{background:var(--ok)}
+  .act-ico svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+  .act-text{font-size:15.5px;font-weight:600;color:var(--ink);line-height:1.55;letter-spacing:0.005em}
+  .act-text strong{font-weight:700;background:linear-gradient(180deg,transparent 60%,var(--amber-soft) 60%);padding:0 4px}
+
+  /* big stripe price highlight */
+  .price-badge{display:inline-flex;align-items:baseline;gap:6px;background:var(--ink);color:var(--bg);padding:14px 20px;border-radius:99px;margin:8px 0}
+  .price-badge .yen{font-family:'Noto Serif JP',serif;font-size:32px;font-weight:900;letter-spacing:-0.02em;line-height:1}
+  .price-badge .unit{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:0.1em;color:#E5E5E5}
+
+  /* CTA button at top */
+  .start-cta{background:var(--ink);color:var(--bg);text-decoration:none;padding:20px 36px;border-radius:99px;display:inline-flex;align-items:center;gap:12px;font-weight:600;font-size:16px;letter-spacing:0.01em;margin-top:28px;transition:transform 0.2s ease, box-shadow 0.2s ease;box-shadow:0 10px 30px -10px rgba(15,15,15,0.4)}
+  .start-cta:hover{transform:translateY(-2px);box-shadow:0 16px 40px -10px rgba(15,15,15,0.5)}
+  .start-cta .arrow{font-family:'JetBrains Mono',monospace;font-size:20px}
+
+  /* done celebration */
+  .done{margin-top:96px;text-align:center;position:relative}
+  .done .confetti{position:absolute;inset:-40px 0;pointer-events:none}
+  .done .confetti span{position:absolute;font-size:24px;animation:floaty 4s ease-in-out infinite}
+  @keyframes floaty{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-12px) rotate(8deg)}}
+  .done .stamp{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ok);letter-spacing:0.3em;font-weight:700;background:var(--ok-soft);padding:7px 18px;border-radius:99px;margin-bottom:18px;text-transform:uppercase}
+  .done h2{font-family:'Noto Serif JP',serif;font-size:56px;font-weight:900;line-height:1.1;letter-spacing:-0.015em;color:var(--ink);margin-bottom:18px}
+  .done p{font-size:16px;color:var(--ink-soft);max-width:480px;margin:0 auto 24px;line-height:1.7}
+  @media (max-width:560px){.done h2{font-size:36px}}
+
+  /* sub text */
+  .small{font-size:12px;color:var(--muted);text-align:center;margin-top:32px;letter-spacing:0.02em}
+
+  /* connector dotted between steps */
+  .connector{height:64px;background-image:radial-gradient(circle, var(--amber) 1.5px, transparent 1.5px);background-size:8px 8px;background-position:center;background-repeat:repeat-y;width:2px;margin:0 auto -32px;background-size:2px 8px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="stamp">FEMOON SaaS · デモ手順</div>
+    <h1>
+      <span class="big">5</span>
+      <span class="arrow">·</span>
+      ステップ<br>で デモ。
+    </h1>
+    <p class="sub">サロン が <strong style="color:var(--ink)">実際 に やる こと</strong> を、 そのまま 上 から 順 に なぞる だけ。 ガイド を 読む 必要 すら ない、 全部 画面 が 案内 して くれる。</p>
+    <a href="https://t35ty6-rgb.github.io/skeleton-demos/femoon-saas-wizard/?ref=demo&salon=デモサロン" target="_blank" class="start-cta">
+      今すぐ デモ を 始める
+      <span class="arrow">→</span>
+    </a>
+    <div class="meta">
+      <span class="pill">所要 5分</span>
+      <span class="pill">¥9,800 課金 (要 解約)</span>
+      <span class="pill">操作 タップ のみ</span>
+    </div>
+  </header>
+
+  <!-- ============ STEP 1 ============ -->
+  <section class="step">
+    <div class="step-head">
+      <div class="step-num">1</div>
+      <div class="step-text">
+        <div class="step-tag">START</div>
+        <div class="step-title">URL を 開く。</div>
+        <div class="step-sub">スマホ で 上 の 「デモ を 始める」 を タップ。 ウィザード が 開く。</div>
+      </div>
+    </div>
+    <div class="visual">
+      <div class="actions">
+        <div class="act">
+          <div class="act-ico tap">
+            <svg viewBox="0 0 24 24"><path d="M9 11V6a2 2 0 1 1 4 0v6"/><path d="M13 9a2 2 0 0 1 4 0v3"/><path d="M17 9a2 2 0 0 1 2 2v5a4 4 0 0 1-4 4h-2a6 6 0 0 1-6-6v-4"/></svg>
+          </div>
+          <div class="act-text">紫ボタン <strong>「はじめる →」</strong> を タップ</div>
+        </div>
+      </div>
+      <div class="phone ph-wizard">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="status"><span>9:41</span><span>●●●</span></div>
+          <div class="screen-body">
+            <div class="ph-eyebrow">START</div>
+            <div class="ph-h1">FEMOON SaaS<br>セットアップ</div>
+            <div class="ph-hint">ひと問 ずつ 答える だけ で 全部 完了 します。 途中保存 で 戻って も OK。</div>
+            <div class="ph-meta">
+              <div class="m"><div class="k">所要</div><div class="v">10分</div></div>
+              <div class="m"><div class="k">質問</div><div class="v">12問</div></div>
+              <div class="m"><div class="k">保存</div><div class="v">自動</div></div>
+            </div>
+            <div class="ph-btn">はじめる <span>→</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="down-arrow">↓</div>
+
+  <!-- ============ STEP 2 ============ -->
+  <section class="step">
+    <div class="step-head">
+      <div class="step-num">2</div>
+      <div class="step-text">
+        <div class="step-tag">FILL</div>
+        <div class="step-title">12問 に 答える。</div>
+        <div class="step-sub">店名・営業時間・コース など、 1問 ずつ 入力 → 「次へ」 を 繰り返す だけ。</div>
+      </div>
+    </div>
+    <div class="visual">
+      <div class="actions">
+        <div class="act">
+          <div class="act-ico input">
+            <svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>
+          </div>
+          <div class="act-text"><strong>入力欄 タップ</strong> → 文字 入力</div>
+        </div>
+        <div class="act">
+          <div class="act-ico tap">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </div>
+          <div class="act-text">下 の <strong>「次へ →」</strong> で 進む (×12回)</div>
+        </div>
+        <div class="act">
+          <div class="act-ico wait">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <div class="act-text">メアド 欄 は <strong>空欄 で OK</strong> (任意)</div>
+        </div>
+      </div>
+      <div class="phone ph-wizard">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="status"><span>9:42</span><span>●●●</span></div>
+          <div class="screen-body">
+            <div class="ph-eyebrow">QUESTION 1 / 12</div>
+            <div class="ph-h1">お店 の 名前 を<br>教えて ください</div>
+            <div class="ph-hint">看板 や チラシ に 出している 正式名称 で OK</div>
+            <input class="ph-input" placeholder="例) ヘアサロン Lune" value="">
+            <div class="ph-btn" style="margin-top:24px">次へ <span>→</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="down-arrow">↓</div>
+
+  <!-- ============ STEP 3 ============ -->
+  <section class="step">
+    <div class="step-head">
+      <div class="step-num">3</div>
+      <div class="step-text">
+        <div class="step-tag">PAY</div>
+        <div class="step-title">決済 する。</div>
+        <div class="step-sub">12問 + 最終確認 の あと、 Stripe の カード入力 画面 へ 自動 で 飛ぶ。</div>
+      </div>
+    </div>
+    <div class="visual">
+      <div class="actions">
+        <div class="act">
+          <div class="act-ico input">
+            <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </div>
+          <div class="act-text"><strong>カード情報</strong> を 入力</div>
+        </div>
+        <div class="act">
+          <div class="act-ico tap">
+            <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          </div>
+          <div class="act-text"><strong>「Subscribe」</strong> を タップ</div>
+        </div>
+        <div class="act">
+          <div class="act-ico wait" style="background:var(--rose)">
+            <svg viewBox="0 0 24 24"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+          </div>
+          <div class="act-text"><strong>本番 課金 されます</strong>。 デモ は すぐ 解約 推奨</div>
+        </div>
+      </div>
+      <div class="phone ph-stripe">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="status"><span>9:44</span><span>●●●</span></div>
+          <div class="screen-body" style="padding-top:32px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.18em;font-weight:600;margin-bottom:10px;text-transform:uppercase">Powered by Stripe</div>
+            <div style="font-size:13px;color:var(--ink);font-weight:600;margin-bottom:6px">Subscribe to FEMOON SaaS</div>
+            <div class="price-badge"><span class="yen">¥9,800</span><span class="unit">/MO</span></div>
+            <div style="border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:18px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#A1A1AA;letter-spacing:0.04em">1234 1234 1234 1234</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+              <div style="border:1px solid var(--line);border-radius:8px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#A1A1AA">MM/YY</div>
+              <div style="border:1px solid var(--line);border-radius:8px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#A1A1AA">CVC</div>
+            </div>
+            <div class="ph-btn" style="margin-top:18px;background:#635BFF">Subscribe</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="down-arrow">↓</div>
+
+  <!-- ============ STEP 4 ============ -->
+  <section class="step">
+    <div class="step-head">
+      <div class="step-num">4</div>
+      <div class="step-text">
+        <div class="step-tag">ACCOUNT</div>
+        <div class="step-title">メアド ＆<br>パス を 決める。</div>
+        <div class="step-sub">決済 完了画面 の 「アカウント作成 へ」 ボタン から ログイン画面 に 飛んで、 自分で 設定。</div>
+      </div>
+    </div>
+    <div class="visual">
+      <div class="actions">
+        <div class="act">
+          <div class="act-ico tap">
+            <svg viewBox="0 0 24 24"><path d="M9 11V6a2 2 0 1 1 4 0v6"/><path d="M13 9a2 2 0 0 1 4 0v3"/><path d="M17 9a2 2 0 0 1 2 2v5a4 4 0 0 1-4 4h-2a6 6 0 0 1-6-6v-4"/></svg>
+          </div>
+          <div class="act-text">「<strong>アカウント作成 へ</strong>」 を タップ</div>
+        </div>
+        <div class="act">
+          <div class="act-ico input">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          </div>
+          <div class="act-text"><strong>メアド</strong> + <strong>パス (8文字以上)</strong> を 入力</div>
+        </div>
+        <div class="act">
+          <div class="act-ico ok">
+            <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          </div>
+          <div class="act-text">「<strong>アカウント作成</strong>」 緑ボタン</div>
+        </div>
+      </div>
+      <div class="phone ph-signup">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="status"><span>9:46</span><span>●●●</span></div>
+          <div class="screen-body" style="padding-top:38px">
+            <div style="font-family:'Noto Serif JP',serif;font-size:18px;font-weight:900;letter-spacing:0.04em;color:var(--ink);text-align:center;margin-bottom:6px">FEMOON</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.24em;font-weight:600;text-align:center;margin-bottom:24px">SALON SAAS</div>
+            <div style="display:flex;border-bottom:1px solid var(--line);margin-bottom:18px">
+              <div style="flex:1;padding:10px 0;font-size:11px;color:var(--muted);text-align:center">ログイン</div>
+              <div style="flex:1;padding:10px 0;font-size:11px;color:var(--ink);font-weight:700;text-align:center;border-bottom:2px solid var(--ink)">新規 登録</div>
+            </div>
+            <div style="background:var(--amber-soft);border-left:3px solid var(--amber);padding:8px 10px;border-radius:0 4px 4px 0;font-size:10px;color:var(--amber);margin-bottom:14px;line-height:1.5">「○○サロン」 の 申込 が 引き当たり ました</div>
+            <input class="ph-input" style="font-size:13px;padding:8px 0;margin-bottom:14px" value="サロン名" readonly>
+            <input class="ph-input" style="font-size:13px;padding:8px 0;margin-bottom:14px" placeholder="メアド" type="email">
+            <input class="ph-input" style="font-size:13px;padding:8px 0" placeholder="パスワード (8文字以上)" type="password">
+            <div class="ph-btn" style="margin-top:18px;background:var(--ok)">アカウント作成</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="down-arrow">↓</div>
+
+  <!-- ============ STEP 5 ============ -->
+  <section class="step">
+    <div class="step-head">
+      <div class="step-num">5</div>
+      <div class="step-text">
+        <div class="step-tag">DONE</div>
+        <div class="step-title">完成。<br>admin に 着いた。</div>
+        <div class="step-sub">予約管理画面 が 開く。 ウィザード で 答えた コース・休日 が 全部 入った 状態。</div>
+      </div>
+    </div>
+    <div class="visual">
+      <div class="actions">
+        <div class="act">
+          <div class="act-ico ok">
+            <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          </div>
+          <div class="act-text">予約 0件、 コース・スタッフ 一覧 が <strong>すでに 入って いる</strong></div>
+        </div>
+        <div class="act">
+          <div class="act-ico wait">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 1"/></svg>
+          </div>
+          <div class="act-text">この まま 運用 開始 可</div>
+        </div>
+      </div>
+      <div class="phone ph-admin">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="status"><span>9:48</span><span>●●●</span></div>
+          <div class="screen-body" style="padding:0;background:#f5f7fa">
+            <div style="background:#2c5aa0;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
+              <div style="font-family:'Noto Serif JP',serif;font-weight:900;font-size:14px;letter-spacing:0.04em">FEMOON</div>
+              <div style="font-size:10px;opacity:0.9">○○サロン</div>
+            </div>
+            <div style="display:flex;background:#fff;border-bottom:1px solid #e5e7eb">
+              <div style="flex:1;padding:12px 0;text-align:center;font-size:10px;color:#2c5aa0;font-weight:700;border-bottom:2px solid #2c5aa0">予約</div>
+              <div style="flex:1;padding:12px 0;text-align:center;font-size:10px;color:#9CA3AF">顧客</div>
+              <div style="flex:1;padding:12px 0;text-align:center;font-size:10px;color:#9CA3AF">売上</div>
+              <div style="flex:1;padding:12px 0;text-align:center;font-size:10px;color:#9CA3AF">設定</div>
+            </div>
+            <div style="padding:14px 16px;font-size:11px;color:#6B7280;display:flex;gap:12px;border-bottom:1px solid #e5e7eb;background:#fff">
+              <span style="color:#1F2937"><strong style="color:#E11D48">0件</strong> 本日予約</span>
+              <span>0名 来店</span>
+              <span>¥0 売上</span>
+            </div>
+            <div style="padding:10px;background:#fff;margin-top:8px">
+              <div style="font-size:10px;color:#6B7280;margin-bottom:6px;font-weight:600">コース</div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;justify-content:space-between;font-size:10px;color:#1F2937"><span>カット</span><span style="color:#737373">60分</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:10px;color:#1F2937"><span>カラー</span><span style="color:#737373">90分</span></div>
+              </div>
+              <div style="font-size:10px;color:#6B7280;margin:10px 0 6px;font-weight:600">スタッフ</div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:#1F2937">
+                  <span style="width:6px;height:6px;border-radius:50%;background:#4a7fbf"></span>店長
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:auto"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DONE -->
+  <div class="done">
+    <div class="confetti">
+      <span style="left:10%;top:0;animation-delay:0s">✦</span>
+      <span style="left:30%;top:30%;animation-delay:0.5s">★</span>
+      <span style="left:70%;top:10%;animation-delay:1s">✦</span>
+      <span style="left:90%;top:40%;animation-delay:1.5s">★</span>
+      <span style="left:20%;top:60%;animation-delay:2s">✦</span>
+      <span style="left:80%;top:70%;animation-delay:2.5s">★</span>
+    </div>
+    <div class="stamp">DEMO COMPLETE</div>
+    <h2>これで デモ 完了。</h2>
+    <p>本番 サロン も 同じ 5ステップ で 自走 で 設定 を 終え、 翌日 から 予約 を 受けられる 状態 に なります。</p>
+    <a href="https://t35ty6-rgb.github.io/skeleton-demos/femoon-saas-wizard/?ref=demo&salon=デモサロン" target="_blank" class="start-cta">
+      もう 1回 試す
+      <span class="arrow">→</span>
+    </a>
+  </div>
+
+  <p class="small">¥9,800 課金 は <a href="https://dashboard.stripe.com/subscriptions" target="_blank" style="color:var(--amber);font-weight:600">Stripe Dashboard</a> の Subscriptions で 即時 解約 可。 解約 後 も デモ環境 は 維持 されます。</p>
+
+</div>
+
+</body>
+</html>
