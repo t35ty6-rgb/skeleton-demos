@@ -1049,19 +1049,35 @@ document.getElementById('cust-tbl').innerHTML = `
   `).join('')}</tbody>
 `;
 
-/* ====== INVENTORY (LP連動) ====== */
-const DEFAULT_INVENTORY = [
-  {nm:'紅華',en:'KOU-KA',cat:'振袖',price:'¥78,000',img:'v3-poster.jpg',video:'v3.mp4',status:'reserved',motion:true,award:true,desc:'深紅地に金彩の花籠と花綴れの振袖。京都友禅大賞 受賞作品。'},
-  {nm:'桜霞',en:'SAKURA-GASUMI',cat:'振袖',price:'ご相談',img:'v1-poster.jpg',video:'v1.mp4',status:'reserved',motion:true,award:true,desc:'桜の花弁が薄紅に流れる京友禅の振袖。京都友禅大賞 受賞作品。'},
-  {nm:'波千鳥',en:'NAMI-CHIDORI',cat:'訪問着',price:'¥38,000',img:'v2-poster.jpg',video:'v2.mp4',status:'av',motion:true,desc:'紺地に銀の波文様、白の千鳥が舞う訪問着。'},
-  {nm:'松鶴',en:'SHOUKAKU',cat:'振袖',price:'¥58,000',img:'k03.jpg',status:'av',desc:'松と鶴、波と紅葉を描いた古典の柄の振袖。'},
-  {nm:'紅薔薇',en:'KOUBARA',cat:'訪問着',price:'¥32,000',img:'k05.jpg',status:'reserved',desc:'紅花染めの地に薔薇の文様。ご卒入学、結婚式お呼ばれに。'},
-  {nm:'瑠璃花扇',en:'RURI-OUGI',cat:'浴衣',price:'¥4,980',img:'k09.jpg',status:'av',desc:'瑠璃の地に花扇の文様。夏のお祭り、花火に。'},
-  {nm:'若葉',en:'WAKABA',cat:'小紋',price:'¥26,000',img:'k06.jpg',status:'reserved',desc:'若葉色の小紋。お茶会・お食事会に。'},
-  {nm:'夕霞',en:'YUUGASUMI',cat:'紬',price:'¥28,000',img:'k07.jpg',status:'av',desc:'柔らかな夕霞色の紬。普段使いからおめかしまで。'},
-  {nm:'藤娘',en:'FUJIMUSUME',cat:'訪問着',price:'¥36,000',img:'k04.jpg',status:'maintenance',desc:'藤の花の優美な文様。'},
-  {nm:'帯結び',en:'OBIMUSUBI',cat:'帯セット',price:'¥8,800',img:'k02.jpg',status:'av',desc:'ご自宅の振袖と合わせる帯・小物セット。'},
-];
+/* ====== INVENTORY (LP連動) ======
+   16着のベースライン = Maya着用AI画像 + 360°回転動画 ・ オーナー要望で既存登録一掃
+   meta上書きは alice_inventory_meta に分離保持 (admin編集→LP即反映) */
+function loadAdminMeta(){
+  try{ return JSON.parse(localStorage.getItem('alice_inventory_meta')||'{}'); }catch(e){return {};}
+}
+function metaFor(id){
+  const o = loadAdminMeta();
+  return o[id] || {};
+}
+const DEFAULT_INVENTORY = Array.from({length:16}, (_,i)=>{
+  const n = String(i+1).padStart(2,'0');
+  const id = 'kimono-'+n;
+  const m = metaFor(id);
+  return {
+    id,
+    nm: m.nm || ('No.'+n),
+    en: m.en || ('NO.'+n),
+    cat: m.cat || '振袖',
+    price: m.price || 'ご相談',
+    img: 'output/'+id+'/model.png',
+    video: 'output/'+id+'/video.mp4',
+    status: m.status || 'av',
+    motion: true,
+    desc: m.desc || 'Maya モデル着用 ・ 360°回転動画でご確認いただけます。',
+  };
+});
+/* レガシー localStorage 在庫は廃止 */
+try{ localStorage.removeItem('alice_inventory'); }catch(e){}
 function loadInventory(){
   try{
     const custom = JSON.parse(localStorage.getItem('alice_inventory')||'[]');
