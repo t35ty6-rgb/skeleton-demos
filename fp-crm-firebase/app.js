@@ -144,6 +144,77 @@
       /* リンク */
       a:not([class]) { color:var(--fp-mint-darker) !important; }
       a:not([class]):hover { color:var(--fp-mint-dark) !important; }
+
+      /* ============================================================ */
+      /* ★★★ 50-60代 FP 向け 1から構造再設計 (BQ→さらに刷新) ★★★      */
+      /* ============================================================ */
+      /* モーダル全体 — 左右2カラム廃止 → 上下stack + 余白 大幅 拡大 */
+      #modal-content { max-width:920px !important; max-height:92vh !important; border-radius:28px !important; }
+      .cd-modal { display:block !important; grid-template-columns:none !important; padding:0 !important; }
+      .cd-modal aside.cd-left, .cd-modal .cd-left { display:none !important; }
+      .cd-modal main.cd-right, .cd-modal .cd-right { padding:0 !important; background:var(--fp-mint-paper) !important; }
+      /* ★ 上部ヘッダ (顧客名 + アバター + 状態) — mint hero 統合 */
+      .cd-modal main.cd-right::before {
+        content:''; display:block;
+        background:linear-gradient(135deg,var(--fp-mint) 0%,var(--fp-mint-dark) 100%) !important;
+        height:140px;
+        border-radius:0 !important;
+      }
+      /* タブ — 巨大化 + アイコン強調 */
+      .cd-modal .cd-tabs { background:#fff !important; padding:0 18px !important; gap:0 !important; border-bottom:2px solid var(--fp-line) !important; position:sticky !important; top:0 !important; z-index:5 !important; box-shadow:0 2px 8px rgba(15,31,29,0.04) !important; }
+      .cd-modal .cd-tab { font-size:17px !important; font-weight:800 !important; padding:22px 26px !important; min-height:64px !important; }
+      .cd-modal .cd-tab.cd-tab-active { background:var(--fp-mint-faint) !important; border-bottom-color:var(--fp-mint) !important; border-bottom-width:4px !important; }
+      .cd-modal .cd-tab .cd-tab-count { min-width:30px !important; height:28px !important; font-size:13.5px !important; padding:0 11px !important; }
+      .cd-modal .cd-tabpanels { padding:28px 32px 40px !important; background:var(--fp-mint-paper) !important; }
+      /* カード — もっと大きく + 余白拡張 */
+      .cd-modal .detail-section { padding:30px 32px !important; border-radius:24px !important; margin-bottom:22px !important; }
+      .cd-modal .detail-section h3 { font-size:13.5px !important; margin-bottom:24px !important; }
+      /* メインCTA — 横幅一杯 + 巨大 */
+      body .cd-modal .fp-draft-cta#modal-draft-btn, .cd-modal .fp-draft-cta#modal-draft-btn { width:100% !important; min-height:88px !important; border-radius:24px !important; padding:24px 28px !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-label { font-size:21px !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-sub { font-size:14px !important; margin-top:4px !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-no { width:42px !important; height:42px !important; font-size:18px !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-icon { width:28px !important; height:28px !important; }
+      /* サブボタン — 大きく */
+      .cd-modal .modal-brief-btn, .cd-modal #modal-edit-btn, .cd-modal .cd-flow-edit, .cd-modal button[data-open-hearing] { padding:16px 32px !important; font-size:16px !important; min-height:56px !important; }
+      .cd-modal #fp-fam-ai, .cd-modal #fp-fam-add { padding:16px 32px !important; font-size:16px !important; min-height:56px !important; }
+      /* 議事録カード head — もっと大きく */
+      .cd-modal .fp-meeting-card { padding:26px 30px !important; }
+      .cd-modal .fp-meeting-card-date { font-size:22px !important; }
+      .cd-modal .fp-meeting-card-eyebrow { font-size:14px !important; }
+      .cd-modal .fp-meeting-body { font-size:15.5px !important; line-height:1.95 !important; }
+      /* 家族カード — もっと大きく */
+      .cd-modal .fp-fam-card { padding:22px 22px !important; min-width:200px !important; border-radius:20px !important; }
+      .cd-modal .fp-fam-name { font-size:20px !important; }
+      .cd-modal .fp-fam-age { font-size:14px !important; margin-top:6px !important; }
+
+      /* ============================================================ */
+      /* ★ 顧客台帳 — table廃止 → カード grid (1人 = 1大型カード) */
+      /* ============================================================ */
+      #clients-view table thead { display:none !important; }
+      #clients-view table, #clients-view tbody { display:block !important; }
+      #client-tbody { display:grid !important; grid-template-columns:repeat(auto-fill,minmax(380px,1fr)) !important; gap:20px !important; padding:24px 0 !important; }
+      #client-tbody tr { display:block !important; background:#fff !important; border:1px solid var(--fp-line) !important; border-radius:24px !important; padding:24px 26px !important; box-shadow:var(--fp-card-shadow-soft) !important; transition:all 0.18s ease !important; }
+      #client-tbody tr:hover { background:#fff !important; border-color:var(--fp-mint) !important; box-shadow:0 12px 32px rgba(91,191,181,0.18) !important; transform:translateY(-2px) !important; }
+      #client-tbody tr td { display:block !important; padding:0 !important; border:none !important; font-size:14.5px !important; }
+      #client-tbody tr td:first-child { margin-bottom:18px !important; padding-bottom:18px !important; border-bottom:1px solid var(--fp-line-soft) !important; }
+      #client-tbody .client-row-name { display:flex !important; align-items:center !important; gap:14px !important; }
+      #client-tbody .client-row-name strong { font-size:19px !important; }
+      #client-tbody .avatar, #client-tbody .avatar-sm { width:54px !important; height:54px !important; font-size:18px !important; }
+      #client-tbody tr td:nth-child(2)::before { content:'年齢 '; font-size:11px; color:var(--fp-ink-soft); font-weight:700; letter-spacing:0.06em; }
+      #client-tbody tr td:nth-child(3)::before { content:'職業 '; font-size:11px; color:var(--fp-ink-soft); font-weight:700; letter-spacing:0.06em; }
+      #client-tbody tr td:nth-child(4)::before { content:'家族 '; font-size:11px; color:var(--fp-ink-soft); font-weight:700; letter-spacing:0.06em; }
+      #client-tbody tr td:nth-child(2), #client-tbody tr td:nth-child(3), #client-tbody tr td:nth-child(4) { display:inline-block !important; margin-right:14px !important; margin-bottom:8px !important; padding:0 !important; }
+      #client-tbody tr td.num::before { content:'資産 '; font-size:11px; color:var(--fp-ink-soft); font-weight:700; letter-spacing:0.06em; }
+      #client-tbody .num { font-size:22px !important; }
+      /* 状態 / 最終接触 行 */
+      #client-tbody tr td:nth-last-child(2), #client-tbody tr td:nth-last-child(1) { margin-top:14px !important; display:inline-flex !important; align-items:center !important; gap:8px !important; }
+
+      /* ============================================================ */
+      /* ★ ホーム — 大型 1メッセージ + 巨大CTA */
+      /* ============================================================ */
+      /* 「次のステップを見る」 etc を 巨大化 */
+      [data-go="clients"], #add-client-btn, button.fp-empty-cta { padding:18px 36px !important; font-size:17px !important; border-radius:var(--fp-radius-button) !important; min-height:60px !important; box-shadow:0 8px 24px rgba(91,191,181,0.32) !important; }
     `;
     document.head.appendChild(st);
   })();
