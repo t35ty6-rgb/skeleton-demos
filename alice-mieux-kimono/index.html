@@ -770,7 +770,7 @@ img{display:block;max-width:100%}
         </div>
         <a class="cta" href="#pickup">今月の三着を見る ›</a>
       </div>
-      <div class="r"><div class="pic"><video src="assets/kimono/hero-20260618.mp4" autoplay muted loop playsinline poster="assets/kimono/hero-20260618.jpg"></video></div></div>
+      <div class="r"><div class="pic"><video src="assets/kimono/output/kimono-01/video.mp4" poster="assets/kimono/output/kimono-01/model.png" autoplay muted loop playsinline></video></div></div>
     </div>
     <div class="slide">
       <div class="l">
@@ -787,7 +787,7 @@ img{display:block;max-width:100%}
         </div>
         <a class="cta" href="#pickup">浴衣一覧を見る ›</a>
       </div>
-      <div class="r"><div class="pic"><img src="assets/kimono/k09.jpg" alt="浴衣"></div></div>
+      <div class="r"><div class="pic"><video src="assets/kimono/output/kimono-08/video.mp4" poster="assets/kimono/output/kimono-08/model.png" autoplay muted loop playsinline></video></div></div>
     </div>
     <div class="slide">
       <div class="l">
@@ -804,7 +804,7 @@ img{display:block;max-width:100%}
         </div>
         <a class="cta" href="#pickup">ブライダルプランを見る ›</a>
       </div>
-      <div class="r"><div class="pic"><img src="assets/kimono/k02.jpg" alt="ブライダル"></div></div>
+      <div class="r"><div class="pic"><video src="assets/kimono/output/kimono-12/video.mp4" poster="assets/kimono/output/kimono-12/model.png" autoplay muted loop playsinline></video></div></div>
     </div>
   </div>
   <button class="hero-arrow l" id="prev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -1264,19 +1264,26 @@ const KIMONO_BASELINE = Array.from({length:16}, (_,i)=>{
   return {
     id,
     nm: m.nm || ('No.'+n),
-    pref: m.pref ?? '【新着】',
+    pref: m.pref ?? '【新作】',
     sub: m.sub || '振袖',
     img: 'output/'+id+'/model.png',
     video: 'output/'+id+'/video.mp4',
-    price: m.price || 'ご相談',
-    new: true,
+    price: m.price || '¥250,000',
+    new: m.new !== false,
     motion: true,
   };
 });
 const NEW_ITEMS_DEFAULT = KIMONO_BASELINE;
-/* レガシー localStorage 在庫は廃止 (オーナー要望: 既存登録一掃)
-   meta override は alice_inventory_meta に分離して保持 */
-try{ localStorage.removeItem('alice_inventory'); }catch(e){}
+/* 既存 hardcode 9着は撤去済 (オーナー要望: 一掃)
+   admin 追加分は alice_inventory (custom only, legacy 在庫はもう書き戻されない)
+   16着の meta上書きは alice_inventory_meta */
+/* 旧 hardcode-derived 在庫 (桜霞/波千鳥/etc) が残ってたら清掃 */
+try{
+  const cur = JSON.parse(localStorage.getItem('alice_inventory')||'[]');
+  const legacyNames = new Set(['桜霞','紅華','波千鳥','松鶴','紅薔薇','瑠璃花扇','若葉','夕霞','藤娘','帯結び']);
+  const clean = cur.filter(c => !legacyNames.has(c.nm));
+  if(clean.length !== cur.length) localStorage.setItem('alice_inventory', JSON.stringify(clean));
+}catch(e){}
 function loadCustomInv(){
   try{return JSON.parse(localStorage.getItem('alice_inventory')||'[]');}catch(e){return []}
 }

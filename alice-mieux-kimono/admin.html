@@ -1068,16 +1068,22 @@ const DEFAULT_INVENTORY = Array.from({length:16}, (_,i)=>{
     nm: m.nm || ('No.'+n),
     en: m.en || ('NO.'+n),
     cat: m.cat || '振袖',
-    price: m.price || 'ご相談',
+    price: m.price || '¥250,000',
     img: 'output/'+id+'/model.png',
     video: 'output/'+id+'/video.mp4',
     status: m.status || 'av',
     motion: true,
+    new: m.new !== false,
     desc: m.desc || 'Maya モデル着用 ・ 360°回転動画でご確認いただけます。',
   };
 });
-/* レガシー localStorage 在庫は廃止 */
-try{ localStorage.removeItem('alice_inventory'); }catch(e){}
+/* 旧 hardcode-derived 在庫 (桜霞/波千鳥/etc) が残ってたら清掃 — admin 追加分は保持 */
+try{
+  const cur = JSON.parse(localStorage.getItem('alice_inventory')||'[]');
+  const legacyNames = new Set(['桜霞','紅華','波千鳥','松鶴','紅薔薇','瑠璃花扇','若葉','夕霞','藤娘','帯結び']);
+  const clean = cur.filter(c => !legacyNames.has(c.nm));
+  if(clean.length !== cur.length) localStorage.setItem('alice_inventory', JSON.stringify(clean));
+}catch(e){}
 function loadInventory(){
   try{
     const custom = JSON.parse(localStorage.getItem('alice_inventory')||'[]');
