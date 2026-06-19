@@ -1569,7 +1569,7 @@ window.fpReadyAfterAuth = function() {
 <script>
 (function(){
   // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
-  const FP_VERSION = "20260619AY-slots-inline-hint+name-required";
+  const FP_VERSION = "20260619AZ-diagnostic-overlay";
   const loadTime = new Date();
   const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
   const dateLabel = (FP_VERSION.match(/^(\d{4})(\d{2})(\d{2})/) || []).slice(1).join('/').replace(/^(\d{4})\//,'$1/').replace(/\/(\d{2})\/(\d{2})$/,'/$1/$2') || FP_VERSION;
@@ -1594,6 +1594,82 @@ window.fpReadyAfterAuth = function() {
   });
   document.addEventListener('DOMContentLoaded', () => document.body.appendChild(badge));
   if (document.readyState !== 'loading') document.body.appendChild(badge);
+})();
+</script>
+
+<!-- ★ 診断 オーバーレイ: stg or ?diag=1 で 表示。 オーナーが スクショ撮るだけで Firestore件数 / localStorage件数 / 不一致 が 一目で 分かる -->
+<script type="module">
+(async function diagOverlay() {
+  // 表示条件: stg.app.skeleton-inc.jp / localhost / ?diag=1 のみ (本番は 出ない)
+  const showAlways = location.host === 'stg.app.skeleton-inc.jp' || location.host.startsWith('localhost') || new URLSearchParams(location.search).get('diag') === '1';
+  if (!showAlways) return;
+
+  // overlay 構築 (即 表示, データ は あとから 流し込む)
+  const box = document.createElement('div');
+  box.id = 'fp-diag-overlay';
+  box.style.cssText = 'position:fixed;top:54px;left:10px;z-index:2147483640;background:rgba(15,23,42,0.93);color:#E2E8F0;padding:12px 16px;border-radius:10px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;line-height:1.7;max-width:380px;box-shadow:0 8px 28px rgba(0,0,0,0.32);backdrop-filter:blur(8px);border:1px solid rgba(255,233,168,0.22);';
+  box.innerHTML = '<div style="font-size:9px;letter-spacing:0.22em;color:#FFE9A8;font-weight:700;margin-bottom:8px;">🔬 DIAGNOSTIC PANEL · STG ONLY</div><div id="fp-diag-content" style="opacity:0.5;">読込中…</div><div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.12);display:flex;gap:6px;flex-wrap:wrap;"><button id="fp-diag-refresh" style="background:#3B82F6;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 再取得</button><button id="fp-diag-purge" style="background:#DC2626;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">🧹 localStorage 全削除</button><button id="fp-diag-hide" style="background:#374151;color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;">隠す</button></div>';
+  (document.body || document.documentElement).appendChild(box);
+
+  async function fetchFirestoreCount(tenantId) {
+    try {
+      const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js');
+      const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
+      let app;
+      try { app = getApp(); } catch (_) { app = initializeApp({ apiKey:'AIzaSyAmVAEe9l9e1Yo_dzzJdbTVU35wWKd2sH4', authDomain:'skeleton-fp-compass-632026.firebaseapp.com', projectId:'skeleton-fp-compass-632026' }); }
+      const db = getFirestore(app);
+      const snap = await getDocs(collection(db, 'tenants/'+tenantId+'/customers'));
+      return { count: snap.size, sample: snap.docs.slice(0,5).map(d => { const x = d.data(); return (x.name||'?')+' ('+ (x.source||'-')+')' }) };
+    } catch (e) { return { err: e.message }; }
+  }
+
+  async function render() {
+    const c = document.getElementById('fp-diag-content');
+    if (!c) return;
+    c.style.opacity = '0.6';
+    c.innerHTML = '取得中…';
+    const tenantId = window.__fp?.tenantId || '(未取得)';
+    const userEmail = window.__fp?.userEmail || '(未ログイン)';
+    const dummyLen = window.DUMMY_CLIENTS?.length;
+    const dummyVer = window.DUMMY_CLIENTS_VERSION || '(unset)';
+    const lsLegacy = (localStorage.getItem('fp-crm-clients-v1') || '');
+    const lsReal = (localStorage.getItem('fp-crm-real-clients-v1') || '');
+    const isReal = localStorage.getItem('fp-crm-real-mode') === '1';
+    let lsLegacyCount = 0, lsRealCount = 0;
+    try { lsLegacyCount = JSON.parse(lsLegacy || '[]').length; } catch(_){}
+    try { lsRealCount = JSON.parse(lsReal || '[]').length; } catch(_){}
+    let fsInfo = { count: '?', sample: [], err: null };
+    if (window.__fp?.tenantId) {
+      fsInfo = await fetchFirestoreCount(window.__fp.tenantId);
+    }
+    const dom = document.querySelectorAll('.client-card, .customer-card, [data-customer-id], [data-client-id]').length;
+    const mismatch = (fsInfo.count !== '?') && (dom !== fsInfo.count + (isReal ? 0 : (dummyLen || 0)));
+    const warnColor = mismatch ? '#EF4444' : '#22C55E';
+    c.style.opacity = '1';
+    c.innerHTML = '<div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px;align-items:center;">' +
+      '<div style="color:#94A3B8;">tenant:</div><div><b style="color:#FFE9A8;">' + tenantId + '</b></div>' +
+      '<div style="color:#94A3B8;">user:</div><div>' + userEmail + '</div>' +
+      '<div style="color:#94A3B8;">FS count:</div><div><b style="color:' + warnColor + ';">' + fsInfo.count + '</b>' + (fsInfo.err ? ' (err: '+fsInfo.err.slice(0,40)+')' : '') + '</div>' +
+      '<div style="color:#94A3B8;">DOM cards:</div><div><b style="color:' + warnColor + ';">' + dom + '</b></div>' +
+      '<div style="color:#94A3B8;">DUMMY len:</div><div>' + dummyLen + ' (' + dummyVer + ')</div>' +
+      '<div style="color:#94A3B8;">LS legacy:</div><div>' + lsLegacyCount + ' 件 (fp-crm-clients-v1)</div>' +
+      '<div style="color:#94A3B8;">LS real:</div><div>' + lsRealCount + ' 件 (fp-crm-real-clients-v1)</div>' +
+      '<div style="color:#94A3B8;">real mode:</div><div>' + (isReal ? 'ON' : 'OFF') + '</div>' +
+      '</div>' +
+      (fsInfo.sample.length ? '<div style="margin-top:8px;color:#FFE9A8;font-size:10px;">FS samples:</div><div style="font-size:10px;opacity:0.85;">' + fsInfo.sample.map(s => '• ' + s).join('<br>') + '</div>' : '') +
+      (mismatch ? '<div style="margin-top:8px;padding:6px 8px;background:rgba(239,68,68,0.18);border-radius:5px;color:#FCA5A5;font-size:10.5px;line-height:1.6;">⚠ 不一致検知: DOM=' + dom + ' ≠ 期待値 (FS+demo). localStorage 削除 推奨</div>' : '<div style="margin-top:8px;color:#22C55E;font-size:10.5px;">✓ 一致 (DOM = FS + demo)</div>');
+  }
+  document.getElementById('fp-diag-refresh')?.addEventListener('click', render);
+  document.getElementById('fp-diag-purge')?.addEventListener('click', () => {
+    if (!confirm('localStorage 全削除して リロードします。 OK?')) return;
+    localStorage.clear(); sessionStorage.clear(); location.reload();
+  });
+  document.getElementById('fp-diag-hide')?.addEventListener('click', () => box.style.display = 'none');
+  // 初回 render (auth完了 待ち)
+  setTimeout(render, 2500);
+  // window.__fp 更新時 もう一度
+  let attempts = 0;
+  const ivl = setInterval(() => { attempts++; if (window.__fp?.tenantId || attempts > 10) { clearInterval(ivl); render(); } }, 1500);
 })();
 </script>
 </body>
