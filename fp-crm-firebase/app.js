@@ -2,52 +2,82 @@
 // シングルページ。ダッシュボード / 顧客一覧 / タイムライン / 顧客詳細モーダル。
 
 (function () {
-  // ★ mint/teal フィンテック skin (50-60代 FP 向け / オーナー承認デザイン) — CSS injection
-  //   既存 styles-v8-workspace.css を 上書き、 顧客モーダル + 顧客台帳 のみ
+  // ★ mint/teal フィンテック skin — オーナー指定 元画像 (Money Sent! 風) 完全コピー
+  //   主役色 mint を 支配色化 / 大型pill ボタン (radius 999px) / 数字大字 / pure white card / 余白たっぷり
   (function injectFintechSkin(){
     if (document.getElementById('fp-fintech-skin')) return;
     const st = document.createElement('style');
     st.id = 'fp-fintech-skin';
     st.textContent = `
       :root {
-        --fp-mint: #4DB6AC;
-        --fp-mint-dark: #00897B;
-        --fp-mint-soft: #B2DFDB;
-        --fp-mint-faint: #E0F2F1;
-        --fp-ink-strong: #0F172A;
-        --fp-ink-mid: #475569;
-        --fp-ink-soft: #94A3B8;
+        --fp-mint: #5BBFB5;
+        --fp-mint-dark: #2E9E92;
+        --fp-mint-darker: #1E8E83;
+        --fp-mint-soft: #A8DCD5;
+        --fp-mint-faint: #E0F2EF;
+        --fp-mint-paper: #F4FAF9;
+        --fp-ink-strong: #0F1F1D;
+        --fp-ink: #1F2F2D;
+        --fp-ink-mid: #4F5F5D;
+        --fp-ink-soft: #8A9C99;
+        --fp-line: #E8EFEE;
+        --fp-line-soft: #F0F5F4;
         --fp-card-bg: #FFFFFF;
-        --fp-card-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.06);
-        --fp-radius-card: 16px;
+        --fp-card-shadow: 0 1px 2px rgba(15,31,29,0.04), 0 6px 18px rgba(15,31,29,0.06);
+        --fp-card-shadow-soft: 0 1px 3px rgba(15,31,29,0.04);
+        --fp-radius-card: 20px;
+        --fp-radius-card-sm: 16px;
         --fp-radius-pill: 999px;
+        --fp-radius-button: 28px;
       }
-      .cd-modal { background:#F8FAFB !important; font-family:'Noto Sans JP','Inter',-apple-system,sans-serif !important; }
-      .cd-modal .cd-tabs { border-bottom:1px solid #E2E8F0 !important; padding:4px 4px 0 !important; gap:2px !important; }
-      .cd-modal .cd-tab { font-size:15px !important; font-weight:700 !important; color:var(--fp-ink-mid) !important; padding:14px 18px !important; border:none !important; background:transparent !important; border-bottom:3px solid transparent !important; border-radius:0 !important; }
-      .cd-modal .cd-tab:hover { color:var(--fp-mint-dark) !important; background:transparent !important; }
-      .cd-modal .cd-tab.cd-tab-active { color:var(--fp-mint-dark) !important; border-bottom-color:var(--fp-mint) !important; background:transparent !important; }
-      .cd-modal .cd-tab .cd-tab-count { display:inline-flex !important; align-items:center !important; justify-content:center !important; min-width:24px !important; height:22px !important; padding:0 8px !important; margin-left:6px !important; background:var(--fp-mint-faint) !important; color:var(--fp-mint-dark) !important; border-radius:11px !important; font-size:12px !important; font-weight:800 !important; }
+      /* ===== モーダル 全体 ===== */
+      .cd-modal { background:var(--fp-mint-paper) !important; font-family:'Noto Sans JP','Inter',-apple-system,sans-serif !important; color:var(--fp-ink) !important; }
+      #modal-overlay { background:rgba(15,31,29,0.42) !important; backdrop-filter:blur(2px) !important; }
+      #modal-content { max-width:1080px !important; border-radius:24px !important; overflow:hidden !important; box-shadow:0 24px 72px rgba(15,31,29,0.25) !important; background:var(--fp-mint-paper) !important; }
+      .cd-modal aside.cd-left, .cd-modal .cd-left { background:#fff !important; border-right:1px solid var(--fp-line) !important; }
+      .cd-modal main.cd-right, .cd-modal .cd-right { background:var(--fp-mint-paper) !important; padding:24px 28px !important; }
+      /* ===== ヘッダ部 山田 太郎様 ===== */
+      .cd-modal .cd-profile-head, .cd-modal .cd-left .cd-profile-section:first-child { background:var(--fp-mint) !important; color:#fff !important; border:none !important; border-radius:0 !important; margin:0 !important; padding:32px 24px 28px !important; box-shadow:none !important; }
+      .cd-modal .cd-profile-head .avatar, .cd-modal .cd-left .avatar-lg, .cd-modal .cd-left .avatar { background:rgba(255,255,255,0.22) !important; color:#fff !important; width:72px !important; height:72px !important; font-size:28px !important; font-weight:800 !important; border:3px solid rgba(255,255,255,0.4) !important; box-shadow:0 4px 16px rgba(0,0,0,0.12) !important; }
+      .cd-modal .cd-left .cd-profile-name, .cd-modal .cd-left h2 { color:#fff !important; font-size:22px !important; font-weight:800 !important; letter-spacing:-0.01em !important; }
+      .cd-modal .cd-left .cd-profile-kana { color:rgba(255,255,255,0.85) !important; font-size:13px !important; }
+      /* ===== タブ ===== */
+      .cd-modal .cd-tabs { background:transparent !important; border-bottom:1px solid var(--fp-line) !important; padding:4px 4px 0 !important; gap:2px !important; }
+      .cd-modal .cd-tab { font-size:15.5px !important; font-weight:700 !important; color:var(--fp-ink-soft) !important; padding:16px 22px !important; border:none !important; background:transparent !important; border-bottom:3px solid transparent !important; border-radius:0 !important; }
+      .cd-modal .cd-tab:hover { color:var(--fp-mint-darker) !important; background:transparent !important; }
+      .cd-modal .cd-tab.cd-tab-active { color:var(--fp-mint-darker) !important; border-bottom-color:var(--fp-mint) !important; background:transparent !important; }
+      .cd-modal .cd-tab .cd-tab-count { display:inline-flex !important; align-items:center !important; justify-content:center !important; min-width:24px !important; height:22px !important; padding:0 8px !important; margin-left:6px !important; background:var(--fp-mint-faint) !important; color:var(--fp-mint-darker) !important; border-radius:11px !important; font-size:12px !important; font-weight:800 !important; }
       .cd-modal .cd-tab.cd-tab-active .cd-tab-count { background:var(--fp-mint) !important; color:#fff !important; }
-      .cd-modal .detail-section, .cd-modal .cd-profile-section, .cd-modal .cd-card { background:var(--fp-card-bg) !important; border:1px solid #ECEEF1 !important; border-radius:var(--fp-radius-card) !important; box-shadow:var(--fp-card-shadow) !important; padding:20px 22px !important; margin-bottom:14px !important; }
-      .cd-modal .detail-section h3 { font-size:17px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; margin:0 0 14px !important; letter-spacing:-0.005em !important; }
-      .cd-modal .count-badge { background:var(--fp-mint-faint) !important; color:var(--fp-mint-dark) !important; padding:3px 10px !important; border-radius:var(--fp-radius-pill) !important; font-size:12px !important; font-weight:800 !important; margin-left:8px !important; vertical-align:middle !important; }
-      .cd-modal .fp-meeting-card { background:#fff !important; border:1px solid #ECEEF1 !important; border-radius:var(--fp-radius-card) !important; box-shadow:0 1px 3px rgba(15,23,42,0.04) !important; padding:18px 20px !important; }
-      .cd-modal .fp-meeting-card-eyebrow { font-size:13px !important; font-weight:800 !important; color:var(--fp-mint-dark) !important; }
-      .cd-modal .fp-meeting-card-date { font-size:15px !important; font-weight:700 !important; color:var(--fp-ink-strong) !important; margin-top:3px !important; }
-      .cd-modal .fp-fam-card { background:#fff !important; border:1px solid #E2E8F0 !important; border-radius:14px !important; padding:14px 16px !important; min-width:148px !important; box-shadow:0 1px 2px rgba(15,23,42,0.04) !important; }
-      .cd-modal .fp-fam-name { font-size:15px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; }
-      .cd-modal .fp-fam-age { font-size:12.5px !important; color:var(--fp-ink-mid) !important; }
-      .cd-modal #fp-fam-ai { background:var(--fp-mint) !important; color:#fff !important; border:none !important; padding:13px 22px !important; border-radius:12px !important; font-size:15px !important; font-weight:800 !important; }
-      .cd-modal #fp-fam-add { background:#fff !important; border:1.5px solid #CBD5E1 !important; color:var(--fp-ink-mid) !important; padding:13px 22px !important; border-radius:12px !important; font-size:15px !important; font-weight:700 !important; }
-      .cd-modal [data-open-hearing] { background:var(--fp-mint-dark) !important; color:#fff !important; border:none !important; padding:12px 20px !important; border-radius:12px !important; font-size:15px !important; font-weight:700 !important; box-shadow:0 4px 12px rgba(0,137,123,0.22) !important; }
-      /* ★ styles-v8 .fp-draft-cta#modal-draft-btn (id+class) を上回る specificity で mint化 */
+      /* ===== カード ===== */
+      .cd-modal .detail-section, .cd-modal .cd-profile-section, .cd-modal .cd-card, .cd-modal .fp-meeting-card { background:var(--fp-card-bg) !important; border:1px solid var(--fp-line) !important; border-radius:var(--fp-radius-card) !important; box-shadow:var(--fp-card-shadow) !important; padding:24px 26px !important; margin-bottom:18px !important; }
+      .cd-modal .cd-left .cd-profile-section:not(:first-child) { background:transparent !important; border:none !important; box-shadow:none !important; padding:14px 24px !important; border-radius:0 !important; border-bottom:1px solid var(--fp-line-soft) !important; margin:0 !important; }
+      .cd-modal .detail-section h3 { font-size:13px !important; font-weight:800 !important; color:var(--fp-ink-soft) !important; margin:0 0 18px !important; letter-spacing:0.08em !important; text-transform:uppercase !important; }
+      .cd-modal .count-badge { background:var(--fp-mint-faint) !important; color:var(--fp-mint-darker) !important; padding:4px 12px !important; border-radius:var(--fp-radius-pill) !important; font-size:12px !important; font-weight:800 !important; margin-left:10px !important; vertical-align:middle !important; }
+      /* ===== 議事録カード ===== */
+      .cd-modal .fp-meeting-card-eyebrow { font-size:13px !important; font-weight:800 !important; color:var(--fp-mint-darker) !important; letter-spacing:0 !important; }
+      .cd-modal .fp-meeting-card-date { font-size:18px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; margin-top:4px !important; letter-spacing:-0.005em !important; }
+      .cd-modal .fp-meeting-block-label { color:var(--fp-ink-soft) !important; font-size:11.5px !important; font-weight:800 !important; letter-spacing:0.06em !important; text-transform:uppercase !important; }
+      .cd-modal .fp-meeting-body { font-size:14.5px !important; line-height:1.85 !important; color:var(--fp-ink) !important; }
+      .cd-modal .fp-concern-chip { background:var(--fp-mint-faint) !important; color:var(--fp-mint-darker) !important; padding:5px 14px !important; border-radius:var(--fp-radius-pill) !important; font-size:12.5px !important; font-weight:700 !important; }
+      /* ===== 家族カード ===== */
+      .cd-modal .fp-fam-card { background:#fff !important; border:1px solid var(--fp-line) !important; border-radius:var(--fp-radius-card-sm) !important; padding:18px 18px !important; min-width:160px !important; box-shadow:var(--fp-card-shadow-soft) !important; }
+      .cd-modal .fp-fam-rel { color:var(--fp-mint-darker) !important; font-size:11px !important; font-weight:800 !important; letter-spacing:0.08em !important; }
+      .cd-modal .fp-fam-name { font-size:18px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; letter-spacing:-0.005em !important; }
+      .cd-modal .fp-fam-age { font-size:13px !important; color:var(--fp-ink-mid) !important; margin-top:3px !important; }
+      /* ===== ピル ボタン (元画像 SEND/CONFIRM 風) ===== */
+      .cd-modal #fp-fam-ai, .cd-modal button[data-open-hearing] { background:var(--fp-mint) !important; background-image:none !important; color:#fff !important; border:none !important; padding:14px 30px !important; border-radius:var(--fp-radius-button) !important; font-size:15px !important; font-weight:800 !important; letter-spacing:0.01em !important; box-shadow:0 6px 18px rgba(91,191,181,0.32) !important; }
+      .cd-modal #fp-fam-ai:hover, .cd-modal button[data-open-hearing]:hover { background:var(--fp-mint-dark) !important; box-shadow:0 8px 22px rgba(46,158,146,0.42) !important; }
+      .cd-modal #fp-fam-add { background:#fff !important; border:1.5px solid var(--fp-mint-soft) !important; color:var(--fp-mint-darker) !important; padding:14px 30px !important; border-radius:var(--fp-radius-button) !important; font-size:15px !important; font-weight:700 !important; }
+      .cd-modal .modal-brief-btn { background:#fff !important; color:var(--fp-mint-darker) !important; border:1.5px solid var(--fp-mint-soft) !important; padding:14px 28px !important; border-radius:var(--fp-radius-button) !important; font-size:15px !important; font-weight:800 !important; }
+      .cd-modal .cd-flow-edit, .cd-modal #modal-edit-btn { background:#fff !important; color:var(--fp-ink-mid) !important; border:1.5px solid var(--fp-line) !important; padding:14px 24px !important; border-radius:var(--fp-radius-button) !important; font-size:14.5px !important; font-weight:700 !important; }
+      /* ===== メインCTA (Money Sent! SEND ボタン風 — 大型 pill mint solid) ===== */
       body .cd-modal .fp-draft-cta#modal-draft-btn,
       body .cd-modal button.fp-draft-cta#modal-draft-btn,
-      .cd-modal .fp-draft-cta#modal-draft-btn { background:var(--fp-mint) !important; background-image:none !important; background-color:var(--fp-mint) !important; border-radius:14px !important; box-shadow:0 8px 20px rgba(77,182,172,0.32) !important; padding:16px 20px !important; min-height:64px !important; border:none !important; animation:none !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-label { font-size:16px !important; font-weight:800 !important; color:#fff !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-no { background:rgba(255,255,255,0.28) !important; border:1px solid rgba(255,255,255,0.4) !important; color:#fff !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-sub { color:rgba(255,255,255,0.92) !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn { background:var(--fp-mint) !important; background-image:none !important; background-color:var(--fp-mint) !important; border-radius:var(--fp-radius-button) !important; box-shadow:0 12px 32px rgba(91,191,181,0.42) !important; padding:18px 24px !important; min-height:72px !important; border:none !important; animation:none !important; transition:all 0.18s ease !important; }
+      body .cd-modal .fp-draft-cta#modal-draft-btn:hover { background:var(--fp-mint-dark) !important; box-shadow:0 16px 36px rgba(46,158,146,0.52) !important; transform:translateY(-1px) !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-label { font-size:18px !important; font-weight:800 !important; color:#fff !important; letter-spacing:-0.005em !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-no { background:rgba(255,255,255,0.22) !important; border:1.5px solid rgba(255,255,255,0.42) !important; color:#fff !important; width:34px !important; height:34px !important; font-size:14px !important; }
+      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-sub { color:rgba(255,255,255,0.92) !important; font-size:13px !important; }
       .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-icon { color:#fff !important; }
       /* AI推奨 ブロック (cd-flow) — 青紫 hardcode bg → 白カード */
       .cd-modal .cd-flow, .cd-modal .cd-flow[style] { background:#fff !important; background-image:none !important; border:1px solid #ECEEF1 !important; border-radius:var(--fp-radius-card) !important; box-shadow:var(--fp-card-shadow) !important; padding:22px 24px !important; color:var(--fp-ink-strong) !important; }
@@ -63,21 +93,30 @@
       .cd-modal button[data-open-hearing][style] { background:var(--fp-mint-dark) !important; background-image:none !important; color:#fff !important; }
       .cd-modal .modal-brief-btn { background:#fff !important; color:var(--fp-mint-dark) !important; border:1.5px solid var(--fp-mint) !important; padding:12px 20px !important; border-radius:12px !important; font-size:15px !important; font-weight:800 !important; }
       .cd-modal .cd-flow-edit { background:#fff !important; color:var(--fp-ink-mid) !important; border:1.5px solid #E2E8F0 !important; padding:12px 20px !important; border-radius:12px !important; font-size:15px !important; font-weight:700 !important; }
-      .cd-modal #modal-delete-btn { background:transparent !important; color:var(--fp-ink-soft) !important; border:none !important; font-size:13px !important; text-decoration:underline !important; padding:12px 8px !important; }
-      .cd-modal .cd-stat { background:#fff !important; border:1px solid #ECEEF1 !important; border-radius:14px !important; padding:14px 16px !important; }
-      .cd-modal .cd-stat-value { font-size:26px !important; font-weight:900 !important; color:var(--fp-mint-dark) !important; letter-spacing:-0.02em !important; }
-      .cd-modal .cd-stat-label { font-size:11.5px !important; font-weight:700 !important; color:var(--fp-ink-soft) !important; letter-spacing:0.06em !important; text-transform:uppercase !important; }
-      .cd-modal .cd-stat-unit { font-size:14px !important; color:var(--fp-ink-mid) !important; margin-left:3px !important; }
-      .cd-modal .cd-stat-sub { font-size:12.5px !important; color:var(--fp-ink-mid) !important; margin-top:4px !important; }
-      .cd-modal .status-pill.active { background:var(--fp-mint-faint) !important; color:var(--fp-mint-dark) !important; }
-      /* 顧客台帳 row */
-      #client-tbody tr { background:#fff !important; border-bottom:1px solid #F1F5F9 !important; transition:background 0.15s ease !important; }
-      #client-tbody tr:hover { background:#F8FAFB !important; cursor:pointer !important; }
-      #client-tbody td { padding:18px 18px !important; font-size:14.5px !important; vertical-align:middle !important; }
-      #client-tbody .client-row-name strong { font-size:15.5px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; }
-      #client-tbody .avatar { background:var(--fp-mint-soft) !important; color:var(--fp-mint-dark) !important; font-weight:800 !important; }
-      #client-tbody .status-pill.active { background:var(--fp-mint-faint) !important; color:var(--fp-mint-dark) !important; padding:5px 12px !important; border-radius:var(--fp-radius-pill) !important; font-size:12px !important; font-weight:800 !important; }
-      #client-tbody .status-pill.new { background:#FEF3C7 !important; color:#92400E !important; padding:5px 12px !important; border-radius:var(--fp-radius-pill) !important; font-size:12px !important; font-weight:800 !important; }
+      .cd-modal #modal-delete-btn { background:transparent !important; color:var(--fp-ink-soft) !important; border:none !important; font-size:13px !important; text-decoration:underline !important; padding:14px 8px !important; }
+      /* ===== サイドバー 統計 (¥1,250万 等大字) ===== */
+      .cd-modal .cd-left .stat-block, .cd-modal .cd-left .cd-stat { background:transparent !important; border:none !important; box-shadow:none !important; padding:18px 24px !important; }
+      .cd-modal .cd-stat-value, .cd-modal .cd-left .stat-value { font-size:32px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; letter-spacing:-0.02em !important; line-height:1.1 !important; font-family:'Inter','Noto Sans JP',sans-serif !important; }
+      .cd-modal .cd-stat-label, .cd-modal .cd-left .stat-label { font-size:11px !important; font-weight:800 !important; color:var(--fp-ink-soft) !important; letter-spacing:0.1em !important; text-transform:uppercase !important; }
+      .cd-modal .cd-stat-unit { font-size:14px !important; color:var(--fp-ink-mid) !important; margin-left:4px !important; font-weight:700 !important; }
+      .cd-modal .cd-stat-sub { font-size:12.5px !important; color:var(--fp-ink-mid) !important; margin-top:6px !important; }
+      .cd-modal .status-pill { padding:5px 14px !important; border-radius:var(--fp-radius-pill) !important; font-size:12px !important; font-weight:800 !important; letter-spacing:0.02em !important; }
+      .cd-modal .status-pill.active { background:rgba(255,255,255,0.24) !important; color:#fff !important; }
+      .cd-modal .status-pill.new { background:rgba(255,255,255,0.24) !important; color:#fff !important; }
+      .cd-modal .status-pill.important { background:rgba(255,255,255,0.24) !important; color:#fff !important; }
+      /* ===== 顧客台帳 row ===== */
+      #client-tbody { background:transparent !important; }
+      #client-tbody tr { background:#fff !important; border-bottom:1px solid var(--fp-line-soft) !important; transition:background 0.15s ease !important; }
+      #client-tbody tr:hover { background:var(--fp-mint-faint) !important; cursor:pointer !important; }
+      #client-tbody td { padding:22px 22px !important; font-size:15px !important; vertical-align:middle !important; color:var(--fp-ink) !important; }
+      #client-tbody .client-row-name strong { font-size:16.5px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; letter-spacing:-0.005em !important; }
+      #client-tbody .avatar, #client-tbody .avatar-sm { background:var(--fp-mint) !important; color:#fff !important; font-weight:800 !important; width:44px !important; height:44px !important; font-size:15px !important; box-shadow:0 4px 10px rgba(91,191,181,0.28) !important; }
+      #client-tbody .status-pill { padding:6px 14px !important; border-radius:var(--fp-radius-pill) !important; font-size:12.5px !important; font-weight:800 !important; }
+      #client-tbody .status-pill.active { background:var(--fp-mint-faint) !important; color:var(--fp-mint-darker) !important; }
+      #client-tbody .status-pill.new { background:#FEF3C7 !important; color:#92400E !important; }
+      #client-tbody .status-pill.important { background:#FEE2E2 !important; color:#991B1B !important; }
+      #client-tbody .num { font-size:17px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; font-family:'Inter','Noto Sans JP',sans-serif !important; letter-spacing:-0.01em !important; }
+      thead tr th { background:transparent !important; color:var(--fp-ink-soft) !important; font-size:11.5px !important; font-weight:800 !important; letter-spacing:0.08em !important; text-transform:uppercase !important; padding:14px 22px !important; border-bottom:1px solid var(--fp-line) !important; }
       @media (prefers-reduced-motion: reduce) {
         #client-tbody tr { transition:none !important; }
       }
