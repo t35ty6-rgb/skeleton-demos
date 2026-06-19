@@ -126,7 +126,20 @@
       aside, nav.sidebar, .sidebar, .side-nav, [class*="sidebar"], [class*="SideNav"] { background:#fff !important; border-right:1px solid var(--fp-line) !important; }
       aside .nav-item.active, aside .nav-item[data-active], .sidebar .nav-item.active, .side-nav .nav-item.active { background:var(--fp-mint-faint) !important; color:var(--fp-mint-darker) !important; border-left:3px solid var(--fp-mint) !important; }
       /* ホーム ヘッダ (おはようございます ... ダーク bg → mint hero) */
-      .home-hero, .dashboard-hero, .greeting-card, [class*="hero"][class*="dark"], [style*="background:linear-gradient(135deg,#0F172A"], [style*="background:linear-gradient(135deg,#1B2658"], [style*="background:linear-gradient(135deg,#1b2845"] { background:linear-gradient(135deg,var(--fp-mint),var(--fp-mint-dark)) !important; background-image:linear-gradient(135deg,var(--fp-mint),var(--fp-mint-dark)) !important; color:#fff !important; border-radius:24px !important; box-shadow:0 16px 40px rgba(91,191,181,0.32) !important; border:none !important; }
+      .mega-hero, .mega-hero-bg, .home-hero, .dashboard-hero, .greeting-card, [class*="hero"][class*="dark"], [style*="background:linear-gradient(135deg,#0F172A"], [style*="background:linear-gradient(135deg,#1B2658"], [style*="background:linear-gradient(135deg,#1b2845"] { background:linear-gradient(135deg,var(--fp-mint),var(--fp-mint-dark)) !important; background-image:linear-gradient(135deg,var(--fp-mint),var(--fp-mint-dark)) !important; color:#fff !important; border-radius:24px !important; box-shadow:0 16px 40px rgba(91,191,181,0.32) !important; border:none !important; }
+      .mega-hero { padding:48px 44px !important; }
+      .mega-hero-bg { display:none !important; }
+      .mega-hero-title, .mega-hero-name, .mega-hero-highlight { color:#fff !important; font-size:34px !important; font-weight:800 !important; letter-spacing:-0.015em !important; line-height:1.4 !important; }
+      .mega-hero-highlight { background:rgba(255,255,255,0.22) !important; padding:0 14px !important; border-radius:14px !important; }
+      .mega-hero-name { display:inline !important; padding:0 !important; background:transparent !important; }
+      .mega-hero-date { color:rgba(255,255,255,0.82) !important; font-size:13.5px !important; font-weight:700 !important; letter-spacing:0.04em !important; margin-bottom:14px !important; }
+      .mega-hero-lead { color:rgba(255,255,255,0.92) !important; font-size:14.5px !important; margin-top:18px !important; line-height:1.7 !important; }
+      .mega-hero-stats { gap:32px !important; margin-top:28px !important; }
+      .mega-hero-stat-label { color:rgba(255,255,255,0.82) !important; font-size:11px !important; letter-spacing:0.08em !important; text-transform:uppercase !important; font-weight:800 !important; }
+      .mega-hero-stat-value { color:#fff !important; font-size:36px !important; font-weight:800 !important; font-family:'Inter','Noto Sans JP',sans-serif !important; letter-spacing:-0.02em !important; }
+      .mega-hero-cta, .mega-hero-cta-primary, .mega-hero-cta-secondary { padding:14px 28px !important; border-radius:999px !important; font-size:15px !important; font-weight:800 !important; min-height:52px !important; }
+      .mega-hero-cta-primary { background:#fff !important; background-image:none !important; color:var(--fp-mint-darker) !important; border:none !important; box-shadow:0 8px 20px rgba(255,255,255,0.32) !important; }
+      .mega-hero-cta-secondary { background:rgba(255,255,255,0.18) !important; border:1.5px solid rgba(255,255,255,0.45) !important; color:#fff !important; }
       /* 「次のステップを見る」 等 紺ボタン */
       button[style*="background:#1B2658"], button[style*="background:#0F172A"], button[style*="background:linear-gradient(135deg,#1B"], .home-cta-primary, .dashboard-cta-primary { background:#fff !important; background-image:none !important; color:var(--fp-mint-darker) !important; border:none !important; padding:14px 28px !important; border-radius:var(--fp-radius-button) !important; font-weight:800 !important; box-shadow:0 6px 18px rgba(255,255,255,0.32) !important; }
       /* 紺紫アクセント button 全般 → mint */
