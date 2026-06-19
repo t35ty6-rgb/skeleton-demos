@@ -2,245 +2,6 @@
 // シングルページ。ダッシュボード / 顧客一覧 / タイムライン / 顧客詳細モーダル。
 
 (function () {
-  // ★ mint/teal フィンテック skin — オーナー指定 元画像 (Money Sent! 風) 完全コピー
-  //   主役色 mint を 支配色化 / 大型pill ボタン (radius 999px) / 数字大字 / pure white card / 余白たっぷり
-  (function injectFintechSkin(){
-    if (document.getElementById('fp-fintech-skin')) return;
-    const st = document.createElement('style');
-    st.id = 'fp-fintech-skin';
-    st.textContent = `
-      :root {
-        --fp-mint: #5BBFB5;
-        --fp-mint-dark: #2E9E92;
-        --fp-mint-darker: #1E8E83;
-        --fp-mint-soft: #A8DCD5;
-        --fp-mint-faint: #E0F2EF;
-        --fp-mint-paper: #F4FAF9;
-        --fp-ink-strong: #0F1F1D;
-        --fp-ink: #1F2F2D;
-        --fp-ink-mid: #4F5F5D;
-        --fp-ink-soft: #8A9C99;
-        --fp-line: #E8EFEE;
-        --fp-line-soft: #F0F5F4;
-        --fp-card-bg: #FFFFFF;
-        --fp-card-shadow: 0 1px 2px rgba(15,31,29,0.04), 0 6px 18px rgba(15,31,29,0.06);
-        --fp-card-shadow-soft: 0 1px 3px rgba(15,31,29,0.04);
-        --fp-radius-card: 20px;
-        --fp-radius-card-sm: 16px;
-        --fp-radius-pill: 999px;
-        --fp-radius-button: 28px;
-      }
-      /* ===== モーダル 全体 ===== */
-      .cd-modal { background:var(--fp-mint-paper) !important; font-family:'Noto Sans JP','Inter',-apple-system,sans-serif !important; color:var(--fp-ink) !important; }
-      #modal-overlay { background:rgba(15,31,29,0.42) !important; backdrop-filter:blur(2px) !important; }
-      #modal-content { max-width:1080px !important; border-radius:24px !important; overflow:hidden !important; box-shadow:0 24px 72px rgba(15,31,29,0.25) !important; background:var(--fp-mint-paper) !important; }
-      .cd-modal aside.cd-left, .cd-modal .cd-left { background:#fff !important; border-right:1px solid var(--fp-line) !important; }
-      .cd-modal main.cd-right, .cd-modal .cd-right { background:var(--fp-mint-paper) !important; padding:24px 28px !important; }
-      /* ===== ヘッダ部 山田 太郎様 ===== */
-      .cd-modal .cd-profile-head, .cd-modal .cd-left .cd-profile-section:first-child { background:var(--fp-mint) !important; color:#fff !important; border:none !important; border-radius:0 !important; margin:0 !important; padding:32px 24px 28px !important; box-shadow:none !important; }
-      .cd-modal .cd-profile-head .avatar, .cd-modal .cd-left .avatar-lg, .cd-modal .cd-left .avatar { background:rgba(255,255,255,0.22) !important; color:#fff !important; width:72px !important; height:72px !important; font-size:28px !important; font-weight:800 !important; border:3px solid rgba(255,255,255,0.4) !important; box-shadow:0 4px 16px rgba(0,0,0,0.12) !important; }
-      .cd-modal .cd-left .cd-profile-name, .cd-modal .cd-left h2 { color:#fff !important; font-size:22px !important; font-weight:800 !important; letter-spacing:-0.01em !important; }
-      .cd-modal .cd-left .cd-profile-kana { color:rgba(255,255,255,0.85) !important; font-size:13px !important; }
-      /* ===== タブ ===== */
-      .cd-modal .cd-tabs { background:transparent !important; border-bottom:1px solid var(--fp-line) !important; padding:4px 4px 0 !important; gap:2px !important; }
-      .cd-modal .cd-tab { font-size:15.5px !important; font-weight:700 !important; color:var(--fp-ink-soft) !important; padding:16px 22px !important; border:none !important; background:transparent !important; border-bottom:3px solid transparent !important; border-radius:0 !important; }
-      .cd-modal .cd-tab:hover { color:var(--fp-mint-darker) !important; background:transparent !important; }
-      .cd-modal .cd-tab.cd-tab-active { color:var(--fp-mint-darker) !important; border-bottom-color:var(--fp-mint) !important; background:transparent !important; }
-      .cd-modal .cd-tab .cd-tab-count { display:inline-flex !important; align-items:center !important; justify-content:center !important; min-width:24px !important; height:22px !important; padding:0 8px !important; margin-left:6px !important; background:var(--fp-mint-faint) !important; color:var(--fp-mint-darker) !important; border-radius:11px !important; font-size:12px !important; font-weight:800 !important; }
-      .cd-modal .cd-tab.cd-tab-active .cd-tab-count { background:var(--fp-mint) !important; color:#fff !important; }
-      /* ===== カード ===== */
-      .cd-modal .detail-section, .cd-modal .cd-profile-section, .cd-modal .cd-card, .cd-modal .fp-meeting-card { background:var(--fp-card-bg) !important; border:1px solid var(--fp-line) !important; border-radius:var(--fp-radius-card) !important; box-shadow:var(--fp-card-shadow) !important; padding:24px 26px !important; margin-bottom:18px !important; }
-      .cd-modal .cd-left .cd-profile-section:not(:first-child) { background:transparent !important; border:none !important; box-shadow:none !important; padding:14px 24px !important; border-radius:0 !important; border-bottom:1px solid var(--fp-line-soft) !important; margin:0 !important; }
-      .cd-modal .detail-section h3 { font-size:13px !important; font-weight:800 !important; color:var(--fp-ink-soft) !important; margin:0 0 18px !important; letter-spacing:0.08em !important; text-transform:uppercase !important; }
-      .cd-modal .count-badge { background:var(--fp-mint-faint) !important; color:var(--fp-mint-darker) !important; padding:4px 12px !important; border-radius:var(--fp-radius-pill) !important; font-size:12px !important; font-weight:800 !important; margin-left:10px !important; vertical-align:middle !important; }
-      /* ===== 議事録カード ===== */
-      .cd-modal .fp-meeting-card-eyebrow { font-size:13px !important; font-weight:800 !important; color:var(--fp-mint-darker) !important; letter-spacing:0 !important; }
-      .cd-modal .fp-meeting-card-date { font-size:18px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; margin-top:4px !important; letter-spacing:-0.005em !important; }
-      .cd-modal .fp-meeting-block-label { color:var(--fp-ink-soft) !important; font-size:11.5px !important; font-weight:800 !important; letter-spacing:0.06em !important; text-transform:uppercase !important; }
-      .cd-modal .fp-meeting-body { font-size:14.5px !important; line-height:1.85 !important; color:var(--fp-ink) !important; }
-      .cd-modal .fp-concern-chip { background:var(--fp-mint-faint) !important; color:var(--fp-mint-darker) !important; padding:5px 14px !important; border-radius:var(--fp-radius-pill) !important; font-size:12.5px !important; font-weight:700 !important; }
-      /* ===== 家族カード ===== */
-      .cd-modal .fp-fam-card { background:#fff !important; border:1px solid var(--fp-line) !important; border-radius:var(--fp-radius-card-sm) !important; padding:18px 18px !important; min-width:160px !important; box-shadow:var(--fp-card-shadow-soft) !important; }
-      .cd-modal .fp-fam-rel { color:var(--fp-mint-darker) !important; font-size:11px !important; font-weight:800 !important; letter-spacing:0.08em !important; }
-      .cd-modal .fp-fam-name { font-size:18px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; letter-spacing:-0.005em !important; }
-      .cd-modal .fp-fam-age { font-size:13px !important; color:var(--fp-ink-mid) !important; margin-top:3px !important; }
-      /* ===== ピル ボタン (元画像 SEND/CONFIRM 風) ===== */
-      .cd-modal #fp-fam-ai, .cd-modal button[data-open-hearing] { background:var(--fp-mint) !important; background-image:none !important; color:#fff !important; border:none !important; padding:14px 30px !important; border-radius:var(--fp-radius-button) !important; font-size:15px !important; font-weight:800 !important; letter-spacing:0.01em !important; box-shadow:0 6px 18px rgba(91,191,181,0.32) !important; }
-      .cd-modal #fp-fam-ai:hover, .cd-modal button[data-open-hearing]:hover { background:var(--fp-mint-dark) !important; box-shadow:0 8px 22px rgba(46,158,146,0.42) !important; }
-      .cd-modal #fp-fam-add { background:#fff !important; border:1.5px solid var(--fp-mint-soft) !important; color:var(--fp-mint-darker) !important; padding:14px 30px !important; border-radius:var(--fp-radius-button) !important; font-size:15px !important; font-weight:700 !important; }
-      .cd-modal .modal-brief-btn { background:#fff !important; color:var(--fp-mint-darker) !important; border:1.5px solid var(--fp-mint-soft) !important; padding:14px 28px !important; border-radius:var(--fp-radius-button) !important; font-size:15px !important; font-weight:800 !important; }
-      .cd-modal .cd-flow-edit, .cd-modal #modal-edit-btn { background:#fff !important; color:var(--fp-ink-mid) !important; border:1.5px solid var(--fp-line) !important; padding:14px 24px !important; border-radius:var(--fp-radius-button) !important; font-size:14.5px !important; font-weight:700 !important; }
-      /* ===== メインCTA (Money Sent! SEND ボタン風 — 大型 pill mint solid) ===== */
-      body .cd-modal .fp-draft-cta#modal-draft-btn,
-      body .cd-modal button.fp-draft-cta#modal-draft-btn,
-      .cd-modal .fp-draft-cta#modal-draft-btn { background:var(--fp-mint) !important; background-image:none !important; background-color:var(--fp-mint) !important; border-radius:var(--fp-radius-button) !important; box-shadow:0 12px 32px rgba(91,191,181,0.42) !important; padding:18px 24px !important; min-height:72px !important; border:none !important; animation:none !important; transition:all 0.18s ease !important; }
-      body .cd-modal .fp-draft-cta#modal-draft-btn:hover { background:var(--fp-mint-dark) !important; box-shadow:0 16px 36px rgba(46,158,146,0.52) !important; transform:translateY(-1px) !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-label { font-size:18px !important; font-weight:800 !important; color:#fff !important; letter-spacing:-0.005em !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-no { background:rgba(255,255,255,0.22) !important; border:1.5px solid rgba(255,255,255,0.42) !important; color:#fff !important; width:34px !important; height:34px !important; font-size:14px !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-sub { color:rgba(255,255,255,0.92) !important; font-size:13px !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-icon { color:#fff !important; }
-      /* AI推奨 ブロック (cd-flow) — 青紫 hardcode bg → 白カード */
-      .cd-modal .cd-flow, .cd-modal .cd-flow[style] { background:#fff !important; background-image:none !important; border:1px solid #ECEEF1 !important; border-radius:var(--fp-radius-card) !important; box-shadow:var(--fp-card-shadow) !important; padding:22px 24px !important; color:var(--fp-ink-strong) !important; }
-      .cd-modal .cd-flow-title { color:var(--fp-ink-strong) !important; font-size:18px !important; font-weight:800 !important; }
-      .cd-modal .cd-flow-reason { color:var(--fp-ink-mid) !important; font-size:13.5px !important; }
-      .cd-modal .cd-flow-eyebrow-pill { background:var(--fp-mint-faint) !important; color:var(--fp-mint-dark) !important; padding:4px 10px !important; border-radius:var(--fp-radius-pill) !important; font-size:11px !important; font-weight:800 !important; }
-      .cd-modal .cd-flow-eyebrow-pri { background:#FEF3C7 !important; color:#92400E !important; padding:3px 10px !important; border-radius:var(--fp-radius-pill) !important; font-size:11px !important; font-weight:700 !important; }
-      .cd-modal .cd-flow-step-next { background:#F8FAFB !important; border:1px solid #ECEEF1 !important; border-radius:12px !important; }
-      .cd-modal .cd-flow-arrow { color:var(--fp-mint) !important; }
-      .cd-modal .cd-flow-step-label { color:var(--fp-ink-strong) !important; font-size:14px !important; font-weight:700 !important; }
-      .cd-modal .cd-flow-step-sub { color:var(--fp-ink-mid) !important; font-size:12px !important; }
-      /* ★ 「📋 アンケート」ボタン inline gradient override */
-      .cd-modal button[data-open-hearing][style] { background:var(--fp-mint-dark) !important; background-image:none !important; color:#fff !important; }
-      .cd-modal .modal-brief-btn { background:#fff !important; color:var(--fp-mint-dark) !important; border:1.5px solid var(--fp-mint) !important; padding:12px 20px !important; border-radius:12px !important; font-size:15px !important; font-weight:800 !important; }
-      .cd-modal .cd-flow-edit { background:#fff !important; color:var(--fp-ink-mid) !important; border:1.5px solid #E2E8F0 !important; padding:12px 20px !important; border-radius:12px !important; font-size:15px !important; font-weight:700 !important; }
-      .cd-modal #modal-delete-btn { background:transparent !important; color:var(--fp-ink-soft) !important; border:none !important; font-size:13px !important; text-decoration:underline !important; padding:14px 8px !important; }
-      /* ===== サイドバー 統計 (¥1,250万 等大字) ===== */
-      .cd-modal .cd-left .stat-block, .cd-modal .cd-left .cd-stat { background:transparent !important; border:none !important; box-shadow:none !important; padding:18px 24px !important; }
-      .cd-modal .cd-stat-value, .cd-modal .cd-left .stat-value { font-size:32px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; letter-spacing:-0.02em !important; line-height:1.1 !important; font-family:'Inter','Noto Sans JP',sans-serif !important; }
-      .cd-modal .cd-stat-label, .cd-modal .cd-left .stat-label { font-size:11px !important; font-weight:800 !important; color:var(--fp-ink-soft) !important; letter-spacing:0.1em !important; text-transform:uppercase !important; }
-      .cd-modal .cd-stat-unit { font-size:14px !important; color:var(--fp-ink-mid) !important; margin-left:4px !important; font-weight:700 !important; }
-      .cd-modal .cd-stat-sub { font-size:12.5px !important; color:var(--fp-ink-mid) !important; margin-top:6px !important; }
-      .cd-modal .status-pill { padding:5px 14px !important; border-radius:var(--fp-radius-pill) !important; font-size:12px !important; font-weight:800 !important; letter-spacing:0.02em !important; }
-      .cd-modal .status-pill.active { background:rgba(255,255,255,0.24) !important; color:#fff !important; }
-      .cd-modal .status-pill.new { background:rgba(255,255,255,0.24) !important; color:#fff !important; }
-      .cd-modal .status-pill.important { background:rgba(255,255,255,0.24) !important; color:#fff !important; }
-      /* ===== 顧客台帳 row ===== */
-      #client-tbody { background:transparent !important; }
-      #client-tbody tr { background:#fff !important; border-bottom:1px solid var(--fp-line-soft) !important; transition:background 0.15s ease !important; }
-      #client-tbody tr:hover { background:var(--fp-mint-faint) !important; cursor:pointer !important; }
-      #client-tbody td { padding:22px 22px !important; font-size:15px !important; vertical-align:middle !important; color:var(--fp-ink) !important; }
-      #client-tbody .client-row-name strong { font-size:16.5px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; letter-spacing:-0.005em !important; }
-      #client-tbody .avatar, #client-tbody .avatar-sm { background:var(--fp-mint) !important; color:#fff !important; font-weight:800 !important; width:44px !important; height:44px !important; font-size:15px !important; box-shadow:0 4px 10px rgba(91,191,181,0.28) !important; }
-      #client-tbody .status-pill { padding:6px 14px !important; border-radius:var(--fp-radius-pill) !important; font-size:12.5px !important; font-weight:800 !important; }
-      #client-tbody .status-pill.active { background:var(--fp-mint-faint) !important; color:var(--fp-mint-darker) !important; }
-      #client-tbody .status-pill.new { background:#FEF3C7 !important; color:#92400E !important; }
-      #client-tbody .status-pill.important { background:#FEE2E2 !important; color:#991B1B !important; }
-      #client-tbody .num { font-size:17px !important; font-weight:800 !important; color:var(--fp-ink-strong) !important; font-family:'Inter','Noto Sans JP',sans-serif !important; letter-spacing:-0.01em !important; }
-      thead tr th { background:transparent !important; color:var(--fp-ink-soft) !important; font-size:11.5px !important; font-weight:800 !important; letter-spacing:0.08em !important; text-transform:uppercase !important; padding:14px 22px !important; border-bottom:1px solid var(--fp-line) !important; }
-      @media (prefers-reduced-motion: reduce) {
-        #client-tbody tr { transition:none !important; }
-      }
-      /* ===== 全画面 mint化 (ホーム / サイドバー / ヘッダ 等) ===== */
-      body { background:var(--fp-mint-paper) !important; }
-      /* 左サイドバー */
-      aside, nav.sidebar, .sidebar, .side-nav, [class*="sidebar"], [class*="SideNav"] { background:#fff !important; border-right:1px solid var(--fp-line) !important; }
-      aside .nav-item.active, aside .nav-item[data-active], .sidebar .nav-item.active, .side-nav .nav-item.active { background:var(--fp-mint-faint) !important; color:var(--fp-mint-darker) !important; border-left:3px solid var(--fp-mint) !important; }
-      /* ホーム ヘッダ (おはようございます ... ダーク bg → mint hero) */
-      .mega-hero, .mega-hero-bg, .home-hero, .dashboard-hero, .greeting-card, [class*="hero"][class*="dark"], [style*="background:linear-gradient(135deg,#0F172A"], [style*="background:linear-gradient(135deg,#1B2658"], [style*="background:linear-gradient(135deg,#1b2845"] { background:linear-gradient(135deg,var(--fp-mint),var(--fp-mint-dark)) !important; background-image:linear-gradient(135deg,var(--fp-mint),var(--fp-mint-dark)) !important; color:#fff !important; border-radius:24px !important; box-shadow:0 16px 40px rgba(91,191,181,0.32) !important; border:none !important; }
-      .mega-hero { padding:48px 44px !important; }
-      .mega-hero-bg { display:none !important; }
-      .mega-hero-title, .mega-hero-name, .mega-hero-highlight { color:#fff !important; font-size:34px !important; font-weight:800 !important; letter-spacing:-0.015em !important; line-height:1.4 !important; }
-      .mega-hero-highlight { background:rgba(255,255,255,0.22) !important; padding:0 14px !important; border-radius:14px !important; }
-      .mega-hero-name { display:inline !important; padding:0 !important; background:transparent !important; }
-      .mega-hero-date { color:rgba(255,255,255,0.82) !important; font-size:13.5px !important; font-weight:700 !important; letter-spacing:0.04em !important; margin-bottom:14px !important; }
-      .mega-hero-lead { color:rgba(255,255,255,0.92) !important; font-size:14.5px !important; margin-top:18px !important; line-height:1.7 !important; }
-      .mega-hero-stats { gap:32px !important; margin-top:28px !important; }
-      .mega-hero-stat-label { color:rgba(255,255,255,0.82) !important; font-size:11px !important; letter-spacing:0.08em !important; text-transform:uppercase !important; font-weight:800 !important; }
-      .mega-hero-stat-value { color:#fff !important; font-size:36px !important; font-weight:800 !important; font-family:'Inter','Noto Sans JP',sans-serif !important; letter-spacing:-0.02em !important; }
-      .mega-hero-cta, .mega-hero-cta-primary, .mega-hero-cta-secondary { padding:14px 28px !important; border-radius:999px !important; font-size:15px !important; font-weight:800 !important; min-height:52px !important; }
-      .mega-hero-cta-primary { background:#fff !important; background-image:none !important; color:var(--fp-mint-darker) !important; border:none !important; box-shadow:0 8px 20px rgba(255,255,255,0.32) !important; }
-      .mega-hero-cta-secondary { background:rgba(255,255,255,0.18) !important; border:1.5px solid rgba(255,255,255,0.45) !important; color:#fff !important; }
-      /* 「次のステップを見る」 等 紺ボタン */
-      button[style*="background:#1B2658"], button[style*="background:#0F172A"], button[style*="background:linear-gradient(135deg,#1B"], .home-cta-primary, .dashboard-cta-primary { background:#fff !important; background-image:none !important; color:var(--fp-mint-darker) !important; border:none !important; padding:14px 28px !important; border-radius:var(--fp-radius-button) !important; font-weight:800 !important; box-shadow:0 6px 18px rgba(255,255,255,0.32) !important; }
-      /* 紺紫アクセント button 全般 → mint */
-      button[style*="background:#5B5BF0"], button[style*="background:linear-gradient(135deg,#5B5BF0"], button[style*="background:#3730A3"] { background:var(--fp-mint) !important; background-image:none !important; color:#fff !important; border:none !important; }
-      /* メインカード/コンテナ 全般 */
-      .board-section, .home-section, .dashboard-card, [class*="card-section"] { background:#fff !important; border:1px solid var(--fp-line) !important; border-radius:var(--fp-radius-card) !important; box-shadow:var(--fp-card-shadow-soft) !important; }
-      /* ヘッダ h1/h2 */
-      h1, h2 { color:var(--fp-ink-strong) !important; letter-spacing:-0.015em !important; }
-      /* タブnav (ホーム / 顧客台帳 / ライフイベント 等の上部) */
-      [data-tab].active, [data-tab][aria-selected="true"], .tab.active { color:var(--fp-mint-darker) !important; border-bottom-color:var(--fp-mint) !important; }
-      /* 「新規顧客を登録」 等 primary button */
-      button[style*="background:#1B2658"], #add-client-btn, .btn-primary, button.btn-primary { background:var(--fp-mint) !important; background-image:none !important; color:#fff !important; border:none !important; border-radius:var(--fp-radius-button) !important; padding:13px 26px !important; font-weight:800 !important; box-shadow:0 6px 18px rgba(91,191,181,0.32) !important; }
-      /* 状態 chip (LINE 緑 / 紫 等) → mint系 */
-      .status-pill.active, .badge.active, [class*="badge"][class*="success"] { background:var(--fp-mint-faint) !important; color:var(--fp-mint-darker) !important; }
-      /* リンク */
-      a:not([class]) { color:var(--fp-mint-darker) !important; }
-      a:not([class]):hover { color:var(--fp-mint-dark) !important; }
-
-      /* ============================================================ */
-      /* ★★★ ゼロベース リアウト: 1カラム mobile風 mint hero + pill tab */
-      /* ============================================================ */
-      /* モーダル コンテナ */
-      #modal-overlay { background:rgba(15,31,29,0.55) !important; align-items:flex-start !important; padding:32px 16px !important; }
-      #modal-content { max-width:780px !important; width:100% !important; max-height:calc(100vh - 64px) !important; border-radius:32px !important; overflow:hidden !important; box-shadow:0 32px 80px rgba(15,31,29,0.32) !important; background:#fff !important; padding:0 !important; display:flex !important; flex-direction:column !important; }
-      .cd-modal { display:block !important; grid-template-columns:none !important; padding:0 !important; background:#fff !important; }
-      /* 左右2カラム → 廃止 (1カラム) */
-      .cd-modal aside.cd-left, .cd-modal .cd-left { display:contents !important; }
-      .cd-modal main.cd-right, .cd-modal .cd-right { padding:0 !important; background:#fff !important; display:flex !important; flex-direction:column !important; }
-      /* ★★ 上部 mint hero (元画像 Send Money 風) ★★ */
-      /*   既存 .cd-left ヘッダ要素 (avatar/name) を 上部に再配置 */
-      .cd-modal .cd-left > * { display:none !important; }
-      .cd-modal .cd-left .cd-profile-head,
-      .cd-modal .cd-left .cd-profile-section:first-child { display:block !important; background:linear-gradient(155deg,var(--fp-mint) 0%,var(--fp-mint-dark) 100%) !important; color:#fff !important; padding:40px 32px 36px !important; text-align:center !important; border-radius:0 !important; box-shadow:none !important; border:none !important; margin:0 !important; order:-100 !important; position:relative !important; }
-      .cd-modal .cd-left .avatar, .cd-modal .cd-left .avatar-lg { background:rgba(255,255,255,0.22) !important; border:4px solid rgba(255,255,255,0.4) !important; width:92px !important; height:92px !important; font-size:34px !important; margin:0 auto 14px !important; display:flex !important; align-items:center !important; justify-content:center !important; border-radius:50% !important; color:#fff !important; font-weight:800 !important; box-shadow:0 8px 24px rgba(0,0,0,0.18) !important; }
-      .cd-modal .cd-left h2, .cd-modal .cd-left .cd-profile-name { color:#fff !important; font-size:28px !important; font-weight:800 !important; letter-spacing:-0.015em !important; margin:0 0 6px !important; }
-      .cd-modal .cd-left .cd-profile-kana { color:rgba(255,255,255,0.85) !important; font-size:14px !important; }
-      .cd-modal .cd-left .status-pill { display:inline-block !important; background:rgba(255,255,255,0.24) !important; color:#fff !important; padding:6px 16px !important; border-radius:999px !important; font-size:12.5px !important; font-weight:800 !important; margin-top:14px !important; }
-      /* ★ pill タブ (横並び 中央寄せ) */
-      .cd-modal .cd-tabs { background:#fff !important; padding:24px 24px 12px !important; gap:8px !important; border-bottom:none !important; display:flex !important; flex-wrap:wrap !important; justify-content:center !important; }
-      .cd-modal .cd-tab { background:#F4FAF9 !important; color:var(--fp-ink-mid) !important; font-size:15px !important; font-weight:800 !important; padding:12px 22px !important; min-height:48px !important; border:1.5px solid var(--fp-line) !important; border-radius:999px !important; border-bottom:1.5px solid var(--fp-line) !important; }
-      .cd-modal .cd-tab:hover { background:var(--fp-mint-faint) !important; border-color:var(--fp-mint-soft) !important; color:var(--fp-mint-darker) !important; }
-      .cd-modal .cd-tab.cd-tab-active { background:var(--fp-mint) !important; color:#fff !important; border-color:var(--fp-mint) !important; box-shadow:0 6px 18px rgba(91,191,181,0.32) !important; }
-      .cd-modal .cd-tab .cd-tab-count { background:rgba(255,255,255,0.24) !important; color:#fff !important; min-width:24px !important; padding:0 8px !important; height:22px !important; margin-left:6px !important; }
-      .cd-modal .cd-tab:not(.cd-tab-active) .cd-tab-count { background:#fff !important; color:var(--fp-ink-soft) !important; border:1px solid var(--fp-line) !important; }
-      /* タブ パネル */
-      .cd-modal .cd-tabpanels { padding:8px 24px 36px !important; background:#fff !important; overflow-y:auto !important; flex:1 !important; }
-      /* セクション (overview パネル内) — カード 控え目 + 余白拡大 */
-      .cd-modal .detail-section, .cd-modal .cd-profile-section { background:#fff !important; border:1px solid var(--fp-line) !important; border-radius:20px !important; padding:24px 26px !important; margin-bottom:16px !important; box-shadow:var(--fp-card-shadow-soft) !important; }
-      .cd-modal .detail-section h3 { font-size:12px !important; margin-bottom:18px !important; }
-      /* ★ メインCTA — 横幅一杯 巨大 pill (画面下に固定風) */
-      body .cd-modal .fp-draft-cta#modal-draft-btn, .cd-modal .fp-draft-cta#modal-draft-btn { width:100% !important; min-height:76px !important; border-radius:24px !important; padding:18px 28px !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-label { font-size:19px !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-sub { font-size:13px !important; margin-top:3px !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-no { width:36px !important; height:36px !important; font-size:15px !important; }
-      .cd-modal .fp-draft-cta#modal-draft-btn .cd-flow-step-icon { width:24px !important; height:24px !important; }
-      /* サブボタン pill 統一 */
-      .cd-modal .modal-brief-btn, .cd-modal #modal-edit-btn, .cd-modal .cd-flow-edit, .cd-modal button[data-open-hearing], .cd-modal #fp-fam-ai, .cd-modal #fp-fam-add { padding:14px 26px !important; font-size:15px !important; min-height:52px !important; border-radius:999px !important; }
-      /* 議事録 / 家族カード */
-      .cd-modal .fp-meeting-card { padding:22px 24px !important; border-radius:18px !important; }
-      .cd-modal .fp-meeting-card-date { font-size:18px !important; }
-      .cd-modal .fp-meeting-card-eyebrow { font-size:12.5px !important; }
-      .cd-modal .fp-meeting-body { font-size:15px !important; line-height:1.9 !important; }
-      .cd-modal .fp-fam-card { padding:18px 20px !important; min-width:170px !important; border-radius:16px !important; }
-      .cd-modal .fp-fam-name { font-size:18px !important; }
-      .cd-modal .fp-fam-age { font-size:13px !important; margin-top:5px !important; }
-      /* WORKFLOW ブロック compact */
-      .cd-modal .cd-flow { padding:18px 20px !important; border-radius:18px !important; }
-      .cd-modal .cd-flow-title { font-size:16px !important; }
-      /* 概観タブ 上部 紹介 紙 → mint hero と 統合表示 */
-      .cd-modal #cd-tags-section, .cd-modal .cd-profile-section[id*="tags"] { border:none !important; box-shadow:none !important; background:transparent !important; padding:8px 0 !important; }
-
-      /* ============================================================ */
-      /* ★ 顧客台帳 — table廃止 → カード grid (1人 = 1大型カード) */
-      /* ============================================================ */
-      #clients-view table thead { display:none !important; }
-      #clients-view table, #clients-view tbody { display:block !important; }
-      #client-tbody { display:grid !important; grid-template-columns:repeat(auto-fill,minmax(380px,1fr)) !important; gap:20px !important; padding:24px 0 !important; }
-      #client-tbody tr { display:block !important; background:#fff !important; border:1px solid var(--fp-line) !important; border-radius:24px !important; padding:24px 26px !important; box-shadow:var(--fp-card-shadow-soft) !important; transition:all 0.18s ease !important; }
-      #client-tbody tr:hover { background:#fff !important; border-color:var(--fp-mint) !important; box-shadow:0 12px 32px rgba(91,191,181,0.18) !important; transform:translateY(-2px) !important; }
-      #client-tbody tr td { display:block !important; padding:0 !important; border:none !important; font-size:14.5px !important; }
-      #client-tbody tr td:first-child { margin-bottom:18px !important; padding-bottom:18px !important; border-bottom:1px solid var(--fp-line-soft) !important; }
-      #client-tbody .client-row-name { display:flex !important; align-items:center !important; gap:14px !important; }
-      #client-tbody .client-row-name strong { font-size:19px !important; }
-      #client-tbody .avatar, #client-tbody .avatar-sm { width:54px !important; height:54px !important; font-size:18px !important; }
-      #client-tbody tr td:nth-child(2)::before { content:'年齢 '; font-size:11px; color:var(--fp-ink-soft); font-weight:700; letter-spacing:0.06em; }
-      #client-tbody tr td:nth-child(3)::before { content:'職業 '; font-size:11px; color:var(--fp-ink-soft); font-weight:700; letter-spacing:0.06em; }
-      #client-tbody tr td:nth-child(4)::before { content:'家族 '; font-size:11px; color:var(--fp-ink-soft); font-weight:700; letter-spacing:0.06em; }
-      #client-tbody tr td:nth-child(2), #client-tbody tr td:nth-child(3), #client-tbody tr td:nth-child(4) { display:inline-block !important; margin-right:14px !important; margin-bottom:8px !important; padding:0 !important; }
-      #client-tbody tr td.num::before { content:'資産 '; font-size:11px; color:var(--fp-ink-soft); font-weight:700; letter-spacing:0.06em; }
-      #client-tbody .num { font-size:22px !important; }
-      /* 状態 / 最終接触 行 */
-      #client-tbody tr td:nth-last-child(2), #client-tbody tr td:nth-last-child(1) { margin-top:14px !important; display:inline-flex !important; align-items:center !important; gap:8px !important; }
-
-      /* ============================================================ */
-      /* ★ ホーム — 大型 1メッセージ + 巨大CTA */
-      /* ============================================================ */
-      /* 「次のステップを見る」 etc を 巨大化 */
-      [data-go="clients"], #add-client-btn, button.fp-empty-cta { padding:18px 36px !important; font-size:17px !important; border-radius:var(--fp-radius-button) !important; min-height:60px !important; box-shadow:0 8px 24px rgba(91,191,181,0.32) !important; }
-    `;
-    document.head.appendChild(st);
-  })();
 
   const TODAY = window.LifeEvents.TODAY;
   const LS_KEY = 'fp-crm-state-v1';
@@ -2326,36 +2087,37 @@
       };
       (kpiHintsMap[stageKey] || []).forEach(h => jobsCandidates.push(h));
       const workflowHtml = `
-        <div style="background:#fff;color:#0F172A;border:1px solid #ECEEF1;border-radius:16px;padding:18px 22px;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,0.04),0 4px 12px rgba(15,23,42,0.06);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:#00897B;text-transform:uppercase;">📍 現在地</div>
-            <div style="font-size:12px;color:#475569;font-weight:600;">面談 ${pastMs}回 / 次予約 ${futureMs}件</div>
+        <div style="background:linear-gradient(135deg,#0f1729,#1b2845);color:#fff;border-radius:12px;padding:14px 18px;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.16em;opacity:0.8;">📍 WORKFLOW — このお客様の現在地</div>
+            <div style="font-size:10.5px;opacity:0.85;">面談 ${pastMs}回 / 次予約 ${futureMs}件</div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;overflow-x:auto;padding-bottom:6px;margin-bottom:14px;">
+          <div style="display:flex;gap:4px;align-items:center;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;">
             ${stages.map((s, i) => `
-              <div style="flex:1;min-width:88px;text-align:center;padding:10px 6px;border-radius:12px;background:${i < currentStageIdx ? '#E0F2F1' : i === currentStageIdx ? '#4DB6AC' : '#F8FAFB'};border:1.5px solid ${i < currentStageIdx ? '#4DB6AC' : i === currentStageIdx ? '#00897B' : '#E2E8F0'};color:${i === currentStageIdx ? '#fff' : i < currentStageIdx ? '#00897B' : '#94A3B8'};">
-                <div style="font-size:20px;">${i < currentStageIdx ? '✓' : s.icon}</div>
-                <div style="font-size:11px;font-weight:800;margin-top:4px;">${escapeHtml(s.label)}</div>
+              <div style="flex:1;min-width:90px;text-align:center;padding:8px 6px;border-radius:8px;background:${i < currentStageIdx ? 'rgba(16,185,129,0.25)' : i === currentStageIdx ? 'linear-gradient(135deg,#f59e0b,#ea580c)' : 'rgba(255,255,255,0.08)'};border:1.5px solid ${i < currentStageIdx ? '#10b981' : i === currentStageIdx ? '#f59e0b' : 'rgba(255,255,255,0.2)'};">
+                <div style="font-size:18px;">${i < currentStageIdx ? '✓' : s.icon}</div>
+                <div style="font-size:10px;font-weight:700;margin-top:3px;${i > currentStageIdx ? 'opacity:0.55;' : ''}">${escapeHtml(s.label)}</div>
               </div>
-              ${i < stages.length - 1 ? '<div style="font-size:14px;color:#CBD5E1;">→</div>' : ''}
+              ${i < stages.length - 1 ? '<div style="font-size:14px;opacity:0.5;">→</div>' : ''}
             `).join('')}
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div style="background:#F8FAFB;border:1px solid #ECEEF1;border-radius:12px;padding:14px 16px;">
-              <div style="font-size:11px;font-weight:800;letter-spacing:0.06em;color:#94A3B8;margin-bottom:8px;text-transform:uppercase;">🔄 いま動いてる</div>
-              ${activeActions.length === 0 ? '<div style="font-size:12.5px;color:#94A3B8;">次のアクション待ち</div>' : activeActions.map(a => `
-                <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;color:#0F172A;">
+          <style>@keyframes fp-stage-pulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0.5)}50%{box-shadow:0 0 0 8px rgba(245,158,11,0)}}</style>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11.5px;">
+            <div style="background:rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;">
+              <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">🔄 いま動いてる</div>
+              ${activeActions.length === 0 ? '<div style="font-size:11px;opacity:0.6;">なし — 次のアクション待ち</div>' : activeActions.map(a => `
+                <div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11.5px;">
                   <span>${a.icon}</span>
                   <span style="flex:1;">${escapeHtml(a.label)}</span>
-                  <span style="font-size:10.5px;padding:3px 9px;border-radius:999px;background:${a.tone === 'done' ? '#E0F2F1' : a.tone === 'active' ? '#E0F2F1' : a.tone === 'wait' ? '#FEF3C7' : '#FEE2E2'};color:${a.tone === 'done' ? '#00897B' : a.tone === 'active' ? '#00897B' : a.tone === 'wait' ? '#92400E' : '#991B1B'};font-weight:800;">${a.tone === 'done' ? '完了' : a.tone === 'active' ? '進行' : a.tone === 'wait' ? '待ち' : '要対応'}</span>
+                  <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:${a.tone === 'done' ? '#10b981' : a.tone === 'active' ? '#5B5BF0' : a.tone === 'wait' ? '#f59e0b' : '#dc2626'};color:#fff;font-weight:800;letter-spacing:0.04em;">${a.tone === 'done' ? '完了' : a.tone === 'active' ? '進行' : a.tone === 'wait' ? '待ち' : '要対応'}</span>
                 </div>
               `).join('')}
             </div>
-            <div style="background:#E0F2F1;border:1px solid #B2DFDB;border-radius:12px;padding:14px 16px;">
-              <div style="font-size:11px;font-weight:800;letter-spacing:0.06em;color:#00897B;margin-bottom:8px;text-transform:uppercase;">⚡ 次やる (${escapeHtml(stages[nextStageIdx].label)})</div>
+            <div style="background:rgba(91,91,240,0.18);border:1px solid rgba(91,91,240,0.4);border-radius:8px;padding:10px 12px;">
+              <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:#C7D2FE;margin-bottom:6px;text-transform:uppercase;">⚡ Jobs候補 → 次やるべき (${escapeHtml(stages[nextStageIdx].label)} 達成のため)</div>
               ${jobsCandidates.map((j, idx) => `
-                <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;color:#0F172A;">
-                  <span style="background:#4DB6AC;color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">${idx + 1}</span>
+                <div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11.5px;">
+                  <span style="background:#5B5BF0;color:#fff;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;">${idx + 1}</span>
                   <span style="flex:1;">${escapeHtml(j)}</span>
                 </div>
               `).join('')}
@@ -5239,7 +5001,7 @@ STEP C: 結果報告
       if (!match) return;
       if (!latestAi || (r.ts || '') > (latestAi.createdAt || '')) latestAi = { summary: r.summary, transcript: r.transcript, createdAt: r.ts };
     });
-    const sanitize = (s) => typeof s !== 'string' ? s : s.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '').replace(/(^|[^\uD800-\uDBFF])([\uDC00-\uDFFF])/g, '$1').replace(/[ --]/g, '');
+    const sanitize = (s) => typeof s !== 'string' ? s : s.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '').replace(/(^|[^\uD800-\uDBFF])([\uDC00-\uDFFF])/g, '$1').replace(/[
 
     try {
       const result = await generateDeliverableViaMacMini({ type, client, clientCtx, taskTitle, latestAi, sanitize });
