@@ -3964,8 +3964,8 @@ ${ctxText}${surveyTxt}`;
             <div class="fp-meeting-card">
               <div class="fp-meeting-card-head">
                 <div>
-                  <div class="fp-meeting-card-eyebrow" style="font-size:11.5px !important;font-weight:900 !important;color:#1B3A5C !important;letter-spacing:0 !important;">📹 Zoom ${zN}回目</div>
-                  <div class="fp-meeting-card-date">${escapeHtml(fmtDateRobust(b.date))} ${escapeHtml(fmtTimeRobust(b.time))} 面談</div>
+                  <div class="fp-meeting-card-eyebrow" style="font-size:13px !important;font-weight:900 !important;color:#1B3A5C !important;letter-spacing:0 !important;">📹 Zoom ${zN}回目 ${aiData.ts || aiData.createdAt ? `<span style="font-size:11px;color:#9CA3AF;font-weight:700;margin-left:8px;font-family:Menlo,monospace;">#${(()=>{ const d=new Date(aiData.ts || aiData.createdAt); return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0'); })()}</span>` : ''}</div>
+                  <div class="fp-meeting-card-date" style="font-size:14px;font-weight:700;">${escapeHtml(fmtDateRobust(b.date))} ${escapeHtml(fmtTimeRobust(b.time))} 面談</div>
                 </div>
                 <div class="fp-meeting-card-actions">
                   ${b.driveUrl ? `<a href="${escapeHtml(b.driveUrl)}" target="_blank" class="fp-btn fp-btn-sm fp-btn-gold">🎥 録画を見る</a>` : ''}
@@ -4041,11 +4041,11 @@ ${ctxText}${surveyTxt}`;
               const zKey = (a.bookingTs || '') + '|' + (a.ts || a.createdAt || '');
               const zN = aiZoomIdx.get(zKey) || '?';
               return `
-              <div class="fp-meeting-card fp-meeting-card-orphan">
+              <div class="fp-meeting-card">
                 <div class="fp-meeting-card-head">
                   <div>
-                    <div class="fp-meeting-card-eyebrow" style="font-size:11.5px !important;font-weight:900 !important;color:#1B3A5C !important;letter-spacing:0 !important;">📹 Zoom ${zN}回目</div>
-                    <div class="fp-meeting-card-date">${escapeHtml(fmtDateRobust(a.date) || String(a.bookingTs || a.createdAt || '').slice(0,10))} 面談</div>
+                    <div class="fp-meeting-card-eyebrow" style="font-size:13px !important;font-weight:900 !important;color:#1B3A5C !important;letter-spacing:0 !important;">📹 Zoom ${zN}回目 ${a.ts || a.createdAt ? `<span style="font-size:11px;color:#9CA3AF;font-weight:700;margin-left:8px;font-family:Menlo,monospace;">#${(()=>{ const d=new Date(a.ts || a.createdAt); return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0'); })()}</span>` : ''}</div>
+                    <div class="fp-meeting-card-date" style="font-size:14px;font-weight:700;">${escapeHtml(fmtDateRobust(a.date) || String(a.bookingTs || a.createdAt || '').slice(0,10))} 面談</div>
                   </div>
                 </div>
                 ${a.transcript ? `
