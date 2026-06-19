@@ -121,7 +121,7 @@
     onAuthStateChanged, signOut, setPersistence, browserSessionPersistence,
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
   import {
-    getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, getDocs, addDoc,
+    getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, getDocs, getDocsFromServer, addDoc,
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
   import {
     getFunctions, httpsCallable,
@@ -465,7 +465,9 @@
   // ===== 認証状態の監視 + Firestore からデータ読み込み =====
   let signupInProgress = false;
   async function loadTenantData(tenantId) {
-    const snap = await getDocs(collection(db, "tenants", tenantId, "customers"));
+    // ★ getDocsFromServer = キャッシュ無視 で 必ず サーバー から 取得
+    //   (オーナーが Jobs/Admin で 削除 した後、 ブラウザ Firestore offline cache が 古い顧客 を 抱えてた 問題 対策)
+    const snap = await getDocsFromServer(collection(db, "tenants", tenantId, "customers"));
     const list = [];
     for (const d of snap.docs) {
       const c = { id: d.id, ...d.data() };
@@ -1569,7 +1571,7 @@ window.fpReadyAfterAuth = function() {
 <script>
 (function(){
   // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
-  const FP_VERSION = "20260619BB-diag-draggable+pill";
+  const FP_VERSION = "20260619BC-getDocsFromServer+full-cache-purge";
   const loadTime = new Date();
   const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
   const dateLabel = (FP_VERSION.match(/^(\d{4})(\d{2})(\d{2})/) || []).slice(1).join('/').replace(/^(\d{4})\//,'$1/').replace(/\/(\d{2})\/(\d{2})$/,'/$1/$2') || FP_VERSION;
@@ -1691,11 +1693,12 @@ window.fpReadyAfterAuth = function() {
   async function fetchFirestoreCount(tenantId) {
     try {
       const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js');
-      const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
+      const { getFirestore, collection, getDocsFromServer } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
       let app;
       try { app = getApp(); } catch (_) { app = initializeApp({ apiKey:'AIzaSyAmVAEe9l9e1Yo_dzzJdbTVU35wWKd2sH4', authDomain:'skeleton-fp-compass-632026.firebaseapp.com', projectId:'skeleton-fp-compass-632026' }); }
       const db = getFirestore(app);
-      const snap = await getDocs(collection(db, 'tenants/'+tenantId+'/customers'));
+      // ★ getDocsFromServer = キャッシュ無視で 必ず サーバー から 最新値 取得
+      const snap = await getDocsFromServer(collection(db, 'tenants/'+tenantId+'/customers'));
       return { count: snap.size, sample: snap.docs.slice(0,5).map(d => { const x = d.data(); return (x.name||'?')+' ('+ (x.source||'-')+')' }) };
     } catch (e) { return { err: e.message }; }
   }
@@ -1746,18 +1749,63 @@ window.fpReadyAfterAuth = function() {
       (fsMismatch ? '<div style="margin-top:8px;padding:6px 8px;background:rgba(239,68,68,0.18);border-radius:5px;color:#FCA5A5;font-size:10.5px;line-height:1.6;">⚠ FS(' + fsInfo.count + ') ≠ DUMMY(' + dummyLen + ')<br>= 初回ロード後 に Firestore で 変化 した 状態<br>→ 「🔁 ハードリロード」 で 反映</div>' : '<div style="margin-top:8px;color:#22C55E;font-size:10.5px;">✓ FS = DUMMY (キャッシュ整合)</div>');
   }
   document.getElementById('fp-diag-refresh')?.addEventListener('click', render);
-  document.getElementById('fp-diag-hardreload')?.addEventListener('click', () => {
-    // cache-bust URL で 強制再取得 (DUMMY_CLIENTS が Firestore 最新値 で 上書き される)
+  async function purgeAllClientCaches() {
+    const log = [];
+    // 1. localStorage / sessionStorage
+    try { localStorage.clear(); log.push('localStorage cleared'); } catch (e) { log.push('LS err: ' + e.message); }
+    try { sessionStorage.clear(); log.push('sessionStorage cleared'); } catch (e) { log.push('SS err: ' + e.message); }
+    // 2. ★ Firestore offline cache (IndexedDB) を 含む 全 IndexedDB 削除
+    try {
+      if (indexedDB.databases) {
+        const dbs = await indexedDB.databases();
+        for (const d of dbs) {
+          if (d.name) {
+            await new Promise((resolve) => {
+              const req = indexedDB.deleteDatabase(d.name);
+              req.onsuccess = () => { log.push('IDB deleted: ' + d.name); resolve(); };
+              req.onerror = () => { log.push('IDB err: ' + d.name); resolve(); };
+              req.onblocked = () => { log.push('IDB blocked: ' + d.name); resolve(); };
+            });
+          }
+        }
+      } else {
+        // Safari fallback: 既知DB を name で delete (firebaseLocalStorageDb, firestore/[default])
+        for (const name of ['firebaseLocalStorageDb', 'firestore/[DEFAULT]/skeleton-fp-compass-632026/main']) {
+          try { indexedDB.deleteDatabase(name); log.push('IDB del (fallback): ' + name); } catch(_) {}
+        }
+      }
+    } catch (e) { log.push('IDB scan err: ' + e.message); }
+    // 3. Service Worker キャッシュ (もしあれば)
+    try {
+      if (window.caches) {
+        const names = await caches.keys();
+        for (const n of names) { await caches.delete(n); log.push('SW cache deleted: ' + n); }
+      }
+    } catch (e) { log.push('SW err: ' + e.message); }
+    return log;
+  }
+  async function hardReloadWithPurge(includeAuth) {
+    const c = document.getElementById('fp-diag-content');
+    if (c) c.innerHTML = '<div style="color:#FCA5A5;">🧹 全キャッシュ削除中...</div>';
+    const log = await purgeAllClientCaches();
+    console.log('[diag purge] ', log);
+    // Auth セッションも 削除する場合 (再ログイン 必要に なる)
+    if (!includeAuth) {
+      // Auth 情報 (Firebase Auth IDB) は 復活させる
+      // → Auth 情報の 削除 を 別途 復元 する 方法ない なので、 includeAuth=false でも 全部消える
+    }
     const u = new URL(location.href);
     u.searchParams.set('nocache', Math.random().toString(36).slice(2,9));
-    location.replace(u.toString());
+    // 少し 待って から reload (削除が 完了 する 時間)
+    setTimeout(() => location.replace(u.toString()), 500);
+  }
+  document.getElementById('fp-diag-hardreload')?.addEventListener('click', async () => {
+    if (!confirm('全キャッシュ (localStorage + Firestore IndexedDB + ServiceWorker) を 削除して 再起動します。\n再ログイン が 必要 になる 可能性あり。 OK?')) return;
+    await hardReloadWithPurge(true);
   });
-  document.getElementById('fp-diag-purge')?.addEventListener('click', () => {
-    if (!confirm('localStorage / sessionStorage を 全削除して 再起動します。 OK?')) return;
-    localStorage.clear(); sessionStorage.clear();
-    const u = new URL(location.href);
-    u.searchParams.set('nocache', Math.random().toString(36).slice(2,9));
-    location.replace(u.toString());
+  document.getElementById('fp-diag-purge')?.addEventListener('click', async () => {
+    if (!confirm('localStorage / sessionStorage / IndexedDB を 全削除して 再起動します。 OK?')) return;
+    await hardReloadWithPurge(true);
   });
   // 初回 render (auth完了 待ち)
   setTimeout(render, 2500);
