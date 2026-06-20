@@ -182,7 +182,14 @@
   // ============================
   // タブ切替
   // ============================
-  function activateTab(name) {
+  // ★ URLルーティング: 全 view を `?view={name}` で 表現
+  //   - tab click → activateTab(name) → URL pushState → URL更新
+  //   - ブラウザ back / forward → popstate → URL読取 → activateTab(name, {fromPopstate:true})
+  //   - リロード / 直アクセス → 初期 URL 読取 → activateTab で 復元
+  //   メリット: F5でも 同じ画面戻る / Playwright E2E URL直アクセス / Bug再現が URL共有 だけで済む
+  const VALID_VIEWS = ['dashboard','clients','timeline','leadHub','distributionHub','birthdayTab','calendarTab','settingsHub','dormantFollowup','tagsHub','kpi'];
+  function activateTab(name, options) {
+    options = options || {};
     state.activeTab = name;
     saveState();
     document.querySelectorAll('.tab').forEach(t => {
@@ -194,7 +201,6 @@
     if (name === 'dashboard') renderDashboard();
     if (name === 'clients') renderClients();
     if (name === 'timeline') renderGlobalTimeline();
-    // LINE系メインタブ昇格
     if (['leadHub', 'distributionHub', 'birthdayTab', 'calendarTab', 'settingsHub', 'dormantFollowup', 'tagsHub'].indexOf(name) >= 0) {
       if (window.LineApp) {
         if (!window._lineInited) {
@@ -204,7 +210,35 @@
         window.LineApp.activateSubview(name);
       }
     }
+    // ★ URL更新 (popstate由来でない時 = ユーザclick / 初期化 など)
+    if (!options.fromPopstate && VALID_VIEWS.indexOf(name) >= 0) {
+      try {
+        const url = new URL(window.location);
+        if (url.searchParams.get('view') !== name) {
+          url.searchParams.set('view', name);
+          // モーダル系の customer/tab パラメータ も view 切替時はクリア
+          url.searchParams.delete('customer');
+          url.searchParams.delete('tab');
+          history.pushState({ view: name }, '', url.pathname + url.search);
+        }
+      } catch (e) { console.warn('[router] pushState fail:', e); }
+    }
   }
+  // popstate (ブラウザ back/forward) listener
+  window.addEventListener('popstate', (e) => {
+    const view = (e.state && e.state.view) || new URLSearchParams(window.location.search).get('view') || 'dashboard';
+    if (VALID_VIEWS.indexOf(view) < 0) return;
+    if (state.activeTab === view) return;
+    activateTab(view, { fromPopstate: true });
+  });
+  // 初期URL → 該当 view 復元 (リロード時 同じ画面に戻る)
+  function routeFromUrl() {
+    const initialView = new URLSearchParams(window.location.search).get('view');
+    if (initialView && VALID_VIEWS.indexOf(initialView) >= 0 && initialView !== state.activeTab) {
+      activateTab(initialView, { fromPopstate: true });
+    }
+  }
+  window.FPRouter = { activateTab, routeFromUrl, VALID_VIEWS };
 
   // ============================
   // ダッシュボード
@@ -7531,6 +7565,9 @@ ${client.name}さん、ありがとうございます。
     window.FpApp = { openClientModal: openClientModal, openClientForm: openClientForm, getTagsMaster: getTagsMaster, getClientTags: getClientTags };
 
     activateTab(state.activeTab);
+
+    // ★ URL routing: ?view=clients 等で起動された場合は そのview へ
+    try { routeFromUrl(); } catch (e) { console.warn('[router] routeFromUrl fail:', e); }
 
     // 残存 cleared flag を解除 (前回までの残骸)
     try { localStorage.removeItem('fp-cleared-permanently'); } catch (_) {}
