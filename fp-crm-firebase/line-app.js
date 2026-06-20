@@ -1143,6 +1143,8 @@
       _fsCustomerId: c.docId,
       userId: 'fs:' + c.docId,
       name: c.name,
+      // ★ LINE pictureUrl 反映 (fs:DOCID は liveData.users に存在しない → usersByUid lookup miss → イニシャル円になる退化バグ 修正)
+      pictureUrl: c.pictureUrl || c.linePictureUrl || '',
       q2_年代: c.surveyAnswers?.q1_年代,
       q3_家族: c.surveyAnswers?.q3_家族,
       q4_年収: c.surveyAnswers?.q4_年収,
@@ -1170,8 +1172,10 @@
         || (u.displayName && String(u.displayName).trim())
         || ((s.q1_テーマ && s.q1_テーマ.trim()) ? s.q1_テーマ + 'のお客様' : '相談者');
       const initial = (displayName || '?').replace(/\s+/g, '').slice(0, 1);
-      const avatarHtml = u.pictureUrl
-        ? `<img src="${escapeHtml(u.pictureUrl)}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.12);">`
+      // ★ pictureUrl: s.pictureUrl (Firestore直) → u.pictureUrl (legacy users) の順 で fallback
+      const picUrl = s.pictureUrl || u.pictureUrl || '';
+      const avatarHtml = picUrl
+        ? `<img src="${escapeHtml(picUrl)}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.12);">`
         : `<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.12);">${escapeHtml(initial)}</div>`;
       return `
         <div data-pending-card data-uid="${escapeHtml(s.userId || '')}" style="background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;padding:18px 22px;margin-bottom:10px;box-shadow:var(--shadow-xs);">

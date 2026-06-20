@@ -3271,10 +3271,24 @@
           <div style="display:flex;flex-direction:column;gap:12px;">
             <label style="display:block;"><div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:4px;">関係</div>
               <select id="fp-fam-rel" style="width:100%;padding:9px 12px;border:1px solid #E2E8F0;border-radius:7px;font-size:13px;font-family:inherit;">
-                <option value="spouse" ${m.rel==='spouse'?'selected':''}>配偶者</option>
-                <option value="child" ${m.rel==='child'?'selected':''}>お子様</option>
-                <option value="parent" ${m.rel==='parent'?'selected':''}>親</option>
-                <option value="sibling" ${m.rel==='sibling'?'selected':''}>ご兄弟</option>
+                <optgroup label="上の世代">
+                  <option value="grandparent" ${m.rel==='grandparent'?'selected':''}>祖父母</option>
+                  <option value="parent" ${m.rel==='parent'?'selected':''}>親 (実父母)</option>
+                  <option value="parent_in_law" ${m.rel==='parent_in_law'?'selected':''}>義父母 (配偶者の親)</option>
+                  <option value="uncle" ${m.rel==='uncle'?'selected':''}>おじ・おば</option>
+                </optgroup>
+                <optgroup label="同世代">
+                  <option value="spouse" ${m.rel==='spouse'?'selected':''}>配偶者</option>
+                  <option value="sibling" ${m.rel==='sibling'?'selected':''}>ご兄弟</option>
+                  <option value="sibling_in_law" ${m.rel==='sibling_in_law'?'selected':''}>義兄弟 (配偶者の兄弟)</option>
+                  <option value="cousin" ${m.rel==='cousin'?'selected':''}>いとこ</option>
+                </optgroup>
+                <optgroup label="下の世代">
+                  <option value="child" ${m.rel==='child'?'selected':''}>お子様</option>
+                  <option value="child_in_law" ${m.rel==='child_in_law'?'selected':''}>子の配偶者</option>
+                  <option value="nephew" ${m.rel==='nephew'?'selected':''}>甥・姪 (兄弟の子)</option>
+                  <option value="grandchild" ${m.rel==='grandchild'?'selected':''}>お孫さん</option>
+                </optgroup>
                 <option value="other" ${m.rel==='other'?'selected':''}>その他</option>
               </select>
             </label>
@@ -3734,14 +3748,22 @@ ${ctxText}${surveyTxt}`;
   // ============================
   function renderFamilyTreeBlock(client) {
     const fam = Array.isArray(client.family) ? client.family : [];
-    // 関係 → 表示順 + ラベル + 色
+    // 関係 → 表示順 + ラベル + 色 (相続/二世帯/事業承継 で 必要になる 拡張親族 込み)
     const relMeta = {
-      self:    { label: '本人',     color: '#5B5BF0', order: 0 },
-      spouse:  { label: '配偶者',   color: '#EF4444', order: 1 },
-      child:   { label: 'お子様',   color: '#06B6D4', order: 2 },
-      parent:  { label: '親',       color: '#A855F7', order: -1 },
-      sibling: { label: 'ご兄弟',   color: '#84CC16', order: 3 },
-      other:   { label: 'その他',   color: '#6B7280', order: 4 },
+      self:           { label: '本人',         color: '#5B5BF0', order: 0 },
+      grandparent:    { label: '祖父母',       color: '#7C3AED', order: -3 },
+      parent:         { label: '親',           color: '#A855F7', order: -2 },
+      parent_in_law:  { label: '義父母',       color: '#C084FC', order: -1 },
+      uncle:          { label: 'おじ・おば',   color: '#D8B4FE', order: -1 },
+      spouse:         { label: '配偶者',       color: '#EF4444', order: 1 },
+      sibling:        { label: 'ご兄弟',       color: '#84CC16', order: 2 },
+      sibling_in_law: { label: '義兄弟',       color: '#A3E635', order: 2 },
+      cousin:         { label: 'いとこ',       color: '#22C55E', order: 3 },
+      child:          { label: 'お子様',       color: '#06B6D4', order: 4 },
+      child_in_law:   { label: '子の配偶者',   color: '#22D3EE', order: 5 },
+      nephew:         { label: '甥・姪',       color: '#0EA5E9', order: 5 },
+      grandchild:     { label: 'お孫さん',     color: '#F59E0B', order: 6 },
+      other:          { label: 'その他',       color: '#6B7280', order: 7 },
     };
     const age = (birth) => {
       if (!birth) return null;
@@ -3758,8 +3780,12 @@ ${ctxText}${surveyTxt}`;
       <div class="fp-fam-name">${escapeHtml(client.name || 'お客様')}</div>
       <div class="fp-fam-age">${age(client.birth) ?? '?'}歳 / ${escapeHtml(client.occupation || '職業未設定')}</div>
     </div>`;
-    // 関係別 にグループ化 → 描画順は parent → self → spouse → sibling → child → other
-    const groups = { parent: [], self: [], spouse: [], sibling: [], child: [], other: [] };
+    // 関係別 にグループ化 → 描画順は 祖父母 → 親/義父母/おじおば → self/spouse → 兄弟/義兄弟/いとこ → 子/義子/甥姪 → 孫 → other
+    const groups = {
+      grandparent: [], parent: [], parent_in_law: [], uncle: [],
+      spouse: [], sibling: [], sibling_in_law: [], cousin: [],
+      child: [], child_in_law: [], nephew: [], grandchild: [], other: [],
+    };
     fam.forEach((m, idx) => {
       const r = (m.rel || 'other').toLowerCase();
       const grp = groups[r] ? r : 'other';
@@ -3796,7 +3822,10 @@ ${ctxText}${surveyTxt}`;
           .fp-fam-card .fp-fam-edit{position:absolute;top:6px;right:6px;background:rgba(255,255,255,0.7);border:1px solid rgba(0,0,0,0.08);border-radius:5px;width:24px;height:24px;cursor:pointer;font-size:11px;padding:0;}
           .fp-fam-card .fp-fam-edit:hover{background:#fff;border-color:rgba(0,0,0,0.18);}
         </style>
+        ${renderGroup('grandparent', groups.grandparent)}
         ${renderGroup('parent', groups.parent)}
+        ${renderGroup('parent_in_law', groups.parent_in_law)}
+        ${renderGroup('uncle', groups.uncle)}
         <div style="margin-bottom:14px;">
           <div style="font-size:11px;font-weight:800;color:#5B5BF0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">本人 + 配偶者</div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;">
@@ -3812,8 +3841,13 @@ ${ctxText}${surveyTxt}`;
             }).join('')}
           </div>
         </div>
-        ${renderGroup('child', groups.child)}
         ${renderGroup('sibling', groups.sibling)}
+        ${renderGroup('sibling_in_law', groups.sibling_in_law)}
+        ${renderGroup('cousin', groups.cousin)}
+        ${renderGroup('child', groups.child)}
+        ${renderGroup('child_in_law', groups.child_in_law)}
+        ${renderGroup('nephew', groups.nephew)}
+        ${renderGroup('grandchild', groups.grandchild)}
         ${renderGroup('other', groups.other)}
         ${fam.length === 0 ? '<div style="padding:24px;background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:10px;text-align:center;color:#64748B;font-size:12.5px;">まだ家族情報が登録されていません。<br>「✨ 議事録 から AI 抽出」 で 過去の Zoom 議事録 から 自動 で 家族構成 を 取り込めます。</div>' : ''}
       </div>`;
