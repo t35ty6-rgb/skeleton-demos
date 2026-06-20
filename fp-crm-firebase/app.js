@@ -7564,10 +7564,15 @@ ${client.name}さん、ありがとうございます。
     // line-app.js から呼び出せるように公開
     window.FpApp = { openClientModal: openClientModal, openClientForm: openClientForm, getTagsMaster: getTagsMaster, getClientTags: getClientTags };
 
+    // ★ URL routing: ?view=clients 等で起動された場合は state.activeTab を 上書き
+    //   (activateTab を 呼ぶ前に やらないと 先に state.activeTab で URL を 上書きしてしまう)
+    try {
+      const urlView = new URLSearchParams(window.location.search).get('view');
+      if (urlView && VALID_VIEWS.indexOf(urlView) >= 0) {
+        state.activeTab = urlView;
+      }
+    } catch (_) {}
     activateTab(state.activeTab);
-
-    // ★ URL routing: ?view=clients 等で起動された場合は そのview へ
-    try { routeFromUrl(); } catch (e) { console.warn('[router] routeFromUrl fail:', e); }
 
     // 残存 cleared flag を解除 (前回までの残骸)
     try { localStorage.removeItem('fp-cleared-permanently'); } catch (_) {}
