@@ -225,20 +225,65 @@
     }
   }
   // popstate (ブラウザ back/forward) listener
-  window.addEventListener('popstate', (e) => {
-    const view = (e.state && e.state.view) || new URLSearchParams(window.location.search).get('view') || 'dashboard';
-    if (VALID_VIEWS.indexOf(view) < 0) return;
-    if (state.activeTab === view) return;
-    activateTab(view, { fromPopstate: true });
-  });
+  window.addEventListener('popstate', () => { applyUrlState({ fromPopstate: true }); });
   // 初期URL → 該当 view 復元 (リロード時 同じ画面に戻る)
-  function routeFromUrl() {
-    const initialView = new URLSearchParams(window.location.search).get('view');
-    if (initialView && VALID_VIEWS.indexOf(initialView) >= 0 && initialView !== state.activeTab) {
-      activateTab(initialView, { fromPopstate: true });
+  function routeFromUrl() { applyUrlState({ fromPopstate: true }); }
+  // URLの ?view= / ?customer= / ?tab= を 読み取って UI状態に反映
+  // - view: メインタブ
+  // - customer: 顧客モーダルID (あれば 開く / なければ 閉じる)
+  // - tab: モーダル内タブ (overview/line/timeline/proposals/meetings/family)
+  function applyUrlState(options) {
+    options = options || {};
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('view');
+    const customer = params.get('customer');
+    const subtab = params.get('tab');
+    // 1. view 同期
+    if (view && VALID_VIEWS.indexOf(view) >= 0 && view !== state.activeTab) {
+      activateTab(view, { fromPopstate: true });
+    }
+    // 2. customer モーダル 同期
+    const overlay = document.getElementById('modal-overlay');
+    const overlayOpen = overlay && overlay.style.display === 'flex';
+    if (customer) {
+      // URL に customer 指定あり → モーダル開く
+      try {
+        if (typeof openClientModal === 'function' && (!overlayOpen || window._fpCurrentClient?.id !== customer)) {
+          openClientModal(customer, { fromPopstate: true });
+        }
+        // 3. モーダル内タブ 同期
+        if (subtab) {
+          setTimeout(() => {
+            const tabBtn = document.querySelector('[data-cdtab="' + subtab + '"]');
+            if (tabBtn && !tabBtn.classList.contains('cd-tab-active')) tabBtn.click();
+          }, 150);
+        }
+      } catch (e) { console.warn('[router] openClientModal fail:', e); }
+    } else if (overlayOpen && !options.skipModalClose) {
+      // URL に customer 指定なし → モーダル閉じる (popstateで戻った時)
+      try { closeModal({ fromPopstate: true }); } catch (_) {}
     }
   }
-  window.FPRouter = { activateTab, routeFromUrl, VALID_VIEWS };
+  // モーダル URL push helper (openClientModal/closeModal/タブclick から呼ぶ)
+  function pushModalUrl(customerId, subtab) {
+    try {
+      const url = new URL(window.location);
+      if (customerId) {
+        url.searchParams.set('view', 'clients');
+        url.searchParams.set('customer', customerId);
+        if (subtab) url.searchParams.set('tab', subtab);
+        else url.searchParams.delete('tab');
+      } else {
+        url.searchParams.delete('customer');
+        url.searchParams.delete('tab');
+      }
+      const target = url.pathname + url.search;
+      if (window.location.pathname + window.location.search !== target) {
+        history.pushState({ view: 'clients', customer: customerId, tab: subtab }, '', target);
+      }
+    } catch (e) { console.warn('[router] pushModalUrl fail:', e); }
+  }
+  window.FPRouter = { activateTab, routeFromUrl, applyUrlState, pushModalUrl, VALID_VIEWS };
 
   // ============================
   // ダッシュボード
@@ -1672,7 +1717,8 @@
     }
   }
 
-  function openClientModal(id) {
+  function openClientModal(id, options) {
+    options = options || {};
     const c = clients.find(x => x.id === id);
     if (!c) return;
     window._fpCurrentClient = c;  // AI議事録モーダルの LINE 送信 fallback 用
@@ -1681,6 +1727,10 @@
       localStorage.setItem('fp-last-open-client', id);
       localStorage.setItem('fp-last-open-mode', 'client');
     } catch (_) {}
+    // ★ URL routing: ?view=clients&customer={id} に更新 (popstate由来でない時)
+    if (!options.fromPopstate) {
+      try { pushModalUrl(id, null); } catch (_) {}
+    }
     // AI BRIEF で拡大した modal-content の幅を通常に戻す
     try { document.getElementById('modal-content').style.maxWidth = ''; } catch (_) {}
     ensureLineHistory_(c);
@@ -3375,6 +3425,13 @@ ${ctxText}${surveyTxt}`;
           if (p.dataset.cdpanel === key) p.removeAttribute('hidden');
           else p.setAttribute('hidden', '');
         });
+        // ★ URL routing Phase3: モーダル内タブ → ?tab=key
+        try {
+          const cur = window._fpCurrentClient;
+          if (cur && cur.id && typeof pushModalUrl === 'function' && !btn.dataset.fromPopstate) {
+            pushModalUrl(cur.id, key);
+          }
+        } catch (_) {}
         // ★ LINE 履歴タブ開いたら「既読」マーク
         if (key === 'line') {
           try {
@@ -7010,13 +7067,19 @@ ${client.name}さん、ありがとうございます。
     return { intent, reason, body, situation, proposals };
   }
 
-  function closeModal() {
+  function closeModal(options) {
+    options = options || {};
     document.getElementById('modal-overlay').style.display = 'none';
     // ★ 閉じたら復元 flag クリア
     try {
       localStorage.removeItem('fp-last-open-client');
       localStorage.removeItem('fp-last-open-mode');
     } catch (_) {}
+    window._fpCurrentClient = null;
+    // ★ URL routing: customer / tab パラメータ を 除去 (popstate由来でない時)
+    if (!options.fromPopstate) {
+      try { pushModalUrl(null, null); } catch (_) {}
+    }
   }
 
   // ============================
