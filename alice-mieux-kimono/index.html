@@ -1749,7 +1749,10 @@ function renderNewGrid(){
         ${it.motion?'<span class="motion-tag">360° MOTION</span>':''}
       </div>
       <div class="meta">
-        <div class="nm"><span class="pref">${it.pref}</span>${it.nm}<br><span class="pref">${it.sub}</span></div>
+        <div class="nm">${/^No\.\d+$/.test(it.nm)
+          ? `<span class="pref">${it.pref}</span>${it.sub}<br><span class="pref" style="font-family:var(--ui);font-size:9.5px;letter-spacing:.16em;color:var(--ink-3)">${it.id?.toUpperCase()||''}</span>`
+          : `<span class="pref">${it.pref}</span>${it.nm}<br><span class="pref">${it.sub}</span>`
+        }</div>
         <div class="price">${it.price}<small>(税込)</small></div>
       </div>
     </a>
@@ -1802,7 +1805,10 @@ function renderFeat3(){
         </div>
         <div class="info">
           <span class="tag">${it.pref||'新着'} ・ ${it.sub}</span>
-          <h3>${it.nm}<small>${it.id.toUpperCase()} ・ ${it.sub.toUpperCase()}</small></h3>
+          ${/^No\.\d+$/.test(it.nm)
+            ? `<h3>${it.sub}<small>${it.id.toUpperCase()}</small></h3>`
+            : `<h3>${it.nm}<small>${it.id.toUpperCase()} ・ ${it.sub.toUpperCase()}</small></h3>`
+          }
           <p class="desc">モデル着用イメージと 360°回転動画でじっくりご覧いただけます。</p>
           <div class="price"><span class="label">レンタル / 三日間</span><span class="amt">${it.price}<small></small></span></div>
           <button class="try" onclick="openBooking(JSON.parse(this.closest('.it').dataset.kim))">ご試着のご予約 ›</button>
@@ -1821,7 +1827,7 @@ function renderInstaGrid(){
     <a class="insta-c">
       <video src="assets/kimono/${it.video}" muted loop playsinline poster="assets/kimono/${it.img}" onmouseover="this.play()" onmouseout="this.pause()"></video>
       <span class="pic-icon">▶</span>
-      <span class="cap">${it.nm} ・ ${it.sub}</span>
+      <span class="cap">${/^No\.\d+$/.test(it.nm) ? `${it.sub} ・ ${it.id?.toUpperCase()||''}` : `${it.nm} ・ ${it.sub}`}</span>
     </a>
   `).join('');
 }
@@ -1999,7 +2005,7 @@ function renderRanking(key){
         <span class="num ${numClass}">${i+1}</span>
         <div class="pic"><img src="assets/kimono/${it.img}" alt="${it.nm}"></div>
         <div class="meta">
-          <div class="nm">${it.sub}<br>${it.nm}</div>
+          <div class="nm">${it.sub}${/^No\.\d+$/.test(it.nm) ? '' : '<br>'+it.nm}</div>
           <div class="price">${it.price}<small>(税込)</small></div>
         </div>
       </article>
@@ -2076,7 +2082,7 @@ function openBooking(kim){
   const min=new Date(now.getFullYear(),now.getMonth(),now.getDate()+14);
   M.calYear=min.getFullYear();M.calMonth=min.getMonth();
   document.getElementById('m-thumb').src='assets/kimono/'+kim.img;
-  document.getElementById('m-title').textContent=`${kim.nm} ・ ${kim.cat}`;
+  document.getElementById('m-title').textContent= /^No\.\d+$/.test(kim.nm) ? `${kim.cat}` : `${kim.nm} ・ ${kim.cat}`;
   document.getElementById('m-sub').textContent=`N° ${kim.no} ・ ご試着のご予約`;
   // Populate step 0 product detail
   const info = PROD_INFO[kim.nm];
@@ -2285,7 +2291,8 @@ document.getElementById('m-next').addEventListener('click',()=>{
     if(!mail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){ alert('メールアドレスを正しくご入力くださいませ。'); return; }
     if(!tel || !/^[\d\-\s\(\)\+]{10,}$/.test(tel)){ alert('お電話番号を正しくご入力くださいませ (10桁以上)。'); return; }
     if(!scene){ alert('ご利用シーンをお選びくださいませ。'); return; }
-    document.getElementById('r-item').innerHTML=`${M.kim.nm}（${M.kim.cat}・N° ${M.kim.no}）<small style="display:block;font-family:var(--ui);font-size:10.5px;color:var(--ink-3);letter-spacing:.08em;margin-top:4px;text-transform:uppercase;font-weight:600">RENTAL ${M.selDays}日間 ・ <span style="color:var(--red);font-family:var(--serif);font-size:14px;font-weight:700">${M.finalPriceStr}</span> (税込)</small>`;
+    const _kimDisp = /^No\.\d+$/.test(M.kim.nm) ? `${M.kim.cat}（N° ${M.kim.no}）` : `${M.kim.nm}（${M.kim.cat}・N° ${M.kim.no}）`;
+    document.getElementById('r-item').innerHTML=`${_kimDisp}<small style="display:block;font-family:var(--ui);font-size:10.5px;color:var(--ink-3);letter-spacing:.08em;margin-top:4px;text-transform:uppercase;font-weight:600">RENTAL ${M.selDays}日間 ・ <span style="color:var(--red);font-family:var(--serif);font-size:14px;font-weight:700">${M.finalPriceStr}</span> (税込)</small>`;
     document.getElementById('r-when').textContent=`${fmtDate(M.selDate)} ${M.selTime}〜`;
     document.getElementById('r-name').textContent=`${document.getElementById('f-lname').value} ${document.getElementById('f-fname').value} さま`;
     document.getElementById('r-mail').textContent=document.getElementById('f-mail').value;
