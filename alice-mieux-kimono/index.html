@@ -1749,7 +1749,7 @@ function renderNewGrid(){
       </div>
       <div class="meta">
         <div class="nm">${/^No\.\d+$/.test(it.nm)
-          ? `<span class="pref">${it.pref}</span>${it.sub}<br><span class="pref" style="font-family:var(--ui);font-size:9.5px;letter-spacing:.16em;color:var(--ink-3)">${it.id?.toUpperCase()||''}</span>`
+          ? `<span class="pref">${it.pref}</span>${it.sub}`
           : `<span class="pref">${it.pref}</span>${it.nm}<br><span class="pref">${it.sub}</span>`
         }</div>
         <div class="price">${it.price}<small>(税込)</small></div>
@@ -1805,8 +1805,8 @@ function renderFeat3(){
         <div class="info">
           <span class="tag">${it.pref||'新着'} ・ ${it.sub}</span>
           ${/^No\.\d+$/.test(it.nm)
-            ? `<h3>${it.sub}<small>${it.id.toUpperCase()}</small></h3>`
-            : `<h3>${it.nm}<small>${it.id.toUpperCase()} ・ ${it.sub.toUpperCase()}</small></h3>`
+            ? `<h3>${it.sub}</h3>`
+            : `<h3>${it.nm}<small>${it.sub.toUpperCase()}</small></h3>`
           }
           <p class="desc">モデル着用イメージと 360°回転動画でじっくりご覧いただけます。</p>
           <div class="price"><span class="label">レンタル / 三日間</span><span class="amt">${it.price}<small></small></span></div>
@@ -1818,17 +1818,32 @@ function renderFeat3(){
 }
 renderFeat3();
 
-/* ============ INSTA GRID (動的) ============ */
+/* ============ INSTA GRID — 店舗写真 + ピックアップきもの (重複回避) ============ */
 function renderInstaGrid(){
   const el = document.getElementById('insta-grid');
   if(!el) return;
-  el.innerHTML = KIMONO_BASELINE.slice(0, 6).map(it=>`
-    <a class="insta-c">
-      <video src="assets/kimono/${it.video}" muted loop playsinline poster="assets/kimono/${it.img}" onmouseover="this.play()" onmouseout="this.pause()"></video>
-      <span class="pic-icon">▶</span>
-      <span class="cap">${/^No\.\d+$/.test(it.nm) ? `${it.sub} ・ ${it.id?.toUpperCase()||''}` : `${it.nm} ・ ${it.sub}`}</span>
-    </a>
-  `).join('');
+  /* 店舗の雰囲気写真3枚 + 上で出てない後半きもの3枚 */
+  const items = [
+    { type:'img', src:'assets/alice/shop-02.png', cap:'店内 ・ アトリエ風景' },
+    { type:'vid', kid:'kimono-11', cap:'振袖 ・ ご試着の様子' },
+    { type:'img', src:'assets/alice/shop-03.png', cap:'お仕度ブース' },
+    { type:'vid', kid:'kimono-13', cap:'振袖 ・ お母さまとご一緒に' },
+    { type:'img', src:'assets/alice/shop-04.png', cap:'店舗外観' },
+    { type:'vid', kid:'kimono-16', cap:'振袖 ・ 360° MOTION' },
+  ];
+  el.innerHTML = items.map(it => {
+    if(it.type === 'vid'){
+      return `<a class="insta-c">
+        <video src="assets/kimono/output/${it.kid}/video.mp4" muted loop playsinline preload="none" poster="assets/kimono/output/${it.kid}/model.png" onmouseover="this.play()" onmouseout="this.pause()"></video>
+        <span class="pic-icon">▶</span>
+        <span class="cap">${it.cap}</span>
+      </a>`;
+    }
+    return `<a class="insta-c">
+      <img src="${it.src}" alt="${it.cap}" loading="lazy" decoding="async">
+      <span class="cap">${it.cap}</span>
+    </a>`;
+  }).join('');
 }
 renderInstaGrid();
 
