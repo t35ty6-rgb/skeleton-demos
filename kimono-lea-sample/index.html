@@ -193,12 +193,13 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   }
   .video-grid {
+    max-width: 720px;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
     margin-bottom: 24px;
   }
-  @media (max-width: 880px) { .video-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 880px) { .video-grid { grid-template-columns: repeat(2, 1fr); max-width: 100%; } }
   .vg-item {
     position: relative;
     background: #000;
@@ -382,11 +383,11 @@
 <div class="video-section">
   <div class="video-section-head">
     <div>
-      <h2>商品紹介動画｜全8商品</h2>
-      <div class="vs-sub">各13秒・1080×1080・SNS兼用の正方形｜サムネクリックで再生</div>
+      <h2>商品紹介動画｜実撮サンプル 2本</h2>
+      <div class="vs-sub">1080×1080・SNS兼用の正方形｜サムネクリックで再生</div>
     </div>
     <div style="display:flex;gap:8px;">
-      <a class="btn" href="videos/furisode.mp4" download>⬇ サンプルMP4</a>
+      <a class="btn" href="videos/sample1.mp4" download>⬇ サンプルMP4</a>
       <button class="btn btn-primary" onclick="document.querySelectorAll('.vg-player').forEach(v=>v.pause())">⏸ 全停止</button>
     </div>
   </div>
@@ -498,29 +499,28 @@ const PRODUCTS = [
    "tomesode08_main.jpg","tomesode08_back.jpg","tomesode08_obi.jpg","tomesode08_set.jpg","","","","","",""]
 ];
 
-const SLUGS = [
-  "furisode","homongi","shichigosan-boy","shichigosan-girl",
-  "sotsugyo","montsuki","yukata","tomesode"
+const VIDEOS = [
+  { slug: "sample1", label: "訪問着 サンプル①" },
+  { slug: "sample2", label: "訪問着 サンプル②" }
 ];
 
 function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 function renderVideoGrid() {
   const grid = document.getElementById("videoGrid");
-  grid.innerHTML = SLUGS.map((slug, idx) => `
-    <div class="vg-item" id="vg-${slug}" data-slug="${slug}" data-idx="${idx}">
-      <img class="vg-poster" src="videos/posters/${slug}.jpg" alt="${esc(PRODUCTS[idx][0])}">
-      <video class="vg-player" preload="none" playsinline src="videos/${slug}.mp4"></video>
+  grid.innerHTML = VIDEOS.map((v, idx) => `
+    <div class="vg-item" id="vg-${v.slug}" data-slug="${v.slug}" data-idx="${idx}">
+      <img class="vg-poster" src="videos/posters/${v.slug}.jpg" alt="${esc(v.label)}">
+      <video class="vg-player" preload="none" playsinline src="videos/${v.slug}.mp4"></video>
       <div class="vg-overlay"><div class="vg-play-btn">▶</div></div>
       <div class="vg-num">${idx+1}</div>
-      <div class="vg-label">${esc(PRODUCTS[idx][0])}</div>
+      <div class="vg-label">${esc(v.label)}</div>
     </div>
   `).join("");
 
   document.querySelectorAll(".vg-item").forEach(item => {
     item.addEventListener("click", () => {
       const video = item.querySelector("video");
-      // pause all others
       document.querySelectorAll(".vg-item").forEach(o => {
         if (o !== item) {
           o.classList.remove("playing","active");
@@ -542,11 +542,9 @@ function renderVideoGrid() {
   });
 }
 
-function playVideo(idx) {
-  const slug = SLUGS[idx];
-  const item = document.getElementById("vg-" + slug);
-  item.scrollIntoView({ behavior: "smooth", block: "center" });
-  setTimeout(() => item.click(), 500);
+function playVideo() {
+  const section = document.querySelector(".video-section");
+  section.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function renderProducts() {
@@ -571,7 +569,7 @@ function renderProducts() {
       <div class="product-head">
         <h2><span class="num">${idx+1}</span><span class="name">${esc(p[0])}</span></h2>
         <div>
-          <button class="video-btn" onclick="playVideo(${idx})">📹 動画</button>
+          <button class="video-btn" onclick="playVideo()" title="サンプル動画を見る">📹 動画サンプル</button>
           <button class="btn" data-row="${idx}" onclick="copyRow(${idx})">この商品をTSVコピー</button>
         </div>
       </div>
@@ -605,7 +603,7 @@ function copyPublicUrl() {
 function copyAllRows() {
   const header = COLUMNS.join("\t");
   const body = PRODUCTS.map(p => p.join("\t")).join("\n");
-  navigator.clipboard.writeText(header + "\n" + body).then(() => showToast("全8商品をTSVコピー（Sheets/Excel貼付OK）"));
+  navigator.clipboard.writeText(header + "\n" + body).then(() => showToast("全商品データをTSVコピー（Sheets/Excel貼付OK）"));
 }
 
 let toastTimer;
