@@ -1248,7 +1248,7 @@ window.fpReadyAfterAuth = function() {
     });
   })();
 
-  const ver = "20260623F-card-simple";
+  const ver = "20260623G-modal-lock";
   const scripts = [
     "life-events.js?v=" + ver,
     "recommender.js?v=" + ver,
@@ -1423,6 +1423,21 @@ window.fpReadyAfterAuth = function() {
         ticking = true;
       }
     }, { passive: true });
+
+    // ★ 2026-06-22 roundU: モーダル開閉 監視 → body scroll lock
+    (function () {
+      const checkModal = () => {
+        const ovs = [document.getElementById('modal-overlay'), document.getElementById('form-overlay')];
+        const anyOpen = ovs.some(o => o && (o.style.display === 'flex' || window.getComputedStyle(o).display === 'flex'));
+        document.body.classList.toggle('modal-open', anyOpen);
+      };
+      // MutationObserver で modal-overlay の style 変化を検知
+      ['modal-overlay', 'form-overlay'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) new MutationObserver(checkModal).observe(el, { attributes: true, attributeFilter: ['style'] });
+      });
+      setInterval(checkModal, 500);  // フォールバック
+    })();
 
     // ★ 2026-06-22 roundT: モバイル専用 ボックス ホーム (greet 圧縮 + 2x2 stats + today + 2quick)
     function buildMobileHome() {
@@ -1820,7 +1835,7 @@ window.fpReadyAfterAuth = function() {
 <script>
 (function(){
   // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
-  const FP_VERSION = "20260623F-card-simple";
+  const FP_VERSION = "20260623G-modal-lock";
   try { window.FP_VERSION = FP_VERSION; } catch(_) {}
   const loadTime = new Date();
   const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
