@@ -4127,8 +4127,8 @@ ${ctxText}${surveyTxt}`;
   function fmtDateRobust(raw) {
     if (!raw) return '';
     const s = String(raw);
-    // ★ オーナーfb 2026-06-23: UTC ISO (.000Z) は JST に変換してから日付化 (1日ずれ防止)
-    if (/T\d{2}:\d{2}.*Z$/.test(s)) {
+    // ★ オーナーfb 2026-06-23: 「T...」 を含む 全 ISO 文字列 (Z 有無問わず) は JST に 変換 (1日ずれ防止)
+    if (s.includes('T') && /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s)) {
       const d = new Date(s);
       if (!isNaN(d.getTime())) {
         return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
