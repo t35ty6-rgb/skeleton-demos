@@ -1886,18 +1886,26 @@
       if (c.name)         aiKeys.add('fp-ai-' + c.name);
       myBks.forEach(b => { if (b.userId) aiKeys.add('fp-ai-' + b.userId); if (b.ts) aiKeys.add('fp-ai-' + b.ts); if (b.name) aiKeys.add('fp-ai-' + b.name); });
       const meetingEvents = [];
+      // ★ オーナーfb 2026-06-23: 議事録の日付が1日ずれる → UTC を Asia/Tokyo で日付化
+      const toJstDateStr = (raw) => {
+        if (!raw) return null;
+        const d = new Date(raw);
+        if (isNaN(d.getTime())) return null;
+        return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+      };
       const collectFromEntry = (a) => {
         if (!a || (!a.summary && !a.key_concerns && !(typeof a.key_concerns === 'string'))) return;
-        let dateStr = a.date || String(a.bookingTs || '').slice(0, 10);
-        if (!dateStr && a.createdAt) dateStr = String(a.createdAt).slice(0, 10);
-        if (!dateStr && a.ts) dateStr = String(a.ts).slice(0, 10);
-        if (!dateStr) dateStr = new Date().toISOString().slice(0, 10);
+        let dateStr = (typeof a.date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(a.date))
+          ? a.date.slice(0, 10)
+          : (toJstDateStr(a.bookingTs) || toJstDateStr(a.createdAt) || toJstDateStr(a.ts) || toJstDateStr(new Date()));
         let kc = a.key_concerns;
         if (typeof kc === 'string') { try { kc = JSON.parse(kc); } catch (_) { kc = []; } }
         const concerns = (kc || []).slice(0, 3).join(' / ');
         const label = '面談実施' + (concerns ? ' — ' + concerns : '');
+        // dateStr "YYYY-MM-DD" を ローカル noon でDate化 (UTC midnightだと前日表示される)
+        const [yy, mm, dd] = dateStr.split('-').map(Number);
         meetingEvents.push({
-          date: new Date(dateStr),
+          date: new Date(yy, mm - 1, dd, 12, 0, 0),
           kind: 'meeting',
           cat: 'meeting',
           label,
