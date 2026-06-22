@@ -1248,7 +1248,7 @@ window.fpReadyAfterAuth = function() {
     });
   })();
 
-  const ver = "20260623B-hero-drawer";
+  const ver = "20260623C-mobile-native-home";
   const scripts = [
     "life-events.js?v=" + ver,
     "recommender.js?v=" + ver,
@@ -1423,6 +1423,75 @@ window.fpReadyAfterAuth = function() {
         ticking = true;
       }
     }, { passive: true });
+
+    // ★ 2026-06-22 roundS: モバイル時 ホーム画面に モバイル専用 markup を 注入 (PC版は CSS で hide)
+    function buildMobileHome() {
+      if (window.innerWidth > 768) return;
+      const dashView = document.querySelector('.view[data-view="dashboard"]');
+      if (!dashView) return;
+      if (dashView.querySelector('.m-screen-home')) return;  // 重複防止
+
+      const name = (window.__fp?.userEmail || 'FP').split('@')[0].slice(0, 12);
+      const today = new Date();
+      const wdays = ['日','月','火','水','木','金','土'];
+      const dateStr = `${today.getFullYear()}年 ${today.getMonth()+1}月 ${today.getDate()}日 (${wdays[today.getDay()]})`;
+      // クライアント数 = window.DUMMY_CLIENTS から
+      const totalClients = (window.DUMMY_CLIENTS || []).length;
+
+      const root = document.createElement('div');
+      root.className = 'm-screen-home';
+      root.innerHTML = `
+        <div class="m-greet">
+          <div class="m-greet-date">${dateStr}</div>
+          <div class="m-greet-line">おはよう、 <span class="m-greet-name">${name}</span> さん。</div>
+          <div class="m-greet-big">
+            <span class="m-greet-num" id="m-greet-num">0</span>
+            <span class="m-greet-unit">名 が フォロー待ち</span>
+          </div>
+        </div>
+
+        <div class="m-stats">
+          <div class="m-stat"><div class="m-stat-num" id="m-stat-clients">${totalClients}</div><div class="m-stat-label">顧客 合計</div></div>
+          <div class="m-stat"><div class="m-stat-num" id="m-stat-week">0</div><div class="m-stat-label">今週フォロ</div></div>
+          <div class="m-stat"><div class="m-stat-num" id="m-stat-line">0</div><div class="m-stat-label">未読 LINE</div></div>
+        </div>
+
+        <div class="m-quick-actions">
+          <button class="m-qa" id="m-qa-new-meeting">
+            <span class="m-qa-icon">⚡</span>
+            <span>急遽 面談</span>
+          </button>
+          <button class="m-qa is-secondary" id="m-qa-new-client">
+            <span class="m-qa-icon">+</span>
+            <span>新規 顧客</span>
+          </button>
+        </div>
+
+        <h2 class="m-section-h">今日 話すべき方</h2>
+      `;
+      dashView.insertBefore(root, dashView.firstChild);
+
+      // 数字 カウントアップ アニメ
+      const targetN = Math.min(totalClients, 9);
+      const numEl = document.getElementById('m-greet-num');
+      let cur = 0;
+      const tick = () => { cur++; if (numEl) numEl.textContent = cur; if (cur < targetN) setTimeout(tick, 70); };
+      setTimeout(tick, 220);
+
+      // 急遽面談 → サイドバー の同 CTA を click
+      document.getElementById('m-qa-new-meeting')?.addEventListener('click', () => {
+        document.getElementById('sidebar-quick-inperson')?.click();
+      });
+      // 新規顧客 → 既存 add-client-btn click
+      document.getElementById('m-qa-new-client')?.addEventListener('click', () => {
+        document.getElementById('add-client-btn')?.click();
+      });
+    }
+    // 初回 + tab 切替時 に build
+    setTimeout(buildMobileHome, 1500);
+    document.querySelectorAll('.m-tab[data-target-tab="dashboard"], .tab[data-tab="dashboard"]').forEach(t => {
+      t.addEventListener('click', () => setTimeout(buildMobileHome, 300));
+    });
 
     // ★ 2026-06-22 roundR: 顧客タブ active 時のみ FAB 表示 (body class で CSS切替)
     function updateTabClassMobile() {
@@ -1673,7 +1742,7 @@ window.fpReadyAfterAuth = function() {
 <script>
 (function(){
   // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
-  const FP_VERSION = "20260623B-hero-drawer";
+  const FP_VERSION = "20260623C-mobile-native-home";
   try { window.FP_VERSION = FP_VERSION; } catch(_) {}
   const loadTime = new Date();
   const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
