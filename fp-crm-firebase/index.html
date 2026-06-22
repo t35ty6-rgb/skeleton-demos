@@ -713,6 +713,9 @@
 
 <div id="mobile-backdrop" aria-hidden="true"></div>
 
+<!-- ★ 2026-06-22 roundR: モバイル 顧客タブ FAB「+ 新規顧客」 -->
+<button id="mobile-fab-new-client" aria-label="新規顧客を登録" type="button">+</button>
+
 <div class="shell">
 
   <!-- ===== Sidebar (dark) ===== -->
@@ -1245,7 +1248,7 @@ window.fpReadyAfterAuth = function() {
     });
   })();
 
-  const ver = "20260622Y-html-overflow";
+  const ver = "20260622Z-mobile-native";
   const scripts = [
     "life-events.js?v=" + ver,
     "recommender.js?v=" + ver,
@@ -1420,6 +1423,21 @@ window.fpReadyAfterAuth = function() {
         ticking = true;
       }
     }, { passive: true });
+
+    // ★ 2026-06-22 roundR: 顧客タブ active 時のみ FAB 表示 (body class で CSS切替)
+    function updateTabClassMobile() {
+      const active = document.querySelector('.tab.active[data-tab]');
+      document.body.classList.toggle('tab-clients-active', active?.dataset.tab === 'clients');
+    }
+    document.querySelectorAll('.tab[data-tab]').forEach(t => t.addEventListener('click', () => setTimeout(updateTabClassMobile, 100)));
+    document.querySelectorAll('.m-tab[data-target-tab]').forEach(t => t.addEventListener('click', () => setTimeout(updateTabClassMobile, 100)));
+    setTimeout(updateTabClassMobile, 500);
+
+    // FAB クリック → 既存「+新規顧客を登録」 ボタンを click (機能流用)
+    document.getElementById('mobile-fab-new-client')?.addEventListener('click', () => {
+      const btn = document.getElementById('add-client-btn');
+      if (btn) btn.click();
+    });
   })();
 
   // Sidebar search → focus client search and switch tab
@@ -1655,7 +1673,7 @@ window.fpReadyAfterAuth = function() {
 <script>
 (function(){
   // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
-  const FP_VERSION = "20260622Y-html-overflow";
+  const FP_VERSION = "20260622Z-mobile-native";
   try { window.FP_VERSION = FP_VERSION; } catch(_) {}
   const loadTime = new Date();
   const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
