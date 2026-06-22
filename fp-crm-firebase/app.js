@@ -565,6 +565,29 @@
             <div class="senior-action-contact">⏰ 最終接触: <strong>${days == null ? '未記録' : days + '日前'}</strong></div>
           </div>
 
+          ${(function(){
+            // 状況に応じたすぐ送れるLINE文案を生成
+            const fpHandleName = ((window.__fp?.tenantName || '').match(/^[^\s—\-]+/) || ['先生'])[0];
+            let quickMsg = '';
+            const kpi = kpis[0];
+            if (kpi?.id === 'cancel') {
+              quickMsg = `${c.name}さん、先日はご予定が合わず失礼しました。\nよろしければ改めてお時間を作れますか？\n候補日を3つご連絡いただければ調整いたします 🙏\n— ${fpHandleName}`;
+            } else if (kpi?.id === 'stalled') {
+              const prop = (c.proposals || []).slice().reverse().find(p => p.result === '検討中' || p.result === '提案中');
+              quickMsg = `${c.name}さん、お世話になっております。\n先日ご提案した「${prop?.title || '件'}」について、\n何かご不明点はございますか？\n気軽にご連絡ください😊\n— ${fpHandleName}`;
+            } else if (kpi?.id === 'event' && nextEvent) {
+              quickMsg = `${c.name}さん、いつもありがとうございます。\n${nextEvent.title}が近づいてまいりましたね。\nお役に立てることがあればぜひご相談ください！\n— ${fpHandleName}`;
+            } else if (kpi?.id === 'dormant') {
+              quickMsg = `${c.name}さん、ご無沙汰しております 😊\nお元気でいらっしゃいますか？\n最近お伝えしたい情報がいくつかございます。\n30分ほどお時間はありますか？\n— ${fpHandleName}`;
+            } else {
+              quickMsg = `${c.name}さん、こんにちは！\nいつもありがとうございます。\n何かお役に立てることがあればお気軽にご連絡ください😊\n— ${fpHandleName}`;
+            }
+            return `
+          <div class="senior-card-quick-msg" style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:9px;padding:11px 14px;margin:12px 0 14px;">
+            <div style="font-size:10px;font-weight:900;color:#065F46;letter-spacing:0.08em;margin-bottom:5px;">💬 すぐ送れる文案</div>
+            <div style="font-size:12px;color:#0F172A;line-height:1.7;white-space:pre-wrap;">${escapeHtml(quickMsg)}</div>
+          </div>`;
+          })()}
           <div class="senior-card-buttons">
             <button class="senior-btn senior-btn-primary" data-brief-open="${c.id}">
               <i data-lucide="message-square-text"></i>
@@ -572,7 +595,7 @@
             </button>
             <button class="senior-btn senior-btn-secondary" data-brief-detail="${c.id}">
               <i data-lucide="user-round"></i>
-              <span>この方の詳細を見る</span>
+              <span>詳細を見る</span>
             </button>
           </div>
         </div>`;
@@ -838,7 +861,12 @@
       let merged = 0;
       liveMsgs.forEach(m => {
         if (!m.userId || !m.text) return;
-        const c = clients.find(x => x.lineFriendId === m.userId);
+        let c = clients.find(x => x.lineFriendId === m.userId);
+        if (!c && m.name) {
+          // Fallback: match by display name, then fix lineFriendId for future matching
+          c = clients.find(x => String(x.name || '').trim() === String(m.name || '').trim());
+          if (c && m.userId) c.lineFriendId = m.userId;
+        }
         if (!c) return;
         if (!Array.isArray(c.lineHistory)) c.lineHistory = [];
         const ts = String(m.ts || '').slice(0, 19);
@@ -4088,14 +4116,19 @@ ${ctxText}${surveyTxt}`;
         </div>
         <div id="fp-fam-msg" style="font-size:11.5px;font-weight:700;margin-bottom:10px;"></div>
         <style>
-          /* 家系図 木構造 — 世代ごと 横並び + 縦に 連結線 */
+          /* 家計図 — 世代縦積み + カード型 + SVG接続線風CSS */
           .fp-fam-tree{display:flex;flex-direction:column;gap:0;font-family:'Noto Sans JP',sans-serif;}
-          .fp-fam-gen-row{position:relative;padding:14px 16px 16px;border-radius:10px;margin-bottom:8px;}
-          .fp-fam-gen-row + .fp-fam-gen-row::before{content:'';position:absolute;left:50%;top:-8px;width:2px;height:8px;background:#CBD5E1;}
-          .fp-fam-gen-label{font-size:11px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;}
-          .fp-fam-gen-cards{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;}
-          .fp-fam-card{position:relative;min-width:148px;padding:14px 16px 12px;border-radius:11px;font-family:'Noto Sans JP',sans-serif;}
-          .fp-fam-card .fp-fam-rel{font-size:11px;font-weight:900;letter-spacing:0.05em;margin-bottom:5px;}
+          .fp-fam-gen-row{position:relative;padding:16px 18px 18px;border-radius:12px;margin-bottom:0;}
+          .fp-fam-gen-row + .fp-fam-gen-row{margin-top:2px;}
+          .fp-fam-gen-row::before{content:'';display:block;width:2px;height:20px;background:linear-gradient(180deg,#CBD5E1,#94A3B8);margin:0 auto -2px;position:relative;left:0;}
+          .fp-fam-gen-row:first-child::before{display:none;}
+          .fp-fam-gen-label{font-size:10px;font-weight:900;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+          .fp-fam-gen-label::after{content:'';flex:1;height:1px;background:#E2E8F0;}
+          .fp-fam-gen-cards{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;position:relative;}
+          .fp-fam-gen-cards::before{content:'';position:absolute;left:50%;top:-16px;width:2px;height:16px;background:#CBD5E1;display:none;}
+          .fp-fam-card{position:relative;min-width:140px;padding:13px 16px 11px;border-radius:12px;font-family:'Noto Sans JP',sans-serif;transition:transform 0.15s ease,box-shadow 0.15s ease;}
+          .fp-fam-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.12);}
+          .fp-fam-card .fp-fam-rel{font-size:10px;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:4px;}
           .fp-fam-card .fp-fam-name{font-size:15.5px;font-weight:900;color:#0F172A;margin-bottom:4px;line-height:1.3;letter-spacing:-0.01em;}
           .fp-fam-card .fp-fam-age{font-size:12px;color:#475569;line-height:1.4;font-weight:600;}
           .fp-fam-card .fp-fam-edit{position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.85);border:1px solid rgba(0,0,0,0.1);border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:12px;padding:0;}

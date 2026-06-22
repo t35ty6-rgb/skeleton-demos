@@ -1499,7 +1499,9 @@
                <button class="btn-mini" data-open-memo="${tsEnc}" style="background:#f8fafc;border:1px solid #e5e7eb;color:#374151;">📝 メモ${savedTasksCount > 0 ? ' ('+savedTasksCount+'件)' : ''}</button>
                ${cancelBtnHtml}`;
       } else {
-        cta = cancelBtnHtml;
+        cta = `<button class="btn-rec-start" data-rec-start="${tsEnc}" data-rec-mode="inperson" style="background:linear-gradient(135deg,#7C3AED,#6D28D9);">● 対面録画開始</button>
+               <button class="btn-mini" data-open-memo="${tsEnc}" style="background:#f8fafc;border:1px solid #e5e7eb;color:#374151;">📝 メモ${savedTasksCount > 0 ? ' ('+savedTasksCount+'件)' : ''}</button>
+               ${cancelBtnHtml}`;
       }
       const recPill = rec === 'recording' ? '<span class="rec-pill recording">● 録画中</span>'
         : rec === 'saved' ? '<span class="rec-pill saved">📼 録画保存済</span>' : '';
@@ -2132,6 +2134,77 @@
         }
       }
     });
+  }
+
+  // 対面モード録画: webcam + マイクで録画 → 同じ AI議事録パイプラインへ
+  async function startWebcamRecording(bookingTs) {
+    const R = window._fpRecorder;
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 },
+      });
+    } catch (e) {
+      alert('カメラ・マイクのアクセスを許可してください\n\n詳細: ' + (e?.message || e));
+      return;
+    }
+    // 録画プレビュー (小さく右下に表示)
+    let previewEl = document.getElementById('fp-webcam-preview');
+    if (!previewEl) {
+      previewEl = document.createElement('video');
+      previewEl.id = 'fp-webcam-preview';
+      previewEl.muted = true;
+      previewEl.autoplay = true;
+      previewEl.playsInline = true;
+      previewEl.style.cssText = 'position:fixed;bottom:80px;right:20px;width:180px;height:120px;border-radius:10px;border:3px solid #DC2626;z-index:9990;object-fit:cover;box-shadow:0 8px 24px rgba(0,0,0,0.4);';
+      document.body.appendChild(previewEl);
+    }
+    previewEl.srcObject = stream;
+    const chunks = [];
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus'
+      : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4';
+    const mr = new MediaRecorder(stream, { mimeType });
+    mr.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+    mr.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      if (previewEl) { previewEl.remove(); }
+      const blob = new Blob(chunks, { type: mimeType });
+      R.blob = blob;
+      R.bookingTs = bookingTs;
+      R.mediaRecorder = null;
+      // GAS に録画状態を保存
+      try { await fetch(CLOUD_RUN_BASE + '/api/recording/stop?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }); } catch (_) {}
+      // 既存の AI 議事録パイプライン (stopScreenRecording の後段と同じ)
+      try {
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        const fname = 'webcam-recording-' + Date.now() + '.' + ext;
+        const arrayBuf = await blob.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuf);
+        let b64 = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          b64 += btoa(String.fromCharCode(...bytes.subarray(i, i + chunkSize)));
+        }
+        const upRes = await fetch(CLOUD_RUN_BASE + '/api/upload-recording', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ts: bookingTs, filename: fname, mimeType, base64: b64 }),
+        });
+        console.log('[webcam] upload result:', await upRes.json());
+      } catch (upErr) { console.warn('[webcam] upload fail:', upErr); }
+      await fetchLiveData();
+      renderLeadHubInner();
+    };
+    mr.start(3000);
+    R.mediaRecorder = mr;
+    R.bookingTs = bookingTs;
+    R.blob = null;
+    // GAS に録画開始を通知
+    try { await fetch(CLOUD_RUN_BASE + '/api/recording/start?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }); } catch (_) {}
+    // ★ 同じく stopScreenRecording ボタン = 停止
+    await fetchLiveData();
+    renderLeadHubInner();
   }
 
   // 画面録画 → 停止時に Drive の顧客フォルダへ自動アップロード
@@ -3988,6 +4061,12 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       btn.addEventListener('click', async () => {
         const ts = btn.dataset.recStart;
         const zoomUrl = btn.dataset.zoom;
+        if (btn.dataset.recMode === 'inperson') {
+            await startWebcamRecording(ts);
+            await fetchLiveData();
+            renderLeadHubInner();
+            return;
+          }
         // ★ オーナーfb (v AH): Zoom pre-open popup が画面共有ダイアログを覆ってた。
         // 修正: pre-open は 画面外/極小 で 開いて 即 blur + CRM focus 戻し。 ユーザには見えないように。
         const sw = window.screen.availWidth || screen.width;
@@ -4564,7 +4643,11 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
           let merged = 0;
           msgs.forEach(m => {
             if (!m.userId || !m.text) return;
-            const c = window.DUMMY_CLIENTS.find(x => x.lineFriendId === m.userId);
+            let c = window.DUMMY_CLIENTS.find(x => x.lineFriendId === m.userId);
+            if (!c && m.name) {
+              c = window.DUMMY_CLIENTS.find(x => String(x.name || '').trim() === String(m.name || '').trim());
+              if (c && m.userId) c.lineFriendId = m.userId;
+            }
             if (!c) return;
             if (!Array.isArray(c.lineHistory)) c.lineHistory = [];
             const ts = String(m.ts || '').slice(0, 19);
@@ -4646,6 +4729,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
           }
         }
       } catch (sErr) { console.warn('survey→client merge fail:', sErr); }
+      try { checkPendingDateSelections(); } catch(_) {}
 
       const detail = (liveData.users ? liveData.users.length + 'ユーザー' : '') +
                      (liveData.bookings ? ' / ' + liveData.bookings.length + '予約' : '');
@@ -4659,6 +4743,89 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       showSyncIndicator('error', e.message || '');
       return liveData; // キャッシュがあれば返す
     }
+  }
+
+  // Scan line_messages for customer date selections → show FP confirmation popup
+  function checkPendingDateSelections() {
+    if (!liveData) return;
+    const msgs = liveData.line_messages || [];
+    const surveys = liveData.survey_answers || [];
+    const bookings = liveData.bookings || [];
+    const DATE_SEL_PAT = /候補([1-3１２３])\s*[（(]([^）)]+)[）)]\s*でお願いします/;
+    msgs.forEach(m => {
+      if (!m.text || !m.userId || m.direction === 'out') return;
+      const match = m.text.match(DATE_SEL_PAT);
+      if (!match) return;
+      const alreadyConfirmed = bookings.some(b => b.userId === m.userId && b.date && b.status !== 'cancelled');
+      if (alreadyConfirmed) return;
+      const pending = surveys.find(s => s.userId === m.userId && !s.confirmedSlot && (s.q6_候補1 || s.q7_候補2 || s.q8_候補3));
+      if (!pending) return;
+      const alertKey = 'fp-date-alert-' + m.userId + '-' + String(m.ts || '').slice(0, 16);
+      if (localStorage.getItem(alertKey)) return;
+      localStorage.setItem(alertKey, '1');
+      const userName = m.name || (window.DUMMY_CLIENTS || []).find(c => c.lineFriendId === m.userId)?.name || 'お客様';
+      showDateConfirmModal(m.userId, userName, match[2], m.text);
+    });
+  }
+
+  function showDateConfirmModal(userId, userName, dateTimeStr, originalText) {
+    const year = new Date().getFullYear();
+    const dmMatch = dateTimeStr.match(/(\d{1,2})月(\d{1,2})日/);
+    const timeMatch = dateTimeStr.match(/(\d{1,2}:\d{2})/);
+    if (!dmMatch) return;
+    const dateStr = year + '-' + dmMatch[1].padStart(2, '0') + '-' + dmMatch[2].padStart(2, '0');
+    const slotStr = timeMatch ? timeMatch[1] : '';
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.72);backdrop-filter:blur(6px);z-index:10090;display:flex;align-items:center;justify-content:center;padding:20px;font-family:"Noto Sans JP",sans-serif;';
+    overlay.innerHTML = `
+      <div style="background:#fff;max-width:500px;width:100%;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.35);overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#F59E0B,#D97706);color:#fff;padding:20px 24px;">
+          <div style="font-size:10px;font-weight:800;letter-spacing:0.2em;margin-bottom:4px;opacity:0.9;">📅 日程確認リクエスト</div>
+          <h3 style="margin:0;font-size:18px;font-weight:900;">お客様から日程選択が届きました</h3>
+        </div>
+        <div style="padding:24px;">
+          <div style="background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:800;color:#92400E;letter-spacing:0.06em;margin-bottom:5px;">📩 ${escapeHtml(userName)}様からのメッセージ</div>
+            <div style="font-size:14px;font-weight:800;color:#1F1A12;">${escapeHtml(originalText)}</div>
+          </div>
+          <div style="font-size:14px;color:#374151;margin-bottom:6px;line-height:1.8;">
+            <strong>${escapeHtml(userName)}様</strong>が <strong style="color:#5B5BF0;">${escapeHtml(dateTimeStr)}</strong> を選択しました。<br>
+            確定してよろしいですか？
+          </div>
+          <div style="font-size:11.5px;color:#6B7280;margin-bottom:20px;">確定すると Zoom URL が自動生成・送信され、Googleカレンダーに登録されます。</div>
+          <div id="fp-date-confirm-status" style="font-size:12.5px;font-weight:700;margin-bottom:14px;min-height:18px;"></div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button id="fp-date-confirm-skip" style="background:#fff;color:#6B7280;border:1px solid #D1D5DB;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">後で確認</button>
+            <button id="fp-date-confirm-ok" style="background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;border:none;padding:11px 26px;border-radius:8px;font-size:13.5px;font-weight:900;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(91,91,240,0.3);">✓ 確定して承りましたを送る</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#fp-date-confirm-skip').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#fp-date-confirm-ok').addEventListener('click', async () => {
+      const statusEl = overlay.querySelector('#fp-date-confirm-status');
+      const okBtn = overlay.querySelector('#fp-date-confirm-ok');
+      okBtn.disabled = true; okBtn.textContent = '処理中...';
+      statusEl.style.color = '#5B5BF0'; statusEl.textContent = 'Zoom URL を発行・カレンダー登録中…';
+      try {
+        const r = await fetch(CLOUD_RUN_BASE + '/api/confirm-slot', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, dateStr, slotStr, name: userName }),
+        });
+        const d = await r.json();
+        if (d.ok || d.success) {
+          statusEl.style.color = '#059669'; statusEl.textContent = '✅ 確定完了 — 「承りました」メッセージを送信しました';
+          setTimeout(() => overlay.remove(), 2200);
+          fetchLiveData().then(() => { if (currentSubview === 'leadHub') renderLeadHubInner(); });
+        } else {
+          statusEl.style.color = '#DC2626'; statusEl.textContent = '❌ ' + (d.error || '確定処理に失敗しました');
+          okBtn.disabled = false; okBtn.textContent = '✓ 確定して承りましたを送る';
+        }
+      } catch (e) {
+        statusEl.style.color = '#DC2626'; statusEl.textContent = '❌ 通信エラー: ' + e.message;
+        okBtn.disabled = false; okBtn.textContent = '✓ 確定して承りましたを送る';
+      }
+    });
   }
 
   function renderLeadFunnel() {
@@ -6300,16 +6467,23 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
     }
     async function sendMsg(msg) {
       const client = (window.DUMMY_CLIENTS || []).find(c => c.id === msg.clientId);
-      if (!client || !client.lineFriendId) { alert('LINE 連携情報が見つかりません'); return false; }
+      if (!client) { alert(`送信失敗: ${msg.clientName}様の顧客データが見つかりません`); return false; }
+      if (!client.lineFriendId || client.lineFriendId.startsWith('U-lead-') || client.lineFriendId.startsWith('demo-')) {
+        alert(`${msg.clientName}様はLINE未連携です。\n\n顧客台帳でLINE友だちIDを確認してください。`); return false;
+      }
       try {
         const r = await fetch(CLOUD_RUN_BASE + '/api/send-line', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: client.lineFriendId, text: msg.body }),
         });
-        const d = await r.json();
+        let d;
+        try { d = await r.json(); } catch (_) { d = { ok: false, error: 'サーバーエラー (レスポンス形式異常)' }; }
         if (d.ok) { markSent(msg.id, msg.clientId); return true; }
-        alert('送信失敗: ' + (d.error || '')); return false;
-      } catch (e) { alert('送信失敗: ' + e.message); return false; }
+        const errMsg = d.error || (r.status === 429 ? 'LINE 送信数上限 (月間制限)' : r.status >= 500 ? 'サーバーエラー' : '送信失敗');
+        alert(`${msg.clientName}様への送信に失敗しました\n\n原因: ${errMsg}`); return false;
+      } catch (e) {
+        alert(`通信エラー: ${e.message}\n\nネットワーク接続を確認してください`); return false;
+      }
     }
 
     document.querySelectorAll('[data-send]').forEach(btn => {
