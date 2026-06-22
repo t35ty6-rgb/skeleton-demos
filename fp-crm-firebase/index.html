@@ -1248,7 +1248,7 @@ window.fpReadyAfterAuth = function() {
     });
   })();
 
-  const ver = "20260623J-table-compact";
+  const ver = "20260623K-audit-fixes";
   const scripts = [
     "life-events.js?v=" + ver,
     "recommender.js?v=" + ver,
@@ -1392,15 +1392,25 @@ window.fpReadyAfterAuth = function() {
       toggle(true);
     });
 
-    // 既存 .tab click → ボトムナビ active 同期
+    // 既存 .tab click → ボトムナビ active 同期 + トップバータイトル 更新
+    const tabLabelMap = {
+      dashboard: 'ホーム', clients: '顧客', timeline: 'ライフイベント', meetingHistory: '面談履歴',
+      leadHub: '新規相談', distributionHub: '配信', dormantFollowup: 'ご無沙汰',
+      tagsHub: 'タグ管理', birthdayTab: '誕生日', calendarTab: '年末配布', settingsHub: '設定',
+    };
     document.querySelectorAll('.tab[data-tab]').forEach(t => {
       t.addEventListener('click', () => {
         const id = t.dataset.tab;
         const mtab = document.querySelector('.m-tab[data-target-tab="'+id+'"]');
+        const tt = document.getElementById('mobile-current-title');
         if (mtab) {
           document.querySelectorAll('.m-tab').forEach(x => x.classList.toggle('is-active', x === mtab));
-          const tt = document.getElementById('mobile-current-title');
           if (tt) tt.textContent = mtab.querySelector('span')?.textContent || '';
+        } else {
+          // ボトムナビに無いタブ (配信/ご無沙汰/タグ/誕生日/年末配布/設定) は 「もっと」 をアクティブにして タイトルだけ更新
+          const moreTab = document.getElementById('mtab-more');
+          if (moreTab) document.querySelectorAll('.m-tab').forEach(x => x.classList.toggle('is-active', x === moreTab));
+          if (tt) tt.textContent = tabLabelMap[id] || id;
         }
       });
     });
@@ -1835,7 +1845,7 @@ window.fpReadyAfterAuth = function() {
 <script>
 (function(){
   // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
-  const FP_VERSION = "20260623J-table-compact";
+  const FP_VERSION = "20260623K-audit-fixes";
   try { window.FP_VERSION = FP_VERSION; } catch(_) {}
   const loadTime = new Date();
   const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
