@@ -673,12 +673,44 @@
 </head>
 <body data-prod="1">
 
-<!-- ★ 2026-06-22 roundO: モバイル ハンバーガーボタン (768px 未満で表示) -->
-<button id="mobile-hamburger" aria-label="メニューを開く" type="button">
-  <span class="mh-bar"></span>
-  <span class="mh-bar"></span>
-  <span class="mh-bar"></span>
-</button>
+<!-- ★ 2026-06-22 roundP: モバイル トップバー (固定 56px) -->
+<header id="mobile-topbar" class="m-only">
+  <button id="mobile-hamburger" aria-label="メニュー" type="button">
+    <span class="mh-bar"></span><span class="mh-bar"></span><span class="mh-bar"></span>
+  </button>
+  <div id="mobile-title-wrap">
+    <div class="m-eyebrow">FP COMPASS</div>
+    <div id="mobile-current-title">ホーム</div>
+  </div>
+  <button id="mobile-user-btn" aria-label="アカウント" type="button">
+    <span id="mobile-user-avatar">FP</span>
+  </button>
+</header>
+
+<!-- ★ 2026-06-22 roundP: モバイル ボトムナビ (固定 5タブ) -->
+<nav id="mobile-bottomnav" class="m-only" aria-label="メイン">
+  <button class="m-tab" data-mtab="dashboard" data-target-tab="dashboard">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9 12 2 21 9v11a2 2 0 0 1-2 2h-4v-7H10v7H5a2 2 0 0 1-2-2z"/></svg>
+    <span>ホーム</span>
+  </button>
+  <button class="m-tab" data-mtab="clients" data-target-tab="clients">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>顧客</span>
+  </button>
+  <button class="m-tab" data-mtab="meetingHistory" data-target-tab="meetingHistory">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+    <span>履歴</span>
+  </button>
+  <button class="m-tab" data-mtab="leadHub" data-target-tab="leadHub">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+    <span>相談</span>
+  </button>
+  <button class="m-tab" data-mtab="more" id="mtab-more">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+    <span>もっと</span>
+  </button>
+</nav>
+
 <div id="mobile-backdrop" aria-hidden="true"></div>
 
 <div class="shell">
@@ -1213,7 +1245,7 @@ window.fpReadyAfterAuth = function() {
     });
   })();
 
-  const ver = "20260622U-mobile";
+  const ver = "20260622V-mobile-first";
   const scripts = [
     "life-events.js?v=" + ver,
     "recommender.js?v=" + ver,
@@ -1335,8 +1367,59 @@ window.fpReadyAfterAuth = function() {
     };
     ham.addEventListener('click', () => toggle());
     backdrop.addEventListener('click', () => toggle(false));
-    // ESC で閉じる
     document.addEventListener('keydown', e => { if (e.key === 'Escape') toggle(false); });
+
+    // ★ 2026-06-22 roundP: ボトムナビ クリック → 該当 .tab を 同期 click
+    document.querySelectorAll('.m-tab[data-target-tab]').forEach(mt => {
+      mt.addEventListener('click', () => {
+        const target = mt.dataset.targetTab;
+        const tab = document.querySelector('.tab[data-tab="'+target+'"]');
+        if (tab) tab.click();
+        // active state を 即時反映 (タブ click の async 待たない)
+        document.querySelectorAll('.m-tab').forEach(t => t.classList.toggle('is-active', t === mt));
+        // タイトル更新
+        const t = document.getElementById('mobile-current-title');
+        if (t) t.textContent = mt.querySelector('span')?.textContent || '';
+        toggle(false);
+      });
+    });
+    // 「もっと」 タブ → drawer 開く
+    document.getElementById('mtab-more')?.addEventListener('click', () => {
+      document.querySelectorAll('.m-tab').forEach(t => t.classList.toggle('is-active', t.id === 'mtab-more'));
+      toggle(true);
+    });
+
+    // 既存 .tab click → ボトムナビ active 同期
+    document.querySelectorAll('.tab[data-tab]').forEach(t => {
+      t.addEventListener('click', () => {
+        const id = t.dataset.tab;
+        const mtab = document.querySelector('.m-tab[data-target-tab="'+id+'"]');
+        if (mtab) {
+          document.querySelectorAll('.m-tab').forEach(x => x.classList.toggle('is-active', x === mtab));
+          const tt = document.getElementById('mobile-current-title');
+          if (tt) tt.textContent = mtab.querySelector('span')?.textContent || '';
+        }
+      });
+    });
+    // 初期: dashboard active
+    document.querySelector('.m-tab[data-target-tab="dashboard"]')?.classList.add('is-active');
+
+    // ★ モバイル ユーザーボタン → アカウントページへ
+    document.getElementById('mobile-user-btn')?.addEventListener('click', () => {
+      window.location.href = '/account.html';
+    });
+
+    // ★ スクロール検知 → トップバー frosted glass (signature subtle motion)
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          document.body.dataset.scrolled = window.scrollY > 4 ? '1' : '0';
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }, { passive: true });
   })();
 
   // Sidebar search → focus client search and switch tab
@@ -1572,7 +1655,7 @@ window.fpReadyAfterAuth = function() {
 <script>
 (function(){
   // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
-  const FP_VERSION = "20260622U-mobile";
+  const FP_VERSION = "20260622V-mobile-first";
   try { window.FP_VERSION = FP_VERSION; } catch(_) {}
   const loadTime = new Date();
   const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
