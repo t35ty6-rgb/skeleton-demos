@@ -187,7 +187,7 @@
   //   - ブラウザ back / forward → popstate → URL読取 → activateTab(name, {fromPopstate:true})
   //   - リロード / 直アクセス → 初期 URL 読取 → activateTab で 復元
   //   メリット: F5でも 同じ画面戻る / Playwright E2E URL直アクセス / Bug再現が URL共有 だけで済む
-  const VALID_VIEWS = ['dashboard','clients','timeline','leadHub','distributionHub','birthdayTab','calendarTab','settingsHub','dormantFollowup','tagsHub','kpi'];
+  const VALID_VIEWS = ['dashboard','clients','timeline','meetingHistory','leadHub','distributionHub','birthdayTab','calendarTab','settingsHub','dormantFollowup','tagsHub','kpi'];
   function activateTab(name, options) {
     options = options || {};
     state.activeTab = name;
@@ -201,6 +201,12 @@
     if (name === 'dashboard') renderDashboard();
     if (name === 'clients') renderClients();
     if (name === 'timeline') renderGlobalTimeline();
+    if (name === 'meetingHistory') {
+      if (window.LineApp && window.LineApp.renderMeetingHistory) {
+        if (!window._lineInited) { window.LineApp.init(); window._lineInited = true; }
+        window.LineApp.renderMeetingHistory();
+      }
+    }
     if (['leadHub', 'distributionHub', 'birthdayTab', 'calendarTab', 'settingsHub', 'dormantFollowup', 'tagsHub'].indexOf(name) >= 0) {
       if (window.LineApp) {
         if (!window._lineInited) {
@@ -1087,10 +1093,20 @@
     mergeLineActivity();
     // ★ 全 client に 議事録 自動タグ を 一括 反映 (顧客一覧でも 出るように)
     try { autoTagAllClients(); } catch (e) { console.warn('autoTagAllClients:', e); }
+    // ★ 2026-06-22 roundI: タグ filter UI を 動的描画
+    try { renderClientTagSegmentBar(); } catch (e) { console.warn('tagSegmentBar:', e); }
     const q = state.search.trim().toLowerCase();
     let list = clients.slice();
     if (state.statusFilter !== 'all') {
       list = list.filter(c => c.status === state.statusFilter);
+    }
+    // ★ タグ filter (state.tagFilter は タグID配列、 OR マッチ = どれか1つでもタグついてる)
+    state.tagFilter = state.tagFilter || [];
+    if (state.tagFilter.length > 0) {
+      list = list.filter(c => {
+        const myTags = (typeof getClientTags === 'function') ? getClientTags(c.id) : [];
+        return state.tagFilter.some(t => myTags.includes(t));
+      });
     }
     if (q) {
       list = list.filter(c =>
@@ -2847,37 +2863,119 @@
                 </span>
                 <i data-lucide="wand-2" class="cd-flow-step-icon"></i>
               </button>
-              <!-- 右: クイックアクション グリッド (Zoom今すぐ / Zoom予約 / 候補日 / タグ / 自分で書く / 顧客情報) -->
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <!-- ★ 2026-06-22 roundN: 3列×2行 横長レイアウト + 文言短縮 -->
+              <div class="fp-qa-grid">
                 ${c.lineFriendId ? `
-                  <button class="fp-quick-act" data-quick-instant="${escapeHtml(c.id)}" style="background:#fff;border:1.5px solid #2D8CFF;color:#0F172A;padding:9px 8px;border-radius:9px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:50px;justify-content:center;line-height:1.25;">
-                    <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#2D8CFF"/><text x="50" y="62" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="700" font-size="28" fill="#fff" letter-spacing="-1">zoom</text></svg>
-                    <span>⚡ 今すぐ</span>
+                  <button class="fp-qa-pop" data-accent="zoom" data-quick-instant="${escapeHtml(c.id)}">
+                    <span class="fp-qa-tip">＼ 1クリック開始 ／</span>
+                    <span class="fp-qa-capsule">
+                      <span class="fp-qa-dot"></span>
+                      <span class="fp-qa-label">
+                        <span class="fp-qa-label-main">⚡ 今すぐ Zoom</span>
+                        <span class="fp-qa-label-sub">URL 自動送付</span>
+                      </span>
+                      <span class="fp-qa-arrow">→</span>
+                    </span>
                   </button>
-                  <button class="fp-quick-act" data-quick-schedule="${escapeHtml(c.id)}" style="background:#fff;border:1.5px solid #2D8CFF;color:#0F172A;padding:9px 8px;border-radius:9px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:50px;justify-content:center;line-height:1.25;">
-                    <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#2D8CFF"/><text x="50" y="62" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="700" font-size="28" fill="#fff" letter-spacing="-1">zoom</text></svg>
-                    <span>📅 日時指定</span>
+                  <button class="fp-qa-pop" data-accent="schedule" data-quick-schedule="${escapeHtml(c.id)}">
+                    <span class="fp-qa-tip">＼ 候補日 確定 ／</span>
+                    <span class="fp-qa-capsule">
+                      <span class="fp-qa-dot"></span>
+                      <span class="fp-qa-label">
+                        <span class="fp-qa-label-main">📅 日時指定</span>
+                        <span class="fp-qa-label-sub">日付を 決めて 予約</span>
+                      </span>
+                      <span class="fp-qa-arrow">→</span>
+                    </span>
                   </button>
-                  <button class="fp-quick-act" data-quick-slots="${escapeHtml(c.id)}" style="background:#fff;border:1.5px solid #E2E8F0;color:#475569;padding:9px 8px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:50px;justify-content:center;line-height:1.25;">
-                    <span style="font-size:18px;">📅</span>
-                    <span>候補日 3つ</span>
+                  <button class="fp-qa-pop" data-accent="slots" data-quick-slots="${escapeHtml(c.id)}">
+                    <span class="fp-qa-tip">＼ LINE 送信 ／</span>
+                    <span class="fp-qa-capsule">
+                      <span class="fp-qa-dot"></span>
+                      <span class="fp-qa-label">
+                        <span class="fp-qa-label-main">🗓 候補日 3つ</span>
+                        <span class="fp-qa-label-sub">お客様 タップ</span>
+                      </span>
+                      <span class="fp-qa-arrow">→</span>
+                    </span>
                   </button>
                 ` : ''}
-                <button class="fp-quick-act" data-quick-tag="${escapeHtml(c.id)}" style="background:#fff;border:1.5px solid #E2E8F0;color:#475569;padding:9px 8px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:50px;justify-content:center;line-height:1.25;">
-                  <svg width="20" height="20" viewBox="0 0 32 32" fill="none"><path d="M11 5 L20 5 C21.1 5 22 5.9 22 7 L22 15 C22 15.5 21.8 16 21.4 16.4 L14.4 23.4 C13.6 24.2 12.3 24.2 11.5 23.4 L4.5 16.4 C3.7 15.6 3.7 14.3 4.5 13.5 L11 7 Z" fill="#E58FAE" stroke="#14213D" stroke-width="2.5" stroke-linejoin="round"/><circle cx="16.5" cy="10.5" r="1.6" fill="#14213D"/></svg>
-                  <span>タグ</span>
+                <button class="fp-qa-pop" data-accent="tag" data-quick-tag="${escapeHtml(c.id)}">
+                  <span class="fp-qa-tip">＼ セグメント ／</span>
+                  <span class="fp-qa-capsule">
+                    <span class="fp-qa-dot"></span>
+                    <span class="fp-qa-label">
+                      <span class="fp-qa-label-main">🏷 タグ</span>
+                      <span class="fp-qa-label-sub">分類 / 絞込</span>
+                    </span>
+                    <span class="fp-qa-arrow">→</span>
+                  </span>
                 </button>
-                <button class="modal-brief-btn fp-quick-act" data-line-brief="${c.id}" style="background:#fff;color:#059669;border:1.5px solid #10B981;padding:9px 8px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:50px;justify-content:center;line-height:1.25;">
-                  <span style="font-size:18px;">✍</span>
-                  <span>自分で書く</span>
+                <button class="modal-brief-btn fp-qa-pop" data-accent="brief" data-line-brief="${c.id}">
+                  <span class="fp-qa-tip">＼ 自由文 ／</span>
+                  <span class="fp-qa-capsule">
+                    <span class="fp-qa-dot"></span>
+                    <span class="fp-qa-label">
+                      <span class="fp-qa-label-main">✍ 自分で書く</span>
+                      <span class="fp-qa-label-sub">手入力 LINE</span>
+                    </span>
+                    <span class="fp-qa-arrow">→</span>
+                  </span>
                 </button>
-                <button class="cd-flow-edit fp-quick-act" id="modal-edit-btn" style="background:#fff;color:#475569;border:1.5px solid #E2E8F0;padding:9px 8px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:50px;justify-content:center;line-height:1.25;">
-                  <span style="font-size:18px;">✏</span>
-                  <span>顧客情報</span>
+                <button class="cd-flow-edit fp-qa-pop" data-accent="info" id="modal-edit-btn">
+                  <span class="fp-qa-tip">＼ 編集 ／</span>
+                  <span class="fp-qa-capsule">
+                    <span class="fp-qa-dot"></span>
+                    <span class="fp-qa-label">
+                      <span class="fp-qa-label-main">✏ 顧客情報</span>
+                      <span class="fp-qa-label-sub">名前/家族 編集</span>
+                    </span>
+                    <span class="fp-qa-arrow">→</span>
+                  </span>
                 </button>
               </div>
-              <style>@keyframes fp-draft-cta-pulse{0%,100%{transform:translateY(0) scale(1);box-shadow:0 8px 24px rgba(249,115,22,0.55),0 0 0 4px rgba(255,255,255,0.5)}50%{transform:translateY(-2.5px) scale(1.025);box-shadow:0 16px 36px rgba(249,115,22,0.72),0 0 0 7px rgba(255,255,255,0.6)}}@keyframes fp-draft-cta-gradient{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-              .fp-quick-act:hover{border-color:#5B5BF0 !important;background:#F8FAFC !important;}</style>
+              <style>
+                @keyframes fp-draft-cta-pulse{0%,100%{transform:translateY(0) scale(1);box-shadow:0 8px 24px rgba(249,115,22,0.55),0 0 0 4px rgba(255,255,255,0.5)}50%{transform:translateY(-2.5px) scale(1.025);box-shadow:0 16px 36px rgba(249,115,22,0.72),0 0 0 7px rgba(255,255,255,0.6)}}
+                @keyframes fp-draft-cta-gradient{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+                /* ★ 2026-06-22 roundK: gold CTA 統一 (元: bg白+青/緑border、 新: white+gold-border capsule) */
+                .fp-quick-act {
+                  background: #fff !important;
+                  border: 1.5px solid #C19A3A !important;
+                  color: #1F2A3F !important;
+                  padding: 11px 14px !important;
+                  border-radius: 12px !important;
+                  font-size: 12.5px !important;
+                  font-weight: 700 !important;
+                  cursor: pointer;
+                  font-family: 'Hiragino Sans','Noto Sans JP',sans-serif !important;
+                  display: flex !important;
+                  align-items: center !important;
+                  gap: 10px !important;
+                  min-height: 56px !important;
+                  text-align: left !important;
+                  transition: background .12s, border-color .12s, transform .12s, box-shadow .15s;
+                  box-shadow: 0 2px 6px rgba(193,154,58,0.12);
+                  letter-spacing: 0.02em;
+                }
+                .fp-quick-act:hover {
+                  background: #FBF5E3 !important;
+                  border-color: #9A5A18 !important;
+                  transform: translateY(-1px);
+                  box-shadow: 0 6px 14px rgba(193,154,58,0.22);
+                }
+                .fp-quick-act:active { transform: translateY(0); }
+                .fp-qa-icon {
+                  flex-shrink: 0; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+                  background: #FBF5E3; color: #9A5A18; border-radius: 10px;
+                  font-size: 16px;
+                }
+                .fp-qa-label {
+                  display: flex; flex-direction: column; gap: 2px; line-height: 1.3; flex: 1;
+                }
+                .fp-qa-sub {
+                  font-size: 10.5px; color: #6B7280; font-weight: 600; letter-spacing: 0.02em;
+                }
+              </style>
             </div>
 
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;justify-content:flex-end;">
@@ -3010,10 +3108,22 @@
                 })()}
               </div>
               <div class="cd-line-composer">
+                ${!c.lineFriendId ? `
+                  <!-- ★ 2026-06-22 roundK: LINE ID 後付け 紐付け input — 顧客登録 後に LINE 友だち追加してもらった時の流れ -->
+                  <div style="background:#FBF5E3;border:1.5px solid #C19A3A;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+                    <div style="font-size:11px;font-weight:800;color:#9A5A18;letter-spacing:0.12em;margin-bottom:6px;">🔗 LINE 友だち ID を 後から 紐付け</div>
+                    <p style="font-size:11.5px;color:#5e4d1a;line-height:1.65;margin:0 0 10px;">先に Zoom などで お会いした お客様。 後で 公式LINE を 友だち追加してもらったら、 ここで <strong>LINE userId</strong> を 入れて 紐付けてください。 LINE 履歴も 紐付きます。</p>
+                    <div style="display:flex;gap:8px;align-items:stretch;">
+                      <input type="text" id="cd-lineid-attach-input" placeholder="U+32文字 の LINE userId (例: U6f07ed9af4afce1bb...)" style="flex:1;padding:8px 12px;font-size:12px;font-family:'JetBrains Mono',monospace;border:1.5px solid #E8D9A8;border-radius:7px;background:#fff;">
+                      <button id="cd-lineid-attach-btn" data-cid="${escapeHtml(c.id)}" class="btn-cta-primary" style="padding:8px 18px;font-size:12.5px;border-radius:7px;justify-content:center;"><span>紐付ける</span></button>
+                    </div>
+                    <div id="cd-lineid-attach-msg" style="font-size:11px;color:#9A5A18;margin-top:8px;min-height:14px;"></div>
+                  </div>
+                ` : ''}
                 <textarea id="cd-line-input" placeholder="メッセージを入力... (Cmd+Enter で送信)"></textarea>
                 <div class="cd-line-composer-foot">
-                  <span class="cd-line-composer-meta">${c.lineFriendId ? '✓ LINE連携済' : '⚠ LINE friend ID 未登録'}</span>
-                  <button class="cd-line-ai-quick" id="cd-line-ai-quick" data-cid="${escapeHtml(c.id)}" title="AI が直近の履歴から返信案を生成 → textarea に挿入 → 編集して送信" style="background:linear-gradient(135deg,#6366F1,#4338CA);color:#fff;border:none;padding:8px 14px;border-radius:6px;font-weight:800;cursor:pointer;font-size:12.5px;font-family:inherit;letter-spacing:0.04em;margin-right:8px;">✨ AI で返信案</button>
+                  <span class="cd-line-composer-meta">${c.lineFriendId ? '✓ LINE連携済' : '⚠ LINE friend ID 未登録 (上の枠で 紐付け)'}</span>
+                  <button class="cd-line-ai-quick btn-mini-action" id="cd-line-ai-quick" data-cid="${escapeHtml(c.id)}" title="AI が直近の履歴から返信案を生成 → textarea に挿入 → 編集して送信" style="margin-right:8px;"><span class="icon">✨</span>AI で返信案</button>
                   <button class="cd-line-send-btn" id="cd-line-send"${c.lineFriendId ? '' : ' disabled'}>
                     <i data-lucide="send"></i><span>送信</span>
                   </button>
@@ -3708,6 +3818,47 @@ ${ctxText}${surveyTxt}`;
         }
       });
     }
+    // ★ 2026-06-22 roundK: LINE ID 後付け 紐付け
+    const lineidBtn = document.getElementById('cd-lineid-attach-btn');
+    if (lineidBtn) {
+      lineidBtn.addEventListener('click', async () => {
+        const input = document.getElementById('cd-lineid-attach-input');
+        const msg = document.getElementById('cd-lineid-attach-msg');
+        const cid = lineidBtn.dataset.cid;
+        const val = (input.value || '').trim();
+        if (!/^U[a-f0-9]{32}$/i.test(val)) {
+          msg.textContent = '✗ LINE userId の 形式が違います (U+ 32文字 の英数)';
+          msg.style.color = '#B91C1C';
+          return;
+        }
+        msg.textContent = '⏳ Firestore に 紐付け中…';
+        msg.style.color = '#9A5A18';
+        lineidBtn.disabled = true;
+        try {
+          if (!window.__fp?.functions) throw new Error('functions 未初期化');
+          // Firestore に直接書き込み (admin SDK 経由ではなく client SDK)
+          const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
+          const tid = window.__fp.tenantId;
+          await updateDoc(doc(window.__fp.db, `tenants/${tid}/customers/${cid}`), {
+            lineFriendId: val,
+            userId: val,  // legacy 互換
+            lineLinkedAt: new Date(),
+          });
+          // ローカル DUMMY_CLIENTS 更新
+          const lc = (window.DUMMY_CLIENTS || []).find(x => x.id === cid);
+          if (lc) { lc.lineFriendId = val; lc.userId = val; }
+          msg.textContent = '✓ LINE ID 紐付け完了。 これで LINE 送受信できます。';
+          msg.style.color = '#065F46';
+          // モーダル再描画
+          setTimeout(() => { try { openClientModal(cid); } catch (_) {} }, 1200);
+        } catch (e) {
+          msg.textContent = '✗ 紐付け失敗: ' + (e.message || e);
+          msg.style.color = '#B91C1C';
+          lineidBtn.disabled = false;
+        }
+      });
+    }
+
     // ★ AI で返信案 を 1 クリック生成 (textarea に挿入、 編集して送信)
     const aiQuickBtn = document.getElementById('cd-line-ai-quick');
     if (aiQuickBtn) {
@@ -8113,6 +8264,46 @@ ${client.name}さん、ありがとうございます。
       console.log('[autoTagAll] updated', changed, 'clients');
     }
   }
+  // ★ 2026-06-22 roundI: 顧客台帳タグセグメント filter UI
+  function renderClientTagSegmentBar() {
+    const bar = document.getElementById('client-tag-segment-bar');
+    const chipsEl = document.getElementById('client-tag-chips');
+    const clearBtn = document.getElementById('client-tag-clear');
+    if (!bar || !chipsEl) return;
+    const master = (typeof getTagsMaster === 'function') ? getTagsMaster() : [];
+    if (!master.length) { bar.style.display = 'none'; return; }
+    // 各タグの該当顧客数を計算
+    const tagCount = {};
+    master.forEach(t => { tagCount[t.id] = 0; });
+    (clients || []).forEach(c => {
+      const ids = (typeof getClientTags === 'function') ? getClientTags(c.id) : [];
+      ids.forEach(id => { if (tagCount.hasOwnProperty(id)) tagCount[id]++; });
+    });
+    // 0件タグは隠す
+    const visible = master.filter(t => tagCount[t.id] > 0);
+    if (!visible.length) { bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+    state.tagFilter = state.tagFilter || [];
+    chipsEl.innerHTML = visible.map(t => {
+      const on = state.tagFilter.includes(t.id);
+      const bg = on ? (t.color || '#9A5A18') : '#fff';
+      const fg = on ? '#fff' : (t.color || '#1F2A3F');
+      const border = t.color || '#9A5A18';
+      return `<button data-client-tag-filter="${escapeHtml(t.id)}" style="background:${bg};color:${fg};border:1.5px solid ${border};padding:5px 12px;border-radius:99px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:'Hiragino Sans',sans-serif;letter-spacing:0.02em;display:inline-flex;align-items:center;gap:5px;transition:all .12s;">${escapeHtml(t.label || t.id)}<span style="opacity:.75;font-weight:700;font-size:10.5px;">${tagCount[t.id]}</span></button>`;
+    }).join('');
+    clearBtn.style.display = state.tagFilter.length > 0 ? '' : 'none';
+    chipsEl.querySelectorAll('[data-client-tag-filter]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tid = btn.dataset.clientTagFilter;
+        const idx = state.tagFilter.indexOf(tid);
+        if (idx >= 0) state.tagFilter.splice(idx, 1);
+        else state.tagFilter.push(tid);
+        renderClients();
+      });
+    });
+    clearBtn.onclick = () => { state.tagFilter = []; renderClients(); };
+  }
+
   function getTagsMaster() {
     try { return JSON.parse(localStorage.getItem('fp-tags-master') || '[]'); } catch (_) { return []; }
   }
