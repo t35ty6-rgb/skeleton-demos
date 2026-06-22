@@ -4126,8 +4126,23 @@ ${ctxText}${surveyTxt}`;
   }
   function fmtDateRobust(raw) {
     if (!raw) return '';
-    const m = String(raw).match(/(\d{4})-(\d{2})-(\d{2})/);
+    const s = String(raw);
+    // ★ オーナーfb 2026-06-23: UTC ISO (.000Z) は JST に変換してから日付化 (1日ずれ防止)
+    if (/T\d{2}:\d{2}.*Z$/.test(s)) {
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+      }
+    }
+    const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
     return m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+  }
+  // ★ オーナーfb 2026-06-23: 録画開始時刻 (Zoom開始 = ai.ts/createdAt) を HH:MM JST で表示
+  function fmtJstTime(raw) {
+    if (!raw) return '';
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' });
   }
 
   // ============================
@@ -4561,6 +4576,7 @@ ${ctxText}${surveyTxt}`;
                 <div>
                   <div class="fp-meeting-card-eyebrow" style="font-size:13px !important;font-weight:900 !important;color:#1B3A5C !important;letter-spacing:0 !important;">📹 Zoom ${zN}回目 ${aiData.ts || aiData.createdAt ? `<span style="font-size:11px;color:#9CA3AF;font-weight:700;margin-left:8px;font-family:Menlo,monospace;">#${(()=>{ const d=new Date(aiData.ts || aiData.createdAt); return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0'); })()}</span>` : ''}</div>
                   <div class="fp-meeting-card-date" style="font-size:14px;font-weight:700;">${escapeHtml(fmtDateRobust(b.date))} ${escapeHtml(fmtTimeRobust(b.time))} 面談</div>
+                  ${aiData.ts || aiData.createdAt ? `<div class="fp-meeting-card-recstart" style="font-size:11.5px;color:#6B7280;font-weight:600;margin-top:3px;">録画開始: ${escapeHtml(fmtDateRobust(aiData.ts || aiData.createdAt))} ${escapeHtml(fmtJstTime(aiData.ts || aiData.createdAt))}</div>` : ''}
                 </div>
                 <div class="fp-meeting-card-actions">
                   ${b.driveUrl ? `<a href="${escapeHtml(b.driveUrl)}" target="_blank" class="fp-btn fp-btn-sm fp-btn-gold">🎥 録画を見る</a>` : ''}
@@ -4640,7 +4656,8 @@ ${ctxText}${surveyTxt}`;
                 <div class="fp-meeting-card-head">
                   <div>
                     <div class="fp-meeting-card-eyebrow" style="font-size:13px !important;font-weight:900 !important;color:#1B3A5C !important;letter-spacing:0 !important;">📹 Zoom ${zN}回目 ${a.ts || a.createdAt ? `<span style="font-size:11px;color:#9CA3AF;font-weight:700;margin-left:8px;font-family:Menlo,monospace;">#${(()=>{ const d=new Date(a.ts || a.createdAt); return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0'); })()}</span>` : ''}</div>
-                    <div class="fp-meeting-card-date" style="font-size:14px;font-weight:700;">${escapeHtml(fmtDateRobust(a.date) || String(a.bookingTs || a.createdAt || '').slice(0,10))} 面談</div>
+                    <div class="fp-meeting-card-date" style="font-size:14px;font-weight:700;">${escapeHtml(fmtDateRobust(a.date) || fmtDateRobust(a.bookingTs || a.createdAt || ''))} 面談</div>
+                    ${a.ts || a.createdAt ? `<div class="fp-meeting-card-recstart" style="font-size:11.5px;color:#6B7280;font-weight:600;margin-top:3px;">録画開始: ${escapeHtml(fmtDateRobust(a.ts || a.createdAt))} ${escapeHtml(fmtJstTime(a.ts || a.createdAt))}</div>` : ''}
                   </div>
                 </div>
                 ${a.transcript ? `
