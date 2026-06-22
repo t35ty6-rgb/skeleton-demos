@@ -2703,7 +2703,7 @@
 
           <!-- ★ オーナーfb 2026-06-20: 「今すぐ Zoom 開始」 + 「日時指定 Zoom 予約」 — 顧客名直下、 Zoom 公式アイコン -->
           ${c.lineFriendId ? `
-            <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="cd-zoom-pair" style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
               <button id="cd-instant-zoom-btn" data-client-id="${escapeHtml(c.id)}" style="background:#fff;color:#0F172A;border:2px solid #2D8CFF;padding:12px 14px;border-radius:14px;font-size:14.5px;font-weight:900;cursor:pointer;font-family:'Noto Sans JP',sans-serif;letter-spacing:0.005em;box-shadow:0 6px 18px rgba(45,140,255,0.22);display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:66px;transition:transform .12s,box-shadow .12s;">
                 <svg width="34" height="34" viewBox="0 0 100 100" style="flex-shrink:0;border-radius:10px;box-shadow:0 2px 6px rgba(45,140,255,0.30);">
                   <defs><linearGradient id="zg-inst-${escapeHtml(c.id)}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#4A9BFF"/><stop offset="100%" stop-color="#2D8CFF"/></linearGradient></defs>
