@@ -673,6 +673,14 @@
 </head>
 <body data-prod="1">
 
+<!-- ★ 2026-06-22 roundO: モバイル ハンバーガーボタン (768px 未満で表示) -->
+<button id="mobile-hamburger" aria-label="メニューを開く" type="button">
+  <span class="mh-bar"></span>
+  <span class="mh-bar"></span>
+  <span class="mh-bar"></span>
+</button>
+<div id="mobile-backdrop" aria-hidden="true"></div>
+
 <div class="shell">
 
   <!-- ===== Sidebar (dark) ===== -->
@@ -1205,7 +1213,7 @@ window.fpReadyAfterAuth = function() {
     });
   })();
 
-  const ver = "20260622T-3col-displaygrid";
+  const ver = "20260622U-mobile";
   const scripts = [
     "life-events.js?v=" + ver,
     "recommender.js?v=" + ver,
@@ -1309,7 +1317,27 @@ window.fpReadyAfterAuth = function() {
       const crumb = CRUMB_MAP[tab.dataset.tab];
       if (crumb) document.getElementById('current-crumb').textContent = crumb;
     }
+    // ★ 2026-06-22 roundO: モバイルで タブ クリック後 サイドバー閉じる
+    if (e.target.closest('.tab[data-tab]')) {
+      document.body.classList.remove('mobile-nav-open');
+    }
   });
+
+  // ★ モバイル ハンバーガー click → サイドバー slide-in/out
+  (function () {
+    const ham = document.getElementById('mobile-hamburger');
+    const backdrop = document.getElementById('mobile-backdrop');
+    if (!ham || !backdrop) return;
+    const toggle = (open) => {
+      const isOpen = open === undefined ? !document.body.classList.contains('mobile-nav-open') : open;
+      document.body.classList.toggle('mobile-nav-open', isOpen);
+      ham.setAttribute('aria-label', isOpen ? 'メニューを閉じる' : 'メニューを開く');
+    };
+    ham.addEventListener('click', () => toggle());
+    backdrop.addEventListener('click', () => toggle(false));
+    // ESC で閉じる
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') toggle(false); });
+  })();
 
   // Sidebar search → focus client search and switch tab
   document.getElementById('sidebar-search-input').addEventListener('focus', (e) => {
@@ -1544,7 +1572,7 @@ window.fpReadyAfterAuth = function() {
 <script>
 (function(){
   // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
-  const FP_VERSION = "20260622T-3col-displaygrid";
+  const FP_VERSION = "20260622U-mobile";
   try { window.FP_VERSION = FP_VERSION; } catch(_) {}
   const loadTime = new Date();
   const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
