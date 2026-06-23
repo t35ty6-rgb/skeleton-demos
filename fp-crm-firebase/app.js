@@ -3120,14 +3120,23 @@
                   <!-- ★ 2026-06-22 roundK: LINE ID 後付け 紐付け input — 顧客登録 後に LINE 友だち追加してもらった時の流れ -->
                   <div style="background:#FBF5E3;border:1.5px solid #C19A3A;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
                     <div style="font-size:11px;font-weight:800;color:#9A5A18;letter-spacing:0.12em;margin-bottom:6px;">🔗 LINE 友だち ID を 後から 紐付け</div>
-                    <p style="font-size:11.5px;color:#5e4d1a;line-height:1.65;margin:0 0 10px;">先に Zoom などで お会いした お客様。 後で 公式LINE を 友だち追加してもらったら、 ここで <strong>LINE userId</strong> を 入れて 紐付けてください。 LINE 履歴も 紐付きます。</p>
+                    <p style="font-size:11.5px;color:#5e4d1a;line-height:1.65;margin:0 0 10px;">先に Zoom などで お会いした お客様。 後で 公式LINE を 友だち追加してもらったら、 ここで <strong>LINE userId</strong> を 入れて 紐付けてください。 LINE 履歴も 紐付きます。 取得方法 は LINE連携済 顧客 を 開くと 同じ枠に 「📋 ID をコピー」 ボタン が 出ます。</p>
                     <div style="display:flex;gap:8px;align-items:stretch;">
                       <input type="text" id="cd-lineid-attach-input" placeholder="U+32文字 の LINE userId (例: U6f07ed9af4afce1bb...)" style="flex:1;padding:8px 12px;font-size:12px;font-family:'JetBrains Mono',monospace;border:1.5px solid #E8D9A8;border-radius:7px;background:#fff;">
                       <button id="cd-lineid-attach-btn" data-cid="${escapeHtml(c.id)}" class="btn-cta-primary" style="padding:8px 18px;font-size:12.5px;border-radius:7px;justify-content:center;"><span>紐付ける</span></button>
                     </div>
                     <div id="cd-lineid-attach-msg" style="font-size:11px;color:#9A5A18;margin-top:8px;min-height:14px;"></div>
                   </div>
-                ` : ''}
+                ` : `
+                  <!-- ★ オーナーfb 2026-06-23: LINE 連携済 客 で userId を 表示+コピー (他客への 紐付け用) -->
+                  <div style="background:#F0FDF4;border:1.5px solid #06C755;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <div style="flex:1 1 auto;min-width:0;">
+                      <div style="font-size:11px;font-weight:800;color:#065F46;letter-spacing:0.12em;margin-bottom:4px;">🔗 LINE userId (この客の)</div>
+                      <code id="cd-lineid-show" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#0F172A;background:#fff;padding:4px 8px;border-radius:5px;border:1px solid #BBF7D0;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.lineFriendId)}</code>
+                    </div>
+                    <button id="cd-lineid-copy" data-uid="${escapeHtml(c.lineFriendId)}" style="background:#06C755;color:#fff;border:none;padding:8px 14px;border-radius:7px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0;">📋 コピー</button>
+                  </div>
+                `}
                 <textarea id="cd-line-input" placeholder="メッセージを入力... (Cmd+Enter で送信)"></textarea>
                 <div class="cd-line-composer-foot">
                   <span class="cd-line-composer-meta">${c.lineFriendId ? '✓ LINE連携済' : '⚠ LINE friend ID 未登録 (上の枠で 紐付け)'}</span>
@@ -3823,6 +3832,33 @@ ${ctxText}${surveyTxt}`;
           status.style.color = '#DC2626'; status.textContent = '❌ 失敗: ' + (e.message || e).slice(0, 200);
           instantBtn.disabled = false; instantBtn.innerHTML = origHtml;
           instantBtn.style.opacity = '1'; instantBtn.style.cursor = 'pointer';
+        }
+      });
+    }
+    // ★ オーナーfb 2026-06-23: LINE userId コピー (LINE連携済客)
+    const lineidCopyBtn = document.getElementById('cd-lineid-copy');
+    if (lineidCopyBtn) {
+      lineidCopyBtn.addEventListener('click', async () => {
+        const uid = lineidCopyBtn.dataset.uid || '';
+        try {
+          await navigator.clipboard.writeText(uid);
+          const orig = lineidCopyBtn.innerHTML;
+          lineidCopyBtn.innerHTML = '✓ コピー済';
+          lineidCopyBtn.style.background = '#065F46';
+          setTimeout(() => { lineidCopyBtn.innerHTML = orig; lineidCopyBtn.style.background = '#06C755'; }, 1500);
+        } catch (e) {
+          // fallback: select the code element
+          const code = document.getElementById('cd-lineid-show');
+          if (code) {
+            const range = document.createRange();
+            range.selectNodeContents(code);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            try { document.execCommand('copy'); } catch (_) {}
+            sel.removeAllRanges();
+          }
+          alert('LINE userId: ' + uid);
         }
       });
     }
