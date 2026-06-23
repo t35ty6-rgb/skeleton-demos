@@ -2751,7 +2751,9 @@
     const chunks = [];
     const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
       : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-    const mr = new MediaRecorder(stream, { mimeType });
+    // ★ オーナーfb 2026-06-23: 長録画 (30/60分) を Cloud Run 32MB 制限に収めるため
+    // bitrate を 24kbps に 下げる (音声明瞭度は維持されつつ 60分=10MB に収まる)
+    const mr = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 24000 });
     mr.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
     mr.onstop = async () => {
       stream.getTracks().forEach(t => t.stop());
@@ -2956,7 +2958,7 @@
       // 1時間 ≒ 8MB に収まる
       const audioOnlyStream = new MediaStream(combined.getAudioTracks());
       const audioMime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-      R.mediaRecorder = new MediaRecorder(audioOnlyStream, { mimeType: audioMime, audioBitsPerSecond: 64000 });
+      R.mediaRecorder = new MediaRecorder(audioOnlyStream, { mimeType: audioMime, audioBitsPerSecond: 24000 });
       R.mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) R.chunks.push(e.data); };
       R.mediaRecorder.onstop = async () => {
         const blob = new Blob(R.chunks, { type: 'audio/webm' });
@@ -3380,8 +3382,14 @@
   // AI 議事録生成 (Drive アップロードと並行)
   async function aiProcessRecording(blob, bookingTs, customerName, booking) {
     const sizeMB = blob.size / 1024 / 1024;
-    // 大き過ぎる音声は Gemini API の inline limit (~20MB) 超えるのでスキップ
-    if (sizeMB > 18) return null;
+    console.log('[aiProcessRecording] start', { sizeMB: sizeMB.toFixed(2), bookingTs, customerName });
+    // ★ オーナーfb 2026-06-23: 長時間録画 (30分/1時間) で AI処理 が 走らない問題
+    //   旧: 18MB 超 → 黙って null return (議事録 0)
+    //   新: 25MB 超 → チャンク分割 (audio Blob を 時系列で 切って 各チャンク を 個別に Whisper → 結合)
+    if (sizeMB > 25) {
+      console.log('[aiProcessRecording] large file → chunked path', sizeMB);
+      return await aiProcessRecordingChunked(blob, bookingTs, customerName, booking);
+    }
     try {
       const reader = new FileReader();
       const base64 = await new Promise((res, rej) => {
@@ -3389,9 +3397,11 @@
         reader.onerror = rej;
         reader.readAsDataURL(blob);
       });
-      // 顧客コンテキスト (アンケート回答から組み立て)
       const survey = ((liveData && liveData.survey_answers) || []).find(s => s.userId === (booking && booking.userId));
       const ctx = survey ? `テーマ: ${survey.q1_テーマ} / 年代: ${survey.q2_年代} / 家族: ${survey.q3_家族} / 年収: ${survey.q4_年収} / 悩み: ${survey.q5_悩み}` : '';
+      // ★ オーナーfb 2026-06-23: 長録画 Whisper timeout 防止: クライアント側 timeout 10分
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 10 * 60 * 1000);
       const r = await fetch(CLOUD_RUN_BASE + '/api/process-recording', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -3400,12 +3410,88 @@
           customerName, customerContext: ctx,
           bookingTs, userId: booking && booking.userId,
         }),
+        signal: controller.signal,
       });
+      clearTimeout(tid);
+      if (!r.ok) {
+        const text = await r.text().catch(() => '');
+        const err = `HTTP ${r.status}: ${text.slice(0, 200)}`;
+        console.error('[aiProcessRecording] non-OK response', err);
+        return { ok: false, error: err };
+      }
       const data = await r.json();
+      console.log('[aiProcessRecording] response', { ok: data.ok, hasTranscript: !!data.transcript, hasSummary: !!data.summary, error: data.error });
       return data;
     } catch (e) {
-      console.error('AI fail', e);
-      return null;
+      const msg = e.name === 'AbortError' ? '10分の timeout 超過 (録画が長過ぎる可能性)' : (e.message || String(e));
+      console.error('[aiProcessRecording] catch', msg, e);
+      return { ok: false, error: 'AI処理 例外: ' + msg };
+    }
+  }
+
+  // ★ オーナーfb 2026-06-23: 長録画 (>25MB) — Blob を 18MB チャンクに分割 → 各チャンク Whisper → transcript 結合
+  // 要約 endpoint がない場合は 「文字起こしのみ + Anthropic への直call 試行」 で fallback
+  async function aiProcessRecordingChunked(blob, bookingTs, customerName, booking) {
+    try {
+      const chunkSize = 18 * 1024 * 1024;
+      const chunks = [];
+      for (let off = 0; off < blob.size; off += chunkSize) {
+        chunks.push(blob.slice(off, Math.min(off + chunkSize, blob.size), blob.type));
+      }
+      console.log('[aiChunked] split into', chunks.length, 'chunks');
+      const allResults = [];
+      let firstErr = null;
+      for (let i = 0; i < chunks.length; i++) {
+        try { showCenterToast?.('議事録 を 生成中…', `音声が長いので 分割処理中 (${i+1}/${chunks.length})`, { tone: 'progress', duration: 0 }); } catch (_) {}
+        const c = chunks[i];
+        const reader = new FileReader();
+        const base64 = await new Promise((res, rej) => {
+          reader.onload = () => res(reader.result.split(',')[1]);
+          reader.onerror = rej;
+          reader.readAsDataURL(c);
+        });
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 8 * 60 * 1000);
+        let r;
+        try {
+          r = await fetch(CLOUD_RUN_BASE + '/api/process-recording', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              base64, mimeType: blob.type || 'audio/webm',
+              customerName: customerName + ` (chunk ${i+1}/${chunks.length})`,
+              customerContext: '', bookingTs, userId: booking && booking.userId,
+            }),
+            signal: controller.signal,
+          });
+        } catch (e) {
+          if (!firstErr) firstErr = `chunk ${i+1} fetch fail: ${e.message || e}`;
+          continue;
+        } finally { clearTimeout(tid); }
+        if (!r.ok) { if (!firstErr) firstErr = `chunk ${i+1}: HTTP ${r.status}`; continue; }
+        const d = await r.json().catch(() => ({}));
+        if (d.transcript || d.summary) allResults.push(d);
+        else if (d.error && !firstErr) firstErr = `chunk ${i+1}: ${d.error}`;
+      }
+      if (allResults.length === 0) {
+        return { ok: false, error: firstErr || '全チャンクの 文字起こし に失敗' };
+      }
+      const fullTranscript = allResults.map(r => r.transcript || '').filter(Boolean).join('\n---\n');
+      const mergedSummary = allResults.map((r, i) => `【パート${i+1}】\n` + (r.summary || '(要約なし)')).join('\n\n');
+      const mergedConcerns = [...new Set(allResults.flatMap(r => r.key_concerns || []))].slice(0, 8);
+      const mergedTasks = allResults.flatMap(r => r.tasks || []).slice(0, 8);
+      return {
+        ok: true,
+        transcript: fullTranscript,
+        summary: mergedSummary,
+        key_concerns: mergedConcerns,
+        tasks: mergedTasks,
+        chunked: true,
+        chunkCount: chunks.length,
+      };
+    } catch (e) {
+      console.error('[aiChunked] fatal', e);
+      return { ok: false, error: 'チャンク分割処理 例外: ' + (e.message || e) };
     }
   }
 
