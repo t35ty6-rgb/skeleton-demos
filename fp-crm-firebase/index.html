@@ -1248,7 +1248,7 @@ window.fpReadyAfterAuth = function() {
     });
   })();
 
-  const ver = "20260623R8-tabs-top-revert";
+  const ver = "20260623S-home-kpi-refresh";
   const scripts = [
     "life-events.js?v=" + ver,
     "recommender.js?v=" + ver,
@@ -1595,6 +1595,19 @@ window.fpReadyAfterAuth = function() {
     document.querySelectorAll('.m-tab[data-target-tab="dashboard"], .tab[data-tab="dashboard"]').forEach(t => {
       t.addEventListener('click', () => setTimeout(buildMobileHome, 300));
     });
+    // ★ オーナーfb 2026-06-23: Firestore 顧客 が 後から ロードされた時 KPI を 更新
+    (function watchClientsLoad() {
+      let lastCount = -1, attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        const cur = (window.DUMMY_CLIENTS || []).length;
+        if (cur !== lastCount) {
+          lastCount = cur;
+          if (window.innerWidth <= 768) buildMobileHome();
+        }
+        if (attempts >= 60) clearInterval(interval);
+      }, 500);
+    })();
 
     // ★ 2026-06-22 roundR: 顧客タブ active 時のみ FAB 表示 (body class で CSS切替)
     function updateTabClassMobile() {
@@ -1845,7 +1858,7 @@ window.fpReadyAfterAuth = function() {
 <script>
 (function(){
   // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
-  const FP_VERSION = "20260623R8-tabs-top-revert";
+  const FP_VERSION = "20260623S-home-kpi-refresh";
   try { window.FP_VERSION = FP_VERSION; } catch(_) {}
   const loadTime = new Date();
   const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
