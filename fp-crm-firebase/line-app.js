@@ -1179,7 +1179,7 @@
         <!-- ★ 急遽 開始 — 2モード (Zoom即発行 / 対面録音) — カメラ/マイク権限は対面のみ必要 -->
         <label style="display:block;font-size:11.5px;font-weight:700;color:#374151;letter-spacing:0.04em;margin-bottom:8px;">面談スタイル</label>
         <div id="fp-qi-mode-grid" style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:16px;">
-          <label class="fp-qi-mode" data-mode="zoom" style="display:flex;gap:12px;padding:16px 18px;border:1.5px solid #C19A3A;border-radius:10px;cursor:pointer;background:#FBF5E3;transition:border-color .12s,background .12s;">
+          <label class="fp-qi-mode" data-mode="zoom" style="display:flex;gap:12px;padding:16px 18px;border:1.5px solid #E5E7EB;border-radius:10px;cursor:pointer;background:#fff;transition:border-color .12s,background .12s;">
             <input type="radio" name="fp-qi-mode" value="zoom" checked style="margin-top:3px;flex-shrink:0;">
             <div style="flex:1;">
               <div style="font-size:11px;font-weight:800;color:#9A5A18;letter-spacing:0.12em;margin-bottom:3px;">RECOMMENDED</div>
@@ -3215,9 +3215,34 @@
       </div>`;
     // ★ 反映完了 toast は autoSaveAIResult の GAS保存完了 .then で 出す (showProgressDoneAction は ここでは 出さない、 二重表示防止)
     document.getElementById('fp-show-result').addEventListener('click', () => {
+      // ★ オーナーfb 2026-06-24: 「AI議事録を見る」 → 顧客モーダルの 議事録タブ に 飛ぶ (旧: 別モーダル)
       const r = window._fpAIResult;
-      if (r) showAIResultModal(r.result, r.customerName, r.booking);
       const p = document.getElementById('fp-unified-progress'); if (p) p.remove();
+      if (!r) return;
+      // 該当客を特定: booking.userId or customerName 一致
+      const clients = (window.DUMMY_CLIENTS || window.FpApp?.getClients?.() || []);
+      const targetUid = (r.booking && r.booking.userId) || '';
+      let match = clients.find(c => targetUid && (c.lineFriendId === targetUid || c.id === targetUid));
+      if (!match && r.customerName) {
+        match = clients.find(c => c.name === r.customerName);
+      }
+      if (match && typeof window.openClientModal === 'function') {
+        window.openClientModal(match.id);
+        // モーダル開いた後 議事録タブ に切替
+        setTimeout(() => {
+          const t = [...document.querySelectorAll('.cd-tab')].find(t => /議事録/.test(t.textContent));
+          if (t) t.click();
+        }, 600);
+      } else if (typeof window.FpApp?.openClientModal === 'function' && match) {
+        window.FpApp.openClientModal(match.id);
+        setTimeout(() => {
+          const t = [...document.querySelectorAll('.cd-tab')].find(t => /議事録/.test(t.textContent));
+          if (t) t.click();
+        }, 600);
+      } else {
+        // 旧フォールバック: 該当客が 特定できない場合は 旧 AI結果モーダル
+        showAIResultModal(r.result, r.customerName, r.booking);
+      }
     });
     document.getElementById('fp-progress-close').addEventListener('click', () => {
       const p = document.getElementById('fp-unified-progress'); if (p) p.remove();
