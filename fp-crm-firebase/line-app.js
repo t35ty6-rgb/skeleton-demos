@@ -3409,6 +3409,7 @@
           base64, mimeType: blob.type || 'audio/webm',
           customerName, customerContext: ctx,
           bookingTs, userId: booking && booking.userId,
+          tenantId: (window.__fp && window.__fp.tenantId) || '',
         }),
         signal: controller.signal,
       });
@@ -3461,6 +3462,7 @@
               base64, mimeType: blob.type || 'audio/webm',
               customerName: customerName + ` (chunk ${i+1}/${chunks.length})`,
               customerContext: '', bookingTs, userId: booking && booking.userId,
+              tenantId: (window.__fp && window.__fp.tenantId) || '',
             }),
             signal: controller.signal,
           });
