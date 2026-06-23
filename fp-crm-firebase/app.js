@@ -3026,6 +3026,7 @@
             })()}</button>
             <button class="cd-tab" data-cdtab="timeline" style="font-size:15px !important;font-weight:700 !important;">履歴 <span class="cd-tab-count">${events.length}</span></button>
             <button class="cd-tab" data-cdtab="meetings" style="font-size:15px !important;font-weight:700 !important;">議事録 <span class="cd-tab-count" id="cd-meetings-count">…</span></button>
+            <button class="cd-tab" data-cdtab="qa" style="font-size:15px !important;font-weight:700 !important;">Q&A <span class="cd-tab-count" id="cd-qa-count">—</span></button>
             <button class="cd-tab" data-cdtab="family" style="font-size:15px !important;font-weight:700 !important;">家族 <span class="cd-tab-count">${(c.family || []).length + 1}</span></button>
           </div>
 
@@ -3162,6 +3163,15 @@
             <!-- MEETINGS -->
             <div class="cd-tabpanel" data-cdpanel="meetings" hidden>
               ${renderMeetingRecordsBlock(c) || '<div class="cd-empty">面談録なし</div>'}
+            </div>
+
+            <!-- Q&A (Phase 2: LINE質問 自動分類) -->
+            <div class="cd-tabpanel" data-cdpanel="qa" hidden>
+              <div id="cd-qa-content" data-client-id="${escapeHtml(c.id)}">
+                <div style="padding:32px 24px;text-align:center;color:#94A3B8;font-size:13px;">
+                  Q&A 分析 — 「Q&A」タブを開くと自動分析
+                </div>
+              </div>
             </div>
 
             <!-- FAMILY 家系図 -->
@@ -3754,6 +3764,10 @@ ${ctxText}${surveyTxt}`;
             });
           } catch(_) {}
         }
+        // ★ Phase 2: Q&A タブ 初回開時 自動 分析
+        if (key === 'qa') {
+          loadQATabForClient(c);
+        }
       });
     });
     // Quick action stubs
@@ -4256,6 +4270,125 @@ ${ctxText}${surveyTxt}`;
   // ============================
   // 👨‍👩‍👧‍👦 家系図 ブロック (議事録 から AI 自動抽出 + 編集可)
   // ============================
+  // ============================
+  // ★ Phase 2 (オーナーfb 2026-06-24): Q&A タブ — LINE 質問 自動分類 + 予測
+  // 開いた時に Claude Haiku で 分類 → 顧客 ごとの Q&A サマリ表示
+  // ============================
+  async function loadQATabForClient(client) {
+    const root = document.getElementById('cd-qa-content');
+    if (!root) return;
+    if (root.dataset.loaded === '1' && !root.dataset.refresh) return; // 一度ロードしたら 再分析ボタン以外 再実行しない
+    const lh = (client.lineHistory || []).filter(m => (m.from === 'user' || m.direction === 'in') && m.text);
+    if (lh.length === 0) {
+      root.innerHTML = '<div style="padding:32px 24px;text-align:center;color:#94A3B8;font-size:13px;">LINE 履歴 が ないので Q&A 分析 できません</div>';
+      const tabBadge = document.getElementById('cd-qa-count');
+      if (tabBadge) tabBadge.textContent = '0';
+      return;
+    }
+    root.innerHTML = `<div style="padding:32px 24px;text-align:center;color:#94A3B8;font-size:13px;">
+      <div style="font-size:24px;margin-bottom:8px;">🔍</div>
+      Q&A 分析中 (AI が ${lh.length} 件の メッセージ を 分類しています…)
+    </div>`;
+    try {
+      const ctx = (function(){
+        const parts = [];
+        if (client.age) parts.push(client.age + '歳');
+        if (client.occupation) parts.push(client.occupation);
+        if (client.aum) parts.push('AUM¥' + (client.aum/10000) + '万');
+        return parts.join(' / ');
+      })();
+      const messages = lh.slice(-50).map(m => ({
+        text: m.text || '',
+        ts: m.ts || m.date || '',
+      }));
+      const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/classify-questions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages, customerName: client.name,
+          customerContext: ctx,
+          tenantId: (window.__fp && window.__fp.tenantId) || '',
+          userId: client.lineFriendId || client.id || '',
+        }),
+      });
+      const data = await r.json();
+      if (!data.ok) {
+        root.innerHTML = `<div style="padding:24px;color:#B91C1C;font-size:13px;">分析失敗: ${escapeHtml(data.error || '')}</div>`;
+        return;
+      }
+      renderQAContent(root, data, client);
+      root.dataset.loaded = '1';
+      delete root.dataset.refresh;
+      const tabBadge = document.getElementById('cd-qa-count');
+      if (tabBadge) tabBadge.textContent = String(data.totalQuestions || 0);
+    } catch (e) {
+      root.innerHTML = `<div style="padding:24px;color:#B91C1C;font-size:13px;">分析 例外: ${escapeHtml(e.message || String(e))}</div>`;
+    }
+  }
+  function renderQAContent(root, data, client) {
+    const cats = data.categories || [];
+    const pred = data.predictedNext || data.predicted_next_questions || [];
+    const catColor = {
+      'NISA・iDeCo': '#5B5BF0',
+      '教育資金': '#06b6d4',
+      '住宅ローン': '#f59e0b',
+      '老後資金': '#8b5cf6',
+      '保険': '#ec4899',
+      '相続・贈与': '#10b981',
+      '税金': '#dc2626',
+      'その他': '#64748b',
+    };
+    const html = `
+      <div style="padding:18px 16px 80px;">
+        <!-- summary header -->
+        <div style="margin-bottom:18px;padding:14px 16px;background:linear-gradient(135deg,#FBF5E3,#FFFBF1);border:1px solid #E8D9A8;border-left:4px solid #C19A3A;border-radius:8px;">
+          <div style="font-size:11px;font-weight:800;color:#8B7D5D;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:4px;">Q&A 自動分析</div>
+          <div style="font-size:17px;font-weight:800;color:#1F2A3F;">${data.totalQuestions || 0} 件の質問</div>
+          ${data.topCategories && data.topCategories.length > 0 ? `<div style="font-size:12px;color:#5e4d1a;margin-top:4px;">頻出: ${data.topCategories.slice(0,3).map(c => escapeHtml(c)).join(' · ')}</div>` : ''}
+          <button id="cd-qa-refresh" style="margin-top:10px;background:#fff;color:#8B6F26;border:1px solid #C19A3A;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 再分析</button>
+        </div>
+
+        <!-- predicted next questions -->
+        ${pred.length > 0 ? `
+        <div style="margin-bottom:18px;padding:14px 16px;background:#F8FAFC;border:1px solid #CBD5E1;border-left:4px solid #5B5BF0;border-radius:8px;">
+          <div style="font-size:11px;font-weight:800;color:#5B5BF0;letter-spacing:0.16em;text-transform:uppercase;margin-bottom:8px;">🔮 次に 聞かれそうな 質問</div>
+          <ul style="margin:0;padding-left:18px;font-size:13px;color:#1F2A3F;line-height:1.85;">
+            ${pred.slice(0, 6).map(q => `<li style="margin-bottom:4px;">${escapeHtml(q)}</li>`).join('')}
+          </ul>
+          <div style="font-size:10.5px;color:#64748B;margin-top:8px;line-height:1.55;">↑ AI が お客様の 質問パターン から 予測。 次回 面談の 事前準備 や 先回り LINE 返信 に。</div>
+        </div>
+        ` : ''}
+
+        <!-- categorized questions -->
+        ${cats.length === 0 ? '<div style="padding:24px;text-align:center;color:#94A3B8;font-size:13px;">分類対象の 質問 が 抽出できませんでした (会話が短い or 質問でない)</div>' : ''}
+        ${cats.map(cat => {
+          const color = catColor[cat.name] || '#64748B';
+          const qs = cat.questions || [];
+          return `
+          <div style="margin-bottom:14px;background:#fff;border:1px solid #E2E8F0;border-left:4px solid ${color};border-radius:8px;overflow:hidden;">
+            <div style="padding:11px 14px;background:${color}08;display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-size:13px;font-weight:800;color:#1F2A3F;">${escapeHtml(cat.name)}</div>
+              <div style="font-size:11px;font-weight:800;color:${color};background:${color}1F;padding:2px 9px;border-radius:99px;letter-spacing:0.04em;">${cat.count || qs.length} 件</div>
+            </div>
+            <div style="padding:10px 14px;">
+              ${qs.slice(0, 8).map(q => `
+                <div style="padding:7px 0;border-bottom:1px solid #F1F5F9;font-size:12.5px;color:#334155;line-height:1.65;">
+                  <span style="color:${color};font-weight:700;margin-right:4px;">Q.</span>
+                  ${escapeHtml(q.q || q)}
+                  ${q.ts ? `<span style="font-size:10px;color:#94A3B8;margin-left:6px;">${escapeHtml(String(q.ts).slice(0,10))}</span>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    root.innerHTML = html;
+    document.getElementById('cd-qa-refresh')?.addEventListener('click', () => {
+      root.dataset.refresh = '1';
+      delete root.dataset.loaded;
+      loadQATabForClient(client);
+    });
+  }
+
   function renderFamilyTreeBlock(client) {
     const fam = Array.isArray(client.family) ? client.family : [];
     // 関係 → ラベル + 色 (細分化 13→34区分: 父/母別、 長男/長女/次男/次女別、 兄/姉/弟/妹別)
@@ -4717,6 +4850,17 @@ ${ctxText}${surveyTxt}`;
                     ${aiData.key_concerns.map(k => `<span class="fp-concern-chip">${escapeHtml(k)}</span>`).join('')}
                   </div>
                 </div>` : ''}
+              ${aiData.predicted_next_questions && aiData.predicted_next_questions.length > 0 ? `
+                <div class="fp-meeting-block">
+                  <div class="fp-meeting-block-label" style="display:flex;align-items:center;gap:6px;">
+                    🔮 次回 聞かれそうな 質問
+                    <span style="font-size:9.5px;font-weight:600;color:#94A3B8;background:#F1F5F9;padding:1px 6px;border-radius:99px;">AI 予測</span>
+                  </div>
+                  <ul style="margin:0;padding-left:18px;font-size:13px;color:#1F2A3F;line-height:1.85;">
+                    ${aiData.predicted_next_questions.slice(0, 6).map(q => `<li style="margin-bottom:3px;">${escapeHtml(q)}</li>`).join('')}
+                  </ul>
+                  <div style="font-size:10.5px;color:#64748B;margin-top:6px;line-height:1.55;">次の LINE 連絡 や 次回 面談 の 事前 準備 で 先回り 対応 してください。</div>
+                </div>` : ''}
               ${b.memo ? `
                 <div class="fp-meeting-block">
                   <div class="fp-meeting-block-label">手書きメモ</div>
@@ -4784,6 +4928,16 @@ ${ctxText}${surveyTxt}`;
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
                       ${a.key_concerns.map(k => `<span class="fp-concern-chip">${escapeHtml(k)}</span>`).join('')}
                     </div>
+                  </div>` : ''}
+                ${a.predicted_next_questions && a.predicted_next_questions.length > 0 ? `
+                  <div class="fp-meeting-block">
+                    <div class="fp-meeting-block-label" style="display:flex;align-items:center;gap:6px;">
+                      🔮 次回 聞かれそうな 質問
+                      <span style="font-size:9.5px;font-weight:600;color:#94A3B8;background:#F1F5F9;padding:1px 6px;border-radius:99px;">AI 予測</span>
+                    </div>
+                    <ul style="margin:0;padding-left:18px;font-size:13px;color:#1F2A3F;line-height:1.85;">
+                      ${a.predicted_next_questions.slice(0, 6).map(q => `<li style="margin-bottom:3px;">${escapeHtml(q)}</li>`).join('')}
+                    </ul>
                   </div>` : ''}
               </div>
             `;
