@@ -4802,8 +4802,17 @@ ${ctxText}${surveyTxt}`;
               const db = new Date(String(b.date || '') + 'T' + String(b.time || '00:00')).getTime();
               return (isNaN(da) ? 0 : da) - (isNaN(db) ? 0 : db);
             });
+            // ★ オーナーfb 2026-06-24: 「議事録」 タブには 実際に録画/メモが ある booking だけ表示
+            // (旧: 全 booking 表示 → 未来の予約だけの 空カード が 先頭に並ぶ「意味不明日付」 バグ)
+            const sortedBksFiltered = sortedBks.filter(b => {
+              const ai = aiResults.find(a => a.bookingTs === b.ts) || {};
+              const hasAi = !!(ai.transcript || ai.summary || (ai.key_concerns && ai.key_concerns.length > 0));
+              const hasMemo = !!(b.memo && String(b.memo).trim());
+              return hasAi || hasMemo;
+            });
+            if (sortedBksFiltered.length === 0) return '';
             return '<div style="display:grid;gap:14px;margin-bottom:18px;">' +
-            sortedBks.slice().reverse().map(b => {
+            sortedBksFiltered.slice().reverse().map(b => {
             const aiData = aiResults.find(a => a.bookingTs === b.ts) || {};
             // ★ メインカードの Zoom連番 は aiData の zoom連番 を使う (orphanと整合)
             const zKey = (aiData.bookingTs || '') + '|' + (aiData.ts || aiData.createdAt || '');
@@ -8015,7 +8024,16 @@ ${client.name}さん、ありがとうございます。
 
     // 直近 LINE メッセージ
     const lastIncoming = (client.lineHistory || []).slice().reverse().find(m => m.direction === 'in');
-    const lastIncomingDays = lastIncoming ? daysSince((lastIncoming.ts || '').slice(0, 10)) : 9999;
+    // ★ オーナーfb 2026-06-24: lastIncoming.ts が Firestore Timestamp の場合 .slice() で死ぬ → 文字列化
+    const lastIncomingTsStr = (function(t){
+      if (!t) return '';
+      if (typeof t === 'string') return t;
+      if (typeof t.toDate === 'function') { try { return t.toDate().toISOString(); } catch(_) {} }
+      if (typeof t.seconds === 'number') return new Date(t.seconds * 1000).toISOString();
+      if (t instanceof Date) return t.toISOString();
+      try { return String(t); } catch(_) { return ''; }
+    })(lastIncoming && lastIncoming.ts);
+    const lastIncomingDays = lastIncoming ? daysSince(lastIncomingTsStr.slice(0, 10)) : 9999;
 
     // 家族構成
     const children = (client.family || []).filter(m => m.rel === 'child');
