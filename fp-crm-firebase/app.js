@@ -3128,13 +3128,16 @@
                     <div id="cd-lineid-attach-msg" style="font-size:11px;color:#9A5A18;margin-top:8px;min-height:14px;"></div>
                   </div>
                 ` : `
-                  <!-- ★ オーナーfb 2026-06-23: LINE 連携済 客 で userId を 表示+コピー (他客への 紐付け用) -->
-                  <div style="background:#F0FDF4;border:1.5px solid #06C755;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                    <div style="flex:1 1 auto;min-width:0;">
-                      <div style="font-size:11px;font-weight:800;color:#065F46;letter-spacing:0.12em;margin-bottom:4px;">🔗 LINE userId (この客の)</div>
-                      <code id="cd-lineid-show" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#0F172A;background:#fff;padding:4px 8px;border-radius:5px;border:1px solid #BBF7D0;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.lineFriendId)}</code>
+                  <!-- ★ オーナーfb 2026-06-23: LINE 連携済 客 で userId 表示+コピー + 既存客マージ -->
+                  <div style="background:#F0FDF4;border:1.5px solid #06C755;border-radius:10px;padding:10px 14px;margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                      <div style="flex:1 1 auto;min-width:0;">
+                        <div style="font-size:11px;font-weight:800;color:#065F46;letter-spacing:0.12em;margin-bottom:4px;">🔗 LINE userId (この客の)</div>
+                        <code id="cd-lineid-show" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#0F172A;background:#fff;padding:4px 8px;border-radius:5px;border:1px solid #BBF7D0;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.lineFriendId)}</code>
+                      </div>
+                      <button id="cd-lineid-copy" data-uid="${escapeHtml(c.lineFriendId)}" style="background:#06C755;color:#fff;border:none;padding:8px 14px;border-radius:7px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0;">📋 コピー</button>
                     </div>
-                    <button id="cd-lineid-copy" data-uid="${escapeHtml(c.lineFriendId)}" style="background:#06C755;color:#fff;border:none;padding:8px 14px;border-radius:7px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0;">📋 コピー</button>
+                    <button id="cd-merge-existing" data-cid="${escapeHtml(c.id)}" data-uid="${escapeHtml(c.lineFriendId)}" style="margin-top:8px;width:100%;background:#fff;color:#065F46;border:1.5px solid #06C755;padding:9px 12px;border-radius:7px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;">→ この客は 既に登録済 (既存客に マージ)</button>
                   </div>
                 `}
                 <textarea id="cd-line-input" placeholder="メッセージを入力... (Cmd+Enter で送信)"></textarea>
@@ -3835,6 +3838,48 @@ ${ctxText}${surveyTxt}`;
         }
       });
     }
+    // ★ オーナーfb 2026-06-23: 「この LINE客 は 既に登録済」 → 既存客 list pick → マージ
+    const mergeBtn = document.getElementById('cd-merge-existing');
+    if (mergeBtn) {
+      mergeBtn.addEventListener('click', async () => {
+        const sourceCid = mergeBtn.dataset.cid;      // この LINE 客 (削除予定)
+        const uid = mergeBtn.dataset.uid;
+        const allClients = (window.DUMMY_CLIENTS || []).filter(x => x.id !== sourceCid && !x.lineFriendId);
+        if (allClients.length === 0) {
+          alert('マージ先 候補 (LINE 未連携 の既存客) が ありません。 先に 「+ 新規 顧客」 で 登録してください。');
+          return;
+        }
+        // 簡易 picker: prompt で 名前選択
+        const list = allClients.map((c, i) => `${i + 1}. ${c.name}${c.kana ? ' (' + c.kana + ')' : ''}`).join('\n');
+        const sel = prompt(`どの既存客に マージ しますか? (番号で 入力)\n\n${list}\n\nキャンセル: 空 or × を 入力`);
+        if (!sel || sel === '×') return;
+        const idx = parseInt(sel, 10) - 1;
+        if (isNaN(idx) || idx < 0 || idx >= allClients.length) {
+          alert('番号が 不正です'); return;
+        }
+        const target = allClients[idx];
+        if (!confirm(`「${target.name}」 に この LINE 客 を マージします。\n\n・「${target.name}」 に LINE userId 紐付け\n・現在開いてる LINE 客レコード を 削除\n\nよろしいですか?`)) return;
+        try {
+          const { doc, updateDoc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
+          const tid = window.__fp.tenantId;
+          await updateDoc(doc(window.__fp.db, `tenants/${tid}/customers/${target.id}`), {
+            lineFriendId: uid, userId: uid, lineLinkedAt: new Date(),
+          });
+          target.lineFriendId = uid; target.userId = uid;
+          await deleteDoc(doc(window.__fp.db, `tenants/${tid}/customers/${sourceCid}`));
+          const i2 = (window.DUMMY_CLIENTS || []).findIndex(x => x.id === sourceCid);
+          if (i2 >= 0) window.DUMMY_CLIENTS.splice(i2, 1);
+          alert(`✓ マージ完了 — 「${target.name}」 に LINE 連携を 紐付けました。`);
+          if (typeof window.refreshFirestoreCustomers === 'function') await window.refreshFirestoreCustomers();
+          if (typeof renderClients === 'function') renderClients();
+          // 元モーダル 閉じて マージ先 を 開く
+          try { document.getElementById('modal-overlay').style.display = 'none'; } catch (_) {}
+          setTimeout(() => openClientModal(target.id), 600);
+        } catch (e) {
+          alert('✗ マージ失敗: ' + (e.message || e));
+        }
+      });
+    }
     // ★ オーナーfb 2026-06-23: LINE userId コピー (LINE連携済客)
     const lineidCopyBtn = document.getElementById('cd-lineid-copy');
     if (lineidCopyBtn) {
@@ -3880,21 +3925,45 @@ ${ctxText}${surveyTxt}`;
         lineidBtn.disabled = true;
         try {
           if (!window.__fp?.functions) throw new Error('functions 未初期化');
-          // Firestore に直接書き込み (admin SDK 経由ではなく client SDK)
-          const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
+          const { doc, updateDoc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
           const tid = window.__fp.tenantId;
+          // ★ オーナーfb 2026-06-23: 紐付け時に 同じ userId の 自動作成 LINE 客 (重複) を 削除する
+          const dupes = (window._fpFirestoreCustomers || []).filter(x => x.lineFriendId === val && x.docId !== cid);
+          if (dupes.length > 0) {
+            const confirmMsg = `この LINE userId は 既に「${dupes[0].name || '(名無し)'}」 として 別行 に 自動登録されてます。\n\nこちらの 「${(window.DUMMY_CLIENTS || []).find(x => x.id === cid)?.name || cid}」 に 統合 (自動登録分を 削除) しますか?\n\n※ LINE 履歴 は 紐付くだけなので 失われません。 自動登録分の メモ/タスク は 残ります (元客id ベースなので)。`;
+            if (!confirm(confirmMsg)) {
+              msg.textContent = '✗ キャンセルされました';
+              msg.style.color = '#9A5A18';
+              lineidBtn.disabled = false;
+              return;
+            }
+          }
+          // 1. 元客 に lineFriendId をセット
           await updateDoc(doc(window.__fp.db, `tenants/${tid}/customers/${cid}`), {
             lineFriendId: val,
-            userId: val,  // legacy 互換
+            userId: val,
             lineLinkedAt: new Date(),
           });
-          // ローカル DUMMY_CLIENTS 更新
           const lc = (window.DUMMY_CLIENTS || []).find(x => x.id === cid);
           if (lc) { lc.lineFriendId = val; lc.userId = val; }
-          msg.textContent = '✓ LINE ID 紐付け完了。 これで LINE 送受信できます。';
+          // 2. 重複 LINE 客 を削除
+          for (const d of dupes) {
+            try {
+              await deleteDoc(doc(window.__fp.db, `tenants/${tid}/customers/${d.docId}`));
+              const idx = (window.DUMMY_CLIENTS || []).findIndex(x => x.id === d.docId);
+              if (idx >= 0) window.DUMMY_CLIENTS.splice(idx, 1);
+            } catch (delErr) { console.warn('[merge] delete dup fail', d.docId, delErr); }
+          }
+          msg.textContent = dupes.length > 0
+            ? `✓ 紐付け完了 + 重複 ${dupes.length} 件 を 統合しました。`
+            : '✓ LINE ID 紐付け完了。 これで LINE 送受信できます。';
           msg.style.color = '#065F46';
-          // モーダル再描画
-          setTimeout(() => { try { openClientModal(cid); } catch (_) {} }, 1200);
+          // 顧客一覧 強制 refresh
+          try {
+            if (window.refreshFirestoreCustomers) await window.refreshFirestoreCustomers();
+            if (typeof renderClients === 'function') renderClients();
+          } catch (_) {}
+          setTimeout(() => { try { openClientModal(cid); } catch (_) {} }, 1500);
         } catch (e) {
           msg.textContent = '✗ 紐付け失敗: ' + (e.message || e);
           msg.style.color = '#B91C1C';
