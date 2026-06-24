@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MIO アンケート 集計 ダッシュボード ｜ 大野商工会議所</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FBFAF6;
+  --paper:#fff;
+  --soft:#F2EFE7;
+  --ink:#1A1A1A;
+  --ink-2:#3A3A3A;
+  --ink-3:#6A6A6A;
+  --ink-4:#A8A8A8;
+  --line:#E5E1D7;
+  --sky:#5B9CA7;
+  --sky-deep:#2E6E7A;
+  --sky-pale:#E4EEF0;
+  --gold:#C9A66B;
+  --red:#C7472D;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;
+  font-weight:500;line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+  font-feature-settings:"palt";
+  min-height:100vh;
+}
+.num{font-family:'Inter','Noto Sans JP',sans-serif}
+
+header.top{
+  background:var(--ink);color:#fff;padding:14px 20px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.h-brand{font-size:11px;font-weight:900;letter-spacing:0.18em}
+.h-meta{font-family:'Inter';font-size:11px;font-weight:700;opacity:0.7;letter-spacing:0.1em}
+.h-meta button{
+  background:transparent;border:1px solid #fff;color:#fff;
+  font-size:10px;font-weight:700;padding:4px 10px;cursor:pointer;
+  font-family:inherit;letter-spacing:0.12em;margin-left:10px;
+}
+
+.wrap{max-width:1080px;margin:0 auto;padding:24px 20px}
+
+.page-head{padding:24px 0 20px;border-bottom:2px solid var(--ink);margin-bottom:24px}
+.page-head h1{font-size:24px;font-weight:900;letter-spacing:-0.005em}
+.page-head p{font-size:13px;color:var(--ink-3);font-weight:500;margin-top:6px}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+@media(max-width:680px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--paper);border:2px solid var(--ink);padding:14px 16px}
+.kpi .l{font-family:'Inter';font-size:10px;font-weight:700;letter-spacing:0.18em;color:var(--ink-3);text-transform:uppercase}
+.kpi .v{font-family:'Inter';font-size:30px;font-weight:900;color:var(--ink);letter-spacing:-0.02em;margin-top:4px;line-height:1}
+.kpi .sub{font-size:11px;color:var(--ink-4);font-weight:600;margin-top:4px}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:880px){.grid{grid-template-columns:1fr}}
+.card{background:var(--paper);border:2px solid var(--ink)}
+.card h3{
+  background:var(--ink);color:#fff;padding:11px 14px;font-size:12px;
+  font-weight:900;letter-spacing:0.14em;
+}
+.card-body{padding:18px}
+
+.bars{display:flex;flex-direction:column;gap:9px}
+.bar-row{display:grid;grid-template-columns:90px 1fr 60px;gap:10px;align-items:center;font-size:13px;font-weight:700}
+.bar-row .nm{color:var(--ink-2)}
+.bar-track{position:relative;height:24px;background:var(--soft)}
+.bar-fill{position:absolute;top:0;left:0;bottom:0;background:var(--sky-deep);transition:width 0.5s ease-out}
+.bar-fill.gold{background:var(--gold)}
+.bar-fill.red{background:var(--red)}
+.bar-row .cnt{font-family:'Inter';color:var(--ink);text-align:right;font-size:13px;font-weight:900}
+.bar-row .cnt small{font-family:'Noto Sans JP';color:var(--ink-3);font-weight:600;font-size:10.5px;display:block}
+
+.coupon-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.coupon-cell{background:var(--soft);padding:14px;text-align:center;border:2px solid transparent}
+.coupon-cell.gold{border-color:var(--gold)}
+.coupon-cell .lbl{font-family:'Inter';font-size:11px;font-weight:900;letter-spacing:0.14em;color:var(--ink-3)}
+.coupon-cell .pct{font-family:'Inter';font-size:24px;font-weight:900;color:var(--ink);margin-top:2px}
+.coupon-cell .ct{font-family:'Inter';font-size:14px;font-weight:900;color:var(--sky-deep);margin-top:6px}
+
+.pref-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:12px}
+@media(max-width:680px){.pref-grid{grid-template-columns:repeat(2,1fr)}}
+.pref-cell{display:flex;justify-content:space-between;align-items:baseline;padding:6px 10px;border-bottom:1px dotted var(--line)}
+.pref-cell .p{color:var(--ink-2);font-weight:700}
+.pref-cell .c{font-family:'Inter';color:var(--ink);font-weight:900}
+
+/* login screen */
+.login{
+  min-height:100vh;display:grid;place-items:center;background:var(--bg);padding:20px;
+}
+.login-box{
+  max-width:380px;width:100%;background:var(--paper);border:2px solid var(--ink);padding:30px;
+}
+.login-box h2{font-size:16px;font-weight:900;letter-spacing:0.06em;margin-bottom:6px}
+.login-box p{font-size:12px;color:var(--ink-3);font-weight:600;margin-bottom:18px}
+.login-box label{display:block;font-size:11px;font-weight:900;letter-spacing:0.12em;color:var(--ink-3);margin-bottom:6px}
+.login-box input{
+  width:100%;padding:12px 14px;border:1.5px solid var(--line);
+  font-size:15px;font-family:inherit;background:var(--bg);margin-bottom:12px;
+  border-radius:2px;font-weight:500;
+}
+.login-box input:focus{outline:none;border-color:var(--sky-deep)}
+.login-box button{
+  width:100%;padding:14px;background:var(--ink);color:#fff;border:none;
+  font-size:14px;font-weight:900;letter-spacing:0.14em;cursor:pointer;font-family:inherit;
+}
+.login-err{margin-top:10px;padding:10px;background:#FCE7E0;border:1px solid var(--red);color:var(--red);font-size:12px;font-weight:700}
+
+.empty{text-align:center;padding:60px 20px;color:var(--ink-3);font-size:13px;font-weight:600}
+.empty b{display:block;color:var(--ink);font-weight:900;font-size:15px;margin-bottom:6px}
+
+.loading{text-align:center;padding:80px 20px}
+.spinner{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--sky-deep);border-radius:50%;margin:0 auto 14px;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+footer{text-align:center;padding:24px 20px;font-size:10.5px;color:var(--ink-4);letter-spacing:0.08em;border-top:1px solid var(--line);margin-top:24px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="login">
+  <div class="login-box">
+    <h2>MIO ダッシュボード ログイン</h2>
+    <p>管理者の メールアドレス と パスワード で ログインしてください。</p>
+    <label>メールアドレス</label>
+    <input type="email" id="loginEmail" placeholder="admin@example.com">
+    <label>パスワード</label>
+    <input type="password" id="loginPwd">
+    <button id="loginBtn">ログイン</button>
+    <div id="loginErr" class="login-err" style="display:none"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" style="display:none">
+  <header class="top">
+    <div class="h-brand">MIO ／ MADE IN ONO — ADMIN</div>
+    <div class="h-meta">
+      <span id="userEmail"></span>
+      <button id="logoutBtn">ログアウト</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="page-head">
+      <h1>ご来場アンケート 集計</h1>
+      <p>友だち追加時の アンケート回答 と クーポン当選結果 の リアルタイム集計</p>
+    </div>
+
+    <div id="content">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>読み込み中…</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    MIO ／ Made in Ono — 運営: 大野商工会議所
+  </footer>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAmVAEe9l9e1Yo_dzzJdbTVU35wWKd2sH4",
+  authDomain: "skeleton-fp-compass-632026.firebaseapp.com",
+  projectId: "skeleton-fp-compass-632026"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const ADMIN_EMAILS = ['t3.5ty6@gmail.com']; // 商工会議所担当者を追加可
+
+onAuthStateChanged(auth, async user => {
+  if (user && ADMIN_EMAILS.includes(user.email)) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('userEmail').textContent = user.email;
+    await loadAndRender();
+  } else {
+    document.getElementById('loginScreen').style.display = 'grid';
+    document.getElementById('dashboard').style.display = 'none';
+  }
+});
+
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pwd = document.getElementById('loginPwd').value;
+  const err = document.getElementById('loginErr');
+  err.style.display = 'none';
+  try {
+    await signInWithEmailAndPassword(auth, email, pwd);
+    if (!ADMIN_EMAILS.includes(email)) {
+      await signOut(auth);
+      throw new Error('管理者権限がありません');
+    }
+  } catch (e) {
+    err.textContent = `ログイン失敗: ${e.message}`;
+    err.style.display = 'block';
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+
+async function loadAndRender() {
+  try {
+    const snap = await getDocs(query(collection(db, 'mio_line_survey'), orderBy('created_at','desc')));
+    const docs = snap.docs.map(d => d.data());
+    render(docs);
+  } catch (e) {
+    document.getElementById('content').innerHTML = `<div class="empty"><b>読み込み失敗</b>${e.message}</div>`;
+  }
+}
+
+function tally(arr, key) {
+  const m = new Map();
+  arr.forEach(d => {
+    const v = d[key];
+    if (v) m.set(v, (m.get(v) || 0) + 1);
+  });
+  return m;
+}
+
+function pct(n, total) { return total > 0 ? Math.round((n / total) * 1000) / 10 : 0; }
+
+function renderBars(map, total, kind='') {
+  const entries = [...map.entries()].sort((a,b) => b[1] - a[1]);
+  const max = Math.max(...entries.map(e => e[1]), 1);
+  return entries.map(([nm, n]) => `
+    <div class="bar-row">
+      <div class="nm">${nm}</div>
+      <div class="bar-track"><div class="bar-fill ${kind}" style="width:${(n/max)*100}%"></div></div>
+      <div class="cnt">${n}<small>${pct(n,total)}%</small></div>
+    </div>
+  `).join('');
+}
+
+function render(docs) {
+  const total = docs.length;
+  if (total === 0) {
+    document.getElementById('content').innerHTML = `<div class="empty"><b>まだ 回答がありません</b>アンケートが 1件以上 入ると ここに 集計が 表示されます。</div>`;
+    return;
+  }
+
+  const wonDocs = docs.filter(d => d.coupon != null);
+  const couponMap = tally(wonDocs, 'coupon');
+
+  // KPIs
+  const kpis = `
+    <div class="kpis">
+      <div class="kpi"><div class="l">TOTAL</div><div class="v">${total}</div><div class="sub">合計回答</div></div>
+      <div class="kpi"><div class="l">WON</div><div class="v">${wonDocs.length}</div><div class="sub">ルーレット完了</div></div>
+      <div class="kpi"><div class="l">REGIONS</div><div class="v">${tally(docs,'prefecture').size}</div><div class="sub">都道府県</div></div>
+      <div class="kpi"><div class="l">TODAY</div><div class="v">${docs.filter(d => d.created_at && d.created_at.toDate && d.created_at.toDate().toDateString() === new Date().toDateString()).length}</div><div class="sub">本日の回答</div></div>
+    </div>
+  `;
+
+  // Coupons
+  const coupons = `
+    <div class="card">
+      <h3>当選クーポン 配布数</h3>
+      <div class="card-body">
+        <div class="coupon-grid">
+          ${[5,10,20].map(p => `
+            <div class="coupon-cell${p===20?' gold':''}">
+              <div class="lbl">MIWA-${String(p).padStart(2,'0')}</div>
+              <div class="pct">${p}%</div>
+              <div class="ct">${couponMap.get(p) || 0} 件</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Age
+  const ageOrder = ['20代','30代','40代','50代','60代以上'];
+  const ageMap = tally(docs, 'age_band');
+  const ageOrdered = new Map(ageOrder.filter(a => ageMap.has(a)).map(a => [a, ageMap.get(a)]));
+
+  // Gender
+  const genderMap = tally(docs, 'gender');
+
+  // Prefecture
+  const prefMap = tally(docs, 'prefecture');
+  const prefSorted = [...prefMap.entries()].sort((a,b) => b[1] - a[1]);
+
+  document.getElementById('content').innerHTML = `
+    ${kpis}
+    ${coupons}
+    <div style="height:14px"></div>
+    <div class="grid">
+      <div class="card">
+        <h3>年齢層</h3>
+        <div class="card-body">
+          <div class="bars">${renderBars(ageOrdered, total)}</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>性別</h3>
+        <div class="card-body">
+          <div class="bars">${renderBars(genderMap, total, 'gold')}</div>
+        </div>
+      </div>
+    </div>
+    <div style="height:14px"></div>
+    <div class="card">
+      <h3>都道府県 (回答数 順)</h3>
+      <div class="card-body">
+        <div class="pref-grid">
+          ${prefSorted.map(([p,c]) => `<div class="pref-cell"><span class="p">${p}</span><span class="c">${c}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+</script>
+
+</body>
+</html>
