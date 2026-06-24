@@ -297,10 +297,10 @@
   <div class="wrap">
     <div class="roulette-head">
       <div class="section-eyebrow">SPIN &amp; WIN</div>
-      <h2 class="section-title">ハズレなし、<br class="sp-only">来場者全員プレゼント。</h2>
+      <h2 class="section-title">MIO 限定、<br>来場感謝クーポン抽選。</h2>
       <p class="section-lead">
         「<b>SPIN</b>」ボタンを押すと、ルーレットが回ります。<br>
-        止まった場所のクーポンを、MIO オンラインストアでご利用いただけます。
+        止まった場所の割引クーポンを、MIO オンラインストアでご利用いただけます。
       </p>
     </div>
 
@@ -426,23 +426,32 @@
 
 <script>
 /* ============================================================
-   PRIZES — 編集はここだけ。weight は当選確率の重み。
+   OUTCOMES — 当選結果の定義。weight は当選確率（合計100で％そのもの）。
    code は MIO オンラインストア (Stripe) に登録するクーポンID。
 ============================================================ */
-const PRIZES = [
-  { label:'10% OFF',     sub:'全品対象',     code:'MIWA-10',    note:'お会計時に <b>10%</b> 割引いたします。', weight:3, color:'#5eb9d6', text:'#fff' },
-  { label:'送料無料',     sub:'1回のご注文', code:'MIWA-SHIP',  note:'1回のご注文の <b>送料を無料</b> といたします。', weight:3, color:'#0f2a3a', text:'#fff' },
-  { label:'5% OFF',      sub:'全品対象',     code:'MIWA-05',    note:'お会計時に <b>5%</b> 割引いたします。', weight:4, color:'#e6f3f8', text:'#0f2a3a' },
-  { label:'1,000円 OFF', sub:'1万円以上で', code:'MIWA-1000',  note:'1万円以上のご注文で <b>1,000円</b> 割引いたします。', weight:2, color:'#a07a2c', text:'#fff' },
-  { label:'10% OFF',     sub:'全品対象',     code:'MIWA-10',    note:'お会計時に <b>10%</b> 割引いたします。', weight:3, color:'#2a7a98', text:'#fff' },
-  { label:'5% OFF',      sub:'全品対象',     code:'MIWA-05',    note:'お会計時に <b>5%</b> 割引いたします。', weight:4, color:'#f0e7d2', text:'#0f2a3a' },
-  { label:'3,000円 OFF', sub:'3万円以上で', code:'MIWA-3000',  note:'3万円以上のご注文で <b>3,000円</b> 割引いたします。<br><small>★レアスロット当選おめでとうございます。</small>', weight:1, color:'#d54a2a', text:'#fff' },
-  { label:'送料無料',     sub:'1回のご注文', code:'MIWA-SHIP',  note:'1回のご注文の <b>送料を無料</b> といたします。', weight:3, color:'#fff',    text:'#0f2a3a' },
+const OUTCOMES = {
+  '5':  { label:'5% OFF',  pct:'5%',  code:'MIWA-05', note:'お会計時に <b>5%</b> 割引いたします。',   weight:80 },
+  '10': { label:'10% OFF', pct:'10%', code:'MIWA-10', note:'お会計時に <b>10%</b> 割引いたします。',  weight:18 },
+  '20': { label:'20% OFF', pct:'20%', code:'MIWA-20', note:'お会計時に <b>20%</b> 割引いたします。<br><small>★レアスロット当選おめでとうございます。</small>', weight:2 },
+};
+
+/* 視覚ホイールは10セグメント等分。色は Mio パレットで交互。
+   20% は1枠だけ（朱で「あたり」）、10% は対角に2枠、残り7枠は5%。 */
+const SEGMENT_DEFS = [
+  { key:'5',  fill:'#f0e7d2', text:'#0f2a3a' }, // 0  cream
+  { key:'5',  fill:'#5eb9d6', text:'#ffffff' }, // 1  sky
+  { key:'10', fill:'#2a7a98', text:'#ffffff' }, // 2  sky-deep
+  { key:'5',  fill:'#e6f3f8', text:'#0f2a3a' }, // 3  sky-pale
+  { key:'5',  fill:'#5eb9d6', text:'#ffffff' }, // 4  sky
+  { key:'20', fill:'#d54a2a', text:'#ffffff' }, // 5  shu (JACKPOT)
+  { key:'5',  fill:'#5eb9d6', text:'#ffffff' }, // 6  sky
+  { key:'5',  fill:'#e6f3f8', text:'#0f2a3a' }, // 7  sky-pale
+  { key:'10', fill:'#2a7a98', text:'#ffffff' }, // 8  sky-deep
+  { key:'5',  fill:'#f0e7d2', text:'#0f2a3a' }, // 9  cream
 ];
 
-const N = PRIZES.length;
-const SEG = 360 / N;                  // 1スロットあたりの角度
-const POINTER_ANGLE = 270;            // SVG座標で 12時方向 = -90度 = 270度
+const N = SEGMENT_DEFS.length;
+const SEG = 360 / N;  // 36度
 
 /* ============================================================
    SVG wheel build
@@ -454,46 +463,65 @@ const polarToXY = (cx, cy, r, deg) => {
   return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
 };
 
-PRIZES.forEach((p, i) => {
+SEGMENT_DEFS.forEach((def, i) => {
+  const out = OUTCOMES[def.key];
   const start = i * SEG;
   const end = (i + 1) * SEG;
   const [x1, y1] = polarToXY(0, 0, R, start);
   const [x2, y2] = polarToXY(0, 0, R, end);
   const large = SEG > 180 ? 1 : 0;
+
+  // 1) wedge
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   path.setAttribute('d', `M0,0 L${x1.toFixed(3)},${y1.toFixed(3)} A${R},${R} 0 ${large} 1 ${x2.toFixed(3)},${y2.toFixed(3)} Z`);
-  path.setAttribute('fill', p.color);
+  path.setAttribute('fill', def.fill);
   path.setAttribute('stroke', '#0f2a3a');
-  path.setAttribute('stroke-width', '0.6');
+  path.setAttribute('stroke-width', '0.5');
   svg.appendChild(path);
 
-  // label (radial)
+  // 2) label group: radial, label faces outward
   const labelAngle = start + SEG / 2;
-  const [lx, ly] = polarToXY(0, 0, R * 0.62, labelAngle);
+  const isJackpot = (def.key === '20');
+  // 半径方向の中心位置 (内側ほど狭くて文字小さくなる)
+  const [lx, ly] = polarToXY(0, 0, R * 0.66, labelAngle);
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   g.setAttribute('transform', `translate(${lx.toFixed(3)},${ly.toFixed(3)}) rotate(${labelAngle})`);
 
+  // jackpotだけ ★ をのせる
+  if (isJackpot) {
+    const star = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    star.setAttribute('text-anchor', 'middle');
+    star.setAttribute('font-family', "'Inter', sans-serif");
+    star.setAttribute('font-size', '5');
+    star.setAttribute('fill', '#f0e7d2');
+    star.setAttribute('y', '-12');
+    star.textContent = '★';
+    g.appendChild(star);
+  }
+
+  // メイン: パーセント数字 (Inter, weight 800)
   const t1 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   t1.setAttribute('text-anchor', 'middle');
-  t1.setAttribute('font-family', "'Noto Serif JP', serif");
-  t1.setAttribute('font-weight', '600');
-  t1.setAttribute('font-size', '10.5');
-  t1.setAttribute('letter-spacing', '0.4');
-  t1.setAttribute('fill', p.text);
-  t1.setAttribute('y', '-3');
-  t1.textContent = p.label;
+  t1.setAttribute('font-family', "'Inter', sans-serif");
+  t1.setAttribute('font-weight', '800');
+  t1.setAttribute('font-size', isJackpot ? '15' : '14');
+  t1.setAttribute('letter-spacing', '-0.4');
+  t1.setAttribute('fill', def.text);
+  t1.setAttribute('y', isJackpot ? '-1' : '-1.5');
+  t1.textContent = out.pct;
   g.appendChild(t1);
 
+  // サブ: OFF (small, tracked uppercase)
   const t2 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   t2.setAttribute('text-anchor', 'middle');
-  t2.setAttribute('font-family', "'Noto Serif JP', serif");
-  t2.setAttribute('font-weight', '400');
-  t2.setAttribute('font-size', '5.2');
-  t2.setAttribute('letter-spacing', '1.4');
-  t2.setAttribute('fill', p.text);
-  t2.setAttribute('opacity', '0.85');
+  t2.setAttribute('font-family', "'Inter', sans-serif");
+  t2.setAttribute('font-weight', '700');
+  t2.setAttribute('font-size', '4.6');
+  t2.setAttribute('letter-spacing', '0.9');
+  t2.setAttribute('fill', def.text);
+  t2.setAttribute('opacity', '0.82');
   t2.setAttribute('y', '7');
-  t2.textContent = p.sub;
+  t2.textContent = 'OFF';
   g.appendChild(t2);
 
   svg.appendChild(g);
@@ -504,37 +532,44 @@ PRIZES.forEach((p, i) => {
 ============================================================ */
 const wheel = document.getElementById('wheel');
 const spinBtn = document.getElementById('spinBtn');
-const STORAGE_KEY = 'mio_miwa_roulette_used_v1';
+const STORAGE_KEY = 'mio_miwa_roulette_used_v2';
 
 let currentRotation = 0; // 累積角度
 
-function weightedPick() {
-  const total = PRIZES.reduce((s, p) => s + p.weight, 0);
+function weightedPickOutcomeKey() {
+  const keys = Object.keys(OUTCOMES);
+  const total = keys.reduce((s, k) => s + OUTCOMES[k].weight, 0);
   let r = Math.random() * total;
-  for (let i = 0; i < PRIZES.length; i++) {
-    r -= PRIZES[i].weight;
-    if (r <= 0) return i;
+  for (const k of keys) {
+    r -= OUTCOMES[k].weight;
+    if (r <= 0) return k;
   }
-  return PRIZES.length - 1;
+  return keys[keys.length - 1];
+}
+
+function pickSegmentForKey(key) {
+  const indices = SEGMENT_DEFS.map((d, i) => d.key === key ? i : -1).filter(i => i !== -1);
+  return indices[Math.floor(Math.random() * indices.length)];
 }
 
 function spin() {
   if (spinBtn.disabled) return;
   spinBtn.disabled = true;
 
-  const idx = weightedPick();
-  const segCenter = idx * SEG + SEG / 2;
+  const key = weightedPickOutcomeKey();
+  const segIdx = pickSegmentForKey(key);
+  const segCenter = segIdx * SEG + SEG / 2;
+  // 微小なジッターで毎回違う位置に止めて自然に
+  const jitter = (Math.random() - 0.5) * (SEG * 0.55);
   // ポインタは 12時方向 (0deg)。回転 R 後、segCenter が 0 に来るには R = 360 - segCenter (mod 360)
-  const targetWithin = (360 - segCenter) % 360;
-  // 5周〜7周追加
+  const targetWithin = (360 - segCenter - jitter + 360) % 360;
   const spins = 5 + Math.floor(Math.random() * 3);
-  // 現在の回転を 360で割った余りを引いて、絶対値を更新
   const baseFromCurrent = currentRotation - (currentRotation % 360);
   const finalRotation = baseFromCurrent + spins * 360 + targetWithin;
   currentRotation = finalRotation;
   wheel.style.transform = `rotate(${finalRotation}deg)`;
 
-  setTimeout(() => showResult(idx), 5300);
+  setTimeout(() => showResult(key), 5300);
 }
 
 spinBtn.addEventListener('click', () => {
@@ -557,21 +592,21 @@ const titleEl = document.getElementById('resultTitle');
 const copyBtn = document.getElementById('resultCopy');
 const lineBtn = document.getElementById('resultLine');
 
-function showResult(idx) {
-  const p = PRIZES[idx];
+function showResult(key) {
+  const p = OUTCOMES[key];
   titleEl.textContent = `「${p.label}」 獲得！`;
-  subEl.textContent = `${p.sub} ／ クーポンコード`;
+  subEl.textContent = `MIO 来場感謝クーポンコード`;
   codeEl.textContent = p.code;
   noteEl.innerHTML = p.note + '<br>※有効期限：2026年12月31日まで。他クーポンとの併用不可。';
   // LINE 自分に送る URL
-  const txt = `【MIO 来場感謝クーポン】\n${p.label}（${p.sub}）\nコード：${p.code}\n\nMIO オンラインストア\nhttps://mio-ono.shop\n\n※有効期限：2026年12月31日まで`;
+  const txt = `【MIO 来場感謝クーポン】\n${p.label}\nコード：${p.code}\n\nMIO オンラインストア\nhttps://mio-ono.shop\n\n※有効期限：2026年12月31日まで`;
   lineBtn.href = `https://line.me/R/share?text=${encodeURIComponent(txt)}`;
 
   mask.classList.add('is-open');
   document.body.style.overflow = 'hidden';
   fireConfetti();
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ idx, code: p.code, at: Date.now() }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ key, code: p.code, at: Date.now() }));
 }
 
 function closeResult() {
