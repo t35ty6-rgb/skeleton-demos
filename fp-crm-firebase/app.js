@@ -6772,7 +6772,7 @@ ${JSON.stringify(jsonPayload, null, 2)}
           <div style="display:flex;gap:8px;justify-content:flex-end;">
             <button id="fp-brief-back" style="background:#fff;border:1px solid #E2E8F0;color:#475569;padding:10px 18px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">← もう一度</button>
             <button id="fp-brief-copy" style="background:#fff;border:1px solid #10B981;color:#059669;padding:10px 18px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;">📋 コピー</button>
-            <button id="fp-brief-set-line" style="background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(16,185,129,0.35);">LINE送信欄に セット →</button>
+            <button id="fp-brief-send-line" style="background:linear-gradient(135deg,#06c755,#04a045);color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(6,199,85,0.4);">📤 LINE で 送信</button>
           </div>
           <div id="fp-brief-msg" style="margin-top:10px;font-size:11.5px;font-weight:700;text-align:center;color:#059669;"></div>`;
         after.querySelector('#fp-brief-back').addEventListener('click', () => {
@@ -6785,11 +6785,44 @@ ${JSON.stringify(jsonPayload, null, 2)}
           const t = after.querySelector('#fp-brief-result').value;
           try { await navigator.clipboard.writeText(t); after.querySelector('#fp-brief-msg').textContent = '✓ コピー しました'; } catch (_) {}
         });
-        after.querySelector('#fp-brief-set-line').addEventListener('click', () => {
-          const t = after.querySelector('#fp-brief-result').value;
-          const tArea = document.getElementById('cd-line-input');
-          if (tArea) { tArea.value = t; tArea.focus(); }
-          overlay.remove();
+        // ★ オーナーfb 2026-06-24: 「LINE送信欄にセット」 が cd-line-input 不在で 効かない問題 →
+        // この場で sendLineMessage callable を 直接叩く 「LINE で 送信」 に置換
+        after.querySelector('#fp-brief-send-line').addEventListener('click', async () => {
+          const sendBtn = after.querySelector('#fp-brief-send-line');
+          const msgEl = after.querySelector('#fp-brief-msg');
+          const text = after.querySelector('#fp-brief-result').value.trim();
+          if (!text) { msgEl.style.color = '#B91C1C'; msgEl.textContent = '⚠ 本文が空です'; return; }
+          if (!client.lineFriendId) { msgEl.style.color = '#B91C1C'; msgEl.textContent = '⚠ この客は LINE 未連携 (lineFriendId 無し)'; return; }
+          if (!confirm(`${client.name || 'お客様'} 様 に この文面で LINE を送信します。 よろしいですか?\n\n${text.slice(0, 120)}${text.length > 120 ? '…' : ''}`)) return;
+          sendBtn.disabled = true;
+          sendBtn.textContent = '送信中…';
+          msgEl.style.color = '#9A5A18';
+          msgEl.textContent = '⏳ LINE 送信中…';
+          try {
+            const { httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js');
+            const fn = httpsCallable(window.__fp.functions, 'sendLineMessage');
+            const res = await fn({ lineFriendId: client.lineFriendId, text, customerId: client._fsCustomerId || client.id });
+            if (res.data && res.data.ok) {
+              msgEl.style.color = '#059669';
+              msgEl.textContent = '✓ 送信完了';
+              sendBtn.textContent = '✓ 送信済';
+              sendBtn.style.background = '#065F46';
+              // ローカル lineHistory にも append
+              try {
+                client.lineHistory = client.lineHistory || [];
+                client.lineHistory.push({ direction: 'out', text, ts: new Date().toISOString(), via: 'brief-draft' });
+              } catch (_) {}
+              setTimeout(() => overlay.remove(), 1500);
+            } else {
+              throw new Error((res.data && res.data.error) || 'LINE送信失敗');
+            }
+          } catch (e) {
+            console.error('[brief send line]', e);
+            msgEl.style.color = '#B91C1C';
+            msgEl.textContent = '❌ 送信失敗: ' + (e.message || String(e)).slice(0, 100);
+            sendBtn.disabled = false;
+            sendBtn.textContent = '📤 LINE で 送信';
+          }
         });
       } catch (e) {
         console.error('[generateBriefDraft]', e);
