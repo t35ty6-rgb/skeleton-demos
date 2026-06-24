@@ -97,11 +97,26 @@ main{flex:1;padding:24px 20px 40px;max-width:480px;margin:0 auto;width:100%;text
 .result-label{font-size:13px;font-weight:900;color:var(--gold-deep);letter-spacing:0.2em;margin-bottom:18px}
 
 .result-code{
-  display:inline-block;
+  display:inline-flex;align-items:center;gap:14px;
   background:var(--paper);border:2px dashed var(--ink);
-  padding:18px 36px;margin-bottom:8px;
+  padding:18px 28px;margin-bottom:8px;
   font-family:'Inter';font-weight:900;font-size:32px;letter-spacing:0.08em;color:var(--ink);
+  cursor:pointer;transition:transform 0.1s,background 0.2s;
+  -webkit-user-select:none;user-select:none;
 }
+.result-code:active{transform:scale(0.97)}
+.result-code.copied{background:var(--gold);color:#fff;border-color:var(--gold)}
+.result-code-tap{
+  font-family:'Noto Sans JP',sans-serif;font-size:11px;font-weight:900;letter-spacing:0.16em;
+  color:var(--sky-deep);padding:6px 12px;background:var(--sky-pale);border-radius:99px;
+}
+.result-code.copied .result-code-tap{background:#fff;color:var(--gold-deep)}
+.copied-flash{
+  display:inline-block;margin-top:6px;font-size:11px;font-weight:900;letter-spacing:0.16em;
+  color:var(--gold-deep);background:var(--gold);color:#fff;padding:4px 12px;
+  opacity:0;transition:opacity 0.3s;
+}
+.copied-flash.show{opacity:1}
 .result-howto{font-size:12.5px;color:var(--ink-3);font-weight:500;line-height:1.85;margin-bottom:24px;letter-spacing:0.02em}
 
 .cta-shop{
@@ -149,7 +164,11 @@ footer b{display:block;color:var(--ink-3);font-weight:700;margin-bottom:4px}
   <div class="result" id="result">
     <div class="result-pct" id="rPct">5<small>% OFF</small></div>
     <div class="result-label" id="rLabel">あたり！</div>
-    <div class="result-code" id="rCode">MIO-05</div>
+    <div class="result-code" id="rCode" title="タップでコピー">
+      <span id="rCodeText">MIO-05</span>
+      <span class="result-code-tap">タップでコピー</span>
+    </div>
+    <div class="copied-flash" id="copiedFlash">クリップボードに コピーしました</div>
     <div class="result-howto">
       決済画面の「プロモコード」欄に<br>
       <b style="color:var(--ink)">上のコード</b>を 入力するだけで 割引適用。
@@ -301,11 +320,32 @@ spinBtn.addEventListener('click', async () => {
 function showResult(pct) {
   const code = `MIO-${String(pct).padStart(2,'0')}`;
   document.getElementById('rPct').innerHTML = `${pct}<small>% OFF</small>`;
-  document.getElementById('rCode').textContent = code;
+  document.getElementById('rCodeText').textContent = code;
   document.getElementById('pre').style.display = 'none';
   document.getElementById('result').classList.add('show');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+// Tap-to-copy on coupon code
+document.getElementById('rCode').addEventListener('click', async () => {
+  const code = document.getElementById('rCodeText').textContent.trim();
+  try {
+    await navigator.clipboard.writeText(code);
+  } catch (e) {
+    // Fallback for older browsers / iOS in some contexts
+    const ta = document.createElement('textarea');
+    ta.value = code; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove();
+  }
+  const codeEl = document.getElementById('rCode');
+  const flash = document.getElementById('copiedFlash');
+  codeEl.classList.add('copied');
+  flash.classList.add('show');
+  setTimeout(() => {
+    codeEl.classList.remove('copied');
+    flash.classList.remove('show');
+  }, 1800);
+});
 </script>
 
 </body>
