@@ -9059,6 +9059,54 @@ ${client.name}さん、ありがとうございます。
     const addBtn = document.getElementById('add-client-btn');
     if (addBtn) addBtn.addEventListener('click', () => openClientForm(null));
 
+    // ★ オーナーfb 2026-06-24: 顧客台帳 CSV エクスポート (Excel 互換 UTF-8 BOM)
+    const csvBtn = document.getElementById('export-csv-btn');
+    if (csvBtn) csvBtn.addEventListener('click', () => {
+      const csvEsc = (v) => {
+        const s = String(v == null ? '' : v);
+        return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      };
+      const ageOf = (birth) => {
+        if (!birth) return '';
+        const d = new Date(birth);
+        if (isNaN(d)) return '';
+        const t = new Date();
+        let a = t.getFullYear() - d.getFullYear();
+        if (t.getMonth() < d.getMonth() || (t.getMonth() === d.getMonth() && t.getDate() < d.getDate())) a--;
+        return a;
+      };
+      const familyDesc = (c) => {
+        if (!Array.isArray(c.family) || c.family.length === 0) return c.familyStructure || '単身';
+        return c.family.map(f => f.relation || f.role || '').filter(Boolean).join('・') || (c.familyStructure || '');
+      };
+      const headers = ['名前', 'かな', '年齢', '職業', '家族構成', 'ステータス', '管理資産(円)', '最終接触日', 'LINE連携', '主な関心事'];
+      const rows = clients.map(c => [
+        c.name || '',
+        c.nameKana || c.kana || '',
+        ageOf(c.birth),
+        c.occupation || '',
+        familyDesc(c),
+        c.status || '',
+        c.aum || 0,
+        c.lastContact || '',
+        c.lineFriendId ? '✓' : '',
+        (Array.isArray(c.interests) ? c.interests.join('・') : (c.interests || '')),
+      ]);
+      const csv = [headers, ...rows].map(r => r.map(csvEsc).join(',')).join('\r\n');
+      const bom = '﻿';
+      const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8' });
+      const today = new Date().toISOString().slice(0, 10);
+      const fpName = (window.__fp?.tenantName || '').replace(/\s/g, '').replace(/—DEMOビュー/, '') || 'FP事務所';
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `顧客台帳_${fpName}_${today}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
     // モーダル外クリックで閉じる
     document.getElementById('modal-overlay').addEventListener('click', e => {
       if (e.target.id === 'modal-overlay') closeModal();
@@ -9072,6 +9120,15 @@ ${client.name}さん、ありがとうございます。
       if (e.key === 'Escape') {
         closeModal();
         document.getElementById('form-overlay').style.display = 'none';
+      }
+      // ★ オーナーfb 2026-06-24 Polish: Cmd+K / Ctrl+K で 顧客検索 にフォーカス
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        try { activateTab('clients'); } catch (_) {}
+        setTimeout(() => {
+          const search = document.getElementById('client-search');
+          if (search) { search.focus(); search.select(); }
+        }, 50);
       }
     });
 
