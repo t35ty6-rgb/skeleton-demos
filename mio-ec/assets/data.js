@@ -112,7 +112,7 @@
         `<div class="pdp-thumb${i===0?' active':''}" data-src="${escapeHtml(src)}"><img src="${escapeHtml(src)}" alt=""></div>`
       ).join('');
       const badgeHtml = p.badge ? `<div class="badge">${escapeHtml(p.badge)}</div>` : '';
-      const shippingHtml = p.shippingFee ? `全国一律 ¥${p.shippingFee.toLocaleString('ja-JP')}（地域により異なる場合あり）` : 'お問い合わせください';
+      const shippingHtml = (p.shippingFee && p.shippingFee > 0) ? `全国一律 ¥${p.shippingFee.toLocaleString('ja-JP')}（地域により異なる場合あり）` : '送料無料（全国一律）';
 
       return `
 <div style="background:var(--sky-pale);padding:18px 24px;font-size:11px;letter-spacing:.2em;color:var(--ink-sub)">
@@ -139,7 +139,7 @@
     <div class="pdp-price">
       <strong>${yen(price.incl)}</strong>
       <span class="unit">税込（うち消費税 ${yen(price.taxAmount)} ／ 税抜 ${yen(price.excl)}）</span>
-      <span class="tax">送料別</span>
+      <span class="tax">送料無料</span>
     </div>
 
     <div class="pdp-buynow">
