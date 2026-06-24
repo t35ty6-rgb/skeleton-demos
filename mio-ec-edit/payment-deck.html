@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mio (Made in Ono) ／ 決済の仕組み</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Noto+Serif+JP:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=Cormorant+Garamond:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0f2a3a;
+  --ink-2:#1b3a4d;
+  --ink-sub:#4a6b7c;
+  --sky:#5eb9d6;
+  --sky-deep:#2a7a98;
+  --sky-pale:#e6f3f8;
+  --snow:#f4faff;
+  --paper:#f7f3ea;
+  --paper-2:#efe8d7;
+  --shu:#c1432a;
+  --shu-deep:#8e2e1a;
+  --gold:#b88a3a;
+  --line:#d6c9a8;
+  --line-strong:#1a3548;
+  --kuro:#0a0a0a;
+
+  --serif: 'Shippori Mincho','Noto Serif JP','Hiragino Mincho ProN','Yu Mincho',serif;
+  --serif-en: 'Cormorant Garamond', serif;
+  --sans: 'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#1a1a1a;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+body{padding:48px 0;display:flex;flex-direction:column;align-items:center;gap:32px}
+
+/* ===== Slide frame ===== */
+.deck-title{
+  color:#d6c9a8;font-family:var(--serif-en);font-size:14px;letter-spacing:.4em;
+  text-transform:uppercase;margin-bottom:-8px
+}
+.slide{
+  width:1280px;height:720px;background:var(--paper);
+  position:relative;overflow:hidden;
+  box-shadow:0 24px 80px rgba(0,0,0,.5),0 4px 12px rgba(0,0,0,.3);
+}
+.slide-num{
+  position:absolute;left:48px;bottom:32px;font-family:var(--serif-en);
+  font-size:13px;letter-spacing:.3em;color:var(--ink-sub);z-index:5;
+}
+.slide-num strong{color:var(--shu);font-weight:500}
+.slide-foot{
+  position:absolute;right:48px;bottom:32px;font-family:var(--serif);
+  font-size:11px;letter-spacing:.25em;color:var(--ink-sub);z-index:5;
+}
+.slide-foot .dot{display:inline-block;width:4px;height:4px;background:var(--shu);
+  border-radius:50%;vertical-align:middle;margin:0 10px 2px}
+.slide-chapter{
+  position:absolute;left:48px;top:32px;font-family:var(--serif-en);
+  font-size:12px;letter-spacing:.4em;color:var(--ink-sub);text-transform:uppercase;z-index:5;
+}
+.slide-chapter::before{content:"—— ";color:var(--shu)}
+
+/* paper texture */
+.slide::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:
+    radial-gradient(rgba(180,150,80,.04) 1px,transparent 1px),
+    radial-gradient(rgba(140,110,60,.03) 1px,transparent 1px);
+  background-size:3px 3px,7px 7px;
+  background-position:0 0,1px 2px;
+  z-index:1;
+}
+
+/* ============ SLIDE 01 : COVER ============ */
+.s01{background:linear-gradient(180deg,#0d2333 0%,#163952 60%,#1f4a66 100%);color:#f4ead2}
+.s01 .slide-num,.s01 .slide-foot,.s01 .slide-chapter{color:#9fb9c9}
+.s01 .slide-num strong{color:#e0a447}
+.s01::before{opacity:.4}
+.s01-bg{
+  position:absolute;inset:0;z-index:1;opacity:.35;
+}
+.s01-bg svg{width:100%;height:100%;display:block}
+.s01-grid{
+  position:absolute;inset:48px;border:1px solid rgba(216,201,168,.18);
+  z-index:2;pointer-events:none;
+}
+.s01-grid::before,.s01-grid::after{
+  content:"";position:absolute;background:rgba(216,201,168,.12);
+}
+.s01-grid::before{left:0;right:0;top:33.33%;height:1px}
+.s01-grid::after{top:0;bottom:0;left:50%;width:1px}
+.s01-content{
+  position:absolute;inset:0;z-index:4;
+  display:flex;flex-direction:column;justify-content:center;padding:0 96px;
+}
+.s01-eyebrow{
+  font-family:var(--serif-en);font-size:16px;letter-spacing:.55em;
+  color:#e0a447;text-transform:uppercase;margin-bottom:36px;
+  display:flex;align-items:center;gap:16px
+}
+.s01-eyebrow::before{content:"";display:block;width:60px;height:1px;background:#e0a447}
+.s01-mark{
+  font-family:var(--serif-en);font-size:84px;line-height:1;font-weight:400;
+  letter-spacing:.04em;color:#f4ead2;margin-bottom:8px;
+}
+.s01-mark em{font-style:italic;color:#e0a447;font-weight:300}
+.s01-jp{
+  font-family:var(--serif);font-size:24px;font-weight:300;letter-spacing:.45em;
+  color:#cfd9e1;margin-bottom:48px
+}
+.s01-title{
+  font-family:var(--serif);font-size:62px;font-weight:500;
+  letter-spacing:.06em;line-height:1.3;color:#fff
+}
+.s01-title .shu{color:#e0a447}
+.s01-rule{margin:40px 0 32px;width:120px;height:1px;background:#e0a447}
+.s01-meta{
+  font-family:var(--serif);font-size:14px;letter-spacing:.3em;color:#9fb9c9;
+  display:flex;gap:24px;align-items:center;
+}
+.s01-meta b{font-weight:500;color:#cfd9e1}
+.s01-tag{
+  position:absolute;top:96px;right:96px;z-index:5;
+  font-family:var(--serif-en);font-size:11px;letter-spacing:.45em;
+  color:#e0a447;text-align:right;line-height:2;text-transform:uppercase;
+  border-left:1px solid rgba(224,164,71,.5);padding-left:18px;
+}
+
+/* ============ SLIDE 02 : 3 POINTS ============ */
+.s02{padding:80px 96px}
+.s02 .head{
+  display:flex;align-items:baseline;gap:24px;margin-bottom:8px;z-index:3;position:relative
+}
+.s02 .head .num{font-family:var(--serif-en);font-size:48px;color:var(--shu);font-weight:300;font-style:italic}
+.s02 .head .label{font-family:var(--serif);font-size:13px;letter-spacing:.4em;color:var(--ink-sub)}
+.s02 .h1{
+  font-family:var(--serif);font-size:54px;font-weight:600;color:var(--ink);
+  letter-spacing:.04em;line-height:1.25;margin-bottom:8px;z-index:3;position:relative
+}
+.s02 .h1 .accent{color:var(--shu)}
+.s02 .lead{
+  font-family:var(--serif);font-size:18px;color:var(--ink-sub);letter-spacing:.1em;
+  margin-bottom:56px;z-index:3;position:relative
+}
+.s02 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;z-index:3;position:relative}
+.s02 .card{
+  background:#fff;padding:36px 28px 32px;position:relative;
+  border-top:3px solid var(--ink);
+  box-shadow:0 1px 0 var(--line);
+}
+.s02 .card::after{
+  content:"";position:absolute;top:-3px;left:0;width:64px;height:3px;background:var(--shu);
+}
+.s02 .card .n{
+  font-family:var(--serif-en);font-size:14px;letter-spacing:.4em;color:var(--shu);
+  margin-bottom:24px;font-weight:500
+}
+.s02 .card .t{
+  font-family:var(--serif);font-size:28px;font-weight:600;line-height:1.4;color:var(--ink);
+  margin-bottom:18px;letter-spacing:.04em
+}
+.s02 .card .d{
+  font-family:var(--sans);font-size:13.5px;line-height:1.9;color:var(--ink-sub);letter-spacing:.04em
+}
+.s02 .card .icon{
+  font-family:var(--serif-en);font-style:italic;font-size:80px;line-height:1;
+  color:var(--paper-2);position:absolute;right:18px;bottom:6px;pointer-events:none;
+}
+
+/* ============ SLIDE 03 : Stripe Rationale ============ */
+.s03{padding:80px 96px;background:#fffefb}
+.s03 .head{display:flex;align-items:baseline;gap:24px;margin-bottom:8px;z-index:3;position:relative}
+.s03 .head .num{font-family:var(--serif-en);font-size:48px;color:var(--shu);font-weight:300;font-style:italic}
+.s03 .head .label{font-family:var(--serif);font-size:13px;letter-spacing:.4em;color:var(--ink-sub)}
+.s03 .h1{font-family:var(--serif);font-size:48px;font-weight:600;color:var(--ink);letter-spacing:.04em;line-height:1.25;margin-bottom:36px;z-index:3;position:relative}
+.s03 .h1 .accent{color:var(--shu)}
+.s03 .grid{display:grid;grid-template-columns:.85fr 1fr;gap:48px;z-index:3;position:relative}
+.s03 .stripe-card{
+  background:linear-gradient(135deg,#0d2333 0%,#1f4a66 100%);color:#f4ead2;
+  padding:36px 32px;position:relative;overflow:hidden;
+}
+.s03 .stripe-card::after{
+  content:"";position:absolute;right:-40px;bottom:-40px;width:160px;height:160px;
+  border:1px solid rgba(224,164,71,.4);border-radius:50%
+}
+.s03 .stripe-card::before{
+  content:"";position:absolute;right:0;top:0;width:6px;height:100%;background:#e0a447
+}
+.s03 .stripe-card .pre{font-family:var(--serif-en);font-size:11px;letter-spacing:.5em;color:#e0a447;margin-bottom:18px;text-transform:uppercase}
+.s03 .stripe-card .nm{font-family:var(--serif-en);font-size:54px;letter-spacing:.02em;line-height:1;margin-bottom:6px;font-weight:400}
+.s03 .stripe-card .nm em{font-style:italic;font-weight:300}
+.s03 .stripe-card .jp{font-family:var(--serif);font-size:15px;letter-spacing:.3em;color:#cfd9e1;margin-bottom:24px}
+.s03 .stripe-card dl{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:13px}
+.s03 .stripe-card dt{font-family:var(--serif);color:#9fb9c9;letter-spacing:.15em}
+.s03 .stripe-card dd{color:#fff;letter-spacing:.04em;font-family:var(--sans);font-weight:300}
+.s03 .stripe-card dd b{color:#e0a447;font-weight:500}
+.s03 .reasons{display:flex;flex-direction:column;gap:18px}
+.s03 .reason{display:grid;grid-template-columns:48px 1fr;gap:18px;padding:18px 0;border-bottom:1px solid var(--line)}
+.s03 .reason:last-child{border-bottom:none}
+.s03 .reason .ix{font-family:var(--serif-en);font-size:32px;color:var(--shu);font-style:italic;font-weight:400;line-height:1}
+.s03 .reason .t{font-family:var(--serif);font-size:19px;font-weight:600;color:var(--ink);margin-bottom:6px;letter-spacing:.04em}
+.s03 .reason .d{font-family:var(--sans);font-size:13px;color:var(--ink-sub);line-height:1.8;letter-spacing:.04em}
+
+/* ============ SLIDE 04 : Cards ============ */
+.s04{padding:80px 96px}
+.s04 .head{display:flex;align-items:baseline;gap:24px;margin-bottom:8px;z-index:3;position:relative}
+.s04 .head .num{font-family:var(--serif-en);font-size:48px;color:var(--shu);font-weight:300;font-style:italic}
+.s04 .head .label{font-family:var(--serif);font-size:13px;letter-spacing:.4em;color:var(--ink-sub)}
+.s04 .h1{font-family:var(--serif);font-size:48px;font-weight:600;color:var(--ink);letter-spacing:.04em;line-height:1.25;margin-bottom:8px;z-index:3;position:relative}
+.s04 .lead{font-family:var(--serif);font-size:17px;color:var(--ink-sub);letter-spacing:.1em;margin-bottom:48px;z-index:3;position:relative}
+.s04 .body{display:grid;grid-template-columns:1.2fr 1fr;gap:56px;z-index:3;position:relative}
+.s04 .brands{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.s04 .brand{
+  aspect-ratio:8/5;background:#fff;border:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.s04 .brand .nm{font-family:var(--serif-en);font-weight:500;font-size:22px;letter-spacing:.08em;color:var(--ink)}
+.s04 .brand .sub{font-family:var(--serif);font-size:11px;letter-spacing:.3em;color:var(--ink-sub);margin-top:6px}
+.s04 .brand .stripe-bar{position:absolute;left:0;right:0;bottom:0;height:6px;background:linear-gradient(90deg,#1a1f71 0%,#1a1f71 33%,#eb001b 33%,#eb001b 66%,#f79e1b 66%)}
+.s04 .brand:nth-child(2) .stripe-bar{background:linear-gradient(90deg,#eb001b,#f79e1b)}
+.s04 .brand:nth-child(3) .stripe-bar{background:linear-gradient(90deg,#006fcf,#006fcf)}
+.s04 .brand:nth-child(4) .stripe-bar{background:#0079be}
+.s04 .brand:nth-child(5) .stripe-bar{background:#0e4c96}
+.s04 .ck{
+  background:#fff;border:1px solid var(--line);padding:24px;position:relative;
+  font-family:var(--mono);font-size:11px
+}
+.s04 .ck .browser{display:flex;gap:6px;margin-bottom:14px}
+.s04 .ck .browser i{width:10px;height:10px;border-radius:50%;background:#e6e1d5;display:block}
+.s04 .ck .url{background:#f7f3ea;padding:6px 10px;font-family:var(--mono);font-size:10px;color:var(--ink-sub);margin-bottom:18px;border-radius:3px}
+.s04 .ck .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--line);font-size:12px;color:var(--ink)}
+.s04 .ck .row.total{font-weight:600;color:var(--shu);border:none;padding-top:14px;font-size:14px}
+.s04 .ck .pay{margin-top:14px;background:var(--ink);color:#fff;text-align:center;padding:10px;letter-spacing:.3em;font-family:var(--serif);font-size:12px}
+.s04 .ck .lock{font-size:9px;color:var(--ink-sub);text-align:center;margin-top:10px;letter-spacing:.3em;font-family:var(--serif)}
+
+/* ============ SLIDE 05 : Money Flow ============ */
+.s05{padding:72px 96px}
+.s05 .head{display:flex;align-items:baseline;gap:24px;margin-bottom:8px;z-index:3;position:relative}
+.s05 .head .num{font-family:var(--serif-en);font-size:48px;color:var(--shu);font-weight:300;font-style:italic}
+.s05 .head .label{font-family:var(--serif);font-size:13px;letter-spacing:.4em;color:var(--ink-sub)}
+.s05 .h1{font-family:var(--serif);font-size:46px;font-weight:600;color:var(--ink);letter-spacing:.04em;line-height:1.25;margin-bottom:40px;z-index:3;position:relative}
+.s05 .flow{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:stretch;
+  position:relative;z-index:3
+}
+.s05 .node{
+  background:#fff;border:1px solid var(--line);padding:22px 18px 24px;position:relative;
+  min-height:200px;display:flex;flex-direction:column
+}
+.s05 .node .step{
+  font-family:var(--serif-en);font-size:11px;letter-spacing:.4em;color:var(--shu);
+  font-weight:500;margin-bottom:12px
+}
+.s05 .node .icon{
+  width:48px;height:48px;background:var(--ink);color:var(--paper);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif-en);font-style:italic;font-size:22px;
+  margin-bottom:18px;
+}
+.s05 .node .nm{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink);margin-bottom:6px;letter-spacing:.04em}
+.s05 .node .role{font-family:var(--sans);font-size:11px;color:var(--ink-sub);letter-spacing:.15em;margin-bottom:14px}
+.s05 .node .d{font-family:var(--sans);font-size:12px;color:var(--ink);line-height:1.75;letter-spacing:.04em;margin-top:auto}
+.s05 .node .amt{
+  position:absolute;right:-8px;top:18px;background:var(--shu);color:#fff;
+  font-family:var(--serif-en);font-style:italic;font-size:18px;
+  padding:6px 12px;letter-spacing:.05em;z-index:2;font-weight:400
+}
+.s05 .arr{
+  position:absolute;left:calc(25% - 12px);right:auto;top:50%;width:24px;height:24px;
+  transform:translateY(-50%);z-index:4;pointer-events:none
+}
+.s05 .arrows{position:relative}
+.s05 .arrows::before,.s05 .arrows::after,.s05 .arrows i{
+  content:"";position:absolute;top:50%;width:0;height:0;
+  border-top:7px solid transparent;border-bottom:7px solid transparent;
+  border-left:11px solid var(--shu);transform:translateY(-50%);z-index:4
+}
+.s05 .arrows::before{left:calc(25% - 6px)}
+.s05 .arrows::after{left:calc(50% - 6px)}
+.s05 .arrows i{left:calc(75% - 6px);display:block}
+.s05 .note{
+  margin-top:24px;padding:18px 22px;background:var(--paper-2);
+  font-family:var(--serif);font-size:13.5px;color:var(--ink);letter-spacing:.08em;line-height:1.8;
+  border-left:3px solid var(--shu);position:relative;z-index:3
+}
+.s05 .note b{color:var(--shu);font-weight:600}
+
+/* ============ SLIDE 06 : 4 STEPS ============ */
+.s06{padding:80px 96px;background:#fffefb}
+.s06 .head{display:flex;align-items:baseline;gap:24px;margin-bottom:8px;z-index:3;position:relative}
+.s06 .head .num{font-family:var(--serif-en);font-size:48px;color:var(--shu);font-weight:300;font-style:italic}
+.s06 .head .label{font-family:var(--serif);font-size:13px;letter-spacing:.4em;color:var(--ink-sub)}
+.s06 .h1{font-family:var(--serif);font-size:46px;font-weight:600;color:var(--ink);letter-spacing:.04em;line-height:1.25;margin-bottom:8px;z-index:3;position:relative}
+.s06 .lead{font-family:var(--serif);font-size:16px;color:var(--ink-sub);letter-spacing:.1em;margin-bottom:44px;z-index:3;position:relative}
+.s06 .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;z-index:3;position:relative}
+.s06 .step{position:relative}
+.s06 .step .top{
+  font-family:var(--serif-en);font-size:120px;line-height:1;color:var(--paper-2);
+  font-weight:300;font-style:italic;margin-bottom:-30px;letter-spacing:-.05em
+}
+.s06 .step .box{
+  background:#fff;border-top:2px solid var(--ink);padding:24px 22px 26px;position:relative;
+  border-bottom:1px solid var(--line);
+}
+.s06 .step .actor{
+  font-family:var(--serif);font-size:11px;letter-spacing:.3em;color:var(--shu);
+  margin-bottom:14px;font-weight:600
+}
+.s06 .step .t{
+  font-family:var(--serif);font-size:20px;font-weight:600;color:var(--ink);
+  margin-bottom:14px;letter-spacing:.04em;line-height:1.4
+}
+.s06 .step .d{
+  font-family:var(--sans);font-size:12.5px;color:var(--ink-sub);line-height:1.85;letter-spacing:.04em
+}
+.s06 .step .time{
+  position:absolute;top:-4px;right:0;font-family:var(--mono);font-size:10px;
+  color:var(--shu);letter-spacing:.2em;background:var(--paper);padding:3px 8px;
+}
+.s06 .strip{
+  margin-top:36px;padding:18px 24px;background:var(--ink);color:#f4ead2;
+  font-family:var(--serif);font-size:14px;letter-spacing:.2em;
+  display:flex;justify-content:space-between;align-items:center;position:relative;z-index:3
+}
+.s06 .strip b{color:#e0a447;font-weight:500}
+.s06 .strip .em{font-family:var(--serif-en);font-size:18px;font-style:italic;color:#e0a447}
+
+/* ============ SLIDE 07 : PCI DSS ============ */
+.s07{padding:80px 96px}
+.s07 .head{display:flex;align-items:baseline;gap:24px;margin-bottom:8px;z-index:3;position:relative}
+.s07 .head .num{font-family:var(--serif-en);font-size:48px;color:var(--shu);font-weight:300;font-style:italic}
+.s07 .head .label{font-family:var(--serif);font-size:13px;letter-spacing:.4em;color:var(--ink-sub)}
+.s07 .h1{font-family:var(--serif);font-size:46px;font-weight:600;color:var(--ink);letter-spacing:.04em;line-height:1.25;margin-bottom:32px;z-index:3;position:relative}
+.s07 .h1 .em{color:var(--shu);font-family:var(--serif-en);font-style:italic;font-weight:500}
+.s07 .grid{display:grid;grid-template-columns:.95fr 1fr;gap:48px;z-index:3;position:relative}
+.s07 .badge{
+  background:linear-gradient(180deg,#0d2333,#1f4a66);color:#fff;padding:36px 32px;
+  position:relative;display:flex;flex-direction:column;justify-content:space-between;
+  min-height:340px;overflow:hidden;
+}
+.s07 .badge::before{
+  content:"";position:absolute;inset:14px;border:1px solid rgba(224,164,71,.4);pointer-events:none
+}
+.s07 .badge .stamp{
+  font-family:var(--serif-en);font-size:120px;line-height:1;font-style:italic;font-weight:300;
+  color:#e0a447;margin-bottom:0;letter-spacing:-.04em
+}
+.s07 .badge .stamp .small{font-size:34px;letter-spacing:.05em;color:#fff;font-style:normal;font-weight:400;vertical-align:top;display:inline-block;margin-left:8px}
+.s07 .badge .ts{font-family:var(--serif);font-size:14px;letter-spacing:.3em;color:#cfd9e1;margin-top:8px}
+.s07 .badge .ts b{color:#e0a447;font-weight:500}
+.s07 .badge .lock{position:absolute;right:36px;top:36px;font-family:var(--serif-en);font-size:11px;letter-spacing:.4em;color:#e0a447;text-transform:uppercase}
+.s07 .badge .lock::before{content:"▢ ";color:#e0a447}
+.s07 .explain .t{font-family:var(--serif);font-size:22px;font-weight:600;color:var(--ink);letter-spacing:.04em;margin-bottom:18px;line-height:1.5}
+.s07 .explain .t .mk{background:linear-gradient(180deg,transparent 60%,rgba(193,67,42,.18) 60%);padding:0 4px}
+.s07 .explain .p{font-family:var(--serif);font-size:15px;color:var(--ink);line-height:2;letter-spacing:.08em;margin-bottom:18px}
+.s07 .level-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:20px}
+.s07 .lv{padding:10px 8px;text-align:center;font-family:var(--serif-en);font-size:12px;letter-spacing:.2em;background:#fff;border:1px solid var(--line);color:var(--ink-sub)}
+.s07 .lv.on{background:var(--shu);color:#fff;border-color:var(--shu);font-weight:500;position:relative}
+.s07 .lv.on::after{content:"Mio";position:absolute;left:50%;transform:translateX(-50%);top:-22px;font-family:var(--serif);font-size:11px;color:var(--shu);letter-spacing:.2em}
+
+/* ============ SLIDE 08 : 3.6% FEE ============ */
+.s08{padding:72px 96px}
+.s08 .head{display:flex;align-items:baseline;gap:24px;margin-bottom:8px;z-index:3;position:relative}
+.s08 .head .num{font-family:var(--serif-en);font-size:48px;color:var(--shu);font-weight:300;font-style:italic}
+.s08 .head .label{font-family:var(--serif);font-size:13px;letter-spacing:.4em;color:var(--ink-sub)}
+.s08 .h1{font-family:var(--serif);font-size:46px;font-weight:600;color:var(--ink);letter-spacing:.04em;line-height:1.25;margin-bottom:32px;z-index:3;position:relative}
+.s08 .grid{display:grid;grid-template-columns:.9fr 1fr;gap:48px;align-items:start;z-index:3;position:relative}
+.s08 .figure{
+  background:#fff;padding:32px 28px;border:1px solid var(--line);position:relative;
+}
+.s08 .figure::before{content:"事例";position:absolute;top:-12px;left:24px;background:var(--shu);color:#fff;font-family:var(--serif);font-size:12px;letter-spacing:.3em;padding:3px 14px}
+.s08 .figure .row{display:flex;justify-content:space-between;align-items:baseline;padding:12px 0;border-bottom:1px dashed var(--line);font-family:var(--serif);letter-spacing:.04em}
+.s08 .figure .row .nm{font-size:13px;color:var(--ink-sub)}
+.s08 .figure .row .v{font-family:var(--serif-en);font-style:italic;font-size:22px;color:var(--ink);font-weight:400}
+.s08 .figure .row.fee .v{color:var(--shu-deep)}
+.s08 .figure .row.net .v{font-size:30px;color:var(--shu);font-weight:500}
+.s08 .figure .row.net{border-bottom:none;padding-top:18px}
+.s08 .figure .row.net .nm{font-size:14px;color:var(--ink);font-weight:600}
+.s08 .figure .cap{font-family:var(--sans);font-size:10.5px;color:var(--ink-sub);margin-top:14px;letter-spacing:.05em;line-height:1.7}
+.s08 .who{display:flex;flex-direction:column;gap:14px}
+.s08 .who .it{
+  display:grid;grid-template-columns:80px 1fr;gap:18px;
+  background:#fff;border:1px solid var(--line);padding:20px 22px;position:relative
+}
+.s08 .who .it.A{border-left:4px solid var(--shu)}
+.s08 .who .it.B{opacity:.45}
+.s08 .who .ix{font-family:var(--serif-en);font-size:48px;font-style:italic;color:var(--shu);line-height:1;font-weight:300}
+.s08 .who .B .ix{color:var(--ink-sub)}
+.s08 .who .t{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink);margin-bottom:6px;letter-spacing:.04em}
+.s08 .who .d{font-family:var(--sans);font-size:12.5px;color:var(--ink-sub);line-height:1.85;letter-spacing:.04em}
+.s08 .who .tag{
+  position:absolute;top:18px;right:22px;font-family:var(--serif);font-size:10px;
+  letter-spacing:.3em;padding:3px 10px;border:1px solid var(--shu);color:var(--shu)
+}
+.s08 .who .B .tag{border-color:var(--ink-sub);color:var(--ink-sub)}
+
+/* ============ SLIDE 09 : Why no bank transfer ============ */
+.s09{padding:80px 96px;background:#fffefb}
+.s09 .head{display:flex;align-items:baseline;gap:24px;margin-bottom:8px;z-index:3;position:relative}
+.s09 .head .num{font-family:var(--serif-en);font-size:48px;color:var(--shu);font-weight:300;font-style:italic}
+.s09 .head .label{font-family:var(--serif);font-size:13px;letter-spacing:.4em;color:var(--ink-sub)}
+.s09 .h1{font-family:var(--serif);font-size:42px;font-weight:600;color:var(--ink);letter-spacing:.04em;line-height:1.3;margin-bottom:8px;z-index:3;position:relative}
+.s09 .lead{font-family:var(--serif);font-size:16px;color:var(--ink-sub);letter-spacing:.1em;margin-bottom:40px;z-index:3;position:relative}
+.s09 .table{z-index:3;position:relative;background:#fff;border:1px solid var(--line)}
+.s09 .tr{display:grid;grid-template-columns:170px 1.1fr 1fr;border-bottom:1px solid var(--line)}
+.s09 .tr:last-child{border-bottom:none}
+.s09 .tr.h{background:var(--ink);color:#f4ead2}
+.s09 .tr.h .c{font-family:var(--serif);font-size:13px;letter-spacing:.3em;padding:14px 22px}
+.s09 .c{padding:18px 22px;font-family:var(--sans);font-size:12.5px;line-height:1.8;color:var(--ink);border-right:1px solid var(--line);letter-spacing:.04em}
+.s09 .c:last-child{border-right:none}
+.s09 .c.lbl{font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink);letter-spacing:.08em;background:var(--paper-2)}
+.s09 .c .good{color:var(--shu);font-weight:600}
+.s09 .c .bad{color:var(--ink-sub)}
+.s09 .conclude{
+  margin-top:28px;padding:20px 26px;background:var(--ink);color:#f4ead2;
+  font-family:var(--serif);font-size:15px;letter-spacing:.15em;line-height:1.7;
+  border-left:4px solid var(--shu);z-index:3;position:relative
+}
+.s09 .conclude b{color:#e0a447;font-weight:500}
+
+/* ============ SLIDE 10 : SUMMARY / NEXT ============ */
+.s10{padding:72px 96px;background:linear-gradient(180deg,#fffefb 0%,#f4ead2 100%)}
+.s10 .head{display:flex;align-items:baseline;gap:24px;margin-bottom:8px;z-index:3;position:relative}
+.s10 .head .num{font-family:var(--serif-en);font-size:48px;color:var(--shu);font-weight:300;font-style:italic}
+.s10 .head .label{font-family:var(--serif);font-size:13px;letter-spacing:.4em;color:var(--ink-sub)}
+.s10 .h1{font-family:var(--serif);font-size:50px;font-weight:600;color:var(--ink);letter-spacing:.04em;line-height:1.25;margin-bottom:36px;z-index:3;position:relative}
+.s10 .h1 .em{color:var(--shu);font-family:var(--serif-en);font-style:italic;font-weight:500}
+.s10 .summary{display:grid;grid-template-columns:1fr 1fr;gap:36px;z-index:3;position:relative}
+.s10 .pillar{background:rgba(255,255,255,.7);backdrop-filter:blur(4px);padding:28px 28px 30px;border:1px solid var(--line)}
+.s10 .pillar h3{font-family:var(--serif);font-size:14px;letter-spacing:.4em;color:var(--shu);font-weight:600;margin-bottom:18px;display:flex;align-items:center;gap:12px}
+.s10 .pillar h3::before{content:"";display:block;width:24px;height:1px;background:var(--shu)}
+.s10 .pillar ul{list-style:none}
+.s10 .pillar li{font-family:var(--serif);font-size:14.5px;color:var(--ink);letter-spacing:.06em;line-height:1.7;padding:10px 0 10px 22px;border-bottom:1px dashed var(--line);position:relative}
+.s10 .pillar li:last-child{border-bottom:none}
+.s10 .pillar li::before{
+  content:"";position:absolute;left:0;top:18px;width:10px;height:10px;
+  background:var(--shu);transform:rotate(45deg)
+}
+.s10 .pillar.next{background:var(--ink);color:#f4ead2;border:none}
+.s10 .pillar.next h3{color:#e0a447}
+.s10 .pillar.next h3::before{background:#e0a447}
+.s10 .pillar.next li{color:#f4ead2;border-color:rgba(216,201,168,.25)}
+.s10 .pillar.next li::before{background:#e0a447}
+.s10 .pillar.next li .step{font-family:var(--serif-en);color:#e0a447;font-style:italic;margin-right:10px;font-size:16px}
+.s10 .end{
+  position:absolute;left:96px;bottom:90px;font-family:var(--serif);
+  font-size:12px;letter-spacing:.4em;color:var(--ink-sub);
+}
+.s10 .end b{color:var(--ink);font-weight:500}
+.s10 .end::before{content:"";display:inline-block;width:40px;height:1px;background:var(--shu);vertical-align:middle;margin-right:14px;margin-bottom:2px}
+
+/* shared decorative motifs */
+.deco-circle{
+  position:absolute;border:1px solid var(--line);border-radius:50%;
+  pointer-events:none;z-index:2
+}
+
+@media print{
+  body{background:#fff;padding:0;gap:0}
+  .deck-title,.bottom-nav{display:none}
+  .slide{box-shadow:none;page-break-after:always;width:100vw;height:100vh}
+}
+
+.bottom-nav{
+  position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.7);color:#fff;padding:8px 18px;border-radius:99px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;backdrop-filter:blur(8px);
+  z-index:99
+}
+</style>
+</head>
+<body>
+
+<div class="deck-title">MIO ／ MADE IN ONO &nbsp;·&nbsp; PAYMENT DECK &nbsp;·&nbsp; 10 SLIDES</div>
+
+<!-- ====================== SLIDE 01 : COVER ====================== -->
+<section class="slide s01">
+  <div class="s01-bg">
+    <svg viewBox="0 0 1280 720" preserveAspectRatio="none">
+      <path d="M0,720 L0,520 C200,460 360,490 520,440 C700,390 860,430 1040,400 C1180,380 1240,400 1280,390 L1280,720 Z" fill="rgba(224,164,71,.10)"/>
+      <path d="M0,720 L0,580 C160,540 320,560 480,520 C660,490 820,520 1000,500 C1140,490 1220,510 1280,500 L1280,720 Z" fill="rgba(224,164,71,.18)"/>
+      <circle cx="980" cy="190" r="80" fill="none" stroke="rgba(224,164,71,.3)" stroke-width="1"/>
+      <circle cx="980" cy="190" r="50" fill="rgba(224,164,71,.12)"/>
+    </svg>
+  </div>
+  <div class="s01-grid"></div>
+  <div class="s01-tag">PAYMENT<br>SYSTEM<br>DECK<br>·<br>2026</div>
+  <div class="s01-content">
+    <div class="s01-eyebrow">For 大野商工会議所 &nbsp;／&nbsp; 出品事業者</div>
+    <div class="s01-mark">MIO<em>.</em></div>
+    <div class="s01-jp">Made in Ono ／ 大野の匠を全国に</div>
+    <div class="s01-title">
+      ―― 決済の仕組み<br>
+      <span style="font-size:38px;letter-spacing:.1em;color:#cfd9e1;font-weight:300">Stripe で、<span class="shu">安全に、簡単に、世界基準で。</span></span>
+    </div>
+    <div class="s01-rule"></div>
+    <div class="s01-meta">
+      <span>VOL. <b>01</b></span>
+      <span>·</span>
+      <span>BRIEFING DECK</span>
+      <span>·</span>
+      <span>10 PAGES</span>
+    </div>
+  </div>
+  <div class="slide-chapter">cover</div>
+  <div class="slide-num"><strong>01</strong> ／ 10</div>
+  <div class="slide-foot">MIO Payment Briefing<span class="dot"></span>大野商工会議所</div>
+</section>
+
+<!-- ====================== SLIDE 02 : 3 KEY POINTS ====================== -->
+<section class="slide s02">
+  <div class="deco-circle" style="width:320px;height:320px;right:-120px;top:-80px"></div>
+  <div class="head"><span class="num">01</span><span class="label">KEY TAKEAWAYS ／ 3つの要点</span></div>
+  <div class="h1">難しい知識は要らない。<br><span class="accent">押さえるべきは、3点だけ。</span></div>
+  <div class="lead">Mio の決済はシンプルに設計されている。本資料の結論を、最初に提示する。</div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="n">POINT 01</div>
+      <div class="t">事業者の手元に<br>カード番号は届かない。</div>
+      <div class="d">お客様のカード情報は決済代行 Stripe が直接処理する。Mio や出品事業者のサーバーには一切残らないため、漏洩リスクと個人情報の保管責任を完全に外せる。</div>
+      <div class="icon">SAFE</div>
+    </div>
+    <div class="card">
+      <div class="n">POINT 02</div>
+      <div class="t">1クリックで<br>決済リンクが出る。</div>
+      <div class="d">Stripe 管理画面で商品を登録すると、購入ページのURLが自動発行される。専門知識・サーバー設定・サイト連携工事は不要。発行所要時間はおよそ1分。</div>
+      <div class="icon">FAST</div>
+    </div>
+    <div class="card">
+      <div class="n">POINT 03</div>
+      <div class="t">世界基準のセキュリティ<br>PCI DSS Level 1。</div>
+      <div class="d">Stripe はクレジットカード業界が定める最高水準の安全認証を取得済。Amazon・Google・トヨタなどグローバル企業と同じ規格で守られる。</div>
+      <div class="icon">TRUST</div>
+    </div>
+  </div>
+
+  <div class="slide-chapter">key takeaways</div>
+  <div class="slide-num"><strong>02</strong> ／ 10</div>
+  <div class="slide-foot">MIO Payment Briefing<span class="dot"></span>大野商工会議所</div>
+</section>
+
+<!-- ====================== SLIDE 03 : Why Stripe ====================== -->
+<section class="slide s03">
+  <div class="deco-circle" style="width:240px;height:240px;left:-100px;bottom:-80px"></div>
+  <div class="head"><span class="num">02</span><span class="label">WHY STRIPE ／ 採用した決済システム</span></div>
+  <div class="h1">なぜ <span class="accent">Stripe</span> を採用したのか。</div>
+
+  <div class="grid">
+    <div class="stripe-card">
+      <div class="lock" style="position:absolute;top:24px;right:24px;font-family:var(--serif-en);font-size:10px;letter-spacing:.4em;color:#e0a447">▢ VERIFIED</div>
+      <div class="pre">PAYMENT PROVIDER</div>
+      <div class="nm"><em>Stripe</em>,</div>
+      <div class="jp">ストライプ社</div>
+      <dl>
+        <dt>本社</dt><dd>米国サンフランシスコ</dd>
+        <dt>創業</dt><dd>2010年</dd>
+        <dt>導入国</dt><dd><b>190カ国</b></dd>
+        <dt>採用企業</dt><dd>Amazon／Google／Shopify／トヨタ／メルカリ ほか</dd>
+        <dt>規格</dt><dd><b>PCI DSS Level 1</b>（最高水準）</dd>
+        <dt>対応カード</dt><dd>Visa／Mastercard／Amex／Diners／JCB</dd>
+      </dl>
+    </div>
+
+    <div class="reasons">
+      <div class="reason">
+        <div class="ix">i</div>
+        <div>
+          <div class="t">業界標準だから、説明コストが要らない。</div>
+          <div class="d">「Stripeで決済します」と伝えれば EC を運営したことのある全ての事業者・お客様に通じる。導入後の運用・引き継ぎが容易。</div>
+        </div>
+      </div>
+      <div class="reason">
+        <div class="ix">ii</div>
+        <div>
+          <div class="t">サイト工事・サーバー構築が不要。</div>
+          <div class="d">商品ごとに発行される URL を Mio EC が貼るだけ。決済画面は Stripe が用意する。デザインも自動最適化、スマホ完全対応。</div>
+        </div>
+      </div>
+      <div class="reason">
+        <div class="ix">iii</div>
+        <div>
+          <div class="t">入金が自動で銀行口座に届く。</div>
+          <div class="d">売上は Stripe ダッシュボードでリアルタイム可視化、登録口座に自動送金される。督促・領収書発行・コンビニ番号管理は発生しない。</div>
+        </div>
+      </div>
+      <div class="reason">
+        <div class="ix">iv</div>
+        <div>
+          <div class="t">不正利用は Stripe 側で機械学習検知。</div>
+          <div class="d">世界で蓄積された決済データから不審な取引を自動でブロック。事業者側で「怪しい注文」を判断する負担を負わない。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-chapter">why stripe</div>
+  <div class="slide-num"><strong>03</strong> ／ 10</div>
+  <div class="slide-foot">MIO Payment Briefing<span class="dot"></span>大野商工会議所</div>
+</section>
+
+<!-- ====================== SLIDE 04 : Cards & Checkout ====================== -->
+<section class="slide s04">
+  <div class="head"><span class="num">03</span><span class="label">PAYMENT METHODS ／ 対応決済方法</span></div>
+  <div class="h1">クレジットカード5ブランド対応。</div>
+  <div class="lead">国内・海外を問わず主要カードに対応。決済画面は Stripe が自動で表示する。</div>
+
+  <div class="body">
+    <div>
+      <div class="brands">
+        <div class="brand"><div class="nm">VISA</div><div class="sub">ヴィザ</div><div class="stripe-bar"></div></div>
+        <div class="brand"><div class="nm">Mastercard</div><div class="sub">マスター</div><div class="stripe-bar"></div></div>
+        <div class="brand"><div class="nm">AMEX</div><div class="sub">アメックス</div><div class="stripe-bar"></div></div>
+        <div class="brand"><div class="nm">Diners</div><div class="sub">ダイナース</div><div class="stripe-bar"></div></div>
+        <div class="brand"><div class="nm">JCB</div><div class="sub">ジェーシービー</div><div class="stripe-bar"></div></div>
+        <div class="brand" style="background:var(--ink);color:#f4ead2;border:none">
+          <div class="nm" style="color:#e0a447;font-size:18px">5 BRANDS</div>
+          <div class="sub" style="color:#cfd9e1">国内シェア 95% 超</div>
+        </div>
+      </div>
+      <p style="margin-top:24px;font-family:var(--serif);font-size:13px;color:var(--ink-sub);line-height:1.9;letter-spacing:.06em">
+        Apple Pay／Google Pay も Stripe 経由で利用可能。3Dセキュア認証も標準対応。
+      </p>
+    </div>
+
+    <div class="ck">
+      <div class="browser"><i></i><i></i><i></i></div>
+      <div class="url">checkout.stripe.com / pay / cs_live_...</div>
+      <div style="font-family:var(--serif);font-size:14px;color:var(--ink);margin-bottom:14px;letter-spacing:.05em">MIO ／ ロッカクファイヤーピット</div>
+      <div class="row"><span>商品代金</span><span>¥38,000</span></div>
+      <div class="row"><span>送料</span><span>¥1,200</span></div>
+      <div class="row total"><span>合計</span><span>¥39,200</span></div>
+      <div style="margin-top:18px;font-family:var(--sans);font-size:11px;color:var(--ink);letter-spacing:.1em">カード番号</div>
+      <div style="background:#f7f3ea;padding:8px 10px;margin-top:6px;font-family:var(--mono);font-size:11px;color:var(--ink-sub)">•••• •••• •••• ••••</div>
+      <div class="pay">支 払 う</div>
+      <div class="lock">▢ Powered by Stripe ／ PCI DSS Level 1</div>
+    </div>
+  </div>
+
+  <div class="slide-chapter">payment methods</div>
+  <div class="slide-num"><strong>04</strong> ／ 10</div>
+  <div class="slide-foot">MIO Payment Briefing<span class="dot"></span>大野商工会議所</div>
+</section>
+
+<!-- ====================== SLIDE 05 : Money Flow ====================== -->
+<section class="slide s05">
+  <div class="head"><span class="num">04</span><span class="label">MONEY FLOW ／ お金の流れ</span></div>
+  <div class="h1">注文から入金まで、4つの主体を通る。</div>
+
+  <div class="arrows" style="position:relative">
+    <div class="flow">
+      <div class="node">
+        <div class="step">STEP 01</div>
+        <div class="icon">A</div>
+        <div class="nm">お 客 様</div>
+        <div class="role">CUSTOMER</div>
+        <div class="d">商品ページの「注文する」を押し、Stripe の決済画面でカード情報を入力。即時決済が完了する。</div>
+        <div class="amt">¥39,200</div>
+      </div>
+      <div class="node">
+        <div class="step">STEP 02</div>
+        <div class="icon">B</div>
+        <div class="nm">S t r i p e</div>
+        <div class="role">PROCESSOR</div>
+        <div class="d">カード会社と直接通信し、決済処理・本人認証・不正検知を実行。Mio のサーバーは一切関与しない。</div>
+      </div>
+      <div class="node">
+        <div class="step">STEP 03</div>
+        <div class="icon">C</div>
+        <div class="nm">手 数 料</div>
+        <div class="role">FEE 3.6%</div>
+        <div class="d">Stripe が決済額から自動で控除。出品事業者は意識しなくてよい。請求書・振込作業も発生しない。</div>
+        <div class="amt" style="background:var(--ink-sub)">−¥1,411</div>
+      </div>
+      <div class="node">
+        <div class="step">STEP 04</div>
+        <div class="icon">D</div>
+        <div class="nm">事業者口座</div>
+        <div class="role">SELLER BANK</div>
+        <div class="d">残額が登録した銀行口座へ自動入金。標準サイクルは4営業日後。ダッシュボードで全履歴を確認できる。</div>
+        <div class="amt">¥37,789</div>
+      </div>
+    </div>
+    <i></i>
+  </div>
+
+  <div class="note">
+    <b>事業者がやることは、商品を出品して発送するだけ。</b>　決済の催促・領収書発行・カード番号管理・入金確認の作業は、すべて Stripe 側で自動化される。
+  </div>
+
+  <div class="slide-chapter">money flow</div>
+  <div class="slide-num"><strong>05</strong> ／ 10</div>
+  <div class="slide-foot">MIO Payment Briefing<span class="dot"></span>大野商工会議所</div>
+</section>
+
+<!-- ====================== SLIDE 06 : 4 STEPS for Sellers ====================== -->
+<section class="slide s06">
+  <div class="head"><span class="num">05</span><span class="label">SELLER SETUP ／ 出品事業者の作業</span></div>
+  <div class="h1">出品開始までの全工程。<br><span style="color:var(--shu);font-family:var(--serif-en);font-style:italic;font-size:40px">All in 30 min.</span></div>
+  <div class="lead">出品事業者が触る画面は Stripe 管理画面のみ。サイト側の修正は Mio 運営が代行する。</div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="top">01</div>
+      <div class="box">
+        <div class="time">5 min</div>
+        <div class="actor">出 品 者</div>
+        <div class="t">Stripeアカウント<br>開設</div>
+        <div class="d">屋号・代表者名・銀行口座を入力。本人確認書類をアップロード。審査は通常1〜2営業日。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="top">02</div>
+      <div class="box">
+        <div class="time">5 min</div>
+        <div class="actor">出 品 者</div>
+        <div class="t">商品を登録<br>（名称・価格・写真）</div>
+        <div class="d">Stripe管理画面「商品」から新規追加。1商品あたり3分程度。在庫数の管理は不要（自由販売）。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="top">03</div>
+      <div class="box">
+        <div class="time">1 min</div>
+        <div class="actor">出 品 者</div>
+        <div class="t">決済リンクを<br>1クリック発行</div>
+        <div class="d">商品詳細の「決済リンクを作成」を押すと専用URLが生成される。配送先住所・電話・確認メールは標準で有効化。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="top">04</div>
+      <div class="box">
+        <div class="time">自動</div>
+        <div class="actor">Mio 運営</div>
+        <div class="t">サイトに<br>自動反映</div>
+        <div class="d">GitHub Actions が Stripe を5分おきに監視。新商品はサイトに自動掲載される。出品者は何もしなくてよい。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="strip">
+    <span>出品者の作業合計　<b>およそ 11 分</b>　／　以降は新商品ごとに約 9 分</span>
+    <span class="em">simple by design.</span>
+  </div>
+
+  <div class="slide-chapter">seller setup</div>
+  <div class="slide-num"><strong>06</strong> ／ 10</div>
+  <div class="slide-foot">MIO Payment Briefing<span class="dot"></span>大野商工会議所</div>
+</section>
+
+<!-- ====================== SLIDE 07 : PCI DSS ====================== -->
+<section class="slide s07">
+  <div class="head"><span class="num">06</span><span class="label">SECURITY ／ セキュリティ規格</span></div>
+  <div class="h1">PCI DSS <span class="em">Level 1</span><br>―― クレジットカード業界の最高水準。</div>
+
+  <div class="grid">
+    <div class="badge">
+      <div class="lock">CERTIFIED</div>
+      <div>
+        <div class="stamp">L1<span class="small">PCI DSS</span></div>
+        <div class="ts">Stripe Inc. ／ <b>取得済</b></div>
+      </div>
+      <div style="font-family:var(--serif);font-size:11px;color:#9fb9c9;letter-spacing:.25em;line-height:1.8">
+        年間6,000,000件超の<br>カード取引を扱う事業者に<br>義務付けられる最高ランク
+      </div>
+    </div>
+    <div class="explain">
+      <div class="t">カード業界が定めた、世界共通の<span class="mk">「カード情報を守るためのルール」</span>。</div>
+      <div class="p">
+        Visa・Mastercard・JCB など 5 大ブランドが共同で策定した安全基準で、取引規模によって <b>Level 1 〜 4</b> の 4 段階がある。Stripe は最も厳格な <b>Level 1</b> を取得しており、Amazon／Google／Shopify と同じ規格で守られる。
+      </div>
+      <div class="p" style="font-size:13.5px;color:var(--ink-sub)">
+        Mio EC は Stripe 経由で決済を受けるため、<b>この Level 1 の保護が自動的に適用</b>される。事業者・商工会議所側で別途セキュリティ認証を取得する必要はない。
+      </div>
+      <div class="level-row">
+        <div class="lv">L4</div>
+        <div class="lv">L3</div>
+        <div class="lv">L2</div>
+        <div class="lv on">L1 ／ MIO</div>
+      </div>
+      <div style="font-family:var(--sans);font-size:10.5px;color:var(--ink-sub);margin-top:10px;letter-spacing:.15em">↑ 数字が小さいほど厳格</div>
+    </div>
+  </div>
+
+  <div class="slide-chapter">security</div>
+  <div class="slide-num"><strong>07</strong> ／ 10</div>
+  <div class="slide-foot">MIO Payment Briefing<span class="dot"></span>大野商工会議所</div>
+</section>
+
+<!-- ====================== SLIDE 08 : Fee ====================== -->
+<section class="slide s08">
+  <div class="head"><span class="num">07</span><span class="label">FEE STRUCTURE ／ 手数料の扱い</span></div>
+  <div class="h1">決済手数料 <span style="color:var(--shu);font-family:var(--serif-en);font-style:italic;font-weight:500">3.6%</span> は、誰が負担するか。</div>
+
+  <div class="grid">
+    <div>
+      <div class="figure">
+        <div class="row"><span class="nm">商品代金</span><span class="v">¥39,200</span></div>
+        <div class="row fee"><span class="nm">Stripe 決済手数料（3.6%）</span><span class="v">− ¥1,411</span></div>
+        <div class="row net"><span class="nm">事業者振込額</span><span class="v">¥37,789</span></div>
+        <div class="cap">※ 商品代金 ¥39,200 のケース。実際の額・サイクルは Stripe 管理画面で都度確認可。</div>
+      </div>
+      <p style="font-family:var(--serif);font-size:12px;color:var(--ink-sub);margin-top:14px;letter-spacing:.1em;line-height:1.8">
+        ※ 振込手数料・領収書発行手数料は別途発生しない。出金は Stripe 標準サイクル（4営業日後）で自動。
+      </p>
+    </div>
+
+    <div class="who">
+      <div class="it A">
+        <div class="tag">採用</div>
+        <div class="ix">A</div>
+        <div>
+          <div class="t">Mio 運営側で吸収する方式</div>
+          <div class="d">出品事業者の振込額は <b style="color:var(--shu)">商品代金そのまま</b>。手数料分は Mio 運営費（年会費・出品料）から拠出する。事業者は「売れたら売れた分が入る」という、わかりやすい設計。</div>
+        </div>
+      </div>
+      <div class="it B">
+        <div class="tag">不採用</div>
+        <div class="ix">B</div>
+        <div>
+          <div class="t">出品事業者が負担する方式</div>
+          <div class="d">商品ごとに 3.6% を差し引いて入金する形。一般的な EC モール（楽天・Amazon）はこちら。Mio は地域の事業者が「気軽に出品しやすい」設計を優先し、不採用。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-chapter">fee structure</div>
+  <div class="slide-num"><strong>08</strong> ／ 10</div>
+  <div class="slide-foot">MIO Payment Briefing<span class="dot"></span>大野商工会議所</div>
+</section>
+
+<!-- ====================== SLIDE 09 : Why no bank/cvs/cod ====================== -->
+<section class="slide s09">
+  <div class="head"><span class="num">08</span><span class="label">SCOPE ／ 対応決済の絞り込み</span></div>
+  <div class="h1">銀行振込・代引・コンビニ後払いを、<br>あえて採用していない。</div>
+  <div class="lead">少人数で運営する産直EC で発生しがちなトラブルを、入口で防ぐ設計。</div>
+
+  <div class="table">
+    <div class="tr h">
+      <div class="c">決済方法</div>
+      <div class="c">運営の手間</div>
+      <div class="c">主なリスク</div>
+    </div>
+    <div class="tr">
+      <div class="c lbl">クレジット<br>カード <span style="color:var(--shu)">（採用）</span></div>
+      <div class="c"><span class="good">即時入金・全自動。</span>事業者・運営ともに手作業ゼロ。</div>
+      <div class="c"><span class="good">Stripe の不正検知が自動でブロック。事業者責任なし。</span></div>
+    </div>
+    <div class="tr">
+      <div class="c lbl">銀行振込<br><span class="bad">（不採用）</span></div>
+      <div class="c"><span class="bad">入金確認・消込を手動で。</span>「振り込んだのに発送されない」問い合わせが頻発。</div>
+      <div class="c"><span class="bad">振込人名と注文者名の不一致で消込不能。督促・返金トラブルが発生。</span></div>
+    </div>
+    <div class="tr">
+      <div class="c lbl">代金引換<br><span class="bad">（不採用）</span></div>
+      <div class="c"><span class="bad">配送業者との別契約・代引手数料の精算が必要。</span></div>
+      <div class="c"><span class="bad">受取拒否時に商品が往復し、送料・梱包資材が損失化する。</span></div>
+    </div>
+    <div class="tr">
+      <div class="c lbl">コンビニ<br>後払い<span class="bad">（不採用）</span></div>
+      <div class="c"><span class="bad">後払い決済会社との契約・与信審査・督促連携が必要。</span></div>
+      <div class="c"><span class="bad">未払い率が一定割合発生。回収業務に運営リソースが取られる。</span></div>
+    </div>
+  </div>
+
+  <div class="conclude">
+    結果として、Mio の運営チームは <b>商品の集約・発送・販促</b> に集中できる。<br>
+    複雑な決済を増やさないことが、地域ECを長く続けるための前提条件である。
+  </div>
+
+  <div class="slide-chapter">scope</div>
+  <div class="slide-num"><strong>09</strong> ／ 10</div>
+  <div class="slide-foot">MIO Payment Briefing<span class="dot"></span>大野商工会議所</div>
+</section>
+
+<!-- ====================== SLIDE 10 : SUMMARY & NEXT ====================== -->
+<section class="slide s10">
+  <div class="deco-circle" style="width:380px;height:380px;right:-160px;top:-100px"></div>
+  <div class="head"><span class="num">09</span><span class="label">SUMMARY &amp; NEXT ／ まとめと次の一手</span></div>
+  <div class="h1">Mio の決済は <span class="em">Simple, Safe, Standard.</span></div>
+
+  <div class="summary">
+    <div class="pillar">
+      <h3>SUMMARY ／ 本資料の要点</h3>
+      <ul>
+        <li>決済は Stripe ／ クレジットカード5ブランドのみ。</li>
+        <li>カード番号は Mio・事業者のサーバーに保存されない。</li>
+        <li>PCI DSS Level 1 ―― 業界最高水準のセキュリティで保護。</li>
+        <li>手数料 3.6% は Mio 運営が吸収。事業者は商品代金100%が入金。</li>
+        <li>銀行振込・代引・後払いは採用しない（運営トラブル予防）。</li>
+        <li>出品者の作業は約11分。サイト反映は自動。</li>
+      </ul>
+    </div>
+    <div class="pillar next">
+      <h3>NEXT ／ 出品開始までの3ステップ</h3>
+      <ul>
+        <li><span class="step">i</span>Stripe アカウント開設（屋号・口座登録）</li>
+        <li><span class="step">ii</span>Stripe 管理画面で商品を登録</li>
+        <li><span class="step">iii</span>「決済リンクを作成」を1クリック → Mio EC が自動掲載</li>
+      </ul>
+      <div style="margin-top:18px;padding:14px 16px;background:rgba(224,164,71,.12);font-family:var(--serif);font-size:12.5px;letter-spacing:.1em;color:#f4ead2;line-height:1.7">
+        手順詳細は <b style="color:#e0a447">セットアップガイド</b>（setup-guide.html）に図解で掲載。
+      </div>
+    </div>
+  </div>
+
+  <div class="end"><b>MIO ／ MADE IN ONO</b> &nbsp;·&nbsp; 大野商工会議所 &nbsp;·&nbsp; 制作協力 スケルトン株式会社</div>
+
+  <div class="slide-chapter">summary &amp; next</div>
+  <div class="slide-num"><strong>10</strong> ／ 10</div>
+  <div class="slide-foot">MIO Payment Briefing<span class="dot"></span>大野商工会議所</div>
+</section>
+
+<div class="bottom-nav">↑↓ scroll &nbsp;·&nbsp; ⌘+P → PDF 化可</div>
+
+</body>
+</html>
