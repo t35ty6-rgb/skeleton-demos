@@ -1779,6 +1779,23 @@
     // AI BRIEF で拡大した modal-content の幅を通常に戻す
     try { document.getElementById('modal-content').style.maxWidth = ''; } catch (_) {}
     ensureLineHistory_(c);
+    // ★ オーナーfb 2026-06-24 (重さ解消): 初回ロード は LINE 履歴 20件 だけ →
+    // 顧客モーダル を 開いた時に フル履歴 を lazy load
+    if (c._lineHistoryPartial && typeof window.fetchFullLineHistory === 'function' && !c._lineHistoryLoading) {
+      c._lineHistoryLoading = true;
+      window.fetchFullLineHistory(c._fsCustomerId || c.id).then(full => {
+        if (full && full.length > (c.lineHistory || []).length) {
+          c.lineHistory = full;
+          c._lineHistoryPartial = false;
+          // モーダル開いてる間 に LINE タブ が active なら再描画
+          try {
+            const lineTab = document.querySelector('.cd-tab.cd-tab-active[data-cdtab="line"]');
+            if (lineTab && typeof openClientModal === 'function') openClientModal(c.id, { fromPopstate: true });
+          } catch (_) {}
+        }
+        c._lineHistoryLoading = false;
+      }).catch(() => { c._lineHistoryLoading = false; });
+    }
     // ★ 議事録 → 自動タグ抽出 (NISA/iDeCo/保険/相続 等を 議事録本文から regex で キャッチ → c.autoTags)
     //   オーナーfb 2026-06-20: 重さ対策 → 議事録 数 が 同じなら 前回結果 再利用 (キャッシュ)
     try {
@@ -6836,11 +6853,37 @@ ${JSON.stringify(jsonPayload, null, 2)}
       }
       const prompt = buildBriefPrompt(client, brief, refineHistory);
       try {
-        if (!window.__fp?.functions) throw new Error('functions 未初期化');
-        const { httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js');
-        const fn = httpsCallable(window.__fp.functions, 'generateBriefDraft');
-        const res = await fn({ prompt });
-        const reply = (res.data && res.data.reply) || '';
+        // ★ オーナーfb 2026-06-24: 「AI下書き 遅すぎ」 → Groq Llama 70B 経由 (~0.5-1秒) に 切替
+        // 旧: Firebase Function generateBriefDraft (Claude Haiku 4秒)
+        // 失敗時は 旧経路に fallback
+        let reply = '';
+        try {
+          const r = await fetch('https://fp-compass-webhook-527726449426.asia-northeast1.run.app/api/generate-line-draft', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt,
+              tenantId: (window.__fp && window.__fp.tenantId) || '',
+              userId: client.lineFriendId || '',
+              customerName: client.name || '',
+            }),
+          });
+          const d = await r.json();
+          if (r.ok && d.ok && d.reply) {
+            reply = d.reply;
+            console.log('[draft] Groq Llama', d.elapsedMs + 'ms', d.inputTokens + '/' + d.outputTokens + ' tok');
+          } else {
+            console.warn('[draft] Groq fail → fallback Claude:', d.error || r.status);
+          }
+        } catch (e) { console.warn('[draft] Groq fetch fail → fallback Claude:', e.message); }
+        if (!reply) {
+          // Fallback: Anthropic Claude Haiku
+          if (!window.__fp?.functions) throw new Error('functions 未初期化');
+          const { httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js');
+          const fn = httpsCallable(window.__fp.functions, 'generateBriefDraft');
+          const res = await fn({ prompt });
+          reply = (res.data && res.data.reply) || '';
+        }
         if (!reply) throw new Error('AI 応答 が 空');
         renderResultUI(brief, reply);
       } catch (e) {

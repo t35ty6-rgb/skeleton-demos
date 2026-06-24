@@ -122,6 +122,7 @@
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
   import {
     getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, getDocs, addDoc,
+    query, where, orderBy, limit,
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
   import {
     getFunctions, httpsCallable,
@@ -467,24 +468,43 @@
   // ===== 認証状態の監視 + Firestore からデータ読み込み =====
   let signupInProgress = false;
   async function loadTenantData(tenantId) {
+    // ★ オーナーfb 2026-06-24 (重さ解消):
+    //   旧: 全顧客 × 全 line_messages を 初回ロードで 一括読込 → 顧客100名×msg100通=10,000docs で 重くなる
+    //   新: 初回は 顧客リスト + 最新20件 LINE のみ。 残り (= 顧客モーダル open 時) に lazy load
     const snap = await getDocs(collection(db, "tenants", tenantId, "customers"));
     const list = [];
     for (const d of snap.docs) {
       const c = { id: d.id, ...d.data() };
-      // ★ pictureUrl (webhook 由来 / Profile API) を linePictureUrl (UI 表示用) に コピー
-      //   UI 側 は c.linePictureUrl を 参照する仕様。 webhook で 取得した pictureUrl が UI に 反映されない 問題を 修正
       if (c.pictureUrl && !c.linePictureUrl) c.linePictureUrl = c.pictureUrl;
-      // 各 customer のサブコレを並列で読む (line_messages, cancellations)
+      // ★ 初期ロード は 最新20件 + cancellations のみ (キャンセル件数は通常 少ない)
       const [lineSnap, cxlSnap] = await Promise.all([
-        getDocs(collection(db, "tenants", tenantId, "customers", d.id, "line_messages")).catch(() => null),
+        getDocs(query(
+          collection(db, "tenants", tenantId, "customers", d.id, "line_messages"),
+          orderBy("idx", "desc"), limit(20)
+        )).catch(() => null),
         getDocs(collection(db, "tenants", tenantId, "customers", d.id, "cancellations")).catch(() => null),
       ]);
-      c.lineHistory = lineSnap ? lineSnap.docs.map(x => x.data()).sort((a,b) => (a.idx||0) - (b.idx||0)) : [];
+      const recent20 = lineSnap ? lineSnap.docs.map(x => x.data()).sort((a,b) => (a.idx||0) - (b.idx||0)) : [];
+      c.lineHistory = recent20;
+      c._lineHistoryPartial = recent20.length === 20; // フル取得 が 必要なら lazy load
       c.cancellations = cxlSnap ? cxlSnap.docs.map(x => x.data()).sort((a,b) => (a.idx||0) - (b.idx||0)) : [];
       list.push(c);
     }
     return list;
   }
+
+  // ★ 顧客モーダル を 開いた時に フル LINE 履歴 を lazy load (重さ解消)
+  window.fetchFullLineHistory = async function(customerId) {
+    try {
+      const tenantId = window.__fp && window.__fp.tenantId;
+      if (!tenantId) return null;
+      const snap = await getDocs(query(
+        collection(db, "tenants", tenantId, "customers", customerId, "line_messages"),
+        orderBy("idx", "asc")
+      ));
+      return snap.docs.map(x => x.data());
+    } catch (e) { console.warn('fetchFullLineHistory fail', e.message); return null; }
+  };
   function showBillingGate(status, tenantId) {
     // 既存ゲートがあれば消す
     const existing = document.getElementById("fp-billing-gate");
@@ -1248,7 +1268,7 @@ window.fpReadyAfterAuth = function() {
     });
   })();
 
-  const ver = "20260624F-draft-refine";
+  const ver = "20260624G-fast-light";
   const scripts = [
     "life-events.js?v=" + ver,
     "recommender.js?v=" + ver,
@@ -1858,7 +1878,7 @@ window.fpReadyAfterAuth = function() {
 <script>
 (function(){
   // 最新の ver を 1 箇所に集約 (fpReadyAfterAuth 側と一致させる必要あり)
-  const FP_VERSION = "20260624F-draft-refine";
+  const FP_VERSION = "20260624G-fast-light";
   try { window.FP_VERSION = FP_VERSION; } catch(_) {}
   const loadTime = new Date();
   const hhmm = String(loadTime.getHours()).padStart(2,'0') + ':' + String(loadTime.getMinutes()).padStart(2,'0');
