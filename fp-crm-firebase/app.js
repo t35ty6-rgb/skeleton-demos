@@ -6669,7 +6669,7 @@ STEP C: 結果報告
     overlay.querySelector('#fp-brief-close').addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 
-    function buildBriefPrompt(c, brief) {
+    function buildBriefPrompt(c, brief, refineHistory) {
       const surveys = ((window.LineAppLiveData && window.LineAppLiveData.survey_answers) || [])
         .filter(s => (s.userId && s.userId === c.lineFriendId) || (s.name && s.name === c.name) || (s.displayName && s.displayName === c.name))
         .sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
@@ -6678,7 +6678,7 @@ STEP C: 結果報告
         .filter(r => (r.userId && r.userId === c.lineFriendId) || (r.customerName && r.customerName === c.name))
         .sort((a, b) => (a.ts || '').localeCompare(b.ts || ''))
         .slice(-3)
-        .map(r => ({ date: (r.ts || '').slice(0, 10), summary: r.summary || '', key_concerns: r.key_concerns || [] }));
+        .map(r => ({ date: (r.ts || '').slice(0, 10), summary: (r.summary || '').slice(0, 600), key_concerns: r.key_concerns || [], predicted_next_questions: r.predicted_next_questions || [] }));
       const recentLine = (c.lineHistory || []).slice(-12)
         .map(m => ({ direction: m.direction || m.from || 'out', ts: m.ts, text: (m.text || '').slice(0, 240) }));
       const family = (c.family || []).map(m => {
@@ -6688,6 +6688,42 @@ STEP C: 結果報告
       });
       const age = window.LifeEvents ? window.LifeEvents.currentAge(c) : null;
       const fpName = (window.__fp && window.__fp.tenantName ? String(window.__fp.tenantName) : 'FP事務所').replace(/ — DEMO ビュー/, '');
+
+      // ★ Phase A 強化 (オーナーfb 2026-06-24):
+      // [1] FP 過去送信文 (out 方向のみ 直近10通) → トーン 学習
+      const fpToneSamples = (c.lineHistory || [])
+        .filter(m => (m.direction === 'out' || m.from === 'fp' || m.from === 'system') && m.text)
+        .slice(-10)
+        .map(m => String(m.text).slice(0, 240));
+      // [2] 客 過去質問 (Q&A archive cache: customer_qa_summary より優先、 無ければ lineHistory in から推定)
+      const pastQuestions = (function(){
+        try {
+          const cs = (window._fpQACache && window._fpQACache[c.id]) || null;
+          if (cs && cs.categories) {
+            return cs.categories.flatMap(cat => (cat.questions || []).slice(0, 3).map(q => ({
+              category: cat.name, q: typeof q === 'string' ? q : (q.q || '')
+            }))).slice(0, 12);
+          }
+        } catch (_) {}
+        return (c.lineHistory || [])
+          .filter(m => (m.direction === 'in' || m.from === 'user') && /[?？]/.test(m.text || ''))
+          .slice(-6)
+          .map(m => ({ category: '不明', q: String(m.text).slice(0, 160) }));
+      })();
+      // [3] 提案 / キャンセル ステータス (触れていい/タブー 判断)
+      const stalledProp = (c.proposals || []).slice().reverse().find(p => p.result === '提案中' || p.result === '検討中');
+      const lastCancel = (c.cancellations || []).slice().sort((a,b) => new Date(b.date) - new Date(a.date))[0];
+      const proposalStatus = {
+        stalled: stalledProp ? { title: stalledProp.title, daysSince: Math.floor((Date.now() - new Date(stalledProp.date).getTime())/86400000) } : null,
+        lastSuccess: (c.proposals || []).slice().reverse().find(p => p.result === '成約') || null,
+        lastCancel: lastCancel ? { reason: lastCancel.reason, daysSince: Math.floor((Date.now() - new Date(lastCancel.date).getTime())/86400000) } : null,
+      };
+      // [4] タグ (FPが手動で つけた) + 自動タグ (議事録 AI 抽出)
+      const tagsMaster = (typeof getTagsMaster === 'function') ? getTagsMaster() : [];
+      const myTagIds = (typeof getClientTags === 'function') ? getClientTags(c.id) : [];
+      const manualTags = myTagIds.map(id => tagsMaster.find(t => t.id === id)).filter(Boolean).map(t => t.label);
+      const autoTags = Array.isArray(c.autoTags) ? c.autoTags.map(t => t.label) : [];
+
       const jsonPayload = {
         meta: { generatedAt: new Date().toISOString(), fpName, mode: 'line_reply_from_brief' },
         customer: {
@@ -6698,6 +6734,7 @@ STEP C: 結果報告
           family,
           aum: c.aum || 0,
           lastContact: c.lastContact || '',
+          manualTags, autoTags,
         },
         surveyAnswers: latestSurvey ? {
           年代: latestSurvey.q2_年代 || latestSurvey.q1_年代 || '',
@@ -6712,18 +6749,44 @@ STEP C: 結果報告
         } : null,
         recentMeetings: allMeetings,
         recentLineHistory: recentLine,
+        proposalStatus,
+        pastQuestions,           // ★ 新規: 客が 過去 LINE で 聞いた 質問
+        fpToneSamples,           // ★ 新規: FP の 過去 LINE 送信文 (トーン参考)
         fpBrief: brief,
+        refineHistory: refineHistory || [], // ★ Phase C: 添削履歴 (前回 draft + FP の修正指示)
       };
+      const refineSection = (refineHistory && refineHistory.length > 0) ? `
+
+【★ 重要: 添削モード】
+前回 生成した 下書き と FP からの修正指示が refineHistory にあります。
+最新の修正指示に従って 文面を 練り直してください。
+過去の指示 も 累積で 反映してください (例: 「丁寧に」 → 「もっとフランクに」 と来たら 中間の 親しみ易い丁寧 が 正解)。
+` : '';
+
       return `あなたは 経験豊富な FP の 文章コーチ です。
 下記 JSON の fpBrief (FP が ${escapeHtml(c.name)}様 に 伝えたい意図) を、
-LINE 1通分 (200-400字、 顧客の家族/議事録/直近やりとり を 踏まえた 個別感のある 文面) に 整えてください。
+LINE 1通分 (200-400字、 顧客の家族/議事録/過去質問/直近やりとり を 踏まえた 個別感のある 文面) に 整えてください。
+${refineSection}
 
 【出力フォーマット 厳守】
 - LINE文面 のみ。 前置き不要、 code fence 不要、 解説不要。
 - 改行は自然に (LINE プレビューを意識)、 顧客の呼称は「${escapeHtml(c.name)}様」。
 - 文末は柔らかく(「お時間あるときに 一言いただけたら嬉しいです」 等)。
-- 議事録 / アンケート から 拾える キーワード (テーマ/悩み) を 1箇所 だけ 自然に 引用。
-- 強引なクロージング / 提案 押し付け は NG。
+
+【個別感を出すコツ (品質基準)】
+- fpToneSamples を 参考に、 この FP らしい 文体・絵文字使い・改行リズム に 寄せる
+- pastQuestions に ある カテゴリ を 1つ 自然に 触れる ("先日のご質問の○○の件…" 等)
+- proposalStatus.stalled が ある なら 「先日の○○のご検討」 に 軽く触れる (押し売り NG)
+- proposalStatus.lastCancel が 30日以内 なら キャンセル理由 を 暗黙に 配慮 (「お忙しい中」 等)
+- recentMeetings.key_concerns の 1個 を 自然に 拾う (議事録の キーワード 引用)
+- 議事録の predicted_next_questions が ある なら 客が 次に 聞きたい事に 先回りで 軽く触れる
+- manualTags / autoTags は FP が この客に 持ってる 属性 (「教育資金AI」 等) → 該当テーマに 寄せる
+
+【NG】
+- 「お疲れ様でした」 「ありがとうございます」 だけの 定型挨拶 で 始めない
+- 全顧客に 当てはまる 一般論 で 終わらせない (固有情報 最低2個 引用 必須)
+- 強引なクロージング / 提案押し付け
+- pastQuestions / fpToneSamples が 空でも 嘘の 過去質問 を 創作しない
 
 【顧客データ JSON】
 \`\`\`json
@@ -6744,14 +6807,34 @@ ${JSON.stringify(jsonPayload, null, 2)}
       } catch (e) { console.warn('download fail:', e); }
     }
 
-    overlay.querySelector('#fp-brief-gen').addEventListener('click', async () => {
-      const brief = overlay.querySelector('#fp-brief-input').value.trim();
-      if (!brief) { alert('伝えたいこと を 入力してください'); return; }
+    // ★ Phase C: 添削履歴 (refine 用の state)
+    const refineHistory = []; // [{ draft, instruction }]
+
+    // ★ Phase A: Q&A archive cache を 先に 取得 (個別感UP)
+    (async () => {
+      try {
+        if (!window._fpQACache) window._fpQACache = {};
+        if (window._fpQACache[client.id] || !client.lineFriendId) return;
+        const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
+        const fs = getFirestore(window.__fp.app || window.__fp.firebaseApp || undefined);
+        const tid = (window.__fp && window.__fp.tenantId) || '';
+        if (!tid) return;
+        const ref = doc(fs, 'customer_qa_summary', `${tid}__${client.lineFriendId}`);
+        const snap = await getDoc(ref);
+        if (snap.exists()) window._fpQACache[client.id] = snap.data();
+      } catch (e) { /* silent */ }
+    })();
+
+    async function runGenerate(brief, refineInstruction) {
       const genBtn = overlay.querySelector('#fp-brief-gen');
-      const origLabel = genBtn.innerHTML;
-      genBtn.disabled = true;
-      genBtn.innerHTML = '✨ AI 生成中…';
-      const prompt = buildBriefPrompt(client, brief);
+      const origLabel = genBtn ? genBtn.innerHTML : '';
+      if (genBtn) { genBtn.disabled = true; genBtn.innerHTML = '✨ AI 生成中…'; }
+      // refineInstruction があれば refineHistory に 追加
+      if (refineInstruction) {
+        const prev = (overlay.querySelector('#fp-brief-result') || {}).value || '';
+        refineHistory.push({ draft: prev, instruction: refineInstruction });
+      }
+      const prompt = buildBriefPrompt(client, brief, refineHistory);
       try {
         if (!window.__fp?.functions) throw new Error('functions 未初期化');
         const { httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js');
@@ -6759,94 +6842,124 @@ ${JSON.stringify(jsonPayload, null, 2)}
         const res = await fn({ prompt });
         const reply = (res.data && res.data.reply) || '';
         if (!reply) throw new Error('AI 応答 が 空');
-        // 結果表示UIに 差し替え
-        overlay.querySelector('#fp-brief-step1').style.display = 'none';
-        const after = overlay.querySelector('#fp-brief-after');
-        after.style.display = 'block';
-        after.innerHTML = `
-          <div style="background:linear-gradient(135deg,#F0FDF4,#fff);border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12.5px;color:#065F46;font-weight:700;">✅ AI下書き 生成 完了 (Claude Haiku)</div>
-          <div style="background:#fff;border:1.5px solid #BBF7D0;border-radius:12px;padding:18px 20px;margin-bottom:14px;">
-            <div style="font-family:'Inter',sans-serif;font-size:10px;letter-spacing:0.18em;color:#059669;font-weight:800;margin-bottom:8px;">📝 LINE 下書き 案</div>
-            <textarea id="fp-brief-result" rows="10" style="width:100%;padding:12px 14px;border:1px solid #E2E8F0;border-radius:8px;font-size:13.5px;font-family:inherit;line-height:1.85;resize:vertical;box-sizing:border-box;">${escapeHtml(reply)}</textarea>
-          </div>
-          <div style="display:flex;gap:8px;justify-content:flex-end;">
-            <button id="fp-brief-back" style="background:#fff;border:1px solid #E2E8F0;color:#475569;padding:10px 18px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">← もう一度</button>
-            <button id="fp-brief-copy" style="background:#fff;border:1px solid #10B981;color:#059669;padding:10px 18px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;">📋 コピー</button>
-            <button id="fp-brief-send-line" style="background:linear-gradient(135deg,#06c755,#04a045);color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(6,199,85,0.4);">📤 LINE で 送信</button>
-          </div>
-          <div id="fp-brief-msg" style="margin-top:10px;font-size:11.5px;font-weight:700;text-align:center;color:#059669;"></div>`;
-        after.querySelector('#fp-brief-back').addEventListener('click', () => {
-          overlay.querySelector('#fp-brief-step1').style.display = 'block';
-          after.style.display = 'none';
-          genBtn.disabled = false;
-          genBtn.innerHTML = origLabel;
-        });
-        after.querySelector('#fp-brief-copy').addEventListener('click', async () => {
-          const t = after.querySelector('#fp-brief-result').value;
-          try { await navigator.clipboard.writeText(t); after.querySelector('#fp-brief-msg').textContent = '✓ コピー しました'; } catch (_) {}
-        });
-        // ★ オーナーfb 2026-06-24: 「LINE送信欄にセット」 が cd-line-input 不在で 効かない問題 →
-        // この場で sendLineMessage callable を 直接叩く 「LINE で 送信」 に置換
-        after.querySelector('#fp-brief-send-line').addEventListener('click', async () => {
-          const sendBtn = after.querySelector('#fp-brief-send-line');
-          const msgEl = after.querySelector('#fp-brief-msg');
-          const text = after.querySelector('#fp-brief-result').value.trim();
-          if (!text) { msgEl.style.color = '#B91C1C'; msgEl.textContent = '⚠ 本文が空です'; return; }
-          if (!client.lineFriendId) { msgEl.style.color = '#B91C1C'; msgEl.textContent = '⚠ この客は LINE 未連携 (lineFriendId 無し)'; return; }
-          if (!confirm(`${client.name || 'お客様'} 様 に この文面で LINE を送信します。 よろしいですか?\n\n${text.slice(0, 120)}${text.length > 120 ? '…' : ''}`)) return;
-          sendBtn.disabled = true;
-          sendBtn.textContent = '送信中…';
-          msgEl.style.color = '#9A5A18';
-          msgEl.textContent = '⏳ LINE 送信中…';
-          try {
-            const { httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js');
-            const fn = httpsCallable(window.__fp.functions, 'sendLineMessage');
-            const res = await fn({ lineFriendId: client.lineFriendId, text, customerId: client._fsCustomerId || client.id });
-            if (res.data && res.data.ok) {
-              msgEl.style.color = '#059669';
-              msgEl.textContent = '✓ 送信完了';
-              sendBtn.textContent = '✓ 送信済';
-              sendBtn.style.background = '#065F46';
-              // ローカル lineHistory にも append
-              try {
-                client.lineHistory = client.lineHistory || [];
-                client.lineHistory.push({ direction: 'out', text, ts: new Date().toISOString(), via: 'brief-draft' });
-              } catch (_) {}
-              setTimeout(() => overlay.remove(), 1500);
-            } else {
-              throw new Error((res.data && res.data.error) || 'LINE送信失敗');
-            }
-          } catch (e) {
-            console.error('[brief send line]', e);
-            msgEl.style.color = '#B91C1C';
-            msgEl.textContent = '❌ 送信失敗: ' + (e.message || String(e)).slice(0, 100);
-            sendBtn.disabled = false;
-            sendBtn.textContent = '📤 LINE で 送信';
-          }
-        });
+        renderResultUI(brief, reply);
       } catch (e) {
         console.error('[generateBriefDraft]', e);
-        // フォールバック: 残高切れ等 paid API 失敗時 → 旧 prompt copy + claude.ai UX
         try { await navigator.clipboard.writeText(prompt); } catch (_) {}
-        const customerSlug = String(client.name || 'customer').replace(/[\/\\\s]+/g, '_');
-        const stamp = new Date().toISOString().slice(0, 10);
-        downloadAsFile(`${customerSlug}_brief-prompt_${stamp}.txt`, prompt, 'text/plain');
-        overlay.querySelector('#fp-brief-step1').style.display = 'none';
-        overlay.querySelector('#fp-brief-after').style.display = 'block';
         const errMsg = String(e.message || e);
         const msgEl = overlay.querySelector('#fp-brief-msg');
         if (msgEl) {
           msgEl.style.color = '#B91C1C';
-          msgEl.textContent = '⚠ AI生成失敗 (' + errMsg.slice(0,80) + ')。 プロンプトをクリップボードに コピー しました → Claude を開いて 貼り付けて下さい';
+          msgEl.textContent = '⚠ AI生成失敗 (' + errMsg.slice(0,80) + ')。 プロンプト クリップボード コピー済';
         }
       } finally {
-        // 成功時は new UI に置き換え済 → ボタン状態 戻すのは fallback path のみ
-        if (overlay.querySelector('#fp-brief-step1') && overlay.querySelector('#fp-brief-step1').style.display !== 'none') {
-          genBtn.disabled = false;
-          genBtn.innerHTML = origLabel;
-        }
+        if (genBtn && genBtn.innerHTML.includes('生成中')) { genBtn.disabled = false; genBtn.innerHTML = origLabel; }
       }
+    }
+
+    function renderResultUI(brief, reply) {
+      overlay.querySelector('#fp-brief-step1').style.display = 'none';
+      const after = overlay.querySelector('#fp-brief-after');
+      after.style.display = 'block';
+      const refineBadge = refineHistory.length > 0
+        ? `<span style="background:#5B5BF0;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;margin-left:8px;letter-spacing:0.04em;">${refineHistory.length} 回 添削</span>` : '';
+      after.innerHTML = `
+        <div style="background:linear-gradient(135deg,#F0FDF4,#fff);border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12.5px;color:#065F46;font-weight:700;display:flex;align-items:center;">
+          ✅ AI下書き 生成 完了 (Claude Haiku) ${refineBadge}
+        </div>
+        <div style="background:#fff;border:1.5px solid #BBF7D0;border-radius:12px;padding:18px 20px;margin-bottom:14px;">
+          <div style="font-family:'Inter',sans-serif;font-size:10px;letter-spacing:0.18em;color:#059669;font-weight:800;margin-bottom:8px;">📝 LINE 下書き 案</div>
+          <textarea id="fp-brief-result" rows="9" style="width:100%;padding:12px 14px;border:1px solid #E2E8F0;border-radius:8px;font-size:13.5px;font-family:inherit;line-height:1.85;resize:vertical;box-sizing:border-box;">${escapeHtml(reply)}</textarea>
+        </div>
+        <!-- ★ Phase C: 添削チャット UI -->
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-left:3px solid #5B5BF0;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+          <div style="font-size:11px;font-weight:800;color:#5B5BF0;letter-spacing:0.12em;margin-bottom:6px;">🔁 AI に 直してもらう</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+            <button class="fp-refine-quick" data-q="もっとフランクに" style="background:#fff;border:1px solid #CBD5E1;color:#475569;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">もっとフランクに</button>
+            <button class="fp-refine-quick" data-q="もっと丁寧に" style="background:#fff;border:1px solid #CBD5E1;color:#475569;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">もっと丁寧に</button>
+            <button class="fp-refine-quick" data-q="もっと短く (100字以内)" style="background:#fff;border:1px solid #CBD5E1;color:#475569;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">短く</button>
+            <button class="fp-refine-quick" data-q="数字を入れてもっと具体的に" style="background:#fff;border:1px solid #CBD5E1;color:#475569;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">数字 入れる</button>
+            <button class="fp-refine-quick" data-q="絵文字を1-2個 入れて 柔らかく" style="background:#fff;border:1px solid #CBD5E1;color:#475569;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">絵文字</button>
+            <button class="fp-refine-quick" data-q="押し売り感を消して もっと相手のペースに寄せて" style="background:#fff;border:1px solid #CBD5E1;color:#475569;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">押し売り感 消す</button>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <input id="fp-refine-input" type="text" placeholder="例: お子様の名前を 入れて / 結論を先に / etc" style="flex:1;padding:8px 12px;border:1px solid #CBD5E1;border-radius:6px;font-size:12.5px;font-family:inherit;">
+            <button id="fp-refine-go" style="background:#5B5BF0;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;">🔁 直す</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;">
+          <button id="fp-brief-back" style="background:#fff;border:1px solid #E2E8F0;color:#475569;padding:10px 18px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">← 入力に戻る</button>
+          <button id="fp-brief-copy" style="background:#fff;border:1px solid #10B981;color:#059669;padding:10px 18px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;">📋 コピー</button>
+          <button id="fp-brief-send-line" style="background:linear-gradient(135deg,#06c755,#04a045);color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(6,199,85,0.4);">📤 LINE で 送信</button>
+        </div>
+        <div id="fp-brief-msg" style="margin-top:10px;font-size:11.5px;font-weight:700;text-align:center;color:#059669;"></div>`;
+      bindResultButtons(brief);
+    }
+
+    function bindResultButtons(brief) {
+      const after = overlay.querySelector('#fp-brief-after');
+      after.querySelectorAll('.fp-refine-quick').forEach(btn => {
+        btn.addEventListener('click', () => runGenerate(brief, btn.dataset.q));
+      });
+      after.querySelector('#fp-refine-go').addEventListener('click', () => {
+        const inp = after.querySelector('#fp-refine-input');
+        const v = (inp.value || '').trim();
+        if (!v) { inp.focus(); return; }
+        inp.value = '';
+        runGenerate(brief, v);
+      });
+      after.querySelector('#fp-refine-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') after.querySelector('#fp-refine-go').click();
+      });
+      after.querySelector('#fp-brief-back').addEventListener('click', () => {
+        overlay.querySelector('#fp-brief-step1').style.display = 'block';
+        after.style.display = 'none';
+        refineHistory.length = 0;
+        const genBtn = overlay.querySelector('#fp-brief-gen');
+        if (genBtn) { genBtn.disabled = false; genBtn.innerHTML = '✨ AI で 下書き 生成'; }
+      });
+      after.querySelector('#fp-brief-copy').addEventListener('click', async () => {
+        const t = after.querySelector('#fp-brief-result').value;
+        try { await navigator.clipboard.writeText(t); after.querySelector('#fp-brief-msg').textContent = '✓ コピー しました'; } catch (_) {}
+      });
+      bindSendLine(after);
+    }
+
+    function bindSendLine(after) {
+      after.querySelector('#fp-brief-send-line').addEventListener('click', async () => {
+        const sendBtn = after.querySelector('#fp-brief-send-line');
+        const msgEl = after.querySelector('#fp-brief-msg');
+        const text = after.querySelector('#fp-brief-result').value.trim();
+        if (!text) { msgEl.style.color = '#B91C1C'; msgEl.textContent = '⚠ 本文が空です'; return; }
+        if (!client.lineFriendId) { msgEl.style.color = '#B91C1C'; msgEl.textContent = '⚠ この客は LINE 未連携'; return; }
+        if (!confirm(`${client.name || 'お客様'} 様 に この文面で LINE を送信します。 よろしいですか?\n\n${text.slice(0, 120)}${text.length > 120 ? '…' : ''}`)) return;
+        sendBtn.disabled = true; sendBtn.textContent = '送信中…';
+        msgEl.style.color = '#9A5A18'; msgEl.textContent = '⏳ LINE 送信中…';
+        try {
+          const { httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js');
+          const fn = httpsCallable(window.__fp.functions, 'sendLineMessage');
+          const res = await fn({ lineFriendId: client.lineFriendId, text, customerId: client._fsCustomerId || client.id });
+          if (res.data && res.data.ok) {
+            msgEl.style.color = '#059669'; msgEl.textContent = '✓ 送信完了';
+            sendBtn.textContent = '✓ 送信済'; sendBtn.style.background = '#065F46';
+            try { client.lineHistory = client.lineHistory || []; client.lineHistory.push({ direction: 'out', text, ts: new Date().toISOString(), via: 'brief-draft' }); } catch (_) {}
+            setTimeout(() => overlay.remove(), 1500);
+          } else { throw new Error((res.data && res.data.error) || 'LINE送信失敗'); }
+        } catch (e) {
+          console.error('[brief send line]', e);
+          msgEl.style.color = '#B91C1C'; msgEl.textContent = '❌ 送信失敗: ' + (e.message || String(e)).slice(0, 100);
+          sendBtn.disabled = false; sendBtn.textContent = '📤 LINE で 送信';
+        }
+      });
+    }
+
+    overlay.querySelector('#fp-brief-gen').addEventListener('click', async () => {
+      const brief = overlay.querySelector('#fp-brief-input').value.trim();
+      if (!brief) { alert('伝えたいこと を 入力してください'); return; }
+      refineHistory.length = 0;
+      await runGenerate(brief);
     });
+
     overlay.querySelector('#fp-brief-after').addEventListener('click', (e) => {
       if (e.target.closest('#fp-brief-open-claude')) {
         window.open('https://claude.ai/new', '_blank');
