@@ -1800,10 +1800,12 @@
     // 初期fetchは ai_results の transcript を strip + 最新60件のみ → ここで full data を hydrate
     // 同じ顧客を再度開いた時 は スキップ (cache)
     try {
-      const lineUserId = c.lineFriendId;
-      if (lineUserId && window.LineAppLiveData?._lite && typeof window.getCustomerDetailApi === 'function' && !c._fullHydrated && !c._fullHydrating) {
+      // ★ ai_result.userId は Firestore 顧客ID(=c.id) に揃ってる。 lineFriendId は LINE側 と Firestore側で別物。
+      // /api/customer-detail は backend で `x.userId === uid || x.lineFriendId === uid` で 両方マッチ
+      const detailUid = c._fsCustomerId || c.id;
+      if (detailUid && window.LineAppLiveData?._lite && typeof window.getCustomerDetailApi === 'function' && !c._fullHydrated && !c._fullHydrating) {
         c._fullHydrating = true;
-        fetch(window.getCustomerDetailApi(lineUserId))
+        fetch(window.getCustomerDetailApi(detailUid))
           .then(r => r.ok ? r.json() : null)
           .then(detail => {
             if (!detail) return;
