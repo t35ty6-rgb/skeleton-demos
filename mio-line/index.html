@@ -211,10 +211,13 @@ footer b{display:block;color:var(--ink-3);font-weight:700;margin-bottom:4px}
   運営: 大野商工会議所　・　福井県大野市
 </footer>
 
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
-import { getFirestore, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+const LIFF_ID = '2010490911-nTMU39VA';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAmVAEe9l9e1Yo_dzzJdbTVU35wWKd2sH4",
@@ -278,24 +281,67 @@ document.addEventListener('click', e => {
   if (e.target.matches('[data-submit]')) submit();
 });
 
+// ── LIFF + 既存回答チェック ──
+let lineUserId = null;
+
+async function initLiffAndCheckExisting() {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    if (liff.isLoggedIn()) {
+      const profile = await liff.getProfile();
+      lineUserId = profile.userId;
+    } else if (liff.isInClient()) {
+      liff.login();
+      return;
+    }
+  } catch (e) {
+    console.warn('LIFF init skipped (likely direct browser access):', e?.message);
+  }
+
+  if (!lineUserId) return; // anon mode (PC直アクセス等)
+
+  // 既存回答チェック (この LINE userId で すでにアンケ済か)
+  try {
+    await signInAnonymously(auth);
+    await new Promise(r => onAuthStateChanged(auth, u => u && r()));
+    const ref = doc(db, 'mio_line_survey', lineUserId);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data.coupon) {
+        // すでに当選済 → ルーレット結果画面へ
+        location.replace(`roulette.html?session=${lineUserId}&existing=1`);
+      } else {
+        // アンケート済だが ルーレット未消化 → ルーレットへ
+        location.replace(`roulette.html?session=${lineUserId}`);
+      }
+    }
+  } catch (e) {
+    console.warn('既存チェックspip:', e?.message);
+  }
+}
+initLiffAndCheckExisting();
+
 async function submit() {
   document.getElementById('err').style.display = 'none';
   showStep('loading');
   try {
     await signInAnonymously(auth);
     await new Promise(r => onAuthStateChanged(auth, u => u && r()));
-    const docRef = await addDoc(collection(db, 'mio_line_survey'), {
+    // docId は LINE userId (LIFF経由) or anon fallback
+    const docId = lineUserId || `anon_${auth.currentUser.uid}`;
+    await setDoc(doc(db, 'mio_line_survey', docId), {
       age_band: answers.age_band,
       gender: answers.gender,
       prefecture: answers.prefecture,
       created_at: serverTimestamp(),
       uid: auth.currentUser.uid,
+      line_user_id: lineUserId,
       coupon: null,
       won_at: null,
       user_agent: navigator.userAgent.slice(0, 200)
     });
-    // redirect to roulette
-    location.href = `roulette.html?session=${docRef.id}`;
+    location.href = `roulette.html?session=${docId}`;
   } catch (err) {
     console.error(err);
     showStep(currentStep);

@@ -281,14 +281,39 @@ function spinTo(targetPct) {
 // ── Session loading ──
 const params = new URLSearchParams(location.search);
 const sessionId = params.get('session');
+const isExisting = params.get('existing') === '1';
 const spinBtn = document.getElementById('spinBtn');
 const errEl = document.getElementById('err');
+const preEl = document.getElementById('pre');
 
 if (!sessionId) {
   errEl.textContent = 'セッションIDがありません。 アンケートから やり直してください。';
   errEl.style.display = 'block';
   spinBtn.disabled = true;
 }
+
+// 既存当選チェック (再アクセス時は即結果表示)
+async function loadExistingIfAny() {
+  if (!sessionId) return;
+  try {
+    await signInAnonymously(auth);
+    await new Promise(r => onAuthStateChanged(auth, u => u && r()));
+    const ref = doc(db, 'mio_line_survey', sessionId);
+    const snap = await getDoc(ref);
+    if (snap.exists() && snap.data().coupon != null) {
+      // 既に当選済 — ルーレット動かさず即結果表示 (1ユーザー1回ルール)
+      const pct = snap.data().coupon;
+      // 軽くスピンアニメ → 結果表示
+      preEl.querySelector('.subtitle').textContent = 'すでに 当選済みです';
+      preEl.querySelector('.lead').innerHTML = '一度 ルーレットで 当選した コードを 再表示します。<br><b style="color:var(--ink)">同じ LINE アカウント で 何度も 引くことは できません。</b>';
+      spinBtn.textContent = 'コードを 表示する';
+      spinBtn.dataset.existing = '1';
+    }
+  } catch (e) {
+    console.warn('existing check:', e?.message);
+  }
+}
+loadExistingIfAny();
 
 spinBtn.addEventListener('click', async () => {
   spinBtn.disabled = true;
@@ -299,16 +324,16 @@ spinBtn.addEventListener('click', async () => {
     const ref = doc(db, 'mio_line_survey', sessionId);
     const snap = await getDoc(ref);
     if (!snap.exists()) throw new Error('セッションが見つかりません');
-    // if already won, replay same result
     let pct = snap.data().coupon;
-    let firstTime = !pct;
+    const firstTime = pct == null;
     if (firstTime) {
       pct = drawCoupon();
       await updateDoc(ref, { coupon: pct, won_at: serverTimestamp() });
     }
 
     spinTo(pct);
-    setTimeout(() => showResult(pct), 6300);
+    const wait = firstTime ? 6300 : 3500; // 既存は短めスピン
+    setTimeout(() => showResult(pct), wait);
   } catch (err) {
     console.error(err);
     errEl.textContent = `失敗: ${err.message}`;
