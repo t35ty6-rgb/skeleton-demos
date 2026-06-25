@@ -38,7 +38,9 @@
   function isClientModalOpen() {
     try {
       const ov = document.getElementById('modal-overlay');
-      return !!(ov && ov.classList.contains('open'));
+      if (!ov) return false;
+      const d = ov.style.display;
+      return d && d !== 'none';
     } catch (_) { return false; }
   }
   let _pendingBgRender = false;
@@ -374,6 +376,9 @@
           window._lineInited = true;
         }
         window.LineApp.activateSubview(name);
+      } else {
+        // ★ 2026-06-26 perf: line-app.js deferred ロード中なら ペンディング保存→ロード後 リプレイ
+        window._pendingLineView = name;
       }
     }
     // ★ URL更新 (popstate由来でない時 = ユーザclick / 初期化 など)
@@ -3466,9 +3471,9 @@
         const idx = clients.findIndex(x => x.id === cid);
         if (idx >= 0) clients.splice(idx, 1);
         try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS || clients)); } catch (_) {}
-        // ④ モーダル閉じる + 一覧再描画
+        // ④ モーダル閉じる + 一覧再描画 (削除は即時反映)
         closeModal();
-        if (window.FPCrmRefreshClients) window.FPCrmRefreshClients();
+        if (window.FPCrmRefreshClients) window.FPCrmRefreshClients({ immediate: true });
         alert('✓ ' + cname + ' さん を削除しました。\n(localStorage ' + keysToRemove.length + '件 + GAS関連データ)');
       } catch (e) {
         alert('削除失敗: ' + e.message);
@@ -8654,6 +8659,8 @@ ${client.name}さん、ありがとうございます。
     if (!options.fromPopstate) {
       try { pushModalUrl(null, null); } catch (_) {}
     }
+    // ★ 2026-06-26 重さ解消 Phase 5: モーダル open 中に保留した 背景render を消化
+    try { if (typeof window._fpFlushPendingBgRender === 'function') window._fpFlushPendingBgRender(); } catch (_) {}
   }
 
   // ============================
