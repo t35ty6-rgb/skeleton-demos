@@ -286,38 +286,72 @@ const spinBtn = document.getElementById('spinBtn');
 const errEl = document.getElementById('err');
 const preEl = document.getElementById('pre');
 
+// 当選結果はページロード時に確定させ、ボタン押下時はアニメーションだけにする。
+// 旧実装はクリック時に signIn → getDoc → updateDoc の3往復が走り、
+// LINE内蔵ブラウザ/低速回線で「ボタン押してもホイールが回らない」体感バグ多発。
+const SPIN_BTN_LABELS = {
+  preparing: '準備中…',
+  ready: 'ルーレットを 回す',
+  existing: 'コードを 表示する'
+};
+const state = { pct: null, firstTime: true, ready: false };
+const originalBtnText = spinBtn.textContent;
+spinBtn.disabled = true;
+spinBtn.textContent = SPIN_BTN_LABELS.preparing;
+
 if (!sessionId) {
   errEl.textContent = 'セッションIDがありません。 アンケートから やり直してください。';
   errEl.style.display = 'block';
-  spinBtn.disabled = true;
+  spinBtn.textContent = originalBtnText;
 }
 
-// 既存当選チェック (再アクセス時は即結果表示)
-async function loadExistingIfAny() {
+async function prepareCoupon() {
   if (!sessionId) return;
   try {
     await signInAnonymously(auth);
     await new Promise(r => onAuthStateChanged(auth, u => u && r()));
     const ref = doc(db, 'mio_line_survey', sessionId);
     const snap = await getDoc(ref);
-    if (snap.exists() && snap.data().coupon != null) {
-      // 既に当選済 — ルーレット動かさず即結果表示 (1ユーザー1回ルール)
-      const pct = snap.data().coupon;
-      // 軽くスピンアニメ → 結果表示
+    if (!snap.exists()) throw new Error('セッションが見つかりません');
+
+    let pct = snap.data().coupon;
+    if (pct == null) {
+      pct = drawCoupon();
+      await updateDoc(ref, { coupon: pct, won_at: serverTimestamp() });
+      state.firstTime = true;
+      spinBtn.textContent = SPIN_BTN_LABELS.ready;
+    } else {
+      state.firstTime = false;
       preEl.querySelector('.subtitle').textContent = 'すでに 当選済みです';
       preEl.querySelector('.lead').innerHTML = '一度 ルーレットで 当選した コードを 再表示します。<br><b style="color:var(--ink)">同じ LINE アカウント で 何度も 引くことは できません。</b>';
-      spinBtn.textContent = 'コードを 表示する';
-      spinBtn.dataset.existing = '1';
+      spinBtn.textContent = SPIN_BTN_LABELS.existing;
     }
+    state.pct = pct;
+    state.ready = true;
+    spinBtn.disabled = false;
   } catch (e) {
-    console.warn('existing check:', e?.message);
+    console.error('prepareCoupon:', e);
+    errEl.textContent = `準備に失敗しました: ${e.message}`;
+    errEl.style.display = 'block';
+    spinBtn.textContent = originalBtnText;
+    spinBtn.disabled = false;
   }
 }
-loadExistingIfAny();
+prepareCoupon();
 
 spinBtn.addEventListener('click', async () => {
+  if (spinBtn.disabled) return;
   spinBtn.disabled = true;
   errEl.style.display = 'none';
+
+  if (state.ready && state.pct != null) {
+    spinTo(state.pct);
+    const wait = state.firstTime ? 6300 : 3500;
+    setTimeout(() => showResult(state.pct), wait);
+    return;
+  }
+
+  // フォールバック: prepareCoupon が失敗していた場合のみ旧フローで再試行
   try {
     await signInAnonymously(auth);
     await new Promise(r => onAuthStateChanged(auth, u => u && r()));
@@ -330,9 +364,8 @@ spinBtn.addEventListener('click', async () => {
       pct = drawCoupon();
       await updateDoc(ref, { coupon: pct, won_at: serverTimestamp() });
     }
-
     spinTo(pct);
-    const wait = firstTime ? 6300 : 3500; // 既存は短めスピン
+    const wait = firstTime ? 6300 : 3500;
     setTimeout(() => showResult(pct), wait);
   } catch (err) {
     console.error(err);
