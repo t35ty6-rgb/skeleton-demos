@@ -3371,10 +3371,14 @@
         try {
           injectFullEntry();
           const currentCid = window._fpCurrentClient?.id;
-          const targetClient = (window.DUMMY_CLIENTS || []).find(c =>
+          let targetClient = (window.DUMMY_CLIENTS || []).find(c =>
             (c.lineFriendId && c.lineFriendId === userId) ||
             (c.name && (c.name === nameKey || c.name === customerName))
           );
+          // ★ fallback: 名前/userId match 失敗時、 現在モーダル開いてる客 を 対象に (録画フローは「この客の議事録」 が 自明)
+          if (!targetClient && window._fpCurrentClient) {
+            targetClient = window._fpCurrentClient;
+          }
           // fetchLiveData が lite=1 で transcript strip するので、 完了後に再inject + モーダル再描画
           fetchLiveData()
             .then(() => { injectFullEntry(); })
