@@ -3562,7 +3562,7 @@
     // ★ オーナーfb 2026-06-23: 長時間録画 (30分/1時間) で AI処理 が 走らない問題
     //   旧: 18MB 超 → 黙って null return (議事録 0)
     //   新: 25MB 超 → チャンク分割 (audio Blob を 時系列で 切って 各チャンク を 個別に Whisper → 結合)
-    if (sizeMB > 25) {
+    if (sizeMB > 18) {
       console.log('[aiProcessRecording] large file → chunked path', sizeMB);
       return await aiProcessRecordingChunked(blob, bookingTs, customerName, booking);
     }
