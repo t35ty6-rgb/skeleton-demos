@@ -3778,7 +3778,7 @@
   async function autoUploadRecording(blob, bookingTs, customerName, booking) {
     const sizeMB = blob.size / 1024 / 1024;
     const filename = `meeting-${(booking && booking.date) || new Date().toISOString().slice(0,10)}-${new Date().toISOString().slice(11,16).replace(':','')}.webm`;
-    if (sizeMB > 24) throw new Error('ファイルが大きすぎます (' + sizeMB.toFixed(1) + 'MB)');
+    if (sizeMB > 100) throw new Error('ファイルが大きすぎます (' + sizeMB.toFixed(1) + 'MB)');
     const reader = new FileReader();
     const base64 = await new Promise((res, rej) => {
       reader.onload = () => res(reader.result.split(',')[1]);
