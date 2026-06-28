@@ -1,25 +1,135 @@
-/* 荒島旅舎 / 學舎 — LINE予約デモ app.js
-   - ハイブリッド構成 (LIFFミニアプリ想定) のフロー再現
-   - LIFF SDK は demoMode bypass、Bot push は「商店街の便り」モックで体験
-   - 状態は localStorage に保管 (戻る/再訪での復元)
+/* 荒島旅舎 / 學舎 — 公式予約サイト
+   - トップページ: houses / rooms 表示
+   - LINE モーダル: チャット形式で予約フロー (新規 + 再予約)
+   - 履歴: localStorage に保存し、次回モーダル開いた時に「もう一度予約」を提案
 */
 
 (function () {
   'use strict';
 
   const D = window.ARASHIMA_DATA;
-  const LS_KEY = 'arashima.draft.v1';
+  const HIST_KEY = 'arashima.history.v2';
 
-  // ===== State =====
-  const state = loadDraft() || {
-    step: 1,
-    buildingId: null,
-    roomId: null,
-    checkin: defaultCheckin(),
-    nights: 2,
-    guests: 2,
-    name: '',
-    note: '',
+  // ===== Top page: houses =====
+  function renderHouses() {
+    const host = document.getElementById('housesGrid');
+    if (!host) return;
+    host.innerHTML = D.buildings.map((b) => {
+      const rooms = D.rooms.filter((r) => r.buildingId === b.id);
+      const minPrice = Math.min(...rooms.map((r) => r.price));
+      const nameEn = b.id === 'ryosha' ? 'RYOSHA' : 'GAKUSHA';
+      return `
+        <article class="house" data-house="${b.id}">
+          <div class="house__addr">${b.addrTown.toUpperCase()} · NO.${b.addrCode}</div>
+          <h3 class="house__name">${b.name}</h3>
+          <div class="house__name-en">${nameEn}</div>
+          <p class="house__tagline">${b.tagline}</p>
+          <p class="house__lead">${b.lead}</p>
+          <div class="house__facility">
+            ${b.facility.map((f) => `<span>${f}</span>`).join('')}
+          </div>
+          <div class="house__time">
+            <div>Check-in<strong>${b.checkIn}</strong></div>
+            <div>Check-out<strong>${b.checkOut}</strong></div>
+            <div>From<strong>¥${minPrice.toLocaleString()}</strong></div>
+          </div>
+        </article>
+      `;
+    }).join('');
+
+    host.querySelectorAll('.house').forEach((el) => {
+      el.addEventListener('click', () => {
+        const bid = el.dataset.house;
+        openLineModal({ preset: { buildingId: bid } });
+      });
+    });
+  }
+
+  // ===== Top page: rooms (リスト型) =====
+  function renderRooms(filter = 'all') {
+    const host = document.getElementById('roomsGrid');
+    if (!host) return;
+    const rooms = D.rooms.filter((r) => filter === 'all' || r.buildingId === filter);
+    host.innerHTML = rooms.map((r) => {
+      const b = D.buildings.find((x) => x.id === r.buildingId);
+      const num = parseInt(r.id.split('-')[1], 10) || r.id;
+      return `
+        <article class="room" data-room="${r.id}">
+          <div class="room__num">${num}</div>
+          <div class="room__main">
+            <h3 class="room__name">${r.name}</h3>
+            <div class="room__bldg">${b.name} / ${b.addrTown}</div>
+          </div>
+          <div class="room__specs">
+            <div>定員<strong>${r.capacity}名</strong></div>
+            <div>広さ<strong>${r.size}</strong></div>
+          </div>
+          <div class="room__feat">
+            ${r.features.map((f) => `<span>${f}</span>`).join('')}
+          </div>
+          <div class="room__price">
+            <div class="room__price-num">¥${r.price.toLocaleString()}<small>〜</small></div>
+            <div class="room__price-unit">per night</div>
+          </div>
+        </article>
+      `;
+    }).join('');
+
+    host.querySelectorAll('.room').forEach((el) => {
+      el.addEventListener('click', () => {
+        const r = D.rooms.find((x) => x.id === el.dataset.room);
+        openLineModal({ preset: { buildingId: r.buildingId, roomId: r.id } });
+      });
+    });
+
+    updateFilterCounts();
+  }
+
+  function updateFilterCounts() {
+    const all = D.rooms.length;
+    const ryosha = D.rooms.filter((r) => r.buildingId === 'ryosha').length;
+    const gakusha = D.rooms.filter((r) => r.buildingId === 'gakusha').length;
+    document.querySelectorAll('.filter').forEach((f) => {
+      const sp = f.querySelector('span');
+      if (!sp) return;
+      if (f.dataset.filter === 'all') sp.textContent = all;
+      if (f.dataset.filter === 'ryosha') sp.textContent = ryosha;
+      if (f.dataset.filter === 'gakusha') sp.textContent = gakusha;
+    });
+  }
+
+  // ===== Filter toggle =====
+  function setupFilters() {
+    document.querySelectorAll('.filter').forEach((f) => {
+      f.addEventListener('click', () => {
+        document.querySelectorAll('.filter').forEach((x) => x.classList.remove('is-on'));
+        f.classList.add('is-on');
+        renderRooms(f.dataset.filter);
+      });
+    });
+  }
+
+  // ===== History (localStorage) =====
+  function loadHistory() {
+    try {
+      return JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+    } catch (_) { return []; }
+  }
+
+  function pushHistory(record) {
+    const hist = loadHistory();
+    hist.unshift({ ...record, ts: Date.now() });
+    try {
+      localStorage.setItem(HIST_KEY, JSON.stringify(hist.slice(0, 10)));
+    } catch (_) {}
+  }
+
+  // ===== LINE Modal — state machine =====
+  const modal = {
+    el: null,
+    body: null,
+    state: null,
+    draft: null,
   };
 
   function defaultCheckin() {
@@ -28,384 +138,427 @@
     return d.toISOString().slice(0, 10);
   }
 
-  function saveDraft() {
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(state));
-    } catch (_) {}
+  function fmtDate(iso) {
+    const d = new Date(iso);
+    return `${d.getMonth() + 1}月${d.getDate()}日 (${'日月火水木金土'[d.getDay()]})`;
   }
 
-  function loadDraft() {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch (_) {
-      return null;
+  function openLineModal(opts = {}) {
+    if (!modal.el) {
+      modal.el = document.getElementById('lineModal');
+      modal.body = document.getElementById('lineModalBody');
+    }
+    modal.draft = {
+      buildingId: opts.preset?.buildingId || null,
+      roomId: opts.preset?.roomId || null,
+      checkin: defaultCheckin(),
+      nights: 2,
+      guests: 2,
+      name: '',
+      tel: '',
+      note: '',
+      planLabel: opts.preset?.planLabel || null,
+    };
+    modal.el.setAttribute('data-open', 'true');
+    modal.el.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    // 履歴があれば「welcome-back」、なければ「welcome-new」
+    const hist = loadHistory();
+    if (opts.preset?.buildingId || opts.preset?.roomId) {
+      // 直接クリック → 即フロー
+      modal.draft.flow = 'preset';
+      renderModal('selectDate');
+    } else if (hist.length > 0) {
+      modal.draft.flow = 'returning';
+      renderModal('welcomeBack', { history: hist });
+    } else {
+      modal.draft.flow = 'new';
+      renderModal('welcomeNew');
     }
   }
 
-  function clearDraft() {
-    try { localStorage.removeItem(LS_KEY); } catch (_) {}
+  function closeLineModal() {
+    if (!modal.el) return;
+    modal.el.setAttribute('data-open', 'false');
+    modal.el.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
   }
 
-  // ===== Render: 棟カード (top section) =====
-  function renderBuildings() {
-    const host = document.getElementById('buildingsGrid');
-    host.innerHTML = D.buildings.map((b) => {
-      const rooms = D.rooms.filter((r) => r.buildingId === b.id);
-      const minPrice = Math.min(...rooms.map((r) => r.price));
-      return `
-        <article class="bldg-card" data-bldg="${b.id}">
-          <div class="bldg-card__addr">${b.addrTown}・${b.addrCode}</div>
-          <h3 class="bldg-card__name">${b.name}</h3>
-          <div class="bldg-card__kana">${b.kana} / arashima</div>
-          <p class="bldg-card__tagline">${b.tagline}</p>
-          <p class="bldg-card__lead">${b.lead}</p>
-          <div class="bldg-card__fac">
-            ${b.facility.map((f) => `<span>${f}</span>`).join('')}
-          </div>
-          <div class="bldg-card__time">
-            <div><strong>IN</strong> ${b.checkIn}</div>
-            <div><strong>OUT</strong> ${b.checkOut}</div>
-            <div><strong>最低</strong> ¥${minPrice.toLocaleString()}〜</div>
-          </div>
-        </article>
-      `;
-    }).join('');
+  function renderModal(screen, ctx = {}) {
+    modal.state = screen;
+    const body = modal.body;
+    body.innerHTML = '';
 
-    host.querySelectorAll('.bldg-card').forEach((el) => {
-      el.addEventListener('click', () => {
-        const id = el.dataset.bldg;
-        state.buildingId = id;
-        state.roomId = null;
-        state.step = 2;
-        saveDraft();
-        jumpTo('reserve');
-        renderReserve();
-      });
-    });
-  }
+    const day = new Date();
+    const dayLabel = `${day.getMonth() + 1}月${day.getDate()}日 (${'日月火水木金土'[day.getDay()]})`;
 
-  // ===== Render: 客室一覧 (top section) =====
-  function renderRooms(filter = 'all') {
-    const host = document.getElementById('roomsGrid');
-    const rooms = D.rooms.filter((r) => filter === 'all' || r.buildingId === filter);
-    host.innerHTML = rooms.map((r) => {
-      const b = D.buildings.find((x) => x.id === r.buildingId);
-      return `
-        <article class="room-card" data-room="${r.id}">
-          <div class="room-card__head">
-            <div class="room-card__no">${r.no}</div>
-            <div class="room-card__bldg">${b.name}・${b.addrCode}</div>
-          </div>
-          <h3 class="room-card__name">${r.name}</h3>
-          <div class="room-card__specs">
-            <div>定員<strong>${r.capacity}名</strong></div>
-            <div>広さ<strong>${r.size}</strong></div>
-            <div>寝具<strong style="font-size:11px">${r.beds}</strong></div>
-          </div>
-          <div class="room-card__feat">
-            ${r.features.map((f) => `<span>${f}</span>`).join('')}
-          </div>
-          <div class="room-card__foot">
-            <div>
-              <span class="room-card__price-k">一泊</span>
-              <span class="room-card__price">¥${r.price.toLocaleString()}</span>
-              <span class="room-card__price-u">〜</span>
-            </div>
-            <div class="room-card__cta">この部屋 →</div>
-          </div>
-        </article>
-      `;
-    }).join('');
+    const dayDiv = document.createElement('div');
+    dayDiv.className = 'lm-day';
+    dayDiv.textContent = dayLabel;
+    body.appendChild(dayDiv);
 
-    host.querySelectorAll('.room-card').forEach((el) => {
-      el.addEventListener('click', () => {
-        const r = D.rooms.find((x) => x.id === el.dataset.room);
-        state.buildingId = r.buildingId;
-        state.roomId = r.id;
-        state.step = 3;
-        saveDraft();
-        jumpTo('reserve');
-        renderReserve();
-      });
-    });
-
-    updateCounts();
-  }
-
-  function updateCounts() {
-    document.getElementById('countAll').textContent = D.rooms.length;
-    document.getElementById('countRyosha').textContent =
-      D.rooms.filter((r) => r.buildingId === 'ryosha').length;
-    document.getElementById('countGakusha').textContent =
-      D.rooms.filter((r) => r.buildingId === 'gakusha').length;
-  }
-
-  // ===== Reserve panel renderer =====
-  function renderReserve() {
-    // Steps
-    document.querySelectorAll('.reserve__step').forEach((el) => {
-      const s = el.dataset.step;
-      el.classList.toggle('is-on', String(state.step) === s);
-      el.classList.toggle('is-done', Number(s) < Number(state.step));
-    });
-
-    // Panels
-    document.querySelectorAll('.reserve__panel').forEach((el) => {
-      el.classList.toggle('is-on', el.dataset.panel === String(state.step));
-    });
-
-    // Step 1 — 建屋
-    const bldgHost = document.getElementById('rsBuildings');
-    bldgHost.innerHTML = D.buildings.map((b) => {
-      const rooms = D.rooms.filter((r) => r.buildingId === b.id);
-      const minPrice = Math.min(...rooms.map((r) => r.price));
-      return `
-        <article class="rs-bldg-card" data-bldg="${b.id}">
-          <div class="rs-bldg-card__addr">${b.addrTown}・${b.addrCode}</div>
-          <h4 class="rs-bldg-card__name">${b.name}</h4>
-          <p class="rs-bldg-card__lead">${b.tagline}<br>最低 ¥${minPrice.toLocaleString()}〜 / 室</p>
-        </article>
-      `;
-    }).join('');
-    bldgHost.querySelectorAll('.rs-bldg-card').forEach((el) => {
-      el.addEventListener('click', () => {
-        state.buildingId = el.dataset.bldg;
-        state.roomId = null;
-        state.step = 2;
-        saveDraft();
-        renderReserve();
-      });
-    });
-
-    // Step 2 — 部屋
-    const roomHost = document.getElementById('rsRooms');
-    const rooms = state.buildingId
-      ? D.rooms.filter((r) => r.buildingId === state.buildingId)
-      : [];
-    roomHost.innerHTML = rooms.map((r) => `
-      <article class="rs-room-card" data-room="${r.id}">
-        <div class="rs-room-card__no">${r.no}号 / ${r.size}</div>
-        <h4 class="rs-room-card__name">${r.name}</h4>
-        <div class="rs-room-card__meta">
-          <span>定員 ${r.capacity}名</span>
-          <span class="rs-room-card__price">¥${r.price.toLocaleString()}〜</span>
-        </div>
-      </article>
-    `).join('');
-    roomHost.querySelectorAll('.rs-room-card').forEach((el) => {
-      el.addEventListener('click', () => {
-        state.roomId = el.dataset.room;
-        state.step = 3;
-        saveDraft();
-        renderReserve();
-      });
-    });
-
-    // Step 3 — 日付
-    const ci = document.getElementById('rsCheckin');
-    if (ci) {
-      ci.value = state.checkin;
-      ci.min = new Date().toISOString().slice(0, 10);
-      ci.onchange = () => { state.checkin = ci.value; saveDraft(); };
-    }
-    const nights = document.getElementById('rsNights');
-    if (nights) {
-      nights.value = state.nights;
-      nights.onchange = () => { state.nights = Number(nights.value); saveDraft(); };
-    }
-    const guests = document.getElementById('rsGuests');
-    if (guests) {
-      guests.value = state.guests;
-      guests.onchange = () => { state.guests = Number(guests.value); saveDraft(); };
+    if (screen === 'welcomeNew') {
+      addBubble('こんにちは。荒島旅舎・學舎の公式アカウントです。<br>はじめてのご予約ですね、ようこそ。');
+      addBubble('ご予約のお手伝いをします。<br>4つだけお伺いします:<br>① 建屋 ② 客室 ③ 日付 ④ お名前。<br>所要 1〜2分です。');
+      addQuick([
+        { label: '予約を始める', onclick: () => renderModal('selectHouse') },
+        { label: 'まずは部屋を見たい', secondary: true, onclick: () => { closeLineModal(); document.getElementById('rooms').scrollIntoView({ behavior: 'smooth' }); } },
+      ]);
     }
 
-    // Step 4 — Summary
-    if (state.step === 4) {
-      renderSummary();
-    }
-  }
-
-  function renderSummary() {
-    const bldg = D.buildings.find((b) => b.id === state.buildingId);
-    const room = D.rooms.find((r) => r.id === state.roomId);
-    if (!bldg || !room) return;
-
-    const ci = new Date(state.checkin);
-    const co = new Date(state.checkin);
-    co.setDate(co.getDate() + state.nights);
-
-    const total = room.price * state.nights;
-
-    const fmt = (d) => `${d.getFullYear()}年 ${d.getMonth() + 1}月 ${d.getDate()}日 (${'日月火水木金土'[d.getDay()]})`;
-
-    document.getElementById('rsSummary').innerHTML = `
-      <dl>
-        <dt>建屋</dt><dd>${bldg.name} / ${bldg.addrTown} ${bldg.addrCode}</dd>
-        <dt>部屋</dt><dd>${room.no}号 ・ ${room.name}</dd>
-        <dt>到着</dt><dd>${fmt(ci)}</dd>
-        <dt>出発</dt><dd>${fmt(co)} <span class="num">(${state.nights}泊)</span></dd>
-        <dt>人数</dt><dd><span class="num">${state.guests}</span> 名</dd>
-        <dt>合計</dt><dd class="total">¥${total.toLocaleString()}</dd>
-      </dl>
-    `;
-
-    const name = document.getElementById('rsName');
-    if (name) {
-      name.value = state.name;
-      name.oninput = () => { state.name = name.value; saveDraft(); };
-    }
-    const note = document.getElementById('rsNote');
-    if (note) {
-      note.value = state.note;
-      note.oninput = () => { state.note = note.value; saveDraft(); };
-    }
-  }
-
-  // ===== Letters (Bot通知プレビュー) — removed from page, keep no-op =====
-  function renderLetters() {
-    const host = document.getElementById('lettersRail');
-    if (!host) return;
-    host.innerHTML = D.letters.map((l) => `
-      <article class="letter">
-        <div class="letter__head">
-          <div class="letter__from">
-            <span class="letter__from-mark">荒</span>
-            <span>荒島旅舎・學舎</span>
-          </div>
-          <span>${l.kind === 'confirm' ? '予約確定' : l.kind === 'remind' ? '前夜' : '当日'}</span>
-        </div>
-        <h4 class="letter__title">${l.title}</h4>
-        <div class="letter__body">
-          ${l.lines.map((x) => `<p>${x}</p>`).join('')}
-        </div>
-        <div class="letter__stamp">${l.stamp}</div>
-      </article>
-    `).join('');
-  }
-
-  // ===== Navigation =====
-  function jumpTo(anchor) {
-    const el = document.getElementById(anchor);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  function setupNav() {
-    // Hero CTA + buttons with data-jump
-    document.querySelectorAll('[data-jump]').forEach((b) => {
-      b.addEventListener('click', () => jumpTo(b.dataset.jump));
-    });
-
-    // Reserve step nav (back / next)
-    document.querySelectorAll('[data-back]').forEach((b) => {
-      b.addEventListener('click', () => {
-        state.step = Number(b.dataset.back);
-        saveDraft();
-        renderReserve();
-      });
-    });
-    document.querySelectorAll('[data-next]').forEach((b) => {
-      b.addEventListener('click', () => {
-        if (b.dataset.next === '4' && !state.roomId) {
-          alert('お部屋を選んでください');
-          state.step = 2;
-          renderReserve();
-          return;
-        }
-        state.step = Number(b.dataset.next);
-        saveDraft();
-        renderReserve();
-      });
-    });
-
-    // Confirm
-    const confirm = document.getElementById('rsConfirm');
-    if (confirm) {
-      confirm.addEventListener('click', () => {
-        if (!state.name.trim()) {
-          alert('お名前を入力してください');
-          return;
-        }
-        // 予約番号生成 (A-0000)
-        const resNo = 'A-' + String(Math.floor(Math.random() * 9000) + 1000);
-        document.getElementById('rsResNo').textContent = resNo;
-        state.step = 'done';
-        // 完了状態は draft に残さず別キーで履歴化
-        try {
-          const hist = JSON.parse(localStorage.getItem('arashima.history') || '[]');
-          hist.unshift({
-            resNo, ts: Date.now(),
-            buildingId: state.buildingId,
-            roomId: state.roomId,
-            checkin: state.checkin,
-            nights: state.nights,
-            guests: state.guests,
-            name: state.name,
-            note: state.note,
-          });
-          localStorage.setItem('arashima.history', JSON.stringify(hist.slice(0, 20)));
-        } catch (_) {}
-        clearDraft();
-        renderReserve();
-      });
+    else if (screen === 'welcomeBack') {
+      const last = ctx.history[0];
+      const lastBldg = D.buildings.find((b) => b.id === last.buildingId);
+      const lastRoom = D.rooms.find((r) => r.id === last.roomId);
+      addBubble(`おかえりなさい、${last.name} 様。<br>前回は <strong>${lastBldg?.name || ''}・${lastRoom?.no || ''}号</strong> にお泊まりいただきました。`);
+      addCardSummary({
+        建屋: lastBldg?.name + ' ' + lastBldg?.addrTown,
+        客室: lastRoom?.no + '号 / ' + lastRoom?.name,
+        到着: fmtDate(last.checkin),
+        泊数: last.nights + '泊',
+        人数: last.guests + '名',
+      }, '前回のご予約');
+      addBubble('同じ内容でもう一度、または新しい内容でご予約いただけます。');
+      addQuick([
+        { label: '前回と同じ部屋を予約', onclick: () => {
+          modal.draft.buildingId = last.buildingId;
+          modal.draft.roomId = last.roomId;
+          modal.draft.guests = last.guests;
+          modal.draft.name = last.name;
+          modal.draft.tel = last.tel || '';
+          renderModal('selectDate', { fromHistory: true });
+        }},
+        { label: '別の部屋で予約', onclick: () => renderModal('selectHouse') },
+        { label: '予約履歴を全部見る', secondary: true, onclick: () => renderModal('history', { history: ctx.history }) },
+      ]);
     }
 
-    const restart = document.getElementById('rsRestart');
-    if (restart) {
-      restart.addEventListener('click', () => {
-        Object.assign(state, {
-          step: 1,
-          buildingId: null,
-          roomId: null,
-          checkin: defaultCheckin(),
-          nights: 2,
-          guests: 2,
-          name: '',
-          note: '',
+    else if (screen === 'history') {
+      addBubble('これまでのご予約履歴です。');
+      const list = document.createElement('div');
+      list.className = 'lm-list';
+      ctx.history.forEach((h) => {
+        const b = D.buildings.find((x) => x.id === h.buildingId);
+        const r = D.rooms.find((x) => x.id === h.roomId);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.innerHTML = `
+          <span class="lm-list-name">${b?.name || ''} ・ ${r?.no || ''}号</span>
+          <span class="lm-list-meta">${fmtDate(h.checkin)} / ${h.nights}泊 / ${h.guests}名</span>
+        `;
+        btn.addEventListener('click', () => {
+          modal.draft.buildingId = h.buildingId;
+          modal.draft.roomId = h.roomId;
+          modal.draft.guests = h.guests;
+          modal.draft.name = h.name;
+          modal.draft.tel = h.tel || '';
+          renderModal('selectDate', { fromHistory: true });
         });
-        renderReserve();
-        jumpTo('reserve');
+        list.appendChild(btn);
       });
+      body.appendChild(wrapInBubble(list));
     }
 
-    // Filter chips
-    document.querySelectorAll('.chip').forEach((c) => {
-      c.addEventListener('click', () => {
-        document.querySelectorAll('.chip').forEach((x) => x.classList.remove('chip--on'));
-        c.classList.add('chip--on');
-        renderRooms(c.dataset.filter);
+    else if (screen === 'selectHouse') {
+      addBubble('まず、どちらの建屋に？');
+      const list = document.createElement('div');
+      list.className = 'lm-list';
+      D.buildings.forEach((b) => {
+        const rooms = D.rooms.filter((r) => r.buildingId === b.id);
+        const minPrice = Math.min(...rooms.map((r) => r.price));
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.innerHTML = `
+          <span class="lm-list-name">${b.name}</span>
+          <span class="lm-list-meta">${b.addrTown} ${b.addrCode}</span>
+          <span class="lm-list-price">¥${minPrice.toLocaleString()} 〜 / 室</span>
+        `;
+        btn.addEventListener('click', () => {
+          modal.draft.buildingId = b.id;
+          modal.draft.roomId = null;
+          renderModal('selectRoom');
+        });
+        list.appendChild(btn);
       });
-    });
+      body.appendChild(wrapInBubble(list));
+    }
 
-    // Address rail scroll spy
-    const sections = ['hero', 'story', 'buildings', 'gallery', 'rooms', 'rhythm', 'season', 'plans', 'access', 'voices', 'reserve', 'faq', 'contact'];
-    const rail = document.querySelectorAll('.addr-rail__list li');
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting) {
-          rail.forEach((li) => {
-            li.classList.toggle('is-on', li.dataset.anchor === e.target.id);
-          });
-        }
+    else if (screen === 'selectRoom') {
+      const bldg = D.buildings.find((b) => b.id === modal.draft.buildingId);
+      addBubble(`${bldg.name} ですね。<br>どのお部屋に？`);
+      const rooms = D.rooms.filter((r) => r.buildingId === modal.draft.buildingId);
+      const list = document.createElement('div');
+      list.className = 'lm-list';
+      rooms.forEach((r) => {
+        const num = parseInt(r.id.split('-')[1], 10) || r.id;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.innerHTML = `
+          <span class="lm-list-name">${num}号 / ${r.name}</span>
+          <span class="lm-list-meta">定員 ${r.capacity}名 · ${r.size} · ${r.beds}</span>
+          <span class="lm-list-price">¥${r.price.toLocaleString()} 〜 / 一泊</span>
+        `;
+        btn.addEventListener('click', () => {
+          modal.draft.roomId = r.id;
+          renderModal('selectDate');
+        });
+        list.appendChild(btn);
       });
-    }, { rootMargin: '-40% 0px -50% 0px' });
-    sections.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
+      body.appendChild(wrapInBubble(list));
+      addQuick([{ label: '← 建屋を変える', secondary: true, onclick: () => renderModal('selectHouse') }]);
+    }
+
+    else if (screen === 'selectDate') {
+      const r = D.rooms.find((x) => x.id === modal.draft.roomId);
+      const num = parseInt(r.id.split('-')[1], 10) || r.id;
+      addBubble(`${num}号 (${r.name}) ですね。<br>いつから、何泊にされますか？`);
+      const form = document.createElement('form');
+      form.className = 'lm-form';
+      form.innerHTML = `
+        <label>
+          <span class="lm-form-k">チェックイン</span>
+          <input type="date" id="lmCheckin" value="${modal.draft.checkin}" min="${new Date().toISOString().slice(0,10)}">
+        </label>
+        <label>
+          <span class="lm-form-k">宿泊数</span>
+          <select id="lmNights">
+            ${[1,2,3,4,5,7].map((n) => `<option value="${n}" ${n===modal.draft.nights?'selected':''}>${['','一','二','三','四','五','六','七'][n] || n}泊</option>`).join('')}
+          </select>
+        </label>
+        <label>
+          <span class="lm-form-k">人数</span>
+          <select id="lmGuests">
+            ${[1,2,3,4,5,6].map((n) => `<option value="${n}" ${n===modal.draft.guests?'selected':''}>${['','一','二','三','四','五','六'][n] || n}名</option>`).join('')}
+          </select>
+        </label>
+        <button type="submit">確認へ進む</button>
+      `;
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        modal.draft.checkin = form.querySelector('#lmCheckin').value;
+        modal.draft.nights = Number(form.querySelector('#lmNights').value);
+        modal.draft.guests = Number(form.querySelector('#lmGuests').value);
+        renderModal('confirmDetails');
+      });
+      body.appendChild(wrapInBubble(form));
+      addQuick([{ label: '← 部屋を選び直す', secondary: true, onclick: () => renderModal('selectRoom') }]);
+    }
+
+    else if (screen === 'confirmDetails') {
+      const bldg = D.buildings.find((b) => b.id === modal.draft.buildingId);
+      const room = D.rooms.find((r) => r.id === modal.draft.roomId);
+      const total = room.price * modal.draft.nights;
+      const co = new Date(modal.draft.checkin);
+      co.setDate(co.getDate() + modal.draft.nights);
+
+      addBubble('内容を確認しました。');
+      addCardSummary({
+        建屋: bldg.name,
+        客室: room.no + '号 / ' + room.name,
+        到着: fmtDate(modal.draft.checkin),
+        出発: fmtDate(co.toISOString().slice(0,10)) + ` (${modal.draft.nights}泊)`,
+        人数: modal.draft.guests + '名',
+        合計: '¥' + total.toLocaleString(),
+      }, 'ご予約内容', { total: '¥' + total.toLocaleString() });
+
+      const needContact = !modal.draft.name || !modal.draft.tel;
+      if (needContact) {
+        addBubble('最後に、お名前とお電話番号を教えてください。');
+        const form = document.createElement('form');
+        form.className = 'lm-form';
+        form.innerHTML = `
+          <label>
+            <span class="lm-form-k">お名前</span>
+            <input type="text" id="lmName" value="${modal.draft.name}" placeholder="例) 田中" required>
+          </label>
+          <label>
+            <span class="lm-form-k">お電話番号</span>
+            <input type="tel" id="lmTel" value="${modal.draft.tel}" placeholder="例) 090-1234-5678" required>
+          </label>
+          <label>
+            <span class="lm-form-k">ご要望 (任意)</span>
+            <textarea id="lmNote" placeholder="例) 自転車を一台貸してください">${modal.draft.note}</textarea>
+          </label>
+          <button type="submit">予約を確定する</button>
+        `;
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          modal.draft.name = form.querySelector('#lmName').value.trim();
+          modal.draft.tel = form.querySelector('#lmTel').value.trim();
+          modal.draft.note = form.querySelector('#lmNote').value.trim();
+          confirmReservation();
+        });
+        body.appendChild(wrapInBubble(form));
+      } else {
+        // 履歴経由で名前/電話あり
+        addBubble(`${modal.draft.name} 様、ご連絡先は前回と同じでよろしいですか？`);
+        const form = document.createElement('form');
+        form.className = 'lm-form';
+        form.innerHTML = `
+          <label>
+            <span class="lm-form-k">ご要望 (任意)</span>
+            <textarea id="lmNote" placeholder="例) 自転車を一台貸してください">${modal.draft.note}</textarea>
+          </label>
+          <button type="submit">この内容で予約する</button>
+        `;
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          modal.draft.note = form.querySelector('#lmNote').value.trim();
+          confirmReservation();
+        });
+        body.appendChild(wrapInBubble(form));
+        addQuick([{ label: '連絡先を変更する', secondary: true, onclick: () => {
+          modal.draft.name = ''; modal.draft.tel = '';
+          renderModal('confirmDetails');
+        }}]);
+      }
+    }
+
+    else if (screen === 'done') {
+      const resNo = ctx.resNo;
+      addBubble(`<strong>${modal.draft.name}</strong> 様、ありがとうございます。<br>たしかに承りました。`);
+
+      // 確定スタンプ
+      const stamp = document.createElement('div');
+      stamp.className = 'lm-stamp';
+      stamp.innerHTML = '承<br>諾';
+      body.appendChild(stamp);
+
+      addBubble(`予約番号: <strong style="color:#843C28">${resNo}</strong>`);
+      addBubble('24時間以内に担当者から、改めてご連絡いたします。<br>当日までの道順・チェックイン案内も、このトークでお届けします。');
+
+      addQuick([
+        { label: 'もう一度予約する', onclick: () => {
+          const hist = loadHistory();
+          renderModal('welcomeBack', { history: hist });
+        }},
+        { label: 'トークを閉じる', secondary: true, onclick: closeLineModal },
+      ]);
+
+      // Scroll to bottom
+      setTimeout(() => { body.scrollTop = body.scrollHeight; }, 100);
+    }
+
+    // 自動スクロール
+    requestAnimationFrame(() => {
+      body.scrollTop = body.scrollHeight;
     });
-    // Rail click → jump
-    rail.forEach((li) => {
-      li.addEventListener('click', () => jumpTo(li.dataset.anchor));
+  }
+
+  function confirmReservation() {
+    const resNo = 'A-' + String(Math.floor(Math.random() * 9000) + 1000);
+    const rec = {
+      resNo,
+      buildingId: modal.draft.buildingId,
+      roomId: modal.draft.roomId,
+      checkin: modal.draft.checkin,
+      nights: modal.draft.nights,
+      guests: modal.draft.guests,
+      name: modal.draft.name,
+      tel: modal.draft.tel,
+      note: modal.draft.note,
+    };
+    pushHistory(rec);
+    renderModal('done', { resNo });
+  }
+
+  // ===== Modal helpers =====
+  function addBubble(html) {
+    const wrap = document.createElement('div');
+    wrap.className = 'lm-bub-in';
+    wrap.innerHTML = `<div class="lm-bub-avatar">荒</div><div class="lm-body">${html}</div>`;
+    modal.body.appendChild(wrap);
+  }
+
+  function wrapInBubble(inner) {
+    const wrap = document.createElement('div');
+    wrap.className = 'lm-bub-in';
+    const avatar = document.createElement('div');
+    avatar.className = 'lm-bub-avatar';
+    avatar.textContent = '荒';
+    wrap.appendChild(avatar);
+    wrap.appendChild(inner);
+    return wrap;
+  }
+
+  function addCardSummary(rows, title, opts = {}) {
+    const wrap = document.createElement('div');
+    wrap.className = 'lm-bub-in';
+    const avatar = document.createElement('div');
+    avatar.className = 'lm-bub-avatar';
+    avatar.textContent = '荒';
+    wrap.appendChild(avatar);
+
+    const card = document.createElement('div');
+    card.className = 'lm-card';
+    let html = `<div class="lm-card__head">${title}</div><div class="lm-card__body">`;
+    for (const [k, v] of Object.entries(rows)) {
+      if (k === '合計' && opts.total) continue;
+      html += `<div class="lm-card__row"><span>${k}</span><strong>${v}</strong></div>`;
+    }
+    if (opts.total) {
+      html += `<div class="lm-card__row lm-card__row--total"><span>合計</span><strong>${opts.total}</strong></div>`;
+    }
+    html += `</div>`;
+    card.innerHTML = html;
+    wrap.appendChild(card);
+    modal.body.appendChild(wrap);
+  }
+
+  function addQuick(items) {
+    const wrap = document.createElement('div');
+    wrap.className = 'lm-quick';
+    items.forEach((it) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = it.label;
+      if (it.secondary) b.classList.add('is-secondary');
+      b.addEventListener('click', it.onclick);
+      wrap.appendChild(b);
+    });
+    modal.body.appendChild(wrap);
+  }
+
+  // ===== Modal triggers =====
+  function setupModal() {
+    document.querySelectorAll('[data-open-line-modal]').forEach((b) => {
+      b.addEventListener('click', (e) => {
+        e.preventDefault();
+        openLineModal();
+      });
+    });
+    document.querySelectorAll('[data-close-line-modal]').forEach((b) => {
+      b.addEventListener('click', closeLineModal);
+    });
+    document.querySelectorAll('[data-line-back]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const back = {
+          welcomeBack: null, welcomeNew: null,
+          history: 'welcomeBack',
+          selectHouse: loadHistory().length > 0 ? 'welcomeBack' : 'welcomeNew',
+          selectRoom: 'selectHouse',
+          selectDate: 'selectRoom',
+          confirmDetails: 'selectDate',
+        };
+        const to = back[modal.state];
+        if (to) renderModal(to, { history: loadHistory() });
+        else closeLineModal();
+      });
+    });
+    // Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.el?.getAttribute('data-open') === 'true') {
+        closeLineModal();
+      }
     });
   }
 
   // ===== Boot =====
   document.addEventListener('DOMContentLoaded', () => {
-    renderBuildings();
+    renderHouses();
     renderRooms('all');
-    renderLetters();
-    renderReserve();
-    setupNav();
+    setupFilters();
+    setupModal();
   });
 })();
