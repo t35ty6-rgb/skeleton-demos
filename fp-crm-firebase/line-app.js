@@ -2883,46 +2883,21 @@
     // preOpened = { preZoomWin } - click 直後に開いた空 Zoom popup を引き継ぐ
     const preZoomWin = preOpened?.preZoomWin || null;
     const R = window._fpRecorder;
-    // ★ 順序: 共有許可 → 成功時に Zoom + メモ 同時オープン → 録画開始
-    // (Zoom を先に開くと画面共有ダイアログが裏に隠れて操作不能になるため)
-    // キャンセル時は catch で Zoom だけ開いて「録画なしで Zoom 入る」フォールバック
-    showPickerHint();
+    // ★ 2026-06-29: 画面共有 → マイク録音 のみ に切替 (オーナーfb)
+    //   旧: getDisplayMedia で 画面+システム音声 (毎回 ダイアログ うざい / video 使い道なし)
+    //   新: getUserMedia({audio:true}) で マイクだけ録音 (ダイアログなし)
+    //   前提: FPは Zoom音声を スピーカーで聴く (イヤホンNG) → マイクが 自分の声 + Zoom相手の声 両方拾う
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: 'monitor', frameRate: 15 },
-        audio: { echoCancellation: false, noiseSuppression: false, sampleRate: 44100 },
-        systemAudio: 'include',
-        preferCurrentTab: false,
-      });
-      hidePickerHint();
-      // ★ Chrome の「共有を停止」 バー (画面最下部に常時表示) で停止された時の検知
-      // → MediaRecorder.onstop が onended で自動発火する
-      stream.getVideoTracks().forEach(track => {
-        track.addEventListener('ended', () => {
-          if (window._fpRecorder.mediaRecorder && window._fpRecorder.mediaRecorder.state !== 'inactive') {
-            const t = document.createElement('div');
-            t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#fff;border-left:5px solid #06c755;border-radius:10px;padding:14px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.2);z-index:10004;font-family:inherit;';
-            t.innerHTML = '<strong style="font-size:14px;display:block;">⏹ 画面共有が停止されました</strong><div style="font-size:12px;color:#6b7280;">録画停止 → AI 処理を開始します</div>';
-            document.body.appendChild(t);
-            setTimeout(() => t.remove(), 6000);
-            stopScreenRecording();
-          }
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: false, noiseSuppression: true, sampleRate: 44100 },
         });
-      });
-      // 音声チェック (★ 2026-06-27: 音声無しでは進めない強制ガード — 「音声共有」 必須)
-      const audioTracks = stream.getAudioTracks();
-      if (audioTracks.length === 0) {
-        // stream 即停止
-        stream.getTracks().forEach(t => t.stop());
-        // ブロッキング モーダル (alert) で 必須 リトライ 案内
-        alert('🚨 「音声を共有」 が OFF のため 録画 進めません\n\n' +
-              '理由: 音声がないと AI議事録が 生成できません (Whisper が無音を「YouTube動画系」 と幻覚判定)\n\n' +
-              '【やり直し手順】\n' +
-              '1. もう一度 「録画ON」 ボタンを 押す\n' +
-              '2. 画面共有ダイアログで 「画面全体」 (or 「Chromeタブ」) を 選ぶ\n' +
-              '3. ⚠️ 左下の 「タブの音声も共有」 チェックボックスに ✅ を 必ず 入れる\n' +
-              '4. 「共有」 を 押す');
-        return;  // 録画開始させない
+      } catch (e) {
+        alert('🎤 マイク アクセス できません\n\n' +
+              'Mac の場合: システム設定 → プライバシーとセキュリティ → マイク で Chrome を ON\n\n' +
+              '技術詳細: ' + (e?.name || e?.message || e));
+        return;
       }
 
       // ★ オーナーfb (v AF): メモ画面廃止 → Zoom 全画面 1 つだけ。pre-open Zoom popup に URL を流し込む。
@@ -2981,17 +2956,9 @@
       window._fpMemoWin = null;
       console.log('[layout] Zoom 全画面 (' + sw + 'x' + sh + ') / メモ画面なし');
 
-      // マイク音声を合成
-      let combined = stream;
-      try {
-        const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const ac = new AudioContext();
-        const dest = ac.createMediaStreamDestination();
-        if (stream.getAudioTracks().length > 0) ac.createMediaStreamSource(new MediaStream([stream.getAudioTracks()[0]])).connect(dest);
-        ac.createMediaStreamSource(mic).connect(dest);
-        combined = new MediaStream([...stream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
-        R._micStream = mic;
-      } catch (_) {}
+      // ★ 2026-06-29: マイク直接録音 (画面共有 廃止 → 合成不要)
+      const combined = stream;
+      R._micStream = stream;
 
       // ★ bookingTs が URLエンコード状態 (%3A 等) で来る path がある → 必ず decode して保存
       //   旧バグ: data-rec-start に encodeURIComponent済 ts を 入れる箇所 (fillBookingsList の tsEnc) → R.bookingTs encoded で GAS sheet 保存 → 顧客モーダル b.ts (decoded) と find 一致せず 議事録 反映なし
