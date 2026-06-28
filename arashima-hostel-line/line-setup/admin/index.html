@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>運営管理 · 荒島ホテル</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="head">
+  <div class="head__brand">
+    <span class="head__brand-en">ARASHIMA</span>
+    <span class="head__brand-sub">運営管理</span>
+  </div>
+  <nav class="head__nav">
+    <button data-tab="today" class="is-on">今日</button>
+    <button data-tab="upcoming">今後</button>
+    <button data-tab="all">全予約</button>
+    <button data-tab="guests">ゲスト</button>
+    <button data-tab="logs">ログ</button>
+  </nav>
+  <div class="head__user" id="userBadge">未ログイン</div>
+</header>
+
+<main class="body">
+  <!-- ログイン要求 -->
+  <div class="login" id="login" style="display:none;">
+    <h1>運営管理</h1>
+    <p>オーナー権限でログインしてください。</p>
+    <button class="cta" id="btnLogin">Google でログイン</button>
+  </div>
+
+  <!-- ダッシュボード -->
+  <div class="dash" id="dash" style="display:none;">
+
+    <!-- 今日 -->
+    <section data-pane="today">
+      <div class="kpis" id="kpis">
+        <div class="kpi"><div class="kpi-k">本日 IN</div><div class="kpi-v" id="kpiTodayIn">—</div></div>
+        <div class="kpi"><div class="kpi-k">本日 OUT</div><div class="kpi-v" id="kpiTodayOut">—</div></div>
+        <div class="kpi"><div class="kpi-k">今夜 滞在中</div><div class="kpi-v" id="kpiStaying">—</div></div>
+        <div class="kpi"><div class="kpi-k">明日 IN</div><div class="kpi-v" id="kpiTomorrow">—</div></div>
+      </div>
+
+      <h2>本日のチェックイン</h2>
+      <table class="tbl" id="tblTodayIn"></table>
+
+      <h2>本日のチェックアウト</h2>
+      <table class="tbl" id="tblTodayOut"></table>
+    </section>
+
+    <!-- 今後 -->
+    <section data-pane="upcoming" hidden>
+      <h2>今後 30 日の予約</h2>
+      <table class="tbl" id="tblUpcoming"></table>
+    </section>
+
+    <!-- 全予約 -->
+    <section data-pane="all" hidden>
+      <h2>全予約 (新しい順 / 100件)</h2>
+      <div class="filters">
+        <label>状態
+          <select id="filterStatus">
+            <option value="">すべて</option>
+            <option value="pending">受付中</option>
+            <option value="confirmed">確定</option>
+            <option value="cancelled">キャンセル</option>
+            <option value="completed">完了</option>
+          </select>
+        </label>
+        <label>建屋
+          <select id="filterBldg">
+            <option value="">すべて</option>
+            <option value="ryosha">旅舎</option>
+            <option value="gakusha">學舎</option>
+          </select>
+        </label>
+        <button class="btn" id="exportCsv">CSV ダウンロード</button>
+      </div>
+      <table class="tbl" id="tblAll"></table>
+    </section>
+
+    <!-- ゲスト -->
+    <section data-pane="guests" hidden>
+      <h2>ゲスト (リピーター上位)</h2>
+      <table class="tbl" id="tblGuests"></table>
+    </section>
+
+    <!-- ログ -->
+    <section data-pane="logs" hidden>
+      <h2>運用ログ (直近 200 件)</h2>
+      <table class="tbl" id="tblLogs"></table>
+    </section>
+
+  </div>
+</main>
+
+<!-- 予約詳細モーダル -->
+<div class="modal" id="modal" hidden>
+  <div class="modal__backdrop" data-close-modal></div>
+  <div class="modal__shell">
+    <header class="modal__head">
+      <h3 id="modalTitle">予約詳細</h3>
+      <button class="modal__close" data-close-modal>×</button>
+    </header>
+    <div class="modal__body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+  window.__ENV = window.__ENV || {
+    FIREBASE_API_KEY: 'REPLACE_WITH_API_KEY',
+    FIREBASE_PROJECT_ID: 'arashima-hotel',
+    FIREBASE_AUTH_DOMAIN: 'arashima-hotel.firebaseapp.com',
+  };
+</script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

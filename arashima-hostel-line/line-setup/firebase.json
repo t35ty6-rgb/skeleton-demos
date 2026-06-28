@@ -1,0 +1,41 @@
+{
+  "firestore": {
+    "rules": "firestore/rules.txt",
+    "indexes": "firestore/indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions-bundle",
+      "codebase": "default",
+      "runtime": "nodejs20",
+      "predeploy": ["npm --prefix functions-bundle install"]
+    }
+  ],
+  "hosting": [
+    {
+      "target": "liff",
+      "public": "liff",
+      "rewrites": [
+        { "source": "/api/liff-auth", "function": { "functionId": "liffAuth", "region": "asia-northeast1" } },
+        { "source": "/api/admin-push", "function": { "functionId": "adminPush", "region": "asia-northeast1" } },
+        { "source": "/webhook", "function": { "functionId": "webhook", "region": "asia-northeast1" } },
+        { "source": "**", "destination": "/index.html" }
+      ],
+      "headers": [
+        { "source": "**", "headers": [{ "key": "X-Frame-Options", "value": "SAMEORIGIN" }] }
+      ]
+    },
+    {
+      "target": "admin",
+      "public": "admin",
+      "rewrites": [
+        { "source": "/api/liff-auth", "function": { "functionId": "liffAuth", "region": "asia-northeast1" } },
+        { "source": "/api/admin-push", "function": { "functionId": "adminPush", "region": "asia-northeast1" } },
+        { "source": "**", "destination": "/index.html" }
+      ],
+      "headers": [
+        { "source": "**", "headers": [{ "key": "X-Frame-Options", "value": "DENY" }] }
+      ]
+    }
+  ]
+}

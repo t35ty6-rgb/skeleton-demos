@@ -1,0 +1,70 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ヘルパー: 管理者判定 (admin custom claim)
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    // ヘルパー: LIFF 認証された LINE userId
+    function isLineUser(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // ============ Reservations ============
+    match /reservations/{resNo} {
+      // 一覧表示: admin のみ
+      allow list: if isAdmin();
+      // 個別 get: admin or 本人 (lineUserId 一致)
+      allow get: if isAdmin() || (request.auth != null && resource.data.lineUserId == request.auth.uid);
+      // 作成: 認証された LIFF ユーザーが自分の予約のみ作成可能
+      allow create: if request.auth != null
+        && request.resource.data.lineUserId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.totalPrice is number
+        && request.resource.data.totalPrice > 0;
+      // 更新: admin (全項目) または 本人 (キャンセルのみ)
+      allow update: if isAdmin()
+        || (request.auth != null
+            && resource.data.lineUserId == request.auth.uid
+            && request.resource.data.status == 'cancelled'
+            && resource.data.status in ['pending', 'confirmed']);
+      // 削除: 不可
+      allow delete: if false;
+    }
+
+    // ============ Guests ============
+    match /guests/{lineUserId} {
+      allow get: if isAdmin() || isLineUser(lineUserId);
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() || isLineUser(lineUserId);
+      allow delete: if false;
+    }
+
+    // ============ Rooms (マスタ・公開読み取り) ============
+    match /rooms/{roomId} {
+      allow read: if true;            // 客室情報は LIFF/Hosting から自由に読める
+      allow write: if isAdmin();
+    }
+
+    // ============ Availability (公開読み取り) ============
+    match /availability/{date}/rooms/{roomId} {
+      allow read: if true;            // 空室カレンダー
+      allow write: if false;          // trigger function 経由のみ (server SDK で書込)
+    }
+
+    // ============ Ops Logs ============
+    match /ops_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;          // server SDK のみ
+    }
+
+    // ============ Ops State ============
+    match /ops_state/{docId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}
