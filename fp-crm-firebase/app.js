@@ -2029,9 +2029,21 @@
                 });
               }
               c._fullHydrated = true;
-              // 議事録タブ が active なら 再描画 (transcript全文 + 古い議事録 復元)
+              // ★ 2026-06-27 速度改善: 議事録タブ active時のみ 再描画。 他タブなら 全DOM rebuild スキップ (遅さの主因)
+              //   次に議事録タブ open した時 表示される (ai_results は live merge済)
               const meetingsTab = document.querySelector('.cd-tab.cd-tab-active[data-cdtab="meetings"]');
-              if (meetingsTab && typeof openClientModal === 'function') openClientModal(c.id, { fromPopstate: true });
+              const lineTabActive = document.querySelector('.cd-tab.cd-tab-active[data-cdtab="line"]');
+              if (meetingsTab && typeof openClientModal === 'function' && !lineTabActive) {
+                // 議事録panel のみ 差分更新 (全modal rebuild 回避)
+                try {
+                  const panel = document.querySelector('[data-cdpanel="meetings"]');
+                  if (panel && typeof renderMeetingRecordsBlock === 'function') {
+                    panel.innerHTML = renderMeetingRecordsBlock(c) || '<div class="cd-empty">面談録なし</div>';
+                  }
+                } catch (_) {
+                  openClientModal(c.id, { fromPopstate: true });
+                }
+              }
             } catch (e) { console.warn('[customer-detail hydrate] merge fail', e); }
             c._fullHydrating = false;
           })
@@ -5257,8 +5269,11 @@ ${ctxText}${surveyTxt}`;
             const key = (a.bookingTs || '') + '|' + (a.ts || a.createdAt || '');
             aiZoomIdx.set(key, i + 1);
           });
+          // ★ 2026-06-27: 議事録 並び順 を 新→旧 (newest first) で明示 sort
           return '<div style="display:grid;gap:14px;margin-bottom:18px;">' +
-            orphan.slice().reverse().map(a => {
+            orphan.slice()
+              .sort((a, b) => String(b.ts || b.createdAt || '').localeCompare(String(a.ts || a.createdAt || '')))
+              .map(a => {
               const zKey = (a.bookingTs || '') + '|' + (a.ts || a.createdAt || '');
               const zN = aiZoomIdx.get(zKey) || '?';
               return `
