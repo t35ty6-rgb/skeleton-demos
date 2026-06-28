@@ -4080,6 +4080,13 @@ ${ctxText}${surveyTxt}`;
           if (p.dataset.cdpanel === key) p.removeAttribute('hidden');
           else p.setAttribute('hidden', '');
         });
+        // ★ 2026-06-27: 議事録タブ open時 latest liveData から panel 再生成 (hydrate後の最新議事録 反映)
+        if (key === 'meetings' && typeof renderMeetingRecordsBlock === 'function') {
+          try {
+            const panel = document.querySelector('[data-cdpanel="meetings"]');
+            if (panel) panel.innerHTML = renderMeetingRecordsBlock(c) || '<div class="cd-empty">面談録なし</div>';
+          } catch (_) {}
+        }
         // ★ URL routing Phase3: モーダル内タブ → ?tab=key
         try {
           const cur = window._fpCurrentClient;
