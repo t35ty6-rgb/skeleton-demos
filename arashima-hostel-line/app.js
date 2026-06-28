@@ -1,158 +1,77 @@
-/* 荒島ホテル — LINE 予約システム デモ
-   - スマホ画面 (リッチメニュー) を操作
-   - 「予約する」→ LIFF 起動 (建屋/部屋/日付/連絡先/完了)
-   - 他のマス → Bot 自動返信を吹き出しで追加
-   - 履歴は localStorage 保存 → 次回 LIFF 起動時に「前回と同じ予約」 ワンタップ
+/* ARASHIMA HOTEL / 荒島ホテル
+   - ヒーロースライダー auto cross-fade
+   - ナビ scroll で stuck class
+   - 予約バー submit → LIFF 起動 (フォーム値を draft に流し込み)
+   - LIFF: 建屋/客室/連絡先/完了 (履歴があれば再予約画面)
 */
 
 (function () {
   'use strict';
 
   const D = window.ARASHIMA_DATA;
-  const HIST_KEY = 'arashima.history.v3';
+  const HIST_KEY = 'arashima.history.v4';
 
-  // ===== Initial chat setup =====
-  function todayLabel() {
-    const d = new Date();
-    return `${d.getMonth() + 1}月${d.getDate()}日 (${'日月火水木金土'[d.getDay()]})`;
-  }
+  // ===== Hero slider =====
+  function setupHeroSlider() {
+    const slides = document.querySelectorAll('.hero__slide');
+    const dots = document.querySelectorAll('.hero__dot');
+    if (!slides.length) return;
 
-  function fmtDate(iso) {
-    const d = new Date(iso);
-    return `${d.getMonth() + 1}月${d.getDate()}日 (${'日月火水木金土'[d.getDay()]})`;
-  }
+    let idx = 0;
+    function goto(n) {
+      slides.forEach((s, i) => s.classList.toggle('is-on', i === n));
+      dots.forEach((d, i) => d.classList.toggle('is-on', i === n));
+      idx = n;
+    }
 
-  function bootChat() {
-    const chat = document.getElementById('phoneChat');
-    if (!chat) return;
-    chat.innerHTML = '';
-    addBubble('lm-day', todayLabel(), { chat });
-    addInBubble('荒島ホテルへようこそ。<br>ご用件は下のメニューからお選びください。', { chat });
-  }
+    dots.forEach((d, i) => {
+      d.addEventListener('click', () => goto(i));
+    });
 
-  // ===== Bubble helpers =====
-  function addBubble(cls, html, opts = {}) {
-    const chat = opts.chat || document.getElementById('phoneChat');
-    const el = document.createElement('div');
-    el.className = cls;
-    el.innerHTML = html;
-    chat.appendChild(el);
-    chat.scrollTop = chat.scrollHeight;
-    return el;
-  }
+    let timer = setInterval(() => {
+      goto((idx + 1) % slides.length);
+    }, 5500);
 
-  function addInBubble(html, opts = {}) {
-    const chat = opts.chat || document.getElementById('phoneChat');
-    const wrap = document.createElement('div');
-    wrap.className = 'lm-bub-in';
-    wrap.innerHTML = `<div class="lm-bub-avatar">荒</div><div class="lm-body">${html}</div>`;
-    chat.appendChild(wrap);
-    chat.scrollTop = chat.scrollHeight;
-    return wrap;
-  }
-
-  function addOutBubble(html, opts = {}) {
-    const chat = opts.chat || document.getElementById('phoneChat');
-    const wrap = document.createElement('div');
-    wrap.className = 'lm-bub-out';
-    wrap.innerHTML = `<div class="lm-body">${html}</div>`;
-    chat.appendChild(wrap);
-    chat.scrollTop = chat.scrollHeight;
-    return wrap;
-  }
-
-  function addFlexBubble(title, rows, opts = {}) {
-    const chat = opts.chat || document.getElementById('phoneChat');
-    const wrap = document.createElement('div');
-    wrap.className = 'lm-bub-in';
-    const rowsHtml = Object.entries(rows).map(([k, v]) => `<div class="lm-flex__row"><span>${k}</span><strong>${v}</strong></div>`).join('');
-    wrap.innerHTML = `
-      <div class="lm-bub-avatar">荒</div>
-      <div class="lm-flex">
-        <div class="lm-flex__hd">${title}</div>
-        <div class="lm-flex__bd">${rowsHtml}</div>
-      </div>
-    `;
-    chat.appendChild(wrap);
-    chat.scrollTop = chat.scrollHeight;
-    return wrap;
-  }
-
-  // ===== Rich menu actions =====
-  function setupRichMenu() {
-    document.querySelectorAll('.rich-menu__cell').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const action = btn.dataset.action;
-        const label = btn.querySelector('.rich-menu__label')?.textContent || '';
-        // Customer sends (echo)
-        setTimeout(() => addOutBubble(label), 80);
-        // Bot replies
-        setTimeout(() => handleAction(action), 700);
-      });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) clearInterval(timer);
+      else timer = setInterval(() => goto((idx + 1) % slides.length), 5500);
     });
   }
 
-  function handleAction(action) {
-    if (action === 'reserve') {
-      addInBubble('かしこまりました。<br>ご予約フォームをこちらでお開きします。');
-      setTimeout(() => openLiff(), 600);
+  // ===== Nav stuck on scroll =====
+  function setupNavStuck() {
+    const nav = document.getElementById('nav');
+    if (!nav) return;
+    const update = () => {
+      nav.setAttribute('data-stuck', window.scrollY > 80 ? 'true' : 'false');
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  }
+
+  // ===== Reserve bar form =====
+  function setupReserveBar() {
+    const form = document.getElementById('reserveBarForm');
+    if (!form) return;
+
+    const ci = document.getElementById('rbCheckin');
+    if (ci) {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      ci.value = d.toISOString().slice(0, 10);
+      ci.min = new Date().toISOString().slice(0, 10);
     }
-    else if (action === 'rooms') {
-      addInBubble('客室と滞在プランをお送りします。');
-      const minR = Math.min(...D.rooms.filter(r => r.buildingId === 'ryosha').map(r => r.price));
-      const minG = Math.min(...D.rooms.filter(r => r.buildingId === 'gakusha').map(r => r.price));
-      addFlexBubble('荒島ホテル 全室', {
-        '旅舎': '5室 / ¥' + minR.toLocaleString() + '〜',
-        '學舎': '3室 / ¥' + minG.toLocaleString() + '〜',
-        '素泊まり': '一泊一室',
-        '人気プラン': '3泊以上 15% OFF',
-      });
-      setTimeout(() => addInBubble('気になるお部屋があれば、「予約する」 から日付を入れてください。'), 800);
-    }
-    else if (action === 'access') {
-      addInBubble('道順をお送りします。<br><br>📍 福井県大野市 元町 8-17<br>越美北線・越前大野駅から徒歩 12 分。');
-      setTimeout(() => addFlexBubble('道順 (4ステップ)', {
-        '1.': '駅前ロータリーを左へ',
-        '2.': '真名川にかかる橋を渡る',
-        '3.': '寺町通りに入る',
-        '4.': '朱の暖簾、8-17',
-      }), 600);
-      setTimeout(() => addInBubble('Google マップで開く: https://maps.google.com/?q=福井県大野市元町8-17'), 1100);
-    }
-    else if (action === 'changes') {
-      const hist = loadHistory();
-      if (hist.length === 0) {
-        addInBubble('現在、お客様のご予約は登録されていません。<br>新規ご予約は「予約する」から。');
-      } else {
-        const h = hist[0];
-        const b = D.buildings.find((x) => x.id === h.buildingId);
-        const r = D.rooms.find((x) => x.id === h.roomId);
-        addInBubble('お客様の現在のご予約は以下のとおりです。');
-        addFlexBubble('現在のご予約', {
-          '予約番号': h.resNo,
-          '建屋': b?.name || '',
-          '客室': (r?.no || '') + '号',
-          '到着': fmtDate(h.checkin),
-          '泊数': h.nights + '泊',
-        });
-        setTimeout(() => addInBubble('変更・キャンセルは「予約する」 ボタンからお手続きできます。<br>3日前まで無料 / 前日 50% / 当日 100%。'), 700);
-      }
-    }
-    else if (action === 'facility') {
-      addInBubble('館内のご案内です。<br>共用部はチェックイン中は 24 時間お使いいただけます。');
-      setTimeout(() => addFlexBubble('共用設備', {
-        'キッチン': '1F / 24h',
-        'ラウンジ': '1F / 暖炉風ストーブ',
-        '貸自転車': '3台 / 無料',
-        'シャワー': '男女別 / 24h',
-        '洗濯機': '¥300/回',
-      }), 600);
-      setTimeout(() => addInBubble('Wi-Fi パスワードはチェックイン時にお伝えします。'), 1100);
-    }
-    else if (action === 'contact') {
-      addInBubble('お問い合わせ内容をどうぞ。<br>このトークに直接ご記入いただけます。');
-      setTimeout(() => addInBubble('受付時間: 9:00 - 21:00<br>通常 1 時間以内にスタッフが返信します。<br>営業時間外は翌朝の返信となります。'), 700);
-    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const preset = {
+        checkin: ci?.value || null,
+        nights: Number(document.getElementById('rbNights')?.value || 2),
+        guests: Number(document.getElementById('rbGuests')?.value || 2),
+        buildingId: document.getElementById('rbHouse')?.value || null,
+      };
+      openLiff({ preset });
+    });
   }
 
   // ===== History =====
@@ -182,6 +101,11 @@
     return d.toISOString().slice(0, 10);
   }
 
+  function fmtDate(iso) {
+    const d = new Date(iso);
+    return `${d.getMonth() + 1}月${d.getDate()}日 (${'日月火水木金土'[d.getDay()]})`;
+  }
+
   function openLiff(opts = {}) {
     if (!liff.el) {
       liff.el = document.getElementById('liff');
@@ -190,9 +114,9 @@
     liff.draft = {
       buildingId: opts.preset?.buildingId || null,
       roomId: opts.preset?.roomId || null,
-      checkin: defaultCheckin(),
-      nights: 2,
-      guests: 2,
+      checkin: opts.preset?.checkin || defaultCheckin(),
+      nights: opts.preset?.nights || 2,
+      guests: opts.preset?.guests || 2,
       name: '',
       tel: '',
       note: '',
@@ -204,6 +128,8 @@
     const hist = loadHistory();
     if (hist.length > 0) {
       renderLiff('welcomeBack', { history: hist });
+    } else if (liff.draft.buildingId) {
+      renderLiff('selectRoom');
     } else {
       renderLiff('selectHouse');
     }
@@ -214,13 +140,6 @@
     liff.el.setAttribute('data-open', 'false');
     liff.el.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
-    // Bot post-message in chat
-    setTimeout(() => {
-      if (liff.draft?._completed) {
-        addInBubble('ご予約ありがとうございました。<br>当日までの案内をこのトークでお届けします。');
-        liff.draft._completed = false;
-      }
-    }, 200);
   }
 
   function renderLiff(screen, ctx = {}) {
@@ -273,7 +192,7 @@
       }).join('');
       step.innerHTML = `
         <h3 class="liff__q">どちらの建屋に？</h3>
-        <p class="liff__sub">同じオーナーが運営する別の表情の二棟です。</p>
+        <p class="liff__sub">商店街の真ん中の旅舎、城町の書斎付き學舎。</p>
         <div class="liff__opt">${opts}</div>
       `;
       body.appendChild(step);
@@ -341,10 +260,6 @@
             <select id="liffGuests" class="liff__input">
               ${[1,2,3,4,5,6].map(n => `<option value="${n}" ${n===liff.draft.guests?'selected':''}>${n}名</option>`).join('')}
             </select>
-          </label>
-          <label class="liff__field">
-            <span class="liff__field-k">料金/泊</span>
-            <div class="liff__input" style="background:#f7f7f7; color:var(--accent); font-family:var(--display-en); font-style:italic; font-weight:600;">¥${r.price.toLocaleString()}</div>
           </label>
         </div>
         <button class="liff__cta" id="liffNext" type="button">確認へ進む</button>
@@ -422,7 +337,7 @@
         <div class="liff__done-no">予約番号 ${resNo}</div>
         <p>${liff.draft.name} 様、ありがとうございます。<br>担当者から 24 時間以内に LINE のトークでご連絡いたします。</p>
         <p style="font-size:11px;">前日にチェックイン時刻と道順、当日に鍵の場所をお送りします。</p>
-        <button class="liff__cta" id="liffCloseDone" type="button">トークに戻る</button>
+        <button class="liff__cta" id="liffCloseDone" type="button">閉じる</button>
       `;
       body.appendChild(step);
       body.querySelector('#liffCloseDone').addEventListener('click', closeLiff);
@@ -443,28 +358,16 @@
       note: liff.draft.note,
     };
     pushHistory(rec);
-    liff.draft._completed = true;
     renderLiff('done', { resNo });
-
-    // Bot push to chat (simulate after-close push)
-    const bldg = D.buildings.find((b) => b.id === rec.buildingId);
-    const room = D.rooms.find((r) => r.id === rec.roomId);
-    const co = new Date(rec.checkin);
-    co.setDate(co.getDate() + rec.nights);
-    setTimeout(() => {
-      addFlexBubble('ご予約 確定', {
-        '予約番号': resNo,
-        '建屋': bldg?.name || '',
-        '客室': (room?.no || '') + '号',
-        '到着': fmtDate(rec.checkin),
-        '泊数': rec.nights + '泊',
-        '合計': '¥' + (room.price * rec.nights).toLocaleString(),
-      });
-    }, 800);
   }
 
-  // ===== LIFF triggers =====
-  function setupLiff() {
+  function setupLiffTriggers() {
+    document.querySelectorAll('[data-open-liff]').forEach((b) => {
+      b.addEventListener('click', (e) => {
+        e.preventDefault();
+        openLiff();
+      });
+    });
     document.querySelectorAll('[data-close-liff]').forEach((b) => {
       b.addEventListener('click', closeLiff);
     });
@@ -490,21 +393,11 @@
     });
   }
 
-  // ===== Page-level =====
-  function setupJumpToPhone() {
-    document.querySelectorAll('[data-jump-phone]').forEach((a) => {
-      a.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.querySelector('.phone').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      });
-    });
-  }
-
   // ===== Boot =====
   document.addEventListener('DOMContentLoaded', () => {
-    bootChat();
-    setupRichMenu();
-    setupLiff();
-    setupJumpToPhone();
+    setupHeroSlider();
+    setupNavStuck();
+    setupReserveBar();
+    setupLiffTriggers();
   });
 })();
