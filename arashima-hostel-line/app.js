@@ -393,11 +393,61 @@
     });
   }
 
+  // ===== Lightbox =====
+  function setupLightbox() {
+    const grid = document.getElementById('galleryGrid');
+    const box = document.getElementById('lightbox');
+    if (!grid || !box) return;
+
+    const cells = Array.from(grid.querySelectorAll('.gallery__cell'));
+    const imgEl = document.getElementById('lightboxImg');
+    const capEl = document.getElementById('lightboxCap');
+    let idx = 0;
+
+    function show(i) {
+      idx = (i + cells.length) % cells.length;
+      const cell = cells[idx];
+      const src = cell.querySelector('img')?.src || '';
+      const cap = cell.querySelector('figcaption')?.textContent || '';
+      const alt = cell.querySelector('img')?.alt || '';
+      imgEl.src = src;
+      imgEl.alt = alt;
+      capEl.textContent = cap;
+      box.hidden = false;
+      requestAnimationFrame(() => box.setAttribute('aria-hidden', 'false'));
+      document.body.style.overflow = 'hidden';
+    }
+
+    function close() {
+      box.setAttribute('aria-hidden', 'true');
+      setTimeout(() => { box.hidden = true; }, 300);
+      document.body.style.overflow = '';
+    }
+
+    cells.forEach((c, i) => {
+      c.addEventListener('click', () => show(i));
+    });
+    document.querySelector('[data-lightbox-close]')?.addEventListener('click', close);
+    document.querySelector('[data-lightbox-prev]')?.addEventListener('click', () => show(idx - 1));
+    document.querySelector('[data-lightbox-next]')?.addEventListener('click', () => show(idx + 1));
+    box.addEventListener('click', (e) => {
+      if (e.target === box) close();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (box.getAttribute('aria-hidden') === 'false') {
+        if (e.key === 'Escape') close();
+        else if (e.key === 'ArrowLeft') show(idx - 1);
+        else if (e.key === 'ArrowRight') show(idx + 1);
+      }
+    });
+  }
+
   // ===== Boot =====
   document.addEventListener('DOMContentLoaded', () => {
     setupHeroSlider();
     setupNavStuck();
     setupReserveBar();
     setupLiffTriggers();
+    setupLightbox();
   });
 })();
