@@ -262,9 +262,10 @@
     }
   }
 
-  // ===== Letters (Bot通知プレビュー) =====
+  // ===== Letters (Bot通知プレビュー) — removed from page, keep no-op =====
   function renderLetters() {
     const host = document.getElementById('lettersRail');
+    if (!host) return;
     host.innerHTML = D.letters.map((l) => `
       <article class="letter">
         <div class="letter__head">
@@ -378,7 +379,7 @@
     });
 
     // Address rail scroll spy
-    const sections = ['hero', 'buildings', 'gallery', 'rooms', 'rhythm', 'access', 'reserve', 'line-preview', 'letters', 'faq'];
+    const sections = ['hero', 'story', 'buildings', 'gallery', 'rooms', 'rhythm', 'season', 'plans', 'access', 'voices', 'reserve', 'faq', 'contact'];
     const rail = document.querySelectorAll('.addr-rail__list li');
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
