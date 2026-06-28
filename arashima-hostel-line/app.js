@@ -1,131 +1,175 @@
-/* 荒島旅舎 / 學舎 — 公式予約サイト
-   - トップページ: houses / rooms 表示
-   - LINE モーダル: チャット形式で予約フロー (新規 + 再予約)
-   - 履歴: localStorage に保存し、次回モーダル開いた時に「もう一度予約」を提案
+/* 荒島ホテル — LINE 予約システム デモ
+   - スマホ画面 (リッチメニュー) を操作
+   - 「予約する」→ LIFF 起動 (建屋/部屋/日付/連絡先/完了)
+   - 他のマス → Bot 自動返信を吹き出しで追加
+   - 履歴は localStorage 保存 → 次回 LIFF 起動時に「前回と同じ予約」 ワンタップ
 */
 
 (function () {
   'use strict';
 
   const D = window.ARASHIMA_DATA;
-  const HIST_KEY = 'arashima.history.v2';
+  const HIST_KEY = 'arashima.history.v3';
 
-  // ===== Top page: houses =====
-  function renderHouses() {
-    const host = document.getElementById('housesGrid');
-    if (!host) return;
-    host.innerHTML = D.buildings.map((b) => {
-      const rooms = D.rooms.filter((r) => r.buildingId === b.id);
-      const minPrice = Math.min(...rooms.map((r) => r.price));
-      const nameEn = b.id === 'ryosha' ? 'RYOSHA' : 'GAKUSHA';
-      return `
-        <article class="house" data-house="${b.id}">
-          <div class="house__addr">${b.addrTown.toUpperCase()} · NO.${b.addrCode}</div>
-          <h3 class="house__name">${b.name}</h3>
-          <div class="house__name-en">${nameEn}</div>
-          <p class="house__tagline">${b.tagline}</p>
-          <p class="house__lead">${b.lead}</p>
-          <div class="house__facility">
-            ${b.facility.map((f) => `<span>${f}</span>`).join('')}
-          </div>
-          <div class="house__time">
-            <div>Check-in<strong>${b.checkIn}</strong></div>
-            <div>Check-out<strong>${b.checkOut}</strong></div>
-            <div>From<strong>¥${minPrice.toLocaleString()}</strong></div>
-          </div>
-        </article>
-      `;
-    }).join('');
+  // ===== Initial chat setup =====
+  function todayLabel() {
+    const d = new Date();
+    return `${d.getMonth() + 1}月${d.getDate()}日 (${'日月火水木金土'[d.getDay()]})`;
+  }
 
-    host.querySelectorAll('.house').forEach((el) => {
-      el.addEventListener('click', () => {
-        const bid = el.dataset.house;
-        openLineModal({ preset: { buildingId: bid } });
+  function fmtDate(iso) {
+    const d = new Date(iso);
+    return `${d.getMonth() + 1}月${d.getDate()}日 (${'日月火水木金土'[d.getDay()]})`;
+  }
+
+  function bootChat() {
+    const chat = document.getElementById('phoneChat');
+    if (!chat) return;
+    chat.innerHTML = '';
+    addBubble('lm-day', todayLabel(), { chat });
+    addInBubble('荒島ホテルへようこそ。<br>ご用件は下のメニューからお選びください。', { chat });
+  }
+
+  // ===== Bubble helpers =====
+  function addBubble(cls, html, opts = {}) {
+    const chat = opts.chat || document.getElementById('phoneChat');
+    const el = document.createElement('div');
+    el.className = cls;
+    el.innerHTML = html;
+    chat.appendChild(el);
+    chat.scrollTop = chat.scrollHeight;
+    return el;
+  }
+
+  function addInBubble(html, opts = {}) {
+    const chat = opts.chat || document.getElementById('phoneChat');
+    const wrap = document.createElement('div');
+    wrap.className = 'lm-bub-in';
+    wrap.innerHTML = `<div class="lm-bub-avatar">荒</div><div class="lm-body">${html}</div>`;
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+    return wrap;
+  }
+
+  function addOutBubble(html, opts = {}) {
+    const chat = opts.chat || document.getElementById('phoneChat');
+    const wrap = document.createElement('div');
+    wrap.className = 'lm-bub-out';
+    wrap.innerHTML = `<div class="lm-body">${html}</div>`;
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+    return wrap;
+  }
+
+  function addFlexBubble(title, rows, opts = {}) {
+    const chat = opts.chat || document.getElementById('phoneChat');
+    const wrap = document.createElement('div');
+    wrap.className = 'lm-bub-in';
+    const rowsHtml = Object.entries(rows).map(([k, v]) => `<div class="lm-flex__row"><span>${k}</span><strong>${v}</strong></div>`).join('');
+    wrap.innerHTML = `
+      <div class="lm-bub-avatar">荒</div>
+      <div class="lm-flex">
+        <div class="lm-flex__hd">${title}</div>
+        <div class="lm-flex__bd">${rowsHtml}</div>
+      </div>
+    `;
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+    return wrap;
+  }
+
+  // ===== Rich menu actions =====
+  function setupRichMenu() {
+    document.querySelectorAll('.rich-menu__cell').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        const label = btn.querySelector('.rich-menu__label')?.textContent || '';
+        // Customer sends (echo)
+        setTimeout(() => addOutBubble(label), 80);
+        // Bot replies
+        setTimeout(() => handleAction(action), 700);
       });
     });
   }
 
-  // ===== Top page: rooms (リスト型) =====
-  function renderRooms(filter = 'all') {
-    const host = document.getElementById('roomsGrid');
-    if (!host) return;
-    const rooms = D.rooms.filter((r) => filter === 'all' || r.buildingId === filter);
-    host.innerHTML = rooms.map((r) => {
-      const b = D.buildings.find((x) => x.id === r.buildingId);
-      const num = parseInt(r.id.split('-')[1], 10) || r.id;
-      return `
-        <article class="room" data-room="${r.id}">
-          <div class="room__num">${num}</div>
-          <div class="room__main">
-            <h3 class="room__name">${r.name}</h3>
-            <div class="room__bldg">${b.name} / ${b.addrTown}</div>
-          </div>
-          <div class="room__specs">
-            <div>定員<strong>${r.capacity}名</strong></div>
-            <div>広さ<strong>${r.size}</strong></div>
-          </div>
-          <div class="room__feat">
-            ${r.features.map((f) => `<span>${f}</span>`).join('')}
-          </div>
-          <div class="room__price">
-            <div class="room__price-num">¥${r.price.toLocaleString()}<small>〜</small></div>
-            <div class="room__price-unit">per night</div>
-          </div>
-        </article>
-      `;
-    }).join('');
-
-    host.querySelectorAll('.room').forEach((el) => {
-      el.addEventListener('click', () => {
-        const r = D.rooms.find((x) => x.id === el.dataset.room);
-        openLineModal({ preset: { buildingId: r.buildingId, roomId: r.id } });
+  function handleAction(action) {
+    if (action === 'reserve') {
+      addInBubble('かしこまりました。<br>ご予約フォームをこちらでお開きします。');
+      setTimeout(() => openLiff(), 600);
+    }
+    else if (action === 'rooms') {
+      addInBubble('客室と滞在プランをお送りします。');
+      const minR = Math.min(...D.rooms.filter(r => r.buildingId === 'ryosha').map(r => r.price));
+      const minG = Math.min(...D.rooms.filter(r => r.buildingId === 'gakusha').map(r => r.price));
+      addFlexBubble('荒島ホテル 全室', {
+        '旅舎': '5室 / ¥' + minR.toLocaleString() + '〜',
+        '學舎': '3室 / ¥' + minG.toLocaleString() + '〜',
+        '素泊まり': '一泊一室',
+        '人気プラン': '3泊以上 15% OFF',
       });
-    });
-
-    updateFilterCounts();
+      setTimeout(() => addInBubble('気になるお部屋があれば、「予約する」 から日付を入れてください。'), 800);
+    }
+    else if (action === 'access') {
+      addInBubble('道順をお送りします。<br><br>📍 福井県大野市 元町 8-17<br>越美北線・越前大野駅から徒歩 12 分。');
+      setTimeout(() => addFlexBubble('道順 (4ステップ)', {
+        '1.': '駅前ロータリーを左へ',
+        '2.': '真名川にかかる橋を渡る',
+        '3.': '寺町通りに入る',
+        '4.': '朱の暖簾、8-17',
+      }), 600);
+      setTimeout(() => addInBubble('Google マップで開く: https://maps.google.com/?q=福井県大野市元町8-17'), 1100);
+    }
+    else if (action === 'changes') {
+      const hist = loadHistory();
+      if (hist.length === 0) {
+        addInBubble('現在、お客様のご予約は登録されていません。<br>新規ご予約は「予約する」から。');
+      } else {
+        const h = hist[0];
+        const b = D.buildings.find((x) => x.id === h.buildingId);
+        const r = D.rooms.find((x) => x.id === h.roomId);
+        addInBubble('お客様の現在のご予約は以下のとおりです。');
+        addFlexBubble('現在のご予約', {
+          '予約番号': h.resNo,
+          '建屋': b?.name || '',
+          '客室': (r?.no || '') + '号',
+          '到着': fmtDate(h.checkin),
+          '泊数': h.nights + '泊',
+        });
+        setTimeout(() => addInBubble('変更・キャンセルは「予約する」 ボタンからお手続きできます。<br>3日前まで無料 / 前日 50% / 当日 100%。'), 700);
+      }
+    }
+    else if (action === 'facility') {
+      addInBubble('館内のご案内です。<br>共用部はチェックイン中は 24 時間お使いいただけます。');
+      setTimeout(() => addFlexBubble('共用設備', {
+        'キッチン': '1F / 24h',
+        'ラウンジ': '1F / 暖炉風ストーブ',
+        '貸自転車': '3台 / 無料',
+        'シャワー': '男女別 / 24h',
+        '洗濯機': '¥300/回',
+      }), 600);
+      setTimeout(() => addInBubble('Wi-Fi パスワードはチェックイン時にお伝えします。'), 1100);
+    }
+    else if (action === 'contact') {
+      addInBubble('お問い合わせ内容をどうぞ。<br>このトークに直接ご記入いただけます。');
+      setTimeout(() => addInBubble('受付時間: 9:00 - 21:00<br>通常 1 時間以内にスタッフが返信します。<br>営業時間外は翌朝の返信となります。'), 700);
+    }
   }
 
-  function updateFilterCounts() {
-    const all = D.rooms.length;
-    const ryosha = D.rooms.filter((r) => r.buildingId === 'ryosha').length;
-    const gakusha = D.rooms.filter((r) => r.buildingId === 'gakusha').length;
-    document.querySelectorAll('.filter').forEach((f) => {
-      const sp = f.querySelector('span');
-      if (!sp) return;
-      if (f.dataset.filter === 'all') sp.textContent = all;
-      if (f.dataset.filter === 'ryosha') sp.textContent = ryosha;
-      if (f.dataset.filter === 'gakusha') sp.textContent = gakusha;
-    });
-  }
-
-  // ===== Filter toggle =====
-  function setupFilters() {
-    document.querySelectorAll('.filter').forEach((f) => {
-      f.addEventListener('click', () => {
-        document.querySelectorAll('.filter').forEach((x) => x.classList.remove('is-on'));
-        f.classList.add('is-on');
-        renderRooms(f.dataset.filter);
-      });
-    });
-  }
-
-  // ===== History (localStorage) =====
+  // ===== History =====
   function loadHistory() {
-    try {
-      return JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
-    } catch (_) { return []; }
+    try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); }
+    catch (_) { return []; }
   }
 
-  function pushHistory(record) {
+  function pushHistory(rec) {
     const hist = loadHistory();
-    hist.unshift({ ...record, ts: Date.now() });
-    try {
-      localStorage.setItem(HIST_KEY, JSON.stringify(hist.slice(0, 10)));
-    } catch (_) {}
+    hist.unshift({ ...rec, ts: Date.now() });
+    try { localStorage.setItem(HIST_KEY, JSON.stringify(hist.slice(0, 10))); }
+    catch (_) {}
   }
 
-  // ===== LINE Modal — state machine =====
-  const modal = {
+  // ===== LIFF (mini-app reservation) =====
+  const liff = {
     el: null,
     body: null,
     state: null,
@@ -138,17 +182,12 @@
     return d.toISOString().slice(0, 10);
   }
 
-  function fmtDate(iso) {
-    const d = new Date(iso);
-    return `${d.getMonth() + 1}月${d.getDate()}日 (${'日月火水木金土'[d.getDay()]})`;
-  }
-
-  function openLineModal(opts = {}) {
-    if (!modal.el) {
-      modal.el = document.getElementById('lineModal');
-      modal.body = document.getElementById('lineModalBody');
+  function openLiff(opts = {}) {
+    if (!liff.el) {
+      liff.el = document.getElementById('liff');
+      liff.body = document.getElementById('liffBody');
     }
-    modal.draft = {
+    liff.draft = {
       buildingId: opts.preset?.buildingId || null,
       roomId: opts.preset?.roomId || null,
       checkin: defaultCheckin(),
@@ -157,408 +196,315 @@
       name: '',
       tel: '',
       note: '',
-      planLabel: opts.preset?.planLabel || null,
     };
-    modal.el.setAttribute('data-open', 'true');
-    modal.el.setAttribute('aria-hidden', 'false');
+    liff.el.setAttribute('data-open', 'true');
+    liff.el.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
 
-    // 履歴があれば「welcome-back」、なければ「welcome-new」
     const hist = loadHistory();
-    if (opts.preset?.buildingId || opts.preset?.roomId) {
-      // 直接クリック → 即フロー
-      modal.draft.flow = 'preset';
-      renderModal('selectDate');
-    } else if (hist.length > 0) {
-      modal.draft.flow = 'returning';
-      renderModal('welcomeBack', { history: hist });
+    if (hist.length > 0) {
+      renderLiff('welcomeBack', { history: hist });
     } else {
-      modal.draft.flow = 'new';
-      renderModal('welcomeNew');
+      renderLiff('selectHouse');
     }
   }
 
-  function closeLineModal() {
-    if (!modal.el) return;
-    modal.el.setAttribute('data-open', 'false');
-    modal.el.setAttribute('aria-hidden', 'true');
+  function closeLiff() {
+    if (!liff.el) return;
+    liff.el.setAttribute('data-open', 'false');
+    liff.el.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    // Bot post-message in chat
+    setTimeout(() => {
+      if (liff.draft?._completed) {
+        addInBubble('ご予約ありがとうございました。<br>当日までの案内をこのトークでお届けします。');
+        liff.draft._completed = false;
+      }
+    }, 200);
   }
 
-  function renderModal(screen, ctx = {}) {
-    modal.state = screen;
-    const body = modal.body;
+  function renderLiff(screen, ctx = {}) {
+    liff.state = screen;
+    const body = liff.body;
     body.innerHTML = '';
 
-    const day = new Date();
-    const dayLabel = `${day.getMonth() + 1}月${day.getDate()}日 (${'日月火水木金土'[day.getDay()]})`;
-
-    const dayDiv = document.createElement('div');
-    dayDiv.className = 'lm-day';
-    dayDiv.textContent = dayLabel;
-    body.appendChild(dayDiv);
-
-    if (screen === 'welcomeNew') {
-      addBubble('こんにちは。荒島旅舎・學舎の公式アカウントです。<br>はじめてのご予約ですね、ようこそ。');
-      addBubble('ご予約のお手伝いをします。<br>4つだけお伺いします:<br>① 建屋 ② 客室 ③ 日付 ④ お名前。<br>所要 1〜2分です。');
-      addQuick([
-        { label: '予約を始める', onclick: () => renderModal('selectHouse') },
-        { label: 'まずは部屋を見たい', secondary: true, onclick: () => { closeLineModal(); document.getElementById('rooms').scrollIntoView({ behavior: 'smooth' }); } },
-      ]);
-    }
-
-    else if (screen === 'welcomeBack') {
+    if (screen === 'welcomeBack') {
       const last = ctx.history[0];
       const lastBldg = D.buildings.find((b) => b.id === last.buildingId);
       const lastRoom = D.rooms.find((r) => r.id === last.roomId);
-      addBubble(`おかえりなさい、${last.name} 様。<br>前回は <strong>${lastBldg?.name || ''}・${lastRoom?.no || ''}号</strong> にお泊まりいただきました。`);
-      addCardSummary({
-        建屋: lastBldg?.name + ' ' + lastBldg?.addrTown,
-        客室: lastRoom?.no + '号 / ' + lastRoom?.name,
-        到着: fmtDate(last.checkin),
-        泊数: last.nights + '泊',
-        人数: last.guests + '名',
-      }, '前回のご予約');
-      addBubble('同じ内容でもう一度、または新しい内容でご予約いただけます。');
-      addQuick([
-        { label: '前回と同じ部屋を予約', onclick: () => {
-          modal.draft.buildingId = last.buildingId;
-          modal.draft.roomId = last.roomId;
-          modal.draft.guests = last.guests;
-          modal.draft.name = last.name;
-          modal.draft.tel = last.tel || '';
-          renderModal('selectDate', { fromHistory: true });
-        }},
-        { label: '別の部屋で予約', onclick: () => renderModal('selectHouse') },
-        { label: '予約履歴を全部見る', secondary: true, onclick: () => renderModal('history', { history: ctx.history }) },
-      ]);
-    }
-
-    else if (screen === 'history') {
-      addBubble('これまでのご予約履歴です。');
-      const list = document.createElement('div');
-      list.className = 'lm-list';
-      ctx.history.forEach((h) => {
-        const b = D.buildings.find((x) => x.id === h.buildingId);
-        const r = D.rooms.find((x) => x.id === h.roomId);
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.innerHTML = `
-          <span class="lm-list-name">${b?.name || ''} ・ ${r?.no || ''}号</span>
-          <span class="lm-list-meta">${fmtDate(h.checkin)} / ${h.nights}泊 / ${h.guests}名</span>
-        `;
-        btn.addEventListener('click', () => {
-          modal.draft.buildingId = h.buildingId;
-          modal.draft.roomId = h.roomId;
-          modal.draft.guests = h.guests;
-          modal.draft.name = h.name;
-          modal.draft.tel = h.tel || '';
-          renderModal('selectDate', { fromHistory: true });
-        });
-        list.appendChild(btn);
+      const step = document.createElement('div');
+      step.className = 'liff__step';
+      step.innerHTML = `
+        <h3 class="liff__q">おかえりなさい、${last.name} 様</h3>
+        <p class="liff__sub">前回のご予約と同じ内容で、日付だけ変更してもう一度ご予約いただけます。</p>
+        <button class="liff__rebook" type="button" id="liffRebook">
+          <span class="liff__rebook-tag">前回のご予約</span>
+          <span class="liff__rebook-title">${lastBldg?.name || ''} ・ ${lastRoom?.no || ''}号</span>
+          <span class="liff__rebook-meta">${fmtDate(last.checkin)} / ${last.nights}泊 / ${last.guests}名</span>
+        </button>
+        <p class="liff__sub" style="text-align:center; margin:0;">または</p>
+        <button class="liff__cta" type="button" id="liffNew">新しく予約する</button>
+      `;
+      body.appendChild(step);
+      body.querySelector('#liffRebook').addEventListener('click', () => {
+        liff.draft.buildingId = last.buildingId;
+        liff.draft.roomId = last.roomId;
+        liff.draft.guests = last.guests;
+        liff.draft.name = last.name;
+        liff.draft.tel = last.tel || '';
+        renderLiff('selectDate', { fromHistory: true });
       });
-      body.appendChild(wrapInBubble(list));
+      body.querySelector('#liffNew').addEventListener('click', () => renderLiff('selectHouse'));
     }
 
     else if (screen === 'selectHouse') {
-      addBubble('まず、どちらの建屋に？');
-      const list = document.createElement('div');
-      list.className = 'lm-list';
-      D.buildings.forEach((b) => {
+      const step = document.createElement('div');
+      step.className = 'liff__step';
+      const opts = D.buildings.map((b) => {
         const rooms = D.rooms.filter((r) => r.buildingId === b.id);
-        const minPrice = Math.min(...rooms.map((r) => r.price));
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.innerHTML = `
-          <span class="lm-list-name">${b.name}</span>
-          <span class="lm-list-meta">${b.addrTown} ${b.addrCode}</span>
-          <span class="lm-list-price">¥${minPrice.toLocaleString()} 〜 / 室</span>
+        const min = Math.min(...rooms.map((r) => r.price));
+        return `
+          <button type="button" data-bldg="${b.id}">
+            <span class="liff__opt-name">${b.name}</span>
+            <span class="liff__opt-meta">${b.addrTown} ${b.addrCode} · ${rooms.length}室</span>
+            <span class="liff__opt-price">¥${min.toLocaleString()} 〜 / 室</span>
+          </button>
         `;
-        btn.addEventListener('click', () => {
-          modal.draft.buildingId = b.id;
-          modal.draft.roomId = null;
-          renderModal('selectRoom');
+      }).join('');
+      step.innerHTML = `
+        <h3 class="liff__q">どちらの建屋に？</h3>
+        <p class="liff__sub">同じオーナーが運営する別の表情の二棟です。</p>
+        <div class="liff__opt">${opts}</div>
+      `;
+      body.appendChild(step);
+      step.querySelectorAll('[data-bldg]').forEach((b) => {
+        b.addEventListener('click', () => {
+          liff.draft.buildingId = b.dataset.bldg;
+          liff.draft.roomId = null;
+          renderLiff('selectRoom');
         });
-        list.appendChild(btn);
       });
-      body.appendChild(wrapInBubble(list));
     }
 
     else if (screen === 'selectRoom') {
-      const bldg = D.buildings.find((b) => b.id === modal.draft.buildingId);
-      addBubble(`${bldg.name} ですね。<br>どのお部屋に？`);
-      const rooms = D.rooms.filter((r) => r.buildingId === modal.draft.buildingId);
-      const list = document.createElement('div');
-      list.className = 'lm-list';
-      rooms.forEach((r) => {
+      const bldg = D.buildings.find((b) => b.id === liff.draft.buildingId);
+      const rooms = D.rooms.filter((r) => r.buildingId === liff.draft.buildingId);
+      const step = document.createElement('div');
+      step.className = 'liff__step';
+      const opts = rooms.map((r) => {
         const num = parseInt(r.id.split('-')[1], 10) || r.id;
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.innerHTML = `
-          <span class="lm-list-name">${num}号 / ${r.name}</span>
-          <span class="lm-list-meta">定員 ${r.capacity}名 · ${r.size} · ${r.beds}</span>
-          <span class="lm-list-price">¥${r.price.toLocaleString()} 〜 / 一泊</span>
+        return `
+          <button type="button" data-room="${r.id}">
+            <span class="liff__opt-name">${num}号 / ${r.name}</span>
+            <span class="liff__opt-meta">定員 ${r.capacity}名 · ${r.size} · ${r.beds}</span>
+            <span class="liff__opt-price">¥${r.price.toLocaleString()} 〜 / 一泊</span>
+          </button>
         `;
-        btn.addEventListener('click', () => {
-          modal.draft.roomId = r.id;
-          renderModal('selectDate');
+      }).join('');
+      step.innerHTML = `
+        <h3 class="liff__q">${bldg.name} のどのお部屋に？</h3>
+        <p class="liff__sub">全 ${rooms.length} 室からお選びください。</p>
+        <div class="liff__opt">${opts}</div>
+        <button class="liff__back-link" type="button" id="liffBack">← 建屋を変える</button>
+      `;
+      body.appendChild(step);
+      step.querySelectorAll('[data-room]').forEach((b) => {
+        b.addEventListener('click', () => {
+          liff.draft.roomId = b.dataset.room;
+          renderLiff('selectDate');
         });
-        list.appendChild(btn);
       });
-      body.appendChild(wrapInBubble(list));
-      addQuick([{ label: '← 建屋を変える', secondary: true, onclick: () => renderModal('selectHouse') }]);
+      body.querySelector('#liffBack').addEventListener('click', () => renderLiff('selectHouse'));
     }
 
     else if (screen === 'selectDate') {
-      const r = D.rooms.find((x) => x.id === modal.draft.roomId);
+      const r = D.rooms.find((x) => x.id === liff.draft.roomId);
       const num = parseInt(r.id.split('-')[1], 10) || r.id;
-      addBubble(`${num}号 (${r.name}) ですね。<br>いつから、何泊にされますか？`);
-      const form = document.createElement('form');
-      form.className = 'lm-form';
-      form.innerHTML = `
-        <label>
-          <span class="lm-form-k">チェックイン</span>
-          <input type="date" id="lmCheckin" value="${modal.draft.checkin}" min="${new Date().toISOString().slice(0,10)}">
+      const step = document.createElement('div');
+      step.className = 'liff__step';
+      step.innerHTML = `
+        <h3 class="liff__q">${num}号 / ${r.name}</h3>
+        <p class="liff__sub">いつから、何泊にされますか？</p>
+        <label class="liff__field">
+          <span class="liff__field-k">チェックイン</span>
+          <input type="date" id="liffCheckin" class="liff__input" value="${liff.draft.checkin}" min="${new Date().toISOString().slice(0,10)}">
         </label>
-        <label>
-          <span class="lm-form-k">宿泊数</span>
-          <select id="lmNights">
-            ${[1,2,3,4,5,7].map((n) => `<option value="${n}" ${n===modal.draft.nights?'selected':''}>${['','一','二','三','四','五','六','七'][n] || n}泊</option>`).join('')}
-          </select>
-        </label>
-        <label>
-          <span class="lm-form-k">人数</span>
-          <select id="lmGuests">
-            ${[1,2,3,4,5,6].map((n) => `<option value="${n}" ${n===modal.draft.guests?'selected':''}>${['','一','二','三','四','五','六'][n] || n}名</option>`).join('')}
-          </select>
-        </label>
-        <button type="submit">確認へ進む</button>
+        <div class="liff__row">
+          <label class="liff__field">
+            <span class="liff__field-k">宿泊数</span>
+            <select id="liffNights" class="liff__input">
+              ${[1,2,3,4,5,7].map(n => `<option value="${n}" ${n===liff.draft.nights?'selected':''}>${n}泊</option>`).join('')}
+            </select>
+          </label>
+          <label class="liff__field">
+            <span class="liff__field-k">人数</span>
+            <select id="liffGuests" class="liff__input">
+              ${[1,2,3,4,5,6].map(n => `<option value="${n}" ${n===liff.draft.guests?'selected':''}>${n}名</option>`).join('')}
+            </select>
+          </label>
+          <label class="liff__field">
+            <span class="liff__field-k">料金/泊</span>
+            <div class="liff__input" style="background:#f7f7f7; color:var(--accent); font-family:var(--display-en); font-style:italic; font-weight:600;">¥${r.price.toLocaleString()}</div>
+          </label>
+        </div>
+        <button class="liff__cta" id="liffNext" type="button">確認へ進む</button>
+        <button class="liff__back-link" type="button" id="liffBack">← 部屋を変える</button>
       `;
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        modal.draft.checkin = form.querySelector('#lmCheckin').value;
-        modal.draft.nights = Number(form.querySelector('#lmNights').value);
-        modal.draft.guests = Number(form.querySelector('#lmGuests').value);
-        renderModal('confirmDetails');
+      body.appendChild(step);
+      body.querySelector('#liffNext').addEventListener('click', () => {
+        liff.draft.checkin = body.querySelector('#liffCheckin').value;
+        liff.draft.nights = Number(body.querySelector('#liffNights').value);
+        liff.draft.guests = Number(body.querySelector('#liffGuests').value);
+        renderLiff('confirmDetails');
       });
-      body.appendChild(wrapInBubble(form));
-      addQuick([{ label: '← 部屋を選び直す', secondary: true, onclick: () => renderModal('selectRoom') }]);
+      body.querySelector('#liffBack').addEventListener('click', () => renderLiff('selectRoom'));
     }
 
     else if (screen === 'confirmDetails') {
-      const bldg = D.buildings.find((b) => b.id === modal.draft.buildingId);
-      const room = D.rooms.find((r) => r.id === modal.draft.roomId);
-      const total = room.price * modal.draft.nights;
-      const co = new Date(modal.draft.checkin);
-      co.setDate(co.getDate() + modal.draft.nights);
+      const bldg = D.buildings.find((b) => b.id === liff.draft.buildingId);
+      const room = D.rooms.find((r) => r.id === liff.draft.roomId);
+      const total = room.price * liff.draft.nights;
+      const co = new Date(liff.draft.checkin);
+      co.setDate(co.getDate() + liff.draft.nights);
 
-      addBubble('内容を確認しました。');
-      addCardSummary({
-        建屋: bldg.name,
-        客室: room.no + '号 / ' + room.name,
-        到着: fmtDate(modal.draft.checkin),
-        出発: fmtDate(co.toISOString().slice(0,10)) + ` (${modal.draft.nights}泊)`,
-        人数: modal.draft.guests + '名',
-        合計: '¥' + total.toLocaleString(),
-      }, 'ご予約内容', { total: '¥' + total.toLocaleString() });
-
-      const needContact = !modal.draft.name || !modal.draft.tel;
-      if (needContact) {
-        addBubble('最後に、お名前とお電話番号を教えてください。');
-        const form = document.createElement('form');
-        form.className = 'lm-form';
-        form.innerHTML = `
-          <label>
-            <span class="lm-form-k">お名前</span>
-            <input type="text" id="lmName" value="${modal.draft.name}" placeholder="例) 田中" required>
-          </label>
-          <label>
-            <span class="lm-form-k">お電話番号</span>
-            <input type="tel" id="lmTel" value="${modal.draft.tel}" placeholder="例) 090-1234-5678" required>
-          </label>
-          <label>
-            <span class="lm-form-k">ご要望 (任意)</span>
-            <textarea id="lmNote" placeholder="例) 自転車を一台貸してください">${modal.draft.note}</textarea>
-          </label>
-          <button type="submit">予約を確定する</button>
-        `;
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-          modal.draft.name = form.querySelector('#lmName').value.trim();
-          modal.draft.tel = form.querySelector('#lmTel').value.trim();
-          modal.draft.note = form.querySelector('#lmNote').value.trim();
-          confirmReservation();
-        });
-        body.appendChild(wrapInBubble(form));
-      } else {
-        // 履歴経由で名前/電話あり
-        addBubble(`${modal.draft.name} 様、ご連絡先は前回と同じでよろしいですか？`);
-        const form = document.createElement('form');
-        form.className = 'lm-form';
-        form.innerHTML = `
-          <label>
-            <span class="lm-form-k">ご要望 (任意)</span>
-            <textarea id="lmNote" placeholder="例) 自転車を一台貸してください">${modal.draft.note}</textarea>
-          </label>
-          <button type="submit">この内容で予約する</button>
-        `;
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-          modal.draft.note = form.querySelector('#lmNote').value.trim();
-          confirmReservation();
-        });
-        body.appendChild(wrapInBubble(form));
-        addQuick([{ label: '連絡先を変更する', secondary: true, onclick: () => {
-          modal.draft.name = ''; modal.draft.tel = '';
-          renderModal('confirmDetails');
-        }}]);
-      }
+      const step = document.createElement('div');
+      step.className = 'liff__step';
+      step.innerHTML = `
+        <h3 class="liff__q">この内容で予約します</h3>
+        <div class="liff__summary">
+          <dl>
+            <dt>建屋</dt><dd>${bldg.name} · ${bldg.addrTown}</dd>
+            <dt>客室</dt><dd>${room.no}号 / ${room.name}</dd>
+            <dt>到着</dt><dd>${fmtDate(liff.draft.checkin)}</dd>
+            <dt>出発</dt><dd>${fmtDate(co.toISOString().slice(0,10))} (${liff.draft.nights}泊)</dd>
+            <dt>人数</dt><dd>${liff.draft.guests}名</dd>
+            <dt>合計</dt><dd class="total">¥${total.toLocaleString()}</dd>
+          </dl>
+        </div>
+        <label class="liff__field">
+          <span class="liff__field-k">お名前</span>
+          <input type="text" id="liffName" class="liff__input" value="${liff.draft.name}" placeholder="例) 田中">
+        </label>
+        <label class="liff__field">
+          <span class="liff__field-k">お電話番号</span>
+          <input type="tel" id="liffTel" class="liff__input" value="${liff.draft.tel}" placeholder="例) 090-1234-5678">
+        </label>
+        <label class="liff__field">
+          <span class="liff__field-k">ご要望 (任意)</span>
+          <textarea id="liffNote" class="liff__input liff__input--ta" placeholder="例) 自転車を一台貸してください">${liff.draft.note}</textarea>
+        </label>
+        <button class="liff__cta" id="liffConfirm" type="button">予約を確定する</button>
+        <button class="liff__back-link" type="button" id="liffBack">← 日付を変える</button>
+      `;
+      body.appendChild(step);
+      body.querySelector('#liffConfirm').addEventListener('click', () => {
+        const name = body.querySelector('#liffName').value.trim();
+        const tel = body.querySelector('#liffTel').value.trim();
+        if (!name || !tel) {
+          alert('お名前と電話番号をご入力ください');
+          return;
+        }
+        liff.draft.name = name;
+        liff.draft.tel = tel;
+        liff.draft.note = body.querySelector('#liffNote').value.trim();
+        confirmReservation();
+      });
+      body.querySelector('#liffBack').addEventListener('click', () => renderLiff('selectDate'));
     }
 
     else if (screen === 'done') {
       const resNo = ctx.resNo;
-      addBubble(`<strong>${modal.draft.name}</strong> 様、ありがとうございます。<br>たしかに承りました。`);
-
-      // 確定スタンプ
-      const stamp = document.createElement('div');
-      stamp.className = 'lm-stamp';
-      stamp.innerHTML = '承<br>諾';
-      body.appendChild(stamp);
-
-      addBubble(`予約番号: <strong style="color:#843C28">${resNo}</strong>`);
-      addBubble('24時間以内に担当者から、改めてご連絡いたします。<br>当日までの道順・チェックイン案内も、このトークでお届けします。');
-
-      addQuick([
-        { label: 'もう一度予約する', onclick: () => {
-          const hist = loadHistory();
-          renderModal('welcomeBack', { history: hist });
-        }},
-        { label: 'トークを閉じる', secondary: true, onclick: closeLineModal },
-      ]);
-
-      // Scroll to bottom
-      setTimeout(() => { body.scrollTop = body.scrollHeight; }, 100);
+      const step = document.createElement('div');
+      step.className = 'liff__step liff__done';
+      step.innerHTML = `
+        <div class="liff__stamp">承<br>諾</div>
+        <h3>たしかに承りました</h3>
+        <div class="liff__done-no">予約番号 ${resNo}</div>
+        <p>${liff.draft.name} 様、ありがとうございます。<br>担当者から 24 時間以内に LINE のトークでご連絡いたします。</p>
+        <p style="font-size:11px;">前日にチェックイン時刻と道順、当日に鍵の場所をお送りします。</p>
+        <button class="liff__cta" id="liffCloseDone" type="button">トークに戻る</button>
+      `;
+      body.appendChild(step);
+      body.querySelector('#liffCloseDone').addEventListener('click', closeLiff);
     }
-
-    // 自動スクロール
-    requestAnimationFrame(() => {
-      body.scrollTop = body.scrollHeight;
-    });
   }
 
   function confirmReservation() {
     const resNo = 'A-' + String(Math.floor(Math.random() * 9000) + 1000);
     const rec = {
       resNo,
-      buildingId: modal.draft.buildingId,
-      roomId: modal.draft.roomId,
-      checkin: modal.draft.checkin,
-      nights: modal.draft.nights,
-      guests: modal.draft.guests,
-      name: modal.draft.name,
-      tel: modal.draft.tel,
-      note: modal.draft.note,
+      buildingId: liff.draft.buildingId,
+      roomId: liff.draft.roomId,
+      checkin: liff.draft.checkin,
+      nights: liff.draft.nights,
+      guests: liff.draft.guests,
+      name: liff.draft.name,
+      tel: liff.draft.tel,
+      note: liff.draft.note,
     };
     pushHistory(rec);
-    renderModal('done', { resNo });
-  }
+    liff.draft._completed = true;
+    renderLiff('done', { resNo });
 
-  // ===== Modal helpers =====
-  function addBubble(html) {
-    const wrap = document.createElement('div');
-    wrap.className = 'lm-bub-in';
-    wrap.innerHTML = `<div class="lm-bub-avatar">荒</div><div class="lm-body">${html}</div>`;
-    modal.body.appendChild(wrap);
-  }
-
-  function wrapInBubble(inner) {
-    const wrap = document.createElement('div');
-    wrap.className = 'lm-bub-in';
-    const avatar = document.createElement('div');
-    avatar.className = 'lm-bub-avatar';
-    avatar.textContent = '荒';
-    wrap.appendChild(avatar);
-    wrap.appendChild(inner);
-    return wrap;
-  }
-
-  function addCardSummary(rows, title, opts = {}) {
-    const wrap = document.createElement('div');
-    wrap.className = 'lm-bub-in';
-    const avatar = document.createElement('div');
-    avatar.className = 'lm-bub-avatar';
-    avatar.textContent = '荒';
-    wrap.appendChild(avatar);
-
-    const card = document.createElement('div');
-    card.className = 'lm-card';
-    let html = `<div class="lm-card__head">${title}</div><div class="lm-card__body">`;
-    for (const [k, v] of Object.entries(rows)) {
-      if (k === '合計' && opts.total) continue;
-      html += `<div class="lm-card__row"><span>${k}</span><strong>${v}</strong></div>`;
-    }
-    if (opts.total) {
-      html += `<div class="lm-card__row lm-card__row--total"><span>合計</span><strong>${opts.total}</strong></div>`;
-    }
-    html += `</div>`;
-    card.innerHTML = html;
-    wrap.appendChild(card);
-    modal.body.appendChild(wrap);
-  }
-
-  function addQuick(items) {
-    const wrap = document.createElement('div');
-    wrap.className = 'lm-quick';
-    items.forEach((it) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = it.label;
-      if (it.secondary) b.classList.add('is-secondary');
-      b.addEventListener('click', it.onclick);
-      wrap.appendChild(b);
-    });
-    modal.body.appendChild(wrap);
-  }
-
-  // ===== Modal triggers =====
-  function setupModal() {
-    document.querySelectorAll('[data-open-line-modal]').forEach((b) => {
-      b.addEventListener('click', (e) => {
-        e.preventDefault();
-        openLineModal();
+    // Bot push to chat (simulate after-close push)
+    const bldg = D.buildings.find((b) => b.id === rec.buildingId);
+    const room = D.rooms.find((r) => r.id === rec.roomId);
+    const co = new Date(rec.checkin);
+    co.setDate(co.getDate() + rec.nights);
+    setTimeout(() => {
+      addFlexBubble('ご予約 確定', {
+        '予約番号': resNo,
+        '建屋': bldg?.name || '',
+        '客室': (room?.no || '') + '号',
+        '到着': fmtDate(rec.checkin),
+        '泊数': rec.nights + '泊',
+        '合計': '¥' + (room.price * rec.nights).toLocaleString(),
       });
+    }, 800);
+  }
+
+  // ===== LIFF triggers =====
+  function setupLiff() {
+    document.querySelectorAll('[data-close-liff]').forEach((b) => {
+      b.addEventListener('click', closeLiff);
     });
-    document.querySelectorAll('[data-close-line-modal]').forEach((b) => {
-      b.addEventListener('click', closeLineModal);
-    });
-    document.querySelectorAll('[data-line-back]').forEach((b) => {
+    document.querySelectorAll('[data-liff-back]').forEach((b) => {
       b.addEventListener('click', () => {
         const back = {
-          welcomeBack: null, welcomeNew: null,
-          history: 'welcomeBack',
-          selectHouse: loadHistory().length > 0 ? 'welcomeBack' : 'welcomeNew',
+          welcomeBack: null,
+          selectHouse: loadHistory().length > 0 ? 'welcomeBack' : null,
           selectRoom: 'selectHouse',
           selectDate: 'selectRoom',
           confirmDetails: 'selectDate',
+          done: null,
         };
-        const to = back[modal.state];
-        if (to) renderModal(to, { history: loadHistory() });
-        else closeLineModal();
+        const to = back[liff.state];
+        if (to) renderLiff(to, { history: loadHistory() });
+        else closeLiff();
       });
     });
-    // Escape key
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && modal.el?.getAttribute('data-open') === 'true') {
-        closeLineModal();
+      if (e.key === 'Escape' && liff.el?.getAttribute('data-open') === 'true') {
+        closeLiff();
       }
+    });
+  }
+
+  // ===== Page-level =====
+  function setupJumpToPhone() {
+    document.querySelectorAll('[data-jump-phone]').forEach((a) => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelector('.phone').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
     });
   }
 
   // ===== Boot =====
   document.addEventListener('DOMContentLoaded', () => {
-    renderHouses();
-    renderRooms('all');
-    setupFilters();
-    setupModal();
+    bootChat();
+    setupRichMenu();
+    setupLiff();
+    setupJumpToPhone();
   });
 })();
