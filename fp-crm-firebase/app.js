@@ -4960,7 +4960,19 @@ ${ctxText}${surveyTxt}`;
       return { ...b, memo };
     });
 
-    if (bookingsWithMemo.length === 0 && tasks.length === 0) return ''; // 何もない時は表示しない
+    // ★ 2026-06-27: bookings+tasks 0件 でも ai_results あれば render (新規顧客の orphan 議事録 反映漏れ fix)
+    const liveAiCheck = (window.LineAppLiveData && window.LineAppLiveData.ai_results) || [];
+    const hasAnyAi = liveAiCheck.some(r => {
+      const rUid = String(r.userId || '');
+      const rName = String(r.customerName || '').replace(/様/g, '').replace(/[\s　]/g, '').toLowerCase();
+      const cId = String(client.id || '');
+      const cLfid = String(client.lineFriendId || '');
+      const cName = String(client.name || '').replace(/様/g, '').replace(/[\s　]/g, '').toLowerCase();
+      return (rUid && cId && rUid === cId) ||
+             (rUid && cLfid && rUid === cLfid) ||
+             (rName && cName && rName === cName);
+    });
+    if (bookingsWithMemo.length === 0 && tasks.length === 0 && !hasAnyAi) return ''; // 全部ゼロの時のみ skip
 
     // AI 議事録データ (localStorage + GAS 永続化シートの両方から集約)
     const aiCandidateKeys = new Set();
