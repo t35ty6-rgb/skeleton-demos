@@ -2909,11 +2909,20 @@
           }
         });
       });
-      // 音声チェック
+      // 音声チェック (★ 2026-06-27: 音声無しでは進めない強制ガード — 「音声共有」 必須)
       const audioTracks = stream.getAudioTracks();
       if (audioTracks.length === 0) {
-        const ok = confirm('⚠ 「音声を共有」 が OFF のようです。\n\n録画はされますが、音声が無いと AI 議事録が生成できません。\n\n[OK] このまま録画する (音声無しで進める)\n[キャンセル] 一度キャンセル → やり直す');
-        if (!ok) { stream.getTracks().forEach(t => t.stop()); return; }
+        // stream 即停止
+        stream.getTracks().forEach(t => t.stop());
+        // ブロッキング モーダル (alert) で 必須 リトライ 案内
+        alert('🚨 「音声を共有」 が OFF のため 録画 進めません\n\n' +
+              '理由: 音声がないと AI議事録が 生成できません (Whisper が無音を「YouTube動画系」 と幻覚判定)\n\n' +
+              '【やり直し手順】\n' +
+              '1. もう一度 「録画ON」 ボタンを 押す\n' +
+              '2. 画面共有ダイアログで 「画面全体」 (or 「Chromeタブ」) を 選ぶ\n' +
+              '3. ⚠️ 左下の 「タブの音声も共有」 チェックボックスに ✅ を 必ず 入れる\n' +
+              '4. 「共有」 を 押す');
+        return;  // 録画開始させない
       }
 
       // ★ オーナーfb (v AF): メモ画面廃止 → Zoom 全画面 1 つだけ。pre-open Zoom popup に URL を流し込む。
