@@ -4081,10 +4081,24 @@ ${ctxText}${surveyTxt}`;
           else p.setAttribute('hidden', '');
         });
         // ★ 2026-06-27: 議事録タブ open時 latest liveData から panel 再生成 (hydrate後の最新議事録 反映)
+        // ★ 2026-06-29 速度改善: 同じデータなら 再render skip (cache hit)
         if (key === 'meetings' && typeof renderMeetingRecordsBlock === 'function') {
           try {
             const panel = document.querySelector('[data-cdpanel="meetings"]');
-            if (panel) panel.innerHTML = renderMeetingRecordsBlock(c) || '<div class="cd-empty">面談録なし</div>';
+            const live = window.LineAppLiveData || {};
+            const aiCount = (live.ai_results || []).filter(a =>
+              a.userId === c.id || a.userId === c.lineFriendId || a.customerName === c.name
+            ).length;
+            const cacheKey = `${c.id}|${aiCount}|${(c.lineHistory||[]).length}`;
+            if (panel) {
+              if (panel.dataset.cacheKey === cacheKey && panel.dataset.cacheHasContent === '1') {
+                // cache hit → 再render skip
+              } else {
+                panel.innerHTML = renderMeetingRecordsBlock(c) || '<div class="cd-empty">面談録なし</div>';
+                panel.dataset.cacheKey = cacheKey;
+                panel.dataset.cacheHasContent = '1';
+              }
+            }
           } catch (_) {}
         }
         // ★ URL routing Phase3: モーダル内タブ → ?tab=key
