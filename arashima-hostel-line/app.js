@@ -378,7 +378,7 @@
     });
 
     // Address rail scroll spy
-    const sections = ['hero', 'buildings', 'rooms', 'reserve', 'letters'];
+    const sections = ['hero', 'buildings', 'gallery', 'rooms', 'rhythm', 'access', 'reserve', 'line-preview', 'letters', 'faq'];
     const rail = document.querySelectorAll('.addr-rail__list li');
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
