@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>のうと / マイページ</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0eee8; --paper: #fff;
+    --ink: #1c1b18; --ink-2: #3a3833; --ink-3: #6b6862;
+    --line: #eae6da;
+    --leaf: #2e4a3a;
+    --soil: #b25538; --soil-2: #8e3f25;
+    --line-green: #06c755;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; font-family: "Noto Sans JP", "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--ink); font-weight: 500;
+    font-feature-settings: "palt" 1; -webkit-font-smoothing: antialiased;
+    overscroll-behavior: contain;
+  }
+
+  .wrap {
+    max-width: 480px; margin: 0 auto;
+    min-height: 100vh; display: flex; flex-direction: column;
+    background: var(--bg);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ── ヘッダ (シーン) ── */
+  .head {
+    background: linear-gradient(160deg, var(--soil) 0%, #c66a4d 60%, #d68a5a 100%);
+    color: #fff; padding: 28px 22px 60px; position: relative;
+  }
+  .head .shop { display: flex; align-items: center; gap: 10px; font-size: 12px; opacity: .9; }
+  .head .shop .logo {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: rgba(255,255,255,.2); display: grid; place-items: center;
+    font-weight: 900; font-size: 12px;
+  }
+  .head h1 { margin: 22px 0 4px; font-size: 14px; font-weight: 500; opacity: .9; letter-spacing: 0; }
+  .head .greet { font-size: 24px; font-weight: 900; letter-spacing: -.02em; }
+
+  /* ── ポイントカード ── */
+  .point-card {
+    margin: -42px 16px 0; background: #fff; border-radius: 16px;
+    padding: 22px; box-shadow: 0 12px 24px -12px rgba(0,0,0,.18);
+    position: relative; z-index: 2;
+  }
+  .point-card .label { color: var(--ink-3); font-size: 11.5px; font-weight: 700; letter-spacing: .04em; }
+  .point-card .pts { display: flex; align-items: baseline; gap: 4px; margin-top: 4px; }
+  .point-card .pts b { font-family: "Inter", sans-serif; font-weight: 800; font-size: 42px; letter-spacing: -.03em; color: var(--ink); }
+  .point-card .pts span { font-size: 14px; color: var(--ink-3); font-weight: 700; }
+  .point-card .prog { margin-top: 14px; height: 6px; background: var(--bg); border-radius: 999px; overflow: hidden; }
+  .point-card .prog i { display: block; height: 100%; background: var(--soil); border-radius: 999px; transition: width .4s; }
+  .point-card .prog-meta { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--ink-3); margin-top: 6px; font-weight: 700; }
+  .point-card .prog-meta b { color: var(--ink); font-family: "Inter", sans-serif; }
+  .point-card .ltv {
+    margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line);
+    display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3);
+  }
+  .point-card .ltv b { color: var(--ink); font-family: "Inter", sans-serif; font-weight: 800; }
+
+  /* ── メニュー ── */
+  .menu {
+    margin: 16px 16px 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  .menu a {
+    background: #fff; border-radius: 12px; padding: 14px 4px; text-align: center;
+    text-decoration: none; color: var(--ink); font-size: 11px; font-weight: 700;
+    display: grid; gap: 4px; border: 1px solid var(--line); cursor: pointer;
+  }
+  .menu a:active { background: var(--bg); }
+  .menu a .e { font-size: 22px; }
+  .menu a .badge { color: var(--soil); font-weight: 800; font-size: 10px; margin-top: 2px; }
+
+  /* ── お知らせ ── */
+  .section { margin: 16px 16px 0; background: #fff; border-radius: 16px; padding: 16px; }
+  .section h2 {
+    margin: 0 0 10px; font-size: 13.5px; font-weight: 900; letter-spacing: -.01em;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .section h2 a { font-size: 11px; color: var(--leaf); text-decoration: none; font-weight: 700; cursor: pointer; }
+  .list { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
+  .list li {
+    padding: 11px 0; border-top: 1px dashed var(--line);
+    display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center;
+  }
+  .list li:first-child { border-top: 0; padding-top: 0; }
+  .list .e { font-size: 22px; }
+  .list .nm { font-weight: 700; line-height: 1.4; }
+  .list .nm small { display: block; color: var(--ink-3); font-weight: 500; font-size: 10.5px; margin-top: 1px; }
+  .list .pt { font-family: "Inter", sans-serif; font-weight: 700; font-size: 11.5px; color: var(--soil); white-space: nowrap; }
+  .list .pt.leaf { color: var(--leaf); }
+
+  /* ── 履歴詳細 ── */
+  .hist { list-style: none; margin: 0; padding: 0; }
+  .hist li {
+    padding: 12px 0; border-top: 1px dashed var(--line);
+  }
+  .hist li:first-child { border-top: 0; padding-top: 0; }
+  .hist .date { font-family: "Inter", sans-serif; font-size: 11px; font-weight: 700; color: var(--ink-3); }
+  .hist .items { font-weight: 700; font-size: 13.5px; margin-top: 4px; line-height: 1.5; }
+  .hist .foot { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11.5px; color: var(--ink-3); }
+  .hist .foot b { color: var(--ink); font-family: "Inter", sans-serif; }
+
+  /* ── フッターナビ ── */
+  .foot {
+    margin-top: 16px; background: rgba(255,255,255,.96);
+    border-top: 1px solid var(--line); padding: 10px 16px 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+    text-align: center; font-size: 10.5px; color: var(--ink-3); font-weight: 700;
+    position: sticky; bottom: 0;
+  }
+  .foot a { color: var(--ink-3); text-decoration: none; display: grid; gap: 2px; cursor: pointer; padding: 6px 0; border-radius: 8px; }
+  .foot a.cur { color: var(--soil); }
+  .foot a:active { background: var(--bg); }
+  .foot .e { font-size: 19px; }
+
+  /* ── 個別ビュー ── */
+  .view { display: none; flex: 1; }
+  .view.is-active { display: flex; flex-direction: column; }
+  .body-view { padding: 22px 16px 0; flex: 1; }
+  .body-view h1 {
+    font-size: 22px; font-weight: 900; letter-spacing: -.02em; margin: 0 0 4px;
+  }
+  .body-view .sub { color: var(--ink-3); font-size: 12.5px; margin-bottom: 16px; }
+  .back { display: inline-flex; align-items: center; gap: 4px; color: var(--leaf); font-weight: 700; font-size: 12.5px; cursor: pointer; margin-bottom: 12px; }
+
+  .coupon {
+    background: #fff; border: 1px dashed var(--soil); border-radius: 12px;
+    padding: 16px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .coupon .v { font-family: "Inter", sans-serif; font-weight: 800; font-size: 28px; color: var(--soil); letter-spacing: -.02em; }
+  .coupon .nm { font-weight: 800; font-size: 14px; }
+  .coupon .nm small { display: block; color: var(--ink-3); font-weight: 500; font-size: 11.5px; margin-top: 2px; }
+
+  .empty { padding: 32px 16px; text-align: center; color: var(--ink-3); font-weight: 700; font-size: 13px; }
+  .empty .e { font-size: 32px; display: block; margin-bottom: 8px; }
+
+  /* dev mode banner */
+  .dev-bar {
+    background: #1c1b18; color: rgba(255,255,255,.7);
+    padding: 6px 16px; font-size: 10.5px; text-align: center;
+    font-family: "Inter", sans-serif; font-weight: 600;
+  }
+  .dev-bar select { background: transparent; color: rgba(255,255,255,.9); border: 1px solid rgba(255,255,255,.2); border-radius: 4px; padding: 2px 6px; font: inherit; font-size: 10.5px; margin-left: 4px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="dev-bar">
+    🔧 開発プレビュー / 実機LINEではこのバー非表示 ・ お客切替
+    <select id="customerPicker"></select>
+  </div>
+
+  <!-- ── HOME ── -->
+  <section class="view is-active" data-view="home">
+    <div class="head">
+      <div class="shop"><span class="logo" id="shopLogo">N</span><span id="shopName">—</span></div>
+      <h1>こんにちは</h1>
+      <div class="greet"><span id="greetName">—</span> さま</div>
+    </div>
+
+    <div class="point-card">
+      <div class="label">あなたのポイント</div>
+      <div class="pts"><b id="ptsB">0</b><span>P</span></div>
+      <div class="prog"><i id="ptsBar" style="width:0%"></i></div>
+      <div class="prog-meta"><span>次の特典まで</span><b id="ptsRemain">あと 0P</b></div>
+      <div class="ltv"><span>これまでの累計</span><span><b id="ltvB">¥0</b> / <b id="visitsB">0</b>回来店</span></div>
+    </div>
+
+    <div class="menu">
+      <a onclick="showView('history')"><span class="e">🛍</span>購入履歴</a>
+      <a onclick="showView('coupons')"><span class="e">🎁</span>クーポン<br><span class="badge" id="couponBadge"></span></a>
+      <a onclick="alert('お気に入り機能は Phase 3 で追加されます')"><span class="e">🪴</span>お気に入り</a>
+      <a onclick="alert('取り置き機能は Phase 2 で追加されます')"><span class="e">📅</span>取り置き</a>
+    </div>
+
+    <div class="section">
+      <h2>あなたへのお知らせ <a onclick="showView('news')">すべて</a></h2>
+      <ul class="list" id="newsList"></ul>
+    </div>
+
+    <div class="section">
+      <h2>直近のお買い物 <a onclick="showView('history')">すべて</a></h2>
+      <ul class="hist" id="recentHist"></ul>
+    </div>
+  </section>
+
+  <!-- ── HISTORY ── -->
+  <section class="view" data-view="history">
+    <div class="body-view">
+      <span class="back" onclick="showView('home')">← ホーム</span>
+      <h1>購入履歴</h1>
+      <div class="sub" id="histSub">—</div>
+      <div class="section">
+        <ul class="hist" id="fullHist"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── COUPONS ── -->
+  <section class="view" data-view="coupons">
+    <div class="body-view">
+      <span class="back" onclick="showView('home')">← ホーム</span>
+      <h1>クーポン</h1>
+      <div class="sub" id="couponSub">—</div>
+      <div id="couponList"></div>
+    </div>
+  </section>
+
+  <!-- ── NEWS ── -->
+  <section class="view" data-view="news">
+    <div class="body-view">
+      <span class="back" onclick="showView('home')">← ホーム</span>
+      <h1>お知らせ</h1>
+      <div class="sub" id="newsSub">—</div>
+      <div class="section">
+        <ul class="list" id="fullNewsList"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SHOP CONTACT ── -->
+  <section class="view" data-view="shop">
+    <div class="body-view">
+      <span class="back" onclick="showView('home')">← ホーム</span>
+      <h1>お店へ</h1>
+      <div class="section">
+        <p style="margin:0; font-size:13.5px; line-height:1.7;">ご相談・取り置き・取り寄せのご相談は、このLINEのトーク画面からお気軽にどうぞ。<br>営業時間 11:00〜19:00 / 定休日 火曜</p>
+      </div>
+      <div class="section" style="margin-top:12px;">
+        <h2>店舗情報</h2>
+        <p style="margin:0; font-size:12.5px; line-height:1.7; color:var(--ink-2);">
+          <b id="shopAddrBig" style="font-weight:900;">—</b><br>
+          〒— / TEL —<br><br>
+          越前焼・丹波焼・萩焼を中心に、若手作家の器と古道具を扱う小さな雑貨店です。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <nav class="foot">
+    <a class="cur" data-view="home" onclick="showView('home')"><span class="e">🏠</span>ホーム</a>
+    <a data-view="history" onclick="showView('history')"><span class="e">📖</span>履歴</a>
+    <a data-view="coupons" onclick="showView('coupons')"><span class="e">🎁</span>特典</a>
+    <a data-view="shop" onclick="showView('shop')"><span class="e">💬</span>お店へ</a>
+  </nav>
+</div>
+
+<script type="module">
+import { createRepo } from '../shared/data.js';
+import { seedDemoData, DEMO_TENANT_ID } from '../seed/demo-data.js';
+
+const TENANT_ID = new URLSearchParams(location.search).get('tenant') || DEMO_TENANT_ID;
+const repo = createRepo(TENANT_ID);
+
+const state = {
+  customer: null,
+  settings: null,
+};
+
+async function init() {
+  // 共有データなので、admin側で既に投入済の前提。なければ自動投入。
+  const customers = await repo.listCustomers();
+  if (customers.length === 0) {
+    await seedDemoData(repo);
+  }
+  state.settings = await repo.getSettings();
+
+  // demo: 顧客切替 picker
+  const all = await repo.listCustomers();
+  const picker = document.getElementById('customerPicker');
+  picker.innerHTML = all.map(c => `<option value="${c.id}">${c.realName || c.displayName}</option>`).join('');
+
+  const queryUid = new URLSearchParams(location.search).get('uid');
+  const defaultId = queryUid || localStorage.getItem('zakka-customer-id') || all[0]?.id;
+  picker.value = defaultId;
+  picker.addEventListener('change', async (e) => {
+    localStorage.setItem('zakka-customer-id', e.target.value);
+    await loadCustomer(e.target.value);
+  });
+
+  await loadCustomer(defaultId);
+
+  // realtime
+  repo.onCustomersChange(async () => { await loadCustomer(state.customer.id); });
+  repo.onPurchasesChange(async () => { await loadCustomer(state.customer.id); });
+  repo.onMessagesChange(async () => { await renderNews(); });
+}
+
+async function loadCustomer(id) {
+  state.customer = await repo.getCustomer(id);
+  if (!state.customer) return;
+  renderHome();
+  renderHistory();
+  renderCoupons();
+  renderNews();
+  renderShop();
+}
+
+function renderHome() {
+  const c = state.customer;
+  const s = state.settings;
+  document.getElementById('shopName').textContent = s.tenantName || '雑貨と道具 のうと';
+  document.getElementById('shopLogo').textContent = (s.tenantName || 'N').slice(0,1);
+  document.getElementById('greetName').textContent = c.realName || c.displayName;
+
+  const pts = c.points || 0;
+  const milestone = pts < 500 ? 500 : pts < 1000 ? 1000 : Math.ceil((pts+1)/500)*500;
+  const prev = milestone - 500;
+  const ratio = Math.max(0, Math.min(100, ((pts - prev) / (milestone - prev)) * 100));
+  document.getElementById('ptsB').textContent = pts.toLocaleString();
+  document.getElementById('ptsBar').style.width = ratio + '%';
+  document.getElementById('ptsRemain').textContent = `あと ${(milestone - pts).toLocaleString()}P`;
+  document.getElementById('ltvB').textContent = '¥' + (c.ltv || 0).toLocaleString();
+  document.getElementById('visitsB').textContent = c.visits || 0;
+}
+
+async function renderNews() {
+  const c = state.customer;
+  if (!c) return;
+
+  // クーポン badge
+  const coupons = await repo.adapter.list('coupons', {});
+  const myCoupons = coupons.filter(cp => (cp.customerIds || []).includes(c.id) && !cp.used);
+  document.getElementById('couponBadge').textContent = myCoupons.length ? `${myCoupons.length}枚` : '';
+
+  // ニュース構築: クーポン + 最近の自分宛メッセージ + 全体お知らせ (PHASE 2でテナント"announcement"に対応)
+  const msgs = await repo.listMessagesByCustomer(c.id);
+  const news = [];
+
+  myCoupons.forEach(cp => {
+    news.push({
+      e: '🎁',
+      nm: cp.label, sub: `${cp.code} ・ 期限 ${cp.expireAt.slice(5).replace('-','/')}`,
+      pt: cp.kind === 'percent' ? `−${cp.value}%` : `¥${cp.value} OFF`,
+      cls: '',
+    });
+  });
+  msgs.filter(m => m.direction === 'out').slice(0, 3).forEach(m => {
+    news.push({
+      e: m.kind === 'auto' && m.triggerId === 'birth_month' ? '🎂' : m.kind === 'auto' && m.triggerId === 'purchase_thanks' ? '💌' : '📣',
+      nm: m.text.length > 40 ? m.text.slice(0,40)+'…' : m.text,
+      sub: m.sentAt.slice(0,10).replace(/-/g,'/'),
+      pt: m.kind === 'auto' ? '自動' : 'お店から', cls: 'leaf',
+    });
+  });
+
+  // テナント全体お知らせ（デモ）
+  news.push({
+    e: '🍶',
+    nm: '青木善之介さんの織部 新作入荷',
+    sub: '取り皿・ぐい呑み・小鉢の3型',
+    pt: 'NEW', cls: 'leaf',
+  });
+
+  const renderList = (list, el) => {
+    if (list.length === 0) {
+      el.innerHTML = `<li class="empty"><span class="e">📭</span>お知らせはまだありません</li>`;
+      return;
+    }
+    el.innerHTML = list.map(n => `
+      <li><span class="e">${n.e}</span>
+        <span class="nm">${escape(n.nm)}<small>${escape(n.sub)}</small></span>
+        <span class="pt ${n.cls}">${escape(n.pt)}</span>
+      </li>
+    `).join('');
+  };
+  renderList(news.slice(0, 3), document.getElementById('newsList'));
+  renderList(news, document.getElementById('fullNewsList'));
+  document.getElementById('newsSub').textContent = `お知らせ ${news.length}件`;
+
+  // recent purchases
+  const ps = await repo.listPurchasesByCustomer(c.id);
+  document.getElementById('recentHist').innerHTML = ps.slice(0, 3).map(p => `
+    <li>
+      <div class="date">${p.purchasedAt.slice(0,10).replace(/-/g,'/')}</div>
+      <div class="items">${escape(p.lines.map(l => l.productName + (l.qty>1?' ×'+l.qty:'')).join(' / '))}</div>
+      <div class="foot"><span>${p.isGift ? '包装あり' : ''}</span><b>¥${p.total.toLocaleString()}</b></div>
+    </li>
+  `).join('') || '<li class="empty"><span class="e">🛍</span>まだお買い物の記録がありません</li>';
+}
+
+async function renderHistory() {
+  const c = state.customer;
+  const ps = await repo.listPurchasesByCustomer(c.id);
+  document.getElementById('histSub').textContent = `全${ps.length}件 ・ 累計 ¥${(c.ltv || 0).toLocaleString()}`;
+  document.getElementById('fullHist').innerHTML = ps.length === 0
+    ? '<li class="empty"><span class="e">🛍</span>まだお買い物の記録がありません</li>'
+    : ps.map(p => `
+      <li>
+        <div class="date">${p.purchasedAt.slice(0,10).replace(/-/g,'/')}</div>
+        <div class="items">${escape(p.lines.map(l => l.productName + (l.qty>1?' ×'+l.qty:'')).join(' / '))}</div>
+        <div class="foot">
+          <span>${escape([p.isGift?'包装あり':'', p.note].filter(Boolean).join(' / '))}</span>
+          <b>¥${p.total.toLocaleString()}</b>
+        </div>
+      </li>
+    `).join('');
+}
+
+async function renderCoupons() {
+  const c = state.customer;
+  const coupons = await repo.adapter.list('coupons', {});
+  const my = coupons.filter(cp => (cp.customerIds || []).includes(c.id));
+  document.getElementById('couponSub').textContent = `お持ちのクーポン ${my.filter(c => !c.used).length}枚`;
+  document.getElementById('couponList').innerHTML = my.length === 0
+    ? '<div class="empty"><span class="e">🎁</span>現在ご利用いただけるクーポンはありません</div>'
+    : my.map(cp => `
+      <div class="coupon" style="${cp.used ? 'opacity:.4;' : ''}">
+        <div class="v">${cp.kind === 'percent' ? cp.value + '%' : '¥' + cp.value}</div>
+        <div>
+          <div class="nm">${escape(cp.label)}<small>${escape(cp.code)} ・ 期限 ${cp.expireAt.slice(5).replace('-','/')}</small></div>
+          ${cp.used ? '<small style="color:var(--ink-3);">使用済</small>' : '<small style="color:var(--soil); font-weight:700;">レジで店員にこの画面をご提示ください</small>'}
+        </div>
+      </div>
+    `).join('');
+}
+
+function renderShop() {
+  const s = state.settings;
+  document.getElementById('shopAddrBig').textContent = s.tenantName || '雑貨と道具 のうと';
+}
+
+window.showView = function(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-active', v.dataset.view === name));
+  document.querySelectorAll('.foot a').forEach(a => a.classList.toggle('cur', a.dataset.view === name));
+  window.scrollTo(0, 0);
+};
+
+function escape(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+init().catch(e => {
+  console.error(e);
+  document.body.innerHTML = `<div style="padding:32px; color:var(--soil);">読み込みエラー: ${e.message}</div>`;
+});
+</script>
+</body>
+</html>

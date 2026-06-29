@@ -1,0 +1,1189 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>のうと 店内管理 / 雑貨LINEツール</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f6f1; --bg-2: #efece4; --paper: #fff;
+    --ink: #1c1b18; --ink-2: #3a3833; --ink-3: #6b6862;
+    --line: #d8d4ca; --line-2: #e9e5da;
+    --leaf: #2e4a3a; --leaf-2: #1f3328;
+    --soil: #b25538; --soil-2: #8e3f25;
+    --honey: #c98a2b;
+    --shadow-1: 0 1px 0 rgba(28,27,24,.04), 0 8px 24px -16px rgba(28,27,24,.18);
+    --shadow-2: 0 1px 0 rgba(28,27,24,.04), 0 24px 48px -28px rgba(28,27,24,.28);
+    --r-sm: 6px; --r-md: 10px; --r-lg: 18px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; font-family: "Noto Sans JP", "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--ink); font-weight: 500;
+    font-feature-settings: "palt" 1; -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── shell ─────────────────────────────── */
+  .shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+  @media (max-width: 880px) { .shell { grid-template-columns: 1fr; } }
+  aside {
+    background: var(--bg-2); border-right: 1px solid var(--line);
+    padding: 20px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  @media (max-width: 880px) {
+    aside { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 12px 0; }
+  }
+  .shop {
+    padding: 0 18px 16px; border-bottom: 1px solid var(--line); margin-bottom: 12px;
+  }
+  .shop .name { font-weight: 900; letter-spacing: -.02em; font-size: 15px; }
+  .shop .role { color: var(--ink-3); font-size: 11.5px; margin-top: 2px; }
+  nav { padding: 0 8px; display: grid; gap: 2px; }
+  nav button {
+    appearance: none; border: 0; background: transparent;
+    width: 100%; text-align: left; font: inherit; font-weight: 700; font-size: 13.5px;
+    color: var(--ink-2); padding: 9px 12px; border-radius: var(--r-sm);
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+  }
+  nav button:hover { background: rgba(0,0,0,.04); }
+  nav button[aria-current="page"] { background: var(--ink); color: var(--bg); }
+  nav .cnt {
+    font-family: "Inter", sans-serif; font-size: 11px; font-weight: 700;
+    padding: 2px 7px; border-radius: 999px; background: var(--paper); color: var(--ink-2);
+  }
+  nav button[aria-current="page"] .cnt { background: rgba(255,255,255,.18); color: var(--bg); }
+  .stuff-foot { padding: 16px 18px; font-size: 11px; color: var(--ink-3); border-top: 1px solid var(--line); margin-top: 20px; }
+  .stuff-foot button { font: inherit; font-weight: 700; background: transparent; border: 0; color: var(--leaf); cursor: pointer; padding: 0; }
+
+  main { padding: 28px 32px; max-width: 1200px; }
+  @media (max-width: 880px) { main { padding: 20px 18px; } }
+
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .head h1 { margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -.02em; }
+  .head .sub { color: var(--ink-3); font-size: 13px; margin-top: 4px; }
+  .head .actions { display: flex; gap: 8px; }
+
+  .btn {
+    appearance: none; border: 1px solid var(--line); background: var(--paper);
+    color: var(--ink); padding: 10px 16px; border-radius: var(--r-sm);
+    font: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { border-color: var(--ink); }
+  .btn-primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .btn-primary:hover { background: var(--leaf-2); }
+  .btn-leaf { background: var(--leaf); color: #fff; border-color: var(--leaf); }
+  .btn-leaf:hover { background: var(--leaf-2); }
+  .btn-ghost { background: transparent; border-color: transparent; color: var(--ink-3); }
+
+  .view { display: none; animation: f .3s; }
+  .view.is-active { display: block; }
+  @keyframes f { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .view { animation: none; } }
+
+  /* ── KPI ── */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  @media (max-width: 700px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+  .kpi { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; }
+  .kpi .l { font-size: 11.5px; color: var(--ink-3); font-weight: 700; letter-spacing: .04em; }
+  .kpi .v { font-family: "Inter", sans-serif; font-weight: 800; font-size: 26px; letter-spacing: -.02em; margin-top: 6px; }
+  .kpi .v small { font-size: 13px; color: var(--ink-3); font-weight: 600; font-family: "Noto Sans JP", sans-serif; margin-left: 2px; }
+  .kpi .d { font-size: 11.5px; margin-top: 6px; color: var(--leaf); font-weight: 700; }
+  .kpi .d.dn { color: var(--soil); }
+
+  /* ── chart ── */
+  .chart { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md); padding: 20px; margin-bottom: 24px; }
+  .chart h3 { margin: 0 0 14px; font-size: 14px; font-weight: 900; letter-spacing: -.01em; }
+  .bars { display: grid; grid-template-columns: repeat(14, 1fr); align-items: end; gap: 6px; height: 140px; padding-bottom: 24px; }
+  .bars b { display: block; background: var(--leaf); border-radius: 4px 4px 0 0; position: relative; min-height: 2px; }
+  .bars b.today { background: var(--soil); }
+  .bars b span { position: absolute; bottom: -22px; left: 0; right: 0; text-align: center; font-size: 10.5px; color: var(--ink-3); font-family: "Inter", sans-serif; font-weight: 600; }
+
+  /* ── block (汎用カード) ── */
+  .block { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md); padding: 20px; margin-bottom: 16px; }
+  .block h3 { margin: 0 0 14px; font-size: 14px; font-weight: 900; letter-spacing: -.02em; display: flex; justify-content: space-between; align-items: baseline; }
+  .block h3 a { font-size: 12px; font-weight: 700; color: var(--leaf); text-decoration: none; cursor: pointer; }
+
+  /* ── timeline ── */
+  ul.tl { list-style: none; margin: 0; padding: 0; }
+  ul.tl li { padding: 12px 0; border-top: 1px dashed var(--line); display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+  ul.tl .item { min-width: 0; display: block; background: transparent; border: 0; padding: 0; }
+  ul.tl .item small { word-break: break-word; }
+  ul.tl li:first-child { border-top: 0; padding-top: 0; }
+  ul.tl .date { font-family: "Inter", sans-serif; font-size: 12px; font-weight: 700; color: var(--ink-3); }
+  ul.tl .item { font-weight: 700; font-size: 14px; }
+  ul.tl .item small { display: block; color: var(--ink-3); font-weight: 500; font-size: 12px; margin-top: 2px; line-height: 1.5; }
+  ul.tl .price { font-family: "Inter", sans-serif; font-weight: 800; font-size: 14px; }
+
+  /* ── search ── */
+  .search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+  .search-bar input { flex: 1; appearance: none; border: 1px solid var(--line); background: var(--paper); padding: 12px 14px; border-radius: var(--r-sm); font: inherit; font-size: 14px; }
+  .search-bar input:focus { outline: 2px solid var(--leaf); outline-offset: -1px; border-color: var(--leaf); }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .chip { padding: 5px 11px; border: 1px solid var(--line); background: var(--paper); border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--ink-2); cursor: pointer; }
+  .chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  /* ── 顧客カード行 ── */
+  .customers { display: grid; gap: 10px; }
+  .crow {
+    display: grid; grid-template-columns: 44px 1.4fr 1fr 1fr 1fr auto;
+    gap: 16px; align-items: center;
+    padding: 14px 16px; background: var(--paper);
+    border: 1px solid var(--line); border-radius: var(--r-md);
+    cursor: pointer; transition: border-color .15s, transform .15s;
+  }
+  .crow:hover { border-color: var(--ink); transform: translateY(-1px); }
+  @media (max-width: 760px) {
+    .crow { grid-template-columns: 44px 1fr auto; }
+    .crow .hide-sm { display: none; }
+  }
+  .ava { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; color: #fff; font-size: 16px; background: var(--leaf); flex-shrink: 0; }
+  .crow .nm { font-weight: 900; letter-spacing: -.01em; }
+  .crow .nm small { display: block; font-weight: 500; color: var(--ink-3); font-size: 12px; margin-top: 2px; }
+  .lbl { color: var(--ink-3); font-size: 11px; letter-spacing: .04em; font-weight: 700; }
+  .val { font-family: "Inter", sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -.01em; margin-top: 2px; }
+  .val small { font-weight: 500; color: var(--ink-3); font-family: "Noto Sans JP", sans-serif; font-size: 12px; margin-left: 2px; }
+
+  /* ── タグ ── */
+  .tag { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--bg-2); color: var(--ink-2); }
+  .tag.vip { background: #f4e7d4; color: var(--soil-2); }
+  .tag.regul { background: #dbeadf; color: var(--leaf-2); }
+  .tag.new { background: #e6e1f0; color: #4b3f7a; }
+  .tag.sleep { background: #efece4; color: var(--ink-3); }
+  .tag.birth { background: #fdf0e0; color: #8a5418; }
+
+  /* ── カルテ ── */
+  .karte { display: grid; grid-template-columns: 360px 1fr; gap: 24px; }
+  @media (max-width: 980px) { .karte { grid-template-columns: 1fr; } }
+  .karte-left { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md); padding: 24px; }
+  .karte-ava { width: 72px; height: 72px; border-radius: 50%; background: var(--soil); display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 28px; }
+  .karte-left h2 { margin: 14px 0 4px; font-size: 22px; font-weight: 900; letter-spacing: -.02em; }
+  .karte-left .meta { color: var(--ink-3); font-size: 12.5px; line-height: 1.7; }
+  .karte-tags { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+  .karte-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 22px; border-top: 1px solid var(--line-2); }
+  .karte-stats > div { padding: 14px 0; border-bottom: 1px solid var(--line-2); }
+  .karte-stats > div:nth-child(odd) { border-right: 1px solid var(--line-2); padding-right: 12px; }
+  .karte-stats > div:nth-child(even) { padding-left: 12px; }
+  .karte-stats .l { font-size: 11px; color: var(--ink-3); font-weight: 700; letter-spacing: .04em; }
+  .karte-stats .v { font-family: "Inter", sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -.02em; margin-top: 2px; }
+  .karte-stats .v small { font-weight: 500; color: var(--ink-3); font-family: "Noto Sans JP", sans-serif; font-size: 12px; margin-left: 2px; }
+
+  .note-card {
+    margin-top: 18px; padding: 14px 16px;
+    background: #fdf8eb; border: 1px solid #ead9a6;
+    border-radius: var(--r-sm); font-size: 13px; line-height: 1.7; color: var(--ink-2);
+  }
+  .note-card textarea { width: 100%; border: 0; background: transparent; font: inherit; resize: vertical; min-height: 60px; }
+  .note-card .who { font-weight: 700; color: var(--leaf-2); display: block; margin-bottom: 4px; font-size: 11px; letter-spacing: .04em; }
+
+  /* ── 購入記録フォーム ── */
+  .rec-form { display: grid; gap: 10px; }
+  .rec-line { display: grid; grid-template-columns: 1fr 70px 100px 30px; gap: 6px; align-items: end; }
+  @media (max-width: 600px) { .rec-line { grid-template-columns: 1fr 1fr; } }
+  .rec-form input, .rec-form select { appearance: none; border: 1px solid var(--line); background: #fbfaf6; padding: 9px 11px; border-radius: var(--r-sm); font: inherit; font-size: 13.5px; width: 100%; }
+  .rec-form label { font-size: 11px; color: var(--ink-3); font-weight: 700; letter-spacing: .04em; }
+  .rec-foot { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding-top: 12px; margin-top: 6px; border-top: 1px dashed var(--line); }
+  .rec-foot .total { font-family: "Inter", sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -.02em; }
+  .rec-foot .total small { font-weight: 500; color: var(--ink-3); font-family: "Noto Sans JP", sans-serif; font-size: 12px; margin-left: 2px; }
+  .rec-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .rec-options label.row { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 6px 0; }
+  .icon-btn { appearance: none; border: 0; background: transparent; color: var(--soil); font-size: 18px; cursor: pointer; padding: 0; }
+
+  /* ── 在庫 ── */
+  .inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 800px) { .inv-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 460px) { .inv-grid { grid-template-columns: 1fr; } }
+  .item { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; display: grid; grid-template-columns: 56px 1fr; gap: 14px; align-items: center; }
+  .item .ico { width: 56px; height: 56px; border-radius: var(--r-sm); background: var(--bg-2); display: grid; place-items: center; font-size: 26px; }
+  .item .nm { font-weight: 800; font-size: 14px; letter-spacing: -.01em; }
+  .item .nm small { display: block; color: var(--ink-3); font-weight: 500; font-size: 11.5px; margin-top: 2px; }
+  .stock-bar { margin-top: 8px; height: 5px; background: var(--bg-2); border-radius: 999px; overflow: hidden; }
+  .stock-bar i { display: block; height: 100%; background: var(--leaf); }
+  .stock-bar.low i { background: var(--soil); }
+  .stock-bar.mid i { background: var(--honey); }
+  .stock-meta { display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px; color: var(--ink-3); font-weight: 700; }
+  .stock-meta b { color: var(--ink); font-family: "Inter", sans-serif; }
+  .item .stock-edit { display: flex; gap: 4px; margin-top: 6px; align-items: center; font-size: 11px; color: var(--ink-3); font-weight: 700; }
+  .item .stock-edit button { appearance: none; border: 1px solid var(--line); background: var(--paper); width: 24px; height: 24px; border-radius: 50%; font: inherit; font-weight: 800; cursor: pointer; }
+
+  /* ── 配信 ── */
+  .seg-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; }
+  @media (max-width: 700px) { .seg-grid { grid-template-columns: 1fr; } }
+  .seg { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md); padding: 18px; }
+  .seg .nm { font-weight: 900; font-size: 15px; letter-spacing: -.02em; }
+  .seg .desc { color: var(--ink-3); font-size: 12.5px; margin: 4px 0 12px; line-height: 1.6; }
+  .seg .row { display: flex; align-items: end; justify-content: space-between; border-top: 1px dashed var(--line); padding-top: 12px; }
+  .seg .cnt { font-family: "Inter", sans-serif; font-weight: 800; font-size: 24px; letter-spacing: -.02em; }
+  .seg .cnt small { font-weight: 500; color: var(--ink-3); font-family: "Noto Sans JP", sans-serif; font-size: 12px; margin-left: 2px; }
+
+  /* ── 設定 ── */
+  .form-grid { display: grid; gap: 12px; max-width: 560px; }
+  .form-grid label { font-size: 11.5px; color: var(--ink-3); font-weight: 700; letter-spacing: .04em; }
+  .form-grid input, .form-grid select, .form-grid textarea {
+    width: 100%; appearance: none; border: 1px solid var(--line); background: var(--paper);
+    padding: 10px 12px; border-radius: var(--r-sm); font: inherit; font-size: 14px;
+  }
+
+  /* ── toast ── */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--bg); padding: 12px 20px;
+    border-radius: 999px; font-weight: 700; font-size: 13.5px;
+    box-shadow: var(--shadow-2); z-index: 1000;
+    animation: tin .3s, tout .3s 2.7s forwards;
+  }
+  @keyframes tin { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  @keyframes tout { to { opacity: 0; transform: translate(-50%, 20px); } }
+
+  /* ── modal ── */
+  dialog { border: 0; background: var(--paper); border-radius: var(--r-lg); padding: 24px; max-width: 480px; width: 90%; box-shadow: var(--shadow-2); }
+  dialog::backdrop { background: rgba(28,27,24,.4); backdrop-filter: blur(2px); }
+  dialog h3 { margin: 0 0 16px; font-size: 18px; font-weight: 900; letter-spacing: -.02em; }
+  .dlg-act { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+  .empty { padding: 40px 20px; text-align: center; color: var(--ink-3); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside>
+    <div class="shop">
+      <div class="name" id="shopName">— 読込中</div>
+      <div class="role">スタッフ <span id="staffMe">—</span> / 本日 <span id="staffActive">—</span>名出勤</div>
+    </div>
+    <nav id="nav">
+      <button data-view="dash"  aria-current="page">今日の店<span class="cnt" id="navAttn">·</span></button>
+      <button data-view="cust">お客さま<span class="cnt" id="navCustCnt">—</span></button>
+      <button data-view="inv">在庫<span class="cnt" id="navInvAlert">·</span></button>
+      <button data-view="mkt">配信・施策</button>
+      <button data-view="prod">商品マスタ</button>
+      <button data-view="settings">設定</button>
+    </nav>
+    <div class="stuff-foot">
+      雑貨LINEツール α<br>
+      <button onclick="confirmSeed()">デモデータを再投入</button> / <button onclick="exportData()">書出</button>
+    </div>
+  </aside>
+
+  <main>
+    <!-- VIEW: ダッシュボード -->
+    <section class="view is-active" data-view="dash">
+      <div class="head">
+        <div>
+          <h1>今日の店</h1>
+          <div class="sub" id="dashSub">—</div>
+        </div>
+        <div class="actions">
+          <span class="chip on">今日</span>
+          <span class="chip" onclick="alert('週次集計は商談後に実装')">今週</span>
+          <span class="chip" onclick="alert('月次集計は商談後に実装')">今月</span>
+        </div>
+      </div>
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <div class="chart">
+        <h3>直近14日間の日次売上</h3>
+        <div class="bars" id="bars"></div>
+      </div>
+
+      <div class="block">
+        <h3>今日のお声がけ候補 <a onclick="switchView('cust')">お客さま一覧 →</a></h3>
+        <ul class="tl" id="attnList"></ul>
+      </div>
+
+      <div class="block">
+        <h3>最近の購入記録 <a onclick="switchView('cust')">すべて →</a></h3>
+        <ul class="tl" id="recentList"></ul>
+      </div>
+    </section>
+
+    <!-- VIEW: お客さま一覧 -->
+    <section class="view" data-view="cust">
+      <div class="head">
+        <div>
+          <h1>お客さま</h1>
+          <div class="sub" id="custSub">—</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="openNewCustomer()">＋ 新しいお客さま</button>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" id="custSearch" placeholder="お名前・LINE表示名・電話・メモで検索">
+        <button class="btn">検索</button>
+      </div>
+      <div class="filters" id="custFilters">
+        <span class="chip on" data-fil="all">すべて</span>
+        <span class="chip" data-fil="vip">VIP</span>
+        <span class="chip" data-fil="regul">常連</span>
+        <span class="chip" data-fil="new">新規</span>
+        <span class="chip" data-fil="sleep">休眠</span>
+        <span class="chip" data-fil="birth">誕生月</span>
+      </div>
+      <div class="customers" id="custList"></div>
+    </section>
+
+    <!-- VIEW: カルテ -->
+    <section class="view" data-view="karte">
+      <div class="head">
+        <div>
+          <h1 id="karteName">—</h1>
+          <div class="sub"><a onclick="switchView('cust')" style="color:var(--leaf); cursor:pointer; font-weight:700;">← お客さま一覧に戻る</a></div>
+        </div>
+        <div class="actions">
+          <button class="btn" onclick="editCustomer()">編集</button>
+        </div>
+      </div>
+
+      <div class="karte">
+        <div class="karte-left">
+          <div class="karte-ava" id="karteAva">—</div>
+          <h2 id="karteHName">—</h2>
+          <div class="meta" id="karteMeta">—</div>
+          <div class="karte-tags" id="karteTags"></div>
+          <div class="karte-stats" id="karteStats"></div>
+          <div class="note-card">
+            <span class="who">店長メモ</span>
+            <textarea id="karteNote" placeholder="お声がけのきっかけ、ご家族の好み、ご記念日など"></textarea>
+            <button class="btn" style="margin-top:6px; padding:6px 12px; font-size:12px;" onclick="saveNote()">メモを保存</button>
+          </div>
+        </div>
+
+        <div style="display: grid; gap: 16px;">
+          <div class="block">
+            <h3>今日の購入を記録</h3>
+            <form class="rec-form" id="recForm" onsubmit="submitPurchase(event)">
+              <div id="recLines"></div>
+              <button type="button" class="btn btn-ghost" onclick="addRecLine()" style="justify-self: start;">＋ 商品を追加</button>
+
+              <div class="rec-options">
+                <div>
+                  <label>支払方法</label>
+                  <select id="recPay">
+                    <option value="cash">現金</option>
+                    <option value="card">クレジット</option>
+                    <option value="paypay">PayPay</option>
+                    <option value="linepay">LINE Pay</option>
+                    <option value="other">その他</option>
+                  </select>
+                </div>
+                <div>
+                  <label>ポイント利用 (任意)</label>
+                  <input type="number" id="recPoints" placeholder="0" min="0" step="100">
+                </div>
+              </div>
+              <div class="rec-options">
+                <label class="row"><input type="checkbox" id="recGift"> 贈答・包装あり</label>
+              </div>
+              <div>
+                <label>メモ (任意)</label>
+                <input type="text" id="recNote" placeholder="お子さまへの入学祝い、お歳暮、etc.">
+              </div>
+              <div class="rec-foot">
+                <div>
+                  合計 <span class="total" id="recTotal">¥0</span>
+                  <small id="recPointInfo">・獲得予定 0P</small>
+                </div>
+                <button type="button" class="btn" onclick="resetRecForm()">クリア</button>
+                <button type="submit" class="btn btn-leaf">記録 → 自動LINE</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="block">
+            <h3>購入履歴 <span style="color:var(--ink-3); font-size:12px; font-weight:500;" id="purchaseCount"></span></h3>
+            <ul class="tl" id="karteHistory"></ul>
+          </div>
+
+          <div class="block">
+            <h3>LINE やりとり</h3>
+            <ul class="tl" id="karteMessages"></ul>
+            <form onsubmit="sendManualMessage(event)" style="display:flex; gap:8px; margin-top:12px;">
+              <input type="text" id="manualMsg" placeholder="このお客さまにメッセージを送る" style="flex:1; appearance:none; border:1px solid var(--line); padding:10px 12px; border-radius:var(--r-sm); font:inherit;">
+              <button type="submit" class="btn btn-primary">送信</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: 在庫 -->
+    <section class="view" data-view="inv">
+      <div class="head">
+        <div>
+          <h1>在庫</h1>
+          <div class="sub" id="invSub">—</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="switchView('prod')">＋ 入荷を記録 / 商品追加</button>
+        </div>
+      </div>
+      <div class="filters" id="invFilters">
+        <span class="chip on" data-fil="all">すべて</span>
+        <span class="chip" data-fil="low">残少</span>
+      </div>
+      <div class="inv-grid" id="invList"></div>
+    </section>
+
+    <!-- VIEW: 商品マスタ -->
+    <section class="view" data-view="prod">
+      <div class="head">
+        <div>
+          <h1>商品マスタ</h1>
+          <div class="sub" id="prodSub">—</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="openNewProduct()">＋ 商品を追加</button>
+        </div>
+      </div>
+      <div id="prodList"></div>
+    </section>
+
+    <!-- VIEW: 配信・施策 -->
+    <section class="view" data-view="mkt">
+      <div class="head">
+        <div>
+          <h1>配信・施策</h1>
+          <div class="sub">セグメントを選んでお客さまへLINE一斉送信。自動配信は常時実行されます。</div>
+        </div>
+      </div>
+
+      <div class="block">
+        <h3>自動配信</h3>
+        <ul class="tl" id="autoMsgList"></ul>
+      </div>
+
+      <div class="block">
+        <h3>手動セグメント配信</h3>
+        <div class="seg-grid" id="segGrid"></div>
+      </div>
+    </section>
+
+    <!-- VIEW: 設定 -->
+    <section class="view" data-view="settings">
+      <div class="head">
+        <div>
+          <h1>設定</h1>
+          <div class="sub">店名・LINE連携・ポイントルール</div>
+        </div>
+      </div>
+
+      <div class="block">
+        <h3>店舗情報</h3>
+        <form class="form-grid" onsubmit="saveSettings(event)">
+          <div><label>店名</label><input type="text" id="setName"></div>
+          <div><label>LINE Channel ID</label><input type="text" id="setLineChId" placeholder="商談後に取得"></div>
+          <div><label>LINE Channel Secret</label><input type="password" id="setLineChSecret"></div>
+          <div><label>LINE Channel Access Token</label><input type="password" id="setLineToken"></div>
+          <div><label>LIFF ID</label><input type="text" id="setLiffId"></div>
+
+          <h4 style="margin: 16px 0 0; font-size: 14px;">ポイントルール</h4>
+          <div><label>¥ ごとに 1P 加算</label><input type="number" id="setYenPerPoint" min="50" step="50"></div>
+          <div><label>誕生月ボーナス倍率</label><input type="number" id="setBirthBonus" min="1" max="5" step="0.1"></div>
+          <div><label>有効期限 (日)</label><input type="number" id="setExpire" min="30"></div>
+
+          <div style="margin-top: 12px;">
+            <button type="submit" class="btn btn-leaf">設定を保存</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="block" style="background:#fdf8eb; border-color:#ead9a6;">
+        <h3>商談前メモ</h3>
+        <p style="margin:0; line-height:1.7; color:var(--ink-2); font-size:13.5px;">
+          LINE Channel と LIFF ID は、商談後に客先と一緒に LINE Developer Console で発行します。デモ運用中はメッセージ送信はログ記録のみで、実際のLINE配信は行いません。
+        </p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="customerDlg">
+  <h3 id="custDlgTitle">新しいお客さま</h3>
+  <form class="form-grid" onsubmit="submitCustomer(event)">
+    <div><label>お名前 *</label><input type="text" id="cdName" required></div>
+    <div><label>ふりがな</label><input type="text" id="cdFurigana"></div>
+    <div><label>LINE 表示名</label><input type="text" id="cdDisplay"></div>
+    <div><label>電話</label><input type="text" id="cdPhone"></div>
+    <div><label>住所</label><input type="text" id="cdAddress"></div>
+    <div><label>誕生日 (YYYY-MM-DD)</label><input type="text" id="cdBirth" placeholder="1985-04-22"></div>
+    <div><label>メモ</label><textarea id="cdNote" rows="3"></textarea></div>
+    <div class="dlg-act">
+      <button type="button" class="btn" onclick="document.getElementById('customerDlg').close()">キャンセル</button>
+      <button type="submit" class="btn btn-leaf">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="productDlg">
+  <h3>商品を追加</h3>
+  <form class="form-grid" onsubmit="submitProduct(event)">
+    <div><label>商品名 *</label><input type="text" id="pdName" required></div>
+    <div><label>作家・産地</label><input type="text" id="pdMaker"></div>
+    <div><label>カテゴリ</label>
+      <select id="pdCat"><option value="utsuwa">器</option><option value="dougu">道具</option><option value="nuno">布</option><option value="kodougu">古道具</option><option value="other">その他</option></select>
+    </div>
+    <div><label>価格 (税込)</label><input type="number" id="pdPrice" required></div>
+    <div><label>原価 (任意)</label><input type="number" id="pdCost"></div>
+    <div><label>在庫数</label><input type="number" id="pdStock" value="0"></div>
+    <div><label>基準在庫 (棚いっぱい時)</label><input type="number" id="pdStockBase" value="10"></div>
+    <div><label>絵文字</label><input type="text" id="pdIcon" placeholder="🍵" value="📦"></div>
+    <div><label>単位</label><input type="text" id="pdUnit" value="点"></div>
+    <div class="dlg-act">
+      <button type="button" class="btn" onclick="document.getElementById('productDlg').close()">キャンセル</button>
+      <button type="submit" class="btn btn-leaf">追加</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module">
+import { createRepo } from '../shared/data.js';
+import { seedDemoData, DEMO_TENANT_ID } from '../seed/demo-data.js';
+import { POINT_RULES_DEFAULT } from '../shared/schema.js';
+
+const TENANT_ID = new URLSearchParams(location.search).get('tenant') || DEMO_TENANT_ID;
+const repo = createRepo(TENANT_ID);
+
+// state
+const state = {
+  currentView: 'dash',
+  currentCustomerId: null,
+  currentStaffId: 's_morisita',
+  custFilter: 'all',
+  invFilter: 'all',
+  search: '',
+  settings: null,
+  recLines: [],
+};
+
+window.state = state;
+window.repo = repo;
+
+// ── init ─────────────────────────────────────────
+async function init() {
+  // 初回起動: デモデータ自動投入
+  const customers = await repo.listCustomers();
+  if (customers.length === 0) {
+    await seedDemoData(repo);
+  }
+  state.settings = await repo.getSettings();
+
+  bindNav();
+  bindFilters();
+  await refresh();
+
+  // 30秒 polling (localStorage 駆動の擬似リアルタイム)
+  repo.onCustomersChange(() => refresh());
+  repo.onPurchasesChange(() => refresh());
+  repo.onProductsChange(() => refresh());
+  repo.onMessagesChange(() => refresh());
+}
+
+function bindNav() {
+  document.querySelectorAll('#nav button').forEach(b => {
+    b.addEventListener('click', () => switchView(b.dataset.view));
+  });
+}
+function bindFilters() {
+  document.querySelectorAll('#custFilters .chip').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('#custFilters .chip').forEach(x => x.classList.toggle('on', x === c));
+      state.custFilter = c.dataset.fil;
+      renderCustList();
+    });
+  });
+  document.querySelectorAll('#invFilters .chip').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('#invFilters .chip').forEach(x => x.classList.toggle('on', x === c));
+      state.invFilter = c.dataset.fil;
+      renderInvList();
+    });
+  });
+  document.getElementById('custSearch').addEventListener('input', (e) => {
+    state.search = e.target.value;
+    renderCustList();
+  });
+}
+
+window.switchView = function(name) {
+  state.currentView = name;
+  document.querySelectorAll('#nav button').forEach(b => b.toggleAttribute('aria-current', b.dataset.view === name));
+  document.querySelectorAll('#nav button').forEach(b => { if (b.dataset.view === name) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-active', v.dataset.view === name));
+  if (name === 'dash')     renderDash();
+  if (name === 'cust')     renderCustList();
+  if (name === 'inv')      renderInvList();
+  if (name === 'prod')     renderProdList();
+  if (name === 'mkt')      renderMkt();
+  if (name === 'settings') renderSettings();
+};
+
+async function refresh() {
+  // sidebar shop
+  document.getElementById('shopName').textContent = state.settings.tenantName || '雑貨と道具';
+  document.getElementById('staffMe').textContent = '森下';
+  const staffList = await repo.listStaff();
+  document.getElementById('staffActive').textContent = staffList.length || '—';
+
+  const customers = await repo.listCustomers();
+  document.getElementById('navCustCnt').textContent = customers.length;
+  const attn = await repo.todaysAttention();
+  document.getElementById('navAttn').textContent = attn.length;
+
+  const products = await repo.listProducts();
+  const lowStock = products.filter(p => p.stock / Math.max(1, p.stockBase) < 0.3).length;
+  document.getElementById('navInvAlert').textContent = lowStock;
+
+  // 現在のビューを再描画
+  switchView(state.currentView);
+}
+
+// ── ダッシュボード ───────────────────────────
+async function renderDash() {
+  const today = new Date();
+  document.getElementById('dashSub').textContent =
+    today.getFullYear() + '年' + (today.getMonth()+1) + '月' + today.getDate() + '日 (' + ['日','月','火','水','木','金','土'][today.getDay()] + ') · 営業時間 11:00〜19:00';
+
+  const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+  const todayISO = startOfDay.toISOString();
+  const kpi = await repo.dashboardKPI({ from: todayISO });
+  const kpiAll = await repo.dashboardKPI({});
+
+  const customers = await repo.listCustomers();
+  const newThisMonth = customers.filter(c => {
+    if (!c.createdAt) return false;
+    const d = new Date(c.createdAt);
+    return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth();
+  }).length;
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi"><div class="l">本日の売上</div><div class="v">${yen(kpi.sales)}</div><div class="d">${kpi.visits ? '来店 ' + kpi.visits + '名' : '本日まだ来店なし'}</div></div>
+    <div class="kpi"><div class="l">本日の来店</div><div class="v">${kpi.visits}<small>名</small></div><div class="d">うち常連 ${kpi.regulars}名</div></div>
+    <div class="kpi"><div class="l">今月の新規LINE登録</div><div class="v">${newThisMonth}<small>名</small></div><div class="d">累計お客さま ${customers.length}名</div></div>
+    <div class="kpi"><div class="l">客単価 (本日)</div><div class="v">${yen(kpi.aov)}</div><div class="d">累計客単価 ${yen(kpiAll.aov)}</div></div>
+  `;
+
+  // bar chart
+  const series = await repo.dailySalesSeries(14);
+  const max = Math.max(...series.map(s => s.sales), 1);
+  document.getElementById('bars').innerHTML = series.map((s, i) => {
+    const h = Math.max(2, (s.sales / max) * 100);
+    const isToday = i === series.length - 1;
+    const dd = s.date.slice(8, 10);
+    return `<b class="${isToday ? 'today' : ''}" style="height:${h}%" title="${s.date} ¥${s.sales.toLocaleString()}"><span>${dd}</span></b>`;
+  }).join('');
+
+  // attention
+  const attn = await repo.todaysAttention();
+  document.getElementById('attnList').innerHTML = attn.length === 0
+    ? `<li class="empty">本日のお声がけ候補はありません</li>`
+    : attn.map(c => {
+      const reason = [];
+      if (c.tags.includes('vip')) reason.push('VIP');
+      if (c.tags.includes('sleep')) reason.push(c.daysSince + '日ご無沙汰');
+      if (c.tags.includes('birth')) reason.push('お誕生月');
+      return `<li onclick="openKarte('${c.id}')" style="cursor:pointer;">
+        <span class="date">前回 ${c.lastVisitAt ? c.lastVisitAt.slice(5,10).replace('-','/') : '—'}</span>
+        <span class="item">${esc(c.realName || c.displayName)}<small>${esc(c.note || '').slice(0, 60)} / 累計 ${yen(c.ltv)}</small></span>
+        <span class="price" style="color:var(--soil);">${reason.join(' / ')}</span>
+      </li>`;
+    }).join('');
+
+  // recent purchases
+  const purchases = await repo.listPurchases({ orderBy: ['purchasedAt', 'desc'], limit: 6 });
+  const allCustomers = customers;
+  document.getElementById('recentList').innerHTML = purchases.length === 0
+    ? `<li class="empty">まだ購入記録がありません</li>`
+    : purchases.map(p => {
+      const c = allCustomers.find(x => x.id === p.customerId);
+      const items = p.lines.map(l => l.productName + (l.qty > 1 ? '×' + l.qty : '')).join(' / ');
+      return `<li onclick="openKarte('${p.customerId}')" style="cursor:pointer;">
+        <span class="date">${p.purchasedAt.slice(5,10).replace('-','/')}</span>
+        <span class="item">${esc(c?.realName || c?.displayName || '—')}さま<small>${esc(items)}</small></span>
+        <span class="price">${yen(p.total)}</span>
+      </li>`;
+    }).join('');
+}
+
+// ── お客さま一覧 ─────────────────────────
+async function renderCustList() {
+  const all = await repo.listCustomers();
+  const f = state.custFilter;
+  const s = state.search.toLowerCase().trim();
+  const list = all
+    .filter(c => f === 'all' ? true : (c.tags || []).includes(f))
+    .filter(c => !s ? true : [c.realName, c.displayName, c.furigana, c.phone, c.note].some(v => (v || '').toLowerCase().includes(s)))
+    .sort((a, b) => (new Date(b.lastVisitAt || 0)) - (new Date(a.lastVisitAt || 0)));
+
+  document.getElementById('custSub').textContent = `登録 ${all.length}名 / 表示 ${list.length}名`;
+
+  if (list.length === 0) {
+    document.getElementById('custList').innerHTML = `<div class="empty">該当するお客さまがいません</div>`;
+    return;
+  }
+  document.getElementById('custList').innerHTML = list.map((c, i) => {
+    const tags = (c.tags || []).slice(0, 3).map(t => {
+      const map = { vip: 'VIP', regul: '常連', new: '新規', sleep: '休眠', birth: '誕生月' };
+      const cls = map[t] ? ` ${t}` : '';
+      const label = map[t] || t;
+      return `<span class="tag${cls}">${esc(label)}</span>`;
+    }).join('');
+    return `<div class="crow" onclick="openKarte('${c.id}')">
+      <div class="ava" style="background:${avaColor(i)};">${esc((c.realName || c.displayName || '?').slice(0,1))}</div>
+      <div>
+        <div class="nm">${esc(c.realName || c.displayName)}<small>${esc(c.displayName ? '@' + c.displayName : '')} · ${esc(c.address || '')}</small></div>
+        <div style="margin-top:6px; display:flex; gap:4px; flex-wrap:wrap;">${tags}</div>
+      </div>
+      <div class="hide-sm"><div class="lbl">累計</div><div class="val">${yen(c.ltv)}</div></div>
+      <div class="hide-sm"><div class="lbl">来店</div><div class="val">${c.visits || 0}<small>回</small></div></div>
+      <div class="hide-sm"><div class="lbl">前回</div><div class="val">${c.lastVisitAt ? c.lastVisitAt.slice(5,10).replace('-','/') : '—'}</div></div>
+      <div class="val" style="font-family:Inter; color:var(--ink-3);">→</div>
+    </div>`;
+  }).join('');
+}
+
+// ── カルテ ─────────────────────────────
+window.openKarte = async function(id) {
+  state.currentCustomerId = id;
+  state.recLines = [{ productId: '', qty: 1, unitPrice: 0 }];
+  switchView('karte');
+  await renderKarte();
+};
+
+async function renderKarte() {
+  const c = await repo.getCustomer(state.currentCustomerId);
+  if (!c) { switchView('cust'); return; }
+
+  document.getElementById('karteName').textContent = c.realName || c.displayName;
+  document.getElementById('karteHName').textContent = c.realName || c.displayName;
+  document.getElementById('karteAva').textContent = (c.realName || c.displayName || '?').slice(0,1);
+
+  const ageLine = c.birthdate ? `誕生日 ${c.birthdate.slice(5,7)}/${c.birthdate.slice(8,10)}` : '';
+  document.getElementById('karteMeta').innerHTML =
+    `${esc(c.displayName ? '@' + c.displayName + ' · ' : '')}${esc(c.address || '')}<br>${ageLine}`;
+
+  const tagMap = { vip: 'VIP', regul: '常連', new: '新規', sleep: '休眠', birth: '誕生月' };
+  document.getElementById('karteTags').innerHTML = (c.tags || []).map(t => {
+    const lbl = tagMap[t] || t;
+    const cls = tagMap[t] ? ` ${t}` : '';
+    return `<span class="tag${cls}">${esc(lbl)}</span>`;
+  }).join('');
+
+  document.getElementById('karteStats').innerHTML = `
+    <div><div class="l">累計購入</div><div class="v">${yen(c.ltv)}</div></div>
+    <div><div class="l">来店回数</div><div class="v">${c.visits || 0}<small>回</small></div></div>
+    <div><div class="l">保有ポイント</div><div class="v">${c.points || 0}<small>P</small></div></div>
+    <div><div class="l">最終来店</div><div class="v">${c.lastVisitAt ? c.lastVisitAt.slice(5,10).replace('-','/') : '—'}</div></div>
+  `;
+  document.getElementById('karteNote').value = c.note || '';
+
+  // 購入記録 フォーム
+  renderRecForm();
+
+  // 履歴
+  const purchases = await repo.listPurchasesByCustomer(c.id);
+  document.getElementById('purchaseCount').textContent = `全${purchases.length}件`;
+  document.getElementById('karteHistory').innerHTML = purchases.length === 0
+    ? `<li class="empty">まだ購入履歴がありません</li>`
+    : purchases.slice(0, 10).map(p => {
+      const items = p.lines.map(l => l.productName + (l.qty > 1 ? ' ×' + l.qty : '')).join(' / ');
+      const noteLine = [p.isGift ? '包装あり' : '', p.note].filter(Boolean).join(' / ');
+      return `<li>
+        <span class="date">${p.purchasedAt.slice(0,10).replace(/-/g,'/')}</span>
+        <span class="item">${esc(items)}<small>${esc(noteLine)}</small></span>
+        <span class="price">${yen(p.total)}</span>
+      </li>`;
+    }).join('');
+
+  // メッセージ
+  const msgs = await repo.listMessagesByCustomer(c.id);
+  document.getElementById('karteMessages').innerHTML = msgs.length === 0
+    ? `<li class="empty">まだやりとりがありません</li>`
+    : msgs.slice(0, 6).map(m => {
+      const tag = m.direction === 'out' ? (m.kind === 'auto' ? '自動' : '送信') : '受信';
+      const col = m.direction === 'out' ? 'var(--leaf)' : 'var(--ink-3)';
+      return `<li>
+        <span class="date">${m.sentAt.slice(5,10).replace('-','/')}</span>
+        <span class="item">${esc(m.text)}<small>${esc(m.kind)} / ${esc(m.status)}</small></span>
+        <span class="price" style="color:${col};">${tag}</span>
+      </li>`;
+    }).join('');
+}
+
+async function renderRecForm() {
+  const products = await repo.listProducts({ where: { active: true } });
+  const opts = ['<option value="">— 商品を選択 —</option>'].concat(
+    products.map(p => `<option value="${p.id}" data-price="${p.price}">${esc(p.name)} (${yen(p.price)} / 残${p.stock})</option>`)
+  ).join('');
+
+  document.getElementById('recLines').innerHTML = state.recLines.map((ln, i) => `
+    <div class="rec-line">
+      <div>
+        <label>${i === 0 ? '商品' : ''}</label>
+        <select data-i="${i}" class="rec-prod">${opts.replace(`value="${ln.productId}"`, `value="${ln.productId}" selected`)}</select>
+      </div>
+      <div>
+        <label>${i === 0 ? '個数' : ''}</label>
+        <input type="number" min="1" value="${ln.qty}" data-i="${i}" class="rec-qty">
+      </div>
+      <div>
+        <label>${i === 0 ? '単価 (円)' : ''}</label>
+        <input type="number" min="0" value="${ln.unitPrice}" data-i="${i}" class="rec-price">
+      </div>
+      <div>
+        ${i > 0 ? `<button type="button" class="icon-btn" onclick="removeRecLine(${i})">×</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.rec-prod').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const i = parseInt(e.target.dataset.i);
+      const opt = e.target.options[e.target.selectedIndex];
+      state.recLines[i].productId = e.target.value;
+      state.recLines[i].unitPrice = parseInt(opt.dataset.price || 0);
+      renderRecForm();
+    });
+  });
+  document.querySelectorAll('.rec-qty').forEach(inp => {
+    inp.addEventListener('input', (e) => { state.recLines[parseInt(e.target.dataset.i)].qty = parseInt(e.target.value) || 0; updateRecTotal(); });
+  });
+  document.querySelectorAll('.rec-price').forEach(inp => {
+    inp.addEventListener('input', (e) => { state.recLines[parseInt(e.target.dataset.i)].unitPrice = parseInt(e.target.value) || 0; updateRecTotal(); });
+  });
+  document.getElementById('recPoints').addEventListener('input', updateRecTotal);
+  updateRecTotal();
+}
+window.addRecLine = function() {
+  state.recLines.push({ productId: '', qty: 1, unitPrice: 0 });
+  renderRecForm();
+};
+window.removeRecLine = function(i) {
+  state.recLines.splice(i, 1);
+  renderRecForm();
+};
+window.resetRecForm = function() {
+  state.recLines = [{ productId: '', qty: 1, unitPrice: 0 }];
+  document.getElementById('recPoints').value = '';
+  document.getElementById('recNote').value = '';
+  document.getElementById('recGift').checked = false;
+  renderRecForm();
+};
+
+function updateRecTotal() {
+  const sub = state.recLines.reduce((s, ln) => s + (ln.unitPrice * ln.qty || 0), 0);
+  const pUsed = parseInt(document.getElementById('recPoints').value) || 0;
+  const total = Math.max(0, sub - pUsed);
+  const earned = Math.floor(total / (state.settings?.point?.yenPerPoint || POINT_RULES_DEFAULT.yenPerPoint));
+  document.getElementById('recTotal').textContent = yen(total);
+  document.getElementById('recPointInfo').textContent = `・小計 ${yen(sub)} ・ 獲得予定 ${earned}P`;
+}
+
+window.submitPurchase = async function(ev) {
+  ev.preventDefault();
+  const validLines = state.recLines.filter(l => l.productId && l.qty > 0);
+  if (validLines.length === 0) { toast('商品を選んでください'); return; }
+  try {
+    await repo.recordPurchase({
+      customerId: state.currentCustomerId,
+      lines: validLines.map(l => ({ productId: l.productId, qty: l.qty, unitPrice: l.unitPrice })),
+      paymentMethod: document.getElementById('recPay').value,
+      pointsUsed: parseInt(document.getElementById('recPoints').value) || 0,
+      isGift: document.getElementById('recGift').checked,
+      note: document.getElementById('recNote').value,
+      staffId: state.currentStaffId,
+    });
+    toast('購入を記録 → お礼LINEを送信しました');
+    resetRecForm();
+    await renderKarte();
+  } catch (e) {
+    toast('エラー: ' + e.message);
+  }
+};
+
+window.saveNote = async function() {
+  const note = document.getElementById('karteNote').value;
+  await repo.patchCustomer(state.currentCustomerId, { note });
+  toast('メモを保存しました');
+};
+
+window.sendManualMessage = async function(ev) {
+  ev.preventDefault();
+  const txt = document.getElementById('manualMsg').value.trim();
+  if (!txt) return;
+  await repo.logMessage({
+    customerId: state.currentCustomerId,
+    direction: 'out', kind: 'manual',
+    text: txt, staffId: state.currentStaffId,
+    status: 'sent',
+  });
+  document.getElementById('manualMsg').value = '';
+  toast('メッセージを送信しました');
+  await renderKarte();
+};
+
+window.editCustomer = function() {
+  openCustomerDlg(state.currentCustomerId);
+};
+
+window.openNewCustomer = function() { openCustomerDlg(null); };
+function openCustomerDlg(id) {
+  const dlg = document.getElementById('customerDlg');
+  document.getElementById('custDlgTitle').textContent = id ? 'お客さまを編集' : '新しいお客さま';
+  if (id) {
+    repo.getCustomer(id).then(c => {
+      document.getElementById('cdName').value = c.realName || '';
+      document.getElementById('cdFurigana').value = c.furigana || '';
+      document.getElementById('cdDisplay').value = c.displayName || '';
+      document.getElementById('cdPhone').value = c.phone || '';
+      document.getElementById('cdAddress').value = c.address || '';
+      document.getElementById('cdBirth').value = c.birthdate || '';
+      document.getElementById('cdNote').value = c.note || '';
+      dlg._editingId = id;
+      dlg.showModal();
+    });
+  } else {
+    ['cdName','cdFurigana','cdDisplay','cdPhone','cdAddress','cdBirth','cdNote'].forEach(k => document.getElementById(k).value = '');
+    dlg._editingId = null;
+    dlg.showModal();
+  }
+}
+window.submitCustomer = async function(ev) {
+  ev.preventDefault();
+  const dlg = document.getElementById('customerDlg');
+  const data = {
+    realName: document.getElementById('cdName').value,
+    furigana: document.getElementById('cdFurigana').value,
+    displayName: document.getElementById('cdDisplay').value || document.getElementById('cdName').value,
+    phone: document.getElementById('cdPhone').value,
+    address: document.getElementById('cdAddress').value,
+    birthdate: document.getElementById('cdBirth').value,
+    note: document.getElementById('cdNote').value,
+  };
+  if (dlg._editingId) {
+    await repo.patchCustomer(dlg._editingId, data);
+  } else {
+    const c = await repo.saveCustomer(data);
+    state.currentCustomerId = c.id;
+  }
+  dlg.close();
+  toast('保存しました');
+  if (state.currentView === 'karte') await renderKarte();
+  else renderCustList();
+};
+
+// ── 在庫 ────────────────────────────────
+async function renderInvList() {
+  const all = await repo.listProducts();
+  const f = state.invFilter;
+  const list = f === 'low' ? all.filter(p => p.stockBase > 0 && p.stock / p.stockBase < 0.3) : all;
+  document.getElementById('invSub').textContent = `登録 ${all.length}点 / 在庫切れ間近 ${all.filter(p => p.stockBase > 0 && p.stock / p.stockBase < 0.3).length}点`;
+
+  if (list.length === 0) {
+    document.getElementById('invList').innerHTML = `<div class="empty">商品がありません</div>`;
+    return;
+  }
+  document.getElementById('invList').innerHTML = list.map(p => {
+    const ratio = p.stockBase > 0 ? p.stock / p.stockBase : 0;
+    const cls = ratio < 0.15 ? 'low' : ratio < 0.4 ? 'mid' : '';
+    return `<div class="item">
+      <div class="ico">${esc(p.icon || '📦')}</div>
+      <div>
+        <div class="nm">${esc(p.name)}<small>${esc(p.maker || '')} / ${yen(p.price)}</small></div>
+        <div class="stock-bar ${cls}"><i style="width: ${Math.min(100, Math.max(0, ratio * 100))}%;"></i></div>
+        <div class="stock-meta"><span>在庫</span><b>${p.stock} / ${p.stockBase}${esc(p.unit || '')}</b></div>
+        <div class="stock-edit">
+          <button onclick="changeStock('${p.id}', -1)">−</button>
+          <button onclick="changeStock('${p.id}', 1)">＋</button>
+          <span>クリックで増減</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+window.changeStock = async function(productId, delta) {
+  const p = await repo.getProduct(productId);
+  await repo.patchProduct(productId, { stock: Math.max(0, (p.stock || 0) + delta) });
+  toast(`${p.name}: ${p.stock + delta}${p.unit || '点'}`);
+};
+
+// ── 商品マスタ ──────────────────────────
+async function renderProdList() {
+  const list = await repo.listProducts();
+  document.getElementById('prodSub').textContent = `登録 ${list.length}点`;
+  if (list.length === 0) {
+    document.getElementById('prodList').innerHTML = `<div class="empty">商品がありません</div>`;
+    return;
+  }
+  document.getElementById('prodList').innerHTML = list.map(p => `
+    <div class="block" style="padding:14px 18px; margin-bottom:8px; display:grid; grid-template-columns:48px 1fr auto auto auto; gap:16px; align-items:center;">
+      <div style="font-size:28px;">${esc(p.icon)}</div>
+      <div>
+        <div style="font-weight:900;">${esc(p.name)}</div>
+        <div style="color:var(--ink-3); font-size:12.5px;">${esc(p.maker || '')} / ${categoryLabel(p.category)}</div>
+      </div>
+      <div class="val">${yen(p.price)}</div>
+      <div class="val">在庫 ${p.stock}${esc(p.unit || '')}</div>
+      <div>
+        <button class="btn" onclick="alert('編集は商談後')">編集</button>
+      </div>
+    </div>
+  `).join('');
+}
+function categoryLabel(id) {
+  const cs = (state.settings?.categories || []);
+  return cs.find(c => c.id === id)?.label || id || '—';
+}
+window.openNewProduct = function() {
+  document.getElementById('productDlg').showModal();
+};
+window.submitProduct = async function(ev) {
+  ev.preventDefault();
+  await repo.saveProduct({
+    name: document.getElementById('pdName').value,
+    maker: document.getElementById('pdMaker').value,
+    category: document.getElementById('pdCat').value,
+    price: parseInt(document.getElementById('pdPrice').value),
+    cost: parseInt(document.getElementById('pdCost').value) || 0,
+    stock: parseInt(document.getElementById('pdStock').value) || 0,
+    stockBase: parseInt(document.getElementById('pdStockBase').value) || 10,
+    icon: document.getElementById('pdIcon').value || '📦',
+    unit: document.getElementById('pdUnit').value || '点',
+    active: true,
+  });
+  document.getElementById('productDlg').close();
+  toast('商品を追加しました');
+  renderProdList();
+};
+
+// ── 配信 ────────────────────────────────
+async function renderMkt() {
+  const customers = await repo.listCustomers();
+  const now = new Date();
+  const birthThisMonth = customers.filter(c => c.birthdate && parseInt(c.birthdate.slice(5,7)) === (now.getMonth()+1)).length;
+  const sleepCount = customers.filter(c => (c.tags || []).includes('sleep')).length;
+
+  document.getElementById('autoMsgList').innerHTML = `
+    <li>
+      <span class="date">毎朝9時</span>
+      <span class="item">誕生月のお客さま<small>10%OFFクーポン自動送付 / 今月 ${birthThisMonth}名対象</small></span>
+      <span class="price" style="color:var(--leaf);">ON</span>
+    </li>
+    <li>
+      <span class="date">毎週月曜</span>
+      <span class="item">3ヶ月ご無沙汰のお客さま<small>「お元気ですか」掘り起こしメッセージ / 今週 ${sleepCount}名対象</small></span>
+      <span class="price" style="color:var(--leaf);">ON</span>
+    </li>
+    <li>
+      <span class="date">購入直後</span>
+      <span class="item">お礼メッセージ＋ポイント残高<small>記録の瞬間に自動配信</small></span>
+      <span class="price" style="color:var(--leaf);">ON</span>
+    </li>
+  `;
+
+  // segments
+  const segs = [
+    { nm: '常連さま (累計1万円以上)', desc: '新作の入荷案内・先行内覧に。', fn: c => (c.ltv || 0) >= 10000 },
+    { nm: '贈答利用が多い', desc: 'お中元・お歳暮の先行案内に。', fn: c => (c.tags || []).includes('gift_user') },
+    { nm: 'VIP (累計5万円以上)', desc: '最優先のご案内。', fn: c => (c.tags || []).includes('vip') },
+    { nm: '今月お誕生月', desc: 'お誕生日メッセージ + 特別クーポン。', fn: c => c.birthdate && parseInt(c.birthdate.slice(5,7)) === (now.getMonth()+1) },
+    { nm: '休眠 (3ヶ月以上ご無沙汰)', desc: 'おかえりなさいの一言を。', fn: c => (c.tags || []).includes('sleep') },
+    { nm: '新規 (今月)', desc: 'お礼と次回ご来店のきっかけを。', fn: c => (c.tags || []).includes('new') },
+  ];
+  document.getElementById('segGrid').innerHTML = segs.map(s => {
+    const cnt = customers.filter(s.fn).length;
+    return `<div class="seg">
+      <div class="nm">${esc(s.nm)}</div>
+      <div class="desc">${esc(s.desc)}</div>
+      <div class="row">
+        <div class="cnt">${cnt}<small>名</small></div>
+        <button class="btn" onclick="alert('実配信は商談後 LINE Channel 設定で有効化')">下書きを書く →</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 設定 ────────────────────────────────
+async function renderSettings() {
+  const s = await repo.getSettings();
+  document.getElementById('setName').value = s.tenantName || '';
+  document.getElementById('setLineChId').value = s.line?.channelId || '';
+  document.getElementById('setLineChSecret').value = s.line?.channelSecret || '';
+  document.getElementById('setLineToken').value = s.line?.channelAccessToken || '';
+  document.getElementById('setLiffId').value = s.line?.liffId || '';
+  document.getElementById('setYenPerPoint').value = s.point?.yenPerPoint || POINT_RULES_DEFAULT.yenPerPoint;
+  document.getElementById('setBirthBonus').value = s.point?.bonusOnBirthMonth || POINT_RULES_DEFAULT.bonusOnBirthMonth;
+  document.getElementById('setExpire').value = s.point?.expireDays || POINT_RULES_DEFAULT.expireDays;
+}
+window.saveSettings = async function(ev) {
+  ev.preventDefault();
+  const next = {
+    ...state.settings,
+    tenantName: document.getElementById('setName').value,
+    line: {
+      channelId: document.getElementById('setLineChId').value,
+      channelSecret: document.getElementById('setLineChSecret').value,
+      channelAccessToken: document.getElementById('setLineToken').value,
+      liffId: document.getElementById('setLiffId').value,
+    },
+    point: {
+      ...(state.settings?.point || POINT_RULES_DEFAULT),
+      yenPerPoint: parseInt(document.getElementById('setYenPerPoint').value) || POINT_RULES_DEFAULT.yenPerPoint,
+      bonusOnBirthMonth: parseFloat(document.getElementById('setBirthBonus').value) || POINT_RULES_DEFAULT.bonusOnBirthMonth,
+      expireDays: parseInt(document.getElementById('setExpire').value) || POINT_RULES_DEFAULT.expireDays,
+    },
+  };
+  await repo.saveSettings(next);
+  state.settings = next;
+  toast('設定を保存しました');
+  refresh();
+};
+
+// ── utils ────────────────────────────────
+function yen(n) { return '¥' + (n || 0).toLocaleString(); }
+function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function avaColor(i) {
+  const cs = ['var(--leaf)', 'var(--soil)', 'var(--honey)', 'var(--leaf-2)', '#555049', '#6b4d3a'];
+  return cs[i % cs.length];
+}
+function toast(t) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = t;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+window.confirmSeed = async function() {
+  if (!confirm('現在のデータを消してデモデータを再投入します。よろしいですか？')) return;
+  await seedDemoData(repo);
+  toast('デモデータを再投入しました');
+  refresh();
+};
+window.exportData = async function() {
+  const dump = {
+    settings: await repo.getSettings(),
+    customers: await repo.listCustomers(),
+    products: await repo.listProducts(),
+    purchases: await repo.listPurchases(),
+    staff: await repo.listStaff(),
+    messages: await repo.listMessages(),
+  };
+  const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `zakka-crm-${TENANT_ID}-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+};
+
+init().catch(e => {
+  console.error(e);
+  document.body.innerHTML = `<div style="padding: 40px; color: var(--soil);">読み込みエラー: ${e.message}</div>`;
+});
+</script>
+</body>
+</html>

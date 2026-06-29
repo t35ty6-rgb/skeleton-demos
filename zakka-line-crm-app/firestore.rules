@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── ユーティリティ ───
+    function isAuthed() { return request.auth != null; }
+    function isStaff(tenantId) {
+      return isAuthed() && exists(/databases/$(database)/documents/tenants/$(tenantId)/staff/$(request.auth.uid));
+    }
+    function isOwner(tenantId) {
+      return isStaff(tenantId) &&
+        get(/databases/$(database)/documents/tenants/$(tenantId)/staff/$(request.auth.uid)).data.role == 'owner';
+    }
+    function isMyselfCustomer(tenantId, customerId) {
+      return isAuthed() &&
+        get(/databases/$(database)/documents/tenants/$(tenantId)/customers/$(customerId)).data.lineUserId == request.auth.token.line_user_id;
+    }
+
+    // ─── テナント設定 ───
+    match /tenants/{tenantId} {
+      allow read:  if isStaff(tenantId);
+      allow write: if isOwner(tenantId);
+
+      // 顧客カルテ
+      match /customers/{customerId} {
+        allow read:   if isStaff(tenantId) || isMyselfCustomer(tenantId, customerId);
+        allow create: if isStaff(tenantId);
+        allow update: if isStaff(tenantId);
+        allow delete: if isOwner(tenantId);
+
+        // 顧客 サブ: 自分用クーポン
+        match /coupons/{couponId} {
+          allow read: if isStaff(tenantId) || isMyselfCustomer(tenantId, customerId);
+          allow write: if isStaff(tenantId);
+        }
+      }
+
+      // 商品マスタ (お客側からも在庫数だけ参照可)
+      match /products/{productId} {
+        allow read:  if true;
+        allow write: if isStaff(tenantId);
+      }
+
+      // 購入記録 (お客は自分の購入だけ)
+      match /purchases/{purchaseId} {
+        allow read:   if isStaff(tenantId) ||
+                      (isAuthed() && resource.data.customerId != null &&
+                       isMyselfCustomer(tenantId, resource.data.customerId));
+        allow create: if isStaff(tenantId);
+        allow update: if isOwner(tenantId);
+        allow delete: if isOwner(tenantId);
+      }
+
+      // メッセージログ
+      match /messages/{messageId} {
+        allow read:   if isStaff(tenantId);
+        allow create: if isStaff(tenantId);
+        allow update: if isStaff(tenantId);
+      }
+
+      // スタッフ名簿
+      match /staff/{staffId} {
+        allow read:  if isStaff(tenantId);
+        allow write: if isOwner(tenantId);
+      }
+
+      // クーポン
+      match /coupons/{couponId} {
+        allow read:  if isStaff(tenantId);
+        allow write: if isStaff(tenantId);
+      }
+    }
+  }
+}
