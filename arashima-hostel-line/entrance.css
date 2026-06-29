@@ -85,7 +85,6 @@ body {
   display: block;
   text-decoration: none;
   overflow: hidden;
-  transition: flex 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
   cursor: pointer;
   outline: none;
 }
@@ -99,17 +98,99 @@ body {
   color: var(--sumi);
 }
 
-/* hover で 拡張する暖簾 */
-.gate:hover .door--ryosha  { filter: brightness(0.78) saturate(0.85); }
-.gate:hover .door--gakusha { filter: brightness(0.92) saturate(0.9); }
-.gate .door:hover { filter: none !important; }
+/* ====== 背景写真スライド ====== */
+.door__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+.door__bg-slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transform: scale(1.05);
+  animation: door-bg-cycle 30s infinite cubic-bezier(0.4, 0.0, 0.2, 1);
+  will-change: opacity, transform;
+}
+/* 5枚 × 6秒ずつ表示 + 0.8秒 cross-fade */
+.door__bg-slide:nth-child(1) { animation-delay:  0s;  }
+.door__bg-slide:nth-child(2) { animation-delay:  6s;  }
+.door__bg-slide:nth-child(3) { animation-delay: 12s;  }
+.door__bg-slide:nth-child(4) { animation-delay: 18s;  }
+.door__bg-slide:nth-child(5) { animation-delay: 24s;  }
+
+@keyframes door-bg-cycle {
+  0%   { opacity: 0; transform: scale(1.10); }
+  3%   { opacity: 1; }
+  20%  { opacity: 1; transform: scale(1.05); }
+  23%  { opacity: 0; }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
+/* ====== 文字可読性のための gradient overlay ====== */
+.door__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.door--ryosha .door__overlay {
+  background:
+    linear-gradient(180deg,
+      rgba(14, 14, 12, 0.55) 0%,
+      rgba(14, 14, 12, 0.25) 25%,
+      rgba(14, 14, 12, 0.45) 55%,
+      rgba(14, 14, 12, 0.92) 100%
+    );
+}
+.door--gakusha .door__overlay {
+  background:
+    linear-gradient(180deg,
+      rgba(242, 237, 227, 0.50) 0%,
+      rgba(242, 237, 227, 0.22) 25%,
+      rgba(242, 237, 227, 0.50) 55%,
+      rgba(242, 237, 227, 0.93) 100%
+    );
+}
+
+/* hover で写真側を少しズーム + overlay 引き締め */
+.door:hover .door__bg-slide {
+  animation-play-state: paused;
+}
+.door--ryosha:hover .door__overlay {
+  background:
+    linear-gradient(180deg,
+      rgba(14, 14, 12, 0.35) 0%,
+      rgba(14, 14, 12, 0.18) 30%,
+      rgba(14, 14, 12, 0.40) 60%,
+      rgba(14, 14, 12, 0.88) 100%
+    );
+}
+.door--gakusha:hover .door__overlay {
+  background:
+    linear-gradient(180deg,
+      rgba(242, 237, 227, 0.32) 0%,
+      rgba(242, 237, 227, 0.15) 30%,
+      rgba(242, 237, 227, 0.42) 60%,
+      rgba(242, 237, 227, 0.88) 100%
+    );
+}
+
+.gate:hover .door:not(:hover) .door__overlay {
+  filter: brightness(0.7);
+}
 
 .door__inner {
   padding: clamp(28px, 5vw, 64px) clamp(24px, 5vw, 72px);
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 70vh;
+  min-height: 78vh;
   position: relative;
   z-index: 2;
 }
@@ -136,26 +217,31 @@ body {
   opacity: 0.7;
 }
 
-/* MEGA 漢字 */
+/* MEGA 漢字 (写真の上に重ねる印章として) */
 .door__char {
   font-family: 'Noto Sans JP', sans-serif;
   font-weight: 900;
-  font-size: clamp(180px, 28vw, 420px);
+  font-size: clamp(160px, 24vw, 360px);
   line-height: 0.82;
-  margin: 0;
-  margin-bottom: clamp(8px, 1.5vw, 16px);
+  margin: 0 0 clamp(8px, 1.5vw, 16px) 0;
   letter-spacing: -0.04em;
   position: relative;
+  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
 }
 .door--ryosha .door__char {
   color: var(--shu);
-  text-shadow: 0 0 60px rgba(193, 70, 44, 0.18);
+  text-shadow:
+    0 6px 24px rgba(0, 0, 0, 0.55),
+    0 0 80px rgba(193, 70, 44, 0.30);
 }
 .door--gakusha .door__char {
   color: var(--koke2);
+  text-shadow:
+    0 4px 16px rgba(95, 100, 80, 0.32),
+    0 0 60px rgba(242, 237, 227, 0.45);
 }
 
-/* 漢字の影に薄い印影 */
+/* 漢字の下に印影の罫線 */
 .door__char::after {
   content: '';
   position: absolute;
@@ -164,24 +250,38 @@ body {
   width: 38%;
   height: 1px;
   background: currentColor;
-  opacity: 0.4;
+  opacity: 0.55;
 }
 
 .door__name {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   margin-bottom: clamp(20px, 3vw, 36px);
 }
+.door__name-kana {
+  font-size: clamp(13px, 1.1vw, 15px);
+  letter-spacing: 0.7em;
+  font-weight: 500;
+  opacity: 0.78;
+  padding-left: 2px;
+}
+.door--ryosha .door__name-kana { color: var(--shu); }
+.door--gakusha .door__name-kana { color: var(--koke2); }
+
+.door__name-jp {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-weight: 900;
+  font-size: clamp(26px, 2.6vw, 36px);
+  letter-spacing: 0.18em;
+}
+
 .door__name-en {
   font-family: 'Marcellus', serif;
-  font-size: clamp(20px, 2.4vw, 30px);
-  letter-spacing: 0.24em;
-}
-.door__name-jp {
-  font-size: 14px;
-  letter-spacing: 0.32em;
-  opacity: 0.75;
+  font-size: clamp(11px, 0.9vw, 13px);
+  letter-spacing: 0.36em;
+  opacity: 0.6;
+  margin-top: 2px;
 }
 
 .door__lead {
@@ -189,8 +289,10 @@ body {
   line-height: 1.85;
   max-width: 32em;
   margin: 0 0 clamp(24px, 3vw, 40px) 0;
-  opacity: 0.82;
+  opacity: 0.92;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
 }
+.door--gakusha .door__lead { text-shadow: 0 1px 6px rgba(255, 255, 255, 0.32); }
 
 /* facts 表 */
 .door__facts {
