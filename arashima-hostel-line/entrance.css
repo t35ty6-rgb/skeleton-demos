@@ -112,32 +112,19 @@ body {
   color: var(--sumi);
 }
 
-/* ====== 背景写真 ====== */
+/* ====== 背景写真 (固定 1 枚) ====== */
 .door__bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
-.door__bg-slide {
+.door__bg-still {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center;
-  opacity: 0;
-  transform: scale(1.06);
-  animation: door-bg-cycle 32s infinite cubic-bezier(0.4, 0.0, 0.2, 1);
-  will-change: opacity, transform;
 }
-.door__bg-slide:nth-child(1) { animation-delay:  0s; }
-.door__bg-slide:nth-child(2) { animation-delay:  6.4s; }
-.door__bg-slide:nth-child(3) { animation-delay: 12.8s; }
-.door__bg-slide:nth-child(4) { animation-delay: 19.2s; }
-.door__bg-slide:nth-child(5) { animation-delay: 25.6s; }
-
-@keyframes door-bg-cycle {
-  0%   { opacity: 0; transform: scale(1.10); }
-  3%   { opacity: 1; }
-  20%  { opacity: 1; transform: scale(1.04); }
-  23%  { opacity: 0; }
-  100% { opacity: 0; transform: scale(1.04); }
+.door:hover .door__bg-still {
+  transform: scale(1.04);
+  transition: transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* overlay: 縦組ブロック側 (中央〜左) を濃く、 右側を呼吸 */
@@ -179,79 +166,50 @@ body {
   opacity: 0.12;
 }
 
-.door:hover .door__bg-slide { animation-play-state: paused; }
 .gate:hover .door:not(:hover) { filter: brightness(0.78) saturate(0.85); transition: filter 0.6s ease; }
 .gate .door { transition: filter 0.6s ease; }
 
-/* ====== Top bar: eyebrow + 印章 (対角線の起点) ====== */
+/* ====== Top bar: eyebrow ====== */
 .door__topbar {
   position: relative;
   z-index: 2;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: flex-start;
   gap: 24px;
 }
 
 .door__eyebrow {
-  display: flex;
-  align-items: baseline;
+  display: inline-flex;
+  align-items: center;
   gap: 14px;
   padding-top: 6px;
 }
+/* 「Ⅰ」「Ⅱ」 ローマ数字 細セリフ */
 .door__num {
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 500;
-  font-size: 13px;
-  letter-spacing: 0.18em;
+  font-family: 'Marcellus', 'Cormorant Garamond', serif;
+  font-weight: 400;
+  font-size: clamp(15px, 1.3vw, 18px);
+  letter-spacing: 0.12em;
+  line-height: 1;
 }
 .door--ryosha  .door__num { color: var(--shu3); }
 .door--gakusha .door__num { color: var(--koke2); }
-.door__type {
-  font-size: 10px;
-  letter-spacing: 0.42em;
-  text-transform: uppercase;
-  opacity: 0.7;
-  font-weight: 500;
+
+.door__rule {
+  display: inline-block;
+  width: 28px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.4;
 }
 
-/* ====== 落款印 (朱角印に白漢字1字、 装飾削ぎ落とし) ====== */
-.seal {
-  position: relative;
-  width: clamp(64px, 5.8vw, 84px);
-  height: clamp(64px, 5.8vw, 84px);
-  display: grid;
-  place-items: center;
-  isolation: isolate;
-}
-/* 印影の不均一感を SVG noise で 1点だけ足す */
-.seal::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  mix-blend-mode: multiply;
-  opacity: 0.42;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch' seed='3'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.85 0'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>");
-  background-size: 120px 120px;
-}
-.seal--ryosha {
-  background: var(--shu);
-  color: var(--yuki);
-}
-.seal--gakusha {
-  background: var(--koke2);
-  color: var(--yuki);
-}
-.seal__char {
-  font-family: var(--serif);
-  font-weight: 700;
-  font-size: clamp(40px, 4.2vw, 54px);
-  line-height: 1;
-  letter-spacing: 0;
-  position: relative;
-  z-index: 2;
-  text-shadow: 0 0 1px rgba(255, 255, 255, 0.15);
+.door__type {
+  font-family: 'Marcellus', serif;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  opacity: 0.72;
+  font-weight: 400;
 }
 
 /* ====== 縦組ブランドブロック (Signature element) ====== */
@@ -282,13 +240,13 @@ body {
 .door--ryosha  .vbrand__kana { color: var(--shu3); }
 .door--gakusha .vbrand__kana { color: var(--koke2); }
 
-/* 「荒島」 縦組 主役 — 細明朝で大書き (太字を捨て格式を取る) */
+/* 「旅舎」「學舎」 縦組 主役 — 細明朝で大書き */
 .vbrand__main {
   writing-mode: vertical-rl;
   text-orientation: upright;
   font-family: var(--serif);
   font-weight: 500;
-  font-size: clamp(94px, 11vw, 158px);
+  font-size: clamp(96px, 11.5vw, 164px);
   line-height: 0.95;
   letter-spacing: -0.02em;
   margin: 0;
@@ -299,26 +257,49 @@ body {
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6);
 }
 
-/* 縦罫線 (主役と副の間) */
+/* 縦 2本罫 (合本罫: 太 + 細) */
 .vbrand__divider {
-  width: 1px;
+  width: 5px;
   align-self: stretch;
-  background: currentColor;
-  opacity: 0.28;
+  border-left: 1px solid currentColor;
+  border-right: 0.5px solid currentColor;
+  opacity: 0.3;
   margin: clamp(14px, 1.8vw, 28px) 0;
 }
 
-/* 「旅舎」「學舎」 縦組 副 — 細字、 主役より一段控えめ */
+/* 屋号番号 (一/二) + 「荒島」 縦組 副 (主役より格段に控えめ) */
+.vbrand__subwrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding-top: 18px;
+}
+
+.vbrand__num {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(12px, 1vw, 14px);
+  line-height: 1;
+  letter-spacing: 0;
+  opacity: 0.55;
+}
+.door--ryosha  .vbrand__num { color: var(--shu3); }
+.door--gakusha .vbrand__num { color: var(--koke2); }
+
+/* 「荒島」 縦組 副 — 細字、 主役の 1/4 サイズ程度 */
 .vbrand__sub {
   writing-mode: vertical-rl;
   text-orientation: upright;
   font-family: var(--serif);
-  font-weight: 500;
-  font-size: clamp(26px, 2.8vw, 40px);
-  line-height: 1;
-  letter-spacing: 0.14em;
-  padding-top: 20px;
-  opacity: 0.88;
+  font-weight: 400;
+  font-size: clamp(20px, 2vw, 28px);
+  line-height: 1.05;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+  white-space: nowrap;
 }
 
 /* ====== 下端: 1行 + CTA ====== */
@@ -462,11 +443,10 @@ body {
   }
   .topband { flex-direction: column; gap: 8px; align-items: flex-start; }
   .botband { flex-direction: column; text-align: center; gap: 10px; }
-  .seal { width: 68px; height: 68px; }
-  .seal__char { font-size: 38px; }
-  .vbrand__main { font-size: clamp(82px, 24vw, 124px); }
-  .vbrand__sub  { font-size: clamp(22px, 5.6vw, 32px); }
+  .vbrand__main { font-size: clamp(88px, 26vw, 132px); }
+  .vbrand__sub  { font-size: clamp(18px, 4.4vw, 24px); }
   .vbrand__kana { font-size: 13px; letter-spacing: 0.55em; }
+  .vbrand__num  { font-size: 12px; }
   .door__line { font-size: 14px; letter-spacing: 0.18em; }
 }
 
@@ -475,12 +455,11 @@ body {
     padding: 24px 22px 30px;
     min-height: 88vh;
   }
-  .seal { width: 58px; height: 58px; }
-  .seal__char { font-size: 32px; }
   .vbrand { gap: 18px; }
-  .vbrand__main { font-size: 104px; }
-  .vbrand__sub  { font-size: 24px; }
+  .vbrand__main { font-size: 112px; }
+  .vbrand__sub  { font-size: 20px; }
   .vbrand__kana { font-size: 12px; padding-top: 6px; letter-spacing: 0.5em; }
+  .vbrand__num  { font-size: 11px; }
   .door__line { font-size: 12.5px; }
   .door__cta { font-size: 12px; letter-spacing: 0.24em; }
 }
