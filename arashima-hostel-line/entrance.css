@@ -44,38 +44,45 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px var(--gutter);
+  padding: 18px var(--gutter);
   border-bottom: 1px solid rgba(244, 240, 229, 0.12);
   background: var(--sumi);
   position: relative;
   z-index: 5;
+  gap: 24px;
 }
 .topband__brand {
   display: flex;
   flex-direction: column;
   line-height: 1.1;
+  gap: 5px;
 }
 .topband__brand-en {
   font-family: 'Marcellus', 'Cormorant Garamond', serif;
-  font-size: 17px;
+  font-size: clamp(17px, 1.5vw, 21px);
   letter-spacing: 0.32em;
   color: var(--yuki);
 }
 .topband__brand-jp {
-  font-size: 11px;
-  letter-spacing: 0.42em;
-  color: rgba(244, 240, 229, 0.55);
-  margin-top: 4px;
+  font-size: clamp(11px, 0.9vw, 13px);
+  letter-spacing: 0.22em;
+  color: rgba(244, 240, 229, 0.72);
+  font-weight: 500;
 }
 .topband__meta {
   display: flex;
   align-items: center;
   gap: 10px;
   font-size: 11px;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.26em;
   color: rgba(244, 240, 229, 0.6);
 }
 .topband__dot { color: var(--gold); }
+.topband__year {
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: 0.18em;
+  font-size: 10px;
+}
 
 /* ====== GATE ====== */
 .gate {
@@ -127,6 +134,20 @@ body {
 }
 
 .door__overlay { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+
+/* 微細 grain (画面に紙の質感を載せる) */
+.door::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.42 0'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>");
+  background-size: 180px 180px;
+}
+.door--ryosha::after  { opacity: 0.16; }
+.door--gakusha::after { opacity: 0.10; }
 .door--ryosha .door__overlay {
   background:
     linear-gradient(180deg,
@@ -139,10 +160,10 @@ body {
 .door--gakusha .door__overlay {
   background:
     linear-gradient(180deg,
-      rgba(244, 240, 229, 0.72) 0%,
+      rgba(244, 240, 229, 0.68) 0%,
       rgba(244, 240, 229, 0.42) 40%,
-      rgba(244, 240, 229, 0.78) 75%,
-      rgba(244, 240, 229, 0.96) 100%
+      rgba(244, 240, 229, 0.65) 75%,
+      rgba(244, 240, 229, 0.82) 100%
     );
 }
 
@@ -194,62 +215,89 @@ body {
   font-weight: 500;
 }
 
-/* ====== 印章ロゴ (AD指摘 #2: 漢字をセリフ化) ====== */
+/* ====== 印章ロゴ (大型化 + 影深く) ====== */
 .seal {
   position: relative;
-  width: clamp(72px, 7vw, 96px);
-  height: clamp(72px, 7vw, 96px);
+  width: clamp(92px, 9vw, 124px);
+  height: clamp(92px, 9vw, 124px);
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  border: 1.5px solid currentColor;
+  border: 2px solid currentColor;
   border-radius: 2px;
   isolation: isolate;
+  transform: rotate(-1.5deg);
 }
 .seal::before {
   content: '';
   position: absolute;
-  inset: 5px;
+  inset: 6px;
   border: 0.5px solid currentColor;
-  opacity: 0.55;
+  opacity: 0.5;
+  border-radius: 1px;
+}
+.seal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18) 0%, transparent 50%);
+  pointer-events: none;
   border-radius: 1px;
 }
 .seal--ryosha {
-  background: var(--shu);
+  background:
+    radial-gradient(ellipse at 30% 25%, rgba(255, 100, 70, 0.22), transparent 60%),
+    var(--shu);
   color: var(--yuki);
-  border-color: rgba(244, 240, 229, 0.25);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+  border-color: rgba(244, 240, 229, 0.28);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.55),
+    0 2px 8px rgba(0, 0, 0, 0.35),
+    inset 0 0 20px rgba(0, 0, 0, 0.15);
 }
 .seal--ryosha::before { border-color: var(--yuki); }
 
 .seal--gakusha {
-  background: var(--yuki);
+  background:
+    radial-gradient(ellipse at 30% 25%, rgba(255, 255, 255, 0.6), transparent 60%),
+    var(--yuki);
   color: var(--koke2);
-  border-color: rgba(95, 100, 80, 0.42);
-  box-shadow: 0 4px 18px rgba(95, 100, 80, 0.18);
+  border-color: rgba(95, 100, 80, 0.5);
+  box-shadow:
+    0 6px 22px rgba(95, 100, 80, 0.28),
+    0 2px 6px rgba(95, 100, 80, 0.18),
+    inset 0 0 18px rgba(95, 100, 80, 0.08);
 }
 .seal--gakusha::before { border-color: var(--koke2); }
 
-/* 漢字をセリフ系で組み直す (印章の物質感) */
 .seal__char {
   font-family: var(--serif);
   font-weight: 800;
-  font-size: clamp(40px, 4.4vw, 56px);
+  font-size: clamp(52px, 5.8vw, 76px);
   line-height: 1;
   letter-spacing: -0.04em;
-  margin-bottom: -4px;
+  margin-bottom: -6px;
+  position: relative;
+  z-index: 2;
 }
 .seal__en {
   position: absolute;
-  bottom: 5px;
+  bottom: 7px;
   left: 0;
   right: 0;
   text-align: center;
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 500;
-  font-size: 7.5px;
-  letter-spacing: 0.32em;
-  opacity: 0.78;
+  font-size: 8.5px;
+  letter-spacing: 0.34em;
+  opacity: 0.82;
+  z-index: 2;
+}
+
+/* hover で印章を起こす */
+.door:hover .seal {
+  transform: rotate(0deg) scale(1.04);
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* ====== ペルソナ (FOR) ====== */
@@ -320,15 +368,27 @@ body {
   margin: 0;
 }
 
-.door__name-sub {
-  font-size: clamp(12px, 0.95vw, 14px);
-  letter-spacing: 0.16em;
-  opacity: 0.75;
-  margin: 4px 0 0;
+/* 印章直下の機能ヘッドライン (panel が何の宿か 一目で) */
+.door__headline {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-weight: 500;
+  font-size: clamp(15px, 1.25vw, 18px);
   line-height: 1.6;
+  letter-spacing: 0.06em;
+  margin: 10px 0 0;
+  opacity: 0.95;
 }
+.door__headline strong {
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  font-size: 1.15em;
+  display: inline-block;
+  padding-top: 2px;
+}
+.door--ryosha .door__headline strong  { color: var(--shu3); }
+.door--gakusha .door__headline strong { color: var(--koke2); }
 
-/* ====== 具体機能リスト (3項目に絞る) ====== */
+/* ====== 具体機能リスト ====== */
 .door__features {
   list-style: none;
   margin: 0;
@@ -337,26 +397,68 @@ body {
   gap: 10px;
 }
 .door__features li {
-  display: grid;
-  grid-template-columns: 22px 1fr;
-  align-items: start;
+  display: flex;
+  align-items: flex-start;
   gap: 12px;
   font-size: clamp(13.5px, 1vw, 15px);
-  line-height: 1.6;
+  line-height: 1.65;
   letter-spacing: 0.04em;
   padding-bottom: 10px;
   border-bottom: 1px dashed currentColor;
 }
 .door__features li:last-child { border-bottom: none; padding-bottom: 0; }
 .door__features svg {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   margin-top: 3px;
+  flex-shrink: 0;
+}
+.door__features strong {
+  white-space: nowrap;
 }
 .door--ryosha  .door__features li { border-bottom-color: rgba(244, 240, 229, 0.18); }
 .door--ryosha  .door__features svg { color: var(--shu3); }
 .door--gakusha .door__features li { border-bottom-color: rgba(20, 17, 14, 0.16); }
 .door--gakusha .door__features svg { color: var(--koke2); }
+
+.door__features strong {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.door--ryosha  .door__features strong { color: var(--yuki); }
+.door--gakusha .door__features strong { color: var(--sumi); }
+
+/* ====== 住所 + MAP リンク ====== */
+.door__address {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: clamp(12px, 0.95vw, 13.5px);
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  padding: 8px 14px 8px 0;
+  width: max-content;
+  border-bottom: 1px solid currentColor;
+  margin-top: 4px;
+  transition: opacity 0.3s ease;
+  opacity: 0.78;
+}
+.door__address:hover { opacity: 1; }
+.door__address svg { width: 13px; height: 13px; flex-shrink: 0; }
+.door--ryosha  .door__address { color: rgba(244, 240, 229, 0.85); border-bottom-color: rgba(244, 240, 229, 0.3); }
+.door--gakusha .door__address { color: rgba(20, 17, 14, 0.78); border-bottom-color: rgba(20, 17, 14, 0.3); }
+
+.door__address-hint {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.34em;
+  padding: 2px 6px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  margin-left: 4px;
+  opacity: 0.7;
+}
 
 /* ====== CTA ====== */
 .door__cta {
@@ -375,64 +477,91 @@ body {
 .door--ryosha  .door__cta { color: var(--shu3); border-top-color: rgba(226, 104, 71, 0.45); }
 .door--gakusha .door__cta { color: var(--koke2); border-top-color: rgba(95, 100, 80, 0.4); }
 
-/* ====== 中央の柱 (番地 + MAP リンク化) ====== */
+/* ====== 中央柱: ARASHIMA 屋号縦書き + 暖簾 ====== */
 .post {
-  width: clamp(72px, 8vw, 110px);
-  background: var(--koshi);
+  width: clamp(56px, 5vw, 78px);
+  background: linear-gradient(180deg, var(--koshi) 0%, #C8BB9C 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 0;
   position: relative;
-  text-decoration: none;
   color: var(--sumi);
-  transition: background 0.4s ease;
+  isolation: isolate;
+  border-left: 1px solid rgba(20, 17, 14, 0.18);
+  border-right: 1px solid rgba(20, 17, 14, 0.18);
+  box-shadow: inset 0 0 30px rgba(20, 17, 14, 0.08);
 }
-.post:hover { background: #BCAE8C; }
-.post:hover .post__hint { opacity: 1; }
+
+/* 上から垂れる暖簾 (4本布) */
+.post__noren {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(48px, 4.5vw, 70px);
+  height: clamp(40px, 5vw, 64px);
+  display: flex;
+  gap: 1.5px;
+  pointer-events: none;
+}
+.post__noren span {
+  flex: 1;
+  background: linear-gradient(180deg,
+    rgba(193, 70, 44, 0.95) 0%,
+    rgba(142, 51, 30, 1) 80%,
+    rgba(142, 51, 30, 0.95) 100%);
+  border-radius: 0 0 1px 1px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.post__noren span:nth-child(1) { height: 88%; }
+.post__noren span:nth-child(2) { height: 96%; }
+.post__noren span:nth-child(3) { height: 90%; }
+.post__noren span:nth-child(4) { height: 98%; }
 
 .post__rule {
   flex: 1;
   width: 1px;
   background: var(--sumi);
-  opacity: 0.4;
+  opacity: 0.28;
 }
-.post__addr {
+
+/* 縦書きロゴ */
+.post__logo {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 18px 0;
+  gap: clamp(20px, 3vw, 32px);
+  padding: clamp(20px, 3vw, 36px) 0;
+  width: 100%;
+}
+
+.post__logo-en {
+  writing-mode: vertical-rl;
+  font-family: 'Marcellus', 'Cormorant Garamond', serif;
+  font-size: clamp(10px, 0.9vw, 12px);
+  letter-spacing: 0.16em;
+  color: rgba(20, 17, 14, 0.5);
+  text-orientation: mixed;
+}
+
+.post__logo-jp {
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.05;
+  text-align: center;
   color: var(--sumi);
+  letter-spacing: -0.02em;
 }
-.post__addr > span {
-  font-family: 'Noto Sans JP', sans-serif;
-  font-weight: 700;
-  font-size: clamp(14px, 1.3vw, 18px);
-  letter-spacing: 0.1em;
-  writing-mode: horizontal-tb;
-  line-height: 1;
-}
-.post__addr-num {
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700;
-  font-size: clamp(28px, 3vw, 38px) !important;
-  color: var(--shu) !important;
-}
-.post__addr-slash {
-  font-family: 'Marcellus', serif;
-  color: var(--sumi);
-  opacity: 0.5;
-  font-size: clamp(20px, 2vw, 28px) !important;
-}
-.post__hint {
+
+.post__logo-since {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 9px;
-  letter-spacing: 0.3em;
-  color: var(--sumi);
-  opacity: 0.4;
-  margin-top: 8px;
-  transition: opacity 0.3s ease;
+  letter-spacing: 0.22em;
+  text-align: center;
+  color: rgba(20, 17, 14, 0.5);
+  line-height: 1.4;
+  text-transform: uppercase;
 }
 
 /* ====== BOTTOM BAND ====== */
@@ -499,22 +628,55 @@ body {
     scroll-snap-stop: always;
   }
   .door__inner { min-height: 92vh; }
+
+  /* 中央柱を SP では「商店街バー」 横帯に */
   .post {
     width: 100%;
     flex-direction: row;
-    padding: 0 24px;
-    height: 56px;
+    padding: 14px 24px;
+    height: auto;
+    min-height: 64px;
     scroll-snap-align: none;
+    align-items: center;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid rgba(20, 17, 14, 0.18);
+    border-bottom: 1px solid rgba(20, 17, 14, 0.18);
+    gap: 14px;
+    justify-content: center;
   }
-  .post__rule { flex: 1; height: 1px; width: auto; }
-  .post__addr { flex-direction: row; padding: 0 18px; gap: 10px; }
-  .post__hint { margin-top: 0; margin-left: 8px; }
-  .topband { flex-direction: column; gap: 6px; align-items: flex-start; }
+  .post__noren {
+    position: static;
+    transform: none;
+    width: 28px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+  .post__noren span:nth-child(1) { height: 88%; }
+  .post__noren span:nth-child(2) { height: 96%; }
+  .post__noren span:nth-child(3) { height: 90%; }
+  .post__noren span:nth-child(4) { height: 100%; }
+  .post__rule { display: none; }
+  .post__logo {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    padding: 0;
+    width: auto;
+  }
+  .post__logo-en { writing-mode: horizontal-tb; font-size: 10px; letter-spacing: 0.24em; }
+  .post__logo-jp { font-size: 18px; line-height: 1; display: inline-flex; gap: 2px; }
+  .post__logo-jp br { display: none; }
+  .post__logo-since { font-size: 9px; }
+  .post__logo-since br { display: none; }
+
+  .topband { flex-direction: column; gap: 8px; align-items: flex-start; }
   .botband { flex-direction: column; text-align: center; gap: 10px; }
   .door__head { align-items: center; }
-  .seal { width: 64px; height: 64px; }
-  .seal__char { font-size: 36px; }
-  .door__name-jp { font-size: 38px; letter-spacing: 0.08em; }
+  .seal { width: 84px; height: 84px; transform: rotate(-1deg); }
+  .seal__char { font-size: 48px; }
+  .door__name-jp { font-size: 36px; letter-spacing: 0.08em; }
+  .door__headline { font-size: 15px; }
 }
 
 @media (max-width: 480px) {
@@ -523,10 +685,14 @@ body {
     gap: 16px;
     min-height: 88vh;
   }
-  .door__features li { font-size: 13px; }
+  .door__features li { font-size: 13px; line-height: 1.55; }
   .door__chips li { font-size: 12.5px; padding: 4px 10px; }
   .door__name-jp { font-size: 30px; }
+  .door__headline { font-size: 14px; }
   .door__cta { font-size: 13px; letter-spacing: 0.22em; }
+  .door__address { font-size: 11.5px; }
+  .seal { width: 76px; height: 76px; }
+  .seal__char { font-size: 42px; }
 }
 
 /* focus visible */
