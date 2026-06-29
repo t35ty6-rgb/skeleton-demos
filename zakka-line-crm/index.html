@@ -1,0 +1,1658 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>雑貨店向け LINE一体型 顧客カルテ + ポイント + ミニ在庫 — 提案デモ</title>
+<meta name="description" content="公式LINEを起点に、ポイントカード・購買履歴・在庫・スタッフ共有CRMを1ツールに束ねた、雑貨店専用の小さなOS。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #f7f6f1;
+    --bg-2:      #efece4;
+    --paper:     #ffffff;
+    --ink:       #1c1b18;
+    --ink-2:     #3a3833;
+    --ink-3:     #6b6862;
+    --line:      #d8d4ca;
+    --line-2:    #e9e5da;
+    --leaf:      #2e4a3a;        /* 深い杉緑 */
+    --leaf-2:    #1f3328;
+    --soil:      #b25538;        /* 赤土 / 朱 */
+    --soil-2:    #8e3f25;
+    --honey:     #c98a2b;        /* 山吹 */
+    --line-green:#06c755;        /* LINE公式色 (お客画面のみ) */
+    --shadow-1:  0 1px 0 rgba(28,27,24,.04), 0 8px 24px -16px rgba(28,27,24,.18);
+    --shadow-2:  0 1px 0 rgba(28,27,24,.04), 0 24px 48px -28px rgba(28,27,24,.28);
+    --r-sm: 6px; --r-md: 10px; --r-lg: 18px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans JP", "Inter", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-weight: 500;
+    font-feature-settings: "palt" 1;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection { background: var(--ink); color: var(--bg); }
+
+  /* ───── header ───── */
+  header.site {
+    position: sticky; top: 0; z-index: 50;
+    background: color-mix(in oklab, var(--bg) 85%, transparent);
+    backdrop-filter: saturate(140%) blur(12px);
+    -webkit-backdrop-filter: saturate(140%) blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav {
+    max-width: 1240px; margin: 0 auto;
+    padding: 14px 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .brand {
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  .brand-mark {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--ink); color: var(--bg);
+    display: grid; place-items: center;
+    font-weight: 900; font-size: 14px; letter-spacing: -.02em;
+    align-self: center;
+  }
+  .brand-name { font-weight: 900; letter-spacing: -.02em; font-size: 15px; }
+  .brand-sub  { color: var(--ink-3); font-size: 12px; letter-spacing: .04em; }
+
+  .tabs {
+    display: inline-flex; gap: 4px; padding: 4px;
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 999px; box-shadow: var(--shadow-1);
+  }
+  .tab {
+    appearance: none; border: 0; background: transparent;
+    font: inherit; font-weight: 700;
+    color: var(--ink-3);
+    padding: 9px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color .2s, background .2s;
+    letter-spacing: .01em;
+    font-size: 13.5px;
+  }
+  .tab[aria-selected="true"] {
+    background: var(--ink); color: var(--bg);
+  }
+  .tab:focus-visible { outline: 2px solid var(--soil); outline-offset: 2px; }
+  .nav-cta {
+    font-weight: 700; font-size: 12.5px;
+    color: var(--ink-3);
+    text-decoration: none;
+  }
+  @media (max-width: 760px) {
+    .nav { padding: 12px 16px; flex-wrap: wrap; }
+    .nav-cta { display: none; }
+    .tabs { order: 3; width: 100%; justify-content: space-between; }
+    .tab { flex: 1; padding: 9px 4px; font-size: 12.5px; }
+  }
+
+  /* ───── panel base ───── */
+  main { max-width: 1240px; margin: 0 auto; padding: 32px 24px 96px; }
+  .panel { display: none; }
+  .panel.is-active { display: block; animation: fade .35s cubic-bezier(.2,.7,.2,1); }
+  @keyframes fade { from {opacity:0; transform: translateY(6px);} to {opacity:1; transform:none;} }
+  @media (prefers-reduced-motion: reduce) {
+    .panel.is-active { animation: none; }
+  }
+
+  /* ============================================ */
+  /*               TAB 1 : PROPOSAL               */
+  /* ============================================ */
+  .hero {
+    padding: 56px 0 40px;
+    display: grid; grid-template-columns: 1.65fr .85fr; gap: 64px;
+    align-items: end;
+    border-bottom: 1px solid var(--line);
+  }
+  @media (max-width: 920px) {
+    .hero { grid-template-columns: 1fr; gap: 32px; padding: 32px 0 24px; }
+  }
+  .kicker {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700; color: var(--leaf);
+    letter-spacing: .08em;
+  }
+  .kicker::before {
+    content: ""; width: 18px; height: 1px; background: var(--leaf);
+  }
+  .hero h1 {
+    margin: 16px 0 20px;
+    font-size: clamp(30px, 4.2vw, 52px);
+    font-weight: 900;
+    line-height: 1.18;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--soil);
+    border-bottom: 3px solid var(--soil);
+    padding-bottom: 2px;
+  }
+  .hero p.lead {
+    font-size: 17px; line-height: 1.8;
+    color: var(--ink-2);
+    max-width: 32em;
+    text-wrap: pretty;
+  }
+  .meta-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-2);
+  }
+  .meta-card dt {
+    font-size: 11.5px; color: var(--ink-3);
+    letter-spacing: .06em; font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .meta-card dd {
+    margin: 0 0 18px;
+    font-weight: 700;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .meta-card dd:last-child { margin-bottom: 0; }
+  .meta-card .num {
+    font-family: "Inter", sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+  }
+
+  /* problem / solution row */
+  .row-2 {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 24px; margin-top: 56px;
+  }
+  @media (max-width: 760px) { .row-2 { grid-template-columns: 1fr; } }
+
+  .card-soft {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 32px;
+  }
+  .card-soft.tinted {
+    background: var(--bg-2);
+    border-color: var(--line-2);
+  }
+  .card-soft h2 {
+    margin: 0 0 18px;
+    font-size: 20px; font-weight: 900;
+    letter-spacing: -.02em;
+  }
+  .card-soft h2 .num-prefix {
+    font-family: "Inter", sans-serif;
+    font-weight: 800;
+    color: var(--ink-3);
+    margin-right: 10px;
+  }
+  .pain-list { list-style: none; margin: 0; padding: 0; }
+  .pain-list li {
+    padding: 14px 0;
+    border-bottom: 1px dashed var(--line);
+    color: var(--ink-2);
+    font-weight: 500;
+    line-height: 1.6;
+    display: grid; grid-template-columns: 28px 1fr; gap: 12px;
+    align-items: start;
+  }
+  .pain-list li:last-child { border-bottom: 0; padding-bottom: 0; }
+  .pain-list li::before {
+    content: "—"; color: var(--soil); font-weight: 900;
+    font-family: "Inter", sans-serif;
+  }
+  .answer { color: var(--ink); font-weight: 700; }
+
+  /* feature roadmap */
+  .features {
+    margin-top: 56px;
+  }
+  .section-head {
+    display: flex; align-items: end; justify-content: space-between; gap: 24px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px; margin-bottom: 32px;
+  }
+  .section-head h2 {
+    margin: 0;
+    font-size: clamp(26px, 3.4vw, 36px);
+    font-weight: 900; letter-spacing: -.03em;
+  }
+  .section-head .lede { color: var(--ink-3); font-size: 14px; max-width: 32em; }
+
+  .phase-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+  }
+  @media (max-width: 880px) { .phase-grid { grid-template-columns: 1fr; } }
+  .phase {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 28px;
+    position: relative;
+    display: flex; flex-direction: column;
+  }
+  .phase .badge {
+    align-self: flex-start;
+    font-family: "Inter", sans-serif;
+    font-weight: 800;
+    font-size: 11px; letter-spacing: .08em;
+    padding: 5px 10px; border-radius: 999px;
+    color: var(--ink); background: var(--bg-2);
+    border: 1px solid var(--line);
+    margin-bottom: 18px;
+  }
+  .phase.is-now { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .phase.is-now .badge { background: var(--soil); color: #fff; border-color: var(--soil); }
+  .phase.is-now h3 { color: var(--bg); }
+  .phase.is-now ul li { color: rgba(255,255,255,.85); border-color: rgba(255,255,255,.1); }
+  .phase.is-now .when { color: rgba(255,255,255,.6); }
+  .phase h3 {
+    margin: 0 0 6px; font-size: 19px; font-weight: 900;
+    letter-spacing: -.02em;
+  }
+  .phase .when {
+    color: var(--ink-3); font-size: 12.5px; font-weight: 600;
+    letter-spacing: .04em;
+    margin-bottom: 16px;
+  }
+  .phase ul {
+    list-style: none; padding: 0; margin: 0;
+    font-size: 14px; line-height: 1.7;
+  }
+  .phase ul li {
+    padding: 10px 0;
+    border-top: 1px dashed var(--line);
+  }
+  .phase ul li:first-child { border-top: 0; }
+
+  /* pricing */
+  .pricing {
+    margin-top: 64px;
+    background: var(--ink); color: var(--bg);
+    border-radius: var(--r-lg);
+    padding: 48px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 48px;
+  }
+  @media (max-width: 760px) {
+    .pricing { grid-template-columns: 1fr; padding: 32px; gap: 24px; }
+  }
+  .pricing h2 { font-size: 28px; font-weight: 900; margin: 0 0 12px; letter-spacing: -.03em; }
+  .pricing .lede { color: rgba(255,255,255,.7); font-size: 14px; line-height: 1.8; }
+  .price-stack { display: grid; gap: 18px; }
+  .price-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+  }
+  .price-row:last-child { border-bottom: 0; }
+  .price-row .label { font-weight: 700; font-size: 14px; }
+  .price-row .label small { display:block; color: rgba(255,255,255,.55); font-weight: 500; margin-top: 4px; font-size: 12px; }
+  .price-row .val {
+    font-family: "Inter", sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -.02em;
+  }
+  .price-row .val small { font-weight: 500; font-size: 13px; color: rgba(255,255,255,.55); margin-left: 4px; font-family: "Noto Sans JP", sans-serif; }
+
+  /* next step */
+  .next {
+    margin-top: 56px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 32px;
+    background:
+      linear-gradient(180deg, var(--paper) 0%, var(--paper) 100%);
+    display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center;
+  }
+  @media (max-width: 760px) { .next { grid-template-columns: 1fr; } }
+  .next h2 { margin: 0 0 8px; font-size: 22px; font-weight: 900; letter-spacing: -.02em; }
+  .next p { margin: 0; color: var(--ink-3); }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--soil); color: #fff;
+    border: 0; padding: 16px 24px;
+    border-radius: 999px;
+    font-weight: 800; font-size: 14.5px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .2s, transform .2s;
+    box-shadow: 0 8px 18px -8px var(--soil);
+  }
+  .btn-primary:hover { background: var(--soil-2); transform: translateY(-1px); }
+
+  /* ============================================ */
+  /*           TAB 2 : STAFF (ADMIN UI)          */
+  /* ============================================ */
+  .staff-shell {
+    margin-top: 8px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-2);
+  }
+  .staff-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    background: #fafaf6;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .staff-bar .dot { width: 10px; height: 10px; border-radius: 50%; background: #f0c14b; }
+  .staff-bar .dot.r { background: #ee695b; }
+  .staff-bar .dot.g { background: #62c554; }
+  .staff-bar .url {
+    margin-left: 14px;
+    padding: 4px 12px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-family: "Inter", monospace;
+    font-size: 11.5px;
+    color: var(--ink-3);
+  }
+  .staff-bar .who { margin-left: auto; font-weight: 700; color: var(--ink-2); }
+
+  .staff-grid {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: 720px;
+  }
+  @media (max-width: 880px) { .staff-grid { grid-template-columns: 1fr; min-height: auto; } }
+
+  .staff-side {
+    background: var(--bg-2);
+    border-right: 1px solid var(--line);
+    padding: 20px 0;
+  }
+  @media (max-width: 880px) { .staff-side { border-right: 0; border-bottom: 1px solid var(--line); padding: 12px 0; } }
+  .staff-side .shop {
+    padding: 0 18px 16px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 12px;
+  }
+  .staff-side .shop .name { font-weight: 900; letter-spacing: -.02em; }
+  .staff-side .shop .role { color: var(--ink-3); font-size: 12px; margin-top: 2px; }
+  .staff-nav { display: grid; gap: 2px; padding: 0 8px; }
+  .staff-nav button {
+    appearance: none; border: 0; background: transparent;
+    width: 100%; text-align: left;
+    font: inherit; font-weight: 700; font-size: 13.5px;
+    color: var(--ink-2);
+    padding: 9px 12px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .staff-nav button:hover { background: rgba(0,0,0,.04); }
+  .staff-nav button[aria-current="page"] { background: var(--ink); color: var(--bg); }
+  .staff-nav .count {
+    font-family: "Inter", sans-serif;
+    font-size: 11px; font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--ink-2);
+  }
+  .staff-nav button[aria-current="page"] .count { background: rgba(255,255,255,.18); color: var(--bg); }
+
+  .staff-main { padding: 28px 32px; }
+  @media (max-width: 880px) { .staff-main { padding: 20px 18px; } }
+
+  .staff-view { display: none; }
+  .staff-view.is-active { display: block; }
+
+  .staff-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; margin-bottom: 20px;
+  }
+  .staff-head h2 {
+    margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -.02em;
+  }
+  .staff-head .sub {
+    color: var(--ink-3); font-size: 13px; margin-top: 4px;
+  }
+
+  /* dashboard */
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 700px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+  .kpi {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 16px;
+  }
+  .kpi .label { font-size: 11.5px; color: var(--ink-3); letter-spacing: .04em; font-weight: 700; }
+  .kpi .v {
+    font-family: "Inter", sans-serif;
+    font-weight: 800; font-size: 26px;
+    letter-spacing: -.02em;
+    margin-top: 6px;
+    color: var(--ink);
+  }
+  .kpi .v small { font-size: 13px; color: var(--ink-3); font-weight: 600; font-family: "Noto Sans JP", sans-serif; margin-left: 2px; }
+  .kpi .delta { font-size: 11.5px; margin-top: 6px; color: var(--leaf); font-weight: 700; }
+  .kpi .delta.dn { color: var(--soil); }
+
+  .chart {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .chart h3 { margin: 0 0 12px; font-size: 14px; font-weight: 900; letter-spacing: -.01em; }
+  .bars {
+    display: grid; grid-template-columns: repeat(14, 1fr);
+    align-items: end; gap: 6px;
+    height: 140px;
+  }
+  .bars b {
+    display: block;
+    background: var(--leaf);
+    border-radius: 4px 4px 0 0;
+    position: relative;
+  }
+  .bars b.today { background: var(--soil); }
+  .bars b span {
+    position: absolute; bottom: -22px; left: 0; right: 0;
+    text-align: center; font-size: 10.5px; color: var(--ink-3);
+    font-family: "Inter", sans-serif; font-weight: 600;
+  }
+
+  /* customer search / list */
+  .search-bar {
+    display: flex; gap: 8px; margin-bottom: 16px;
+  }
+  .search-bar input {
+    flex: 1;
+    appearance: none;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    padding: 12px 14px;
+    border-radius: var(--r-sm);
+    font: inherit; font-size: 14px;
+  }
+  .search-bar input:focus { outline: 2px solid var(--leaf); outline-offset: -1px; border-color: var(--leaf); }
+  .search-bar button {
+    appearance: none; border: 1px solid var(--ink);
+    background: var(--ink); color: var(--bg);
+    padding: 0 18px;
+    border-radius: var(--r-sm);
+    font: inherit; font-weight: 700; font-size: 13.5px;
+    cursor: pointer;
+  }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .chip {
+    padding: 5px 11px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    border-radius: 999px;
+    font-size: 12px; font-weight: 700;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  .customers {
+    display: grid; gap: 10px;
+  }
+  .customer-row {
+    display: grid;
+    grid-template-columns: 44px 1.4fr 1fr 1fr 1fr auto;
+    gap: 16px; align-items: center;
+    padding: 14px 16px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    cursor: pointer;
+    transition: border-color .15s, transform .15s;
+  }
+  .customer-row:hover { border-color: var(--ink); transform: translateY(-1px); }
+  @media (max-width: 760px) {
+    .customer-row { grid-template-columns: 44px 1fr auto; }
+    .customer-row .cell.hide-sm { display: none; }
+  }
+  .avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-weight: 900; color: #fff;
+    font-size: 16px;
+    background: var(--leaf);
+  }
+  .avatar.s2 { background: var(--soil); }
+  .avatar.s3 { background: var(--honey); }
+  .avatar.s4 { background: var(--leaf-2); }
+  .avatar.s5 { background: #555049; }
+  .customer-row .name { font-weight: 900; letter-spacing: -.01em; }
+  .customer-row .name small { display: block; font-weight: 500; color: var(--ink-3); font-size: 12px; margin-top: 2px; }
+  .cell-label { color: var(--ink-3); font-size: 11px; letter-spacing: .04em; font-weight: 700; }
+  .cell-val { font-family: "Inter", sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -.01em; margin-top: 2px; }
+  .cell-val small { font-weight: 500; color: var(--ink-3); font-family: "Noto Sans JP", sans-serif; font-size: 12px; margin-left: 2px; }
+  .tag {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px; font-weight: 700;
+    background: var(--bg-2);
+    color: var(--ink-2);
+  }
+  .tag.vip   { background: #f4e7d4; color: var(--soil-2); }
+  .tag.regul { background: #dbeadf; color: var(--leaf-2); }
+  .tag.new   { background: #e6e1f0; color: #4b3f7a; }
+  .tag.sleep { background: #efece4; color: var(--ink-3); }
+
+  /* karte modal-style */
+  .karte {
+    display: grid; grid-template-columns: 1fr 1.4fr; gap: 24px;
+    margin-top: 8px;
+  }
+  @media (max-width: 880px) { .karte { grid-template-columns: 1fr; } }
+  .karte-left {
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: 24px;
+  }
+  .karte-avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: var(--soil);
+    display: grid; place-items: center;
+    color: #fff; font-weight: 900; font-size: 28px;
+  }
+  .karte-left h3 { margin: 14px 0 4px; font-size: 22px; font-weight: 900; letter-spacing: -.02em; }
+  .karte-left .meta { color: var(--ink-3); font-size: 12.5px; }
+  .karte-tags { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+  .karte-stats {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+    margin-top: 22px; border-top: 1px solid var(--line-2);
+  }
+  .karte-stats > div { padding: 14px 0; border-bottom: 1px solid var(--line-2); }
+  .karte-stats > div:nth-child(odd) { border-right: 1px solid var(--line-2); padding-right: 12px; }
+  .karte-stats > div:nth-child(even) { padding-left: 12px; }
+  .karte-stats .l { font-size: 11px; color: var(--ink-3); letter-spacing: .04em; font-weight: 700; }
+  .karte-stats .v { font-family: "Inter", sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -.02em; margin-top: 2px; }
+  .karte-stats .v small { font-weight: 500; color: var(--ink-3); font-family: "Noto Sans JP", sans-serif; font-size: 12px; margin-left: 2px; }
+
+  .note {
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: #fdf8eb;
+    border: 1px solid #ead9a6;
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--ink-2);
+  }
+  .note .who { font-weight: 700; color: var(--leaf-2); }
+
+  .karte-right { display: grid; gap: 16px; }
+  .block {
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: 20px;
+  }
+  .block h4 { margin: 0 0 12px; font-size: 14px; font-weight: 900; letter-spacing: -.02em;
+              display: flex; justify-content: space-between; align-items: baseline; }
+  .block h4 a { font-size: 12px; font-weight: 700; color: var(--leaf); text-decoration: none; }
+
+  .timeline { list-style: none; margin: 0; padding: 0; }
+  .timeline li {
+    padding: 12px 0;
+    border-top: 1px dashed var(--line);
+    display: grid; grid-template-columns: 74px 1fr auto; gap: 12px;
+    align-items: start;
+  }
+  .timeline li:first-child { border-top: 0; padding-top: 0; }
+  .timeline .date {
+    font-family: "Inter", sans-serif;
+    font-size: 12px; font-weight: 700;
+    color: var(--ink-3);
+    letter-spacing: -.01em;
+  }
+  .timeline .item { font-weight: 700; font-size: 14px; }
+  .timeline .item small { display: block; color: var(--ink-3); font-weight: 500; font-size: 12px; margin-top: 2px; }
+  .timeline .price {
+    font-family: "Inter", sans-serif;
+    font-weight: 800; font-size: 14px;
+    color: var(--ink);
+  }
+
+  .quick-form {
+    display: grid; grid-template-columns: 2fr 80px 100px auto;
+    gap: 8px; align-items: end;
+  }
+  @media (max-width: 600px) { .quick-form { grid-template-columns: 1fr; } }
+  .quick-form label { font-size: 11.5px; color: var(--ink-3); letter-spacing: .04em; font-weight: 700; }
+  .quick-form input {
+    appearance: none; border: 1px solid var(--line);
+    padding: 10px 12px; border-radius: var(--r-sm);
+    font: inherit; font-size: 14px;
+    width: 100%; background: #fbfaf6;
+  }
+  .quick-form button {
+    appearance: none; border: 0; background: var(--leaf); color: #fff;
+    padding: 11px 18px; border-radius: var(--r-sm);
+    font: inherit; font-weight: 800; font-size: 13.5px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .quick-form button:hover { background: var(--leaf-2); }
+
+  /* inventory */
+  .inv-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  @media (max-width: 800px) { .inv-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 460px) { .inv-grid { grid-template-columns: 1fr; } }
+  .item {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 16px;
+    display: grid; grid-template-columns: 56px 1fr; gap: 14px;
+    align-items: center;
+  }
+  .item .ico {
+    width: 56px; height: 56px;
+    border-radius: var(--r-sm);
+    background: var(--bg-2);
+    display: grid; place-items: center;
+    font-size: 26px;
+  }
+  .item .nm { font-weight: 800; font-size: 14px; letter-spacing: -.01em; }
+  .item .nm small { display: block; color: var(--ink-3); font-weight: 500; font-size: 11.5px; margin-top: 2px; }
+  .stock-bar {
+    margin-top: 8px; height: 5px;
+    background: var(--bg-2);
+    border-radius: 999px; overflow: hidden;
+  }
+  .stock-bar i {
+    display: block; height: 100%;
+    background: var(--leaf);
+  }
+  .stock-bar.low i { background: var(--soil); }
+  .stock-bar.mid i { background: var(--honey); }
+  .stock-meta {
+    display: flex; justify-content: space-between;
+    font-size: 11px; margin-top: 4px;
+    color: var(--ink-3); font-weight: 700;
+  }
+  .stock-meta b { color: var(--ink); font-family: "Inter", sans-serif; }
+
+  /* marketing */
+  .seg-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+    margin-top: 12px;
+  }
+  @media (max-width: 700px) { .seg-grid { grid-template-columns: 1fr; } }
+  .seg {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 18px;
+  }
+  .seg .nm { font-weight: 900; font-size: 15px; letter-spacing: -.02em; }
+  .seg .desc { color: var(--ink-3); font-size: 12.5px; margin: 4px 0 12px; line-height: 1.6; }
+  .seg .row {
+    display: flex; align-items: end; justify-content: space-between;
+    border-top: 1px dashed var(--line); padding-top: 12px;
+  }
+  .seg .cnt { font-family: "Inter", sans-serif; font-weight: 800; font-size: 24px; letter-spacing: -.02em; }
+  .seg .cnt small { font-weight: 500; color: var(--ink-3); font-family: "Noto Sans JP", sans-serif; font-size: 12px; margin-left: 2px; }
+  .seg button {
+    appearance: none; border: 1px solid var(--ink); background: transparent;
+    padding: 8px 14px; border-radius: var(--r-sm);
+    font: inherit; font-weight: 700; font-size: 12.5px;
+    cursor: pointer;
+  }
+
+  /* ============================================ */
+  /*            TAB 3 : CUSTOMER (LINE)           */
+  /* ============================================ */
+  .liff-wrap {
+    display: grid; grid-template-columns: 360px 1fr; gap: 56px;
+    margin-top: 16px;
+    align-items: start;
+  }
+  @media (max-width: 920px) { .liff-wrap { grid-template-columns: 1fr; gap: 32px; } }
+
+  .phone {
+    width: 360px; max-width: 100%;
+    margin: 0 auto;
+    background: #1a1a18;
+    border-radius: 44px;
+    padding: 12px;
+    box-shadow: var(--shadow-2);
+    position: sticky; top: 88px;
+  }
+  @media (max-width: 920px) { .phone { position: static; } }
+  .phone-screen {
+    background: #f0eee8;
+    border-radius: 34px;
+    overflow: hidden;
+    height: 720px;
+    position: relative;
+    display: flex; flex-direction: column;
+  }
+  .phone-notch {
+    height: 22px; display: flex; justify-content: space-between; align-items: center;
+    padding: 0 22px;
+    font-size: 11px; color: var(--ink);
+    font-family: "Inter", sans-serif; font-weight: 700;
+    background: #fff;
+  }
+  .phone-status { display: flex; gap: 4px; align-items: center; font-size: 10px; }
+
+  .liff-head {
+    background: linear-gradient(160deg, var(--soil) 0%, #c66a4d 60%, #d68a5a 100%);
+    color: #fff;
+    padding: 24px 20px 56px;
+    position: relative;
+  }
+  .liff-head .shop {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; opacity: .9;
+  }
+  .liff-head .shop .logo {
+    width: 22px; height: 22px; border-radius: 6px;
+    background: rgba(255,255,255,.2);
+    display: grid; place-items: center;
+    font-weight: 900; font-size: 11px;
+  }
+  .liff-head h2 {
+    margin: 18px 0 4px;
+    font-size: 14px; font-weight: 500;
+    opacity: .9;
+  }
+  .liff-head .greet {
+    font-size: 22px; font-weight: 900; letter-spacing: -.02em;
+  }
+
+  .point-card {
+    margin: -36px 16px 0;
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 12px 24px -12px rgba(0,0,0,.2);
+    position: relative; z-index: 2;
+  }
+  .point-card .label { color: var(--ink-3); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+  .point-card .pts {
+    display: flex; align-items: baseline; gap: 4px;
+    margin-top: 4px;
+  }
+  .point-card .pts b {
+    font-family: "Inter", sans-serif; font-weight: 800;
+    font-size: 36px; letter-spacing: -.03em;
+    color: var(--ink);
+  }
+  .point-card .pts span { font-size: 13px; color: var(--ink-3); font-weight: 700; }
+  .point-card .prog {
+    margin-top: 12px;
+    height: 6px; background: var(--bg-2);
+    border-radius: 999px; overflow: hidden;
+  }
+  .point-card .prog i { display: block; height: 100%; width: 68%; background: var(--soil); border-radius: 999px; }
+  .point-card .prog-meta {
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: var(--ink-3); margin-top: 6px; font-weight: 700;
+  }
+  .point-card .prog-meta b { color: var(--ink); font-family: "Inter", sans-serif; }
+
+  .liff-menu {
+    margin: 16px 16px 0;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  .liff-menu a {
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px 4px;
+    text-align: center;
+    text-decoration: none;
+    color: var(--ink);
+    font-size: 11px; font-weight: 700;
+    display: grid; gap: 4px;
+    border: 1px solid #eae6da;
+  }
+  .liff-menu a .e { font-size: 20px; }
+
+  .liff-section {
+    flex: 1;
+    margin: 16px 16px 0;
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  .liff-section h3 {
+    margin: 0 0 10px;
+    font-size: 13px; font-weight: 900; letter-spacing: -.01em;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .liff-section h3 a { font-size: 11px; color: var(--leaf); text-decoration: none; font-weight: 700; }
+  .liff-list { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
+  .liff-list li {
+    padding: 9px 0; border-top: 1px dashed #ece8da;
+    display: grid; grid-template-columns: 36px 1fr auto; gap: 10px;
+    align-items: center;
+  }
+  .liff-list li:first-child { border-top: 0; padding-top: 0; }
+  .liff-list .e { font-size: 22px; }
+  .liff-list .nm { font-weight: 700; line-height: 1.4; }
+  .liff-list .nm small { display: block; color: var(--ink-3); font-weight: 500; font-size: 10.5px; margin-top: 1px; }
+  .liff-list .pt {
+    font-family: "Inter", sans-serif; font-weight: 700; font-size: 12px;
+    color: var(--soil);
+  }
+
+  .liff-foot {
+    background: rgba(255,255,255,.95);
+    border-top: 1px solid #eae6da;
+    padding: 10px 16px 16px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+    text-align: center;
+    font-size: 10px; color: var(--ink-3); font-weight: 700;
+  }
+  .liff-foot a { color: var(--ink-3); text-decoration: none; display: grid; gap: 2px; }
+  .liff-foot a.cur { color: var(--soil); }
+  .liff-foot .e { font-size: 18px; }
+
+  /* explanations on right side */
+  .liff-explain { display: grid; gap: 20px; }
+  .liff-explain h2 {
+    font-size: clamp(26px, 3.4vw, 34px);
+    font-weight: 900; letter-spacing: -.03em;
+    margin: 0 0 8px;
+  }
+  .liff-explain p.lead { color: var(--ink-2); line-height: 1.8; max-width: 36em; }
+
+  .feat-list { list-style: none; margin: 0; padding: 0; }
+  .feat-list li {
+    padding: 18px 0;
+    border-top: 1px solid var(--line);
+    display: grid; grid-template-columns: 36px 1fr; gap: 18px;
+    align-items: start;
+  }
+  .feat-list li:first-child { border-top: 0; }
+  .feat-list .n {
+    font-family: "Inter", sans-serif; font-weight: 800; font-size: 18px;
+    color: var(--soil); letter-spacing: -.01em;
+  }
+  .feat-list h4 { margin: 0 0 4px; font-size: 16px; font-weight: 900; letter-spacing: -.02em; }
+  .feat-list p { margin: 0; color: var(--ink-2); line-height: 1.7; font-size: 14px; }
+
+  /* footer */
+  footer.site {
+    border-top: 1px solid var(--line);
+    margin-top: 64px; padding: 24px;
+    text-align: center; font-size: 12px;
+    color: var(--ink-3);
+    background: var(--bg-2);
+  }
+  footer.site a { color: var(--ink); text-decoration: none; font-weight: 700; }
+
+  /* tiny utils */
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="nav">
+    <div class="brand">
+      <span class="brand-mark">N</span>
+      <div>
+        <div class="brand-name">雑貨と道具 のうと</div>
+        <div class="brand-sub">LINE 顧客台帳 + ポイント + 在庫</div>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="表示切替">
+      <button class="tab" role="tab" aria-selected="true"  aria-controls="panel-1" id="tab-1">提案書</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="panel-2" id="tab-2">スタッフ画面</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="panel-3" id="tab-3">お客のLINE</button>
+    </div>
+
+    <a class="nav-cta" href="#contact">スケルトン株式会社</a>
+  </div>
+</header>
+
+<main>
+
+<!-- ════════════════════════════════════════════ -->
+<!--                PANEL 1 : 提案書              -->
+<!-- ════════════════════════════════════════════ -->
+<section class="panel is-active" id="panel-1" role="tabpanel" aria-labelledby="tab-1">
+
+  <div class="hero">
+    <div>
+      <span class="kicker">店向けLINE 顧客台帳 + ポイント + ミニ在庫</span>
+      <h1>お得意さまの顔と買い物履歴を、<em>店全員で共有する</em>。その入口は、LINEの友だち登録ひとつ。</h1>
+      <p class="lead">公式LINEに登録した瞬間、お客さま一人ひとりのカルテが店側に生まれます。「いつ、誰が、何を買ったか」がそのまま積み重なり、ポイントカードも在庫も売上も、ひとつの画面でつながる。担当者しか知らない情報を、4人のスタッフ全員が同じ目線で見られる状態をつくります。</p>
+    </div>
+    <dl class="meta-card">
+      <dt>提案先</dt><dd>雑貨と道具 のうと さま</dd>
+      <dt>スタッフ規模</dt><dd>4名（オーナー含む）</dd>
+      <dt>初期構築期間</dt><dd class="num">4週間</dd>
+      <dt>初期費用 / 月額</dt><dd><span class="num">¥248,000</span> / <span class="num">¥9,800</span></dd>
+    </dl>
+  </div>
+
+  <div class="row-2">
+    <div class="card-soft tinted">
+      <h2><span class="num-prefix">01</span>いま起きていること</h2>
+      <ul class="pain-list">
+        <li><span>お得意さまの好みや家族構成を、店長ひとりしか把握できていない。本人が休みの日、他のスタッフが同じ会話を再現できない。</span></li>
+        <li><span>「あの方、前回これ買われたよね」を当てるのは記憶頼り。買い物履歴が紙にもデジタルにも残らない。</span></li>
+        <li><span>紙のポイントカードは、お客さまが財布に入れたまま忘れてくる。再発行の手間と、二重発行のトラブル。</span></li>
+        <li><span>新しい器が入荷した時、それを喜びそうな常連さまへ伝える手段がない。インスタは見ていない方も多い。</span></li>
+        <li><span>売れ筋・売れ残り・季節の山が、月末まで見えない。仕入れの判断が経験と勘に偏る。</span></li>
+      </ul>
+    </div>
+    <div class="card-soft">
+      <h2><span class="num-prefix">02</span>このツールが解くこと</h2>
+      <ul class="pain-list">
+        <li><span class="answer">お客さまカルテをスタッフ4人で共有。前回の会話、好みのジャンル、家族の好み、すべて見える。</span></li>
+        <li><span class="answer">レジで「LINE出してください」だけ。スマホ提示で本人特定→購入記録→ポイント加算→お礼LINEまで自動。</span></li>
+        <li><span class="answer">ポイントカードはLINEの中。なくさない、忘れない、財布が膨らまない。誕生月クーポンも自動で届く。</span></li>
+        <li><span class="answer">入荷した器を「織部・粉引が好きな8名さま」だけに案内、といったセグメント配信が、ボタンひとつ。</span></li>
+        <li><span class="answer">売上は商品別・お客別・時間帯別で自動集計。仕入れと棚づくりが、数字で語れるようになる。</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="features">
+    <div class="section-head">
+      <h2>機能ロードマップ</h2>
+      <div class="lede">いきなり全部は使いこなせません。<br>店の運用に馴染ませながら、3段階で広げていきます。</div>
+    </div>
+    <div class="phase-grid">
+
+      <div class="phase is-now">
+        <span class="badge">PHASE 1 / 1ヶ月目</span>
+        <h3>顧客カルテと、ポイント、お礼LINE</h3>
+        <div class="when">初期構築期間 4週間で納品</div>
+        <ul>
+          <li>公式LINE友だち追加 → 自動カルテ発行</li>
+          <li>スタッフ用Webアプリ（スマホ/PC両対応）</li>
+          <li>顧客検索・カルテ閲覧・接客メモ共有</li>
+          <li>レジで購入記録 → ポイント自動加算</li>
+          <li>「ありがとう」自動配信＋ポイント残高</li>
+          <li>誕生月クーポン自動配信</li>
+        </ul>
+      </div>
+
+      <div class="phase">
+        <span class="badge">PHASE 2 / 2〜3ヶ月目</span>
+        <h3>在庫と、売上ダッシュボード</h3>
+        <div class="when">運用が安定してから追加</div>
+        <ul>
+          <li>商品マスタ（写真・カテゴリ・原価）</li>
+          <li>入荷／棚出しで在庫を増減</li>
+          <li>購入記録と連動して自動在庫減</li>
+          <li>日次・週次・商品別の売上集計</li>
+          <li>客別の累計購入額と来店頻度</li>
+          <li>在庫切れアラート（LINE通知）</li>
+        </ul>
+      </div>
+
+      <div class="phase">
+        <span class="badge">PHASE 3 / 4ヶ月目〜</span>
+        <h3>マーケティングと、再来店</h3>
+        <div class="when">蓄積された顧客データを使い始める</div>
+        <ul>
+          <li>VIP（累計・頻度上位）の自動抽出</li>
+          <li>「織部好き」「贈答多め」等のタグ配信</li>
+          <li>3ヶ月来店なし → 掘り起こしLINE自動</li>
+          <li>新着入荷を相性のいい客にレコメンド</li>
+          <li>季節催事の事前案内（先行内覧会）</li>
+          <li>家族の誕生日・記念日にお声がけ</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pricing">
+    <div>
+      <h2>費用と、含まれるもの</h2>
+      <p class="lede">初期構築は4週間で納品。LINE公式アカウントの設定代行、スタッフ全員の使い方研修、初期顧客データの取り込みまで含みます。月額にサーバー費用も含むので、追加請求はありません。</p>
+    </div>
+    <div class="price-stack">
+      <div class="price-row">
+        <div class="label">初期構築（一括）<small>設計・実装・LINE設定・データ取込・研修</small></div>
+        <div class="val">¥248,000<small>税別</small></div>
+      </div>
+      <div class="price-row">
+        <div class="label">月額利用料<small>サーバー・LINE配信・保守込み</small></div>
+        <div class="val">¥9,800<small>/月 税別</small></div>
+      </div>
+      <div class="price-row">
+        <div class="label">Phase 2 / 在庫機能追加<small>運用安定後の追加実装</small></div>
+        <div class="val">¥98,000<small>税別</small></div>
+      </div>
+      <div class="price-row">
+        <div class="label">Phase 3 / マーケ機能追加<small>顧客データ活用の段階で実装</small></div>
+        <div class="val">¥128,000<small>税別</small></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="next" id="contact">
+    <div>
+      <h2>次のひと手間で、決まります</h2>
+      <p>このデモ画面をそのまま操作いただけます。スタッフ画面・お客さまのLINE画面、両方の使い心地を見てから判断ください。気になる点は、その場で調整します。</p>
+    </div>
+    <a class="btn-primary" href="#" onclick="event.preventDefault(); switchTab(1);">スタッフ画面を見る →</a>
+  </div>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════ -->
+<!--          PANEL 2 : スタッフ画面 (admin)       -->
+<!-- ════════════════════════════════════════════ -->
+<section class="panel" id="panel-2" role="tabpanel" aria-labelledby="tab-2">
+
+  <div class="staff-shell">
+    <div class="staff-bar">
+      <span class="dot r"></span><span class="dot"></span><span class="dot g"></span>
+      <span class="url">https://nouto.app/staff</span>
+      <span class="who">スタッフ：森下さん</span>
+    </div>
+
+    <div class="staff-grid">
+      <aside class="staff-side">
+        <div class="shop">
+          <div class="name">雑貨と道具 のうと</div>
+          <div class="role">本日 4名出勤中</div>
+        </div>
+        <nav class="staff-nav" id="staffNav">
+          <button data-view="dash"  aria-current="page">今日の店<span class="count">3</span></button>
+          <button data-view="cust">お客さま<span class="count">428</span></button>
+          <button data-view="karte">カルテ（瀬戸さま）</button>
+          <button data-view="inv">在庫<span class="count">12</span></button>
+          <button data-view="mkt">配信・施策</button>
+        </nav>
+      </aside>
+
+      <div class="staff-main">
+
+        <!-- VIEW: DASHBOARD -->
+        <div class="staff-view is-active" data-view="dash">
+          <div class="staff-head">
+            <div>
+              <h2>今日の店</h2>
+              <div class="sub">2026年6月30日（火）— 営業中 11:00〜19:00</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <span class="chip on">今日</span>
+              <span class="chip">今週</span>
+              <span class="chip">今月</span>
+            </div>
+          </div>
+
+          <div class="kpi-row">
+            <div class="kpi">
+              <div class="label">本日の売上</div>
+              <div class="v">¥48,600</div>
+              <div class="delta">前週火曜比 +24%</div>
+            </div>
+            <div class="kpi">
+              <div class="label">来店客数</div>
+              <div class="v">14<small>名</small></div>
+              <div class="delta">うち常連 8名</div>
+            </div>
+            <div class="kpi">
+              <div class="label">新規LINE登録</div>
+              <div class="v">3<small>名</small></div>
+              <div class="delta">今月累計 22名</div>
+            </div>
+            <div class="kpi">
+              <div class="label">客単価</div>
+              <div class="v">¥3,471</div>
+              <div class="delta dn">前週比 −¥420</div>
+            </div>
+          </div>
+
+          <div class="chart">
+            <h3>直近2週間の日次売上</h3>
+            <div class="bars" aria-label="日次売上棒グラフ">
+              <b style="height:32%"></b><b style="height:48%"></b><b style="height:24%"></b>
+              <b style="height:64%"></b><b style="height:42%"></b><b style="height:78%"></b>
+              <b style="height:58%"></b><b style="height:36%"></b><b style="height:52%"></b>
+              <b style="height:28%"></b><b style="height:68%"></b><b style="height:46%"></b>
+              <b style="height:84%"></b><b class="today" style="height:62%"></b>
+            </div>
+          </div>
+
+          <div class="block">
+            <h4>今日のお声がけ候補 <a href="#">すべて表示 →</a></h4>
+            <ul class="timeline">
+              <li>
+                <span class="date">前回 03/14</span>
+                <span class="item">瀬戸 美佳さま<small>誕生日が来週 / 織部・粉引お好み / 累計 ¥62,400</small></span>
+                <span class="price">VIP</span>
+              </li>
+              <li>
+                <span class="date">前回 04/02</span>
+                <span class="item">藤田 さおりさま<small>3ヶ月ご無沙汰 / お子さま入学グッズで来店 / 累計 ¥38,200</small></span>
+                <span class="price">休眠</span>
+              </li>
+              <li>
+                <span class="date">前回 06/15</span>
+                <span class="item">岡崎 拓郎さま<small>萩焼の取り寄せ問い合わせ中 / 入荷連絡待ち</small></span>
+                <span class="price">要連絡</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- VIEW: CUSTOMER LIST -->
+        <div class="staff-view" data-view="cust">
+          <div class="staff-head">
+            <div>
+              <h2>お客さま</h2>
+              <div class="sub">登録428名 / 今月来店 84名 / VIP 36名</div>
+            </div>
+          </div>
+          <div class="search-bar">
+            <input type="text" placeholder="お名前・LINE表示名・電話・タグで検索" value="">
+            <button>検索</button>
+          </div>
+          <div class="filters">
+            <span class="chip on">すべて</span>
+            <span class="chip">VIP</span>
+            <span class="chip">常連</span>
+            <span class="chip">新規（今月）</span>
+            <span class="chip">休眠（3ヶ月+）</span>
+            <span class="chip">誕生月</span>
+          </div>
+          <div class="customers">
+
+            <div class="customer-row" onclick="showView('karte')">
+              <div class="avatar">瀬</div>
+              <div>
+                <div class="name">瀬戸 美佳<small>@mika.s · 福井市 · 40代</small></div>
+                <div style="margin-top:6px; display:flex; gap:4px;"><span class="tag vip">VIP</span><span class="tag">織部好み</span><span class="tag">贈答多め</span></div>
+              </div>
+              <div class="cell hide-sm">
+                <div class="cell-label">累計購入</div>
+                <div class="cell-val">¥62,400</div>
+              </div>
+              <div class="cell hide-sm">
+                <div class="cell-label">来店回数</div>
+                <div class="cell-val">14<small>回</small></div>
+              </div>
+              <div class="cell hide-sm">
+                <div class="cell-label">前回ご来店</div>
+                <div class="cell-val">3/14</div>
+              </div>
+              <div class="cell-val" style="font-family:Inter; color:var(--soil);">→</div>
+            </div>
+
+            <div class="customer-row">
+              <div class="avatar s2">藤</div>
+              <div>
+                <div class="name">藤田 さおり<small>@saori.fujita · 鯖江市 · 30代</small></div>
+                <div style="margin-top:6px; display:flex; gap:4px;"><span class="tag sleep">休眠</span><span class="tag">子ども用品</span></div>
+              </div>
+              <div class="cell hide-sm"><div class="cell-label">累計購入</div><div class="cell-val">¥38,200</div></div>
+              <div class="cell hide-sm"><div class="cell-label">来店回数</div><div class="cell-val">9<small>回</small></div></div>
+              <div class="cell hide-sm"><div class="cell-label">前回ご来店</div><div class="cell-val">4/02</div></div>
+              <div class="cell-val" style="font-family:Inter; color:var(--ink-3);">→</div>
+            </div>
+
+            <div class="customer-row">
+              <div class="avatar s3">岡</div>
+              <div>
+                <div class="name">岡崎 拓郎<small>@taku.okazaki · 福井市 · 50代</small></div>
+                <div style="margin-top:6px; display:flex; gap:4px;"><span class="tag regul">常連</span><span class="tag">萩焼</span><span class="tag">取り寄せ</span></div>
+              </div>
+              <div class="cell hide-sm"><div class="cell-label">累計購入</div><div class="cell-val">¥48,900</div></div>
+              <div class="cell hide-sm"><div class="cell-label">来店回数</div><div class="cell-val">11<small>回</small></div></div>
+              <div class="cell hide-sm"><div class="cell-label">前回ご来店</div><div class="cell-val">6/15</div></div>
+              <div class="cell-val" style="font-family:Inter; color:var(--ink-3);">→</div>
+            </div>
+
+            <div class="customer-row">
+              <div class="avatar s4">古</div>
+              <div>
+                <div class="name">古川 真理子<small>@mari.f · 大野市 · 60代</small></div>
+                <div style="margin-top:6px; display:flex; gap:4px;"><span class="tag regul">常連</span><span class="tag">茶道具</span></div>
+              </div>
+              <div class="cell hide-sm"><div class="cell-label">累計購入</div><div class="cell-val">¥84,600</div></div>
+              <div class="cell hide-sm"><div class="cell-label">来店回数</div><div class="cell-val">18<small>回</small></div></div>
+              <div class="cell hide-sm"><div class="cell-label">前回ご来店</div><div class="cell-val">6/22</div></div>
+              <div class="cell-val" style="font-family:Inter; color:var(--ink-3);">→</div>
+            </div>
+
+            <div class="customer-row">
+              <div class="avatar s5">中</div>
+              <div>
+                <div class="name">中村 大輔<small>@d.nakamura · 福井市 · 30代</small></div>
+                <div style="margin-top:6px; display:flex; gap:4px;"><span class="tag new">新規</span><span class="tag">贈答</span></div>
+              </div>
+              <div class="cell hide-sm"><div class="cell-label">累計購入</div><div class="cell-val">¥6,800</div></div>
+              <div class="cell hide-sm"><div class="cell-label">来店回数</div><div class="cell-val">1<small>回</small></div></div>
+              <div class="cell hide-sm"><div class="cell-label">前回ご来店</div><div class="cell-val">6/28</div></div>
+              <div class="cell-val" style="font-family:Inter; color:var(--ink-3);">→</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- VIEW: KARTE -->
+        <div class="staff-view" data-view="karte">
+          <div class="staff-head">
+            <div>
+              <h2>瀬戸 美佳さま</h2>
+              <div class="sub"><a href="#" onclick="event.preventDefault(); showView('cust');" style="color:var(--leaf); text-decoration:none; font-weight:700;">← お客さま一覧に戻る</a></div>
+            </div>
+          </div>
+
+          <div class="karte">
+            <div class="karte-left">
+              <div class="karte-avatar">瀬</div>
+              <h3>瀬戸 美佳</h3>
+              <div class="meta">@mika.s ・ 福井市 ・ 40代<br>誕生日 7/8（来週）</div>
+              <div class="karte-tags">
+                <span class="tag vip">VIP</span>
+                <span class="tag">織部好み</span>
+                <span class="tag">粉引好み</span>
+                <span class="tag">贈答多め</span>
+              </div>
+              <div class="karte-stats">
+                <div><div class="l">累計購入</div><div class="v">¥62,400</div></div>
+                <div><div class="l">来店回数</div><div class="v">14<small>回</small></div></div>
+                <div><div class="l">保有ポイント</div><div class="v">624<small>P</small></div></div>
+                <div><div class="l">最終来店</div><div class="v">3/14</div></div>
+              </div>
+              <div class="note">
+                <div class="who">店長メモ（4/12 更新）</div>
+                ご長女が来年大学進学。一人暮らしのお祝いに、土鍋とご飯茶碗を探されていた。萩焼の入荷時に必ずお声がけする約束。
+              </div>
+            </div>
+
+            <div class="karte-right">
+              <div class="block">
+                <h4>今日の購入を記録</h4>
+                <div class="quick-form">
+                  <div>
+                    <label>商品</label>
+                    <input type="text" value="織部 取り皿 5寸（青木 善之介）">
+                  </div>
+                  <div>
+                    <label>個数</label>
+                    <input type="text" value="2">
+                  </div>
+                  <div>
+                    <label>単価</label>
+                    <input type="text" value="¥3,800">
+                  </div>
+                  <button>記録 → 自動LINE</button>
+                </div>
+              </div>
+
+              <div class="block">
+                <h4>購入履歴 <a href="#">全件 →</a></h4>
+                <ul class="timeline">
+                  <li>
+                    <span class="date">2026/03/14</span>
+                    <span class="item">粉引 飯碗（中村 友也）<small>2客 / 母の日のご贈答 / 包装あり</small></span>
+                    <span class="price">¥7,200</span>
+                  </li>
+                  <li>
+                    <span class="date">2026/01/22</span>
+                    <span class="item">古道具 木の盆<small>1点 / お正月用にとお持ち帰り</small></span>
+                    <span class="price">¥4,800</span>
+                  </li>
+                  <li>
+                    <span class="date">2025/12/06</span>
+                    <span class="item">織部 ぐい呑み 5客組<small>ご主人へのお歳暮 / 桐箱対応</small></span>
+                    <span class="price">¥12,600</span>
+                  </li>
+                  <li>
+                    <span class="date">2025/10/18</span>
+                    <span class="item">麻布 紺<small>2枚 / 食卓敷きとして</small></span>
+                    <span class="price">¥3,400</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="block">
+                <h4>LINEでのやりとり <a href="#">全件 →</a></h4>
+                <ul class="timeline">
+                  <li>
+                    <span class="date">06/29</span>
+                    <span class="item">送信：誕生月クーポン10%OFF<small>自動配信 / 開封済 / 未利用</small></span>
+                    <span class="price" style="color:var(--ink-3);">自動</span>
+                  </li>
+                  <li>
+                    <span class="date">04/15</span>
+                    <span class="item">受信：「次の入荷はいつごろですか？」<small>森下さんが翌日に返信済</small></span>
+                    <span class="price" style="color:var(--leaf);">対応済</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW: INVENTORY -->
+        <div class="staff-view" data-view="inv">
+          <div class="staff-head">
+            <div>
+              <h2>在庫</h2>
+              <div class="sub">登録162点 / 在庫切れ間近 12点</div>
+            </div>
+            <button class="chip on" style="font-size:13px; padding:8px 14px;">+ 入荷を記録</button>
+          </div>
+          <div class="filters">
+            <span class="chip on">すべて</span>
+            <span class="chip">器</span>
+            <span class="chip">道具</span>
+            <span class="chip">布</span>
+            <span class="chip">古道具</span>
+            <span class="chip">在庫少</span>
+          </div>
+          <div class="inv-grid">
+            <div class="item">
+              <div class="ico">🍵</div>
+              <div>
+                <div class="nm">織部 取り皿 5寸<small>青木 善之介 / ¥3,800</small></div>
+                <div class="stock-bar"><i style="width:78%"></i></div>
+                <div class="stock-meta"><span>在庫</span><b>14 / 18点</b></div>
+              </div>
+            </div>
+            <div class="item">
+              <div class="ico">🥢</div>
+              <div>
+                <div class="nm">栗の木 箸 25cm<small>福井木工舎 / ¥1,200</small></div>
+                <div class="stock-bar"><i style="width:42%"></i></div>
+                <div class="stock-meta"><span>在庫</span><b>21 / 50膳</b></div>
+              </div>
+            </div>
+            <div class="item">
+              <div class="ico">🪴</div>
+              <div>
+                <div class="nm">粉引 飯碗<small>中村 友也 / ¥3,600</small></div>
+                <div class="stock-bar mid"><i style="width:22%"></i></div>
+                <div class="stock-meta"><span>在庫</span><b>3 / 14点</b></div>
+              </div>
+            </div>
+            <div class="item">
+              <div class="ico">🍶</div>
+              <div>
+                <div class="nm">織部 ぐい呑み<small>青木 善之介 / ¥2,500</small></div>
+                <div class="stock-bar low"><i style="width:8%"></i></div>
+                <div class="stock-meta"><span>残り</span><b>1点 / 要発注</b></div>
+              </div>
+            </div>
+            <div class="item">
+              <div class="ico">🧵</div>
+              <div>
+                <div class="nm">麻布 紺 1m<small>越前 / ¥1,700</small></div>
+                <div class="stock-bar"><i style="width:65%"></i></div>
+                <div class="stock-meta"><span>在庫</span><b>13 / 20m</b></div>
+              </div>
+            </div>
+            <div class="item">
+              <div class="ico">🪵</div>
+              <div>
+                <div class="nm">古道具 木の盆<small>骨董 / ¥4,800</small></div>
+                <div class="stock-bar low"><i style="width:12%"></i></div>
+                <div class="stock-meta"><span>残り</span><b>2点</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW: MARKETING -->
+        <div class="staff-view" data-view="mkt">
+          <div class="staff-head">
+            <div>
+              <h2>配信・施策</h2>
+              <div class="sub">セグメントを選んで、ボタンひとつでLINE一斉送信</div>
+            </div>
+          </div>
+
+          <div class="block">
+            <h4>定期実行中の自動配信</h4>
+            <ul class="timeline">
+              <li>
+                <span class="date">毎日 朝9時</span>
+                <span class="item">誕生月のお客さま<small>10%OFFクーポン自動送付 / 今月22名対象</small></span>
+                <span class="price" style="color:var(--leaf);">ON</span>
+              </li>
+              <li>
+                <span class="date">毎週 月曜</span>
+                <span class="item">3ヶ月ご無沙汰のお客さま<small>「お元気ですか」掘り起こしメッセージ / 今週14名対象</small></span>
+                <span class="price" style="color:var(--leaf);">ON</span>
+              </li>
+              <li>
+                <span class="date">購入直後</span>
+                <span class="item">お礼メッセージ＋ポイント残高<small>自動配信</small></span>
+                <span class="price" style="color:var(--leaf);">ON</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="staff-head" style="margin-top:24px;">
+            <h2 style="font-size:18px;">手動セグメント配信</h2>
+          </div>
+          <div class="seg-grid">
+            <div class="seg">
+              <div class="nm">織部・粉引が好きな常連さま</div>
+              <div class="desc">過去に和食器を購入＋累計1万円以上のお客さま。新入荷の案内に。</div>
+              <div class="row">
+                <div class="cnt">38<small>名</small></div>
+                <button>下書きを書く →</button>
+              </div>
+            </div>
+            <div class="seg">
+              <div class="nm">贈答利用の多いお客さま</div>
+              <div class="desc">過去に包装ありで購入したお客さま。お中元・お歳暮の先行案内に。</div>
+              <div class="row">
+                <div class="cnt">64<small>名</small></div>
+                <button>下書きを書く →</button>
+              </div>
+            </div>
+            <div class="seg">
+              <div class="nm">茶道具に反応するお客さま</div>
+              <div class="desc">茶碗・茶筅・棗のいずれかをご購入・閲覧したお客さま。</div>
+              <div class="row">
+                <div class="cnt">22<small>名</small></div>
+                <button>下書きを書く →</button>
+              </div>
+            </div>
+            <div class="seg">
+              <div class="nm">休眠から戻った新規ファン</div>
+              <div class="desc">6ヶ月ぶりに戻られたお客さま。「おかえりなさい」の一言を。</div>
+              <div class="row">
+                <div class="cnt">9<small>名</small></div>
+                <button>下書きを書く →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════ -->
+<!--       PANEL 3 : お客のLINE画面 (LIFF)         -->
+<!-- ════════════════════════════════════════════ -->
+<section class="panel" id="panel-3" role="tabpanel" aria-labelledby="tab-3">
+
+  <div class="liff-wrap">
+
+    <div class="phone" aria-label="お客さまのLINE画面プレビュー">
+      <div class="phone-screen">
+        <div class="phone-notch">
+          <span>9:41</span>
+          <div class="phone-status"><span>●●●●</span><span>5G</span><span>96%</span></div>
+        </div>
+
+        <div class="liff-head">
+          <div class="shop">
+            <span class="logo">N</span>
+            <span>雑貨と道具 のうと</span>
+          </div>
+          <h2>こんにちは</h2>
+          <div class="greet">瀬戸 美佳 さま</div>
+        </div>
+
+        <div class="point-card">
+          <div class="label">あなたのポイント</div>
+          <div class="pts"><b>624</b><span>P</span></div>
+          <div class="prog"><i></i></div>
+          <div class="prog-meta"><span>次の特典まで</span><b>あと 176P</b></div>
+        </div>
+
+        <div class="liff-menu">
+          <a href="#"><span class="e">🛍</span>購入履歴</a>
+          <a href="#"><span class="e">🎁</span>クーポン<br><small style="color:var(--soil); font-weight:800;">1枚</small></a>
+          <a href="#"><span class="e">🪴</span>お気に入り</a>
+          <a href="#"><span class="e">📅</span>取り置き</a>
+        </div>
+
+        <div class="liff-section">
+          <h3>あなたへのお知らせ <a href="#">すべて</a></h3>
+          <ul class="liff-list">
+            <li>
+              <span class="e">🎂</span>
+              <span class="nm">7月のお誕生日おめでとうございます<small>店内10%OFFクーポン進呈中 ・ 期限 7/31</small></span>
+              <span class="pt">−10%</span>
+            </li>
+            <li>
+              <span class="e">🍶</span>
+              <span class="nm">青木善之介さんの織部 新作入荷<small>取り皿・ぐい呑み・小鉢の3型</small></span>
+              <span class="pt" style="color:var(--leaf);">NEW</span>
+            </li>
+            <li>
+              <span class="e">📦</span>
+              <span class="nm">取り置き中の萩焼が入荷します<small>来週金曜の入荷便で到着予定</small></span>
+              <span class="pt" style="color:var(--leaf);">予約</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="liff-foot">
+          <a href="#" class="cur"><span class="e">🏠</span>ホーム</a>
+          <a href="#"><span class="e">📖</span>履歴</a>
+          <a href="#"><span class="e">🎁</span>特典</a>
+          <a href="#"><span class="e">💬</span>お店へ</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="liff-explain">
+      <span class="kicker">お客さまから見える世界</span>
+      <h2>財布が膨らまない、忘れない、<br>あなただけのポイントカード。</h2>
+      <p class="lead">公式LINEを友だち追加した瞬間から、お客さま専用のページがLINEの中に立ち上がります。ポイントの残高も、購入の履歴も、贈り物のメモも、ぜんぶこの一画面に。次に欲しいものをこちらが先回りで届けるので、お客さまは「思い出した時に開く」だけ。</p>
+
+      <ol class="feat-list">
+        <li>
+          <span class="n">01</span>
+          <div>
+            <h4>ポイントは、LINEの中で増える</h4>
+            <p>レジでお名前を伝えるだけ。スタッフが入力した瞬間、お礼のメッセージとともにポイント残高が更新されます。物理カード不要、財布が膨らみません。</p>
+          </div>
+        </li>
+        <li>
+          <span class="n">02</span>
+          <div>
+            <h4>「前に買ったあれ」がすぐ分かる</h4>
+            <p>購入履歴は写真付きでLINEの中に。来客で同じ器を揃えたい時、贈答の重複を避けたい時、開けばすぐに思い出せます。</p>
+          </div>
+        </li>
+        <li>
+          <span class="n">03</span>
+          <div>
+            <h4>誕生月のクーポンは自動で届く</h4>
+            <p>お客さまから何もしなくても、誕生月の初日にお祝いのメッセージとクーポンが届きます。スタッフが忘れる心配はありません。</p>
+          </div>
+        </li>
+        <li>
+          <span class="n">04</span>
+          <div>
+            <h4>好きなジャンルの新着だけ届く</h4>
+            <p>織部が好きな方に粉引の案内、子どもグッズに興味のない方に入学シーズンの案内、を送らない。配信は「あなたの好み」に絞ります。LINEブロック率が圧倒的に下がります。</p>
+          </div>
+        </li>
+        <li>
+          <span class="n">05</span>
+          <div>
+            <h4>取り置き、入荷待ち、その場で頼める</h4>
+            <p>店頭で見つけた一点を「家族に相談してから」。取り置きボタンひとつで3日間キープ、スタッフ画面に即通知が届きます。</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+  </div>
+
+</section>
+
+</main>
+
+<footer class="site">
+  本提案は スケルトン株式会社（福井県福井市）が作成しました。 ・ <a href="mailto:t3.5ty6@gmail.com">t3.5ty6@gmail.com</a><br>
+  デモ画面上のお客さま情報・店舗情報はすべて架空のサンプルです。
+</footer>
+
+<script>
+  // tab switching
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.panel');
+  function switchTab(idx) {
+    tabs.forEach((t,i)=>{
+      t.setAttribute('aria-selected', i===idx ? 'true' : 'false');
+    });
+    panels.forEach((p,i)=>{
+      p.classList.toggle('is-active', i===idx);
+    });
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  tabs.forEach((t,i)=>{
+    t.addEventListener('click', ()=>switchTab(i));
+    t.addEventListener('keydown', (e)=>{
+      if (e.key === 'ArrowRight') { switchTab((i+1)%tabs.length); tabs[(i+1)%tabs.length].focus(); }
+      if (e.key === 'ArrowLeft')  { switchTab((i-1+tabs.length)%tabs.length); tabs[(i-1+tabs.length)%tabs.length].focus(); }
+    });
+  });
+
+  // staff inner nav
+  const navBtns = document.querySelectorAll('#staffNav button');
+  const views = document.querySelectorAll('.staff-view');
+  function showView(name) {
+    navBtns.forEach(b => b.toggleAttribute('aria-current', b.dataset.view === name));
+    navBtns.forEach(b => { if (b.dataset.view === name) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+    views.forEach(v => v.classList.toggle('is-active', v.dataset.view === name));
+  }
+  navBtns.forEach(b => b.addEventListener('click', ()=>showView(b.dataset.view)));
+</script>
+</body>
+</html>
