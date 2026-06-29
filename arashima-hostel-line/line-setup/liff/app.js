@@ -1,31 +1,29 @@
 /**
  * LIFF 予約フォーム (荒島ホテル)
- * - liff.init で LINE userId を取得
- * - Firestore で rooms / 既存予約履歴を読み取り
- * - 予約確定で reservations に書き込み
- * - webhook (firestore onCreate trigger) が確認 push を送信
+ * - liff.init で LINE userId を取得 (LINE 内ブラウザ)
+ * - LINE外ブラウザでは demoUserId で動作 (テスト用)
+ * - Firestore は public read + open write (lineUserId 紐付けで集計)
  */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, query, where, orderBy, limit, serverTimestamp, initializeFirestore } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { getAuth, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import {
+  initializeFirestore, collection, doc, getDoc, getDocs, setDoc,
+  query, where, orderBy, limit, serverTimestamp,
+} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const ENV = window.__ENV;
 
-const firebaseConfig = {
+const app = initializeApp({
   apiKey: ENV.FIREBASE_API_KEY,
   authDomain: ENV.FIREBASE_AUTH_DOMAIN,
   projectId: ENV.FIREBASE_PROJECT_ID,
-};
-const app = initializeApp(firebaseConfig);
-// experimentalAutoDetectLongPolling 必須 (Chrome 拡張 / NW で WebChannel ブロック対策)
+});
 const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
-const auth = getAuth(app);
 
 const state = {
-  liffReady: false,
   lineUserId: null,
   displayName: null,
+  inLineBrowser: false,
   rooms: [],
   buildings: [],
   history: [],
@@ -45,22 +43,41 @@ const body = document.getElementById('body');
 
 (async function boot() {
   try {
-    await liff.init({ liffId: ENV.LIFF_ID });
-    if (!liff.isLoggedIn()) {
-      liff.login();
-      return;
+    // LIFF 初期化を試みる (外ブラウザの場合は失敗するが続行)
+    try {
+      await liff.init({ liffId: ENV.LIFF_ID });
+      state.inLineBrowser = liff.isInClient();
+      if (liff.isLoggedIn()) {
+        try {
+          const profile = await liff.getProfile();
+          state.lineUserId = profile.userId;
+          state.displayName = profile.displayName;
+        } catch (e) {
+          console.warn('getProfile failed', e);
+        }
+      } else if (state.inLineBrowser) {
+        // LINE 内ブラウザでログインしてなければ login
+        liff.login();
+        return;
+      }
+    } catch (e) {
+      console.warn('liff.init failed (probably outside LINE):', e);
     }
-    const profile = await liff.getProfile();
-    state.lineUserId = profile.userId;
-    state.displayName = profile.displayName;
 
-    // Firebase Auth (LIFF token を Cloud Function で交換する想定)
-    await authenticateWithLiff();
+    // フォールバック: 外ブラウザや profile 取得失敗時はデモユーザーで進める
+    if (!state.lineUserId) {
+      let demoId = localStorage.getItem('arashima.demoUserId');
+      if (!demoId) {
+        demoId = 'demo-' + Math.random().toString(36).slice(2, 11);
+        localStorage.setItem('arashima.demoUserId', demoId);
+      }
+      state.lineUserId = demoId;
+      state.displayName = 'ゲスト';
+    }
 
     await loadMasterData();
     await loadHistory();
 
-    // 初期画面
     if (state.history.length > 0) {
       renderWelcomeBack();
     } else {
@@ -68,37 +85,34 @@ const body = document.getElementById('body');
     }
   } catch (err) {
     console.error(err);
-    body.innerHTML = `<div class="error">読み込みに失敗しました: ${err.message}<br>もう一度お試しください。</div>`;
+    body.innerHTML = `<div class="error">読み込みに失敗しました。<br><small>${err.message}</small><br><br><button class="cta" onclick="location.reload()">再読み込み</button></div>`;
   }
 })();
 
-async function authenticateWithLiff() {
-  // LIFF access token を Cloud Function に投げて Firebase custom token を受け取る
-  const idToken = liff.getAccessToken();
-  const res = await fetch(`/api/liff-auth?token=${idToken}`);
-  const { customToken } = await res.json();
-  if (customToken) {
-    await signInWithCustomToken(auth, customToken);
-  }
-}
-
 async function loadMasterData() {
-  const snap = await getDocs(collection(db, 'rooms'));
-  state.rooms = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => r.active !== false);
-  const bldgSnap = await getDocs(collection(db, 'buildings'));
-  state.buildings = bldgSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const [bSnap, rSnap] = await Promise.all([
+    getDocs(collection(db, 'buildings')),
+    getDocs(collection(db, 'rooms')),
+  ]);
+  state.buildings = bSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  state.rooms = rSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => r.active !== false);
 }
 
 async function loadHistory() {
   if (!state.lineUserId) return;
-  const q = query(
-    collection(db, 'reservations'),
-    where('lineUserId', '==', state.lineUserId),
-    orderBy('createdAt', 'desc'),
-    limit(5)
-  );
-  const snap = await getDocs(q);
-  state.history = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  try {
+    const q = query(
+      collection(db, 'reservations'),
+      where('lineUserId', '==', state.lineUserId),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+    const snap = await getDocs(q);
+    state.history = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    console.warn('history load failed (likely no index yet)', e);
+    state.history = [];
+  }
 }
 
 function defaultCheckin() {
@@ -143,7 +157,7 @@ function renderWelcomeBack() {
 function renderSelectHouse() {
   const opts = state.buildings.map((b) => {
     const rooms = state.rooms.filter((r) => r.buildingId === b.id);
-    const min = Math.min(...rooms.map((r) => r.price));
+    const min = rooms.length ? Math.min(...rooms.map((r) => r.price)) : 0;
     return `
       <button type="button" data-bldg="${b.id}">
         <span class="opt-name">${b.name}</span>
@@ -302,16 +316,15 @@ async function confirmReservation() {
       note: state.draft.note,
       totalPrice: total,
       status: 'pending',
-      source: 'liff',
+      source: state.inLineBrowser ? 'liff' : 'web',
       remindedPre: false,
       remindedArrival: false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
 
-    // guests upsert (Cloud Function trigger 側でも行うが、即時の repeater 判定のため)
     await setDoc(doc(db, 'guests', state.lineUserId), {
-      displayName: state.displayName,
+      displayName: state.displayName || '',
       realName: state.draft.name,
       tel: state.draft.tel,
       lastResNo: resNo,
@@ -323,7 +336,7 @@ async function confirmReservation() {
     console.error(err);
     cta.disabled = false;
     cta.textContent = '予約を確定する';
-    alert('予約の送信に失敗しました。しばらくおいてもう一度お試しください。');
+    alert('予約の送信に失敗しました: ' + err.message);
   }
 }
 
@@ -333,21 +346,22 @@ function renderDone(resNo) {
       <div class="stamp">承<br>諾</div>
       <h2>たしかに承りました</h2>
       <div class="done-no">予約番号 ${resNo}</div>
-      <p>${state.draft.name} 様、ありがとうございます。<br>担当者から 24 時間以内に LINE のトークでご連絡いたします。</p>
+      <p>${state.draft.name} 様、ありがとうございます。<br>担当者から 24 時間以内に ${state.inLineBrowser ? 'LINE のトーク' : 'お電話'} でご連絡いたします。</p>
       <p style="font-size:11px;">前日にチェックイン時刻と道順、当日朝に鍵の場所をお送りします。</p>
-      <button class="cta" id="close">閉じる</button>
+      <button class="cta" id="close">${state.inLineBrowser ? 'LINE に戻る' : '閉じる'}</button>
     </div>
   `;
-  document.getElementById('close').addEventListener('click', () => liff.closeWindow());
+  document.getElementById('close').addEventListener('click', () => {
+    if (state.inLineBrowser && typeof liff !== 'undefined') liff.closeWindow();
+    else location.reload();
+  });
 }
 
-// 戻る・閉じる
 document.getElementById('btnBack').addEventListener('click', () => {
-  // 1段戻る (現状は閉じる)
-  if (liff.isInClient()) liff.closeWindow();
+  if (state.inLineBrowser && typeof liff !== 'undefined') liff.closeWindow();
   else history.back();
 });
 document.getElementById('btnClose').addEventListener('click', () => {
-  if (liff.isInClient()) liff.closeWindow();
+  if (state.inLineBrowser && typeof liff !== 'undefined') liff.closeWindow();
   else window.close();
 });

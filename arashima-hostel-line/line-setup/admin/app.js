@@ -1,27 +1,29 @@
 /**
  * 運営管理画面 (荒島ホテル)
- * - Google ログイン (admin custom claim 必須)
+ * - 簡易 ID/PW 認証 (デモ運用)
  * - 予約一覧 / 今日 / 今後 / 全予約 / ゲスト / ログ
- * - 予約詳細モーダル + 状態変更 + LINE メッセージ送信
+ * - 予約詳細モーダル + 状態変更
  */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {
   initializeFirestore, collection, doc, getDoc, getDocs, updateDoc,
-  query, where, orderBy, limit, serverTimestamp
+  query, where, orderBy, limit, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import {
-  getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged
-} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 
 const ENV = window.__ENV;
+
+// デモ用 ID/PW (本番ではサーバー認証に差し替え)
+const DEMO_USER = 'arashima';
+const DEMO_PASS = 'arashima2026';
+const AUTH_KEY  = 'arashima.admin.auth';
+
 const app = initializeApp({
   apiKey: ENV.FIREBASE_API_KEY,
   authDomain: ENV.FIREBASE_AUTH_DOMAIN,
   projectId: ENV.FIREBASE_PROJECT_ID,
 });
 const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
-const auth = getAuth(app);
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -29,33 +31,69 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
 let buildings = [];
 let rooms = [];
 
-// ============ Auth ============
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    $('#login').style.display = 'block';
-    $('#dash').style.display = 'none';
-    $('#userBadge').textContent = '未ログイン';
+// ============ Auth (簡易) ============
+function isAuthed() {
+  return localStorage.getItem(AUTH_KEY) === '1';
+}
+function authLogin(user, pass) {
+  if (user === DEMO_USER && pass === DEMO_PASS) {
+    localStorage.setItem(AUTH_KEY, '1');
+    return true;
+  }
+  return false;
+}
+function authLogout() {
+  localStorage.removeItem(AUTH_KEY);
+  location.reload();
+}
+
+async function bootIfAuthed() {
+  if (!isAuthed()) {
+    showLogin();
     return;
   }
-  const token = await user.getIdTokenResult();
-  if (!token.claims.admin) {
-    $('#userBadge').textContent = `${user.email} (権限なし)`;
-    $('#login').style.display = 'block';
-    $('#dash').style.display = 'none';
-    alert('管理者権限がありません。オーナーに連絡してください。');
-    signOut(auth);
-    return;
-  }
-  $('#userBadge').textContent = user.displayName || user.email;
   $('#login').style.display = 'none';
   $('#dash').style.display = 'block';
+  $('#userBadge').innerHTML = `<a href="#" id="logout" style="color:inherit;text-decoration:underline;">${DEMO_USER} (ログアウト)</a>`;
+  $('#logout').addEventListener('click', (e) => { e.preventDefault(); authLogout(); });
   await loadMaster();
   renderTab('today');
-});
+}
 
-$('#btnLogin').addEventListener('click', () => {
-  signInWithPopup(auth, new GoogleAuthProvider()).catch((e) => alert(e.message));
-});
+function showLogin() {
+  $('#login').style.display = 'block';
+  $('#dash').style.display = 'none';
+  $('#userBadge').textContent = '未ログイン';
+
+  // ログインフォームを差し替え
+  $('#login').innerHTML = `
+    <h1>運営管理</h1>
+    <p>ID と パスワードを入力してください。</p>
+    <form id="loginForm" style="display:flex;flex-direction:column;gap:12px;max-width:320px;margin:24px auto 0;">
+      <input type="text" id="loginUser" placeholder="ID" autocomplete="username" required
+        style="padding:12px 14px;border:1px solid #ccc;border-radius:6px;font-size:14px;font-family:inherit;">
+      <input type="password" id="loginPass" placeholder="パスワード" autocomplete="current-password" required
+        style="padding:12px 14px;border:1px solid #ccc;border-radius:6px;font-size:14px;font-family:inherit;">
+      <button class="cta" type="submit">ログイン</button>
+      <p id="loginError" style="color:#dc2626;font-size:12px;text-align:center;margin:0;display:none;">ID または パスワードが違います</p>
+    </form>
+    <p style="text-align:center;font-size:11px;color:#888;margin-top:24px;">
+      デモ用: ID <strong>arashima</strong> / PW <strong>arashima2026</strong>
+    </p>
+  `;
+  $('#loginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const user = $('#loginUser').value.trim();
+    const pass = $('#loginPass').value;
+    if (authLogin(user, pass)) {
+      bootIfAuthed();
+    } else {
+      $('#loginError').style.display = 'block';
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', bootIfAuthed);
 
 // ============ Tabs ============
 $$('.head__nav button').forEach((b) => {
@@ -104,9 +142,7 @@ function fmtDateTime(ts) {
 }
 
 function statusTag(s) {
-  const map = {
-    pending: '受付中', confirmed: '確定', cancelled: 'キャンセル', completed: '完了',
-  };
+  const map = { pending: '受付中', confirmed: '確定', cancelled: 'キャンセル', completed: '完了' };
   return `<span class="tag tag--${s || 'pending'}">${map[s] || s}</span>`;
 }
 
@@ -116,49 +152,40 @@ async function loadToday() {
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
   const dayAfter = new Date(today); dayAfter.setDate(dayAfter.getDate() + 2);
 
-  // 本日 IN
   const inSnap = await getDocs(query(
     collection(db, 'reservations'),
     where('status', 'in', ['pending', 'confirmed']),
     where('checkin', '>=', today),
     where('checkin', '<', tomorrow),
-  ));
-  const todayIn = inSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  )).catch(() => ({ docs: [] }));
+  const todayIn = inSnap.docs ? inSnap.docs.map((d) => ({ id: d.id, ...d.data() })) : [];
 
-  // 本日 OUT (checkin + nights == today)
-  const outQ = query(collection(db, 'reservations'),
-    where('status', 'in', ['confirmed', 'completed']),
-    where('checkin', '>=', new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000)),
-    where('checkin', '<', today),
-  );
-  const outSnap = await getDocs(outQ);
-  const todayOut = outSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => {
-    const ci = r.checkin?.toDate();
+  const staySnap = await getDocs(query(
+    collection(db, 'reservations'),
+    where('status', '==', 'confirmed'),
+  )).catch(() => ({ docs: [] }));
+  const all = staySnap.docs ? staySnap.docs.map((d) => ({ id: d.id, ...d.data() })) : [];
+
+  const todayOut = all.filter((r) => {
+    const ci = r.checkin?.toDate?.();
     if (!ci) return false;
     const co = new Date(ci); co.setDate(co.getDate() + r.nights);
     return co.toDateString() === today.toDateString();
   });
-
-  // 今夜滞在中
-  const staySnap = await getDocs(query(
-    collection(db, 'reservations'),
-    where('status', '==', 'confirmed'),
-  ));
-  const staying = staySnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => {
-    const ci = r.checkin?.toDate();
+  const staying = all.filter((r) => {
+    const ci = r.checkin?.toDate?.();
     if (!ci) return false;
     const co = new Date(ci); co.setDate(co.getDate() + r.nights);
     return ci <= today && today < co;
   });
 
-  // 明日 IN
   const tomSnap = await getDocs(query(
     collection(db, 'reservations'),
     where('status', 'in', ['pending', 'confirmed']),
     where('checkin', '>=', tomorrow),
     where('checkin', '<', dayAfter),
-  ));
-  const tomIn = tomSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  )).catch(() => ({ docs: [] }));
+  const tomIn = tomSnap.docs ? tomSnap.docs.map((d) => ({ id: d.id, ...d.data() })) : [];
 
   $('#kpiTodayIn').textContent = todayIn.length;
   $('#kpiTodayOut').textContent = todayOut.length;
@@ -202,7 +229,6 @@ function renderTable(sel, data, withDetail) {
   }
 }
 
-// ============ Upcoming ============
 async function loadUpcoming() {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const future = new Date(today); future.setDate(future.getDate() + 30);
@@ -212,17 +238,16 @@ async function loadUpcoming() {
     where('checkin', '>=', today),
     where('checkin', '<=', future),
     orderBy('checkin', 'asc'),
-  ));
+  )).catch(() => ({ docs: [] }));
   renderTable('#tblUpcoming', snap.docs.map((d) => ({ id: d.id, ...d.data() })), true);
 }
 
-// ============ All ============
 async function loadAll() {
   const snap = await getDocs(query(
     collection(db, 'reservations'),
     orderBy('createdAt', 'desc'),
     limit(100),
-  ));
+  )).catch(() => ({ docs: [] }));
   let data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
   const apply = () => {
@@ -254,13 +279,12 @@ function exportCsv(data) {
   URL.revokeObjectURL(url);
 }
 
-// ============ Guests ============
 async function loadGuests() {
   const snap = await getDocs(query(
     collection(db, 'guests'),
-    orderBy('totalReservations', 'desc'),
+    orderBy('lastSeenAt', 'desc'),
     limit(50),
-  ));
+  )).catch(() => ({ docs: [] }));
   const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   const tbl = $('#tblGuests');
   if (data.length === 0) {
@@ -270,7 +294,7 @@ async function loadGuests() {
   tbl.innerHTML = `
     <thead><tr>
       <th>LINE 名</th><th>本名</th><th>電話</th><th>予約回数</th><th>泊数累計</th>
-      <th>区分</th><th>最終訪問</th><th>メモ</th>
+      <th>区分</th><th>最終訪問</th>
     </tr></thead>
     <tbody>
       ${data.map((g) => `
@@ -282,20 +306,18 @@ async function loadGuests() {
           <td>${g.totalNights || 0}</td>
           <td>${g.isRepeater ? '<span class="tag tag--repeater">リピーター</span>' : ''}</td>
           <td>${fmtDate(g.lastSeenAt)}</td>
-          <td>${g.preferences || '—'}</td>
         </tr>
       `).join('')}
     </tbody>
   `;
 }
 
-// ============ Logs ============
 async function loadLogs() {
   const snap = await getDocs(query(
     collection(db, 'ops_logs'),
     orderBy('ts', 'desc'),
     limit(200),
-  ));
+  )).catch(() => ({ docs: [] }));
   const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   const tbl = $('#tblLogs');
   if (data.length === 0) {
@@ -318,7 +340,6 @@ async function loadLogs() {
   `;
 }
 
-// ============ Detail Modal ============
 async function openDetail(resNo) {
   const snap = await getDoc(doc(db, 'reservations', resNo));
   if (!snap.exists()) return;
@@ -344,13 +365,8 @@ async function openDetail(resNo) {
         <dt>受付日時</dt><dd>${fmtDateTime(r.createdAt)}</dd>
       </dl>
       <div class="detail__actions">
-        ${r.status === 'pending'
-          ? `<button class="action-confirm" data-act="confirm">確定する</button>`
-          : ''}
-        ${r.status !== 'cancelled'
-          ? `<button class="action-cancel" data-act="cancel">キャンセル扱い</button>`
-          : ''}
-        <button class="action-message" data-act="message">LINE で連絡</button>
+        ${r.status === 'pending' ? `<button class="action-confirm" data-act="confirm">確定する</button>` : ''}
+        ${r.status !== 'cancelled' && r.status !== 'completed' ? `<button class="action-cancel" data-act="cancel">キャンセル扱い</button>` : ''}
       </div>
     </div>
   `;
@@ -378,23 +394,6 @@ async function handleAction(r, act) {
     alert('キャンセルしました。');
     closeModal();
     renderTab('today');
-  } else if (act === 'message') {
-    const text = prompt(`${r.name} 様へのメッセージ:`, '');
-    if (!text) return;
-    try {
-      await fetch('/api/admin-push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lineUserId: r.lineUserId,
-          text,
-          adminUid: auth.currentUser.uid,
-        }),
-      });
-      alert('送信しました。');
-    } catch (e) {
-      alert('送信失敗: ' + e.message);
-    }
   }
 }
 
