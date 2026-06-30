@@ -1,8 +1,8 @@
 #!/bin/zsh
 # FP Compass ヘルプ ナレーション TTS (Google Cloud Neural2-D 男性 落ち着いた声)
 set -e
-VOICE="ja-JP-Neural2-D"
-RATE="0.95"   # ゆっくり目 (教材向け)
+VOICE="ja-JP-Neural2-C"
+RATE="1.20"   # オーナーfb: 1.20 で OK (1.05 はまだ遅い)
 PROJECT="skeleton-pricer-130118"
 OUT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$OUT_DIR"
@@ -18,7 +18,7 @@ import json
 print(json.dumps({
     'input': {'text': '''$text'''},
     'voice': {'languageCode': 'ja-JP', 'name': '$VOICE'},
-    'audioConfig': {'audioEncoding': 'MP3', 'speakingRate': $RATE, 'sampleRateHertz': 44100, 'pitch': -2.0}
+    'audioConfig': {'audioEncoding': 'MP3', 'speakingRate': $RATE, 'sampleRateHertz': 44100}
 }, ensure_ascii=False))" > /tmp/p.json
   TOKEN=$(gcloud auth print-access-token)
   resp=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" \
