@@ -124,10 +124,72 @@
   .daily-table th{background:var(--gray-1);font-weight:600;color:#555;font-size:11px;}
   .daily-table tr.weekend td{background:#fbfbf3;}
   .daily-table tr:hover td{background:var(--yellow-soft);}
+  /* ── タブバー (4タブ) */
+  .tabs{display:flex;background:#222;border-bottom:3px solid var(--orange);}
+  .tabs button{background:transparent;border:none;color:#aaa;font-size:12px;font-weight:600;padding:8px 18px;cursor:pointer;letter-spacing:.04em;border-right:1px solid #333;}
+  .tabs button:hover{background:#333;color:#fff;}
+  .tabs button.active{background:var(--orange);color:#fff;}
+  .view{display:none;}
+  .view.active{display:block;}
+  /* deep-dive 共通 (st/dow/placement) */
+  .dd-wrap{padding:14px;background:#fafafa;min-height:calc(100vh - 88px - 38px);}
+  .dd-head{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;}
+  .dd-head h2{margin:0;font-size:16px;font-weight:700;color:var(--black);}
+  .dd-head .sub{font-size:11px;color:#666;}
+  .dd-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;}
+  .dd-filters input[type=text]{padding:5px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;min-width:240px;}
+  .dd-filters select{padding:4px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;}
+  .dd-filters label{font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;}
+  .insight-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+  .insight-box{background:#fff;border:1px solid var(--gray-3);border-left:5px solid var(--orange);padding:8px 12px;}
+  .insight-box.bad{border-left-color:var(--red);}
+  .insight-box .head{font-size:11px;font-weight:700;color:var(--orange);letter-spacing:.04em;margin-bottom:4px;}
+  .insight-box.bad .head{color:var(--red);}
+  .insight-box .items{font-size:13px;font-weight:600;}
+  .insight-box .items span{display:inline-block;margin-right:10px;}
+  /* ST table */
+  table.dd-table{width:100%;border-collapse:collapse;font-size:12px;background:#fff;}
+  table.dd-table thead th{position:sticky;top:0;background:var(--black);color:#fff;padding:5px 6px;font-weight:600;text-align:left;font-size:11px;cursor:pointer;user-select:none;white-space:nowrap;border-right:1px solid #333;}
+  table.dd-table thead th.num{text-align:right;}
+  table.dd-table thead th:hover{background:#333;}
+  table.dd-table thead th.sorted{color:var(--yellow);}
+  table.dd-table tbody td{padding:4px 6px;border-bottom:1px solid var(--gray-2);}
+  table.dd-table tbody td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  table.dd-table tbody tr:hover{background:var(--yellow-soft);}
+  .tag-badge{display:inline-block;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;color:#fff;letter-spacing:.04em;min-width:64px;text-align:center;}
+  .tag-NEGATIVE{background:var(--red);}
+  .tag-PROMOTE{background:var(--orange);}
+  .tag-HIGH_ACOS{background:#9a7700;}
+  .tag-OK{background:#888;}
+  .tag-INSUFFICIENT{background:#ccc;color:#666;}
+  /* DoW heatmap */
+  .dow-grid{display:grid;grid-template-columns:120px repeat(7,1fr);gap:1px;background:var(--gray-3);border:1px solid var(--gray-3);font-size:11px;}
+  .dow-grid > div{background:#fff;padding:6px 8px;}
+  .dow-grid .hdr{background:var(--black);color:#fff;font-weight:700;text-align:center;letter-spacing:.04em;font-size:10px;}
+  .dow-grid .row-lbl{background:var(--gray-1);font-weight:600;color:#555;}
+  .dow-grid .cell{text-align:center;font-variant-numeric:tabular-nums;line-height:1.3;}
+  .dow-grid .cell .v{font-weight:700;font-size:13px;}
+  .dow-grid .cell .sub{font-size:9px;color:#666;}
+  .dow-grid .cell.weekend{background:#fbfbf3;}
+  /* Placement bars */
+  .pl-block{background:#fff;border:1px solid var(--gray-3);padding:10px 14px;margin-bottom:10px;}
+  .pl-block h3{margin:0 0 6px;font-size:13px;font-weight:700;color:var(--black);}
+  .pl-block .sub{font-size:11px;color:#666;margin-bottom:6px;}
+  .pl-bars{display:flex;flex-direction:column;gap:5px;}
+  .pl-bar-row{display:grid;grid-template-columns:130px 1fr 90px 90px 90px;gap:8px;align-items:center;font-size:12px;}
+  .pl-bar-row .lbl{font-weight:600;color:#333;}
+  .pl-bar-row .track{position:relative;height:18px;background:var(--gray-1);border-radius:2px;overflow:hidden;}
+  .pl-bar-row .track .fill{height:100%;background:var(--orange);}
+  .pl-bar-row .track .fill.bad{background:var(--red);}
+  .pl-bar-row .track .fill.good{background:var(--yellow);}
+  .pl-bar-row .v{text-align:right;font-variant-numeric:tabular-nums;font-size:11px;color:#555;}
   /* mobile fallback (狭くなったら縦) */
   @media (max-width: 980px){
     .wrap{grid-template-columns:1fr;height:auto;}
     .left{max-height:50vh;}
+    .insight-row{grid-template-columns:1fr;}
+    .dow-grid{font-size:9px;}
+    .dow-grid > div{padding:3px 2px;}
   }
 </style>
 </head>
@@ -152,6 +214,14 @@
   <div class="cell insuff"><div class="lbl">判定不足</div><div class="val" data-tier="INSUFFICIENT">—</div></div>
 </div>
 
+<div class="tabs" id="tabs">
+  <button class="tab-btn active" data-view="kw">KW別</button>
+  <button class="tab-btn" data-view="st">検索語句別</button>
+  <button class="tab-btn" data-view="dow">曜日別</button>
+  <button class="tab-btn" data-view="pl">プレースメント別</button>
+</div>
+
+<div class="view active" id="view-kw">
 <div class="wrap">
   <div class="left">
     <div class="filters">
@@ -193,6 +263,90 @@
 
   <div class="right" id="right">
     <div class="empty">← 左からKWを選んでください</div>
+  </div>
+</div>
+</div><!-- /view-kw -->
+
+<div class="view" id="view-st">
+  <div class="dd-wrap">
+    <div class="dd-head">
+      <h2>検索語句別 (Manual Search Terms)</h2>
+      <span class="sub">過去14日 / Manual KW (BROAD/PHRASE/EXACT) で広告出した結果、 実際にユーザーが入力した検索語句</span>
+    </div>
+    <div class="insight-row" id="st-insights"><div class="insight-box"><div class="head">読み込み中…</div></div></div>
+    <div class="dd-filters">
+      <input type="text" id="st-search" placeholder="検索語句で絞り込み">
+      <select id="st-tag">
+        <option value="">全タグ</option>
+        <option value="NEGATIVE">Negative候補</option>
+        <option value="PROMOTE">昇格候補</option>
+        <option value="HIGH_ACOS">ACoS高</option>
+        <option value="OK">通常</option>
+        <option value="INSUFFICIENT">判定不足</option>
+      </select>
+      <select id="st-match">
+        <option value="">全Match</option>
+        <option value="BROAD">BROAD</option>
+        <option value="PHRASE">PHRASE</option>
+        <option value="EXACT">EXACT</option>
+      </select>
+      <label><input type="checkbox" id="st-cost"> cost&gt;0のみ</label>
+      <span id="st-count" style="font-size:11px;color:#666;margin-left:auto;">—</span>
+    </div>
+    <div style="background:#fff;border:1px solid var(--gray-3);max-height:calc(100vh - 280px);overflow:auto;">
+      <table class="dd-table" id="st-table">
+        <thead>
+          <tr>
+            <th data-key="tag">タグ</th>
+            <th data-key="searchTerm">検索語句</th>
+            <th data-key="matchType">Match</th>
+            <th data-key="clicks" class="num">clicks</th>
+            <th data-key="cost" class="num">cost</th>
+            <th data-key="sales14d" class="num">sales</th>
+            <th data-key="acos" class="num">ACoS</th>
+            <th data-key="cvr" class="num">CVR</th>
+            <th>推奨アクション</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-dow">
+  <div class="dd-wrap">
+    <div class="dd-head">
+      <h2>曜日別 (Day-of-Week)</h2>
+      <span class="sub">過去14日 / ASIN × 曜日 で 入札スケジューリング判断材料を抽出 (Amazon Ads API は hourOfDay 未対応のため 曜日 集約)</span>
+    </div>
+    <div class="insight-row" id="dow-insights"><div class="insight-box"><div class="head">読み込み中…</div></div></div>
+    <div class="dd-filters">
+      <select id="dow-asin"><option value="">全ASIN合算</option></select>
+      <select id="dow-metric">
+        <option value="acos">ACoS (色濃いほど悪い)</option>
+        <option value="roas">ROAS (色濃いほど良い)</option>
+        <option value="cost">広告費</option>
+        <option value="sales14d">売上</option>
+      </select>
+    </div>
+    <div id="dow-grid"></div>
+    <div style="margin-top:14px;background:#fff;border:1px solid var(--gray-3);padding:8px;">
+      <h3 style="margin:0 0 6px;font-size:11px;color:#666;letter-spacing:.04em;">日次推移 (14日)</h3>
+      <canvas id="dow-chart" style="max-height:200px;"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-pl">
+  <div class="dd-wrap">
+    <div class="dd-head">
+      <h2>プレースメント別 (Top of Search / Product Page / Rest of Search)</h2>
+      <span class="sub">過去14日 / Campaign × Placement 配信比率と効率</span>
+    </div>
+    <div class="insight-row" id="pl-insights"><div class="insight-box"><div class="head">読み込み中…</div></div></div>
+    <div id="pl-overall" class="pl-block"></div>
+    <div id="pl-campaigns"></div>
   </div>
 </div>
 
@@ -508,6 +662,271 @@ loadData().then(d=>{
     `<div class="empty" style="color:#d8302f;">データ取得失敗: ${escapeHtml(err.message)}<br>data/kw-daily.json が未生成の可能性</div>`;
   document.getElementById('visible-count').textContent = '読み込み失敗';
 });
+
+// ════════════════════════════════════════════════
+// タブ切替 + 3軸ディープダイブ
+// ════════════════════════════════════════════════
+let ST_DATA=null, DOW_DATA=null, PL_DATA=null;
+let stSortKey='cost', stSortDir='desc';
+let dowChart=null;
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const v = btn.dataset.view;
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b===btn));
+    document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active', el.id==='view-'+v));
+    if(v==='st' && !ST_DATA) loadST();
+    if(v==='dow' && !DOW_DATA) loadDoW();
+    if(v==='pl' && !PL_DATA) loadPL();
+  });
+});
+
+// ── ST (検索語句別) ────────────────────────────
+async function loadST(){
+  try{
+    const r = await fetch('./data/searchterm.json?_='+Date.now());
+    if(!r.ok) throw new Error('searchterm.json '+r.status);
+    ST_DATA = await r.json();
+    renderSTInsights();
+    renderSTTable();
+    document.getElementById('st-search').addEventListener('input', renderSTTable);
+    document.getElementById('st-tag').addEventListener('change', renderSTTable);
+    document.getElementById('st-match').addEventListener('change', renderSTTable);
+    document.getElementById('st-cost').addEventListener('change', renderSTTable);
+    document.querySelectorAll('#st-table thead th[data-key]').forEach(th=>{
+      th.addEventListener('click', ()=>{
+        const k=th.dataset.key;
+        if(stSortKey===k) stSortDir=(stSortDir==='asc'?'desc':'asc');
+        else { stSortKey=k; stSortDir=(['searchTerm','matchType','tag'].includes(k)?'asc':'desc'); }
+        renderSTTable();
+      });
+    });
+  } catch(e){
+    document.getElementById('st-insights').innerHTML =
+      `<div class="insight-box bad"><div class="head">読み込み失敗</div><div class="items">${escapeHtml(e.message)}<br>data/searchterm.json が未生成の可能性</div></div>`;
+  }
+}
+function renderSTInsights(){
+  const tc = ST_DATA.tag_count || {};
+  const top5neg = ST_DATA.terms.filter(t=>t.tag==='NEGATIVE').slice(0,5);
+  const top5prom = ST_DATA.terms.filter(t=>t.tag==='PROMOTE').slice(0,5);
+  const negCost = top5neg.reduce((s,t)=>s+t.cost,0);
+  document.getElementById('st-insights').innerHTML = `
+    <div class="insight-box bad">
+      <div class="head">▶ Negative候補 ${tc.NEGATIVE||0}語 (TOP5 損失合計 ¥${Math.round(negCost).toLocaleString()})</div>
+      <div class="items">${top5neg.length?top5neg.map(t=>`<span>${escapeHtml(t.searchTerm)} <b>¥${Math.round(t.cost).toLocaleString()}</b></span>`).join(''):'なし'}</div>
+    </div>
+    <div class="insight-box">
+      <div class="head">▶ 昇格(Exact化)候補 ${tc.PROMOTE||0}語</div>
+      <div class="items">${top5prom.length?top5prom.map(t=>`<span>${escapeHtml(t.searchTerm)} <b>ACoS ${(t.acos*100).toFixed(0)}%</b></span>`).join(''):'なし'}</div>
+    </div>`;
+}
+function renderSTTable(){
+  const q = document.getElementById('st-search').value.trim().toLowerCase();
+  const fTag = document.getElementById('st-tag').value;
+  const fMatch = document.getElementById('st-match').value;
+  const fCost = document.getElementById('st-cost').checked;
+  let list = ST_DATA.terms.filter(t=>{
+    if(q && !(t.searchTerm||'').toLowerCase().includes(q)) return false;
+    if(fTag && t.tag!==fTag) return false;
+    if(fMatch && t.matchType!==fMatch) return false;
+    if(fCost && !(t.cost>0)) return false;
+    return true;
+  });
+  list.sort((a,b)=>{
+    const va = a[stSortKey]==null?-1:a[stSortKey];
+    const vb = b[stSortKey]==null?-1:b[stSortKey];
+    if(typeof va==='string') return stSortDir==='asc'? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+    return stSortDir==='asc'? va-vb : vb-va;
+  });
+  document.getElementById('st-count').textContent = `表示: ${list.length} / ${ST_DATA.terms.length} 語`;
+  const tbody = document.querySelector('#st-table tbody');
+  tbody.innerHTML = list.slice(0,500).map(t=>`
+    <tr>
+      <td><span class="tag-badge tag-${t.tag}">${t.tag_label||t.tag}</span></td>
+      <td>${escapeHtml(t.searchTerm)}</td>
+      <td>${t.matchType||''}</td>
+      <td class="num">${fmtNum(t.clicks)}</td>
+      <td class="num">${fmtYen(t.cost)}</td>
+      <td class="num">${fmtYen(t.sales14d)}</td>
+      <td class="num">${fmtPct(t.acos)}</td>
+      <td class="num">${fmtPct(t.cvr)}</td>
+      <td>${escapeHtml(t.reason||'')}</td>
+    </tr>`).join('');
+  document.querySelectorAll('#st-table thead th[data-key]').forEach(th=>{
+    th.classList.toggle('sorted', th.dataset.key===stSortKey);
+  });
+}
+
+// ── DoW (曜日別) ───────────────────────────────
+async function loadDoW(){
+  try{
+    const r = await fetch('./data/hourly.json?_='+Date.now());
+    if(!r.ok) throw new Error('hourly.json '+r.status);
+    DOW_DATA = await r.json();
+    const sel = document.getElementById('dow-asin');
+    sel.innerHTML = '<option value="">全ASIN合算</option>' +
+      (DOW_DATA.by_asin||[]).map(a=>`<option value="${a.asin}">${a.asin}</option>`).join('');
+    sel.addEventListener('change', renderDoW);
+    document.getElementById('dow-metric').addEventListener('change', renderDoW);
+    renderDoWInsights();
+    renderDoW();
+  } catch(e){
+    document.getElementById('dow-insights').innerHTML =
+      `<div class="insight-box bad"><div class="head">読み込み失敗</div><div class="items">${escapeHtml(e.message)}<br>data/hourly.json が未生成の可能性</div></div>`;
+  }
+}
+function renderDoWInsights(){
+  const g = (DOW_DATA.insights&&DOW_DATA.insights.golden)||[];
+  const r = (DOW_DATA.insights&&DOW_DATA.insights.redzone)||[];
+  document.getElementById('dow-insights').innerHTML = `
+    <div class="insight-box">
+      <div class="head">▶ 黄金曜日 (ROAS高)</div>
+      <div class="items">${g.length?g.map(d=>`<span>${d.label}曜 <b>ROAS ${d.roas.toFixed(2)}</b></span>`).join(''):'cost=0'}</div>
+    </div>
+    <div class="insight-box bad">
+      <div class="head">▶ 赤字曜日 (ACoS高)</div>
+      <div class="items">${r.length?r.map(d=>`<span>${d.label}曜 <b>ACoS ${(d.acos*100).toFixed(0)}%</b></span>`).join(''):'なし'}</div>
+    </div>`;
+}
+function renderDoW(){
+  const asin = document.getElementById('dow-asin').value;
+  const metric = document.getElementById('dow-metric').value;
+  let cells;
+  if(asin){
+    const a = (DOW_DATA.by_asin||[]).find(x=>x.asin===asin);
+    cells = a? a.hours : DOW_DATA.hours;
+  } else cells = DOW_DATA.hours;
+
+  // metric range
+  const vals = cells.map(c=>c[metric]).filter(v=>v!=null && isFinite(v));
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const inverted = (metric==='acos' || metric==='cost'); // 高=悪 (赤強い)
+  function color(v){
+    if(v==null||!isFinite(v)) return '#fff';
+    const t = (mx===mn)?0.5: (v-mn)/(mx-mn);
+    const u = inverted ? t : 1-t;
+    // u 大 → 赤強い, u 小 → 緑
+    const r=255, g=Math.round(255-u*200), b=Math.round(150-u*80);
+    return `rgb(${r},${g},${b})`;
+  }
+  function fmtVal(v){
+    if(v==null||!isFinite(v)) return '—';
+    if(metric==='acos') return (v*100).toFixed(0)+'%';
+    if(metric==='roas') return v.toFixed(2);
+    if(metric==='cost'||metric==='sales14d') return '¥'+Math.round(v).toLocaleString();
+    return Math.round(v);
+  }
+  const labels = DOW_DATA.dow_labels || ['日','月','火','水','木','金','土'];
+  let html = '<div class="dow-grid">';
+  html += '<div class="hdr">' + (asin? asin : '全ASIN') + '</div>';
+  for(const l of labels) html += `<div class="hdr">${l}</div>`;
+  html += '<div class="row-lbl">' + metric + '</div>';
+  for(let i=0;i<7;i++){
+    const c = cells[i];
+    const v = c?c[metric]:null;
+    const isWE = (i===0||i===6);
+    html += `<div class="cell ${isWE?'weekend':''}" style="background:${color(v)};">
+      <div class="v">${fmtVal(v)}</div>
+      <div class="sub">cost ¥${Math.round(c.cost||0).toLocaleString()}</div>
+    </div>`;
+  }
+  html += '</div>';
+  document.getElementById('dow-grid').innerHTML = html;
+
+  // daily chart
+  if(dowChart) dowChart.destroy();
+  const daily = DOW_DATA.daily||[];
+  const ctx = document.getElementById('dow-chart').getContext('2d');
+  dowChart = new Chart(ctx, {
+    data: {
+      labels: daily.map(d=>d.date.slice(5)),
+      datasets: [
+        { type:'bar', label:'広告費', data:daily.map(d=>Math.round(d.cost)), backgroundColor:'#ff7a00', yAxisID:'y' },
+        { type:'line', label:'売上', data:daily.map(d=>Math.round(d.sales14d)), borderColor:'#1a1a1a', backgroundColor:'transparent', borderWidth:2, pointRadius:0, yAxisID:'y' },
+        { type:'line', label:'ACoS%', data:daily.map(d=>d.acos==null?null:Math.round(d.acos*1000)/10), borderColor:'#d8302f', backgroundColor:'transparent', borderWidth:2, pointRadius:0, yAxisID:'y1', spanGaps:true },
+      ],
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10, font:{size:10}}}},
+      scales:{
+        x:{ticks:{font:{size:9},autoSkip:true,maxRotation:0}},
+        y:{position:'left', beginAtZero:true, ticks:{font:{size:10}, callback:v=>'¥'+v.toLocaleString()}},
+        y1:{position:'right', beginAtZero:true, ticks:{font:{size:10},callback:v=>v+'%'}, grid:{display:false}},
+      },
+    },
+  });
+}
+
+// ── Placement (プレースメント別) ────────────────
+async function loadPL(){
+  try{
+    const r = await fetch('./data/placement.json?_='+Date.now());
+    if(!r.ok) throw new Error('placement.json '+r.status);
+    PL_DATA = await r.json();
+    renderPL();
+  } catch(e){
+    document.getElementById('pl-insights').innerHTML =
+      `<div class="insight-box bad"><div class="head">読み込み失敗</div><div class="items">${escapeHtml(e.message)}<br>data/placement.json が未生成の可能性</div></div>`;
+  }
+}
+function renderPL(){
+  const plList = PL_DATA.placements||[];
+  const totalCost = plList.reduce((s,p)=>s+p.cost,0);
+  // insights: 効いてる/損切り
+  const best = plList.filter(p=>p.acos!=null).sort((a,b)=>(a.acos)-(b.acos))[0];
+  const worst = plList.filter(p=>p.acos!=null).sort((a,b)=>(b.acos)-(a.acos))[0];
+  document.getElementById('pl-insights').innerHTML = `
+    <div class="insight-box">
+      <div class="head">▶ 効率最良: ${best?escapeHtml(best.label):'—'}</div>
+      <div class="items">${best?`<span>ACoS <b>${(best.acos*100).toFixed(1)}%</b></span><span>cost ¥${Math.round(best.cost).toLocaleString()}</span><span>売上 ¥${Math.round(best.sales14d).toLocaleString()}</span>`:'—'}</div>
+    </div>
+    <div class="insight-box bad">
+      <div class="head">▶ 損切り検討: ${worst&&worst.acos>=0.5?escapeHtml(worst.label):'なし'}</div>
+      <div class="items">${worst&&worst.acos>=0.5?`<span>ACoS <b>${(worst.acos*100).toFixed(1)}%</b></span><span>cost ¥${Math.round(worst.cost).toLocaleString()}</span><span>プレースメント入札比率 -25% 検討</span>`:'許容範囲'}</div>
+    </div>`;
+
+  // overall (3区分)
+  document.getElementById('pl-overall').innerHTML = `
+    <h3>全体: 配信比率 × 効率</h3>
+    <div class="sub">合計 cost ¥${Math.round(totalCost).toLocaleString()} (14日)</div>
+    <div class="pl-bars">
+      ${plList.map(p=>{
+        const w = totalCost>0? (p.cost/totalCost*100).toFixed(1) : 0;
+        const cls = p.acos==null?'':(p.acos>=0.5?'bad':(p.acos<0.3?'good':''));
+        return `<div class="pl-bar-row">
+          <div class="lbl">${escapeHtml(p.label)}</div>
+          <div class="track"><div class="fill ${cls}" style="width:${w}%;"></div></div>
+          <div class="v">¥${Math.round(p.cost).toLocaleString()}</div>
+          <div class="v">ACoS ${fmtPct(p.acos)}</div>
+          <div class="v">売上 ¥${Math.round(p.sales14d).toLocaleString()}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // per campaign
+  const cs = PL_DATA.campaigns||[];
+  document.getElementById('pl-campaigns').innerHTML = cs.map(c=>{
+    const ct = c.summary.cost;
+    return `<div class="pl-block">
+      <h3>${escapeHtml(c.campaignName||c.campaignId)}</h3>
+      <div class="sub">cost ¥${Math.round(ct).toLocaleString()} / 売上 ¥${Math.round(c.summary.sales14d).toLocaleString()} / ACoS ${fmtPct(c.summary.acos)}</div>
+      <div class="pl-bars">
+        ${c.placements.map(p=>{
+          const w = ct>0? (p.cost/ct*100).toFixed(1) : 0;
+          const cls = p.acos==null?'':(p.acos>=0.5?'bad':(p.acos<0.3?'good':''));
+          return `<div class="pl-bar-row">
+            <div class="lbl">${escapeHtml(p.label)}</div>
+            <div class="track"><div class="fill ${cls}" style="width:${w}%;"></div></div>
+            <div class="v">¥${Math.round(p.cost).toLocaleString()}</div>
+            <div class="v">ACoS ${fmtPct(p.acos)}</div>
+            <div class="v">売上 ¥${Math.round(p.sales14d).toLocaleString()}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
 </script>
 
 </body>
