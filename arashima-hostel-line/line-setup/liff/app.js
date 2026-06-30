@@ -27,7 +27,7 @@ const BUILDINGS = {
       '本棚のある居間、大野の本と地図が並ぶ',
       '無料の貸自転車・越前大野城まで7分',
     ],
-    facility: ['共用キッチン (IH/冷蔵庫/調味料)', 'ラウンジ・本棚', 'シャワー個室 3', '洗濯機 ¥200/回', '貸自転車 4台', 'Wi-Fi 全室'],
+    facility: ['共用キッチン (IH/冷蔵庫/調味料)', 'ラウンジ・本棚', 'シャワー個室 3', '洗濯機 200円/回', '貸自転車 4台', 'Wi-Fi 全室'],
     checkIn: '15:00 - 21:00',
     checkOut: '〜10:00',
     fitFor: ['商店街と地元文化を体験したい方', '一人旅・カップル・2-6名グループ', '朝活・早朝散歩が好きな方'],
@@ -236,33 +236,30 @@ function showToast(msg, ms = 2400) {
 async function loadAvailability() {
   try {
     const today = new Date(); today.setHours(0,0,0,0);
-    const from = new Date(today); from.setDate(from.getDate() - 7);
     const to = new Date(today); to.setDate(to.getDate() + state.monthsLoaded * 31);
+    const fromStr = ymd(today);
+    const toStr = ymd(to);
 
-    const q = query(
-      collection(getDb(), 'reservations'),
-      where('checkin', '>=', Timestamp.fromDate(from)),
-      where('checkin', '<=', Timestamp.fromDate(to)),
-    );
-    const snap = await getDocs(q);
+    // getAvailability API 経由 (Firestore rules で availability は public read だが、
+    // 集約取得は API の方が効率的)
+    const url = `https://asia-northeast1-${ENV.FIREBASE_PROJECT_ID}.cloudfunctions.net/getAvailability?from=${fromStr}&to=${toStr}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`getAvailability HTTP ${res.status}`);
+    const data = await res.json();
 
-    // 初期化: from-to の各日付に全室空きで埋める
+    // 初期化: from-to の各日付に全室空きで埋める → API 結果で占有を引く
     const map = {};
     for (let d = new Date(today); d <= to; d.setDate(d.getDate()+1)) {
       map[ymd(d)] = new Set(ROOMS.map((r) => r.id));
     }
-    // 予約で塞ぐ
-    snap.docs.forEach((doc) => {
-      const r = doc.data();
-      if (r.status === 'cancelled') return;
-      const ci = r.checkin?.toDate?.();
-      if (!ci) return;
-      for (let i = 0; i < (r.nights || 1); i++) {
-        const d = new Date(ci); d.setDate(d.getDate() + i);
-        const key = ymd(d);
-        if (map[key]) map[key].delete(r.roomId);
+    for (const [date, rooms] of Object.entries(data.availability || {})) {
+      if (!map[date]) continue;
+      for (const [roomId, info] of Object.entries(rooms)) {
+        if (['held', 'booked', 'blocked'].includes(info.status)) {
+          map[date].delete(roomId);
+        }
       }
-    });
+    }
     state.availability = map;
   } catch (e) {
     console.warn('availability load failed', e);
@@ -293,6 +290,20 @@ function minPriceFor(dateKey) {
   return Math.min(...prices);
 }
 
+// 進捗 stepper HTML (current = 1..3)
+function stepperHtml(current) {
+  const labels = ['日付選択', '客室選択', '内容確認'];
+  let html = '<div class="stepper">';
+  for (let i = 0; i < 3; i++) {
+    const n = i + 1;
+    const cls = n < current ? 'is-done' : n === current ? 'is-active' : '';
+    html += `<div class="stepper__dot ${cls}"><div class="stepper__dot-num"><span>${n}</span></div><div>${labels[i]}</div></div>`;
+    if (i < 2) html += `<div class="stepper__line ${n < current ? 'is-done' : ''}"></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
 // 連泊範囲で利用可能な部屋IDのリスト
 function roomsAvailableForRange(checkin, checkout) {
   let common = null;
@@ -312,7 +323,7 @@ function renderCalendar() {
 
   const rangeBar = renderRangeBar();
   let html = `
-    <div class="step-pill">STEP 1 / 3</div>
+    ${stepperHtml(1)}
     <h1 class="h1">いつ、お泊まりですか？</h1>
     <p class="lead">チェックインの日 → チェックアウトの日 の順にタップしてください。</p>
     ${rangeBar}
@@ -412,9 +423,10 @@ function buildCell(date, today) {
   if (status === 'few') badge = `<span class="cal-cell__badge">残${remaining}</span>`;
   else if (status === 'full') badge = `<span class="cal-cell__badge">満室</span>`;
 
+  // 価格は最安値より高い日のみ表示 (基本 4000 円)
   let price = '';
-  if (status !== 'full' && minP) {
-    price = `<span class="cal-cell__price">¥${(minP/1000).toFixed(0)}k〜</span>`;
+  if (status !== 'full' && minP && minP > 4000) {
+    price = `<span class="cal-cell__price">${minP.toLocaleString()}円〜</span>`;
   }
 
   btn.innerHTML = `<span class="cal-cell__day">${date.getDate()}</span>${badge}${price}`;
@@ -523,11 +535,11 @@ function renderRooms() {
   list.sort((a, b) => (b._available - a._available) || a.price - b.price);
 
   body.innerHTML = `
-    <div class="step-pill">STEP 2 / 3</div>
+    ${stepperHtml(2)}
     <h1 class="h1">どのお部屋に？</h1>
     <p class="lead"><strong>${fmtDate(ci)} → ${fmtDate(co)} / ${nights}泊</strong> で空いてる お部屋を表示しています。</p>
     <div class="filters" id="filters">
-      <button class="filter-chip ${state.buildingFilter==='all'?'is-on':''}" data-f="all">全室 (${availIds.length}空)</button>
+      <button class="filter-chip ${state.buildingFilter==='all'?'is-on':''}" data-f="all">全室 (${availIds.length} 空)</button>
       <button class="filter-chip ${state.buildingFilter==='ryosha'?'is-on':''}" data-f="ryosha">旅舎</button>
       <button class="filter-chip ${state.buildingFilter==='gakusha'?'is-on':''}" data-f="gakusha">學舎</button>
     </div>
@@ -568,7 +580,7 @@ function renderRoomCard(r) {
         <img src="${r.photos[0]}" alt="${r.name}" loading="lazy">
         <span class="room-card__tag room-card__tag--bldg">${b.name}</span>
         ${!r._available ? `<span class="room-card__tag room-card__tag--full">満室</span>` : ''}
-        <div class="room-card__price-badge">¥${r.price.toLocaleString()}<small>/泊</small></div>
+        <div class="room-card__price-badge">${r.price.toLocaleString()}<small>円/泊</small></div>
       </div>
       <div class="room-card__body">
         <div class="room-card__title">
@@ -585,7 +597,7 @@ function renderRoomCard(r) {
           ${r.tags.slice(0, 3).map((t) => `<li>${t}</li>`).join('')}
         </ul>
         <div class="room-card__row">
-          <div class="room-card__total">${nights}泊 合計 <strong>¥${total.toLocaleString()}</strong></div>
+          <div class="room-card__total">${nights}泊 合計 <strong>${total.toLocaleString()}円</strong></div>
           <span class="room-card__cta">詳細 <svg class="ico"><use href="#i-arrow-r"/></svg></span>
         </div>
       </div>
@@ -633,8 +645,8 @@ function openRoomSheet(r) {
 
       <div class="detail-h">料金</div>
       <ul class="detail-list">
-        <li>一泊一室 ¥${r.price.toLocaleString()} (税込・素泊まり)</li>
-        <li>${nights}泊 合計 ¥${total.toLocaleString()}</li>
+        <li>一泊一室 ${r.price.toLocaleString()}円 (税込・素泊まり)</li>
+        <li>${nights}泊 合計 ${total.toLocaleString()}円</li>
       </ul>
 
       <div style="height:90px"></div>
@@ -642,7 +654,7 @@ function openRoomSheet(r) {
     <div class="dock">
       <div class="dock__row">
         <span>${nights}泊 合計</span>
-        <strong>¥${total.toLocaleString()}</strong>
+        <strong>${total.toLocaleString()}円</strong>
       </div>
       <button class="btn btn--primary" id="selectRoom">この部屋を予約する</button>
     </div>
@@ -690,18 +702,38 @@ function renderConfirm() {
   const total = r.price * nights;
 
   body.innerHTML = `
-    <div class="step-pill">STEP 3 / 3</div>
+    ${stepperHtml(3)}
     <h1 class="h1">ご予約内容の確認</h1>
     <p class="lead">下記の内容で承ります。重要事項にご同意のうえお進みください。</p>
 
-    <div class="summary">
-      <div class="summary__row"><span>建屋</span><strong>${b.name} (${b.addr})</strong></div>
-      <div class="summary__row"><span>客室</span><strong>${r.no} ${r.name}</strong></div>
-      <div class="summary__row"><span>チェックイン</span><strong>${fmtDateLong(state.checkin)}</strong></div>
-      <div class="summary__row"><span>チェックアウト</span><strong>${fmtDateLong(state.checkout)}</strong></div>
-      <div class="summary__row"><span>泊数</span><strong>${nights}泊</strong></div>
-      <div class="summary__row"><span>定員</span><strong>${r.capacity}名 まで</strong></div>
-      <div class="summary__row summary__total"><span>合計 (税込)</span><strong>¥${total.toLocaleString()}</strong></div>
+    <div class="receipt">
+      <div class="receipt__head">
+        <div class="receipt__title">予 約 の し お り</div>
+        <strong>${b.name}  ${r.no}号</strong>
+        <small>${r.name} · 定員 ${r.capacity} 名</small>
+      </div>
+      <div class="receipt__body">
+        <div class="receipt__sec">
+          <div class="receipt__sec-lbl">CHECK IN</div>
+          <div class="receipt__sec-val">${fmtDateLong(state.checkin)}</div>
+        </div>
+        <div class="receipt__sec">
+          <div class="receipt__sec-lbl">CHECK OUT</div>
+          <div class="receipt__sec-val">${fmtDateLong(state.checkout)} <small>${nights}泊</small></div>
+        </div>
+        <div class="receipt__sec">
+          <div class="receipt__sec-lbl">ROOM</div>
+          <div class="receipt__sec-val">${r.name} <small>定員 ${r.capacity}名</small></div>
+        </div>
+        <div class="receipt__sec">
+          <div class="receipt__sec-lbl">ADDRESS</div>
+          <div class="receipt__sec-val" style="font-size:13px;font-weight:500;">${b.addr}</div>
+        </div>
+      </div>
+      <div class="receipt__total">
+        <span>合計 (税込・現地払い)</span>
+        <strong>${total.toLocaleString()}円</strong>
+      </div>
     </div>
 
     <h2 class="h2">ご予約代表者</h2>
@@ -750,7 +782,7 @@ function renderConfirm() {
     <button class="btn btn--text" id="backRooms" style="margin-top:8px; margin-bottom:120px">← 部屋を選び直す</button>
 
     <div class="confirm-dock">
-      <div class="confirm-dock__hint">合計 ¥${total.toLocaleString()} (税込・現地払い)</div>
+      <div class="confirm-dock__hint">合計 ${total.toLocaleString()}円 (税込・現地払い)</div>
       <button class="btn btn--primary" id="btnConfirm" ${(!state.agreedTerms||!state.agreedCancel)?'disabled':''}>予約を確定する</button>
     </div>
   `;
@@ -796,36 +828,41 @@ async function confirmReservation() {
   try {
     const r = state.selectedRoom;
     const nights = nightsBetween(state.checkin, state.checkout);
-    const total = r.price * nights;
-    const resNo = 'A-' + String(Math.floor(Math.random() * 9000) + 1000);
-    const ci = new Date(state.checkin); ci.setHours(0,0,0,0);
+    const ciDate = state.checkin;
+    const checkinStr = `${ciDate.getFullYear()}-${String(ciDate.getMonth()+1).padStart(2,'0')}-${String(ciDate.getDate()).padStart(2,'0')}`;
 
-    const rec = {
-      resNo,
-      lineUserId: state.lineUserId,
+    // ★ Cloud Function callable (reserveRoomFn) で在庫 lock + 予約 commit
+    const liffToken = state.inLineBrowser && window.liff ? window.liff.getAccessToken() : null;
+    const headers = { 'Content-Type': 'application/json' };
+    if (liffToken) headers.Authorization = `Bearer ${liffToken}`;
+
+    const body = {
       buildingId: r.buildingId,
       roomId: r.id,
-      checkin: ci,
+      checkin: checkinStr,
       nights,
-      guests: r.capacity, // 簡略化 (将来 picker 追加)
+      guests: r.capacity,
       name, tel,
-      note: state.guestNote,
-      totalPrice: total,
-      status: 'pending',
-      source: state.inLineBrowser ? 'liff' : 'web',
-      remindedPre: false,
-      remindedArrival: false,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      note: state.guestNote || '',
     };
+    if (!liffToken) body.demoUserId = state.lineUserId.replace(/^demo:/, '');
 
-    await setDoc(doc(getDb(), 'reservations', resNo), rec);
-    setDoc(doc(getDb(), 'guests', state.lineUserId), {
-      displayName: state.displayName, realName: name, tel,
-      lastResNo: resNo, lastSeenAt: serverTimestamp(),
-    }, { merge: true }).catch(()=>{});
+    const url = `https://asia-northeast1-${ENV.FIREBASE_PROJECT_ID}.cloudfunctions.net/reserveRoomFn`;
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+    const data = await res.json();
 
-    renderDone(resNo);
+    if (!res.ok || !data.ok) {
+      if (data.conflict) {
+        showToast(`他経路 (${data.message || '別予約'}) で押さえられています。日付を変えてください。`, 5000);
+      } else {
+        showToast(`送信失敗: ${data.error || res.statusText}`, 5000);
+      }
+      btn.disabled = false;
+      btn.textContent = '予約を確定する';
+      return;
+    }
+
+    renderDone(data.resNo);
   } catch (e) {
     console.error(e);
     btn.disabled = false;
@@ -845,23 +882,40 @@ function renderDone(resNo) {
   const total = r.price * nights;
 
   body.innerHTML = `
-    <div class="done">
-      <div class="done__stamp">承<br>諾</div>
-      <h2>たしかに承りました</h2>
-      <div class="done__no">${resNo}</div>
-      <p>${state.guestName} 様、ありがとうございます。<br>担当者が空室を確認のうえ、<strong>24時間以内に LINE のトーク</strong>でご連絡いたします。</p>
-
-      <div class="done__info">
-        <div class="done__info-row"><span>建屋・客室</span><strong>${b.name} ${r.no}</strong></div>
-        <div class="done__info-row"><span>チェックイン</span><strong>${fmtDateLong(state.checkin)}</strong></div>
-        <div class="done__info-row"><span>チェックアウト</span><strong>${fmtDateLong(state.checkout)}</strong></div>
-        <div class="done__info-row"><span>合計</span><strong>¥${total.toLocaleString()}</strong></div>
+    <div class="ticket">
+      <div class="ticket__hero">
+        <div class="ticket__chop">承<br>諾</div>
+        <div class="ticket__h">たしかに承りました</div>
+        <div class="ticket__sub">${state.guestName} 様、 ご予約ありがとうございます。<br>24 時間以内に LINE のトークでご連絡いたします。</div>
       </div>
-
-      <p style="font-size:12px;">前日にチェックイン時刻と道順、当日朝に鍵の場所を LINE でお送りします。</p>
-
-      <button class="btn btn--primary" id="btnClose2" style="margin-top:20px">${state.inLineBrowser ? 'LINE に戻る' : '閉じる'}</button>
+      <div class="ticket__notch">
+        <div class="ticket__notch-line"></div>
+      </div>
+      <div class="ticket__body">
+        <div class="ticket__no">
+          <span class="ticket__no-lbl">RESERVATION NO</span>
+          <span class="ticket__no-val">${resNo}</span>
+        </div>
+        <div class="ticket__rows">
+          <div class="ticket__row"><span>建屋 / 客室</span><strong>${b.name} ${r.no}号</strong></div>
+          <div class="ticket__row"><span>チェックイン</span><strong>${fmtDateLong(state.checkin)}</strong></div>
+          <div class="ticket__row"><span>チェックアウト</span><strong>${fmtDateLong(state.checkout)}</strong></div>
+          <div class="ticket__row"><span>泊数</span><strong>${nights}泊</strong></div>
+          <div class="ticket__row total"><span>合計</span><strong>${total.toLocaleString()}円</strong></div>
+        </div>
+      </div>
     </div>
+
+    <div class="next-steps">
+      <div class="next-steps__h">これからの流れ</div>
+      <ul class="next-steps__list">
+        <li><strong>24 時間以内</strong>担当者から LINE で確定のご連絡</li>
+        <li><strong>前日 18 時</strong>チェックイン時刻と道順を自動配信</li>
+        <li><strong>当日 7 時</strong>鍵の場所・暗証番号を自動配信</li>
+      </ul>
+    </div>
+
+    <button class="btn btn--primary" id="btnClose2" style="margin-top:8px">${state.inLineBrowser ? 'LINE に戻る' : '閉じる'}</button>
   `;
   document.getElementById('btnClose2').addEventListener('click', () => {
     if (state.inLineBrowser && typeof liff !== 'undefined') liff.closeWindow();

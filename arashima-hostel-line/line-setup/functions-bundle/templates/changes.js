@@ -38,7 +38,7 @@ function bubble(r) {
         row('到着', `${dateStr} (${dow})`),
         row('泊数', `${r.nights}泊`),
         row('人数', `${r.guests}名`),
-        row('合計', `¥${(r.totalPrice || 0).toLocaleString()}`),
+        row('合計', `${(r.totalPrice || 0).toLocaleString()}円`),
       ],
     },
     footer: {

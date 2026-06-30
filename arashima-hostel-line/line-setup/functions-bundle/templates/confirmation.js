@@ -42,7 +42,7 @@ module.exports = function confirmationFlex(rec, building, room) {
             margin: 'md',
             contents: [
               { type: 'text', text: '合計', size: 'sm', color: '#999999', flex: 2 },
-              { type: 'text', text: `¥${(rec.totalPrice || 0).toLocaleString()}`, size: 'xl', color: '#9B3A26', weight: 'bold', flex: 4 },
+              { type: 'text', text: `${(rec.totalPrice || 0).toLocaleString()}円`, size: 'xl', color: '#9B3A26', weight: 'bold', flex: 4 },
             ],
           },
         ],

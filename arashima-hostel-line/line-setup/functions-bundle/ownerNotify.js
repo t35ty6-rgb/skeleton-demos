@@ -54,7 +54,7 @@ exports.onReservationCreated = functions.onDocumentCreated(
         const ci = rec.checkin?.toDate?.();
         const dateStr = ci ? `${ci.getMonth() + 1}/${ci.getDate()} (${'日月火水木金土'[ci.getDay()]})` : '-';
         await client.pushMessage(ownerUserId, [
-          { type: 'text', text: `[新規予約] ${rec.resNo}\n${rec.name} 様 / ${rec.tel}\n${bldg?.name || ''} ・ ${room?.no || ''}号\n${dateStr} から ${rec.nights}泊 / ${rec.guests}名\n合計 ¥${(rec.totalPrice || 0).toLocaleString()}\n備考: ${rec.note || 'なし'}` },
+          { type: 'text', text: `[新規予約] ${rec.resNo}\n${rec.name} 様 / ${rec.tel}\n${bldg?.name || ''} ・ ${room?.no || ''}号\n${dateStr} から ${rec.nights}泊 / ${rec.guests}名\n合計 ${(rec.totalPrice || 0).toLocaleString()}円\n備考: ${rec.note || 'なし'}` },
         ]);
       } catch (err) {
         console.error('owner push failed', err);
@@ -99,10 +99,9 @@ exports.onReservationUpdated = functions.onDocumentUpdated(
 
     if (after.status === 'confirmed' && before.status === 'pending') {
       try {
-        await client.pushMessage(rec.lineUserId, [
-          { type: 'text', text: `${rec.name} 様\n\nご予約 ${rec.resNo} を確定いたしました。\n前日に道順、当日に鍵の場所をお送りします。お待ちしております。` },
-        ]);
-      } catch (err) { console.error(err); }
+        const flex = buildConfirmFlex(rec);
+        await client.pushMessage(rec.lineUserId, [flex]);
+      } catch (err) { console.error('confirm flex push failed', err); }
     } else if (after.status === 'cancelled') {
       try {
         await client.pushMessage(rec.lineUserId, [
@@ -119,3 +118,132 @@ exports.onReservationUpdated = functions.onDocumentUpdated(
     });
   }
 );
+
+// ============================================
+// 予約確定 Flex (Google カレンダー登録ボタン付き)
+// ============================================
+const BUILDING_META = {
+  ryosha:  { name: '旅舎', addr: '福井県大野市元町 8-17', ciHour: 15, coHour: 10 },
+  gakusha: { name: '學舎', addr: '福井県大野市城町 3-05', ciHour: 16, coHour: 11 },
+};
+
+function buildGcalUrl(rec, bldg) {
+  // YYYYMMDDTHHmmssZ (UTC)
+  const ci = new Date(rec.checkinDateStr + 'T00:00:00+09:00');
+  ci.setHours(ci.getHours() + bldg.ciHour);
+  const co = new Date(ci);
+  co.setDate(co.getDate() + (rec.nights || 1));
+  co.setHours(0, 0, 0, 0);
+  co.setHours(bldg.coHour);
+
+  const fmt = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const title = `${bldg.name} 宿泊 (${rec.name} 様)`;
+  const detail = `荒島ホテル ${bldg.name}\n予約番号: ${rec.resNo}\n部屋: ${rec.roomId}\n人数: ${rec.guests} 名\n合計: ${(rec.totalPrice || 0).toLocaleString()}円\n\nLINE @arashima-hotel`;
+
+  const qs = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: title,
+    dates: `${fmt(ci)}/${fmt(co)}`,
+    details: detail,
+    location: bldg.addr,
+  });
+  return `https://calendar.google.com/calendar/render?${qs.toString()}`;
+}
+
+function buildConfirmFlex(rec) {
+  const bldg = BUILDING_META[rec.buildingId] || { name: '荒島ホテル', addr: '福井県大野市', ciHour: 15, coHour: 10 };
+  const gcalUrl = buildGcalUrl(rec, bldg);
+
+  // 表示用 date
+  const ciDate = new Date(rec.checkinDateStr + 'T00:00:00+09:00');
+  const coDate = new Date(ciDate);
+  coDate.setDate(coDate.getDate() + (rec.nights || 1));
+  const fmtJp = (d) => `${d.getMonth() + 1}月${d.getDate()}日 (${'日月火水木金土'[d.getDay()]})`;
+
+  return {
+    type: 'flex',
+    altText: `ご予約を確定しました — ${rec.resNo}`,
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#1B5E20',
+        paddingAll: '20px',
+        contents: [
+          { type: 'text', text: 'ご予約を確定しました', color: '#FFFFFF', size: 'lg', weight: 'bold' },
+          { type: 'text', text: `${rec.name} 様`, color: '#A5D6A7', size: 'sm', margin: 'sm' },
+        ],
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        contents: [
+          {
+            type: 'box', layout: 'horizontal', spacing: 'sm',
+            contents: [
+              { type: 'text', text: '予約番号', color: '#888', size: 'sm', flex: 2 },
+              { type: 'text', text: rec.resNo, weight: 'bold', size: 'md', flex: 5, align: 'end' },
+            ],
+          },
+          {
+            type: 'box', layout: 'horizontal', spacing: 'sm',
+            contents: [
+              { type: 'text', text: 'お部屋', color: '#888', size: 'sm', flex: 2 },
+              { type: 'text', text: `${bldg.name} ${rec.roomId}`, weight: 'bold', size: 'md', flex: 5, align: 'end' },
+            ],
+          },
+          {
+            type: 'box', layout: 'horizontal', spacing: 'sm',
+            contents: [
+              { type: 'text', text: 'チェックイン', color: '#888', size: 'sm', flex: 2 },
+              { type: 'text', text: `${fmtJp(ciDate)} ${bldg.ciHour}:00〜`, weight: 'bold', size: 'md', flex: 5, align: 'end', wrap: true },
+            ],
+          },
+          {
+            type: 'box', layout: 'horizontal', spacing: 'sm',
+            contents: [
+              { type: 'text', text: 'チェックアウト', color: '#888', size: 'sm', flex: 2 },
+              { type: 'text', text: `${fmtJp(coDate)} 〜${bldg.coHour}:00`, weight: 'bold', size: 'md', flex: 5, align: 'end', wrap: true },
+            ],
+          },
+          {
+            type: 'box', layout: 'horizontal', spacing: 'sm',
+            contents: [
+              { type: 'text', text: '泊数 / 人数', color: '#888', size: 'sm', flex: 2 },
+              { type: 'text', text: `${rec.nights} 泊 / ${rec.guests} 名`, weight: 'bold', size: 'md', flex: 5, align: 'end' },
+            ],
+          },
+          { type: 'separator', margin: 'md' },
+          {
+            type: 'box', layout: 'horizontal', spacing: 'sm',
+            contents: [
+              { type: 'text', text: '合計 (現地払い)', color: '#888', size: 'sm', flex: 3 },
+              { type: 'text', text: `${(rec.totalPrice || 0).toLocaleString()}円`, weight: 'bold', size: 'xl', flex: 4, align: 'end', color: '#1B5E20' },
+            ],
+          },
+        ],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          {
+            type: 'button',
+            style: 'primary',
+            color: '#4285F4',
+            action: { type: 'uri', label: 'Google カレンダーに登録', uri: gcalUrl },
+          },
+          {
+            type: 'text',
+            text: '前日に道順、 当日に鍵の場所をお送りします。',
+            size: 'xs', color: '#888', wrap: true, align: 'center', margin: 'sm',
+          },
+        ],
+      },
+    },
+  };
+}
