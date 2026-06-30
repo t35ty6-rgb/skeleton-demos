@@ -278,25 +278,26 @@ function renderRoomMap(data) {
   }
 
   const bldgOrder = ['ryosha', 'gakusha'];
+  const bldgEnName = { ryosha: 'Ryosha · Inn', gakusha: 'Gakusha · Study House' };
   $('#roomMap').innerHTML = bldgOrder.filter((b) => byBldg[b]).map((bId) => `
     <div class="roommap__bldg">
       <div class="roommap__bldg-head">
         <div class="roommap__bldg-icon"><svg><use href="${bldgIconHref(bId)}"/></svg></div>
         <div>
-          <div class="roommap__bldg-name">${bldgName(bId)}</div>
+          <div class="roommap__bldg-name">${bldgName(bId)}<span class="roommap__bldg-en">${bldgEnName[bId] || ''}</span></div>
         </div>
-        <div class="roommap__bldg-meta">${byBldg[bId].length} 室</div>
+        <div class="roommap__bldg-meta">${byBldg[bId].length} rooms</div>
       </div>
       <div class="roommap__grid">
         ${byBldg[bId].map((r) => {
           const s = roomStates.get(r.id);
           const state = s?.state || 'open';
-          const stateLabel = { in: '本日 IN', out: '本日 OUT', stay: '滞在中', open: '空室', booked: '予約済', blocked: 'ブロック' }[state];
+          const stateLabel = { in: '到着', out: '出発', stay: '滞在', open: '空き', booked: '予約', blocked: '停止' }[state];
           return `
             <div class="rcell rcell--${state}" data-res="${s?.resNo || ''}">
               <div class="rcell__num">${roomNum(r.id)}</div>
               <div class="rcell__name">${r.name || ''}</div>
-              <div class="rcell__cap"><svg><use href="#i-people"/></svg>定員 ${r.capacity || r.maxGuests || '?'} 名 · ${(r.price || 0).toLocaleString()}円〜</div>
+              <div class="rcell__cap"><svg><use href="#i-people"/></svg>${r.capacity || r.maxGuests || '?'} guests · from ${(r.price || 0).toLocaleString()}円</div>
               <div class="rcell__status">${stateLabel}</div>
               ${s?.guest ? `<div class="rcell__guest">${s.guest} 様</div>` : ''}
             </div>
