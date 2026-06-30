@@ -233,11 +233,11 @@
     </div>
 
     <div class="point-card">
-      <div class="label">あなたのポイント</div>
+      <div class="label">貯まったポイント</div>
       <div class="pts"><b id="ptsB">0</b><span>P</span></div>
       <div class="prog"><i id="ptsBar" style="width:0%"></i></div>
       <div class="prog-meta"><span>次の特典まで</span><b id="ptsRemain">あと 0P</b></div>
-      <div class="ltv"><span>これまでの累計</span><span><b id="ltvB">¥0</b> / <b id="visitsB">0</b>回来店</span></div>
+      <div class="ltv"><span>累計</span><span><b id="ltvB">¥0</b> ・ <b id="visitsB">0</b>回ご来店</span></div>
     </div>
 
     <div class="menu">
@@ -303,7 +303,7 @@
         <div class="l">あなた専用 QR</div>
         <h3 id="qrName">—</h3>
         <div id="qrBox"></div>
-        <div class="qrcap">スタッフが QR を読み取ると、 <b>お客さま情報・ポイント残高</b> が一瞬で出ます。<br>このQRは <b>あなた専用</b>、 他の方に共有しないでください。</div>
+        <div class="qrcap">スタッフが読み取ると、 <b>お客さま情報とポイント残高</b> が一瞬で表示されます。<br>このQRはお客さまご本人専用です、 他の方に共有しないでください。</div>
       </div>
     </div>
   </section>
@@ -365,16 +365,21 @@
   <section class="view" data-view="shop">
     <div class="body-view">
       <span class="back" onclick="showView('home')">← ホーム</span>
-      <h1>お店へ</h1>
+      <h1>LINEでお話しする</h1>
       <div class="section">
-        <p style="margin:0; font-size:13.5px; line-height:1.7;">ご相談・取り置き・取り寄せのご相談は、このLINEのトーク画面からお気軽にどうぞ。<br>営業時間 11:00〜19:00 / 定休日 火曜</p>
+        <p style="margin:0; font-size:13.5px; line-height:1.7;">ご相談、 お取り置き、 お取り寄せ。 このLINEのトーク画面からお気軽にどうぞ。<br>営業時間 11:00〜19:00 ・ 定休日 火曜</p>
       </div>
       <div class="section" style="margin-top:12px;">
-        <h2>店舗情報</h2>
-        <p style="margin:0; font-size:12.5px; line-height:1.7; color:var(--ink-2);">
+        <h2>店舗のご案内</h2>
+        <p style="margin:0; font-size:12.5px; line-height:1.7; color:var(--ink-2);" id="shopInfo">
           <b id="shopAddrBig" style="font-weight:900;">—</b><br>
-          〒— / TEL —<br><br>
-          越前焼・丹波焼・萩焼を中心に、若手作家の器と古道具を扱う小さな雑貨店です。
+          越前焼・丹波焼・萩焼を中心に、 若手作家の器と古道具を扱う小さな雑貨店です。
+        </p>
+      </div>
+      <div class="section" style="margin-top:12px; background:#fdf8eb;">
+        <h2 style="font-size:12px; letter-spacing:.04em;">個人情報の取扱いについて</h2>
+        <p style="margin:0; font-size:11.5px; line-height:1.7; color:var(--ink-2);">
+          本サービスは、 お名前・購入履歴・ポイントなどの情報を、 店舗運営とサービス向上のためにのみ使用します。 ご退会のご希望は、 LINEでスタッフへお知らせください。
         </p>
       </div>
     </div>
@@ -385,7 +390,7 @@
     <a data-view="history" onclick="showView('history')"><span class="e">📖</span>履歴</a>
     <a data-view="qr" onclick="showView('qr')"><span class="e">📱</span>QR</a>
     <a data-view="coupons" onclick="showView('coupons')"><span class="e">🎁</span>特典</a>
-    <a data-view="shop" onclick="showView('shop')"><span class="e">💬</span>お店へ</a>
+    <a data-view="shop" onclick="showView('shop')"><span class="e">💬</span>LINEで話す</a>
   </nav>
 </div>
 
@@ -462,7 +467,9 @@ async function renderHolds() {
   if (!c) return;
   // 商品セレクト
   const products = await repo.listProducts({ where: { active: true } });
-  document.getElementById('holdProductSel').innerHTML = products.map(p => `<option value="${p.id}" data-name="${escape(p.name)}" data-price="${p.price}">${escape(p.name)} (¥${(p.price||0).toLocaleString()})</option>`).join('');
+  document.getElementById('holdProductSel').innerHTML = products.map(p => `<option value="${p.id}" data-name="${esc(p.name)}" data-price="${p.price}">${esc(p.name)} (¥${(p.price||0).toLocaleString()})</option>`).join('');
+  // 商品名は esc() でエスケープしたが option text として表示する用、 dataset.name は html attribute なので 一度デコード
+  Array.from(document.getElementById('holdProductSel').options).forEach((o, i) => o.dataset.name = (products[i]||{}).name || '');
 
   // 自分の取り置き一覧
   const all = await repo.listHolds({ where: { customerId: c.id } });
@@ -481,9 +488,9 @@ async function renderHolds() {
     : all.map(h => {
       const s = statMap[h.status] || statMap.requested;
       return `<div class="hold-card">
-        <span class="stat ${s.cls}">${escape(s.label)}</span>
-        <div class="nm">${escape(h.productName)} ×${h.qty}</div>
-        <div class="meta">${escape(h.note || '')}<br>申込: ${h.createdAt ? h.createdAt.slice(0,10).replace(/-/g,'/') : '—'}</div>
+        <span class="stat ${s.cls}">${esc(s.label)}</span>
+        <div class="nm">${esc(h.productName)} ×${h.qty}</div>
+        <div class="meta">${esc(h.note || '')}<br>申込: ${h.createdAt ? h.createdAt.slice(0,10).replace(/-/g,'/') : '—'}</div>
       </div>`;
     }).join('');
 }
@@ -499,23 +506,22 @@ window.setCustRating = function(r) {
 
 window.submitCustReview = async function() {
   const r = state.custRating || 0;
-  if (!r) { alert('星評価を選んでください'); return; }
+  if (!r) { await modalAlert('星の数を選んでください。'); return; }
   await repo.saveReview({
     customerId: state.customer.id,
     rating: r,
     text: document.getElementById('custReviewText').value,
-    status: r >= 4 ? 'pending' : 'pending',  // 4以上もスタッフ確認後公開
+    status: 'pending',
     sharedToGoogle: false,
   });
   document.getElementById('custReviewText').value = '';
   state.custRating = 0;
   document.querySelectorAll('#custStars span').forEach(s => { s.textContent = '☆'; s.style.color = 'var(--line)'; });
   if (r >= 4 && state.settings.googleMapsReviewUrl) {
-    if (confirm('ありがとうございました!\nGoogleマップにも同じ評価を投稿いただけますか?\n(お店の励みになります)')) {
-      window.open(state.settings.googleMapsReviewUrl, '_blank');
-    }
+    const yes = await modalAlert('ご感想ありがとうございます。\n\nよろしければ、Googleマップにも同じご感想をいただけますか。\nお店の励みになります。', { cancel: true, okLabel: 'Googleマップへ', cancelLabel: 'このまま戻る' });
+    if (yes) window.open(state.settings.googleMapsReviewUrl, '_blank');
   } else {
-    alert('ご感想ありがとうございました。 オーナーが必ず確認いたします。');
+    await modalAlert('ご感想ありがとうございます。\n確認してご連絡いたします。');
   }
   showView('home');
 };
@@ -527,7 +533,7 @@ window.submitCustomerHold = async function() {
   await repo.saveHold({
     customerId: c.id,
     productId: sel.value,
-    productName: decodeURIComponent(opt.dataset.name),
+    productName: opt.dataset.name,
     qty: parseInt(document.getElementById('holdQty').value) || 1,
     estimatedPrice: parseInt(opt.dataset.price) * (parseInt(document.getElementById('holdQty').value) || 1),
     note: document.getElementById('holdNote').value,
@@ -536,7 +542,7 @@ window.submitCustomerHold = async function() {
   });
   document.getElementById('holdNote').value = '';
   document.getElementById('holdQty').value = 1;
-  alert('お取り置きを承りました。 確認後、 こちらからご連絡します。');
+  await modalAlert('お取り置きを承りました。\n確認後、 こちらからご連絡します。');
   renderHolds();
 };
 
@@ -603,8 +609,8 @@ async function renderNews() {
     }
     el.innerHTML = list.map(n => `
       <li><span class="e">${n.e}</span>
-        <span class="nm">${escape(n.nm)}<small>${escape(n.sub)}</small></span>
-        <span class="pt ${n.cls}">${escape(n.pt)}</span>
+        <span class="nm">${esc(n.nm)}<small>${esc(n.sub)}</small></span>
+        <span class="pt ${n.cls}">${esc(n.pt)}</span>
       </li>
     `).join('');
   };
@@ -617,7 +623,7 @@ async function renderNews() {
   document.getElementById('recentHist').innerHTML = ps.slice(0, 3).map(p => `
     <li>
       <div class="date">${p.purchasedAt.slice(0,10).replace(/-/g,'/')}</div>
-      <div class="items">${escape(p.lines.map(l => l.productName + (l.qty>1?' ×'+l.qty:'')).join(' / '))}</div>
+      <div class="items">${esc(p.lines.map(l => l.productName + (l.qty>1?' ×'+l.qty:'')).join(' / '))}</div>
       <div class="foot"><span>${p.isGift ? '包装あり' : ''}</span><b>¥${p.total.toLocaleString()}</b></div>
     </li>
   `).join('') || '<li class="empty"><span class="e">🛍</span>まだお買い物の記録がありません</li>';
@@ -632,9 +638,9 @@ async function renderHistory() {
     : ps.map(p => `
       <li>
         <div class="date">${p.purchasedAt.slice(0,10).replace(/-/g,'/')}</div>
-        <div class="items">${escape(p.lines.map(l => l.productName + (l.qty>1?' ×'+l.qty:'')).join(' / '))}</div>
+        <div class="items">${esc(p.lines.map(l => l.productName + (l.qty>1?' ×'+l.qty:'')).join(' / '))}</div>
         <div class="foot">
-          <span>${escape([p.isGift?'包装あり':'', p.note].filter(Boolean).join(' / '))}</span>
+          <span>${esc([p.isGift?'包装あり':'', p.note].filter(Boolean).join(' / '))}</span>
           <b>¥${p.total.toLocaleString()}</b>
         </div>
       </li>
@@ -652,7 +658,7 @@ async function renderCoupons() {
       <div class="coupon" style="${cp.used ? 'opacity:.4;' : ''}">
         <div class="v">${cp.kind === 'percent' ? cp.value + '%' : '¥' + cp.value}</div>
         <div>
-          <div class="nm">${escape(cp.label)}<small>${escape(cp.code)} ・ 期限 ${cp.expireAt.slice(5).replace('-','/')}</small></div>
+          <div class="nm">${esc(cp.label)}<small>${esc(cp.code)} ・ 期限 ${cp.expireAt.slice(5).replace('-','/')}</small></div>
           ${cp.used ? '<small style="color:var(--ink-3);">使用済</small>' : '<small style="color:var(--soil); font-weight:700;">レジで店員にこの画面をご提示ください</small>'}
         </div>
       </div>
@@ -670,7 +676,25 @@ window.showView = function(name) {
   window.scrollTo(0, 0);
 };
 
-function escape(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function modalAlert(msg, opts = {}) {
+  return new Promise((resolve) => {
+    const dlg = document.createElement('dialog');
+    dlg.style.cssText = 'border:0; border-radius:16px; padding:0; max-width:340px; width:88%; box-shadow:0 24px 48px -12px rgba(0,0,0,.3);';
+    dlg.innerHTML = `
+      <div style="padding: 22px 24px 8px; font-family:'Noto Sans JP',sans-serif;">
+        <div style="font-size:14.5px; line-height:1.8; color:#1c1b18; white-space:pre-wrap;">${esc(msg)}</div>
+      </div>
+      <div style="padding: 8px 16px 16px; display:flex; gap:8px; justify-content:flex-end;">
+        ${opts.cancel ? `<button class="cancelBtn" style="appearance:none;border:1px solid #d8d4ca;background:#fff;padding:10px 16px;border-radius:8px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;">${esc(opts.cancelLabel || 'いいえ')}</button>` : ''}
+        <button class="okBtn" style="appearance:none;border:0;background:#1c1b18;color:#f7f6f1;padding:10px 18px;border-radius:8px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;">${esc(opts.okLabel || 'OK')}</button>
+      </div>`;
+    document.body.appendChild(dlg);
+    dlg.querySelector('.okBtn').onclick = () => { dlg.close(); dlg.remove(); resolve(true); };
+    if (opts.cancel) dlg.querySelector('.cancelBtn').onclick = () => { dlg.close(); dlg.remove(); resolve(false); };
+    dlg.showModal();
+  });
+}
 
 init().catch(e => {
   console.error(e);

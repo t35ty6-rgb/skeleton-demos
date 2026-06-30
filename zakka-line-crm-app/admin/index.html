@@ -23,7 +23,9 @@
     margin: 0; font-family: "Noto Sans JP", "Inter", system-ui, sans-serif;
     background: var(--bg); color: var(--ink); font-weight: 500;
     font-feature-settings: "palt" 1; -webkit-font-smoothing: antialiased;
+    letter-spacing: 0.02em;
   }
+  h1, h2, h3, h4 { letter-spacing: -0.02em; }
 
   /* ── shell ─────────────────────────────── */
   .shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
@@ -148,7 +150,7 @@
 
   /* ── タグ ── */
   .tag { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--bg-2); color: var(--ink-2); }
-  .tag.vip { background: #f4e7d4; color: var(--soil-2); }
+  .tag.vip { background: #8c3d24; color: #fff; }
   .tag.regul { background: #dbeadf; color: var(--leaf-2); }
   .tag.new { background: #e6e1f0; color: #4b3f7a; }
   .tag.sleep { background: #efece4; color: var(--ink-3); }
@@ -774,8 +776,7 @@
       <button data-view="prod">商品マスタ</button>
       <button data-view="settings">設定</button>
     </nav>
-    <div class="stuff-foot">
-      雑貨LINEツール α<br>
+    <div class="stuff-foot" id="devTools" style="display: none;">
       <button onclick="confirmSeed()">デモデータを再投入</button> / <button onclick="exportData()">書出</button>
     </div>
   </aside>
@@ -820,8 +821,8 @@
           <div class="reg-find">
             <h4>ポイント利用 (任意)</h4>
             <div class="pay-opts">
-              <input type="number" id="regPointsUse" placeholder="0" min="0" step="100" oninput="updateRegTotal()">
-              <label><span id="regAvailPoints">0P</span> ご利用可</label>
+              <input type="number" id="regPointsUse" placeholder="100以上" min="0" step="100" oninput="updateRegTotal()">
+              <label><span id="regAvailPoints">0P</span> ご利用可 (100P以上)</label>
             </div>
           </div>
 
@@ -877,8 +878,8 @@
         </div>
         <div class="actions">
           <span class="chip on">今日</span>
-          <span class="chip" onclick="alert('週次集計は商談後に実装')">今週</span>
-          <span class="chip" onclick="alert('月次集計は商談後に実装')">今月</span>
+          <span class="chip" style="opacity:.5; cursor:not-allowed;" title="準備中">今週</span>
+          <span class="chip" style="opacity:.5; cursor:not-allowed;" title="準備中">今月</span>
         </div>
       </div>
 
@@ -1264,7 +1265,7 @@
   <div class="processing">
     <div class="phone-tap">📱</div>
     <h3>お客さまのカードを iPhone にかざしてください</h3>
-    <p id="processMsg">Stripe決済端末と通信中…</p>
+    <p id="processMsg">決済を処理しています…</p>
   </div>
 </dialog>
 
@@ -1369,6 +1370,10 @@ window.state = state;
 async function init() {
   repo = await createRepo(TENANT_ID);
   window.repo = repo;
+  // dev ツール (?dev=1) で デモ用ボタン群表示
+  if (new URLSearchParams(location.search).get('dev') === '1') {
+    document.getElementById('devTools').style.display = '';
+  }
 
   // 初回起動: デモデータ自動投入
   const customers = await repo.listCustomers();
@@ -1552,7 +1557,7 @@ async function renderDash() {
     : attn.map(c => {
       const reason = [];
       if (c.tags.includes('vip')) reason.push('VIP');
-      if (c.tags.includes('sleep')) reason.push(c.daysSince + '日ご無沙汰');
+      if (c.tags.includes('sleep')) reason.push(c.daysSince + '日来店なし');
       if (c.tags.includes('birth')) reason.push('お誕生月');
       return `<li onclick="openKarte('${c.id}')" style="cursor:pointer;">
         <span class="date">前回 ${c.lastVisitAt ? c.lastVisitAt.slice(5,10).replace('-','/') : '—'}</span>
@@ -1724,8 +1729,12 @@ function renderCartItems() {
 
 window.addToCart = async function(productId) {
   const p = await repo.getProduct(productId);
+  if ((p.stock || 0) <= 0) { toast(`${p.name} は在庫切れです`); return; }
   const ex = state.cart.find(it => it.productId === productId);
-  if (ex) { ex.qty++; }
+  if (ex) {
+    if (ex.qty >= (p.stock || 0)) { toast(`在庫上限 ${p.stock}${p.unit||'点'} です`); return; }
+    ex.qty++;
+  }
   else state.cart.push({ productId, name: p.name, maker: p.maker, icon: p.icon, unitPrice: p.price, qty: 1, category: p.category });
   renderCartItems(); updateRegTotal();
 };
@@ -1750,7 +1759,8 @@ window.updateRegTotal = async function() {
   const ptUse = parseInt(document.getElementById('regPointsUse')?.value) || 0;
   let maxPt = 0;
   if (state.regCustomerId) { const c = await repo.getCustomer(state.regCustomerId); maxPt = c?.points || 0; }
-  const ptUsed = Math.min(ptUse, maxPt, subtotal);
+  const minP = state.settings?.point?.redeemMinPoints || POINT_RULES_DEFAULT.redeemMinPoints;
+  const ptUsed = ptUse < minP ? 0 : Math.min(ptUse, maxPt, subtotal);
   const grand = Math.max(0, subtotal - ptUsed);
   const earn = Math.floor(grand / (state.settings?.point?.yenPerPoint || 100));
 
@@ -1771,7 +1781,7 @@ window.processPayment = async function(method) {
   if (state.cart.length === 0 || !state.regCustomerId) return;
   const dlg = document.getElementById('processDlg');
   if (method === 'stripe_tap') {
-    document.getElementById('processMsg').textContent = 'Stripe決済端末と通信中…';
+    document.getElementById('processMsg').textContent = '決済を処理しています…';
     dlg.showModal();
     await sleep(1400);
     document.getElementById('processMsg').textContent = 'カード認証中…';
@@ -1899,14 +1909,14 @@ window.advanceHold = async function(holdId, to) {
     await repo.logMessage({
       customerId: h.customerId, direction: 'out', kind: 'auto',
       triggerId: 'hold_ready',
-      text: `${h.productName} が入荷しました。 ぜひご来店ください。`,
+      text: `${h.productName} が入荷いたしました。 お時間のあるときに、 ぜひどうぞ。`,
       status: 'sent', staffId: state.currentStaffId,
     });
-    toast('お客さまにご来店連絡を送信');
+    toast('ご来店のご連絡を送信しました');
   } else if (to === 'completed') {
-    toast('取り置きを完了');
+    toast('取り置きを完了しました');
   } else {
-    toast('状態を更新');
+    toast('状態を更新しました');
   }
   renderHolds();
 };
@@ -1936,7 +1946,7 @@ window.submitHold = async function(ev) {
     requestedAt: new Date().toISOString(),
   });
   document.getElementById('holdDlg').close();
-  toast('取り置きを登録');
+  toast('取り置きを登録しました');
   renderHolds();
 };
 
@@ -2198,7 +2208,7 @@ window.submitPurchase = async function(ev) {
       note: document.getElementById('recNote').value,
       staffId: state.currentStaffId,
     });
-    toast('購入を記録 → お礼LINEを送信しました');
+    toast('購入を記録し、お礼LINEを送信しました');
     resetRecForm();
     await renderKarte();
   } catch (e) {
@@ -2376,7 +2386,7 @@ async function renderMkt() {
     </li>
     <li>
       <span class="date">毎週月曜</span>
-      <span class="item">3ヶ月ご無沙汰のお客さま<small>「お元気ですか」掘り起こしメッセージ / 今週 ${sleepCount}名対象</small></span>
+      <span class="item">3ヶ月来店なしのお客さま<small>「お元気ですか」 のお声がけ / 今週 ${sleepCount}名対象</small></span>
       <span class="price" style="color:var(--leaf);">ON</span>
     </li>
     <li>
@@ -2392,7 +2402,7 @@ async function renderMkt() {
     { nm: '贈答利用が多い', desc: 'お中元・お歳暮の先行案内に。', fn: c => (c.tags || []).includes('gift_user') },
     { nm: 'VIP (累計5万円以上)', desc: '最優先のご案内。', fn: c => (c.tags || []).includes('vip') },
     { nm: '今月お誕生月', desc: 'お誕生日メッセージ + 特別クーポン。', fn: c => c.birthdate && parseInt(c.birthdate.slice(5,7)) === (now.getMonth()+1) },
-    { nm: '休眠 (3ヶ月以上ご無沙汰)', desc: 'おかえりなさいの一言を。', fn: c => (c.tags || []).includes('sleep') },
+    { nm: '休眠 (3ヶ月以上来店なし)', desc: 'おかえりなさいの一言を。', fn: c => (c.tags || []).includes('sleep') },
     { nm: '新規 (今月)', desc: 'お礼と次回ご来店のきっかけを。', fn: c => (c.tags || []).includes('new') },
   ];
   document.getElementById('segGrid').innerHTML = segs.map(s => {
@@ -2740,7 +2750,7 @@ ${location.origin}/
 // ── オンボーディングウィザード ─────────────────
 const onboardSteps = [
   { title: '店名を教えてください', body: () => `<label>店名</label><input id="obName" value="${esc(state.obData.name || state.settings.tenantName || '')}" placeholder="例: 雑貨と道具 のうと">` },
-  { title: '商品のジャンルを設定', body: () => `<label>主な取扱カテゴリ (4つまで、 後で変更可)</label>
+  { title: '商品カテゴリを決める', body: () => `<label>主な取扱カテゴリ (4つまで、 後で変更可)</label>
     <input id="obCats" value="${esc((state.obData.cats || ['器','道具','布','古道具']).join(','))}" placeholder="例: 器,道具,布,古道具">` },
   { title: 'ポイントルール', body: () => `<label>何円ごとに 1P 加算しますか</label>
     <input type="number" id="obYenP" value="${state.obData.yenP || 100}" min="50" step="50">
@@ -2750,7 +2760,7 @@ const onboardSteps = [
     <input type="number" id="obGoalD" value="${state.obData.goalD || 30000}" min="0" step="1000">
     <label>1ヶ月の目標 (円)</label>
     <input type="number" id="obGoalM" value="${state.obData.goalM || 800000}" min="0" step="1000">` },
-  { title: 'お問い合わせ先', body: () => `<label>オーナーメール (月次レポート送付先)</label>
+  { title: '連絡先・Googleマップ', body: () => `<label>オーナーメール (月次レポート送付先)</label>
     <input type="email" id="obEmail" value="${esc(state.obData.email || '')}" placeholder="owner@example.com">
     <label>Googleマップ レビューURL (任意、 後で設定可)</label>
     <input type="url" id="obGmap" value="${esc(state.obData.gmap || '')}" placeholder="https://search.google.com/local/writereview?placeid=…">` },

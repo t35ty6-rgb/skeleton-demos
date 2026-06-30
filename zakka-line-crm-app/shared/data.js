@@ -130,7 +130,9 @@ export class Repo {
   // ── 購入 ─────────────────────────
   async listPurchases(q = {})        { return this.adapter.list('purchases', q); }
   async listPurchasesByCustomer(customerId) {
-    return this.adapter.list('purchases', { where: { customerId }, orderBy: ['purchasedAt', 'desc'] });
+    // 複合 Firestore index 不要のため orderBy をクライアント側で
+    const items = await this.adapter.list('purchases', { where: { customerId } });
+    return items.sort((a, b) => (b.purchasedAt || '').localeCompare(a.purchasedAt || ''));
   }
 
   /**
@@ -210,7 +212,8 @@ export class Repo {
   // ── メッセージ ───────────────────
   async listMessages(q = {})         { return this.adapter.list('messages', q); }
   async listMessagesByCustomer(customerId) {
-    return this.adapter.list('messages', { where: { customerId }, orderBy: ['sentAt', 'desc'] });
+    const items = await this.adapter.list('messages', { where: { customerId } });
+    return items.sort((a, b) => (b.sentAt || '').localeCompare(a.sentAt || ''));
   }
   async logMessage(m) {
     const id = _id('m');
