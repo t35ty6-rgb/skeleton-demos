@@ -264,6 +264,13 @@
 
   .empty { padding: 56px 20px; text-align: center; color: var(--ink-3); font-weight: 600; line-height: 1.7; }
   .empty .emi { display: block; margin: 0 auto 14px; opacity: .55; }
+
+  /* ── SVG アイコンの基本スタイル ── */
+  .ico { display: inline-block; vertical-align: -4px; flex-shrink: 0; }
+  nav button .ico { vertical-align: -5px; margin-right: 4px; }
+  .pay-btn .ic .ico { color: currentColor; }
+  .ai-item .e .ico { color: #f0d3a8; }
+  .menu .e .ico { color: var(--ink); }
   .empty b { display: block; color: var(--ink-2); font-weight: 800; font-size: 14.5px; margin-bottom: 4px; }
   .empty p { margin: 0; font-size: 13px; }
 
@@ -797,7 +804,7 @@
       </div>
     </div>
     <nav id="nav">
-      <button data-view="register" style="background: var(--soil); color: #fff; font-size: 14.5px; padding: 12px;">📱 レジ</button>
+      <button data-view="register" style="background: var(--soil); color: #fff; font-size: 14.5px; padding: 12px; display: flex; align-items: center; gap: 8px;"><span class="ico-slot" data-icon="register"></span> レジ</button>
       <button data-view="dash"  aria-current="page">今日の店<span class="cnt" id="navAttn">·</span></button>
       <button data-view="cust">お客さま<span class="cnt" id="navCustCnt">—</span></button>
       <button data-view="holds">取り置き<span class="cnt" id="navHolds">·</span></button>
@@ -1370,6 +1377,8 @@
 import { createRepo } from '../shared/data.js';
 import { seedDemoData, DEMO_TENANT_ID } from '../seed/demo-data.js';
 import { POINT_RULES_DEFAULT } from '../shared/schema.js';
+import { icon, logoMark, hankoBig } from '../shared/icons.js';
+window.icon = icon; window.logoMark = logoMark; window.hankoBig = hankoBig;
 
 const TENANT_ID = new URLSearchParams(location.search).get('tenant') || DEMO_TENANT_ID;
 let repo;  // 非同期初期化 (init() 内で await)
@@ -1412,6 +1421,16 @@ async function init() {
   // dev ツール (?dev=1) で デモ用ボタン群表示
   if (new URLSearchParams(location.search).get('dev') === '1') {
     document.getElementById('devTools').style.display = '';
+  }
+  // SVG アイコン投入 (data-icon 属性)
+  document.querySelectorAll('[data-icon]').forEach(el => {
+    const name = el.dataset.icon;
+    el.innerHTML = icon(name, { size: 20 });
+  });
+  // ロゴ (落款) を sidebar shop の最上段に独立配置
+  const shopBlock = document.querySelector('.shop');
+  if (shopBlock && !shopBlock.querySelector('.logo-mark')) {
+    shopBlock.insertAdjacentHTML('afterbegin', `<div style="margin-bottom:10px;">${logoMark({ size: 32 })}</div>`);
   }
 
   // 初回起動: デモデータ自動投入
