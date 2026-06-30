@@ -57,11 +57,33 @@ export const ICONS = {
   arrow:     `<svg ${SVG_PROPS}><line x1="4" y1="12" x2="20" y2="12"/><path d="M14 6 L20 12 L14 18"/></svg>`,
   menu:      `<svg ${SVG_PROPS}><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>`,
 
+  // ─── アパレル (服飾) ───
+  shirt:     `<svg ${SVG_PROPS}><path d="M6 6 L4 8 L6 12 L7 10 L7 20 L17 20 L17 10 L18 12 L20 8 L18 6 L15 4 L9 4 Z"/><path d="M9 4 C 10 6, 14 6, 15 4"/></svg>`,
+  cardigan:  `<svg ${SVG_PROPS}><path d="M6 5 L4 9 L6 13 L7 11 L7 21 L17 21 L17 11 L18 13 L20 9 L18 5 L14 3 L10 3 Z"/><line x1="12" y1="3" x2="12" y2="21"/></svg>`,
+  bag:       `<svg ${SVG_PROPS}><path d="M5 9 L19 9 L18 21 L6 21 Z"/><path d="M8 9 C 8 5, 16 5, 16 9"/></svg>`,
+  hat:       `<svg ${SVG_PROPS}><ellipse cx="12" cy="17" rx="9" ry="2"/><path d="M7 17 C 7 12, 8 6, 12 6 C 16 6, 17 12, 17 17"/></svg>`,
+  accessory: `<svg ${SVG_PROPS}><circle cx="12" cy="9" r="2"/><path d="M12 11 L9 21 M12 11 L15 21"/><path d="M9 5 L15 5"/></svg>`,
+  scarf:     `<svg ${SVG_PROPS}><path d="M8 3 C 6 8, 8 12, 10 14 L 10 21 L 14 21 L 14 14 C 16 12, 18 8, 16 3 Z"/></svg>`,
+
   // ─── 雑貨店モチーフ (signature 周辺) ───
   sprout:    `<svg ${SVG_PROPS}><path d="M12 20 L12 11"/><path d="M12 11 C 6 11, 4 6, 4 4 C 6 4, 11 5, 12 11"/><path d="M12 11 C 18 11, 20 6, 20 4 C 18 4, 13 5, 12 11"/></svg>`,
   paper:     `<svg ${SVG_PROPS}><path d="M5 3 L15 3 L19 7 L19 21 L5 21 Z"/><path d="M15 3 L15 7 L19 7"/></svg>`,
   hanko:     `<svg ${SVG_PROPS}><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 17 L7 7 L10 7 L12 13 L14 7 L17 7 L17 17" stroke-width="2"/></svg>`,
   sparkle:   `<svg ${SVG_PROPS}><path d="M12 3 L13.5 10.5 L21 12 L13.5 13.5 L12 21 L10.5 13.5 L3 12 L10.5 10.5 Z"/></svg>`,
+};
+
+/**
+ * SVG パターン (背景用) — data URI で CSS background-image に使う
+ */
+export const PATTERNS = {
+  // 麻の葉 (シームレスタイル 80x80)
+  asanoha: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><g fill="none" stroke="%231f3328" stroke-width="0.7" stroke-linecap="round" opacity="0.5"><path d="M40 0 L40 40 M40 0 L20 14 M40 0 L60 14 M40 40 L20 26 M40 40 L60 26 M20 14 L20 40 M60 14 L60 40 M20 14 L60 26 M60 14 L20 26 M0 40 L40 40 L40 80 M40 80 L20 66 M40 80 L60 66 M40 40 L20 54 M40 40 L60 54 M20 54 L20 80 M60 54 L60 80 M20 54 L60 66 M60 54 L20 66 M80 40 L40 40"/></g></svg>`)}`,
+  // 七宝 (円が重なるパターン)
+  shippo: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><g fill="none" stroke="%232e4a3a" stroke-width="0.6" opacity="0.18"><circle cx="30" cy="30" r="20"/><circle cx="0" cy="30" r="20"/><circle cx="60" cy="30" r="20"/><circle cx="30" cy="0" r="20"/><circle cx="30" cy="60" r="20"/></g></svg>`)}`,
+  // 青海波 (波の重なり)
+  seigaiha: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20" viewBox="0 0 40 20"><g fill="none" stroke="%232e4a3a" stroke-width="0.7" opacity="0.18"><path d="M0 20 Q 10 0 20 20 T 40 20"/><path d="M0 16 Q 10 -4 20 16 T 40 16"/><path d="M0 12 Q 10 -8 20 12 T 40 12"/></g></svg>`)}`,
+  // 和紙風 ノイズ (粒子感)
+  washi: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="3"/><feColorMatrix values="0 0 0 0 0.11 0 0 0 0 0.10 0 0 0 0 0.08 0 0 0 0.07 0"/></filter><rect width="200" height="200" filter="url(%23n)"/></svg>`)}`,
 };
 
 /**

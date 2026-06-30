@@ -13,7 +13,7 @@ const dateOffset = (days) => dayOffset(days).slice(0, 10);
 export const DEMO_TENANT_ID = 'zakka-demo';
 
 export const DEMO_SETTINGS = {
-  tenantName: '雑貨と道具 のうと',
+  tenantName: 'のうと / 服と道具',
   legalName: '',
   taxRegistrationNumber: '',
   address: '福井県',
@@ -33,10 +33,13 @@ export const DEMO_SETTINGS = {
     liffId: '',
   },
   categories: [
-    { id: 'utsuwa',  label: '器' },
-    { id: 'dougu',   label: '道具' },
-    { id: 'nuno',    label: '布' },
-    { id: 'kodougu', label: '古道具' },
+    { id: 'ifuku',     label: '服' },
+    { id: 'accessory', label: '装身具' },
+    { id: 'bag',       label: '鞄' },
+    { id: 'utsuwa',    label: '器' },
+    { id: 'dougu',     label: '道具' },
+    { id: 'nuno',      label: '布' },
+    { id: 'kodougu',   label: '古道具' },
   ],
   goals: {
     daily:   30000,
@@ -55,14 +58,28 @@ export const DEMO_STAFF = [
 ];
 
 export const DEMO_PRODUCTS = [
-  { id: 'p_oribe_tori5', name: '織部 取り皿 5寸', maker: '青木 善之介', category: 'utsuwa', price: 3800, cost: 1900, icon: '🍵', stock: 14, stockBase: 18, unit: '点', tags: ['oribe', 'shinki'], active: true },
-  { id: 'p_kuri_hashi',  name: '栗の木 箸 25cm', maker: '福井木工舎',   category: 'dougu',  price: 1200, cost: 480,  icon: '🥢', stock: 21, stockBase: 50, unit: '膳', tags: [], active: true },
-  { id: 'p_kohiki_meshi',name: '粉引 飯碗',       maker: '中村 友也',   category: 'utsuwa', price: 3600, cost: 1620, icon: '🪴', stock: 3,  stockBase: 14, unit: '点', tags: ['kohiki'], active: true },
-  { id: 'p_oribe_guinomi',name: '織部 ぐい呑み',  maker: '青木 善之介', category: 'utsuwa', price: 2500, cost: 1100, icon: '🍶', stock: 1,  stockBase: 12, unit: '点', tags: ['oribe', 'low'], active: true },
-  { id: 'p_asanuno',     name: '麻布 紺 1m',     maker: '越前麻',     category: 'nuno',   price: 1700, cost: 850,  icon: '🧵', stock: 13, stockBase: 20, unit: 'm', tags: [], active: true },
-  { id: 'p_kibon',       name: '古道具 木の盆',  maker: '骨董',       category: 'kodougu', price: 4800, cost: 2200, icon: '🪵', stock: 2,  stockBase: 6, unit: '点', tags: [], active: true },
-  { id: 'p_hagi_yunomi', name: '萩焼 湯呑',      maker: '大和 義人',  category: 'utsuwa', price: 2800, cost: 1200, icon: '🫖', stock: 8,  stockBase: 12, unit: '点', tags: ['hagi'], active: true },
-  { id: 'p_kiri_box',    name: '桐箱 大',        maker: '越前木箱',  category: 'dougu',  price: 1800, cost: 700,  icon: '📦', stock: 22, stockBase: 40, unit: '点', tags: ['gift'], active: true },
+  // ─── アパレル (主力) ───
+  { id: 'p_linen_shirt', name: 'リネンシャツ / 生成り',      maker: 'Linette (フランス)',     category: 'ifuku', price: 18800, cost: 8200, icon: 'shirt',    stock: 6, stockBase: 12, unit: '点', tags: ['linen', 'spring'], active: true },
+  { id: 'p_wool_cardi',  name: 'ウールカーディガン / 墨黒', maker: 'Bigeard (フランス)',      category: 'ifuku', price: 32000, cost: 14500, icon: 'cardigan', stock: 3, stockBase: 8, unit: '点', tags: ['wool', 'winter'], active: true },
+  { id: 'p_canvas_apron',name: '帆布エプロン / 倉敷',        maker: '倉敷帆布',                 category: 'ifuku', price: 6800,  cost: 2800, icon: 'shirt',    stock: 11, stockBase: 16, unit: '点', tags: ['apron', 'work'], active: true },
+  { id: 'p_silk_scarf',  name: '絹のスカーフ / 草木染め',    maker: '西陣 上田',                category: 'accessory', price: 9800, cost: 4200, icon: 'scarf',    stock: 5, stockBase: 8, unit: '点', tags: ['silk', 'gift'], active: true },
+
+  // ─── 鞄・装身具 ───
+  { id: 'p_basket_bag',  name: '麻のカゴ鞄 / 中',            maker: 'マダガスカル直輸入',       category: 'bag',       price: 14500, cost: 5800, icon: 'bag',      stock: 4, stockBase: 6, unit: '点', tags: ['summer', 'natural'], active: true },
+  { id: 'p_brass_earring',name: '真鍮のピアス / 雫',         maker: '高岡 須磨',                category: 'accessory', price: 3200,  cost: 1100, icon: 'accessory', stock: 9, stockBase: 14, unit: '対', tags: ['brass', 'gift'], active: true },
+  { id: 'p_linen_hat',   name: '麻のサンハット',              maker: 'Linette (フランス)',      category: 'ifuku', price: 7800,  cost: 3200, icon: 'hat',     stock: 7, stockBase: 10, unit: '点', tags: ['linen', 'summer'], active: true },
+
+  // ─── 器・道具 ───
+  { id: 'p_oribe_tori5', name: '織部 取り皿 5寸',            maker: '青木 善之介',              category: 'utsuwa', price: 3800, cost: 1900, icon: 'utsuwa', stock: 14, stockBase: 18, unit: '点', tags: ['oribe', 'shinki'], active: true },
+  { id: 'p_kohiki_meshi',name: '粉引 飯碗',                   maker: '中村 友也',                category: 'utsuwa', price: 3600, cost: 1620, icon: 'utsuwa', stock: 3,  stockBase: 14, unit: '点', tags: ['kohiki'], active: true },
+  { id: 'p_oribe_guinomi',name: '織部 ぐい呑み',              maker: '青木 善之介',              category: 'utsuwa', price: 2500, cost: 1100, icon: 'utsuwa', stock: 1,  stockBase: 12, unit: '点', tags: ['oribe', 'low'], active: true },
+  { id: 'p_hagi_yunomi', name: '萩焼 湯呑',                   maker: '大和 義人',                category: 'utsuwa', price: 2800, cost: 1200, icon: 'utsuwa', stock: 8,  stockBase: 12, unit: '点', tags: ['hagi'], active: true },
+  { id: 'p_kuri_hashi',  name: '栗の木 箸 25cm',              maker: '福井木工舎',                category: 'dougu',  price: 1200, cost: 480,  icon: 'dougu',  stock: 21, stockBase: 50, unit: '膳', tags: [], active: true },
+
+  // ─── 布・古道具 ───
+  { id: 'p_asanuno',     name: '麻布 紺 1m',                  maker: '越前麻',                    category: 'nuno',    price: 1700, cost: 850,  icon: 'nuno',    stock: 13, stockBase: 20, unit: 'm', tags: [], active: true },
+  { id: 'p_kibon',       name: '古道具 木の盆',                maker: '骨董',                       category: 'kodougu', price: 4800, cost: 2200, icon: 'kodougu', stock: 2,  stockBase: 6, unit: '点', tags: [], active: true },
+  { id: 'p_kiri_box',    name: '桐箱 大',                     maker: '越前木箱',                  category: 'dougu',   price: 1800, cost: 700,  icon: 'dougu',  stock: 22, stockBase: 40, unit: '点', tags: ['gift'], active: true },
 ];
 
 export const DEMO_CUSTOMERS = [
