@@ -14,6 +14,11 @@ export const DEMO_TENANT_ID = 'zakka-demo';
 
 export const DEMO_SETTINGS = {
   tenantName: '雑貨と道具 のうと',
+  legalName: '',
+  taxRegistrationNumber: '',
+  address: '福井県',
+  phone: '',
+  ownerEmail: '',
   point: {
     yenPerPoint: 100,
     pointPerYen: 1,
@@ -33,13 +38,20 @@ export const DEMO_SETTINGS = {
     { id: 'nuno',    label: '布' },
     { id: 'kodougu', label: '古道具' },
   ],
+  goals: {
+    daily:   30000,
+    weekly:  200000,
+    monthly: 800000,
+  },
+  onboardingDone: true,  // demo は完了済とみなす
+  googleMapsReviewUrl: 'https://search.google.com/local/writereview?placeid=DEMO_PLACE_ID',
 };
 
 export const DEMO_STAFF = [
-  { id: 's_owner',  name: '吉田 オーナー', role: 'owner' },
-  { id: 's_morisita', name: '森下', role: 'staff' },
-  { id: 's_tanaka',   name: '田中', role: 'staff' },
-  { id: 's_kawai',    name: '川合', role: 'staff' },
+  { id: 's_owner',    name: 'オーナー', role: 'owner', pin: '0000', color: '#1f3328' },
+  { id: 's_morisita', name: '森下',     role: 'staff', pin: '1111', color: '#2e4a3a' },
+  { id: 's_tanaka',   name: '田中',     role: 'staff', pin: '2222', color: '#b25538' },
+  { id: 's_kawai',    name: '川合',     role: 'staff', pin: '3333', color: '#c98a2b' },
 ];
 
 export const DEMO_PRODUCTS = [
@@ -289,6 +301,27 @@ export const DEMO_COUPONS = [
   },
 ];
 
+export const DEMO_REVIEWS = [
+  {
+    id: 'rv_1',
+    customerId: 'c_furukawa',
+    rating: 5,
+    text: '茶道の生徒さんへのご贈答品を相談しました。 丁寧に選んでくださって、 桐箱も用意していただきました。 また伺います。',
+    status: 'approved',
+    sharedToGoogle: true,
+    createdAt: dayOffset(6),
+  },
+  {
+    id: 'rv_2',
+    customerId: 'c_seto',
+    rating: 5,
+    text: '織部の新作を取り置きしてくださり、 ありがとうございました。 LINE で連絡もらえるのが助かります。',
+    status: 'pending',
+    sharedToGoogle: false,
+    createdAt: dayOffset(2),
+  },
+];
+
 export async function seedDemoData(repo) {
   await repo.adapter._wipeAll?.();
   await repo.saveSettings(DEMO_SETTINGS);
@@ -299,4 +332,5 @@ export async function seedDemoData(repo) {
   for (const m of DEMO_MESSAGES) await repo.adapter.set('messages', m.id, m);
   for (const cp of DEMO_COUPONS) await repo.adapter.set('coupons', cp.id, cp);
   for (const h of DEMO_HOLDS) await repo.adapter.set('holds', h.id, h);
+  for (const rv of DEMO_REVIEWS) await repo.adapter.set('reviews', rv.id, rv);
 }

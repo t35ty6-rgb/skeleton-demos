@@ -234,6 +234,21 @@ export class Repo {
   }
   async patchHold(id, patch)         { return this.adapter.update('holds', id, patch); }
 
+  // ── レビュー ─────────────────────
+  async listReviews(q = {})          { return this.adapter.list('reviews', q); }
+  async saveReview(r) {
+    const id = r.id || _id('r');
+    return this.adapter.set('reviews', id, { status: 'pending', createdAt: new Date().toISOString(), ...r, id });
+  }
+  async patchReview(id, patch)       { return this.adapter.update('reviews', id, patch); }
+
+  // ── 領収書 ───────────────────────
+  async saveReceipt(r) {
+    const id = r.id || _id('rc');
+    return this.adapter.set('receipts', id, { issuedAt: new Date().toISOString(), ...r, id });
+  }
+  async listReceipts(q = {})         { return this.adapter.list('receipts', q); }
+
   // ── 設定 ─────────────────────────
   async getSettings()                { return (await this.adapter.get('settings', 'main')) || {}; }
   async saveSettings(s)              { return this.adapter.set('settings', 'main', s); }
@@ -347,6 +362,126 @@ export class Repo {
   async segmentCount(segmentFn) {
     const customers = await this.listCustomers();
     return customers.filter(segmentFn).length;
+  }
+
+  // ── 目標進捗 ─────────────────────
+  async goalProgress() {
+    const settings = await this.getSettings();
+    const goals = settings.goals || { daily: 30000, weekly: 200000, monthly: 800000 };
+    const purchases = await this.listPurchases();
+    const now = new Date();
+    const sod = new Date(now); sod.setHours(0,0,0,0);
+    const sow = new Date(sod); sow.setDate(sow.getDate() - sod.getDay());
+    const som = new Date(sod.getFullYear(), sod.getMonth(), 1);
+    const sum = (since) => purchases.filter(p => new Date(p.purchasedAt) >= since).reduce((s, p) => s + p.total, 0);
+    return {
+      daily:   { actual: sum(sod), target: goals.daily   },
+      weekly:  { actual: sum(sow), target: goals.weekly  },
+      monthly: { actual: sum(som), target: goals.monthly },
+    };
+  }
+
+  // ── AI おすすめ (ヒューリスティック) ─────────
+  async aiSuggestions(customerId) {
+    const c = await this.getCustomer(customerId);
+    if (!c) return [];
+    const tags = new Set(c.tags || []);
+    const purchases = await this.listPurchasesByCustomer(customerId);
+    const products = await this.listProducts({ where: { active: true } });
+    const settings = await this.getSettings();
+    const now = new Date();
+
+    const boughtIds = new Set();
+    const catCount = new Map();
+    const makerCount = new Map();
+    purchases.forEach(p => p.lines.forEach(l => {
+      boughtIds.add(l.productId);
+      catCount.set(l.category, (catCount.get(l.category) || 0) + l.qty);
+      const pr = products.find(x => x.id === l.productId);
+      if (pr?.maker) makerCount.set(pr.maker, (makerCount.get(pr.maker) || 0) + l.qty);
+    }));
+
+    const favCategory = [...catCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    const favMaker = [...makerCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+
+    const suggestions = [];
+
+    // 1. お気に入り作家の新作
+    if (favMaker) {
+      const fromFav = products.filter(p => p.maker === favMaker && !boughtIds.has(p.id) && p.stock > 0);
+      if (fromFav[0]) {
+        suggestions.push({
+          icon: '🍶',
+          reason: `${favMaker} さんの新作`,
+          productName: fromFav[0].name,
+          productId: fromFav[0].id,
+          confidence: 'high',
+          why: `${c.realName || c.displayName}さまは ${favMaker} さんの作品を ${makerCount.get(favMaker)}点 お持ちです`,
+        });
+      }
+    }
+
+    // 2. お気に入りジャンル
+    if (favCategory) {
+      const fromCat = products.filter(p => p.category === favCategory && !boughtIds.has(p.id) && p.stock > 0);
+      if (fromCat[0]) {
+        suggestions.push({
+          icon: '🪴',
+          reason: `お好みの ${this._catLabel(favCategory, settings)} ジャンル`,
+          productName: fromCat[0].name,
+          productId: fromCat[0].id,
+          confidence: 'mid',
+          why: `${this._catLabel(favCategory, settings)} を ${catCount.get(favCategory)}点 お買い上げの実績`,
+        });
+      }
+    }
+
+    // 3. 贈答多めなら 桐箱
+    if (tags.has('gift_user')) {
+      const giftProduct = products.find(p => (p.tags || []).includes('gift') && p.stock > 0);
+      if (giftProduct) {
+        suggestions.push({
+          icon: '🎁',
+          reason: 'ご贈答に',
+          productName: giftProduct.name,
+          productId: giftProduct.id,
+          confidence: 'mid',
+          why: 'ご贈答利用が多いお客さまです',
+        });
+      }
+    }
+
+    // 4. お誕生月クーポン案内
+    if (c.birthdate) {
+      const bMonth = parseInt(c.birthdate.slice(5, 7));
+      if (bMonth === now.getMonth() + 1) {
+        suggestions.push({
+          icon: '🎂',
+          reason: 'お声がけ',
+          productName: 'お誕生月クーポンのご案内',
+          confidence: 'high',
+          why: '今月お誕生月、 まだ10%OFFクーポン未使用',
+        });
+      }
+    }
+
+    // 5. 休眠 → 再訪誘導
+    if (tags.has('sleep')) {
+      const days = c.lastVisitAt ? Math.floor((now - new Date(c.lastVisitAt))/86400000) : 0;
+      suggestions.push({
+        icon: '👋',
+        reason: 'お声がけ',
+        productName: 'お久しぶりですね、 一言ご挨拶を',
+        confidence: 'high',
+        why: `${days}日ぶりのご来店です`,
+      });
+    }
+
+    return suggestions.slice(0, 4);
+  }
+
+  _catLabel(catId, settings) {
+    return (settings.categories || []).find(c => c.id === catId)?.label || catId;
   }
 
   // ── 購読 ─────────────────────────

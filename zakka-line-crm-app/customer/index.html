@@ -241,10 +241,11 @@
     </div>
 
     <div class="menu">
-      <a onclick="showView('history')"><span class="e">🛍</span>購入履歴</a>
+      <a onclick="showView('history')"><span class="e">🛍</span>履歴</a>
       <a onclick="showView('coupons')"><span class="e">🎁</span>クーポン<br><span class="badge" id="couponBadge"></span></a>
       <a onclick="showView('qr')"><span class="e">📱</span>お会計QR</a>
       <a onclick="showView('holds')"><span class="e">📅</span>取り置き<br><span class="badge" id="holdBadge"></span></a>
+      <a onclick="showView('review')" style="grid-column: span 4;"><span class="e">⭐</span>お店にレビューを送る</a>
     </div>
 
     <div class="section">
@@ -329,6 +330,33 @@
       <div class="section">
         <h2>あなたのお取り置き <a id="holdCount"></a></h2>
         <div id="holdList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── レビュー投稿 ── -->
+  <section class="view" data-view="review">
+    <div class="body-view">
+      <span class="back" onclick="showView('home')">← ホーム</span>
+      <h1>お店にレビューを送る</h1>
+      <div class="sub">ご来店の感想を、 ぜひお聞かせください。 オーナーが必ず読みます。</div>
+      <div class="hold-form">
+        <label>評価</label>
+        <div style="font-size: 38px; text-align: center; margin: 12px 0; cursor: pointer; letter-spacing: .1em;" id="custStars">
+          <span data-r="1" onclick="setCustRating(1)" style="color: var(--line);">☆</span>
+          <span data-r="2" onclick="setCustRating(2)" style="color: var(--line);">☆</span>
+          <span data-r="3" onclick="setCustRating(3)" style="color: var(--line);">☆</span>
+          <span data-r="4" onclick="setCustRating(4)" style="color: var(--line);">☆</span>
+          <span data-r="5" onclick="setCustRating(5)" style="color: var(--line);">☆</span>
+        </div>
+        <label>ご感想 (任意)</label>
+        <textarea id="custReviewText" rows="3" placeholder="器の選び方が丁寧だった、 取り置きが助かった、 など"></textarea>
+        <div class="btn-row">
+          <button onclick="submitCustReview()">投稿</button>
+        </div>
+        <p style="font-size:11px;color:var(--ink-3);text-align:center;margin-top:10px;line-height:1.6;">
+          投稿後、 高評価の方には Googleマップへの<br>レビュー投稿リンクをお送りします (任意)
+        </p>
       </div>
     </div>
   </section>
@@ -459,6 +487,38 @@ async function renderHolds() {
       </div>`;
     }).join('');
 }
+
+window.setCustRating = function(r) {
+  state.custRating = r;
+  document.querySelectorAll('#custStars span').forEach(s => {
+    const v = parseInt(s.dataset.r);
+    s.textContent = v <= r ? '★' : '☆';
+    s.style.color = v <= r ? 'var(--soil)' : 'var(--line)';
+  });
+};
+
+window.submitCustReview = async function() {
+  const r = state.custRating || 0;
+  if (!r) { alert('星評価を選んでください'); return; }
+  await repo.saveReview({
+    customerId: state.customer.id,
+    rating: r,
+    text: document.getElementById('custReviewText').value,
+    status: r >= 4 ? 'pending' : 'pending',  // 4以上もスタッフ確認後公開
+    sharedToGoogle: false,
+  });
+  document.getElementById('custReviewText').value = '';
+  state.custRating = 0;
+  document.querySelectorAll('#custStars span').forEach(s => { s.textContent = '☆'; s.style.color = 'var(--line)'; });
+  if (r >= 4 && state.settings.googleMapsReviewUrl) {
+    if (confirm('ありがとうございました!\nGoogleマップにも同じ評価を投稿いただけますか?\n(お店の励みになります)')) {
+      window.open(state.settings.googleMapsReviewUrl, '_blank');
+    }
+  } else {
+    alert('ご感想ありがとうございました。 オーナーが必ず確認いたします。');
+  }
+  showView('home');
+};
 
 window.submitCustomerHold = async function() {
   const c = state.customer;

@@ -56,6 +56,20 @@ export const HOLD_STATUS = {
   CANCELLED: { id: 'cancelled', label: 'キャンセル' },
 };
 
+// ─── レビュー (お客→お店) ───
+export const REVIEW_STATUS = {
+  PENDING:  { id: 'pending',  label: '未確認' },
+  APPROVED: { id: 'approved', label: '公開' },
+  HIDDEN:   { id: 'hidden',   label: '非表示' },
+};
+
+// ─── 売上目標 種別 ───
+export const GOAL_TYPES = {
+  DAILY:   { id: 'daily',   label: '本日' },
+  WEEKLY:  { id: 'weekly',  label: '今週' },
+  MONTHLY: { id: 'monthly', label: '今月' },
+};
+
 // ─── 商品カテゴリ (テナント設定で上書き可能) ───
 export const PRODUCT_CATEGORIES_DEFAULT = [
   { id: 'utsuwa',  label: '器' },
