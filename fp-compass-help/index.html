@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>操作ガイド · FP Compass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@400;600;700&display=swap">
+<style>
+  *,*::before,*::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: #FFFFFF; color: #15172B;
+    font-family: "Noto Sans JP", system-ui, sans-serif;
+    font-weight: 400; line-height: 1.85; font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+
+  :root {
+    --ink: #15172B;
+    --ink-soft: #5A5D7A;
+    --ink-mute: #8B8DA1;
+    --paper: #F8F7F2;
+    --rule: #EAE7DD;
+    --rule-strong: #D6D2C4;
+    --brand: #4338CA;
+    --brand-soft: #EEEEFB;
+    --brand-ink: #2D2393;
+    --gold: #C89D3C;
+    --gold-soft: #FBF1D8;
+    --bg: #FFFFFF;
+    --shadow-card: 0 1px 0 rgba(21,23,43,.04), 0 8px 24px -12px rgba(21,23,43,.08);
+  }
+
+  /* ─── Layout ──────────────────────────────────────────── */
+  .app {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    min-height: 100vh;
+  }
+  /* sidebar */
+  .side {
+    background: var(--paper);
+    border-right: 1px solid var(--rule);
+    padding: 28px 22px 80px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  .side-brand {
+    display: flex; align-items: center; gap: 10px;
+    padding-bottom: 22px; margin-bottom: 18px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .side-brand-mark {
+    width: 28px; height: 28px;
+    background: var(--brand);
+    border-radius: 6px;
+    display: grid; place-items: center;
+    color: #fff; font-weight: 900; font-size: 13px;
+    letter-spacing: 0;
+  }
+  .side-brand-text { font-weight: 700; font-size: 13.5px; letter-spacing: .01em; }
+  .side-brand-text small {
+    display: block; font-weight: 400; font-size: 11px;
+    color: var(--ink-soft); margin-top: 1px;
+  }
+
+  .side-group { margin-top: 22px; }
+  .side-group:first-of-type { margin-top: 0; }
+  .side-group-label {
+    font-size: 10.5px; font-weight: 700;
+    letter-spacing: .14em; color: var(--ink-mute);
+    text-transform: none;
+    margin-bottom: 10px;
+    padding-left: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .side-group-label::before {
+    content: ''; width: 14px; height: 1px;
+    background: var(--rule-strong);
+  }
+  .side-link {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 10px; border-radius: 5px;
+    font-size: 13.5px; color: var(--ink); font-weight: 400;
+    margin: 1px 0;
+    transition: background .12s;
+  }
+  .side-link:hover { background: rgba(67,56,202,.06); }
+  .side-link.active { background: var(--brand-soft); color: var(--brand-ink); font-weight: 500; }
+  .side-link-num {
+    font-family: "Inter", sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 11px; color: var(--ink-mute);
+    width: 18px; font-weight: 600;
+  }
+  .side-link.active .side-link-num { color: var(--gold); }
+
+  /* main */
+  .main { padding: 0; min-width: 0; }
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule);
+    padding: 12px 36px;
+    display: flex; align-items: center; gap: 20px;
+  }
+  .topbar-search {
+    flex: 1; max-width: 540px;
+    position: relative;
+  }
+  .topbar-search input {
+    width: 100%; padding: 9px 14px 9px 38px;
+    border: 1px solid var(--rule);
+    border-radius: 8px; background: #fff;
+    font-size: 14px; color: var(--ink);
+    font-family: inherit;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .topbar-search input:focus {
+    outline: none; border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(67,56,202,.12);
+  }
+  .topbar-search::before {
+    content: ''; position: absolute;
+    left: 13px; top: 50%; transform: translateY(-50%);
+    width: 14px; height: 14px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235A5D7A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+    background-repeat: no-repeat; background-size: contain;
+    pointer-events: none;
+  }
+  .topbar-clock {
+    font-family: "Inter", sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 12.5px; color: var(--ink-soft);
+    letter-spacing: .02em;
+  }
+  .topbar-clock-dot {
+    display: inline-block; width: 6px; height: 6px;
+    border-radius: 50%; background: var(--gold);
+    margin-right: 8px; vertical-align: middle;
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+  /* hero */
+  .hero { padding: 56px 36px 36px; max-width: 880px; }
+  .hero-eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: .18em;
+    color: var(--gold);
+    margin-bottom: 18px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .hero-eyebrow::before {
+    content: ''; width: 24px; height: 1px; background: var(--gold);
+  }
+  .hero h1 {
+    font-size: 38px; font-weight: 900;
+    line-height: 1.25; letter-spacing: -0.015em;
+    margin: 0 0 18px;
+  }
+  .hero h1 em {
+    font-style: normal; color: var(--brand);
+    background-image: linear-gradient(transparent 60%, var(--gold-soft) 60%);
+    padding: 0 2px;
+  }
+  .hero-lead {
+    font-size: 16px; color: var(--ink-soft);
+    margin: 0 0 30px; line-height: 1.85;
+    max-width: 640px;
+  }
+  .hero-chips {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    align-items: center;
+  }
+  .hero-chips-label {
+    font-size: 11.5px; color: var(--ink-mute);
+    font-weight: 500; margin-right: 4px;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 999px;
+    background: var(--paper); border: 1px solid var(--rule);
+    font-size: 12.5px; color: var(--ink);
+    transition: all .12s;
+  }
+  .chip:hover {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+    color: var(--brand-ink);
+  }
+
+  /* content sections */
+  .content { padding: 0 36px 120px; max-width: 880px; }
+
+  .group-divider {
+    margin: 56px 0 24px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .group-divider-title {
+    font-size: 12px; font-weight: 700;
+    letter-spacing: .16em; color: var(--ink-mute);
+    white-space: nowrap;
+  }
+  .group-divider-line {
+    flex: 1; height: 1px; background: var(--rule);
+  }
+  .group-divider-time {
+    font-family: "Inter", sans-serif;
+    font-size: 11px; color: var(--gold);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .card {
+    border: 1px solid var(--rule);
+    border-radius: 8px; background: #fff;
+    margin-bottom: 14px;
+    overflow: hidden;
+    transition: border-color .15s, box-shadow .2s;
+  }
+  .card.open {
+    border-color: var(--brand);
+    box-shadow: var(--shadow-card);
+  }
+  .card-head {
+    padding: 18px 22px;
+    cursor: pointer;
+    display: flex; align-items: flex-start; gap: 16px;
+    transition: background .12s;
+  }
+  .card-head:hover { background: rgba(67,56,202,.025); }
+  .card-head-num {
+    font-family: "Inter", sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 11px; font-weight: 700;
+    color: var(--gold);
+    letter-spacing: .08em;
+    margin-top: 4px;
+    min-width: 32px;
+  }
+  .card-head-body { flex: 1; min-width: 0; }
+  .card-opener {
+    font-size: 18.5px; font-weight: 900;
+    line-height: 1.45; letter-spacing: -0.01em;
+    color: var(--ink); margin-bottom: 4px;
+  }
+  .card-opener em {
+    font-style: normal; color: var(--brand);
+  }
+  .card-feature {
+    font-size: 12px; color: var(--ink-mute);
+    font-weight: 500; letter-spacing: .03em;
+  }
+  .card-feature::before {
+    content: '機能 · '; opacity: .7;
+  }
+  .card-arrow {
+    color: var(--ink-mute);
+    font-family: "Inter", sans-serif;
+    font-size: 14px;
+    transition: transform .2s;
+    margin-top: 4px;
+  }
+  .card.open .card-arrow { transform: rotate(90deg); color: var(--brand); }
+
+  .card-body {
+    display: none;
+    padding: 0 22px 24px 70px;
+  }
+  .card.open .card-body { display: block; }
+  .card-body-grid {
+    display: grid; grid-template-columns: 1fr; gap: 24px;
+    margin-top: 6px;
+  }
+
+  /* media block */
+  .media {
+    position: relative;
+    background: #15172B;
+    border-radius: 6px;
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+    display: grid; place-items: center;
+  }
+  .media video {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block;
+  }
+  .media-placeholder {
+    color: rgba(255,255,255,.55);
+    font-size: 12.5px; text-align: center;
+    padding: 24px;
+    display: flex; flex-direction: column; gap: 8px;
+    align-items: center;
+  }
+  .media-placeholder-icon {
+    width: 44px; height: 44px;
+    border: 1.5px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 14px;
+  }
+  .media-controls {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 12px 16px;
+    background: linear-gradient(to top, rgba(0,0,0,.7), transparent);
+    display: flex; align-items: center; gap: 12px;
+    color: #fff; font-size: 12px;
+    font-family: "Inter", sans-serif;
+    font-variant-numeric: tabular-nums;
+    opacity: 0; transition: opacity .2s;
+  }
+  .media:hover .media-controls { opacity: 1; }
+  .play-btn {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,.15);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .play-btn:hover { background: rgba(255,255,255,.28); }
+
+  /* helper section */
+  .helper-section { padding-top: 4px; }
+  .helper-title {
+    font-size: 12px; font-weight: 700;
+    color: var(--ink-mute);
+    letter-spacing: .08em;
+    margin-bottom: 10px;
+  }
+  .helper-list {
+    list-style: none; padding: 0; margin: 0;
+  }
+  .helper-list li {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 5px 0;
+    font-size: 14px; color: var(--ink);
+    line-height: 1.7;
+  }
+  .helper-list li::before {
+    content: '○';
+    color: var(--gold); font-size: 8px;
+    margin-top: 9px; flex-shrink: 0;
+    font-weight: 700;
+  }
+
+  .more-section {
+    margin-top: 18px; padding-top: 18px;
+    border-top: 1px solid var(--rule);
+  }
+  .more-link {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0;
+    font-size: 13.5px; color: var(--brand);
+    font-weight: 500;
+    transition: color .12s;
+  }
+  .more-link:hover { color: var(--brand-ink); }
+  .more-link::before {
+    content: '→';
+    font-family: "Inter", sans-serif;
+    font-weight: 700;
+  }
+
+  /* footer */
+  .foot {
+    padding: 48px 36px;
+    border-top: 1px solid var(--rule);
+    color: var(--ink-mute);
+    font-size: 12.5px;
+    display: flex; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+  }
+
+  /* responsive */
+  @media (max-width: 880px) {
+    .app { grid-template-columns: 1fr; }
+    .side {
+      position: relative; height: auto; top: auto;
+      border-right: 0; border-bottom: 1px solid var(--rule);
+      padding: 18px 20px;
+    }
+    .side-group { margin-top: 16px; }
+    .topbar { padding: 10px 20px; }
+    .topbar-clock { display: none; }
+    .hero { padding: 36px 20px 24px; }
+    .hero h1 { font-size: 28px; }
+    .content { padding: 0 20px 80px; }
+    .card-head { padding: 14px 16px; }
+    .card-body { padding: 0 16px 20px 16px; }
+    .card-head-num { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,*::before,*::after { animation: none !important; transition: none !important; }
+  }
+
+  /* search filter state */
+  .card.hidden { display: none; }
+  .group-divider.empty { display: none; }
+  .empty-search {
+    padding: 32px 22px;
+    color: var(--ink-mute);
+    font-size: 13.5px;
+    text-align: center;
+    border: 1px dashed var(--rule);
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ─── sidebar ─────────────────────────────────────── -->
+  <aside class="side" id="side">
+    <a class="side-brand" href="#top">
+      <div class="side-brand-mark">FP</div>
+      <div class="side-brand-text">
+        FP Compass
+        <small>操作ガイド</small>
+      </div>
+    </a>
+
+    <div class="side-group">
+      <div class="side-group-label">朝のうちに</div>
+      <a class="side-link" href="#sec-login"><span class="side-link-num">01</span>ログイン</a>
+      <a class="side-link" href="#sec-dashboard"><span class="side-link-num">02</span>ダッシュボード</a>
+      <a class="side-link" href="#sec-clients"><span class="side-link-num">03</span>顧客台帳</a>
+    </div>
+
+    <div class="side-group">
+      <div class="side-group-label">面談 中 に</div>
+      <a class="side-link" href="#sec-modal"><span class="side-link-num">04</span>顧客カルテ</a>
+      <a class="side-link" href="#sec-line"><span class="side-link-num">05</span>LINE で送信</a>
+      <a class="side-link" href="#sec-recording"><span class="side-link-num">06</span>録音 → 議事録</a>
+    </div>
+
+    <div class="side-group">
+      <div class="side-group-label">面談 が終わったら</div>
+      <a class="side-link" href="#sec-timeline"><span class="side-link-num">07</span>ライフイベント</a>
+      <a class="side-link" href="#sec-meetings"><span class="side-link-num">08</span>面談録</a>
+      <a class="side-link" href="#sec-zoom"><span class="side-link-num">09</span>Zoom 日程</a>
+    </div>
+
+    <div class="side-group">
+      <div class="side-group-label">いつでも</div>
+      <a class="side-link" href="#sec-calendar"><span class="side-link-num">10</span>カレンダー</a>
+      <a class="side-link" href="#sec-liff"><span class="side-link-num">11</span>お客様 画面</a>
+      <a class="side-link" href="#sec-survey"><span class="side-link-num">12</span>アンケート</a>
+    </div>
+  </aside>
+
+  <!-- ─── main ────────────────────────────────────────── -->
+  <main class="main" id="top">
+
+    <div class="topbar">
+      <div class="topbar-search">
+        <input id="search" type="search" placeholder="機能名 で 検索 (例: 録音、 Zoom、 LINE)" autocomplete="off">
+      </div>
+      <div class="topbar-clock" id="clock">
+        <span class="topbar-clock-dot"></span>
+        <span id="clock-text">--:--</span>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div class="hero-eyebrow">FP COMPASS · ご利用 ガイド</div>
+      <h1>
+        操作 が 分からなく なったら、<br>
+        <em>動画</em> と <em>音声</em> で すぐ 確認。
+      </h1>
+      <p class="hero-lead">
+        12 の 機能 を、 1 つ ずつ 短い 動画 で ご説明します。 ナレーション 付き なので、 画面 を 見ながら 耳 で 聞いて 進められます。 機能名 で 検索 する か、 朝・面談中・面談後・いつでも の カテゴリ から お選びください。
+      </p>
+      <div class="hero-chips">
+        <span class="hero-chips-label">よく見られる:</span>
+        <a class="chip" href="#sec-recording">録音 → 議事録</a>
+        <a class="chip" href="#sec-zoom">Zoom 日程 調整</a>
+        <a class="chip" href="#sec-line">LINE で 送信</a>
+        <a class="chip" href="#sec-recording">議事録 の 修正</a>
+      </div>
+    </section>
+
+    <div class="content" id="content">
+
+      <!-- ─── 朝のうちに ─────────────────────────────────── -->
+      <div class="group-divider" data-group="morning">
+        <span class="group-divider-title">朝のうちに</span>
+        <span class="group-divider-line"></span>
+        <span class="group-divider-time">3 動画 · 約 2 分</span>
+      </div>
+
+      <article class="card" id="sec-login" data-group="morning" data-keys="ログイン メアド パスワード 入る 開く 起動">
+        <div class="card-head">
+          <div class="card-head-num">01</div>
+          <div class="card-head-body">
+            <div class="card-opener">朝、 <em>PC を 開いて</em> FP Compass に 入ります</div>
+            <div class="card-feature">ログイン</div>
+          </div>
+          <div class="card-arrow">▸</div>
+        </div>
+        <div class="card-body">
+          <div class="card-body-grid">
+            <div class="media">
+              <video preload="metadata" data-src="assets/videos/01-login.mp4"></video>
+              <div class="media-placeholder">
+                <div class="media-placeholder-icon">▶</div>
+                <div>動画 準備中 · 約 30 秒</div>
+              </div>
+              <div class="media-controls">
+                <div class="play-btn">▶</div>
+                <span>00:00 / 00:30</span>
+              </div>
+            </div>
+            <div class="helper-section">
+              <div class="helper-title">この 動画 で ご紹介 すること</div>
+              <ul class="helper-list">
+                <li>FP Compass の URL を 開きます</li>
+                <li>メアド と パスワード を 入力 します</li>
+                <li>「ログイン」 ボタン を 押します</li>
+              </ul>
+              <div class="more-section">
+                <a class="more-link" href="#sec-dashboard">続けて、 ダッシュボード の 見方 を 見る</a>
+                <a class="more-link" href="#">パスワード を 忘れた 時 の リセット 手順</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" id="sec-dashboard" data-group="morning" data-keys="ダッシュボード 予定 KPI 今日 一覧 通知">
+        <div class="card-head">
+          <div class="card-head-num">02</div>
+          <div class="card-head-body">
+            <div class="card-opener">今日 の <em>予定</em> と <em>やる事</em> を、 ひと目 で 確認</div>
+            <div class="card-feature">ダッシュボード</div>
+          </div>
+          <div class="card-arrow">▸</div>
+        </div>
+        <div class="card-body">
+          <div class="card-body-grid">
+            <div class="media">
+              <video preload="metadata" data-src="assets/videos/02-dashboard.mp4"></video>
+              <div class="media-placeholder">
+                <div class="media-placeholder-icon">▶</div>
+                <div>動画 準備中 · 約 45 秒</div>
+              </div>
+              <div class="media-controls"><div class="play-btn">▶</div><span>00:00 / 00:45</span></div>
+            </div>
+            <div class="helper-section">
+              <div class="helper-title">この 動画 で ご紹介 すること</div>
+              <ul class="helper-list">
+                <li>今日 の Zoom 面談 予定 を 上 から 順 に 確認</li>
+                <li>顧客数 / 今月 の 面談数 / 売上見込 の カード</li>
+                <li>新着 の LINE メッセージ と やるべき タスク</li>
+              </ul>
+              <div class="more-section">
+                <a class="more-link" href="#sec-clients">続けて、 顧客台帳 の 開き方</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" id="sec-clients" data-group="morning" data-keys="顧客 台帳 検索 一覧 客 並び替え 絞り込み">
+        <div class="card-head">
+          <div class="card-head-num">03</div>
+          <div class="card-head-body">
+            <div class="card-opener">気 に なる <em>お客様 を 探して</em>、 開きます</div>
+            <div class="card-feature">顧客台帳</div>
+          </div>
+          <div class="card-arrow">▸</div>
+        </div>
+        <div class="card-body">
+          <div class="card-body-grid">
+            <div class="media">
+              <video preload="metadata" data-src="assets/videos/03-clients.mp4"></video>
+              <div class="media-placeholder">
+                <div class="media-placeholder-icon">▶</div>
+                <div>動画 準備中 · 約 45 秒</div>
+              </div>
+              <div class="media-controls"><div class="play-btn">▶</div><span>00:00 / 00:45</span></div>
+            </div>
+            <div class="helper-section">
+              <div class="helper-title">この 動画 で ご紹介 すること</div>
+              <ul class="helper-list">
+                <li>左メニュー の 「顧客」 タブ を 押す</li>
+                <li>名前 で 検索、 または ステータス で 絞り込み</li>
+                <li>顧客 を タップ して カルテ を 開く</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ─── 面談 中 に ─────────────────────────────────── -->
+      <div class="group-divider" data-group="meeting">
+        <span class="group-divider-title">面談 中 に</span>
+        <span class="group-divider-line"></span>
+        <span class="group-divider-time">3 動画 · 約 3 分</span>
+      </div>
+
+      <article class="card" id="sec-modal" data-group="meeting" data-keys="顧客 カルテ モーダル タブ overview line timeline meetings qa family 家族">
+        <div class="card-head">
+          <div class="card-head-num">04</div>
+          <div class="card-head-body">
+            <div class="card-opener">お客様 と 話しながら、 <em>情報 を ひと目 で</em> 見る</div>
+            <div class="card-feature">顧客カルテ (6 タブ)</div>
+          </div>
+          <div class="card-arrow">▸</div>
+        </div>
+        <div class="card-body">
+          <div class="card-body-grid">
+            <div class="media">
+              <video preload="metadata" data-src="assets/videos/04-modal.mp4"></video>
+              <div class="media-placeholder">
+                <div class="media-placeholder-icon">▶</div>
+                <div>動画 準備中 · 約 60 秒</div>
+              </div>
+              <div class="media-controls"><div class="play-btn">▶</div><span>00:00 / 01:00</span></div>
+            </div>
+            <div class="helper-section">
+              <div class="helper-title">6 つ の タブ の 役割</div>
+              <ul class="helper-list">
+                <li>概要 · 基本情報 と 今 困っている こと</li>
+                <li>LINE · お客様 と の 過去 の やりとり</li>
+                <li>人生年表 · ライフイベント の 一覧</li>
+                <li>面談録 · 過去 の Zoom 議事録</li>
+                <li>Q&A · 過去 の 質問 と 回答</li>
+                <li>家族 · 配偶者 や お子様 の 情報</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" id="sec-line" data-group="meeting" data-keys="LINE メッセージ 送信 個別 push 友だち 連絡">
+        <div class="card-head">
+          <div class="card-head-num">05</div>
+          <div class="card-head-body">
+            <div class="card-opener">面談 中 や 直後 に、 <em>LINE で すぐ 送る</em></div>
+            <div class="card-feature">LINE 個別 送信</div>
+          </div>
+          <div class="card-arrow">▸</div>
+        </div>
+        <div class="card-body">
+          <div class="card-body-grid">
+            <div class="media">
+              <video preload="metadata" data-src="assets/videos/05-line.mp4"></video>
+              <div class="media-placeholder">
+                <div class="media-placeholder-icon">▶</div>
+                <div>動画 準備中 · 約 50 秒</div>
+              </div>
+              <div class="media-controls"><div class="play-btn">▶</div><span>00:00 / 00:50</span></div>
+            </div>
+            <div class="helper-section">
+              <div class="helper-title">この 動画 で ご紹介 すること</div>
+              <ul class="helper-list">
+                <li>顧客 カルテ の 「LINE」 タブ を 開く</li>
+                <li>下 の 入力欄 に メッセージ を 打つ</li>
+                <li>「送信」 を 押す と、 お客様 の LINE に 即 届く</li>
+              </ul>
+              <div class="more-section">
+                <a class="more-link" href="#sec-recording">続けて、 録音 と 議事録 の 使い方</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" id="sec-recording" data-group="meeting" data-keys="録音 議事録 AI Whisper Claude 自動 生成 タスク 提案">
+        <div class="card-head">
+          <div class="card-head-num">06</div>
+          <div class="card-head-body">
+            <div class="card-opener">面談 が 終わったら、 <em>録音 から 議事録 を 自動</em> で 作ります</div>
+            <div class="card-feature">録音 → AI 議事録</div>
+          </div>
+          <div class="card-arrow">▸</div>
+        </div>
+        <div class="card-body">
+          <div class="card-body-grid">
+            <div class="media">
+              <video preload="metadata" data-src="assets/videos/06-recording.mp4"></video>
+              <div class="media-placeholder">
+                <div class="media-placeholder-icon">▶</div>
+                <div>動画 準備中 · 約 90 秒</div>
+              </div>
+              <div class="media-controls"><div class="play-btn">▶</div><span>00:00 / 01:30</span></div>
+            </div>
+            <div class="helper-section">
+              <div class="helper-title">この 動画 で ご紹介 すること</div>
+              <ul class="helper-list">
+                <li>面談 開始 時 に 「録音」 ボタン を 押す</li>
+                <li>面談 終了 後 に 「停止」 を 押す</li>
+                <li>30 秒 ほど で AI が 議事録 と タスク を 自動生成</li>
+                <li>次回 提案 と 想定 質問 も 一緒 に 出ます</li>
+              </ul>
+              <div class="more-section">
+                <a class="more-link" href="#sec-meetings">過去 の 議事録 を 見返す 方法</a>
+                <a class="more-link" href="#sec-timeline">議事録 から ライフイベント を 登録</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ─── 面談 が終わったら ─────────────────────────── -->
+      <div class="group-divider" data-group="after">
+        <span class="group-divider-title">面談 が 終わったら</span>
+        <span class="group-divider-line"></span>
+        <span class="group-divider-time">3 動画 · 約 2 分</span>
+      </div>
+
+      <article class="card" id="sec-timeline" data-group="after" data-keys="timeline ライフイベント 人生 年表 進学 結婚 退職 相続">
+        <div class="card-head">
+          <div class="card-head-num">07</div>
+          <div class="card-head-body">
+            <div class="card-opener">お客様 の <em>人生 イベント</em> を、 時系列 で 整理</div>
+            <div class="card-feature">ライフイベント</div>
+          </div>
+          <div class="card-arrow">▸</div>
+        </div>
+        <div class="card-body">
+          <div class="card-body-grid">
+            <div class="media">
+              <video preload="metadata" data-src="assets/videos/07-timeline.mp4"></video>
+              <div class="media-placeholder">
+                <div class="media-placeholder-icon">▶</div>
+                <div>動画 準備中 · 約 40 秒</div>
+              </div>
+              <div class="media-controls"><div class="play-btn">▶</div><span>00:00 / 00:40</span></div>
+            </div>
+            <div class="helper-section">
+              <div class="helper-title">この 動画 で ご紹介 すること</div>
+              <ul class="helper-list">
+                <li>顧客 カルテ の 「人生年表」 タブ を 開く</li>
+                <li>進学 / 結婚 / 退職 等 を 追加 する</li>
+                <li>議事録 から 自動 で 抽出 された イベント も 確認</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" id="sec-meetings" data-group="after" data-keys="meetings 面談録 議事録 過去 履歴 一覧 検索">
+        <div class="card-head">
+          <div class="card-head-num">08</div>
+          <div class="card-head-body">
+            <div class="card-opener">過去 の <em>議事録 を いつでも</em> 見返せます</div>
+            <div class="card-feature">面談録</div>
+          </div>
+          <div class="card-arrow">▸</div>
+        </div>
+        <div class="card-body">
+          <div class="card-body-grid">
+            <div class="media">
+              <video preload="metadata" data-src="assets/videos/08-meetings.mp4"></video>
+              <div class="media-placeholder">
+                <div class="media-placeholder-icon">▶</div>
+                <div>動画 準備中 · 約 40 秒</div>
+              </div>
+              <div class="media-controls"><div class="play-btn">▶</div><span>00:00 / 00:40</span></div>
+            </div>
+            <div class="helper-section">
+              <div class="helper-title">この 動画 で ご紹介 すること</div>
+              <ul class="helper-list">
+                <li>顧客 カルテ の 「面談録」 タブ を 開く</li>
+                <li>過去 の 議事録 を 日付 順 に 確認</li>
+                <li>カード を 開く と、 タスク や 次回提案 も 表示</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" id="sec-zoom" data-group="after" data-keys="Zoom 日程 候補日 提案 確定 ミーティング URL 招待">
+        <div class="card-head">
+          <div class="card-head-num">09</div>
+          <div class="card-head-body">
+            <div class="card-opener">次回 の <em>日程 を、 候補日 提案</em> で スムーズ に</div>
+            <div class="card-feature">Zoom 日程 調整</div>
+          </div>
+          <div class="card-arrow">▸</div>
+        </div>
+        <div class="card-body">
+          <div class="card-body-grid">
+            <div class="media">
+              <video preload="metadata" data-src="assets/videos/09-zoom.mp4"></video>
+              <div class="media-placeholder">
+                <div class="media-placeholder-icon">▶</div>
+                <div>動画 準備中 · 約 50 秒</div>
+              </div>
+              <div class="media-controls"><div class="play-btn">▶</div><span>00:00 / 00:50</span></div>
+            </div>
+            <div class="helper-section">
+              <div class="helper-title">この 動画 で ご紹介 すること</div>
+              <ul class="helper-list">
+                <li>顧客 に 候補日 を 3 つ ほど 提示 する</li>
+                <li>お客様 が LINE で 1 つ 選ぶ と 自動 確定</li>
+                <li>Zoom URL が 発行 され、 カレンダー に 登録</li>
+              </ul>
+              <div class="more-section">
+                <a class="more-link" href="#sec-calendar">Google Calendar と の 連携 を 確認</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ─── いつでも ──────────────────────────────────── -->
+      <div class="group-divider" data-group="anytime">
+        <span class="group-divider-title">いつでも</span>
+        <span class="group-divider-line"></span>
+        <span class="group-divider-time">3 動画 · 約 2 分</span>
+      </div>
+
+      <article class="card" id="sec-calendar" data-group="anytime" data-keys="カレンダー Google Calendar 同期 予定">
+        <div class="card-head">
+          <div class="card-head-num">10</div>
+          <div class="card-head-body">
+            <div class="card-opener">Google カレンダー と、 <em>双方向 で 同期</em></div>
+            <div class="card-feature">カレンダー 連携</div>
+          </div>
+          <div class="card-arrow">▸</div>
+        </div>
+        <div class="card-body">
+          <div class="card-body-grid">
+            <div class="media">
+              <video preload="metadata" data-src="assets/videos/10-calendar.mp4"></video>
+              <div class="media-placeholder">
+                <div class="media-placeholder-icon">▶</div>
+                <div>動画 準備中 · 約 30 秒</div>
+              </div>
+              <div class="media-controls"><div class="play-btn">▶</div><span>00:00 / 00:30</span></div>
+            </div>
+            <div class="helper-section">
+              <div class="helper-title">この 動画 で ご紹介 すること</div>
+              <ul class="helper-list">
+                <li>初回 のみ Google アカウント で 連携 を 承認</li>
+                <li>FP Compass で 確定 した 予定 が 自動 で カレンダー に</li>
+                <li>カレンダー側 の 変更 も FP Compass に 反映</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" id="sec-liff" data-group="anytime" data-keys="LIFF お客様 画面 LINE リッチメニュー 確認">
+        <div class="card-head">
+          <div class="card-head-num">11</div>
+          <div class="card-head-body">
+            <div class="card-opener">お客様 が 見ている <em>LINE 内 の 画面</em> を 確認</div>
+            <div class="card-feature">お客様 側 画面 (LIFF)</div>
+          </div>
+          <div class="card-arrow">▸</div>
+        </div>
+        <div class="card-body">
+          <div class="card-body-grid">
+            <div class="media">
+              <video preload="metadata" data-src="assets/videos/11-liff.mp4"></video>
+              <div class="media-placeholder">
+                <div class="media-placeholder-icon">▶</div>
+                <div>動画 準備中 · 約 40 秒</div>
+              </div>
+              <div class="media-controls"><div class="play-btn">▶</div><span>00:00 / 00:40</span></div>
+            </div>
+            <div class="helper-section">
+              <div class="helper-title">この 動画 で ご紹介 すること</div>
+              <ul class="helper-list">
+                <li>お客様 の LINE リッチメニュー から 開く 画面</li>
+                <li>アンケート / 議事録 確認 / 次回予約 が 並ぶ</li>
+                <li>FP 側 から 表示 を 確認 する 方法</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" id="sec-survey" data-group="anytime" data-keys="アンケート survey 事前 集計 質問 回答">
+        <div class="card-head">
+          <div class="card-head-num">12</div>
+          <div class="card-head-body">
+            <div class="card-opener">事前 <em>アンケート</em> で、 面談 を 効率化</div>
+            <div class="card-feature">アンケート</div>
+          </div>
+          <div class="card-arrow">▸</div>
+        </div>
+        <div class="card-body">
+          <div class="card-body-grid">
+            <div class="media">
+              <video preload="metadata" data-src="assets/videos/12-survey.mp4"></video>
+              <div class="media-placeholder">
+                <div class="media-placeholder-icon">▶</div>
+                <div>動画 準備中 · 約 40 秒</div>
+              </div>
+              <div class="media-controls"><div class="play-btn">▶</div><span>00:00 / 00:40</span></div>
+            </div>
+            <div class="helper-section">
+              <div class="helper-title">この 動画 で ご紹介 すること</div>
+              <ul class="helper-list">
+                <li>お客様 が LINE から 13問 の 事前 アンケート に 回答</li>
+                <li>FP 側 で 自動 で 集計 さ れ、 顧客 カルテ に 反映</li>
+                <li>面談 前 に 「概要」 タブ で 内容 を 確認</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <div id="empty-search" class="empty-search" style="display:none;">
+        該当 する 機能 が 見つかりません でした。 別 の キーワード で お試しください。
+      </div>
+
+    </div>
+
+    <footer class="foot">
+      <div>FP Compass · Skeleton Inc. © 2026</div>
+      <div>お困り の 時 は LINE サポート まで お気軽 に</div>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  // ── live clock ──
+  const clockEl = document.getElementById('clock-text');
+  function tick() {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    clockEl.textContent = hh + ':' + mm;
+  }
+  tick(); setInterval(tick, 30000);
+
+  // ── card accordion ──
+  document.querySelectorAll('.card-head').forEach(head => {
+    head.addEventListener('click', () => {
+      const card = head.closest('.card');
+      const wasOpen = card.classList.contains('open');
+      // Close others (Notion-like: one at a time, but also allow multi via shift)
+      if (!event.shiftKey) {
+        document.querySelectorAll('.card.open').forEach(c => {
+          if (c !== card) c.classList.remove('open');
+        });
+      }
+      card.classList.toggle('open', !wasOpen);
+      if (!wasOpen) {
+        history.replaceState(null, '', '#' + card.id);
+        // load video lazy
+        const v = card.querySelector('video');
+        if (v && v.dataset.src && !v.src) v.src = v.dataset.src;
+      }
+    });
+  });
+
+  // ── sidebar active state on scroll ──
+  const links = Array.from(document.querySelectorAll('.side-link'));
+  const cards = Array.from(document.querySelectorAll('.card'));
+  function setActive(id) {
+    links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + id));
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) setActive(e.target.id);
+    });
+  }, { rootMargin: '-40% 0px -50% 0px' });
+  cards.forEach(c => io.observe(c));
+
+  // ── sidebar link click → open + scroll ──
+  links.forEach(link => {
+    link.addEventListener('click', (e) => {
+      const href = link.getAttribute('href');
+      if (!href.startsWith('#sec-')) return;
+      e.preventDefault();
+      const id = href.slice(1);
+      const card = document.getElementById(id);
+      if (!card) return;
+      // close others, open this
+      document.querySelectorAll('.card.open').forEach(c => { if (c !== card) c.classList.remove('open'); });
+      card.classList.add('open');
+      const v = card.querySelector('video');
+      if (v && v.dataset.src && !v.src) v.src = v.dataset.src;
+      // scroll smoothly
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.replaceState(null, '', href);
+    });
+  });
+
+  // ── search filter ──
+  const searchEl = document.getElementById('search');
+  const emptyEl = document.getElementById('empty-search');
+  function filter(q) {
+    q = (q || '').trim().toLowerCase();
+    let visibleCount = 0;
+    cards.forEach(card => {
+      if (!q) {
+        card.classList.remove('hidden');
+        visibleCount++;
+        return;
+      }
+      const keys = (card.dataset.keys || '').toLowerCase();
+      const opener = (card.querySelector('.card-opener')?.textContent || '').toLowerCase();
+      const feature = (card.querySelector('.card-feature')?.textContent || '').toLowerCase();
+      const match = keys.includes(q) || opener.includes(q) || feature.includes(q);
+      card.classList.toggle('hidden', !match);
+      if (match) visibleCount++;
+    });
+    // hide group dividers with no visible cards
+    document.querySelectorAll('.group-divider').forEach(div => {
+      const grp = div.dataset.group;
+      const groupCards = cards.filter(c => c.dataset.group === grp);
+      const anyVisible = groupCards.some(c => !c.classList.contains('hidden'));
+      div.classList.toggle('empty', !anyVisible);
+    });
+    emptyEl.style.display = visibleCount === 0 ? 'block' : 'none';
+  }
+  searchEl.addEventListener('input', e => filter(e.target.value));
+
+  // ── keyboard: "/" focuses search ──
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && document.activeElement !== searchEl) {
+      e.preventDefault(); searchEl.focus();
+    }
+    if (e.key === 'Escape' && document.activeElement === searchEl) {
+      searchEl.value = ''; filter(''); searchEl.blur();
+    }
+  });
+
+  // ── open hash on load ──
+  if (location.hash && location.hash.startsWith('#sec-')) {
+    const card = document.querySelector(location.hash);
+    if (card) {
+      card.classList.add('open');
+      const v = card.querySelector('video');
+      if (v && v.dataset.src && !v.src) v.src = v.dataset.src;
+      setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
+  }
+})();
+</script>
+</body>
+</html>
