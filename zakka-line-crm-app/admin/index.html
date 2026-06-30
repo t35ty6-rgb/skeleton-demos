@@ -157,7 +157,7 @@
   .tag.birth { background: #fdf0e0; color: #8a5418; }
 
   /* ── カルテ ── */
-  .karte { display: grid; grid-template-columns: 360px 1fr; gap: 24px; }
+  .karte { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
   @media (max-width: 980px) { .karte { grid-template-columns: 1fr; } }
   .karte-left { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md); padding: 24px; }
   .karte-ava { width: 72px; height: 72px; border-radius: 50%; background: var(--soil); display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 28px; }
@@ -245,7 +245,10 @@
   dialog h3 { margin: 0 0 16px; font-size: 18px; font-weight: 900; letter-spacing: -.02em; }
   .dlg-act { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 
-  .empty { padding: 40px 20px; text-align: center; color: var(--ink-3); font-weight: 700; }
+  .empty { padding: 56px 20px; text-align: center; color: var(--ink-3); font-weight: 600; line-height: 1.7; }
+  .empty .emi { display: block; margin: 0 auto 14px; opacity: .55; }
+  .empty b { display: block; color: var(--ink-2); font-weight: 800; font-size: 14.5px; margin-bottom: 4px; }
+  .empty p { margin: 0; font-size: 13px; }
 
   /* ── レジ画面 ── */
   .reg-screen { display: grid; grid-template-columns: 1.35fr 1fr; gap: 20px; }
@@ -488,10 +491,10 @@
     body { background: #fff; }
   }
   .receipt {
-    max-width: 320px; margin: 20px auto; padding: 20px;
-    font-family: "Inter", "Noto Sans JP", monospace;
-    font-size: 12px; line-height: 1.6;
-    background: #fff;
+    max-width: 320px; margin: 20px auto; padding: 24px 20px;
+    font-family: "Noto Sans JP", "Inter", sans-serif;
+    font-size: 12.5px; line-height: 1.65;
+    background: #fff; color: #1c1b18;
   }
   .receipt h4 { margin: 0; text-align: center; font-size: 16px; font-weight: 900; }
   .receipt .meta { text-align: center; font-size: 11px; color: var(--ink-3); margin: 4px 0 14px; }
@@ -562,7 +565,14 @@
   .goal .bar i.ok { background: var(--leaf); }
   .goal .bar i.mid { background: var(--honey); }
   .goal .bar i.low { background: var(--soil); }
-  .goal .bar i.over { background: linear-gradient(90deg, var(--leaf), #f0d3a8); }
+  .goal .bar i.over { background: linear-gradient(90deg, var(--leaf), #f0d3a8); animation: shimmer 2.4s ease-in-out infinite; background-size: 200% 100%; }
+  @keyframes shimmer { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+  @media (prefers-reduced-motion: reduce) { .goal .bar i.over { animation: none; } }
+  .goal.achieved { position: relative; }
+  .goal.achieved::after {
+    content: "✨"; position: absolute; top: 12px; right: 14px;
+    font-size: 18px;
+  }
   .goal .pct { margin-top: 4px; font-size: 11px; font-weight: 800; color: var(--ink-3); letter-spacing: .04em; text-align: right; }
   .goal .pct b { font-family: "Inter", sans-serif; }
   .goal .pct.over b { color: var(--leaf); }
@@ -590,11 +600,15 @@
   .ai-item .what { font-weight: 800; font-size: 13.5px; }
   .ai-item .what small { display: block; color: rgba(255,255,255,.65); font-weight: 500; font-size: 11.5px; margin-top: 2px; line-height: 1.5; }
   .ai-item .conf {
+    display: inline-flex; gap: 2px; align-items: center;
     font-family: "Inter", sans-serif; font-weight: 800; font-size: 10px;
-    padding: 3px 8px; border-radius: 999px; letter-spacing: .04em;
+    letter-spacing: .04em; color: #f0d3a8;
   }
-  .ai-item .conf.high { background: #f0d3a8; color: var(--leaf-2); }
-  .ai-item .conf.mid { background: rgba(240,211,168,.4); color: #f0d3a8; }
+  .ai-item .conf b { color: #f0d3a8; font-size: 11px; letter-spacing: 0; }
+  .ai-item .conf.high b::before { content: "●●●"; }
+  .ai-item .conf.mid b::before  { content: "●●○"; color: rgba(240,211,168,.45); }
+  .ai-item .conf.low b::before  { content: "●○○"; color: rgba(240,211,168,.3); }
+  .ai-item .stock { font-size: 10.5px; color: rgba(240,211,168,.7); font-weight: 700; margin-top: 4px; display: block; }
 
   /* ── レビュー ── */
   .review-list { display: grid; gap: 10px; }
@@ -835,12 +849,12 @@
             </button>
             <button class="pay-btn secondary" id="payCash" onclick="processPayment('cash')" disabled>
               <span class="ic">💴</span>
-              <div>現金<small>釣銭の計算はレジ画面で</small></div>
+              <div>現金<small>お釣りはお手元で確認</small></div>
               <span class="amt" id="payAmt2">¥0</span>
             </button>
             <button class="pay-btn secondary" id="payPaypay" onclick="processPayment('paypay')" disabled>
               <span class="ic">📲</span>
-              <div>PayPay (手動入力)<small>別アプリ決済後 ここで記録</small></div>
+              <div>PayPay (手動入力)<small>PayPayアプリで決済後 こちらで記録</small></div>
               <span class="amt" id="payAmt3">¥0</span>
             </button>
           </div>
@@ -861,7 +875,7 @@
       </div>
       <div class="filters" id="holdsFilters">
         <span class="chip on" data-hfil="all">すべて</span>
-        <span class="chip" data-hfil="requested">お申し込み中</span>
+        <span class="chip" data-hfil="requested">ご依頼中</span>
         <span class="chip" data-hfil="confirmed">取り置き中</span>
         <span class="chip" data-hfil="ready">ご来店待ち</span>
         <span class="chip" data-hfil="completed">完了</span>
@@ -921,7 +935,7 @@
       </div>
 
       <div class="block">
-        <h3>今日のお声がけ候補 <a onclick="switchView('cust')">お客さま一覧 →</a></h3>
+        <h3>今日、 お声がけしたい方 <a onclick="switchView('cust')">お客さま一覧 →</a></h3>
         <ul class="tl" id="attnList"></ul>
       </div>
 
@@ -1247,10 +1261,18 @@
       <div class="paid-row"><span class="l">残高</span><span class="v" id="paidBal">0P</span></div>
 
       <div class="paid-auto">
-        <b>自動完了したこと</b>
-        ✓ カルテに購入記録を追加<br>
-        ✓ ポイントを加算してお礼LINEを送信<br>
-        ✓ 在庫を自動で減らしました
+        <b>自動完了</b>
+        <ul style="margin:6px 0 0; padding-left:18px; list-style:none;">
+          <li style="position:relative; padding-left:14px;">
+            <span style="position:absolute; left:0; color:var(--leaf);">✓</span> カルテに購入記録を追加
+          </li>
+          <li style="position:relative; padding-left:14px;">
+            <span style="position:absolute; left:0; color:var(--leaf);">✓</span> ポイント加算とお礼LINEを送信
+          </li>
+          <li style="position:relative; padding-left:14px;">
+            <span style="position:absolute; left:0; color:var(--leaf);">✓</span> 在庫を自動で更新
+          </li>
+        </ul>
       </div>
     </div>
     <div class="paid-f">
@@ -1511,11 +1533,12 @@ async function renderDash() {
   const renderGoal = (key, label) => {
     const g = gp[key]; const pct = g.target > 0 ? Math.min(200, (g.actual / g.target) * 100) : 0;
     const cls = pct >= 100 ? 'over' : pct >= 80 ? 'ok' : pct >= 50 ? 'mid' : 'low';
-    return `<div class="goal">
+    const achieved = pct >= 100 ? 'achieved' : '';
+    return `<div class="goal ${achieved}">
       <div class="lb"><span>${label} 売上目標</span><b>${Math.round(pct)}%</b></div>
       <div class="nums"><span class="actual">${yen(g.actual)}</span><span class="target">/ ${yen(g.target)}</span></div>
       <div class="bar"><i class="${cls}" style="width:${Math.min(100, pct)}%;"></i></div>
-      <div class="pct ${pct >= 100 ? 'over' : ''}">${pct >= 100 ? '✓ 目標達成 ' : '残り '}<b>${yen(Math.max(0, g.target - g.actual))}</b></div>
+      <div class="pct ${pct >= 100 ? 'over' : ''}">${pct >= 100 ? '達成 ・ さらに ' : '残り '}<b>${yen(Math.abs(g.target - g.actual))}</b></div>
     </div>`;
   };
   document.getElementById('goalRow').innerHTML =
@@ -1533,11 +1556,21 @@ async function renderDash() {
     return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth();
   }).length;
 
+  // 前週同日の比較 (WoW)
+  const lastWeek = new Date(startOfDay); lastWeek.setDate(lastWeek.getDate() - 7);
+  const lastWeekEnd = new Date(startOfDay); lastWeekEnd.setDate(lastWeekEnd.getDate() - 6);
+  const lwSales = (await repo.listPurchases())
+    .filter(p => p.purchasedAt >= lastWeek.toISOString() && p.purchasedAt < lastWeekEnd.toISOString())
+    .reduce((s, p) => s + p.total, 0);
+  const wow = lwSales > 0 ? Math.round(((kpi.sales - lwSales) / lwSales) * 100) : null;
+  const wowText = wow === null ? '前週データなし' : wow >= 0 ? `前週比 +${wow}%` : `前週比 ${wow}%`;
+  const wowClass = wow === null ? '' : wow >= 0 ? '' : 'dn';
+
   document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi"><div class="l">本日の売上</div><div class="v">${yen(kpi.sales)}</div><div class="d">${kpi.visits ? '来店 ' + kpi.visits + '名' : '本日まだ来店なし'}</div></div>
-    <div class="kpi"><div class="l">本日の来店</div><div class="v">${kpi.visits}<small>名</small></div><div class="d">うち常連 ${kpi.regulars}名</div></div>
-    <div class="kpi"><div class="l">今月の新規LINE登録</div><div class="v">${newThisMonth}<small>名</small></div><div class="d">累計お客さま ${customers.length}名</div></div>
-    <div class="kpi"><div class="l">客単価 (本日)</div><div class="v">${yen(kpi.aov)}</div><div class="d">累計客単価 ${yen(kpiAll.aov)}</div></div>
+    <div class="kpi"><div class="l">本日の売上</div><div class="v">${yen(kpi.sales)}</div><div class="d ${wowClass}">${wowText}</div></div>
+    <div class="kpi"><div class="l">本日の来店</div><div class="v">${kpi.visits}<small>名</small></div><div class="d">${kpi.regulars > 0 ? '常連 ' + kpi.regulars + '名' : '─'}</div></div>
+    <div class="kpi"><div class="l">今月の新規LINE登録</div><div class="v">${newThisMonth}<small>名</small></div><div class="d">登録累計 ${customers.length}名</div></div>
+    <div class="kpi"><div class="l">客単価 (本日)</div><div class="v">${kpi.aov > 0 ? yen(kpi.aov) : '<small style="font-size:18px;color:var(--ink-3);">—</small>'}</div><div class="d">一人あたり累計 ${yen(kpiAll.aov)}</div></div>
   `;
 
   // bar chart
@@ -1870,11 +1903,11 @@ async function renderHolds() {
   document.getElementById('holdsSub').textContent = `登録 ${holds.length}件 / ${list.length}件 表示`;
 
   const statMap = {
-    requested: { cls: 'req', label: 'お申し込み中', next: { btn: '取り置き確認', to: 'confirmed' } },
+    requested: { cls: 'req', label: 'ご依頼中',     next: { btn: '受付', to: 'confirmed' } },
     confirmed: { cls: 'cnf', label: '取り置き中',   next: { btn: 'ご来店連絡', to: 'ready' } },
     ready:     { cls: 'rdy', label: 'ご来店待ち',   next: { btn: 'ご購入済み', to: 'completed' } },
     completed: { cls: 'cmp', label: '完了',         next: null },
-    cancelled: { cls: 'cmp', label: 'キャンセル',   next: null },
+    cancelled: { cls: 'cmp', label: '取り消し',     next: null },
   };
 
   if (list.length === 0) {
@@ -2081,13 +2114,17 @@ async function renderKarte() {
   const sug = await repo.aiSuggestions(c.id);
   if (sug.length > 0) {
     document.getElementById('aiSuggestions').style.display = '';
-    document.getElementById('aiList').innerHTML = sug.map(s => `
-      <div class="ai-item">
+    // 各サジェストに在庫情報も補完
+    const products = await repo.listProducts();
+    document.getElementById('aiList').innerHTML = sug.map(s => {
+      const p = s.productId ? products.find(x => x.id === s.productId) : null;
+      const stockNote = p ? `<span class="stock">在庫 ${p.stock}${p.unit || '点'}</span>` : '';
+      return `<div class="ai-item">
         <span class="e">${esc(s.icon)}</span>
-        <span class="what">${esc(s.productName)}<small>${esc(s.reason)} ・ ${esc(s.why)}</small></span>
-        <span class="conf ${s.confidence}">${s.confidence === 'high' ? '高' : s.confidence === 'mid' ? '中' : '低'}</span>
-      </div>
-    `).join('');
+        <span class="what">${esc(s.productName)}<small>${esc(s.reason)} ・ ${esc(s.why)}</small>${stockNote}</span>
+        <span class="conf ${s.confidence}"><b></b></span>
+      </div>`;
+    }).join('');
   } else {
     document.getElementById('aiSuggestions').style.display = 'none';
   }
@@ -2771,6 +2808,7 @@ window.startOnboard = function() {
 };
 window.closeOnboard = function() {
   document.getElementById('onboardOverlay').style.display = 'none';
+  document.querySelector('.onboard-foot').style.display = '';  // 次回起動時のため戻す
 };
 window.obBack = function() {
   if (state.obStep > 1) { collectOb(); state.obStep--; renderOnboard(); }
@@ -2790,7 +2828,7 @@ function collectOb() {
 }
 function renderOnboard() {
   const s = onboardSteps[state.obStep - 1];
-  document.getElementById('obStep').textContent = `STEP ${state.obStep} / ${onboardSteps.length}`;
+  document.getElementById('obStep').textContent = `STEP ${state.obStep}/${onboardSteps.length}`;
   document.getElementById('obProgress').innerHTML = onboardSteps.map((_, i) => `<span class="${i + 1 < state.obStep ? 'done' : i + 1 === state.obStep ? 'cur' : ''}"></span>`).join('');
   document.getElementById('obBody').innerHTML = `<h2>${esc(s.title)}</h2>${s.body()}`;
   document.getElementById('obBackBtn').disabled = state.obStep === 1;
@@ -2811,12 +2849,46 @@ async function completeOnboard() {
   };
   await repo.saveSettings(next);
   state.settings = next;
-  closeOnboard();
+
+  // お祝い画面
+  document.getElementById('obBody').innerHTML = `
+    <div style="text-align: center; padding: 16px 0 8px;">
+      <div style="font-size: 56px; line-height: 1; margin-bottom: 12px;" id="obCheer">🌿</div>
+      <h2 style="text-align:center;">準備が整いました</h2>
+      <p style="margin: 0 0 20px; color: var(--ink-2); font-size: 14px; line-height: 1.8;">
+        ${esc(d.name || state.settings.tenantName)} で MEI を使い始められます。<br>
+        まずは「レジ」 から、 1人目のお客さまを記録してみてください。
+      </p>
+      <button class="btn btn-leaf" onclick="closeOnboard(); switchView('register');" style="padding: 14px 24px;">レジを開く →</button>
+    </div>
+  `;
+  document.getElementById('obProgress').innerHTML = onboardSteps.map(() => '<span class="done"></span>').join('');
+  document.getElementById('obStep').textContent = '完了';
+  document.querySelector('.onboard-foot').style.display = 'none';
+
   document.getElementById('onboardCta').style.display = 'none';
-  toast('セットアップ完了 ✓ お疲れさまでした');
   refresh();
 }
 function _id() { return Math.random().toString(36).slice(2, 8); }
+
+// ── キーボードショートカット ───────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  // Esc でモーダル/オーバーレイ閉じる
+  if (e.key === 'Escape') {
+    ['paidDlg','processDlg','customerDlg','productDlg','receiptDlg','reviewIntakeDlg','holdDlg','qrDlg'].forEach(id => {
+      const d = document.getElementById(id); if (d?.open) d.close();
+    });
+    if (document.getElementById('aside')?.classList.contains('open')) toggleNav(false);
+  }
+  // / でレジ商品検索フォーカス
+  if (e.key === '/' && state.currentView === 'register') {
+    e.preventDefault();
+    document.getElementById('regProdSearch')?.focus();
+  }
+  // r でレジへ
+  if (e.key === 'r' && e.metaKey) { e.preventDefault(); switchView('register'); }
+});
 
 init().catch(e => {
   console.error(e);
