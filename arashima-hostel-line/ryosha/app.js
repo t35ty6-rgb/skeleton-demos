@@ -11,6 +11,11 @@
   const D = window.ARASHIMA_DATA;
   const HIST_KEY = 'arashima.history.v4';
 
+  // 公式 LINE 友だち追加 (実 ID 取得後にここを差し替えるだけで全画面反映)
+  const LINE_BASIC_ID = '@arashima-hotel';
+  const LINE_ADD_URL = `https://line.me/R/ti/p/${encodeURIComponent(LINE_BASIC_ID)}`;
+  const LINE_QR_SRC = `https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=0&data=${encodeURIComponent(LINE_ADD_URL)}`;
+
   // ===== Hero slider =====
   function setupHeroSlider() {
     const slides = document.querySelectorAll('.hero__slide');
@@ -64,13 +69,38 @@
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      const preset = {
-        checkin: ci?.value || null,
-        nights: Number(document.getElementById('rbNights')?.value || 2),
-        guests: Number(document.getElementById('rbGuests')?.value || 2),
-        buildingId: document.getElementById('rbHouse')?.value || null,
-      };
-      openLiff({ preset });
+      openLineQr();
+    });
+  }
+
+  // ===== LINE 友だち追加 QR モーダル =====
+  function openLineQr() {
+    const el = document.getElementById('lineqr');
+    if (!el) return;
+    const img = document.getElementById('lineqrImg');
+    const open = document.getElementById('lineqrOpen');
+    if (img && !img.src) img.src = LINE_QR_SRC;
+    if (open) open.href = LINE_ADD_URL;
+    el.hidden = false;
+    requestAnimationFrame(() => el.setAttribute('aria-hidden', 'false'));
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLineQr() {
+    const el = document.getElementById('lineqr');
+    if (!el) return;
+    el.setAttribute('aria-hidden', 'true');
+    setTimeout(() => { el.hidden = true; }, 200);
+    document.body.style.overflow = '';
+  }
+  function setupLineQr() {
+    document.querySelectorAll('[data-close-lineqr]').forEach((b) => {
+      b.addEventListener('click', closeLineQr);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const el = document.getElementById('lineqr');
+        if (el && el.getAttribute('aria-hidden') === 'false') closeLineQr();
+      }
     });
   }
 
@@ -365,7 +395,7 @@
     document.querySelectorAll('[data-open-liff]').forEach((b) => {
       b.addEventListener('click', (e) => {
         e.preventDefault();
-        openLiff();
+        openLineQr();
       });
     });
     document.querySelectorAll('[data-close-liff]').forEach((b) => {
@@ -447,6 +477,7 @@
     setupHeroSlider();
     setupNavStuck();
     setupReserveBar();
+    setupLineQr();
     setupLiffTriggers();
     setupLightbox();
   });
