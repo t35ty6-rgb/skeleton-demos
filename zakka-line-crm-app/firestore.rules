@@ -2,73 +2,156 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ─── ユーティリティ ───
-    function isAuthed() { return request.auth != null; }
-    function isStaff(tenantId) {
-      return isAuthed() && exists(/databases/$(database)/documents/tenants/$(tenantId)/staff/$(request.auth.uid));
-    }
-    function isOwner(tenantId) {
-      return isStaff(tenantId) &&
-        get(/databases/$(database)/documents/tenants/$(tenantId)/staff/$(request.auth.uid)).data.role == 'owner';
-    }
-    function isMyselfCustomer(tenantId, customerId) {
-      return isAuthed() &&
-        get(/databases/$(database)/documents/tenants/$(tenantId)/customers/$(customerId)).data.lineUserId == request.auth.token.line_user_id;
+    function signedIn() { return request.auth != null; }
+
+    // LIFF customer: signed in with custom token from liffAuth (singular tenantId in claim)
+    function isCustomerOf(tenantId) {
+      return signedIn() && request.auth.token.tenantId == tenantId;
     }
 
-    // ─── テナント設定 ───
+    // Admin: signed in with Email/Password + setupTenant/inviteAdmin added tenantId to adminTenants claim
+    function isAdminOf(tenantId) {
+      return signedIn() && tenantId in (request.auth.token.adminTenants);
+    }
+
+    // /admins/{uid} — each admin user can read their own doc only. Server-side write only.
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // /tenants/{tenantId} — never read directly from client. credentials live here.
+    // All client access must go through /api/{tenantId}/config (curated, no secrets exposed)
     match /tenants/{tenantId} {
-      allow read:  if isStaff(tenantId);
-      allow write: if isOwner(tenantId);
+      allow read, write: if false;
+    }
 
-      // 顧客カルテ
-      match /customers/{customerId} {
-        allow read:   if isStaff(tenantId) || isMyselfCustomer(tenantId, customerId);
-        allow create: if isStaff(tenantId);
-        allow update: if isStaff(tenantId);
-        allow delete: if isOwner(tenantId);
+    // Products / categories / coupons: public read (shop side), admin write
+    match /tenants/{tenantId}/products/{productId} {
+      allow read: if true;
+      allow write: if isAdminOf(tenantId);
+    }
+    match /tenants/{tenantId}/categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdminOf(tenantId);
+    }
+    match /tenants/{tenantId}/coupons/{couponId} {
+      allow read: if true;
+      allow write: if isAdminOf(tenantId);
+    }
 
-        // 顧客 サブ: 自分用クーポン
-        match /coupons/{couponId} {
-          allow read: if isStaff(tenantId) || isMyselfCustomer(tenantId, customerId);
-          allow write: if isStaff(tenantId);
-        }
-      }
+    // Orders: admin read all; customer read only own (matched by line_id)
+    // Writes are server-side only (via Cloud Functions / Stripe webhook)
+    match /tenants/{tenantId}/orders/{orderId} {
+      allow read: if isAdminOf(tenantId) ||
+        (isCustomerOf(tenantId) && resource.data.line_id == request.auth.token.lineUserId);
+      allow write: if false;
+    }
 
-      // 商品マスタ (お客側からも在庫数だけ参照可)
-      match /products/{productId} {
-        allow read:  if true;
-        allow write: if isStaff(tenantId);
-      }
+    // Customers: admin only
+    match /tenants/{tenantId}/customers/{customerId} {
+      allow read: if isAdminOf(tenantId);
+      allow write: if false;
+    }
 
-      // 購入記録 (お客は自分の購入だけ)
-      match /purchases/{purchaseId} {
-        allow read:   if isStaff(tenantId) ||
-                      (isAuthed() && resource.data.customerId != null &&
-                       isMyselfCustomer(tenantId, resource.data.customerId));
-        allow create: if isStaff(tenantId);
-        allow update: if isOwner(tenantId);
-        allow delete: if isOwner(tenantId);
-      }
+    // Messages (broadcast records): admin only
+    match /tenants/{tenantId}/messages/{messageId} {
+      allow read, write: if isAdminOf(tenantId);
+    }
 
-      // メッセージログ
-      match /messages/{messageId} {
-        allow read:   if isStaff(tenantId);
-        allow create: if isStaff(tenantId);
-        allow update: if isStaff(tenantId);
-      }
+    // Scheduled messages (予約配信): admin read, server-side write only
+    match /tenants/{tenantId}/scheduled_messages/{id} {
+      allow read: if isAdminOf(tenantId);
+      allow write: if false;
+    }
 
-      // スタッフ名簿
-      match /staff/{staffId} {
-        allow read:  if isStaff(tenantId);
-        allow write: if isOwner(tenantId);
-      }
+    // Step flows (ステップ配信): admin read, server-side write via callable
+    match /tenants/{tenantId}/step_flows/{id} {
+      allow read: if isAdminOf(tenantId);
+      allow write: if false;
+    }
+    match /tenants/{tenantId}/customers/{cid}/step_state/{id} {
+      allow read, write: if false;  // server-side only
+    }
 
-      // クーポン
-      match /coupons/{couponId} {
-        allow read:  if isStaff(tenantId);
-        allow write: if isStaff(tenantId);
-      }
+    // Payouts (振込履歴): admin read, server-side write only
+    match /tenants/{tenantId}/payouts/{id} {
+      allow read: if isAdminOf(tenantId);
+      allow write: if false;
+    }
+
+    // Abandoned carts: shop customer can upsert own doc (id = lineUserId), admin read for monitoring
+    match /tenants/{tenantId}/abandoned_carts/{customerId} {
+      allow read: if isAdminOf(tenantId);
+      allow create, update: if isCustomerOf(tenantId) && customerId == request.auth.token.lineUserId;
+      allow delete: if false;
+    }
+
+    // Error logs: admin read; write via server-side callable only
+    match /tenants/{tenantId}/error_logs/{id} {
+      allow read: if isAdminOf(tenantId);
+      allow write: if false;
+    }
+
+    // Alerts (stock, etc): admin read + mark-as-read; server-side create only
+    match /tenants/{tenantId}/alerts/{id} {
+      allow read: if isAdminOf(tenantId);
+      allow update: if isAdminOf(tenantId);
+      allow create, delete: if false;
+    }
+
+    // Reviews: public read (公開済のみ shop で表示), customer create (自分), admin manage
+    match /tenants/{tenantId}/reviews/{id} {
+      allow read: if true;
+      allow create: if isCustomerOf(tenantId)
+        && request.resource.data.line_id == request.auth.token.lineUserId
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5;
+      allow update, delete: if isAdminOf(tenantId);
+    }
+
+    // Fix #59: _ops_logs (グローバル運用ログ = Stripe webhook 失敗 等)
+    // 任意の adminTenants claim 保有者 (= 何かしらのテナント管理者) は read 可
+    // 偽イベント注入の調査が テナントを跨ぐので 共有可視性が必要
+    match /_ops_logs/{id} {
+      allow read: if signedIn() && request.auth.token.adminTenants is list && request.auth.token.adminTenants.size() > 0;
+      allow write: if false;
+    }
+
+    // Fix #63: _dlq (Dead Letter Queue) — admin が reprocess するため read 必要
+    match /_dlq/{id} {
+      allow read: if signedIn() && request.auth.token.adminTenants is list && request.auth.token.adminTenants.size() > 0;
+      allow write: if false;  // 書込/更新は すべて server-side (reprocessDlq, markDlq)
+    }
+
+    // Fix #65: _stripe_events (idempotency 用) — client read 不要、 server-side のみ
+    match /_stripe_events/{id} {
+      allow read, write: if false;
+    }
+
+    // Fix #69: _backups (wipe前の自動スナップショット) — admin が listBackups 経由で確認、 復元 callable 経由
+    // 直接 client から read 可 にすると 巨大データ転送リスク。 server-side のみ
+    match /_backups/{id} {
+      allow read, write: if false;
+    }
+    match /_backups/{id}/{col}/{doc} {
+      allow read, write: if false;
+    }
+
+    // ─── MEI (雑貨LINEツール) - 間借り中 ─────────────────────────
+    // Skel·EC と同じ Firebase project に間借り。 collection prefix `mei_` で完全分離。
+    // 🚨 商談前 デモフェーズ用の 緩いルール。
+    //   本番稼働 (実顧客データ投入) する前に、 必ず Skel·EC 並みの
+    //   custom claim (mei_admin/mei_customer) ベース制御に書き換える。
+    //   タスク: TODO before Phase 1 production launch
+    match /mei_tenants/{tenantId}/{document=**} {
+      allow read, write: if true;
+    }
+
+    // Default deny everything else
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

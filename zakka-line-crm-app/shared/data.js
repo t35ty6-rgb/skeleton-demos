@@ -225,6 +225,15 @@ export class Repo {
     return this.adapter.set('staff', id, { createdAt: new Date().toISOString(), role: 'staff', ...s, id });
   }
 
+  // ── 取り置き ─────────────────────
+  async listHolds(q = {})            { return this.adapter.list('holds', q); }
+  async saveHold(h) {
+    const id = h.id || _id('h');
+    const now = new Date().toISOString();
+    return this.adapter.set('holds', id, { status: 'requested', createdAt: now, ...h, id });
+  }
+  async patchHold(id, patch)         { return this.adapter.update('holds', id, patch); }
+
   // ── 設定 ─────────────────────────
   async getSettings()                { return (await this.adapter.get('settings', 'main')) || {}; }
   async saveSettings(s)              { return this.adapter.set('settings', 'main', s); }
@@ -273,6 +282,68 @@ export class Repo {
       .slice(0, 5);
   }
 
+  // ── スタッフ別 売上集計 ─────────────────────
+  async salesByStaff({ days = 30 } = {}) {
+    const since = new Date(); since.setDate(since.getDate() - days);
+    const purchases = (await this.listPurchases()).filter(p => new Date(p.purchasedAt) >= since);
+    const staffList = await this.listStaff();
+    const map = new Map();
+    for (const p of purchases) {
+      const m = map.get(p.staffId) || { staffId: p.staffId, sales: 0, count: 0 };
+      m.sales += p.total; m.count++;
+      map.set(p.staffId, m);
+    }
+    return [...map.values()].map(m => ({
+      ...m,
+      name: staffList.find(s => s.id === m.staffId)?.name || '不明',
+      aov: m.count ? Math.round(m.sales / m.count) : 0,
+    })).sort((a, b) => b.sales - a.sales);
+  }
+
+  // ── 時間帯別 売上 (0-23時) ─────────────────────
+  async salesByHour({ days = 30 } = {}) {
+    const since = new Date(); since.setDate(since.getDate() - days);
+    const purchases = (await this.listPurchases()).filter(p => new Date(p.purchasedAt) >= since);
+    const buckets = new Array(24).fill(0).map(() => ({ sales: 0, count: 0 }));
+    for (const p of purchases) {
+      const h = new Date(p.purchasedAt).getHours();
+      buckets[h].sales += p.total; buckets[h].count++;
+    }
+    return buckets.map((b, h) => ({ hour: h, sales: b.sales, count: b.count }));
+  }
+
+  // ── カテゴリ別 売上 ───────────────────────
+  async salesByCategory({ days = 30 } = {}) {
+    const since = new Date(); since.setDate(since.getDate() - days);
+    const purchases = (await this.listPurchases()).filter(p => new Date(p.purchasedAt) >= since);
+    const map = new Map();
+    for (const p of purchases) {
+      for (const line of (p.lines || [])) {
+        const m = map.get(line.category) || { category: line.category, sales: 0, qty: 0 };
+        m.sales += line.subtotal || 0;
+        m.qty += line.qty || 0;
+        map.set(line.category, m);
+      }
+    }
+    return [...map.values()].sort((a, b) => b.sales - a.sales);
+  }
+
+  // ── 売れ筋商品 TOP ─────────────────────────
+  async topProducts({ days = 30, limit = 10 } = {}) {
+    const since = new Date(); since.setDate(since.getDate() - days);
+    const purchases = (await this.listPurchases()).filter(p => new Date(p.purchasedAt) >= since);
+    const map = new Map();
+    for (const p of purchases) {
+      for (const line of (p.lines || [])) {
+        const m = map.get(line.productId) || { productId: line.productId, name: line.productName, sales: 0, qty: 0 };
+        m.sales += line.subtotal || 0;
+        m.qty += line.qty || 0;
+        map.set(line.productId, m);
+      }
+    }
+    return [...map.values()].sort((a, b) => b.sales - a.sales).slice(0, limit);
+  }
+
   async segmentCount(segmentFn) {
     const customers = await this.listCustomers();
     return customers.filter(segmentFn).length;
@@ -283,6 +354,7 @@ export class Repo {
   onPurchasesChange(cb) { return this.adapter.onChange('purchases', cb); }
   onProductsChange(cb)  { return this.adapter.onChange('products', cb); }
   onMessagesChange(cb)  { return this.adapter.onChange('messages', cb); }
+  onHoldsChange(cb)     { return this.adapter.onChange('holds', cb); }
 }
 
 // ─── ID 生成 ─────────────────────────────────────────
@@ -293,8 +365,31 @@ function _id(prefix) {
 }
 
 // ─── factory ─────────────────────────────────────────
-export function createRepo(tenantId) {
-  return new Repo({ tenantId, adapter: new LocalAdapter(`zakka-crm:${tenantId}`) });
+/**
+ * モードを自動判定して Repo を返す:
+ * - production (*.web.app / *.firebaseapp.com / 本番カスタムドメイン) → Firestore
+ * - localhost / file:// / その他 → localStorage
+ * URL パラメータ ?mode=local / ?mode=fb で明示切替可能
+ */
+export async function createRepo(tenantId) {
+  const params = new URLSearchParams(globalThis.location?.search || '');
+  const forced = params.get('mode');
+  const host = globalThis.location?.hostname || '';
+  const isProd =
+    host.endsWith('.web.app') ||
+    host.endsWith('.firebaseapp.com') ||
+    host.endsWith('.skeleton-inc.jp') ||
+    host.endsWith('.nouto.app');
+  const useFirestore = forced === 'fb' || (forced !== 'local' && isProd);
+
+  let adapter;
+  if (useFirestore) {
+    const { FirestoreAdapter } = await import('./firebase-adapter.js');
+    adapter = new FirestoreAdapter(tenantId);
+  } else {
+    adapter = new LocalAdapter(`zakka-crm:${tenantId}`);
+  }
+  return new Repo({ tenantId, adapter });
 }
 
 export { LocalAdapter };

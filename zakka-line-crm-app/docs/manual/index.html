@@ -1,0 +1,1625 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MEI 運営マニュアル / 雑貨店向け LINE一体型 顧客台帳</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #f7f6f1;
+    --bg-2:      #efece4;
+    --paper:     #ffffff;
+    --ink:       #1c1b18;
+    --ink-2:     #3a3833;
+    --ink-3:     #6b6862;
+    --ink-4:     #9a958c;
+    --line:      #d8d4ca;
+    --line-2:    #e9e5da;
+    --leaf:      #2e4a3a;
+    --leaf-2:    #1f3328;
+    --leaf-3:    #d4dbcc;
+    --soil:      #b25538;
+    --soil-2:    #8e3f25;
+    --soil-3:    #f4ddd0;
+    --honey:     #c98a2b;
+    --honey-3:   #f9ebcf;
+    --line-green:#06c755;
+    --shadow-1:  0 1px 0 rgba(28,27,24,.04), 0 8px 24px -16px rgba(28,27,24,.18);
+    --shadow-2:  0 1px 0 rgba(28,27,24,.04), 0 24px 48px -28px rgba(28,27,24,.28);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans JP", "Inter", system-ui, sans-serif;
+    background: var(--bg-2);
+    color: var(--ink);
+    font-weight: 500;
+    font-feature-settings: "palt" 1;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    line-height: 1.7;
+  }
+
+  /* ── ナビ (画面表示時のみ) ─────────────────── */
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: color-mix(in oklab, var(--bg-2) 85%, transparent);
+    backdrop-filter: saturate(140%) blur(12px);
+    -webkit-backdrop-filter: saturate(140%) blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topnav-inner {
+    max-width: 1920px; margin: 0 auto;
+    padding: 12px 32px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .topnav .brand {
+    display: flex; align-items: baseline; gap: 12px;
+    font-weight: 900; font-size: 14px; letter-spacing: -.01em;
+  }
+  .topnav .brand .mark {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--ink); color: var(--bg);
+    display: grid; place-items: center;
+    font-size: 13px; align-self: center;
+  }
+  .topnav .brand small { color: var(--ink-3); font-weight: 600; }
+
+  .toc {
+    display: flex; gap: 4px; flex-wrap: wrap;
+  }
+  .toc a {
+    font-size: 12.5px; font-weight: 700;
+    padding: 6px 10px; border-radius: 6px;
+    color: var(--ink-3); text-decoration: none;
+    transition: color .15s, background .15s;
+  }
+  .toc a:hover { background: var(--paper); color: var(--ink); }
+  .pdf-btn {
+    appearance: none; border: 1px solid var(--ink);
+    background: var(--ink); color: var(--bg);
+    padding: 8px 14px; border-radius: 999px;
+    font: inherit; font-weight: 700; font-size: 12.5px;
+    cursor: pointer; white-space: nowrap;
+  }
+
+  @media (max-width: 980px) {
+    .topnav .toc, .topnav .pdf-btn { display: none; }
+  }
+
+  /* ── スライドベース (16:9) ──────────────────── */
+  .slide {
+    width: min(100%, 1440px);
+    margin: 32px auto;
+    aspect-ratio: 16 / 9;
+    background: var(--paper);
+    border-radius: 18px;
+    box-shadow: var(--shadow-2);
+    padding: 64px 80px;
+    display: flex; flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  @media (max-width: 980px) {
+    .slide {
+      aspect-ratio: auto;
+      padding: 40px 28px;
+      margin: 20px auto;
+      border-radius: 12px;
+    }
+  }
+  .slide-no {
+    position: absolute;
+    bottom: 24px; right: 32px;
+    font-family: "Inter", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-4);
+    letter-spacing: .04em;
+  }
+  .slide-brand {
+    position: absolute;
+    bottom: 24px; left: 32px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-4);
+    letter-spacing: .04em;
+  }
+
+  /* ── 表紙 ──────────────────── */
+  .cover {
+    background:
+      linear-gradient(160deg, var(--leaf-2) 0%, var(--leaf) 55%, #3b5f4a 100%);
+    color: var(--bg);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+  }
+  .cover .stamp {
+    align-self: start;
+    display: inline-flex; align-items: center; gap: 12px;
+    font-size: 12.5px; font-weight: 700; letter-spacing: .12em;
+    color: rgba(255,255,255,.75);
+  }
+  .cover .stamp::before { content: ""; width: 24px; height: 1px; background: rgba(255,255,255,.5); }
+  .cover .title-block { align-self: center; }
+  .cover h1 {
+    margin: 0;
+    font-size: clamp(40px, 5.8vw, 84px);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1.04;
+    text-wrap: balance;
+  }
+  .cover h1 em {
+    font-style: normal;
+    color: #f0d3a8;
+    font-weight: 900;
+  }
+  .cover .sub {
+    margin-top: 28px;
+    font-size: clamp(15px, 1.4vw, 19px);
+    color: rgba(255,255,255,.82);
+    max-width: 30em;
+    line-height: 1.8;
+  }
+  .cover .meta {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+    align-self: end;
+    border-top: 1px solid rgba(255,255,255,.18);
+    padding-top: 22px;
+  }
+  .cover .meta dt {
+    font-size: 11px; letter-spacing: .12em;
+    color: rgba(255,255,255,.55); font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .cover .meta dd {
+    margin: 0; font-size: 14.5px; font-weight: 700;
+  }
+  .cover .slide-no, .cover .slide-brand { color: rgba(255,255,255,.5); }
+
+  /* ── セクションタイトル ──────────────────── */
+  .section-head {
+    display: flex; align-items: baseline; gap: 24px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 22px;
+    margin-bottom: 36px;
+  }
+  .section-head .ch {
+    font-family: "Inter", sans-serif;
+    font-weight: 800; font-size: 13px;
+    color: var(--soil);
+    letter-spacing: .04em;
+  }
+  .section-head h2 {
+    margin: 0;
+    font-size: clamp(28px, 3.2vw, 40px);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+  .section-head .head-note {
+    margin-left: auto;
+    font-size: 13px; color: var(--ink-3);
+    max-width: 22em; text-align: right;
+  }
+
+  /* ── 目次 ──────────────────── */
+  .toc-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0 56px;
+    flex: 1;
+    align-content: start;
+  }
+  .toc-row {
+    display: grid; grid-template-columns: 38px 1fr auto;
+    gap: 16px; align-items: baseline;
+    padding: 18px 0;
+    border-bottom: 1px dashed var(--line);
+    text-decoration: none; color: var(--ink);
+    transition: color .15s;
+  }
+  .toc-row:hover { color: var(--soil); }
+  .toc-row .n {
+    font-family: "Inter", sans-serif;
+    font-weight: 800; font-size: 17px;
+    color: var(--ink-3); letter-spacing: -.01em;
+  }
+  .toc-row .t { font-weight: 900; font-size: 17px; letter-spacing: -.01em; }
+  .toc-row .t small {
+    display: block;
+    color: var(--ink-3);
+    font-weight: 500; font-size: 12.5px;
+    margin-top: 3px;
+  }
+  .toc-row .p {
+    font-family: "Inter", sans-serif;
+    font-size: 12.5px; color: var(--ink-3); font-weight: 700;
+  }
+
+  /* ── 大枠説明 ──────────────────── */
+  .three-up {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+    flex: 1;
+    align-content: center;
+  }
+  .three-up > div {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px 24px;
+    display: flex; flex-direction: column;
+  }
+  .three-up h3 {
+    margin: 0 0 12px;
+    font-size: 19px; font-weight: 900;
+    letter-spacing: -.02em;
+  }
+  .three-up .icn {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: var(--ink); color: var(--bg);
+    display: grid; place-items: center;
+    font-size: 22px;
+    margin-bottom: 18px;
+  }
+  .three-up .icn.s { background: var(--soil); }
+  .three-up .icn.h { background: var(--honey); }
+  .three-up p {
+    margin: 0; color: var(--ink-2);
+    font-size: 14px; line-height: 1.85;
+  }
+
+  /* ── 全体フロー図 ──────────────────── */
+  .flow {
+    flex: 1;
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 32px;
+  }
+  .flow-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+    gap: 18px;
+    align-items: stretch;
+  }
+  .flow-node {
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    border-radius: 14px;
+    padding: 20px 18px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .flow-node.customer { background: var(--soil-3); border-color: var(--soil); }
+  .flow-node.line     { background: #e6f7eb; border-color: var(--line-green); }
+  .flow-node.staff    { background: var(--leaf-3); border-color: var(--leaf); }
+  .flow-node.auto     { background: var(--honey-3); border-color: var(--honey); }
+  .flow-node .who {
+    font-size: 10.5px; font-weight: 800;
+    letter-spacing: .12em; color: var(--ink-3);
+  }
+  .flow-node .what {
+    font-size: 15px; font-weight: 900;
+    letter-spacing: -.01em; line-height: 1.35;
+  }
+  .flow-node .what small {
+    display: block;
+    color: var(--ink-3); font-weight: 500;
+    font-size: 11.5px; margin-top: 4px; line-height: 1.55;
+  }
+  .arrow {
+    display: grid; place-items: center;
+    font-family: "Inter", sans-serif;
+    color: var(--ink-3);
+    font-size: 24px; font-weight: 300;
+  }
+  .flow-legend {
+    display: flex; gap: 24px; justify-content: center;
+    font-size: 12px; color: var(--ink-3); font-weight: 700;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+  }
+  .flow-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .flow-legend .d {
+    width: 12px; height: 12px; border-radius: 4px;
+    border: 1.5px solid currentColor;
+  }
+  .flow-legend .d.customer { background: var(--soil-3); color: var(--soil); }
+  .flow-legend .d.line     { background: #e6f7eb;     color: var(--line-green); }
+  .flow-legend .d.staff    { background: var(--leaf-3); color: var(--leaf); }
+  .flow-legend .d.auto     { background: var(--honey-3); color: var(--honey); }
+
+  /* ── スタッフのシーン3つ ──────────────────── */
+  .scenes {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px;
+    flex: 1; align-content: center;
+  }
+  .scene {
+    display: flex; flex-direction: column;
+  }
+  .scene .when {
+    font-family: "Inter", sans-serif;
+    font-size: 12px; font-weight: 800;
+    letter-spacing: .12em;
+    color: var(--soil);
+    margin-bottom: 10px;
+  }
+  .scene h3 {
+    margin: 0 0 18px;
+    font-size: 20px; font-weight: 900; letter-spacing: -.02em;
+    line-height: 1.3;
+  }
+  .scene ol {
+    list-style: none; padding: 0; margin: 0;
+    counter-reset: step;
+  }
+  .scene ol li {
+    counter-increment: step;
+    padding: 12px 0 12px 36px;
+    position: relative;
+    border-top: 1px dashed var(--line);
+    font-size: 13.5px; line-height: 1.7;
+    color: var(--ink-2);
+  }
+  .scene ol li:first-child { border-top: 0; padding-top: 8px; }
+  .scene ol li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 14px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--leaf); color: #fff;
+    display: grid; place-items: center;
+    font-family: "Inter", sans-serif; font-weight: 800; font-size: 11.5px;
+  }
+  .scene ol li b { color: var(--ink); font-weight: 800; }
+  .scene .takeaway {
+    margin-top: 18px;
+    padding: 12px 14px;
+    background: var(--bg);
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--ink-2);
+  }
+  .scene .takeaway b { color: var(--leaf-2); font-weight: 800; display: block; margin-bottom: 2px; font-size: 11px; letter-spacing: .04em; }
+
+  /* ── お客LINE画面 紹介 ──────────────────── */
+  .liff-explainer {
+    flex: 1; display: grid; grid-template-columns: 320px 1fr; gap: 64px;
+    align-items: center;
+  }
+  .phone-mini {
+    background: #1a1a18;
+    border-radius: 38px;
+    padding: 10px;
+    box-shadow: var(--shadow-2);
+    aspect-ratio: 9 / 16;
+    max-height: 100%;
+  }
+  .phone-mini-screen {
+    background: #f0eee8;
+    border-radius: 30px;
+    overflow: hidden;
+    height: 100%;
+    display: flex; flex-direction: column;
+  }
+  .pmh {
+    background: linear-gradient(160deg, var(--soil) 0%, #c66a4d 60%, #d68a5a 100%);
+    color: #fff; padding: 18px 16px 36px;
+  }
+  .pmh .shop { font-size: 11px; opacity: .85; }
+  .pmh .greet { margin-top: 14px; font-size: 18px; font-weight: 900; letter-spacing: -.02em; }
+  .pmcard {
+    margin: -28px 12px 0;
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 8px 16px -8px rgba(0,0,0,.18);
+  }
+  .pmcard .l { font-size: 10px; color: var(--ink-3); font-weight: 700; }
+  .pmcard b { font-family: "Inter", sans-serif; font-weight: 800; font-size: 26px; letter-spacing: -.03em; }
+  .pmcard .pb { margin-top: 8px; height: 4px; background: var(--bg); border-radius: 999px; overflow: hidden; }
+  .pmcard .pb i { display: block; height: 100%; width: 68%; background: var(--soil); }
+  .pmmenu {
+    margin: 12px 12px 0;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  }
+  .pmmenu a {
+    background: #fff; border-radius: 9px; padding: 9px 2px;
+    text-align: center; text-decoration: none; color: var(--ink);
+    font-size: 9px; font-weight: 700;
+    border: 1px solid #eae6da;
+    display: grid; gap: 2px;
+  }
+  .pmmenu a .e { font-size: 16px; }
+  .pmlist {
+    margin: 12px 12px 12px;
+    background: #fff; border-radius: 12px; padding: 12px;
+    flex: 1;
+    font-size: 10.5px;
+  }
+  .pmlist h4 { margin: 0 0 8px; font-size: 11px; font-weight: 900; }
+  .pmlist .it {
+    padding: 7px 0;
+    border-top: 1px dashed #ece8da;
+    display: grid; grid-template-columns: 24px 1fr auto;
+    gap: 8px; align-items: center;
+  }
+  .pmlist .it:first-child { border-top: 0; padding-top: 0; }
+  .pmlist .it .e { font-size: 16px; }
+  .pmlist .it .nm { font-weight: 700; line-height: 1.35; }
+  .pmlist .it .pt { font-family: "Inter", sans-serif; font-weight: 700; font-size: 9.5px; color: var(--soil); }
+
+  .liff-callouts { display: flex; flex-direction: column; gap: 18px; }
+  .liff-callouts h3 {
+    margin: 0;
+    font-size: clamp(22px, 2.4vw, 32px);
+    font-weight: 900; letter-spacing: -.03em; line-height: 1.2;
+    text-wrap: balance;
+  }
+  .liff-callouts .lead {
+    color: var(--ink-2); font-size: 14.5px; line-height: 1.8; max-width: 32em;
+  }
+  .liff-callouts ul {
+    list-style: none; padding: 0; margin: 0;
+    display: grid; gap: 10px;
+  }
+  .liff-callouts ul li {
+    padding: 14px 16px;
+    background: var(--bg);
+    border-radius: 10px;
+    display: grid; grid-template-columns: 28px 1fr; gap: 12px;
+    align-items: start;
+    font-size: 13.5px; line-height: 1.6;
+  }
+  .liff-callouts ul li::before {
+    content: "";
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--soil);
+    margin-top: 8px; margin-left: 8px;
+  }
+  .liff-callouts ul li b { color: var(--ink); font-weight: 800; }
+
+  /* ── 設定ステップ ──────────────────── */
+  .setup-step {
+    flex: 1; display: grid; grid-template-columns: 1.1fr 1fr; gap: 56px;
+    align-items: stretch;
+  }
+  .setup-left h3 {
+    margin: 0 0 6px;
+    font-size: 26px; font-weight: 900; letter-spacing: -.025em;
+  }
+  .setup-step-no {
+    font-family: "Inter", sans-serif;
+    font-weight: 800; font-size: 14px;
+    color: var(--soil); letter-spacing: .04em;
+    margin-bottom: 8px;
+  }
+  .setup-left p.lead {
+    color: var(--ink-2); font-size: 14.5px; line-height: 1.85; max-width: 32em;
+  }
+  .setup-left ol {
+    list-style: none; padding: 0; margin: 22px 0 0;
+    counter-reset: sstep;
+  }
+  .setup-left ol li {
+    counter-increment: sstep;
+    padding: 14px 0 14px 48px;
+    position: relative;
+    border-top: 1px solid var(--line-2);
+    font-size: 14px; line-height: 1.75; color: var(--ink-2);
+  }
+  .setup-left ol li:first-child { border-top: 0; padding-top: 6px; }
+  .setup-left ol li::before {
+    content: counter(sstep);
+    position: absolute; left: 0; top: 14px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--ink); color: #fff;
+    display: grid; place-items: center;
+    font-family: "Inter", sans-serif; font-weight: 800; font-size: 13px;
+  }
+  .setup-left ol li:first-child::before { top: 6px; }
+  .setup-left ol li b { color: var(--ink); font-weight: 800; }
+  .setup-left ol li code {
+    font-family: "Inter", monospace;
+    background: var(--bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    color: var(--soil-2);
+    word-break: break-all;
+  }
+
+  /* スクリーンモックアップ枠 */
+  .mock {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .mock-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding-bottom: 12px; margin-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px; color: var(--ink-3);
+  }
+  .mock-bar .dot { width: 9px; height: 9px; border-radius: 50%; background: #f0c14b; }
+  .mock-bar .dot.r { background: #ee695b; }
+  .mock-bar .dot.g { background: #62c554; }
+  .mock-bar .url {
+    margin-left: 10px;
+    padding: 3px 10px;
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 5px;
+    font-family: "Inter", monospace;
+    font-size: 10.5px;
+  }
+  .mock-body { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .mock-row {
+    display: grid; grid-template-columns: 110px 1fr; gap: 10px;
+    align-items: center; font-size: 12px;
+  }
+  .mock-row label {
+    font-weight: 700; color: var(--ink-3);
+  }
+  .mock-row input {
+    appearance: none;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-family: "Inter", monospace;
+    font-size: 11.5px;
+    color: var(--ink);
+  }
+  .mock-row.empty input { color: var(--ink-4); font-style: italic; }
+  .mock-section-title {
+    font-size: 11px; font-weight: 900; letter-spacing: .04em;
+    color: var(--ink); margin: 10px 0 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .mock-section-title:first-child { margin-top: 0; }
+  .mock-btn {
+    align-self: flex-start;
+    background: var(--leaf); color: #fff;
+    border: 0; padding: 9px 18px; border-radius: 6px;
+    font: inherit; font-weight: 800; font-size: 12px;
+  }
+
+  .field-callout {
+    background: var(--soil-3);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    margin-top: 12px;
+  }
+  .field-callout b { color: var(--soil-2); font-weight: 800; }
+
+  /* LINE Console モック (各設定スライドで使用) */
+  .console-mock {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .console-mock .ch {
+    background: #00b900;
+    color: #fff;
+    padding: 10px 16px;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: .04em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .console-mock .ch::before {
+    content: "L"; display: grid; place-items: center;
+    background: #fff; color: #00b900;
+    width: 18px; height: 18px; border-radius: 4px;
+    font-weight: 900; font-size: 11px;
+  }
+  .console-mock .cb { padding: 18px; }
+  .console-mock h4 {
+    margin: 0 0 12px; font-size: 14px; font-weight: 900; letter-spacing: -.02em;
+  }
+  .console-mock .field {
+    margin-bottom: 12px;
+  }
+  .console-mock .field label {
+    display: block; font-size: 10.5px; color: var(--ink-3);
+    font-weight: 700; letter-spacing: .04em; margin-bottom: 3px;
+  }
+  .console-mock .field .v {
+    font-family: "Inter", monospace;
+    font-size: 12px;
+    background: var(--bg);
+    padding: 6px 10px;
+    border-radius: 5px;
+    color: var(--ink);
+    border: 1px dashed var(--line);
+    position: relative;
+  }
+  .console-mock .field .v.highlight {
+    border: 1.5px solid var(--soil);
+    background: var(--soil-3);
+    color: var(--soil-2);
+    font-weight: 700;
+  }
+  .console-mock .field .v.highlight::after {
+    content: "コピー";
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    background: var(--soil); color: #fff;
+    font-size: 9px; padding: 2px 8px; border-radius: 999px;
+    font-family: "Noto Sans JP", sans-serif; font-weight: 800;
+    letter-spacing: .04em;
+  }
+  .console-mock .nav-tabs {
+    display: flex; gap: 0;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 14px;
+    overflow-x: auto;
+  }
+  .console-mock .nav-tabs span {
+    padding: 8px 14px;
+    font-size: 11px; font-weight: 700;
+    color: var(--ink-3);
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  .console-mock .nav-tabs span.active {
+    color: var(--ink); border-color: var(--ink);
+  }
+
+  /* ── 注意点グリッド ──────────────────── */
+  .care-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    flex: 1; align-content: start;
+  }
+  .care {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 22px 20px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .care.warn { background: var(--soil-3); border-color: #e0bba6; }
+  .care.notice { background: var(--honey-3); border-color: #e2c891; }
+  .care.ok { background: var(--leaf-3); border-color: #b9c8b0; }
+  .care .lbl {
+    font-family: "Inter", sans-serif;
+    font-weight: 800; font-size: 10.5px;
+    letter-spacing: .12em; color: var(--soil-2);
+  }
+  .care.notice .lbl { color: #8a5c0e; }
+  .care.ok .lbl { color: var(--leaf-2); }
+  .care h3 {
+    margin: 0; font-size: 16px; font-weight: 900; letter-spacing: -.01em;
+    line-height: 1.4;
+  }
+  .care p {
+    margin: 0; font-size: 13px; line-height: 1.7;
+    color: var(--ink-2);
+  }
+  .care .action {
+    margin-top: auto; padding-top: 10px;
+    border-top: 1px dashed rgba(0,0,0,.1);
+    font-size: 12px; font-weight: 700; color: var(--ink);
+  }
+  .care .action::before {
+    content: "→ "; color: var(--ink-3); font-family: "Inter", sans-serif;
+  }
+
+  /* ── トラブル対処 ──────────────────── */
+  .trouble {
+    flex: 1; display: grid; grid-template-columns: 1fr; gap: 14px;
+    align-content: start;
+  }
+  .trouble .row {
+    display: grid; grid-template-columns: 1fr 1.4fr 0.8fr;
+    gap: 24px;
+    padding: 16px 20px;
+    background: var(--bg);
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    align-items: start;
+  }
+  .trouble .row.head {
+    background: var(--ink); color: var(--bg); border-color: var(--ink);
+    padding: 12px 20px;
+  }
+  .trouble .row.head > div { font-size: 11.5px; font-weight: 800; letter-spacing: .04em; }
+  .trouble .row .sym { font-size: 14px; font-weight: 800; }
+  .trouble .row .ans { font-size: 13.5px; line-height: 1.7; color: var(--ink-2); }
+  .trouble .row .ans b { color: var(--ink); font-weight: 800; }
+  .trouble .row .who { font-size: 12px; font-weight: 700; color: var(--leaf); }
+  .trouble .row .who.skel { color: var(--soil); }
+
+  /* ── 連絡先 ──────────────────── */
+  .contact-slide {
+    background: var(--ink); color: var(--bg);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 64px;
+    align-content: center;
+  }
+  .contact-slide h2 {
+    margin: 0 0 24px;
+    font-size: clamp(34px, 4vw, 56px);
+    font-weight: 900; letter-spacing: -.04em;
+    line-height: 1.05;
+  }
+  .contact-slide p {
+    color: rgba(255,255,255,.7);
+    font-size: 15px; line-height: 1.85;
+    max-width: 28em;
+  }
+  .contact-list {
+    display: grid; gap: 22px;
+    align-self: center;
+  }
+  .contact-list .row {
+    padding-bottom: 22px;
+    border-bottom: 1px solid rgba(255,255,255,.15);
+  }
+  .contact-list .row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .contact-list dt {
+    font-size: 11px; letter-spacing: .12em;
+    color: rgba(255,255,255,.55); font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .contact-list dd {
+    margin: 0;
+    font-family: "Inter", sans-serif;
+    font-weight: 700;
+    font-size: 19px;
+    letter-spacing: -.02em;
+  }
+  .contact-slide .slide-no, .contact-slide .slide-brand { color: rgba(255,255,255,.4); }
+
+  /* ── 印刷時 ────────────────────────── */
+  @media print {
+    body { background: #fff; }
+    .topnav { display: none; }
+    .slide {
+      box-shadow: none; margin: 0;
+      width: 297mm; height: 167mm; /* 16:9 A4横 */
+      page-break-after: always; break-after: page;
+      border-radius: 0;
+      padding: 18mm 22mm;
+    }
+    .slide:last-child { page-break-after: auto; }
+  }
+
+  /* ── reduced motion ─────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    .toc a { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <div class="brand">
+      <span class="mark">M</span>
+      MEI 運営マニュアル
+      <small>α版 / 2026.06</small>
+    </div>
+    <div class="toc">
+      <a href="#cover">表紙</a>
+      <a href="#about">これは何</a>
+      <a href="#flow">全体の流れ</a>
+      <a href="#scenes">毎日の使い方</a>
+      <a href="#liff">お客の画面</a>
+      <a href="#setup1">LINE設定</a>
+      <a href="#care">運営の注意点</a>
+      <a href="#trouble">困った時</a>
+      <a href="#contact">連絡先</a>
+    </div>
+    <button class="pdf-btn" onclick="window.print()">PDFで保存</button>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 1 / 表紙 -->
+<section class="slide cover" id="cover">
+  <div class="stamp">運営マニュアル ・ スケルトン株式会社 提供</div>
+  <div class="title-block">
+    <h1>お得意さまの顔と買い物を、<em>店全員で覚える</em>道具。</h1>
+    <div class="sub">
+      お客さまが公式LINEを友だち追加した瞬間にカルテが生まれます。
+      レジでの一手間で、購入履歴、ポイント、好み、ぜんぶ自動で記録され、
+      スタッフ4人の誰もが同じ目線でお客さまと向き合えるようになります。
+    </div>
+  </div>
+  <dl class="meta">
+    <div><dt>プロダクト</dt><dd>MEI (メイ)</dd></div>
+    <div><dt>対象店舗</dt><dd>雑貨と道具 のうと さま</dd></div>
+    <div><dt>本資料</dt><dd>運営マニュアル / 全11ページ</dd></div>
+  </dl>
+  <span class="slide-no">01 / 11</span>
+  <span class="slide-brand">MEI Manual</span>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 2 / 目次 -->
+<section class="slide" id="toc">
+  <div class="section-head">
+    <div>
+      <div class="ch">目次</div>
+      <h2>この資料を、最後まで読まなくていい構成にしました。</h2>
+    </div>
+    <div class="head-note">
+      困った時に該当ページだけ開けばわかる<br>「逆引き辞書」 として作っています。
+    </div>
+  </div>
+
+  <div class="toc-grid">
+    <a class="toc-row" href="#about">
+      <div class="n">01</div>
+      <div class="t">MEIはなにをしてくれる道具か<small>3つの価値を1ページで</small></div>
+      <div class="p">P.03</div>
+    </a>
+    <a class="toc-row" href="#flow">
+      <div class="n">02</div>
+      <div class="t">全体の流れ<small>お客→LINE→スタッフ画面→自動配信</small></div>
+      <div class="p">P.04</div>
+    </a>
+    <a class="toc-row" href="#scenes">
+      <div class="n">03</div>
+      <div class="t">スタッフが毎日やること<small>来店時/入荷時/週末の3シーン</small></div>
+      <div class="p">P.05</div>
+    </a>
+    <a class="toc-row" href="#liff">
+      <div class="n">04</div>
+      <div class="t">お客さまから見える世界<small>LINE画面で何が起きているか</small></div>
+      <div class="p">P.06</div>
+    </a>
+    <a class="toc-row" href="#setup1">
+      <div class="n">05</div>
+      <div class="t">LINE 初期設定 / 公式アカウント開設<small>STEP 1 of 5</small></div>
+      <div class="p">P.07</div>
+    </a>
+    <a class="toc-row" href="#setup2">
+      <div class="n">06</div>
+      <div class="t">LINE 初期設定 / Messaging API 発行<small>STEP 2-3 of 5</small></div>
+      <div class="p">P.08</div>
+    </a>
+    <a class="toc-row" href="#setup3">
+      <div class="n">07</div>
+      <div class="t">LINE 初期設定 / LIFFアプリ作成<small>STEP 4 of 5</small></div>
+      <div class="p">P.09</div>
+    </a>
+    <a class="toc-row" href="#setup4">
+      <div class="n">08</div>
+      <div class="t">LINE 初期設定 / MEIに貼り付けて完了<small>STEP 5 of 5</small></div>
+      <div class="p">P.10</div>
+    </a>
+    <a class="toc-row" href="#care">
+      <div class="n">09</div>
+      <div class="t">運営で気をつけること<small>個人情報・LINEプラン・退会対応</small></div>
+      <div class="p">P.11</div>
+    </a>
+    <a class="toc-row" href="#trouble">
+      <div class="n">10</div>
+      <div class="t">困った時の対処<small>スタッフ4人で共有しておく早見表</small></div>
+      <div class="p">P.12</div>
+    </a>
+  </div>
+
+  <span class="slide-no">02 / 11</span>
+  <span class="slide-brand">MEI Manual</span>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 3 / これは何 -->
+<section class="slide" id="about">
+  <div class="section-head">
+    <div>
+      <div class="ch">第1章</div>
+      <h2>MEIは、何をしてくれる道具か。</h2>
+    </div>
+    <div class="head-note">
+      ひと言で:「お得意さまの記憶を、店全員で共有する装置」<br>
+      ポイントカード機能はその入口でしかありません。
+    </div>
+  </div>
+
+  <div class="three-up">
+    <div>
+      <div class="icn">👥</div>
+      <h3>顧客カルテを 店全員で共有</h3>
+      <p>
+        「あの方の好みは織部、ご長女が来年大学進学、母の日は粉引を贈った」 ── これまで店長ひとりが頭で覚えていたことが、スタッフ4人の画面に同じように映ります。担当者休みの日でも会話が途切れません。
+      </p>
+    </div>
+    <div>
+      <div class="icn s">🎁</div>
+      <h3>ポイントは LINEの中で増える</h3>
+      <p>
+        紙のカードは要りません。お客さまが公式LINEを友だち追加した時点で発行され、レジで購入を記録するたびに自動で加算、お礼のメッセージと一緒にLINEへ届きます。なくす、忘れる、再発行する、がなくなります。
+      </p>
+    </div>
+    <div>
+      <div class="icn h">📣</div>
+      <h3>新作の案内を 好みのお客さまだけに</h3>
+      <p>
+        「織部好きのお客さま8名」 だけに新作の入荷案内を送る、「3ヶ月ご無沙汰の方」 にだけ近況のお声がけを送る。一斉配信ではなく、相手に合わせた配信で、ブロック率を抑えながら来店につなげます。
+      </p>
+    </div>
+  </div>
+
+  <span class="slide-no">03 / 11</span>
+  <span class="slide-brand">MEI Manual</span>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 4 / 全体の流れ -->
+<section class="slide" id="flow">
+  <div class="section-head">
+    <div>
+      <div class="ch">第2章</div>
+      <h2>お客さまとMEIの、ふだんのやりとり。</h2>
+    </div>
+    <div class="head-note">
+      矢印の流れは、レジでの30秒で起きていることです。
+    </div>
+  </div>
+
+  <div class="flow">
+    <div class="flow-row">
+      <div class="flow-node customer">
+        <div class="who">お客さま</div>
+        <div class="what">公式LINEを<br>友だち追加<small>QRコードか店頭ポスター経由</small></div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-node line">
+        <div class="who">LINE経由</div>
+        <div class="what">自動で<br>カルテ発行<small>お名前(LINE表示名)が登録される</small></div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-node staff">
+        <div class="who">スタッフ画面</div>
+        <div class="what">新しいお客さま<br>として表示<small>「今月の新規LINE登録」に1人追加</small></div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-node auto">
+        <div class="who">自動配信</div>
+        <div class="what">お礼の<br>初回メッセージ<small>「ご登録ありがとうございます」</small></div>
+      </div>
+    </div>
+
+    <div class="flow-row">
+      <div class="flow-node customer">
+        <div class="who">お客さま</div>
+        <div class="what">来店<br>レジでお会計<small>「LINEあります」とひと言</small></div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-node staff">
+        <div class="who">スタッフ画面</div>
+        <div class="what">お名前で検索<br>カルテを開く<small>過去の購入も全部見える</small></div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-node staff">
+        <div class="who">スタッフ画面</div>
+        <div class="what">商品選んで<br>記録ボタン<small>在庫も自動で減る</small></div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-node auto">
+        <div class="who">自動配信</div>
+        <div class="what">お礼+ポイント<br>残高 自動LINE<small>「72P加算→ 残高624P」</small></div>
+      </div>
+    </div>
+
+    <div class="flow-legend">
+      <span><span class="d customer"></span>お客さまの行動</span>
+      <span><span class="d line"></span>LINEで起きること</span>
+      <span><span class="d staff"></span>スタッフの操作</span>
+      <span><span class="d auto"></span>MEIの自動配信</span>
+    </div>
+  </div>
+
+  <span class="slide-no">04 / 11</span>
+  <span class="slide-brand">MEI Manual</span>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 5 / 毎日の使い方 / シーン3つ -->
+<section class="slide" id="scenes">
+  <div class="section-head">
+    <div>
+      <div class="ch">第3章</div>
+      <h2>スタッフが毎日、画面でやること。</h2>
+    </div>
+    <div class="head-note">
+      シーンは3つだけ。<br>
+      これさえ習慣になれば、あとは自動で積み重なります。
+    </div>
+  </div>
+
+  <div class="scenes">
+    <div class="scene">
+      <div class="when">SCENE 1 / お客さまが来店</div>
+      <h3>レジで「LINEあります」と言われたら</h3>
+      <ol>
+        <li>スタッフ画面の上の検索欄に<b>お名前を入力</b>(漢字でもふりがなでも、LINE表示名でも検索できます)</li>
+        <li>該当のお客さまの行をタップしてカルテを開く</li>
+        <li>「今日の購入を記録」 で<b>商品を選んで個数を入力</b>。複数商品は「+商品を追加」で増やす</li>
+        <li>支払方法を選んで<b>「記録 → 自動LINE」</b>ボタン。この時点で在庫が自動で減り、お礼LINEがお客さまに届きます</li>
+      </ol>
+      <div class="takeaway">
+        <b>所要時間の目安</b>
+        慣れたスタッフで30〜45秒、慣れていない方でも1分かかりません。
+      </div>
+    </div>
+
+    <div class="scene">
+      <div class="when">SCENE 2 / 新しい器が入荷した</div>
+      <h3>新作を、好みのお客さまだけに案内する</h3>
+      <ol>
+        <li>「商品マスタ」 で <b>新商品を追加</b>。商品名・作家・価格・初期在庫を入力</li>
+        <li>「在庫」 ページで、その商品が<b>正しく登録されたか確認</b></li>
+        <li>「配信・施策」 ページで、たとえば<b>「織部好み + 累計1万円以上」</b>のセグメントを選択</li>
+        <li>「下書きを書く」 から案内文を作成して送信。配信数はその場で集計されます</li>
+      </ol>
+      <div class="takeaway">
+        <b>送り過ぎ注意</b>
+        週1回より多い配信は、LINEブロックが急に増える原因になります。
+      </div>
+    </div>
+
+    <div class="scene">
+      <div class="when">SCENE 3 / 週末・店じまいの後</div>
+      <h3>今週の店を、数字で振り返る</h3>
+      <ol>
+        <li>「今日の店」 で<b>週次/月次の売上推移</b>を確認</li>
+        <li>「お声がけ候補」 で<b>3ヶ月ご無沙汰のお客さま</b>を確認、必要なら個別連絡</li>
+        <li>「在庫」 で<b>残り少ない商品</b>をチェック、発注リストを作成</li>
+        <li>気づいたお客さまの好み・要望は、カルテの<b>「店長メモ」 に記録</b>(他のスタッフも見えます)</li>
+      </ol>
+      <div class="takeaway">
+        <b>店長メモが資産</b>
+        「次回お会いした時に聞きたいこと」 まで書いておくと、雑談が続きます。
+      </div>
+    </div>
+  </div>
+
+  <span class="slide-no">05 / 11</span>
+  <span class="slide-brand">MEI Manual</span>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 6 / お客のLINE画面 -->
+<section class="slide" id="liff">
+  <div class="section-head">
+    <div>
+      <div class="ch">第4章</div>
+      <h2>お客さまから見える世界は、これだけです。</h2>
+    </div>
+    <div class="head-note">
+      ポイント残高、購入履歴、クーポン、お知らせ。<br>
+      シンプルに保つことで、開いてもらえます。
+    </div>
+  </div>
+
+  <div class="liff-explainer">
+    <div class="phone-mini">
+      <div class="phone-mini-screen">
+        <div class="pmh">
+          <div class="shop">雑貨と道具 のうと</div>
+          <div class="greet">瀬戸 美佳 さま</div>
+        </div>
+        <div class="pmcard">
+          <div class="l">あなたのポイント</div>
+          <b>624 <span style="font-size:13px; color:var(--ink-3); font-family:'Noto Sans JP'; font-weight:700;">P</span></b>
+          <div class="pb"><i></i></div>
+        </div>
+        <div class="pmmenu">
+          <a><span class="e">🛍</span>履歴</a>
+          <a><span class="e">🎁</span>クーポン</a>
+          <a><span class="e">🪴</span>お気に入り</a>
+          <a><span class="e">📅</span>取り置き</a>
+        </div>
+        <div class="pmlist">
+          <h4>お知らせ</h4>
+          <div class="it">
+            <span class="e">🎂</span>
+            <span class="nm">誕生月10%OFF</span>
+            <span class="pt">−10%</span>
+          </div>
+          <div class="it">
+            <span class="e">🍶</span>
+            <span class="nm">織部 新作入荷</span>
+            <span class="pt">NEW</span>
+          </div>
+          <div class="it">
+            <span class="e">📦</span>
+            <span class="nm">取り置き入荷予定</span>
+            <span class="pt">予約</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="liff-callouts">
+      <h3>お客さまにとっては、「財布が膨らまないポイントカード」 から始まります。</h3>
+      <div class="lead">
+        ポイントが貯まる、誕生月にクーポンが届く、好きなジャンルの新着だけ案内が来る。LINEを開けば全部わかる、というシンプルさが入口です。
+      </div>
+      <ul>
+        <li><span></span><span><b>ポイント残高と次の特典まで</b> ── 紙のカードを家に忘れた、で揉めることがなくなります</span></li>
+        <li><span></span><span><b>過去の購入が写真付きで全部見える</b> ── 「あれの色違いを娘にも」 がスムーズに</span></li>
+        <li><span></span><span><b>誕生月クーポンが自動で届く</b> ── スタッフが覚えていなくても、来店のきっかけになります</span></li>
+        <li><span></span><span><b>取り置きを画面から依頼できる</b> ── 「家族に相談してから」 がそのまま購入につながります</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <span class="slide-no">06 / 11</span>
+  <span class="slide-brand">MEI Manual</span>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 7 / 設定 Step 1 -->
+<section class="slide" id="setup1">
+  <div class="section-head">
+    <div>
+      <div class="ch">第5章 / LINE 初期設定 (1/5)</div>
+      <h2>公式LINEアカウントを開設する。</h2>
+    </div>
+    <div class="head-note">
+      所要時間: 10分<br>
+      LINEビジネスIDがあれば3分で終わります
+    </div>
+  </div>
+
+  <div class="setup-step">
+    <div class="setup-left">
+      <div class="setup-step-no">STEP 1</div>
+      <h3>LINE公式アカウントを作る</h3>
+      <p class="lead">
+        まず、お店専用のLINE公式アカウントを発行します。お客さまが「友だち追加」 する先のアカウントです。すでに公式LINEをお持ちならこの工程はスキップ可。
+      </p>
+      <ol>
+        <li>パソコンで <code>manager.line.biz/signup</code> を開く</li>
+        <li>普段使いのLINEアカウントで<b>ログイン</b>。お店専用のメールアドレスを<b>LINEビジネスIDとして発行</b>(Gmailで可)</li>
+        <li>アカウント名を<b>「雑貨と道具 のうと」</b>、業種を<b>「ショッピング・小売」</b>に設定</li>
+        <li>料金プランは<b>「フリー (月200通)」</b>でまず作成。後で必ず「ライトプラン」 に変更します</li>
+      </ol>
+    </div>
+
+    <div class="mock">
+      <div class="mock-bar">
+        <span class="dot r"></span><span class="dot"></span><span class="dot g"></span>
+        <span class="url">manager.line.biz/signup</span>
+      </div>
+      <div class="mock-body">
+        <div class="mock-section-title">アカウント作成</div>
+        <div class="mock-row"><label>アカウント名</label><input value="雑貨と道具 のうと"></div>
+        <div class="mock-row"><label>業種</label><input value="ショッピング・小売 / 雑貨"></div>
+        <div class="mock-row"><label>会社名</label><input value="雑貨と道具 のうと"></div>
+        <div class="mock-row"><label>料金プラン</label><input value="フリープラン (月200通)"></div>
+        <div style="margin-top:auto; padding-top:14px;">
+          <button class="mock-btn">アカウントを作成</button>
+        </div>
+        <div class="field-callout" style="margin-top:14px;">
+          <b>注意</b> フリープランの200通は、お客さま20名で自動配信を1ヶ月回すと枯渇します。本番運用には<b>ライトプラン (月¥5,000 / 5,000通)</b> 推奨。アカウント作成後、すぐにプラン変更可能です。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <span class="slide-no">07 / 11</span>
+  <span class="slide-brand">MEI Manual</span>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 8 / 設定 Step 2-3 -->
+<section class="slide" id="setup2">
+  <div class="section-head">
+    <div>
+      <div class="ch">第5章 / LINE 初期設定 (2/5)</div>
+      <h2>Messaging API を有効化して、認証情報を取得する。</h2>
+    </div>
+    <div class="head-note">
+      所要時間: 5分<br>
+      この3つの情報がMEIとLINEをつなぐ鍵になります
+    </div>
+  </div>
+
+  <div class="setup-step">
+    <div class="setup-left">
+      <div class="setup-step-no">STEP 2-3</div>
+      <h3>Channel ID / Secret / Access Token を発行</h3>
+      <p class="lead">
+        LINE公式アカウント管理画面の「設定」 → 「Messaging API」 タブから、自動配信やお礼メッセージを送るための認証情報を取得します。
+      </p>
+      <ol>
+        <li>管理画面で右上の<b>「設定」</b>を開く</li>
+        <li>左メニューの<b>「Messaging API」</b>を選択して、<b>「Messaging APIを利用する」</b>をクリック</li>
+        <li>Developerコンソールで開発者として登録(初回のみ)。プロバイダー名は<b>「雑貨と道具 のうと」</b>でOK</li>
+        <li>Webhook URLに<b><code>https://us-central1-skeleton-skel-ec-2606.cloudfunctions.net/meiLineWebhook?tenant=zakka-demo</code></b>を貼り付け</li>
+        <li>右図の3つの値<b>(Channel ID / Channel secret / Channel access token)</b> を<b>1つずつ「コピー」</b>。メモ帳に貼っておきます</li>
+      </ol>
+    </div>
+
+    <div>
+      <div class="console-mock">
+        <div class="ch">LINE Developers Console / Basic settings</div>
+        <div class="cb">
+          <div class="nav-tabs">
+            <span class="active">Basic settings</span>
+            <span>Messaging API</span>
+            <span>LIFF</span>
+            <span>Security</span>
+          </div>
+
+          <div class="field">
+            <label>Channel name</label>
+            <div class="v">雑貨と道具 のうと</div>
+          </div>
+          <div class="field">
+            <label>Channel ID</label>
+            <div class="v highlight">2006847291</div>
+          </div>
+          <div class="field">
+            <label>Channel secret</label>
+            <div class="v highlight">9f2c1a4b6e8d3f5a7c9b1d4e6f8a3c5b</div>
+          </div>
+          <div class="field">
+            <label>Channel access token (long-lived)</label>
+            <div class="v highlight">XX+5fGN/aBcD8eFgHiJkLm...発行ボタンで生成</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-callout">
+        <b>絶対の禁忌</b> Channel secret と access token は<b>パスワードと同じ重さ</b>です。スクショをSNSに上げる、メールで送る、紙にメモして店頭に貼る、全部NG。MEIの設定タブに直接貼り付けるのが正しい運用です。
+      </div>
+    </div>
+  </div>
+
+  <span class="slide-no">08 / 11</span>
+  <span class="slide-brand">MEI Manual</span>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 9 / 設定 Step 4 -->
+<section class="slide" id="setup3">
+  <div class="section-head">
+    <div>
+      <div class="ch">第5章 / LINE 初期設定 (3/5)</div>
+      <h2>LIFFアプリを作って、お客さまの画面を開けるようにする。</h2>
+    </div>
+    <div class="head-note">
+      所要時間: 3分<br>
+      LIFF = LINEの中で開く専用Webアプリのことです
+    </div>
+  </div>
+
+  <div class="setup-step">
+    <div class="setup-left">
+      <div class="setup-step-no">STEP 4</div>
+      <h3>LIFF (Mini App) を作る</h3>
+      <p class="lead">
+        LIFFは、お客さまがLINEのトーク画面から開く、「マイページ」 のことです。ポイント残高や購入履歴を表示する画面のURLをLINEに登録します。
+      </p>
+      <ol>
+        <li>同じDeveloperコンソールで <b>「LIFF」</b> タブに切り替え</li>
+        <li>右上の<b>「+ Add」</b>ボタンをクリック</li>
+        <li>LIFF app nameに<b>「のうと マイページ」</b>、Sizeは<b>「Full」</b>(画面全体表示)</li>
+        <li>Endpoint URLに<b><code>https://mei-nouto.web.app</code></b>を貼り付け</li>
+        <li>Scopesは<b>「profile」と「openid」</b>をチェック</li>
+        <li>作成後、表示された<b>「LIFF ID」</b>(例: <code>2006847291-x7K8mZpQ</code>) を<b>「コピー」</b></li>
+      </ol>
+    </div>
+
+    <div>
+      <div class="console-mock">
+        <div class="ch">LINE Developers Console / Add a new LIFF app</div>
+        <div class="cb">
+          <div class="field">
+            <label>LIFF app name *</label>
+            <div class="v">のうと マイページ</div>
+          </div>
+          <div class="field">
+            <label>Size *</label>
+            <div class="v">Full</div>
+          </div>
+          <div class="field">
+            <label>Endpoint URL *</label>
+            <div class="v highlight">https://mei-nouto.web.app</div>
+          </div>
+          <div class="field">
+            <label>Scopes</label>
+            <div class="v">☑ profile ☑ openid ☐ chat_message.write</div>
+          </div>
+          <div class="field">
+            <label>LIFF ID (作成後に表示)</label>
+            <div class="v highlight">2006847291-x7K8mZpQ</div>
+          </div>
+          <div style="margin-top:14px;">
+            <button class="mock-btn">Add</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-callout">
+        <b>LIFF IDの控え方</b> 作成直後の画面にしか表示されない訳ではなく、後からLIFFタブを開けば再確認できますが、メモ帳に貼って次のステップに進むのが確実です。
+      </div>
+    </div>
+  </div>
+
+  <span class="slide-no">09 / 11</span>
+  <span class="slide-brand">MEI Manual</span>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 10 / 設定 Step 5 -->
+<section class="slide" id="setup4">
+  <div class="section-head">
+    <div>
+      <div class="ch">第5章 / LINE 初期設定 (4/5)</div>
+      <h2>取得した4つの値を、MEIに貼り付けて完了。</h2>
+    </div>
+    <div class="head-note">
+      所要時間: 2分<br>
+      貼り付けて「保存」 を押すだけです
+    </div>
+  </div>
+
+  <div class="setup-step">
+    <div class="setup-left">
+      <div class="setup-step-no">STEP 5</div>
+      <h3>MEI設定タブに貼り付ける</h3>
+      <p class="lead">
+        <code>https://mei-nouto-admin.web.app</code> を開いて、左メニュー一番下の <b>「設定」</b> ページへ。先ほどメモ帳に貼った4つの値をそれぞれの欄に貼り付けて、「設定を保存」 を押します。これで接続完了。
+      </p>
+      <ol>
+        <li>MEIスタッフ画面を開いて、左メニューの<b>「設定」</b>へ</li>
+        <li><b>LINE Channel ID</b>欄に貼り付け</li>
+        <li><b>LINE Channel Secret</b>欄に貼り付け</li>
+        <li><b>LINE Channel Access Token</b>欄に貼り付け</li>
+        <li><b>LIFF ID</b>欄に貼り付け</li>
+        <li>下にスクロールして<b>「設定を保存」</b>ボタンをクリック</li>
+        <li>テスト用に自分のLINEで公式アカウントを<b>友だち追加</b>。10秒ほどで「ご登録ありがとうございます」 のメッセージが届けば、接続成功です</li>
+      </ol>
+    </div>
+
+    <div class="mock">
+      <div class="mock-bar">
+        <span class="dot r"></span><span class="dot"></span><span class="dot g"></span>
+        <span class="url">mei-nouto-admin.web.app/#settings</span>
+      </div>
+      <div class="mock-body">
+        <div class="mock-section-title">店舗情報</div>
+        <div class="mock-row"><label>店名</label><input value="雑貨と道具 のうと"></div>
+
+        <div class="mock-section-title">LINE連携</div>
+        <div class="mock-row"><label>Channel ID</label><input value="2006847291"></div>
+        <div class="mock-row"><label>Channel Secret</label><input value="•••••••••••••••••••••••"></div>
+        <div class="mock-row"><label>Access Token</label><input value="•••••••••••••••••••••••"></div>
+        <div class="mock-row"><label>LIFF ID</label><input value="2006847291-x7K8mZpQ"></div>
+
+        <div class="mock-section-title">ポイントルール</div>
+        <div class="mock-row"><label>¥ ごとに 1P</label><input value="100"></div>
+        <div class="mock-row"><label>誕生月ボーナス</label><input value="2.0"></div>
+
+        <div style="margin-top:14px;">
+          <button class="mock-btn">設定を保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <span class="slide-no">10 / 11</span>
+  <span class="slide-brand">MEI Manual</span>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 11 / 運営の注意点 -->
+<section class="slide" id="care">
+  <div class="section-head">
+    <div>
+      <div class="ch">第6章</div>
+      <h2>運営で気をつけること、必ずやること。</h2>
+    </div>
+    <div class="head-note">
+      8項目。<br>
+      ぜんぶスタッフ4人で共有しておきます。
+    </div>
+  </div>
+
+  <div class="care-grid">
+    <div class="care warn">
+      <div class="lbl">法的義務</div>
+      <h3>個人情報の同意導線</h3>
+      <p>お客さまの名前、電話、購入履歴は個人情報。LINE登録直後に「利用規約 + プライバシーポリシー」 同意のメッセージを必ず1通送ります。</p>
+      <div class="action">スケルトンが雛形を提供します</div>
+    </div>
+
+    <div class="care notice">
+      <div class="lbl">運用必須</div>
+      <h3>LINEプランはライト以上</h3>
+      <p>フリープラン200通は、お客さま20名で1日枯渇します。ライト(¥5,000/月・5,000通)、配信が多い月はスタンダード(¥15,000/月・30,000通)に。</p>
+      <div class="action">アカウント開設後すぐ変更</div>
+    </div>
+
+    <div class="care">
+      <div class="lbl">運用必須</div>
+      <h3>退会対応の窓口を一本化</h3>
+      <p>「データ消して」 要望は法的義務。受付係を1人決め、カルテ画面の「削除」 ボタンで対応。誰が削除したか記録が残ります。</p>
+      <div class="action">店長が受付係</div>
+    </div>
+
+    <div class="care warn">
+      <div class="lbl">情報漏洩防止</div>
+      <h3>スタッフ離職時の即時無効化</h3>
+      <p>退職する方のログインアカウントを当日中に無効化。放置すると退職後も顧客情報が見えてしまいます。</p>
+      <div class="action">スケルトンに連絡で5分対応</div>
+    </div>
+
+    <div class="care notice">
+      <div class="lbl">配信ルール</div>
+      <h3>配信は週1回まで</h3>
+      <p>過剰配信はLINEブロック増加 = 顧客資産の喪失。新作入荷とお誕生日以外は基本送らない、を徹底。</p>
+      <div class="action">配信履歴は管理画面で確認</div>
+    </div>
+
+    <div class="care ok">
+      <div class="lbl">自動運用</div>
+      <h3>月次バックアップ</h3>
+      <p>顧客カルテと購入履歴は月1で自動バックアップ。誤削除や障害時の最終防衛線。設定不要、スケルトン側で月初1日に取得します。</p>
+      <div class="action">手作業不要</div>
+    </div>
+
+    <div class="care">
+      <div class="lbl">スマホ運用</div>
+      <h3>端末紛失時の即時ロック</h3>
+      <p>スタッフのスマホ盗難・紛失時は1時間以内にスケルトンへ連絡。リモートでログイン無効化します。</p>
+      <div class="action">緊急連絡先: P.13</div>
+    </div>
+
+    <div class="care ok">
+      <div class="lbl">月次レビュー</div>
+      <h3>月末の数字を見る習慣</h3>
+      <p>月末に5分、「今月の店」 ダッシュボードを見るだけ。VIPの方の来店頻度、休眠の人数、これだけ追えば次月の打ち手が見えます。</p>
+      <div class="action">毎月末の朝会で共有</div>
+    </div>
+
+    <div class="care warn">
+      <div class="lbl">本番稼働前</div>
+      <h3>セキュリティ強化の最終確認</h3>
+      <p>本番稼働開始日に、スケルトン側でアクセス権限を「お店スタッフのみ」 に最終ロック。デモ用の緩い設定から本番設定への切替作業です。</p>
+      <div class="action">稼働日にスケルトンが対応</div>
+    </div>
+  </div>
+
+  <span class="slide-no">11 / 11</span>
+  <span class="slide-brand">MEI Manual</span>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 12 / トラブル対処 -->
+<section class="slide" id="trouble">
+  <div class="section-head">
+    <div>
+      <div class="ch">第7章</div>
+      <h2>困った時の早見表。</h2>
+    </div>
+    <div class="head-note">
+      この表のどれにも当てはまらない時は<br>
+      迷わずスケルトンに連絡 → 即対応します
+    </div>
+  </div>
+
+  <div class="trouble">
+    <div class="row head">
+      <div>こんな時は</div>
+      <div>こう動く</div>
+      <div>担当</div>
+    </div>
+
+    <div class="row">
+      <div class="sym">お客さまの名前で検索しても出てこない</div>
+      <div class="ans">まだLINE友だち追加されていない可能性。「新しいお客さま」 ボタンから手動でカルテ作成。後でLINE登録すれば自動でつながります。<b>同姓同名の場合は電話番号で識別</b>。</div>
+      <div class="who">スタッフ</div>
+    </div>
+
+    <div class="row">
+      <div class="sym">「記録 → 自動LINE」 を押してもLINEが届かない</div>
+      <div class="ans">設定タブの<b>Channel access token</b>が空、または期限切れの可能性。スタッフ画面の「設定」 → LINE連携を確認。トークンは<b>長期(360日)で発行</b>している前提。</div>
+      <div class="who skel">スケルトン</div>
+    </div>
+
+    <div class="row">
+      <div class="sym">LINEプラン枠を超えた、と通知が来た</div>
+      <div class="ans">LINE管理画面で<b>翌月までに上位プランへ変更</b>。今月は配信が止まりますが、購入記録とポイント加算は通常通り動きます。お客さまへは謝罪文を一斉送信できます。</div>
+      <div class="who">店長</div>
+    </div>
+
+    <div class="row">
+      <div class="sym">スタッフのスマホを紛失した</div>
+      <div class="ans"><b>1時間以内にスケルトンに連絡</b>。リモートでログイン無効化します。MEI自体に顧客の個人情報は端末に保存されない設計なので、画面を見られる以上の被害はありません。</div>
+      <div class="who skel">スケルトン</div>
+    </div>
+
+    <div class="row">
+      <div class="sym">お客さまから「データを消してほしい」 と言われた</div>
+      <div class="ans">店長が受付。<b>カルテ画面の「削除」 ボタン</b>で即時削除。30日間は復元可能なので、誤削除の場合は連絡。完全削除後は復元不可。</div>
+      <div class="who">店長</div>
+    </div>
+
+    <div class="row">
+      <div class="sym">スタッフ画面が真っ白になった、固まった</div>
+      <div class="ans">画面を1回<b>リロード(Cmd+R / F5)</b>。それでも改善しなければスマホ・PCを再起動。<b>データは全部サーバーに保存されている</b>ので、消えることはありません。</div>
+      <div class="who">スタッフ</div>
+    </div>
+
+    <div class="row">
+      <div class="sym">在庫の数字が実際と合わない</div>
+      <div class="ans">在庫ページの<b>±ボタンで手動調整</b>可能。週末の棚卸し時に実数と画面の数字を合わせる、を習慣化。差分が大きい時は<b>記録漏れの可能性</b>。</div>
+      <div class="who">店長</div>
+    </div>
+
+  </div>
+
+  <span class="slide-no">12 / 13</span>
+  <span class="slide-brand">MEI Manual</span>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 13 / 連絡先 -->
+<section class="slide contact-slide" id="contact">
+  <div>
+    <h2>困ったら、<br>すぐに連絡を。</h2>
+    <p>
+      お店の営業に関わる困りごとは、最短15分以内に返答します。
+      LINEでメッセージをいただければ、緊急の場合は当日中、それ以外も翌営業日朝までに対応します。
+    </p>
+  </div>
+
+  <dl class="contact-list">
+    <div class="row">
+      <dt>運営会社</dt>
+      <dd>スケルトン株式会社</dd>
+    </div>
+    <div class="row">
+      <dt>担当</dt>
+      <dd>吉田 恭聡</dd>
+    </div>
+    <div class="row">
+      <dt>メール / 通常のお問い合わせ</dt>
+      <dd>t3.5ty6@gmail.com</dd>
+    </div>
+    <div class="row">
+      <dt>LINE / 緊急の連絡用</dt>
+      <dd>(店舗導入時にお伝えします)</dd>
+    </div>
+    <div class="row">
+      <dt>所在地</dt>
+      <dd>福井県福井市</dd>
+    </div>
+  </dl>
+
+  <span class="slide-no">13 / 13</span>
+  <span class="slide-brand">MEI Manual</span>
+</section>
+
+<script>
+  // smooth scroll for TOC links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+</body>
+</html>

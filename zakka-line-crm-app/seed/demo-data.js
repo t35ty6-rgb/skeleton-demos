@@ -246,6 +246,35 @@ export const DEMO_MESSAGES = [
   },
 ];
 
+export const DEMO_HOLDS = [
+  {
+    id: 'h_oka_hagi',
+    customerId: 'c_okazaki',
+    productId: 'p_hagi_yunomi',
+    productName: '萩焼 湯呑',
+    qty: 4,
+    estimatedPrice: 11200,
+    note: '入荷時にお声がけ希望、 ご贈答用 (桐箱対応)',
+    status: 'confirmed',
+    requestedAt: dayOffset(12),
+    expireAt: dayOffset(-14).slice(0, 10),
+    createdAt: dayOffset(12),
+  },
+  {
+    id: 'h_seto_new',
+    customerId: 'c_seto',
+    productId: 'p_oribe_tori5',
+    productName: '織部 取り皿 5寸 (新作)',
+    qty: 2,
+    estimatedPrice: 7600,
+    note: '新作の入荷次第',
+    status: 'requested',
+    requestedAt: dayOffset(1),
+    expireAt: dayOffset(-21).slice(0, 10),
+    createdAt: dayOffset(1),
+  },
+];
+
 export const DEMO_COUPONS = [
   {
     id: 'cp_seto_birth',
@@ -269,4 +298,5 @@ export async function seedDemoData(repo) {
   for (const pu of DEMO_PURCHASES) await repo.adapter.set('purchases', pu.id, pu);
   for (const m of DEMO_MESSAGES) await repo.adapter.set('messages', m.id, m);
   for (const cp of DEMO_COUPONS) await repo.adapter.set('coupons', cp.id, cp);
+  for (const h of DEMO_HOLDS) await repo.adapter.set('holds', h.id, h);
 }

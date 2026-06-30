@@ -38,11 +38,22 @@ export const AUTO_MESSAGES = {
 
 // ─── 支払方法 enum (実店舗POS的) ───
 export const PAYMENT_METHODS = {
-  CASH:    { id: 'cash',    label: '現金' },
-  CARD:    { id: 'card',    label: 'クレジット' },
-  PAYPAY:  { id: 'paypay',  label: 'PayPay' },
-  LINEPAY: { id: 'linepay', label: 'LINE Pay' },
-  OTHER:   { id: 'other',   label: 'その他' },
+  STRIPE_TAP:   { id: 'stripe_tap',   label: 'iPhoneタッチ決済',  group: 'stripe', icon: '📱' },
+  STRIPE_CARD:  { id: 'stripe_card',  label: 'クレジット (差込)',  group: 'stripe', icon: '💳' },
+  STRIPE_IC:    { id: 'stripe_ic',    label: 'IC (Suica等)',     group: 'stripe', icon: '🔵' },
+  CASH:         { id: 'cash',         label: '現金',              group: 'cash',   icon: '💴' },
+  PAYPAY:       { id: 'paypay',       label: 'PayPay',           group: 'qr',     icon: '📲' },
+  LINEPAY:      { id: 'linepay',      label: 'LINE Pay',         group: 'qr',     icon: '💚' },
+  OTHER:        { id: 'other',        label: 'その他',            group: 'other',  icon: '✏️' },
+};
+
+// ─── 取り置き状態 ───
+export const HOLD_STATUS = {
+  REQUESTED: { id: 'requested', label: 'お申し込み中' },
+  CONFIRMED: { id: 'confirmed', label: '取り置き中' },
+  READY:     { id: 'ready',     label: 'ご来店をお待ちしています' },
+  COMPLETED: { id: 'completed', label: 'ご購入済み' },
+  CANCELLED: { id: 'cancelled', label: 'キャンセル' },
 };
 
 // ─── 商品カテゴリ (テナント設定で上書き可能) ───
@@ -189,6 +200,8 @@ export const paths = {
   staff:        (t)                  => `tenants/${t}/staff`,
   messages:     (t)                  => `tenants/${t}/messages`,
   coupons:      (t)                  => `tenants/${t}/coupons`,
+  holds:        (t)                  => `tenants/${t}/holds`,
+  hold:         (t, id)              => `tenants/${t}/holds/${id}`,
   customerCoupons: (t, customerId)   => `tenants/${t}/customers/${customerId}/coupons`,
 };
 

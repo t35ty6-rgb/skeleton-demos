@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>のうと / マイページ</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
   :root {
     --bg: #f0eee8; --paper: #fff;
@@ -143,6 +144,69 @@
   .empty { padding: 32px 16px; text-align: center; color: var(--ink-3); font-weight: 700; font-size: 13px; }
   .empty .e { font-size: 32px; display: block; margin-bottom: 8px; }
 
+  /* ── QR コード セクション ── */
+  .qr-card {
+    margin: 12px 16px 0;
+    background: #fff;
+    border-radius: 16px;
+    padding: 18px;
+    text-align: center;
+  }
+  .qr-card .l { font-size: 11.5px; color: var(--ink-3); font-weight: 700; letter-spacing: .04em; margin-bottom: 6px; }
+  .qr-card h3 { margin: 0 0 12px; font-size: 14px; font-weight: 900; letter-spacing: -.01em; }
+  .qr-card #qrBox {
+    display: inline-block;
+    padding: 12px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+  }
+  .qr-card #qrBox img,
+  .qr-card #qrBox canvas { display: block; }
+  .qr-card .qrcap { font-size: 11px; color: var(--ink-3); margin-top: 10px; line-height: 1.5; }
+  .qr-card .qrcap b { color: var(--ink); font-weight: 800; }
+
+  /* ── 取り置きフォーム ── */
+  .hold-form {
+    background: #fff; border-radius: 16px; padding: 16px;
+    margin-bottom: 12px;
+  }
+  .hold-form label { font-size: 11px; color: var(--ink-3); font-weight: 700; letter-spacing: .04em; }
+  .hold-form select, .hold-form input, .hold-form textarea {
+    width: 100%; appearance: none;
+    border: 1px solid var(--line);
+    padding: 9px 11px; border-radius: 8px;
+    font: inherit; font-size: 13.5px;
+    margin: 4px 0 10px;
+    background: #fbfaf6;
+    box-sizing: border-box;
+  }
+  .hold-form .btn-row {
+    display: flex; gap: 6px;
+  }
+  .hold-form button {
+    appearance: none; border: 0;
+    background: var(--soil); color: #fff;
+    padding: 11px 18px; border-radius: 999px;
+    font: inherit; font-weight: 800; font-size: 13px;
+    cursor: pointer; flex: 1;
+  }
+  .hold-form button.cancel { background: var(--bg); color: var(--ink-3); }
+  .hold-card {
+    background: #fff; border-radius: 12px; padding: 14px;
+    margin-bottom: 8px;
+  }
+  .hold-card .stat {
+    display: inline-block; font-size: 10.5px; font-weight: 800;
+    padding: 3px 9px; border-radius: 999px;
+    background: var(--bg); color: var(--ink-2);
+    margin-bottom: 6px;
+  }
+  .hold-card .stat.cnf { background: var(--leaf-3); color: var(--leaf); }
+  .hold-card .stat.rdy { background: var(--soil-3); color: var(--soil-2); }
+  .hold-card .nm { font-weight: 800; font-size: 14px; }
+  .hold-card .meta { color: var(--ink-3); font-size: 11.5px; margin-top: 4px; line-height: 1.5; }
+
   /* dev mode banner */
   .dev-bar {
     background: #1c1b18; color: rgba(255,255,255,.7);
@@ -179,8 +243,8 @@
     <div class="menu">
       <a onclick="showView('history')"><span class="e">🛍</span>購入履歴</a>
       <a onclick="showView('coupons')"><span class="e">🎁</span>クーポン<br><span class="badge" id="couponBadge"></span></a>
-      <a onclick="alert('お気に入り機能は Phase 3 で追加されます')"><span class="e">🪴</span>お気に入り</a>
-      <a onclick="alert('取り置き機能は Phase 2 で追加されます')"><span class="e">📅</span>取り置き</a>
+      <a onclick="showView('qr')"><span class="e">📱</span>お会計QR</a>
+      <a onclick="showView('holds')"><span class="e">📅</span>取り置き<br><span class="badge" id="holdBadge"></span></a>
     </div>
 
     <div class="section">
@@ -228,6 +292,47 @@
     </div>
   </section>
 
+  <!-- ── QR (お会計時にスタッフに見せる) ── -->
+  <section class="view" data-view="qr">
+    <div class="body-view">
+      <span class="back" onclick="showView('home')">← ホーム</span>
+      <h1>お会計時のQR</h1>
+      <div class="sub">レジでスタッフにこの画面をお見せください</div>
+      <div class="qr-card">
+        <div class="l">あなた専用 QR</div>
+        <h3 id="qrName">—</h3>
+        <div id="qrBox"></div>
+        <div class="qrcap">スタッフが QR を読み取ると、 <b>お客さま情報・ポイント残高</b> が一瞬で出ます。<br>このQRは <b>あなた専用</b>、 他の方に共有しないでください。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 取り置き ── -->
+  <section class="view" data-view="holds">
+    <div class="body-view">
+      <span class="back" onclick="showView('home')">← ホーム</span>
+      <h1>取り置き</h1>
+      <div class="sub">気になる商品を、 入荷時 or 来店時にお取り置きできます</div>
+
+      <div class="hold-form">
+        <label>商品を選ぶ</label>
+        <select id="holdProductSel"></select>
+        <label>数量</label>
+        <input type="number" id="holdQty" value="1" min="1">
+        <label>ご希望・お伝えしたいこと (任意)</label>
+        <textarea id="holdNote" rows="2" placeholder="ご贈答用 / 包装希望 / 入荷次第 等"></textarea>
+        <div class="btn-row">
+          <button onclick="submitCustomerHold()">取り置きを申し込む</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>あなたのお取り置き <a id="holdCount"></a></h2>
+        <div id="holdList"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ── SHOP CONTACT ── -->
   <section class="view" data-view="shop">
     <div class="body-view">
@@ -250,6 +355,7 @@
   <nav class="foot">
     <a class="cur" data-view="home" onclick="showView('home')"><span class="e">🏠</span>ホーム</a>
     <a data-view="history" onclick="showView('history')"><span class="e">📖</span>履歴</a>
+    <a data-view="qr" onclick="showView('qr')"><span class="e">📱</span>QR</a>
     <a data-view="coupons" onclick="showView('coupons')"><span class="e">🎁</span>特典</a>
     <a data-view="shop" onclick="showView('shop')"><span class="e">💬</span>お店へ</a>
   </nav>
@@ -260,7 +366,7 @@ import { createRepo } from '../shared/data.js';
 import { seedDemoData, DEMO_TENANT_ID } from '../seed/demo-data.js';
 
 const TENANT_ID = new URLSearchParams(location.search).get('tenant') || DEMO_TENANT_ID;
-const repo = createRepo(TENANT_ID);
+let repo;  // 非同期初期化 (init() 内で await)
 
 const state = {
   customer: null,
@@ -268,6 +374,8 @@ const state = {
 };
 
 async function init() {
+  repo = await createRepo(TENANT_ID);
+
   // 共有データなので、admin側で既に投入済の前提。なければ自動投入。
   const customers = await repo.listCustomers();
   if (customers.length === 0) {
@@ -304,7 +412,73 @@ async function loadCustomer(id) {
   renderCoupons();
   renderNews();
   renderShop();
+  renderQr();
+  renderHolds();
 }
+
+function renderQr() {
+  const c = state.customer;
+  if (!c) return;
+  document.getElementById('qrName').textContent = (c.realName || c.displayName) + ' さま';
+  const box = document.getElementById('qrBox');
+  box.innerHTML = '';
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(box, { text: c.lineUserId || c.id, width: 200, height: 200, colorDark: '#1c1b18', colorLight: '#ffffff' });
+  } else {
+    box.textContent = c.lineUserId || c.id;
+  }
+}
+
+async function renderHolds() {
+  const c = state.customer;
+  if (!c) return;
+  // 商品セレクト
+  const products = await repo.listProducts({ where: { active: true } });
+  document.getElementById('holdProductSel').innerHTML = products.map(p => `<option value="${p.id}" data-name="${escape(p.name)}" data-price="${p.price}">${escape(p.name)} (¥${(p.price||0).toLocaleString()})</option>`).join('');
+
+  // 自分の取り置き一覧
+  const all = await repo.listHolds({ where: { customerId: c.id } });
+  document.getElementById('holdCount').textContent = all.length ? `全${all.length}件` : '';
+  document.getElementById('holdBadge').textContent = all.filter(h => h.status !== 'completed' && h.status !== 'cancelled').length || '';
+
+  const statMap = {
+    requested: { cls: '', label: 'お申し込み受付中' },
+    confirmed: { cls: 'cnf', label: '取り置き中' },
+    ready:     { cls: 'rdy', label: 'ご来店をお待ちしています' },
+    completed: { cls: '', label: 'ご購入済み' },
+    cancelled: { cls: '', label: 'キャンセル' },
+  };
+  document.getElementById('holdList').innerHTML = all.length === 0
+    ? '<div class="empty"><span class="e">📅</span>お取り置きはまだありません</div>'
+    : all.map(h => {
+      const s = statMap[h.status] || statMap.requested;
+      return `<div class="hold-card">
+        <span class="stat ${s.cls}">${escape(s.label)}</span>
+        <div class="nm">${escape(h.productName)} ×${h.qty}</div>
+        <div class="meta">${escape(h.note || '')}<br>申込: ${h.createdAt ? h.createdAt.slice(0,10).replace(/-/g,'/') : '—'}</div>
+      </div>`;
+    }).join('');
+}
+
+window.submitCustomerHold = async function() {
+  const c = state.customer;
+  const sel = document.getElementById('holdProductSel');
+  const opt = sel.options[sel.selectedIndex];
+  await repo.saveHold({
+    customerId: c.id,
+    productId: sel.value,
+    productName: decodeURIComponent(opt.dataset.name),
+    qty: parseInt(document.getElementById('holdQty').value) || 1,
+    estimatedPrice: parseInt(opt.dataset.price) * (parseInt(document.getElementById('holdQty').value) || 1),
+    note: document.getElementById('holdNote').value,
+    status: 'requested',
+    requestedAt: new Date().toISOString(),
+  });
+  document.getElementById('holdNote').value = '';
+  document.getElementById('holdQty').value = 1;
+  alert('お取り置きを承りました。 確認後、 こちらからご連絡します。');
+  renderHolds();
+};
 
 function renderHome() {
   const c = state.customer;
