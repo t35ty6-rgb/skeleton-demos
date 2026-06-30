@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1200">
+<title>PEGAT KW ダッシュボード | Skeleton</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --orange:#ff7a00;
+    --orange-dark:#e36a00;
+    --yellow:#ffd400;
+    --yellow-soft:#fff6cc;
+    --black:#1a1a1a;
+    --gray-1:#f5f5f5;
+    --gray-2:#ececec;
+    --gray-3:#ddd;
+    --gray-4:#999;
+    --text:#222;
+    --green:#2e8b57;
+    --red:#d8302f;
+    --red-dark:#a31818;
+    --tier-star:#ff7a00;
+    --tier-good:#ffd400;
+    --tier-watch:#bcbcbc;
+    --tier-bad:#d8302f;
+    --tier-dead:#1a1a1a;
+    --tier-insuff:#e8e8e8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#fafafa;color:var(--text);font-family:-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",sans-serif;font-size:13px;line-height:1.45;}
+  code,.mono{font-family:"SF Mono",Menlo,Consolas,monospace;}
+  /* ── ヘッダ */
+  header{background:var(--black);color:#fff;padding:8px 14px;display:flex;align-items:center;gap:18px;border-bottom:3px solid var(--orange);}
+  header h1{font-size:14px;margin:0;font-weight:700;letter-spacing:.02em;}
+  header .brand-pill{background:var(--orange);color:#fff;font-weight:700;padding:2px 8px;border-radius:2px;font-size:11px;}
+  header .meta{margin-left:auto;display:flex;gap:14px;font-size:11px;color:#ccc;}
+  header .meta b{color:#fff;}
+  /* ── サマリバー */
+  .summary{display:flex;gap:1px;background:var(--gray-3);border-bottom:1px solid var(--gray-3);}
+  .summary .cell{background:#fff;padding:8px 14px;flex:1;text-align:center;}
+  .summary .cell .lbl{font-size:10px;color:#666;letter-spacing:.05em;}
+  .summary .cell .val{font-size:20px;font-weight:700;line-height:1.1;margin-top:2px;}
+  .summary .cell.star{background:#fff6e8;} .summary .cell.star .val{color:var(--orange);}
+  .summary .cell.good{background:var(--yellow-soft);} .summary .cell.good .val{color:#9a7700;}
+  .summary .cell.watch .val{color:#666;}
+  .summary .cell.bad{background:#fde9e8;} .summary .cell.bad .val{color:var(--red);}
+  .summary .cell.dead{background:#222;color:#fff;} .summary .cell.dead .val{color:#fff;}
+  .summary .cell.dead .lbl{color:#aaa;}
+  .summary .cell.insuff .val{color:#aaa;}
+  /* ── レイアウト */
+  .wrap{display:grid;grid-template-columns:520px 1fr;height:calc(100vh - 88px);}
+  /* ── 左ペイン: KW一覧 */
+  .left{border-right:1px solid var(--gray-3);background:#fff;display:flex;flex-direction:column;min-height:0;}
+  .filters{padding:8px;background:var(--gray-1);border-bottom:1px solid var(--gray-3);display:flex;flex-direction:column;gap:6px;}
+  .filters .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .filters input[type=text]{flex:1;padding:5px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:13px;}
+  .filters select{padding:4px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;}
+  .filters label{font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;}
+  .count{font-size:11px;color:#666;padding:4px 8px;background:var(--yellow-soft);border-bottom:1px solid var(--gray-3);}
+  .list-wrap{flex:1;overflow-y:auto;min-height:0;}
+  table.kwlist{width:100%;border-collapse:collapse;font-size:12px;}
+  table.kwlist thead th{position:sticky;top:0;background:var(--black);color:#fff;padding:5px 6px;font-weight:600;text-align:left;font-size:11px;cursor:pointer;user-select:none;white-space:nowrap;border-right:1px solid #333;}
+  table.kwlist thead th.num{text-align:right;}
+  table.kwlist thead th:hover{background:#333;}
+  table.kwlist thead th .arr{opacity:.4;font-size:9px;}
+  table.kwlist thead th.sorted .arr{opacity:1;color:var(--yellow);}
+  table.kwlist tbody td{padding:4px 6px;border-bottom:1px solid var(--gray-2);vertical-align:middle;}
+  table.kwlist tbody td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  table.kwlist tbody tr{cursor:pointer;}
+  table.kwlist tbody tr:hover{background:var(--yellow-soft);}
+  table.kwlist tbody tr.selected{background:#ffe7c2 !important;outline:2px solid var(--orange);outline-offset:-2px;}
+  .tier-badge{display:inline-block;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;color:#fff;letter-spacing:.04em;min-width:44px;text-align:center;}
+  .tier-STAR{background:var(--tier-star);}
+  .tier-GOOD{background:var(--tier-good);color:#5a4400;}
+  .tier-WATCH{background:var(--tier-watch);color:#fff;}
+  .tier-BAD{background:var(--tier-bad);}
+  .tier-DEAD{background:var(--tier-dead);}
+  .tier-INSUFFICIENT{background:var(--tier-insuff);color:#888;}
+  .kw-text{font-weight:600;}
+  .kw-text .mt{font-size:10px;color:#888;font-weight:400;margin-left:3px;}
+  /* ── 右ペイン: 詳細 */
+  .right{padding:14px;overflow-y:auto;background:#fafafa;min-height:0;}
+  .empty{color:#aaa;text-align:center;padding:80px 20px;font-size:14px;}
+  .detail h2{margin:0 0 4px;font-size:18px;font-weight:700;color:var(--black);}
+  .detail .sub{color:#666;font-size:12px;margin-bottom:14px;}
+  .detail .sub .pill{display:inline-block;background:var(--gray-2);padding:1px 6px;border-radius:2px;margin-right:4px;font-size:11px;}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+  .card{background:#fff;border:1px solid var(--gray-3);border-top:3px solid var(--orange);padding:8px 10px;}
+  .card .lbl{font-size:10px;color:#666;letter-spacing:.05em;text-transform:uppercase;}
+  .card .val{font-size:18px;font-weight:700;margin-top:2px;line-height:1.15;}
+  .card .delta{font-size:11px;color:#888;margin-top:1px;}
+  .card.bid{border-top-color:var(--yellow);background:var(--yellow-soft);}
+  .card.bid .val{color:#7a5e00;}
+  .card.bid .delta{color:#5a4400;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  .chart-box{background:#fff;border:1px solid var(--gray-3);padding:8px;}
+  .chart-box h3{margin:0 0 4px;font-size:11px;color:#666;letter-spacing:.04em;font-weight:600;}
+  .chart-box canvas{max-height:160px;}
+  .action-box{background:#fff;border:1px solid var(--gray-3);border-left:5px solid var(--orange);padding:10px 14px;margin-bottom:14px;}
+  .action-box .head{font-size:12px;font-weight:700;color:var(--orange);margin-bottom:6px;letter-spacing:.04em;}
+  .action-box .body{font-size:14px;line-height:1.5;}
+  .action-box .body .kbd{background:var(--black);color:#fff;padding:2px 6px;border-radius:2px;font-family:"SF Mono",monospace;font-size:12px;}
+  .action-box.tier-BAD{border-left-color:var(--red);} .action-box.tier-BAD .head{color:var(--red);}
+  .action-box.tier-DEAD{border-left-color:var(--tier-dead);} .action-box.tier-DEAD .head{color:var(--tier-dead);}
+  .action-box.tier-GOOD{border-left-color:var(--yellow);} .action-box.tier-GOOD .head{color:#9a7700;}
+  .action-box.tier-WATCH{border-left-color:var(--gray-4);} .action-box.tier-WATCH .head{color:#666;}
+  .action-box.tier-INSUFFICIENT{border-left-color:var(--gray-3);} .action-box.tier-INSUFFICIENT .head{color:#999;}
+  .btns{display:flex;gap:8px;margin-top:10px;}
+  .btn{display:inline-block;padding:6px 14px;font-size:13px;font-weight:700;border:none;border-radius:2px;cursor:pointer;letter-spacing:.04em;}
+  .btn.primary{background:var(--orange);color:#fff;}
+  .btn.primary:hover{background:var(--orange-dark);}
+  .btn.disabled{background:#ccc;color:#888;cursor:not-allowed;}
+  .btn.disabled:hover{background:#ccc;}
+  .copy-flash{font-size:11px;color:var(--green);margin-left:8px;display:none;}
+  .copy-flash.show{display:inline;}
+  /* 日次表 */
+  .daily-table{background:#fff;border:1px solid var(--gray-3);}
+  .daily-table h3{margin:0;font-size:11px;font-weight:600;color:#fff;background:var(--black);padding:6px 10px;letter-spacing:.04em;}
+  .daily-table table{width:100%;border-collapse:collapse;font-size:12px;}
+  .daily-table th,.daily-table td{padding:3px 8px;border-bottom:1px solid var(--gray-2);text-align:right;font-variant-numeric:tabular-nums;}
+  .daily-table th:first-child,.daily-table td:first-child{text-align:left;}
+  .daily-table th{background:var(--gray-1);font-weight:600;color:#555;font-size:11px;}
+  .daily-table tr.weekend td{background:#fbfbf3;}
+  .daily-table tr:hover td{background:var(--yellow-soft);}
+  /* mobile fallback (狭くなったら縦) */
+  @media (max-width: 980px){
+    .wrap{grid-template-columns:1fr;height:auto;}
+    .left{max-height:50vh;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand-pill">SKELETON</span>
+  <h1>PEGAT クッション 広告KW ダッシュボード</h1>
+  <div class="meta">
+    <span>期間: <b id="m-range">—</b></span>
+    <span>総KW: <b id="m-total">—</b></span>
+    <span>最終更新: <b id="m-updated">—</b></span>
+  </div>
+</header>
+
+<div class="summary" id="summary">
+  <div class="cell star"><div class="lbl">STAR</div><div class="val" data-tier="STAR">—</div></div>
+  <div class="cell good"><div class="lbl">GOOD</div><div class="val" data-tier="GOOD">—</div></div>
+  <div class="cell watch"><div class="lbl">WATCH</div><div class="val" data-tier="WATCH">—</div></div>
+  <div class="cell bad"><div class="lbl">BAD</div><div class="val" data-tier="BAD">—</div></div>
+  <div class="cell dead"><div class="lbl">DEAD</div><div class="val" data-tier="DEAD">—</div></div>
+  <div class="cell insuff"><div class="lbl">判定不足</div><div class="val" data-tier="INSUFFICIENT">—</div></div>
+</div>
+
+<div class="wrap">
+  <div class="left">
+    <div class="filters">
+      <div class="row">
+        <input type="text" id="search" placeholder="KWで絞り込み (例: 車 クッション)">
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="f-bad"> BADのみ</label>
+        <label><input type="checkbox" id="f-roas1"> ROAS&lt;1</label>
+        <label><input type="checkbox" id="f-active"> 30日で1click+</label>
+        <select id="f-tier">
+          <option value="">全Tier</option>
+          <option value="STAR">STAR</option>
+          <option value="GOOD">GOOD</option>
+          <option value="WATCH">WATCH</option>
+          <option value="BAD">BAD</option>
+          <option value="DEAD">DEAD</option>
+          <option value="INSUFFICIENT">判定不足</option>
+        </select>
+      </div>
+    </div>
+    <div class="count" id="visible-count">読み込み中…</div>
+    <div class="list-wrap">
+      <table class="kwlist" id="kwlist">
+        <thead>
+          <tr>
+            <th data-key="tier" class="sortable">Tier <span class="arr">▾</span></th>
+            <th data-key="text" class="sortable">KW <span class="arr">▾</span></th>
+            <th data-key="cost30" class="sortable num">広告費30d <span class="arr">▾</span></th>
+            <th data-key="acos7" class="sortable num">ACoS 7d <span class="arr">▾</span></th>
+            <th data-key="roas7" class="sortable num">ROAS 7d <span class="arr">▾</span></th>
+            <th data-key="bid" class="sortable num">bid <span class="arr">▾</span></th>
+          </tr>
+        </thead>
+        <tbody id="kwlist-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="right" id="right">
+    <div class="empty">← 左からKWを選んでください</div>
+  </div>
+</div>
+
+<script>
+const DATA_URL = './data/kw-daily.json';
+
+let DATA = null;
+let sortKey = 'cost30';
+let sortDir = 'desc';
+let selectedId = null;
+let chartCost = null, chartAcos = null;
+
+function fmtYen(n){
+  if(n==null||isNaN(n)) return '—';
+  return '¥' + Math.round(n).toLocaleString();
+}
+function fmtPct(n){
+  if(n==null||isNaN(n)||!isFinite(n)) return '—';
+  return (n*100).toFixed(1)+'%';
+}
+function fmtNum(n){
+  if(n==null||isNaN(n)) return '—';
+  return Math.round(n).toLocaleString();
+}
+function fmtRoas(n){
+  if(n==null||isNaN(n)||!isFinite(n)) return '—';
+  return n.toFixed(2);
+}
+
+async function loadData(){
+  const url = DATA_URL + '?_=' + Date.now();
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('JSON fetch failed '+res.status);
+  return res.json();
+}
+
+function init(){
+  document.getElementById('m-range').textContent = `${DATA.range.startDate} 〜 ${DATA.range.endDate}`;
+  document.getElementById('m-total').textContent = DATA.total_kw;
+  const updated = new Date(DATA.generated_at);
+  document.getElementById('m-updated').textContent = updated.toLocaleString('ja-JP',{hour12:false});
+  for(const tier of ['STAR','GOOD','WATCH','BAD','DEAD','INSUFFICIENT']){
+    const el = document.querySelector(`[data-tier="${tier}"]`);
+    if(el) el.textContent = DATA.tier_count[tier] || 0;
+  }
+  renderList();
+}
+
+function getMetric(kw, key){
+  switch(key){
+    case 'tier':
+      const order = {STAR:5,GOOD:4,WATCH:3,BAD:2,DEAD:1,INSUFFICIENT:0};
+      return order[kw.tier]||0;
+    case 'text': return kw.text||'';
+    case 'cost30': return kw.summary30d.cost||0;
+    case 'acos7': return kw.summary7d.acos==null?-1:kw.summary7d.acos;
+    case 'roas7': return kw.summary7d.roas==null?-1:kw.summary7d.roas;
+    case 'bid': return kw.current_bid||0;
+  }
+  return 0;
+}
+
+function filterKws(){
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const fBad = document.getElementById('f-bad').checked;
+  const fRoas = document.getElementById('f-roas1').checked;
+  const fActive = document.getElementById('f-active').checked;
+  const fTier = document.getElementById('f-tier').value;
+  return DATA.kws.filter(k=>{
+    if(q && !(k.text||'').toLowerCase().includes(q)) return false;
+    if(fBad && k.tier!=='BAD') return false;
+    if(fTier && k.tier!==fTier) return false;
+    if(fRoas){
+      const r = k.summary7d.roas;
+      if(r==null || r>=1) return false;
+    }
+    if(fActive){
+      if(!(k.summary30d.clicks>0)) return false;
+    }
+    return true;
+  });
+}
+
+function renderList(){
+  const list = filterKws();
+  list.sort((a,b)=>{
+    const va = getMetric(a, sortKey);
+    const vb = getMetric(b, sortKey);
+    if(typeof va==='string'){
+      return sortDir==='asc'? va.localeCompare(vb) : vb.localeCompare(va);
+    }
+    return sortDir==='asc'? va-vb : vb-va;
+  });
+
+  document.getElementById('visible-count').textContent = `表示: ${list.length} / ${DATA.kws.length} KW`;
+
+  const tbody = document.getElementById('kwlist-body');
+  tbody.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  for(const kw of list){
+    const tr = document.createElement('tr');
+    if(kw.id===selectedId) tr.className = 'selected';
+    tr.dataset.id = kw.id;
+    tr.innerHTML = `
+      <td><span class="tier-badge tier-${kw.tier}">${kw.tier==='INSUFFICIENT'?'N/A':kw.tier}</span></td>
+      <td class="kw-text">${escapeHtml(kw.text)}<span class="mt">${kw.matchType||''}</span></td>
+      <td class="num">${fmtYen(kw.summary30d.cost)}</td>
+      <td class="num">${fmtPct(kw.summary7d.acos)}</td>
+      <td class="num">${fmtRoas(kw.summary7d.roas)}</td>
+      <td class="num">${kw.current_bid?fmtYen(kw.current_bid):'—'}</td>
+    `;
+    tr.addEventListener('click', ()=>select(kw.id));
+    frag.appendChild(tr);
+  }
+  tbody.appendChild(frag);
+
+  // ヘッダ ソート印
+  for(const th of document.querySelectorAll('th.sortable')){
+    th.classList.toggle('sorted', th.dataset.key===sortKey);
+    const arr = th.querySelector('.arr');
+    if(arr) arr.textContent = th.dataset.key===sortKey ? (sortDir==='asc'?'▴':'▾') : '▾';
+  }
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function select(id){
+  selectedId = id;
+  for(const tr of document.querySelectorAll('#kwlist-body tr')){
+    tr.classList.toggle('selected', tr.dataset.id===id);
+  }
+  const kw = DATA.kws.find(k=>k.id===id);
+  if(kw) renderDetail(kw);
+}
+
+function buildDailyArray(kw){
+  // 30日 startDate→endDate を埋める
+  const out = [];
+  const start = new Date(DATA.range.startDate+'T00:00:00Z');
+  const end = new Date(DATA.range.endDate+'T00:00:00Z');
+  for(let d=new Date(start); d<=end; d.setUTCDate(d.getUTCDate()+1)){
+    const key = d.toISOString().slice(0,10);
+    const v = kw.daily[key] || {impressions:0,clicks:0,cost:0,sales14d:0,purchases14d:0};
+    out.push({date:key, ...v, acos: v.sales14d>0? v.cost/v.sales14d : null});
+  }
+  return out;
+}
+
+function renderDetail(kw){
+  const days = buildDailyArray(kw);
+  const labels = days.map(x=>x.date.slice(5)); // MM-DD
+  const recommended = kw.recommended_bid;
+  const cur = kw.current_bid;
+  const bidDelta = (cur && recommended) ? (recommended - cur) : null;
+  const bidPct = (cur && recommended && cur>0) ? ((recommended-cur)/cur*100) : null;
+
+  const tierLabel = {
+    STAR:'STAR (効率最強)',
+    GOOD:'GOOD (採算内)',
+    WATCH:'WATCH (採算ぎりぎり)',
+    BAD:'BAD (損失)',
+    DEAD:'DEAD (停止候補)',
+    INSUFFICIENT:'判定不足 (clicks 不足)',
+  }[kw.tier] || kw.tier;
+
+  const actionTxt = {
+    BID_UP_15: '+15% bid up',
+    BID_UP_5: '+5% bid up',
+    NONE: '据え置き',
+    BID_DOWN_30: '-30% bid down',
+    PAUSE_AND_NEGATIVE: '一時停止 + ネガティブ追加',
+  }[kw.recommended_action] || kw.recommended_action;
+
+  const right = document.getElementById('right');
+  right.innerHTML = `
+    <div class="detail">
+      <h2>${escapeHtml(kw.text)}</h2>
+      <div class="sub">
+        <span class="pill">${kw.matchType||'-'}</span>
+        <span class="pill tier-badge tier-${kw.tier}" style="color:${kw.tier==='GOOD'?'#5a4400':'#fff'};">${kw.tier}</span>
+        <span class="pill mono">KW ID: ${kw.id}</span>
+        ${kw.state? `<span class="pill">${kw.state}</span>`:''}
+      </div>
+
+      <div class="cards">
+        <div class="card"><div class="lbl">広告費 (7d)</div><div class="val">${fmtYen(kw.summary7d.cost)}</div><div class="delta">30d: ${fmtYen(kw.summary30d.cost)}</div></div>
+        <div class="card"><div class="lbl">売上 (7d)</div><div class="val">${fmtYen(kw.summary7d.sales14d)}</div><div class="delta">30d: ${fmtYen(kw.summary30d.sales14d)}</div></div>
+        <div class="card"><div class="lbl">ACoS / ROAS (7d)</div><div class="val">${fmtPct(kw.summary7d.acos)}</div><div class="delta">ROAS ${fmtRoas(kw.summary7d.roas)} / CVR ${fmtPct(kw.summary7d.cvr)}</div></div>
+        <div class="card bid"><div class="lbl">現bid → 推奨bid</div><div class="val">${cur?fmtYen(cur):'—'} → ${fmtYen(recommended)}</div><div class="delta">${bidDelta==null?'':(bidDelta>0?'+':'')+bidDelta+'円 ('+ (bidPct>0?'+':'')+bidPct.toFixed(0)+'%)'}</div></div>
+      </div>
+
+      <div class="action-box tier-${kw.tier}">
+        <div class="head">▶ ${tierLabel} → ${actionTxt}</div>
+        <div class="body">
+          <b>${escapeHtml(kw.reason||'')}</b><br>
+          推奨入札を <span class="kbd">${fmtYen(recommended)}</span> に変更してください。
+          <div class="btns">
+            <button class="btn primary" id="copy-bid">推奨bidをコピー (${recommended})</button>
+            <button class="btn disabled" disabled title="Phase B解禁後に有効化">実行 (Phase B 未解禁)</button>
+            <span class="copy-flash" id="flash">✓ コピー済</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="chart-box"><h3>広告費 / 売上 (日別 ¥)</h3><canvas id="chart-cost"></canvas></div>
+        <div class="chart-box"><h3>ACoS / Impressions (日別)</h3><canvas id="chart-acos"></canvas></div>
+      </div>
+
+      <div class="daily-table">
+        <h3>日別明細 (新→旧)</h3>
+        <table>
+          <thead><tr><th>日付</th><th>imp</th><th>click</th><th>cost</th><th>sales</th><th>orders</th><th>ACoS</th></tr></thead>
+          <tbody>
+            ${[...days].reverse().map(d=>{
+              const isWeekend = [0,6].includes(new Date(d.date+'T00:00:00Z').getUTCDay());
+              return `<tr class="${isWeekend?'weekend':''}">
+                <td>${d.date.slice(5)}</td>
+                <td>${fmtNum(d.impressions)}</td>
+                <td>${fmtNum(d.clicks)}</td>
+                <td>${fmtYen(d.cost)}</td>
+                <td>${fmtYen(d.sales14d)}</td>
+                <td>${fmtNum(d.purchases14d)}</td>
+                <td>${fmtPct(d.acos)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('copy-bid').addEventListener('click', ()=>{
+    navigator.clipboard.writeText(String(recommended)).then(()=>{
+      const f = document.getElementById('flash');
+      f.classList.add('show');
+      setTimeout(()=>f.classList.remove('show'), 1500);
+    });
+  });
+
+  // Charts
+  if(chartCost) chartCost.destroy();
+  if(chartAcos) chartAcos.destroy();
+  const ctxCost = document.getElementById('chart-cost').getContext('2d');
+  chartCost = new Chart(ctxCost, {
+    data: {
+      labels,
+      datasets: [
+        { type:'bar', label:'広告費', data:days.map(x=>Math.round(x.cost)), backgroundColor:'#ff7a00', yAxisID:'y' },
+        { type:'line', label:'売上', data:days.map(x=>Math.round(x.sales14d)), borderColor:'#1a1a1a', backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.2, yAxisID:'y' },
+      ],
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10, font:{size:10}}}},
+      scales:{
+        x:{ticks:{font:{size:9},autoSkip:true,maxRotation:0}},
+        y:{beginAtZero:true, ticks:{font:{size:10}, callback:v=>'¥'+v.toLocaleString()}},
+      },
+    },
+  });
+
+  const ctxAcos = document.getElementById('chart-acos').getContext('2d');
+  chartAcos = new Chart(ctxAcos, {
+    data: {
+      labels,
+      datasets: [
+        { type:'line', label:'ACoS', data:days.map(x=>x.acos==null?null:Math.round(x.acos*1000)/10), borderColor:'#d8302f', backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.2, spanGaps:true, yAxisID:'y' },
+        { type:'bar', label:'impressions', data:days.map(x=>x.impressions), backgroundColor:'#ffd400', yAxisID:'y1' },
+      ],
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10, font:{size:10}}}},
+      scales:{
+        x:{ticks:{font:{size:9},autoSkip:true,maxRotation:0}},
+        y:{position:'left', beginAtZero:true, ticks:{font:{size:10}, callback:v=>v+'%'}, title:{display:true,text:'ACoS', font:{size:9}}},
+        y1:{position:'right', beginAtZero:true, ticks:{font:{size:10}}, grid:{display:false}, title:{display:true,text:'imp', font:{size:9}}},
+      },
+    },
+  });
+}
+
+// ── event wiring
+document.getElementById('search').addEventListener('input', renderList);
+document.getElementById('f-bad').addEventListener('change', renderList);
+document.getElementById('f-roas1').addEventListener('change', renderList);
+document.getElementById('f-active').addEventListener('change', renderList);
+document.getElementById('f-tier').addEventListener('change', renderList);
+for(const th of document.querySelectorAll('th.sortable')){
+  th.addEventListener('click', ()=>{
+    const k = th.dataset.key;
+    if(sortKey===k) sortDir = (sortDir==='asc'?'desc':'asc');
+    else { sortKey = k; sortDir = (k==='text'?'asc':'desc'); }
+    renderList();
+  });
+}
+
+loadData().then(d=>{
+  DATA = d;
+  init();
+  // 初期選択: BAD があれば BAD 中で cost30 最大、 なければ 全体で cost30 最大
+  const candidates = DATA.kws.slice().sort((a,b)=>(b.summary30d.cost||0)-(a.summary30d.cost||0));
+  const bad = candidates.find(k=>k.tier==='BAD');
+  const first = bad || candidates[0];
+  if(first) select(first.id);
+}).catch(err=>{
+  document.getElementById('right').innerHTML =
+    `<div class="empty" style="color:#d8302f;">データ取得失敗: ${escapeHtml(err.message)}<br>data/kw-daily.json が未生成の可能性</div>`;
+  document.getElementById('visible-count').textContent = '読み込み失敗';
+});
+</script>
+
+</body>
+</html>
