@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>のうと 店内管理 / 雑貨LINEツール</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <style>
   :root {
     /* Morisawa font stack (ローカルinstall済なら Morisawa、 なければ Noto Sans JP に自動 fallback) */
@@ -852,7 +853,7 @@
           <div class="sub" id="regSub">商品を選んで、支払方法を選ぶだけ。残りは全部自動です。</div>
         </div>
         <div class="actions">
-          <button class="btn" onclick="openQrScan()">📷 QRスキャン</button>
+          <button class="btn btn-leaf" onclick="openQrScan()" style="font-size:14.5px; padding:12px 18px;"><span data-icon="qr" style="display:inline-flex; vertical-align:-4px; margin-right:6px;"></span> お客さまQR読取</button>
           <button class="btn" onclick="resetCart()">クリア</button>
         </div>
       </div>
@@ -1267,16 +1268,23 @@
   </form>
 </dialog>
 
-<dialog id="qrDlg">
-  <h3>QRをスキャンしてお客さま特定</h3>
+<dialog id="qrDlg" style="max-width: 480px; width: 92%;">
+  <h3 style="margin-bottom:14px;">お客さまのQRをかざしてください</h3>
   <div class="qrscan">
-    <div class="frame">📱</div>
-    <h3>お客さまのLINE画面をかざしてください</h3>
-    <p>または、 デモ用に下のID欄に直接 lineUserId を入力</p>
-    <input class="qrscan-fallback" id="qrInput" placeholder="例: U_demo_seto" oninput="qrLookup(this.value)">
+    <div class="frame" id="qrFrameWrap" style="position:relative; padding:0; background:#000;">
+      <video id="qrVideo" autoplay playsinline muted style="width:100%; max-width:340px; aspect-ratio:1; object-fit:cover; border-radius:14px; display:block;"></video>
+      <canvas id="qrCanvas" style="display:none;"></canvas>
+      <div style="position:absolute; inset:8%; border:2px solid var(--soil); border-radius:14px; pointer-events:none; box-shadow:0 0 0 9999px rgba(0,0,0,.35);"></div>
+    </div>
+    <h3 id="qrStatus" style="margin:14px 0 4px;">カメラを起動しています…</h3>
+    <p id="qrHint" style="color:rgba(255,255,255,.65); font-size:12.5px; margin:0 0 10px;">お客さまのLINEアプリで「お会計QR」を表示してもらってください</p>
+    <details style="margin-top:10px;">
+      <summary style="cursor:pointer; font-size:11.5px; color:rgba(255,255,255,.5);">カメラが使えない場合 (手動入力)</summary>
+      <input class="qrscan-fallback" id="qrInput" placeholder="lineUserId か顧客IDを入力" oninput="qrLookup(this.value)" style="margin-top:8px;">
+    </details>
   </div>
   <div class="dlg-act">
-    <button type="button" class="btn" onclick="document.getElementById('qrDlg').close()">閉じる</button>
+    <button type="button" class="btn" onclick="closeQrScan()">閉じる</button>
   </div>
 </dialog>
 
@@ -1936,19 +1944,76 @@ window.printReceipt = function() {
   setTimeout(() => document.getElementById('receiptArea').style.display = 'none', 100);
 };
 
-window.openQrScan = function() {
+// ── QR カメラスキャナ ─────────────────
+let _qrStream = null, _qrLoop = null;
+window.openQrScan = async function() {
   document.getElementById('qrInput').value = '';
   document.getElementById('qrDlg').showModal();
+  await startQrCamera();
 };
+window.closeQrScan = function() {
+  stopQrCamera();
+  document.getElementById('qrDlg').close();
+};
+async function startQrCamera() {
+  const video = document.getElementById('qrVideo');
+  const status = document.getElementById('qrStatus');
+  try {
+    _qrStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 640 } }
+    });
+    video.srcObject = _qrStream;
+    await video.play();
+    status.textContent = 'お客さまのQRをかざしてください';
+    scanQrLoop();
+  } catch (e) {
+    status.textContent = 'カメラが使えません';
+    document.getElementById('qrHint').textContent = '下の「手動入力」を開いて顧客IDを入力してください';
+    document.getElementById('qrVideo').style.display = 'none';
+  }
+}
+function stopQrCamera() {
+  if (_qrLoop) { cancelAnimationFrame(_qrLoop); _qrLoop = null; }
+  if (_qrStream) { _qrStream.getTracks().forEach(t => t.stop()); _qrStream = null; }
+  const video = document.getElementById('qrVideo');
+  if (video) { video.srcObject = null; video.style.display = ''; }
+}
+function scanQrLoop() {
+  const video = document.getElementById('qrVideo');
+  const canvas = document.getElementById('qrCanvas');
+  const status = document.getElementById('qrStatus');
+  if (!video || !document.getElementById('qrDlg').open) return;
+  if (video.readyState === video.HAVE_ENOUGH_DATA && typeof jsQR !== 'undefined') {
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    const ctx2 = canvas.getContext('2d');
+    ctx2.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const img = ctx2.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+    if (code && code.data) {
+      status.textContent = '✓ ' + code.data.slice(0, 24);
+      stopQrCamera();
+      qrLookup(code.data);
+      return;
+    }
+  }
+  _qrLoop = requestAnimationFrame(scanQrLoop);
+}
 window.qrLookup = async function(uid) {
   if (!uid || uid.length < 3) return;
-  const customers = await repo.listCustomers({ where: { lineUserId: uid.trim() } });
+  let customers = await repo.listCustomers({ where: { lineUserId: uid.trim() } });
+  if (customers.length === 0) {
+    // 顧客 ID 直接入力フォールバック
+    const c = await repo.getCustomer(uid.trim());
+    if (c) customers = [c];
+  }
   if (customers.length > 0) {
     state.regCustomerId = customers[0].id;
-    document.getElementById('qrDlg').close();
+    closeQrScan();
     if (state.currentView !== 'register') switchView('register');
     else renderRegister();
-    toast(`${customers[0].realName || customers[0].displayName} さまを特定`);
+    toast(`${customers[0].realName || customers[0].displayName} さま 特定`);
+  } else if (uid.length > 5) {
+    document.getElementById('qrStatus').textContent = '該当するお客さまが見つかりません';
   }
 };
 
