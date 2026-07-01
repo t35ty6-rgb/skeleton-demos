@@ -1166,6 +1166,7 @@ function renderMonthShift() {
 }
 
 // 月ビュー: セルをタップ → その日 全スタッフのシフトを1画面で編集
+// (選択は local state に保持 → 「保存」で一括コミット、「キャンセル」で破棄)
 function openMonthDaySheet(dateStr) {
   const [y, mo, dd] = dateStr.split('-').map(Number);
   const d = new Date(y, mo - 1, dd);
@@ -1173,15 +1174,21 @@ function openMonthDaySheet(dateStr) {
   const staff = opsLoadStaff();
   const shifts = opsLoadShifts();
 
-  $('#opsModalTitle').textContent = `${mo}/${dd}(${dowLbl}) のシフト`;
+  // 各スタッフの 変更前値 / 変更後値 を保持
+  const pending = {};
+  for (const s of staff) pending[s.id] = shifts[`${dateStr}|${s.id}`] || '';
+  const original = { ...pending };
+
   const opts = ['9-16', '15-20', '9-20', '休', ''];
   const optLbl = { '9-16': '9-16 朝', '15-20': '15-20 夜', '9-20': '9-20 通し', '休': '休', '': '未定' };
 
+  $('#opsModalTitle').textContent = `${mo}/${dd}(${dowLbl}) のシフト`;
   $('#opsModalBody').innerHTML = `
     <div class="ops-edit">
-      <div class="ops-edit__lbl" style="margin-bottom:4px;">スタッフごとにタップして選択</div>
+      <div class="ops-edit__lbl" style="margin-bottom:4px;">スタッフごとに選択 → 下の <strong>保存する</strong> で確定</div>
+      <div id="dayRowsBox">
       ${staff.map((s) => {
-        const cur = shifts[`${dateStr}|${s.id}`] || '';
+        const cur = pending[s.id];
         return `<div class="day-row" data-sid="${s.id}">
           <div class="day-row__name" style="border-left:3px solid ${s.color};">
             <span class="avatar avatar--sm" style="background:${s.color}">${s.initial}</span>
@@ -1193,30 +1200,57 @@ function openMonthDaySheet(dateStr) {
           </div>
         </div>`;
       }).join('')}
+      </div>
+      <div id="dayChangeSummary" class="day-summary"></div>
       <div class="ops-edit__actions">
-        <span></span>
-        <button class="btn btn--primary" id="dayDone">閉じる</button>
+        <button class="btn--ghost" id="dayCancel">キャンセル</button>
+        <button class="btn btn--primary" id="daySave" disabled>保存する</button>
       </div>
     </div>
   `;
   $('#opsModal').hidden = false;
 
-  // オプションボタン: クリックで即保存
+  const updateSummary = () => {
+    const changed = staff.filter((s) => pending[s.id] !== original[s.id]);
+    $('#daySave').disabled = changed.length === 0;
+    $('#dayChangeSummary').innerHTML = changed.length
+      ? `<span class="day-summary__chg">${changed.length} 名 変更予定 (保存を押すと反映)</span>`
+      : '<span class="day-summary__none">変更なし</span>';
+  };
+  updateSummary();
+
+  // ボタン クリックで pending 更新のみ (保存はしない)
   $$('#opsModalBody .day-row').forEach((row) => {
     const sid = row.dataset.sid;
     $$('.day-opt', row).forEach((btn) => {
       btn.onclick = () => {
-        const v = btn.dataset.shift;
-        const m = opsLoadShifts();
-        const key = `${dateStr}|${sid}`;
-        if (v === '') delete m[key]; else m[key] = v;
-        opsSaveShifts(m);
+        pending[sid] = btn.dataset.shift;
         $$('.day-opt', row).forEach((x) => x.classList.remove('is-on'));
         btn.classList.add('is-on');
+        updateSummary();
       };
     });
   });
-  $('#dayDone').onclick = () => { $('#opsModal').hidden = true; renderShiftMode(); };
+
+  $('#daySave').onclick = () => {
+    const m = opsLoadShifts();
+    let n = 0;
+    for (const s of staff) {
+      if (pending[s.id] === original[s.id]) continue;
+      const key = `${dateStr}|${s.id}`;
+      if (pending[s.id] === '') delete m[key]; else m[key] = pending[s.id];
+      n++;
+    }
+    opsSaveShifts(m);
+    $('#opsModal').hidden = true;
+    renderShiftMode();
+    showOpsToast(`${n} 名のシフトを保存しました`);
+  };
+  $('#dayCancel').onclick = () => {
+    const changed = staff.filter((s) => pending[s.id] !== original[s.id]);
+    if (changed.length > 0 && !confirm(`${changed.length} 名 の変更を破棄しますか?`)) return;
+    $('#opsModal').hidden = true;
+  };
 }
 
 // ---- 月次シフト全員に配信 モーダル ----
@@ -1371,8 +1405,9 @@ function renderShiftGrid() {
   });
 }
 
-// ---- シフトピッカー ----
+// ---- シフトピッカー (候補選択 → 確定/取消 の 2段階) ----
 let _shiftPickerAnchor = null;
+let _shiftPickerPending = null; // { key, prevVal, chosenVal }
 function openShiftPicker(cellEl) {
   const picker = $('#shiftPicker');
   const key = cellEl.dataset.key;
@@ -1381,11 +1416,31 @@ function openShiftPicker(cellEl) {
   const [y, mo, dd] = dateStr.split('-').map(Number);
   const d = new Date(y, mo - 1, dd);
   const dowLbl = '日月火水木金土'[d.getDay()];
-  $('#shiftPickerHead').innerHTML = `<strong>${escapeHtml(sname)}</strong> さん<span class="shift-picker__date">${mo}/${dd}(${dowLbl})</span>`;
+  const prevVal = opsLoadShifts()[key] || '';
   _shiftPickerAnchor = cellEl;
+  _shiftPickerPending = { key, prevVal, chosenVal: prevVal };
   cellEl.classList.add('shift-cell--active');
 
-  // 表示位置: セル直下、はみ出るなら 直上、モバイル は 底面固定
+  // ヘッダ 描画
+  $('#shiftPickerHead').innerHTML = `
+    <div><strong>${escapeHtml(sname)}</strong> さん<span class="shift-picker__date">${mo}/${dd}(${dowLbl})</span></div>
+    <div class="shift-picker__cur" id="shiftPickerCur">現在: <em>${prevVal || '未定'}</em></div>
+  `;
+
+  // 選択肢 に is-on を prevVal に付与
+  $$('#shiftPicker .shift-opt').forEach((b) => {
+    b.classList.toggle('is-on', b.dataset.shift === prevVal);
+  });
+
+  // 確定/取消 バー を表示
+  const bar = $('#shiftPickerBar');
+  if (bar) {
+    bar.hidden = false;
+    $('#shiftPickerConfirm').disabled = true;
+    $('#shiftPickerConfirm').textContent = '確定';
+  }
+
+  // 表示位置
   picker.hidden = false;
   picker.style.visibility = 'hidden';
   requestAnimationFrame(() => {
@@ -1416,23 +1471,44 @@ function openShiftPicker(cellEl) {
     picker.style.visibility = 'visible';
   });
 
-  // ボタン配線 (毎回置き換え)
+  // 選択肢ボタン: chosenVal を更新 (即保存しない)
   $$('#shiftPicker .shift-opt').forEach((b) => {
     b.onclick = (ev) => {
       ev.stopPropagation();
       const v = b.dataset.shift;
-      const m = opsLoadShifts();
-      if (v === '') delete m[key]; else m[key] = v;
-      opsSaveShifts(m);
-      closeShiftPicker();
-      renderShiftGrid();
+      _shiftPickerPending.chosenVal = v;
+      $$('#shiftPicker .shift-opt').forEach((x) => x.classList.toggle('is-on', x.dataset.shift === v));
+      const cur = $('#shiftPickerCur');
+      const changed = v !== _shiftPickerPending.prevVal;
+      if (cur) cur.innerHTML = changed
+        ? `変更: <em>${_shiftPickerPending.prevVal || '未定'}</em> → <strong>${v || '未定'}</strong>`
+        : `現在: <em>${v || '未定'}</em>`;
+      $('#shiftPickerConfirm').disabled = !changed;
     };
   });
+
+  // 確定
+  $('#shiftPickerConfirm').onclick = (ev) => {
+    ev.stopPropagation();
+    const { key, chosenVal } = _shiftPickerPending;
+    const m = opsLoadShifts();
+    if (chosenVal === '') delete m[key]; else m[key] = chosenVal;
+    opsSaveShifts(m);
+    closeShiftPicker();
+    renderShiftMode();
+    showOpsToast('シフトを保存しました');
+  };
+  // 取消
+  $('#shiftPickerCancel').onclick = (ev) => {
+    ev.stopPropagation();
+    closeShiftPicker();
+  };
 }
 function closeShiftPicker() {
   const picker = $('#shiftPicker');
   picker.hidden = true;
   if (_shiftPickerAnchor) { _shiftPickerAnchor.classList.remove('shift-cell--active'); _shiftPickerAnchor = null; }
+  _shiftPickerPending = null;
 }
 document.addEventListener('click', (e) => {
   const picker = $('#shiftPicker');
@@ -1440,6 +1516,24 @@ document.addEventListener('click', (e) => {
   if (picker.contains(e.target)) return;
   closeShiftPicker();
 });
+
+// ---- 共通トースト ----
+let _toastTimer = null;
+function showOpsToast(msg, type = 'ok') {
+  let el = $('#opsToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'opsToast';
+    el.className = 'ops-toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.remove('is-error');
+  if (type === 'error') el.classList.add('is-error');
+  el.classList.add('is-visible');
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('is-visible'), 1800);
+}
 
 // ---- まとめて設定モーダル ----
 function openBulkShiftModal() {
