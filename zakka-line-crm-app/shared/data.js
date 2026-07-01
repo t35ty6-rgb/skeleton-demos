@@ -414,7 +414,7 @@ export class Repo {
       const fromFav = products.filter(p => p.maker === favMaker && !boughtIds.has(p.id) && p.stock > 0);
       if (fromFav[0]) {
         suggestions.push({
-          icon: '🍶',
+          iconKey: 'sparkles',
           reason: `${favMaker} さんの新作`,
           productName: fromFav[0].name,
           productId: fromFav[0].id,
@@ -429,7 +429,7 @@ export class Repo {
       const fromCat = products.filter(p => p.category === favCategory && !boughtIds.has(p.id) && p.stock > 0);
       if (fromCat[0]) {
         suggestions.push({
-          icon: '🪴',
+          iconKey: 'shoppingBag',
           reason: `お好みの ${this._catLabel(favCategory, settings)} ジャンル`,
           productName: fromCat[0].name,
           productId: fromCat[0].id,
@@ -444,7 +444,7 @@ export class Repo {
       const giftProduct = products.find(p => (p.tags || []).includes('gift') && p.stock > 0);
       if (giftProduct) {
         suggestions.push({
-          icon: '🎁',
+          iconKey: 'giftBox2',
           reason: 'ご贈答に',
           productName: giftProduct.name,
           productId: giftProduct.id,
@@ -459,7 +459,7 @@ export class Repo {
       const bMonth = parseInt(c.birthdate.slice(5, 7));
       if (bMonth === now.getMonth() + 1) {
         suggestions.push({
-          icon: '🎂',
+          iconKey: 'cake',
           reason: 'お声がけ',
           productName: 'お誕生月クーポンのご案内',
           confidence: 'high',
@@ -472,7 +472,7 @@ export class Repo {
     if (tags.has('sleep')) {
       const days = c.lastVisitAt ? Math.floor((now - new Date(c.lastVisitAt))/86400000) : 0;
       suggestions.push({
-        icon: '👋',
+        iconKey: 'award',
         reason: 'お声がけ',
         productName: 'お久しぶりですね、 一言ご挨拶を',
         confidence: 'high',
