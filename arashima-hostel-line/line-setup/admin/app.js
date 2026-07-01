@@ -784,12 +784,38 @@ async function loadOps() {
   $('#opsPrev').onclick = () => { opsState.date = addDays(opsState.date, -1); dateInput.value = ymd(opsState.date); renderOpsToday(); };
   $('#opsNext').onclick = () => { opsState.date = addDays(opsState.date, 1); dateInput.value = ymd(opsState.date); renderOpsToday(); };
   $('#opsGoToday').onclick = () => { opsState.date = new Date(); dateInput.value = ymd(opsState.date); renderOpsToday(); };
-  $('#opsAddTask').onclick = () => openTaskModal(null);
+
+  // クイックタスク追加 (Enter or 追加ボタン)
+  const qi = $('#opsQuickInput');
+  const qAdd = () => {
+    const v = qi.value.trim();
+    if (!v) { qi.focus(); return; }
+    const dateStr = ymd(opsState.date);
+    const m = opsLoadTasks();
+    const tList = m[dateStr] || [];
+    tList.push({
+      id: `m-${Date.now()}`,
+      type: 'other',
+      typeLabel: 'Task',
+      title: v,
+      meta: '',
+      auto: false,
+      assignees: [],
+      done: false,
+    });
+    m[dateStr] = tList;
+    opsSaveTasks(m);
+    qi.value = '';
+    renderOpsToday();
+  };
+  $('#opsQuickAdd').onclick = qAdd;
+  qi.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); qAdd(); } });
 
   $('#shiftPrev').onclick = () => { opsState.weekStart = addDays(opsState.weekStart, -7); renderShiftGrid(); };
   $('#shiftNext').onclick = () => { opsState.weekStart = addDays(opsState.weekStart, 7); renderShiftGrid(); };
   $('#shiftToday').onclick = () => { opsState.weekStart = startOfWeek(new Date()); renderShiftGrid(); };
   $('#shiftPrint').onclick = () => window.print();
+  $('#shiftBulk').onclick = () => openBulkShiftModal();
   $('#staffAdd').onclick = () => openStaffModal(null);
 
   $$('[data-close-ops-modal]').forEach((b) => b.addEventListener('click', () => { $('#opsModal').hidden = true; }));
@@ -1026,7 +1052,6 @@ function renderShiftGrid() {
   const staff = opsLoadStaff();
   const shifts = opsLoadShifts();
 
-  const SHIFT_OPTIONS = ['', '9-16', '15-20', '9-20', '休'];
   const html = `
     <table class="shift-table">
       <thead>
@@ -1034,7 +1059,8 @@ function renderShiftGrid() {
           <th class="st-staff-h">スタッフ</th>
           ${days.map((d) => {
             const isT = isToday(d);
-            return `<th class="${isT ? 'st-today' : ''}"><span class="st-dow">${dayDows[d.getDay()]}</span><span class="st-date">${d.getMonth()+1}/${d.getDate()}</span></th>`;
+            const isWknd = d.getDay() === 0 || d.getDay() === 6;
+            return `<th class="${isT ? 'st-today' : ''} ${isWknd ? 'st-wknd' : ''}"><span class="st-dow">${dayDows[d.getDay()]}</span><span class="st-date">${d.getMonth()+1}/${d.getDate()}</span></th>`;
           }).join('')}
         </tr>
       </thead>
@@ -1042,16 +1068,19 @@ function renderShiftGrid() {
         ${staff.map((s) => `
           <tr>
             <td class="st-staff" style="border-left-color:${s.color}">
-              <div class="st-staff-name"><span class="avatar avatar--md" style="background:${s.color}">${s.initial}</span>${escapeHtml(s.name)}</div>
-              <div class="st-staff-wish">${escapeHtml(s.wish || '')}</div>
+              <div class="st-staff-name"><span class="avatar avatar--sm" style="background:${s.color}">${s.initial}</span>${escapeHtml(s.name)}${s.lineUserId ? '<span class="st-line-dot" title="LINE連携済"></span>' : ''}</div>
             </td>
             ${days.map((d) => {
               const key = `${ymd(d)}|${s.id}`;
               const val = shifts[key] || '';
-              const cls = val ? (val === '休' ? 'shift-cell--off' : 'shift-cell--set') : '';
+              const isT = isToday(d);
+              let cls = 'shift-cell';
+              if (val === '休') cls += ' shift-cell--off';
+              else if (val) cls += ' shift-cell--set';
+              if (isT) cls += ' shift-cell--today';
               return `<td>
-                <div class="shift-cell ${cls}" data-key="${key}" data-color="${s.color}">
-                  ${val ? `<span class="shift-cell__time">${val}</span>${val !== '休' ? `<span class="shift-cell__dot" style="background:${s.color}"></span>` : ''}` : '<span class="shift-cell__time">—</span>'}
+                <div class="${cls}" data-key="${key}" data-sid="${s.id}" data-sname="${escapeHtml(s.name)}" data-date="${ymd(d)}" data-color="${s.color}">
+                  ${val ? `<span class="shift-cell__time">${val}</span>` : '<span class="shift-cell__empty">＋</span>'}
                 </div>
               </td>`;
             }).join('')}
@@ -1062,34 +1091,168 @@ function renderShiftGrid() {
   `;
   $('#shiftGrid').innerHTML = html;
 
-  // クリック → 次の選択肢へトグル
+  // セル タップ → ピッカーポップオーバー
   $$('.shift-cell[data-key]').forEach((el) => {
-    el.addEventListener('click', () => {
-      const key = el.dataset.key;
-      const cur = shifts[key] || '';
-      const idx = SHIFT_OPTIONS.indexOf(cur);
-      const next = SHIFT_OPTIONS[(idx + 1) % SHIFT_OPTIONS.length];
-      const m = opsLoadShifts();
-      if (next === '') delete m[key]; else m[key] = next;
-      opsSaveShifts(m);
-      renderShiftGrid();
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      openShiftPicker(el);
     });
   });
+}
+
+// ---- シフトピッカー ----
+let _shiftPickerAnchor = null;
+function openShiftPicker(cellEl) {
+  const picker = $('#shiftPicker');
+  const key = cellEl.dataset.key;
+  const sname = cellEl.dataset.sname;
+  const dateStr = cellEl.dataset.date;
+  const [y, mo, dd] = dateStr.split('-').map(Number);
+  const d = new Date(y, mo - 1, dd);
+  const dowLbl = '日月火水木金土'[d.getDay()];
+  $('#shiftPickerHead').innerHTML = `<strong>${escapeHtml(sname)}</strong> さん<span class="shift-picker__date">${mo}/${dd}(${dowLbl})</span>`;
+  _shiftPickerAnchor = cellEl;
+  cellEl.classList.add('shift-cell--active');
+
+  // 表示位置: セル直下、はみ出るなら 直上、モバイル は 底面固定
+  picker.hidden = false;
+  picker.style.visibility = 'hidden';
+  requestAnimationFrame(() => {
+    const rect = cellEl.getBoundingClientRect();
+    const pickRect = picker.getBoundingClientRect();
+    const isMobile = window.innerWidth < 640;
+    if (isMobile) {
+      picker.classList.add('shift-picker--sheet');
+      picker.style.left = '0';
+      picker.style.right = '0';
+      picker.style.top = 'auto';
+      picker.style.bottom = '0';
+    } else {
+      picker.classList.remove('shift-picker--sheet');
+      let top = rect.bottom + window.scrollY + 6;
+      if (top + pickRect.height > window.innerHeight + window.scrollY - 20) {
+        top = rect.top + window.scrollY - pickRect.height - 6;
+      }
+      let left = rect.left + window.scrollX;
+      if (left + pickRect.width > window.innerWidth - 12) {
+        left = window.innerWidth - pickRect.width - 12;
+      }
+      picker.style.left = left + 'px';
+      picker.style.top = top + 'px';
+      picker.style.bottom = 'auto';
+      picker.style.right = 'auto';
+    }
+    picker.style.visibility = 'visible';
+  });
+
+  // ボタン配線 (毎回置き換え)
+  $$('#shiftPicker .shift-opt').forEach((b) => {
+    b.onclick = (ev) => {
+      ev.stopPropagation();
+      const v = b.dataset.shift;
+      const m = opsLoadShifts();
+      if (v === '') delete m[key]; else m[key] = v;
+      opsSaveShifts(m);
+      closeShiftPicker();
+      renderShiftGrid();
+    };
+  });
+}
+function closeShiftPicker() {
+  const picker = $('#shiftPicker');
+  picker.hidden = true;
+  if (_shiftPickerAnchor) { _shiftPickerAnchor.classList.remove('shift-cell--active'); _shiftPickerAnchor = null; }
+}
+document.addEventListener('click', (e) => {
+  const picker = $('#shiftPicker');
+  if (!picker || picker.hidden) return;
+  if (picker.contains(e.target)) return;
+  closeShiftPicker();
+});
+
+// ---- まとめて設定モーダル ----
+function openBulkShiftModal() {
+  const staff = opsLoadStaff();
+  const days = Array.from({ length: 7 }, (_, i) => addDays(opsState.weekStart, i));
+  const dowLbl = ['日', '月', '火', '水', '木', '金', '土'];
+  $('#opsModalTitle').textContent = 'まとめてシフト設定';
+  $('#opsModalBody').innerHTML = `
+    <div class="ops-edit">
+      <div class="ops-edit__field">
+        <span class="ops-edit__lbl">スタッフ</span>
+        <select id="bulkStaff" style="width:100%;padding:8px;border:1px solid var(--rule);background:var(--paper);font-family:inherit;font-size:14px;">
+          ${staff.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="ops-edit__field">
+        <span class="ops-edit__lbl">対象曜日 (今週 ${opsState.weekStart.getMonth()+1}/${opsState.weekStart.getDate()}〜)</span>
+        <div class="bulk-dow" id="bulkDow">
+          ${dowLbl.map((lbl, i) => {
+            const d = days[i];
+            return `<label class="bulk-dow__cell ${i===0||i===6?'is-wknd':''}">
+              <input type="checkbox" data-dow="${i}" checked>
+              <span class="bulk-dow__lbl">${lbl}</span>
+              <span class="bulk-dow__date">${d.getMonth()+1}/${d.getDate()}</span>
+            </label>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="ops-edit__field">
+        <span class="ops-edit__lbl">シフト</span>
+        <div class="bulk-shift" id="bulkShift">
+          ${['9-16', '15-20', '9-20', '休', ''].map((v, i) => `
+            <button type="button" data-shift="${v}" class="bulk-shift__btn ${i===0?'is-on':''}">${v || '未定 (空欄)'}</button>
+          `).join('')}
+        </div>
+      </div>
+      <div class="ops-edit__actions">
+        <button class="btn--ghost" id="bulkClose">キャンセル</button>
+        <button class="btn btn--primary" id="bulkApply">まとめて適用</button>
+      </div>
+    </div>
+  `;
+  $('#opsModal').hidden = false;
+
+  let chosenShift = '9-16';
+  $$('#bulkShift .bulk-shift__btn').forEach((b) => {
+    b.onclick = () => {
+      $$('#bulkShift .bulk-shift__btn').forEach((x) => x.classList.remove('is-on'));
+      b.classList.add('is-on');
+      chosenShift = b.dataset.shift;
+    };
+  });
+
+  $('#bulkClose').onclick = () => { $('#opsModal').hidden = true; };
+  $('#bulkApply').onclick = () => {
+    const staffId = $('#bulkStaff').value;
+    const selectedDows = $$('#bulkDow input[type=checkbox]:checked').map((c) => Number(c.dataset.dow));
+    if (!selectedDows.length) return;
+    const m = opsLoadShifts();
+    let n = 0;
+    for (const dowIdx of selectedDows) {
+      const key = `${ymd(days[dowIdx])}|${staffId}`;
+      if (chosenShift === '') delete m[key]; else m[key] = chosenShift;
+      n++;
+    }
+    opsSaveShifts(m);
+    $('#opsModal').hidden = true;
+    renderShiftGrid();
+  };
 }
 
 // ---- スタッフ一覧 ----
 function renderStaffList() {
   const staff = opsLoadStaff();
-  $('#staffList').innerHTML = staff.map((s) => `
-    <div class="staff-card" data-sid="${s.id}" style="border-left-color:${s.color}">
+  $('#staffList').innerHTML = staff.map((s) => {
+    const isLinked = !!s.lineUserId;
+    return `<div class="staff-card" data-sid="${s.id}" style="border-left-color:${s.color}">
       <span class="avatar avatar--lg" style="background:${s.color}">${s.initial}</span>
       <div class="staff-card__body">
-        <div class="staff-card__name">${escapeHtml(s.name)}</div>
-        <div class="staff-card__meta">${escapeHtml(s.tel || '電話 未登録')}</div>
-        <div class="staff-card__wish">${escapeHtml(s.wish || '')}</div>
+        <div class="staff-card__name">${escapeHtml(s.name)}${isLinked ? '<span class="staff-card__line" title="LINE連携済">LINE</span>' : ''}</div>
+        <div class="staff-card__meta">${escapeHtml(s.tel || '電話 未登録')}${s.wish ? ' · ' + escapeHtml(s.wish) : ''}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
   $$('.staff-card[data-sid]').forEach((el) => {
     el.addEventListener('click', () => openStaffModal(el.dataset.sid));
   });

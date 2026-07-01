@@ -1221,7 +1221,7 @@ h2 small {
   width: 100%;
   border-collapse: separate;
   border-spacing: 2px;
-  min-width: 720px;
+  min-width: 560px;
 }
 .shift-table th {
   font-family: var(--sans);
@@ -1291,18 +1291,24 @@ h2 small {
 .shift-cell {
   background: white;
   border-radius: 2px;
-  padding: 10px 6px;
+  padding: 8px 4px;
   text-align: center;
   cursor: pointer;
-  min-height: 48px;
+  min-height: 40px;
   vertical-align: middle;
   border: 1px solid transparent;
-  transition: border-color .15s, background .15s;
+  transition: border-color .12s, background .12s, transform .12s;
+  display: flex; align-items: center; justify-content: center;
 }
-.shift-cell:hover { border-color: var(--rule-2); background: var(--paper-3); }
+.shift-cell:hover { border-color: var(--ink); background: var(--paper-3); }
+.shift-cell--active { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink); }
 .shift-cell--set {
-  background: white;
+  background: var(--indigo-soft);
 }
+.shift-cell--off {
+  background: var(--accent-pale);
+}
+.shift-cell--today { outline: 2px solid var(--accent); outline-offset: -2px; }
 .shift-cell__time {
   font-family: var(--num);
   font-weight: 700;
@@ -1311,14 +1317,153 @@ h2 small {
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
-.shift-cell__dot {
-  display: block;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  margin: 4px auto 0;
+.shift-cell--off .shift-cell__time { color: var(--accent); font-weight: 700; }
+.shift-cell__empty {
+  color: rgba(20,17,14,0.20);
+  font-weight: 300;
+  font-size: 18px;
 }
-.shift-cell--off .shift-cell__time { color: var(--muted); font-weight: 500; }
-.shift-cell:not(.shift-cell--set):not(.shift-cell--off) .shift-cell__time { color: var(--ink-3); }
+.st-wknd .st-dow, .st-wknd .st-date { color: var(--accent); }
+.st-line-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  background: var(--line);
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* --- クイックタスク追加 (インライン) --- */
+.ops-quick-add {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+.ops-quick-add input {
+  flex: 1;
+  padding: 12px 14px;
+  border: 1px solid var(--rule-2);
+  background: white;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--ink);
+  border-radius: 3px;
+}
+.ops-quick-add input:focus { outline: 2px solid var(--ink); outline-offset: -1px; border-color: var(--ink); }
+.ops-quick-add .btn--primary { padding: 0 20px; font-size: 13px; }
+
+/* --- シフトピッカー (ポップオーバー / モバイルシート) --- */
+.shift-picker {
+  position: absolute;
+  z-index: 1000;
+  background: white;
+  border: 1px solid var(--ink);
+  border-radius: 4px;
+  box-shadow: 0 12px 32px -12px rgba(20,17,14,0.30), 0 4px 12px -4px rgba(20,17,14,0.20);
+  min-width: 340px;
+  overflow: hidden;
+}
+.shift-picker--sheet {
+  position: fixed;
+  border-radius: 12px 12px 0 0;
+  min-width: 100vw;
+  box-shadow: 0 -8px 24px -8px rgba(20,17,14,0.35);
+  animation: sheetUp .18s ease-out;
+}
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.shift-picker__inner { display: flex; flex-direction: column; }
+.shift-picker__head {
+  padding: 12px 16px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--sans);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+}
+.shift-picker__head strong { font-weight: 700; }
+.shift-picker__date {
+  margin-left: 12px;
+  font-family: var(--num);
+  color: var(--gold-soft);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+}
+.shift-picker__opts {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  background: var(--rule);
+}
+.shift-opt {
+  padding: 18px 8px;
+  background: white;
+  border: none;
+  cursor: pointer;
+  font-family: var(--num);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  transition: background .12s;
+}
+.shift-opt span {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+.shift-opt:hover { background: var(--paper-3); }
+.shift-opt--am { border-top: 3px solid var(--gold); }
+.shift-opt--pm { border-top: 3px solid var(--indigo); }
+.shift-opt--full { border-top: 3px solid var(--moss); }
+.shift-opt--off { border-top: 3px solid var(--accent); background: var(--accent-pale); }
+.shift-opt--clear { border-top: 3px solid var(--rule-2); background: var(--paper-3); color: var(--muted); }
+
+/* --- まとめて設定 モーダル --- */
+.bulk-dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.bulk-dow__cell {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 10px 4px;
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background .12s;
+}
+.bulk-dow__cell:has(input:checked) { background: var(--indigo-soft); border-color: var(--indigo); }
+.bulk-dow__cell input { margin: 0; }
+.bulk-dow__lbl { font-size: 12px; font-weight: 700; color: var(--ink); }
+.bulk-dow__date { font-family: var(--num); font-size: 10px; color: var(--muted); }
+.bulk-dow__cell.is-wknd .bulk-dow__lbl { color: var(--accent); }
+
+.bulk-shift {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.bulk-shift__btn {
+  padding: 14px 6px;
+  background: white;
+  border: 1px solid var(--rule-2);
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: var(--num);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink);
+  transition: background .12s, border-color .12s;
+}
+.bulk-shift__btn:hover { background: var(--paper-3); }
+.bulk-shift__btn.is-on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
 /* --- スタッフ一覧 --- */
 .stafflist {
@@ -1367,6 +1512,19 @@ h2 small {
   font-weight: 700;
   letter-spacing: 0.08em;
   margin-top: 4px;
+}
+.staff-card__line {
+  display: inline-block;
+  background: var(--line);
+  color: white;
+  font-family: var(--num);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 2px;
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
 /* --- モーダル内 タスク編集 --- */
@@ -1484,12 +1642,26 @@ h2 small {
     gap: 12px !important;
   }
   .ops-col {
-    padding: 18px 18px 20px !important;
+    padding: 14px 16px 16px !important;
     min-height: 0 !important;
   }
-  .shiftgrid { padding: 14px; }
+  /* シフト表をコンパクトに = 7日 一望できる */
+  .shiftgrid { padding: 8px; overflow-x: auto; }
+  .shift-table { min-width: 100%; border-spacing: 1px; }
   .shift-table th.st-staff-h,
-  .shift-table .st-staff { width: 128px !important; padding: 10px 12px; }
+  .shift-table .st-staff { width: 76px !important; padding: 6px 8px !important; }
+  .shift-table th { padding: 6px 2px !important; }
+  .shift-table th .st-dow { font-size: 10px; letter-spacing: 0.10em; }
+  .shift-table th .st-date { font-size: 12px; margin-top: 2px; }
+  .shift-table .st-staff-name { font-size: 12px; gap: 4px; letter-spacing: 0.02em; }
+  .shift-table .st-staff-name .avatar { width: 22px; height: 22px; font-size: 11px; }
+  .shift-cell { min-height: 32px; padding: 4px 2px; }
+  .shift-cell__time { font-size: 11px; }
+  .shift-cell__empty { font-size: 14px; }
   .stafflist { grid-template-columns: 1fr; }
   .task-card__photo { width: 88px; }
+  .ops-quick-add input { padding: 10px 12px; font-size: 13px; }
+  .ops-quick-add .btn--primary { padding: 0 14px; font-size: 12px; }
+  .bulk-dow { grid-template-columns: repeat(4, 1fr); }
+  .bulk-shift { grid-template-columns: repeat(3, 1fr); }
 }
