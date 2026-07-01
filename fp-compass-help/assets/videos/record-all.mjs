@@ -118,7 +118,7 @@ async function injectHelper(p) {
       if (!ov) {
         ov = document.createElement('div');
         ov.id = 'fp-help-overlay';
-        ov.style.cssText = 'position:fixed;inset:0;background:rgba(21,23,43,0.32);z-index:99990;pointer-events:none;opacity:0;transition:opacity 0.35s;';
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(21,23,43,0.18);z-index:99990;pointer-events:none;opacity:0;transition:opacity 0.35s;';
         document.body.appendChild(ov);
       }
       requestAnimationFrame(() => { ov.style.opacity = '1'; });
@@ -289,46 +289,86 @@ const features = [
   }},
 
   { name: '07-recording', fn: async (p) => {
-    // ★ QA fix 2026-07-02: 実UI = サイドバー「急遽 面談スタート」 → モーダル → 対面録音 → 議事録
+    // ★ 2026-07-02 fb fix: ナレで言った所を 実際に触って見せる (click + scroll)、 dim 薄く 場面見える
     await p.waitForTimeout(1500);
-    // 1. サイドバー 「急遽 面談スタート」 ズーム紹介
+    // 1. サイドバー 「急遽 面談スタート」 zoom + 実クリック
     await focusClick(p, '.sidebar-quick-rec-label, .sidebar-quick-rec, [class*="quick-rec"]',
-      'サイドバー「急遽 面談スタート」', { scale: 1.9, hold: 2500, after: 500, click: false });
-    // 実クリック は JS で 確実に
+      'サイドバー「急遽 面談スタート」', { scale: 1.9, hold: 2200, after: 400, click: false });
     await p.evaluate(() => {
       const el = document.querySelector('.sidebar-quick-rec-label, .sidebar-quick-rec, [class*="quick-rec"]');
-      const btn = el?.closest('button') || el;
-      btn?.click();
+      (el?.closest('button') || el)?.click();
     });
-    await p.waitForTimeout(2500);
-    // 2. モーダル で 対面録音 モード ハイライト (マイク許可回避で click:false)
-    await focusClick(p, '.fp-qi-mode[data-mode="audio"], label[data-mode="audio"], [data-mode="audio"]',
-      '対面 録音 を 選ぶ', { scale: 1.7, hold: 3500, after: 500, click: false });
-    // 3. モーダル 閉じる (Escape 効かないので DOM 直接除去)
+    await p.waitForTimeout(2200);   // モーダル 開くのを 見せる (2秒)
+    // 2. 「対面 で 録音 だけ する」 zoom → JS で radio 選択状態にして 視覚 確認
+    await focusClick(p, '.fp-qi-mode[data-mode="audio"], label[data-mode="audio"]',
+      '対面 録音 を 選ぶ', { scale: 1.7, hold: 2500, after: 200, click: false });
+    // radio 選択状態を 視覚化 (実クリックは マイク許可 promptを 避ける)
     await p.evaluate(() => {
-      document.getElementById('fp-quick-inperson-modal')?.remove();
+      const mode = document.querySelector('.fp-qi-mode[data-mode="audio"]');
+      if (mode) {
+        mode.style.borderColor = '#9A5A18';
+        mode.style.background = '#FFF9EB';
+        const r = mode.querySelector('input[type="radio"]');
+        if (r) r.checked = true;
+      }
     });
+    await p.waitForTimeout(1500);   // 選択状態 見せる
+    // 3. 「Zoom 即発行」 モード も zoom (対比 で紹介)
+    await focusClick(p, '.fp-qi-mode[data-mode="zoom"], label[data-mode="zoom"]',
+      'Zoom 即 発行 なら 双方 参加', { scale: 1.6, hold: 2500, after: 500, click: false });
+    // 4. モーダル 閉じる
+    await p.evaluate(() => document.getElementById('fp-quick-inperson-modal')?.remove());
     await p.waitForTimeout(700);
-    // 4. 顧客カルテ 開いて 「議事録 は ここ に」 説明
+    // 5. 顧客カルテ 開く (openModal)
     await openModal(p, '徳佐|Jobs');
     await p.waitForTimeout(2000);
-    // 5. 面談録 タブ focusClick
-    await focusClick(p, '[data-cdtab="meetings"]', '面談録 タブ を 開く', { scale: 1.9, hold: 1400, after: 1500 });
-    // 6. 議事録カード 1個 zoom
+    // 6. 面談録 タブ zoom + 実クリック
+    await focusClick(p, '[data-cdtab="meetings"]', '面談録 タブ を タップ', { scale: 1.9, hold: 1300, after: 300 });
+    await p.waitForTimeout(1500);   // タブ切替 反映を 見せる
+    // 7. 議事録一覧 で 下に scroll して 複数カード 見せる
+    await p.evaluate(() => {
+      const panel = document.querySelector('[data-cdpanel="meetings"]');
+      if (panel) panel.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    await p.waitForTimeout(1200);
+    await highlight(p, '[data-cdpanel="meetings"]', '過去 の 議事録 が 一覧 で', 3000);
+    await p.evaluate(() => {
+      const panel = document.querySelector('[data-cdpanel="meetings"]');
+      if (panel) panel.scrollBy({ top: 200, behavior: 'smooth' });
+    });
+    await p.waitForTimeout(2000);
+    // 8. カード zoom + click で 展開
+    await p.evaluate(() => {
+      const panel = document.querySelector('[data-cdpanel="meetings"]');
+      if (panel) panel.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    await p.waitForTimeout(1000);
     await p.evaluate(() => {
       const card = document.querySelector('[data-cdpanel="meetings"] .meeting-card, [data-cdpanel="meetings"] .fp-meeting-card, [data-cdpanel="meetings"] article');
-      if (card) window.fpHelp.zoom(card, 'AI が 生成 した 議事録', { scale: 1.4 });
+      if (card) window.fpHelp.zoom(card, 'カード を タップ', { scale: 1.35 });
     });
-    await p.waitForTimeout(3000);
-    // カード click で 詳細展開
+    await p.waitForTimeout(2000);
     await p.evaluate(() => {
       window.fpHelp.zoomOut(); window.fpHelp.clear();
       const card = document.querySelector('[data-cdpanel="meetings"] .meeting-card, [data-cdpanel="meetings"] .fp-meeting-card, [data-cdpanel="meetings"] article');
       if (card) card.click();
     });
-    await p.waitForTimeout(2500);
-    // 7. 議事録詳細 の 6セクション highlight (モーダル本体避け、 詳細部分のみ)
-    await highlight(p, '.meeting-detail, .meeting-open, .cd-meeting-body, [data-cdpanel="meetings"] .open, [data-cdpanel="meetings"] > div:last-child', '6 セクション + タスク + 次回提案', 6000);
+    await p.waitForTimeout(2000);
+    // 9. 展開後 中を scroll で 見せる (6セクション + タスク)
+    await p.evaluate(() => {
+      const panel = document.querySelector('[data-cdpanel="meetings"]');
+      if (panel) panel.scrollBy({ top: 250, behavior: 'smooth' });
+    });
+    await p.waitForTimeout(2000);
+    await p.evaluate(() => {
+      const panel = document.querySelector('[data-cdpanel="meetings"]');
+      if (panel) panel.scrollBy({ top: 300, behavior: 'smooth' });
+    });
+    await p.waitForTimeout(2000);
+    await p.evaluate(() => {
+      const panel = document.querySelector('[data-cdpanel="meetings"]');
+      if (panel) panel.scrollBy({ top: 300, behavior: 'smooth' });
+    });
     await p.waitForTimeout(2500);
   }},
 
