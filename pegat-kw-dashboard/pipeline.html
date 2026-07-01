@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PEGAT データパイプライン | Skeleton</title>
+<style>
+  :root{
+    --orange:#ff7a00; --orange-dark:#e36a00;
+    --yellow:#ffd400; --yellow-soft:#fff6cc;
+    --black:#1a1a1a; --gray-1:#f5f5f5; --gray-2:#ececec; --gray-3:#ddd; --gray-4:#999;
+    --text:#222; --green:#2e8b57; --red:#d8302f;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#fafafa;color:var(--text);font-family:-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",sans-serif;font-size:13px;line-height:1.55;}
+  header{background:var(--black);color:#fff;padding:8px 14px;display:flex;align-items:center;gap:18px;border-bottom:3px solid var(--orange);}
+  header h1{font-size:14px;margin:0;font-weight:700;letter-spacing:.02em;}
+  header .brand-pill{background:var(--orange);color:#fff;font-weight:700;padding:2px 8px;border-radius:2px;font-size:11px;}
+  header .meta{margin-left:auto;font-size:11px;color:#ccc;}
+  header a{color:#ffd400;text-decoration:none;margin-left:14px;font-size:12px;}
+  header a:hover{text-decoration:underline;}
+  .wrap{max-width:1100px;margin:0 auto;padding:18px;}
+  h2{font-size:15px;background:var(--black);color:#fff;padding:6px 10px;margin:20px 0 0 0;letter-spacing:.04em;border-left:5px solid var(--orange);}
+  h3{font-size:13px;color:var(--orange-dark);margin:14px 0 6px;font-weight:700;letter-spacing:.02em;}
+  table{width:100%;border-collapse:collapse;background:#fff;margin-bottom:10px;font-size:12px;}
+  th{background:#333;color:#fff;padding:5px 8px;font-weight:600;text-align:left;font-size:11px;letter-spacing:.03em;border-right:1px solid #444;}
+  th.num{text-align:right;}
+  td{padding:5px 8px;border-bottom:1px solid var(--gray-2);vertical-align:top;}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  td.time{font-family:"SF Mono",Menlo,monospace;font-weight:600;color:var(--orange-dark);white-space:nowrap;}
+  td.name{font-weight:600;}
+  td.desc{color:#555;}
+  .badge{display:inline-block;padding:1px 6px;background:var(--yellow-soft);color:#7a5e00;font-weight:700;border-radius:2px;font-size:10px;letter-spacing:.04em;margin-right:4px;}
+  .badge.api{background:#e0f0ff;color:#164e8c;}
+  .badge.scrape{background:#fff2cc;color:#7a5e00;}
+  .badge.ai{background:#fde9e8;color:#a31818;}
+  .flow{background:#fff;border:1px solid var(--gray-3);padding:14px;margin:8px 0 20px;font-family:"SF Mono",Menlo,monospace;font-size:12px;line-height:1.7;color:#333;white-space:pre;overflow-x:auto;}
+  .stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 20px;}
+  .stat{background:#fff;border-top:3px solid var(--orange);border:1px solid var(--gray-3);padding:10px;}
+  .stat .lbl{font-size:10px;color:#666;letter-spacing:.05em;text-transform:uppercase;}
+  .stat .val{font-size:22px;font-weight:700;line-height:1.1;margin-top:2px;color:var(--black);}
+  .stat .unit{font-size:11px;color:#666;font-weight:400;}
+  .stat.warn{border-top-color:var(--red);}
+  .stat.warn .val{color:var(--red);}
+  .callout{background:var(--yellow-soft);border:1px solid var(--yellow);padding:10px 14px;margin:10px 0;font-size:12px;color:#5a4400;}
+  .callout b{color:#333;}
+  @media (max-width:700px){.stat-cards{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+<header>
+  <span class="brand-pill">SKELETON</span>
+  <h1>PEGAT データパイプライン</h1>
+  <div class="meta">
+    <a href="./index.html">← ダッシュボードへ戻る</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h2>1. 全体像</h2>
+
+<div class="flow">
+[Amazon Ads API] ──┐
+[SP-API 実績]     ──┤
+[Keepa API 競合]  ──┼──→ [ジョブズ 集約・判定] ──→ [Sheets 7タブ]
+[HTML scrape]     ──┤                                [ダッシュボード 4-5タブ]
+[SERP scrape]     ──┤                                [LINE 緊急通知]
+[Best Sellers]    ──┘                                [朝メール]
+                                                     [佐瀬さん共有シート]
+</div>
+
+<div class="stat-cards">
+  <div class="stat"><div class="lbl">データソース</div><div class="val">7 <span class="unit">系統</span></div></div>
+  <div class="stat"><div class="lbl">1日 収集点</div><div class="val">2,500 <span class="unit">〜3,000</span></div></div>
+  <div class="stat"><div class="lbl">監視ASIN</div><div class="val">10 <span class="unit">自社2+競合8</span></div></div>
+  <div class="stat"><div class="lbl">監視KW</div><div class="val">182 <span class="unit">+ SERP 5</span></div></div>
+</div>
+
+<h2>2. データソース詳細</h2>
+
+<h3>▶ Amazon Ads API (公式)</h3>
+<table>
+<thead><tr><th style="width:110px">取得内容</th><th style="width:110px">頻度</th><th style="width:130px">実行</th><th>取得項目</th></tr></thead>
+<tbody>
+<tr><td class="name">SP KW 日次</td><td>毎朝 <b>6:45</b></td><td class="time">bid-optimizer</td><td>KW × 日付 × 厚薄ASIN × imp/click/cost/sales/purchases</td></tr>
+<tr><td class="name">SP 商品広告 日次</td><td>毎朝 <b>6:30</b></td><td class="time">pegat-fetcher</td><td>厚薄ASIN別 imp/click/cost/売上 → 実績シート F/L/S/T列 自動書込</td></tr>
+<tr><td class="name">SP 検索語句 日次</td><td>毎朝 <b>7:10</b></td><td class="time">deep-dive</td><td>548件/日、 実際に入力された検索語句 (Negative候補/EXACT昇格候補)</td></tr>
+<tr><td class="name">SP Auto 検索語句</td><td>毎朝 <b>6:46</b></td><td class="time">auto-optimizer</td><td>Auto Targeting発火の検索語句、 4match type別</td></tr>
+<tr><td class="name">SP 曜日別</td><td>毎朝 <b>7:10</b></td><td class="time">deep-dive</td><td>7曜日 × ROAS/ACoS (API制約でhourly不可)</td></tr>
+<tr><td class="name">SP プレースメント別</td><td>毎朝 <b>7:10</b></td><td class="time">deep-dive</td><td>TOS / Product Page / Rest of Search 別 ACoS</td></tr>
+<tr><td class="name">SB Video 日次</td><td>毎朝 <b>6:47</b></td><td class="time">sb-optimizer</td><td>動画広告 ROAS/VTR (視聴完了率)</td></tr>
+<tr><td class="name">現bid 全KW</td><td>毎朝 <b>6:45</b></td><td class="time">bid-optimizer</td><td>/sp/keywords/list 経由、 482 KW 現在入札額</td></tr>
+</tbody>
+</table>
+
+<h3>▶ SP-API (Amazon Selling Partner)</h3>
+<table>
+<thead><tr><th style="width:110px">取得内容</th><th style="width:110px">頻度</th><th style="width:130px">実行</th><th>取得項目</th></tr></thead>
+<tbody>
+<tr><td class="name">Orders Report</td><td>毎朝 <b>6:30</b></td><td class="time">pegat-fetcher</td><td>前日全注文 (ASIN/数量/価格/状態)</td></tr>
+<tr><td class="name">Sales-and-Traffic</td><td>毎朝 <b>6:30</b></td><td class="time">pegat-fetcher</td><td>セッション/PV/CVR/BuyBox% 日次</td></tr>
+<tr><td class="name">在庫サマリ</td><td>毎朝 <b>6:35</b></td><td class="time">inventory-to-keiri</td><td>FBA在庫、 経理連携</td></tr>
+</tbody>
+</table>
+
+<h3>▶ Keepa API (競合トラッキング)</h3>
+<table>
+<thead><tr><th style="width:110px">取得内容</th><th style="width:110px">頻度</th><th style="width:130px">実行</th><th>取得項目</th></tr></thead>
+<tbody>
+<tr><td class="name">競合8社 スナップショット</td><td>毎朝 <b>7:15</b></td><td class="time">competitor-fetcher</td><td>価格/BSR/レビュー数/評価★/在庫状態/直近30日変化%</td></tr>
+</tbody>
+</table>
+
+<h3>▶ HTML/SERP スクレイプ (Playwright)</h3>
+<table>
+<thead><tr><th style="width:110px">取得内容</th><th style="width:110px">頻度</th><th style="width:130px">実行</th><th>取得項目</th></tr></thead>
+<tbody>
+<tr><td class="name">競合8社 商品ページ</td><td>毎朝 <b>6:20</b></td><td class="time">html-scraper</td><td>タイトル/画像URL/バリエ数/クーポン/Vine/Saleバッジ</td></tr>
+<tr><td class="name">SERP検索結果 5KW</td><td>毎朝 <b>6:18</b></td><td class="time">serp-scraper</td><td>SP/SB広告枠占有率、 自社/競合順位</td></tr>
+<tr><td class="name">Best Sellers Top100</td><td>毎週日曜 <b>6:25</b></td><td class="time">bestsellers</td><td>新規参入ASIN検知 (レビュー<20件マーク)</td></tr>
+<tr><td class="name">競合SEO順位</td><td>毎朝 <b>7:15</b></td><td class="time">seo-rank</td><td>Top20KW × 8社 × 順位</td></tr>
+<tr><td class="name">レビュー全文</td><td>毎週日曜 <b>8:00</b></td><td class="time">review-analyzer</td><td>10ASIN × 直近50件 レビュー全文 (実装中)</td></tr>
+</tbody>
+</table>
+
+<h2>3. 分析・判定エンジン</h2>
+
+<h3>▶ 3-tier KW 判定 (毎朝 6:45)</h3>
+<table>
+<thead><tr><th style="width:80px">Tier</th><th style="width:280px">条件</th><th>推奨アクション</th></tr></thead>
+<tbody>
+<tr><td class="name">🟢 STAR</td><td>CVR≥12% & ACoS≤16%</td><td>bid +20%、 Manual EXACT昇格、 TOS +50%</td></tr>
+<tr><td class="name">🟢 GOOD</td><td>CVR≥8% & ACoS≤27%</td><td>bid +5% 維持</td></tr>
+<tr><td class="name">🟡 WATCH</td><td>ACoS 27-42%</td><td>7日観察</td></tr>
+<tr><td class="name">🔴 BAD</td><td>ACoS>42%</td><td>bid -30% (¥100/日以内)</td></tr>
+<tr><td class="name">⚫ DEAD</td><td>50click+ で sales=0、 30日経過</td><td>Pause + Negative Exact追加</td></tr>
+</tbody>
+</table>
+
+<h3>▶ 8-Phase 判定 (毎朝 6:40)</h3>
+<div class="callout">
+自社状態 (BSR / 在庫日数 / 需要トレンド / イベントカレンダー) から 「今どのモードで戦うか」 を自動判定。
+現在 = <b>SALE_SPIKE</b> (Prime Day T-7日、 予算+80%許容、 Target ACoS 40%)
+</div>
+<table>
+<thead><tr><th style="width:130px">フェーズ</th><th style="width:120px">Target ACoS</th><th>戦略</th></tr></thead>
+<tbody>
+<tr><td>LAUNCH (上市90日)</td><td>50-80%</td><td>Auto重視、 TOS+50%</td></tr>
+<tr><td>SEO CLIMB (100レビュー到達まで)</td><td>35-50%</td><td>Manual Exact集中</td></tr>
+<tr><td>PROFIT (安定期)</td><td>18-25%</td><td>Down-Only、 Manual Exact 60%</td></tr>
+<tr><td>SALE SPIKE ★現在</td><td>25-35%</td><td>Up-Down、 予算+80%、 SB Video投下</td></tr>
+<tr><td>INVENTORY RISK (在庫<30日)</td><td>上限なし→抑制</td><td>広告-40%〜Pause</td></tr>
+<tr><td>DEFENSE (競合参入時)</td><td>30-40%</td><td>Defense ASIN+200%、 Brand Defense</td></tr>
+<tr><td>SLOW (需要減)</td><td>停止</td><td>Auto広告で原因切分</td></tr>
+<tr><td>REFRESH (画像/A+刷新後)</td><td>30-40%</td><td>SB Video集中、 CTR再測定</td></tr>
+</tbody>
+</table>
+
+<h3>▶ 15シグナル → アクション マトリクス (毎朝 6:58)</h3>
+<div class="callout">
+競合動態を 15指標で 監視、 前日比±閾値超えたら 対応アクション自動判定。
+Phase A (現在) = 判定+シート記録のみ。 Phase B (1週間後解禁) = bid/Negative/Pause 自動実行。
+</div>
+<table>
+<thead><tr><th style="width:180px">検知シグナル</th><th>自動アクション (Phase B時)</th></tr></thead>
+<tbody>
+<tr><td>競合 値下げ ≥5%</td><td>Defense ASIN入札 +50%</td></tr>
+<tr><td>競合 在庫切れ</td><td>対象KW入札 +30%、 TOS placement +50%、 SB Video投下</td></tr>
+<tr><td>競合 新規参入 (レビュー<20)</td><td>7日観察 → Defense ASIN登録準備</td></tr>
+<tr><td>自社 BSR急落 -20%</td><td>Auto広告 +20%、 画像CTR点検アラート</td></tr>
+<tr><td>自社 在庫 <30日</td><td>広告 -40%、 Inventory Risk Phase移行</td></tr>
+<tr><td>Prime Day -7日</td><td>Sale Spike Phase移行、 予算+80%</td></tr>
+<tr><td>⚫DEAD KW検出</td><td>Negative Exact追加、 該当KW Pause</td></tr>
+<tr><td>🟢STAR KW検出</td><td>Manual Exact 昇格、 TOS +50%</td></tr>
+</tbody>
+</table>
+
+<h3>▶ Claude AI 朝の戦況サマリ (毎朝 6:50)</h3>
+<div class="callout">
+Claude Haiku 4.5 が 上記全データ (実績/KW判定/フェーズ/シグナル発火) を読み込み、 <b>3-5行で今日の戦況+優先アクション</b> を自動生成。
+例: 「◯厚好調継続、 薄要対策 → ①薄の状況確認 ②厚予算UP ③セッション波動監視」
+</div>
+
+<h2>4. 出力先</h2>
+
+<table>
+<thead><tr><th style="width:200px">出力場所</th><th>用途</th><th>更新頻度</th></tr></thead>
+<tbody>
+<tr><td class="name">Sheets「実績（日次）」</td><td>売上/注文/広告費/セッション</td><td>毎朝 6:30</td></tr>
+<tr><td class="name">Sheets「KW入札履歴」</td><td>3-tier判定 (DRY/LIVE tag)</td><td>毎朝 6:45/46/47</td></tr>
+<tr><td class="name">Sheets「フェーズ履歴」</td><td>今日のフェーズ判定</td><td>毎朝 6:40</td></tr>
+<tr><td class="name">Sheets「シグナル発火履歴」</td><td>15シグナルの発火</td><td>毎朝 6:55</td></tr>
+<tr><td class="name">Sheets「アクション実行履歴」</td><td>シグナル→アクション マッピング結果</td><td>毎朝 6:58</td></tr>
+<tr><td class="name">Sheets「戦況サマリ」</td><td>AI朝の戦況分析 (3-5行)</td><td>毎朝 6:50</td></tr>
+<tr><td class="name">Sheets「競合動向」</td><td>競合8社 状態</td><td>毎朝 7:15 (Keepa)</td></tr>
+<tr><td class="name">Web ダッシュボード (4タブ)</td><td>KW/検索語句/曜日/プレースメント</td><td>毎朝 7:05/7:10</td></tr>
+<tr><td class="name">LINE push (オーナー)</td><td>SEVERE級 シグナル即通知</td><td>随時 (シグナル発火時)</td></tr>
+<tr><td class="name">Gmail 朝メール</td><td>日次サマリ</td><td>毎朝 7:00</td></tr>
+</tbody>
+</table>
+
+<h2>5. 累積スケール</h2>
+
+<div class="stat-cards">
+  <div class="stat"><div class="lbl">1日 データ点</div><div class="val">~2,700</div></div>
+  <div class="stat"><div class="lbl">1週間</div><div class="val">~19,000</div></div>
+  <div class="stat"><div class="lbl">1ヶ月</div><div class="val">~81,000</div></div>
+  <div class="stat"><div class="lbl">1年 想定</div><div class="val">~985,000 <span class="unit">≒100万</span></div></div>
+</div>
+
+<div class="callout">
+<b>スケール参考</b>:
+Amazon 一流ブランド (SharkNinja/Anker級) = 日 数百万点 (レビュー全文embedding + AMC customer journey + 外部SNS + 全カテゴリ競合数百社)。
+現在の Jobs は 中級プロ運用者 (Perpetua/DataHawk 利用者) の 1/20 程度のデータ量。 十分な意思決定精度 で 月商¥数百万レベルの PEGAT運用 は 過剰なくらいだが、 <b>1商品¥1000万超・US/EU展開時は 追加データ層 (AMC / Brand Analytics / レビューAI) が必要</b>。
+</div>
+
+<h2>6. 今後の拡張 (優先順位)</h2>
+
+<table>
+<thead><tr><th style="width:40px">#</th><th style="width:200px">機能</th><th>効果</th><th style="width:80px">状態</th></tr></thead>
+<tbody>
+<tr><td>1</td><td class="name">レビュー全文 AI 感情分析</td><td>褒め/不満Top10、 競合差別化ギャップ抽出</td><td><span class="badge ai">実装中</span></td></tr>
+<tr><td>2</td><td class="name">Brand Analytics Search Query Performance</td><td>「本当の検索需要」 と自社シェア%</td><td><span class="badge">計画</span></td></tr>
+<tr><td>3</td><td class="name">自社 LP CVR / 画像CTR 分析</td><td>どの画像/セクションが 売上に効くか</td><td><span class="badge">計画</span></td></tr>
+<tr><td>4</td><td class="name">Amazon Marketing Cloud (AMC)</td><td>広告→オーガニック halo効果 定量測定</td><td><span class="badge">検討</span></td></tr>
+<tr><td>5</td><td class="name">強化学習 bid Agent</td><td>rule-based → 学習型AI (環境適応)</td><td><span class="badge">検討</span></td></tr>
+</tbody>
+</table>
+
+<div style="text-align:center;color:#999;font-size:11px;margin:24px 0 12px;">Skeleton Inc. × PEGAT クッションOEM プロジェクト</div>
+
+</div>
+</body>
+</html>
