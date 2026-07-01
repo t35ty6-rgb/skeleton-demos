@@ -79,3 +79,22 @@ exports.markCompleted = reminderCron.markCompleted;
 const liffAuth = require('./liffAuth');
 exports.liffAuth = liffAuth.liffAuth;
 exports.adminPush = liffAuth.adminPush;
+
+// ============ OTA channel sync ============
+const icalExport = require('./ota/ical-export');
+exports.icalExport = icalExport.icalExport;
+
+const icalImport = require('./ota/ical-import');
+exports.icalImport = icalImport.icalImport;
+exports.icalImportNow = icalImport.icalImportNow;
+
+const conflictResolver = require('./ota/conflict-resolver');
+exports.conflictResolver = conflictResolver.conflictResolver;
+
+const reserveRoomFn = require('./ota/reserve-room-fn');
+exports.reserveRoomFn = reserveRoomFn.reserveRoomFn;
+exports.getMyReservations = reserveRoomFn.getMyReservations;
+exports.getAvailability = reserveRoomFn.getAvailability;
+
+const adminApi = require('./ota/admin-api');
+exports.adminApi = adminApi.adminApi;

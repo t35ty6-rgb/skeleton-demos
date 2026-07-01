@@ -1003,4 +1003,493 @@ h2 small {
   .body { padding: 16px; }
   .kpis { grid-template-columns: repeat(2, 1fr); }
   .roommap__grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .ops-tasks { grid-template-columns: 1fr; gap: 12px; }
+  .ops-col { padding: 18px 18px 20px; min-height: 0; }
+  .shiftgrid { padding: 14px; }
+  .shift-table th.st-staff-h,
+  .shift-table .st-staff { width: 128px; padding: 10px 12px; }
+  .stafflist { grid-template-columns: 1fr; }
+}
+
+/* ============================================
+   OPS (工程管理)
+   ============================================ */
+.ops-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ops-date-input {
+  font-family: var(--num);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: 4px;
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* --- 本日 やること --- */
+.ops-tasks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.ops-col {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 22px 22px 24px;
+  min-height: 240px;
+  min-width: 0;
+}
+.ops-col[data-col="pending"]  { border-top: 2px solid var(--ink-3); }
+.ops-col[data-col="assigned"] { border-top: 3px solid var(--accent); }
+.ops-col[data-col="done"]     { border-top: 3px solid var(--moss); }
+.ops-col__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.ops-col__lbl {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  color: var(--ink);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ops-col__count {
+  font-family: var(--num);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.ops-col[data-col="pending"] .ops-col__count { color: var(--accent); }
+.ops-col[data-col="assigned"] .ops-col__count { color: var(--indigo); }
+.ops-col[data-col="done"] .ops-col__count { color: var(--moss); }
+.ops-col__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* --- タスクカード --- */
+.task-card {
+  background: white;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+  overflow: hidden;
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+.task-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(20,17,14,0.08);
+}
+.task-card__photo {
+  width: 64px;
+  min-height: 82px;
+  background: #1a1614;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.task-card__photo img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.task-card__body {
+  padding: 10px 12px 12px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.task-card__type {
+  font-family: var(--num);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.task-card__title {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+}
+.task-card__meta {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.task-card__assignees {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.task-card__none {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.task-card--auto {
+  border-left: 3px solid var(--indigo);
+}
+.task-card--manual {
+  border-left: 3px solid var(--gold);
+}
+.task-card--done {
+  opacity: 0.65;
+}
+.task-card--done .task-card__title {
+  text-decoration: line-through;
+}
+.task-card__stamp {
+  position: absolute;
+  right: 4px; bottom: 4px;
+  font-family: var(--sans);
+  font-weight: 900;
+  font-size: 20px;
+  color: rgba(90, 107, 63, 0.95);
+  border: 2px solid rgba(90, 107, 63, 0.95);
+  border-radius: 999px;
+  width: 30px; height: 30px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.9);
+  transform: rotate(-8deg);
+}
+
+/* スタッフ アバターチップ (小) */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0;
+  color: white;
+  flex-shrink: 0;
+}
+.avatar--md { width: 32px; height: 32px; font-size: 13px; }
+.avatar--lg { width: 44px; height: 44px; font-size: 16px; }
+
+.ops-actions {
+  margin-bottom: 36px;
+}
+
+/* --- 週間シフト表 --- */
+.shiftgrid {
+  background: white;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 20px;
+  overflow-x: auto;
+  margin-bottom: 24px;
+}
+.shift-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 2px;
+  min-width: 720px;
+}
+.shift-table th {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 12px 6px;
+  text-align: center;
+  background: var(--paper-3);
+  color: var(--muted);
+  letter-spacing: 0.18em;
+  border-radius: 2px;
+}
+.shift-table th.st-staff-h {
+  text-align: left;
+  padding: 12px 16px;
+  width: 150px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--num);
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  font-weight: 600;
+  text-transform: uppercase;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+.shift-table .st-staff {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  box-shadow: 2px 0 6px -3px rgba(20,17,14,0.15);
+}
+.shift-table th.st-today {
+  background: var(--accent);
+  color: white;
+}
+.shift-table th.st-today .st-dow, .shift-table th.st-today .st-date { color: white; }
+.shift-table th .st-dow { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; color: var(--muted); }
+.shift-table th .st-date { display: block; font-family: var(--num); font-size: 16px; font-weight: 700; margin-top: 3px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.shift-table .st-staff {
+  padding: 12px 16px;
+  background: var(--paper-3);
+  border-radius: 2px;
+  vertical-align: middle;
+  border-left: 3px solid transparent;
+}
+.shift-table .st-staff-name {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.shift-table .st-staff-wish {
+  font-family: var(--num);
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+.shift-cell {
+  background: white;
+  border-radius: 2px;
+  padding: 10px 6px;
+  text-align: center;
+  cursor: pointer;
+  min-height: 48px;
+  vertical-align: middle;
+  border: 1px solid transparent;
+  transition: border-color .15s, background .15s;
+}
+.shift-cell:hover { border-color: var(--rule-2); background: var(--paper-3); }
+.shift-cell--set {
+  background: white;
+}
+.shift-cell__time {
+  font-family: var(--num);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink);
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.shift-cell__dot {
+  display: block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin: 4px auto 0;
+}
+.shift-cell--off .shift-cell__time { color: var(--muted); font-weight: 500; }
+.shift-cell:not(.shift-cell--set):not(.shift-cell--off) .shift-cell__time { color: var(--ink-3); }
+
+/* --- スタッフ一覧 --- */
+.stafflist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.staff-card {
+  background: white;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: background .15s, transform .15s;
+  border-left: 3px solid var(--ink-3);
+}
+.staff-card:hover { background: var(--paper-3); transform: translateY(-1px); }
+.staff-card__body {
+  flex: 1;
+  min-width: 0;
+}
+.staff-card__name {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+  letter-spacing: 0.06em;
+}
+.staff-card__meta {
+  font-family: var(--num);
+  font-size: 10px;
+  color: var(--ink-3);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+.staff-card__wish {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-top: 4px;
+}
+
+/* --- モーダル内 タスク編集 --- */
+.ops-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.ops-edit__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ops-edit__lbl {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+.ops-edit input[type="text"],
+.ops-edit input[type="tel"],
+.ops-edit input[type="date"],
+.ops-edit input[type="time"],
+.ops-edit select,
+.ops-edit textarea {
+  font-family: var(--sans);
+  font-size: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: 4px;
+  background: white;
+  color: var(--ink);
+}
+.ops-edit__staff-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ops-edit__staff-picker button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: 999px;
+  background: white;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--ink);
+  transition: background .15s;
+}
+.ops-edit__staff-picker button.is-on {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.ops-edit__staff-picker button.is-on .avatar { border: 1px solid var(--paper); }
+.ops-edit__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+.ops-edit__actions .btn--danger {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid rgba(155,58,38,0.3);
+}
+.ops-edit__actions .btn--primary {
+  background: var(--ink);
+  color: var(--paper);
+  border: 1px solid var(--ink);
+}
+.ops-edit__actions .btn--primary:hover { background: var(--ink-2); }
+.btn--ghost {
+  background: transparent;
+  border: 1px solid var(--rule-2);
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-weight: 500;
+  color: var(--ink);
+}
+.btn--ghost:hover { background: var(--paper-3); }
+
+/* --- 印刷レイアウト (シフト表のみ) --- */
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  body { background: white; }
+  .head, .head__nav, .head__user,
+  [data-pane]:not([data-pane="ops"]),
+  [data-pane="ops"] > .section-head:not(:nth-of-type(2)),
+  [data-pane="ops"] > .ops-tasks,
+  [data-pane="ops"] > .ops-actions,
+  [data-pane="ops"] > #staffList,
+  [data-pane="ops"] > .section-head:last-of-type,
+  .modal, .week-nav button { display: none !important; }
+  [data-pane="ops"] { display: block !important; }
+  .shiftgrid { border: 1px solid #000; padding: 12px; overflow: visible; }
+  .shift-table { min-width: 100%; }
+}
+
+/* ============================================
+   SP override (工程タブ用) — 末尾配置で cascade勝ち
+   ============================================ */
+@media (max-width: 768px) {
+  .ops-tasks {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .ops-col {
+    padding: 18px 18px 20px !important;
+    min-height: 0 !important;
+  }
+  .shiftgrid { padding: 14px; }
+  .shift-table th.st-staff-h,
+  .shift-table .st-staff { width: 128px !important; padding: 10px 12px; }
+  .stafflist { grid-template-columns: 1fr; }
+  .task-card__photo { width: 88px; }
 }

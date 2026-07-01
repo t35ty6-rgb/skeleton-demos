@@ -112,6 +112,7 @@ function renderTab(tab) {
   else if (tab === 'all') loadAll();
   else if (tab === 'guests') loadGuests();
   else if (tab === 'ota') loadOta();
+  else if (tab === 'ops') loadOps();
   else if (tab === 'logs') loadLogs();
 }
 
@@ -298,7 +299,7 @@ function renderRoomMap(data) {
         ${byBldg[bId].map((r) => {
           const s = roomStates.get(r.id);
           const state = s?.state || 'open';
-          const stateLabel = { in: '到着', out: '出発', stay: '滞在', open: '空き', booked: '予約', blocked: '停止' }[state];
+          const stateLabel = { in: '本日 IN', out: '本日 OUT', stay: '滞在中', open: '空室', booked: '予約済', blocked: '停止' }[state];
           const photo = ROOM_PHOTO[r.id];
           return `
             <div class="rcell rcell--${state}" data-res="${s?.resNo || ''}">
@@ -680,3 +681,456 @@ $('#btnImportNow')?.addEventListener('click', async () => {
   });
   r.textContent = `結果: ${await res.text()}`;
 });
+
+// ============================================
+// 工程管理 (OPS) — シフト + タスク + スタッフ
+// ============================================
+const OPS_STAFF_KEY = 'arashima.ops.staff.v1';
+const OPS_SHIFT_KEY = 'arashima.ops.shift.v1';
+const OPS_TASK_KEY  = 'arashima.ops.task.v1';
+
+// スタッフ初期データ (バイト5人想定)
+const DEFAULT_STAFF = [
+  { id: 's1', name: '山田 花', initial: '山', tel: '', wish: '週3', color: '#5A6B3F' },
+  { id: 's2', name: '佐藤 桃', initial: '佐', tel: '', wish: '週2', color: '#B8893B' },
+  { id: 's3', name: '田中 蓮', initial: '田', tel: '', wish: '週4', color: '#2A4A5E' },
+  { id: 's4', name: '鈴木 葵', initial: '鈴', tel: '', wish: '週2', color: '#9B3A26' },
+  { id: 's5', name: '高橋 陸', initial: '高', tel: '', wish: '週3', color: '#4A4238' },
+];
+const STAFF_PALETTE = ['#5A6B3F', '#B8893B', '#2A4A5E', '#9B3A26', '#4A4238', '#7C8068', '#6B7A99'];
+
+const opsState = {
+  date: new Date(),       // 本日タスクの表示日
+  weekStart: null,        // シフト表の週開始日
+  reservations: [],       // Firestore から取得した予約 (直近30日)
+};
+
+function opsLoadStaff() {
+  try {
+    const s = JSON.parse(localStorage.getItem(OPS_STAFF_KEY) || 'null');
+    if (Array.isArray(s) && s.length) return s;
+  } catch (_) {}
+  localStorage.setItem(OPS_STAFF_KEY, JSON.stringify(DEFAULT_STAFF));
+  return DEFAULT_STAFF;
+}
+function opsSaveStaff(list) { localStorage.setItem(OPS_STAFF_KEY, JSON.stringify(list)); }
+
+function opsLoadShifts() {
+  try { return JSON.parse(localStorage.getItem(OPS_SHIFT_KEY) || '{}'); }
+  catch (_) { return {}; }
+}
+function opsSaveShifts(map) { localStorage.setItem(OPS_SHIFT_KEY, JSON.stringify(map)); }
+
+function opsLoadTasks() {
+  try { return JSON.parse(localStorage.getItem(OPS_TASK_KEY) || '{}'); }
+  catch (_) { return {}; }
+}
+function opsSaveTasks(map) { localStorage.setItem(OPS_TASK_KEY, JSON.stringify(map)); }
+
+async function loadOps() {
+  if (!opsState.weekStart) opsState.weekStart = startOfWeek(new Date());
+
+  // 予約データ (自動タスク生成の元) を取得
+  const data = await apiGet('list', { pane: 'upcoming' });
+  opsState.reservations = data?.items || [];
+
+  renderOpsToday();
+  renderShiftGrid();
+  renderStaffList();
+
+  // Wire nav buttons (idempotent)
+  const dateInput = $('#opsDate');
+  dateInput.value = ymd(opsState.date);
+  dateInput.onchange = () => { opsState.date = new Date(dateInput.value + 'T00:00:00'); renderOpsToday(); };
+  $('#opsPrev').onclick = () => { opsState.date = addDays(opsState.date, -1); dateInput.value = ymd(opsState.date); renderOpsToday(); };
+  $('#opsNext').onclick = () => { opsState.date = addDays(opsState.date, 1); dateInput.value = ymd(opsState.date); renderOpsToday(); };
+  $('#opsGoToday').onclick = () => { opsState.date = new Date(); dateInput.value = ymd(opsState.date); renderOpsToday(); };
+  $('#opsAddTask').onclick = () => openTaskModal(null);
+
+  $('#shiftPrev').onclick = () => { opsState.weekStart = addDays(opsState.weekStart, -7); renderShiftGrid(); };
+  $('#shiftNext').onclick = () => { opsState.weekStart = addDays(opsState.weekStart, 7); renderShiftGrid(); };
+  $('#shiftToday').onclick = () => { opsState.weekStart = startOfWeek(new Date()); renderShiftGrid(); };
+  $('#shiftPrint').onclick = () => window.print();
+  $('#staffAdd').onclick = () => openStaffModal(null);
+
+  $$('[data-close-ops-modal]').forEach((b) => b.addEventListener('click', () => { $('#opsModal').hidden = true; }));
+}
+
+// ---- 自動タスク生成 (予約 → タスク) ----
+function autoTasksForDate(dateStr) {
+  const tasks = [];
+  const target = new Date(dateStr + 'T00:00:00');
+  for (const r of opsState.reservations) {
+    if (!r.checkinDateStr) continue;
+    if (r.status === 'cancelled' || r.status === 'completed') continue;
+    const ci = new Date(r.checkinDateStr + 'T00:00:00');
+    const co = new Date(ci); co.setDate(co.getDate() + (r.nights || 1));
+    // 受付 (チェックイン当日)
+    if (ymd(ci) === dateStr) {
+      tasks.push({
+        id: `auto-in-${r.resNo}`,
+        type: 'reception',
+        typeLabel: 'Reception',
+        title: `${r.name || 'お客様'} 様 受付`,
+        meta: `${roomNum(r.roomId)}号 · ${r.nights}泊 · ${r.guests}名`,
+        roomId: r.roomId,
+        photo: ROOM_PHOTO_LOOKUP[r.roomId],
+        auto: true,
+      });
+    }
+    // ベッドメイキング (チェックアウト当日)
+    if (ymd(co) === dateStr) {
+      tasks.push({
+        id: `auto-out-${r.resNo}`,
+        type: 'bedmaking',
+        typeLabel: 'Bed making',
+        title: `${roomNum(r.roomId)}号 ベッド`,
+        meta: `${r.name || ''} 様 OUT`,
+        roomId: r.roomId,
+        photo: ROOM_PHOTO_LOOKUP[r.roomId],
+        auto: true,
+      });
+    }
+  }
+  return tasks;
+}
+
+const ROOM_PHOTO_LOOKUP = {
+  'r-201': 'p17.webp', 'r-202': 'p15.webp', 'r-203': 'p16.webp',
+  'r-301': 'p18.webp', 'r-302': 'p19.webp',
+  'g-101': 'p07.webp', 'g-201': 'p02.webp', 'g-202': 'p04.webp',
+};
+
+// ---- 本日タスク 描画 ----
+function renderOpsToday() {
+  const dateStr = ymd(opsState.date);
+  const dayLbl = `${opsState.date.getMonth()+1}/${opsState.date.getDate()} (${'日月火水木金土'[opsState.date.getDay()]})`;
+  $('#opsToday').textContent = dayLbl;
+
+  const auto = autoTasksForDate(dateStr);
+  const manualMap = opsLoadTasks();
+  const manual = manualMap[dateStr] || [];
+  const allTasks = [...auto, ...manual];
+  const overrides = manualMap[`_state_${dateStr}`] || {};
+
+  const staff = opsLoadStaff();
+  const staffById = Object.fromEntries(staff.map((s) => [s.id, s]));
+
+  const buckets = { pending: [], assigned: [], done: [] };
+  for (const t of allTasks) {
+    const st = overrides[t.id] || {};
+    const assignees = st.assignees || t.assignees || [];
+    const done = st.done ?? false;
+    const finalTask = { ...t, assignees, done };
+    if (done) buckets.done.push(finalTask);
+    else if (assignees.length > 0) buckets.assigned.push(finalTask);
+    else buckets.pending.push(finalTask);
+  }
+
+  $('#opsCntPending').textContent = buckets.pending.length;
+  $('#opsCntAssigned').textContent = buckets.assigned.length;
+  $('#opsCntDone').textContent = buckets.done.length;
+  $('#opsListPending').innerHTML  = buckets.pending.map((t) => taskCardHtml(t, staffById)).join('') || '<div style="color:var(--muted);font-size:12px;padding:16px;text-align:center;letter-spacing:0.14em;">なし</div>';
+  $('#opsListAssigned').innerHTML = buckets.assigned.map((t) => taskCardHtml(t, staffById)).join('') || '<div style="color:var(--muted);font-size:12px;padding:16px;text-align:center;letter-spacing:0.14em;">なし</div>';
+  $('#opsListDone').innerHTML     = buckets.done.map((t) => taskCardHtml(t, staffById)).join('') || '<div style="color:var(--muted);font-size:12px;padding:16px;text-align:center;letter-spacing:0.14em;">なし</div>';
+
+  $$('.task-card[data-tid]').forEach((el) => {
+    el.addEventListener('click', () => openTaskModal(el.dataset.tid));
+  });
+}
+
+function taskCardHtml(t, staffById) {
+  const photo = t.photo ? `<div class="task-card__photo"><img src="./assets/photos/${t.photo}" alt="" loading="lazy">${t.done ? '<span class="task-card__stamp">済</span>' : ''}</div>` : '';
+  const assigneesHtml = t.assignees.length
+    ? t.assignees.map((aid) => {
+        const s = staffById[aid];
+        if (!s) return '';
+        return `<span class="avatar" style="background:${s.color}">${s.initial}</span>`;
+      }).join('')
+    : '<span class="task-card__none">まだ誰も</span>';
+  const kindCls = t.auto ? 'task-card--auto' : 'task-card--manual';
+  const doneCls = t.done ? 'task-card--done' : '';
+  return `<div class="task-card ${kindCls} ${doneCls}" data-tid="${t.id}">
+    ${photo}
+    <div class="task-card__body">
+      <div class="task-card__type">${t.typeLabel || 'Task'}</div>
+      <div class="task-card__title">${escapeHtml(t.title)}</div>
+      <div class="task-card__meta">${escapeHtml(t.meta || '')}</div>
+      <div class="task-card__assignees">${assigneesHtml}</div>
+    </div>
+  </div>`;
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---- タスク編集 モーダル ----
+function openTaskModal(tid) {
+  const dateStr = ymd(opsState.date);
+  const auto = autoTasksForDate(dateStr);
+  const manualMap = opsLoadTasks();
+  const manual = manualMap[dateStr] || [];
+  const overrides = manualMap[`_state_${dateStr}`] || {};
+
+  let task = tid ? [...auto, ...manual].find((t) => t.id === tid) : null;
+  const isNew = !task;
+  if (isNew) {
+    task = { id: `m-${Date.now()}`, type: 'other', typeLabel: 'Task', title: '', meta: '', auto: false, assignees: [], done: false };
+  } else {
+    const st = overrides[task.id] || {};
+    task = { ...task, assignees: st.assignees || task.assignees || [], done: st.done ?? false };
+  }
+
+  const staff = opsLoadStaff();
+  $('#opsModalTitle').textContent = isNew ? 'タスクを追加' : 'タスクの詳細';
+  $('#opsModalBody').innerHTML = `
+    <div class="ops-edit">
+      ${!isNew && task.auto ? `<div style="font-family:var(--num);font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--indigo);">Auto — 予約から生成</div>` : ''}
+      ${isNew ? `
+        <label class="ops-edit__field">
+          <span class="ops-edit__lbl">やること</span>
+          <input type="text" id="tfTitle" value="${escapeHtml(task.title)}" placeholder="例) 洗濯機を回す">
+        </label>
+        <label class="ops-edit__field">
+          <span class="ops-edit__lbl">補足</span>
+          <input type="text" id="tfMeta" value="${escapeHtml(task.meta)}" placeholder="例) タオル 12枚">
+        </label>
+      ` : `
+        <div class="ops-edit__field"><span class="ops-edit__lbl">やること</span><div style="font-family:var(--sans);font-weight:700;font-size:15px;color:var(--ink);">${escapeHtml(task.title)}</div></div>
+        <div class="ops-edit__field"><span class="ops-edit__lbl">補足</span><div style="font-family:var(--sans);font-size:13px;color:var(--muted);">${escapeHtml(task.meta || '—')}</div></div>
+      `}
+      <div class="ops-edit__field">
+        <span class="ops-edit__lbl">担当</span>
+        <div class="ops-edit__staff-picker" id="tfStaff">
+          ${staff.map((s) => `
+            <button type="button" data-sid="${s.id}" class="${task.assignees.includes(s.id) ? 'is-on' : ''}">
+              <span class="avatar" style="background:${s.color}">${s.initial}</span>${escapeHtml(s.name)}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+      <div class="ops-edit__actions">
+        ${isNew ? '<span></span>' : `<button class="btn--ghost" id="tfToggleDone">${task.done ? '未完了に戻す' : '終わりにする'}</button>`}
+        <div style="display:flex;gap:10px;">
+          ${!isNew && !task.auto ? '<button class="btn--danger btn" id="tfDelete">削除</button>' : ''}
+          <button class="btn btn--primary" id="tfSave">${isNew ? '追加する' : '保存する'}</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const chosen = new Set(task.assignees);
+  $$('#tfStaff button').forEach((b) => {
+    b.addEventListener('click', () => {
+      const sid = b.dataset.sid;
+      if (chosen.has(sid)) { chosen.delete(sid); b.classList.remove('is-on'); }
+      else { chosen.add(sid); b.classList.add('is-on'); }
+    });
+  });
+
+  $('#tfSave').onclick = () => {
+    const m = opsLoadTasks();
+    if (isNew) {
+      const tList = m[dateStr] || [];
+      const t = {
+        ...task,
+        title: $('#tfTitle').value.trim() || 'タスク',
+        meta: $('#tfMeta').value.trim(),
+        assignees: Array.from(chosen),
+      };
+      if (!t.title) return;
+      tList.push(t);
+      m[dateStr] = tList;
+      opsSaveTasks(m);
+    } else {
+      const st = m[`_state_${dateStr}`] || {};
+      st[task.id] = { ...(st[task.id] || {}), assignees: Array.from(chosen), done: task.done };
+      m[`_state_${dateStr}`] = st;
+      opsSaveTasks(m);
+    }
+    $('#opsModal').hidden = true;
+    renderOpsToday();
+  };
+
+  if (!isNew) {
+    $('#tfToggleDone').onclick = () => {
+      const m = opsLoadTasks();
+      const st = m[`_state_${dateStr}`] || {};
+      st[task.id] = { ...(st[task.id] || {}), assignees: Array.from(chosen), done: !task.done };
+      m[`_state_${dateStr}`] = st;
+      opsSaveTasks(m);
+      $('#opsModal').hidden = true;
+      renderOpsToday();
+    };
+    const del = $('#tfDelete');
+    if (del) del.onclick = () => {
+      if (!confirm('このタスクを削除しますか?')) return;
+      const m = opsLoadTasks();
+      m[dateStr] = (m[dateStr] || []).filter((t) => t.id !== task.id);
+      if (m[`_state_${dateStr}`]) delete m[`_state_${dateStr}`][task.id];
+      opsSaveTasks(m);
+      $('#opsModal').hidden = true;
+      renderOpsToday();
+    };
+  }
+
+  $('#opsModal').hidden = false;
+}
+
+// ---- 週間シフト表 ----
+function renderShiftGrid() {
+  const days = Array.from({ length: 7 }, (_, i) => addDays(opsState.weekStart, i));
+  const dayDows = ['日', '月', '火', '水', '木', '金', '土'];
+  $('#opsWeekRange').textContent = `${opsState.weekStart.getMonth()+1}/${opsState.weekStart.getDate()} - ${days[6].getMonth()+1}/${days[6].getDate()}`;
+
+  const staff = opsLoadStaff();
+  const shifts = opsLoadShifts();
+
+  const SHIFT_OPTIONS = ['', '9-16', '15-20', '9-20', '休'];
+  const html = `
+    <table class="shift-table">
+      <thead>
+        <tr>
+          <th class="st-staff-h">スタッフ</th>
+          ${days.map((d) => {
+            const isT = isToday(d);
+            return `<th class="${isT ? 'st-today' : ''}"><span class="st-dow">${dayDows[d.getDay()]}</span><span class="st-date">${d.getMonth()+1}/${d.getDate()}</span></th>`;
+          }).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${staff.map((s) => `
+          <tr>
+            <td class="st-staff" style="border-left-color:${s.color}">
+              <div class="st-staff-name"><span class="avatar avatar--md" style="background:${s.color}">${s.initial}</span>${escapeHtml(s.name)}</div>
+              <div class="st-staff-wish">${escapeHtml(s.wish || '')}</div>
+            </td>
+            ${days.map((d) => {
+              const key = `${ymd(d)}|${s.id}`;
+              const val = shifts[key] || '';
+              const cls = val ? (val === '休' ? 'shift-cell--off' : 'shift-cell--set') : '';
+              return `<td>
+                <div class="shift-cell ${cls}" data-key="${key}" data-color="${s.color}">
+                  ${val ? `<span class="shift-cell__time">${val}</span>${val !== '休' ? `<span class="shift-cell__dot" style="background:${s.color}"></span>` : ''}` : '<span class="shift-cell__time">—</span>'}
+                </div>
+              </td>`;
+            }).join('')}
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+  $('#shiftGrid').innerHTML = html;
+
+  // クリック → 次の選択肢へトグル
+  $$('.shift-cell[data-key]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const key = el.dataset.key;
+      const cur = shifts[key] || '';
+      const idx = SHIFT_OPTIONS.indexOf(cur);
+      const next = SHIFT_OPTIONS[(idx + 1) % SHIFT_OPTIONS.length];
+      const m = opsLoadShifts();
+      if (next === '') delete m[key]; else m[key] = next;
+      opsSaveShifts(m);
+      renderShiftGrid();
+    });
+  });
+}
+
+// ---- スタッフ一覧 ----
+function renderStaffList() {
+  const staff = opsLoadStaff();
+  $('#staffList').innerHTML = staff.map((s) => `
+    <div class="staff-card" data-sid="${s.id}" style="border-left-color:${s.color}">
+      <span class="avatar avatar--lg" style="background:${s.color}">${s.initial}</span>
+      <div class="staff-card__body">
+        <div class="staff-card__name">${escapeHtml(s.name)}</div>
+        <div class="staff-card__meta">${escapeHtml(s.tel || '電話 未登録')}</div>
+        <div class="staff-card__wish">${escapeHtml(s.wish || '')}</div>
+      </div>
+    </div>
+  `).join('');
+  $$('.staff-card[data-sid]').forEach((el) => {
+    el.addEventListener('click', () => openStaffModal(el.dataset.sid));
+  });
+}
+
+function openStaffModal(sid) {
+  const list = opsLoadStaff();
+  const s = sid ? list.find((x) => x.id === sid) : { id: `s${Date.now()}`, name: '', initial: '', tel: '', wish: '', color: STAFF_PALETTE[list.length % STAFF_PALETTE.length] };
+  const isNew = !sid;
+
+  $('#opsModalTitle').textContent = isNew ? 'スタッフを追加' : 'スタッフ情報';
+  $('#opsModalBody').innerHTML = `
+    <div class="ops-edit">
+      <label class="ops-edit__field">
+        <span class="ops-edit__lbl">お名前</span>
+        <input type="text" id="sfName" value="${escapeHtml(s.name)}" placeholder="例) 山田 花">
+      </label>
+      <label class="ops-edit__field">
+        <span class="ops-edit__lbl">イニシャル (1文字)</span>
+        <input type="text" id="sfInitial" value="${escapeHtml(s.initial)}" maxlength="2" placeholder="山">
+      </label>
+      <label class="ops-edit__field">
+        <span class="ops-edit__lbl">電話</span>
+        <input type="tel" id="sfTel" value="${escapeHtml(s.tel)}" placeholder="090-xxxx-xxxx">
+      </label>
+      <label class="ops-edit__field">
+        <span class="ops-edit__lbl">希望シフト</span>
+        <input type="text" id="sfWish" value="${escapeHtml(s.wish)}" placeholder="週3 / 週末のみ 等">
+      </label>
+      <div class="ops-edit__field">
+        <span class="ops-edit__lbl">色 (シフト表・タスクで使用)</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${STAFF_PALETTE.map((c) => `<button type="button" data-color="${c}" class="sfColor" style="width:32px;height:32px;border-radius:50%;border:${c===s.color?'3px solid var(--ink)':'1px solid var(--rule)'};background:${c};cursor:pointer;"></button>`).join('')}
+        </div>
+      </div>
+      <div class="ops-edit__actions">
+        ${isNew ? '<span></span>' : '<button class="btn--danger btn" id="sfDelete">削除</button>'}
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn--primary" id="sfSave">${isNew ? '追加する' : '保存する'}</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  let chosenColor = s.color;
+  $$('#opsModalBody .sfColor').forEach((b) => {
+    b.addEventListener('click', () => {
+      chosenColor = b.dataset.color;
+      $$('#opsModalBody .sfColor').forEach((x) => x.style.border = '1px solid var(--rule)');
+      b.style.border = '3px solid var(--ink)';
+    });
+  });
+
+  $('#sfSave').onclick = () => {
+    const name = $('#sfName').value.trim();
+    if (!name) return;
+    const initial = ($('#sfInitial').value.trim() || name.slice(0, 1));
+    const tel = $('#sfTel').value.trim();
+    const wish = $('#sfWish').value.trim();
+    const next = { id: s.id, name, initial, tel, wish, color: chosenColor };
+    let l = opsLoadStaff();
+    const idx = l.findIndex((x) => x.id === s.id);
+    if (idx >= 0) l[idx] = next; else l.push(next);
+    opsSaveStaff(l);
+    $('#opsModal').hidden = true;
+    renderStaffList();
+    renderShiftGrid();
+    renderOpsToday();
+  };
+
+  const del = $('#sfDelete');
+  if (del) del.onclick = () => {
+    if (!confirm(`${s.name} を削除しますか?`)) return;
+    let l = opsLoadStaff().filter((x) => x.id !== s.id);
+    opsSaveStaff(l);
+    $('#opsModal').hidden = true;
+    renderStaffList();
+    renderShiftGrid();
+    renderOpsToday();
+  };
+
+  $('#opsModal').hidden = false;
+}

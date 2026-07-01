@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ============ Rooms / Buildings (公開マスタ) ============
+    // ============ 公開マスタ (read only) ============
     match /rooms/{roomId} {
       allow read: if true;
       allow write: if false;
@@ -13,43 +13,44 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ============ Reservations ============
-    // LIFF からは認証無しで予約作成可能 (デモ運用)
-    // - 必須フィールドあり + 妥当な金額 + status=pending のみ受付
-    match /reservations/{resNo} {
+    // ============ 空室カレンダー (LIFF が public read) ============
+    // 個人情報なし (status / heldBy のみ) なので read 開放
+    match /availability/{date}/rooms/{roomId} {
       allow read: if true;
-      allow create: if request.resource.data.lineUserId is string
-        && request.resource.data.name is string
-        && request.resource.data.tel is string
-        && request.resource.data.totalPrice is number
-        && request.resource.data.totalPrice > 0
-        && request.resource.data.status == 'pending';
-      // 更新は admin 画面から (デモは open update を許可・本番は管理画面側で IP 制限等を別途)
-      allow update: if true;
+      allow write: if false;  // Functions admin SDK 経由のみ
+    }
+
+    // ============ 予約データ (Functions のみ書き換え可) ============
+    match /reservations/{resNo} {
+      allow read: if false;
+      allow create: if false;
+      allow update: if false;
       allow delete: if false;
     }
 
-    // ============ Guests ============
+    // ============ ゲスト (個人情報、Functions のみ) ============
     match /guests/{lineUserId} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
 
-    // ============ Availability (空室カレンダー) ============
-    match /availability/{date}/rooms/{roomId} {
-      allow read: if true;
-      allow write: if false;
-    }
-
-    // ============ Ops Logs ============
+    // ============ 運用ログ (admin api 経由) ============
     match /ops_logs/{logId} {
-      allow read: if true;
-      allow write: if false;
+      allow read, write: if false;
     }
 
-    // ============ Ops State ============
+    // ============ オーナー設定 (admin api 経由) ============
     match /ops_state/{docId} {
-      allow read: if true;
-      allow write: if false;
+      allow read, write: if false;
+    }
+
+    // ============ OTA 設定 (admin api 経由) ============
+    match /ota_config/{source} {
+      allow read, write: if false;
+    }
+
+    // ============ admin セッション (Functions のみ) ============
+    match /admin_sessions/{token} {
+      allow read, write: if false;
     }
   }
 }
