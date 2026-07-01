@@ -1616,11 +1616,265 @@ function renderStaffList() {
         <div class="staff-card__name">${escapeHtml(s.name)}${isLinked ? '<span class="staff-card__line" title="LINE連携済">LINE</span>' : ''}</div>
         <div class="staff-card__meta">${escapeHtml(s.tel || '電話 未登録')}${s.wish ? ' · ' + escapeHtml(s.wish) : ''}</div>
       </div>
+      <div class="staff-card__actions">
+        <button class="btn staff-card__shift" data-act="shift" data-sid="${s.id}">📅 シフト入力</button>
+        <button class="btn--ghost staff-card__info" data-act="info" data-sid="${s.id}" title="情報を編集">i</button>
+      </div>
     </div>`;
   }).join('');
-  $$('.staff-card[data-sid]').forEach((el) => {
-    el.addEventListener('click', () => openStaffModal(el.dataset.sid));
+  $$('.staff-card__shift').forEach((el) => {
+    el.addEventListener('click', (e) => { e.stopPropagation(); openStaffShiftEditor(el.dataset.sid); });
   });
+  $$('.staff-card__info').forEach((el) => {
+    el.addEventListener('click', (e) => { e.stopPropagation(); openStaffModal(el.dataset.sid); });
+  });
+  // カード全体クリックはシフト入力を優先
+  $$('.staff-card[data-sid]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      openStaffShiftEditor(el.dataset.sid);
+    });
+  });
+}
+
+// ---- スタッフ × 月シフト エディタ ----
+// スタッフを選んで、その人の 月カレンダー上で 日付タップ or テキスト入力+Enter で
+// シフトを 一括で 入力・保存する UI
+let _staffShiftEditor = null;
+function openStaffShiftEditor(sid) {
+  const staff = opsLoadStaff();
+  const s = staff.find((x) => x.id === sid);
+  if (!s) return;
+  const shifts = opsLoadShifts();
+
+  // その人の 全シフト を pending にコピー (保存前は Firestore に反映しない)
+  const pending = {};
+  const original = {};
+  for (const [k, v] of Object.entries(shifts)) {
+    if (k.endsWith('|' + sid)) { pending[k] = v; original[k] = v; }
+  }
+
+  const anchor = opsState.monthAnchor || (() => { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), 1); })();
+  _staffShiftEditor = { sid, s, pending, original, anchor: new Date(anchor), curShift: '9-16' };
+
+  $('#opsModalTitle').innerHTML = `<span class="avatar avatar--sm" style="background:${s.color};vertical-align:middle;margin-right:8px;">${s.initial}</span>${escapeHtml(s.name)} さん のシフト`;
+  $('#opsModalBody').innerHTML = `
+    <div class="ops-edit sse-root">
+      <!-- 月ナビ -->
+      <div class="sse-nav">
+        <button class="btn--icon" id="sseMonthPrev">‹</button>
+        <div class="sse-month" id="sseMonthLbl"></div>
+        <button class="btn--icon" id="sseMonthNext">›</button>
+        <button class="btn--ghost" id="sseMonthThis" style="font-size:11px;">今月</button>
+      </div>
+
+      <!-- 個人カレンダー (mini) -->
+      <div class="sse-cal" id="sseCal"></div>
+
+      <!-- 日付テキスト入力: "7/2 7/5 7/12" -->
+      <div class="ops-edit__lbl" style="margin-top:14px;">キーボード入力 (日付をスペース or カンマで区切る)</div>
+      <div class="sse-input-row">
+        <input type="text" id="sseDateInput" placeholder="例) 7/2 7/5 7/12  → Enter で追加" autocomplete="off">
+        <select id="sseShiftSelect" class="sse-select">
+          <option value="9-16">9-16 朝</option>
+          <option value="15-20">15-20 夜</option>
+          <option value="9-20">9-20 通し</option>
+          <option value="休">休</option>
+          <option value="">未定 (削除)</option>
+        </select>
+        <button class="btn btn--primary" id="sseAdd">追加</button>
+      </div>
+      <div class="sse-hint">Enter で追加 / カレンダーの日付を直接タップしてもOK</div>
+
+      <!-- 変更予定サマリー -->
+      <div id="sseSummary" class="sse-summary"></div>
+
+      <div class="ops-edit__actions">
+        <button class="btn--ghost" id="sseCancel">キャンセル</button>
+        <button class="btn btn--primary" id="sseSave" disabled>保存する</button>
+      </div>
+    </div>
+  `;
+  $('#opsModal').hidden = false;
+
+  renderStaffShiftCal();
+
+  // 月ナビ
+  $('#sseMonthPrev').onclick = () => {
+    _staffShiftEditor.anchor = new Date(_staffShiftEditor.anchor.getFullYear(), _staffShiftEditor.anchor.getMonth() - 1, 1);
+    renderStaffShiftCal();
+  };
+  $('#sseMonthNext').onclick = () => {
+    _staffShiftEditor.anchor = new Date(_staffShiftEditor.anchor.getFullYear(), _staffShiftEditor.anchor.getMonth() + 1, 1);
+    renderStaffShiftCal();
+  };
+  $('#sseMonthThis').onclick = () => {
+    const t = new Date();
+    _staffShiftEditor.anchor = new Date(t.getFullYear(), t.getMonth(), 1);
+    renderStaffShiftCal();
+  };
+
+  // シフト種別選択の変更
+  $('#sseShiftSelect').onchange = (e) => { _staffShiftEditor.curShift = e.target.value; };
+
+  // 日付テキスト入力 → Enter or 追加ボタン
+  const addFromInput = () => {
+    const raw = $('#sseDateInput').value;
+    const dates = parseDateTokens(raw, _staffShiftEditor.anchor);
+    if (!dates.length) { showOpsToast('日付を認識できませんでした (例: 7/2 or 2 5 12)', 'error'); return; }
+    const v = $('#sseShiftSelect').value;
+    for (const dstr of dates) {
+      const key = `${dstr}|${sid}`;
+      if (v === '') delete _staffShiftEditor.pending[key];
+      else _staffShiftEditor.pending[key] = v;
+    }
+    $('#sseDateInput').value = '';
+    renderStaffShiftCal();
+    showOpsToast(`${dates.length} 日を「${v || '未定'}」に設定 (未保存)`);
+  };
+  $('#sseAdd').onclick = addFromInput;
+  $('#sseDateInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addFromInput(); }
+  });
+
+  // キャンセル / 保存
+  $('#sseCancel').onclick = () => {
+    const changed = getStaffShiftChangedCount();
+    if (changed > 0 && !confirm(`${changed} 日の 変更を破棄しますか?`)) return;
+    $('#opsModal').hidden = true;
+    _staffShiftEditor = null;
+  };
+  $('#sseSave').onclick = () => {
+    const m = opsLoadShifts();
+    let n = 0;
+    // その人のキー を pending で置き換える
+    for (const k of Object.keys(m)) {
+      if (k.endsWith('|' + sid)) delete m[k];
+    }
+    for (const [k, v] of Object.entries(_staffShiftEditor.pending)) {
+      if (v && v !== '') m[k] = v;
+    }
+    // 差分カウント
+    const beforeKeys = new Set(Object.keys(_staffShiftEditor.original));
+    const afterKeys = new Set(Object.keys(_staffShiftEditor.pending));
+    for (const k of afterKeys) {
+      if (!beforeKeys.has(k) || _staffShiftEditor.original[k] !== _staffShiftEditor.pending[k]) n++;
+    }
+    for (const k of beforeKeys) if (!afterKeys.has(k)) n++;
+    opsSaveShifts(m);
+    $('#opsModal').hidden = true;
+    _staffShiftEditor = null;
+    renderShiftMode();
+    showOpsToast(`${s.name} さん のシフト ${n} 日 を保存しました`);
+  };
+}
+
+function getStaffShiftChangedCount() {
+  if (!_staffShiftEditor) return 0;
+  const { pending, original } = _staffShiftEditor;
+  const allKeys = new Set([...Object.keys(pending), ...Object.keys(original)]);
+  let n = 0;
+  for (const k of allKeys) if (pending[k] !== original[k]) n++;
+  return n;
+}
+
+function renderStaffShiftCal() {
+  if (!_staffShiftEditor) return;
+  const { sid, s, pending, anchor, curShift } = _staffShiftEditor;
+  const y = anchor.getFullYear(), mo = anchor.getMonth();
+  $('#sseMonthLbl').textContent = `${y}年 ${mo + 1}月`;
+
+  const firstDay = new Date(y, mo, 1);
+  const firstDow = firstDay.getDay();
+  const daysInMonth = new Date(y, mo + 1, 0).getDate();
+  const gridStart = new Date(y, mo, 1 - firstDow);
+  const rowCount = Math.ceil((firstDow + daysInMonth) / 7);
+  const cells = Array.from({ length: rowCount * 7 }, (_, i) => addDays(gridStart, i));
+
+  const dowLbl = ['日', '月', '火', '水', '木', '金', '土'];
+  const html = `
+    <div class="sse-dow-head">
+      ${dowLbl.map((lbl, i) => `<div class="sse-dow ${i===0||i===6?'is-wknd':''}">${lbl}</div>`).join('')}
+    </div>
+    <div class="sse-grid" style="grid-template-rows: repeat(${rowCount}, 1fr);">
+      ${cells.map((d) => {
+        const inMonth = d.getMonth() === mo;
+        const isT = isToday(d);
+        const dateStr = ymd(d);
+        const key = `${dateStr}|${sid}`;
+        const val = pending[key] || '';
+        const origVal = _staffShiftEditor.original[key] || '';
+        const changed = val !== origVal;
+        return `<div class="sse-cell ${inMonth?'':'is-out'} ${isT?'is-today':''} ${val?'has-val':''} ${val==='休'?'is-off':''} ${changed?'is-changed':''}" data-date="${dateStr}">
+          <div class="sse-cell__day">${d.getDate()}</div>
+          ${val ? `<div class="sse-cell__val" style="background:${val==='休'?'transparent':s.color}">${val}</div>` : '<div class="sse-cell__empty">＋</div>'}
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+  $('#sseCal').innerHTML = html;
+
+  // セル tap: curShift を割当 (もう一度同じセル tap で 削除にできる)
+  $$('#sseCal .sse-cell[data-date]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const dstr = el.dataset.date;
+      const key = `${dstr}|${sid}`;
+      const cur = pending[key];
+      if (cur === curShift) delete pending[key];
+      else pending[key] = curShift;
+      renderStaffShiftCal();
+      updateStaffShiftSummary();
+    });
+  });
+
+  updateStaffShiftSummary();
+}
+
+function updateStaffShiftSummary() {
+  const n = getStaffShiftChangedCount();
+  $('#sseSave').disabled = n === 0;
+  $('#sseSummary').innerHTML = n > 0
+    ? `<span class="sse-summary__chg">${n} 日 変更予定 (保存を押すと反映)</span>`
+    : '<span class="sse-summary__none">変更なし</span>';
+}
+
+// テキスト入力 "7/2 7/5 7/12" or "2 5 12" (現月扱い) を YYYY-MM-DD 配列に
+function parseDateTokens(text, anchor) {
+  const y = anchor.getFullYear(), mo = anchor.getMonth() + 1;
+  const daysInMonth = new Date(y, mo, 0).getDate();
+  const out = [];
+  const tokens = String(text || '').replace(/[、,，]/g, ' ').split(/\s+/).filter(Boolean);
+  for (const t of tokens) {
+    // "M/D" or "MM/DD"
+    const md = t.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+    if (md) {
+      const m = Number(md[1]), d = Number(md[2]);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        const useY = m === mo ? y : (m < mo ? y + 1 : y);
+        const daysCheck = new Date(useY, m, 0).getDate();
+        if (d <= daysCheck) out.push(`${useY}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+      }
+      continue;
+    }
+    // 単独数字 → 現月の日
+    const dOnly = t.match(/^(\d{1,2})$/);
+    if (dOnly) {
+      const d = Number(dOnly[1]);
+      if (d >= 1 && d <= daysInMonth) out.push(`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+      continue;
+    }
+    // "1-5" 範囲
+    const range = t.match(/^(\d{1,2})[-〜~](\d{1,2})$/);
+    if (range) {
+      const a = Number(range[1]), b = Number(range[2]);
+      if (a >= 1 && b <= daysInMonth && a <= b) {
+        for (let d = a; d <= b; d++) out.push(`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+      }
+      continue;
+    }
+  }
+  // dedupe
+  return Array.from(new Set(out));
 }
 
 function openStaffModal(sid) {
