@@ -223,6 +223,7 @@
   <button class="tab-btn" data-view="pl">プレースメント別</button>
   <button class="tab-btn" data-view="review">レビュー分析</button>
   <button class="tab-btn" data-view="adj">調整履歴</button>
+  <button class="tab-btn" data-view="learn">🧠 学習ログ</button>
 </div>
 
 <div class="view active" id="view-kw">
@@ -463,6 +464,70 @@
           </thead>
           <tbody id="adj-tbody"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-learn">
+  <div class="dd-wrap">
+    <div class="dd-head">
+      <h2>🧠 学習ログ (bid変更 × 予測 vs 実測 × Claude因果分析)</h2>
+      <span class="sub" id="learn-sub">読み込み中…</span>
+    </div>
+
+    <div class="summary" id="learn-summary" style="border-bottom:1px solid var(--gray-3);"></div>
+
+    <div style="padding:10px;background:var(--gray-1);border-bottom:1px solid var(--gray-3);display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      <input type="text" id="learn-search" placeholder="KWで絞り込み" style="padding:5px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:13px;min-width:200px;">
+      <label>カテゴリ:
+        <select id="learn-cat" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;">
+          <option value="all">全カテゴリ</option>
+        </select>
+      </label>
+      <label>スコープ:
+        <select id="learn-scope" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;">
+          <option value="all">全部</option>
+          <option value="汎用">汎用 (他OEM転用可)</option>
+          <option value="PEGAT固有">PEGAT固有</option>
+        </select>
+      </label>
+      <label>信頼度:
+        <select id="learn-conf" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;">
+          <option value="0">全部</option>
+          <option value="0.5">0.5+</option>
+          <option value="0.7">0.7+</option>
+          <option value="0.85">0.85+ (高)</option>
+        </select>
+      </label>
+      <span id="learn-count" style="font-size:11px;color:#666;margin-left:auto;">—</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;min-height:calc(100vh - 320px);">
+      <!-- 左: 効果測定テーブル -->
+      <div class="daily-table" style="min-height:0;overflow:hidden;display:flex;flex-direction:column;">
+        <h3>📊 効果測定 (bid変更 実測結果、 新→旧)</h3>
+        <div style="overflow:auto;flex:1;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:var(--black);color:#fff;position:sticky;top:0;">
+                <th style="padding:5px 6px;text-align:left;font-size:11px;">日付</th>
+                <th style="padding:5px 6px;text-align:left;font-size:11px;">KW</th>
+                <th style="padding:5px 6px;text-align:right;font-size:11px;">bid変化</th>
+                <th style="padding:5px 6px;text-align:right;font-size:11px;">imp<br><span style="font-size:9px;color:#aaa;">予/実/差</span></th>
+                <th style="padding:5px 6px;text-align:right;font-size:11px;">sales<br><span style="font-size:9px;color:#aaa;">予/実</span></th>
+                <th style="padding:5px 6px;text-align:center;font-size:11px;">判定</th>
+              </tr>
+            </thead>
+            <tbody id="learn-effect-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 右: 学びカード -->
+      <div style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+        <h3 style="margin:0;font-size:11px;font-weight:600;color:#fff;background:var(--black);padding:6px 10px;letter-spacing:.04em;">💡 Claude因果分析 (学び + primary_cause + 推奨アクション)</h3>
+        <div id="learn-cards" style="overflow-y:auto;flex:1;padding:8px;background:#fff;border:1px solid var(--gray-3);"></div>
       </div>
     </div>
   </div>
@@ -798,6 +863,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     if(v==='pl' && !PL_DATA) loadPL();
     if(v==='review' && !RV_DATA) loadReview();
     if(v==='adj' && !ADJ_DATA) loadAdj();
+    if(v==='learn' && !LEARN_DATA) loadLearn();
   });
 });
 
@@ -1222,6 +1288,114 @@ function renderPL(){
       </div>
     </div>`;
   }).join('');
+}
+
+// ── 学習ログ ────────────────────────────
+let LEARN_DATA = null;
+async function loadLearn(){
+  try{
+    const res = await fetch('./data/knowledge.json?t=' + Date.now());
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    LEARN_DATA = await res.json();
+  }catch(e){
+    document.getElementById('learn-sub').textContent = '読み込み失敗: '+e.message+' (knowledge.json が未生成の可能性)';
+    return;
+  }
+  const D = LEARN_DATA;
+  document.getElementById('learn-sub').textContent =
+    `学び ${D.summary.learning_count}件 / 効果測定 ${D.summary.effect_count}件 (${D.generated_at.slice(0,10)} 更新)`;
+
+  // サマリバー
+  const s = D.summary;
+  const total = (s.verdicts['成功']||0)+(s.verdicts['期待外れ']||0)+(s.verdicts['悪化']||0);
+  const catList = Object.entries(s.by_category||{}).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  document.getElementById('learn-summary').innerHTML = `
+    <div class="cell"><div class="lbl">学び件数</div><div class="val">${s.learning_count}</div></div>
+    <div class="cell"><div class="lbl">平均confidence</div><div class="val">${(s.avg_confidence||0).toFixed(2)}</div></div>
+    <div class="cell good"><div class="lbl">成功🟢</div><div class="val">${s.verdicts['成功']||0}</div></div>
+    <div class="cell" style="background:#fff8e0;"><div class="lbl">期待外れ🟡</div><div class="val" style="color:#a37600;">${s.verdicts['期待外れ']||0}</div></div>
+    <div class="cell bad"><div class="lbl">悪化🔴</div><div class="val">${s.verdicts['悪化']||0}</div></div>
+    <div class="cell"><div class="lbl">汎用ルール</div><div class="val">${s.by_scope['汎用']||0}</div></div>
+    <div class="cell"><div class="lbl">主要カテゴリ</div><div class="val" style="font-size:12px;line-height:1.3;text-align:left;padding:2px 0;">${catList.map(c=>`${c[0]}:${c[1]}`).join('<br>')||'—'}</div></div>
+  `;
+
+  // カテゴリselect init
+  const catSel = document.getElementById('learn-cat');
+  const cats = new Set(D.learnings.map(l=>l.category).filter(Boolean));
+  for(const c of [...cats].sort()){
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    catSel.appendChild(opt);
+  }
+
+  ['learn-search','learn-cat','learn-scope','learn-conf'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', renderLearn);
+    document.getElementById(id).addEventListener('change', renderLearn);
+  });
+  renderLearn();
+}
+function renderLearn(){
+  const D = LEARN_DATA;
+  const q = (document.getElementById('learn-search').value||'').trim().toLowerCase();
+  const cat = document.getElementById('learn-cat').value;
+  const scope = document.getElementById('learn-scope').value;
+  const minConf = Number(document.getElementById('learn-conf').value);
+
+  const learnings = D.learnings.filter(l=>{
+    if(q && !(l.kw||'').toLowerCase().includes(q) && !(l.learning||'').toLowerCase().includes(q)) return false;
+    if(cat!=='all' && l.category!==cat) return false;
+    if(scope!=='all' && l.scope!==scope) return false;
+    if(l.confidence < minConf) return false;
+    return true;
+  });
+  const effects = D.effects.filter(e=>{
+    if(q && !(e.kw||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  document.getElementById('learn-count').textContent = `効果 ${effects.length} / 学び ${learnings.length}`;
+
+  const esc = s => (s||'').toString().replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'})[c]);
+
+  // 効果測定テーブル
+  const effRows = effects.map(e=>{
+    const verdictColor = e.verdict==='成功'?'#2e8b57':e.verdict==='悪化'?'#d8302f':'#a37600';
+    const verdictBg = e.verdict==='成功'?'#e8f5ec':e.verdict==='悪化'?'#fde9e8':'#fff8e0';
+    const impStr = `<span style="color:#888;">${e.predImp>=0?'+':''}${e.predImp.toFixed(0)}</span> / <b>${e.actImp!==null?(e.actImp>=0?'+':'')+e.actImp.toFixed(0):'—'}</b> / <span style="color:${(e.impDiff||0)>=0?'#2e8b57':'#d8302f'};">${e.impDiff!==null?(e.impDiff>=0?'+':'')+e.impDiff.toFixed(0):'—'}</span>`;
+    const salesStr = `<span style="color:#888;">${e.predSales>=0?'+':''}${e.predSales.toFixed(0)}</span> / <b>${e.actSales!==null?(e.actSales>=0?'+':'')+e.actSales.toFixed(0):'—'}</b>`;
+    return `<tr style="border-bottom:1px solid var(--gray-2);">
+      <td style="padding:5px 6px;font-weight:600;font-size:11px;">${esc(e.date)}</td>
+      <td style="padding:5px 6px;font-size:11px;">${esc(e.kw)} <span style="color:#999;font-size:10px;">(${esc(e.match)})</span></td>
+      <td style="padding:5px 6px;text-align:right;font-family:'SF Mono',monospace;font-size:11px;">¥${e.oldBid}→¥${e.newBid}<br><span style="color:#666;">${e.bidChangePct>=0?'+':''}${e.bidChangePct.toFixed(0)}%</span></td>
+      <td style="padding:5px 6px;text-align:right;font-size:11px;">${impStr}</td>
+      <td style="padding:5px 6px;text-align:right;font-size:11px;">${salesStr}</td>
+      <td style="padding:5px 6px;text-align:center;background:${verdictBg};color:${verdictColor};font-weight:700;font-size:11px;">${esc(e.verdict)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('learn-effect-tbody').innerHTML = effRows || '<tr><td colspan="6" style="padding:20px;text-align:center;color:#999;">該当なし (bid変更後 3日経過待ち)</td></tr>';
+
+  // 学びカード
+  const cardsHtml = learnings.map(l=>{
+    const scopeBadge = l.scope==='汎用'
+      ? '<span style="background:var(--orange);color:#fff;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;">汎用</span>'
+      : '<span style="background:var(--gray-3);color:#555;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;">PEGAT固有</span>';
+    const confColor = l.confidence>=0.8?'#2e8b57':l.confidence>=0.6?'#a37600':'#999';
+    return `<div style="border:1px solid var(--gray-3);border-left:3px solid var(--orange);padding:10px;margin-bottom:8px;background:#fff;">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">
+        <span style="font-size:11px;color:#666;">${esc(l.date)}</span>
+        <span style="background:var(--yellow-soft);color:#7a5e00;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;">${esc(l.category)}</span>
+        ${scopeBadge}
+        <span style="margin-left:auto;font-size:10px;color:${confColor};font-weight:700;">conf ${l.confidence.toFixed(2)}</span>
+      </div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:4px;color:var(--black);">${esc(l.kw)}</div>
+      <div style="font-size:12px;color:#333;line-height:1.5;margin-bottom:6px;background:var(--yellow-soft);padding:6px 8px;border-left:2px solid var(--yellow);">
+        <b>💡 学び:</b> ${esc(l.learning)}
+      </div>
+      <div style="font-size:11px;color:#555;margin-bottom:3px;"><b>原因:</b> ${esc(l.primary_cause)}</div>
+      <div style="font-size:11px;color:#555;margin-bottom:3px;"><b>次に:</b> ${esc(l.recommended_next_action)}</div>
+      ${l.hypotheses.length ? `<details style="margin-top:5px;"><summary style="font-size:10px;color:#888;cursor:pointer;">他の仮説 ${l.hypotheses.length}件</summary><ul style="font-size:11px;color:#666;margin:3px 0 0 20px;padding:0;">${l.hypotheses.map(h=>`<li>${esc(h)}</li>`).join('')}</ul></details>` : ''}
+    </div>`;
+  }).join('');
+  document.getElementById('learn-cards').innerHTML = cardsHtml || '<div style="padding:40px;text-align:center;color:#999;">該当なし</div>';
 }
 </script>
 
