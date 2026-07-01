@@ -1384,26 +1384,86 @@
   </form>
 </dialog>
 
-<dialog id="productDlg">
-  <h3>商品を追加</h3>
-  <form class="form-grid" onsubmit="submitProduct(event)">
-    <div><label>商品名 *</label><input type="text" id="pdName" required></div>
-    <div><label>作家・産地</label><input type="text" id="pdMaker"></div>
-    <div><label>カテゴリ</label>
-      <select id="pdCat"><option value="utsuwa">器</option><option value="dougu">道具</option><option value="nuno">布</option><option value="kodougu">古道具</option><option value="other">その他</option></select>
-    </div>
-    <div><label>価格 (税込)</label><input type="number" id="pdPrice" required></div>
-    <div><label>原価 (任意)</label><input type="number" id="pdCost"></div>
-    <div><label>在庫数</label><input type="number" id="pdStock" value="0"></div>
-    <div><label>基準在庫 (棚いっぱい時)</label><input type="number" id="pdStockBase" value="10"></div>
-    <div><label>絵文字</label><input type="text" id="pdIcon" placeholder="🍵" value="📦"></div>
-    <div><label>単位</label><input type="text" id="pdUnit" value="点"></div>
+<dialog id="productDlg" style="max-width: 560px; width: 92%;">
+  <div style="display:flex; gap:4px; margin-bottom:16px; background:var(--bg); padding:4px; border-radius:999px;">
+    <button class="pdTab" data-pdtab="quick" onclick="switchProductTab('quick')" style="flex:1; appearance:none; border:0; background:transparent; padding:8px 12px; border-radius:999px; font:inherit; font-weight:800; font-size:13px; cursor:pointer;">クイック追加</button>
+    <button class="pdTab" data-pdtab="detail" onclick="switchProductTab('detail')" style="flex:1; appearance:none; border:0; background:transparent; padding:8px 12px; border-radius:999px; font:inherit; font-weight:800; font-size:13px; cursor:pointer;">詳細入力</button>
+    <button class="pdTab" data-pdtab="bulk" onclick="switchProductTab('bulk')" style="flex:1; appearance:none; border:0; background:transparent; padding:8px 12px; border-radius:999px; font:inherit; font-weight:800; font-size:13px; cursor:pointer;">まとめて</button>
+  </div>
+
+  <!-- ── クイック追加 ── -->
+  <div class="pdPanel" data-pdtab="quick">
+    <h3 style="margin:0 0 6px;">1行で追加</h3>
+    <p style="margin:0 0 14px; color:var(--ink-3); font-size:12.5px; line-height:1.6;">商品名と価格をまとめて。 例: <code style="background:var(--bg); padding:2px 6px; border-radius:4px;">リネンシャツ ¥18,800</code></p>
+    <form onsubmit="submitQuickProduct(event)">
+      <input type="text" id="pdQuick" placeholder="商品名 と 価格 (例: 麻のカゴ鞄 14500)" required autofocus style="width:100%; appearance:none; border:1.5px solid var(--line); padding:14px 16px; border-radius:10px; font:inherit; font-size:15px; margin-bottom:12px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+        <select id="pdQuickCat" style="appearance:none; border:1px solid var(--line); padding:10px 12px; border-radius:8px; font:inherit; font-size:13.5px; background:#fbfaf6;"></select>
+        <input type="text" id="pdQuickMaker" placeholder="作家 (任意)" style="appearance:none; border:1px solid var(--line); padding:10px 12px; border-radius:8px; font:inherit; font-size:13.5px; background:#fbfaf6;">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+        <input type="number" id="pdQuickStock" placeholder="在庫数" min="0" value="1" style="appearance:none; border:1px solid var(--line); padding:10px 12px; border-radius:8px; font:inherit; font-size:13.5px; background:#fbfaf6;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--ink-3);"><input type="file" id="pdQuickImg" accept="image/*" capture="environment" style="flex:1; font-size:12px;"> 写真</label>
+      </div>
+      <div id="pdQuickPreview" style="display:none; margin-bottom:12px; padding:8px; background:var(--bg); border-radius:8px; text-align:center;"></div>
+      <div class="dlg-act">
+        <button type="button" class="btn" onclick="document.getElementById('productDlg').close()">キャンセル</button>
+        <button type="submit" class="btn btn-leaf">追加</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── 詳細入力 ── -->
+  <div class="pdPanel" data-pdtab="detail" style="display:none;">
+    <h3 style="margin:0 0 14px;">詳細入力</h3>
+    <form class="form-grid" onsubmit="submitProduct(event)">
+      <div><label>商品名 *</label><input type="text" id="pdName" required></div>
+      <div><label>作家・産地</label><input type="text" id="pdMaker"></div>
+      <div><label>カテゴリ</label><select id="pdCat"></select></div>
+      <div><label>価格 (税込)</label><input type="number" id="pdPrice" required></div>
+      <div><label>原価 (任意)</label><input type="number" id="pdCost"></div>
+      <div><label>在庫数</label><input type="number" id="pdStock" value="0"></div>
+      <div><label>基準在庫 (棚いっぱい時)</label><input type="number" id="pdStockBase" value="10"></div>
+      <div><label>アイコン</label>
+        <select id="pdIcon">
+          <option value="shirt">服 (シャツ)</option>
+          <option value="cardigan">カーディガン</option>
+          <option value="bag">鞄</option>
+          <option value="hat">帽子</option>
+          <option value="scarf">スカーフ</option>
+          <option value="accessory">装身具</option>
+          <option value="utsuwa">器</option>
+          <option value="dougu">道具</option>
+          <option value="nuno">布</option>
+          <option value="kodougu">古道具</option>
+          <option value="other">その他</option>
+        </select>
+      </div>
+      <div><label>単位</label><input type="text" id="pdUnit" value="点"></div>
+      <div><label>写真 (任意)</label><input type="file" id="pdImg" accept="image/*" capture="environment"></div>
+      <div class="dlg-act">
+        <button type="button" class="btn" onclick="document.getElementById('productDlg').close()">キャンセル</button>
+        <button type="submit" class="btn btn-leaf">追加</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── まとめて追加 ── -->
+  <div class="pdPanel" data-pdtab="bulk" style="display:none;">
+    <h3 style="margin:0 0 6px;">Excel / CSV から一括登録</h3>
+    <p style="margin:0 0 12px; color:var(--ink-3); font-size:12.5px; line-height:1.6;">Excel や スプシからコピー → 貼付け。 各行 <b>タブ区切り</b>: 商品名/価格/在庫/カテゴリ/作家。</p>
+    <textarea id="pdBulk" rows="8" placeholder="リネンシャツ&#9;18800&#9;6&#9;ifuku&#9;Linette&#10;麻のカゴ鞄&#9;14500&#9;4&#9;bag&#9;マダガスカル&#10;真鍮ピアス&#9;3200&#9;9&#9;accessory&#9;高岡" style="width:100%; appearance:none; border:1.5px solid var(--line); padding:12px 14px; border-radius:10px; font-family:'Inter', monospace; font-size:12.5px; background:#fbfaf6; margin-bottom:10px;"></textarea>
+    <p id="pdBulkStatus" style="margin:0 0 12px; font-size:12px; color:var(--ink-3);"></p>
     <div class="dlg-act">
       <button type="button" class="btn" onclick="document.getElementById('productDlg').close()">キャンセル</button>
-      <button type="submit" class="btn btn-leaf">追加</button>
+      <button type="button" class="btn btn-leaf" onclick="submitBulkProducts()">まとめて追加</button>
     </div>
-  </form>
+  </div>
 </dialog>
+
+<style>
+  .pdTab.on { background: var(--ink); color: var(--bg); }
+</style>
 
 <script type="module">
 import { createRepo } from '../shared/data.js';
@@ -2157,13 +2217,16 @@ window.exportCSV = async function(type) {
   toast(`${filename} を保存しました`);
 };
 
-// ── 商品アイコン (SVG優先) ──────────────────────
-function productIcon(p) {
+// ── 商品アイコン (写真>SVG>絵文字 優先) ──────────────────────
+function productIcon(p, size = 32) {
   if (!p) return '';
+  // 写真あれば写真
+  if (p.imageDataUrl) {
+    return `<img src="${p.imageDataUrl}" style="width:${size}px; height:${size}px; object-fit:cover; border-radius:4px;">`;
+  }
   const i = p.icon || 'other';
-  // shared/icons.js に同名 key あればSVG、 なければ emoji fallback
   if (window.icon && i && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27FF}]/u.test(i)) {
-    return window.icon(i, { size: 32 });
+    return window.icon(i, { size });
   }
   return esc(i);
 }
@@ -2506,7 +2569,7 @@ async function renderProdList() {
   }
   document.getElementById('prodList').innerHTML = list.map(p => `
     <div class="block" style="padding:14px 18px; margin-bottom:8px; display:grid; grid-template-columns:48px 1fr auto auto auto; gap:16px; align-items:center;">
-      <div style="font-size:28px;">${esc(p.icon)}</div>
+      <div style="width:48px; height:48px; display:grid; place-items:center; background:var(--bg); border-radius:6px; color:var(--leaf-2);">${productIcon(p, 32)}</div>
       <div>
         <div style="font-weight:900;">${esc(p.name)}</div>
         <div style="color:var(--ink-3); font-size:12.5px;">${esc(p.maker || '')} / ${categoryLabel(p.category)}</div>
@@ -2523,26 +2586,153 @@ function categoryLabel(id) {
   const cs = (state.settings?.categories || []);
   return cs.find(c => c.id === id)?.label || id || '—';
 }
-window.openNewProduct = function() {
+window.openNewProduct = async function() {
+  // カテゴリセレクト populate
+  const settings = await repo.getSettings();
+  const cats = (settings.categories || []);
+  const catOpts = cats.map(c => `<option value="${c.id}">${esc(c.label)}</option>`).join('');
+  document.getElementById('pdQuickCat').innerHTML = catOpts;
+  document.getElementById('pdCat').innerHTML = catOpts;
+
+  // 前回入力の復元 (localStorage)
+  const last = JSON.parse(localStorage.getItem('zakka-last-product') || '{}');
+  if (last.category) { document.getElementById('pdQuickCat').value = last.category; document.getElementById('pdCat').value = last.category; }
+  if (last.maker) document.getElementById('pdQuickMaker').value = last.maker;
+  if (last.unit) document.getElementById('pdUnit').value = last.unit;
+
   document.getElementById('productDlg').showModal();
+  setTimeout(() => { switchProductTab('quick'); document.getElementById('pdQuick').focus(); }, 50);
 };
+
+window.switchProductTab = function(name) {
+  document.querySelectorAll('.pdTab').forEach(t => t.classList.toggle('on', t.dataset.pdtab === name));
+  document.querySelectorAll('.pdPanel').forEach(p => p.style.display = p.dataset.pdtab === name ? '' : 'none');
+};
+
+// ── クイック追加: 「商品名 ¥価格」 パース ──
+function parseQuickInput(txt) {
+  const t = String(txt || '').trim();
+  // 価格候補 (¥/円/, or 単に数字4-6桁)
+  const m = t.match(/(.+?)[\s　]*[¥￥]?\s*([\d,]{3,7})\s*円?/) || t.match(/(.+?)[\s　]+([\d,]{3,7})/);
+  if (!m) return null;
+  return { name: m[1].trim(), price: parseInt(m[2].replace(/,/g, ''), 10) };
+}
+
+async function readImageAsDataURL(file, maxSize = 800) {
+  if (!file) return null;
+  return new Promise((res, rej) => {
+    const img = new Image(); const rd = new FileReader();
+    rd.onload = () => { img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > maxSize || h > maxSize) { const r = maxSize / Math.max(w, h); w = w * r; h = h * r; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      res(canvas.toDataURL('image/jpeg', 0.82));
+    }; img.onerror = rej; img.src = rd.result; };
+    rd.onerror = rej; rd.readAsDataURL(file);
+  });
+}
+
+// クイック追加の写真プレビュー
+document.addEventListener('change', async (e) => {
+  if (e.target.id === 'pdQuickImg' && e.target.files[0]) {
+    const url = await readImageAsDataURL(e.target.files[0]);
+    document.getElementById('pdQuickPreview').innerHTML = `<img src="${url}" style="max-height:120px; border-radius:6px;">`;
+    document.getElementById('pdQuickPreview').style.display = '';
+  }
+});
+
+window.submitQuickProduct = async function(ev) {
+  ev.preventDefault();
+  const parsed = parseQuickInput(document.getElementById('pdQuick').value);
+  if (!parsed || !parsed.price) { toast('価格を認識できませんでした。 「商品名 ¥価格」 で入力してください'); return; }
+  const category = document.getElementById('pdQuickCat').value;
+  const maker = document.getElementById('pdQuickMaker').value;
+  const stock = parseInt(document.getElementById('pdQuickStock').value) || 1;
+  const imgFile = document.getElementById('pdQuickImg').files[0];
+  const imageDataUrl = imgFile ? await readImageAsDataURL(imgFile) : null;
+  // カテゴリ→アイコン推定
+  const iconMap = { ifuku: 'shirt', accessory: 'accessory', bag: 'bag', utsuwa: 'utsuwa', kurashi: 'dougu', nuno: 'nuno' };
+  await repo.saveProduct({
+    name: parsed.name, maker,
+    category,
+    price: parsed.price, cost: 0,
+    stock, stockBase: Math.max(stock, 10),
+    icon: iconMap[category] || 'other',
+    unit: '点',
+    imageDataUrl,
+    active: true,
+  });
+  // 前回入力保持
+  localStorage.setItem('zakka-last-product', JSON.stringify({ category, maker, unit: '点' }));
+  document.getElementById('productDlg').close();
+  document.getElementById('pdQuick').value = '';
+  document.getElementById('pdQuickImg').value = '';
+  document.getElementById('pdQuickPreview').style.display = 'none';
+  toast(`${parsed.name} を追加しました`);
+  renderProdList();
+  if (state.currentView === 'inv') renderInvList();
+};
+
 window.submitProduct = async function(ev) {
   ev.preventDefault();
+  const imgFile = document.getElementById('pdImg')?.files[0];
+  const imageDataUrl = imgFile ? await readImageAsDataURL(imgFile) : null;
+  const category = document.getElementById('pdCat').value;
+  const maker = document.getElementById('pdMaker').value;
+  const unit = document.getElementById('pdUnit').value || '点';
   await repo.saveProduct({
     name: document.getElementById('pdName').value,
-    maker: document.getElementById('pdMaker').value,
-    category: document.getElementById('pdCat').value,
+    maker,
+    category,
     price: parseInt(document.getElementById('pdPrice').value),
     cost: parseInt(document.getElementById('pdCost').value) || 0,
     stock: parseInt(document.getElementById('pdStock').value) || 0,
     stockBase: parseInt(document.getElementById('pdStockBase').value) || 10,
-    icon: document.getElementById('pdIcon').value || '📦',
-    unit: document.getElementById('pdUnit').value || '点',
+    icon: document.getElementById('pdIcon').value || 'other',
+    unit,
+    imageDataUrl,
     active: true,
   });
+  localStorage.setItem('zakka-last-product', JSON.stringify({ category, maker, unit }));
   document.getElementById('productDlg').close();
   toast('商品を追加しました');
   renderProdList();
+  if (state.currentView === 'inv') renderInvList();
+};
+
+window.submitBulkProducts = async function() {
+  const txt = document.getElementById('pdBulk').value.trim();
+  if (!txt) { toast('入力欄が空です'); return; }
+  const settings = await repo.getSettings();
+  const validCats = new Set((settings.categories || []).map(c => c.id));
+  const iconMap = { ifuku: 'shirt', accessory: 'accessory', bag: 'bag', utsuwa: 'utsuwa', kurashi: 'dougu', nuno: 'nuno' };
+  const lines = txt.split(/\r?\n/).filter(l => l.trim());
+  let ok = 0, ng = 0;
+  for (const line of lines) {
+    const cols = line.split(/\t|,/).map(c => c.trim());
+    const [name, priceRaw, stockRaw, cat, maker] = cols;
+    const price = parseInt((priceRaw || '').replace(/[¥￥,\s]/g, ''), 10);
+    if (!name || !price) { ng++; continue; }
+    const category = validCats.has(cat) ? cat : 'other';
+    await repo.saveProduct({
+      name, maker: maker || '', category,
+      price, cost: 0,
+      stock: parseInt(stockRaw) || 0,
+      stockBase: Math.max(parseInt(stockRaw) || 10, 10),
+      icon: iconMap[category] || 'other',
+      unit: '点',
+      active: true,
+    });
+    ok++;
+  }
+  document.getElementById('pdBulkStatus').textContent = `${ok}件 追加、 ${ng}件 スキップ`;
+  toast(`${ok}件 追加しました`);
+  document.getElementById('pdBulk').value = '';
+  renderProdList();
+  if (state.currentView === 'inv') renderInvList();
+  setTimeout(() => document.getElementById('productDlg').close(), 800);
 };
 
 // ── 配信 ────────────────────────────────
