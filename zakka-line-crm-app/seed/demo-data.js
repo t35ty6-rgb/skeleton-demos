@@ -56,38 +56,38 @@ export const DEMO_STAFF = [
   { id: 's_kawai',    name: '川合',     role: 'staff', pin: '3333', color: '#c98a2b' },
 ];
 
-// Unsplash 実写画像 (無料/商用OK)、 400x400 crop で統一
-const IMG = (id) => `https://images.unsplash.com/photo-${id}?w=400&h=400&fit=crop&auto=format&q=75`;
+// Pexels 実写画像 (完全無料/商用OK)、 400x400 crop で統一
+const IMG = (id) => `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop`;
 
 export const DEMO_PRODUCTS = [
   // ─── 服 (主力) ───
-  { id: 'p_linen_shirt',  name: 'リネンシャツ / 生成り',       maker: 'Linette (フランス)',       category: 'ifuku', price: 18800, cost: 8200, icon: 'shirt',    imageUrl: IMG('1602810318383-e386cc2a3ccf'), stock: 6,  stockBase: 12, unit: '点', tags: ['linen', '春夏'], active: true },
-  { id: 'p_wool_cardi',   name: 'ウールカーディガン / 墨黒',   maker: 'Bigeard (フランス)',       category: 'ifuku', price: 32000, cost: 14500, icon: 'cardigan', imageUrl: IMG('1591047139829-d91aecb6caea'), stock: 3,  stockBase: 8,  unit: '点', tags: ['wool', '秋冬'], active: true },
-  { id: 'p_canvas_apron', name: '帆布エプロン / 倉敷',         maker: '倉敷帆布',                  category: 'ifuku', price: 6800,  cost: 2800, icon: 'shirt',    imageUrl: IMG('1591261730798-b2e6d3ba6fef'), stock: 11, stockBase: 16, unit: '点', tags: ['apron'], active: true },
-  { id: 'p_linen_hat',    name: '麻のサンハット',              maker: 'Linette (フランス)',       category: 'ifuku', price: 7800,  cost: 3200, icon: 'hat',      imageUrl: IMG('1521369909029-2afed882baee'), stock: 7,  stockBase: 10, unit: '点', tags: ['linen', '夏'], active: true },
-  { id: 'p_wool_socks',   name: 'ウール靴下 / 生成り',         maker: 'ノルウェー直輸入',          category: 'ifuku', price: 2400,  cost: 980,  icon: 'shirt',    imageUrl: IMG('1586350977771-b3714b6b1c98'), stock: 18, stockBase: 24, unit: '足', tags: ['秋冬'], active: true },
+  { id: 'p_linen_shirt',  name: 'リネンシャツ / 生成り',       maker: 'Linette (フランス)',       category: 'ifuku', price: 18800, cost: 8200, icon: 'shirt',    imageUrl: IMG('22441297'), stock: 6,  stockBase: 12, unit: '点', tags: ['linen', '春夏'], active: true },
+  { id: 'p_wool_cardi',   name: 'ウールカーディガン / 墨黒',   maker: 'Bigeard (フランス)',       category: 'ifuku', price: 32000, cost: 14500, icon: 'cardigan', imageUrl: IMG('8148587'),  stock: 3,  stockBase: 8,  unit: '点', tags: ['wool', '秋冬'], active: true },
+  { id: 'p_canvas_apron', name: '帆布エプロン / 倉敷',         maker: '倉敷帆布',                  category: 'ifuku', price: 6800,  cost: 2800, icon: 'shirt',    imageUrl: IMG('6069107'),  stock: 11, stockBase: 16, unit: '点', tags: ['apron'], active: true },
+  { id: 'p_linen_hat',    name: '麻のサンハット',              maker: 'Linette (フランス)',       category: 'ifuku', price: 7800,  cost: 3200, icon: 'hat',      imageUrl: IMG('1078973'),  stock: 7,  stockBase: 10, unit: '点', tags: ['linen', '夏'], active: true },
+  { id: 'p_wool_socks',   name: 'ウール靴下 / 生成り',         maker: 'ノルウェー直輸入',          category: 'ifuku', price: 2400,  cost: 980,  icon: 'socks',    imageUrl: IMG('8422159'),  stock: 18, stockBase: 24, unit: '足', tags: ['秋冬'], active: true },
 
   // ─── 装身具 ───
-  { id: 'p_silk_scarf',   name: '絹のスカーフ / 草木染め',     maker: '西陣 上田',                 category: 'accessory', price: 9800, cost: 4200, icon: 'scarf',     imageUrl: IMG('1601924582970-9238bcb495d9'), stock: 5, stockBase: 8,  unit: '点', tags: ['silk', '贈答'], active: true },
-  { id: 'p_brass_earring',name: '真鍮のピアス / 雫',          maker: '高岡 須磨',                 category: 'accessory', price: 3200, cost: 1100, icon: 'accessory', imageUrl: IMG('1610694955371-d4a3e0ce4b52'), stock: 9, stockBase: 14, unit: '対', tags: ['brass', '贈答'], active: true },
-  { id: 'p_brass_ring',   name: '真鍮の指輪 / つや消し',       maker: '高岡 須磨',                 category: 'accessory', price: 4500, cost: 1500, icon: 'accessory', imageUrl: IMG('1605100804763-247f67b3557e'), stock: 8, stockBase: 12, unit: '点', tags: ['brass'], active: true },
+  { id: 'p_silk_scarf',   name: '絹のスカーフ / 草木染め',     maker: '西陣 上田',                 category: 'accessory', price: 9800, cost: 4200, icon: 'scarf',     imageUrl: IMG('2703202'),  stock: 5, stockBase: 8,  unit: '点', tags: ['silk', '贈答'], active: true },
+  { id: 'p_brass_earring',name: '真鍮のピアス / 雫',          maker: '高岡 須磨',                 category: 'accessory', price: 3200, cost: 1100, icon: 'earring',   imageUrl: IMG('10879063'), stock: 9, stockBase: 14, unit: '対', tags: ['brass', '贈答'], active: true },
+  { id: 'p_brass_ring',   name: '真鍮の指輪 / つや消し',       maker: '高岡 須磨',                 category: 'accessory', price: 4500, cost: 1500, icon: 'ring',      imageUrl: IMG('10891494'), stock: 8, stockBase: 12, unit: '点', tags: ['brass'], active: true },
 
   // ─── 鞄 ───
-  { id: 'p_basket_bag',   name: '麻のカゴ鞄 / 中',             maker: 'マダガスカル直輸入',        category: 'bag', price: 14500, cost: 5800, icon: 'bag', imageUrl: IMG('1594223274512-ad4803739b7c'), stock: 4, stockBase: 6, unit: '点', tags: ['summer'], active: true },
-  { id: 'p_leather_tote', name: '革のトート / キャメル',       maker: 'TOTE と暮らし',              category: 'bag', price: 28000, cost: 12000, icon: 'bag', imageUrl: IMG('1548036328-c9fa89d128fa'), stock: 3, stockBase: 5, unit: '点', tags: ['leather'], active: true },
+  { id: 'p_basket_bag',   name: '麻のカゴ鞄 / 中',             maker: 'マダガスカル直輸入',        category: 'bag', price: 14500, cost: 5800, icon: 'bag',     imageUrl: IMG('9218687'), stock: 4, stockBase: 6, unit: '点', tags: ['summer'], active: true },
+  { id: 'p_leather_tote', name: '革のトート / キャメル',       maker: 'TOTE と暮らし',              category: 'bag', price: 28000, cost: 12000, icon: 'handbag', imageUrl: IMG('936075'),  stock: 3, stockBase: 5, unit: '点', tags: ['leather'], active: true },
 
   // ─── 器 (アクセント) ───
-  { id: 'p_oribe_tori5',  name: '織部 取り皿 5寸',             maker: '青木 善之介',                category: 'utsuwa', price: 3800, cost: 1900, icon: 'utsuwa', imageUrl: IMG('1610701596007-11502861dcfa'), stock: 14, stockBase: 18, unit: '点', tags: ['oribe'], active: true },
-  { id: 'p_kohiki_meshi', name: '粉引 飯碗',                    maker: '中村 友也',                  category: 'utsuwa', price: 3600, cost: 1620, icon: 'utsuwa', imageUrl: IMG('1584949091598-c31daaaa4aa9'), stock: 3,  stockBase: 14, unit: '点', tags: ['kohiki'], active: true },
-  { id: 'p_glass_pitcher',name: '吹きガラスのピッチャー',       maker: '辻 和美',                    category: 'utsuwa', price: 12800, cost: 5400, icon: 'utsuwa', imageUrl: IMG('1610824352934-c10d87b700cc'), stock: 4,  stockBase: 6, unit: '点', tags: ['glass'], active: true },
+  { id: 'p_oribe_tori5',  name: '織部 取り皿 5寸',             maker: '青木 善之介',                category: 'utsuwa', price: 3800, cost: 1900, icon: 'utsuwa', imageUrl: IMG('6207812'), stock: 14, stockBase: 18, unit: '点', tags: ['oribe'], active: true },
+  { id: 'p_kohiki_meshi', name: '粉引 飯碗',                    maker: '中村 友也',                  category: 'utsuwa', price: 3600, cost: 1620, icon: 'utsuwa', imageUrl: IMG('4553027'), stock: 3,  stockBase: 14, unit: '点', tags: ['kohiki'], active: true },
+  { id: 'p_glass_pitcher',name: '吹きガラスのピッチャー',       maker: '辻 和美',                    category: 'utsuwa', price: 12800, cost: 5400, icon: 'utsuwa', imageUrl: IMG('3735711'), stock: 4,  stockBase: 6, unit: '点', tags: ['glass'], active: true },
 
   // ─── 暮らし道具 ───
-  { id: 'p_brass_tray',   name: '真鍮トレー / 月',             maker: '高岡 須磨',                 category: 'kurashi', price: 8800, cost: 3800, icon: 'dougu',   imageUrl: IMG('1602184392030-4b8ac1e0c5f2'), stock: 6, stockBase: 10, unit: '点', tags: ['brass'], active: true },
-  { id: 'p_rattan_basket',name: '籐のかご / 蓋付き',           maker: '岡山 倉敷',                  category: 'kurashi', price: 6200, cost: 2400, icon: 'kodougu', imageUrl: IMG('1602163872957-b06a34d1a0ff'), stock: 8, stockBase: 12, unit: '点', tags: ['storage'], active: true },
-  { id: 'p_kiri_box',     name: '桐箱 大 / 贈答用',             maker: '越前木箱',                  category: 'kurashi', price: 1800, cost: 700, icon: 'dougu', imageUrl: IMG('1604754742629-3e0498a4d5eb'), stock: 22, stockBase: 40, unit: '点', tags: ['贈答'], active: true },
+  { id: 'p_brass_tray',   name: '真鍮トレー / 月',             maker: '高岡 須磨',                 category: 'kurashi', price: 8800, cost: 3800, icon: 'dougu',   imageUrl: IMG('7263003'), stock: 6, stockBase: 10, unit: '点', tags: ['brass'], active: true },
+  { id: 'p_rattan_basket',name: '籐のかご / 蓋付き',           maker: '岡山 倉敷',                  category: 'kurashi', price: 6200, cost: 2400, icon: 'kodougu', imageUrl: IMG('2249530'), stock: 8, stockBase: 12, unit: '点', tags: ['storage'], active: true },
+  { id: 'p_kiri_box',     name: '桐箱 大 / 贈答用',             maker: '越前木箱',                  category: 'kurashi', price: 1800, cost: 700,  icon: 'dougu',                             stock: 22, stockBase: 40, unit: '点', tags: ['贈答'], active: true },
 
   // ─── 布 ───
-  { id: 'p_asanuno',      name: '麻布 紺 1m',                   maker: '越前麻',                     category: 'nuno', price: 1700, cost: 850, icon: 'nuno', imageUrl: IMG('1620799140408-edc6dcb6d633'), stock: 13, stockBase: 20, unit: 'm', tags: [], active: true },
+  { id: 'p_asanuno',      name: '麻布 紺 1m',                   maker: '越前麻',                     category: 'nuno', price: 1700, cost: 850, icon: 'nuno', imageUrl: IMG('6431811'), stock: 13, stockBase: 20, unit: 'm', tags: [], active: true },
 ];
 
 export const DEMO_CUSTOMERS = [
