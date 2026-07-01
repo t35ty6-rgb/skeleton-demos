@@ -256,9 +256,9 @@
     box-shadow: var(--shadow-card);
   }
   .card-head {
-    padding: 18px 22px;
+    padding: 16px 20px;
     cursor: pointer;
-    display: flex; align-items: flex-start; gap: 16px;
+    display: flex; align-items: center; gap: 18px;
     transition: background .12s;
   }
   .card-head:hover { background: rgba(67,56,202,.025); }
@@ -268,10 +268,114 @@
     font-size: 11px; font-weight: 700;
     color: var(--gold);
     letter-spacing: .08em;
-    margin-top: 4px;
-    min-width: 32px;
+    min-width: 24px;
+    align-self: flex-start; margin-top: 4px;
   }
   .card-head-body { flex: 1; min-width: 0; }
+  /* サムネ (head右) */
+  .card-thumb {
+    position: relative;
+    width: 168px; height: 94px;
+    border-radius: 6px; overflow: hidden;
+    background: #15172B;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(21,23,43,.15), inset 0 0 0 1px rgba(255,255,255,.08);
+  }
+  .card-thumb img {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block;
+    transition: opacity .3s;
+  }
+  .card-thumb-preview {
+    position: absolute; inset: 0;
+    opacity: 0; transition: opacity .25s;
+    pointer-events: none;
+  }
+  .card-thumb-preview video {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block;
+  }
+  .card-thumb-badge {
+    position: absolute; top: 6px; left: 6px;
+    background: rgba(21,23,43,.72);
+    color: #fff;
+    font-family: "Inter", sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 10.5px; font-weight: 700;
+    padding: 2px 7px; border-radius: 3px;
+    letter-spacing: .05em;
+  }
+  .card-thumb-play {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px; height: 32px;
+    background: rgba(255,255,255,.95);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    color: var(--brand);
+    font-size: 11px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.3);
+    transition: transform .2s, opacity .2s;
+  }
+  .card:hover .card-thumb-play {
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+  .card:hover .card-thumb-preview { opacity: 1; }
+  .card:hover .card-thumb img { opacity: .3; }
+
+  /* 進捗 チェックマーク (見た印) */
+  .card-check {
+    width: 22px; height: 22px;
+    border: 1.5px solid var(--rule-strong);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    color: transparent;
+    font-size: 12px;
+    transition: all .15s;
+    flex-shrink: 0;
+    align-self: flex-start; margin-top: 4px;
+  }
+  .card.viewed .card-check {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+  }
+  .card.viewed .card-head-num { color: var(--ink-mute); }
+  .card.viewed { opacity: .82; }
+  .card.viewed:hover { opacity: 1; }
+
+  /* hero-card (07 メイン機能 用 = 大きく強調) */
+  .card.hero-card {
+    background: linear-gradient(135deg, #FBFAF6 0%, #F8F7F2 100%);
+    border-color: var(--gold);
+    border-width: 2px;
+    position: relative;
+  }
+  .card.hero-card::before {
+    content: 'MOST USED';
+    position: absolute;
+    top: -10px; right: 20px;
+    background: var(--gold);
+    color: #fff;
+    font-family: "Inter", sans-serif;
+    font-size: 10px; font-weight: 800;
+    letter-spacing: .12em;
+    padding: 3px 10px; border-radius: 3px;
+    box-shadow: 0 3px 8px rgba(200,157,60,.35);
+  }
+  .card.hero-card .card-thumb {
+    width: 240px; height: 135px;
+  }
+  .card.hero-card .card-opener {
+    font-size: 20.5px;
+  }
+  @media (max-width: 780px) {
+    .card-thumb { width: 96px; height: 54px; }
+    .card.hero-card .card-thumb { width: 120px; height: 68px; }
+    .card.hero-card::before { top: -8px; right: 12px; font-size: 9px; padding: 2px 7px; }
+    .card-check { width: 18px; height: 18px; font-size: 10px; }
+    .card-head { padding: 12px 14px; gap: 12px; }
+  }
   .card-opener {
     font-size: 18.5px; font-weight: 900;
     line-height: 1.45; letter-spacing: -0.01em;
@@ -521,21 +625,46 @@
   /* responsive */
   @media (max-width: 880px) {
     .app { grid-template-columns: 1fr; }
+    /* ★ mobile: sidebar を main の 後 に order で移動 (hero → main → sidebar) */
     .side {
       position: relative; height: auto; top: auto;
-      border-right: 0; border-bottom: 1px solid var(--rule);
-      padding: 18px 20px;
+      border-right: 0; border-top: 1px solid var(--rule);
+      padding: 20px 20px 40px;
+      order: 2;
     }
+    .main { order: 1; }
     .side-group { margin-top: 16px; }
+    /* mobile では sidebar を details/summary collapse に */
+    .side-toc-toggle {
+      display: block !important;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13.5px; font-weight: 700;
+      color: var(--ink); cursor: pointer;
+      display: flex !important; align-items: center; justify-content: space-between;
+      width: 100%;
+    }
+    .side-toc-toggle::after { content: '▾'; color: var(--gold); font-size: 14px; }
+    .side.collapsed .side-brand,
+    .side.collapsed .side-group { display: none; }
     .topbar { padding: 10px 20px; }
     .topbar-clock { display: none; }
-    .hero { padding: 36px 20px 24px; }
-    .hero h1 { font-size: 28px; }
+    .hero { padding: 28px 20px 20px; }
+    .hero h1 { font-size: 26px; line-height: 1.3; }
+    .hero-lead { font-size: 14px; }
     .content { padding: 0 20px 80px; }
-    .card-head { padding: 14px 16px; }
+    .card-head { padding: 14px 14px; }
     .card-body { padding: 0 16px 20px 16px; }
     .card-head-num { display: none; }
+    .card.hero-card::before {
+      right: 6px; top: -7px;
+      font-size: 8.5px; letter-spacing: .08em;
+      padding: 2px 6px;
+    }
   }
+  .side-toc-toggle { display: none; }
 
   @media (prefers-reduced-motion: reduce) {
     *,*::before,*::after { animation: none !important; transition: none !important; }
@@ -558,7 +687,8 @@
 <div class="app">
 
   <!-- ─── sidebar ─────────────────────────────────────── -->
-  <aside class="side" id="side">
+  <aside class="side collapsed" id="side">
+    <button class="side-toc-toggle" id="tocToggle" aria-expanded="false">章 一覧 を 開く</button>
     <a class="side-brand" href="#top">
       <div class="side-brand-mark">FP</div>
       <div class="side-brand-text">
@@ -1228,21 +1358,89 @@
     }
   });
 
+  // ── mobile sidebar collapse (design-reviewer fb: 1st fold にhero見えるように) ──
+  const tocToggle = document.getElementById('tocToggle');
+  const sideEl = document.getElementById('side');
+  if (tocToggle && sideEl) {
+    tocToggle.addEventListener('click', () => {
+      const collapsed = sideEl.classList.toggle('collapsed');
+      tocToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      tocToggle.textContent = collapsed ? '章 一覧 を 開く' : '章 一覧 を 閉じる';
+    });
+    // desktop では sidebar 常時展開
+    const applyMode = () => {
+      if (window.innerWidth > 880) sideEl.classList.remove('collapsed');
+      else if (!tocToggle.dataset.touched) sideEl.classList.add('collapsed');
+    };
+    applyMode();
+    window.addEventListener('resize', applyMode);
+    tocToggle.addEventListener('click', () => { tocToggle.dataset.touched = '1'; });
+  }
+
   // ── audio playlist + MediaSession (画面OFFでも継続再生) ──
   const TRACKS = [
-    { n: '01', title: 'ログイン',            file: 'assets/audio/01-login.mp3' },
-    { n: '02', title: 'ダッシュボード',       file: 'assets/audio/02-dashboard.mp3' },
-    { n: '03', title: '顧客台帳',            file: 'assets/audio/03-clients.mp3' },
-    { n: '04', title: '顧客カルテ (6タブ)',  file: 'assets/audio/04-modal.mp3' },
-    { n: '05', title: 'アンケート 結果',      file: 'assets/audio/05-survey.mp3' },
-    { n: '06', title: 'LINE で 送る',        file: 'assets/audio/06-line.mp3' },
-    { n: '07', title: '録音 → AI 議事録',    file: 'assets/audio/07-recording.mp3' },
-    { n: '08', title: 'ライフイベント',       file: 'assets/audio/08-timeline.mp3' },
-    { n: '09', title: '過去 の 面談録',       file: 'assets/audio/09-meetings.mp3' },
-    { n: '10', title: '次回 Zoom 提案',      file: 'assets/audio/10-zoom.mp3' },
-    { n: '11', title: 'カレンダー 連携',      file: 'assets/audio/11-calendar.mp3' },
-    { n: '12', title: 'お客様 LINE 画面',    file: 'assets/audio/12-liff.mp3' },
+    { n: '01', title: 'ログイン',            sec: 'sec-login',      dur: 15, file: 'assets/audio/01-login.mp3',      video: 'assets/videos/01-login.mp4',      thumb: 'assets/images/thumb/01-login.jpg' },
+    { n: '02', title: 'ダッシュボード',       sec: 'sec-dashboard',  dur: 25, file: 'assets/audio/02-dashboard.mp3',  video: 'assets/videos/02-dashboard.mp4',  thumb: 'assets/images/thumb/02-dashboard.jpg' },
+    { n: '03', title: '顧客台帳',            sec: 'sec-clients',    dur: 22, file: 'assets/audio/03-clients.mp3',    video: 'assets/videos/03-clients.mp4',    thumb: 'assets/images/thumb/03-clients.jpg' },
+    { n: '04', title: '顧客カルテ (6タブ)',  sec: 'sec-modal',      dur: 32, file: 'assets/audio/04-modal.mp3',      video: 'assets/videos/04-modal.mp4',      thumb: 'assets/images/thumb/04-modal.jpg' },
+    { n: '05', title: 'アンケート 結果',      sec: 'sec-survey',     dur: 22, file: 'assets/audio/05-survey.mp3',     video: 'assets/videos/05-survey.mp4',     thumb: 'assets/images/thumb/05-survey.jpg' },
+    { n: '06', title: 'LINE で 送る',        sec: 'sec-line',       dur: 23, file: 'assets/audio/06-line.mp3',       video: 'assets/videos/06-line.mp4',       thumb: 'assets/images/thumb/06-line.jpg' },
+    { n: '07', title: '録音 → AI 議事録',    sec: 'sec-recording',  dur: 48, file: 'assets/audio/07-recording.mp3',  video: 'assets/videos/07-recording.mp4',  thumb: 'assets/images/thumb/07-recording.jpg' },
+    { n: '08', title: 'ライフイベント',       sec: 'sec-timeline',   dur: 22, file: 'assets/audio/08-timeline.mp3',   video: 'assets/videos/08-timeline.mp4',   thumb: 'assets/images/thumb/08-timeline.jpg' },
+    { n: '09', title: '過去 の 面談録',       sec: 'sec-meetings',   dur: 19, file: 'assets/audio/09-meetings.mp3',   video: 'assets/videos/09-meetings.mp4',   thumb: 'assets/images/thumb/09-meetings.jpg' },
+    { n: '10', title: '次回 Zoom 提案',      sec: 'sec-zoom',       dur: 26, file: 'assets/audio/10-zoom.mp3',       video: 'assets/videos/10-zoom.mp4',       thumb: 'assets/images/thumb/10-zoom.jpg' },
+    { n: '11', title: 'カレンダー 連携',      sec: 'sec-calendar',   dur: 21, file: 'assets/audio/11-calendar.mp3',   video: 'assets/videos/11-calendar.mp4',   thumb: 'assets/images/thumb/11-calendar.jpg' },
+    { n: '12', title: 'お客様 LINE 画面',    sec: 'sec-liff',       dur: 22, file: 'assets/audio/12-liff.mp3',       video: 'assets/videos/12-liff.mp4',       thumb: 'assets/images/thumb/12-liff.jpg' },
   ];
+
+  // ── 各カード に thumb / check を 動的注入 + hero-card + hover preview + viewed 状態 ──
+  const VIEWED_KEY = 'fpHelp:viewed:v1';
+  const viewed = new Set(JSON.parse(localStorage.getItem(VIEWED_KEY) || '[]'));
+  const markViewed = (secId) => {
+    if (viewed.has(secId)) return;
+    viewed.add(secId);
+    localStorage.setItem(VIEWED_KEY, JSON.stringify([...viewed]));
+    document.getElementById(secId)?.classList.add('viewed');
+  };
+  for (const t of TRACKS) {
+    const card = document.getElementById(t.sec);
+    if (!card) continue;
+    if (t.sec === 'sec-recording') card.classList.add('hero-card');
+    if (viewed.has(t.sec)) card.classList.add('viewed');
+    const head = card.querySelector('.card-head');
+    const arrow = head.querySelector('.card-arrow');
+    const thumb = document.createElement('div');
+    thumb.className = 'card-thumb';
+    thumb.innerHTML =
+      '<img src="' + t.thumb + '" alt="" loading="lazy">' +
+      '<div class="card-thumb-preview"><video preload="none" muted loop playsinline data-src="' + t.video + '"></video></div>' +
+      '<div class="card-thumb-badge">' + t.dur + '秒</div>' +
+      '<div class="card-thumb-play">▶</div>';
+    head.insertBefore(thumb, arrow);
+    const check = document.createElement('div');
+    check.className = 'card-check';
+    check.innerHTML = '✓';
+    head.insertBefore(check, arrow);
+    // hover で preview 再生
+    let hoverT;
+    card.addEventListener('mouseenter', () => {
+      clearTimeout(hoverT);
+      hoverT = setTimeout(() => {
+        const v = thumb.querySelector('.card-thumb-preview video');
+        if (v && !v.src) v.src = v.dataset.src;
+        v?.play().catch(() => {});
+      }, 200);
+    });
+    card.addEventListener('mouseleave', () => {
+      clearTimeout(hoverT);
+      const v = thumb.querySelector('.card-thumb-preview video');
+      if (v) { v.pause(); v.currentTime = 0; }
+    });
+    // カード 開いたら viewed に
+    card.querySelector('.card-head').addEventListener('click', () => {
+      setTimeout(() => { if (card.classList.contains('open')) markViewed(t.sec); }, 2000);
+    });
+  }
   const audio = document.getElementById('audioPlayer');
   const bar = document.getElementById('audioBar');
   const numEl = document.getElementById('audioNum');

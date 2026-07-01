@@ -13,21 +13,36 @@ const EMAIL = 't3.5ty6@gmail.com';
 const PASS = 'tukasa2907';
 
 const HIGHLIGHT_CSS = `
-/* コンパちゃん (mebuki chatbot) は録画中は非表示 — ヘルプ動画 に映り込むのは不適切 */
+/* コンパちゃん (mebuki chatbot) は録画中は非表示 */
 .mb-fab-hint, .mb-fab, .mb-fab-img, [class^="mb-fab"], [id^="mbFab"], .mebuki-fab, #mebukiFab { display: none !important; }
+/* body が zoom時に transformされる — スクロールバー隠す */
+html.fp-help-zooming, html.fp-help-zooming body { overflow: hidden !important; }
+body { transition: transform 0.55s cubic-bezier(.4,0,.2,1); }
 .fp-help-spot { position: absolute !important; border: 3px solid #C89D3C !important; border-radius: 8px !important;
-  box-shadow: 0 0 0 6px rgba(200,157,60,0.18), 0 0 24px rgba(200,157,60,0.4) !important;
+  box-shadow: 0 0 0 6px rgba(200,157,60,0.20), 0 0 32px rgba(200,157,60,0.55) !important;
   pointer-events: none !important; z-index: 99998 !important;
-  animation: fp-help-pulse 1.4s ease-in-out infinite; }
+  animation: fp-help-pulse 1.2s ease-in-out infinite; }
 .fp-help-arrow { position: absolute !important; pointer-events: none !important; z-index: 99999 !important;
   background: #15172B; color: #fff; font-family: "Noto Sans JP", system-ui, sans-serif;
-  font-weight: 700; font-size: 15px; padding: 8px 14px; border-radius: 6px;
-  box-shadow: 0 6px 20px rgba(0,0,0,.28); white-space: nowrap; animation: fp-help-fadein .3s ease; }
+  font-weight: 800; font-size: 14px; padding: 7px 12px; border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.35); white-space: nowrap; animation: fp-help-fadein .25s ease; }
 .fp-help-arrow::after { content: ''; position: absolute; left: -6px; top: 50%;
   transform: translateY(-50%) rotate(45deg); width: 10px; height: 10px; background: #15172B; }
-@keyframes fp-help-pulse { 0%,100% { box-shadow: 0 0 0 6px rgba(200,157,60,0.18), 0 0 24px rgba(200,157,60,0.4); }
-  50% { box-shadow: 0 0 0 10px rgba(200,157,60,0.10), 0 0 32px rgba(200,157,60,0.6); } }
+/* カーソル (大きめSVG) */
+#fp-help-cursor { position: absolute; pointer-events: none; z-index: 99997;
+  transition: left .45s cubic-bezier(.4,0,.2,1), top .45s cubic-bezier(.4,0,.2,1);
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,.4)); }
+/* クリックリング */
+.fp-help-ring { position: absolute; pointer-events: none; z-index: 100000;
+  border: 4px solid #4338CA; border-radius: 50%;
+  animation: fp-help-ring 0.65s cubic-bezier(.2,.8,.4,1) forwards; }
+@keyframes fp-help-pulse { 0%,100% { box-shadow: 0 0 0 6px rgba(200,157,60,0.20), 0 0 32px rgba(200,157,60,0.55); }
+  50% { box-shadow: 0 0 0 12px rgba(200,157,60,0.10), 0 0 40px rgba(200,157,60,0.7); } }
 @keyframes fp-help-fadein { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes fp-help-ring {
+  from { transform: scale(0.25); opacity: 1; }
+  to   { transform: scale(2.6);  opacity: 0; }
+}
 `;
 
 async function injectHelper(p) {
@@ -48,9 +63,27 @@ async function injectHelper(p) {
     const style = document.createElement('style');
     style.textContent = css;
     document.documentElement.appendChild(style);
+    window.fpHelp.getTarget = (sel) => (typeof sel === 'string' ? document.querySelector(sel) : sel);
+    window.fpHelp.ensureCursor = () => {
+      if (window._fpCursor) return window._fpCursor;
+      const c = document.createElement('div');
+      c.id = 'fp-help-cursor';
+      c.innerHTML = '<svg width="36" height="42" viewBox="0 0 36 42" xmlns="http://www.w3.org/2000/svg"><path d="M2 2 L2 32 L10 24 L15 34 L20 32 L15 22 L26 22 Z" fill="#15172B" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>';
+      c.style.left = '640px'; c.style.top = '360px';
+      document.body.appendChild(c);
+      window._fpCursor = c;
+      return c;
+    };
+    window.fpHelp.moveCursor = (sel) => {
+      const t = window.fpHelp.getTarget(sel); if (!t) return;
+      const r = t.getBoundingClientRect();
+      const c = window.fpHelp.ensureCursor();
+      c.style.left = (window.scrollX + r.left + r.width / 2 - 6) + 'px';
+      c.style.top  = (window.scrollY + r.top + r.height / 2 - 4) + 'px';
+    };
     window.fpHelp.spot = (sel, label) => {
       try {
-        const target = typeof sel === 'string' ? document.querySelector(sel) : sel;
+        const target = window.fpHelp.getTarget(sel);
         if (!target) return false;
         const rect = target.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) return false;
@@ -72,10 +105,100 @@ async function injectHelper(p) {
         return true;
       } catch (e) { return false; }
     };
+    // ★ ズーム演出: 該当要素だけ scale + z-index up、 背景 は dim overlay で 暗く
+    window.fpHelp.zoom = (sel, label, opts) => {
+      opts = opts || {};
+      const scale = opts.scale || 1.35;
+      const t = window.fpHelp.getTarget(sel);
+      if (!t) return false;
+      const r = t.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return false;
+      // dark overlay 挿入
+      let ov = document.getElementById('fp-help-overlay');
+      if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'fp-help-overlay';
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(21,23,43,0.62);z-index:99990;pointer-events:none;opacity:0;transition:opacity 0.35s;';
+        document.body.appendChild(ov);
+      }
+      requestAnimationFrame(() => { ov.style.opacity = '1'; });
+      // 該当要素 拡大 + z-index up
+      const oldPos = window.getComputedStyle(t).position;
+      window._fpZoomSaved = { el: t, position: t.style.position, zIndex: t.style.zIndex, transform: t.style.transform, transition: t.style.transition, background: t.style.background };
+      t.style.transition = 'transform 0.42s cubic-bezier(.34,1.2,.5,1), box-shadow 0.4s';
+      t.style.transform = 'scale(' + scale + ')';
+      t.style.transformOrigin = 'center center';
+      if (oldPos === 'static') t.style.position = 'relative';
+      t.style.zIndex = '99993';
+      // 背景色 なし の 要素 は 背景色 付ける (overlay で 透けて見えないよう)
+      if (!t.style.background && (t.tagName === 'BUTTON' || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) {
+        const bg = window.getComputedStyle(t).backgroundColor;
+        if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
+          t.style.background = '#fff';
+        }
+      }
+      window.fpHelp.spot(sel, label);
+      window.fpHelp.moveCursor(sel);
+      return true;
+    };
+    window.fpHelp.zoomOut = () => {
+      const ov = document.getElementById('fp-help-overlay');
+      if (ov) { ov.style.opacity = '0'; setTimeout(() => { try { ov.remove(); } catch(_){} }, 400); }
+      const s = window._fpZoomSaved;
+      if (s && s.el) {
+        s.el.style.transform = s.transform || '';
+        s.el.style.zIndex = s.zIndex || '';
+        s.el.style.position = s.position || '';
+        s.el.style.transition = s.transition || '';
+        s.el.style.background = s.background || '';
+        window._fpZoomSaved = null;
+      }
+    };
+    // ★ クリック直前 の リング アニメ (紫)
+    window.fpHelp.clickRing = (sel) => {
+      const t = window.fpHelp.getTarget(sel); if (!t) return;
+      const r = t.getBoundingClientRect();
+      const cx = window.scrollX + r.left + r.width / 2;
+      const cy = window.scrollY + r.top + r.height / 2;
+      const ring = document.createElement('div');
+      ring.className = 'fp-help-ring';
+      ring.style.left = (cx - 30) + 'px';
+      ring.style.top  = (cy - 30) + 'px';
+      ring.style.width = '60px';
+      ring.style.height = '60px';
+      document.body.appendChild(ring);
+      setTimeout(() => ring.remove(), 700);
+    };
     window.fpHelp.clear = () => {
-      document.querySelectorAll('.fp-help-spot, .fp-help-arrow').forEach(el => el.remove());
+      document.querySelectorAll('.fp-help-spot, .fp-help-arrow, .fp-help-ring').forEach(el => el.remove());
     };
   }, HIGHLIGHT_CSS);
+}
+
+// ★ ズーム → 静止 → クリックリング → 引き の 3段カメラワーク
+async function focusClick(p, sel, label, opts) {
+  opts = opts || {};
+  const scale = opts.scale || 1.5;
+  const holdMs = opts.hold || 1600;    // ズーム後 静止時間 (ナレとの同期)
+  const afterMs = opts.after || 1400;  // クリック後 (遷移確認)
+  const doClick = opts.click !== false;
+  await p.evaluate(({ s, l, sc }) => window.fpHelp.zoom(s, l, { scale: sc }), { s: sel, l: label || '', sc: scale });
+  await p.waitForTimeout(holdMs);
+  if (doClick) {
+    await p.evaluate((s) => window.fpHelp.clickRing(s), sel);
+    // zoom中は body scale なのでネイティブclick座標ズレる → JS click に切替
+    await p.evaluate((s) => { const t = typeof s === 'string' ? document.querySelector(s) : s; if (t) t.click(); }, sel);
+  }
+  await p.waitForTimeout(400);
+  await p.evaluate(() => { window.fpHelp.zoomOut(); window.fpHelp.clear(); });
+  await p.waitForTimeout(afterMs);
+}
+// ズームなし の spot (該当要素 が 大きすぎる or 全体紹介用)
+async function highlight(p, sel, label, holdMs = 3500) {
+  await p.evaluate(({ s, l }) => window.fpHelp.spot(s, l), { s: sel, l: label || '' });
+  await p.evaluate((s) => window.fpHelp.moveCursor(s), sel);
+  await p.waitForTimeout(holdMs);
+  await p.evaluate(() => window.fpHelp.clear());
 }
 
 async function reset(p) {
@@ -103,188 +226,170 @@ async function openModal(p, regex) {
 }
 
 // 各機能 操作 (前後 reset で 状態リセット)
+// ★ 新カメラワーク: 「ここ を 押す」 前 に ズームイン → 静止 → クリック → 引き
 const features = [
   { name: '02-dashboard', fn: async (p) => {
     await p.evaluate(() => document.querySelector('.tab[data-tab="home"]')?.click());
     await p.waitForTimeout(2000);
-    await p.evaluate(() => window.fpHelp.spot('.today-section, [data-section="today"], .dashboard-today, .home-today, .main-content, main', '今日 の 予定'));
-    await p.waitForTimeout(4500);
-    await p.evaluate(() => window.fpHelp.clear());
-    await p.evaluate(() => window.fpHelp.spot('.kpi, .stats, .home-kpi, .kpi-row', '今月 の 数字'));
-    await p.waitForTimeout(4500);
-    await p.evaluate(() => window.fpHelp.clear());
+    await highlight(p, 'main, .main-content, .home-content', '今日 の 全体', 3500);
+    // KPI カード は 小さいので zoom で 拡大
+    await focusClick(p, '.kpi, .stats, .home-kpi, .kpi-row, main', '今月 の 数字', { scale: 1.4, hold: 2500, after: 800, click: false });
+    // scroll下 で 新着通知
     await p.evaluate(() => window.scrollBy({ top: 300, behavior: 'smooth' }));
-    await p.waitForTimeout(2500);
-    await p.evaluate(() => window.fpHelp.spot('.notifications, .home-notice, .alert-list, .recent-line', '新着 通知'));
-    await p.waitForTimeout(4500);
-    await p.evaluate(() => window.fpHelp.clear());
-    await p.waitForTimeout(2500);
+    await p.waitForTimeout(1200);
+    await highlight(p, '.notifications, .home-notice, .alert-list, .recent-line, main', '新着 の 通知', 3500);
+    await p.waitForTimeout(2000);
   }},
 
   { name: '03-clients', fn: async (p) => {
-    await p.evaluate(() => window.fpHelp.spot('.tab[data-tab="clients"]', '顧客 タブ'));
-    await p.waitForTimeout(3500);
-    await p.evaluate(() => window.fpHelp.clear());
-    await p.evaluate(() => document.querySelector('.tab[data-tab="clients"]')?.click());
-    await p.waitForTimeout(2000);
-    await p.evaluate(() => window.fpHelp.spot('input[type=search], #client-search, .search-input, input[placeholder*="検索"]', '名前 で 検索'));
-    await p.waitForTimeout(4000);
-    await p.evaluate(() => window.fpHelp.clear());
+    await focusClick(p, '.tab[data-tab="clients"]', '顧客 タブ を 押す', { scale: 1.7, hold: 1800, after: 1800 });
+    await highlight(p, 'input[type=search], #client-search, .search-input, input[placeholder*="検索"], main', '名前 で 検索', 3200);
+    // 顧客1人 選択 (openModal で 開く 前 に spot)
+    await p.evaluate(() => {
+      const rows = document.querySelectorAll('.client-row, [data-customer-id], tr[data-id]');
+      if (rows[0]) window.fpHelp.zoom(rows[0], 'タップ で カルテ 開く', { scale: 1.3 });
+    });
+    await p.waitForTimeout(1800);
+    await p.evaluate(() => { window.fpHelp.zoomOut(); window.fpHelp.clear(); });
     await openModal(p, '徳佐|Jobs|お');
-    await p.waitForTimeout(3500);
-    await p.waitForTimeout(2500);
+    await p.waitForTimeout(3000);
   }},
 
   { name: '04-modal', fn: async (p) => {
     await openModal(p, '徳佐|Jobs');
-    await p.waitForTimeout(2500);
-    for (const k of ['overview','line','timeline','meetings','qa','family']) {
-      try { await p.click(`[data-cdtab="${k}"]`, { timeout: 2000 }); } catch (_) {}
-      await p.waitForTimeout(4500);
+    await p.waitForTimeout(2000);
+    // 各タブ を zoomイン → 押す → 引く
+    for (const [k, l] of [['overview','概要'],['line','LINE'],['timeline','人生年表'],['meetings','面談録'],['qa','Q&A'],['family','家族']]) {
+      await focusClick(p, `[data-cdtab="${k}"]`, l, { scale: 1.9, hold: 1400, after: 2200 });
     }
-    await p.waitForTimeout(2500);
   }},
 
   { name: '05-survey', fn: async (p) => {
     await openModal(p, '徳佐|Jobs');
-    await p.waitForTimeout(1500);
-    try { await p.click('[data-cdtab="overview"]', { timeout: 2000 }); } catch (_) {}
-    await p.waitForTimeout(2000);
+    await p.waitForTimeout(1200);
+    await focusClick(p, '[data-cdtab="overview"]', '概要 タブ', { scale: 1.6, hold: 1000, after: 1800 });
     await p.evaluate(() => {
       const panel = document.querySelector('[data-cdpanel="overview"]');
       if (panel) panel.scrollTo({ top: panel.scrollHeight / 3, behavior: 'smooth' });
     });
-    await p.waitForTimeout(2000);
-    await p.evaluate(() => {
-      const sels = ['.survey-result', '.survey-answers', '[data-section="survey"]', '[data-cdpanel="overview"]'];
-      for (const s of sels) if (window.fpHelp.spot(s, 'アンケート 13問')) return;
-    });
-    await p.waitForTimeout(7000);
-    await p.evaluate(() => window.fpHelp.clear());
+    await p.waitForTimeout(1200);
+    await highlight(p, '.survey-result, .survey-answers, [data-section="survey"], [data-cdpanel="overview"]', 'アンケート 13問 の 回答', 6500);
     await p.waitForTimeout(2500);
   }},
 
   { name: '06-line', fn: async (p) => {
     await openModal(p, '徳佐|Jobs');
-    await p.waitForTimeout(1500);
-    try { await p.click('[data-cdtab="line"]', { timeout: 2000 }); } catch (_) {}
-    await p.waitForTimeout(2500);
-    await p.evaluate(() => window.fpHelp.spot('#cd-line-chat, [data-cdpanel="line"]', '過去 の やり取り'));
-    await p.waitForTimeout(4500);
-    await p.evaluate(() => window.fpHelp.clear());
-    await p.evaluate(() => window.fpHelp.spot('#cd-line-input', 'ここに 入力'));
+    await p.waitForTimeout(1200);
+    await focusClick(p, '[data-cdtab="line"]', 'LINE タブ', { scale: 1.6, hold: 1200, after: 1500 });
+    await highlight(p, '#cd-line-chat, [data-cdpanel="line"]', '過去 の やり取り', 3500);
+    await focusClick(p, '#cd-line-input', 'ここ に 入力', { scale: 1.5, hold: 1500, after: 300, click: false });
     try { await p.fill('#cd-line-input', 'テスト送信', { timeout: 1500 }); } catch (_) {}
-    await p.waitForTimeout(4000);
-    await p.evaluate(() => window.fpHelp.clear());
-    await p.evaluate(() => window.fpHelp.spot('#cd-line-send', '送信'));
-    await p.waitForTimeout(3500);
-    await p.evaluate(() => window.fpHelp.clear());
     await p.waitForTimeout(2500);
+    await focusClick(p, '#cd-line-send', '送信 ボタン', { scale: 1.9, hold: 1600, after: 1800, click: false });
   }},
 
   { name: '07-recording', fn: async (p) => {
-    await openModal(p, '徳佐|Jobs');
-    await p.waitForTimeout(2500);
-    await p.evaluate(() => window.fpHelp.spot('#cd-record-btn, .record-fab, button.record, [data-action="record-start"]', '録音 ボタン'));
-    await p.waitForTimeout(6500);
-    await p.evaluate(() => window.fpHelp.clear());
-    await p.evaluate(() => window.fpHelp.spot('#cd-record-btn, .record-fab, button.record', '面談中 ...'));
-    await p.waitForTimeout(6500);
-    await p.evaluate(() => window.fpHelp.clear());
-    await p.evaluate(() => window.fpHelp.spot('#cd-record-btn, .record-fab, button.record', '面談 後 もう一度 押して 停止'));
-    await p.waitForTimeout(6500);
-    await p.evaluate(() => window.fpHelp.clear());
-    try { await p.click('[data-cdtab="meetings"]', { timeout: 2000 }); } catch (_) {}
-    await p.waitForTimeout(2500);
-    await p.evaluate(() => window.fpHelp.spot('[data-cdpanel="meetings"]', 'AI が 30 秒 〜 1 分 で 議事録 生成'));
-    await p.waitForTimeout(7000);
-    await p.evaluate(() => window.fpHelp.clear());
+    // ★ QA fix 2026-07-02: 実UI = サイドバー「急遽 面談スタート」 → モーダル → 対面録音 → 議事録
+    await p.waitForTimeout(1500);
+    // 1. サイドバー 「急遽 面談スタート」 ズーム紹介
+    await focusClick(p, '.sidebar-quick-rec-label, .sidebar-quick-rec, [class*="quick-rec"]',
+      'サイドバー「急遽 面談スタート」', { scale: 1.9, hold: 2500, after: 500, click: false });
+    // 実クリック は JS で 確実に
     await p.evaluate(() => {
+      const el = document.querySelector('.sidebar-quick-rec-label, .sidebar-quick-rec, [class*="quick-rec"]');
+      const btn = el?.closest('button') || el;
+      btn?.click();
+    });
+    await p.waitForTimeout(2500);
+    // 2. モーダル で 対面録音 モード ハイライト (マイク許可回避で click:false)
+    await focusClick(p, '.fp-qi-mode[data-mode="audio"], label[data-mode="audio"], [data-mode="audio"]',
+      '対面 録音 を 選ぶ', { scale: 1.7, hold: 3500, after: 500, click: false });
+    // 3. モーダル 閉じる (Escape 効かないので DOM 直接除去)
+    await p.evaluate(() => {
+      document.getElementById('fp-quick-inperson-modal')?.remove();
+    });
+    await p.waitForTimeout(700);
+    // 4. 顧客カルテ 開いて 「議事録 は ここ に」 説明
+    await openModal(p, '徳佐|Jobs');
+    await p.waitForTimeout(2000);
+    // 5. 面談録 タブ focusClick
+    await focusClick(p, '[data-cdtab="meetings"]', '面談録 タブ を 開く', { scale: 1.9, hold: 1400, after: 1500 });
+    // 6. 議事録カード 1個 zoom
+    await p.evaluate(() => {
+      const card = document.querySelector('[data-cdpanel="meetings"] .meeting-card, [data-cdpanel="meetings"] .fp-meeting-card, [data-cdpanel="meetings"] article');
+      if (card) window.fpHelp.zoom(card, 'AI が 生成 した 議事録', { scale: 1.4 });
+    });
+    await p.waitForTimeout(3000);
+    // カード click で 詳細展開
+    await p.evaluate(() => {
+      window.fpHelp.zoomOut(); window.fpHelp.clear();
       const card = document.querySelector('[data-cdpanel="meetings"] .meeting-card, [data-cdpanel="meetings"] .fp-meeting-card, [data-cdpanel="meetings"] article');
       if (card) card.click();
     });
     await p.waitForTimeout(2500);
-    await p.evaluate(() => window.fpHelp.spot('[data-cdpanel="meetings"]', '6 セクション + タスク + 次回提案'));
-    await p.waitForTimeout(8000);
-    await p.evaluate(() => window.fpHelp.clear());
+    // 7. 議事録詳細 の 6セクション highlight (モーダル本体避け、 詳細部分のみ)
+    await highlight(p, '.meeting-detail, .meeting-open, .cd-meeting-body, [data-cdpanel="meetings"] .open, [data-cdpanel="meetings"] > div:last-child', '6 セクション + タスク + 次回提案', 6000);
     await p.waitForTimeout(2500);
   }},
 
   { name: '08-timeline', fn: async (p) => {
     await openModal(p, '徳佐|Jobs');
-    await p.waitForTimeout(1500);
-    try { await p.click('[data-cdtab="timeline"]', { timeout: 2000 }); } catch (_) {}
-    await p.waitForTimeout(2500);
-    await p.evaluate(() => window.fpHelp.spot('[data-cdpanel="timeline"]', '時系列 で 全部'));
-    await p.waitForTimeout(6000);
-    await p.evaluate(() => window.fpHelp.clear());
+    await p.waitForTimeout(1200);
+    await focusClick(p, '[data-cdtab="timeline"]', '人生年表 タブ', { scale: 1.9, hold: 1300, after: 1800 });
+    await highlight(p, '[data-cdpanel="timeline"]', '時系列 で 全部', 5000);
     await p.evaluate(() => {
       const item = document.querySelector('[data-cdpanel="timeline"] .cd-tl-list > *, [data-cdpanel="timeline"] li, [data-cdpanel="timeline"] article');
-      if (item) window.fpHelp.spot(item, '進学 / 退職 等');
+      if (item) window.fpHelp.zoom(item, '進学 / 退職 等', { scale: 1.3 });
     });
-    await p.waitForTimeout(5000);
-    await p.evaluate(() => window.fpHelp.clear());
-    await p.waitForTimeout(3000);
+    await p.waitForTimeout(4500);
+    await p.evaluate(() => { window.fpHelp.zoomOut(); window.fpHelp.clear(); });
+    await p.waitForTimeout(2500);
   }},
 
   { name: '09-meetings', fn: async (p) => {
     await openModal(p, '徳佐|Jobs');
-    await p.waitForTimeout(1500);
-    try { await p.click('[data-cdtab="meetings"]', { timeout: 2000 }); } catch (_) {}
-    await p.waitForTimeout(2500);
-    await p.evaluate(() => window.fpHelp.spot('[data-cdpanel="meetings"]', '面談録 一覧'));
-    await p.waitForTimeout(4500);
-    await p.evaluate(() => window.fpHelp.clear());
+    await p.waitForTimeout(1200);
+    await focusClick(p, '[data-cdtab="meetings"]', '面談録 タブ', { scale: 1.9, hold: 1300, after: 1800 });
+    await highlight(p, '[data-cdpanel="meetings"]', '日付順 に カード 表示', 4000);
+    await p.evaluate(() => {
+      const card = document.querySelector('[data-cdpanel="meetings"] .meeting-card, [data-cdpanel="meetings"] .fp-meeting-card, [data-cdpanel="meetings"] article');
+      if (card) { window.fpHelp.zoom(card, 'タップ で 詳細', { scale: 1.4 }); }
+    });
+    await p.waitForTimeout(1800);
     await p.evaluate(() => {
       const card = document.querySelector('[data-cdpanel="meetings"] .meeting-card, [data-cdpanel="meetings"] .fp-meeting-card, [data-cdpanel="meetings"] article');
       if (card) card.click();
     });
-    await p.waitForTimeout(2500);
-    await p.evaluate(() => window.fpHelp.spot('[data-cdpanel="meetings"]', '議事録 全文 + タスク'));
-    await p.waitForTimeout(6000);
-    await p.evaluate(() => window.fpHelp.clear());
-    await p.waitForTimeout(2500);
+    await p.waitForTimeout(1500);
+    await p.evaluate(() => { window.fpHelp.zoomOut(); window.fpHelp.clear(); });
+    await highlight(p, '[data-cdpanel="meetings"]', '議事録 全文 + タスク', 5500);
+    await p.waitForTimeout(2000);
   }},
 
   { name: '10-zoom', fn: async (p) => {
     await openModal(p, '徳佐|Jobs');
-    await p.waitForTimeout(1500);
-    try { await p.click('[data-cdtab="line"]', { timeout: 2000 }); } catch (_) {}
-    await p.waitForTimeout(2500);
-    await p.evaluate(() => window.fpHelp.spot('#cd-line-propose, .propose-slots, [data-action="propose"], button[onclick*="propose"]', '候補日 提案'));
-    await p.waitForTimeout(6000);
-    await p.evaluate(() => window.fpHelp.clear());
-    try { await p.click('#cd-line-propose, .propose-slots, [data-action="propose"]', { timeout: 2000 }); } catch (_) {}
-    await p.waitForTimeout(2500);
-    await p.evaluate(() => {
-      const sels = ['.slot-picker', '.propose-modal', '[data-modal="propose"]', '.modal-overlay .modal'];
-      for (const s of sels) if (window.fpHelp.spot(s, '候補 を 3 つ 選ぶ')) return;
-      window.fpHelp.spot('body', '候補 を 3 つ 選ぶ');
-    });
-    await p.waitForTimeout(8000);
-    await p.evaluate(() => window.fpHelp.clear());
+    await p.waitForTimeout(1200);
+    await focusClick(p, '[data-cdtab="line"]', 'LINE タブ', { scale: 1.9, hold: 1300, after: 1800 });
+    await focusClick(p, '#cd-line-propose, .propose-slots, [data-action="propose"], button[onclick*="propose"], [data-cdpanel="line"]', '候補日 提案', { scale: 1.7, hold: 2500, after: 1500, click: false });
+    // クリック できる場合のみ
+    try { await p.click('#cd-line-propose, .propose-slots, [data-action="propose"]', { timeout: 1500 }); } catch (_) {}
+    await p.waitForTimeout(2000);
+    await highlight(p, '.slot-picker, .propose-modal, [data-modal="propose"], .modal-overlay .modal, body', '候補 を 3 つ 選ぶ', 6500);
     await p.waitForTimeout(2500);
   }},
 
   { name: '11-calendar', fn: async (p) => {
-    await p.waitForTimeout(1500);
-    const ok = await p.evaluate(() => {
-      const tab = document.querySelector('.tab[data-tab="settings"]') || document.querySelector('.tab[data-tab="config"]');
-      if (tab) { tab.click(); return true; }
-      return false;
-    });
-    await p.waitForTimeout(3000);
+    await p.waitForTimeout(1200);
     await p.evaluate(() => {
-      const sels = ['.calendar-integration', '.google-calendar', '[data-section="calendar"]', '.settings-calendar', 'main'];
-      for (const s of sels) if (window.fpHelp.spot(s, 'Google カレンダー 連携')) return;
+      const tab = document.querySelector('.tab[data-tab="settings"]') || document.querySelector('.tab[data-tab="config"]');
+      if (tab) tab.click();
     });
-    await p.waitForTimeout(7000);
-    await p.evaluate(() => window.fpHelp.clear());
     await p.waitForTimeout(2500);
-    await p.evaluate(() => window.fpHelp.spot('.calendar-status, .connected-badge, .calendar-info, main', '連携 状態'));
-    await p.waitForTimeout(5000);
-    await p.evaluate(() => window.fpHelp.clear());
-    await p.waitForTimeout(2500);
+    await highlight(p, '.calendar-integration, .google-calendar, [data-section="calendar"], .settings-calendar, main', 'Google カレンダー 連携', 6500);
+    await p.evaluate(() => window.scrollBy({ top: 200, behavior: 'smooth' }));
+    await p.waitForTimeout(1500);
+    await highlight(p, '.calendar-status, .connected-badge, .calendar-info, main', '連携 済 の 状態', 4500);
+    await p.waitForTimeout(2000);
   }},
 
   { name: '12-liff', fn: async (p) => {
@@ -309,9 +414,23 @@ const features = [
     await p.evaluate(() => {
       if (window._fpLiffOverlay) window.fpHelp.spot(window._fpLiffOverlay, 'お客様 が 見る 画面');
     });
-    await p.waitForTimeout(10000);
+    await p.waitForTimeout(4500);
     await p.evaluate(() => window.fpHelp.clear());
-    await p.waitForTimeout(3000);
+    // 各メニュー を zoom で 拡大
+    await p.evaluate(() => {
+      const menus = window._fpLiffOverlay?.querySelectorAll('div[style*="text-align:center"]');
+      if (menus && menus[0]) window.fpHelp.zoom(menus[0], 'アンケート', { scale: 1.5 });
+    });
+    await p.waitForTimeout(2500);
+    await p.evaluate(() => { window.fpHelp.zoomOut(); window.fpHelp.clear(); });
+    await p.waitForTimeout(500);
+    await p.evaluate(() => {
+      const menus = window._fpLiffOverlay?.querySelectorAll('div[style*="text-align:center"]');
+      if (menus && menus[1]) window.fpHelp.zoom(menus[1], '議事録 確認', { scale: 1.5 });
+    });
+    await p.waitForTimeout(2500);
+    await p.evaluate(() => { window.fpHelp.zoomOut(); window.fpHelp.clear(); });
+    await p.waitForTimeout(2500);
     await p.evaluate(() => { if (window._fpLiffOverlay) window._fpLiffOverlay.remove(); });
   }},
 ];
@@ -344,7 +463,7 @@ await ctx.addInitScript(() => {
   if (document.body) startObserver();
   else document.addEventListener('DOMContentLoaded', startObserver, { once: true });
   // 保険: interval
-  setInterval(kill, 400);
+  setInterval(kill, 200);
 });
 const p = await ctx.newPage();
 p.on('pageerror', e => console.log('PE:', e.message.slice(0, 80)));
@@ -363,7 +482,9 @@ console.log('  ✓ logged in');
 // 各 feature の 開始/終了 時刻 を 記録
 const timeline = [];
 const t0 = Date.now();
+const ONLY_ARG = process.argv[2] || '';
 for (const f of features) {
+  if (ONLY_ARG && !f.name.includes(ONLY_ARG)) continue;
   await reset(p);
   await injectHelper(p);  // reset で消える可能性 → 再注入
   const start = (Date.now() - t0) / 1000;
