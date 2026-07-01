@@ -13,6 +13,8 @@ const EMAIL = 't3.5ty6@gmail.com';
 const PASS = 'tukasa2907';
 
 const HIGHLIGHT_CSS = `
+/* コンパちゃん (mebuki chatbot) は録画中は非表示 — ヘルプ動画 に映り込むのは不適切 */
+.mb-fab-hint, .mb-fab, .mb-fab-img, [class^="mb-fab"], [id^="mbFab"], .mebuki-fab, #mebukiFab { display: none !important; }
 .fp-help-spot { position: absolute !important; border: 3px solid #C89D3C !important; border-radius: 8px !important;
   box-shadow: 0 0 0 6px rgba(200,157,60,0.18), 0 0 24px rgba(200,157,60,0.4) !important;
   pointer-events: none !important; z-index: 99998 !important;
@@ -30,6 +32,17 @@ const HIGHLIGHT_CSS = `
 
 async function injectHelper(p) {
   await p.evaluate((css) => {
+    // コンパちゃん (mebuki chatbot) 削除 loop (毎回 呼ばれても 二重 setInterval しない)
+    const killChatbot = () => {
+      ['#mbFab', '#mbFabHint', '#mbPanel', '#mbClose', '#mbInput', '#mbMessages', '#mbResize', '#mbSend']
+        .forEach(id => { const el = document.getElementById(id.slice(1)); if (el) try { el.remove(); } catch(_){} });
+      document.querySelectorAll('[class^="mb-fab"], [class*=" mb-fab"], .mb-bubble, .mb-panel, .mb-head, .mb-quick, .mb-resize, .mb-close, .mb-input-row, .mb-messages')
+        .forEach(el => { try { el.remove(); } catch(_){} });
+    };
+    killChatbot();
+    if (!window._fpChatbotKillTimer) {
+      window._fpChatbotKillTimer = setInterval(killChatbot, 800);
+    }
     if (window.fpHelp) return;
     window.fpHelp = {};
     const style = document.createElement('style');
@@ -308,6 +321,30 @@ const b = await chromium.launch({ headless: true });
 const ctx = await b.newContext({
   viewport: { width: 1280, height: 720 },
   recordVideo: { dir: OUT_DIR, size: { width: 1280, height: 720 } },
+});
+// ★ addInitScript で 各 navigation 直後 に mebuki chatbot を 完全排除 (CSS + MutationObserver)
+await ctx.addInitScript(() => {
+  const KILL_SELECTORS = '#mbFab, #mbFabHint, #mbPanel, #mbClose, #mbInput, #mbMessages, #mbResize, #mbSend, .mb-fab, .mb-fab-hint, .mb-fab-img, .mb-fab-badge, .mb-fab-avatar, .mb-fab-pulse, .mb-fab-label, .mb-bubble, .mb-panel, .mb-head, .mb-head-avatar, .mb-head-img, .mb-messages, .mb-msg, .mb-quick, .mb-q, .mb-input, .mb-input-row, .mb-close, .mb-resize';
+  // CSS で 表示阻止 (fallback)
+  const style = document.createElement('style');
+  style.id = 'fp-hide-mebuki';
+  style.textContent = KILL_SELECTORS + ' { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }';
+  (document.head || document.documentElement).appendChild(style);
+  // 削除関数
+  const kill = () => {
+    try { document.querySelectorAll(KILL_SELECTORS).forEach(el => el.remove()); } catch(_){}
+  };
+  kill();
+  // MutationObserver で 追加された瞬間 削除
+  const startObserver = () => {
+    if (window._fpChatbotObs) return;
+    window._fpChatbotObs = new MutationObserver(kill);
+    window._fpChatbotObs.observe(document.documentElement, { childList: true, subtree: true });
+  };
+  if (document.body) startObserver();
+  else document.addEventListener('DOMContentLoaded', startObserver, { once: true });
+  // 保険: interval
+  setInterval(kill, 400);
 });
 const p = await ctx.newPage();
 p.on('pageerror', e => console.log('PE:', e.message.slice(0, 80)));
