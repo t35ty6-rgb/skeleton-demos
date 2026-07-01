@@ -702,11 +702,14 @@ const STAFF_PALETTE = ['#5A6B3F', '#B8893B', '#2A4A5E', '#9B3A26', '#4A4238', '#
 const opsState = {
   date: new Date(),       // 本日タスクの表示日
   weekStart: null,        // シフト表の週開始日
+  monthAnchor: null,      // 月ビューの表示月 (その月の 1日)
+  viewMode: 'week',       // 'week' | 'month'
   reservations: [],       // Firestore から取得した予約 (直近30日)
 };
 
 // In-memory cache (Firestore 経由で同期、LocalStorage は offline fallback)
-const opsCache = { staff: null, shifts: null, tasks: null };
+const opsCache = { staff: null, shifts: null, tasks: null, config: null };
+const OPS_CFG_KEY = 'arashima.ops.config.v1';
 
 function _lsRead(key, fallback) {
   try {
@@ -725,9 +728,11 @@ async function opsLoadFromServer() {
       opsCache.staff  = Array.isArray(data.staff)  && data.staff.length  ? data.staff  : DEFAULT_STAFF;
       opsCache.shifts = (data.shifts && typeof data.shifts === 'object') ? data.shifts : {};
       opsCache.tasks  = (data.tasks  && typeof data.tasks  === 'object') ? data.tasks  : {};
+      opsCache.config = (data.config && typeof data.config === 'object') ? data.config : {};
       _lsWrite(OPS_STAFF_KEY, opsCache.staff);
       _lsWrite(OPS_SHIFT_KEY, opsCache.shifts);
       _lsWrite(OPS_TASK_KEY,  opsCache.tasks);
+      _lsWrite(OPS_CFG_KEY,   opsCache.config);
       // 初回 seed: server 側 staff が空ならデフォルトを push
       if (!Array.isArray(data.staff) || !data.staff.length) {
         apiPost({ action: 'ops-save-staff', list: DEFAULT_STAFF }).catch(() => {});
@@ -741,11 +746,13 @@ async function opsLoadFromServer() {
   opsCache.staff  = _lsRead(OPS_STAFF_KEY, DEFAULT_STAFF);
   opsCache.shifts = _lsRead(OPS_SHIFT_KEY, {});
   opsCache.tasks  = _lsRead(OPS_TASK_KEY,  {});
+  opsCache.config = _lsRead(OPS_CFG_KEY, {});
 }
 
 function opsLoadStaff()  { return opsCache.staff  || DEFAULT_STAFF; }
 function opsLoadShifts() { return opsCache.shifts || {}; }
 function opsLoadTasks()  { return opsCache.tasks  || {}; }
+function opsLoadConfig() { return opsCache.config || {}; }
 
 function opsSaveStaff(list) {
   opsCache.staff = list;
@@ -762,9 +769,17 @@ function opsSaveTasks(map) {
   _lsWrite(OPS_TASK_KEY, map);
   apiPost({ action: 'ops-save-tasks', map }).catch((e) => console.warn('[ops] save-tasks failed:', e.message));
 }
+function opsSaveConfig(patch) {
+  opsCache.config = { ...(opsCache.config || {}), ...patch };
+  _lsWrite(OPS_CFG_KEY, opsCache.config);
+  return apiPost({ action: 'ops-save-config', patch });
+}
 
 async function loadOps() {
   if (!opsState.weekStart) opsState.weekStart = startOfWeek(new Date());
+  if (!opsState.monthAnchor) {
+    const t = new Date(); opsState.monthAnchor = new Date(t.getFullYear(), t.getMonth(), 1);
+  }
 
   // 予約データ (自動タスク生成の元) と ops state (Firestore) を並列取得
   const [data] = await Promise.all([
@@ -774,7 +789,7 @@ async function loadOps() {
   opsState.reservations = data?.items || [];
 
   renderOpsToday();
-  renderShiftGrid();
+  renderShiftMode();
   renderStaffList();
 
   // Wire nav buttons (idempotent)
@@ -811,11 +826,35 @@ async function loadOps() {
   $('#opsQuickAdd').onclick = qAdd;
   qi.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); qAdd(); } });
 
-  $('#shiftPrev').onclick = () => { opsState.weekStart = addDays(opsState.weekStart, -7); renderShiftGrid(); };
-  $('#shiftNext').onclick = () => { opsState.weekStart = addDays(opsState.weekStart, 7); renderShiftGrid(); };
-  $('#shiftToday').onclick = () => { opsState.weekStart = startOfWeek(new Date()); renderShiftGrid(); };
+  $('#shiftPrev').onclick = () => {
+    if (opsState.viewMode === 'month') opsState.monthAnchor = new Date(opsState.monthAnchor.getFullYear(), opsState.monthAnchor.getMonth() - 1, 1);
+    else opsState.weekStart = addDays(opsState.weekStart, -7);
+    renderShiftMode();
+  };
+  $('#shiftNext').onclick = () => {
+    if (opsState.viewMode === 'month') opsState.monthAnchor = new Date(opsState.monthAnchor.getFullYear(), opsState.monthAnchor.getMonth() + 1, 1);
+    else opsState.weekStart = addDays(opsState.weekStart, 7);
+    renderShiftMode();
+  };
+  $('#shiftToday').onclick = () => {
+    if (opsState.viewMode === 'month') {
+      const t = new Date(); opsState.monthAnchor = new Date(t.getFullYear(), t.getMonth(), 1);
+    } else {
+      opsState.weekStart = startOfWeek(new Date());
+    }
+    renderShiftMode();
+  };
   $('#shiftPrint').onclick = () => window.print();
   $('#shiftBulk').onclick = () => openBulkShiftModal();
+  $('#shiftPublish').onclick = () => openPublishMonthlyModal();
+  $$('.shift-mode-btn').forEach((b) => {
+    b.onclick = () => {
+      const mode = b.dataset.mode;
+      opsState.viewMode = mode;
+      $$('.shift-mode-btn').forEach((x) => x.classList.toggle('is-on', x.dataset.mode === mode));
+      renderShiftMode();
+    };
+  });
   $('#staffAdd').onclick = () => openStaffModal(null);
 
   $$('[data-close-ops-modal]').forEach((b) => b.addEventListener('click', () => { $('#opsModal').hidden = true; }));
@@ -1041,6 +1080,238 @@ function openTaskModal(tid) {
   }
 
   $('#opsModal').hidden = false;
+}
+
+// ---- シフトビュー切替 (週/月) ----
+function renderShiftMode() {
+  const isMonth = opsState.viewMode === 'month';
+  $('#shiftGrid').hidden = isMonth;
+  $('#shiftMonthGrid').hidden = !isMonth;
+  $('#shiftChap').textContent = isMonth ? 'Monthly' : 'Weekly Shift';
+  $('#shiftToday').textContent = isMonth ? '今月' : '今週';
+  if (isMonth) renderMonthShift();
+  else renderShiftGrid();
+}
+
+// ---- 月シフトビュー (6x7 グリッド) ----
+function renderMonthShift() {
+  const anchor = opsState.monthAnchor;
+  const y = anchor.getFullYear(), mo = anchor.getMonth();
+  const firstDay = new Date(y, mo, 1);
+  const firstDow = firstDay.getDay(); // 0=日
+  const daysInMonth = new Date(y, mo + 1, 0).getDate();
+  const gridStart = new Date(y, mo, 1 - firstDow);
+  const rowCount = Math.ceil((firstDow + daysInMonth) / 7);
+  const cells = Array.from({ length: rowCount * 7 }, (_, i) => addDays(gridStart, i));
+
+  $('#opsWeekRange').textContent = `${y}年 ${mo + 1}月`;
+
+  const staff = opsLoadStaff();
+  const staffById = Object.fromEntries(staff.map((s) => [s.id, s]));
+  const shifts = opsLoadShifts();
+
+  // 予約日別 map
+  const resByDate = {};
+  for (const r of opsState.reservations) {
+    if (!r.checkinDateStr) continue;
+    if (r.status === 'cancelled') continue;
+    const ci = new Date(r.checkinDateStr + 'T00:00:00');
+    const co = new Date(ci); co.setDate(co.getDate() + (r.nights || 1));
+    for (let d = new Date(ci); d < co; d = new Date(d.getTime() + 86400000)) {
+      const k = ymd(d);
+      resByDate[k] = (resByDate[k] || 0) + 1;
+    }
+  }
+
+  const dowLbl = ['日', '月', '火', '水', '木', '金', '土'];
+  const html = `
+    <div class="mm-dow-head">
+      ${dowLbl.map((lbl, i) => `<div class="mm-dow ${i===0||i===6?'is-wknd':''}">${lbl}</div>`).join('')}
+    </div>
+    <div class="mm-grid" style="grid-template-rows: repeat(${rowCount}, 1fr);">
+      ${cells.map((d) => {
+        const inMonth = d.getMonth() === mo;
+        const isT = isToday(d);
+        const dateStr = ymd(d);
+        const dowIdx = d.getDay();
+        const staffOnDuty = staff.filter((s) => {
+          const v = shifts[`${dateStr}|${s.id}`];
+          return v && v !== '休';
+        });
+        const staffOff = staff.filter((s) => shifts[`${dateStr}|${s.id}`] === '休');
+        const resCount = resByDate[dateStr] || 0;
+        return `<div class="mm-cell ${inMonth ? '' : 'is-out'} ${isT ? 'is-today' : ''} ${dowIdx===0||dowIdx===6?'is-wknd':''}" data-date="${dateStr}">
+          <div class="mm-cell__head">
+            <span class="mm-cell__day">${d.getDate()}</span>
+            ${resCount > 0 ? `<span class="mm-cell__resv" title="${resCount}件の予約">${resCount}</span>` : ''}
+          </div>
+          <div class="mm-cell__staff">
+            ${staffOnDuty.slice(0, 4).map((s) => {
+              const v = shifts[`${dateStr}|${s.id}`];
+              return `<span class="mm-chip" style="background:${s.color}" title="${escapeHtml(s.name)} ${v}">${s.initial}<em>${v}</em></span>`;
+            }).join('')}
+            ${staffOnDuty.length > 4 ? `<span class="mm-chip mm-chip--more">+${staffOnDuty.length - 4}</span>` : ''}
+            ${staffOff.length > 0 ? `<span class="mm-off">休 ${staffOff.length}</span>` : ''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+  $('#shiftMonthGrid').innerHTML = html;
+
+  // 月セル tap → その日の シフト入力ミニシート (スタッフ縦並び)
+  $$('#shiftMonthGrid .mm-cell').forEach((el) => {
+    el.addEventListener('click', () => openMonthDaySheet(el.dataset.date));
+  });
+}
+
+// 月ビュー: セルをタップ → その日 全スタッフのシフトを1画面で編集
+function openMonthDaySheet(dateStr) {
+  const [y, mo, dd] = dateStr.split('-').map(Number);
+  const d = new Date(y, mo - 1, dd);
+  const dowLbl = '日月火水木金土'[d.getDay()];
+  const staff = opsLoadStaff();
+  const shifts = opsLoadShifts();
+
+  $('#opsModalTitle').textContent = `${mo}/${dd}(${dowLbl}) のシフト`;
+  const opts = ['9-16', '15-20', '9-20', '休', ''];
+  const optLbl = { '9-16': '9-16 朝', '15-20': '15-20 夜', '9-20': '9-20 通し', '休': '休', '': '未定' };
+
+  $('#opsModalBody').innerHTML = `
+    <div class="ops-edit">
+      <div class="ops-edit__lbl" style="margin-bottom:4px;">スタッフごとにタップして選択</div>
+      ${staff.map((s) => {
+        const cur = shifts[`${dateStr}|${s.id}`] || '';
+        return `<div class="day-row" data-sid="${s.id}">
+          <div class="day-row__name" style="border-left:3px solid ${s.color};">
+            <span class="avatar avatar--sm" style="background:${s.color}">${s.initial}</span>
+            <span>${escapeHtml(s.name)}</span>
+            ${s.lineUserId ? '<span class="st-line-dot" title="LINE連携済"></span>' : ''}
+          </div>
+          <div class="day-row__opts">
+            ${opts.map((v) => `<button data-shift="${v}" class="day-opt ${v===cur?'is-on':''}">${optLbl[v]}</button>`).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+      <div class="ops-edit__actions">
+        <span></span>
+        <button class="btn btn--primary" id="dayDone">閉じる</button>
+      </div>
+    </div>
+  `;
+  $('#opsModal').hidden = false;
+
+  // オプションボタン: クリックで即保存
+  $$('#opsModalBody .day-row').forEach((row) => {
+    const sid = row.dataset.sid;
+    $$('.day-opt', row).forEach((btn) => {
+      btn.onclick = () => {
+        const v = btn.dataset.shift;
+        const m = opsLoadShifts();
+        const key = `${dateStr}|${sid}`;
+        if (v === '') delete m[key]; else m[key] = v;
+        opsSaveShifts(m);
+        $$('.day-opt', row).forEach((x) => x.classList.remove('is-on'));
+        btn.classList.add('is-on');
+      };
+    });
+  });
+  $('#dayDone').onclick = () => { $('#opsModal').hidden = true; renderShiftMode(); };
+}
+
+// ---- 月次シフト全員に配信 モーダル ----
+function openPublishMonthlyModal() {
+  const staff = opsLoadStaff();
+  const shifts = opsLoadShifts();
+  const anchor = opsState.monthAnchor || (() => { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), 1); })();
+  const y = anchor.getFullYear(), mo = anchor.getMonth();
+  const daysInMonth = new Date(y, mo + 1, 0).getDate();
+  const monthLbl = `${y}年${mo + 1}月`;
+
+  // 各スタッフの その月の シフト集計
+  const summary = staff.map((s) => {
+    let cnt = 0, off = 0;
+    for (let dd = 1; dd <= daysInMonth; dd++) {
+      const v = shifts[`${y}-${String(mo+1).padStart(2,'0')}-${String(dd).padStart(2,'0')}|${s.id}`];
+      if (v === '休') off++;
+      else if (v) cnt++;
+    }
+    return { staff: s, count: cnt, off, hasLine: !!s.lineUserId };
+  });
+
+  const cfg = opsLoadConfig();
+  const notifyAll = !!cfg.notifyAllOnNewReservation;
+
+  $('#opsModalTitle').textContent = `${monthLbl} シフト 一斉配信`;
+  $('#opsModalBody').innerHTML = `
+    <div class="ops-edit">
+      <div class="ops-edit__lbl">配信内容</div>
+      <div style="font-size:13px;color:var(--ink-3);line-height:1.7;">
+        LINE 連携済みの スタッフ に、 その月の 自分の シフト一覧 + Google カレンダー 一括登録リンク の Flex を送信します。
+      </div>
+
+      <div class="ops-edit__lbl" style="margin-top:8px;">対象スタッフ</div>
+      <div class="publish-list" id="publishList">
+        ${summary.map((r) => `
+          <label class="publish-row ${!r.hasLine ? 'is-disabled' : ''}">
+            <input type="checkbox" data-sid="${r.staff.id}" ${r.hasLine && r.count > 0 ? 'checked' : ''} ${!r.hasLine ? 'disabled' : ''}>
+            <span class="publish-row__avatar avatar avatar--sm" style="background:${r.staff.color}">${r.staff.initial}</span>
+            <span class="publish-row__name">${escapeHtml(r.staff.name)}</span>
+            <span class="publish-row__meta">
+              ${r.hasLine ? `<span class="publish-row__cnt">${r.count}件</span>${r.off > 0 ? `<span class="publish-row__off">/休${r.off}</span>` : ''}` : '<span class="publish-row__nolink">LINE 未連携</span>'}
+            </span>
+          </label>
+        `).join('')}
+      </div>
+
+      <div class="ops-edit__lbl" style="margin-top:8px;border-top:1px solid var(--rule);padding-top:14px;">通知 設定 (常時)</div>
+      <label class="cfg-row">
+        <input type="checkbox" id="cfgNotifyAll" ${notifyAll ? 'checked' : ''}>
+        <span>
+          <strong>新規予約が入ったら 全員に通知する</strong>
+          <span class="cfg-row__hint">OFF なら 該当日 シフト入り の スタッフ のみに通知 (現行動作)。 ON なら グループ LINE のように 連携済み 全員 に軽通知も追加送信。</span>
+        </span>
+      </label>
+
+      <div class="ops-edit__actions">
+        <button class="btn--ghost" id="pubClose">閉じる</button>
+        <button class="btn btn--primary" id="pubSend">配信する</button>
+      </div>
+      <div id="pubResult" style="font-size:13px;color:var(--muted);"></div>
+    </div>
+  `;
+  $('#opsModal').hidden = false;
+
+  // config toggle: 即保存
+  $('#cfgNotifyAll').onchange = async (e) => {
+    try { await opsSaveConfig({ notifyAllOnNewReservation: e.target.checked }); }
+    catch (err) { console.warn('config save failed', err); }
+  };
+
+  $('#pubClose').onclick = () => { $('#opsModal').hidden = true; };
+  $('#pubSend').onclick = async () => {
+    const targets = $$('#publishList input[type=checkbox]:checked').map((c) => c.dataset.sid);
+    if (!targets.length) { $('#pubResult').textContent = '対象スタッフを選択してください。'; return; }
+    if (!confirm(`${monthLbl} のシフトを ${targets.length}名 の LINE に送信します。よろしいですか?`)) return;
+    $('#pubSend').disabled = true; $('#pubSend').textContent = '送信中…';
+    try {
+      const r = await apiPost({
+        action: 'ops-publish-monthly-shifts',
+        year: y, month: mo + 1,
+        staffIds: targets,
+      });
+      if (r?.ok) {
+        $('#pubResult').innerHTML = `<span style="color:var(--moss);">✓ ${r.sent}名 送信完了 (失敗 ${r.failed || 0})</span>`;
+        $('#pubSend').textContent = '完了';
+      } else {
+        $('#pubResult').innerHTML = `<span style="color:var(--accent);">エラー: ${escapeHtml(r?.error || 'unknown')}</span>`;
+        $('#pubSend').disabled = false; $('#pubSend').textContent = '再送信';
+      }
+    } catch (e) {
+      $('#pubResult').innerHTML = `<span style="color:var(--accent);">${escapeHtml(e.message)}</span>`;
+      $('#pubSend').disabled = false; $('#pubSend').textContent = '再送信';
+    }
+  };
 }
 
 // ---- 週間シフト表 ----

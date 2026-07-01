@@ -12,6 +12,7 @@ const admin = require('firebase-admin');
 const { defineSecret } = require('firebase-functions/params');
 
 const ADMIN_SECRET = defineSecret('ADMIN_SECRET');
+const LINE_CHANNEL_ACCESS_TOKEN = defineSecret('LINE_CHANNEL_ACCESS_TOKEN');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
@@ -49,7 +50,7 @@ function snapToResv(doc) {
 }
 
 exports.adminApi = functions.onRequest(
-  { region: 'asia-northeast1', cors: true, secrets: [ADMIN_SECRET], memory: '256MiB' },
+  { region: 'asia-northeast1', cors: true, secrets: [ADMIN_SECRET, LINE_CHANNEL_ACCESS_TOKEN], memory: '256MiB' },
   async (req, res) => {
     if (req.method === 'OPTIONS') return res.status(204).end();
     if (!authed(req)) return res.status(401).json({ error: 'unauthorized' });
@@ -125,18 +126,20 @@ exports.adminApi = functions.onRequest(
           return res.status(400).json({ error: 'unknown pane' });
         }
 
-        // ---- 工程管理 (シフト/タスク/スタッフ) 一括ロード ----
+        // ---- 工程管理 (シフト/タスク/スタッフ/config) 一括ロード ----
         if (action === 'ops-load') {
-          const [staffSnap, shiftSnap, taskSnap] = await Promise.all([
+          const [staffSnap, shiftSnap, taskSnap, cfgSnap] = await Promise.all([
             db.collection('ops_state').doc('staff').get(),
             db.collection('ops_state').doc('shifts').get(),
             db.collection('ops_state').doc('tasks').get(),
+            db.collection('ops_state').doc('config').get(),
           ]);
           return res.json({
             ok: true,
             staff: staffSnap.exists ? (staffSnap.data().list || []) : [],
             shifts: shiftSnap.exists ? (shiftSnap.data().map || {}) : {},
             tasks: taskSnap.exists ? (taskSnap.data().map || {}) : {},
+            config: cfgSnap.exists ? (() => { const c = cfgSnap.data(); delete c.updatedAt; return c; })() : {},
           });
         }
 
@@ -233,6 +236,32 @@ exports.adminApi = functions.onRequest(
             staffId, expiresAt, createdAt: admin.firestore.FieldValue.serverTimestamp(),
           });
           return res.json({ ok: true, code, expiresInSec: 600 });
+        }
+
+        // ---- 工程管理 config 保存 ----
+        if (body.action === 'ops-save-config') {
+          const patch = (body.patch && typeof body.patch === 'object') ? body.patch : {};
+          const allowed = ['notifyAllOnNewReservation'];
+          const sanitized = {};
+          for (const k of allowed) if (k in patch) sanitized[k] = !!patch[k];
+          await db.collection('ops_state').doc('config').set({
+            ...sanitized,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true });
+          return res.json({ ok: true });
+        }
+
+        // ---- 月次シフト 一斉配信 ----
+        if (body.action === 'ops-publish-monthly-shifts') {
+          const y = Number(body.year);
+          const mo = Number(body.month);
+          const staffIds = Array.isArray(body.staffIds) ? body.staffIds : [];
+          if (!y || !mo || mo < 1 || mo > 12) return res.status(400).json({ error: 'invalid year/month' });
+          if (!staffIds.length) return res.status(400).json({ error: 'no staffIds' });
+          if (staffIds.length > 50) return res.status(400).json({ error: 'too many staff' });
+          const staffNotify = require('../staffNotify');
+          const r = await staffNotify.publishMonthlyShifts(y, mo, staffIds);
+          return res.json({ ok: true, ...r });
         }
 
         // ---- スタッフから LINE 経由で lineUserId 紐付け解除 ----
