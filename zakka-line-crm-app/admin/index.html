@@ -1426,16 +1426,54 @@
       <div><label>基準在庫 (棚いっぱい時)</label><input type="number" id="pdStockBase" value="10"></div>
       <div><label>アイコン</label>
         <select id="pdIcon">
-          <option value="shirt">服 (シャツ)</option>
-          <option value="cardigan">カーディガン</option>
-          <option value="bag">鞄</option>
-          <option value="hat">帽子</option>
-          <option value="scarf">スカーフ</option>
-          <option value="accessory">装身具</option>
-          <option value="utsuwa">器</option>
-          <option value="dougu">道具</option>
-          <option value="nuno">布</option>
-          <option value="kodougu">古道具</option>
+          <optgroup label="─ 服 ─">
+            <option value="shirt">シャツ</option>
+            <option value="tshirt">Tシャツ</option>
+            <option value="cardigan">カーディガン</option>
+            <option value="sweater">セーター</option>
+            <option value="coat">コート</option>
+            <option value="dress">ワンピース</option>
+            <option value="skirt">スカート</option>
+            <option value="pants">パンツ</option>
+            <option value="socks">靴下</option>
+          </optgroup>
+          <optgroup label="─ 鞄・靴 ─">
+            <option value="bag">鞄</option>
+            <option value="handbag">ハンドバッグ</option>
+            <option value="backpack">リュック</option>
+            <option value="shoe">靴</option>
+            <option value="sneaker">スニーカー</option>
+          </optgroup>
+          <optgroup label="─ 装身具 ─">
+            <option value="hat">帽子</option>
+            <option value="cap">キャップ</option>
+            <option value="scarf">スカーフ</option>
+            <option value="tie">ネクタイ</option>
+            <option value="belt">ベルト</option>
+            <option value="glove">手袋</option>
+            <option value="sunglass">サングラス</option>
+            <option value="watch">腕時計</option>
+            <option value="ring">指輪</option>
+            <option value="necklace">ネックレス</option>
+            <option value="earring">ピアス</option>
+            <option value="accessory">装身具 (その他)</option>
+          </optgroup>
+          <optgroup label="─ 雑貨・暮らし ─">
+            <option value="perfume">香水</option>
+            <option value="candle">キャンドル</option>
+            <option value="soap">石鹸</option>
+            <option value="towel">タオル</option>
+            <option value="coffee">コーヒー / ドリンク</option>
+            <option value="tag">タグ</option>
+            <option value="hanger">ハンガー</option>
+            <option value="store">お店 / ロゴ</option>
+          </optgroup>
+          <optgroup label="─ 器・道具 ─">
+            <option value="utsuwa">器</option>
+            <option value="dougu">道具</option>
+            <option value="nuno">布</option>
+            <option value="kodougu">古道具</option>
+          </optgroup>
           <option value="other">その他</option>
         </select>
       </div>
@@ -2658,14 +2696,56 @@ window.submitQuickProduct = async function(ev) {
   const stock = parseInt(document.getElementById('pdQuickStock').value) || 1;
   const imgFile = document.getElementById('pdQuickImg').files[0];
   const imageDataUrl = imgFile ? await readImageAsDataURL(imgFile) : null;
-  // カテゴリ→アイコン推定
-  const iconMap = { ifuku: 'shirt', accessory: 'accessory', bag: 'bag', utsuwa: 'utsuwa', kurashi: 'dougu', nuno: 'nuno' };
+  // 商品名からアイコン推定 (優先)、 なければカテゴリから
+  const inferIcon = (name, cat) => {
+    const n = String(name).toLowerCase();
+    const rules = [
+      [/tシャツ|tシャツ|カットソー/, 'tshirt'],
+      [/シャツ|ブラウス/, 'shirt'],
+      [/カーディガン/, 'cardigan'],
+      [/セーター|ニット/, 'sweater'],
+      [/コート|ジャケット/, 'coat'],
+      [/ワンピース|ドレス/, 'dress'],
+      [/スカート/, 'skirt'],
+      [/パンツ|ジーンズ|ズボン/, 'pants'],
+      [/靴下|ソックス/, 'socks'],
+      [/スニーカー/, 'sneaker'],
+      [/靴|シューズ|サンダル|パンプス/, 'shoe'],
+      [/ハンドバッグ/, 'handbag'],
+      [/リュック|バックパック/, 'backpack'],
+      [/鞄|バッグ|カゴ鞄|トート/, 'bag'],
+      [/キャップ/, 'cap'],
+      [/帽子|ハット/, 'hat'],
+      [/スカーフ|ストール|マフラー/, 'scarf'],
+      [/ネクタイ/, 'tie'],
+      [/ベルト/, 'belt'],
+      [/手袋|グローブ/, 'glove'],
+      [/サングラス|眼鏡|メガネ/, 'sunglass'],
+      [/時計|ウォッチ/, 'watch'],
+      [/指輪|リング/, 'ring'],
+      [/ネックレス|チョーカー/, 'necklace'],
+      [/ピアス|イヤリング/, 'earring'],
+      [/香水|パフューム/, 'perfume'],
+      [/キャンドル|ろうそく/, 'candle'],
+      [/石鹸|ソープ/, 'soap'],
+      [/タオル/, 'towel'],
+      [/コーヒー|茶|ドリンク/, 'coffee'],
+      [/皿|茶碗|飯碗|器|湯呑|ぐい呑み|ピッチャー/, 'utsuwa'],
+      [/箸|フォーク|スプーン/, 'dougu'],
+      [/布|生地|麻布/, 'nuno'],
+      [/かご|籠|木の盆|骨董/, 'kodougu'],
+    ];
+    for (const [re, icon] of rules) if (re.test(n)) return icon;
+    const catMap = { ifuku: 'shirt', accessory: 'accessory', bag: 'bag', utsuwa: 'utsuwa', kurashi: 'dougu', nuno: 'nuno' };
+    return catMap[cat] || 'other';
+  };
+  window.inferIcon = inferIcon;
   await repo.saveProduct({
     name: parsed.name, maker,
     category,
     price: parsed.price, cost: 0,
     stock, stockBase: Math.max(stock, 10),
-    icon: iconMap[category] || 'other',
+    icon: inferIcon(parsed.name, category),
     unit: '点',
     imageDataUrl,
     active: true,
@@ -2713,7 +2793,6 @@ window.submitBulkProducts = async function() {
   if (!txt) { toast('入力欄が空です'); return; }
   const settings = await repo.getSettings();
   const validCats = new Set((settings.categories || []).map(c => c.id));
-  const iconMap = { ifuku: 'shirt', accessory: 'accessory', bag: 'bag', utsuwa: 'utsuwa', kurashi: 'dougu', nuno: 'nuno' };
   const lines = txt.split(/\r?\n/).filter(l => l.trim());
   let ok = 0, ng = 0;
   for (const line of lines) {
@@ -2727,7 +2806,7 @@ window.submitBulkProducts = async function() {
       price, cost: 0,
       stock: parseInt(stockRaw) || 0,
       stockBase: Math.max(parseInt(stockRaw) || 10, 10),
-      icon: iconMap[category] || 'other',
+      icon: inferIcon(name, category),
       unit: '点',
       active: true,
     });

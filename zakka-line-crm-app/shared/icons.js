@@ -57,13 +57,47 @@ export const ICONS = {
   arrow:     `<svg ${SVG_PROPS}><line x1="4" y1="12" x2="20" y2="12"/><path d="M14 6 L20 12 L14 18"/></svg>`,
   menu:      `<svg ${SVG_PROPS}><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>`,
 
-  // ─── アパレル (服飾) ───
+  // ─── アパレル (服飾) - セレクトショップ向け 25種 ───
   shirt:     `<svg ${SVG_PROPS}><path d="M6 6 L4 8 L6 12 L7 10 L7 20 L17 20 L17 10 L18 12 L20 8 L18 6 L15 4 L9 4 Z"/><path d="M9 4 C 10 6, 14 6, 15 4"/></svg>`,
+  tshirt:    `<svg ${SVG_PROPS}><path d="M4 8 L8 3 L10 5 L14 5 L16 3 L20 8 L17 11 L17 20 L7 20 L7 11 Z"/></svg>`,
   cardigan:  `<svg ${SVG_PROPS}><path d="M6 5 L4 9 L6 13 L7 11 L7 21 L17 21 L17 11 L18 13 L20 9 L18 5 L14 3 L10 3 Z"/><line x1="12" y1="3" x2="12" y2="21"/></svg>`,
+  coat:      `<svg ${SVG_PROPS}><path d="M6 5 L4 9 L6 13 L7 11 L7 22 L17 22 L17 11 L18 13 L20 9 L18 5 L14 3 L10 3 Z"/><line x1="12" y1="3" x2="12" y2="22"/><circle cx="10.5" cy="10" r="0.6" fill="currentColor"/><circle cx="10.5" cy="14" r="0.6" fill="currentColor"/><circle cx="10.5" cy="18" r="0.6" fill="currentColor"/></svg>`,
+  dress:     `<svg ${SVG_PROPS}><path d="M9 3 L15 3 L15 8 L20 20 L4 20 L9 8 Z"/><path d="M9 3 C 10 5, 14 5, 15 3"/></svg>`,
+  skirt:     `<svg ${SVG_PROPS}><path d="M6 6 L18 6 L21 20 L3 20 Z"/><line x1="6" y1="6" x2="8" y2="20"/><line x1="18" y1="6" x2="16" y2="20"/><line x1="12" y1="6" x2="12" y2="20"/></svg>`,
+  pants:     `<svg ${SVG_PROPS}><path d="M6 3 L18 3 L17 12 L15 21 L10 21 L12 12 L9 21 L4 21 L6 12 Z"/></svg>`,
+  sweater:   `<svg ${SVG_PROPS}><path d="M6 6 L4 9 L6 13 L7 11 L7 20 L17 20 L17 11 L18 13 L20 9 L18 6 L14 4 L10 4 Z"/><path d="M8 12 L9 14 L15 14 L16 12"/></svg>`,
+  socks:     `<svg ${SVG_PROPS}><path d="M9 3 L15 3 L15 14 L18 17 L18 20 L12 20 L9 17 Z"/><line x1="9" y1="11" x2="15" y2="11"/></svg>`,
+  shoe:      `<svg ${SVG_PROPS}><path d="M3 16 L3 19 L21 19 L21 16 L18 15 L15 12 L11 12 L9 15 L4 15 Z"/><line x1="7" y1="15" x2="7" y2="17"/><line x1="10" y1="15" x2="10" y2="17"/></svg>`,
+  sneaker:   `<svg ${SVG_PROPS}><path d="M3 15 L4 18 L20 18 L21 15 L17 14 L14 10 L9 10 L8 12 L4 13 Z"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="12" y1="10" x2="12" y2="14"/></svg>`,
+  belt:      `<svg ${SVG_PROPS}><path d="M2 10 L18 10 L18 14 L2 14 Z"/><rect x="14" y="9" width="6" height="6" rx="1"/><line x1="17" y1="10" x2="17" y2="14"/></svg>`,
+  tie:       `<svg ${SVG_PROPS}><path d="M10 3 L14 3 L15 6 L14 8 L15 20 L12 22 L9 20 L10 8 L9 6 Z"/></svg>`,
+
   bag:       `<svg ${SVG_PROPS}><path d="M5 9 L19 9 L18 21 L6 21 Z"/><path d="M8 9 C 8 5, 16 5, 16 9"/></svg>`,
+  handbag:   `<svg ${SVG_PROPS}><path d="M4 10 L20 10 L20 20 L4 20 Z"/><path d="M7 10 C 7 6, 17 6, 17 10"/><line x1="4" y1="14" x2="20" y2="14"/></svg>`,
+  backpack:  `<svg ${SVG_PROPS}><path d="M6 8 L18 8 L18 21 L6 21 Z"/><path d="M9 8 C 9 4, 15 4, 15 8"/><rect x="8" y="12" width="8" height="5" rx="1"/></svg>`,
+
   hat:       `<svg ${SVG_PROPS}><ellipse cx="12" cy="17" rx="9" ry="2"/><path d="M7 17 C 7 12, 8 6, 12 6 C 16 6, 17 12, 17 17"/></svg>`,
-  accessory: `<svg ${SVG_PROPS}><circle cx="12" cy="9" r="2"/><path d="M12 11 L9 21 M12 11 L15 21"/><path d="M9 5 L15 5"/></svg>`,
+  cap:       `<svg ${SVG_PROPS}><path d="M4 15 L22 15 L20 12 C 18 8, 14 6, 12 6 C 10 6, 8 8, 6 12 Z"/></svg>`,
+
   scarf:     `<svg ${SVG_PROPS}><path d="M8 3 C 6 8, 8 12, 10 14 L 10 21 L 14 21 L 14 14 C 16 12, 18 8, 16 3 Z"/></svg>`,
+  glove:     `<svg ${SVG_PROPS}><path d="M9 3 L9 8 L7 8 L7 10 L8 12 L8 20 L15 20 L15 12 L16 10 L14 10 L14 3 Z"/><line x1="11" y1="3" x2="11" y2="9"/></svg>`,
+  sunglass:  `<svg ${SVG_PROPS}><circle cx="7" cy="13" r="4"/><circle cx="17" cy="13" r="4"/><path d="M11 13 L13 13"/><path d="M3 10 L4 8 M21 10 L20 8"/></svg>`,
+  watch:     `<svg ${SVG_PROPS}><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9 7 L9 4 L15 4 L15 7 M9 17 L9 20 L15 20 L15 17"/><line x1="12" y1="12" x2="14" y2="14"/></svg>`,
+
+  accessory: `<svg ${SVG_PROPS}><circle cx="12" cy="9" r="2"/><path d="M12 11 L9 21 M12 11 L15 21"/><path d="M9 5 L15 5"/></svg>`,
+  ring:      `<svg ${SVG_PROPS}><ellipse cx="12" cy="15" rx="6" ry="5"/><path d="M8 10 L10 4 L14 4 L16 10"/></svg>`,
+  necklace:  `<svg ${SVG_PROPS}><path d="M4 4 C 4 12, 20 12, 20 4"/><circle cx="12" cy="17" r="3"/></svg>`,
+  earring:   `<svg ${SVG_PROPS}><circle cx="9" cy="5" r="1.5"/><path d="M9 6.5 L9 13"/><circle cx="9" cy="16" r="3"/><circle cx="16" cy="5" r="1.5"/><path d="M16 6.5 L16 13"/><circle cx="16" cy="16" r="3"/></svg>`,
+
+  // ─── 雑貨・暮らし ───
+  perfume:   `<svg ${SVG_PROPS}><rect x="8" y="9" width="8" height="12" rx="1"/><path d="M10 9 L10 5 L14 5 L14 9"/><path d="M12 5 L12 3"/><path d="M15 7 C 17 6, 18 8, 17 10" opacity=".5"/></svg>`,
+  candle:    `<svg ${SVG_PROPS}><rect x="8" y="10" width="8" height="11"/><path d="M12 10 L12 6"/><path d="M11 6 C 11 4, 13 4, 12 2 C 11 4, 13 4, 13 6"/></svg>`,
+  soap:      `<svg ${SVG_PROPS}><path d="M6 15 L6 9 C 6 6, 8 4, 12 4 C 16 4, 18 6, 18 9 L18 15 C 18 18, 16 20, 12 20 C 8 20, 6 18, 6 15 Z"/><path d="M9 8 C 10 9, 14 9, 15 8" opacity=".5"/></svg>`,
+  towel:     `<svg ${SVG_PROPS}><rect x="4" y="6" width="16" height="12" rx="1"/><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/></svg>`,
+  coffee:    `<svg ${SVG_PROPS}><path d="M4 8 L18 8 L17 18 C 16 19, 6 19, 5 18 Z"/><path d="M18 10 C 21 10, 22 12, 21 14 C 20 15, 19 15, 18 15"/><path d="M8 4 C 8 5, 9 6, 8 7 M12 4 C 12 5, 13 6, 12 7"/></svg>`,
+  tag:       `<svg ${SVG_PROPS}><path d="M3 12 L12 3 L21 3 L21 12 L12 21 Z"/><circle cx="16" cy="8" r="1.5"/></svg>`,
+  hanger:    `<svg ${SVG_PROPS}><path d="M12 3 C 10 3, 9 5, 10 7 L 12 8 L 2 18 L 22 18 L 12 8"/></svg>`,
+  store:     `<svg ${SVG_PROPS}><path d="M3 9 L5 4 L19 4 L21 9"/><path d="M4 9 L4 20 L20 20 L20 9"/><path d="M3 9 C 5 11, 7 11, 8 9 C 9 11, 11 11, 12 9 C 13 11, 15 11, 16 9 C 17 11, 19 11, 21 9"/></svg>`,
 
   // ─── 雑貨店モチーフ (signature 周辺) ───
   sprout:    `<svg ${SVG_PROPS}><path d="M12 20 L12 11"/><path d="M12 11 C 6 11, 4 6, 4 4 C 6 4, 11 5, 12 11"/><path d="M12 11 C 18 11, 20 6, 20 4 C 18 4, 13 5, 12 11"/></svg>`,
