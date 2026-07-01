@@ -118,7 +118,7 @@ async function injectHelper(p) {
       if (!ov) {
         ov = document.createElement('div');
         ov.id = 'fp-help-overlay';
-        ov.style.cssText = 'position:fixed;inset:0;background:rgba(21,23,43,0.62);z-index:99990;pointer-events:none;opacity:0;transition:opacity 0.35s;';
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(21,23,43,0.32);z-index:99990;pointer-events:none;opacity:0;transition:opacity 0.35s;';
         document.body.appendChild(ov);
       }
       requestAnimationFrame(() => { ov.style.opacity = '1'; });
