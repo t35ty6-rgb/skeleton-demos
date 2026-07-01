@@ -222,6 +222,7 @@
   <button class="tab-btn" data-view="dow">曜日別</button>
   <button class="tab-btn" data-view="pl">プレースメント別</button>
   <button class="tab-btn" data-view="review">レビュー分析</button>
+  <button class="tab-btn" data-view="adj">調整履歴</button>
 </div>
 
 <div class="view active" id="view-kw">
@@ -401,6 +402,66 @@
             </tr>
           </thead>
           <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-adj">
+  <div class="dd-wrap">
+    <div class="dd-head">
+      <h2>📅 調整履歴 (KW入札変更 全記録)</h2>
+      <span class="sub" id="adj-sub">読み込み中…</span>
+    </div>
+    <div style="padding:10px;background:var(--gray-1);border-bottom:1px solid var(--gray-3);display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      <label>日付:
+        <select id="adj-date" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;">
+          <option value="all">全期間</option>
+        </select>
+      </label>
+      <label>種別:
+        <select id="adj-tag" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;">
+          <option value="all">全部</option>
+          <option value="LIVE">LIVE (実変更のみ)</option>
+          <option value="DRY">DRY (判定のみ)</option>
+        </select>
+      </label>
+      <label>方向:
+        <select id="adj-dir" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;">
+          <option value="all">全部</option>
+          <option value="up">↑ 上げた</option>
+          <option value="down">↓ 下げた</option>
+        </select>
+      </label>
+      <span id="adj-count" style="font-size:11px;color:#666;margin-left:auto;">—</span>
+    </div>
+
+    <div class="daily-table">
+      <h3>📊 日別サマリ (LIVE件数 / 上げ↑ / 下げ↓)</h3>
+      <div id="adj-summary" style="max-height:200px;overflow:auto;padding:6px;"></div>
+    </div>
+
+    <div class="daily-table" style="margin-top:10px;">
+      <h3>📝 変更明細 (最新→古い順)</h3>
+      <div style="max-height:calc(100vh - 480px);overflow:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:var(--black);color:#fff;">
+              <th style="padding:5px 8px;text-align:left;font-size:11px;">日付</th>
+              <th style="padding:5px 8px;text-align:left;font-size:11px;">タグ</th>
+              <th style="padding:5px 8px;text-align:left;font-size:11px;">KW</th>
+              <th style="padding:5px 8px;text-align:left;font-size:11px;">match</th>
+              <th style="padding:5px 8px;text-align:left;font-size:11px;">判定</th>
+              <th style="padding:5px 8px;text-align:right;font-size:11px;">旧bid</th>
+              <th style="padding:5px 8px;text-align:right;font-size:11px;">→</th>
+              <th style="padding:5px 8px;text-align:right;font-size:11px;">新bid</th>
+              <th style="padding:5px 8px;text-align:right;font-size:11px;">差額</th>
+              <th style="padding:5px 8px;text-align:right;font-size:11px;">ACoS</th>
+              <th style="padding:5px 8px;text-align:left;font-size:11px;">理由</th>
+            </tr>
+          </thead>
+          <tbody id="adj-tbody"></tbody>
         </table>
       </div>
     </div>
@@ -736,8 +797,86 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     if(v==='dow' && !DOW_DATA) loadDoW();
     if(v==='pl' && !PL_DATA) loadPL();
     if(v==='review' && !RV_DATA) loadReview();
+    if(v==='adj' && !ADJ_DATA) loadAdj();
   });
 });
+
+// ── 調整履歴 ────────────────────────────
+let ADJ_DATA = null;
+async function loadAdj(){
+  try{
+    const res = await fetch('./data/adjustments.json?t=' + Date.now());
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    ADJ_DATA = await res.json();
+  }catch(e){
+    document.getElementById('adj-sub').textContent = '読み込み失敗: '+e.message+' (adjustments.json が未生成の可能性)';
+    return;
+  }
+  const D = ADJ_DATA;
+  document.getElementById('adj-sub').textContent =
+    `全 ${D.total_rows.toLocaleString()} 件 / ${D.summary_by_date.length} 日 (${D.generated_at.slice(0,10)} 更新)`;
+  const sel = document.getElementById('adj-date');
+  for(const s of D.summary_by_date){
+    const opt = document.createElement('option');
+    opt.value = s.date;
+    opt.textContent = `${s.date} (LIVE:${s.live} DRY:${s.dry})`;
+    sel.appendChild(opt);
+  }
+  sel.addEventListener('change', renderAdj);
+  document.getElementById('adj-tag').addEventListener('change', renderAdj);
+  document.getElementById('adj-dir').addEventListener('change', renderAdj);
+  renderAdj();
+}
+function renderAdj(){
+  const D = ADJ_DATA;
+  const dateSel = document.getElementById('adj-date').value;
+  const tagSel = document.getElementById('adj-tag').value;
+  const dirSel = document.getElementById('adj-dir').value;
+  let rows = D.rows;
+  if(dateSel !== 'all') rows = rows.filter(r => r.date === dateSel);
+  if(tagSel !== 'all') rows = rows.filter(r => r.tag === tagSel);
+  if(dirSel === 'up') rows = rows.filter(r => (r.action||'').startsWith('BID_UP'));
+  else if(dirSel === 'down') rows = rows.filter(r => r.action === 'BID_DOWN_30');
+  document.getElementById('adj-count').textContent = `表示: ${rows.length} / ${D.total_rows} 件`;
+
+  const summaryHtml = D.summary_by_date.filter(s => dateSel==='all' || s.date===dateSel).slice(0, 30).map(s => `
+    <div style="display:grid;grid-template-columns:110px 90px 60px 60px 60px 1fr;gap:4px;padding:4px 8px;font-size:12px;border-bottom:1px solid var(--gray-2);align-items:center;">
+      <div style="font-weight:700;">${s.date}</div>
+      <div style="font-size:11px;color:#666;">LIVE:${s.live} DRY:${s.dry}</div>
+      <div style="color:${s.up>0?'var(--green)':'#999'};">↑${s.up}</div>
+      <div style="color:${s.down>0?'var(--red)':'#999'};">↓${s.down}</div>
+      <div style="color:#666;">停:${s.pause}</div>
+      <div style="font-size:10px;color:#888;">計 ${s.live+s.dry}件</div>
+    </div>
+  `).join('');
+  document.getElementById('adj-summary').innerHTML = summaryHtml || '<div style="padding:20px;text-align:center;color:#999;">データなし</div>';
+
+  const visible = rows.slice(0, 500);
+  const esc = s => (s||'').toString().replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'})[c]);
+  const tbodyHtml = visible.map(r => {
+    const delta = (r.oldBid != null && r.newBid != null) ? r.newBid - r.oldBid : null;
+    const deltaStr = delta === null ? '' : (delta > 0 ? `+${delta}` : `${delta}`);
+    const deltaColor = delta > 0 ? 'var(--green)' : delta < 0 ? 'var(--red)' : '#999';
+    const tagBg = r.tag === 'LIVE' ? 'background:var(--orange);color:#fff;' : 'background:var(--gray-3);color:#555;';
+    const tierColor = ({BAD:'var(--red)', GOOD:'#7a5e00', STAR:'var(--orange)', DEAD:'#000', WATCH:'#666'})[r.tier] || '#999';
+    return `
+      <tr style="border-bottom:1px solid var(--gray-2);">
+        <td style="padding:4px 8px;font-weight:600;">${esc(r.date)}</td>
+        <td style="padding:4px 8px;"><span style="${tagBg}padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;">${esc(r.tag)}</span></td>
+        <td style="padding:4px 8px;font-weight:600;">${esc(r.kw)}</td>
+        <td style="padding:4px 8px;font-size:11px;color:#666;">${esc(r.matchType)}</td>
+        <td style="padding:4px 8px;color:${tierColor};font-weight:700;">${esc(r.tier)}</td>
+        <td style="padding:4px 8px;text-align:right;font-family:'SF Mono',monospace;">${r.oldBid ?? '—'}</td>
+        <td style="padding:4px 8px;text-align:center;color:#999;">→</td>
+        <td style="padding:4px 8px;text-align:right;font-family:'SF Mono',monospace;font-weight:700;">${r.newBid ?? '—'}</td>
+        <td style="padding:4px 8px;text-align:right;font-family:'SF Mono',monospace;color:${deltaColor};font-weight:700;">${deltaStr}</td>
+        <td style="padding:4px 8px;text-align:right;font-size:11px;color:#666;">${r.acos != null ? (r.acos*100).toFixed(0)+'%' : '—'}</td>
+        <td style="padding:4px 8px;font-size:11px;color:#555;">${esc(r.reason)}</td>
+      </tr>
+    `;
+  }).join('');
+  document.getElementById('adj-tbody').innerHTML = tbodyHtml || '<tr><td colspan="11" style="padding:20px;text-align:center;color:#999;">該当なし</td></tr>';
+}
 
 // ── レビュー分析 ────────────────────────────
 let RV_DATA = null;
