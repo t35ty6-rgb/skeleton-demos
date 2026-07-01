@@ -705,33 +705,72 @@ const opsState = {
   reservations: [],       // Firestore から取得した予約 (直近30日)
 };
 
-function opsLoadStaff() {
+// In-memory cache (Firestore 経由で同期、LocalStorage は offline fallback)
+const opsCache = { staff: null, shifts: null, tasks: null };
+
+function _lsRead(key, fallback) {
   try {
-    const s = JSON.parse(localStorage.getItem(OPS_STAFF_KEY) || 'null');
-    if (Array.isArray(s) && s.length) return s;
-  } catch (_) {}
-  localStorage.setItem(OPS_STAFF_KEY, JSON.stringify(DEFAULT_STAFF));
-  return DEFAULT_STAFF;
+    const v = JSON.parse(localStorage.getItem(key) || 'null');
+    return v == null ? fallback : v;
+  } catch (_) { return fallback; }
 }
-function opsSaveStaff(list) { localStorage.setItem(OPS_STAFF_KEY, JSON.stringify(list)); }
+function _lsWrite(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch (_) {}
+}
 
-function opsLoadShifts() {
-  try { return JSON.parse(localStorage.getItem(OPS_SHIFT_KEY) || '{}'); }
-  catch (_) { return {}; }
+async function opsLoadFromServer() {
+  try {
+    const data = await apiGet('ops-load');
+    if (data && data.ok) {
+      opsCache.staff  = Array.isArray(data.staff)  && data.staff.length  ? data.staff  : DEFAULT_STAFF;
+      opsCache.shifts = (data.shifts && typeof data.shifts === 'object') ? data.shifts : {};
+      opsCache.tasks  = (data.tasks  && typeof data.tasks  === 'object') ? data.tasks  : {};
+      _lsWrite(OPS_STAFF_KEY, opsCache.staff);
+      _lsWrite(OPS_SHIFT_KEY, opsCache.shifts);
+      _lsWrite(OPS_TASK_KEY,  opsCache.tasks);
+      // 初回 seed: server 側 staff が空ならデフォルトを push
+      if (!Array.isArray(data.staff) || !data.staff.length) {
+        apiPost({ action: 'ops-save-staff', list: DEFAULT_STAFF }).catch(() => {});
+      }
+      return;
+    }
+  } catch (e) {
+    console.warn('[ops] server load failed, using LS cache:', e.message);
+  }
+  // Fallback: LS
+  opsCache.staff  = _lsRead(OPS_STAFF_KEY, DEFAULT_STAFF);
+  opsCache.shifts = _lsRead(OPS_SHIFT_KEY, {});
+  opsCache.tasks  = _lsRead(OPS_TASK_KEY,  {});
 }
-function opsSaveShifts(map) { localStorage.setItem(OPS_SHIFT_KEY, JSON.stringify(map)); }
 
-function opsLoadTasks() {
-  try { return JSON.parse(localStorage.getItem(OPS_TASK_KEY) || '{}'); }
-  catch (_) { return {}; }
+function opsLoadStaff()  { return opsCache.staff  || DEFAULT_STAFF; }
+function opsLoadShifts() { return opsCache.shifts || {}; }
+function opsLoadTasks()  { return opsCache.tasks  || {}; }
+
+function opsSaveStaff(list) {
+  opsCache.staff = list;
+  _lsWrite(OPS_STAFF_KEY, list);
+  apiPost({ action: 'ops-save-staff', list }).catch((e) => console.warn('[ops] save-staff failed:', e.message));
 }
-function opsSaveTasks(map) { localStorage.setItem(OPS_TASK_KEY, JSON.stringify(map)); }
+function opsSaveShifts(map) {
+  opsCache.shifts = map;
+  _lsWrite(OPS_SHIFT_KEY, map);
+  apiPost({ action: 'ops-save-shifts', map }).catch((e) => console.warn('[ops] save-shifts failed:', e.message));
+}
+function opsSaveTasks(map) {
+  opsCache.tasks = map;
+  _lsWrite(OPS_TASK_KEY, map);
+  apiPost({ action: 'ops-save-tasks', map }).catch((e) => console.warn('[ops] save-tasks failed:', e.message));
+}
 
 async function loadOps() {
   if (!opsState.weekStart) opsState.weekStart = startOfWeek(new Date());
 
-  // 予約データ (自動タスク生成の元) を取得
-  const data = await apiGet('list', { pane: 'upcoming' });
+  // 予約データ (自動タスク生成の元) と ops state (Firestore) を並列取得
+  const [data] = await Promise.all([
+    apiGet('list', { pane: 'upcoming' }),
+    opsLoadFromServer(),
+  ]);
   opsState.reservations = data?.items || [];
 
   renderOpsToday();

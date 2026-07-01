@@ -125,6 +125,21 @@ exports.adminApi = functions.onRequest(
           return res.status(400).json({ error: 'unknown pane' });
         }
 
+        // ---- 工程管理 (シフト/タスク/スタッフ) 一括ロード ----
+        if (action === 'ops-load') {
+          const [staffSnap, shiftSnap, taskSnap] = await Promise.all([
+            db.collection('ops_state').doc('staff').get(),
+            db.collection('ops_state').doc('shifts').get(),
+            db.collection('ops_state').doc('tasks').get(),
+          ]);
+          return res.json({
+            ok: true,
+            staff: staffSnap.exists ? (staffSnap.data().list || []) : [],
+            shifts: shiftSnap.exists ? (shiftSnap.data().map || {}) : {},
+            tasks: taskSnap.exists ? (taskSnap.data().map || {}) : {},
+          });
+        }
+
         if (action === 'detail') {
           const resNo = String(req.query.resNo || '');
           const doc = await db.collection('reservations').doc(resNo).get();
@@ -165,6 +180,42 @@ exports.adminApi = functions.onRequest(
             ...patch,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           }, { merge: true });
+          return res.json({ ok: true });
+        }
+
+        // ---- 工程管理 保存 (staff/shifts/tasks) ----
+        if (body.action === 'ops-save-staff') {
+          const list = Array.isArray(body.list) ? body.list : [];
+          if (list.length > 50) return res.status(400).json({ error: 'staff too large' });
+          for (const s of list) {
+            if (typeof s.id !== 'string' || !s.id) return res.status(400).json({ error: 'invalid staff id' });
+            if (typeof s.name !== 'string') return res.status(400).json({ error: 'invalid staff name' });
+          }
+          await db.collection('ops_state').doc('staff').set({
+            list,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          return res.json({ ok: true });
+        }
+
+        if (body.action === 'ops-save-shifts') {
+          const map = (body.map && typeof body.map === 'object') ? body.map : {};
+          if (Object.keys(map).length > 5000) return res.status(400).json({ error: 'shifts too large' });
+          await db.collection('ops_state').doc('shifts').set({
+            map,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          return res.json({ ok: true });
+        }
+
+        if (body.action === 'ops-save-tasks') {
+          const map = (body.map && typeof body.map === 'object') ? body.map : {};
+          const bytes = Buffer.byteLength(JSON.stringify(map), 'utf8');
+          if (bytes > 900000) return res.status(400).json({ error: 'tasks too large (near 1MiB doc limit)' });
+          await db.collection('ops_state').doc('tasks').set({
+            map,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
           return res.json({ ok: true });
         }
 
