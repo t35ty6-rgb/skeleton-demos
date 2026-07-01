@@ -75,6 +75,10 @@ exports.preCheckinReminder = reminderCron.preCheckinReminder;
 exports.arrivalReminder = reminderCron.arrivalReminder;
 exports.markCompleted = reminderCron.markCompleted;
 
+// ============ スタッフ 通知 (新規予約→シフト入りスタッフ / 前日リマインド) ============
+const staffNotify = require('./staffNotify');
+exports.staffTomorrowReminder = staffNotify.staffTomorrowReminder;
+
 // ============ LIFF auth + admin push ============
 const liffAuth = require('./liffAuth');
 exports.liffAuth = liffAuth.liffAuth;

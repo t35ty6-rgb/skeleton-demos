@@ -219,6 +219,37 @@ exports.adminApi = functions.onRequest(
           return res.json({ ok: true });
         }
 
+        // ---- スタッフ ↔ LINE ペアリングコード発行 (10分有効) ----
+        if (body.action === 'ops-issue-pair-code') {
+          const staffId = String(body.staffId || '');
+          if (!staffId) return res.status(400).json({ error: 'missing staffId' });
+          const staffSnap = await db.collection('ops_state').doc('staff').get();
+          const list = staffSnap.exists ? (staffSnap.data().list || []) : [];
+          if (!list.some((s) => s.id === staffId)) return res.status(404).json({ error: 'staff not found' });
+          // 6桁 数字コード (0-9)
+          const code = String(Math.floor(100000 + Math.random() * 900000));
+          const expiresAt = admin.firestore.Timestamp.fromMillis(Date.now() + 10 * 60 * 1000);
+          await db.collection('ops_pair_codes').doc(code).set({
+            staffId, expiresAt, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          return res.json({ ok: true, code, expiresInSec: 600 });
+        }
+
+        // ---- スタッフから LINE 経由で lineUserId 紐付け解除 ----
+        if (body.action === 'ops-unlink-staff-line') {
+          const staffId = String(body.staffId || '');
+          if (!staffId) return res.status(400).json({ error: 'missing staffId' });
+          const staffSnap = await db.collection('ops_state').doc('staff').get();
+          const list = staffSnap.exists ? (staffSnap.data().list || []) : [];
+          const idx = list.findIndex((s) => s.id === staffId);
+          if (idx < 0) return res.status(404).json({ error: 'staff not found' });
+          delete list[idx].lineUserId;
+          await db.collection('ops_state').doc('staff').set({
+            list, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          return res.json({ ok: true });
+        }
+
         return res.status(400).json({ error: 'unknown POST action' });
       }
 

@@ -1099,6 +1099,7 @@ function openStaffModal(sid) {
   const list = opsLoadStaff();
   const s = sid ? list.find((x) => x.id === sid) : { id: `s${Date.now()}`, name: '', initial: '', tel: '', wish: '', color: STAFF_PALETTE[list.length % STAFF_PALETTE.length] };
   const isNew = !sid;
+  const isLinked = !!s.lineUserId;
 
   $('#opsModalTitle').textContent = isNew ? 'スタッフを追加' : 'スタッフ情報';
   $('#opsModalBody').innerHTML = `
@@ -1125,6 +1126,16 @@ function openStaffModal(sid) {
           ${STAFF_PALETTE.map((c) => `<button type="button" data-color="${c}" class="sfColor" style="width:32px;height:32px;border-radius:50%;border:${c===s.color?'3px solid var(--ink)':'1px solid var(--rule)'};background:${c};cursor:pointer;"></button>`).join('')}
         </div>
       </div>
+      ${isNew ? '' : `
+      <div class="ops-edit__field" style="border-top:1px solid var(--rule);padding-top:14px;margin-top:6px;">
+        <span class="ops-edit__lbl">LINE連携</span>
+        <div id="sfLineArea" style="font-size:13px;color:var(--muted);">
+          ${isLinked
+            ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;"><span style="color:var(--ink);font-weight:600;">✓ 連携済み</span><button class="btn--ghost" id="sfUnlinkBtn" style="font-size:12px;">解除</button></div>`
+            : `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;"><span>未連携 — LINE で操作するには連携コードを発行</span><button class="btn--ghost" id="sfPairBtn" style="font-size:12px;">コード発行</button></div>`
+          }
+        </div>
+      </div>`}
       <div class="ops-edit__actions">
         ${isNew ? '<span></span>' : '<button class="btn--danger btn" id="sfDelete">削除</button>'}
         <div style="display:flex;gap:10px;">
@@ -1133,6 +1144,47 @@ function openStaffModal(sid) {
       </div>
     </div>
   `;
+
+  // ---- LINE 連携ボタン配線 ----
+  if (!isNew) {
+    const pairBtn = $('#sfPairBtn');
+    if (pairBtn) pairBtn.onclick = async () => {
+      pairBtn.disabled = true; pairBtn.textContent = '発行中…';
+      try {
+        const r = await apiPost({ action: 'ops-issue-pair-code', staffId: s.id });
+        if (r?.ok) {
+          $('#sfLineArea').innerHTML = `
+            <div style="text-align:center;padding:14px;border:1px dashed var(--rule);border-radius:4px;background:var(--paper2);">
+              <div style="font-size:11px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;">連携コード (10分有効)</div>
+              <div style="font-family:var(--num);font-size:32px;font-weight:700;letter-spacing:0.14em;color:var(--ink);margin:8px 0;">${r.code}</div>
+              <div style="font-size:12px;color:var(--muted);">${escapeHtml(s.name)} さんの LINE から <br>この 6桁 を送ってもらってください</div>
+            </div>`;
+        } else {
+          $('#sfLineArea').innerHTML = `<div style="color:var(--red);">発行に失敗しました: ${escapeHtml(r?.error || 'unknown')}</div>`;
+        }
+      } catch (e) {
+        $('#sfLineArea').innerHTML = `<div style="color:var(--red);">${escapeHtml(e.message)}</div>`;
+      }
+    };
+    const unlinkBtn = $('#sfUnlinkBtn');
+    if (unlinkBtn) unlinkBtn.onclick = async () => {
+      if (!confirm(`${s.name} の LINE 連携を解除しますか?`)) return;
+      unlinkBtn.disabled = true; unlinkBtn.textContent = '解除中…';
+      try {
+        const r = await apiPost({ action: 'ops-unlink-staff-line', staffId: s.id });
+        if (r?.ok) {
+          // ローカル cache も更新
+          delete s.lineUserId;
+          const l = opsLoadStaff();
+          const idx = l.findIndex((x) => x.id === s.id);
+          if (idx >= 0) { delete l[idx].lineUserId; opsCache.staff = l; _lsWrite(OPS_STAFF_KEY, l); }
+          $('#sfLineArea').innerHTML = '<div>解除しました</div>';
+        }
+      } catch (e) {
+        $('#sfLineArea').innerHTML = `<div style="color:var(--red);">${escapeHtml(e.message)}</div>`;
+      }
+    };
+  }
 
   let chosenColor = s.color;
   $$('#opsModalBody .sfColor').forEach((b) => {

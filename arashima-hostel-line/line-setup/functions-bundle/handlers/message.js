@@ -1,14 +1,27 @@
 /**
  * フリーメッセージ ハンドラ
- * キーワードベース (簡易): 「予約」「キャンセル」「アクセス」「料金」「空室」
- * 該当しない場合は スタッフへのエスカレーション
+ * まず staff LINE 紐付け を確認し、 該当スタッフからの メッセージ なら staffMessage に委譲。
+ * それ以外は キーワードベース guest 応答。
  */
+
+const staffMessage = require('./staffMessage');
 
 module.exports = async (event, ctx) => {
   const { lineClient, db, env } = ctx;
   const lineUserId = event.source.userId;
   const text = (event.message.text || '').trim();
   const liffUrl = `https://liff.line.me/${env.LIFF_ID}`;
+
+  // ---- スタッフ 判定 (紐付け済 or ペアリング coward 試行) ----
+  const staff = await staffMessage.findStaffByLineUserId(db, lineUserId);
+  if (staff) {
+    // 既に紐付け済みスタッフ: staffMessage に完全委譲
+    await staffMessage(event, ctx, staff);
+    return;
+  }
+  // 未紐付け: 6桁 数字 コードなら staffMessage が ペアリング処理、それ以外は false 返す
+  const handled = await staffMessage(event, ctx, null);
+  if (handled !== false) return;
 
   let messages = [];
 

@@ -61,6 +61,19 @@ exports.onReservationCreated = functions.onDocumentCreated(
       }
     }
 
+    // 該当日 シフト入りスタッフ に Flex 通知
+    try {
+      const staffNotify = require('./staffNotify');
+      const r = await staffNotify.pushNewReservationToStaff(rec);
+      await db.collection('ops_logs').add({
+        ts: admin.firestore.FieldValue.serverTimestamp(),
+        level: 'info', source: 'trigger', event: 'staff_notified_new_reservation',
+        payload: { resNo: rec.resNo, sent: r.sent, failed: r.failed },
+      });
+    } catch (err) {
+      console.error('staff notify failed', err);
+    }
+
     const guestRef = db.collection('guests').doc(rec.lineUserId);
     const gSnap = await guestRef.get();
     const prev = gSnap.exists ? gSnap.data() : {};
