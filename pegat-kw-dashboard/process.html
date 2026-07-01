@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PEGAT 広告 自動調整 — オーナー説明資料 | Skeleton</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --orange:#ff7a00; --orange-dark:#e36a00; --orange-light:#ffe4c4;
+    --yellow:#ffd400; --yellow-soft:#fff6cc;
+    --black:#1a1a1a; --gray-1:#f5f5f5; --gray-2:#ececec; --gray-3:#ddd; --gray-4:#999;
+    --text:#222; --green:#2e8b57; --red:#d8302f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:#fafafa;color:var(--text);font-family:-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;font-size:14px;line-height:1.6;}
+  /* ── ヘッダ */
+  header{background:var(--black);color:#fff;padding:14px 20px;border-bottom:4px solid var(--orange);}
+  header .container{max-width:1000px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  header .brand{background:var(--orange);color:#fff;font-weight:900;padding:3px 10px;border-radius:2px;font-size:12px;letter-spacing:.06em;}
+  header h1{font-size:20px;font-weight:800;letter-spacing:.02em;}
+  header .lead{color:#ccc;font-size:13px;margin-left:auto;}
+  header a{color:#ffd400;text-decoration:none;font-size:12px;margin-left:12px;}
+  /* ── コンテンツ */
+  main{max-width:1000px;margin:0 auto;padding:20px;}
+  section{background:#fff;border:1px solid var(--gray-3);border-radius:4px;padding:20px 24px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.03);}
+  section h2{font-size:20px;font-weight:800;color:var(--black);border-left:6px solid var(--orange);padding-left:12px;margin-bottom:14px;letter-spacing:.02em;}
+  section h3{font-size:15px;font-weight:700;color:var(--orange-dark);margin:16px 0 8px;}
+  section p{margin-bottom:10px;font-size:14px;}
+  section .lead-para{font-size:15px;color:#555;background:var(--yellow-soft);padding:10px 14px;border-left:4px solid var(--yellow);margin-bottom:16px;}
+  /* ── タイムライン */
+  .timeline{display:grid;grid-template-columns:80px 1fr;gap:12px 20px;position:relative;padding-left:10px;}
+  .timeline::before{content:'';position:absolute;left:52px;top:8px;bottom:8px;width:2px;background:var(--gray-3);}
+  .timeline .time{font-family:"SF Mono",Menlo,monospace;font-weight:800;color:var(--orange-dark);font-size:14px;text-align:right;padding-top:8px;position:relative;}
+  .timeline .time::after{content:'';position:absolute;right:-30px;top:12px;width:12px;height:12px;background:var(--orange);border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 1px var(--gray-3);}
+  .timeline .task{background:#fff;border:1px solid var(--gray-3);border-left:4px solid var(--orange);padding:10px 14px;border-radius:2px;}
+  .timeline .task .who{font-weight:800;color:var(--black);font-size:13px;}
+  .timeline .task .what{color:#555;font-size:13px;margin-top:2px;}
+  .timeline .task .qty{display:inline-block;background:var(--yellow-soft);color:#5a4400;font-size:11px;font-weight:700;padding:1px 6px;border-radius:2px;margin-right:4px;margin-top:4px;}
+  /* ── データボックス (icon grid) */
+  .data-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+  .data-box{background:#fff;border:1px solid var(--gray-3);padding:12px 14px;border-top:4px solid var(--orange);text-align:center;}
+  .data-box .icon{font-size:30px;line-height:1;margin-bottom:6px;}
+  .data-box .name{font-weight:800;color:var(--black);font-size:13px;margin-bottom:4px;}
+  .data-box .count{font-size:18px;font-weight:900;color:var(--orange-dark);line-height:1.1;}
+  .data-box .unit{font-size:10px;color:#666;}
+  /* ── 判定表 */
+  .judge-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .judge-table thead th{background:var(--black);color:#fff;padding:8px 10px;font-weight:700;text-align:left;letter-spacing:.02em;font-size:12px;}
+  .judge-table tbody td{padding:10px;border-bottom:1px solid var(--gray-2);vertical-align:middle;}
+  .judge-table tbody tr.star{background:#fff6e8;}
+  .judge-table tbody tr.good{background:var(--yellow-soft);}
+  .judge-table tbody tr.watch{background:var(--gray-1);}
+  .judge-table tbody tr.bad{background:#fde9e8;}
+  .judge-table tbody tr.dead{background:#222;color:#fff;}
+  .judge-table tbody tr.dead td{color:#fff;}
+  .tier-name{font-weight:800;letter-spacing:.02em;font-size:14px;}
+  .tier-name.star{color:var(--orange-dark);}
+  .tier-name.good{color:#7a5e00;}
+  .tier-name.watch{color:#666;}
+  .tier-name.bad{color:var(--red);}
+  .arrow-cell{font-weight:900;color:var(--black);font-size:14px;}
+  /* ── 例カード */
+  .example-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  .example{background:#fff;border:1px solid var(--gray-3);border-top:4px solid var(--orange);padding:14px;}
+  .example h4{font-size:13px;font-weight:800;color:var(--black);margin-bottom:8px;letter-spacing:.02em;}
+  .example .before-after{background:var(--gray-1);border:1px solid var(--gray-2);padding:8px 10px;margin:6px 0;font-family:"SF Mono",Menlo,monospace;font-size:12px;line-height:1.5;}
+  .example .before-after b{color:var(--red);}
+  .example .before-after b.after{color:var(--green);}
+  .example .why{color:#555;font-size:12px;margin-top:8px;line-height:1.5;}
+  /* ── フェーズ表 */
+  .phase-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;}
+  .phase-card{background:#fff;border:1px solid var(--gray-3);padding:10px 12px;border-left:4px solid var(--gray-3);font-size:12px;}
+  .phase-card.now{border-left-color:var(--orange);background:var(--orange-light);}
+  .phase-card .name{font-weight:800;font-size:13px;margin-bottom:2px;}
+  .phase-card .cond{color:#666;font-size:11px;}
+  .phase-card .badge-now{display:inline-block;background:var(--orange);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:2px;margin-left:4px;}
+  /* ── フロー矢印 */
+  .flow-vert{display:flex;flex-direction:column;align-items:center;gap:0;}
+  .flow-vert .step{background:#fff;border:2px solid var(--orange);padding:10px 14px;font-weight:700;font-size:13px;min-width:280px;text-align:center;}
+  .flow-vert .step.action{background:var(--orange);color:#fff;}
+  .flow-vert .arrow{color:var(--orange);font-size:22px;line-height:1;margin:4px 0;}
+  /* ── オーナー作業チェックリスト */
+  .checklist{background:var(--yellow-soft);border:2px solid var(--yellow);border-radius:6px;padding:16px 20px;}
+  .checklist h3{color:#5a4400;font-size:16px;font-weight:800;margin-bottom:10px;}
+  .checklist ul{list-style:none;}
+  .checklist li{padding:6px 0;font-size:14px;display:flex;align-items:baseline;gap:8px;}
+  .checklist li::before{content:'☐';font-size:18px;font-weight:800;color:var(--orange-dark);}
+  /* ── stats big */
+  .big-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 20px;}
+  .big-stat{background:linear-gradient(135deg,var(--orange) 0%,var(--orange-dark) 100%);color:#fff;padding:14px;text-align:center;border-radius:4px;}
+  .big-stat .num{font-size:26px;font-weight:900;line-height:1;}
+  .big-stat .lbl{font-size:11px;letter-spacing:.05em;margin-top:4px;opacity:.9;}
+  /* ── mobile */
+  @media(max-width:700px){
+    header .container{flex-direction:column;align-items:flex-start;gap:6px;}
+    header .lead{margin-left:0;}
+    .timeline{grid-template-columns:60px 1fr;}
+    .timeline::before{left:38px;}
+    .timeline .time::after{right:-26px;}
+    .example-grid{grid-template-columns:1fr;}
+    .big-stats{grid-template-columns:1fr 1fr;}
+  }
+  .footer{text-align:center;color:#999;font-size:11px;margin:20px 0 30px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <span class="brand">SKELETON</span>
+    <h1>PEGAT 広告 自動調整のしくみ</h1>
+    <div class="lead">
+      オーナー説明資料
+      <a href="./index.html">→ ダッシュボード</a>
+      <a href="./pipeline.html">→ 詳細版</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ===== 全体像 ===== -->
+<section>
+  <h2>📌 全体像</h2>
+  <p class="lead-para">毎朝 6:18〜7:30 の 約1時間で、 <b>17人分の作業</b>が自動で終わる。 オーナーは 起きたら結果を見るだけ。</p>
+
+  <div class="big-stats">
+    <div class="big-stat"><div class="num">17</div><div class="lbl">自動化ツール</div></div>
+    <div class="big-stat"><div class="num">3,000</div><div class="lbl">データ点/日</div></div>
+    <div class="big-stat"><div class="num">10</div><div class="lbl">監視ASIN</div></div>
+    <div class="big-stat"><div class="num">182</div><div class="lbl">監視KW</div></div>
+  </div>
+
+  <div class="flow-vert">
+    <div class="step">1️⃣ データ集める (6:18〜7:15)</div>
+    <div class="arrow">↓</div>
+    <div class="step">2️⃣ 判定する (6:40〜6:58)</div>
+    <div class="arrow">↓</div>
+    <div class="step">3️⃣ まとめる (6:50〜7:10)</div>
+    <div class="arrow">↓</div>
+    <div class="step action">4️⃣ オーナーに届ける (7:00〜)</div>
+  </div>
+</section>
+
+<!-- ===== 朝のタイムライン ===== -->
+<section>
+  <h2>🕐 朝の1時間 タイムライン</h2>
+  <p class="lead-para">6:18から7:30まで、 順番に自動作業が走る。 各時刻に <b>1タスク=1人分</b> の作業が起きるイメージ。</p>
+
+  <div class="timeline">
+    <div class="time">6:18</div>
+    <div class="task">
+      <div class="who">🔍 検索結果チェック係</div>
+      <div class="what">「車 クッション」 など5KWで検索、 上位20位を撮影。 誰が1位か、 どこにスポンサー枠出てるか記録。</div>
+      <span class="qty">100項目</span><span class="qty">35秒</span>
+    </div>
+
+    <div class="time">6:20</div>
+    <div class="task">
+      <div class="who">📸 ライバル商品ページ撮影係</div>
+      <div class="what">競合8社の商品ページを1枚ずつ撮影。 タイトル/画像枚数/クーポン/バリエ色数などをメモ。</div>
+      <span class="qty">80項目</span><span class="qty">90秒</span>
+    </div>
+
+    <div class="time">6:25 (日曜)</div>
+    <div class="task">
+      <div class="who">🏆 Best Sellers 巡回 (週1)</div>
+      <div class="what">クッション部門 Top100 のASIN 全部メモ。 先週いなかったASINが上位入り = 新規参入者発見。</div>
+      <span class="qty">100項目</span>
+    </div>
+
+    <div class="time">6:30</div>
+    <div class="task">
+      <div class="who">💰 会計・売上集計係</div>
+      <div class="what">Amazon管理画面から 昨日の全注文・売上・広告費 ダウンロード。 実績シートに自動入力。</div>
+      <span class="qty">50件</span><span class="qty">1分</span>
+    </div>
+
+    <div class="time">6:35</div>
+    <div class="task">
+      <div class="who">📦 在庫チェック係</div>
+      <div class="what">FBA倉庫の残り個数を経理シートへ転記。</div>
+    </div>
+
+    <div class="time">6:40</div>
+    <div class="task">
+      <div class="who">🎯 戦略モード 判定係</div>
+      <div class="what">「今日どのモードで戦うか」 8つから自動選定。 今日 = <b style="color:var(--orange-dark)">SALE SPIKE (セール直前モード)</b>。</div>
+    </div>
+
+    <div class="time">6:45</div>
+    <div class="task">
+      <div class="who">📊 KW判定係 (メイン広告担当)</div>
+      <div class="what">120キーワード全部を「儲かってる? 損してる?」 で 5段階判定。 結果を シートに記録。</div>
+      <span class="qty">120KW</span>
+    </div>
+
+    <div class="time">6:46</div>
+    <div class="task">
+      <div class="who">🤖 Auto広告 検索語句係</div>
+      <div class="what">Auto広告 で 実際に来た検索語句 (306語) をチェック。 儲かった語句 → Manual昇格候補。</div>
+      <span class="qty">306語</span>
+    </div>
+
+    <div class="time">6:47</div>
+    <div class="task">
+      <div class="who">🎬 動画広告 (SB Video) 係</div>
+      <div class="what">動画広告の 視聴完了率/ROAS を判定。 今日 ROAS=0.71 → BAD判定。</div>
+    </div>
+
+    <div class="time">6:50</div>
+    <div class="task">
+      <div class="who">🤵 秘書AI (Claude)</div>
+      <div class="what">上で集めた全データを AI が5秒で読んで <b>朝の戦況を3-5行で要約</b>。 「今日のアクション優先順位」 まで書く。</div>
+    </div>
+
+    <div class="time">6:55</div>
+    <div class="task">
+      <div class="who">🚨 警備員 (シグナル検知)</div>
+      <div class="what">ライバル8社の 15指標を 前日比較。 異常あれば LINEでオーナーに即通知。</div>
+      <span class="qty">15指標×8社=120</span>
+    </div>
+
+    <div class="time">6:58</div>
+    <div class="task">
+      <div class="who">🎖️ 作戦指示官</div>
+      <div class="what">警備員が見つけた異常に対して 「じゃあ何やる?」 を 10通りのマトリクスから自動判定。</div>
+    </div>
+
+    <div class="time">7:00</div>
+    <div class="task">
+      <div class="who">📧 朝メール 配信</div>
+      <div class="what">全部まとめて オーナーの Gmail に朝の会議メール送信。</div>
+    </div>
+
+    <div class="time">7:05</div>
+    <div class="task">
+      <div class="who">📊 KWダッシュボード 更新</div>
+      <div class="what">過去30日 × 全KW のデータを JSON化 → GitHubに push → Webダッシュボード更新。</div>
+      <span class="qty">5,460データ点</span>
+    </div>
+
+    <div class="time">7:10</div>
+    <div class="task">
+      <div class="who">🔬 深堀り分析係</div>
+      <div class="what">検索語句/曜日/プレースメント の 3軸で 追加分析JSON生成。</div>
+    </div>
+
+    <div class="time">7:15</div>
+    <div class="task">
+      <div class="who">📈 Keepa 情報屋</div>
+      <div class="what">Keepa API から ライバル8社の 価格/BSR/レビュー数 の正確な数字取得。</div>
+    </div>
+
+    <div class="time">7:30</div>
+    <div class="task">
+      <div class="who">🛡️ 最終アラート監視</div>
+      <div class="what">従来の異常検知システム が二重チェック。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 集めるデータ ===== -->
+<section>
+  <h2>📥 集めるデータ (1日あたり)</h2>
+  <p class="lead-para">毎日 <b>約3,000データ点</b> を8種類の情報源から集める。</p>
+
+  <div class="data-grid">
+    <div class="data-box"><div class="icon">💰</div><div class="name">売上/注文</div><div class="count">50</div><div class="unit">件/日</div></div>
+    <div class="data-box"><div class="icon">📊</div><div class="name">広告 KW実績</div><div class="count">2,000</div><div class="unit">件/日</div></div>
+    <div class="data-box"><div class="icon">🔍</div><div class="name">検索語句</div><div class="count">548</div><div class="unit">語/日</div></div>
+    <div class="data-box"><div class="icon">🎯</div><div class="name">現在の入札</div><div class="count">482</div><div class="unit">KW/日</div></div>
+    <div class="data-box"><div class="icon">🏪</div><div class="name">ライバル情報</div><div class="count">40</div><div class="unit">項目/日</div></div>
+    <div class="data-box"><div class="icon">📸</div><div class="name">ライバルページ</div><div class="count">80</div><div class="unit">要素/日</div></div>
+    <div class="data-box"><div class="icon">📈</div><div class="name">検索結果 順位</div><div class="count">100</div><div class="unit">位置/日</div></div>
+    <div class="data-box"><div class="icon">🚨</div><div class="name">シグナル発火</div><div class="count">10</div><div class="unit">〜30件/日</div></div>
+  </div>
+
+  <div style="background:#fff;border:1px solid var(--gray-3);padding:12px 14px;margin-top:14px;">
+    <div style="font-weight:800;font-size:13px;color:var(--black);margin-bottom:6px;">📅 累積すると…</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;">
+      <div><b style="font-size:20px;color:var(--orange-dark);">3,000</b><br><span style="font-size:11px;color:#666;">1日</span></div>
+      <div><b style="font-size:20px;color:var(--orange-dark);">21,000</b><br><span style="font-size:11px;color:#666;">1週間</span></div>
+      <div><b style="font-size:20px;color:var(--orange-dark);">90,000</b><br><span style="font-size:11px;color:#666;">1ヶ月</span></div>
+      <div><b style="font-size:20px;color:var(--orange-dark);">100万+</b><br><span style="font-size:11px;color:#666;">1年</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 判定ロジック ===== -->
+<section>
+  <h2>🧠 どうやって判定してる?</h2>
+  <p class="lead-para">全KW を <b>5段階</b> に分けて評価。 ACoS (=広告費÷売上) が 基準。</p>
+
+  <h3>▶ 5段階 判定表</h3>
+  <table class="judge-table">
+    <thead>
+      <tr><th style="width:100px">判定</th><th>条件</th><th style="width:200px">推奨アクション</th><th style="width:120px">今朝の件数</th></tr>
+    </thead>
+    <tbody>
+      <tr class="star">
+        <td><span class="tier-name star">🟢 STAR</span><br>効率最強</td>
+        <td>CVR≥12% <b>&</b> ACoS≤16%</td>
+        <td>入札 <b style="color:var(--green)">+20%</b> / Manual EXACT昇格</td>
+        <td><b>0件</b></td>
+      </tr>
+      <tr class="good">
+        <td><span class="tier-name good">🟢 GOOD</span><br>採算内</td>
+        <td>CVR≥8% <b>&</b> ACoS≤27%</td>
+        <td>入札 <b style="color:var(--green)">+5%</b> 維持</td>
+        <td><b>3件</b></td>
+      </tr>
+      <tr class="watch">
+        <td><span class="tier-name watch">🟡 WATCH</span><br>要監視</td>
+        <td>ACoS 27〜42%</td>
+        <td>7日観察 (変更なし)</td>
+        <td><b>2件</b></td>
+      </tr>
+      <tr class="bad">
+        <td><span class="tier-name bad">🔴 BAD</span><br>赤字</td>
+        <td>ACoS <b>&gt;</b> 42% (Break-even超過)</td>
+        <td>入札 <b style="color:var(--red)">−30%</b> (¥100/日以内)</td>
+        <td><b>8件</b></td>
+      </tr>
+      <tr class="dead">
+        <td><span class="tier-name" style="color:#fff;">⚫ DEAD</span><br>停止推奨</td>
+        <td>50click+ で sales=0、 30日経過</td>
+        <td>Pause + Negative追加</td>
+        <td><b>0件</b></td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="margin-top:8px;color:#666;font-size:12px;">※残り 169件 は「クリック少なくて 判定できない」 (INSUFFICIENT)。 データ蓄積待ち。</p>
+
+  <h3>▶ 8つの戦略モード (今どのモード?)</h3>
+  <div class="phase-grid">
+    <div class="phase-card"><div class="name">LAUNCH</div><div class="cond">上市90日以内</div></div>
+    <div class="phase-card"><div class="name">SEO CLIMB</div><div class="cond">レビュー100件到達まで</div></div>
+    <div class="phase-card"><div class="name">PROFIT</div><div class="cond">安定運用期</div></div>
+    <div class="phase-card now"><div class="name">SALE SPIKE <span class="badge-now">今</span></div><div class="cond">Prime Day前後</div></div>
+    <div class="phase-card"><div class="name">INVENTORY RISK</div><div class="cond">在庫30日未満</div></div>
+    <div class="phase-card"><div class="name">DEFENSE</div><div class="cond">競合参入検知時</div></div>
+    <div class="phase-card"><div class="name">SLOW</div><div class="cond">需要減時</div></div>
+    <div class="phase-card"><div class="name">REFRESH</div><div class="cond">画像/A+ 刷新後</div></div>
+  </div>
+</section>
+
+<!-- ===== 実際の調整例 ===== -->
+<section>
+  <h2>🔧 実際の調整 3例 (今朝のデータ)</h2>
+  <p class="lead-para">実際に AIが「こう調整すべき」 と判定した例を3つ紹介。</p>
+
+  <div class="example-grid">
+    <div class="example">
+      <h4>例1: 🔴 BAD → 入札 下げる</h4>
+      <div style="font-weight:800;font-size:13px;color:var(--black);">車クッション (EXACT)</div>
+      <div class="before-after">
+        現状: <b>ACoS 55%</b> 赤字<br>
+        入札: <b>¥70/クリック</b><br>
+        ↓<br>
+        推奨: <b class="after">¥49/クリック</b><br>
+        （-30% ダウン）
+      </div>
+      <div class="why">ACoS 55% は Break-even 42% を超えて赤字。 入札下げて クリック数減らし 損失止める。 <b>効果:</b> 月¥5,000-8,000改善見込み。</div>
+    </div>
+
+    <div class="example">
+      <h4>例2: 🟢 GOOD → 入札 上げる</h4>
+      <div style="font-weight:800;font-size:13px;color:var(--black);">車しーとクッション (EXACT)</div>
+      <div class="before-after">
+        現状: <b>ACoS 27%</b> 採算内<br>
+        入札: <b>¥60/クリック</b><br>
+        ↓<br>
+        推奨: <b class="after">¥63/クリック</b><br>
+        （+5% アップ）
+      </div>
+      <div class="why">誤字入りのお宝KW。 競合少なく効率良い。 入札少し上げて 表示回数増やす。 <b>効果:</b> 月¥3,000売上追加見込み。</div>
+    </div>
+
+    <div class="example">
+      <h4>例3: ⚫ Auto→Manual 昇格</h4>
+      <div style="font-weight:800;font-size:13px;color:var(--black);">坐骨神経痛 クッション 車</div>
+      <div class="before-after">
+        現状: Auto広告のみ<br>
+        <b>ACoS 19%</b> 効率最強<br>
+        ↓<br>
+        推奨: <b class="after">Manual EXACT新規追加</b>
+      </div>
+      <div class="why">Auto広告で発見された お宝KW。 Manual広告で直接狙って 入札コントロール可能に。 <b>効果:</b> 月¥5,000-10,000売上追加見込み。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 15シグナル→アクション ===== -->
+<section>
+  <h2>🚨 「ライバルが動いた」 の 自動対応</h2>
+  <p class="lead-para">ライバル8社の 動きを毎朝チェックして、 異常あれば <b>自動で対応策</b>を提案 (Phase A) or 実行 (Phase B)。</p>
+
+  <table class="judge-table">
+    <thead><tr><th style="width:220px">検知シグナル</th><th>自動アクション</th></tr></thead>
+    <tbody>
+      <tr><td><b>競合が値下げ ≥5%</b></td><td>Defense ASIN入札 +50% / Brand Defense展開</td></tr>
+      <tr><td><b>競合が在庫切れ</b> 🎯チャンス</td><td>対象KW入札 +30% / TOS placement +50% / SB Video投下</td></tr>
+      <tr><td><b>競合の 新規参入</b></td><td>7日観察 → Defense ASIN登録準備</td></tr>
+      <tr><td><b>自社 BSR急落 −20%</b></td><td>Auto広告 +20% / 画像CTR点検アラート</td></tr>
+      <tr><td><b>自社 在庫 30日未満</b></td><td>広告 −40% / Inventory Risk Phase 移行</td></tr>
+      <tr><td><b>Prime Day −7日</b> (今日!)</td><td>Sale Spike Phase 移行 / 予算 +80%</td></tr>
+      <tr><td><b>⚫ DEAD KW検出</b></td><td>Negative Exact追加 / 該当KW Pause</td></tr>
+      <tr><td><b>🟢 STAR KW検出</b></td><td>Manual Exact 昇格 / TOS +50%</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== 調整の段階 ===== -->
+<section>
+  <h2>📈 調整の段階 (今どこ?)</h2>
+  <p class="lead-para">「判定するだけ」 → 「AIが自動実行」 まで <b>5段階</b>。 今は Lv2。</p>
+
+  <div class="flow-vert">
+    <div class="step" style="background:var(--green);color:#fff;">Lv1: オーナー手動 (旧やり方)</div>
+    <div class="arrow">↓</div>
+    <div class="step" style="background:var(--green);color:#fff;">Lv2: AI判定 + オーナー手動実行 ★今</div>
+    <div class="arrow">↓</div>
+    <div class="step" style="border-style:dashed;color:#999;">Lv3: 1KWだけ試験自動 (1週間後)</div>
+    <div class="arrow" style="color:#ccc;">↓</div>
+    <div class="step" style="border-style:dashed;color:#999;">Lv4: 全KW自動 (Phase B解禁)</div>
+    <div class="arrow" style="color:#ccc;">↓</div>
+    <div class="step" style="border-style:dashed;color:#999;">Lv5: AI完全全自動運用</div>
+  </div>
+</section>
+
+<!-- ===== オーナー作業 ===== -->
+<section>
+  <h2>✅ オーナーが やること (現在)</h2>
+
+  <div class="checklist">
+    <h3>朝のルーティン (1分で完了)</h3>
+    <ul>
+      <li>Gmail 朝メール 確認 (7:00〜届く)</li>
+      <li>ダッシュボード開く → 「戦況サマリ」 タブで AI要約 3行読む</li>
+      <li>LINE 通知あれば 内容確認 (SEVERE級のみ届く)</li>
+      <li>気になるKWあれば ダッシュボードで 30日トレンド確認</li>
+      <li>推奨bid が出てたら Amazon広告画面で 手動セット (コピペ)</li>
+    </ul>
+  </div>
+
+  <h3 style="margin-top:20px;">✨ 週次で やること</h3>
+  <div style="background:#fff;border:1px solid var(--gray-3);padding:12px 14px;">
+    <b>1週間後 (7/8頃)</b>: dry-run データ蓄積後、 Phase B (自動実行) 解禁 判断<br>
+    <b>2週間後</b>: レビュー全文AI感情分析 スタート (毎週日曜 8:00)<br>
+    <b>月次</b>: 佐瀬さんコンサル に シート数字共有 (自動)
+  </div>
+</section>
+
+<div class="footer">Skeleton Inc. × PEGAT クッションOEM プロジェクト<br>作成: 2026-07-02 (Jobs AI CEO)</div>
+
+</main>
+</body>
+</html>
