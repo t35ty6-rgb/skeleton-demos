@@ -2220,15 +2220,21 @@ window.exportCSV = async function(type) {
 // ── 商品アイコン (写真>SVG>絵文字 優先) ──────────────────────
 function productIcon(p, size = 32) {
   if (!p) return '';
-  // 写真あれば写真
+  const iconKey = p.icon || 'other';
+  const svgFallback = (window.icon && iconKey && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27FF}]/u.test(iconKey))
+    ? window.icon(iconKey, { size })
+    : esc(iconKey);
+  const svgEscaped = svgFallback.replace(/"/g, '&quot;');
+  const commonStyle = `width:${size}px; height:${size}px; object-fit:cover; border-radius:4px; display:block;`;
+  // 写真 (アップロード) 最優先
   if (p.imageDataUrl) {
-    return `<img src="${p.imageDataUrl}" style="width:${size}px; height:${size}px; object-fit:cover; border-radius:4px;">`;
+    return `<img src="${p.imageDataUrl}" style="${commonStyle}" onerror="this.outerHTML='${svgEscaped}'">`;
   }
-  const i = p.icon || 'other';
-  if (window.icon && i && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27FF}]/u.test(i)) {
-    return window.icon(i, { size });
+  // Unsplash 直リンク
+  if (p.imageUrl) {
+    return `<img src="${p.imageUrl}" loading="lazy" style="${commonStyle}" onerror="this.outerHTML='${svgEscaped}'">`;
   }
-  return esc(i);
+  return svgFallback;
 }
 window.productIcon = productIcon;
 
