@@ -735,8 +735,107 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     if(v==='st' && !ST_DATA) loadST();
     if(v==='dow' && !DOW_DATA) loadDoW();
     if(v==='pl' && !PL_DATA) loadPL();
+    if(v==='review' && !RV_DATA) loadReview();
   });
 });
+
+// ── レビュー分析 ────────────────────────────
+let RV_DATA = null;
+async function loadReview(){
+  try{
+    const r = await fetch('./data/reviews.json?_=' + Date.now());
+    if(!r.ok) throw new Error('reviews.json '+r.status);
+    RV_DATA = await r.json();
+    renderReview();
+  } catch(e){
+    document.getElementById('rv-sub').textContent = '読み込み失敗: ' + e.message + ' (data/reviews.json が未生成の可能性)';
+  }
+}
+function renderReview(){
+  const D = RV_DATA;
+  document.getElementById('rv-sub').textContent =
+    `${D.source_date} 時点 / ${D.source_review_count}件のレビューを ${D.model} で分析`;
+
+  const OWN = new Set(['B0FL5FC4J3','B0FL5BPJC7']);
+  const asins = Object.values(D.asins || {});
+  const own = asins.filter(a=>OWN.has(a.asin) && !a.error);
+  const comp = asins.filter(a=>!OWN.has(a.asin) && !a.error);
+  const avg = arr => arr.length ? arr.reduce((s,x)=>s+(x||0),0)/arr.length : null;
+  const ownSent = avg(own.map(a=>a.overall_sentiment).filter(x=>x!=null));
+  const ownRating = avg(own.map(a=>a.avg_rating).filter(x=>x!=null));
+  const compSent = avg(comp.map(a=>a.overall_sentiment).filter(x=>x!=null));
+  document.getElementById('rv-own-sent').textContent = ownSent==null ? '—' : ownSent.toFixed(2);
+  document.getElementById('rv-own-rating').textContent = ownRating==null ? '—' : ownRating.toFixed(2) + ' ★';
+  document.getElementById('rv-comp-sent').textContent = compSent==null ? '—' : compSent.toFixed(2);
+
+  const mergeThemes = key => {
+    const m = new Map();
+    own.forEach(a => (a[key]||[]).forEach(e => {
+      const k = (e.theme||'').trim();
+      if(!k) return;
+      if(!m.has(k)) m.set(k, { theme:k, count:0, sample_quote:e.sample_quote||'', asins:[] });
+      const c = m.get(k); c.count += e.count||0; c.asins.push(a.label||a.asin);
+      if(!c.sample_quote && e.sample_quote) c.sample_quote = e.sample_quote;
+    }));
+    return [...m.values()].sort((a,b)=>b.count-a.count).slice(0,10);
+  };
+  document.getElementById('rv-praise').innerHTML = renderThemeList(mergeThemes('praise_top10'), 'praise');
+  document.getElementById('rv-complaint').innerHTML = renderThemeList(mergeThemes('complaint_top10'), 'complaint');
+
+  const gapImp = (D.meta && D.meta.gap_improvement_top10) || [];
+  const gapAdv = (D.meta && D.meta.gap_advantage_top10) || [];
+  document.getElementById('rv-gap-imp').innerHTML = renderGapList(gapImp, 'improvement');
+  document.getElementById('rv-gap-adv').innerHTML = renderGapList(gapAdv, 'advantage');
+
+  const tb = document.querySelector('#rv-asin-table tbody');
+  tb.innerHTML = asins.map(a => {
+    if (a.error) return `<tr><td><b>${escapeHtml(a.label||a.asin)}</b></td><td style="font-family:monospace;font-size:11px;">${escapeHtml(a.asin)}</td><td colspan="6" style="color:#c00;font-size:11px;">${escapeHtml(a.error||'error')}</td></tr>`;
+    const p3 = (a.praise_top10||[]).slice(0,3).map(e=>escapeHtml(e.theme)).join('<br>');
+    const c3 = (a.complaint_top10||[]).slice(0,3).map(e=>escapeHtml(e.theme)).join('<br>');
+    return `<tr>
+      <td><b>${escapeHtml(a.label||a.asin)}</b></td>
+      <td style="font-family:monospace;font-size:11px;">${escapeHtml(a.asin)}</td>
+      <td class="num">${a.count}</td>
+      <td class="num">${a.avg_rating!=null?a.avg_rating.toFixed(2):'—'}</td>
+      <td class="num">${a.overall_sentiment!=null?a.overall_sentiment.toFixed(2):'—'}</td>
+      <td style="font-size:11px;">${escapeHtml(a.dominant_use_case||'')}</td>
+      <td style="font-size:11px;">${p3}</td>
+      <td style="font-size:11px;">${c3}</td>
+    </tr>`;
+  }).join('');
+}
+function renderThemeList(list, kind){
+  if(!list || list.length===0) return '<div style="padding:10px;color:#999;">データ無し</div>';
+  const color = kind==='praise' ? '#3b7d3b' : '#c04040';
+  return '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+    list.map((e,i)=>`
+      <tr style="border-bottom:1px solid var(--gray-2);">
+        <td style="padding:6px 8px;vertical-align:top;">
+          <div style="font-weight:600;color:${color};font-size:12px;">
+            <span style="color:#999;margin-right:6px;">${i+1}.</span>${escapeHtml(e.theme)}
+            <span style="float:right;color:#666;font-weight:400;">${e.count}件</span>
+          </div>
+          <div style="color:#666;font-size:11px;margin-top:3px;line-height:1.4;">「${escapeHtml((e.sample_quote||'').slice(0,120))}」</div>
+        </td>
+      </tr>`).join('') + '</table>';
+}
+function renderGapList(list, kind){
+  if(!list || list.length===0) return '<div style="padding:6px;color:#999;">ギャップ無し</div>';
+  const color = kind==='improvement' ? '#c04040' : '#3b7d3b';
+  const countKey = kind==='improvement' ? 'competitor_count' : 'competitor_complaint_count';
+  const countLabel = kind==='improvement' ? '競合褒め' : '競合不満';
+  return '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+    list.map((g,i)=>`
+      <tr style="border-bottom:1px solid var(--gray-2);">
+        <td style="padding:5px 8px;width:22px;color:#999;vertical-align:top;">${i+1}.</td>
+        <td style="padding:5px 8px;vertical-align:top;">
+          <div style="font-weight:600;color:${color};">${escapeHtml(g.theme)}</div>
+          <div style="color:#666;font-size:11px;margin-top:2px;">「${escapeHtml((g.sample_quote||'').slice(0,140))}」</div>
+        </td>
+        <td class="num" style="padding:5px 8px;font-size:11px;color:#555;vertical-align:top;white-space:nowrap;">${countLabel} <b>${g[countKey]}件</b></td>
+        <td style="padding:5px 8px;font-size:10px;color:#888;vertical-align:top;">${escapeHtml((g.competitor_asins||[]).join(' / '))}</td>
+      </tr>`).join('') + '</table>';
+}
 
 // ── ST (検索語句別) ────────────────────────────
 async function loadST(){
