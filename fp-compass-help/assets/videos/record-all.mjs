@@ -18,16 +18,16 @@ const HIGHLIGHT_CSS = `
 /* body が zoom時に transformされる — スクロールバー隠す */
 html.fp-help-zooming, html.fp-help-zooming body { overflow: hidden !important; }
 body { transition: transform 0.55s cubic-bezier(.4,0,.2,1); }
-.fp-help-spot { position: absolute !important; border: 3px solid #C89D3C !important; border-radius: 8px !important;
-  box-shadow: 0 0 0 6px rgba(200,157,60,0.20), 0 0 32px rgba(200,157,60,0.55) !important;
+.fp-help-spot { position: absolute !important; border: 4px solid #EF4444 !important; border-radius: 8px !important;
+  box-shadow: 0 0 0 8px rgba(239,68,68,0.28), 0 0 40px rgba(239,68,68,0.85), 0 0 90px rgba(239,68,68,0.5) !important;
   pointer-events: none !important; z-index: 99998 !important;
-  animation: fp-help-pulse 1.2s ease-in-out infinite; }
+  animation: fp-help-pulse 1.1s ease-in-out infinite; }
 .fp-help-arrow { position: absolute !important; pointer-events: none !important; z-index: 99999 !important;
-  background: #15172B; color: #fff; font-family: "Noto Sans JP", system-ui, sans-serif;
-  font-weight: 800; font-size: 14px; padding: 7px 12px; border-radius: 6px;
-  box-shadow: 0 6px 20px rgba(0,0,0,.35); white-space: nowrap; animation: fp-help-fadein .25s ease; }
+  background: #EF4444; color: #fff; font-family: "Noto Sans JP", system-ui, sans-serif;
+  font-weight: 800; font-size: 15px; padding: 9px 16px; border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(239,68,68,.45); white-space: nowrap; animation: fp-help-fadein .25s ease; }
 .fp-help-arrow::after { content: ''; position: absolute; left: -6px; top: 50%;
-  transform: translateY(-50%) rotate(45deg); width: 10px; height: 10px; background: #15172B; }
+  transform: translateY(-50%) rotate(45deg); width: 12px; height: 12px; background: #EF4444; }
 /* カーソル (大きめSVG) */
 #fp-help-cursor { position: absolute; pointer-events: none; z-index: 99997;
   transition: left .45s cubic-bezier(.4,0,.2,1), top .45s cubic-bezier(.4,0,.2,1);
@@ -36,8 +36,8 @@ body { transition: transform 0.55s cubic-bezier(.4,0,.2,1); }
 .fp-help-ring { position: absolute; pointer-events: none; z-index: 100000;
   border: 4px solid #4338CA; border-radius: 50%;
   animation: fp-help-ring 0.65s cubic-bezier(.2,.8,.4,1) forwards; }
-@keyframes fp-help-pulse { 0%,100% { box-shadow: 0 0 0 6px rgba(200,157,60,0.20), 0 0 32px rgba(200,157,60,0.55); }
-  50% { box-shadow: 0 0 0 12px rgba(200,157,60,0.10), 0 0 40px rgba(200,157,60,0.7); } }
+@keyframes fp-help-pulse { 0%,100% { box-shadow: 0 0 0 8px rgba(239,68,68,0.28), 0 0 40px rgba(239,68,68,0.85), 0 0 90px rgba(239,68,68,0.5); }
+  50% { box-shadow: 0 0 0 14px rgba(239,68,68,0.14), 0 0 55px rgba(239,68,68,0.95), 0 0 120px rgba(239,68,68,0.4); } }
 @keyframes fp-help-fadein { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes fp-help-ring {
   from { transform: scale(0.25); opacity: 1; }
@@ -105,7 +105,7 @@ async function injectHelper(p) {
         return true;
       } catch (e) { return false; }
     };
-    // ★ ズーム演出: 該当要素だけ scale + z-index up、 背景 は dim overlay で 暗く
+    // ★ 2026-07-02 dim廃止: 「グレースケール見づらい」 fb → dim overlay OFF、 赤枠+吹き出し+scale だけ で フォーカス
     window.fpHelp.zoom = (sel, label, opts) => {
       opts = opts || {};
       const scale = opts.scale || 1.35;
@@ -113,15 +113,6 @@ async function injectHelper(p) {
       if (!t) return false;
       const r = t.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) return false;
-      // dark overlay 挿入
-      let ov = document.getElementById('fp-help-overlay');
-      if (!ov) {
-        ov = document.createElement('div');
-        ov.id = 'fp-help-overlay';
-        ov.style.cssText = 'position:fixed;inset:0;background:rgba(21,23,43,0.18);z-index:99990;pointer-events:none;opacity:0;transition:opacity 0.35s;';
-        document.body.appendChild(ov);
-      }
-      requestAnimationFrame(() => { ov.style.opacity = '1'; });
       // 該当要素 拡大 + z-index up
       const oldPos = window.getComputedStyle(t).position;
       window._fpZoomSaved = { el: t, position: t.style.position, zIndex: t.style.zIndex, transform: t.style.transform, transition: t.style.transition, background: t.style.background };
@@ -130,20 +121,12 @@ async function injectHelper(p) {
       t.style.transformOrigin = 'center center';
       if (oldPos === 'static') t.style.position = 'relative';
       t.style.zIndex = '99993';
-      // 背景色 なし の 要素 は 背景色 付ける (overlay で 透けて見えないよう)
-      if (!t.style.background && (t.tagName === 'BUTTON' || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) {
-        const bg = window.getComputedStyle(t).backgroundColor;
-        if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
-          t.style.background = '#fff';
-        }
-      }
+      // 背景 上書き は しない (元 の色 保持、 dim overlay なし なので 不要)
       window.fpHelp.spot(sel, label);
       window.fpHelp.moveCursor(sel);
       return true;
     };
     window.fpHelp.zoomOut = () => {
-      const ov = document.getElementById('fp-help-overlay');
-      if (ov) { ov.style.opacity = '0'; setTimeout(() => { try { ov.remove(); } catch(_){} }, 400); }
       const s = window._fpZoomSaved;
       if (s && s.el) {
         s.el.style.transform = s.transform || '';
@@ -289,22 +272,33 @@ const features = [
   }},
 
   { name: '07-recording', fn: async (p) => {
-    // ★ 2026-07-02 fb fix: ナレで言った所を 実際に触って見せる (click + scroll)、 dim 薄く 場面見える
+    // ★ 2026-07-02 全工程 丁寧化: 「初めて 見る人 が 分かる」 レベル で
     await p.waitForTimeout(1500);
-    // 1. サイドバー 「急遽 面談スタート」 zoom + 実クリック
-    await focusClick(p, '.sidebar-quick-rec-label, .sidebar-quick-rec, [class*="quick-rec"]',
-      'サイドバー「急遽 面談スタート」', { scale: 1.9, hold: 2200, after: 400, click: false });
+
+    // === step 1: サイドバー 「急遽 面談スタート」 (実DOM: #sidebar-quick-inperson) ===
+    await focusClick(p, '#sidebar-quick-inperson',
+      '「急遽 面談スタート」 を 押す', { scale: 1.9, hold: 2800, after: 300, click: false });
+    await p.evaluate(() => document.getElementById('sidebar-quick-inperson')?.click());
+    await p.waitForTimeout(2500);   // モーダル open 見せる
+
+    // === step 2: お客様 プルダウン ===
+    await focusClick(p, '#fp-qi-client', 'お客様 を 選ぶ', { scale: 1.6, hold: 2500, after: 200, click: false });
+    // JS で option を 選択状態に (dropdown 開かず 選択済 視覚化)
     await p.evaluate(() => {
-      const el = document.querySelector('.sidebar-quick-rec-label, .sidebar-quick-rec, [class*="quick-rec"]');
-      (el?.closest('button') || el)?.click();
+      const sel = document.getElementById('fp-qi-client');
+      if (sel && sel.options.length > 2) {
+        sel.selectedIndex = 2;   // 最初 の 顧客
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+        sel.style.borderColor = '#9A5A18';
+      }
     });
-    await p.waitForTimeout(2200);   // モーダル 開くのを 見せる (2秒)
-    // 2. 「対面 で 録音 だけ する」 zoom → JS で radio 選択状態にして 視覚 確認
-    await focusClick(p, '.fp-qi-mode[data-mode="audio"], label[data-mode="audio"]',
-      '対面 録音 を 選ぶ', { scale: 1.7, hold: 2500, after: 200, click: false });
-    // radio 選択状態を 視覚化 (実クリックは マイク許可 promptを 避ける)
+    await p.waitForTimeout(1800);
+
+    // === step 3: Zoom即発行 モード zoom + 選択 ===
+    await focusClick(p, '.fp-qi-mode[data-mode="zoom"], label[data-mode="zoom"]',
+      'Zoom 即 発行 を 選ぶ', { scale: 1.5, hold: 3500, after: 200, click: false });
     await p.evaluate(() => {
-      const mode = document.querySelector('.fp-qi-mode[data-mode="audio"]');
+      const mode = document.querySelector('.fp-qi-mode[data-mode="zoom"]');
       if (mode) {
         mode.style.borderColor = '#9A5A18';
         mode.style.background = '#FFF9EB';
@@ -312,64 +306,76 @@ const features = [
         if (r) r.checked = true;
       }
     });
-    await p.waitForTimeout(1500);   // 選択状態 見せる
-    // 3. 「Zoom 即発行」 モード も zoom (対比 で紹介)
-    await focusClick(p, '.fp-qi-mode[data-mode="zoom"], label[data-mode="zoom"]',
-      'Zoom 即 発行 なら 双方 参加', { scale: 1.6, hold: 2500, after: 500, click: false });
-    // 4. モーダル 閉じる
-    await p.evaluate(() => document.getElementById('fp-quick-inperson-modal')?.remove());
-    await p.waitForTimeout(700);
-    // 5. 顧客カルテ 開く (openModal)
-    await openModal(p, '徳佐|Jobs');
-    await p.waitForTimeout(2000);
-    // 6. 面談録 タブ zoom + 実クリック
-    await focusClick(p, '[data-cdtab="meetings"]', '面談録 タブ を タップ', { scale: 1.9, hold: 1300, after: 300 });
-    await p.waitForTimeout(1500);   // タブ切替 反映を 見せる
-    // 7. 議事録一覧 で 下に scroll して 複数カード 見せる
-    await p.evaluate(() => {
-      const panel = document.querySelector('[data-cdpanel="meetings"]');
-      if (panel) panel.scrollTo({ top: 0, behavior: 'smooth' });
-    });
     await p.waitForTimeout(1200);
-    await highlight(p, '[data-cdpanel="meetings"]', '過去 の 議事録 が 一覧 で', 3000);
+
+    // === step 4: 「対面 で 録音」 モード (対比 説明) ===
+    await focusClick(p, '.fp-qi-mode[data-mode="audio"], label[data-mode="audio"]',
+      '対面 なら 「対面 録音」', { scale: 1.5, hold: 3500, after: 300, click: false });
+
+    // === step 5: 「選んだ スタイル で 開始」 zoom ===
+    await focusClick(p, '#fp-qi-start, .fp-qi-start, button[type="submit"]',
+      '「選んだ スタイル で 開始」', { scale: 1.7, hold: 2800, after: 500, click: false });
+
+    // === step 6: モーダル 閉じる (Zoom発行 相当 の 説明 は ナレで) ===
+    await p.evaluate(() => document.getElementById('fp-quick-inperson-modal')?.remove());
+    await p.waitForTimeout(800);
+
+    // === step 7: 「議事録 生成中」 通知 の 模擬表示 (右上) ===
     await p.evaluate(() => {
-      const panel = document.querySelector('[data-cdpanel="meetings"]');
-      if (panel) panel.scrollBy({ top: 200, behavior: 'smooth' });
+      const toast = document.createElement('div');
+      toast.id = 'fp-help-toast';
+      toast.style.cssText = 'position:fixed;top:22px;right:22px;background:#1F2A3F;color:#fff;padding:14px 20px;border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,0.35);z-index:99997;display:flex;align-items:center;gap:12px;font-family:"Noto Sans JP",sans-serif;';
+      toast.innerHTML = '<div style="width:18px;height:18px;border:2.5px solid #FBBF24;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div><div style="font-weight:700;font-size:13.5px;">議事録 生成中... (30秒〜1分)</div>';
+      const st = document.createElement('style');
+      st.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+      document.head.appendChild(st);
+      document.body.appendChild(toast);
+    });
+    await p.evaluate(() => window.fpHelp.spot('#fp-help-toast', '右上 に 通知'));
+    await p.waitForTimeout(3500);
+    await p.evaluate(() => window.fpHelp.clear());
+    await p.evaluate(() => {
+      const t = document.getElementById('fp-help-toast');
+      if (t) t.innerHTML = '<div style="width:18px;height:18px;background:#10B981;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:800;">✓</div><div style="font-weight:700;font-size:13.5px;">議事録 完成 しました</div>';
     });
     await p.waitForTimeout(2000);
-    // 8. カード zoom + click で 展開
+    await p.evaluate(() => document.getElementById('fp-help-toast')?.remove());
+
+    // === step 8: 顧客カルテ 開く ===
+    await openModal(p, '徳佐|Jobs');
+    await p.waitForTimeout(1800);
+
+    // === step 9: 「面談録」 タブ zoom + 実クリック ===
+    await focusClick(p, '[data-cdtab="meetings"]', '「面談録」 タブ を タップ', { scale: 2.0, hold: 2200, after: 500 });
+    await p.waitForTimeout(1200);
+
+    // === step 10: 議事録カード (.fp-meeting-card 実DOM) zoom + click 展開 ===
     await p.evaluate(() => {
-      const panel = document.querySelector('[data-cdpanel="meetings"]');
-      if (panel) panel.scrollTo({ top: 0, behavior: 'smooth' });
+      const card = document.querySelector('.fp-meeting-card');
+      if (card) window.fpHelp.zoom(card, '新しい 議事録 カード', { scale: 1.3 });
     });
-    await p.waitForTimeout(1000);
-    await p.evaluate(() => {
-      const card = document.querySelector('[data-cdpanel="meetings"] .meeting-card, [data-cdpanel="meetings"] .fp-meeting-card, [data-cdpanel="meetings"] article');
-      if (card) window.fpHelp.zoom(card, 'カード を タップ', { scale: 1.35 });
-    });
-    await p.waitForTimeout(2000);
+    await p.waitForTimeout(2800);
+    // カード click で 展開 (fp-compass-app で is-open クラス切替)
     await p.evaluate(() => {
       window.fpHelp.zoomOut(); window.fpHelp.clear();
-      const card = document.querySelector('[data-cdpanel="meetings"] .meeting-card, [data-cdpanel="meetings"] .fp-meeting-card, [data-cdpanel="meetings"] article');
+      const card = document.querySelector('.fp-meeting-card');
       if (card) card.click();
     });
-    await p.waitForTimeout(2000);
-    // 9. 展開後 中を scroll で 見せる (6セクション + タスク)
-    await p.evaluate(() => {
-      const panel = document.querySelector('[data-cdpanel="meetings"]');
-      if (panel) panel.scrollBy({ top: 250, behavior: 'smooth' });
-    });
-    await p.waitForTimeout(2000);
-    await p.evaluate(() => {
-      const panel = document.querySelector('[data-cdpanel="meetings"]');
-      if (panel) panel.scrollBy({ top: 300, behavior: 'smooth' });
-    });
-    await p.waitForTimeout(2000);
-    await p.evaluate(() => {
-      const panel = document.querySelector('[data-cdpanel="meetings"]');
-      if (panel) panel.scrollBy({ top: 300, behavior: 'smooth' });
-    });
-    await p.waitForTimeout(2500);
+    await p.waitForTimeout(2200);
+
+    // === step 11: 展開後 モーダル本体 (.cd-modal-body 相当) を scroll で 中身見せる ===
+    // fp-meeting-card 展開で 本文が下に出る → モーダル / panel を scroll
+    for (const dy of [200, 240, 260, 280, 280, 260]) {
+      await p.evaluate((y) => {
+        // モーダル 本体 or panel を scroll
+        const targets = document.querySelectorAll('.cd-modal-body, .cd-content, [data-cdpanel="meetings"], .modal-body, .cd-body');
+        targets.forEach(t => t.scrollBy({ top: y, behavior: 'smooth' }));
+        window.scrollBy({ top: y * 0.5, behavior: 'smooth' });
+      }, dy);
+      await p.waitForTimeout(2500);
+    }
+    // 末尾: 議事録カード 全体 highlight (見えた事を 確認)
+    await highlight(p, '.fp-meeting-card', '議事録 完成', 3000);
   }},
 
   { name: '08-timeline', fn: async (p) => {
@@ -483,7 +489,13 @@ const ctx = await b.newContext({
 });
 // ★ addInitScript で 各 navigation 直後 に mebuki chatbot を 完全排除 (CSS + MutationObserver)
 await ctx.addInitScript(() => {
-  const KILL_SELECTORS = '#mbFab, #mbFabHint, #mbPanel, #mbClose, #mbInput, #mbMessages, #mbResize, #mbSend, .mb-fab, .mb-fab-hint, .mb-fab-img, .mb-fab-badge, .mb-fab-avatar, .mb-fab-pulse, .mb-fab-label, .mb-bubble, .mb-panel, .mb-head, .mb-head-avatar, .mb-head-img, .mb-messages, .mb-msg, .mb-quick, .mb-q, .mb-input, .mb-input-row, .mb-close, .mb-resize';
+  const KILL_SELECTORS = '#mbFab, #mbFabHint, #mbPanel, #mbClose, #mbInput, #mbMessages, #mbResize, #mbSend, .mb-fab, .mb-fab-hint, .mb-fab-img, .mb-fab-badge, .mb-fab-avatar, .mb-fab-pulse, .mb-fab-label, .mb-bubble, .mb-panel, .mb-head, .mb-head-avatar, .mb-head-img, .mb-messages, .mb-msg, .mb-quick, .mb-q, .mb-input, .mb-input-row, .mb-close, .mb-resize, .chatbot-widget, [class*="mebuki"], [id*="mebuki"]';
+  // ★ 早期 CSS 注入 (documentElement に直接 style tag で 最速で有効化)
+  const earlyStyle = 'html:not(.fp-help-allow-chatbot) ' + KILL_SELECTORS.split(',').map(s => s.trim()).join(', html:not(.fp-help-allow-chatbot) ') + ' { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; position: absolute !important; left: -9999px !important; }';
+  const st0 = document.createElement('style');
+  st0.id = 'fp-hide-mebuki-early';
+  st0.textContent = earlyStyle;
+  (document.head || document.documentElement).appendChild(st0);
   // CSS で 表示阻止 (fallback)
   const style = document.createElement('style');
   style.id = 'fp-hide-mebuki';
@@ -503,7 +515,7 @@ await ctx.addInitScript(() => {
   if (document.body) startObserver();
   else document.addEventListener('DOMContentLoaded', startObserver, { once: true });
   // 保険: interval
-  setInterval(kill, 200);
+  setInterval(kill, 50);
 });
 const p = await ctx.newPage();
 p.on('pageerror', e => console.log('PE:', e.message.slice(0, 80)));
