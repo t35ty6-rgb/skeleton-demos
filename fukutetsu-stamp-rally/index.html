@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ふくてつ さんぽ帳">
 <meta name="fukutetsu-liff-id" content="">
+<meta name="fukutetsu-backend" content="local">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -441,6 +442,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script type="module" src="./shared/store.js"></script>
 <script>
 // ─────────── data ───────────
 const SPOTS = [
@@ -458,6 +460,17 @@ const SPOTS = [
 const RADIUS_M = 150;
 const LS_STAMPS = "ftr01_stamps_v3";
 const LS_USER = "ftr01_user_v3";
+const BACKEND = (document.querySelector('meta[name="fukutetsu-backend"]')||{}).content || "local";
+const USE_FS = BACKEND === "firestore";
+
+function storeReady(){
+  if (window.fukutetsuStore) return Promise.resolve();
+  return new Promise(r => {
+    window.addEventListener("fukutetsu-store-ready", ()=>r(), { once:true });
+    // Local backend では store.js が読めなくても localStorage 直で動作 → 1.5s で resolve
+    if (BACKEND === "local") setTimeout(r, 200);
+  });
+}
 
 // ─────────── state ───────────
 let user = loadUser();
@@ -712,7 +725,7 @@ function renderPrize(){
 }
 
 // ─────────── stamp ───────────
-function doStamp(spot){
+async function doStamp(spot){
   if (!spot) return false;
   if (collected.some(c=>c.code===spot.code)){
     showToast("既に集印済", `${spot.name} は既にスタンプ済みです`, true);
@@ -722,8 +735,22 @@ function doStamp(spot){
   const pad = x => String(x).padStart(2,"0");
   const time = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} JST`;
   const serial = String(284 + collected.length * 7).padStart(6,"0");
-  collected.push({ code: spot.code, name: spot.name, coord: spot.coord, time, serial, isNew: true });
+  const stamp = { code: spot.code, name: spot.name, station: spot.station, coord: spot.coord, time, serial, isNew: true };
+  collected.push(stamp);
   saveStamps();
+  // Firestore backend: サーバー側にも保存 (fire-and-forget)
+  if (USE_FS && user && user.userId){
+    try {
+      await window.fukutetsuStore.saveStamp(user.userId, {
+        code: spot.code, name: spot.name, station: spot.station,
+        coord: spot.coord, time, serial,
+        lat: spot.lat, lng: spot.lng,
+        via: user.via || "web",
+      });
+    } catch(e){
+      console.warn("[fukutetsu] Firestore stamp save failed:", e);
+    }
+  }
 
   // flash
   const flash = document.getElementById("flash");
@@ -904,6 +931,8 @@ document.getElementById("btn-reset").addEventListener("click", ()=>{
 const LIFF_ID = (document.querySelector('meta[name="fukutetsu-liff-id"]') || {}).content || "";
 
 async function bootstrap(){
+  // Wait for store module to boot (localStorage is instant, Firestore needs init)
+  await storeReady();
   // LIFF path (only if LIFF_ID is set + SDK available)
   if (LIFF_ID && typeof window.liff !== "undefined"){
     try {
@@ -913,7 +942,6 @@ async function bootstrap(){
           liff.login();
           return;
         }
-        // Outside LINE, not logged in: try web login
         liff.login();
         return;
       }
@@ -926,7 +954,14 @@ async function bootstrap(){
         joinedAt: (user && user.joinedAt) || Date.now()
       };
       saveUser();
-      // In LINE + logged in: skip onboarding, go straight to app
+      if (USE_FS){
+        try {
+          await window.fukutetsuStore.saveUser(user);
+          // Firestore が SSOT なので サーバから 押印履歴を再読み込み
+          const remote = await window.fukutetsuStore.listStamps(user.userId);
+          if (remote && remote.length){ collected = remote; saveStamps(); }
+        } catch(e){ console.warn("[fukutetsu] Firestore user sync failed:", e); }
+      }
       render();
       tryGeolocation();
       return;
@@ -938,6 +973,13 @@ async function bootstrap(){
   if (!user || !user.name){
     showOb();
   } else {
+    // Firestore backend + userIdあり (Web+手動ID) の場合は 履歴同期
+    if (USE_FS && user.userId){
+      try {
+        const remote = await window.fukutetsuStore.listStamps(user.userId);
+        if (remote && remote.length){ collected = remote; saveStamps(); }
+      } catch(e){ console.warn("[fukutetsu] Firestore stamps sync failed:", e); }
+    }
     render();
     tryGeolocation();
   }
