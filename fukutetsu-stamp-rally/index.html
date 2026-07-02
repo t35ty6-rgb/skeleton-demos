@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#c3d9dc">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ふくてつ さんぽ帳">
-<meta name="fukutetsu-liff-id" content="">
+<meta name="fukutetsu-liff-id" content="2010586164-khN3xquN">
 <meta name="fukutetsu-backend" content="local">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./photos/icon-192.png">
@@ -1075,34 +1075,36 @@ async function bootstrap(){
   if (LIFF_ID && typeof window.liff !== "undefined"){
     try {
       await liff.init({ liffId: LIFF_ID });
+      const inClient = liff.isInClient();
       if (!liff.isLoggedIn()){
-        if (liff.isInClient()){
+        if (inClient){
+          // LINE内起動時のみ自動ログイン (redirect flow)
           liff.login();
           return;
         }
-        liff.login();
+        // 通常ブラウザ (LIFF URL 直開き等): ログイン強制はせず web fallback
+        console.log("[fukutetsu] LIFF ready (browser) → web fallback (onboarding)");
+      } else {
+        const p = await liff.getProfile();
+        user = {
+          name: p.displayName,
+          userId: p.userId,
+          pictureUrl: p.pictureUrl || null,
+          via: inClient ? "liff" : "liff-browser",
+          joinedAt: (user && user.joinedAt) || Date.now()
+        };
+        saveUser();
+        if (USE_FS){
+          try {
+            await window.fukutetsuStore.saveUser(user);
+            const remote = await window.fukutetsuStore.listStamps(user.userId);
+            if (remote && remote.length){ collected = remote; saveStamps(); }
+          } catch(e){ console.warn("[fukutetsu] Firestore user sync failed:", e); }
+        }
+        render();
+        tryGeolocation();
         return;
       }
-      const p = await liff.getProfile();
-      user = {
-        name: p.displayName,
-        userId: p.userId,
-        pictureUrl: p.pictureUrl || null,
-        via: "liff",
-        joinedAt: (user && user.joinedAt) || Date.now()
-      };
-      saveUser();
-      if (USE_FS){
-        try {
-          await window.fukutetsuStore.saveUser(user);
-          // Firestore が SSOT なので サーバから 押印履歴を再読み込み
-          const remote = await window.fukutetsuStore.listStamps(user.userId);
-          if (remote && remote.length){ collected = remote; saveStamps(); }
-        } catch(e){ console.warn("[fukutetsu] Firestore user sync failed:", e); }
-      }
-      render();
-      tryGeolocation();
-      return;
     } catch(e){
       console.warn("LIFF init failed, falling back to web mode:", e);
     }
