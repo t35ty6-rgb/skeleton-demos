@@ -314,6 +314,23 @@ async function pointAt(p, sel, label, holdMs = 1200) {
   await wait(p, 200);
 }
 
+// v4.3 ★ tapAt: 「〜を押します」と narration が言う瞬間に click 発火
+//   spotPreMs 秒 先に spot 表示で目線誘導 → その後 clickRing (実クリック)
+//   opts.click=false なら クリックリング演出のみ (実 click しない)
+async function tapAt(p, sel, label, opts = {}) {
+  const spotPreMs = opts.spotPreMs ?? 800;
+  const holdAfterMs = opts.holdAfterMs ?? 700;
+  const doClick = opts.click !== false;
+  await hint(p, sel, label);
+  await wait(p, 300);
+  await spot(p, sel, label);
+  await wait(p, spotPreMs);
+  await clickRing(p, sel, doClick);
+  await wait(p, holdAfterMs);
+  await clearSpots(p);
+  await wait(p, 200);
+}
+
 // ========== 各章シナリオ ==========
 // 各 segment: { dur: 秒数, act: 実行するアクション }
 // segments の合計秒 ≒ AUDIO_DUR
