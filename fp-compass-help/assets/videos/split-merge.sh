@@ -35,12 +35,18 @@ for entry in timeline:
     # 動画 vs ナレ の差
     diff = nar_dur - vid_dur
     if diff > 0.3:
-        # 動画 を tpad で 末尾フリーズ延長
+        # ナレ の 方が長い → 動画 tpad で 末尾フリーズ延長
         vf = f"tpad=stop_mode=clone:stop_duration={diff:.2f},format=yuv420p"
+        use_dur = vid_dur
+    elif diff < -0.3:
+        # 動画 の 方が長い → 動画 の 最初 nar_dur 秒 だけ trim
+        vf = "format=yuv420p"
+        use_dur = nar_dur
     else:
         vf = "format=yuv420p"
-    lines.append(f'echo "→ {n} (vid {vid_dur:.1f}s, nar {nar_dur:.1f}s, pad {max(diff,0):.1f}s)"')
-    lines.append(f'ffmpeg -y -ss {vid_start:.3f} -t {vid_dur:.3f} -i "_all.webm" -i "{mp3}" -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -map 0:v:0 -map 1:a:0 -vf "{vf}" -movflags +faststart "{n}.mp4" 2>/dev/null')
+        use_dur = vid_dur
+    lines.append(f'echo "→ {n} (vid {vid_dur:.1f}s, nar {nar_dur:.1f}s, use {use_dur:.1f}s)"')
+    lines.append(f'ffmpeg -y -ss {vid_start:.3f} -t {use_dur:.3f} -i "_all.webm" -i "{mp3}" -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -map 0:v:0 -map 1:a:0 -vf "{vf}" -movflags +faststart "{n}.mp4" 2>/dev/null')
 print('\n'.join(lines))
 PYEOF
 
