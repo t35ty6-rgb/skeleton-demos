@@ -1,0 +1,1035 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>訪問販売員アプリ — サン・クロレラ 統合LINE OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/ui.css">
+<style>
+  body { background: var(--bg); padding-bottom: 96px; }
+
+  /* ── header ── */
+  .app-head {
+    background: linear-gradient(150deg, var(--leaf-2), var(--leaf) 72%);
+    color: #fff;
+    padding: 20px 20px 24px;
+    border-radius: 0 0 24px 24px;
+  }
+  .app-head .row1 { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .app-head .brand-mark { background: rgba(255,255,255,.15); }
+  .app-head .brand-mark svg { width: 20px; height: 20px; }
+  .app-head .role { font-size: 11px; letter-spacing: .1em; font-weight: 700; opacity: .85; }
+  .app-head .home-link { margin-left: auto; color: #fff; text-decoration: none; font-size: 12.5px; opacity: .85; }
+  .app-head .rep {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .app-head .rep .avatar {
+    width: 54px; height: 54px; border-radius: 999px;
+    background: rgba(255,255,255,.2); color: #fff;
+    display: grid; place-items: center;
+    font-weight: 900; font-size: 20px;
+  }
+  .app-head .rep .info .hello { font-size: 11.5px; opacity: .8; }
+  .app-head .rep .info .name { font-size: 20px; font-weight: 900; letter-spacing: -.01em; margin-top: 2px; }
+  .app-head .rep .info .office { font-size: 12px; opacity: .85; margin-top: 2px; }
+  .app-head .metrics {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.2);
+  }
+  .app-head .metrics > div .k { font-size: 10.5px; opacity: .78; letter-spacing: .04em; }
+  .app-head .metrics > div .v {
+    font-family: var(--font-num); font-weight: 700; font-size: 20px; letter-spacing: -.01em;
+    font-variant-numeric: tabular-nums; margin-top: 2px;
+  }
+  .app-head .metrics > div .v sub { font-size: 11px; font-weight: 500; opacity: .78; margin-left: 3px; }
+
+  /* ── main ── */
+  main {
+    max-width: 720px; margin: 0 auto; padding: 24px 18px;
+  }
+  .section-title {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 4px 4px 12px;
+  }
+  .section-title h3 { font-size: 14px; color: var(--ink-3); letter-spacing: .04em; }
+  .section-title .link {
+    color: var(--leaf-2); font-weight: 800; font-size: 13px;
+    text-decoration: none;
+  }
+
+  /* Quick actions */
+  .quick {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    margin-bottom: 24px;
+  }
+  .quick .b {
+    appearance: none; border: 1px solid var(--line); background: var(--paper);
+    border-radius: 14px; padding: 14px 6px 12px; font: inherit;
+    display: flex; flex-direction: column; gap: 4px; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: transform .12s, box-shadow .15s;
+    color: var(--ink);
+    min-height: 76px;
+  }
+  .quick .b:hover  { box-shadow: var(--shadow-1); }
+  .quick .b:active { transform: translateY(1px); }
+  .quick .b.primary { background: var(--leaf-2); color: #fff; border-color: var(--leaf-2); }
+  .quick .b svg { width: 22px; height: 22px; }
+  .quick .b .label { font-size: 11.5px; font-weight: 800; letter-spacing: .02em; text-align: center; }
+
+  /* Visit card */
+  .card {
+    background: var(--paper); border-radius: var(--r-md);
+    padding: 14px 14px 12px; margin-bottom: 8px;
+    box-shadow: var(--shadow-1);
+    display: grid; align-items: center;
+    cursor: pointer;
+  }
+  .card:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+  .card.visit { grid-template-columns: 46px 1fr auto; gap: 12px; }
+  .card .time {
+    background: var(--leaf-4); color: var(--leaf-2);
+    border-radius: 8px; text-align: center; padding: 6px 4px;
+    font-family: var(--font-num); font-weight: 700;
+  }
+  .card .time .hh { display: block; font-size: 15px; line-height: 1; }
+  .card .time .mm { display: block; font-size: 10px; opacity: .7; margin-top: 2px; }
+  .card .info .name { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+  .card .info .meta {
+    font-size: 12px; color: var(--ink-3); margin-top: 3px;
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .card .chev { color: var(--ink-3); font-size: 20px; }
+
+  /* Customer row */
+  .cust {
+    display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center;
+    background: var(--paper); border-radius: var(--r-md);
+    padding: 12px 14px; margin-bottom: 8px;
+    box-shadow: var(--shadow-1);
+    cursor: pointer;
+    transition: transform .12s, box-shadow .15s;
+  }
+  .cust:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+  .cust .avatar {
+    width: 44px; height: 44px; border-radius: 999px;
+    background: linear-gradient(135deg, oklch(0.85 0.05 145), oklch(0.75 0.09 145));
+    color: var(--leaf-2);
+    display: grid; place-items: center; font-weight: 900; font-size: 16px;
+  }
+  .cust .name { font-size: 15px; font-weight: 800; }
+  .cust .meta {
+    font-size: 11.5px; color: var(--ink-3); margin-top: 2px;
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .cust .rank-badge {
+    padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .04em;
+  }
+  .rank-A    { background: oklch(0.94 0.06 145); color: var(--leaf-2); }
+  .rank-B    { background: oklch(0.94 0.04 75); color: oklch(0.4 0.10 75); }
+  .rank-C    { background: var(--bg-2); color: var(--ink-3); }
+  .rank-DORM { background: oklch(0.95 0.04 25); color: var(--alert); }
+
+  /* Filter row */
+  .filter-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+    overflow-x: auto; padding-bottom: 4px;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .filter-row .chip { flex-shrink: 0; }
+
+  .search-wrap { position: relative; margin-bottom: 12px; }
+  .search-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--ink-3); }
+  .search-wrap .input { padding-left: 44px; }
+
+  /* Bottom nav */
+  .tab-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: color-mix(in oklab, var(--paper) 96%, transparent);
+    backdrop-filter: saturate(140%) blur(10px);
+    border-top: 1px solid var(--line);
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    z-index: var(--z-nav);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tab-nav a {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 12px 4px 10px;
+    color: var(--ink-3);
+    text-decoration: none;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .04em;
+    transition: color .15s;
+  }
+  .tab-nav a[aria-current="page"] { color: var(--leaf-2); }
+  .tab-nav a svg { width: 22px; height: 22px; }
+
+  /* View switcher */
+  .view { display: none; }
+  .view[data-active="true"] { display: block; }
+
+  /* Rank ranking */
+  .rank-list { list-style: none; padding: 0; margin: 0; }
+  .rank-list li {
+    display: grid; grid-template-columns: 32px 1fr auto; gap: 12px; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid var(--line-2);
+  }
+  .rank-list li:last-child { border-bottom: 0; }
+  .rank-list .n {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 999px;
+    background: var(--bg-2); color: var(--ink-2); font-weight: 800; font-size: 12px;
+    font-family: var(--font-num);
+  }
+  .rank-list .n.gold   { background: oklch(0.87 0.12 90);  color: oklch(0.34 0.09 65); }
+  .rank-list .n.silver { background: oklch(0.90 0.02 260); color: oklch(0.36 0.02 260); }
+  .rank-list .n.bronze { background: oklch(0.85 0.09 55);  color: oklch(0.34 0.10 55); }
+  .rank-list .name { font-weight: 800; font-size: 14px; }
+  .rank-list .office { font-size: 11.5px; color: var(--ink-3); margin-top: 1px; }
+  .rank-list .amt { font-family: var(--font-num); font-weight: 700; font-size: 14px; }
+
+  /* Detail modal */
+  .cust-detail .avatar-big {
+    display: flex; gap: 14px; align-items: center; margin-bottom: 18px;
+  }
+  .cust-detail .avatar-big .a {
+    width: 60px; height: 60px; border-radius: 999px;
+    background: linear-gradient(135deg, var(--leaf), var(--leaf-3));
+    color: #fff; display: grid; place-items: center;
+    font-weight: 900; font-size: 22px;
+  }
+  .cust-detail .name-big { font-size: 22px; font-weight: 900; letter-spacing: -.02em; }
+  .cust-detail .meta-big { color: var(--ink-3); font-size: 13px; margin-top: 2px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .cust-detail .kpis {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 20px;
+  }
+  .cust-detail .kpis > div {
+    padding: 12px; background: var(--bg-2); border-radius: var(--r-md);
+  }
+  .cust-detail .kpis .k { font-size: 11px; color: var(--ink-3); font-weight: 700; }
+  .cust-detail .kpis .v {
+    font-family: var(--font-num); font-weight: 700; font-size: 18px; margin-top: 2px;
+    color: var(--ink); letter-spacing: -.01em;
+  }
+  .cust-detail .actions {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 18px 0;
+  }
+  .cust-detail h4 {
+    font-size: 13px; color: var(--ink-3); letter-spacing: .04em;
+    margin: 20px 0 8px;
+  }
+  .history-row {
+    display: grid; grid-template-columns: 60px 1fr auto; gap: 12px; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--line-2);
+    font-size: 13px;
+  }
+  .history-row:last-child { border-bottom: 0; }
+  .history-row .date { color: var(--ink-3); font-size: 11.5px; font-family: var(--font-num); }
+  .history-row .title { font-weight: 700; }
+  .history-row .sub { color: var(--ink-3); font-size: 11.5px; margin-top: 1px; }
+  .history-row .amt { font-family: var(--font-num); font-weight: 700; }
+  .history-row .ch { font-size: 10.5px; padding: 2px 6px; border-radius: 4px; margin-right: 4px; }
+  .ch-visit { background: var(--leaf-4); color: var(--leaf-2); }
+  .ch-line  { background: oklch(0.95 0.04 145); color: oklch(0.4 0.08 145); }
+  .ch-web   { background: oklch(0.95 0.05 75); color: oklch(0.4 0.10 75); }
+  .ch-phone { background: var(--bg-2); color: var(--ink-3); }
+
+  /* New order */
+  .prod-pick {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 12px 14px;
+    display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center;
+    margin-bottom: 8px;
+  }
+  .prod-pick .thumb {
+    width: 40px; height: 40px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--leaf-4), var(--leaf-3));
+    color: var(--leaf-2); display: grid; place-items: center;
+    font-weight: 900; font-size: 12px;
+  }
+  .prod-pick .pn { font-size: 13.5px; font-weight: 700; }
+  .prod-pick .pp { font-size: 11px; color: var(--ink-3); font-family: var(--font-num); margin-top: 1px; }
+  .prod-pick .qty {
+    display: inline-flex; gap: 6px; align-items: center;
+    background: var(--bg-2); border-radius: 999px; padding: 2px;
+  }
+  .prod-pick .qty button {
+    appearance: none; border: 0; background: transparent; font: inherit;
+    width: 28px; height: 28px; border-radius: 999px; cursor: pointer;
+    font-size: 16px; font-weight: 800; color: var(--ink-2);
+  }
+  .prod-pick .qty button:hover { background: var(--paper); }
+  .prod-pick .qty .n { min-width: 20px; text-align: center; font-family: var(--font-num); font-weight: 700; }
+
+  .cart-total {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 18px 20px;
+    margin: 16px 0;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .cart-total .lbl { font-size: 13px; color: var(--ink-3); font-weight: 700; }
+  .cart-total .v { font-family: var(--font-num); font-weight: 700; font-size: 26px; color: var(--leaf-2); }
+
+  /* Toggles for status */
+  .switch {
+    appearance: none; -webkit-appearance: none;
+    width: 44px; height: 26px; border-radius: 999px; background: var(--line);
+    position: relative; cursor: pointer; transition: background .18s;
+    flex-shrink: 0;
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 3px; left: 3px;
+    width: 20px; height: 20px; border-radius: 999px;
+    background: #fff; transition: transform .18s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  }
+  .switch:checked { background: var(--leaf-2); }
+  .switch:checked::after { transform: translateX(18px); }
+</style>
+</head>
+<body>
+
+<header class="app-head">
+  <div class="row1">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c0-6 4-11 10-12-1 6-4 10-10 12z"/><path d="M12 22C6 20 3 16 2 10c6 1 10 5 10 12z"/></svg>
+    </div>
+    <div>
+      <div class="role">FIELD APP · 訪問販売員</div>
+      <div style="font-size:14px; font-weight:800; margin-top:2px;">サン・クロレラ 統合LINE OS</div>
+    </div>
+    <a class="home-link" href="../">← 入口へ</a>
+  </div>
+  <div class="rep" id="repHead"></div>
+  <div class="metrics" id="repMetrics"></div>
+</header>
+
+<main>
+  <!-- ─── Home ─── -->
+  <section class="view" id="view-home" data-active="true">
+    <div class="quick">
+      <button class="b primary" data-action="newOrder" aria-label="受注入力">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.5 12h11L21 8H6"/><circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg>
+        <span class="label">受注入力</span>
+      </button>
+      <button class="b" data-action="qr">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM17 17h4v4h-4zM14 20h3"/></svg>
+        <span class="label">友達追加</span>
+      </button>
+      <button class="b" data-action="visitLog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4h4"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M8 13h8M8 17h5"/></svg>
+        <span class="label">訪問記録</span>
+      </button>
+      <button class="b" data-action="broadcast">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span class="label">LINE送信</span>
+      </button>
+    </div>
+
+    <div class="section-title"><h3>今日の訪問予定</h3><span class="dim" id="visitCount">— 件</span></div>
+    <div id="todayVisits"></div>
+
+    <div class="section-title" style="margin-top:24px"><h3>気に掛けたいお客さま</h3><a class="link" href="#customers">すべて見る</a></div>
+    <div id="watchList"></div>
+  </section>
+
+  <!-- ─── Customers ─── -->
+  <section class="view" id="view-customers">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input class="input" id="custSearch" placeholder="お名前・電話番号で検索">
+    </div>
+    <div class="filter-row" id="custFilters">
+      <button class="chip on" data-rank="all">すべて</button>
+      <button class="chip" data-rank="A">A 優良継続</button>
+      <button class="chip" data-rank="B">B 継続</button>
+      <button class="chip" data-rank="C">C 新規・単発</button>
+      <button class="chip" data-rank="DORM">休眠</button>
+    </div>
+    <div id="custList"></div>
+  </section>
+
+  <!-- ─── Orders ─── -->
+  <section class="view" id="view-orders">
+    <div class="section-title"><h3>今月の受注</h3><span class="dim" id="ordCount">—</span></div>
+    <div id="ordList"></div>
+  </section>
+
+  <!-- ─── Performance ─── -->
+  <section class="view" id="view-perf">
+    <div class="section-title"><h3>今月の成績</h3></div>
+    <div class="card" style="display:block; cursor:default; padding: 20px 22px;">
+      <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+        <div>
+          <div class="dim" style="font-size:12px; font-weight:700;">売上</div>
+          <div class="num" style="font-size:26px; color:var(--leaf-2);" id="perfRevenue">—</div>
+        </div>
+        <div>
+          <div class="dim" style="font-size:12px; font-weight:700;">受注件数</div>
+          <div class="num" style="font-size:26px;" id="perfCount">—</div>
+        </div>
+        <div>
+          <div class="dim" style="font-size:12px; font-weight:700;">担当客継続率</div>
+          <div class="num" style="font-size:26px; color:var(--leaf-2);" id="perfRetention">—</div>
+        </div>
+        <div>
+          <div class="dim" style="font-size:12px; font-weight:700;">所内順位</div>
+          <div class="num" style="font-size:26px;" id="perfRank">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top: 24px;"><h3>販売員ランキング</h3><span class="dim">今月</span></div>
+    <div class="card" style="display:block; cursor:default; padding: 4px 18px;">
+      <ul class="rank-list" id="rankList"></ul>
+    </div>
+  </section>
+
+  <!-- ─── Me ─── -->
+  <section class="view" id="view-me">
+    <div class="section-title"><h3>販売員を切り替え</h3></div>
+    <div class="card" style="display:block; cursor:default; padding: 4px 14px;">
+      <ul class="rank-list" id="switchList"></ul>
+    </div>
+    <div class="section-title" style="margin-top:24px"><h3>ヘルプ</h3></div>
+    <div class="card" style="display:block; cursor:default; padding: 18px 20px;">
+      <p style="margin:0; font-size:13.5px; color:var(--ink-2); line-height:1.75;">
+        担当客の状態変化は毎朝プッシュでお知らせします。ご不明点は所属長までご相談ください。
+      </p>
+    </div>
+    <div style="margin-top:24px; text-align:center;">
+      <a class="btn btn-ghost" href="../">← 入口へ戻る</a>
+    </div>
+  </section>
+</main>
+
+<!-- Bottom nav -->
+<nav class="tab-nav" aria-label="メインナビ">
+  <a href="#home" data-view="home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-8 9 8v8a2 2 0 0 1-2 2h-3v-6H10v6H5a2 2 0 0 1-2-2z"/></svg>
+    <span>ホーム</span>
+  </a>
+  <a href="#customers" data-view="customers">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/></svg>
+    <span>担当客</span>
+  </a>
+  <a href="#orders" data-view="orders">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.5 12h11L21 8H6"/><circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg>
+    <span>受注</span>
+  </a>
+  <a href="#perf" data-view="perf">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+    <span>成績</span>
+  </a>
+  <a href="#me" data-view="me">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+    <span>マイ</span>
+  </a>
+</nav>
+
+<div class="toast-host" id="toastHost"></div>
+<div id="modalHost"></div>
+
+<script type="module">
+  import { db, session, uid } from '../shared/data.js';
+  import { seedIfEmpty } from '../shared/seed.js';
+  import { fmt, autoRank, CHANNELS } from '../shared/schema.js';
+
+  await seedIfEmpty();
+
+  const state = {
+    view: 'home',
+    custFilter: 'all',
+    custSearch: '',
+    reps: [], customers: [], orders: [], products: [], subs: [], visits: [], msgs: [],
+    cart: {}, // productId -> qty for new order
+  };
+
+  async function refresh() {
+    state.reps      = await db.list('reps');
+    state.customers = await db.list('customers');
+    state.orders    = await db.list('orders', { orderBy: ['createdAt', 'desc'] });
+    state.products  = await db.list('products');
+    state.subs      = await db.list('subscriptions');
+    state.visits    = await db.list('visits', { orderBy: ['createdAt', 'desc'] });
+    state.msgs      = await db.list('messages', { orderBy: ['createdAt', 'asc'] });
+    render();
+  }
+  db.onChange('orders',        refresh);
+  db.onChange('customers',     refresh);
+  db.onChange('visits',        refresh);
+  db.onChange('subscriptions', refresh);
+  db.onChange('messages',      refresh);
+
+  function currentRep() { return state.reps.find(r => r.id === session.repId) || state.reps[0]; }
+  function myCustomers() {
+    const rid = currentRep().id;
+    return state.customers.filter(c => c.repId === rid);
+  }
+  function ordersForCust(cid) { return state.orders.filter(o => o.customerId === cid); }
+  function subsForCust(cid) { return state.subs.filter(s => s.customerId === cid); }
+
+  function monthStart() {
+    const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d.getTime();
+  }
+  function myMonthOrders() {
+    const rid = currentRep().id, m = monthStart();
+    return state.orders.filter(o => o.repId === rid && o.createdAt >= m);
+  }
+
+  /* ─── Views renderers ─── */
+  function renderHead() {
+    const r = currentRep();
+    const initial = r.name[0];
+    document.getElementById('repHead').innerHTML = `
+      <div class="avatar">${initial}</div>
+      <div class="info">
+        <div class="hello">おはようございます</div>
+        <div class="name">${r.name} さん</div>
+        <div class="office">${r.office} 営業所 / 担当 ${myCustomers().length}名</div>
+      </div>
+    `;
+    const mo = myMonthOrders();
+    const revenue = mo.reduce((s,o) => s+o.total, 0);
+    const active = myCustomers().filter(c => autoRank(c) !== 'DORM').length;
+    const total  = myCustomers().length;
+    const ret = total ? Math.round(active/total*100) : 0;
+    const allReps = state.reps.filter(x => x.status === 'active');
+    const scored = allReps.map(rp => {
+      const mo2 = state.orders.filter(o => o.repId === rp.id && o.createdAt >= monthStart());
+      return { rep: rp, rev: mo2.reduce((s,o)=>s+o.total,0) };
+    }).sort((a,b) => b.rev - a.rev);
+    const rank = scored.findIndex(x => x.rep.id === r.id) + 1;
+    document.getElementById('repMetrics').innerHTML = `
+      <div><div class="k">今月売上</div><div class="v">${fmt.yenShort(revenue)}</div></div>
+      <div><div class="k">継続率</div><div class="v">${ret}<sub>%</sub></div></div>
+      <div><div class="k">全社順位</div><div class="v">${rank}<sub>位 / ${scored.length}</sub></div></div>
+    `;
+  }
+
+  function renderHome() {
+    const rid = currentRep().id;
+    const mine = myCustomers();
+    // 今日の訪問予定 = mine 中 lastVisitAt が 45日以上前 or ランクA & 30日以上前, 上位3件
+    const now = Date.now();
+    const candidates = mine.map(c => {
+      const gap = c.lastVisitAt ? (now - c.lastVisitAt) / 86400000 : 999;
+      const rank = autoRank(c);
+      let priority = 0;
+      if (rank === 'A' && gap > 25) priority += 40 + gap;
+      else if (rank === 'DORM') priority += 30 + gap * 0.3;
+      else if (rank === 'B' && gap > 40) priority += 20 + gap * 0.5;
+      else priority += gap * 0.1;
+      const hour = 9 + Math.floor(Math.abs(hashCode(c.id)) % 8);
+      const min  = [0, 15, 30, 45][Math.abs(hashCode(c.id + 'm')) % 4];
+      return { c, priority, hh: hour, mm: min, gap: Math.round(gap) };
+    }).sort((a,b) => a.hh - b.hh || a.mm - b.mm)
+      .filter(x => x.priority > 15).slice(0, 4);
+    document.getElementById('visitCount').textContent = candidates.length + ' 件';
+    document.getElementById('todayVisits').innerHTML = candidates.map(v => `
+      <div class="card visit" data-cid="${v.c.id}">
+        <div class="time"><span class="hh">${String(v.hh).padStart(2,'0')}</span><span class="mm">:${String(v.mm).padStart(2,'0')}</span></div>
+        <div class="info">
+          <div class="name">${v.c.name} さま</div>
+          <div class="meta"><span>前回 ${fmt.daysAgo(v.c.lastVisitAt)}</span><span class="rank-badge rank-${autoRank(v.c)}">${autoRank(v.c)}</span></div>
+        </div>
+        <div class="chev">›</div>
+      </div>
+    `).join('') || `<div class="empty"><h3>本日の訪問予定はありません</h3><p>担当客一覧から任意の方へ訪問記録を追加できます。</p></div>`;
+
+    // Watch list = 休眠 + Aランク & 20日以上経過
+    const watch = mine.map(c => ({ c, r: autoRank(c), g: c.lastVisitAt ? (now - c.lastVisitAt)/86400000 : 999 }))
+      .filter(x => x.r === 'DORM' || (x.r === 'A' && x.g > 20))
+      .sort((a,b) => b.g - a.g).slice(0, 5);
+    document.getElementById('watchList').innerHTML = watch.map(w => `
+      <div class="cust" data-cid="${w.c.id}">
+        <div class="avatar">${w.c.name[0]}</div>
+        <div>
+          <div class="name">${w.c.name} さま</div>
+          <div class="meta"><span>${w.c.age}歳</span><span>前回 ${fmt.daysAgo(w.c.lastVisitAt)}</span></div>
+        </div>
+        <div class="rank-badge rank-${w.r}">${w.r === 'DORM' ? '休眠' : w.r}</div>
+      </div>
+    `).join('') || `<div class="empty"><p>気に掛けたいお客さまはいません。</p></div>`;
+
+    document.querySelectorAll('#view-home [data-cid]').forEach(el =>
+      el.addEventListener('click', () => openCustomer(el.dataset.cid)));
+  }
+
+  function renderCustomers() {
+    let list = myCustomers();
+    if (state.custFilter !== 'all') list = list.filter(c => autoRank(c) === state.custFilter);
+    const q = state.custSearch.trim().toLowerCase();
+    if (q) list = list.filter(c => c.name.toLowerCase().includes(q) || (c.phone||'').includes(q));
+    list.sort((a,b) => (b.lastVisitAt || 0) - (a.lastVisitAt || 0));
+    document.getElementById('custList').innerHTML = list.map(c => `
+      <div class="cust" data-cid="${c.id}">
+        <div class="avatar">${c.name[0]}</div>
+        <div>
+          <div class="name">${c.name} さま</div>
+          <div class="meta"><span>${c.age}歳</span><span>継続 ${c.orderCount}回</span><span>前回 ${fmt.daysAgo(c.lastVisitAt)}</span></div>
+        </div>
+        <div class="rank-badge rank-${autoRank(c)}">${autoRank(c) === 'DORM' ? '休眠' : autoRank(c)}</div>
+      </div>
+    `).join('') || `<div class="empty"><h3>該当なし</h3><p>検索条件を変更してください。</p></div>`;
+    document.querySelectorAll('#custList [data-cid]').forEach(el =>
+      el.addEventListener('click', () => openCustomer(el.dataset.cid)));
+  }
+
+  function renderOrders() {
+    const mo = myMonthOrders();
+    document.getElementById('ordCount').textContent = mo.length + ' 件 / 合計 ' + fmt.yenShort(mo.reduce((s,o)=>s+o.total,0));
+    if (!mo.length) { document.getElementById('ordList').innerHTML = `<div class="empty"><h3>今月の受注はまだありません</h3><p>ホームの「受注入力」からその場受注ができます。</p></div>`; return; }
+    document.getElementById('ordList').innerHTML = mo.map(o => {
+      const c = state.customers.find(x => x.id === o.customerId);
+      const ch = CHANNELS[o.channel.toUpperCase()];
+      return `
+        <div class="card visit" style="grid-template-columns: 1fr auto;" data-cid="${o.customerId}">
+          <div class="info">
+            <div class="name">${c ? c.name + ' さま' : '(削除された顧客)'}</div>
+            <div class="meta">
+              <span class="ch ch-${o.channel}">${ch ? ch.label : o.channel}</span>
+              <span>${fmt.date(o.createdAt)}</span>
+              <span>${o.items.length}品目</span>
+            </div>
+          </div>
+          <div class="num" style="font-size:16px;">${fmt.yen(o.total)}</div>
+        </div>
+      `;
+    }).join('');
+    document.querySelectorAll('#ordList [data-cid]').forEach(el =>
+      el.addEventListener('click', () => openCustomer(el.dataset.cid)));
+  }
+
+  function renderPerf() {
+    const mo = myMonthOrders();
+    const revenue = mo.reduce((s,o)=>s+o.total,0);
+    document.getElementById('perfRevenue').textContent = fmt.yenShort(revenue);
+    document.getElementById('perfCount').textContent = mo.length + '件';
+    const mine = myCustomers();
+    const dorm = mine.filter(c => autoRank(c) === 'DORM').length;
+    const ret = mine.length ? Math.round((mine.length - dorm) / mine.length * 100) : 0;
+    document.getElementById('perfRetention').textContent = ret + '%';
+    // Ranking
+    const allReps = state.reps.filter(x => x.status === 'active');
+    const scored = allReps.map(rp => {
+      const mo2 = state.orders.filter(o => o.repId === rp.id && o.createdAt >= monthStart());
+      return { rep: rp, rev: mo2.reduce((s,o)=>s+o.total,0), n: mo2.length };
+    }).sort((a,b) => b.rev - a.rev);
+    const myRank = scored.findIndex(x => x.rep.id === currentRep().id) + 1;
+    document.getElementById('perfRank').textContent = myRank + '位';
+    document.getElementById('rankList').innerHTML = scored.map((s, i) => {
+      const isMe = s.rep.id === currentRep().id;
+      const cls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      return `<li${isMe ? ' style="background:var(--leaf-4); margin: 0 -18px; padding-left: 18px; padding-right: 18px;"' : ''}>
+        <span class="n ${cls}">${i+1}</span>
+        <div>
+          <div class="name">${s.rep.name}${isMe ? ' ← あなた' : ''}</div>
+          <div class="office">${s.rep.office} · ${s.n}件</div>
+        </div>
+        <div class="amt">${fmt.yenShort(s.rev)}</div>
+      </li>`;
+    }).join('');
+  }
+
+  function renderMe() {
+    document.getElementById('switchList').innerHTML = state.reps.filter(r => r.status === 'active').map(r => {
+      const isMe = r.id === currentRep().id;
+      return `<li data-repid="${r.id}" style="cursor:pointer;${isMe ? 'background:var(--leaf-4); margin:0 -14px; padding-left:14px; padding-right:14px;' : ''}">
+        <span class="n">${r.name[0]}</span>
+        <div>
+          <div class="name">${r.name}${isMe ? ' (ログイン中)' : ''}</div>
+          <div class="office">${r.office} · 在職 ${r.tenure}年</div>
+        </div>
+        ${isMe ? '' : '<span class="btn btn-icon btn-outline" style="pointer-events:none;">切替</span>'}
+      </li>`;
+    }).join('');
+    document.querySelectorAll('#switchList [data-repid]').forEach(el =>
+      el.addEventListener('click', () => {
+        session.repId = el.dataset.repid;
+        render();
+        toast(`${state.reps.find(r=>r.id===el.dataset.repid).name} さんに切り替えました`, 'ok');
+      }));
+  }
+
+  function render() {
+    renderHead();
+    renderHome();
+    renderCustomers();
+    renderOrders();
+    renderPerf();
+    renderMe();
+  }
+
+  /* ─── View router ─── */
+  function switchView(name) {
+    state.view = name;
+    document.querySelectorAll('.view').forEach(v => v.dataset.active = (v.id === 'view-' + name) ? 'true' : 'false');
+    document.querySelectorAll('.tab-nav a').forEach(a =>
+      a.setAttribute(a.dataset.view === name ? 'aria-current' : 'data-nope', 'page'));
+    document.querySelectorAll('.tab-nav a').forEach(a => {
+      if (a.dataset.view === name) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    window.scrollTo({ top: 0 });
+  }
+  document.querySelectorAll('.tab-nav a').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault(); switchView(a.dataset.view);
+    history.replaceState(null, '', '#' + a.dataset.view);
+  }));
+  window.addEventListener('hashchange', () => {
+    const h = location.hash.slice(1) || 'home';
+    if (document.getElementById('view-' + h)) switchView(h);
+  });
+
+  /* ─── Quick actions ─── */
+  document.querySelectorAll('.quick .b').forEach(b => b.addEventListener('click', () => {
+    const a = b.dataset.action;
+    if (a === 'newOrder') openNewOrder();
+    else if (a === 'qr') openQR();
+    else if (a === 'visitLog') openVisitLog();
+    else if (a === 'broadcast') openBroadcast();
+  }));
+
+  /* ─── Search + filter ─── */
+  document.getElementById('custSearch').addEventListener('input', e => {
+    state.custSearch = e.target.value; renderCustomers();
+  });
+  document.querySelectorAll('#custFilters .chip').forEach(c => c.addEventListener('click', () => {
+    document.querySelectorAll('#custFilters .chip').forEach(x => x.classList.remove('on'));
+    c.classList.add('on'); state.custFilter = c.dataset.rank; renderCustomers();
+  }));
+
+  /* ─── Modals ─── */
+  function openModal(html, opts = {}) {
+    const host = document.getElementById('modalHost');
+    host.innerHTML = `<div class="modal-bg"><div class="modal ${opts.wide ? 'wide' : ''}">${html}</div></div>`;
+    const bg = host.querySelector('.modal-bg');
+    bg.addEventListener('click', e => { if (e.target === bg) closeModal(); });
+    return host.querySelector('.modal');
+  }
+  function closeModal() { document.getElementById('modalHost').innerHTML = ''; }
+  window.closeModal = closeModal;
+
+  function openCustomer(cid) {
+    const c = state.customers.find(x => x.id === cid);
+    if (!c) return;
+    const orders = ordersForCust(cid);
+    const subs = subsForCust(cid);
+    const totalYear = orders.filter(o => o.createdAt > Date.now() - 365*86400000).reduce((s,o)=>s+o.total,0);
+    const m = openModal(`
+      <div class="modal-title">
+        <h2>お客さまカルテ</h2>
+        <button class="modal-close" onclick="closeModal()" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="cust-detail">
+        <div class="avatar-big">
+          <div class="a">${c.name[0]}</div>
+          <div>
+            <div class="name-big">${c.name} さま</div>
+            <div class="meta-big"><span>${c.age}歳</span><span>${c.address.split('府')[0]}府…</span><span class="rank-badge rank-${autoRank(c)}">${autoRank(c) === 'DORM' ? '休眠' : autoRank(c)}</span></div>
+          </div>
+        </div>
+        <div class="kpis">
+          <div><div class="k">継続回数</div><div class="v">${c.orderCount}回</div></div>
+          <div><div class="k">直近1年</div><div class="v">${fmt.yenShort(totalYear)}</div></div>
+          <div><div class="k">前回訪問</div><div class="v" style="font-size:15px;">${fmt.daysAgo(c.lastVisitAt)}</div></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="btnOrderForCust">受注入力</button>
+          <button class="btn btn-outline" id="btnVisitForCust">訪問記録</button>
+        </div>
+        <h4>継続中の定期便</h4>
+        ${subs.length ? subs.map(s => {
+          const p = state.products.find(x => x.id === s.productId);
+          return `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line-2);font-size:13.5px;">
+            <div>
+              <div style="font-weight:700;">${p ? p.name : ''}</div>
+              <div class="dim" style="font-size:11.5px; margin-top:1px;">${s.cycleDays}日サイクル · 次回 ${fmt.date(s.nextDeliveryAt)}</div>
+            </div>
+            <div class="num">${fmt.yen((p ? p.subPrice : 0) * s.qty)}</div>
+          </div>`;
+        }).join('') : '<div class="dim" style="font-size:13px; padding:8px 0;">まだ定期便はありません。</div>'}
+        <h4>ご購入履歴</h4>
+        ${orders.slice(0, 6).map(o => {
+          const first = o.items[0]?.name || '';
+          return `<div class="history-row">
+            <div class="date">${fmt.date(o.createdAt)}</div>
+            <div>
+              <div class="title">${first}${o.items.length > 1 ? ` ほか${o.items.length-1}品` : ''}</div>
+              <div class="sub"><span class="ch ch-${o.channel}">${CHANNELS[o.channel.toUpperCase()]?.label || o.channel}</span></div>
+            </div>
+            <div class="amt">${fmt.yen(o.total)}</div>
+          </div>`;
+        }).join('') || '<div class="dim" style="font-size:13px; padding:8px 0;">履歴はまだありません。</div>'}
+        ${c.note ? `<h4>メモ</h4><p style="font-size:13.5px; color:var(--ink-2); line-height:1.75; background:var(--bg-2); padding:12px 14px; border-radius:8px;">${c.note}</p>` : ''}
+      </div>
+    `);
+    m.querySelector('#btnOrderForCust').addEventListener('click', () => {
+      closeModal(); openNewOrder(cid);
+    });
+    m.querySelector('#btnVisitForCust').addEventListener('click', () => {
+      closeModal(); openVisitLog(cid);
+    });
+  }
+
+  function openNewOrder(preselectCid) {
+    state.cart = {};
+    const mine = myCustomers();
+    const custOpts = mine.map(c => `<option value="${c.id}"${c.id === preselectCid ? ' selected' : ''}>${c.name} さま</option>`).join('');
+    const prodRows = state.products.map(p => `
+      <div class="prod-pick" data-pid="${p.id}">
+        <div class="thumb">${p.img}</div>
+        <div>
+          <div class="pn">${p.name}</div>
+          <div class="pp">${fmt.yen(p.subPrice)} <span class="dim2">(訪問価格)</span></div>
+        </div>
+        <div class="qty">
+          <button data-op="-">−</button>
+          <span class="n" data-n>0</span>
+          <button data-op="+">+</button>
+        </div>
+      </div>
+    `).join('');
+    const m = openModal(`
+      <div class="modal-title">
+        <h2>受注入力</h2>
+        <button class="modal-close" onclick="closeModal()" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="field">
+        <label>お客さま</label>
+        <select class="select" id="orderCust">${custOpts}</select>
+      </div>
+      <div class="field">
+        <label>商品と数量</label>
+        <div id="orderProds">${prodRows}</div>
+      </div>
+      <div class="cart-total"><span class="lbl">お会計</span><span class="v" id="cartTotal">¥0</span></div>
+      <div class="field">
+        <label>支払方法</label>
+        <select class="select" id="orderPay">
+          <option value="linepay">LINE Payで即決済リンク送信</option>
+          <option value="card">クレジットカード決済リンク送信</option>
+          <option value="cod">代金引換 (次回お届け時)</option>
+          <option value="bank">銀行振込 (書面あとから郵送)</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="btnPlaceOrder" style="width:100%;">この内容で決済リンクを送信</button>
+    `, { wide: true });
+
+    function recalc() {
+      let total = 0;
+      Object.entries(state.cart).forEach(([pid, n]) => {
+        const p = state.products.find(x => x.id === pid);
+        if (p) total += p.subPrice * n;
+      });
+      m.querySelector('#cartTotal').textContent = fmt.yen(total);
+    }
+    m.querySelectorAll('.prod-pick').forEach(row => {
+      const pid = row.dataset.pid;
+      row.querySelectorAll('button[data-op]').forEach(b => b.addEventListener('click', () => {
+        const cur = state.cart[pid] || 0;
+        const next = Math.max(0, cur + (b.dataset.op === '+' ? 1 : -1));
+        state.cart[pid] = next;
+        row.querySelector('[data-n]').textContent = next;
+        recalc();
+      }));
+    });
+    m.querySelector('#btnPlaceOrder').addEventListener('click', async () => {
+      const cid = m.querySelector('#orderCust').value;
+      const items = Object.entries(state.cart).filter(([, n]) => n > 0).map(([pid, qty]) => {
+        const p = state.products.find(x => x.id === pid);
+        return { productId: pid, name: p.name, price: p.subPrice, qty, tag: p.tag };
+      });
+      if (!items.length) { toast('数量を入力してください', 'warn'); return; }
+      const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+      const oid = uid('ord');
+      const order = {
+        id: oid, customerId: cid, repId: currentRep().id, channel: 'visit',
+        items, total,
+        paymentMethod: m.querySelector('#orderPay').value,
+        status: 'shipped', createdAt: Date.now(),
+      };
+      await db.set('orders', oid, order);
+      // Update customer aggregates
+      const c = await db.get('customers', cid);
+      await db.update('customers', cid, {
+        orderCount: (c.orderCount || 0) + 1,
+        ltv: (c.ltv || 0) + total,
+        lastVisitAt: Date.now(),
+      });
+      // Add visit
+      const vid = uid('vis');
+      await db.set('visits', vid, {
+        id: vid, customerId: cid, repId: currentRep().id, kind: 'delivery',
+        note: '受注: ' + items.map(i => i.name).join(', '),
+        createdAt: Date.now(),
+      });
+      // Add LINE msg (rep → customer)
+      const mid = uid('msg');
+      await db.set('messages', mid, {
+        id: mid, customerId: cid, direction: 'incoming', repId: currentRep().id,
+        body: `本日のご注文、${fmt.yen(total)}の決済リンクをお送りします。ご確認ください。`,
+        createdAt: Date.now(),
+      });
+      closeModal();
+      toast('決済リンクをお客さまに送信しました', 'ok');
+    });
+  }
+
+  function openVisitLog(preselectCid) {
+    const mine = myCustomers();
+    const custOpts = mine.map(c => `<option value="${c.id}"${c.id === preselectCid ? ' selected' : ''}>${c.name} さま</option>`).join('');
+    const recent = state.visits.filter(v => v.repId === currentRep().id).slice(0, 8);
+    const m = openModal(`
+      <div class="modal-title">
+        <h2>訪問記録</h2>
+        <button class="modal-close" onclick="closeModal()" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="field"><label>お客さま</label>
+        <select class="select" id="visCust">${custOpts}</select></div>
+      <div class="field"><label>訪問種別</label>
+        <select class="select" id="visKind">
+          <option value="delivery">お届け</option>
+          <option value="check">お伺い (体調確認)</option>
+          <option value="new">新規訪問</option>
+          <option value="followup">未購入フォロー</option>
+        </select></div>
+      <div class="field"><label>メモ</label>
+        <textarea class="textarea" id="visNote" placeholder="ご様子・次回に向けたメモ"></textarea></div>
+      <button class="btn btn-primary" id="btnSaveVisit" style="width:100%;">記録する</button>
+      <h4 style="margin-top: 24px; font-size:13px; color:var(--ink-3); letter-spacing:.04em;">直近の訪問記録</h4>
+      ${recent.map(v => {
+        const c = state.customers.find(x => x.id === v.customerId);
+        return `<div class="history-row">
+          <div class="date">${fmt.date(v.createdAt)}</div>
+          <div>
+            <div class="title">${c ? c.name + ' さま' : ''}</div>
+            <div class="sub">${v.note}</div>
+          </div>
+        </div>`;
+      }).join('') || '<div class="dim" style="font-size:13px;">まだ記録はありません。</div>'}
+    `);
+    m.querySelector('#btnSaveVisit').addEventListener('click', async () => {
+      const cid = m.querySelector('#visCust').value;
+      const kind = m.querySelector('#visKind').value;
+      const note = m.querySelector('#visNote').value.trim() || '訪問';
+      const vid = uid('vis');
+      await db.set('visits', vid, {
+        id: vid, customerId: cid, repId: currentRep().id, kind, note, createdAt: Date.now(),
+      });
+      await db.update('customers', cid, { lastVisitAt: Date.now() });
+      closeModal();
+      toast('訪問記録を保存しました', 'ok');
+    });
+  }
+
+  function openQR() {
+    const r = currentRep();
+    const url = `https://line.sunchlorella.example/friend?ref=${r.id}`;
+    openModal(`
+      <div class="modal-title">
+        <h2>玄関先 友達追加 QR</h2>
+        <button class="modal-close" onclick="closeModal()" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <p style="margin: 0 0 14px; font-size:13.5px; color:var(--ink-2); line-height:1.75;">
+        お客さまがこのQRを読み取ると、公式LINEの友達追加と同時に、あなた (${r.name} 担当) の紐付けが自動で行われます。
+      </p>
+      <div style="background:#fff; border:1px solid var(--line); border-radius:var(--r-md); padding:20px; text-align:center; margin-bottom: 14px;">
+        <div style="width: 220px; height: 220px; margin: 0 auto; background: #fff; padding: 12px; border-radius: 8px;">
+          <img alt="QR" style="width:100%; height:100%;" src="data:image/svg+xml;utf8,${encodeURIComponent(fakeQR(url))}">
+        </div>
+        <div style="font-family:var(--font-num); font-size:11px; color:var(--ink-3); margin-top:12px; word-break:break-all;">${url}</div>
+      </div>
+      <p style="margin:0; font-size:12.5px; color:var(--ink-3); line-height:1.6;">
+        ※ このQRは販売員固有です。他の販売員のQRとは別のリンクになります。 友達追加時に <code style="font-family:var(--font-num); background:var(--bg-2); padding:1px 6px; border-radius:4px;">ref=${r.id}</code> が刻印されます。
+      </p>
+    `);
+  }
+
+  function openBroadcast() {
+    const mine = myCustomers();
+    const opts = mine.map(c => `
+      <label style="display:flex; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line-2); font-size:14px;">
+        <input type="checkbox" value="${c.id}" style="width:22px; height:22px; accent-color: var(--leaf-2);">
+        <span style="flex:1;">${c.name} さま <span class="dim" style="font-size:11.5px; margin-left:4px;">${c.age}歳 · 前回 ${fmt.daysAgo(c.lastVisitAt)}</span></span>
+      </label>
+    `).join('');
+    const m = openModal(`
+      <div class="modal-title">
+        <h2>LINE 送信</h2>
+        <button class="modal-close" onclick="closeModal()" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="field"><label>送信先 (担当客より複数選択可)</label>
+        <div style="max-height: 240px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r-md); padding: 4px 12px;">
+          ${opts}
+        </div>
+      </div>
+      <div class="field"><label>本文</label>
+        <textarea class="textarea" id="bcBody" placeholder="お客さま宛のメッセージ">こんにちは。今月のお届け予定のご案内です。ご都合の良い曜日をお知らせください。</textarea></div>
+      <button class="btn btn-primary" id="btnBcSend" style="width:100%;">選択したお客さまに送信</button>
+    `);
+    m.querySelector('#btnBcSend').addEventListener('click', async () => {
+      const cids = [...m.querySelectorAll('input:checked')].map(x => x.value);
+      const body = m.querySelector('#bcBody').value.trim();
+      if (!cids.length) { toast('送信先を選んでください', 'warn'); return; }
+      if (!body)        { toast('本文を入力してください', 'warn'); return; }
+      for (const cid of cids) {
+        const mid = uid('msg');
+        await db.set('messages', mid, {
+          id: mid, customerId: cid, direction: 'incoming', repId: currentRep().id, body, createdAt: Date.now(),
+        });
+      }
+      closeModal();
+      toast(`${cids.length}名に送信しました`, 'ok');
+    });
+  }
+
+  /* ─── Helpers ─── */
+  function hashCode(s) { let h = 0; for (let i = 0; i < s.length; i++) h = ((h<<5)-h) + s.charCodeAt(i) | 0; return h; }
+  function fakeQR(text) {
+    // decorative pseudo-QR (not real QR): grid based on hash for stability
+    const size = 21;
+    let rows = '';
+    const seed = Math.abs(hashCode(text));
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const inCorner = (x < 7 && y < 7) || (x >= size-7 && y < 7) || (x < 7 && y >= size-7);
+        const cornerFill = (inCorner && (x===0||y===0||x===6||y===6||x===size-7||x===size-1||y===size-7||y===size-1 || (x>=2 && x<=4 && y>=2 && y<=4) || (x>=size-5 && x<=size-3 && y>=2 && y<=4) || (x>=2 && x<=4 && y>=size-5 && y<=size-3)));
+        const dataFill = !inCorner && (((seed >> ((x+y*3) % 32)) & 1) === 1 || (x*y*3+seed) % 5 === 0);
+        if (cornerFill || dataFill) rows += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
+      }
+    }
+    return `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${size} ${size}' shape-rendering='crispEdges'>${rows}</svg>`;
+  }
+
+  function toast(msg, kind = 'ok') {
+    const el = document.createElement('div');
+    el.className = 'toast ' + kind;
+    el.textContent = msg;
+    document.getElementById('toastHost').appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+  }
+
+  // Initial route
+  const h = location.hash.slice(1);
+  if (h && document.getElementById('view-' + h)) switchView(h);
+  else switchView('home');
+
+  await refresh();
+</script>
+</body>
+</html>

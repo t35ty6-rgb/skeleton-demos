@@ -1,0 +1,1024 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>本社 統合ダッシュボード — サン・クロレラ 統合LINE OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/ui.css">
+<style>
+  body { background: var(--bg); }
+  .layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  /* ── Sidebar ── */
+  aside.sidebar {
+    background: oklch(0.24 0.02 145); color: rgba(255,255,255,.85);
+    padding: 20px 12px 24px;
+    display: flex; flex-direction: column; gap: 4px;
+    position: sticky; top: 0; height: 100vh;
+    overflow-y: auto;
+  }
+  @media (max-width: 900px) {
+    aside.sidebar { position: static; height: auto; }
+  }
+  aside .brand-block {
+    display: flex; align-items: center; gap: 12px;
+    padding: 6px 10px 18px;
+    border-bottom: 1px solid rgba(255,255,255,.1); margin-bottom: 12px;
+  }
+  aside .brand-block .brand-mark { background: var(--leaf-3); }
+  aside .brand-block .n { font-size: 13.5px; font-weight: 900; letter-spacing: -.01em; color: #fff; }
+  aside .brand-block .r { font-size: 11px; opacity: .65; letter-spacing: .06em; margin-top: 2px; }
+  aside a {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: var(--r-md);
+    color: rgba(255,255,255,.75); text-decoration: none;
+    font-size: 13.5px; font-weight: 700;
+    transition: background .15s, color .15s;
+  }
+  aside a:hover { background: rgba(255,255,255,.08); color: #fff; }
+  aside a[aria-current="page"] { background: var(--leaf-3); color: #fff; }
+  aside a svg { width: 18px; height: 18px; flex-shrink: 0; }
+  aside .sect-label {
+    font-size: 10.5px; letter-spacing: .1em; font-weight: 700;
+    color: rgba(255,255,255,.4); padding: 14px 14px 6px;
+  }
+  aside .home-back {
+    margin-top: auto;
+    padding: 12px 14px;
+    background: rgba(255,255,255,.06);
+    border-radius: var(--r-md);
+    color: rgba(255,255,255,.7); text-decoration: none;
+    font-size: 12.5px; font-weight: 700;
+    text-align: center;
+  }
+
+  main.pane { padding: 32px 36px 60px; }
+  @media (max-width: 900px) { main.pane { padding: 24px 18px 60px; } }
+
+  .pane-head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
+  }
+  .pane-head h1 { font-size: clamp(22px, 2.4vw, 30px); margin-bottom: 4px; }
+  .pane-head .sub { color: var(--ink-3); font-size: 13.5px; }
+
+  .seg-toggle {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px; background: var(--paper);
+    border: 1px solid var(--line); border-radius: 999px;
+    box-shadow: var(--shadow-1);
+  }
+  .seg-toggle button {
+    appearance: none; border: 0; background: transparent; font: inherit;
+    padding: 8px 16px; border-radius: 999px; cursor: pointer;
+    font-size: 12.5px; font-weight: 800; color: var(--ink-3);
+  }
+  .seg-toggle button.on { background: var(--leaf-2); color: #fff; }
+
+  .view { display: none; }
+  .view[data-active="true"] { display: block; }
+
+  /* KPI grid */
+  .kpis {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px;
+  }
+  @media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .kpis { grid-template-columns: 1fr; } }
+  .kpi {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 20px 22px 18px;
+    display: flex; flex-direction: column; gap: 4px;
+    box-shadow: var(--shadow-1);
+  }
+  .kpi .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .kpi .k { font-size: 12.5px; color: var(--ink-3); font-weight: 700; letter-spacing: .02em; }
+  .kpi .icon { width: 28px; height: 28px; border-radius: 8px; background: var(--leaf-4); color: var(--leaf-2); display: grid; place-items: center; }
+  .kpi .icon svg { width: 16px; height: 16px; }
+  .kpi .v {
+    font-family: var(--font-num); font-weight: 700;
+    font-size: clamp(24px, 2.4vw, 30px); letter-spacing: -.02em; line-height: 1.05;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi .v .yen { font-size: .58em; font-weight: 600; margin-right: 2px; }
+  .kpi .v .u { font-size: .48em; color: var(--ink-3); font-weight: 500; margin-left: 4px; }
+  .kpi .diff { font-size: 12px; margin-top: 4px; font-weight: 700; }
+  .kpi .diff.up { color: var(--leaf-2); }
+  .kpi .diff.down { color: var(--alert); }
+
+  /* Card */
+  .card {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 24px 24px 22px;
+    box-shadow: var(--shadow-1); margin-bottom: 20px;
+  }
+  .card > .head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 18px; flex-wrap: wrap; gap: 12px;
+  }
+  .card > .head h3 { font-size: 16px; }
+  .card > .head .sub { font-size: 12.5px; color: var(--ink-3); }
+
+  .legend { display: inline-flex; gap: 12px; font-size: 12px; color: var(--ink-2); font-weight: 700; flex-wrap: wrap; }
+  .legend .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; vertical-align: 0; margin-right: 6px; }
+
+  .split { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
+  @media (max-width: 1100px) { .split { grid-template-columns: 1fr; } }
+
+  /* Bar chart */
+  .chart-bars {
+    display: grid; grid-template-columns: 92px 1fr 100px; gap: 10px 12px;
+    align-items: center; font-size: 12.5px;
+  }
+  .chart-bars .lbl { color: var(--ink-2); font-weight: 700; }
+  .chart-bars .bar { height: 26px; border-radius: 6px; overflow: hidden; display: flex; background: var(--line-2); }
+  .chart-bars .bar span { display: block; height: 100%; transition: width .4s cubic-bezier(.2,.8,.2,1); }
+  .chart-bars .amt { font-family: var(--font-num); font-weight: 700; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  .rank {
+    width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px;
+  }
+  .rank th, .rank td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--line-2); }
+  .rank thead th { font-size: 11px; color: var(--ink-3); font-weight: 700; letter-spacing: .04em; }
+  .rank tbody tr:last-child td { border-bottom: 0; }
+  .rank .num { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; }
+  .rank .rankn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 999px;
+    background: var(--bg-2); color: var(--ink-2); font-weight: 800; font-size: 12px;
+    font-family: var(--font-num);
+  }
+  .rank .rankn.gold   { background: oklch(0.87 0.12 90);  color: oklch(0.34 0.09 65); }
+  .rank .rankn.silver { background: oklch(0.90 0.02 260); color: oklch(0.36 0.02 260); }
+  .rank .rankn.bronze { background: oklch(0.85 0.09 55);  color: oklch(0.34 0.10 55); }
+  .rank .repname { font-weight: 800; letter-spacing: -.01em; }
+  .rank .office  { color: var(--ink-3); font-size: 11.5px; margin-top: 1px; }
+
+  /* Table */
+  table.data {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-lg); overflow: hidden;
+    font-size: 13.5px;
+    box-shadow: var(--shadow-1);
+  }
+  table.data th, table.data td {
+    padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line-2);
+    vertical-align: middle;
+  }
+  table.data thead th {
+    background: var(--bg-2); font-size: 11px; color: var(--ink-3);
+    font-weight: 700; letter-spacing: .04em; text-transform: none;
+  }
+  table.data tbody tr:hover { background: color-mix(in oklab, var(--leaf-4) 40%, transparent); }
+  table.data tbody tr:last-child td { border-bottom: 0; }
+  table.data td.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; }
+  table.data .cust-link { cursor: pointer; color: var(--ink); font-weight: 800; }
+
+  /* Segment builder */
+  .seg-builder { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 1000px) { .seg-builder { grid-template-columns: 1fr; } }
+  .filter-group {
+    border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: 14px 16px; margin-bottom: 12px; background: var(--bg);
+  }
+  .filter-group h4 {
+    font-size: 11.5px; color: var(--ink-3); letter-spacing: .06em;
+    margin-bottom: 8px; text-transform: uppercase;
+  }
+  .chips-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .seg-preview {
+    background: var(--bg-2); border-radius: var(--r-md); padding: 20px;
+    display: flex; flex-direction: column; gap: 14px;
+    position: sticky; top: 20px;
+  }
+  .seg-count { display: flex; align-items: baseline; gap: 10px; }
+  .seg-count .n {
+    font-family: var(--font-num); font-weight: 700; font-size: 42px;
+    color: var(--leaf-2); letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+  }
+  .seg-count .lbl { font-size: 13px; color: var(--ink-3); font-weight: 700; }
+  .seg-flex {
+    background: #fff; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--line); box-shadow: var(--shadow-1);
+  }
+  .seg-flex .hero {
+    height: 100px; background: linear-gradient(135deg, var(--leaf), var(--leaf-3));
+    display: grid; place-items: center; color: #fff;
+    font-weight: 900; font-size: 18px; letter-spacing: -.02em;
+  }
+  .seg-flex .body { padding: 12px 14px; }
+  .seg-flex .body h4 { margin: 0 0 4px; font-size: 13.5px; }
+  .seg-flex .body p { margin: 0; font-size: 12px; color: var(--ink-3); line-height: 1.55; }
+  .seg-actions { display: flex; gap: 10px; }
+  .seg-actions .btn { flex: 1; }
+
+  /* Broadcast list */
+  .bc {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 14px 18px;
+    margin-bottom: 8px;
+    display: grid; grid-template-columns: 1fr auto auto; gap: 16px; align-items: center;
+  }
+  .bc h4 { font-size: 14px; margin-bottom: 3px; }
+  .bc .meta { font-size: 11.5px; color: var(--ink-3); display: flex; gap: 8px; flex-wrap: wrap; }
+  .bc .n { font-family: var(--font-num); font-weight: 700; font-size: 14px; text-align: right; }
+  .bc .rate { color: var(--leaf-2); font-family: var(--font-num); font-weight: 800; font-size: 15px; text-align: right; }
+  .bc .rate small { color: var(--ink-3); font-weight: 600; margin-left: 2px; }
+
+  /* Product grid admin */
+  .padmin {
+    display: grid; grid-template-columns: 60px 1fr auto auto; gap: 16px; align-items: center;
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: 12px 16px; margin-bottom: 8px;
+  }
+  .padmin .thumb {
+    width: 60px; height: 60px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--leaf-4), var(--leaf-3));
+    color: var(--leaf-2); display: grid; place-items: center;
+    font-weight: 900; font-size: 18px;
+  }
+  .padmin .n { font-weight: 800; font-size: 14.5px; }
+  .padmin .meta { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+  .padmin .price { font-family: var(--font-num); font-weight: 700; font-size: 15px; text-align: right; }
+  .padmin .price small { color: var(--ink-3); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand-block">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c0-6 4-11 10-12-1 6-4 10-10 12z"/><path d="M12 22C6 20 3 16 2 10c6 1 10 5 10 12z"/></svg>
+      </div>
+      <div>
+        <div class="n">サン・クロレラ 統合LINE OS</div>
+        <div class="r">本社 統合コンソール</div>
+      </div>
+    </div>
+
+    <a href="#dash" data-view="dash" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-8 9 8v8a2 2 0 0 1-2 2h-3v-6H10v6H5a2 2 0 0 1-2-2z"/></svg>
+      ダッシュボード
+    </a>
+
+    <div class="sect-label">実績・分析</div>
+    <a href="#orders" data-view="orders">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.5 12h11L21 8H6"/><circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg>
+      受注一覧
+    </a>
+    <a href="#reps" data-view="reps">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      販売員ランキング
+    </a>
+    <a href="#subs" data-view="subs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8 8-4-4"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
+      定期便
+    </a>
+
+    <div class="sect-label">顧客・商品</div>
+    <a href="#customers" data-view="customers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/></svg>
+      顧客CRM
+    </a>
+    <a href="#products" data-view="products">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8-4-8 4 8 4 8-4z"/><path d="M4 7v10l8 4 8-4V7"/></svg>
+      商品
+    </a>
+
+    <div class="sect-label">LINE 運用</div>
+    <a href="#broadcast" data-view="broadcast">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l8 5V5L6 10H4a1 1 0 0 0-1 1z"/><path d="M17 7a5 5 0 0 1 0 10"/></svg>
+      セグメント配信
+    </a>
+    <a href="#bclog" data-view="bclog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4h4"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M8 13h8M8 17h5"/></svg>
+      配信履歴
+    </a>
+
+    <div class="sect-label">運用</div>
+    <a href="#settings" data-view="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>
+      設定
+    </a>
+
+    <a href="../" class="home-back">← 入口へ戻る</a>
+  </aside>
+
+  <main class="pane">
+    <!-- ── Dashboard ── -->
+    <section class="view" id="view-dash" data-active="true">
+      <div class="pane-head">
+        <div>
+          <h1>本社 統合ダッシュボード</h1>
+          <div class="sub">3チャネル横断で、売上・営業実績・配信効果を1画面で。</div>
+        </div>
+        <div class="seg-toggle" id="periodToggle">
+          <button data-period="day">日次</button>
+          <button data-period="month" class="on">月次</button>
+          <button data-period="year">年次</button>
+        </div>
+      </div>
+
+      <div class="kpis" id="kpiRow"></div>
+
+      <div class="split">
+        <div class="card">
+          <div class="head">
+            <div>
+              <h3>チャネル別 売上 (今月)</h3>
+              <div class="sub">ブロック別内訳</div>
+            </div>
+            <div class="legend">
+              <span><span class="dot" style="background: var(--leaf-2);"></span>訪問販売</span>
+              <span><span class="dot" style="background: var(--leaf-3);"></span>LINE EC</span>
+              <span><span class="dot" style="background: var(--earth);"></span>自社EC</span>
+              <span><span class="dot" style="background: var(--ink-3);"></span>電話</span>
+            </div>
+          </div>
+          <div class="chart-bars" id="regionBars"></div>
+
+          <div style="margin-top: 22px; padding-top: 18px; border-top: 1px dashed var(--line); display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;" id="chSummary"></div>
+        </div>
+
+        <div class="card">
+          <div class="head">
+            <h3>販売員ランキング TOP 5</h3>
+            <div class="sub">今月</div>
+          </div>
+          <table class="rank" id="topReps"></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head">
+          <div>
+            <h3>直近の受注</h3>
+            <div class="sub">3チャネル横断 20件</div>
+          </div>
+          <a class="btn btn-outline btn-icon" href="#orders">受注一覧へ</a>
+        </div>
+        <table class="data" id="recentOrdersTbl">
+          <thead><tr><th>日時</th><th>お客さま</th><th>チャネル</th><th>担当</th><th style="text-align:right;">金額</th></tr></thead>
+          <tbody id="recentOrdersBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Orders ── -->
+    <section class="view" id="view-orders">
+      <div class="pane-head"><div><h1>受注一覧</h1><div class="sub">全チャネルの受注をタイムラインで</div></div></div>
+      <div style="display:flex; gap:10px; margin-bottom: 14px; flex-wrap:wrap;">
+        <button class="chip on" data-ch-filter="all">すべて</button>
+        <button class="chip"    data-ch-filter="visit">訪問販売</button>
+        <button class="chip"    data-ch-filter="line">LINE EC</button>
+        <button class="chip"    data-ch-filter="web">自社EC</button>
+        <button class="chip"    data-ch-filter="phone">電話</button>
+      </div>
+      <table class="data" id="ordersTbl">
+        <thead><tr><th>日時</th><th>お客さま</th><th>チャネル</th><th>担当</th><th>品目</th><th style="text-align:right;">金額</th></tr></thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </section>
+
+    <!-- ── Reps ── -->
+    <section class="view" id="view-reps">
+      <div class="pane-head"><div><h1>販売員ランキング</h1><div class="sub">今月の売上・受注件数・担当客数</div></div></div>
+      <div class="card"><table class="data" id="repsTbl">
+        <thead><tr><th style="width:60px;">#</th><th>販売員</th><th>営業所</th><th style="text-align:right;">担当客</th><th style="text-align:right;">今月受注</th><th style="text-align:right;">今月売上</th></tr></thead>
+        <tbody id="repsBody"></tbody>
+      </table></div>
+    </section>
+
+    <!-- ── Subs ── -->
+    <section class="view" id="view-subs">
+      <div class="pane-head"><div><h1>定期便</h1><div class="sub">継続中・停止中を一覧で。次回お届けが近い順</div></div></div>
+      <table class="data" id="subsTbl">
+        <thead><tr><th>お客さま</th><th>商品</th><th>担当</th><th style="text-align:right;">次回</th><th style="text-align:right;">状態</th></tr></thead>
+        <tbody id="subsBody"></tbody>
+      </table>
+    </section>
+
+    <!-- ── Customers ── -->
+    <section class="view" id="view-customers">
+      <div class="pane-head"><div><h1>顧客CRM</h1><div class="sub">全社の顧客をタグで絞り込み</div></div></div>
+      <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
+        <input class="input" id="cSearch" placeholder="お名前・電話番号で検索" style="max-width: 280px;">
+        <button class="chip on" data-c-region="all">全ブロック</button>
+        <button class="chip"    data-c-region="kyoto">京都</button>
+        <button class="chip"    data-c-region="kanto">関東</button>
+        <button class="chip"    data-c-region="kansai">関西</button>
+        <button class="chip"    data-c-region="chubu">中部</button>
+        <button class="chip"    data-c-region="kyushu">九州</button>
+      </div>
+      <table class="data" id="custTbl">
+        <thead><tr><th>お客さま</th><th>年齢</th><th>担当</th><th>継続</th><th style="text-align:right;">LTV</th><th style="text-align:right;">最終ご購入</th></tr></thead>
+        <tbody id="custBody"></tbody>
+      </table>
+    </section>
+
+    <!-- ── Products ── -->
+    <section class="view" id="view-products">
+      <div class="pane-head">
+        <div><h1>商品</h1><div class="sub">価格・在庫・定期便価格の管理</div></div>
+        <button class="btn btn-outline" id="btnNewProd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M12 5v14M5 12h14"/></svg>新規商品</button>
+      </div>
+      <div id="prodList"></div>
+    </section>
+
+    <!-- ── Broadcast ── -->
+    <section class="view" id="view-broadcast">
+      <div class="pane-head"><div><h1>セグメント配信</h1><div class="sub">タグを組み合わせて対象を絞り込み、Flex Messageで配信</div></div></div>
+      <div class="card">
+        <div class="seg-builder">
+          <div id="segFilters"></div>
+          <div class="seg-preview">
+            <div class="seg-count"><div class="n" id="segN">—</div><div class="lbl">名 / 該当</div></div>
+            <div class="field"><label>配信タイトル</label><input class="input" id="bcTitle" value="今月ご継続の皆さまへ"></div>
+            <div class="field"><label>本文</label><textarea class="textarea" id="bcBody">お手元の在庫はいかがですか?次回お届けが近づいてまいりましたので、ご案内申し上げます。</textarea></div>
+            <div class="seg-flex">
+              <div class="hero" id="bcHero">今月ご継続の皆さまへ</div>
+              <div class="body">
+                <h4 id="bcH4">クロレラA 粒、来月分の予約が始まります</h4>
+                <p id="bcP">「予約する」もしくは「スキップ」からお選びください。</p>
+              </div>
+            </div>
+            <div class="seg-actions">
+              <button class="btn btn-outline">下書きに保存</button>
+              <button class="btn btn-primary" id="btnBcSend">配信する</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Broadcast log ── -->
+    <section class="view" id="view-bclog">
+      <div class="pane-head"><div><h1>配信履歴</h1><div class="sub">開封率・クリック率の実測</div></div></div>
+      <div id="bcList"></div>
+    </section>
+
+    <!-- ── Settings ── -->
+    <section class="view" id="view-settings">
+      <div class="pane-head"><div><h1>設定</h1><div class="sub">テナント・LINE公アカ・自動配信・営業所</div></div></div>
+
+      <div class="card">
+        <h3 style="margin-bottom:14px;">テナント情報</h3>
+        <div class="field"><label>会社名</label><input class="input" value="サン・クロレラジャパン株式会社" readonly></div>
+        <div class="field"><label>公式LINE 名称</label><input class="input" value="サン・クロレラ サポート" readonly></div>
+        <div class="field"><label>本社所在地</label><input class="input" value="京都府京都市 (デモ表示用)" readonly></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:14px;">自動配信</h3>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding: 10px 0; border-bottom: 1px solid var(--line-2);">
+          <div><h4>誕生月クーポン (¥1,000 OFF)</h4><div class="dim" style="font-size:12px;">毎月1日 09:00 JST 自動配信</div></div>
+          <input type="checkbox" class="switch" checked>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding: 10px 0; border-bottom: 1px solid var(--line-2);">
+          <div><h4>休眠 60日超 お伺いメッセージ</h4><div class="dim" style="font-size:12px;">週次 火曜 11:00 JST</div></div>
+          <input type="checkbox" class="switch" checked>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding: 10px 0;">
+          <div><h4>定期便お届け3日前リマインド</h4><div class="dim" style="font-size:12px;">毎日 07:00 JST 該当者のみ</div></div>
+          <input type="checkbox" class="switch" checked>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:14px;">デモ管理</h3>
+        <p class="dim" style="font-size:13px;">デモデータの初期化はこちらから行えます。 本番接続時は Firebase Firestore へ切り替わり、この操作は無効になります。</p>
+        <div style="display:flex; gap:10px; margin-top: 10px;">
+          <button class="btn btn-outline" id="btnResetSeed">シード再適用</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast-host" id="toastHost"></div>
+<div id="modalHost"></div>
+
+<script type="module">
+  import { db, uid } from '../shared/data.js';
+  import { seedIfEmpty, seedForce } from '../shared/seed.js';
+  import { fmt, CHANNELS, TAG_GROUPS, filterCustomers } from '../shared/schema.js';
+
+  await seedIfEmpty();
+
+  const state = {
+    view: 'dash',
+    reps: [], customers: [], orders: [], products: [], subs: [], msgs: [], broadcasts: [],
+    ordersFilter: 'all',
+    custRegion: 'all',
+    custSearch: '',
+    segSelected: new Set(['s_sub']),
+    period: 'month',
+  };
+
+  async function refresh() {
+    state.reps       = await db.list('reps');
+    state.customers  = await db.list('customers');
+    state.orders     = await db.list('orders', { orderBy: ['createdAt', 'desc'] });
+    state.products   = await db.list('products');
+    state.subs       = await db.list('subscriptions');
+    state.msgs       = await db.list('messages', { orderBy: ['createdAt', 'desc'] });
+    state.broadcasts = await db.list('broadcasts', { orderBy: ['sentAt', 'desc'] });
+    render();
+  }
+  ['reps','customers','orders','products','subscriptions','messages','broadcasts'].forEach(c => db.onChange(c, refresh));
+
+  /* ─── Helpers ─── */
+  function monthStart(offset = 0) {
+    const d = new Date(); d.setMonth(d.getMonth() + offset); d.setDate(1); d.setHours(0,0,0,0);
+    return d.getTime();
+  }
+  function periodStart() {
+    if (state.period === 'day')  return new Date().setHours(0,0,0,0);
+    if (state.period === 'year') { const d = new Date(); d.setMonth(0,1); d.setHours(0,0,0,0); return d.getTime(); }
+    return monthStart();
+  }
+  function inPeriod(t) { return t >= periodStart(); }
+
+  /* ─── KPI ─── */
+  function renderKPI() {
+    const orders = state.orders.filter(o => inPeriod(o.createdAt));
+    const revenue = orders.reduce((s,o) => s+o.total, 0);
+    const activeSubs = state.subs.filter(s => s.status === 'active').length;
+    const totalSubs  = state.subs.length;
+    const retention  = totalSubs ? Math.round((activeSubs / totalSubs) * 1000) / 10 : 0;
+    const friends = state.customers.length + 184300;
+    // 配信平均開封率 = 全broadcasts の openRate 平均
+    const openAvg = state.broadcasts.length
+      ? Math.round(state.broadcasts.reduce((s, b) => s + (b.openRate || 0), 0) / state.broadcasts.length * 10) / 10
+      : 0;
+
+    const kpis = [
+      { k: '総売上', v: fmt.yenShort(revenue), sub: '↑ +11.4% 前年同期比', up: true, ic: 'yen' },
+      { k: '定期便継続率', v: retention + '%', sub: '↑ +2.4pt 先月比', up: true, ic: 'refresh' },
+      { k: 'LINE友達 (累計)', v: friends.toLocaleString('ja-JP'), sub: '↑ +8,240 今月', up: true, ic: 'users' },
+      { k: '配信 平均開封率', v: openAvg + '%', sub: '一斉配信比 3.4倍', up: true, ic: 'bell' },
+    ];
+    document.getElementById('kpiRow').innerHTML = kpis.map(x => `
+      <div class="kpi">
+        <div class="head">
+          <div class="k">${x.k}</div>
+          <div class="icon">${iconSvg(x.ic)}</div>
+        </div>
+        <div class="v">${x.v}</div>
+        <div class="diff ${x.up ? 'up' : 'down'}">${x.sub}</div>
+      </div>
+    `).join('');
+  }
+  function iconSvg(name) {
+    const s = { yen: '<path d="M6 4l6 8 6-8M6 12h12M6 16h12M12 12v8"/>',
+                refresh: '<path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M21 3v5h-5M3 21v-5h5"/>',
+                users: '<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>',
+                bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/>' }[name] || '';
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${s}</svg>`;
+  }
+
+  /* ─── Region bars ─── */
+  function renderRegionBars() {
+    const orders = state.orders.filter(o => inPeriod(o.createdAt));
+    const regionMap = { kyoto: '京都本部', kanto: '関東', kansai: '関西', kansai_o: '関西', chubu: '中部', kyushu: '九州' };
+    // Group customers by officeId, then aggregate order totals by channel per region
+    const byRegion = {};
+    orders.forEach(o => {
+      const c = state.customers.find(x => x.id === o.customerId);
+      const rg = c?.officeId || 'kyoto';
+      if (!byRegion[rg]) byRegion[rg] = { visit: 0, line: 0, web: 0, phone: 0, total: 0 };
+      byRegion[rg][o.channel] = (byRegion[rg][o.channel] || 0) + o.total;
+      byRegion[rg].total += o.total;
+    });
+    // Fallback demo regions (for full display even when data thin)
+    const fixed = [
+      ['kyoto', '京都本部',  { visit: 312e6*.58, line: 312e6*.28, web: 312e6*.14 }, 312e6],
+      ['kanto', '関東ブロック',{ visit: 246e6*.46, line: 246e6*.34, web: 246e6*.20 }, 246e6],
+      ['kansai','関西ブロック',{ visit: 178e6*.62, line: 178e6*.24, web: 178e6*.14 }, 178e6],
+      ['chubu', '中部ブロック',{ visit: 84e6*.51,  line: 84e6*.33,  web: 84e6*.16 },  84e6],
+      ['kyushu','九州ブロック',{ visit: 42e6*.44,  line: 42e6*.38,  web: 42e6*.18 },  42e6],
+    ];
+    const max = fixed.reduce((m, r) => Math.max(m, r[3]), 1);
+    document.getElementById('regionBars').innerHTML = fixed.map(([, label, d, tot]) => {
+      const scale = tot / max * 100;
+      const parts = ['visit','line','web'].map(k => {
+        const w = tot ? (d[k] / tot) * scale : 0;
+        return `<span style="width:${w}%; background: ${{visit:'var(--leaf-2)', line:'var(--leaf-3)', web:'var(--earth)'}[k]};"></span>`;
+      }).join('');
+      return `<div class="lbl">${label}</div><div class="bar">${parts}</div><div class="amt">${fmt.yenShort(tot)}</div>`;
+    }).join('');
+    // Summary
+    const summed = fixed.reduce((s, [,,d]) => ({ visit: s.visit + d.visit, line: s.line + d.line, web: s.web + d.web }), { visit: 0, line: 0, web: 0 });
+    const total = summed.visit + summed.line + summed.web;
+    const box = [
+      ['訪問販売', summed.visit, 'var(--leaf-2)'],
+      ['LINE EC', summed.line,   'var(--leaf-3)'],
+      ['自社EC',  summed.web,    'var(--earth)'],
+      ['計',      total,         'var(--ink)'],
+    ];
+    document.getElementById('chSummary').innerHTML = box.map(([lbl, v, c]) => `
+      <div>
+        <div style="font-size:12px; color:var(--ink-3); font-weight:700; margin-bottom:4px;">${lbl}</div>
+        <div style="font-family:var(--font-num); font-weight:700; font-size:20px; color:${c};">${fmt.yenShort(v)}<span style="font-size:11px; color:var(--ink-3); font-weight:500;"> / ${total ? Math.round(v/total*100) : 0}%</span></div>
+      </div>
+    `).join('');
+  }
+
+  /* ─── Top reps ─── */
+  function renderTopReps() {
+    const orders = state.orders.filter(o => inPeriod(o.createdAt));
+    const scored = state.reps.map(r => {
+      const mo = orders.filter(o => o.repId === r.id);
+      return { rep: r, rev: mo.reduce((s,o)=>s+o.total,0), n: mo.length };
+    }).sort((a,b) => b.rev - a.rev).slice(0, 5);
+    document.getElementById('topReps').innerHTML = `
+      <thead><tr><th style="width:36px;">#</th><th>販売員</th><th class="num">今月売上</th></tr></thead>
+      <tbody>${scored.map((s, i) => {
+        const cls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+        return `<tr>
+          <td><span class="rankn ${cls}">${i+1}</span></td>
+          <td><div class="repname">${s.rep.name}</div><div class="office">${s.rep.office}</div></td>
+          <td class="num">${fmt.yenShort(s.rev)}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    `;
+  }
+
+  /* ─── Recent orders ─── */
+  function renderRecent() {
+    const rows = state.orders.slice(0, 20).map(o => {
+      const c = state.customers.find(x => x.id === o.customerId);
+      const r = state.reps.find(x => x.id === o.repId);
+      const ch = CHANNELS[o.channel.toUpperCase()];
+      return `<tr>
+        <td>${fmt.date(o.createdAt)} ${fmt.time(o.createdAt)}</td>
+        <td class="cust-link" data-cid="${o.customerId}">${c ? c.name + ' さま' : '—'}</td>
+        <td><span class="badge ${badgeCh(o.channel)}">${ch ? ch.label : o.channel}</span></td>
+        <td>${r ? r.name : '<span class="dim">直販</span>'}</td>
+        <td class="num">${fmt.yen(o.total)}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('recentOrdersBody').innerHTML = rows;
+    bindCustLinks();
+  }
+  function badgeCh(c) {
+    return c === 'visit' ? '' : c === 'line' ? 'info' : c === 'web' ? 'warn' : 'mono';
+  }
+
+  /* ─── Orders full ─── */
+  function renderOrders() {
+    let list = state.orders;
+    if (state.ordersFilter !== 'all') list = list.filter(o => o.channel === state.ordersFilter);
+    document.getElementById('ordersBody').innerHTML = list.slice(0, 200).map(o => {
+      const c = state.customers.find(x => x.id === o.customerId);
+      const r = state.reps.find(x => x.id === o.repId);
+      const ch = CHANNELS[o.channel.toUpperCase()];
+      const first = o.items[0]?.name || '';
+      return `<tr>
+        <td>${fmt.date(o.createdAt)}</td>
+        <td class="cust-link" data-cid="${o.customerId}">${c ? c.name + ' さま' : '—'}</td>
+        <td><span class="badge ${badgeCh(o.channel)}">${ch ? ch.label : o.channel}</span></td>
+        <td>${r ? r.name : '<span class="dim">—</span>'}</td>
+        <td>${first}${o.items.length > 1 ? ` ほか${o.items.length-1}品` : ''}</td>
+        <td class="num">${fmt.yen(o.total)}</td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="6"><div class="empty"><p>該当なし</p></div></td></tr>`;
+    bindCustLinks();
+  }
+
+  /* ─── Reps ─── */
+  function renderReps() {
+    const orders = state.orders.filter(o => inPeriod(o.createdAt));
+    const scored = state.reps.map(r => {
+      const mo = orders.filter(o => o.repId === r.id);
+      const custN = state.customers.filter(c => c.repId === r.id).length;
+      return { rep: r, rev: mo.reduce((s,o)=>s+o.total,0), n: mo.length, custN };
+    }).sort((a,b) => b.rev - a.rev);
+    document.getElementById('repsBody').innerHTML = scored.map((s, i) => {
+      const cls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      return `<tr>
+        <td><span class="rankn ${cls}">${i+1}</span></td>
+        <td><div class="repname">${s.rep.name}</div></td>
+        <td>${s.rep.office}</td>
+        <td class="num">${s.custN}</td>
+        <td class="num">${s.n}</td>
+        <td class="num">${fmt.yenShort(s.rev)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  /* ─── Subs ─── */
+  function renderSubs() {
+    const all = [...state.subs].sort((a,b) => a.nextDeliveryAt - b.nextDeliveryAt);
+    document.getElementById('subsBody').innerHTML = all.map(s => {
+      const c = state.customers.find(x => x.id === s.customerId);
+      const p = state.products.find(x => x.id === s.productId);
+      const r = state.reps.find(x => x.id === s.repId);
+      const label = { active: 'ご継続中', paused: 'スキップ中', stopped: '停止' }[s.status];
+      const dLeft = Math.ceil((s.nextDeliveryAt - Date.now()) / 86400000);
+      return `<tr>
+        <td class="cust-link" data-cid="${s.customerId}">${c ? c.name + ' さま' : '—'}</td>
+        <td>${p ? p.name : ''} × ${s.qty}</td>
+        <td>${r ? r.name : '<span class="dim">—</span>'}</td>
+        <td class="num">${fmt.date(s.nextDeliveryAt)} <span class="dim">(${dLeft>0?'+'+dLeft+'日':dLeft+'日'})</span></td>
+        <td class="num"><span class="badge ${s.status === 'active' ? '' : s.status === 'paused' ? 'warn' : 'mono'}">${label}</span></td>
+      </tr>`;
+    }).join('');
+    bindCustLinks();
+  }
+
+  /* ─── Customers ─── */
+  function renderCust() {
+    let list = state.customers;
+    if (state.custRegion !== 'all') list = list.filter(c => c.officeId === state.custRegion);
+    const q = state.custSearch.trim().toLowerCase();
+    if (q) list = list.filter(c => c.name.toLowerCase().includes(q) || (c.phone||'').includes(q));
+    list = [...list].sort((a,b) => (b.ltv || 0) - (a.ltv || 0));
+    document.getElementById('custBody').innerHTML = list.slice(0, 200).map(c => {
+      const r = state.reps.find(x => x.id === c.repId);
+      return `<tr>
+        <td class="cust-link" data-cid="${c.id}">${c.name} さま</td>
+        <td>${c.age}歳</td>
+        <td>${r ? r.name : '<span class="dim">—</span>'}</td>
+        <td>${c.orderCount}回</td>
+        <td class="num">${fmt.yenShort(c.ltv || 0)}</td>
+        <td class="num">${fmt.daysAgo(c.lastVisitAt)}</td>
+      </tr>`;
+    }).join('');
+    bindCustLinks();
+  }
+
+  /* ─── Products ─── */
+  function renderProducts() {
+    document.getElementById('prodList').innerHTML = state.products.map(p => `
+      <div class="padmin">
+        <div class="thumb">${p.img}</div>
+        <div>
+          <div class="n">${p.name}</div>
+          <div class="meta">${p.category} · 在庫 ${p.stock}</div>
+        </div>
+        <div class="price">${fmt.yen(p.price)}<div><small>定期 ${fmt.yen(p.subPrice)}</small></div></div>
+        <button class="btn btn-outline btn-icon" data-edit-pid="${p.id}">編集</button>
+      </div>
+    `).join('');
+    document.querySelectorAll('[data-edit-pid]').forEach(b => b.addEventListener('click', () => {
+      openEditProd(b.dataset.editPid);
+    }));
+  }
+  function openEditProd(pid) {
+    const p = state.products.find(x => x.id === pid);
+    if (!p) return;
+    const m = openModal(`
+      <div class="modal-title">
+        <h2>商品編集</h2>
+        <button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="field"><label>商品名</label><input class="input" id="pName" value="${p.name}"></div>
+      <div class="field"><label>通常価格</label><input class="input" type="number" id="pPrice" value="${p.price}"></div>
+      <div class="field"><label>定期便価格</label><input class="input" type="number" id="pSub" value="${p.subPrice}"></div>
+      <div class="field"><label>在庫</label><input class="input" type="number" id="pStock" value="${p.stock}"></div>
+      <button class="btn btn-primary" id="btnSaveProd" style="width:100%;">保存する</button>
+    `);
+    m.querySelector('#btnSaveProd').addEventListener('click', async () => {
+      await db.update('products', pid, {
+        name: m.querySelector('#pName').value,
+        price: Number(m.querySelector('#pPrice').value),
+        subPrice: Number(m.querySelector('#pSub').value),
+        stock: Number(m.querySelector('#pStock').value),
+      });
+      closeModal();
+      toast('商品を更新しました', 'ok');
+    });
+  }
+  document.getElementById('btnNewProd').addEventListener('click', () => {
+    const m = openModal(`
+      <div class="modal-title"><h2>新規商品</h2><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+      <div class="field"><label>商品名</label><input class="input" id="pName" placeholder="例: サン・クロレラA 粒 300粒"></div>
+      <div class="field"><label>通常価格</label><input class="input" type="number" id="pPrice" placeholder="7020"></div>
+      <div class="field"><label>定期便価格</label><input class="input" type="number" id="pSub" placeholder="6620"></div>
+      <div class="field"><label>在庫</label><input class="input" type="number" id="pStock" placeholder="100"></div>
+      <div class="field"><label>ラベル (1文字)</label><input class="input" id="pImg" maxlength="4" placeholder="A粒"></div>
+      <button class="btn btn-primary" id="btnCreateProd" style="width:100%;">作成する</button>
+    `);
+    m.querySelector('#btnCreateProd').addEventListener('click', async () => {
+      const pid = uid('prd');
+      await db.set('products', pid, {
+        id: pid, name: m.querySelector('#pName').value || '新商品',
+        category: 'chlorella', tag: 'p_a_grain',
+        price: Number(m.querySelector('#pPrice').value) || 0,
+        subPrice: Number(m.querySelector('#pSub').value) || 0,
+        stock: Number(m.querySelector('#pStock').value) || 0,
+        img: m.querySelector('#pImg').value || '新',
+        desc: '',
+      });
+      closeModal();
+      toast('商品を作成しました', 'ok');
+    });
+  });
+
+  /* ─── Broadcast ─── */
+  function renderSegFilters() {
+    let html = '';
+    Object.values(TAG_GROUPS).forEach(g => {
+      html += `<div class="filter-group"><h4>${g.label}</h4><div class="chips-row">`;
+      g.tags.forEach(t => {
+        const on = state.segSelected.has(t.id);
+        html += `<button class="chip ${on?'on':''}" data-tag="${t.id}">${t.label}</button>`;
+      });
+      html += `</div></div>`;
+    });
+    document.getElementById('segFilters').innerHTML = html;
+    document.querySelectorAll('[data-tag]').forEach(b => b.addEventListener('click', () => {
+      const t = b.dataset.tag;
+      if (state.segSelected.has(t)) state.segSelected.delete(t);
+      else state.segSelected.add(t);
+      renderSegFilters();
+      renderSegPreview();
+    }));
+    renderSegPreview();
+  }
+  function renderSegPreview() {
+    const tags = [...state.segSelected];
+    const matched = filterCustomers(state.customers, tags, state.orders, state.subs);
+    // Extrapolate to a demo-scale friend count (baseline 6000 per customer, adjusted by tag count)
+    const n = Math.max(matched.length, Math.round(matched.length * 260 + 120));
+    document.getElementById('segN').textContent = n.toLocaleString('ja-JP');
+    document.getElementById('btnBcSend').textContent = n.toLocaleString('ja-JP') + '名に配信';
+    // Sync flex
+    document.getElementById('bcHero').textContent = document.getElementById('bcTitle').value || '—';
+    document.getElementById('bcH4').textContent = (document.getElementById('bcBody').value || '').split('。')[0] || '—';
+    document.getElementById('bcP').textContent  = (document.getElementById('bcBody').value || '');
+  }
+  ['bcTitle', 'bcBody'].forEach(id => {
+    document.getElementById(id).addEventListener('input', renderSegPreview);
+  });
+  document.getElementById('btnBcSend').addEventListener('click', async () => {
+    const bid = uid('bc');
+    const targetCount = parseInt(document.getElementById('segN').textContent.replace(/,/g, ''), 10) || 0;
+    await db.set('broadcasts', bid, {
+      id: bid, kind: 'manual',
+      title: document.getElementById('bcTitle').value || '手動配信',
+      segment: [...state.segSelected], targetCount,
+      openRate: 30 + Math.random() * 25,
+      clickRate: 4 + Math.random() * 10,
+      sentAt: Date.now(),
+      bodyPreview: document.getElementById('bcBody').value.slice(0, 80),
+    });
+    toast('配信キューに登録しました', 'ok');
+    switchView('bclog'); history.replaceState(null, '', '#bclog');
+  });
+
+  /* ─── BC log ─── */
+  function renderBcLog() {
+    document.getElementById('bcList').innerHTML = state.broadcasts.map(b => `
+      <div class="bc">
+        <div>
+          <h4>${b.title}</h4>
+          <div class="meta"><span>${fmt.date(b.sentAt)}</span><span>${b.segment.join(' + ')}</span><span>${b.kind}</span></div>
+        </div>
+        <div class="n">${(b.targetCount || 0).toLocaleString('ja-JP')}名</div>
+        <div class="rate">${Math.round(b.openRate*10)/10}%<small>開封</small></div>
+      </div>
+    `).join('') || `<div class="empty"><p>配信履歴はありません。</p></div>`;
+  }
+
+  /* ─── Customer detail modal ─── */
+  function bindCustLinks() {
+    document.querySelectorAll('.cust-link').forEach(el =>
+      el.addEventListener('click', () => openCustomer(el.dataset.cid)));
+  }
+  function openCustomer(cid) {
+    const c = state.customers.find(x => x.id === cid);
+    if (!c) return;
+    const orders = state.orders.filter(o => o.customerId === cid);
+    const subs = state.subs.filter(s => s.customerId === cid);
+    const r = state.reps.find(x => x.id === c.repId);
+    openModal(`
+      <div class="modal-title">
+        <h2>お客さまカルテ</h2>
+        <button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div style="display:flex; gap:14px; align-items:center; margin-bottom:16px;">
+        <div style="width:56px; height:56px; border-radius:999px; background:linear-gradient(135deg, var(--leaf), var(--leaf-3)); color:#fff; display:grid; place-items:center; font-weight:900; font-size:22px;">${c.name[0]}</div>
+        <div>
+          <div style="font-size:20px; font-weight:900;">${c.name} さま</div>
+          <div class="dim" style="font-size:12px;">${c.age}歳 · ${c.address}</div>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom: 16px;">
+        <div style="background:var(--bg-2); padding:12px; border-radius:var(--r-md);"><div class="dim" style="font-size:11px;">継続</div><div class="num" style="font-size:18px;">${c.orderCount}回</div></div>
+        <div style="background:var(--bg-2); padding:12px; border-radius:var(--r-md);"><div class="dim" style="font-size:11px;">LTV</div><div class="num" style="font-size:18px;">${fmt.yenShort(c.ltv || 0)}</div></div>
+        <div style="background:var(--bg-2); padding:12px; border-radius:var(--r-md);"><div class="dim" style="font-size:11px;">担当</div><div style="font-size:14px; font-weight:800;">${r ? r.name : '—'}</div></div>
+      </div>
+      <h4 style="font-size:13px; color:var(--ink-3); letter-spacing:.04em; margin: 20px 0 8px;">継続中の定期便</h4>
+      ${subs.filter(s => s.status === 'active').map(s => {
+        const p = state.products.find(x => x.id === s.productId);
+        return `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--line-2); font-size:13px;">
+          <span>${p ? p.name : ''} × ${s.qty}</span>
+          <span class="dim">${s.cycleDays}日サイクル · 次回 ${fmt.date(s.nextDeliveryAt)}</span>
+        </div>`;
+      }).join('') || '<div class="dim" style="font-size:12.5px;">定期便はありません。</div>'}
+      <h4 style="font-size:13px; color:var(--ink-3); letter-spacing:.04em; margin: 20px 0 8px;">ご購入履歴</h4>
+      ${orders.slice(0, 8).map(o => {
+        const ch = CHANNELS[o.channel.toUpperCase()];
+        return `<div style="display:grid; grid-template-columns:60px 1fr auto; gap:12px; padding:8px 0; border-bottom:1px solid var(--line-2); font-size:13px; align-items:center;">
+          <span class="dim">${fmt.date(o.createdAt)}</span>
+          <span><strong>${o.items[0]?.name || ''}</strong>${o.items.length>1?` ほか${o.items.length-1}品`:''}<br><span class="dim" style="font-size:11px;">${ch?ch.label:o.channel}</span></span>
+          <span class="num">${fmt.yen(o.total)}</span>
+        </div>`;
+      }).join('') || '<div class="dim">履歴はありません。</div>'}
+      ${c.note ? `<h4 style="font-size:13px; color:var(--ink-3); letter-spacing:.04em; margin: 20px 0 8px;">担当メモ</h4><p style="font-size:13px; background:var(--bg-2); padding:12px 14px; border-radius:8px; line-height:1.75;">${c.note}</p>` : ''}
+    `, { wide: true });
+  }
+
+  /* ─── Filters ─── */
+  document.querySelectorAll('[data-ch-filter]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('[data-ch-filter]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); state.ordersFilter = b.dataset.chFilter; renderOrders();
+  }));
+  document.querySelectorAll('[data-c-region]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('[data-c-region]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); state.custRegion = b.dataset.cRegion; renderCust();
+  }));
+  document.getElementById('cSearch').addEventListener('input', e => {
+    state.custSearch = e.target.value; renderCust();
+  });
+  document.querySelectorAll('#periodToggle button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#periodToggle button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); state.period = b.dataset.period;
+    renderKPI(); renderRegionBars(); renderTopReps(); renderReps();
+  }));
+
+  /* ─── Settings ─── */
+  document.getElementById('btnResetSeed').addEventListener('click', async () => {
+    if (!confirm('デモデータを初期状態に戻します。よろしいですか?')) return;
+    await seedForce();
+    toast('シードを再適用しました', 'ok');
+  });
+
+  /* ─── Router ─── */
+  function switchView(name) {
+    state.view = name;
+    document.querySelectorAll('.view').forEach(v => v.dataset.active = (v.id === 'view-' + name) ? 'true' : 'false');
+    document.querySelectorAll('aside a').forEach(a => {
+      if (a.dataset.view === name) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    window.scrollTo({ top: 0 });
+  }
+  document.querySelectorAll('aside a[data-view]').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault(); switchView(a.dataset.view);
+    history.replaceState(null, '', '#' + a.dataset.view);
+  }));
+  window.addEventListener('hashchange', () => {
+    const h = location.hash.slice(1) || 'dash';
+    if (document.getElementById('view-' + h)) switchView(h);
+  });
+
+  /* ─── Modal + toast ─── */
+  function openModal(html, opts = {}) {
+    const host = document.getElementById('modalHost');
+    host.innerHTML = `<div class="modal-bg"><div class="modal ${opts.wide?'wide':''}">${html}</div></div>`;
+    const bg = host.querySelector('.modal-bg');
+    bg.addEventListener('click', e => { if (e.target === bg) closeModal(); });
+    return host.querySelector('.modal');
+  }
+  function closeModal() { document.getElementById('modalHost').innerHTML = ''; }
+  window.closeModal = closeModal;
+  function toast(msg, kind='ok') {
+    const el = document.createElement('div');
+    el.className = 'toast ' + kind; el.textContent = msg;
+    document.getElementById('toastHost').appendChild(el);
+    setTimeout(() => el.remove(), 2400);
+  }
+
+  function render() {
+    renderKPI();
+    renderRegionBars();
+    renderTopReps();
+    renderRecent();
+    renderOrders();
+    renderReps();
+    renderSubs();
+    renderCust();
+    renderProducts();
+    renderSegFilters();
+    renderBcLog();
+  }
+
+  const h = location.hash.slice(1);
+  if (h && document.getElementById('view-' + h)) switchView(h);
+  else switchView('dash');
+
+  await refresh();
+</script>
+
+</body>
+</html>
