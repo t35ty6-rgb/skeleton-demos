@@ -509,8 +509,13 @@
   import { db, uid } from '../shared/data.js';
   import { seedIfEmpty, seedForce } from '../shared/seed.js';
   import { fmt, CHANNELS, TAG_GROUPS, filterCustomers } from '../shared/schema.js';
+  import { requireLoggedIn, attachSignOutButton } from '../shared/auth-gate.js';
+  import { getConfig } from '../shared/config.js';
+  import { sendBroadcast } from '../shared/api.js';
 
-  await seedIfEmpty();
+  const claims = await requireLoggedIn({ role: 'admin' });
+  const cfg = getConfig();
+  if (cfg.backend === 'local') await seedIfEmpty();
 
   const state = {
     view: 'dash',
@@ -860,19 +865,23 @@
     document.getElementById(id).addEventListener('input', renderSegPreview);
   });
   document.getElementById('btnBcSend').addEventListener('click', async () => {
-    const bid = uid('bc');
-    const targetCount = parseInt(document.getElementById('segN').textContent.replace(/,/g, ''), 10) || 0;
-    await db.set('broadcasts', bid, {
-      id: bid, kind: 'manual',
-      title: document.getElementById('bcTitle').value || '手動配信',
-      segment: [...state.segSelected], targetCount,
-      openRate: 30 + Math.random() * 25,
-      clickRate: 4 + Math.random() * 10,
-      sentAt: Date.now(),
-      bodyPreview: document.getElementById('bcBody').value.slice(0, 80),
-    });
-    toast('配信キューに登録しました', 'ok');
-    switchView('bclog'); history.replaceState(null, '', '#bclog');
+    const btn = document.getElementById('btnBcSend');
+    const original = btn.textContent;
+    btn.disabled = true; btn.textContent = '送信中…';
+    try {
+      const r = await sendBroadcast({
+        title: document.getElementById('bcTitle').value || '手動配信',
+        body:  document.getElementById('bcBody').value,
+        segmentTags: [...state.segSelected],
+      });
+      const label = r.targetCount != null ? `${r.targetCount}名に配信しました` : '配信キューに登録しました';
+      toast(label, 'ok');
+      switchView('bclog'); history.replaceState(null, '', '#bclog');
+    } catch (e) {
+      console.error(e); toast('配信に失敗しました: ' + (e.message || e), 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = original;
+    }
   });
 
   /* ─── BC log ─── */

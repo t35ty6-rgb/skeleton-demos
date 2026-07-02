@@ -437,8 +437,13 @@
   import { db, session, uid } from '../shared/data.js';
   import { seedIfEmpty } from '../shared/seed.js';
   import { fmt, autoRank, CHANNELS } from '../shared/schema.js';
+  import { requireLoggedIn } from '../shared/auth-gate.js';
+  import { getConfig } from '../shared/config.js';
+  import { writeOrder, sendDirect } from '../shared/api.js';
 
-  await seedIfEmpty();
+  const claims = await requireLoggedIn({ role: 'rep' });
+  const cfg = getConfig();
+  if (cfg.backend === 'local') await seedIfEmpty();
 
   const state = {
     view: 'home',
@@ -849,38 +854,27 @@
         return { productId: pid, name: p.name, price: p.subPrice, qty, tag: p.tag };
       });
       if (!items.length) { toast('数量を入力してください', 'warn'); return; }
-      const total = items.reduce((s, i) => s + i.price * i.qty, 0);
-      const oid = uid('ord');
-      const order = {
-        id: oid, customerId: cid, repId: currentRep().id, channel: 'visit',
-        items, total,
-        paymentMethod: m.querySelector('#orderPay').value,
-        status: 'shipped', createdAt: Date.now(),
-      };
-      await db.set('orders', oid, order);
-      // Update customer aggregates
-      const c = await db.get('customers', cid);
-      await db.update('customers', cid, {
-        orderCount: (c.orderCount || 0) + 1,
-        ltv: (c.ltv || 0) + total,
-        lastVisitAt: Date.now(),
-      });
-      // Add visit
-      const vid = uid('vis');
-      await db.set('visits', vid, {
-        id: vid, customerId: cid, repId: currentRep().id, kind: 'delivery',
-        note: '受注: ' + items.map(i => i.name).join(', '),
-        createdAt: Date.now(),
-      });
-      // Add LINE msg (rep → customer)
-      const mid = uid('msg');
-      await db.set('messages', mid, {
-        id: mid, customerId: cid, direction: 'incoming', repId: currentRep().id,
-        body: `本日のご注文、${fmt.yen(total)}の決済リンクをお送りします。ご確認ください。`,
-        createdAt: Date.now(),
-      });
-      closeModal();
-      toast('決済リンクをお客さまに送信しました', 'ok');
+      const btn = m.querySelector('#btnPlaceOrder');
+      btn.disabled = true; btn.textContent = '送信中…';
+      try {
+        await writeOrder({
+          customerId: cid, repId: currentRep().id,
+          items, paymentMethod: m.querySelector('#orderPay').value,
+          channel: 'visit',
+        });
+        // 訪問記録も同時に付与
+        const vid = uid('vis');
+        await db.set('visits', vid, {
+          id: vid, customerId: cid, repId: currentRep().id, kind: 'delivery',
+          note: '受注: ' + items.map(i => i.name).join(', '),
+          createdAt: Date.now(),
+        });
+        closeModal();
+        toast('決済リンクをお客さまに送信しました', 'ok');
+      } catch (e) {
+        console.error(e); toast('受注に失敗しました: ' + (e.message || e), 'error');
+        btn.disabled = false; btn.textContent = 'この内容で決済リンクを送信';
+      }
     });
   }
 
@@ -987,14 +981,18 @@
       const body = m.querySelector('#bcBody').value.trim();
       if (!cids.length) { toast('送信先を選んでください', 'warn'); return; }
       if (!body)        { toast('本文を入力してください', 'warn'); return; }
-      for (const cid of cids) {
-        const mid = uid('msg');
-        await db.set('messages', mid, {
-          id: mid, customerId: cid, direction: 'incoming', repId: currentRep().id, body, createdAt: Date.now(),
-        });
+      const btn = m.querySelector('#btnBcSend');
+      btn.disabled = true; btn.textContent = '送信中…';
+      try {
+        for (const cid of cids) {
+          await sendDirect({ customerId: cid, body, repId: currentRep().id });
+        }
+        closeModal();
+        toast(`${cids.length}名に送信しました`, 'ok');
+      } catch (e) {
+        console.error(e); toast('送信に失敗しました: ' + (e.message || e), 'error');
+        btn.disabled = false; btn.textContent = '選択したお客さまに送信';
       }
-      closeModal();
-      toast(`${cids.length}名に送信しました`, 'ok');
     });
   }
 

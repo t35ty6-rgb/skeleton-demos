@@ -477,8 +477,31 @@
   import { db, session, uid } from '../shared/data.js';
   import { seedIfEmpty } from '../shared/seed.js';
   import { fmt } from '../shared/schema.js';
+  import { getConfig } from '../shared/config.js';
+  import { ensureLiff } from '../shared/auth.js';
+  import {
+    createCheckout, bindLineCustomer, fetchCustomerBundle,
+    updateSubscription, customerReply,
+  } from '../shared/api.js';
 
-  await seedIfEmpty();
+  const cfg = getConfig();
+  if (cfg.backend === 'local') await seedIfEmpty();
+
+  // LIFF 起動 (?ref=販売員ID 付き友達追加パラメータを引継ぐ)
+  let liffReady = false;
+  if (cfg.liff.enabled) {
+    try {
+      const r = await ensureLiff();
+      if (r?.profile?.userId) {
+        const params = new URLSearchParams(location.search);
+        await bindLineCustomer({
+          displayName: r.profile.displayName,
+          ref: params.get('ref') || null,
+        });
+        liffReady = true;
+      }
+    } catch (e) { console.warn('LIFF init failed', e); }
+  }
 
   const state = {
     reps: [], customers: [], orders: [], products: [], subs: [], msgs: [],
@@ -488,6 +511,22 @@
   function saveCart() { localStorage.setItem('sunchlorella::v1::customer::cart', JSON.stringify(state.cart)); }
 
   async function refresh() {
+    if (cfg.backend === 'firebase' && liffReady) {
+      try {
+        const b = await fetchCustomerBundle();
+        if (b?.customer) {
+          state.customers = [b.customer];
+          state.reps      = b.rep ? [b.rep] : [];
+          state.orders    = b.orders || [];
+          state.subs      = b.subscriptions || [];
+          state.msgs      = b.messages || [];
+          state.products  = b.products || [];
+          session.customerId = b.customer.id;
+          render();
+          return;
+        }
+      } catch (e) { console.warn('bundle fetch failed', e); }
+    }
     state.reps      = await db.list('reps');
     state.customers = await db.list('customers');
     state.orders    = await db.list('orders', { orderBy: ['createdAt', 'desc'] });
@@ -496,7 +535,11 @@
     state.msgs      = await db.list('messages', { orderBy: ['createdAt', 'asc'] });
     render();
   }
-  ['orders','customers','messages','subscriptions'].forEach(c => db.onChange(c, refresh));
+  // firebase mode の customer は Firebase Auth を使わないため Firestore の onSnapshot に
+  // アクセス権がない (Permission Denied)。 local mode でのみ realtime hook を張る。
+  if (cfg.backend === 'local') {
+    ['orders','customers','messages','subscriptions'].forEach(c => db.onChange(c, refresh));
+  }
 
   function me() { return state.customers.find(c => c.id === session.customerId) || state.customers[0]; }
   function myRep() { return state.reps.find(r => r.id === me()?.repId) || state.reps[0]; }
@@ -576,14 +619,27 @@
       switchView('cart'); history.replaceState(null,'','#cart');
     });
     document.getElementById('btnAddSub').addEventListener('click', async () => {
-      const sid = uid('sub');
-      await db.set('subscriptions', sid, {
-        id: sid, customerId: me().id, productId: pid, qty: 1,
-        cycleDays: 30, nextDeliveryAt: Date.now() + 30*86400000,
-        status: 'active', createdAt: Date.now(), repId: me().repId,
-      });
-      closeModal(); toast('定期便を開始しました', 'ok');
-      switchView('subs'); history.replaceState(null,'','#subs');
+      const btn = document.getElementById('btnAddSub');
+      btn.disabled = true; btn.textContent = '申込中…';
+      try {
+        const r = await createCheckout({
+          customerId: me().id,
+          items: [{ productId: p.id, name: p.name, price: p.subPrice, qty: 1, tag: p.tag }],
+          subscription: true,
+        });
+        if (r?.url) {
+          if (window.liff && window.liff.isInClient) window.liff.openWindow({ url: r.url, external: false });
+          else location.href = r.url;
+          return;
+        }
+        closeModal(); toast('定期便を申し込みました', 'ok');
+        switchView('subs'); history.replaceState(null,'','#subs');
+        await refresh();
+      } catch (e) {
+        console.error(e); toast('定期便の申込に失敗しました: ' + (e.message || e), 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '定期便で毎月お届け';
+      }
     });
   }
   function renderCart() {
@@ -636,14 +692,13 @@
     document.querySelectorAll('[data-sub-action]').forEach(b => b.addEventListener('click', async () => {
       const sid = b.dataset.sid;
       const action = b.dataset.subAction;
-      const s = await db.get('subscriptions', sid);
-      if (action === 'pause')  await db.update('subscriptions', sid, { status: 'paused' });
-      if (action === 'stop')   await db.update('subscriptions', sid, { status: 'stopped' });
-      if (action === 'resume') await db.update('subscriptions', sid, { status: 'active' });
-      if (action === 'skip') {
-        await db.update('subscriptions', sid, { nextDeliveryAt: s.nextDeliveryAt + s.cycleDays * 86400000 });
+      try {
+        await updateSubscription({ subscriptionId: sid, action });
+        toast('定期便を更新しました', 'ok');
+        await refresh();
+      } catch (e) {
+        console.error(e); toast('定期便の更新に失敗しました', 'error');
       }
-      toast('定期便を更新しました', 'ok');
     }));
   }
   function subCard(s) {
@@ -804,21 +859,27 @@
       const p = state.products.find(x => x.id === pid);
       return { productId: pid, name: p.name, price: p.price, qty, tag: p.tag };
     });
-    const total = items.reduce((s, i) => s + i.price * i.qty, 0);
-    const oid = uid('ord');
-    await db.set('orders', oid, {
-      id: oid, customerId: c.id, repId: c.repId, channel: 'line',
-      items, total,
-      paymentMethod: document.getElementById('payMethod').value,
-      status: 'shipped', createdAt: Date.now(),
-    });
-    await db.update('customers', c.id, {
-      orderCount: (c.orderCount || 0) + 1,
-      ltv: (c.ltv || 0) + total,
-    });
-    state.cart = {}; saveCart();
-    toast('ご注文ありがとうございました', 'ok');
-    switchView('history'); history.replaceState(null, '', '#history');
+    const btn = document.getElementById('btnCheckout');
+    btn.disabled = true; btn.textContent = '注文処理中…';
+    try {
+      const r = await createCheckout({
+        customerId: c.id, items,
+        paymentMethod: document.getElementById('payMethod').value,
+      });
+      state.cart = {}; saveCart();
+      // Stripe Checkout Session URL がサーバーから返ってきたら LIFF openWindow / それ以外は 履歴に戻す
+      if (r?.url) {
+        if (window.liff && window.liff.isInClient) window.liff.openWindow({ url: r.url, external: false });
+        else location.href = r.url;
+      } else {
+        toast('ご注文ありがとうございました', 'ok');
+        switchView('history'); history.replaceState(null, '', '#history');
+      }
+    } catch (e) {
+      console.error(e); toast('ご注文に失敗しました: ' + (e.message || e), 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'お届け先を確認して注文する';
+    }
   });
 
   document.getElementById('chatSend').addEventListener('click', sendChat);
@@ -827,19 +888,25 @@
     const el = document.getElementById('chatInput');
     const body = el.value.trim();
     if (!body) return;
-    const mid = uid('msg');
-    await db.set('messages', mid, {
-      id: mid, customerId: me().id, direction: 'outgoing', body, createdAt: Date.now(),
-    });
-    el.value = '';
-    setTimeout(async () => {
-      const rmid = uid('msg');
-      await db.set('messages', rmid, {
-        id: rmid, customerId: me().id, direction: 'incoming', repId: myRep().id,
-        body: 'ご連絡ありがとうございます。確認のうえ折り返しご案内いたします。',
-        createdAt: Date.now(),
-      });
-    }, 900);
+    try {
+      await customerReply({ body });
+      el.value = '';
+      // localモードでのみ 自動返信ダミーを流す (本番は担当が手動で返信)
+      if (cfg.backend === 'local') {
+        setTimeout(async () => {
+          const rmid = uid('msg');
+          await db.set('messages', rmid, {
+            id: rmid, customerId: me().id, direction: 'incoming', repId: myRep().id,
+            body: 'ご連絡ありがとうございます。確認のうえ折り返しご案内いたします。',
+            createdAt: Date.now(),
+          });
+        }, 900);
+      } else {
+        await refresh();
+      }
+    } catch (e) {
+      console.error(e); toast('送信に失敗しました', 'error');
+    }
   }
 
   function toast(msg, kind='ok') {

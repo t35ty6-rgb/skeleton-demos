@@ -1,0 +1,103 @@
+rules_version = '2';
+
+/**
+ * サン・クロレラ 統合LINE OS - Firestore rules
+ *
+ * multi-tenant 前提。 一切のフルオープン read/write は禁止。
+ *
+ * 判定:
+ *   - super-admin (Skeleton側 保守用): request.auth.token.superadmin == true
+ *   - admin      (テナント管理者): request.auth.token.role == 'admin' &&
+ *                  request.auth.token.tenantId == tid
+ *   - rep        (訪問販売員)      : role == 'rep' && tenantId == tid
+ *
+ * NOTE: 顧客 (customer LIFF) は Firebase Auth を使わない前提。
+ *       顧客の read/write は必ず Cloud Functions (getCustomerBundle / createCheckout /
+ *       updateSubscription / customerReply / bindLineUser) を経由する。
+ *       Functions は LIFF ID Token を LINE OAuth verify した上で
+ *       Admin SDK 経由で書き込むので、rules 側は superadmin として通す。
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSuperAdmin() {
+      return request.auth != null && request.auth.token.superadmin == true;
+    }
+    function claim(name) {
+      return request.auth != null ? request.auth.token[name] : null;
+    }
+    function isAdmin(tid) {
+      return claim('role') == 'admin' && claim('tenantId') == tid;
+    }
+    function isRep(tid) {
+      return claim('role') == 'rep' && claim('tenantId') == tid;
+    }
+
+    // ─── Stripe event dedup (Cloud Functions only) ───
+    match /_stripe_events/{eventId} {
+      allow read, write: if false;  // Admin SDK 経由のみ
+    }
+
+    // ─── テナントルート ───
+    match /sunchlorella_tenants/{tid} {
+      allow read:  if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+      allow write: if isAdmin(tid) || isSuperAdmin();
+
+      match /reps/{rid} {
+        allow read:  if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+        allow write: if isAdmin(tid) || isSuperAdmin();
+      }
+
+      match /customers/{cid} {
+        allow read:  if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+        allow write: if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+      }
+
+      match /products/{pid} {
+        allow read:  if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+        allow write: if isAdmin(tid) || isSuperAdmin();
+      }
+
+      match /orders/{oid} {
+        allow read:  if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+        allow create,update: if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+        allow delete: if isAdmin(tid) || isSuperAdmin();
+      }
+
+      match /subscriptions/{sid} {
+        allow read:  if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+        allow create: if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+        allow update: if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+        allow delete: if isAdmin(tid) || isSuperAdmin();
+      }
+
+      match /visits/{vid} {
+        allow read:  if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+        allow write: if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+      }
+
+      match /messages/{mid} {
+        allow read:  if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+        allow write: if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+      }
+
+      match /broadcasts/{bid} {
+        allow read:  if isAdmin(tid) || isSuperAdmin();
+        allow write: if isAdmin(tid) || isSuperAdmin();
+      }
+
+      match /settings/{sid} {
+        allow read:  if isAdmin(tid) || isRep(tid) || isSuperAdmin();
+        allow write: if isAdmin(tid) || isSuperAdmin();
+      }
+
+      match /users/{uid} {
+        allow read:  if request.auth != null && (
+                        isAdmin(tid) || isSuperAdmin() || request.auth.uid == uid);
+        allow write: if isSuperAdmin() ||
+                        (isAdmin(tid) && request.auth.uid != uid);
+      }
+    }
+  }
+}
