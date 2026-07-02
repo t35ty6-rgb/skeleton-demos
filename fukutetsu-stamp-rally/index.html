@@ -10,8 +10,12 @@
 <meta name="apple-mobile-web-app-title" content="ふくてつ さんぽ帳">
 <meta name="fukutetsu-liff-id" content="">
 <meta name="fukutetsu-backend" content="local">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./photos/icon-192.png">
+<link rel="apple-touch-icon" href="./photos/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="image" href="./photos/00_bg_tram_wide.webp" fetchpriority="high">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -30,6 +34,10 @@
   --sky:linear-gradient(180deg,#c3d9dc 0%,#d8e5d4 55%,#e5dfc4 100%);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--red);outline-offset:2px;border-radius:2px}
+.tabs button:focus-visible{outline-offset:-2px}
+.tab:focus{outline:none}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:"Noto Sans JP",system-ui,sans-serif;font-weight:500;font-feature-settings:"palt" 1;line-height:1.55;-webkit-font-smoothing:antialiased}
 body{min-height:100vh;min-height:100dvh;overflow-x:hidden}
 a{color:inherit;text-decoration:none}
@@ -46,7 +54,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 }
 
 /* ─────── header ─────── */
-.hd{padding:18px 20px 24px;background:linear-gradient(180deg,transparent 0%,oklch(0.965 0.008 82 / 0.1) 50%,oklch(0.965 0.008 82 / 0.75) 100%),url('photos/00_bg_tram_wide.jpg') center 62% / cover;border-bottom:1px solid var(--rule-2);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-height:260px;position:relative}
+.hd{padding:18px 20px 24px;background:linear-gradient(180deg,transparent 0%,oklch(0.965 0.008 82 / 0.1) 50%,oklch(0.965 0.008 82 / 0.75) 100%),url('photos/00_bg_tram_wide.webp') center 62% / cover;border-bottom:1px solid var(--rule-2);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-height:260px;position:relative}
 .hd .lg{display:flex;align-items:center;gap:10px}
 .hd .lg .mk{width:26px;height:26px;background:var(--red);position:relative;flex-shrink:0}
 .hd .lg .mk::after{content:"";position:absolute;inset:6px;border:1.5px solid var(--paper)}
@@ -261,7 +269,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 <!-- ONBOARDING -->
 <div class="ob" id="ob">
   <div class="ob-hero">
-    <img src="photos/00_hero_illustration.jpg" alt="福井鉄道スタンプラリー" loading="eager">
+    <img src="photos/00_hero_illustration.webp" alt="福井鉄道スタンプラリー" loading="eager">
   </div>
   <div class="ob-body">
     <h1>ふくてつ<br><span class="red">さんぽ帳。</span></h1>
@@ -299,7 +307,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
   <div class="main">
 
     <!-- MAP tab (spot list + current spot) -->
-    <div class="pnl on" data-pnl="map">
+    <div class="pnl on" data-pnl="map" role="tabpanel" id="pnl-map" aria-label="スポット">
       <div class="prog">
         <div class="prog-head">
           <span class="k">Progress</span>
@@ -319,7 +327,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
     </div>
 
     <!-- SCAN tab -->
-    <div class="pnl" data-pnl="scan">
+    <div class="pnl" data-pnl="scan" role="tabpanel" id="pnl-scan" aria-label="スキャン">
       <div class="scan">
         <h3>QR コードを読み取る</h3>
         <p class="sc-sub">各スポットの掲出 QR にカメラを向けると自動で読み取ります。押印には GPS 圏内にいる必要があります。</p>
@@ -344,7 +352,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
     </div>
 
     <!-- BOOK tab -->
-    <div class="pnl" data-pnl="book">
+    <div class="pnl" data-pnl="book" role="tabpanel" id="pnl-book" aria-label="スタンプ帳">
       <div class="st">
         <h3>スタンプ帳</h3>
         <span class="k" id="book-cnt">0 / 10</span>
@@ -353,7 +361,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
     </div>
 
     <!-- PRIZE tab -->
-    <div class="pnl" data-pnl="prize">
+    <div class="pnl" data-pnl="prize" role="tabpanel" id="pnl-prize" aria-label="景品">
       <div class="prize-status">
         <span class="k">Stamps Collected</span>
         <div class="n" id="prize-n">0</div>
@@ -385,21 +393,21 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
   </div>
 
   <!-- bottom tabs -->
-  <nav class="tabs">
-    <button class="tab on" data-tab="map">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3l6 3 6-3v15l-6 3-6-3-6 3V6l6-3z"/><path d="M9 3v15"/><path d="M15 6v15"/></svg>
+  <nav class="tabs" role="tablist" aria-label="メインナビゲーション">
+    <button class="tab on" data-tab="map" role="tab" aria-selected="true" aria-controls="pnl-map" aria-label="スポット一覧">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3l6 3 6-3v15l-6 3-6-3-6 3V6l6-3z"/><path d="M9 3v15"/><path d="M15 6v15"/></svg>
       <span class="lbl">スポット</span>
     </button>
-    <button class="tab" data-tab="scan">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h4v4h-4z"/></svg>
+    <button class="tab" data-tab="scan" role="tab" aria-selected="false" aria-controls="pnl-scan" aria-label="QRスキャン">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h4v4h-4z"/></svg>
       <span class="lbl">スキャン</span>
     </button>
-    <button class="tab" data-tab="book">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13a2 2 0 012 2v14a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/><path d="M4 4v14"/><path d="M8 8h9"/><path d="M8 12h9"/></svg>
+    <button class="tab" data-tab="book" role="tab" aria-selected="false" aria-controls="pnl-book" aria-label="スタンプ帳">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h13a2 2 0 012 2v14a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/><path d="M4 4v14"/><path d="M8 8h9"/><path d="M8 12h9"/></svg>
       <span class="lbl">帳</span>
     </button>
-    <button class="tab" data-tab="prize">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
+    <button class="tab" data-tab="prize" role="tab" aria-selected="false" aria-controls="pnl-prize" aria-label="景品">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
       <span class="lbl">景品</span>
     </button>
   </nav>
@@ -407,13 +415,13 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 </div>
 
 <!-- toast -->
-<div class="toast" id="toast">
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
   <span class="k" id="toast-k">STAMPED</span>
   <span id="toast-msg"></span>
 </div>
 
 <!-- flash / ticket -->
-<div class="flash" id="flash">
+<div class="flash" id="flash" role="dialog" aria-modal="true" aria-label="スタンプ押印完了">
   <div class="ticket">
     <div class="im"><img id="fx-img" src="" alt=""></div>
     <div class="tag">Stamped</div>
@@ -431,7 +439,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 </div>
 
 <!-- sim modal -->
-<div class="sim-modal" id="sim-modal">
+<div class="sim-modal" id="sim-modal" role="dialog" aria-modal="true" aria-label="現在位置のシミュレーション">
   <div class="sim-sheet">
     <h4>シミュレータ · 現在位置を選ぶ</h4>
     <p class="desc">実端末では GPS で自動判定します。ここでは 10スポットのどこにいるかを手動で切り替えます。</p>
@@ -446,16 +454,16 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 <script>
 // ─────────── data ───────────
 const SPOTS = [
-  { code:"SP-01", name:"越前和紙の里",             station:"たけふ新",       img:"photos/01_echizen_washi.jpg",   lat:35.9262, lng:136.1675, coord:"35°55'34\"N 136°10'02\"E" },
-  { code:"SP-02", name:"サンドーム福井",           station:"サンドーム西",   img:"photos/02_sundome_fukui.jpg",   lat:35.9700, lng:136.2124, coord:"35°58'12\"N 136°12'44\"E" },
-  { code:"SP-03", name:"武生中央公園",             station:"たけふ新",       img:"photos/03_takefu_chuo_park.jpg",lat:35.9061, lng:136.1778, coord:"35°54'22\"N 136°10'40\"E" },
-  { code:"SP-04", name:"西山公園",                 station:"西鯖江",         img:"photos/04_nishiyama_park.jpg",  lat:35.9533, lng:136.1830, coord:"35°57'12\"N 136°10'59\"E" },
-  { code:"SP-05", name:"めがねミュージアム",       station:"神明",           img:"photos/05_megane_museum.jpg",   lat:35.9461, lng:136.1836, coord:"35°56'46\"N 136°11'01\"E" },
-  { code:"SP-06", name:"福井城址",                 station:"福井城址大名町", img:"photos/06_fukui_castle.jpg",    lat:36.0665, lng:136.2223, coord:"36°03'59\"N 136°13'20\"E" },
-  { code:"SP-07", name:"養浩館庭園",               station:"仁愛女子高校",   img:"photos/07_yokokan_garden.jpg",  lat:36.0717, lng:136.2231, coord:"36°04'18\"N 136°13'23\"E" },
-  { code:"SP-08", name:"足羽神社",                 station:"福井駅",         img:"photos/08_asuwa_shrine.jpg",    lat:36.0589, lng:136.2220, coord:"36°03'32\"N 136°13'19\"E" },
-  { code:"SP-09", name:"福井駅前 恐竜モニュメント", station:"福井駅",         img:"photos/09_fukui_dinosaur.jpg",  lat:36.0616, lng:136.2227, coord:"36°03'42\"N 136°13'22\"E" },
-  { code:"SP-10", name:"田原町 商店街",            station:"田原町",         img:"photos/10_tawaramachi.jpg",     lat:36.0778, lng:136.2228, coord:"36°04'40\"N 136°13'22\"E" },
+  { code:"SP-01", name:"越前和紙の里",             station:"たけふ新",       img:"photos/01_echizen_washi.webp",   lat:35.9262, lng:136.1675, coord:"35°55'34\"N 136°10'02\"E" },
+  { code:"SP-02", name:"サンドーム福井",           station:"サンドーム西",   img:"photos/02_sundome_fukui.webp",   lat:35.9700, lng:136.2124, coord:"35°58'12\"N 136°12'44\"E" },
+  { code:"SP-03", name:"武生中央公園",             station:"たけふ新",       img:"photos/03_takefu_chuo_park.webp",lat:35.9061, lng:136.1778, coord:"35°54'22\"N 136°10'40\"E" },
+  { code:"SP-04", name:"西山公園",                 station:"西鯖江",         img:"photos/04_nishiyama_park.webp",  lat:35.9533, lng:136.1830, coord:"35°57'12\"N 136°10'59\"E" },
+  { code:"SP-05", name:"めがねミュージアム",       station:"神明",           img:"photos/05_megane_museum.webp",   lat:35.9461, lng:136.1836, coord:"35°56'46\"N 136°11'01\"E" },
+  { code:"SP-06", name:"福井城址",                 station:"福井城址大名町", img:"photos/06_fukui_castle.webp",    lat:36.0665, lng:136.2223, coord:"36°03'59\"N 136°13'20\"E" },
+  { code:"SP-07", name:"養浩館庭園",               station:"仁愛女子高校",   img:"photos/07_yokokan_garden.webp",  lat:36.0717, lng:136.2231, coord:"36°04'18\"N 136°13'23\"E" },
+  { code:"SP-08", name:"足羽神社",                 station:"福井駅",         img:"photos/08_asuwa_shrine.webp",    lat:36.0589, lng:136.2220, coord:"36°03'32\"N 136°13'19\"E" },
+  { code:"SP-09", name:"福井駅前 恐竜モニュメント", station:"福井駅",         img:"photos/09_fukui_dinosaur.webp",  lat:36.0616, lng:136.2227, coord:"36°03'42\"N 136°13'22\"E" },
+  { code:"SP-10", name:"田原町 商店街",            station:"田原町",         img:"photos/10_tawaramachi.webp",     lat:36.0778, lng:136.2228, coord:"36°04'40\"N 136°13'22\"E" },
 ];
 const RADIUS_M = 150;
 const LS_STAMPS = "ftr01_stamps_v3";
@@ -509,14 +517,28 @@ document.getElementById("ob-name").addEventListener("keydown", e=>{
 document.getElementById("who-chg").addEventListener("click", showOb);
 
 // ─────────── geolocation ───────────
+let watchId = null;
 function tryGeolocation(){
   if (!("geolocation" in navigator)){
     setGpsWarn("この端末は位置情報に非対応");
     return;
   }
-  navigator.geolocation.watchPosition(
+  if (watchId !== null) return; // already watching
+  watchId = navigator.geolocation.watchPosition(
     pos => {
-      currentPos = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy };
+      // Kalman-lite: 前値との平滑移動平均。精度が良い側に重み寄せる
+      const raw = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy };
+      if (currentPos && currentPos.acc && raw.acc && raw.acc < 300){
+        const wRaw = currentPos.acc / (currentPos.acc + raw.acc);
+        const wPrev = 1 - wRaw;
+        currentPos = {
+          lat: raw.lat * wRaw + currentPos.lat * wPrev,
+          lng: raw.lng * wRaw + currentPos.lng * wPrev,
+          acc: Math.min(currentPos.acc, raw.acc),
+        };
+      } else {
+        currentPos = raw;
+      }
       simulatedCode = null;
       render();
     },
@@ -527,6 +549,20 @@ function tryGeolocation(){
     { enableHighAccuracy:true, maximumAge:20000, timeout:15000 }
   );
 }
+function stopGeolocation(){
+  if (watchId !== null){
+    try { navigator.geolocation.clearWatch(watchId); } catch(e){}
+    watchId = null;
+  }
+}
+// バックグラウンド時は GPS 監視停止 (電池節約)、復帰時に再開
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden){
+    stopGeolocation();
+  } else if (user && user.name && !simulatedCode){
+    tryGeolocation();
+  }
+});
 function setGpsWarn(msg){
   const el = document.getElementById("gps");
   el.classList.remove("warn","off");
@@ -738,17 +774,23 @@ async function doStamp(spot){
   const stamp = { code: spot.code, name: spot.name, station: spot.station, coord: spot.coord, time, serial, isNew: true };
   collected.push(stamp);
   saveStamps();
-  // Firestore backend: サーバー側にも保存 (fire-and-forget)
+  // Firestore backend: サーバー側にも保存 (fire-and-forget、失敗時オフラインキュー)
   if (USE_FS && user && user.userId){
-    try {
-      await window.fukutetsuStore.saveStamp(user.userId, {
-        code: spot.code, name: spot.name, station: spot.station,
-        coord: spot.coord, time, serial,
-        lat: spot.lat, lng: spot.lng,
-        via: user.via || "web",
-      });
-    } catch(e){
-      console.warn("[fukutetsu] Firestore stamp save failed:", e);
+    const payload = {
+      code: spot.code, name: spot.name, station: spot.station,
+      coord: spot.coord, time, serial,
+      lat: spot.lat, lng: spot.lng,
+      via: user.via || "web",
+    };
+    if (!navigator.onLine){
+      enqueuePending(payload);
+    } else {
+      try {
+        await window.fukutetsuStore.saveStamp(user.userId, payload);
+      } catch(e){
+        console.warn("[fukutetsu] Firestore stamp save failed → enqueue:", e);
+        enqueuePending(payload);
+      }
     }
   }
 
@@ -779,11 +821,25 @@ document.getElementById("flash").addEventListener("click", ()=>{
 
 // ─────────── tabs ───────────
 function switchTab(tab){
-  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x.dataset.tab === tab));
+  document.querySelectorAll(".tab").forEach(x => {
+    const on = x.dataset.tab === tab;
+    x.classList.toggle("on", on);
+    x.setAttribute("aria-selected", on ? "true" : "false");
+  });
   document.querySelectorAll(".pnl").forEach(p => p.classList.toggle("on", p.dataset.pnl === tab));
   if (tab !== "scan" && camActive) stopCam();
 }
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", ()=> switchTab(t.dataset.tab)));
+// keyboard: left/right arrow moves focus among tabs
+document.querySelectorAll(".tab").forEach((t, idx, tabs) => {
+  t.addEventListener("keydown", e => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const nxt = e.key === "ArrowRight" ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+    tabs[nxt].focus();
+    switchTab(tabs[nxt].dataset.tab);
+  });
+});
 
 // ─────────── QR camera ───────────
 async function startCam(){
@@ -986,6 +1042,42 @@ async function bootstrap(){
 }
 
 bootstrap();
+
+// ─────────── Service Worker ───────────
+if ("serviceWorker" in navigator && location.protocol !== "file:"){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(e => console.warn("[sw] register failed:", e));
+  });
+}
+
+// ─────────── オフライン押印キュー ───────────
+const PENDING_KEY = "ftr01_pending_v1";
+function enqueuePending(stamp){
+  try {
+    const q = JSON.parse(localStorage.getItem(PENDING_KEY) || "[]");
+    q.push({ ...stamp, queuedAt: Date.now() });
+    localStorage.setItem(PENDING_KEY, JSON.stringify(q));
+  } catch(e){}
+}
+async function flushPending(){
+  if (!USE_FS || !user || !user.userId || !window.fukutetsuStore) return;
+  let q;
+  try { q = JSON.parse(localStorage.getItem(PENDING_KEY) || "[]"); } catch(e){ q = []; }
+  if (!q.length) return;
+  const remaining = [];
+  for (const stamp of q){
+    try { await window.fukutetsuStore.saveStamp(user.userId, stamp); }
+    catch(e){ remaining.push(stamp); }
+  }
+  localStorage.setItem(PENDING_KEY, JSON.stringify(remaining));
+  if (q.length !== remaining.length){
+    showToast("SYNCED", `${q.length - remaining.length}件の押印を同期しました`);
+  }
+}
+window.addEventListener("online", flushPending);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && navigator.onLine) flushPending();
+});
 </script>
 </body>
 </html>
