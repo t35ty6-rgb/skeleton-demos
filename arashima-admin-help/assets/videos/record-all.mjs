@@ -11,18 +11,21 @@ mkdirSync(OUT_DIR, { recursive: true });
 const SECRET = readFileSync('/Users/tsukasayoshida/.skeleton-arashima/.env', 'utf8').match(/ADMIN_SECRET=(\S+)/)[1];
 const URL = `https://arashima-admin.web.app/?secret=${SECRET}`;
 
-// mp3 実測時間 (ffprobe) + 少しバッファ
+// mp3 実測時間 (ffprobe) + 少しバッファ (v4: 13章構成)
 const AUDIO_DUR = {
   '01-overview': 37.5,
-  '02-login': 37.1,
-  '03-today': 37.2,
-  '04-tasks': 38.5,
-  '05-week-shift': 35.8,
-  '06-month-shift': 38.6,
-  '07-staff-editor': 41.5,
-  '08-line-pairing': 66.2,
-  '09-publish': 40.2,
-  '10-auto-notify': 67.7,
+  '02-customer-liff': 42.4,
+  '03-booking-form': 47.6,
+  '04-booking-done': 39.9,
+  '05-login': 37.1,
+  '06-today': 37.2,
+  '07-tasks': 38.5,
+  '08-week-shift': 35.8,
+  '09-month-shift': 38.6,
+  '10-staff-editor': 41.5,
+  '11-line-pairing': 66.2,
+  '12-publish': 40.2,
+  '13-auto-notify': 67.7,
 };
 
 const HIGHLIGHT_CSS = `
@@ -352,8 +355,415 @@ const chapters = [
     }},
   ]},
 
-  // ─────────────── 02 ログイン (37s) ───────────────
-  { name: '02-login', segments: [
+  // ═══════════════════════════════════════════
+  // 02〜04: お客様 側 の 予約 フロー (新章)
+  // 疑似 モバイル フレーム で LINE + LIFF フォーム を 再現
+  // ═══════════════════════════════════════════
+
+  // ─────────────── 02 お客様 LINE 予約 (42s) ───────────────
+  { name: '02-customer-liff', segments: [
+    // (5s) "お客様 が 予約 する とき の 流れ を、ご せつめい します。"
+    { dur: 5.0, act: async (p) => {
+      await clearCaption(p);
+      await removeTitle(p);
+      await showTitle(p, 'お客様 の LINE 予約', 'CHAPTER 1 · 顧客 UX');
+    }},
+    // (6s) "お客様 は、まず、荒島 の 公式 LINE アカウント を、友達 に 追加 します。"
+    { dur: 6.0, act: async (p) => {
+      await removeTitle(p);
+      // 電話フレーム + LINE 友達追加画面
+      await p.evaluate(() => {
+        const phone = document.createElement('div');
+        phone.id = 'ar-help-phone';
+        phone.style.cssText = 'position:fixed;top:32px;left:50%;transform:translateX(-50%);width:360px;height:640px;background:#fff;border:10px solid #222;border-radius:44px;box-shadow:0 24px 60px rgba(0,0,0,.5);z-index:99990;overflow:hidden;display:flex;flex-direction:column;font-family:"Noto Sans JP",sans-serif;';
+        phone.innerHTML = `
+          <div style="background:#06C755;color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;background:#fff;border-radius:50%;color:#06C755;font-weight:700;display:grid;place-items:center;font-size:18px;">荒</div><div style="font-weight:700;font-size:15px;">荒島 ホステル 公式</div></div>
+          </div>
+          <div style="flex:1;padding:32px 20px;background:#F0F2F5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+            <div style="width:96px;height:96px;background:#06C755;color:#fff;border-radius:50%;display:grid;place-items:center;font-size:44px;font-weight:700;">荒</div>
+            <div style="font-size:16px;font-weight:700;color:#0E0E0C;">荒島 ホステル 公式</div>
+            <div id="ar-liff-addbtn" style="background:#06C755;color:#fff;padding:12px 32px;border-radius:24px;font-weight:700;font-size:14px;box-shadow:0 4px 12px rgba(6,199,85,.4);">+  友達 追加</div>
+          </div>
+        `;
+        document.body.appendChild(phone);
+      });
+      await pointAt(p, '#ar-liff-addbtn', '友達 追加 ボタン', 3500);
+    }},
+    // (6s) "友達 追加 の あと、LINE の トーク 画面 の した に、リッチメニュー が 表示 されます。"
+    { dur: 6.0, act: async (p) => {
+      // トーク画面 + リッチメニュー
+      await p.evaluate(() => {
+        const phone = document.getElementById('ar-help-phone');
+        if (!phone) return;
+        phone.innerHTML = `
+          <div style="background:#06C755;color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;">
+            <div style="width:32px;height:32px;background:#fff;border-radius:50%;color:#06C755;font-weight:700;display:grid;place-items:center;">荒</div>
+            <div style="font-weight:700;font-size:14px;">荒島 ホステル 公式</div>
+          </div>
+          <div style="flex:1;padding:14px;background:#F0F2F5;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;overflow:hidden;">
+            <div style="align-self:flex-start;background:#fff;padding:10px 14px;border-radius:12px 12px 12px 4px;max-width:78%;font-size:12px;line-height:1.7;">友達 追加 ありがとう ございます。<br>下 の メニュー から どうぞ。</div>
+          </div>
+          <div id="ar-rich-menu" style="background:#fff;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);height:220px;border-top:1px solid #ddd;">
+            <div data-rich="book" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-right:1px solid #eee;border-bottom:1px solid #eee;background:#0E0E0C;color:#F2EDE3;"><div style="font-size:26px;">🛏️</div><div style="font-size:11px;font-weight:700;letter-spacing:0.08em;">予約 する</div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-right:1px solid #eee;border-bottom:1px solid #eee;"><div style="font-size:24px;">🏠</div><div style="font-size:10px;color:#4A4238;">客室 プラン</div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-bottom:1px solid #eee;"><div style="font-size:24px;">🗺️</div><div style="font-size:10px;color:#4A4238;">アクセス</div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-right:1px solid #eee;"><div style="font-size:24px;">💴</div><div style="font-size:10px;color:#4A4238;">料金</div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-right:1px solid #eee;"><div style="font-size:24px;">📅</div><div style="font-size:10px;color:#4A4238;">空室 確認</div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:#F0EBE0;"><div style="font-size:24px;">💬</div><div style="font-size:10px;color:#4A4238;">問い合わせ</div></div>
+          </div>
+        `;
+      });
+      await wait(p, 800);
+      await pointAt(p, '#ar-rich-menu', 'リッチメニュー (画面下)', 3500);
+    }},
+    // (6s) "リッチメニュー には、予約、客室 プラン、アクセス、料金、空 室 確認、の 5 つ の ボタン が あります。"
+    { dur: 6.0, act: async (p) => {
+      await caption(p, 'リッチメニュー = 5 つ の 定型 ボタン');
+    }},
+    // (5s) "予約 する とき は、いちばん ひだり の 「予約」 を タップ します。"
+    { dur: 5.0, act: async (p) => {
+      await clearCaption(p);
+      await focusFlow(p, '[data-rich="book"]', '「予約 する」 を タップ', { holdMs: 2000, scale: 2.0 });
+    }},
+    // (5s) "すると、LINE の なか で、予約 フォーム が 起動 します。"
+    { dur: 5.0, act: async (p) => {
+      // LIFF が起動する演出 (電話画面 が 予約フォームに切り替わる)
+      await p.evaluate(() => {
+        const phone = document.getElementById('ar-help-phone');
+        if (!phone) return;
+        phone.innerHTML = `
+          <div style="background:#0E0E0C;color:#F2EDE3;padding:14px 18px;display:flex;align-items:center;gap:10px;">
+            <div style="font-size:11px;color:#B8893B;letter-spacing:0.18em;">LIFF · LINE内 アプリ</div>
+          </div>
+          <div style="flex:1;padding:24px 20px;background:#FAF7F1;display:flex;flex-direction:column;gap:14px;">
+            <div style="text-align:center;padding-top:20px;">
+              <div style="font-size:11px;color:#B8893B;letter-spacing:0.24em;font-weight:700;">STEP 1 / 4</div>
+              <div style="font-size:18px;color:#0E0E0C;font-weight:700;margin-top:8px;font-family:'Noto Sans JP',serif;">とまる 建物 を えらぶ</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
+              <div style="padding:18px;background:#fff;border:2px solid #C1462C;border-radius:6px;text-align:center;">
+                <div style="font-size:18px;font-weight:700;color:#0E0E0C;">旅舎</div>
+                <div style="font-size:11px;color:#6B6356;margin-top:4px;">元町 8-17 / 5 室</div>
+              </div>
+              <div style="padding:18px;background:#fff;border:1px solid #ddd;border-radius:6px;text-align:center;">
+                <div style="font-size:18px;font-weight:700;color:#0E0E0C;">學舎</div>
+                <div style="font-size:11px;color:#6B6356;margin-top:4px;">城町 3-05 / 3 室</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      await wait(p, 1000);
+      await caption(p, 'LIFF (LINE内 ミニアプリ) が 起動');
+    }},
+    // (5s) "これ を、リフ、と 呼びます。"
+    { dur: 5.0, act: async (p) => {
+      await clearCaption(p);
+      await caption(p, '<strong style="color:#C1462C;">LIFF (リフ)</strong> = LINE Front-end Framework');
+    }},
+    // (4.4s) "リフ は、LINE の アプリ の なか だけ で 動く、荒島 せんよう の 予約 画面 です。"
+    { dur: 4.4, act: async (p) => {
+      await caption(p, 'アプリ 追加 不要 / LINE 内 で 完結');
+      await wait(p, 100);
+    }},
+  ]},
+
+  // ─────────────── 03 予約フォーム 4ステップ (47s) ───────────────
+  { name: '03-booking-form', segments: [
+    // (4.5s) "予約 フォーム は、4 つ の ステップ です。"
+    { dur: 4.5, act: async (p) => {
+      await clearCaption(p);
+      await removeTitle(p);
+      await p.evaluate(() => document.getElementById('ar-help-phone')?.remove());
+      await goTab(p, 'today');
+      await wait(p, 300);
+      await showTitle(p, '予約 フォーム<br>4 ステップ', 'CHAPTER 2 · LIFF');
+    }},
+    // (5s) "1 つ 目、とまる たてもの を えらびます。"
+    { dur: 5.0, act: async (p) => {
+      await removeTitle(p);
+      // フォンフレーム + STEP 1 建物選択
+      await p.evaluate(() => {
+        const phone = document.createElement('div');
+        phone.id = 'ar-help-phone';
+        phone.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);width:360px;height:650px;background:#fff;border:10px solid #222;border-radius:44px;box-shadow:0 24px 60px rgba(0,0,0,.5);z-index:99990;overflow:hidden;display:flex;flex-direction:column;font-family:"Noto Sans JP",sans-serif;';
+        phone.innerHTML = `
+          <div style="background:#0E0E0C;color:#F2EDE3;padding:14px 18px;font-size:11px;color:#B8893B;letter-spacing:0.18em;">LIFF · 予約 フォーム</div>
+          <div id="ar-liff-step" style="flex:1;padding:24px 20px;background:#FAF7F1;display:flex;flex-direction:column;gap:12px;overflow-y:auto;">
+            <div style="text-align:center;">
+              <div style="font-size:11px;color:#B8893B;letter-spacing:0.24em;font-weight:700;">STEP 1 / 4</div>
+              <div style="font-size:18px;color:#0E0E0C;font-weight:700;margin-top:8px;">とまる 建物 を えらぶ</div>
+            </div>
+            <div id="ar-liff-buildings" style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
+              <div data-b="ryosha" style="padding:18px;background:#fff;border:2px solid #C1462C;border-radius:6px;text-align:center;box-shadow:0 4px 12px rgba(193,70,44,.15);">
+                <div style="font-size:20px;font-weight:700;color:#0E0E0C;">旅舎</div>
+                <div style="font-size:11px;color:#6B6356;margin-top:6px;">商店街 中心 · 元町 8-17 · 5 室</div>
+                <div style="font-size:11px;color:#6B6356;margin-top:2px;">メイン 宿</div>
+              </div>
+              <div data-b="gakusha" style="padding:18px;background:#fff;border:1px solid #ddd;border-radius:6px;text-align:center;">
+                <div style="font-size:20px;font-weight:700;color:#0E0E0C;">學舎</div>
+                <div style="font-size:11px;color:#6B6356;margin-top:6px;">商店街 はずれ · 城町 3-05 · 3 室</div>
+                <div style="font-size:11px;color:#6B6356;margin-top:2px;">姉妹 館</div>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(phone);
+      });
+      await wait(p, 700);
+      await caption(p, '建物 は 2 種類: <strong>旅舎</strong> / <strong>學舎</strong>');
+    }},
+    // (7s) "荒島 には、旅舎 と、學舎 の、2 つ の たてもの が あります。旅舎 は、商店街 の ちゅうしん に ある、メイン の やど です。"
+    { dur: 7.0, act: async (p) => {
+      await pointAt(p, 'div[data-b="ryosha"]', '旅舎 (メイン)', 5000);
+    }},
+    // (5.5s) "學舎 は、商店街 の はずれ に ある、姉妹 かん です。"
+    { dur: 5.5, act: async (p) => {
+      await pointAt(p, 'div[data-b="gakusha"]', '學舎 (姉妹館)', 4500);
+    }},
+    // (5s) "たてもの を えらぶ と、その たてもの の 客室 が、いちらん で 表示 されます。"
+    { dur: 5.0, act: async (p) => {
+      // STEP 2 へ遷移
+      await p.evaluate(() => {
+        const step = document.getElementById('ar-liff-step');
+        if (!step) return;
+        step.innerHTML = `
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:#B8893B;letter-spacing:0.24em;font-weight:700;">STEP 2 / 4</div>
+            <div style="font-size:17px;color:#0E0E0C;font-weight:700;margin-top:8px;">旅舎 の 客室 を えらぶ</div>
+          </div>
+          <div id="ar-liff-rooms" style="display:flex;flex-direction:column;gap:10px;margin-top:6px;">
+            <div data-r="r-201" style="padding:12px;background:#fff;border:2px solid #C1462C;border-radius:6px;display:flex;gap:10px;">
+              <div style="width:70px;height:60px;background:#5A6B3F;border-radius:4px;color:#F2EDE3;display:grid;place-items:center;font-size:22px;font-weight:700;">201</div>
+              <div style="flex:1;text-align:left;">
+                <div style="font-size:13px;font-weight:700;color:#0E0E0C;">201号 (山側)</div>
+                <div style="font-size:11px;color:#6B6356;margin-top:2px;">定員 2 / ¥5,800 一泊</div>
+              </div>
+            </div>
+            <div style="padding:12px;background:#fff;border:1px solid #ddd;border-radius:6px;display:flex;gap:10px;">
+              <div style="width:70px;height:60px;background:#2A4A5E;border-radius:4px;color:#F2EDE3;display:grid;place-items:center;font-size:22px;font-weight:700;">202</div>
+              <div style="flex:1;text-align:left;">
+                <div style="font-size:13px;font-weight:700;color:#0E0E0C;">202号 (川側)</div>
+                <div style="font-size:11px;color:#6B6356;margin-top:2px;">定員 3 / ¥7,200 一泊</div>
+              </div>
+            </div>
+            <div style="padding:12px;background:#fff;border:1px solid #ddd;border-radius:6px;display:flex;gap:10px;">
+              <div style="width:70px;height:60px;background:#9B3A26;border-radius:4px;color:#F2EDE3;display:grid;place-items:center;font-size:22px;font-weight:700;">301</div>
+              <div style="flex:1;text-align:left;">
+                <div style="font-size:13px;font-weight:700;color:#0E0E0C;">301号 (角)</div>
+                <div style="font-size:11px;color:#6B6356;margin-top:2px;">定員 4 / ¥9,800 一泊</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      await wait(p, 700);
+      await clearCaption(p);
+      await caption(p, 'STEP 2 · 客室 選択');
+    }},
+    // (5s) "2 つ 目、客室 を えらびます。かく 客室 には、ていいん、料金、写真、が 表示 されます。"
+    { dur: 5.0, act: async (p) => {
+      await clearCaption(p);
+      await pointAt(p, 'div[data-r="r-201"]', '定員 / 料金 / 番号', 4000);
+    }},
+    // (4s) "好きな 部屋 を タップ して、えらびます。"
+    { dur: 4.0, act: async (p) => {
+      await clickRing(p, 'div[data-r="r-201"]', false);
+      await wait(p, 500);
+    }},
+    // (5s) "3 つ 目、チェックイン の 日付 と、とまりすう、にんずう を、入力 します。"
+    { dur: 5.0, act: async (p) => {
+      // STEP 3 遷移
+      await p.evaluate(() => {
+        const step = document.getElementById('ar-liff-step');
+        if (!step) return;
+        step.innerHTML = `
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:#B8893B;letter-spacing:0.24em;font-weight:700;">STEP 3 / 4</div>
+            <div style="font-size:17px;color:#0E0E0C;font-weight:700;margin-top:8px;">日付 と 人数</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px;">
+            <div>
+              <div style="font-size:11px;color:#6B6356;letter-spacing:0.1em;margin-bottom:6px;">チェックイン</div>
+              <div id="ar-liff-date" style="padding:12px;background:#fff;border:2px solid #0E0E0C;border-radius:4px;text-align:left;font-family:Inter,monospace;font-size:15px;font-weight:700;color:#0E0E0C;">2026 / 07 / 15</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <div style="font-size:11px;color:#6B6356;letter-spacing:0.1em;margin-bottom:6px;">とまりすう</div>
+                <div id="ar-liff-nights" style="padding:12px;background:#fff;border:1px solid #ddd;border-radius:4px;text-align:center;font-family:Inter,monospace;font-size:16px;font-weight:700;">2 泊</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:#6B6356;letter-spacing:0.1em;margin-bottom:6px;">にんずう</div>
+                <div id="ar-liff-guests" style="padding:12px;background:#fff;border:1px solid #ddd;border-radius:4px;text-align:center;font-family:Inter,monospace;font-size:16px;font-weight:700;">2 名</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      await wait(p, 700);
+      await pointAt(p, '#ar-liff-date', '日付', 2500);
+    }},
+    // (4s) "日付 を えらぶ と、空 いて いる 客室 だけ が、えらべます。"
+    { dur: 4.0, act: async (p) => {
+      await pointAt(p, '#ar-liff-nights', '泊数', 3000);
+    }},
+    // (4s) 続き "にんずう も 入力"
+    { dur: 4.0, act: async (p) => {
+      await pointAt(p, '#ar-liff-guests', '人数', 3000);
+    }},
+    // (4.5s) "4 つ 目、お なまえ と、電話 番号 を 入力 して、"
+    { dur: 4.5, act: async (p) => {
+      await p.evaluate(() => {
+        const step = document.getElementById('ar-liff-step');
+        if (!step) return;
+        step.innerHTML = `
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:#B8893B;letter-spacing:0.24em;font-weight:700;">STEP 4 / 4</div>
+            <div style="font-size:17px;color:#0E0E0C;font-weight:700;margin-top:8px;">お客様 情報</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px;">
+            <div>
+              <div style="font-size:11px;color:#6B6356;letter-spacing:0.1em;margin-bottom:6px;">お なまえ</div>
+              <div style="padding:12px;background:#fff;border:1px solid #ddd;border-radius:4px;font-size:14px;">吉田 恭聡</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#6B6356;letter-spacing:0.1em;margin-bottom:6px;">電話 番号</div>
+              <div style="padding:12px;background:#fff;border:1px solid #ddd;border-radius:4px;font-family:Inter,monospace;font-size:14px;">090-1234-5678</div>
+            </div>
+            <div id="ar-liff-confirm" style="margin-top:12px;padding:14px;background:#0E0E0C;color:#F2EDE3;text-align:center;border-radius:4px;font-weight:700;font-size:15px;letter-spacing:0.06em;">予約 を かくてい する</div>
+          </div>
+        `;
+      });
+      await wait(p, 700);
+      await caption(p, 'STEP 4 · 氏名 と 電話 番号');
+    }},
+    // (4.6s) "「予約 を かくてい する」 を タップ。これ で、予約 完了 です。"
+    { dur: 4.6, act: async (p) => {
+      await clearCaption(p);
+      await pointAt(p, '#ar-liff-confirm', 'タップ で 予約 完了', 3800);
+    }},
+  ]},
+
+  // ─────────────── 04 予約完了 メッセージ (40s) ───────────────
+  { name: '04-booking-done', segments: [
+    // (4s) "予約 が 完了 する と、"
+    { dur: 4.0, act: async (p) => {
+      await clearCaption(p);
+      await removeTitle(p);
+      await showTitle(p, '予約 完了 → お客様<br>自動 案内 メッセージ', 'CHAPTER 3 · 通知');
+    }},
+    // (5s) "お客様 の LINE に、じどう で 確認 メッセージ が とどきます。"
+    { dur: 5.0, act: async (p) => {
+      await removeTitle(p);
+      // 電話画面: LINE トーク + 確認 Flex カード
+      await p.evaluate(() => {
+        const phone = document.getElementById('ar-help-phone') || (() => {
+          const el = document.createElement('div');
+          el.id = 'ar-help-phone';
+          el.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);width:360px;height:670px;background:#fff;border:10px solid #222;border-radius:44px;box-shadow:0 24px 60px rgba(0,0,0,.5);z-index:99990;overflow:hidden;display:flex;flex-direction:column;font-family:"Noto Sans JP",sans-serif;';
+          document.body.appendChild(el);
+          return el;
+        })();
+        phone.innerHTML = `
+          <div style="background:#06C755;color:#fff;padding:12px 18px;font-weight:700;font-size:14px;">荒島 ホステル 公式</div>
+          <div id="ar-phone-body" style="flex:1;padding:14px;background:#F0F2F5;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;overflow-y:auto;"></div>
+        `;
+        const body = phone.querySelector('#ar-phone-body');
+        // 案内メッセージ (Flex 予約確認カード)
+        body.innerHTML = `
+          <div id="ar-book-flex" style="align-self:flex-start;background:#fff;border-radius:12px;overflow:hidden;max-width:88%;box-shadow:0 4px 12px rgba(0,0,0,.08);">
+            <div style="background:#1B5E20;color:#fff;padding:12px 14px;">
+              <div style="font-size:10px;color:#A5D6A7;letter-spacing:0.18em;font-weight:700;">RESERVED</div>
+              <div style="font-size:14px;font-weight:700;margin-top:4px;">ご予約 を 承りました</div>
+              <div style="font-size:10px;color:#A5D6A7;margin-top:3px;">吉田 恭聡 様</div>
+            </div>
+            <div style="padding:12px 14px;font-size:11px;line-height:1.9;">
+              <div style="display:flex;justify-content:space-between;"><span style="color:#888;">予約 番号</span><span style="font-weight:700;font-family:monospace;">A-K7X9P2</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:#888;">お 部屋</span><span style="font-weight:700;">旅舎 201号</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:#888;">IN</span><span style="font-weight:700;">7/15 (水) 15:00〜</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:#888;">OUT</span><span style="font-weight:700;">7/17 (金) 〜10:00</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:#888;">合計</span><span style="font-weight:700;color:#1B5E20;font-size:14px;">¥11,600</span></div>
+            </div>
+            <div id="ar-book-gcal" style="padding:10px 14px;background:#F0EBE0;">
+              <div style="background:#4285F4;color:#fff;text-align:center;padding:10px;border-radius:4px;font-weight:700;font-size:12px;">Google カレンダー に 登録</div>
+            </div>
+          </div>
+        `;
+      });
+      await wait(p, 700);
+      await pointAt(p, '#ar-book-flex', 'お客様 の LINE に 自動 送信', 3000);
+    }},
+    // (7s) "メッセージ には、予約 番号、たてもの、客室、チェックイン と チェックアウト の 日付、とまりすう、にんずう、そして 合計 きんがく が、まとめて 表示 されます。"
+    { dur: 7.0, act: async (p) => {
+      await focusFlow(p, '#ar-book-flex', '予約 内容 が 全部 記載', { holdMs: 3500, scale: 1.3 });
+    }},
+    // (4s) "した に、「Google カレンダー に とうろく」 の ボタン が あります。"
+    { dur: 4.0, act: async (p) => {
+      await pointAt(p, '#ar-book-gcal', 'カレンダー 登録 ボタン', 3000);
+    }},
+    // (5.5s) "このボタン を タップ する と、予約 の にってい が、じどう で、Google カレンダー に とうろく されます。"
+    { dur: 5.5, act: async (p) => {
+      await clickRing(p, '#ar-book-gcal', false);
+      await wait(p, 500);
+      await caption(p, 'ワンタップ で Google カレンダー 登録');
+    }},
+    // (5s) "さらに、前日 の よる、前日 リマインダー が、"
+    { dur: 5.0, act: async (p) => {
+      // 前日リマインダー 表示
+      await p.evaluate(() => {
+        const body = document.querySelector('#ar-phone-body');
+        if (!body) return;
+        const rem = document.createElement('div');
+        rem.id = 'ar-book-reminder';
+        rem.style = 'align-self:flex-start;background:#fff;border-radius:12px;overflow:hidden;max-width:88%;box-shadow:0 4px 12px rgba(0,0,0,.08);margin-top:8px;';
+        rem.innerHTML = `
+          <div style="background:#B8893B;color:#fff;padding:10px 14px;">
+            <div style="font-size:10px;letter-spacing:0.18em;font-weight:700;">前日 リマインダー</div>
+            <div style="font-size:13px;font-weight:700;margin-top:3px;">明日 チェックイン です</div>
+          </div>
+          <div style="padding:10px 14px;font-size:11px;line-height:1.8;color:#333;">
+            吉田 様、 明日 15 時 から の チェックイン です。 道順 は こちら から。
+          </div>
+        `;
+        body.appendChild(rem);
+      });
+      await wait(p, 700);
+      await clearCaption(p);
+      await pointAt(p, '#ar-book-reminder', '前日 の 案内', 3300);
+    }},
+    // (5s) "チェックイン とうじつ の あさ、案内 メッセージ が、それぞれ じどう で とどきます。"
+    { dur: 5.0, act: async (p) => {
+      await p.evaluate(() => {
+        const body = document.querySelector('#ar-phone-body');
+        if (!body) return;
+        const arr = document.createElement('div');
+        arr.id = 'ar-book-arrival';
+        arr.style = 'align-self:flex-start;background:#fff;border-radius:12px;overflow:hidden;max-width:88%;box-shadow:0 4px 12px rgba(0,0,0,.08);margin-top:8px;';
+        arr.innerHTML = `
+          <div style="background:#C1462C;color:#fff;padding:10px 14px;">
+            <div style="font-size:10px;letter-spacing:0.18em;font-weight:700;">当日 の 案内</div>
+            <div style="font-size:13px;font-weight:700;margin-top:3px;">本日 15 時 に お待ちして います</div>
+          </div>
+          <div style="padding:10px 14px;font-size:11px;line-height:1.8;color:#333;">
+            鍵 の 場所 と、 チェックイン の 手順 は こちら。
+          </div>
+        `;
+        body.appendChild(arr);
+        body.scrollTop = body.scrollHeight;
+      });
+      await wait(p, 700);
+      await pointAt(p, '#ar-book-arrival', '当日 の 案内', 3000);
+    }},
+    // (4.4s) "バイト がわ の じどう 通知 だけ で なく、お客様 がわ も、完全 に じどう化 されて います。"
+    { dur: 4.4, act: async (p) => {
+      await caption(p, '<strong style="color:#C1462C;">お客様 側 も 完全 自動化</strong>');
+      await wait(p, 100);
+    }},
+  ]},
+
+  // ─────────────── 05 ログイン (37s) — 旧02 ───────────────
+  { name: '05-login', segments: [
     // "まず、うんえい かんり がめん を ひらきます。" (4s)
     { dur: 4.0, act: async (p) => {
       await removeTitle(p);
@@ -403,7 +813,7 @@ const chapters = [
   ]},
 
   // ─────────────── 03 今日タブ (37s) ───────────────
-  { name: '03-today', segments: [
+  { name: '06-today', segments: [
     // "ログイン すると、まず 「きょう」 タブ が 開きます。" (4s)
     { dur: 4.0, act: async (p) => {
       await clearSpots(p);
@@ -447,7 +857,7 @@ const chapters = [
   ]},
 
   // ─────────────── 04 タスク (38s) ───────────────
-  { name: '04-tasks', segments: [
+  { name: '07-tasks', segments: [
     // "「こうてい」 タブ を 開くと、" (3.5s)
     { dur: 3.5, act: async (p) => {
       await clearCaption(p);
@@ -498,7 +908,7 @@ const chapters = [
   ]},
 
   // ─────────────── 05 週シフト (36s) ───────────────
-  { name: '05-week-shift', segments: [
+  { name: '08-week-shift', segments: [
     // "次 は、シフト 表 の 週 ビュー です。" (3.5s)
     { dur: 3.5, act: async (p) => {
       await clearCaption(p);
@@ -543,7 +953,7 @@ const chapters = [
   ]},
 
   // ─────────────── 06 月シフト (39s) ───────────────
-  { name: '06-month-shift', segments: [
+  { name: '09-month-shift', segments: [
     // "続いて、月 ビュー です。" (3.5s)
     { dur: 3.5, act: async (p) => {
       await clearCaption(p);
@@ -613,7 +1023,7 @@ const chapters = [
   ]},
 
   // ─────────────── 07 スタッフ×月 (42s) ───────────────
-  { name: '07-staff-editor', segments: [
+  { name: '10-staff-editor', segments: [
     // "スタッフ 一人 分 の シフト を、まとめて 入力 したい 場合 は、" (5s)
     { dur: 5.0, act: async (p) => {
       await clearCaption(p);
@@ -674,7 +1084,7 @@ const chapters = [
   ]},
 
   // ─────────────── 08 LINE連携 (66s) ───────────────
-  { name: '08-line-pairing', segments: [
+  { name: '11-line-pairing', segments: [
     // "スタッフ を LINE と 連携 させる 方法。" (4s)
     { dur: 4.0, act: async (p) => {
       await clearCaption(p);
@@ -846,7 +1256,7 @@ const chapters = [
   ]},
 
   // ─────────────── 09 一斉配信 (40s) ───────────────
-  { name: '09-publish', segments: [
+  { name: '12-publish', segments: [
     // "1 ヶ 月 分 の シフト を、全員 に 一斉 配信。" (4s)
     { dur: 4.0, act: async (p) => {
       await clearCaption(p);
@@ -915,7 +1325,7 @@ const chapters = [
   ]},
 
   // ─────────────── 10 自動通知 (68s) ───────────────
-  { name: '10-auto-notify', segments: [
+  { name: '13-auto-notify', segments: [
     // "最後 に、予約 が 入った とき の、自動 通知 の 仕組み。" (5s)
     { dur: 5.0, act: async (p) => {
       await clearCaption(p);
