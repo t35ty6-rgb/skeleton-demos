@@ -459,8 +459,11 @@
     <button class="item tab-btn" data-view="st" data-title="検索語句別" data-sub="実際に打たれたクエリを分析">
       <span class="ico">🔎</span><span>検索語句</span>
     </button>
-    <button class="item tab-btn" data-view="dow" data-title="曜日別" data-sub="7日×24hヒートマップ">
+    <button class="item tab-btn" data-view="dow" data-title="曜日別" data-sub="広告費 × 曜日 集約">
       <span class="ico">📅</span><span>曜日別</span>
+    </button>
+    <button class="item tab-btn" data-view="hourly" data-title="時間帯別" data-sub="注文の 曜日×時間 分布 (過去30日)">
+      <span class="ico">🕐</span><span>時間帯別</span>
     </button>
     <button class="item tab-btn" data-view="pl" data-title="プレースメント別" data-sub="TOS / PP / ROS 内訳">
       <span class="ico">📍</span><span>プレースメント</span>
@@ -492,8 +495,10 @@
       <input type="date" id="top-from" style="width:100%;background:var(--side-input-bg);border:1px solid var(--side-input-border);color:var(--side-fg);padding:3px 6px;border-radius:3px;font-size:10.5px;margin-bottom:3px;">
       <input type="date" id="top-to" style="width:100%;background:var(--side-input-bg);border:1px solid var(--side-input-border);color:var(--side-fg);padding:3px 6px;border-radius:3px;font-size:10.5px;">
     </div>
-    <div class="mini-metric"><span class="l">売上</span><span class="v pos" id="mini-sales">—</span></div>
+    <div class="mini-metric"><span class="l">売上</span><span class="v" id="mini-sales">—</span></div>
+    <div class="mini-metric"><span class="l">粗利</span><span class="v" id="mini-gross" title="0.85×売上 − (厚1355+薄1292)×個数 = 販売手数料15%+仕入+FBA固定手数料 差引後">—</span></div>
     <div class="mini-metric"><span class="l">広告費</span><span class="v neg" id="mini-ads">—</span></div>
+    <div class="mini-metric"><span class="l">純利益</span><span class="v" id="mini-net" title="粗利 − 広告費">—</span></div>
     <div class="mini-metric"><span class="l">ROAS</span><span class="v" id="mini-roas">—</span></div>
     <div class="mini-metric"><span class="l">ACoS</span><span class="v" id="mini-acos">—</span></div>
     <div class="mini-metric"><span class="l">販売数</span><span class="v" id="mini-units">—</span></div>
@@ -645,6 +650,48 @@
   </div>
 </div>
 
+<div class="view" id="view-hourly">
+  <div class="dd-wrap">
+    <div class="dd-head">
+      <h2>時間帯別 注文分布 (曜日 × 時間)</h2>
+      <span class="sub" id="ho-sub">読み込み中…</span>
+    </div>
+    <div class="insight-row" id="ho-insights">
+      <div class="insight-box"><div class="head">ピーク時間帯</div><div class="items"><span id="ho-peak-hours">—</span></div></div>
+      <div class="insight-box"><div class="head">ピーク曜日</div><div class="items"><span id="ho-peak-dows">—</span></div></div>
+      <div class="insight-box"><div class="head">注文ゼロ時間帯</div><div class="items"><span id="ho-dead-hours">—</span></div></div>
+    </div>
+    <div style="background:#fff6cc;border:1px solid #e0c580;padding:8px 12px;margin-bottom:10px;font-size:11.5px;color:#5a4400;line-height:1.55;">
+      <b style="color:#7a5e00;">📊 データソース</b>: SP-API Orders API の PurchaseDate (JST変換後) を 過去30日 分 集約。
+      <b>Amazon Ads V3 は hourOfDay 未対応</b> のため 時間帯別 CTR/CVR/ROAS の 直接計測は不可。
+      注文量 (需要側) の 時間分布 のみ 可視化。 手動 bid ピーク時間帯を強くする 判断材料 として使用可能。
+    </div>
+    <div style="background:#fff;border:1px solid var(--gray-3);padding:12px;">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px;">
+        <h3 style="margin:0;font-size:12px;font-weight:800;letter-spacing:.03em;color:var(--black);font-family:var(--font-display);">曜日 × 時間 ヒートマップ</h3>
+        <label style="font-size:11px;color:#666;margin-left:auto;">
+          表示:
+          <select id="ho-metric" style="padding:3px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;margin-left:4px;">
+            <option value="orders" selected>注文数</option>
+            <option value="sales">売上 (円)</option>
+          </select>
+        </label>
+      </div>
+      <div id="ho-grid" style="overflow-x:auto;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+      <div style="background:#fff;border:1px solid var(--gray-3);padding:10px 12px;">
+        <h3 style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--black);font-family:var(--font-display);">時間帯 合算 (全曜日)</h3>
+        <canvas id="ho-chart-hours" style="max-height:180px;"></canvas>
+      </div>
+      <div style="background:#fff;border:1px solid var(--gray-3);padding:10px 12px;">
+        <h3 style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--black);font-family:var(--font-display);">曜日 合算 (全時間)</h3>
+        <canvas id="ho-chart-dows" style="max-height:180px;"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="view" id="view-pl">
   <div class="dd-wrap">
     <div class="dd-head">
@@ -687,6 +734,26 @@
     <div style="margin-top:10px;background:#fff;border:1px solid var(--gray-3);padding:8px;">
       <h3 style="margin:0 0 6px;font-size:11px;color:#666;letter-spacing:.04em;">訴求チャンスTop10 (競合叩かれ × 自社良し)</h3>
       <div id="rv-gap-adv"></div>
+    </div>
+
+    <!-- 個別レビュー一覧 (取得日タグ+消えたレビュー検知) — 2026-07-02 追加 -->
+    <div style="margin-top:10px;background:#fff;border:1px solid var(--gray-3);padding:12px;">
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+        <h3 style="margin:0;font-size:13px;font-weight:800;letter-spacing:-.01em;font-family:var(--font-display);">個別レビュー一覧 (Amazon消失検知付き)</h3>
+        <span id="rv-hist-meta" style="font-size:11px;color:#666;">読み込み中…</span>
+        <label style="font-size:11px;color:#666;margin-left:auto;">ASIN:
+          <select id="rv-hist-asin" style="padding:3px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;margin-left:4px;"></select>
+        </label>
+        <label style="font-size:11px;color:#666;">表示:
+          <select id="rv-hist-filter" style="padding:3px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;margin-left:4px;">
+            <option value="all">全部</option>
+            <option value="active">現存のみ</option>
+            <option value="disappeared">消失のみ</option>
+            <option value="new">新着 (7日以内)</option>
+          </select>
+        </label>
+      </div>
+      <div id="rv-hist-list" style="max-height:520px;overflow:auto;border:1px solid var(--gray-2);border-radius:2px;"></div>
     </div>
 
     <div style="margin-top:10px;background:#fff;border:1px solid var(--gray-3);padding:8px;">
@@ -1206,19 +1273,26 @@ function renderTopSales() {
   const filtered = TOP_SALES.filter(d => d.date >= from && d.date <= to);
   document.getElementById('top-range-label').textContent = `${from} 〜 ${to} (${filtered.length}日)`;
 
-  let atsuU=0, usuU=0, salesEx=0, adCost=0, sess=0, imp=0, adsOrders=0;
+  let atsuU=0, usuU=0, atsuSales=0, usuSales=0, adCost=0, sess=0, imp=0, adsOrders=0;
   for (const d of filtered) {
     atsuU += d.atsu.units || 0;
     usuU  += d.usu.units || 0;
-    salesEx += (d.atsu.sales_ex || 0) + (d.usu.sales_ex || 0);
+    atsuSales += d.atsu.sales_ex || 0;
+    usuSales += d.usu.sales_ex || 0;
     adCost += (d.atsu.ad_cost || 0) + (d.usu.ad_cost || 0);
     sess += (d.atsu.sess || 0) + (d.usu.sess || 0);
     imp += (d.atsu.imp || 0) + (d.usu.imp || 0);
     adsOrders += (d.atsu.ads_orders || 0) + (d.usu.ads_orders || 0);
   }
+  const salesEx = atsuSales + usuSales;
   const totalU = atsuU + usuU;
   const acos = salesEx > 0 ? adCost / salesEx : null;
   const roas = adCost > 0 ? salesEx / adCost : null;
+  // 粗利 SSOT: 厚 = 0.85×売上 − 1355×個 / 薄 = 0.85×売上 − 1292×個 (仕入+FBA+販売手数料15% 差引後)
+  const grossAtsu = 0.85 * atsuSales - 1355 * atsuU;
+  const grossUsu  = 0.85 * usuSales  - 1292 * usuU;
+  const gross = grossAtsu + grossUsu;
+  const net = gross - adCost;
   const yenShort = v => {
     const n = Math.round(v);
     if (Math.abs(n) >= 10000) return '¥' + (n/10000).toFixed(n>=100000?0:1) + '万';
@@ -1231,8 +1305,17 @@ function renderTopSales() {
   };
 
   const $ = id => document.getElementById(id);
+  const setSigned = (id, v, isYen) => {
+    const el = $(id); if (!el) return;
+    el.textContent = (isYen ? yenShort(v) : v);
+    el.classList.toggle('pos', v > 0);
+    el.classList.toggle('neg', v < 0);
+  };
   $('mini-sales').textContent = yenShort(salesEx);
+  $('mini-sales').classList.toggle('pos', salesEx > 0);
+  setSigned('mini-gross', gross, true);
   $('mini-ads').textContent = yenShort(adCost);
+  setSigned('mini-net', net, true);
   $('mini-roas').textContent = roas != null ? roas.toFixed(2) + 'x' : '—';
   const acosEl = $('mini-acos');
   acosEl.textContent = acos != null ? (acos*100).toFixed(0) + '%' : '—';
@@ -1258,6 +1341,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     document.querySelector('.main-content').scrollTop = 0;
     if(v==='st' && !ST_DATA) loadST();
     if(v==='dow' && !DOW_DATA) loadDoW();
+    if(v==='hourly' && !HO_DATA) loadHourly();
     if(v==='pl' && !PL_DATA) loadPL();
     if(v==='review' && !RV_DATA) loadReview();
     if(v==='adj' && !ADJ_DATA) loadAdj();
@@ -1306,8 +1390,12 @@ async function loadAdj(){
       const ad = Math.round(day.atsu.ad_cost + day.usu.ad_cost);
       const sess = day.atsu.sess + day.usu.sess;
       const roas = ad > 0 ? (s/ad).toFixed(2) : '—';
+      // 粗利 SSOT: 厚 0.85×sales_ex − 1355×個 / 薄 0.85×sales_ex − 1292×個
+      const gross = Math.round(0.85*day.atsu.sales_ex - 1355*day.atsu.units + 0.85*day.usu.sales_ex - 1292*day.usu.units);
+      const net = gross - ad;
+      const netColor = net > 0 ? 'var(--green)' : net < 0 ? 'var(--red)' : '#666';
       return `
-        <div style="background:#fff;border:1px solid #e0c580;padding:8px 10px;min-width:150px;">
+        <div style="background:#fff;border:1px solid #e0c580;padding:8px 10px;min-width:170px;">
           <div style="font-size:10px;color:#7a5e00;font-weight:700;letter-spacing:.04em;margin-bottom:4px;">${dayLabel(day.date, i)}</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;">
             <div>厚:<b style="font-size:14px;">${day.atsu.units}</b>個</div>
@@ -1315,9 +1403,10 @@ async function loadAdj(){
             <div style="grid-column:1/-1;border-top:1px solid #f0e0a0;margin-top:2px;padding-top:2px;">
               計 <b>${t}</b>個 / 売上 <b>${yen(s)}</b>
             </div>
-            <div>広告費 ${yen(ad)}</div>
-            <div>セッション ${sess}</div>
+            <div>広告費 <span style="color:var(--red);">${yen(ad)}</span></div>
+            <div>粗利 ${yen(gross)}</div>
             <div>ROAS <b>${roas}x</b></div>
+            <div>純利益 <b style="color:${netColor};">${yen(net)}</b></div>
           </div>
         </div>
       `;
@@ -1416,7 +1505,7 @@ function renderAdj(){
 }
 
 // ── レビュー分析 ────────────────────────────
-let RV_DATA = null;
+let RV_DATA = null, RV_HIST = null;
 async function loadReview(){
   try{
     const r = await fetch('./data/reviews.json?_=' + Date.now());
@@ -1426,6 +1515,100 @@ async function loadReview(){
   } catch(e){
     document.getElementById('rv-sub').textContent = '読み込み失敗: ' + e.message + ' (data/reviews.json が未生成の可能性)';
   }
+  // 個別レビュー履歴 (取得日 + 消失検知) 並行取得
+  try {
+    const r2 = await fetch('./data/reviews-history.json?_=' + Date.now());
+    if (r2.ok) {
+      RV_HIST = await r2.json();
+      initReviewHistoryUI();
+    }
+  } catch(_) { /* history 未生成でも 本体機能に影響なし */ }
+}
+function initReviewHistoryUI(){
+  if (!RV_HIST) return;
+  const asinSel = document.getElementById('rv-hist-asin');
+  const filterSel = document.getElementById('rv-hist-filter');
+  const asins = Object.entries(RV_HIST.asins || {});
+  // 自社 → 競合 の順、 各ASIN の disappeared 件数を バッジ表示
+  asins.sort((a,b) => {
+    const ownA = a[0].startsWith('B0FL5') ? 0 : 1;
+    const ownB = b[0].startsWith('B0FL5') ? 0 : 1;
+    if (ownA !== ownB) return ownA - ownB;
+    return b[1].latest_count - a[1].latest_count;
+  });
+  asinSel.innerHTML = asins.map(([asin, d]) => {
+    const dis = d.disappeared_count > 0 ? ` 🚨消失${d.disappeared_count}` : '';
+    return `<option value="${asin}">${d.label} (${d.latest_count}件${dis})</option>`;
+  }).join('');
+  const totalDis = asins.reduce((s, [,d]) => s + d.disappeared_count, 0);
+  const totalActive = asins.reduce((s, [,d]) => s + d.latest_count, 0);
+  document.getElementById('rv-hist-meta').innerHTML =
+    `<b>取得日 ${RV_HIST.latest_date}</b> / snapshot ${RV_HIST.snapshot_count}日分 (${RV_HIST.snapshot_dates[0]} 〜 ${RV_HIST.latest_date}) · 現存 ${totalActive}件` +
+    (totalDis > 0 ? ` · <span style="color:var(--red);font-weight:800;">消失 ${totalDis}件</span>` : '');
+  asinSel.onchange = renderReviewHistory;
+  filterSel.onchange = renderReviewHistory;
+  renderReviewHistory();
+}
+function renderReviewHistory(){
+  const asin = document.getElementById('rv-hist-asin').value;
+  const filter = document.getElementById('rv-hist-filter').value;
+  const d = RV_HIST.asins[asin];
+  if (!d) { document.getElementById('rv-hist-list').innerHTML = ''; return; }
+
+  const today = new Date(Date.now() + 9*3600_000).toISOString().slice(0,10);
+  const daysAgo = iso => {
+    if (!iso) return 999;
+    return Math.floor((new Date(today) - new Date(iso)) / 86400_000);
+  };
+
+  const merged = [
+    ...d.reviews.map(r => ({ ...r })),
+    ...(d.disappeared || []).map(r => ({ ...r })),
+  ];
+  let rows = merged.filter(r => {
+    if (filter === 'active') return r.status === 'active';
+    if (filter === 'disappeared') return r.status === 'disappeared';
+    if (filter === 'new') return r.status === 'active' && daysAgo(r.first_seen) <= 7;
+    return true;
+  });
+  rows.sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+
+  if (!rows.length) {
+    document.getElementById('rv-hist-list').innerHTML = '<div style="padding:20px;text-align:center;color:#888;font-size:12px;">該当なし</div>';
+    return;
+  }
+
+  const stars = n => '★'.repeat(n) + '☆'.repeat(5-n);
+  const html = rows.map(r => {
+    const isDis = r.status === 'disappeared';
+    const isNew = r.status === 'active' && daysAgo(r.first_seen) <= 7;
+    const bg = isDis ? '#fde9e8' : isNew ? '#fff6e8' : '#fff';
+    const border = isDis ? 'var(--red)' : isNew ? 'var(--orange)' : 'var(--gray-2)';
+    const badge = isDis
+      ? `<span style="background:var(--red);color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:2px;letter-spacing:.04em;">🚨 消失 (${r.missing_since} 最終確認)</span>`
+      : isNew
+      ? `<span style="background:var(--orange);color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:2px;letter-spacing:.04em;">NEW</span>`
+      : '';
+    return `
+      <div style="padding:10px 14px;border-bottom:1px solid var(--gray-2);border-left:3px solid ${border};background:${bg};">
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+          <span style="color:${r.rating>=4?'#f5a623':r.rating<=2?'var(--red)':'#999'};font-size:13px;letter-spacing:2px;">${stars(r.rating)}</span>
+          <b style="font-size:13px;color:${isDis?'#999':'var(--black)'};text-decoration:${isDis?'line-through':'none'};">${escapeHtml(r.title||'(タイトルなし)')}</b>
+          ${badge}
+          <span style="margin-left:auto;font-size:10.5px;color:#888;font-family:var(--font-num);font-variant-numeric:tabular-nums;">
+            投稿 <b style="color:#555;">${r.date||'不明'}</b>
+            · 初回scrape ${r.first_seen}
+            ${r.first_seen !== r.last_seen ? `· 最終確認 ${r.last_seen}` : ''}
+          </span>
+        </div>
+        <div style="font-size:12px;color:${isDis?'#888':'#333'};line-height:1.55;white-space:pre-wrap;">${escapeHtml(r.body||'')}</div>
+        <div style="font-size:10.5px;color:#888;margin-top:4px;">
+          ${r.reviewer||'匿名'}${r.verified?' · <span style="color:var(--green);font-weight:700;">Verified</span>':''}${r.helpful_count?` · 参考になった ${r.helpful_count}`:''}
+        </div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('rv-hist-list').innerHTML = html;
 }
 function renderReview(){
   const D = RV_DATA;
@@ -1759,6 +1942,97 @@ function renderPL(){
       </div>
     </div>`;
   }).join('');
+}
+
+// ── 時間帯別 (Orders API 経由) ────────────────────────────
+let HO_DATA = null, hoChartHours=null, hoChartDows=null;
+async function loadHourly(){
+  try{
+    const r = await fetch('./data/hourly-orders.json?_=' + Date.now());
+    if(!r.ok) throw new Error('hourly-orders.json '+r.status);
+    HO_DATA = await r.json();
+  } catch(e){
+    document.getElementById('ho-sub').textContent = '読み込み失敗: '+e.message+' (data/hourly-orders.json が未生成の可能性)';
+    return;
+  }
+  const D = HO_DATA;
+  document.getElementById('ho-sub').textContent =
+    `${D.range.from} 〜 ${D.range.to} (${D.range.days}日) / 全 ${D.total_orders.toLocaleString()} 件 / 売上 ¥${D.total_sales.toLocaleString()}`;
+
+  // Insights
+  const dowLabels = ['月','火','水','木','金','土','日'];
+  const topH = [...D.hour_totals].sort((a,b) => b.orders - a.orders).slice(0,3).filter(t => t.orders > 0);
+  document.getElementById('ho-peak-hours').innerHTML = topH.length
+    ? topH.map(t => `<b>${t.h}時</b> ${t.orders}件`).join(' / ')
+    : '—';
+  const topD = [...D.dow_totals].sort((a,b) => b.orders - a.orders).slice(0,2).filter(t => t.orders > 0);
+  document.getElementById('ho-peak-dows').innerHTML = topD.length
+    ? topD.map(t => `<b>${dowLabels[t.d]}</b> ${t.orders}件`).join(' / ')
+    : '—';
+  const deadH = D.hour_totals.filter(t => t.orders === 0).map(t => t.h);
+  document.getElementById('ho-dead-hours').innerHTML = deadH.length
+    ? deadH.map(h => `${h}時`).join(', ')
+    : '<span style="color:var(--green);font-weight:700;">なし (全時間で注文あり)</span>';
+
+  document.getElementById('ho-metric').onchange = renderHourlyGrid;
+  renderHourlyGrid();
+  renderHourlyCharts();
+}
+function renderHourlyGrid(){
+  const D = HO_DATA;
+  const metric = document.getElementById('ho-metric').value;
+  const dowLabels = ['月','火','水','木','金','土','日'];
+  const values = metric === 'sales' ? D.grid_sales : D.grid;
+  let vmax = 0;
+  for (const row of values) for (const v of row) if (v > vmax) vmax = v;
+
+  const cell = (v, dow, h) => {
+    const ratio = vmax > 0 ? v / vmax : 0;
+    // 濃淡は オレンジ→白
+    const bg = v === 0 ? '#fafafa' : `rgba(255,122,0,${0.08 + ratio * 0.75})`;
+    const txt = metric === 'sales'
+      ? (v === 0 ? '' : v >= 10000 ? '¥' + Math.round(v/1000) + 'k' : '¥' + v)
+      : (v === 0 ? '' : String(v));
+    const color = ratio > 0.55 ? '#fff' : v === 0 ? '#ccc' : '#333';
+    return `<div style="background:${bg};color:${color};padding:5px 3px;text-align:center;font-size:11px;font-weight:${ratio>0.4?800:600};font-family:var(--font-num);font-variant-numeric:tabular-nums;border-right:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;letter-spacing:-.01em;" title="${dowLabels[dow]} ${h}時: ${v}${metric==='sales'?'円':'件'}">${txt}</div>`;
+  };
+
+  const rowLabels = ['月','火','水','木','金','土','日'];
+  const hdr = `<div style="background:#1a1a1a;color:#fff;padding:5px 6px;font-weight:800;text-align:right;font-size:11px;font-family:var(--font-display);letter-spacing:.04em;">曜日 ＼ 時</div>` +
+    Array.from({length:24}, (_,h) => `<div style="background:#1a1a1a;color:#fff;padding:5px 3px;text-align:center;font-weight:700;font-size:10.5px;font-family:var(--font-num);font-variant-numeric:tabular-nums;">${h}</div>`).join('');
+  const body = values.map((row, dow) => {
+    const rowTot = row.reduce((s, v) => s + v, 0);
+    const label = `<div style="background:${dow>=5?'#fbfbf3':'#f5f5f5'};color:#333;padding:5px 8px;font-weight:800;font-size:11.5px;font-family:var(--font-display);border-right:1px solid var(--gray-3);text-align:right;">${rowLabels[dow]} <span style="color:#888;font-weight:600;font-family:var(--font-num);font-size:10.5px;">${rowTot}</span></div>`;
+    return label + row.map((v, h) => cell(v, dow, h)).join('');
+  }).join('');
+  document.getElementById('ho-grid').innerHTML = `
+    <div style="display:grid;grid-template-columns:80px repeat(24, minmax(28px, 1fr));gap:0;border:1px solid var(--gray-3);border-radius:2px;overflow:hidden;">
+      ${hdr}${body}
+    </div>
+  `;
+}
+function renderHourlyCharts(){
+  const D = HO_DATA;
+  if (typeof Chart === 'undefined') return;  // Chart.js まだ読み込まれてない
+  if (hoChartHours) hoChartHours.destroy();
+  if (hoChartDows) hoChartDows.destroy();
+  hoChartHours = new Chart(document.getElementById('ho-chart-hours'), {
+    type: 'bar',
+    data: {
+      labels: D.hour_totals.map(t => t.h + '時'),
+      datasets: [{ label: '注文数', data: D.hour_totals.map(t => t.orders), backgroundColor: '#ff7a00', borderRadius: 2 }],
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+  });
+  const dowLabels = ['月','火','水','木','金','土','日'];
+  hoChartDows = new Chart(document.getElementById('ho-chart-dows'), {
+    type: 'bar',
+    data: {
+      labels: D.dow_totals.map(t => dowLabels[t.d]),
+      datasets: [{ label: '注文数', data: D.dow_totals.map(t => t.orders), backgroundColor: '#ffd400', borderRadius: 2 }],
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+  });
 }
 
 // ── 学習ログ ────────────────────────────
