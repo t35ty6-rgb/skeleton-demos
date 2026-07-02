@@ -189,36 +189,49 @@ exports.setTenantConfig = onRequest(async (req, res) => {
 });
 
 /* ─────────────────────────────────────────────────────────
- * 4. LINE Webhook
- *   POST /api/lineWebhook?tenant={id}
- *   署名検証 + follow/message/unfollow を処理
+ * 4. LINE Webhook — multi-channel (4アカ束ね対応)
+ *   POST /api/lineWebhook?tenant={tid}&channel={chid}
+ *   channel別 channelSecret で署名検証、 friend追加時に acquiredChannel 刻印
+ *   後方互換: channel パラメータ無ければ 旧 tenant.line 設定を使う
  * ───────────────────────────────────────────────────────── */
 exports.lineWebhook = onRequest(async (req, res) => {
   if (cors(req, res)) return;
   const tid = req.query.tenant || req.get('x-tenant');
   if (!tid) return fail(res, 400, 'tenant 必須');
-  const t = await tenantSettings(tid);
-  if (!t?.line?.channelSecret) return fail(res, 404, 'テナント未設定');
+  const chid = req.query.channel || req.get('x-channel') || null;
+
+  // channel 指定あり = multi-channel モード、 なし = legacy tenant.line
+  let secret, token, sourceChannelId;
+  if (chid) {
+    const ch = await channelSettings(tid, chid);
+    if (!ch?.channelSecret) return fail(res, 404, 'チャンネル未設定');
+    if (ch.status !== 'active') return fail(res, 403, 'チャンネル停止中');
+    secret = ch.channelSecret; token = ch.channelAccessToken; sourceChannelId = chid;
+  } else {
+    const t = await tenantSettings(tid);
+    if (!t?.line?.channelSecret) return fail(res, 404, 'テナント未設定');
+    secret = t.line.channelSecret; token = t.line.channelAccessToken;
+  }
 
   if (!req.rawBody) return fail(res, 400, 'rawBody missing (署名検証不能)');
-  const expected = crypto.createHmac('sha256', t.line.channelSecret).update(req.rawBody).digest('base64');
+  const expected = crypto.createHmac('sha256', secret).update(req.rawBody).digest('base64');
   if (req.get('x-line-signature') !== expected) return fail(res, 401, '署名不一致');
 
+  const t = await tenantSettings(tid);
   for (const ev of (req.body.events || [])) {
-    try { await handleLineEvent(tid, ev, t); }
+    try { await handleLineEvent(tid, ev, { token, sourceChannelId, branding: t?.branding, tenantName: t?.tenantName }); }
     catch (e) { console.error('LINE event handler error', e); }
   }
   return res.status(200).send('OK');
 });
 
-async function handleLineEvent(tid, ev, t) {
+async function handleLineEvent(tid, ev, ctx) {
   const userId = ev.source?.userId;
   if (!userId) return;
-  const tok = t.line.channelAccessToken;
+  const tok = ctx.token;
 
   if (ev.type === 'follow') {
     const profile = await lineFetchProfile(userId, tok);
-    // ?ref=rep_xxx で来た友達追加パラメータを拾う (連携先: LIFF welcome page)
     const cid = 'c_' + crypto.randomBytes(6).toString('hex');
     await db.doc(tenantPath(tid, 'customers', cid)).set({
       id: cid, lineUserId: userId,
@@ -229,10 +242,16 @@ async function handleLineEvent(tid, ev, t) {
       orderCount: 0, ltv: 0,
       tags: ['new'],
       note: '',
+      ...(ctx.sourceChannelId ? { acquiredChannel: ctx.sourceChannelId } : {}),
     });
+    // channel stats 更新 (atomic increment で race 防止)
+    if (ctx.sourceChannelId) {
+      await db.doc(tenantPath(tid, 'channels', ctx.sourceChannelId))
+        .set({ stats: { acquired: admin.firestore.FieldValue.increment(1), lastAcquiredAt: Date.now() } }, { merge: true });
+    }
     await linePush(userId, tok, [{
       type: 'text',
-      text: `${profile.displayName || 'お客さま'} さま\n${t.branding?.displayName || t.tenantName} です。 お友だち追加ありがとうございます。 担当より改めてご連絡いたします。`,
+      text: `${profile.displayName || 'お客さま'} さま\n${ctx.branding?.displayName || ctx.tenantName || 'サン・クロレラ'} です。 お友だち追加ありがとうございます。 担当より改めてご連絡いたします。`,
     }]);
     return;
   }
@@ -247,6 +266,7 @@ async function handleLineEvent(tid, ev, t) {
       id: mid, customerId: cid, direction: 'outgoing',
       body: ev.message.text, createdAt: Date.now(),
       channel: 'line',
+      ...(ctx.sourceChannelId ? { channelId: ctx.sourceChannelId } : {}),
     });
     return;
   }
@@ -291,20 +311,10 @@ exports.bindLineUser = onRequest({ secrets: [LIFF_CHANNEL_ID] }, async (req, res
       note: ref ? `販売員 ${ref} 経由で友だち追加` : '',
       ...acquisition,
     });
-    // キャンペーン stats 更新 (新規獲得+1) — 既存 orders/revenue を保持
+    // キャンペーン stats 更新 (atomic increment で race 防止 + 既存 orders/revenue 保持)
     if (campaign) {
-      const cRef = db.doc(tenantPath(tid, 'campaigns', campaign));
-      const cSnap = await cRef.get();
-      if (cSnap.exists) {
-        const s = cSnap.data().stats || {};
-        await cRef.set({
-          stats: {
-            ...s,
-            acquired: (s.acquired || 0) + 1,
-            lastAcquiredAt: Date.now(),
-          },
-        }, { merge: true });
-      }
+      await db.doc(tenantPath(tid, 'campaigns', campaign))
+        .set({ stats: { acquired: admin.firestore.FieldValue.increment(1), lastAcquiredAt: Date.now() } }, { merge: true });
     }
   } else {
     cid = snap.docs[0].id;
@@ -360,21 +370,16 @@ exports.recordOrder = onRequest({ secrets: [STRIPE_SECRET_KEY] }, async (req, re
   };
   await db.doc(tenantPath(tid, 'orders', oid)).set(order);
 
-  // キャンペーン stats — 売上/受注件数を積む
+  // キャンペーン stats — 売上/受注件数を積む (atomic increment)
   if (orderAttribution?.campaignId) {
-    const cRef = db.doc(tenantPath(tid, 'campaigns', orderAttribution.campaignId));
-    const cs = await cRef.get();
-    if (cs.exists) {
-      const s = cs.data().stats || {};
-      await cRef.set({
+    await db.doc(tenantPath(tid, 'campaigns', orderAttribution.campaignId))
+      .set({
         stats: {
-          ...s,
-          orders: (s.orders || 0) + 1,
-          revenue: (s.revenue || 0) + total,
+          orders: admin.firestore.FieldValue.increment(1),
+          revenue: admin.firestore.FieldValue.increment(total),
           lastOrderAt: Date.now(),
         },
       }, { merge: true });
-    }
   }
 
   // 顧客サマリ更新
@@ -420,6 +425,26 @@ exports.recordOrder = onRequest({ secrets: [STRIPE_SECRET_KEY] }, async (req, re
 
   return res.json({ ok: true, orderId: oid, paymentUrl });
 });
+
+/**
+ * Channel 設定を取得 (テナントの channels サブコレクション)。
+ * multi-channel 対応: 4アカを1テナントで束ねる。 各アカに channelSecret / channelAccessToken を持つ。
+ */
+async function channelSettings(tid, chid) {
+  const snap = await db.doc(tenantPath(tid, 'channels', chid)).get();
+  return snap.exists ? snap.data() : null;
+}
+
+/**
+ * テナントの全 active チャンネルから 販売員1:1 送信用の チャンネル (kind=sales) を選ぶ。
+ * 該当なしなら 先頭 active チャンネル、それも無ければ null。
+ */
+async function primaryChannel(tid) {
+  const snap = await db.collection(tenantPath(tid, 'channels'))
+    .where('status', '==', 'active').get();
+  const list = snap.docs.map(d => d.data());
+  return list.find(c => c.kind === 'sales') || list[0] || null;
+}
 
 /**
  * LIFF ID Token 検証 (顧客端末が本物の LINE user である証明)
@@ -570,22 +595,17 @@ exports.stripeWebhook = onRequest({ secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_
         lastVisitAt: Date.now(),
       }, { merge: true });
     }
-    // キャンペーン stats
+    // キャンペーン stats (atomic increment)
     const campaignId = order?.attribution?.campaignId;
     if (campaignId) {
-      const cRef = db.doc(tenantPath(tenantId, 'campaigns', campaignId));
-      const cs = await cRef.get();
-      if (cs.exists) {
-        const s = cs.data().stats || {};
-        await cRef.set({
+      await db.doc(tenantPath(tenantId, 'campaigns', campaignId))
+        .set({
           stats: {
-            ...s,
-            orders: (s.orders || 0) + 1,
-            revenue: (s.revenue || 0) + (order?.total || 0),
+            orders: admin.firestore.FieldValue.increment(1),
+            revenue: admin.firestore.FieldValue.increment(order?.total || 0),
             lastOrderAt: Date.now(),
           },
         }, { merge: true });
-      }
     }
 
     if (subscription === 'true') {
@@ -623,15 +643,34 @@ exports.broadcastSend = onRequest(async (req, res) => {
   const claims = await requireAdmin(req, res);
   if (!claims) return;
   const tid = claims.tenantId;
-  const { title, body, segmentTags = [], dryRun = false } = req.body || {};
+  const { title, body, segmentTags = [], dryRun = false, sourceChannelId = null } = req.body || {};
   if (!body) return fail(res, 400, 'body 必須');
-  const t = await tenantSettings(tid);
-  if (!t?.line?.channelAccessToken) return fail(res, 400, 'LINE未設定');
+
+  // multi-channel: sourceChannelId 指定なら そのチャンネルから、無ければ primary channel or legacy tenant.line
+  let accessToken, chid;
+  if (sourceChannelId) {
+    const ch = await channelSettings(tid, sourceChannelId);
+    if (!ch?.channelAccessToken) return fail(res, 400, '指定アカウント未設定');
+    if (ch.status !== 'active') return fail(res, 403, '指定アカウント停止中');
+    accessToken = ch.channelAccessToken; chid = sourceChannelId;
+  } else {
+    const primary = await primaryChannel(tid);
+    if (primary?.channelAccessToken) { accessToken = primary.channelAccessToken; chid = primary.id; }
+    else {
+      const t = await tenantSettings(tid);
+      if (!t?.line?.channelAccessToken) return fail(res, 400, 'LINE未設定');
+      accessToken = t.line.channelAccessToken;
+    }
+  }
 
   const custs = await db.collection(tenantPath(tid, 'customers')).get();
   const target = custs.docs.map(d => d.data()).filter(c => {
     if (!c.lineUserId) return false;
     if (c.tags?.includes('unfollowed')) return false;
+    // アカ束ね: 送信元チャンネル指定時は そのチャンネル獲得顧客のみ (アカ跨ぎ配信を防ぐ)
+    // acquiredChannel が未設定の顧客も 明示的に除外 (誤配信防止、明示的 chid 指定なら「そのアカ経由の
+    // 友達」だけがターゲット、と厳格に扱う)
+    if (chid && c.acquiredChannel !== chid) return false;
     if (!segmentTags.length) return true;
     return segmentTags.every(tag => (c.tags || []).includes(tag));
   });
@@ -645,11 +684,12 @@ exports.broadcastSend = onRequest(async (req, res) => {
     openRate: 0, clickRate: 0,
     sentBy: claims.uid,
     status: dryRun ? 'draft' : 'sending',
+    ...(chid ? { sourceChannelId: chid } : {}),
   });
 
   if (!dryRun) {
     const messages = [{ type: 'text', text: (title ? title + '\n\n' : '') + body }];
-    await lineMulticast(target.map(c => c.lineUserId), t.line.channelAccessToken, messages);
+    await lineMulticast(target.map(c => c.lineUserId), accessToken, messages);
     await db.doc(tenantPath(tid, 'broadcasts', bid)).set({ status: 'sent' }, { merge: true });
   }
 
@@ -664,20 +704,37 @@ exports.directPush = onRequest(async (req, res) => {
   const claims = await requireAdminOrRep(req, res);
   if (!claims) return;
   const tid = claims.tenantId;
-  const { customerId, body } = req.body || {};
+  const { customerId, body, sourceChannelId = null } = req.body || {};
   if (!customerId || !body) return fail(res, 400, 'customerId/body 必須');
-  const t = await tenantSettings(tid);
   const c = (await db.doc(tenantPath(tid, 'customers', customerId)).get()).data();
   if (!c?.lineUserId) return fail(res, 400, '顧客のLINE未紐付け');
-  if (!t?.line?.channelAccessToken) return fail(res, 400, 'LINE未設定');
-  const r = await linePush(c.lineUserId, t.line.channelAccessToken, [{ type: 'text', text: body }]);
+
+  // 送信元チャンネル決定 — 顧客の acquiredChannel を優先 (お客が友達追加したアカから返信)
+  let accessToken, chid;
+  const preferChid = sourceChannelId || c.acquiredChannel;
+  if (preferChid) {
+    const ch = await channelSettings(tid, preferChid);
+    if (ch?.channelAccessToken && ch.status === 'active') { accessToken = ch.channelAccessToken; chid = preferChid; }
+  }
+  if (!accessToken) {
+    const primary = await primaryChannel(tid);
+    if (primary?.channelAccessToken) { accessToken = primary.channelAccessToken; chid = primary.id; }
+    else {
+      const t = await tenantSettings(tid);
+      if (!t?.line?.channelAccessToken) return fail(res, 400, 'LINE未設定');
+      accessToken = t.line.channelAccessToken;
+    }
+  }
+
+  const r = await linePush(c.lineUserId, accessToken, [{ type: 'text', text: body }]);
   if (!r.ok) return fail(res, 502, 'LINE送信失敗', { detail: r.error });
   const mid = 'msg_' + Date.now().toString(36) + '_' + crypto.randomBytes(3).toString('hex');
   await db.doc(tenantPath(tid, 'messages', mid)).set({
     id: mid, customerId, direction: 'incoming', repId: claims.repId || null,
     body, createdAt: Date.now(),
+    ...(chid ? { channelId: chid } : {}),
   });
-  return res.json({ ok: true, messageId: mid });
+  return res.json({ ok: true, messageId: mid, channelId: chid });
 });
 
 /* ─────────────────────────────────────────────────────────

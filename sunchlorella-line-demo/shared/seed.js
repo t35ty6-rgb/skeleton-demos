@@ -9,7 +9,7 @@
 
 import { db } from './data.js';
 
-const SEED_FLAG = 'sunchlorella::seeded::v2';
+const SEED_FLAG = 'sunchlorella::seeded::v3';
 
 export async function seedIfEmpty() {
   if (localStorage.getItem(SEED_FLAG)) return false;
@@ -211,6 +211,87 @@ async function seedAll() {
   ];
   for (const m of msgs) await db.set('messages', m.id, m);
 
+  /* ─── 公式LINEアカウント (4アカ束ね) ─── */
+  const channels = [
+    {
+      id: 'ch_sales',
+      name: 'サン・クロレラ 営業部',   kind: 'sales',
+      status: 'active',
+      channelSecret: '',                // 本番接続時に管理画面から入力
+      channelAccessToken: '',
+      basicId: '@sunchlorella-sales',
+      richMenuId: 'richmenu-sales',
+      description: '訪問販売員と顧客の1:1連絡・受注・決済リンク送信の窓口',
+      friends: 68420,                   // デモ表示値
+      createdAt: D(1400),
+    },
+    {
+      id: 'ch_cs',
+      name: 'お客さまサポート',        kind: 'cs',
+      status: 'active',
+      channelSecret: '',
+      channelAccessToken: '',
+      basicId: '@sunchlorella-cs',
+      richMenuId: 'richmenu-cs',
+      description: '商品の使い方相談・返品交換・体調相談 の総合窓口',
+      friends: 52180,
+      createdAt: D(1600),
+    },
+    {
+      id: 'ch_sub',
+      name: '定期便お知らせ',          kind: 'sub',
+      status: 'active',
+      channelSecret: '',
+      channelAccessToken: '',
+      basicId: '@sunchlorella-teiki',
+      richMenuId: 'richmenu-sub',
+      description: '定期便継続顧客への お届け前通知・変更受付 専用',
+      friends: 38240,
+      createdAt: D(1200),
+    },
+    {
+      id: 'ch_event',
+      name: 'イベント・キャンペーン',  kind: 'event',
+      status: 'active',
+      channelSecret: '',
+      channelAccessToken: '',
+      basicId: '@sunchlorella-event',
+      richMenuId: 'richmenu-event',
+      description: '試合会場・万博・広告 経由の新規獲得と キャンペーン期間限定 配信',
+      friends: 25480,
+      createdAt: D(600),
+    },
+  ];
+  for (const ch of channels) await db.set('channels', ch.id, ch);
+
+  // 顧客に acquiredChannel を付与 (どのアカから友達追加されたか)
+  const channelAttr = [
+    ['cust_tanaka',   'ch_sales'],
+    ['cust_yamada',   'ch_sales'],
+    ['cust_matsumoto','ch_event'],
+    ['cust_kawai',    'ch_sales'],
+    ['cust_kobayashi','ch_sub'],
+    ['cust_watanabe', 'ch_sales'],
+    ['cust_sasaki',   'ch_sub'],
+    ['cust_okamoto',  'ch_cs'],
+    ['cust_maeda',    'ch_event'],
+    ['cust_ishida',   'ch_sub'],
+    ['cust_nomura',   'ch_sales'],
+    ['cust_hashimoto','ch_cs'],
+    ['cust_uchida',   'ch_sub'],
+    ['cust_arai',     'ch_sales'],
+    ['cust_ozawa',    'ch_event'],
+    ['cust_kimura',   'ch_cs'],
+    ['cust_saito',    'ch_event'],
+    ['cust_kondo',    'ch_sales'],
+    ['cust_ando',     'ch_cs'],
+    ['cust_hattori',  'ch_event'],
+  ];
+  for (const [cid, chn] of channelAttr) {
+    const c = await db.get('customers', cid);
+    if (c) await db.set('customers', cid, { ...c, acquiredChannel: chn });
+  }
+
   /* ─── キャンペーン (attribution) ─── */
   const campaigns = [
     {
@@ -290,6 +371,23 @@ async function seedAll() {
         revenue,
         lastAcquiredAt: acquiredCustomers.length ? Math.max(...acquiredCustomers.map(c => c.createdAt || 0)) : null,
         lastOrderAt:    attrOrders.length        ? Math.max(...attrOrders.map(o => o.createdAt || 0))        : null,
+      },
+    });
+  }
+
+  // channels.stats を集計 (アカ別 獲得顧客数・売上・LTV平均)
+  for (const ch of channels) {
+    const acqCusts = allCustomers.filter(c => c.acquiredChannel === ch.id);
+    const acqIds = new Set(acqCusts.map(c => c.id));
+    const chOrders = allOrders.filter(o => acqIds.has(o.customerId));
+    const revenue = chOrders.reduce((s, o) => s + (o.total || 0), 0);
+    await db.set('channels', ch.id, {
+      ...ch,
+      stats: {
+        acquired: acqCusts.length,
+        orders: chOrders.length,
+        revenue,
+        avgLtv: acqCusts.length ? Math.round(revenue / acqCusts.length) : 0,
       },
     });
   }

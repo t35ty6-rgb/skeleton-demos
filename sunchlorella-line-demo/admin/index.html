@@ -231,6 +231,64 @@
   .bc .rate { color: var(--leaf-2); font-family: var(--font-num); font-weight: 800; font-size: 15px; text-align: right; }
   .bc .rate small { color: var(--ink-3); font-weight: 600; margin-left: 2px; }
 
+  /* Channels (公式LINEアカウント) */
+  .chan-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .chan {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 20px 22px;
+    box-shadow: var(--shadow-1);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .chan .head-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .chan .avatar {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--line-green); color: #fff;
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  .chan .avatar svg { width: 22px; height: 22px; }
+  .chan .avatar.sales     { background: var(--leaf-2); }
+  .chan .avatar.cs        { background: oklch(0.5 0.14 240); }
+  .chan .avatar.sub       { background: var(--earth); }
+  .chan .avatar.event     { background: oklch(0.55 0.16 25); }
+  .chan .avatar.marketing { background: oklch(0.55 0.15 300); }
+  .chan h3 { font-size: 16px; letter-spacing: -.01em; }
+  .chan .basic-id { font-family: var(--font-num); font-size: 11.5px; color: var(--ink-3); }
+  .chan .kind-badge {
+    display: inline-block; padding: 3px 9px; border-radius: 999px;
+    background: var(--leaf-4); color: var(--leaf-2);
+    font-size: 11px; font-weight: 800; letter-spacing: .04em;
+  }
+  .chan .status-badge {
+    display: inline-block; padding: 3px 9px; border-radius: 999px;
+    background: oklch(0.94 0.06 145); color: var(--leaf-2);
+    font-size: 11px; font-weight: 800; letter-spacing: .04em;
+  }
+  .chan .status-badge.paused { background: oklch(0.94 0.06 75); color: oklch(0.4 0.10 75); }
+  .chan .desc { font-size: 13px; color: var(--ink-2); line-height: 1.75; }
+  .chan .kpis {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    padding-top: 12px; border-top: 1px dashed var(--line);
+  }
+  .chan .kpis > div { padding: 8px 10px; background: var(--bg-2); border-radius: var(--r-sm); }
+  .chan .kpis .k { font-size: 10.5px; color: var(--ink-3); font-weight: 700; }
+  .chan .kpis .v {
+    font-family: var(--font-num); font-weight: 700; font-size: 17px;
+    color: var(--ink); margin-top: 2px; font-variant-numeric: tabular-nums;
+  }
+  .chan .webhook {
+    padding: 10px 12px; background: var(--bg-2); border-radius: var(--r-sm);
+    font-family: var(--font-num); font-size: 10.5px; color: var(--ink-3);
+    word-break: break-all; line-height: 1.5;
+  }
+  .chan .webhook strong { color: var(--ink-2); }
+  .chan .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chan .btns .btn { min-height: 36px; padding: 6px 12px; font-size: 12.5px; }
+
   /* Campaigns */
   .camp {
     background: var(--paper); border: 1px solid var(--line);
@@ -341,6 +399,10 @@
     </a>
 
     <div class="sect-label">LINE 運用</div>
+    <a href="#channels" data-view="channels">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="8" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="16" cy="10" r="1" fill="currentColor"/></svg>
+      公式アカウント
+    </a>
     <a href="#campaigns" data-view="campaigns">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v6H4z"/><path d="M4 14h16v6H4z"/><path d="M9 4v6M15 14v6"/></svg>
       キャンペーン
@@ -484,6 +546,24 @@
       <div id="prodList"></div>
     </section>
 
+    <!-- ── Channels (公式LINEアカウント) ── -->
+    <section class="view" id="view-channels">
+      <div class="pane-head">
+        <div>
+          <h1>公式LINEアカウント</h1>
+          <div class="sub">部署別に運用中の4アカウントを1画面で束ねる。 それぞれのwebhook・友達数・売上・配信効果</div>
+        </div>
+        <button class="btn btn-primary" id="btnNewChan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M12 5v14M5 12h14"/></svg>
+          アカウントを追加
+        </button>
+      </div>
+
+      <div id="chanSummary" class="kpis" style="margin-bottom: 24px;"></div>
+
+      <div class="chan-grid" id="chanGrid"></div>
+    </section>
+
     <!-- ── Campaigns ── -->
     <section class="view" id="view-campaigns">
       <div class="pane-head">
@@ -507,6 +587,7 @@
           <div id="segFilters"></div>
           <div class="seg-preview">
             <div class="seg-count"><div class="n" id="segN">—</div><div class="lbl">名 / 該当</div></div>
+            <div class="field"><label>送信元アカウント</label><select class="select" id="bcSourceCh"></select></div>
             <div class="field"><label>配信タイトル</label><input class="input" id="bcTitle" value="今月ご継続の皆さまへ"></div>
             <div class="field"><label>本文</label><textarea class="textarea" id="bcBody">お手元の在庫はいかがですか?次回お届けが近づいてまいりましたので、ご案内申し上げます。</textarea></div>
             <div class="seg-flex">
@@ -575,7 +656,7 @@
 <script type="module">
   import { db, uid } from '../shared/data.js';
   import { seedIfEmpty, seedForce } from '../shared/seed.js';
-  import { fmt, CHANNELS, TAG_GROUPS, filterCustomers, CAMPAIGN_KIND, CAMPAIGN_STATUS, isCampaignActive } from '../shared/schema.js';
+  import { fmt, CHANNELS, TAG_GROUPS, filterCustomers, CAMPAIGN_KIND, CAMPAIGN_STATUS, isCampaignActive, CHANNEL_KIND, CHANNEL_STATUS } from '../shared/schema.js';
   import { requireLoggedIn, attachSignOutButton } from '../shared/auth-gate.js';
   import { getConfig } from '../shared/config.js';
   import { sendBroadcast } from '../shared/api.js';
@@ -587,7 +668,8 @@
   const state = {
     view: 'dash',
     reps: [], customers: [], orders: [], products: [], subs: [], msgs: [], broadcasts: [],
-    campaigns: [],
+    campaigns: [], channels: [],
+    bcSourceChannelId: '',
     ordersFilter: 'all',
     custRegion: 'all',
     custSearch: '',
@@ -604,9 +686,10 @@
     state.msgs       = await db.list('messages', { orderBy: ['createdAt', 'desc'] });
     state.broadcasts = await db.list('broadcasts', { orderBy: ['sentAt', 'desc'] });
     state.campaigns  = await db.list('campaigns', { orderBy: ['priority', 'desc'] });
+    state.channels   = await db.list('channels');
     render();
   }
-  ['reps','customers','orders','products','subscriptions','messages','broadcasts','campaigns'].forEach(c => db.onChange(c, refresh));
+  ['reps','customers','orders','products','subscriptions','messages','broadcasts','campaigns','channels'].forEach(c => db.onChange(c, refresh));
 
   /* ─── Helpers ─── */
   function monthStart(offset = 0) {
@@ -908,6 +991,16 @@
       });
       html += `</div></div>`;
     });
+    // 獲得アカウント (どの公式LINEアカから友達追加されたか)
+    if (state.channels.length) {
+      html += `<div class="filter-group"><h4>獲得公式アカウント</h4><div class="chips-row">`;
+      state.channels.forEach(c => {
+        const tagId = 'ch:' + c.id;
+        const on = state.segSelected.has(tagId);
+        html += `<button class="chip ${on?'on':''}" data-tag="${tagId}">${escapeHtml(c.name)}</button>`;
+      });
+      html += `</div></div>`;
+    }
     // キャンペーン別 (実装済み acquisition タグ)
     if (state.campaigns.length) {
       html += `<div class="filter-group"><h4>獲得キャンペーン</h4><div class="chips-row">`;
@@ -925,6 +1018,14 @@
       <button class="chip ${state.segSelected.has('pref_web')?'on':''}"   data-tag="pref_web">自社EC派</button>
     </div></div>`;
     document.getElementById('segFilters').innerHTML = html;
+    // 送信元アカウント セレクターも同期
+    const src = document.getElementById('bcSourceCh');
+    if (src) {
+      src.innerHTML = '<option value="">(すべてのアカウント / 自動判定)</option>' + state.channels.map(c =>
+        `<option value="${c.id}" ${state.bcSourceChannelId === c.id ? 'selected' : ''}>${escapeHtml(c.name)} (${(c.friends || 0).toLocaleString('ja-JP')}名)</option>`
+      ).join('');
+      src.onchange = () => { state.bcSourceChannelId = src.value; renderSegPreview(); };
+    }
     document.querySelectorAll('[data-tag]').forEach(b => b.addEventListener('click', () => {
       const t = b.dataset.tag;
       if (state.segSelected.has(t)) state.segSelected.delete(t);
@@ -958,6 +1059,7 @@
         title: document.getElementById('bcTitle').value || '手動配信',
         body:  document.getElementById('bcBody').value,
         segmentTags: [...state.segSelected],
+        sourceChannelId: state.bcSourceChannelId || null,
       });
       const label = r.targetCount != null ? `${r.targetCount}名に配信しました` : '配信キューに登録しました';
       toast(label, 'ok');
@@ -968,6 +1070,135 @@
       btn.disabled = false; btn.textContent = original;
     }
   });
+
+  /* ─── Channels (公式LINEアカウント統合) ─── */
+  function renderChannels() {
+    const cs = state.channels;
+    if (!cs.length) {
+      document.getElementById('chanGrid').innerHTML = `<div class="empty" style="grid-column: 1/-1;"><h3>公式アカウントはまだ登録されていません</h3><p>右上の「アカウントを追加」から登録できます。</p></div>`;
+      document.getElementById('chanSummary').innerHTML = '';
+      return;
+    }
+    // サマリー (アカ合算)
+    const totalFriends = cs.reduce((s, c) => s + (c.friends || 0), 0);
+    const totalAcquired = cs.reduce((s, c) => s + (c.stats?.acquired || 0), 0);
+    const totalOrders = cs.reduce((s, c) => s + (c.stats?.orders || 0), 0);
+    const totalRevenue = cs.reduce((s, c) => s + (c.stats?.revenue || 0), 0);
+    document.getElementById('chanSummary').innerHTML = `
+      <div class="kpi">
+        <div class="head"><div class="k">アカウント数</div></div>
+        <div class="v">${cs.length}<span class="u">本</span></div>
+        <div class="diff up">全て 1画面で統合管理</div>
+      </div>
+      <div class="kpi">
+        <div class="head"><div class="k">合計友達数</div></div>
+        <div class="v">${totalFriends.toLocaleString('ja-JP')}</div>
+        <div class="diff up">4アカ横断</div>
+      </div>
+      <div class="kpi">
+        <div class="head"><div class="k">アカ経由売上</div></div>
+        <div class="v">${fmt.yenShort(totalRevenue)}</div>
+        <div class="diff up">${totalOrders.toLocaleString('ja-JP')}件</div>
+      </div>
+      <div class="kpi">
+        <div class="head"><div class="k">アカ経由 獲得顧客</div></div>
+        <div class="v">${totalAcquired.toLocaleString('ja-JP')}<span class="u">名</span></div>
+        <div class="diff up">seed実データ</div>
+      </div>
+    `;
+
+    document.getElementById('chanGrid').innerHTML = cs.map(c => {
+      const kind = CHANNEL_KIND[c.kind?.toUpperCase()] || { label: c.kind };
+      const status = CHANNEL_STATUS[c.status?.toUpperCase()] || { label: c.status };
+      const s = c.stats || {};
+      const webhookUrl = `${location.origin}${location.pathname.replace(/\/admin\/.*$/, '')}/api/lineWebhook?tenant=${cfg.tenantId}&channel=${c.id}`;
+      return `
+        <div class="chan">
+          <div class="head-row">
+            <div class="avatar ${c.kind}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div style="flex:1;">
+              <h3>${escapeHtml(c.name)}</h3>
+              <div class="basic-id">${escapeHtml(c.basicId || '')}</div>
+            </div>
+            <span class="kind-badge">${kind.label}</span>
+            <span class="status-badge ${c.status}">${status.label}</span>
+          </div>
+          <div class="desc">${escapeHtml(c.description || '')}</div>
+          <div class="kpis">
+            <div><div class="k">友達数</div><div class="v">${(c.friends || 0).toLocaleString('ja-JP')}</div></div>
+            <div><div class="k">獲得</div><div class="v">${(s.acquired || 0).toLocaleString('ja-JP')}名</div></div>
+            <div><div class="k">売上</div><div class="v">${fmt.yenShort(s.revenue || 0)}</div></div>
+            <div><div class="k">LTV平均</div><div class="v">${s.avgLtv ? fmt.yenShort(s.avgLtv) : '—'}</div></div>
+          </div>
+          <div class="webhook">
+            <strong>Webhook URL:</strong><br>
+            ${webhookUrl}
+          </div>
+          <div class="btns">
+            <button class="btn btn-outline" data-chan-edit="${c.id}">設定編集</button>
+            <button class="btn btn-outline" data-chan-copy-wh="${c.id}">Webhook コピー</button>
+            <button class="btn btn-ghost" data-chan-toggle="${c.id}" data-next="${c.status === 'active' ? 'paused' : 'active'}">${c.status === 'active' ? '一時停止' : '再開'}</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    document.querySelectorAll('[data-chan-edit]').forEach(b => b.addEventListener('click', () => openChannelModal(b.dataset.chanEdit)));
+    document.querySelectorAll('[data-chan-copy-wh]').forEach(b => b.addEventListener('click', () => {
+      const c = state.channels.find(x => x.id === b.dataset.chanCopyWh);
+      const url = `${location.origin}${location.pathname.replace(/\/admin\/.*$/, '')}/api/lineWebhook?tenant=${cfg.tenantId}&channel=${c.id}`;
+      navigator.clipboard?.writeText(url).then(() => toast('Webhook URLをコピーしました', 'ok'));
+    }));
+    document.querySelectorAll('[data-chan-toggle]').forEach(b => b.addEventListener('click', async () => {
+      await db.update('channels', b.dataset.chanToggle, { status: b.dataset.next });
+      toast(b.dataset.next === 'active' ? 'アカウントを再開しました' : '一時停止しました', 'ok');
+    }));
+  }
+
+  function openChannelModal(chid) {
+    const c = chid ? state.channels.find(x => x.id === chid)
+      : { id: '', name: '', kind: 'sales', status: 'active', basicId: '', channelSecret: '', channelAccessToken: '', description: '' };
+    if (!c) return;
+    const kinds = Object.values(CHANNEL_KIND).map(k => `<option value="${k.id}" ${c.kind === k.id ? 'selected' : ''}>${k.label}</option>`).join('');
+    const stats = Object.values(CHANNEL_STATUS).map(s => `<option value="${s.id}" ${c.status === s.id ? 'selected' : ''}>${s.label}</option>`).join('');
+    const m = openModal(`
+      <div class="modal-title">
+        <h2>${chid ? 'アカウント設定編集' : '新規アカウント登録'}</h2>
+        <button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="field"><label>アカウント名</label><input class="input" id="chName" value="${escapeAttr(c.name)}" placeholder="例: サン・クロレラ 営業部"></div>
+      <div class="field"><label>ベーシックID</label><input class="input" id="chBasic" value="${escapeAttr(c.basicId || '')}" placeholder="@sunchlorella-xxx"></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="field"><label>種類</label><select class="select" id="chKind">${kinds}</select></div>
+        <div class="field"><label>状態</label><select class="select" id="chStatus">${stats}</select></div>
+      </div>
+      <div class="field"><label>Channel Secret</label><input class="input" id="chSecret" value="${escapeAttr(c.channelSecret || '')}" placeholder="LINE Developers Console で発行"></div>
+      <div class="field"><label>Channel Access Token</label><input class="input" id="chToken" value="${escapeAttr(c.channelAccessToken || '')}" placeholder="長期トークンを推奨"></div>
+      <div class="field"><label>Rich Menu ID</label><input class="input" id="chRichMenu" value="${escapeAttr(c.richMenuId || '')}" placeholder="richmenu-xxxxxxxx"></div>
+      <div class="field"><label>用途メモ</label><textarea class="textarea" id="chDesc">${escapeHtml(c.description || '')}</textarea></div>
+      <button class="btn btn-primary" id="btnSaveChan" style="width:100%;">保存する</button>
+    `, { wide: true });
+    m.querySelector('#btnSaveChan').addEventListener('click', async () => {
+      const id = c.id || 'ch_' + Date.now().toString(36);
+      const payload = {
+        id, name: m.querySelector('#chName').value.trim() || '(無題)',
+        basicId: m.querySelector('#chBasic').value.trim(),
+        kind: m.querySelector('#chKind').value,
+        status: m.querySelector('#chStatus').value,
+        channelSecret: m.querySelector('#chSecret').value.trim(),
+        channelAccessToken: m.querySelector('#chToken').value.trim(),
+        richMenuId: m.querySelector('#chRichMenu').value.trim(),
+        description: m.querySelector('#chDesc').value,
+        ...(chid ? {} : { friends: 0, stats: { acquired: 0, orders: 0, revenue: 0, avgLtv: 0 }, createdAt: Date.now() }),
+      };
+      await db.set('channels', id, payload);
+      closeModal();
+      toast(chid ? 'アカウント設定を更新しました' : 'アカウントを登録しました', 'ok');
+    });
+  }
+  document.getElementById('btnNewChan').addEventListener('click', () => openChannelModal(null));
 
   /* ─── Campaigns ─── */
   function renderCampaigns() {
@@ -1239,6 +1470,7 @@
     renderSegFilters();
     renderBcLog();
     renderCampaigns();
+    renderChannels();
   }
 
   const h = location.hash.slice(1);

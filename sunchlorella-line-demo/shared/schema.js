@@ -104,6 +104,22 @@ export const BROADCAST_KIND = {
   AUTO_SUB_REMIND: { id: 'auto_sub_remind', label: '自動: 定期便お届け前' },
 };
 
+/* ─── 公式LINEアカウント (channels) ─── */
+export const CHANNEL_KIND = {
+  SALES:   { id: 'sales',   label: '営業・受注' },
+  CS:      { id: 'cs',      label: 'カスタマーサポート' },
+  SUB:     { id: 'sub',     label: '定期便お知らせ' },
+  EVENT:   { id: 'event',   label: 'イベント・キャンペーン' },
+  MARKETING:{ id: 'marketing', label: 'マーケティング配信' },
+  OTHER:   { id: 'other',   label: 'その他' },
+};
+
+export const CHANNEL_STATUS = {
+  ACTIVE:  { id: 'active',  label: '稼働中' },
+  PAUSED:  { id: 'paused',  label: '一時停止' },
+  ARCHIVED:{ id: 'archived',label: 'アーカイブ (統合済)' },
+};
+
 /* ─── キャンペーン (attribution) ─── */
 export const CAMPAIGN_KIND = {
   DEFAULT:  { id: 'default',  label: '通常運用' },
@@ -197,6 +213,8 @@ export function autoTags(customer, orders = [], subs = []) {
   productTags.forEach(t => tags.add(t));
   // キャンペーン獲得タグ
   if (customer.acquisitionCampaign) tags.add('camp:' + customer.acquisitionCampaign);
+  // 獲得アカウント (どの公式LINEアカから友達追加されたか)
+  if (customer.acquiredChannel) tags.add('ch:' + customer.acquiredChannel);
   // チャネル選好: 直近3件のうち最頻を「LINE派/訪問派」タグに
   const recent = orders.filter(o => o.customerId === customer.id)
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 3);
@@ -221,6 +239,7 @@ export function filterCustomers(customers, selectedTagIds, orders, subs) {
   selectedTagIds.forEach(t => {
     let g;
     if (t.startsWith('camp:'))       g = 'CAMPAIGN';
+    else if (t.startsWith('ch:'))    g = 'CHANNEL';
     else if (t.startsWith('pref_'))  g = 'PREF';
     else g = groups[t] || 'OTHER';
     if (!byGroup[g]) byGroup[g] = [];

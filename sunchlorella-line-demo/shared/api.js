@@ -84,21 +84,30 @@ export async function sendDirect({ customerId, body, repId }) {
 /**
  * セグメント配信 (LINE multicast)
  */
-export async function sendBroadcast({ title, body, segmentTags = [] }) {
+export async function sendBroadcast({ title, body, segmentTags = [], sourceChannelId = null }) {
   const cfg = getConfig();
   if (cfg.backend === 'firebase') {
-    return callFunction('broadcastSend', { title, body, segmentTags });
+    return callFunction('broadcastSend', { title, body, segmentTags, sourceChannelId });
   }
   const bid = uid('bc');
+  // local: 送信元アカ指定時は そのアカ獲得顧客のみを targetCount 算定
+  let target = 0;
+  const custs = await db.list('customers');
+  target = custs.filter(c => {
+    // 送信元アカ指定時は そのアカ獲得顧客のみ (未紐付け顧客も除外、Cloud Functions と揃える)
+    if (sourceChannelId && c.acquiredChannel !== sourceChannelId) return false;
+    return true;
+  }).length;
   await db.set('broadcasts', bid, {
     id: bid, kind: 'manual', title: title || '手動配信',
-    segment: segmentTags, targetCount: 0,
+    segment: segmentTags, targetCount: target,
     bodyPreview: (body || '').slice(0, 200),
     sentAt: Date.now(),
     openRate: 30 + Math.random() * 25,
     clickRate: 4 + Math.random() * 10,
+    ...(sourceChannelId ? { sourceChannelId } : {}),
   });
-  return { ok: true, broadcastId: bid };
+  return { ok: true, broadcastId: bid, targetCount: target };
 }
 
 /**
