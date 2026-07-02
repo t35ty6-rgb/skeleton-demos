@@ -211,6 +211,89 @@ async function seedAll() {
   ];
   for (const m of msgs) await db.set('messages', m.id, m);
 
+  /* ─── キャンペーン (attribution) ─── */
+  const campaigns = [
+    {
+      id: 'camp_default',
+      name: '通常運用', kind: 'default',
+      status: 'active', priority: 0,
+      startAt: null, endAt: null,
+      richMenuId: 'richmenu-default',
+      tagToApply: null,
+      landingSlug: '',
+      note: '常時稼働。 他キャンペーン期間外はこちらのリッチメニュー。',
+    },
+    {
+      id: 'camp_lakes_home_2607',
+      name: '滋賀レイクス ホーム3連戦', kind: 'sports',
+      status: 'active', priority: 20,
+      startAt: D(1), endAt: D(-3),   // 昨日〜3日後 (デモ)
+      richMenuId: 'richmenu-basketball',
+      tagToApply: 'src_lakes_home_2607',
+      landingSlug: 'lakes-home',
+      note: 'ウカルちゃんアリーナ での ホーム試合3連戦。 会場QR + LINE友達1000名限定 ¥500 OFF。',
+    },
+    {
+      id: 'camp_expo_kansai',
+      name: '大阪・関西万博 出展', kind: 'expo',
+      status: 'active', priority: 15,
+      startAt: D(21), endAt: D(-90),
+      richMenuId: 'richmenu-expo',
+      tagToApply: 'src_expo_kansai',
+      landingSlug: 'expo-kansai',
+      note: '関西万博 会場QR + 万博限定パッケージ + LINE内 抽選会。',
+    },
+    {
+      id: 'camp_meta_60plus',
+      name: 'Meta広告 60代健康キャンペーン', kind: 'ads',
+      status: 'active', priority: 8,
+      startAt: D(35), endAt: D(-25),
+      richMenuId: 'richmenu-default',
+      tagToApply: 'src_meta_60plus',
+      landingSlug: 'health60',
+      note: 'Instagram 60代健康関心層 ターゲティング広告。 動画クリエイティブ3本 A/B。',
+    },
+  ];
+  for (const c of campaigns) await db.set('campaigns', c.id, c);
+
+  // キャンペーン獲得: 一部の 顧客に acquisitionCampaign を付与
+  const campAttr = [
+    ['cust_matsumoto', 'camp_lakes_home_2607'],
+    ['cust_saito',     'camp_lakes_home_2607'],
+    ['cust_hattori',   'camp_expo_kansai'],
+    ['cust_maeda',     'camp_meta_60plus'],
+    ['cust_ozawa',     'camp_meta_60plus'],
+  ];
+  for (const [cid, cmp] of campAttr) {
+    const c = await db.get('customers', cid);
+    if (c) await db.set('customers', cid, { ...c, acquisitionCampaign: cmp });
+  }
+  // 受注 の attribution.campaignId を 該当顧客の 全受注に付与
+  for (const [cid, cmp] of campAttr) {
+    const list = await db.list('orders', { where: { customerId: cid } });
+    for (const o of list) await db.set('orders', o.id, { ...o, attribution: { campaignId: cmp } });
+  }
+
+  // campaigns.stats を 初期集計 (以降の Cloud Functions で自動加算されるが 初期表示のため)
+  const allCustomers = await db.list('customers');
+  const allOrders    = await db.list('orders');
+  for (const cp of campaigns) {
+    const acquiredCustomers = allCustomers.filter(c => c.acquisitionCampaign === cp.id);
+    const acquiredIds = new Set(acquiredCustomers.map(c => c.id));
+    const attrOrders  = allOrders.filter(o => o.attribution?.campaignId === cp.id || acquiredIds.has(o.customerId));
+    const revenue     = attrOrders.reduce((s, o) => s + (o.total || 0), 0);
+    await db.set('campaigns', cp.id, {
+      ...cp,
+      stats: {
+        acquired: acquiredCustomers.length,
+        orders:   attrOrders.length,
+        revenue,
+        lastAcquiredAt: acquiredCustomers.length ? Math.max(...acquiredCustomers.map(c => c.createdAt || 0)) : null,
+        lastOrderAt:    attrOrders.length        ? Math.max(...attrOrders.map(o => o.createdAt || 0))        : null,
+      },
+    });
+  }
+
   /* ─── テナント設定 ─── */
   await db.set('settings', 'tenant', {
     id: 'tenant',

@@ -104,6 +104,23 @@ export const BROADCAST_KIND = {
   AUTO_SUB_REMIND: { id: 'auto_sub_remind', label: '自動: 定期便お届け前' },
 };
 
+/* ─── キャンペーン (attribution) ─── */
+export const CAMPAIGN_KIND = {
+  DEFAULT:  { id: 'default',  label: '通常運用' },
+  SPORTS:   { id: 'sports',   label: 'スポーツ協賛 (試合会場)' },
+  EXPO:     { id: 'expo',     label: '博覧会・イベント' },
+  RETAIL:   { id: 'retail',   label: '実店舗・催事' },
+  ADS:      { id: 'ads',      label: '広告 (Web / SNS)' },
+  PARTNER:  { id: 'partner',  label: '協業・タイアップ' },
+};
+
+export const CAMPAIGN_STATUS = {
+  SCHEDULED: { id: 'scheduled', label: '予定' },
+  ACTIVE:    { id: 'active',    label: '実施中' },
+  ENDED:     { id: 'ended',     label: '終了' },
+  PAUSED:    { id: 'paused',    label: '一時停止' },
+};
+
 /* ─── 支払方法 ─── */
 export const PAYMENT_METHODS = {
   LINEPAY:  { id: 'linepay',  label: 'LINE Pay' },
@@ -129,6 +146,25 @@ export function autoRank(customer) {
   if ((customer.ltv || 0) >= 200000 && daysSinceLast <= 45) return 'A';
   if ((customer.orderCount || 0) >= 3) return 'B';
   return 'C';
+}
+
+/* ─── ヘルパー: キャンペーン期間中か判定 ─── */
+export function isCampaignActive(campaign, at = Date.now()) {
+  if (!campaign) return false;
+  if (campaign.status === 'ended' || campaign.status === 'paused') return false;
+  if (campaign.startAt && at < campaign.startAt) return false;
+  if (campaign.endAt && at > campaign.endAt) return false;
+  return true;
+}
+
+/* ─── ヘルパー: 「いま流す」べきリッチメニュー ID (試合日はスポーツ、それ以外は default) ─── */
+export function currentRichMenuId(campaigns, at = Date.now()) {
+  const ordered = [...campaigns].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+  for (const c of ordered) {
+    if (isCampaignActive(c, at) && c.richMenuId) return { campaignId: c.id, richMenuId: c.richMenuId };
+  }
+  const def = campaigns.find(c => c.kind === 'default');
+  return def?.richMenuId ? { campaignId: def.id, richMenuId: def.richMenuId } : null;
 }
 
 /* ─── ヘルパー: 顧客が属するタグ一覧を自動算出 ─── */
@@ -159,6 +195,17 @@ export function autoTags(customer, orders = [], subs = []) {
     if (i.tag) productTags.add(i.tag);
   }));
   productTags.forEach(t => tags.add(t));
+  // キャンペーン獲得タグ
+  if (customer.acquisitionCampaign) tags.add('camp:' + customer.acquisitionCampaign);
+  // チャネル選好: 直近3件のうち最頻を「LINE派/訪問派」タグに
+  const recent = orders.filter(o => o.customerId === customer.id)
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 3);
+  if (recent.length >= 2) {
+    const count = { visit: 0, line: 0, web: 0, phone: 0 };
+    recent.forEach(o => { count[o.channel] = (count[o.channel] || 0) + 1; });
+    const top = Object.entries(count).sort((a, b) => b[1] - a[1])[0];
+    if (top && top[1] >= 2) tags.add('pref_' + top[0]);
+  }
   return [...tags];
 }
 
@@ -172,7 +219,10 @@ export function filterCustomers(customers, selectedTagIds, orders, subs) {
   }));
   const byGroup = {};
   selectedTagIds.forEach(t => {
-    const g = groups[t];
+    let g;
+    if (t.startsWith('camp:'))       g = 'CAMPAIGN';
+    else if (t.startsWith('pref_'))  g = 'PREF';
+    else g = groups[t] || 'OTHER';
     if (!byGroup[g]) byGroup[g] = [];
     byGroup[g].push(t);
   });

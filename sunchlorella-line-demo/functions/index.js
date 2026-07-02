@@ -273,10 +273,14 @@ exports.bindLineUser = onRequest({ secrets: [LIFF_CHANNEL_ID] }, async (req, res
   const liff = await verifyLiffToken(req);
   if (!liff) return fail(res, 401, 'LIFF ID Token 必須');
   const lineUserId = liff.lineUserId;
-  const { displayName, ref } = req.body || {};
+  const { displayName, ref, campaign, utmSource, utmMedium, utmCampaign } = req.body || {};
   const snap = await db.collection(tenantPath(tid, 'customers'))
     .where('lineUserId', '==', lineUserId).limit(1).get();
   let cid;
+  const acquisition = campaign ? {
+    acquisitionCampaign: campaign,
+    acquisitionUtm: { source: utmSource || null, medium: utmMedium || null, campaign: utmCampaign || null },
+  } : {};
   if (snap.empty) {
     cid = 'c_' + crypto.randomBytes(6).toString('hex');
     await db.doc(tenantPath(tid, 'customers', cid)).set({
@@ -285,12 +289,34 @@ exports.bindLineUser = onRequest({ secrets: [LIFF_CHANNEL_ID] }, async (req, res
       createdAt: Date.now(), lastVisitAt: null,
       orderCount: 0, ltv: 0, tags: ['new'],
       note: ref ? `販売員 ${ref} 経由で友だち追加` : '',
+      ...acquisition,
     });
+    // キャンペーン stats 更新 (新規獲得+1) — 既存 orders/revenue を保持
+    if (campaign) {
+      const cRef = db.doc(tenantPath(tid, 'campaigns', campaign));
+      const cSnap = await cRef.get();
+      if (cSnap.exists) {
+        const s = cSnap.data().stats || {};
+        await cRef.set({
+          stats: {
+            ...s,
+            acquired: (s.acquired || 0) + 1,
+            lastAcquiredAt: Date.now(),
+          },
+        }, { merge: true });
+      }
+    }
   } else {
     cid = snap.docs[0].id;
+    const cur = snap.docs[0].data();
     const patch = { updatedAt: Date.now() };
-    // repId 上書き禁止 (既存担当が居るなら維持)
-    if (!snap.docs[0].data().repId && ref) patch.repId = ref;
+    // 既存担当が居るなら repId 上書き禁止
+    if (!cur.repId && ref) patch.repId = ref;
+    // 既存キャンペーンが居るなら 上書き禁止 (最初に獲得したキャンペーンが「acquisition」)
+    if (!cur.acquisitionCampaign && campaign) {
+      patch.acquisitionCampaign = campaign;
+      patch.acquisitionUtm = acquisition.acquisitionUtm;
+    }
     if (displayName) patch.displayName = displayName;
     await db.doc(tenantPath(tid, 'customers', cid)).set(patch, { merge: true });
   }
@@ -307,7 +333,7 @@ exports.recordOrder = onRequest({ secrets: [STRIPE_SECRET_KEY] }, async (req, re
   const claims = await requireAdminOrRep(req, res);
   if (!claims) return;
   const tid = claims.tenantId;
-  const { customerId, items, paymentMethod = 'linepay', channel = 'visit' } = req.body || {};
+  const { customerId, items, paymentMethod = 'linepay', channel = 'visit', attribution = null } = req.body || {};
   if (!customerId || !Array.isArray(items) || !items.length) {
     return fail(res, 400, 'customerId / items 必須');
   }
@@ -318,13 +344,38 @@ exports.recordOrder = onRequest({ secrets: [STRIPE_SECRET_KEY] }, async (req, re
   if (!cSnap.exists) return fail(res, 404, '顧客が見つかりません');
   const customer = cSnap.data();
 
+  // 受注の attribution — 明示指定がなければ 顧客の 獲得キャンペーン を継承
+  const orderAttribution = attribution?.campaign
+    ? { campaignId: attribution.campaign, ref: attribution.ref || null, utm: {
+        source: attribution.utmSource || null, medium: attribution.utmMedium || null, campaign: attribution.utmCampaign || null,
+      } }
+    : (customer.acquisitionCampaign ? { campaignId: customer.acquisitionCampaign, source: 'inherited' } : null);
+
   const oid = 'ord_' + Date.now().toString(36) + '_' + crypto.randomBytes(3).toString('hex');
   const order = {
     id: oid, customerId, repId: claims.role === 'rep' ? claims.repId : (req.body.repId || null),
     channel, items, total, paymentMethod, status: 'pending_payment',
     createdAt: Date.now(),
+    ...(orderAttribution ? { attribution: orderAttribution } : {}),
   };
   await db.doc(tenantPath(tid, 'orders', oid)).set(order);
+
+  // キャンペーン stats — 売上/受注件数を積む
+  if (orderAttribution?.campaignId) {
+    const cRef = db.doc(tenantPath(tid, 'campaigns', orderAttribution.campaignId));
+    const cs = await cRef.get();
+    if (cs.exists) {
+      const s = cs.data().stats || {};
+      await cRef.set({
+        stats: {
+          ...s,
+          orders: (s.orders || 0) + 1,
+          revenue: (s.revenue || 0) + total,
+          lastOrderAt: Date.now(),
+        },
+      }, { merge: true });
+    }
+  }
 
   // 顧客サマリ更新
   await db.doc(tenantPath(tid, 'customers', customerId)).set({
@@ -411,12 +462,19 @@ exports.createCheckout = onRequest({ secrets: [STRIPE_SECRET_KEY, LIFF_CHANNEL_I
   if (!tid) return fail(res, 400, 'tenant 必須');
   const liff = await verifyLiffToken(req);
   if (!liff) return fail(res, 401, 'LIFF ID Token 必須');
-  const { items, subscription = false } = req.body || {};
+  const { items, subscription = false, attribution = null } = req.body || {};
   if (!Array.isArray(items) || !items.length) return fail(res, 400, 'items 必須');
   const t = await tenantSettings(tid);
   if (!t?.stripe?.enabled) return fail(res, 400, 'Stripe未設定');
   const customer = await findCustomerByLine(tid, liff.lineUserId);
   if (!customer) return fail(res, 404, '顧客未登録');
+
+  // 受注 attribution — 明示指定がなければ 顧客の 獲得キャンペーン を継承
+  const orderAttribution = attribution?.campaign
+    ? { campaignId: attribution.campaign, ref: attribution.ref || null, utm: {
+        source: attribution.utmSource || null, medium: attribution.utmMedium || null, campaign: attribution.utmCampaign || null,
+      } }
+    : (customer.acquisitionCampaign ? { campaignId: customer.acquisitionCampaign, source: 'inherited' } : null);
 
   // ── 商品価格 は必ず Firestore から取得 (クライアント改竄防止) ──
   const line_items = [];
@@ -459,6 +517,7 @@ exports.createCheckout = onRequest({ secrets: [STRIPE_SECRET_KEY, LIFF_CHANNEL_I
     subscription: !!subscription,
     stripeSessionId: session.id, paymentUrl: session.url,
     status: 'pending_payment', createdAt: Date.now(),
+    ...(orderAttribution ? { attribution: orderAttribution } : {}),
   });
   return res.json({ ok: true, url: session.url, orderId: oid });
 });
@@ -503,13 +562,30 @@ exports.stripeWebhook = onRequest({ secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_
     // 顧客集計 (webhook到達後にサーバー側で確定)
     const custDoc = await db.doc(tenantPath(tenantId, 'customers', customerId)).get();
     const cust    = custDoc.exists ? custDoc.data() : null;
+    const order   = (await db.doc(tenantPath(tenantId, 'orders', orderId)).get()).data();
     if (cust) {
-      const order = (await db.doc(tenantPath(tenantId, 'orders', orderId)).get()).data();
       await db.doc(tenantPath(tenantId, 'customers', customerId)).set({
         orderCount: (cust.orderCount || 0) + 1,
         ltv: (cust.ltv || 0) + (order?.total || 0),
         lastVisitAt: Date.now(),
       }, { merge: true });
+    }
+    // キャンペーン stats
+    const campaignId = order?.attribution?.campaignId;
+    if (campaignId) {
+      const cRef = db.doc(tenantPath(tenantId, 'campaigns', campaignId));
+      const cs = await cRef.get();
+      if (cs.exists) {
+        const s = cs.data().stats || {};
+        await cRef.set({
+          stats: {
+            ...s,
+            orders: (s.orders || 0) + 1,
+            revenue: (s.revenue || 0) + (order?.total || 0),
+            lastOrderAt: Date.now(),
+          },
+        }, { merge: true });
+      }
     }
 
     if (subscription === 'true') {

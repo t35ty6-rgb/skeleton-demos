@@ -23,20 +23,31 @@ function liffToken() {
     : null;
 }
 
+/** sessionStorage の attribution (URL params) を取り出す。 未設定なら null。 */
+function currentAttribution() {
+  if (typeof window === 'undefined' || !window.__sunchlorellaAttr) return null;
+  const a = window.__sunchlorellaAttr();
+  if (!a) return null;
+  const has = a.ref || a.campaign || a.utmSource || a.utmMedium || a.utmCampaign;
+  return has ? a : null;
+}
+
 /**
  * 訪問販売員 受注 (LINE決済リンク付き)
  */
-export async function writeOrder({ customerId, repId, items, paymentMethod = 'linepay', channel = 'visit' }) {
+export async function writeOrder({ customerId, repId, items, paymentMethod = 'linepay', channel = 'visit', attribution = null }) {
   const total = items.reduce((s, i) => s + (i.price|0) * (i.qty|0), 0);
+  const attr = attribution || currentAttribution();
   const cfg = getConfig();
   if (cfg.backend === 'firebase') {
-    return callFunction('recordOrder', { customerId, repId, items, paymentMethod, channel });
+    return callFunction('recordOrder', { customerId, repId, items, paymentMethod, channel, attribution: attr });
   }
   // local
   const oid = uid('ord');
   const order = {
     id: oid, customerId, repId, channel,
     items, total, paymentMethod, status: 'shipped', createdAt: Date.now(),
+    ...(attr ? { attribution: { campaignId: attr.campaign || null, ref: attr.ref || null, utm: { source: attr.utmSource, medium: attr.utmMedium, campaign: attr.utmCampaign } } } : {}),
   };
   await db.set('orders', oid, order);
   const c = await db.get('customers', customerId);
@@ -94,12 +105,13 @@ export async function sendBroadcast({ title, body, segmentTags = [] }) {
  * 顧客 (LIFF) → Stripe Checkout Session 作成
  * @returns { url } リダイレクト先
  */
-export async function createCheckout({ customerId, items, subscription = false }) {
+export async function createCheckout({ customerId, items, subscription = false, attribution = null }) {
+  const attr = attribution || currentAttribution();
   const cfg = getConfig();
   if (cfg.backend === 'firebase') {
     // productId + qty のみを送る (price はサーバー側 Firestore lookup)
     const trimmed = items.map(i => ({ productId: i.productId, qty: i.qty }));
-    return callFunction('createCheckout', { items: trimmed, subscription }, { liffIdToken: liffToken() });
+    return callFunction('createCheckout', { items: trimmed, subscription, attribution: attr }, { liffIdToken: liffToken() });
   }
   const oid = uid('ord');
   const total = items.reduce((s, i) => s + i.price * i.qty, 0);
@@ -107,6 +119,7 @@ export async function createCheckout({ customerId, items, subscription = false }
     id: oid, customerId, channel: 'line', items, total,
     subscription: !!subscription,
     status: 'shipped', createdAt: Date.now(),
+    ...(attr ? { attribution: { campaignId: attr.campaign || null, ref: attr.ref || null, utm: { source: attr.utmSource, medium: attr.utmMedium, campaign: attr.utmCampaign } } } : {}),
   });
   const c = await db.get('customers', customerId);
   if (c) await db.update('customers', customerId, {
@@ -132,10 +145,14 @@ export async function createCheckout({ customerId, items, subscription = false }
 /**
  * LIFF 経由の 顧客紐付け (?ref=販売員ID)
  */
-export async function bindLineCustomer({ displayName, ref }) {
+export async function bindLineCustomer({ displayName, ref, campaign, utmSource, utmMedium, utmCampaign }) {
   const cfg = getConfig();
   if (cfg.backend !== 'firebase') return null;
-  const r = await callFunction('bindLineUser', { displayName, ref }, { liffIdToken: liffToken() });
+  const r = await callFunction(
+    'bindLineUser',
+    { displayName, ref, campaign, utmSource, utmMedium, utmCampaign },
+    { liffIdToken: liffToken() }
+  );
   if (r?.customerId) session.customerId = r.customerId;
   return r;
 }

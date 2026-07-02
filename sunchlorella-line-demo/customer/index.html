@@ -487,16 +487,42 @@
   const cfg = getConfig();
   if (cfg.backend === 'local') await seedIfEmpty();
 
-  // LIFF 起動 (?ref=販売員ID 付き友達追加パラメータを引継ぐ)
+  // URL の attribution パラメータを sessionStorage に保存 (以降のfriend追加/購入 に付与)
+  // ?ref=販売員ID / ?campaign=キャンペーンID / ?utm_source=... など
+  {
+    const p = new URLSearchParams(location.search);
+    const attrKeys = ['ref', 'campaign', 'utm_source', 'utm_medium', 'utm_campaign'];
+    for (const k of attrKeys) {
+      const v = p.get(k);
+      if (v) sessionStorage.setItem('sunchlorella::attr::' + k, v);
+    }
+  }
+  function attrFromSession() {
+    const g = k => sessionStorage.getItem('sunchlorella::attr::' + k);
+    return {
+      ref:       g('ref'),
+      campaign:  g('campaign'),
+      utmSource: g('utm_source'),
+      utmMedium: g('utm_medium'),
+      utmCampaign: g('utm_campaign'),
+    };
+  }
+  window.__sunchlorellaAttr = attrFromSession;
+
+  // LIFF 起動 (?ref=販売員ID / ?campaign=xxx 付き友達追加パラメータを引継ぐ)
   let liffReady = false;
   if (cfg.liff.enabled) {
     try {
       const r = await ensureLiff();
       if (r?.profile?.userId) {
-        const params = new URLSearchParams(location.search);
+        const a = attrFromSession();
         await bindLineCustomer({
           displayName: r.profile.displayName,
-          ref: params.get('ref') || null,
+          ref: a.ref || null,
+          campaign: a.campaign || null,
+          utmSource: a.utmSource || null,
+          utmMedium: a.utmMedium || null,
+          utmCampaign: a.utmCampaign || null,
         });
         liffReady = true;
       }
