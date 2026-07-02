@@ -166,6 +166,15 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 .scan-actions{display:flex;flex-direction:column;gap:10px;max-width:340px;margin:0 auto}
 .scan-hint{margin:0 auto;max-width:340px;font-size:12px;color:oklch(0.75 0.008 70);line-height:1.75;padding:14px 16px;border-left:2px solid var(--red);background:oklch(0.22 0.006 60)}
 .scan-hint b{color:var(--paper);font-weight:700}
+.gps-check{padding:16px 18px 18px;background:oklch(0.22 0.006 60);border:1.5px solid var(--red);margin:0 auto 16px;max-width:340px;border-radius:2px}
+.gps-check.ok{border-color:var(--green)}
+.gps-check .k{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.2em;color:var(--red);text-transform:uppercase;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.gps-check.ok .k{color:var(--green)}
+.gps-check .k::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.gps-check h4{margin:0 0 6px;font-size:14px;font-weight:900;color:var(--paper);letter-spacing:-.005em}
+.gps-check p{margin:0 0 12px;font-size:12px;color:oklch(0.78 0.008 70);line-height:1.7}
+.gps-check .btn-enable{width:100%;padding:12px;background:var(--red);color:var(--paper);border:none;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:.02em;border-radius:2px;font-family:inherit}
+.gps-check .btn-enable:hover{background:var(--red-hi)}
 
 /* ── SPOT LIST (map tab) ── */
 .spot-list{display:grid;grid-template-columns:1fr;gap:10px}
@@ -320,6 +329,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
             <p>カメラを開始してください。ブラウザから権限を求められます。</p>
           </div>
         </div>
+        <div class="gps-check" id="scan-gps-check"></div>
         <div class="scan-actions">
           <button class="btn-primary" id="btn-cam">カメラを開始する <span class="arr">→</span></button>
           <button class="btn-secondary" id="btn-cam-stop" style="display:none">カメラを停止</button>
@@ -542,6 +552,32 @@ function render(){
   renderSpotList();
   renderBook();
   renderPrize();
+  renderScanGpsCheck();
+}
+
+function renderScanGpsCheck(){
+  const el = document.getElementById("scan-gps-check");
+  const btnCam = document.getElementById("btn-cam");
+  if (!el || !btnCam) return;
+  if (simulatedCode){
+    const s = SPOTS.find(x=>x.code===simulatedCode);
+    el.className = "gps-check ok";
+    el.innerHTML = `<span class="k">シミュ · 位置固定中</span><h4>${s.code} ${s.name} 圏内として動作</h4><p>スキャンした QR がこのスポットのものなら押印されます。実端末では右上「シミュ」を OFF にして 実 GPS に戻せます。</p>`;
+    btnCam.disabled = false;
+    return;
+  }
+  if (currentPos){
+    const here = currentInRangeSpot();
+    el.className = "gps-check ok";
+    el.innerHTML = here
+      ? `<span class="k">GPS · 位置取得済</span><h4>${here.name} 圏内 · ${Math.round(distToSpot(here))}m</h4><p>この場所の QR を読み取ると押印されます。</p>`
+      : `<span class="k">GPS · 位置取得済</span><h4>対象スポットの圏外</h4><p>スキャンしても押印は成立しません。150m以内に入ってください。</p>`;
+    btnCam.disabled = false;
+    return;
+  }
+  el.className = "gps-check";
+  el.innerHTML = `<span class="k">GPS · 未取得</span><h4>位置情報を有効にしてください</h4><p>押印には現在地から 150m 以内であることの確認が必要です。GPS が無いと QR を読み取っても押印は成立しません。</p><button class="btn-enable" onclick="tryGeolocation()">位置情報を有効にする</button>`;
+  btnCam.disabled = true;
 }
 
 function renderGps(){
@@ -716,6 +752,12 @@ document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", ()=> 
 
 // ─────────── QR camera ───────────
 async function startCam(){
+  // GPS must be available (or simulated) before scanning
+  if (!simulatedCode && !currentPos){
+    showToast("GPS が必要", "スキャン前に位置情報を有効にしてください", true);
+    tryGeolocation();
+    return;
+  }
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" }, audio:false });
   } catch(e){
