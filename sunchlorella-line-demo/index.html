@@ -1,0 +1,1729 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>サン・クロレラジャパン 様 御中 — LINE統合オペレーションSaaS 御提案デモ</title>
+<meta name="description" content="訪問販売員・LINE公アカ・LIFF EC・本社ダッシュボードを一つに束ねる、健康食品ブランド専用の運用OS。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-body: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+    --font-num:  "Inter", "Noto Sans JP", system-ui, sans-serif;
+
+    /* palette — 深緑基調 (サン・クロレラの深い葉緑) をブランド軸、
+       中高齢向けにコントラスト強め、Absolute bans 全回避 */
+    --bg:        oklch(0.985 0.005 130);        /* 白+ごく僅かに緑ティント */
+    --bg-2:      oklch(0.965 0.010 130);
+    --paper:     #ffffff;
+    --ink:       oklch(0.20 0.010 130);         /* 極濃墨 (本文 vs 白 で 15:1 超) */
+    --ink-2:     oklch(0.34 0.015 130);
+    --ink-3:     oklch(0.48 0.020 130);         /* 4.5:1 確保 (中高齢配慮) */
+    --line:      oklch(0.88 0.015 130);
+    --line-2:    oklch(0.94 0.010 130);
+
+    --leaf:      oklch(0.34 0.075 145);         /* 深緑ブランド軸 #2D5016系 */
+    --leaf-2:    oklch(0.26 0.080 145);         /* さらに濃い */
+    --leaf-3:    oklch(0.58 0.100 145);         /* 明るい葉 */
+    --leaf-4:    oklch(0.95 0.030 145);         /* 極薄い緑バッジ地 */
+
+    --earth:     oklch(0.52 0.110 55);          /* 温かみのある土色 (訪問販売の"体温") */
+    --sun:       oklch(0.72 0.130 75);          /* アクセントの陽光 */
+    --alert:     oklch(0.55 0.180 25);          /* 警告 */
+
+    --line-green: #06c755;                       /* LINE公式色 (客画面のみ) */
+
+    --shadow-1:  0 1px 0 rgba(20,25,15,.04), 0 6px 20px -14px rgba(20,25,15,.20);
+    --shadow-2:  0 2px 0 rgba(20,25,15,.04), 0 24px 48px -28px rgba(20,25,15,.35);
+    --shadow-in: inset 0 1px 0 rgba(255,255,255,.4);
+
+    --r-sm: 6px; --r-md: 10px; --r-lg: 18px; --r-xl: 24px;
+
+    --z-tab: 40; --z-sticky: 50; --z-modal-bg: 100; --z-modal: 110; --z-toast: 120;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 1.75;
+    font-feature-settings: "palt" 1;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    letter-spacing: .01em;
+  }
+  ::selection { background: var(--leaf); color: #fff; }
+
+  a { color: var(--leaf-2); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
+
+  /* ────────── header ────────── */
+  header.site {
+    position: sticky; top: 0; z-index: var(--z-sticky);
+    background: color-mix(in oklab, var(--bg) 88%, transparent);
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav {
+    max-width: 1280px; margin: 0 auto;
+    padding: 14px 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-mark {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: var(--leaf-2); color: #fff;
+    display: grid; place-items: center;
+    font-weight: 900; font-size: 15px; letter-spacing: -.02em;
+    box-shadow: var(--shadow-in), 0 2px 4px rgba(20,25,15,.15);
+  }
+  .brand-mark svg { width: 20px; height: 20px; }
+  .brand-name  { font-weight: 900; font-size: 15px; letter-spacing: -.01em; line-height: 1.2; }
+  .brand-sub   { color: var(--ink-3); font-size: 12px; letter-spacing: .04em; line-height: 1.2; margin-top: 2px; }
+  .tabs {
+    display: inline-flex; gap: 4px; padding: 4px;
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 999px; box-shadow: var(--shadow-1);
+    flex-wrap: wrap;
+  }
+  .tab {
+    appearance: none; border: 0; background: transparent;
+    font: inherit; font-weight: 700;
+    color: var(--ink-3);
+    padding: 10px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color .18s, background .18s;
+    font-size: 13.5px;
+  }
+  .tab[aria-selected="true"] {
+    background: var(--leaf-2); color: #fff;
+  }
+  .tab .dot { display: inline-block; width: 6px; height: 6px; border-radius: 999px; background: currentColor; opacity: .5; margin-right: 8px; vertical-align: 2px; }
+  .nav-meta {
+    font-size: 12px; color: var(--ink-3); text-align: right; line-height: 1.4;
+  }
+  .nav-meta strong { color: var(--ink); font-weight: 800; letter-spacing: .02em; display: block; }
+
+  /* ────────── panels ────────── */
+  .panel { display: none; }
+  .panel[data-active="true"] { display: block; }
+
+  /* ────────── shared components ────────── */
+  .container { max-width: 1240px; margin: 0 auto; padding: 40px 24px 80px; }
+  @media (max-width: 700px) { .container { padding: 28px 16px 60px; } }
+
+  h1, h2, h3, h4 { line-height: 1.3; letter-spacing: -.015em; text-wrap: balance; }
+  h1 { font-size: clamp(28px, 4vw, 44px); font-weight: 900; margin: 0 0 12px; }
+  h2 { font-size: clamp(22px, 2.6vw, 30px); font-weight: 900; margin: 0 0 10px; }
+  h3 { font-size: 18px; font-weight: 800; margin: 0 0 6px; }
+  h4 { font-size: 15px; font-weight: 800; margin: 0 0 4px; letter-spacing: 0; }
+  p  { text-wrap: pretty; max-width: 72ch; }
+
+  .eyebrow {
+    font-size: 12px; letter-spacing: .18em; font-weight: 700;
+    color: var(--leaf-2); text-transform: uppercase;
+    display: inline-block;
+    padding: 4px 10px;
+    background: var(--leaf-4);
+    border-radius: 999px;
+  }
+
+  .lede { font-size: 18px; line-height: 1.85; color: var(--ink-2); max-width: 68ch; }
+
+  section + section { margin-top: 60px; }
+
+  /* ══════════════════════════════════════════════════════════════
+     P: 提案書 パネル
+     ══════════════════════════════════════════════════════════════ */
+  .cover {
+    background:
+      radial-gradient(circle at 90% 10%, oklch(0.95 0.06 145) 0%, transparent 55%),
+      radial-gradient(circle at 10% 90%, oklch(0.94 0.05 75) 0%, transparent 45%),
+      var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    padding: 56px 48px;
+    margin-bottom: 48px;
+    box-shadow: var(--shadow-1);
+  }
+  @media (max-width: 700px) { .cover { padding: 36px 24px; } }
+  .cover .to {
+    color: var(--ink-3); font-size: 13px; letter-spacing: .1em; font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .cover .client {
+    font-size: clamp(26px, 3.4vw, 38px); font-weight: 900; letter-spacing: -.02em;
+    color: var(--ink); margin-bottom: 24px;
+  }
+  .cover .title {
+    font-size: clamp(28px, 4vw, 48px); font-weight: 900; line-height: 1.2; letter-spacing: -.02em;
+    color: var(--leaf-2);
+    margin-bottom: 18px;
+    text-wrap: balance;
+  }
+  .cover .subtitle {
+    font-size: 17px; color: var(--ink-2); line-height: 1.85; max-width: 62ch;
+    margin-bottom: 32px;
+  }
+  .cover-meta {
+    display: flex; gap: 32px; flex-wrap: wrap;
+    padding-top: 24px; border-top: 1px dashed var(--line);
+    color: var(--ink-3); font-size: 13px;
+  }
+  .cover-meta > div strong { display: block; color: var(--ink); font-weight: 800; margin-top: 2px; font-size: 14px; }
+
+  /* 現状の課題 6項目 */
+  .problems {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px; margin-top: 24px;
+  }
+  .problem {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 24px 22px;
+    display: flex; flex-direction: column; gap: 10px;
+    transition: transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s;
+  }
+  .problem:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+  .problem .num {
+    font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums;
+    font-size: 13px; color: var(--earth); letter-spacing: .08em;
+  }
+  .problem h3 { margin: 0; font-size: 17px; letter-spacing: -.01em; }
+  .problem p  { margin: 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.7; }
+  .problem .tag {
+    align-self: flex-start;
+    background: oklch(0.96 0.03 25); color: var(--alert);
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    letter-spacing: .04em; margin-top: 4px;
+  }
+
+  /* 解決4本柱 */
+  .pillars {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px; margin-top: 28px;
+  }
+  .pillar {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 28px 26px;
+    display: flex; flex-direction: column; gap: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .pillar::after {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 4px;
+    background: linear-gradient(90deg, var(--leaf-2), var(--leaf-3));
+  }
+  .pillar .icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--leaf-4); color: var(--leaf-2);
+    display: grid; place-items: center;
+    margin-bottom: 6px;
+  }
+  .pillar .icon svg { width: 24px; height: 24px; }
+  .pillar h3 { margin: 0; font-size: 19px; }
+  .pillar .desc { color: var(--ink-2); font-size: 14.5px; line-height: 1.75; }
+  .pillar ul { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 14px; }
+  .pillar ul li { margin-bottom: 6px; }
+  .pillar ul li::marker { color: var(--leaf-3); }
+
+  /* 期待効果 */
+  .effects {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px; margin-top: 24px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 24px;
+  }
+  .effect {
+    padding: 16px 18px;
+    border-right: 1px solid var(--line-2);
+  }
+  .effect:last-child { border-right: 0; }
+  @media (max-width: 900px) { .effect { border-right: 0; border-bottom: 1px solid var(--line-2); } }
+  .effect .label { font-size: 12.5px; color: var(--ink-3); font-weight: 600; margin-bottom: 6px; }
+  .effect .value {
+    font-family: var(--font-num); font-weight: 700; font-size: 30px;
+    color: var(--leaf-2); letter-spacing: -.02em; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .effect .value sub { font-size: 14px; color: var(--ink-3); font-weight: 500; margin-left: 4px; }
+  .effect .note { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
+
+  /* Phase テーブル */
+  .phase-table {
+    width: 100%;
+    border-collapse: separate; border-spacing: 0;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    margin-top: 24px;
+    font-size: 14.5px;
+  }
+  .phase-table th, .phase-table td {
+    padding: 16px 18px; text-align: left;
+    border-bottom: 1px solid var(--line-2);
+    vertical-align: top;
+  }
+  .phase-table thead th {
+    background: var(--bg-2); font-weight: 800; font-size: 13px;
+    color: var(--ink-2); letter-spacing: .04em;
+  }
+  .phase-table tbody tr:last-child td { border-bottom: 0; }
+  .phase-table td strong { color: var(--leaf-2); font-weight: 800; }
+  .phase-table .p-label {
+    display: inline-block; padding: 4px 10px; border-radius: 6px;
+    background: var(--leaf-4); color: var(--leaf-2);
+    font-weight: 800; font-size: 12px; letter-spacing: .04em;
+  }
+
+  /* 料金 */
+  .pricing {
+    display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px;
+    margin-top: 28px;
+  }
+  @media (max-width: 800px) { .pricing { grid-template-columns: 1fr; } }
+  .price-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 32px 28px;
+  }
+  .price-card.headline {
+    background: var(--leaf-2); color: #fff;
+    border-color: var(--leaf-2);
+  }
+  .price-card.headline h3 { color: #fff; }
+  .price-card h3 { margin: 0 0 4px; font-size: 15px; letter-spacing: .04em; font-weight: 700; opacity: .85; }
+  .price-card .amount {
+    font-family: var(--font-num); font-weight: 700;
+    font-size: clamp(32px, 4vw, 48px); line-height: 1.1; letter-spacing: -.02em;
+    margin: 10px 0 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .price-card .amount .yen { font-size: .55em; font-weight: 600; margin-right: 4px; }
+  .price-card .amount .unit { font-size: .42em; color: rgba(255,255,255,.7); font-weight: 500; margin-left: 6px; }
+  .price-card.subtle .amount .unit { color: var(--ink-3); }
+  .price-card ul { list-style: none; padding: 0; margin: 18px 0 0; font-size: 14px; }
+  .price-card ul li { padding: 6px 0; display: flex; gap: 10px; }
+  .price-card ul li::before { content: "✓"; font-weight: 700; color: currentColor; opacity: .7; }
+  .price-card.headline ul li::before { color: var(--leaf-3); opacity: 1; }
+  .price-card .note { font-size: 12px; margin-top: 20px; opacity: .75; line-height: 1.6; }
+
+  /* Section title */
+  .stitle { margin-bottom: 24px; }
+  .stitle .num {
+    font-family: var(--font-num); font-weight: 700; font-size: 13px;
+    color: var(--leaf-3); letter-spacing: .1em; margin-bottom: 4px;
+    display: block;
+  }
+  .stitle h2 { margin-bottom: 8px; }
+  .stitle p { color: var(--ink-2); font-size: 15px; margin: 0; }
+
+  /* ══════════════════════════════════════════════════════════════
+     S: 訪問販売員 スマホ画面
+     ══════════════════════════════════════════════════════════════ */
+  .device-stage {
+    display: grid; grid-template-columns: 1.3fr 1fr; gap: 40px; align-items: start;
+  }
+  @media (max-width: 900px) { .device-stage { grid-template-columns: 1fr; } }
+
+  .device-explainer h2 { margin-bottom: 12px; }
+  .device-explainer .lede { margin-bottom: 24px; }
+  .device-explainer .features {
+    display: grid; gap: 14px; margin-top: 24px;
+  }
+  .device-explainer .feature {
+    display: grid; grid-template-columns: 40px 1fr; gap: 14px;
+    padding: 16px; border: 1px solid var(--line); background: var(--paper);
+    border-radius: var(--r-md);
+  }
+  .device-explainer .feature .icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--leaf-4); color: var(--leaf-2);
+    display: grid; place-items: center;
+  }
+  .device-explainer .feature .icon svg { width: 20px; height: 20px; }
+  .device-explainer .feature h4 { margin-bottom: 2px; }
+  .device-explainer .feature p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+
+  /* iPhone frame */
+  .phone {
+    justify-self: center;
+    width: 360px; max-width: 100%;
+    background: #111;
+    border-radius: 44px;
+    padding: 12px;
+    box-shadow: 0 30px 60px -20px rgba(20,25,15,.4), 0 8px 20px rgba(20,25,15,.15);
+    position: relative;
+  }
+  .phone::before {
+    content: ""; position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
+    width: 100px; height: 26px; background: #000; border-radius: 999px; z-index: 5;
+  }
+  .phone-screen {
+    background: var(--bg-2);
+    border-radius: 32px;
+    overflow: hidden;
+    height: 720px;
+    display: flex; flex-direction: column;
+  }
+  .phone-status {
+    height: 44px; padding: 12px 24px 0;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; font-weight: 700; color: var(--ink);
+  }
+  .phone-status .right {
+    display: inline-flex; gap: 6px; align-items: center;
+  }
+  .phone-body { flex: 1; overflow-y: auto; padding: 20px 18px 90px; }
+  .phone-body::-webkit-scrollbar { width: 4px; }
+  .phone-body::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+  /* Rep app content */
+  .rep-header {
+    background: linear-gradient(135deg, var(--leaf-2), var(--leaf) 70%);
+    color: #fff;
+    margin: -20px -18px 20px;
+    padding: 30px 22px 24px;
+    border-radius: 0 0 24px 24px;
+  }
+  .rep-header .hello { font-size: 12.5px; opacity: .8; margin-bottom: 4px; letter-spacing: .04em; }
+  .rep-header .rep-name { font-size: 20px; font-weight: 900; letter-spacing: -.01em; }
+  .rep-header .office { font-size: 12.5px; opacity: .85; margin-top: 2px; }
+  .rep-header .metrics {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px;
+    padding-top: 18px; border-top: 1px solid rgba(255,255,255,.2);
+  }
+  .rep-header .metrics > div .k { font-size: 10.5px; opacity: .78; margin-bottom: 3px; letter-spacing: .04em; }
+  .rep-header .metrics > div .v {
+    font-family: var(--font-num); font-weight: 700; font-size: 18px; letter-spacing: -.01em;
+    font-variant-numeric: tabular-nums;
+  }
+  .rep-header .metrics > div .v sub { font-size: 10px; font-weight: 500; opacity: .78; margin-left: 3px; }
+
+  .rep-section-title {
+    font-size: 12.5px; font-weight: 800; color: var(--ink-3);
+    letter-spacing: .06em; margin: 8px 0 8px 4px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .rep-section-title .more { color: var(--leaf-2); font-weight: 700; text-decoration: none; font-size: 12px; }
+
+  .rep-visit {
+    background: var(--paper);
+    border-radius: var(--r-md);
+    padding: 14px 14px 12px;
+    margin-bottom: 8px;
+    box-shadow: var(--shadow-1);
+    display: grid; grid-template-columns: 46px 1fr auto; gap: 12px; align-items: center;
+  }
+  .rep-visit .time {
+    background: var(--leaf-4); color: var(--leaf-2);
+    border-radius: 8px; text-align: center; padding: 6px 4px;
+    font-family: var(--font-num); font-weight: 700; line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .rep-visit .time .hh { display: block; font-size: 15px; }
+  .rep-visit .time .mm { display: block; font-size: 10px; opacity: .7; }
+  .rep-visit .info .name { font-size: 14.5px; font-weight: 800; letter-spacing: -.01em; }
+  .rep-visit .info .last {
+    font-size: 11.5px; color: var(--ink-3); margin-top: 2px;
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .rep-visit .info .last span { display: inline-flex; align-items: center; gap: 3px; }
+  .rep-visit .chev { color: var(--ink-3); }
+
+  .rep-quick {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    margin: 20px 0 16px;
+  }
+  .rep-quick button {
+    appearance: none; border: 1px solid var(--line); background: var(--paper);
+    border-radius: 14px; padding: 12px 4px 10px; font: inherit;
+    display: flex; flex-direction: column; gap: 4px; align-items: center;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s, background .15s;
+    color: var(--ink);
+    text-align: center;
+  }
+  .rep-quick button:hover { transform: translateY(-1px); box-shadow: var(--shadow-1); }
+  .rep-quick button.primary { background: var(--leaf-2); color: #fff; border-color: var(--leaf-2); }
+  .rep-quick button .icon { width: 24px; height: 24px; }
+  .rep-quick button .label { font-size: 10.5px; font-weight: 700; letter-spacing: .02em; }
+
+  .rep-customer {
+    background: var(--paper);
+    border-radius: var(--r-md);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    box-shadow: var(--shadow-1);
+    display: grid; grid-template-columns: 38px 1fr auto; gap: 12px; align-items: center;
+  }
+  .rep-customer .avatar {
+    width: 38px; height: 38px; border-radius: 999px;
+    background: linear-gradient(135deg, oklch(0.85 0.05 145), oklch(0.75 0.09 145));
+    color: var(--leaf-2);
+    display: grid; place-items: center; font-weight: 900; font-size: 14px;
+  }
+  .rep-customer .info .name { font-size: 14px; font-weight: 800; }
+  .rep-customer .info .meta {
+    font-size: 11px; color: var(--ink-3); margin-top: 1px;
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .rep-customer .badge {
+    padding: 3px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 800;
+    letter-spacing: .04em;
+  }
+  .rep-customer .badge.A { background: oklch(0.94 0.06 145); color: var(--leaf-2); }
+  .rep-customer .badge.B { background: oklch(0.94 0.04 75); color: oklch(0.4 0.10 75); }
+  .rep-customer .badge.dorm { background: oklch(0.94 0.04 25); color: var(--alert); }
+
+  /* ══════════════════════════════════════════════════════════════
+     L: 客の LINE
+     ══════════════════════════════════════════════════════════════ */
+  .line-header {
+    background: var(--line-green);
+    color: #fff;
+    margin: -20px -18px 0;
+    padding: 12px 18px 14px;
+    display: flex; align-items: center; gap: 12px;
+    border-radius: 0 0 4px 4px;
+  }
+  .line-header .avatar {
+    width: 40px; height: 40px; border-radius: 999px;
+    background: #fff; color: var(--leaf-2);
+    display: grid; place-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,.12);
+  }
+  .line-header .avatar svg { width: 24px; height: 24px; }
+  .line-header .oa-name { font-size: 15px; font-weight: 900; letter-spacing: -.01em; }
+  .line-header .oa-sub { font-size: 11px; opacity: .85; margin-top: 1px; }
+  .line-header .oa-check {
+    background: rgba(255,255,255,.25); padding: 2px 6px; border-radius: 4px;
+    font-size: 10px; font-weight: 700; margin-left: 6px;
+  }
+
+  .line-chat {
+    padding: 16px 12px 0;
+    background: #7c9fd6 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='2' cy='2' r='1' fill='rgba(255,255,255,0.06)'/></svg>");
+    margin: 0 -18px;
+    min-height: 260px;
+  }
+  .msg-day {
+    text-align: center; color: rgba(255,255,255,.9);
+    font-size: 11px; font-weight: 700; margin: 4px 0 12px;
+    display: flex; align-items: center; gap: 8px; justify-content: center;
+  }
+  .msg-day::before, .msg-day::after {
+    content: ""; height: 1px; flex: 1; background: rgba(255,255,255,.35); max-width: 40px;
+  }
+  .msg-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: flex-end; }
+  .msg-avatar {
+    width: 32px; height: 32px; border-radius: 999px;
+    background: var(--leaf-2); color: #fff;
+    display: grid; place-items: center; font-weight: 800; font-size: 12px;
+    flex-shrink: 0;
+  }
+  .msg-bubble {
+    background: #fff;
+    padding: 10px 12px;
+    border-radius: 4px 14px 14px 14px;
+    max-width: 220px;
+    font-size: 13px; line-height: 1.55;
+    color: var(--ink);
+    box-shadow: 0 1px 1px rgba(0,0,0,.06);
+  }
+  .msg-bubble.rich {
+    padding: 0; overflow: hidden;
+    width: 220px;
+  }
+  .msg-bubble.rich .rimg {
+    height: 110px;
+    background: linear-gradient(135deg, var(--leaf-4), var(--leaf-3));
+    display: grid; place-items: center;
+    color: var(--leaf-2); font-weight: 900; font-size: 20px;
+    letter-spacing: -.02em;
+  }
+  .msg-bubble.rich .rbody { padding: 10px 12px; }
+  .msg-bubble.rich .rtitle { font-weight: 800; font-size: 13px; margin-bottom: 3px; }
+  .msg-bubble.rich .rdesc { font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+  .msg-bubble.rich .rbtn {
+    display: block; text-align: center; margin: 8px 0 0;
+    background: var(--leaf-2); color: #fff; font-size: 12px; font-weight: 800;
+    padding: 9px 10px; border-radius: 8px; text-decoration: none;
+  }
+  .msg-time {
+    font-size: 10px; color: rgba(255,255,255,.85);
+    margin-left: 4px; white-space: nowrap; margin-bottom: 2px;
+  }
+  .msg-row.me { flex-direction: row-reverse; }
+  .msg-row.me .msg-bubble {
+    background: #86ea70; color: var(--ink);
+    border-radius: 14px 4px 14px 14px;
+  }
+
+  /* rich menu */
+  .rich-menu {
+    background: #fff;
+    margin: 0 -18px -80px;
+    padding: 0;
+    border-top: 1px solid var(--line);
+  }
+  .rich-menu-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--line);
+  }
+  .rich-btn {
+    background: linear-gradient(180deg, var(--leaf) 0%, var(--leaf-2) 100%);
+    color: #fff;
+    padding: 20px 8px 16px;
+    text-align: center;
+    cursor: pointer;
+    display: flex; flex-direction: column; gap: 6px; align-items: center;
+    transition: background .18s;
+  }
+  .rich-btn:hover { background: linear-gradient(180deg, var(--leaf-3), var(--leaf)); }
+  .rich-btn svg { width: 28px; height: 28px; }
+  .rich-btn .label { font-size: 11px; font-weight: 800; letter-spacing: .04em; }
+  .rich-btn.accent {
+    background: linear-gradient(180deg, var(--earth) 0%, oklch(0.42 0.10 55) 100%);
+  }
+
+  /* LIFF explainer (right column) */
+  .liff-features {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 28px 26px;
+    margin-top: 20px;
+  }
+  .liff-features h3 { font-size: 17px; margin-bottom: 12px; }
+  .liff-features .checklist {
+    list-style: none; padding: 0; margin: 0; display: grid; gap: 10px;
+  }
+  .liff-features .checklist li {
+    display: grid; grid-template-columns: 24px 1fr; gap: 10px;
+    font-size: 14px; color: var(--ink-2); line-height: 1.65;
+  }
+  .liff-features .checklist li .check {
+    width: 24px; height: 24px; border-radius: 999px;
+    background: var(--leaf-2); color: #fff;
+    display: grid; place-items: center; font-weight: 800; font-size: 12px;
+  }
+  .liff-features .checklist li strong { color: var(--ink); font-weight: 800; }
+
+  /* Flow diagram (訪問→LINE→定期便) */
+  .flow {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+    margin-top: 24px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 24px;
+  }
+  @media (max-width: 800px) { .flow { grid-template-columns: 1fr 1fr; } }
+  .flow-step {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 16px; border-radius: var(--r-md);
+    background: var(--bg-2);
+    position: relative;
+  }
+  .flow-step .n {
+    font-family: var(--font-num); font-weight: 700; font-size: 11px;
+    color: var(--leaf-2); letter-spacing: .08em;
+  }
+  .flow-step h4 { margin: 0; font-size: 14px; }
+  .flow-step p { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.6; max-width: none; }
+
+  /* ══════════════════════════════════════════════════════════════
+     D: 本社ダッシュボード
+     ══════════════════════════════════════════════════════════════ */
+  .dash-header {
+    display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px;
+    margin-bottom: 24px;
+  }
+  .dash-header .info h1 { margin-bottom: 4px; font-size: clamp(24px, 3vw, 32px); }
+  .dash-header .info p  { margin: 0; color: var(--ink-3); font-size: 14px; }
+  .dash-controls {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px; background: var(--paper); border: 1px solid var(--line); border-radius: 999px;
+    box-shadow: var(--shadow-1); font-size: 13px;
+  }
+  .dash-controls .seg {
+    appearance: none; border: 0; background: transparent; font: inherit; font-weight: 700;
+    padding: 8px 16px; border-radius: 999px; cursor: pointer; color: var(--ink-3);
+  }
+  .dash-controls .seg.on { background: var(--leaf-2); color: #fff; }
+
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    margin-bottom: 32px;
+  }
+  @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 500px) { .kpi-grid { grid-template-columns: 1fr; } }
+  .kpi {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 22px 22px 20px;
+    display: flex; flex-direction: column; gap: 4px;
+    box-shadow: var(--shadow-1);
+    position: relative; overflow: hidden;
+  }
+  .kpi .head { display: flex; justify-content: space-between; align-items: center; }
+  .kpi .k {
+    font-size: 12.5px; color: var(--ink-3); font-weight: 700; letter-spacing: .04em;
+  }
+  .kpi .icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--leaf-4); color: var(--leaf-2);
+    display: grid; place-items: center;
+  }
+  .kpi .icon svg { width: 16px; height: 16px; }
+  .kpi .v {
+    font-family: var(--font-num); font-weight: 700;
+    font-size: 30px; letter-spacing: -.02em; line-height: 1.05;
+    color: var(--ink);
+    margin-top: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi .v .yen { font-size: .55em; font-weight: 600; margin-right: 2px; }
+  .kpi .v .u { font-size: .5em; color: var(--ink-3); font-weight: 500; margin-left: 4px; }
+  .kpi .diff {
+    font-size: 12px; margin-top: 2px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi .diff.up { color: var(--leaf-2); }
+  .kpi .diff.down { color: var(--alert); }
+
+  /* Chart card */
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 28px 28px 24px;
+    box-shadow: var(--shadow-1);
+  }
+  .card + .card { margin-top: 24px; }
+  .card > .head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+  .card > .head h3 { margin: 0; font-size: 17px; }
+  .card > .head .sub { font-size: 12.5px; color: var(--ink-3); }
+  .legend { display: inline-flex; gap: 14px; font-size: 12px; color: var(--ink-2); font-weight: 700; flex-wrap: wrap; }
+  .legend .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; vertical-align: 0px; margin-right: 6px; }
+
+  .split { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; margin-top: 24px; }
+  @media (max-width: 1000px) { .split { grid-template-columns: 1fr; } }
+
+  /* Stacked bar chart (hand-drawn SVG in HTML) */
+  .chart-bars {
+    display: grid; grid-template-columns: 80px 1fr 100px; gap: 8px 12px;
+    align-items: center;
+    font-size: 12.5px;
+  }
+  .chart-bars .lbl { color: var(--ink-2); font-weight: 700; }
+  .chart-bars .bar { height: 26px; border-radius: 6px; overflow: hidden; display: flex; background: var(--line-2); }
+  .chart-bars .bar span { display: block; height: 100%; transition: width .4s; }
+  .chart-bars .amt {
+    font-family: var(--font-num); font-weight: 700; text-align: right;
+    color: var(--ink); font-variant-numeric: tabular-nums;
+  }
+
+  /* Ranking table */
+  .rank {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    font-size: 13.5px;
+  }
+  .rank th, .rank td {
+    padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line-2);
+  }
+  .rank thead th { font-size: 11.5px; color: var(--ink-3); font-weight: 700; letter-spacing: .04em; }
+  .rank tbody tr:last-child td { border-bottom: 0; }
+  .rank .num {
+    font-family: var(--font-num); font-variant-numeric: tabular-nums; font-weight: 700;
+    text-align: right;
+  }
+  .rank .rankn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 999px;
+    background: var(--bg-2); color: var(--ink-2); font-weight: 800; font-size: 12px;
+    font-family: var(--font-num);
+  }
+  .rank .rankn.gold   { background: oklch(0.87 0.12 90);  color: oklch(0.34 0.09 65); }
+  .rank .rankn.silver { background: oklch(0.90 0.02 260); color: oklch(0.36 0.02 260); }
+  .rank .rankn.bronze { background: oklch(0.85 0.09 55);  color: oklch(0.34 0.10 55); }
+  .rank .repname { font-weight: 800; letter-spacing: -.01em; }
+  .rank .office { color: var(--ink-3); font-size: 11.5px; margin-top: 1px; }
+
+  /* Segment builder */
+  .segment-builder {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  }
+  @media (max-width: 1000px) { .segment-builder { grid-template-columns: 1fr; } }
+  .filter-group { border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px; margin-bottom: 12px; background: var(--bg); }
+  .filter-group h4 { margin-bottom: 8px; font-size: 12px; color: var(--ink-3); letter-spacing: .04em; text-transform: uppercase; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    appearance: none; border: 1px solid var(--line); background: var(--paper); font: inherit;
+    padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    font-size: 12.5px; font-weight: 700; color: var(--ink-2);
+    transition: all .15s;
+  }
+  .chip.on { background: var(--leaf-2); color: #fff; border-color: var(--leaf-2); }
+  .chip:hover:not(.on) { border-color: var(--leaf-3); color: var(--leaf-2); }
+
+  .segment-preview {
+    background: var(--bg-2);
+    border-radius: var(--r-md); padding: 20px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .segment-count {
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  .segment-count .n {
+    font-family: var(--font-num); font-weight: 700; font-size: 44px;
+    color: var(--leaf-2); letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+  }
+  .segment-count .lbl { font-size: 13px; color: var(--ink-3); font-weight: 700; }
+  .segment-flex {
+    background: #fff; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--line); box-shadow: var(--shadow-1);
+  }
+  .segment-flex .hero {
+    height: 110px;
+    background: linear-gradient(135deg, var(--leaf), var(--leaf-3));
+    display: grid; place-items: center; color: #fff;
+    font-weight: 900; font-size: 20px; letter-spacing: -.02em;
+  }
+  .segment-flex .body { padding: 14px 16px; }
+  .segment-flex .body h4 { margin: 0 0 4px; font-size: 14px; }
+  .segment-flex .body p { margin: 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.6; }
+  .segment-actions { display: flex; gap: 10px; }
+  .segment-actions button {
+    flex: 1; appearance: none; border: 0; font: inherit;
+    padding: 12px; border-radius: var(--r-md); font-weight: 800; cursor: pointer;
+    font-size: 13px;
+  }
+  .btn-primary { background: var(--leaf-2); color: #fff; }
+  .btn-primary:hover { background: var(--leaf); }
+  .btn-outline { background: var(--paper); border: 1px solid var(--line); color: var(--ink-2); }
+
+  /* ══════════════════════════════════════════════════════════════
+     footer
+     ══════════════════════════════════════════════════════════════ */
+  footer.site {
+    background: var(--leaf-2);
+    color: rgba(255,255,255,.85);
+    padding: 40px 24px;
+    text-align: center;
+  }
+  footer.site .co { font-size: 15px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+  footer.site .meta { font-size: 12.5px; opacity: .75; line-height: 1.7; }
+
+  /* motion */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+  .fade-in { animation: fadeIn .35s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="nav">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <!-- 葉モチーフ (自然派を1文字で象徴) -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c0-6 4-11 10-12-1 6-4 10-10 12z"/><path d="M12 22C6 20 3 16 2 10c6 1 10 5 10 12z"/><path d="M12 22v-9"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">サン・クロレラ 統合LINE OS</div>
+        <div class="brand-sub">SKELETON INC. 御提案デモ v1</div>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="デモパネル">
+      <button class="tab" role="tab" data-tab="P" aria-selected="true" aria-controls="panel-P"><span class="dot"></span>提案書</button>
+      <button class="tab" role="tab" data-tab="S" aria-selected="false" aria-controls="panel-S"><span class="dot"></span>訪問販売員</button>
+      <button class="tab" role="tab" data-tab="L" aria-selected="false" aria-controls="panel-L"><span class="dot"></span>お客さまLINE</button>
+      <button class="tab" role="tab" data-tab="D" aria-selected="false" aria-controls="panel-D"><span class="dot"></span>本社ダッシュボード</button>
+    </div>
+
+    <div class="nav-meta">
+      <strong>サン・クロレラジャパン 様 御中</strong>
+      2026-07 / 制作: スケルトン株式会社
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     P: 提案書
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-P" role="tabpanel" data-active="true">
+  <div class="container">
+
+    <div class="cover fade-in">
+      <div class="to">御 提 案 書</div>
+      <div class="client">サン・クロレラジャパン 株式会社 様</div>
+      <div class="title">訪問販売員・公式LINE・オンラインショップを、一つに束ねる。</div>
+      <div class="subtitle">
+        玄関先で結ばれた「お客さまと販売員の縁」を、その後もずっと崩さない。<br>
+        LINEをお客さまとの窓口に、オンラインショップを購入導線に、本社を横断ダッシュボードに。<br>
+        3つの流れを一本のオペレーションOSにまとめる、全社DXパッケージです。
+      </div>
+      <div class="cover-meta">
+        <div>ご提案先<strong>サン・クロレラジャパン株式会社 御中</strong></div>
+        <div>ご提案元<strong>スケルトン株式会社</strong></div>
+        <div>ご提案日<strong>2026年7月</strong></div>
+        <div>デモ形態<strong>ブラウザで動く 商談用モックアップ</strong></div>
+      </div>
+    </div>
+
+    <!-- 現状の課題 -->
+    <section>
+      <div class="stitle">
+        <span class="num">01 &nbsp; ISSUES</span>
+        <h2>ヒアリングで見えた、6つの課題</h2>
+        <p>現場・営業・本社それぞれで発生している「もったいない」を、まず1枚に整理しました。</p>
+      </div>
+      <div class="problems">
+        <div class="problem">
+          <span class="num">01</span>
+          <span class="tag">営業実績</span>
+          <h3>訪問販売の売上が、EC部門に直入りしてしまう</h3>
+          <p>玄関先で受注しても、お客さまが後日オンラインで買うと、担当販売員の実績にならない。営業のモチベーションを削っている。</p>
+        </div>
+        <div class="problem">
+          <span class="num">02</span>
+          <span class="tag">配信</span>
+          <h3>公式LINEが一斉配信しかできない</h3>
+          <p>年齢・商品履歴・定期便の有無で分けたいのに、今は「全員に同じ内容」しか送れない。<br>解約率と広告費が両方悪化している。</p>
+        </div>
+        <div class="problem">
+          <span class="num">03</span>
+          <span class="tag">導線</span>
+          <h3>LINE内で買い切れない</h3>
+          <p>LINEでご案内しても、購入時に外部サイトへ飛ばされてしまう。中高齢のお客さまの離脱が最も多いポイント。</p>
+        </div>
+        <div class="problem">
+          <span class="num">04</span>
+          <span class="tag">入力負担</span>
+          <h3>メールアドレス入力が、購入の壁になっている</h3>
+          <p>中高齢のお客さまにとって、メール登録は最大のハードル。<br>LINEアカウントだけで注文が完結する導線が必要。</p>
+        </div>
+        <div class="problem">
+          <span class="num">05</span>
+          <span class="tag">運用</span>
+          <h3>公式LINEが部署ごとに 4アカウントに分散</h3>
+          <p>お客さまから見て「どこに聞けばいいか分からない」状態。<br>月額固定費も 4本ぶん、部署間の情報も分断されている。</p>
+        </div>
+        <div class="problem">
+          <span class="num">06</span>
+          <span class="tag">可視化</span>
+          <h3>チャネル横断の売上が見えていない</h3>
+          <p>訪問販売・LINE EC・自社ECの数字が別バケツで、月次会議で「全体でどうなっているか」の議論ができない。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 解決4本柱 -->
+    <section>
+      <div class="stitle">
+        <span class="num">02 &nbsp; SOLUTION</span>
+        <h2>解決策は、この 4本柱で束ねます</h2>
+        <p>それぞれを別々のSaaSで買うと年間 数百万円 掛かる領域を、貴社専用の一つのOSに統合します。</p>
+      </div>
+
+      <div class="pillars">
+        <div class="pillar">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h3>1. 公式LINE 4→1 統合</h3>
+          <div class="desc">部署別4アカウントを、1つの公式アカウントに束ねます。</div>
+          <ul>
+            <li>友達追加パラメータ (販売員QR/DM/イベント) でタグを自動付与</li>
+            <li>タグに応じて、リッチメニューが自動で切り替わる</li>
+            <li>旧4アカから2週間の移行キャンペーン (移行率 60–80% 想定)</li>
+            <li>月額固定費 × 4本 → 1本に集約</li>
+          </ul>
+        </div>
+
+        <div class="pillar">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M17 11l2 2 4-4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/></svg>
+          </div>
+          <h3>2. セグメント配信エンジン</h3>
+          <div class="desc">属性・行動・購買意思の3階層タグで、届けたい人にだけ届ける。</div>
+          <ul>
+            <li>タグAND/OR絞り込み → 該当人数リアルタイム表示</li>
+            <li>Flex Message ビジュアル編集 (画像+文+ボタン)</li>
+            <li>A/Bテスト配信 (30/70で試打 → 開封率高い方を本配信)</li>
+            <li>誕生月/休眠/カート放棄 のトリガー自動配信</li>
+          </ul>
+        </div>
+
+        <div class="pillar">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M7 14h4"/><path d="M7 10h10"/></svg>
+          </div>
+          <h3>3. LIFF内 ワンタップEC</h3>
+          <div class="desc">LINEから一歩も出ずに、商品閲覧・購入・定期便変更まで完結。</div>
+          <ul>
+            <li>メールアドレス入力ゼロ (LINE User ID がキー)</li>
+            <li>初回のみ氏名・住所入力、次回以降は自動</li>
+            <li>LINE Pay / クレジット / 代引き 全対応</li>
+            <li>定期便は Stripe Subscription で継続課金/停止/次回スキップ</li>
+          </ul>
+        </div>
+
+        <div class="pillar">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <h3>4. 訪問販売員アプリ + 本社ダッシュボード</h3>
+          <div class="desc">この案件の本丸。営業実績の帰属を、永続的に守ります。</div>
+          <ul>
+            <li>玄関先でQR友達追加 → 販売員ID が LINE User ID に永続刻印</li>
+            <li>お客さまが後日LINEで買い足しても、担当販売員の実績に加算</li>
+            <li>販売員別ランキング/インセンティブ自動計算</li>
+            <li>本社は 3チャネル横断の売上・LTV・継続率を1画面で</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 期待効果 -->
+    <section>
+      <div class="stitle">
+        <span class="num">03 &nbsp; IMPACT</span>
+        <h2>導入 6ヶ月後の期待効果</h2>
+        <p>同規模の健康食品/化粧品ブランド 実装事例からの当社試算です (お約束ではなく、ベンチマーク値としてご参照ください)。</p>
+      </div>
+      <div class="effects">
+        <div class="effect">
+          <div class="label">販売員1人あたり 月次売上</div>
+          <div class="value">+18<sub>%</sub></div>
+          <div class="note">担当客の可視化 + 休眠検知</div>
+        </div>
+        <div class="effect">
+          <div class="label">定期便 6ヶ月継続率</div>
+          <div class="value">+12<sub>pt</sub></div>
+          <div class="note">停止前の個別push が効く</div>
+        </div>
+        <div class="effect">
+          <div class="label">LINE経由 購入CVR</div>
+          <div class="value">×2.4<sub>倍</sub></div>
+          <div class="note">メアド入力 撤廃効果</div>
+        </div>
+        <div class="effect">
+          <div class="label">配信 開封率</div>
+          <div class="value">42<sub>%</sub></div>
+          <div class="note">一斉配信の 3〜4倍水準</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Phase -->
+    <section>
+      <div class="stitle">
+        <span class="num">04 &nbsp; ROADMAP</span>
+        <h2>3ヶ月で本番稼働までの、現実的な導入計画</h2>
+        <p>いきなり全社切替ではなく、段階的に。100億企業規模で必ず起こる「移行事故」を織り込んだ工程です。</p>
+      </div>
+      <table class="phase-table">
+        <thead><tr><th style="width:100px">Phase</th><th>期間</th><th>この期に完了すること</th><th style="width:180px">本社側にお願いしたい作業</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="p-label">P1 MVP</span></td>
+            <td>1〜2ヶ月目</td>
+            <td>公式LINE 4→1 統合設計 / タグ設計 / 訪問販売員アプリ (受注+紐付け) / LIFF EC (メアド不要決済)</td>
+            <td>販売員1営業所で先行運用/現行LINE友達データ提供</td>
+          </tr>
+          <tr>
+            <td><span class="p-label">P2 α</span></td>
+            <td>3ヶ月目</td>
+            <td>セグメント配信 A/Bテスト / 定期便Subscription / 販売員インセンティブ自動計算 / 週次役員PDF自動送付</td>
+            <td>営業所2〜3拡大/紙台帳客のCSV提供</td>
+          </tr>
+          <tr>
+            <td><span class="p-label">P3 本番</span></td>
+            <td>4ヶ月目</td>
+            <td>旧4アカからの移行キャンペーン実施 / 全営業所展開 / 販売員教育コンテンツ / 段階切替 → 完全切替</td>
+            <td>移行告知の社内広報/販売員研修枠 30分×3回</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 料金 -->
+    <section>
+      <div class="stitle">
+        <span class="num">05 &nbsp; INVESTMENT</span>
+        <h2>ご投資額</h2>
+        <p>LSTEP + Shopify + SFA を別々に導入した場合の 3〜4割の水準で、貴社専用に最適化します。</p>
+      </div>
+      <div class="pricing">
+        <div class="price-card headline">
+          <h3>初期構築 (Phase 1–3 一括)</h3>
+          <div class="amount"><span class="yen">¥</span>7,800,000<span class="unit">(税別)</span></div>
+          <ul>
+            <li>4本柱すべての開発・設計・実装</li>
+            <li>販売員1名分の実機テスト機材/研修コンテンツ</li>
+            <li>Firebase / LINE Messaging API 初期セットアップ一式</li>
+            <li>本番切替支援 (旧LINE友達移行含む)</li>
+          </ul>
+          <div class="note">お支払いは Phase 完了ごとの 3分割 (P1:40% / P2:30% / P3:30%) に対応可能です。</div>
+        </div>
+        <div class="price-card subtle">
+          <h3>月額運用</h3>
+          <div class="amount">¥<span>380,000</span><span class="unit">/月 (税別)</span></div>
+          <ul>
+            <li>保守・障害対応・軽微機能追加</li>
+            <li>週次役員レポート運用</li>
+            <li>販売員向けサポート窓口</li>
+          </ul>
+          <div class="note">Firebase/LINE Messaging/Stripe決済手数料 は別途実費 (月商比連動)。</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     S: 訪問販売員アプリ
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-S" role="tabpanel">
+  <div class="container">
+    <div class="stitle">
+      <span class="num">S &nbsp; FIELD APP</span>
+      <h2>訪問販売員のスマホに、こう入ります</h2>
+      <p>玄関先で1台。担当客の顔・前回訪問日・今月の実績・次にお声がけすべき方、全部このアプリの中に。</p>
+    </div>
+
+    <div class="device-stage">
+      <div class="device-explainer">
+        <div class="features">
+          <div class="feature">
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 8h16M8 4v4"/></svg>
+            </div>
+            <div>
+              <h4>今日の訪問予定リスト</h4>
+              <p>時系列で、前回何を買ったか・在庫はもう切れるか・体調変化 まで一目。訪問前3分の予習が要らなくなります。</p>
+            </div>
+          </div>
+          <div class="feature">
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h5v5H3zM16 3h5v5h-5zM3 16h5v5H3zM16 16h5v5h-5z"/></svg>
+            </div>
+            <div>
+              <h4>玄関先QR友達追加 → 販売員ID 永続刻印</h4>
+              <p>お客さまがQRを読むだけで、担当販売員IDが永続タグ付け。お客さまが後日ご自身でLINE内購入されても、担当の実績になります。</p>
+            </div>
+          </div>
+          <div class="feature">
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M4 12h16"/></svg>
+            </div>
+            <div>
+              <h4>その場受注 → 決済リンク送付</h4>
+              <p>お客さまの目の前でカゴを組み立て、LINE内決済リンクを即発行。「あとで振り込んで」の未回収リスクがなくなります。</p>
+            </div>
+          </div>
+          <div class="feature">
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+            </div>
+            <div>
+              <h4>今月の成績・社内ランキング</h4>
+              <p>売上・継続率・新規獲得数 の3指標をリアルタイムで。<br>営業所内順位・全社順位が見えることで、内発的なやる気に繋がります。</p>
+            </div>
+          </div>
+          <div class="feature">
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            </div>
+            <div>
+              <h4>「今月まだフォローしていないお客さま」通知</h4>
+              <p>担当客のうち45日以上お声がけしていない方を、毎朝プッシュ。休眠→解約の兆候を、事前に潰します。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 訪問販売員 iPhone mock -->
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="phone-status">
+            <span>9:14</span>
+            <span class="right">
+              <svg width="16" height="10" viewBox="0 0 16 10" fill="currentColor"><path d="M0 8h2v2H0zM4 6h2v4H4zM8 4h2v6H8zM12 2h2v8h-2z"/></svg>
+              <svg width="20" height="10" viewBox="0 0 20 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="1" width="16" height="8" rx="1.5"/><rect x="3" y="3" width="12" height="4" fill="currentColor"/></svg>
+            </span>
+          </div>
+          <div class="phone-body">
+            <div class="rep-header">
+              <div class="hello">おはようございます</div>
+              <div class="rep-name">北野 誠 さん</div>
+              <div class="office">京都南 営業所 / 担当 62名</div>
+              <div class="metrics">
+                <div><div class="k">今月売上</div><div class="v">¥812<sub>k</sub></div></div>
+                <div><div class="k">継続率</div><div class="v">94<sub>%</sub></div></div>
+                <div><div class="k">所内順位</div><div class="v">3<sub>位</sub></div></div>
+              </div>
+            </div>
+
+            <div class="rep-quick">
+              <button class="primary" type="button">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM17 17h4v4h-4zM14 20h3"/></svg>
+                <span class="label">友達追加</span>
+              </button>
+              <button type="button">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 10h16M9 4v16"/></svg>
+                <span class="label">受注入力</span>
+              </button>
+              <button type="button">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4h4"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M8 13h8M8 17h5"/></svg>
+                <span class="label">訪問記録</span>
+              </button>
+              <button type="button">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span class="label">LINE送信</span>
+              </button>
+            </div>
+
+            <div class="rep-section-title">今日の訪問予定 <span>3件</span></div>
+            <div class="rep-visit">
+              <div class="time"><span class="hh">10</span><span class="mm">:00</span></div>
+              <div class="info">
+                <div class="name">田中 幸子さま</div>
+                <div class="last"><span>前回 6/12</span><span>クロレラA 粒×2</span></div>
+              </div>
+              <div class="chev">›</div>
+            </div>
+            <div class="rep-visit">
+              <div class="time"><span class="hh">13</span><span class="mm">:30</span></div>
+              <div class="info">
+                <div class="name">山田 治さま</div>
+                <div class="last"><span>前回 5/28</span><span>もうすぐ在庫切</span></div>
+              </div>
+              <div class="chev">›</div>
+            </div>
+            <div class="rep-visit">
+              <div class="time"><span class="hh">15</span><span class="mm">:15</span></div>
+              <div class="info">
+                <div class="name">松本 美津子さま</div>
+                <div class="last"><span>新規</span><span>お試しセット案内</span></div>
+              </div>
+              <div class="chev">›</div>
+            </div>
+
+            <div class="rep-section-title">担当のお客さま <a class="more" href="#">すべて見る</a></div>
+            <div class="rep-customer">
+              <div class="avatar">田</div>
+              <div class="info">
+                <div class="name">田中 幸子さま</div>
+                <div class="meta"><span>78歳</span><span>定期便継続 32ヶ月</span></div>
+              </div>
+              <span class="badge A">A</span>
+            </div>
+            <div class="rep-customer">
+              <div class="avatar">山</div>
+              <div class="info">
+                <div class="name">山田 治さま</div>
+                <div class="meta"><span>72歳</span><span>ドリンク+粒</span></div>
+              </div>
+              <span class="badge A">A</span>
+            </div>
+            <div class="rep-customer">
+              <div class="avatar">河</div>
+              <div class="info">
+                <div class="name">河合 敏子さま</div>
+                <div class="meta"><span>81歳</span><span>単発購入</span></div>
+              </div>
+              <span class="badge B">B</span>
+            </div>
+            <div class="rep-customer">
+              <div class="avatar">小</div>
+              <div class="info">
+                <div class="name">小林 智之さま</div>
+                <div class="meta"><span>68歳</span><span>最終購入 4/2</span></div>
+              </div>
+              <span class="badge dorm">休眠</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flow diagram -->
+    <div class="flow" style="margin-top: 48px;">
+      <div class="flow-step">
+        <span class="n">STEP 1</span>
+        <h4>玄関先QR</h4>
+        <p>販売員のQRを、お客さまがLINEで読み取り。友達追加時に販売員IDが自動で付与されます。</p>
+      </div>
+      <div class="flow-step">
+        <span class="n">STEP 2</span>
+        <h4>その場で受注</h4>
+        <p>販売員のスマホで注文入力。決済リンクがLINEに届き、お客さまがタップして決済完了。</p>
+      </div>
+      <div class="flow-step">
+        <span class="n">STEP 3</span>
+        <h4>継続はLINE内で</h4>
+        <p>その後の追加購入・定期便変更はLINEで完結。訪問販売員は追客なしで実績に加算。</p>
+      </div>
+      <div class="flow-step">
+        <span class="n">STEP 4</span>
+        <h4>本社が全部見える</h4>
+        <p>販売員ごとの売上・継続率・LTV が本社ダッシュボードに反映。人事評価・給与連動まで自動化。</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     L: お客さま LINE 画面
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-L" role="tabpanel">
+  <div class="container">
+    <div class="stitle">
+      <span class="num">L &nbsp; CUSTOMER LINE</span>
+      <h2>お客さまから見た、LINE公アカ 1本の世界</h2>
+      <p>ここが「メールアドレス不要」の入り口。中高齢のお客さまでもタップだけで購入・定期便変更が完結します。</p>
+    </div>
+
+    <div class="device-stage">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="phone-status">
+            <span>9:22</span>
+            <span class="right">
+              <svg width="16" height="10" viewBox="0 0 16 10" fill="currentColor"><path d="M0 8h2v2H0zM4 6h2v4H4zM8 4h2v6H8zM12 2h2v8h-2z"/></svg>
+              <svg width="20" height="10" viewBox="0 0 20 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="1" width="16" height="8" rx="1.5"/><rect x="3" y="3" width="12" height="4" fill="currentColor"/></svg>
+            </span>
+          </div>
+          <div class="phone-body" style="padding-bottom: 0;">
+            <div class="line-header">
+              <div class="avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c0-6 4-11 10-12-1 6-4 10-10 12z"/><path d="M12 22C6 20 3 16 2 10c6 1 10 5 10 12z"/></svg>
+              </div>
+              <div>
+                <div class="oa-name">サン・クロレラ サポート <span class="oa-check">認証済</span></div>
+                <div class="oa-sub">担当: 北野 誠 (京都南)</div>
+              </div>
+            </div>
+
+            <div class="line-chat">
+              <div class="msg-day">今日</div>
+
+              <div class="msg-row">
+                <div class="msg-avatar">サ</div>
+                <div class="msg-bubble">
+                  田中さま、おはようございます。<br>
+                  クロレラAのお届け、来週の火曜になります。ご都合いかがでしょうか?
+                </div>
+                <div class="msg-time">9:14</div>
+              </div>
+
+              <div class="msg-row me">
+                <div class="msg-bubble">はい、火曜で大丈夫です。ありがとうございます。</div>
+                <div class="msg-time">9:18</div>
+              </div>
+
+              <div class="msg-row">
+                <div class="msg-avatar">サ</div>
+                <div class="msg-bubble rich">
+                  <div class="rimg">プラズマローゲン<br>新発売</div>
+                  <div class="rbody">
+                    <div class="rtitle">記憶をいたわる、新習慣</div>
+                    <div class="rdesc">今月ご継続のお客さまだけ、初回¥500 OFF。<br>会員価格でお試しいただけます。</div>
+                    <a class="rbtn" href="#">詳しく見る</a>
+                  </div>
+                </div>
+                <div class="msg-time">9:20</div>
+              </div>
+            </div>
+
+            <!-- リッチメニュー -->
+            <div class="rich-menu">
+              <div class="rich-menu-grid">
+                <div class="rich-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M7 14h4M7 10h10"/></svg>
+                  <div class="label">商品を見る</div>
+                </div>
+                <div class="rich-btn accent">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8 8-4-4"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
+                  <div class="label">定期便を管理</div>
+                </div>
+                <div class="rich-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/><path d="M12 7v5l3 3"/></svg>
+                  <div class="label">履歴を見る</div>
+                </div>
+                <div class="rich-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H5.6L4 18z"/></svg>
+                  <div class="label">相談する</div>
+                </div>
+                <div class="rich-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="12" rx="2"/><path d="M4 10h16"/></svg>
+                  <div class="label">会員証</div>
+                </div>
+                <div class="rich-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12c0-4-3-8-8-8s-8 4-8 8"/><path d="M4 12v8h16v-8"/><circle cx="12" cy="14" r="2"/></svg>
+                  <div class="label">クーポン</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="device-explainer">
+        <div class="liff-features">
+          <h3>お客さま体験の中核 5つ</h3>
+          <ul class="checklist">
+            <li>
+              <div class="check">✓</div>
+              <div><strong>メールアドレス入力ゼロ。</strong> LINEに登録された氏名だけで購入開始。初回のみ住所入力、次回以降は自動で確定します。</div>
+            </li>
+            <li>
+              <div class="check">✓</div>
+              <div><strong>LINE内で最後まで完結。</strong> 商品閲覧・カート・決済・完了。外部サイトへの遷移はゼロ、離脱がなくなります。</div>
+            </li>
+            <li>
+              <div class="check">✓</div>
+              <div><strong>定期便もタップで変更。</strong> スキップ・数量変更・停止 いずれもボタン1つ。電話やメールでご相談いただく必要がありません。</div>
+            </li>
+            <li>
+              <div class="check">✓</div>
+              <div><strong>担当販売員と直接つながる。</strong> 上部に担当氏名を常時表示、質問1タップで既存の販売員のLINEに届きます。</div>
+            </li>
+            <li>
+              <div class="check">✓</div>
+              <div><strong>大きく読みやすいUI。</strong> 中高齢のお客さまでも迷わない、本文16px・タップ領域48px以上・コントラスト強化 の設計。</div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="liff-features" style="background: var(--leaf-4); border-color: var(--leaf-3);">
+          <h3 style="color: var(--leaf-2);">「メアド撤廃」がもたらす CVR 変化</h3>
+          <p style="margin: 0 0 8px; font-size: 14px; color: var(--ink-2);">健康食品ブランドの中高齢層 (60代以上) の購入導線での実測値です。</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+            <div>
+              <div style="font-size: 11px; color: var(--ink-3); font-weight: 700; margin-bottom: 4px;">現状 (外部EC遷移)</div>
+              <div style="font-family: var(--font-num); font-weight: 700; font-size: 26px; color: var(--ink-3);">1.8%</div>
+            </div>
+            <div>
+              <div style="font-size: 11px; color: var(--leaf-2); font-weight: 700; margin-bottom: 4px;">LIFF内 (メアド不要)</div>
+              <div style="font-family: var(--font-num); font-weight: 700; font-size: 26px; color: var(--leaf-2);">4.3%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     D: 本社ダッシュボード
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-D" role="tabpanel">
+  <div class="container">
+
+    <div class="dash-header">
+      <div class="info">
+        <h1>本社 統合ダッシュボード</h1>
+        <p>3チャネル横断で、売上・営業実績・配信効果を一画面に。役員会・営業会議・EC部会議、全部この1画面で。</p>
+      </div>
+      <div class="dash-controls">
+        <button class="seg">日次</button>
+        <button class="seg on">月次</button>
+        <button class="seg">年次</button>
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="head">
+          <div class="k">今月 総売上</div>
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H7"/></svg></div>
+        </div>
+        <div class="v"><span class="yen">¥</span>862<span class="u">M</span></div>
+        <div class="diff up">↑ +11.4% 前年同月比</div>
+      </div>
+      <div class="kpi">
+        <div class="head">
+          <div class="k">定期便 継続率</div>
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9v3M21 12a9 9 0 0 1-9 9v-3"/><path d="M17 8l4-3-3-4M7 16l-4 3 3 4"/></svg></div>
+        </div>
+        <div class="v">86.2<span class="u">%</span></div>
+        <div class="diff up">↑ +2.4pt 先月比</div>
+      </div>
+      <div class="kpi">
+        <div class="head">
+          <div class="k">アクティブLINE友達</div>
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2M16 3.13a4 4 0 0 1 0 7.75M22 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+        </div>
+        <div class="v">184,320<span class="u">人</span></div>
+        <div class="diff up">↑ +8,240 今月増</div>
+      </div>
+      <div class="kpi">
+        <div class="head">
+          <div class="k">配信 平均開封率</div>
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></div>
+        </div>
+        <div class="v">42.8<span class="u">%</span></div>
+        <div class="diff up">↑ 一斉配信比 3.4倍</div>
+      </div>
+    </div>
+
+    <!-- 3チャネル別売上 + 販売員ランキング -->
+    <div class="split">
+      <div class="card">
+        <div class="head">
+          <div>
+            <h3>チャネル別 売上 (今月)</h3>
+            <div class="sub">全¥862M の内訳</div>
+          </div>
+          <div class="legend">
+            <span><span class="dot" style="background: var(--leaf-2);"></span>訪問販売</span>
+            <span><span class="dot" style="background: var(--leaf-3);"></span>LINE EC</span>
+            <span><span class="dot" style="background: var(--earth);"></span>自社EC</span>
+          </div>
+        </div>
+        <div class="chart-bars">
+          <div class="lbl">京都本部</div>
+          <div class="bar">
+            <span style="width: 58%; background: var(--leaf-2);"></span>
+            <span style="width: 28%; background: var(--leaf-3);"></span>
+            <span style="width: 14%; background: var(--earth);"></span>
+          </div>
+          <div class="amt">¥312M</div>
+
+          <div class="lbl">関東ブロック</div>
+          <div class="bar">
+            <span style="width: 46%; background: var(--leaf-2);"></span>
+            <span style="width: 34%; background: var(--leaf-3);"></span>
+            <span style="width: 20%; background: var(--earth);"></span>
+          </div>
+          <div class="amt">¥246M</div>
+
+          <div class="lbl">関西ブロック</div>
+          <div class="bar">
+            <span style="width: 62%; background: var(--leaf-2);"></span>
+            <span style="width: 24%; background: var(--leaf-3);"></span>
+            <span style="width: 14%; background: var(--earth);"></span>
+          </div>
+          <div class="amt">¥178M</div>
+
+          <div class="lbl">中部ブロック</div>
+          <div class="bar">
+            <span style="width: 51%; background: var(--leaf-2);"></span>
+            <span style="width: 33%; background: var(--leaf-3);"></span>
+            <span style="width: 16%; background: var(--earth);"></span>
+          </div>
+          <div class="amt">¥84M</div>
+
+          <div class="lbl">九州ブロック</div>
+          <div class="bar">
+            <span style="width: 44%; background: var(--leaf-2);"></span>
+            <span style="width: 38%; background: var(--leaf-3);"></span>
+            <span style="width: 18%; background: var(--earth);"></span>
+          </div>
+          <div class="amt">¥42M</div>
+        </div>
+
+        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px dashed var(--line); display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+          <div>
+            <div style="font-size: 12px; color: var(--ink-3); font-weight: 700; margin-bottom: 4px;">訪問販売</div>
+            <div style="font-family: var(--font-num); font-weight: 700; font-size: 22px; color: var(--leaf-2);">¥478M<span style="font-size: 12px; color: var(--ink-3); font-weight: 500;"> / 55.4%</span></div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: var(--ink-3); font-weight: 700; margin-bottom: 4px;">LINE EC</div>
+            <div style="font-family: var(--font-num); font-weight: 700; font-size: 22px; color: var(--leaf-3);">¥252M<span style="font-size: 12px; color: var(--ink-3); font-weight: 500;"> / 29.2%</span></div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: var(--ink-3); font-weight: 700; margin-bottom: 4px;">自社EC</div>
+            <div style="font-family: var(--font-num); font-weight: 700; font-size: 22px; color: var(--earth);">¥132M<span style="font-size: 12px; color: var(--ink-3); font-weight: 500;"> / 15.4%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head">
+          <h3>販売員ランキング TOP 10</h3>
+          <div class="sub">今月 累計売上</div>
+        </div>
+        <table class="rank">
+          <thead>
+            <tr><th style="width:36px">#</th><th>販売員</th><th class="num">売上</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="rankn gold">1</span></td><td><div class="repname">佐藤 恵美</div><div class="office">京都南</div></td><td class="num">¥1.24M</td></tr>
+            <tr><td><span class="rankn silver">2</span></td><td><div class="repname">吉川 篤</div><div class="office">京都北</div></td><td class="num">¥1.02M</td></tr>
+            <tr><td><span class="rankn bronze">3</span></td><td><div class="repname">北野 誠</div><div class="office">京都南</div></td><td class="num">¥0.81M</td></tr>
+            <tr><td><span class="rankn">4</span></td><td><div class="repname">村田 千夏</div><div class="office">大阪梅田</div></td><td class="num">¥0.78M</td></tr>
+            <tr><td><span class="rankn">5</span></td><td><div class="repname">高橋 実</div><div class="office">名古屋</div></td><td class="num">¥0.74M</td></tr>
+            <tr><td><span class="rankn">6</span></td><td><div class="repname">石井 律子</div><div class="office">東京世田谷</div></td><td class="num">¥0.72M</td></tr>
+            <tr><td><span class="rankn">7</span></td><td><div class="repname">中村 陽</div><div class="office">横浜青葉</div></td><td class="num">¥0.68M</td></tr>
+            <tr><td><span class="rankn">8</span></td><td><div class="repname">松井 佳代</div><div class="office">神戸</div></td><td class="num">¥0.63M</td></tr>
+            <tr><td><span class="rankn">9</span></td><td><div class="repname">山口 一郎</div><div class="office">福岡博多</div></td><td class="num">¥0.59M</td></tr>
+            <tr><td><span class="rankn">10</span></td><td><div class="repname">藤田 亮</div><div class="office">札幌</div></td><td class="num">¥0.54M</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Segment builder -->
+    <div class="card" style="margin-top: 24px;">
+      <div class="head">
+        <div>
+          <h3>セグメント配信ビルダー</h3>
+          <div class="sub">タグを選ぶ → 該当お客さま数リアルタイム → Flex Message配信</div>
+        </div>
+      </div>
+
+      <div class="segment-builder">
+        <div>
+          <div class="filter-group">
+            <h4>年代</h4>
+            <div class="chips">
+              <button class="chip">50代</button>
+              <button class="chip on">60代</button>
+              <button class="chip on">70代</button>
+              <button class="chip">80代以上</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <h4>ご利用商品</h4>
+            <div class="chips">
+              <button class="chip on">クロレラA 粒</button>
+              <button class="chip">パウダー</button>
+              <button class="chip">ドリンク</button>
+              <button class="chip">プラズマローゲン</button>
+              <button class="chip">アガリクス</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <h4>状態</h4>
+            <div class="chips">
+              <button class="chip on">定期便継続中</button>
+              <button class="chip">初回購入から30日</button>
+              <button class="chip">休眠 60日</button>
+              <button class="chip">誕生月</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <h4>担当営業所</h4>
+            <div class="chips">
+              <button class="chip on">京都本部</button>
+              <button class="chip">関東</button>
+              <button class="chip">関西</button>
+              <button class="chip">中部</button>
+              <button class="chip">九州</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="segment-preview">
+          <div class="segment-count">
+            <div class="n">3,842</div>
+            <div class="lbl">名 / 該当</div>
+          </div>
+          <div class="segment-flex">
+            <div class="hero">今月ご継続の皆さまへ</div>
+            <div class="body">
+              <h4>クロレラA 粒、来月分の予約が始まります</h4>
+              <p>お手元にまだ残りがある方は、次回スキップも承れます。<br>「予約する」もしくは「スキップ」からお選びください。</p>
+            </div>
+          </div>
+          <div class="segment-actions">
+            <button class="btn-outline">下書きに保存</button>
+            <button class="btn-primary">3,842名 に配信</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer class="site">
+  <div class="co">スケルトン株式会社 / SKELETON INC.</div>
+  <div class="meta">
+    〒910-0833 福井県福井市新保北1-203 &nbsp;|&nbsp; 御提案: 2026-07 &nbsp;|&nbsp; 商談用モックアップデモ v1<br>
+    このデモは動作イメージのご確認用です。 本番システムはお客さま専用にカスタマイズしてご提供します。
+  </div>
+</footer>
+
+<script>
+  // Tab switching
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.panel');
+  tabs.forEach(t => {
+    t.addEventListener('click', () => {
+      const target = t.dataset.tab;
+      tabs.forEach(x => x.setAttribute('aria-selected', x === t ? 'true' : 'false'));
+      panels.forEach(p => {
+        const on = p.id === 'panel-' + target;
+        p.dataset.active = on ? 'true' : 'false';
+        if (on) {
+          p.classList.remove('fade-in');
+          void p.offsetWidth;
+          p.classList.add('fade-in');
+        }
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+
+  // Segment builder chip toggle + count animation
+  document.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('click', () => {
+      c.classList.toggle('on');
+      const n = document.querySelector('.segment-count .n');
+      if (n) {
+        const delta = Math.round((Math.random() - 0.4) * 800);
+        const cur = parseInt(n.textContent.replace(/,/g, ''));
+        const next = Math.max(120, cur + delta);
+        n.textContent = next.toLocaleString('ja-JP');
+        const btn = document.querySelector('.segment-actions .btn-primary');
+        if (btn) btn.textContent = next.toLocaleString('ja-JP') + '名 に配信';
+      }
+    });
+  });
+
+  // Date controls
+  document.querySelectorAll('.dash-controls .seg').forEach(s => {
+    s.addEventListener('click', () => {
+      document.querySelectorAll('.dash-controls .seg').forEach(x => x.classList.remove('on'));
+      s.classList.add('on');
+    });
+  });
+</script>
+
+</body>
+</html>
