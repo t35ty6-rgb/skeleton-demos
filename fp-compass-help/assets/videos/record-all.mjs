@@ -499,7 +499,10 @@ await ctx.addInitScript(() => {
   // CSS で 表示阻止 (fallback)
   const style = document.createElement('style');
   style.id = 'fp-hide-mebuki';
-  style.textContent = KILL_SELECTORS + ' { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }';
+  style.textContent =
+    KILL_SELECTORS + ' { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }' +
+    /* ★ 2026-07-02 fb fix: fp-compass-app の modal-overlay で 背景 半透明黒 → 「グレー/黒くなる」 の 原因 → 透明化 */
+    ' .modal-overlay, #modal-overlay, #form-overlay, [class*="modal-overlay"], [class*="modal-backdrop"] { background: transparent !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }';
   (document.head || document.documentElement).appendChild(style);
   // 削除関数
   const kill = () => {
