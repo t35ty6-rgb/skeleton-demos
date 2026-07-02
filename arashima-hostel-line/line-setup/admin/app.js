@@ -1148,10 +1148,12 @@ function renderMonthShift() {
           <div class="mm-cell__staff">
             ${staffOnDuty.slice(0, 4).map((s) => {
               const v = shifts[`${dateStr}|${s.id}`];
-              return `<span class="mm-chip" style="background:${s.color}" title="${escapeHtml(s.name)} ${v}">${s.initial}<em>${v}</em></span>`;
+              return `<span class="mm-chip shift-cell" style="background:${s.color}" title="${escapeHtml(s.name)} ${v} (タップで編集)" data-key="${dateStr}|${s.id}" data-sid="${s.id}" data-sname="${escapeHtml(s.name)}" data-date="${dateStr}" data-color="${s.color}">${s.initial}<em>${v}</em></span>`;
             }).join('')}
-            ${staffOnDuty.length > 4 ? `<span class="mm-chip mm-chip--more">+${staffOnDuty.length - 4}</span>` : ''}
-            ${staffOff.length > 0 ? `<span class="mm-off">休 ${staffOff.length}</span>` : ''}
+            ${staffOnDuty.length > 4 ? `<span class="mm-chip mm-chip--more" data-more="1">+${staffOnDuty.length - 4}</span>` : ''}
+            ${staffOff.slice(0, 3).map((s) => `<span class="mm-chip mm-chip--off shift-cell" title="${escapeHtml(s.name)} 休 (タップで編集)" data-key="${dateStr}|${s.id}" data-sid="${s.id}" data-sname="${escapeHtml(s.name)}" data-date="${dateStr}" data-color="${s.color}">${s.initial}<em>休</em></span>`).join('')}
+            ${staffOff.length > 3 ? `<span class="mm-off">休 +${staffOff.length - 3}</span>` : ''}
+            <span class="mm-chip mm-chip--add" data-add="1" title="スタッフを選んで追加">+</span>
           </div>
         </div>`;
       }).join('')}
@@ -1159,9 +1161,38 @@ function renderMonthShift() {
   `;
   $('#shiftMonthGrid').innerHTML = html;
 
-  // 月セル tap → その日の シフト入力ミニシート (スタッフ縦並び)
+  // 個別チップ tap → 週ビューと同じ 5ボタンピッカー
+  $$('#shiftMonthGrid .mm-chip.shift-cell').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openShiftPicker(el);
+    });
+  });
+
+  // + 追加 chip tap → その日 全スタッフ編集シート (bulk 入力)
+  $$('#shiftMonthGrid .mm-chip--add').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cell = el.closest('.mm-cell');
+      if (cell) openMonthDaySheet(cell.dataset.date);
+    });
+  });
+
+  // +Nスタッフ (溢れ) tap → その日 全スタッフ編集シート
+  $$('#shiftMonthGrid .mm-chip--more').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cell = el.closest('.mm-cell');
+      if (cell) openMonthDaySheet(cell.dataset.date);
+    });
+  });
+
+  // セル本体 (チップ以外) tap → 全スタッフ編集シート (bulk 経路)
   $$('#shiftMonthGrid .mm-cell').forEach((el) => {
-    el.addEventListener('click', () => openMonthDaySheet(el.dataset.date));
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.mm-chip')) return; // チップ内は個別処理
+      openMonthDaySheet(el.dataset.date);
+    });
   });
 }
 
