@@ -12,20 +12,19 @@ const URL = 'https://stg.app.skeleton-inc.jp/';
 const EMAIL = 't3.5ty6@gmail.com';
 const PASS = 'tukasa2907';
 
-// mp3 実測時間
 const AUDIO_DUR = {
-  '01-login': 15,
-  '02-dashboard': 25,
-  '03-clients': 22,
-  '04-modal': 32,
-  '05-survey': 22,
-  '06-line': 23,
-  '07-recording': 84,
-  '08-timeline': 22,
-  '09-meetings': 19,
-  '10-zoom': 26,
-  '11-calendar': 21,
-  '12-liff': 22,
+  '01-login': 18.7,
+  '02-dashboard': 27.6,
+  '03-clients': 25.2,
+  '04-modal': 36.1,
+  '05-survey': 24.4,
+  '06-line': 28.2,
+  '07-recording': 103.5,
+  '08-timeline': 27.5,
+  '09-meetings': 21.8,
+  '10-zoom': 34.1,
+  '11-calendar': 27.0,
+  '12-liff': 27.5,
 };
 
 const HIGHLIGHT_CSS = `
@@ -240,32 +239,28 @@ class Sync {
 }
 
 async function goTab(p, tab) {
-  await p.evaluate((t) => {
-    document.querySelector(`.tab[data-tab="${t}"], [data-tab="${t}"]`)?.click();
-  }, tab);
+  await p.evaluate((t) => document.querySelector(`.tab[data-tab="${t}"], [data-tab="${t}"]`)?.click(), tab);
   await wait(p, 800);
 }
 async function openModal(p, regex) {
   return await p.evaluate((r) => {
     const list = window.DUMMY_CLIENTS || [];
     const re = new RegExp(r, 'i');
-    const target = list.find(c => re.test(c.name || '')) || list[0];
-    if (target && window.FpApp?.openClientModal) {
-      window.FpApp.openClientModal(target.id);
-      return target.id;
-    }
+    const t = list.find(c => re.test(c.name || '')) || list[0];
+    if (t && window.FpApp?.openClientModal) { window.FpApp.openClientModal(t.id); return t.id; }
   }, regex);
 }
 async function reset(p) {
   await p.evaluate(() => {
     document.querySelector('.cd-close')?.click();
     document.getElementById('fp-quick-inperson-modal')?.remove();
+    document.getElementById('fp-help-toast')?.remove();
     document.querySelectorAll('.ar-help-title, .ar-help-caption, .ar-help-spot, .ar-help-hint, .ar-help-arrow, .ar-help-ring').forEach(el => el.remove());
     window.arHelp && window.arHelp.zoomOut && window.arHelp.zoomOut();
     window.arHelp && window.arHelp.clear && window.arHelp.clear();
     window.scrollTo(0, 0);
   });
-  await goTab(p, 'clients');   // 顧客タブ (明るいUI)
+  await goTab(p, 'clients');
   await wait(p, 500);
 }
 
@@ -332,140 +327,344 @@ async function pointAt(p, sel, label, holdMs = 1200) {
 
 const chapters = [
 
-  // ─────────────── 07 録音→AI議事録 (84s、 主役) ───────────────
-  { name: '07-recording', segments: [
-
-    // 「面談 の 録音 と AI 議事録 の 使い方 を、 最初 から 最後 まで ご説明 します。」 (6.5s)
-    { dur: 6.5, act: async (p) => {
+  // ─── 01 ログイン (18.7s) ───
+  { name: '01-login', segments: [
+    { dur: 4, act: async (p) => {
       await goTab(p, 'clients');
       await wait(p, 400);
-      await showTitle(p, '録音 と<br>AI 議事録', 'CHAPTER 07 · 主 機 能');
+      await showTitle(p, 'ログイン', 'CHAPTER 01');
     }},
-
-    // 「まず、 画面 左 の サイドバー に ある、 『急遽 面談 スタート』 を 押します。」 (6.5s)
-    { dur: 6.5, act: async (p) => {
+    { dur: 4, act: async (p) => {
       await removeTitle(p);
-      await focusFlow(p, '#sidebar-quick-inperson', 'サイドバー 「急遽 面談 スタート」', { holdMs: 3800, scale: 1.7 });
+      await caption(p, 'ブラウザ で アプリ の URL に アクセス');
     }},
+    { dur: 6, act: async (p) => {
+      await caption(p, 'メールアドレス と パスワード を 入力');
+    }},
+    { dur: 4.7, act: async (p) => {
+      await caption(p, '「ログイン」 を 押す と ダッシュボード に');
+    }},
+  ]},
 
-    // 「入力 画面 が 開いたら、 上 の リスト から、 面談 する お客様 を 選びます。」 (6.5s)
-    { dur: 6.5, act: async (p) => {
+  // ─── 02 ダッシュボード (27.6s) ───
+  { name: '02-dashboard', segments: [
+    { dur: 3.5, act: async (p) => {
+      await goTab(p, 'home');
+      await wait(p, 400);
+      await showTitle(p, 'ダッシュボード', 'CHAPTER 02');
+    }},
+    { dur: 6, act: async (p) => {
+      await removeTitle(p);
+      await goTab(p, 'home');
+      await wait(p, 500);
+      await focusFlow(p, 'main, .home-content, .dashboard', '今日 の 予定 が 上 から 順 に', { holdMs: 2500, scale: 1.15 });
+    }},
+    { dur: 7, act: async (p) => {
+      await caption(p, '<strong style="color:#C1462C;">今月 の 顧客 数 / 面談 数 / 売上 見込</strong> を KPI カード で');
+    }},
+    { dur: 6, act: async (p) => {
+      await caption(p, '新着 メッセージ + 期限 が 近い タスク も 一覧');
+    }},
+    { dur: 5.1, act: async (p) => {
+      await caption(p, '朝 一番 に これ を 見る だけ で 今日 が 見える');
+    }},
+  ]},
+
+  // ─── 03 顧客台帳 (25.2s) ───
+  { name: '03-clients', segments: [
+    { dur: 3.5, act: async (p) => {
+      await showTitle(p, '顧客台帳', 'CHAPTER 03');
+    }},
+    { dur: 5, act: async (p) => {
+      await removeTitle(p);
+      await focusFlow(p, '.tab[data-tab="clients"]', '「顧客」 タブ を 押す', { holdMs: 2000, scale: 1.6, click: true });
+    }},
+    { dur: 6, act: async (p) => {
+      await caption(p, '登録 された 全 顧客 が 一覧 で 表示');
+    }},
+    { dur: 6, act: async (p) => {
+      await focusFlow(p, 'input[type=search], #client-search, .search-input, input[placeholder*="検索"]', '名前 / メール で 検索', { holdMs: 2500, scale: 1.4 });
+    }},
+    { dur: 4.7, act: async (p) => {
+      await caption(p, 'タップ で 詳細 カルテ が 開く');
+    }},
+  ]},
+
+  // ─── 04 顧客カルテ 6タブ (36.1s) ───
+  { name: '04-modal', segments: [
+    { dur: 3.5, act: async (p) => {
+      await showTitle(p, '顧客カルテ<br>6 タブ 構造', 'CHAPTER 04');
+    }},
+    { dur: 5, act: async (p) => {
+      await removeTitle(p);
+      await openModal(p, '徳佐|Jobs');
+      await wait(p, 1500);
+      await caption(p, 'お客様 を 選ぶ と 詳細 カルテ が 開く');
+    }},
+    { dur: 5, act: async (p) => {
+      await focusFlow(p, '[data-cdtab="overview"]', '概要 (基本 情報 + アンケート)', { holdMs: 2000, scale: 1.5, click: true });
+    }},
+    { dur: 5, act: async (p) => {
+      await focusFlow(p, '[data-cdtab="line"]', 'LINE (やり取り 履歴)', { holdMs: 2000, scale: 1.5, click: true });
+    }},
+    { dur: 5, act: async (p) => {
+      await focusFlow(p, '[data-cdtab="timeline"]', '人生 年表', { holdMs: 2000, scale: 1.5, click: true });
+    }},
+    { dur: 5, act: async (p) => {
+      await focusFlow(p, '[data-cdtab="meetings"]', '面談録 (過去 の 議事録)', { holdMs: 2000, scale: 1.5, click: true });
+    }},
+    { dur: 4, act: async (p) => {
+      await focusFlow(p, '[data-cdtab="qa"]', 'Q & A', { holdMs: 1500, scale: 1.5, click: true });
+    }},
+    { dur: 3.6, act: async (p) => {
+      await focusFlow(p, '[data-cdtab="family"]', '家族', { holdMs: 1500, scale: 1.5, click: true });
+    }},
+  ]},
+
+  // ─── 05 アンケート結果 (24.4s) ───
+  { name: '05-survey', segments: [
+    { dur: 3.5, act: async (p) => {
+      await showTitle(p, '事前 アンケート<br>13 問 の 結果', 'CHAPTER 05');
+    }},
+    { dur: 5, act: async (p) => {
+      await removeTitle(p);
+      await openModal(p, '徳佐|Jobs');
+      await wait(p, 1500);
+      await goTab(p, 'clients');
+      await p.evaluate(() => document.querySelector('[data-cdtab="overview"]')?.click());
+      await wait(p, 500);
+      await caption(p, '「概要」 タブ の 下半分 に 表示');
+    }},
+    { dur: 8, act: async (p) => {
+      await caption(p, '<strong style="color:#C1462C;">13 問</strong> の 回答: 年代 / 職業 / 家族 / 年収 / 資産 / 相談テーマ');
+    }},
+    { dur: 7.9, act: async (p) => {
+      await caption(p, '面談 前 に 見る だけ で アイスブレイク が スムーズ');
+    }},
+  ]},
+
+  // ─── 06 LINE 送信 (28.2s) ───
+  { name: '06-line', segments: [
+    { dur: 3.5, act: async (p) => {
+      await showTitle(p, 'LINE で 送信', 'CHAPTER 06');
+    }},
+    { dur: 5, act: async (p) => {
+      await removeTitle(p);
+      await openModal(p, '徳佐|Jobs');
+      await wait(p, 1200);
+      await focusFlow(p, '[data-cdtab="line"]', '「LINE」 タブ を 開く', { holdMs: 1800, scale: 1.5, click: true });
+    }},
+    { dur: 6, act: async (p) => {
+      await caption(p, '過去 の やり取り が 上 に 並ぶ');
+    }},
+    { dur: 6, act: async (p) => {
+      await focusFlow(p, '#cd-line-input', '一番 下 の 入力 欄 に メッセージ', { holdMs: 2500, scale: 1.5 });
+      await p.fill('#cd-line-input', 'テスト').catch(() => {});
+    }},
+    { dur: 4, act: async (p) => {
+      await focusFlow(p, '#cd-line-send', '送信 ボタン → 数秒 で 届く', { holdMs: 1500, scale: 1.7 });
+    }},
+    { dur: 3.7, act: async (p) => {
+      await caption(p, '議事録 共有 / 次回 候補日 も ここ から');
+    }},
+  ]},
+
+  // ─── 07 録音→AI議事録 (主役 103.5s) ───
+  { name: '07-recording', segments: [
+    { dur: 6, act: async (p) => {
+      await goTab(p, 'clients');
+      await wait(p, 400);
+      await showTitle(p, '録音 → AI 議事録', 'CHAPTER 07 · 主 機 能');
+    }},
+    { dur: 7, act: async (p) => {
+      await removeTitle(p);
+      await focusFlow(p, '#sidebar-quick-inperson', 'サイドバー 「急遽 面談 スタート」', { holdMs: 3500, scale: 1.7 });
+    }},
+    { dur: 6, act: async (p) => {
       await p.evaluate(() => document.getElementById('sidebar-quick-inperson')?.click());
       await wait(p, 1500);
-      await focusFlow(p, '#fp-qi-client', 'お客様 を 選ぶ', { holdMs: 2800, scale: 1.5 });
+      await focusFlow(p, '#fp-qi-client', 'お客様 を 選ぶ', { holdMs: 2500, scale: 1.5 });
       await p.evaluate(() => {
         const sel = document.getElementById('fp-qi-client');
         if (sel && sel.options.length > 2) { sel.selectedIndex = 2; sel.dispatchEvent(new Event('change', { bubbles: true })); }
       });
     }},
-
-    // 「次 に、 面談 スタイル を 3 つ から 選びます。」 (5.5s)
-    { dur: 5.5, act: async (p) => {
-      await caption(p, '面談 スタイル は <strong style="color:#C1462C;">3 つ</strong> から 選択');
+    { dur: 5, act: async (p) => {
+      await caption(p, '面談 スタイル <strong style="color:#C1462C;">3 つ</strong> から 選択');
     }},
-
-    // 「Zoom で 面談 する 場合 は 一番 上、」 (5s)
-    { dur: 5.0, act: async (p) => {
+    { dur: 5, act: async (p) => {
       await clearCaption(p);
       await focusFlow(p, '.fp-qi-mode[data-mode="zoom"]', 'Zoom 即 発行 (双方 参加)', { holdMs: 2500, scale: 1.4 });
     }},
-
-    // 「対面 録音 は 真ん中、」 (4s)
-    { dur: 4.0, act: async (p) => {
-      await focusFlow(p, '.fp-qi-mode[data-mode="audio"]', '対面 で 録音 だけ', { holdMs: 1800, scale: 1.4 });
+    { dur: 4.5, act: async (p) => {
+      await focusFlow(p, '.fp-qi-mode[data-mode="audio"]', '対面 で 録音 だけ', { holdMs: 2000, scale: 1.4 });
     }},
-
-    // 「電話 や 訪問先 で メモ だけ 残す 場合 は 一番 下 です。」 (6s)
-    { dur: 6.0, act: async (p) => {
-      await focusFlow(p, '.fp-qi-mode[data-mode="memo"]', '録音 せず メモ だけ 書く', { holdMs: 3800, scale: 1.4 });
+    { dur: 5, act: async (p) => {
+      await focusFlow(p, '.fp-qi-mode[data-mode="memo"]', '録音 せず メモ だけ', { holdMs: 2500, scale: 1.4 });
     }},
-
-    // 「選んだ ら、 下 の 『選んだ スタイル で 開始』 を 押します。」 (6s)
-    { dur: 6.0, act: async (p) => {
+    { dur: 5, act: async (p) => {
       await p.evaluate(() => {
-        const zoom = document.querySelector('.fp-qi-mode[data-mode="zoom"]');
-        const r = zoom?.querySelector('input[type=radio]'); if (r) r.checked = true;
+        const z = document.querySelector('.fp-qi-mode[data-mode="zoom"]');
+        const r = z?.querySelector('input[type=radio]'); if (r) r.checked = true;
       });
-      await focusFlow(p, '#fp-qi-start, .fp-qi-start, button[type=submit]', '「選んだ スタイル で 開始」', { holdMs: 3800, scale: 1.6 });
+      await focusFlow(p, '#fp-qi-start, .fp-qi-start, button[type=submit]', '「選んだ スタイル で 開始」', { holdMs: 2500, scale: 1.6 });
     }},
-
-    // 「Zoom を 選ぶ と、 お客様 の LINE に URL が 自動 で 届き、 そのまま 面談 を 始められます。」 (8s)
-    { dur: 8.0, act: async (p) => {
+    { dur: 7, act: async (p) => {
       await p.evaluate(() => document.getElementById('fp-quick-inperson-modal')?.remove());
-      await caption(p, 'Zoom URL は <strong>お客様 の LINE に 自動 送信</strong> → 双方 参加');
+      await caption(p, 'Zoom URL は <strong>お客様 の LINE に 自動 送信</strong>');
     }},
-
-    // 「面談 が 終わったら、 Zoom を 閉じる か、 対面 の 場合 は 停止 ボタン を 押します。」 (7s)
-    { dur: 7.0, act: async (p) => {
-      await caption(p, '面談 終了 → <strong>Zoom を 閉じる or 停止 ボタン</strong>');
+    { dur: 5, act: async (p) => {
+      await caption(p, '対面 は マイク 使用 許可 → 面談 開始');
     }},
-
-    // 「画面 の 右上 に、 『議事録 生成中』 の 通知 が 出て、 30 秒 から 1 分 で 完成 します。」 (8s)
-    { dur: 8.0, act: async (p) => {
+    { dur: 6, act: async (p) => {
+      await caption(p, '面談 終了 → Zoom を 閉じる or 停止 ボタン');
+    }},
+    { dur: 8, act: async (p) => {
       await clearCaption(p);
       await p.evaluate(() => {
-        const toast = document.createElement('div');
-        toast.id = 'fp-help-toast';
-        toast.style.cssText = 'position:fixed;top:22px;right:22px;background:#0E0E0C;color:#F2EDE3;padding:16px 22px;border-radius:4px;border-left:3px solid #C1462C;box-shadow:0 12px 32px rgba(0,0,0,.4);z-index:99997;display:flex;align-items:center;gap:14px;font-family:"Noto Sans JP",sans-serif;';
-        toast.innerHTML = '<div style="width:20px;height:20px;border:2.5px solid #B8893B;border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;"></div><div style="font-weight:700;font-size:14px;">議事録 生成中... (30秒〜1分)</div>';
+        const t = document.createElement('div');
+        t.id = 'fp-help-toast';
+        t.style.cssText = 'position:fixed;top:22px;right:22px;background:#0E0E0C;color:#F2EDE3;padding:16px 22px;border-radius:4px;border-left:3px solid #C1462C;box-shadow:0 12px 32px rgba(0,0,0,.4);z-index:99997;display:flex;align-items:center;gap:14px;font-family:"Noto Sans JP",sans-serif;';
+        t.innerHTML = '<div style="width:20px;height:20px;border:2.5px solid #B8893B;border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;"></div><div style="font-weight:700;font-size:14px;">議事録 生成中... (30秒〜1分)</div>';
         const st = document.createElement('style'); st.textContent = '@keyframes sp { to { transform: rotate(360deg); } }'; document.head.appendChild(st);
-        document.body.appendChild(toast);
+        document.body.appendChild(t);
       });
       await p.evaluate(() => window.arHelp.spot('#fp-help-toast', '右上 に 通知'));
     }},
-
-    // 「完成 したら、 顧客一覧 から 該当 の お客様 を 開き、」 (5.5s)
-    { dur: 5.5, act: async (p) => {
+    { dur: 6, act: async (p) => {
       await p.evaluate(() => document.getElementById('fp-help-toast')?.remove());
-      await clearCaption(p);
       await goTab(p, 'clients');
       await wait(p, 400);
       await openModal(p, '徳佐|Jobs');
-      await wait(p, 1600);
+      await wait(p, 1500);
+      await caption(p, '該当 お客様 の カルテ を 開く');
     }},
-
-    // 「上部 タブ の 左 から 3 番目、 『面談録』 を 押します。」 (5.5s)
-    { dur: 5.5, act: async (p) => {
+    { dur: 6, act: async (p) => {
       await focusFlow(p, '[data-cdtab="meetings"]', '「面談録」 タブ (左 から 3 番目)', { holdMs: 2500, scale: 1.6, click: true });
     }},
-
-    // 「一番 上 に、 新しい 議事録 カード が 並ぶ ので、」 (5s)
-    { dur: 5.0, act: async (p) => {
+    { dur: 6, act: async (p) => {
       await p.evaluate(() => {
         const card = document.querySelector('.fp-meeting-card');
-        if (card) window.arHelp.spot(card, '新しい 議事録');
+        if (card) window.arHelp.spot(card, '新しい 議事録 カード');
       });
-      await caption(p, '新しい 議事録 が カード 形式 で 一番 上 に');
+      await caption(p, '一番 上 に 新しい 議事録');
     }},
-
-    // 「タップ する と、 プロフィール、 課題、 提案、 数字、 次回 アクション、 合意 事項 の 6 セクション と、」 (10s)
-    { dur: 10.0, act: async (p) => {
+    { dur: 8, act: async (p) => {
       await p.evaluate(() => window.arHelp.clearSpots());
       await p.evaluate(() => document.querySelector('.fp-meeting-card')?.click());
       await wait(p, 1200);
-      await caption(p, '<strong>6 セクション</strong>: プロフィール / 課題 / 提案 / 数字 / 次回 アクション / 合意 事項');
-      await p.evaluate(() => { document.querySelector('[data-cdpanel="meetings"]')?.scrollBy({ top: 240, behavior: 'smooth' }); });
+      await caption(p, '<strong>6 セクション</strong>: プロフィール / 課題 / 提案 / 数字 / 次回 アクション / 合意');
+      await p.evaluate(() => document.querySelector('[data-cdpanel="meetings"]')?.scrollBy({ top: 200, behavior: 'smooth' }));
     }},
-
-    // 「FP が 次 に やる タスク、 そして 次回 面談 の 提案 まで、 全部 まとめて 表示 されます。」 (9s)
-    { dur: 9.0, act: async (p) => {
-      await caption(p, '+ FP タスク + 次回 面談 提案 (全部 まとめて 表示)');
-      await p.evaluate(() => { document.querySelector('[data-cdpanel="meetings"]')?.scrollBy({ top: 280, behavior: 'smooth' }); });
-      await wait(p, 3000);
-      await p.evaluate(() => { document.querySelector('[data-cdpanel="meetings"]')?.scrollBy({ top: 280, behavior: 'smooth' }); });
+    { dur: 6, act: async (p) => {
+      await caption(p, '+ FP タスク + 次回 面談 提案 (全部 まとめて)');
+      await p.evaluate(() => document.querySelector('[data-cdpanel="meetings"]')?.scrollBy({ top: 260, behavior: 'smooth' }));
     }},
-
-    // 「タスク は チェック で 完了、 LINE 下書き も 自動 で 付いて きます。」 (6s)
-    { dur: 6.0, act: async (p) => {
-      await caption(p, 'タスク は <strong>チェック で 完了</strong>、 <strong>LINE 下書き</strong> も 自動生成');
+    { dur: 5, act: async (p) => {
+      await caption(p, 'タスク は チェック で 完了、 LINE 下書き 自動生成');
     }},
-
-    // 「Q & A タブ に は、 お客様 が 次 に 聞き そう な 質問 も、 AI が 予測 して 並びます。」 (8s)
-    { dur: 8.0, act: async (p) => {
-      await focusFlow(p, '[data-cdtab="qa"]', 'Q & A タブ (AI 予測 質問)', { holdMs: 4500, scale: 1.6 });
-      await clearCaption(p);
+    { dur: 7, act: async (p) => {
+      await focusFlow(p, '[data-cdtab="qa"]', 'Q & A タブ (AI 予測 質問)', { holdMs: 3500, scale: 1.6, click: true });
     }},
+  ]},
 
+  // ─── 08 ライフイベント (27.5s) ───
+  { name: '08-timeline', segments: [
+    { dur: 3.5, act: async (p) => {
+      await showTitle(p, 'ライフ イベント', 'CHAPTER 08');
+    }},
+    { dur: 5, act: async (p) => {
+      await removeTitle(p);
+      await openModal(p, '徳佐|Jobs');
+      await wait(p, 1200);
+      await focusFlow(p, '[data-cdtab="timeline"]', '「人生 年表」 タブ', { holdMs: 2000, scale: 1.5, click: true });
+    }},
+    { dur: 8, act: async (p) => {
+      await caption(p, '過去 → 未来 の 時系列 で 全部 表示 (進学 / 退職 / 結婚 / 出産)');
+    }},
+    { dur: 6, act: async (p) => {
+      await caption(p, '議事録 から <strong style="color:#C1462C;">AI が 自動抽出</strong> した イベント も 反映');
+    }},
+    { dur: 5, act: async (p) => {
+      await caption(p, '右上 「追加」 ボタン で 新規 登録');
+    }},
+  ]},
+
+  // ─── 09 過去の面談録 (21.8s) ───
+  { name: '09-meetings', segments: [
+    { dur: 3.5, act: async (p) => {
+      await showTitle(p, '過去 の 面談録', 'CHAPTER 09');
+    }},
+    { dur: 5, act: async (p) => {
+      await removeTitle(p);
+      await openModal(p, '徳佐|Jobs');
+      await wait(p, 1200);
+      await focusFlow(p, '[data-cdtab="meetings"]', '「面談録」 タブ', { holdMs: 2000, scale: 1.5, click: true });
+    }},
+    { dur: 6, act: async (p) => {
+      await caption(p, '日付 順 に カード で 一覧');
+    }},
+    { dur: 7.3, act: async (p) => {
+      await p.evaluate(() => document.querySelector('.fp-meeting-card')?.click());
+      await wait(p, 1200);
+      await caption(p, 'タップ で <strong>議事録 全文 + タスク + 次回 提案</strong> が 開く');
+    }},
+  ]},
+
+  // ─── 10 次回 Zoom 提案 (34.1s) ───
+  { name: '10-zoom', segments: [
+    { dur: 3.5, act: async (p) => {
+      await showTitle(p, '次回 Zoom 提案', 'CHAPTER 10');
+    }},
+    { dur: 5, act: async (p) => {
+      await removeTitle(p);
+      await openModal(p, '徳佐|Jobs');
+      await wait(p, 1200);
+      await focusFlow(p, '[data-cdtab="line"]', 'LINE タブ から 提案', { holdMs: 2000, scale: 1.5, click: true });
+    }},
+    { dur: 6, act: async (p) => {
+      await caption(p, '候補 を <strong style="color:#C1462C;">3 つ</strong> 選ぶ');
+    }},
+    { dur: 8, act: async (p) => {
+      await caption(p, '例: 火 14 時 / 水 10 時 / 木 19 時 → 送信 で お客様 LINE に');
+    }},
+    { dur: 11.6, act: async (p) => {
+      await caption(p, 'お客様 が 1 つ 選ぶ と 自動 確定 + Zoom URL 発行 + カレンダー 登録');
+    }},
+  ]},
+
+  // ─── 11 カレンダー連携 (27.0s) ───
+  { name: '11-calendar', segments: [
+    { dur: 3.5, act: async (p) => {
+      await showTitle(p, 'Google<br>カレンダー 連携', 'CHAPTER 11');
+    }},
+    { dur: 6, act: async (p) => {
+      await removeTitle(p);
+      await caption(p, '設定 画面 → 初回 のみ Google アカウント で 認証');
+    }},
+    { dur: 9, act: async (p) => {
+      await caption(p, '<strong style="color:#C1462C;">確定 した 予定 が 自動 で Google カレンダー に</strong>');
+    }},
+    { dur: 8.5, act: async (p) => {
+      await caption(p, 'カレンダー 側 の 変更 も FP コンパス に 反映 (双方向 同期)');
+    }},
+  ]},
+
+  // ─── 12 お客様 LINE 画面 (27.5s) ───
+  { name: '12-liff', segments: [
+    { dur: 3.5, act: async (p) => {
+      await showTitle(p, 'お客様 LINE 画面<br>(LIFF)', 'CHAPTER 12');
+    }},
+    { dur: 6, act: async (p) => {
+      await removeTitle(p);
+      await caption(p, 'お客様 は LINE リッチ メニュー から 開く');
+    }},
+    { dur: 11, act: async (p) => {
+      await caption(p, 'メニュー: 事前 アンケート / 議事録 確認 / 次回 予約 / 質問 投稿');
+    }},
+    { dur: 7, act: async (p) => {
+      await caption(p, 'FP 側 は 設定 の <strong>プレビュー モード</strong> で 見え方 を 確認');
+    }},
   ]},
 
 ];

@@ -23,10 +23,6 @@ for entry in timeline:
     n = entry['name']
     vid_start = entry['start']
     vid_dur = entry['end'] - entry['start']
-    # ★ 07-recording は 開始 3秒 (濃色ダッシュボード hero が残る frame) を cut
-    if n == '07-recording':
-        vid_start += 3
-        vid_dur -= 3
     mp3 = f'{audio_dir}/{n}.mp3'
     if not os.path.exists(mp3):
         print(f"# SKIP {n}: no mp3", flush=True)
@@ -35,11 +31,9 @@ for entry in timeline:
     # 動画 vs ナレ の差
     diff = nar_dur - vid_dur
     if diff > 0.3:
-        # ナレ の 方が長い → 動画 tpad で 末尾フリーズ延長
         vf = f"tpad=stop_mode=clone:stop_duration={diff:.2f},format=yuv420p"
         use_dur = vid_dur
     elif diff < -0.3:
-        # 動画 の 方が長い → 動画 の 最初 nar_dur 秒 だけ trim
         vf = "format=yuv420p"
         use_dur = nar_dur
     else:
