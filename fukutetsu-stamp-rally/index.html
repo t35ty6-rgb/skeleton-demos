@@ -544,6 +544,12 @@ function tryGeolocation(){
       // Kalman-lite: 前値との平滑移動平均。精度が良い側に重み寄せる
       const raw = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy };
       if (currentPos && currentPos.acc && raw.acc && raw.acc < 300){
+        // 位置差 が 極小 (< ~3m) なら 更新スキップ (render loop / img flicker 抑制)
+        const dLat = Math.abs(raw.lat - currentPos.lat);
+        const dLng = Math.abs(raw.lng - currentPos.lng);
+        if (dLat < 0.00003 && dLng < 0.00003){
+          return; // no significant move, no re-render
+        }
         const wRaw = currentPos.acc / (currentPos.acc + raw.acc);
         const wPrev = 1 - wRaw;
         currentPos = {
@@ -555,7 +561,7 @@ function tryGeolocation(){
         currentPos = raw;
       }
       simulatedCode = null;
-      render();
+      scheduleRender();
     },
     err => {
       const msg = err.code === 1 ? "位置情報が拒否されました" : "位置情報が取得できません";
@@ -607,15 +613,29 @@ function currentInRangeSpot(){
 }
 
 // ─────────── render ───────────
+let renderPending = null;
+function scheduleRender(fn){
+  if (renderPending) return;
+  renderPending = requestAnimationFrame(() => {
+    renderPending = null;
+    (fn || render)();
+  });
+}
+
 function render(){
-  // header
+  // header (once-only unless user changes)
   if (user) {
-    document.getElementById("who-nm").textContent = user.name;
+    const nmEl = document.getElementById("who-nm");
+    if (nmEl.textContent !== user.name) nmEl.textContent = user.name;
     const av = document.getElementById("who-av");
     if (user.pictureUrl){
-      av.innerHTML = `<img src="${user.pictureUrl}" alt="">`;
+      const existing = av.querySelector("img");
+      if (!existing || existing.src !== user.pictureUrl){
+        av.innerHTML = `<img src="${user.pictureUrl}" alt="">`;
+      }
     } else {
-      av.textContent = (user.name[0] || "?").toUpperCase();
+      const c = (user.name[0] || "?").toUpperCase();
+      if (av.textContent !== c) av.textContent = c;
     }
   }
   renderGps();
@@ -713,6 +733,31 @@ function renderHereCard(){
 
 function renderSpotList(){
   const el = document.getElementById("spot-list");
+  // 初回のみ全ボタン作成 (以降はDOM再利用で画像flicker回避)
+  if (!el.dataset.initialized){
+    el.dataset.initialized = "1";
+    SPOTS.forEach(s => {
+      const b = document.createElement("button");
+      b.dataset.code = s.code;
+      b.innerHTML = `
+        <div class="im"><img src="${s.img}" alt="${s.name}" loading="lazy" decoding="async"></div>
+        <div class="bd">
+          <div class="co">${s.code} · 最寄 ${s.station}駅</div>
+          <div class="nm">${s.name}</div>
+          <div class="st"></div>
+          <div class="dist"></div>
+        </div>
+      `;
+      b.addEventListener("click", () => {
+        const cur = SPOTS.find(x => x.code === b.dataset.code);
+        const d = distToSpot(cur);
+        const inRange = d !== null && d <= RADIUS_M;
+        const stamped = collected.some(c=>c.code===cur.code);
+        if (inRange && !stamped) switchTab("scan");
+      });
+      el.appendChild(b);
+    });
+  }
   const withDist = SPOTS.map(s => ({...s, d: distToSpot(s)}));
   withDist.sort((a,b) => {
     if (a.d === null && b.d === null) return 0;
@@ -720,43 +765,51 @@ function renderSpotList(){
     if (b.d === null) return -1;
     return a.d - b.d;
   });
-  el.innerHTML = "";
-  withDist.forEach(s => {
-    const done = collected.some(c=>c.code===s.code);
+  // 順序変更 + 状態更新
+  withDist.forEach((s, idx) => {
+    const btn = el.querySelector(`[data-code="${s.code}"]`);
+    if (!btn) return;
+    if (el.children[idx] !== btn) el.insertBefore(btn, el.children[idx] || null);
+    const done = collected.some(c => c.code === s.code);
     const here = !done && s.d !== null && s.d <= RADIUS_M;
     const distStr = s.d === null ? "距離不明" : (s.d < 1000 ? `${Math.round(s.d)}m` : `${(s.d/1000).toFixed(1)}km`);
-    const b = document.createElement("button");
-    b.className = "spot-item" + (done?" done":"") + (here?" here":"");
-    b.innerHTML = `
-      <div class="im"><img src="${s.img}" alt="${s.name}" loading="lazy"></div>
-      <div class="bd">
-        <div class="co">${s.code} · 最寄 ${s.station}駅</div>
-        <div class="nm">${s.name}</div>
-        <div class="st">${done ? "集印済" : (here ? "圏内 · 押印可" : "未集印")}</div>
-        <div class="dist">${done ? "✓ 済" : distStr}</div>
-      </div>
-    `;
-    b.addEventListener("click", ()=>{
-      if (here) switchTab("scan");
-    });
-    el.appendChild(b);
+    const nextClass = "spot-item" + (done?" done":"") + (here?" here":"");
+    if (btn.className !== nextClass) btn.className = nextClass;
+    const stEl = btn.querySelector(".st");
+    const distEl = btn.querySelector(".dist");
+    const stText = done ? "集印済" : (here ? "圏内 · 押印可" : "未集印");
+    const distText = done ? "✓ 済" : distStr;
+    if (stEl.textContent !== stText) stEl.textContent = stText;
+    if (distEl.textContent !== distText) distEl.textContent = distText;
   });
 }
 
 function renderBook(){
   const grid = document.getElementById("grid-stamps");
   document.getElementById("book-cnt").textContent = `${collected.length} / ${SPOTS.length}`;
-  grid.innerHTML = "";
+  // 初回のみ全カード作成 (以降はDOM再利用で画像flicker回避)
+  if (!grid.dataset.initialized){
+    grid.dataset.initialized = "1";
+    SPOTS.forEach(s => {
+      const div = document.createElement("div");
+      div.dataset.code = s.code;
+      div.innerHTML = `
+        <div class="im"><img src="${s.img}" alt="${s.name}" loading="lazy" decoding="async"><span class="co">${s.code}</span><span class="tg">押印</span></div>
+        <div class="bd"><div class="nm">${s.name}</div><div class="mt"></div></div>
+      `;
+      grid.appendChild(div);
+    });
+  }
   SPOTS.forEach(s => {
+    const card = grid.querySelector(`[data-code="${s.code}"]`);
+    if (!card) return;
     const got = collected.find(c => c.code === s.code);
-    const div = document.createElement("div");
-    div.className = "card" + (got ? "" : " empty") + (got && got.isNew ? " new" : "");
-    div.innerHTML = `
-      <div class="im"><img src="${s.img}" alt="${s.name}" loading="lazy"><span class="co">${s.code}</span><span class="tg">押印</span></div>
-      <div class="bd"><div class="nm">${s.name}</div><div class="mt">${got ? got.time.slice(0,10)+"<br>No. "+got.serial : "最寄 · "+s.station+"駅<br>未集印"}</div></div>
-    `;
+    const nextClass = "card" + (got ? "" : " empty") + (got && got.isNew ? " new" : "");
+    if (card.className !== nextClass) card.className = nextClass;
+    const mt = card.querySelector(".mt");
+    const nextMt = got ? `${got.time.slice(0,10)}<br>No. ${got.serial}` : `最寄 · ${s.station}駅<br>未集印`;
+    if (mt.innerHTML !== nextMt) mt.innerHTML = nextMt;
     if (got) got.isNew = false;
-    grid.appendChild(div);
   });
 }
 
