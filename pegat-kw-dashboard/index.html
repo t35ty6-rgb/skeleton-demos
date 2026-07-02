@@ -415,6 +415,10 @@
       <h2>📅 調整履歴 (KW入札変更 全記録)</h2>
       <span class="sub" id="adj-sub">読み込み中…</span>
     </div>
+
+    <!-- 収益サマリカード (佐瀬コンサル 共有シートと同じ数字) -->
+    <div id="adj-perf" style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--gray-3);border-bottom:1px solid var(--gray-3);"></div>
+
     <div style="padding:10px;background:var(--gray-1);border-bottom:1px solid var(--gray-3);display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
       <label>日付:
         <select id="adj-date" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;">
@@ -881,6 +885,30 @@ async function loadAdj(){
   const D = ADJ_DATA;
   document.getElementById('adj-sub').textContent =
     `全 ${D.total_rows.toLocaleString()} 件 / ${D.summary_by_date.length} 日 (${D.generated_at.slice(0,10)} 更新)`;
+
+  // 収益サマリカード (7日 / 30日)
+  const perf = D.performance_summary;
+  if (perf) {
+    const yen = v => v == null ? '—' : '¥' + v.toLocaleString();
+    const pct = v => v == null ? '—' : (v * 100).toFixed(0) + '%';
+    const mkCard = (label, s) => `
+      <div style="background:#fff;padding:12px 14px;">
+        <div style="font-size:11px;color:#666;letter-spacing:.05em;margin-bottom:6px;font-weight:700;">${label} ${perf.data_date ? '('+perf.data_date+' 時点)' : ''}</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+          <div><div style="font-size:10px;color:#888;">売上</div><div style="font-size:16px;font-weight:800;color:var(--green);">${yen(s.sales)}</div></div>
+          <div><div style="font-size:10px;color:#888;">広告費</div><div style="font-size:16px;font-weight:800;color:var(--red);">${yen(s.cost)}</div></div>
+          <div><div style="font-size:10px;color:#888;">imp</div><div style="font-size:16px;font-weight:800;">${(s.impressions||0).toLocaleString()}</div></div>
+          <div><div style="font-size:10px;color:#888;">click</div><div style="font-size:16px;font-weight:800;">${(s.clicks||0).toLocaleString()}</div></div>
+          <div><div style="font-size:10px;color:#888;">購入</div><div style="font-size:16px;font-weight:800;">${s.purchases || 0}個</div></div>
+          <div><div style="font-size:10px;color:#888;">ACoS</div><div style="font-size:16px;font-weight:800;color:${s.acos > 0.42 ? 'var(--red)' : 'var(--green)'};">${pct(s.acos)}</div></div>
+          <div><div style="font-size:10px;color:#888;">ROAS</div><div style="font-size:16px;font-weight:800;">${s.roas ? s.roas.toFixed(2)+'x' : '—'}</div></div>
+          <div><div style="font-size:10px;color:#888;">CPC</div><div style="font-size:16px;font-weight:800;">${yen(s.cpc)}</div></div>
+        </div>
+      </div>
+    `;
+    document.getElementById('adj-perf').innerHTML = mkCard('過去7日', perf.last_7d) + mkCard('過去30日', perf.last_30d);
+  }
+
   const sel = document.getElementById('adj-date');
   for(const s of D.summary_by_date){
     const opt = document.createElement('option');
