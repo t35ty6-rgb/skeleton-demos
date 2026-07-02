@@ -514,16 +514,16 @@ const chapters = [
       await wait(p, 700);
       await caption(p, '建物 は 2 種類: <strong>旅舎</strong> / <strong>學舎</strong>');
     }},
-    // (7s) "荒島 には、旅舎 と、學舎 の、2 つ の たてもの が あります。旅舎 は、商店街 の ちゅうしん に ある、メイン の やど です。"
-    { dur: 7.0, act: async (p) => {
-      await pointAt(p, 'div[data-b="ryosha"]', '旅舎 (メイン)', 5000);
+    // (6s) "荒島 には、旅舎 と、學舎 の、2 つ の たてもの が あります。旅舎 は、商店街 の ちゅうしん に ある、メイン の やど です。"
+    { dur: 6.0, act: async (p) => {
+      await pointAt(p, 'div[data-b="ryosha"]', '旅舎 (メイン)', 4200);
     }},
-    // (5.5s) "學舎 は、商店街 の はずれ に ある、姉妹 かん です。"
-    { dur: 5.5, act: async (p) => {
-      await pointAt(p, 'div[data-b="gakusha"]', '學舎 (姉妹館)', 4500);
+    // (4.5s) "學舎 は、商店街 の はずれ に ある、姉妹 かん です。"
+    { dur: 4.5, act: async (p) => {
+      await pointAt(p, 'div[data-b="gakusha"]', '學舎 (姉妹館)', 3200);
     }},
-    // (5s) "たてもの を えらぶ と、その たてもの の 客室 が、いちらん で 表示 されます。"
-    { dur: 5.0, act: async (p) => {
+    // (4s) "たてもの を えらぶ と、その たてもの の 客室 が、いちらん で 表示 されます。"
+    { dur: 4.0, act: async (p) => {
       // STEP 2 へ遷移
       await p.evaluate(() => {
         const step = document.getElementById('ar-liff-step');
@@ -562,18 +562,18 @@ const chapters = [
       await clearCaption(p);
       await caption(p, 'STEP 2 · 客室 選択');
     }},
-    // (5s) "2 つ 目、客室 を えらびます。かく 客室 には、ていいん、料金、写真、が 表示 されます。"
-    { dur: 5.0, act: async (p) => {
-      await clearCaption(p);
-      await pointAt(p, 'div[data-r="r-201"]', '定員 / 料金 / 番号', 4000);
-    }},
-    // (4s) "好きな 部屋 を タップ して、えらびます。"
+    // (4s) "2 つ 目、客室 を えらびます。かく 客室 には、ていいん、料金、写真、が 表示 されます。"
     { dur: 4.0, act: async (p) => {
-      await clickRing(p, 'div[data-r="r-201"]', false);
-      await wait(p, 500);
+      await clearCaption(p);
+      await pointAt(p, 'div[data-r="r-201"]', '定員 / 料金 / 番号', 3000);
     }},
-    // (5s) "3 つ 目、チェックイン の 日付 と、とまりすう、にんずう を、入力 します。"
-    { dur: 5.0, act: async (p) => {
+    // (3s) "好きな 部屋 を タップ して、えらびます。"
+    { dur: 3.0, act: async (p) => {
+      await clickRing(p, 'div[data-r="r-201"]', false);
+      await wait(p, 400);
+    }},
+    // (4s) "3 つ 目、チェックイン の 日付 と、とまりすう、にんずう を、入力 します。"
+    { dur: 4.0, act: async (p) => {
       // STEP 3 遷移
       await p.evaluate(() => {
         const step = document.getElementById('ar-liff-step');
@@ -601,19 +601,19 @@ const chapters = [
           </div>
         `;
       });
-      await wait(p, 700);
-      await pointAt(p, '#ar-liff-date', '日付', 2500);
+      await wait(p, 500);
+      await pointAt(p, '#ar-liff-date', '日付', 1800);
     }},
-    // (4s) "日付 を えらぶ と、空 いて いる 客室 だけ が、えらべます。"
+    // (3.5s) "日付 を えらぶ と、空 いて いる 客室 だけ が、えらべます。"
+    { dur: 3.5, act: async (p) => {
+      await pointAt(p, '#ar-liff-nights', '泊数', 2500);
+    }},
+    // (3s) 続き "にんずう も 入力"
+    { dur: 3.0, act: async (p) => {
+      await pointAt(p, '#ar-liff-guests', '人数', 2200);
+    }},
+    // (4s) "4 つ 目、お なまえ と、電話 番号 を 入力 して、"
     { dur: 4.0, act: async (p) => {
-      await pointAt(p, '#ar-liff-nights', '泊数', 3000);
-    }},
-    // (4s) 続き "にんずう も 入力"
-    { dur: 4.0, act: async (p) => {
-      await pointAt(p, '#ar-liff-guests', '人数', 3000);
-    }},
-    // (4.5s) "4 つ 目、お なまえ と、電話 番号 を 入力 して、"
-    { dur: 4.5, act: async (p) => {
       await p.evaluate(() => {
         const step = document.getElementById('ar-liff-step');
         if (!step) return;
@@ -635,13 +635,13 @@ const chapters = [
           </div>
         `;
       });
-      await wait(p, 700);
+      await wait(p, 500);
       await caption(p, 'STEP 4 · 氏名 と 電話 番号');
     }},
-    // (4.6s) "「予約 を かくてい する」 を タップ。これ で、予約 完了 です。"
-    { dur: 4.6, act: async (p) => {
+    // (4.1s) "「予約 を かくてい する」 を タップ。これ で、予約 完了 です。"
+    { dur: 4.1, act: async (p) => {
       await clearCaption(p);
-      await pointAt(p, '#ar-liff-confirm', 'タップ で 予約 完了', 3800);
+      await pointAt(p, '#ar-liff-confirm', 'タップ で 予約 完了', 3200);
     }},
   ]},
 
@@ -1191,12 +1191,12 @@ const chapters = [
       await clearCaption(p);
       await caption(p, '✓ 連携 完了');
     }},
-    // "連携 された カード に は、緑 の 「LINE」 バッジ。" (5s)
-    { dur: 5.0, act: async (p) => {
+    // "連携 された カード に は、緑 の 「LINE」 バッジ。" (4s)
+    { dur: 4.0, act: async (p) => {
       await caption(p, '管理画面 の スタッフ カード に <span style="background:#06C755;color:#fff;padding:2px 8px;border-radius:2px;font-size:11px;font-weight:700;">LINE</span> バッジ');
     }},
-    // "連携 後、「シフト」 と 送ると、今週 の シフト が 返る。" (5.5s)
-    { dur: 5.5, act: async (p) => {
+    // "連携 後、「シフト」 と 送ると、今週 の シフト が 返る。" (4.5s)
+    { dur: 4.5, act: async (p) => {
       await clearCaption(p);
       await p.evaluate(() => {
         const body = document.getElementById('ar-phone-body');
@@ -1214,8 +1214,8 @@ const chapters = [
       });
       await caption(p, 'コマンド 例 <span style="color:#B8893B;">①</span> シフト → 今週 の 予定');
     }},
-    // "「明日 9じ から 16じ」 と 送ると、自分 で 登録 できる。" (5s)
-    { dur: 5.0, act: async (p) => {
+    // "「明日 9じ から 16じ」 と 送ると、自分 で 登録 できる。" (4s)
+    { dur: 4.0, act: async (p) => {
       await p.evaluate(() => {
         const body = document.getElementById('ar-phone-body');
         if (body) {
@@ -1232,8 +1232,8 @@ const chapters = [
       });
       await caption(p, 'コマンド 例 <span style="color:#B8893B;">②</span> 明日 9-16 → シフト 追加');
     }},
-    // "「タスク」 と 送ると、今日 の 担当 タスク が 一覧。" (4.5s)
-    { dur: 4.5, act: async (p) => {
+    // "「タスク」 と 送ると、今日 の 担当 タスク が 一覧。" (3.8s)
+    { dur: 3.8, act: async (p) => {
       await p.evaluate(() => {
         const body = document.getElementById('ar-phone-body');
         if (body) {
