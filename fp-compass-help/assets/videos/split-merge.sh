@@ -23,6 +23,10 @@ for entry in timeline:
     n = entry['name']
     vid_start = entry['start']
     vid_dur = entry['end'] - entry['start']
+    # ★ 07-recording は 開始 3秒 (濃色ダッシュボード hero が残る frame) を cut
+    if n == '07-recording':
+        vid_start += 3
+        vid_dur -= 3
     mp3 = f'{audio_dir}/{n}.mp3'
     if not os.path.exists(mp3):
         print(f"# SKIP {n}: no mp3", flush=True)

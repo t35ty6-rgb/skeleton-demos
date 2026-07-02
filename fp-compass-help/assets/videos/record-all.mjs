@@ -18,26 +18,26 @@ const HIGHLIGHT_CSS = `
 /* body が zoom時に transformされる — スクロールバー隠す */
 html.fp-help-zooming, html.fp-help-zooming body { overflow: hidden !important; }
 body { transition: transform 0.55s cubic-bezier(.4,0,.2,1); }
-.fp-help-spot { position: absolute !important; border: 4px solid #EF4444 !important; border-radius: 8px !important;
-  box-shadow: 0 0 0 8px rgba(239,68,68,0.28), 0 0 40px rgba(239,68,68,0.85), 0 0 90px rgba(239,68,68,0.5) !important;
-  pointer-events: none !important; z-index: 99998 !important;
-  animation: fp-help-pulse 1.1s ease-in-out infinite; }
-.fp-help-arrow { position: absolute !important; pointer-events: none !important; z-index: 99999 !important;
+.fp-help-spot { position: absolute !important; border: 3px solid #EF4444 !important; border-radius: 8px !important;
+  box-shadow: 0 0 0 4px rgba(239,68,68,0.22), 0 0 16px rgba(239,68,68,0.45) !important;
+  pointer-events: none !important; z-index: 100001 !important;
+  animation: fp-help-pulse 1.2s ease-in-out infinite; }
+.fp-help-arrow { position: absolute !important; pointer-events: none !important; z-index: 100002 !important;
   background: #EF4444; color: #fff; font-family: "Noto Sans JP", system-ui, sans-serif;
   font-weight: 800; font-size: 15px; padding: 9px 16px; border-radius: 4px;
   box-shadow: 0 8px 24px rgba(239,68,68,.45); white-space: nowrap; animation: fp-help-fadein .25s ease; }
 .fp-help-arrow::after { content: ''; position: absolute; left: -6px; top: 50%;
   transform: translateY(-50%) rotate(45deg); width: 12px; height: 12px; background: #EF4444; }
 /* カーソル (大きめSVG) */
-#fp-help-cursor { position: absolute; pointer-events: none; z-index: 99997;
+#fp-help-cursor { position: absolute; pointer-events: none; z-index: 100003;
   transition: left .45s cubic-bezier(.4,0,.2,1), top .45s cubic-bezier(.4,0,.2,1);
   filter: drop-shadow(0 4px 10px rgba(0,0,0,.4)); }
 /* クリックリング */
-.fp-help-ring { position: absolute; pointer-events: none; z-index: 100000;
+.fp-help-ring { position: absolute; pointer-events: none; z-index: 100005;
   border: 4px solid #4338CA; border-radius: 50%;
   animation: fp-help-ring 0.65s cubic-bezier(.2,.8,.4,1) forwards; }
-@keyframes fp-help-pulse { 0%,100% { box-shadow: 0 0 0 8px rgba(239,68,68,0.28), 0 0 40px rgba(239,68,68,0.85), 0 0 90px rgba(239,68,68,0.5); }
-  50% { box-shadow: 0 0 0 14px rgba(239,68,68,0.14), 0 0 55px rgba(239,68,68,0.95), 0 0 120px rgba(239,68,68,0.4); } }
+@keyframes fp-help-pulse { 0%,100% { box-shadow: 0 0 0 4px rgba(239,68,68,0.22), 0 0 16px rgba(239,68,68,0.45); }
+  50% { box-shadow: 0 0 0 7px rgba(239,68,68,0.14), 0 0 24px rgba(239,68,68,0.6); } }
 @keyframes fp-help-fadein { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes fp-help-ring {
   from { transform: scale(0.25); opacity: 1; }
@@ -155,7 +155,20 @@ async function injectHelper(p) {
     window.fpHelp.clear = () => {
       document.querySelectorAll('.fp-help-spot, .fp-help-arrow, .fp-help-ring').forEach(el => el.remove());
     };
+    // ★ 白フェード layer (全体 明度up、 spot は z 99998 で 上表示)
+    window.fpHelp.addWhiteFade = (opacity) => {
+      let fade = document.getElementById('fp-help-white-fade');
+      if (!fade) {
+        fade = document.createElement('div');
+        fade.id = 'fp-help-white-fade';
+        fade.style.cssText = 'position:fixed;inset:0;z-index:100000;pointer-events:none;';
+        document.body.appendChild(fade);
+      }
+      fade.style.background = 'rgba(255,255,255,' + (opacity || 0.72) + ')';
+    };
   }, HIGHLIGHT_CSS);
+  // login後 に fade layer 常時 表示
+  await p.evaluate(() => window.fpHelp.addWhiteFade(0.85));
 }
 
 // ★ ズーム → 静止 → クリックリング → 引き の 3段カメラワーク
@@ -185,14 +198,16 @@ async function highlight(p, sel, label, holdMs = 3500) {
 }
 
 async function reset(p) {
-  // モーダル閉じる + clientsタブ戻る + scroll top
+  // モーダル閉じる + clients tab (明るいUI) + scroll top、 fade layer は 維持
   await p.evaluate(() => {
     document.querySelector('.cd-close')?.click();
-    document.querySelector('.tab[data-tab="home"]')?.click();
+    // ★ home tab (濃紺) じゃなく clients tab (明るい) に戻す
+    document.querySelector('.tab[data-tab="clients"], [data-tab="clients"]')?.click();
     window.scrollTo(0, 0);
     window.fpHelp && window.fpHelp.clear();
+    window.fpHelp?.addWhiteFade?.(0.9);
   });
-  await p.waitForTimeout(800);
+  await p.waitForTimeout(500);
 }
 
 async function openModal(p, regex) {
@@ -272,8 +287,13 @@ const features = [
   }},
 
   { name: '07-recording', fn: async (p) => {
-    // ★ 2026-07-02 全工程 丁寧化: 「初めて 見る人 が 分かる」 レベル で
-    await p.waitForTimeout(1500);
+    // ★ reset 直後 は home tab (ダッシュボード濃紺) → clients tab 切替 + fade を wait 前 に完了
+    // wait最小化 + fade opacity 0.9 で 短時間 の 濃色 も カバー
+    await p.evaluate(() => {
+      window.fpHelp?.addWhiteFade?.(0.9);
+      document.querySelector('.tab[data-tab="clients"], [data-tab="clients"]')?.click();
+    });
+    await p.waitForTimeout(300);
 
     // === step 1: サイドバー 「急遽 面談スタート」 (実DOM: #sidebar-quick-inperson) ===
     await focusClick(p, '#sidebar-quick-inperson',
@@ -509,12 +529,22 @@ await ctx.addInitScript(() => {
     try { document.querySelectorAll(KILL_SELECTORS).forEach(el => el.remove()); } catch(_){}
     // ★ 2026-07-02 fb fix: fp-compass-app CSS の !important を JS setProperty で 上書き
     try {
-      document.querySelectorAll('.modal-overlay, #modal-overlay, #form-overlay').forEach(el => {
+      // ★ #fp-quick-inperson-modal も inline style で 濃紺 rgba(15,23,42,0.72) → 透明化
+      document.querySelectorAll('.modal-overlay, #modal-overlay, #form-overlay, #fp-quick-inperson-modal').forEach(el => {
         el.style.setProperty('background', 'transparent', 'important');
         el.style.setProperty('background-color', 'transparent', 'important');
         el.style.setProperty('backdrop-filter', 'none', 'important');
         el.style.setProperty('-webkit-backdrop-filter', 'none', 'important');
       });
+    } catch(_){}
+    // ★ 白フェード レイヤー (元UI 濃色 を明るく、 spot は z-index 99998 で上表示)
+    try {
+      if (document.body && !document.getElementById('fp-help-white-fade')) {
+        const fade = document.createElement('div');
+        fade.id = 'fp-help-white-fade';
+        fade.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,0.55);z-index:100000;pointer-events:none;';
+        document.body.appendChild(fade);
+      }
     } catch(_){}
   };
   kill();
