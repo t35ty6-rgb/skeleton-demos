@@ -257,8 +257,7 @@ async function reset(p) {
 }
 
 // 高レベル helper
-async function caption(p, text) { await p.evaluate((t) => window.arHelp.caption(t), text); }
-async function clearCaption(p) { await p.evaluate(() => document.querySelectorAll('.ar-help-caption').forEach(el => el.remove())); }
+// (v4.2) caption 定義は 下 で no-op 再定義済み
 async function hint(p, sel, label = '') { await p.evaluate(({ s, l }) => window.arHelp.spot(s, l, 'hint'), { s: sel, l: label }); }
 async function spot(p, sel, label = '') { await p.evaluate(({ s, l }) => { window.arHelp.clearSpots(); window.arHelp.spot(s, l); }, { s: sel, l: label }); }
 async function clearSpots(p) { await p.evaluate(() => window.arHelp.clearSpots()); }
@@ -274,10 +273,12 @@ async function clickRing(p, sel, doClick = true) {
     await p.evaluate((s) => { const t = typeof s === 'string' ? document.querySelector(s) : s; if (t) t.click(); }, sel);
   }
 }
-async function showTitle(p, text, eyebrow) {
-  await p.evaluate(({ t, e }) => window.arHelp.title(t, e), { t: text, e: eyebrow || '' });
-}
-async function removeTitle(p) { await p.evaluate(() => document.querySelectorAll('.ar-help-title').forEach(el => el.remove())); }
+// v4.2 (owner): 章冒頭のポップアップは煩わしいので無効化
+async function showTitle(p, text, eyebrow) { /* disabled per owner v4.2 */ }
+async function removeTitle(p) { /* disabled */ }
+// v4.2 (owner): 下部固定 caption も 煩わしいので無効化 (spot ラベルのみ残す)
+async function caption(p, text) { /* disabled per owner v4.2 */ }
+async function clearCaption(p) { /* disabled */ }
 
 // ★★ 核心 helper: 5段階カメラワーク (全体→hint→zoom→hold→引き)
 // 使い方: await focusFlow(p, sel, label, { hintMs, holdMs, scale })
