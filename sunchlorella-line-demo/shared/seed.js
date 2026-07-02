@@ -9,7 +9,7 @@
 
 import { db } from './data.js';
 
-const SEED_FLAG = 'sunchlorella::seeded::v1';
+const SEED_FLAG = 'sunchlorella::seeded::v2';
 
 export async function seedIfEmpty() {
   if (localStorage.getItem(SEED_FLAG)) return false;
