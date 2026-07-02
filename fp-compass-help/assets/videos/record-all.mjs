@@ -504,9 +504,18 @@ await ctx.addInitScript(() => {
     /* ★ 2026-07-02 fb fix: fp-compass-app の modal-overlay で 背景 半透明黒 → 「グレー/黒くなる」 の 原因 → 透明化 */
     ' .modal-overlay, #modal-overlay, #form-overlay, [class*="modal-overlay"], [class*="modal-backdrop"] { background: transparent !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }';
   (document.head || document.documentElement).appendChild(style);
-  // 削除関数
+  // 削除関数 + modal-overlay 透明化 の 強制上書き (CSS !important の 上書き用)
   const kill = () => {
     try { document.querySelectorAll(KILL_SELECTORS).forEach(el => el.remove()); } catch(_){}
+    // ★ 2026-07-02 fb fix: fp-compass-app CSS の !important を JS setProperty で 上書き
+    try {
+      document.querySelectorAll('.modal-overlay, #modal-overlay, #form-overlay').forEach(el => {
+        el.style.setProperty('background', 'transparent', 'important');
+        el.style.setProperty('background-color', 'transparent', 'important');
+        el.style.setProperty('backdrop-filter', 'none', 'important');
+        el.style.setProperty('-webkit-backdrop-filter', 'none', 'important');
+      });
+    } catch(_){}
   };
   kill();
   // MutationObserver で 追加された瞬間 削除
