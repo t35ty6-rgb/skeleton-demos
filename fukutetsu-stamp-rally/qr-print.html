@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QR コード印刷 · ふくてつ さんぽ帳</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:oklch(0.98 0.005 82);
+  --ink:oklch(0.14 0.006 60);
+  --dim:oklch(0.5 0.006 65);
+  --rule:oklch(0.8 0.008 70);
+  --red:oklch(0.55 0.16 25);
+  --green:oklch(0.55 0.09 165);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#e6e6e0;font-family:"Noto Sans JP",system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5}
+button,input{font-family:inherit;color:inherit}
+
+.screen-only{max-width:1000px;margin:0 auto;padding:32px 24px}
+.screen-only .top{background:var(--paper);padding:24px 28px;border:1px solid var(--rule);margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.screen-only .top h1{margin:0 0 6px;font-size:22px;font-weight:900;letter-spacing:-.015em}
+.screen-only .top p{margin:0;font-size:13px;color:var(--dim);line-height:1.7;max-width:60ch}
+.screen-only .top .actions{display:flex;gap:10px}
+.btn{padding:12px 20px;background:var(--paper);border:1.5px solid var(--ink);color:var(--ink);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-block}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn.primary{background:var(--red);border-color:var(--red);color:var(--paper)}
+.btn.primary:hover{background:var(--ink);border-color:var(--ink)}
+
+/* A4 sheet */
+.sheet{background:var(--paper);width:210mm;min-height:297mm;margin:0 auto 24px;padding:14mm 12mm;box-shadow:0 20px 40px -12px rgba(0,0,0,.15);position:relative}
+.sh-head{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:6mm;border-bottom:1px solid var(--ink);margin-bottom:8mm}
+.sh-head h2{margin:0;font-size:18px;font-weight:900;letter-spacing:-.01em}
+.sh-head .meta{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--dim);letter-spacing:.16em;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6mm}
+.card{border:1.5px dashed var(--ink);padding:6mm 5mm;display:grid;grid-template-columns:auto 1fr;gap:5mm;align-items:center;position:relative;page-break-inside:avoid}
+.card .qr{width:32mm;height:32mm;background:var(--paper);display:flex;align-items:center;justify-content:center}
+.card .qr canvas,.card .qr img{width:100%;height:100%;display:block;image-rendering:pixelated}
+.card .info .code{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--red);letter-spacing:.14em;font-weight:700;text-transform:uppercase;margin-bottom:2mm}
+.card .info h3{margin:0 0 2mm;font-size:16px;font-weight:900;letter-spacing:-.01em;line-height:1.25}
+.card .info .stn{font-size:11.5px;color:var(--dim);margin-bottom:3mm}
+.card .info .todo{font-size:10.5px;line-height:1.55;color:var(--ink);border-top:1px solid var(--rule);padding-top:2.5mm}
+.card .info .todo b{font-weight:700;color:var(--red)}
+.card::before{content:"CUT";position:absolute;top:-4mm;right:-1mm;font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--dim);letter-spacing:.2em;background:#e6e6e0;padding:0 4mm}
+
+.sh-foot{position:absolute;bottom:8mm;left:12mm;right:12mm;padding-top:4mm;border-top:1px solid var(--rule);display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase}
+
+/* print */
+@media print{
+  body{background:white}
+  .screen-only{display:none}
+  .sheet{margin:0;box-shadow:none;page-break-after:always;width:100%;padding:12mm 10mm}
+  .sheet:last-child{page-break-after:auto}
+  @page{size:A4;margin:0}
+}
+</style>
+</head>
+<body>
+
+<div class="screen-only">
+  <div class="top">
+    <div>
+      <h1>QR コード印刷ページ</h1>
+      <p>10スポットの押印用 QR コードを A4 6枚に印刷し、各観光地のホーム掲出や店舗レジ横などに貼ってください。QR を読むと「ふくてつ さんぽ帳」アプリで押印が発火します。</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="./index.html">← アプリに戻る</a>
+      <button class="btn primary" onclick="window.print()">印刷する</button>
+    </div>
+  </div>
+</div>
+
+<!-- A4 Sheet (10 cards / 2 pages of 6+4) -->
+<div class="sheet">
+  <div class="sh-head">
+    <h2>ふくてつ さんぽ帳 · 押印用 QR コード（1/2）</h2>
+    <span class="meta">FT-2026-Summer · Sheet 1</span>
+  </div>
+  <div class="grid" id="grid-1"></div>
+  <div class="sh-foot">
+    <span>Cut along dashed lines · 現地掲出用</span>
+    <span>Fukui Railway · FTR-01</span>
+  </div>
+</div>
+
+<div class="sheet">
+  <div class="sh-head">
+    <h2>ふくてつ さんぽ帳 · 押印用 QR コード（2/2）</h2>
+    <span class="meta">FT-2026-Summer · Sheet 2</span>
+  </div>
+  <div class="grid" id="grid-2"></div>
+  <div class="sh-foot">
+    <span>Cut along dashed lines · 現地掲出用</span>
+    <span>Fukui Railway · FTR-01</span>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script>
+const SPOTS = [
+  { code:"SP-01", name:"越前和紙の里",             station:"たけふ新",       todo:"越前和紙の里を訪れた記念にスキャン。<b>1つスタンプ獲得</b>。" },
+  { code:"SP-02", name:"サンドーム福井",           station:"サンドーム西",   todo:"サンドームで公演鑑賞の思い出にスキャン。<b>1つスタンプ獲得</b>。" },
+  { code:"SP-03", name:"武生中央公園",             station:"たけふ新",       todo:"菊人形・かこさとし絵本館の帰りにスキャン。<b>1つスタンプ獲得</b>。" },
+  { code:"SP-04", name:"西山公園",                 station:"西鯖江",         todo:"レッサーパンダ広場前のQRをスキャン。<b>1つスタンプ獲得</b>。" },
+  { code:"SP-05", name:"めがねミュージアム",       station:"神明",           todo:"眼鏡体験工房の入口でスキャン。<b>1つスタンプ獲得</b>。" },
+  { code:"SP-06", name:"福井城址",                 station:"福井城址大名町", todo:"御廊下橋のたもとでスキャン。<b>1つスタンプ獲得</b>。" },
+  { code:"SP-07", name:"養浩館庭園",               station:"仁愛女子高校",   todo:"庭園の券売所横でスキャン。<b>1つスタンプ獲得</b>。" },
+  { code:"SP-08", name:"足羽神社",                 station:"福井駅",         todo:"拝殿前の掲示板でスキャン。<b>1つスタンプ獲得</b>。" },
+  { code:"SP-09", name:"福井駅前 恐竜モニュメント", station:"福井駅",         todo:"恐竜像前の看板をスキャン。<b>1つスタンプ獲得</b>。" },
+  { code:"SP-10", name:"田原町 商店街",            station:"田原町",         todo:"商店街入口の観光案内板でスキャン。<b>1つスタンプ獲得</b>。" },
+];
+
+const base = location.origin + location.pathname.replace(/qr-print\.html$/, "index.html");
+
+function renderCard(s){
+  const qrText = `${base}?spot=${s.code}`;
+  const qr = qrcode(0, 'M');
+  qr.addData(qrText);
+  qr.make();
+  const dataUrl = qr.createDataURL(8, 2);
+  const wrap = document.createElement("div");
+  wrap.className = "card";
+  wrap.innerHTML = `
+    <div class="qr"><img class="qr-img" src="${dataUrl}" alt="QR ${s.code}"></div>
+    <div class="info">
+      <div class="code">${s.code}</div>
+      <h3>${s.name}</h3>
+      <div class="stn">最寄 · ${s.station}駅</div>
+      <div class="todo">${s.todo}</div>
+    </div>
+  `;
+  return wrap;
+}
+
+const g1 = document.getElementById("grid-1");
+const g2 = document.getElementById("grid-2");
+SPOTS.slice(0,6).forEach(s => g1.appendChild(renderCard(s)));
+SPOTS.slice(6).forEach(s => g2.appendChild(renderCard(s)));
+</script>
+</body>
+</html>
