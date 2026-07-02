@@ -282,33 +282,46 @@ async function clickRing(p, sel, doClick = true) {
     await p.evaluate((s) => { const t = typeof s === 'string' ? document.querySelector(s) : s; if (t) t.click(); }, sel);
   }
 }
+// ★ 中央ポップは オーナー fb「見づらい」 で 廃止 → screen label (上部小さいバッジ) に
 async function showTitle(p, text, eyebrow) {
-  await p.evaluate(({ t, e }) => window.arHelp.title(t, e), { t: text, e: eyebrow || '' });
+  // 互換 用 no-op (旧 chapter 呼出 で 落ちない よう)
+  await wait(p, 50);
 }
-async function removeTitle(p) { await p.evaluate(() => document.querySelectorAll('.ar-help-title').forEach(el => el.remove())); }
+async function removeTitle(p) {
+  await p.evaluate(() => document.querySelectorAll('.ar-help-title, .ar-help-screen').forEach(el => el.remove()));
+}
+async function showScreen(p, label) {
+  await p.evaluate((l) => {
+    document.querySelectorAll('.ar-help-screen').forEach(el => el.remove());
+    const el = document.createElement('div');
+    el.className = 'ar-help-screen';
+    el.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99994;padding:8px 22px;background:rgba(14,14,12,0.9);color:#F2EDE3;border-left:3px solid #B8893B;border-radius:2px;font-family:"Noto Sans JP",sans-serif;font-weight:700;font-size:14px;letter-spacing:.06em;box-shadow:0 8px 20px rgba(0,0,0,.4);animation:ar-fadein-up .3s ease;';
+    el.textContent = '▶ ' + l;
+    document.body.appendChild(el);
+  }, label);
+}
 
-// ★★ 核心 helper: 5段階カメラワーク (全体→hint→zoom→hold→引き)
-// 使い方: await focusFlow(p, sel, label, { hintMs, holdMs, scale })
-// 合計時間 = 0.5 (全体) + 0.5 (hint) + 0.8 (zoom-in) + holdMs + 0.5 (zoom-out) + 0.3 (引き)
+// ★★ 核心 helper: 全体→hint長め→ゆっくりズーム→hold→引き
+// オーナー fb「全体表示 から アップ フォーカス 当てる」 対応: 全体+hint を 長く
 async function focusFlow(p, sel, label, opts = {}) {
   const holdMs = opts.holdMs ?? 2500;
   const scale = opts.scale ?? 1.5;
   const doClick = opts.click === true;
-  // Step 1: 全体状態を軽く見せる (spot なし、cursor だけ静止 = "全体表示")
-  await wait(p, 400);
-  // Step 2: hint (soft spot) で目線誘導 (zoom前)
+  // Step 1: 全体状態 (spot なし、 目 が 追いつくよう 1.2s)
+  await wait(p, 1200);
+  // Step 2: hint (soft spot) 目線誘導 (1.5s = 前 の 2倍)
   await hint(p, sel, label);
-  await wait(p, 700);
-  // Step 3: zoom in (0.7s transition + 0.05s buffer)
+  await wait(p, 1500);
+  // Step 3: ゆっくりズーム (transition 0.7s + wait 1.0s = 前 より 長い)
   await zoomIn(p, sel, label, scale);
-  await wait(p, 800);
-  // Step 4: hold (ここで説明)
+  await wait(p, 1000);
+  // Step 4: hold (説明時間)
   await wait(p, holdMs);
   // Step 5: click (optional)
   if (doClick) { await clickRing(p, sel, true); await wait(p, 500); }
   // Step 6: zoom out
   await zoomOut(p);
-  await wait(p, 350);
+  await wait(p, 400);
 }
 
 // ★ シンプル focus (zoom なし、spot + cursor 移動のみ) — 小さい要素・短い説明用
@@ -332,7 +345,7 @@ const chapters = [
     { dur: 4, act: async (p) => {
       await goTab(p, 'clients');
       await wait(p, 400);
-      await showTitle(p, 'ログイン', 'CHAPTER 01');
+      await showScreen(p, 'ログイン');
     }},
     { dur: 4, act: async (p) => {
       await removeTitle(p);
@@ -351,7 +364,7 @@ const chapters = [
     { dur: 3.5, act: async (p) => {
       await goTab(p, 'home');
       await wait(p, 400);
-      await showTitle(p, 'ダッシュボード', 'CHAPTER 02');
+      await showScreen(p, 'ダッシュボード');
     }},
     { dur: 6, act: async (p) => {
       await removeTitle(p);
@@ -373,7 +386,7 @@ const chapters = [
   // ─── 03 顧客台帳 (25.2s) ───
   { name: '03-clients', segments: [
     { dur: 3.5, act: async (p) => {
-      await showTitle(p, '顧客台帳', 'CHAPTER 03');
+      await showScreen(p, '顧客台帳');
     }},
     { dur: 5, act: async (p) => {
       await removeTitle(p);
@@ -393,7 +406,7 @@ const chapters = [
   // ─── 04 顧客カルテ 6タブ (36.1s) ───
   { name: '04-modal', segments: [
     { dur: 3.5, act: async (p) => {
-      await showTitle(p, '顧客カルテ<br>6 タブ 構造', 'CHAPTER 04');
+      await showScreen(p, '顧客カルテ 6 タブ 構造');
     }},
     { dur: 5, act: async (p) => {
       await removeTitle(p);
@@ -424,7 +437,7 @@ const chapters = [
   // ─── 05 アンケート結果 (24.4s) ───
   { name: '05-survey', segments: [
     { dur: 3.5, act: async (p) => {
-      await showTitle(p, '事前 アンケート<br>13 問 の 結果', 'CHAPTER 05');
+      await showScreen(p, '事前 アンケート 13 問 の 結果');
     }},
     { dur: 5, act: async (p) => {
       await removeTitle(p);
@@ -446,7 +459,7 @@ const chapters = [
   // ─── 06 LINE 送信 (28.2s) ───
   { name: '06-line', segments: [
     { dur: 3.5, act: async (p) => {
-      await showTitle(p, 'LINE で 送信', 'CHAPTER 06');
+      await showScreen(p, 'LINE で 送信');
     }},
     { dur: 5, act: async (p) => {
       await removeTitle(p);
@@ -474,7 +487,7 @@ const chapters = [
     { dur: 6, act: async (p) => {
       await goTab(p, 'clients');
       await wait(p, 400);
-      await showTitle(p, '録音 → AI 議事録', 'CHAPTER 07 · 主 機 能');
+      await showScreen(p, '録音 → AI 議事録');
     }},
     { dur: 7, act: async (p) => {
       await removeTitle(p);
@@ -571,7 +584,7 @@ const chapters = [
   // ─── 08 ライフイベント (27.5s) ───
   { name: '08-timeline', segments: [
     { dur: 3.5, act: async (p) => {
-      await showTitle(p, 'ライフ イベント', 'CHAPTER 08');
+      await showScreen(p, 'ライフ イベント');
     }},
     { dur: 5, act: async (p) => {
       await removeTitle(p);
@@ -593,7 +606,7 @@ const chapters = [
   // ─── 09 過去の面談録 (21.8s) ───
   { name: '09-meetings', segments: [
     { dur: 3.5, act: async (p) => {
-      await showTitle(p, '過去 の 面談録', 'CHAPTER 09');
+      await showScreen(p, '過去 の 面談録');
     }},
     { dur: 5, act: async (p) => {
       await removeTitle(p);
@@ -614,7 +627,7 @@ const chapters = [
   // ─── 10 次回 Zoom 提案 (34.1s) ───
   { name: '10-zoom', segments: [
     { dur: 3.5, act: async (p) => {
-      await showTitle(p, '次回 Zoom 提案', 'CHAPTER 10');
+      await showScreen(p, '次回 Zoom 提案');
     }},
     { dur: 5, act: async (p) => {
       await removeTitle(p);
@@ -636,7 +649,7 @@ const chapters = [
   // ─── 11 カレンダー連携 (27.0s) ───
   { name: '11-calendar', segments: [
     { dur: 3.5, act: async (p) => {
-      await showTitle(p, 'Google<br>カレンダー 連携', 'CHAPTER 11');
+      await showScreen(p, 'Google カレンダー 連携');
     }},
     { dur: 6, act: async (p) => {
       await removeTitle(p);
@@ -653,7 +666,7 @@ const chapters = [
   // ─── 12 お客様 LINE 画面 (27.5s) ───
   { name: '12-liff', segments: [
     { dur: 3.5, act: async (p) => {
-      await showTitle(p, 'お客様 LINE 画面<br>(LIFF)', 'CHAPTER 12');
+      await showScreen(p, 'お客様 LINE 画面 (LIFF)');
     }},
     { dur: 6, act: async (p) => {
       await removeTitle(p);
