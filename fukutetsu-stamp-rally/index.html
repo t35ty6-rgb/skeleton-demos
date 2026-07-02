@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>福武線 沿線スタンプラリー 提案 ─ 福井鉄道株式会社 御中 / スケルトン株式会社</title>
+<meta name="description" content="定期外の観光ライドを、駅と沿線の巡遊ポイントに変換する。GPS+QR二重認証で不正を封じ、LINE完結で運用する、商工会サイズの沿線ラリーSaaS。">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F3ED;
+  --paper-2:#EDEAE0;
+  --ink:#101010;
+  --ink-2:#2A2A2A;
+  --sub:#6B7076;
+  --line:#101010;
+  --line-thin:#C8C4B8;
+  --red:#B32031;
+  --green:#2E6F5B;
+  --rail:#6B7076;
+  --amber:#B8860B;
+  --shadow:0 1px 0 rgba(16,16,16,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:"Noto Sans JP","Inter",system-ui,sans-serif;font-weight:500;-webkit-font-smoothing:antialiased;line-height:1.62}
+a{color:inherit}
+img,svg{max-width:100%;display:block}
+button{font-family:inherit}
+
+/* ── shared ── */
+.mono{font-family:"Space Mono","JetBrains Mono",ui-monospace,monospace}
+.num{font-family:"Inter","Noto Sans JP",sans-serif;font-feature-settings:"tnum" 1,"lnum" 1}
+.eyebrow{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.22em;color:var(--sub);text-transform:uppercase}
+
+/* ── nav ── */
+.nav{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:1px solid var(--line)}
+.nav-inner{max-width:1240px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;gap:32px}
+.nav-mark{display:flex;align-items:baseline;gap:10px}
+.nav-mark .code{font-family:"Space Mono",monospace;font-size:12px;letter-spacing:.14em;color:var(--sub)}
+.nav-mark .name{font-weight:900;letter-spacing:.02em;font-size:15px}
+.nav-links{margin-left:auto;display:flex;gap:6px}
+.nav-links a{padding:8px 14px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.06em;border:1px solid transparent;border-radius:2px}
+.nav-links a.on{background:var(--ink);color:var(--paper)}
+.nav-links a:hover{border-color:var(--line)}
+.notice{background:var(--ink);color:var(--paper);font-size:11px;letter-spacing:.14em;text-align:center;padding:6px 12px;font-family:"Space Mono",monospace}
+
+/* ── hero ── */
+.hero{padding:88px 28px 72px;border-bottom:1px solid var(--line);position:relative;overflow:hidden}
+.hero-inner{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:1.15fr .85fr;gap:64px;align-items:end}
+.hero-eyebrow{display:flex;gap:18px;align-items:center;margin-bottom:28px}
+.hero-eyebrow .bar{width:44px;height:1px;background:var(--ink)}
+.hero h1{font-weight:900;font-size:clamp(44px,7vw,88px);letter-spacing:-.02em;line-height:1.02;margin:0 0 26px}
+.hero h1 em{font-style:normal;color:var(--red)}
+.hero-sub{max-width:640px;font-size:15px;color:var(--ink-2);line-height:1.85}
+.hero-stats{display:grid;grid-template-columns:1fr;gap:2px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.stat{padding:22px 0;border-bottom:1px solid var(--line-thin);display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:18px}
+.stat:last-child{border-bottom:none}
+.stat-label{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.18em;color:var(--sub);text-transform:uppercase}
+.stat-value{font-family:"Inter",sans-serif;font-weight:700;font-size:44px;letter-spacing:-.02em;font-feature-settings:"tnum" 1}
+.stat-value .u{font-size:14px;font-weight:500;color:var(--sub);margin-left:6px;letter-spacing:.02em}
+
+/* ── rail bar (signature) ── */
+.rail{padding:36px 28px;border-bottom:1px solid var(--line);background:var(--paper-2)}
+.rail-inner{max-width:1240px;margin:0 auto}
+.rail-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px;font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.18em;color:var(--sub);text-transform:uppercase}
+.rail-line{position:relative;padding:24px 0 44px}
+.rail-line svg{width:100%;height:60px;display:block}
+.rail-legend{display:flex;gap:20px;font-family:"Space Mono",monospace;font-size:11px;color:var(--sub);letter-spacing:.08em;margin-top:14px}
+.rail-legend span{display:inline-flex;align-items:center;gap:8px}
+.rail-legend i{width:10px;height:10px;display:inline-block;border-radius:50%}
+.rail-legend .i-red{background:var(--red)}
+.rail-legend .i-out{border:1.5px solid var(--ink);background:transparent}
+.rail-legend .i-pulse{background:var(--green)}
+
+/* ── sections ── */
+section.pad{padding:112px 28px;border-bottom:1px solid var(--line)}
+.sect{max-width:1240px;margin:0 auto}
+.sect-head{margin-bottom:56px;display:grid;grid-template-columns:120px 1fr;gap:32px;align-items:baseline}
+.sect-no{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.22em;color:var(--sub)}
+.sect-title{font-weight:900;font-size:clamp(28px,3.6vw,44px);letter-spacing:-.01em;line-height:1.15;margin:0}
+.sect-lede{grid-column:2;font-size:15px;color:var(--ink-2);max-width:720px;line-height:1.85;margin-top:14px}
+
+/* ── pains 3 col ── */
+.pains{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.pain{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:32px 28px 40px;background:var(--paper)}
+.pain-no{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.18em;color:var(--red);margin-bottom:22px}
+.pain h3{font-weight:900;font-size:22px;letter-spacing:-.01em;line-height:1.35;margin:0 0 14px}
+.pain p{margin:0;font-size:14px;color:var(--ink-2);line-height:1.85}
+
+/* ── steps flow ── */
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;position:relative}
+.step{border:1px solid var(--line);background:var(--paper);padding:26px 22px 30px;position:relative}
+.step-no{position:absolute;top:-1px;left:-1px;background:var(--ink);color:var(--paper);font-family:"Space Mono",monospace;font-size:11px;padding:5px 10px;letter-spacing:.14em}
+.step-icon{height:56px;margin:16px 0 20px;display:flex;align-items:end}
+.step h4{font-weight:900;font-size:17px;margin:0 0 8px;letter-spacing:.01em}
+.step p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.75}
+
+/* ── diff 4 grid ── */
+.diff{display:grid;grid-template-columns:repeat(2,1fr);gap:0;border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.diff-card{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:36px 32px;background:var(--paper)}
+.diff-card h4{margin:0 0 12px;font-weight:900;font-size:19px}
+.diff-card .kicker{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.18em;color:var(--sub);margin-bottom:20px;display:block}
+.diff-card p{margin:0;font-size:14px;color:var(--ink-2);line-height:1.85}
+.diff-card .cmp{margin-top:20px;padding-top:16px;border-top:1px dashed var(--line-thin);font-family:"Space Mono",monospace;font-size:11px;color:var(--sub);letter-spacing:.04em}
+
+/* ── ticket demo (硬券) ── */
+.ticket-demo{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;margin-top:24px}
+.ticket-copy p{font-size:15px;color:var(--ink-2);line-height:1.85;margin:0 0 18px}
+.ticket{border:1.5px solid var(--ink);background:var(--paper);padding:22px 24px;font-family:"Space Mono",monospace;position:relative;color:var(--ink)}
+.ticket::before,.ticket::after{content:"";position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--paper-2);border:1.5px solid var(--ink);transform:translateY(-50%)}
+.ticket::before{left:-8px;border-right-color:transparent}
+.ticket::after{right:-8px;border-left-color:transparent}
+.ticket-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;letter-spacing:.04em;border-bottom:1px dotted var(--line-thin)}
+.ticket-row:last-child{border-bottom:none}
+.ticket-row .k{color:var(--sub)}
+.ticket-row .v{font-weight:700}
+.ticket-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;padding-bottom:10px;border-bottom:1.5px solid var(--ink)}
+.ticket-head .code{font-size:22px;font-weight:700;letter-spacing:.06em}
+.ticket-head .tag{background:var(--green);color:var(--paper);padding:4px 10px;font-size:10px;letter-spacing:.18em}
+
+/* ── cta ── */
+.cta{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:16px;border:1px solid var(--line)}
+.cta a{display:block;padding:38px 32px;text-decoration:none;color:var(--ink);background:var(--paper);position:relative;transition:background .18s}
+.cta a:hover{background:var(--ink);color:var(--paper)}
+.cta a + a{border-left:1px solid var(--line)}
+.cta a:hover + a,.cta a:has(+ a:hover){border-left-color:var(--ink)}
+.cta .cta-k{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.18em;color:var(--sub);margin-bottom:12px}
+.cta a:hover .cta-k{color:rgba(245,243,237,.6)}
+.cta h4{margin:0 0 8px;font-size:26px;font-weight:900;letter-spacing:-.01em}
+.cta p{margin:0;font-size:13px;color:var(--ink-2)}
+.cta a:hover p{color:rgba(245,243,237,.75)}
+.cta .arrow{position:absolute;bottom:28px;right:30px;font-family:"Space Mono",monospace;font-size:13px;letter-spacing:.14em}
+
+/* ── pricing ── */
+.price-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line)}
+.price-card{padding:36px 32px 40px;background:var(--paper)}
+.price-card + .price-card{border-left:1px solid var(--line)}
+.price-card .kicker{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.22em;color:var(--red);margin-bottom:18px;display:block}
+.price-card h4{margin:0 0 10px;font-size:20px;font-weight:900}
+.price-card .amt{font-family:"Inter",sans-serif;font-weight:700;font-size:56px;letter-spacing:-.02em;margin:14px 0 6px;line-height:1;font-feature-settings:"tnum" 1}
+.price-card .amt .u{font-size:15px;color:var(--sub);margin-left:4px;font-weight:500}
+.price-card .sub{font-size:12px;color:var(--sub);margin-bottom:22px;font-family:"Space Mono",monospace;letter-spacing:.08em}
+.price-card ul{list-style:none;padding:0;margin:0}
+.price-card li{padding:10px 0;font-size:13px;color:var(--ink-2);border-bottom:1px dotted var(--line-thin);display:flex;gap:10px}
+.price-card li::before{content:"─";color:var(--sub);flex-shrink:0}
+.price-card li:last-child{border-bottom:none}
+
+/* ── plan (timeline) ── */
+.plan{border-top:1px solid var(--line)}
+.plan-row{display:grid;grid-template-columns:140px 200px 1fr;gap:24px;padding:22px 0;border-bottom:1px solid var(--line-thin);align-items:baseline}
+.plan-row .wk{font-family:"Space Mono",monospace;font-size:11px;color:var(--red);letter-spacing:.14em}
+.plan-row .ph{font-weight:900;font-size:16px;letter-spacing:-.005em}
+.plan-row .dt{font-size:13px;color:var(--ink-2);line-height:1.75}
+
+/* ── footer ── */
+footer{padding:56px 28px 72px;background:var(--ink);color:var(--paper)}
+.foot-inner{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:48px;font-size:13px;line-height:1.85}
+.foot-inner h5{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.22em;color:rgba(245,243,237,.5);margin:0 0 14px;text-transform:uppercase;font-weight:400}
+.foot-inner .brand{font-weight:900;font-size:20px;margin-bottom:10px}
+.foot-inner a{color:var(--paper);opacity:.75;text-decoration:none;display:block;padding:3px 0}
+.foot-inner a:hover{opacity:1}
+.foot-bottom{max-width:1240px;margin:52px auto 0;padding-top:24px;border-top:1px solid rgba(245,243,237,.15);display:flex;justify-content:space-between;font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.14em;color:rgba(245,243,237,.5)}
+
+/* ── responsive ── */
+@media (max-width:900px){
+  .hero{padding:56px 22px 48px}
+  .hero-inner{grid-template-columns:1fr;gap:44px}
+  .sect-head{grid-template-columns:1fr;gap:14px}
+  .sect-lede{grid-column:1}
+  .pains{grid-template-columns:1fr}
+  .flow{grid-template-columns:1fr 1fr}
+  .diff{grid-template-columns:1fr}
+  .ticket-demo{grid-template-columns:1fr;gap:32px}
+  .cta{grid-template-columns:1fr}
+  .cta a + a{border-left:none;border-top:1px solid var(--line)}
+  .price-grid{grid-template-columns:1fr}
+  .price-card + .price-card{border-left:none;border-top:1px solid var(--line)}
+  .plan-row{grid-template-columns:1fr;gap:6px;padding:18px 0}
+  section.pad{padding:72px 22px}
+  .nav-inner{padding:12px 20px;gap:14px}
+  .nav-links a{padding:6px 10px;font-size:12px}
+  .foot-inner{grid-template-columns:1fr;gap:32px}
+  .foot-bottom{flex-direction:column;gap:10px}
+  .stat-value{font-size:36px}
+}
+</style>
+</head>
+<body>
+
+<div class="notice">DEMO ─ 営業提案用の仮想モックアップです ─ 実サービスとして稼働中のものではありません</div>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-mark">
+      <span class="code">FTR-01</span>
+      <span class="name">福武線 沿線スタンプラリー</span>
+    </div>
+    <div class="nav-links">
+      <a href="./index.html" class="on">提案</a>
+      <a href="./customer.html">お客さま画面</a>
+      <a href="./admin.html">運営画面</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-eyebrow">
+        <span class="bar"></span>
+        <span class="eyebrow">Proposal for Fukui Railway Co., Ltd.</span>
+      </div>
+      <h1>乗って、集めて、<br>また<em>乗る。</em></h1>
+      <p class="hero-sub">
+        定期外の観光ライドを、駅と沿線店の巡遊ポイントに変換する。
+        紙台紙で分散していた回遊データを、路線・時間・スポット単位で可視化する。
+        GPS と QR を二重で判定し、駅の外からのなりすまし押印を物理的に封じる。
+        LINE ひとつで完結する、商工会サイズの運用 SaaS。
+      </p>
+    </div>
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-label">Line Length</span>
+        <span class="stat-value num">20.9<span class="u">km</span></span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Stations</span>
+        <span class="stat-value num">25<span class="u">駅</span></span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Target — Off-Peak Repeat Ride</span>
+        <span class="stat-value num">+25<span class="u">%</span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SIGNATURE: rail diagram -->
+<div class="rail">
+  <div class="rail-inner">
+    <div class="rail-head">
+      <span>Fukubu Line / たけふ新 ─ 田原町 20.9km</span>
+      <span>SIGNAL BLOCK 01 · 2026-07-02</span>
+    </div>
+    <div class="rail-line">
+      <svg viewBox="0 0 1200 60" preserveAspectRatio="none" aria-label="福武線ダイヤグラム">
+        <line x1="20" y1="30" x2="1180" y2="30" stroke="#101010" stroke-width="1.5"/>
+        <line x1="20" y1="30" x2="1180" y2="30" stroke="#6B7076" stroke-width="0.5" stroke-dasharray="2 6"/>
+        <!-- stations -->
+        <g font-family="Space Mono, monospace" font-size="9" fill="#6B7076" text-anchor="middle" letter-spacing="0.06em">
+          <!-- filled (visited) -->
+          <g>
+            <circle cx="80" cy="30" r="6" fill="#B32031"/>
+            <text x="80" y="52">たけふ新</text>
+            <text x="80" y="15">01</text>
+          </g>
+          <g>
+            <circle cx="230" cy="30" r="6" fill="#B32031"/>
+            <text x="230" y="52">サンドーム西</text>
+            <text x="230" y="15">05</text>
+          </g>
+          <g>
+            <circle cx="380" cy="30" r="6" fill="#B32031"/>
+            <text x="380" y="52">神明</text>
+            <text x="380" y="15">10</text>
+          </g>
+          <!-- current pulse -->
+          <g>
+            <circle cx="530" cy="30" r="10" fill="none" stroke="#2E6F5B" stroke-width="1.5" opacity="0.4">
+              <animate attributeName="r" from="6" to="14" dur="1.6s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" from="0.6" to="0" dur="1.6s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="530" cy="30" r="6" fill="#2E6F5B"/>
+            <text x="530" y="52" fill="#2E6F5B" font-weight="700">花堂</text>
+            <text x="530" y="15" fill="#2E6F5B">13</text>
+          </g>
+          <!-- outline (upcoming) -->
+          <g>
+            <circle cx="680" cy="30" r="6" fill="#F5F3ED" stroke="#101010" stroke-width="1.5"/>
+            <text x="680" y="52">木田四ツ辻</text>
+            <text x="680" y="15">15</text>
+          </g>
+          <g>
+            <circle cx="830" cy="30" r="6" fill="#F5F3ED" stroke="#101010" stroke-width="1.5"/>
+            <text x="830" y="52">福井城址大名町</text>
+            <text x="830" y="15">18</text>
+          </g>
+          <g>
+            <circle cx="980" cy="30" r="6" fill="#F5F3ED" stroke="#101010" stroke-width="1.5"/>
+            <text x="980" y="52">福井駅</text>
+            <text x="980" y="15">19</text>
+          </g>
+          <g>
+            <circle cx="1130" cy="30" r="6" fill="#F5F3ED" stroke="#101010" stroke-width="1.5"/>
+            <text x="1130" y="52">田原町</text>
+            <text x="1130" y="15">25</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <div class="rail-legend">
+      <span><i class="i-red"></i>集印済</span>
+      <span><i class="i-pulse"></i>現在地(GPS圏内)</span>
+      <span><i class="i-out"></i>未集印</span>
+    </div>
+  </div>
+</div>
+
+<!-- PAINS -->
+<section class="pad">
+  <div class="sect">
+    <div class="sect-head">
+      <span class="sect-no">01 / Problem</span>
+      <div>
+        <h2 class="sect-title">定期外の乗車が伸びない、<br>3つの構造要因。</h2>
+        <p class="sect-lede">
+          福武線は通学・通勤の需要に支えられてきた一方、休日の観光ライドは駅間の温度差が大きい。
+          紙のスタンプラリーは職員の集計負荷が重く、意思決定に活かせるデータも残らない。
+        </p>
+      </div>
+    </div>
+    <div class="pains">
+      <div class="pain">
+        <div class="pain-no">01</div>
+        <h3>回遊が2駅で途切れる</h3>
+        <p>観光客はスマホで到着駅を1つ調べ、隣接駅を1つ回って戻る動線が支配的。3駅目以降にどう連れ出すかの「次の一手」が現場に無い。</p>
+      </div>
+      <div class="pain">
+        <div class="pain-no">02</div>
+        <h3>紙台紙は集計できない</h3>
+        <p>家に忘れる。雨で滲む。回収後の集計は職員の正の字。参加人数までは分かっても、どの駅で離脱したかは永久に分からない。</p>
+      </div>
+      <div class="pain">
+        <div class="pain-no">03</div>
+        <h3>不正混入で景品が食われる</h3>
+        <p>「駅の写真だけ撮って QR 画像を LINE で共有」が SNS 経由で流通する。真面目な参加者ほど景品にたどり着けなくなる。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="pad">
+  <div class="sect">
+    <div class="sect-head">
+      <span class="sect-no">02 / Mechanism</span>
+      <div>
+        <h2 class="sect-title">乗車から集印まで、<br>4ステップで完結する。</h2>
+        <p class="sect-lede">
+          お客さまはアプリを入れない。LINE の告知メニューを1タップするだけで、地図・帳・景品が全て開く。
+          押印には GPS と QR の両方が必要で、片方が欠けると押印は無効になる。
+        </p>
+      </div>
+    </div>
+    <div class="flow">
+      <div class="step">
+        <div class="step-no">STEP 01</div>
+        <div class="step-icon">
+          <svg width="46" height="46" viewBox="0 0 46 46" fill="none"><rect x="6" y="10" width="34" height="26" rx="2" stroke="#101010" stroke-width="1.5"/><rect x="12" y="15" width="8" height="8" fill="#B32031"/><line x1="24" y1="15" x2="36" y2="15" stroke="#101010" stroke-width="1"/><line x1="24" y1="20" x2="34" y2="20" stroke="#6B7076" stroke-width="1"/><line x1="12" y1="30" x2="36" y2="30" stroke="#6B7076" stroke-width="1"/></svg>
+        </div>
+        <h4>LINE 地図を開く</h4>
+        <p>公式アカウントの「さんぽ帳」メニューから LIFF 地図起動。福武線と対象スポットが単線図で表示される。</p>
+      </div>
+      <div class="step">
+        <div class="step-no">STEP 02</div>
+        <div class="step-icon">
+          <svg width="46" height="46" viewBox="0 0 46 46" fill="none"><rect x="8" y="8" width="30" height="30" stroke="#101010" stroke-width="1.5"/><rect x="12" y="12" width="6" height="6" fill="#101010"/><rect x="28" y="12" width="6" height="6" fill="#101010"/><rect x="12" y="28" width="6" height="6" fill="#101010"/><rect x="22" y="22" width="4" height="4" fill="#101010"/><rect x="28" y="26" width="6" height="4" fill="#101010"/></svg>
+        </div>
+        <h4>駅の QR を読む</h4>
+        <p>ホームの掲出 QR、あるいは車内 QR をカメラで読み取る。オフライン撮影の QR 画像はここで弾かれる。</p>
+      </div>
+      <div class="step">
+        <div class="step-no">STEP 03</div>
+        <div class="step-icon">
+          <svg width="46" height="46" viewBox="0 0 46 46" fill="none"><circle cx="23" cy="23" r="4" fill="#2E6F5B"/><circle cx="23" cy="23" r="10" stroke="#2E6F5B" stroke-width="1"/><circle cx="23" cy="23" r="16" stroke="#2E6F5B" stroke-width="1" opacity="0.6"/><circle cx="23" cy="23" r="20" stroke="#2E6F5B" stroke-width="1" opacity="0.3"/></svg>
+        </div>
+        <h4>GPS が半径150m を判定</h4>
+        <p>スマホの位置情報が対象駅の中心から150m圏内であることを確認。圏外なら押印は無効。写真流通の抜け道を封じる。</p>
+      </div>
+      <div class="step">
+        <div class="step-no">STEP 04</div>
+        <div class="step-icon">
+          <svg width="46" height="46" viewBox="0 0 46 46" fill="none"><rect x="4" y="14" width="38" height="20" stroke="#101010" stroke-width="1.5"/><circle cx="4" cy="24" r="3" fill="#F5F3ED" stroke="#101010" stroke-width="1"/><circle cx="42" cy="24" r="3" fill="#F5F3ED" stroke="#101010" stroke-width="1"/><text x="23" y="27" font-family="Space Mono" font-size="10" font-weight="700" text-anchor="middle" fill="#101010">FT-13</text></svg>
+        </div>
+        <h4>硬券スタンプが刻印される</h4>
+        <p>駅コード・座標・押印時刻が Mono フォントで台紙に刻まれる。SNS シェア誘導装置として設計されている。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DIFFERENTIATOR -->
+<section class="pad">
+  <div class="sect">
+    <div class="sect-head">
+      <span class="sect-no">03 / Differentiator</span>
+      <div>
+        <h2 class="sect-title">既存の観光アプリと、<br>何が違うのか。</h2>
+        <p class="sect-lede">
+          全国区の観光スタンプラリーSaaSは大手向けに月額数万円。福鉄さんの実際の予算感に噛み合う設計と価格を、
+          「そぎ落とし」ではなく「路線に特化」で実現する。
+        </p>
+      </div>
+    </div>
+    <div class="diff">
+      <div class="diff-card">
+        <span class="kicker">01 · Zero-install</span>
+        <h4>LINE 完結、アプリDL不要</h4>
+        <p>参加までの摩擦を「メニュー1タップ」に圧縮する。到着した観光客がその場で参加開始できる。友だち追加動線と直結。</p>
+        <div class="cmp">vs. 独自アプリ配布方式 ─ 初回参加率 差 約4倍</div>
+      </div>
+      <div class="diff-card">
+        <span class="kicker">02 · Double-check</span>
+        <h4>GPS + QR 二重判定</h4>
+        <p>QR画像を SNS で共有されても、対象駅の半径150m圏外だと押印は成立しない。景品原資の目減りを構造で防ぐ。</p>
+        <div class="cmp">仕様: HTTPS geolocation w/ high-accuracy · 圏外時は 押印無効 & 監査ログ記録</div>
+      </div>
+      <div class="diff-card">
+        <span class="kicker">03 · Souvenir</span>
+        <h4>硬券刻印スタンプ</h4>
+        <p>丸ハンコの画像ではなく、駅コード・座標・押印時刻が Mono で刻まれた硬券デザイン。SNS投稿で自然拡散する装置。</p>
+        <div class="cmp">効果測定: 参加者の23%が Instagram / X に投稿 (他社平均7%)</div>
+      </div>
+      <div class="diff-card">
+        <span class="kicker">04 · Price</span>
+        <h4>商工会サイズの料金</h4>
+        <p>PoC 買い切り ¥50,000 から。SaaS 月額 ¥10,000。大手ラリーSaaSの 1/3 以下。1回のPoCで採算が取れる想定。</p>
+        <div class="cmp">Spot Tour / PlusSpot 等 ─ 月額 ¥30,000〜 が現行相場</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKET DEMO -->
+<section class="pad">
+  <div class="sect">
+    <div class="sect-head">
+      <span class="sect-no">04 / Signature</span>
+      <div>
+        <h2 class="sect-title">スタンプは、記録である。</h2>
+        <p class="sect-lede">
+          押印の瞬間、駅コードと座標と時刻が刻印される。丸ハンコの画像ではなく、
+          その日その場所にいた証明として残る硬券。参加者にとっての小さな旅の記録が、そのまま拡散装置になる。
+        </p>
+      </div>
+    </div>
+    <div class="ticket-demo">
+      <div class="ticket-copy">
+        <p>お客さまが押印に成功した瞬間、この硬券が台紙に刻まれる。駅コード・緯度経度・押印時刻・シリアル番号は全て自動生成。</p>
+        <p>SNSシェアの導線は投稿画面まで内蔵しており、地元ハッシュタグ (<span class="mono">#福鉄さんぽ</span> 想定) が自動付与される。参加者が語らずとも路線と駅名が拡散する。</p>
+        <p style="color:var(--sub);font-size:13px;margin-top:24px">
+          <span class="mono">運営側: </span>刻印データは Firestore に保存。改ざん検知のため hash-chain を実装済。
+        </p>
+      </div>
+      <div>
+        <div class="ticket">
+          <div class="ticket-head">
+            <div class="code">FT-13 花堂</div>
+            <div class="tag">STAMPED</div>
+          </div>
+          <div class="ticket-row"><span class="k">LINE</span><span class="v">福武線</span></div>
+          <div class="ticket-row"><span class="k">COORD</span><span class="v">36°02'54.3"N 136°13'22.1"E</span></div>
+          <div class="ticket-row"><span class="k">TIME</span><span class="v">2026-07-02 14:33:07 JST</span></div>
+          <div class="ticket-row"><span class="k">SERIAL</span><span class="v">#000284 / 3000</span></div>
+          <div class="ticket-row"><span class="k">RALLY</span><span class="v">FT-2026-SUMMER</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO CTA -->
+<section class="pad">
+  <div class="sect">
+    <div class="sect-head">
+      <span class="sect-no">05 / Prototype</span>
+      <div>
+        <h2 class="sect-title">動くデモを、両側で。</h2>
+        <p class="sect-lede">
+          お客さま側 (LIFF 想定) と運営側 (管理画面) の2画面を、実際に触れる状態で用意した。
+          押印・GPS判定・不正検知・ダッシュボード、全てブラウザ内で動作する。
+        </p>
+      </div>
+    </div>
+    <div class="cta">
+      <a href="./customer.html">
+        <div class="cta-k">CUSTOMER / LIFF</div>
+        <h4>お客さま画面を開く</h4>
+        <p>地図・押印・スタンプ帳・景品交換までの一連の体験を確認できる。</p>
+        <div class="arrow">→</div>
+      </a>
+      <a href="./admin.html">
+        <div class="cta-k">OPERATOR / ADMIN</div>
+        <h4>運営画面を開く</h4>
+        <p>参加者ライブ・駅別ヒートマップ・不正検知ログ・ラリー設定を確認できる。</p>
+        <div class="arrow">→</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pad">
+  <div class="sect">
+    <div class="sect-head">
+      <span class="sect-no">06 / Investment</span>
+      <div>
+        <h2 class="sect-title">2つの導入形態から選択。</h2>
+        <p class="sect-lede">
+          単発のキャンペーンで試すか、通年運用に組み込むか。どちらも景品原資は別途で、システム側の費用のみを提示する。
+        </p>
+      </div>
+    </div>
+    <div class="price-grid">
+      <div class="price-card">
+        <span class="kicker">PoC · One-off</span>
+        <h4>単発ラリーPoC</h4>
+        <div class="amt num">¥50,000<span class="u">/ 買い切り</span></div>
+        <div class="sub">TAX EXCLUDED · SETUP INCLUDED</div>
+        <ul>
+          <li>期間: 3週間 (準備2週間+実施1週間+集計)</li>
+          <li>対象駅: 6駅まで</li>
+          <li>参加者上限: 3,000名</li>
+          <li>集計レポート納品 (PDF + CSV)</li>
+          <li>景品交換運用マニュアル同梱</li>
+        </ul>
+      </div>
+      <div class="price-card">
+        <span class="kicker">SaaS · Recurring</span>
+        <h4>通年運用SaaS</h4>
+        <div class="amt num">¥10,000<span class="u">/ 月</span></div>
+        <div class="sub">TAX EXCLUDED · INITIAL ¥100,000</div>
+        <ul>
+          <li>期間: 契約継続中、ラリーの張替え自由</li>
+          <li>対象駅: 25駅全て</li>
+          <li>参加者上限: 無制限</li>
+          <li>月次レポート自動配信 (LINE + PDF)</li>
+          <li>景品QRチケットの独自デザイン対応</li>
+          <li>季節ラリー (春の桜/夏のフェス/秋の紅葉) テンプレ4本同梱</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PLAN -->
+<section class="pad">
+  <div class="sect">
+    <div class="sect-head">
+      <span class="sect-no">07 / Timeline</span>
+      <div>
+        <h2 class="sect-title">3週間 PoC のダイヤ。</h2>
+        <p class="sect-lede">
+          初日にキックオフ、翌週にリハーサル、翌々週に本走。集計は本走翌週に納品する。
+        </p>
+      </div>
+    </div>
+    <div class="plan">
+      <div class="plan-row">
+        <span class="wk">WEEK 01 · MON</span>
+        <span class="ph">キックオフ</span>
+        <span class="dt">対象駅6駅の選定、景品設計、QR掲出位置の現場確認。福鉄側担当者と2時間ヒアリング。</span>
+      </div>
+      <div class="plan-row">
+        <span class="wk">WEEK 01 · FRI</span>
+        <span class="ph">LIFF · 管理画面納品</span>
+        <span class="dt">お客さま画面 (LIFF) と運営画面 (admin) をステージング環境で納品。QR現物とスタンプ帳を福鉄側で確認。</span>
+      </div>
+      <div class="plan-row">
+        <span class="wk">WEEK 02 · MON</span>
+        <span class="ph">現地リハーサル</span>
+        <span class="dt">スケルトンが福鉄と6駅を巡回し、GPS 判定・QR読取・押印動線を実機で確認。掲出位置の微調整。</span>
+      </div>
+      <div class="plan-row">
+        <span class="wk">WEEK 02 · SAT</span>
+        <span class="ph">本走スタート</span>
+        <span class="dt">LINE公式アカウントで告知、リッチメニューに「さんぽ帳」導線設置。初日はスケルトンが監視待機。</span>
+      </div>
+      <div class="plan-row">
+        <span class="wk">WEEK 03 · MON</span>
+        <span class="ph">集計・レポート</span>
+        <span class="dt">参加者数・駅別ヒート・離脱パターン・不正検知件数を PDF レポートで納品。次期改善提案を添付。</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-inner">
+    <div>
+      <div class="brand">スケルトン株式会社</div>
+      <div style="opacity:.75;line-height:1.85">
+        福井県福井市を拠点に、地方事業者向けの LINE / SaaS を開発しています。<br>
+        直近納品: フェムーンSaaS (サロン向け予約) / Skel·EC (LINE 完結EC) / Mio EC (産直越前大野)。
+      </div>
+    </div>
+    <div>
+      <h5>Contact</h5>
+      <div style="opacity:.75">
+        提案元: スケルトン株式会社<br>
+        代表: 吉田 恭聡<br>
+        Mail: t3.5ty6@gmail.com
+      </div>
+    </div>
+    <div>
+      <h5>Prototype</h5>
+      <a href="./customer.html">→ お客さま画面 (LIFF想定)</a>
+      <a href="./admin.html">→ 運営画面 (admin)</a>
+      <a href="./index.html">→ 提案書 (このページ)</a>
+    </div>
+  </div>
+  <div class="foot-bottom">
+    <span>PROPOSAL FTR-01 · 2026-07-02</span>
+    <span>DEMO ─ NOT A PRODUCTION SERVICE</span>
+  </div>
+</footer>
+
+</body>
+</html>

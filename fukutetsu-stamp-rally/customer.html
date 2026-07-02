@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ふくてつ さんぽ帳 ─ お客さま画面デモ</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F3ED;
+  --paper-2:#EDEAE0;
+  --ink:#101010;
+  --ink-2:#2A2A2A;
+  --sub:#6B7076;
+  --line:#101010;
+  --line-thin:#C8C4B8;
+  --red:#B32031;
+  --green:#2E6F5B;
+  --rail:#6B7076;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--paper-2);color:var(--ink);font-family:"Noto Sans JP","Inter",system-ui,sans-serif;font-weight:500;-webkit-font-smoothing:antialiased;line-height:1.6;min-height:100vh}
+button,input,select{font-family:inherit;font-weight:inherit}
+.mono{font-family:"Space Mono",monospace}
+
+/* ── nav (LP と共通) ── */
+.nav{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:1px solid var(--line)}
+.nav-inner{max-width:1240px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;gap:32px}
+.nav-mark{display:flex;align-items:baseline;gap:10px}
+.nav-mark .code{font-family:"Space Mono",monospace;font-size:12px;letter-spacing:.14em;color:var(--sub)}
+.nav-mark .name{font-weight:900;letter-spacing:.02em;font-size:15px}
+.nav-links{margin-left:auto;display:flex;gap:6px}
+.nav-links a{padding:8px 14px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.06em;border:1px solid transparent;border-radius:2px}
+.nav-links a.on{background:var(--ink);color:var(--paper)}
+.nav-links a:hover{border-color:var(--line)}
+.notice{background:var(--ink);color:var(--paper);font-size:11px;letter-spacing:.14em;text-align:center;padding:6px 12px;font-family:"Space Mono",monospace}
+
+/* ── layout ── */
+.stage{max-width:1240px;margin:0 auto;padding:48px 28px 80px;display:grid;grid-template-columns:1fr 420px 1fr;gap:32px;align-items:start}
+.stage-note{position:sticky;top:100px;padding:24px;border:1px solid var(--line);background:var(--paper)}
+.stage-note h3{font-size:15px;font-weight:900;margin:0 0 14px;letter-spacing:-.005em}
+.stage-note .eyebrow{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.18em;color:var(--red);margin-bottom:12px;text-transform:uppercase}
+.stage-note p{font-size:13px;color:var(--ink-2);line-height:1.85;margin:0 0 12px}
+.stage-note .simu{margin-top:22px;padding-top:18px;border-top:1px dashed var(--line-thin)}
+.stage-note label{display:block;font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--sub);margin-bottom:8px;text-transform:uppercase}
+.stage-note select{width:100%;padding:12px;border:1.5px solid var(--ink);background:var(--paper);font-size:14px;font-weight:700;color:var(--ink);appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(135deg,var(--ink) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:36px}
+.stage-note .btn-reset{margin-top:14px;width:100%;padding:10px;background:var(--paper-2);border:1px solid var(--line-thin);font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--sub);cursor:pointer}
+.stage-note .btn-reset:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* ── phone frame ── */
+.phone{background:var(--ink);border-radius:36px;padding:14px;box-shadow:0 30px 60px -20px rgba(16,16,16,.4),0 0 0 2px rgba(16,16,16,.05);position:relative}
+.phone::before{content:"";position:absolute;top:26px;left:50%;transform:translateX(-50%);width:110px;height:22px;background:var(--ink);border-radius:16px;z-index:2}
+.screen{background:var(--paper);border-radius:28px;overflow:hidden;min-height:760px;display:flex;flex-direction:column}
+
+/* ── screen header ── */
+.scr-status{padding:14px 24px 8px;display:flex;justify-content:space-between;font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.06em;color:var(--ink)}
+.scr-head{padding:6px 24px 20px;border-bottom:1px solid var(--line)}
+.scr-brand{display:flex;align-items:baseline;justify-content:space-between}
+.scr-brand h1{font-size:20px;font-weight:900;letter-spacing:-.01em;margin:0}
+.scr-brand h1 small{font-family:"Space Mono",monospace;font-weight:400;color:var(--sub);font-size:11px;letter-spacing:.14em;margin-left:8px}
+.scr-loc{margin-top:12px;display:flex;align-items:center;gap:8px;font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.06em}
+.scr-loc .dot{width:8px;height:8px;border-radius:50%;background:var(--green);position:relative}
+.scr-loc .dot::before{content:"";position:absolute;inset:-4px;border-radius:50%;border:1.5px solid var(--green);animation:pulse 1.6s ease-out infinite}
+.scr-loc .dot.out{background:var(--sub)}
+.scr-loc .dot.out::before{display:none}
+.scr-loc-txt{color:var(--ink);font-weight:700}
+.scr-loc-txt.out{color:var(--sub);font-weight:500}
+@keyframes pulse{from{transform:scale(1);opacity:.7}to{transform:scale(2.2);opacity:0}}
+
+/* ── tabs ── */
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;padding:14px 8px;background:none;border:none;font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--sub);cursor:pointer;border-bottom:2px solid transparent}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--red)}
+
+/* ── panels ── */
+.panels{flex:1;overflow:hidden}
+.panel{display:none;padding:24px}
+.panel.on{display:block}
+
+/* ── MAP panel ── */
+.map-title{font-size:11px;font-family:"Space Mono",monospace;letter-spacing:.18em;color:var(--sub);text-transform:uppercase;margin-bottom:12px;display:flex;justify-content:space-between}
+.map{position:relative;padding:20px 0;background:var(--paper-2);border:1px solid var(--line-thin);margin-bottom:18px}
+.map svg{width:100%;height:auto;display:block}
+.map-node{cursor:default}
+.progress{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:14px;background:var(--ink);color:var(--paper);margin-bottom:14px}
+.progress .k{font-family:"Space Mono",monospace;font-size:10px;letter-spacing:.14em;color:rgba(245,243,237,.6);text-transform:uppercase}
+.progress .bar{position:relative;height:2px;background:rgba(245,243,237,.15)}
+.progress .bar-fill{position:absolute;left:0;top:0;bottom:0;background:var(--red);transition:width .5s}
+.progress .n{font-family:"Inter",sans-serif;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.map-help{font-size:12px;color:var(--sub);line-height:1.75;margin-top:14px}
+.map-help b{color:var(--ink);font-weight:700}
+
+/* ── QR action button ── */
+.qr-cta{margin-top:16px;padding:20px;border:1.5px solid var(--ink);background:var(--paper);text-align:center;position:relative}
+.qr-cta.locked{background:var(--paper-2);border-style:dashed;border-color:var(--sub)}
+.qr-cta .qr-k{font-family:"Space Mono",monospace;font-size:10px;letter-spacing:.18em;color:var(--sub);margin-bottom:8px;text-transform:uppercase}
+.qr-cta h4{margin:0 0 10px;font-size:16px;font-weight:900;letter-spacing:-.005em}
+.qr-cta .qr-desc{font-size:12px;color:var(--ink-2);margin-bottom:16px;line-height:1.7}
+.btn-primary{width:100%;padding:16px;background:var(--red);color:var(--paper);border:none;font-size:15px;font-weight:900;letter-spacing:.02em;cursor:pointer;position:relative}
+.btn-primary:hover{background:var(--ink)}
+.btn-primary:disabled{background:var(--sub);cursor:not-allowed}
+.btn-primary .arrow{margin-left:8px;font-family:"Space Mono",monospace}
+
+/* ── BOOK panel (stamp collection) ── */
+.book-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px}
+.book-head h3{margin:0;font-size:16px;font-weight:900}
+.book-head .cnt{font-family:"Space Mono",monospace;font-size:12px;color:var(--sub);letter-spacing:.06em}
+.grid-stamps{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stamp{border:1.5px solid var(--ink);padding:12px;background:var(--paper);position:relative;min-height:110px;font-family:"Space Mono",monospace}
+.stamp.empty{border-style:dashed;border-color:var(--line-thin);background:transparent}
+.stamp .code{font-size:14px;font-weight:700;letter-spacing:.04em;margin-bottom:6px}
+.stamp .stn{font-family:"Noto Sans JP",sans-serif;font-size:13px;font-weight:900;letter-spacing:-.005em;margin-bottom:12px}
+.stamp .meta{font-size:9.5px;color:var(--sub);letter-spacing:.02em;line-height:1.7}
+.stamp.empty .code,.stamp.empty .stn{color:var(--sub);font-weight:400}
+.stamp .tag{position:absolute;top:8px;right:8px;background:var(--green);color:var(--paper);padding:2px 6px;font-size:9px;letter-spacing:.14em;font-weight:700}
+.stamp.empty .tag{display:none}
+.stamp.new{animation:stampIn .6s cubic-bezier(.2,.9,.2,1.1)}
+@keyframes stampIn{
+  0%{transform:scale(.4) rotate(-14deg);opacity:0}
+  60%{transform:scale(1.05) rotate(4deg);opacity:1}
+  100%{transform:scale(1) rotate(0);opacity:1}
+}
+
+/* ── PRIZE panel ── */
+.prize{padding:18px 0}
+.prize-status{padding:20px;background:var(--ink);color:var(--paper);margin-bottom:18px;text-align:center}
+.prize-status .n{font-family:"Inter",sans-serif;font-weight:700;font-size:48px;letter-spacing:-.02em;line-height:1;margin:6px 0;font-feature-settings:"tnum" 1}
+.prize-status .k{font-family:"Space Mono",monospace;font-size:10px;letter-spacing:.18em;color:rgba(245,243,237,.6);text-transform:uppercase}
+.prize-status .sub{font-size:11px;color:rgba(245,243,237,.75);margin-top:8px}
+.prize-list{border-top:1px solid var(--line-thin)}
+.prize-item{display:grid;grid-template-columns:44px 1fr auto;gap:12px;padding:14px 0;border-bottom:1px solid var(--line-thin);align-items:center}
+.prize-item .need{font-family:"Space Mono",monospace;font-size:11px;color:var(--red);letter-spacing:.06em}
+.prize-item h5{margin:0 0 3px;font-size:13px;font-weight:900}
+.prize-item .prize-desc{font-size:11px;color:var(--sub);line-height:1.6}
+.prize-item .st{font-family:"Space Mono",monospace;font-size:10px;letter-spacing:.14em;padding:4px 8px;border:1px solid var(--sub);color:var(--sub)}
+.prize-item.ok .st{background:var(--green);color:var(--paper);border-color:var(--green)}
+
+/* ── toast ── */
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:14px 22px;font-size:13px;font-weight:700;letter-spacing:.02em;box-shadow:0 20px 40px -10px rgba(16,16,16,.4);z-index:100;opacity:0;pointer-events:none;transition:opacity .3s;font-family:"Noto Sans JP",sans-serif}
+.toast.show{opacity:1;pointer-events:auto}
+.toast.err{background:var(--red)}
+.toast .k{font-family:"Space Mono",monospace;font-size:10px;letter-spacing:.18em;color:rgba(245,243,237,.6);text-transform:uppercase;display:block;margin-bottom:3px}
+
+/* ── stamp flash overlay ── */
+.flash{position:fixed;inset:0;background:rgba(16,16,16,.75);display:none;align-items:center;justify-content:center;z-index:200;padding:24px}
+.flash.on{display:flex}
+.flash-ticket{background:var(--paper);border:2px solid var(--ink);padding:32px 28px;max-width:340px;width:100%;position:relative;transform:scale(.4) rotate(-14deg);opacity:0}
+.flash.on .flash-ticket{animation:stampIn .7s cubic-bezier(.2,.9,.2,1.1) forwards}
+.flash-ticket::before,.flash-ticket::after{content:"";position:absolute;top:50%;width:24px;height:24px;border-radius:50%;background:var(--ink);transform:translateY(-50%)}
+.flash-ticket::before{left:-12px}
+.flash-ticket::after{right:-12px}
+.flash-ticket .tag{position:absolute;top:14px;right:14px;background:var(--green);color:var(--paper);padding:5px 10px;font-size:10px;letter-spacing:.18em;font-family:"Space Mono",monospace;font-weight:700}
+.flash-ticket h3{margin:0 0 4px;font-size:14px;font-family:"Space Mono",monospace;color:var(--sub);letter-spacing:.14em}
+.flash-ticket .stn{font-size:28px;font-weight:900;letter-spacing:-.01em;margin-bottom:24px}
+.flash-row{display:flex;justify-content:space-between;padding:6px 0;font-family:"Space Mono",monospace;font-size:11px;border-bottom:1px dotted var(--line-thin)}
+.flash-row .k{color:var(--sub)}
+.flash-row .v{font-weight:700}
+.flash-tap{position:absolute;bottom:-40px;left:50%;transform:translateX(-50%);color:var(--paper);font-size:12px;font-family:"Space Mono",monospace;letter-spacing:.14em;opacity:.7}
+
+@media (max-width:1100px){
+  .stage{grid-template-columns:1fr;gap:24px;padding:32px 16px 60px;max-width:520px}
+  .stage-note{position:relative;top:0}
+  .phone{max-width:420px;margin:0 auto}
+}
+</style>
+</head>
+<body>
+
+<div class="notice">DEMO ─ お客さま画面 (LIFF想定) の営業デモです ─ 実際は LINE 内で開きます</div>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-mark">
+      <span class="code">FTR-01</span>
+      <span class="name">福武線 沿線スタンプラリー</span>
+    </div>
+    <div class="nav-links">
+      <a href="./index.html">提案</a>
+      <a href="./customer.html" class="on">お客さま画面</a>
+      <a href="./admin.html">運営画面</a>
+    </div>
+  </div>
+</nav>
+
+<div class="stage">
+
+  <!-- 左: 説明 (デスクトップのみ) -->
+  <aside class="stage-note">
+    <div class="eyebrow">Customer / LIFF</div>
+    <h3>スマホ側の体験</h3>
+    <p>実際は LINE の公式アカウントから 1タップで起動する LIFF アプリ。ここではブラウザで挙動を再現している。</p>
+    <p>右のデモは <b>位置情報 (GPS) の判定</b> と <b>QR 読取</b> の両方が揃わないと押印できない仕様。</p>
+    <p style="color:var(--sub);font-size:12px">シミュレータの「現在位置」を切り替えると、対象駅の圏内に入る/圏外に出るを再現できる。</p>
+  </aside>
+
+  <!-- 中央: Phone -->
+  <div class="phone">
+    <div class="screen">
+      <div class="scr-status">
+        <span>14:33</span>
+        <span>LINE · LIFF</span>
+      </div>
+      <div class="scr-head">
+        <div class="scr-brand">
+          <h1>ふくてつ さんぽ帳<small>FT-2026-SUMMER</small></h1>
+        </div>
+        <div class="scr-loc">
+          <span class="dot" id="loc-dot"></span>
+          <span class="scr-loc-txt" id="loc-txt">— 現在地を取得中 —</span>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="on" data-tab="map">地図</button>
+        <button data-tab="book">帳</button>
+        <button data-tab="prize">景品</button>
+      </div>
+
+      <div class="panels">
+
+        <!-- MAP -->
+        <div class="panel on" data-panel="map">
+          <div class="map-title">
+            <span>Fukubu Line · 8 spots</span>
+            <span class="mono" id="map-progress-label">0 / 8</span>
+          </div>
+          <div class="map">
+            <svg viewBox="0 0 340 380" preserveAspectRatio="xMidYMid meet">
+              <!-- vertical rail line -->
+              <line x1="80" y1="30" x2="80" y2="360" stroke="#101010" stroke-width="1.5"/>
+              <line x1="80" y1="30" x2="80" y2="360" stroke="#6B7076" stroke-width="0.5" stroke-dasharray="2 6"/>
+              <!-- direction label -->
+              <text x="80" y="18" font-family="Space Mono" font-size="9" fill="#6B7076" text-anchor="middle" letter-spacing="0.14em">↑ 田原町</text>
+              <text x="80" y="378" font-family="Space Mono" font-size="9" fill="#6B7076" text-anchor="middle" letter-spacing="0.14em">たけふ新 ↓</text>
+              <g id="map-nodes"></g>
+            </svg>
+          </div>
+
+          <div class="progress">
+            <span class="k">Progress</span>
+            <span class="bar"><span class="bar-fill" id="bar-fill"></span></span>
+            <span class="n" id="bar-n">0/8</span>
+          </div>
+
+          <div class="qr-cta" id="qr-cta">
+            <!-- filled by JS -->
+          </div>
+
+          <div class="map-help">
+            <b>使い方 —</b> 対象駅の圏内に入ると押印ボタンが有効化される。ホーム掲出の QR を読み取ると押印完了。
+          </div>
+        </div>
+
+        <!-- BOOK -->
+        <div class="panel" data-panel="book">
+          <div class="book-head">
+            <h3>スタンプ帳</h3>
+            <span class="cnt" id="book-cnt">0 / 8</span>
+          </div>
+          <div class="grid-stamps" id="grid-stamps"></div>
+        </div>
+
+        <!-- PRIZE -->
+        <div class="panel" data-panel="prize">
+          <div class="prize">
+            <div class="prize-status">
+              <span class="k">Stamps Collected</span>
+              <div class="n" id="prize-n">0</div>
+              <div class="sub" id="prize-sub">あと 3個 集めると 第1景品交換 可能</div>
+            </div>
+            <div class="prize-list">
+              <div class="prize-item" data-need="3">
+                <div class="need">3個</div>
+                <div>
+                  <h5>沿線カフェ ドリンク引換</h5>
+                  <div class="prize-desc">対象6店舗のいずれか1杯</div>
+                </div>
+                <div class="st">未達</div>
+              </div>
+              <div class="prize-item" data-need="5">
+                <div class="need">5個</div>
+                <div>
+                  <h5>福鉄1日フリーきっぷ 割引</h5>
+                  <div class="prize-desc">通常¥1,000 → ¥500</div>
+                </div>
+                <div class="st">未達</div>
+              </div>
+              <div class="prize-item" data-need="8">
+                <div class="need">8個</div>
+                <div>
+                  <h5>コンプリート限定 硬券セット</h5>
+                  <div class="prize-desc">実寸硬券8枚 + 記念スタンプ帳台紙</div>
+                </div>
+                <div class="st">未達</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 右: シミュレータ -->
+  <aside class="stage-note">
+    <div class="eyebrow">Simulator</div>
+    <h3>シミュレータ操作</h3>
+    <p>実機ではスマホのGPSが自動判定するが、ここでは現在位置を手動で切り替える。</p>
+    <div class="simu">
+      <label>現在位置 (Current Station)</label>
+      <select id="loc-select">
+        <option value="">— 沿線外 (電車内など) —</option>
+      </select>
+      <button class="btn-reset" id="btn-reset">スタンプ帳をリセット</button>
+    </div>
+    <p style="color:var(--sub);font-size:12px;margin-top:22px">
+      <span class="mono">TIPS —</span> 対象駅を選ぶ → 地図の「押印する」ボタンが赤色に活性化。<br>
+      沿線外や非対象駅を選ぶと押印は無効。
+    </p>
+  </aside>
+
+</div>
+
+<!-- toast -->
+<div class="toast" id="toast">
+  <span class="k" id="toast-k">STAMPED</span>
+  <span id="toast-msg"></span>
+</div>
+
+<!-- stamp flash overlay -->
+<div class="flash" id="flash">
+  <div class="flash-ticket">
+    <div class="tag">STAMPED</div>
+    <h3 id="flash-code">FT-13</h3>
+    <div class="stn" id="flash-stn">花堂</div>
+    <div class="flash-row"><span class="k">LINE</span><span class="v">福武線</span></div>
+    <div class="flash-row"><span class="k">COORD</span><span class="v" id="flash-coord"></span></div>
+    <div class="flash-row"><span class="k">TIME</span><span class="v" id="flash-time"></span></div>
+    <div class="flash-row"><span class="k">SERIAL</span><span class="v" id="flash-serial"></span></div>
+    <div class="flash-tap">TAP TO CLOSE</div>
+  </div>
+</div>
+
+<script>
+// ── 対象スポット (デモ用 8駅) ──
+const STATIONS = [
+  { code:"FT-01", name:"たけふ新",       spot:"越前和紙の里",     coord:"35°55'34.2\"N 136°10'02.8\"E", y:340 },
+  { code:"FT-05", name:"サンドーム西",   spot:"サンドーム福井",   coord:"35°58'12.1\"N 136°12'44.6\"E", y:295 },
+  { code:"FT-10", name:"神明",           spot:"神明社",           coord:"35°59'48.9\"N 136°11'50.3\"E", y:245 },
+  { code:"FT-13", name:"花堂",           spot:"花堂ベーカリー通り", coord:"36°02'54.3\"N 136°13'22.1\"E", y:205 },
+  { code:"FT-15", name:"木田四ツ辻",     spot:"木田商店街",       coord:"36°03'22.6\"N 136°13'40.9\"E", y:170 },
+  { code:"FT-18", name:"福井城址大名町", spot:"福井城址",         coord:"36°03'59.4\"N 136°13'20.5\"E", y:130 },
+  { code:"FT-19", name:"福井駅",         spot:"恐竜モニュメント", coord:"36°03'42.9\"N 136°13'22.7\"E", y:90 },
+  { code:"FT-25", name:"田原町",         spot:"田原町商店街",     coord:"36°04'40.1\"N 136°13'22.0\"E", y:45 },
+];
+
+const LS_KEY = "ftr01_stamps";
+
+// ── state ──
+let currentStationCode = ""; // "" = 沿線外
+let collected = loadStamps();
+let currentTab = "map";
+
+function loadStamps(){
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); }
+  catch(e){ return []; }
+}
+function saveStamps(){ localStorage.setItem(LS_KEY, JSON.stringify(collected)); }
+
+// ── init select ──
+const sel = document.getElementById("loc-select");
+STATIONS.forEach(s => {
+  const o = document.createElement("option");
+  o.value = s.code;
+  o.textContent = `${s.code} · ${s.name}駅 圏内 (${s.spot})`;
+  sel.appendChild(o);
+});
+// non-target simulate
+const oOff = document.createElement("option");
+oOff.value = "__off";
+oOff.textContent = "— 対象外の駅にいる (家寿田など) —";
+sel.appendChild(oOff);
+
+sel.addEventListener("change", e => {
+  currentStationCode = e.target.value === "__off" ? "__off" : e.target.value;
+  render();
+});
+
+// ── tabs ──
+document.querySelectorAll(".tabs button").forEach(b => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("on"));
+    document.querySelector(`[data-panel="${b.dataset.tab}"]`).classList.add("on");
+    currentTab = b.dataset.tab;
+  });
+});
+
+// ── render ──
+function render(){
+  renderLocBadge();
+  renderMapNodes();
+  renderQrCta();
+  renderProgress();
+  renderBook();
+  renderPrize();
+}
+
+function renderLocBadge(){
+  const dot = document.getElementById("loc-dot");
+  const txt = document.getElementById("loc-txt");
+  if (currentStationCode === "" || currentStationCode === "__off"){
+    dot.classList.add("out");
+    txt.classList.add("out");
+    txt.textContent = currentStationCode === "__off" ? "沿線内 · 対象駅圏外" : "沿線外 · GPS 未取得";
+  } else {
+    dot.classList.remove("out");
+    txt.classList.remove("out");
+    const s = STATIONS.find(x => x.code === currentStationCode);
+    txt.textContent = `${s.code} ${s.name}駅 圏内 · ±150m`;
+  }
+}
+
+function renderMapNodes(){
+  const g = document.getElementById("map-nodes");
+  g.innerHTML = "";
+  STATIONS.forEach(s => {
+    const stamped = collected.some(c => c.code === s.code);
+    const isCurrent = currentStationCode === s.code;
+    // node
+    const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    c.setAttribute("cx", 80);
+    c.setAttribute("cy", s.y);
+    c.setAttribute("r", 7);
+    c.setAttribute("class","map-node");
+    if (stamped){
+      c.setAttribute("fill","#B32031"); c.setAttribute("stroke","none");
+    } else {
+      c.setAttribute("fill","#F5F3ED"); c.setAttribute("stroke","#101010"); c.setAttribute("stroke-width","1.5");
+    }
+    g.appendChild(c);
+    // pulse if current
+    if (isCurrent && !stamped){
+      const pulse = document.createElementNS("http://www.w3.org/2000/svg","circle");
+      pulse.setAttribute("cx",80);
+      pulse.setAttribute("cy",s.y);
+      pulse.setAttribute("r",7);
+      pulse.setAttribute("fill","none");
+      pulse.setAttribute("stroke","#2E6F5B");
+      pulse.setAttribute("stroke-width","1.5");
+      pulse.innerHTML = `<animate attributeName="r" from="7" to="16" dur="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" from="0.7" to="0" dur="1.6s" repeatCount="indefinite"/>`;
+      g.appendChild(pulse);
+      const inner = document.createElementNS("http://www.w3.org/2000/svg","circle");
+      inner.setAttribute("cx",80); inner.setAttribute("cy",s.y); inner.setAttribute("r",7); inner.setAttribute("fill","#2E6F5B");
+      g.appendChild(inner);
+    }
+    // labels
+    const code = document.createElementNS("http://www.w3.org/2000/svg","text");
+    code.setAttribute("x", 100); code.setAttribute("y", s.y - 4);
+    code.setAttribute("font-family","Space Mono"); code.setAttribute("font-size","9");
+    code.setAttribute("fill", stamped ? "#B32031" : (isCurrent ? "#2E6F5B" : "#6B7076"));
+    code.setAttribute("letter-spacing","0.08em");
+    code.textContent = s.code;
+    g.appendChild(code);
+    const nm = document.createElementNS("http://www.w3.org/2000/svg","text");
+    nm.setAttribute("x", 100); nm.setAttribute("y", s.y + 10);
+    nm.setAttribute("font-family","Noto Sans JP"); nm.setAttribute("font-size","12");
+    nm.setAttribute("font-weight", (stamped || isCurrent) ? "900" : "500");
+    nm.setAttribute("fill", stamped ? "#101010" : (isCurrent ? "#2E6F5B" : "#101010"));
+    nm.textContent = `${s.name}  · ${s.spot}`;
+    g.appendChild(nm);
+  });
+}
+
+function renderQrCta(){
+  const el = document.getElementById("qr-cta");
+  const isTarget = currentStationCode && currentStationCode !== "__off";
+  const s = isTarget ? STATIONS.find(x=>x.code===currentStationCode) : null;
+  const stamped = s && collected.some(c => c.code === s.code);
+
+  if (!isTarget){
+    el.className = "qr-cta locked";
+    el.innerHTML = `
+      <div class="qr-k">GPS · Not In Range</div>
+      <h4>対象駅の圏内に入ってください</h4>
+      <div class="qr-desc">押印には対象駅から半径150m以内にいる必要があります。<br>QR画像だけを受け取っても押印はできません。</div>
+      <button class="btn-primary" disabled>圏外 · 押印できません</button>
+    `;
+    return;
+  }
+  if (stamped){
+    el.className = "qr-cta locked";
+    el.innerHTML = `
+      <div class="qr-k">Already Stamped</div>
+      <h4>${s.code} ${s.name}駅は集印済です</h4>
+      <div class="qr-desc">次の駅へ移動してください。「帳」タブで硬券が確認できます。</div>
+      <button class="btn-primary" disabled>集印済</button>
+    `;
+    return;
+  }
+  el.className = "qr-cta";
+  el.innerHTML = `
+    <div class="qr-k">GPS · In Range · ±150m</div>
+    <h4>${s.code} ${s.name}駅 · ${s.spot}</h4>
+    <div class="qr-desc">ホーム掲出の QR を読み取って押印します。</div>
+    <button class="btn-primary" id="btn-qr">QR を読み取って押印 <span class="arrow">→</span></button>
+  `;
+  document.getElementById("btn-qr").addEventListener("click", doStamp);
+}
+
+function renderProgress(){
+  const total = STATIONS.length;
+  const n = collected.length;
+  const pct = Math.round(n/total*100);
+  document.getElementById("bar-fill").style.width = pct + "%";
+  document.getElementById("bar-n").textContent = `${n}/${total}`;
+  document.getElementById("map-progress-label").textContent = `${n} / ${total}`;
+}
+
+function renderBook(){
+  const grid = document.getElementById("grid-stamps");
+  document.getElementById("book-cnt").textContent = `${collected.length} / ${STATIONS.length}`;
+  grid.innerHTML = "";
+  STATIONS.forEach(s => {
+    const got = collected.find(c => c.code === s.code);
+    const div = document.createElement("div");
+    div.className = "stamp" + (got ? "" : " empty") + (got && got.isNew ? " new" : "");
+    if (got){
+      div.innerHTML = `
+        <span class="tag">押印</span>
+        <div class="code">${s.code}</div>
+        <div class="stn">${s.name}</div>
+        <div class="meta">${got.coord}<br>${got.time}<br>#${got.serial}</div>
+      `;
+      got.isNew = false;
+    } else {
+      div.innerHTML = `
+        <div class="code">${s.code}</div>
+        <div class="stn">${s.name}</div>
+        <div class="meta">${s.spot}<br>未集印</div>
+      `;
+    }
+    grid.appendChild(div);
+  });
+}
+
+function renderPrize(){
+  const n = collected.length;
+  document.getElementById("prize-n").textContent = n;
+  const sub = document.getElementById("prize-sub");
+  const nexts = [3,5,8].filter(x=>x>n);
+  if (nexts.length){
+    sub.textContent = `あと ${nexts[0]-n} 個で 次の景品交換可能`;
+  } else {
+    sub.textContent = `コンプリート達成 · おめでとうございます`;
+  }
+  document.querySelectorAll(".prize-item").forEach(item => {
+    const need = +item.dataset.need;
+    const st = item.querySelector(".st");
+    if (n >= need){
+      item.classList.add("ok");
+      st.textContent = "交換可";
+    } else {
+      item.classList.remove("ok");
+      st.textContent = "未達";
+    }
+  });
+}
+
+// ── stamp action ──
+function doStamp(){
+  const s = STATIONS.find(x=>x.code===currentStationCode);
+  if (!s) return;
+  const now = new Date();
+  const time = now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0")+" "+String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0")+":"+String(now.getSeconds()).padStart(2,"0")+" JST";
+  const serial = "000" + (284 + collected.length * 7);
+  const stamp = { code: s.code, name: s.name, coord: s.coord, time, serial: serial.slice(-6), isNew:true };
+  collected.push(stamp);
+  saveStamps();
+
+  // flash
+  const flash = document.getElementById("flash");
+  document.getElementById("flash-code").textContent = s.code;
+  document.getElementById("flash-stn").textContent = s.name;
+  document.getElementById("flash-coord").textContent = s.coord;
+  document.getElementById("flash-time").textContent = time;
+  document.getElementById("flash-serial").textContent = `#${serial.slice(-6)} / 3000`;
+  flash.classList.add("on");
+  setTimeout(()=>{
+    flash.classList.remove("on");
+    render();
+    showToast("STAMPED", `${s.code} ${s.name}駅 押印完了`);
+  }, 1800);
+}
+
+document.getElementById("flash").addEventListener("click", ()=>{
+  document.getElementById("flash").classList.remove("on");
+  render();
+});
+
+// ── toast ──
+let toastTimer = null;
+function showToast(k, msg, err=false){
+  const t = document.getElementById("toast");
+  document.getElementById("toast-k").textContent = k;
+  document.getElementById("toast-msg").textContent = msg;
+  t.classList.toggle("err", err);
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("show"), 2400);
+}
+
+// ── reset ──
+document.getElementById("btn-reset").addEventListener("click", ()=>{
+  if (!confirm("スタンプ帳をリセットしますか?")) return;
+  collected = [];
+  saveStamps();
+  render();
+  showToast("RESET", "スタンプ帳を初期化しました");
+});
+
+// ── initial ──
+render();
+</script>
+</body>
+</html>
