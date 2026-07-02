@@ -316,6 +316,9 @@ exports.bindLineUser = onRequest({ secrets: [LIFF_CHANNEL_ID] }, async (req, res
       await db.doc(tenantPath(tid, 'campaigns', campaign))
         .set({ stats: { acquired: admin.firestore.FieldValue.increment(1), lastAcquiredAt: Date.now() } }, { merge: true });
     }
+    // シナリオ 自動起動 (friend_add trigger)
+    triggerScenarios(tid, 'friend_add', cid).catch(e => console.error('triggerScenarios friend_add error', e));
+    if (campaign) triggerScenarios(tid, 'campaign_join', cid, { campaignId: campaign }).catch(e => console.error(e));
   } else {
     cid = snap.docs[0].id;
     const cur = snap.docs[0].data();
@@ -381,6 +384,10 @@ exports.recordOrder = onRequest({ secrets: [STRIPE_SECRET_KEY] }, async (req, re
         },
       }, { merge: true });
   }
+
+  // シナリオ 自動起動 (purchase trigger)
+  triggerScenarios(tid, 'purchase', customerId, { orderCount: (customer.orderCount || 0) + 1 })
+    .catch(e => console.error('triggerScenarios purchase error', e));
 
   // 顧客サマリ更新
   await db.doc(tenantPath(tid, 'customers', customerId)).set({
@@ -606,6 +613,12 @@ exports.stripeWebhook = onRequest({ secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_
             lastOrderAt: Date.now(),
           },
         }, { merge: true });
+    }
+
+    // シナリオ 自動起動 (purchase trigger, Stripe決済経由)
+    if (cust) {
+      triggerScenarios(tenantId, 'purchase', customerId, { orderCount: (cust.orderCount || 0) + 1 })
+        .catch(e => console.error('triggerScenarios purchase (stripe) error', e));
     }
 
     if (subscription === 'true') {
@@ -869,6 +882,182 @@ exports.getStats = onRequest(async (req, res) => {
     byRep: Object.values(byRep).sort((a, b) => b.revenue - a.revenue),
   });
 });
+
+/* ─────────────────────────────────────────────────────────
+ * 12a. startScenarioRun — 指定 customer に scenario の run を作成
+ *      重複起動防止: 同一 (customerId, scenarioId) に active run があればskip
+ * ───────────────────────────────────────────────────────── */
+async function startScenarioRun(tid, scenarioId, customerId) {
+  const s = (await db.doc(tenantPath(tid, 'scenarios', scenarioId)).get()).data();
+  if (!s || s.status !== 'active') return null;
+  if (!Array.isArray(s.steps) || !s.steps.length) return null;
+
+  // 重複防止
+  const dup = await db.collection(tenantPath(tid, 'scenarioRuns'))
+    .where('customerId', '==', customerId)
+    .where('scenarioId', '==', scenarioId)
+    .where('status', '==', 'active').limit(1).get();
+  if (!dup.empty) return dup.docs[0].data();
+
+  const rid = 'run_' + Date.now().toString(36) + '_' + crypto.randomBytes(3).toString('hex');
+  const run = {
+    id: rid, scenarioId, customerId,
+    currentStepIndex: 0,
+    startedAt: Date.now(),
+    nextFireAt: Date.now(),  // すぐ発火
+    status: 'active',
+  };
+  await db.doc(tenantPath(tid, 'scenarioRuns', rid)).set(run);
+  await db.doc(tenantPath(tid, 'scenarios', scenarioId))
+    .set({ stats: { active: admin.firestore.FieldValue.increment(1) } }, { merge: true });
+  return run;
+}
+
+/* ─────────────────────────────────────────────────────────
+ * 12b. advanceScenarioRun — 現ステップ実行 + 次ステップの nextFireAt 設定
+ *      wait / send / tag_add / tag_remove / branch / end に対応
+ * ───────────────────────────────────────────────────────── */
+async function advanceScenarioRun(tid, run) {
+  const s = (await db.doc(tenantPath(tid, 'scenarios', run.scenarioId)).get()).data();
+  if (!s || s.status !== 'active') return;
+  const steps = s.steps || [];
+  if (run.currentStepIndex >= steps.length) {
+    await db.doc(tenantPath(tid, 'scenarioRuns', run.id)).set({ status: 'done', doneAt: Date.now(), nextFireAt: null }, { merge: true });
+    await db.doc(tenantPath(tid, 'scenarios', run.scenarioId))
+      .set({ stats: { active: admin.firestore.FieldValue.increment(-1), done: admin.firestore.FieldValue.increment(1) } }, { merge: true });
+    return;
+  }
+  const step = steps[run.currentStepIndex];
+  const c = (await db.doc(tenantPath(tid, 'customers', run.customerId)).get()).data();
+  if (!c) {
+    await db.doc(tenantPath(tid, 'scenarioRuns', run.id))
+      .set({ status: 'error', errorMessage: 'customer_not_found', nextFireAt: null }, { merge: true });
+    await db.doc(tenantPath(tid, 'scenarios', run.scenarioId))
+      .set({ stats: {
+        active: admin.firestore.FieldValue.increment(-1),
+        error:  admin.firestore.FieldValue.increment(1),
+      }}, { merge: true });
+    return;
+  }
+  const t = await tenantSettings(tid);
+
+  let nextIndex = run.currentStepIndex + 1;
+  let nextFireAt = Date.now();
+
+  try {
+    if (step.kind === 'end') {
+      await db.doc(tenantPath(tid, 'scenarioRuns', run.id)).set({ status: 'done', doneAt: Date.now(), nextFireAt: null }, { merge: true });
+      await db.doc(tenantPath(tid, 'scenarios', run.scenarioId))
+        .set({ stats: { active: admin.firestore.FieldValue.increment(-1), done: admin.firestore.FieldValue.increment(1) } }, { merge: true });
+      return;
+    }
+
+    if (step.kind === 'wait') {
+      const wait = (step.waitDays || 0) * 86400000 + (step.waitHours || 0) * 3600000 + (step.waitMinutes || 0) * 60000;
+      nextFireAt = Date.now() + wait;
+    }
+
+    if (step.kind === 'send') {
+      // 顧客の acquiredChannel or primary channel から送信
+      let accessToken;
+      if (c.acquiredChannel) {
+        const ch = await channelSettings(tid, c.acquiredChannel);
+        if (ch?.channelAccessToken && ch.status === 'active') accessToken = ch.channelAccessToken;
+      }
+      if (!accessToken) {
+        const p = await primaryChannel(tid);
+        accessToken = p?.channelAccessToken || t?.line?.channelAccessToken;
+      }
+      if (c.lineUserId && accessToken) {
+        await linePush(c.lineUserId, accessToken, [{ type: 'text', text: step.message || '' }]);
+      }
+      // send は次ステップ即実行
+      nextFireAt = Date.now();
+    }
+
+    if (step.kind === 'tag_add' && step.tagId) {
+      await db.doc(tenantPath(tid, 'customers', c.id))
+        .set({ tags: admin.firestore.FieldValue.arrayUnion(step.tagId) }, { merge: true });
+      nextFireAt = Date.now();
+    }
+
+    if (step.kind === 'tag_remove' && step.tagId) {
+      await db.doc(tenantPath(tid, 'customers', c.id))
+        .set({ tags: admin.firestore.FieldValue.arrayRemove(step.tagId) }, { merge: true });
+      nextFireAt = Date.now();
+    }
+
+    if (step.kind === 'branch') {
+      const has = step.branchTag && (c.tags || []).includes(step.branchTag);
+      // Yes = 次ステップ / No = 2ステップ先
+      nextIndex = run.currentStepIndex + (has ? 1 : 2);
+      nextFireAt = Date.now();
+    }
+
+    await db.doc(tenantPath(tid, 'scenarioRuns', run.id)).set({
+      currentStepIndex: nextIndex, nextFireAt,
+    }, { merge: true });
+  } catch (e) {
+    console.error('scenario advance error', run.id, e);
+    await db.doc(tenantPath(tid, 'scenarioRuns', run.id))
+      .set({ status: 'error', errorMessage: String(e.message || e), nextFireAt: null }, { merge: true });
+    await db.doc(tenantPath(tid, 'scenarios', run.scenarioId))
+      .set({ stats: { active: admin.firestore.FieldValue.increment(-1), error: admin.firestore.FieldValue.increment(1) } }, { merge: true });
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
+ * 12c. scenarioTick — 5分ごと に nextFireAt <= now の run を進める
+ * ───────────────────────────────────────────────────────── */
+exports.scenarioTick = onSchedule({ schedule: 'every 5 minutes', timeZone: 'Asia/Tokyo' }, async () => {
+  const tenants = await db.collection(PREFIX).get();
+  for (const tDoc of tenants.docs) {
+    const tid = tDoc.id;
+    const dueSnap = await db.collection(tenantPath(tid, 'scenarioRuns'))
+      .where('status', '==', 'active')
+      .where('nextFireAt', '<=', Date.now())
+      .limit(500).get();
+    for (const runDoc of dueSnap.docs) {
+      try { await advanceScenarioRun(tid, runDoc.data()); }
+      catch (e) { console.error('scenarioTick run advance error', tid, runDoc.id, e); }
+    }
+  }
+});
+
+/* ─────────────────────────────────────────────────────────
+ * 12d. startScenarioManual — admin が手動で 特定customer に scenario 発火
+ * ───────────────────────────────────────────────────────── */
+exports.startScenarioManual = onRequest(async (req, res) => {
+  if (cors(req, res)) return;
+  const claims = await requireAdmin(req, res);
+  if (!claims) return;
+  const { scenarioId, customerId } = req.body || {};
+  if (!scenarioId || !customerId) return fail(res, 400, 'scenarioId / customerId 必須');
+  const run = await startScenarioRun(claims.tenantId, scenarioId, customerId);
+  return res.json({ ok: true, run });
+});
+
+/**
+ * 汎用: 特定 trigger を持つ全 active scenarios を customer に対して開始
+ */
+async function triggerScenarios(tid, triggerKind, customerId, extra = {}) {
+  const snap = await db.collection(tenantPath(tid, 'scenarios'))
+    .where('trigger', '==', triggerKind)
+    .where('status', '==', 'active').get();
+  for (const doc of snap.docs) {
+    const s = doc.data();
+    // triggerCondition の 簡易チェック
+    if (s.triggerCondition) {
+      if (triggerKind === 'purchase' && s.triggerCondition.orderCount != null) {
+        if (extra.orderCount !== s.triggerCondition.orderCount) continue;
+      }
+      if (triggerKind === 'tag_added' && s.triggerCondition.tag) {
+        if (extra.tag !== s.triggerCondition.tag) continue;
+      }
+    }
+    await startScenarioRun(tid, s.id, customerId);
+  }
+}
 
 /* ─────────────────────────────────────────────────────────
  * 12. dailyRoutine — 毎朝 07:00 JST (誕生月+定期便リマインド+休眠60日)

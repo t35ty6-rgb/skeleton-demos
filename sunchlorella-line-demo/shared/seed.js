@@ -9,7 +9,7 @@
 
 import { db } from './data.js';
 
-const SEED_FLAG = 'sunchlorella::seeded::v3';
+const SEED_FLAG = 'sunchlorella::seeded::v4';
 
 export async function seedIfEmpty() {
   if (localStorage.getItem(SEED_FLAG)) return false;
@@ -388,6 +388,93 @@ async function seedAll() {
         orders: chOrders.length,
         revenue,
         avgLtv: acqCusts.length ? Math.round(revenue / acqCusts.length) : 0,
+      },
+    });
+  }
+
+  /* ─── ステップ配信シナリオ (LSTEP代替) ─── */
+  const scenarios = [
+    {
+      id: 'scn_welcome',
+      name: '新規友だち歓迎シナリオ (3日プログラム)',
+      trigger: 'friend_add',
+      status: 'active',
+      description: '友だち追加直後の 3日間で ブランドと担当を覚えていただき、 初回購入まで導く',
+      steps: [
+        { id: 'st1', kind: 'send', message: 'サン・クロレラ サポートへようこそ。 担当の販売員が改めてご連絡いたします。 まずは 会員証をご覧ください。' },
+        { id: 'st2', kind: 'wait', waitDays: 1, waitHours: 0, waitMinutes: 0 },
+        { id: 'st3', kind: 'send', message: 'ご覧いただきありがとうございます。 今日は 60年以上続く サン・クロレラ の 「ホールフード」 という考え方 をご紹介します。' },
+        { id: 'st4', kind: 'wait', waitDays: 2, waitHours: 0, waitMinutes: 0 },
+        { id: 'st5', kind: 'send', message: 'お試しセットを ¥1,000 OFF でご案内中です。 気になる商品をタップしてご覧ください。' },
+        { id: 'st6', kind: 'tag_add', tagId: 'welcome_3day_done' },
+        { id: 'st7', kind: 'end' },
+      ],
+      createdAt: D(30),
+    },
+    {
+      id: 'scn_first_purchase',
+      name: '初回購入 後の 継続育成シナリオ',
+      trigger: 'purchase',
+      triggerCondition: { orderCount: 1 },
+      status: 'active',
+      description: '初回購入直後のお客様に お礼→使い方→定期便のご案内 を段階的に',
+      steps: [
+        { id: 'st1', kind: 'send', message: 'ご購入ありがとうございました。 商品到着まで数日お待ちください。 その間 使い方の動画を1つご紹介します。' },
+        { id: 'st2', kind: 'wait', waitDays: 3, waitHours: 0 },
+        { id: 'st3', kind: 'send', message: '商品お手元に届きましたでしょうか。 続けて実感するには 「毎日決まった時間」 が一番のコツです。' },
+        { id: 'st4', kind: 'wait', waitDays: 4, waitHours: 0 },
+        { id: 'st5', kind: 'branch', branchTag: 's_sub' },
+        { id: 'st6', kind: 'send', message: '定期便ご利用ありがとうございます。 次回のお届けをお楽しみに。' },
+        { id: 'st7', kind: 'end' },
+        { id: 'st8', kind: 'send', message: '定期便なら お得な会員価格 + お届け忘れなし。 いつでも1タップで停止できます。' },
+        { id: 'st9', kind: 'end' },
+      ],
+      createdAt: D(60),
+    },
+    {
+      id: 'scn_dormant_recovery',
+      name: '休眠60日 復帰シナリオ',
+      trigger: 'tag_added',
+      triggerCondition: { tag: 's_sleep60' },
+      status: 'active',
+      description: '休眠タグが付いたお客様に 担当からの お伺い → 特別クーポン の 2段階復帰オファー',
+      steps: [
+        { id: 'st1', kind: 'send', message: 'ご無沙汰しております。 お元気でお過ごしですか。 担当より改めてご連絡いたします。' },
+        { id: 'st2', kind: 'wait', waitDays: 5, waitHours: 0 },
+        { id: 'st3', kind: 'branch', branchTag: 'purchased_recent' },
+        { id: 'st4', kind: 'end' },
+        { id: 'st5', kind: 'send', message: '復帰記念に ¥1,500 OFF クーポンをお送りしました。 期限は1週間、 定期便再開もこちらから承ります。' },
+        { id: 'st6', kind: 'tag_add', tagId: 'dormant_recovery_offered' },
+        { id: 'st7', kind: 'end' },
+      ],
+      createdAt: D(45),
+    },
+  ];
+  for (const s of scenarios) await db.set('scenarios', s.id, {
+    ...s,
+    stats: { active: 0, done: 0, error: 0 },
+  });
+
+  /* ─── シナリオ 実行中 サンプル (Run: どのお客がどのステップに居るか) ─── */
+  const runs = [
+    { id: 'run_1', scenarioId: 'scn_welcome',          customerId: 'cust_matsumoto', currentStepIndex: 2, startedAt: D(2),  nextFireAt: D(-1), status: 'active' },
+    { id: 'run_2', scenarioId: 'scn_welcome',          customerId: 'cust_saito',     currentStepIndex: 4, startedAt: D(4),  nextFireAt: D(-2), status: 'active' },
+    { id: 'run_3', scenarioId: 'scn_first_purchase',   customerId: 'cust_hattori',   currentStepIndex: 1, startedAt: D(1),  nextFireAt: D(-2), status: 'active' },
+    { id: 'run_4', scenarioId: 'scn_dormant_recovery', customerId: 'cust_arai',      currentStepIndex: 4, startedAt: D(6),  nextFireAt: D(-2), status: 'active' },
+    { id: 'run_5', scenarioId: 'scn_welcome',          customerId: 'cust_maeda',     currentStepIndex: 6, startedAt: D(10), nextFireAt: null,  status: 'done' },
+    { id: 'run_6', scenarioId: 'scn_first_purchase',   customerId: 'cust_ozawa',     currentStepIndex: 8, startedAt: D(12), nextFireAt: null,  status: 'done' },
+  ];
+  for (const r of runs) await db.set('scenarioRuns', r.id, r);
+
+  // scenarios.stats を集計
+  for (const s of scenarios) {
+    const rs = runs.filter(r => r.scenarioId === s.id);
+    await db.set('scenarios', s.id, {
+      ...s,
+      stats: {
+        active: rs.filter(r => r.status === 'active').length,
+        done:   rs.filter(r => r.status === 'done').length,
+        error:  rs.filter(r => r.status === 'error').length,
       },
     });
   }

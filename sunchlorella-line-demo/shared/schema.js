@@ -104,6 +104,64 @@ export const BROADCAST_KIND = {
   AUTO_SUB_REMIND: { id: 'auto_sub_remind', label: '自動: 定期便お届け前' },
 };
 
+/* ─── ステップ配信シナリオ (LSTEP代替) ─── */
+export const SCENARIO_TRIGGER = {
+  FRIEND_ADD:    { id: 'friend_add',    label: '友だち追加時' },
+  TAG_ADDED:     { id: 'tag_added',     label: 'タグが付いた時' },
+  PURCHASE:      { id: 'purchase',      label: '購入時' },
+  CAMPAIGN_JOIN: { id: 'campaign_join', label: 'キャンペーン獲得時' },
+  MANUAL:        { id: 'manual',        label: '手動起動' },
+};
+
+export const SCENARIO_STEP_KIND = {
+  WAIT:    { id: 'wait',    label: '⏱ 待機' },
+  SEND:    { id: 'send',    label: '💬 メッセージ送信' },
+  TAG_ADD: { id: 'tag_add', label: '🏷 タグを追加' },
+  TAG_REMOVE: { id: 'tag_remove', label: '✂ タグを剥がす' },
+  BRANCH:  { id: 'branch',  label: '🔀 タグで分岐' },
+  END:     { id: 'end',     label: '🏁 終了' },
+};
+
+export const SCENARIO_STATUS = {
+  DRAFT:    { id: 'draft',    label: '下書き' },
+  ACTIVE:   { id: 'active',   label: '稼働中' },
+  PAUSED:   { id: 'paused',   label: '一時停止' },
+  ARCHIVED: { id: 'archived', label: 'アーカイブ' },
+};
+
+export const RUN_STATUS = {
+  ACTIVE:  { id: 'active',  label: '実行中' },
+  DONE:    { id: 'done',    label: '完了' },
+  STOPPED: { id: 'stopped', label: '停止' },
+  ERROR:   { id: 'error',   label: 'エラー' },
+};
+
+/**
+ * シナリオ の 次発火時刻を計算 (waitDays + waitHours + waitMinutes を分単位に)
+ */
+export function stepWaitMillis(step) {
+  if (step.kind !== 'wait') return 0;
+  const d = (step.waitDays  || 0) * 86400000;
+  const h = (step.waitHours || 0) * 3600000;
+  const m = (step.waitMinutes || 0) * 60000;
+  return d + h + m;
+}
+
+/**
+ * シナリオ Run の 次ステップを探す。 分岐時 は tag を見て branchYes / branchNo を返す。
+ */
+export function nextStepIndex(scenario, currentIndex, customerTags = []) {
+  const cur = scenario.steps[currentIndex];
+  if (!cur) return -1;
+  if (cur.kind === 'branch') {
+    const has = cur.branchTag && customerTags.includes(cur.branchTag);
+    // 分岐は「次のインデックス」ではなく「N ステップ飛ばし」で表現
+    // シンプルには「Yes なら次 (+1)、 No なら +2」
+    return has ? currentIndex + 1 : currentIndex + 2;
+  }
+  return currentIndex + 1;
+}
+
 /* ─── 公式LINEアカウント (channels) ─── */
 export const CHANNEL_KIND = {
   SALES:   { id: 'sales',   label: '営業・受注' },
