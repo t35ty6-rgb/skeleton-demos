@@ -207,6 +207,48 @@
   </div>
 </header>
 
+<!-- トップ実績パネル (全タブ共通、 期間選択可) -->
+<div id="top-sales" style="background:#fff;border-bottom:2px solid var(--orange);padding:10px 14px;">
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:8px;">
+    <span style="font-size:13px;font-weight:800;color:var(--black);letter-spacing:.03em;">📊 販売実績</span>
+    <select id="top-range" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;">
+      <option value="today">今日</option>
+      <option value="yesterday" selected>昨日</option>
+      <option value="7d">過去7日</option>
+      <option value="30d">過去30日</option>
+      <option value="90d">過去90日</option>
+      <option value="custom">カスタム</option>
+    </select>
+    <span id="top-custom-wrap" style="display:none;font-size:11px;">
+      <input type="date" id="top-from" style="padding:3px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:11px;">
+      〜
+      <input type="date" id="top-to" style="padding:3px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:11px;">
+    </span>
+    <span id="top-range-label" style="font-size:11px;color:#666;margin-left:auto;">—</span>
+  </div>
+  <div id="top-cells" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">
+    <div class="top-cell" data-key="units"><div class="l">販売数</div><div class="v"><b class="v-atsu">—</b>厚 / <b class="v-usu">—</b>薄</div><div class="t">計 <b class="v-total">—</b>個</div></div>
+    <div class="top-cell" data-key="sales"><div class="l">売上 (税抜)</div><div class="v-total">—</div></div>
+    <div class="top-cell" data-key="ads"><div class="l">広告費</div><div class="v-total">—</div></div>
+    <div class="top-cell" data-key="sess"><div class="l">セッション</div><div class="v-total">—</div></div>
+    <div class="top-cell" data-key="imp"><div class="l">imp</div><div class="v-total">—</div></div>
+    <div class="top-cell" data-key="ads-orders"><div class="l">広告経由 注文</div><div class="v-total">—</div></div>
+    <div class="top-cell" data-key="roas"><div class="l">ROAS</div><div class="v-total">—</div></div>
+    <div class="top-cell" data-key="acos"><div class="l">ACoS</div><div class="v-total">—</div></div>
+  </div>
+</div>
+<style>
+  .top-cell{background:var(--gray-1);border:1px solid var(--gray-3);border-top:3px solid var(--orange);padding:6px 8px;text-align:center;}
+  .top-cell .l{font-size:10px;color:#666;letter-spacing:.05em;margin-bottom:2px;font-weight:700;}
+  .top-cell .v{font-size:11px;color:#333;}
+  .top-cell .v b{font-size:14px;font-weight:800;}
+  .top-cell .t{font-size:11px;color:#666;margin-top:2px;}
+  .top-cell .v-total{font-size:16px;font-weight:800;color:var(--black);}
+  .top-cell[data-key="sales"] .v-total{color:var(--green);}
+  .top-cell[data-key="ads"] .v-total{color:var(--red);}
+  .top-cell[data-key="acos"] .v-total.bad{color:var(--red);}
+</style>
+
 <div class="summary" id="summary">
   <div class="cell star"><div class="lbl">STAR</div><div class="val" data-tier="STAR">—</div></div>
   <div class="cell good"><div class="lbl">GOOD</div><div class="val" data-tier="GOOD">—</div></div>
@@ -852,6 +894,91 @@ loadData().then(d=>{
     `<div class="empty" style="color:#d8302f;">データ取得失敗: ${escapeHtml(err.message)}<br>data/kw-daily.json が未生成の可能性</div>`;
   document.getElementById('visible-count').textContent = '読み込み失敗';
 });
+
+// ── トップ実績パネル (全タブ共通、 期間選択) ──────
+let TOP_SALES = null;
+(async () => {
+  try {
+    const res = await fetch('./data/adjustments.json?t=' + Date.now());
+    if (!res.ok) return;
+    const j = await res.json();
+    TOP_SALES = j.recent_sales || [];
+    initTopSales();
+  } catch(e) { console.warn('[top-sales] fail:', e); }
+})();
+
+function initTopSales() {
+  const sel = document.getElementById('top-range');
+  const wrap = document.getElementById('top-custom-wrap');
+  const fromEl = document.getElementById('top-from');
+  const toEl = document.getElementById('top-to');
+  if (TOP_SALES.length) {
+    fromEl.value = TOP_SALES[TOP_SALES.length-1].date;
+    toEl.value = TOP_SALES[0].date;
+    fromEl.min = TOP_SALES[TOP_SALES.length-1].date;
+    toEl.max = TOP_SALES[0].date;
+  }
+  sel.addEventListener('change', () => {
+    wrap.style.display = sel.value === 'custom' ? 'inline-block' : 'none';
+    renderTopSales();
+  });
+  fromEl.addEventListener('change', renderTopSales);
+  toEl.addEventListener('change', renderTopSales);
+  renderTopSales();
+}
+
+function renderTopSales() {
+  if (!TOP_SALES || !TOP_SALES.length) return;
+  const range = document.getElementById('top-range').value;
+  const jstToday = new Date(Date.now() + 9*3600_000).toISOString().slice(0,10);
+  const yesterday = new Date(Date.now() + 9*3600_000 - 86400_000).toISOString().slice(0,10);
+  let from, to;
+  if (range === 'today') { from = jstToday; to = jstToday; }
+  else if (range === 'yesterday') { from = yesterday; to = yesterday; }
+  else if (range === '7d') { from = new Date(Date.now() + 9*3600_000 - 7*86400_000).toISOString().slice(0,10); to = yesterday; }
+  else if (range === '30d') { from = new Date(Date.now() + 9*3600_000 - 30*86400_000).toISOString().slice(0,10); to = yesterday; }
+  else if (range === '90d') { from = new Date(Date.now() + 9*3600_000 - 90*86400_000).toISOString().slice(0,10); to = yesterday; }
+  else { from = document.getElementById('top-from').value; to = document.getElementById('top-to').value; }
+
+  const filtered = TOP_SALES.filter(d => d.date >= from && d.date <= to);
+  document.getElementById('top-range-label').textContent = `${from} 〜 ${to} (${filtered.length}日)`;
+
+  let atsuU=0, usuU=0, salesEx=0, adCost=0, sess=0, imp=0, adsOrders=0;
+  for (const d of filtered) {
+    atsuU += d.atsu.units || 0;
+    usuU  += d.usu.units || 0;
+    salesEx += (d.atsu.sales_ex || 0) + (d.usu.sales_ex || 0);
+    adCost += (d.atsu.ad_cost || 0) + (d.usu.ad_cost || 0);
+    sess += (d.atsu.sess || 0) + (d.usu.sess || 0);
+    imp += (d.atsu.imp || 0) + (d.usu.imp || 0);
+    adsOrders += (d.atsu.ads_orders || 0) + (d.usu.ads_orders || 0);
+  }
+  const totalU = atsuU + usuU;
+  const acos = salesEx > 0 ? adCost / salesEx : null;
+  const roas = adCost > 0 ? salesEx / adCost : null;
+  const yen = v => '¥' + Math.round(v).toLocaleString();
+  const num = v => (v || 0).toLocaleString();
+
+  const cells = document.querySelectorAll('#top-cells .top-cell');
+  cells.forEach(c => {
+    const key = c.dataset.key;
+    if (key === 'units') {
+      c.querySelector('.v-atsu').textContent = atsuU;
+      c.querySelector('.v-usu').textContent = usuU;
+      c.querySelector('.v-total').textContent = totalU;
+    } else if (key === 'sales') c.querySelector('.v-total').textContent = yen(salesEx);
+    else if (key === 'ads') c.querySelector('.v-total').textContent = yen(adCost);
+    else if (key === 'sess') c.querySelector('.v-total').textContent = num(sess);
+    else if (key === 'imp') c.querySelector('.v-total').textContent = num(imp);
+    else if (key === 'ads-orders') c.querySelector('.v-total').textContent = num(adsOrders);
+    else if (key === 'roas') c.querySelector('.v-total').textContent = roas != null ? roas.toFixed(2) + 'x' : '—';
+    else if (key === 'acos') {
+      const el = c.querySelector('.v-total');
+      el.textContent = acos != null ? (acos*100).toFixed(0) + '%' : '—';
+      el.classList.toggle('bad', acos != null && acos > 0.42);
+    }
+  });
+}
 
 // ════════════════════════════════════════════════
 // タブ切替 + 3軸ディープダイブ
