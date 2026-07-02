@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#c3d9dc">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ふくてつ さんぽ帳">
+<meta name="fukutetsu-liff-id" content="">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -51,7 +52,8 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 .hd .lg .tt{font-weight:900;font-size:14px;letter-spacing:-.005em;color:var(--ink);text-shadow:0 1px 3px oklch(0.965 0.008 82 / 0.9),0 0 10px oklch(0.965 0.008 82 / 0.5)}
 .hd .lg .tt small{display:block;font-family:"JetBrains Mono",monospace;font-weight:400;font-size:9.5px;color:var(--ink-2);letter-spacing:.14em;text-transform:uppercase;margin-top:1px;text-shadow:0 1px 2px oklch(0.965 0.008 82 / 0.9)}
 .hd .who{display:flex;align-items:center;gap:8px;padding:6px 12px;background:oklch(0.98 0.005 82 / .9);border:1px solid oklch(0.55 0.02 60 / .3);border-radius:20px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-.hd .who .av{width:22px;height:22px;background:var(--red);color:var(--paper);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900}
+.hd .who .av{width:22px;height:22px;background:var(--red);color:var(--paper);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;overflow:hidden}
+.hd .who .av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .hd .who .nm{font-size:12px;font-weight:700;color:var(--ink);max-width:14ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hd .who button.chg{background:transparent;border:none;padding:0 4px;color:var(--dim);font-size:11px;cursor:pointer;font-weight:500}
 
@@ -437,6 +439,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
   </div>
 </div>
 
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
 // ─────────── data ───────────
@@ -544,7 +547,12 @@ function render(){
   // header
   if (user) {
     document.getElementById("who-nm").textContent = user.name;
-    document.getElementById("who-av").textContent = (user.name[0] || "?").toUpperCase();
+    const av = document.getElementById("who-av");
+    if (user.pictureUrl){
+      av.innerHTML = `<img src="${user.pictureUrl}" alt="">`;
+    } else {
+      av.textContent = (user.name[0] || "?").toUpperCase();
+    }
   }
   renderGps();
   renderProgress();
@@ -892,13 +900,50 @@ document.getElementById("btn-reset").addEventListener("click", ()=>{
   showToast("RESET", "スタンプ帳を初期化しました");
 });
 
-// ─────────── init ───────────
-if (!user || !user.name){
-  showOb();
-} else {
-  render();
-  tryGeolocation();
+// ─────────── init (LIFF or Web) ───────────
+const LIFF_ID = (document.querySelector('meta[name="fukutetsu-liff-id"]') || {}).content || "";
+
+async function bootstrap(){
+  // LIFF path (only if LIFF_ID is set + SDK available)
+  if (LIFF_ID && typeof window.liff !== "undefined"){
+    try {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()){
+        if (liff.isInClient()){
+          liff.login();
+          return;
+        }
+        // Outside LINE, not logged in: try web login
+        liff.login();
+        return;
+      }
+      const p = await liff.getProfile();
+      user = {
+        name: p.displayName,
+        userId: p.userId,
+        pictureUrl: p.pictureUrl || null,
+        via: "liff",
+        joinedAt: (user && user.joinedAt) || Date.now()
+      };
+      saveUser();
+      // In LINE + logged in: skip onboarding, go straight to app
+      render();
+      tryGeolocation();
+      return;
+    } catch(e){
+      console.warn("LIFF init failed, falling back to web mode:", e);
+    }
+  }
+  // Web fallback: standard onboarding
+  if (!user || !user.name){
+    showOb();
+  } else {
+    render();
+    tryGeolocation();
+  }
 }
+
+bootstrap();
 </script>
 </body>
 </html>

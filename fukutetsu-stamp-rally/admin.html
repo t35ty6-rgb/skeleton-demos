@@ -138,6 +138,38 @@ button,input,select{font-family:inherit;color:inherit}
 .tbl td.mut{color:var(--dim)}
 .tbl tr:last-child td{border-bottom:none}
 
+/* segment push */
+.seg-list{display:flex;flex-direction:column;gap:8px}
+.seg-row{display:grid;grid-template-columns:44px 1fr auto auto;gap:12px;align-items:center;padding:12px 14px;background:var(--bg);border:1px solid var(--rule-2)}
+.seg-tag{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--red-hi);background:color-mix(in oklch,var(--red) 14%,transparent);padding:6px 8px;text-align:center;border-radius:2px}
+.seg-name{font-size:13.5px;font-weight:900;color:var(--paper);letter-spacing:-.005em;margin-bottom:2px}
+.seg-cond{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--muted);letter-spacing:.06em}
+.seg-n{font-family:"Noto Sans JP",sans-serif;font-weight:700;font-size:17px;color:var(--paper);letter-spacing:-.01em;font-feature-settings:"tnum" 1;white-space:nowrap}
+.seg-n u{font-size:11px;color:var(--muted);font-weight:500;margin-left:2px;text-decoration:none}
+.seg-btn-send{padding:8px 14px;font-size:11.5px;background:transparent;border:1px solid var(--rule-2);color:var(--body);font-family:inherit;font-weight:700;cursor:pointer;letter-spacing:.02em;transition:all .2s}
+.seg-btn-send:hover{background:var(--red);border-color:var(--red);color:var(--paper)}
+.seg-note{margin-top:16px;padding-top:14px;border-top:1px dashed var(--rule-2);font-size:12px;color:var(--muted);line-height:1.7}
+.seg-note b{color:var(--red-hi);font-family:"JetBrains Mono",monospace;font-weight:700}
+
+/* segment modal */
+.seg-modal{position:fixed;inset:0;background:oklch(0 0 0 / .65);display:none;align-items:center;justify-content:center;z-index:200;padding:24px}
+.seg-modal.on{display:flex}
+.seg-mo{background:var(--bg-2);border:1px solid var(--rule-2);max-width:520px;width:100%;max-height:88vh;overflow-y:auto;padding:24px 26px 26px}
+.seg-mo-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+.seg-mo-tag{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--red-hi);background:color-mix(in oklch,var(--red) 20%,transparent);padding:4px 8px;font-weight:700;margin-right:8px}
+.seg-mo-name{font-size:18px;font-weight:900;color:var(--paper);letter-spacing:-.015em}
+.seg-mo-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0 4px;line-height:1}
+.seg-mo-close:hover{color:var(--paper)}
+.seg-mo-meta{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);margin-bottom:20px;letter-spacing:.06em}
+.seg-mo-meta b{color:var(--red-hi);font-weight:700}
+.seg-mo-lbl{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:8px;display:block}
+.seg-mo-ta{width:100%;min-height:140px;padding:14px;background:var(--bg-3);border:1px solid var(--rule-2);color:var(--paper);font-size:13.5px;font-family:"Noto Sans JP",sans-serif;line-height:1.75;resize:vertical}
+.seg-mo-ta:focus{outline:none;border-color:var(--paper)}
+.seg-mo-pv{margin-top:18px;padding:14px 16px;background:oklch(0.98 0.005 82);color:oklch(0.14 0.006 60);font-size:13px;line-height:1.65;border-radius:6px 6px 6px 0;font-family:"Noto Sans JP",sans-serif;max-width:80%}
+.seg-mo-pv-lbl{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:16px;margin-bottom:6px;display:block}
+.seg-mo-actions{margin-top:22px;padding-top:18px;border-top:1px solid var(--rule-2);display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg-mo-actions .btn{padding:12px}
+
 .exports{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .exports .btn{padding:14px;text-align:left;font-size:12.5px;font-weight:500;letter-spacing:.02em;line-height:1.5}
 .exports .btn span{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;color:var(--muted);margin-top:4px;text-transform:uppercase}
@@ -356,6 +388,17 @@ button,input,select{font-family:inherit;color:inherit}
 
       <div class="panel">
         <div class="panel-head">
+          <h2>LINE セグメント配信</h2>
+          <span class="k">Segmented push</span>
+        </div>
+        <div class="panel-body">
+          <div class="seg-list" id="seg-list"></div>
+          <div class="seg-note">合計 <b>3,000名</b> がラリー参加中。 broadcast 禁止、 必ず userId 指定で push (Cloud Functions + Messaging API 連携予定)。</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
           <h2>レポート出力</h2>
           <span class="k">Export</span>
         </div>
@@ -370,6 +413,24 @@ button,input,select{font-family:inherit;color:inherit}
       </div>
     </div>
 
+  </div>
+</div>
+
+<div class="seg-modal" id="seg-modal">
+  <div class="seg-mo">
+    <div class="seg-mo-head">
+      <div><span class="seg-mo-tag" id="seg-mo-tag">S1</span><span class="seg-mo-name" id="seg-mo-name">新規参加</span></div>
+      <button class="seg-mo-close" id="seg-mo-close" aria-label="閉じる">×</button>
+    </div>
+    <div class="seg-mo-meta"><span id="seg-mo-cond">押印1個</span> · 対象 <b id="seg-mo-count">900名</b> · 想定 push 消費 <b id="seg-mo-cost">900通</b></div>
+    <label class="seg-mo-lbl" for="seg-mo-ta">文面 (◯◯さん は 各ユーザー名に自動置換)</label>
+    <textarea class="seg-mo-ta" id="seg-mo-ta"></textarea>
+    <span class="seg-mo-pv-lbl">LINE プレビュー</span>
+    <div class="seg-mo-pv" id="seg-mo-pv"></div>
+    <div class="seg-mo-actions">
+      <button class="btn primary" id="seg-mo-send">今すぐ送信</button>
+      <button class="btn" id="seg-mo-sched">予約配信 · 明日09:00</button>
+    </div>
   </div>
 </div>
 
@@ -513,6 +574,70 @@ document.getElementById("btn-export").addEventListener("click", ()=>{
 renderActs();
 renderHeat();
 renderTable();
+
+// ─────────── segment push ───────────
+const SEGMENTS = [
+  { id:"S1", name:"新規参加",   cond:"押印1個",           n:900, sample:"◯◯さん、越前和紙の里 押印おめでとうございます。 あと3個で 沿線カフェ ドリンク1杯 交換できます。 次のオススメは 徒歩12分の 武生中央公園。" },
+  { id:"S2", name:"育成中",     cond:"押印2〜3個",        n:800, sample:"◯◯さん、今週末はどこ行きますか。 まだ未訪問のスポットは 西山公園・恐竜モニュメント・福井城址 など。 週末は晴れ予報です。" },
+  { id:"S3", name:"あと少し",   cond:"押印5〜6個",        n:500, sample:"◯◯さん、コンプまで あと4個。 残り3日、福井駅発 → 城址 → 養浩館 → 足羽神社 の順で 2時間で回れます。" },
+  { id:"S4", name:"コンプ達成", cond:"押印10個",          n:450, sample:"◯◯さん、コンプおめでとうございます。 硬券セットは 福井駅観光案内所 で 8/31まで お受け取りください。 次期ラリーは秋10月開催、 いち早くお知らせします。" },
+  { id:"S5", name:"途中離脱",   cond:"3日以上更新なし",   n:350, sample:"◯◯さん、ラリーは8/31までです。 現在地から一番近いのは ◯◯です。 硬券帳がリセットされる前に、 あと少し集めませんか。" },
+];
+
+function renderSegments(){
+  const el = document.getElementById("seg-list");
+  el.innerHTML = "";
+  SEGMENTS.forEach(s => {
+    const row = document.createElement("div");
+    row.className = "seg-row";
+    row.innerHTML = `
+      <div class="seg-tag">${s.id}</div>
+      <div><div class="seg-name">${s.name}</div><div class="seg-cond">${s.cond}</div></div>
+      <div class="seg-n">${s.n.toLocaleString()}<u>名</u></div>
+      <button class="seg-btn-send" data-seg="${s.id}">配信 →</button>
+    `;
+    el.appendChild(row);
+  });
+  el.querySelectorAll(".seg-btn-send").forEach(b => {
+    b.addEventListener("click", () => openSegModal(b.dataset.seg));
+  });
+}
+renderSegments();
+
+const segModal = document.getElementById("seg-modal");
+let currentSeg = null;
+
+function openSegModal(id){
+  const s = SEGMENTS.find(x => x.id === id);
+  if (!s) return;
+  currentSeg = s;
+  document.getElementById("seg-mo-tag").textContent = s.id;
+  document.getElementById("seg-mo-name").textContent = s.name;
+  document.getElementById("seg-mo-cond").textContent = s.cond;
+  document.getElementById("seg-mo-count").textContent = `${s.n.toLocaleString()}名`;
+  document.getElementById("seg-mo-cost").textContent = `${s.n.toLocaleString()}通`;
+  document.getElementById("seg-mo-ta").value = s.sample;
+  updateSegPreview();
+  segModal.classList.add("on");
+}
+function updateSegPreview(){
+  const text = document.getElementById("seg-mo-ta").value || "";
+  const preview = text.replace(/◯◯さん/g, "山内 明日香さん");
+  document.getElementById("seg-mo-pv").textContent = preview || "文面を入力…";
+}
+document.getElementById("seg-mo-ta").addEventListener("input", updateSegPreview);
+document.getElementById("seg-mo-close").addEventListener("click", () => segModal.classList.remove("on"));
+segModal.addEventListener("click", e => { if (e.target === segModal) segModal.classList.remove("on"); });
+document.getElementById("seg-mo-send").addEventListener("click", () => {
+  if (!currentSeg) return;
+  alert(`Demo · 送信シミュレーション\n\nセグメント: ${currentSeg.id} ${currentSeg.name}\n対象: ${currentSeg.n.toLocaleString()}名\n\n本番では Cloud Functions 経由で LINE Messaging API に push (to: userId必須、broadcast禁止)。 消費 push 数 = 対象人数。`);
+  segModal.classList.remove("on");
+});
+document.getElementById("seg-mo-sched").addEventListener("click", () => {
+  if (!currentSeg) return;
+  alert(`Demo · 予約配信\n\nセグメント: ${currentSeg.id} ${currentSeg.name}\n予約: 明日 09:00\n\nCloud Scheduler + Functions で定時実行 (配信直前にセグメントを再走査、条件外れたユーザーはスキップ)。`);
+  segModal.classList.remove("on");
+});
 </script>
 </body>
 </html>
