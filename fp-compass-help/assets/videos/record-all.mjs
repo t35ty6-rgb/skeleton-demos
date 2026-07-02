@@ -343,7 +343,7 @@ const chapters = [
   // ─── 01 ログイン (19.3s) — ログイン済み state なので caption/screen のみ ───
   { name: '01-login', segments: [
     { dur: 4.5, act: async (p) => {
-      await goTab(p, 'clients');
+      await goTab(p, 'home');
       await wait(p, 400);
       await showScreen(p, 'ログイン');
       await caption(p, 'まいにち 使いはじめる 最初 の 手順');
@@ -356,6 +356,8 @@ const chapters = [
       await caption(p, 'メール アドレス と パスワード を 入力');
     }},
     { dur: 3.8, act: async (p) => {
+      await goTab(p, 'home');
+      await wait(p, 300);
       await caption(p, '「ログイン」 を 押す と ダッシュボード に');
     }},
   ]},
@@ -389,6 +391,8 @@ const chapters = [
   // ─── 03 顧客台帳 (24.4s) ───
   { name: '03-clients', segments: [
     { dur: 3, act: async (p) => {
+      await goTab(p, 'home');
+      await wait(p, 400);
       await showScreen(p, '顧客台帳');
     }},
     { dur: 5, act: async (p) => {
