@@ -513,7 +513,7 @@ export function summarize(reps, customers, orders, subs) {
   const total = subs.length;
   const retention = total ? Math.round((active / total) * 1000) / 10 : 0;
 
-  const friends = customers.length + 184300; // デモ的に大規模プロモの見え方に (今月+8,240)
+  const friends = customers.filter(c => c.lineUserId).length; // 実顧客のみ (旧デモ水増しは除去)
   return {
     revenue, byChannel, byRep, retention, friends,
     thisMonthOrders,
