@@ -9,7 +9,7 @@
 
 import { db } from './data.js';
 
-const SEED_FLAG = 'sunchlorella::seeded::v4';
+const SEED_FLAG = 'sunchlorella::seeded::v5';
 
 export async function seedIfEmpty() {
   if (localStorage.getItem(SEED_FLAG)) return false;
@@ -191,14 +191,17 @@ async function seedAll() {
   });
   for (const v of visits) await db.set('visits', v.id, v);
 
-  /* ─── 配信履歴 6件 ─── */
+  /* ─── 配信履歴 (アカ別に分散) ─── */
   const broadcasts = [
-    { id: 'bc_1', kind: 'manual',       title: '定期便お届けのお知らせ (7月分)', segment: ['s_sub'], targetCount: 12820, openRate: 44.2, clickRate: 8.1, sentAt: D(1),  bodyPreview: 'お世話になっております。今月の定期便のお届けについてご案内いたします。' },
-    { id: 'bc_2', kind: 'manual',       title: 'プラズマローゲン 会員限定¥500 OFF', segment: ['age_60','age_70','s_sub'], targetCount: 5320, openRate: 51.7, clickRate: 12.4, sentAt: D(4),  bodyPreview: '今月ご継続の皆さまへ、プラズマローゲン初回¥500 OFFのお知らせです。' },
-    { id: 'bc_3', kind: 'auto_birth',   title: '7月お誕生月の皆さまへ',          segment: ['s_birthmonth'], targetCount: 862, openRate: 62.4, clickRate: 18.9, sentAt: D(7),  bodyPreview: 'お誕生月おめでとうございます。ささやかですが¥1,000クーポンをお贈りします。' },
-    { id: 'bc_4', kind: 'auto_sleep',   title: '休眠60日超の皆さまへ (お伺い)',  segment: ['s_sleep60'], targetCount: 1240, openRate: 21.3, clickRate: 4.2, sentAt: D(10), bodyPreview: 'ご無沙汰しております。担当よりお伺いのご連絡です。' },
-    { id: 'bc_5', kind: 'manual',       title: '関東ブロック 夏の健康フェア案内',segment: ['r_kanto'], targetCount: 8420, openRate: 34.6, clickRate: 7.2, sentAt: D(15), bodyPreview: '関東の皆さまへ、夏の健康フェア開催のお知らせです。' },
-    { id: 'bc_6', kind: 'auto_sub_remind', title: '定期便お届け3日前リマインド', segment: ['s_sub'], targetCount: 986,  openRate: 71.2, clickRate: 22.0, sentAt: D(2),  bodyPreview: '3日後にお届けの定期便、お手元の在庫はいかがですか?' },
+    { id: 'bc_1', kind: 'manual',          title: '定期便お届けのお知らせ (7月分)',       segment: ['s_sub'],                     sourceChannelId: 'ch_sub',   targetCount: 12820, openRate: 44.2, clickRate: 8.1,  sentAt: D(1),  bodyPreview: 'お世話になっております。今月の定期便のお届けについてご案内いたします。' },
+    { id: 'bc_2', kind: 'manual',          title: 'プラズマローゲン 会員限定¥500 OFF',    segment: ['age_60','age_70','s_sub'],   sourceChannelId: 'ch_sales', targetCount: 5320,  openRate: 51.7, clickRate: 12.4, sentAt: D(4),  bodyPreview: '今月ご継続の皆さまへ、プラズマローゲン初回¥500 OFFのお知らせです。' },
+    { id: 'bc_3', kind: 'auto_birth',      title: '7月お誕生月の皆さまへ',                segment: ['s_birthmonth'],              sourceChannelId: 'ch_sales', targetCount: 862,   openRate: 62.4, clickRate: 18.9, sentAt: D(7),  bodyPreview: 'お誕生月おめでとうございます。ささやかですが¥1,000クーポンをお贈りします。' },
+    { id: 'bc_4', kind: 'auto_sleep',      title: '休眠60日超の皆さまへ (お伺い)',        segment: ['s_sleep60'],                 sourceChannelId: 'ch_cs',    targetCount: 1240,  openRate: 21.3, clickRate: 4.2,  sentAt: D(10), bodyPreview: 'ご無沙汰しております。担当よりお伺いのご連絡です。' },
+    { id: 'bc_5', kind: 'manual',          title: '滋賀レイクス試合前 応援キャンペーン',  segment: ['ch:ch_event'],               sourceChannelId: 'ch_event', targetCount: 8420,  openRate: 58.6, clickRate: 15.2, sentAt: D(3),  bodyPreview: '滋賀レイクスから来ていただいた皆さまへ、試合前 応援キャンペーンのご案内です。' },
+    { id: 'bc_6', kind: 'auto_sub_remind', title: '定期便お届け3日前リマインド',          segment: ['s_sub'],                     sourceChannelId: 'ch_sub',   targetCount: 986,   openRate: 71.2, clickRate: 22.0, sentAt: D(2),  bodyPreview: '3日後にお届けの定期便、お手元の在庫はいかがですか?' },
+    { id: 'bc_7', kind: 'manual',          title: '万博会場 特別クーポンのご案内',        segment: ['camp:camp_expo_kansai'],     sourceChannelId: 'ch_event', targetCount: 620,   openRate: 66.1, clickRate: 19.4, sentAt: D(6),  bodyPreview: '大阪・関西万博 サン・クロレラブース にお越しいただいた皆さまへ。' },
+    { id: 'bc_8', kind: 'manual',          title: '商品お使いこなしのコツ (動画)',        segment: ['age_60','age_70','age_80'],  sourceChannelId: 'ch_cs',    targetCount: 3860,  openRate: 47.3, clickRate: 10.5, sentAt: D(8),  bodyPreview: 'お手元にお届けした商品を 毎日 続けやすくする ちょっとしたコツを 動画でご紹介します。' },
+    { id: 'bc_9', kind: 'manual',          title: '担当より 個別ご案内 (訪問予定確認)',   segment: ['pref_visit'],                sourceChannelId: 'ch_sales', targetCount: 4280,  openRate: 68.4, clickRate: 24.8, sentAt: D(5),  bodyPreview: '担当の訪問予定を お知らせいたします。 ご都合の良い曜日をお選びください。' },
   ];
   for (const b of broadcasts) await db.set('broadcasts', b.id, b);
 
