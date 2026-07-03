@@ -244,6 +244,31 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 .toast .k{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.2em;color:oklch(0.68 0.008 70);text-transform:uppercase;display:block;margin-bottom:3px}
 .toast.err{background:var(--red)}
 
+/* out-of-range modal (押印できない警告) */
+.oor-modal{position:fixed;inset:0;background:oklch(0 0 0 / .7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:210;padding:24px}
+.oor-modal.on{display:flex}
+.oor-card{background:var(--paper);color:var(--ink);border:2px solid var(--red);border-radius:2px;max-width:360px;width:100%;overflow:hidden;transform:scale(.85);opacity:0;transition:transform .35s cubic-bezier(.2,.9,.2,1),opacity .3s}
+.oor-modal.on .oor-card{transform:scale(1);opacity:1}
+.oor-hero{aspect-ratio:16/9;overflow:hidden;background:var(--paper-3);position:relative}
+.oor-hero img{width:100%;height:100%;object-fit:cover;filter:grayscale(.5) brightness(.72)}
+.oor-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,oklch(0.14 0.006 60 / .55) 100%);pointer-events:none}
+.oor-tag{position:absolute;top:12px;left:12px;background:var(--red);color:var(--paper);padding:5px 11px;font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.22em;font-weight:700;text-transform:uppercase;z-index:2}
+.oor-body{padding:22px 24px 26px}
+.oor-body h3{margin:0 0 6px;font-size:20px;font-weight:900;letter-spacing:-.02em;color:var(--red);line-height:1.3}
+.oor-body .oor-sub{margin:0 0 18px;font-size:12px;color:var(--dim);font-family:"JetBrains Mono",monospace;letter-spacing:.06em}
+.oor-dist-box{padding:14px 16px;background:var(--paper-2);border:1px solid var(--rule-2);margin-bottom:18px;border-radius:2px}
+.oor-dist-box .k{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:6px}
+.oor-dist-box .v{font-family:"Noto Sans JP",sans-serif;font-weight:700;font-size:26px;letter-spacing:-.02em;color:var(--ink);font-feature-settings:"tnum" 1;line-height:1.1}
+.oor-dist-box .req{margin-top:10px;padding-top:10px;border-top:1px dashed var(--rule-2);font-size:12px;color:var(--dim);line-height:1.65}
+.oor-dist-box .req b{color:var(--red);font-weight:700}
+.oor-body .oor-hint{margin:0 0 20px;font-size:12.5px;color:var(--ink-2);line-height:1.75}
+.oor-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.oor-actions button{padding:14px;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;border-radius:2px;letter-spacing:.02em}
+.oor-actions .oor-primary{background:var(--red);color:var(--paper);border:none;transition:background .2s}
+.oor-actions .oor-primary:hover{background:var(--ink)}
+.oor-actions .oor-secondary{background:transparent;color:var(--ink);border:1.5px solid var(--ink);transition:background .2s}
+.oor-actions .oor-secondary:hover{background:var(--ink);color:var(--paper)}
+
 /* sim modal */
 .sim-modal{position:fixed;inset:0;background:oklch(0 0 0 / .55);display:none;align-items:flex-end;justify-content:center;z-index:180;padding:0}
 .sim-modal.on{display:flex}
@@ -436,6 +461,30 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
       <div class="r"><span class="k">Serial</span><span class="v" id="fx-serial"></span></div>
     </div>
     <div class="tap">Tap to close</div>
+  </div>
+</div>
+
+<!-- out-of-range modal -->
+<div class="oor-modal" id="oor-modal" role="alertdialog" aria-modal="true" aria-labelledby="oor-title" aria-describedby="oor-hint">
+  <div class="oor-card">
+    <div class="oor-hero">
+      <span class="oor-tag">GPS 圏外</span>
+      <img id="oor-img" src="" alt="">
+    </div>
+    <div class="oor-body">
+      <h3 id="oor-title">押印できません</h3>
+      <div class="oor-sub" id="oor-code">SP-XX · 最寄 XX駅</div>
+      <div class="oor-dist-box">
+        <span class="k">現在地からの距離</span>
+        <div class="v" id="oor-dist">— m</div>
+        <div class="req">押印には スポットから <b>150m 以内</b> に入る必要があります。</div>
+      </div>
+      <p class="oor-hint" id="oor-hint">写真だけ共有された QR コードは このガードで無効化されます。 現地に向かって もう一度 スキャンしてください。</p>
+      <div class="oor-actions">
+        <button class="oor-secondary" id="oor-map" type="button">地図で見る</button>
+        <button class="oor-primary" id="oor-close" type="button">閉じる</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1054,18 +1103,62 @@ function handleQr(data){
     setTimeout(()=>{ if(camActive) scanLoop(); }, 1500);
     return;
   }
-  // GPS check (unless simulated)
+  // GPS check (unless simulated) → 圏外は モーダルで はっきり通知
   if (!inRange(spot)){
     const d = distToSpot(spot);
-    const dStr = d === null ? "位置不明" : `${d>=1000?(d/1000).toFixed(1)+"km":Math.round(d)+"m"}`;
-    showToast("圏外です", `${spot.name} まで ${dStr}`, true);
-    setTimeout(()=>{ if(camActive) scanLoop(); }, 1800);
-    return;
+    showOutOfRangeModal(spot, d);
+    return; // scanLoop はモーダル閉じたときに再開
   }
   stopCam();
   doStamp(spot);
   switchTab("book");
 }
+
+// ─────────── out-of-range modal ───────────
+function showOutOfRangeModal(spot, distM){
+  const m = document.getElementById("oor-modal");
+  const img = document.getElementById("oor-img");
+  img.src = spot.img;
+  img.alt = spot.name;
+  document.getElementById("oor-title").textContent = `${spot.name} · 押印できません`;
+  document.getElementById("oor-code").textContent = `${spot.code} · 最寄 ${spot.station}駅`;
+  const distEl = document.getElementById("oor-dist");
+  if (distM === null){
+    distEl.textContent = "距離不明 · GPS未取得";
+  } else if (distM >= 1000){
+    distEl.textContent = `${(distM/1000).toFixed(1)} km 離れています`;
+  } else {
+    distEl.textContent = `${Math.round(distM)} m 離れています`;
+  }
+  m.classList.add("on");
+  // 強めのhaptic (拒絶パターン)
+  try { if ("vibrate" in navigator) navigator.vibrate([200, 80, 200]); } catch(e){}
+  // 不正試行ログ (Firestore backend時のみ)
+  if (USE_FS && user && user.userId && window.fukutetsuStore && window.fukutetsuStore.logFraud){
+    window.fukutetsuStore.logFraud({
+      userId: user.userId,
+      spotCode: spot.code,
+      distM: distM,
+      reason: "out_of_range_scan",
+      ua: (navigator.userAgent || "").slice(0, 120),
+    }).catch(()=>{});
+  }
+}
+document.getElementById("oor-close").addEventListener("click", () => {
+  document.getElementById("oor-modal").classList.remove("on");
+  if (camActive) setTimeout(scanLoop, 200); // スキャン再開
+});
+document.getElementById("oor-map").addEventListener("click", () => {
+  document.getElementById("oor-modal").classList.remove("on");
+  if (camActive) stopCam();
+  switchTab("map");
+});
+document.getElementById("oor-modal").addEventListener("click", e => {
+  if (e.target.id === "oor-modal"){
+    document.getElementById("oor-modal").classList.remove("on");
+    if (camActive) setTimeout(scanLoop, 200);
+  }
+});
 
 // ─────────── simulator ───────────
 const simModal = document.getElementById("sim-modal");
