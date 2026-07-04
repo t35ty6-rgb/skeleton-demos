@@ -198,40 +198,50 @@ async function injectHelper(p) {
     };
     window.scHelp.clearCaption = () => document.querySelectorAll('.sc-caption').forEach(el => el.remove());
     window.scHelp.slide = async (html) => {
-      document.querySelectorAll('.sc-slide').forEach(el => el.remove());
-      // インジェクト: Google Fonts (Noto Sans JP weight range + Inter Tight numbers)
+      // Google Fonts inject (idempotent)
       if (!document.getElementById('sc-fonts')) {
         const l = document.createElement('link');
         l.id = 'sc-fonts'; l.rel = 'stylesheet';
         l.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=Inter+Tight:wght@300;400;500;700&display=swap';
         document.head.appendChild(l);
       }
-      // フォント読み込み完了を保証 (recording 前提)
       if (document.fonts && document.fonts.ready) {
         try { await document.fonts.load('900 88px "Noto Sans JP"'); await document.fonts.load('400 160px "Inter Tight"'); await document.fonts.ready; } catch (_) {}
       }
+      // Cross-fade: 既存スライドを 300ms でフェードアウト、 同時に 新スライドを フェードイン
+      const existing = Array.from(document.querySelectorAll('.sc-slide'));
       const el = document.createElement('div');
       el.className = 'sc-slide';
-      // Editorial: off-white bg, no cream tint, deep ink text, generous padding
       el.style.cssText = [
-        'position:fixed', 'inset:0', 'z-index:99994',
+        'position:fixed', 'inset:0',
+        'z-index:99994',
         'background:oklch(0.985 0.005 130)',
         'font-family:"Noto Sans JP",system-ui,sans-serif',
         'color:oklch(0.18 0.010 130)',
         'display:flex', 'flex-direction:column',
         'padding:64px 88px 56px',
         'overflow:hidden',
-        'animation:sc-fadein .4s ease',
-        'font-feature-settings:"palt" 1', // 日本語詰め文字
+        'opacity:0',
+        'transition:opacity .35s ease-out',
+        'font-feature-settings:"palt" 1',
       ].join(';');
       el.innerHTML = html;
-      // 段階リビール: data-reveal="N" 属性の要素を初期非表示に
       el.querySelectorAll('[data-reveal]').forEach(x => {
         x.style.opacity = '0';
-        x.style.transform = 'translateY(14px)';
-        x.style.transition = 'opacity .55s cubic-bezier(.2,.8,.4,1), transform .55s cubic-bezier(.2,.8,.4,1)';
+        x.style.transform = 'translateY(10px)';
+        x.style.transition = 'opacity .40s cubic-bezier(.2,.8,.4,1), transform .40s cubic-bezier(.2,.8,.4,1)';
       });
       document.body.appendChild(el);
+      // Trigger cross-fade
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      el.style.opacity = '1';
+      existing.forEach(oldEl => {
+        oldEl.style.transition = 'opacity .30s ease-out';
+        oldEl.style.opacity = '0';
+        setTimeout(() => { try { oldEl.remove(); } catch (_) {} }, 320);
+      });
+      // Wait for fade-in to be visually established
+      await new Promise(r => setTimeout(r, 350));
       return el;
     };
     window.scHelp.reveal = (n) => {
@@ -473,13 +483,13 @@ const chapters = [
     await slide(p, `
       ${SL.chrome('01 / 05', '課題')}
       <div style="margin-top:36px;">${SL.title('御社の現場でいま、<br>起きていること', { size: '52px' })}</div>
-      <div style="margin-top:44px;display:grid;grid-template-columns:56px 1fr;gap:24px;row-gap:26px;max-width:900px;">
-        <div data-reveal="1" style="font-family:${C.fNum};font-size:22px;font-weight:400;color:${C.leaf};letter-spacing:-0.02em;">01</div>
-        <div data-reveal="1" style="font-family:${C.fBody};font-size:19px;font-weight:700;color:${C.ink};line-height:1.5;">訪問販売員の実績が、EC化によって消えていく</div>
-        <div data-reveal="2" style="font-family:${C.fNum};font-size:22px;font-weight:400;color:${C.leaf};letter-spacing:-0.02em;">02</div>
-        <div data-reveal="2" style="font-family:${C.fBody};font-size:19px;font-weight:700;color:${C.ink};line-height:1.5;">4本の公式LINE が部署別で運用され、本社が数字を横断把握できない</div>
-        <div data-reveal="3" style="font-family:${C.fNum};font-size:22px;font-weight:400;color:${C.leaf};letter-spacing:-0.02em;">03</div>
-        <div data-reveal="3" style="font-family:${C.fBody};font-size:19px;font-weight:700;color:${C.ink};line-height:1.5;">中高齢のお客様の半数が、メールアドレス入力で離脱する</div>
+      <div style="margin-top:56px;display:grid;grid-template-columns:88px 1fr;gap:32px;row-gap:36px;max-width:960px;">
+        <div data-reveal="1" style="font-family:${C.fNum};font-size:48px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">01</div>
+        <div data-reveal="1" style="font-family:${C.fBody};font-size:23px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">訪問販売員の実績が、EC化 に よって <span style="color:${C.alert};">消えていく</span></div>
+        <div data-reveal="2" style="font-family:${C.fNum};font-size:48px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">02</div>
+        <div data-reveal="2" style="font-family:${C.fBody};font-size:23px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">4本の公式LINE が部署別で運用され、本社が数字を <span style="color:${C.alert};">横断把握できない</span></div>
+        <div data-reveal="3" style="font-family:${C.fNum};font-size:48px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">03</div>
+        <div data-reveal="3" style="font-family:${C.fBody};font-size:23px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">中高齢のお客様の <span style="color:${C.alert};">半数</span> が、メールアドレス入力で離脱する</div>
       </div>
       ${SL.foot}
     `);
@@ -655,7 +665,7 @@ const chapters = [
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
         <div data-reveal="1" style="display:flex;align-items:baseline;gap:16px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.12em;font-weight:400;"><span>01</span><span style="flex:1;height:1px;background:${C.line};max-width:80px;"></span><span>解決策</span></div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">訪問販売員の実績を、<br><span style="color:${C.leaf};">永続的に守る</span></div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:80px;line-height:1.1;letter-spacing:-0.045em;color:${C.ink};">訪問販売員の実績を、<br><span style="color:${C.leaf};">永続的に守る</span></div>
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
@@ -776,7 +786,7 @@ const chapters = [
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
         <div data-reveal="1" style="display:flex;align-items:baseline;gap:16px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.12em;font-weight:400;"><span>02</span><span style="flex:1;height:1px;background:${C.line};max-width:80px;"></span><span>解決策</span></div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">4本の公式LINE を、<br><span style="color:${C.leaf};">1画面で束ねる</span></div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:80px;line-height:1.1;letter-spacing:-0.045em;color:${C.ink};">4本の公式LINE を、<br><span style="color:${C.leaf};">1画面で束ねる</span></div>
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
@@ -893,7 +903,7 @@ const chapters = [
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
         <div data-reveal="1" style="display:flex;align-items:baseline;gap:16px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.12em;font-weight:400;"><span>03</span><span style="flex:1;height:1px;background:${C.line};max-width:80px;"></span><span>解決策</span></div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">LINE 内だけで、<br><span style="color:${C.leaf};">閲覧から会計まで</span></div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:80px;line-height:1.1;letter-spacing:-0.045em;color:${C.ink};">LINE 内だけで、<br><span style="color:${C.leaf};">閲覧から会計まで</span></div>
         <div data-reveal="3" style="margin-top:28px;font-family:${C.fBody};font-size:18px;color:${C.ink2};font-weight:500;">メールアドレス入力は、一切求めません。</div>
       </div>
     `);
@@ -1005,7 +1015,7 @@ const chapters = [
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
         <div data-reveal="1" style="display:flex;align-items:baseline;gap:16px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.12em;font-weight:400;"><span>04</span><span style="flex:1;height:1px;background:${C.line};max-width:80px;"></span><span>解決策</span></div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:66px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">キャンペーンごとに、<br><span style="color:${C.leaf};">獲得顧客のLTV</span> を別々 に計測</div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.045em;color:${C.ink};">キャンペーンごとに、<br><span style="color:${C.leaf};">獲得顧客のLTV</span> を別々 に計測</div>
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
@@ -1122,7 +1132,7 @@ const chapters = [
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
         <div data-reveal="1" style="display:flex;align-items:baseline;gap:16px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.12em;font-weight:400;"><span>05</span><span style="flex:1;height:1px;background:${C.line};max-width:80px;"></span><span>解決策</span></div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:66px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">ステップ配信<br><span style="color:${C.leaf};">シナリオビルダー</span> を標準装備</div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.045em;color:${C.ink};">ステップ配信<br><span style="color:${C.leaf};">シナリオビルダー</span> を標準装備</div>
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
@@ -1280,7 +1290,7 @@ const chapters = [
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
         <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">IMPACT · MEASURED</div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:60px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">同規模健康食品ブランド<br><span style="color:${C.leaf};">導入 6ヶ月後</span> の実測</div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:68px;line-height:1.1;letter-spacing:-0.045em;color:${C.ink};">同規模健康食品ブランド<br><span style="color:${C.leaf};">導入 6ヶ月後</span> の実測</div>
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
@@ -1293,12 +1303,13 @@ const chapters = [
 
       <div style="margin-top:36px;display:grid;grid-template-columns:1fr 1.4fr;gap:56px;flex:1;">
         <div data-reveal="1" style="display:flex;flex-direction:column;justify-content:center;">
-          <div style="display:flex;align-items:baseline;gap:10px;">
-            <div style="font-family:${C.fNum};font-weight:400;font-size:44px;color:${C.leaf};letter-spacing:-0.02em;">+</div>
-            <div style="font-family:${C.fNum};font-weight:400;font-size:160px;line-height:0.9;letter-spacing:-0.05em;color:${C.leaf};">18</div>
-            <div style="font-family:${C.fNum};font-weight:400;font-size:44px;color:${C.leaf};letter-spacing:-0.02em;">%</div>
+          <div style="display:inline-block;padding:6px 14px;background:${C.leaf};color:#f5f7f2;font-family:${C.fNum};font-size:12px;font-weight:700;letter-spacing:0.14em;align-self:flex-start;">MEASURED · 6ヶ月後</div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-top:20px;">
+            <div style="font-family:${C.fNum};font-weight:500;font-size:56px;color:${C.leaf};letter-spacing:-0.03em;">+</div>
+            <div style="font-family:${C.fNum};font-weight:500;font-size:180px;line-height:0.9;letter-spacing:-0.05em;color:${C.leaf};">18</div>
+            <div style="font-family:${C.fNum};font-weight:500;font-size:56px;color:${C.leaf};letter-spacing:-0.03em;">%</div>
           </div>
-          <div style="margin-top:12px;font-family:${C.fBody};font-size:14px;color:${C.ink2};letter-spacing:0.02em;">6ヶ月後、平均増加</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:16px;color:${C.ink};font-weight:700;letter-spacing:-0.005em;">販売員 1人あたり 月次売上、平均増加</div>
         </div>
 
         <div data-reveal="2" style="display:flex;flex-direction:column;justify-content:center;padding-left:44px;border-left:1px solid ${C.line};">
@@ -1323,12 +1334,13 @@ const chapters = [
 
       <div style="margin-top:36px;display:grid;grid-template-columns:1fr 1.4fr;gap:56px;flex:1;">
         <div data-reveal="1" style="display:flex;flex-direction:column;justify-content:center;">
-          <div style="display:flex;align-items:baseline;gap:10px;">
-            <div style="font-family:${C.fNum};font-weight:400;font-size:44px;color:${C.leaf};letter-spacing:-0.02em;">+</div>
-            <div style="font-family:${C.fNum};font-weight:400;font-size:160px;line-height:0.9;letter-spacing:-0.05em;color:${C.leaf};">12</div>
-            <div style="font-family:${C.fNum};font-weight:400;font-size:44px;color:${C.leaf};letter-spacing:-0.02em;">pt</div>
+          <div style="display:inline-block;padding:6px 14px;background:${C.leaf};color:#f5f7f2;font-family:${C.fNum};font-size:12px;font-weight:700;letter-spacing:0.14em;align-self:flex-start;">MEASURED · 6ヶ月後</div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-top:20px;">
+            <div style="font-family:${C.fNum};font-weight:500;font-size:56px;color:${C.leaf};letter-spacing:-0.03em;">+</div>
+            <div style="font-family:${C.fNum};font-weight:500;font-size:180px;line-height:0.9;letter-spacing:-0.05em;color:${C.leaf};">12</div>
+            <div style="font-family:${C.fNum};font-weight:500;font-size:56px;color:${C.leaf};letter-spacing:-0.03em;">pt</div>
           </div>
-          <div style="margin-top:12px;font-family:${C.fBody};font-size:14px;color:${C.ink2};letter-spacing:0.02em;">6ヶ月後、継続率上昇</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:16px;color:${C.ink};font-weight:700;letter-spacing:-0.005em;">定期便 半年継続率、上昇</div>
         </div>
 
         <div data-reveal="2" style="display:flex;flex-direction:column;justify-content:center;padding-left:44px;border-left:1px solid ${C.line};">
@@ -1353,11 +1365,12 @@ const chapters = [
 
       <div style="margin-top:36px;display:grid;grid-template-columns:1fr 1.4fr;gap:56px;flex:1;">
         <div data-reveal="1" style="display:flex;flex-direction:column;justify-content:center;">
-          <div style="display:flex;align-items:baseline;gap:10px;">
-            <div style="font-family:${C.fNum};font-weight:400;font-size:160px;line-height:0.9;letter-spacing:-0.05em;color:${C.leaf};">2〜3</div>
-            <div style="font-family:${C.fNum};font-weight:400;font-size:44px;color:${C.leaf};letter-spacing:-0.02em;">倍</div>
+          <div style="display:inline-block;padding:6px 14px;background:${C.leaf};color:#f5f7f2;font-family:${C.fNum};font-size:12px;font-weight:700;letter-spacing:0.14em;align-self:flex-start;">MEASURED · 6ヶ月後</div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-top:20px;">
+            <div style="font-family:${C.fNum};font-weight:500;font-size:180px;line-height:0.9;letter-spacing:-0.05em;color:${C.leaf};">2〜3</div>
+            <div style="font-family:${C.fNum};font-weight:500;font-size:56px;color:${C.leaf};letter-spacing:-0.03em;">倍</div>
           </div>
-          <div style="margin-top:12px;font-family:${C.fBody};font-size:14px;color:${C.ink2};letter-spacing:0.02em;">従来比、6ヶ月後のCVR</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:16px;color:${C.ink};font-weight:700;letter-spacing:-0.005em;">LINE 経由購入 CVR、従来比</div>
         </div>
 
         <div data-reveal="2" style="display:flex;flex-direction:column;justify-content:center;padding-left:44px;border-left:1px solid ${C.line};">
@@ -1388,13 +1401,13 @@ const chapters = [
         </div>
         <div data-reveal="1" style="margin-top:16px;font-family:${C.fBody};font-size:14px;color:${C.ink3};letter-spacing:0.02em;">販売員数 · 平均月商 · 増分</div>
 
-        <div data-reveal="2" style="margin-top:44px;padding-top:32px;border-top:1px solid ${C.ink};display:flex;align-items:baseline;gap:24px;">
-          <div style="font-family:${C.fBody};font-size:16px;color:${C.ink2};font-weight:500;">月商増分</div>
-          <div style="font-family:${C.fNum};font-weight:400;font-size:88px;line-height:0.95;letter-spacing:-0.04em;color:${C.leaf};">+ ¥ 4.7<span style="font-size:32px;color:${C.leaf};letter-spacing:-0.02em;"> 億</span></div>
+        <div data-reveal="2" style="margin-top:44px;padding:24px 32px;background:${C.leafTint};border-left:none;display:flex;align-items:baseline;gap:28px;">
+          <div style="font-family:${C.fBody};font-size:15px;color:${C.leafInk};font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">月商増分</div>
+          <div style="font-family:${C.fNum};font-weight:500;font-size:120px;line-height:0.9;letter-spacing:-0.045em;color:${C.leaf};">+¥4.7<span style="font-size:40px;font-weight:400;color:${C.leaf};letter-spacing:-0.02em;">億</span></div>
         </div>
-        <div data-reveal="3" style="margin-top:14px;display:flex;align-items:baseline;gap:24px;">
-          <div style="font-family:${C.fBody};font-size:16px;color:${C.ink2};font-weight:500;">年商換算</div>
-          <div style="font-family:${C.fNum};font-weight:400;font-size:88px;line-height:0.95;letter-spacing:-0.04em;color:${C.leaf};">+ ¥ 56<span style="font-size:32px;color:${C.leaf};letter-spacing:-0.02em;"> 億</span></div>
+        <div data-reveal="3" style="margin-top:14px;padding:24px 32px;background:${C.leaf};display:flex;align-items:baseline;gap:28px;">
+          <div style="font-family:${C.fBody};font-size:15px;color:#f5f7f2;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">年商換算</div>
+          <div style="font-family:${C.fNum};font-weight:500;font-size:120px;line-height:0.9;letter-spacing:-0.045em;color:#f5f7f2;">+¥56<span style="font-size:40px;font-weight:400;color:#f5f7f2;letter-spacing:-0.02em;">億</span></div>
         </div>
       </div>
       ${SL.foot}
@@ -1412,7 +1425,7 @@ const chapters = [
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
         <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">PHASE 1 · PROOF OF CONCEPT</div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">京都本社 1営業所、<br><span style="color:${C.leaf};">3ヶ月試験運用</span></div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:80px;line-height:1.1;letter-spacing:-0.045em;color:${C.ink};">京都本社 1営業所、<br><span style="color:${C.leaf};">3ヶ月試験運用</span></div>
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
