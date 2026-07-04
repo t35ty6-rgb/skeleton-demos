@@ -98,13 +98,31 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 .main{flex:1;padding:22px 20px 32px}
 
 /* progress */
-.prog{margin-bottom:24px;padding:20px;background:var(--ink);color:var(--paper);border-radius:2px}
+.prog{margin-bottom:16px;padding:20px 20px 22px;background:var(--ink);color:var(--paper);border-radius:2px;position:relative;overflow:hidden}
+.prog::before{content:"";position:absolute;top:0;right:0;bottom:0;width:120px;background:radial-gradient(circle at 100% 50%,oklch(0.55 0.16 25 / .15) 0%,transparent 70%);pointer-events:none}
 .prog-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
 .prog-head .k{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.2em;color:oklch(0.68 0.008 70);text-transform:uppercase}
 .prog-head .n{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:16px}
-.prog-bar{height:3px;background:oklch(0.28 0.006 60);position:relative;overflow:hidden}
-.prog-bar-fill{position:absolute;left:0;top:0;bottom:0;background:var(--red-hi);transition:width .6s cubic-bezier(.2,.9,.2,1)}
-.prog-note{margin-top:12px;font-size:12px;color:oklch(0.82 0.008 70);letter-spacing:.01em}
+.prog-bar{height:4px;background:oklch(0.28 0.006 60);position:relative;margin-top:14px}
+.prog-bar-fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--red-hi) 0%,oklch(0.72 0.16 30) 100%);transition:width .8s cubic-bezier(.2,.9,.2,1);border-radius:0 2px 2px 0}
+.prog-bar-mark{position:absolute;top:-3px;bottom:-3px;width:2px;background:oklch(0.6 0.008 70);z-index:1}
+.prog-bar-mark[data-at="4"]{left:40%}
+.prog-bar-mark[data-at="7"]{left:70%}
+.prog-bar-mark::after{content:attr(data-at);position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-family:"JetBrains Mono",monospace;font-size:9px;color:oklch(0.68 0.008 70);letter-spacing:.06em;font-weight:700}
+.prog-note{margin-top:16px;font-size:12.5px;color:oklch(0.86 0.008 70);letter-spacing:.005em;line-height:1.55;position:relative;z-index:1}
+.prog-note b{color:var(--paper);font-weight:900;font-size:14px}
+
+/* ─── ゴール帯 (特典3段階 常時表示) ─── */
+.goals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:22px}
+.goal{background:var(--paper);border:1.5px solid var(--ink);border-radius:0;padding:12px 8px 14px;text-align:center;position:relative;transition:transform .32s cubic-bezier(.2,.9,.2,1),box-shadow .32s cubic-bezier(.2,.9,.2,1),opacity .3s}
+.goal.done{opacity:.55}
+.goal.done::before{content:"✓";position:absolute;top:5px;right:8px;color:var(--green);font-weight:900;font-size:14px;line-height:1}
+.goal.near{border-color:var(--red);border-width:2px;padding:11px 7px 13px;transform:translateY(-3px);box-shadow:0 8px 20px -8px oklch(0.55 0.16 25 / .4)}
+.goal.near::after{content:"あと少し";position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--red);color:var(--paper);padding:2px 8px;font-size:9px;font-family:"Noto Sans JP",sans-serif;font-weight:900;letter-spacing:.05em;line-height:1.4;white-space:nowrap}
+.goal-icon{font-size:24px;line-height:1;margin-bottom:5px}
+.goal-need{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--red);letter-spacing:.14em;font-weight:700;margin-bottom:4px}
+.goal-need b{font-family:"Noto Sans JP",sans-serif;font-size:18px;font-weight:900;color:var(--ink);letter-spacing:-.02em;margin-right:1px}
+.goal-what{font-size:10.5px;color:var(--ink-2);line-height:1.35;letter-spacing:0;font-weight:600}
 
 /* section title */
 .st{display:flex;align-items:baseline;justify-content:space-between;margin:28px 0 14px;gap:10px}
@@ -466,6 +484,76 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 .sim-sheet .list button .co{font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--red);letter-spacing:.08em}
 .sim-sheet .cls{margin-top:16px;width:100%;padding:12px;background:transparent;border:1px solid var(--rule);color:var(--dim);font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;cursor:pointer;text-transform:uppercase;border-radius:2px}
 
+/* ─── flyer (起動時 参加ガイド チラシ) ─── */
+.flyer-ov{position:fixed;inset:0;background:linear-gradient(180deg,#c8dde0 0%,#d8e5d4 45%,#eae4c8 100%);z-index:230;display:none;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.flyer-ov.on{display:flex}
+.flyer-topbar{position:sticky;top:0;left:0;right:0;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;background:oklch(0.98 0.005 82 / .96);border-bottom:1.5px solid var(--ink);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:3}
+.flyer-topbar .brand{display:flex;align-items:center;gap:8px}
+.flyer-topbar .brand .mk{width:22px;height:22px;background:var(--red);position:relative;flex-shrink:0}
+.flyer-topbar .brand .mk::after{content:"";position:absolute;inset:5px;border:1.2px solid var(--paper)}
+.flyer-topbar .brand-tt{font-weight:900;font-size:13px;color:var(--ink);letter-spacing:-.005em}
+.flyer-topbar button{background:transparent;border:1.5px solid var(--ink);padding:6px 14px;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer;border-radius:2px;color:var(--ink);letter-spacing:.02em}
+.flyer-topbar button:hover{background:var(--ink);color:var(--paper)}
+.flyer-page{padding:22px 16px 40px;max-width:520px;margin:0 auto;width:100%;position:relative}
+
+/* hero */
+.flyer-hero{text-align:center;padding:22px 14px 24px;background:oklch(0.98 0.005 82 / .8);border:1.5px solid var(--ink);margin-bottom:26px;position:relative}
+.flyer-hero-lead{font-size:12px;color:var(--ink-2);margin:0 0 12px;font-weight:700;line-height:1.6;letter-spacing:.03em}
+.flyer-hero h1{margin:0;font-size:26px;font-weight:900;letter-spacing:-.03em;color:var(--ink);line-height:1.1;text-wrap:balance}
+.flyer-hero h1 em{font-style:normal;color:var(--red);font-size:32px;letter-spacing:-.02em}
+.flyer-hero-sub{margin:10px 0 0;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--red);letter-spacing:.24em;text-transform:uppercase;font-weight:700}
+
+/* section title band */
+.flyer-sect-title{text-align:center;margin:30px 0 16px}
+.flyer-sect-title .band{display:inline-block;background:var(--ink);color:var(--paper);padding:6px 20px;font-size:13px;font-weight:900;letter-spacing:.06em}
+
+/* steps */
+.flyer-steps{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.flyer-step{background:var(--paper);border:1.5px solid var(--ink);padding:12px 12px 14px;position:relative}
+.flyer-step-tag{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px dashed color-mix(in oklch,var(--ink) 30%,transparent)}
+.flyer-step-tag .n{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--red);letter-spacing:.14em;font-weight:900}
+.flyer-step-tag .bns{font-family:"JetBrains Mono",monospace;font-size:8.5px;color:var(--ink);font-weight:900;letter-spacing:.14em;background:oklch(0.9 0.01 82);padding:1.5px 6px;border:1px solid var(--ink)}
+.flyer-step-icon{font-size:28px;text-align:center;margin:4px 0 8px;line-height:1}
+.flyer-step h3{margin:0 0 6px;font-size:13.5px;font-weight:900;letter-spacing:-.01em;line-height:1.35;color:var(--ink)}
+.flyer-step p{margin:0;font-size:11px;color:var(--ink-2);line-height:1.6;letter-spacing:.005em}
+.flyer-step p b{color:var(--ink);font-weight:700}
+.flyer-step .note{margin-top:7px;padding-top:6px;border-top:1px dashed color-mix(in oklch,var(--ink) 20%,transparent);font-size:10px;color:var(--dim);line-height:1.5;letter-spacing:0}
+
+/* prize table */
+.flyer-prize-tbl{background:var(--paper);border:1.5px solid var(--ink);margin-bottom:6px}
+.flyer-prize-row{display:grid;grid-template-columns:58px 1fr auto;gap:10px;padding:12px 14px;align-items:center;border-bottom:1px solid color-mix(in oklch,var(--ink) 20%,transparent)}
+.flyer-prize-row:last-child{border-bottom:none}
+.flyer-prize-row .cnt{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--red);font-weight:900;letter-spacing:.02em;line-height:1}
+.flyer-prize-row .cnt b{font-family:"Noto Sans JP",sans-serif;font-size:22px;font-weight:900;color:var(--ink);letter-spacing:-.02em;margin-right:1px}
+.flyer-prize-row .what{font-size:12.5px;color:var(--ink);font-weight:700;line-height:1.4}
+.flyer-prize-row .what small{display:block;font-size:10px;color:var(--ink-2);font-weight:500;margin-top:2px;letter-spacing:.02em}
+.flyer-prize-row .where{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--dim);letter-spacing:.06em;text-align:right;line-height:1.5;font-weight:700}
+.flyer-prize-foot{text-align:center;font-size:10.5px;color:var(--dim);letter-spacing:.04em;margin-bottom:12px;font-family:"JetBrains Mono",monospace;padding-top:8px}
+
+/* zones + 10 spots */
+.flyer-spot-zones{margin-bottom:12px;font-size:10.5px;color:var(--ink-2);font-weight:600;line-height:1.85;letter-spacing:.02em;padding:14px;background:oklch(0.98 0.005 82 / .6);border:1px solid var(--rule)}
+.flyer-spot-zones b{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--red);letter-spacing:.1em;text-transform:uppercase;font-weight:900;display:inline-block;margin-right:6px}
+.flyer-spots-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.flyer-spot-item{background:var(--paper);border:1.5px solid var(--ink);padding:6px 3px 8px;text-align:center;position:relative}
+.flyer-spot-item .n{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:900;color:var(--paper);background:var(--red);line-height:1;letter-spacing:0;position:absolute;top:-8px;left:50%;transform:translateX(-50%);padding:3px 6px;min-width:16px}
+.flyer-spot-item .im{aspect-ratio:1;background:var(--paper-2);overflow:hidden;margin-bottom:5px}
+.flyer-spot-item .im img{width:100%;height:100%;object-fit:cover;display:block}
+.flyer-spot-item .nm{font-size:8.5px;color:var(--ink);font-weight:700;line-height:1.3;letter-spacing:-.005em;text-wrap:balance}
+
+/* period */
+.flyer-period{margin-top:24px;padding:16px 18px 18px;background:var(--paper);border:1.5px solid var(--ink);text-align:center}
+.flyer-period-label{display:inline-block;background:var(--red);color:var(--paper);padding:4px 14px;font-size:11px;font-weight:900;letter-spacing:.06em;margin-bottom:12px;line-height:1.5}
+.flyer-period-date{font-size:14px;color:var(--ink);font-weight:700;letter-spacing:-.005em;margin-bottom:4px;line-height:1.5}
+.flyer-period-date b{color:var(--red);font-size:22px;font-weight:900;margin:0 2px;letter-spacing:-.02em;font-family:"Noto Sans JP",sans-serif}
+.flyer-period-days{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-2);letter-spacing:.18em;margin-bottom:16px;font-weight:700}
+.flyer-period-fee{border-top:1.5px dashed color-mix(in oklch,var(--ink) 25%,transparent);padding-top:14px;font-size:13px;color:var(--ink);font-weight:700}
+.flyer-period-fee b{color:var(--red);font-size:22px;font-weight:900;margin:0 4px;letter-spacing:-.02em}
+.flyer-period-fee small{display:block;font-size:10.5px;color:var(--ink-2);margin-top:6px;letter-spacing:.02em;font-weight:500}
+
+/* CTA */
+.flyer-cta{margin-top:24px;padding:16px;background:var(--red);color:var(--paper);border:none;font-family:inherit;font-size:15px;font-weight:900;cursor:pointer;border-radius:2px;letter-spacing:.02em;width:100%;transition:background .2s}
+.flyer-cta:hover{background:var(--ink)}
+
 @media (prefers-reduced-motion:reduce){*{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
 </style>
 </head>
@@ -745,6 +833,103 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
   <button class="help-close-btn" id="help-close" type="button">わかった · 使ってみる</button>
 </div>
 
+<!-- flyer (起動時 参加ガイド) -->
+<div class="flyer-ov" id="flyer-ov" role="dialog" aria-modal="true" aria-labelledby="flyer-title">
+  <div class="flyer-topbar">
+    <div class="brand"><span class="mk"></span><span class="brand-tt">福鉄 沿線 スタンプラリー</span></div>
+    <button type="button" id="flyer-close-btn">閉じる</button>
+  </div>
+  <div class="flyer-page">
+    <div class="flyer-hero">
+      <p class="flyer-hero-lead">スタンプを 集めながら<br>沿線 10観光地 を 巡ろう!</p>
+      <h1 id="flyer-title">福鉄 沿線 <em>10</em> スタンプラリー</h1>
+      <p class="flyer-hero-sub">Fukubu Line · 2026 Summer</p>
+    </div>
+
+    <div class="flyer-sect-title"><span class="band">参加方法 · 4 STEP</span></div>
+    <div class="flyer-steps">
+      <div class="flyer-step">
+        <div class="flyer-step-tag"><span class="n">STEP 1</span></div>
+        <div class="flyer-step-icon">📱</div>
+        <h3>公式LINE 友だち追加</h3>
+        <p><b>福鉄公式LINE</b> を 友だち追加 → 「さんぽ帳を開く」 タップ。</p>
+        <div class="note">スマホだけあればOK · アプリDL 不要</div>
+      </div>
+      <div class="flyer-step">
+        <div class="flyer-step-tag"><span class="n">STEP 2</span></div>
+        <div class="flyer-step-icon">🚊</div>
+        <h3>沿線10観光地 に行く</h3>
+        <p>各スポットの <b>現地掲出 QR</b> を カメラでスキャン。</p>
+        <div class="note">GPS 150m以内 でしか押せない · 写真だけシェアされてもNG</div>
+      </div>
+      <div class="flyer-step">
+        <div class="flyer-step-tag"><span class="n">STEP 3</span></div>
+        <div class="flyer-step-icon">🎫</div>
+        <h3>硬券が刻まれる</h3>
+        <p>スタンプ帳 に <b>硬券</b> (コード + 座標 + 時刻 + 番号)。</p>
+        <div class="note">SNSシェア で 硬券画像 を拡散できる</div>
+      </div>
+      <div class="flyer-step">
+        <div class="flyer-step-tag"><span class="n">STEP 4</span><span class="bns">BONUS</span></div>
+        <div class="flyer-step-icon">🎡</div>
+        <h3>ルーレット抽選</h3>
+        <p>押印 <b>4個到達</b> で ルーレット → 沿線飲食店 クーポン 1枚 GET。</p>
+        <div class="note">6種類 · コーヒー / モーニング / 抹茶セット / Sドリンク / 半熟卵 / 焼菓子</div>
+      </div>
+    </div>
+
+    <div class="flyer-sect-title"><span class="band">硬券が集まると もらえるもの</span></div>
+    <div class="flyer-prize-tbl">
+      <div class="flyer-prize-row">
+        <span class="cnt"><b>4</b>個</span>
+        <span class="what">沿線カフェ ドリンク 1杯<small>コーヒー / 紅茶 / スイーツドリンク</small></span>
+        <span class="where">対象<br>6店舗</span>
+      </div>
+      <div class="flyer-prize-row">
+        <span class="cnt"><b>7</b>個</span>
+        <span class="what">1日フリーきっぷ 半額<small>¥1,000 → ¥500 · 有効1ヶ月</small></span>
+        <span class="where">各駅<br>窓口</span>
+      </div>
+      <div class="flyer-prize-row">
+        <span class="cnt"><b>10</b>個</span>
+        <span class="what">コンプリート限定 · 硬券セット<small>実寸硬券10枚 + 記念台紙</small></span>
+        <span class="where">福井駅<br>案内所</span>
+      </div>
+    </div>
+    <div class="flyer-prize-foot">先着 · なくなり次第 終了</div>
+
+    <div class="flyer-sect-title"><span class="band">対象10観光地 · 沿線 20.9km</span></div>
+    <div class="flyer-spot-zones">
+      <b>たけふ新</b>① 越前和紙の里 · ② 武生中央公園<br>
+      <b>サンドーム西</b>③ サンドーム福井<br>
+      <b>西鯖江〜神明</b>④ 西山公園 · ⑤ めがねミュージアム<br>
+      <b>福井駅周辺</b>⑥ 福井城址 · ⑦ 養浩館庭園 · ⑧ 足羽神社 · ⑨ 恐竜モニュメント<br>
+      <b>田原町</b>⑩ 田原町商店街
+    </div>
+    <div class="flyer-spots-grid">
+      <div class="flyer-spot-item"><span class="n">1</span><div class="im"><img src="photos/01_echizen_washi.webp" alt="" loading="lazy"></div><div class="nm">越前和紙の里</div></div>
+      <div class="flyer-spot-item"><span class="n">2</span><div class="im"><img src="photos/03_takefu_chuo_park.webp" alt="" loading="lazy"></div><div class="nm">武生中央公園</div></div>
+      <div class="flyer-spot-item"><span class="n">3</span><div class="im"><img src="photos/02_sundome_fukui.webp" alt="" loading="lazy"></div><div class="nm">サンドーム福井</div></div>
+      <div class="flyer-spot-item"><span class="n">4</span><div class="im"><img src="photos/04_nishiyama_park.webp" alt="" loading="lazy"></div><div class="nm">西山公園</div></div>
+      <div class="flyer-spot-item"><span class="n">5</span><div class="im"><img src="photos/05_megane_museum.webp" alt="" loading="lazy"></div><div class="nm">めがねミュージアム</div></div>
+      <div class="flyer-spot-item"><span class="n">6</span><div class="im"><img src="photos/06_fukui_castle.webp" alt="" loading="lazy"></div><div class="nm">福井城址</div></div>
+      <div class="flyer-spot-item"><span class="n">7</span><div class="im"><img src="photos/07_yokokan_garden.webp" alt="" loading="lazy"></div><div class="nm">養浩館庭園</div></div>
+      <div class="flyer-spot-item"><span class="n">8</span><div class="im"><img src="photos/08_asuwa_shrine.webp" alt="" loading="lazy"></div><div class="nm">足羽神社</div></div>
+      <div class="flyer-spot-item"><span class="n">9</span><div class="im"><img src="photos/09_fukui_dinosaur.webp" alt="" loading="lazy"></div><div class="nm">恐竜モニュメント</div></div>
+      <div class="flyer-spot-item"><span class="n">10</span><div class="im"><img src="photos/10_tawaramachi.webp" alt="" loading="lazy"></div><div class="nm">田原町商店街</div></div>
+    </div>
+
+    <div class="flyer-period">
+      <span class="flyer-period-label">期間 · 参加費</span>
+      <div class="flyer-period-date"><b>2026</b>年 <b>7</b>月<b>15</b>日 (水) 〜 <b>8</b>月<b>31</b>日 (月)</div>
+      <div class="flyer-period-days">48 DAYS</div>
+      <div class="flyer-period-fee">参加費 <b>無料</b><small>LINE友達追加のみ · 何度でも参加可</small></div>
+    </div>
+
+    <button class="flyer-cta" id="flyer-start-btn" type="button">アプリを使ってみる →</button>
+  </div>
+</div>
+
 <!-- prize detail sheet -->
 <div class="prize-modal" id="prize-modal" role="dialog" aria-modal="true" aria-labelledby="prize-sheet-title">
   <div class="prize-sheet">
@@ -893,10 +1078,10 @@ document.getElementById("ob-start").addEventListener("click", ()=>{
   hideOb();
   render();
   tryGeolocation();
-  // 初回起動なら 使い方ガイド を自動表示
+  // 初回起動なら チラシ (参加ガイド) を自動表示
   setTimeout(() => {
-    try { if (!localStorage.getItem(HELP_SEEN_KEY)) showHelp(); } catch(e){}
-  }, 500);
+    try { if (!localStorage.getItem(LS_FLYER_SEEN)) showFlyer(); } catch(e){}
+  }, 400);
 });
 document.getElementById("ob-name").addEventListener("keydown", e=>{
   if (e.key === "Enter") document.getElementById("ob-start").click();
@@ -1824,9 +2009,24 @@ function hideHelp(){
   document.getElementById("help-ov").classList.remove("on");
   try { localStorage.setItem(HELP_SEEN_KEY, "1"); } catch(e){}
 }
-document.getElementById("btn-help").addEventListener("click", showHelp);
 document.getElementById("help-close").addEventListener("click", hideHelp);
 document.getElementById("help-close-x").addEventListener("click", hideHelp);
+
+// ─────────── flyer (起動時 参加ガイド) ───────────
+const LS_FLYER_SEEN = "ftr01_flyer_seen_v1";
+function showFlyer(){
+  const ov = document.getElementById("flyer-ov");
+  ov.classList.add("on");
+  ov.scrollTop = 0;
+}
+function hideFlyer(){
+  document.getElementById("flyer-ov").classList.remove("on");
+  try { localStorage.setItem(LS_FLYER_SEEN, "1"); } catch(e){}
+}
+document.getElementById("flyer-close-btn").addEventListener("click", hideFlyer);
+document.getElementById("flyer-start-btn").addEventListener("click", hideFlyer);
+// ヘルプボタン (?) は flyer を開く
+document.getElementById("btn-help").addEventListener("click", showFlyer);
 
 // ─────────── out-of-range modal ───────────
 function showOutOfRangeModal(spot, distM){
@@ -1968,8 +2168,8 @@ async function bootstrap(){
         render();
         tryGeolocation();
         setTimeout(() => {
-          try { if (!localStorage.getItem(HELP_SEEN_KEY)) showHelp(); } catch(e){}
-        }, 500);
+          try { if (!localStorage.getItem(LS_FLYER_SEEN)) showFlyer(); } catch(e){}
+        }, 400);
         return;
       }
     } catch(e){
@@ -1989,6 +2189,10 @@ async function bootstrap(){
     }
     render();
     tryGeolocation();
+    // 初回起動 (再訪含む onboarding 済み) なら チラシ 自動表示
+    setTimeout(() => {
+      try { if (!localStorage.getItem(LS_FLYER_SEEN)) showFlyer(); } catch(e){}
+    }, 400);
   }
 }
 
