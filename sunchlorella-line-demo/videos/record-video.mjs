@@ -485,22 +485,23 @@ const chapters = [
     await slide(p, `
       ${SL.chrome('AGENDA', '課題')}
       <div data-reveal="1" style="margin-top:36px;">${SL.title('御社の現場でいま、<br>起きていること<span style="color:${C.leaf};">は 3つ</span>', { size: '52px' })}</div>
-      <div style="margin-top:56px;display:grid;grid-template-columns:88px 1fr;gap:32px;row-gap:36px;max-width:960px;">
-        <div data-reveal="2" style="font-family:${C.fNum};font-size:48px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">01</div>
+      <div style="margin-top:56px;display:grid;grid-template-columns:150px 1fr;gap:28px;row-gap:36px;max-width:1020px;">
+        <div data-reveal="2" style="font-family:${C.fBody};font-size:28px;font-weight:900;color:${C.leaf};letter-spacing:-0.02em;line-height:1;">1つ目は</div>
         <div data-reveal="2" style="font-family:${C.fBody};font-size:23px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">訪問販売員の実績が、EC化 に よって <span style="color:${C.alert};">消えていく</span></div>
-        <div data-reveal="3" style="font-family:${C.fNum};font-size:48px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">02</div>
+        <div data-reveal="3" style="font-family:${C.fBody};font-size:28px;font-weight:900;color:${C.leaf};letter-spacing:-0.02em;line-height:1;">2つ目は</div>
         <div data-reveal="3" style="font-family:${C.fBody};font-size:23px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">4本の公式LINE が部署別で運用され、本社が数字を <span style="color:${C.alert};">横断把握できない</span></div>
-        <div data-reveal="4" style="font-family:${C.fNum};font-size:48px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">03</div>
+        <div data-reveal="4" style="font-family:${C.fBody};font-size:28px;font-weight:900;color:${C.leaf};letter-spacing:-0.02em;line-height:1;">3つ目は</div>
         <div data-reveal="4" style="font-family:${C.fBody};font-size:23px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">中高齢のお客様の <span style="color:${C.alert};">半数</span> が、メールアドレス入力で離脱する</div>
       </div>
       <div data-reveal="5" style="margin-top:auto;padding-top:22px;font-family:${C.fBody};font-size:14px;color:${C.ink3};letter-spacing:0.06em;">これから、1つずつ、場面と数字でご説明します</div>
       ${SL.foot}
     `);
     await reveal(p, 1);
-    await sync.waitFor(p, 'agenda_1'); await reveal(p, 2);
-    await sync.waitFor(p, 'agenda_2'); await reveal(p, 3);
-    await sync.waitFor(p, 'agenda_3'); await reveal(p, 4);
-    await sync.waitFor(p, 'agenda_end'); await reveal(p, 5);
+    // 「1つ目は」開始時 = agenda_intro mark (11.7s、前フレーズ終了 = 次フレーズ開始)
+    await sync.waitFor(p, 'agenda_intro'); await reveal(p, 2);
+    await sync.waitFor(p, 'agenda_1'); await reveal(p, 3);   // 「2つ目は」開始
+    await sync.waitFor(p, 'agenda_2'); await reveal(p, 4);   // 「3つ目は」開始
+    await sync.waitFor(p, 'agenda_3'); await reveal(p, 5);   // 「これから1つずつ」開始
 
     // ── 転入① 「まず、1つ目」 (agenda_end 34.6 → issue1_intro 40.0) ──
     await slide(p, `
@@ -529,7 +530,7 @@ const chapters = [
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
-    await sync.waitFor(p, 'issue1_topic'); await reveal(p, 3);
+    await wait(p, 900); await reveal(p, 3); // 「これは〜」開始 と 同期 (200-300ms 遅延で 目線誘導)
 
     // ── 課題① 具体シナリオ (issue1_before_scene 53.8 → issue1_end 71.7) ──
     await sync.waitFor(p, 'issue1_before_scene');
@@ -607,7 +608,7 @@ const chapters = [
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
-    await sync.waitFor(p, 'issue2_topic'); await reveal(p, 3);
+    await wait(p, 900); await reveal(p, 3); // 「これは〜」開始 と 同期 (200-300ms 遅延で 目線誘導)
 
     // ── 課題② (issue2_dispatch 90.8 → issue2_end 108.1) editorial diagram ──
     await sync.waitFor(p, 'issue2_dispatch');
@@ -679,7 +680,7 @@ const chapters = [
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
-    await sync.waitFor(p, 'issue3_topic'); await reveal(p, 3);
+    await wait(p, 900); await reveal(p, 3); // 「これは〜」開始 と 同期 (200-300ms 遅延で 目線誘導)
 
     // ── 課題③ (issue3_scene 134.4 → issue3_end 142.4) ──
     await sync.waitFor(p, 'issue3_scene');
@@ -1420,14 +1421,14 @@ const chapters = [
     await slide(p, `
       ${SL.chrome('AGENDA', '3つの数字')}
       <div data-reveal="1" style="margin-top:28px;">${SL.title('6ヶ月後、<br><span style="color:${C.leaf};">3つの数字</span> に変化', { size: '48px' })}</div>
-      <div style="margin-top:44px;display:grid;grid-template-columns:88px 1fr auto;gap:32px;row-gap:32px;max-width:1100px;">
-        <div data-reveal="2" style="font-family:${C.fNum};font-size:44px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">01</div>
+      <div style="margin-top:44px;display:grid;grid-template-columns:150px 1fr auto;gap:28px;row-gap:32px;max-width:1150px;">
+        <div data-reveal="2" style="font-family:${C.fBody};font-size:26px;font-weight:900;color:${C.leaf};letter-spacing:-0.02em;line-height:1;">1つ目は</div>
         <div data-reveal="2" style="font-family:${C.fBody};font-size:21px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">販売員 1人あたり 月次売上</div>
         <div data-reveal="2" style="font-family:${C.fNum};font-size:36px;font-weight:500;color:${C.leaf};letter-spacing:-0.03em;">+18<span style="font-size:20px;">%</span></div>
-        <div data-reveal="3" style="font-family:${C.fNum};font-size:44px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">02</div>
+        <div data-reveal="3" style="font-family:${C.fBody};font-size:26px;font-weight:900;color:${C.leaf};letter-spacing:-0.02em;line-height:1;">2つ目は</div>
         <div data-reveal="3" style="font-family:${C.fBody};font-size:21px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">定期便 半年継続率</div>
         <div data-reveal="3" style="font-family:${C.fNum};font-size:36px;font-weight:500;color:${C.leaf};letter-spacing:-0.03em;">+12<span style="font-size:20px;">pt</span></div>
-        <div data-reveal="4" style="font-family:${C.fNum};font-size:44px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">03</div>
+        <div data-reveal="4" style="font-family:${C.fBody};font-size:26px;font-weight:900;color:${C.leaf};letter-spacing:-0.02em;line-height:1;">3つ目は</div>
         <div data-reveal="4" style="font-family:${C.fBody};font-size:21px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">LINE 経由購入 CVR</div>
         <div data-reveal="4" style="font-family:${C.fNum};font-size:36px;font-weight:500;color:${C.leaf};letter-spacing:-0.03em;">2〜3<span style="font-size:20px;">倍</span></div>
       </div>
@@ -1435,10 +1436,12 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    await sync.waitFor(p, 'agenda_1'); await reveal(p, 2);
-    await sync.waitFor(p, 'agenda_2'); await reveal(p, 3);
-    await sync.waitFor(p, 'agenda_3'); await reveal(p, 4);
-    await sync.waitFor(p, 'agenda_end'); await reveal(p, 5);
+    // 「1つ目は」開始時 = title_end mark (前フレーズ 「変化が出ています」 終了 = 次フレーズ開始)
+    await sync.waitFor(p, 'title_end'); // already waited above but no-op if past
+    await reveal(p, 2);
+    await sync.waitFor(p, 'agenda_1'); await reveal(p, 3);  // 「2つ目は」開始
+    await sync.waitFor(p, 'agenda_2'); await reveal(p, 4);  // 「3つ目は」開始
+    await sync.waitFor(p, 'agenda_3'); await reveal(p, 5);  // 「それぞれ」開始
 
     // ── 転入① 「まず、1つ目」 (agenda_end 29.5 → kpi1 35.8) ──
     await slide(p, `
