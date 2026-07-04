@@ -340,15 +340,18 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 .scan{margin:-22px -20px 0;background:var(--ink);color:var(--paper);min-height:calc(100vh - 200px);padding:20px 20px 40px;position:relative}
 .scan h3{margin:0 0 10px;font-size:20px;font-weight:900;letter-spacing:-.015em;color:var(--paper)}
 .scan .sc-sub{font-size:13px;color:oklch(0.75 0.008 70);margin:0 0 18px;line-height:1.7}
-.cam-wrap{position:relative;aspect-ratio:1;max-width:340px;margin:0 auto 20px;background:oklch(0.09 0 0);overflow:hidden;border-radius:4px}
+.cam-wrap{position:relative;aspect-ratio:1;max-width:340px;margin:0 auto 20px;background:oklch(0.09 0 0);overflow:hidden;border:1.5px solid var(--ink);border-radius:0}
 .cam-wrap video{width:100%;height:100%;object-fit:cover;display:block}
 .cam-wrap canvas{display:none}
 .cam-wrap .reticle{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at center,transparent 40%,oklch(0 0 0 / .55) 75%)}
 .cam-wrap .reticle::before{content:"";position:absolute;inset:24% 24%;border:2px solid var(--red-hi);box-shadow:0 0 0 3000px oklch(0 0 0 / .35);animation:reticle 2.2s cubic-bezier(.2,.9,.2,1) infinite}
 @keyframes reticle{0%,100%{transform:scale(1);opacity:.95}50%{transform:scale(1.03);opacity:.7}}
-.cam-wrap .placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:oklch(0.68 0.008 70);text-align:center;padding:24px;gap:12px}
-.cam-wrap .placeholder .ic{font-family:"JetBrains Mono",monospace;font-size:44px;color:oklch(0.5 0.008 70)}
-.cam-wrap .placeholder p{margin:0;font-size:13px;line-height:1.7;max-width:24ch}
+/* placeholder = カメラ未起動 · イラスト表示 */
+.cam-wrap.idle{background:transparent}
+.cam-wrap .placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0;background:#f5eddc}
+.cam-wrap .placeholder img{width:100%;height:100%;display:block;object-fit:cover}
+.cam-wrap .placeholder-hint{position:absolute;bottom:16px;left:16px;right:16px;background:var(--ink);color:var(--paper);padding:9px 12px;font-family:"Noto Sans JP",sans-serif;font-size:12px;font-weight:700;letter-spacing:.005em;line-height:1.5;text-align:center}
+.cam-wrap .placeholder-hint em{color:oklch(0.72 0.14 30);font-style:normal;font-weight:900}
 .scan-actions{display:flex;flex-direction:column;gap:10px;max-width:340px;margin:0 auto}
 .scan-hint{margin:0 auto;max-width:340px;font-size:12px;color:oklch(0.75 0.008 70);line-height:1.75;padding:14px 16px;border-left:2px solid var(--red);background:oklch(0.22 0.006 60)}
 .scan-hint b{color:var(--paper);font-weight:700}
@@ -745,13 +748,13 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
       <div class="scan">
         <h3>QR を読み取る</h3>
         <p class="sc-sub">スポットに掲出されている QR にカメラを向けるだけ。 GPS 150m 圏内 で 押印可。</p>
-        <div class="cam-wrap" id="cam-wrap">
+        <div class="cam-wrap idle" id="cam-wrap">
           <video id="cam" playsinline muted></video>
           <canvas id="qr-canvas"></canvas>
           <div class="reticle" id="reticle"></div>
           <div class="placeholder" id="cam-ph">
-            <div class="ic">[ ]</div>
-            <p>下の 「カメラを開始する」 を タップ · ブラウザで許可を選ぶと 起動します</p>
+            <img src="assets/scan-placeholder.svg" alt="QR を 読み取り 硬券 に 押印" loading="lazy">
+            <div class="placeholder-hint">下の <em>カメラを開始する</em> を タップ · 許可 で 起動</div>
           </div>
         </div>
         <div class="gps-check" id="scan-gps-check"></div>
@@ -1915,6 +1918,7 @@ async function startCam(){
   await video.play();
   camTrack = camStream.getVideoTracks()[0];
   const caps = camTrack.getCapabilities ? camTrack.getCapabilities() : {};
+  document.getElementById("cam-wrap").classList.remove("idle");
   document.getElementById("cam-ph").style.display = "none";
   document.getElementById("reticle").style.display = "block";
   document.getElementById("btn-cam").style.display = "none";
@@ -1943,6 +1947,7 @@ function stopCam(){
   camActive = false;
   const video = document.getElementById("cam");
   video.srcObject = null;
+  document.getElementById("cam-wrap").classList.add("idle");
   document.getElementById("cam-ph").style.display = "flex";
   document.getElementById("reticle").style.display = "none";
   document.getElementById("btn-cam").style.display = "flex";
