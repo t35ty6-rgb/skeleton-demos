@@ -181,10 +181,11 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 @keyframes stampIn{0%{transform:scale(.4) rotate(-10deg);opacity:0}60%{transform:scale(1.05) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
 
 /* prize */
-.prize-status{position:relative;padding:22px 24px 20px;background:var(--ink);color:var(--paper);margin-bottom:22px;border-radius:2px;background-image:radial-gradient(oklch(1 0 0 / .04) 1px, transparent 1.5px);background-size:14px 14px;overflow:hidden}
+.prize-status{position:relative;padding:22px 24px 20px;background:linear-gradient(160deg, oklch(0.16 0.006 60) 0%, oklch(0.11 0.008 60) 60%, oklch(0.19 0.02 30) 100%);color:var(--paper);margin-bottom:22px;border-radius:2px;overflow:hidden}
 .prize-status::before,.prize-status::after{content:"";position:absolute;left:0;right:0;height:14px;background-image:radial-gradient(circle at 7px 7px, var(--paper) 4px, transparent 4.5px);background-size:14px 14px;background-repeat:repeat-x;z-index:2}
 .prize-status::before{top:-7px}
 .prize-status::after{bottom:-7px}
+.ps-bg{position:absolute;inset:0;background-image:url("assets/prize-status-bg.svg");background-size:cover;background-position:center;background-repeat:no-repeat;pointer-events:none;z-index:0}
 .ps-perf{position:absolute;top:14px;bottom:14px;width:1px;border-left:1px dashed oklch(1 0 0 / .18);z-index:1}
 .ps-perf-l{left:56px}
 .ps-perf-r{right:56px}
@@ -781,6 +782,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
     <!-- PRIZE tab -->
     <div class="pnl" data-pnl="prize" role="tabpanel" id="pnl-prize" aria-label="景品">
       <div class="prize-status" role="group" aria-label="集印進行度">
+        <div class="ps-bg" aria-hidden="true"></div>
         <div class="ps-perf ps-perf-l" aria-hidden="true"></div>
         <div class="ps-perf ps-perf-r" aria-hidden="true"></div>
         <div class="ps-head">
@@ -2352,7 +2354,10 @@ document.getElementById("spot-modal").addEventListener("click", e => {
 document.getElementById("spot-sheet-map").addEventListener("click", () => {
   const spot = document.getElementById("spot-modal")._currentSpot;
   if (!spot) return;
-  const url = `https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}`;
+  // スポット名 で 検索 → GoogleMap の ピン が 「サンドーム福井」 等 の 名前 で 出る
+  // 座標 のみ だと 座標文字列 が ラベル化されて 分かりにくい
+  const q = encodeURIComponent(`${spot.name} ${spot.station || ""}駅 福井`);
+  const url = `https://www.google.com/maps/search/?api=1&query=${q}`;
   try {
     if (window.liff && typeof window.liff.openWindow === "function"){
       window.liff.openWindow({ url, external: true });
