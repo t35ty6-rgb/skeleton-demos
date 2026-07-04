@@ -125,7 +125,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .card > .card-h .see:hover{text-decoration:underline}
 
 .mtg-list{display:flex;flex-direction:column}
-.mtg{display:grid;grid-template-columns:100px 44px 1fr auto;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line-soft)}
+.mtg{display:grid;grid-template-columns:100px 44px minmax(0,1fr) auto;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line-soft)}
 .mtg:last-child{border-bottom:0}
 .mtg .when{font-family:var(--mono);font-size:11px;color:var(--sub);letter-spacing:0.02em;line-height:1.5}
 .mtg .when strong{display:block;color:var(--ink);font-weight:500;font-size:13px;font-family:var(--sans);margin-bottom:2px}
@@ -134,6 +134,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .mtg .avatar img{width:100%;height:100%;object-fit:cover}
 .mtg .who{min-width:0}
 .mtg .who .name{font-size:14px;font-weight:500;color:var(--ink)}
+.mtg .who .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mtg .who .topic{font-size:12px;color:var(--sub);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mtg .status{font-family:var(--mono);font-size:10px;letter-spacing:0.08em;padding:4px 8px;border-radius:2px;text-transform:uppercase;font-weight:500;white-space:nowrap}
 .mtg .status.scheduled{color:var(--sub);border:1px solid var(--line)}
@@ -191,7 +192,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .cust-table td.status .badge{font-family:var(--mono);font-size:10px;letter-spacing:0.08em;padding:3px 8px;border-radius:2px;text-transform:uppercase;font-weight:500}
 .cust-table td.status .badge.active{color:var(--success);background:#E6F1EB}
 .cust-table td.status .badge.warm{color:var(--accent);background:var(--accent-soft)}
-.cust-table td.status .badge.cold{color:var(--sub);background:var(--line-soft)}
+.cust-table td.status .badge.cold{color:#374151;background:#E5E7EB;border:1px solid #D1D5DB}
 
 /* ---- customer detail ---- */
 .detail-h{display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center;margin-bottom:32px}
@@ -284,8 +285,8 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .setting-row .k{font-size:12px;color:var(--sub);letter-spacing:0.06em;text-transform:uppercase;font-weight:500}
 .setting-row .v{font-size:13px}
 .setting-row .v .status{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;padding:3px 8px;border-radius:2px;font-weight:500;text-transform:uppercase;margin-right:10px}
-.setting-row .v .status.ok{background:#E6F1EB;color:var(--success)}
-.setting-row .v .status.pending{background:#FBF3E0;color:var(--warn)}
+.setting-row .v .status.ok{background:#D1FAE5;color:#065F46}
+.setting-row .v .status.pending{background:var(--accent-soft);color:var(--accent);border:1px solid rgba(11,91,107,0.2)}
 .setting-row .v .mono{font-family:var(--mono);font-size:12px;color:var(--sub)}
 
 /* ---- view switching ---- */
@@ -303,6 +304,18 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
   .min-body{grid-template-columns:1fr}
   .side-pane{position:static}
   .top .search{display:none}
+  .view{padding:20px 16px 48px}
+  .mtg{grid-template-columns:76px 36px minmax(0,1fr);gap:12px}
+  .mtg .status{grid-column:1 / -1;justify-self:start;margin-top:4px;margin-left:88px}
+  .mtg .avatar{width:36px;height:36px}
+  .mtg .when{font-size:10px}
+  .mtg .when strong{font-size:12px}
+  .filter-bar{flex-wrap:wrap;gap:8px}
+  .filter-bar .chip{padding:6px 10px;font-size:11px;display:inline-flex;align-items:center;line-height:1}
+  .cust-table td.date{display:none}
+  .cust-table th:nth-child(3),.cust-table td:nth-child(3){display:none}
+  .h-view{flex-direction:column;align-items:stretch;gap:16px}
+  .h-view .actions{flex-wrap:wrap}
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -571,7 +584,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
           <div class="mail">tanaka.taro@example.com &nbsp;·&nbsp; 顧問 5ヶ月目</div>
         </div>
         <div class="actions">
-          <a href="#" class="btn ghost">LINE でメッセージ</a>
+          <a href="#" class="btn">LINE でメッセージ</a>
           <a href="#" class="btn primary">予定を作る<span class="arrow"></span></a>
         </div>
       </div>
@@ -650,6 +663,91 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
         </div>
 
       </div>
+    </section>
+
+    <!-- ============ MINUTES LIST ============ -->
+    <section class="view" id="v-minutes">
+      <div class="h-view">
+        <div class="lead">
+          <h1>議事録</h1>
+          <p>会議終了から 5〜10 分で自動生成された議事録の一覧。要点・決定事項・次アクションを含みます。</p>
+        </div>
+        <div class="actions">
+          <a href="#" class="btn ghost">CSV 書き出し</a>
+          <a href="#" class="btn primary">手動アップロード<span class="arrow"></span></a>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="search-wrap"><input type="search" placeholder="顧客 / トピック / 決定事項で検索..." /></div>
+        <button class="chip on">すべて</button>
+        <button class="chip">今週</button>
+        <button class="chip">今月</button>
+        <button class="chip">要フォロー</button>
+        <span class="meta">18 件</span>
+      </div>
+
+      <table class="cust-table">
+        <thead><tr>
+          <th style="width:12%">日付</th>
+          <th style="width:22%">顧客</th>
+          <th style="width:42%">タイトル / サマリ</th>
+          <th style="width:12%">状態</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+          <tr class="row" onclick="showView('minute-detail')">
+            <td class="date">2026-07-04</td>
+            <td class="name"><div class="cell"><div class="avatar line">田</div><div class="body"><div class="n">田中 太郎</div><div class="n-sub">士業 · 顧問</div></div></div></td>
+            <td>
+              <div style="font-weight:500;margin-bottom:4px">相続税 試算資料 確認</div>
+              <div style="font-size:12px;color:var(--sub);line-height:1.6;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">田中太郎氏より相続税についての相談があった。相続手続きに必要な戸籍謄本等の取り寄せを 7/15 までに実施し…</div>
+            </td>
+            <td class="status"><span class="badge active">配信済</span></td>
+            <td><a class="btn ghost" href="#" style="padding:6px 10px;font-size:11px">開く<span class="arrow"></span></a></td>
+          </tr>
+          <tr class="row">
+            <td class="date">2026-06-20</td>
+            <td class="name"><div class="cell"><div class="avatar">佐</div><div class="body"><div class="n">佐藤 花子</div><div class="n-sub">コーチング</div></div></div></td>
+            <td>
+              <div style="font-weight:500;margin-bottom:4px">コーチング 初回セッション</div>
+              <div style="font-size:12px;color:var(--sub);line-height:1.6;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">目標設定セッション。3ヶ月後の状態を「マネジメント初任 チームからの信頼獲得」と定義。次回まで週次…</div>
+            </td>
+            <td class="status"><span class="badge active">配信済</span></td>
+            <td><a class="btn ghost" href="#" style="padding:6px 10px;font-size:11px">開く<span class="arrow"></span></a></td>
+          </tr>
+          <tr class="row">
+            <td class="date">2026-06-18</td>
+            <td class="name"><div class="cell"><div class="avatar">中</div><div class="body"><div class="n">中村 拓也</div><div class="n-sub">法律 · 継続</div></div></div></td>
+            <td>
+              <div style="font-weight:500;margin-bottom:4px">契約書レビュー 事前打合せ</div>
+              <div style="font-size:12px;color:var(--sub);line-height:1.6;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">共同事業契約の草案について論点整理。競業避止・秘密保持・IP 帰属の 3項目を優先論点とし、次回までに…</div>
+            </td>
+            <td class="status"><span class="badge warm">要フォロー</span></td>
+            <td><a class="btn ghost" href="#" style="padding:6px 10px;font-size:11px">開く<span class="arrow"></span></a></td>
+          </tr>
+          <tr class="row">
+            <td class="date">2026-06-10</td>
+            <td class="name"><div class="cell"><div class="avatar">高</div><div class="body"><div class="n">高橋 涼</div><div class="n-sub">クリエイティブ</div></div></div></td>
+            <td>
+              <div style="font-weight:500;margin-bottom:4px">ブランドリニューアル 検討会</div>
+              <div style="font-size:12px;color:var(--sub);line-height:1.6;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">現行ロゴの認知度と、リニューアル時のリスク整理。デザイン案は 3 方向で検討、7 月中旬に絞り込み…</div>
+            </td>
+            <td class="status"><span class="badge active">配信済</span></td>
+            <td><a class="btn ghost" href="#" style="padding:6px 10px;font-size:11px">開く<span class="arrow"></span></a></td>
+          </tr>
+          <tr class="row">
+            <td class="date">2026-06-05</td>
+            <td class="name"><div class="cell"><div class="avatar line">田</div><div class="body"><div class="n">田中 太郎</div><div class="n-sub">士業 · 顧問</div></div></div></td>
+            <td>
+              <div style="font-weight:500;margin-bottom:4px">紹介経由 顔合わせ</div>
+              <div style="font-size:12px;color:var(--sub);line-height:1.6;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">紹介元との関係性と、相談範囲のスコーピング。相続案件でスタート、月次で経過共有の運用に合意。</div>
+            </td>
+            <td class="status"><span class="badge active">配信済</span></td>
+            <td><a class="btn ghost" href="#" style="padding:6px 10px;font-size:11px">開く<span class="arrow"></span></a></td>
+          </tr>
+        </tbody>
+      </table>
     </section>
 
     <!-- ============ MINUTE DETAIL ============ -->
@@ -866,12 +964,13 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 </div>
 
 <script>
-const views = ['dashboard','customers','customer-detail','minute-detail','calendar','settings'];
+const views = ['dashboard','customers','customer-detail','minutes','minute-detail','calendar','settings'];
 const crumbs = {
   'dashboard': 'ダッシュボード',
   'customers': '顧客',
   'customer-detail': '顧客 <span class="sep">/</span> 田中 太郎',
-  'minute-detail': '議事録 <span class="sep">/</span> 相続税 試算資料 確認',
+  'minutes': '議事録',
+  'minute-detail': '議事録 <span class="sep">/</span> 2026-07-04 相続税 試算資料 確認',
   'calendar': '予定',
   'settings': '設定',
 };
