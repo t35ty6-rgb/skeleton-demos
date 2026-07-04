@@ -459,12 +459,14 @@ async function goView(p, view) {
 const chapters = [
 
   // ═══════════════════════════════════════════════════════
-  //  Ch 01 · 課題 (86.6s)  editorial rewrite
+  //  Ch 01 · 課題提起 (130.6s) with narrative enumeration
+  //  marks: thanks_end(7.2) agenda_intro(11.7) agenda_1(17.1) agenda_2(24.5)
+  //         agenda_3(30.5) agenda_end(34.6) issue1_intro(40.0) ...
   // ═══════════════════════════════════════════════════════
   { name: '01-issue', act: async (p, sync) => {
     await goto(p, `${BASE}/admin/index.html`);
 
-    // ── 表紙 (0 → 7.2) — restrained typographic cover ──
+    // ── 表紙 (0 → thanks_end 7.2) ──
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:820px;">
         <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">FOR SUN CHLORELLA JAPAN — 2026 / 07</div>
@@ -478,27 +480,42 @@ const chapters = [
     `);
     await reveal(p, 1); await reveal(p, 2); await reveal(p, 3); await reveal(p, 4);
 
-    // ── アジェンダ: 3課題 (thanks_end 7.2 → intro_end 14.2) ──
+    // ── 3課題 列挙アジェンダ (thanks_end 7.2 → agenda_end 34.6) ──
     await sync.waitFor(p, 'thanks_end');
     await slide(p, `
-      ${SL.chrome('01 / 05', '課題')}
-      <div style="margin-top:36px;">${SL.title('御社の現場でいま、<br>起きていること', { size: '52px' })}</div>
+      ${SL.chrome('AGENDA', '課題')}
+      <div data-reveal="1" style="margin-top:36px;">${SL.title('御社の現場でいま、<br>起きていること<span style="color:${C.leaf};">は 3つ</span>', { size: '52px' })}</div>
       <div style="margin-top:56px;display:grid;grid-template-columns:88px 1fr;gap:32px;row-gap:36px;max-width:960px;">
-        <div data-reveal="1" style="font-family:${C.fNum};font-size:48px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">01</div>
-        <div data-reveal="1" style="font-family:${C.fBody};font-size:23px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">訪問販売員の実績が、EC化 に よって <span style="color:${C.alert};">消えていく</span></div>
-        <div data-reveal="2" style="font-family:${C.fNum};font-size:48px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">02</div>
-        <div data-reveal="2" style="font-family:${C.fBody};font-size:23px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">4本の公式LINE が部署別で運用され、本社が数字を <span style="color:${C.alert};">横断把握できない</span></div>
-        <div data-reveal="3" style="font-family:${C.fNum};font-size:48px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">03</div>
-        <div data-reveal="3" style="font-family:${C.fBody};font-size:23px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">中高齢のお客様の <span style="color:${C.alert};">半数</span> が、メールアドレス入力で離脱する</div>
+        <div data-reveal="2" style="font-family:${C.fNum};font-size:48px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">01</div>
+        <div data-reveal="2" style="font-family:${C.fBody};font-size:23px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">訪問販売員の実績が、EC化 に よって <span style="color:${C.alert};">消えていく</span></div>
+        <div data-reveal="3" style="font-family:${C.fNum};font-size:48px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">02</div>
+        <div data-reveal="3" style="font-family:${C.fBody};font-size:23px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">4本の公式LINE が部署別で運用され、本社が数字を <span style="color:${C.alert};">横断把握できない</span></div>
+        <div data-reveal="4" style="font-family:${C.fNum};font-size:48px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">03</div>
+        <div data-reveal="4" style="font-family:${C.fBody};font-size:23px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">中高齢のお客様の <span style="color:${C.alert};">半数</span> が、メールアドレス入力で離脱する</div>
       </div>
+      <div data-reveal="5" style="margin-top:auto;padding-top:22px;font-family:${C.fBody};font-size:14px;color:${C.ink3};letter-spacing:0.06em;">これから、1つずつ、場面と数字でご説明します</div>
       ${SL.foot}
     `);
-    await reveal(p, 1); await wait(p, 1500);
-    await reveal(p, 2); await wait(p, 1500);
-    await reveal(p, 3);
+    await reveal(p, 1);
+    await sync.waitFor(p, 'agenda_1'); await reveal(p, 2);
+    await sync.waitFor(p, 'agenda_2'); await reveal(p, 3);
+    await sync.waitFor(p, 'agenda_3'); await reveal(p, 4);
+    await sync.waitFor(p, 'agenda_end'); await reveal(p, 5);
 
-    // ── 課題① 具体シナリオ: 北野さん × 田中さま(intro_end 14.2 → issue1_end 37.4) ──
-    await sync.waitFor(p, 'intro_end');
+    // ── 転入① 「まず、1つ目」 (agenda_end 34.6 → issue1_intro 40.0) ──
+    await slide(p, `
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1000px;">
+        <div data-reveal="1" style="font-family:${C.fBody};font-size:16px;color:${C.ink3};font-weight:500;letter-spacing:0.06em;">まず、1つ目</div>
+        <div data-reveal="2" style="margin-top:24px;display:flex;align-items:baseline;gap:36px;">
+          <div style="font-family:${C.fNum};font-size:200px;font-weight:300;color:${C.leaf};line-height:0.9;letter-spacing:-0.05em;">01</div>
+          <div style="font-family:${C.fBody};font-size:52px;font-weight:900;color:${C.ink};line-height:1.15;letter-spacing:-0.035em;">訪問販売員の実績が、<br><span style="color:${C.alert};">消えていく</span></div>
+        </div>
+      </div>
+    `);
+    await reveal(p, 1); await reveal(p, 2);
+
+    // ── 課題① 具体シナリオ (issue1_intro 40.0 → issue1_end 57.9) ──
+    await sync.waitFor(p, 'issue1_intro');
     await slide(p, `
       ${SL.chrome('02 / 05', '課題 · 一')}
       <div style="margin-top:32px;">${SL.title('販売員の実績が、<br><span style="color:${C.leaf}">消える</span>', { size: '52px' })}</div>
@@ -547,7 +564,20 @@ const chapters = [
     await sync.waitFor(p, 'issue1_result'); await reveal(p, 4);
     await sync.waitFor(p, 'issue1_end'); await reveal(p, 5);
 
-    // ── 課題② (issue1_end 37.4 → issue2_end 61.2) editorial diagram ──
+    // ── 転入② 「次に、2つ目」 (issue1_end 57.9 → issue2_intro 63.2) ──
+    await slide(p, `
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1100px;">
+        <div data-reveal="1" style="font-family:${C.fBody};font-size:16px;color:${C.ink3};font-weight:500;letter-spacing:0.06em;">次に、2つ目</div>
+        <div data-reveal="2" style="margin-top:24px;display:flex;align-items:baseline;gap:36px;">
+          <div style="font-family:${C.fNum};font-size:200px;font-weight:300;color:${C.leaf};line-height:0.9;letter-spacing:-0.05em;">02</div>
+          <div style="font-family:${C.fBody};font-size:48px;font-weight:900;color:${C.ink};line-height:1.15;letter-spacing:-0.035em;">本社で数字を、<br><span style="color:${C.alert};">横断把握できない</span></div>
+        </div>
+      </div>
+    `);
+    await reveal(p, 1); await reveal(p, 2);
+
+    // ── 課題② (issue2_intro 63.2 → issue2_end 85.2) editorial diagram ──
+    await sync.waitFor(p, 'issue2_intro');
     await slide(p, `
       ${SL.chrome('03 / 05', '課題 · 二')}
       <div style="margin-top:28px;">${SL.title('4本の公式LINE が、<br>本社で<span style="color:${C.leaf}">合算できない</span>', { size: '48px' })}</div>
@@ -585,11 +615,26 @@ const chapters = [
       </div>
       ${SL.foot}
     `);
-    await reveal(p, 1); await reveal(p, 2); await reveal(p, 3); await reveal(p, 4); await reveal(p, 5);
+    await reveal(p, 1);
+    await sync.waitFor(p, 'issue2_dispatch');
+    await reveal(p, 2); await reveal(p, 3); await reveal(p, 4); await reveal(p, 5);
     await sync.waitFor(p, 'issue2_hq'); await reveal(p, 6);
     await sync.waitFor(p, 'issue2_end'); await reveal(p, 7);
 
-    // ── 課題③ (issue2_end 61.2 → issue3_end 80.6) ──
+    // ── 転入③ 「最後に、3つ目」 (issue2_end 85.2 → issue3_intro 90.6) ──
+    await slide(p, `
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1100px;">
+        <div data-reveal="1" style="font-family:${C.fBody};font-size:16px;color:${C.ink3};font-weight:500;letter-spacing:0.06em;">最後に、3つ目</div>
+        <div data-reveal="2" style="margin-top:24px;display:flex;align-items:baseline;gap:36px;">
+          <div style="font-family:${C.fNum};font-size:200px;font-weight:300;color:${C.leaf};line-height:0.9;letter-spacing:-0.05em;">03</div>
+          <div style="font-family:${C.fBody};font-size:52px;font-weight:900;color:${C.ink};line-height:1.15;letter-spacing:-0.035em;">中高齢のお客様が、<br><span style="color:${C.alert};">離脱する</span></div>
+        </div>
+      </div>
+    `);
+    await reveal(p, 1); await reveal(p, 2);
+
+    // ── 課題③ (issue3_intro 90.6 → issue3_end 108.2) ──
+    await sync.waitFor(p, 'issue3_intro');
     await slide(p, `
       ${SL.chrome('04 / 05', '課題 · 三')}
       <div style="margin-top:28px;">${SL.title('中高齢の半数が、<br>メール入力で<span style="color:${C.leaf}">諦める</span>', { size: '48px' })}</div>
@@ -640,19 +685,47 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2); await reveal(p, 3);
     await sync.waitFor(p, 'issue3_scene'); await reveal(p, 4);
 
-    // ── 解決策 intro (issue3_end 80.6 → 86.6) ──
+    // ── 統合LINE OS 提示 (issue3_end 108.2 → solution_five 118.6) ──
     await sync.waitFor(p, 'issue3_end');
     await slide(p, `
-      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
-        <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">05 / 05 — TOWARD ONE SYSTEM</div>
-        <div data-reveal="2" style="margin-top:28px;font-family:${C.fBody};font-weight:900;font-size:76px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">3つの課題を、<br><span style="color:${C.leaf};">1つの運用OS</span> で解く</div>
-        <div data-reveal="3" style="margin-top:36px;display:flex;align-items:baseline;gap:14px;">
-          <div style="width:56px;height:1px;background:${C.leaf};"></div>
-          <div style="font-family:${C.fBody};font-size:18px;color:${C.leaf};font-weight:700;letter-spacing:-0.005em;">統合 LINE OS</div>
-        </div>
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1000px;">
+        <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">TOWARD ONE SYSTEM</div>
+        <div data-reveal="2" style="margin-top:28px;font-family:${C.fBody};font-weight:900;font-size:76px;line-height:1.1;letter-spacing:-0.045em;color:${C.ink};">3つの課題を、<br><span style="color:${C.leaf};">1つの運用OS</span> に</div>
+        <div data-reveal="3" style="margin-top:44px;padding:20px 40px;background:${C.leaf};color:#f5f7f2;font-family:${C.fBody};font-size:28px;font-weight:800;letter-spacing:0.02em;display:inline-block;align-self:flex-start;">統合LINE OS</div>
       </div>
     `);
-    await reveal(p, 1); await reveal(p, 2); await wait(p, 3000); await reveal(p, 3);
+    await reveal(p, 1); await reveal(p, 2);
+    await sync.waitFor(p, 'solution_intro'); await reveal(p, 3);
+
+    // ── 5つの機能 preview (solution_five 118.6 → solution_end 130.5) ──
+    await sync.waitFor(p, 'solution_five');
+    await slide(p, `
+      ${SL.chrome('5 FUNCTIONS', '構成')}
+      <div data-reveal="1" style="margin-top:28px;">${SL.title('統合LINE OS は、<br><span style="color:${C.leaf};">5つの機能</span> で構成', { size: '48px' })}</div>
+      <div style="margin-top:44px;display:grid;grid-template-columns:repeat(5,1fr);gap:22px;flex:1;">
+        ${[
+          ['I','訪問販売員実績','担当ID の 永久刻印'],
+          ['II','4アカウント統合','1画面で 束ねる'],
+          ['III','LINE内 EC','メアド不要 決済'],
+          ['IV','キャンペーン LTV','QR別 顧客追跡'],
+          ['V','シナリオビルダー','LSTEP 代替'],
+        ].map(([r,t,d],i) => `
+          <div data-reveal="${2+i}" style="padding-top:24px;border-top:2px solid ${C.ink};">
+            <div style="font-family:${C.fNum};font-size:12px;color:${C.leaf};letter-spacing:0.14em;font-weight:700;">${r}</div>
+            <div style="margin-top:10px;font-family:${C.fBody};font-size:18px;font-weight:800;color:${C.ink};line-height:1.35;letter-spacing:-0.01em;">${t}</div>
+            <div style="margin-top:8px;font-family:${C.fBody};font-size:12px;color:${C.ink2};line-height:1.7;">${d}</div>
+          </div>`).join('')}
+      </div>
+      <div data-reveal="7" style="margin-top:auto;padding-top:20px;font-family:${C.fBody};font-size:14px;color:${C.ink3};letter-spacing:0.06em;">今から、それぞれを、順番に、詳しくお話しします</div>
+      ${SL.foot}
+    `);
+    await reveal(p, 1);
+    await reveal(p, 2); await wait(p, 600);
+    await reveal(p, 3); await wait(p, 600);
+    await reveal(p, 4); await wait(p, 600);
+    await reveal(p, 5); await wait(p, 600);
+    await reveal(p, 6);
+    await sync.waitFor(p, 'solution_list'); await reveal(p, 7);
   }},
 
   // ═══════════════════════════════════════════════════════
@@ -1295,8 +1368,48 @@ const chapters = [
     `);
     await reveal(p, 1); await reveal(p, 2);
 
-    // ── KPI 01: +18% (title_end 8.8 → kpi2 35.7) ──
+    // ── 3KPI 列挙アジェンダ (title_end 8.8 → agenda_end 29.5) ──
     await sync.waitFor(p, 'title_end');
+    await slide(p, `
+      ${SL.chrome('AGENDA', '3つの数字')}
+      <div data-reveal="1" style="margin-top:28px;">${SL.title('6ヶ月後、<br><span style="color:${C.leaf};">3つの数字</span> に変化', { size: '48px' })}</div>
+      <div style="margin-top:44px;display:grid;grid-template-columns:88px 1fr auto;gap:32px;row-gap:32px;max-width:1100px;">
+        <div data-reveal="2" style="font-family:${C.fNum};font-size:44px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">01</div>
+        <div data-reveal="2" style="font-family:${C.fBody};font-size:21px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">販売員 1人あたり 月次売上</div>
+        <div data-reveal="2" style="font-family:${C.fNum};font-size:36px;font-weight:500;color:${C.leaf};letter-spacing:-0.03em;">+18<span style="font-size:20px;">%</span></div>
+        <div data-reveal="3" style="font-family:${C.fNum};font-size:44px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">02</div>
+        <div data-reveal="3" style="font-family:${C.fBody};font-size:21px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">定期便 半年継続率</div>
+        <div data-reveal="3" style="font-family:${C.fNum};font-size:36px;font-weight:500;color:${C.leaf};letter-spacing:-0.03em;">+12<span style="font-size:20px;">pt</span></div>
+        <div data-reveal="4" style="font-family:${C.fNum};font-size:44px;font-weight:400;color:${C.leaf};letter-spacing:-0.03em;line-height:0.9;">03</div>
+        <div data-reveal="4" style="font-family:${C.fBody};font-size:21px;font-weight:900;color:${C.ink};line-height:1.5;letter-spacing:-0.015em;">LINE 経由購入 CVR</div>
+        <div data-reveal="4" style="font-family:${C.fNum};font-size:36px;font-weight:500;color:${C.leaf};letter-spacing:-0.03em;">2〜3<span style="font-size:20px;">倍</span></div>
+      </div>
+      <div data-reveal="5" style="margin-top:auto;padding-top:22px;font-family:${C.fBody};font-size:14px;color:${C.ink3};letter-spacing:0.06em;">それぞれ、なぜこの数字が出たのか、順番にご説明します</div>
+      ${SL.foot}
+    `);
+    await reveal(p, 1);
+    await sync.waitFor(p, 'agenda_1'); await reveal(p, 2);
+    await sync.waitFor(p, 'agenda_2'); await reveal(p, 3);
+    await sync.waitFor(p, 'agenda_3'); await reveal(p, 4);
+    await sync.waitFor(p, 'agenda_end'); await reveal(p, 5);
+
+    // ── 転入① 「まず、1つ目」 (agenda_end 29.5 → kpi1 35.8) ──
+    await slide(p, `
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1100px;">
+        <div data-reveal="1" style="font-family:${C.fBody};font-size:16px;color:${C.ink3};font-weight:500;letter-spacing:0.06em;">まず、1つ目</div>
+        <div data-reveal="2" style="margin-top:24px;display:flex;align-items:baseline;gap:36px;">
+          <div style="font-family:${C.fNum};font-size:200px;font-weight:300;color:${C.leaf};line-height:0.9;letter-spacing:-0.05em;">01</div>
+          <div>
+            <div style="font-family:${C.fBody};font-size:36px;font-weight:900;color:${C.ink};line-height:1.15;letter-spacing:-0.025em;">販売員 月次売上</div>
+            <div style="font-family:${C.fNum};font-size:56px;font-weight:500;color:${C.leaf};line-height:1;letter-spacing:-0.03em;margin-top:12px;">+18%</div>
+          </div>
+        </div>
+      </div>
+    `);
+    await reveal(p, 1); await reveal(p, 2);
+
+    // ── KPI 01: 詳細 (kpi1 35.8 → kpi2 57.7) ──
+    await sync.waitFor(p, 'kpi1');
     await slide(p, `
       ${SL.chrome('KPI · 01', '6ヶ月後実測')}
       <div style="margin-top:26px;">${SL.title('販売員 1人あたり月次売上', { size: '32px' })}</div>
@@ -1326,7 +1439,23 @@ const chapters = [
     await reveal(p, 1);
     await sync.waitFor(p, 'kpi1_reason'); await reveal(p, 2);
 
-    // ── KPI 02: +12pt (kpi2 35.7 → kpi3 55.9) ──
+    // ── 転入② 「次に、2つ目」 (kpi1_end 52.1 → kpi2 57.7) ──
+    await sync.waitFor(p, 'kpi1_end');
+    await slide(p, `
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1100px;">
+        <div data-reveal="1" style="font-family:${C.fBody};font-size:16px;color:${C.ink3};font-weight:500;letter-spacing:0.06em;">次に、2つ目</div>
+        <div data-reveal="2" style="margin-top:24px;display:flex;align-items:baseline;gap:36px;">
+          <div style="font-family:${C.fNum};font-size:200px;font-weight:300;color:${C.leaf};line-height:0.9;letter-spacing:-0.05em;">02</div>
+          <div>
+            <div style="font-family:${C.fBody};font-size:36px;font-weight:900;color:${C.ink};line-height:1.15;letter-spacing:-0.025em;">定期便 半年継続率</div>
+            <div style="font-family:${C.fNum};font-size:56px;font-weight:500;color:${C.leaf};line-height:1;letter-spacing:-0.03em;margin-top:12px;">+12pt</div>
+          </div>
+        </div>
+      </div>
+    `);
+    await reveal(p, 1); await reveal(p, 2);
+
+    // ── KPI 02: 詳細 (kpi2 57.7 → kpi3 74.8) ──
     await sync.waitFor(p, 'kpi2');
     await slide(p, `
       ${SL.chrome('KPI · 02', '6ヶ月後実測')}
@@ -1357,7 +1486,23 @@ const chapters = [
     await reveal(p, 1);
     await sync.waitFor(p, 'kpi2_reason'); await reveal(p, 2);
 
-    // ── KPI 03: 2-3x (kpi3 55.9 → calc_setup 62.5) ──
+    // ── 転入③ 「最後に、3つ目」 (kpi2_reason 68.8 → kpi3 74.8) ──
+    await wait(p, 3500);
+    await slide(p, `
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1100px;">
+        <div data-reveal="1" style="font-family:${C.fBody};font-size:16px;color:${C.ink3};font-weight:500;letter-spacing:0.06em;">最後に、3つ目</div>
+        <div data-reveal="2" style="margin-top:24px;display:flex;align-items:baseline;gap:36px;">
+          <div style="font-family:${C.fNum};font-size:200px;font-weight:300;color:${C.leaf};line-height:0.9;letter-spacing:-0.05em;">03</div>
+          <div>
+            <div style="font-family:${C.fBody};font-size:36px;font-weight:900;color:${C.ink};line-height:1.15;letter-spacing:-0.025em;">LINE 経由購入 CVR</div>
+            <div style="font-family:${C.fNum};font-size:56px;font-weight:500;color:${C.leaf};line-height:1;letter-spacing:-0.03em;margin-top:12px;">2〜3倍</div>
+          </div>
+        </div>
+      </div>
+    `);
+    await reveal(p, 1); await reveal(p, 2);
+
+    // ── KPI 03: 詳細 (kpi3 74.8 → calc_setup 88.1) ──
     await sync.waitFor(p, 'kpi3');
     await slide(p, `
       ${SL.chrome('KPI · 03', '6ヶ月後実測')}
@@ -1383,9 +1528,10 @@ const chapters = [
       </div>
       ${SL.foot}
     `);
-    await reveal(p, 1); await reveal(p, 2);
+    await reveal(p, 1);
+    await sync.waitFor(p, 'kpi3_reason'); await reveal(p, 2);
 
-    // ── 御社インパクト計算 (calc_setup 62.5 → end 69.5) ──
+    // ── 御社インパクト計算 (calc_setup 88.1 → end 95.1) ──
     await sync.waitFor(p, 'calc_setup');
     await slide(p, `
       ${SL.chrome('YOUR IMPACT', '想定売上')}
