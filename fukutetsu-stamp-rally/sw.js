@@ -11,6 +11,7 @@ const ASSETS = [
   "./index.html",
   "./manifest.webmanifest",
   "./photos/00_bg_tram_wide.webp",
+  "./photos/00_bg_tram_orange.webp",
   "./photos/00_hero_illustration.webp",
   "./photos/01_echizen_washi.webp",
   "./photos/02_sundome_fukui.webp",
