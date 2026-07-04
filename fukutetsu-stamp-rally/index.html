@@ -2196,6 +2196,38 @@ async function bootstrap(){
   }
 }
 
+// ─────────── demo mode (URLクエリで直接ルーレットに ) ───────────
+(function applyDemoMode(){
+  try {
+    const q = new URL(location.href).searchParams;
+    if (q.get("demo") === "roulette"){
+      // 4個スタンプ 一時 注入 (localStorage 上書き)
+      const now = new Date();
+      const pad = x => String(x).padStart(2,"0");
+      const time = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} JST`;
+      const preload = ["SP-01","SP-02","SP-03","SP-04"].map((code,i) => {
+        const s = SPOTS.find(x=>x.code===code);
+        return { code, name:s.name, station:s.station, coord:s.coord, time, serial: String(284+i*7).padStart(6,"0"), isNew:false };
+      });
+      collected = preload;
+      saveStamps();
+      // ルーレット 未使用 状態に
+      try { localStorage.removeItem(LS_ROULETTE_USED); localStorage.removeItem(LS_COUPONS); } catch(e){}
+      // ユーザーも デモ名に
+      if (!user || !user.name){
+        user = { name: "デモ 太郎", joinedAt: Date.now() };
+        saveUser();
+      }
+      // flyer / help は auto非表示
+      try { localStorage.setItem(LS_FLYER_SEEN, "1"); localStorage.setItem(HELP_SEEN_KEY, "1"); } catch(e){}
+      // 景品タブに 自動遷移
+      window.addEventListener("load", () => setTimeout(() => {
+        try { switchTab("prize"); render(); } catch(e){}
+      }, 500));
+    }
+  } catch(e){ console.warn("demo mode init failed:", e); }
+})();
+
 bootstrap();
 
 // ─────────── Web Vitals (LCP / CLS / INP) ───────────
