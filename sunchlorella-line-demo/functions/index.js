@@ -106,20 +106,52 @@ async function linePush(to, accessToken, messages) {
   }
   return { ok: true };
 }
+/**
+ * LINE multicast — 送達結果を { ok, failed, errors[] } で返す。
+ * 429 (rate limit) は Retry-After ヘッダに従い 最大3回リトライ。
+ * 5xx は指数バックオフで 最大3回リトライ。
+ * それ以外の失敗は failed に加算し次chunkへ (途中で止まらないが 呼び元で status='partial_failure' を判定できる)。
+ */
 async function lineMulticast(to, accessToken, messages) {
+  if (!to?.length) return { ok: 0, failed: 0, errors: [] };
   const chunks = [];
   for (let i = 0; i < to.length; i += 500) chunks.push(to.slice(i, i + 500));
+  const result = { ok: 0, failed: 0, errors: [] };
   for (const chunk of chunks) {
-    const r = await fetch('https://api.line.me/v2/bot/message/multicast', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ to: chunk, messages }),
-    });
-    if (!r.ok) console.error('LINE multicast failed', r.status, await r.text().catch(() => ''));
+    let sent = false;
+    for (let attempt = 0; attempt < 3 && !sent; attempt++) {
+      const r = await fetch('https://api.line.me/v2/bot/message/multicast', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ to: chunk, messages }),
+      });
+      if (r.ok) { result.ok += chunk.length; sent = true; break; }
+      if (r.status === 429) {
+        const wait = Number(r.headers.get('retry-after') || 1) * 1000;
+        await new Promise(res => setTimeout(res, Math.min(wait, 30000)));
+        continue;
+      }
+      if (r.status >= 500) {
+        await new Promise(res => setTimeout(res, Math.pow(2, attempt) * 1000));
+        continue;
+      }
+      // 4xx (署名不正・quota枯渇等) は retry しても改善しない
+      const errText = await r.text().catch(() => '');
+      console.error('LINE multicast failed', r.status, errText);
+      result.failed += chunk.length;
+      result.errors.push({ status: r.status, body: errText.slice(0, 500) });
+      break;
+    }
+    if (!sent && !result.errors.length) {
+      // 3回全部 5xx/429 で失敗
+      result.failed += chunk.length;
+      result.errors.push({ status: 0, body: 'retry_exhausted' });
+    }
   }
+  return result;
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -263,6 +295,9 @@ async function handleLineEvent(tid, ev, ctx) {
     const cid = snap.docs[0].id;
     const mid = 'msg_' + Date.now().toString(36) + '_' + crypto.randomBytes(3).toString('hex');
     await db.doc(tenantPath(tid, 'messages', mid)).set({
+      // direction 定義 SSOT: システム視点で outgoing = 顧客が送った (顧客→システム)、
+      // incoming = 担当が送った (担当→顧客)。 customer 画面では incoming が左バブル、
+      // outgoing が右バブル として描画される (customer/index.html)。
       id: mid, customerId: cid, direction: 'outgoing',
       body: ev.message.text, createdAt: Date.now(),
       channel: 'line',
@@ -389,16 +424,27 @@ exports.recordOrder = onRequest({ secrets: [STRIPE_SECRET_KEY] }, async (req, re
   triggerScenarios(tid, 'purchase', customerId, { orderCount: (customer.orderCount || 0) + 1 })
     .catch(e => console.error('triggerScenarios purchase error', e));
 
-  // 顧客サマリ更新
-  await db.doc(tenantPath(tid, 'customers', customerId)).set({
-    orderCount: (customer.orderCount || 0) + 1,
-    ltv: (customer.ltv || 0) + total,
-    lastVisitAt: Date.now(),
-    updatedAt: Date.now(),
-  }, { merge: true });
+  // テナント設定を先に取得 (顧客集計の分岐に使う)
+  const t = await tenantSettings(tid);
+
+  // 顧客サマリ更新 — Stripe未使用時のみここで確定 (Stripe有効時は stripeWebhook で二重カウント防止)
+  // lastVisitAt は 訪問販売員 が受注入力した時点で更新 (決済前でも訪問した事実は残す)
+  if (!t?.stripe?.enabled) {
+    await db.doc(tenantPath(tid, 'customers', customerId)).set({
+      orderCount: admin.firestore.FieldValue.increment(1),
+      ltv:        admin.firestore.FieldValue.increment(total),
+      lastVisitAt: Date.now(),
+      updatedAt: Date.now(),
+    }, { merge: true });
+  } else {
+    // Stripe有効時: 訪問記録のみ更新、集計は stripeWebhook checkout.session.completed で確定
+    await db.doc(tenantPath(tid, 'customers', customerId)).set({
+      lastVisitAt: Date.now(),
+      updatedAt: Date.now(),
+    }, { merge: true });
+  }
 
   // Stripe決済リンク発行 (LINE Pay/Card)
-  const t = await tenantSettings(tid);
   let paymentUrl = null;
   if (t?.stripe?.enabled) {
     const Stripe = require('stripe');
@@ -415,9 +461,11 @@ exports.recordOrder = onRequest({ secrets: [STRIPE_SECRET_KEY] }, async (req, re
         quantity: i.qty,
       })),
       metadata: { tenantId: tid, orderId: oid, customerId },
+      // payment_intent にも metadata を引継ぎ (Stripe Dashboard 直操作 refund で失われない)
+      payment_intent_data: { metadata: { tenantId: tid, orderId: oid, customerId } },
       success_url: (t.stripe.successUrl || 'https://line.me') + `?order=${oid}`,
       cancel_url:  (t.stripe.cancelUrl  || 'https://line.me') + `?order=${oid}`,
-    });
+    }, { idempotencyKey: oid });  // 同じ orderId で複数回叩いても Session が重複作成されない
     paymentUrl = session.url;
     await db.doc(tenantPath(tid, 'orders', oid)).set({ stripeSessionId: session.id, paymentUrl }, { merge: true });
   }
@@ -535,14 +583,21 @@ exports.createCheckout = onRequest({ secrets: [STRIPE_SECRET_KEY, LIFF_CHANNEL_I
   const Stripe = require('stripe');
   const stripe = new Stripe(STRIPE_SECRET_KEY.value(), { apiVersion: '2024-06-20' });
   const oid = 'ord_' + Date.now().toString(36) + '_' + crypto.randomBytes(3).toString('hex');
+  const commonMeta = { tenantId: tid, orderId: oid, customerId: customer.id, repId: customer.repId || '' };
   const session = await stripe.checkout.sessions.create({
     mode: subscription ? 'subscription' : 'payment',
     payment_method_types: ['card'],
     line_items,
-    metadata: { tenantId: tid, orderId: oid, customerId: customer.id, subscription: String(!!subscription) },
+    metadata: { ...commonMeta, subscription: String(!!subscription) },
+    // subscription経由の invoice / charge にも metadata を引継ぎ (Stripe仕様: Checkout Session の metadata は継承されないため明示)
+    ...(subscription ? {
+      subscription_data: { metadata: commonMeta },
+    } : {
+      payment_intent_data: { metadata: commonMeta },
+    }),
     success_url: t.stripe.successUrl || 'https://line.me',
     cancel_url:  t.stripe.cancelUrl  || 'https://line.me',
-  });
+  }, { idempotencyKey: oid });
   await db.doc(tenantPath(tid, 'orders', oid)).set({
     id: oid, customerId: customer.id, repId: customer.repId || null,
     channel: 'line', items: resolved, total,
@@ -591,14 +646,14 @@ exports.stripeWebhook = onRequest({ secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_
       status: 'paid', paidAt: Date.now(),
       stripePaymentIntent: s.payment_intent,
     }, { merge: true });
-    // 顧客集計 (webhook到達後にサーバー側で確定)
+    // 顧客集計 (webhook到達後にサーバー側で確定) — atomic increment で並行決済 race 防止
     const custDoc = await db.doc(tenantPath(tenantId, 'customers', customerId)).get();
     const cust    = custDoc.exists ? custDoc.data() : null;
     const order   = (await db.doc(tenantPath(tenantId, 'orders', orderId)).get()).data();
     if (cust) {
       await db.doc(tenantPath(tenantId, 'customers', customerId)).set({
-        orderCount: (cust.orderCount || 0) + 1,
-        ltv: (cust.ltv || 0) + (order?.total || 0),
+        orderCount: admin.firestore.FieldValue.increment(1),
+        ltv:        admin.firestore.FieldValue.increment(order?.total || 0),
         lastVisitAt: Date.now(),
       }, { merge: true });
     }
@@ -623,10 +678,11 @@ exports.stripeWebhook = onRequest({ secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_
 
     if (subscription === 'true') {
       const sid = 'sub_' + Date.now().toString(36) + '_' + crypto.randomBytes(3).toString('hex');
-      const order = (await db.doc(tenantPath(tenantId, 'orders', orderId)).get()).data();
-      const firstItem = order?.items?.[0] || {};
+      const orderNow = (await db.doc(tenantPath(tenantId, 'orders', orderId)).get()).data();
+      const firstItem = orderNow?.items?.[0] || {};
       await db.doc(tenantPath(tenantId, 'subscriptions', sid)).set({
         id: sid, customerId, orderId,
+        repId: orderNow?.repId || cust?.repId || null,  // 販売員実績帰属を引継ぎ
         productId: firstItem.productId || null,
         qty: firstItem.qty || 1,
         stripeSubscriptionId: s.subscription,
@@ -702,8 +758,16 @@ exports.broadcastSend = onRequest(async (req, res) => {
 
   if (!dryRun) {
     const messages = [{ type: 'text', text: (title ? title + '\n\n' : '') + body }];
-    await lineMulticast(target.map(c => c.lineUserId), accessToken, messages);
-    await db.doc(tenantPath(tid, 'broadcasts', bid)).set({ status: 'sent' }, { merge: true });
+    const r = await lineMulticast(target.map(c => c.lineUserId), accessToken, messages);
+    const finalStatus = r.failed > 0
+      ? (r.ok > 0 ? 'partial_failure' : 'failed')
+      : 'sent';
+    await db.doc(tenantPath(tid, 'broadcasts', bid)).set({
+      status: finalStatus,
+      deliveredCount: r.ok,
+      failedCount: r.failed,
+      ...(r.errors.length ? { errorSample: r.errors.slice(0, 3) } : {}),
+    }, { merge: true });
   }
 
   return res.json({ ok: true, broadcastId: bid, targetCount: target.length, dryRun: !!dryRun });
@@ -776,13 +840,11 @@ exports.getCustomerBundle = onRequest({ secrets: [LIFF_CHANNEL_ID] }, async (req
     : null;
   // 販売員は顧客に見せる項目だけ抜粋
   const safeRep = rep ? { id: rep.id, name: rep.name, office: rep.office } : null;
+  // 顧客に見せてはいけない秘匿フィールドを destructure で確実に除去 (undefined 上書きは JSON.stringify で消えるが将来リスク)
+  const { note: _note, acquisitionUtm: _acqUtm, ...safeCustomer } = customer;
   return res.json({
     ok: true,
-    customer: {
-      ...customer,
-      // 秘匿フィールドは返さない
-      note: undefined,
-    },
+    customer: safeCustomer,
     rep: safeRep,
     orders:        ordersSnap.docs.map(d => d.data()),
     subscriptions: subsSnap.docs.map(d => d.data()),
