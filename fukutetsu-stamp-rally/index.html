@@ -146,6 +146,8 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 .btn-primary:disabled{background:oklch(0.75 0.006 70);cursor:not-allowed}
 .btn-primary .arr{font-family:"JetBrains Mono",monospace;letter-spacing:.14em;font-size:13px}
 .btn-secondary{width:100%;padding:14px;background:transparent;color:var(--ink);border:1.5px solid var(--ink);font-size:14px;font-weight:700;cursor:pointer;border-radius:2px;letter-spacing:.02em}
+.btn-reset{display:block;margin:32px auto 8px;padding:6px 10px;background:transparent;color:var(--dim);border:none;font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.btn-reset:hover{color:var(--red)}
 .btn-secondary:hover{background:var(--ink);color:var(--paper)}
 
 /* stamp grid (book) */
@@ -343,6 +345,28 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 .spot-item:hover .chev{color:var(--ink);transform:translateY(-50%) translateX(2px)}
 .spot-item.here .dist{color:var(--green);font-weight:700}
 .spot-item.done .dist{color:var(--green)}
+
+/* ── 章立て ヘッダ (物語り) ── */
+.chapter-head{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:18px 4px 12px;margin:24px 0 10px;border-bottom:1.5px solid var(--ink);position:relative}
+.chapter-head:first-of-type{margin-top:8px}
+.chapter-num{width:44px;height:44px;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-family:"Noto Sans JP",sans-serif;font-size:22px;font-weight:900;line-height:1;letter-spacing:-.02em}
+.chapter-body h4{margin:0 0 3px;font-size:16px;font-weight:900;letter-spacing:-.01em;color:var(--ink);line-height:1.15}
+.chapter-body .sub{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--dim);letter-spacing:.06em;line-height:1.35;font-weight:600}
+.chapter-progress{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--red);letter-spacing:.06em;font-weight:900;text-align:right;line-height:1.35;white-space:nowrap}
+.chapter-progress.done{color:var(--green)}
+.chapter-progress .l{color:var(--dim);font-weight:500}
+
+/* 章完成 stage */
+.chapter-cheer{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.85);background:var(--paper);border:2.5px solid var(--ink);padding:20px 32px 22px;text-align:center;z-index:225;opacity:0;pointer-events:none;transition:transform .5s cubic-bezier(.2,.9,.2,1),opacity .4s;max-width:320px;box-shadow:0 20px 40px -12px oklch(0 0 0 / .3)}
+.chapter-cheer.on{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
+.chapter-cheer .num{font-size:32px;font-weight:900;color:var(--red);letter-spacing:-.02em;line-height:1;font-family:"Noto Sans JP",sans-serif}
+.chapter-cheer .lbl{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--dim);letter-spacing:.24em;text-transform:uppercase;margin-top:4px}
+.chapter-cheer h4{margin:12px 0 6px;font-size:20px;font-weight:900;letter-spacing:-.015em;color:var(--ink)}
+.chapter-cheer p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.7;letter-spacing:.01em}
+
+/* 硬券 flash に narrative */
+.ticket .story{margin-top:14px;padding-top:12px;border-top:1.5px dashed color-mix(in oklch,var(--ink) 30%,transparent);font-family:"Noto Sans JP",sans-serif;font-size:12px;color:var(--ink);line-height:1.7;letter-spacing:.005em;font-weight:500;text-align:center}
+.ticket .story::before{content:"あなたの一節";display:block;font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--dim);letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px;font-weight:700}
 
 /* ── ONBOARDING ── */
 .ob{position:fixed;inset:0;background:var(--sky);z-index:100;display:none;flex-direction:column;padding:24px 24px 32px;overflow-y:auto}
@@ -624,8 +648,8 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
       <div id="here-card"></div>
 
       <div class="st">
-        <h3>3章 · 10スポット</h3>
-        <span class="k">By chapter</span>
+        <h3>スポット一覧</h3>
+        <span class="k">3章 · 10地点</span>
       </div>
       <div class="spot-list" id="spot-list"></div>
     </div>
@@ -633,15 +657,15 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
     <!-- SCAN tab -->
     <div class="pnl" data-pnl="scan" role="tabpanel" id="pnl-scan" aria-label="スキャン">
       <div class="scan">
-        <h3>QR コードを読み取る</h3>
-        <p class="sc-sub">各スポットの掲出 QR にカメラを向けると自動で読み取ります。押印には GPS 圏内にいる必要があります。</p>
+        <h3>QR を読み取る</h3>
+        <p class="sc-sub">スポットに掲出されている QR にカメラを向けるだけ。 GPS 150m 圏内 で 押印可。</p>
         <div class="cam-wrap" id="cam-wrap">
           <video id="cam" playsinline muted></video>
           <canvas id="qr-canvas"></canvas>
           <div class="reticle" id="reticle"></div>
           <div class="placeholder" id="cam-ph">
             <div class="ic">[ ]</div>
-            <p>カメラを開始してください。ブラウザから権限を求められます。</p>
+            <p>下の 「カメラを開始する」 を タップ · ブラウザで許可を選ぶと 起動します</p>
           </div>
         </div>
         <div class="gps-check" id="scan-gps-check"></div>
@@ -668,7 +692,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
     <!-- PRIZE tab -->
     <div class="pnl" data-pnl="prize" role="tabpanel" id="pnl-prize" aria-label="景品">
       <div class="prize-status">
-        <span class="k">Stamps Collected</span>
+        <span class="k">集印 数</span>
         <div class="n" id="prize-n">0</div>
         <div class="sub" id="prize-sub">あと 4個 集めると 第1景品交換が可能</div>
       </div>
@@ -706,7 +730,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
         <div class="coupons-grid" id="coupons-grid"></div>
       </div>
 
-      <button class="btn-secondary" id="btn-reset" style="margin-top:20px">スタンプ帳をリセット</button>
+      <button class="btn-reset" id="btn-reset" type="button">スタンプ帳をリセット</button>
     </div>
 
   </div>
@@ -1127,7 +1151,7 @@ function tryGeolocation(){
       scheduleRender();
     },
     err => {
-      const msg = err.code === 1 ? "位置情報が拒否されました" : "位置情報が取得できません";
+      const msg = err.code === 1 ? "GPS 未許可 · 現在地ボタンで切替可" : "GPS 取得中…";
       setGpsWarn(msg);
     },
     { enableHighAccuracy:true, maximumAge:20000, timeout:15000 }
@@ -1279,10 +1303,9 @@ function renderHereCard(){
   const here = currentInRangeSpot();
   if (!here){
     el.innerHTML = `<div class="hero-card locked"><div class="hc-body">
-      <span class="hc-tag">現在地の圏内にスポットなし</span>
-      <h4>近くのスポットへ移動してください</h4>
-      <p class="hc-desc">対象スポットから 150m 以内に入ると、押印ボタンが有効化されます。下の一覧を確認して次に向かうスポットを選びましょう。</p>
-      <button class="btn-secondary" onclick="switchTab('scan')">QR スキャンを開く</button>
+      <span class="hc-tag">圏内スポットなし</span>
+      <h4>次の一駅へ</h4>
+      <p class="hc-desc">150m以内に入ると 押印ボタンが有効になる。 一覧から 次のスポット を選ぼう。</p>
     </div></div>`;
     return;
   }
