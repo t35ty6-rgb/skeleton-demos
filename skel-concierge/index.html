@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Skel Concierge — 顧客対応の総合窓口</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --paper:#FAFAF6;
+  --surface:#FFFFFF;
+  --ink:#14181D;
+  --ink-soft:#2A3038;
+  --sub:#6B7481;
+  --sub-soft:#8B93A0;
+  --line:#E0DDD6;
+  --line-soft:#EFEDE7;
+  --line-strong:#B7B3AA;
+  --accent:#0B5B6B;
+  --accent-soft:#EAF1F2;
+  --accent-hover:#0A4E5B;
+  --error:#B4381F;
+  --warn:#A66F00;
+  --success:#2E7A57;
+  --line-green:#06C755;
+  --nav-w:240px;
+  --top-h:64px;
+  --radius:2px;
+  --sans:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-size:14px;line-height:1.6;letter-spacing:0.01em}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;background:transparent;border:0;color:inherit}
+input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
+
+/* ---- layout ---- */
+.app{display:grid;grid-template-columns:var(--nav-w) 1fr;min-height:100vh;min-height:100dvh}
+
+.side{
+  background:var(--ink);color:#D8D5CE;position:sticky;top:0;height:100vh;height:100dvh;
+  padding:20px 0 24px;display:flex;flex-direction:column;
+}
+.side .brand{padding:8px 24px 32px;display:flex;align-items:center;gap:12px}
+.side .brand .mark{width:32px;height:32px;background:var(--accent);color:#FAFAF6;font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:0.02em;display:flex;align-items:center;justify-content:center;border-radius:2px}
+.side .brand .name{font-size:15px;font-weight:700;letter-spacing:-0.01em;color:#F1EEE7}
+.side .brand .name em{font-style:normal;font-weight:400;color:#8B93A0;font-size:10px;display:block;letter-spacing:0.16em;text-transform:uppercase;margin-top:2px;font-family:var(--mono)}
+
+.side .nav{list-style:none;padding:8px 12px;flex:1}
+.side .nav li{margin-bottom:2px}
+.side .nav a{
+  display:flex;align-items:center;gap:12px;padding:10px 12px;font-size:13px;font-weight:500;color:#B4B1AB;
+  border-radius:var(--radius);position:relative;transition:background 160ms, color 160ms;
+}
+.side .nav a:hover{color:#F1EEE7;background:rgba(255,255,255,0.04)}
+.side .nav a.active{color:#FAFAF6;background:rgba(255,255,255,0.06)}
+.side .nav a.active::before{content:"";position:absolute;left:-12px;top:8px;bottom:8px;width:2px;background:var(--accent)}
+.side .nav a .ic{width:16px;height:16px;flex:none;color:currentColor}
+.side .nav a .lbl{flex:1}
+.side .nav a .badge{font-family:var(--mono);font-size:10px;font-weight:500;color:#8B93A0;letter-spacing:0.04em}
+.side .nav-group{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;color:#5E6068;text-transform:uppercase;padding:16px 12px 6px;margin-top:8px}
+
+.side .side-foot{padding:16px 24px;border-top:1px solid rgba(255,255,255,0.06);font-family:var(--mono);font-size:10px;letter-spacing:0.06em;color:#5E6068}
+.side .side-foot .env{color:var(--accent);font-weight:500}
+
+/* ---- main ---- */
+.main{display:flex;flex-direction:column;min-width:0}
+.top{
+  height:var(--top-h);background:var(--paper);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:24px;padding:0 32px;position:sticky;top:0;z-index:10;
+}
+.crumb{font-family:var(--mono);font-size:11px;color:var(--sub);letter-spacing:0.06em;text-transform:uppercase}
+.crumb span{color:var(--sub-soft)}
+.crumb .sep{margin:0 8px;color:var(--sub-soft)}
+.top .spacer{flex:1}
+.top .search{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);
+  border-radius:var(--radius);background:var(--surface);min-width:280px;transition:border-color 180ms;
+}
+.top .search:focus-within{border-color:var(--ink)}
+.top .search input{border:0;outline:0;background:transparent;flex:1;min-width:0;font-size:13px}
+.top .search kbd{font-family:var(--mono);font-size:10px;color:var(--sub);border:1px solid var(--line-soft);padding:2px 5px;border-radius:2px;letter-spacing:0.04em}
+.top .user{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 6px;border-radius:20px;transition:background 160ms}
+.top .user:hover{background:var(--line-soft)}
+.top .user .avatar{width:28px;height:28px;background:var(--ink);color:#F1EEE7;font-family:var(--mono);font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;border-radius:50%;letter-spacing:0.02em}
+.top .user .who{font-size:13px;font-weight:500}
+
+.view{padding:32px 40px 64px;max-width:1440px;width:100%}
+.view.wide{max-width:1600px}
+
+.h-view{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:32px;gap:32px;flex-wrap:wrap}
+.h-view .lead{max-width:520px}
+.h-view h1{font-size:28px;font-weight:900;letter-spacing:-0.02em;line-height:1.15;margin-bottom:8px}
+.h-view p{font-size:13px;color:var(--sub)}
+.h-view .actions{display:flex;gap:10px}
+
+.btn{display:inline-flex;align-items:center;gap:10px;font-size:13px;font-weight:600;letter-spacing:0.02em;padding:10px 16px;border:1px solid var(--line-strong);background:transparent;color:var(--ink);border-radius:var(--radius);transition:all 160ms;text-decoration:none}
+.btn:hover{border-color:var(--ink);background:var(--ink);color:var(--paper)}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.primary:hover{background:var(--accent);border-color:var(--accent)}
+.btn.ghost{border-color:transparent;color:var(--sub);padding:10px 12px}
+.btn.ghost:hover{color:var(--ink);background:var(--line-soft)}
+.btn .arrow{width:14px;height:1px;background:currentColor;position:relative}
+.btn .arrow::after{content:"";position:absolute;right:0;top:-3px;width:6px;height:6px;border-right:1px solid currentColor;border-top:1px solid currentColor;transform:rotate(45deg)}
+.btn:hover .arrow{transform:translateX(4px)}
+
+/* ---- KPI ---- */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:40px}
+.kpi{background:var(--surface);border:1px solid var(--line);padding:20px 22px;border-radius:var(--radius)}
+.kpi .l{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;color:var(--sub);text-transform:uppercase;margin-bottom:14px}
+.kpi .n{font-family:var(--mono);font-size:36px;font-weight:400;letter-spacing:-0.02em;color:var(--ink);line-height:1}
+.kpi .delta{font-family:var(--mono);font-size:11px;color:var(--sub);margin-top:10px;letter-spacing:0.02em}
+.kpi .delta.up{color:var(--success)}
+.kpi .delta.down{color:var(--error)}
+
+/* ---- cards ---- */
+.two-col{display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px 26px}
+.card > .card-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px;gap:16px}
+.card > .card-h h2{font-size:15px;font-weight:700;letter-spacing:-0.005em}
+.card > .card-h .see{font-size:11px;font-family:var(--mono);color:var(--accent);letter-spacing:0.06em;text-transform:uppercase;font-weight:500}
+.card > .card-h .see:hover{text-decoration:underline}
+
+.mtg-list{display:flex;flex-direction:column}
+.mtg{display:grid;grid-template-columns:100px 44px 1fr auto;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line-soft)}
+.mtg:last-child{border-bottom:0}
+.mtg .when{font-family:var(--mono);font-size:11px;color:var(--sub);letter-spacing:0.02em;line-height:1.5}
+.mtg .when strong{display:block;color:var(--ink);font-weight:500;font-size:13px;font-family:var(--sans);margin-bottom:2px}
+.mtg .avatar{width:36px;height:36px;border-radius:50%;background:var(--line-soft);color:var(--sub);display:flex;align-items:center;justify-content:center;font-weight:600;position:relative;border:1px solid var(--line);overflow:hidden}
+.mtg .avatar.line::after{content:"";position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;background:var(--line-green);border:2px solid var(--surface);border-radius:50%}
+.mtg .avatar img{width:100%;height:100%;object-fit:cover}
+.mtg .who{min-width:0}
+.mtg .who .name{font-size:14px;font-weight:500;color:var(--ink)}
+.mtg .who .topic{font-size:12px;color:var(--sub);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mtg .status{font-family:var(--mono);font-size:10px;letter-spacing:0.08em;padding:4px 8px;border-radius:2px;text-transform:uppercase;font-weight:500;white-space:nowrap}
+.mtg .status.scheduled{color:var(--sub);border:1px solid var(--line)}
+.mtg .status.zoom-ready{color:var(--accent);background:var(--accent-soft)}
+.mtg .status.done{color:var(--success);background:#E6F1EB}
+.mtg .status.pending{color:var(--warn);background:#FBF3E0}
+
+.action-list{display:flex;flex-direction:column;gap:0}
+.action{display:grid;grid-template-columns:auto 1fr auto;gap:14px;padding:12px 0;border-bottom:1px solid var(--line-soft);align-items:baseline}
+.action:last-child{border-bottom:0}
+.action .due{font-family:var(--mono);font-size:11px;color:var(--sub);letter-spacing:0.02em;white-space:nowrap}
+.action .due.overdue{color:var(--error);font-weight:500}
+.action .due.today{color:var(--warn);font-weight:500}
+.action .task{font-size:13px;line-height:1.5}
+.action .task .who{color:var(--sub);font-size:11px;margin-right:6px}
+.action .customer-tag{font-family:var(--mono);font-size:10px;letter-spacing:0.04em;color:var(--accent);white-space:nowrap}
+
+.minutes-strip{display:flex;flex-direction:column;gap:14px}
+.min-card{padding:14px 0;border-bottom:1px solid var(--line-soft);display:flex;flex-direction:column;gap:6px}
+.min-card:last-child{border-bottom:0}
+.min-card .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.min-card .name{font-size:13px;font-weight:500}
+.min-card .date{font-family:var(--mono);font-size:10px;color:var(--sub);letter-spacing:0.04em;white-space:nowrap}
+.min-card .sum{font-size:12px;color:var(--sub);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.min-card .link{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:0.06em;text-transform:uppercase;font-weight:500;margin-top:4px;display:inline-block}
+.min-card .link:hover{text-decoration:underline}
+
+/* ---- customers table ---- */
+.filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:20px;padding:12px 0;border-bottom:1px solid var(--line)}
+.filter-bar .search-wrap{flex:1;position:relative}
+.filter-bar input[type=search]{width:100%;background:transparent;border:0;border-bottom:1px solid transparent;padding:8px 0;outline:none;font-size:14px}
+.filter-bar input[type=search]:focus{border-bottom-color:var(--ink)}
+.filter-bar .chip{font-family:var(--sans);font-size:12px;font-weight:500;padding:6px 12px;border:1px solid var(--line);border-radius:2px;color:var(--sub);cursor:pointer;transition:all 160ms}
+.filter-bar .chip:hover{color:var(--ink);border-color:var(--ink)}
+.filter-bar .chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.filter-bar .meta{font-family:var(--mono);font-size:11px;color:var(--sub);letter-spacing:0.02em;padding-left:8px;white-space:nowrap}
+
+.cust-table{width:100%;border-collapse:collapse}
+.cust-table th{text-align:left;font-size:10px;font-weight:500;letter-spacing:0.14em;color:var(--sub);padding:12px 16px;border-bottom:1px solid var(--line);text-transform:uppercase}
+.cust-table td{padding:16px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+.cust-table tr.row{cursor:pointer;transition:background 140ms}
+.cust-table tr.row:hover{background:#F5F3EE}
+.cust-table td.name{font-weight:500}
+.cust-table td.name .cell{display:flex;gap:14px;align-items:center}
+.cust-table td.name .avatar{width:40px;height:40px;border-radius:50%;background:var(--line-soft);color:var(--sub);flex:none;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border:1px solid var(--line);font-size:14px;font-weight:600}
+.cust-table td.name .avatar img{width:100%;height:100%;object-fit:cover}
+.cust-table td.name .avatar.line::after{content:"";position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;background:var(--line-green);border:2px solid var(--surface);border-radius:50%}
+.cust-table td.name .body{min-width:0}
+.cust-table td.name .body .n{color:var(--ink)}
+.cust-table td.name .body .n-sub{color:var(--sub);font-family:var(--mono);font-size:11px;font-weight:400;margin-top:3px;letter-spacing:0.02em}
+.cust-table td.tags .tag{display:inline-block;font-size:10px;font-weight:500;letter-spacing:0.08em;padding:3px 8px;border:1px solid var(--line-strong);color:var(--ink);margin-right:6px;text-transform:uppercase}
+.cust-table td.tags .tag.warn{border-color:var(--warn);color:var(--warn)}
+.cust-table td.date{font-size:12px;color:var(--sub);white-space:nowrap}
+.cust-table td.count{text-align:right;font-family:var(--mono);font-size:14px;color:var(--sub-soft);font-weight:500}
+.cust-table td.status .badge{font-family:var(--mono);font-size:10px;letter-spacing:0.08em;padding:3px 8px;border-radius:2px;text-transform:uppercase;font-weight:500}
+.cust-table td.status .badge.active{color:var(--success);background:#E6F1EB}
+.cust-table td.status .badge.warm{color:var(--accent);background:var(--accent-soft)}
+.cust-table td.status .badge.cold{color:var(--sub);background:var(--line-soft)}
+
+/* ---- customer detail ---- */
+.detail-h{display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center;margin-bottom:32px}
+.detail-h .avatar{width:64px;height:64px;border-radius:50%;background:var(--line-soft);color:var(--sub);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;position:relative;border:1px solid var(--line);overflow:hidden}
+.detail-h .avatar img{width:100%;height:100%;object-fit:cover}
+.detail-h .avatar.line::after{content:"";position:absolute;bottom:0;right:0;width:16px;height:16px;background:var(--line-green);border:3px solid var(--surface);border-radius:50%}
+.detail-h .name-h{min-width:0}
+.detail-h h1{font-size:24px;font-weight:900;letter-spacing:-0.02em;line-height:1.2;margin-bottom:4px}
+.detail-h .mail{font-family:var(--mono);font-size:12px;color:var(--sub);letter-spacing:0.02em}
+.detail-h .actions{display:flex;gap:10px}
+
+.detail-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start}
+.pane{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px 26px;margin-bottom:20px}
+.pane h2{font-size:14px;font-weight:700;letter-spacing:-0.005em;margin-bottom:16px;display:flex;justify-content:space-between;align-items:baseline}
+.pane h2 .n{font-family:var(--mono);font-size:11px;color:var(--sub);font-weight:500;letter-spacing:0.04em}
+
+.info-grid{display:grid;grid-template-columns:120px 1fr;row-gap:14px;column-gap:20px;font-size:13px}
+.info-grid dt{color:var(--sub);font-size:11px;letter-spacing:0.06em;text-transform:uppercase;padding-top:2px}
+.info-grid dd{color:var(--ink)}
+.info-grid dd.mono{font-family:var(--mono);font-size:12px}
+.info-grid dd .tag-inline{display:inline-block;font-size:10px;font-weight:500;letter-spacing:0.08em;padding:3px 8px;border:1px solid var(--line-strong);margin-right:5px;text-transform:uppercase}
+
+.timeline{position:relative;padding-left:24px}
+.timeline::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:1px;background:var(--line)}
+.timeline .item{position:relative;padding-bottom:24px}
+.timeline .item::before{content:"";position:absolute;left:-24px;top:4px;width:11px;height:11px;background:var(--surface);border:2px solid var(--accent);border-radius:50%}
+.timeline .item.done::before{background:var(--accent);border-color:var(--accent)}
+.timeline .item .when{font-family:var(--mono);font-size:11px;color:var(--sub);letter-spacing:0.04em;margin-bottom:6px}
+.timeline .item .title{font-size:14px;font-weight:500;margin-bottom:6px}
+.timeline .item .sum{font-size:12px;color:var(--sub);line-height:1.7;margin-bottom:8px}
+.timeline .item .go{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:0.06em;text-transform:uppercase;font-weight:500}
+.timeline .item .go:hover{text-decoration:underline}
+
+.notes-editor{width:100%;min-height:120px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper);font-family:var(--sans);font-size:13px;line-height:1.7;outline:0;resize:vertical;transition:border-color 160ms}
+.notes-editor:focus{border-color:var(--ink)}
+
+/* ---- minutes detail ---- */
+.min-h{margin-bottom:28px}
+.min-h .kicker{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:0.14em;text-transform:uppercase;font-weight:500;margin-bottom:12px}
+.min-h h1{font-size:26px;font-weight:900;letter-spacing:-0.02em;line-height:1.25;margin-bottom:14px;max-width:640px}
+.min-h .meta-row{display:flex;gap:24px;font-family:var(--mono);font-size:11px;color:var(--sub);letter-spacing:0.02em;flex-wrap:wrap}
+.min-h .meta-row .cus{color:var(--ink);font-weight:500;font-family:var(--sans);font-size:13px;letter-spacing:0}
+
+.min-body{display:grid;grid-template-columns:1fr 320px;gap:32px;align-items:start;margin-top:20px}
+.summary-block{background:var(--surface);border:1px solid var(--line);padding:28px 32px;border-radius:var(--radius);margin-bottom:20px}
+.summary-block h3{font-size:11px;font-weight:500;letter-spacing:0.14em;color:var(--sub);text-transform:uppercase;margin-bottom:12px}
+.summary-block .body-txt{font-size:15px;line-height:1.9;color:var(--ink-soft);letter-spacing:0.01em}
+
+.list-block{background:var(--surface);border:1px solid var(--line);padding:24px 28px;border-radius:var(--radius);margin-bottom:20px}
+.list-block h3{font-size:11px;font-weight:500;letter-spacing:0.14em;color:var(--sub);text-transform:uppercase;margin-bottom:16px}
+.list-block ul{list-style:none}
+.list-block ul li{position:relative;padding:8px 0 8px 22px;font-size:13px;line-height:1.7;border-bottom:1px solid var(--line-soft)}
+.list-block ul li:last-child{border-bottom:0}
+.list-block ul li::before{content:"";position:absolute;left:4px;top:16px;width:6px;height:1px;background:var(--sub)}
+
+.action-block{background:var(--surface);border:1px solid var(--line);padding:24px 28px;border-radius:var(--radius);margin-bottom:20px}
+.action-block h3{font-size:11px;font-weight:500;letter-spacing:0.14em;color:var(--sub);text-transform:uppercase;margin-bottom:16px}
+.action-block .a{display:grid;grid-template-columns:auto 1fr auto;gap:16px;padding:12px 0;border-bottom:1px solid var(--line-soft);align-items:baseline}
+.action-block .a:last-child{border-bottom:0}
+.action-block .a .who{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;color:var(--sub);text-transform:uppercase;padding:4px 10px;border:1px solid var(--line);border-radius:2px;white-space:nowrap}
+.action-block .a .task{font-size:14px;line-height:1.5}
+.action-block .a .due{font-family:var(--mono);font-size:11px;color:var(--warn);letter-spacing:0.02em;white-space:nowrap}
+
+.transcript-block{background:var(--surface);border:1px solid var(--line);padding:24px 28px;border-radius:var(--radius)}
+.transcript-block details summary{cursor:pointer;font-size:11px;font-weight:500;letter-spacing:0.14em;color:var(--sub);text-transform:uppercase;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.transcript-block details summary::-webkit-details-marker{display:none}
+.transcript-block details summary::after{content:"+";font-family:var(--mono);font-size:14px;color:var(--sub)}
+.transcript-block details[open] summary::after{content:"−"}
+.transcript-block .body-txt{font-size:13px;line-height:2;color:var(--sub);font-family:var(--sans);margin-top:16px;padding-top:16px;border-top:1px solid var(--line-soft)}
+
+.side-pane{position:sticky;top:calc(var(--top-h) + 32px)}
+.mini-card{background:var(--surface);border:1px solid var(--line);padding:20px 22px;border-radius:var(--radius);margin-bottom:16px}
+.mini-card h4{font-size:11px;font-weight:500;letter-spacing:0.14em;color:var(--sub);text-transform:uppercase;margin-bottom:14px}
+.mini-card .row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;font-size:12px;border-bottom:1px solid var(--line-soft)}
+.mini-card .row:last-child{border-bottom:0}
+.mini-card .row .k{color:var(--sub)}
+.mini-card .row .v{font-family:var(--mono);color:var(--ink);font-weight:500}
+.mini-card .customer-mini{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.mini-card .customer-mini .avatar{width:40px;height:40px;border-radius:50%;background:var(--line-soft);color:var(--sub);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;position:relative;border:1px solid var(--line)}
+.mini-card .customer-mini .avatar.line::after{content:"";position:absolute;bottom:0;right:0;width:12px;height:12px;background:var(--line-green);border:2px solid var(--surface);border-radius:50%}
+.mini-card .customer-mini .body .n{font-size:14px;font-weight:500}
+.mini-card .customer-mini .body .m{font-family:var(--mono);font-size:11px;color:var(--sub)}
+
+/* ---- settings ---- */
+.setting-section{background:var(--surface);border:1px solid var(--line);padding:28px 32px;border-radius:var(--radius);margin-bottom:20px}
+.setting-section > h2{font-size:15px;font-weight:700;letter-spacing:-0.005em;margin-bottom:6px}
+.setting-section > p{font-size:12px;color:var(--sub);margin-bottom:24px;max-width:520px;line-height:1.7}
+.setting-row{display:grid;grid-template-columns:180px 1fr auto;gap:24px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line-soft)}
+.setting-row:last-child{border-bottom:0}
+.setting-row .k{font-size:12px;color:var(--sub);letter-spacing:0.06em;text-transform:uppercase;font-weight:500}
+.setting-row .v{font-size:13px}
+.setting-row .v .status{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;padding:3px 8px;border-radius:2px;font-weight:500;text-transform:uppercase;margin-right:10px}
+.setting-row .v .status.ok{background:#E6F1EB;color:var(--success)}
+.setting-row .v .status.pending{background:#FBF3E0;color:var(--warn)}
+.setting-row .v .mono{font-family:var(--mono);font-size:12px;color:var(--sub)}
+
+/* ---- view switching ---- */
+.view{display:none}
+.view.on{display:block}
+
+/* ---- responsive ---- */
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .side{position:fixed;transform:translateX(-100%);z-index:100;transition:transform 200ms;width:var(--nav-w)}
+  .side.open{transform:translateX(0)}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .two-col{grid-template-columns:1fr}
+  .detail-grid{grid-template-columns:1fr}
+  .min-body{grid-template-columns:1fr}
+  .side-pane{position:static}
+  .top .search{display:none}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+
+/* ---- SVG helper stroke width ---- */
+.ic{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="side">
+    <div class="brand">
+      <div class="mark">SK</div>
+      <div class="name">Skel Concierge<em>Skeleton, Inc.</em></div>
+    </div>
+    <ul class="nav" id="nav">
+      <li><a href="#dashboard" data-view="dashboard" class="active">
+        <svg class="ic" viewBox="0 0 24 24" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span class="lbl">ダッシュボード</span>
+      </a></li>
+      <li><a href="#customers" data-view="customers">
+        <svg class="ic" viewBox="0 0 24 24" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="lbl">顧客</span>
+        <span class="badge">24</span>
+      </a></li>
+      <li><a href="#minutes" data-view="minutes">
+        <svg class="ic" viewBox="0 0 24 24" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+        <span class="lbl">議事録</span>
+        <span class="badge">18</span>
+      </a></li>
+      <li><a href="#calendar" data-view="calendar">
+        <svg class="ic" viewBox="0 0 24 24" width="16" height="16"><rect x="3" y="4" width="18" height="18" rx="1"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span class="lbl">予定</span>
+      </a></li>
+
+      <li class="nav-group">Setup</li>
+      <li><a href="#settings" data-view="settings">
+        <svg class="ic" viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span class="lbl">設定</span>
+      </a></li>
+    </ul>
+
+    <div class="side-foot">
+      <div><span class="env">● Prototype</span> v0.3</div>
+      <div style="margin-top:4px">Tenant: Skeleton</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <div class="top">
+      <div class="crumb" id="crumb"><span>Skel Concierge</span> <span class="sep">/</span> ダッシュボード</div>
+      <div class="spacer"></div>
+      <div class="search">
+        <svg class="ic" viewBox="0 0 24 24" width="14" height="14"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" placeholder="顧客、議事録、予定を検索..." />
+        <kbd>⌘K</kbd>
+      </div>
+      <button class="user" aria-label="User menu">
+        <span class="avatar">TY</span>
+        <span class="who">Tsukasa Y.</span>
+      </button>
+    </div>
+
+    <!-- ============ DASHBOARD ============ -->
+    <section class="view on" id="v-dashboard">
+      <div class="h-view">
+        <div class="lead">
+          <h1>今週のダッシュボード</h1>
+          <p>予定・議事録・次アクションを一箇所で。今週は 4 件の面談、直近の議事録から 6 件の次アクションが発生しています。</p>
+        </div>
+        <div class="actions">
+          <a href="#customers" class="btn ghost">顧客一覧</a>
+          <a href="#" class="btn primary">新規予定を作る<span class="arrow"></span></a>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi"><div class="l">Customers</div><div class="n">24</div><div class="delta up">+3 今月</div></div>
+        <div class="kpi"><div class="l">Meetings (7d)</div><div class="n">4</div><div class="delta">先週 6</div></div>
+        <div class="kpi"><div class="l">Minutes generated</div><div class="n">18</div><div class="delta up">+2 今週</div></div>
+        <div class="kpi"><div class="l">Next actions</div><div class="n">11</div><div class="delta down">3 件期限超過</div></div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-h"><h2>今週の予定</h2><a class="see" href="#calendar">すべて →</a></div>
+          <div class="mtg-list">
+            <div class="mtg">
+              <div class="when"><strong>7/8 (火)</strong>10:00 – 10:45</div>
+              <div class="avatar line">田</div>
+              <div class="who"><div class="name">田中 太郎</div><div class="topic">相続税 試算資料 確認</div></div>
+              <span class="status zoom-ready">Zoom 発行済</span>
+            </div>
+            <div class="mtg">
+              <div class="when"><strong>7/9 (水)</strong>14:30 – 15:15</div>
+              <div class="avatar">佐</div>
+              <div class="who"><div class="name">佐藤 花子</div><div class="topic">コーチング 2回目 目標設定</div></div>
+              <span class="status scheduled">Zoom 未</span>
+            </div>
+            <div class="mtg">
+              <div class="when"><strong>7/10 (木)</strong>11:00 – 12:00</div>
+              <div class="avatar line">山</div>
+              <div class="who"><div class="name">山本 麻衣</div><div class="topic">初回相談 (問い合わせフォーム経由)</div></div>
+              <span class="status zoom-ready">Zoom 発行済</span>
+            </div>
+            <div class="mtg">
+              <div class="when"><strong>7/11 (金)</strong>16:00 – 16:30</div>
+              <div class="avatar">中</div>
+              <div class="who"><div class="name">中村 拓也</div><div class="topic">契約書レビュー 継続</div></div>
+              <span class="status scheduled">Zoom 未</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>次アクション</h2><a class="see" href="#">すべて →</a></div>
+          <div class="action-list">
+            <div class="action">
+              <div class="due overdue">−2日</div>
+              <div class="task"><span class="who">田中様</span>戸籍謄本 取り寄せ</div>
+              <div class="customer-tag">士業</div>
+            </div>
+            <div class="action">
+              <div class="due today">今日</div>
+              <div class="task"><span class="who">オーナー</span>試算資料 作成</div>
+              <div class="customer-tag">田中太郎</div>
+            </div>
+            <div class="action">
+              <div class="due">7/15</div>
+              <div class="task"><span class="who">佐藤様</span>次回テーマ 提出</div>
+              <div class="customer-tag">コーチング</div>
+            </div>
+            <div class="action">
+              <div class="due">7/16</div>
+              <div class="task"><span class="who">オーナー</span>山本様 事前資料 送付</div>
+              <div class="customer-tag">初回</div>
+            </div>
+            <div class="action">
+              <div class="due">7/20</div>
+              <div class="task"><span class="who">オーナー</span>中村様 契約書 修正案</div>
+              <div class="customer-tag">継続</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px"></div>
+
+      <div class="card">
+        <div class="card-h"><h2>直近の議事録</h2><a class="see" href="#minutes">すべて →</a></div>
+        <div class="minutes-strip">
+          <div class="min-card">
+            <div class="row"><div class="name">田中 太郎 · 相続税 試算資料 確認</div><div class="date">2026-07-04</div></div>
+            <div class="sum">田中太郎氏より相続税についての相談があった。相続手続きに必要な戸籍謄本等の取り寄せを7月15日までに実施し、7月25日にオンラインで資産資料の確認を行う予定で進めることが確認された。</div>
+            <a class="link" href="#minute-detail" onclick="showView('minute-detail');return false;">議事録を開く →</a>
+          </div>
+          <div class="min-card">
+            <div class="row"><div class="name">佐藤 花子 · コーチング 初回セッション</div><div class="date">2026-06-20</div></div>
+            <div class="sum">目標設定セッション。3ヶ月後の状態を「マネジメント初任 チームからの信頼獲得」と定義。次回まで週次で30分のリフレクション時間を確保。</div>
+            <a class="link" href="#">議事録を開く →</a>
+          </div>
+          <div class="min-card">
+            <div class="row"><div class="name">中村 拓也 · 契約書レビュー 事前打合せ</div><div class="date">2026-06-18</div></div>
+            <div class="sum">共同事業契約の草案について論点整理。競業避止・秘密保持・IP 帰属の 3項目を優先論点とし、次回までに修正版を提示することで合意。</div>
+            <a class="link" href="#">議事録を開く →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CUSTOMERS ============ -->
+    <section class="view" id="v-customers">
+      <div class="h-view">
+        <div class="lead">
+          <h1>顧客</h1>
+          <p>公式 LINE に友だち追加された顧客と、Google カレンダーの参加者から名寄せされた顧客の統合ビュー。</p>
+        </div>
+        <div class="actions">
+          <a href="#" class="btn ghost">CSV 書き出し</a>
+          <a href="#" class="btn primary">顧客を追加<span class="arrow"></span></a>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="search-wrap"><input type="search" placeholder="氏名 / メール / タグで検索..." /></div>
+        <button class="chip on">すべて</button>
+        <button class="chip">今週面談</button>
+        <button class="chip">Zoom未発行</button>
+        <button class="chip">未接触</button>
+        <span class="meta">24 件</span>
+      </div>
+
+      <table class="cust-table">
+        <thead><tr>
+          <th style="width:26%">顧客</th>
+          <th style="width:14%">タグ</th>
+          <th style="width:14%">最終面談</th>
+          <th style="width:14%">直近議事録</th>
+          <th style="width:8%;text-align:right">回数</th>
+          <th style="width:10%">状態</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+          <tr class="row" onclick="showView('customer-detail')">
+            <td class="name"><div class="cell"><div class="avatar line">田</div><div class="body"><div class="n">田中 太郎</div><div class="n-sub">tanaka.taro@example.com</div></div></div></td>
+            <td class="tags"><span class="tag">士業</span><span class="tag">顧問</span></td>
+            <td class="date">今日</td>
+            <td class="date">相続税 試算資料 確認</td>
+            <td class="count">5</td>
+            <td class="status"><span class="badge active">Active</span></td>
+            <td><a class="btn ghost" href="#" style="padding:6px 10px;font-size:11px">開く<span class="arrow"></span></a></td>
+          </tr>
+          <tr class="row">
+            <td class="name"><div class="cell"><div class="avatar line">佐</div><div class="body"><div class="n">佐藤 花子</div><div class="n-sub">sato.hanako@example.co.jp</div></div></div></td>
+            <td class="tags"><span class="tag">コーチング</span></td>
+            <td class="date">2週間前</td>
+            <td class="date">初回セッション</td>
+            <td class="count">2</td>
+            <td class="status"><span class="badge warm">Warm</span></td>
+            <td><a class="btn ghost" href="#" style="padding:6px 10px;font-size:11px">開く<span class="arrow"></span></a></td>
+          </tr>
+          <tr class="row">
+            <td class="name"><div class="cell"><div class="avatar line">山</div><div class="body"><div class="n">山本 麻衣</div><div class="n-sub">yamamoto@ideal-skin.jp</div></div></div></td>
+            <td class="tags"><span class="tag warn">未接触</span></td>
+            <td class="date">—</td>
+            <td class="date">—</td>
+            <td class="count">0</td>
+            <td class="status"><span class="badge warm">New</span></td>
+            <td><a class="btn ghost" href="#" style="padding:6px 10px;font-size:11px">開く<span class="arrow"></span></a></td>
+          </tr>
+          <tr class="row">
+            <td class="name"><div class="cell"><div class="avatar">中</div><div class="body"><div class="n">中村 拓也</div><div class="n-sub">nakamura@nakamura-law.jp</div></div></div></td>
+            <td class="tags"><span class="tag">法律</span><span class="tag">継続</span></td>
+            <td class="date">3週間前</td>
+            <td class="date">契約書レビュー 事前打合せ</td>
+            <td class="count">7</td>
+            <td class="status"><span class="badge active">Active</span></td>
+            <td><a class="btn ghost" href="#" style="padding:6px 10px;font-size:11px">開く<span class="arrow"></span></a></td>
+          </tr>
+          <tr class="row">
+            <td class="name"><div class="cell"><div class="avatar">高</div><div class="body"><div class="n">高橋 涼</div><div class="n-sub">takahashi@studio-r.co.jp</div></div></div></td>
+            <td class="tags"><span class="tag">クリエイティブ</span></td>
+            <td class="date">2ヶ月前</td>
+            <td class="date">ブランドリニューアル 検討会</td>
+            <td class="count">3</td>
+            <td class="status"><span class="badge cold">Cold</span></td>
+            <td><a class="btn ghost" href="#" style="padding:6px 10px;font-size:11px">開く<span class="arrow"></span></a></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============ CUSTOMER DETAIL ============ -->
+    <section class="view" id="v-customer-detail">
+      <div class="detail-h">
+        <div class="avatar line">田</div>
+        <div class="name-h">
+          <h1>田中 太郎</h1>
+          <div class="mail">tanaka.taro@example.com &nbsp;·&nbsp; 顧問 5ヶ月目</div>
+        </div>
+        <div class="actions">
+          <a href="#" class="btn ghost">LINE でメッセージ</a>
+          <a href="#" class="btn primary">予定を作る<span class="arrow"></span></a>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+
+        <div>
+          <div class="pane">
+            <h2>顧客カルテ<span class="n">最終更新: 2026-07-04</span></h2>
+            <dl class="info-grid">
+              <dt>タグ</dt>
+              <dd><span class="tag-inline">士業</span><span class="tag-inline">顧問</span></dd>
+              <dt>登録日</dt>
+              <dd>2026-06-14 (公式 LINE 経由)</dd>
+              <dt>連絡先</dt>
+              <dd class="mono">tanaka.taro@example.com</dd>
+              <dt>LINE 表示名</dt>
+              <dd>田中 太郎</dd>
+              <dt>メモ</dt>
+              <dd style="grid-column:2">
+                <textarea class="notes-editor">相続案件。父の相続について、7月中に必要書類を揃える。試算は保守的なシナリオで一度提示、そこから最適化。母の意向も並行で確認する必要あり。</textarea>
+              </dd>
+            </dl>
+          </div>
+
+          <div class="pane">
+            <h2>面談履歴 & 議事録<span class="n">5 件</span></h2>
+            <div class="timeline">
+              <div class="item">
+                <div class="when">2026-07-04 · 45分</div>
+                <div class="title">相続税 試算資料 確認</div>
+                <div class="sum">相続手続きに必要な戸籍謄本等の取り寄せを 7/15 までに実施、7/25 にオンラインで資産資料の確認を行うことが確認された。</div>
+                <a class="go" href="#" onclick="showView('minute-detail');return false;">議事録を開く →</a>
+              </div>
+              <div class="item done">
+                <div class="when">2026-06-20 · 60分</div>
+                <div class="title">相続 初回相談</div>
+                <div class="sum">相続構成メンバーの確認、財産概要ヒアリング、次回までに戸籍・通帳の準備を依頼。</div>
+                <a class="go" href="#">議事録を開く →</a>
+              </div>
+              <div class="item done">
+                <div class="when">2026-06-05 · 30分</div>
+                <div class="title">紹介経由 顔合わせ</div>
+                <div class="sum">紹介元との関係性と、相談範囲のスコーピング。</div>
+                <a class="go" href="#">議事録を開く →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="side-pane">
+          <div class="mini-card">
+            <h4>統計</h4>
+            <div class="row"><span class="k">面談回数</span><span class="v">5 回</span></div>
+            <div class="row"><span class="k">合計時間</span><span class="v">3h 45m</span></div>
+            <div class="row"><span class="k">議事録</span><span class="v">3 件</span></div>
+            <div class="row"><span class="k">次回予定</span><span class="v">7/8 (火)</span></div>
+          </div>
+
+          <div class="mini-card">
+            <h4>次アクション</h4>
+            <div class="row"><span class="k">田中様</span><span class="v" style="color:var(--error)">戸籍謄本 −2日</span></div>
+            <div class="row"><span class="k">オーナー</span><span class="v" style="color:var(--warn)">試算資料 今日</span></div>
+            <div class="row"><span class="k">田中様</span><span class="v">親の意向確認 7/20</span></div>
+          </div>
+
+          <div class="mini-card">
+            <h4>LINE ステータス</h4>
+            <div class="customer-mini">
+              <div class="avatar line">田</div>
+              <div class="body"><div class="n">田中 太郎</div><div class="m">連携済 · 2026-06-14</div></div>
+            </div>
+            <div class="row"><span class="k">直近配信</span><span class="v">Zoom URL · 今日</span></div>
+            <div class="row"><span class="k">既読</span><span class="v">1分後</span></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ MINUTE DETAIL ============ -->
+    <section class="view" id="v-minute-detail">
+      <div class="min-h">
+        <div class="kicker">議事録 · 自動生成</div>
+        <h1>相続税 試算資料 確認</h1>
+        <div class="meta-row">
+          <span>2026-07-04</span>
+          <span>15:00 – 15:45 (45分)</span>
+          <span class="cus">田中 太郎</span>
+          <span>Claude Haiku 4.5 · Whisper medium</span>
+        </div>
+      </div>
+
+      <div class="min-body">
+        <div>
+          <div class="summary-block">
+            <h3>サマリ</h3>
+            <p class="body-txt">田中太郎氏より相続税についての相談があった。相続手続きに必要な戸籍謄本等の取り寄せを 7月15日までに実施し、7月25日にオンラインで資産資料の確認を行う予定で進めることが確認された。</p>
+          </div>
+
+          <div class="list-block">
+            <h3>主要トピック</h3>
+            <ul>
+              <li>相続税の相談</li>
+              <li>戸籍謄本等の取り寄せ</li>
+              <li>資産資料の確認</li>
+            </ul>
+          </div>
+
+          <div class="list-block">
+            <h3>決定事項</h3>
+            <ul>
+              <li>戸籍謄本等を 7月15日までに取り寄せる</li>
+              <li>7月25日にオンラインで資産資料を確認する</li>
+            </ul>
+          </div>
+
+          <div class="action-block">
+            <h3>次アクション</h3>
+            <div class="a"><span class="who">田中様</span><span class="task">戸籍謄本等を取り寄せる</span><span class="due">〜 2026-07-15</span></div>
+            <div class="a"><span class="who">双方</span><span class="task">資産資料の確認 (オンライン)</span><span class="due">〜 2026-07-25</span></div>
+          </div>
+
+          <div class="transcript-block">
+            <details>
+              <summary>書き起こし全文 <span style="font-family:var(--mono);color:var(--sub);letter-spacing:0.02em">101 文字</span></summary>
+              <p class="body-txt">こんにちは、田中太郎です。本日は相続税について相談させてください。父の相続について、まず戸籍謄本を7月15日までに取り寄せます。次回は7月25日にオンラインで、試算資料を確認したいです。よろしくお願いします。</p>
+            </details>
+          </div>
+        </div>
+
+        <aside class="side-pane">
+          <div class="mini-card">
+            <h4>顧客</h4>
+            <div class="customer-mini">
+              <div class="avatar line">田</div>
+              <div class="body"><div class="n">田中 太郎</div><div class="m">tanaka.taro@example.com</div></div>
+            </div>
+            <div class="row"><span class="k">通算面談</span><span class="v">5 回</span></div>
+            <div class="row"><span class="k">初回登録</span><span class="v">2026-06-14</span></div>
+          </div>
+
+          <div class="mini-card">
+            <h4>共有</h4>
+            <div class="row"><span class="k">田中様に LINE 送付</span><a class="v" href="#" style="color:var(--accent)">送る →</a></div>
+            <div class="row"><span class="k">Markdown 書き出し</span><a class="v" href="#" style="color:var(--accent)">DL →</a></div>
+            <div class="row"><span class="k">PDF 書き出し</span><a class="v" href="#" style="color:var(--accent)">DL →</a></div>
+          </div>
+
+          <div class="mini-card">
+            <h4>元データ</h4>
+            <div class="row"><span class="k">Zoom Meeting</span><span class="v">86367985041</span></div>
+            <div class="row"><span class="k">録画</span><span class="v">m4a · 20s (sample)</span></div>
+            <div class="row"><span class="k">生成にかかった時間</span><span class="v">7s</span></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============ CALENDAR ============ -->
+    <section class="view" id="v-calendar">
+      <div class="h-view">
+        <div class="lead">
+          <h1>予定</h1>
+          <p>Google カレンダーの「Zoom自動発行」カレンダーと同期しています。予定を作成すると 5 分以内に Zoom URL が発行され、参加者の LINE に届きます。</p>
+        </div>
+        <div class="actions">
+          <a href="#" class="btn ghost">カレンダーを開く</a>
+          <a href="#" class="btn primary">新規予定<span class="arrow"></span></a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>今後 7 日</h2><span style="font-family:var(--mono);font-size:11px;color:var(--sub);letter-spacing:0.02em">4 件</span></div>
+        <div class="mtg-list">
+          <div class="mtg">
+            <div class="when"><strong>7/8 (火)</strong>10:00 – 10:45</div>
+            <div class="avatar line">田</div>
+            <div class="who"><div class="name">田中 太郎</div><div class="topic">相続税 試算資料 確認</div></div>
+            <span class="status zoom-ready">Zoom 発行済</span>
+          </div>
+          <div class="mtg">
+            <div class="when"><strong>7/9 (水)</strong>14:30 – 15:15</div>
+            <div class="avatar">佐</div>
+            <div class="who"><div class="name">佐藤 花子</div><div class="topic">コーチング 2回目 目標設定</div></div>
+            <span class="status pending">Zoom 発行待ち</span>
+          </div>
+          <div class="mtg">
+            <div class="when"><strong>7/10 (木)</strong>11:00 – 12:00</div>
+            <div class="avatar line">山</div>
+            <div class="who"><div class="name">山本 麻衣</div><div class="topic">初回相談 (問い合わせフォーム経由)</div></div>
+            <span class="status zoom-ready">Zoom 発行済</span>
+          </div>
+          <div class="mtg">
+            <div class="when"><strong>7/11 (金)</strong>16:00 – 16:30</div>
+            <div class="avatar">中</div>
+            <div class="who"><div class="name">中村 拓也</div><div class="topic">契約書レビュー 継続</div></div>
+            <span class="status scheduled">未同期</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section class="view" id="v-settings">
+      <div class="h-view">
+        <div class="lead">
+          <h1>設定</h1>
+          <p>Skel Concierge を動かすための外部サービス連携。すべて Skeleton 側で管理し、顧客側で必要な作業はありません。</p>
+        </div>
+      </div>
+
+      <div class="setting-section">
+        <h2>公式 LINE</h2>
+        <p>顧客が友だち追加すると自動で登録画面が届き、氏名とメールを入力すると顧客一覧に追加されます。</p>
+        <div class="setting-row">
+          <div class="k">Channel Access Token</div>
+          <div class="v"><span class="status pending">Pending</span><span class="mono">未設定 (オーナー入力待ち)</span></div>
+          <a class="btn" href="#">貼り付け</a>
+        </div>
+        <div class="setting-row">
+          <div class="k">Channel Secret</div>
+          <div class="v"><span class="status pending">Pending</span><span class="mono">未設定</span></div>
+          <a class="btn" href="#">貼り付け</a>
+        </div>
+        <div class="setting-row">
+          <div class="k">Webhook URL</div>
+          <div class="v"><span class="mono">https://…/webhook (Token 貼付後に発行)</span></div>
+          <a class="btn ghost" href="#">コピー</a>
+        </div>
+        <div class="setting-row">
+          <div class="k">LIFF ID</div>
+          <div class="v"><span class="mono">Token 貼付後に自動発行</span></div>
+        </div>
+      </div>
+
+      <div class="setting-section">
+        <h2>Zoom</h2>
+        <p>Skeleton の Server-to-Server OAuth で会議を発行します。顧客側で Zoom アカウントは不要です。</p>
+        <div class="setting-row">
+          <div class="k">Account ID</div>
+          <div class="v"><span class="status ok">Connected</span><span class="mono">…jHqK (Jobs Hotkey と共通)</span></div>
+          <a class="btn ghost" href="#">切り替え</a>
+        </div>
+        <div class="setting-row">
+          <div class="k">録画</div>
+          <div class="v">Cloud Recording · 議事録生成に利用</div>
+          <a class="btn ghost" href="#">確認</a>
+        </div>
+      </div>
+
+      <div class="setting-section">
+        <h2>Google カレンダー</h2>
+        <p>「Zoom自動発行」カレンダーを 5 分間隔で監視し、参加者リストと突き合わせて配信します。</p>
+        <div class="setting-row">
+          <div class="k">カレンダー</div>
+          <div class="v"><span class="status ok">Connected</span><span class="mono">Zoom自動発行 (d4d6b65f…)</span></div>
+          <a class="btn ghost" href="#">切り替え</a>
+        </div>
+        <div class="setting-row">
+          <div class="k">Service Account</div>
+          <div class="v"><span class="mono">pricer-sa@skeleton-pricer-130118</span></div>
+        </div>
+        <div class="setting-row">
+          <div class="k">監視間隔</div>
+          <div class="v">5 分 (LaunchAgent com.skeleton.zoom-line-bridge)</div>
+          <a class="btn ghost" href="#">ログ</a>
+        </div>
+      </div>
+
+      <div class="setting-section">
+        <h2>議事録エンジン</h2>
+        <p>録画音声を Whisper で書き起こし、Claude で要点抽出。会議 1 件あたり約 ¥60 (60 分基準)。</p>
+        <div class="setting-row">
+          <div class="k">書き起こし</div>
+          <div class="v"><span class="status ok">Ready</span><span class="mono">whisper-cpp · ggml-medium (ja)</span></div>
+          <a class="btn ghost" href="#">切り替え</a>
+        </div>
+        <div class="setting-row">
+          <div class="k">要約 LLM</div>
+          <div class="v"><span class="status ok">Ready</span><span class="mono">claude-haiku-4-5-20251001</span></div>
+          <a class="btn ghost" href="#">切り替え</a>
+        </div>
+        <div class="setting-row">
+          <div class="k">Zoom 録画ディレクトリ</div>
+          <div class="v"><span class="mono">~/Documents/Zoom</span></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+const views = ['dashboard','customers','customer-detail','minute-detail','calendar','settings'];
+const crumbs = {
+  'dashboard': 'ダッシュボード',
+  'customers': '顧客',
+  'customer-detail': '顧客 <span class="sep">/</span> 田中 太郎',
+  'minute-detail': '議事録 <span class="sep">/</span> 相続税 試算資料 確認',
+  'calendar': '予定',
+  'settings': '設定',
+};
+
+function showView(name){
+  views.forEach(v => document.getElementById('v-' + v).classList.remove('on'));
+  document.getElementById('v-' + name).classList.add('on');
+  document.querySelectorAll('.side .nav a').forEach(a => a.classList.remove('active'));
+  const activeNav = document.querySelector(`.side .nav a[data-view="${name}"]`) || document.querySelector(`.side .nav a[data-view="${name.split('-')[0]}"]`);
+  activeNav && activeNav.classList.add('active');
+  document.getElementById('crumb').innerHTML = `<span>Skel Concierge</span> <span class="sep">/</span> ${crumbs[name] || name}`;
+  window.scrollTo({top:0, behavior:'instant'});
+}
+window.showView = showView;
+
+document.querySelectorAll('.side .nav a').forEach(a => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    showView(a.dataset.view);
+    history.replaceState(null, '', '#' + a.dataset.view);
+  });
+});
+
+// hash routing
+const initial = (location.hash || '#dashboard').slice(1);
+if (views.includes(initial)) showView(initial);
+</script>
+</body>
+</html>
