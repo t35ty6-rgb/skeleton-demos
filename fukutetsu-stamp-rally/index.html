@@ -606,7 +606,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
       </div>
       <div class="hd-catch-line">
         <span>Fukubu Line</span>
-        <span>20.9 km · 10 spots</span>
+        <span>3 chapters · 10 spots</span>
       </div>
     </div>
   </div>
@@ -633,8 +633,8 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
       <div id="here-card"></div>
 
       <div class="st">
-        <h3>10スポット一覧</h3>
-        <span class="k">Distance sorted</span>
+        <h3>3章 · 10スポット</h3>
+        <span class="k">By chapter</span>
       </div>
       <div class="spot-list" id="spot-list"></div>
     </div>
@@ -761,9 +761,18 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
       <div class="r"><span class="k">Coord</span><span class="v" id="fx-coord"></span></div>
       <div class="r"><span class="k">Time</span><span class="v" id="fx-time"></span></div>
       <div class="r"><span class="k">Serial</span><span class="v" id="fx-serial"></span></div>
+      <div class="story" id="fx-story"></div>
     </div>
     <div class="tap">Tap to close</div>
   </div>
+</div>
+
+<!-- 章完成 cheer -->
+<div class="chapter-cheer" id="chapter-cheer" role="status" aria-live="polite">
+  <div class="num" id="chapter-cheer-num">壱</div>
+  <div class="lbl">CHAPTER · COMPLETE</div>
+  <h4 id="chapter-cheer-title">越前 制覇</h4>
+  <p id="chapter-cheer-body">紙 と 菊 と ドーム が 揃った。 次は 「鯖江」 へ。</p>
 </div>
 
 <!-- spot detail sheet -->
@@ -1008,17 +1017,23 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 <script>
 // ─────────── data ───────────
 const SPOTS = [
-  { code:"SP-01", name:"越前和紙の里",             station:"たけふ新",       img:"photos/01_echizen_washi.webp",   lat:35.9262, lng:136.1675, coord:"35°55'34\"N 136°10'02\"E", desc:"1500年前、 ここで 紙 が 始まった。 手漉きの音、 楮の香り、 職人の背中 が 今も工房に残る。" },
-  { code:"SP-02", name:"サンドーム福井",           station:"サンドーム西",   img:"photos/02_sundome_fukui.webp",   lat:35.9700, lng:136.2124, coord:"35°58'12\"N 136°12'44\"E", desc:"県内最大 のドーム。 音楽ライブが響き、 産業展示 が並び、 県民が集う 一日。" },
-  { code:"SP-03", name:"武生中央公園",             station:"たけふ新",       img:"photos/03_takefu_chuo_park.webp",lat:35.9061, lng:136.1778, coord:"35°54'22\"N 136°10'40\"E", desc:"秋の菊人形、 かこさとし絵本館。 子どもも大人も、 半日 遊べる 家族の 拠点。" },
-  { code:"SP-04", name:"西山公園",                 station:"西鯖江",         img:"photos/04_nishiyama_park.webp",  lat:35.9533, lng:136.1830, coord:"35°57'12\"N 136°10'59\"E", desc:"春、 ツツジ5万本 が一斉に咲く。 レッサーパンダが 昼寝する 鯖江市西山動物園、 日本トップクラス の 飼育数。" },
-  { code:"SP-05", name:"めがねミュージアム",       station:"神明",           img:"photos/05_megane_museum.webp",   lat:35.9461, lng:136.1836, coord:"35°56'46\"N 136°11'01\"E", desc:"鯖江眼鏡 の 全て が ここに。 工房で 手作り体験、 ミュージアムショップで 掘り出し物 を 探す。" },
-  { code:"SP-06", name:"福井城址",                 station:"福井城址大名町", img:"photos/06_fukui_castle.webp",    lat:36.0665, lng:136.2223, coord:"36°03'59\"N 136°13'20\"E", desc:"結城秀康 の 石垣 と 堀。 本丸跡 が 県庁 になった 全国的にも 珍しい 城郭。 御廊下橋 の 朱 が 映える。" },
-  { code:"SP-07", name:"養浩館庭園",               station:"仁愛女子高校",   img:"photos/07_yokokan_garden.webp",  lat:36.0717, lng:136.2231, coord:"36°04'18\"N 136°13'23\"E", desc:"福井藩主 松平家 の 別邸。 池泉回遊式庭園、 数寄屋建築、 苔庭 が 時間 を 忘れさせる。" },
-  { code:"SP-08", name:"足羽神社",                 station:"福井駅",         img:"photos/08_asuwa_shrine.webp",    lat:36.0589, lng:136.2220, coord:"36°03'32\"N 136°13'19\"E", desc:"継体天皇 ゆかり の 古社。 春 の 桜、 山頂 からの 福井市街 の 眺望 が 絶景。" },
-  { code:"SP-09", name:"福井駅前 恐竜モニュメント", station:"福井駅",         img:"photos/09_fukui_dinosaur.webp",  lat:36.0616, lng:136.2227, coord:"36°03'42\"N 136°13'22\"E", desc:"実寸大 の 恐竜 3体。 福井駅 に 降りた 瞬間 の インパクト、 SNS拡散 の 定番スポット。" },
-  { code:"SP-10", name:"田原町 商店街",            station:"田原町",         img:"photos/10_tawaramachi.webp",     lat:36.0778, lng:136.2228, coord:"36°04'40\"N 136°13'22\"E", desc:"福武線 終点、 えち鉄接続。 昭和レトロ商店街 と 若手店舗 が 混在する 面白いエリア、 一日 の 締めくくり に。" },
+  { code:"SP-01", name:"越前和紙の里",             station:"たけふ新",       img:"photos/01_echizen_washi.webp",   lat:35.9262, lng:136.1675, coord:"35°55'34\"N 136°10'02\"E", chapter:"I",   desc:"1500年前、 ここで 紙 が 始まった。 手漉きの音、 楮の香り、 職人の背中 が 今も工房に残る。",              story:"1500年前 の 手漉きの 音 が 聞こえた。 楮 の 香り、 職人 の 背中。" },
+  { code:"SP-02", name:"サンドーム福井",           station:"サンドーム西",   img:"photos/02_sundome_fukui.webp",   lat:35.9700, lng:136.2124, coord:"35°58'12\"N 136°12'44\"E", chapter:"I",   desc:"県内最大 のドーム。 音楽ライブが響き、 産業展示 が並び、 県民が集う 一日。",                                 story:"ドーム の 屋根 の下、  今日 も 誰か の 一日 が 始まる。" },
+  { code:"SP-03", name:"武生中央公園",             station:"たけふ新",       img:"photos/03_takefu_chuo_park.webp",lat:35.9061, lng:136.1778, coord:"35°54'22\"N 136°10'40\"E", chapter:"I",   desc:"秋の菊人形、 かこさとし絵本館。 子どもも大人も、 半日 遊べる 家族の 拠点。",                                story:"かこさとし の 絵本 の 中 の 世界 が、 目の前 に 広がった。" },
+  { code:"SP-04", name:"西山公園",                 station:"西鯖江",         img:"photos/04_nishiyama_park.webp",  lat:35.9533, lng:136.1830, coord:"35°57'12\"N 136°10'59\"E", chapter:"II",  desc:"春、 ツツジ5万本 が一斉に咲く。 レッサーパンダが 昼寝する 鯖江市西山動物園、 日本トップクラス の 飼育数。", story:"ツツジ の 桃色、 青空。 レッサーパンダ が 昼寝 を している。" },
+  { code:"SP-05", name:"めがねミュージアム",       station:"神明",           img:"photos/05_megane_museum.webp",   lat:35.9461, lng:136.1836, coord:"35°56'46\"N 136°11'01\"E", chapter:"II",  desc:"鯖江眼鏡 の 全て が ここに。 工房で 手作り体験、 ミュージアムショップで 掘り出し物 を 探す。",                story:"職人 の 指先 が、 一本 の フレーム を 磨いている。" },
+  { code:"SP-06", name:"福井城址",                 station:"福井城址大名町", img:"photos/06_fukui_castle.webp",    lat:36.0665, lng:136.2223, coord:"36°03'59\"N 136°13'20\"E", chapter:"III", desc:"結城秀康 の 石垣 と 堀。 本丸跡 が 県庁 になった 全国的にも 珍しい 城郭。 御廊下橋 の 朱 が 映える。",     story:"結城秀康 の 石垣 に 触れる。 御廊下橋 の 朱 が 映える。" },
+  { code:"SP-07", name:"養浩館庭園",               station:"仁愛女子高校",   img:"photos/07_yokokan_garden.webp",  lat:36.0717, lng:136.2231, coord:"36°04'18\"N 136°13'23\"E", chapter:"III", desc:"福井藩主 松平家 の 別邸。 池泉回遊式庭園、 数寄屋建築、 苔庭 が 時間 を 忘れさせる。",                        story:"苔 と 数寄屋、  藩主 の 別邸。 時間 が ゆっくり と 流れる。" },
+  { code:"SP-08", name:"足羽神社",                 station:"福井駅",         img:"photos/08_asuwa_shrine.webp",    lat:36.0589, lng:136.2220, coord:"36°03'32\"N 136°13'19\"E", chapter:"III", desc:"継体天皇 ゆかり の 古社。 春 の 桜、 山頂 からの 福井市街 の 眺望 が 絶景。",                                story:"継体天皇 の 古社、 山頂 の 桜。 街 を 見下ろす。" },
+  { code:"SP-09", name:"福井駅前 恐竜モニュメント", station:"福井駅",         img:"photos/09_fukui_dinosaur.webp",  lat:36.0616, lng:136.2227, coord:"36°03'42\"N 136°13'22\"E", chapter:"III", desc:"実寸大 の 恐竜 3体。 福井駅 に 降りた 瞬間 の インパクト、 SNS拡散 の 定番スポット。",                       story:"駅 に 降りた 瞬間、 恐竜 3体 が 迎えてくれた。 福井 の 顔。" },
+  { code:"SP-10", name:"田原町 商店街",            station:"田原町",         img:"photos/10_tawaramachi.webp",     lat:36.0778, lng:136.2228, coord:"36°04'40\"N 136°13'22\"E", chapter:"III", desc:"福武線 終点、 えち鉄接続。 昭和レトロ商店街 と 若手店舗 が 混在する 面白いエリア、 一日 の 締めくくり に。", story:"福武線 の 終着駅。 昭和 と 新しい 店 が 交差する、  一日 の 終わり。" },
 ];
+
+const CHAPTERS = {
+  "I":   { num: "壱", title: "越前", subtitle: "紙 と 菊 と ドーム",         count: 3 },
+  "II":  { num: "弐", title: "鯖江", subtitle: "ツツジ と 眼鏡 の 街",       count: 2 },
+  "III": { num: "参", title: "福井", subtitle: "城下町 の 終着駅",           count: 5 },
+};
 const RADIUS_M = 150;
 const LS_STAMPS = "ftr01_stamps_v3";
 const LS_USER = "ftr01_user_v3";
@@ -1294,45 +1309,70 @@ function renderHereCard(){
 
 function renderSpotList(){
   const el = document.getElementById("spot-list");
-  // 初回のみ全ボタン作成 (以降はDOM再利用で画像flicker回避)
+  // 初回のみ全カード生成 (章ヘッダ + spot-item を 章別に)
   if (!el.dataset.initialized){
     el.dataset.initialized = "1";
-    SPOTS.forEach(s => {
-      const b = document.createElement("button");
-      b.dataset.code = s.code;
-      b.innerHTML = `
-        <div class="im"><img src="${s.img}" alt="${s.name}" loading="lazy" decoding="async"></div>
-        <div class="bd">
-          <div class="co">${s.code} · 最寄 ${s.station}駅</div>
-          <div class="nm">${s.name}</div>
-          <div class="see">${s.desc || ""}</div>
-          <div class="st"></div>
-          <div class="dist"></div>
-          <span class="chev" aria-hidden="true">›</span>
+    const chapters = Object.keys(CHAPTERS);
+    chapters.forEach(ch => {
+      const chData = CHAPTERS[ch];
+      const chapSpots = SPOTS.filter(s => s.chapter === ch);
+      const head = document.createElement("div");
+      head.className = "chapter-head";
+      head.dataset.chapter = ch;
+      head.innerHTML = `
+        <div class="chapter-num">${chData.num}</div>
+        <div class="chapter-body">
+          <h4>${chData.title}</h4>
+          <div class="sub">${chData.subtitle}</div>
         </div>
+        <div class="chapter-progress" data-ch-progress="${ch}"><span class="l">0 /</span> ${chData.count}</div>
       `;
-      b.addEventListener("click", () => {
-        const cur = SPOTS.find(x => x.code === b.dataset.code);
-        if (cur) openSpotSheet(cur);
+      el.appendChild(head);
+      chapSpots.forEach(s => {
+        const b = document.createElement("button");
+        b.dataset.code = s.code;
+        b.className = "spot-item";
+        b.innerHTML = `
+          <div class="im"><img src="${s.img}" alt="${s.name}" loading="lazy" decoding="async"></div>
+          <div class="bd">
+            <div class="co">${s.code} · 最寄 ${s.station}駅</div>
+            <div class="nm">${s.name}</div>
+            <div class="see">${s.desc || ""}</div>
+            <div class="st"></div>
+            <div class="dist"></div>
+            <span class="chev" aria-hidden="true">›</span>
+          </div>
+        `;
+        b.addEventListener("click", () => {
+          const cur = SPOTS.find(x => x.code === b.dataset.code);
+          if (cur) openSpotSheet(cur);
+        });
+        el.appendChild(b);
       });
-      el.appendChild(b);
     });
   }
-  const withDist = SPOTS.map(s => ({...s, d: distToSpot(s)}));
-  withDist.sort((a,b) => {
-    if (a.d === null && b.d === null) return 0;
-    if (a.d === null) return 1;
-    if (b.d === null) return -1;
-    return a.d - b.d;
+  // 章 進行度を 更新
+  Object.keys(CHAPTERS).forEach(ch => {
+    const chData = CHAPTERS[ch];
+    const done = collected.filter(c => {
+      const s = SPOTS.find(x => x.code === c.code);
+      return s && s.chapter === ch;
+    }).length;
+    const p = el.querySelector(`[data-ch-progress="${ch}"]`);
+    if (p){
+      const isDone = done === chData.count;
+      p.classList.toggle("done", isDone);
+      p.innerHTML = isDone ? `✓ 制覇` : `<span class="l">${done} /</span> ${chData.count}`;
+    }
   });
-  // 順序変更 + 状態更新
-  withDist.forEach((s, idx) => {
+  // 章順のまま · 状態のみ 更新 (章別グルーピング では 距離ソート しない)
+  SPOTS.forEach(s => {
     const btn = el.querySelector(`[data-code="${s.code}"]`);
     if (!btn) return;
-    if (el.children[idx] !== btn) el.insertBefore(btn, el.children[idx] || null);
+    const d = distToSpot(s);
     const done = collected.some(c => c.code === s.code);
-    const here = !done && s.d !== null && s.d <= RADIUS_M;
-    const distStr = s.d === null ? "距離不明" : (s.d < 1000 ? `${Math.round(s.d)}m` : `${(s.d/1000).toFixed(1)}km`);
+    const here = !done && d !== null && d <= RADIUS_M;
+    const distStr = d === null ? "" : (d < 1000 ? `${Math.round(d)}m` : `${(d/1000).toFixed(1)}km`);
     const nextClass = "spot-item" + (done?" done":"") + (here?" here":"");
     if (btn.className !== nextClass) btn.className = nextClass;
     const stEl = btn.querySelector(".st");
@@ -1454,6 +1494,17 @@ async function doStamp(spot){
   }
 
   // flash
+  // 章 完成 検知
+  const chap = spot.chapter;
+  if (chap){
+    const doneInChap = collected.filter(c => {
+      const s = SPOTS.find(x => x.code === c.code);
+      return s && s.chapter === chap;
+    }).length;
+    if (CHAPTERS[chap] && doneInChap === CHAPTERS[chap].count){
+      setTimeout(() => showChapterCheer(chap), 2600);
+    }
+  }
   const flash = document.getElementById("flash");
   document.getElementById("fx-img").src = spot.img;
   document.getElementById("fx-img").alt = spot.name;
@@ -1463,6 +1514,7 @@ async function doStamp(spot){
   document.getElementById("fx-coord").textContent = spot.coord;
   document.getElementById("fx-time").textContent = time;
   document.getElementById("fx-serial").textContent = `${serial} / 3000`;
+  document.getElementById("fx-story").textContent = spot.story || "";
   flash.classList.add("on");
   setTimeout(()=>{
     if (flash.classList.contains("on")){
@@ -1477,6 +1529,21 @@ document.getElementById("flash").addEventListener("click", ()=>{
   document.getElementById("flash").classList.remove("on");
   render();
 });
+
+// ─────────── 章 完成 cheer ───────────
+function showChapterCheer(chap){
+  const c = CHAPTERS[chap];
+  if (!c) return;
+  document.getElementById("chapter-cheer-num").textContent = c.num;
+  document.getElementById("chapter-cheer-title").textContent = `${c.title} 制覇`;
+  const nextChap = chap === "I" ? "II" : (chap === "II" ? "III" : null);
+  const nextText = nextChap ? `次は 「${CHAPTERS[nextChap].title}」 へ。` : "3章 すべて 完成 · コンプリート達成。";
+  document.getElementById("chapter-cheer-body").textContent = `${c.subtitle}。 ${nextText}`;
+  const el = document.getElementById("chapter-cheer");
+  el.classList.add("on");
+  try { if ("vibrate" in navigator) navigator.vibrate([80, 40, 80, 40, 200]); } catch(e){}
+  setTimeout(() => el.classList.remove("on"), 3600);
+}
 
 // ─────────── tabs ───────────
 function switchTab(tab){
