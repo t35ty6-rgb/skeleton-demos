@@ -341,6 +341,28 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 .spot-item .st{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--dim);letter-spacing:.06em}
 .spot-item .dist{position:absolute;bottom:8px;right:24px;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);letter-spacing:.04em}
 .spot-item .chev{position:absolute;top:50%;right:10px;transform:translateY(-50%);font-family:"JetBrains Mono",monospace;font-size:18px;color:var(--dim);font-weight:700;transition:transform .2s,color .2s;line-height:1}
+
+/* ─── 章立て ヘッダ (物語り) ─── */
+.chapter-head{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:16px 4px 10px;margin:20px 0 8px;border-bottom:1.5px solid var(--ink);position:relative}
+.chapter-head:first-of-type{margin-top:6px}
+.chapter-num{width:44px;height:44px;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-family:"Noto Sans JP",sans-serif;font-size:22px;font-weight:900;line-height:1;letter-spacing:-.02em}
+.chapter-body h4{margin:0 0 3px;font-size:16px;font-weight:900;letter-spacing:-.01em;color:var(--ink);line-height:1.15}
+.chapter-body .sub{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--dim);letter-spacing:.06em;line-height:1.35;font-weight:600}
+.chapter-progress{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--red);letter-spacing:.06em;font-weight:900;text-align:right;line-height:1.35;white-space:nowrap}
+.chapter-progress.done{color:var(--green)}
+.chapter-progress .l{color:var(--dim);font-weight:500}
+
+/* 章完成 ステージ */
+.chapter-cheer{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.85);background:var(--paper);border:2.5px solid var(--ink);padding:20px 32px 22px;text-align:center;z-index:225;opacity:0;pointer-events:none;transition:transform .5s cubic-bezier(.2,.9,.2,1),opacity .4s;max-width:320px;box-shadow:0 20px 40px -12px oklch(0 0 0 / .3)}
+.chapter-cheer.on{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
+.chapter-cheer .num{font-size:32px;font-weight:900;color:var(--red);letter-spacing:-.02em;line-height:1;font-family:"Noto Sans JP",sans-serif}
+.chapter-cheer .lbl{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--dim);letter-spacing:.24em;text-transform:uppercase;margin-top:4px}
+.chapter-cheer h4{margin:12px 0 6px;font-size:20px;font-weight:900;letter-spacing:-.015em;color:var(--ink)}
+.chapter-cheer p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.7;letter-spacing:.01em}
+
+/* 硬券 flash に narrative 追加 */
+.ticket .story{margin-top:14px;padding-top:12px;border-top:1.5px dashed color-mix(in oklch,var(--ink) 30%,transparent);font-family:"Noto Sans JP",sans-serif;font-size:12px;color:var(--ink);line-height:1.7;letter-spacing:.005em;font-weight:500;text-align:center}
+.ticket .story::before{content:"あなたの一節";display:block;font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--dim);letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px;font-weight:700}
 .spot-item:hover .chev{color:var(--ink);transform:translateY(-50%) translateX(2px)}
 .spot-item.here .dist{color:var(--green);font-weight:700}
 .spot-item.done .dist{color:var(--green)}
@@ -634,7 +656,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 
       <div class="st">
         <h3>10スポット一覧</h3>
-        <span class="k">Distance sorted</span>
+        <span class="k">3 chapters · 10 spots</span>
       </div>
       <div class="spot-list" id="spot-list"></div>
     </div>
@@ -742,6 +764,14 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 
 </div>
 
+<!-- 章完成 cheer -->
+<div class="chapter-cheer" id="chapter-cheer" role="status" aria-live="polite">
+  <div class="num" id="chapter-cheer-num">壱</div>
+  <div class="lbl">CHAPTER · COMPLETE</div>
+  <h4 id="chapter-cheer-title">城郭 制覇</h4>
+  <p id="chapter-cheer-body">天空の城 と 麓 の 硬券 が 揃った。 次は 城下町 へ。</p>
+</div>
+
 <!-- toast -->
 <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
   <span class="k" id="toast-k">STAMPED</span>
@@ -761,6 +791,7 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
       <div class="r"><span class="k">Coord</span><span class="v" id="fx-coord"></span></div>
       <div class="r"><span class="k">Time</span><span class="v" id="fx-time"></span></div>
       <div class="r"><span class="k">Serial</span><span class="v" id="fx-serial"></span></div>
+      <div class="story" id="fx-story"></div>
     </div>
     <div class="tap">Tap to close</div>
   </div>
@@ -1012,17 +1043,23 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 <script>
 // ─────────── data ───────────
 const SPOTS = [
-  { code:"SP-01", name:"越前大野城",        station:"亀山",     img:"photos/01_ono_castle.webp",     lat:35.9789, lng:136.4864, coord:"35°58'44\"N 136°29'11\"E", desc:"天空の城。 雲海 に 浮かぶ 姿 は 秋から春 の 早朝 に 現れる。 天守 からの 越前大野 城下町 の 眺望。" },
-  { code:"SP-02", name:"御清水",            station:"泉町",     img:"photos/02_ono_gosho.webp",      lat:35.9797, lng:136.4869, coord:"35°58'46\"N 136°29'12\"E", desc:"名水百選。 城下町 の 中心 を 流れる 湧水、 昔から 大野 の 人々 の 生活水。" },
-  { code:"SP-03", name:"七間朝市",          station:"七間通り", img:"photos/03_ono_asaichi.webp",    lat:35.9799, lng:136.4880, coord:"35°58'48\"N 136°29'17\"E", desc:"400年 続く 朝市。 春から秋 の 早朝、 大野 の 農家 が 野菜 · 山菜 · 手仕事 を 並べる。" },
-  { code:"SP-04", name:"旧内山家",          station:"城町",     img:"photos/04_ono_uchiyama.webp",   lat:35.9793, lng:136.4855, coord:"35°58'45\"N 136°29'08\"E", desc:"幕末 の 家老屋敷。 白壁 と 黒瓦 の 佇まい、 蔵座敷 と 静かな 中庭。" },
-  { code:"SP-05", name:"寺町通り",          station:"寺町",     img:"photos/05_ono_teramachi.webp",  lat:35.9770, lng:136.4870, coord:"35°58'37\"N 136°29'13\"E", desc:"石畳 の 城下町。 16 の 寺院 が 連なる 通り、 幕末 の 面影 が 残る 大野 の 象徴。" },
-  { code:"SP-06", name:"亀山公園",          station:"城山",     img:"photos/06_ono_kameyama.webp",   lat:35.9787, lng:136.4862, coord:"35°58'43\"N 136°29'10\"E", desc:"越前大野城 の 麓。 春 の 桜、 秋 の 紅葉、 家族連れ で 賑わう 憩いの場。" },
-  { code:"SP-07", name:"平成大野屋 二階蔵", station:"元町",     img:"photos/07_ono_heisei.webp",     lat:35.9800, lng:136.4874, coord:"35°58'48\"N 136°29'15\"E", desc:"地元産品 の 直売所。 大野 の 米 · 味噌 · 醤油 · 手仕事 が 集まる 蔵造 の 建物。" },
-  { code:"SP-08", name:"荒島岳 展望台",     station:"下打波",   img:"photos/08_ono_arashima.webp",   lat:35.9036, lng:136.5978, coord:"35°54'13\"N 136°35'52\"E", desc:"日本百名山 · 標高 1523m。 秋 の 紅葉、 冬 の 雪景色、 越前 の 屋根 と 呼ばれる 名山。" },
-  { code:"SP-09", name:"明鏡洞",            station:"麻気",     img:"photos/09_ono_meikyodo.webp",   lat:35.9500, lng:136.5100, coord:"35°57'00\"N 136°30'36\"E", desc:"真名川沿い の 洞窟。 水面 に 洞の口 が 映る、 大野 の 隠れた 名所。" },
-  { code:"SP-10", name:"春日神社",          station:"春日",     img:"photos/10_ono_kasuga.webp",     lat:35.9805, lng:136.4855, coord:"35°58'50\"N 136°29'08\"E", desc:"奥越 総鎮守。 大野 の 中心 に 鎮座 する 古社、 参道 の 大杉 が 印象的。" },
+  { code:"SP-01", name:"越前大野城",        station:"亀山",     img:"photos/01_ono_castle.webp",     lat:35.9789, lng:136.4864, coord:"35°58'44\"N 136°29'11\"E", chapter:"I",   desc:"天空の城。 雲海 に 浮かぶ 姿 は 秋から春 の 早朝 に 現れる。 天守 からの 越前大野 城下町 の 眺望。", story:"山門を くぐる。 雲海 の 上 に、 天守 が 姿を 現した。" },
+  { code:"SP-06", name:"亀山公園",          station:"城山",     img:"photos/06_ono_kameyama.webp",   lat:35.9787, lng:136.4862, coord:"35°58'43\"N 136°29'10\"E", chapter:"I",   desc:"越前大野城 の 麓。 春 の 桜、 秋 の 紅葉、 家族連れ で 賑わう 憩いの場。", story:"城の 麓、 桜の 木陰 で 一息 つく。 天守 が 見守ってくれる。" },
+  { code:"SP-02", name:"御清水",            station:"泉町",     img:"photos/02_ono_gosho.webp",      lat:35.9797, lng:136.4869, coord:"35°58'46\"N 136°29'12\"E", chapter:"II",  desc:"名水百選。 城下町 の 中心 を 流れる 湧水、 昔から 大野 の 人々 の 生活水。", story:"湧水 に 手を触れる。 400年、 大野を 潤してきた 水。" },
+  { code:"SP-03", name:"七間朝市",          station:"七間通り", img:"photos/03_ono_asaichi.webp",    lat:35.9799, lng:136.4880, coord:"35°58'48\"N 136°29'17\"E", chapter:"II",  desc:"400年 続く 朝市。 春から秋 の 早朝、 大野 の 農家 が 野菜 · 山菜 · 手仕事 を 並べる。", story:"朝市 の おばあちゃん が 山菜を 並べる。 春 の 匂い が 立つ。" },
+  { code:"SP-04", name:"旧内山家",          station:"城町",     img:"photos/04_ono_uchiyama.webp",   lat:35.9793, lng:136.4855, coord:"35°58'45\"N 136°29'08\"E", chapter:"II",  desc:"幕末 の 家老屋敷。 白壁 と 黒瓦 の 佇まい、 蔵座敷 と 静かな 中庭。", story:"白壁 と 黒瓦。 静かな 中庭 が あなたを 迎えた。" },
+  { code:"SP-05", name:"寺町通り",          station:"寺町",     img:"photos/05_ono_teramachi.webp",  lat:35.9770, lng:136.4870, coord:"35°58'37\"N 136°29'13\"E", chapter:"II",  desc:"石畳 の 城下町。 16 の 寺院 が 連なる 通り、 幕末 の 面影 が 残る 大野 の 象徴。", story:"石畳 を 歩く。 16 の 寺 が 城下町 の 記憶 を 守っている。" },
+  { code:"SP-07", name:"平成大野屋 二階蔵", station:"元町",     img:"photos/07_ono_heisei.webp",     lat:35.9800, lng:136.4874, coord:"35°58'48\"N 136°29'15\"E", chapter:"II",  desc:"地元産品 の 直売所。 大野 の 米 · 味噌 · 醤油 · 手仕事 が 集まる 蔵造 の 建物。", story:"蔵 の 中、 大野 の 米と 味噌 が あなたを 呼ぶ。" },
+  { code:"SP-10", name:"春日神社",          station:"春日",     img:"photos/10_ono_kasuga.webp",     lat:35.9805, lng:136.4855, coord:"35°58'50\"N 136°29'08\"E", chapter:"II",  desc:"奥越 総鎮守。 大野 の 中心 に 鎮座 する 古社、 参道 の 大杉 が 印象的。", story:"参道 の 大杉 が 見下ろす。 城下町 の 総鎮守 に 祈る。" },
+  { code:"SP-08", name:"荒島岳 展望台",     station:"下打波",   img:"photos/08_ono_arashima.webp",   lat:35.9036, lng:136.5978, coord:"35°54'13\"N 136°35'52\"E", chapter:"III", desc:"日本百名山 · 標高 1523m。 秋 の 紅葉、 冬 の 雪景色、 越前 の 屋根 と 呼ばれる 名山。", story:"越前 の 屋根 · 1523m。 山頂 から 城下町 を 見下ろす。" },
+  { code:"SP-09", name:"明鏡洞",            station:"麻気",     img:"photos/09_ono_meikyodo.webp",   lat:35.9500, lng:136.5100, coord:"35°57'00\"N 136°30'36\"E", chapter:"III", desc:"真名川沿い の 洞窟。 水面 に 洞の口 が 映る、 大野 の 隠れた 名所。", story:"川面 に、 洞 の 口 が 映る。 大野 の 隠れた 名所。" },
 ];
+
+const CHAPTERS = {
+  "I":   { num: "壱", title: "城郭",   subtitle: "天空の城 と その麓",         count: 2 },
+  "II":  { num: "弐", title: "城下町", subtitle: "名水 · 朝市 · 石畳 · 蔵 · 社",  count: 6 },
+  "III": { num: "参", title: "奥越",   subtitle: "山と川、隠れた地",           count: 2 },
+};
 const RADIUS_M = 150;
 const LS_STAMPS = "ftr01_stamps_v3";
 const LS_USER = "ftr01_user_v3";
@@ -1298,45 +1335,72 @@ function renderHereCard(){
 
 function renderSpotList(){
   const el = document.getElementById("spot-list");
-  // 初回のみ全ボタン作成 (以降はDOM再利用で画像flicker回避)
+  // 初回のみ全カード生成 (章ヘッダ + spot-item を 章別に)
   if (!el.dataset.initialized){
     el.dataset.initialized = "1";
-    SPOTS.forEach(s => {
-      const b = document.createElement("button");
-      b.dataset.code = s.code;
-      b.innerHTML = `
-        <div class="im"><img src="${s.img}" alt="${s.name}" loading="lazy" decoding="async"></div>
-        <div class="bd">
-          <div class="co">${s.code} · 最寄 ${s.station}駅</div>
-          <div class="nm">${s.name}</div>
-          <div class="see">${s.desc || ""}</div>
-          <div class="st"></div>
-          <div class="dist"></div>
-          <span class="chev" aria-hidden="true">›</span>
+    const chapters = Object.keys(CHAPTERS);
+    chapters.forEach(ch => {
+      const chData = CHAPTERS[ch];
+      const chapSpots = SPOTS.filter(s => s.chapter === ch);
+      // 章ヘッダ
+      const head = document.createElement("div");
+      head.className = "chapter-head";
+      head.dataset.chapter = ch;
+      head.innerHTML = `
+        <div class="chapter-num">${chData.num}</div>
+        <div class="chapter-body">
+          <h4>${chData.title}</h4>
+          <div class="sub">${chData.subtitle}</div>
         </div>
+        <div class="chapter-progress" data-ch-progress="${ch}"><span class="l">0 /</span> ${chData.count}</div>
       `;
-      b.addEventListener("click", () => {
-        const cur = SPOTS.find(x => x.code === b.dataset.code);
-        if (cur) openSpotSheet(cur);
+      el.appendChild(head);
+      // 各 スポット
+      chapSpots.forEach(s => {
+        const b = document.createElement("button");
+        b.dataset.code = s.code;
+        b.className = "spot-item";
+        b.innerHTML = `
+          <div class="im"><img src="${s.img}" alt="${s.name}" loading="lazy" decoding="async"></div>
+          <div class="bd">
+            <div class="co">${s.code} · 最寄 ${s.station}</div>
+            <div class="nm">${s.name}</div>
+            <div class="see">${s.desc || ""}</div>
+            <div class="st"></div>
+            <div class="dist"></div>
+            <span class="chev" aria-hidden="true">›</span>
+          </div>
+        `;
+        b.addEventListener("click", () => {
+          const cur = SPOTS.find(x => x.code === b.dataset.code);
+          if (cur) openSpotSheet(cur);
+        });
+        el.appendChild(b);
       });
-      el.appendChild(b);
     });
   }
-  const withDist = SPOTS.map(s => ({...s, d: distToSpot(s)}));
-  withDist.sort((a,b) => {
-    if (a.d === null && b.d === null) return 0;
-    if (a.d === null) return 1;
-    if (b.d === null) return -1;
-    return a.d - b.d;
+  // 章 進行度を 更新
+  Object.keys(CHAPTERS).forEach(ch => {
+    const chData = CHAPTERS[ch];
+    const done = collected.filter(c => {
+      const s = SPOTS.find(x => x.code === c.code);
+      return s && s.chapter === ch;
+    }).length;
+    const p = el.querySelector(`[data-ch-progress="${ch}"]`);
+    if (p){
+      const isDone = done === chData.count;
+      p.classList.toggle("done", isDone);
+      p.innerHTML = isDone ? `✓ 制覇` : `<span class="l">${done} /</span> ${chData.count}`;
+    }
   });
-  // 順序変更 + 状態更新
-  withDist.forEach((s, idx) => {
+  // 章順のまま · 状態のみ 更新 (章別グルーピング では 距離ソート しない)
+  SPOTS.forEach(s => {
     const btn = el.querySelector(`[data-code="${s.code}"]`);
     if (!btn) return;
-    if (el.children[idx] !== btn) el.insertBefore(btn, el.children[idx] || null);
+    const d = distToSpot(s);
     const done = collected.some(c => c.code === s.code);
-    const here = !done && s.d !== null && s.d <= RADIUS_M;
-    const distStr = s.d === null ? "距離不明" : (s.d < 1000 ? `${Math.round(s.d)}m` : `${(s.d/1000).toFixed(1)}km`);
+    const here = !done && d !== null && d <= RADIUS_M;
+    const distStr = d === null ? "" : (d < 1000 ? `${Math.round(d)}m` : `${(d/1000).toFixed(1)}km`);
     const nextClass = "spot-item" + (done?" done":"") + (here?" here":"");
     if (btn.className !== nextClass) btn.className = nextClass;
     const stEl = btn.querySelector(".st");
@@ -1458,6 +1522,17 @@ async function doStamp(spot){
   }
 
   // flash
+  // 章 完成 検知
+  const chap = spot.chapter;
+  if (chap){
+    const doneInChap = collected.filter(c => {
+      const s = SPOTS.find(x => x.code === c.code);
+      return s && s.chapter === chap;
+    }).length;
+    if (CHAPTERS[chap] && doneInChap === CHAPTERS[chap].count){
+      setTimeout(() => showChapterCheer(chap), 2600);
+    }
+  }
   const flash = document.getElementById("flash");
   document.getElementById("fx-img").src = spot.img;
   document.getElementById("fx-img").alt = spot.name;
@@ -1467,6 +1542,7 @@ async function doStamp(spot){
   document.getElementById("fx-coord").textContent = spot.coord;
   document.getElementById("fx-time").textContent = time;
   document.getElementById("fx-serial").textContent = `${serial} / 3000`;
+  document.getElementById("fx-story").textContent = spot.story || "";
   flash.classList.add("on");
   setTimeout(()=>{
     if (flash.classList.contains("on")){
@@ -1483,6 +1559,20 @@ document.getElementById("flash").addEventListener("click", ()=>{
 });
 
 // ─────────── tabs ───────────
+// 章 完成 cheer
+function showChapterCheer(chap){
+  const c = CHAPTERS[chap];
+  if (!c) return;
+  document.getElementById("chapter-cheer-num").textContent = c.num;
+  document.getElementById("chapter-cheer-title").textContent = `${c.title} 制覇`;
+  const nextChap = chap === "I" ? "II" : (chap === "II" ? "III" : null);
+  const nextText = nextChap ? `次は 「${CHAPTERS[nextChap].title}」 へ。` : "残り 1章 が 完成 · 次は コンプリート。";
+  document.getElementById("chapter-cheer-body").textContent = `${c.subtitle}。 ${nextText}`;
+  const el = document.getElementById("chapter-cheer");
+  el.classList.add("on");
+  try { if ("vibrate" in navigator) navigator.vibrate([80, 40, 80, 40, 200]); } catch(e){}
+  setTimeout(() => el.classList.remove("on"), 3600);
+}
 function switchTab(tab){
   document.querySelectorAll(".tab").forEach(x => {
     const on = x.dataset.tab === tab;
