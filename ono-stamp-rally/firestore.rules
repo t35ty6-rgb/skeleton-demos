@@ -1,0 +1,54 @@
+rules_version = "2";
+
+// Fukutetsu Rally · Firestore Security Rules
+//
+// このファイルは fukutetsu_ prefix のコレクションのみ対象。
+// Skel·EC 側 rules と統合する場合は、この match ブロックを追加する。
+//
+// 認証: LINE Login からの firebase auth custom token (uid = LINE userId) を想定。
+// 本番 deploy 時は Cloud Functions で custom token 発行 (LIFF SDK の access token → verify → Firebase custom token) が推奨。
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ラリー設定 (公開読み取り、書き込みは server-side)
+    match /fukutetsu_rallies/{rallyId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // 参加者ドキュメント (本人のみ)
+    match /fukutetsu_rallies/{rallyId}/participants/{userId} {
+      allow read:   if request.auth != null && request.auth.uid == userId;
+      allow write:  if request.auth != null && request.auth.uid == userId
+                    && request.resource.data.userId == userId;
+    }
+
+    // 押印ログ (本人のみ read/create、update/delete禁止)
+    match /fukutetsu_rallies/{rallyId}/stamps/{stampId} {
+      allow read:   if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.rallyId == rallyId;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // 不正試行ログ (server-side only)
+    match /fukutetsu_rallies/{rallyId}/fraud/{docId} {
+      allow read, write: if false;
+    }
+
+    // スポットマスタ (公開読み取り)
+    match /fukutetsu_spots/{spotId} {
+      allow read:  if true;
+      allow write: if false;
+    }
+
+    // 配信ログ (server-side only)
+    match /fukutetsu_pushes/{pushId} {
+      allow read, write: if false;
+    }
+
+  }
+}

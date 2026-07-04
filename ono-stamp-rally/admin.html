@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>運営ダッシュボード · おおのじょう さんぽ帳</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:oklch(0.152 0.006 60);
+  --bg-2:oklch(0.185 0.006 60);
+  --bg-3:oklch(0.21 0.006 60);
+  --paper:oklch(0.955 0.012 82);
+  --body:oklch(0.92 0.008 80);
+  --muted:oklch(0.68 0.008 70);
+  --dim:oklch(0.44 0.006 65);
+  --rule:oklch(0.28 0.006 60);
+  --rule-2:oklch(0.36 0.006 60);
+  --red:oklch(0.58 0.16 25);
+  --red-hi:oklch(0.66 0.18 25);
+  --green:oklch(0.6 0.09 165);
+  --amber:oklch(0.72 0.13 75);
+}
+*{box-sizing:border-box}
+body{margin:0;padding:0;background:var(--bg);color:var(--body);font-family:"Noto Sans JP",system-ui,sans-serif;font-weight:500;font-feature-settings:"palt" 1;line-height:1.65;-webkit-font-smoothing:antialiased;min-height:100vh}
+a{color:inherit;text-decoration:none}
+img,svg{max-width:100%;display:block}
+button,input,select{font-family:inherit;color:inherit}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-feature-settings:"tnum" 1}
+::selection{background:var(--red);color:var(--paper)}
+
+.nav{position:sticky;top:0;z-index:50;background:color-mix(in oklch,var(--bg) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--rule)}
+.nav-inner{max-width:1440px;margin:0 auto;padding:16px 32px;display:flex;align-items:center;gap:28px}
+.brand{display:flex;align-items:baseline;gap:12px;font-weight:700}
+.brand .mk{width:22px;height:22px;background:var(--red);position:relative;flex-shrink:0}
+.brand .mk::after{content:"";position:absolute;inset:5px;border:1px solid var(--paper)}
+.brand .txt{font-size:14px;letter-spacing:.02em;color:var(--paper)}
+.brand .txt small{color:var(--muted);font-weight:400;margin-left:8px;font-size:12px}
+.nav-links{margin-left:auto;display:flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--rule)}
+.nav-links a{padding:8px 16px;font-size:13px;font-weight:700;color:var(--muted);transition:color .2s}
+.nav-links a.on{background:var(--paper);color:oklch(0.14 0.006 60)}
+.nav-links a:not(.on):hover{color:var(--paper)}
+.strip{background:var(--paper);color:oklch(0.14 0.006 60);font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.24em;text-align:center;padding:6px 12px;text-transform:uppercase}
+
+.wrap{max-width:1440px;margin:0 auto;padding:48px 32px 96px}
+
+.page-head{padding-bottom:32px;border-bottom:1px solid var(--rule);margin-bottom:44px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.page-head .kicker{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.24em;color:var(--red);text-transform:uppercase;display:block;margin-bottom:14px}
+.page-head h1{margin:0 0 12px;font-weight:900;font-size:clamp(30px,3.6vw,44px);letter-spacing:-.028em;line-height:1.1;color:var(--paper)}
+.page-head .meta{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted);letter-spacing:.06em;display:flex;gap:20px;flex-wrap:wrap;text-transform:uppercase}
+.page-head .meta .live{color:var(--green);font-weight:700;display:inline-flex;align-items:center;gap:8px}
+.page-head .meta .live::before{content:"";width:8px;height:8px;background:var(--green);border-radius:50%;box-shadow:0 0 0 3px color-mix(in oklch,var(--green) 30%,transparent);animation:pulse-dot 1.6s ease-out infinite}
+@keyframes pulse-dot{0%,100%{box-shadow:0 0 0 3px color-mix(in oklch,var(--green) 30%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in oklch,var(--green) 15%,transparent)}}
+.actions{display:flex;gap:10px}
+.btn{padding:12px 20px;background:transparent;border:1px solid var(--rule-2);color:var(--body);font-size:13px;font-weight:700;letter-spacing:.01em;cursor:pointer;transition:all .2s;font-family:inherit}
+.btn:hover{background:var(--bg-2);border-color:var(--paper);color:var(--paper)}
+.btn.primary{background:var(--red);border-color:var(--red);color:var(--paper)}
+.btn.primary:hover{background:var(--red-hi);border-color:var(--red-hi)}
+
+.explain-panel{background:linear-gradient(180deg,color-mix(in oklch,var(--red) 12%,var(--bg-2)) 0%,var(--bg-2) 100%);border:1px solid color-mix(in oklch,var(--red) 30%,var(--rule-2));padding:28px 32px 32px;margin-bottom:44px}
+.explain-title{font-family:"Noto Sans JP",sans-serif;font-weight:900;font-size:18px;color:var(--paper);letter-spacing:-.005em;margin-bottom:24px;display:flex;align-items:center;gap:14px}
+.explain-title .ex-tag{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.2em;background:var(--red);color:var(--paper);padding:4px 10px;text-transform:uppercase;font-weight:700}
+.explain-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.ex-item{padding-left:16px;border-left:2px solid var(--red)}
+.ex-item .ex-n{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;color:var(--red-hi);text-transform:uppercase;display:block;margin-bottom:8px}
+.ex-item b{display:block;font-size:14.5px;font-weight:900;color:var(--paper);margin-bottom:8px;letter-spacing:-.005em;line-height:1.4}
+.ex-item p{margin:0;font-size:12.5px;line-height:1.7;color:var(--body)}
+@media (max-width:900px){.explain-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.explain-grid{grid-template-columns:1fr}}
+
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:56px;border-top:1px solid var(--rule-2);border-bottom:1px solid var(--rule-2)}
+.kpi{padding:32px 32px 34px;position:relative}
+.kpi + .kpi{border-left:1px solid var(--rule-2)}
+.kpi .k{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.22em;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:22px}
+.kpi .v{font-family:"Noto Sans JP",sans-serif;font-weight:700;font-size:56px;letter-spacing:-.035em;line-height:.95;color:var(--paper);font-feature-settings:"tnum" 1}
+.kpi .v .u{font-size:14px;color:var(--muted);margin-left:8px;font-weight:500;letter-spacing:.02em}
+.kpi .d{margin-top:16px;font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.02em;line-height:1.6}
+.kpi .d.up{color:var(--green)}
+.kpi .d.dn{color:var(--red)}
+.kpi .d .arr{margin-right:6px}
+
+.grid-main{display:grid;grid-template-columns:1.2fr .8fr;gap:32px}
+
+.panel{background:var(--bg-2);border:1px solid var(--rule);margin-bottom:32px}
+.panel-head{padding:20px 28px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:baseline;gap:14px}
+.panel-head h2{margin:0;font-size:16px;font-weight:900;color:var(--paper);letter-spacing:-.005em}
+.panel-head .k{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+.panel-body{padding:24px 28px}
+
+.act-list{font-family:"JetBrains Mono",monospace;font-size:12px}
+.act-row{display:grid;grid-template-columns:64px 68px 1fr auto;gap:16px;padding:12px 0;border-bottom:1px dotted var(--rule-2);align-items:center}
+.act-row:last-child{border-bottom:none}
+.act-row .t{color:var(--dim);letter-spacing:.04em}
+.act-row .code{color:var(--red-hi);font-weight:700;letter-spacing:.06em}
+.act-row .who{font-family:"Noto Sans JP",sans-serif;color:var(--paper);font-size:13px;font-weight:500;letter-spacing:.005em}
+.act-row .action{color:var(--muted);text-align:right;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.act-row.new{animation:actIn .6s ease-out}
+@keyframes actIn{from{background:color-mix(in oklch,var(--red) 12%,transparent)}to{background:transparent}}
+
+.heat-wrap{padding:16px 28px 24px}
+.heat-wrap svg{width:100%;height:auto;display:block}
+.heat-legend{display:flex;gap:22px;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--muted);letter-spacing:.08em;margin-top:14px;padding-top:14px;border-top:1px dotted var(--rule-2);text-transform:uppercase;flex-wrap:wrap}
+.heat-legend span{display:inline-flex;align-items:center;gap:8px}
+.heat-legend i{width:10px;height:10px;background:var(--red);border-radius:50%;opacity:.3}
+.heat-legend i.i2{opacity:.6}
+.heat-legend i.i3{opacity:1}
+
+.fraud-row{display:grid;grid-template-columns:70px 1fr auto;gap:14px;padding:14px 0;border-bottom:1px dotted var(--rule-2);align-items:center;font-size:13px}
+.fraud-row:last-child{border-bottom:none}
+.fraud-row .t{font-family:"JetBrains Mono",monospace;color:var(--dim);letter-spacing:.04em;font-size:11px}
+.fraud-row .msg{color:var(--body);line-height:1.7}
+.fraud-row .msg b{font-family:"JetBrains Mono",monospace;color:var(--red-hi);font-weight:700;letter-spacing:.04em}
+.fraud-row .tag{font-family:"JetBrains Mono",monospace;font-size:10px;background:color-mix(in oklch,var(--amber) 20%,transparent);border:1px solid var(--amber);color:var(--amber);padding:4px 9px;letter-spacing:.16em;font-weight:700;text-transform:uppercase}
+.fraud-row .tag.blk{background:color-mix(in oklch,var(--red) 22%,transparent);border-color:var(--red);color:var(--red-hi)}
+.fraud-foot{margin-top:20px;padding-top:16px;border-top:1px dashed var(--rule-2);font-size:12.5px;color:var(--muted);line-height:1.8}
+.fraud-foot b{font-family:"JetBrains Mono",monospace;color:var(--red-hi);font-weight:700}
+
+.setup{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.setup .field{display:flex;flex-direction:column}
+.setup label{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+.setup input,.setup select{padding:13px;background:var(--bg-3);border:1px solid var(--rule-2);color:var(--paper);font-size:13.5px;font-weight:500;transition:border-color .2s}
+.setup input:focus,.setup select:focus{outline:none;border-color:var(--paper);background:var(--bg-2)}
+.setup .field.full{grid-column:1/-1}
+.setup .row-actions{grid-column:1/-1;display:flex;gap:10px;padding-top:10px;border-top:1px dotted var(--rule-2);margin-top:6px}
+
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;padding:12px 8px;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--rule-2);font-weight:500}
+.tbl td{padding:11px 8px;border-bottom:1px dotted var(--rule-2);font-size:13.5px;color:var(--body);vertical-align:middle}
+.tbl td.thumb{width:60px;padding:8px}
+.tbl td.thumb .th-img{width:52px;height:38px;overflow:hidden;background:var(--bg-3);border:1px solid var(--rule-2)}
+.tbl td.thumb .th-img img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(.85)}
+.tbl td.code{font-family:"JetBrains Mono",monospace;color:var(--red-hi);font-weight:700;letter-spacing:.06em;font-size:12px;width:70px}
+.tbl td.n{font-family:"JetBrains Mono",monospace;font-weight:700;text-align:right;color:var(--paper);white-space:nowrap}
+.tbl td .bar{display:inline-block;height:4px;background:var(--red);vertical-align:middle;margin-right:10px;opacity:.9}
+.tbl td.mut{color:var(--dim)}
+.tbl tr:last-child td{border-bottom:none}
+
+/* segment push */
+.seg-list{display:flex;flex-direction:column;gap:8px}
+.seg-row{display:grid;grid-template-columns:44px 1fr auto auto;gap:12px;align-items:center;padding:12px 14px;background:var(--bg);border:1px solid var(--rule-2)}
+.seg-tag{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--red-hi);background:color-mix(in oklch,var(--red) 14%,transparent);padding:6px 8px;text-align:center;border-radius:2px}
+.seg-name{font-size:13.5px;font-weight:900;color:var(--paper);letter-spacing:-.005em;margin-bottom:2px}
+.seg-cond{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--muted);letter-spacing:.06em}
+.seg-n{font-family:"Noto Sans JP",sans-serif;font-weight:700;font-size:17px;color:var(--paper);letter-spacing:-.01em;font-feature-settings:"tnum" 1;white-space:nowrap}
+.seg-n u{font-size:11px;color:var(--muted);font-weight:500;margin-left:2px;text-decoration:none}
+.seg-btn-send{padding:8px 14px;font-size:11.5px;background:transparent;border:1px solid var(--rule-2);color:var(--body);font-family:inherit;font-weight:700;cursor:pointer;letter-spacing:.02em;transition:all .2s}
+.seg-btn-send:hover{background:var(--red);border-color:var(--red);color:var(--paper)}
+.seg-note{margin-top:16px;padding-top:14px;border-top:1px dashed var(--rule-2);font-size:12px;color:var(--muted);line-height:1.7}
+.seg-note b{color:var(--red-hi);font-family:"JetBrains Mono",monospace;font-weight:700}
+
+/* segment modal */
+.seg-modal{position:fixed;inset:0;background:oklch(0 0 0 / .65);display:none;align-items:center;justify-content:center;z-index:200;padding:24px}
+.seg-modal.on{display:flex}
+.seg-mo{background:var(--bg-2);border:1px solid var(--rule-2);max-width:520px;width:100%;max-height:88vh;overflow-y:auto;padding:24px 26px 26px}
+.seg-mo-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+.seg-mo-tag{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--red-hi);background:color-mix(in oklch,var(--red) 20%,transparent);padding:4px 8px;font-weight:700;margin-right:8px}
+.seg-mo-name{font-size:18px;font-weight:900;color:var(--paper);letter-spacing:-.015em}
+.seg-mo-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0 4px;line-height:1}
+.seg-mo-close:hover{color:var(--paper)}
+.seg-mo-meta{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);margin-bottom:20px;letter-spacing:.06em}
+.seg-mo-meta b{color:var(--red-hi);font-weight:700}
+.seg-mo-lbl{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:8px;display:block}
+.seg-mo-ta{width:100%;min-height:140px;padding:14px;background:var(--bg-3);border:1px solid var(--rule-2);color:var(--paper);font-size:13.5px;font-family:"Noto Sans JP",sans-serif;line-height:1.75;resize:vertical}
+.seg-mo-ta:focus{outline:none;border-color:var(--paper)}
+.seg-mo-pv{margin-top:18px;padding:14px 16px;background:oklch(0.98 0.005 82);color:oklch(0.14 0.006 60);font-size:13px;line-height:1.65;border-radius:6px 6px 6px 0;font-family:"Noto Sans JP",sans-serif;max-width:80%}
+.seg-mo-pv-lbl{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:16px;margin-bottom:6px;display:block}
+.seg-mo-actions{margin-top:22px;padding-top:18px;border-top:1px solid var(--rule-2);display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg-mo-actions .btn{padding:12px}
+
+.exports{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.exports .btn{padding:14px;text-align:left;font-size:12.5px;font-weight:500;letter-spacing:.02em;line-height:1.5}
+.exports .btn span{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;color:var(--muted);margin-top:4px;text-transform:uppercase}
+
+@media (max-width:1180px){
+  .grid-main{grid-template-columns:1fr}
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .kpi:nth-child(3),.kpi:nth-child(4){border-top:1px solid var(--rule-2)}
+  .kpi:nth-child(3){border-left:none}
+}
+@media (max-width:640px){
+  .kpi-row{grid-template-columns:1fr}
+  .kpi + .kpi{border-left:none;border-top:1px solid var(--rule-2)}
+  .setup,.exports{grid-template-columns:1fr}
+  .nav-inner{padding:14px 20px;gap:14px}
+  .brand .txt small{display:none}
+  .nav-links a{padding:6px 12px;font-size:12px}
+  .wrap{padding:32px 20px 60px}
+  .kpi .v{font-size:42px}
+  .act-row{grid-template-columns:56px 60px 1fr;gap:10px}
+  .act-row .action{grid-column:1/-1;text-align:left;padding-left:126px;padding-top:2px}
+}
+
+@media (prefers-reduced-motion:reduce){*{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
+</style>
+</head>
+<body>
+
+<div class="strip">Demo · 運営ダッシュボード · データは営業提案用の想定値です</div>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="./index.html" class="brand">
+      <span class="mk"></span>
+      <span class="txt">城下町 沿線スタンプラリー<small>Proposal FTR-01</small></span>
+    </a>
+    <div class="nav-links">
+      <a href="./index.html">アプリ</a>
+      <a href="./admin.html" class="on">運営</a>
+      <a href="./qr-print.html">QR印刷</a>
+      <a href="./pitch.html">提案</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <div class="page-head">
+    <div>
+      <span class="kicker">Operator · Admin</span>
+      <h1>おおのじょう さんぽ帳 · 運営画面</h1>
+      <div class="meta">
+        <span>FT-2026-Summer</span>
+        <span>07-15 → 08-31</span>
+        <span>対象 10スポット</span>
+        <span class="live">Day 12 / 48 稼働中</span>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btn-sim">Sim · 参加者 +1</button>
+      <button class="btn primary" id="btn-export">CSV 書き出し</button>
+    </div>
+  </div>
+
+  <div class="explain-panel">
+    <div class="explain-title">この画面で運営が判断すること<span class="ex-tag">4つ</span></div>
+    <div class="explain-grid">
+      <div class="ex-item"><span class="ex-n">01</span><b>今週の参加者数と押印分布</b><p>定期外の観光ライドが増えているか。前週比・前月比で追いかける。</p></div>
+      <div class="ex-item"><span class="ex-n">02</span><b>どのスポットで離脱しているか</b><p>ヒートマップの薄い場所 = 集客が届いていない。次期の景品追加や案内強化の候補。</p></div>
+      <div class="ex-item"><span class="ex-n">03</span><b>不正押印の遮断件数</b><p>GPS圏外からのQR読取が構造でブロックされているか。景品原資のロス防止の効き目。</p></div>
+      <div class="ex-item"><span class="ex-n">04</span><b>参加者ライブで今起きていること</b><p>コンプリート達成者の動きを即現場に共有 (景品交換の窓口案内など)。</p></div>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi">
+      <span class="k">今日の参加者</span>
+      <div class="v mono" id="kpi-today">168<span class="u">名</span></div>
+      <div class="d up"><span class="arr">↑</span>昨日比 +32名（+24%）</div>
+    </div>
+    <div class="kpi">
+      <span class="k">累計押印数</span>
+      <div class="v mono" id="kpi-total">5,203<span class="u">押</span></div>
+      <div class="d up"><span class="arr">↑</span>週次 +1,142押（+28%）</div>
+    </div>
+    <div class="kpi">
+      <span class="k">コンプリート率</span>
+      <div class="v mono">14.2<span class="u">%</span></div>
+      <div class="d up"><span class="arr">↑</span>前週比 +2.4pt</div>
+    </div>
+    <div class="kpi">
+      <span class="k">平均滞在時間</span>
+      <div class="v mono">58<span class="u">min</span></div>
+      <div class="d up"><span class="arr">↑</span>前週比 +14min</div>
+    </div>
+  </div>
+
+  <div class="grid-main">
+
+    <div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>参加者ライブ</h2>
+          <span class="k">Last 10 · Auto-refresh</span>
+        </div>
+        <div class="panel-body">
+          <div class="act-list" id="act-list"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>スポット別ヒートマップ</h2>
+          <span class="k">Density · 10 spots</span>
+        </div>
+        <div class="heat-wrap">
+          <svg viewBox="0 0 1000 240" preserveAspectRatio="xMidYMid meet" id="heat-svg">
+            <line x1="40" y1="110" x2="960" y2="110" stroke="oklch(0.36 0.006 60)" stroke-width="1.5"/>
+            <line x1="40" y1="110" x2="960" y2="110" stroke="oklch(0.5 0.006 60)" stroke-width="0.7" stroke-dasharray="1 8"/>
+            <text x="40" y="228" font-family="JetBrains Mono" font-size="10" fill="oklch(0.44 0.006 65)" letter-spacing="0.14em">たけふ新 →</text>
+            <text x="960" y="228" font-family="JetBrains Mono" font-size="10" fill="oklch(0.44 0.006 65)" text-anchor="end" letter-spacing="0.14em">← 田原町</text>
+          </svg>
+          <div class="heat-legend">
+            <span><i></i>疎</span>
+            <span><i class="i2"></i>中</span>
+            <span><i class="i3"></i>密</span>
+            <span style="margin-left:auto">数字 · 累計押印数</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>スポット別 集計</h2>
+          <span class="k">By spot</span>
+        </div>
+        <div class="panel-body">
+          <table class="tbl">
+            <thead>
+              <tr><th></th><th>コード</th><th>スポット名</th><th style="text-align:right">押印数</th><th style="text-align:right">シェア</th></tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>不正検知ログ</h2>
+          <span class="k">Out-of-range attempts</span>
+        </div>
+        <div class="panel-body">
+          <div>
+            <div class="fraud-row">
+              <span class="t">14:32</span>
+              <div class="msg"><b>SP-04</b> 西山公園の QR を <b>圏外</b>（距離 2.4km）から読取試行</div>
+              <span class="tag blk">遮断</span>
+            </div>
+            <div class="fraud-row">
+              <span class="t">13:58</span>
+              <div class="msg"><b>SP-09</b> 恐竜モニュメントの QR を <b>圏外</b>（距離 890m）から読取試行</div>
+              <span class="tag blk">遮断</span>
+            </div>
+            <div class="fraud-row">
+              <span class="t">13:41</span>
+              <div class="msg">同一ユーザーが <b>3スポット</b> の QR を 4分以内に連続読取。移動不可能な速度</div>
+              <span class="tag">要注意</span>
+            </div>
+            <div class="fraud-row">
+              <span class="t">12:20</span>
+              <div class="msg"><b>SP-02</b> サンドーム福井の QR を <b>圏外</b>（距離 5.1km）から読取試行</div>
+              <span class="tag blk">遮断</span>
+            </div>
+            <div class="fraud-row">
+              <span class="t">11:03</span>
+              <div class="msg"><b>SP-10</b> 田原町商店街の QR を <b>圏外</b>（距離 340m）から読取試行</div>
+              <span class="tag blk">遮断</span>
+            </div>
+            <div class="fraud-row">
+              <span class="t">09:47</span>
+              <div class="msg">位置情報を <b>拒否</b> したユーザーが押印試行</div>
+              <span class="tag">要注意</span>
+            </div>
+          </div>
+          <div class="fraud-foot">
+            本日の遮断 <b>22件</b>。累計 <b>289件</b>。<br>
+            紙台紙運用の頃は検知不可能だった不正が、GPS判定で構造的にブロックされている。
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>ラリー設定</h2>
+          <span class="k">Rally config</span>
+        </div>
+        <div class="panel-body">
+          <div class="setup">
+            <div class="field"><label>ラリー名</label><input type="text" value="おおのじょう さんぽ帳 2026 夏"></div>
+            <div class="field"><label>ラリー ID</label><input type="text" value="FT-2026-Summer" class="mono"></div>
+            <div class="field"><label>開始</label><input type="date" value="2026-07-15"></div>
+            <div class="field"><label>終了</label><input type="date" value="2026-08-31"></div>
+            <div class="field"><label>対象スポット数</label><select><option>10スポット（現行）</option><option>6スポット</option><option>15スポット</option></select></div>
+            <div class="field"><label>GPS 判定半径</label><select><option>150m（現行）</option><option>100m</option><option>200m</option><option>300m</option></select></div>
+            <div class="field full"><label>コンプリート景品</label><input type="text" value="大野1日フリーきっぷ + 硬券セット + 沿線カフェドリンク"></div>
+            <div class="row-actions">
+              <button class="btn primary">保存する</button>
+              <button class="btn">プレビュー</button>
+              <button class="btn" style="margin-left:auto">ラリーを終了</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>LINE セグメント配信</h2>
+          <span class="k">Segmented push</span>
+        </div>
+        <div class="panel-body">
+          <div class="seg-list" id="seg-list"></div>
+          <div class="seg-note">合計 <b>3,000名</b> がラリー参加中。 broadcast 禁止、 必ず userId 指定で push (Cloud Functions + Messaging API 連携予定)。</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>レポート出力</h2>
+          <span class="k">Export</span>
+        </div>
+        <div class="panel-body">
+          <div class="exports">
+            <button class="btn">日次 CSV<span>Daily</span></button>
+            <button class="btn">週次 PDF<span>Weekly</span></button>
+            <button class="btn">スポット別サマリ<span>By spot</span></button>
+            <button class="btn">LINE 月次配信<span>Monthly push</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="seg-modal" id="seg-modal">
+  <div class="seg-mo">
+    <div class="seg-mo-head">
+      <div><span class="seg-mo-tag" id="seg-mo-tag">S1</span><span class="seg-mo-name" id="seg-mo-name">新規参加</span></div>
+      <button class="seg-mo-close" id="seg-mo-close" aria-label="閉じる">×</button>
+    </div>
+    <div class="seg-mo-meta"><span id="seg-mo-cond">押印1個</span> · 対象 <b id="seg-mo-count">900名</b> · 想定 push 消費 <b id="seg-mo-cost">900通</b></div>
+    <label class="seg-mo-lbl" for="seg-mo-ta">文面 (◯◯さん は 各ユーザー名に自動置換)</label>
+    <textarea class="seg-mo-ta" id="seg-mo-ta"></textarea>
+    <span class="seg-mo-pv-lbl">LINE プレビュー</span>
+    <div class="seg-mo-pv" id="seg-mo-pv"></div>
+    <div class="seg-mo-actions">
+      <button class="btn primary" id="seg-mo-send">今すぐ送信</button>
+      <button class="btn" id="seg-mo-sched">予約配信 · 明日09:00</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SPOTS = [
+  { code:"SP-01", name:"越前和紙の里",             station:"たけふ新",       img:"photos/01_echizen_washi.webp",   n:412, x:60  },
+  { code:"SP-02", name:"サンドーム福井",           station:"サンドーム西",   img:"photos/02_sundome_fukui.webp",   n:398, x:150 },
+  { code:"SP-03", name:"武生中央公園",             station:"たけふ新",       img:"photos/03_takefu_chuo_park.webp",n:521, x:240 },
+  { code:"SP-04", name:"西山公園",                 station:"西鯖江",         img:"photos/04_nishiyama_park.webp",  n:678, x:330 },
+  { code:"SP-05", name:"めがねミュージアム",       station:"神明",           img:"photos/05_megane_museum.webp",   n:441, x:420 },
+  { code:"SP-06", name:"福井城址",                 station:"福井城址大名町", img:"photos/06_fukui_castle.webp",    n:734, x:510 },
+  { code:"SP-07", name:"養浩館庭園",               station:"仁愛女子高校",   img:"photos/07_yokokan_garden.webp",  n:307, x:600 },
+  { code:"SP-08", name:"足羽神社",                 station:"福井駅",         img:"photos/08_asuwa_shrine.webp",    n:395, x:690 },
+  { code:"SP-09", name:"福井駅前 恐竜モニュメント", station:"福井駅",         img:"photos/09_fukui_dinosaur.webp",  n:854, x:780 },
+  { code:"SP-10", name:"田原町 商店街",            station:"田原町",         img:"photos/10_tawaramachi.webp",     n:463, x:870 },
+];
+
+const NAMES = ["山内 明日香","西村 拓也","小林 亜由美","高瀬 修一","河野 みずき","藤田 直樹","岡本 千夏","中村 悠人","堀内 由紀","浅野 健太郎","谷口 舞","石川 隆","森田 遙香","塚本 陽介","青木 沙織"];
+
+let acts = [
+  { t:"14:33", code:"SP-04", who:"山内 明日香さん", action:"押印 · 5個目 · 経過38分" },
+  { t:"14:31", code:"SP-09", who:"西村 拓也さん", action:"押印 · 3個目 · 経過22分" },
+  { t:"14:28", code:"SP-02", who:"小林 亜由美さん", action:"押印 · 2個目 · 経過14分" },
+  { t:"14:24", code:"SP-01", who:"高瀬 修一さん", action:"参加開始 · 友だち追加" },
+  { t:"14:19", code:"SP-06", who:"河野 みずきさん", action:"押印 · 6個目 · 経過52分" },
+  { t:"14:11", code:"SP-04", who:"藤田 直樹さん", action:"景品交換 · ドリンク引換" },
+  { t:"14:06", code:"SP-10", who:"岡本 千夏さん", action:"押印 · 10個目 · コンプリート" },
+  { t:"13:52", code:"SP-05", who:"中村 悠人さん", action:"押印 · 4個目 · 経過29分" },
+  { t:"13:44", code:"SP-09", who:"堀内 由紀さん", action:"押印 · 1個目 · 参加開始" },
+  { t:"13:38", code:"SP-03", who:"浅野 健太郎さん", action:"押印 · 2個目 · 経過18分" },
+];
+
+function renderActs(){
+  const el = document.getElementById("act-list");
+  el.innerHTML = "";
+  acts.slice(0,10).forEach(a => {
+    const row = document.createElement("div");
+    row.className = "act-row" + (a.isNew ? " new" : "");
+    row.innerHTML = `
+      <span class="t">${a.t}</span>
+      <span class="code">${a.code}</span>
+      <span class="who">${a.who}</span>
+      <span class="action">${a.action}</span>
+    `;
+    el.appendChild(row);
+    a.isNew = false;
+  });
+}
+
+function renderHeat(){
+  const svg = document.getElementById("heat-svg");
+  svg.querySelectorAll(".heat-node").forEach(n => n.remove());
+  const maxN = Math.max(...SPOTS.map(s => s.n));
+  SPOTS.forEach(s => {
+    const scale = s.n / maxN;
+    const r = 8 + scale * 32;
+    const opacity = 0.28 + scale * 0.62;
+    const c = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    c.setAttribute("cx",s.x); c.setAttribute("cy",110); c.setAttribute("r",r);
+    c.setAttribute("fill","oklch(0.58 0.16 25)"); c.setAttribute("opacity",opacity);
+    c.setAttribute("class","heat-node");
+    svg.appendChild(c);
+    const d = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    d.setAttribute("cx",s.x); d.setAttribute("cy",110); d.setAttribute("r",3);
+    d.setAttribute("fill","oklch(0.955 0.012 82)"); d.setAttribute("class","heat-node");
+    svg.appendChild(d);
+    const n = document.createElementNS("http://www.w3.org/2000/svg","text");
+    n.setAttribute("x",s.x); n.setAttribute("y",110 - r - 10);
+    n.setAttribute("text-anchor","middle");
+    n.setAttribute("font-family","JetBrains Mono"); n.setAttribute("font-size","12");
+    n.setAttribute("font-weight","700"); n.setAttribute("fill","oklch(0.955 0.012 82)");
+    n.setAttribute("class","heat-node");
+    n.textContent = s.n;
+    svg.appendChild(n);
+    const code = document.createElementNS("http://www.w3.org/2000/svg","text");
+    code.setAttribute("x",s.x); code.setAttribute("y",188);
+    code.setAttribute("text-anchor","middle");
+    code.setAttribute("font-family","JetBrains Mono"); code.setAttribute("font-size","8.5");
+    code.setAttribute("fill","oklch(0.68 0.008 70)"); code.setAttribute("letter-spacing","0.08em");
+    code.setAttribute("class","heat-node");
+    code.textContent = s.code;
+    svg.appendChild(code);
+    const nm = document.createElementNS("http://www.w3.org/2000/svg","text");
+    nm.setAttribute("x",s.x); nm.setAttribute("y",202);
+    nm.setAttribute("text-anchor","middle");
+    nm.setAttribute("font-family","Noto Sans JP"); nm.setAttribute("font-size","10.5");
+    nm.setAttribute("font-weight","700"); nm.setAttribute("fill","oklch(0.92 0.008 80)");
+    nm.setAttribute("class","heat-node");
+    // truncate long names for label
+    const label = s.name.length > 9 ? s.name.slice(0,8)+"…" : s.name;
+    nm.textContent = label;
+    svg.appendChild(nm);
+  });
+}
+
+function renderTable(){
+  const tbody = document.getElementById("tbody");
+  const total = SPOTS.reduce((s,x)=>s+x.n,0);
+  const maxN = Math.max(...SPOTS.map(s=>s.n));
+  const sorted = [...SPOTS].sort((a,b)=>b.n-a.n);
+  tbody.innerHTML = "";
+  sorted.forEach(s => {
+    const pct = (s.n/total*100).toFixed(1);
+    const barW = Math.round(s.n/maxN*70);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="thumb"><div class="th-img"><img src="${s.img}" alt="${s.name}" loading="lazy"></div></td>
+      <td class="code">${s.code}</td>
+      <td>${s.name} <span style="color:var(--dim);font-size:12px">· ${s.station}駅</span></td>
+      <td class="n"><span class="bar" style="width:${barW}px"></span>${s.n.toLocaleString()}</td>
+      <td class="n mut">${pct}%</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById("btn-sim").addEventListener("click", ()=>{
+  const now = new Date();
+  const t = String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+  const st = SPOTS[Math.floor(Math.random()*SPOTS.length)];
+  const nm = NAMES[Math.floor(Math.random()*NAMES.length)];
+  const nth = 1 + Math.floor(Math.random()*9);
+  const min = 5 + Math.floor(Math.random()*75);
+  acts.unshift({ t, code:st.code, who:`${nm}さん`, action:`押印 · ${nth}個目 · 経過${min}分`, isNew:true });
+  st.n += 1;
+  const today = document.getElementById("kpi-today");
+  const total = document.getElementById("kpi-total");
+  const t2 = parseInt(today.textContent) + 1;
+  const T2 = parseInt(total.textContent.replace(/,/g,"")) + 1;
+  today.innerHTML = `${t2}<span class="u">名</span>`;
+  total.innerHTML = `${T2.toLocaleString()}<span class="u">押</span>`;
+  renderActs();
+  renderHeat();
+  renderTable();
+});
+
+document.getElementById("btn-export").addEventListener("click", ()=>{
+  alert("Demo · CSV 書き出し\n\n本番ではラリー期間の全押印ログを CSV でダウンロード可能。\n列: timestamp, spot_code, spot_name, station, user_id (匿名化), coord, is_valid, prize_redeemed");
+});
+
+renderActs();
+renderHeat();
+renderTable();
+
+// ─────────── segment push ───────────
+const SEGMENTS = [
+  { id:"S1", name:"新規参加",   cond:"押印1個",           n:900, sample:"◯◯さん、越前和紙の里 押印おめでとうございます。 あと3個で 沿線カフェ ドリンク1杯 交換できます。 次のオススメは 徒歩12分の 武生中央公園。" },
+  { id:"S2", name:"育成中",     cond:"押印2〜3個",        n:800, sample:"◯◯さん、今週末はどこ行きますか。 まだ未訪問のスポットは 西山公園・恐竜モニュメント・福井城址 など。 週末は晴れ予報です。" },
+  { id:"S3", name:"あと少し",   cond:"押印5〜6個",        n:500, sample:"◯◯さん、コンプまで あと4個。 残り3日、福井駅発 → 城址 → 養浩館 → 足羽神社 の順で 2時間で回れます。" },
+  { id:"S4", name:"コンプ達成", cond:"押印10個",          n:450, sample:"◯◯さん、コンプおめでとうございます。 硬券セットは 福井駅観光案内所 で 8/31まで お受け取りください。 次期ラリーは秋10月開催、 いち早くお知らせします。" },
+  { id:"S5", name:"途中離脱",   cond:"3日以上更新なし",   n:350, sample:"◯◯さん、ラリーは8/31までです。 現在地から一番近いのは ◯◯です。 硬券帳がリセットされる前に、 あと少し集めませんか。" },
+];
+
+function renderSegments(){
+  const el = document.getElementById("seg-list");
+  el.innerHTML = "";
+  SEGMENTS.forEach(s => {
+    const row = document.createElement("div");
+    row.className = "seg-row";
+    row.innerHTML = `
+      <div class="seg-tag">${s.id}</div>
+      <div><div class="seg-name">${s.name}</div><div class="seg-cond">${s.cond}</div></div>
+      <div class="seg-n">${s.n.toLocaleString()}<u>名</u></div>
+      <button class="seg-btn-send" data-seg="${s.id}">配信 →</button>
+    `;
+    el.appendChild(row);
+  });
+  el.querySelectorAll(".seg-btn-send").forEach(b => {
+    b.addEventListener("click", () => openSegModal(b.dataset.seg));
+  });
+}
+renderSegments();
+
+const segModal = document.getElementById("seg-modal");
+let currentSeg = null;
+
+function openSegModal(id){
+  const s = SEGMENTS.find(x => x.id === id);
+  if (!s) return;
+  currentSeg = s;
+  document.getElementById("seg-mo-tag").textContent = s.id;
+  document.getElementById("seg-mo-name").textContent = s.name;
+  document.getElementById("seg-mo-cond").textContent = s.cond;
+  document.getElementById("seg-mo-count").textContent = `${s.n.toLocaleString()}名`;
+  document.getElementById("seg-mo-cost").textContent = `${s.n.toLocaleString()}通`;
+  document.getElementById("seg-mo-ta").value = s.sample;
+  updateSegPreview();
+  segModal.classList.add("on");
+}
+function updateSegPreview(){
+  const text = document.getElementById("seg-mo-ta").value || "";
+  const preview = text.replace(/◯◯さん/g, "山内 明日香さん");
+  document.getElementById("seg-mo-pv").textContent = preview || "文面を入力…";
+}
+document.getElementById("seg-mo-ta").addEventListener("input", updateSegPreview);
+document.getElementById("seg-mo-close").addEventListener("click", () => segModal.classList.remove("on"));
+segModal.addEventListener("click", e => { if (e.target === segModal) segModal.classList.remove("on"); });
+document.getElementById("seg-mo-send").addEventListener("click", () => {
+  if (!currentSeg) return;
+  alert(`Demo · 送信シミュレーション\n\nセグメント: ${currentSeg.id} ${currentSeg.name}\n対象: ${currentSeg.n.toLocaleString()}名\n\n本番では Cloud Functions 経由で LINE Messaging API に push (to: userId必須、broadcast禁止)。 消費 push 数 = 対象人数。`);
+  segModal.classList.remove("on");
+});
+document.getElementById("seg-mo-sched").addEventListener("click", () => {
+  if (!currentSeg) return;
+  alert(`Demo · 予約配信\n\nセグメント: ${currentSeg.id} ${currentSeg.name}\n予約: 明日 09:00\n\nCloud Scheduler + Functions で定時実行 (配信直前にセグメントを再走査、条件外れたユーザーはスキップ)。`);
+  segModal.classList.remove("on");
+});
+</script>
+</body>
+</html>
