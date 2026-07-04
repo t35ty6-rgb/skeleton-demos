@@ -670,30 +670,30 @@ const chapters = [
         <div data-reveal="1" style="padding-top:6px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">01</div>
         <div data-reveal="1" style="padding-bottom:16px;border-bottom:1px solid ${C.line};">
           <div style="font-family:${C.fBody};font-size:18px;font-weight:700;color:${C.ink};line-height:1.4;">対面 · 玄関先で 信頼を 積む</div>
-          <div style="margin-top:6px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.8;">販売員が 商品を 説明する。 これまでの 訪問販売と 同じ 動作。</div>
+          <div style="margin-top:6px;font-family:${C.fBody};font-size:15px;color:${C.ink2};line-height:1.8;">販売員が商品を説明する。これまでの訪問販売と同じ動作。</div>
         </div>
 
         <div data-reveal="2" style="padding-top:6px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">02</div>
         <div data-reveal="2" style="padding-bottom:16px;border-bottom:1px solid ${C.line};">
           <div style="font-family:${C.fBody};font-size:18px;font-weight:700;color:${C.ink};line-height:1.4;">QR 提示</div>
-          <div style="margin-top:6px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.8;">タブレット、 名刺、 チラシ印刷 のいずれかで 販売員個別の QR を 見せる。</div>
+          <div style="margin-top:6px;font-family:${C.fBody};font-size:15px;color:${C.ink2};line-height:1.8;">タブレット、名刺、チラシ印刷のいずれかで販売員個別のQRを見せる。</div>
         </div>
 
         <div data-reveal="3" style="padding-top:6px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">03</div>
         <div data-reveal="3" style="padding-bottom:16px;border-bottom:1px solid ${C.line};">
           <div style="font-family:${C.fBody};font-size:18px;font-weight:700;color:${C.ink};line-height:1.4;">スキャン</div>
-          <div style="margin-top:6px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.8;">お客様が LINE で QR を 読み取る。 タップ 1回で 友達追加が 完了する。</div>
+          <div style="margin-top:6px;font-family:${C.fBody};font-size:15px;color:${C.ink2};line-height:1.8;">お客様がLINEでQRを読み取る。タップ1回で友達追加が完了する。</div>
         </div>
 
         <div data-reveal="4" style="padding-top:6px;font-family:${C.fNum};font-size:12px;color:${C.leaf};letter-spacing:0.14em;font-weight:700;">04</div>
         <div data-reveal="4">
           <div style="font-family:${C.fBody};font-size:18px;font-weight:700;color:${C.leaf};line-height:1.4;">刻印</div>
-          <div style="margin-top:6px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.8;">担当販売員 ID が、 お客様 レコード に 永久に 書き込まれる。</div>
+          <div style="margin-top:6px;font-family:${C.fBody};font-size:15px;color:${C.ink2};line-height:1.8;">担当販売員IDが、お客様レコードに永久に書き込まれる。</div>
           <div data-reveal="5" style="margin-top:12px;display:inline-block;padding:6px 12px;background:${C.leafTint};font-family:${C.fNum};font-size:12px;color:${C.leafInk};letter-spacing:0.02em;">customer.repId = "北野誠"</div>
         </div>
       </div>
 
-      <div data-reveal="6" style="margin-top:32px;padding-top:20px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">友達追加 と rep_id 刻印は、 同時に 完了 します。 お客様側は、 QR を スキャンする 1動作 だけ。</div>
+      <div data-reveal="6" style="margin-top:32px;padding-top:20px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">友達追加とrep_id刻印は、同時に完了します。お客様側は、QRをスキャンする1動作だけ。</div>
       ${SL.foot}
     `);
     await reveal(p, 1); await reveal(p, 2);
@@ -1014,7 +1014,7 @@ const chapters = [
     await sync.waitFor(p, 'title_end');
     await slide(p, `
       ${SL.chrome('IV · 01', 'チャネル')}
-      <div style="margin-top:26px;">${SL.title('3つの現場に、<br>別々 の <span style="color:${C.leaf};">QRコード</span> を発行', { size: '42px' })}</div>
+      <div style="margin-top:26px;">${SL.title('3つの現場に、<br>別々の <span style="color:${C.leaf};">QRコード</span> を発行', { size: '42px' })}</div>
 
       <div style="margin-top:44px;display:grid;grid-template-columns:repeat(3,1fr);gap:36px;flex:1;">
         <div data-reveal="1">
@@ -1080,7 +1080,7 @@ const chapters = [
           <div data-reveal="1" style="padding:22px 8px 22px 24px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:17px;color:${C.ink};">500 名</div>
           <div data-reveal="1" style="padding:22px 8px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:28px;font-weight:700;color:${C.leaf};letter-spacing:-0.02em;">¥ 18,400</div>
           <div data-reveal="1" style="padding:22px 8px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:20px;color:${C.leaf};letter-spacing:-0.01em;">52<span style="font-size:14px;">%</span></div>
-          <div data-reveal="4" style="padding:22px 0 22px 24px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fBody};font-size:13px;font-weight:700;color:${C.leaf};">継続</div>
+          <div data-reveal="1" style="padding:22px 0 22px 24px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fBody};font-size:13px;font-weight:700;color:${C.leaf};">継続</div>
 
           <!-- Row: 万博 -->
           <div data-reveal="2" style="padding:22px 0;border-bottom:1px solid ${C.line};">
@@ -1090,7 +1090,7 @@ const chapters = [
           <div data-reveal="2" style="padding:22px 8px 22px 24px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:17px;color:${C.ink};">200 名</div>
           <div data-reveal="2" style="padding:22px 8px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:28px;font-weight:700;color:${C.ink};letter-spacing:-0.02em;">¥ 9,200</div>
           <div data-reveal="2" style="padding:22px 8px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:20px;color:${C.ink};letter-spacing:-0.01em;">28<span style="font-size:14px;">%</span></div>
-          <div data-reveal="5" style="padding:22px 0 22px 24px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fBody};font-size:13px;font-weight:700;color:${C.ink2};">再考</div>
+          <div data-reveal="2" style="padding:22px 0 22px 24px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fBody};font-size:13px;font-weight:700;color:${C.ink2};">再考</div>
 
           <!-- Row: 新聞 -->
           <div data-reveal="3" style="padding:22px 0;">
@@ -1100,7 +1100,7 @@ const chapters = [
           <div data-reveal="3" style="padding:22px 8px 22px 24px;text-align:right;font-family:${C.fNum};font-size:17px;color:${C.ink};">80 名</div>
           <div data-reveal="3" style="padding:22px 8px;text-align:right;font-family:${C.fNum};font-size:28px;font-weight:700;color:${C.ink};letter-spacing:-0.02em;">¥ 6,700</div>
           <div data-reveal="3" style="padding:22px 8px;text-align:right;font-family:${C.fNum};font-size:20px;color:${C.ink};letter-spacing:-0.01em;">19<span style="font-size:14px;">%</span></div>
-          <div data-reveal="6" style="padding:22px 0 22px 24px;text-align:right;font-family:${C.fBody};font-size:13px;font-weight:700;color:${C.alert};">見直し</div>
+          <div data-reveal="3" style="padding:22px 0 22px 24px;text-align:right;font-family:${C.fBody};font-size:13px;font-weight:700;color:${C.alert};">見直し</div>
         </div>
       </div>
       ${SL.foot}
@@ -1108,9 +1108,6 @@ const chapters = [
     await reveal(p, 1);
     await sync.waitFor(p, 'data_expo'); await reveal(p, 2);
     await sync.waitFor(p, 'data_paper'); await reveal(p, 3);
-    await wait(p, 4500); await reveal(p, 4);
-    await wait(p, 2500); await reveal(p, 5);
-    await wait(p, 2500); await reveal(p, 6);
   }},
 
   // ═══════════════════════════════════════════════════════
@@ -1306,7 +1303,7 @@ const chapters = [
 
         <div data-reveal="2" style="display:flex;flex-direction:column;justify-content:center;padding-left:44px;border-left:1px solid ${C.line};">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">WHY · この数字が出た理由</div>
-          <div style="margin-top:20px;font-family:${C.fBody};font-size:16px;line-height:2;color:${C.ink};">
+          <div style="margin-top:20px;font-family:${C.fBody};font-size:16px;line-height:2;color:${C.ink};padding-bottom:16px;">
             担当顧客の EC · LINE 追加購入も、販売員実績に帰属する。<br>
             「自分の顧客が、見えない所でも買ってくれている」実感が生まれる。<br>
             モチベーションが向上、訪問質が向上、追加購入の循環につながる。
@@ -1336,7 +1333,7 @@ const chapters = [
 
         <div data-reveal="2" style="display:flex;flex-direction:column;justify-content:center;padding-left:44px;border-left:1px solid ${C.line};">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">WHY · この数字が出た理由</div>
-          <div style="margin-top:20px;font-family:${C.fBody};font-size:16px;line-height:2;color:${C.ink};">
+          <div style="margin-top:20px;font-family:${C.fBody};font-size:16px;line-height:2;color:${C.ink};padding-bottom:16px;">
             「解約」タップ前の引き止めシナリオが自動発火する。<br>
             定期便スキップが 1タップ、「面倒だからやめる」の手前で継続に戻せる。<br>
             担当販売員から直接電話でフォローできる体制が整う。
@@ -1365,9 +1362,9 @@ const chapters = [
 
         <div data-reveal="2" style="display:flex;flex-direction:column;justify-content:center;padding-left:44px;border-left:1px solid ${C.line};">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">WHY · この数字が出た理由</div>
-          <div style="margin-top:20px;font-family:${C.fBody};font-size:16px;line-height:2;color:${C.ink};">
+          <div style="margin-top:20px;font-family:${C.fBody};font-size:16px;line-height:2;color:${C.ink};padding-bottom:16px;">
             メール登録が不要になり、中高齢層の離脱が撤廃される。<br>
-            LIFF が LINE 内完結、外部サイトへの遷移がゼロになる。
+            LIFFがLINE内完結、外部サイトへの遷移がゼロになる。
           </div>
         </div>
       </div>
@@ -1441,7 +1438,7 @@ const chapters = [
             <div style="font-family:${C.fNum};font-weight:400;font-size:96px;line-height:0.9;letter-spacing:-0.04em;color:${C.ink};">5</div>
             <div style="font-family:${C.fBody};font-size:20px;color:${C.ink2};font-weight:500;">名</div>
           </div>
-          <div style="margin-top:16px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.75;">京都本社の 1営業所に 所属する 販売員。</div>
+          <div style="margin-top:16px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.75;">京都本社の1営業所に所属する販売員。</div>
         </div>
         <div data-reveal="3" style="padding-top:32px;border-top:2px solid ${C.ink};">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">対象顧客</div>
