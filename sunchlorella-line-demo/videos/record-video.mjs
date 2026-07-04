@@ -1,5 +1,5 @@
-// サン・クロレラ 統合LINE OS 営業ナレーション動画
-// 実UI (admin/rep/customer) を動かしながら 音声8章に同期
+// サン・クロレラ統合LINE OS 営業ナレーション動画
+// 実UI (admin/rep/customer) を動かしながら音声8章に同期
 // arashima-admin-help 方式 (focusFlow 5段階カメラワーク + 累積秒同期)
 import pwPkg from '/Users/tsukasayoshida/.skeleton-pegat/node_modules/playwright/index.js';
 const { chromium } = pwPkg;
@@ -222,7 +222,7 @@ async function injectHelper(p) {
         'padding:64px 88px 56px',
         'overflow:hidden',
         'animation:sc-fadein .4s ease',
-        'font-feature-settings:"palt" 1', // 日本語 詰め文字
+        'font-feature-settings:"palt" 1', // 日本語詰め文字
       ].join(';');
       el.innerHTML = html;
       // 段階リビール: data-reveal="N" 属性の要素を初期非表示に
@@ -267,7 +267,7 @@ class Sync {
     this.duration = duration || 30;
     this.t0 = Date.now();
   }
-  // ナレーション の 指定 mark 位置 まで 待機 (audio time-based)
+  // ナレーションの指定 mark 位置まで待機 (audio time-based)
   async waitFor(p, name) {
     const t = this.marks[name];
     if (t == null) { console.log(`    ⚠ mark not found: ${name}`); return; }
@@ -305,11 +305,11 @@ async function clearAll(p) { await p.evaluate(() => window.scHelp.clear()); }
 
 // ============ Editorial slide primitives ============
 // 設計方針:
-//  - 眉ラベル (SOLUTION · 01 等) は 使わない (impeccable ban)
-//  - 数字連番 01/02/03 は 実際の順序である時だけ
+//  - 眉ラベル (SOLUTION · 01 等) は使わない (impeccable ban)
+//  - 数字連番 01/02/03 は実際の順序である時だけ
 //  - Hero-metric テンプレ (デカ数字+小ラベル+アクセント色) 禁止
-//  - カードグリッド 反復 禁止 (weight/spacing/rule で 階層)
-//  - 絵文字 禁止 (SVG icon か 純粋タイポ)
+//  - カードグリッド反復禁止 (weight/spacing/rule で階層)
+//  - 絵文字禁止 (SVG icon か純粋タイポ)
 //  - Palette: off-white bg (--bg) + 墨 ink + 深緑 leaf (accent <10%)
 const C = {
   bg:      'oklch(0.985 0.005 130)',
@@ -332,18 +332,18 @@ const SL = {
   // Slide chrome: fine top overline + running foot (identity, not eyebrow)
   chrome: (ordinal, section) => `
     <div style="display:flex;align-items:baseline;gap:20px;padding-bottom:22px;border-bottom:1px solid ${C.line};">
-      <div style="font-family:${C.fNum};font-size:11px;font-weight:400;color:${C.ink3};letter-spacing:0.12em;text-transform:uppercase;">
+      <div style="font-family:${C.fNum};font-size:12px;font-weight:500;color:${C.ink2};letter-spacing:0.10em;text-transform:uppercase;">
         Sun Chlorella Japan · 統合LINE OS
       </div>
       <div style="flex:1;"></div>
-      ${section ? `<div style="font-family:${C.fBody};font-size:12px;font-weight:500;color:${C.ink2};letter-spacing:0.02em;">${section}</div>` : ''}
-      ${ordinal ? `<div style="font-family:${C.fNum};font-size:11px;font-weight:400;color:${C.ink3};letter-spacing:0.14em;">${ordinal}</div>` : ''}
+      ${section ? `<div style="font-family:${C.fBody};font-size:13px;font-weight:500;color:${C.ink2};letter-spacing:0.02em;">${section}</div>` : ''}
+      ${ordinal ? `<div style="font-family:${C.fNum};font-size:12px;font-weight:500;color:${C.ink2};letter-spacing:0.12em;">${ordinal}</div>` : ''}
     </div>`,
   foot: `
     <div style="margin-top:auto;padding-top:20px;border-top:1px solid ${C.line};display:flex;align-items:baseline;gap:16px;font-family:${C.fBody};">
-      <div style="font-size:11px;font-weight:500;color:${C.ink3};letter-spacing:0.02em;">Skeleton Inc.</div>
+      <div style="font-size:12px;font-weight:500;color:${C.ink2};letter-spacing:0.02em;">Skeleton Inc.</div>
       <div style="flex:1;height:1px;"></div>
-      <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.08em;">2026 · 07</div>
+      <div style="font-family:${C.fNum};font-size:12px;font-weight:500;color:${C.ink2};letter-spacing:0.06em;">2026 · 07</div>
     </div>`,
 
   // Big editorial title (no eyebrow — the title carries itself)
@@ -420,11 +420,11 @@ async function preloadFonts(p) {
         setTimeout(fin, 5000);
       });
     }
-    // 明示的に 全 weight を preload
+    // 明示的に全 weight を preload
     const jobs = [];
     for (const w of [300, 400, 500, 700, 900]) jobs.push(document.fonts.load(`${w} 16px "Noto Sans JP"`));
     for (const w of [300, 400, 500, 700]) jobs.push(document.fonts.load(`${w} 16px "Inter Tight"`));
-    // 大サイズ 数字 も (レンダリング用 の 実 metric を 確保)
+    // 大サイズ数字も (レンダリング用の実 metric を確保)
     jobs.push(document.fonts.load('900 88px "Noto Sans JP"'));
     jobs.push(document.fonts.load('400 160px "Inter Tight"'));
     await Promise.all(jobs);
@@ -459,10 +459,10 @@ const chapters = [
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:820px;">
         <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">FOR SUN CHLORELLA JAPAN — 2026 / 07</div>
         <div data-reveal="2" style="margin-top:36px;font-family:${C.fBody};font-weight:900;font-size:88px;line-height:1.05;letter-spacing:-0.045em;color:${C.ink};">統合<span style="color:${C.leaf};">LINE OS</span></div>
-        <div data-reveal="3" style="margin-top:14px;font-family:${C.fBody};font-weight:500;font-size:22px;line-height:1.5;color:${C.ink2};letter-spacing:-0.005em;">訪問販売員 62名 と、 4本 の 公式アカウント と、<br>京都本社 の 経営会議 を、 一本 の 数字 で 繋ぐ 提案書</div>
+        <div data-reveal="3" style="margin-top:14px;font-family:${C.fBody};font-weight:500;font-size:22px;line-height:1.5;color:${C.ink2};letter-spacing:-0.005em;">訪問販売員 62名と、 4本の公式アカウントと、<br>京都本社の経営会議を、一本の数字で繋ぐ提案書</div>
         <div data-reveal="4" style="margin-top:56px;display:flex;align-items:baseline;gap:14px;">
           <div style="width:56px;height:1px;background:${C.ink};"></div>
-          <div style="font-family:${C.fBody};font-size:14px;color:${C.ink2};font-weight:500;letter-spacing:0.02em;">株式会社 スケルトン</div>
+          <div style="font-family:${C.fBody};font-size:14px;color:${C.ink2};font-weight:500;letter-spacing:0.02em;">株式会社スケルトン</div>
         </div>
       </div>
     `);
@@ -472,14 +472,14 @@ const chapters = [
     await sync.waitFor(p, 'thanks_end');
     await slide(p, `
       ${SL.chrome('01 / 05', '課題')}
-      <div style="margin-top:36px;">${SL.title('御社 の 現場 で いま、<br>起きている こと', { size: '52px' })}</div>
+      <div style="margin-top:36px;">${SL.title('御社の現場でいま、<br>起きていること', { size: '52px' })}</div>
       <div style="margin-top:44px;display:grid;grid-template-columns:56px 1fr;gap:24px;row-gap:26px;max-width:900px;">
         <div data-reveal="1" style="font-family:${C.fNum};font-size:22px;font-weight:400;color:${C.leaf};letter-spacing:-0.02em;">01</div>
-        <div data-reveal="1" style="font-family:${C.fBody};font-size:19px;font-weight:700;color:${C.ink};line-height:1.5;">訪問販売員 の 実績 が、 EC化 に よって 消えていく</div>
+        <div data-reveal="1" style="font-family:${C.fBody};font-size:19px;font-weight:700;color:${C.ink};line-height:1.5;">訪問販売員の実績が、 EC化によって消えていく</div>
         <div data-reveal="2" style="font-family:${C.fNum};font-size:22px;font-weight:400;color:${C.leaf};letter-spacing:-0.02em;">02</div>
-        <div data-reveal="2" style="font-family:${C.fBody};font-size:19px;font-weight:700;color:${C.ink};line-height:1.5;">4本 の 公式LINE が 部署別 で 運用され、 本社が 数字を 横断把握 できない</div>
+        <div data-reveal="2" style="font-family:${C.fBody};font-size:19px;font-weight:700;color:${C.ink};line-height:1.5;">4本の公式LINE が部署別で運用され、本社が数字を横断把握できない</div>
         <div data-reveal="3" style="font-family:${C.fNum};font-size:22px;font-weight:400;color:${C.leaf};letter-spacing:-0.02em;">03</div>
-        <div data-reveal="3" style="font-family:${C.fBody};font-size:19px;font-weight:700;color:${C.ink};line-height:1.5;">中高齢 の お客様 の 半数 が、 メールアドレス 入力 で 離脱 する</div>
+        <div data-reveal="3" style="font-family:${C.fBody};font-size:19px;font-weight:700;color:${C.ink};line-height:1.5;">中高齢のお客様の半数が、メールアドレス入力で離脱する</div>
       </div>
       ${SL.foot}
     `);
@@ -491,7 +491,7 @@ const chapters = [
     await sync.waitFor(p, 'intro_end');
     await slide(p, `
       ${SL.chrome('02 / 05', '課題 · 一')}
-      <div style="margin-top:32px;">${SL.title('販売員 の 実績 が、<br><span style="color:${C.leaf}">消える</span>', { size: '52px' })}</div>
+      <div style="margin-top:32px;">${SL.title('販売員の実績が、<br><span style="color:${C.leaf}">消える</span>', { size: '52px' })}</div>
 
       <div style="margin-top:44px;display:grid;grid-template-columns:repeat(4, 1fr);gap:0;position:relative;">
         <!-- horizontal spine -->
@@ -500,34 +500,34 @@ const chapters = [
         <div data-reveal="1" style="text-align:center;padding-right:20px;">
           <div style="margin:0 auto;width:14px;height:14px;border:2px solid ${C.ink};border-radius:50%;background:${C.bg};position:relative;z-index:1;"></div>
           <div style="margin-top:24px;font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">TIME 01</div>
-          <div style="margin-top:6px;font-family:${C.fBody};font-size:16px;font-weight:700;color:${C.ink};line-height:1.4;">3ヶ月 通う</div>
-          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.7;">販売員 北野さん が、 田中家 に 通い続け、 商品 の 価値 を 丁寧に 伝える。</div>
+          <div style="margin-top:6px;font-family:${C.fBody};font-size:16px;font-weight:700;color:${C.ink};line-height:1.4;">3ヶ月通う</div>
+          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.7;">販売員北野さんが、田中家に通い続け、商品の価値を丁寧に伝える。</div>
         </div>
 
         <div data-reveal="2" style="text-align:center;padding-right:20px;">
           <div style="margin:0 auto;width:14px;height:14px;border:2px solid ${C.ink};border-radius:50%;background:${C.bg};position:relative;z-index:1;"></div>
           <div style="margin-top:24px;font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">TIME 02</div>
-          <div style="margin-top:6px;font-family:${C.fBody};font-size:16px;font-weight:700;color:${C.ink};line-height:1.4;">週末 の 夜</div>
-          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.7;">田中さま が、 スマホ で ECサイト を 開き、 定期便 に 申し込む。</div>
+          <div style="margin-top:6px;font-family:${C.fBody};font-size:16px;font-weight:700;color:${C.ink};line-height:1.4;">週末の夜</div>
+          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.7;">田中さまが、スマホで ECサイトを開き、定期便に申し込む。</div>
         </div>
 
         <div data-reveal="3" style="text-align:center;padding-right:20px;">
           <div style="margin:0 auto;width:14px;height:14px;border:2px solid ${C.ink};border-radius:50%;background:${C.bg};position:relative;z-index:1;"></div>
           <div style="margin-top:24px;font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">TIME 03</div>
-          <div style="margin-top:6px;font-family:${C.fBody};font-size:16px;font-weight:700;color:${C.ink};line-height:1.4;">その 瞬間</div>
-          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.7;">売上 は、 EC部門 の 実績 として 計上 される。</div>
+          <div style="margin-top:6px;font-family:${C.fBody};font-size:16px;font-weight:700;color:${C.ink};line-height:1.4;">その瞬間</div>
+          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.7;">売上は、 EC部門の実績として計上される。</div>
         </div>
 
         <div data-reveal="4" style="text-align:center;">
           <div style="margin:0 auto;width:14px;height:14px;background:${C.alert};border-radius:50%;position:relative;z-index:1;"></div>
           <div style="margin-top:24px;font-family:${C.fNum};font-size:11px;color:${C.alert};letter-spacing:0.14em;font-weight:400;">RESULT</div>
-          <div style="margin-top:6px;font-family:${C.fBody};font-size:16px;font-weight:700;color:${C.alert};line-height:1.4;">実績 は 残らない</div>
-          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.7;">北野さん の 3ヶ月 の 努力 は、 どこ にも 記録 されない。</div>
+          <div style="margin-top:6px;font-family:${C.fBody};font-size:16px;font-weight:700;color:${C.alert};line-height:1.4;">実績は残らない</div>
+          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.7;">北野さんの 3ヶ月の努力は、どこにも記録されない。</div>
         </div>
       </div>
 
       <div data-reveal="5" style="margin-top:52px;padding:24px 28px;border-left:none;background:${C.bg2};">
-        <div style="font-family:${C.fBody};font-size:15px;color:${C.ink};line-height:1.85;">この 光景 が、 今月 も、 全国 <span style="font-family:${C.fNum};font-weight:700;">62名</span> の 訪問販売員 の 現場 で、 起きて います。</div>
+        <div style="font-family:${C.fBody};font-size:15px;color:${C.ink};line-height:1.85;">この光景が、今月も、全国 <span style="font-family:${C.fNum};font-weight:700;">62名</span> の訪問販売員の現場で、起きています。</div>
       </div>
       ${SL.foot}
     `);
@@ -540,15 +540,15 @@ const chapters = [
     // ── 課題② (issue1_end 37.4 → issue2_end 61.2) editorial diagram ──
     await slide(p, `
       ${SL.chrome('03 / 05', '課題 · 二')}
-      <div style="margin-top:28px;">${SL.title('4本 の 公式LINE が、<br>本社 で <span style="color:${C.leaf}">合算 できない</span>', { size: '48px' })}</div>
+      <div style="margin-top:28px;">${SL.title('4本の公式LINE が、<br>本社で <span style="color:${C.leaf}">合算できない</span>', { size: '48px' })}</div>
 
       <div style="margin-top:36px;display:grid;grid-template-columns:1fr 1px 1fr;gap:40px;flex:1;">
         <div data-reveal="1">
-          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">CURRENT · 部署 別 運用</div>
+          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">CURRENT · 部署別運用</div>
           <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid ${C.line};">
             ${[
-              ['営業部','販売員 追跡'],
-              ['お客様サポート','問い合わせ 応答'],
+              ['営業部','販売員追跡'],
+              ['お客様サポート','問い合わせ応答'],
               ['定期便お知らせ','出荷連絡'],
               ['キャンペーン','季節企画'],
             ].map(([n,r],i) => `
@@ -558,18 +558,18 @@ const chapters = [
                 <div style="margin-top:2px;font-family:${C.fBody};font-size:12px;color:${C.ink3};">${r}</div>
               </div>`).join('')}
           </div>
-          <div style="margin-top:16px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.75;">配信ツール が 部署ごと に 別。 数字 は それぞれ の 部署 で 手集計。</div>
+          <div style="margin-top:16px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.75;">配信ツールが部署ごとに別。数字はそれぞれの部署で手集計。</div>
         </div>
 
         <div style="width:1px;background:${C.line};"></div>
 
         <div data-reveal="6" style="display:flex;flex-direction:column;justify-content:center;">
-          <div style="font-family:${C.fNum};font-size:11px;color:${C.alert};letter-spacing:0.16em;font-weight:400;">HEAD OFFICE · 本社 視点</div>
+          <div style="font-family:${C.fNum};font-size:11px;color:${C.alert};letter-spacing:0.16em;font-weight:400;">HEAD OFFICE · 本社視点</div>
           <div style="margin-top:20px;font-family:${C.fBody};font-size:17px;font-weight:500;color:${C.ink};line-height:1.9;">
-            経営会議 で 「LINE経由 の 総売上、 総友達数、 平均開封率」 を 見たくても、 <span style="font-weight:700;background:linear-gradient(transparent 65%,${C.leafTint} 65%);">4部署 から 数字 を 集めて、 手作業 で 合算 する 必要 が あります</span>。
+            経営会議で「LINE経由の総売上、総友達数、平均開封率」を見たくても、 <span style="font-weight:700;background:linear-gradient(transparent 65%,${C.leafTint} 65%);">4部署から数字を集めて、手作業で合算する必要があります</span>。
           </div>
           <div data-reveal="7" style="margin-top:32px;padding-top:20px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">
-            統合 したい が、 既存 の 友達 を 失う リスク が こわい。<br>この まま で は、 統合 判断 の 材料 も、 手 に 入ら ない。
+            統合したいが、既存の友達を失うリスクがこわい。<br>このままでは、統合判断の材料も、手に入らない。
           </div>
         </div>
       </div>
@@ -582,7 +582,7 @@ const chapters = [
     // ── 課題③ (issue2_end 61.2 → issue3_end 80.6) ──
     await slide(p, `
       ${SL.chrome('04 / 05', '課題 · 三')}
-      <div style="margin-top:28px;">${SL.title('中高齢 の 半数 が、<br>メール入力 で <span style="color:${C.leaf}">諦める</span>', { size: '48px' })}</div>
+      <div style="margin-top:28px;">${SL.title('中高齢の半数が、<br>メール入力で <span style="color:${C.leaf}">諦める</span>', { size: '48px' })}</div>
 
       <div style="margin-top:36px;display:grid;grid-template-columns:1.3fr 1fr;gap:56px;flex:1;">
         <div data-reveal="1" style="display:flex;flex-direction:column;">
@@ -600,8 +600,8 @@ const chapters = [
             </div>
             <div data-reveal="2" style="display:flex;gap:14px;align-items:baseline;border-bottom:2px solid ${C.alert};padding:12px 0;background:linear-gradient(90deg, transparent, ${C.alertTint} 60%);">
               <span style="font-family:${C.fNum};color:${C.alert};font-size:12px;letter-spacing:0.1em;width:22px;font-weight:700;">03</span>
-              <span style="color:${C.alert};font-weight:700;">メール アドレス 入力</span>
-              <span style="margin-left:auto;font-family:${C.fNum};font-size:11px;color:${C.alert};letter-spacing:0.14em;font-weight:700;">半数 離脱</span>
+              <span style="color:${C.alert};font-weight:700;">メールアドレス入力</span>
+              <span style="margin-left:auto;font-family:${C.fNum};font-size:11px;color:${C.alert};letter-spacing:0.14em;font-weight:700;">半数離脱</span>
             </div>
             <div style="display:flex;gap:14px;align-items:baseline;border-bottom:1px solid ${C.line};padding:8px 0;color:${C.ink3};">
               <span style="font-family:${C.fNum};font-size:12px;letter-spacing:0.1em;width:22px;">04</span>
@@ -621,7 +621,7 @@ const chapters = [
             <div style="font-family:${C.fNum};font-weight:400;font-size:36px;color:${C.alert};letter-spacing:-0.02em;">%</div>
           </div>
           <div data-reveal="4" style="margin-top:20px;font-family:${C.fBody};font-size:15px;line-height:1.85;color:${C.ink2};max-width:32ch;">
-            御社 の 中心顧客層 = 60代 〜 70代 の 女性。 メール登録 を 求められた 瞬間、 半数 が 購入 を あきらめる。 販売員 が いくら ECサイト を ご案内 しても、 「登録 が わからない」 の 声 で、 追加購入 に つながら ない。
+            御社の中心顧客層 = 60代〜 70代の女性。メール登録を求められた瞬間、半数が購入をあきらめる。販売員がいくら ECサイトをご案内しても、「登録がわからない」の声で、追加購入につながらない。
           </div>
         </div>
       </div>
@@ -635,7 +635,7 @@ const chapters = [
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
         <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">05 / 05 — TOWARD ONE SYSTEM</div>
-        <div data-reveal="2" style="margin-top:28px;font-family:${C.fBody};font-weight:900;font-size:76px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">3つ の 課題 を、<br><span style="color:${C.leaf};">1つ の 運用OS</span> で 解く</div>
+        <div data-reveal="2" style="margin-top:28px;font-family:${C.fBody};font-weight:900;font-size:76px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">3つの課題を、<br><span style="color:${C.leaf};">1つの運用OS</span> で解く</div>
         <div data-reveal="3" style="margin-top:36px;display:flex;align-items:baseline;gap:14px;">
           <div style="width:56px;height:1px;background:${C.leaf};"></div>
           <div style="font-family:${C.fBody};font-size:18px;color:${C.leaf};font-weight:700;letter-spacing:-0.005em;">統合 LINE OS</div>
@@ -654,8 +654,8 @@ const chapters = [
     // ── 表紙 (0 → 5.2) ──
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
-        <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">SOLUTION · I</div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">訪問販売員 の 実績 を、<br><span style="color:${C.leaf};">永続的 に 守る</span></div>
+        <div data-reveal="1" style="display:flex;align-items:baseline;gap:16px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.12em;font-weight:400;"><span>01</span><span style="flex:1;height:1px;background:${C.line};max-width:80px;"></span><span>解決策</span></div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">訪問販売員の実績を、<br><span style="color:${C.leaf};">永続的に守る</span></div>
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
@@ -664,42 +664,36 @@ const chapters = [
     await sync.waitFor(p, 'title_end');
     await slide(p, `
       ${SL.chrome('I · 01', '仕組み')}
-      <div style="margin-top:26px;">${SL.title('玄関先 で、 3秒 で、<br><span style="color:${C.leaf};">担当ID</span> を 顧客 に 刻印', { size: '44px' })}</div>
+      <div style="margin-top:26px;">${SL.title('玄関先で、 3秒で、<br><span style="color:${C.leaf};">担当ID</span> を顧客に刻印', { size: '44px' })}</div>
 
-      <div style="margin-top:44px;display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative;">
-        <div style="position:absolute;top:22px;left:6%;right:6%;height:1px;background:${C.line};"></div>
-
-        <div data-reveal="1" style="padding-right:24px;">
-          <div style="width:12px;height:12px;background:${C.ink};border-radius:50%;"></div>
-          <div style="margin-top:24px;font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">STEP 01</div>
-          <div style="margin-top:6px;font-family:${C.fBody};font-size:16px;font-weight:700;color:${C.ink};line-height:1.4;">対面</div>
-          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.8;">販売員 が、 玄関先 で 商品 を 説明 し、 信頼 を 積む。</div>
+      <div style="margin-top:36px;flex:1;display:grid;grid-template-columns:80px 1fr;column-gap:30px;row-gap:14px;align-content:start;">
+        <div data-reveal="1" style="padding-top:6px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">01</div>
+        <div data-reveal="1" style="padding-bottom:16px;border-bottom:1px solid ${C.line};">
+          <div style="font-family:${C.fBody};font-size:18px;font-weight:700;color:${C.ink};line-height:1.4;">対面 · 玄関先で 信頼を 積む</div>
+          <div style="margin-top:6px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.8;">販売員が 商品を 説明する。 これまでの 訪問販売と 同じ 動作。</div>
         </div>
 
-        <div data-reveal="2" style="padding-right:24px;">
-          <div style="width:12px;height:12px;background:${C.ink};border-radius:50%;"></div>
-          <div style="margin-top:24px;font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">STEP 02</div>
-          <div style="margin-top:6px;font-family:${C.fBody};font-size:16px;font-weight:700;color:${C.ink};line-height:1.4;">QR 提示</div>
-          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.8;">タブレット、 名刺、 チラシ 印刷。 販売員 個別 の QR を 見せる。</div>
+        <div data-reveal="2" style="padding-top:6px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">02</div>
+        <div data-reveal="2" style="padding-bottom:16px;border-bottom:1px solid ${C.line};">
+          <div style="font-family:${C.fBody};font-size:18px;font-weight:700;color:${C.ink};line-height:1.4;">QR 提示</div>
+          <div style="margin-top:6px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.8;">タブレット、 名刺、 チラシ印刷 のいずれかで 販売員個別の QR を 見せる。</div>
         </div>
 
-        <div data-reveal="3" style="padding-right:24px;">
-          <div style="width:12px;height:12px;background:${C.ink};border-radius:50%;"></div>
-          <div style="margin-top:24px;font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">STEP 03</div>
-          <div style="margin-top:6px;font-family:${C.fBody};font-size:16px;font-weight:700;color:${C.ink};line-height:1.4;">スキャン</div>
-          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.8;">お客様 が LINE で 読み取る。 タップ 一回 で 友達追加。</div>
+        <div data-reveal="3" style="padding-top:6px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">03</div>
+        <div data-reveal="3" style="padding-bottom:16px;border-bottom:1px solid ${C.line};">
+          <div style="font-family:${C.fBody};font-size:18px;font-weight:700;color:${C.ink};line-height:1.4;">スキャン</div>
+          <div style="margin-top:6px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.8;">お客様が LINE で QR を 読み取る。 タップ 1回で 友達追加が 完了する。</div>
         </div>
 
+        <div data-reveal="4" style="padding-top:6px;font-family:${C.fNum};font-size:12px;color:${C.leaf};letter-spacing:0.14em;font-weight:700;">04</div>
         <div data-reveal="4">
-          <div style="width:12px;height:12px;background:${C.leaf};border-radius:50%;"></div>
-          <div style="margin-top:24px;font-family:${C.fNum};font-size:11px;color:${C.leaf};letter-spacing:0.14em;font-weight:400;">STEP 04</div>
-          <div style="margin-top:6px;font-family:${C.fBody};font-size:16px;font-weight:700;color:${C.leaf};line-height:1.4;">刻印</div>
-          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.8;">担当販売員ID が、 お客様レコード に 永久 に 書き込まれる。</div>
-          <div data-reveal="5" style="margin-top:14px;padding:8px 10px;background:${C.leafTint};font-family:${C.fNum};font-size:11px;color:${C.leafInk};letter-spacing:0.02em;">customer.repId = "北野誠"</div>
+          <div style="font-family:${C.fBody};font-size:18px;font-weight:700;color:${C.leaf};line-height:1.4;">刻印</div>
+          <div style="margin-top:6px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.8;">担当販売員 ID が、 お客様 レコード に 永久に 書き込まれる。</div>
+          <div data-reveal="5" style="margin-top:12px;display:inline-block;padding:6px 12px;background:${C.leafTint};font-family:${C.fNum};font-size:12px;color:${C.leafInk};letter-spacing:0.02em;">customer.repId = "北野誠"</div>
         </div>
       </div>
 
-      <div data-reveal="6" style="margin-top:48px;padding-top:20px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">友達追加 と rep_id 刻印 は、 同時 に 完了 します。 お客様 側 は、 QR を スキャン する 一動作 だけ。</div>
+      <div data-reveal="6" style="margin-top:32px;padding-top:20px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">友達追加 と rep_id 刻印は、 同時に 完了 します。 お客様側は、 QR を スキャンする 1動作 だけ。</div>
       ${SL.foot}
     `);
     await reveal(p, 1); await reveal(p, 2);
@@ -707,19 +701,19 @@ const chapters = [
     await sync.waitFor(p, 'step_scan'); await reveal(p, 4);
     await wait(p, 3500); await reveal(p, 5); await reveal(p, 6);
 
-    // ── 4チャネル 全帰属 (step_engrave 25.8 → ltv_end 42.5) ──
+    // ── 4チャネル全帰属 (step_engrave 25.8 → ltv_end 42.5) ──
     await sync.waitFor(p, 'step_engrave');
     await slide(p, `
       ${SL.chrome('I · 02', '帰属')}
-      <div style="margin-top:26px;">${SL.title('以降 の <span style="color:${C.leaf};">全 チャネル</span> の 購入 が、<br>担当販売員 の 実績 に なる', { size: '42px' })}</div>
+      <div style="margin-top:26px;">${SL.title('以降の <span style="color:${C.leaf};">全チャネル</span> の購入が、<br>担当販売員の実績になる', { size: '42px' })}</div>
 
       <div style="margin-top:36px;display:grid;grid-template-columns:1.4fr 1fr;gap:56px;flex:1;">
         <div data-reveal="1">
-          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">田中 幸子さま · 生涯購入 4チャネル</div>
+          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">田中幸子さま · 生涯購入 4チャネル</div>
           <div style="margin-top:18px;font-family:${C.fBody};">
             <div data-reveal="2" style="display:grid;grid-template-columns:100px 1fr auto;gap:14px;align-items:baseline;padding:12px 0;border-bottom:1px solid ${C.line};">
               <div style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.06em;">2026 · 07 · 04</div>
-              <div style="font-size:14px;color:${C.ink};">玄関先 訪問 · 対面注文</div>
+              <div style="font-size:14px;color:${C.ink};">玄関先訪問 · 対面注文</div>
               <div style="font-family:${C.fNum};font-size:15px;font-weight:500;color:${C.ink};">¥ 8,640</div>
             </div>
             <div data-reveal="3" style="display:grid;grid-template-columns:100px 1fr auto;gap:14px;align-items:baseline;padding:12px 0;border-bottom:1px solid ${C.line};">
@@ -746,9 +740,9 @@ const chapters = [
         </div>
 
         <div data-reveal="7" style="display:flex;flex-direction:column;justify-content:center;padding-left:40px;border-left:1px solid ${C.line};">
-          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">担当販売員 · 北野 誠 実績</div>
+          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">担当販売員 · 北野誠実績</div>
           <div style="margin-top:20px;font-family:${C.fNum};font-weight:400;font-size:56px;line-height:0.95;letter-spacing:-0.03em;color:${C.leaf};">¥ 45,740</div>
-          <div style="margin-top:16px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.9;">4チャネル の 全 購入 が、 担当販売員 の 実績 として、 本社ダッシュボード に 集計 されます。</div>
+          <div style="margin-top:16px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.9;">4チャネルの全購入が、担当販売員の実績として、本社ダッシュボードに集計されます。</div>
         </div>
       </div>
       ${SL.foot}
@@ -764,10 +758,10 @@ const chapters = [
     await rmSlide(p);
     await p.evaluate(() => { document.querySelector('a[data-view="perf"]')?.click(); });
     await wait(p, 400);
-    await caption(p, '実画面: 販売員 個人成績 · 月次売上 / 継続率 / ランキング / 前月比 / 目標達成率');
-    await focusFlow(p, '.view[data-view="perf"]', '販売員 62名 の スマホ アプリ', { holdMs: 6500, scale: 1.2 });
+    await caption(p, '実画面: 販売員個人成績 · 月次売上 / 継続率 / ランキング / 前月比 / 目標達成率');
+    await focusFlow(p, '.view[data-view="perf"]', '販売員 62名のスマホアプリ', { holdMs: 6500, scale: 1.2 });
     await sync.waitFor(p, 'app_realtime');
-    await caption(p, '本人 が リアルタイム で 確認 · 「努力 が 見えない」 モヤモヤ を 解消');
+    await caption(p, '本人がリアルタイムで確認 · 「努力が見えない」モヤモヤを解消');
   }},
 
   // ═══════════════════════════════════════════════════════
@@ -781,8 +775,8 @@ const chapters = [
     // ── 表紙 (0 → 4.8) ──
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
-        <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">SOLUTION · II</div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">4本 の 公式LINE を、<br><span style="color:${C.leaf};">1画面 で 束ねる</span></div>
+        <div data-reveal="1" style="display:flex;align-items:baseline;gap:16px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.12em;font-weight:400;"><span>02</span><span style="flex:1;height:1px;background:${C.line};max-width:80px;"></span><span>解決策</span></div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">4本の公式LINE を、<br><span style="color:${C.leaf};">1画面で束ねる</span></div>
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
@@ -791,14 +785,14 @@ const chapters = [
     await sync.waitFor(p, 'title_end');
     await slide(p, `
       ${SL.chrome('II · 01', '統合ダッシュ')}
-      <div style="margin-top:26px;">${SL.title('4本 の 数字 を、 本社 の <span style="color:${C.leaf};">1画面</span> に', { size: '42px' })}</div>
+      <div style="margin-top:26px;">${SL.title('4本の数字を、本社の <span style="color:${C.leaf};">1画面</span> に', { size: '42px' })}</div>
 
       <div style="margin-top:36px;display:grid;grid-template-columns:1fr 1px 1.1fr;gap:44px;flex:1;">
         <div>
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">SOURCES · 4アカ</div>
           <div style="margin-top:16px;display:flex;flex-direction:column;gap:0;">
             ${[
-              ['営業部','販売員 追跡'],
+              ['営業部','販売員追跡'],
               ['お客様サポート','問い合わせ'],
               ['定期便お知らせ','出荷連絡'],
               ['キャンペーン','季節企画'],
@@ -820,11 +814,11 @@ const chapters = [
           <div style="font-family:${C.fNum};font-size:11px;color:${C.leaf};letter-spacing:0.16em;font-weight:400;">HEAD OFFICE · 統合サマリー</div>
           <div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:22px 40px;">
             <div>
-              <div style="font-family:${C.fBody};font-size:12px;color:${C.ink3};">総 友達数</div>
+              <div style="font-family:${C.fBody};font-size:12px;color:${C.ink3};">総友達数</div>
               <div style="font-family:${C.fNum};font-weight:400;font-size:44px;color:${C.ink};line-height:1;letter-spacing:-0.03em;margin-top:4px;">28,470</div>
             </div>
             <div>
-              <div style="font-family:${C.fBody};font-size:12px;color:${C.ink3};">アカ経由 売上</div>
+              <div style="font-family:${C.fBody};font-size:12px;color:${C.ink3};">アカ経由売上</div>
               <div style="font-family:${C.fNum};font-weight:400;font-size:44px;color:${C.ink};line-height:1;letter-spacing:-0.03em;margin-top:4px;">¥ 42.8<span style="font-size:22px;">M</span></div>
             </div>
             <div>
@@ -832,11 +826,11 @@ const chapters = [
               <div style="font-family:${C.fNum};font-weight:400;font-size:44px;color:${C.ink};line-height:1;letter-spacing:-0.03em;margin-top:4px;">36<span style="font-size:22px;">%</span></div>
             </div>
             <div>
-              <div style="font-family:${C.fBody};font-size:12px;color:${C.ink3};">獲得 顧客</div>
+              <div style="font-family:${C.fBody};font-size:12px;color:${C.ink3};">獲得顧客</div>
               <div style="font-family:${C.fNum};font-weight:400;font-size:44px;color:${C.ink};line-height:1;letter-spacing:-0.03em;margin-top:4px;">3,102</div>
             </div>
           </div>
-          <div data-reveal="7" style="margin-top:28px;padding-top:16px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">既存 友達 の 喪失 リスク ゼロ の まま、 4本 の 数字 を 一元 化 します。</div>
+          <div data-reveal="7" style="margin-top:28px;padding-top:16px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">既存友達の喪失リスクゼロのまま、 4本の数字を一元化します。</div>
         </div>
       </div>
       ${SL.foot}
@@ -852,36 +846,36 @@ const chapters = [
     // ── 実UI channels (unified 20.7 → detail_end 34.2) ──
     await sync.waitFor(p, 'unified');
     await rmSlide(p);
-    await caption(p, '実画面: 4アカ合算 サマリー + アカ別カード');
-    await focusFlow(p, '#chanSummary', '4アカ 合算 KPI', { holdMs: 4000, scale: 1.2 });
+    await caption(p, '実画面: 4アカ合算サマリー + アカ別カード');
+    await focusFlow(p, '#chanSummary', '4アカ合算 KPI', { holdMs: 4000, scale: 1.2 });
     await sync.waitFor(p, 'detail_intro');
-    await caption(p, 'アカウント カード クリック → 個別 詳細 ダッシュボード');
-    await focusFlow(p, '#chanGrid', 'アカウント カード', { holdMs: 4500, scale: 1.15 });
+    await caption(p, 'アカウントカードクリック → 個別詳細ダッシュボード');
+    await focusFlow(p, '#chanGrid', 'アカウントカード', { holdMs: 4500, scale: 1.15 });
 
     // ── 統合判断 A/B (detail_end 34.2 → end 53.0) ──
     await sync.waitFor(p, 'detail_end');
     await slide(p, `
       ${SL.chrome('II · 02', '判断')}
-      <div style="margin-top:26px;">${SL.title('統合 する か、<br>4本 の まま か。 数字 を 見てから 決める', { size: '38px' })}</div>
+      <div style="margin-top:26px;">${SL.title('統合するか、<br>4本のままか。数字を見てから決める', { size: '38px' })}</div>
 
       <div style="margin-top:44px;display:grid;grid-template-columns:1fr 1fr;gap:48px;flex:1;">
         <div data-reveal="1">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">OPTION A</div>
-          <div style="margin-top:14px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};line-height:1.4;">4本 の まま + 統合ダッシュ だけ</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};line-height:1.4;">4本のまま + 統合ダッシュだけ</div>
           <div style="margin-top:24px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.95;">
-            既存 友達 喪失 ゼロ。 部署 の 独立性 は 維持。 本社 は 横断 KPI を 把握 できる。 部署 間 の 調整 コスト が 最小。
+            既存友達喪失ゼロ。部署の独立性は維持。本社は横断 KPI を把握できる。部署間の調整コストが最小。
           </div>
         </div>
         <div data-reveal="2">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">OPTION B</div>
-          <div style="margin-top:14px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};line-height:1.4;">1本 に 完全統合</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};line-height:1.4;">1本に完全統合</div>
           <div style="margin-top:24px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.95;">
-            運用工数 削減。 顧客 に とって シンプル な 窓口。 部署 間 の 役割 調整 が 必要。 統合 移行時 に 一定 の 友達喪失 リスク あり。
+            運用工数削減。顧客にとってシンプルな窓口。部署間の役割調整が必要。統合移行時に一定の友達喪失リスクあり。
           </div>
         </div>
       </div>
       <div data-reveal="3" style="margin-top:32px;padding:24px 28px;background:${C.leafTint};">
-        <div style="font-family:${C.fBody};font-size:15px;color:${C.ink};line-height:1.85;">3ヶ月 の 統合ダッシュ 数字 を 見た 上 で、 経営会議 で 御判断 いただけます。</div>
+        <div style="font-family:${C.fBody};font-size:15px;color:${C.ink};line-height:1.85;">3ヶ月の統合ダッシュ数字を見た上で、経営会議で御判断いただけます。</div>
       </div>
       ${SL.foot}
     `);
@@ -898,9 +892,9 @@ const chapters = [
     // ── 表紙 (0 → 7.1) ──
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
-        <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">SOLUTION · III</div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">LINE 内 だけ で、<br><span style="color:${C.leaf};">閲覧 から 会計 まで</span></div>
-        <div data-reveal="3" style="margin-top:28px;font-family:${C.fBody};font-size:18px;color:${C.ink2};font-weight:500;">メール アドレス 入力 は、 一切 求めません。</div>
+        <div data-reveal="1" style="display:flex;align-items:baseline;gap:16px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.12em;font-weight:400;"><span>03</span><span style="flex:1;height:1px;background:${C.line};max-width:80px;"></span><span>解決策</span></div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">LINE 内だけで、<br><span style="color:${C.leaf};">閲覧から会計まで</span></div>
+        <div data-reveal="3" style="margin-top:28px;font-family:${C.fBody};font-size:18px;color:${C.ink2};font-weight:500;">メールアドレス入力は、一切求めません。</div>
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
@@ -910,7 +904,7 @@ const chapters = [
     await sync.waitFor(p, 'rich_menu');
     await slide(p, `
       ${SL.chrome('III · 01', '顧客ジャーニー')}
-      <div style="margin-top:26px;">${SL.title('全て が <span style="color:${C.leaf};">LINE アプリ 内</span> で 完結 する', { size: '42px' })}</div>
+      <div style="margin-top:26px;">${SL.title('全てが <span style="color:${C.leaf};">LINE アプリ内</span> で完結する', { size: '42px' })}</div>
 
       <div style="margin-top:44px;display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative;">
         <div style="position:absolute;top:22px;left:6%;right:6%;height:1px;background:${C.line};"></div>
@@ -919,28 +913,28 @@ const chapters = [
           <div style="width:12px;height:12px;background:${C.ink};border-radius:50%;"></div>
           <div style="margin-top:24px;font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">STEP 01</div>
           <div style="margin-top:6px;font-family:${C.fBody};font-size:17px;font-weight:700;color:${C.ink};line-height:1.4;">リッチメニュー</div>
-          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.8;">「商品 を 見る」 を タップ。</div>
+          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.8;">「商品を見る」をタップ。</div>
         </div>
         <div data-reveal="2" style="padding-right:24px;">
           <div style="width:12px;height:12px;background:${C.ink};border-radius:50%;"></div>
           <div style="margin-top:24px;font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">STEP 02</div>
           <div style="margin-top:6px;font-family:${C.fBody};font-size:17px;font-weight:700;color:${C.ink};line-height:1.4;">閲覧 · カート</div>
-          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.8;">LINE アプリ 内 で 商品 選択、 数量 指定、 カート に 追加。</div>
+          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.8;">LINE アプリ内で商品選択、数量指定、カートに追加。</div>
         </div>
         <div data-reveal="3" style="padding-right:24px;">
           <div style="width:12px;height:12px;background:${C.ink};border-radius:50%;"></div>
           <div style="margin-top:24px;font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">STEP 03</div>
           <div style="margin-top:6px;font-family:${C.fBody};font-size:17px;font-weight:700;color:${C.ink};line-height:1.4;">決済</div>
-          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.8;">Stripe 経由。 クレジット カード、 銀行 振込。</div>
+          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.8;">Stripe 経由。クレジットカード、銀行振込。</div>
         </div>
         <div data-reveal="4">
           <div style="width:12px;height:12px;background:${C.leaf};border-radius:50%;"></div>
           <div style="margin-top:24px;font-family:${C.fNum};font-size:11px;color:${C.leaf};letter-spacing:0.14em;font-weight:400;">STEP 04</div>
           <div style="margin-top:6px;font-family:${C.fBody};font-size:17px;font-weight:700;color:${C.leaf};line-height:1.4;">完了 · 通知</div>
-          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.8;">LINE に 決済完了 の 通知 が 届く。 領収書 も 同 チャンネル。</div>
+          <div style="margin-top:8px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.8;">LINE に決済完了の通知が届く。領収書も同チャンネル。</div>
         </div>
       </div>
-      <div data-reveal="5" style="margin-top:48px;padding-top:20px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">外部 サイト への 遷移 は ありません。 お客様 は LINE を 閉じる 必要 が ない。</div>
+      <div data-reveal="5" style="margin-top:48px;padding-top:20px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">外部サイトへの遷移はありません。お客様は LINE を閉じる必要がない。</div>
       ${SL.foot}
     `);
     await reveal(p, 1); await wait(p, 1800); await reveal(p, 2);
@@ -950,11 +944,11 @@ const chapters = [
     await sync.waitFor(p, 'checkout');
     await slide(p, `
       ${SL.chrome('III · 02', '入力')}
-      <div style="margin-top:26px;">${SL.title('初回 の <span style="color:${C.leaf};">3項目</span> だけ。<br>次回 以降 は 自動 継承', { size: '40px' })}</div>
+      <div style="margin-top:26px;">${SL.title('初回の <span style="color:${C.leaf};">3項目</span> だけ。<br>次回以降は自動継承', { size: '40px' })}</div>
 
       <div style="margin-top:44px;display:grid;grid-template-columns:1fr 1fr;gap:56px;flex:1;">
         <div>
-          <div style="font-family:${C.fNum};font-size:11px;color:${C.leaf};letter-spacing:0.16em;font-weight:400;">STATUM · 初回 入力</div>
+          <div style="font-family:${C.fNum};font-size:11px;color:${C.leaf};letter-spacing:0.16em;font-weight:400;">STATUM · 初回入力</div>
           <div style="margin-top:18px;">
             <div data-reveal="1" style="display:grid;grid-template-columns:32px 1fr;gap:16px;align-items:baseline;padding:14px 0;border-bottom:1px solid ${C.line};">
               <div style="font-family:${C.fNum};font-size:14px;color:${C.leaf};letter-spacing:0.06em;">01</div>
@@ -969,15 +963,15 @@ const chapters = [
               <div style="font-family:${C.fBody};font-size:19px;font-weight:700;color:${C.ink};">電話番号</div>
             </div>
           </div>
-          <div data-reveal="4" style="margin-top:20px;padding:14px 18px;background:${C.leafTint};font-family:${C.fBody};font-size:13px;color:${C.leafInk};line-height:1.75;">次回 以降 の 注文 は、 これ ら の 情報 を 自動 で 引き継ぎ ます。</div>
+          <div data-reveal="4" style="margin-top:20px;padding:14px 18px;background:${C.leafTint};font-family:${C.fBody};font-size:13px;color:${C.leafInk};line-height:1.75;">次回以降の注文は、これらの情報を自動で引き継ぎます。</div>
         </div>
 
         <div data-reveal="5" style="padding-left:40px;border-left:1px solid ${C.line};">
-          <div style="font-family:${C.fNum};font-size:11px;color:${C.alert};letter-spacing:0.16em;font-weight:400;">REMOVED · 従来 EC の 壁</div>
+          <div style="font-family:${C.fNum};font-size:11px;color:${C.alert};letter-spacing:0.16em;font-weight:400;">REMOVED · 従来 EC の壁</div>
           <div style="margin-top:18px;font-family:${C.fBody};font-size:15px;color:${C.ink2};line-height:2;">
-            メール アドレス<br>パスワード<br>会員登録 の 手続き<br>メール で ログイン<br>パスワード リセット の 迷路
+            メールアドレス<br>パスワード<br>会員登録の手続き<br>メールでログイン<br>パスワードリセットの迷路
           </div>
-          <div data-reveal="6" style="margin-top:22px;padding-top:16px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">上記 は、 統合 LINE OS で は <span style="color:${C.ink};font-weight:700;">全て 撤廃</span> します。</div>
+          <div data-reveal="6" style="margin-top:22px;padding-top:16px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">上記は、統合 LINE OS では <span style="color:${C.ink};font-weight:700;">全て撤廃</span> します。</div>
         </div>
       </div>
       ${SL.foot}
@@ -994,9 +988,9 @@ const chapters = [
     await p.evaluate(() => { location.hash = '#subs'; });
     await wait(p, 400);
     await caption(p, '実画面: 定期便 · スキップ / 数量変更 / 停止 / 再開 · 全て 1タップ');
-    await focusFlow(p, '.sub-card', '定期便 カード', { holdMs: 6500, scale: 1.15 });
+    await focusFlow(p, '.sub-card', '定期便カード', { holdMs: 6500, scale: 1.15 });
     await sync.waitFor(p, 'sub_ops');
-    await caption(p, '中高齢 の 「メール登録 の 壁」 を 完全 に 撤廃');
+    await caption(p, '中高齢の「メール登録の壁」を完全に撤廃');
   }},
 
   // ═══════════════════════════════════════════════════════
@@ -1010,25 +1004,25 @@ const chapters = [
     // ── 表紙 (0 → 6.9) ──
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
-        <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">SOLUTION · IV</div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:66px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">キャンペーン ごと に、<br><span style="color:${C.leaf};">獲得顧客 の LTV</span> を 別々 に 計測</div>
+        <div data-reveal="1" style="display:flex;align-items:baseline;gap:16px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.12em;font-weight:400;"><span>04</span><span style="flex:1;height:1px;background:${C.line};max-width:80px;"></span><span>解決策</span></div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:66px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">キャンペーンごとに、<br><span style="color:${C.leaf};">獲得顧客の LTV</span> を別々 に計測</div>
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
 
-    // ── 3チャネル 発行 (title_end 6.9 → data_lakes 32.3) ──
+    // ── 3チャネル発行 (title_end 6.9 → data_lakes 32.3) ──
     await sync.waitFor(p, 'title_end');
     await slide(p, `
       ${SL.chrome('IV · 01', 'チャネル')}
-      <div style="margin-top:26px;">${SL.title('3つ の 現場 に、<br>別々 の <span style="color:${C.leaf};">QRコード</span> を 発行', { size: '42px' })}</div>
+      <div style="margin-top:26px;">${SL.title('3つの現場に、<br>別々 の <span style="color:${C.leaf};">QRコード</span> を発行', { size: '42px' })}</div>
 
       <div style="margin-top:44px;display:grid;grid-template-columns:repeat(3,1fr);gap:36px;flex:1;">
         <div data-reveal="1">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">CHANNEL · 01</div>
           <div style="margin-top:12px;font-family:${C.fBody};font-size:20px;font-weight:700;color:${C.ink};line-height:1.4;">滋賀レイクス<br>協賛試合</div>
-          <div style="margin-top:14px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.85;">会場 で 配布 する QR。 バスケットボール 観戦 客 に 直接 リーチ。</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.85;">会場で配布する QR。バスケットボール観戦客に直接リーチ。</div>
           <div data-reveal="4" style="margin-top:22px;padding-top:14px;border-top:1px solid ${C.line};">
-            <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.06em;">友達追加 実績</div>
+            <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.06em;">友達追加実績</div>
             <div style="font-family:${C.fNum};font-weight:400;font-size:42px;line-height:1;color:${C.ink};letter-spacing:-0.03em;margin-top:4px;">500<span style="font-size:20px;color:${C.ink3};"> 名</span></div>
           </div>
         </div>
@@ -1036,9 +1030,9 @@ const chapters = [
         <div data-reveal="2">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">CHANNEL · 02</div>
           <div style="margin-top:12px;font-family:${C.fBody};font-size:20px;font-weight:700;color:${C.ink};line-height:1.4;">大阪関西万博<br>出展ブース</div>
-          <div style="margin-top:14px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.85;">出展 ブース で 配布 する QR。 国内外 の 一般 来場者。</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.85;">出展ブースで配布する QR。国内外の一般来場者。</div>
           <div data-reveal="5" style="margin-top:22px;padding-top:14px;border-top:1px solid ${C.line};">
-            <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.06em;">友達追加 実績</div>
+            <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.06em;">友達追加実績</div>
             <div style="font-family:${C.fNum};font-weight:400;font-size:42px;line-height:1;color:${C.ink};letter-spacing:-0.03em;margin-top:4px;">200<span style="font-size:20px;color:${C.ink3};"> 名</span></div>
           </div>
         </div>
@@ -1046,15 +1040,15 @@ const chapters = [
         <div data-reveal="3">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">CHANNEL · 03</div>
           <div style="margin-top:12px;font-family:${C.fBody};font-size:20px;font-weight:700;color:${C.ink};line-height:1.4;">新聞広告<br>紙面 QR</div>
-          <div style="margin-top:14px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.85;">全国紙 に 掲載 する 紙面 QR。 中高齢 の 定期購読者 が 中心。</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.85;">全国紙に掲載する紙面 QR。中高齢の定期購読者が中心。</div>
           <div data-reveal="6" style="margin-top:22px;padding-top:14px;border-top:1px solid ${C.line};">
-            <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.06em;">友達追加 実績</div>
+            <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.06em;">友達追加実績</div>
             <div style="font-family:${C.fNum};font-weight:400;font-size:42px;line-height:1;color:${C.ink};letter-spacing:-0.03em;margin-top:4px;">80<span style="font-size:20px;color:${C.ink3};"> 名</span></div>
           </div>
         </div>
       </div>
 
-      <div data-reveal="7" style="margin-top:36px;padding-top:20px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">管理画面 で ワンクリック で QR を 発行。 各 QR に 獲得数、 LTV、 継続率 が 紐づいて 集計 されます。</div>
+      <div data-reveal="7" style="margin-top:36px;padding-top:20px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">管理画面でワンクリックで QR を発行。各 QR に獲得数、 LTV、継続率が紐づいて集計されます。</div>
       ${SL.foot}
     `);
     await reveal(p, 1);
@@ -1067,7 +1061,7 @@ const chapters = [
     await sync.waitFor(p, 'data_lakes');
     await slide(p, `
       ${SL.chrome('IV · 02', 'ROI')}
-      <div style="margin-top:26px;">${SL.title('平均LTV × 継続率 で、<br><span style="color:${C.leaf};">投資判定</span> を 数字 で', { size: '40px' })}</div>
+      <div style="margin-top:26px;">${SL.title('平均LTV × 継続率で、<br><span style="color:${C.leaf};">投資判定</span> を数字で', { size: '40px' })}</div>
 
       <div style="margin-top:36px;flex:1;">
         <div style="display:grid;grid-template-columns:2.5fr repeat(3,1fr) 1.4fr;gap:0;">
@@ -1080,31 +1074,31 @@ const chapters = [
 
           <!-- Row: レイクス -->
           <div data-reveal="1" style="padding:22px 0;border-bottom:1px solid ${C.line};">
-            <div style="font-family:${C.fBody};font-size:17px;font-weight:700;color:${C.ink};">滋賀レイクス 協賛試合</div>
+            <div style="font-family:${C.fBody};font-size:17px;font-weight:700;color:${C.ink};">滋賀レイクス協賛試合</div>
             <div style="font-family:${C.fBody};font-size:12px;color:${C.ink3};margin-top:3px;">CHANNEL · 01</div>
           </div>
           <div data-reveal="1" style="padding:22px 8px 22px 24px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:17px;color:${C.ink};">500 名</div>
-          <div data-reveal="1" style="padding:22px 8px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:24px;font-weight:500;color:${C.leaf};letter-spacing:-0.02em;">¥ 18,400</div>
+          <div data-reveal="1" style="padding:22px 8px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:28px;font-weight:700;color:${C.leaf};letter-spacing:-0.02em;">¥ 18,400</div>
           <div data-reveal="1" style="padding:22px 8px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:20px;color:${C.leaf};letter-spacing:-0.01em;">52<span style="font-size:14px;">%</span></div>
           <div data-reveal="4" style="padding:22px 0 22px 24px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fBody};font-size:13px;font-weight:700;color:${C.leaf};">継続</div>
 
           <!-- Row: 万博 -->
           <div data-reveal="2" style="padding:22px 0;border-bottom:1px solid ${C.line};">
-            <div style="font-family:${C.fBody};font-size:17px;font-weight:700;color:${C.ink};">大阪関西万博 出展</div>
+            <div style="font-family:${C.fBody};font-size:17px;font-weight:700;color:${C.ink};">大阪関西万博出展</div>
             <div style="font-family:${C.fBody};font-size:12px;color:${C.ink3};margin-top:3px;">CHANNEL · 02</div>
           </div>
           <div data-reveal="2" style="padding:22px 8px 22px 24px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:17px;color:${C.ink};">200 名</div>
-          <div data-reveal="2" style="padding:22px 8px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:24px;font-weight:500;color:${C.ink};letter-spacing:-0.02em;">¥ 9,200</div>
+          <div data-reveal="2" style="padding:22px 8px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:28px;font-weight:700;color:${C.ink};letter-spacing:-0.02em;">¥ 9,200</div>
           <div data-reveal="2" style="padding:22px 8px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fNum};font-size:20px;color:${C.ink};letter-spacing:-0.01em;">28<span style="font-size:14px;">%</span></div>
           <div data-reveal="5" style="padding:22px 0 22px 24px;border-bottom:1px solid ${C.line};text-align:right;font-family:${C.fBody};font-size:13px;font-weight:700;color:${C.ink2};">再考</div>
 
           <!-- Row: 新聞 -->
           <div data-reveal="3" style="padding:22px 0;">
-            <div style="font-family:${C.fBody};font-size:17px;font-weight:700;color:${C.ink};">新聞広告 紙面 QR</div>
+            <div style="font-family:${C.fBody};font-size:17px;font-weight:700;color:${C.ink};">新聞広告紙面 QR</div>
             <div style="font-family:${C.fBody};font-size:12px;color:${C.ink3};margin-top:3px;">CHANNEL · 03</div>
           </div>
           <div data-reveal="3" style="padding:22px 8px 22px 24px;text-align:right;font-family:${C.fNum};font-size:17px;color:${C.ink};">80 名</div>
-          <div data-reveal="3" style="padding:22px 8px;text-align:right;font-family:${C.fNum};font-size:24px;font-weight:500;color:${C.ink};letter-spacing:-0.02em;">¥ 6,700</div>
+          <div data-reveal="3" style="padding:22px 8px;text-align:right;font-family:${C.fNum};font-size:28px;font-weight:700;color:${C.ink};letter-spacing:-0.02em;">¥ 6,700</div>
           <div data-reveal="3" style="padding:22px 8px;text-align:right;font-family:${C.fNum};font-size:20px;color:${C.ink};letter-spacing:-0.01em;">19<span style="font-size:14px;">%</span></div>
           <div data-reveal="6" style="padding:22px 0 22px 24px;text-align:right;font-family:${C.fBody};font-size:13px;font-weight:700;color:${C.alert};">見直し</div>
         </div>
@@ -1130,41 +1124,41 @@ const chapters = [
     // ── 表紙 (0 → 4.9) ──
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
-        <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">SOLUTION · V</div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:66px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">ステップ配信<br><span style="color:${C.leaf};">シナリオ ビルダー</span> を 標準 装備</div>
+        <div data-reveal="1" style="display:flex;align-items:baseline;gap:16px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.12em;font-weight:400;"><span>05</span><span style="flex:1;height:1px;background:${C.line};max-width:80px;"></span><span>解決策</span></div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:66px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">ステップ配信<br><span style="color:${C.leaf};">シナリオビルダー</span> を標準装備</div>
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
 
-    // ── LSTEP 代替 コスト比較 (title_end 4.9 → sc_a 20.9) ──
+    // ── LSTEP 代替コスト比較 (title_end 4.9 → sc_a 20.9) ──
     await sync.waitFor(p, 'title_end');
     await slide(p, `
       ${SL.chrome('V · 01', 'コスト')}
-      <div style="margin-top:26px;">${SL.title('外部 LSTEP の 中核機能 を、<br><span style="color:${C.leaf};">追加費用 なし</span> で 内蔵', { size: '42px' })}</div>
+      <div style="margin-top:26px;">${SL.title('外部 LSTEP の中核機能を、<br><span style="color:${C.leaf};">追加費用なし</span> で内蔵', { size: '42px' })}</div>
 
       <div style="margin-top:44px;display:grid;grid-template-columns:1fr 1fr;gap:56px;flex:1;">
         <div data-reveal="1">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">CURRENT · 外部ツール</div>
-          <div style="margin-top:14px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};">LSTEP を 別契約</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};">LSTEP を別契約</div>
           <div style="margin-top:28px;display:flex;align-items:baseline;gap:8px;">
             <div style="font-family:${C.fNum};font-weight:400;font-size:76px;line-height:0.9;letter-spacing:-0.04em;color:${C.ink};">¥30<span style="font-size:32px;color:${C.ink3};letter-spacing:-0.02em;">〜</span>50</div>
             <div style="font-family:${C.fBody};font-size:16px;color:${C.ink3};font-weight:500;">万 / 月</div>
           </div>
-          <div style="margin-top:14px;font-family:${C.fBody};font-size:13px;color:${C.ink3};letter-spacing:0.02em;">年間 換算 ¥360万 〜 ¥600万</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:13px;color:${C.ink3};letter-spacing:0.02em;">年間換算 ¥360万〜 ¥600万</div>
           <div style="margin-top:24px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.9;">
-            別 ツール · データ 連携 の 手間 · 学習コスト が それぞれ 発生
+            別ツール · データ連携の手間 · 学習コストがそれぞれ発生
           </div>
         </div>
 
         <div data-reveal="2" style="padding-left:56px;border-left:1px solid ${C.line};">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.leaf};letter-spacing:0.14em;font-weight:400;">SOLUTION · 統合LINE OS</div>
-          <div style="margin-top:14px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};">シナリオ ビルダー 内蔵</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};">シナリオビルダー内蔵</div>
           <div style="margin-top:28px;display:flex;align-items:baseline;gap:8px;">
             <div style="font-family:${C.fNum};font-weight:400;font-size:76px;line-height:0.9;letter-spacing:-0.04em;color:${C.leaf};">¥0</div>
           </div>
-          <div style="margin-top:14px;font-family:${C.fBody};font-size:13px;color:${C.ink3};letter-spacing:0.02em;">統合 LINE OS に 標準 装備</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:13px;color:${C.ink3};letter-spacing:0.02em;">統合 LINE OS に標準装備</div>
           <div style="margin-top:24px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.9;">
-            1 画面 で 完結 · 顧客 データ 直結 · マウス操作 のみ で 組立
+            1 画面で完結 · 顧客データ直結 · マウス操作のみで組立
           </div>
         </div>
       </div>
@@ -1177,7 +1171,7 @@ const chapters = [
     await sync.waitFor(p, 'sc_a');
     await slide(p, `
       ${SL.chrome('V · 02', '典型シナリオ')}
-      <div style="margin-top:26px;">${SL.title('御社 で 使える<br><span style="color:${C.leaf};">3つ の 自動配信</span> 例', { size: '40px' })}</div>
+      <div style="margin-top:26px;">${SL.title('御社で使える<br><span style="color:${C.leaf};">3つの自動配信</span> 例', { size: '40px' })}</div>
 
       <div style="margin-top:36px;display:grid;grid-template-columns:repeat(3,1fr);gap:44px;flex:1;">
         <div data-reveal="1">
@@ -1186,15 +1180,15 @@ const chapters = [
           <div style="margin-top:22px;">
             <div style="display:grid;grid-template-columns:64px 1fr;gap:16px;padding:10px 0;border-bottom:1px solid ${C.lineDim};">
               <div style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.02em;">0 分</div>
-              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">歓迎メッセージ + 担当販売員 紹介</div>
+              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">歓迎メッセージ + 担当販売員紹介</div>
             </div>
             <div style="display:grid;grid-template-columns:64px 1fr;gap:16px;padding:10px 0;border-bottom:1px solid ${C.lineDim};">
               <div style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.02em;">1 日後</div>
-              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">商品 ストーリー 配信</div>
+              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">商品ストーリー配信</div>
             </div>
             <div style="display:grid;grid-template-columns:64px 1fr;gap:16px;padding:10px 0;">
               <div style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.02em;">3 日後</div>
-              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">初回 クーポン ¥1,000</div>
+              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">初回クーポン ¥1,000</div>
             </div>
           </div>
         </div>
@@ -1204,16 +1198,16 @@ const chapters = [
           <div style="margin-top:12px;font-family:${C.fBody};font-size:19px;font-weight:700;color:${C.ink};line-height:1.4;">初回購入後<br>継続育成</div>
           <div style="margin-top:22px;">
             <div style="display:grid;grid-template-columns:64px 1fr;gap:16px;padding:10px 0;border-bottom:1px solid ${C.lineDim};">
-              <div style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.02em;">購入 直後</div>
-              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">御礼 + 担当販売員 挨拶</div>
+              <div style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.02em;">購入直後</div>
+              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">御礼 + 担当販売員挨拶</div>
             </div>
             <div style="display:grid;grid-template-columns:64px 1fr;gap:16px;padding:10px 0;border-bottom:1px solid ${C.lineDim};">
               <div style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.02em;">7 日後</div>
-              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">使い方 ガイド 動画</div>
+              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">使い方ガイド動画</div>
             </div>
             <div style="display:grid;grid-template-columns:64px 1fr;gap:16px;padding:10px 0;">
               <div style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.02em;">25 日後</div>
-              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">定期便 割引 提案</div>
+              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">定期便割引提案</div>
             </div>
           </div>
         </div>
@@ -1224,15 +1218,15 @@ const chapters = [
           <div style="margin-top:22px;">
             <div style="display:grid;grid-template-columns:64px 1fr;gap:16px;padding:10px 0;border-bottom:1px solid ${C.lineDim};">
               <div style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.02em;">60 日</div>
-              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">特別 クーポン ¥3,000</div>
+              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">特別クーポン ¥3,000</div>
             </div>
             <div style="display:grid;grid-template-columns:64px 1fr;gap:16px;padding:10px 0;border-bottom:1px solid ${C.lineDim};">
               <div style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.02em;">+ 7 日</div>
-              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">担当販売員 から 電話</div>
+              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">担当販売員から電話</div>
             </div>
             <div style="display:grid;grid-template-columns:64px 1fr;gap:16px;padding:10px 0;">
               <div style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.02em;">+ 14 日</div>
-              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">配信 停止 判定</div>
+              <div style="font-family:${C.fBody};font-size:13px;color:${C.ink2};line-height:1.65;">配信停止判定</div>
             </div>
           </div>
         </div>
@@ -1247,16 +1241,16 @@ const chapters = [
     await sync.waitFor(p, 'sc_intro_end');
     await slide(p, `
       ${SL.chrome('V · 03', '部品')}
-      <div style="margin-top:26px;">${SL.title('6つ の <span style="color:${C.leaf};">標準ステップ</span> を、<br>マウス で 縦に 並べる', { size: '40px' })}</div>
+      <div style="margin-top:26px;">${SL.title('6つの <span style="color:${C.leaf};">標準ステップ</span> を、<br>マウスで縦に並べる', { size: '40px' })}</div>
 
       <div style="margin-top:44px;display:grid;grid-template-columns:repeat(6,1fr);gap:24px;flex:1;">
         ${[
-          ['01','待機','N日 後 に 進める'],
+          ['01','待機','N日後に進める'],
           ['02','送信','Flex / 動画 / 画像'],
-          ['03','タグ付与','セグメント 自動'],
-          ['04','分岐','条件 で 分ける'],
-          ['05','購入 判定','買った / 買わない'],
-          ['06','終了','シナリオ 完了'],
+          ['03','タグ付与','セグメント自動'],
+          ['04','分岐','条件で分ける'],
+          ['05','購入判定','買った / 買わない'],
+          ['06','終了','シナリオ完了'],
         ].map(([n,t,d],i) => `
           <div data-reveal="${1+Math.floor(i/2)}" style="padding-top:24px;border-top:1px solid ${C.ink};">
             <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">${n}</div>
@@ -1264,7 +1258,7 @@ const chapters = [
             <div style="margin-top:8px;font-family:${C.fBody};font-size:12px;color:${C.ink2};line-height:1.7;">${d}</div>
           </div>`).join('')}
       </div>
-      <div data-reveal="4" style="margin-top:44px;padding-top:20px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">エクセル は 使える けれど、 プログラミング は でき ない、 と いう 前提 で 設計 されています。</div>
+      <div data-reveal="4" style="margin-top:44px;padding-top:20px;border-top:1px solid ${C.line};font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">エクセルは使えるけれど、プログラミングはできない、という前提で設計されています。</div>
       ${SL.foot}
     `);
     await reveal(p, 1); await wait(p, 1800);
@@ -1275,8 +1269,8 @@ const chapters = [
     // ── 実UI scenarios (steps_list 44.1 → end 53.5) ──
     await sync.waitFor(p, 'steps_list');
     await rmSlide(p);
-    await caption(p, '実画面: シナリオ管理 · マウス操作 だけ で 組み立て');
-    await focusFlow(p, '.view[data-view="scenarios"]', 'シナリオ ビルダー', { holdMs: 6500, scale: 1.15 });
+    await caption(p, '実画面: シナリオ管理 · マウス操作だけで組み立て');
+    await focusFlow(p, '.view[data-view="scenarios"]', 'シナリオビルダー', { holdMs: 6500, scale: 1.15 });
   }},
 
   // ═══════════════════════════════════════════════════════
@@ -1289,7 +1283,7 @@ const chapters = [
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
         <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">IMPACT · MEASURED</div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:60px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">同規模 健康食品 ブランド<br><span style="color:${C.leaf};">導入 6ヶ月後</span> の 実測</div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:60px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">同規模健康食品ブランド<br><span style="color:${C.leaf};">導入 6ヶ月後</span> の実測</div>
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
@@ -1297,8 +1291,8 @@ const chapters = [
     // ── KPI 01: +18% (title_end 8.8 → kpi2 35.7) ──
     await sync.waitFor(p, 'title_end');
     await slide(p, `
-      ${SL.chrome('KPI · 01', '6ヶ月後 実測')}
-      <div style="margin-top:26px;">${SL.title('販売員 1人 あたり 月次売上', { size: '32px' })}</div>
+      ${SL.chrome('KPI · 01', '6ヶ月後実測')}
+      <div style="margin-top:26px;">${SL.title('販売員 1人あたり月次売上', { size: '32px' })}</div>
 
       <div style="margin-top:36px;display:grid;grid-template-columns:1fr 1.4fr;gap:56px;flex:1;">
         <div data-reveal="1" style="display:flex;flex-direction:column;justify-content:center;">
@@ -1307,30 +1301,28 @@ const chapters = [
             <div style="font-family:${C.fNum};font-weight:400;font-size:160px;line-height:0.9;letter-spacing:-0.05em;color:${C.leaf};">18</div>
             <div style="font-family:${C.fNum};font-weight:400;font-size:44px;color:${C.leaf};letter-spacing:-0.02em;">%</div>
           </div>
-          <div style="margin-top:12px;font-family:${C.fBody};font-size:14px;color:${C.ink2};letter-spacing:0.02em;">6ヶ月後、 平均 増加</div>
+          <div style="margin-top:12px;font-family:${C.fBody};font-size:14px;color:${C.ink2};letter-spacing:0.02em;">6ヶ月後、平均増加</div>
         </div>
 
         <div data-reveal="2" style="display:flex;flex-direction:column;justify-content:center;padding-left:44px;border-left:1px solid ${C.line};">
-          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">WHY · この 数字 が 出た 理由</div>
+          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">WHY · この数字が出た理由</div>
           <div style="margin-top:20px;font-family:${C.fBody};font-size:16px;line-height:2;color:${C.ink};">
-            <span data-reveal="3">担当顧客 の EC · LINE 追加購入 も、 販売員実績 に 帰属 する。</span><br>
-            <span data-reveal="4">「自分 の 顧客 が、 見えない 所 でも 買って くれて いる」 実感 が 生まれる。</span><br>
-            <span data-reveal="5">モチベーション が 向上、 訪問質 が 向上、 追加購入 の 循環 に つながる。</span>
+            担当顧客の EC · LINE 追加購入も、販売員実績に帰属する。<br>
+            「自分の顧客が、見えない所でも買ってくれている」実感が生まれる。<br>
+            モチベーションが向上、訪問質が向上、追加購入の循環につながる。
           </div>
         </div>
       </div>
       ${SL.foot}
     `);
-    await reveal(p, 1); await reveal(p, 2);
-    await sync.waitFor(p, 'kpi1_reason'); await reveal(p, 3);
-    await wait(p, 2500); await reveal(p, 4);
-    await wait(p, 2500); await reveal(p, 5);
+    await reveal(p, 1);
+    await sync.waitFor(p, 'kpi1_reason'); await reveal(p, 2);
 
     // ── KPI 02: +12pt (kpi2 35.7 → kpi3 55.9) ──
     await sync.waitFor(p, 'kpi2');
     await slide(p, `
-      ${SL.chrome('KPI · 02', '6ヶ月後 実測')}
-      <div style="margin-top:26px;">${SL.title('定期便 半年 継続率', { size: '32px' })}</div>
+      ${SL.chrome('KPI · 02', '6ヶ月後実測')}
+      <div style="margin-top:26px;">${SL.title('定期便半年継続率', { size: '32px' })}</div>
 
       <div style="margin-top:36px;display:grid;grid-template-columns:1fr 1.4fr;gap:56px;flex:1;">
         <div data-reveal="1" style="display:flex;flex-direction:column;justify-content:center;">
@@ -1339,30 +1331,28 @@ const chapters = [
             <div style="font-family:${C.fNum};font-weight:400;font-size:160px;line-height:0.9;letter-spacing:-0.05em;color:${C.leaf};">12</div>
             <div style="font-family:${C.fNum};font-weight:400;font-size:44px;color:${C.leaf};letter-spacing:-0.02em;">pt</div>
           </div>
-          <div style="margin-top:12px;font-family:${C.fBody};font-size:14px;color:${C.ink2};letter-spacing:0.02em;">6ヶ月後、 継続率 上昇</div>
+          <div style="margin-top:12px;font-family:${C.fBody};font-size:14px;color:${C.ink2};letter-spacing:0.02em;">6ヶ月後、継続率上昇</div>
         </div>
 
         <div data-reveal="2" style="display:flex;flex-direction:column;justify-content:center;padding-left:44px;border-left:1px solid ${C.line};">
-          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">WHY · この 数字 が 出た 理由</div>
+          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">WHY · この数字が出た理由</div>
           <div style="margin-top:20px;font-family:${C.fBody};font-size:16px;line-height:2;color:${C.ink};">
-            <span data-reveal="3">「解約」 タップ 前 の 引き止め シナリオ が 自動 発火 する。</span><br>
-            <span data-reveal="4">定期便 スキップ が 1タップ、 「面倒 だから やめる」 の 手前 で 継続 に 戻せる。</span><br>
-            <span data-reveal="5">担当販売員 から 直接 電話 で フォロー できる 体制 が 整う。</span>
+            「解約」タップ前の引き止めシナリオが自動発火する。<br>
+            定期便スキップが 1タップ、「面倒だからやめる」の手前で継続に戻せる。<br>
+            担当販売員から直接電話でフォローできる体制が整う。
           </div>
         </div>
       </div>
       ${SL.foot}
     `);
-    await reveal(p, 1); await reveal(p, 2);
-    await sync.waitFor(p, 'kpi2_reason'); await reveal(p, 3);
-    await wait(p, 3000); await reveal(p, 4);
-    await wait(p, 3000); await reveal(p, 5);
+    await reveal(p, 1);
+    await sync.waitFor(p, 'kpi2_reason'); await reveal(p, 2);
 
     // ── KPI 03: 2-3x (kpi3 55.9 → calc_setup 62.5) ──
     await sync.waitFor(p, 'kpi3');
     await slide(p, `
-      ${SL.chrome('KPI · 03', '6ヶ月後 実測')}
-      <div style="margin-top:26px;">${SL.title('LINE 経由 購入 CVR', { size: '32px' })}</div>
+      ${SL.chrome('KPI · 03', '6ヶ月後実測')}
+      <div style="margin-top:26px;">${SL.title('LINE 経由購入 CVR', { size: '32px' })}</div>
 
       <div style="margin-top:36px;display:grid;grid-template-columns:1fr 1.4fr;gap:56px;flex:1;">
         <div data-reveal="1" style="display:flex;flex-direction:column;justify-content:center;">
@@ -1370,26 +1360,26 @@ const chapters = [
             <div style="font-family:${C.fNum};font-weight:400;font-size:160px;line-height:0.9;letter-spacing:-0.05em;color:${C.leaf};">2〜3</div>
             <div style="font-family:${C.fNum};font-weight:400;font-size:44px;color:${C.leaf};letter-spacing:-0.02em;">倍</div>
           </div>
-          <div style="margin-top:12px;font-family:${C.fBody};font-size:14px;color:${C.ink2};letter-spacing:0.02em;">従来比、 6ヶ月後 の CVR</div>
+          <div style="margin-top:12px;font-family:${C.fBody};font-size:14px;color:${C.ink2};letter-spacing:0.02em;">従来比、 6ヶ月後の CVR</div>
         </div>
 
         <div data-reveal="2" style="display:flex;flex-direction:column;justify-content:center;padding-left:44px;border-left:1px solid ${C.line};">
-          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">WHY · この 数字 が 出た 理由</div>
+          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.16em;font-weight:400;">WHY · この数字が出た理由</div>
           <div style="margin-top:20px;font-family:${C.fBody};font-size:16px;line-height:2;color:${C.ink};">
-            <span data-reveal="3">メール登録 が 不要 に なり、 中高齢層 の 離脱 が 撤廃 される。</span><br>
-            <span data-reveal="4">LIFF が LINE 内 完結、 外部 サイト への 遷移 が ゼロ に なる。</span>
+            メール登録が不要になり、中高齢層の離脱が撤廃される。<br>
+            LIFF が LINE 内完結、外部サイトへの遷移がゼロになる。
           </div>
         </div>
       </div>
       ${SL.foot}
     `);
-    await reveal(p, 1); await reveal(p, 2); await reveal(p, 3); await reveal(p, 4);
+    await reveal(p, 1); await reveal(p, 2);
 
     // ── 御社インパクト計算 (calc_setup 62.5 → end 69.5) ──
     await sync.waitFor(p, 'calc_setup');
     await slide(p, `
-      ${SL.chrome('YOUR IMPACT', '想定 売上')}
-      <div style="margin-top:32px;">${SL.title('御社 に 当てはめた 場合', { size: '32px' })}</div>
+      ${SL.chrome('YOUR IMPACT', '想定売上')}
+      <div style="margin-top:32px;">${SL.title('御社に当てはめた場合', { size: '32px' })}</div>
 
       <div style="margin-top:44px;flex:1;display:flex;flex-direction:column;justify-content:center;">
         <div data-reveal="1" style="display:flex;align-items:baseline;gap:24px;font-family:${C.fNum};font-weight:400;font-size:52px;line-height:1;letter-spacing:-0.03em;color:${C.ink};">
@@ -1399,14 +1389,14 @@ const chapters = [
           <span style="color:${C.ink3};font-size:38px;">×</span>
           <span>15<span style="font-size:22px;color:${C.ink3};letter-spacing:0;"> %</span></span>
         </div>
-        <div data-reveal="1" style="margin-top:16px;font-family:${C.fBody};font-size:14px;color:${C.ink3};letter-spacing:0.02em;">販売員 数 · 平均月商 · 増分</div>
+        <div data-reveal="1" style="margin-top:16px;font-family:${C.fBody};font-size:14px;color:${C.ink3};letter-spacing:0.02em;">販売員数 · 平均月商 · 増分</div>
 
         <div data-reveal="2" style="margin-top:44px;padding-top:32px;border-top:1px solid ${C.ink};display:flex;align-items:baseline;gap:24px;">
-          <div style="font-family:${C.fBody};font-size:16px;color:${C.ink2};font-weight:500;">月商 増分</div>
+          <div style="font-family:${C.fBody};font-size:16px;color:${C.ink2};font-weight:500;">月商増分</div>
           <div style="font-family:${C.fNum};font-weight:400;font-size:88px;line-height:0.95;letter-spacing:-0.04em;color:${C.leaf};">+ ¥ 4.7<span style="font-size:32px;color:${C.leaf};letter-spacing:-0.02em;"> 億</span></div>
         </div>
         <div data-reveal="3" style="margin-top:14px;display:flex;align-items:baseline;gap:24px;">
-          <div style="font-family:${C.fBody};font-size:16px;color:${C.ink2};font-weight:500;">年商 換算</div>
+          <div style="font-family:${C.fBody};font-size:16px;color:${C.ink2};font-weight:500;">年商換算</div>
           <div style="font-family:${C.fNum};font-weight:400;font-size:88px;line-height:0.95;letter-spacing:-0.04em;color:${C.leaf};">+ ¥ 56<span style="font-size:32px;color:${C.leaf};letter-spacing:-0.02em;"> 億</span></div>
         </div>
       </div>
@@ -1425,7 +1415,7 @@ const chapters = [
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
         <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">PHASE 1 · PROOF OF CONCEPT</div>
-        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">京都本社 1営業所、<br><span style="color:${C.leaf};">3ヶ月 試験運用</span></div>
+        <div data-reveal="2" style="margin-top:24px;font-family:${C.fBody};font-weight:900;font-size:72px;line-height:1.1;letter-spacing:-0.04em;color:${C.ink};">京都本社 1営業所、<br><span style="color:${C.leaf};">3ヶ月試験運用</span></div>
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
@@ -1434,32 +1424,32 @@ const chapters = [
     await sync.waitFor(p, 'title_end');
     await slide(p, `
       ${SL.chrome('PHASE 1', '条件')}
-      <div style="margin-top:26px;">${SL.title('実効果 検証 の 具体 条件', { size: '36px' })}</div>
+      <div style="margin-top:26px;">${SL.title('実効果検証の具体条件', { size: '36px' })}</div>
 
-      <div style="margin-top:48px;display:grid;grid-template-columns:repeat(3,1fr);gap:0;flex:1;">
-        <div data-reveal="1" style="padding-top:32px;padding-right:40px;border-top:2px solid ${C.leaf};">
-          <div style="font-family:${C.fNum};font-size:11px;color:${C.leaf};letter-spacing:0.14em;font-weight:400;">初期費用</div>
+      <div style="margin-top:48px;display:grid;grid-template-columns:repeat(3,1fr);gap:40px;flex:1;align-items:start;">
+        <div data-reveal="1" style="padding-top:32px;border-top:2px solid ${C.ink};">
+          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">初期費用</div>
           <div style="margin-top:16px;display:flex;align-items:baseline;gap:6px;">
-            <div style="font-family:${C.fNum};font-weight:400;font-size:96px;line-height:0.9;letter-spacing:-0.04em;color:${C.leaf};">800</div>
-            <div style="font-family:${C.fBody};font-size:20px;color:${C.leaf};font-weight:500;">万円</div>
+            <div style="font-family:${C.fNum};font-weight:400;font-size:96px;line-height:0.9;letter-spacing:-0.04em;color:${C.ink};">800</div>
+            <div style="font-family:${C.fBody};font-size:20px;color:${C.ink2};font-weight:500;">万円</div>
           </div>
-          <div style="margin-top:16px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.75;">3ヶ月 分 の 一括。 追加費用 なし。</div>
+          <div style="margin-top:16px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.75;">3ヶ月分の一括。 追加費用なし。</div>
         </div>
-        <div data-reveal="2" style="padding-top:32px;padding:32px 40px 0;border-top:2px solid ${C.ink};">
-          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">対象 販売員</div>
+        <div data-reveal="2" style="padding-top:32px;border-top:2px solid ${C.ink};">
+          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">対象販売員</div>
           <div style="margin-top:16px;display:flex;align-items:baseline;gap:6px;">
             <div style="font-family:${C.fNum};font-weight:400;font-size:96px;line-height:0.9;letter-spacing:-0.04em;color:${C.ink};">5</div>
-            <div style="font-family:${C.fBody};font-size:20px;color:${C.ink};font-weight:500;">名</div>
+            <div style="font-family:${C.fBody};font-size:20px;color:${C.ink2};font-weight:500;">名</div>
           </div>
-          <div style="margin-top:16px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.75;">京都本社 の 1営業所 に 所属 する 販売員。</div>
+          <div style="margin-top:16px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.75;">京都本社の 1営業所に 所属する 販売員。</div>
         </div>
-        <div data-reveal="3" style="padding-top:32px;padding-left:40px;border-top:2px solid ${C.ink};">
-          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">対象 顧客</div>
+        <div data-reveal="3" style="padding-top:32px;border-top:2px solid ${C.ink};">
+          <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">対象顧客</div>
           <div style="margin-top:16px;display:flex;align-items:baseline;gap:6px;">
             <div style="font-family:${C.fNum};font-weight:400;font-size:96px;line-height:0.9;letter-spacing:-0.04em;color:${C.ink};">500</div>
-            <div style="font-family:${C.fBody};font-size:20px;color:${C.ink};font-weight:500;">名</div>
+            <div style="font-family:${C.fBody};font-size:20px;color:${C.ink2};font-weight:500;">名</div>
           </div>
-          <div style="margin-top:16px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.75;">既存 の 定期便 顧客 から 選定。</div>
+          <div style="margin-top:16px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.75;">既存の 定期便顧客 から 選定。</div>
         </div>
       </div>
       ${SL.foot}
@@ -1471,28 +1461,28 @@ const chapters = [
     await sync.waitFor(p, 'scale_end');
     await slide(p, `
       ${SL.chrome('PHASE 1', '検証項目')}
-      <div style="margin-top:26px;">${SL.title('3ヶ月 で 見て いただく<br><span style="color:${C.leaf};">4つ の 数字</span>', { size: '38px' })}</div>
+      <div style="margin-top:26px;">${SL.title('3ヶ月で見ていただく<br><span style="color:${C.leaf};">4つの数字</span>', { size: '38px' })}</div>
 
       <div style="margin-top:36px;display:grid;grid-template-columns:1fr 1fr;gap:44px 56px;flex:1;">
         <div data-reveal="1">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">METRIC · 01</div>
-          <div style="margin-top:10px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};line-height:1.35;">販売員 月次売上</div>
-          <div style="margin-top:14px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">導入前 平均 と 3ヶ月目 平均 の 比較。 <span style="color:${C.leaf};font-weight:700;">+18% 到達</span> を 判定基準 に。</div>
+          <div style="margin-top:10px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};line-height:1.35;">販売員月次売上</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">導入前平均と 3ヶ月目平均の比較。 <span style="color:${C.leaf};font-weight:700;">+18% 到達</span> を判定基準に。</div>
         </div>
         <div data-reveal="2">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">METRIC · 02</div>
-          <div style="margin-top:10px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};line-height:1.35;">LINE 経由 定期便 加入率</div>
-          <div style="margin-top:14px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">既存 顧客 500名 の うち、 LIFF EC 経由 で 定期便 加入 する 比率。</div>
+          <div style="margin-top:10px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};line-height:1.35;">LINE 経由定期便加入率</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">既存顧客 500名のうち、 LIFF EC 経由で定期便加入する比率。</div>
         </div>
         <div data-reveal="3">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">METRIC · 03</div>
-          <div style="margin-top:10px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};line-height:1.35;">解約 阻止 率</div>
-          <div style="margin-top:14px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">「解約」 タップ 前 の 引き止め シナリオ で、 どれだけ 継続 に 戻せる か。</div>
+          <div style="margin-top:10px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};line-height:1.35;">解約阻止率</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">「解約」タップ前の引き止めシナリオで、どれだけ継続に戻せるか。</div>
         </div>
         <div data-reveal="4">
           <div style="font-family:${C.fNum};font-size:11px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">METRIC · 04</div>
-          <div style="margin-top:10px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};line-height:1.35;">販売員 満足度 スコア</div>
-          <div style="margin-top:14px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">「自分 の 実績 が 見える」 「業務 が 楽 に なった」 の NPS ヒアリング。</div>
+          <div style="margin-top:10px;font-family:${C.fBody};font-size:22px;font-weight:700;color:${C.ink};line-height:1.35;">販売員満足度スコア</div>
+          <div style="margin-top:14px;font-family:${C.fBody};font-size:14px;color:${C.ink2};line-height:1.85;">「自分の実績が見える」「業務が楽になった」の NPS ヒアリング。</div>
         </div>
       </div>
       ${SL.foot}
@@ -1504,7 +1494,7 @@ const chapters = [
 
     // ── Phase 後 (phase_after 39.3 → schedule 42.5) ──
     await sync.waitFor(p, 'phase_after');
-    await caption(p, '全社展開 / 4アカ統合 / 保守契約 は、 3ヶ月 の 数字 を 見た 上で 御判断 ください');
+    await caption(p, '全社展開 / 4アカ統合 / 保守契約は、 3ヶ月の数字を見た上で御判断ください');
 
     // ── クロージング (schedule 42.5 → end 49.4) ──
     await sync.waitFor(p, 'schedule');
@@ -1512,10 +1502,10 @@ const chapters = [
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:900px;">
         <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">SKELETON INC.</div>
-        <div data-reveal="2" style="margin-top:32px;font-family:${C.fBody};font-weight:900;font-size:64px;line-height:1.15;letter-spacing:-0.04em;color:${C.ink};">サン・クロレラジャパン 様 の<br><span style="color:${C.leaf};">100年 先 の 事業</span> を、 一緒 に</div>
+        <div data-reveal="2" style="margin-top:32px;font-family:${C.fBody};font-weight:900;font-size:64px;line-height:1.15;letter-spacing:-0.04em;color:${C.ink};">サン・クロレラジャパン様の<br><span style="color:${C.leaf};">100年先の事業</span> を、一緒に</div>
         <div data-reveal="3" style="margin-top:44px;display:flex;align-items:baseline;gap:14px;">
           <div style="width:56px;height:1px;background:${C.ink};"></div>
-          <div style="font-family:${C.fBody};font-size:14px;color:${C.ink2};font-weight:500;letter-spacing:0.02em;">お打ち合わせ を お待ち しております</div>
+          <div style="font-family:${C.fBody};font-size:14px;color:${C.ink2};font-weight:500;letter-spacing:0.02em;">お打ち合わせをお待ちしております</div>
         </div>
       </div>
     `);
