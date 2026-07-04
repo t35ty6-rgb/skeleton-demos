@@ -514,8 +514,25 @@ const chapters = [
     `);
     await reveal(p, 1); await reveal(p, 2);
 
-    // ── 課題① 具体シナリオ (issue1_intro 40.0 → issue1_end 57.9) ──
+    // ── 見出し要約① (issue1_intro 40.0 → issue1_before_scene 53.8) ──
+    // 転入スライドを維持しつつ、見出し要約 の 説明中は 補助テキスト を 出す
     await sync.waitFor(p, 'issue1_intro');
+    await slide(p, `
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1100px;">
+        <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.leaf};letter-spacing:0.18em;font-weight:700;">課題 · 01</div>
+        <div data-reveal="2" style="margin-top:16px;font-family:${C.fBody};font-size:56px;font-weight:900;color:${C.ink};line-height:1.15;letter-spacing:-0.035em;">訪問販売員の実績が、<br><span style="color:${C.alert};">消えていく</span></div>
+        <div data-reveal="3" style="margin-top:44px;padding:22px 28px;background:${C.bg2};font-family:${C.fBody};font-size:18px;font-weight:500;color:${C.ink};line-height:1.9;max-width:60ch;letter-spacing:-0.005em;">
+          販売員が 玄関先で 積み上げた <strong>信頼</strong>、<br>
+          その 成果が、 お客様が オンラインで 買い物 した 瞬間、<br>
+          <span style="color:${C.alert};font-weight:900;">EC部門の 実績として 計上されて しまう</span>、 という 問題です。
+        </div>
+      </div>
+    `);
+    await reveal(p, 1); await reveal(p, 2);
+    await sync.waitFor(p, 'issue1_topic'); await reveal(p, 3);
+
+    // ── 課題① 具体シナリオ (issue1_before_scene 53.8 → issue1_end 71.7) ──
+    await sync.waitFor(p, 'issue1_before_scene');
     await slide(p, `
       ${SL.chrome('02 / 05', '課題 · 一')}
       <div style="margin-top:32px;">${SL.title('販売員の実績が、<br><span style="color:${C.leaf}">消える</span>', { size: '52px' })}</div>
@@ -576,8 +593,24 @@ const chapters = [
     `);
     await reveal(p, 1); await reveal(p, 2);
 
-    // ── 課題② (issue2_intro 63.2 → issue2_end 85.2) editorial diagram ──
+    // ── 見出し要約② (issue2_intro 77.0 → issue2_dispatch 90.8) ──
     await sync.waitFor(p, 'issue2_intro');
+    await slide(p, `
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1100px;">
+        <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.leaf};letter-spacing:0.18em;font-weight:700;">課題 · 02</div>
+        <div data-reveal="2" style="margin-top:16px;font-family:${C.fBody};font-size:52px;font-weight:900;color:${C.ink};line-height:1.15;letter-spacing:-0.035em;">本社で数字を、<br><span style="color:${C.alert};">横断把握できない</span></div>
+        <div data-reveal="3" style="margin-top:44px;padding:22px 28px;background:${C.bg2};font-family:${C.fBody};font-size:18px;font-weight:500;color:${C.ink};line-height:1.9;max-width:60ch;letter-spacing:-0.005em;">
+          <strong>4本の 公式LINE アカウント</strong> が、<br>
+          部署ごと 別々に 運用 されて いる ため、<br>
+          <span style="color:${C.alert};font-weight:900;">本社として 横断的な 数字が 見えない</span>、 という 問題です。
+        </div>
+      </div>
+    `);
+    await reveal(p, 1); await reveal(p, 2);
+    await sync.waitFor(p, 'issue2_topic'); await reveal(p, 3);
+
+    // ── 課題② (issue2_dispatch 90.8 → issue2_end 108.1) editorial diagram ──
+    await sync.waitFor(p, 'issue2_dispatch');
     await slide(p, `
       ${SL.chrome('03 / 05', '課題 · 二')}
       <div style="margin-top:28px;">${SL.title('4本の公式LINE が、<br>本社で<span style="color:${C.leaf}">合算できない</span>', { size: '48px' })}</div>
@@ -616,7 +649,6 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    await sync.waitFor(p, 'issue2_dispatch');
     await reveal(p, 2); await reveal(p, 3); await reveal(p, 4); await reveal(p, 5);
     await sync.waitFor(p, 'issue2_hq'); await reveal(p, 6);
     await sync.waitFor(p, 'issue2_end'); await reveal(p, 7);
@@ -633,8 +665,24 @@ const chapters = [
     `);
     await reveal(p, 1); await reveal(p, 2);
 
-    // ── 課題③ (issue3_intro 90.6 → issue3_end 108.2) ──
+    // ── 見出し要約③ (issue3_intro 113.6 → issue3_scene 134.4) ──
     await sync.waitFor(p, 'issue3_intro');
+    await slide(p, `
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1100px;">
+        <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.leaf};letter-spacing:0.18em;font-weight:700;">課題 · 03</div>
+        <div data-reveal="2" style="margin-top:16px;font-family:${C.fBody};font-size:52px;font-weight:900;color:${C.ink};line-height:1.15;letter-spacing:-0.035em;">中高齢のお客様が、<br><span style="color:${C.alert};">離脱する</span></div>
+        <div data-reveal="3" style="margin-top:44px;padding:22px 28px;background:${C.bg2};font-family:${C.fBody};font-size:18px;font-weight:500;color:${C.ink};line-height:1.9;max-width:60ch;letter-spacing:-0.005em;">
+          御社の 中心顧客層 で ある <strong>60代 70代 の 女性</strong> が、<br>
+          ECサイトで メール登録 を 求められた 瞬間、<br>
+          <span style="color:${C.alert};font-weight:900;">半数が 諦めて しまう</span>、 という 問題です。
+        </div>
+      </div>
+    `);
+    await reveal(p, 1); await reveal(p, 2);
+    await sync.waitFor(p, 'issue3_topic'); await reveal(p, 3);
+
+    // ── 課題③ (issue3_scene 134.4 → issue3_end 142.4) ──
+    await sync.waitFor(p, 'issue3_scene');
     await slide(p, `
       ${SL.chrome('04 / 05', '課題 · 三')}
       <div style="margin-top:28px;">${SL.title('中高齢の半数が、<br>メール入力で<span style="color:${C.leaf}">諦める</span>', { size: '48px' })}</div>
@@ -682,8 +730,7 @@ const chapters = [
       </div>
       ${SL.foot}
     `);
-    await reveal(p, 1); await reveal(p, 2); await reveal(p, 3);
-    await sync.waitFor(p, 'issue3_scene'); await reveal(p, 4);
+    await reveal(p, 1); await reveal(p, 2); await reveal(p, 3); await reveal(p, 4);
 
     // ── 統合LINE OS 提示 (issue3_end 108.2 → solution_five 118.6) ──
     await sync.waitFor(p, 'issue3_end');
