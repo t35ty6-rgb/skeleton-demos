@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="format-detection" content="telephone=no" />
+<title>Zoom URL を LINE で受け取る — スケルトン株式会社</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#FAFAF6;
+    --ink:#14181D;
+    --sub:#6B7481;
+    --line:#E0DDD6;
+    --line-strong:#B7B3AA;
+    --accent:#0B5B6B;
+    --accent-soft:#EAF1F2;
+    --error:#B4381F;
+    --radius:2px;
+    --sans:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:stretch;line-height:1.6;font-size:15px;font-weight:400;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  main{width:100%;max-width:460px;margin:0 auto;padding:40px 24px 32px;flex:1;display:flex;flex-direction:column}
+  .brand{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--sub);text-transform:uppercase;margin-bottom:56px}
+  .brand::before{content:"";display:inline-block;width:14px;height:1px;background:var(--sub);vertical-align:middle;margin-right:10px;transform:translateY(-1px)}
+
+  h1{font-size:32px;font-weight:900;letter-spacing:-0.02em;line-height:1.2;margin-bottom:20px}
+  h1 .accent{color:var(--accent)}
+  .lead{font-size:14px;color:var(--sub);line-height:1.8;margin-bottom:44px;max-width:32ch}
+
+  .divider{height:1px;background:var(--line);margin:0 0 40px}
+
+  .field{margin-bottom:32px;position:relative}
+  .field label{display:block;font-size:11px;font-weight:500;letter-spacing:0.14em;color:var(--sub);margin-bottom:12px}
+  .field input{width:100%;font-family:var(--sans);font-size:16px;font-weight:400;color:var(--ink);background:transparent;border:0;border-bottom:1px solid var(--line);padding:8px 0 10px;outline:none;transition:border-color 180ms ease}
+  .field input::placeholder{color:var(--line-strong)}
+  .field input:focus{border-bottom-color:var(--ink)}
+  .field .underline{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--accent);transform:scaleX(0);transform-origin:left center;transition:transform 260ms cubic-bezier(.2,.7,.2,1)}
+  .field input:focus ~ .underline{transform:scaleX(1)}
+  .field .hint{font-size:11px;color:var(--sub);margin-top:8px;line-height:1.5;font-family:var(--mono);letter-spacing:0.02em}
+  .field.error input{border-bottom-color:var(--error)}
+  .field.error .hint{color:var(--error)}
+
+  .prefill{font-family:var(--mono);font-size:11px;color:var(--sub);margin-bottom:12px;letter-spacing:0.02em;display:flex;align-items:center;gap:10px}
+  .prefill .dot{width:6px;height:6px;background:var(--accent);border-radius:50%;flex:none}
+
+  .actions{margin-top:16px}
+  button[type=submit]{
+    width:100%;font-family:var(--sans);font-size:15px;font-weight:700;letter-spacing:0.06em;
+    color:var(--paper);background:var(--ink);border:0;padding:18px 20px;cursor:pointer;
+    border-radius:var(--radius);transition:background 200ms ease, transform 120ms ease;
+    display:flex;align-items:center;justify-content:center;gap:12px;
+  }
+  button[type=submit]:hover:not(:disabled){background:var(--accent)}
+  button[type=submit]:active{transform:translateY(1px)}
+  button[type=submit]:disabled{background:var(--line-strong);cursor:not-allowed}
+  button[type=submit] .arrow{width:14px;height:1px;background:var(--paper);position:relative;transition:transform 200ms}
+  button[type=submit] .arrow::after{content:"";position:absolute;right:0;top:-3px;width:6px;height:6px;border-right:1px solid var(--paper);border-top:1px solid var(--paper);transform:rotate(45deg)}
+  button[type=submit]:hover:not(:disabled) .arrow{transform:translateX(4px)}
+
+  .fine{margin-top:auto;padding-top:48px;font-size:11px;color:var(--sub);line-height:1.7;font-family:var(--mono);letter-spacing:0.02em}
+  .fine strong{color:var(--ink);font-weight:500}
+
+  /* success view */
+  .done{display:none;flex-direction:column}
+  .done.on{display:flex;animation:fadein 480ms ease both}
+  .done h1{margin-bottom:24px}
+  .done .status{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--accent);margin-bottom:56px;text-transform:uppercase}
+  .done .status::before{content:"";display:inline-block;width:14px;height:1px;background:var(--accent);vertical-align:middle;margin-right:10px;transform:translateY(-1px)}
+  .done .flow{margin:24px 0 40px;padding:24px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .done .flow .step{display:flex;gap:16px;padding:10px 0;font-size:13px;color:var(--sub);line-height:1.7}
+  .done .flow .step .num{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:0.06em;flex:none;padding-top:2px;min-width:22px}
+  .done .flow .step strong{color:var(--ink);font-weight:500;display:block;margin-bottom:2px;font-size:14px}
+
+  @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  .form-view.off{display:none}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<main>
+
+  <!-- registration form -->
+  <section class="form-view" id="formView">
+    <div class="brand">Skeleton, Inc. &nbsp;/&nbsp; Zoom · LINE Bridge</div>
+
+    <h1>Zoom URL を、<br /><span class="accent">LINE</span> で。</h1>
+    <p class="lead">
+      予定が入った瞬間、Zoom の招待リンクをこの LINE でお届けします。
+      日時をコピペしたり、URL を探したりする必要はもうありません。
+    </p>
+
+    <div class="divider"></div>
+
+    <div class="prefill" id="prefill" hidden>
+      <span class="dot"></span>
+      <span id="prefillText">LINE アカウントを確認しました</span>
+    </div>
+
+    <form id="regForm" novalidate>
+      <div class="field" id="fName">
+        <label for="name">お名前</label>
+        <input type="text" id="name" name="name" placeholder="山田 太郎" autocomplete="name" required />
+        <span class="underline"></span>
+        <div class="hint" id="hName" hidden></div>
+      </div>
+
+      <div class="field" id="fEmail">
+        <label for="email">メールアドレス</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" inputmode="email" required />
+        <span class="underline"></span>
+        <div class="hint" id="hEmail">Google カレンダーに登録している宛先をご記入ください</div>
+      </div>
+
+      <div class="actions">
+        <button type="submit" id="submitBtn">
+          <span>登録する</span>
+          <span class="arrow" aria-hidden="true"></span>
+        </button>
+      </div>
+    </form>
+
+    <div class="fine">
+      <strong>個人情報の取り扱い</strong><br />
+      ご入力いただいた情報は、Zoom URL を LINE でお届けする目的のみに使用します。
+      第三者への提供はいたしません。
+    </div>
+  </section>
+
+  <!-- success -->
+  <section class="done" id="doneView" aria-live="polite">
+    <div class="brand">Skeleton, Inc. &nbsp;/&nbsp; Zoom · LINE Bridge</div>
+    <div class="status">Registered</div>
+    <h1>登録が<br />完了しました。</h1>
+    <p class="lead">
+      次に Zoom 会議が設定されたら、この LINE トークにリンクをお届けします。<br />
+      特別な操作は不要です。
+    </p>
+    <div class="flow">
+      <div class="step"><span class="num">01</span><span><strong>予定が入る</strong>スケルトンから Google カレンダーに追加</span></div>
+      <div class="step"><span class="num">02</span><span><strong>Zoom URL を自動発行</strong>Skeleton の Zoom アカウントで会議を作成</span></div>
+      <div class="step"><span class="num">03</span><span><strong>LINE に届く</strong>この LINE トークに URL とパスワードを送信</span></div>
+    </div>
+    <div class="fine">
+      情報の修正が必要になったら、このトークで「修正」と送信してください。
+    </div>
+  </section>
+
+</main>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+(() => {
+  const LIFF_ID = window.__LIFF_ID__ || 'PLACEHOLDER_LIFF_ID';
+  const ENDPOINT = window.__REG_ENDPOINT__ || '';
+
+  const $ = (id) => document.getElementById(id);
+  const formView = $('formView');
+  const doneView = $('doneView');
+  const form = $('regForm');
+  const submitBtn = $('submitBtn');
+  const nameInput = $('name');
+  const emailInput = $('email');
+  const fName = $('fName');
+  const fEmail = $('fEmail');
+  const hName = $('hName');
+  const hEmail = $('hEmail');
+  const prefill = $('prefill');
+  const prefillText = $('prefillText');
+
+  let profile = null;
+  let idToken = null;
+
+  async function boot(){
+    try{
+      if (typeof liff !== 'undefined' && LIFF_ID !== 'PLACEHOLDER_LIFF_ID'){
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()){ liff.login(); return; }
+        profile = await liff.getProfile();
+        idToken = liff.getIDToken();
+        if (profile?.displayName){
+          nameInput.value = profile.displayName;
+          prefillText.textContent = `LINE アカウントを確認しました  ${profile.displayName}`;
+          prefill.hidden = false;
+        }
+      }
+    } catch(e){
+      // LIFF 外 (プレビュー) でも form 自体は動く
+      prefillText.textContent = 'プレビュー — LINE 内で開くと自動入力されます';
+      prefill.hidden = false;
+    }
+  }
+
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  function validate(){
+    let ok = true;
+    fName.classList.remove('error');
+    fEmail.classList.remove('error');
+    hName.hidden = true;
+    hEmail.textContent = 'Google カレンダーに登録している宛先をご記入ください';
+
+    if (!nameInput.value.trim()){
+      fName.classList.add('error'); hName.hidden = false; hName.textContent = 'お名前を入力してください'; ok = false;
+    }
+    if (!emailRe.test(emailInput.value.trim())){
+      fEmail.classList.add('error'); hEmail.textContent = 'メールアドレスの形式が正しくありません'; ok = false;
+    }
+    return ok;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    submitBtn.disabled = true;
+    submitBtn.querySelector('span').textContent = '登録中…';
+    try{
+      const body = {
+        name: nameInput.value.trim(),
+        email: emailInput.value.trim().toLowerCase(),
+        lineUserId: profile?.userId || null,
+        lineDisplayName: profile?.displayName || null,
+        idToken,
+      };
+      if (ENDPOINT){
+        const res = await fetch(ENDPOINT, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error('server ' + res.status);
+      } else {
+        // preview mode: no endpoint
+        await new Promise(r => setTimeout(r, 500));
+      }
+      formView.classList.add('off');
+      doneView.classList.add('on');
+      window.scrollTo({top:0, behavior:'smooth'});
+    } catch(err){
+      submitBtn.disabled = false;
+      submitBtn.querySelector('span').textContent = '登録する';
+      hEmail.textContent = '登録に失敗しました。時間をおいてお試しください';
+      fEmail.classList.add('error');
+    }
+  });
+
+  boot();
+})();
+</script>
+</body>
+</html>
