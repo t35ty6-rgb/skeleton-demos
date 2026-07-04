@@ -664,7 +664,7 @@ const chapters = [
     await sync.waitFor(p, 'title_end');
     await slide(p, `
       ${SL.chrome('I · 01', '仕組み')}
-      <div style="margin-top:26px;">${SL.title('玄関先で、3秒で、<br><span style="color:${C.leaf};">担当ID</span> を顧客に刻印', { size: '44px' })}</div>
+      <div style="margin-top:26px;">${SL.title('玄関先で、3秒で、<br><span style="color:${C.leaf};">担当ID</span>を顧客に刻印', { size: '44px' })}</div>
 
       <div style="margin-top:36px;flex:1;display:grid;grid-template-columns:80px 1fr;column-gap:30px;row-gap:14px;align-content:start;">
         <div data-reveal="1" style="padding-top:6px;font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.14em;font-weight:400;">01</div>
