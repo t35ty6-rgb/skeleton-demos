@@ -43,10 +43,13 @@ export const TAG_GROUPS = {
       { id: 'p_a_powder',   label: 'クロレラA パウダー' },
       { id: 'p_a_tablet',   label: 'クロレラA タブレット' },
       { id: 'p_drink',      label: 'ドリンク' },
+      { id: 'p_wakasa',     label: 'サン・ワカサ' },
+      { id: 'p_protein',    label: 'プラントプロテイン' },
       { id: 'p_plasma',     label: 'プラズマローゲン' },
       { id: 'p_agaricus',   label: 'アガリクス' },
       { id: 'p_ukogi',      label: 'エゾウコギ' },
       { id: 'p_astaxanthin',label: 'アスタキサンチン' },
+      { id: 'p_cosmetic',   label: '化粧品・ヘアケア' },
     ],
   },
   STATUS: {
@@ -79,6 +82,7 @@ export const PRODUCT_CATEGORIES = [
   { id: 'ukogi',       label: 'エゾウコギ' },
   { id: 'astaxanthin', label: 'アスタキサンチン' },
   { id: 'anserine',    label: 'アンセリン' },
+  { id: 'cosmetic',    label: '化粧品・ヘアケア' },
 ];
 
 /* ─── 受注チャネル (この案件の本丸) ─── */

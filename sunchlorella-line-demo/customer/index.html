@@ -315,10 +315,11 @@
   }
   .cart-list .thumb {
     width: 44px; height: 44px; border-radius: 8px;
-    background: linear-gradient(135deg, var(--leaf-4), var(--leaf-3));
+    background: var(--soft); overflow: hidden;
     color: var(--leaf-2); display: grid; place-items: center;
     font-weight: 900; font-size: 14px;
   }
+  .cart-list .thumb .thumb-img { transition: none; }
   .cart-list .n { font-size: 13.5px; font-weight: 800; }
   .cart-list .p { font-family: var(--font-num); font-size: 12px; color: var(--ink-3); margin-top: 2px; }
   .cart-list .qty {
@@ -351,11 +352,12 @@
   }
   .sub-card .thumb {
     width: 52px; height: 52px; border-radius: 12px;
-    background: linear-gradient(135deg, var(--leaf-4), var(--leaf-3));
+    background: var(--soft); overflow: hidden;
     color: var(--leaf-2); display: grid; place-items: center;
     font-weight: 900; font-size: 16px;
     align-self: start;
   }
+  .sub-card .thumb .thumb-img { transition: none; }
   .sub-card .n { font-size: 14.5px; font-weight: 800; }
   .sub-card .meta { color: var(--ink-3); font-size: 12px; margin-top: 3px; }
   .sub-card .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
@@ -821,11 +823,24 @@
   const CAT_LABEL = {
     chlorella: 'CHLORELLA', plasmalogen: 'PLASMALOGEN',
     agaricus: 'AGARICUS', ukogi: 'UKOGI',
+    astaxanthin: 'ASTAXANTHIN', anserine: 'ANSERINE',
+    cosmetic: 'COSMETIC',
   };
   const CAT_JP = {
     chlorella: 'クロレラ', plasmalogen: 'プラズマローゲン',
     agaricus: 'アガリクス', ukogi: 'エゾウコギ',
+    astaxanthin: 'アスタキサンチン', anserine: 'アンセリン',
+    cosmetic: '化粧品・ヘアケア',
   };
+  // p.img が http(s):// or ../ で始まる URL/相対パスなら <img>、それ以外は文字列 fallback
+  function thumbHTML(p) {
+    const im = p.img || '';
+    if (im.startsWith('http') || im.startsWith('../') || im.includes('/')) {
+      return `<img class="thumb-img" src="${im}" alt="${escapeAttr(p.name)}" loading="lazy">`;
+    }
+    return `<span>${im}</span>`;
+  }
+  function escapeAttr(s) { return String(s).replace(/"/g, '&quot;'); }
   const state_shop = { cat: 'all' };
 
   function renderShop() {
@@ -845,12 +860,12 @@
     }));
 
     // featured (first plasmalogen, else first product)
-    const feat = all.find(p => p.id === 'prd_plasma') || all[0];
+    const feat = all.find(p => p.id === 'prd_neuro_90' || p.id === 'prd_plasma') || all[0];
     if (feat) {
       document.getElementById('shopFeat').innerHTML = `
         <div class="feat-card" data-pid="${feat.id}">
           <div class="img">
-            <span>${feat.img}</span>
+            ${thumbHTML(feat)}
             <span class="badge">定期便 ¥${(feat.price - feat.subPrice).toLocaleString('ja-JP')} OFF</span>
           </div>
           <div class="body">
@@ -873,7 +888,7 @@
   }
   function prodCard(p) {
     return `<div class="prod" data-pid="${p.id}">
-      <div class="thumb"><span>${p.img}</span></div>
+      <div class="thumb">${thumbHTML(p)}</div>
       <div class="body">
         <div class="cat-lab">${CAT_LABEL[p.category] || p.category.toUpperCase()}</div>
         <div class="n">${p.name}</div>
@@ -893,7 +908,7 @@
     if (!p) return;
     openModal(`
       <div class="prod-full">
-        <div class="hero"><span>${p.img}</span></div>
+        <div class="hero">${thumbHTML(p)}</div>
         <div class="cat-lab">${CAT_LABEL[p.category] || p.category.toUpperCase()}</div>
         <h2>${p.name}</h2>
         <div class="price-row">
@@ -949,7 +964,7 @@
       const p = state.products.find(x => x.id === pid);
       if (!p) return '';
       return `<div class="row" data-pid="${pid}">
-        <div class="thumb">${p.img}</div>
+        <div class="thumb">${thumbHTML(p)}</div>
         <div>
           <div class="n">${p.name}</div>
           <div class="p">${fmt.yen(p.price)} × ${qty}</div>
@@ -1000,7 +1015,7 @@
     const p = state.products.find(x => x.id === s.productId);
     const label = { active: 'ご継続中', paused: 'スキップ中', stopped: '停止' }[s.status];
     return `<div class="sub-card">
-      <div class="thumb">${p ? p.img : '—'}</div>
+      <div class="thumb">${p ? thumbHTML(p) : '—'}</div>
       <div>
         <div class="n">${p ? p.name : ''} × ${s.qty}</div>
         <div class="meta">${s.cycleDays}日サイクル · ${label} · 次回 ${fmt.date(s.nextDeliveryAt)}</div>

@@ -9,7 +9,7 @@
 
 import { db } from './data.js';
 
-const SEED_FLAG = 'sunchlorella::seeded::v5';
+const SEED_FLAG = 'sunchlorella::seeded::v6-20products';
 
 export async function seedIfEmpty() {
   if (localStorage.getItem(SEED_FLAG)) return false;
@@ -38,16 +38,42 @@ async function seedAll() {
   ];
   for (const r of reps) await db.set('reps', r.id, r);
 
-  /* ─── 商品 8点 (公開情報のみ) ─── */
+  /* ─── 商品 20点 (公開情報 + 実画像) ─── */
+  // 画像は customer/img/products/ 配下 (相対パス)。 admin/customer 両方から
+  // ../customer/img/products/xx.jpg で参照
+  const IMG = (n) => `../customer/img/products/${n}`;
   const products = [
-    { id: 'prd_a300',    name: 'サン・クロレラA 粒 300粒',   category: 'chlorella', price: 7020, subPrice: 6620, stock: 320, tag: 'p_a_grain',  desc: 'クロレラを丸ごと粒に。1回15粒×20日分の目安。', img: 'A粒' },
-    { id: 'prd_a900',    name: 'サン・クロレラA 粒 900粒',   category: 'chlorella', price: 19440, subPrice: 18240, stock: 210, tag: 'p_a_grain',  desc: 'ご家族用またはお得な60日分。', img: 'A粒L' },
-    { id: 'prd_apowder', name: 'サン・クロレラA パウダー',   category: 'chlorella', price: 6480, subPrice: 6080, stock: 180, tag: 'p_a_powder', desc: 'お飲み物に混ぜてどうぞ。無味に近く続けやすい。', img: 'A粉' },
-    { id: 'prd_atablet', name: 'サン・クロレラA タブレット', category: 'chlorella', price: 5940, subPrice: 5540, stock: 240, tag: 'p_a_tablet', desc: 'ラムネ状で舐めやすく、外出先でもお召し上がりいただけます。', img: 'A錠' },
-    { id: 'prd_drink',   name: 'クロレラドリンク 10本',      category: 'chlorella', price: 3780, subPrice: 3480, stock: 460, tag: 'p_drink',    desc: '1本30mL、朝の1杯に。冷やしても美味しくいただけます。', img: '飲' },
-    { id: 'prd_plasma',  name: 'プラズマローゲン 90粒',     category: 'plasmalogen', price: 12960, subPrice: 12160, stock: 130, tag: 'p_plasma',   desc: '記憶をいたわる新習慣。1日3粒×30日分。', img: 'P' },
-    { id: 'prd_agari',   name: 'アガリクス 顆粒 90包',       category: 'agaricus',    price: 15120, subPrice: 14320, stock: 90,  tag: 'p_agaricus', desc: '力強い日課に。1包を水またはぬるま湯に溶かして。', img: 'ア' },
-    { id: 'prd_ukogi',   name: 'エゾウコギ 粒 240粒',       category: 'ukogi',       price: 5940, subPrice: 5540, stock: 160, tag: 'p_ukogi',    desc: '毎日のリズムを整えるハーブ由来。ロシア極東の伝統。', img: 'ウ' },
+    /* ── クロレラ (10品) ── */
+    { id: 'prd_a300',       name: 'サン・クロレラA 粒 300粒',            category: 'chlorella',   price:  7020, subPrice:  6318, stock: 320, tag: 'p_a_grain',    desc: 'クロレラを丸ごと粒に。1回15粒×20日分の目安。50年以上愛される、当社の基幹商品です。', img: IMG('a-tablet.jpg') },
+    { id: 'prd_a900',       name: 'サン・クロレラA 粒 900粒',            category: 'chlorella',   price: 19440, subPrice: 17496, stock: 210, tag: 'p_a_grain',    desc: 'ご家族用またはお得な60日分の大容量パック。日々の栄養補給を経済的にご継続いただけます。', img: IMG('a-tablet.jpg') },
+    { id: 'prd_apowder_20', name: 'サン・クロレラ パウダー 20g',         category: 'chlorella',   price:  4104, subPrice:  3693, stock: 260, tag: 'p_a_powder',   desc: 'お飲み物に混ぜてお召し上がりいただけます。無味に近く続けやすい微粉末仕上げ。',        img: IMG('chlorella-powder.jpg') },
+    { id: 'prd_apowder_60', name: 'サン・クロレラ パウダー 60g',         category: 'chlorella',   price: 10800, subPrice:  9720, stock: 180, tag: 'p_a_powder',   desc: 'たっぷりお使いいただける60g入り。スムージーやお料理にもお使いいただけます。',          img: IMG('chlorella-powder.jpg') },
+    { id: 'prd_afine',      name: 'サン・クロレラA ファインパウダー',   category: 'chlorella',   price:  9720, subPrice:  8748, stock: 130, tag: 'p_a_powder',   desc: '微粒子タイプで、水にサッと溶ける飲みやすさが特徴。NSFアンチドーピング認証取得。',   img: IMG('a-fine-powder.jpg') },
+    { id: 'prd_tai_tab',    name: 'サン・タイ タブレット',                category: 'chlorella',   price:  6480, subPrice:  5832, stock: 190, tag: 'p_a_tablet',   desc: '若鯛エキス配合の栄養補助食品。噛んでも飲み込みやすいタブレットタイプです。',           img: IMG('tai-tablet.jpg') },
+    { id: 'prd_tai_drink',  name: 'サン・タイ ドリンク 10本',             category: 'chlorella',   price:  3780, subPrice:  3402, stock: 460, tag: 'p_drink',      desc: '1本30mL、朝の1杯に。若鯛と長年培ったクロレラ製法をあわせた飲みきりドリンク。',       img: IMG('tai-drink.jpg') },
+    { id: 'prd_wakasa',     name: 'サン・ワカサ 60本',                    category: 'chlorella',   price:  8640, subPrice:  7776, stock: 220, tag: 'p_wakasa',     desc: 'クロレラCGFを高濃度で配合したロングセラーの飲料。1日1本、健康の維持にお役立てください。', img: IMG('wakasa.jpg') },
+    { id: 'prd_wakasagold', name: 'サン・ワカサ ゴールド プラス',          category: 'chlorella',   price: 12960, subPrice: 11664, stock: 140, tag: 'p_wakasa',     desc: 'エゾウコギ・アガリクス・プラズマローゲンをプラスした、贅沢な複合ドリンク。',             img: IMG('wakasa-gold.jpg') },
+    { id: 'prd_plantprot',  name: 'プラントプロテイン&クロレラ',           category: 'chlorella',   price:  5400, subPrice:  4860, stock: 170, tag: 'p_protein',    desc: '植物性プロテインとクロレラを組み合わせた次世代サプリ。運動後の栄養補給におすすめ。',   img: IMG('plant-protein.jpg') },
+
+    /* ── プラズマローゲン (2品) ── */
+    { id: 'prd_neuro_90',   name: 'サン・ニューロ 90粒',                  category: 'plasmalogen', price: 12960, subPrice: 11664, stock: 130, tag: 'p_plasma',     desc: 'ホヤ由来プラズマローゲンを1日分1000μg配合。記憶をいたわる新習慣。1日3粒×30日分。',  img: IMG('neuro.jpg') },
+    { id: 'prd_neuro_270',  name: 'サン・ニューロ 270粒 (お徳用)',        category: 'plasmalogen', price: 34992, subPrice: 31493, stock:  70, tag: 'p_plasma',     desc: '3ヶ月分の大容量パック。ご継続のお客さま向けに、より経済的にお使いいただけます。',      img: IMG('neuro.jpg') },
+
+    /* ── エゾウコギ (4品) ── */
+    { id: 'prd_ukogi_ext',  name: 'サン・ウコギエキス',                   category: 'ukogi',       price:  9720, subPrice:  8748, stock: 160, tag: 'p_ukogi',      desc: '独自製法でエゾウコギエキスを高濃度に抽出。飲みやすい液状に仕上げました。',              img: IMG('ukogi-extract.jpg') },
+    { id: 'prd_ukogi_org',  name: 'SUN UKOGI 有機タブレット',              category: 'ukogi',       price:  6480, subPrice:  5832, stock: 120, tag: 'p_ukogi',      desc: '有機エゾウコギ根部を配合したタブレット。毎日のリズムを整える生活に。',                  img: IMG('ukogi-organic.webp') },
+    { id: 'prd_shin_tab',   name: 'サン・シン タブレット',                 category: 'ukogi',       price:  5400, subPrice:  4860, stock: 180, tag: 'p_ukogi',      desc: 'エゾウコギを凝縮した糖衣タブレット。持ち歩きやすく続けやすい小粒サイズ。',              img: IMG('shin-tablet.jpg') },
+    { id: 'prd_shin_drink', name: 'サン・シン ドリンク 10本',               category: 'ukogi',       price:  4320, subPrice:  3888, stock: 340, tag: 'p_ukogi',      desc: 'CGFクロレラを配合した濃厚エゾウコギドリンク。日々の元気の1本に。',                     img: IMG('shin-drink.jpg') },
+
+    /* ── アガリクス (1品) ── */
+    { id: 'prd_agari',      name: 'サン・クロレラ アガリクス 90包',        category: 'agaricus',    price: 15120, subPrice: 13608, stock:  90, tag: 'p_agaricus',   desc: 'ブラジル・ピエダーデ産アガリクス (岩出101株) とクロレラCGFの複合サプリ。力強い日課に。', img: IMG('agaricus.jpg') },
+
+    /* ── アスタキサンチン (1品) ── */
+    { id: 'prd_astarella',  name: 'アスタレラ',                            category: 'astaxanthin', price:  6480, subPrice:  5832, stock: 200, tag: 'p_astaxanthin',desc: 'ピント調節・目の疲労軽減・視覚記憶維持を三重機能でサポート (機能性表示食品)。',        img: IMG('astarella.jpg') },
+
+    /* ── 化粧品・ヘアケア (2品) ── */
+    { id: 'prd_cgfcream',   name: 'Sun CGF Cream',                         category: 'cosmetic',    price:  5940, subPrice:  5346, stock: 150, tag: 'p_cosmetic',   desc: 'クロレラCGF配合の保湿クリーム。しっとりと肌になじむ使い心地です。',                    img: IMG('cgf-cream.jpg') },
+    { id: 'prd_hairtonic',  name: '育毛トニック',                          category: 'cosmetic',    price:  3240, subPrice:  2916, stock: 220, tag: 'p_cosmetic',   desc: 'クロレラCGF配合の薬用育毛トニック。爽やかな使い心地で頭皮ケアに。',                    img: IMG('hair-tonic.jpg') },
   ];
   for (const p of products) await db.set('products', p.id, p);
 
@@ -90,61 +116,61 @@ async function seedAll() {
   const orderSpecs = [
     // customerId, daysAgo, [productIds], channel, repId (visit時のみ)
     // 直近3日 (今月分) — ダッシュボードKPIが動く見せどころ
-    ['cust_sasaki',    0,  ['prd_a900', 'prd_plasma'], 'visit', 'rep_sato'],
+    ['cust_sasaki',    0,  ['prd_a900', 'prd_neuro_90'], 'visit', 'rep_sato'],
     ['cust_nomura',    0,  ['prd_a900', 'prd_agari'],  'visit', 'rep_yoshi'],
     ['cust_tanaka',    0,  ['prd_a300'], 'line', null],
-    ['cust_okamoto',   1,  ['prd_apowder'], 'line', null],
-    ['cust_yamada',    1,  ['prd_drink'], 'line', null],
+    ['cust_okamoto',   1,  ['prd_apowder_20'], 'line', null],
+    ['cust_yamada',    1,  ['prd_wakasa'], 'line', null],
     ['cust_watanabe',  1,  ['prd_agari', 'prd_a900'], 'visit', 'rep_kitano'],
     ['cust_uchida',    1,  ['prd_a900'], 'visit', 'rep_yoshi'],
-    ['cust_kondo',     2,  ['prd_a900', 'prd_atablet'], 'visit', 'rep_takahashi'],
-    ['cust_ozawa',     2,  ['prd_drink', 'prd_a300'], 'visit', 'rep_murata'],
-    ['cust_kimura',    2,  ['prd_apowder'], 'line', null],
-    ['cust_hashimoto', 2,  ['prd_ukogi', 'prd_a300'], 'visit', 'rep_yoshi'],
-    ['cust_ishida',    2,  ['prd_atablet', 'prd_agari'], 'visit', 'rep_sato'],
+    ['cust_kondo',     2,  ['prd_a900', 'prd_tai_tab'], 'visit', 'rep_takahashi'],
+    ['cust_ozawa',     2,  ['prd_wakasa', 'prd_a300'], 'visit', 'rep_murata'],
+    ['cust_kimura',    2,  ['prd_apowder_20'], 'line', null],
+    ['cust_hashimoto', 2,  ['prd_ukogi_ext', 'prd_a300'], 'visit', 'rep_yoshi'],
+    ['cust_ishida',    2,  ['prd_tai_tab', 'prd_agari'], 'visit', 'rep_sato'],
     ['cust_ando',      2,  ['prd_a300'], 'phone', null],
     ['cust_maeda',     2,  ['prd_a300'], 'web', null],
-    ['cust_saito',     2,  ['prd_ukogi'], 'visit', 'rep_murata'],
+    ['cust_saito',     2,  ['prd_ukogi_ext'], 'visit', 'rep_murata'],
 
-    ['cust_tanaka',    3,  ['prd_a300', 'prd_drink'], 'visit', 'rep_kitano'],
+    ['cust_tanaka',    3,  ['prd_a300', 'prd_wakasa'], 'visit', 'rep_kitano'],
     ['cust_tanaka',   33,  ['prd_a300'], 'line', null],
     ['cust_tanaka',   63,  ['prd_a300'], 'visit', 'rep_kitano'],
     ['cust_tanaka',   93,  ['prd_a300'], 'line', null],
-    ['cust_yamada',   12,  ['prd_a300', 'prd_atablet'], 'visit', 'rep_kitano'],
+    ['cust_yamada',   12,  ['prd_a300', 'prd_tai_tab'], 'visit', 'rep_kitano'],
     ['cust_yamada',   45,  ['prd_a900'], 'visit', 'rep_kitano'],
-    ['cust_yamada',   78,  ['prd_drink'], 'line', null],
+    ['cust_yamada',   78,  ['prd_wakasa'], 'line', null],
     ['cust_matsumoto',28,  ['prd_a300'], 'visit', 'rep_kitano'],
     ['cust_kawai',    70,  ['prd_a300'], 'visit', 'rep_kitano'],
-    ['cust_kobayashi',96,  ['prd_atablet'], 'visit', 'rep_kitano'],
+    ['cust_kobayashi',96,  ['prd_tai_tab'], 'visit', 'rep_kitano'],
     ['cust_watanabe',  4,  ['prd_a900', 'prd_agari'], 'visit', 'rep_kitano'],
     ['cust_watanabe', 34,  ['prd_a300', 'prd_agari'], 'line', null],
     ['cust_watanabe', 64,  ['prd_a300', 'prd_agari'], 'visit', 'rep_kitano'],
-    ['cust_sasaki',    5,  ['prd_a900', 'prd_plasma'], 'visit', 'rep_sato'],
+    ['cust_sasaki',    5,  ['prd_a900', 'prd_neuro_90'], 'visit', 'rep_sato'],
     ['cust_sasaki',   35,  ['prd_a900'], 'line', null],
     ['cust_sasaki',   65,  ['prd_a900'], 'visit', 'rep_sato'],
-    ['cust_okamoto',  14,  ['prd_apowder'], 'visit', 'rep_sato'],
-    ['cust_okamoto',  44,  ['prd_apowder'], 'line', null],
+    ['cust_okamoto',  14,  ['prd_apowder_20'], 'visit', 'rep_sato'],
+    ['cust_okamoto',  44,  ['prd_apowder_20'], 'line', null],
     ['cust_maeda',    18,  ['prd_a300'], 'visit', 'rep_sato'],
-    ['cust_ishida',   42,  ['prd_atablet', 'prd_agari'], 'visit', 'rep_sato'],
-    ['cust_ishida',   72,  ['prd_atablet'], 'line', null],
-    ['cust_nomura',    8,  ['prd_a900', 'prd_plasma', 'prd_agari'], 'visit', 'rep_yoshi'],
+    ['cust_ishida',   42,  ['prd_tai_tab', 'prd_agari'], 'visit', 'rep_sato'],
+    ['cust_ishida',   72,  ['prd_tai_tab'], 'line', null],
+    ['cust_nomura',    8,  ['prd_a900', 'prd_neuro_90', 'prd_agari'], 'visit', 'rep_yoshi'],
     ['cust_nomura',   38,  ['prd_a900', 'prd_agari'], 'line', null],
     ['cust_nomura',   68,  ['prd_a900', 'prd_agari'], 'visit', 'rep_yoshi'],
-    ['cust_hashimoto',16,  ['prd_ukogi', 'prd_a300'], 'visit', 'rep_yoshi'],
+    ['cust_hashimoto',16,  ['prd_ukogi_ext', 'prd_a300'], 'visit', 'rep_yoshi'],
     ['cust_hashimoto',46,  ['prd_a300'], 'line', null],
     ['cust_uchida',   21,  ['prd_a900', 'prd_agari'], 'visit', 'rep_yoshi'],
     ['cust_uchida',   51,  ['prd_a900'], 'line', null],
     ['cust_uchida',   81,  ['prd_a900'], 'visit', 'rep_yoshi'],
-    ['cust_ozawa',    11,  ['prd_drink', 'prd_a300'], 'visit', 'rep_murata'],
+    ['cust_ozawa',    11,  ['prd_wakasa', 'prd_a300'], 'visit', 'rep_murata'],
     ['cust_ozawa',    41,  ['prd_a300'], 'line', null],
-    ['cust_kimura',   31,  ['prd_apowder'], 'visit', 'rep_murata'],
-    ['cust_kimura',   61,  ['prd_apowder'], 'web', null],
-    ['cust_saito',     9,  ['prd_ukogi'], 'visit', 'rep_murata'],
+    ['cust_kimura',   31,  ['prd_apowder_20'], 'visit', 'rep_murata'],
+    ['cust_kimura',   61,  ['prd_apowder_20'], 'web', null],
+    ['cust_saito',     9,  ['prd_ukogi_ext'], 'visit', 'rep_murata'],
     ['cust_kondo',    19,  ['prd_a900'], 'visit', 'rep_takahashi'],
     ['cust_kondo',    49,  ['prd_a900'], 'line', null],
     ['cust_ando',     38,  ['prd_a300'], 'visit', 'rep_takahashi'],
-    ['cust_hattori',  23,  ['prd_ukogi'], 'visit', 'rep_takahashi'],
-    ['cust_hattori',  53,  ['prd_atablet'], 'web', null],
+    ['cust_hattori',  23,  ['prd_ukogi_ext'], 'visit', 'rep_takahashi'],
+    ['cust_hattori',  53,  ['prd_tai_tab'], 'web', null],
     ['cust_arai',     50,  ['prd_a300'], 'phone', null],
   ];
   for (const [cid, dAgo, pids, ch, rid] of orderSpecs) {
@@ -169,12 +195,12 @@ async function seedAll() {
     { id: 'sub_watanabe_a900',  customerId: 'cust_watanabe',  productId: 'prd_a900',    qty: 1, cycleDays: 60, nextDeliveryAt: D(-22), status: 'active', createdAt: D(1400),repId: 'rep_kitano' },
     { id: 'sub_watanabe_agari', customerId: 'cust_watanabe',  productId: 'prd_agari',   qty: 1, cycleDays: 30, nextDeliveryAt: D(-4),  status: 'active', createdAt: D(1200),repId: 'rep_kitano' },
     { id: 'sub_sasaki_a900',    customerId: 'cust_sasaki',    productId: 'prd_a900',    qty: 1, cycleDays: 60, nextDeliveryAt: D(-25), status: 'active', createdAt: D(2100),repId: 'rep_sato' },
-    { id: 'sub_okamoto_apowder',customerId: 'cust_okamoto',   productId: 'prd_apowder', qty: 1, cycleDays: 45, nextDeliveryAt: D(-12), status: 'active', createdAt: D(890), repId: 'rep_sato' },
-    { id: 'sub_ishida_atablet', customerId: 'cust_ishida',    productId: 'prd_atablet', qty: 2, cycleDays: 60, nextDeliveryAt: D(-18), status: 'active', createdAt: D(1650),repId: 'rep_sato' },
+    { id: 'sub_okamoto_apowder',customerId: 'cust_okamoto',   productId: 'prd_apowder_20', qty: 1, cycleDays: 45, nextDeliveryAt: D(-12), status: 'active', createdAt: D(890), repId: 'rep_sato' },
+    { id: 'sub_ishida_atablet', customerId: 'cust_ishida',    productId: 'prd_tai_tab', qty: 2, cycleDays: 60, nextDeliveryAt: D(-18), status: 'active', createdAt: D(1650),repId: 'rep_sato' },
     { id: 'sub_nomura_a900',    customerId: 'cust_nomura',    productId: 'prd_a900',    qty: 1, cycleDays: 45, nextDeliveryAt: D(-6),  status: 'active', createdAt: D(2600),repId: 'rep_yoshi' },
     { id: 'sub_nomura_agari',   customerId: 'cust_nomura',    productId: 'prd_agari',   qty: 1, cycleDays: 30, nextDeliveryAt: D(-2),  status: 'active', createdAt: D(2400),repId: 'rep_yoshi' },
     { id: 'sub_uchida_a900',    customerId: 'cust_uchida',    productId: 'prd_a900',    qty: 1, cycleDays: 45, nextDeliveryAt: D(-11), status: 'active', createdAt: D(3000),repId: 'rep_yoshi' },
-    { id: 'sub_kimura_apowder', customerId: 'cust_kimura',    productId: 'prd_apowder', qty: 1, cycleDays: 45, nextDeliveryAt: D(-16), status: 'active', createdAt: D(1100),repId: 'rep_murata' },
+    { id: 'sub_kimura_apowder', customerId: 'cust_kimura',    productId: 'prd_apowder_20', qty: 1, cycleDays: 45, nextDeliveryAt: D(-16), status: 'active', createdAt: D(1100),repId: 'rep_murata' },
     { id: 'sub_kondo_a900',     customerId: 'cust_kondo',     productId: 'prd_a900',    qty: 1, cycleDays: 60, nextDeliveryAt: D(-20), status: 'active', createdAt: D(1900),repId: 'rep_takahashi' },
   ];
   for (const s of subsData) await db.set('subscriptions', s.id, s);
@@ -210,7 +236,7 @@ async function seedAll() {
     { id: 'msg1', customerId: 'cust_tanaka', direction: 'incoming', repId: 'rep_kitano', body: '田中さま、おはようございます。7月分の定期便のお届け、来週火曜日でご都合いかがでしょうか?', createdAt: D(0) + 9*3600*1000 + 14*60*1000 },
     { id: 'msg2', customerId: 'cust_tanaka', direction: 'outgoing', body: 'はい、火曜で大丈夫です。よろしくお願いします。', createdAt: D(0) + 9*3600*1000 + 18*60*1000 },
     { id: 'msg3', customerId: 'cust_tanaka', direction: 'incoming', repId: 'rep_kitano', body: 'ありがとうございます。それではまた火曜日に伺います。', createdAt: D(0) + 9*3600*1000 + 20*60*1000 },
-    { id: 'msg4', customerId: 'cust_tanaka', direction: 'incoming', repId: 'rep_kitano', kind: 'rich', title: 'プラズマローゲン 新発売', desc: '今月ご継続の皆さまだけ、初回¥500 OFF。会員価格でお試しいただけます。', productId: 'prd_plasma', createdAt: D(0) + 9*3600*1000 + 22*60*1000 },
+    { id: 'msg4', customerId: 'cust_tanaka', direction: 'incoming', repId: 'rep_kitano', kind: 'rich', title: 'プラズマローゲン 新発売', desc: '今月ご継続の皆さまだけ、初回¥500 OFF。会員価格でお試しいただけます。', productId: 'prd_neuro_90', createdAt: D(0) + 9*3600*1000 + 22*60*1000 },
   ];
   for (const m of msgs) await db.set('messages', m.id, m);
 

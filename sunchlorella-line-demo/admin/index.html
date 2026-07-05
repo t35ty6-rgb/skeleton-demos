@@ -1595,8 +1595,11 @@
       const saleOn = p.salePrice && p.salePrice < p.price
         && (!p.saleUntil || new Date(p.saleUntil).getTime() > now);
       const displayPrice = saleOn ? p.salePrice : p.price;
-      const thumbStyle = p.photos?.[0] ? `style="background-image:url('${escapeAttr(p.photos[0])}');"` : '';
-      const thumbLabel = p.photos?.[0] ? '' : escapeHtml(p.img || p.name?.charAt(0) || '?');
+      // photos[0] があればそれ、無ければ p.img が URL/相対パスならそれ、それも無ければ文字fallback
+      const imgIsPath = p.img && (p.img.startsWith('http') || p.img.startsWith('../') || p.img.includes('/'));
+      const thumbSrc = p.photos?.[0] || (imgIsPath ? p.img : '');
+      const thumbStyle = thumbSrc ? `style="background-image:url('${escapeAttr(thumbSrc)}'); background-size:cover; background-position:center;"` : '';
+      const thumbLabel = thumbSrc ? '' : escapeHtml(p.img || p.name?.charAt(0) || '?');
       const badge = stock <= 0 ? `<span class="p-badge out">在庫切れ</span>`
         : stock <= 10 ? `<span class="p-badge">残 ${stock}</span>`
         : saleOn ? `<span class="p-badge">SALE</span>`
