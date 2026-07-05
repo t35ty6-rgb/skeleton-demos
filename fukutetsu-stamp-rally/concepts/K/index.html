@@ -2,285 +2,1243 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>K · BOARD + CHAT · 福鉄</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#fbf7ee">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>ふくてつ · さんぽ帳</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800;900&family=Inter:wght@500;700;800&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
+/* ═══════════════════════════════════════
+   DESIGN TOKENS
+   Scene: 60代 女性 が 一人で 週末 の 福鉄 に乗り、
+   沿線の 神社 · 商店街 を 巡り、 手に持った スマホ に
+   静かな 相棒 が 話しかけてくる。 明るい夏の朝の光。
+   Strategy: committed (Fukubu orange 30-40%).
+   ═══════════════════════════════════════ */
 :root{
-  --sky:#a5cbe0;
-  --sky-2:#7fb4d4;
-  --grass:#84c07a;
-  --grass-2:#5aa356;
-  --earth:#c9a878;
-  --earth-2:#a08560;
-  --ink:#1e1a17;
-  --paper:#fff;
-  --cream:#fff7e6;
-  --accent:#e64a2c;
-  --accent-2:#b83820;
-  --gold:#f3cf5a;
-  --yellow:#ffe270;
-  --pink:#f5c0a8;
-  --me:#0284c7;
-  --me-2:#026799;
-  --bot:#f2eee4;
-  --dim:#7a6f5f;
-  --line:#e5e0d3;
+  /* Warm off-white body (not cream: chroma toward orange hue) */
+  --bg:oklch(0.985 0.008 60);
+  --bg-sink:oklch(0.965 0.011 65);
+  --surface:oklch(1 0 0);
+  --surface-2:oklch(0.98 0.006 82);
+  --surface-3:oklch(0.94 0.012 78);
+  --hair:oklch(0.9 0.01 78);
+  --hair-2:oklch(0.82 0.012 74);
+
+  /* Ink ramp */
+  --ink:oklch(0.19 0.02 50);
+  --ink-1:oklch(0.28 0.02 50);
+  --ink-2:oklch(0.42 0.018 55);
+  --ink-3:oklch(0.55 0.014 60);
+  --ink-4:oklch(0.68 0.01 65);
+
+  /* Sky world (upper board) */
+  --sky-1:oklch(0.92 0.045 235);
+  --sky-2:oklch(0.87 0.06 220);
+  --sky-3:oklch(0.82 0.075 210);
+
+  /* Grass world (lower board) */
+  --grass-1:oklch(0.82 0.1 148);
+  --grass-2:oklch(0.72 0.13 148);
+  --grass-3:oklch(0.6 0.14 148);
+
+  /* Brand · Fukubu orange */
+  --brand:oklch(0.62 0.185 40);
+  --brand-hi:oklch(0.7 0.19 42);
+  --brand-lo:oklch(0.5 0.17 38);
+  --brand-tint:oklch(0.95 0.03 42);
+
+  /* States */
+  --done:oklch(0.58 0.14 148);
+  --done-hi:oklch(0.68 0.14 148);
+  --done-lo:oklch(0.44 0.13 148);
+  --locked:oklch(0.68 0.03 55);
+  --locked-hi:oklch(0.76 0.03 55);
+  --lens:oklch(0.5 0.15 235);  /* chat me */
+  --lens-hi:oklch(0.62 0.16 235);
+  --gold:oklch(0.82 0.11 82);
+  --sakura:oklch(0.86 0.07 15);
+
+  /* Semantic z-index */
+  --z-board:0;
+  --z-sheet:10;
+  --z-header:20;
+  --z-toast:30;
+  --z-fab:35;
+  --z-backdrop:40;
+  --z-modal:50;
+
+  /* Motion */
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+  --ease-in-out:cubic-bezier(0.65,0,0.35,1);
+  --dur-1:180ms;
+  --dur-2:260ms;
+  --dur-3:420ms;
+
+  /* Spacing scale */
+  --s-1:4px;
+  --s-2:8px;
+  --s-3:12px;
+  --s-4:16px;
+  --s-5:24px;
+  --s-6:32px;
+
+  /* Radii */
+  --r-1:8px;
+  --r-2:14px;
+  --r-3:20px;
+  --r-4:28px;
+
+  /* Safe area */
+  --safe-top:env(safe-area-inset-top);
+  --safe-bottom:env(safe-area-inset-bottom);
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;background:var(--sky);color:var(--ink);font-family:"Baloo 2","Noto Sans JP",sans-serif;font-weight:700;-webkit-font-smoothing:antialiased;line-height:1.4;overflow:hidden;height:100vh}
-.app{max-width:420px;margin:0 auto;height:100vh;background:linear-gradient(180deg,var(--sky) 0%,var(--sky-2) 55%,var(--grass) 100%);position:relative;overflow:hidden}
 
-/* ============ TOP HP BAR ============ */
-.hp{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:center;z-index:20;gap:8px}
-.hp .card{background:var(--paper);border:3px solid var(--ink);border-radius:16px;padding:6px 12px 6px 6px;display:flex;align-items:center;gap:10px;box-shadow:0 3px 0 var(--ink);flex:1;min-width:0}
-.hp .card .avatar{width:36px;height:36px;background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);border:2px solid var(--ink);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--paper);font-weight:900;font-size:15px;flex-shrink:0}
-.hp .card .stat{display:flex;align-items:baseline;gap:4px;line-height:1}
-.hp .card .n{font-family:"Baloo 2",sans-serif;font-weight:900;font-size:22px;color:var(--ink);letter-spacing:-.02em}
-.hp .card .n small{font-size:11px;color:var(--dim);font-weight:700}
-.hp .card .l{font-size:9px;font-weight:800;color:var(--dim);letter-spacing:.14em;text-transform:uppercase}
-.hp .streak{background:var(--paper);border:3px solid var(--ink);border-radius:14px;padding:6px 12px;display:flex;align-items:center;gap:6px;box-shadow:0 3px 0 var(--ink);font-weight:800;font-size:14px;color:var(--ink);flex-shrink:0}
-.hp .streak .fire{animation:bob 1.4s ease-in-out infinite}
-@keyframes bob{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-3px) rotate(5deg)}}
-.hp .menu{width:44px;height:44px;background:var(--paper);border:3px solid var(--ink);border-radius:14px;color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 3px 0 var(--ink);cursor:pointer;flex-shrink:0}
+@media (prefers-color-scheme: dark){
+  /* Kept light per product register: cream/paper aesthetic is core identity */
+}
 
-/* ============ BOARD (upper part, scrollable) ============ */
-.board-wrap{position:absolute;top:76px;left:0;right:0;bottom:238px;overflow:hidden;z-index:1}
-.board{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:8px 0 20px}
-.board::-webkit-scrollbar{display:none}
-.board svg{display:block;margin:0 auto;width:100%;max-width:420px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;text-rendering:optimizeLegibility}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Zen Kaku Gothic New","Nunito",system-ui,-apple-system,sans-serif;
+  font-weight:500;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  font-feature-settings:"palt" 1;
+  font-optical-sizing:auto;
+  user-select:none;
+}
+button,input{font-family:inherit;color:inherit;border:0;background:none}
+button{cursor:pointer;-webkit-appearance:none;appearance:none}
+input{outline:0}
+img,svg{display:block;max-width:100%}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
 
-/* Cloud decorations */
-.cloud1,.cloud2{position:absolute;pointer-events:none;z-index:2}
-.cloud1{top:20px;left:20px;font-size:32px;animation:float 8s ease-in-out infinite}
-.cloud2{top:70px;right:30px;font-size:26px;animation:float 6s ease-in-out infinite reverse}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+/* ═══════════════════════════════════════
+   APP SHELL
+   ═══════════════════════════════════════ */
+.app{
+  position:fixed;
+  inset:0;
+  max-width:440px;
+  margin:0 auto;
+  background:var(--bg);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
 
-/* ============ CHAT SHEET (bottom fixed) ============ */
-.chat{position:absolute;bottom:0;left:0;right:0;background:var(--paper);border-top:3px solid var(--ink);border-radius:24px 24px 0 0;box-shadow:0 -8px 24px -8px oklch(0 0 0 / .18);z-index:15;height:238px;display:flex;flex-direction:column;transition:height .28s cubic-bezier(.2,.9,.2,1)}
-.chat.expanded{height:60vh}
-.chat .grip{width:44px;height:5px;background:var(--line);border-radius:3px;margin:8px auto 4px;flex-shrink:0}
-.chat-hd{padding:2px 16px 8px;flex-shrink:0;display:flex;align-items:center;gap:10px}
-.chat-hd .av{width:36px;height:36px;background:linear-gradient(135deg,var(--gold) 0%,var(--accent) 100%);border:2px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--paper);font-family:"Noto Sans JP",sans-serif;font-weight:900;font-size:14px;box-shadow:0 2px 0 var(--ink);position:relative}
-.chat-hd .av::after{content:"";position:absolute;bottom:-1px;right:-1px;width:11px;height:11px;background:var(--grass-2);border-radius:50%;border:2px solid var(--paper)}
-.chat-hd .who{flex:1;line-height:1.15}
-.chat-hd .name{font-size:14px;font-weight:900;letter-spacing:-.005em}
-.chat-hd .sub{font-size:10.5px;color:var(--grass-2);font-weight:800;letter-spacing:.02em;font-family:"Baloo 2",sans-serif}
-.chat-hd .exp{width:32px;height:32px;background:var(--bot);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--dim);cursor:pointer;font-weight:800}
+/* ─────── Sticky header ─────── */
+.app-header{
+  z-index:var(--z-header);
+  padding:calc(var(--safe-top) + 10px) 14px 12px;
+  background:oklch(from var(--bg) l c h / 0.72);
+  backdrop-filter:blur(24px) saturate(1.4);
+  -webkit-backdrop-filter:blur(24px) saturate(1.4);
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:12px;
+  border-bottom:0.5px solid oklch(from var(--ink) l c h / 0.08);
+  flex-shrink:0;
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.brand-mark{
+  width:38px;
+  height:38px;
+  border-radius:12px;
+  background:linear-gradient(158deg,var(--brand-hi) 0%,var(--brand) 55%,var(--brand-lo) 100%);
+  display:grid;
+  place-items:center;
+  color:oklch(1 0 0);
+  font-family:"Nunito",sans-serif;
+  font-weight:900;
+  font-size:15px;
+  letter-spacing:-0.03em;
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.28),
+    inset 0 -1px 0 oklch(0 0 0 / 0.14),
+    0 2px 6px -1px oklch(from var(--brand) l c h / 0.35);
+  position:relative;
+}
+.brand-mark::after{
+  content:"";
+  position:absolute;
+  inset:6px;
+  border:1px solid oklch(1 0 0 / 0.22);
+  border-radius:6px;
+  pointer-events:none;
+}
+.brand-mark span{position:relative;z-index:1}
+.brand-text .brand-name{
+  font-family:"Nunito",sans-serif;
+  font-weight:800;
+  font-size:15.5px;
+  letter-spacing:-0.015em;
+  line-height:1.1;
+  color:var(--ink);
+}
+.brand-text .brand-sub{
+  font-size:11px;
+  font-weight:600;
+  color:var(--ink-3);
+  letter-spacing:0.02em;
+  line-height:1.15;
+  margin-top:1px;
+}
 
-.log{flex:1;overflow-y:auto;padding:6px 14px 4px;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch}
-.log::-webkit-scrollbar{width:4px}
-.log::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
-.msg{max-width:82%;padding:10px 13px;border-radius:16px;font-size:13.5px;line-height:1.5;font-weight:600;font-family:"Baloo 2","Noto Sans JP",sans-serif;position:relative}
-.msg.bot{background:var(--bot);color:var(--ink);border-bottom-left-radius:4px;align-self:flex-start}
-.msg.me{background:var(--me);color:var(--paper);border-bottom-right-radius:4px;align-self:flex-end;font-weight:700}
-.msg em{color:var(--accent);font-style:normal;font-weight:900}
-.msg b{font-weight:900}
+/* Center progress pill */
+.progress-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 6px 6px 12px;
+  background:var(--surface);
+  border-radius:22px;
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.06),
+    0 4px 12px -6px oklch(0 0 0 / 0.12),
+    inset 0 0 0 1px var(--hair);
+  justify-self:center;
+}
+.progress-pill .p-num{
+  font-family:"Nunito",sans-serif;
+  font-weight:800;
+  font-size:16px;
+  letter-spacing:-0.015em;
+  color:var(--ink);
+  font-feature-settings:"tnum";
+  line-height:1;
+}
+.progress-pill .p-num em{
+  font-style:normal;
+  color:var(--ink-3);
+  font-weight:600;
+  font-size:12.5px;
+}
+.progress-pill .p-track{
+  width:56px;
+  height:8px;
+  background:var(--surface-3);
+  border-radius:4px;
+  overflow:hidden;
+  position:relative;
+}
+.progress-pill .p-fill{
+  position:absolute;
+  inset:0;
+  width:30%;
+  background:linear-gradient(90deg,var(--brand) 0%,var(--brand-hi) 100%);
+  border-radius:4px;
+  box-shadow:inset 0 -1px 0 oklch(from var(--brand-lo) l c h / 0.45);
+}
+
+/* Header actions */
+.header-actions{
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.icon-btn{
+  width:38px;
+  height:38px;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  color:var(--ink-1);
+  position:relative;
+  transition:background var(--dur-1) var(--ease-out),transform var(--dur-1) var(--ease-out);
+}
+.icon-btn:active{background:var(--surface-3);transform:scale(0.94)}
+.icon-btn svg{width:22px;height:22px;stroke-width:1.7}
+.icon-btn .streak-flame{
+  width:24px;
+  height:24px;
+  display:grid;
+  place-items:center;
+}
+.icon-btn .streak-count{
+  font-family:"Nunito",sans-serif;
+  font-weight:800;
+  font-size:12.5px;
+  color:var(--brand);
+  position:absolute;
+  bottom:2px;
+  right:2px;
+  background:var(--surface);
+  border-radius:8px;
+  padding:0px 5px;
+  line-height:14px;
+  box-shadow:0 1px 2px oklch(0 0 0 / 0.14);
+  min-width:16px;
+  text-align:center;
+}
+.icon-btn.notif::after{
+  content:"";
+  position:absolute;
+  top:6px;
+  right:8px;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--brand);
+  box-shadow:0 0 0 2px var(--bg);
+}
+
+/* ═══════════════════════════════════════
+   BOARD CANVAS (main scrollable)
+   ═══════════════════════════════════════ */
+.canvas{
+  position:relative;
+  overflow:hidden;
+  flex:1;
+  min-height:0;
+  background:linear-gradient(180deg,
+    var(--sky-1) 0%,
+    var(--sky-2) 22%,
+    oklch(0.93 0.05 175) 42%,
+    var(--grass-1) 65%,
+    var(--grass-2) 100%);
+}
+.canvas-scroll{
+  position:absolute;
+  inset:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  scroll-behavior:smooth;
+  padding-bottom:280px; /* chat peek clearance */
+}
+.canvas-scroll::-webkit-scrollbar{display:none}
+
+/* Ambient decoration layer */
+.canvas-decor{
+  position:relative;
+  width:100%;
+  padding:8px 0 0;
+  pointer-events:none;
+}
+.cloud{position:absolute;color:oklch(1 0 0 / 0.85)}
+.cloud svg{width:100%;height:100%;filter:drop-shadow(0 2px 3px oklch(from var(--ink) l c h / 0.05))}
+.cloud.c1{top:24px;left:26px;width:88px;height:32px;animation:drift 20s var(--ease-in-out) infinite}
+.cloud.c2{top:96px;right:32px;width:72px;height:26px;animation:drift 25s var(--ease-in-out) infinite reverse}
+.cloud.c3{top:180px;left:48px;width:52px;height:20px;opacity:0.7;animation:drift 30s var(--ease-in-out) infinite}
+@keyframes drift{
+  0%,100%{transform:translateX(0)}
+  50%{transform:translateX(20px)}
+}
+
+/* Sun / warm glow */
+.sun{
+  position:absolute;
+  top:36px;
+  right:22px;
+  width:64px;
+  height:64px;
+  background:radial-gradient(circle,var(--gold) 20%,oklch(from var(--gold) l c h / 0.5) 40%,transparent 70%);
+  border-radius:50%;
+  filter:blur(1px);
+  opacity:0.7;
+}
+
+/* Board SVG */
+.board{
+  position:relative;
+  width:100%;
+  height:1180px;
+  z-index:1;
+}
+.board svg{width:100%;height:100%;display:block}
+
+/* Node interaction states */
+.node{cursor:pointer;transition:transform var(--dur-2) var(--ease-out)}
+.node:active{transform:scale(0.94)}
+
+/* ═══════════════════════════════════════
+   CHAT SHEET (bottom, draggable 3-snap)
+   ═══════════════════════════════════════ */
+.sheet{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:var(--z-sheet);
+  background:var(--surface);
+  border-top-left-radius:26px;
+  border-top-right-radius:26px;
+  box-shadow:
+    0 -1px 0 var(--hair),
+    0 -12px 40px -12px oklch(0 0 0 / 0.18),
+    0 -24px 48px -20px oklch(0 0 0 / 0.12);
+  transition:height var(--dur-2) var(--ease-out);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  max-height:calc(100vh - 88px - var(--safe-top));
+}
+.sheet[data-snap="peek"]{height:calc(268px + var(--safe-bottom))}
+.sheet[data-snap="half"]{height:calc(52vh + var(--safe-bottom))}
+.sheet[data-snap="full"]{height:calc(85vh + var(--safe-bottom))}
+
+.sheet-handle{
+  height:24px;
+  display:grid;
+  place-items:center;
+  padding-top:8px;
+  cursor:grab;
+  flex-shrink:0;
+  width:100%;
+}
+.sheet-handle:active{cursor:grabbing}
+.handle-grip{
+  width:38px;
+  height:5px;
+  border-radius:3px;
+  background:var(--hair-2);
+  transition:background var(--dur-1) var(--ease-out),width var(--dur-1) var(--ease-out);
+}
+.sheet-handle:hover .handle-grip,.sheet-handle:active .handle-grip{background:var(--ink-3);width:46px}
+
+/* Agent header */
+.agent-bar{
+  padding:6px 16px 12px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-shrink:0;
+  border-bottom:0.5px solid var(--hair);
+}
+.agent-avatar{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:linear-gradient(160deg,oklch(0.92 0.07 42) 0%,var(--brand-hi) 60%,var(--brand) 100%);
+  display:grid;
+  place-items:center;
+  position:relative;
+  box-shadow:
+    inset 0 1.5px 0 oklch(1 0 0 / 0.35),
+    inset 0 -1.5px 0 oklch(from var(--brand-lo) l c h / 0.35),
+    0 3px 8px -2px oklch(from var(--brand) l c h / 0.3);
+  flex-shrink:0;
+}
+.agent-avatar svg{width:26px;height:26px;color:oklch(1 0 0)}
+.agent-online{
+  position:absolute;
+  bottom:1px;
+  right:1px;
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  background:oklch(0.72 0.16 150);
+  border:2.5px solid var(--surface);
+  box-shadow:0 0 8px oklch(from var(--done) l c h / 0.4);
+}
+.agent-online::after{
+  content:"";
+  position:absolute;
+  inset:-4px;
+  border-radius:50%;
+  background:oklch(0.72 0.16 150 / 0.35);
+  animation:ping 2.4s var(--ease-in-out) infinite;
+}
+@keyframes ping{
+  0%{transform:scale(1);opacity:0.6}
+  100%{transform:scale(1.8);opacity:0}
+}
+.agent-info{flex:1;min-width:0}
+.agent-name{
+  font-family:"Zen Kaku Gothic New",sans-serif;
+  font-weight:700;
+  font-size:15px;
+  letter-spacing:-0.01em;
+  color:var(--ink);
+  line-height:1.2;
+}
+.agent-status{
+  font-size:11.5px;
+  color:oklch(0.5 0.13 150);
+  font-weight:600;
+  letter-spacing:0.005em;
+  margin-top:1px;
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+.agent-status::before{
+  content:"";
+  width:5px;
+  height:5px;
+  background:oklch(0.62 0.16 150);
+  border-radius:50%;
+  display:inline-block;
+}
+.agent-actions{display:flex;gap:2px}
+.agent-actions .icon-btn{width:36px;height:36px;color:var(--ink-2)}
+
+/* Chat log */
+.chat-log{
+  flex:1;
+  overflow-y:auto;
+  padding:14px 14px 6px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  -webkit-overflow-scrolling:touch;
+  scroll-behavior:smooth;
+}
+.chat-log::-webkit-scrollbar{width:3px}
+.chat-log::-webkit-scrollbar-thumb{background:var(--hair-2);border-radius:2px}
+
+.chat-time{
+  align-self:center;
+  font-size:11px;
+  font-weight:600;
+  color:var(--ink-3);
+  letter-spacing:0.02em;
+  padding:6px 0 2px;
+}
+
+.msg{
+  max-width:84%;
+  padding:9px 13px 10px;
+  border-radius:18px;
+  font-size:14px;
+  line-height:1.55;
+  font-weight:500;
+  color:var(--ink);
+  letter-spacing:0.005em;
+  animation:msg-in var(--dur-3) var(--ease-out);
+  word-wrap:break-word;
+}
+@keyframes msg-in{
+  from{opacity:0;transform:translateY(6px) scale(0.96)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.msg.bot{
+  background:var(--surface-3);
+  border-bottom-left-radius:6px;
+  align-self:flex-start;
+}
+.msg.me{
+  background:linear-gradient(180deg,var(--lens-hi) 0%,var(--lens) 100%);
+  color:oklch(1 0 0);
+  border-bottom-right-radius:6px;
+  align-self:flex-end;
+  font-weight:600;
+  box-shadow:0 1px 2px oklch(0 0 0 / 0.08);
+}
+.msg strong{font-weight:700;color:var(--ink)}
+.msg.me strong{color:oklch(1 0 0)}
+.msg em{
+  font-style:normal;
+  font-weight:800;
+  color:var(--brand);
+}
+.msg.me em{color:oklch(0.98 0.05 65)}
 
 /* Spot card in chat */
-.spot-card{background:var(--paper);border:2.5px solid var(--ink);border-radius:14px;padding:0;overflow:hidden;max-width:260px;align-self:flex-start;box-shadow:0 3px 0 var(--ink);cursor:pointer;transition:transform .12s}
-.spot-card:active{transform:translate(1px,2px);box-shadow:0 1px 0 var(--ink)}
-.spot-card .im{aspect-ratio:16/8;background:linear-gradient(135deg,var(--gold) 0%,var(--accent) 100%);position:relative;display:flex;align-items:center;justify-content:center}
-.spot-card .im .k{font-family:"Noto Sans JP",sans-serif;font-weight:900;font-size:66px;color:oklch(1 0 0 / .95);letter-spacing:-.05em;line-height:1}
-.spot-card .im .tag{position:absolute;top:6px;left:6px;background:oklch(0 0 0 / .55);color:var(--paper);padding:3px 9px;border-radius:8px;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
-.spot-card .b{padding:8px 12px 10px}
-.spot-card h4{margin:0;font-family:"Baloo 2","Noto Sans JP",sans-serif;font-weight:900;font-size:13.5px;letter-spacing:-.01em;color:var(--ink)}
-.spot-card .m{font-size:10.5px;color:var(--dim);font-weight:700;margin-top:2px}
-.spot-card .go{background:var(--accent);color:var(--paper);border-top:2.5px solid var(--ink);padding:8px 12px;font-family:inherit;font-weight:900;font-size:12.5px;letter-spacing:.02em;display:flex;justify-content:center;align-items:center;gap:5px}
+.spot-card{
+  align-self:flex-start;
+  width:min(320px,86%);
+  background:var(--surface);
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.06),
+    0 8px 24px -8px oklch(0 0 0 / 0.14),
+    inset 0 0 0 1px var(--hair);
+  cursor:pointer;
+  transition:transform var(--dur-2) var(--ease-out);
+  animation:msg-in var(--dur-3) var(--ease-out);
+}
+.spot-card:active{transform:scale(0.985)}
+.spot-card-media{
+  aspect-ratio:16/9;
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(135deg,var(--gold) 0%,oklch(0.62 0.15 65) 45%,var(--brand) 100%);
+}
+.spot-card-media svg{position:absolute;inset:0;width:100%;height:100%}
+.spot-card-media .glyph{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  font-family:"Zen Kaku Gothic New",sans-serif;
+  font-weight:900;
+  font-size:88px;
+  color:oklch(1 0 0 / 0.95);
+  letter-spacing:-0.05em;
+  line-height:0.9;
+  text-shadow:0 6px 24px oklch(0 0 0 / 0.25);
+}
+.spot-card-media .badge{
+  position:absolute;
+  top:10px;
+  left:10px;
+  padding:5px 10px 5px 8px;
+  background:oklch(0 0 0 / 0.55);
+  backdrop-filter:blur(8px);
+  color:oklch(1 0 0);
+  border-radius:10px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:0.02em;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+}
+.spot-card-media .badge svg{width:12px;height:12px;stroke-width:2.2}
+.spot-card-body{
+  padding:12px 14px 10px;
+}
+.spot-card-body h4{
+  font-family:"Zen Kaku Gothic New",sans-serif;
+  font-weight:700;
+  font-size:15px;
+  letter-spacing:-0.015em;
+  color:var(--ink);
+  line-height:1.3;
+}
+.spot-card-meta{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-top:3px;
+  font-size:11.5px;
+  color:var(--ink-3);
+  font-weight:600;
+}
+.spot-card-meta .sep{width:2px;height:2px;background:var(--ink-3);border-radius:50%;opacity:0.7}
+.spot-card-cta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:11px 14px;
+  background:linear-gradient(90deg,var(--brand) 0%,var(--brand-hi) 100%);
+  color:oklch(1 0 0);
+  font-family:"Zen Kaku Gothic New",sans-serif;
+  font-weight:700;
+  font-size:14px;
+  letter-spacing:0.005em;
+  border-top:1px solid var(--hair);
+}
+.spot-card-cta svg{width:16px;height:16px;stroke-width:2.4}
+
+/* Typing indicator */
+.typing{
+  align-self:flex-start;
+  display:flex;
+  align-items:center;
+  gap:3px;
+  padding:12px 14px;
+  background:var(--surface-3);
+  border-radius:18px;
+  border-bottom-left-radius:6px;
+  animation:msg-in var(--dur-3) var(--ease-out);
+}
+.typing span{
+  width:6px;
+  height:6px;
+  background:var(--ink-3);
+  border-radius:50%;
+  opacity:0.3;
+  animation:type-bob 1.2s var(--ease-in-out) infinite;
+}
+.typing span:nth-child(2){animation-delay:0.12s}
+.typing span:nth-child(3){animation-delay:0.24s}
+@keyframes type-bob{
+  0%,60%,100%{opacity:0.3;transform:translateY(0)}
+  30%{opacity:0.9;transform:translateY(-4px)}
+}
 
 /* Quick reply chips */
-.chips{padding:6px 14px 6px;display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0;border-top:1px solid var(--line)}
-.chips::-webkit-scrollbar{display:none}
-.chip{background:var(--paper);border:2px solid var(--ink);color:var(--ink);padding:8px 14px;border-radius:16px;font-family:inherit;font-weight:800;font-size:12.5px;letter-spacing:-.005em;cursor:pointer;flex-shrink:0;box-shadow:0 2px 0 var(--ink);transition:transform .12s,box-shadow .12s;font-family:"Baloo 2","Noto Sans JP",sans-serif}
-.chip:active{transform:translate(1px,2px);box-shadow:0 0 0 var(--ink)}
-.chip.primary{background:var(--accent);color:var(--paper);border-color:var(--ink)}
-.chip.gold{background:var(--gold);color:var(--ink);border-color:var(--ink)}
+.chip-row{
+  padding:10px 12px 8px;
+  display:flex;
+  gap:6px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  flex-shrink:0;
+  mask:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 12px),transparent 100%);
+}
+.chip-row::-webkit-scrollbar{display:none}
+.chip{
+  padding:9px 14px;
+  border-radius:14px;
+  background:var(--surface);
+  color:var(--ink);
+  font-size:13.5px;
+  font-weight:700;
+  letter-spacing:-0.005em;
+  white-space:nowrap;
+  flex-shrink:0;
+  box-shadow:
+    0 1px 1px oklch(0 0 0 / 0.05),
+    inset 0 0 0 1px var(--hair);
+  scroll-snap-align:start;
+  transition:transform var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out);
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.chip:active{transform:scale(0.96);background:var(--surface-3)}
+.chip svg{width:14px;height:14px;stroke-width:2}
+.chip.primary{
+  background:linear-gradient(180deg,var(--brand-hi) 0%,var(--brand) 100%);
+  color:oklch(1 0 0);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.28),
+    inset 0 -1px 0 oklch(from var(--brand-lo) l c h / 0.5),
+    0 3px 8px -3px oklch(from var(--brand) l c h / 0.4);
+}
 
-/* Input */
-.inp{padding:8px 12px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px;align-items:center;flex-shrink:0;border-top:1px solid var(--line);background:var(--paper)}
-.inp .attach{width:34px;height:34px;background:var(--bot);border:2px solid var(--ink);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--ink);cursor:pointer;flex-shrink:0}
-.inp .attach svg{width:16px;height:16px;stroke-width:2.4}
-.inp input{flex:1;background:var(--bot);border:2px solid var(--ink);padding:8px 14px;border-radius:16px;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink);outline:none}
-.inp input::placeholder{color:var(--dim);font-weight:600}
-.inp .send{width:38px;height:38px;background:var(--me);border:2px solid var(--ink);border-radius:12px;color:var(--paper);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 0 var(--ink);cursor:pointer;flex-shrink:0}
-.inp .send svg{width:18px;height:18px;stroke-width:2.4}
+/* Input bar */
+.input-bar{
+  padding:10px 12px calc(14px + var(--safe-bottom));
+  display:grid;
+  grid-template-columns:36px 1fr 36px;
+  gap:8px;
+  align-items:center;
+  background:var(--bg-sink);
+  border-top:0.5px solid var(--hair);
+  flex-shrink:0;
+}
+.input-bar .attach{
+  width:36px;
+  height:36px;
+  border-radius:12px;
+  background:var(--surface);
+  color:var(--ink-2);
+  display:grid;
+  place-items:center;
+  box-shadow:inset 0 0 0 1px var(--hair);
+  transition:transform var(--dur-1) var(--ease-out);
+}
+.input-bar .attach:active{transform:scale(0.92)}
+.input-bar .attach svg{width:18px;height:18px;stroke-width:2}
+.input-bar .field{
+  height:38px;
+  padding:0 14px;
+  background:var(--surface);
+  border-radius:19px;
+  font-size:14px;
+  font-weight:500;
+  color:var(--ink);
+  box-shadow:inset 0 0 0 1px var(--hair);
+  width:100%;
+}
+.input-bar .field::placeholder{color:var(--ink-3);font-weight:500}
+.input-bar .send{
+  width:36px;
+  height:36px;
+  border-radius:12px;
+  background:linear-gradient(180deg,var(--lens-hi) 0%,var(--lens) 100%);
+  color:oklch(1 0 0);
+  display:grid;
+  place-items:center;
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.28),
+    0 3px 8px -3px oklch(from var(--lens) l c h / 0.4);
+  transition:transform var(--dur-1) var(--ease-out);
+}
+.input-bar .send:active{transform:scale(0.92)}
+.input-bar .send svg{width:16px;height:16px;stroke-width:2.4}
 
-.top-badge{position:absolute;top:76px;right:0;background:var(--ink);color:var(--yellow);padding:4px 10px;font-family:"Baloo 2",sans-serif;font-size:10px;font-weight:900;letter-spacing:.14em;z-index:100;border-radius:12px 0 0 12px}
+/* Floating action: current spot beacon */
+.beacon-fab{
+  position:absolute;
+  bottom:calc(288px + var(--safe-bottom));
+  right:16px;
+  z-index:var(--z-fab);
+  padding:10px 14px 10px 12px;
+  background:var(--surface);
+  color:var(--ink);
+  border-radius:22px;
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.08),
+    0 6px 24px -4px oklch(0 0 0 / 0.2),
+    inset 0 0 0 1px var(--hair);
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:-0.005em;
+  transition:opacity var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out);
+}
+.beacon-fab .beacon-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--brand);
+  box-shadow:0 0 0 3px oklch(from var(--brand) l c h / 0.2);
+  animation:ping 1.6s var(--ease-in-out) infinite;
+}
+.beacon-fab:active{transform:scale(0.94)}
+.beacon-fab svg{width:14px;height:14px;stroke-width:2.4;color:var(--brand)}
+
+/* Sheet expand-hide beacon */
+.sheet[data-snap="full"] ~ .beacon-fab{opacity:0;pointer-events:none}
+
+/* ═══════════════════════════════════════
+   REDUCED MOTION
+   ═══════════════════════════════════════ */
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:1ms !important;transition-duration:1ms !important}
+  .cloud{animation:none !important}
+  .agent-online::after{animation:none !important;display:none}
+  .beacon-fab .beacon-dot{animation:none !important}
+}
 </style>
 </head>
 <body>
 
 <div class="app">
-  <!-- Clouds -->
-  <div class="cloud1">☁️</div>
-  <div class="cloud2">☁️</div>
 
-  <!-- TOP HP BAR -->
-  <div class="hp">
-    <div class="card">
-      <div class="avatar">明</div>
-      <div style="display:flex;flex-direction:column;gap:1px">
-        <div class="stat"><div class="n">3<small>/10</small></div></div>
-        <div class="l">Collected</div>
+  <!-- ═══════════════════════════════════════
+       HEADER
+       ═══════════════════════════════════════ -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark"><span>Fk</span></div>
+      <div class="brand-text">
+        <div class="brand-name">ふくてつ</div>
+        <div class="brand-sub">さんぽ帳 · 2026 夏</div>
       </div>
     </div>
-    <div class="streak"><span class="fire">🔥</span> 3</div>
-    <div class="menu">☰</div>
-  </div>
 
-  <div class="top-badge">K · BOARD × CHAT</div>
-
-  <!-- BOARD -->
-  <div class="board-wrap">
-    <div class="board">
-      <svg viewBox="0 0 400 800" xmlns="http://www.w3.org/2000/svg">
-        <!-- Distant hills at top -->
-        <path d="M0 60 Q60 30 120 50 Q180 20 240 45 Q300 15 360 40 Q400 30 400 60 L400 100 L0 100 Z" fill="#7fb4d4" opacity="0.4"/>
-
-        <!-- Path (winding) -->
-        <path d="M340 100 Q260 160 300 220 Q340 280 260 320 Q180 360 220 420 Q260 480 180 520 Q100 560 140 620 Q170 680 100 720"
-              stroke="#fff" stroke-width="26" fill="none" stroke-linecap="round"/>
-        <path d="M340 100 Q260 160 300 220 Q340 280 260 320 Q180 360 220 420 Q260 480 180 520 Q100 560 140 620 Q170 680 100 720"
-              stroke="#1e1a17" stroke-width="26" fill="none" stroke-linecap="round" stroke-dasharray="1 13"/>
-
-        <!-- START flag -->
-        <g transform="translate(340,100)">
-          <rect x="-38" y="-15" width="76" height="30" fill="#fff" stroke="#1e1a17" stroke-width="3" rx="4"/>
-          <text x="0" y="6" text-anchor="middle" font-family="Baloo 2" font-size="15" font-weight="800" fill="#1e1a17">START</text>
-        </g>
-
-        <!-- Node 1 (越前和紙) DONE -->
-        <g transform="translate(305,205)">
-          <circle r="34" fill="#5aa356" stroke="#1e1a17" stroke-width="4"/>
-          <circle r="34" fill="#84c07a" stroke="#1e1a17" stroke-width="4" transform="translate(0,-4)"/>
-          <path d="M-11 -3 L-3 6 L12 -9" stroke="#fff" stroke-width="5.5" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,-4)"/>
-          <text y="52" text-anchor="middle" font-family="Baloo 2" font-size="12" font-weight="900" fill="#1e1a17">和紙の里</text>
-        </g>
-
-        <!-- Node 2 (サンドーム) DONE -->
-        <g transform="translate(295,310)">
-          <circle r="34" fill="#5aa356" stroke="#1e1a17" stroke-width="4"/>
-          <circle r="34" fill="#84c07a" stroke="#1e1a17" stroke-width="4" transform="translate(0,-4)"/>
-          <path d="M-11 -3 L-3 6 L12 -9" stroke="#fff" stroke-width="5.5" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,-4)"/>
-          <text y="52" text-anchor="middle" font-family="Baloo 2" font-size="12" font-weight="900" fill="#1e1a17">サンドーム</text>
-        </g>
-
-        <!-- Chapter 2 flag -->
-        <g transform="translate(240,375)">
-          <path d="M-26 -13 L26 -13 L22 0 L26 13 L-26 13 Z" fill="#fff" stroke="#1e1a17" stroke-width="3"/>
-          <text y="4" text-anchor="middle" font-family="Baloo 2" font-size="12" font-weight="800" fill="#1e1a17">CH.2 鯖江</text>
-        </g>
-
-        <!-- Node 3 武生 (locked) -->
-        <g transform="translate(210,420)">
-          <circle r="30" fill="#a08560" stroke="#1e1a17" stroke-width="4"/>
-          <circle r="30" fill="#c9a878" stroke="#1e1a17" stroke-width="4" transform="translate(0,-3)"/>
-          <text y="6" text-anchor="middle" font-family="Baloo 2" font-size="20" font-weight="900" fill="#fff" transform="translate(0,-3)">3</text>
-          <text y="50" text-anchor="middle" font-family="Baloo 2" font-size="11" font-weight="900" fill="#1e1a17">武生公園</text>
-        </g>
-
-        <!-- Node 4 (西山) DONE -->
-        <g transform="translate(240,505)">
-          <circle r="34" fill="#5aa356" stroke="#1e1a17" stroke-width="4"/>
-          <circle r="34" fill="#84c07a" stroke="#1e1a17" stroke-width="4" transform="translate(0,-4)"/>
-          <path d="M-11 -3 L-3 6 L12 -9" stroke="#fff" stroke-width="5.5" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,-4)"/>
-          <text y="52" text-anchor="middle" font-family="Baloo 2" font-size="12" font-weight="900" fill="#1e1a17">西山公園</text>
-        </g>
-
-        <!-- Node 5 めがね (CURRENT · big pulse) -->
-        <g transform="translate(175,585)">
-          <circle r="48" fill="#e64a2c" opacity="0.25">
-            <animate attributeName="r" values="48;62;48" dur="1.6s" repeatCount="indefinite"/>
-          </circle>
-          <circle r="38" fill="#b83820" stroke="#1e1a17" stroke-width="4"/>
-          <circle r="38" fill="#e64a2c" stroke="#1e1a17" stroke-width="4" transform="translate(0,-4)"/>
-          <text y="8" text-anchor="middle" font-family="Noto Sans JP" font-size="30" font-weight="900" fill="#fff" transform="translate(0,-4)">鏡</text>
-          <text y="58" text-anchor="middle" font-family="Baloo 2" font-size="12" font-weight="900" fill="#1e1a17">めがね</text>
-          <text y="72" text-anchor="middle" font-family="Baloo 2" font-size="10" font-weight="900" fill="#e64a2c">▲ 圏内!</text>
-        </g>
-
-        <!-- Chapter 3 flag -->
-        <g transform="translate(140,660)">
-          <path d="M-26 -13 L26 -13 L22 0 L26 13 L-26 13 Z" fill="#fff" stroke="#1e1a17" stroke-width="3"/>
-          <text y="4" text-anchor="middle" font-family="Baloo 2" font-size="12" font-weight="800" fill="#1e1a17">CH.3 福井</text>
-        </g>
-
-        <!-- Node 6 福井城 locked -->
-        <g transform="translate(105,725)">
-          <circle r="30" fill="#a08560" stroke="#1e1a17" stroke-width="4"/>
-          <circle r="30" fill="#c9a878" stroke="#1e1a17" stroke-width="4" transform="translate(0,-3)"/>
-          <text y="6" text-anchor="middle" font-family="Baloo 2" font-size="20" font-weight="900" fill="#fff" transform="translate(0,-3)">6</text>
-          <text y="50" text-anchor="middle" font-family="Baloo 2" font-size="11" font-weight="900" fill="#1e1a17">福井城址</text>
-        </g>
-
-        <!-- Sparkles -->
-        <text x="130" y="180" font-size="16" fill="#ffe270">✦</text>
-        <text x="360" y="270" font-size="14" fill="#ffe270">✦</text>
-        <text x="90" y="480" font-size="14" fill="#ffe270">✦</text>
-        <text x="330" y="580" font-size="16" fill="#ffe270">✦</text>
-        <text x="240" y="700" font-size="14" fill="#ffe270">✦</text>
-      </svg>
+    <div class="progress-pill" role="status" aria-label="集印進行度">
+      <div class="p-num">3<em>/10</em></div>
+      <div class="p-track"><span class="p-fill"></span></div>
     </div>
-  </div>
 
-  <!-- CHAT SHEET -->
-  <div class="chat">
-    <div class="grip"></div>
-    <div class="chat-hd">
-      <div class="av">Fk</div>
-      <div class="who">
-        <div class="name">ふくてつ ガイド</div>
-        <div class="sub">● オンライン · あなたの旅の相棒</div>
+    <div class="header-actions">
+      <button class="icon-btn" aria-label="連続日数 3日">
+        <span class="streak-flame">
+          <svg viewBox="0 0 24 24" fill="url(#fireGrad)" stroke="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="fireGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffd166"/>
+                <stop offset="0.5" stop-color="#ef8a2b"/>
+                <stop offset="1" stop-color="#c1421c"/>
+              </linearGradient>
+            </defs>
+            <path d="M12 3c1 2 3 3 4 5s0 4-1 5c1-1 2-2 3-1 1 2 0 5-2 7-2 2-4 3-6 3-3 0-6-2-6-6 0-3 2-6 3-8 0 2 1 4 2 4 0-3-1-6 3-9z"/>
+          </svg>
+        </span>
+        <span class="streak-count">3</span>
+      </button>
+      <button class="icon-btn notif" aria-label="通知">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════
+       BOARD CANVAS
+       ═══════════════════════════════════════ -->
+  <div class="canvas">
+    <div class="canvas-scroll" id="scroll">
+
+      <div class="canvas-decor">
+        <div class="sun"></div>
+        <div class="cloud c1"><svg viewBox="0 0 88 32" fill="currentColor"><ellipse cx="18" cy="20" rx="14" ry="10"/><ellipse cx="42" cy="16" rx="18" ry="12"/><ellipse cx="68" cy="22" rx="14" ry="9"/></svg></div>
+        <div class="cloud c2"><svg viewBox="0 0 72 26" fill="currentColor"><ellipse cx="14" cy="16" rx="12" ry="8"/><ellipse cx="36" cy="12" rx="14" ry="10"/><ellipse cx="58" cy="18" rx="12" ry="7"/></svg></div>
+        <div class="cloud c3"><svg viewBox="0 0 52 20" fill="currentColor"><ellipse cx="12" cy="12" rx="10" ry="7"/><ellipse cx="30" cy="10" rx="12" ry="8"/><ellipse cx="45" cy="14" rx="8" ry="5"/></svg></div>
       </div>
-      <div class="exp">▴</div>
+
+      <div class="board">
+        <svg viewBox="0 0 400 1180" xmlns="http://www.w3.org/2000/svg" aria-label="集印ルート マップ">
+          <defs>
+            <linearGradient id="pathGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="oklch(0.72 0.18 40)"/>
+              <stop offset="1" stop-color="oklch(0.55 0.16 38)"/>
+            </linearGradient>
+            <linearGradient id="doneRing" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="oklch(0.72 0.14 148)"/>
+              <stop offset="1" stop-color="oklch(0.5 0.13 148)"/>
+            </linearGradient>
+            <linearGradient id="lockedRing" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="oklch(0.82 0.03 55)"/>
+              <stop offset="1" stop-color="oklch(0.62 0.03 55)"/>
+            </linearGradient>
+            <linearGradient id="currentRing" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="oklch(0.72 0.19 42)"/>
+              <stop offset="1" stop-color="oklch(0.5 0.17 38)"/>
+            </linearGradient>
+            <filter id="nodeShadow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+              <feOffset dx="0" dy="2"/>
+              <feComponentTransfer><feFuncA type="linear" slope="0.32"/></feComponentTransfer>
+              <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <!-- Distant hills at top -->
+          <path d="M0 90 Q60 60 130 82 Q200 50 270 80 Q340 45 400 78 L400 130 L0 130 Z" fill="oklch(0.72 0.08 210)" opacity="0.55"/>
+          <path d="M0 130 Q80 108 160 130 Q240 105 320 128 Q380 118 400 130 L400 170 L0 170 Z" fill="oklch(0.65 0.1 210)" opacity="0.6"/>
+
+          <!-- Sakura tree left -->
+          <g transform="translate(48,180)" opacity="0.9">
+            <path d="M0 60 L0 -8" stroke="oklch(0.35 0.05 40)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M0 30 Q-8 22 -14 26 M0 15 Q10 8 16 12" stroke="oklch(0.35 0.05 40)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <circle cx="-2" cy="-4" r="14" fill="oklch(0.86 0.07 15)"/>
+            <circle cx="8" cy="4" r="10" fill="oklch(0.86 0.07 15)"/>
+            <circle cx="-12" cy="6" r="8" fill="oklch(0.86 0.07 15)"/>
+            <circle cx="-4" cy="-14" r="7" fill="oklch(0.86 0.07 15)"/>
+            <circle cx="6" cy="-8" r="6" fill="oklch(0.86 0.07 15)"/>
+          </g>
+
+          <!-- Sakura tree right -->
+          <g transform="translate(360,290)" opacity="0.85">
+            <path d="M0 50 L0 -6" stroke="oklch(0.35 0.05 40)" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="-1" cy="-2" r="11" fill="oklch(0.86 0.07 15)"/>
+            <circle cx="8" cy="2" r="7" fill="oklch(0.86 0.07 15)"/>
+            <circle cx="-10" cy="4" r="6" fill="oklch(0.86 0.07 15)"/>
+          </g>
+
+          <!-- Path (undone base) -->
+          <path d="M334 205 Q276 258 300 314 Q328 372 262 400 Q198 428 224 488 Q262 550 194 588 Q118 626 148 690 Q182 754 108 792 Q56 822 100 900 Q126 950 96 1010 Q76 1058 128 1094"
+                stroke="oklch(0.85 0.02 60)" stroke-width="28" fill="none" stroke-linecap="round"/>
+          <!-- Path (done · progress overlay) -->
+          <path d="M334 205 Q276 258 300 314 Q328 372 262 400 Q198 428 224 488 Q262 550 194 588"
+                stroke="url(#pathGrad)" stroke-width="26" fill="none" stroke-linecap="round"/>
+          <!-- Path outline -->
+          <path d="M334 205 Q276 258 300 314 Q328 372 262 400 Q198 428 224 488 Q262 550 194 588 Q118 626 148 690 Q182 754 108 792 Q56 822 100 900 Q126 950 96 1010 Q76 1058 128 1094"
+                stroke="oklch(0.4 0.04 50)" stroke-width="30" fill="none" stroke-linecap="round" stroke-dasharray="0.5 15" opacity="0.35"/>
+
+          <!-- START marker -->
+          <g transform="translate(334,145)">
+            <rect x="-42" y="-16" width="84" height="32" rx="16" fill="oklch(1 0 0)" stroke="oklch(0.28 0.02 50)" stroke-width="2"/>
+            <text x="0" y="6" text-anchor="middle" font-family="Nunito" font-weight="800" font-size="14" fill="oklch(0.28 0.02 50)" letter-spacing="-0.5">START</text>
+          </g>
+
+          <!-- Node 1: Done -->
+          <g class="node" transform="translate(298,215)" filter="url(#nodeShadow)">
+            <circle r="30" fill="oklch(0.44 0.13 148)"/>
+            <circle r="30" fill="url(#doneRing)" transform="translate(0,-4)"/>
+            <path d="M-10 -3 L-3 5 L11 -8" stroke="oklch(1 0 0)" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,-4)"/>
+          </g>
+          <text x="298" y="266" text-anchor="middle" font-family="Zen Kaku Gothic New" font-weight="700" font-size="12" fill="oklch(0.19 0.02 50)">越前和紙の里</text>
+
+          <!-- Node 2: Done -->
+          <g class="node" transform="translate(305,335)" filter="url(#nodeShadow)">
+            <circle r="30" fill="oklch(0.44 0.13 148)"/>
+            <circle r="30" fill="url(#doneRing)" transform="translate(0,-4)"/>
+            <path d="M-10 -3 L-3 5 L11 -8" stroke="oklch(1 0 0)" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,-4)"/>
+          </g>
+          <text x="305" y="386" text-anchor="middle" font-family="Zen Kaku Gothic New" font-weight="700" font-size="12" fill="oklch(0.19 0.02 50)">サンドーム福井</text>
+
+          <!-- Chapter 2 flag -->
+          <g transform="translate(258,430)">
+            <path d="M-38 -14 L40 -14 L34 0 L40 14 L-38 14 Z" fill="oklch(1 0 0)" stroke="oklch(0.28 0.02 50)" stroke-width="2"/>
+            <text x="0" y="4" text-anchor="middle" font-family="Zen Kaku Gothic New" font-weight="700" font-size="11" fill="oklch(0.28 0.02 50)">2章 · 鯖江</text>
+          </g>
+
+          <!-- Node 3: Locked -->
+          <g class="node" transform="translate(230,470)" filter="url(#nodeShadow)">
+            <circle r="26" fill="oklch(0.5 0.03 55)"/>
+            <circle r="26" fill="url(#lockedRing)" transform="translate(0,-3)"/>
+            <text y="6" text-anchor="middle" font-family="Nunito" font-weight="800" font-size="18" fill="oklch(1 0 0)" transform="translate(0,-3)">3</text>
+          </g>
+          <text x="230" y="516" text-anchor="middle" font-family="Zen Kaku Gothic New" font-weight="700" font-size="12" fill="oklch(0.28 0.02 50)" opacity="0.7">武生中央公園</text>
+
+          <!-- Node 4: Done -->
+          <g class="node" transform="translate(225,555)" filter="url(#nodeShadow)">
+            <circle r="30" fill="oklch(0.44 0.13 148)"/>
+            <circle r="30" fill="url(#doneRing)" transform="translate(0,-4)"/>
+            <path d="M-10 -3 L-3 5 L11 -8" stroke="oklch(1 0 0)" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,-4)"/>
+          </g>
+          <text x="225" y="606" text-anchor="middle" font-family="Zen Kaku Gothic New" font-weight="700" font-size="12" fill="oklch(0.19 0.02 50)">西山公園</text>
+
+          <!-- Node 5: CURRENT · larger pulse -->
+          <g class="node" transform="translate(195,650)">
+            <circle r="48" fill="oklch(from oklch(0.62 0.185 40) l c h / 0.28)">
+              <animate attributeName="r" values="48;62;48" dur="1.8s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0.28;0.05;0.28" dur="1.8s" repeatCount="indefinite"/>
+            </circle>
+            <g filter="url(#nodeShadow)">
+              <circle r="38" fill="oklch(0.5 0.17 38)"/>
+              <circle r="38" fill="url(#currentRing)" transform="translate(0,-4)"/>
+              <text y="9" text-anchor="middle" font-family="Zen Kaku Gothic New" font-weight="900" font-size="30" fill="oklch(1 0 0)" transform="translate(0,-4)">鏡</text>
+            </g>
+          </g>
+          <text x="195" y="710" text-anchor="middle" font-family="Zen Kaku Gothic New" font-weight="800" font-size="13" fill="oklch(0.19 0.02 50)">めがねミュージアム</text>
+          <text x="195" y="726" text-anchor="middle" font-family="Nunito" font-weight="800" font-size="10.5" fill="oklch(0.62 0.185 40)" letter-spacing="0.1em">圏内 · タップで押印</text>
+
+          <!-- Chapter 3 flag -->
+          <g transform="translate(158,752)">
+            <path d="M-38 -14 L40 -14 L34 0 L40 14 L-38 14 Z" fill="oklch(1 0 0)" stroke="oklch(0.28 0.02 50)" stroke-width="2"/>
+            <text x="0" y="4" text-anchor="middle" font-family="Zen Kaku Gothic New" font-weight="700" font-size="11" fill="oklch(0.28 0.02 50)">3章 · 福井</text>
+          </g>
+
+          <!-- Node 6-10: Locked -->
+          <g class="node" transform="translate(130,798)" filter="url(#nodeShadow)">
+            <circle r="26" fill="oklch(0.5 0.03 55)"/>
+            <circle r="26" fill="url(#lockedRing)" transform="translate(0,-3)"/>
+            <text y="6" text-anchor="middle" font-family="Nunito" font-weight="800" font-size="18" fill="oklch(1 0 0)" transform="translate(0,-3)">6</text>
+          </g>
+          <text x="130" y="844" text-anchor="middle" font-family="Zen Kaku Gothic New" font-weight="700" font-size="11.5" fill="oklch(0.28 0.02 50)" opacity="0.65">福井城址</text>
+
+          <g class="node" transform="translate(78,878)" filter="url(#nodeShadow)">
+            <circle r="26" fill="oklch(0.5 0.03 55)"/>
+            <circle r="26" fill="url(#lockedRing)" transform="translate(0,-3)"/>
+            <text y="6" text-anchor="middle" font-family="Nunito" font-weight="800" font-size="18" fill="oklch(1 0 0)" transform="translate(0,-3)">7</text>
+          </g>
+          <text x="78" y="924" text-anchor="middle" font-family="Zen Kaku Gothic New" font-weight="700" font-size="11.5" fill="oklch(0.28 0.02 50)" opacity="0.65">養浩館庭園</text>
+
+          <g class="node" transform="translate(120,948)" filter="url(#nodeShadow)">
+            <circle r="26" fill="oklch(0.5 0.03 55)"/>
+            <circle r="26" fill="url(#lockedRing)" transform="translate(0,-3)"/>
+            <text y="6" text-anchor="middle" font-family="Nunito" font-weight="800" font-size="18" fill="oklch(1 0 0)" transform="translate(0,-3)">8</text>
+          </g>
+          <text x="120" y="994" text-anchor="middle" font-family="Zen Kaku Gothic New" font-weight="700" font-size="11.5" fill="oklch(0.28 0.02 50)" opacity="0.65">足羽神社</text>
+
+          <g class="node" transform="translate(90,1005)" filter="url(#nodeShadow)">
+            <circle r="26" fill="oklch(0.5 0.03 55)"/>
+            <circle r="26" fill="url(#lockedRing)" transform="translate(0,-3)"/>
+            <text y="6" text-anchor="middle" font-family="Nunito" font-weight="800" font-size="18" fill="oklch(1 0 0)" transform="translate(0,-3)">9</text>
+          </g>
+          <text x="90" y="1051" text-anchor="middle" font-family="Zen Kaku Gothic New" font-weight="700" font-size="11.5" fill="oklch(0.28 0.02 50)" opacity="0.65">恐竜モニュメント</text>
+
+          <g class="node" transform="translate(130,1058)" filter="url(#nodeShadow)">
+            <circle r="28" fill="oklch(0.5 0.03 55)"/>
+            <circle r="28" fill="url(#lockedRing)" transform="translate(0,-3)"/>
+            <text y="6" text-anchor="middle" font-family="Nunito" font-weight="800" font-size="18" fill="oklch(1 0 0)" transform="translate(0,-3)">10</text>
+          </g>
+
+          <!-- GOAL (硬券 セット box) -->
+          <g transform="translate(130,1120)">
+            <rect x="-42" y="-16" width="84" height="32" rx="8" fill="oklch(1 0 0)" stroke="oklch(0.28 0.02 50)" stroke-width="2.5"/>
+            <path d="M-32 -8 L26 -8" stroke="oklch(0.62 0.185 40)" stroke-width="2"/>
+            <path d="M-32 -4 L26 -4" stroke="oklch(0.62 0.185 40)" stroke-width="2"/>
+            <path d="M-32 4 L26 4" stroke="oklch(0.62 0.185 40)" stroke-width="2"/>
+            <text x="0" y="15" text-anchor="middle" font-family="Nunito" font-weight="800" font-size="10" fill="oklch(0.4 0.04 50)" letter-spacing="0.15em">GOAL · 硬券セット</text>
+          </g>
+
+          <!-- Sparkles -->
+          <g fill="oklch(0.82 0.11 82)" opacity="0.85">
+            <circle cx="150" cy="200" r="2"/>
+            <circle cx="350" cy="310" r="1.5"/>
+            <circle cx="85" cy="440" r="2"/>
+            <circle cx="320" cy="570" r="1.5"/>
+            <circle cx="60" cy="700" r="2"/>
+            <circle cx="290" cy="820" r="1.5"/>
+            <circle cx="200" cy="960" r="2"/>
+            <circle cx="45" cy="1040" r="1.5"/>
+          </g>
+        </svg>
+      </div>
     </div>
 
-    <div class="log">
-      <div class="msg bot">おかえり 明日香さん! 👋<br>今 <em>神明駅</em> の 近くにいるね。 圏内スポット あるよ:</div>
+    <!-- Floating beacon: current spot -->
+    <button class="beacon-fab" id="beacon" aria-label="現在地の圏内スポット">
+      <span class="beacon-dot"></span>
+      <span>圏内 · めがねミュージアム</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+  </div>
 
-      <div class="spot-card">
-        <div class="im"><span class="tag">📍 圏内</span><span class="k">鏡</span></div>
-        <div class="b">
-          <h4>めがねミュージアム</h4>
-          <div class="m">SP-05 · 章2 鯖江 · 徒歩 6分</div>
+  <!-- ═══════════════════════════════════════
+       CHAT SHEET
+       ═══════════════════════════════════════ -->
+  <aside class="sheet" data-snap="peek" id="sheet" role="complementary" aria-label="ガイド チャット">
+    <button class="sheet-handle" aria-label="シート展開/折りたたみ" id="handle">
+      <div class="handle-grip"></div>
+    </button>
+
+    <div class="agent-bar">
+      <div class="agent-avatar">
+        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <circle cx="16" cy="14" r="9" fill="currentColor"/>
+          <circle cx="12" cy="13" r="1.8" fill="oklch(0.19 0.02 50)"/>
+          <circle cx="20" cy="13" r="1.8" fill="oklch(0.19 0.02 50)"/>
+          <path d="M12 18 Q16 21 20 18" stroke="oklch(0.19 0.02 50)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <rect x="7" y="6" width="18" height="4" rx="2" fill="oklch(0.62 0.185 40)"/>
+        </svg>
+        <span class="agent-online" aria-hidden="true"></span>
+      </div>
+      <div class="agent-info">
+        <div class="agent-name">ふくてつ ガイド</div>
+        <div class="agent-status">今、鯖江エリアにいるね</div>
+      </div>
+      <div class="agent-actions">
+        <button class="icon-btn" aria-label="通話"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg></button>
+        <button class="icon-btn" aria-label="オプション"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      </div>
+    </div>
+
+    <div class="chat-log" id="log">
+      <div class="chat-time">今日 · 14:32</div>
+
+      <div class="msg bot">おかえりなさい。<br>GPS を見たら、いま <em>神明駅</em> の 近くですね。 圏内 の スポットが あります。</div>
+
+      <button class="spot-card" id="spotCard">
+        <div class="spot-card-media">
+          <span class="badge">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="10" r="3"/><path d="M12 2C7 2 5 6 5 10c0 5 7 12 7 12s7-7 7-12c0-4-2-8-7-8z"/></svg>
+            圏内 · 徒歩 6分
+          </span>
+          <span class="glyph">鏡</span>
         </div>
-        <div class="go">▶ 押印して +1</div>
-      </div>
+        <div class="spot-card-body">
+          <h4>めがねミュージアム</h4>
+          <div class="spot-card-meta">
+            <span>SP-05</span>
+            <span class="sep"></span>
+            <span>2 章 · 鯖江</span>
+            <span class="sep"></span>
+            <span>神明駅</span>
+          </div>
+        </div>
+        <div class="spot-card-cta">
+          <span>QR で 押印する</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </button>
 
-      <div class="msg bot"><em>あと 1個</em> で 「ドリンク引換」 GET! 🎁</div>
+      <div class="msg bot">ここで あと <em>1個</em> 押印すると、 「ドリンク引換」 が使えます。</div>
+
     </div>
 
-    <div class="chips">
-      <div class="chip primary">▶ 押印する</div>
-      <div class="chip">📍 経路</div>
-      <div class="chip gold">🎁 景品</div>
-      <div class="chip">🗺 マップ全画面</div>
+    <div class="chip-row" role="toolbar" aria-label="クイック返信">
+      <button class="chip primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM17 17h4v4h-4z"/></svg>
+        押印する
+      </button>
+      <button class="chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C7 2 5 6 5 10c0 5 7 12 7 12s7-7 7-12c0-4-2-8-7-8z"/><circle cx="12" cy="10" r="3"/></svg>
+        経路
+      </button>
+      <button class="chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/></svg>
+        景品
+      </button>
+      <button class="chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13a2 2 0 012 2v14a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/><path d="M8 8h9M8 12h9"/></svg>
+        スタンプ帳
+      </button>
+      <button class="chip">
+        近くの他の店
+      </button>
     </div>
 
-    <div class="inp">
-      <div class="attach"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div>
-      <input placeholder="ガイドに聞く…" />
-      <button class="send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
-    </div>
-  </div>
+    <form class="input-bar" onsubmit="return false">
+      <button type="button" class="attach" aria-label="添付">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <input type="text" class="field" placeholder="ガイドに聞く、たとえば「近くのカフェ」" aria-label="メッセージ">
+      <button type="submit" class="send" aria-label="送信">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      </button>
+    </form>
+  </aside>
+
 </div>
 
 <script>
-// simple expand toggle on chat header exp button
-document.querySelector('.exp').addEventListener('click',()=>{
-  document.querySelector('.chat').classList.toggle('expanded');
-  const btn = document.querySelector('.exp');
-  btn.textContent = document.querySelector('.chat').classList.contains('expanded') ? '▾' : '▴';
-});
-// tap grip also toggles
-document.querySelector('.grip').addEventListener('click',()=>{
-  document.querySelector('.chat').classList.toggle('expanded');
-});
-// auto-scroll board to current node on load
-window.addEventListener('load',()=>{
-  const board = document.querySelector('.board');
-  if (board) board.scrollTop = board.scrollHeight * 0.55;
+// ═══════════════════════════════════════
+// SHEET: 3-snap drag
+// ═══════════════════════════════════════
+(function(){
+  const sheet = document.getElementById('sheet');
+  const handle = document.getElementById('handle');
+  const beacon = document.getElementById('beacon');
+  const snaps = ['peek','half','full'];
+  let snap = 0;
+  let dragStart = null;
+
+  function setSnap(next){
+    snap = Math.max(0, Math.min(snaps.length - 1, next));
+    sheet.setAttribute('data-snap', snaps[snap]);
+  }
+
+  handle.addEventListener('click', (e) => {
+    // If we didn't drag, cycle: peek → half → full → peek
+    if (dragStart === null){
+      setSnap((snap + 1) % snaps.length);
+    }
+  });
+
+  handle.addEventListener('pointerdown', (e) => {
+    dragStart = e.clientY;
+    handle.setPointerCapture(e.pointerId);
+  });
+  handle.addEventListener('pointermove', (e) => {
+    if (dragStart === null) return;
+    const dy = dragStart - e.clientY;
+    if (Math.abs(dy) > 30){
+      if (dy > 0) setSnap(snap + 1);
+      else setSnap(snap - 1);
+      dragStart = null;
+    }
+  });
+  handle.addEventListener('pointerup', (e) => {
+    setTimeout(() => { dragStart = null; }, 50);
+  });
+
+  // Beacon jumps to full sheet
+  beacon.addEventListener('click', () => setSnap(2));
+})();
+
+// ═══════════════════════════════════════
+// CHIP INTERACTION: send back reply + typing
+// ═══════════════════════════════════════
+(function(){
+  const log = document.getElementById('log');
+  const chips = document.querySelectorAll('.chip');
+  chips.forEach(chip => chip.addEventListener('click', () => {
+    const me = document.createElement('div');
+    me.className = 'msg me';
+    me.textContent = chip.textContent.trim();
+    log.appendChild(me);
+
+    const typing = document.createElement('div');
+    typing.className = 'typing';
+    typing.innerHTML = '<span></span><span></span><span></span>';
+    log.appendChild(typing);
+    log.scrollTop = log.scrollHeight;
+
+    setTimeout(() => {
+      typing.remove();
+      const bot = document.createElement('div');
+      bot.className = 'msg bot';
+      bot.textContent = 'わかりました、案内するね。';
+      log.appendChild(bot);
+      log.scrollTop = log.scrollHeight;
+    }, 900);
+  }));
+})();
+
+// ═══════════════════════════════════════
+// AUTO-CENTER board on current node
+// ═══════════════════════════════════════
+window.addEventListener('load', () => {
+  const s = document.getElementById('scroll');
+  if (s){
+    // Node 5 is at y=650 in the SVG (which is proportionally in board of height 1180)
+    const boardH = 1180;
+    const targetY = 650;
+    const scrollable = s.scrollHeight - s.clientHeight;
+    s.scrollTop = Math.max(0, (targetY / boardH) * scrollable - 100);
+  }
 });
 </script>
-</body></html>
+</body>
+</html>
