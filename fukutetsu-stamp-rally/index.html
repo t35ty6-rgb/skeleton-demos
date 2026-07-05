@@ -281,9 +281,31 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 .prize-sheet .status-line .mono{font-family:"JetBrains Mono",monospace;font-size:12px}
 .prize-sheet h4{margin:20px 0 10px;font-size:13px;font-weight:900;letter-spacing:.005em;color:var(--ink);text-transform:uppercase;font-family:"JetBrains Mono",monospace;letter-spacing:.14em}
 .prize-sheet .shops-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
-.prize-sheet .shops-list li{padding:10px 12px;background:var(--paper-2);border:1px solid var(--rule);font-size:12.5px;line-height:1.5;border-radius:2px}
+.prize-sheet .shops-list li{padding:10px 12px;background:var(--paper-2);border:1px solid var(--rule);font-size:12.5px;line-height:1.5;border-radius:2px;display:flex;justify-content:space-between;align-items:center;gap:10px}
 .prize-sheet .shops-list li b{color:var(--ink);font-weight:700}
-.prize-sheet .shops-list li .st{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--dim);letter-spacing:.08em;display:block;margin-top:2px}
+.prize-sheet .shops-list li .st{font-family:"Noto Sans JP",sans-serif;font-size:11px;color:var(--dim);display:block;margin-top:2px}
+.prize-sheet .shops-list li .map-lnk{flex-shrink:0;padding:6px 10px;background:var(--paper);border:1px solid var(--ink);color:var(--ink);font-size:11px;font-weight:800;text-decoration:none;border-radius:2px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.prize-sheet .shops-list li .map-lnk:hover{background:var(--ink);color:var(--paper)}
+.prize-sheet .shops-list li .map-lnk::before{content:"📍";font-size:12px}
+
+/* 使えるお店 一覧 (景品タブ 常時可視) */
+.shops-master{margin-top:26px;padding-top:22px;border-top:1px solid var(--rule-2)}
+.shops-master-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.shops-master-head h4{margin:0;font-size:16px;font-weight:900;letter-spacing:-.01em;color:var(--ink)}
+.shops-master-head .cnt{font-size:11.5px;color:var(--dim);font-weight:700}
+.shops-master-lead{font-size:12px;color:var(--ink-2);line-height:1.7;margin:0 0 14px}
+.shop-card{border:1.2px solid var(--rule);background:var(--paper);padding:12px 14px;border-radius:3px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.shop-card:last-child{margin-bottom:0}
+.shop-card .info{min-width:0}
+.shop-card .nm{font-size:14px;font-weight:900;color:var(--ink);letter-spacing:-.005em;margin-bottom:3px;line-height:1.3}
+.shop-card .ac{font-size:11.5px;color:var(--dim);line-height:1.5;margin-bottom:5px}
+.shop-card .badges{display:flex;flex-wrap:wrap;gap:4px}
+.shop-card .badge{font-size:10px;font-weight:700;padding:3px 7px;border-radius:2px;letter-spacing:.02em;line-height:1.3}
+.shop-card .badge.b-p{background:oklch(0.94 0.03 30);color:var(--red);border:1px solid var(--red)}
+.shop-card .badge.b-r{background:oklch(0.94 0.02 82);color:oklch(0.42 0.05 70);border:1px solid oklch(0.72 0.02 70)}
+.shop-card .map-btn{padding:9px 12px;background:var(--ink);color:var(--paper);border:none;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer;border-radius:2px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.shop-card .map-btn:hover{background:var(--red)}
+.shop-card .map-btn::before{content:"📍";font-size:13px}
 .prize-sheet .how{padding:14px 16px;background:oklch(0.98 0.005 82);border:1px solid var(--rule);border-radius:2px;font-size:12.5px;color:var(--ink-2);line-height:1.75;margin-bottom:18px}
 .prize-sheet .how b{color:var(--ink);font-weight:700}
 .prize-sheet-actions{margin-top:22px}
@@ -885,6 +907,15 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
         <h4>取得済クーポン <span class="cnt" id="coupons-cnt">0枚</span></h4>
         <div class="coupons-grid" id="coupons-grid"></div>
       </div>
+
+      <section class="shops-master" aria-label="使えるお店 一覧">
+        <div class="shops-master-head">
+          <h4>使えるお店 一覧</h4>
+          <span class="cnt" id="shops-master-cnt">— 店</span>
+        </div>
+        <p class="shops-master-lead">景品・クーポン は 以下の 沿線店舗 で 使えます。 <b>「地図」</b> をタップすると Google マップで 場所を確認できます。</p>
+        <div id="shops-master-list"></div>
+      </section>
 
       <button class="btn-reset" id="btn-reset" type="button">スタンプ帳をリセット</button>
     </div>
@@ -1785,25 +1816,19 @@ function renderPrize(){
   const rouBtn = document.getElementById("btn-roulette");
   const rouSub = document.getElementById("roul-cta-sub");
   const rouTitle = document.getElementById("roul-cta-title");
-  const used = localStorage.getItem(LS_ROULETTE_USED) === "1";
-  if (used){
-    cta.classList.add("locked");
-    rouBtn.disabled = true;
-    rouBtn.textContent = "抽選済み";
-    rouTitle.textContent = "ボーナスルーレット";
-    rouSub.textContent = "1回抽選済です (取得済クーポンは 下を確認)";
-  } else if (n >= 4){
+  // デモモード: 何度でも回せる
+  if (n >= 4){
     cta.classList.remove("locked");
     rouBtn.disabled = false;
     rouBtn.textContent = "ルーレットを回す";
-    rouTitle.textContent = "ボーナスルーレット · 準備できました";
+    rouTitle.textContent = "ボーナスルーレット (デモ · 何度でも回せます)";
     rouSub.textContent = "沿線飲食店の クーポンが 1枚 当たります";
   } else {
     cta.classList.add("locked");
     rouBtn.disabled = true;
     rouBtn.textContent = `あと ${4 - n}個 集めよう`;
     rouTitle.textContent = "ボーナスルーレット";
-    rouSub.textContent = "4個到達で 沿線飲食店クーポンが 1回抽選できます";
+    rouSub.textContent = "4個到達で 沿線飲食店クーポンが 抽選できます";
   }
   renderCoupons();
 }
@@ -2154,7 +2179,10 @@ function openPrizeSheet(prizeId){
   const details = document.getElementById("prize-sheet-details");
   details.innerHTML = `
     <h4>対象店舗</h4>
-    <ul class="shops-list">${p.shops.map(s => `<li><b>${s.name}</b><span class="st">${s.station}</span></li>`).join("")}</ul>
+    <ul class="shops-list">${p.shops.map(s => {
+      const q = encodeURIComponent(`${s.name} ${s.station} 福井`);
+      return `<li><div><b>${s.name}</b><span class="st">${s.station}</span></div><a class="map-lnk" href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener">地図</a></li>`;
+    }).join("")}</ul>
     <h4>引換方法</h4>
     <div class="how">${p.how}</div>
   `;
@@ -2175,6 +2203,45 @@ document.getElementById("prize-sheet-cta").addEventListener("click", () => {
 document.querySelectorAll(".prize-item").forEach(el => {
   el.addEventListener("click", () => openPrizeSheet(el.dataset.prize));
 });
+
+// ─────────── 使えるお店 一覧 (景品タブ 常時表示) ───────────
+function renderShopsMaster(){
+  const list = document.getElementById("shops-master-list");
+  if (!list) return;
+  const map = new Map(); // key: shop name -> { name, station, badges: Set }
+  PRIZES.forEach(p => {
+    p.shops.forEach(s => {
+      const key = s.name;
+      if (!map.has(key)) map.set(key, { name: s.name, station: s.station, badges: new Set() });
+      map.get(key).badges.add(`景品 · ${p.name}`);
+    });
+  });
+  ROULETTE_PRIZES.forEach(r => {
+    const key = r.shop;
+    if (!map.has(key)) map.set(key, { name: r.shop, station: r.station, badges: new Set() });
+    map.get(key).badges.add(`クーポン · ${r.benefit}`);
+  });
+  const shops = Array.from(map.values());
+  document.getElementById("shops-master-cnt").textContent = `${shops.length} 店`;
+  list.innerHTML = shops.map(s => {
+    const q = encodeURIComponent(`${s.name} ${s.station} 福井`);
+    const badges = Array.from(s.badges).map(b => {
+      const cls = b.startsWith("景品") ? "b-p" : "b-r";
+      return `<span class="badge ${cls}">${b}</span>`;
+    }).join("");
+    return `
+      <div class="shop-card">
+        <div class="info">
+          <div class="nm">${s.name}</div>
+          <div class="ac">${s.station}</div>
+          <div class="badges">${badges}</div>
+        </div>
+        <a class="map-btn" href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener">地図</a>
+      </div>
+    `;
+  }).join("");
+}
+renderShopsMaster();
 
 // ─────────── roulette ───────────
 function drawWheel(){
@@ -2222,10 +2289,7 @@ function openRoulette(){
     showToast("まだ 抽選できません", "押印 4個 集めると 参加できます", true);
     return;
   }
-  if (localStorage.getItem(LS_ROULETTE_USED) === "1"){
-    showToast("使用済み", "ボーナスルーレットは 1回のみです", true);
-    return;
-  }
+  // デモモード: 何度でも回せる
   drawWheel();
   document.getElementById("roul-result").classList.remove("on");
   const btn = document.getElementById("roul-spin");
@@ -2284,13 +2348,14 @@ document.getElementById("roul-spin").addEventListener("click", () => {
     };
     existing.push(coupon);
     saveCoupons(existing);
-    localStorage.setItem(LS_ROULETTE_USED, "1");
+    // デモモード: LS_ROULETTE_USED は 記録しない (何度でも回せる)
     // show result
     document.getElementById("roul-res-benefit").textContent = winner.benefit;
     document.getElementById("roul-res-shop").textContent = `${winner.shop} · ${winner.station}`;
     document.getElementById("roul-res-code").textContent = code;
     document.getElementById("roul-result").classList.add("on");
-    btn.textContent = "受け取りました";
+    btn.disabled = false;
+    btn.textContent = "もう一度回す";
     rouletteSpinning = false;
     renderPrize(); // update CTA state + coupon list
   }, 5700);
