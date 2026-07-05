@@ -1506,22 +1506,44 @@ function renderJourney(){
       ${nodeSvg}
     </svg>
   `;
-  // node tap/click → open spot sheet (event delegation · iOS Safari + LIFF 対応)
+  // node tap/click → open spot sheet + scroll spot list to that spot
+  // iOS Safari · LIFF · Android WebView 全対応 · pointer + click 二重
   if (!el.dataset.delegated){
     el.dataset.delegated = "1";
+    let lastTapAt = 0;
     const handler = (ev) => {
       const g = ev.target.closest(".j-node");
       if (!g) return;
+      // Debounce (pointerup + click 両方 発火して 二重動作 防止)
+      const now = Date.now();
+      if (now - lastTapAt < 400) return;
+      lastTapAt = now;
       ev.preventDefault();
+      ev.stopPropagation();
       const code = g.getAttribute("data-code");
       const spot = SPOTS.find(s => s.code === code);
-      if (spot){
-        try { openSpotSheet(spot); }
-        catch(e){ console.error("[journey click] openSpotSheet failed:", e); alert("スポット詳細を開けませんでした · " + e.message); }
-      }
+      if (!spot) return;
+      // 視覚 tap feedback
+      g.style.opacity = "0.5";
+      setTimeout(() => { g.style.opacity = "1"; }, 200);
+      // 1. スポット詳細シートを開く
+      try { openSpotSheet(spot); }
+      catch(e){ console.error("[journey click] openSpotSheet failed:", e); alert("スポット詳細を開けませんでした · " + e.message); return; }
+      // 2. スポット一覧 の 該当ticket に scroll (背景で 揃える)
+      setTimeout(() => {
+        const btn = document.querySelector(`#spot-list [data-code="${code}"]`);
+        if (btn){
+          btn.scrollIntoView({ behavior: "smooth", block: "center" });
+          btn.style.transition = "background-color 0.6s";
+          const orig = btn.style.backgroundColor;
+          btn.style.backgroundColor = "oklch(0.72 0.14 30 / .15)";
+          setTimeout(() => { btn.style.backgroundColor = orig; }, 900);
+        }
+      }, 100);
     };
+    // pointerup が click より 早く発火 · タッチデバイスで 反応早くなる
+    el.addEventListener("pointerup", handler);
     el.addEventListener("click", handler);
-    el.addEventListener("touchend", handler, { passive: false });
   }
 }
 
