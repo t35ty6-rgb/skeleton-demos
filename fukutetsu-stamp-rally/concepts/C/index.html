@@ -3,180 +3,138 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>C · 遊び心 ゲームボード · 福鉄</title>
+<title>C · SWIPE-DECK · 福鉄</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Noto+Sans+JP:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700;800;900&family=Noto+Sans+JP:wght@500;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:oklch(0.97 0.02 78);
-  --surface:oklch(1 0 0);
-  --ink:oklch(0.24 0.008 60);
-  --dim:oklch(0.55 0.008 60);
-  --coral:oklch(0.75 0.19 50);
-  --coral-dark:oklch(0.55 0.18 40);
-  --lime:oklch(0.78 0.18 145);
-  --lime-dark:oklch(0.6 0.17 145);
-  --sky:oklch(0.72 0.15 220);
-  --sky-dark:oklch(0.5 0.14 220);
-  --sun:oklch(0.88 0.16 90);
-  --sun-dark:oklch(0.7 0.14 80);
-  --shadow:oklch(0.24 0.008 60);
+  --bg:#171826;
+  --bg-2:#20223a;
+  --paper:#fafafd;
+  --ink:#0f1220;
+  --dim:#767a91;
+  --accent:#ff7854;
+  --accent-2:#fd267a;
+  --green:#4fd97b;
+  --yellow:#ffb84a;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:"Nunito","Noto Sans JP",sans-serif;font-weight:800;-webkit-font-smoothing:antialiased;line-height:1.4}
-.app{max-width:420px;margin:0 auto;min-height:100vh;background:var(--bg);padding-bottom:100px;position:relative;overflow-x:hidden}
-.app::before{content:"";position:absolute;top:0;left:0;right:0;height:200px;background:radial-gradient(ellipse at top,oklch(0.9 0.14 220 / .3) 0%,transparent 60%);z-index:0;pointer-events:none}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--paper);font-family:"Poppins","Noto Sans JP",sans-serif;font-weight:500;-webkit-font-smoothing:antialiased;line-height:1.4;overflow:hidden;height:100vh}
+.app{max-width:420px;margin:0 auto;height:100vh;background:linear-gradient(180deg,var(--bg-2) 0%,var(--bg) 100%);position:relative;overflow:hidden;display:flex;flex-direction:column}
 
-/* Header */
-.hd{padding:16px 20px 12px;position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center}
-.hd .brand{display:flex;align-items:center;gap:10px}
-.hd .mk{width:44px;height:44px;background:var(--coral);border:3px solid var(--ink);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:900;box-shadow:0 4px 0 var(--ink);transform:rotate(-4deg)}
-.hd .name{font-size:18px;font-weight:900;letter-spacing:-.02em}
-.hd .name small{display:block;font-size:11px;font-weight:800;color:var(--dim);letter-spacing:.05em}
-.hd .avatar{width:44px;height:44px;background:var(--lime);border:3px solid var(--ink);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:var(--ink);box-shadow:0 4px 0 var(--ink)}
+/* ─── TOP: progress dots + counter ─── */
+.top{padding:16px 20px 12px;flex-shrink:0}
+.top-row1{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.top-row1 .brand{font-family:"Poppins",sans-serif;font-weight:800;font-size:14px;letter-spacing:.02em}
+.top-row1 .brand span{color:var(--accent)}
+.top-row1 .avatar{width:34px;height:34px;background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);color:var(--paper);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
+.dots{display:flex;gap:4px}
+.dot{flex:1;height:3px;border-radius:2px;background:oklch(1 0 0 / .12)}
+.dot.done{background:var(--green)}
+.dot.now{background:var(--accent)}
 
-/* Streak card */
-.streak{margin:12px 20px 16px;background:var(--surface);border:3px solid var(--ink);border-radius:22px;padding:16px 18px;box-shadow:0 6px 0 var(--ink);position:relative;z-index:1;display:flex;align-items:center;gap:14px}
-.streak .flame{width:56px;height:56px;background:linear-gradient(180deg,var(--sun) 0%,var(--coral) 100%);border:3px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 4px 0 var(--ink);animation:bob 2.2s ease-in-out infinite}
-@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-.streak .txt h3{margin:0;font-size:18px;font-weight:900;letter-spacing:-.02em}
-.streak .txt .sub{font-size:12px;color:var(--dim);font-weight:700}
+/* ─── CARD STACK CENTER ─── */
+.deck{flex:1;position:relative;padding:16px 20px 8px;display:flex;align-items:center;justify-content:center}
+.card{position:absolute;left:20px;right:20px;background:var(--paper);color:var(--ink);border-radius:22px;overflow:hidden;box-shadow:0 20px 40px -12px oklch(0 0 0 / .5),0 0 0 1px oklch(1 0 0 / .08);transition:transform .3s cubic-bezier(.2,.9,.2,1)}
+.card.back-2{transform:translateY(24px) scale(.9);opacity:.6}
+.card.back-1{transform:translateY(12px) scale(.95);opacity:.85}
+.card.front{transform:translateY(0) scale(1);z-index:2}
+.card-im{aspect-ratio:1;background:linear-gradient(135deg,oklch(0.75 0.15 40) 0%,oklch(0.55 0.24 30) 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.card-im .kanji{font-family:"Noto Sans JP",sans-serif;font-weight:900;font-size:180px;color:oklch(1 0 0 / .95);letter-spacing:-.05em;text-shadow:0 8px 30px oklch(0 0 0 / .4)}
+.card-im::before{content:"";position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 30% 20%,oklch(1 0 0 / .3) 0%,transparent 60%)}
+.card-tags{position:absolute;top:16px;left:16px;display:flex;gap:6px}
+.card-tag{background:oklch(0 0 0 / .5);color:var(--paper);padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.05em;backdrop-filter:blur(6px)}
+.card-tag.dist{background:var(--green);color:var(--paper)}
+.card-info{padding:20px 22px 22px}
+.card-info .co{font-family:"Poppins",sans-serif;font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.14em;text-transform:uppercase}
+.card-info h2{margin:4px 0 2px;font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.15}
+.card-info .sub{font-family:"Noto Sans JP",sans-serif;font-size:13px;color:var(--dim);font-weight:500;margin-top:6px;line-height:1.6}
 
-/* Adventure card */
-.adventure{margin:0 20px 16px;background:linear-gradient(135deg,var(--sky) 0%,var(--sky-dark) 100%);border:3px solid var(--ink);border-radius:24px;padding:18px 20px;color:#fff;box-shadow:0 6px 0 var(--ink);position:relative;z-index:1;overflow:hidden}
-.adventure::before{content:"";position:absolute;top:-30px;right:-30px;width:140px;height:140px;background:oklch(1 0 0 / .15);border-radius:50%}
-.adventure .k{font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;opacity:.85}
-.adventure h2{margin:4px 0 10px;font-size:22px;font-weight:900;letter-spacing:-.02em}
-.adventure .prog{display:flex;gap:5px;margin-bottom:8px}
-.adventure .prog span{flex:1;height:10px;background:oklch(1 0 0 / .25);border-radius:5px;position:relative;overflow:hidden}
-.adventure .prog span.on{background:var(--lime);box-shadow:inset 0 -2px 0 var(--lime-dark)}
-.adventure .sub{font-size:12px;font-weight:800;opacity:.95}
+/* ─── SWIPE ACTION BUTTONS ─── */
+.swipe-actions{padding:12px 20px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-shrink:0}
+.swipe-btn{width:60px;height:60px;border-radius:50%;background:oklch(1 0 0 / .08);border:1.5px solid oklch(1 0 0 / .15);color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;transition:transform .15s}
+.swipe-btn:active{transform:scale(.92)}
+.swipe-btn.center{width:82px;height:82px;background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);border:none;box-shadow:0 8px 24px -4px oklch(0.6 0.2 30 / .6)}
+.swipe-btn.center svg{width:32px;height:32px;stroke-width:2.4}
+.swipe-btn.skip{background:transparent;color:var(--dim)}
+.swipe-btn.info{background:transparent;color:var(--yellow)}
+.swipe-btn.map{background:transparent;color:oklch(0.6 0.15 220)}
 
-/* Path visualization */
-.path-card{margin:0 20px 16px;background:var(--surface);border:3px solid var(--ink);border-radius:26px;padding:18px 16px;box-shadow:0 6px 0 var(--ink);position:relative;z-index:1}
-.path-card h3{margin:0 0 14px;font-size:16px;font-weight:900;letter-spacing:-.01em;text-align:center}
-.path{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:center;justify-items:center}
-.node{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;position:relative;border:3px solid var(--ink);box-shadow:0 4px 0 var(--ink);color:#fff}
-.node.done{background:var(--lime)}
-.node.done::after{content:"✓";font-size:22px}
-.node.now{background:var(--coral);animation:pulse 1.4s ease-in-out infinite}
-.node.now::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:3px dashed var(--coral);opacity:.55;animation:ring 1.4s ease-in-out infinite}
-.node.next{background:var(--surface);color:var(--dim);font-size:16px}
-.node.next::before{content:"";position:absolute;inset:6px;border-radius:50%;border:2px dashed var(--dim);opacity:.5}
-.node.goal{background:var(--sun);color:var(--ink);font-size:20px}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
-@keyframes ring{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:0;transform:scale(1.2)}}
-.path-sub{margin-top:14px;text-align:center;font-size:12.5px;font-weight:800;color:var(--coral-dark)}
-
-/* Spots (as quest cards) */
-.sect-title{padding:22px 22px 8px;display:flex;justify-content:space-between;align-items:baseline}
-.sect-title h2{margin:0;font-size:18px;font-weight:900;letter-spacing:-.02em}
-.sect-title .a{font-size:12px;color:var(--sky-dark);font-weight:900;text-decoration:none}
-
-.quests{padding:0 20px;display:flex;flex-direction:column;gap:12px}
-.quest{background:var(--surface);border:3px solid var(--ink);border-radius:20px;padding:14px;display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;box-shadow:0 4px 0 var(--ink);cursor:pointer;transition:transform .12s}
-.quest:active{transform:translate(1px,3px);box-shadow:0 1px 0 var(--ink)}
-.quest .im{width:64px;height:64px;background:var(--sun);border:3px solid var(--ink);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px}
-.quest h4{margin:0 0 3px;font-size:14px;font-weight:900;letter-spacing:-.01em}
-.quest .meta{font-size:11px;font-weight:800;color:var(--dim);letter-spacing:-.005em;display:flex;gap:6px;align-items:center}
-.quest .meta .dot{color:var(--coral-dark);font-weight:900}
-.quest .chip{background:var(--sky);color:#fff;border:2px solid var(--ink);padding:4px 10px;border-radius:10px;font-size:11px;font-weight:900;letter-spacing:-.005em}
-
-.quest.done{opacity:.75}
-.quest.done .im{background:var(--lime)}
-.quest.done .im::after{content:"✓";font-size:32px;color:#fff}
-.quest.done .im>.emoji{display:none}
-.quest.done .chip{background:var(--lime);color:#fff}
-
-.quest.now{background:linear-gradient(180deg,oklch(0.96 0.05 40) 0%,var(--surface) 60%);border-color:var(--coral)}
-.quest.now .im{background:var(--coral);animation:bob 2s ease-in-out infinite}
-.quest.now .chip{background:var(--coral);color:#fff;animation:pulse2 1.6s ease-in-out infinite}
-@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.7}}
-
-/* Prize teaser */
-.prize{margin:20px 20px 16px;background:linear-gradient(135deg,var(--sun) 0%,var(--coral) 100%);border:3px solid var(--ink);border-radius:24px;padding:18px 22px;color:var(--ink);box-shadow:0 6px 0 var(--ink);position:relative;overflow:hidden}
-.prize::before{content:"";position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:oklch(1 0 0 / .2);border-radius:50%}
-.prize .k{font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;opacity:.75}
-.prize h3{margin:4px 0 2px;font-size:22px;font-weight:900;letter-spacing:-.02em}
-.prize .sub{font-size:12px;font-weight:800;opacity:.9}
-.prize button{margin-top:12px;background:var(--surface);color:var(--ink);border:3px solid var(--ink);padding:10px 20px;border-radius:14px;font-family:inherit;font-weight:900;font-size:13px;box-shadow:0 4px 0 var(--ink);cursor:pointer;transition:transform .12s}
-.prize button:active{transform:translate(1px,3px);box-shadow:0 1px 0 var(--ink)}
-
-/* Tabs */
-.tabs{position:fixed;bottom:0;left:0;right:0;max-width:420px;margin:0 auto;background:var(--surface);border-top:3px solid var(--ink);display:grid;grid-template-columns:repeat(4,1fr);padding:10px 0 max(12px,env(safe-area-inset-bottom)) 0;z-index:40;box-shadow:0 -6px 20px -8px oklch(0 0 0 / .15)}
-.tab{background:none;border:none;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--dim);cursor:pointer;font-family:inherit;font-weight:900;transition:color .2s,transform .12s}
-.tab.on{color:var(--coral-dark)}
-.tab.on .icc{background:var(--coral);color:#fff;border-color:var(--ink);box-shadow:0 3px 0 var(--ink)}
-.tab .icc{width:44px;height:44px;background:var(--surface);border:3px solid var(--dim);border-radius:14px;display:flex;align-items:center;justify-content:center;transition:all .2s}
-.tab .icc svg{width:20px;height:20px}
-.tab .lbl{font-size:10px;font-weight:900;margin-top:2px}
-.tab:active{transform:scale(.94)}
-
-.top-badge{position:fixed;top:16px;left:16px;background:var(--ink);color:var(--sun);padding:6px 12px;border-radius:12px;font-family:inherit;font-size:10.5px;font-weight:900;letter-spacing:.06em;z-index:100;border:2px solid var(--ink);box-shadow:0 3px 0 oklch(0.14 0.006 60 / .5)}
+/* ─── BOTTOM META ─── */
+.meta-bar{padding:8px 20px 24px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;border-top:1px solid oklch(1 0 0 / .08)}
+.meta-count{display:flex;align-items:center;gap:8px}
+.meta-count .n{font-family:"Poppins",sans-serif;font-size:22px;font-weight:900;color:var(--paper);letter-spacing:-.02em}
+.meta-count .n small{font-size:12px;color:var(--dim);font-weight:600}
+.meta-count .lbl{font-size:11px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+.meta-tabs{display:flex;gap:6px;background:oklch(1 0 0 / .08);padding:4px;border-radius:12px}
+.meta-tabs button{background:none;border:none;color:var(--dim);padding:6px 12px;border-radius:8px;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;letter-spacing:.02em}
+.meta-tabs button.on{background:var(--paper);color:var(--ink)}
 </style>
 </head>
 <body>
-<div class="top-badge">C案 · PLAYFUL</div>
 
 <div class="app">
-  <div class="hd">
-    <div class="brand">
-      <div class="mk">Fk</div>
-      <div class="name">ふくてつ さんぽ帳<small>Fukubu Line · 2026 Summer</small></div>
+  <!-- TOP: brand + progress dots -->
+  <div class="top">
+    <div class="top-row1">
+      <div class="brand">FUKUBU<span>.</span>DECK</div>
+      <div class="avatar">明</div>
     </div>
-    <div class="avatar">明</div>
-  </div>
-
-  <div class="streak">
-    <div class="flame">🔥</div>
-    <div class="txt"><h3>3 日連続 集印中!</h3><div class="sub">今日 で 記録更新 · 明日 も来て +1</div></div>
-  </div>
-
-  <div class="adventure">
-    <div class="k">Your Adventure</div>
-    <h2>集印 の 大冒険</h2>
-    <div class="prog">
-      <span class="on"></span><span class="on"></span><span class="on"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    <div class="dots">
+      <div class="dot done"></div><div class="dot done"></div><div class="dot done"></div>
+      <div class="dot now"></div>
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
     </div>
-    <div class="sub">3 / 10 · あと 1個 で ドリンク Get!</div>
   </div>
 
-  <div class="path-card">
-    <h3>次の 一駅</h3>
-    <div class="path">
-      <div class="node done"></div>
-      <div class="node done"></div>
-      <div class="node done"></div>
-      <div class="node now">4</div>
-      <div class="node next">5</div>
+  <!-- CENTER: card stack -->
+  <div class="deck">
+    <div class="card back-2">
+      <div class="card-im"><span class="kanji">城</span></div>
+      <div class="card-info"><div class="co">SP-06 · CH.3 FUKUI</div><h2>福井城址</h2></div>
     </div>
-    <div class="path-sub">▲ ここタップ で スタート!</div>
+    <div class="card back-1">
+      <div class="card-im" style="background:linear-gradient(135deg,#3b6c78 0%,#1c2d4f 100%)"><span class="kanji">花</span></div>
+      <div class="card-info"><div class="co">SP-04 · CH.2 SABAE</div><h2>西山公園</h2></div>
+    </div>
+    <div class="card front">
+      <div class="card-im" style="background:linear-gradient(135deg,#dcaf3d 0%,#c85a2a 100%)">
+        <div class="card-tags"><span class="card-tag">SP-05</span><span class="card-tag dist">圏内 · 押印可</span></div>
+        <span class="kanji">鏡</span>
+      </div>
+      <div class="card-info">
+        <div class="co">CH.2 SABAE · 神明駅</div>
+        <h2>めがねミュージアム</h2>
+        <div class="sub">鯖江眼鏡 の 全て が ここに。 工房で 手作り体験、 掘り出し物 を 探す。</div>
+      </div>
+    </div>
   </div>
 
-  <div class="sect-title"><h2>クエスト</h2><a href="#" class="a">全部見る →</a></div>
-
-  <div class="quests">
-    <div class="quest done"><div class="im"><span class="emoji">🏮</span></div><div><h4>越前和紙の里</h4><div class="meta"><span>SP-01</span><span class="dot">·</span><span>1 章</span></div></div><span class="chip">完了</span></div>
-    <div class="quest done"><div class="im"><span class="emoji">🏟</span></div><div><h4>サンドーム福井</h4><div class="meta"><span>SP-02</span><span class="dot">·</span><span>1 章</span></div></div><span class="chip">完了</span></div>
-    <div class="quest now"><div class="im">🌸</div><div><h4>武生中央公園</h4><div class="meta"><span>SP-03</span><span class="dot">·</span><span>1.2 km</span></div></div><span class="chip">挑戦中</span></div>
-    <div class="quest"><div class="im">👓</div><div><h4>めがねミュージアム</h4><div class="meta"><span>SP-05</span><span class="dot">·</span><span>14 km</span></div></div><span class="chip">未挑戦</span></div>
-    <div class="quest"><div class="im">🏯</div><div><h4>福井城址</h4><div class="meta"><span>SP-06</span><span class="dot">·</span><span>22 km</span></div></div><span class="chip">未挑戦</span></div>
-    <div class="quest"><div class="im">🦖</div><div><h4>恐竜モニュメント</h4><div class="meta"><span>SP-09</span><span class="dot">·</span><span>24 km</span></div></div><span class="chip">未挑戦</span></div>
+  <!-- SWIPE ACTION BUTTONS -->
+  <div class="swipe-actions">
+    <button class="swipe-btn skip" title="次へ"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    <button class="swipe-btn info" title="詳細"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></button>
+    <button class="swipe-btn center" title="押印!">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    </button>
+    <button class="swipe-btn map" title="地図"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C7 2 5 6 5 10c0 5 7 12 7 12s7-7 7-12c0-4-2-8-7-8z"/><circle cx="12" cy="10" r="3"/></svg></button>
+    <button class="swipe-btn skip" title="巻き戻し"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 019-9v0a9 9 0 018 5"/><polyline points="19 3 20 8 15 8"/></svg></button>
   </div>
 
-  <div class="prize">
-    <div class="k">Next Reward</div>
-    <h3>ドリンク引換 🍹</h3>
-    <div class="sub">あと 1個 で 沿線カフェ 1杯無料 Get</div>
-    <button>詳細 →</button>
+  <!-- META BAR: count + tabs -->
+  <div class="meta-bar">
+    <div class="meta-count">
+      <div class="n">3<small> / 10</small></div>
+      <div class="lbl">Collected</div>
+    </div>
+    <div class="meta-tabs">
+      <button class="on">Deck</button>
+      <button>Map</button>
+      <button>Book</button>
+      <button>Prize</button>
+    </div>
   </div>
-
-  <nav class="tabs">
-    <button class="tab on"><span class="icc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg></span><span class="lbl">ホーム</span></button>
-    <button class="tab"><span class="icc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h4v4h-4z"/></svg></span><span class="lbl">スキャン</span></button>
-    <button class="tab"><span class="icc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13a2 2 0 012 2v14a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/><path d="M4 4v14"/><path d="M8 8h9"/><path d="M8 12h9"/></svg></span><span class="lbl">図鑑</span></button>
-    <button class="tab"><span class="icc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg></span><span class="lbl">景品</span></button>
-  </nav>
 </div>
 </body></html>
