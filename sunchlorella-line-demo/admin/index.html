@@ -889,13 +889,31 @@
       </table>
     </section>
 
-    <!-- ── Products ── -->
+    <!-- ── Products (EC 商品管理) ── -->
     <section class="view" id="view-products">
       <div class="pane-head">
-        <div><h1>商品</h1><div class="sub">価格・在庫・定期便価格の管理</div></div>
-        <button class="btn btn-outline" id="btnNewProd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M12 5v14M5 12h14"/></svg>新規商品</button>
+        <div><h1>商品</h1><div class="sub">写真 · 価格 · 在庫 · 定期便 · カテゴリ · タグ を 一元管理 (Skel·EC 互換)</div></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline" id="btnProdImport" title="CSV 一括登録 (未実装)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>CSV 取込</button>
+          <button class="btn btn-primary" id="btnNewProd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M12 5v14M5 12h14"/></svg>新規商品</button>
+        </div>
       </div>
-      <div id="prodList"></div>
+      <div class="prod-toolbar">
+        <input type="search" class="input" id="prodSearch" placeholder="商品名 / SKU で 検索" style="max-width:280px;">
+        <select class="select" id="prodCatFilter" style="max-width:180px;"><option value="">全カテゴリ</option></select>
+        <select class="select" id="prodStockFilter" style="max-width:150px;">
+          <option value="">在庫 全て</option>
+          <option value="in">在庫あり</option>
+          <option value="low">残り 少 (10以下)</option>
+          <option value="out">在庫切れ</option>
+        </select>
+        <div class="spacer"></div>
+        <div style="display:flex;gap:4px;background:var(--bg-2);border-radius:8px;padding:3px;">
+          <button type="button" class="prod-view-mode active" data-mode="grid" title="カード表示"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></button>
+          <button type="button" class="prod-view-mode" data-mode="list" title="リスト表示"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+        </div>
+      </div>
+      <div id="prodList" class="prod-grid"></div>
     </section>
 
     <!-- ── Channels (公式LINEアカウント) ── -->
@@ -1324,71 +1342,359 @@
   }
 
   /* ─── Products ─── */
+  const PRODUCT_CATEGORIES = [
+    { id: 'chlorella',  label: 'クロレラ' },
+    { id: 'wakasa',     label: '若さ サポート' },
+    { id: 'immunity',   label: '免疫 サポート' },
+    { id: 'digestive',  label: '腸内環境' },
+    { id: 'senior',     label: 'シニア向け' },
+    { id: 'gift',       label: 'ギフト' },
+    { id: 'seasonal',   label: '季節 限定' },
+  ];
+  const SHIPPING_KINDS = [
+    { id: 'std',  label: '通常配送' },
+    { id: 'cool', label: 'クール便' },
+    { id: 'bulk', label: '大型 配送' },
+  ];
+  let prodViewMode = 'grid';
+  let prodFilter = { q: '', category: '', stock: '' };
+
   function renderProducts() {
-    document.getElementById('prodList').innerHTML = state.products.map(p => `
-      <div class="padmin">
-        <div class="thumb">${p.img}</div>
-        <div>
-          <div class="n">${p.name}</div>
-          <div class="meta">${p.category} · 在庫 ${p.stock}</div>
+    const listEl = document.getElementById('prodList');
+    if (!listEl) return;
+    listEl.className = 'prod-grid' + (prodViewMode === 'list' ? ' list-mode' : '');
+
+    // Category filter options
+    const catSel = document.getElementById('prodCatFilter');
+    if (catSel && catSel.options.length <= 1) {
+      PRODUCT_CATEGORIES.forEach(c => {
+        const o = document.createElement('option'); o.value = c.id; o.textContent = c.label;
+        catSel.appendChild(o);
+      });
+    }
+
+    const now = Date.now();
+    const items = state.products.filter(p => {
+      if (prodFilter.q) {
+        const q = prodFilter.q.toLowerCase();
+        if (!(p.name?.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q))) return false;
+      }
+      if (prodFilter.category && p.category !== prodFilter.category) return false;
+      const stock = Number(p.stock || 0);
+      if (prodFilter.stock === 'in' && stock <= 0) return false;
+      if (prodFilter.stock === 'low' && (stock <= 0 || stock > 10)) return false;
+      if (prodFilter.stock === 'out' && stock > 0) return false;
+      return true;
+    });
+
+    if (!items.length) {
+      listEl.innerHTML = `<div class="empty" style="grid-column: 1 / -1;"><h3>該当 商品 が ありません</h3><p>フィルタ を 変えて 再検索 する か、 右上 「+ 新規商品」 から 作成 して ください。</p></div>`;
+      return;
+    }
+
+    listEl.innerHTML = items.map(p => {
+      const cat = PRODUCT_CATEGORIES.find(c => c.id === p.category);
+      const stock = Number(p.stock || 0);
+      const saleOn = p.salePrice && p.salePrice < p.price
+        && (!p.saleUntil || new Date(p.saleUntil).getTime() > now);
+      const displayPrice = saleOn ? p.salePrice : p.price;
+      const thumbStyle = p.photos?.[0] ? `style="background-image:url('${escapeAttr(p.photos[0])}');"` : '';
+      const thumbLabel = p.photos?.[0] ? '' : escapeHtml(p.img || p.name?.charAt(0) || '?');
+      const badge = stock <= 0 ? `<span class="p-badge out">在庫切れ</span>`
+        : stock <= 10 ? `<span class="p-badge">残 ${stock}</span>`
+        : saleOn ? `<span class="p-badge">SALE</span>`
+        : '';
+      return `
+        <div class="prod-card" data-edit-pid="${p.id}" role="button" tabindex="0">
+          <div class="p-thumb" ${thumbStyle}>${badge}${thumbLabel}</div>
+          <div class="p-body">
+            ${cat ? `<div class="p-cat">${escapeHtml(cat.label)}</div>` : ''}
+            <div class="p-name">${escapeHtml(p.name || '(無題)')}</div>
+            <div class="p-price-row">
+              <span class="p-price ${saleOn ? 'sale' : ''}">${fmt.yen(displayPrice)}</span>
+              ${saleOn ? `<span class="p-price-old">${fmt.yen(p.price)}</span>` : ''}
+            </div>
+            ${p.subPrice ? `<div class="p-sub">定期便 ${fmt.yen(p.subPrice)}</div>` : ''}
+            <div class="p-meta">
+              ${p.sku ? `<span class="p-tag">SKU ${escapeHtml(p.sku)}</span>` : ''}
+              <span class="p-tag">在庫 ${stock}</span>
+              ${Array.isArray(p.tags) ? p.tags.slice(0, 2).map(t => `<span class="p-tag">${escapeHtml(t)}</span>`).join('') : ''}
+            </div>
+          </div>
         </div>
-        <div class="price">${fmt.yen(p.price)}<div><small>定期 ${fmt.yen(p.subPrice)}</small></div></div>
-        <button class="btn btn-outline btn-icon" data-edit-pid="${p.id}">編集</button>
-      </div>
-    `).join('');
-    document.querySelectorAll('[data-edit-pid]').forEach(b => b.addEventListener('click', () => {
-      openEditProd(b.dataset.editPid);
-    }));
+      `;
+    }).join('');
+
+    listEl.querySelectorAll('[data-edit-pid]').forEach(el => {
+      el.addEventListener('click', () => openProductEditor(el.dataset.editPid));
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProductEditor(el.dataset.editPid); }
+      });
+    });
   }
-  function openEditProd(pid) {
-    const p = state.products.find(x => x.id === pid);
-    if (!p) return;
+
+  // Toolbar wiring
+  document.getElementById('prodSearch')?.addEventListener('input', (e) => {
+    prodFilter.q = e.target.value.trim(); renderProducts();
+  });
+  document.getElementById('prodCatFilter')?.addEventListener('change', (e) => {
+    prodFilter.category = e.target.value; renderProducts();
+  });
+  document.getElementById('prodStockFilter')?.addEventListener('change', (e) => {
+    prodFilter.stock = e.target.value; renderProducts();
+  });
+  document.querySelectorAll('.prod-view-mode').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.prod-view-mode').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    prodViewMode = b.dataset.mode;
+    renderProducts();
+  }));
+
+  function openProductEditor(pid) {
+    const isNew = !pid;
+    const orig = pid ? state.products.find(x => x.id === pid) : {
+      id: '', name: '', sku: '', category: 'chlorella', tags: [],
+      price: 0, subPrice: 0, salePrice: 0, saleUntil: '',
+      stock: 0, reorderPoint: 10, unit: '個',
+      shipping: 'std', desc: '', photos: [], img: '',
+    };
+    if (!orig) return;
+    const p = JSON.parse(JSON.stringify(orig)); // draft
+    if (!Array.isArray(p.tags)) p.tags = [];
+    if (!Array.isArray(p.photos)) p.photos = [];
+
+    const catOpts = PRODUCT_CATEGORIES.map(c => `<option value="${c.id}" ${p.category === c.id ? 'selected' : ''}>${c.label}</option>`).join('');
+    const shipOpts = SHIPPING_KINDS.map(s => `<option value="${s.id}" ${p.shipping === s.id ? 'selected' : ''}>${s.label}</option>`).join('');
+
     const m = openModal(`
       <div class="modal-title">
-        <h2>商品編集</h2>
+        <h2>${isNew ? '新規商品' : '商品編集'}</h2>
         <button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
       </div>
-      <div class="field"><label>商品名</label><input class="input" id="pName" value="${p.name}"></div>
-      <div class="field"><label>通常価格</label><input class="input" type="number" id="pPrice" value="${p.price}"></div>
-      <div class="field"><label>定期便価格</label><input class="input" type="number" id="pSub" value="${p.subPrice}"></div>
-      <div class="field"><label>在庫</label><input class="input" type="number" id="pStock" value="${p.stock}"></div>
-      <button class="btn btn-primary" id="btnSaveProd" style="width:100%;">保存する</button>
-    `);
-    m.querySelector('#btnSaveProd').addEventListener('click', async () => {
-      await db.update('products', pid, {
-        name: m.querySelector('#pName').value,
-        price: Number(m.querySelector('#pPrice').value),
-        subPrice: Number(m.querySelector('#pSub').value),
-        stock: Number(m.querySelector('#pStock').value),
+      <div class="prod-editor">
+        <div class="prod-editor-form" id="prodForm">
+          <div class="fld">
+            <div class="fld-label">写真 (最大 4枚)</div>
+            <div class="prod-photos" id="prodPhotos"></div>
+            <div class="fld-hint">URL 貼付 で 追加 (JPG / PNG / HTTPS 必須) · 1枚目 が メイン画像 に</div>
+          </div>
+
+          <div class="fld">
+            <label for="pName">商品名</label>
+            <input id="pName" type="text" placeholder="例: サン・クロレラA 粒 300粒" value="${escapeAttr(p.name)}">
+          </div>
+
+          <div class="fld-2col">
+            <div class="fld">
+              <label for="pSku">SKU / 商品コード</label>
+              <input id="pSku" type="text" placeholder="例: SCA-300" value="${escapeAttr(p.sku || '')}">
+            </div>
+            <div class="fld">
+              <label for="pCat">カテゴリ</label>
+              <select id="pCat">${catOpts}</select>
+            </div>
+          </div>
+
+          <div class="fld">
+            <label for="pDesc">説明</label>
+            <textarea id="pDesc" placeholder="9種類のアミノ酸と葉緑素がバランス良く含まれる総合健康食品。 創業以来 50年の主力商品です。" style="min-height:100px;">${escapeHtml(p.desc || '')}</textarea>
+          </div>
+
+          <div class="fld-section">価格</div>
+          <div class="fld-3col">
+            <div class="fld">
+              <label for="pPrice">通常価格</label>
+              <input id="pPrice" type="number" min="0" placeholder="7020" value="${p.price || ''}">
+            </div>
+            <div class="fld">
+              <label for="pSub">定期便 価格</label>
+              <input id="pSub" type="number" min="0" placeholder="6620" value="${p.subPrice || ''}">
+            </div>
+            <div class="fld">
+              <label for="pSale">セール価格</label>
+              <input id="pSale" type="number" min="0" placeholder="5980" value="${p.salePrice || ''}">
+            </div>
+          </div>
+          <div class="fld">
+            <label for="pSaleUntil">セール 終了日 (任意)</label>
+            <input id="pSaleUntil" type="date" value="${p.saleUntil || ''}">
+            <div class="fld-hint">終了日 を 過ぎる と 自動 で 通常価格 に戻ります</div>
+          </div>
+
+          <div class="fld-section">在庫 · 配送</div>
+          <div class="fld-3col">
+            <div class="fld">
+              <label for="pStock">在庫 数</label>
+              <input id="pStock" type="number" min="0" placeholder="100" value="${p.stock || 0}">
+            </div>
+            <div class="fld">
+              <label for="pReorder">発注点</label>
+              <input id="pReorder" type="number" min="0" placeholder="10" value="${p.reorderPoint || 10}">
+            </div>
+            <div class="fld">
+              <label for="pUnit">販売単位</label>
+              <input id="pUnit" type="text" placeholder="個" value="${escapeAttr(p.unit || '個')}">
+            </div>
+          </div>
+          <div class="fld">
+            <label for="pShip">配送区分</label>
+            <select id="pShip">${shipOpts}</select>
+          </div>
+
+          <div class="fld-section">タグ</div>
+          <div class="fld">
+            <div class="fld-label">セグメント / キャンペーン 紐付け</div>
+            <div class="tag-chips" id="pTagChips"></div>
+            <div class="fld-hint">Enter で 追加 · 例: 新商品, 主力, 母の日, 販売員推奨</div>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:12px;">
+            ${!isNew ? `<button type="button" class="btn btn-outline" id="btnDelProd" style="color:var(--alert);border-color:var(--alert);">削除</button>` : ''}
+            <div style="flex:1;"></div>
+            <button type="button" class="btn btn-outline" onclick="closeModal()">キャンセル</button>
+            <button type="button" class="btn btn-primary" id="btnSaveProd">${isNew ? '作成する' : '保存する'}</button>
+          </div>
+        </div>
+
+        <div class="prod-preview" aria-label="商品カード プレビュー">
+          <div class="prod-preview-head">EC / LIFF 表示 プレビュー</div>
+          <div class="pv-card" id="pvCard"></div>
+        </div>
+      </div>
+    `, { wide: true });
+
+    // --- Photo strip render ---
+    function renderPhotos() {
+      const cont = m.querySelector('#prodPhotos');
+      const slots = [0,1,2,3].map(idx => {
+        const url = p.photos[idx];
+        if (url) {
+          return `<div class="prod-photo filled" style="background-image:url('${escapeAttr(url)}');" data-photo-idx="${idx}">
+            <button type="button" class="p-photo-remove" data-photo-remove="${idx}" title="削除">×</button>
+          </div>`;
+        }
+        return `<div class="prod-photo" data-photo-add="${idx}" title="URL を 追加">＋</div>`;
+      }).join('');
+      cont.innerHTML = slots;
+      cont.querySelectorAll('[data-photo-add]').forEach(el => el.addEventListener('click', () => {
+        const url = prompt('画像 URL (HTTPS)');
+        if (url && /^https:\/\//.test(url)) {
+          p.photos.push(url);
+          renderPhotos(); renderPreview();
+        } else if (url) {
+          toast('HTTPS URL を 指定 してください', 'err');
+        }
+      }));
+      cont.querySelectorAll('[data-photo-remove]').forEach(el => el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = Number(el.dataset.photoRemove);
+        p.photos.splice(idx, 1);
+        renderPhotos(); renderPreview();
+      }));
+    }
+    renderPhotos();
+
+    // --- Tag chips render ---
+    function renderTags() {
+      const cont = m.querySelector('#pTagChips');
+      cont.innerHTML = p.tags.map((t, idx) =>
+        `<span class="tag-chip">${escapeHtml(t)}<button type="button" class="rm" data-tag-rm="${idx}">×</button></span>`
+      ).join('') + `<input type="text" class="tag-chip-input" id="pTagInput" placeholder="${p.tags.length ? '' : '例: 新商品, 主力, 母の日'}">`;
+      cont.querySelectorAll('[data-tag-rm]').forEach(b => b.addEventListener('click', () => {
+        const idx = Number(b.dataset.tagRm);
+        p.tags.splice(idx, 1); renderTags(); renderPreview();
+      }));
+      const input = cont.querySelector('#pTagInput');
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && input.value.trim()) {
+          e.preventDefault();
+          const t = input.value.trim();
+          if (!p.tags.includes(t)) p.tags.push(t);
+          input.value = ''; renderTags(); renderPreview();
+          m.querySelector('#pTagInput').focus();
+        } else if (e.key === 'Backspace' && !input.value && p.tags.length) {
+          p.tags.pop(); renderTags(); renderPreview();
+        }
       });
+    }
+    renderTags();
+
+    // --- Live preview ---
+    function collect() {
+      p.name = m.querySelector('#pName').value.trim();
+      p.sku = m.querySelector('#pSku').value.trim();
+      p.category = m.querySelector('#pCat').value;
+      p.desc = m.querySelector('#pDesc').value;
+      p.price = Number(m.querySelector('#pPrice').value) || 0;
+      p.subPrice = Number(m.querySelector('#pSub').value) || 0;
+      p.salePrice = Number(m.querySelector('#pSale').value) || 0;
+      p.saleUntil = m.querySelector('#pSaleUntil').value;
+      p.stock = Number(m.querySelector('#pStock').value) || 0;
+      p.reorderPoint = Number(m.querySelector('#pReorder').value) || 0;
+      p.unit = m.querySelector('#pUnit').value.trim() || '個';
+      p.shipping = m.querySelector('#pShip').value;
+    }
+    function renderPreview() {
+      collect();
+      const cat = PRODUCT_CATEGORIES.find(c => c.id === p.category);
+      const now = Date.now();
+      const saleOn = p.salePrice && p.salePrice < p.price
+        && (!p.saleUntil || new Date(p.saleUntil).getTime() > now);
+      const displayPrice = saleOn ? p.salePrice : p.price;
+      const thumbHtml = p.photos[0]
+        ? `<div class="pv-thumb" style="background-image:url('${escapeAttr(p.photos[0])}');"></div>`
+        : `<div class="pv-thumb">${escapeHtml((p.name || '?').charAt(0))}</div>`;
+      m.querySelector('#pvCard').innerHTML = `
+        ${thumbHtml}
+        <div class="pv-body">
+          ${cat ? `<div class="pv-cat">${escapeHtml(cat.label)}</div>` : ''}
+          <div class="pv-name">${escapeHtml(p.name || '（商品名 未入力）')}</div>
+          ${p.desc ? `<div class="pv-desc">${escapeHtml(p.desc).slice(0, 140)}${p.desc.length > 140 ? '…' : ''}</div>` : ''}
+          <div class="pv-price">
+            <span class="now ${saleOn ? 'sale' : ''}">${fmt.yen(displayPrice)}</span>
+            ${saleOn ? `<span class="old">${fmt.yen(p.price)}</span>` : ''}
+          </div>
+          ${p.subPrice ? `<div class="pv-sub">定期便 ${fmt.yen(p.subPrice)} / 回</div>` : ''}
+          <div class="pv-cta">
+            <button type="button" class="buy" tabindex="-1">今すぐ買う</button>
+            ${p.subPrice ? `<button type="button" class="sub" tabindex="-1">定期便で注文</button>` : ''}
+          </div>
+        </div>
+      `;
+    }
+    // Wire form inputs for live preview
+    ['#pName','#pSku','#pCat','#pDesc','#pPrice','#pSub','#pSale','#pSaleUntil','#pStock','#pReorder','#pUnit','#pShip'].forEach(sel => {
+      const el = m.querySelector(sel);
+      if (el) el.addEventListener('input', renderPreview);
+      if (el) el.addEventListener('change', renderPreview);
+    });
+    renderPreview();
+
+    // Save handler
+    m.querySelector('#btnSaveProd').addEventListener('click', async () => {
+      collect();
+      if (!p.name) { toast('商品名 を 入力 してください', 'err'); return; }
+      const id = p.id || uid('prd');
+      p.id = id;
+      p.updatedAt = Date.now();
+      if (isNew) p.createdAt = Date.now();
+      await db.set('products', id, p);
       closeModal();
-      toast('商品を更新しました', 'ok');
+      toast(isNew ? '商品 を 作成 しました' : '商品 を 更新 しました', 'ok');
+    });
+    // Delete handler
+    const del = m.querySelector('#btnDelProd');
+    if (del) del.addEventListener('click', async () => {
+      if (!confirm(`「${p.name}」 を 削除 します。 元 に 戻せません。 続行 しますか?`)) return;
+      await db.remove('products', p.id);
+      closeModal();
+      toast('商品 を 削除 しました', 'ok');
     });
   }
-  document.getElementById('btnNewProd').addEventListener('click', () => {
-    const m = openModal(`
-      <div class="modal-title"><h2>新規商品</h2><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
-      <div class="field"><label>商品名</label><input class="input" id="pName" placeholder="例: サン・クロレラA 粒 300粒"></div>
-      <div class="field"><label>通常価格</label><input class="input" type="number" id="pPrice" placeholder="7020"></div>
-      <div class="field"><label>定期便価格</label><input class="input" type="number" id="pSub" placeholder="6620"></div>
-      <div class="field"><label>在庫</label><input class="input" type="number" id="pStock" placeholder="100"></div>
-      <div class="field"><label>ラベル (1文字)</label><input class="input" id="pImg" maxlength="4" placeholder="A粒"></div>
-      <button class="btn btn-primary" id="btnCreateProd" style="width:100%;">作成する</button>
-    `);
-    m.querySelector('#btnCreateProd').addEventListener('click', async () => {
-      const pid = uid('prd');
-      await db.set('products', pid, {
-        id: pid, name: m.querySelector('#pName').value || '新商品',
-        category: 'chlorella', tag: 'p_a_grain',
-        price: Number(m.querySelector('#pPrice').value) || 0,
-        subPrice: Number(m.querySelector('#pSub').value) || 0,
-        stock: Number(m.querySelector('#pStock').value) || 0,
-        img: m.querySelector('#pImg').value || '新',
-        desc: '',
-      });
-      closeModal();
-      toast('商品を作成しました', 'ok');
-    });
+
+  document.getElementById('btnNewProd').addEventListener('click', () => openProductEditor(null));
+  document.getElementById('btnProdImport')?.addEventListener('click', () => {
+    toast('CSV 取込 は v2 で 実装 予定', 'info');
   });
 
   /* ─── Broadcast ─── */
