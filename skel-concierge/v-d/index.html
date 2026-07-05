@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Optional runtime config for GAS API + LIFF (see config.example.js). -->
+<script src="config.js" onerror="void 0"></script>
 <style>
 :root{
   /* Surfaces */
@@ -3399,11 +3401,267 @@ function showToast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
 }
 
+/* ==============================
+   REMOTE ADAPTER — GAS API 配線 (Phase 1a)
+   Injected via ../config.js: window.__API_URL__ / window.__ADMIN_TOKEN__ / window.__LIFF_URL_BASE__
+   config.js 無し or 通信失敗 なら 現状 の static demo データ で 動く (fallback)。
+   ============================== */
+const CFG = {
+  API_URL: (window.__API_URL__ || '').trim(),
+  ADMIN_TOKEN: (window.__ADMIN_TOKEN__ || localStorage.getItem('skel-token') || '').trim(),
+  LIFF_URL_BASE: (window.__LIFF_URL_BASE__ || '').trim(),
+};
+const REMOTE = !!CFG.API_URL;
+let pollTimer = null;
+
+async function apiCall(op, body){
+  if (!CFG.API_URL) throw new Error('API_URL 未設定');
+  if (!CFG.ADMIN_TOKEN) {
+    const tok = prompt('管理者 Token を 入力 して ください:');
+    if (!tok) throw new Error('token 未入力');
+    CFG.ADMIN_TOKEN = tok.trim();
+    localStorage.setItem('skel-token', CFG.ADMIN_TOKEN);
+  }
+  const url = CFG.API_URL + '?type=api&op=' + encodeURIComponent(op) + '&token=' + encodeURIComponent(CFG.ADMIN_TOKEN);
+  const res = await fetch(url, {
+    method:'POST', mode:'cors',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify(Object.assign({ _token: CFG.ADMIN_TOKEN, op }, body || {})),
+    redirect: 'follow',
+  });
+  const j = await res.json();
+  if (!j.ok) throw new Error(j.error || 'API error');
+  return j;
+}
+
+function _remoteCustomerToThread(c){
+  const name = c.name || '(名前 未登録)';
+  return {
+    id: c.id, avChar: c.avChar || '?', avClass: c.avClass || '',
+    name, short: (name.split(' ')[0] || name) + 'さま',
+    lastPreview: c.lastPreview || '', time: c.lastTs ? _formatTs(c.lastTs) : '',
+    unread: c.unread || 0, alert: !!c.alert, online: false,
+    stage: c.stage || '', stageClass: c.stageClass || '',
+    header: (c.stage || '') + (c.alert ? ' · <span class="a">要 対応</span>' : ''),
+    meeting: c.meeting || null,
+    kv: [], tasks: [], files: [], filesEmpty: '', minutes: [], messages: [],
+  };
+}
+function _formatTs(iso){
+  try {
+    const d = new Date(iso);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) return d.getHours() + ':' + String(d.getMinutes()).padStart(2,'0');
+    return (d.getMonth()+1) + '/' + d.getDate();
+  } catch(_) { return ''; }
+}
+
+async function bootRemote(){
+  const res = await apiCall('list-customers');
+  if (!res.customers || !res.customers.length) {
+    showToast('客 が 未登録 です。 LINE 追加 で 自動 追加 されます。');
+    // Keep demo data if no customers yet
+    return false;
+  }
+  state.clear();
+  res.customers.forEach(c => state.set(c.id, _remoteCustomerToThread(c)));
+  currentId = res.customers[0].id;
+  return true;
+}
+
+async function refreshCustomer(id){
+  if (!REMOTE) return;
+  try {
+    const j = await apiCall('get-customer', { customerId: id });
+    const t = state.get(id);
+    if (!t) return;
+    Object.assign(t, {
+      stage: j.customer.stage || t.stage,
+      stageClass: j.customer.stageClass || t.stageClass,
+      kv: j.customer.kv || [],
+      meeting: j.meeting || null,
+      minutes: (j.minutes || []).map(m => ({
+        id: m.id, title: m.title, date: m.date, dur: m.dur,
+        actions: m.actions, sent: m.sent, summary: m.summary, items: m.items,
+      })),
+      messages: (j.messages || []).map(m => {
+        if (m.type === 'flex' && m.flexBody) {
+          return { type: m.direction === 'in' ? 'other' : 'me',
+                   rich: { head: m.flexHead || '', body: '(Flex カード)', kv: [], actions: [] },
+                   time: m.time, read: m.read };
+        }
+        return { type: m.direction === 'in' ? 'other' : 'me',
+                 text: (m.text || '').replace(/\n/g,'<br>'),
+                 time: m.time, read: m.read };
+      }),
+    });
+  } catch(e) { console.warn('refreshCustomer fail', e.message); }
+}
+
+function startPolling(){
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      const res = await apiCall('list-customers');
+      let dirty = false;
+      res.customers.forEach(c => {
+        const t = state.get(c.id);
+        if (!t) { state.set(c.id, _remoteCustomerToThread(c)); dirty = true; return; }
+        if (t.unread !== c.unread || t.lastPreview !== c.lastPreview) dirty = true;
+        t.unread = c.unread || 0;
+        t.lastPreview = c.lastPreview || t.lastPreview;
+        t.time = c.lastTs ? _formatTs(c.lastTs) : t.time;
+        t.alert = !!c.alert;
+        t.meeting = c.meeting || t.meeting;
+      });
+      if (dirty) renderThreads();
+      if ($('#chat-drawer')?.classList.contains('show')) {
+        await refreshCustomer(currentId);
+        renderChat();
+      }
+    } catch(e) { console.warn('poll fail', e.message); }
+  }, 6000);
+}
+
+/* Override handleMeetingAction to route through API when REMOTE */
+const _handleMeetingActionLocal = handleMeetingAction;
+handleMeetingAction = async function(action, t){
+  if (!REMOTE) return _handleMeetingActionLocal(action, t);
+  try {
+    if (action === 'open') {
+      const url = (t.meeting && (t.meeting.zoomHostUrl || t.meeting.url)) || '';
+      if (url) window.open(url, '_blank');
+      else showToast('Zoom URL が ありません');
+      return;
+    }
+    if (action === 'resend') {
+      showToast('URL を 再送 します…');
+      await apiCall('issue-zoom-url', { customerId: t.id, meetingId: t.meeting?.id, startAt: t.meeting?.startAt, durationMin: t.meeting?.minutes });
+      await refreshCustomer(t.id); renderChat();
+      showToast('Zoom URL を LINE で 再送 しました');
+      return;
+    }
+    if (action === 'issue') {
+      showToast('Zoom URL を 発行 中…');
+      await apiCall('issue-zoom-url', { customerId: t.id, meetingId: t.meeting?.id, startAt: t.meeting?.startAt, durationMin: t.meeting?.minutes || 45 });
+      await refreshCustomer(t.id); renderChat(); renderThreads();
+      showToast('Zoom URL 発行 + LINE 送信 済');
+      return;
+    }
+    if (action === 'cancel') {
+      openCancelModal(t); return;  // uses cancel-modal → confirm → apiCall
+    }
+    if (action === 'reschedule' || action === 'propose') { openRescheduleModal(t); return; }
+    if (action === 'liff-preview') { openLiffPreview(t); return; }
+    if (action === 'remind') {
+      showToast('返信 を 促す flex を お送り します…');
+      await apiCall('send-text', { customerId: t.id, text: (t.short || 'お客さま') + ' 御案内 の 面談 候補、 御確認 頂けまして でしょうか。 難しければ 再度 3 つ お出し しますので お知らせ ください。' });
+      await refreshCustomer(t.id); renderChat();
+      showToast('返信 を 促す メッセージ を お送り しました');
+      return;
+    }
+  } catch(e) {
+    showToast('エラー: ' + e.message);
+    console.error(e);
+  }
+};
+
+/* Override reschedule modal confirm to call API */
+const _rescheduleBtn = document.getElementById('modal-confirm');
+if (_rescheduleBtn) {
+  const _newRescheduleHandler = async () => {
+    if (!REMOTE) return;  // let existing local handler run
+    const t = modalContext.t; if (!t) return;
+    const slots = Array.from(document.querySelectorAll('#modal-slots .slot')).map(x => ({
+      label: x.dataset.slotLabel,
+      sub: (t.meeting?.minutes || 45) + ' 分 · Zoom · ' + (t.stage || '担当'),
+    }));
+    try {
+      showToast('候補 3 つ を LINE で 送信 中…');
+      await apiCall('propose-meeting', { customerId: t.id, slots, durationMin: t.meeting?.minutes || 45 });
+      await refreshCustomer(t.id); renderChat(); renderThreads();
+      showToast('候補 3 件 を LINE で 送信 しました');
+      closeRescheduleModal();
+    } catch(e) { showToast('送信 失敗: ' + e.message); }
+  };
+  // Attach as additional listener; the existing local listener also fires, but for REMOTE it becomes no-op
+  _rescheduleBtn.addEventListener('click', _newRescheduleHandler, true);
+}
+
+/* Override cancel modal to call API */
+const _cancelBtn = document.getElementById('cancel-confirm');
+if (_cancelBtn) {
+  _cancelBtn.addEventListener('click', async () => {
+    if (!REMOTE) return;
+    const t = cancelContext; if (!t) return;
+    try {
+      await apiCall('cancel-meeting', { customerId: t.id, meetingId: t.meeting?.id });
+      await refreshCustomer(t.id); renderChat();
+      showToast('御振替 御相談 を お送り しました');
+      document.getElementById('cancel-scrim').classList.remove('show');
+    } catch(e) { showToast('エラー: ' + e.message); }
+  }, true);
+}
+
+/* Override sendMessage to use API */
+const _sendMessageLocal = sendMessage;
+sendMessage = async function(){
+  if (!REMOTE) return _sendMessageLocal();
+  const text = input.value.trim();
+  if (!text) return;
+  const t = state.get(currentId);
+  try {
+    await apiCall('send-text', { customerId: t.id, text });
+    input.value = ''; updateSendState();
+    await refreshCustomer(t.id); renderChat(); renderThreads();
+    showToast('送信 しました');
+  } catch(e) { showToast('送信 失敗: ' + e.message); }
+};
+
+/* Override minute send + generate-and-send */
+const _handleMinuteActionLocal = handleMinuteAction;
+handleMinuteAction = async function(action, t, idx){
+  if (!REMOTE) return _handleMinuteActionLocal(action, t, idx);
+  if (action === 'generate') { _handleMinuteActionLocal(action, t, idx); return; }
+  const m = (t.minutes || [])[idx];
+  if (!m) return;
+  if (action === 'open') return _handleMinuteActionLocal(action, t, idx);
+  if (action === 'send') {
+    try {
+      await apiCall('send-minutes', { customerId: t.id, minuteId: m.id });
+      await refreshCustomer(t.id); renderChat();
+      showToast('議事録 を Flex で 送信 しました');
+    } catch(e) { showToast('送信 失敗: ' + e.message); }
+    return;
+  }
+  if (action === 'pdf') { showToast('PDF 生成 は Phase 1b'); return; }
+};
+
 /* ---------- Init ---------- */
-renderThreads();
-renderChat();
-bindActionBar();
-updateSendState();
+async function init(){
+  bindActionBar();
+  updateSendState();
+  if (REMOTE) {
+    try {
+      const ok = await bootRemote();
+      if (ok) {
+        renderThreads();
+        await refreshCustomer(currentId);
+        renderChat();
+        startPolling();
+        showToast('サーバー 接続 済 · ' + state.size + ' 客');
+        return;
+      }
+    } catch(e) {
+      console.error(e);
+      showToast('API 接続 失敗、 デモ で 起動: ' + e.message);
+      // fall through to local demo
+    }
+  }
+  renderThreads();
+  renderChat();
+}
+init();
 </script>
 
 </body>
