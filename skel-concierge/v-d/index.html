@@ -200,6 +200,305 @@ input,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 .tool-btn:hover{background:var(--sys);color:var(--ink-2)}
 .tool-btn svg{width:20px;height:20px;stroke-width:2}
 
+/* ==================================================================
+   COCKPIT LAYOUT — customer detail is the workspace, chat is a drawer
+   ================================================================== */
+.app{display:grid;grid-template-columns:300px 1fr;min-height:100vh;height:100dvh;isolation:isolate}
+.cockpit{
+  background:var(--bg);overflow-y:auto;overflow-x:hidden;
+  display:flex;flex-direction:column;position:relative;
+}
+
+/* Big customer header */
+.ck-head{
+  padding:24px 32px 18px;background:var(--panel);border-bottom:1px solid var(--line);
+  display:grid;grid-template-columns:56px 1fr auto;gap:18px;align-items:center;
+  position:sticky;top:0;z-index:var(--z-header);
+  backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+  background:rgba(255,255,255,0.86);
+}
+.ck-back{
+  display:none;width:44px;height:44px;border-radius:50%;color:var(--ink-2);
+  align-items:center;justify-content:center;font-size:24px;line-height:1;cursor:pointer;background:none;border:0;
+}
+.ck-back:hover{background:var(--sys)}
+.ck-avatar{
+  width:56px;height:56px;border-radius:50%;background:#3F4045;color:#FFF;
+  font-size:24px;font-weight:800;display:grid;place-items:center;letter-spacing:-0.01em;
+  box-shadow:0 6px 16px -6px rgba(15,17,20,0.18), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.ck-avatar.pink{background:#C56685}.ck-avatar.blue{background:#3F6B9E}.ck-avatar.olive{background:#6E7A42}.ck-avatar.orange{background:#C46F3C}.ck-avatar.violet{background:#6D5FA0}
+.ck-title{min-width:0;display:flex;flex-direction:column;gap:2px}
+.ck-title .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ck-title h1{font-size:26px;font-weight:800;letter-spacing:0.005em;line-height:1.2;color:var(--ink)}
+.ck-title .meta{
+  font-family:var(--num);font-size:11.5px;color:var(--ink-3);font-weight:700;
+  letter-spacing:0.06em;text-transform:uppercase;display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+}
+.ck-title .meta span{display:inline-flex;align-items:center;gap:4px}
+.ck-title .meta .sep{color:var(--mute)}
+.ck-badge{
+  font-family:var(--num);font-size:11px;font-weight:800;padding:4px 10px;border-radius:12px;
+  letter-spacing:0.06em;text-transform:uppercase;display:inline-flex;align-items:center;gap:5px;
+}
+.ck-badge::before{content:"";width:6px;height:6px;background:currentColor;border-radius:50%}
+.ck-badge.alert{background:var(--alert-tint);color:var(--alert)}
+.ck-badge.ok{background:var(--line-green-tint);color:var(--line-green-2)}
+
+.ck-chat-toggle{
+  min-height:52px;padding:12px 18px;border-radius:14px;background:var(--ink);color:#FFF;
+  border:0;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;letter-spacing:0.005em;
+  box-shadow:0 2px 4px rgba(15,17,20,0.22), 0 8px 20px -6px rgba(15,17,20,0.32), inset 0 1px 0 rgba(255,255,255,0.08);
+  transition:transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.ck-chat-toggle:hover{background:#000;box-shadow:0 4px 8px rgba(15,17,20,0.26), 0 12px 28px -6px rgba(15,17,20,0.42), inset 0 1px 0 rgba(255,255,255,0.10)}
+.ck-chat-toggle:active{transform:scale(0.97)}
+.ck-chat-toggle svg{width:18px;height:18px}
+.ck-chat-toggle .unread{
+  background:var(--alert);color:#FFF;font-family:var(--num);font-size:11px;font-weight:800;
+  padding:2px 7px;border-radius:9px;min-width:20px;text-align:center;
+}
+
+.ck-body{
+  padding:28px 32px 48px;display:flex;flex-direction:column;gap:24px;max-width:1120px;width:100%;
+  margin:0 auto;
+}
+
+/* ==== HERO NEXT MEETING — dominant card ==== */
+.hero-meeting{
+  position:relative;padding:32px 36px;background:var(--panel);border-radius:var(--r-2xl);
+  box-shadow:var(--elev-2), var(--elev-inset);overflow:hidden;isolation:isolate;
+  display:grid;grid-template-columns:auto 1fr auto;gap:32px;align-items:center;min-height:200px;
+}
+.hero-meeting::before{
+  content:"";position:absolute;inset:-30%;z-index:-1;pointer-events:none;
+  background:radial-gradient(circle at 15% 30%, var(--amber-tint) 0%, transparent 55%),
+             radial-gradient(circle at 85% 70%, rgba(244,166,49,0.10) 0%, transparent 55%);
+  animation:breathe 5s ease-in-out infinite;
+}
+.hero-meeting.proposed::before{
+  background:radial-gradient(circle at 15% 30%, rgba(6,199,85,0.14) 0%, transparent 55%),
+             radial-gradient(circle at 85% 70%, rgba(6,199,85,0.08) 0%, transparent 55%);
+}
+.hero-meeting.pending::before{
+  background:radial-gradient(circle at 15% 30%, rgba(122,128,144,0.08) 0%, transparent 55%);
+  animation:none;
+}
+.hero-meeting.empty::before{background:none;animation:none}
+@media (prefers-reduced-motion:reduce){.hero-meeting::before{animation:none;opacity:0.6}}
+
+.hm-time{display:flex;flex-direction:column;gap:6px;line-height:1;min-width:140px}
+.hm-time .day{
+  font-family:var(--num);font-size:12px;font-weight:800;color:var(--amber-deep);
+  letter-spacing:0.16em;text-transform:uppercase;
+}
+.hero-meeting.pending .hm-time .day{color:var(--ink-3)}
+.hero-meeting.proposed .hm-time .day{color:var(--line-green-2)}
+.hero-meeting.empty .hm-time .day{color:var(--ink-3)}
+.hm-time .clock{
+  font-family:var(--num);font-size:60px;font-weight:800;color:var(--ink);
+  letter-spacing:-0.035em;font-variant-numeric:tabular-nums;line-height:0.95;
+}
+.hm-time .clock.small{font-size:28px;letter-spacing:-0.005em;line-height:1.15}
+.hm-time .until{
+  margin-top:4px;font-family:var(--num);font-size:12px;font-weight:800;
+  padding:5px 11px;background:var(--amber-tint);color:var(--amber-deep);
+  border-radius:12px;letter-spacing:0.06em;text-transform:uppercase;align-self:flex-start;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.hm-time .until::before{
+  content:"";width:6px;height:6px;background:currentColor;border-radius:50%;
+  animation:blink 1.6s ease-in-out infinite;
+}
+.hero-meeting.pending .hm-time .until{background:rgba(122,128,144,0.14);color:var(--ink-3)}
+.hero-meeting.proposed .hm-time .until{background:var(--line-green-tint);color:var(--line-green-2)}
+
+.hm-info{min-width:0;display:flex;flex-direction:column;gap:8px}
+.hm-info .stat{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--num);font-size:11px;font-weight:800;letter-spacing:0.10em;text-transform:uppercase;
+  padding:4px 10px;border-radius:10px;
+  background:var(--line-green-tint);color:var(--line-green-2);align-self:flex-start;
+}
+.hm-info .stat::before{content:"";width:5px;height:5px;background:currentColor;border-radius:50%}
+.hm-info .stat.pending{background:rgba(122,128,144,0.14);color:var(--ink-3)}
+.hm-info .stat.proposed{background:rgba(244,166,49,0.14);color:var(--amber-deep)}
+.hm-info h2{font-size:22px;font-weight:800;color:var(--ink);letter-spacing:0.005em;line-height:1.35}
+.hm-info h2 .warn{color:var(--alert)}
+.hm-info .sub{font-size:14px;color:var(--ink-2);line-height:1.65;font-weight:500}
+.hm-info .sub b{color:var(--ink);font-weight:700}
+.hm-info .sub .g{color:var(--line-green-2);font-weight:700}
+
+.hm-actions{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.hm-primary{
+  min-height:64px;padding:18px 28px;border-radius:18px;font-family:inherit;
+  font-size:17px;font-weight:800;letter-spacing:0.005em;cursor:pointer;border:0;color:#FFF;
+  background:linear-gradient(180deg,var(--line-green),var(--line-green-2));
+  display:flex;align-items:center;justify-content:center;gap:10px;white-space:nowrap;
+  box-shadow:0 3px 6px rgba(4,163,68,0.28), 0 16px 32px -8px rgba(4,163,68,0.52), inset 0 1px 0 rgba(255,255,255,0.24);
+  transition:transform var(--dur-fast) var(--ease-spring), box-shadow var(--dur-fast) var(--ease-out);
+}
+.hm-primary:hover{box-shadow:0 5px 10px rgba(4,163,68,0.32), 0 20px 40px -8px rgba(4,163,68,0.60), inset 0 1px 0 rgba(255,255,255,0.28)}
+.hm-primary:active{transform:scale(0.97)}
+.hm-primary svg{width:20px;height:20px}
+.hm-primary.dark{background:linear-gradient(180deg,var(--ink),#23272E);box-shadow:0 3px 6px rgba(15,17,20,0.28), 0 16px 32px -8px rgba(15,17,20,0.52), inset 0 1px 0 rgba(255,255,255,0.08)}
+.hm-primary.dark:hover{box-shadow:0 5px 10px rgba(15,17,20,0.32), 0 20px 40px -8px rgba(15,17,20,0.60), inset 0 1px 0 rgba(255,255,255,0.10)}
+.hm-secs{display:flex;gap:6px;justify-content:center}
+.hm-sec{
+  min-height:40px;padding:8px 14px;border-radius:10px;background:rgba(15,17,20,0.05);
+  color:var(--ink-2);border:0;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:700;
+  display:flex;align-items:center;gap:5px;transition:transform var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.hm-sec:hover{background:rgba(15,17,20,0.10);color:var(--ink)}
+.hm-sec:active{transform:scale(0.97)}
+.hm-sec svg{width:13px;height:13px}
+
+/* ==== ACTION TILES — 3 giant buttons ==== */
+.action-tiles{display:grid;grid-template-columns:repeat(3, 1fr);gap:14px}
+.tile{
+  background:var(--panel);border-radius:var(--r-xl);border:0;padding:20px 22px;cursor:pointer;
+  font-family:inherit;text-align:left;
+  display:grid;grid-template-columns:48px 1fr auto;gap:16px;align-items:center;
+  box-shadow:var(--elev-1);
+  transition:transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  min-height:100px;
+}
+.tile:hover{transform:translateY(-2px);box-shadow:var(--elev-2)}
+.tile:active{transform:scale(0.985) translateY(0)}
+.tile-icon{
+  width:48px;height:48px;border-radius:14px;background:var(--sys);color:var(--ink);
+  display:grid;place-items:center;flex-shrink:0;
+}
+.tile-icon svg{width:24px;height:24px;stroke-width:2}
+.tile-body{min-width:0;display:flex;flex-direction:column;gap:3px}
+.tile-title{font-size:16px;font-weight:800;color:var(--ink);letter-spacing:0.005em;line-height:1.35}
+.tile-sub{font-size:12.5px;color:var(--ink-3);line-height:1.55;font-weight:500}
+.tile-sub b{color:var(--ink-2);font-weight:700}
+.tile-arr{
+  font-family:var(--num);font-size:20px;font-weight:800;color:var(--ink-3);
+  transition:transform var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.tile:hover .tile-arr{transform:translateX(4px);color:var(--ink)}
+.tile.primary{
+  background:linear-gradient(135deg,var(--line-green),var(--line-green-2));color:#FFF;
+  box-shadow:0 2px 4px rgba(4,163,68,0.28), 0 12px 28px -6px rgba(4,163,68,0.44), inset 0 1px 0 rgba(255,255,255,0.24);
+}
+.tile.primary:hover{box-shadow:0 4px 8px rgba(4,163,68,0.32), 0 16px 36px -6px rgba(4,163,68,0.52), inset 0 1px 0 rgba(255,255,255,0.28)}
+.tile.primary .tile-icon{background:rgba(255,255,255,0.16);color:#FFF}
+.tile.primary .tile-title{color:#FFF}
+.tile.primary .tile-sub{color:rgba(255,255,255,0.88)}
+.tile.primary .tile-sub b{color:#FFF}
+.tile.primary .tile-arr{color:rgba(255,255,255,0.8)}
+.tile.primary:hover .tile-arr{color:#FFF}
+.tile .tile-badge{
+  position:absolute;font-family:var(--num);font-size:10px;font-weight:800;
+  padding:2px 7px;border-radius:9px;background:var(--alert);color:#FFF;letter-spacing:0.04em;
+  transform:translate(0, -50%);top:0;right:16px;
+}
+.tile{position:relative}
+
+@media (max-width:960px){
+  .action-tiles{grid-template-columns:1fr}
+}
+
+/* ==== SUB GRID: minutes + profile side-by-side ==== */
+.ck-sub{display:grid;grid-template-columns:1.4fr 1fr;gap:20px}
+@media (max-width:960px){.ck-sub{grid-template-columns:1fr}}
+
+.ck-panel{background:var(--panel);border-radius:var(--r-xl);padding:20px 22px;box-shadow:var(--elev-1)}
+.ck-panel-h{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;
+}
+.ck-panel-h h3{font-size:15px;font-weight:800;color:var(--ink);letter-spacing:0.005em;display:flex;align-items:center;gap:8px}
+.ck-panel-h .count{
+  font-family:var(--num);font-size:11px;font-weight:800;color:var(--ink-3);
+  padding:3px 9px;background:var(--sys);border-radius:10px;letter-spacing:0.02em;
+}
+.ck-panel-h .link{
+  font-family:var(--num);font-size:11.5px;font-weight:700;color:var(--line-green-2);
+  cursor:pointer;letter-spacing:0.02em;background:none;border:0;padding:6px 8px;
+}
+.ck-panel-h .link:hover{color:var(--line-green)}
+
+/* Profile inline info */
+.ck-profile-body{display:flex;flex-direction:column;gap:14px}
+.ck-profile-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ck-stat{padding:12px 14px;background:var(--sys);border-radius:var(--r-md);display:flex;flex-direction:column;gap:2px}
+.ck-stat .k{font-family:var(--num);font-size:10.5px;font-weight:800;color:var(--ink-3);letter-spacing:0.12em;text-transform:uppercase}
+.ck-stat .v{font-size:14px;font-weight:800;color:var(--ink);letter-spacing:0.005em;font-variant-numeric:tabular-nums}
+.ck-profile-tags{display:flex;flex-wrap:wrap;gap:6px}
+.ck-tag{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--num);font-size:10.5px;font-weight:700;color:var(--ink-2);
+  padding:4px 10px;background:var(--sys);border-radius:10px;letter-spacing:0.02em;
+}
+.ck-tag::before{content:"";width:5px;height:5px;background:var(--ink-3);border-radius:50%}
+
+.ck-file{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--sys);border-radius:10px;
+  font-size:12.5px;color:var(--ink-2);font-weight:600;
+}
+.ck-file svg{width:14px;height:14px;color:var(--ink-3);flex-shrink:0}
+.ck-files-empty{padding:14px;text-align:center;color:var(--ink-3);font-style:italic;font-size:12.5px}
+
+/* ==== CHAT DRAWER (slides in from right) ==== */
+.chat-drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(480px, 100vw);z-index:90;
+  background:var(--panel);box-shadow:-20px 0 60px -20px rgba(15,17,20,0.32);
+  display:flex;flex-direction:column;
+  transform:translateX(100%);
+  transition:transform 340ms var(--ease-spring);
+}
+.chat-drawer.show{transform:translateX(0)}
+.chat-drawer-scrim{
+  position:fixed;inset:0;background:rgba(6,8,12,0.28);z-index:89;
+  opacity:0;pointer-events:none;transition:opacity 220ms var(--ease-out);
+}
+.chat-drawer-scrim.show{opacity:1;pointer-events:auto}
+@media (prefers-reduced-motion:reduce){.chat-drawer,.chat-drawer-scrim{transition:opacity 100ms}}
+
+.chat-drawer-head{
+  padding:16px 22px;border-bottom:1px solid var(--line);flex-shrink:0;
+  display:flex;align-items:center;gap:12px;
+  background:rgba(255,255,255,0.86);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+.chat-drawer-head h4{font-size:14.5px;font-weight:800;letter-spacing:0.005em;flex:1;color:var(--ink);
+  display:flex;align-items:center;gap:8px}
+.chat-drawer-head .g{width:8px;height:8px;background:var(--line-green);border-radius:50%;box-shadow:0 0 0 3px rgba(6,199,85,0.20)}
+.chat-drawer-close{width:36px;height:36px;border-radius:50%;background:none;border:0;cursor:pointer;color:var(--ink-2);font-size:20px;line-height:1;display:grid;place-items:center;transition:background var(--dur-fast) var(--ease-out)}
+.chat-drawer-close:hover{background:var(--sys)}
+
+/* Hide old right detail aside completely — everything moved into cockpit */
+.detail{display:none !important}
+
+/* Hide old chat panel visually; the drawer takes over */
+.chat{display:none !important}
+
+/* Adjust responsive */
+@media (max-width:1024px){
+  .app{grid-template-columns:280px 1fr}
+  .ck-body{padding:24px 24px 40px}
+}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .threads{grid-column:1;grid-row:1}
+  .cockpit{display:none;grid-column:1;grid-row:1}
+  body[data-view="chat"] .threads{display:none}
+  body[data-view="chat"] .cockpit{display:flex}
+  .ck-back{display:grid}
+  .ck-head{padding:14px 18px}
+  .ck-title h1{font-size:22px}
+  .ck-avatar{width:48px;height:48px;font-size:20px}
+  .ck-body{padding:18px 16px 40px;gap:18px}
+  .hero-meeting{grid-template-columns:1fr;gap:20px;padding:24px 22px}
+  .hm-time .clock{font-size:48px}
+  .hm-actions{flex-direction:row;flex-wrap:wrap}
+  .hm-primary{flex:1;min-height:56px;font-size:15px}
+  .chat-drawer{width:100vw}
+  .ck-chat-toggle span:not(.unread){display:none}
+}
+
 /* ==== ACTION BAR — persistent primary actions right below chat header ==== */
 .action-bar{
   padding:14px 22px;background:var(--panel);border-bottom:1px solid var(--line);
@@ -1212,86 +1511,99 @@ input,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
     </div>
   </aside>
 
-  <!-- CENTER — CHAT -->
-  <section class="chat" aria-label="会話" role="tabpanel">
-    <div class="chat-bg" aria-hidden="true"></div>
-
-    <header class="chat-header">
-      <button class="back-btn" id="back-btn" aria-label="会話一覧に戻る"></button>
-      <div class="chat-header-av" id="chat-av" aria-hidden="true">田</div>
-      <div class="chat-header-info">
-        <div class="chat-header-name" id="chat-name">田中 太郎</div>
-        <div class="chat-header-sub" id="chat-sub"><span class="g">● オンライン</span> · 本日 15:00 面談 · 資料 <span class="a">−2日</span></div>
+  <!-- CENTER — CUSTOMER COCKPIT (new main view) -->
+  <main class="cockpit" aria-label="相手 の 詳細">
+    <header class="ck-head">
+      <button class="ck-back" id="ck-back" aria-label="一覧 に 戻る">←</button>
+      <div class="ck-avatar" id="ck-avatar" aria-hidden="true">田</div>
+      <div class="ck-title">
+        <div class="row">
+          <h1 id="ck-name">田中 太郎さま</h1>
+          <span class="ck-badge alert" id="ck-alert" style="display:none">要 対応 <span id="ck-alert-count">0</span> 件</span>
+        </div>
+        <div class="meta" id="ck-meta"></div>
       </div>
-      <div class="chat-header-tools" role="toolbar" aria-label="会話操作">
-        <button class="tool-btn" aria-label="面談を予約">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
-        </button>
-        <button class="tool-btn" aria-label="ファイルを添付">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12l-7.5 7.5a5 5 0 0 1-7-7L14 5a3.5 3.5 0 0 1 5 5l-7.5 7.5a2 2 0 0 1-3-3L15 8"/></svg>
-        </button>
-        <button class="tool-btn" aria-label="メニュー">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
-        </button>
-      </div>
+      <button type="button" class="ck-chat-toggle" id="ck-chat-toggle" aria-label="LINE トーク を 開く">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2">
+          <path d="M4 4h16v12H8l-4 4z"/>
+        </svg>
+        <span>LINE トーク</span>
+        <span class="unread" id="ck-chat-unread" style="display:none">0</span>
+      </button>
     </header>
 
-    <div class="action-bar" role="region" aria-label="主 操作">
-      <button type="button" class="ab-btn primary" id="ab-book">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4">
-          <rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3z"/>
-        </svg>
-        Zoom を 予約 する
-        <span class="arr">→</span>
-      </button>
-      <button type="button" class="ab-btn secondary" id="ab-minutes">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2">
-          <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 13h6M9 17h4"/>
-        </svg>
-        議事録 を 送る
-      </button>
-      <button type="button" class="ab-btn more" id="ab-more" aria-label="その他 の 操作">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
-      </button>
-      <div class="ab-cap" aria-hidden="true">
-        <span>相手 に 候補 3 つ 送信</span>
-        <span>直近 議事録 を Flex で 配信</span>
-        <span>その他</span>
-      </div>
-    </div>
+    <div class="ck-body">
+      <!-- HERO: next meeting or empty-state CTA -->
+      <section class="hero-meeting" id="hero-meeting" role="region" aria-label="次回 面談"></section>
 
-    <div class="meeting-ribbon" id="meeting-ribbon" role="region" aria-label="次回 面談 の 状態 と 操作">
-      <!-- injected -->
-    </div>
-
-    <div class="chat-body" id="chat-body" aria-live="polite" aria-relevant="additions">
-      <!-- injected -->
-    </div>
-
-    <footer class="compose">
-      <div class="quick" role="toolbar" aria-label="クイック 返信">
-        <button class="quick-btn" data-quick="zoom" title="Flex カード で 送信">Zoom URL 再送</button>
-        <button class="quick-btn" data-quick="minutes" title="Flex カード で 送信">議事録 送付</button>
-        <button class="quick-btn" data-quick="reschedule-open" title="候補 3 つ を Flex カード で 送信">候補 3 つ 打診</button>
-        <button class="quick-btn" data-quick="thanks">御礼 定型</button>
-        <button class="quick-btn" data-quick="task">タスク化 メモ</button>
-      </div>
-      <form class="compose-row" id="compose-form" aria-label="メッセージを送信">
-        <button type="button" class="compose-plus" aria-label="添付を開く">＋</button>
-        <textarea class="compose-input" id="compose-input" placeholder="メッセージを 入力…" rows="1" aria-label="メッセージ本文"></textarea>
-        <button type="submit" class="compose-send" id="compose-send" aria-label="送信 (⌘ + Enter)" disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M4 12l16-8-6 18-3-8-7-2z"/></svg>
+      <!-- 3 giant action tiles — always visible, plain labels -->
+      <section class="action-tiles" role="region" aria-label="主 な 操作">
+        <button type="button" class="tile primary" id="tile-book">
+          <span class="tile-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2">
+              <rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3z"/>
+            </svg>
+          </span>
+          <span class="tile-body">
+            <span class="tile-title">Zoom を 予約 する</span>
+            <span class="tile-sub">相手 に <b>候補 3 つ</b> を LINE で 送る → 選択 で <b>Zoom URL 自動 発行</b></span>
+          </span>
+          <span class="tile-arr" aria-hidden="true">→</span>
         </button>
-      </form>
-      <div class="compose-hint">
-        <span><kbd>⌘</kbd> + <kbd>Enter</kbd> で 送信</span>
-        <span id="char-count">0 字</span>
-      </div>
-    </footer>
-  </section>
 
-  <!-- RIGHT — CONTEXT DETAIL -->
-  <aside class="detail" id="detail-panel" role="complementary" aria-label="相手の詳細" data-panel="detail">
+        <button type="button" class="tile" id="tile-minutes">
+          <span class="tile-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2">
+              <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 13h6M9 17h4"/>
+            </svg>
+          </span>
+          <span class="tile-body">
+            <span class="tile-title">議事録 を 送る</span>
+            <span class="tile-sub" id="tile-minutes-sub">直近: 目標整理 (6/21)</span>
+          </span>
+          <span class="tile-arr" aria-hidden="true">→</span>
+        </button>
+
+        <button type="button" class="tile" id="tile-generate">
+          <span class="tile-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2">
+              <path d="M12 2v14M8 8l4-4 4 4M4 20h16"/>
+            </svg>
+          </span>
+          <span class="tile-body">
+            <span class="tile-title">録画 から 議事録 生成</span>
+            <span class="tile-sub">Whisper + Claude で 自動 生成 (FP Compass 同 pipeline)</span>
+          </span>
+          <span class="tile-arr" aria-hidden="true">→</span>
+        </button>
+      </section>
+
+      <!-- Sub grid: minutes list + profile -->
+      <section class="ck-sub">
+        <div class="ck-panel">
+          <div class="ck-panel-h">
+            <h3>議事録 · 過去 の 面談</h3>
+            <span class="count" id="ck-minutes-count">0 件</span>
+          </div>
+          <div id="ck-minutes-list"></div>
+        </div>
+        <div class="ck-panel">
+          <div class="ck-panel-h">
+            <h3>相手 プロフィール</h3>
+          </div>
+          <div class="ck-profile-body">
+            <div class="ck-profile-stats" id="ck-profile-stats"></div>
+            <div id="ck-profile-tags"></div>
+          </div>
+          <div class="ck-panel-h" style="margin-top:14px;margin-bottom:8px"><h3 style="font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.14em">共有 済 資料</h3></div>
+          <div id="ck-files-list"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- RIGHT — CONTEXT DETAIL (legacy, hidden via CSS; state moved to cockpit) -->
+  <aside class="detail" id="detail-panel" role="complementary" aria-label="相手の詳細" data-panel="detail" hidden>
     <div>
       <div class="detail-h">相手 プロフィール</div>
       <div class="detail-card customer">
@@ -1336,6 +1648,39 @@ input,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
   </aside>
 
 </div>
+
+<!-- CHAT DRAWER (slides in from right when LINE トーク button is pressed) -->
+<div class="chat-drawer-scrim" id="chat-drawer-scrim"></div>
+<aside class="chat-drawer" id="chat-drawer" aria-hidden="true">
+  <div class="chat-drawer-head">
+    <div class="g" aria-hidden="true"></div>
+    <h4 id="drawer-name">LINE トーク · 田中 太郎さま</h4>
+    <button type="button" class="chat-drawer-close" id="chat-drawer-close" aria-label="閉じる">×</button>
+  </div>
+  <div class="chat-body" id="chat-body" aria-live="polite" aria-relevant="additions">
+    <!-- messages injected -->
+  </div>
+  <footer class="compose">
+    <div class="quick" role="toolbar" aria-label="クイック 返信">
+      <button class="quick-btn" data-quick="zoom" title="Zoom URL を Flex カード で 送信">Zoom URL 再送</button>
+      <button class="quick-btn" data-quick="minutes" title="議事録 を Flex カード で 送信">議事録 送付</button>
+      <button class="quick-btn" data-quick="reschedule-open">Zoom 予約</button>
+      <button class="quick-btn" data-quick="thanks">御礼</button>
+      <button class="quick-btn" data-quick="task">タスク メモ</button>
+    </div>
+    <form class="compose-row" id="compose-form" aria-label="メッセージを送信">
+      <button type="button" class="compose-plus" aria-label="添付を開く">＋</button>
+      <textarea class="compose-input" id="compose-input" placeholder="メッセージを 入力…" rows="1" aria-label="メッセージ本文"></textarea>
+      <button type="submit" class="compose-send" id="compose-send" aria-label="送信 (⌘ + Enter)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M4 12l16-8-6 18-3-8-7-2z"/></svg>
+      </button>
+    </form>
+    <div class="compose-hint">
+      <span><kbd>⌘</kbd> + <kbd>Enter</kbd> で 送信</span>
+      <span id="char-count">0 字</span>
+    </div>
+  </footer>
+</aside>
 
 <!-- Reschedule / Issue Zoom modal -->
 <div class="modal-scrim" id="modal-scrim" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -1742,29 +2087,255 @@ function renderThreads() {
   });
 }
 
-/* ---------- Chat rendering ---------- */
+/* ---------- Cockpit rendering ---------- */
 function renderChat() {
   const t = state.get(currentId);
 
-  // header
-  $('#chat-av').textContent = t.avChar;
-  $('#chat-av').className = 'chat-header-av ' + (t.avClass || '');
-  $('#chat-name').textContent = t.name;
-  $('#chat-sub').innerHTML = t.header;
+  // Header identity
+  $('#ck-avatar').textContent = t.avChar;
+  $('#ck-avatar').className = 'ck-avatar ' + (t.avClass || '');
+  $('#ck-name').textContent = t.name + 'さま';
+  const metaBits = [t.stage, '担当 吉田'];
+  $('#ck-meta').innerHTML = metaBits.map((b, i) => (i ? '<span class="sep">·</span>' : '') + '<span>' + b + '</span>').join('');
 
-  // ribbon
-  renderRibbon(t);
+  // Alert badge (count overdue tasks or urgent)
+  const overdueTasks = (t.tasks || []).filter(x => x.overdue && !x.done).length;
+  const unread = t.unread || 0;
+  const alertCount = overdueTasks;
+  const alertEl = $('#ck-alert');
+  if (alertCount > 0) { alertEl.style.display = ''; $('#ck-alert-count').textContent = alertCount; }
+  else { alertEl.style.display = 'none'; }
 
-  // body
-  const body = $('#chat-body');
-  body.innerHTML = '';
-  t.messages.forEach(m => body.appendChild(renderMessage(m, t)));
+  // Chat unread badge on drawer toggle
+  const unreadEl = $('#ck-chat-unread');
+  if (unread > 0) { unreadEl.style.display = ''; unreadEl.textContent = unread; }
+  else { unreadEl.style.display = 'none'; }
 
-  // scroll to bottom
-  requestAnimationFrame(() => { body.scrollTop = body.scrollHeight; });
+  // Hero next meeting
+  renderHero(t);
 
-  // detail
-  renderDetail(t);
+  // Tiles subs (dynamic)
+  updateTileSubs(t);
+
+  // Minutes list
+  renderCockpitMinutes(t);
+
+  // Profile
+  renderCockpitProfile(t);
+
+  // Chat messages in the drawer (kept for when it's opened)
+  const chatBody = $('#chat-body');
+  chatBody.innerHTML = '';
+  t.messages.forEach(m => chatBody.appendChild(renderMessage(m, t)));
+  requestAnimationFrame(() => { chatBody.scrollTop = chatBody.scrollHeight; });
+
+  // Drawer header name
+  $('#drawer-name').textContent = 'LINE トーク · ' + t.name + 'さま';
+}
+
+/* ---------- HERO next meeting ---------- */
+function renderHero(t) {
+  const host = $('#hero-meeting');
+  const m = t.meeting;
+
+  const ICONS = {
+    zoom:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3z"/></svg>',
+    send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M4 12l16-8-6 18-3-8-7-2z"/></svg>',
+    preview:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 18h2"/></svg>',
+    plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg>',
+    calendar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>',
+    resend:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><path d="M4 4v6h6M20 20v-6h-6M4 10a8 8 0 0 1 14-3M20 14a8 8 0 0 1-14 3"/></svg>',
+    bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
+  };
+
+  if (!m) {
+    host.className = 'hero-meeting empty';
+    host.innerHTML = `
+      <div class="hm-time"><span class="day">次回 面談</span><span class="clock small" style="color:var(--ink-3)">— 未定</span></div>
+      <div class="hm-info">
+        <h2>${t.name}さま の 次回 面談 は 未定 です</h2>
+        <div class="sub">上 の <b>「Zoom を 予約 する」</b> ボタン、 または この 右 の ボタン を 押す と、 相手 に <b>候補 3 つ</b> が 届き ます。</div>
+      </div>
+      <div class="hm-actions">
+        <button class="hm-primary" data-hero="propose">${ICONS.plus}Zoom を 予約 する</button>
+      </div>
+    `;
+  } else if (m.status === 'confirmed') {
+    host.className = 'hero-meeting';
+    const timeShort = (m.time || '').split(/[\s–\-〜]/)[0].trim() || '—';
+    host.innerHTML = `
+      <div class="hm-time">
+        <span class="day">${m.dateLabel}</span>
+        <span class="clock">${timeShort}</span>
+        <span class="until">${m.until}</span>
+      </div>
+      <div class="hm-info">
+        <span class="stat">Zoom 準備 済</span>
+        <h2>${m.minutes} 分 面談 · ${t.stage.replace(/·.*$/, '').trim()}</h2>
+        <div class="sub">Zoom URL 発行 済 · 開始 <b>15 分前</b> に 相手 の LINE へ リマインド を 自動送信 します。</div>
+      </div>
+      <div class="hm-actions">
+        <button class="hm-primary" data-hero="open">${ICONS.zoom}Zoom を 開く</button>
+        <div class="hm-secs">
+          <button class="hm-sec" data-hero="resend">${ICONS.resend}URL 再送</button>
+          <button class="hm-sec" data-hero="reschedule">${ICONS.calendar}日程 変更</button>
+        </div>
+      </div>
+    `;
+  } else if (m.status === 'pending_url') {
+    host.className = 'hero-meeting pending';
+    host.innerHTML = `
+      <div class="hm-time">
+        <span class="day">${m.dateLabel}</span>
+        <span class="clock small">${m.time}</span>
+        <span class="until">${m.until}</span>
+      </div>
+      <div class="hm-info">
+        <span class="stat pending">Zoom URL 未 発行</span>
+        <h2>日時 決定 済 · <span class="warn">URL を 送る</span> だけ です</h2>
+        <div class="sub">押す と <b>Zoom URL を 自動 発行</b> して、 <b>相手 の LINE に Flex カード で 送信</b> します。</div>
+      </div>
+      <div class="hm-actions">
+        <button class="hm-primary" data-hero="issue">${ICONS.send}Zoom URL を 送る</button>
+        <div class="hm-secs">
+          <button class="hm-sec" data-hero="reschedule">${ICONS.calendar}日程 変更</button>
+        </div>
+      </div>
+    `;
+  } else if (m.status === 'proposed') {
+    host.className = 'hero-meeting proposed';
+    host.innerHTML = `
+      <div class="hm-time">
+        <span class="day">${m.dateLabel}</span>
+        <span class="clock small">候補 3 つ</span>
+        <span class="until">${m.until}</span>
+      </div>
+      <div class="hm-info">
+        <span class="stat proposed">相手 返信 待ち</span>
+        <h2>${t.name}さま に <b>候補 3 つ</b> を 打診 中</h2>
+        <div class="sub">相手 の <b>選択 画面</b> を そのまま プレビュー 出来ます。 選択 → Zoom URL 自動 発行 → LINE に 御案内。</div>
+      </div>
+      <div class="hm-actions">
+        <button class="hm-primary" data-hero="liff-preview">${ICONS.preview}相手 画面 を 見る</button>
+        <div class="hm-secs">
+          <button class="hm-sec" data-hero="remind">${ICONS.bell}返信 を 促す</button>
+          <button class="hm-sec" data-hero="reschedule">${ICONS.resend}候補 を 送り直す</button>
+        </div>
+      </div>
+    `;
+  }
+
+  host.querySelectorAll('[data-hero]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const a = btn.dataset.hero;
+      if (a === 'propose') { openRescheduleModal(t); return; }
+      handleMeetingAction(a, t);
+    });
+  });
+}
+
+function updateTileSubs(t) {
+  const latest = (t.minutes || [])[0];
+  const sub = $('#tile-minutes-sub');
+  if (sub) {
+    sub.innerHTML = latest
+      ? `直近: <b>${latest.title}</b> (${latest.date})`
+      : `まだ 議事録 が ありません`;
+  }
+}
+
+/* ---------- Cockpit minutes list ---------- */
+function renderCockpitMinutes(t) {
+  const host = $('#ck-minutes-list');
+  const count = (t.minutes || []).length;
+  $('#ck-minutes-count').textContent = count + ' 件';
+
+  const ICONS = {
+    open:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 13h6M9 17h4"/></svg>',
+    send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><path d="M4 12l16-8-6 18-3-8-7-2z"/></svg>',
+    pdf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><path d="M12 3v14M6 11l6 6 6-6M4 21h16"/></svg>',
+    docEmpty:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6"/></svg>',
+    generate:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><path d="M12 2v14M8 8l4-4 4 4M4 20h16"/></svg>',
+  };
+
+  if (count === 0) {
+    host.innerHTML = `
+      <div class="minute-empty" style="padding:22px 18px;background:var(--sys)">
+        <div class="ic" aria-hidden="true">${ICONS.docEmpty}</div>
+        <div class="h">まだ 議事録 は ありません</div>
+        <div class="b">面談 の <b>画面録画</b> が 保存 されると、 Whisper で 文字起こし → Claude で 議事録 を 自動 生成 します。</div>
+      </div>
+    `;
+    return;
+  }
+  host.innerHTML = `
+    <div class="minutes-list" style="gap:10px">
+      ${t.minutes.map((m, i) => `
+        <div class="minute-card" data-min-id="${m.id}">
+          <div class="minute-top">
+            <div class="minute-title">${m.title}</div>
+            <div class="minute-date">${m.date}</div>
+          </div>
+          <div class="minute-meta">
+            <span class="minute-tag action">Action ${m.actions} 件</span>
+            <span class="minute-tag ${m.sent ? 'sent' : 'draft'}">${m.sent ? '御配信 済' : '下書き'}</span>
+            <span class="minute-tag draft">${m.dur} 分</span>
+          </div>
+          <div class="minute-actions">
+            <button type="button" class="minute-btn primary" data-min-action="open" data-idx="${i}">${ICONS.open}開く</button>
+            <button type="button" class="minute-btn" data-min-action="send" data-idx="${i}">${ICONS.send}再送</button>
+            <button type="button" class="minute-btn" data-min-action="pdf" data-idx="${i}">${ICONS.pdf}PDF</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  host.querySelectorAll('[data-min-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const act = btn.dataset.minAction;
+      const idx = parseInt(btn.dataset.idx || '0', 10);
+      handleMinuteAction(act, t, idx);
+    });
+  });
+}
+
+function renderCockpitProfile(t) {
+  const stats = $('#ck-profile-stats');
+  const tags = $('#ck-profile-tags');
+  const files = $('#ck-files-list');
+
+  stats.innerHTML = t.kv.slice(0, 4).map(([k,v]) => `
+    <div class="ck-stat"><span class="k">${k}</span><span class="v">${v}</span></div>
+  `).join('');
+
+  const tagList = [];
+  if (t.online) tagList.push('オンライン');
+  if ((t.unread || 0) > 0) tagList.push('未読 ' + t.unread + ' 件');
+  tagList.push(t.stage);
+  tags.innerHTML = tagList.map(x => `<span class="ck-tag">${x}</span>`).join('');
+
+  const FI = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6"/></svg>`;
+  if ((t.files || []).length === 0) {
+    files.innerHTML = `<div class="ck-files-empty">${t.filesEmpty || 'まだ 資料 は ありません'}</div>`;
+  } else {
+    files.innerHTML = t.files.map(f => `<div class="ck-file">${FI}${f.name}</div>`).join('');
+  }
+}
+
+/* ---------- Chat drawer toggle ---------- */
+function openChatDrawer() {
+  $('#chat-drawer').classList.add('show');
+  $('#chat-drawer').setAttribute('aria-hidden', 'false');
+  $('#chat-drawer-scrim').classList.add('show');
+  // clear unread for this thread since user is viewing chat
+  const t = state.get(currentId);
+  if (t.unread) { t.unread = 0; renderThreads(); const u = $('#ck-chat-unread'); if (u) u.style.display = 'none'; }
+  requestAnimationFrame(() => { const cb = $('#chat-body'); if (cb) cb.scrollTop = cb.scrollHeight; });
+}
+function closeChatDrawer() {
+  $('#chat-drawer').classList.remove('show');
+  $('#chat-drawer').setAttribute('aria-hidden', 'true');
+  $('#chat-drawer-scrim').classList.remove('show');
 }
 
 function renderRibbon(t) {
@@ -2690,7 +3261,6 @@ function selectThread(id) {
   renderChat();
   if (window.matchMedia('(max-width: 760px)').matches) {
     document.body.dataset.view = 'chat';
-    $('#chat-body').focus();
   }
 }
 
@@ -2796,9 +3366,28 @@ $('#chat-body').addEventListener('click', (e) => {
 });
 
 /* ---------- Back button (mobile) ---------- */
-$('#back-btn').addEventListener('click', () => {
+const backBtn = $('#ck-back');
+if (backBtn) backBtn.addEventListener('click', () => {
   document.body.dataset.view = 'threads';
 });
+
+/* ---------- Chat drawer + Tiles ---------- */
+const chatToggle = $('#ck-chat-toggle');
+if (chatToggle) chatToggle.addEventListener('click', openChatDrawer);
+const drawerClose = $('#chat-drawer-close');
+if (drawerClose) drawerClose.addEventListener('click', closeChatDrawer);
+const drawerScrim = $('#chat-drawer-scrim');
+if (drawerScrim) drawerScrim.addEventListener('click', closeChatDrawer);
+
+$('#tile-book')?.addEventListener('click', () => openRescheduleModal(state.get(currentId)));
+$('#tile-minutes')?.addEventListener('click', () => {
+  const t = state.get(currentId);
+  const latest = (t.minutes || [])[0];
+  if (!latest) { openRecordingsModal(t); return; }
+  const flex = buildFlex('minutes', t);
+  if (flex) { appendRich(t, flex); showToast('議事録 を Flex で 送信 しました'); }
+});
+$('#tile-generate')?.addEventListener('click', () => openRecordingsModal(state.get(currentId)));
 
 /* ---------- Toast ---------- */
 let toastTimer;
