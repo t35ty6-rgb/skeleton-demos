@@ -483,7 +483,7 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2); await reveal(p, 3); await reveal(p, 4);
 
     // ── 3課題 列挙アジェンダ (thanks_end 7.2 → agenda_end 34.6) ──
-    await sync.waitFor(p, 'thanks_end');
+    await sync.waitFor(p, 'thanks_end', 200);
     await slide(p, `
       ${SL.chrome('AGENDA', '課題')}
       <div data-reveal="1" style="margin-top:36px;">${SL.title('御社の現場でいま、<br>起きていること<span style="color:${C.leaf};">は 3つ</span>', { size: '52px' })}</div>
@@ -535,7 +535,7 @@ const chapters = [
     await wait(p, 900); await reveal(p, 3); // 「これは〜」開始 と 同期 (200-300ms 遅延で 目線誘導)
 
     // ── 課題① 具体シナリオ (issue1_before_scene 53.8 → issue1_end 71.7) ──
-    await sync.waitFor(p, 'issue1_before_scene');
+    await sync.waitFor(p, 'issue1_before_scene', 200);
     await slide(p, `
       ${SL.chrome('02 / 05', '課題 · 一')}
       <div style="margin-top:32px;">${SL.title('販売員の実績が、<br><span style="color:${C.leaf}">消える</span>', { size: '52px' })}</div>
@@ -579,10 +579,10 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1); await wait(p, 400);
-    await sync.waitFor(p, 'issue1_scene_visit'); await reveal(p, 2);
-    await sync.waitFor(p, 'issue1_scene_ec'); await reveal(p, 3);
-    await sync.waitFor(p, 'issue1_result'); await reveal(p, 4);
-    await sync.waitFor(p, 'issue1_end'); await reveal(p, 5);
+    await sync.waitFor(p, 'issue1_scene_visit', 150); await reveal(p, 2);
+    await sync.waitFor(p, 'issue1_scene_ec', 150); await reveal(p, 3);
+    await sync.waitFor(p, 'issue1_result', 150); await reveal(p, 4);
+    await sync.waitFor(p, 'issue1_end', 150); await reveal(p, 5);
 
     // ── 転入② 「次に、2つ目」 (issue1_end 57.9 → issue2_intro 63.2) ──
     await slide(p, `
@@ -613,7 +613,7 @@ const chapters = [
     await wait(p, 900); await reveal(p, 3); // 「これは〜」開始 と 同期 (200-300ms 遅延で 目線誘導)
 
     // ── 課題② (issue2_dispatch 90.8 → issue2_end 108.1) editorial diagram ──
-    await sync.waitFor(p, 'issue2_dispatch');
+    await sync.waitFor(p, 'issue2_dispatch', 200);
     await slide(p, `
       ${SL.chrome('03 / 05', '課題 · 二')}
       <div style="margin-top:28px;">${SL.title('4本の公式LINE が、<br>本社で<span style="color:${C.leaf}">合算できない</span>', { size: '48px' })}</div>
@@ -653,8 +653,8 @@ const chapters = [
     `);
     await reveal(p, 1);
     await reveal(p, 2); await reveal(p, 3); await reveal(p, 4); await reveal(p, 5);
-    await sync.waitFor(p, 'issue2_hq'); await reveal(p, 6);
-    await sync.waitFor(p, 'issue2_end'); await reveal(p, 7);
+    await sync.waitFor(p, 'issue2_hq', 150); await reveal(p, 6);
+    await sync.waitFor(p, 'issue2_end', 150); await reveal(p, 7);
 
     // ── 転入③ 「最後に、3つ目」 (issue2_end 85.2 → issue3_intro 90.6) ──
     await slide(p, `
@@ -685,7 +685,7 @@ const chapters = [
     await wait(p, 900); await reveal(p, 3); // 「これは〜」開始 と 同期 (200-300ms 遅延で 目線誘導)
 
     // ── 課題③ (issue3_scene 134.4 → issue3_end 142.4) ──
-    await sync.waitFor(p, 'issue3_scene');
+    await sync.waitFor(p, 'issue3_scene', 200);
     await slide(p, `
       ${SL.chrome('04 / 05', '課題 · 三')}
       <div style="margin-top:28px;">${SL.title('中高齢の半数が、<br>メール入力で<span style="color:${C.leaf}">諦める</span>', { size: '48px' })}</div>
@@ -736,7 +736,7 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2); await reveal(p, 3); await reveal(p, 4);
 
     // ── 統合LINE OS 提示 (issue3_end 108.2 → solution_five 118.6) ──
-    await sync.waitFor(p, 'issue3_end');
+    await sync.waitFor(p, 'issue3_end', 200);
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1000px;">
         <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.ink3};letter-spacing:0.18em;font-weight:400;">TOWARD ONE SYSTEM</div>
@@ -745,10 +745,10 @@ const chapters = [
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
-    await sync.waitFor(p, 'solution_intro'); await reveal(p, 3);
+    await sync.waitFor(p, 'solution_intro', 150); await reveal(p, 3);
 
     // ── 5つの機能 preview (solution_five 118.6 → solution_end 130.5) ──
-    await sync.waitFor(p, 'solution_five');
+    await sync.waitFor(p, 'solution_five', 200);
     await slide(p, `
       ${SL.chrome('5 FUNCTIONS', '構成')}
       <div data-reveal="1" style="margin-top:28px;">${SL.title('統合LINE OS は、<br><span style="color:${C.leaf};">5つの機能</span> で構成', { size: '48px' })}</div>
@@ -775,7 +775,7 @@ const chapters = [
     await reveal(p, 4); await wait(p, 600);
     await reveal(p, 5); await wait(p, 600);
     await reveal(p, 6);
-    await sync.waitFor(p, 'solution_list'); await reveal(p, 7);
+    await sync.waitFor(p, 'solution_list', 150); await reveal(p, 7);
   }},
 
   // ═══════════════════════════════════════════════════════
@@ -794,7 +794,7 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2);
 
     // ── QR 4-step mechanics (title_end 5.2 → step_engrave 25.8) ──
-    await sync.waitFor(p, 'title_end');
+    await sync.waitFor(p, 'title_end', 200);
     await slide(p, `
       ${SL.chrome('I · 01', '仕組み')}
       <div style="margin-top:26px;">${SL.title('玄関先で、3秒で、<br><span style="color:${C.leaf};">担当ID</span>を顧客に刻印', { size: '44px' })}</div>
@@ -830,12 +830,12 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1); await reveal(p, 2);
-    await sync.waitFor(p, 'step_show_qr'); await reveal(p, 3);
-    await sync.waitFor(p, 'step_scan'); await reveal(p, 4);
+    await sync.waitFor(p, 'step_show_qr', 150); await reveal(p, 3);
+    await sync.waitFor(p, 'step_scan', 150); await reveal(p, 4);
     await wait(p, 3500); await reveal(p, 5); await reveal(p, 6);
 
     // ── 4チャネル全帰属 (step_engrave 25.8 → ltv_end 42.5) ──
-    await sync.waitFor(p, 'step_engrave');
+    await sync.waitFor(p, 'step_engrave', 200);
     await slide(p, `
       ${SL.chrome('I · 02', '帰属')}
       <div style="margin-top:26px;">${SL.title('以降の<span style="color:${C.leaf};">全チャネル</span> の購入が、<br>担当販売員の実績になる', { size: '42px' })}</div>
@@ -885,7 +885,7 @@ const chapters = [
     await reveal(p, 3); await wait(p, 1400);
     await reveal(p, 4); await wait(p, 1400);
     await reveal(p, 5);
-    await sync.waitFor(p, 'ltv_end'); await reveal(p, 6); await reveal(p, 7);
+    await sync.waitFor(p, 'ltv_end', 150); await reveal(p, 6); await reveal(p, 7);
 
     // ── 実UI rep画面 (ltv_end 42.5 → end 63.3) ──
     await rmSlide(p);
@@ -915,7 +915,7 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2);
 
     // ── Before / After 統合ダッシュ (title_end 4.8 → unified 20.7) ──
-    await sync.waitFor(p, 'title_end');
+    await sync.waitFor(p, 'title_end', 200);
     await slide(p, `
       ${SL.chrome('II · 01', '統合ダッシュ')}
       <div style="margin-top:26px;">${SL.title('4本の数字を、本社の<span style="color:${C.leaf};">1画面</span> に', { size: '42px' })}</div>
@@ -969,10 +969,10 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    await sync.waitFor(p, 'acc_sales'); await reveal(p, 2);
-    await sync.waitFor(p, 'acc_support'); await reveal(p, 3);
-    await sync.waitFor(p, 'acc_sub'); await reveal(p, 4);
-    await sync.waitFor(p, 'acc_camp'); await reveal(p, 5);
+    await sync.waitFor(p, 'acc_sales', 150); await reveal(p, 2);
+    await sync.waitFor(p, 'acc_support', 150); await reveal(p, 3);
+    await sync.waitFor(p, 'acc_sub', 150); await reveal(p, 4);
+    await sync.waitFor(p, 'acc_camp', 150); await reveal(p, 5);
     await wait(p, 4500); await reveal(p, 6);
     await wait(p, 3000); await reveal(p, 7);
 
@@ -986,7 +986,7 @@ const chapters = [
     await focusFlow(p, '#chanGrid', 'アカウントカード', { holdMs: 4500, scale: 1.15 });
 
     // ── 統合判断 A/B (detail_end 34.2 → end 53.0) ──
-    await sync.waitFor(p, 'detail_end');
+    await sync.waitFor(p, 'detail_end', 200);
     await slide(p, `
       ${SL.chrome('II · 02', '判断')}
       <div style="margin-top:26px;">${SL.title('統合するか、<br>4本のままか。数字を見てから決める', { size: '38px' })}</div>
@@ -1013,7 +1013,7 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1); await reveal(p, 2);
-    await sync.waitFor(p, 'decision'); await reveal(p, 3);
+    await sync.waitFor(p, 'decision', 150); await reveal(p, 3);
   }},
 
   // ═══════════════════════════════════════════════════════
@@ -1031,10 +1031,10 @@ const chapters = [
       </div>
     `);
     await reveal(p, 1); await reveal(p, 2);
-    await sync.waitFor(p, 'no_email'); await reveal(p, 3);
+    await sync.waitFor(p, 'no_email', 150); await reveal(p, 3);
 
     // ── 顧客ジャーニー 4step (rich_menu 20.3 → checkout 29.3) ──
-    await sync.waitFor(p, 'rich_menu');
+    await sync.waitFor(p, 'rich_menu', 200);
     await slide(p, `
       ${SL.chrome('III · 01', '顧客ジャーニー')}
       <div style="margin-top:26px;">${SL.title('全てが<span style="color:${C.leaf};">LINE アプリ内</span> で完結する', { size: '42px' })}</div>
@@ -1074,7 +1074,7 @@ const chapters = [
     await wait(p, 2500); await reveal(p, 3); await reveal(p, 4); await reveal(p, 5);
 
     // ── 初回のみ入力 (checkout 29.3 → no_pass 42.8) ──
-    await sync.waitFor(p, 'checkout');
+    await sync.waitFor(p, 'checkout', 200);
     await slide(p, `
       ${SL.chrome('III · 02', '入力')}
       <div style="margin-top:26px;">${SL.title('初回の<span style="color:${C.leaf};">3項目</span> だけ。<br>次回以降は自動継承', { size: '40px' })}</div>
@@ -1113,7 +1113,7 @@ const chapters = [
     await reveal(p, 2); await wait(p, 1400);
     await reveal(p, 3); await wait(p, 1400);
     await reveal(p, 4);
-    await sync.waitFor(p, 'no_pass'); await reveal(p, 5); await reveal(p, 6);
+    await sync.waitFor(p, 'no_pass', 150); await reveal(p, 5); await reveal(p, 6);
 
     // ── 実UI 定期便 (no_pass 42.8 → end 58.4) ──
     await sync.waitFor(p, 'no_pass');
@@ -1144,7 +1144,7 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2);
 
     // ── 3チャネル発行 (title_end 6.9 → data_lakes 32.3) ──
-    await sync.waitFor(p, 'title_end');
+    await sync.waitFor(p, 'title_end', 200);
     await slide(p, `
       ${SL.chrome('IV · 01', 'チャネル')}
       <div style="margin-top:26px;">${SL.title('3つの現場に、<br>別々の<span style="color:${C.leaf};">QRコード</span> を発行', { size: '42px' })}</div>
@@ -1185,13 +1185,13 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    await sync.waitFor(p, 'ch_lakes'); await reveal(p, 2);
-    await sync.waitFor(p, 'ch_expo'); await reveal(p, 3);
-    await sync.waitFor(p, 'ch_paper'); await reveal(p, 4); await reveal(p, 5); await reveal(p, 6);
-    await sync.waitFor(p, 'qr_issue'); await reveal(p, 7);
+    await sync.waitFor(p, 'ch_lakes', 150); await reveal(p, 2);
+    await sync.waitFor(p, 'ch_expo', 150); await reveal(p, 3);
+    await sync.waitFor(p, 'ch_paper', 150); await reveal(p, 4); await reveal(p, 5); await reveal(p, 6);
+    await sync.waitFor(p, 'qr_issue', 150); await reveal(p, 7);
 
     // ── LTV 比較 (data_lakes 32.3 → end 62.2) ──
-    await sync.waitFor(p, 'data_lakes');
+    await sync.waitFor(p, 'data_lakes', 200);
     await slide(p, `
       ${SL.chrome('IV · 02', 'ROI')}
       <div style="margin-top:26px;">${SL.title('平均LTV × 継続率で、<br><span style="color:${C.leaf};">投資判定</span> を数字で', { size: '40px' })}</div>
@@ -1239,8 +1239,8 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    await sync.waitFor(p, 'data_expo'); await reveal(p, 2);
-    await sync.waitFor(p, 'data_paper'); await reveal(p, 3);
+    await sync.waitFor(p, 'data_expo', 150); await reveal(p, 2);
+    await sync.waitFor(p, 'data_paper', 150); await reveal(p, 3);
   }},
 
   // ═══════════════════════════════════════════════════════
@@ -1261,7 +1261,7 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2);
 
     // ── LSTEP 代替コスト比較 (title_end 4.9 → sc_a 20.9) ──
-    await sync.waitFor(p, 'title_end');
+    await sync.waitFor(p, 'title_end', 200);
     await slide(p, `
       ${SL.chrome('V · 01', 'コスト')}
       <div style="margin-top:26px;">${SL.title('外部 LSTEP の中核機能を、<br><span style="color:${C.leaf};">追加費用なし</span> で内蔵', { size: '42px' })}</div>
@@ -1295,10 +1295,10 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    await sync.waitFor(p, 'lstep_intro'); await reveal(p, 2);
+    await sync.waitFor(p, 'lstep_intro', 150); await reveal(p, 2);
 
     // ── 3典型シナリオ (sc_a 20.9 → sc_intro_end 34.1) ──
-    await sync.waitFor(p, 'sc_a');
+    await sync.waitFor(p, 'sc_a', 200);
     await slide(p, `
       ${SL.chrome('V · 02', '典型シナリオ')}
       <div style="margin-top:26px;">${SL.title('御社で使える<br><span style="color:${C.leaf};">3つの自動配信</span> 例', { size: '40px' })}</div>
@@ -1364,11 +1364,11 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    await sync.waitFor(p, 'sc_b'); await reveal(p, 2);
-    await sync.waitFor(p, 'sc_c'); await reveal(p, 3);
+    await sync.waitFor(p, 'sc_b', 150); await reveal(p, 2);
+    await sync.waitFor(p, 'sc_c', 150); await reveal(p, 3);
 
     // ── 6標準ステップ (sc_intro_end 34.1 → steps_list 44.1) ──
-    await sync.waitFor(p, 'sc_intro_end');
+    await sync.waitFor(p, 'sc_intro_end', 200);
     await slide(p, `
       ${SL.chrome('V · 03', '部品')}
       <div style="margin-top:26px;">${SL.title('6つの<span style="color:${C.leaf};">標準ステップ</span> を、<br>マウスで縦に並べる', { size: '40px' })}</div>
@@ -1419,7 +1419,7 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2);
 
     // ── 3KPI 列挙アジェンダ (title_end 8.8 → agenda_end 29.5) ──
-    await sync.waitFor(p, 'title_end');
+    await sync.waitFor(p, 'title_end', 200);
     await slide(p, `
       ${SL.chrome('AGENDA', '3つの数字')}
       <div data-reveal="1" style="margin-top:28px;">${SL.title('6ヶ月後、<br><span style="color:${C.leaf};">3つの数字</span> に変化', { size: '48px' })}</div>
@@ -1460,7 +1460,7 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2);
 
     // ── KPI 01: 詳細 (kpi1 35.8 → kpi2 57.7) ──
-    await sync.waitFor(p, 'kpi1');
+    await sync.waitFor(p, 'kpi1', 200);
     await slide(p, `
       ${SL.chrome('KPI · 01', '6ヶ月後実測')}
       <div style="margin-top:26px;">${SL.title('販売員 1人あたり月次売上', { size: '32px' })}</div>
@@ -1488,7 +1488,7 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    await sync.waitFor(p, 'kpi1_reason'); await reveal(p, 2);
+    await sync.waitFor(p, 'kpi1_reason', 150); await reveal(p, 2);
 
     // ── 転入② 「次に、2つ目」 (kpi1_end 52.1 → kpi2 57.7) ──
     await sync.waitFor(p, 'kpi1_end', 200);
@@ -1507,7 +1507,7 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2);
 
     // ── KPI 02: 詳細 (kpi2 57.7 → kpi3 74.8) ──
-    await sync.waitFor(p, 'kpi2');
+    await sync.waitFor(p, 'kpi2', 200);
     await slide(p, `
       ${SL.chrome('KPI · 02', '6ヶ月後実測')}
       <div style="margin-top:26px;">${SL.title('定期便半年継続率', { size: '32px' })}</div>
@@ -1535,7 +1535,7 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    await sync.waitFor(p, 'kpi2_reason'); await reveal(p, 2);
+    await sync.waitFor(p, 'kpi2_reason', 150); await reveal(p, 2);
 
     // ── 転入③ 「最後に、3つ目」 (kpi2_reason 68.8 → kpi3 74.8) ──
     await wait(p, 3500);
@@ -1554,7 +1554,7 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2);
 
     // ── KPI 03: 詳細 (kpi3 74.8 → calc_setup 88.1) ──
-    await sync.waitFor(p, 'kpi3');
+    await sync.waitFor(p, 'kpi3', 200);
     await slide(p, `
       ${SL.chrome('KPI · 03', '6ヶ月後実測')}
       <div style="margin-top:26px;">${SL.title('LINE 経由購入 CVR', { size: '32px' })}</div>
@@ -1580,10 +1580,10 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    await sync.waitFor(p, 'kpi3_reason'); await reveal(p, 2);
+    await sync.waitFor(p, 'kpi3_reason', 150); await reveal(p, 2);
 
     // ── 御社インパクト計算 (calc_setup 88.1 → end 95.1) ──
-    await sync.waitFor(p, 'calc_setup');
+    await sync.waitFor(p, 'calc_setup', 200);
     await slide(p, `
       ${SL.chrome('YOUR IMPACT', '想定売上')}
       <div style="margin-top:32px;">${SL.title('御社に当てはめた場合', { size: '32px' })}</div>
@@ -1610,7 +1610,7 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    await sync.waitFor(p, 'monthly'); await reveal(p, 2);
+    await sync.waitFor(p, 'monthly', 150); await reveal(p, 2);
     await wait(p, 1600); await reveal(p, 3);
   }},
 
@@ -1628,7 +1628,7 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2);
 
     // ── PoC 条件 (title_end 6.3 → scale_end 14.6) ──
-    await sync.waitFor(p, 'title_end');
+    await sync.waitFor(p, 'title_end', 200);
     await slide(p, `
       ${SL.chrome('PHASE 1', '条件')}
       <div style="margin-top:26px;">${SL.title('実効果検証の具体条件', { size: '36px' })}</div>
@@ -1662,10 +1662,10 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    await sync.waitFor(p, 'cost'); await reveal(p, 2); await wait(p, 1500); await reveal(p, 3);
+    await sync.waitFor(p, 'cost', 150); await reveal(p, 2); await wait(p, 1500); await reveal(p, 3);
 
     // ── 4検証項目 (scale_end 14.6 → phase_after 39.3) ──
-    await sync.waitFor(p, 'scale_end');
+    await sync.waitFor(p, 'scale_end', 200);
     await slide(p, `
       ${SL.chrome('PHASE 1', '検証項目')}
       <div style="margin-top:26px;">${SL.title('3ヶ月で見ていただく<br><span style="color:${C.leaf};">4つの数字</span>', { size: '38px' })}</div>
@@ -1694,10 +1694,10 @@ const chapters = [
       </div>
       ${SL.foot}
     `);
-    await sync.waitFor(p, 'm1'); await reveal(p, 1);
-    await sync.waitFor(p, 'm2'); await reveal(p, 2);
-    await sync.waitFor(p, 'm3'); await reveal(p, 3);
-    await sync.waitFor(p, 'm4'); await reveal(p, 4);
+    await sync.waitFor(p, 'm1', 150); await reveal(p, 1);
+    await sync.waitFor(p, 'm2', 150); await reveal(p, 2);
+    await sync.waitFor(p, 'm3', 150); await reveal(p, 3);
+    await sync.waitFor(p, 'm4', 150); await reveal(p, 4);
 
     // ── Phase 後 (phase_after 39.3 → schedule 42.5) ──
     await sync.waitFor(p, 'phase_after');
