@@ -1061,7 +1061,7 @@
 <script type="module">
   import { db, uid } from '../shared/data.js';
   import { seedIfEmpty, seedForce } from '../shared/seed.js';
-  import { fmt, CHANNELS, TAG_GROUPS, filterCustomers, CAMPAIGN_KIND, CAMPAIGN_STATUS, isCampaignActive, CHANNEL_KIND, CHANNEL_STATUS, SCENARIO_TRIGGER, SCENARIO_STEP_KIND, SCENARIO_STATUS, RUN_STATUS } from '../shared/schema.js';
+  import { fmt, CHANNELS, TAG_GROUPS, filterCustomers, CAMPAIGN_KIND, CAMPAIGN_STATUS, isCampaignActive, CHANNEL_KIND, CHANNEL_STATUS, SCENARIO_TRIGGER, SCENARIO_STEP_KIND, SCENARIO_STATUS, RUN_STATUS, MESSAGE_KIND, FLEX_CARD_PRESETS } from '../shared/schema.js';
   import { requireLoggedIn, attachSignOutButton } from '../shared/auth-gate.js';
   import { getConfig } from '../shared/config.js';
   import { sendBroadcast } from '../shared/api.js';
@@ -1635,7 +1635,31 @@
         const field = inp.dataset.field;
         const val = inp.type === 'number' ? Number(inp.value) : inp.value;
         steps[idx] = { ...steps[idx], [field]: val };
+        // messageKind / flexPreset 変更 は 全体 再描画 (エディタ切替)
+        if (field === 'messageKind' || field === 'flexPreset') {
+          if (field === 'flexPreset') {
+            const preset = FLEX_CARD_PRESETS[String(val).toUpperCase()]?.example;
+            if (preset) steps[idx] = { ...steps[idx], card: JSON.parse(JSON.stringify(preset)) };
+          }
+          renderBuilder();
+          return;
+        }
+        // Card フィールド は card object 内 に 保存
+        if (field.startsWith('card') && field !== 'card') {
+          const key = field.replace(/^card/, '').replace(/^./, ch => ch.toLowerCase());
+          const cur = steps[idx].card || {};
+          if (key === 'btnLabel' || key === 'btnUri') {
+            const btn = cur.buttons?.[0] || { label:'', action:'uri', uri:'' };
+            btn[key === 'btnLabel' ? 'label' : 'uri'] = val;
+            steps[idx] = { ...steps[idx], card: { ...cur, buttons: [btn] } };
+          } else {
+            steps[idx] = { ...steps[idx], card: { ...cur, [key]: val } };
+          }
+          // Preview 更新 のため 部分再描画 (先 select 保持)
+          renderBuilder();
+        }
       }));
+      // Live preview: refresh on any card field change without renderBuilder churn (実装済 上記)
       m.querySelectorAll('[data-step-up]').forEach(b => b.addEventListener('click', () => {
         const i = Number(b.dataset.stepUp);
         [steps[i-1], steps[i]] = [steps[i], steps[i-1]];
@@ -1690,7 +1714,82 @@
       `;
     }
     if (st.kind === 'send') {
-      return `<textarea data-step-input="${i}" data-field="message" placeholder="メッセージ本文">${escapeHtml(st.message || '')}</textarea>`;
+      const msgKind = st.messageKind || 'text';
+      const kinds = Object.values(MESSAGE_KIND);
+      const kindOpts = kinds.map(k => `<option value="${k.id}" ${msgKind === k.id ? 'selected' : ''}>${k.label} — ${k.desc}</option>`).join('');
+      let editor = '';
+      if (msgKind === 'text') {
+        editor = `<textarea data-step-input="${i}" data-field="message" placeholder="平文 メッセージ本文 (最大 5000文字)" style="min-height:80px;">${escapeHtml(st.message || '')}</textarea>`;
+      } else if (msgKind === 'image') {
+        editor = `
+          <input type="url" data-step-input="${i}" data-field="imageUrl" placeholder="画像URL (例: https://sunchlorella.kyoto/img/product.jpg)" value="${escapeAttr(st.imageUrl || '')}">
+          ${st.imageUrl ? `<div style="margin-top:6px;"><img src="${escapeAttr(st.imageUrl)}" style="max-width:180px;max-height:120px;border-radius:6px;border:1px solid var(--line);" alt=""></div>` : ''}
+        `;
+      } else if (msgKind === 'flex_card') {
+        const preset = st.flexPreset || 'product';
+        const p = FLEX_CARD_PRESETS[preset.toUpperCase()]?.example || FLEX_CARD_PRESETS.PRODUCT.example;
+        const card = st.card || p;
+        const presetOpts = Object.values(FLEX_CARD_PRESETS).map(x => `<option value="${x.id}" ${preset === x.id ? 'selected' : ''}>${x.label}</option>`).join('');
+        editor = `
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+            <label style="font-size:11px;">プリセット
+              <select data-step-input="${i}" data-field="flexPreset">${presetOpts}</select>
+            </label>
+            <label style="font-size:11px;">タイトル
+              <input type="text" data-step-input="${i}" data-field="cardTitle" placeholder="カード タイトル" value="${escapeAttr(card.title || '')}">
+            </label>
+            <label style="font-size:11px;">サブタイトル
+              <input type="text" data-step-input="${i}" data-field="cardSubtitle" placeholder="サブタイトル" value="${escapeAttr(card.subtitle || '')}">
+            </label>
+            <label style="font-size:11px;">画像 URL (任意)
+              <input type="url" data-step-input="${i}" data-field="cardImageUrl" placeholder="https://..." value="${escapeAttr(card.imageUrl || '')}">
+            </label>
+            <label style="font-size:11px; grid-column: 1 / -1;">本文
+              <textarea data-step-input="${i}" data-field="cardBody" placeholder="カード 本文" style="min-height:50px;">${escapeHtml(card.body || '')}</textarea>
+            </label>
+            <label style="font-size:11px;">ボタン 表示文
+              <input type="text" data-step-input="${i}" data-field="cardBtnLabel" placeholder="例: 詳細 を 見る" value="${escapeAttr(card.buttons?.[0]?.label || '')}">
+            </label>
+            <label style="font-size:11px;">ボタン 遷移URL
+              <input type="url" data-step-input="${i}" data-field="cardBtnUri" placeholder="https://..." value="${escapeAttr(card.buttons?.[0]?.uri || '')}">
+            </label>
+          </div>
+          <div class="flex-preview" style="margin-top:8px; padding:10px; background:var(--bg-2); border-radius:8px; max-width:300px;">
+            <div style="font-size:10px; color:var(--ink-3); letter-spacing:0.14em; font-weight:700;">PREVIEW</div>
+            ${card.imageUrl ? `<img src="${escapeAttr(card.imageUrl)}" style="width:100%;max-height:120px;object-fit:cover;border-radius:6px;margin-top:6px;" alt="">` : ''}
+            <div style="font-family:inherit;font-size:14px;font-weight:800;color:var(--ink);margin-top:8px;">${escapeHtml(card.title || '（タイトル）')}</div>
+            <div style="font-size:12px;color:var(--ink-3);margin-top:2px;">${escapeHtml(card.subtitle || '')}</div>
+            <div style="font-size:13px;color:var(--ink-2);margin-top:8px;line-height:1.6;">${escapeHtml(card.body || '（本文）')}</div>
+            ${card.buttons?.[0]?.label ? `<div style="margin-top:10px;padding:8px 14px;background:var(--leaf);color:#fff;border-radius:4px;font-size:13px;font-weight:700;text-align:center;">${escapeHtml(card.buttons[0].label)}</div>` : ''}
+          </div>
+        `;
+      } else if (msgKind === 'flex_list') {
+        const items = st.listItems || [{ label: '商品 A', desc: '¥3,240' }, { label: '商品 B', desc: '¥4,860' }];
+        editor = `
+          <input type="text" data-step-input="${i}" data-field="listTitle" placeholder="リスト タイトル (例: 定期便 ラインナップ)" value="${escapeAttr(st.listTitle || '')}">
+          <textarea data-step-input="${i}" data-field="listItemsJson" placeholder='[{"label":"商品A","desc":"¥3,240"},{"label":"商品B","desc":"¥4,860"}]' style="min-height:60px;margin-top:6px;font-family:monospace;font-size:11px;">${escapeHtml(JSON.stringify(items, null, 2))}</textarea>
+          <div class="dim" style="font-size:11px;margin-top:4px;">JSON形式 で 項目 を 定義 (label + desc)</div>
+        `;
+      } else if (msgKind === 'carousel') {
+        editor = `
+          <div class="dim" style="font-size:12px;">カルーセル は 現在 JSON 直接編集 のみ (簡易 UI は 未実装)</div>
+          <textarea data-step-input="${i}" data-field="carouselJson" placeholder='[{"title":"カード1","body":"..."},{"title":"カード2","body":"..."}]' style="min-height:80px;font-family:monospace;font-size:11px;margin-top:6px;">${escapeHtml(st.carouselJson || '')}</textarea>
+        `;
+      } else if (msgKind === 'template') {
+        editor = `
+          <input type="text" data-step-input="${i}" data-field="templateId" placeholder="テンプレートID (例: welcome_msg_v1)" value="${escapeAttr(st.templateId || '')}">
+          <div class="dim" style="font-size:11px;margin-top:4px;">「メッセージ管理」画面 で 事前 に 登録 済み の テンプレ を 参照 (未実装)</div>
+        `;
+      }
+      return `
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+          <span class="dim" style="font-size:11px;">種別:</span>
+          <select data-step-input="${i}" data-field="messageKind" style="min-height:28px;padding:2px 8px;font-size:12px;">
+            ${kindOpts}
+          </select>
+        </div>
+        ${editor}
+      `;
     }
     if (st.kind === 'tag_add' || st.kind === 'tag_remove') {
       return `<input type="text" data-step-input="${i}" data-field="tagId" placeholder="タグID (例: welcome_done)" value="${escapeAttr(st.tagId || '')}">`;

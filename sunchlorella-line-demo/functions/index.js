@@ -975,6 +975,97 @@ async function startScenarioRun(tid, scenarioId, customerId) {
   return run;
 }
 
+/**
+ * Send Step の messageKind → LINE Messaging API 形式 の 配列 に 変換
+ * text / image / flex_card / flex_list / carousel / template に 対応
+ * 顧客 属性 (name/repId 等) の テンプレ変数 展開 も 対応: {{name}} → 田中幸子
+ */
+function buildLineMessages(step, customer) {
+  const kind = step.messageKind || 'text';
+  const expand = (s) => String(s || '').replace(/\{\{(\w+)\}\}/g, (_, k) => customer?.[k] ?? '');
+
+  if (kind === 'text') {
+    const text = expand(step.message);
+    if (!text) return [];
+    return [{ type: 'text', text: text.slice(0, 5000) }];
+  }
+  if (kind === 'image') {
+    if (!step.imageUrl) return [];
+    return [{ type: 'image', originalContentUrl: step.imageUrl, previewImageUrl: step.imageUrl }];
+  }
+  if (kind === 'flex_card') {
+    const card = step.card || {};
+    const bubble = {
+      type: 'bubble',
+      ...(card.imageUrl ? { hero: { type: 'image', url: card.imageUrl, size: 'full', aspectRatio: '20:13', aspectMode: 'cover' } } : {}),
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'sm',
+        contents: [
+          { type: 'text', text: expand(card.title) || '', weight: 'bold', size: 'lg', wrap: true },
+          ...(card.subtitle ? [{ type: 'text', text: expand(card.subtitle), size: 'sm', color: '#8a8a82' }] : []),
+          ...(card.body ? [{ type: 'text', text: expand(card.body), size: 'sm', wrap: true, margin: 'md' }] : []),
+        ],
+      },
+      ...(card.buttons?.length ? {
+        footer: {
+          type: 'box', layout: 'vertical', spacing: 'sm',
+          contents: card.buttons.map(b => ({
+            type: 'button', style: 'primary', color: '#1e7d3a',
+            action: b.action === 'postback'
+              ? { type: 'postback', label: b.label, data: b.data || '' }
+              : { type: 'uri', label: b.label, uri: b.uri || 'https://line.me' },
+          })),
+        },
+      } : {}),
+    };
+    return [{ type: 'flex', altText: expand(card.title) || 'メッセージが届きました', contents: bubble }];
+  }
+  if (kind === 'flex_list') {
+    const items = Array.isArray(step.listItems) ? step.listItems
+      : (() => { try { return JSON.parse(step.listItemsJson || '[]'); } catch { return []; } })();
+    if (!items.length) return [];
+    const bubble = {
+      type: 'bubble',
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'md',
+        contents: [
+          { type: 'text', text: expand(step.listTitle) || 'ラインナップ', weight: 'bold', size: 'lg' },
+          { type: 'separator', margin: 'md' },
+          ...items.map(item => ({
+            type: 'box', layout: 'horizontal', margin: 'md',
+            contents: [
+              { type: 'text', text: expand(item.label) || '', size: 'sm', flex: 3, wrap: true },
+              { type: 'text', text: expand(item.desc) || '', size: 'sm', flex: 2, align: 'end', color: '#4a4a44' },
+            ],
+          })),
+        ],
+      },
+    };
+    return [{ type: 'flex', altText: expand(step.listTitle) || 'リスト', contents: bubble }];
+  }
+  if (kind === 'carousel') {
+    let cards;
+    try { cards = JSON.parse(step.carouselJson || '[]'); } catch { cards = []; }
+    if (!cards.length) return [];
+    const bubbles = cards.map(c => ({
+      type: 'bubble',
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'sm',
+        contents: [
+          { type: 'text', text: expand(c.title) || '', weight: 'bold', size: 'md', wrap: true },
+          { type: 'text', text: expand(c.body) || '', size: 'sm', wrap: true, margin: 'md' },
+        ],
+      },
+    }));
+    return [{ type: 'flex', altText: 'カルーセル', contents: { type: 'carousel', contents: bubbles } }];
+  }
+  if (kind === 'template') {
+    // 未実装: 別 collection の messageTemplates を 引く (v2)
+    return [];
+  }
+  return [];
+}
+
 /* ─────────────────────────────────────────────────────────
  * 12b. advanceScenarioRun — 現ステップ実行 + 次ステップの nextFireAt 設定
  *      wait / send / tag_add / tag_remove / branch / end に対応
@@ -1031,9 +1122,10 @@ async function advanceScenarioRun(tid, run) {
         accessToken = p?.channelAccessToken || t?.line?.channelAccessToken;
       }
       if (c.lineUserId && accessToken) {
-        await linePush(c.lineUserId, accessToken, [{ type: 'text', text: step.message || '' }]);
+        // messageKind に 応じて LINE message object を 組み立て
+        const msgs = buildLineMessages(step, c);
+        if (msgs.length) await linePush(c.lineUserId, accessToken, msgs);
       }
-      // send は次ステップ即実行
       nextFireAt = Date.now();
     }
 

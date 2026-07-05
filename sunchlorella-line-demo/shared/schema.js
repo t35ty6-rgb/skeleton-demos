@@ -122,6 +122,57 @@ export const SCENARIO_STEP_KIND = {
   END:     { id: 'end',     label: '🏁 終了' },
 };
 
+/* ─── メッセージ種別 (send step の 拡張) ─── */
+export const MESSAGE_KIND = {
+  TEXT:      { id: 'text',      label: 'テキスト',         desc: '通常の 平文 メッセージ' },
+  IMAGE:     { id: 'image',     label: '画像',             desc: 'URL 指定 の 画像 1枚' },
+  FLEX_CARD: { id: 'flex_card', label: 'カード (Flex)',    desc: 'タイトル+本文+画像+ボタン の 単一カード' },
+  FLEX_LIST: { id: 'flex_list', label: 'リスト (Flex)',    desc: '複数 商品/情報 の リスト形式' },
+  CAROUSEL:  { id: 'carousel',  label: 'カルーセル',       desc: '横 スライド で 複数カード 表示' },
+  TEMPLATE:  { id: 'template',  label: 'テンプレート',     desc: '登録済み メッセージテンプレ から 選択' },
+};
+
+/* ─── Flex Card テンプレ (Send Step で 使い回し) ─── */
+export const FLEX_CARD_PRESETS = {
+  PRODUCT: {
+    id: 'product',
+    label: '商品紹介 カード',
+    example: {
+      title: 'クロレラ サンフォーム',
+      subtitle: '創業50年 の 主力商品',
+      imageUrl: 'https://placeholder.com/product.jpg',
+      body: '9種類 の アミノ酸 と 葉緑素 が バランス良く 含まれる 総合健康食品。',
+      buttons: [
+        { label: '詳細 を 見る', action: 'uri', uri: 'https://sunchlorella.kyoto/products/sunform' },
+      ],
+    },
+  },
+  COUPON: {
+    id: 'coupon',
+    label: 'クーポン カード',
+    example: {
+      title: '¥1,000 クーポン',
+      subtitle: '本日 より 7日間 有効',
+      body: 'このメッセージ を お会計時 に 販売員 に お見せください。',
+      buttons: [
+        { label: 'クーポン を 使う', action: 'postback', data: 'action=use_coupon' },
+      ],
+    },
+  },
+  BOOKING: {
+    id: 'booking',
+    label: '訪問予約 カード',
+    example: {
+      title: '担当販売員 の 訪問予約',
+      subtitle: '北野 誠 が お伺い します',
+      body: '来週 の ご都合 の 良い 日 を お選び ください。',
+      buttons: [
+        { label: '予約する', action: 'uri', uri: 'https://liff.line.me/booking' },
+      ],
+    },
+  },
+};
+
 export const SCENARIO_STATUS = {
   DRAFT:    { id: 'draft',    label: '下書き' },
   ACTIVE:   { id: 'active',   label: '稼働中' },
