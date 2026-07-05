@@ -217,30 +217,174 @@
   table.data td.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; }
   table.data .cust-link { cursor: pointer; color: var(--ink); font-weight: 800; }
 
-  /* Segment builder */
+  /* ═══ Segment builder (polish v2) ═══ */
   .seg-builder { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
   @media (max-width: 1000px) { .seg-builder { grid-template-columns: 1fr; } }
+  .seg-left { display: flex; flex-direction: column; gap: 14px; }
+
+  /* Group color tokens: 各セグメントカテゴリに色を与えて視認性を上げる */
   .filter-group {
     border: 1px solid var(--line); border-radius: var(--r-md);
-    padding: 14px 16px; margin-bottom: 12px; background: var(--bg);
+    padding: 14px 16px 16px; background: var(--bg);
+    border-left: 4px solid var(--gc, var(--leaf-2));
   }
+  .filter-group[data-group="AGE"]      { --gc: oklch(0.62 0.14 250); --gc-tint: oklch(0.96 0.03 250); }
+  .filter-group[data-group="PRODUCT"]  { --gc: oklch(0.55 0.15 145); --gc-tint: oklch(0.95 0.05 145); }
+  .filter-group[data-group="STATUS"]   { --gc: oklch(0.60 0.16 65);  --gc-tint: oklch(0.96 0.05 75);  }
+  .filter-group[data-group="REGION"]   { --gc: oklch(0.55 0.15 300); --gc-tint: oklch(0.96 0.04 300); }
+  .filter-group[data-group="CHANNEL"]  { --gc: oklch(0.55 0.13 200); --gc-tint: oklch(0.95 0.04 200); }
+  .filter-group[data-group="CAMPAIGN"] { --gc: oklch(0.58 0.17 25);  --gc-tint: oklch(0.96 0.05 25);  }
+  .filter-group[data-group="BEHAVIOR"] { --gc: oklch(0.55 0.14 285); --gc-tint: oklch(0.96 0.04 285); }
+  .filter-group .fg-head {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .filter-group .fg-icon {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: var(--gc-tint); color: var(--gc);
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  .filter-group .fg-icon svg { width: 15px; height: 15px; }
   .filter-group h4 {
-    font-size: 11.5px; color: var(--ink-3); letter-spacing: .06em;
-    margin-bottom: 8px; text-transform: uppercase;
+    font-size: 13px; color: var(--ink); letter-spacing: 0;
+    text-transform: none; font-weight: 800; margin: 0;
   }
+  .filter-group .fg-count {
+    font-family: var(--font-num); font-size: 11.5px; color: var(--ink-3);
+    font-weight: 700; margin-left: auto; font-variant-numeric: tabular-nums;
+  }
+  .filter-group .fg-count b { color: var(--gc); }
   .chips-row { display: flex; flex-wrap: wrap; gap: 6px; }
 
+  /* グループ色で active chip を塗り分け */
+  .filter-group .chip.on {
+    background: var(--gc); color: #fff; border-color: var(--gc);
+  }
+  .filter-group .chip:hover:not(.on) {
+    border-color: var(--gc); color: var(--gc); background: var(--gc-tint);
+  }
+
+  /* 選択中サマリ (top strip) */
+  .seg-selected {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .seg-selected .lead {
+    font-size: 12px; font-weight: 800; color: var(--ink);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .seg-selected .lead .badge-n {
+    display: inline-grid; place-items: center; min-width: 22px; height: 22px;
+    padding: 0 7px; border-radius: 999px;
+    background: var(--leaf-2); color: #fff;
+    font-family: var(--font-num); font-weight: 700; font-size: 12px;
+  }
+  .seg-selected .empty-lead { font-size: 12.5px; color: var(--ink-3); font-weight: 700; }
+  .seg-selected .pills { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; }
+  .seg-selected .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 4px 4px 10px; border-radius: 999px;
+    background: var(--gc-tint, var(--bg-2)); color: var(--gc, var(--ink-2));
+    font-size: 11.5px; font-weight: 700; letter-spacing: -.005em;
+    border: 1px solid var(--gc, var(--line));
+  }
+  .seg-selected .pill button {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    width: 18px; height: 18px; border-radius: 999px;
+    display: grid; place-items: center; color: currentColor;
+    font-size: 14px; line-height: 1; padding: 0;
+  }
+  .seg-selected .pill button:hover { background: currentColor; color: var(--paper); }
+  .seg-selected .clear-all {
+    appearance: none; border: 1px solid var(--line); background: var(--paper);
+    padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    font-size: 11.5px; font-weight: 700; color: var(--ink-2);
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-left: auto;
+  }
+  .seg-selected .clear-all:hover { border-color: var(--alert); color: var(--alert); }
+  .seg-selected .clear-all svg { width: 12px; height: 12px; }
+
+  /* プリセット (よく使うセグメント) */
+  .seg-presets {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 12px 14px;
+  }
+  .seg-presets .lead {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 800; color: var(--ink); margin-bottom: 8px;
+  }
+  .seg-presets .lead svg { width: 14px; height: 14px; color: oklch(0.60 0.16 65); }
+  .seg-presets .preset-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg-presets .preset {
+    appearance: none; cursor: pointer;
+    padding: 7px 12px; border-radius: 999px;
+    background: var(--bg-2); border: 1px solid var(--line);
+    font-size: 12px; font-weight: 700; color: var(--ink-2);
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: background .12s, border-color .12s, color .12s;
+  }
+  .seg-presets .preset:hover {
+    background: oklch(0.96 0.05 75); border-color: oklch(0.60 0.16 65);
+    color: oklch(0.42 0.12 65);
+  }
+  .seg-presets .preset .emoji { font-size: 13px; }
+
+  /* Preview (右カラム) */
   .seg-preview {
-    background: var(--bg-2); border-radius: var(--r-md); padding: 20px;
-    display: flex; flex-direction: column; gap: 14px;
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 22px 22px 20px;
+    display: flex; flex-direction: column; gap: 16px;
     position: sticky; top: 20px;
+    box-shadow: var(--shadow-1);
   }
-  .seg-count { display: flex; align-items: baseline; gap: 10px; }
+  .seg-preview .preview-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding-bottom: 14px; border-bottom: 1px dashed var(--line);
+  }
+  .seg-preview .preview-head h3 { font-size: 14px; margin: 0; }
+  .seg-preview .preview-head .n-tip {
+    font-size: 11px; color: var(--ink-3); font-weight: 600;
+  }
+  .seg-count {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  }
   .seg-count .n {
-    font-family: var(--font-num); font-weight: 700; font-size: 42px;
+    font-family: var(--font-num); font-weight: 700; font-size: 46px;
     color: var(--leaf-2); letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+    line-height: 1;
+    transition: transform .18s cubic-bezier(.2,.8,.2,1);
   }
+  .seg-count.pulse .n { transform: scale(1.06); }
   .seg-count .lbl { font-size: 13px; color: var(--ink-3); font-weight: 700; }
+  .seg-count .est {
+    margin-left: auto; font-size: 11px; color: var(--ink-3);
+    font-weight: 600; letter-spacing: .01em;
+  }
+  .seg-avatars {
+    display: flex; align-items: center; gap: 0; padding: 2px 0;
+  }
+  .seg-avatars .av {
+    width: 30px; height: 30px; border-radius: 999px;
+    background: var(--leaf-4); color: var(--leaf-2);
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 12px;
+    border: 2px solid var(--paper); margin-left: -6px;
+    font-family: var(--font-num);
+  }
+  .seg-avatars .av:first-child { margin-left: 0; }
+  .seg-avatars .more {
+    margin-left: 8px; font-size: 11.5px; color: var(--ink-3);
+    font-weight: 700; letter-spacing: -.01em;
+  }
+  .seg-empty-state {
+    padding: 24px 16px; text-align: center;
+    background: var(--bg-2); border-radius: var(--r-md);
+    color: var(--ink-3);
+  }
+  .seg-empty-state svg { width: 24px; height: 24px; color: var(--ink-4); margin-bottom: 6px; }
+  .seg-empty-state .t { font-size: 13px; font-weight: 700; color: var(--ink-2); }
+  .seg-empty-state .s { font-size: 11.5px; margin-top: 3px; }
   .seg-flex {
     background: #fff; border-radius: 12px; overflow: hidden;
     border: 1px solid var(--line); box-shadow: var(--shadow-1);
@@ -1035,9 +1179,34 @@
       <div class="pane-head"><div><h1>セグメント配信</h1><div class="sub">タグを組み合わせて対象を絞り込み、Flex Messageで配信</div></div></div>
       <div class="card">
         <div class="seg-builder">
-          <div id="segFilters"></div>
+          <div class="seg-left">
+            <!-- 選択中サマリ -->
+            <div class="seg-selected" id="segSelectedBar"></div>
+
+            <!-- プリセット -->
+            <div class="seg-presets">
+              <div class="lead">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 6.4L21 9l-5 4.6L17.4 21 12 17.6 6.6 21 8 13.6 3 9l6.6-.6z"/></svg>
+                よく使うセグメント
+              </div>
+              <div class="preset-row" id="segPresetRow"></div>
+            </div>
+
+            <!-- フィルタ グループ -->
+            <div id="segFilters"></div>
+          </div>
+
           <div class="seg-preview">
-            <div class="seg-count"><div class="n" id="segN">—</div><div class="lbl">名 / 該当</div></div>
+            <div class="preview-head">
+              <h3>この条件の該当人数</h3>
+              <span class="n-tip">タグは AND 条件で結合されます</span>
+            </div>
+            <div class="seg-count" id="segCountBox">
+              <div class="n" id="segN">—</div>
+              <div class="lbl">名 / 該当</div>
+            </div>
+            <div class="seg-avatars" id="segAvatars"></div>
+
             <div class="field"><label>送信元アカウント</label><select class="select" id="bcSourceCh"></select></div>
             <div class="field"><label>配信タイトル</label><input class="input" id="bcTitle" value="今月ご継続の皆さまへ"></div>
             <div class="field"><label>本文</label><textarea class="textarea" id="bcBody">お手元の在庫はいかがですか?次回お届けが近づいてまいりましたので、ご案内申し上げます。</textarea></div>
@@ -1737,19 +1906,138 @@
   });
 
   /* ─── Broadcast ─── */
+  // グループ アイコン (視覚化のため)
+  const SEG_GROUP_ICONS = {
+    AGE:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>',
+    PRODUCT:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>',
+    STATUS:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>',
+    REGION:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+    CHANNEL:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+    CAMPAIGN: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12l-8 8-9-9V4h7z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor"/></svg>',
+    BEHAVIOR: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+  };
+  // すべての tag → { label, group } マップを作る (選択中サマリの表示用)
+  function buildTagIndex() {
+    const idx = new Map();
+    Object.entries(TAG_GROUPS).forEach(([gk, g]) => {
+      g.tags.forEach(t => idx.set(t.id, { label: t.label, group: gk }));
+    });
+    state.channels.forEach(c => idx.set('ch:' + c.id, { label: c.name, group: 'CHANNEL' }));
+    state.campaigns.forEach(c => idx.set('camp:' + c.id, { label: c.name, group: 'CAMPAIGN' }));
+    idx.set('pref_visit', { label: '訪問継続 派',  group: 'BEHAVIOR' });
+    idx.set('pref_line',  { label: 'LINE派',       group: 'BEHAVIOR' });
+    idx.set('pref_web',   { label: '自社EC派',     group: 'BEHAVIOR' });
+    return idx;
+  }
+
+  // プリセット定義 (よく使うセグメント)
+  const SEG_PRESETS = [
+    { key: 'sub',        emoji: '📦', label: '定期便継続中',         tags: ['s_sub'] },
+    { key: 'sleep60',    emoji: '💤', label: '休眠 60日以上',         tags: ['s_sleep60'] },
+    { key: 'vip',        emoji: '💎', label: 'LTV¥100万以上',         tags: ['s_vip'] },
+    { key: 'birthmonth', emoji: '🎂', label: '誕生月クーポン対象',    tags: ['s_birthmonth'] },
+    { key: 'new30',      emoji: '🌱', label: '新規 30日以内',         tags: ['s_new30'] },
+    { key: 'plasma',     emoji: '🧠', label: 'プラズマローゲンご利用', tags: ['p_plasma'] },
+  ];
+
+  function renderSegPresets() {
+    const row = document.getElementById('segPresetRow');
+    if (!row) return;
+    row.innerHTML = SEG_PRESETS.map(p =>
+      `<button class="preset" data-preset="${p.key}"><span class="emoji">${p.emoji}</span>${p.label}</button>`
+    ).join('');
+    row.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => {
+      const p = SEG_PRESETS.find(x => x.key === b.dataset.preset);
+      if (!p) return;
+      state.segSelected = new Set(p.tags);
+      renderSegFilters();
+    }));
+  }
+
+  function renderSegSelectedBar() {
+    const bar = document.getElementById('segSelectedBar');
+    if (!bar) return;
+    const idx = buildTagIndex();
+    const sel = [...state.segSelected];
+    if (!sel.length) {
+      bar.innerHTML = `
+        <div class="empty-lead">🎯 セグメントが選択されていません — 下からタグを追加、または上のプリセットから開始</div>`;
+      return;
+    }
+    const pills = sel.map(id => {
+      const t = idx.get(id) || { label: id, group: 'STATUS' };
+      return `<span class="pill" data-group="${t.group}" style="--gc: var(--gc-${t.group}, oklch(0.55 0.15 145)); --gc-tint: var(--gc-tint-${t.group}, oklch(0.95 0.05 145));" data-tag-remove="${id}">
+        ${escapeHtml(t.label)}
+        <button aria-label="削除" title="この条件を外す">×</button>
+      </span>`;
+    }).join('');
+    bar.innerHTML = `
+      <span class="lead"><span class="badge-n">${sel.length}</span>条件</span>
+      <div class="pills">${pills}</div>
+      <button class="clear-all" id="segClearAll">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        すべて解除
+      </button>`;
+    // Pill colors — inline vars per group
+    bar.querySelectorAll('.pill[data-group]').forEach(p => {
+      const g = p.dataset.group;
+      const el = document.querySelector(`.filter-group[data-group="${g}"]`);
+      if (el) {
+        const cs = getComputedStyle(el);
+        p.style.setProperty('--gc', cs.getPropertyValue('--gc').trim() || 'oklch(0.55 0.15 145)');
+        p.style.setProperty('--gc-tint', cs.getPropertyValue('--gc-tint').trim() || 'oklch(0.95 0.05 145)');
+      }
+    });
+    bar.querySelectorAll('[data-tag-remove]').forEach(b => b.querySelector('button').addEventListener('click', () => {
+      state.segSelected.delete(b.dataset.tagRemove);
+      renderSegFilters();
+    }));
+    document.getElementById('segClearAll')?.addEventListener('click', () => {
+      state.segSelected.clear(); renderSegFilters();
+    });
+  }
+
+  // 各グループでの選択数を数えるヘルパ
+  function groupSelectedCount(groupKey, tags) {
+    return [...state.segSelected].filter(id => {
+      if (groupKey === 'CHANNEL')  return id.startsWith('ch:');
+      if (groupKey === 'CAMPAIGN') return id.startsWith('camp:');
+      if (groupKey === 'BEHAVIOR') return ['pref_visit','pref_line','pref_web'].includes(id);
+      return tags.some(t => t.id === id);
+    }).length;
+  }
+
   function renderSegFilters() {
+    // 選択中サマリ とプリセットも同時に更新
+    renderSegSelectedBar();
+    renderSegPresets();
+
     let html = '';
-    Object.values(TAG_GROUPS).forEach(g => {
-      html += `<div class="filter-group"><h4>${g.label}</h4><div class="chips-row">`;
+    Object.entries(TAG_GROUPS).forEach(([gk, g]) => {
+      const sc = groupSelectedCount(gk, g.tags);
+      html += `<div class="filter-group" data-group="${gk}">
+        <div class="fg-head">
+          <span class="fg-icon">${SEG_GROUP_ICONS[gk] || ''}</span>
+          <h4>${g.label}</h4>
+          <span class="fg-count">${sc ? `<b>${sc}</b>/${g.tags.length} 選択中` : `${g.tags.length} 件`}</span>
+        </div>
+        <div class="chips-row">`;
       g.tags.forEach(t => {
         const on = state.segSelected.has(t.id);
         html += `<button class="chip ${on?'on':''}" data-tag="${t.id}">${t.label}</button>`;
       });
       html += `</div></div>`;
     });
-    // 獲得アカウント (どの公式LINEアカから友達追加されたか)
+    // 獲得アカウント
     if (state.channels.length) {
-      html += `<div class="filter-group"><h4>獲得公式アカウント</h4><div class="chips-row">`;
+      const sc = groupSelectedCount('CHANNEL', []);
+      html += `<div class="filter-group" data-group="CHANNEL">
+        <div class="fg-head">
+          <span class="fg-icon">${SEG_GROUP_ICONS.CHANNEL}</span>
+          <h4>獲得公式アカウント</h4>
+          <span class="fg-count">${sc ? `<b>${sc}</b>/${state.channels.length} 選択中` : `${state.channels.length} 件`}</span>
+        </div>
+        <div class="chips-row">`;
       state.channels.forEach(c => {
         const tagId = 'ch:' + c.id;
         const on = state.segSelected.has(tagId);
@@ -1757,9 +2045,16 @@
       });
       html += `</div></div>`;
     }
-    // キャンペーン別 (実装済み acquisition タグ)
+    // 獲得キャンペーン
     if (state.campaigns.length) {
-      html += `<div class="filter-group"><h4>獲得キャンペーン</h4><div class="chips-row">`;
+      const sc = groupSelectedCount('CAMPAIGN', []);
+      html += `<div class="filter-group" data-group="CAMPAIGN">
+        <div class="fg-head">
+          <span class="fg-icon">${SEG_GROUP_ICONS.CAMPAIGN}</span>
+          <h4>獲得キャンペーン</h4>
+          <span class="fg-count">${sc ? `<b>${sc}</b>/${state.campaigns.length} 選択中` : `${state.campaigns.length} 件`}</span>
+        </div>
+        <div class="chips-row">`;
       state.campaigns.forEach(c => {
         const tagId = 'camp:' + c.id;
         const on = state.segSelected.has(tagId);
@@ -1767,12 +2062,22 @@
       });
       html += `</div></div>`;
     }
-    // 行動タグ (autoTags で自動計算)
-    html += `<div class="filter-group"><h4>行動パターン (自動判定)</h4><div class="chips-row">
-      <button class="chip ${state.segSelected.has('pref_visit')?'on':''}" data-tag="pref_visit">訪問継続 派</button>
-      <button class="chip ${state.segSelected.has('pref_line')?'on':''}"  data-tag="pref_line">LINE派</button>
-      <button class="chip ${state.segSelected.has('pref_web')?'on':''}"   data-tag="pref_web">自社EC派</button>
-    </div></div>`;
+    // 行動パターン
+    {
+      const sc = groupSelectedCount('BEHAVIOR', []);
+      html += `<div class="filter-group" data-group="BEHAVIOR">
+        <div class="fg-head">
+          <span class="fg-icon">${SEG_GROUP_ICONS.BEHAVIOR}</span>
+          <h4>行動パターン <span style="font-weight:600; color:var(--ink-3); font-size:11px;">(自動判定)</span></h4>
+          <span class="fg-count">${sc ? `<b>${sc}</b>/3 選択中` : `3 件`}</span>
+        </div>
+        <div class="chips-row">
+          <button class="chip ${state.segSelected.has('pref_visit')?'on':''}" data-tag="pref_visit">訪問継続 派</button>
+          <button class="chip ${state.segSelected.has('pref_line')?'on':''}"  data-tag="pref_line">LINE派</button>
+          <button class="chip ${state.segSelected.has('pref_web')?'on':''}"   data-tag="pref_web">自社EC派</button>
+        </div>
+      </div>`;
+    }
     document.getElementById('segFilters').innerHTML = html;
     // 送信元アカウント セレクターも同期
     const src = document.getElementById('bcSourceCh');
@@ -1782,22 +2087,49 @@
       ).join('');
       src.onchange = () => { state.bcSourceChannelId = src.value; renderSegPreview(); };
     }
-    document.querySelectorAll('[data-tag]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#segFilters [data-tag]').forEach(b => b.addEventListener('click', () => {
       const t = b.dataset.tag;
       if (state.segSelected.has(t)) state.segSelected.delete(t);
       else state.segSelected.add(t);
       renderSegFilters();
-      renderSegPreview();
     }));
+    // 再描画後、pill の色を反映させるため selected bar を再度色付け
+    renderSegSelectedBar();
     renderSegPreview();
   }
   function renderSegPreview() {
     const tags = [...state.segSelected];
     const matched = filterCustomers(state.customers, tags, state.orders, state.subs);
-    // Extrapolate to a demo-scale friend count (baseline 6000 per customer, adjusted by tag count)
+    // Extrapolate to a demo-scale friend count (baseline 260 per customer, base 120)
     const n = Math.max(matched.length, Math.round(matched.length * 260 + 120));
-    document.getElementById('segN').textContent = n.toLocaleString('ja-JP');
-    document.getElementById('btnBcSend').textContent = n.toLocaleString('ja-JP') + '名に配信';
+    const segN = document.getElementById('segN');
+    const prev = segN.textContent;
+    const next = n.toLocaleString('ja-JP');
+    segN.textContent = next;
+    if (prev !== next) {
+      const box = document.getElementById('segCountBox');
+      box?.classList.add('pulse');
+      setTimeout(() => box?.classList.remove('pulse'), 220);
+    }
+    document.getElementById('btnBcSend').textContent = next + '名に配信';
+
+    // Avatar プレビュー (実データからサンプル抽出)
+    const av = document.getElementById('segAvatars');
+    if (av) {
+      const sample = matched.slice(0, 5);
+      if (!sample.length) {
+        av.innerHTML = `<div class="seg-empty-state" style="width:100%;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          <div class="t">該当するお客さまがいません</div>
+          <div class="s">タグを外すか、別の条件を選んでください</div>
+        </div>`;
+      } else {
+        av.innerHTML = sample.map(c =>
+          `<div class="av" title="${escapeHtml(c.name)}">${escapeHtml(c.name[0])}</div>`
+        ).join('') + (matched.length > 5 ? `<span class="more">他 ${(matched.length - 5).toLocaleString('ja-JP')}名</span>` : '');
+      }
+    }
+
     // Sync flex
     document.getElementById('bcHero').textContent = document.getElementById('bcTitle').value || '—';
     document.getElementById('bcH4').textContent = (document.getElementById('bcBody').value || '').split('。')[0] || '—';
