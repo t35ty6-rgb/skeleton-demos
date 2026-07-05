@@ -477,6 +477,135 @@ input,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 /* Hide old chat panel visually; the drawer takes over */
 .chat{display:none !important}
 
+/* ==== SETTINGS / SETUP WIZARD ==== */
+.setup-scrim{
+  position:fixed;inset:0;background:rgba(6,8,12,0.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  display:none;place-items:center;padding:20px;z-index:95;
+  opacity:0;transition:opacity 240ms var(--ease-out);
+}
+.setup-scrim.show{display:grid;opacity:1}
+.setup{
+  background:var(--panel);border-radius:24px;max-width:640px;width:100%;max-height:92vh;
+  overflow:hidden;box-shadow:var(--elev-3);display:flex;flex-direction:column;
+  transform:translateY(20px) scale(0.96);opacity:0;
+  transition:transform 340ms var(--ease-spring), opacity 240ms var(--ease-out);
+}
+.setup-scrim.show .setup{transform:translateY(0) scale(1);opacity:1}
+@media (prefers-reduced-motion:reduce){.setup-scrim,.setup{transition:opacity 100ms}}
+
+.setup-head{
+  padding:22px 26px 18px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:16px;flex-shrink:0;
+}
+.setup-head .ic{
+  width:44px;height:44px;border-radius:12px;background:var(--sys);color:var(--ink);
+  display:grid;place-items:center;flex-shrink:0;
+}
+.setup-head .ic svg{width:22px;height:22px}
+.setup-head .info{flex:1;min-width:0}
+.setup-head h2{font-size:18px;font-weight:800;letter-spacing:0.005em;line-height:1.35}
+.setup-head .sub{font-size:12.5px;color:var(--ink-3);margin-top:3px;line-height:1.55}
+.setup-close{
+  width:36px;height:36px;border-radius:50%;background:none;border:0;cursor:pointer;
+  color:var(--ink-3);font-size:20px;line-height:1;display:grid;place-items:center;
+}
+.setup-close:hover{background:var(--sys);color:var(--ink)}
+
+.setup-body{
+  flex:1;overflow-y:auto;padding:20px 26px;display:flex;flex-direction:column;gap:22px;
+}
+
+.setup-section{display:flex;flex-direction:column;gap:12px}
+.setup-section h3{
+  font-family:var(--num);font-size:11px;font-weight:800;color:var(--line-green-2);
+  letter-spacing:0.14em;text-transform:uppercase;display:flex;align-items:center;gap:8px;
+}
+.setup-section h3::before{content:"";width:14px;height:1px;background:var(--line-green-2)}
+.setup-section h3 .req{
+  font-family:var(--num);font-size:9.5px;font-weight:800;color:var(--alert);
+  padding:2px 6px;background:var(--alert-tint);border-radius:6px;letter-spacing:0.06em;
+}
+
+.setup-field{display:flex;flex-direction:column;gap:5px}
+.setup-field label{
+  font-size:12.5px;font-weight:700;color:var(--ink-2);letter-spacing:0.005em;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.setup-field label .status{
+  font-family:var(--num);font-size:10.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;
+  padding:2px 8px;border-radius:8px;
+}
+.setup-field label .status.set{background:var(--line-green-tint);color:var(--line-green-2)}
+.setup-field label .status.unset{background:var(--alert-tint);color:var(--alert)}
+.setup-field label .status.optional{background:rgba(122,128,144,0.14);color:var(--ink-3)}
+.setup-field input{
+  padding:11px 14px;background:var(--sys);border:1.5px solid transparent;border-radius:10px;
+  font-family:var(--num);font-size:13px;color:var(--ink);font-weight:600;
+  transition:border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  min-height:44px;
+}
+.setup-field input:focus{outline:none;background:var(--panel);border-color:var(--line-green)}
+.setup-field input::placeholder{color:var(--ink-3);font-weight:500}
+.setup-field .hint{font-size:11.5px;color:var(--ink-3);line-height:1.55;font-weight:500}
+.setup-field .hint a{color:var(--line-green-2);font-weight:700;text-decoration:underline}
+.setup-field .hint code{
+  font-family:var(--num);background:var(--sys);padding:1px 6px;border-radius:4px;
+  font-size:11px;font-weight:600;color:var(--ink-2);
+}
+
+.setup-msg{padding:14px 16px;border-radius:12px;font-size:13px;line-height:1.6;font-weight:500;display:flex;gap:10px;align-items:flex-start}
+.setup-msg::before{content:"";width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:1px;display:grid;place-items:center;font-family:var(--num);font-size:11px;font-weight:800}
+.setup-msg.info{background:var(--line-green-tint);color:var(--line-green-2)}
+.setup-msg.info::before{content:"i";background:var(--line-green);color:#FFF}
+.setup-msg.warn{background:var(--amber-tint);color:var(--amber-deep)}
+.setup-msg.warn::before{content:"!";background:var(--amber-deep);color:#FFF}
+.setup-msg.error{background:var(--alert-tint);color:var(--alert)}
+.setup-msg.error::before{content:"×";background:var(--alert);color:#FFF}
+
+.setup-foot{
+  padding:16px 26px 22px;background:linear-gradient(180deg, transparent, rgba(15,17,20,0.02));
+  display:flex;gap:12px;justify-content:space-between;align-items:center;flex-shrink:0;
+  border-top:1px solid var(--line);
+}
+.setup-foot .link{font-size:12px;color:var(--ink-3);font-weight:600;text-decoration:underline;cursor:pointer;background:none;border:0;padding:6px}
+.setup-foot .link:hover{color:var(--ink)}
+.setup-foot .actions{display:flex;gap:10px}
+.setup-btn{
+  min-height:48px;padding:12px 22px;border-radius:12px;font-family:inherit;
+  font-size:14px;font-weight:800;letter-spacing:0.005em;cursor:pointer;border:0;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.setup-btn:active{transform:scale(0.97)}
+.setup-btn.primary{
+  background:linear-gradient(180deg,var(--line-green),var(--line-green-2));color:#FFF;
+  box-shadow:0 2px 4px rgba(4,163,68,0.28), 0 8px 20px -6px rgba(4,163,68,0.44), inset 0 1px 0 rgba(255,255,255,0.24);
+}
+.setup-btn.primary:hover{box-shadow:0 4px 8px rgba(4,163,68,0.32), 0 12px 28px -6px rgba(4,163,68,0.52), inset 0 1px 0 rgba(255,255,255,0.28)}
+.setup-btn.primary:disabled{background:var(--mute);cursor:not-allowed;box-shadow:none}
+.setup-btn.secondary{background:var(--sys);color:var(--ink-2)}
+.setup-btn.secondary:hover{background:rgba(15,17,20,0.08);color:var(--ink)}
+.setup-btn .spin{
+  display:inline-block;width:14px;height:14px;border:2.2px solid rgba(255,255,255,0.28);border-top-color:#FFF;
+  border-radius:50%;animation:spin 700ms linear infinite;
+}
+
+/* Cockpit header settings gear button */
+.ck-settings-btn{
+  min-height:44px;min-width:44px;padding:10px;border-radius:12px;
+  color:var(--ink-3);border:0;background:transparent;cursor:pointer;
+  display:grid;place-items:center;
+  transition:background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.ck-settings-btn:hover{background:var(--sys);color:var(--ink)}
+.ck-settings-btn svg{width:20px;height:20px}
+.ck-settings-btn.pulse{color:var(--amber-deep);background:var(--amber-tint)}
+.ck-settings-btn.pulse::after{
+  content:"要 設定";
+  font-family:var(--num);font-size:9px;font-weight:800;letter-spacing:0.06em;
+  padding:2px 6px;background:var(--amber-deep);color:#FFF;border-radius:6px;margin-left:6px;
+}
+
 /* Adjust responsive */
 @media (max-width:1024px){
   .app{grid-template-columns:280px 1fr}
@@ -1525,6 +1654,12 @@ input,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
         </div>
         <div class="meta" id="ck-meta"></div>
       </div>
+      <button type="button" class="ck-settings-btn" id="ck-settings-btn" aria-label="設定 を 開く" title="設定">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
       <button type="button" class="ck-chat-toggle" id="ck-chat-toggle" aria-label="LINE トーク を 開く">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2">
           <path d="M4 4h16v12H8l-4 4z"/>
@@ -1739,6 +1874,36 @@ input,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
         <!-- injected -->
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ===== SETUP WIZARD + SETTINGS MODAL ===== -->
+<div class="setup-scrim" id="setup-scrim" role="dialog" aria-modal="true" aria-labelledby="setup-title">
+  <div class="setup">
+    <header class="setup-head">
+      <div class="ic" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </div>
+      <div class="info">
+        <h2 id="setup-title">設定</h2>
+        <div class="sub" id="setup-sub">LINE と Zoom の credential を 入れる と 実運用 開始</div>
+      </div>
+      <button type="button" class="setup-close" id="setup-close" aria-label="閉じる">×</button>
+    </header>
+    <div class="setup-body" id="setup-body">
+      <!-- injected: setup wizard or settings form -->
+    </div>
+    <footer class="setup-foot">
+      <button type="button" class="link" id="setup-signout" style="display:none">ログアウト</button>
+      <div style="flex:1"></div>
+      <div class="actions" id="setup-actions">
+        <button type="button" class="setup-btn secondary" id="setup-cancel">閉じる</button>
+        <button type="button" class="setup-btn primary" id="setup-save">保存</button>
+      </div>
+    </footer>
   </div>
 </div>
 
@@ -3637,29 +3802,286 @@ handleMinuteAction = async function(action, t, idx){
   if (action === 'pdf') { showToast('PDF 生成 は Phase 1b'); return; }
 };
 
+/* =============================
+   SETUP WIZARD / SETTINGS
+   ============================= */
+const LS_API_URL = 'skel-api-url';
+const LS_TOKEN = 'skel-token';
+
+function getApiUrl(){ return (window.__API_URL__ || localStorage.getItem(LS_API_URL) || '').trim(); }
+function getAdminToken(){ return (window.__ADMIN_TOKEN__ || localStorage.getItem(LS_TOKEN) || '').trim(); }
+function setApiUrl(v){ localStorage.setItem(LS_API_URL, (v || '').trim()); CFG.API_URL = getApiUrl(); }
+function setAdminToken(v){ localStorage.setItem(LS_TOKEN, (v || '').trim()); CFG.ADMIN_TOKEN = getAdminToken(); }
+
+async function bootstrapCall(apiUrl){
+  const res = await fetch(apiUrl + '?type=bootstrap', {
+    method:'POST', mode:'cors', headers:{'Content-Type':'application/json'}, body:'{}', redirect:'follow',
+  });
+  const j = await res.json();
+  return j;
+}
+
+async function fetchGetConfig(){
+  return await apiCall('get-config');
+}
+async function fetchCheckConfig(){
+  return await apiCall('check-config');
+}
+async function saveConfig(values){
+  return await apiCall('set-config', { values });
+}
+
+let setupContext = { mode: 'setup' };  // 'setup' | 'settings'
+
+function openSetupWizard(){
+  setupContext.mode = 'setup';
+  const api = getApiUrl();
+  $('#setup-title').textContent = '初回 セットアップ';
+  $('#setup-sub').textContent = 'Web App URL を 入れて 「初期化 する」 を 押す だけ';
+  $('#setup-body').innerHTML = `
+    <div class="setup-msg info">
+      Apps Script で <b>Web アプリ として デプロイ</b> して 「全員」 アクセス に した URL (末尾 <code>/exec</code>) を 貼って ください。
+      <br>初期化 で <b>ADMIN_TOKEN</b> と <b>Google Sheets (4 タブ)</b> が 自動 で 生成 されます。
+    </div>
+    <div class="setup-section">
+      <h3>接続 先 <span class="req">必須</span></h3>
+      <div class="setup-field">
+        <label>GAS Web App URL <span class="status ${api ? 'set' : 'unset'}">${api ? '入力済' : '未入力'}</span></label>
+        <input type="url" id="setup-api-url" placeholder="https://script.google.com/macros/s/AKfy.../exec" value="${api}">
+        <div class="hint">Apps Script → デプロイ → 「新しい デプロイ」 → 種類 「ウェブ アプリ」 → 実行 「自分」 / アクセス 「全員」 → デプロイ 後 の URL</div>
+      </div>
+    </div>
+    <div class="setup-msg warn" id="setup-msg" style="display:none"></div>
+  `;
+  $('#setup-actions').innerHTML = `
+    <button type="button" class="setup-btn secondary" id="setup-cancel">キャンセル</button>
+    <button type="button" class="setup-btn primary" id="setup-bootstrap">初期化 する</button>
+  `;
+  $('#setup-signout').style.display = 'none';
+  bindSetupButtons();
+  $('#setup-scrim').classList.add('show');
+}
+
+async function openSettings(){
+  setupContext.mode = 'settings';
+  const api = getApiUrl();
+  const token = getAdminToken();
+  if (!api || !token) { openSetupWizard(); return; }
+  $('#setup-title').textContent = '設定';
+  $('#setup-sub').textContent = 'LINE + Zoom の credential を 入れる と 実運用 開始';
+  $('#setup-body').innerHTML = `<div style="text-align:center;padding:32px;color:var(--ink-3)">設定 読み込み 中…</div>`;
+  $('#setup-actions').innerHTML = `
+    <button type="button" class="setup-btn secondary" id="setup-cancel">閉じる</button>
+    <button type="button" class="setup-btn primary" id="setup-save"><span id="setup-save-lbl">保存</span></button>
+  `;
+  $('#setup-signout').style.display = '';
+  bindSetupButtons();
+  $('#setup-scrim').classList.add('show');
+  try {
+    const cfg = await fetchGetConfig();
+    const check = await fetchCheckConfig();
+    renderSettingsForm(cfg.fields, check);
+  } catch(e) {
+    $('#setup-body').innerHTML = `<div class="setup-msg error">設定 取得 失敗: ${e.message}<br>Token 誤り の 場合 は 「ログアウト」 → 再 セットアップ</div>`;
+  }
+}
+
+function renderSettingsForm(fields, check){
+  const grouped = {};
+  fields.forEach(f => { (grouped[f.category] = grouped[f.category] || []).push(f); });
+  const order = ['LINE','Zoom','LIFF','General'];
+  const html = order.filter(c => grouped[c]).map(cat => `
+    <div class="setup-section">
+      <h3>${cat}${grouped[cat].some(f => f.required && !f.set) ? ' <span class="req">未設定 あり</span>' : ''}</h3>
+      ${grouped[cat].map(f => `
+        <div class="setup-field">
+          <label for="fld-${f.key}">
+            ${f.label}
+            <span class="status ${f.set ? 'set' : (f.required ? 'unset' : 'optional')}">${f.set ? '設定済' : (f.required ? '未設定' : '任意')}</span>
+          </label>
+          <input type="${f.secret ? 'password' : 'text'}" id="fld-${f.key}" name="${f.key}" placeholder="${f.placeholder || (f.set ? '(変更 する 時 だけ 入力)' : '')}" value="${f.set && f.secret ? '' : escapeAttr(f.value)}" autocomplete="off">
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+  const status = check && check.ready
+    ? `<div class="setup-msg info">全 必須項目 設定済 · <a href="${check.sheetUrl}" target="_blank">Google Sheets を 開く</a> · Cockpit で 客一覧 が 表示 されます</div>`
+    : `<div class="setup-msg warn">未設定 の 必須項目: ${(check.missing || []).join(', ') || '—'}<br>これらを 入れて 「保存」 を 押す と 実運用 に 切り替わり ます</div>`;
+  $('#setup-body').innerHTML = status + html;
+}
+
+function escapeAttr(s){ return String(s || '').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function bindSetupButtons(){
+  $('#setup-close').onclick = closeSetup;
+  $('#setup-cancel').onclick = closeSetup;
+  const boot = $('#setup-bootstrap');
+  if (boot) boot.onclick = async () => {
+    const url = ($('#setup-api-url').value || '').trim().replace(/\/$/,'');
+    if (!url) { showSetupMsg('URL を 入力 して ください', 'error'); return; }
+    const cleanUrl = url.endsWith('/exec') ? url : url + '/exec';
+    boot.disabled = true; boot.innerHTML = '<span class="spin"></span>初期化 中…';
+    try {
+      const j = await bootstrapCall(cleanUrl);
+      if (!j.ok) {
+        if (j.bootstrapped) {
+          // Already bootstrapped — need existing ADMIN_TOKEN
+          setApiUrl(cleanUrl);
+          showSetupMsg('この URL は 既に 初期化 済み です。 ADMIN_TOKEN を 入れて ください。', 'warn');
+          promptForToken(cleanUrl);
+          return;
+        }
+        throw new Error(j.error || 'bootstrap 失敗');
+      }
+      setApiUrl(cleanUrl);
+      setAdminToken(j.adminToken);
+      showToast('初期化 完了 · Sheet 自動作成');
+      await openSettings();
+    } catch(e) {
+      showSetupMsg('初期化 失敗: ' + e.message, 'error');
+      boot.disabled = false; boot.innerHTML = '初期化 する';
+    }
+  };
+  const save = $('#setup-save');
+  if (save) save.onclick = async () => {
+    const inputs = document.querySelectorAll('#setup-body input');
+    const values = {};
+    inputs.forEach(i => { if (i.name && i.value.trim()) values[i.name] = i.value.trim(); });
+    const lbl = $('#setup-save-lbl');
+    save.disabled = true; if (lbl) lbl.textContent = '保存 中…';
+    try {
+      const j = await saveConfig(values);
+      showToast('設定 保存 済 (' + (j.changed || []).length + ' 件 更新)');
+      await openSettings();  // refresh
+      // If all required are now set, attempt to boot the app
+      const check = await fetchCheckConfig();
+      if (check.ready && state.size === 0) {
+        const ok = await bootRemote();
+        if (ok) { renderThreads(); await refreshCustomer(currentId); renderChat(); startPolling(); }
+      }
+    } catch(e) {
+      showSetupMsg('保存 失敗: ' + e.message, 'error');
+    } finally {
+      save.disabled = false; if (lbl) lbl.textContent = '保存';
+    }
+  };
+  $('#setup-signout').onclick = () => {
+    if (!confirm('ログアウト しますか (localStorage の Token を 削除)')) return;
+    localStorage.removeItem(LS_TOKEN);
+    localStorage.removeItem(LS_API_URL);
+    CFG.API_URL = ''; CFG.ADMIN_TOKEN = '';
+    location.reload();
+  };
+}
+
+function promptForToken(apiUrl){
+  $('#setup-body').innerHTML = `
+    <div class="setup-msg info">
+      この Web App は 既に 初期化 されて います。
+      Apps Script → プロジェクト 設定 → スクリプト プロパティ で 見られる <b>ADMIN_TOKEN</b> を 貼って ください。
+    </div>
+    <div class="setup-section">
+      <h3>認証 <span class="req">必須</span></h3>
+      <div class="setup-field">
+        <label>ADMIN_TOKEN</label>
+        <input type="password" id="fld-token" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+      </div>
+    </div>
+  `;
+  $('#setup-actions').innerHTML = `
+    <button type="button" class="setup-btn secondary" id="setup-cancel">キャンセル</button>
+    <button type="button" class="setup-btn primary" id="setup-token-save">続行</button>
+  `;
+  $('#setup-cancel').onclick = closeSetup;
+  $('#setup-token-save').onclick = async () => {
+    const v = ($('#fld-token').value || '').trim();
+    if (!v) { showSetupMsg('Token を 入力 して ください', 'error'); return; }
+    setAdminToken(v);
+    try {
+      await apiCall('check-config');
+      showToast('認証 成功');
+      await openSettings();
+    } catch(e) {
+      showSetupMsg('Token 誤り: ' + e.message, 'error');
+      setAdminToken('');
+    }
+  };
+}
+
+function showSetupMsg(text, level){
+  const el = $('#setup-msg');
+  if (el) { el.textContent = text; el.className = 'setup-msg ' + (level || 'warn'); el.style.display = ''; }
+  else {
+    // Insert dynamically
+    $('#setup-body').insertAdjacentHTML('afterbegin', `<div class="setup-msg ${level || 'warn'}">${text}</div>`);
+  }
+}
+function closeSetup(){ $('#setup-scrim').classList.remove('show'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#setup-scrim').classList.contains('show')) closeSetup(); });
+$('#setup-scrim').addEventListener('click', e => { if (e.target === $('#setup-scrim')) closeSetup(); });
+$('#ck-settings-btn').onclick = openSettings;
+
 /* ---------- Init ---------- */
 async function init(){
   bindActionBar();
   updateSendState();
-  if (REMOTE) {
-    try {
-      const ok = await bootRemote();
-      if (ok) {
-        renderThreads();
-        await refreshCustomer(currentId);
-        renderChat();
-        startPolling();
-        showToast('サーバー 接続 済 · ' + state.size + ' 客');
-        return;
-      }
-    } catch(e) {
-      console.error(e);
-      showToast('API 接続 失敗、 デモ で 起動: ' + e.message);
-      // fall through to local demo
-    }
+
+  // Detect: has API_URL been configured?
+  CFG.API_URL = getApiUrl();
+  CFG.ADMIN_TOKEN = getAdminToken();
+  if (!CFG.API_URL) {
+    // No API URL yet → open setup wizard, show demo data behind it
+    renderThreads();
+    renderChat();
+    $('#ck-settings-btn').classList.add('pulse');
+    setTimeout(() => openSetupWizard(), 400);
+    return;
   }
-  renderThreads();
-  renderChat();
+
+  // Have API URL. Check config readiness first (no token needed for check if token missing, but check-config requires token).
+  if (!CFG.ADMIN_TOKEN) {
+    renderThreads();
+    renderChat();
+    $('#ck-settings-btn').classList.add('pulse');
+    setTimeout(() => promptForToken(CFG.API_URL), 400);
+    $('#setup-scrim').classList.add('show');
+    return;
+  }
+
+  // Try boot from remote
+  try {
+    const check = await fetchCheckConfig();
+    if (!check.ready) {
+      renderThreads();
+      renderChat();
+      $('#ck-settings-btn').classList.add('pulse');
+      setTimeout(() => openSettings(), 400);
+      return;
+    }
+    const ok = await bootRemote();
+    if (ok) {
+      renderThreads();
+      await refreshCustomer(currentId);
+      renderChat();
+      startPolling();
+      showToast('サーバー 接続 済 · ' + state.size + ' 客');
+      return;
+    } else {
+      // No customers yet — still show cockpit with empty state
+      renderThreads();
+      renderChat();
+      startPolling();
+      showToast('接続 済 · 客 が 追加 されると 一覧 に 出ます');
+      return;
+    }
+  } catch(e) {
+    console.error(e);
+    renderThreads();
+    renderChat();
+    $('#ck-settings-btn').classList.add('pulse');
+    showToast('API 接続 失敗: ' + e.message);
+    setTimeout(() => openSettings(), 400);
+  }
 }
 init();
 </script>
