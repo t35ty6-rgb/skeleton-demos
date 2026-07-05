@@ -552,11 +552,15 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 .spot-sheet-actions .spot-scan:disabled{background:oklch(0.78 0.006 70);color:var(--paper);cursor:not-allowed;box-shadow:none}
 .spot-sheet-actions .spot-map{background:oklch(0.99 0.003 82);color:var(--ink);border:1.5px solid var(--ink);box-shadow:0 1px 0 var(--ink),0 2px 6px -2px oklch(0 0 0 / .15)}
 .spot-sheet-actions .spot-map:hover{background:var(--ink);color:var(--paper)}
-.spot-sheet-demo{margin-top:10px;width:100%;padding:12px 14px;font-size:12.5px;font-weight:900;cursor:pointer;font-family:inherit;border-radius:3px;letter-spacing:.02em;background:oklch(0.94 0.03 155);color:oklch(0.32 0.08 165);border:1.5px dashed oklch(0.5 0.09 165);transition:background .2s,color .2s}
-.spot-sheet-demo:hover{background:oklch(0.5 0.09 165);color:var(--paper)}
-.spot-sheet-demo:disabled{opacity:.5;cursor:not-allowed}
-.spot-sheet-demo .lbl{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 6px;background:oklch(0.5 0.09 165);color:var(--paper);border-radius:2px;margin-right:6px;letter-spacing:.06em}
-.spot-sheet-demo:hover .lbl{background:var(--paper);color:oklch(0.32 0.08 165)}
+.spot-sheet-demo-wrap{margin-top:14px;padding:12px 14px 14px;background:oklch(0.98 0.008 155 / .6);border:1.5px dashed oklch(0.5 0.09 165);border-radius:3px}
+.spot-sheet-demo-title{font-size:11px;font-weight:900;color:oklch(0.32 0.08 165);margin-bottom:8px;display:flex;align-items:center;gap:6px;letter-spacing:.02em}
+.spot-sheet-demo-title .lbl{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 7px;background:oklch(0.5 0.09 165);color:var(--paper);border-radius:2px;letter-spacing:.08em}
+.spot-sheet-demo-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.spot-sheet-demo-row button{padding:11px 10px;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;border-radius:2px;letter-spacing:.02em;background:var(--paper);color:oklch(0.32 0.08 165);border:1.5px solid oklch(0.5 0.09 165);transition:background .2s,color .2s;touch-action:manipulation}
+.spot-sheet-demo-row button:hover:not(:disabled){background:oklch(0.5 0.09 165);color:var(--paper)}
+.spot-sheet-demo-row button:disabled{opacity:.5;cursor:not-allowed}
+.spot-sheet-demo-row button.active{background:oklch(0.5 0.09 165);color:var(--paper);border-color:oklch(0.35 0.09 165)}
+.spot-sheet-demo-hint{font-size:10.5px;color:var(--dim);line-height:1.55}
 
 /* help overlay (使い方ガイド) */
 .help-ov{position:fixed;inset:0;background:linear-gradient(180deg,#c3d9dc 0%,#d8e5d4 55%,#e5dfc4 100%);color:var(--ink);z-index:220;display:none;flex-direction:column;padding:28px 24px 32px;overflow-y:auto}
@@ -1006,7 +1010,14 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
         <button class="spot-map" id="spot-sheet-map" type="button">地図で見る</button>
         <button class="spot-scan" id="spot-sheet-scan" type="button">スキャン開始</button>
       </div>
-      <button class="spot-sheet-demo" id="spot-sheet-demo" type="button"><span class="lbl">デモ</span>このスポットを 押印する (位置情報 不要)</button>
+      <div class="spot-sheet-demo-wrap">
+        <div class="spot-sheet-demo-title"><span class="lbl">デモ</span>営業デモ用 · 位置情報を 仮想切替</div>
+        <div class="spot-sheet-demo-row">
+          <button class="spot-sheet-demo-range" id="spot-sheet-demo-range" type="button">圏内に入る</button>
+          <button class="spot-sheet-demo" id="spot-sheet-demo" type="button">即 押印</button>
+        </div>
+        <div class="spot-sheet-demo-hint" id="spot-sheet-demo-hint">「圏内に入る」を押すと 圏内判定になり QR スキャンボタンが 有効化されます。 「即 押印」は GPS/QR を 完全バイパスして 直接押印します。</div>
+      </div>
     </div>
   </div>
 </div>
@@ -2461,12 +2472,20 @@ function openSpotSheet(spot){
   }
 
   const demoBtn = document.getElementById("spot-sheet-demo");
+  const rangeBtn = document.getElementById("spot-sheet-demo-range");
+  const isSim = simulatedCode === spot.code;
   if (stamped){
     demoBtn.disabled = true;
-    demoBtn.innerHTML = `<span class="lbl">デモ</span>集印済`;
+    demoBtn.textContent = "集印済";
+    rangeBtn.disabled = true;
+    rangeBtn.classList.remove("active");
+    rangeBtn.textContent = "圏内に入る";
   } else {
     demoBtn.disabled = false;
-    demoBtn.innerHTML = `<span class="lbl">デモ</span>このスポットを 押印する (位置情報 不要)`;
+    demoBtn.textContent = "即 押印";
+    rangeBtn.disabled = false;
+    rangeBtn.classList.toggle("active", isSim);
+    rangeBtn.textContent = isSim ? "圏外に戻す" : "圏内に入る";
   }
 
   m.classList.add("on");
@@ -2503,6 +2522,20 @@ document.getElementById("spot-sheet-demo").addEventListener("click", async () =>
   if (collected.some(c => c.code === spot.code)) return;
   document.getElementById("spot-modal").classList.remove("on");
   await doStamp(spot);
+});
+document.getElementById("spot-sheet-demo-range").addEventListener("click", () => {
+  const spot = document.getElementById("spot-modal")._currentSpot;
+  if (!spot) return;
+  if (simulatedCode === spot.code){
+    simulatedCode = null;
+    tryGeolocation();
+    showToast("圏外に戻しました", "実際の位置情報に戻ります", true);
+  } else {
+    simulatedCode = spot.code;
+    showToast("圏内に入りました", `${spot.code} ${spot.name} の 圏内として動作`);
+  }
+  render();
+  openSpotSheet(spot); // 再描画で 距離/ボタン状態 更新
 });
 
 // ─────────── help overlay (使い方) ───────────
