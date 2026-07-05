@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Skel Concierge / 案 C</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B0F17; --bg-2:#0E1420; --panel:#111827; --panel-2:#151E2D;
+  --border:rgba(255,255,255,0.06); --border-2:rgba(255,255,255,0.10);
+  --ink:#F1F5F9; --ink-2:#CBD5E1; --ink-3:#94A3B8; --mute:#64748B; --soft:#475569;
+  --acid:#4EFFA6; --acid-2:#00E290; --acid-glow:rgba(78,255,166,0.28);
+  --warn:#F59E0B; --hot:#EF4444;
+  --sans:"Noto Sans JP",-apple-system,sans-serif;
+  --num:"Inter","Noto Sans JP",-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;font-size:13px;line-height:1.55;font-weight:500;font-feature-settings:"palt" 1}
+button{font-family:inherit;cursor:pointer;background:none;border:0;color:inherit}
+input,textarea{font-family:inherit;font-size:13px;color:inherit}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+.mono{font-family:var(--mono);letter-spacing:0}
+a{color:inherit;text-decoration:none}
+
+.shell{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:100vh}
+.side{background:var(--bg-2);border-right:1px solid var(--border);padding:14px 12px;display:flex;flex-direction:column;gap:16px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 8px 12px;border-bottom:1px solid var(--border)}
+.brand .m{width:26px;height:26px;background:linear-gradient(180deg,var(--acid),var(--acid-2));color:#0B0F17;font-family:var(--num);font-weight:800;font-size:11px;letter-spacing:-0.04em;display:grid;place-items:center;border-radius:6px;box-shadow:0 0 12px var(--acid-glow)}
+.brand .n{font-size:12.5px;font-weight:700;letter-spacing:-0.01em}
+.brand .n em{font-style:normal;font-family:var(--mono);color:var(--mute);font-size:10px;letter-spacing:0.04em;margin-left:5px}
+
+.q{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border-2);border-radius:6px;background:var(--panel);transition:border-color 140ms}
+.q:focus-within{border-color:var(--acid);box-shadow:0 0 0 3px var(--acid-glow)}
+.q input{background:transparent;border:0;outline:0;flex:1;min-width:0;font-size:12px;color:var(--ink);font-weight:500}
+.q input::placeholder{color:var(--mute)}
+.q kbd{font-family:var(--mono);font-size:10px;color:var(--mute);border:1px solid var(--border-2);padding:1px 5px;border-radius:3px}
+
+nav ul{list-style:none}
+nav .g{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:0.14em;color:var(--soft);text-transform:uppercase;padding:14px 10px 6px}
+nav a{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:5px;font-size:12.5px;font-weight:500;color:var(--ink-3);transition:all 140ms}
+nav a:hover{background:var(--panel);color:var(--ink-2)}
+nav a.on{background:var(--panel);color:var(--acid);box-shadow:inset 0 0 0 1px var(--border-2)}
+nav a .cnt{margin-left:auto;font-family:var(--num);font-size:10.5px;font-weight:700;color:var(--mute)}
+nav a.on .cnt{color:var(--acid)}
+
+.main{padding:0}
+.top{padding:12px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;background:rgba(11,15,23,0.85);backdrop-filter:blur(8px);position:sticky;top:0;z-index:5}
+.top .path{font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:0.02em;display:flex;align-items:center;gap:6px}
+.top .path .now{color:var(--ink)}
+.top .sp{flex:1}
+.top .act{padding:6px 10px;font-size:12px;font-weight:600;border:1px solid var(--border-2);border-radius:5px;background:var(--panel);transition:all 140ms}
+.top .act:hover{border-color:var(--acid);color:var(--acid)}
+.top .act.pri{background:linear-gradient(180deg,var(--acid),var(--acid-2));border-color:var(--acid-2);color:#0B0F17;font-weight:800;box-shadow:0 0 16px var(--acid-glow)}
+
+.body{padding:28px 24px 60px}
+.grid{display:grid;grid-template-columns:1fr 320px;gap:24px}
+@media (max-width:1000px){.grid{grid-template-columns:1fr}}
+
+h1{font-family:var(--num);font-size:32px;font-weight:800;letter-spacing:-0.03em;color:var(--ink);line-height:1.15;margin-bottom:8px}
+h1 .k{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--acid);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;display:block}
+p.sub{font-size:13px;color:var(--ink-3);margin-bottom:22px;max-width:60ch}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:22px}
+.stat{background:var(--bg-2);padding:14px 16px}
+.stat .l{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--mute);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px}
+.stat .n{font-family:var(--num);font-size:24px;font-weight:800;letter-spacing:-0.03em;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+.stat .n small{font-size:12px;font-weight:600;color:var(--mute);margin-left:3px}
+.stat .n.g{color:var(--acid)}
+.stat .n.h{color:var(--hot)}
+.stat .d{font-family:var(--mono);font-size:10.5px;color:var(--mute);margin-top:5px}
+
+.panel{background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin-bottom:14px}
+.panel h2{font-size:12.5px;font-weight:700;color:var(--ink);letter-spacing:-0.005em;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel h2 .cnt{font-family:var(--num);font-size:11px;font-weight:700;color:var(--mute)}
+
+.task{display:grid;grid-template-columns:56px 1fr auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12.5px}
+.task:last-child{border-bottom:0}
+.task .due{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--mute);text-align:center;padding:3px 6px;border-radius:4px;background:rgba(255,255,255,0.04);letter-spacing:0.02em}
+.task .due.o{background:rgba(239,68,68,0.14);color:var(--hot)}
+.task .due.t{background:rgba(245,158,11,0.14);color:var(--warn)}
+.task .who{font-family:var(--mono);font-size:9.5px;font-weight:700;color:var(--mute);letter-spacing:0.04em}
+.task .txt{font-weight:500;color:var(--ink-2)}
+.task .go{color:var(--ink-3);font-family:var(--mono);font-size:11px}
+.task:hover .go{color:var(--acid)}
+
+.item{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03);cursor:pointer}
+.item:last-child{border-bottom:0}
+.item:hover{background:rgba(255,255,255,0.02)}
+.item .av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#334155,#1E293B);color:var(--ink-2);display:grid;place-items:center;font-size:11px;font-weight:700}
+.item .av.g{background:linear-gradient(135deg,var(--acid),var(--acid-2));color:#0B0F17}
+.item .n{font-size:12.5px;font-weight:600;color:var(--ink)}
+.item .m{font-size:11px;color:var(--mute);margin-top:1px}
+.item .t{font-family:var(--num);font-size:10.5px;color:var(--mute);font-variant-numeric:tabular-nums;letter-spacing:0.02em}
+
+.next{padding:16px 18px;background:linear-gradient(180deg, rgba(78,255,166,0.06) 0%, transparent 100%);border:1px solid var(--acid);border-radius:6px;margin-bottom:14px;position:relative;overflow:hidden}
+.next::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--acid),var(--acid-2));box-shadow:0 0 12px var(--acid-glow)}
+.next .k{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acid);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px}
+.next .h{font-size:14px;font-weight:700;color:var(--ink);letter-spacing:-0.01em}
+.next .m{font-family:var(--num);font-size:22px;font-weight:800;color:var(--ink);margin-top:6px;letter-spacing:-0.03em;font-variant-numeric:tabular-nums}
+.next .d{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:4px}
+</style></head>
+<body>
+
+<div class="shell">
+
+  <aside class="side">
+    <div class="brand">
+      <div class="m">SK</div>
+      <div class="n">Concierge<em>v-c</em></div>
+    </div>
+
+    <div class="q">
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--mute)"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input placeholder="Jump to..." /><kbd>⌘K</kbd>
+    </div>
+
+    <nav>
+      <div class="g">Workspace</div>
+      <ul>
+        <li><a class="on">Inbox<span class="cnt">4</span></a></li>
+        <li><a>Contacts<span class="cnt">32</span></a></li>
+        <li><a>Meetings<span class="cnt">6</span></a></li>
+        <li><a>Minutes<span class="cnt">24</span></a></li>
+      </ul>
+      <div class="g">System</div>
+      <ul>
+        <li><a>Automations<span class="cnt">4</span></a></li>
+        <li><a>Settings</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <div class="path"><span>Concierge</span><span>/</span><span class="now">Inbox</span></div>
+      <div class="sp"></div>
+      <button class="act">LINE Send</button>
+      <button class="act pri">+ Meeting</button>
+    </div>
+
+    <div class="body">
+      <span class="k" style="font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--acid);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px;display:block">Inbox / 2026-07-05</span>
+      <h1>4 items need you.</h1>
+      <p class="sub">今日は 2 件の面談、3 件の期限。 まず超過している 1 件から。</p>
+
+      <div class="stats">
+        <div class="stat"><div class="l">Meetings today</div><div class="n g">2</div><div class="d">15:00, 16:30</div></div>
+        <div class="stat"><div class="l">Tasks overdue</div><div class="n h">1</div><div class="d">田中太郎 資料</div></div>
+        <div class="stat"><div class="l">Due today</div><div class="n">2</div><div class="d">中村, 佐藤</div></div>
+        <div class="stat"><div class="l">Cost this month</div><div class="n">¥2,100</div><div class="d">within budget</div></div>
+      </div>
+
+      <div class="grid">
+        <div>
+          <div class="next">
+            <div class="k">Next up</div>
+            <div class="h">初回 ヒアリング / 田中 太郎</div>
+            <div class="m">15:00 → 15:45</div>
+            <div class="d">Zoom URL delivered · reminder in 15 min</div>
+          </div>
+
+          <div class="panel">
+            <h2>Tasks<span class="cnt">3 / 10</span></h2>
+            <div class="task"><span class="due o">−2d</span><div><span class="who">FROM · 田中</span> <span class="txt">資料の返送</span></div><span class="go">→</span></div>
+            <div class="task"><span class="due t">TODAY</span><div><span class="who">SELF</span> <span class="txt">提案書 v2 作成 / 中村</span></div><span class="go">→</span></div>
+            <div class="task"><span class="due">7/10</span><div><span class="who">SELF</span> <span class="txt">事前資料 送付 / 山本</span></div><span class="go">→</span></div>
+          </div>
+
+          <div class="panel">
+            <h2>Recent activity<span class="cnt">42</span></h2>
+            <div class="item"><div class="av g">田</div><div><div class="n">田中 太郎</div><div class="m">議事録配信 · 初回ヒアリング</div></div><span class="t">15:47</span></div>
+            <div class="item"><div class="av">中</div><div><div class="n">中村 拓也</div><div class="m">→ 提案書 draft 送信</div></div><span class="t">14:20</span></div>
+            <div class="item"><div class="av g">松</div><div><div class="n">松井 拓海</div><div class="m">← 見積 中間確認</div></div><span class="t">1d</span></div>
+            <div class="item"><div class="av">高</div><div><div class="n">高橋 涼</div><div class="m">キックオフ 議事録 配信済</div></div><span class="t">3d</span></div>
+            <div class="item"><div class="av g">石</div><div><div class="n">石田 有希</div><div class="m">→ 状況確認 送信</div></div><span class="t">1w</span></div>
+          </div>
+        </div>
+
+        <aside>
+          <div class="panel">
+            <h2>Today's meetings</h2>
+            <div class="item"><div class="av g">田</div><div><div class="n">田中 太郎</div><div class="m">初回 ヒアリング · 45m</div></div><span class="t">15:00</span></div>
+            <div class="item"><div class="av g">中</div><div><div class="n">中村 拓也</div><div class="m">提案書レビュー · 30m</div></div><span class="t">16:30</span></div>
+          </div>
+          <div class="panel">
+            <h2>Shortcuts</h2>
+            <div class="item"><div class="av" style="background:transparent;color:var(--mute)">⌘</div><div><div class="n" style="color:var(--ink-3)">New meeting</div></div><span class="t mono">⌘N</span></div>
+            <div class="item"><div class="av" style="background:transparent;color:var(--mute)">⌘</div><div><div class="n" style="color:var(--ink-3)">Send LINE</div></div><span class="t mono">⌘L</span></div>
+            <div class="item"><div class="av" style="background:transparent;color:var(--mute)">⌘</div><div><div class="n" style="color:var(--ink-3)">Jump to contact</div></div><span class="t mono">⌘J</span></div>
+          </div>
+        </aside>
+      </div>
+
+      <div style="margin-top:44px;padding-top:20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;color:var(--mute);font-size:11px;font-family:var(--mono)">
+        <span>skel-concierge / v-c</span>
+        <a href="../gallery/" style="color:var(--mute)">← back to gallery</a>
+      </div>
+    </div>
+  </main>
+
+</div>
+</body></html>
