@@ -400,8 +400,10 @@ button,input,select{font-family:inherit;color:inherit;-webkit-appearance:none;ap
 .journey-sub{font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:var(--dim);margin-left:auto}
 .journey-map{padding:8px 4px}
 .journey-map svg{width:100%;height:auto;display:block;max-height:640px}
-.journey-map .j-node{cursor:pointer;transition:transform .2s}
+.journey-map .j-node{cursor:pointer;transition:transform .2s;pointer-events:all;-webkit-tap-highlight-color:oklch(0.72 0.14 30 / .3);touch-action:manipulation}
+.journey-map .j-node *{pointer-events:none}
 .journey-map .j-node:hover{transform:scale(1.08)}
+.journey-map .j-node:active{transform:scale(0.92)}
 .journey-map .j-done circle:first-child{filter:drop-shadow(0 2px 3px oklch(0.55 0.14 25 / .3))}
 
 /* ── エリア ヘッダ (物語り) ── */
@@ -1456,7 +1458,7 @@ function renderJourney(){
   // path is 曲線 全体、 進行度 は stroke-dasharray で 表現
 
   el.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="集印ルート · 10地点">
       <!-- 遠景 装飾: 大きな 雲 -->
       <g opacity="0.4">
         <path d="M20 20 Q30 12 45 16 Q55 10 65 20 Q60 26 45 22 Q30 28 20 20 Z" fill="oklch(0.92 0.01 240)"/>
@@ -1481,14 +1483,23 @@ function renderJourney(){
       ${nodeSvg}
     </svg>
   `;
-  // node click → open spot sheet
-  el.querySelectorAll(".j-node").forEach(g => {
-    g.addEventListener("click", () => {
-      const code = g.dataset.code;
+  // node tap/click → open spot sheet (event delegation · iOS Safari + LIFF 対応)
+  if (!el.dataset.delegated){
+    el.dataset.delegated = "1";
+    const handler = (ev) => {
+      const g = ev.target.closest(".j-node");
+      if (!g) return;
+      ev.preventDefault();
+      const code = g.getAttribute("data-code");
       const spot = SPOTS.find(s => s.code === code);
-      if (spot) openSpotSheet(spot);
-    });
-  });
+      if (spot){
+        try { openSpotSheet(spot); }
+        catch(e){ console.error("[journey click] openSpotSheet failed:", e); alert("スポット詳細を開けませんでした · " + e.message); }
+      }
+    };
+    el.addEventListener("click", handler);
+    el.addEventListener("touchend", handler, { passive: false });
+  }
 }
 
 function renderScanGpsCheck(){
