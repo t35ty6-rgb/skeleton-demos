@@ -228,8 +228,8 @@ async function injectHelper(p) {
       el.innerHTML = html;
       el.querySelectorAll('[data-reveal]').forEach(x => {
         x.style.opacity = '0';
-        x.style.transform = 'translateY(10px)';
-        x.style.transition = 'opacity .40s cubic-bezier(.2,.8,.4,1), transform .40s cubic-bezier(.2,.8,.4,1)';
+        x.style.transform = 'translateY(6px)';
+        x.style.transition = 'opacity .15s ease-out, transform .18s cubic-bezier(.2,.8,.4,1)';
       });
       document.body.appendChild(el);
       // Trigger cross-fade
@@ -278,11 +278,13 @@ class Sync {
     this.t0 = Date.now();
   }
   // ナレーションの指定 mark 位置まで待機 (audio time-based)
-  async waitFor(p, name) {
+  // offsetMs > 0 → mark より前 に fire (reveal transition の 遅れ を 相殺)
+  async waitFor(p, name, offsetMs = 0) {
     const t = this.marks[name];
     if (t == null) { console.log(`    ⚠ mark not found: ${name}`); return; }
+    const target = t - offsetMs / 1000;
     const elapsed = (Date.now() - this.t0) / 1000;
-    const remain = t - elapsed;
+    const remain = target - elapsed;
     if (remain > 0.02) await wait(p, remain * 1000);
     else if (remain < -0.5) console.log(`    ⚠ late for ${name} by ${(-remain).toFixed(2)}s`);
   }
@@ -497,11 +499,11 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    // 「1つ目は」開始時 = agenda_intro mark (11.7s、前フレーズ終了 = 次フレーズ開始)
-    await sync.waitFor(p, 'agenda_intro'); await reveal(p, 2);
-    await sync.waitFor(p, 'agenda_1'); await reveal(p, 3);   // 「2つ目は」開始
-    await sync.waitFor(p, 'agenda_2'); await reveal(p, 4);   // 「3つ目は」開始
-    await sync.waitFor(p, 'agenda_3'); await reveal(p, 5);   // 「これから1つずつ」開始
+    // 「1つ目は」等 発話 と 文字表示 を 完全 同期: 150ms 早く reveal 発火 → transition完了 が narration 開始 と一致
+    await sync.waitFor(p, 'agenda_intro', 150); await reveal(p, 2);
+    await sync.waitFor(p, 'agenda_1', 150); await reveal(p, 3);   // 「2つ目は」開始
+    await sync.waitFor(p, 'agenda_2', 150); await reveal(p, 4);   // 「3つ目は」開始
+    await sync.waitFor(p, 'agenda_3', 150); await reveal(p, 5);   // 「これから1つずつ」開始
 
     // ── 転入① 「まず、1つ目」 (agenda_end 34.6 → issue1_intro 40.0) ──
     await slide(p, `
@@ -517,7 +519,7 @@ const chapters = [
 
     // ── 見出し要約① (issue1_intro 40.0 → issue1_before_scene 53.8) ──
     // 転入スライドを維持しつつ、見出し要約 の 説明中は 補助テキスト を 出す
-    await sync.waitFor(p, 'issue1_intro');
+    await sync.waitFor(p, 'issue1_intro', 200);
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1100px;">
         <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.leaf};letter-spacing:0.18em;font-weight:700;">課題 · 01</div>
@@ -595,7 +597,7 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2);
 
     // ── 見出し要約② (issue2_intro 77.0 → issue2_dispatch 90.8) ──
-    await sync.waitFor(p, 'issue2_intro');
+    await sync.waitFor(p, 'issue2_intro', 200);
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1100px;">
         <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.leaf};letter-spacing:0.18em;font-weight:700;">課題 · 02</div>
@@ -667,7 +669,7 @@ const chapters = [
     await reveal(p, 1); await reveal(p, 2);
 
     // ── 見出し要約③ (issue3_intro 113.6 → issue3_scene 134.4) ──
-    await sync.waitFor(p, 'issue3_intro');
+    await sync.waitFor(p, 'issue3_intro', 200);
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1100px;">
         <div data-reveal="1" style="font-family:${C.fNum};font-size:12px;color:${C.leaf};letter-spacing:0.18em;font-weight:700;">課題 · 03</div>
@@ -1436,12 +1438,11 @@ const chapters = [
       ${SL.foot}
     `);
     await reveal(p, 1);
-    // 「1つ目は」開始時 = title_end mark (前フレーズ 「変化が出ています」 終了 = 次フレーズ開始)
-    await sync.waitFor(p, 'title_end'); // already waited above but no-op if past
-    await reveal(p, 2);
-    await sync.waitFor(p, 'agenda_1'); await reveal(p, 3);  // 「2つ目は」開始
-    await sync.waitFor(p, 'agenda_2'); await reveal(p, 4);  // 「3つ目は」開始
-    await sync.waitFor(p, 'agenda_3'); await reveal(p, 5);  // 「それぞれ」開始
+    // 発話 と 完全同期: 150ms 早めに reveal 発火
+    await reveal(p, 2); // title_end 直後 (即 開始)
+    await sync.waitFor(p, 'agenda_1', 150); await reveal(p, 3);  // 「2つ目は」開始
+    await sync.waitFor(p, 'agenda_2', 150); await reveal(p, 4);  // 「3つ目は」開始
+    await sync.waitFor(p, 'agenda_3', 150); await reveal(p, 5);  // 「それぞれ」開始
 
     // ── 転入① 「まず、1つ目」 (agenda_end 29.5 → kpi1 35.8) ──
     await slide(p, `
@@ -1490,7 +1491,7 @@ const chapters = [
     await sync.waitFor(p, 'kpi1_reason'); await reveal(p, 2);
 
     // ── 転入② 「次に、2つ目」 (kpi1_end 52.1 → kpi2 57.7) ──
-    await sync.waitFor(p, 'kpi1_end');
+    await sync.waitFor(p, 'kpi1_end', 200);
     await slide(p, `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1100px;">
         <div data-reveal="1" style="font-family:${C.fBody};font-size:16px;color:${C.ink3};font-weight:500;letter-spacing:0.06em;">次に、2つ目</div>
@@ -1730,6 +1731,7 @@ const p = await ctx.newPage();
 p.on('pageerror', e => console.log('PE:', e.message.slice(0, 80)));
 
 console.log('🎬 recording start');
+const recordStart = Date.now();
 await goto(p, `${BASE}/admin/index.html`);
 await p.evaluate(() => localStorage.clear());
 await p.reload({ waitUntil: 'networkidle' });
@@ -1738,6 +1740,8 @@ await injectHelper(p);
 
 const timeline = [];
 const t0 = Date.now();
+const preloadSec = (t0 - recordStart) / 1000;
+console.log(`  preload duration: ${preloadSec.toFixed(2)}s (will -ss trim in ffmpeg)`);
 const ONLY = process.argv[2] || '';
 
 for (const f of chapters) {
@@ -1767,7 +1771,7 @@ for (const f of chapters) {
 await ctx.close();
 await b.close();
 
-writeFileSync(`${OUT_DIR}/_timeline.json`, JSON.stringify(timeline, null, 2));
+writeFileSync(`${OUT_DIR}/_timeline.json`, JSON.stringify({ preloadSec, timeline }, null, 2));
 const webms = readdirSync(OUT_DIR).filter(f => f.endsWith('.webm'));
 if (webms.length) {
   const newest = webms.sort((a,b) => statSync(`${OUT_DIR}/${b}`).mtimeMs - statSync(`${OUT_DIR}/${a}`).mtimeMs)[0];
