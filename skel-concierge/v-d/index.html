@@ -930,11 +930,11 @@ input,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 
     <footer class="compose">
       <div class="quick" role="toolbar" aria-label="クイック 返信">
-        <button class="quick-btn" data-quick="zoom">Zoom URL 再送</button>
-        <button class="quick-btn" data-quick="minutes">議事録 送付</button>
-        <button class="quick-btn" data-quick="reschedule-open">候補 3 つ 打診</button>
+        <button class="quick-btn" data-quick="zoom" title="Flex カード で 送信">Zoom URL 再送</button>
+        <button class="quick-btn" data-quick="minutes" title="Flex カード で 送信">議事録 送付</button>
+        <button class="quick-btn" data-quick="reschedule-open" title="候補 3 つ を Flex カード で 送信">候補 3 つ 打診</button>
         <button class="quick-btn" data-quick="thanks">御礼 定型</button>
-        <button class="quick-btn" data-quick="task">タスク化</button>
+        <button class="quick-btn" data-quick="task">タスク化 メモ</button>
       </div>
       <form class="compose-row" id="compose-form" aria-label="メッセージを送信">
         <button type="button" class="compose-plus" aria-label="添付を開く">＋</button>
@@ -1234,13 +1234,75 @@ const THREADS = [
   },
 ];
 
+/* Text-fill templates (personal / internal — plain text OK) */
 const QUICK_TEMPLATES = {
-  zoom: (t) => `${t.short} こんにちは。 面談 の Zoom URL を 再送 します。\n→ skel.zoom.us/j/……\n開始 15 分前 に 改めて 御案内 致します。`,
-  minutes: (t) => `${t.short} 先日 の 面談、 議事録 を お送り します。 御確認 の 上、 御質問 が あれば お知らせ ください。`,
-  reschedule: (t) => `${t.short} 面談 日程 の 変更 候補、 御相談 させて 頂けます か。\n\n① \n② \n③ \n\n御都合 の 良い もの を 一つ 御選定 頂ければ 幸い です。`,
   thanks: (t) => `${t.short} 本日 は お時間 頂き ありがとう ございました。 御案内 の 資料、 追って お送り します。`,
   task: (t) => `[タスク化 メモ] ${t.short} · 内容: `,
 };
+
+/* Flex-send templates (customer-facing structured comms) */
+function buildFlex(kind, t) {
+  if (kind === 'zoom-resend') {
+    const url = t.meeting?.url || 'https://skel.zoom.us/j/...(未 発行)';
+    return {
+      head:'📅 Zoom URL 御案内 (再送) · ' + t.short,
+      body: (t.meeting?.dateLabel || '御予定 の 面談') + ' の Zoom URL を 再送 します。',
+      kv:[
+        ['日時', (t.meeting?.dateLabel || '') + ' ' + (t.meeting?.time || '')],
+        ['Zoom', url.replace('https://','')],
+        ['担当', '吉田'],
+      ],
+      actions:['Zoom を 開く','予定 を 変える']
+    };
+  }
+  if (kind === 'minutes') {
+    return {
+      head:'📄 議事録 · ' + (t.short) + ' 御確認 のお願い',
+      body:'先日 の 面談 の 議事録 が 出来上がり ました。 御確認 の 上、 御質問 が あれば お知らせ ください。',
+      kv:[
+        ['論点', '3 件'],
+        ['Action', '3 件 (期限 付)'],
+        ['読了', '約 5 分'],
+      ],
+      actions:['議事録 を 開く','PDF で 保存']
+    };
+  }
+  if (kind === 'cancel-apology') {
+    return {
+      head:'🙇 面談 の 御振替 御相談 · ' + t.short,
+      body:'誠に 恐れ入り ます。 予定 して おりました 面談 を 一度 お流し 頂けます でしょうか。 改めて 御振替 候補 を お出し します。',
+      kv:[
+        ['対象', (t.meeting?.dateLabel || '御予定 の 面談')],
+        ['御振替', '3 候補 を 別途 御案内'],
+      ],
+      actions:['御振替 候補 を 待つ','日程 相談 に 進む']
+    };
+  }
+  if (kind === 'remind') {
+    return {
+      head:'🕒 御返信 の お伺い · ' + t.short,
+      body:'先日 御送り した 面談 候補、 御確認 頂けまして でしょうか。 御多忙 と 存じ ます ので、 難しければ 別 の 候補 を お出し します。',
+      kv:[
+        ['候補', (t.meeting?.proposedSlots?.length || 3) + ' 件 御提示 済'],
+        ['期限', '御返信 頂き 次第'],
+      ],
+      actions:['候補 を もう 一度 見る','別 の 日 を 相談']
+    };
+  }
+  if (kind === 'pre-remind') {
+    const url = t.meeting?.url || 'https://skel.zoom.us/j/...';
+    return {
+      head:'⏰ 面談 15 分前 御案内 · ' + t.short,
+      body:'まもなく 面談 の お時間 です。 Zoom URL は こちら です。',
+      kv:[
+        ['日時', (t.meeting?.dateLabel || '') + ' ' + (t.meeting?.time || '')],
+        ['Zoom', url.replace('https://','')],
+      ],
+      actions:['Zoom を 開く','日程 変更 相談']
+    };
+  }
+  return null;
+}
 
 /* ---------- DOM helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1490,8 +1552,9 @@ function handleMeetingAction(action, t) {
   if (action === 'cancel')    { openCancelModal(t); return; }
   if (action === 'liff-preview') { openLiffPreview(t); return; }
   if (action === 'remind') {
-    appendMe(t, `${t.short} 先日 の 面談 候補、 御確認 頂けまして でしょうか。 御多忙 の 折、 難しければ 再度 3 つ お出し しますので お気軽 に。`);
-    showToast('御催促 (柔ら か め) を お送り しました');
+    const flex = buildFlex('remind', t);
+    if (flex) appendRich(t, flex);
+    showToast('御返信 の お伺い (Flex) を お送り しました');
     return;
   }
 }
@@ -1779,11 +1842,12 @@ $('#cancel-back').addEventListener('click', () => $('#cancel-scrim').classList.r
 $('#cancel-scrim').addEventListener('click', (e) => { if (e.target === $('#cancel-scrim')) $('#cancel-scrim').classList.remove('show'); });
 $('#cancel-confirm').addEventListener('click', () => {
   const t = cancelContext; if (!t) return;
-  appendMe(t, `${t.short} 大変 申し訳 ございません。 予定 して おりました 面談 を、 一度 お流し 頂けます でしょうか。 改めて 御相談 の 候補 を お出し させて 頂きます。`);
+  const flex = buildFlex('cancel-apology', t);
+  if (flex) appendRich(t, flex);
   t.meeting = { status:'pending_url', dateLabel:'再打診 待ち', time:'相手 御返信 待ち', minutes: t.meeting?.minutes || 45, until:'—', url:'' };
   renderChat();
   renderThreads();
-  showToast('キャンセル 御案内 を お送り しました');
+  showToast('御振替 御相談 (Flex) を お送り しました');
   $('#cancel-scrim').classList.remove('show');
 });
 
@@ -1854,6 +1918,10 @@ $$('.quick-btn').forEach(btn => {
     const key = btn.dataset.quick;
     const t = state.get(currentId);
     if (key === 'reschedule-open') { openRescheduleModal(t); return; }
+    /* Structured customer comms → Flex send (no textarea) */
+    if (key === 'zoom')    { const f = buildFlex('zoom-resend', t); if (f) { appendRich(t, f); showToast('Zoom URL 御案内 (Flex) を 送信 しました'); } return; }
+    if (key === 'minutes') { const f = buildFlex('minutes', t);      if (f) { appendRich(t, f); showToast('議事録 御案内 (Flex) を 送信 しました'); } return; }
+    /* Personal / internal → text template fill */
     const tpl = QUICK_TEMPLATES[key];
     if (!tpl) return;
     input.value = tpl(t);
