@@ -1677,7 +1677,7 @@ function renderMinutes(t) {
       <div class="minute-empty">
         <div class="ic" aria-hidden="true">${ICONS.docEmpty}</div>
         <div class="h">まだ 議事録 は ありません</div>
-        <div class="b">Zoom Cloud Recording が 完了 すると、 <b>自動 で 文字起こし → 議事録 が 生成</b> されます。 手動 で 生成 する 事 も 出来ます。</div>
+        <div class="b">面談 の <b>画面録画</b> が 保存 されると、 <b>Whisper で 文字起こし → Claude で 議事録 を 生成</b> します (FP Compass 同様)。 手動 で 選ぶ 事 も 出来ます。</div>
         <button type="button" class="minute-cta" data-min-action="generate">${ICONS.generate}録画 から 議事録 を 生成</button>
       </div>
     `;
@@ -1759,8 +1759,8 @@ function ensureRecModal() {
     <div class="modal-scrim" id="rec-scrim" role="dialog" aria-modal="true" aria-labelledby="rec-title">
       <div class="modal">
         <div class="modal-head">
-          <div class="modal-title" id="rec-title">Zoom 録画 から 議事録 を 生成</div>
-          <div class="modal-sub" id="rec-sub">Cloud Recording が 完了 して いる 録画 を 選ぶ と、 Whisper で 文字起こし → Claude で 議事録 を 生成 → LINE に 送信 出来る 状態 に します。</div>
+          <div class="modal-title" id="rec-title">録画 から 議事録 を 生成</div>
+          <div class="modal-sub" id="rec-sub">面談 の 画面録画 を 選ぶ と、 <b>Whisper で 文字起こし → Claude Haiku で 議事録 生成</b> します。 FP Compass と 同じ pipeline です。</div>
         </div>
         <div class="modal-body" id="rec-body"></div>
         <div class="modal-foot" id="rec-foot"></div>
@@ -1772,10 +1772,10 @@ function ensureRecModal() {
 }
 
 function mockRecordings(t) {
-  // Fabricate 2 recordings for demo, based on thread past meetings
+  // Fabricate 2 recordings for demo (local screen recording via LaunchAgent — FP Compass 同様)
   return [
-    { id:'r1', title:t.name + ' · 面談 (' + (t.meeting?.dateLabel || '直近') + ')', date:'今日', dur:'42:18', size:'186 MB', status:'ready' },
-    { id:'r2', title:t.name + ' · 前回 面談',   date:'2 週間前', dur:'45:02', size:'204 MB', status:'ready' },
+    { id:'r1', title:t.name + ' · 面談 画面録画 (' + (t.meeting?.dateLabel || '直近') + ')', date:'今日', dur:'42:18', size:'186 MB', status:'ready' },
+    { id:'r2', title:t.name + ' · 前回 面談 画面録画',   date:'2 週間前', dur:'45:02', size:'204 MB', status:'ready' },
   ];
 }
 
@@ -1797,7 +1797,7 @@ function renderRecModal() {
           </button>
         `).join('')}
       </div>
-      <div class="modal-note">Cloud Recording が 完了 して いる 面談 だけ 表示 されます。 ローカル録画 は API で 取得 出来ません。</div>
+      <div class="modal-note">Skeleton サーバー の <b>画面録画 監視 フォルダ</b> (~/Movies/skel-concierge/) に 保存 された 面談 の 録画 が 表示 されます。 面談 終了 後 に <b>自動 で 議事録 生成 → LINE 送信</b> も 出来ます。</div>
     `;
     body.querySelectorAll('.rec-item').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1878,10 +1878,11 @@ function renderRecModal() {
 
 function startTranscribe() {
   const steps = [
-    { pct:20,  step:'録画 を ダウンロード 中 (186 MB)…', on:'ts-0' },
-    { pct:45,  step:'Whisper で 文字起こし 中 (42 分 の 音声)…', on:'ts-1' },
-    { pct:72,  step:'Claude Haiku で 論点 と Action を 抽出 中…', on:'ts-2' },
-    { pct:92,  step:'議事録 を 整形 中…', on:'ts-2' },
+    { pct:15,  step:'画面録画 ファイル を 読込 中 (186 MB)…', on:'ts-0' },
+    { pct:42,  step:'ffmpeg で 音声 抽出 中 (42 分)…', on:'ts-0' },
+    { pct:65,  step:'Whisper (large-v3) で 文字起こし 中…', on:'ts-1' },
+    { pct:82,  step:'Claude Haiku で 論点 と Action を 抽出 中…', on:'ts-2' },
+    { pct:95,  step:'議事録 を 整形 中…', on:'ts-2' },
     { pct:100, step:'完了 · プレビュー を 御確認 ください', on:'ts-3' },
   ];
   let i = 0;
