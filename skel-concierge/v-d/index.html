@@ -200,6 +200,60 @@ input,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 .tool-btn:hover{background:var(--sys);color:var(--ink-2)}
 .tool-btn svg{width:20px;height:20px;stroke-width:2}
 
+/* ==== ACTION BAR — persistent primary actions right below chat header ==== */
+.action-bar{
+  padding:14px 22px;background:var(--panel);border-bottom:1px solid var(--line);
+  display:grid;grid-template-columns:1.4fr 1fr auto;gap:10px;align-items:center;flex-shrink:0;
+  position:relative;z-index:calc(var(--z-header) - 1);
+}
+.ab-btn{
+  min-height:64px;padding:14px 18px;border-radius:16px;font-family:inherit;
+  font-size:15px;font-weight:800;letter-spacing:0.005em;cursor:pointer;border:0;
+  display:flex;align-items:center;justify-content:center;gap:10px;line-height:1.2;
+  transition:transform var(--dur-fast) var(--ease-spring), box-shadow var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  text-align:left;
+}
+.ab-btn:active{transform:scale(0.97)}
+.ab-btn svg{width:22px;height:22px;flex-shrink:0}
+
+.ab-btn.primary{
+  background:linear-gradient(180deg,var(--line-green),var(--line-green-2));color:#FFF;
+  box-shadow:0 2px 4px rgba(4,163,68,0.32), 0 12px 28px -6px rgba(4,163,68,0.48), inset 0 1px 0 rgba(255,255,255,0.24);
+  justify-content:center;
+}
+.ab-btn.primary:hover{box-shadow:0 4px 8px rgba(4,163,68,0.36), 0 16px 36px -6px rgba(4,163,68,0.56), inset 0 1px 0 rgba(255,255,255,0.28)}
+.ab-btn.primary .arr{margin-left:2px;opacity:0.85;transition:transform var(--dur-fast) var(--ease-out)}
+.ab-btn.primary:hover .arr{transform:translateX(3px)}
+
+.ab-btn.secondary{
+  background:var(--sys);color:var(--ink);border:1px solid var(--line);
+  justify-content:center;
+}
+.ab-btn.secondary:hover{background:var(--panel);border-color:var(--line-2);box-shadow:var(--elev-1)}
+
+.ab-btn.more{
+  min-width:56px;padding:14px 12px;background:transparent;color:var(--ink-2);
+}
+.ab-btn.more:hover{background:var(--sys)}
+.ab-btn.more svg{width:20px;height:20px}
+
+/* Sub-caption under buttons for zero-doubt clarity */
+.ab-cap{
+  grid-column:1 / -1;padding:2px 4px;margin-top:-4px;
+  font-family:var(--num);font-size:10.5px;font-weight:700;color:var(--ink-3);
+  letter-spacing:0.08em;text-transform:uppercase;
+  display:flex;justify-content:space-around;gap:8px;text-align:center;
+}
+.ab-cap span{flex:1}
+
+@media (max-width:900px){
+  .action-bar{grid-template-columns:1fr auto;padding:12px 16px}
+  .ab-btn{min-height:56px;font-size:14px;padding:12px 14px}
+  .ab-btn.secondary{grid-column:1 / span 1}
+  .ab-btn.more{grid-column:2}
+  .ab-cap{display:none}
+}
+
 /* ==== MEETING RIBBON — big, primary, sticky above chat ==== */
 .meeting-ribbon{
   position:sticky;top:0;z-index:calc(var(--z-header) - 1);
@@ -1182,6 +1236,30 @@ input,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
       </div>
     </header>
 
+    <div class="action-bar" role="region" aria-label="主 操作">
+      <button type="button" class="ab-btn primary" id="ab-book">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4">
+          <rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3z"/>
+        </svg>
+        Zoom を 予約 する
+        <span class="arr">→</span>
+      </button>
+      <button type="button" class="ab-btn secondary" id="ab-minutes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2">
+          <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 13h6M9 17h4"/>
+        </svg>
+        議事録 を 送る
+      </button>
+      <button type="button" class="ab-btn more" id="ab-more" aria-label="その他 の 操作">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+      </button>
+      <div class="ab-cap" aria-hidden="true">
+        <span>相手 に 候補 3 つ 送信</span>
+        <span>直近 議事録 を Flex で 配信</span>
+        <span>その他</span>
+      </div>
+    </div>
+
     <div class="meeting-ribbon" id="meeting-ribbon" role="region" aria-label="次回 面談 の 状態 と 操作">
       <!-- injected -->
     </div>
@@ -1697,40 +1775,33 @@ function renderRibbon(t) {
     zoom:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3z"/></svg>',
     send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M4 12l16-8-6 18-3-8-7-2z"/></svg>',
     preview:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 18h2"/></svg>',
-    plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg>',
     calendar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>',
     resend:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><path d="M4 4v6h6M20 20v-6h-6M4 10a8 8 0 0 1 14-3M20 14a8 8 0 0 1-14 3"/></svg>',
     bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
   };
 
   if (!m) {
-    ribbon.className = 'meeting-ribbon empty';
-    ribbon.innerHTML = `
-      <div class="mr-time"><span class="day">次回 面談</span><span class="clock small" style="color:var(--ink-3)">— 未定</span></div>
-      <div class="mr-info">
-        <div class="head">${t.name}さま の 次回 面談 が 未定 です</div>
-        <div class="sub">日時 を 打診 する と、 相手 に <b>候補 3 つ</b> が Flex カード で 届きます。</div>
-      </div>
-      <div class="mr-actions">
-        <button class="mr-cta" data-mr="propose">${ICONS.plus}日時 を 提案</button>
-      </div>
-    `;
-  } else if (m.status === 'confirmed') {
+    ribbon.style.display = 'none';
+    return;
+  }
+  ribbon.style.display = '';
+
+  if (m.status === 'confirmed') {
     ribbon.className = 'meeting-ribbon';
     const timeShort = (m.time || '').split(/[\s–-〜]/)[0].trim() || '—';
     ribbon.innerHTML = `
       <div class="mr-time">
         <span class="day">${m.dateLabel}</span>
         <span class="clock">${timeShort}</span>
-        <span class="until ${m.untilWarn ? '' : ''}">${m.until}</span>
+        <span class="until">${m.until}</span>
       </div>
       <div class="mr-info">
         <div class="head">${t.name}さま · ${t.stage.replace(/·.*$/, '').trim()}</div>
-        <div class="sub"><span class="g">● Zoom URL 発行 済</span> · ${m.minutes} 分 · 開始 15 分前 に 相手 へ リマインド 自動送信</div>
+        <div class="sub"><span class="g">● Zoom 準備 済</span> · ${m.minutes} 分 · 開始 15 分前 に 相手 へ リマインド 自動送信</div>
       </div>
       <div class="mr-actions">
-        <button class="mr-sec" data-mr="resend">${ICONS.resend}URL 再送</button>
-        <button class="mr-sec" data-mr="reschedule">${ICONS.calendar}時間 変更</button>
+        <button class="mr-sec" data-mr="resend">${ICONS.resend}Zoom URL を 再送</button>
+        <button class="mr-sec" data-mr="reschedule">${ICONS.calendar}日程 変更</button>
         <button class="mr-cta" data-mr="open">${ICONS.zoom}Zoom を 開く</button>
       </div>
     `;
@@ -1744,11 +1815,11 @@ function renderRibbon(t) {
       </div>
       <div class="mr-info">
         <div class="head">${t.name}さま の 面談、 <span class="warn">Zoom URL が 未 発行</span></div>
-        <div class="sub">押すと <b>URL 自動 発行</b> + <b>相手 の LINE に Flex カード で 御案内</b> します。</div>
+        <div class="sub">押すと <b>Zoom URL を 自動 発行</b> して <b>相手 の LINE に 送信</b> します。</div>
       </div>
       <div class="mr-actions">
-        <button class="mr-sec" data-mr="reschedule">${ICONS.calendar}時間 変更</button>
-        <button class="mr-cta" data-mr="issue">${ICONS.send}URL 発行 + LINE 送信</button>
+        <button class="mr-sec" data-mr="reschedule">${ICONS.calendar}日程 変更</button>
+        <button class="mr-cta" data-mr="issue">${ICONS.send}Zoom URL を 送る</button>
       </div>
     `;
   } else if (m.status === 'proposed') {
@@ -1761,23 +1832,92 @@ function renderRibbon(t) {
       </div>
       <div class="mr-info">
         <div class="head">${t.name}さま に <b>候補 3 つ</b> 打診 中 · 返信 待ち</div>
-        <div class="sub">相手 の <b>選択 画面</b> を 確認 出来ます。 選択 → Zoom URL 自動 発行 → LINE に 御案内。</div>
+        <div class="sub">相手 の <b>選択 画面</b> を 見て、 いつ 押しやすい か 確認 出来ます。</div>
       </div>
       <div class="mr-actions">
-        <button class="mr-sec" data-mr="remind">${ICONS.bell}御返信 お伺い</button>
-        <button class="mr-sec" data-mr="reschedule">${ICONS.resend}候補 再送</button>
+        <button class="mr-sec" data-mr="remind">${ICONS.bell}返信 を 促す</button>
+        <button class="mr-sec" data-mr="reschedule">${ICONS.resend}候補 を 送り直す</button>
         <button class="mr-cta" data-mr="liff-preview">${ICONS.preview}相手 画面 を 見る</button>
       </div>
     `;
   }
 
   ribbon.querySelectorAll('[data-mr]').forEach(btn => {
+    btn.addEventListener('click', () => handleMeetingAction(btn.dataset.mr, t));
+  });
+}
+
+/* ---------- Persistent Action Bar handlers ---------- */
+function bindActionBar() {
+  const book = $('#ab-book');
+  const minutes = $('#ab-minutes');
+  const more = $('#ab-more');
+  if (book && !book.dataset.bound) {
+    book.dataset.bound = '1';
+    book.addEventListener('click', () => {
+      const t = state.get(currentId);
+      openRescheduleModal(t);
+    });
+  }
+  if (minutes && !minutes.dataset.bound) {
+    minutes.dataset.bound = '1';
+    minutes.addEventListener('click', () => {
+      const t = state.get(currentId);
+      const latest = (t.minutes || [])[0];
+      if (!latest) {
+        openRecordingsModal(t);
+        return;
+      }
+      const flex = buildFlex('minutes', t);
+      if (flex) { appendRich(t, flex); showToast('議事録 を Flex カード で 送信 しました'); }
+    });
+  }
+  if (more && !more.dataset.bound) {
+    more.dataset.bound = '1';
+    more.addEventListener('click', () => {
+      const t = state.get(currentId);
+      // Simple menu: for now just open a menu-like modal via reschedule as fallback
+      const items = [
+        { label:'Zoom URL を 直接発行 (時間 既に 決定)', act:'issue-direct' },
+        { label:'録画 から 議事録 を 生成', act:'generate' },
+        { label:'面談 を キャンセル', act:'cancel-meeting' },
+      ];
+      openMoreMenu(t, items);
+    });
+  }
+}
+
+function openMoreMenu(t, items) {
+  let scrim = $('#more-scrim');
+  if (!scrim) {
+    document.body.insertAdjacentHTML('beforeend', `
+      <div class="modal-scrim" id="more-scrim" role="dialog" aria-modal="true" aria-labelledby="more-title">
+        <div class="modal">
+          <div class="modal-head">
+            <div class="modal-title" id="more-title">その他 の 操作</div>
+            <div class="modal-sub">よく 使わない けれど 必要 な 操作 を まとめて います。</div>
+          </div>
+          <div class="modal-body" id="more-body"></div>
+          <div class="modal-foot"><button type="button" class="modal-btn cancel" id="more-cancel">閉じる</button></div>
+        </div>
+      </div>
+    `);
+    scrim = $('#more-scrim');
+    scrim.addEventListener('click', (e) => { if (e.target === scrim) scrim.classList.remove('show'); });
+    $('#more-cancel').addEventListener('click', () => scrim.classList.remove('show'));
+  }
+  const body = $('#more-body');
+  body.innerHTML = items.map(x => `<button type="button" class="slot" data-act="${x.act}" role="button" style="justify-content:flex-start;grid-template-columns:1fr auto"><span class="slot-info"><span class="slot-when">${x.label}</span></span><span aria-hidden="true" style="color:var(--ink-3);font-family:var(--num);font-weight:800">→</span></button>`).join('');
+  body.querySelectorAll('[data-act]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const action = btn.dataset.mr;
-      if (action === 'propose') { openRescheduleModal(t); return; }
-      handleMeetingAction(action, t);
+      const a = btn.dataset.act;
+      scrim.classList.remove('show');
+      if (a === 'issue-direct')     { handleMeetingAction('issue', t); }
+      else if (a === 'generate')    { openRecordingsModal(t); }
+      else if (a === 'cancel-meeting') { openCancelModal(t); }
     });
   });
+  scrim.classList.add('show');
 }
 
 function renderMessage(m, t) {
@@ -2673,6 +2813,7 @@ function showToast(msg) {
 /* ---------- Init ---------- */
 renderThreads();
 renderChat();
+bindActionBar();
 updateSendState();
 </script>
 
