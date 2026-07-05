@@ -2362,14 +2362,38 @@
     });
   }
 
+  // ★ 2026-07-06: PCマイク 優先選択 (Continuity iPhone マイク 除外)
+  //   オーナーfb: 携帯マイクが 自動選択され、 携帯閉じると 音声入らない → PC 内蔵マイクだけ 使うよう固定
+  async function getPreferredMicConstraint() {
+    try {
+      // enumerateDevices は permission 済 でないと label が 空 → 一度 dummy getUserMedia で 権限確保
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioIns = devices.filter(d => d.kind === 'audioinput');
+      // iPhone / iPad / Continuity マイク を 除外
+      const excludePattern = /iPhone|iPad|Continuity|Handoff/i;
+      const builtin = audioIns.find(d => !excludePattern.test(d.label) && /Built-in|MacBook|iMac|内蔵|Mac|Studio Display/i.test(d.label));
+      // fallback: iPhone 系じゃない 最初の audio input
+      const nonIphone = builtin || audioIns.find(d => !excludePattern.test(d.label));
+      if (nonIphone && nonIphone.deviceId) {
+        console.log('[mic] preferred:', nonIphone.label, nonIphone.deviceId.slice(0, 8));
+        return { deviceId: { exact: nonIphone.deviceId }, echoCancellation: true, noiseSuppression: true, sampleRate: 44100 };
+      }
+    } catch (e) {
+      console.warn('[mic] enumerateDevices failed:', e);
+    }
+    // fallback: default 制約
+    return { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 };
+  }
+
   // 対面モード録画: webcam + マイクで録画 → 同じ AI議事録パイプラインへ
   async function startWebcamRecording(bookingTs) {
     const R = window._fpRecorder;
     let stream;
     try {
+      const audioConstraint = await getPreferredMicConstraint();
       stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 },
+        audio: audioConstraint,
       });
     } catch (e) {
       // ★ オーナーfb 2026-06-22 (roundG): カメラ/マイク 失敗時に 進める fallback を 3 つ提示
@@ -2768,9 +2792,8 @@
     const R = window._fpRecorder;
     let stream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 },
-      });
+      const audioConstraint = await getPreferredMicConstraint();
+      stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraint });
     } catch (e) {
       alert('マイク も アクセス不可 です。\n\nMac の場合: システム設定 → プライバシーとセキュリティ → マイク で ブラウザ を ON にしてください。\n\n技術: ' + (e?.name || e?.message || e));
       return;
@@ -2897,9 +2920,10 @@
     try {
       let stream;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: false, noiseSuppression: true, sampleRate: 44100 },
-        });
+        const audioConstraint = await getPreferredMicConstraint();
+        // Zoom 用途: echoCancellation=false (元コード踏襲)
+        audioConstraint.echoCancellation = false;
+        stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraint });
       } catch (e) {
         alert('🎤 マイク アクセス できません\n\n' +
               'Mac の場合: システム設定 → プライバシーとセキュリティ → マイク で Chrome を ON\n\n' +
