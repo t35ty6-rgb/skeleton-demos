@@ -203,6 +203,213 @@ input,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 .tool-btn svg{width:20px;height:20px;stroke-width:2}
 
 /* ==================================================================
+   TOP-LEVEL DASHBOARD (workspace-wide overview, all customers)
+   ================================================================== */
+.dash{background:var(--bg);min-height:100vh;height:100dvh;overflow-y:auto;display:none;flex-direction:column;grid-column:1 / -1}
+body[data-mode="dashboard"] .dash{display:flex}
+body[data-mode="dashboard"] .threads,
+body[data-mode="dashboard"] .cockpit,
+body[data-mode="dashboard"] .chat-drawer,
+body[data-mode="dashboard"] .chat-drawer-scrim{display:none !important}
+
+.dash-head{
+  padding:24px 40px 20px;background:var(--panel);border-bottom:1px solid var(--line);
+  display:grid;grid-template-columns:auto 1fr auto;gap:20px;align-items:center;
+  position:sticky;top:0;z-index:var(--z-header);
+  backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+  background:rgba(255,255,255,0.86);
+}
+.dash-brand{display:flex;align-items:center;gap:12px}
+.dash-brand .mark{
+  width:40px;height:40px;background:linear-gradient(135deg,var(--ink),#3F4045);color:var(--panel);
+  display:grid;place-items:center;font-family:var(--num);font-weight:800;font-size:18px;
+  border-radius:12px;letter-spacing:-0.02em;
+  box-shadow:0 2px 4px rgba(15,17,20,0.16), inset 0 1px 0 rgba(255,255,255,0.14);
+}
+.dash-brand .n{display:flex;flex-direction:column;line-height:1.2}
+.dash-brand .n .b{font-size:16px;font-weight:800;letter-spacing:0.005em}
+.dash-brand .n .s{
+  font-family:var(--num);font-size:10.5px;font-weight:700;color:var(--ink-3);
+  letter-spacing:0.14em;text-transform:uppercase;margin-top:2px;
+}
+.dash-head .center{text-align:center}
+.dash-head .center .greet{font-family:var(--num);font-size:11px;font-weight:700;color:var(--ink-3);letter-spacing:0.14em;text-transform:uppercase}
+.dash-head .center .date{font-size:15px;font-weight:800;color:var(--ink);margin-top:2px;letter-spacing:0.005em}
+.dash-head .tools{display:flex;gap:8px;align-items:center}
+
+.dash-body{padding:32px 40px 60px;max-width:1400px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+
+/* Section eyebrow */
+.dash-eye{
+  font-family:var(--num);font-size:var(--tx-caps);font-weight:800;
+  color:var(--ink-3);letter-spacing:0.14em;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px;margin-bottom:14px;
+}
+.dash-eye::before{content:"";width:16px;height:1px;background:currentColor}
+.dash-eye .count{
+  font-family:var(--num);font-size:11px;color:var(--ink-3);font-weight:800;
+  padding:2px 8px;background:var(--sys);border-radius:10px;
+}
+.dash-eye .link{
+  font-family:var(--num);font-size:11px;color:var(--line-green-2);font-weight:800;
+  cursor:pointer;background:none;border:0;padding:4px 8px;letter-spacing:0.06em;
+}
+.dash-eye .link:hover{color:var(--line-green)}
+
+/* KPI row */
+.kpi-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:14px}
+@media (max-width:960px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi{
+  padding:20px 22px;background:var(--panel);border-radius:var(--r-xl);
+  box-shadow:var(--elev-1);
+  display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;isolation:isolate;
+  transition:transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.kpi.clickable{cursor:pointer}
+.kpi.clickable:hover{transform:translateY(-2px);box-shadow:var(--elev-2)}
+.kpi::before{content:"";position:absolute;inset:-40%;z-index:-1;pointer-events:none;opacity:0.6}
+.kpi.today::before{background:radial-gradient(circle at 20% 20%, var(--amber-tint) 0%, transparent 55%)}
+.kpi.unread::before{background:radial-gradient(circle at 20% 20%, var(--line-green-tint) 0%, transparent 55%)}
+.kpi.alert::before{background:radial-gradient(circle at 20% 20%, var(--alert-tint) 0%, transparent 55%)}
+.kpi.count::before{background:radial-gradient(circle at 20% 20%, rgba(122,128,144,0.10) 0%, transparent 55%)}
+.kpi .k{
+  font-family:var(--num);font-size:var(--tx-caps);font-weight:800;color:var(--ink-3);
+  letter-spacing:0.14em;text-transform:uppercase;
+}
+.kpi .v{
+  font-family:var(--num);font-size:44px;font-weight:800;color:var(--ink);
+  letter-spacing:-0.03em;font-variant-numeric:tabular-nums;line-height:1;
+}
+.kpi .v .u{font-size:16px;color:var(--ink-3);font-weight:700;margin-left:6px;letter-spacing:0.02em}
+.kpi .s{font-size:12.5px;color:var(--ink-2);font-weight:500;line-height:1.5}
+.kpi .s b{color:var(--ink);font-weight:700}
+.kpi .s .warn{color:var(--alert);font-weight:700}
+
+/* Today's meetings + alerts row */
+.dash-row{display:grid;grid-template-columns:1.4fr 1fr;gap:20px}
+@media (max-width:960px){.dash-row{grid-template-columns:1fr}}
+.dash-panel{background:var(--panel);border-radius:var(--r-xl);padding:22px 24px;box-shadow:var(--elev-1)}
+
+.today-list{display:flex;flex-direction:column;gap:10px}
+.today-item{
+  display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;
+  padding:14px 16px;background:var(--sys);border-radius:var(--r-md);
+  cursor:pointer;transition:transform var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.today-item:hover{transform:translateY(-1px);background:var(--panel);box-shadow:var(--elev-1)}
+.today-time{
+  font-family:var(--num);font-size:22px;font-weight:800;color:var(--ink);
+  letter-spacing:-0.02em;font-variant-numeric:tabular-nums;line-height:1;
+  min-width:76px;
+}
+.today-time .u{font-family:var(--num);font-size:11px;font-weight:700;color:var(--ink-3);display:block;margin-top:4px;letter-spacing:0.06em;text-transform:uppercase}
+.today-info{min-width:0}
+.today-info .n{font-size:15px;font-weight:800;color:var(--ink);letter-spacing:0.005em;line-height:1.35}
+.today-info .m{font-size:12.5px;color:var(--ink-3);margin-top:2px;font-weight:500}
+.today-status{
+  font-family:var(--num);font-size:10.5px;font-weight:800;padding:4px 10px;border-radius:10px;
+  letter-spacing:0.06em;text-transform:uppercase;flex-shrink:0;
+}
+.today-status.confirmed{background:var(--line-green-tint);color:var(--line-green-2)}
+.today-status.pending{background:rgba(122,128,144,0.14);color:var(--ink-3)}
+.today-status.proposed{background:var(--amber-tint);color:var(--amber-deep)}
+.today-empty{padding:24px;text-align:center;color:var(--ink-3);font-style:italic;font-size:13px;background:var(--sys);border-radius:var(--r-md)}
+
+.alert-list{display:flex;flex-direction:column;gap:8px}
+.alert-item{
+  display:grid;grid-template-columns:32px 1fr auto;gap:12px;align-items:center;
+  padding:12px 14px;background:var(--alert-tint);border-radius:var(--r-md);
+  cursor:pointer;transition:transform var(--dur-fast) var(--ease-out);
+  border:1px solid rgba(226,74,61,0.2);
+}
+.alert-item:hover{transform:translateY(-1px)}
+.alert-item .ic{
+  width:32px;height:32px;background:var(--alert);color:#FFF;border-radius:8px;
+  display:grid;place-items:center;flex-shrink:0;font-weight:800;
+}
+.alert-item .info{min-width:0}
+.alert-item .info .n{font-size:13.5px;font-weight:800;color:var(--alert);letter-spacing:0.005em}
+.alert-item .info .m{font-size:12px;color:var(--ink-2);margin-top:1px;font-weight:500}
+.alert-item .go{
+  color:var(--alert);font-family:var(--num);font-size:18px;font-weight:800;padding:0 4px;
+}
+.alert-empty{padding:24px;text-align:center;color:var(--ink-3);font-size:13px;background:var(--sys);border-radius:var(--r-md);font-weight:500}
+
+/* Customers grid */
+.cust-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:14px}
+.cust-card{
+  background:var(--panel);border-radius:var(--r-lg);padding:18px;
+  box-shadow:var(--elev-1);cursor:pointer;text-align:left;
+  display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden;
+  border:0;font-family:inherit;
+  transition:transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.cust-card:hover{transform:translateY(-2px);box-shadow:var(--elev-2)}
+.cust-card:active{transform:scale(0.985)}
+.cust-card .row1{display:flex;align-items:center;gap:12px}
+.cust-card .av{
+  width:44px;height:44px;border-radius:50%;background:#3F4045;color:#FFF;
+  font-size:17px;font-weight:800;display:grid;place-items:center;flex-shrink:0;
+  box-shadow:0 3px 8px -3px rgba(15,17,20,0.16), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.cust-card .av.pink{background:#C56685}.cust-card .av.blue{background:#3F6B9E}.cust-card .av.olive{background:#6E7A42}.cust-card .av.orange{background:#C46F3C}.cust-card .av.violet{background:#6D5FA0}
+.cust-card .who{min-width:0;flex:1}
+.cust-card .n{font-size:15px;font-weight:800;color:var(--ink);letter-spacing:0.005em;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cust-card .stage{
+  font-family:var(--num);font-size:10.5px;color:var(--ink-3);font-weight:700;
+  letter-spacing:0.06em;text-transform:uppercase;margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.cust-card .badge{
+  position:absolute;top:14px;right:14px;
+  background:var(--alert);color:#FFF;font-family:var(--num);font-size:11px;font-weight:800;
+  padding:3px 8px;border-radius:10px;min-width:22px;text-align:center;letter-spacing:0.02em;
+}
+.cust-card .row2{padding-top:12px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cust-card .row2 .last{
+  font-size:12.5px;color:var(--ink-3);font-weight:500;line-height:1.4;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;
+}
+.cust-card .row2 .time{
+  font-family:var(--num);font-size:10.5px;color:var(--ink-3);font-weight:700;
+  letter-spacing:0.02em;flex-shrink:0;
+}
+.cust-card .meeting-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--num);font-size:10.5px;font-weight:800;padding:4px 8px;border-radius:9px;
+  letter-spacing:0.06em;text-transform:uppercase;
+}
+.cust-card .meeting-pill.confirmed{background:var(--line-green-tint);color:var(--line-green-2)}
+.cust-card .meeting-pill.pending{background:rgba(122,128,144,0.14);color:var(--ink-3)}
+.cust-card .meeting-pill.proposed{background:var(--amber-tint);color:var(--amber-deep)}
+.cust-card .meeting-pill::before{content:"";width:5px;height:5px;background:currentColor;border-radius:50%}
+
+.cust-empty{
+  padding:40px 24px;text-align:center;background:var(--panel);border-radius:var(--r-xl);
+  box-shadow:var(--elev-1);
+}
+.cust-empty h3{font-size:16px;font-weight:800;color:var(--ink);margin-bottom:6px}
+.cust-empty p{font-size:13px;color:var(--ink-3);line-height:1.65;font-weight:500;margin-bottom:16px}
+.cust-empty .add-friend-hint{
+  padding:14px 16px;background:var(--sys);border-radius:var(--r-md);text-align:left;
+  font-size:12.5px;color:var(--ink-2);line-height:1.6;
+}
+.cust-empty .add-friend-hint code{
+  font-family:var(--num);background:var(--panel);padding:2px 8px;border-radius:5px;
+  font-size:11.5px;color:var(--ink);font-weight:700;
+}
+
+/* Back button in cockpit head */
+.ck-back-dash{
+  min-height:40px;padding:8px 14px 8px 10px;border-radius:10px;
+  background:transparent;color:var(--ink-2);border:0;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;letter-spacing:0.005em;
+  transition:background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.ck-back-dash:hover{background:var(--sys);color:var(--ink)}
+.ck-back-dash svg{width:16px;height:16px}
+
+/* ==================================================================
    COCKPIT LAYOUT — customer detail is the workspace, chat is a drawer
    ================================================================== */
 .app{display:grid;grid-template-columns:300px 1fr;min-height:100vh;height:100dvh;isolation:isolate}
@@ -213,8 +420,8 @@ input,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 
 /* Big customer header */
 .ck-head{
-  padding:24px 32px 18px;background:var(--panel);border-bottom:1px solid var(--line);
-  display:grid;grid-template-columns:56px 1fr auto;gap:18px;align-items:center;
+  padding:20px 32px 18px;background:var(--panel);border-bottom:1px solid var(--line);
+  display:grid;grid-template-columns:auto 56px 1fr auto;gap:14px;align-items:center;
   position:sticky;top:0;z-index:var(--z-header);
   backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
   background:rgba(255,255,255,0.86);
@@ -1619,7 +1826,82 @@ input,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 }
 </style>
 </head>
-<body data-view="threads">
+<body data-view="threads" data-mode="dashboard">
+
+<!-- ===== TOP-LEVEL DASHBOARD ===== -->
+<main class="dash" role="main" aria-label="ダッシュボード">
+  <header class="dash-head">
+    <div class="dash-brand">
+      <div class="mark" aria-hidden="true">S</div>
+      <div class="n">
+        <div class="b">Skel Concierge</div>
+        <div class="s" id="dash-owner">担当 · 吉田</div>
+      </div>
+    </div>
+    <div class="center">
+      <div class="greet" id="dash-greet">Today</div>
+      <div class="date" id="dash-date">7 月 6 日 (日)</div>
+    </div>
+    <div class="tools">
+      <button type="button" class="ck-settings-btn" id="dash-settings-btn" aria-label="設定 を 開く" title="設定">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="dash-body">
+
+    <!-- KPI row -->
+    <section class="kpi-grid" aria-label="今日 の 指標">
+      <button type="button" class="kpi today clickable" id="kpi-today">
+        <span class="k">今日 の 面談</span>
+        <span class="v"><span id="kpi-today-v">0</span><span class="u">件</span></span>
+        <span class="s" id="kpi-today-s">予定 なし</span>
+      </button>
+      <button type="button" class="kpi unread clickable" id="kpi-unread">
+        <span class="k">未読 の LINE</span>
+        <span class="v"><span id="kpi-unread-v">0</span><span class="u">件</span></span>
+        <span class="s" id="kpi-unread-s">既読</span>
+      </button>
+      <button type="button" class="kpi alert clickable" id="kpi-alert">
+        <span class="k">要 対応</span>
+        <span class="v"><span id="kpi-alert-v">0</span><span class="u">件</span></span>
+        <span class="s" id="kpi-alert-s">— 落ち着き</span>
+      </button>
+      <div class="kpi count">
+        <span class="k">登録 客</span>
+        <span class="v"><span id="kpi-count-v">0</span><span class="u">名</span></span>
+        <span class="s" id="kpi-count-s">LINE 追加 で 自動 登録</span>
+      </div>
+    </section>
+
+    <!-- Today's meetings + alerts -->
+    <div class="dash-row">
+      <section class="dash-panel">
+        <div class="dash-eye">今日 と 明日 の 面談 <span class="count" id="dash-today-count">0</span></div>
+        <div class="today-list" id="dash-today-list"></div>
+      </section>
+      <section class="dash-panel">
+        <div class="dash-eye">要 対応 <span class="count" id="dash-alert-count">0</span></div>
+        <div class="alert-list" id="dash-alert-list"></div>
+      </section>
+    </div>
+
+    <!-- All customers -->
+    <section>
+      <div class="dash-eye">
+        全 客 <span class="count" id="dash-cust-count">0</span>
+        <div style="flex:1"></div>
+        <button type="button" class="link" id="dash-cust-refresh">↻ 更新</button>
+      </div>
+      <div id="dash-cust-grid-wrap"></div>
+    </section>
+
+  </div>
+</main>
 
 <div class="app" role="application" aria-label="Skel Concierge · 会話管理">
 
@@ -1645,6 +1927,10 @@ input,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
   <!-- CENTER — CUSTOMER COCKPIT (new main view) -->
   <main class="cockpit" aria-label="相手 の 詳細">
     <header class="ck-head">
+      <button class="ck-back-dash" id="ck-back-dash" aria-label="ダッシュボード に 戻る">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M14 6l-6 6 6 6"/></svg>
+        ダッシュボード
+      </button>
       <button class="ck-back" id="ck-back" aria-label="一覧 に 戻る">←</button>
       <div class="ck-avatar" id="ck-avatar" aria-hidden="true">田</div>
       <div class="ck-title">
@@ -3679,7 +3965,7 @@ function startPolling(){
         t.alert = !!c.alert;
         t.meeting = c.meeting || t.meeting;
       });
-      if (dirty) renderThreads();
+      if (dirty) { renderThreads(); if (document.body.dataset.mode === 'dashboard') renderDashboard(); }
       if ($('#chat-drawer')?.classList.contains('show')) {
         await refreshCustomer(currentId);
         renderChat();
@@ -4021,6 +4307,178 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#setup-
 $('#setup-scrim').addEventListener('click', e => { if (e.target === $('#setup-scrim')) closeSetup(); });
 $('#ck-settings-btn').onclick = openSettings;
 
+/* =============================
+   DASHBOARD (top-level workspace)
+   ============================= */
+function setMode(mode){
+  document.body.dataset.mode = mode;
+  if (mode === 'dashboard') renderDashboard();
+}
+
+function goToDashboard(){ setMode('dashboard'); }
+function goToCustomer(id){
+  currentId = id;
+  setMode('cockpit');
+  if (REMOTE) refreshCustomer(id).then(() => { renderThreads(); renderChat(); });
+  else { renderThreads(); renderChat(); }
+}
+
+function renderDashboard(){
+  // Date
+  const now = new Date();
+  const dow = ['日','月','火','水','木','金','土'][now.getDay()];
+  const dateEl = $('#dash-date');
+  if (dateEl) dateEl.textContent = `${now.getFullYear()} 年 ${now.getMonth()+1} 月 ${now.getDate()} 日 (${dow})`;
+  const greetEl = $('#dash-greet');
+  if (greetEl) {
+    const h = now.getHours();
+    greetEl.textContent = h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  }
+
+  const all = Array.from(state.values());
+  const today = new Date();
+  const tomorrow = new Date(today.getTime() + 86400000);
+  const dayKey = d => d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate();
+  const todayKey = dayKey(today), tomorrowKey = dayKey(tomorrow);
+
+  const withMeeting = all.filter(t => t.meeting && t.meeting.startAt);
+  const todayMeetings = withMeeting.filter(t => {
+    const d = new Date(t.meeting.startAt);
+    return dayKey(d) === todayKey || dayKey(d) === tomorrowKey;
+  }).sort((a,b) => (a.meeting.startAt || '').localeCompare(b.meeting.startAt || ''));
+
+  const alerts = all.filter(t => t.alert || (t.meeting && (t.meeting.status === 'pending_url' || t.meeting.status === 'proposed')));
+  const unreadTotal = all.reduce((s, t) => s + (t.unread || 0), 0);
+
+  // KPIs
+  $('#kpi-today-v').textContent = todayMeetings.length;
+  $('#kpi-today-s').textContent = todayMeetings.length
+    ? `直近: ${todayMeetings[0].name}さま · ${(todayMeetings[0].meeting.time || '').split(/[–-〜]/)[0].trim() || ''}`
+    : '予定 なし';
+  $('#kpi-unread-v').textContent = unreadTotal;
+  $('#kpi-unread-s').innerHTML = unreadTotal
+    ? `<b>${all.filter(t => t.unread).length}</b> 名 から`
+    : '既読';
+  $('#kpi-alert-v').textContent = alerts.length;
+  $('#kpi-alert-s').innerHTML = alerts.length
+    ? `<span class="warn">要 対応 ${alerts.length} 件</span>`
+    : '— 落ち着き';
+  $('#kpi-count-v').textContent = all.length;
+
+  // Today's meetings panel
+  $('#dash-today-count').textContent = todayMeetings.length;
+  const todayList = $('#dash-today-list');
+  if (todayMeetings.length === 0) {
+    todayList.innerHTML = `<div class="today-empty">今日 と 明日 の 予定 は ありません</div>`;
+  } else {
+    todayList.innerHTML = todayMeetings.map(t => {
+      const d = new Date(t.meeting.startAt);
+      const isToday = dayKey(d) === todayKey;
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      const statusClass = t.meeting.status || 'pending';
+      const statusLabel = statusClass === 'confirmed' ? 'Zoom 済' : statusClass === 'pending_url' ? 'URL 未' : '打診 中';
+      return `
+        <button type="button" class="today-item" data-cid="${t.id}">
+          <div class="today-time">${hh}:${mm}<span class="u">${isToday ? '今日' : '明日'}</span></div>
+          <div class="today-info">
+            <div class="n">${t.name}さま</div>
+            <div class="m">${t.meeting.time || ''} · ${t.meeting.minutes || 45} 分 · ${t.stage || ''}</div>
+          </div>
+          <span class="today-status ${statusClass === 'pending_url' ? 'pending' : statusClass}">${statusLabel}</span>
+        </button>
+      `;
+    }).join('');
+  }
+  todayList.querySelectorAll('[data-cid]').forEach(el => el.addEventListener('click', () => goToCustomer(el.dataset.cid)));
+
+  // Alerts panel
+  $('#dash-alert-count').textContent = alerts.length;
+  const alertList = $('#dash-alert-list');
+  if (alerts.length === 0) {
+    alertList.innerHTML = `<div class="alert-empty">全 客 の 対応 が 完了 して います 👌</div>`;
+  } else {
+    alertList.innerHTML = alerts.slice(0, 5).map(t => {
+      const reason = t.meeting?.status === 'pending_url' ? 'Zoom URL が 未 発行'
+                    : t.meeting?.status === 'proposed' ? '候補 打診 中 · 返信 待ち'
+                    : t.alert ? '要 対応' : '';
+      return `
+        <button type="button" class="alert-item" data-cid="${t.id}">
+          <div class="ic">!</div>
+          <div class="info"><div class="n">${t.name}さま</div><div class="m">${reason}</div></div>
+          <div class="go">→</div>
+        </button>
+      `;
+    }).join('');
+  }
+  alertList.querySelectorAll('[data-cid]').forEach(el => el.addEventListener('click', () => goToCustomer(el.dataset.cid)));
+
+  // All customers grid
+  $('#dash-cust-count').textContent = all.length;
+  const gridWrap = $('#dash-cust-grid-wrap');
+  if (all.length === 0) {
+    gridWrap.innerHTML = `
+      <div class="cust-empty">
+        <h3>まだ 客 が いません</h3>
+        <p>「顧客管理」 チャンネル を LINE 友だち追加 する と、 自動 で 客一覧 に 追加 されます。</p>
+        <div class="add-friend-hint">
+          友だち追加 URL は LINE Developers Console → チャンネル → Messaging API 設定 → <code>ボット の 基本 ID</code> の 下 に あります。
+          <br>QR コード を コピー して お客さま に お送り ください。
+        </div>
+      </div>
+    `;
+  } else {
+    gridWrap.innerHTML = `<div class="cust-grid">${all.map(t => {
+      const mp = t.meeting ? `<span class="meeting-pill ${t.meeting.status === 'pending_url' ? 'pending' : t.meeting.status}">${
+        t.meeting.status === 'confirmed' ? 'Zoom 予定 あり'
+        : t.meeting.status === 'pending_url' ? 'URL 未 発行'
+        : t.meeting.status === 'proposed' ? '打診 中'
+        : ''
+      }</span>` : '';
+      return `
+        <button type="button" class="cust-card" data-cid="${t.id}">
+          ${t.unread ? `<span class="badge">${t.unread}</span>` : ''}
+          <div class="row1">
+            <div class="av ${t.avClass || ''}">${t.avChar || '?'}</div>
+            <div class="who">
+              <div class="n">${t.name || '(名前 未 登録)'}さま</div>
+              <div class="stage">${t.stage || ''}</div>
+            </div>
+          </div>
+          <div class="row2">
+            ${mp || `<span class="last">${t.lastPreview || '(会話 なし)'}</span>`}
+            <span class="time">${t.time || ''}</span>
+          </div>
+        </button>
+      `;
+    }).join('')}</div>`;
+    gridWrap.querySelectorAll('[data-cid]').forEach(el => el.addEventListener('click', () => goToCustomer(el.dataset.cid)));
+  }
+}
+
+// Wire dashboard buttons
+$('#dash-settings-btn')?.addEventListener('click', openSettings);
+$('#dash-cust-refresh')?.addEventListener('click', async () => {
+  if (REMOTE) { try { await bootRemote(); renderDashboard(); showToast('客一覧 を 更新 しました'); } catch(e) { showToast('更新 失敗: ' + e.message); } }
+  else renderDashboard();
+});
+$('#ck-back-dash')?.addEventListener('click', goToDashboard);
+$('#kpi-today')?.addEventListener('click', () => {
+  // Jump to first today meeting if any
+  const all = Array.from(state.values());
+  const today = new Date(); const todayKey = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+  const first = all.find(t => t.meeting?.startAt && new Date(t.meeting.startAt).getFullYear()+'-'+(new Date(t.meeting.startAt).getMonth()+1)+'-'+new Date(t.meeting.startAt).getDate() === todayKey);
+  if (first) goToCustomer(first.id);
+});
+$('#kpi-unread')?.addEventListener('click', () => {
+  const first = Array.from(state.values()).find(t => t.unread > 0);
+  if (first) goToCustomer(first.id);
+});
+$('#kpi-alert')?.addEventListener('click', () => {
+  const first = Array.from(state.values()).find(t => t.alert);
+  if (first) goToCustomer(first.id);
+});
+
 /* ---------- Init ---------- */
 async function init(){
   bindActionBar();
@@ -4054,36 +4512,40 @@ async function init(){
     if (!check.ready) {
       renderThreads();
       renderChat();
-      $('#ck-settings-btn').classList.add('pulse');
+      renderDashboard();
+      document.querySelectorAll('.ck-settings-btn').forEach(b => b.classList.add('pulse'));
       setTimeout(() => openSettings(), 400);
       return;
     }
     const ok = await bootRemote();
-    if (ok) {
-      renderThreads();
-      await refreshCustomer(currentId);
-      renderChat();
-      startPolling();
-      showToast('サーバー 接続 済 · ' + state.size + ' 客');
-      return;
-    } else {
-      // No customers yet — still show cockpit with empty state
-      renderThreads();
-      renderChat();
-      startPolling();
-      showToast('接続 済 · 客 が 追加 されると 一覧 に 出ます');
-      return;
-    }
+    renderThreads();
+    if (ok && currentId) await refreshCustomer(currentId);
+    renderChat();
+    renderDashboard();
+    startPolling();
+    showToast(ok ? ('接続 済 · ' + state.size + ' 客') : '接続 済 · 客 が 追加 されると 一覧 に 出ます');
+    return;
   } catch(e) {
     console.error(e);
     renderThreads();
     renderChat();
-    $('#ck-settings-btn').classList.add('pulse');
+    renderDashboard();
+    document.querySelectorAll('.ck-settings-btn').forEach(b => b.classList.add('pulse'));
     showToast('API 接続 失敗: ' + e.message);
     setTimeout(() => openSettings(), 400);
   }
 }
+
+// Redirect the earlier init entry-point paths to also render dashboard
+const _origRenderThreads = renderThreads;
 init();
+
+/* Hook selectThread: also switch to cockpit mode */
+const _selectThreadOrig = selectThread;
+selectThread = function(id){
+  _selectThreadOrig(id);
+  setMode('cockpit');
+};
 </script>
 
 </body>
