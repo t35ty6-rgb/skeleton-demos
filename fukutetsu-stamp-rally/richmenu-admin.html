@@ -118,14 +118,22 @@ html,body{min-height:100%;font-family:"Noto Sans JP",sans-serif;color:var(--ink)
 .apply-wrap .save-note b{color:var(--ink)}
 
 /* ── image slot ── */
-.img-slot{border:2px dashed var(--rule);background:var(--paper);padding:20px;border-radius:4px;text-align:center;transition:border .15s}
+.img-slot{border:2px dashed var(--rule);background:var(--paper);padding:22px;border-radius:6px;text-align:center;transition:border .15s}
 .img-slot:hover{border-color:var(--ink)}
-.img-slot img{max-width:100%;max-height:120px;display:block;margin:0 auto 10px;border:1px solid var(--rule)}
-.img-slot .lbl{font-size:12px;font-weight:800;color:var(--ink);margin-bottom:6px}
-.img-slot .hint{font-size:10.5px;color:var(--dim);margin-bottom:10px;line-height:1.5}
+.img-slot img{max-width:100%;max-height:200px;display:block;margin:0 auto 14px;border:1.5px solid var(--ink);border-radius:3px;box-shadow:var(--shadow)}
+.img-slot .img-placeholder{padding:18px 0 20px}
+.img-slot .ph-ic{font-size:40px;margin-bottom:8px;line-height:1;color:var(--dim)}
+.img-slot .ph-lbl{font-size:14px;font-weight:900;color:var(--ink);margin-bottom:4px}
+.img-slot .ph-hint{font-size:11px;color:var(--dim);line-height:1.5}
+.img-slot .img-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.img-slot .img-spec{margin-top:12px;font-size:11px;color:var(--dim)}
 .img-slot input[type=file]{display:none}
-.img-slot .up-btn{padding:8px 16px;background:var(--white);border:1.5px solid var(--ink);color:var(--ink);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;border-radius:3px}
-.img-slot .up-btn:hover{background:var(--ink);color:#fff}
+.img-slot .up-btn,.img-slot .reset-btn{padding:11px 20px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;border-radius:3px;display:inline-flex;align-items:center;gap:6px}
+.img-slot .up-btn{background:var(--ink);color:#fff;border:1.5px solid var(--ink)}
+.img-slot .up-btn:hover{background:var(--red);border-color:var(--red)}
+.img-slot .reset-btn{background:var(--white);color:var(--ink);border:1.5px solid var(--rule)}
+.img-slot .reset-btn:hover{border-color:var(--ink);background:var(--paper-2)}
+.img-slot.has-img{background:var(--white);border-style:solid;border-color:var(--ink)}
 
 /* ── modal ── */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
@@ -206,16 +214,36 @@ html,body{min-height:100%;font-family:"Noto Sans JP",sans-serif;color:var(--ink)
       </div>
     </div>
 
-    <!-- Step 3: cards -->
+    <!-- Step 3: image upload -->
     <div class="section">
-      <h2><span class="n">3</span>4つの ボタン</h2>
+      <h2><span class="n">3</span>メニューの 画像</h2>
+      <div class="sub">Photoshop や Canva などで 作った 画像を アップロード すると そのまま LINE の メニュー に なります。 アップロードしない場合は 自動デザインが使われます。</div>
+      <div class="img-slot" id="img-slot">
+        <img id="img-thumb" src="" alt="menu image" style="display:none">
+        <div class="img-placeholder" id="img-placeholder">
+          <div class="ph-ic">📤</div>
+          <div class="ph-lbl">画像 未アップロード</div>
+          <div class="ph-hint">下のボタンから 画像を選ぶ</div>
+        </div>
+        <div class="img-actions">
+          <label class="up-btn" for="img-upload">画像を アップロード</label>
+          <button class="reset-btn" id="img-reset" type="button" style="display:none">自動デザインに戻す</button>
+        </div>
+        <input type="file" id="img-upload" accept="image/*">
+        <div class="img-spec">推奨サイズ: 2500 × 1686 px (JPG または PNG)</div>
+      </div>
+    </div>
+
+    <!-- Step 4: cards -->
+    <div class="section">
+      <h2><span class="n">4</span>4つの ボタン</h2>
       <div class="sub">それぞれの ボタン を おしたら 開くページ を きめます</div>
       <div class="cards-edit" id="cards-edit"></div>
     </div>
 
-    <!-- Step 4: apply -->
+    <!-- Step 5: apply -->
     <div class="apply-wrap">
-      <h2><span class="n">4</span>設定を LINE に 反映する</h2>
+      <h2><span class="n">5</span>設定を LINE に 反映する</h2>
       <p>全部の設定が おわったら 下のボタン を おしてください。<br>数十秒で LINE アプリに反映されます。</p>
       <button class="btn" id="apply-btn">LINE に 反映する</button>
       <div class="save-note"><b>下書きは自動保存されています。</b>いつでも 途中で戻ってこれます。</div>
@@ -324,6 +352,11 @@ document.getElementById("hero-sub").addEventListener("input", e => { CFG[CUR].he
 // ─────────── Live preview (SVG based, updates in real time) ───────────
 function renderPreview(){
   const c = CFG[CUR];
+  // If custom image uploaded, use it directly
+  if (c.customImage){
+    document.getElementById("rm-img").src = c.customImage;
+    return;
+  }
   const W = 2500, H = 1686;
   const cardH = 488, cardW = 1220;
   const cardXs = [30, 1250];
@@ -397,8 +430,50 @@ document.querySelectorAll("#tab-row button").forEach(btn => {
     document.getElementById("cur-tab-name").textContent = CFG[CUR].label;
     renderHero();
     renderCards();
+    updateImgSlot();
     renderPreview();
   });
+});
+
+// ─────────── Image upload ───────────
+function updateImgSlot(){
+  const c = CFG[CUR];
+  const slot = document.getElementById("img-slot");
+  const thumb = document.getElementById("img-thumb");
+  const ph = document.getElementById("img-placeholder");
+  const resetBtn = document.getElementById("img-reset");
+  if (c.customImage){
+    thumb.src = c.customImage;
+    thumb.style.display = "block";
+    ph.style.display = "none";
+    resetBtn.style.display = "inline-flex";
+    slot.classList.add("has-img");
+  } else {
+    thumb.style.display = "none";
+    ph.style.display = "block";
+    resetBtn.style.display = "none";
+    slot.classList.remove("has-img");
+  }
+}
+document.getElementById("img-upload").addEventListener("change", e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    CFG[CUR].customImage = ev.target.result;
+    saveCfg(CFG);
+    updateImgSlot();
+    renderPreview();
+  };
+  reader.readAsDataURL(f);
+  e.target.value = "";
+});
+document.getElementById("img-reset").addEventListener("click", () => {
+  if (!confirm("アップロードした画像を 削除して 自動デザインに 戻しますか？")) return;
+  delete CFG[CUR].customImage;
+  saveCfg(CFG);
+  updateImgSlot();
+  renderPreview();
 });
 
 // ─────────── Apply ───────────
@@ -425,6 +500,7 @@ document.getElementById("apply-btn").addEventListener("click", async () => {
 // ─────────── Init ───────────
 renderHero();
 renderCards();
+updateImgSlot();
 renderPreview();
 </script>
 </body>
