@@ -577,29 +577,8 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
                 <div class="form-row" style="border-bottom:none">
                   <div class="lbl">このタブのボタン配置<span class="hint" id="grid-cur-tab">スポット</span></div>
                   <div class="val">
-                    <div class="layout-picker" id="grid-picker" style="grid-template-columns:repeat(5,1fr);margin-bottom:0">
-                      <button data-grid="1">
-                        <div class="layout-icon full"></div>
-                        1個
-                      </button>
-                      <button data-grid="2-lr">
-                        <div class="layout-icon lr"><div></div><div></div></div>
-                        2個 (左右)
-                      </button>
-                      <button data-grid="2-tb">
-                        <div class="layout-icon tb"><div></div><div></div></div>
-                        2個 (上下)
-                      </button>
-                      <button data-grid="2x2" class="on">
-                        <div class="layout-icon quad"><div></div><div></div><div></div><div></div></div>
-                        4個 (2×2)
-                      </button>
-                      <button data-grid="3x2">
-                        <div class="layout-icon" style="display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;background:var(--rule-2)"><div style="background:var(--surface-2)"></div><div style="background:var(--surface-2)"></div><div style="background:var(--surface-2)"></div><div style="background:var(--surface-2)"></div><div style="background:var(--surface-2)"></div><div style="background:var(--surface-2)"></div></div>
-                        6個 (3×2)
-                      </button>
-                    </div>
-                    <div class="helper">タブごとに 配置を 変えられます。 変更するとボタン数が自動調整されます</div>
+                    <div class="layout-picker" id="grid-picker" style="grid-template-columns:repeat(auto-fill,minmax(90px,1fr));margin-bottom:0"></div>
+                    <div class="helper">行ごとに列数を変えられる非対称レイアウトも選択可。 変更するとボタン数が自動調整されます</div>
                   </div>
                 </div>
               </div>
@@ -839,13 +818,25 @@ const THEMES = {
   forest: { bg:"#064e3b", ink:"#ecfdf5", sub:"rgba(236,253,245,.7)", accent:"#fbbf24", accentInk:"#064e3b", tabBg:"#065f46", tabInk:"#ecfdf5", tabDim:"rgba(236,253,245,.45)", cardBg:"#065f46", cardInk:"#ecfdf5", hiBg:"#fbbf24", hiInk:"#064e3b" },
 };
 
+// Row-based grid: each layout = array of rows, each row has cols count
+// slots = sum of cols across rows
 const GRID_LAYOUTS = {
-  "1":    { cols: 1, rows: 1, slots: 1 },
-  "2-lr": { cols: 2, rows: 1, slots: 2 },
-  "2-tb": { cols: 1, rows: 2, slots: 2 },
-  "2x2":  { cols: 2, rows: 2, slots: 4 },
-  "3x2":  { cols: 3, rows: 2, slots: 6 },
+  "1":     { rows: [1],       label: "1個" },
+  "2-lr":  { rows: [2],       label: "2個 (横並び)" },
+  "2-tb":  { rows: [1, 1],    label: "2個 (縦並び)" },
+  "2x2":   { rows: [2, 2],    label: "4個 (2×2)" },
+  "3x2":   { rows: [3, 3],    label: "6個 (3×2)" },
+  "1-3":   { rows: [1, 3],    label: "1+3 (hero上)" },
+  "3-1":   { rows: [3, 1],    label: "3+1 (hero下)" },
+  "1-4":   { rows: [1, 4],    label: "1+4" },
+  "2-4":   { rows: [2, 4],    label: "2+4" },
+  "4-2":   { rows: [4, 2],    label: "4+2" },
+  "3-4":   { rows: [3, 4],    label: "上3+下4" },
+  "4-3":   { rows: [4, 3],    label: "上4+下3" },
+  "3-3-3": { rows: [3, 3, 3], label: "3×3 (9個)" },
 };
+function slotCount(L){ return L.rows.reduce((a, c) => a + c, 0); }
+function rowCount(L){ return L.rows.length; }
 
 const DEFAULT_CFG = {
   design: {
@@ -1062,31 +1053,42 @@ document.querySelectorAll("#tabcount-seg button").forEach(btn => {
 });
 
 function renderGridPicker(){
-  const grid = CFG.richmenu[CUR_TAB].grid || "2x2";
-  document.querySelectorAll("#grid-picker button").forEach(b => b.classList.toggle("on", b.dataset.grid === grid));
-}
-document.querySelectorAll("#grid-picker button").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const newGrid = btn.dataset.grid;
-    const L = GRID_LAYOUTS[newGrid];
-    if (!L) return;
-    const c = CFG.richmenu[CUR_TAB];
-    c.grid = newGrid;
-    // resize cards to slot count
-    while (c.cards.length < L.slots){
-      c.cards.push({ title: `ボタン ${c.cards.length + 1}`, url: LIFF_URL, hi: false });
-    }
-    if (c.cards.length > L.slots){
-      c.cards = c.cards.slice(0, L.slots);
-    }
-    SEL_BTN = Math.min(SEL_BTN, L.slots - 1);
-    saveCfg();
-    renderGridPicker();
-    renderStudio();
-    renderDrawer();
-    renderPreview();
+  const picker = document.getElementById("grid-picker");
+  const curKey = CFG.richmenu[CUR_TAB].grid || "2x2";
+  picker.innerHTML = Object.entries(GRID_LAYOUTS).map(([key, L]) => {
+    const rowCells = L.rows.map(cols => `
+      <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:2px;flex:1">
+        ${Array.from({length: cols}, () => `<div style="background:var(--surface-2)"></div>`).join("")}
+      </div>
+    `).join("");
+    return `
+      <button data-grid="${key}" class="${key === curKey ? 'on' : ''}">
+        <div class="layout-icon" style="display:flex;flex-direction:column;gap:2px;background:var(--rule-2);padding:0">${rowCells}</div>
+        <span style="font-size:11px">${L.label}</span>
+      </button>
+    `;
+  }).join("");
+  picker.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const newGrid = btn.dataset.grid;
+      const L = GRID_LAYOUTS[newGrid];
+      if (!L) return;
+      const slots = slotCount(L);
+      const c = CFG.richmenu[CUR_TAB];
+      c.grid = newGrid;
+      while (c.cards.length < slots){
+        c.cards.push({ title: `ボタン ${c.cards.length + 1}`, url: LIFF_URL, hi: false });
+      }
+      if (c.cards.length > slots) c.cards = c.cards.slice(0, slots);
+      SEL_BTN = Math.min(SEL_BTN, slots - 1);
+      saveCfg();
+      renderGridPicker();
+      renderStudio();
+      renderDrawer();
+      renderPreview();
+    });
   });
-});
+}
 function renderRmHero(){
   const c = CFG.richmenu[CUR_TAB];
   document.getElementById("hero-title").value = c.hero.title;
@@ -1126,10 +1128,31 @@ let SEL_BTN = 0;
 function renderStudio(){
   const c = CFG.richmenu[CUR_TAB];
   const gridKey = c.grid || "2x2";
+  const L = GRID_LAYOUTS[gridKey] || GRID_LAYOUTS["2x2"];
   const T = activeTheme();
   const grid = document.getElementById("studio-grid");
-  grid.className = "studio-grid g-" + gridKey.replace(/[^a-z0-9x-]/gi, "");
-  grid.innerHTML = c.cards.map((card, i) => {
+  // build row-based structure: outer grid = rows, each row = inner grid with dynamic cols
+  grid.className = "studio-grid";
+  grid.style.display = "flex";
+  grid.style.flexDirection = "column";
+  grid.style.gap = "14px";
+  let cardIdx = 0;
+  const rowsHtml = L.rows.map(cols => {
+    const rowCards = [];
+    for (let k = 0; k < cols; k++){
+      rowCards.push({ card: c.cards[cardIdx], i: cardIdx });
+      cardIdx++;
+    }
+    return `<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:14px;flex:1">${rowCards.map(({ card, i }) => {
+      if (!card) return "";
+      return renderTileHtml(card, i, T);
+    }).join("")}</div>`;
+  }).join("");
+  grid.innerHTML = rowsHtml;
+  wireTiles(grid);
+}
+
+function renderTileHtml(card, i, T){
     const bg = card.bgImage ? `url("${card.bgImage}")` : (card.bg || (card.hi ? T.hiBg : T.cardBg));
     const textColor = card.textColor || (card.hi ? T.hiInk : T.cardInk);
     const iconKey = card.icon || (card.hi ? "star" : (i === 0 ? "map" : i === 1 ? "pin" : i === 2 ? "gift" : "info"));
@@ -1138,28 +1161,26 @@ function renderStudio(){
     return `
       <div class="btn-tile dnd-row ${SEL_BTN === i ? 'selected' : ''} ${card.hi ? 'hi' : ''} ${noBg ? 'no-bg' : ''}"
            data-i="${i}"
-           style="background-image:${bg.startsWith('url') ? bg : 'none'};background-color:${bg.startsWith('url') ? 'transparent' : bg};">
+           style="background-image:${bg.startsWith('url') ? bg : 'none'};background-color:${bg.startsWith('url') ? 'transparent' : bg};aspect-ratio:1.3">
         <div class="tile-index">ボタン ${i + 1}</div>
         <div class="tile-badge">目立たせる</div>
         <div class="tile-icon" style="background:rgba(255,255,255,.92)"><span style="color:${card.hi ? T.hiBg : T.accent}">${iconSvg}</span></div>
         <div class="tile-label" style="color:${textColor}">${(card.title || "無題").slice(0, 12)}</div>
       </div>
     `;
-  }).join("");
-  // wire click + drag
+}
+
+function wireTiles(grid){
   grid.querySelectorAll(".btn-tile").forEach(tile => {
     tile.addEventListener("click", e => {
-      // Don't trigger during drag
       if (e.target.closest(".dnd-handle")) return;
       SEL_BTN = +tile.dataset.i;
       renderStudio();
       renderDrawer();
-      // scroll drawer into view
       setTimeout(() => document.getElementById("btn-drawer")?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 30);
     });
   });
   attachDnD(grid, () => CFG.richmenu[CUR_TAB].cards, l => CFG.richmenu[CUR_TAB].cards = l, () => {
-    // keep SEL_BTN pointing at same conceptual card is complex; reset to 0 after drag
     renderStudio(); renderDrawer(); renderPreview();
   });
 }
@@ -1489,6 +1510,7 @@ function renderPreview(){
   const tabCount = CFG.design.tabCount || 3;
   const gridKey = c.grid || "2x2";
   const L = GRID_LAYOUTS[gridKey] || GRID_LAYOUTS["2x2"];
+  const nRows = L.rows.length;
   const W = 2500, H = 1686;
   const esc = s => (s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
@@ -1500,9 +1522,7 @@ function renderPreview(){
   const gridY = (tabH && pos === "top" ? tabH : 0) + heroH;
   const gridH = H - tabH - heroH;
   const cardMargin = 30, gap = 24;
-  const cols = L.cols, rows = L.rows;
-  const cardW = (W - cardMargin * 2 - gap * (cols - 1)) / cols;
-  const cardH = (gridH - cardMargin * 2 - gap * (rows - 1)) / rows;
+  const rowH = (gridH - cardMargin * 2 - gap * (nRows - 1)) / nRows;
 
   const tabsAll = [{id:"spot",lbl:"スポット"},{id:"prize",lbl:"景品"},{id:"help",lbl:"使い方"},{id:"extra",lbl:"その他"}];
   const tabs = tabsAll.slice(0, tabCount).map(t => ({...t, lbl: CFG.richmenu[t.id]?.label || t.lbl}));
@@ -1521,31 +1541,36 @@ function renderPreview(){
   svg += `<circle cx="${W - 220}" cy="${heroY + heroH/2}" r="100" fill="none" stroke="${heroInk}" stroke-width="3.5"/>`;
   svg += `<text x="${W - 220}" y="${heroY + heroH/2 + 22}" font-family="Noto Serif JP,serif" font-size="64" font-weight="900" fill="${heroInk}" text-anchor="middle">${c.label.slice(0,1)}</text>`;
 
-  // cards (dynamic grid) — per-button overrides
-  c.cards.forEach((card, i) => {
-    if (i >= L.slots) return;
-    const col = i % cols, row = Math.floor(i / cols);
-    const x = cardMargin + col * (cardW + gap);
-    const y = gridY + cardMargin + row * (cardH + gap);
-    const bg = card.bg || (card.hi ? T.hiBg : T.cardBg);
-    const txt = card.textColor || (card.hi ? T.hiInk : T.cardInk);
-    const eyebrowColor = card.hi ? hexAlpha(txt, .8) : T.accent;
-    // background: image or color
-    if (card.bgImage){
-      const patternId = `bgp-${CUR_TAB}-${i}`;
-      svg += `<defs><pattern id="${patternId}" patternUnits="objectBoundingBox" width="1" height="1"><image href="${card.bgImage}" x="0" y="0" width="${cardW}" height="${cardH}" preserveAspectRatio="xMidYMid slice"/></pattern></defs>`;
-      svg += `<rect x="${x}" y="${y}" width="${cardW}" height="${cardH}" fill="url(#${patternId})" rx="18"/>`;
-      // darken overlay for readability
-      svg += `<rect x="${x}" y="${y}" width="${cardW}" height="${cardH}" fill="rgba(0,0,0,.35)" rx="18"/>`;
-    } else {
-      svg += `<rect x="${x}" y="${y}" width="${cardW}" height="${cardH}" fill="${bg}" rx="18"/>`;
+  // cards (row-based grid) — per-button overrides
+  let cardIdx = 0;
+  L.rows.forEach((cols, rowIdx) => {
+    const cardW = (W - cardMargin * 2 - gap * (cols - 1)) / cols;
+    const cardH = rowH;
+    const y = gridY + cardMargin + rowIdx * (rowH + gap);
+    for (let col = 0; col < cols; col++){
+      const card = c.cards[cardIdx];
+      if (!card){ cardIdx++; continue; }
+      const x = cardMargin + col * (cardW + gap);
+      const bg = card.bg || (card.hi ? T.hiBg : T.cardBg);
+      const txt = card.textColor || (card.hi ? T.hiInk : T.cardInk);
+      const eyebrowColor = card.hi ? hexAlpha(txt, .8) : T.accent;
+      if (card.bgImage){
+        const patternId = `bgp-${CUR_TAB}-${cardIdx}`;
+        svg += `<defs><pattern id="${patternId}" patternUnits="objectBoundingBox" width="1" height="1"><image href="${card.bgImage}" x="0" y="0" width="${cardW}" height="${cardH}" preserveAspectRatio="xMidYMid slice"/></pattern></defs>`;
+        svg += `<rect x="${x}" y="${y}" width="${cardW}" height="${cardH}" fill="url(#${patternId})" rx="18"/>`;
+        svg += `<rect x="${x}" y="${y}" width="${cardW}" height="${cardH}" fill="rgba(0,0,0,.35)" rx="18"/>`;
+      } else {
+        svg += `<rect x="${x}" y="${y}" width="${cardW}" height="${cardH}" fill="${bg}" rx="18"/>`;
+      }
+      const labelColor = card.bgImage ? "#ffffff" : txt;
+      const eyebrowColor2 = card.bgImage ? "rgba(255,255,255,.85)" : eyebrowColor;
+      // scale font by card width so labels don't overflow tight cells
+      const labelSize = Math.max(28, Math.min(56, cardW / 12));
+      const eyeSize = Math.max(14, Math.min(22, cardW / 32));
+      svg += `<text x="${x + 40}" y="${y + eyeSize + 60}" font-family="Noto Sans JP,sans-serif" font-size="${eyeSize}" font-weight="800" letter-spacing="4" fill="${eyebrowColor2}">ボタン ${cardIdx + 1}</text>`;
+      svg += `<text x="${x + 40}" y="${y + eyeSize + 60 + labelSize + 20}" font-family="Noto Sans JP,sans-serif" font-size="${labelSize}" font-weight="900" letter-spacing="-1.5" fill="${labelColor}">${esc(card.title || "").slice(0, Math.floor(cardW / 60))}</text>`;
+      cardIdx++;
     }
-    // eyebrow / label / chevron
-    const labelColor = card.bgImage ? "#ffffff" : txt;
-    const eyebrowColor2 = card.bgImage ? "rgba(255,255,255,.85)" : eyebrowColor;
-    svg += `<text x="${x + 50}" y="${y + 130}" font-family="Noto Sans JP,sans-serif" font-size="22" font-weight="800" letter-spacing="4" fill="${eyebrowColor2}">ボタン ${i + 1}</text>`;
-    svg += `<text x="${x + 50}" y="${y + 230}" font-family="Noto Sans JP,sans-serif" font-size="56" font-weight="900" letter-spacing="-1.5" fill="${labelColor}">${esc(card.title || "").slice(0, 12)}</text>`;
-    svg += `<path d="M ${x + cardW - 90} ${y + cardH/2 - 20} L ${x + cardW - 60} ${y + cardH/2} L ${x + cardW - 90} ${y + cardH/2 + 20}" stroke="${labelColor}" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="${card.hi ? 1 : .4}"/>`;
   });
 
   // tab strip (only render when tabCount > 1)
