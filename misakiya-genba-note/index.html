@@ -1575,6 +1575,54 @@
     box-shadow: 0 1px 3px rgba(15, 30, 78, 0.1);
   }
 
+  .gantt-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .gantt-range, .gantt-nav {
+    display: inline-flex;
+    background: var(--surface-2);
+    border-radius: 12px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .gantt-range button, .gantt-nav button {
+    padding: 8px 14px;
+    background: transparent;
+    border: none;
+    color: var(--ink-3);
+    font-size: 12px;
+    font-weight: 800;
+    border-radius: 10px;
+    font-family: inherit;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    line-height: 1;
+    min-width: 40px;
+  }
+  .gantt-range button.active {
+    background: linear-gradient(180deg, #3B82F6, #1D4ED8);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
+  }
+  .gantt-nav button {
+    color: var(--ink-2);
+    min-width: 36px;
+    padding: 8px 10px;
+  }
+  .gantt-nav button:hover { background: #fff; color: var(--brand-2); }
+  #ganttPrev, #ganttNext { font-size: 18px; font-weight: 700; line-height: 0.8; }
+  #ganttToday {
+    background: #fff;
+    color: var(--brand-2);
+    box-shadow: 0 1px 3px rgba(15, 30, 78, 0.08);
+    padding: 8px 14px;
+  }
+
   .gantt {
     background: #fff;
     border-radius: 20px;
@@ -1686,6 +1734,20 @@
     background: #EF4444;
     z-index: 5;
     box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+  }
+  .gantt__out-range {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10px;
+    color: var(--ink-3);
+    background: var(--surface);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    border: 1px dashed var(--rule-strong);
   }
   .gantt__today::before {
     content: "今日 7/6";
@@ -2122,6 +2184,19 @@
             <div class="ds-grid" id="dsProjectList"></div>
           </div>
           <div id="dsViewGantt" style="display:none">
+            <div class="gantt-controls">
+              <div class="gantt-range" id="ganttRange">
+                <button data-months="1">1ヶ月</button>
+                <button data-months="3">3ヶ月</button>
+                <button class="active" data-months="6">半年</button>
+                <button data-months="12">1年</button>
+              </div>
+              <div class="gantt-nav">
+                <button id="ganttPrev" aria-label="前へ">‹</button>
+                <button id="ganttToday">今日</button>
+                <button id="ganttNext" aria-label="次へ">›</button>
+              </div>
+            </div>
             <div class="gantt" id="dsGantt"></div>
           </div>
         </div>
@@ -3036,15 +3111,22 @@ document.addEventListener('click', e => {
 });
 
 // ── Gantt Chart ─────────────────────────
+const ganttState = { months: 6, offset: 0 };
+const TODAY = new Date(2026, 6, 6); // 2026-07-06
+
 function renderGantt() {
   const gantt = document.getElementById('dsGantt');
   if (!gantt) return;
 
-  const rangeStart = new Date(2026, 3, 1); // 2026-04-01
-  const rangeEnd = new Date(2026, 7, 31);  // 2026-08-31
+  const monthCount = ganttState.months;
+  // center the view around today, adjusted by offset
+  const centerMonth = TODAY.getMonth() + ganttState.offset;
+  const rangeStart = new Date(TODAY.getFullYear(), centerMonth - Math.floor(monthCount / 2), 1);
+  const rangeEnd = new Date(TODAY.getFullYear(), centerMonth - Math.floor(monthCount / 2) + monthCount, 0);
   const totalDays = (rangeEnd - rangeStart) / (24 * 3600 * 1000) + 1;
-  const today = new Date(2026, 6, 6); // 2026-07-06
+  const today = TODAY;
   const todayPct = ((today - rangeStart) / (24 * 3600 * 1000)) / totalDays * 100;
+  const todayInRange = todayPct >= 0 && todayPct <= 100;
 
   const parse = s => {
     if (!s) return null;
@@ -3065,24 +3147,61 @@ function renderGantt() {
     { ref: '福井赤十字病院 コンセント増設', start: '2026-04-15', end: '2026-04-30', progress: 100, status: 'done', team: [['田','tanaka']] },
   ];
 
+  // Build month headers dynamically
+  const monthLabels = [];
+  const iterMonth = new Date(rangeStart);
+  while (iterMonth <= rangeEnd) {
+    const y = iterMonth.getFullYear();
+    const m = iterMonth.getMonth();
+    const monthStart = new Date(y, m, 1);
+    const monthEnd = new Date(y, m + 1, 0);
+    const days = (monthEnd - monthStart) / (24 * 3600 * 1000) + 1;
+    const pct = (days / totalDays) * 100;
+    monthLabels.push({ y, m, pct });
+    iterMonth.setMonth(iterMonth.getMonth() + 1);
+  }
+  const showDayGrid = monthCount <= 3;
+
   const header = `
     <div class="gantt__grid">
       <div></div>
-      <div class="gantt__month-head">
-        <div class="gantt__month">4月<div class="gantt__month__days">4/1 → 4/30</div></div>
-        <div class="gantt__month">5月<div class="gantt__month__days">5/1 → 5/31</div></div>
-        <div class="gantt__month">6月<div class="gantt__month__days">6/1 → 6/30</div></div>
-        <div class="gantt__month">7-8月<div class="gantt__month__days">7/1 → 8/31</div></div>
+      <div class="gantt__month-head" style="display:flex">
+        ${monthLabels.map(l => `
+          <div class="gantt__month" style="flex: 0 0 ${l.pct}%;">
+            ${l.m + 1}月
+            <div class="gantt__month__days">${l.y}</div>
+          </div>
+        `).join('')}
       </div>
     </div>
   `;
 
+  const rangeSummary = `${rangeStart.getFullYear()}年${rangeStart.getMonth() + 1}月 → ${rangeEnd.getFullYear()}年${rangeEnd.getMonth() + 1}月 (${monthCount}ヶ月)`;
+
   const rows = dated.map(p => {
     const start = dayOffset(p.start);
     const end = dayOffset(p.end);
-    const leftPct = (start / totalDays) * 100;
-    const widthPct = Math.max(((end - start + 1) / totalDays) * 100, 1.5);
-    const barText = p.status === 'upcoming' ? `${p.ref.split(' ')[0]} (1日)` : `${p.progress}%`;
+    // clip to visible range
+    const clippedStart = Math.max(start, 0);
+    const clippedEnd = Math.min(end, totalDays - 1);
+    if (clippedEnd < 0 || clippedStart > totalDays - 1) {
+      // Fully out of range → show placeholder row
+      return `
+        <div class="gantt__row">
+          <div class="gantt__label">
+            ${p.ref}
+            <div class="gantt__label__team">${p.team.map(([t,ac])=>`<span class="avatar ${ac}">${t}</span>`).join('')}</div>
+          </div>
+          <div class="gantt__track">
+            ${todayInRange ? `<div class="gantt__today" style="left: ${todayPct}%;"></div>` : ''}
+            <div class="gantt__out-range">期間外 (${p.start.slice(5)} → ${p.end.slice(5)})</div>
+          </div>
+        </div>
+      `;
+    }
+    const leftPct = (clippedStart / totalDays) * 100;
+    const widthPct = Math.max(((clippedEnd - clippedStart + 1) / totalDays) * 100, 1.5);
+    const barText = p.status === 'upcoming' ? '1日作業' : `${p.progress}%`;
 
     return `
       <div class="gantt__row">
@@ -3091,7 +3210,7 @@ function renderGantt() {
           <div class="gantt__label__team">${p.team.map(([t,ac])=>`<span class="avatar ${ac}">${t}</span>`).join('')}</div>
         </div>
         <div class="gantt__track">
-          <div class="gantt__today" style="left: ${todayPct}%;"></div>
+          ${todayInRange ? `<div class="gantt__today" style="left: ${todayPct}%;"></div>` : ''}
           <div class="gantt__bar gantt__bar--${p.status}" style="left: ${leftPct}%; width: ${widthPct}%;" title="${p.ref} ・ ${p.start} → ${p.end}">
             ${p.status === 'progress' || p.status === 'finishing' ? `<div class="gantt__bar__progress" style="width: ${p.progress}%;"></div>` : ''}
             <span style="position:relative;z-index:2">${barText}</span>
@@ -3111,10 +3230,32 @@ function renderGantt() {
       <span class="gantt__legend-item finishing">仕上げ</span>
       <span class="gantt__legend-item upcoming">近日着工</span>
       <span class="gantt__legend-item done">完了</span>
-      <span style="margin-left:auto">今日 <span style="display:inline-block;width:2px;height:12px;background:#EF4444;vertical-align:-2px;margin:0 4px"></span> 2026-07-06 (月)</span>
+      <span style="margin-left:auto">${rangeSummary} ・ 今日 <span style="display:inline-block;width:2px;height:12px;background:#EF4444;vertical-align:-2px;margin:0 4px"></span> ${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}</span>
     </div>
   `;
 }
+
+// Range/nav wiring
+document.querySelectorAll('#ganttRange button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#ganttRange button').forEach(b => b.classList.toggle('active', b === btn));
+    ganttState.months = parseInt(btn.dataset.months, 10);
+    ganttState.offset = 0;
+    renderGantt();
+  });
+});
+document.getElementById('ganttPrev')?.addEventListener('click', () => {
+  ganttState.offset -= Math.max(1, Math.floor(ganttState.months / 2));
+  renderGantt();
+});
+document.getElementById('ganttNext')?.addEventListener('click', () => {
+  ganttState.offset += Math.max(1, Math.floor(ganttState.months / 2));
+  renderGantt();
+});
+document.getElementById('ganttToday')?.addEventListener('click', () => {
+  ganttState.offset = 0;
+  renderGantt();
+});
 
 // View toggle wiring
 document.querySelectorAll('#dsViewToggle button').forEach(btn => {
