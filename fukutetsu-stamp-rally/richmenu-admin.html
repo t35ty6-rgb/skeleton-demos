@@ -2015,17 +2015,44 @@ function showToast(msg){
 });
 
 // ═══════════════════ APPLY ═══════════════════
+// Convert current SVG preview to PNG dataURL (2500x1686)
+async function svgPreviewToPng(){
+  const img = document.getElementById("rm-img");
+  const src = img.src;
+  if (!src) return null;
+  return new Promise((resolve) => {
+    const im = new Image();
+    im.crossOrigin = "anonymous";
+    im.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 2500;
+      canvas.height = 1686;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(0, 0, 2500, 1686);
+      ctx.drawImage(im, 0, 0, 2500, 1686);
+      resolve(canvas.toDataURL("image/jpeg", 0.9));
+    };
+    im.onerror = () => resolve(null);
+    im.src = src;
+  });
+}
+
 // Build deployable payload: config + composed PNGs per tab
 async function buildDeployPayload(){
   const keys = activeTabKeys();
   const tabs = [];
+  const oldCur = CUR_TAB;
   for (const k of keys){
     const t = CFG.richmenu[k];
-    // Save current CUR_TAB, temporarily switch to compose each tab
-    const oldCur = CUR_TAB;
     CUR_TAB = k;
-    const composed = await composeImage();
-    CUR_TAB = oldCur;
+    // Try composition first, fallback to SVG preview PNG
+    let img = await composeImage();
+    if (!img){
+      renderPreview();
+      await new Promise(r => setTimeout(r, 150));
+      img = await svgPreviewToPng();
+    }
     const gridKey = t.grid || "2x2";
     tabs.push({
       key: k,
@@ -2033,9 +2060,11 @@ async function buildDeployPayload(){
       grid: gridKey,
       hero: t.hero,
       cards: t.cards,
-      composedImage: composed || null,
+      composedImage: img || null,
     });
   }
+  CUR_TAB = oldCur;
+  renderPreview();
   return {
     version: 2,
     generatedAt: new Date().toISOString(),
