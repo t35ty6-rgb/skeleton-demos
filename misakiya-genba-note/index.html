@@ -1785,12 +1785,31 @@
     margin-bottom: 14px;
     flex-wrap: wrap;
   }
-  .gantt-range, .gantt-nav {
+  .gantt-mode, .gantt-range, .gantt-nav {
     display: inline-flex;
     background: var(--surface-2);
     border-radius: 12px;
     padding: 3px;
     gap: 2px;
+  }
+  .gantt-mode button {
+    padding: 8px 14px;
+    background: transparent;
+    border: none;
+    color: var(--ink-3);
+    font-size: 12px;
+    font-weight: 800;
+    border-radius: 10px;
+    font-family: inherit;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    line-height: 1;
+    min-width: 60px;
+  }
+  .gantt-mode button.active {
+    background: linear-gradient(180deg, #7C3AED, #5B21B6);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(124, 58, 237, 0.35);
   }
   .gantt-range button, .gantt-nav button {
     padding: 8px 14px;
@@ -1990,17 +2009,125 @@
   .gantt__legend-item.upcoming::before { background: linear-gradient(90deg, #FCD34D, #F59E0B); }
   .gantt__legend-item.done::before { background: linear-gradient(90deg, #6EE7B7, #059669); }
 
-  /* ── Desktop shell ─────────────────────── */
-  .desktop-shell {
+  /* ── Member swimlane ─────────────────── */
+  .gantt__row--member .gantt__label__member {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .gantt__row--member .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  .gantt__label__name {
+    font-size: 12.5px;
+    font-weight: 900;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  .gantt__label__role {
+    font-size: 10.5px;
+    color: var(--ink-3);
+    margin-top: 2px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+  .gantt__row--member .gantt__track {
+    background: var(--surface-2);
+    border-radius: 8px;
+  }
+  .gantt__row--member.has-overlap .gantt__track {
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--surface-2) 0,
+      var(--surface-2) 8px,
+      rgba(239, 68, 68, 0.06) 8px,
+      rgba(239, 68, 68, 0.06) 16px
+    );
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.08);
+  }
+  .gantt__bar--stacked {
+    height: 20px;
+    top: auto;
+    bottom: auto;
+  }
+  .gantt__bar__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    letter-spacing: -0.02em;
+    font-size: 10px;
+  }
+
+  /* ── Overlap panel ───────────────────── */
+  .gantt-overlap {
+    margin-top: 16px;
+    background: linear-gradient(135deg, #FEF3C7 0%, #FEE2E2 100%);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: 16px;
+    padding: 16px 20px;
     display: none;
   }
+  .overlap-head {
+    font-size: 13px;
+    font-weight: 900;
+    color: #B45309;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+  }
+  .overlap-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 10px;
+  }
+  .overlap-item {
+    display: flex;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.7);
+    border-radius: 10px;
+    align-items: flex-start;
+  }
+  .overlap-item .avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .overlap-item__member {
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    margin-bottom: 2px;
+  }
+  .overlap-item__detail {
+    font-size: 11.5px;
+    color: var(--ink-2);
+    line-height: 1.5;
+    font-weight: 500;
+  }
+  .overlap-item__detail b {
+    color: #B45309;
+    font-weight: 900;
+  }
+
+  /* ── Desktop shell ─────────────────────── */
+  .desktop-shell { display: none; }
   @media (min-width: 1100px) {
     body { padding: 24px 20px; }
     .stage {
       flex-direction: row;
       align-items: flex-start;
       gap: 24px;
-      max-width: 1600px;
+      max-width: 1800px;
       width: 100%;
     }
     .stage__caption { display: none; }
@@ -2011,15 +2138,47 @@
       border-radius: 24px;
       box-shadow: 0 24px 60px -20px rgba(15, 30, 78, 0.25), 0 8px 24px -8px rgba(59, 130, 246, 0.12);
       overflow: hidden;
-      height: 900px;
+      height: calc(100vh - 48px);
+      min-height: 780px;
+      max-height: 1100px;
       flex: 1;
       min-width: 0;
     }
-    .device { flex-shrink: 0; }
+    /* Default: PC-only mode = hide iPhone frames */
+    body:not(.demo-mode) .device { display: none; }
   }
-  @media (min-width: 1440px) {
-    .desktop-shell { height: 940px; }
+  /* Demo/presentation mode = show iPhones */
+  body.demo-mode .device { display: block; }
+  body.demo-mode .desktop-shell {
+    max-height: 940px;
+    height: 940px;
   }
+  body.demo-mode .stage { max-width: 1900px; }
+
+  /* Mode toggle button (top-right) */
+  .mode-toggle {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    z-index: 200;
+    background: rgba(15, 23, 42, 0.85);
+    color: #fff;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 100px;
+    font-size: 11.5px;
+    font-weight: 800;
+    font-family: inherit;
+    letter-spacing: -0.01em;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    cursor: pointer;
+    display: none;
+  }
+  @media (min-width: 1100px) {
+    .mode-toggle { display: block; }
+  }
+  .mode-toggle:hover { background: rgba(30, 41, 59, 0.9); }
 
   .ds-sidebar {
     background: linear-gradient(180deg, #0F1A3D 0%, #060B1F 100%);
@@ -2289,6 +2448,8 @@
 </head>
 <body>
 
+<button class="mode-toggle" id="modeToggle">📱 プレゼンモード (3画面)</button>
+
 <div class="stage">
 
   <!-- ── Desktop Shell (1100px+) ───────────── -->
@@ -2399,6 +2560,10 @@
           </div>
           <div id="dsViewGantt" style="display:none">
             <div class="gantt-controls">
+              <div class="gantt-mode" id="ganttMode">
+                <button class="active" data-mode="project">物件別</button>
+                <button data-mode="member">担当者別</button>
+              </div>
               <div class="gantt-range" id="ganttRange">
                 <button data-months="1">1ヶ月</button>
                 <button data-months="3">3ヶ月</button>
@@ -2412,6 +2577,7 @@
               </div>
             </div>
             <div class="gantt" id="dsGantt"></div>
+            <div class="gantt-overlap" id="ganttOverlap"></div>
           </div>
         </div>
 
@@ -3422,8 +3588,28 @@ document.addEventListener('click', e => {
 });
 
 // ── Gantt Chart ─────────────────────────
-const ganttState = { months: 6, offset: 0 };
+const ganttState = { months: 6, offset: 0, mode: 'project' };
 const TODAY = new Date(2026, 6, 6); // 2026-07-06
+
+// Absolute-dated project data (single source of truth for gantt)
+const projectsDated = [
+  { id: 'P1', ref: '福井中学校 高圧受電盤更新', short: '福井中学校', start: '2026-07-01', end: '2026-08-15', progress: 22, status: 'progress', team: ['tsuji','tanaka','yamamoto'], color: '#3B82F6' },
+  { id: 'P2', ref: '越前美術館 分電盤増設', short: '越前美術館', start: '2026-07-06', end: '2026-07-20', progress: 45, status: 'progress', team: ['tsuji','suzuki'], color: '#8B5CF6' },
+  { id: 'P3', ref: '大野市役所 外灯LED化', short: '大野市役所', start: '2026-06-20', end: '2026-07-25', progress: 78, status: 'progress', team: ['inoue'], color: '#F59E0B' },
+  { id: 'P4', ref: '三崎屋本社 事務所改修', short: '本社改修', start: '2026-05-15', end: '2026-07-10', progress: 92, status: 'finishing', team: ['tanaka','yamamoto'], color: '#EC4899' },
+  { id: 'P5', ref: '勝山工業団地A社 停電メンテ', short: '勝山A社', start: '2026-07-14', end: '2026-07-14', progress: 0, status: 'upcoming', team: ['tsuji'], color: '#FCD34D' },
+  { id: 'P6', ref: '福井駅前 商業ビル 分電盤更新', short: '福井駅前', start: '2026-05-01', end: '2026-06-28', progress: 100, status: 'done', team: ['tsuji','tanaka'], color: '#10B981' },
+  { id: 'P7', ref: '永平寺 参道 街路灯 改修', short: '永平寺', start: '2026-04-10', end: '2026-05-30', progress: 100, status: 'done', team: ['inoue','yamamoto'], color: '#14B8A6' },
+  { id: 'P8', ref: '福井赤十字病院 コンセント増設', short: '赤十字', start: '2026-04-15', end: '2026-04-30', progress: 100, status: 'done', team: ['tanaka'], color: '#06B6D4' },
+];
+
+const members = [
+  { ac: 'tsuji', name: '辻 秀夫', role: '工事部長 28年目' },
+  { ac: 'tanaka', name: '田中 誠', role: '中堅 8年目' },
+  { ac: 'inoue', name: '井上 徹', role: '職長 12年目' },
+  { ac: 'yamamoto', name: '山本 健太', role: '若手 2年目' },
+  { ac: 'suzuki', name: '鈴木 翔', role: '若手 1年目' },
+];
 
 function renderGantt() {
   const gantt = document.getElementById('dsGantt');
@@ -3445,18 +3631,8 @@ function renderGantt() {
     return new Date(y, m - 1, d);
   };
   const dayOffset = d => (parse(d) - rangeStart) / (24 * 3600 * 1000);
-
-  // Add absolute-date fields to project data on the fly
-  const dated = [
-    { ref: '福井中学校 高圧受電盤更新', start: '2026-07-01', end: '2026-08-15', progress: 22, status: 'progress', team: [['辻','tsuji'],['田','tanaka'],['山','yamamoto']] },
-    { ref: '越前美術館 分電盤増設', start: '2026-07-06', end: '2026-07-20', progress: 45, status: 'progress', team: [['辻','tsuji'],['鈴','suzuki']] },
-    { ref: '大野市役所 外灯LED化', start: '2026-06-20', end: '2026-07-25', progress: 78, status: 'progress', team: [['井','inoue']] },
-    { ref: '三崎屋本社 事務所改修', start: '2026-05-15', end: '2026-07-10', progress: 92, status: 'finishing', team: [['田','tanaka'],['山','yamamoto']] },
-    { ref: '勝山工業団地A社 停電メンテ', start: '2026-07-14', end: '2026-07-14', progress: 0, status: 'upcoming', team: [['辻','tsuji']] },
-    { ref: '福井駅前 商業ビル 分電盤更新', start: '2026-05-01', end: '2026-06-28', progress: 100, status: 'done', team: [['辻','tsuji'],['田','tanaka']] },
-    { ref: '永平寺 参道 街路灯 改修', start: '2026-04-10', end: '2026-05-30', progress: 100, status: 'done', team: [['井','inoue'],['山','yamamoto']] },
-    { ref: '福井赤十字病院 コンセント増設', start: '2026-04-15', end: '2026-04-30', progress: 100, status: 'done', team: [['田','tanaka']] },
-  ];
+  const memberMap = Object.fromEntries(members.map(m => [m.ac, m]));
+  const teamKanji = { tsuji:'辻', tanaka:'田', inoue:'井', yamamoto:'山', suzuki:'鈴' };
 
   // Build month headers dynamically
   const monthLabels = [];
@@ -3489,47 +3665,136 @@ function renderGantt() {
 
   const rangeSummary = `${rangeStart.getFullYear()}年${rangeStart.getMonth() + 1}月 → ${rangeEnd.getFullYear()}年${rangeEnd.getMonth() + 1}月 (${monthCount}ヶ月)`;
 
-  const rows = dated.map(p => {
-    const start = dayOffset(p.start);
-    const end = dayOffset(p.end);
-    // clip to visible range
-    const clippedStart = Math.max(start, 0);
-    const clippedEnd = Math.min(end, totalDays - 1);
-    if (clippedEnd < 0 || clippedStart > totalDays - 1) {
-      // Fully out of range → show placeholder row
+  // ── Build rows based on mode ─────────────
+  const buildBar = (p, laneStart, laneEnd, extraClass = '') => {
+    const clippedStart = Math.max(laneStart, 0);
+    const clippedEnd = Math.min(laneEnd, totalDays - 1);
+    if (clippedEnd < 0 || clippedStart > totalDays - 1) return null;
+    const leftPct = (clippedStart / totalDays) * 100;
+    const widthPct = Math.max(((clippedEnd - clippedStart + 1) / totalDays) * 100, 1.5);
+    return `
+      <div class="gantt__bar ${extraClass}" style="left: ${leftPct}%; width: ${widthPct}%; background: linear-gradient(90deg, ${p.color}, ${p.color}CC); box-shadow: 0 2px 6px ${p.color}55;" title="${p.ref} ・ ${p.start} → ${p.end} (${p.progress}%)">
+        ${p.status === 'progress' || p.status === 'finishing' ? `<div class="gantt__bar__progress" style="width: ${p.progress}%;"></div>` : ''}
+        <span class="gantt__bar__label" style="position:relative;z-index:2">${p.short} ${p.status !== 'upcoming' ? p.progress + '%' : '1日'}</span>
+      </div>
+    `;
+  };
+
+  let rows = '';
+  const overlaps = [];
+
+  if (ganttState.mode === 'project') {
+    // Project rows (existing style)
+    rows = projectsDated.map(p => {
+      const start = dayOffset(p.start);
+      const end = dayOffset(p.end);
+      if (end < 0 || start > totalDays - 1) {
+        return `
+          <div class="gantt__row">
+            <div class="gantt__label">
+              ${p.ref}
+              <div class="gantt__label__team">${p.team.map(ac=>`<span class="avatar ${ac}">${teamKanji[ac]}</span>`).join('')}</div>
+            </div>
+            <div class="gantt__track">
+              ${todayInRange ? `<div class="gantt__today" style="left: ${todayPct}%;"></div>` : ''}
+              <div class="gantt__out-range">期間外 (${p.start.slice(5)} → ${p.end.slice(5)})</div>
+            </div>
+          </div>
+        `;
+      }
+      const bar = buildBar(p, start, end);
       return `
         <div class="gantt__row">
           <div class="gantt__label">
             ${p.ref}
-            <div class="gantt__label__team">${p.team.map(([t,ac])=>`<span class="avatar ${ac}">${t}</span>`).join('')}</div>
+            <div class="gantt__label__team">${p.team.map(ac=>`<span class="avatar ${ac}">${teamKanji[ac]}</span>`).join('')}</div>
           </div>
           <div class="gantt__track">
             ${todayInRange ? `<div class="gantt__today" style="left: ${todayPct}%;"></div>` : ''}
-            <div class="gantt__out-range">期間外 (${p.start.slice(5)} → ${p.end.slice(5)})</div>
+            ${bar || ''}
           </div>
         </div>
       `;
-    }
-    const leftPct = (clippedStart / totalDays) * 100;
-    const widthPct = Math.max(((clippedEnd - clippedStart + 1) / totalDays) * 100, 1.5);
-    const barText = p.status === 'upcoming' ? '1日作業' : `${p.progress}%`;
+    }).join('');
+  } else {
+    // Member (swimlane) rows — each member gets a row with all their projects overlaid
+    rows = members.map(m => {
+      const memberProjects = projectsDated
+        .filter(p => p.team.includes(m.ac))
+        .filter(p => {
+          const start = dayOffset(p.start);
+          const end = dayOffset(p.end);
+          return !(end < 0 || start > totalDays - 1);
+        })
+        .sort((a, b) => parse(a.start) - parse(b.start));
 
-    return `
-      <div class="gantt__row">
-        <div class="gantt__label">
-          ${p.ref}
-          <div class="gantt__label__team">${p.team.map(([t,ac])=>`<span class="avatar ${ac}">${t}</span>`).join('')}</div>
-        </div>
-        <div class="gantt__track">
-          ${todayInRange ? `<div class="gantt__today" style="left: ${todayPct}%;"></div>` : ''}
-          <div class="gantt__bar gantt__bar--${p.status}" style="left: ${leftPct}%; width: ${widthPct}%;" title="${p.ref} ・ ${p.start} → ${p.end}">
+      // Overlap detection: put overlapping bars on stacked "sub-lanes"
+      const laneAssign = [];
+      const lanes = []; // lanes[i] = last end offset used
+      memberProjects.forEach(p => {
+        const start = dayOffset(p.start);
+        const end = dayOffset(p.end);
+        let laneIdx = lanes.findIndex(lastEnd => start > lastEnd);
+        if (laneIdx === -1) {
+          laneIdx = lanes.length;
+          lanes.push(end);
+        } else {
+          lanes[laneIdx] = end;
+        }
+        laneAssign.push(laneIdx);
+      });
+      const laneCount = Math.max(lanes.length, 1);
+      const rowHeight = laneCount * 26 + 12;
+
+      // Detect overlaps for warnings
+      for (let i = 0; i < memberProjects.length; i++) {
+        for (let j = i + 1; j < memberProjects.length; j++) {
+          const a = memberProjects[i], b = memberProjects[j];
+          const aStart = parse(a.start), aEnd = parse(a.end);
+          const bStart = parse(b.start), bEnd = parse(b.end);
+          const overlapStart = new Date(Math.max(aStart, bStart));
+          const overlapEnd = new Date(Math.min(aEnd, bEnd));
+          if (overlapStart <= overlapEnd) {
+            const days = Math.round((overlapEnd - overlapStart) / (24*3600*1000)) + 1;
+            overlaps.push({ member: m, a, b, days, overlapStart, overlapEnd });
+          }
+        }
+      }
+
+      const bars = memberProjects.map((p, i) => {
+        const start = dayOffset(p.start);
+        const end = dayOffset(p.end);
+        const top = 6 + laneAssign[i] * 26;
+        return `
+          <div class="gantt__bar gantt__bar--stacked" style="left: ${(Math.max(start, 0) / totalDays) * 100}%; width: ${Math.max(((Math.min(end, totalDays-1) - Math.max(start, 0) + 1) / totalDays) * 100, 1.5)}%; top: ${top}px; background: linear-gradient(90deg, ${p.color}, ${p.color}CC); box-shadow: 0 2px 6px ${p.color}55;" title="${p.ref} ・ ${p.start} → ${p.end} (${p.progress}%)">
             ${p.status === 'progress' || p.status === 'finishing' ? `<div class="gantt__bar__progress" style="width: ${p.progress}%;"></div>` : ''}
-            <span style="position:relative;z-index:2">${barText}</span>
+            <span class="gantt__bar__label" style="position:relative;z-index:2">${p.short} ${p.status !== 'upcoming' ? p.progress + '%' : '1日'}</span>
+          </div>
+        `;
+      }).join('');
+
+      const memberOverlaps = overlaps.filter(o => o.member.ac === m.ac);
+      const hasOverlap = memberOverlaps.length > 0;
+
+      return `
+        <div class="gantt__row gantt__row--member ${hasOverlap ? 'has-overlap' : ''}" style="min-height: ${rowHeight}px;">
+          <div class="gantt__label">
+            <div class="gantt__label__member">
+              <span class="avatar ${m.ac}">${teamKanji[m.ac]}</span>
+              <div>
+                <div class="gantt__label__name">${m.name}</div>
+                <div class="gantt__label__role">${m.role} ・ ${memberProjects.length}件${hasOverlap ? ` ・ <b style="color:#EF4444">重複${memberOverlaps.length}</b>` : ''}</div>
+              </div>
+            </div>
+          </div>
+          <div class="gantt__track" style="height: ${rowHeight}px;">
+            ${todayInRange ? `<div class="gantt__today" style="left: ${todayPct}%;"></div>` : ''}
+            ${bars}
           </div>
         </div>
-      </div>
-    `;
-  }).join('');
+      `;
+    }).join('');
+  }
 
   gantt.innerHTML = `
     ${header}
@@ -3537,13 +3802,47 @@ function renderGantt() {
       ${rows}
     </div>
     <div class="gantt__legend">
-      <span class="gantt__legend-item">進行中</span>
-      <span class="gantt__legend-item finishing">仕上げ</span>
-      <span class="gantt__legend-item upcoming">近日着工</span>
-      <span class="gantt__legend-item done">完了</span>
+      ${projectsDated.filter(p => p.status !== 'done').map(p => `<span class="gantt__legend-item" style="--c: ${p.color}"><span style="background: ${p.color}; width:14px; height:8px; border-radius:100px; display:inline-block; margin-right:5px; vertical-align:1px"></span>${p.short}</span>`).join('')}
       <span style="margin-left:auto">${rangeSummary} ・ 今日 <span style="display:inline-block;width:2px;height:12px;background:#EF4444;vertical-align:-2px;margin:0 4px"></span> ${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}</span>
     </div>
   `;
+
+  // Render overlap warnings below chart
+  const overlapPanel = document.getElementById('ganttOverlap');
+  if (overlapPanel) {
+    if (ganttState.mode === 'member' && overlaps.length) {
+      // Dedupe by (member, a.id, b.id)
+      const uniq = [];
+      const seen = new Set();
+      overlaps.forEach(o => {
+        const k = `${o.member.ac}|${o.a.id}|${o.b.id}`;
+        if (!seen.has(k)) { seen.add(k); uniq.push(o); }
+      });
+      const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+      overlapPanel.innerHTML = `
+        <div class="overlap-head">⚠ 担当者 の 掛け持ち 検出 (${uniq.length}件)</div>
+        <div class="overlap-list">
+          ${uniq.map(o => `
+            <div class="overlap-item">
+              <span class="avatar ${o.member.ac}">${teamKanji[o.member.ac]}</span>
+              <div class="overlap-item__body">
+                <div class="overlap-item__member">${o.member.name}</div>
+                <div class="overlap-item__detail">
+                  <span style="color: ${o.a.color}">■</span> ${o.a.short}
+                  と
+                  <span style="color: ${o.b.color}">■</span> ${o.b.short}
+                  が <b>${fmt(o.overlapStart)} → ${fmt(o.overlapEnd)}</b> (${o.days}日) 重複
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      overlapPanel.style.display = 'block';
+    } else {
+      overlapPanel.style.display = 'none';
+    }
+  }
 }
 
 // Range/nav wiring
@@ -3567,6 +3866,13 @@ document.getElementById('ganttToday')?.addEventListener('click', () => {
   ganttState.offset = 0;
   renderGantt();
 });
+document.querySelectorAll('#ganttMode button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#ganttMode button').forEach(b => b.classList.toggle('active', b === btn));
+    ganttState.mode = btn.dataset.mode;
+    renderGantt();
+  });
+});
 
 // View toggle wiring
 document.querySelectorAll('#dsViewToggle button').forEach(btn => {
@@ -3577,6 +3883,22 @@ document.querySelectorAll('#dsViewToggle button').forEach(btn => {
     document.getElementById('dsViewGantt').style.display = view === 'gantt' ? '' : 'none';
     if (view === 'gantt') renderGantt();
   });
+});
+
+// Mode toggle (PC only)
+const modeToggle = document.getElementById('modeToggle');
+const initialDemo = new URLSearchParams(location.search).get('demo') === '1';
+if (initialDemo) document.body.classList.add('demo-mode');
+function updateModeToggleLabel() {
+  if (!modeToggle) return;
+  modeToggle.textContent = document.body.classList.contains('demo-mode')
+    ? '💻 PCモードに戻る'
+    : '📱 プレゼンモード (3画面)';
+}
+updateModeToggleLabel();
+modeToggle?.addEventListener('click', () => {
+  document.body.classList.toggle('demo-mode');
+  updateModeToggleLabel();
 });
 
 renderVoices();
