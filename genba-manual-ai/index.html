@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>動画マニュアルAI ─ 現場の技術を、動画から書き起こす</title>
+<meta name="description" content="現場作業の動画をアップすると、AIが手順・工具・注意点・ベテランのコツを書き起こし、若手向けマニュアルを自動生成します。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: oklch(0.985 0 0);
+    --surface: oklch(0.955 0 0);
+    --surface-2: oklch(0.925 0 0);
+    --ink: oklch(0.16 0 0);
+    --ink-2: oklch(0.34 0 0);
+    --ink-3: oklch(0.48 0 0);
+    --rule: oklch(0.86 0 0);
+    --rule-strong: oklch(0.72 0 0);
+    --accent: oklch(0.34 0.09 155);
+    --accent-ink: oklch(0.98 0.01 155);
+    --accent-soft: oklch(0.93 0.03 155);
+    --page-x: clamp(20px, 5vw, 96px);
+    --section-y: clamp(80px, 12vw, 180px);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans JP', system-ui, -apple-system, sans-serif;
+    font-weight: 400;
+    line-height: 1.7;
+    font-feature-settings: "palt" 1;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+
+  a { color: inherit; }
+  img, svg { display: block; max-width: 100%; }
+
+  .page { max-width: 1240px; margin: 0 auto; padding: 0 var(--page-x); }
+
+  /* ── Nav ─────────────────────────────────── */
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .nav__brand {
+    font-weight: 900;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+  .nav__brand span {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    margin-right: 10px;
+    vertical-align: 2px;
+  }
+  .nav__meta {
+    font-size: 13px;
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+
+  /* ── Hero ────────────────────────────────── */
+  .hero {
+    padding-top: clamp(60px, 10vw, 140px);
+    padding-bottom: clamp(80px, 12vw, 180px);
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: clamp(40px, 6vw, 96px);
+    align-items: end;
+  }
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; gap: 56px; align-items: start; }
+  }
+  .hero__lede {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+    margin-bottom: 32px;
+  }
+  .hero__lede::before {
+    content: "";
+    display: inline-block;
+    width: 28px;
+    height: 1px;
+    background: var(--accent);
+    vertical-align: 4px;
+    margin-right: 12px;
+  }
+  .hero h1 {
+    font-size: clamp(38px, 6.4vw, 88px);
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -0.035em;
+    margin: 0 0 32px;
+    text-wrap: balance;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .hero__sub {
+    font-size: clamp(15px, 1.5vw, 18px);
+    color: var(--ink-2);
+    max-width: 42ch;
+    line-height: 1.85;
+    margin: 0 0 40px;
+  }
+  .hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 28px;
+    background: var(--ink);
+    color: var(--bg);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 15px;
+    border: 1px solid var(--ink);
+    transition: background 200ms cubic-bezier(0.2, 0.8, 0.2, 1), color 200ms;
+  }
+  .hero__cta:hover { background: var(--accent); border-color: var(--accent); }
+  .hero__cta svg { width: 14px; height: 14px; }
+
+  /* ── Video player mock ───────────────────── */
+  .player {
+    position: relative;
+    background: var(--ink);
+    aspect-ratio: 16 / 10;
+    border: 1px solid var(--ink);
+    overflow: hidden;
+  }
+  .player__scene {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(1200px 400px at 30% 30%, oklch(0.25 0.02 155) 0%, transparent 60%),
+      linear-gradient(180deg, oklch(0.20 0 0), oklch(0.12 0 0));
+  }
+  .player__scene svg { width: 62%; height: auto; opacity: 0.86; }
+  .player__play {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 78px; height: 78px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.94);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  }
+  .player__play::after {
+    content: "";
+    display: block;
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 14px 0 14px 22px;
+    border-color: transparent transparent transparent var(--ink);
+    margin-left: 5px;
+  }
+  .player__bar {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: oklch(0.94 0 0);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,0.7));
+  }
+  .player__progress {
+    position: absolute;
+    left: 20px; right: 20px; bottom: 42px;
+    height: 3px;
+    background: rgba(255,255,255,0.2);
+  }
+  .player__progress::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 34%;
+    background: var(--accent-soft);
+  }
+  .player__caption {
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--ink-3);
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--rule);
+    padding-top: 14px;
+  }
+
+  /* ── Section frame ───────────────────────── */
+  .section {
+    padding-top: var(--section-y);
+    padding-bottom: var(--section-y);
+    border-top: 1px solid var(--rule);
+  }
+  .section__num {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    margin-bottom: 20px;
+  }
+  .section__title {
+    font-size: clamp(28px, 4vw, 52px);
+    font-weight: 900;
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+    margin: 0 0 24px;
+    text-wrap: balance;
+  }
+  .section__intro {
+    font-size: clamp(15px, 1.4vw, 17px);
+    color: var(--ink-2);
+    max-width: 62ch;
+    line-height: 1.85;
+    margin: 0 0 72px;
+  }
+
+  /* ── Demo section (video ↔ manual) ───────── */
+  .demo {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: clamp(40px, 5vw, 80px);
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .demo { grid-template-columns: 1fr; gap: 40px; }
+  }
+
+  .demo__side .arrow {
+    display: none;
+  }
+  @media (min-width: 901px) {
+    .demo__side { position: relative; }
+    .demo__side .arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      right: -70px;
+      top: 60px;
+      width: 40px;
+      height: 40px;
+      color: var(--accent);
+    }
+  }
+
+  .manual {
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    padding: clamp(28px, 3.5vw, 48px);
+  }
+  .manual__meta {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 32px;
+    font-size: 12.5px;
+  }
+  .manual__meta dt { color: var(--ink-3); font-weight: 500; margin-bottom: 4px; }
+  .manual__meta dd { margin: 0; color: var(--ink); font-weight: 700; }
+  .manual h3 {
+    font-size: 22px;
+    font-weight: 900;
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+  }
+  .manual__note {
+    font-size: 13px;
+    color: var(--ink-3);
+    margin-bottom: 28px;
+  }
+  .manual__block {
+    margin-bottom: 32px;
+  }
+  .manual__block h4 {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    margin: 0 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--accent);
+    display: inline-block;
+  }
+  .manual__block p {
+    font-size: 14.5px;
+    color: var(--ink-2);
+    line-height: 1.85;
+    margin: 0;
+  }
+  .manual__steps { list-style: none; padding: 0; margin: 0; counter-reset: step; }
+  .manual__steps li {
+    counter-increment: step;
+    padding: 16px 0 16px 44px;
+    position: relative;
+    border-bottom: 1px dashed var(--rule);
+    font-size: 14.5px;
+    color: var(--ink-2);
+    line-height: 1.75;
+  }
+  .manual__steps li:last-child { border-bottom: none; padding-bottom: 0; }
+  .manual__steps li::before {
+    content: counter(step, decimal-leading-zero);
+    position: absolute;
+    left: 0; top: 18px;
+    font-weight: 900;
+    font-size: 14px;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .manual__steps strong { color: var(--ink); font-weight: 700; }
+  .manual__steps em { font-style: normal; color: var(--ink); font-weight: 500; }
+  .manual__tips, .manual__caution {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .manual__tips li, .manual__caution li {
+    padding: 10px 0 10px 20px;
+    position: relative;
+    font-size: 14.5px;
+    color: var(--ink-2);
+    line-height: 1.75;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .manual__tips li:last-child, .manual__caution li:last-child { border-bottom: none; }
+  .manual__caution li::before {
+    content: "!";
+    position: absolute;
+    left: 0; top: 12px;
+    font-weight: 900;
+    color: var(--accent);
+    font-size: 14px;
+    width: 12px;
+  }
+  .manual__tips li::before {
+    content: "";
+    position: absolute;
+    left: 2px; top: 20px;
+    width: 8px; height: 1px;
+    background: var(--accent);
+  }
+  .manual__checklist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 24px;
+  }
+  @media (max-width: 500px) {
+    .manual__checklist { grid-template-columns: 1fr; }
+  }
+  .manual__checklist li {
+    font-size: 13.5px;
+    color: var(--ink-2);
+    padding-left: 24px;
+    position: relative;
+    line-height: 1.6;
+  }
+  .manual__checklist li::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 4px;
+    width: 14px; height: 14px;
+    border: 1px solid var(--rule-strong);
+  }
+
+  /* ── Themes (three pillars) ──────────────── */
+  .themes {
+    display: grid;
+    gap: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .theme {
+    display: grid;
+    grid-template-columns: 60px 1.1fr 2fr;
+    gap: clamp(20px, 3vw, 56px);
+    padding: clamp(36px, 5vw, 64px) 0;
+    border-bottom: 1px solid var(--rule);
+    align-items: start;
+  }
+  @media (max-width: 800px) {
+    .theme { grid-template-columns: 40px 1fr; gap: 20px; }
+    .theme__body { grid-column: 1 / -1; margin-top: 8px; }
+  }
+  .theme__num {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+  .theme__head h3 {
+    font-size: clamp(20px, 2.3vw, 30px);
+    font-weight: 900;
+    margin: 0 0 12px;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    text-wrap: balance;
+  }
+  .theme__head .tag {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--ink-3);
+    padding: 3px 10px;
+    border: 1px solid var(--rule-strong);
+    letter-spacing: 0.02em;
+  }
+  .theme__body p {
+    margin: 0 0 16px;
+    font-size: 15px;
+    color: var(--ink-2);
+    line-height: 1.85;
+    max-width: 58ch;
+  }
+  .theme__body ul {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0 0;
+    display: grid;
+    gap: 10px;
+  }
+  .theme__body ul li {
+    font-size: 13.5px;
+    color: var(--ink-2);
+    padding-left: 20px;
+    position: relative;
+    line-height: 1.7;
+  }
+  .theme__body ul li::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 12px;
+    width: 10px; height: 1px;
+    background: var(--ink-3);
+  }
+
+  /* ── Phase roadmap ───────────────────────── */
+  .roadmap {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(28px, 3vw, 56px);
+    padding-top: 40px;
+  }
+  @media (max-width: 900px) {
+    .roadmap { grid-template-columns: 1fr; gap: 32px; }
+  }
+  .roadmap::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 20px;
+    height: 1px;
+    background: var(--rule);
+  }
+  @media (max-width: 900px) {
+    .roadmap::before { display: none; }
+  }
+  .phase { position: relative; padding-top: 40px; }
+  @media (max-width: 900px) { .phase { padding-top: 0; padding-left: 24px; border-left: 2px solid var(--rule); } }
+  .phase::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 14px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  @media (max-width: 900px) {
+    .phase::before { left: -7px; top: 6px; }
+  }
+  .phase__label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+  .phase__when {
+    font-size: 13px;
+    color: var(--ink-3);
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+  .phase h4 {
+    font-size: clamp(18px, 1.9vw, 22px);
+    font-weight: 900;
+    margin: 0 0 16px;
+    letter-spacing: -0.02em;
+    line-height: 1.35;
+  }
+  .phase p {
+    font-size: 14px;
+    color: var(--ink-2);
+    line-height: 1.8;
+    margin: 0 0 16px;
+  }
+  .phase ul { list-style: none; padding: 0; margin: 0; }
+  .phase ul li {
+    font-size: 13px;
+    color: var(--ink-2);
+    padding: 6px 0 6px 18px;
+    position: relative;
+    line-height: 1.6;
+    border-top: 1px dashed var(--rule);
+  }
+  .phase ul li:first-child { border-top: none; }
+  .phase ul li::before {
+    content: "▸";
+    position: absolute;
+    left: 0; top: 6px;
+    color: var(--accent);
+    font-size: 10px;
+  }
+
+  /* ── CTA ────────────────────────────────── */
+  .cta-section {
+    background: var(--ink);
+    color: var(--bg);
+    margin-top: var(--section-y);
+    padding-top: var(--section-y);
+    padding-bottom: var(--section-y);
+  }
+  .cta-section .page {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: clamp(40px, 6vw, 96px);
+    align-items: end;
+  }
+  @media (max-width: 900px) {
+    .cta-section .page { grid-template-columns: 1fr; gap: 40px; align-items: start; }
+  }
+  .cta-section h2 {
+    font-size: clamp(32px, 4.6vw, 60px);
+    font-weight: 900;
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+    margin: 0 0 32px;
+    text-wrap: balance;
+  }
+  .cta-section h2 em { font-style: normal; color: var(--accent-soft); }
+  .cta-section__lede {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--accent-soft);
+    letter-spacing: 0.04em;
+    margin-bottom: 24px;
+  }
+  .cta-section p {
+    font-size: 15px;
+    color: oklch(0.82 0 0);
+    line-height: 1.85;
+    margin: 0 0 24px;
+    max-width: 46ch;
+  }
+  .cta-section__steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 16px;
+  }
+  .cta-section__steps li {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 16px;
+    padding: 16px 0;
+    border-top: 1px solid oklch(0.34 0 0);
+    font-size: 14px;
+    color: oklch(0.9 0 0);
+    line-height: 1.7;
+  }
+  .cta-section__steps li:last-child { border-bottom: 1px solid oklch(0.34 0 0); }
+  .cta-section__steps span {
+    color: var(--accent-soft);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+  }
+
+  /* ── Footer ─────────────────────────────── */
+  .foot {
+    padding: 40px 0 64px;
+    border-top: 1px solid var(--rule);
+    font-size: 12px;
+    color: var(--ink-3);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 0;
+  }
+  .foot__note { max-width: 42ch; line-height: 1.7; }
+
+  /* ── Reduced motion ─────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <nav class="nav" aria-label="ページヘッダ">
+    <div class="nav__brand"><span aria-hidden="true"></span>動画マニュアルAI</div>
+    <div class="nav__meta">第1回打合せ資料 ─ 提案デモ</div>
+  </nav>
+</div>
+
+<!-- ── Hero ────────────────────────────────── -->
+<section class="hero page">
+  <div class="hero__text">
+    <div class="hero__lede">技術継承のための、実務ツール</div>
+    <h1>動画1本で、<em>マニュアルが1冊</em>できる。</h1>
+    <p class="hero__sub">現場作業の動画をアップすると、AIが手順・使用工具・注意事項・ベテランのコツを書き起こします。40代の職人の手元を、20代が読める形へ。「見て覚えろ」を、記録に残せる形へ。</p>
+    <a class="hero__cta" href="#demo">
+      実演を見る
+      <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M1 7h11m0 0L7 2m5 5L7 12" stroke="currentColor" stroke-width="1.8"/></svg>
+    </a>
+  </div>
+
+  <div class="hero__player">
+    <div class="player" role="img" aria-label="サンプル動画プレイヤー(実演用)">
+      <div class="player__scene">
+        <svg viewBox="0 0 400 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- 抽象化した「作業する手」のシルエット -->
+          <g stroke="oklch(0.55 0.03 155)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <!-- ロープの円環 -->
+            <ellipse cx="200" cy="150" rx="130" ry="42" opacity="0.4"/>
+            <ellipse cx="200" cy="150" rx="130" ry="42" transform="rotate(20 200 150)" opacity="0.3"/>
+            <path d="M60 130 Q120 90 200 100 Q290 112 340 145" opacity="0.7"/>
+            <path d="M340 145 Q300 195 240 205 Q170 213 100 190" opacity="0.7"/>
+            <!-- 手の輪郭 -->
+            <path d="M140 90 L155 70 L175 65 L190 78 L195 105 L182 120 L165 125 L145 118 Z" opacity="0.85"/>
+            <path d="M245 200 L262 220 L283 225 L296 218 L302 195 L288 180 L268 178 L252 190 Z" opacity="0.85"/>
+            <!-- ハイライトドット -->
+            <circle cx="200" cy="150" r="2" fill="oklch(0.75 0.06 155)"/>
+          </g>
+        </svg>
+      </div>
+      <div class="player__play" aria-hidden="true"></div>
+      <div class="player__progress" aria-hidden="true"></div>
+      <div class="player__bar">
+        <span>サンプル ─ もやい結び 基本手順</span>
+        <span>01:16 / 03:42</span>
+      </div>
+    </div>
+    <div class="player__caption">
+      <span>元動画:MP4 / 3分42秒</span>
+      <span>解析:2026-07-06 09:23</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── Demo ────────────────────────────────── -->
+<section class="section" id="demo">
+  <div class="page">
+    <div class="section__num">01 ─ 実演</div>
+    <h2 class="section__title">この動画から、この手順書ができました。</h2>
+    <p class="section__intro">AIが動画を解析し、章立て・手順・使用工具・ベテランのコツ・チェックリストを自動生成します。左が元動画、右がAIの出力物です。当日は御社の実作業動画で同じ処理を実演します。</p>
+
+    <div class="demo">
+      <div class="demo__side">
+        <div class="player">
+          <div class="player__scene">
+            <svg viewBox="0 0 400 260" fill="none">
+              <g stroke="oklch(0.55 0.03 155)" stroke-width="1.5" stroke-linecap="round" fill="none">
+                <ellipse cx="200" cy="150" rx="130" ry="42" opacity="0.4"/>
+                <ellipse cx="200" cy="150" rx="130" ry="42" transform="rotate(20 200 150)" opacity="0.3"/>
+                <path d="M60 130 Q120 90 200 100 Q290 112 340 145" opacity="0.7"/>
+                <path d="M340 145 Q300 195 240 205 Q170 213 100 190" opacity="0.7"/>
+                <path d="M140 90 L155 70 L175 65 L190 78 L195 105 L182 120 L165 125 L145 118 Z" opacity="0.85"/>
+                <path d="M245 200 L262 220 L283 225 L296 218 L302 195 L288 180 L268 178 L252 190 Z" opacity="0.85"/>
+              </g>
+            </svg>
+          </div>
+          <div class="player__play" aria-hidden="true"></div>
+          <div class="player__progress" aria-hidden="true"></div>
+          <div class="player__bar">
+            <span>元動画 ─ もやい結び 基本手順</span>
+            <span>03:42</span>
+          </div>
+        </div>
+        <div class="player__caption">
+          <span>撮影:iPhone / 縦向き</span>
+          <span>音声:ベテラン発話 含む</span>
+        </div>
+        <div class="arrow" aria-hidden="true">
+          <svg viewBox="0 0 40 40" fill="none">
+            <path d="M8 20h24m0 0l-8-8m8 8l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <article class="manual" aria-label="AIが生成した手順書">
+        <dl class="manual__meta">
+          <div><dt>元動画</dt><dd>3分42秒</dd></div>
+          <div><dt>解析時間</dt><dd>約2分</dd></div>
+          <div><dt>抽出手順</dt><dd>5ステップ</dd></div>
+          <div><dt>抽出コツ</dt><dd>ベテラン発言3件</dd></div>
+        </dl>
+
+        <h3>もやい結び 基本手順書</h3>
+        <p class="manual__note">高所作業・救助・係留に用いる基本結索。荷重下でも解けず、荷重を外せば片手で解けるのが特徴。</p>
+
+        <div class="manual__block">
+          <h4>概要</h4>
+          <p>ロープの末端に固定サイズの輪をつくる結び。船の係留、荷造り、高所作業時の安全確保、救助現場で最初に習得すべき結索とされる。習得の難所は「うさぎが穴から出て木の後ろをまわる」で覚える手順3の方向認識。</p>
+        </div>
+
+        <div class="manual__block">
+          <h4>手順(5ステップ)</h4>
+          <ol class="manual__steps">
+            <li><strong>輪をつくる。</strong>ロープの元側(長い方)を上、末端側(短い方)を下にして小さな輪をつくる。輪の直径は完成させる輪の1.5倍が目安。</li>
+            <li><strong>末端を通す。</strong>末端側を、下から輪に通す。元側は左手で押さえて形が崩れないようにする。</li>
+            <li><strong>元側にまわす。</strong>通した末端を、元側の後ろ側に一度まわす。<em>「うさぎが穴から出て、木の後ろをまわる」</em>と口伝で覚える。</li>
+            <li><strong>輪に戻す。</strong>元側の後ろをまわった末端を、最初の輪に上から通して下に出す。</li>
+            <li><strong>締める。</strong>元側と末端を同時に引き締め、形を固定する。最後に輪の大きさを確認する。</li>
+          </ol>
+        </div>
+
+        <div class="manual__block">
+          <h4>注意事項</h4>
+          <ul class="manual__caution">
+            <li>末端側の余りは輪の直径の3倍以上残すこと。短いと荷重時にすっぽ抜ける。</li>
+            <li>濡れたロープ、合成繊維ロープは緩みやすい。作業前に一度荷重テストを行う。</li>
+            <li>荷重方向は必ず元側から。末端側に荷重をかけると解けない結果になる。</li>
+          </ul>
+        </div>
+
+        <div class="manual__block">
+          <h4>ベテランのコツ(発話から抽出)</h4>
+          <ul class="manual__tips">
+            <li>「輪の中に手が入るサイズで作れ」 ─ ほどく時に指が入る余裕が必要。</li>
+            <li>「片手で結べるように練習しろ」 ─ 高所・暗所では片手作業を強いられる。</li>
+            <li>「見て覚えるより、100回結んで覚えろ」 ─ 手の記憶が第一。</li>
+          </ul>
+        </div>
+
+        <div class="manual__block">
+          <h4>習得チェックリスト</h4>
+          <ul class="manual__checklist">
+            <li>目を閉じても結べるか</li>
+            <li>片手だけで結べるか</li>
+            <li>30秒以内に結べるか</li>
+            <li>荷重下で解けない形状か</li>
+            <li>荷重を外すと片手で解けるか</li>
+            <li>余り長さは3倍以上あるか</li>
+          </ul>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ── Themes: 3 pillars ───────────────────── -->
+<section class="section">
+  <div class="page">
+    <div class="section__num">02 ─ 提案範囲</div>
+    <h2 class="section__title">御社の3つの課題に、道具で応える。</h2>
+    <p class="section__intro">打合せ資料でお示しいただいた「後継者・属人化」「業務効率化」「技術継承」の3つに、それぞれ別の道具を用意します。順番と規模はご相談のうえ決めます。</p>
+
+    <div class="themes">
+      <div class="theme">
+        <div class="theme__num">03</div>
+        <div class="theme__head">
+          <h3>技術継承</h3>
+          <div class="tag">Phase 1 ─ 本デモの領域</div>
+        </div>
+        <div class="theme__body">
+          <p>現場の作業動画をAIが解析し、章立て・手順・使用工具・注意事項・ベテランのコツ・チェックリストを自動で書き起こします。若手はiPad一台で全マニュアルを検索・閲覧できます。</p>
+          <ul>
+            <li>ベテランの発話も認識し「口伝のコツ」を文字に残す</li>
+            <li>1本の動画から3〜5分でマニュアル1冊を生成</li>
+            <li>マニュアルは編集可。監修者が最終確認して公開</li>
+            <li>スマホ・タブレット・PDF出力の3形態に対応</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="theme">
+        <div class="theme__num">01</div>
+        <div class="theme__head">
+          <h3>属人化リスクの解消</h3>
+          <div class="tag">Phase 2</div>
+        </div>
+        <div class="theme__body">
+          <p>キーパーソンの頭の中にある「業務・判断基準・過去の事例」を、LINEで毎日5分ヒアリングし、AIがナレッジデータベースに体系化します。後継者採用と並行して、退職・不在リスクを段階的に減らします。</p>
+          <ul>
+            <li>朝または夕方に定型質問をLINEで自動配信</li>
+            <li>音声・テキスト・写真の3形式で回答可能</li>
+            <li>AIが自動で分類・タグ付け・検索可能化</li>
+            <li>「あの時どうするか」を後任が検索で引ける</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="theme">
+        <div class="theme__num">02</div>
+        <div class="theme__head">
+          <h3>業務効率化(現場発)</h3>
+          <div class="tag">Phase 3</div>
+        </div>
+        <div class="theme__body">
+          <p>ゼロから新しいシステムを入れるのではなく、今の勤務日報・工程管理をそのまま残したまま、現場作業員の「もっとこうだったら」という声だけを集めてITで形にする道具を提供します。</p>
+          <ul>
+            <li>現場作業員がスマホから音声/テキストで投稿</li>
+            <li>AIが分類・要約・優先度付け</li>
+            <li>管理者ダッシュボードで見える化</li>
+            <li>採用された改善案は現場に還元(貢献の可視化)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Phase roadmap ───────────────────────── -->
+<section class="section">
+  <div class="page">
+    <div class="section__num">03 ─ 進め方</div>
+    <h2 class="section__title">段階を踏んで、6ヶ月で3つを組み上げる。</h2>
+    <p class="section__intro">3つを同時に進めるのではなく、効果が見えやすい「技術継承」から立ち上げます。現場が慣れたところで属人化解消・業務効率化に順次拡張します。</p>
+
+    <div class="roadmap">
+      <div class="phase">
+        <div class="phase__label">PHASE 1</div>
+        <div class="phase__when">0 〜 2ヶ月</div>
+        <h4>動画マニュアルAI 立ち上げ</h4>
+        <p>3〜5本の代表作業を撮影し、AIマニュアル化。若手にiPadを配布して現場で試験運用します。フィードバックを回収し、テンプレートを御社仕様に調整します。</p>
+        <ul>
+          <li>代表作業3〜5本の撮影・解析</li>
+          <li>現場での試験運用と改善</li>
+          <li>マニュアル書式の御社仕様化</li>
+        </ul>
+      </div>
+
+      <div class="phase">
+        <div class="phase__label">PHASE 2</div>
+        <div class="phase__when">2 〜 4ヶ月</div>
+        <h4>ノウハウ棚卸しBot</h4>
+        <p>キーパーソンにLINEで毎日5分ヒアリングを開始。過去事例・判断基準・業務の勘所を回答してもらい、AIが体系化・検索可能なデータベースに格納します。</p>
+        <ul>
+          <li>ヒアリング設問セットの設計</li>
+          <li>LINE公式アカウントの構築</li>
+          <li>回答の自動体系化・検索基盤</li>
+        </ul>
+      </div>
+
+      <div class="phase">
+        <div class="phase__label">PHASE 3</div>
+        <div class="phase__when">4 〜 6ヶ月</div>
+        <h4>現場改善ボイス</h4>
+        <p>現場作業員向けに、スマホからワンタップで改善提案を送れる仕組みを提供。AIが分類・優先度付けし、管理者ダッシュボードで見える化。既存の日報・工程管理はそのまま残ります。</p>
+        <ul>
+          <li>スマホ投稿UI(音声・テキスト・写真)</li>
+          <li>AI分類・優先度付け</li>
+          <li>管理者ダッシュボード</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ────────────────────────────────── -->
+<section class="cta-section">
+  <div class="page">
+    <div>
+      <div class="cta-section__lede">次のステップ</div>
+      <h2>まず1本、動画をお預かりして<em>手順書に</em>してみます。</h2>
+      <p>作業種別は問いません。3〜10分程度の動画をお送りいただければ、3営業日以内にサンプル手順書をお返しします。品質を見てから、Phase 1着手のご判断をいただければ十分です。</p>
+      <p>撮影方法・機材・容量の制約はありません。iPhoneやAndroidで撮影した動画をそのままお送りください。</p>
+    </div>
+    <div>
+      <ol class="cta-section__steps">
+        <li><span>01</span>現場作業の動画をご用意(iPhone可)</li>
+        <li><span>02</span>お預かりして、AIで解析(3営業日)</li>
+        <li><span>03</span>サンプル手順書をお返し、内容ご確認</li>
+        <li><span>04</span>Phase 1着手のご判断(継続 or 見送り)</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<div class="page">
+  <footer class="foot">
+    <div class="foot__note">本デモは打合せ資料のため作成した参考実装です。実装物・仕様・費用は打合せ後に個別ご相談のうえ確定します。</div>
+    <div>2026年7月 打合せ用</div>
+  </footer>
+</div>
+
+</body>
+</html>
