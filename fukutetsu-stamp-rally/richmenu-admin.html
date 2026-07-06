@@ -213,22 +213,9 @@ html,body{min-height:100%;font-family:"Noto Sans JP",sans-serif;color:var(--ink)
       <div class="cards-edit" id="cards-edit"></div>
     </div>
 
-    <!-- Step 4: image (advanced) -->
-    <div class="section">
-      <h2><span class="n">4</span>メニュー画像 <span style="font-size:11px;color:var(--dim);font-weight:500;margin-left:6px">(そのままでOK)</span></h2>
-      <div class="sub">今の設定から自動で作った画像です。差し替えたい時だけ 別の画像 (2500 × 1686 px) を アップロード</div>
-      <div class="img-slot">
-        <img id="img-thumb" src="" alt="menu image">
-        <div class="lbl">タブの画像</div>
-        <div class="hint">JPG または PNG · 2500 × 1686 ピクセル 推奨</div>
-        <label class="up-btn" for="img-upload">画像を差し替える</label>
-        <input type="file" id="img-upload" accept="image/*">
-      </div>
-    </div>
-
-    <!-- Step 5: apply -->
+    <!-- Step 4: apply -->
     <div class="apply-wrap">
-      <h2><span class="n">5</span>設定を LINE に 反映する</h2>
+      <h2><span class="n">4</span>設定を LINE に 反映する</h2>
       <p>全部の設定が おわったら 下のボタン を おしてください。<br>数十秒で LINE アプリに反映されます。</p>
       <button class="btn" id="apply-btn">LINE に 反映する</button>
       <div class="save-note"><b>下書きは自動保存されています。</b>いつでも 途中で戻ってこれます。</div>
@@ -309,22 +296,10 @@ function renderCards(){
         <span class="badge">目立たせる</span>
       </div>
       <div class="field">
-        <label>アイコン <span class="hint">タップして選ぶ</span></label>
-        <div class="icon-pick" data-i="${i}">
-          ${ICON_CHOICES.map(x => `<button data-icon="${x}" class="${x === card.icon ? "on" : ""}">${x}</button>`).join("")}
-        </div>
+        <label>ボタン名 <span class="req">*</span></label>
+        <input class="c-title" data-i="${i}" value="${card.title.replace(/"/g,'&quot;')}" placeholder="例: 現在地から探す">
       </div>
-      <div class="grid">
-        <div class="field">
-          <label>ボタン名 <span class="req">*</span></label>
-          <input class="c-title" data-i="${i}" value="${card.title.replace(/"/g,'&quot;')}" placeholder="例: 現在地から探す">
-        </div>
-        <div class="field">
-          <label>説明文</label>
-          <input class="c-sub" data-i="${i}" value="${card.sub.replace(/"/g,'&quot;')}" placeholder="例: 150m圏内のスポットを自動判定">
-        </div>
-      </div>
-      <div class="field" style="margin-top:8px">
+      <div class="field">
         <label>おしたら開くページの URL <span class="req">*</span></label>
         <input class="c-url" data-i="${i}" value="${card.url}" placeholder="https://…">
       </div>
@@ -335,21 +310,8 @@ function renderCards(){
   el.querySelectorAll(".c-title").forEach(inp => {
     inp.addEventListener("input", e => { CFG[CUR].cards[+e.target.dataset.i].title = e.target.value; saveCfg(CFG); renderPreview(); });
   });
-  el.querySelectorAll(".c-sub").forEach(inp => {
-    inp.addEventListener("input", e => { CFG[CUR].cards[+e.target.dataset.i].sub = e.target.value; saveCfg(CFG); renderPreview(); });
-  });
   el.querySelectorAll(".c-url").forEach(inp => {
     inp.addEventListener("input", e => { CFG[CUR].cards[+e.target.dataset.i].url = e.target.value; saveCfg(CFG); });
-  });
-  el.querySelectorAll(".icon-pick button").forEach(btn => {
-    btn.addEventListener("click", e => {
-      const i = +btn.parentElement.dataset.i;
-      const emoji = btn.dataset.icon;
-      CFG[CUR].cards[i].icon = emoji;
-      saveCfg(CFG);
-      renderCards();
-      renderPreview();
-    });
   });
 }
 function renderHero(){
@@ -439,20 +401,6 @@ document.querySelectorAll("#tab-row button").forEach(btn => {
   });
 });
 
-// ─────────── Image upload ───────────
-document.getElementById("img-upload").addEventListener("change", e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    document.getElementById("img-thumb").src = ev.target.result;
-    if (!CFG[CUR].customImage) CFG[CUR].customImage = "";
-    CFG[CUR].customImage = ev.target.result;
-    saveCfg(CFG);
-  };
-  reader.readAsDataURL(f);
-});
-
 // ─────────── Apply ───────────
 document.getElementById("apply-btn").addEventListener("click", async () => {
   const btn = document.getElementById("apply-btn");
@@ -475,7 +423,6 @@ document.getElementById("apply-btn").addEventListener("click", async () => {
 });
 
 // ─────────── Init ───────────
-document.getElementById("img-thumb").src = "https://t35ty6-rgb.github.io/skeleton-demos/fukutetsu-stamp-rally/assets/richmenu-preview-fallback.png";
 renderHero();
 renderCards();
 renderPreview();
