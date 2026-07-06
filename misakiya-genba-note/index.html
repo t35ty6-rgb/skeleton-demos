@@ -1,0 +1,3167 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>三崎屋現場ノート ─ スマホアプリ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --brand-1: #1E3A8A;    /* deep indigo */
+    --brand-2: #2563EB;    /* royal blue */
+    --brand-3: #3B82F6;    /* sky blue */
+    --brand-4: #60A5FA;    /* soft sky */
+    --brand-5: #93C5FD;    /* pale sky */
+    --brand-glow: rgba(59, 130, 246, 0.35);
+    --hero-grad: linear-gradient(135deg, #060B1F 0%, #0F1A3D 25%, #1E3A8A 55%, #2563EB 85%, #3B82F6 100%);
+    --btn-grad: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%);
+    --btn-grad-hover: linear-gradient(180deg, #60A5FA 0%, #2563EB 100%);
+    --bg: #F1F5FB;
+    --bg-2: #E6EEFA;
+    --surface: #FFFFFF;
+    --surface-2: #F5F8FD;
+    --ink: #0F172A;
+    --ink-2: #334155;
+    --ink-3: #64748B;
+    --rule: #E2E8F0;
+    --rule-strong: #CBD5E1;
+
+    /* Category pop palette */
+    --cat-progress: #3B82F6;
+    --cat-progress-bg: #DBEAFE;
+    --cat-trouble: #F59E0B;
+    --cat-trouble-bg: #FEF3C7;
+    --cat-urgent: #EF4444;
+    --cat-urgent-bg: #FEE2E2;
+    --cat-knowhow: #8B5CF6;
+    --cat-knowhow-bg: #EDE9FE;
+    --cat-question: #14B8A6;
+    --cat-question-bg: #CCFBF1;
+
+    --shadow-card: 0 1px 2px rgba(15, 30, 78, 0.04), 0 4px 16px -4px rgba(59, 130, 246, 0.10);
+    --shadow-hero: 0 20px 40px -20px rgba(30, 58, 138, 0.5), 0 8px 24px -8px rgba(59, 130, 246, 0.35);
+    --shadow-btn: 0 4px 12px -2px var(--brand-glow), inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background:
+      radial-gradient(ellipse 900px 500px at 15% 10%, rgba(59, 130, 246, 0.10), transparent 60%),
+      radial-gradient(ellipse 700px 400px at 85% 80%, rgba(139, 92, 246, 0.06), transparent 65%),
+      #EDF2FB;
+    color: var(--ink);
+    font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-feature-settings: "palt" 1;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 40px 20px;
+  }
+  button { font-family: inherit; cursor: pointer; }
+
+  .stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    max-width: 100%;
+  }
+  .stage__caption {
+    color: var(--ink-3);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    text-align: center;
+    max-width: 360px;
+    line-height: 1.7;
+  }
+  .stage__caption strong { color: var(--ink); font-weight: 800; font-size: 13px; }
+  .stage__caption .glow {
+    display: inline-block;
+    padding: 2px 8px;
+    background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+    color: #fff;
+    border-radius: 100px;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    margin-right: 4px;
+  }
+
+  /* ── iPhone frame ────────────────────────── */
+  .device {
+    width: 390px;
+    height: 844px;
+    background: #0A0F1E;
+    border-radius: 56px;
+    padding: 12px;
+    box-shadow:
+      0 0 0 2px #1E293B,
+      0 40px 120px -30px rgba(15, 30, 78, 0.6),
+      0 8px 32px -8px rgba(0, 0, 0, 0.25);
+    position: relative;
+  }
+  .device__screen {
+    background: var(--bg);
+    width: 100%;
+    height: 100%;
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    display: grid;
+    grid-template-rows: 1fr 84px;
+  }
+  .device__island {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 118px;
+    height: 34px;
+    background: #0A0F1E;
+    border-radius: 20px;
+    z-index: 100;
+  }
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 14px 32px 6px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: -0.02em;
+    position: relative;
+    z-index: 10;
+  }
+  .status-bar.dark { color: var(--ink); }
+  .status-bar__right { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+
+  /* ── Screens ───────────────────────────── */
+  .screens {
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    position: relative;
+  }
+  .screens::-webkit-scrollbar { display: none; }
+  .screen { display: none; padding: 0 0 28px; }
+  .screen.active { display: block; }
+
+  /* ── Hero (home) ───────────────────────── */
+  .hero {
+    background: var(--hero-grad);
+    color: #fff;
+    padding: 0 24px 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 0 0 32px 32px;
+    box-shadow: var(--shadow-hero);
+  }
+  .hero__waves {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.35;
+  }
+  .hero__waves svg { width: 100%; height: 100%; }
+  .hero__glow {
+    position: absolute;
+    top: -60px; right: -80px;
+    width: 260px; height: 260px;
+    background: radial-gradient(circle, rgba(147, 197, 253, 0.5), transparent 65%);
+    border-radius: 50%;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .hero__glow-2 {
+    position: absolute;
+    bottom: -80px; left: -40px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.28), transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .hero__inner { position: relative; z-index: 2; padding-top: 24px; }
+  .hero__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #E0F2FE;
+    margin-bottom: 14px;
+  }
+  .hero__eyebrow::before {
+    content: "";
+    width: 6px; height: 6px;
+    background: #4ADE80;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #4ADE80;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .hero h1 {
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: -0.035em;
+    line-height: 1.15;
+    margin: 0 0 6px;
+    color: #fff;
+  }
+  .hero__sub {
+    font-size: 13px;
+    color: #BFDBFE;
+    font-weight: 500;
+    margin: 0 0 14px;
+    letter-spacing: 0.005em;
+  }
+  .trust-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .trust-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    background: rgba(255,255,255,0.14);
+    color: #E0F2FE;
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 100px;
+    backdrop-filter: blur(6px);
+  }
+  .trust-badge--gold {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.2));
+    color: #FEF3C7;
+    border-color: rgba(251, 191, 36, 0.4);
+  }
+  .trust-badge::before {
+    content: "";
+    width: 6px; height: 6px;
+    background: currentColor;
+    border-radius: 50%;
+    opacity: 0.8;
+  }
+  .hero__stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .stat {
+    background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 18px;
+    padding: 14px 12px 12px;
+    text-align: center;
+  }
+  .stat__icon {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    margin: 0 auto 8px;
+    font-size: 15px;
+  }
+  .stat__icon.blue { background: linear-gradient(135deg, #60A5FA, #2563EB); }
+  .stat__icon.amber { background: linear-gradient(135deg, #FBBF24, #F59E0B); }
+  .stat__icon.rose { background: linear-gradient(135deg, #FB7185, #EF4444); }
+  .stat__num {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat__label {
+    font-size: 10.5px;
+    color: #BFDBFE;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-top: 4px;
+  }
+
+  /* Home avatar row */
+  .hero__avatar-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 4px 0;
+  }
+  .hero__avatar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+  }
+  .hero__avatar .av {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FBBF24, #F59E0B);
+    display: grid;
+    place-items: center;
+    font-weight: 900;
+    font-size: 13px;
+    color: #fff;
+    border: 2px solid rgba(255,255,255,0.3);
+  }
+  .hero__avatar__name { font-size: 12.5px; font-weight: 700; }
+  .hero__avatar__role { font-size: 10.5px; color: #BFDBFE; }
+  .hero__bell {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.15);
+    display: grid;
+    place-items: center;
+    position: relative;
+    color: #fff;
+  }
+  .hero__bell::after {
+    content: "3";
+    position: absolute;
+    top: -4px; right: -4px;
+    background: #EF4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    min-width: 18px; height: 18px;
+    border-radius: 100px;
+    display: grid; place-items: center;
+    border: 2px solid #1E3A8A;
+    padding: 0 4px;
+  }
+  .hero__bell svg { width: 18px; height: 18px; }
+
+  /* ── Section head ──────────────────────── */
+  .sec-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 4px 24px 12px;
+    gap: 8px;
+  }
+  .sec-head h2 {
+    font-size: 18px;
+    font-weight: 900;
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+  .sec-head__link {
+    font-size: 12px;
+    color: var(--brand-2);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  /* ── Chips (filter) ────────────────────── */
+  .chips {
+    display: flex;
+    gap: 8px;
+    padding: 4px 24px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    padding: 8px 14px;
+    background: #fff;
+    border: 1px solid var(--rule);
+    color: var(--ink-2);
+    font-size: 12.5px;
+    font-weight: 700;
+    border-radius: 100px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: -0.01em;
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(15, 30, 78, 0.04);
+  }
+  .chip .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--brand-3);
+  }
+  .chip.active {
+    background: var(--btn-grad);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: var(--shadow-btn);
+  }
+  .chip.active .dot { background: #fff; }
+  .chip .n { opacity: 0.6; font-weight: 500; }
+  .chip.active .n { opacity: 0.8; }
+
+  /* ── Voice list ─────────────────────────── */
+  .list { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; }
+
+  .card {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: var(--shadow-card);
+    border: 1px solid rgba(226, 232, 240, 0.7);
+  }
+
+  .voice__head {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .avatar {
+    width: 38px; height: 38px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #94A3B8, #64748B);
+    display: grid;
+    place-items: center;
+    font-weight: 900;
+    font-size: 13px;
+    color: #fff;
+    flex-shrink: 0;
+    letter-spacing: -0.02em;
+    box-shadow: 0 2px 6px rgba(100, 116, 139, 0.2);
+  }
+  .avatar.tsuji { background: linear-gradient(135deg, #A78BFA, #7C3AED); box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35); }
+  .avatar.yamamoto { background: linear-gradient(135deg, #FCA5A5, #F87171); }
+  .avatar.inoue { background: linear-gradient(135deg, #6EE7B7, #10B981); }
+  .avatar.tanaka { background: linear-gradient(135deg, #FBBF24, #F59E0B); }
+  .avatar.suzuki { background: linear-gradient(135deg, #7DD3FC, #0EA5E9); }
+  .voice__who { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+  .voice__name { font-size: 13.5px; font-weight: 800; letter-spacing: -0.01em; }
+  .voice__meta {
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-top: 1px;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .voice__meta .sep { color: var(--rule-strong); }
+  .voice__time {
+    font-size: 12px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .voice__type {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--ink-3);
+    padding: 3px 10px;
+    background: var(--surface-2);
+    border-radius: 100px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+  .voice__type.audio {
+    background: var(--cat-progress-bg);
+    color: var(--cat-progress);
+  }
+  .voice__type.audio::before {
+    content: "";
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 4px 0 4px 6px;
+    border-color: transparent transparent transparent currentColor;
+    margin-right: 1px;
+  }
+  .voice__type.photo {
+    background: var(--cat-knowhow-bg);
+    color: var(--cat-knowhow);
+  }
+  .voice__type.photo::before { content: "📷"; font-size: 10px; }
+  .voice__type.text {
+    background: var(--surface-2);
+    color: var(--ink-3);
+  }
+  .voice__type.text::before { content: "T"; font-weight: 900; font-size: 10px; letter-spacing: 0; }
+
+  .voice__body p {
+    margin: 0 0 10px;
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.7;
+    letter-spacing: -0.005em;
+  }
+  .voice__ai {
+    background: linear-gradient(135deg, #EFF6FF 0%, #F5F3FF 100%);
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    line-height: 1.7;
+    margin-bottom: 10px;
+    border: 1px solid rgba(139, 92, 246, 0.12);
+    position: relative;
+  }
+  .voice__ai__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+    color: #fff;
+    font-size: 9.5px;
+    font-weight: 900;
+    padding: 2px 8px;
+    border-radius: 100px;
+    letter-spacing: 0.06em;
+    margin-right: 6px;
+    vertical-align: 1px;
+  }
+  .voice__ai__label::before { content: "✦"; font-size: 8px; }
+
+  .badges { display: flex; gap: 5px; flex-wrap: wrap; }
+  .badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .badge::before {
+    content: "";
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .badge.progress { background: var(--cat-progress-bg); color: var(--cat-progress); }
+  .badge.trouble { background: var(--cat-trouble-bg); color: #B45309; }
+  .badge.urgent { background: var(--cat-urgent); color: #fff; }
+  .badge.urgent::before { background: #fff; box-shadow: 0 0 6px #fff; }
+  .badge.knowhow { background: var(--cat-knowhow-bg); color: var(--cat-knowhow); }
+  .badge.question { background: var(--cat-question-bg); color: #0F766E; }
+
+  /* ── Project ───────────────────────────── */
+  .project__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .project__name {
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1.3;
+    margin: 0;
+    flex: 1;
+    letter-spacing: -0.015em;
+  }
+  .project__pct {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    color: var(--brand-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .project__pct.done {
+    background: linear-gradient(135deg, #10B981, #059669);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .project__pct.upcoming {
+    color: var(--ink-3);
+    font-size: 13px;
+  }
+  .project__term {
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-bottom: 12px;
+    letter-spacing: -0.005em;
+  }
+  .project__term .dot { color: var(--rule-strong); margin: 0 4px; }
+  .project__bar {
+    height: 8px;
+    background: var(--surface-2);
+    border-radius: 100px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .project__bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #60A5FA 0%, #2563EB 100%);
+    border-radius: 100px;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
+    position: relative;
+    overflow: hidden;
+  }
+  .project__bar-fill::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    height: 3px; width: 100%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.5), transparent);
+  }
+  .project__bar-fill.done {
+    background: linear-gradient(90deg, #34D399 0%, #059669 100%);
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+  }
+  .project__foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .project__team {
+    display: flex;
+  }
+  .project__team .avatar {
+    width: 26px; height: 26px;
+    font-size: 10px;
+    border: 2px solid #fff;
+    margin-left: -8px;
+    border-radius: 8px;
+  }
+  .project__team .avatar:first-child { margin-left: 0; }
+  .project__status {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 100px;
+    background: var(--cat-progress-bg);
+    color: var(--cat-progress);
+    letter-spacing: -0.01em;
+  }
+  .project__status.done { background: linear-gradient(135deg, #D1FAE5, #A7F3D0); color: #059669; }
+  .project__status.upcoming { background: var(--cat-trouble-bg); color: #B45309; }
+  .project__status.finishing { background: var(--cat-knowhow-bg); color: var(--cat-knowhow); }
+
+  .project__toggle {
+    background: transparent;
+    border: none;
+    color: var(--brand-2);
+    font-size: 12px;
+    font-weight: 800;
+    margin-top: 12px;
+    padding: 8px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: -0.01em;
+    width: 100%;
+    border-top: 1px dashed var(--rule);
+  }
+  .project__toggle .chev { transition: transform 200ms; font-size: 8px; }
+  .project__toggle.open .chev { transform: rotate(180deg); }
+  .project__steps { display: none; padding: 12px 0 0; }
+  .project__steps.open { display: block; animation: fadeIn 200ms ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  .step {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 10px;
+    padding: 8px 0;
+    align-items: center;
+  }
+  .step__mark {
+    width: 24px; height: 24px;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    font-size: 11px;
+    font-weight: 900;
+    background: var(--surface-2);
+    color: var(--ink-3);
+    border: 1.5px solid var(--rule);
+  }
+  .step.done .step__mark {
+    background: linear-gradient(135deg, #34D399, #059669);
+    color: #fff;
+    border-color: transparent;
+  }
+  .step.active .step__mark {
+    background: linear-gradient(135deg, #60A5FA, #2563EB);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+    animation: pulse 2s infinite;
+  }
+  .step__label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  .step.done .step__label { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--rule-strong); text-decoration-thickness: 1.5px; }
+  .step.active .step__label { color: var(--brand-2); }
+  .step__meta {
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-top: 1px;
+    font-weight: 500;
+  }
+
+  /* ── App head (non-hero screens) ──────── */
+  .app-head {
+    padding: 30px 24px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    background: var(--bg);
+  }
+  .app-head__title {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    margin: 0;
+    line-height: 1.15;
+    background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .app-head__sub {
+    font-size: 12px;
+    color: var(--ink-3);
+    margin: 4px 0 0;
+    font-weight: 600;
+  }
+  .app-head__action {
+    background: var(--btn-grad);
+    color: #fff;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 22px;
+    font-weight: 500;
+    display: grid;
+    place-items: center;
+    padding: 0 0 3px;
+    line-height: 1;
+    box-shadow: var(--shadow-btn);
+    flex-shrink: 0;
+  }
+
+  /* ── Knowhow ───────────────────────────── */
+  .search-wrap {
+    padding: 4px 24px 16px;
+    background: var(--bg);
+    position: sticky;
+    top: 76px;
+    z-index: 5;
+  }
+  .search {
+    width: 100%;
+    padding: 12px 16px 12px 42px;
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    box-shadow: 0 1px 2px rgba(15, 30, 78, 0.03);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 14px center;
+  }
+  .search::placeholder { color: var(--ink-3); font-weight: 500; }
+  .search:focus { outline: 2px solid var(--brand-3); outline-offset: -1px; border-color: transparent; }
+  .knowhow__title {
+    font-size: 14.5px;
+    font-weight: 900;
+    letter-spacing: -0.015em;
+    margin: 0 0 6px;
+    line-height: 1.4;
+  }
+  .knowhow__body {
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.7;
+    margin: 0 0 12px;
+  }
+  .knowhow__meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid var(--rule);
+    font-size: 11px;
+    color: var(--ink-3);
+    flex-wrap: wrap;
+  }
+  .knowhow__meta .who {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    color: var(--ink-2);
+  }
+  .knowhow__meta .who .avatar { width: 20px; height: 20px; font-size: 9px; border-radius: 6px; }
+  .knowhow__meta .tag-inline {
+    background: var(--cat-progress-bg);
+    color: var(--cat-progress);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+  }
+
+  /* ── Interview ─────────────────────────── */
+  .persona-card {
+    margin: 0 20px 16px;
+    background: linear-gradient(135deg, #7C3AED 0%, #A78BFA 50%, #C4B5FD 100%);
+    border-radius: 22px;
+    padding: 20px;
+    color: #fff;
+    box-shadow: 0 12px 30px -12px rgba(124, 58, 237, 0.5);
+    position: relative;
+    overflow: hidden;
+  }
+  .persona-card::after {
+    content: "";
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(255,255,255,0.28), transparent 65%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .persona-card__head { display: flex; align-items: center; gap: 14px; position: relative; z-index: 2; }
+  .persona-card__avatar {
+    width: 56px; height: 56px;
+    background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(6px);
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    font-weight: 900;
+    font-size: 22px;
+    border: 2px solid rgba(255,255,255,0.4);
+  }
+  .persona-card__name { font-size: 17px; font-weight: 900; letter-spacing: -0.02em; }
+  .persona-card__role { font-size: 11.5px; color: #EDE9FE; margin-top: 2px; font-weight: 600; }
+  .persona-card__stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 18px;
+    position: relative;
+    z-index: 2;
+  }
+  .persona-card__stat {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 14px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .persona-card__stat dt { font-size: 10px; color: #EDE9FE; font-weight: 700; letter-spacing: 0.03em; }
+  .persona-card__stat dd { margin: 4px 0 0; font-size: 20px; font-weight: 900; letter-spacing: -0.04em; }
+
+  .qa { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; }
+  .qa__card { background: var(--surface); border-radius: 18px; padding: 16px; box-shadow: var(--shadow-card); border: 1px solid rgba(226, 232, 240, 0.7); }
+  .qa__q {
+    font-size: 13.5px;
+    color: var(--ink);
+    font-weight: 800;
+    margin: 0 0 12px;
+    padding-left: 32px;
+    position: relative;
+    line-height: 1.55;
+    letter-spacing: -0.01em;
+  }
+  .qa__q::before {
+    content: "Q";
+    position: absolute;
+    left: 0; top: -1px;
+    width: 22px; height: 22px;
+    background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+    color: #fff;
+    font-weight: 900;
+    font-size: 12px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 2px 6px rgba(139, 92, 246, 0.35);
+  }
+  .qa__a {
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.75;
+    margin: 0 0 12px;
+    padding-left: 32px;
+    position: relative;
+  }
+  .qa__a::before {
+    content: "A";
+    position: absolute;
+    left: 0; top: -1px;
+    width: 22px; height: 22px;
+    background: linear-gradient(135deg, #60A5FA, #2563EB);
+    color: #fff;
+    font-weight: 900;
+    font-size: 12px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
+  }
+  .qa__meta {
+    padding-left: 32px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--ink-3);
+    flex-wrap: wrap;
+  }
+  .qa__voice {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--cat-progress-bg);
+    color: var(--cat-progress);
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-weight: 800;
+  }
+  .qa__voice::before {
+    content: "";
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 4px 0 4px 6px;
+    border-color: transparent transparent transparent currentColor;
+  }
+
+  /* ── Settings ──────────────────────────── */
+  .settings-list { padding: 12px 20px 0; }
+  .setting-group { margin-bottom: 22px; }
+  .setting-group__label {
+    font-size: 10.5px;
+    color: var(--brand-2);
+    letter-spacing: 0.08em;
+    font-weight: 900;
+    margin-bottom: 8px;
+    padding-left: 4px;
+    text-transform: uppercase;
+  }
+  .setting-group__body {
+    background: #fff;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+    border: 1px solid rgba(226, 232, 240, 0.7);
+  }
+  .setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 13.5px;
+    gap: 12px;
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-row .label {
+    color: var(--ink);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .setting-row .label .icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .setting-row .label .icon.blue { background: linear-gradient(135deg, #60A5FA, #2563EB); }
+  .setting-row .label .icon.purple { background: linear-gradient(135deg, #A78BFA, #7C3AED); }
+  .setting-row .label .icon.green { background: linear-gradient(135deg, #6EE7B7, #059669); }
+  .setting-row .label .icon.amber { background: linear-gradient(135deg, #FBBF24, #F59E0B); }
+  .setting-row .value { color: var(--ink-3); font-size: 12.5px; font-weight: 600; letter-spacing: -0.005em; text-align: right; }
+  .setting-row .value.ok {
+    color: #059669;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .setting-row .value.ok::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #10B981;
+    box-shadow: 0 0 6px #10B981;
+    animation: pulse 2s infinite;
+  }
+
+  /* ── Tab Bar ───────────────────────────── */
+  .tab-bar {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(16px) saturate(1.5);
+    -webkit-backdrop-filter: blur(16px) saturate(1.5);
+    border-top: 1px solid rgba(226, 232, 240, 0.6);
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    padding: 6px 0 22px;
+  }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    padding: 6px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    color: var(--ink-3);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .tab-btn.active {
+    color: var(--brand-2);
+  }
+  .tab-btn__icon {
+    width: 28px; height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    transition: background 200ms;
+  }
+  .tab-btn.active .tab-btn__icon {
+    background: linear-gradient(135deg, #DBEAFE, #EDE9FE);
+  }
+  .tab-btn__icon svg { width: 20px; height: 20px; }
+
+  .empty { padding: 60px 20px; text-align: center; color: var(--ink-3); font-size: 13px; }
+
+  /* ── Manual CTA card (video → AI manual) ── */
+  .manual-cta {
+    margin: 4px 20px 20px;
+    background:
+      radial-gradient(ellipse 400px 200px at 100% 0%, rgba(251, 191, 36, 0.16), transparent 60%),
+      linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%);
+    color: #fff;
+    border-radius: 22px;
+    padding: 20px;
+    box-shadow: 0 12px 30px -12px rgba(59, 130, 246, 0.5);
+    position: relative;
+    overflow: hidden;
+  }
+  .manual-cta__glow {
+    position: absolute;
+    top: -60px; left: -60px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(255,255,255,0.3), transparent 65%);
+    border-radius: 50%;
+  }
+  .manual-cta__body { position: relative; z-index: 2; }
+  .manual-cta__eyebrow {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    background: rgba(255,255,255,0.22);
+    backdrop-filter: blur(8px);
+    padding: 3px 10px;
+    border-radius: 100px;
+    margin-bottom: 12px;
+  }
+  .manual-cta h3 {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    margin: 0 0 8px;
+    line-height: 1.25;
+  }
+  .manual-cta p {
+    font-size: 12.5px;
+    color: #E0E7FF;
+    line-height: 1.7;
+    margin: 0 0 16px;
+    font-weight: 500;
+  }
+  .manual-cta__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .btn {
+    padding: 10px 14px;
+    font-size: 12.5px;
+    font-weight: 800;
+    border-radius: 12px;
+    border: none;
+    font-family: inherit;
+    letter-spacing: -0.01em;
+  }
+  .btn--primary {
+    background: #fff;
+    color: #4C1D95;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .btn--ghost {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.25);
+    backdrop-filter: blur(6px);
+  }
+  .manual-cta__stats {
+    font-size: 11px;
+    color: #DDD6FE;
+    font-weight: 600;
+  }
+  .manual-cta__stats b { color: #fff; font-weight: 900; }
+
+  /* Upload flow (4-step) */
+  .upload-flow {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+    gap: 6px;
+    margin: 16px 0 20px;
+    align-items: center;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 16px;
+    padding: 14px 10px;
+  }
+  .upload-flow__step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+  }
+  .upload-flow__num {
+    width: 28px; height: 28px;
+    background: #fff;
+    color: #4C1D95;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-weight: 900;
+    font-size: 13px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .upload-flow__label {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+  }
+  .upload-flow__label span {
+    display: block;
+    font-size: 9.5px;
+    color: #DDD6FE;
+    font-weight: 600;
+    margin-top: 2px;
+    letter-spacing: 0;
+  }
+  .upload-flow__arrow {
+    color: rgba(255,255,255,0.5);
+    font-size: 14px;
+    font-weight: 900;
+  }
+  @media (max-width: 700px) {
+    .upload-flow {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .upload-flow__arrow { display: none; }
+  }
+
+  /* ── LINE Chat iPhone (2台目) ─────────── */
+  .device--line { display: none; }
+  .device__label {
+    position: absolute;
+    left: 0; right: 0; bottom: -56px;
+    text-align: center;
+    color: var(--ink-2);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .device__label span {
+    display: block;
+    color: var(--ink-3);
+    font-size: 10.5px;
+    font-weight: 600;
+    margin-top: 2px;
+    letter-spacing: 0;
+  }
+  .device--app .device__label { display: none; }
+  @media (min-width: 1300px) {
+    .device--line { display: block; }
+    .device--app .device__label {
+      display: block;
+    }
+    .device--app .device__label::before {
+      content: "admin (アプリ側)";
+      display: block;
+    }
+    .device--app .device__label::after {
+      content: "三崎屋 章 の iPhone";
+      display: block;
+      color: var(--ink-3);
+      font-size: 10.5px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .device--app .device__label { visibility: visible; }
+  }
+  .device__screen--line {
+    background: #7B8FA8;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+  }
+  .line-status {
+    display: flex;
+    justify-content: space-between;
+    padding: 14px 32px 4px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    background: #7B8FA8;
+    position: relative;
+    z-index: 5;
+  }
+  .line-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px 12px;
+    background: #7B8FA8;
+    color: #fff;
+    font-size: 13px;
+  }
+  .line-head__back {
+    background: transparent;
+    color: #fff;
+    border: none;
+    font-size: 26px;
+    line-height: 1;
+    padding: 0 4px;
+  }
+  .line-head__info { flex: 1; }
+  .line-head__name {
+    font-size: 14px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .line-head__official {
+    background: #06C755;
+    color: #fff;
+    font-size: 8.5px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+  }
+  .line-head__status {
+    font-size: 10.5px;
+    color: #E2E8F0;
+    margin-top: 1px;
+    font-weight: 500;
+  }
+  .line-head__menu {
+    background: transparent;
+    color: #fff;
+    border: none;
+    font-size: 20px;
+    padding: 0 4px;
+  }
+
+  .line-body {
+    background: #7B8FA8;
+    overflow-y: auto;
+    padding: 14px 14px 8px;
+    scrollbar-width: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .line-body::-webkit-scrollbar { display: none; }
+  .line-date {
+    align-self: center;
+    background: rgba(0,0,0,0.15);
+    color: #fff;
+    font-size: 10.5px;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-weight: 600;
+    margin: 4px 0 12px;
+    letter-spacing: 0.01em;
+  }
+
+  .line-msg {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    max-width: 88%;
+  }
+  .line-msg--in { align-self: flex-start; }
+  .line-msg--out { align-self: flex-end; flex-direction: row-reverse; }
+  .line-msg__avatar { flex-shrink: 0; }
+  .line-msg__body { display: flex; flex-direction: column; gap: 2px; }
+  .line-msg--out .line-msg__body { align-items: flex-end; }
+  .line-msg__bubble {
+    background: #fff;
+    padding: 8px 12px;
+    border-radius: 4px 16px 16px 16px;
+    font-size: 13px;
+    color: #0F172A;
+    line-height: 1.65;
+    letter-spacing: -0.005em;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    max-width: 220px;
+    word-break: break-word;
+  }
+  .line-msg__bubble b { font-weight: 800; }
+  .line-msg--out .line-msg__bubble {
+    background: #06C755;
+    color: #fff;
+    border-radius: 16px 4px 16px 16px;
+    align-self: flex-end;
+  }
+  .line-msg__time {
+    font-size: 9.5px;
+    color: rgba(255,255,255,0.75);
+    font-weight: 600;
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 2px;
+  }
+  .line-msg--in .line-msg__time {
+    align-self: flex-end;
+    margin-left: 4px;
+    order: 2;
+  }
+  .line-msg--out .line-msg__time { margin-right: 4px; }
+
+  .line-msg__bubble--alert {
+    background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+    color: #78350F;
+    font-size: 12px;
+  }
+  .line-msg__alert {
+    font-size: 12px;
+    font-weight: 800;
+    color: #B45309;
+  }
+
+  .line-msg__bubble--card {
+    background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+    color: #1E1B4B;
+    padding: 12px 14px;
+    max-width: 240px;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+  }
+  .line-manual__badge {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 900;
+    color: #6366F1;
+    background: rgba(99, 102, 241, 0.15);
+    padding: 2px 8px;
+    border-radius: 100px;
+    margin-bottom: 8px;
+    letter-spacing: 0.03em;
+  }
+  .line-manual__title {
+    font-size: 14px;
+    font-weight: 900;
+    color: #0F172A;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+    line-height: 1.35;
+  }
+  .line-manual__stats {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: #475569;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .line-manual__stats b {
+    color: #6366F1;
+    font-weight: 900;
+    font-size: 14px;
+    letter-spacing: -0.03em;
+    margin-left: 2px;
+  }
+  .line-manual__cta {
+    display: block;
+    background: linear-gradient(180deg, #6366F1, #4F46E5);
+    color: #fff !important;
+    text-align: center;
+    text-decoration: none;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    box-shadow: 0 3px 8px rgba(99, 102, 241, 0.35);
+  }
+
+  .line-video {
+    width: 220px;
+  }
+  .line-video__thumb {
+    aspect-ratio: 4 / 3;
+    background: linear-gradient(135deg, #0F1A3D 0%, #1E3A8A 60%, #2563EB 100%);
+    border-radius: 12px;
+    position: relative;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .line-video__thumb::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 30%, rgba(147, 197, 253, 0.4), transparent 60%);
+  }
+  .line-video__play {
+    width: 46px; height: 46px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 50%;
+    color: #0F172A;
+    display: grid; place-items: center;
+    font-size: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    padding-left: 3px;
+    z-index: 2;
+  }
+  .line-video__time {
+    position: absolute;
+    bottom: 6px; right: 8px;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 2;
+  }
+  .line-video__label {
+    position: absolute;
+    top: 6px; left: 8px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 2;
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .line-typing {
+    display: flex;
+    gap: 6px;
+    align-self: flex-start;
+    margin-bottom: 8px;
+  }
+  .line-typing__dots {
+    background: #fff;
+    padding: 10px 14px;
+    border-radius: 4px 16px 16px 16px;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+  .line-typing__dots span {
+    width: 6px; height: 6px;
+    background: #94A3B8;
+    border-radius: 50%;
+    animation: typing 1.4s infinite;
+  }
+  .line-typing__dots span:nth-child(2) { animation-delay: 0.2s; }
+  .line-typing__dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  .line-input {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 14px 24px;
+    background: #fff;
+    border-top: 1px solid #E5E7EB;
+  }
+  .line-input__plus, .line-input__mic {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: #F1F5F9;
+    border: none;
+    color: #475569;
+    font-size: 18px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+    padding: 0 0 3px 0;
+    line-height: 1;
+  }
+  .line-input__box {
+    flex: 1;
+    background: #F1F5F9;
+    padding: 8px 14px;
+    border-radius: 100px;
+    font-size: 12.5px;
+    color: #94A3B8;
+    font-weight: 500;
+  }
+
+  /* ── Gantt Chart ────────────────────────── */
+  .view-toggle {
+    display: inline-flex;
+    background: var(--surface-2);
+    border-radius: 12px;
+    padding: 3px;
+    gap: 2px;
+    margin-bottom: 16px;
+  }
+  .view-toggle button {
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    color: var(--ink-3);
+    font-size: 12.5px;
+    font-weight: 800;
+    border-radius: 10px;
+    font-family: inherit;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+  }
+  .view-toggle button.active {
+    background: #fff;
+    color: var(--brand-2);
+    box-shadow: 0 1px 3px rgba(15, 30, 78, 0.1);
+  }
+
+  .gantt {
+    background: #fff;
+    border-radius: 20px;
+    padding: 20px 24px;
+    box-shadow: var(--shadow-card);
+    overflow-x: auto;
+    border: 1px solid var(--rule);
+  }
+  .gantt__grid {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 0;
+    min-width: 900px;
+  }
+  .gantt__month-head {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+  .gantt__month {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--ink-2);
+    letter-spacing: -0.01em;
+    padding: 4px 8px;
+    border-left: 1px solid var(--rule);
+    position: relative;
+  }
+  .gantt__month:first-child { border-left: none; }
+  .gantt__month__days {
+    font-size: 9.5px;
+    color: var(--ink-3);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  .gantt__row {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .gantt__row:last-child { border-bottom: none; }
+  .gantt__label {
+    padding-right: 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+  }
+  .gantt__label__team {
+    display: flex;
+    gap: 2px;
+    margin-top: 4px;
+  }
+  .gantt__label__team .avatar {
+    width: 20px; height: 20px;
+    font-size: 9.5px;
+    border-radius: 6px;
+    border: 1.5px solid #fff;
+    margin-left: -4px;
+  }
+  .gantt__label__team .avatar:first-child { margin-left: 0; }
+  .gantt__track {
+    position: relative;
+    height: 32px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--surface-2) 0,
+      var(--surface-2) calc(100% / 4 - 1px),
+      var(--rule) calc(100% / 4 - 1px),
+      var(--rule) calc(100% / 4)
+    );
+    border-radius: 8px;
+  }
+  .gantt__bar {
+    position: absolute;
+    top: 6px; bottom: 6px;
+    border-radius: 100px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.01em;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .gantt__bar--progress { background: linear-gradient(90deg, #60A5FA, #2563EB); }
+  .gantt__bar--finishing { background: linear-gradient(90deg, #A78BFA, #7C3AED); box-shadow: 0 2px 6px rgba(124, 58, 237, 0.35); }
+  .gantt__bar--upcoming { background: linear-gradient(90deg, #FCD34D, #F59E0B); color: #78350F; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3); }
+  .gantt__bar--done { background: linear-gradient(90deg, #6EE7B7, #059669); box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3); }
+  .gantt__bar__progress {
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    background: rgba(255,255,255,0.25);
+    border-radius: 100px;
+  }
+  .gantt__today {
+    position: absolute;
+    top: -20px; bottom: 0;
+    width: 2px;
+    background: #EF4444;
+    z-index: 5;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+  }
+  .gantt__today::before {
+    content: "今日 7/6";
+    position: absolute;
+    top: -18px; left: -22px;
+    background: #EF4444;
+    color: #fff;
+    font-size: 9.5px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .gantt__legend {
+    display: flex;
+    gap: 14px;
+    padding-top: 16px;
+    margin-top: 16px;
+    border-top: 1px solid var(--rule);
+    flex-wrap: wrap;
+    font-size: 11.5px;
+    color: var(--ink-3);
+    font-weight: 600;
+  }
+  .gantt__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .gantt__legend-item::before {
+    content: "";
+    width: 20px; height: 8px;
+    border-radius: 100px;
+    background: linear-gradient(90deg, #60A5FA, #2563EB);
+  }
+  .gantt__legend-item.finishing::before { background: linear-gradient(90deg, #A78BFA, #7C3AED); }
+  .gantt__legend-item.upcoming::before { background: linear-gradient(90deg, #FCD34D, #F59E0B); }
+  .gantt__legend-item.done::before { background: linear-gradient(90deg, #6EE7B7, #059669); }
+
+  /* ── Desktop shell ─────────────────────── */
+  .desktop-shell {
+    display: none;
+  }
+  @media (min-width: 1100px) {
+    body { padding: 24px 20px; }
+    .stage {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 24px;
+      max-width: 1600px;
+      width: 100%;
+    }
+    .stage__caption { display: none; }
+    .desktop-shell {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      background: var(--surface);
+      border-radius: 24px;
+      box-shadow: 0 24px 60px -20px rgba(15, 30, 78, 0.25), 0 8px 24px -8px rgba(59, 130, 246, 0.12);
+      overflow: hidden;
+      height: 900px;
+      flex: 1;
+      min-width: 0;
+    }
+    .device { flex-shrink: 0; }
+  }
+  @media (min-width: 1440px) {
+    .desktop-shell { height: 940px; }
+  }
+
+  .ds-sidebar {
+    background: linear-gradient(180deg, #0F1A3D 0%, #060B1F 100%);
+    color: #E0E7FF;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .ds-sidebar::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 240px;
+    background: radial-gradient(ellipse at top left, rgba(59, 130, 246, 0.28), transparent 60%);
+    pointer-events: none;
+  }
+  .ds-brand {
+    padding: 8px 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 2;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 12px;
+  }
+  .ds-brand__mark {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+    display: grid; place-items: center;
+    font-weight: 900;
+    color: #fff;
+    font-size: 16px;
+    letter-spacing: -0.05em;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+  }
+  .ds-brand__text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+  .ds-brand__name { font-size: 14px; font-weight: 900; color: #fff; letter-spacing: -0.01em; }
+  .ds-brand__co { font-size: 10px; color: #93C5FD; font-weight: 600; margin-top: 2px; }
+  .ds-nav {
+    flex: 1;
+    padding: 0 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    position: relative;
+    z-index: 2;
+  }
+  .ds-nav-btn {
+    background: transparent;
+    border: none;
+    color: #94A3B8;
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 13.5px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: background 150ms, color 150ms;
+  }
+  .ds-nav-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
+  .ds-nav-btn.active {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(139, 92, 246, 0.15));
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  .ds-nav-btn__icon {
+    width: 20px; height: 20px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .ds-nav-btn__icon svg { width: 18px; height: 18px; }
+  .ds-nav-btn__badge {
+    margin-left: auto;
+    background: linear-gradient(135deg, #3B82F6, #2563EB);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 100px;
+    letter-spacing: -0.01em;
+  }
+  .ds-nav-btn__badge.rose { background: linear-gradient(135deg, #F87171, #EF4444); }
+  .ds-user {
+    padding: 12px 16px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    z-index: 2;
+  }
+  .ds-user__body { display: flex; flex-direction: column; line-height: 1.3; }
+  .ds-user__name { font-size: 12.5px; font-weight: 800; color: #fff; letter-spacing: -0.01em; }
+  .ds-user__role { font-size: 10.5px; color: #93C5FD; margin-top: 1px; }
+
+  .ds-main {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .ds-header {
+    padding: 20px 32px 16px;
+    border-bottom: 1px solid var(--rule);
+    background: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+  }
+  .ds-header h1 {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    margin: 0;
+    background: linear-gradient(135deg, #0F172A, #1E3A8A);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .ds-header p {
+    font-size: 12px;
+    color: var(--ink-3);
+    margin: 2px 0 0;
+    font-weight: 600;
+  }
+  .ds-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .ds-header__live {
+    color: var(--brand-2);
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ds-header__live::before {
+    content: "";
+    width: 8px; height: 8px;
+    background: #10B981;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #10B981;
+    animation: pulse 2s infinite;
+  }
+  .ds-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px 40px;
+  }
+  .ds-screen { display: none; }
+  .ds-screen.active { display: block; }
+
+  .ds-hero {
+    background: var(--hero-grad);
+    color: #fff;
+    padding: 26px 30px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-hero);
+    position: relative;
+    overflow: hidden;
+  }
+  .ds-hero::before {
+    content: "";
+    position: absolute;
+    top: -100px; right: -80px;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(147, 197, 253, 0.4), transparent 65%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .ds-hero__inner { position: relative; z-index: 2; display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center; }
+  .ds-hero__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(8px);
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #E0F2FE;
+    margin-bottom: 10px;
+  }
+  .ds-hero__eyebrow::before {
+    content: "";
+    width: 6px; height: 6px;
+    background: #4ADE80;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #4ADE80;
+    animation: pulse 2s infinite;
+  }
+  .ds-hero h2 {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.035em;
+    margin: 0 0 6px;
+    color: #fff;
+    line-height: 1.2;
+  }
+  .ds-hero p {
+    font-size: 13px;
+    color: #BFDBFE;
+    margin: 0 0 12px;
+    font-weight: 500;
+  }
+  .ds-hero__stats {
+    display: flex;
+    gap: 12px;
+  }
+  .ds-hero__stat {
+    background: rgba(255,255,255,0.16);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 16px;
+    padding: 14px 20px 12px;
+    min-width: 92px;
+    text-align: center;
+  }
+  .ds-hero__stat-num { font-size: 30px; font-weight: 900; letter-spacing: -0.05em; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+  .ds-hero__stat-label { font-size: 10.5px; color: #BFDBFE; font-weight: 700; letter-spacing: 0.04em; margin-top: 4px; }
+
+  .ds-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin: 24px 0 12px;
+  }
+  .ds-section-head h3 {
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .ds-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 12px;
+  }
+  .ds-chips {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  @media (min-width: 900px) and (max-width: 1099px) {
+    .stage__caption { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- ── Desktop Shell (1100px+) ───────────── -->
+  <div class="desktop-shell">
+    <aside class="ds-sidebar">
+      <div class="ds-brand">
+        <div class="ds-brand__mark">三</div>
+        <div class="ds-brand__text">
+          <span class="ds-brand__name">三崎屋現場ノート</span>
+          <span class="ds-brand__co">三崎屋電工株式会社</span>
+        </div>
+      </div>
+      <nav class="ds-nav">
+        <button class="ds-nav-btn active" data-dstab="voice">
+          <span class="ds-nav-btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
+          ホーム <span class="ds-nav-btn__badge">8</span>
+        </button>
+        <button class="ds-nav-btn" data-dstab="projects">
+          <span class="ds-nav-btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+          案件 <span class="ds-nav-btn__badge">4</span>
+        </button>
+        <button class="ds-nav-btn" data-dstab="knowhow">
+          <span class="ds-nav-btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+          ノウハウ <span class="ds-nav-btn__badge">42</span>
+        </button>
+        <button class="ds-nav-btn" data-dstab="interview">
+          <span class="ds-nav-btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          職人棚卸し <span class="ds-nav-btn__badge">辻</span>
+        </button>
+        <button class="ds-nav-btn" data-dstab="settings">
+          <span class="ds-nav-btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg></span>
+          設定
+        </button>
+      </nav>
+      <div class="ds-user">
+        <div class="avatar tsuji" style="width:36px;height:36px;font-size:12px;border-radius:10px">三</div>
+        <div class="ds-user__body">
+          <span class="ds-user__name">三崎屋 章</span>
+          <span class="ds-user__role">代表取締役</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="ds-main">
+      <header class="ds-header">
+        <div>
+          <h1 id="dsTitle">今日の現場</h1>
+          <p id="dsSub">2026年7月6日 (月) ・ 8件の投稿</p>
+        </div>
+        <div class="ds-header__actions">
+          <span class="ds-header__live">LINE 同期中</span>
+          <span>|</span>
+          <span>9:41</span>
+        </div>
+      </header>
+      <section class="ds-content">
+        <div class="ds-screen active" data-dsscreen="voice">
+          <div class="ds-hero">
+            <div class="ds-hero__inner">
+              <div>
+                <div class="ds-hero__eyebrow">LIVE ・ 2026年7月6日 (月)</div>
+                <h2>おかえりなさい、三崎屋さん</h2>
+                <p>三崎屋電工株式会社 ・ 創立60周年 ・ ISO 9001/14001</p>
+                <div class="trust-row">
+                  <span class="trust-badge trust-badge--gold">創立60周年</span>
+                  <span class="trust-badge">ISO 9001</span>
+                  <span class="trust-badge">ISO 14001</span>
+                </div>
+              </div>
+              <div class="ds-hero__stats">
+                <div class="ds-hero__stat"><div class="ds-hero__stat-num">8</div><div class="ds-hero__stat-label">今日の投稿</div></div>
+                <div class="ds-hero__stat"><div class="ds-hero__stat-num">4</div><div class="ds-hero__stat-label">進行中案件</div></div>
+                <div class="ds-hero__stat"><div class="ds-hero__stat-num">2</div><div class="ds-hero__stat-label">要対応</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="ds-section-head">
+            <h3>現場ボイス</h3>
+            <a class="sec-head__link" href="#">すべて見る →</a>
+          </div>
+          <div class="ds-chips" id="dsVoiceChips"></div>
+          <div class="ds-grid" id="dsVoiceList"></div>
+        </div>
+
+        <div class="ds-screen" data-dsscreen="projects">
+          <div class="ds-section-head" style="margin-top:0">
+            <h3>案件</h3>
+            <div class="view-toggle" id="dsViewToggle">
+              <button class="active" data-view="list">一覧</button>
+              <button data-view="gantt">工程表</button>
+            </div>
+          </div>
+          <div id="dsViewList">
+            <div class="ds-chips" id="dsProjectChips"></div>
+            <div class="ds-grid" id="dsProjectList"></div>
+          </div>
+          <div id="dsViewGantt" style="display:none">
+            <div class="gantt" id="dsGantt"></div>
+          </div>
+        </div>
+
+        <div class="ds-screen" data-dsscreen="knowhow">
+          <div class="ds-section-head" style="margin-top:0"><h3>技術ノウハウ</h3></div>
+          <div id="dsManualCta"></div>
+          <div class="ds-chips" id="dsTagCloud"></div>
+          <div class="ds-grid" id="dsKnowhowList"></div>
+        </div>
+
+        <div class="ds-screen" data-dsscreen="interview">
+          <div id="dsPersonaCard"></div>
+          <div class="ds-section-head"><h3>Q&A 履歴</h3></div>
+          <div class="ds-grid" id="dsQaList"></div>
+        </div>
+
+        <div class="ds-screen" data-dsscreen="settings">
+          <div class="ds-section-head" style="margin-top:0"><h3>会社情報 ・ LINE連携 ・ メンバー</h3></div>
+          <div id="dsSettings"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ── LINE Chat iPhone (現場作業員 田中さん) ── -->
+  <div class="device device--line">
+    <div class="device__island"></div>
+    <div class="device__screen device__screen--line">
+      <div class="line-status">
+        <span>9:41</span>
+        <span>📶 100%</span>
+      </div>
+      <div class="line-head">
+        <button class="line-head__back">‹</button>
+        <div class="line-head__avatar">
+          <div class="avatar" style="width:34px;height:34px;font-size:12px;background:linear-gradient(135deg, #3B82F6, #1D4ED8);border-radius:12px;">三</div>
+        </div>
+        <div class="line-head__info">
+          <div class="line-head__name">三崎屋現場ノート <span class="line-head__official">公式</span></div>
+          <div class="line-head__status">AI が 24時間対応</div>
+        </div>
+        <button class="line-head__menu">≡</button>
+      </div>
+
+      <div class="line-body" id="lineBody">
+        <div class="line-date">2026年7月6日 月曜日</div>
+
+        <div class="line-msg line-msg--in">
+          <div class="line-msg__avatar"><div class="avatar" style="width:32px;height:32px;font-size:11px;background:linear-gradient(135deg, #3B82F6, #1D4ED8);border-radius:10px;">三</div></div>
+          <div class="line-msg__body">
+            <div class="line-msg__bubble">おはようございます 田中さん。<br>今日の現場は <b>越前美術館 分電盤増設</b> です。<br>作業の動画があれば送ってください、手順書に自動でまとめます。</div>
+            <span class="line-msg__time">08:00</span>
+          </div>
+        </div>
+
+        <div class="line-msg line-msg--out">
+          <span class="line-msg__time">10:45</span>
+          <div class="line-msg__bubble">既存の1次側 端子が太くて、注文した圧着スリーブが入らない。至急 22SQ用 の 手配お願いします</div>
+        </div>
+
+        <div class="line-msg line-msg--in">
+          <div class="line-msg__avatar"><div class="avatar" style="width:32px;height:32px;font-size:11px;background:linear-gradient(135deg, #3B82F6, #1D4ED8);border-radius:10px;">三</div></div>
+          <div class="line-msg__body">
+            <div class="line-msg__bubble line-msg__bubble--alert">
+              <span class="line-msg__alert">🚨 至急トラブル として 三崎屋さん に 通知しました</span>
+              <br>22SQ 圧着スリーブ を 発注担当に手配依頼中です。 進捗は続報します。
+            </div>
+            <span class="line-msg__time">10:46</span>
+          </div>
+        </div>
+
+        <div class="line-msg line-msg--in">
+          <div class="line-msg__avatar"><div class="avatar" style="width:32px;height:32px;font-size:11px;background:linear-gradient(135deg, #3B82F6, #1D4ED8);border-radius:10px;">三</div></div>
+          <div class="line-msg__body">
+            <div class="line-msg__bubble">午後お手すきの時に、CVT 端末処理の作業を動画で撮ってもらえますか?<br>若手研修用の 手順書 を作りたいと思ってます。</div>
+            <span class="line-msg__time">13:20</span>
+          </div>
+        </div>
+
+        <div class="line-msg line-msg--out">
+          <div class="line-video">
+            <div class="line-video__thumb">
+              <span class="line-video__play">▶</span>
+              <span class="line-video__time">1:46</span>
+              <span class="line-video__label">CVT_terminal_20260706.mp4</span>
+            </div>
+          </div>
+          <span class="line-msg__time">14:52</span>
+        </div>
+
+        <div class="line-msg line-msg--in">
+          <div class="line-msg__avatar"><div class="avatar" style="width:32px;height:32px;font-size:11px;background:linear-gradient(135deg, #3B82F6, #1D4ED8);border-radius:10px;">三</div></div>
+          <div class="line-msg__body">
+            <div class="line-msg__bubble">動画を受け取りました。 AI が解析します、約1分お待ちください...</div>
+            <span class="line-msg__time">14:53</span>
+          </div>
+        </div>
+
+        <div class="line-typing">
+          <div class="line-typing__avatar"><div class="avatar" style="width:32px;height:32px;font-size:11px;background:linear-gradient(135deg, #3B82F6, #1D4ED8);border-radius:10px;">三</div></div>
+          <div class="line-typing__dots"><span></span><span></span><span></span></div>
+        </div>
+
+        <div class="line-msg line-msg--in">
+          <div class="line-msg__avatar"><div class="avatar" style="width:32px;height:32px;font-size:11px;background:linear-gradient(135deg, #3B82F6, #1D4ED8);border-radius:10px;">三</div></div>
+          <div class="line-msg__body">
+            <div class="line-msg__bubble line-msg__bubble--card">
+              <span class="line-manual__badge">✦ 手順書 完成</span>
+              <div class="line-manual__title">高圧CVTケーブル 端末処理</div>
+              <div class="line-manual__stats">
+                <span>手順<b>6</b></span>
+                <span>注意<b>4</b></span>
+                <span>口伝<b>2</b></span>
+              </div>
+              <a class="line-manual__cta" href="sample-manual.html" target="_blank">手順書を見る →</a>
+            </div>
+            <span class="line-msg__time">14:54</span>
+          </div>
+        </div>
+
+        <div class="line-msg line-msg--in">
+          <div class="line-msg__avatar"><div class="avatar" style="width:32px;height:32px;font-size:11px;background:linear-gradient(135deg, #3B82F6, #1D4ED8);border-radius:10px;">三</div></div>
+          <div class="line-msg__body">
+            <div class="line-msg__bubble">ノウハウDB に格納しました。<br>「CVT カッター角度」など、辻部長のコツも自動抽出済みです。</div>
+            <span class="line-msg__time">14:54</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="line-input">
+        <button class="line-input__plus">+</button>
+        <div class="line-input__box">メッセージ</div>
+        <button class="line-input__mic">🎤</button>
+      </div>
+    </div>
+    <div class="device__label">現場作業員 (LINE 側)<br><span>田中さん の iPhone</span></div>
+  </div>
+
+  <div class="device device--app">
+    <div class="device__island"></div>
+    <div class="device__screen">
+      <div class="screens" id="screens">
+
+        <!-- ── HOME ────────────────────────── -->
+        <section class="screen active" data-screen="voice">
+          <header class="hero">
+            <div class="hero__waves">
+              <svg viewBox="0 0 400 300" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="waveGrad" x1="0" x2="1">
+                    <stop offset="0" stop-color="#93C5FD" stop-opacity="0"/>
+                    <stop offset="0.5" stop-color="#93C5FD" stop-opacity="0.9"/>
+                    <stop offset="1" stop-color="#93C5FD" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M -20 60 Q 100 20, 200 60 T 420 60" stroke="url(#waveGrad)" stroke-width="1" fill="none"/>
+                <path d="M -20 100 Q 100 60, 200 100 T 420 100" stroke="url(#waveGrad)" stroke-width="1" fill="none" opacity="0.7"/>
+                <path d="M -20 150 Q 100 110, 200 150 T 420 150" stroke="url(#waveGrad)" stroke-width="1.2" fill="none"/>
+                <path d="M -20 200 Q 100 160, 200 200 T 420 200" stroke="url(#waveGrad)" stroke-width="1" fill="none" opacity="0.6"/>
+                <path d="M -20 250 Q 100 210, 200 250 T 420 250" stroke="url(#waveGrad)" stroke-width="1" fill="none" opacity="0.5"/>
+              </svg>
+            </div>
+            <div class="hero__glow"></div>
+            <div class="hero__glow-2"></div>
+            <div class="status-bar">
+              <span>9:41</span>
+              <span class="status-bar__right">📶 100%</span>
+            </div>
+            <div class="hero__inner">
+              <div class="hero__eyebrow">LIVE ・ 2026年7月6日 (月)</div>
+              <h1>おかえりなさい、<br>三崎屋さん</h1>
+              <p class="hero__sub">三崎屋電工株式会社 ・ 福井県福井市 / 坂井市</p>
+              <div class="trust-row">
+                <span class="trust-badge trust-badge--gold">創立60周年</span>
+                <span class="trust-badge">ISO 9001</span>
+                <span class="trust-badge">ISO 14001</span>
+              </div>
+              <div class="hero__stats">
+                <div class="stat">
+                  <div class="stat__icon blue">📥</div>
+                  <div class="stat__num">8</div>
+                  <div class="stat__label">今日の投稿</div>
+                </div>
+                <div class="stat">
+                  <div class="stat__icon amber">⚡</div>
+                  <div class="stat__num">4</div>
+                  <div class="stat__label">進行中案件</div>
+                </div>
+                <div class="stat">
+                  <div class="stat__icon rose">🔥</div>
+                  <div class="stat__num">2</div>
+                  <div class="stat__label">要対応</div>
+                </div>
+              </div>
+              <div class="hero__avatar-row">
+                <div class="hero__avatar">
+                  <div class="av">三</div>
+                  <div>
+                    <div class="hero__avatar__name">三崎屋 章</div>
+                    <div class="hero__avatar__role">代表取締役</div>
+                  </div>
+                </div>
+                <button class="hero__bell" aria-label="通知">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <div class="sec-head">
+            <h2>現場ボイス</h2>
+            <a class="sec-head__link" href="#">すべて見る →</a>
+          </div>
+          <div class="chips">
+            <button class="chip active" data-filter="all"><span class="dot" style="background:var(--brand-3)"></span>すべて<span class="n">8</span></button>
+            <button class="chip" data-filter="progress"><span class="dot" style="background:var(--cat-progress)"></span>進捗<span class="n">4</span></button>
+            <button class="chip" data-filter="trouble"><span class="dot" style="background:var(--cat-trouble)"></span>トラブル<span class="n">2</span></button>
+            <button class="chip" data-filter="knowhow"><span class="dot" style="background:var(--cat-knowhow)"></span>ノウハウ<span class="n">2</span></button>
+            <button class="chip" data-filter="question"><span class="dot" style="background:var(--cat-question)"></span>質問<span class="n">1</span></button>
+          </div>
+          <div class="list" id="voiceList"></div>
+        </section>
+
+        <!-- ── PROJECTS ─────────────────────── -->
+        <section class="screen" data-screen="projects">
+          <div class="app-head">
+            <div>
+              <h1 class="app-head__title">案件</h1>
+              <p class="app-head__sub">進行中 4件 ・ 近日着工 1件</p>
+            </div>
+            <button class="app-head__action" aria-label="案件追加">+</button>
+          </div>
+          <div class="chips">
+            <button class="chip active" data-pfilter="active">進行中<span class="n">4</span></button>
+            <button class="chip" data-pfilter="upcoming">近日着工<span class="n">1</span></button>
+            <button class="chip" data-pfilter="done">完了<span class="n">3</span></button>
+            <button class="chip" data-pfilter="all">全件</button>
+          </div>
+          <div class="list" id="projectList"></div>
+        </section>
+
+        <!-- ── KNOWHOW ──────────────────────── -->
+        <section class="screen" data-screen="knowhow">
+          <div class="app-head">
+            <div>
+              <h1 class="app-head__title">ノウハウ</h1>
+              <p class="app-head__sub">42件の技術ノウハウが蓄積</p>
+            </div>
+          </div>
+
+          <!-- 動画マニュアル生成 CTA (③技術継承 UI 統合) -->
+          <div class="manual-cta">
+            <div class="manual-cta__glow"></div>
+            <div class="manual-cta__body">
+              <div class="manual-cta__eyebrow">✦ 新機能</div>
+              <h3>動画から手順書をつくる</h3>
+              <p>ベテランが工具や部材を指しながら喋る動画を LINE で送るだけ。AI が音声を書き起こし、動画からフレームを切り出して、画像と説明が並ぶ手順書を自動でつくります。</p>
+
+              <div class="upload-flow">
+                <div class="upload-flow__step">
+                  <div class="upload-flow__num">1</div>
+                  <div class="upload-flow__label">現場で撮影<br><span>iPhone 標準カメラ</span></div>
+                </div>
+                <div class="upload-flow__arrow">→</div>
+                <div class="upload-flow__step">
+                  <div class="upload-flow__num">2</div>
+                  <div class="upload-flow__label">LINE で送信<br><span>@三崎屋現場ノート</span></div>
+                </div>
+                <div class="upload-flow__arrow">→</div>
+                <div class="upload-flow__step">
+                  <div class="upload-flow__num">3</div>
+                  <div class="upload-flow__label">約1分待つ<br><span>AI が解析</span></div>
+                </div>
+                <div class="upload-flow__arrow">→</div>
+                <div class="upload-flow__step">
+                  <div class="upload-flow__num">4</div>
+                  <div class="upload-flow__label">手順書 完成<br><span>ノウハウDB 蓄積</span></div>
+                </div>
+              </div>
+
+              <div class="manual-cta__actions">
+                <a class="btn btn--primary" href="sample-manual.html" target="_blank">サンプル (CVT 端末処理) を見る →</a>
+                <button class="btn btn--ghost" id="btnUpload">アプリからも直接送れます</button>
+              </div>
+              <div class="manual-cta__stats">
+                <span><b>3〜10分</b> の動画 → <b>約1分</b> で完成 ・ 三崎屋電工 実物サンプル済</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sec-head" style="margin-top: 8px;">
+            <h2>蓄積された技術ノウハウ</h2>
+            <a class="sec-head__link" href="#">全 42件 →</a>
+          </div>
+          <div class="search-wrap" style="position:static;">
+            <input class="search" id="knowhowSearch" type="search" placeholder="CVT / 圧着 / メガー ..." />
+          </div>
+          <div class="chips" id="tagCloud"></div>
+          <div class="list" id="knowhowList"></div>
+        </section>
+
+        <!-- ── INTERVIEW ────────────────────── -->
+        <section class="screen" data-screen="interview">
+          <div class="app-head">
+            <div>
+              <h1 class="app-head__title">職人棚卸し</h1>
+              <p class="app-head__sub">辻 秀夫 部長 ・ 日次ヒアリング</p>
+            </div>
+          </div>
+          <div class="persona-card">
+            <div class="persona-card__head">
+              <div class="persona-card__avatar">辻</div>
+              <div>
+                <div class="persona-card__name">辻 秀夫</div>
+                <div class="persona-card__role">工事部長 ・ 56歳 ・ 現場歴28年</div>
+              </div>
+            </div>
+            <dl class="persona-card__stats">
+              <div class="persona-card__stat"><dt>今月質問</dt><dd>28</dd></div>
+              <div class="persona-card__stat"><dt>回答率</dt><dd>91%</dd></div>
+              <div class="persona-card__stat"><dt>累計</dt><dd>62</dd></div>
+            </dl>
+          </div>
+          <div class="qa" id="qaList"></div>
+        </section>
+
+        <!-- ── SETTINGS ─────────────────────── -->
+        <section class="screen" data-screen="settings">
+          <div class="app-head">
+            <div>
+              <h1 class="app-head__title">設定</h1>
+              <p class="app-head__sub">三崎屋電工 ・ admin: 三崎屋 章</p>
+            </div>
+          </div>
+          <div class="settings-list">
+            <div class="setting-group">
+              <div class="setting-group__label">会社情報</div>
+              <div class="setting-group__body">
+                <div class="setting-row"><span class="label"><span class="icon blue">🏢</span>会社名</span><span class="value">三崎屋電工株式会社</span></div>
+                <div class="setting-row"><span class="label"><span class="icon amber">📍</span>本店</span><span class="value">福井市大森町40-5-2</span></div>
+                <div class="setting-row"><span class="label"><span class="icon amber">📍</span>坂井営業所</span><span class="value">坂井市坂井町上兵庫38-3</span></div>
+                <div class="setting-row"><span class="label"><span class="icon green">📞</span>本店</span><span class="value">0776-98-3388</span></div>
+                <div class="setting-row"><span class="label"><span class="icon green">📞</span>坂井</span><span class="value">0776-72-3393</span></div>
+                <div class="setting-row"><span class="label"><span class="icon purple">🏅</span>認証</span><span class="value">ISO 9001 / 14001</span></div>
+              </div>
+            </div>
+            <div class="setting-group">
+              <div class="setting-group__label">LINE 連携</div>
+              <div class="setting-group__body">
+                <div class="setting-row"><span class="label"><span class="icon blue">💬</span>アカウント</span><span class="value">@misakiya-genba</span></div>
+                <div class="setting-row"><span class="label"><span class="icon green">✓</span>接続状態</span><span class="value ok">稼働中</span></div>
+                <div class="setting-row"><span class="label"><span class="icon amber">👥</span>友だち数</span><span class="value">14 名</span></div>
+                <div class="setting-row"><span class="label"><span class="icon purple">📬</span>今月受信</span><span class="value">612 件</span></div>
+              </div>
+            </div>
+            <div class="setting-group">
+              <div class="setting-group__label">メンバー</div>
+              <div class="setting-group__body">
+                <div class="setting-row"><span class="label"><span class="avatar tsuji" style="width:28px;height:28px;font-size:11px;border-radius:8px">辻</span>辻 秀夫 (部長)</span><span class="value ok">稼働</span></div>
+                <div class="setting-row"><span class="label"><span class="avatar tanaka" style="width:28px;height:28px;font-size:11px;border-radius:8px">田</span>田中 誠</span><span class="value ok">稼働</span></div>
+                <div class="setting-row"><span class="label"><span class="avatar inoue" style="width:28px;height:28px;font-size:11px;border-radius:8px">井</span>井上 徹</span><span class="value ok">稼働</span></div>
+                <div class="setting-row"><span class="label"><span class="avatar yamamoto" style="width:28px;height:28px;font-size:11px;border-radius:8px">山</span>山本 健太</span><span class="value ok">稼働</span></div>
+                <div class="setting-row"><span class="label"><span class="avatar suzuki" style="width:28px;height:28px;font-size:11px;border-radius:8px">鈴</span>鈴木 翔</span><span class="value ok">稼働</span></div>
+                <div class="setting-row"><span class="label"><span class="icon" style="background:#E2E8F0;color:#64748B">+</span>他 9 名</span><span class="value">─</span></div>
+              </div>
+            </div>
+            <div class="setting-group">
+              <div class="setting-group__label">AI 分類</div>
+              <div class="setting-group__body">
+                <div class="setting-row"><span class="label"><span class="icon blue">📊</span>進捗報告</span><span class="value">作業内容+時刻+場所</span></div>
+                <div class="setting-row"><span class="label"><span class="icon amber">⚠️</span>トラブル</span><span class="value">「困った」等</span></div>
+                <div class="setting-row"><span class="label"><span class="icon purple">🧠</span>ノウハウ</span><span class="value">ベテラン手順説明</span></div>
+                <div class="setting-row"><span class="label" style="color:var(--cat-question)"><span class="icon" style="background:linear-gradient(135deg, #5EEAD4, #14B8A6)">?</span>質問</span><span class="value">「?」「教えて」等</span></div>
+                <div class="setting-row"><span class="label" style="color:var(--cat-urgent)"><span class="icon" style="background:linear-gradient(135deg, #FCA5A5, #EF4444)">!</span>至急判定</span><span class="value">「至急」「今すぐ」等</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- ── Tab Bar ────────────────────── -->
+      <nav class="tab-bar">
+        <button class="tab-btn active" data-tab="voice">
+          <span class="tab-btn__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </span>
+          ホーム
+        </button>
+        <button class="tab-btn" data-tab="projects">
+          <span class="tab-btn__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </span>
+          案件
+        </button>
+        <button class="tab-btn" data-tab="knowhow">
+          <span class="tab-btn__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </span>
+          ノウハウ
+        </button>
+        <button class="tab-btn" data-tab="interview">
+          <span class="tab-btn__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </span>
+          棚卸し
+        </button>
+        <button class="tab-btn" data-tab="settings">
+          <span class="tab-btn__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg>
+          </span>
+          設定
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <div class="stage__caption">
+    <span class="glow">MVP</span><strong>三崎屋現場ノート</strong><br>
+    現場作業員が LINE で話しかけるだけ。AI が案件・ノウハウ・棚卸しに自動分類。<br>
+    admin は このアプリで 全部見える。
+  </div>
+</div>
+
+<script>
+// ── Data (electrical work realism kept) ────
+const voices = [
+  { id:'v1', avatar:'山', ac:'yamamoto', name:'山本 健太', role:'若手2年目', tsuji:false,
+    site:'福井中学校 高圧受電盤', time:'08:12', type:'audio', typeLabel:'音声 42秒',
+    text:'養生完了しました。受電盤の側面カバー外そうとしてるんですけど、ネジが1本錆びててペンチで回してます。他3本は問題なく外れました。',
+    ai:'福井中学校 現場入場・養生完了、カバー着脱作業中。 進捗遅延の兆候なし。',
+    tags:[['進捗','progress']] },
+  { id:'v2', avatar:'井', ac:'inoue', name:'井上 徹', role:'職長12年目', tsuji:false,
+    site:'大野市役所 外灯LED', time:'09:34', type:'audio', typeLabel:'音声 28秒',
+    text:'5基目のLED取り付け終わりました。1基だけ センサー反応してない、多分ケーブル短絡か初期不良。明日 検査員 呼びます。',
+    ai:'大野市役所 5基中4基完了・1基センサー不良。明日 検査員 立会 で 手戻り工数 半日想定。',
+    tags:[['進捗','progress'],['トラブル','trouble']] },
+  { id:'v3', avatar:'田', ac:'tanaka', name:'田中 誠', role:'中堅8年目', tsuji:false,
+    site:'越前美術館 分電盤', time:'10:47', type:'audio', typeLabel:'音声 35秒',
+    text:'既存の1次側 端子が太くて、注文した圧着スリーブが入らない。至急 22SQ用 の 手配お願いします。作業止まってます。',
+    ai:'越前美術館 資材適合外・22SQ 圧着スリーブ 至急手配要。 作業停止、本日中 手配で 明日再開可能。',
+    tags:[['至急','urgent'],['トラブル','trouble']] },
+  { id:'v4', avatar:'辻', ac:'tsuji', name:'辻 秀夫', role:'工事部長・28年目', tsuji:true,
+    site:'福井中学校 (山本さん宛)', time:'11:20', type:'audio', typeLabel:'音声 52秒',
+    text:'CVT の 端末処理は 半導電層を 綺麗に切り落とすこと。ガタつくと 絶縁破壊 の 起点になる。カッターは 垂直近く、力入れず 何度もなぞる。芯線 見えたら 傷ついてる。写真見せてから やらせて。',
+    ai:'CVT端末処理 半導電層加工 ノウハウ。 若手向け 現場指導。 電界集中→絶縁破壊 の 因果を明示。 ノウハウDB に自動反映。',
+    tags:[['ノウハウ','knowhow']] },
+  { id:'v5', avatar:'鈴', ac:'suzuki', name:'鈴木 翔', role:'若手1年目', tsuji:false,
+    site:'越前美術館 分電盤', time:'12:03', type:'text', typeLabel:'テキスト',
+    text:'昼休憩入ります。午後から 圧着 作業続けます、22SQスリーブ 届き次第 再開します。',
+    ai:'越前美術館 昼休憩・午後再開待機。 田中さんの 資材待ちと 連動。',
+    tags:[['進捗','progress']] },
+  { id:'v6', avatar:'山', ac:'yamamoto', name:'山本 健太', role:'若手2年目', tsuji:false,
+    site:'辻さん宛 質問', time:'14:15', type:'audio', typeLabel:'音声 18秒',
+    text:'辻さん、CVT 端末処理 の カッター角度って 深めが 正解ですか? 芯線 見えるくらいまで削って いいですか?',
+    ai:'若手 山本 から 辻部長 への 現場質問。 カッター深度 の 判断基準を求める。 辻部長へ 自動転送済。',
+    tags:[['質問','question']] },
+  { id:'v7', avatar:'辻', ac:'tsuji', name:'辻 秀夫', role:'工事部長・28年目', tsuji:true,
+    site:'山本さんへの回答', time:'14:22', type:'audio', typeLabel:'音声 24秒',
+    text:'カッターは 垂直近く、力入れず 何度もなぞる。芯線 見えたら 傷ついてる。3周 回して 引き剥がして。深めじゃない、浅く 何度も、が 正解。若手 一番失敗する箇所だから 気をつけろ。',
+    ai:'辻部長→山本への 現場指導。「浅く何度も」が若手 一番失敗する 箇所と明言。 ノウハウDB に 自動反映。',
+    tags:[['ノウハウ','knowhow']] },
+  { id:'v8', avatar:'井', ac:'inoue', name:'井上 徹', role:'職長12年目', tsuji:false,
+    site:'大野市役所 外灯LED', time:'15:40', type:'photo', typeLabel:'写真4枚+テキスト',
+    text:'完了写真です。明日 検査員来ます、8:30 現場集合で お願いします。',
+    ai:'大野市役所 完了写真4枚を記録。 明日 検査員立会 8:30集合。',
+    tags:[['進捗','progress']] },
+];
+
+const projects = [
+  { name:'福井中学校 高圧受電盤更新', term:'7/01 → 8/15', team:[['辻','tsuji'],['田','tanaka'],['山','yamamoto']], progress:22, status:'progress', label:'進行中', note:'養生・カバー着脱中',
+    steps:[
+      {label:'現場調査', done:true, meta:'7/01 辻'},
+      {label:'資材発注', done:true, meta:'7/03'},
+      {label:'養生', done:true, meta:'7/06 08:12 山本'},
+      {label:'カバー着脱', done:false, active:true, meta:'進行中 山本'},
+      {label:'端子 増し締め', done:false, meta:'未着手'},
+      {label:'導通試験', done:false, meta:'未着手'},
+      {label:'引渡し検査', done:false, meta:'8/15 予定'},
+    ]},
+  { name:'越前美術館 分電盤増設', term:'7/06 → 7/20', team:[['辻','tsuji'],['鈴','suzuki']], progress:45, status:'progress', label:'進行中', note:'資材手配待ち',
+    steps:[
+      {label:'現場調査', done:true, meta:'7/06'},
+      {label:'既存端子測定', done:true, meta:'7/06 田中'},
+      {label:'圧着スリーブ手配', done:false, active:true, meta:'22SQ 至急 (7/06)'},
+      {label:'配線', done:false, meta:'7/07 予定'},
+      {label:'導通試験', done:false, meta:'未着手'},
+    ]},
+  { name:'大野市役所 外灯LED化', term:'6/20 → 7/25', team:[['井','inoue']], progress:78, status:'progress', label:'進行中', note:'明日 検査員立会',
+    steps:[
+      {label:'撤去 (旧灯5基)', done:true, meta:'6/20-24'},
+      {label:'新LED取付 4基', done:true, meta:'7/03 井上'},
+      {label:'新LED取付 1基 (5基目)', done:true, meta:'7/06 09:34 井上'},
+      {label:'センサー動作確認', done:false, active:true, meta:'1基センサー不良'},
+      {label:'検査員立会', done:false, meta:'7/07 8:30'},
+      {label:'引渡し', done:false, meta:'7/25 予定'},
+    ]},
+  { name:'三崎屋本社 事務所改修', term:'5/15 → 7/10', team:[['田','tanaka'],['山','yamamoto']], progress:92, status:'finishing', label:'仕上げ', note:'引渡し前',
+    steps:[
+      {label:'配線敷設', done:true, meta:'5/15-6/10'},
+      {label:'分電盤設置', done:true, meta:'6/15'},
+      {label:'導通試験', done:true, meta:'6/28'},
+      {label:'仕上げ・清掃', done:false, active:true, meta:'進行中'},
+      {label:'引渡し', done:false, meta:'7/10 予定'},
+    ]},
+  { name:'勝山工業団地 A社 停電メンテ', term:'7/14 (1日)', team:[['辻','tsuji']], progress:0, status:'upcoming', label:'近日着工', note:'6時集合', steps:[] },
+  { name:'福井駅前 商業ビル 分電盤更新', term:'5/01 → 6/28', team:[['辻','tsuji'],['田','tanaka']], progress:100, status:'done', label:'完了', note:'', steps:[] },
+  { name:'永平寺 参道 街路灯 改修', term:'4/10 → 5/30', team:[['井','inoue'],['山','yamamoto']], progress:100, status:'done', label:'完了', note:'', steps:[] },
+  { name:'福井赤十字病院 コンセント増設', term:'3/20 → 4/15', team:[['田','tanaka']], progress:100, status:'done', label:'完了', note:'', steps:[] },
+];
+
+const knowhows = [
+  { title:'CVTケーブル 端末処理 カッター角度', body:'垂直近くで力を入れず、何度もなぞる感覚で3周回す。芯線が見えたら削りすぎ。若手が一番失敗する箇所。', author:'辻 秀夫', ac:'tsuji', date:'7/06', tag:'CVT' },
+  { title:'半導電層 段差処理 (電界集中回避)', body:'半導電層はカッターで綺麗な段差にする。ガタつくと電界集中して絶縁破壊の起点になる。', author:'辻 秀夫', ac:'tsuji', date:'7/06', tag:'絶縁破壊' },
+  { title:'圧着スリーブ サイズ選定の目安', body:'既存端子の直径を先に測る。増設案件は既存側が古い規格の可能性が高く、22SQ・38SQは在庫必須。', author:'田中 誠', ac:'tanaka', date:'6/28', tag:'圧着' },
+  { title:'ブレーカー交換 活線切離し手順', body:'主幹→分岐の順で必ず切る。逆順にすると誘導電圧で残留、感電事故の原因。ゴム手袋+絶縁靴は必ず確認。', author:'辻 秀夫', ac:'tsuji', date:'6/25', tag:'安全' },
+  { title:'絶縁抵抗測定 500V vs 1000V', body:'低圧回路は500V、高圧機器は1000V。600V級モータは500Vで判定基準1MΩ。梅雨時は値が半減するので天気を記録。', author:'辻 秀夫', ac:'tsuji', date:'6/20', tag:'メガー' },
+  { title:'アース接続 D種 vs C種', body:'300V以下=D種(100Ω以下)、300V超=C種(10Ω以下)。医療機器や電子計測器は接地抵抗値の他に接地形状も要確認。', author:'辻 秀夫', ac:'tsuji', date:'6/18', tag:'アース' },
+  { title:'電線管 曲げ加工 加熱の目安', body:'VE管の曲げは炙りすぎ厳禁。管がくすんだ茶色になる前に成形する。焦げ臭が出たら強度低下、必ず新品交換。', author:'辻 秀夫', ac:'tsuji', date:'6/15', tag:'電線管' },
+  { title:'分電盤 相順(RST)確認のコツ', body:'検相器を必ず使う。目視の色線判別だけでは危険。増設時は主幹側と分岐側の両方を測定。三相モータは相順ミスで逆回転。', author:'辻 秀夫', ac:'tsuji', date:'6/10', tag:'検相' },
+  { title:'高圧受電盤 モータ立上げ手順', body:'10年経過のキュービクルは端子台のトルクが緩んでいる。まず全端子の増し締めから。やらないと発熱事故。', author:'辻 秀夫', ac:'tsuji', date:'6/05', tag:'受電盤' },
+  { title:'進相コンデンサ 交換時の注意', body:'残留電荷を必ず放電。10分放置しても数百V残る場合あり。短絡棒で必ず放電確認してから作業。', author:'辻 秀夫', ac:'tsuji', date:'5/28', tag:'安全' },
+];
+
+const tagCloud = ['CVT','ブレーカー','メガー','アース','圧着','分電盤','受電盤','安全'];
+
+const qas = [
+  { q:'福井中学校 高圧受電盤 で 一番注意する箇所は?', a:'10年前のキュービクルは端子台の締付トルクが経年で緩んでる。まず全端子の増し締めからやる。やらないと使用中に発熱事故。山本にトルクレンチ用意させとけ。', tags:['福井中学校','増し締め'], date:'7/06 08:14', voice:'音声45秒' },
+  { q:'取引先 (株)福井電機 の 担当と 支払条件は?', a:'営業は川崎さん (2024年から)、技術は沢田さん。支払いは月末締め翌々月10日払い、5年変わってない。川崎さんは8月末で定年予定、後任は未定。', tags:['取引先','福井電機'], date:'7/05 17:32', voice:'テキスト' },
+  { q:'梅雨時期 の 現場作業 で 特に気をつけることは?', a:'湿度80%超えたら絶縁測定の値が平気で半分になる。IRで判定する時は天気も記録する。雨上がり24時間は高圧作業やめる。4年前 大野の工場で事故出た理由。', tags:['梅雨','絶縁測定'], date:'7/04 08:04', voice:'音声38秒' },
+  { q:'新入り 田中 に 最初に教えるべきことは?', a:'工具の名前と定位置。CVT・IV・VVF・被覆剥き工具・圧着の順。名前呼ばれて3秒で手渡し出来るように半年訓練。田中は覚え早い方だから3ヶ月で卒業目安。', tags:['新人教育','工具'], date:'7/03 17:35', voice:'音声52秒' },
+  { q:'勝山A社 停電メンテ の 手順と 現場の癖は?', a:'朝6時停電、キュービクルは3階建て工場の屋上、階段のみ。工具は事前に屋上まで上げとくのが鉄則。A社の電気主任は松原さん、事前打合せで開始時刻と復電予定時刻を詰めとくこと。松原さんは予定変更嫌う人。', tags:['勝山A社','停電メンテ'], date:'7/02 17:42', voice:'音声68秒' },
+];
+
+// ── Render ──────────────────────────────
+function renderVoices(filter='all') {
+  const list = document.getElementById('voiceList');
+  const items = voices.filter(v => filter==='all' || v.tags.some(t => t[1]===filter));
+  list.innerHTML = items.map(v => `
+    <article class="card">
+      <div class="voice__head">
+        <div class="avatar ${v.ac}">${v.avatar}</div>
+        <div class="voice__who">
+          <span class="voice__name">${v.name}</span>
+          <span class="voice__meta">${v.role}<span class="sep">・</span>${v.site}</span>
+        </div>
+        <span class="voice__time">${v.time}</span>
+      </div>
+      <span class="voice__type ${v.type}">${v.typeLabel}</span>
+      <div class="voice__body">
+        <p>${v.text}</p>
+        <div class="voice__ai"><span class="voice__ai__label">AI要約</span>${v.ai}</div>
+        <div class="badges">${v.tags.map(([label,cls]) => `<span class="badge ${cls}">${label}</span>`).join('')}</div>
+      </div>
+    </article>
+  `).join('');
+}
+
+function renderProjects(pf='active') {
+  const list = document.getElementById('projectList');
+  const items = projects.filter(p => pf==='all' || (pf==='active' && (p.status==='progress'||p.status==='finishing')) || (pf==='upcoming' && p.status==='upcoming') || (pf==='done' && p.status==='done'));
+  list.innerHTML = items.map((p, i) => `
+    <article class="card project-card">
+      <div class="project__head">
+        <h3 class="project__name">${p.name}</h3>
+        <div class="project__pct ${p.status==='done'?'done':p.status==='upcoming'?'upcoming':''}">${p.status==='upcoming'?'着工前':p.progress+'%'}</div>
+      </div>
+      <div class="project__term">${p.term}${p.note?' <span class="dot">・</span> '+p.note:''}</div>
+      ${p.status!=='upcoming'?`<div class="project__bar"><div class="project__bar-fill ${p.status==='done'?'done':''}" style="width:${p.progress}%"></div></div>`:''}
+      <div class="project__foot">
+        <div class="project__team">${p.team.map(([t,ac])=>`<div class="avatar ${ac}">${t}</div>`).join('')}</div>
+        <span class="project__status ${p.status}">${p.label}</span>
+      </div>
+      ${p.steps && p.steps.length ? `
+        <button class="project__toggle" data-project="${i}">工程 (${p.steps.filter(s=>s.done).length}/${p.steps.length}) <span class="chev">▼</span></button>
+        <div class="project__steps" id="steps-${i}">
+          ${p.steps.map((s,idx) => `
+            <div class="step ${s.done?'done':''} ${s.active?'active':''}">
+              <span class="step__mark">${s.done?'✓':s.active?'●':idx+1}</span>
+              <div class="step__body">
+                <div class="step__label">${s.label}</div>
+                <div class="step__meta">${s.meta}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </article>
+  `).join('');
+
+  document.querySelectorAll('.project__toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(`steps-${btn.dataset.project}`);
+      const open = target.classList.toggle('open');
+      btn.classList.toggle('open', open);
+    });
+  });
+}
+
+function renderKnowhow(kw='') {
+  const cloud = document.getElementById('tagCloud');
+  cloud.innerHTML = tagCloud.map(t => `<button class="chip" data-tagfilter="${t}">${t}</button>`).join('');
+  const list = document.getElementById('knowhowList');
+  const items = knowhows.filter(k => !kw || (k.title+k.body+k.tag+k.author).toLowerCase().includes(kw.toLowerCase()));
+  if (!items.length) { list.innerHTML = '<div class="empty">該当なし</div>'; return; }
+  list.innerHTML = items.map(k => `
+    <article class="card">
+      <h4 class="knowhow__title">${k.title}</h4>
+      <p class="knowhow__body">${k.body}</p>
+      <div class="knowhow__meta">
+        <span class="who"><span class="avatar ${k.ac}">${k.author.charAt(0)}</span>${k.author}</span>
+        <span>${k.date}</span>
+        <span class="tag-inline">#${k.tag}</span>
+      </div>
+    </article>
+  `).join('');
+}
+
+function renderQAs() {
+  const list = document.getElementById('qaList');
+  list.innerHTML = qas.map(qa => `
+    <div class="qa__card">
+      <p class="qa__q">${qa.q}</p>
+      <p class="qa__a">${qa.a}</p>
+      <div class="qa__meta">
+        <span class="qa__voice">${qa.voice}</span>
+        <span>${qa.date}</span>
+        <span>${qa.tags.map(t=>'#'+t).join(' ')}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Wiring ──────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.dataset.screen === tab));
+    document.getElementById('screens').scrollTop = 0;
+  });
+});
+document.querySelectorAll('[data-filter]').forEach(c => c.addEventListener('click', () => {
+  document.querySelectorAll('[data-filter]').forEach(cc => cc.classList.toggle('active', cc === c));
+  renderVoices(c.dataset.filter);
+}));
+document.querySelectorAll('[data-pfilter]').forEach(c => c.addEventListener('click', () => {
+  document.querySelectorAll('[data-pfilter]').forEach(cc => cc.classList.toggle('active', cc === c));
+  renderProjects(c.dataset.pfilter);
+}));
+document.getElementById('knowhowSearch').addEventListener('input', e => renderKnowhow(e.target.value));
+document.getElementById('tagCloud').addEventListener('click', e => {
+  const b = e.target.closest('[data-tagfilter]');
+  if (!b) return;
+  document.getElementById('knowhowSearch').value = b.dataset.tagfilter;
+  renderKnowhow(b.dataset.tagfilter);
+});
+
+// ── Desktop shell render ────────────────
+function renderDesktopChips() {
+  document.getElementById('dsVoiceChips').innerHTML = `
+    <button class="chip active" data-dsfilter="all"><span class="dot" style="background:var(--brand-3)"></span>すべて<span class="n">8</span></button>
+    <button class="chip" data-dsfilter="progress"><span class="dot" style="background:var(--cat-progress)"></span>進捗<span class="n">4</span></button>
+    <button class="chip" data-dsfilter="trouble"><span class="dot" style="background:var(--cat-trouble)"></span>トラブル<span class="n">2</span></button>
+    <button class="chip" data-dsfilter="knowhow"><span class="dot" style="background:var(--cat-knowhow)"></span>ノウハウ<span class="n">2</span></button>
+    <button class="chip" data-dsfilter="question"><span class="dot" style="background:var(--cat-question)"></span>質問<span class="n">1</span></button>
+  `;
+  document.getElementById('dsProjectChips').innerHTML = `
+    <button class="chip active" data-dspfilter="active">進行中<span class="n">4</span></button>
+    <button class="chip" data-dspfilter="upcoming">近日着工<span class="n">1</span></button>
+    <button class="chip" data-dspfilter="done">完了<span class="n">3</span></button>
+    <button class="chip" data-dspfilter="all">全件</button>
+  `;
+}
+function renderDesktopVoices(filter='all') {
+  const list = document.getElementById('dsVoiceList');
+  if (!list) return;
+  const items = voices.filter(v => filter==='all' || v.tags.some(t => t[1]===filter));
+  list.innerHTML = items.map(v => `
+    <article class="card">
+      <div class="voice__head">
+        <div class="avatar ${v.ac}">${v.avatar}</div>
+        <div class="voice__who">
+          <span class="voice__name">${v.name}</span>
+          <span class="voice__meta">${v.role}<span class="sep">・</span>${v.site}</span>
+        </div>
+        <span class="voice__time">${v.time}</span>
+      </div>
+      <span class="voice__type ${v.type}">${v.typeLabel}</span>
+      <div class="voice__body">
+        <p>${v.text}</p>
+        <div class="voice__ai"><span class="voice__ai__label">AI要約</span>${v.ai}</div>
+        <div class="badges">${v.tags.map(([label,cls]) => `<span class="badge ${cls}">${label}</span>`).join('')}</div>
+      </div>
+    </article>
+  `).join('');
+}
+function renderDesktopProjects(pf='active') {
+  const list = document.getElementById('dsProjectList');
+  if (!list) return;
+  const items = projects.filter(p => pf==='all' || (pf==='active' && (p.status==='progress'||p.status==='finishing')) || (pf==='upcoming' && p.status==='upcoming') || (pf==='done' && p.status==='done'));
+  list.innerHTML = items.map((p, i) => `
+    <article class="card project-card">
+      <div class="project__head">
+        <h3 class="project__name">${p.name}</h3>
+        <div class="project__pct ${p.status==='done'?'done':p.status==='upcoming'?'upcoming':''}">${p.status==='upcoming'?'着工前':p.progress+'%'}</div>
+      </div>
+      <div class="project__term">${p.term}${p.note?' <span class="dot">・</span> '+p.note:''}</div>
+      ${p.status!=='upcoming'?`<div class="project__bar"><div class="project__bar-fill ${p.status==='done'?'done':''}" style="width:${p.progress}%"></div></div>`:''}
+      <div class="project__foot">
+        <div class="project__team">${p.team.map(([t,ac])=>`<div class="avatar ${ac}">${t}</div>`).join('')}</div>
+        <span class="project__status ${p.status}">${p.label}</span>
+      </div>
+      ${p.steps && p.steps.length ? `
+        <button class="project__toggle" data-dsproject="${i}">工程 (${p.steps.filter(s=>s.done).length}/${p.steps.length}) <span class="chev">▼</span></button>
+        <div class="project__steps" id="dssteps-${i}">
+          ${p.steps.map((s,idx) => `
+            <div class="step ${s.done?'done':''} ${s.active?'active':''}">
+              <span class="step__mark">${s.done?'✓':s.active?'●':idx+1}</span>
+              <div class="step__body">
+                <div class="step__label">${s.label}</div>
+                <div class="step__meta">${s.meta}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </article>
+  `).join('');
+  document.querySelectorAll('[data-dsproject]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(`dssteps-${btn.dataset.dsproject}`);
+      const open = target.classList.toggle('open');
+      btn.classList.toggle('open', open);
+    });
+  });
+}
+function renderDesktopKnowhow(kw='') {
+  const cta = document.getElementById('dsManualCta');
+  if (cta) cta.innerHTML = `
+    <div class="manual-cta" style="margin: 0 0 20px;">
+      <div class="manual-cta__glow"></div>
+      <div class="manual-cta__body">
+        <div class="manual-cta__eyebrow">✦ 新機能</div>
+        <h3>動画から手順書をつくる</h3>
+        <p>ベテランが工具や部材を指しながら喋る動画を LINE で送るだけ。AI が音声を書き起こし、動画からフレームを切り出して、画像と説明が並ぶ手順書を自動でつくります。</p>
+        <div class="upload-flow">
+          <div class="upload-flow__step"><div class="upload-flow__num">1</div><div class="upload-flow__label">現場で撮影<br><span>iPhone 標準カメラ</span></div></div>
+          <div class="upload-flow__arrow">→</div>
+          <div class="upload-flow__step"><div class="upload-flow__num">2</div><div class="upload-flow__label">LINE で送信<br><span>@三崎屋現場ノート</span></div></div>
+          <div class="upload-flow__arrow">→</div>
+          <div class="upload-flow__step"><div class="upload-flow__num">3</div><div class="upload-flow__label">約1分待つ<br><span>AI が解析</span></div></div>
+          <div class="upload-flow__arrow">→</div>
+          <div class="upload-flow__step"><div class="upload-flow__num">4</div><div class="upload-flow__label">手順書 完成<br><span>ノウハウDB 蓄積</span></div></div>
+        </div>
+        <div class="manual-cta__actions">
+          <a class="btn btn--primary" href="sample-manual.html" target="_blank">サンプル (CVT 端末処理) を見る →</a>
+          <button class="btn btn--ghost" id="dsBtnUpload">アプリからも直接送れます</button>
+        </div>
+        <div class="manual-cta__stats"><span><b>3〜10分</b> の動画 → <b>約1分</b> で完成 ・ 三崎屋電工 実物サンプル済</span></div>
+      </div>
+    </div>
+  `;
+  const cloud = document.getElementById('dsTagCloud');
+  if (cloud) cloud.innerHTML = tagCloud.map(t => `<button class="chip" data-dstagfilter="${t}">${t}</button>`).join('');
+  const list = document.getElementById('dsKnowhowList');
+  if (!list) return;
+  const items = knowhows.filter(k => !kw || (k.title+k.body+k.tag+k.author).toLowerCase().includes(kw.toLowerCase()));
+  list.innerHTML = items.map(k => `
+    <article class="card">
+      <h4 class="knowhow__title">${k.title}</h4>
+      <p class="knowhow__body">${k.body}</p>
+      <div class="knowhow__meta">
+        <span class="who"><span class="avatar ${k.ac}">${k.author.charAt(0)}</span>${k.author}</span>
+        <span>${k.date}</span>
+        <span class="tag-inline">#${k.tag}</span>
+      </div>
+    </article>
+  `).join('');
+  wireDesktopUpload();
+}
+function renderDesktopInterview() {
+  const persona = document.getElementById('dsPersonaCard');
+  if (persona) persona.innerHTML = `
+    <div class="persona-card" style="margin:0 0 20px">
+      <div class="persona-card__head">
+        <div class="persona-card__avatar">辻</div>
+        <div>
+          <div class="persona-card__name">辻 秀夫</div>
+          <div class="persona-card__role">工事部長 ・ 56歳 ・ 現場歴28年 ・ 毎朝8:00 / 17:30 に配信</div>
+        </div>
+      </div>
+      <dl class="persona-card__stats">
+        <div class="persona-card__stat"><dt>今月質問</dt><dd>28</dd></div>
+        <div class="persona-card__stat"><dt>回答率</dt><dd>91%</dd></div>
+        <div class="persona-card__stat"><dt>累計</dt><dd>62</dd></div>
+      </dl>
+    </div>
+  `;
+  const list = document.getElementById('dsQaList');
+  if (!list) return;
+  list.innerHTML = qas.map(qa => `
+    <div class="card qa__card">
+      <p class="qa__q">${qa.q}</p>
+      <p class="qa__a">${qa.a}</p>
+      <div class="qa__meta">
+        <span class="qa__voice">${qa.voice}</span>
+        <span>${qa.date}</span>
+        <span>${qa.tags.map(t=>'#'+t).join(' ')}</span>
+      </div>
+    </div>
+  `).join('');
+}
+function renderDesktopSettings() {
+  const box = document.getElementById('dsSettings');
+  if (!box) return;
+  box.innerHTML = `
+    <div class="ds-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+      <div class="card">
+        <div class="setting-group__label">会社情報</div>
+        <div class="setting-row"><span class="label"><span class="icon blue">🏢</span>会社名</span><span class="value">三崎屋電工株式会社</span></div>
+        <div class="setting-row"><span class="label"><span class="icon amber">📍</span>本店</span><span class="value">福井市大森町40-5-2</span></div>
+        <div class="setting-row"><span class="label"><span class="icon amber">📍</span>坂井営業所</span><span class="value">坂井市坂井町上兵庫38-3</span></div>
+        <div class="setting-row"><span class="label"><span class="icon green">📞</span>本店</span><span class="value">0776-98-3388</span></div>
+        <div class="setting-row"><span class="label"><span class="icon green">📞</span>坂井</span><span class="value">0776-72-3393</span></div>
+        <div class="setting-row"><span class="label"><span class="icon purple">🏅</span>認証</span><span class="value">ISO 9001 / 14001</span></div>
+      </div>
+      <div class="card">
+        <div class="setting-group__label">LINE 連携</div>
+        <div class="setting-row"><span class="label"><span class="icon blue">💬</span>アカウント</span><span class="value">@misakiya-genba</span></div>
+        <div class="setting-row"><span class="label"><span class="icon green">✓</span>接続状態</span><span class="value ok">稼働中</span></div>
+        <div class="setting-row"><span class="label"><span class="icon amber">👥</span>友だち数</span><span class="value">14 名</span></div>
+        <div class="setting-row"><span class="label"><span class="icon purple">📬</span>今月受信</span><span class="value">612 件</span></div>
+      </div>
+      <div class="card">
+        <div class="setting-group__label">メンバー</div>
+        <div class="setting-row"><span class="label"><span class="avatar tsuji" style="width:28px;height:28px;font-size:11px;border-radius:8px">辻</span>辻 秀夫 (部長)</span><span class="value ok">稼働</span></div>
+        <div class="setting-row"><span class="label"><span class="avatar tanaka" style="width:28px;height:28px;font-size:11px;border-radius:8px">田</span>田中 誠</span><span class="value ok">稼働</span></div>
+        <div class="setting-row"><span class="label"><span class="avatar inoue" style="width:28px;height:28px;font-size:11px;border-radius:8px">井</span>井上 徹</span><span class="value ok">稼働</span></div>
+        <div class="setting-row"><span class="label"><span class="avatar yamamoto" style="width:28px;height:28px;font-size:11px;border-radius:8px">山</span>山本 健太</span><span class="value ok">稼働</span></div>
+        <div class="setting-row"><span class="label"><span class="avatar suzuki" style="width:28px;height:28px;font-size:11px;border-radius:8px">鈴</span>鈴木 翔</span><span class="value ok">稼働</span></div>
+        <div class="setting-row"><span class="label"><span class="icon" style="background:#E2E8F0;color:#64748B">+</span>他 9 名</span><span class="value">─</span></div>
+      </div>
+    </div>
+  `;
+}
+function wireDesktopUpload() {
+  const btn = document.getElementById('dsBtnUpload');
+  if (!btn || btn.dataset.wired) return;
+  btn.dataset.wired = '1';
+  const file = document.createElement('input');
+  file.type = 'file';
+  file.accept = 'video/*,audio/*';
+  file.style.display = 'none';
+  document.body.appendChild(file);
+  btn.addEventListener('click', () => file.click());
+  file.addEventListener('change', () => {
+    if (!file.files[0]) return;
+    const name = file.files[0].name;
+    const sizeMB = (file.files[0].size / 1048576).toFixed(1);
+    btn.textContent = `解析中 ... (${name} / ${sizeMB}MB)`;
+    btn.disabled = true;
+    setTimeout(() => {
+      window.open('sample-manual.html', '_blank');
+      btn.textContent = '動画をアップロード';
+      btn.disabled = false;
+    }, 1800);
+  });
+}
+
+// Desktop tab switching + sync with mobile
+const dsTitles = {
+  voice: { t: '今日の現場', s: '2026年7月6日 (月) ・ 8件の投稿' },
+  projects: { t: '案件', s: '進行中 4件 ・ 近日着工 1件 ・ 完了 3件' },
+  knowhow: { t: 'ノウハウ', s: '42件の技術ノウハウ ・ 動画から手順書を自動生成' },
+  interview: { t: '職人棚卸し', s: '辻 秀夫 部長 ・ 日次ヒアリング Bot' },
+  settings: { t: '設定', s: 'みさきや電工 ・ admin: 三崎屋 章' },
+};
+document.querySelectorAll('.ds-nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.dstab;
+    document.querySelectorAll('.ds-nav-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.ds-screen').forEach(s => s.classList.toggle('active', s.dataset.dsscreen === tab));
+    const info = dsTitles[tab];
+    if (info) {
+      document.getElementById('dsTitle').textContent = info.t;
+      document.getElementById('dsSub').textContent = info.s;
+    }
+    // Sync mobile tab bar for consistent story
+    const mobileBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+    if (mobileBtn) mobileBtn.click();
+  });
+});
+document.addEventListener('click', e => {
+  const f = e.target.closest('[data-dsfilter]');
+  if (f) {
+    document.querySelectorAll('[data-dsfilter]').forEach(cc => cc.classList.toggle('active', cc === f));
+    renderDesktopVoices(f.dataset.dsfilter);
+    return;
+  }
+  const pf = e.target.closest('[data-dspfilter]');
+  if (pf) {
+    document.querySelectorAll('[data-dspfilter]').forEach(cc => cc.classList.toggle('active', cc === pf));
+    renderDesktopProjects(pf.dataset.dspfilter);
+    return;
+  }
+  const tf = e.target.closest('[data-dstagfilter]');
+  if (tf) {
+    renderDesktopKnowhow(tf.dataset.dstagfilter);
+  }
+});
+
+// ── Gantt Chart ─────────────────────────
+function renderGantt() {
+  const gantt = document.getElementById('dsGantt');
+  if (!gantt) return;
+
+  const rangeStart = new Date(2026, 3, 1); // 2026-04-01
+  const rangeEnd = new Date(2026, 7, 31);  // 2026-08-31
+  const totalDays = (rangeEnd - rangeStart) / (24 * 3600 * 1000) + 1;
+  const today = new Date(2026, 6, 6); // 2026-07-06
+  const todayPct = ((today - rangeStart) / (24 * 3600 * 1000)) / totalDays * 100;
+
+  const parse = s => {
+    if (!s) return null;
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  };
+  const dayOffset = d => (parse(d) - rangeStart) / (24 * 3600 * 1000);
+
+  // Add absolute-date fields to project data on the fly
+  const dated = [
+    { ref: '福井中学校 高圧受電盤更新', start: '2026-07-01', end: '2026-08-15', progress: 22, status: 'progress', team: [['辻','tsuji'],['田','tanaka'],['山','yamamoto']] },
+    { ref: '越前美術館 分電盤増設', start: '2026-07-06', end: '2026-07-20', progress: 45, status: 'progress', team: [['辻','tsuji'],['鈴','suzuki']] },
+    { ref: '大野市役所 外灯LED化', start: '2026-06-20', end: '2026-07-25', progress: 78, status: 'progress', team: [['井','inoue']] },
+    { ref: '三崎屋本社 事務所改修', start: '2026-05-15', end: '2026-07-10', progress: 92, status: 'finishing', team: [['田','tanaka'],['山','yamamoto']] },
+    { ref: '勝山工業団地A社 停電メンテ', start: '2026-07-14', end: '2026-07-14', progress: 0, status: 'upcoming', team: [['辻','tsuji']] },
+    { ref: '福井駅前 商業ビル 分電盤更新', start: '2026-05-01', end: '2026-06-28', progress: 100, status: 'done', team: [['辻','tsuji'],['田','tanaka']] },
+    { ref: '永平寺 参道 街路灯 改修', start: '2026-04-10', end: '2026-05-30', progress: 100, status: 'done', team: [['井','inoue'],['山','yamamoto']] },
+    { ref: '福井赤十字病院 コンセント増設', start: '2026-04-15', end: '2026-04-30', progress: 100, status: 'done', team: [['田','tanaka']] },
+  ];
+
+  const header = `
+    <div class="gantt__grid">
+      <div></div>
+      <div class="gantt__month-head">
+        <div class="gantt__month">4月<div class="gantt__month__days">4/1 → 4/30</div></div>
+        <div class="gantt__month">5月<div class="gantt__month__days">5/1 → 5/31</div></div>
+        <div class="gantt__month">6月<div class="gantt__month__days">6/1 → 6/30</div></div>
+        <div class="gantt__month">7-8月<div class="gantt__month__days">7/1 → 8/31</div></div>
+      </div>
+    </div>
+  `;
+
+  const rows = dated.map(p => {
+    const start = dayOffset(p.start);
+    const end = dayOffset(p.end);
+    const leftPct = (start / totalDays) * 100;
+    const widthPct = Math.max(((end - start + 1) / totalDays) * 100, 1.5);
+    const barText = p.status === 'upcoming' ? `${p.ref.split(' ')[0]} (1日)` : `${p.progress}%`;
+
+    return `
+      <div class="gantt__row">
+        <div class="gantt__label">
+          ${p.ref}
+          <div class="gantt__label__team">${p.team.map(([t,ac])=>`<span class="avatar ${ac}">${t}</span>`).join('')}</div>
+        </div>
+        <div class="gantt__track">
+          <div class="gantt__today" style="left: ${todayPct}%;"></div>
+          <div class="gantt__bar gantt__bar--${p.status}" style="left: ${leftPct}%; width: ${widthPct}%;" title="${p.ref} ・ ${p.start} → ${p.end}">
+            ${p.status === 'progress' || p.status === 'finishing' ? `<div class="gantt__bar__progress" style="width: ${p.progress}%;"></div>` : ''}
+            <span style="position:relative;z-index:2">${barText}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  gantt.innerHTML = `
+    ${header}
+    <div class="gantt__body">
+      ${rows}
+    </div>
+    <div class="gantt__legend">
+      <span class="gantt__legend-item">進行中</span>
+      <span class="gantt__legend-item finishing">仕上げ</span>
+      <span class="gantt__legend-item upcoming">近日着工</span>
+      <span class="gantt__legend-item done">完了</span>
+      <span style="margin-left:auto">今日 <span style="display:inline-block;width:2px;height:12px;background:#EF4444;vertical-align:-2px;margin:0 4px"></span> 2026-07-06 (月)</span>
+    </div>
+  `;
+}
+
+// View toggle wiring
+document.querySelectorAll('#dsViewToggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#dsViewToggle button').forEach(b => b.classList.toggle('active', b === btn));
+    const view = btn.dataset.view;
+    document.getElementById('dsViewList').style.display = view === 'list' ? '' : 'none';
+    document.getElementById('dsViewGantt').style.display = view === 'gantt' ? '' : 'none';
+    if (view === 'gantt') renderGantt();
+  });
+});
+
+renderVoices();
+renderProjects();
+renderKnowhow();
+renderQAs();
+renderDesktopChips();
+renderDesktopVoices();
+renderDesktopProjects();
+renderDesktopKnowhow();
+renderDesktopInterview();
+renderDesktopSettings();
+renderGantt();
+
+// ── Video upload demo ──────────────────
+const btnUpload = document.getElementById('btnUpload');
+if (btnUpload) {
+  const file = document.createElement('input');
+  file.type = 'file';
+  file.accept = 'video/*,audio/*';
+  file.style.display = 'none';
+  document.body.appendChild(file);
+  btnUpload.addEventListener('click', () => file.click());
+  file.addEventListener('change', () => {
+    if (!file.files[0]) return;
+    const name = file.files[0].name;
+    const sizeMB = (file.files[0].size / 1048576).toFixed(1);
+    // Show fake processing UI, then open sample manual after a short delay
+    btnUpload.textContent = `解析中 ... (${name} / ${sizeMB}MB)`;
+    btnUpload.disabled = true;
+    setTimeout(() => {
+      window.open('sample-manual.html', '_blank');
+      btnUpload.textContent = '動画をアップロード';
+      btnUpload.disabled = false;
+    }, 1800);
+  });
+}
+</script>
+</body>
+</html>
