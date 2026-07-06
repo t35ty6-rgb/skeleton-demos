@@ -1,7 +1,30 @@
 /* ============================================================
-   rantan.fukui.jp — EC (LocalStorage cart)
+   rantan.fukui.jp — EC (LocalStorage cart) + CRM Webhook
    ============================================================ */
 (function() {
+
+// CRM Webhook (Google Apps Script Web App URL)
+// deploy/gas-crm.gs を宝喜園さんの Google Sheet にデプロイして、
+// 発行された URL をここに貼り替える。 空文字なら CRM 送信をスキップ (mailto のみ)。
+const CRM_ENDPOINT = '';
+
+// Public helper (used by reserve.html and checkout.html)
+window.RantanCRM = {
+  async send(payload) {
+    if (!CRM_ENDPOINT) return { skipped: true };
+    try {
+      const res = await fetch(CRM_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    } catch (e) {
+      console.warn('CRM send failed:', e);
+      return { ok: false, error: String(e) };
+    }
+  }
+};
 
 const PRODUCTS = [
   { sku: 'pripetto-plain',        cat: 'pripetto',  name: '1 ホール プレーン',                    sub: '16 カット・冷凍',           price: 3800, img: 'assets/img/cheesecake-single.jpg',    tags: ['Pripetto', 'Whole'] },

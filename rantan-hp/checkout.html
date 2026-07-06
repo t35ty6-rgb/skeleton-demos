@@ -376,7 +376,29 @@
       total, pay: paymap[pay], items: Cart.items
     }));
 
-    // Send via mailto
+    // CRM Webhook (fire-and-forget: 顧客DB + 注文履歴 に append)
+    if (window.RantanCRM) {
+      window.RantanCRM.send({
+        type: 'order',
+        orderNo,
+        name: fd.get('name'),
+        tel: fd.get('tel'),
+        email: fd.get('email'),
+        zip: fd.get('zip'),
+        pref: fd.get('pref'),
+        city: fd.get('city'),
+        addr: fd.get('addr'),
+        pay: paymap[pay],
+        total,
+        items: Cart.items.map(it => ({ sku: it.sku, name: it.name, qty: it.qty, price: it.price })),
+        giftWrap: !!fd.get('giftWrap'),
+        giftType: fd.get('giftType') || '',
+        giftName: fd.get('giftName') || '',
+        note: fd.get('note') || ''
+      });
+    }
+
+    // Send via mailto (フォールバック / 深尾さんメール 通知)
     const subject = `【ご注文 ${orderNo}】${fd.get('name')}様 / 合計${yen(total)}`;
     const mailto = `mailto:rantan1710@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
