@@ -57,10 +57,21 @@ let _config = null;
 export function getConfig() {
   if (_config) return _config;
   const injected = typeof window !== 'undefined' ? window.SUNCHLORELLA_CONFIG : null;
-  const stored = (() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); }
-    catch { return null; }
-  })();
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch {}
+  // URL param で backend=firebase が 明示指定されていない限り、 stored の firebase 設定は 破棄
+  // (過去にHosted経由で自動昇格した状態を 引き摺ると 空表示になるため)
+  let urlWantsFirebase = false;
+  if (typeof location !== 'undefined') {
+    try {
+      const p = new URLSearchParams(location.search);
+      urlWantsFirebase = p.get('backend') === 'firebase';
+    } catch {}
+  }
+  if (!urlWantsFirebase && stored?.backend === 'firebase') {
+    stored.backend = 'local';
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stored)); } catch {}
+  }
   _config = deepMerge(DEFAULT_CONFIG, stored || {}, injected || {});
   // URL param upgrade — ?backend=firebase&tenant=xxx
   if (typeof location !== 'undefined') {
@@ -90,10 +101,34 @@ export function clearConfig() {
  * (Firebase Hosting は同じ project に deploy されると init.json を配信する)
  */
 export async function autoDetectHosted() {
-  // Firebase Hosting 特有の /__/firebase/init.json は
-  // web.app / firebaseapp.com のホスト名でのみ配信される。
-  // localhost / GitHub Pages では 404 になり console.error が出るだけなので叩かない。
+  // 自動 Firebase 昇格 は URL param backend=firebase が 明示指定された時のみ。
+  // デフォルトは 常に local (デモモード) — Firebase Auth ユーザーが未セットアップの
+  // ホスティング先 で 全画面が login gate に 詰まる事故を防ぐため。
   if (typeof location === 'undefined') return false;
+  let wantFirebase = false;
+  try {
+    const p = new URLSearchParams(location.search);
+    wantFirebase = p.get('backend') === 'firebase';
+  } catch {}
+  if (!wantFirebase) {
+    // 過去に firebase に昇格した状態が localStorage に残っている場合 強制で local に戻す
+    // (旧ビルドで promotion された stored config を掃除)
+    if (_config?.backend === 'firebase') {
+      setConfig({ backend: 'local' });
+    }
+    // stored config を直接 掃除 (getConfig 未呼出時のガード)
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const j = JSON.parse(raw);
+        if (j?.backend === 'firebase') {
+          j.backend = 'local';
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(j));
+        }
+      }
+    } catch {}
+    return false;
+  }
   const host = location.hostname;
   if (!/\.(web\.app|firebaseapp\.com)$/.test(host)) return false;
   try {

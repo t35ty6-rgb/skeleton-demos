@@ -9,7 +9,7 @@
 
 import { db } from './data.js';
 
-const SEED_FLAG = 'sunchlorella::seeded::v6-20products';
+const SEED_FLAG = 'sunchlorella::seeded::v7-chlorella-labels';
 
 export async function seedIfEmpty() {
   if (localStorage.getItem(SEED_FLAG)) return false;
@@ -241,52 +241,58 @@ async function seedAll() {
   for (const m of msgs) await db.set('messages', m.id, m);
 
   /* ─── 公式LINEアカウント (4アカ束ね) ─── */
+  // 🚨 デモ credentials — 本番公開URL に出す前に removebeforepublicdemo
   const channels = [
     {
       id: 'ch_sales',
-      name: 'サン・クロレラ 営業部',   kind: 'sales',
+      name: 'クロレラ①',   kind: 'sales',
       status: 'active',
-      channelSecret: '',                // 本番接続時に管理画面から入力
-      channelAccessToken: '',
-      basicId: '@sunchlorella-sales',
-      richMenuId: 'richmenu-sales',
-      description: '訪問販売員と顧客の1:1連絡・受注・決済リンク送信の窓口',
-      friends: 68420,                   // デモ表示値
+      channelId: '2010611458',
+      channelSecret: '793df9edf4a9770c156f7a5f67e1b500',
+      channelAccessToken: 'hqdE5Q/Hmzys50km872c6EMi4oZOK6kqruTkhMEA8mNMJbF2Rg1NpJxWDQPLwMQBB+cRgppC6vIE0Hk07iGqKqhtMWHaSzQR/Eis+rau5rqNRDb0coojdVP4mTjJm7PCn0oIVrbYRNdt9yRAiB8bIwdB04t89/1O/w1cDnyilFU=',
+      basicId: '@900hxmqb',
+      ownerUserId: 'U8921d1c8581552e536314276b1e64ea9',
+      richMenuId: '',
+      description: '訪問販売員と顧客の1:1連絡・受注・決済リンク送信の窓口 (実LINE 連携済)',
+      friends: 68420,
       createdAt: D(1400),
     },
     {
       id: 'ch_cs',
-      name: 'お客さまサポート',        kind: 'cs',
+      name: 'クロレラ②',        kind: 'cs',
       status: 'active',
+      channelId: '',
       channelSecret: '',
       channelAccessToken: '',
-      basicId: '@sunchlorella-cs',
-      richMenuId: 'richmenu-cs',
-      description: '商品の使い方相談・返品交換・体調相談 の総合窓口',
+      basicId: '',
+      richMenuId: '',
+      description: '商品の使い方相談・返品交換・体調相談 の総合窓口 (認証情報 未入力)',
       friends: 52180,
       createdAt: D(1600),
     },
     {
       id: 'ch_sub',
-      name: '定期便お知らせ',          kind: 'sub',
+      name: 'クロレラ③',          kind: 'sub',
       status: 'active',
+      channelId: '',
       channelSecret: '',
       channelAccessToken: '',
-      basicId: '@sunchlorella-teiki',
-      richMenuId: 'richmenu-sub',
-      description: '定期便継続顧客への お届け前通知・変更受付 専用',
+      basicId: '',
+      richMenuId: '',
+      description: '定期便継続顧客への お届け前通知・変更受付 専用 (認証情報 未入力)',
       friends: 38240,
       createdAt: D(1200),
     },
     {
       id: 'ch_event',
-      name: 'イベント・キャンペーン',  kind: 'event',
+      name: 'クロレラ④',  kind: 'event',
       status: 'active',
+      channelId: '',
       channelSecret: '',
       channelAccessToken: '',
-      basicId: '@sunchlorella-event',
-      richMenuId: 'richmenu-event',
-      description: '試合会場・万博・広告 経由の新規獲得と キャンペーン期間限定 配信',
+      basicId: '',
+      richMenuId: '',
+      description: '試合会場・万博・広告 経由の新規獲得と キャンペーン期間限定 配信 (認証情報 未入力)',
       friends: 25480,
       createdAt: D(600),
     },

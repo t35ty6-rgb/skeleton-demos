@@ -208,13 +208,20 @@ async function injectHelper(p) {
       if (document.fonts && document.fonts.ready) {
         try { await document.fonts.load('900 88px "Noto Sans JP"'); await document.fonts.load('400 160px "Inter Tight"'); await document.fonts.ready; } catch (_) {}
       }
+      // 永続 page cover: slide 下 に 敷いて 、 cross-fade 中 に 下層 admin/rep/customer ページ が 透けるのを防ぐ
+      if (!document.getElementById('sc-page-cover')) {
+        const c = document.createElement('div');
+        c.id = 'sc-page-cover';
+        c.style.cssText = 'position:fixed !important;inset:0 !important;z-index:2147483646 !important;background:oklch(0.985 0.005 130) !important;pointer-events:none !important;';
+        document.body.appendChild(c);
+      }
       // Cross-fade: 既存スライドを 300ms でフェードアウト、 同時に 新スライドを フェードイン
       const existing = Array.from(document.querySelectorAll('.sc-slide'));
       const el = document.createElement('div');
       el.className = 'sc-slide';
       el.style.cssText = [
         'position:fixed', 'inset:0',
-        'z-index:99994',
+        'z-index:2147483647',
         'background:oklch(0.985 0.005 130)',
         'font-family:"Noto Sans JP",system-ui,sans-serif',
         'color:oklch(0.18 0.010 130)',
@@ -259,7 +266,11 @@ async function injectHelper(p) {
         x.style.opacity = '1'; x.style.transform = 'translateY(0)';
       });
     };
-    window.scHelp.removeSlide = () => document.querySelectorAll('.sc-slide').forEach(el => el.remove());
+    window.scHelp.removeSlide = () => {
+      document.querySelectorAll('.sc-slide').forEach(el => el.remove());
+      const cover = document.getElementById('sc-page-cover');
+      if (cover) cover.remove();  // 下層UI (admin/rep/customer) を 見せる ため cover も 撤去
+    };
     window.scHelp.clear = () => {
       window.scHelp.clearSpots();
       window.scHelp.removeTitle();
@@ -445,8 +456,18 @@ async function preloadFonts(p) {
 }
 
 async function goto(p, url) {
-  await p.goto(url, { waitUntil: 'networkidle' });
-  await wait(p, 500);
+  await p.goto(url, { waitUntil: 'domcontentloaded' });
+  // 遷移直後 に off-white cover を 敷いて 下層ページ (admin/rep/customer) の一瞬 露出 を 防ぐ
+  await p.evaluate(() => {
+    if (!document.getElementById('sc-page-cover')) {
+      const c = document.createElement('div');
+      c.id = 'sc-page-cover';
+      c.style.cssText = 'position:fixed !important;inset:0 !important;z-index:2147483646 !important;background:oklch(0.985 0.005 130) !important;pointer-events:none !important;';
+      (document.body || document.documentElement).appendChild(c);
+    }
+  });
+  await p.waitForLoadState('networkidle');
+  await wait(p, 300);
   await injectHelper(p);
   await preloadFonts(p);
 }
@@ -1727,6 +1748,53 @@ const ctx = await b.newContext({
   recordVideo: { dir: OUT_DIR, size: { width: 1280, height: 720 } },
   deviceScaleFactor: 1,
 });
+// HTML response を intercept して <head> に cover CSS を 直接 埋め込む
+// → browser が HTML パース した 瞬間 に cover が 有効化、 下層UI (admin/rep/customer) は 一度も 見えない
+await ctx.route('**/*', async (route, req) => {
+  const url = req.url();
+  if (!url.startsWith(BASE) || !url.endsWith('.html') && !url.match(/\/(admin|rep|customer)\/?$/)) {
+    return route.continue();
+  }
+  try {
+    const resp = await route.fetch();
+    const status = resp.status();
+    if (status >= 300) return route.continue();
+    let body = await resp.text();
+    // Inject at top of <head>: hide body until DOMContentLoaded + install cover
+    const injection = `
+<style id="sc-init-hide">
+  html { background: oklch(0.985 0.005 130) !important; }
+  body { visibility: hidden !important; }
+  body.sc-ready { visibility: visible !important; }
+</style>
+<script>
+  (function(){
+    var install = function(){
+      if (document.getElementById('sc-page-cover')) return;
+      var c = document.createElement('div');
+      c.id = 'sc-page-cover';
+      c.style.cssText = 'position:fixed !important;inset:0 !important;z-index:2147483646 !important;background:oklch(0.985 0.005 130) !important;pointer-events:none !important;';
+      document.body.appendChild(c);
+      document.body.classList.add('sc-ready');
+    };
+    if (document.body) install();
+    else document.addEventListener('DOMContentLoaded', install, { once: true });
+  })();
+</script>`;
+    if (body.includes('<head>')) {
+      body = body.replace('<head>', '<head>' + injection);
+    } else if (body.includes('<html>')) {
+      body = body.replace('<html>', '<html><head>' + injection + '</head>');
+    } else {
+      body = injection + body;
+    }
+    const headers = resp.headers();
+    delete headers['content-length'];
+    await route.fulfill({ status, headers, body });
+  } catch (e) {
+    return route.continue();
+  }
+});
 const p = await ctx.newPage();
 p.on('pageerror', e => console.log('PE:', e.message.slice(0, 80)));
 
@@ -1734,8 +1802,18 @@ console.log('🎬 recording start');
 const recordStart = Date.now();
 await goto(p, `${BASE}/admin/index.html`);
 await p.evaluate(() => localStorage.clear());
-await p.reload({ waitUntil: 'networkidle' });
-await wait(p, 1000);
+await p.reload({ waitUntil: 'domcontentloaded' });
+// reload後 も cover 再敷き
+await p.evaluate(() => {
+  if (!document.getElementById('sc-page-cover')) {
+    const c = document.createElement('div');
+    c.id = 'sc-page-cover';
+    c.style.cssText = 'position:fixed !important;inset:0 !important;z-index:2147483646 !important;background:oklch(0.985 0.005 130) !important;pointer-events:none !important;';
+    (document.body || document.documentElement).appendChild(c);
+  }
+});
+await p.waitForLoadState('networkidle');
+await wait(p, 700);
 await injectHelper(p);
 
 const timeline = [];
