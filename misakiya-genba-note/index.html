@@ -1262,6 +1262,234 @@
 
   .empty { padding: 60px 20px; text-align: center; color: var(--ink-3); font-size: 13px; }
 
+  /* ── AI Assistant FAB + overlay ─────── */
+  .ai-fab {
+    position: absolute;
+    right: 16px;
+    bottom: 100px;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #A78BFA, #7C3AED);
+    color: #fff;
+    border: none;
+    display: grid; place-items: center;
+    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.5), 0 2px 6px rgba(0,0,0,0.15);
+    z-index: 50;
+    cursor: pointer;
+    transition: transform 200ms ease;
+  }
+  .ai-fab:hover { transform: scale(1.06); }
+  .ai-fab svg { width: 24px; height: 24px; }
+  .ai-fab__badge {
+    position: absolute;
+    top: -4px; right: -4px;
+    background: linear-gradient(135deg, #FCD34D, #F59E0B);
+    color: #78350F;
+    font-size: 9px;
+    font-weight: 900;
+    padding: 2px 6px;
+    border-radius: 100px;
+    letter-spacing: 0.03em;
+    border: 2px solid #fff;
+  }
+  .ai-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    z-index: 100;
+    transform: translateY(100%);
+    transition: transform 300ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  .ai-overlay.open { transform: translateY(0); }
+  .ai-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 44px 14px 12px;
+    background: linear-gradient(180deg, #FAF5FF, var(--bg));
+    border-bottom: 1px solid var(--rule);
+  }
+  .ai-head__back {
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    font-size: 28px;
+    line-height: 1;
+    padding: 0 6px;
+    cursor: pointer;
+  }
+  .ai-head__info { flex: 1; }
+  .ai-head__name {
+    font-size: 14.5px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .ai-head__status {
+    font-size: 10.5px;
+    color: var(--accent-knowhow);
+    margin-top: 1px;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+  }
+  .ai-head__status::before {
+    content: "";
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent-knowhow);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--accent-knowhow);
+    margin-right: 5px;
+    vertical-align: 1px;
+    animation: pulse 2s infinite;
+  }
+  .ai-body {
+    overflow-y: auto;
+    padding: 16px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scrollbar-width: none;
+  }
+  .ai-body::-webkit-scrollbar { display: none; }
+  .ai-msg {
+    display: flex;
+    gap: 8px;
+    max-width: 92%;
+  }
+  .ai-msg--in { align-self: flex-start; }
+  .ai-msg--out { align-self: flex-end; flex-direction: row-reverse; }
+  .ai-msg__avatar {
+    width: 30px; height: 30px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #A78BFA, #7C3AED);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-weight: 900;
+    font-size: 13px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
+  }
+  .ai-msg__bubble {
+    background: #fff;
+    padding: 10px 14px;
+    border-radius: 4px 16px 16px 16px;
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.7;
+    border: 1px solid var(--rule);
+    box-shadow: 0 1px 3px rgba(15, 30, 78, 0.04);
+  }
+  .ai-msg--out .ai-msg__bubble {
+    background: linear-gradient(135deg, #2563EB, #1D4ED8);
+    color: #fff;
+    border-radius: 16px 4px 16px 16px;
+    border-color: transparent;
+  }
+  .ai-msg__bubble b { font-weight: 800; }
+  .ai-msg__bubble .stat-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    margin-top: 6px;
+    padding: 6px 0;
+    border-top: 1px dashed var(--rule);
+    font-size: 12.5px;
+  }
+  .ai-msg__bubble .stat-row:first-of-type { margin-top: 8px; }
+  .ai-msg__bubble .stat-row__label { color: var(--ink-3); font-weight: 500; }
+  .ai-msg__bubble .stat-row__value { color: var(--ink); font-weight: 900; letter-spacing: -0.02em; }
+  .ai-msg__bubble .stat-row__value.warn { color: var(--cat-urgent); }
+  .ai-msg__bubble .stat-row__value.good { color: var(--accent-ok); }
+
+  .ai-typing {
+    align-self: flex-start;
+    display: flex;
+    gap: 8px;
+  }
+  .ai-typing__dots {
+    background: #fff;
+    padding: 12px 16px;
+    border-radius: 4px 16px 16px 16px;
+    border: 1px solid var(--rule);
+    display: flex;
+    gap: 4px;
+  }
+  .ai-typing__dots span {
+    width: 6px; height: 6px;
+    background: var(--accent-knowhow);
+    border-radius: 50%;
+    animation: typing 1.4s infinite;
+  }
+  .ai-typing__dots span:nth-child(2) { animation-delay: 0.2s; }
+  .ai-typing__dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  .ai-suggest {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0;
+  }
+  .ai-suggest button {
+    background: #fff;
+    border: 1px solid var(--rule);
+    color: var(--ink-2);
+    padding: 7px 12px;
+    border-radius: 100px;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: -0.01em;
+    box-shadow: 0 1px 3px rgba(15, 30, 78, 0.04);
+    transition: transform 100ms, background 100ms;
+  }
+  .ai-suggest button:hover {
+    background: var(--accent-knowhow);
+    color: #fff;
+    border-color: transparent;
+    transform: translateY(-1px);
+  }
+
+  .ai-input {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding: 10px 12px 24px;
+    background: #fff;
+    border-top: 1px solid var(--rule);
+  }
+  .ai-input input {
+    flex: 1;
+    background: var(--surface-2);
+    padding: 10px 14px;
+    border: none;
+    border-radius: 100px;
+    font-size: 13px;
+    color: var(--ink);
+    outline: none;
+    font-family: inherit;
+    min-width: 0;
+  }
+  .ai-input input::placeholder { color: var(--ink-3); font-size: 12px; }
+  .ai-input input:focus { background: #F5F3FF; }
+  .ai-input button {
+    background: linear-gradient(135deg, #A78BFA, #7C3AED);
+    color: #fff;
+    border: none;
+    padding: 9px 14px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: -0.01em;
+    font-family: inherit;
+    box-shadow: 0 3px 10px rgba(139, 92, 246, 0.4);
+  }
+
   /* ── Manual CTA card (video → AI manual) ── */
   .manual-cta {
     margin: 4px 20px 20px;
@@ -1722,13 +1950,13 @@
 
   .line-input {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
-    padding: 10px 14px 24px;
+    padding: 10px 12px 24px;
     background: #fff;
     border-top: 1px solid #E5E7EB;
   }
-  .line-input__plus, .line-input__mic {
+  .line-input__plus {
     width: 32px; height: 32px;
     border-radius: 50%;
     background: #F1F5F9;
@@ -1739,16 +1967,38 @@
     flex-shrink: 0;
     padding: 0 0 3px 0;
     line-height: 1;
+    cursor: pointer;
   }
-  .line-input__box {
+  .line-input__field {
     flex: 1;
     background: #F1F5F9;
-    padding: 8px 14px;
+    padding: 8px 12px;
+    border: none;
     border-radius: 100px;
     font-size: 12.5px;
-    color: #94A3B8;
+    color: #0F172A;
     font-weight: 500;
+    outline: none;
+    font-family: inherit;
+    min-width: 0;
   }
+  .line-input__field::placeholder { color: #94A3B8; font-size: 11.5px; }
+  .line-input__field:focus { background: #E0F2FE; }
+  .line-input__send {
+    background: #06C755;
+    color: #fff;
+    border: none;
+    padding: 7px 12px;
+    border-radius: 100px;
+    font-size: 11.5px;
+    font-weight: 800;
+    cursor: pointer;
+    flex-shrink: 0;
+    letter-spacing: -0.01em;
+    font-family: inherit;
+  }
+  .line-input__send:hover { background: #05A548; }
+  .line-input__send:disabled { background: #94A3B8; cursor: not-allowed; }
 
   /* ── Gantt Chart ────────────────────────── */
   .view-toggle {
@@ -2757,11 +3007,11 @@
         </div>
       </div>
 
-      <div class="line-input">
-        <button class="line-input__plus">+</button>
-        <div class="line-input__box">メッセージ</div>
-        <button class="line-input__mic">🎤</button>
-      </div>
+      <form class="line-input" id="lineForm" autocomplete="off">
+        <button type="button" class="line-input__plus" id="lineAttach" title="動画/画像を添付">+</button>
+        <input type="text" class="line-input__field" id="lineInput" placeholder="メッセージを入力 (例: 動画送りたい / 至急 / ノウハウ検索)" />
+        <button type="submit" class="line-input__send" id="lineSend">送信</button>
+      </form>
     </div>
     <div class="device__label">現場作業員 (LINE 側)<br><span>田中さん の iPhone</span></div>
   </div>
@@ -3078,6 +3328,46 @@
           </div>
         </section>
 
+      </div>
+
+      <!-- ── AI Assistant FAB ─────────────── -->
+      <button class="ai-fab" id="aiFab" aria-label="AIアシスタント">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a8 8 0 0 0-8 8c0 2 .8 3.8 2 5.1L4 22l4.9-1.5c1 .3 2 .5 3.1.5a8 8 0 0 0 0-16z"/><circle cx="9" cy="10" r="0.8" fill="currentColor"/><circle cx="12" cy="10" r="0.8" fill="currentColor"/><circle cx="15" cy="10" r="0.8" fill="currentColor"/></svg>
+        <span class="ai-fab__badge">AI</span>
+      </button>
+
+      <!-- ── AI Assistant Overlay ─────────── -->
+      <div class="ai-overlay" id="aiOverlay">
+        <header class="ai-head">
+          <button class="ai-head__back" id="aiClose" aria-label="閉じる">‹</button>
+          <div class="ai-head__avatar"><div class="avatar" style="width:34px;height:34px;font-size:13px;background:linear-gradient(135deg, #A78BFA, #7C3AED);border-radius:12px;box-shadow:0 4px 12px rgba(139,92,246,0.4)">✦</div></div>
+          <div class="ai-head__info">
+            <div class="ai-head__name">三崎屋 AI アシスタント</div>
+            <div class="ai-head__status">経営指標 + 現場状況 に即答</div>
+          </div>
+        </header>
+        <div class="ai-body" id="aiBody">
+          <div class="ai-msg ai-msg--in">
+            <div class="ai-msg__avatar">✦</div>
+            <div class="ai-msg__bubble">
+              おはようございます 三崎屋さん。<br>
+              今日の 三崎屋電工 の 状況 と、辻部長 引継ぎ計画 の 進捗を お知らせしました。<br><br>
+              追加で 知りたいこと があれば お聞きください。
+            </div>
+          </div>
+          <div class="ai-suggest">
+            <button data-q="今日の進捗">📊 今日の進捗</button>
+            <button data-q="辻部長 依存度">👤 辻部長 依存度</button>
+            <button data-q="トラブル一覧">⚠ トラブル一覧</button>
+            <button data-q="越前美術館 の状況">🏛 越前美術館 状況</button>
+            <button data-q="山本さん 育成">💡 山本さん 育成</button>
+            <button data-q="CVT ノウハウ">🧠 CVT ノウハウ</button>
+          </div>
+        </div>
+        <form class="ai-input" id="aiForm" autocomplete="off">
+          <input type="text" id="aiInput" placeholder="三崎屋 AI に聞く (例: 越前美術館 の状況)" />
+          <button type="submit">送信</button>
+        </form>
       </div>
 
       <!-- ── Tab Bar ────────────────────── -->
@@ -3932,6 +4222,314 @@ document.querySelectorAll('#dsViewToggle button').forEach(btn => {
     document.getElementById('dsViewList').style.display = view === 'list' ? '' : 'none';
     document.getElementById('dsViewGantt').style.display = view === 'gantt' ? '' : 'none';
     if (view === 'gantt') renderGantt();
+  });
+});
+
+// ── LINE Chatbot (interactive) ──────────
+const lineBody = document.getElementById('lineBody');
+const lineForm = document.getElementById('lineForm');
+const lineInput = document.getElementById('lineInput');
+const lineAttach = document.getElementById('lineAttach');
+
+const botAvatar = () => `<div class="line-msg__avatar"><div class="avatar" style="width:32px;height:32px;font-size:11px;background:linear-gradient(135deg, #3B82F6, #1D4ED8);border-radius:10px;">三</div></div>`;
+
+function nowStr() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function addUserMsg(text) {
+  const div = document.createElement('div');
+  div.className = 'line-msg line-msg--out';
+  div.innerHTML = `<span class="line-msg__time">${nowStr()}</span><div class="line-msg__bubble">${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+  lineBody.appendChild(div);
+  scrollLineBottom();
+}
+
+function addBotMsg(html, extraClass = '') {
+  const div = document.createElement('div');
+  div.className = 'line-msg line-msg--in';
+  div.innerHTML = `${botAvatar()}<div class="line-msg__body"><div class="line-msg__bubble ${extraClass}">${html}</div><span class="line-msg__time">${nowStr()}</span></div>`;
+  lineBody.appendChild(div);
+  scrollLineBottom();
+}
+
+function addBotVideoCard(title, stats, cta) {
+  const div = document.createElement('div');
+  div.className = 'line-msg line-msg--in';
+  div.innerHTML = `${botAvatar()}<div class="line-msg__body">
+    <div class="line-msg__bubble line-msg__bubble--card">
+      <span class="line-manual__badge">✦ ${title}</span>
+      <div class="line-manual__title">${stats.title}</div>
+      <div class="line-manual__stats">${stats.chips.map(c => `<span>${c.label}<b>${c.value}</b></span>`).join('')}</div>
+      ${cta ? `<a class="line-manual__cta" href="${cta.url}" target="_blank">${cta.label}</a>` : ''}
+    </div>
+    <span class="line-msg__time">${nowStr()}</span>
+  </div>`;
+  lineBody.appendChild(div);
+  scrollLineBottom();
+}
+
+function addTyping() {
+  const div = document.createElement('div');
+  div.className = 'line-typing';
+  div.id = 'lineTypingActive';
+  div.innerHTML = `<div class="line-typing__avatar"><div class="avatar" style="width:32px;height:32px;font-size:11px;background:linear-gradient(135deg, #3B82F6, #1D4ED8);border-radius:10px;">三</div></div><div class="line-typing__dots"><span></span><span></span><span></span></div>`;
+  lineBody.appendChild(div);
+  scrollLineBottom();
+}
+function removeTyping() {
+  document.getElementById('lineTypingActive')?.remove();
+}
+function scrollLineBottom() {
+  setTimeout(() => { lineBody.scrollTop = lineBody.scrollHeight; }, 20);
+}
+
+function chatbotReply(msg) {
+  const m = msg.toLowerCase();
+  const replies = [];
+
+  // Pattern matching (multiple can fire)
+  if (/動画|マニュアル|手順書|撮影|録画/.test(msg)) {
+    replies.push({ type: 'text', html: 'CVT ケーブル 端末処理 の動画ですね。 <b>iPhone で撮影して 送信</b> してください (最長 10分)。<br><br>AI が 音声書き起こし + 動画フレーム抽出 → 手順書化 します。 約 1分 で完成します。' });
+    replies.push({ type: 'card', title: '手順書サンプル (前回作成分)', stats: { title: '高圧CVTケーブル 端末処理', chips: [{label:'手順', value:6},{label:'注意', value:4},{label:'口伝', value:2}] }, cta: { label: 'サンプルを見る →', url: 'sample-manual.html' } });
+  } else if (/至急|緊急|トラブル|困った|止まっ|不良|漏れ|感電/.test(msg)) {
+    replies.push({ type: 'text', html: '<span class="line-msg__alert">🚨 至急トラブル として <b>三崎屋さん</b> に 通知しました</span><br>状況を もう少し詳しく 教えてください。 現場名 / 発生時刻 / 影響範囲 (作業停止 等) を お伝えいただくと 対応が 早くなります。', extraClass: 'line-msg__bubble--alert' });
+  } else if (/ノウハウ|検索|教えて|どうやって|コツ|やり方/.test(msg)) {
+    replies.push({ type: 'text', html: 'ノウハウDB (辻部長 発話 42件) から検索します。<br>キーワード例: <b>CVT / 圧着 / メガー / ブレーカー / アース</b><br><br>そのままキーワードを 送ってください。' });
+  } else if (/工程|進捗|今日|状況|案件/.test(msg)) {
+    replies.push({ type: 'text', html: '今日 の 進捗状況:<br>・ 進行中 4件 (全て予定通り)<br>・ 現場ボイス 8件 (うち 至急 1件・ノウハウ 2件)<br>・ 越前美術館 で 資材トラブル (対応中)<br><br>詳細は アプリの 「案件」 タブ → 「工程表」 を ご確認ください。' });
+  } else if (/辻|依存|属人|引継/.test(msg)) {
+    replies.push({ type: 'text', html: '辻部長 (工事部長・56歳・2029年引退予定) 引継ぎ計画:<br>・ 累計 <b>62件</b> 記録済 / 目標 <b>200件</b> (31%)<br>・ 週 2.1件ペース → 前倒し<br>・ 高圧受電盤 68% / 低圧配電 45% / 住宅配線 22%<br>・ <b>取引先関係 12%</b> = 継承先 未定 (要検討)' });
+  } else if (/おはよう|お疲れ|こんにちは|よろしく|ありがとう/.test(msg)) {
+    const g = /おはよう/.test(msg) ? 'おはようございます' : /お疲れ/.test(msg) ? 'お疲れさまです' : /ありがとう/.test(msg) ? 'ありがとうございます' : 'こんにちは';
+    replies.push({ type: 'text', html: `${g}。 三崎屋現場ノート AI です。<br>何かお手伝いできることは ありますか?<br><br>できること: 動画マニュアル化 / トラブル通知 / ノウハウ検索 / 進捗確認 / 辻部長引継ぎ状況` });
+  } else if (/cvt|端末処理/i.test(msg)) {
+    replies.push({ type: 'text', html: 'CVT ケーブル 端末処理 の ノウハウ (辻部長 発話):<br><br>・ カッターは <b>垂直に近い角度</b>、力を入れず 何度もなぞる<br>・ 芯線 見えたら 削りすぎ (若手が一番失敗する箇所)<br>・ 半導電層 の 段差は 綺麗に (電界集中を防ぐ)<br><br>詳細動画+手順書 をご確認ください。' });
+    replies.push({ type: 'card', title: 'CVT ケーブル 端末処理', stats: { title: '高圧CVTケーブル 端末処理', chips: [{label:'手順', value:6},{label:'注意', value:4},{label:'口伝', value:2}] }, cta: { label: '手順書を見る →', url: 'sample-manual.html' } });
+  } else if (/圧着|スリーブ/.test(msg)) {
+    replies.push({ type: 'text', html: '圧着 関連 の ノウハウ:<br><br>・ 圧着スリーブ サイズ選定: 既存端子の直径を先に測る (田中さん)<br>・ 増設案件は 既存側が古い規格の可能性、22SQ・38SQ は在庫必須<br>・ 圧着時は 端子の変形具合で 加圧不足を判別 (辻部長)' });
+  } else if (/メガー|絶縁抵抗/.test(msg)) {
+    replies.push({ type: 'text', html: 'メガー (絶縁抵抗測定) の ノウハウ:<br><br>・ 低圧回路は <b>500V</b>、高圧機器は <b>1000V</b><br>・ 600V級モータは 500Vで 判定基準 1MΩ<br>・ 梅雨時は 湿度80%超えで 値が半減 → 天気を記録<br>・ 雨上がり 24時間 は 高圧作業やめる (辻部長)' });
+  } else {
+    replies.push({ type: 'text', html: `メッセージ ありがとうございます。<br>対応できる依頼: <br>・ 動画マニュアル化<br>・ トラブル通知 (「至急」等)<br>・ ノウハウ検索 (キーワード)<br>・ 進捗確認 (「今日の状況」)<br>・ 辻部長引継ぎ状況<br><br>キーワード を含めて お送りください。` });
+  }
+
+  return replies;
+}
+
+async function sendChatFlow(msg) {
+  addUserMsg(msg);
+  addTyping();
+  await new Promise(r => setTimeout(r, 700 + Math.random() * 400));
+  removeTyping();
+  const replies = chatbotReply(msg);
+  for (let i = 0; i < replies.length; i++) {
+    const r = replies[i];
+    if (i > 0) {
+      addTyping();
+      await new Promise(res => setTimeout(res, 600));
+      removeTyping();
+    }
+    if (r.type === 'card') addBotVideoCard(r.title, r.stats, r.cta);
+    else addBotMsg(r.html, r.extraClass || '');
+  }
+}
+
+lineForm?.addEventListener('submit', e => {
+  e.preventDefault();
+  const msg = lineInput.value.trim();
+  if (!msg) return;
+  lineInput.value = '';
+  sendChatFlow(msg);
+});
+lineAttach?.addEventListener('click', () => {
+  // Simulate sending a video
+  const div = document.createElement('div');
+  div.className = 'line-msg line-msg--out';
+  div.innerHTML = `<span class="line-msg__time">${nowStr()}</span><div class="line-video">
+    <video controls preload="metadata" style="width: 220px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: block; background: #0F1A3D;">
+      <source src="cvt-demo.mp4" type="video/mp4">
+    </video>
+  </div>`;
+  lineBody.appendChild(div);
+  scrollLineBottom();
+  setTimeout(async () => {
+    addTyping();
+    await new Promise(r => setTimeout(r, 900));
+    removeTyping();
+    addBotMsg('動画を受け取りました。 AI が解析します、約1分お待ちください...');
+    addTyping();
+    await new Promise(r => setTimeout(r, 1500));
+    removeTyping();
+    addBotVideoCard('手順書 完成', {
+      title: '高圧CVTケーブル 端末処理',
+      chips: [{label:'手順', value:6},{label:'注意', value:4},{label:'口伝', value:2}]
+    }, { label: '手順書を見る →', url: 'sample-manual.html' });
+    setTimeout(() => addBotMsg('ノウハウDB に格納しました。<br>「CVT カッター角度」など、辻部長のコツも自動抽出済みです。'), 500);
+  }, 400);
+});
+
+// ── Admin AI Assistant (三崎屋 AI) ─────
+const aiFab = document.getElementById('aiFab');
+const aiOverlay = document.getElementById('aiOverlay');
+const aiClose = document.getElementById('aiClose');
+const aiBody = document.getElementById('aiBody');
+const aiForm = document.getElementById('aiForm');
+const aiInput = document.getElementById('aiInput');
+
+aiFab?.addEventListener('click', () => { aiOverlay.classList.add('open'); setTimeout(() => aiInput?.focus(), 350); });
+aiClose?.addEventListener('click', () => aiOverlay.classList.remove('open'));
+
+function addAiUser(text) {
+  const div = document.createElement('div');
+  div.className = 'ai-msg ai-msg--out';
+  div.innerHTML = `<div class="ai-msg__bubble">${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+  aiBody.appendChild(div);
+  scrollAiBottom();
+}
+function addAiBot(html) {
+  const div = document.createElement('div');
+  div.className = 'ai-msg ai-msg--in';
+  div.innerHTML = `<div class="ai-msg__avatar">✦</div><div class="ai-msg__bubble">${html}</div>`;
+  aiBody.appendChild(div);
+  scrollAiBottom();
+}
+function addAiTyping() {
+  const div = document.createElement('div');
+  div.className = 'ai-typing';
+  div.id = 'aiTyping';
+  div.innerHTML = `<div class="ai-msg__avatar">✦</div><div class="ai-typing__dots"><span></span><span></span><span></span></div>`;
+  aiBody.appendChild(div);
+  scrollAiBottom();
+}
+function removeAiTyping() { document.getElementById('aiTyping')?.remove(); }
+function scrollAiBottom() { setTimeout(() => { aiBody.scrollTop = aiBody.scrollHeight; }, 20); }
+
+function adminAiReply(msg) {
+  const m = msg;
+  if (/今日|進捗|状況|全体/.test(m) && !/越前|福井|大野|本社|勝山/.test(m)) {
+    return `<b>今日 (2026-07-06 月) の 三崎屋電工:</b>
+      <div class="stat-row"><span class="stat-row__label">現場ボイス</span><span class="stat-row__value">8件</span></div>
+      <div class="stat-row"><span class="stat-row__label">進行中案件</span><span class="stat-row__value good">4件 予定通り</span></div>
+      <div class="stat-row"><span class="stat-row__label">要対応</span><span class="stat-row__value warn">2件 (越前・大野)</span></div>
+      <div class="stat-row"><span class="stat-row__label">ノウハウ新規</span><span class="stat-row__value good">+3件 (CVT関連)</span></div>
+      <div class="stat-row"><span class="stat-row__label">LINE 稼働率</span><span class="stat-row__value">86%</span></div>`;
+  }
+  if (/辻|依存|属人|引継/.test(m)) {
+    return `<b>辻部長 引継ぎ計画 (2029年目標):</b><br>
+      累計 <b>62/200件 (31%)</b> ・ 週 2.1件ペース → <b>前倒し</b>
+      <div class="stat-row"><span class="stat-row__label">高圧受電盤</span><span class="stat-row__value good">68% → 田中</span></div>
+      <div class="stat-row"><span class="stat-row__label">低圧配電</span><span class="stat-row__value">45% → 井上</span></div>
+      <div class="stat-row"><span class="stat-row__label">住宅配線</span><span class="stat-row__value">22% → 山本</span></div>
+      <div class="stat-row"><span class="stat-row__label">現場管理</span><span class="stat-row__value">55% → 田中</span></div>
+      <div class="stat-row"><span class="stat-row__label">取引先関係</span><span class="stat-row__value warn">12% → 未定</span></div>
+      <br><b>辻部長 依存度</b> は 先月比 <span style="color:var(--accent-ok);font-weight:900">-5%</span> で 改善中です。`;
+  }
+  if (/トラブル|至急|緊急|問題/.test(m)) {
+    return `<b>現在の トラブル (2件):</b><br>
+      🔴 <b>越前美術館 分電盤</b> ・ 田中さん 10:47<br>
+      <span style="color:var(--ink-3);font-size:11px">既存の1次側 端子が太くて 22SQ 圧着スリーブ が入らない。至急手配中。</span><br><br>
+      🟡 <b>大野市役所 外灯LED</b> ・ 井上さん 09:34<br>
+      <span style="color:var(--ink-3);font-size:11px">1基センサー不良。明日 検査員 立会 で対応 (半日想定)。</span>`;
+  }
+  if (/越前|美術館/.test(m)) {
+    return `<b>越前美術館 分電盤増設:</b>
+      <div class="stat-row"><span class="stat-row__label">期間</span><span class="stat-row__value">7/06 → 7/20</span></div>
+      <div class="stat-row"><span class="stat-row__label">進捗</span><span class="stat-row__value">45%</span></div>
+      <div class="stat-row"><span class="stat-row__label">担当</span><span class="stat-row__value">辻部長・鈴木</span></div>
+      <div class="stat-row"><span class="stat-row__label">状態</span><span class="stat-row__value warn">資材手配待ち</span></div>
+      <br><b>直近の投稿:</b><br>
+      ・ 田中さん 10:47 「22SQ 圧着スリーブ 至急手配」<br>
+      ・ 鈴木さん 12:03 「昼休憩後 再開待機」`;
+  }
+  if (/福井中学校/.test(m)) {
+    return `<b>福井中学校 高圧受電盤更新:</b>
+      <div class="stat-row"><span class="stat-row__label">期間</span><span class="stat-row__value">7/01 → 8/15</span></div>
+      <div class="stat-row"><span class="stat-row__label">進捗</span><span class="stat-row__value">22%</span></div>
+      <div class="stat-row"><span class="stat-row__label">担当</span><span class="stat-row__value">辻部長・田中・山本</span></div>
+      <div class="stat-row"><span class="stat-row__label">状態</span><span class="stat-row__value good">養生完了・カバー着脱中</span></div>`;
+  }
+  if (/大野/.test(m)) {
+    return `<b>大野市役所 外灯LED化:</b>
+      <div class="stat-row"><span class="stat-row__label">期間</span><span class="stat-row__value">6/20 → 7/25</span></div>
+      <div class="stat-row"><span class="stat-row__label">進捗</span><span class="stat-row__value good">78%</span></div>
+      <div class="stat-row"><span class="stat-row__label">担当</span><span class="stat-row__value">井上・佐藤</span></div>
+      <div class="stat-row"><span class="stat-row__label">状態</span><span class="stat-row__value warn">1基不良・明日検査員</span></div>`;
+  }
+  if (/山本|育成|若手/.test(m)) {
+    return `<b>山本 健太 (若手 2年目) 育成状況:</b><br>
+      <span style="color:var(--accent-ok);font-weight:900">💡 順調に成長中</span>
+      <div class="stat-row"><span class="stat-row__label">今月の質問数</span><span class="stat-row__value good">18件 (3ヶ月連続増加)</span></div>
+      <div class="stat-row"><span class="stat-row__label">担当案件</span><span class="stat-row__value">2件 (福井中・本社改修)</span></div>
+      <div class="stat-row"><span class="stat-row__label">習得ノウハウ</span><span class="stat-row__value">7件 (CVT / 電線管 等)</span></div>
+      <div class="stat-row"><span class="stat-row__label">主なメンター</span><span class="stat-row__value">辻部長 (直接指導 4回/月)</span></div>
+      <br>質問数の増加 = 現場で 分からないことを 恥ずかしがらず 聞ける関係性 が 出来ている 良い兆候です。`;
+  }
+  if (/cvt|端末処理/i.test(m)) {
+    return `<b>CVT 関連 ノウハウ (辻部長 発話から抽出):</b><br><br>
+      ✦ <b>カッター角度</b>: 垂直近く、力を入れず 何度もなぞる。 芯線 見えたら 削りすぎ。 <span style="color:var(--cat-urgent);font-weight:800">若手が一番失敗する箇所</span><br><br>
+      ✦ <b>半導電層 段差処理</b>: 綺麗な段差にする。 ガタつくと 電界集中 → 絶縁破壊 の起点<br><br>
+      ✦ <b>接地</b>: 必ず取る。 取り忘れると 誘導電圧で作業者感電<br><br>
+      <a href="sample-manual.html" target="_blank" style="color:var(--brand-2);font-weight:800">→ 高圧CVTケーブル 端末処理 手順書 (画像+動画付き)</a>`;
+  }
+  if (/工程|ガント|スケジュール|カレンダー/.test(m)) {
+    return `工程表 は 「案件」 タブ → 「工程表」 で 閲覧できます。<br>
+      <b>今週の 見どころ:</b><br>
+      ・ 7/06 (今日) は 4案件 が 進行中<br>
+      ・ <b>田中さん が 3件 兼任</b> (福井中・本社改修・越前美術館) → 掛け持ち警告あり<br>
+      ・ 7/10 に 本社改修 引渡し予定<br>
+      ・ 7/14 に 勝山A社 停電メンテ (辻部長 単独)`;
+  }
+  if (/ノウハウ|検索|教えて/.test(m)) {
+    return `ノウハウDB (42件 蓄積) を検索できます。<br>キーワード例:<br>
+      ・ <b>CVT / 圧着 / メガー / ブレーカー / アース / 分電盤 / 受電盤 / 電線管</b><br><br>
+      具体的なキーワード を お聞きください。<br>
+      例: <span style="color:var(--brand-2);font-weight:800">「圧着スリーブ の 選定は?」</span>`;
+  }
+  if (/おはよう|こんにちは|お疲れ|ありがとう/.test(m)) {
+    return `${/おはよう/.test(m) ? 'おはようございます' : /お疲れ/.test(m) ? 'お疲れさまです' : /ありがとう/.test(m) ? '恐れ入ります' : 'こんにちは'}、 三崎屋さん。<br>
+      何かお手伝いできることは ありますか?<br><br>
+      <b>できること:</b><br>
+      ・ 今日の進捗 / 経営指標<br>
+      ・ 辻部長 引継ぎ計画 の 状況<br>
+      ・ トラブル一覧<br>
+      ・ 案件別 状況 (越前美術館 / 福井中学校 等)<br>
+      ・ 若手 育成状況<br>
+      ・ ノウハウ検索`;
+  }
+  return `お問い合わせ ありがとうございます。<br>
+    現在 対応可能な問い合わせ:<br>
+    ・ 今日の進捗 / 状況<br>
+    ・ 辻部長 引継ぎ / 属人化 状況<br>
+    ・ トラブル一覧<br>
+    ・ 案件別 状況 (案件名を含めてください)<br>
+    ・ 若手 育成 (山本さん 等)<br>
+    ・ ノウハウ検索 (CVT / 圧着 / メガー 等)<br>
+    ・ 工程表 / ガント / スケジュール<br><br>
+    もう一度 キーワードを含めて お聞きいただけますか?`;
+}
+
+async function sendAiFlow(msg) {
+  addAiUser(msg);
+  document.querySelectorAll('.ai-suggest').forEach(el => el.remove());
+  addAiTyping();
+  await new Promise(r => setTimeout(r, 700 + Math.random() * 500));
+  removeAiTyping();
+  addAiBot(adminAiReply(msg));
+}
+
+aiForm?.addEventListener('submit', e => {
+  e.preventDefault();
+  const msg = aiInput.value.trim();
+  if (!msg) return;
+  aiInput.value = '';
+  sendAiFlow(msg);
+});
+
+document.querySelectorAll('.ai-suggest button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    sendAiFlow(btn.dataset.q);
   });
 });
 
