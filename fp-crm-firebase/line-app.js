@@ -2425,6 +2425,60 @@
     return '';  // browser default
   }
 
+  // ★ 2026-07-06: モバイル 録音中 バックグラウンド対策
+  //   iOS Safari は タブ切替/画面OFF で 録音停止する 仕様
+  //   → 無音オーディオループ + Wake Lock + visibilitychange 監視 で 延命
+  window._fpKeepAlive = { audio: null, wakeLock: null, visListener: null };
+  async function startBackgroundKeepAlive() {
+    if (!isMobileDevice()) return;  // PC は 不要
+    try {
+      // 1) 無音オーディオ loop で 「音再生中」 扱いに
+      if (!window._fpKeepAlive.audio) {
+        const audio = new Audio();
+        audio.loop = true;
+        audio.playsInline = true;
+        audio.volume = 0.001;
+        // 極小 silent wav (data URI)
+        audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+        audio.play().catch(e => console.warn('[keepAlive] audio play:', e.message));
+        window._fpKeepAlive.audio = audio;
+      }
+      // 2) Wake Lock (画面 OFF 防止、 iOS 16.4+ / Chrome/Safari)
+      if ('wakeLock' in navigator && !window._fpKeepAlive.wakeLock) {
+        try {
+          window._fpKeepAlive.wakeLock = await navigator.wakeLock.request('screen');
+          console.log('[keepAlive] wake lock acquired');
+        } catch (e) { console.warn('[keepAlive] wake lock:', e.message); }
+      }
+      // 3) 可視化状態 監視 (バックグラウンドから戻った時に MediaRecorder が paused なら resume)
+      if (!window._fpKeepAlive.visListener) {
+        window._fpKeepAlive.visListener = async () => {
+          if (document.visibilityState === 'visible') {
+            // Wake Lock 再取得 (バックグラウンド化 で 自動 release される)
+            if ('wakeLock' in navigator && !window._fpKeepAlive.wakeLock) {
+              try {
+                window._fpKeepAlive.wakeLock = await navigator.wakeLock.request('screen');
+              } catch (_) {}
+            }
+            // MediaRecorder resume 試行
+            const R = window._fpRecorder;
+            if (R && R.mediaRecorder && R.mediaRecorder.state === 'paused') {
+              try { R.mediaRecorder.resume(); console.log('[keepAlive] recorder resumed'); } catch (_) {}
+            }
+          }
+        };
+        document.addEventListener('visibilitychange', window._fpKeepAlive.visListener);
+      }
+    } catch (e) { console.warn('[keepAlive] setup failed:', e); }
+  }
+  function stopBackgroundKeepAlive() {
+    try {
+      if (window._fpKeepAlive.audio) { window._fpKeepAlive.audio.pause(); window._fpKeepAlive.audio.src = ''; window._fpKeepAlive.audio = null; }
+      if (window._fpKeepAlive.wakeLock) { window._fpKeepAlive.wakeLock.release?.(); window._fpKeepAlive.wakeLock = null; }
+      if (window._fpKeepAlive.visListener) { document.removeEventListener('visibilitychange', window._fpKeepAlive.visListener); window._fpKeepAlive.visListener = null; }
+    } catch (_) {}
+  }
+
   // 対面モード録画: webcam + マイクで録画 → 同じ AI議事録パイプラインへ
   async function startWebcamRecording(bookingTs) {
     const R = window._fpRecorder;
@@ -2553,6 +2607,7 @@
     const mr = new MediaRecorder(stream, { mimeType });
     mr.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
     mr.onstop = async () => {
+      stopBackgroundKeepAlive();
       stream.getTracks().forEach(t => t.stop());
       if (previewEl) { previewEl.remove(); }
       const blob = new Blob(chunks, { type: mimeType });
@@ -2601,6 +2656,7 @@
       try { if (typeof renderMeetingHistory === 'function') renderMeetingHistory(); } catch(_){}
     };
     mr.start(3000);
+    startBackgroundKeepAlive();
     R.mediaRecorder = mr;
     R.bookingTs = bookingTs;
     R.blob = null;
@@ -2875,6 +2931,7 @@
     const mr = new MediaRecorder(stream, mimeType ? { mimeType, audioBitsPerSecond: 24000 } : { audioBitsPerSecond: 24000 });
     mr.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
     mr.onstop = async () => {
+      stopBackgroundKeepAlive();
       stream.getTracks().forEach(t => t.stop());
       clearInterval(timerInterval);
       if (indicator) indicator.remove();
@@ -2942,6 +2999,7 @@
       }
     });
     mr.start(3000);
+    startBackgroundKeepAlive();
     R.mediaRecorder = mr;
     R.bookingTs = bookingTs;
     R.blob = null;
@@ -3062,6 +3120,7 @@
       R.mediaRecorder = new MediaRecorder(audioOnlyStream, audioMime ? { mimeType: audioMime, audioBitsPerSecond: 24000 } : { audioBitsPerSecond: 24000 });
       R.mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) R.chunks.push(e.data); };
       R.mediaRecorder.onstop = async () => {
+        stopBackgroundKeepAlive();
         const blob = new Blob(R.chunks, { type: 'audio/webm' });
         R.blobUrl = URL.createObjectURL(blob);
         combined.getTracks().forEach(t => t.stop());
@@ -3112,6 +3171,7 @@
         await onRecordingComplete(R.bookingTs, blob, R.blobUrl);
       };
       R.mediaRecorder.start(1000);
+      startBackgroundKeepAlive();
 
       showRecordingBorder();
       fetch(CLOUD_RUN_BASE + '/api/recording/start?ts=' + encodeURIComponent(bookingTs), { method: 'POST' }).catch(() => {});
