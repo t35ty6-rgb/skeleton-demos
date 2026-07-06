@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Skel Concierge · 接続 完全 ガイド</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+  body{font-family:'Noto Sans JP',sans-serif;background:#F5F2EC;color:#0A0A0A;line-height:1.75;padding:0 0 80px;font-feature-settings:"palt"}
+  .wrap{max-width:920px;margin:0 auto;padding:24px 20px}
+
+  .progress-bar{position:sticky;top:0;z-index:100;background:#0A0A0A;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px;border-bottom:3px solid #06C755;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
+  .progress-label{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.15em;color:#06C755;font-weight:700;flex-shrink:0}
+  .progress-track{flex:1;height:10px;background:#262626;border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,#06C755,#A7F3D0);border-radius:99px;width:0%;transition:width 0.5s cubic-bezier(0.22,1,0.36,1)}
+  .progress-num{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:900;color:#fff;min-width:70px;text-align:right}
+  .reset-btn{background:transparent;border:1px solid #525252;color:#A1A1AA;padding:5px 10px;border-radius:5px;font-size:10.5px;cursor:pointer;font-family:'JetBrains Mono',monospace}
+  .reset-btn:hover{background:#262626;color:#fff}
+
+  .hero{background:#0A0A0A;color:#fff;padding:44px 36px;border-radius:24px;margin-bottom:24px;position:relative;overflow:hidden}
+  .hero::before{content:'';position:absolute;top:-80px;right:-80px;width:300px;height:300px;background:radial-gradient(circle,#06C755 0%,transparent 65%);opacity:0.3}
+  .hero .brand{font-family:'JetBrains Mono',monospace;font-size:10px;color:#06C755;letter-spacing:0.35em;font-weight:700;margin-bottom:12px}
+  .hero h1{font-family:'Noto Serif JP',serif;font-size:38px;font-weight:900;letter-spacing:0.01em;line-height:1.25;margin-bottom:14px;position:relative}
+  .hero h1 .accent{color:#06C755}
+  .hero .lead{font-size:14px;color:#D4D4D8;line-height:1.85;max-width:600px;position:relative;margin-bottom:8px}
+  .hero .lead strong{color:#06C755}
+  .hero .visual-promise{margin-top:24px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;position:relative}
+  .vp{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px}
+  .vp .ic{font-size:22px;margin-bottom:6px}
+  .vp .t{font-family:'JetBrains Mono',monospace;font-size:9px;color:#06C755;letter-spacing:0.18em;font-weight:700;margin-bottom:3px}
+  .vp .d{font-size:12px;font-weight:700;color:#fff;line-height:1.4}
+
+  .part-divider{background:linear-gradient(135deg,#06C755,#047857);color:#fff;padding:24px 30px;border-radius:16px;margin:26px 0 16px;text-align:center}
+  .part-divider.zoom{background:linear-gradient(135deg,#2D8CFF,#0B5FBF)}
+  .part-divider.paste{background:linear-gradient(135deg,#F4A631,#B57209)}
+  .part-divider .lbl{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.3em;opacity:0.85;margin-bottom:6px}
+  .part-divider .ttl{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:900;letter-spacing:0.04em}
+  .part-divider .sub{font-size:12px;margin-top:6px;opacity:0.88}
+
+  .step-card{background:#fff;border-radius:20px;padding:0;margin-bottom:20px;box-shadow:0 1px 0 #E5E5E5;border:2px solid transparent;transition:all 0.2s;scroll-margin-top:90px;overflow:hidden;position:relative}
+  .step-card.done{opacity:0.55}
+  .step-card.done .step-num{background:#06C755;color:#fff}
+  .step-card.done .step-num::after{content:'✓';position:absolute;font-size:30px}
+  .step-card.done .step-num-text{display:none}
+
+  .step-head{display:flex;align-items:center;gap:16px;padding:22px 28px;background:#0A0A0A;color:#fff;position:relative}
+  .step-num{flex-shrink:0;width:58px;height:58px;background:#06C755;color:#0A0A0A;border-radius:18px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:900;font-size:26px;position:relative;transition:all 0.3s}
+  .step-head-text{flex:1}
+  .step-eyebrow{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#06C755;letter-spacing:0.22em;font-weight:700;margin-bottom:3px}
+  .step-title{font-family:'Noto Serif JP',serif;font-size:22px;font-weight:900;color:#fff;line-height:1.3}
+  .step-time{font-family:'JetBrains Mono',monospace;font-size:11px;color:#A7F3D0;font-weight:700;padding:5px 11px;background:rgba(6,199,85,0.15);border-radius:5px;letter-spacing:0.1em;flex-shrink:0}
+
+  .step-body{padding:24px 28px}
+
+  .big-action{background:linear-gradient(135deg,#06C755,#047857);color:#fff;border-radius:16px;padding:22px 26px;margin-bottom:16px;position:relative;overflow:hidden}
+  .big-action.zoom{background:linear-gradient(135deg,#2D8CFF,#0B5FBF)}
+  .big-action::before{content:'→';position:absolute;top:50%;left:-12px;transform:translateY(-50%);font-size:80px;color:rgba(255,255,255,0.08);font-weight:900;line-height:1}
+  .big-action .verb{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#A7F3D0;letter-spacing:0.25em;font-weight:700;margin-bottom:6px;position:relative}
+  .big-action.zoom .verb{color:#93C5FD}
+  .big-action .what{font-family:'Noto Serif JP',serif;font-size:20px;font-weight:900;color:#fff;line-height:1.4;position:relative}
+  .big-action .what strong{background:#FFD700;color:#0A0A0A;padding:1px 10px;border-radius:5px;font-style:normal;font-weight:900}
+
+  .copy-block{background:#0A0A0A;color:#fff;border-radius:12px;padding:14px 18px;margin:12px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:12.5px}
+  .copy-block .url-txt{flex:1;color:#06C755;font-weight:600;word-break:break-all;min-width:200px}
+  .copy-block .copy-btn{background:#06C755;color:#0A0A0A;border:none;padding:10px 20px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-weight:900;font-size:12px;cursor:pointer;letter-spacing:0.05em;flex-shrink:0;transition:all 0.15s}
+  .copy-block .copy-btn:hover{background:#A7F3D0;transform:translateY(-1px)}
+  .copy-block .copy-btn.copied{background:#FFD700;color:#0A0A0A}
+  .copy-block .open-btn{background:transparent;color:#06C755;border:1.5px solid #06C755;padding:9px 16px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11.5px;cursor:pointer;text-decoration:none;flex-shrink:0}
+  .copy-block .open-btn:hover{background:#06C755;color:#0A0A0A}
+
+  .expect{background:#F5F2EC;border-radius:10px;padding:12px 16px;margin-top:14px;font-size:13px;color:#525252;line-height:1.7}
+  .expect strong{color:#0A0A0A}
+  .warn{background:#FEF3C7;border:1.5px solid #FBBF24;border-radius:10px;padding:12px 16px;margin-top:14px;font-size:12.5px;color:#78350F;line-height:1.65}
+  .warn strong{color:#92400E;font-weight:900}
+
+  .complete-row{margin-top:18px;text-align:right}
+  .complete-btn{background:#0A0A0A;color:#06C755;border:2px solid #06C755;padding:10px 22px;border-radius:9px;font-family:'JetBrains Mono',monospace;font-weight:900;font-size:12px;cursor:pointer;letter-spacing:0.05em;transition:all 0.15s}
+  .complete-btn:hover{background:#06C755;color:#0A0A0A}
+  .complete-btn.done{background:#06C755;color:#0A0A0A}
+  .complete-btn.done::after{content:' ✓'}
+
+  .paste-block{background:#FEF3C7;border:2px dashed #F4A631;border-radius:12px;padding:14px 18px;margin:12px 0;display:flex;flex-direction:column;gap:8px}
+  .paste-block label{font-family:'JetBrains Mono',monospace;font-size:11px;color:#92400E;letter-spacing:0.15em;font-weight:900}
+  .paste-block input{padding:11px 14px;background:#fff;border:1.5px solid #FBBF24;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#0A0A0A;font-weight:700;min-height:44px;width:100%}
+  .paste-block input:focus{outline:none;border-color:#F4A631;box-shadow:0 0 0 3px rgba(244,166,49,0.15)}
+  .paste-block .paste-note{font-size:11.5px;color:#78350F}
+
+  .final{background:linear-gradient(135deg,#06C755,#047857);color:#fff;border-radius:24px;padding:44px 40px;margin-top:32px;text-align:center;box-shadow:0 12px 44px rgba(6,199,85,0.35)}
+  .final h2{font-family:'Noto Serif JP',serif;font-size:32px;font-weight:900;line-height:1.35;margin-bottom:16px}
+  .final p{font-size:15px;line-height:1.8;margin-bottom:22px}
+  .final .cta{display:inline-block;background:#fff;color:#0A0A0A;padding:16px 32px;border-radius:12px;font-family:'JetBrains Mono',monospace;font-weight:900;font-size:14px;letter-spacing:0.08em;text-decoration:none;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,0.15);transition:transform 0.15s}
+  .final .cta:hover{transform:translateY(-2px)}
+
+  @media (max-width:640px){
+    .wrap{padding:16px 14px}
+    .hero{padding:32px 22px;border-radius:18px}
+    .hero h1{font-size:28px}
+    .hero .lead{font-size:13px}
+    .hero .visual-promise{grid-template-columns:repeat(2,1fr)}
+    .step-head{padding:18px 20px;gap:12px}
+    .step-num{width:50px;height:50px;font-size:22px;border-radius:14px}
+    .step-title{font-size:18px}
+    .step-body{padding:18px 20px}
+    .big-action{padding:18px 20px}
+    .big-action .what{font-size:17px}
+    .part-divider{padding:18px 22px}
+    .part-divider .ttl{font-size:18px}
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar">
+  <span class="progress-label">PROGRESS</span>
+  <div class="progress-track"><div class="progress-fill" id="pfill"></div></div>
+  <div class="progress-num" id="pnum">0 / 12</div>
+  <button class="reset-btn" id="reset-btn">RESET</button>
+</div>
+
+<div class="wrap">
+
+<div class="hero">
+  <div class="brand">SKEL CONCIERGE · 接続 完全 ガイド · v1.0</div>
+  <h1>LINE + Zoom 連携 を<br><span class="accent">迷わず 完了</span></h1>
+  <p class="lead">Cockpit の 設定 に 入れる <strong>「LINE Channel の 3 つ」「LIFF ID」「Zoom S2S の 3 つ」</strong> の 取り方 を、 1 クリック ずつ 画像 と 矢印 で お見せ します。</p>
+  <p class="lead">終わったら 全部 まとめて Cockpit に 貼り付け → LINE で 面談 予約 が 即 動き ます。</p>
+  <div class="visual-promise">
+    <div class="vp"><div class="ic">⏱</div><div class="t">TIME</div><div class="d">15分</div></div>
+    <div class="vp"><div class="ic">💰</div><div class="t">COST</div><div class="d">¥0</div></div>
+    <div class="vp"><div class="ic">📚</div><div class="t">STEP</div><div class="d">12</div></div>
+    <div class="vp"><div class="ic">🎁</div><div class="t">GET</div><div class="d">7項目</div></div>
+  </div>
+</div>
+
+<!-- 全体像 -->
+<div style="background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border:3px solid #FBBF24;border-radius:24px;padding:28px 30px;margin-bottom:24px;box-shadow:0 8px 28px rgba(251,191,36,0.25)">
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#92400E;letter-spacing:0.3em;font-weight:900;margin-bottom:6px">🚸 全体像</div>
+    <div style="font-family:'Noto Serif JP',serif;font-size:28px;font-weight:900;color:#0A0A0A;line-height:1.3">やる こと は<br><span style="background:#FFD700;color:#0A0A0A;padding:4px 18px;border-radius:8px">4 個 だけ</span></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">
+    <div style="background:#fff;border-radius:14px;padding:18px 20px;border-left:6px solid #06C755;display:flex;align-items:flex-start;gap:14px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:900;color:#06C755;line-height:1;min-width:36px">1</div>
+      <div>
+        <div style="font-family:'Noto Serif JP',serif;font-size:17px;font-weight:900;color:#0A0A0A;margin-bottom:4px">LINE の 「顧客管理」 チャンネル を 用意</div>
+        <div style="font-size:12.5px;color:#525252;line-height:1.6">📱 Messaging API チャンネル 作成 + 3 つ の 鍵 取得 (5 分)</div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:14px;padding:18px 20px;border-left:6px solid #2D8CFF;display:flex;align-items:flex-start;gap:14px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:900;color:#2D8CFF;line-height:1;min-width:36px">2</div>
+      <div>
+        <div style="font-family:'Noto Serif JP',serif;font-size:17px;font-weight:900;color:#0A0A0A;margin-bottom:4px">Zoom で S2S OAuth app を 作る</div>
+        <div style="font-size:12.5px;color:#525252;line-height:1.6">🎥 会議 の 自動発行 と Cloud 録画 に 必要 (5 分)</div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:14px;padding:18px 20px;border-left:6px solid #9333EA;display:flex;align-items:flex-start;gap:14px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:900;color:#9333EA;line-height:1;min-width:36px">3</div>
+      <div>
+        <div style="font-family:'Noto Serif JP',serif;font-size:17px;font-weight:900;color:#0A0A0A;margin-bottom:4px">LIFF app を 発行</div>
+        <div style="font-size:12.5px;color:#525252;line-height:1.6">🔗 相手 が LINE 内 で 面談 候補 を 選ぶ 画面 の 発行 (2 分)</div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:14px;padding:18px 20px;border-left:6px solid #F4A631;display:flex;align-items:flex-start;gap:14px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:900;color:#F4A631;line-height:1;min-width:36px">4</div>
+      <div>
+        <div style="font-family:'Noto Serif JP',serif;font-size:17px;font-weight:900;color:#0A0A0A;margin-bottom:4px">Cockpit の 設定 に 7 つ 貼る</div>
+        <div style="font-size:12.5px;color:#525252;line-height:1.6">📋 「保存」 で 実運用 開始 (3 分)</div>
+      </div>
+    </div>
+  </div>
+  <div style="background:#0A0A0A;color:#fff;border-radius:12px;padding:16px 22px;margin-top:20px;text-align:center">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#FBBF24;letter-spacing:0.2em;font-weight:700;margin-bottom:6px">💬 困ったら</div>
+    <div style="font-size:14px;line-height:1.7">Jobs に 「<strong style="background:#FBBF24;color:#0A0A0A;padding:2px 10px;border-radius:4px">Skel Concierge の 接続 代行 して</strong>」 と 1 行 送る → 30 分 で 完了</div>
+  </div>
+</div>
+
+<!-- ============ PART 1: LINE ============ -->
+<div class="part-divider">
+  <div class="lbl">PART 1 / 4</div>
+  <div class="ttl">LINE 顧客管理 チャンネル を 用意</div>
+  <div class="sub">→ Channel ID / Access Token / Secret を 取得</div>
+</div>
+
+<!-- STEP 1 -->
+<div class="step-card" data-step="1">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">1</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 01 / 12</div>
+      <div class="step-title">LINE Developers Console を 開く</div>
+    </div>
+    <div class="step-time">1分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">下 の 緑「コピー」 → Chrome に 貼り付け → Enter</div>
+    </div>
+    <div class="copy-block">
+      <div class="url-txt">https://developers.line.biz/console/</div>
+      <button class="copy-btn" data-copy="https://developers.line.biz/console/">コピー</button>
+      <a class="open-btn" href="https://developers.line.biz/console/" target="_blank">↗ 開く</a>
+    </div>
+    <div class="expect">既に LINE Business ID で ログイン 済 なら Provider (プロバイダー) 一覧 が 出る。 未 登録 なら まず ログイン → Provider を 1 つ 作る (「Skeleton」 等)。</div>
+    <div class="complete-row"><button class="complete-btn" data-done="1">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 2 -->
+<div class="step-card" data-step="2">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">2</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 02 / 12</div>
+      <div class="step-title">Messaging API チャンネル を 作成</div>
+    </div>
+    <div class="step-time">2分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">Provider を 選択 → 「新規 チャンネル 作成」 → <strong>Messaging API</strong> を 選択</div>
+    </div>
+    <div class="expect">
+      入力 項目:<br>
+      ・チャンネル名: <strong>顧客管理</strong> (お好み)<br>
+      ・説明: <strong>面談 予約 と 議事録 の 自動 配信</strong><br>
+      ・カテゴリー: 業種 に 合わせて 選ぶ<br>
+      ・ 利用規約 に 同意 → 「作成」
+    </div>
+    <div class="complete-row"><button class="complete-btn" data-done="2">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 3 -->
+<div class="step-card" data-step="3">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">3</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 03 / 12 · 🎁 1個目</div>
+      <div class="step-title">Channel ID を コピー</div>
+    </div>
+    <div class="step-time">30秒</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">作成 された チャンネル の <strong>「チャネル基本設定」</strong> タブ で <strong>「チャネル ID」</strong> の 数字 を コピー</div>
+    </div>
+    <div class="paste-block">
+      <label>ここ に 貼って 保管 ↓</label>
+      <input type="text" id="paste-line-id" placeholder="例: 2010603725" autocomplete="off">
+      <div class="paste-note">後で Cockpit に 一括 貼り付け ます</div>
+    </div>
+    <div class="complete-row"><button class="complete-btn" data-done="3">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 4 -->
+<div class="step-card" data-step="4">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">4</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 04 / 12 · 🎁 2個目</div>
+      <div class="step-title">Channel Secret を コピー</div>
+    </div>
+    <div class="step-time">30秒</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">同じ 「チャネル基本設定」 タブ の <strong>「チャネル シークレット」</strong> を コピー</div>
+    </div>
+    <div class="paste-block">
+      <label>ここ に 貼って 保管 ↓</label>
+      <input type="password" id="paste-line-secret" placeholder="32 桁 の 英数字" autocomplete="off">
+    </div>
+    <div class="warn"><strong>秘密 鍵 です</strong>。 誰 か に 見せ ない で ください。 万一 漏れた ら 「再発行」 で 新しい 値 に 変更 出来 ます。</div>
+    <div class="complete-row"><button class="complete-btn" data-done="4">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 5 -->
+<div class="step-card" data-step="5">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">5</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 05 / 12 · 🎁 3個目</div>
+      <div class="step-title">Channel Access Token を 発行 して コピー</div>
+    </div>
+    <div class="step-time">1分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">「Messaging API 設定」 タブ → 一番下 の <strong>「チャネル アクセス トークン (長期)」</strong> → 「発行」 → コピー</div>
+    </div>
+    <div class="paste-block">
+      <label>ここ に 貼って 保管 ↓</label>
+      <input type="password" id="paste-line-token" placeholder="長い 文字列" autocomplete="off">
+    </div>
+    <div class="expect">同じ 「Messaging API 設定」 タブ で 以下 も 設定:<br>・「Webhook の 利用」 → <strong>オン</strong><br>・「応答 メッセージ」 → <strong>オフ</strong> (Webhook が 返信 する ため)<br>・「あいさつ メッセージ」 → お好み (オフ 推奨)</div>
+    <div class="complete-row"><button class="complete-btn" data-done="5">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 6 -->
+<div class="step-card" data-step="6">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">6</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 06 / 12</div>
+      <div class="step-title">Webhook URL を 貼る (GAS Web App URL)</div>
+    </div>
+    <div class="step-time">1分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">同じ 画面 の <strong>「Webhook 設定」</strong> → 「Webhook URL」 に 下 の URL を 貼る → 「検証」 で 200 OK 確認</div>
+    </div>
+    <div class="copy-block">
+      <div class="url-txt" id="gas-url">Cockpit で GAS URL を 発行 後 表示 されます</div>
+      <button class="copy-btn" data-copy-el="gas-url">コピー</button>
+    </div>
+    <div class="warn">
+      GAS URL は <strong>Cockpit の ⚙ 設定 の 初回 セットアップ</strong> で 発行 されます (Apps Script で Web App デプロイ → 出た URL)。 未 発行 なら 先 に <a href="../v-d/" style="color:#06C755;font-weight:900;text-decoration:underline">Cockpit を 開く</a> → ⚙ 設定 → GAS URL 入力 → 「初期化」 を 済ませて ください。
+    </div>
+    <div class="complete-row"><button class="complete-btn" data-done="6">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- ============ PART 2: Zoom S2S OAuth ============ -->
+<div class="part-divider zoom">
+  <div class="lbl">PART 2 / 4</div>
+  <div class="ttl">Zoom S2S OAuth app を 作る</div>
+  <div class="sub">→ Zoom 会議 の 自動 発行 と Cloud 録画 に 必要</div>
+</div>
+
+<!-- STEP 7 -->
+<div class="step-card" data-step="7">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">7</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 07 / 12</div>
+      <div class="step-title">Zoom Marketplace で S2S OAuth app 作成</div>
+    </div>
+    <div class="step-time">2分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action zoom">
+      <div class="verb">DO</div>
+      <div class="what">下 の URL を Chrome で 開く → 右上 「Sign In」 → <strong>Develop → Build App</strong> → <strong>Server-to-Server OAuth</strong> を 選択 → 「Create」</div>
+    </div>
+    <div class="copy-block">
+      <div class="url-txt">https://marketplace.zoom.us/develop/create</div>
+      <button class="copy-btn" data-copy="https://marketplace.zoom.us/develop/create">コピー</button>
+      <a class="open-btn" href="https://marketplace.zoom.us/develop/create" target="_blank">↗ 開く</a>
+    </div>
+    <div class="expect">App 名: <strong>Skel Concierge</strong> を 入力 → Basic Information の 会社 名 と 開発者 名 と 開発者 email を 入力 (自分 の 情報 で OK)</div>
+    <div class="complete-row"><button class="complete-btn" data-done="7">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 8 -->
+<div class="step-card" data-step="8">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">8</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 08 / 12 · 🎁 4-5-6個目</div>
+      <div class="step-title">Account ID / Client ID / Client Secret を コピー</div>
+    </div>
+    <div class="step-time">1分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action zoom">
+      <div class="verb">DO</div>
+      <div class="what">「App Credentials」 タブ で <strong>3 つ の 値</strong> を 順番 に コピー</div>
+    </div>
+    <div class="paste-block">
+      <label>Account ID</label>
+      <input type="text" id="paste-zoom-account" placeholder="例: xXXXxXXxXXXxXXXX" autocomplete="off">
+    </div>
+    <div class="paste-block">
+      <label>Client ID</label>
+      <input type="text" id="paste-zoom-client" placeholder="例: xXXXxxxxxxxxxxxxxxxxx" autocomplete="off">
+    </div>
+    <div class="paste-block">
+      <label>Client Secret</label>
+      <input type="password" id="paste-zoom-secret" placeholder="秘密 鍵" autocomplete="off">
+    </div>
+    <div class="complete-row"><button class="complete-btn" data-done="8">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 9 -->
+<div class="step-card" data-step="9">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">9</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 09 / 12</div>
+      <div class="step-title">Scopes を 追加 → App を Activate</div>
+    </div>
+    <div class="step-time">2分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action zoom">
+      <div class="verb">DO</div>
+      <div class="what">「Scopes」 タブ で 「+ Add Scopes」 → 下 の scope を 全 て 追加 → 最後 に 「Activate your app」</div>
+    </div>
+    <div class="expect">
+      必要 な Scopes (必ず 全部 チェック):<br>
+      ・<strong>meeting:write:admin</strong> (会議 作成)<br>
+      ・<strong>meeting:read:admin</strong> (会議 情報 取得)<br>
+      ・<strong>recording:read:admin</strong> (Cloud 録画 取得)<br>
+      ・<strong>user:read:admin</strong> (host user 情報)
+    </div>
+    <div class="warn"><strong>Activate</strong> を 押さ ない と token 発行 出来 ません 罠。 忘れず 押す。</div>
+    <div class="complete-row"><button class="complete-btn" data-done="9">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- ============ PART 3: LIFF ============ -->
+<div class="part-divider">
+  <div class="lbl">PART 3 / 4</div>
+  <div class="ttl">LIFF app を 発行</div>
+  <div class="sub">→ 相手 が 面談 候補 を 選ぶ 画面</div>
+</div>
+
+<!-- STEP 10 -->
+<div class="step-card" data-step="10">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">10</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 10 / 12</div>
+      <div class="step-title">LINE Developers で LIFF app を 追加</div>
+    </div>
+    <div class="step-time">2分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">STEP 1-6 で 作った <strong>顧客管理 チャンネル</strong> の 「LIFF」 タブ → 「追加」</div>
+    </div>
+    <div class="expect">
+      入力 項目:<br>
+      ・LIFF アプリ名: <strong>Skel Concierge 予約</strong><br>
+      ・サイズ: <strong>Full</strong><br>
+      ・エンドポイント URL: <strong>下 の URL を コピー して 貼る</strong><br>
+      ・Scope: <strong>profile</strong> と <strong>openid</strong> に チェック<br>
+      ・ボット リンク 機能: <strong>On (Aggressive)</strong> 推奨
+    </div>
+    <div class="copy-block">
+      <div class="url-txt">https://t35ty6-rgb.github.io/skeleton-demos/skel-concierge/liff/</div>
+      <button class="copy-btn" data-copy="https://t35ty6-rgb.github.io/skeleton-demos/skel-concierge/liff/">コピー</button>
+    </div>
+    <div class="complete-row"><button class="complete-btn" data-done="10">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- STEP 11 -->
+<div class="step-card" data-step="11">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">11</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 11 / 12 · 🎁 7個目</div>
+      <div class="step-title">LIFF ID を コピー</div>
+    </div>
+    <div class="step-time">30秒</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action">
+      <div class="verb">DO</div>
+      <div class="what">発行 された <strong>LIFF ID</strong> (例: 2010603725-XXXXXXXX) を コピー</div>
+    </div>
+    <div class="paste-block">
+      <label>ここ に 貼って 保管 ↓</label>
+      <input type="text" id="paste-liff-id" placeholder="例: 2010603725-abcdEFGH" autocomplete="off">
+    </div>
+    <div class="complete-row"><button class="complete-btn" data-done="11">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<!-- ============ PART 4: PASTE ============ -->
+<div class="part-divider paste">
+  <div class="lbl">PART 4 / 4</div>
+  <div class="ttl">Cockpit の 設定 に 7 つ 貼る</div>
+  <div class="sub">→ 「保存」 で 実運用 開始</div>
+</div>
+
+<!-- STEP 12 -->
+<div class="step-card" data-step="12">
+  <div class="step-head">
+    <div class="step-num"><span class="step-num-text">12</span></div>
+    <div class="step-head-text">
+      <div class="step-eyebrow">STEP 12 / 12</div>
+      <div class="step-title">Cockpit の ⚙ 設定 に 貼り付け → 保存</div>
+    </div>
+    <div class="step-time">3分</div>
+  </div>
+  <div class="step-body">
+    <div class="big-action" style="background:linear-gradient(135deg,#F4A631,#B57209)">
+      <div class="verb" style="color:#FEF3C7">DO</div>
+      <div class="what">Cockpit の <strong>⚙ 設定</strong> を 開く → 上 で コピー した 7 つ を 該当 field に 貼り付け → <strong>保存</strong></div>
+    </div>
+    <div class="copy-block">
+      <div class="url-txt">https://t35ty6-rgb.github.io/skeleton-demos/skel-concierge/v-d/</div>
+      <button class="copy-btn" data-copy="https://t35ty6-rgb.github.io/skeleton-demos/skel-concierge/v-d/">コピー</button>
+      <a class="open-btn" href="../v-d/" target="_blank">↗ Cockpit を 開く</a>
+    </div>
+    <div class="expect">
+      <strong>貼り付け 対応 表</strong>:<br>
+      LINE Channel ID → <code>LINE_CHANNEL_ID</code><br>
+      LINE Channel Access Token → <code>LINE_CHANNEL_ACCESS_TOKEN</code><br>
+      LINE Channel Secret → <code>LINE_CHANNEL_SECRET</code><br>
+      Zoom Account ID → <code>ZOOM_ACCOUNT_ID</code><br>
+      Zoom Client ID → <code>ZOOM_CLIENT_ID</code><br>
+      Zoom Client Secret → <code>ZOOM_CLIENT_SECRET</code><br>
+      LIFF ID → <code>LIFF_ID</code> + <code>LIFF_URL_BASE</code> (LIFF_URL_BASE は <code>https://liff.line.me/</code> の 後 に LIFF ID を つなげる)
+    </div>
+    <div class="complete-row"><button class="complete-btn" data-done="12">完了 → 次へ</button></div>
+  </div>
+</div>
+
+<div class="final">
+  <h2>🎉 全部 揃った</h2>
+  <p>これで LINE で 面談 予約 が 完全 自動 で 回り 始めます。<br>Cockpit で 「Zoom を 予約 する」 tile → 相手 に Flex カード で 候補 送信 → 選択 → Zoom URL 自動 発行 → LINE 通知。</p>
+  <a class="cta" href="../v-d/">↗ Cockpit に 戻って 動作 確認</a>
+</div>
+
+</div>
+
+<script>
+const TOTAL_STEPS = 12;
+const STATE_KEY = 'skel-setup-state';
+
+function loadState(){ try { return JSON.parse(localStorage.getItem(STATE_KEY) || '{}'); } catch(_){ return {}; } }
+function saveState(s){ localStorage.setItem(STATE_KEY, JSON.stringify(s)); }
+let state = loadState();
+
+function updateProgress(){
+  const done = Object.keys(state.done || {}).length;
+  document.getElementById('pnum').textContent = done + ' / ' + TOTAL_STEPS;
+  document.getElementById('pfill').style.width = (done / TOTAL_STEPS * 100) + '%';
+}
+
+// Mark card done
+function markDone(step){
+  state.done = state.done || {};
+  state.done[step] = true;
+  saveState(state);
+  const card = document.querySelector('[data-step="' + step + '"]');
+  if (card) card.classList.add('done');
+  const btn = document.querySelector('[data-done="' + step + '"]');
+  if (btn) { btn.classList.add('done'); btn.textContent = '完了 → 次へ'; }
+  updateProgress();
+  // Scroll to next step
+  const next = document.querySelector('[data-step="' + (step + 1) + '"]');
+  if (next) setTimeout(() => next.scrollIntoView({behavior:'smooth', block:'start'}), 200);
+}
+
+// Bind complete buttons
+document.querySelectorAll('[data-done]').forEach(btn => {
+  btn.addEventListener('click', () => markDone(parseInt(btn.dataset.done, 10)));
+});
+
+// Restore prior state
+Object.keys(state.done || {}).forEach(step => {
+  const card = document.querySelector('[data-step="' + step + '"]');
+  if (card) card.classList.add('done');
+  const btn = document.querySelector('[data-done="' + step + '"]');
+  if (btn) btn.classList.add('done');
+});
+
+// Restore paste values
+['paste-line-id','paste-line-secret','paste-line-token','paste-zoom-account','paste-zoom-client','paste-zoom-secret','paste-liff-id'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el && state[id]) el.value = state[id];
+  if (el) el.addEventListener('input', () => { state[id] = el.value; saveState(state); });
+});
+
+updateProgress();
+
+// Copy buttons
+document.querySelectorAll('[data-copy]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const text = btn.dataset.copy;
+    try {
+      await navigator.clipboard.writeText(text);
+      const orig = btn.textContent;
+      btn.classList.add('copied'); btn.textContent = 'コピー 済 ✓';
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1400);
+    } catch(_) { alert('コピー 失敗。 手動 で 選択 して ください。'); }
+  });
+});
+document.querySelectorAll('[data-copy-el]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const el = document.getElementById(btn.dataset.copyEl);
+    if (!el) return;
+    const text = el.textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      const orig = btn.textContent;
+      btn.classList.add('copied'); btn.textContent = 'コピー 済 ✓';
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1400);
+    } catch(_) { alert('コピー 失敗。 手動 で 選択 して ください。'); }
+  });
+});
+
+// GAS URL from URL param (?gas=...) or localStorage
+const params = new URLSearchParams(location.search);
+const gasFromUrl = params.get('gas');
+const gasStored = localStorage.getItem('skel-api-url');
+const gasUrl = gasFromUrl || gasStored;
+if (gasUrl) {
+  const el = document.getElementById('gas-url');
+  if (el) el.textContent = gasUrl;
+  if (gasFromUrl) localStorage.setItem('skel-api-url', gasFromUrl);
+}
+
+// Reset button
+document.getElementById('reset-btn').addEventListener('click', () => {
+  if (!confirm('進捗 と 入力 値 を リセット しますか')) return;
+  localStorage.removeItem(STATE_KEY);
+  location.reload();
+});
+</script>
+</body>
+</html>

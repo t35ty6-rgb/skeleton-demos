@@ -4176,6 +4176,14 @@ function renderSettingsForm(fields, check){
   const grouped = {};
   fields.forEach(f => { (grouped[f.category] = grouped[f.category] || []).push(f); });
   const order = ['LINE','Zoom','LIFF','General'];
+  const hasMissing = (check.missing || []).length > 0;
+  const guideCta = hasMissing ? `
+    <a class="setup-msg info" href="../setup/?gas=${encodeURIComponent(getApiUrl())}" target="_blank" style="text-decoration:none;cursor:pointer;display:flex;gap:10px;align-items:center;transition:transform 140ms;padding:16px 18px">
+      <span style="font-family:var(--num);font-weight:800;font-size:15px;color:var(--line-green-2)">🎯 初回 は こちら · 12 ステップ 接続 ガイド →</span>
+      <span style="flex:1"></span>
+      <span style="font-family:var(--num);font-size:11px;font-weight:800;color:var(--line-green-2);letter-spacing:0.06em">15 分 / ¥0 / 画像 付き</span>
+    </a>
+  ` : '';
   const html = order.filter(c => grouped[c]).map(cat => `
     <div class="setup-section">
       <h3>${cat}${grouped[cat].some(f => f.required && !f.set) ? ' <span class="req">未設定 あり</span>' : ''}</h3>
@@ -4193,7 +4201,7 @@ function renderSettingsForm(fields, check){
   const status = check && check.ready
     ? `<div class="setup-msg info">全 必須項目 設定済 · <a href="${check.sheetUrl}" target="_blank">Google Sheets を 開く</a> · Cockpit で 客一覧 が 表示 されます</div>`
     : `<div class="setup-msg warn">未設定 の 必須項目: ${(check.missing || []).join(', ') || '—'}<br>これらを 入れて 「保存」 を 押す と 実運用 に 切り替わり ます</div>`;
-  $('#setup-body').innerHTML = status + html;
+  $('#setup-body').innerHTML = guideCta + status + html;
 }
 
 function escapeAttr(s){ return String(s || '').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
