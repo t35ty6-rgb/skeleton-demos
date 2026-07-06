@@ -799,8 +799,15 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
 <div class="modal" id="success-modal">
   <div class="sheet">
     <div class="icon">✓</div>
-    <h3>設定を LINE に送信しました</h3>
-    <p>約1分でリッチメニューが更新されます。<br>LINE アプリを完全終了 → 再起動して確認してください。</p>
+    <h3>設定書 を保存しました</h3>
+    <p style="text-align:left;font-size:13px">今回の全設定 (タブ配置・ボタン・画像・景品・ルーレット など) を <b>1つのファイル</b> に書き出しました。 ダウンロードフォルダを確認してください。</p>
+    <div style="background:var(--surface-2);border-radius:8px;padding:14px 16px;margin-bottom:18px;text-align:left;font-size:12.5px;color:var(--ink-2);line-height:1.75">
+      <b>次のステップ:</b><br>
+      1. ダウンロードされた <code style="font-family:var(--font-mono);font-size:11.5px;background:var(--surface);padding:1px 5px;border-radius:3px">fukutetsu-richmenu-config-YYYYMMDD.json</code> を <b>Jobs (スケルトン)</b> に送信<br>
+      2. Jobs が LINE 側に 反映 (通常 1営業日以内)<br>
+      3. LINE アプリを 完全終了 → 再起動 で 新メニュー確認
+    </div>
+    <p style="font-size:11.5px;color:var(--dim);margin-bottom:16px">※ 今後: 「反映」ボタンで直接 LINE 反映できる 自動配線 (Cloud Function) を Phase 2 で 追加予定</p>
     <button class="btn primary" onclick="document.getElementById('success-modal').classList.remove('on')">閉じる</button>
   </div>
 </div>
@@ -2004,14 +2011,72 @@ function showToast(msg){
 });
 
 // ═══════════════════ APPLY ═══════════════════
+// Build deployable payload: config + composed PNGs per tab
+async function buildDeployPayload(){
+  const keys = activeTabKeys();
+  const tabs = [];
+  for (const k of keys){
+    const t = CFG.richmenu[k];
+    // Save current CUR_TAB, temporarily switch to compose each tab
+    const oldCur = CUR_TAB;
+    CUR_TAB = k;
+    const composed = await composeImage();
+    CUR_TAB = oldCur;
+    const gridKey = t.grid || "2x2";
+    tabs.push({
+      key: k,
+      label: t.label,
+      grid: gridKey,
+      hero: t.hero,
+      cards: t.cards,
+      composedImage: composed || null,
+    });
+  }
+  return {
+    version: 2,
+    generatedAt: new Date().toISOString(),
+    design: CFG.design,
+    tabs,
+    prizes: CFG.prizes,
+    roulette: CFG.roulette,
+    shops: CFG.shops,
+    spots: CFG.spots,
+    settings: CFG.settings,
+  };
+}
+
 document.getElementById("apply-btn").addEventListener("click", async () => {
   const btn = document.getElementById("apply-btn");
   const orig = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = `<span class="spinner"></span>送信中…`;
-  await new Promise(r => setTimeout(r, 1400));
-  btn.disabled = false;
-  btn.innerHTML = orig;
+  btn.innerHTML = `<span class="spinner"></span>設定書 を生成中…`;
+  try {
+    const payload = await buildDeployPayload();
+    // Download as JSON
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const stamp = new Date().toISOString().replace(/[-:]/g,"").slice(0,15);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fukutetsu-richmenu-config-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    // Also POST to a deploy endpoint if present (backend for Phase 2)
+    if (window.FUKUTETSU_DEPLOY_ENDPOINT){
+      await fetch(window.FUKUTETSU_DEPLOY_ENDPOINT, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch(e => console.warn("deploy endpoint failed", e));
+    }
+  } catch(e){
+    alert("設定書の生成に失敗しました: " + e.message);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
   document.getElementById("success-modal").classList.add("on");
 });
 document.getElementById("preview-btn").addEventListener("click", () => {
