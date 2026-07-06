@@ -799,15 +799,15 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
 <div class="modal" id="success-modal">
   <div class="sheet">
     <div class="icon">✓</div>
-    <h3>設定書 を保存しました</h3>
-    <p style="text-align:left;font-size:13px">今回の全設定 (タブ配置・ボタン・画像・景品・ルーレット など) を <b>1つのファイル</b> に書き出しました。 ダウンロードフォルダを確認してください。</p>
+    <h3>LINE に反映を送信しました</h3>
+    <p style="text-align:left;font-size:13.5px;line-height:1.7">設定書がダウンロードされました。 デスクトップの 監視プロセス が これを検出して <b>約30秒以内 に</b> 自動的に LINE へ反映します。</p>
     <div style="background:var(--surface-2);border-radius:8px;padding:14px 16px;margin-bottom:18px;text-align:left;font-size:12.5px;color:var(--ink-2);line-height:1.75">
-      <b>次のステップ:</b><br>
-      1. ダウンロードされた <code style="font-family:var(--font-mono);font-size:11.5px;background:var(--surface);padding:1px 5px;border-radius:3px">fukutetsu-richmenu-config-YYYYMMDD.json</code> を <b>Jobs (スケルトン)</b> に送信<br>
-      2. Jobs が LINE 側に 反映 (通常 1営業日以内)<br>
-      3. LINE アプリを 完全終了 → 再起動 で 新メニュー確認
+      <b>反映確認:</b><br>
+      1. 30秒ほど待つ<br>
+      2. LINE アプリ を <b>完全終了 (スワイプ)</b> → 再起動<br>
+      3. リッチメニュー を 開き 新しい状態 か 確認
     </div>
-    <p style="font-size:11.5px;color:var(--dim);margin-bottom:16px">※ 今後: 「反映」ボタンで直接 LINE 反映できる 自動配線 (Cloud Function) を Phase 2 で 追加予定</p>
+    <p style="font-size:11.5px;color:var(--dim);margin-bottom:16px">※ ダウンロードフォルダに残った設定書 は 反映後 自動でアーカイブされます</p>
     <button class="btn primary" onclick="document.getElementById('success-modal').classList.remove('on')">閉じる</button>
   </div>
 </div>
@@ -1381,25 +1381,31 @@ function renderComposer(){
         const src = (comp.images || [])[i];
         const label = comp.layout === "lr" ? (i === 0 ? "左半分" : "右半分") : comp.layout === "tb" ? (i === 0 ? "上半分" : "下半分") : "画像";
         return `
-          <label class="img-slot-mini ${src ? 'has-img' : ''}" style="background-image:${src ? `url('${src}')` : 'none'}">
+          <div class="img-slot-mini ${src ? 'has-img' : ''}" data-slot-container="${i}" style="background-image:${src ? `url('${src}')` : 'none'}">
             <div class="slot-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></div>
             <div class="slot-label">${label}</div>
             <div class="slot-hint">クリックまたはドロップ</div>
             ${src ? '<div class="slot-fit">FIT COVER</div>' : ''}
             <div class="slot-actions">
-              <button data-slot-clear="${i}" title="削除"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+              <button type="button" data-slot-clear="${i}" title="削除"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
             </div>
             <input type="file" accept="image/*" data-slot="${i}">
-          </label>
+          </div>
         `;
       }).join("")}
     </div>
   `;
   document.getElementById("compose-preview").style.display = "block";
-  // wire uploads
-  wrap.querySelectorAll("[data-slot]").forEach(inp => {
+  // wire slot containers (click = open file picker unless clicking delete)
+  wrap.querySelectorAll("[data-slot-container]").forEach(slotEl => {
+    const idx = +slotEl.dataset.slotContainer;
+    const inp = slotEl.querySelector("input[type=file]");
+    // Click anywhere on the slot except the delete button → open file picker
+    slotEl.addEventListener("click", e => {
+      if (e.target.closest("[data-slot-clear]")) return; // handled below
+      inp.click();
+    });
     inp.addEventListener("change", e => {
-      const idx = +e.target.dataset.slot;
       const f = e.target.files[0];
       if (!f) return;
       const reader = new FileReader();
@@ -1412,11 +1418,9 @@ function renderComposer(){
       e.target.value = "";
     });
     // Drag & drop onto slot
-    const slotEl = inp.closest(".img-slot-mini");
     ["dragenter","dragover"].forEach(ev => slotEl.addEventListener(ev, e => { e.preventDefault(); slotEl.classList.add("hover"); }));
     ["dragleave","drop"].forEach(ev => slotEl.addEventListener(ev, e => { e.preventDefault(); slotEl.classList.remove("hover"); }));
     slotEl.addEventListener("drop", e => {
-      const idx = +inp.dataset.slot;
       const files = [...e.dataTransfer.files].filter(f => f.type.startsWith("image/"));
       if (!files[0]) return;
       const reader = new FileReader();
