@@ -234,7 +234,12 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
 .studio-help .ic{width:32px;height:32px;background:var(--primary);color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;font-weight:900}
 .studio-help b{color:var(--primary-hi);font-weight:900}
 
-.studio-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:22px}
+.studio-grid{display:grid;gap:14px;padding:22px}
+.studio-grid.g-1{grid-template-columns:1fr;grid-template-rows:1fr}
+.studio-grid.g-2lr{grid-template-columns:1fr 1fr;grid-template-rows:1fr}
+.studio-grid.g-2tb{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+.studio-grid.g-2x2{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.studio-grid.g-3x2{grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr}
 .btn-tile{position:relative;aspect-ratio:1.3;border-radius:var(--radius);cursor:pointer;overflow:hidden;transition:transform .15s,box-shadow .15s,outline-color .15s;outline:2px solid transparent;outline-offset:2px;background-size:cover;background-position:center;background-color:var(--surface-2);border:1.5px solid var(--rule);display:flex;flex-direction:column;justify-content:space-between;padding:16px 18px}
 .btn-tile:hover{transform:translateY(-2px);box-shadow:var(--shadow);outline-color:var(--rule-2)}
 .btn-tile.selected{outline-color:var(--primary);box-shadow:0 0 0 4px var(--primary-ring),var(--shadow)}
@@ -548,13 +553,53 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
                     </div>
                   </div>
                 </div>
-                <div class="form-row" style="border-bottom:none">
+                <div class="form-row">
                   <div class="lbl">タブバー位置</div>
                   <div class="val">
                     <div class="seg" id="tabpos-seg">
                       <button data-pos="top"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="6" rx="1"/><rect x="3" y="11" width="18" height="10" rx="1"/></svg>上部</button>
                       <button data-pos="bottom" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="10" rx="1"/><rect x="3" y="15" width="18" height="6" rx="1"/></svg>下部</button>
                     </div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="lbl">タブの数<span class="hint">1〜4個</span></div>
+                  <div class="val">
+                    <div class="seg" id="tabcount-seg">
+                      <button data-count="1">1個</button>
+                      <button data-count="2">2個</button>
+                      <button data-count="3" class="on">3個</button>
+                      <button data-count="4">4個</button>
+                    </div>
+                    <div class="helper">タブが1個の場合は タブバー が非表示になります</div>
+                  </div>
+                </div>
+                <div class="form-row" style="border-bottom:none">
+                  <div class="lbl">このタブのボタン配置<span class="hint" id="grid-cur-tab">スポット</span></div>
+                  <div class="val">
+                    <div class="layout-picker" id="grid-picker" style="grid-template-columns:repeat(5,1fr);margin-bottom:0">
+                      <button data-grid="1">
+                        <div class="layout-icon full"></div>
+                        1個
+                      </button>
+                      <button data-grid="2-lr">
+                        <div class="layout-icon lr"><div></div><div></div></div>
+                        2個 (左右)
+                      </button>
+                      <button data-grid="2-tb">
+                        <div class="layout-icon tb"><div></div><div></div></div>
+                        2個 (上下)
+                      </button>
+                      <button data-grid="2x2" class="on">
+                        <div class="layout-icon quad"><div></div><div></div><div></div><div></div></div>
+                        4個 (2×2)
+                      </button>
+                      <button data-grid="3x2">
+                        <div class="layout-icon" style="display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;background:var(--rule-2)"><div style="background:var(--surface-2)"></div><div style="background:var(--surface-2)"></div><div style="background:var(--surface-2)"></div><div style="background:var(--surface-2)"></div><div style="background:var(--surface-2)"></div><div style="background:var(--surface-2)"></div></div>
+                        6個 (3×2)
+                      </button>
+                    </div>
+                    <div class="helper">タブごとに 配置を 変えられます。 変更するとボタン数が自動調整されます</div>
                   </div>
                 </div>
               </div>
@@ -794,10 +839,19 @@ const THEMES = {
   forest: { bg:"#064e3b", ink:"#ecfdf5", sub:"rgba(236,253,245,.7)", accent:"#fbbf24", accentInk:"#064e3b", tabBg:"#065f46", tabInk:"#ecfdf5", tabDim:"rgba(236,253,245,.45)", cardBg:"#065f46", cardInk:"#ecfdf5", hiBg:"#fbbf24", hiInk:"#064e3b" },
 };
 
+const GRID_LAYOUTS = {
+  "1":    { cols: 1, rows: 1, slots: 1 },
+  "2-lr": { cols: 2, rows: 1, slots: 2 },
+  "2-tb": { cols: 1, rows: 2, slots: 2 },
+  "2x2":  { cols: 2, rows: 2, slots: 4 },
+  "3x2":  { cols: 3, rows: 2, slots: 6 },
+};
+
 const DEFAULT_CFG = {
   design: {
     theme: "snow",
     tabPosition: "bottom", // top | bottom
+    tabCount: 3, // 1-4
     custom: { bg:"#ffffff", ink:"#0f172a", accent:"#06c755" },
   },
   richmenu: {
@@ -829,6 +883,17 @@ const DEFAULT_CFG = {
         { title: "よくある質問", url: `${LIFF_URL}?help=faq`, hi: false },
         { title: "お問い合わせ", url: "https://line.me/R/oaMessage/@fukutetsu/?", hi: false },
         { title: "沿線MAP", url: "https://fukutetsu.jp/", hi: false },
+      ],
+    },
+    extra: {
+      label: "その他",
+      grid: "2x2",
+      hero: { title: "お知らせ", sub: "最新情報 と キャンペーン" },
+      cards: [
+        { title: "お知らせ一覧", url: `${LIFF_URL}?news=1`, hi: true },
+        { title: "運行情報", url: "https://fukutetsu.jp/status", hi: false },
+        { title: "アクセス", url: "https://fukutetsu.jp/access", hi: false },
+        { title: "公式SNS", url: "https://twitter.com/fukutetsu", hi: false },
       ],
     },
   },
@@ -947,18 +1012,78 @@ function switchView(v){
 }
 
 // ═══════════════════ VIEW: RICHMENU ═══════════════════
-function renderRmTabs(){
-  document.querySelectorAll("#tab-row button").forEach(b => b.classList.toggle("on", b.dataset.tab === CUR_TAB));
+const TAB_KEYS = ["spot", "prize", "help", "extra"];
+function activeTabKeys(){
+  return TAB_KEYS.slice(0, CFG.design.tabCount || 3);
 }
-document.querySelectorAll("#tab-row button").forEach(btn => {
+function ensureCurTabValid(){
+  const keys = activeTabKeys();
+  if (!keys.includes(CUR_TAB)) CUR_TAB = keys[0];
+}
+function renderRmTabs(){
+  const keys = activeTabKeys();
+  const row = document.getElementById("tab-row");
+  row.innerHTML = keys.map(k => `<button data-tab="${k}" class="${k === CUR_TAB ? 'on' : ''}">${CFG.richmenu[k].label}</button>`).join("");
+  row.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      CUR_TAB = btn.dataset.tab;
+      SEL_BTN = 0;
+      renderRmTabs();
+      renderRmHero();
+      renderStudio();
+      renderDrawer();
+      updateImgSlot();
+      renderGridPicker();
+      renderPreview();
+    });
+  });
+  // update card head hint
+  const gh = document.getElementById("grid-cur-tab");
+  if (gh) gh.textContent = CFG.richmenu[CUR_TAB].label;
+}
+
+function renderTabCount(){
+  document.querySelectorAll("#tabcount-seg button").forEach(b => b.classList.toggle("on", +b.dataset.count === (CFG.design.tabCount || 3)));
+}
+document.querySelectorAll("#tabcount-seg button").forEach(btn => {
   btn.addEventListener("click", () => {
-    CUR_TAB = btn.dataset.tab;
-    SEL_BTN = 0;
+    CFG.design.tabCount = +btn.dataset.count;
+    ensureCurTabValid();
+    saveCfg();
+    renderTabCount();
     renderRmTabs();
     renderRmHero();
     renderStudio();
     renderDrawer();
     updateImgSlot();
+    renderGridPicker();
+    renderPreview();
+  });
+});
+
+function renderGridPicker(){
+  const grid = CFG.richmenu[CUR_TAB].grid || "2x2";
+  document.querySelectorAll("#grid-picker button").forEach(b => b.classList.toggle("on", b.dataset.grid === grid));
+}
+document.querySelectorAll("#grid-picker button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const newGrid = btn.dataset.grid;
+    const L = GRID_LAYOUTS[newGrid];
+    if (!L) return;
+    const c = CFG.richmenu[CUR_TAB];
+    c.grid = newGrid;
+    // resize cards to slot count
+    while (c.cards.length < L.slots){
+      c.cards.push({ title: `ボタン ${c.cards.length + 1}`, url: LIFF_URL, hi: false });
+    }
+    if (c.cards.length > L.slots){
+      c.cards = c.cards.slice(0, L.slots);
+    }
+    SEL_BTN = Math.min(SEL_BTN, L.slots - 1);
+    saveCfg();
+    renderGridPicker();
+    renderStudio();
+    renderDrawer();
     renderPreview();
   });
 });
@@ -1000,8 +1125,10 @@ let SEL_BTN = 0;
 
 function renderStudio(){
   const c = CFG.richmenu[CUR_TAB];
+  const gridKey = c.grid || "2x2";
   const T = activeTheme();
   const grid = document.getElementById("studio-grid");
+  grid.className = "studio-grid g-" + gridKey.replace(/[^a-z0-9x-]/gi, "");
   grid.innerHTML = c.cards.map((card, i) => {
     const bg = card.bgImage ? `url("${card.bgImage}")` : (card.bg || (card.hi ? T.hiBg : T.cardBg));
     const textColor = card.textColor || (card.hi ? T.hiInk : T.cardInk);
@@ -1359,23 +1486,27 @@ function renderPreview(){
   }
   const T = activeTheme();
   const pos = CFG.design.tabPosition; // "top" | "bottom"
+  const tabCount = CFG.design.tabCount || 3;
+  const gridKey = c.grid || "2x2";
+  const L = GRID_LAYOUTS[gridKey] || GRID_LAYOUTS["2x2"];
   const W = 2500, H = 1686;
   const esc = s => (s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-  // Layout regions depend on tab position
-  const tabH = 220, heroH = 380;
-  const tabY = pos === "top" ? 0 : H - tabH;
-  const heroY = pos === "top" ? tabH : 0;
-  const gridY = pos === "top" ? tabH + heroH : heroH;
+  // Layout regions depend on tab position (hide tab strip if tabCount === 1)
+  const tabH = tabCount > 1 ? 220 : 0;
+  const heroH = 380;
+  const tabY = tabH ? (pos === "top" ? 0 : H - tabH) : -1;
+  const heroY = tabH && pos === "top" ? tabH : 0;
+  const gridY = (tabH && pos === "top" ? tabH : 0) + heroH;
   const gridH = H - tabH - heroH;
-  const cardMargin = 30, gap = 30;
-  const cardW = (W - cardMargin * 2 - gap) / 2;
-  const cardH = (gridH - cardMargin * 2 - gap) / 2;
-  const cardXs = [cardMargin, cardMargin + cardW + gap];
-  const cardYs = [gridY + cardMargin, gridY + cardMargin + cardH + gap];
+  const cardMargin = 30, gap = 24;
+  const cols = L.cols, rows = L.rows;
+  const cardW = (W - cardMargin * 2 - gap * (cols - 1)) / cols;
+  const cardH = (gridH - cardMargin * 2 - gap * (rows - 1)) / rows;
 
-  const tabs = [{id:"spot",lbl:"スポット"},{id:"prize",lbl:"景品"},{id:"help",lbl:"使い方"}];
-  const tabW = W / 3;
+  const tabsAll = [{id:"spot",lbl:"スポット"},{id:"prize",lbl:"景品"},{id:"help",lbl:"使い方"},{id:"extra",lbl:"その他"}];
+  const tabs = tabsAll.slice(0, tabCount).map(t => ({...t, lbl: CFG.richmenu[t.id]?.label || t.lbl}));
+  const tabW = W / tabs.length;
 
   let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">`;
   // canvas
@@ -1390,9 +1521,12 @@ function renderPreview(){
   svg += `<circle cx="${W - 220}" cy="${heroY + heroH/2}" r="100" fill="none" stroke="${heroInk}" stroke-width="3.5"/>`;
   svg += `<text x="${W - 220}" y="${heroY + heroH/2 + 22}" font-family="Noto Serif JP,serif" font-size="64" font-weight="900" fill="${heroInk}" text-anchor="middle">${c.label.slice(0,1)}</text>`;
 
-  // cards (2x2) — per-button overrides
+  // cards (dynamic grid) — per-button overrides
   c.cards.forEach((card, i) => {
-    const x = cardXs[i % 2], y = cardYs[Math.floor(i / 2)];
+    if (i >= L.slots) return;
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = cardMargin + col * (cardW + gap);
+    const y = gridY + cardMargin + row * (cardH + gap);
     const bg = card.bg || (card.hi ? T.hiBg : T.cardBg);
     const txt = card.textColor || (card.hi ? T.hiInk : T.cardInk);
     const eyebrowColor = card.hi ? hexAlpha(txt, .8) : T.accent;
@@ -1414,7 +1548,8 @@ function renderPreview(){
     svg += `<path d="M ${x + cardW - 90} ${y + cardH/2 - 20} L ${x + cardW - 60} ${y + cardH/2} L ${x + cardW - 90} ${y + cardH/2 + 20}" stroke="${labelColor}" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="${card.hi ? 1 : .4}"/>`;
   });
 
-  // tab strip
+  // tab strip (only render when tabCount > 1)
+  if (tabH){
   svg += `<rect y="${tabY}" width="${W}" height="${tabH}" fill="${T.tabBg}"/>`;
   tabs.forEach((t, i) => {
     const x = i * tabW;
@@ -1426,11 +1561,12 @@ function renderPreview(){
     } else {
       svg += `<text x="${x + tabW/2}" y="${tabY + tabH/2 + 12}" font-family="Noto Sans JP,sans-serif" font-size="36" font-weight="700" fill="${T.tabDim}" text-anchor="middle">${t.lbl}</text>`;
     }
-    if (i < 2){
+    if (i < tabs.length - 1){
       const sepColor = hexAlpha(T.tabInk, .1);
       svg += `<line x1="${x + tabW}" y1="${tabY + 30}" x2="${x + tabW}" y2="${tabY + tabH - 30}" stroke="${sepColor}" stroke-width="2"/>`;
     }
   });
+  }
   svg += `</svg>`;
   document.getElementById("rm-img").src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
 }
@@ -1862,11 +1998,19 @@ document.getElementById("preview-btn").addEventListener("click", () => {
 if (!CFG.design) CFG.design = {...DEFAULT_CFG.design};
 if (!CFG.design.theme) CFG.design.theme = "snow";
 if (!CFG.design.tabPosition) CFG.design.tabPosition = "bottom";
+if (!CFG.design.tabCount) CFG.design.tabCount = 3;
 if (!CFG.design.custom) CFG.design.custom = {...DEFAULT_CFG.design.custom};
+// backfill missing extra tab
+if (!CFG.richmenu.extra) CFG.richmenu.extra = JSON.parse(JSON.stringify(DEFAULT_CFG.richmenu.extra));
+// backfill grid per tab
+Object.keys(CFG.richmenu).forEach(k => {
+  if (!CFG.richmenu[k].grid) CFG.richmenu[k].grid = "2x2";
+});
 // backfill spots if state is old
 if (!CFG.spots || !CFG.spots.length) CFG.spots = JSON.parse(JSON.stringify(DEFAULT_CFG.spots));
 
 initBulkDrop();
+ensureCurTabValid();
 
 renderRmTabs();
 renderRmHero();
@@ -1875,6 +2019,8 @@ renderDrawer();
 updateImgSlot();
 renderThemePicker();
 renderTabPos();
+renderTabCount();
+renderGridPicker();
 renderPreview();
 updateNavCounts();
 saveCfg(); // stamp saved time
