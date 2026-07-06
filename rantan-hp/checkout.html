@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ご注文手続き｜らんたん お取り寄せ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600;700;800;900&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<style>
+  .checkout-layout {
+    max-width: 1200px; margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+    gap: clamp(1.5rem, 3vw, 3rem);
+    align-items: start;
+  }
+  @media (max-width: 900px) { .checkout-layout { grid-template-columns: 1fr; } }
+
+  .step {
+    background: var(--surface);
+    padding: clamp(1.4rem, 2.6vw, 2rem);
+    margin-bottom: 1.5rem;
+  }
+  .step h3 {
+    margin: 0 0 1.4rem;
+    display: flex; align-items: center; gap: 0.8rem;
+  }
+  .step h3 .num {
+    font-family: var(--font-latin);
+    color: var(--lantern);
+    font-size: 0.86rem;
+    letter-spacing: 0.14em;
+    font-weight: 700;
+  }
+  .field { display: grid; gap: 0.5rem; margin-bottom: 1rem; }
+  .field > label { font-size: 0.86rem; color: var(--ink); font-weight: 600; letter-spacing: 0.06em; }
+  .field > label small { color: var(--ink-50); font-weight: 400; margin-left: 0.4rem; letter-spacing: 0.02em; }
+  .field input, .field select, .field textarea {
+    padding: 0.9rem 1rem;
+    background: oklch(0.97 0.006 80 / 0.06);
+    color: var(--ink);
+    border: 1px solid oklch(0.82 0.16 68 / 0.35);
+    font-family: var(--font-jp); font-size: 0.98rem;
+    border-radius: 0;
+    transition: border-color .25s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: 0; border-color: var(--lantern);
+  }
+  .field input::placeholder, .field textarea::placeholder { color: var(--ink-50); }
+  .field textarea { resize: vertical; min-height: 5rem; }
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .field-row--3 { grid-template-columns: 1fr 2fr; }
+  @media (max-width: 500px) { .field-row, .field-row--3 { grid-template-columns: 1fr; } }
+
+  .pay-options {
+    display: grid; gap: 0.6rem;
+  }
+  .pay-option {
+    display: flex; gap: 1rem; align-items: flex-start;
+    padding: 1rem 1.2rem;
+    border: 1px solid var(--ink-15);
+    cursor: pointer;
+    transition: border-color .3s, background .3s;
+  }
+  .pay-option:hover { border-color: var(--lantern); }
+  .pay-option:has(input:checked) { border-color: var(--lantern); background: color-mix(in oklch, var(--lantern) 8%, transparent); }
+  .pay-option input { margin-top: 0.35rem; accent-color: oklch(0.82 0.16 68); }
+  .pay-option__body strong { display:block; margin-bottom: 0.2rem; }
+  .pay-option__body small { color: var(--ink-70); font-size: 0.82rem; }
+
+  .checkbox-line { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.4rem; }
+  .checkbox-line input { accent-color: oklch(0.82 0.16 68); }
+
+  .order-summary {
+    background: var(--surface);
+    padding: 1.6rem;
+    position: sticky; top: 5.5rem;
+  }
+  .order-summary h3 { margin: 0 0 1.2rem; }
+  .order-summary__items { border-bottom: 1px solid var(--ink-15); padding-bottom: 1rem; margin-bottom: 1rem; }
+  .order-line { display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 0.9rem; color: var(--ink-70); gap: 1rem; }
+  .order-line strong { color: var(--ink); font-weight: 500; flex: 1; min-width: 0; }
+  .order-line .amt { font-family: var(--font-latin); color: var(--ink); font-weight: 500; white-space: nowrap; }
+  .order-summary__row { display: flex; justify-content: space-between; padding: 0.6rem 0; color: var(--ink-70); font-size: 0.9rem; }
+  .order-summary__row strong { color: var(--ink); }
+  .order-summary__total {
+    border-top: 1px solid var(--ink-15);
+    padding-top: 1rem; margin-top: 0.4rem;
+    display: flex; justify-content: space-between;
+    font-weight: 700; color: var(--ink); font-size: 1.05rem;
+  }
+  .order-summary__total .amount {
+    font-family: var(--font-latin);
+    font-size: 1.5rem; color: var(--lantern);
+  }
+  .checkout-submit {
+    width: 100%;
+    padding: 1.15rem 1.4rem;
+    background: var(--lantern); color: var(--bg-deep);
+    font-weight: 800; font-size: 0.98rem; letter-spacing: 0.14em;
+    margin-top: 1.4rem;
+    transition: background .3s;
+  }
+  .checkout-submit:hover { background: color-mix(in oklch, var(--lantern) 88%, white); }
+  .checkout-back {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    margin-top: 1rem;
+    color: var(--ink-50); font-size: 0.82rem;
+  }
+</style>
+</head>
+<body>
+
+<nav class="site-nav" id="siteNav">
+  <a href="/" class="brand"><span class="brand__mark">らんたん</span><span class="brand__sub">Rantan</span></a>
+  <div class="nav-links">
+    <a href="shop.html">お取り寄せ</a>
+    <a href="rantan.html">らんたん</a>
+    <a href="dried-persimmon.html">つるし柿</a>
+    <a href="pripetto.html">Pripetto</a>
+  </div>
+  <a class="nav-cta" href="tel:0778451710">0778-45-1710</a>
+</nav>
+
+<header class="sub-hero" style="min-height: 30vh; padding: 8rem var(--page-x) 2rem;">
+  <div class="sub-hero__inner">
+    <div class="sub-hero__crumb"><a href="/">Home</a> &nbsp;/&nbsp; <a href="shop.html">Shop</a> &nbsp;/&nbsp; <a href="cart.html">Cart</a> &nbsp;/&nbsp; Checkout</div>
+    <h1 class="sub-hero__title">ご注文手続き<span>Checkout</span></h1>
+  </div>
+</header>
+
+<main>
+<section class="section">
+  <form class="checkout-layout" id="checkoutForm">
+    <div>
+      <!-- Step 1: 配送先 -->
+      <div class="step">
+        <h3><span class="num">01</span>お届け先</h3>
+        <div class="field">
+          <label for="name"><span>お名前 <small>(お届け先)</small></span></label>
+          <input type="text" name="name" id="name" required placeholder="例: 深尾 和宏">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="tel"><span>お電話</span></label>
+            <input type="tel" name="tel" id="tel" required placeholder="0778-45-1710">
+          </div>
+          <div class="field">
+            <label for="email"><span>メールアドレス</span></label>
+            <input type="email" name="email" id="email" required placeholder="rantan1710@gmail.com">
+          </div>
+        </div>
+        <div class="field-row field-row--3">
+          <div class="field">
+            <label for="zip"><span>郵便番号</span></label>
+            <input type="text" name="zip" id="zip" required placeholder="919-0131" pattern="\d{3}-?\d{4}">
+          </div>
+          <div class="field">
+            <label for="pref"><span>都道府県</span></label>
+            <select name="pref" id="pref" required>
+              <option value="">選択してください</option>
+              <option>北海道</option><option>青森県</option><option>岩手県</option><option>宮城県</option><option>秋田県</option><option>山形県</option><option>福島県</option>
+              <option>茨城県</option><option>栃木県</option><option>群馬県</option><option>埼玉県</option><option>千葉県</option><option>東京都</option><option>神奈川県</option>
+              <option>新潟県</option><option>富山県</option><option>石川県</option><option selected>福井県</option><option>山梨県</option><option>長野県</option>
+              <option>岐阜県</option><option>静岡県</option><option>愛知県</option><option>三重県</option>
+              <option>滋賀県</option><option>京都府</option><option>大阪府</option><option>兵庫県</option><option>奈良県</option><option>和歌山県</option>
+              <option>鳥取県</option><option>島根県</option><option>岡山県</option><option>広島県</option><option>山口県</option>
+              <option>徳島県</option><option>香川県</option><option>愛媛県</option><option>高知県</option>
+              <option>福岡県</option><option>佐賀県</option><option>長崎県</option><option>熊本県</option><option>大分県</option><option>宮崎県</option><option>鹿児島県</option><option>沖縄県</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="city"><span>市区町村</span></label>
+          <input type="text" name="city" id="city" required placeholder="南越前町 今庄">
+        </div>
+        <div class="field">
+          <label for="addr"><span>番地・建物名</span></label>
+          <input type="text" name="addr" id="addr" required placeholder="2 字 71">
+        </div>
+        <div class="checkbox-line">
+          <input type="checkbox" id="sameAsShipping" checked>
+          <label for="sameAsShipping" style="font-size:0.86rem; color: var(--ink-70); font-weight: 400;">ご請求先も同じ</label>
+        </div>
+      </div>
+
+      <!-- Step 2: 熨斗 -->
+      <div class="step">
+        <h3><span class="num">02</span>熨斗・のし紙 <small style="font-weight:400; font-size:0.78rem; color:var(--ink-50); letter-spacing:0.14em; margin-left:0.6rem;">Optional</small></h3>
+        <div class="checkbox-line" style="margin-bottom: 1rem;">
+          <input type="checkbox" id="giftWrap" name="giftWrap">
+          <label for="giftWrap" style="font-size:0.9rem; color: var(--ink); font-weight: 500;">贈答用に熨斗紙をかける</label>
+        </div>
+        <div id="giftFields" hidden>
+          <div class="field-row">
+            <div class="field">
+              <label for="giftType"><span>のし表書き</span></label>
+              <select name="giftType" id="giftType">
+                <option value="">(なし)</option>
+                <option>御祝</option><option>内祝</option><option>御中元</option><option>御歳暮</option><option>御礼</option><option>粗品</option><option>寿</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="giftName"><span>お名前 <small>(のし下)</small></span></label>
+              <input type="text" name="giftName" id="giftName" placeholder="例: 深尾">
+            </div>
+          </div>
+          <div class="field">
+            <label for="giftMsg"><span>メッセージカード <small>(50 字以内)</small></span></label>
+            <textarea name="giftMsg" id="giftMsg" maxlength="50" rows="2" placeholder="いつもありがとうございます。"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: 支払 -->
+      <div class="step">
+        <h3><span class="num">03</span>お支払い方法</h3>
+        <div class="pay-options">
+          <label class="pay-option">
+            <input type="radio" name="pay" value="bank" required>
+            <div class="pay-option__body">
+              <strong>銀行振込</strong>
+              <small>ご注文確認メールで、お振込先をご案内します。ご入金後の発送となります。</small>
+            </div>
+          </label>
+          <label class="pay-option">
+            <input type="radio" name="pay" value="cod">
+            <div class="pay-option__body">
+              <strong>代金引換 (代引き)</strong>
+              <small>お届け時に配送業者にお支払いください。代引き手数料 ¥330 が別途かかります。</small>
+            </div>
+          </label>
+          <label class="pay-option">
+            <input type="radio" name="pay" value="card">
+            <div class="pay-option__body">
+              <strong>クレジットカード</strong>
+              <small>ご注文後、メールでカード決済リンクをお送りします (Visa / Mastercard / JCB / AMEX)。</small>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Step 4: 備考 -->
+      <div class="step">
+        <h3><span class="num">04</span>備考 <small style="font-weight:400; font-size:0.78rem; color:var(--ink-50); letter-spacing:0.14em; margin-left:0.6rem;">Optional</small></h3>
+        <div class="field">
+          <label for="note"><span>お届け希望日・時間帯、アレルギーなど</span></label>
+          <textarea name="note" id="note" rows="3" placeholder="お気軽にどうぞ"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <aside class="order-summary">
+      <h3>ご注文内容</h3>
+      <div class="order-summary__items" id="orderItems"></div>
+      <div class="order-summary__row"><span>小計</span><strong id="orderSubtotal">¥0</strong></div>
+      <div class="order-summary__row"><span>送料 <small id="areaLabel" style="font-size:0.72rem; color:var(--ink-50); margin-left:0.3rem;">(本州)</small></span><strong id="orderShipping">¥1,200</strong></div>
+      <div class="order-summary__row" id="codRow" hidden><span>代引き手数料</span><strong>¥330</strong></div>
+      <div class="order-summary__total">
+        <span>合計 <small style="color:var(--ink-50); font-size:0.72rem; margin-left:0.3rem; letter-spacing:0.14em;">税込</small></span>
+        <span class="amount" id="orderTotal">¥1,200</span>
+      </div>
+      <button type="submit" class="checkout-submit">注文する →</button>
+      <a href="cart.html" class="checkout-back">← カートに戻る</a>
+      <p style="color: var(--ink-50); font-size: 0.78rem; line-height: 1.7; margin-top: 1.4rem;">
+        「注文する」を押すと、ご注文内容が rantan1710@gmail.com に送信されます。 深尾が確認 のうえ、 翌営業日朝までに 受注確認メールをお送りします。
+      </p>
+    </aside>
+  </form>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div>
+      <a href="/" class="brand"><span class="brand__mark">らんたん</span></a>
+      <span class="brand__sub">Rantan &middot; Akai-hana &middot; Pripetto</span>
+      <address>〒919-0131 福井県 南越前町 今庄 2 字 71<br>株式会社宝喜園<br><br>Tel 0778-45-1710<br>Mail rantan1710@gmail.com</address>
+    </div>
+    <div><h4>Stores</h4><ul><li><a href="rantan.html">古民家レストラン らんたん</a></li><li><a href="akaihana.html">Cafe 赤い花</a></li><li><a href="pripetto.html">Pripetto</a></li></ul></div>
+    <div><h4>Shop</h4><ul><li><a href="shop.html">お取り寄せ 一覧</a></li><li><a href="cart.html">カート</a></li></ul></div>
+    <div><h4>About</h4><ul><li><a href="town-minamiechizen.html">南越前町 今庄</a></li><li><a href="reserve.html">お店へのご予約</a></li></ul></div>
+  </div>
+  <div class="site-footer__meta"><span>&copy; 2026 Hōkien Co., Ltd.</span><span>rantan.fukui.jp</span></div>
+</footer>
+
+<script src="assets/js/shop.js"></script>
+<script>
+  document.documentElement.classList.add('js');
+  const nav = document.getElementById('siteNav');
+  const onScroll = () => nav.dataset.scrolled = String(window.scrollY > 24);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  const { Cart, yen } = window.RantanShop;
+  const area = sessionStorage.getItem('shippingArea') || 'normal';
+  const isRemote = area === 'remote';
+
+  if (Cart.items.length === 0) { location.href = 'cart.html'; }
+
+  document.getElementById('orderItems').innerHTML = Cart.items.map(it => `
+    <div class="order-line">
+      <strong>${it.name} <small style="color:var(--ink-50); margin-left:0.3rem;">×${it.qty}</small></strong>
+      <span class="amt">${yen(it.price * it.qty)}</span>
+    </div>
+  `).join('');
+  document.getElementById('orderSubtotal').textContent = yen(Cart.subtotal());
+  document.getElementById('orderShipping').textContent = yen(Cart.shipping(isRemote));
+  document.getElementById('areaLabel').textContent = isRemote ? '(北海道・沖縄)' : '(本州・四国・九州)';
+
+  function updateTotal() {
+    const pay = document.querySelector('input[name="pay"]:checked')?.value;
+    const cod = pay === 'cod' ? 330 : 0;
+    document.getElementById('codRow').hidden = cod === 0;
+    document.getElementById('orderTotal').textContent = yen(Cart.total(isRemote) + cod);
+  }
+  document.querySelectorAll('input[name="pay"]').forEach(r => r.addEventListener('change', updateTotal));
+  updateTotal();
+
+  // Gift wrap toggle
+  document.getElementById('giftWrap').addEventListener('change', (e) => {
+    document.getElementById('giftFields').hidden = !e.target.checked;
+  });
+
+  // Submit
+  document.getElementById('checkoutForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const orderNo = 'RH-' + Date.now().toString().slice(-8);
+    const paymap = { bank: '銀行振込', cod: '代金引換', card: 'クレジットカード' };
+    const pay = fd.get('pay');
+    const cod = pay === 'cod' ? 330 : 0;
+    const total = Cart.total(isRemote) + cod;
+    const areaTxt = isRemote ? '北海道・沖縄' : '本州・四国・九州';
+
+    const body = [
+      `【ご注文番号】${orderNo}`,
+      ``,
+      `【ご注文明細】`,
+      ...Cart.items.map(it => `  ・${it.name} (${it.sub||''}) × ${it.qty} = ${yen(it.price*it.qty)}`),
+      `  小計 : ${yen(Cart.subtotal())}`,
+      `  送料 (${areaTxt}) : ${yen(Cart.shipping(isRemote))}`,
+      ...(cod ? [`  代引き手数料 : ¥330`] : []),
+      `  合計 (税込) : ${yen(total)}`,
+      ``,
+      `【お届け先】`,
+      `  お名前 : ${fd.get('name')}`,
+      `  電話 : ${fd.get('tel')}`,
+      `  メール : ${fd.get('email')}`,
+      `  郵便番号 : 〒${fd.get('zip')}`,
+      `  住所 : ${fd.get('pref')} ${fd.get('city')} ${fd.get('addr')}`,
+      ``,
+      `【のし紙】`,
+      fd.get('giftWrap') ? `  表書き : ${fd.get('giftType')||'(なし)'}\n  お名前 : ${fd.get('giftName')||''}\n  メッセージ : ${fd.get('giftMsg')||''}` : `  (なし)`,
+      ``,
+      `【お支払い方法】${paymap[pay]}`,
+      ``,
+      `【備考】`,
+      `  ${fd.get('note') || '(なし)'}`,
+      ``,
+      `---`,
+      `ご注文日時 : ${new Date().toLocaleString('ja-JP')}`,
+      `送信元 : rantan.fukui.jp オンラインショップ`,
+    ].join('\n');
+
+    // Store for complete page
+    sessionStorage.setItem('lastOrder', JSON.stringify({
+      orderNo, name: fd.get('name'), email: fd.get('email'),
+      total, pay: paymap[pay], items: Cart.items
+    }));
+
+    // Send via mailto
+    const subject = `【ご注文 ${orderNo}】${fd.get('name')}様 / 合計${yen(total)}`;
+    const mailto = `mailto:rantan1710@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    // Open mail client
+    window.location.href = mailto;
+
+    // Redirect to complete after a moment (mailto opens in new mail app)
+    setTimeout(() => {
+      Cart.clear();
+      location.href = 'order-complete.html';
+    }, 800);
+  });
+</script>
+
+</body>
+</html>
