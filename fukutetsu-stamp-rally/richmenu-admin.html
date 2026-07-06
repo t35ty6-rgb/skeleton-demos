@@ -142,6 +142,42 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
 .btn.sm{padding:6px 12px;font-size:12px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 
+/* ═══════════ BULK UPLOAD ZONE ═══════════ */
+.bulk-drop{border:2px dashed var(--rule-2);background:var(--surface);padding:20px 22px;border-radius:var(--radius);margin-bottom:16px;text-align:center;transition:border-color .15s,background .15s;cursor:pointer}
+.bulk-drop:hover,.bulk-drop.hover{border-color:var(--primary);background:var(--primary-soft)}
+.bulk-drop .lbl{font-size:14px;font-weight:900;color:var(--ink);margin-bottom:4px}
+.bulk-drop .hint{font-size:12px;color:var(--dim);font-weight:500;line-height:1.6}
+.bulk-drop .hint code{font-family:var(--font-mono);font-size:11.5px;background:var(--surface-2);padding:1px 6px;border-radius:3px;color:var(--ink-2)}
+
+/* ═══════════ SPOT LIST ROWS ═══════════ */
+.spot-row{padding:14px 22px;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:auto 96px 60px 1.4fr 1fr 130px auto;gap:14px;align-items:center;transition:background .12s}
+.spot-row:last-child{border-bottom:none}
+.spot-row:hover{background:var(--surface-2)}
+.spot-row .thumb{width:96px;height:72px;border-radius:var(--radius-sm);background:var(--surface-2);border:1.5px solid var(--rule);background-size:cover;background-position:center;position:relative;overflow:hidden;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;font-weight:700}
+.spot-row .thumb:hover{border-color:var(--primary)}
+.spot-row .thumb .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none}
+.spot-row .thumb .empty svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;opacity:.6}
+.spot-row .thumb .empty span{font-size:10px;font-weight:700}
+.spot-row .thumb.has-img .empty{display:none}
+.spot-row .thumb .change{position:absolute;bottom:2px;right:2px;background:rgba(15,23,42,.85);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;font-family:var(--font-latin);letter-spacing:.02em;opacity:0;transition:opacity .12s}
+.spot-row .thumb.has-img:hover .change{opacity:1}
+.spot-row .code-cell{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--primary-hi);background:var(--primary-soft);padding:6px 8px;border-radius:5px;text-align:center;letter-spacing:.02em}
+.spot-row .name-cell input,.spot-row .station-cell input,.spot-row .coord-cell input{padding:8px 11px;font-size:13px}
+.spot-row .coord-cell input{font-family:var(--font-mono);font-size:11.5px;letter-spacing:0}
+.spot-row input[type=file]{display:none}
+
+/* ═══════════ THUMB SLOT (prize / roulette) ═══════════ */
+.thumb-slot{width:56px;height:56px;border-radius:8px;background:var(--surface-2);border:1.5px solid var(--rule);background-size:cover;background-position:center;position:relative;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:10px;font-weight:700}
+.thumb-slot:hover{border-color:var(--primary)}
+.thumb-slot input[type=file]{display:none}
+.thumb-slot .empty-ic{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;opacity:.5}
+.thumb-slot.has-img .empty-ic{display:none}
+.thumb-small{width:40px;height:40px;border-radius:6px;background:var(--surface-2);border:1.5px solid var(--rule);background-size:cover;background-position:center;position:relative;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.thumb-small:hover{border-color:var(--primary)}
+.thumb-small input[type=file]{display:none}
+.thumb-small svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;opacity:.5}
+.thumb-small.has-img svg{display:none}
+
 /* ═══════════ BUTTON STUDIO ═══════════ */
 .studio-help{background:linear-gradient(135deg,var(--primary-soft) 0%,#e0f2fe 100%);border:1px solid var(--primary);border-radius:var(--radius);padding:14px 18px;margin-bottom:18px;display:flex;gap:12px;align-items:flex-start;font-size:13px;color:var(--ink);line-height:1.6;font-weight:500}
 .studio-help .ic{width:32px;height:32px;background:var(--primary);color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;font-weight:900}
@@ -375,6 +411,11 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
           <span>クーポン店舗</span>
           <span class="nav-count" id="nav-shop-count">6</span>
         </button>
+        <button class="nav-item" data-view="spots">
+          <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
+          <span>スポット (10地点)</span>
+          <span class="nav-count" id="nav-spot-count">10</span>
+        </button>
       </div>
       <div class="sidebar-nav-group">
         <div class="sidebar-nav-label">Configuration</div>
@@ -600,6 +641,37 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
         </div>
       </div>
 
+      <!-- ─── VIEW: SPOTS ─── -->
+      <div class="view" data-view="spots">
+        <p class="view-lead">10地点の写真・名前・座標・説明を管理。 写真は 個別アップロード か 複数まとめて ドロップで自動割り当てできます。</p>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></span>写真を まとめてアップロード</h2>
+              <div class="card-sub">ファイル名の 番号 (01, 02, …) や 順序で スポットに 自動割り当てます</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="bulk-drop" id="bulk-drop">
+              <div class="lbl">画像を ここに ドラッグ&ドロップ</div>
+              <div class="hint">ファイル名が <code>01_○○.jpg</code> や <code>SP-01-○○.png</code> なら 番号でマッチ。 名前が違えば 上から順にセット。 <b>クリックでも選択可</b></div>
+              <input type="file" id="bulk-file" accept="image/*" multiple style="display:none">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg></span>10 地点の詳細</h2>
+              <div class="card-sub">写真クリックで単体アップロード · 名称・座標も編集可能</div>
+            </div>
+          </div>
+          <div class="card-body dense" id="spots-list"></div>
+        </div>
+      </div>
+
       <!-- ─── VIEW: SETTINGS ─── -->
       <div class="view" data-view="settings">
         <p class="view-lead">LINE Bot・LIFF・ブランド情報の基本設定。</p>
@@ -745,6 +817,18 @@ const DEFAULT_CFG = {
     { name: "サンドームコーヒー", station: "サンドーム西 徒歩5分" },
     { name: "西山公園茶屋", station: "西鯖江 徒歩10分" },
   ],
+  spots: [
+    { code: "SP-01", name: "越前和紙の里", station: "たけふ新", coord: "35.9262, 136.1675", desc: "1500年前 の 手漉きの音・楮の香り・職人の背中 が 今も工房に残る", photo: "" },
+    { code: "SP-02", name: "サンドーム福井", station: "サンドーム西", coord: "35.9700, 136.2124", desc: "県内最大 の ドーム。 音楽ライブが響き 産業展示 が並ぶ", photo: "" },
+    { code: "SP-03", name: "武生中央公園", station: "たけふ新", coord: "35.9061, 136.1778", desc: "秋の菊人形、かこさとし絵本館。 家族の拠点", photo: "" },
+    { code: "SP-04", name: "西山公園", station: "西鯖江", coord: "35.9533, 136.1830", desc: "春 ツツジ5万本 が咲き、レッサーパンダが昼寝する 動物園", photo: "" },
+    { code: "SP-05", name: "めがねミュージアム", station: "神明", coord: "35.9461, 136.1836", desc: "鯖江眼鏡の全て。 工房で 手作り体験、掘り出し物ショップ", photo: "" },
+    { code: "SP-06", name: "福井城址", station: "福井城址大名町", coord: "36.0665, 136.2223", desc: "結城秀康 の 石垣と堀。 本丸跡が県庁 の 珍しい城郭", photo: "" },
+    { code: "SP-07", name: "養浩館庭園", station: "仁愛女子高校", coord: "36.0717, 136.2231", desc: "松平家 別邸。 池泉回遊式庭園と 苔庭 が時間を忘れさせる", photo: "" },
+    { code: "SP-08", name: "足羽神社", station: "福井駅", coord: "36.0589, 136.2220", desc: "継体天皇 ゆかりの古社。 春の桜、山頂から福井市街 の 眺望", photo: "" },
+    { code: "SP-09", name: "福井駅前 恐竜モニュメント", station: "福井駅", coord: "36.0616, 136.2227", desc: "実寸大 の 恐竜3体。 福井駅 に降りた瞬間 の インパクト", photo: "" },
+    { code: "SP-10", name: "田原町 商店街", station: "田原町", coord: "36.0778, 136.2228", desc: "福武線終点。 昭和レトロ商店街と 若手店舗 が 交差", photo: "" },
+  ],
   settings: { botName: "福鉄 さんぽ帳", liffId: LIFF, avatar: "福" },
 };
 
@@ -785,6 +869,7 @@ function switchView(v){
     prize: { crumb: "運用 / 景品", title: "景品", badge: "3段階" },
     roulette: { crumb: "運用 / ルーレット", title: "ボーナスルーレット", badge: "6枠" },
     shops: { crumb: "運用 / クーポン店舗", title: "クーポン店舗", badge: `${CFG.shops.length}店` },
+    spots: { crumb: "運用 / スポット", title: "スポット", badge: `${CFG.spots.length}地点` },
     settings: { crumb: "Configuration / 一般設定", title: "一般設定", badge: "" },
   }[v];
   document.getElementById("crumb").textContent = meta.crumb;
@@ -793,6 +878,7 @@ function switchView(v){
   if (v === "prize") renderPrize();
   else if (v === "roulette") renderRoulette();
   else if (v === "shops") renderShops();
+  else if (v === "spots") renderSpots();
 }
 
 // ═══════════════════ VIEW: RICHMENU ═══════════════════
@@ -1237,9 +1323,15 @@ function renderPrize(){
   el.innerHTML = CFG.prizes.map((p, i) => `
     <div class="card">
       <div class="card-head">
-        <div>
-          <h2>景品 ${i + 1}<span class="badge primary" style="margin-left:8px">押印 ${p.need}個〜</span></h2>
-          <div class="card-sub" style="font-family:var(--font-mono);color:var(--muted);letter-spacing:.02em">${p.id}</div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <label class="thumb-slot ${p.image ? 'has-img' : ''}" style="background-image:${p.image ? `url('${p.image}')` : 'none'}" title="景品画像">
+            <svg class="empty-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+            <input type="file" accept="image/*" data-prize-img="${i}">
+          </label>
+          <div>
+            <h2>景品 ${i + 1}<span class="badge primary" style="margin-left:8px">押印 ${p.need}個〜</span></h2>
+            <div class="card-sub" style="font-family:var(--font-mono);color:var(--muted);letter-spacing:.02em">${p.id}</div>
+          </div>
         </div>
       </div>
       <div class="card-body dense">
@@ -1314,6 +1406,16 @@ function renderPrize(){
       saveCfg(); renderPrize();
     });
   });
+  el.querySelectorAll("[data-prize-img]").forEach(inp => {
+    inp.addEventListener("change", e => {
+      const i = +e.target.dataset.prizeImg;
+      const f = e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = ev => { CFG.prizes[i].image = ev.target.result; saveCfg(); renderPrize(); };
+      reader.readAsDataURL(f);
+    });
+  });
   // Attach DnD to each prize's shops list
   el.querySelectorAll("[data-prize-shops]").forEach(container => {
     const i = +container.dataset.prizeShops;
@@ -1326,9 +1428,13 @@ function renderRoulette(){
   const el = document.getElementById("roulette-list");
   const total = CFG.roulette.reduce((a, r) => a + (+r.prob || 0), 0);
   el.innerHTML = CFG.roulette.map((r, i) => `
-    <div class="list-row roulette dnd-row" data-i="${i}" style="grid-template-columns:auto auto 1fr 1.4fr 140px auto">
+    <div class="list-row roulette dnd-row" data-i="${i}" style="grid-template-columns:auto auto auto 1fr 1.4fr 140px auto">
       <span class="dnd-handle" title="ドラッグで並替"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg></span>
       <input type="color" class="color-swatch" data-r="${i}" data-f="color" value="${r.color}">
+      <label class="thumb-small ${r.image ? 'has-img' : ''}" style="background-image:${r.image ? `url('${r.image}')` : 'none'}" title="画像">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+        <input type="file" accept="image/*" data-roulette-img="${i}">
+      </label>
       <input class="input" data-r="${i}" data-f="shop" value="${r.shop.replace(/"/g,'&quot;')}" placeholder="店舗名">
       <input class="input" data-r="${i}" data-f="benefit" value="${r.benefit.replace(/"/g,'&quot;')}" placeholder="特典内容">
       <div class="prob-slider">
@@ -1356,6 +1462,16 @@ function renderRoulette(){
       if (!confirm("この当選枠を削除しますか？")) return;
       CFG.roulette.splice(+btn.dataset.rDel, 1);
       saveCfg(); renderRoulette();
+    });
+  });
+  el.querySelectorAll("[data-roulette-img]").forEach(inp => {
+    inp.addEventListener("change", e => {
+      const i = +e.target.dataset.rouletteImg;
+      const f = e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = ev => { CFG.roulette[i].image = ev.target.result; saveCfg(); renderRoulette(); };
+      reader.readAsDataURL(f);
     });
   });
   attachDnD(el, () => CFG.roulette, l => CFG.roulette = l, () => renderRoulette());
@@ -1401,6 +1517,114 @@ document.getElementById("shop-add").addEventListener("click", () => {
 });
 function updateNavCounts(){
   document.getElementById("nav-shop-count").textContent = CFG.shops.length;
+  const sc = document.getElementById("nav-spot-count");
+  if (sc) sc.textContent = CFG.spots.length;
+}
+
+// ═══════════════════ VIEW: SPOTS ═══════════════════
+function renderSpots(){
+  const el = document.getElementById("spots-list");
+  if (!el) return;
+  el.innerHTML = CFG.spots.map((s, i) => `
+    <div class="spot-row" data-i="${i}">
+      <span class="dnd-handle" title="ドラッグで並替"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg></span>
+      <label class="thumb ${s.photo ? 'has-img' : ''}" style="background-image:${s.photo ? `url('${s.photo}')` : 'none'}" title="写真を変更">
+        <div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>写真</span></div>
+        <span class="change">変更</span>
+        <input type="file" accept="image/*" data-photo-idx="${i}">
+      </label>
+      <div class="code-cell">${s.code}</div>
+      <div class="name-cell"><input class="input" data-sp="${i}" data-f="name" value="${s.name.replace(/"/g,'&quot;')}" placeholder="スポット名"></div>
+      <div class="station-cell"><input class="input" data-sp="${i}" data-f="station" value="${s.station.replace(/"/g,'&quot;')}" placeholder="最寄駅"></div>
+      <div class="coord-cell"><input class="input mono" data-sp="${i}" data-f="coord" value="${s.coord}" placeholder="緯度, 経度"></div>
+      <button class="del" data-sp-del="${i}" title="削除"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>
+    </div>
+    <div class="spot-row-desc" style="padding:0 22px 14px 138px;border-bottom:1px solid var(--rule);margin-top:-14px">
+      <input class="input" data-sp="${i}" data-f="desc" value="${s.desc.replace(/"/g,'&quot;')}" placeholder="説明文" style="padding:8px 11px;font-size:12.5px">
+    </div>
+  `).join("");
+  el.querySelectorAll("[data-sp]").forEach(inp => {
+    inp.addEventListener("input", e => {
+      const i = +e.target.dataset.sp, f = e.target.dataset.f;
+      CFG.spots[i][f] = e.target.value;
+      saveCfg();
+    });
+  });
+  el.querySelectorAll("[data-photo-idx]").forEach(inp => {
+    inp.addEventListener("change", e => {
+      const i = +e.target.dataset.photoIdx;
+      const f = e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        CFG.spots[i].photo = ev.target.result;
+        saveCfg(); renderSpots();
+      };
+      reader.readAsDataURL(f);
+    });
+  });
+  el.querySelectorAll("[data-sp-del]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (!confirm("このスポットを削除しますか？")) return;
+      CFG.spots.splice(+btn.dataset.spDel, 1);
+      saveCfg(); renderSpots(); updateNavCounts();
+    });
+  });
+  attachDnD(el, () => CFG.spots, l => CFG.spots = l, () => renderSpots());
+  updateNavCounts();
+}
+
+// ═══════════════════ BULK UPLOAD ═══════════════════
+function initBulkDrop(){
+  const dz = document.getElementById("bulk-drop");
+  const fileInp = document.getElementById("bulk-file");
+  if (!dz) return;
+  dz.addEventListener("click", () => fileInp.click());
+  ["dragenter","dragover"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dz.classList.add("hover"); }));
+  ["dragleave","drop"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dz.classList.remove("hover"); }));
+  dz.addEventListener("drop", e => {
+    const files = [...e.dataTransfer.files].filter(f => f.type.startsWith("image/"));
+    ingestBulk(files);
+  });
+  fileInp.addEventListener("change", e => {
+    const files = [...e.target.files].filter(f => f.type.startsWith("image/"));
+    ingestBulk(files);
+    e.target.value = "";
+  });
+}
+function ingestBulk(files){
+  if (!files.length) return;
+  let orderIdx = 0;
+  const pending = files.length;
+  let done = 0;
+  files.forEach(f => {
+    // parse spot code from filename: 01_*, SP-01-*, sp01-* etc
+    const m = f.name.match(/(?:SP[- _]?)?0*(\d{1,2})[\-_ .]/i);
+    let targetIdx = -1;
+    if (m){
+      const n = parseInt(m[1], 10);
+      if (n >= 1 && n <= CFG.spots.length) targetIdx = n - 1;
+    }
+    if (targetIdx === -1) targetIdx = orderIdx++;
+    if (targetIdx >= CFG.spots.length) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      CFG.spots[targetIdx].photo = ev.target.result;
+      done++;
+      if (done === pending){
+        saveCfg(); renderSpots();
+        showToast(`${done}枚の写真を割り当てました`);
+      }
+    };
+    reader.readAsDataURL(f);
+  });
+}
+function showToast(msg){
+  // simple inline flash via header briefly
+  const h = document.getElementById("view-title");
+  const orig = h.innerHTML;
+  h.innerHTML = `<span style="color:var(--primary)">✓ ${msg}</span>`;
+  setTimeout(() => h.innerHTML = orig, 2500);
 }
 
 // ═══════════════════ SETTINGS ═══════════════════
@@ -1435,6 +1659,10 @@ if (!CFG.design) CFG.design = {...DEFAULT_CFG.design};
 if (!CFG.design.theme) CFG.design.theme = "snow";
 if (!CFG.design.tabPosition) CFG.design.tabPosition = "bottom";
 if (!CFG.design.custom) CFG.design.custom = {...DEFAULT_CFG.design.custom};
+// backfill spots if state is old
+if (!CFG.spots || !CFG.spots.length) CFG.spots = JSON.parse(JSON.stringify(DEFAULT_CFG.spots));
+
+initBulkDrop();
 
 renderRmTabs();
 renderRmHero();
