@@ -1342,13 +1342,12 @@ function viewCoursesTop(root) {
   const nl = h('section', { class: 'card', style: 'padding:0' });
   nl.innerHTML = `<div class="kz-body">
     <div class="now-learning">
-      <div class="nl-thumb">${I.book}</div>
       <div class="nl-info">
         <div class="nl-eyebrow">受講中</div>
         <div class="nl-name">${esc(current.c.name)}</div>
-        <div style="font-size:12px;color:#cbd5e1;margin-top:4px">${esc(current.c.description || '')}</div>
+        <div style="font-size:12px;color:var(--dim);margin-top:4px;line-height:1.6;font-weight:500;max-width:60ch">${esc(current.c.description || '')}</div>
         <div class="nl-progress"><div class="nl-progress-fill" style="width:${(current.ratio * 100).toFixed(0)}%"></div></div>
-        <div class="nl-progress-lbl"><span>Chapter ${current.done} / ${current.total}</span><span>${(current.ratio * 100).toFixed(0)}%</span></div>
+        <div class="nl-progress-lbl"><span>${current.done} / ${current.total} 章</span><span>${(current.ratio * 100).toFixed(0)}%</span></div>
       </div>
       <button class="nl-cta" data-cont>学習を続ける</button>
     </div>
