@@ -4,10 +4,11 @@
 
 // ============================ Store ============================
 const KEY = 'misakiya-denko-ai::v2::';
-const STORE_KEYS = ['works', 'favorites', 'recent', 'notices', 'courses', 'progress', 'quizzes', 'users', 'currentUserId', 'read', 'categories'];
+const STORE_KEYS = ['works', 'favorites', 'recent', 'notices', 'courses', 'progress', 'quizzes', 'users', 'currentUserId', 'read', 'categories', 'stepChecks', 'workLog'];
 
 const store = {
   works: [], favorites: {}, recent: {}, notices: [], courses: [], progress: {}, quizzes: {}, users: [], read: {}, categories: [],
+  stepChecks: {}, workLog: [],
   currentUserId: 'u1',
 
   load() {
@@ -107,6 +108,27 @@ const store = {
   },
 
   pendingCount() { return this.works.filter(w => w.status === 'pending').length; },
+
+  // Step checks (現場モード)
+  stepKey(uid, wid) { return `${uid}_${wid}`; },
+  getSteps(wid) { return this.stepChecks[this.stepKey(this.currentUserId, wid)] || []; },
+  toggleStep(wid, idx) {
+    const k = this.stepKey(this.currentUserId, wid);
+    const list = this.stepChecks[k] = this.stepChecks[k] || [];
+    const i = list.indexOf(idx);
+    if (i >= 0) list.splice(i, 1); else list.push(idx);
+    this.save('stepChecks');
+  },
+  resetSteps(wid) {
+    const k = this.stepKey(this.currentUserId, wid);
+    delete this.stepChecks[k];
+    this.save('stepChecks');
+  },
+  logWorkComplete(wid) {
+    this.workLog.unshift({ userId: this.currentUserId, workId: wid, ts: Date.now() });
+    if (this.workLog.length > 200) this.workLog.length = 200;
+    this.save('workLog');
+  },
 };
 
 // ============================ Utilities ============================
@@ -756,17 +778,21 @@ function buildDetailCard(w) {
 
   const card = h('section', { class: 'card', id: 'detailCard' });
 
-  const statusBanner = w.status === 'draft' ? `<div class="status-banner status-draft">${I.edit}下書き · 承認申請前</div>`
-    : w.status === 'pending' ? `<div class="status-banner status-pending">${I.clock}承認待ち · ${esc(approver ? approver.name : '担当者')} が確認中</div>`
+  const lastRejectMsg = (w.history || []).find(hi => hi.what && hi.what.startsWith('差戻し'));
+  const statusBanner = w.status === 'draft'
+    ? `<div class="status-banner status-draft">${I.edit}<div><b>下書き</b>${lastRejectMsg ? ` — 前回差戻し理由: ${esc(lastRejectMsg.what.replace(/^差戻し\s*—\s*/, ''))}` : ' · 承認申請前'}</div></div>`
+    : w.status === 'pending'
+    ? `<div class="status-banner status-pending">${I.clock}承認待ち · ${esc(approver ? approver.name : '担当者')} が確認中</div>`
     : '';
 
   card.innerHTML = `
     <div class="detail-h">
       <a class="back-link" data-back>${I.left}戻る</a>
       <div class="detail-title">${esc(w.title)}</div>
-      <button class="btn-fav ${isFav ? 'is-on' : ''}" data-fav>${I.star}${isFav ? 'お気に入り済' : 'お気に入り'}</button>
-      <button class="btn-share" data-share>${I.share}共有</button>
-      <button class="btn btn-secondary btn-sm" data-edit>${I.edit}編集</button>
+      <button class="btn-fav ${isFav ? 'is-on' : ''}" data-fav title="F">${I.star}${isFav ? 'お気に入り済' : 'お気に入り'}</button>
+      <button class="btn-share" data-qr title="QR">${I.qr}QR</button>
+      <button class="btn-share" data-print title="印刷">${I.print}印刷</button>
+      <button class="btn btn-secondary btn-sm" data-edit title="E">${I.edit}編集</button>
     </div>
     ${statusBanner}
     <div class="chip-row">
@@ -807,24 +833,59 @@ function buildDetailCard(w) {
   function renderTab(tab) {
     lower.innerHTML = '';
     if (tab === 'steps') {
-      const g = h('div', { class: 'detail-lower-grid' });
+      const wrap = h('div', {});
+      // Progress bar (現場モード)
+      if (w.steps.length > 0) {
+        const done = store.getSteps(w.id);
+        const pct = Math.round(done.length / w.steps.length * 100);
+        const pr = h('div', { class: 'step-progress' });
+        pr.innerHTML = `
+          <span class="step-progress-lbl">現場チェック進捗</span>
+          <div class="step-progress-bar"><span style="width:${pct}%"></span></div>
+          <span class="step-progress-cnt">${done.length} / ${w.steps.length} · ${pct}%</span>
+          <button class="btn btn-ghost btn-sm" data-reset-steps title="全チェック解除">${I.reset}リセット</button>`;
+        pr.querySelector('[data-reset-steps]').addEventListener('click', () => {
+          store.resetSteps(w.id);
+          renderTab('steps');
+          toast('チェックをリセットしました', 'success');
+        });
+        wrap.append(pr);
+      }
+      const g = h('div', { class: 'detail-lower-grid', style: 'padding-top:12px' });
       const steps = h('div', { class: 'steps' });
       if (w.steps.length === 0) {
-        steps.innerHTML = `<div class="empty" style="padding:24px 0">${I.book}<div>手順がまだ登録されていません</div></div>`;
+        steps.innerHTML = `<div class="empty" style="padding:24px 0">${I.book}<div>手順がまだ登録されていません</div><div style="margin-top:4px;font-size:11.5px">編集画面で「AI で手順下書き」を試してみてください</div></div>`;
       } else {
+        const done = store.getSteps(w.id);
         w.steps.forEach((s, i) => {
-          steps.append(h('div', { class: 'step' },
+          const isDone = done.includes(i);
+          const stepEl = h('div', { class: 'step' + (isDone ? ' is-done' : '') });
+          const check = h('div', { class: 'step-check' + (isDone ? ' on' : ''), title: 'この手順を完了' });
+          check.innerHTML = I.check.replace('<svg', '<svg fill="none"');
+          check.addEventListener('click', () => {
+            store.toggleStep(w.id, i);
+            const nowDone = store.getSteps(w.id);
+            if (nowDone.length === w.steps.length) {
+              store.logWorkComplete(w.id);
+              toast(`「${w.title}」全手順完了 · 作業ログに記録しました`, 'success');
+            }
+            renderTab('steps');
+          });
+          stepEl.append(
+            check,
             h('div', { class: 'step-no' }, i + 1),
             h('div', { class: 'step-body' },
               h('div', { class: 'step-title' }, s.title),
               s.desc ? h('div', { class: 'step-desc' }, s.desc) : null,
               s.note ? h('div', { class: 'step-note' }, s.note) : null,
             )
-          ));
+          );
+          steps.append(stepEl);
         });
       }
       g.append(steps, buildRelatedBlock(w));
-      lower.append(g);
+      wrap.append(g);
+      lower.append(wrap);
     } else if (tab === 'tools') {
       const wrap = h('div', {});
       wrap.append(h('div', { class: 'related-h' }, '使用工具'));
@@ -921,14 +982,99 @@ function buildDetailCard(w) {
     toast(on ? 'お気に入りに追加しました' : 'お気に入りから外しました', 'success');
     render();
   });
-  card.querySelector('[data-share]').addEventListener('click', () => {
-    const url = location.origin + location.pathname + '#work/' + w.id;
-    if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => toast('URL をコピーしました', 'success'));
-    else toast(url);
-  });
   card.querySelector('[data-edit]').addEventListener('click', () => router.go('work/' + w.id + '/edit'));
+  card.querySelector('[data-qr]').addEventListener('click', () => showQRModal(w));
+  card.querySelector('[data-print]').addEventListener('click', () => printWork(w));
 
   return card;
+}
+
+// ===== QR modal for work =====
+function showQRModal(w) {
+  const url = location.origin + location.pathname + '#work/' + w.id;
+  const body = h('div', { class: 'qr-modal' });
+  body.innerHTML = `
+    <div class="qr-svg">${qrSVG(url, 220)}</div>
+    <div class="qr-caption">スマホでこの QR を読み込むと現場ですぐに開けます</div>
+    <div class="qr-url">${esc(url)}</div>`;
+  modal(`QR コード · ${w.title}`, body, (row, close) => {
+    row.append(
+      h('button', { class: 'btn btn-secondary', onclick: () => { navigator.clipboard?.writeText(url); toast('URL をコピーしました', 'success'); } }, 'URL をコピー'),
+      h('button', { class: 'btn btn-primary', onclick: () => close(true) }, '閉じる'),
+    );
+  });
+}
+
+// ===== Print work as procedure sheet =====
+function printWork(w) {
+  const win = window.open('', '_blank');
+  if (!win) { toast('ポップアップを許可してください', 'err'); return; }
+  const cat = store.category(w.category);
+  const author = store.user(w.author);
+  const approver = store.user(w.approver);
+  win.document.write(`<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>${esc(w.title)} · 手順書</title>
+<style>
+  @page{margin:14mm 15mm;size:A4}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Noto Sans JP","Hiragino Sans",sans-serif;font-size:11pt;color:#111;line-height:1.65;font-weight:500}
+  h1{font-size:20pt;font-weight:900;letter-spacing:-0.02em;margin-bottom:6pt;border-bottom:2px solid #111;padding-bottom:6pt}
+  .meta{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:4pt 12pt;font-size:9pt;margin-top:10pt;margin-bottom:14pt}
+  .meta dt{color:#666;font-weight:600}
+  .meta dd{font-weight:700}
+  h2{font-size:12pt;font-weight:800;letter-spacing:-0.01em;margin:14pt 0 6pt 0;padding-bottom:2pt;border-bottom:1px solid #666}
+  .step{display:grid;grid-template-columns:24pt 1fr 30pt;gap:8pt;padding:6pt 0;border-top:1px solid #ccc;page-break-inside:avoid;align-items:flex-start}
+  .step:first-child{border-top:0}
+  .step-no{background:#111;color:#fff;width:22pt;height:22pt;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10pt;margin-top:2pt}
+  .step-title{font-weight:800;font-size:11pt;letter-spacing:-0.005em}
+  .step-desc{font-size:10pt;color:#222;margin-top:2pt}
+  .step-note{margin-top:4pt;padding:4pt 8pt;background:#fff4d6;border-left:3pt solid #b57f10;font-size:9.5pt;font-weight:600;color:#5c3f0f}
+  .step-note::before{content:"⚠ 注意 · ";font-weight:800}
+  .check-box{width:22pt;height:22pt;border:1.5pt solid #111;border-radius:3pt}
+  ul.tools{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:2pt 12pt;font-size:10pt;font-weight:600}
+  ul.tools li{padding:2pt 0;border-bottom:1px dotted #999}
+  ul.tools li::before{content:"□ ";font-weight:800;color:#111}
+  .caution{padding:8pt 10pt;background:#fff;border:2pt solid #a12013;color:#a12013;font-weight:700;margin-bottom:6pt;font-size:10pt}
+  .caution::before{content:"⚠ 危険 · ";font-weight:900}
+  .tip{padding:6pt 10pt;background:#fff;border:1px solid #2b5e8f;color:#123a5b;font-weight:600;margin-bottom:4pt;font-size:10pt}
+  .tip::before{content:"ポイント · ";font-weight:800}
+  footer{margin-top:20pt;padding-top:10pt;border-top:1px solid #666;font-size:8pt;color:#666;display:flex;justify-content:space-between}
+  .desc{font-size:10.5pt;color:#333;margin-bottom:8pt;padding:6pt 10pt;background:#f7f7f2;border-radius:3pt;border-left:3pt solid #c1391d}
+</style></head><body>
+  <h1>${esc(w.title)}</h1>
+  ${w.description ? `<div class="desc">${esc(w.description)}</div>` : ''}
+  <dl class="meta">
+    <dt>カテゴリ</dt><dd>${esc(cat ? cat.name : '—')}</dd>
+    <dt>難易度</dt><dd>${w.difficulty} / 5</dd>
+    <dt>想定時間</dt><dd>${esc(w.duration || '—')}</dd>
+    <dt>現場</dt><dd>${esc(w.site || '—')}</dd>
+    <dt>作成者</dt><dd>${esc(author ? author.name : '—')}</dd>
+    <dt>承認者</dt><dd>${esc(approver ? approver.name : '—')}</dd>
+    <dt>版</dt><dd>${fmtDate(w.updatedAt)}</dd>
+    <dt>印刷日</dt><dd>${fmtDate(Date.now())}</dd>
+  </dl>
+  ${w.cautions && w.cautions.length ? `<h2>危険予知</h2>${w.cautions.map(c => `<div class="caution">${esc(c)}</div>`).join('')}` : ''}
+  ${w.tips && w.tips.length ? `<h2>コツ・ポイント</h2>${w.tips.map(t => `<div class="tip">${esc(t)}</div>`).join('')}` : ''}
+  <h2>作業手順 <span style="font-weight:500;color:#666;font-size:9pt">(右端 □ で現場チェック)</span></h2>
+  ${w.steps.map((s, i) => `
+    <div class="step">
+      <div class="step-no">${i + 1}</div>
+      <div>
+        <div class="step-title">${esc(s.title)}</div>
+        ${s.desc ? `<div class="step-desc">${esc(s.desc)}</div>` : ''}
+        ${s.note ? `<div class="step-note">${esc(s.note)}</div>` : ''}
+      </div>
+      <div class="check-box"></div>
+    </div>
+  `).join('')}
+  ${w.tools && w.tools.length ? `<h2>使用工具</h2><ul class="tools">${w.tools.map(t => `<li>${esc(t.name)} <span style="color:#666;font-family:sans-serif;font-size:9pt">${esc(t.qty)}</span></li>`).join('')}</ul>` : ''}
+  ${w.materials && w.materials.length ? `<h2>使用材料</h2><ul class="tools">${w.materials.map(t => `<li>${esc(t.name)} <span style="color:#666;font-family:sans-serif;font-size:9pt">${esc(t.qty)}</span></li>`).join('')}</ul>` : ''}
+  <footer>
+    <span>三崎屋電工 作業手順書 · ${esc(w.title)}</span>
+    <span>印刷: ${fmtDate(Date.now())}</span>
+  </footer>
+  <script>window.onload=()=>setTimeout(()=>window.print(),400);<\/script>
+</body></html>`);
+  win.document.close();
 }
 
 function buildRelatedBlock(w) {
@@ -1152,6 +1298,26 @@ function viewMypage(root) {
     </div>`;
   root.append(hero);
 
+  // 現場作業ログ
+  const myLog = store.workLog.filter(l => l.userId === uid).slice(0, 10);
+  if (myLog.length > 0) {
+    const logCard = h('section', { class: 'card' });
+    logCard.innerHTML = `<header class="card-h"><div class="card-h-title">現場作業ログ <small>(直近 ${myLog.length} 件)</small></div></header><div class="list" id="lgList"></div>`;
+    const ll = logCard.querySelector('#lgList');
+    for (const l of myLog) {
+      const w = store.work(l.workId);
+      if (!w) continue;
+      const it = h('div', { class: 'list-item' });
+      it.innerHTML = `
+        <span class="list-icon li-doc">${I.check}</span>
+        <span class="list-title">${esc(w.title)} · 全手順完了</span>
+        <span class="list-date">${fmtRelative(l.ts)}</span>`;
+      it.addEventListener('click', () => router.go('work/' + w.id));
+      ll.append(it);
+    }
+    root.append(logCard);
+  }
+
   const authoredCard = h('section', { class: 'card' });
   authoredCard.innerHTML = `<header class="card-h"><div class="card-h-title">投稿した手順書 <small>(${authored.length})</small></div>
     <button class="btn btn-primary btn-sm" data-new>${I.plus}新規追加</button></header>`;
@@ -1261,23 +1427,34 @@ function viewApprove(root) {
         </div></td>`;
       tr.querySelector('[data-open]').addEventListener('click', () => router.go('work/' + w.id));
       tr.querySelector('[data-approve]').addEventListener('click', async () => {
-        const ok = await confirmModal('承認確認', h('div', {}, `「${w.title}」を承認して公開しますか?`));
+        const box = h('div', {});
+        box.append(h('div', {}, `「${w.title}」を承認して公開しますか?`));
+        const ta = h('textarea', { class: 'approve-modal-textarea', placeholder: '承認コメント (任意 · 提出者に届きます)' });
+        box.append(h('div', { class: 'form-lbl', style: 'margin-top:10px' }, '承認コメント'), ta);
+        const ok = await confirmModal('承認確認', box);
         if (!ok) return;
         w.status = 'published';
         w.approver = store.currentUserId;
         w.updatedAt = new Date().toISOString().slice(0, 10);
         w.history = w.history || [];
-        w.history.unshift({ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: '承認して公開しました' });
+        const note = ta.value.trim();
+        w.history.unshift({ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: '承認して公開しました' + (note ? ` — ${note}` : '') });
         store.save('works');
         toast('承認しました', 'success');
         render();
       });
       tr.querySelector('[data-reject]').addEventListener('click', async () => {
-        const ok = await confirmModal('差戻し確認', h('div', {}, `「${w.title}」を差戻しますか? (下書きに戻ります)`));
+        const box = h('div', {});
+        box.append(h('div', {}, `「${w.title}」を差戻します。理由を入力してください:`));
+        const ta = h('textarea', { class: 'approve-modal-textarea', placeholder: '差戻し理由 (必須 · 提出者への修正指示になります)' });
+        box.append(h('div', { class: 'form-lbl', style: 'margin-top:10px' }, '差戻し理由 *'), ta);
+        const ok = await confirmModal('差戻し確認', box);
         if (!ok) return;
+        const reason = ta.value.trim();
+        if (!reason) { toast('差戻し理由は必須です', 'err'); return; }
         w.status = 'draft';
         w.history = w.history || [];
-        w.history.unshift({ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: '差戻ししました' });
+        w.history.unshift({ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: `差戻し — ${reason}` });
         store.save('works');
         toast('差戻ししました');
         render();
@@ -1743,6 +1920,21 @@ function viewWorkEdit(root, params) {
       tabBody.append(formRow('作業概要', '', h('textarea', { class: 'form-ta', oninput: e => draft.description = e.target.value }, draft.description || '')));
     } else if (currentTab === 'steps') {
       const wrap = h('div', { style: 'display:flex;flex-direction:column;gap:8px' });
+      // AI ドラフト generator
+      if (draft.steps.length === 0) {
+        const helper = h('div', { class: 'ai-helper-row' });
+        helper.innerHTML = `${I.sparkle}<div class="ai-helper-row-text">タイトルから電気工事の標準手順 (停電確認 → 検電 → 養生 → 作業 → 通電確認 → 記録) を AI が下書きします。</div><button data-ai-draft>AI で下書き生成</button>`;
+        helper.querySelector('[data-ai-draft]').addEventListener('click', () => {
+          const t = (draft.title || '').trim();
+          if (!t) { toast('先にタイトルを入力してください', 'err'); return; }
+          const generated = window.AI.generateSteps(t, draft.category);
+          draft.steps.push(...generated);
+          renderTab();
+          card.querySelector('#sc').textContent = `(${draft.steps.length})`;
+          toast(`AI が ${generated.length} 手順を下書きしました`, 'success');
+        });
+        wrap.append(helper);
+      }
       draft.steps.forEach((s, i) => wrap.append(buildStepEditor(draft, i, () => { renderTab(); card.querySelector('#sc').textContent = `(${draft.steps.length})`; })));
       wrap.append(h('button', {
         class: 'btn btn-secondary btn-block', style: 'margin-top:6px',
@@ -1758,6 +1950,18 @@ function viewWorkEdit(root, params) {
       tabBody.append(h('div', { style: 'height:16px' }));
       tabBody.append(buildListEditor('使用材料', draft.materials, () => renderTab()));
     } else if (currentTab === 'tipsc') {
+      // AI KYT helper
+      if (draft.cautions.length === 0 && draft.title) {
+        const helper = h('div', { class: 'ai-helper-row' });
+        helper.innerHTML = `${I.sparkle}<div class="ai-helper-row-text">この作業カテゴリの標準的な KYT (危険予知) を AI が候補として提案します。現場に合わせて編集してください。</div><button data-ai-kyt>AI で KYT 生成</button>`;
+        helper.querySelector('[data-ai-kyt]').addEventListener('click', () => {
+          const generated = window.AI.generateKYT(draft.title);
+          draft.cautions.push(...generated);
+          renderTab();
+          toast(`AI が KYT ${generated.length} 項目を提案しました`, 'success');
+        });
+        tabBody.append(helper);
+      }
       tabBody.append(buildTextListEditor('コツ・ポイント', draft.tips, () => renderTab()));
       tabBody.append(h('div', { style: 'height:16px' }));
       tabBody.append(buildTextListEditor('注意点・危険予知', draft.cautions, () => renderTab()));
@@ -1978,12 +2182,516 @@ function buildResourceEditor(draft, onChange) {
   return wrap;
 }
 
+// ============================ Icons additional ============================
+Object.assign(I, {
+  sparkle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>',
+  send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>',
+  qr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h4M17 21h4M21 14v3"/></svg>',
+  print: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>',
+  cmd: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3a3 3 0 0 1 3 3v12a3 3 0 1 1-3-3h12a3 3 0 1 1-3 3V6a3 3 0 1 1 3 3H6a3 3 0 0 1-3-3z"/></svg>',
+});
+
+// ============================ AI FAB & Panel ============================
+const ai = {
+  panel: null,
+  msgs: [
+    { role: 'bot', text: 'こんにちは。三崎屋電工AI の技術アシスタントです。作業手順・基準値・危険予知について何でも聞いてください。', suggest: ['絶縁抵抗の合格基準は?', '検電器の動作確認は?', 'PAS交換の危険は?'] },
+  ],
+
+  toggle() {
+    if (this.panel) return this.close();
+    this.open();
+  },
+  open() {
+    const p = h('div', { class: 'ai-panel' });
+    p.innerHTML = `
+      <div class="ai-h">
+        <div class="ai-h-mark">${I.sparkle}</div>
+        <div class="ai-h-title">技術アシスタント<small>電気工事の実務Q&Aに回答</small></div>
+        <button class="ai-h-close" aria-label="閉じる">${I.x}</button>
+      </div>
+      <div class="ai-body" id="aiBody"></div>
+      <div class="ai-in">
+        <input placeholder="質問を入力 (例: 絶縁抵抗 100V の基準)" id="aiIn" autocomplete="off">
+        <button id="aiSend" aria-label="送信">${I.send}</button>
+      </div>`;
+    document.body.append(p);
+    this.panel = p;
+    this.render();
+    p.querySelector('.ai-h-close').addEventListener('click', () => this.close());
+    const inp = p.querySelector('#aiIn');
+    const send = p.querySelector('#aiSend');
+    inp.focus();
+    const submit = () => {
+      const q = inp.value.trim();
+      if (!q) return;
+      inp.value = '';
+      this.ask(q);
+    };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+    send.addEventListener('click', submit);
+  },
+  close() {
+    if (this.panel) { this.panel.remove(); this.panel = null; }
+  },
+  render() {
+    if (!this.panel) return;
+    const body = this.panel.querySelector('#aiBody');
+    body.innerHTML = '';
+    for (const m of this.msgs) {
+      const msg = h('div', { class: 'ai-msg ' + (m.role === 'me' ? 'me' : 'bot') });
+      msg.append(h('div', { class: 'ai-msg-txt' }, m.text));
+      if (m.related && m.related.length) {
+        const rel = h('div', { class: 'ai-msg-rel' });
+        for (const rid of m.related) {
+          const w = store.work(rid);
+          if (!w) continue;
+          const a = h('a', { onclick: () => { router.go('work/' + rid); this.close(); } }, w.title);
+          rel.append(a);
+        }
+        msg.append(rel);
+      }
+      if (m.suggest && m.suggest.length) {
+        const s = h('div', { class: 'ai-suggest' });
+        for (const q of m.suggest) {
+          const b = h('button', { onclick: () => this.ask(q) }, q);
+          s.append(b);
+        }
+        msg.append(s);
+      }
+      body.append(msg);
+    }
+    body.scrollTop = body.scrollHeight;
+  },
+  async ask(question) {
+    this.msgs.push({ role: 'me', text: question });
+    this.render();
+    // typing indicator
+    const body = this.panel.querySelector('#aiBody');
+    const typing = h('div', { class: 'ai-msg bot' });
+    typing.innerHTML = `<div class="ai-typing"><span></span><span></span><span></span></div>`;
+    body.append(typing);
+    body.scrollTop = body.scrollHeight;
+    await new Promise(r => setTimeout(r, 550 + Math.random() * 350));
+    typing.remove();
+    const res = window.AI.ask(question);
+    this.msgs.push({ role: 'bot', text: res.answer, related: res.related });
+    this.render();
+  },
+};
+
+function mountAIFab() {
+  if (document.getElementById('aiFab')) return;
+  const fab = h('button', { class: 'ai-fab', id: 'aiFab', title: '技術アシスタント (Cmd+/)', 'aria-label': 'AI アシスタント' });
+  fab.innerHTML = I.sparkle + `<span class="fab-dot"></span>`;
+  fab.addEventListener('click', () => ai.toggle());
+  document.body.append(fab);
+}
+
+// ============================ Cmd+K Command Palette ============================
+const palette = {
+  el: null,
+  cursor: 0,
+  items: [],
+
+  open() {
+    if (this.el) return;
+    const p = h('div', { class: 'palette-back' });
+    p.innerHTML = `
+      <div class="palette">
+        <div class="palette-in">
+          ${I.search}
+          <input placeholder="コマンド or キーワードを入力…" id="pIn" autocomplete="off">
+          <kbd>Esc</kbd>
+        </div>
+        <div class="palette-list" id="pList"></div>
+        <div class="palette-foot">
+          <span><kbd>↑↓</kbd> 選択</span>
+          <span><kbd>Enter</kbd> 開く</span>
+          <span><kbd>Esc</kbd> 閉じる</span>
+          <span style="margin-left:auto">${store.works.filter(w => w.status === 'published').length} 件の手順書を検索対象</span>
+        </div>
+      </div>`;
+    p.addEventListener('click', e => { if (e.target === p) this.close(); });
+    document.body.append(p);
+    this.el = p;
+    const inp = p.querySelector('#pIn');
+    inp.focus();
+    this.refresh('');
+    inp.addEventListener('input', e => this.refresh(e.target.value));
+    p.addEventListener('keydown', e => this.onKey(e));
+  },
+  close() {
+    if (this.el) { this.el.remove(); this.el = null; this.cursor = 0; }
+  },
+  onKey(e) {
+    if (e.key === 'Escape') { this.close(); e.preventDefault(); }
+    else if (e.key === 'ArrowDown') {
+      this.cursor = Math.min(this.items.length - 1, this.cursor + 1);
+      this.paint();
+      e.preventDefault();
+    }
+    else if (e.key === 'ArrowUp') {
+      this.cursor = Math.max(0, this.cursor - 1);
+      this.paint();
+      e.preventDefault();
+    }
+    else if (e.key === 'Enter') {
+      const item = this.items[this.cursor];
+      if (item) { item.action(); this.close(); }
+      e.preventDefault();
+    }
+  },
+  paint() {
+    const list = this.el.querySelector('#pList');
+    list.innerHTML = '';
+    if (this.items.length === 0) {
+      list.innerHTML = `<div class="palette-empty">該当なし。<br>別のキーワードで試してください。</div>`;
+      return;
+    }
+    let lastGroup = '';
+    this.items.forEach((item, idx) => {
+      if (item.group !== lastGroup) {
+        list.append(h('div', { class: 'palette-group-h' }, item.group));
+        lastGroup = item.group;
+      }
+      const el = h('div', { class: 'palette-item ' + (idx === this.cursor ? 'on' : '') });
+      el.innerHTML = `
+        ${item.icon || I.right}
+        <div class="palette-body">
+          <div class="palette-title">${item.title}</div>
+          ${item.sub ? `<div class="palette-sub">${esc(item.sub)}</div>` : ''}
+        </div>
+        ${item.hint ? `<div class="palette-hint">${item.hint}</div>` : ''}`;
+      el.addEventListener('click', () => { item.action(); this.close(); });
+      list.append(el);
+    });
+  },
+  refresh(q) {
+    const items = [];
+    const norm = q.trim().toLowerCase();
+    const highlight = (text) => {
+      if (!norm) return esc(text);
+      const idx = text.toLowerCase().indexOf(norm);
+      if (idx < 0) return esc(text);
+      return esc(text.slice(0, idx)) + `<mark>${esc(text.slice(idx, idx + norm.length))}</mark>` + esc(text.slice(idx + norm.length));
+    };
+
+    // ナビ (常に候補)
+    const navs = [
+      { name: 'ホーム', route: 'home', icon: I.home, hint: 'G H' },
+      { name: '作業を探す', route: 'search', icon: I.search, hint: 'G S' },
+      { name: 'お気に入り', route: 'favorites', icon: I.starOutline, hint: 'G F' },
+      { name: '最近の閲覧', route: 'recent', icon: I.clock },
+      { name: 'マイページ', route: 'mypage', icon: I.user },
+      { name: '承認・確認', route: 'approve', icon: I.check },
+      { name: 'データベース', route: 'database', icon: I.db },
+      { name: '教材モード', route: 'courses', icon: I.book },
+      { name: '管理メニュー', route: 'admin', icon: I.gear },
+    ];
+    for (const n of navs) {
+      if (!norm || n.name.toLowerCase().includes(norm)) {
+        items.push({ group: 'ページ', title: highlight(n.name), icon: n.icon, hint: n.hint, action: () => router.go(n.route) });
+      }
+    }
+    // アクション
+    const actions = [
+      { name: '新しい作業を追加', route: 'new', icon: I.plus },
+      { name: '技術アシスタントを開く', action: () => ai.open(), icon: I.sparkle },
+    ];
+    for (const a of actions) {
+      if (!norm || a.name.toLowerCase().includes(norm)) {
+        items.push({ group: 'アクション', title: highlight(a.name), icon: a.icon, action: a.action || (() => router.go(a.route)) });
+      }
+    }
+    // 作業 (fuzzy)
+    if (norm.length >= 1) {
+      const works = store.works.filter(w => w.status === 'published').filter(w =>
+        w.title.toLowerCase().includes(norm) ||
+        (w.tags || []).some(t => t.toLowerCase().includes(norm)) ||
+        (w.description || '').toLowerCase().includes(norm)
+      ).slice(0, 8);
+      for (const w of works) {
+        const cat = store.category(w.category);
+        items.push({
+          group: '作業手順書',
+          title: highlight(w.title),
+          sub: `${cat ? cat.name : ''} · 難易度 ${w.difficulty}/5 · 更新 ${fmtDate(w.updatedAt)}`,
+          icon: I.book,
+          action: () => router.go('work/' + w.id),
+        });
+      }
+      // AI 質問 sink
+      items.push({
+        group: 'AI アシスタント',
+        title: `<mark>「${esc(q)}」</mark> について技術アシスタントに質問`,
+        icon: I.sparkle,
+        action: () => { ai.open(); setTimeout(() => ai.ask(q), 150); },
+      });
+    }
+    this.items = items;
+    this.cursor = 0;
+    this.paint();
+  },
+};
+
+// ============================ Global Keyboard Shortcuts ============================
+let gLeader = null;
+let gLeaderTimeout = null;
+function mountShortcuts() {
+  document.addEventListener('keydown', e => {
+    const inField = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+
+    // Cmd+K / Ctrl+K → palette
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (palette.el) palette.close(); else palette.open();
+      return;
+    }
+    // Cmd+/ → AI
+    if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+      e.preventDefault();
+      ai.toggle();
+      return;
+    }
+    if (inField) return;
+    // ? → help
+    if (e.key === '?') { e.preventDefault(); showHelp(); return; }
+    // Esc → close overlays
+    if (e.key === 'Escape') {
+      if (ai.panel) ai.close();
+      return;
+    }
+    // g leader (vim-style)
+    if (e.key === 'g' && !gLeader) {
+      gLeader = 'g';
+      clearTimeout(gLeaderTimeout);
+      gLeaderTimeout = setTimeout(() => { gLeader = null; }, 1200);
+      return;
+    }
+    if (gLeader === 'g') {
+      gLeader = null;
+      clearTimeout(gLeaderTimeout);
+      const map = { h: 'home', s: 'search', f: 'favorites', r: 'recent', m: 'mypage', a: 'approve', d: 'database', c: 'courses' };
+      if (map[e.key]) { router.go(map[e.key]); e.preventDefault(); return; }
+    }
+    // e = edit current work
+    if (e.key === 'e' && router.current.name === 'work' && router.current.params.id) {
+      e.preventDefault();
+      router.go('work/' + router.current.params.id + '/edit');
+      return;
+    }
+    // f = toggle favorite on work detail
+    if (e.key === 'f' && router.current.name === 'work' && router.current.params.id) {
+      e.preventDefault();
+      const w = store.work(router.current.params.id);
+      if (w) {
+        const on = store.toggleFav(w.id);
+        toast(on ? 'お気に入りに追加しました' : 'お気に入りから外しました', 'success');
+        render();
+      }
+    }
+  });
+}
+
+function showHelp() {
+  const list = h('div', {});
+  const rows = [
+    ['Cmd+K', 'コマンドパレット'],
+    ['Cmd+/', '技術アシスタント'],
+    ['G → H', 'ホーム'],
+    ['G → S', '作業を探す'],
+    ['G → F', 'お気に入り'],
+    ['G → R', '最近の閲覧'],
+    ['G → M', 'マイページ'],
+    ['G → A', '承認・確認'],
+    ['G → D', 'データベース'],
+    ['G → C', '教材モード'],
+    ['F', '作業詳細でお気に入り toggle'],
+    ['E', '作業詳細で編集モードへ'],
+    ['?', 'このヘルプ'],
+    ['Esc', 'オーバーレイを閉じる'],
+  ];
+  const grid = h('div', { style: 'display:grid;grid-template-columns:auto 1fr;gap:8px 18px;font-size:12.5px' });
+  for (const [k, v] of rows) {
+    grid.append(
+      h('kbd', { style: 'background:var(--surface-2);border:1px solid var(--rule);padding:2px 8px;border-radius:4px;font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--ink);text-align:center;justify-self:start' }, k),
+      h('div', { style: 'color:var(--ink-2);font-weight:600' }, v),
+    );
+  }
+  list.append(grid);
+  modal('キーボードショートカット', list, (row, close) => {
+    row.append(h('button', { class: 'btn btn-primary', onclick: () => close(true) }, '閉じる'));
+  });
+}
+
+// ============================ QR Code (self-contained, no external lib) ============================
+// Minimal QR code generator (Model 2, ECC L, up to version 10)
+function qrSVG(text, size = 200) {
+  const matrix = qrMatrix(text);
+  const n = matrix.length;
+  const cell = Math.max(2, Math.floor(size / (n + 4)));
+  const total = cell * (n + 4);
+  let rects = '';
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      if (matrix[y][x]) rects += `<rect x="${(x + 2) * cell}" y="${(y + 2) * cell}" width="${cell}" height="${cell}" fill="#0f0f0f"/>`;
+    }
+  }
+  return `<svg width="${total}" height="${total}" viewBox="0 0 ${total} ${total}" xmlns="http://www.w3.org/2000/svg"><rect width="${total}" height="${total}" fill="#fff"/>${rects}</svg>`;
+}
+
+// Simple QR matrix generator (byte mode, ECC L)
+function qrMatrix(text) {
+  const bytes = new TextEncoder().encode(text);
+  // Determine minimum version for byte mode ECC L
+  const capacities = [17, 32, 53, 78, 106, 134, 154, 192, 230, 271];
+  let version = 1;
+  while (version <= 10 && bytes.length > capacities[version - 1]) version++;
+  if (version > 10) version = 10; // clamp; may still error but sufficient for our short URLs
+  return buildQR(bytes, version);
+}
+
+// A very compact QR encoder for byte-mode ECC-L. Adapted from public-domain implementations.
+function buildQR(data, ver) {
+  const size = 17 + ver * 4;
+  const eccWordsPerBlock = [null, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18][ver];
+  const numBlocks = [null, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2][ver];
+  const totalCodewords = [null, 26, 44, 70, 100, 134, 172, 196, 242, 292, 346][ver];
+  const dataCapacity = totalCodewords - eccWordsPerBlock * numBlocks;
+  // Build bit stream
+  const bits = [];
+  const push = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push((val >> i) & 1); };
+  push(0b0100, 4); // byte mode
+  push(data.length, ver < 10 ? 8 : 16);
+  for (const b of data) push(b, 8);
+  // terminator
+  for (let i = 0; i < 4 && bits.length < dataCapacity * 8; i++) bits.push(0);
+  while (bits.length % 8 !== 0) bits.push(0);
+  const codewords = [];
+  for (let i = 0; i < bits.length; i += 8) {
+    let byte = 0;
+    for (let j = 0; j < 8; j++) byte = (byte << 1) | bits[i + j];
+    codewords.push(byte);
+  }
+  const pad = [0xEC, 0x11];
+  let pi = 0;
+  while (codewords.length < dataCapacity) codewords.push(pad[pi++ % 2]);
+  // Reed-Solomon ECC over GF(256)
+  const rs = rsEncode(codewords, eccWordsPerBlock);
+  const allBytes = codewords.concat(rs);
+  // Build matrix
+  const m = Array.from({ length: size }, () => new Array(size).fill(null));
+  const rsv = Array.from({ length: size }, () => new Array(size).fill(false));
+  // Finder patterns
+  const drawFinder = (r, c) => {
+    for (let y = -1; y <= 7; y++) for (let x = -1; x <= 7; x++) {
+      const yy = r + y, xx = c + x;
+      if (yy < 0 || yy >= size || xx < 0 || xx >= size) continue;
+      const on = (0 <= y && y <= 6 && (x === 0 || x === 6)) ||
+                 (0 <= x && x <= 6 && (y === 0 || y === 6)) ||
+                 (2 <= y && y <= 4 && 2 <= x && x <= 4);
+      m[yy][xx] = on ? 1 : 0;
+      rsv[yy][xx] = true;
+    }
+  };
+  drawFinder(0, 0); drawFinder(0, size - 7); drawFinder(size - 7, 0);
+  // Timing patterns
+  for (let i = 8; i < size - 8; i++) {
+    m[6][i] = (i % 2 === 0) ? 1 : 0; rsv[6][i] = true;
+    m[i][6] = (i % 2 === 0) ? 1 : 0; rsv[i][6] = true;
+  }
+  // Alignment (for ver >= 2)
+  if (ver >= 2) {
+    const alignPos = [null, [], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 50]][ver];
+    for (const cx of alignPos) for (const cy of alignPos) {
+      if ((cx === 6 && cy === 6) || (cx === 6 && cy === size - 7) || (cx === size - 7 && cy === 6)) continue;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        const yy = cy + dy, xx = cx + dx;
+        const on = (Math.abs(dx) === 2 || Math.abs(dy) === 2 || (dx === 0 && dy === 0));
+        m[yy][xx] = on ? 1 : 0;
+        rsv[yy][xx] = true;
+      }
+    }
+  }
+  // Reserve format info
+  for (let i = 0; i <= 8; i++) { if (!rsv[8][i]) { m[8][i] = 0; rsv[8][i] = true; } if (!rsv[i][8]) { m[i][8] = 0; rsv[i][8] = true; } }
+  for (let i = 0; i < 8; i++) { m[size - 1 - i][8] = 0; rsv[size - 1 - i][8] = true; m[8][size - 1 - i] = 0; rsv[8][size - 1 - i] = true; }
+  m[size - 8][8] = 1; rsv[size - 8][8] = true;
+  // Data placement
+  const dataBits = [];
+  for (const b of allBytes) for (let i = 7; i >= 0; i--) dataBits.push((b >> i) & 1);
+  let bitIdx = 0, dir = -1, col = size - 1;
+  while (col > 0) {
+    if (col === 6) col--;
+    for (let vert = 0; vert < size; vert++) {
+      for (let j = 0; j < 2; j++) {
+        const x = col - j;
+        const y = dir < 0 ? size - 1 - vert : vert;
+        if (rsv[y][x]) continue;
+        m[y][x] = bitIdx < dataBits.length ? dataBits[bitIdx++] : 0;
+      }
+    }
+    dir = -dir;
+    col -= 2;
+  }
+  // Apply mask 0 (simplest, and format bits for mask 0)
+  const mask = (y, x) => (y + x) % 2 === 0;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    if (rsv[y][x]) continue;
+    if (mask(y, x)) m[y][x] ^= 1;
+  }
+  // Format info for ECC L, mask 0
+  const formatBits = 0b111011111000100;
+  const formatArr = [];
+  for (let i = 14; i >= 0; i--) formatArr.push((formatBits >> i) & 1);
+  const putFormat = (bits) => {
+    for (let i = 0; i < 6; i++) m[8][i] = bits[i];
+    m[8][7] = bits[6]; m[8][8] = bits[7]; m[7][8] = bits[8];
+    for (let i = 9; i < 15; i++) m[14 - i][8] = bits[i];
+    for (let i = 0; i < 7; i++) m[size - 1 - i][8] = bits[i];
+    for (let i = 7; i < 15; i++) m[8][size - 15 + i] = bits[i];
+  };
+  putFormat(formatArr);
+  return m;
+}
+// Reed-Solomon over GF(256) with primitive poly 0x11d
+function rsEncode(data, eccLen) {
+  const exp = new Array(512), log = new Array(256);
+  let x = 1;
+  for (let i = 0; i < 255; i++) { exp[i] = x; log[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11d; }
+  for (let i = 255; i < 512; i++) exp[i] = exp[i - 255];
+  const gfMul = (a, b) => (a === 0 || b === 0) ? 0 : exp[log[a] + log[b]];
+  // Generator polynomial
+  let gen = [1];
+  for (let i = 0; i < eccLen; i++) {
+    const next = new Array(gen.length + 1).fill(0);
+    for (let j = 0; j < gen.length; j++) {
+      next[j] ^= gen[j];
+      next[j + 1] ^= gfMul(gen[j], exp[i]);
+    }
+    gen = next;
+  }
+  // Divide
+  const buf = data.concat(new Array(eccLen).fill(0));
+  for (let i = 0; i < data.length; i++) {
+    const coef = buf[i];
+    if (coef !== 0) {
+      for (let j = 0; j < gen.length; j++) buf[i + j] ^= gfMul(gen[j], coef);
+    }
+  }
+  return buf.slice(data.length);
+}
+
 // ============================ Boot ============================
 store.load();
 render();
+mountAIFab();
+mountShortcuts();
 
-// Expose for debugging
 window.__store = store;
 window.__router = router;
+window.__ai = ai;
+window.__palette = palette;
 
 })();
