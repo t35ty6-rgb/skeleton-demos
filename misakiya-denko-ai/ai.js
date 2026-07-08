@@ -470,9 +470,10 @@ function generateStepsFromTranscript(cues, opts = {}) {
   }
 
   // If too few / too many, adjust
-  // Too few → subdivide by cue count
-  if (boundaries.length < 3 && cues.length > targetSteps) {
-    const per = Math.ceil(cues.length / targetSteps);
+  // Too few → subdivide by cue count (境界数がターゲットの半分未満 かつ cue が3以上 なら等分割)
+  if (boundaries.length < Math.max(3, Math.ceil(targetSteps / 2)) && cues.length >= 3) {
+    const desired = Math.min(cues.length, targetSteps);
+    const per = Math.max(1, Math.ceil(cues.length / desired));
     boundaries.length = 0;
     for (let i = 0; i < cues.length; i += per) boundaries.push(i);
   }

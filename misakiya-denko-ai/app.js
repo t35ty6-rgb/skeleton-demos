@@ -3557,8 +3557,8 @@ function mountShortcuts() {
   document.addEventListener('keydown', e => {
     const inField = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
 
-    // Cmd+K / Ctrl+K → palette (どこからでも)
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    // Cmd+K / Ctrl+K → palette (どこからでも、両ブラウザ対応)
+    if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'k' || e.code === 'KeyK')) {
       e.preventDefault();
       if (palette.el) palette.close(); else palette.open();
       return;
