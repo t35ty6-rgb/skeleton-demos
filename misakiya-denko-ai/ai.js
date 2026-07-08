@@ -446,7 +446,15 @@ function extractTitle(text) {
   // 短くしすぎない (最低 5, 最大 24)
   if (firstPart.length >= 5 && firstPart.length <= 24) return firstPart;
   if (firstPart.length > 24) return firstPart.slice(0, 20) + '…';
-  return firstPart;
+  // 5字未満 → 句を繋げて補完
+  const parts = t.split(/[。、,\.]/).map(s => s.trim()).filter(Boolean);
+  let joined = '';
+  for (const p of parts) {
+    joined += p;
+    if (joined.length >= 5) break;
+  }
+  if (joined.length > 24) return joined.slice(0, 20) + '…';
+  return joined || firstPart || t.slice(0, 12);
 }
 
 // transcript (cues) → 手順配列 (segment 化)
