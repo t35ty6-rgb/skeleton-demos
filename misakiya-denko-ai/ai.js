@@ -348,6 +348,236 @@ function fulltextSearch(query) {
   return results.sort((a, b) => b.score - a.score);
 }
 
+// ============ VTT / SRT parser + step generator from transcript ============
+
+// Parse WebVTT (YouTube / Zoom / 標準字幕形式)
+function parseVTT(text) {
+  const cues = [];
+  const blocks = text.replace(/\r/g, '').split(/\n\n+/);
+  for (const block of blocks) {
+    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) continue;
+    // skip WEBVTT header
+    if (lines[0] === 'WEBVTT' || lines[0].startsWith('NOTE') || lines[0].startsWith('STYLE')) continue;
+    // Find timing line
+    const timingIdx = lines.findIndex(l => /^\d+:\d+.*-->/.test(l) || /^\d+:\d+\.\d+.*-->/.test(l));
+    if (timingIdx < 0) continue;
+    const timing = lines[timingIdx];
+    const m = timing.match(/(\d+):(\d+)(?::(\d+))?\.?(\d+)?\s*-->\s*(\d+):(\d+)(?::(\d+))?\.?(\d+)?/);
+    if (!m) continue;
+    const toSec = (h, mi, s, ms) => {
+      if (s == null) { s = mi; mi = h; h = 0; }
+      return (+h || 0) * 3600 + (+mi || 0) * 60 + (+s || 0) + (+(ms || 0)) / 1000;
+    };
+    const start = toSec(m[1], m[2], m[3], m[4]);
+    const end = toSec(m[5], m[6], m[7], m[8]);
+    const text = lines.slice(timingIdx + 1).join(' ').replace(/<[^>]+>/g, '').trim();
+    if (text) cues.push({ start, end, text });
+  }
+  return cues;
+}
+
+// Parse SRT (Subrip)
+function parseSRT(text) {
+  const cues = [];
+  const blocks = text.replace(/\r/g, '').split(/\n\n+/);
+  for (const block of blocks) {
+    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) continue;
+    const timing = lines.find(l => l.includes('-->')) || '';
+    const m = timing.match(/(\d+):(\d+):(\d+),(\d+)\s*-->\s*(\d+):(\d+):(\d+),(\d+)/);
+    if (!m) continue;
+    const toSec = (h, mi, s, ms) => +h * 3600 + +mi * 60 + +s + +ms / 1000;
+    const start = toSec(m[1], m[2], m[3], m[4]);
+    const end = toSec(m[5], m[6], m[7], m[8]);
+    const startIdx = lines.indexOf(timing);
+    const text = lines.slice(startIdx + 1).join(' ').replace(/<[^>]+>/g, '').trim();
+    if (text) cues.push({ start, end, text });
+  }
+  return cues;
+}
+
+// Auto-parse (detect VTT vs SRT)
+function parseTranscript(text) {
+  const trimmed = text.trim();
+  if (/^WEBVTT/.test(trimmed) || /-->/.test(trimmed.slice(0, 200)) && !/^\d+\s*$/.test(trimmed.split('\n')[0])) {
+    return parseVTT(trimmed);
+  }
+  if (/^\d+\s*\n/.test(trimmed)) return parseSRT(trimmed);
+  // Plain text — chunk by sentence + fake timestamps
+  return plainTextToCues(trimmed);
+}
+
+// Plain text (no timestamps) → cues with estimated timing (assume ~200 chars/min JP)
+function plainTextToCues(text) {
+  const sentences = text.split(/[。\n]+/).map(s => s.trim()).filter(Boolean);
+  const cues = [];
+  let t = 0;
+  for (const s of sentences) {
+    // ~4 sec per sentence estimate
+    const dur = Math.max(3, Math.min(15, s.length / 4));
+    cues.push({ start: t, end: t + dur, text: s + (s.endsWith('。') ? '' : '。') });
+    t += dur;
+  }
+  return cues;
+}
+
+// Detect "new step" markers in text (接続語・番号 頭)
+const STEP_MARKERS = [
+  /^(まず|最初に|はじめに|第一に)/,
+  /^(次に|続いて|そして|それから|続けて)/,
+  /^(その後|その次|そのあと)/,
+  /^(それでは|では|さて|ここで)/,
+  /^(終わったら|完了したら|できたら)/,
+  /^(最後に|以上で|終わりに)/,
+  /^(手順|ステップ|工程)\s*\d+/,
+  /^(\d+)[.．、)]/,
+  /^[①②③④⑤⑥⑦⑧⑨⑩]/,
+];
+
+// Extract "title" (short) from a caption text — grab a compact noun phrase
+function extractTitle(text) {
+  let t = text.replace(/^(まず|次に|続いて|そして|それでは|それから|終わったら|最後に|最初に|はじめに|続けて|さて|ここで|できたら|完了したら|その後|その次|そのあと|以上で|終わりに)、?/, '').trim();
+  t = t.replace(/^(手順|ステップ|工程)\s*\d+[:.、]?\s*/, '');
+  t = t.replace(/^\d+[.．、)]\s*/, '');
+  t = t.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, '');
+  // Take first phrase up to period/comma/12chars
+  const firstPart = t.split(/[。、,\.]/, 1)[0].trim();
+  // 短くしすぎない (最低 5, 最大 24)
+  if (firstPart.length >= 5 && firstPart.length <= 24) return firstPart;
+  if (firstPart.length > 24) return firstPart.slice(0, 20) + '…';
+  return firstPart;
+}
+
+// transcript (cues) → 手順配列 (segment 化)
+function generateStepsFromTranscript(cues, opts = {}) {
+  const minGap = opts.minGap ?? 3; // sec — 3秒以上あいたら区切り
+  const targetSteps = opts.targetSteps ?? 8; // 目安ステップ数
+  if (!cues.length) return [];
+
+  // Score each cue for "new step" start
+  const boundaries = [0];
+  for (let i = 1; i < cues.length; i++) {
+    const prev = cues[i - 1];
+    const cur = cues[i];
+    const gap = cur.start - prev.end;
+    let isBoundary = false;
+    // marker phrase
+    if (STEP_MARKERS.some(re => re.test(cur.text))) isBoundary = true;
+    // large gap
+    else if (gap >= minGap) isBoundary = true;
+    if (isBoundary) boundaries.push(i);
+  }
+
+  // If too few / too many, adjust
+  // Too few → subdivide by cue count
+  if (boundaries.length < 3 && cues.length > targetSteps) {
+    const per = Math.ceil(cues.length / targetSteps);
+    boundaries.length = 0;
+    for (let i = 0; i < cues.length; i += per) boundaries.push(i);
+  }
+  // Too many → merge adjacent short groups
+  while (boundaries.length > targetSteps + 3 && boundaries.length > 2) {
+    let bestI = 1, bestScore = Infinity;
+    for (let i = 1; i < boundaries.length - 1; i++) {
+      const groupSize = boundaries[i + 1] - boundaries[i];
+      if (groupSize < bestScore) { bestScore = groupSize; bestI = i; }
+    }
+    boundaries.splice(bestI, 1);
+  }
+
+  const steps = [];
+  for (let bi = 0; bi < boundaries.length; bi++) {
+    const startIdx = boundaries[bi];
+    const endIdx = bi + 1 < boundaries.length ? boundaries[bi + 1] - 1 : cues.length - 1;
+    const segCues = cues.slice(startIdx, endIdx + 1);
+    if (!segCues.length) continue;
+    const fullText = segCues.map(c => c.text).join(' ').replace(/\s+/g, ' ').trim();
+    const title = extractTitle(fullText) || `手順 ${bi + 1}`;
+    const desc = fullText;
+    const videoStart = segCues[0].start;
+    const videoEnd = segCues[segCues.length - 1].end;
+    steps.push({
+      title,
+      desc,
+      note: '',
+      videoStart: Math.round(videoStart * 10) / 10,
+      videoEnd: Math.round(videoEnd * 10) / 10,
+    });
+  }
+  return steps;
+}
+
+// Demo transcript generator — 「AI 疑似文字起こし」ボタン用テンプレ
+function mockTranscribe(workTitle) {
+  const templates = {
+    panel: `WEBVTT
+
+00:00:00.000 --> 00:00:06.000
+まず、対象となる分電盤の一次側と二次側のブレーカー位置を確認します。
+
+00:00:06.500 --> 00:00:14.000
+一次側のメインブレーカーをOFFにしてから、施錠タグを取り付けます。
+
+00:00:14.500 --> 00:00:22.000
+次に、検電器を使って各相の電圧がゼロであることを確認します。事前に既知の活線で検電器の動作確認をしておきます。
+
+00:00:22.500 --> 00:00:30.000
+続いて、周囲に養生シートを敷き、落下物対策を行います。工具や部品が下に落ちないように注意します。
+
+00:00:30.500 --> 00:00:42.000
+既設分電盤の配線に符号を付けてから外していきます。ここでは必ず写真を撮って復旧時のトラブルを防ぎます。
+
+00:00:42.500 --> 00:00:54.000
+新設分電盤を規定位置に水準器で水平・垂直を確認しながらアンカーで固定します。取付ボルトは規定トルクで締めます。
+
+00:00:54.500 --> 00:01:04.000
+符号に従って配線を接続します。端子ネジは規定トルク、M4は1.2ニュートンメートルを目安に締付けます。
+
+00:01:04.500 --> 00:01:14.000
+最後に、500Vメガーで絶縁抵抗を測定します。電技解釈14条基準、150V以下は0.1メガオーム以上を確認します。`,
+    hv: `WEBVTT
+
+00:00:00.000 --> 00:00:07.000
+まず、電力会社と事前調整した停電範囲と時間を確認します。
+
+00:00:07.500 --> 00:00:16.000
+停電、検電、接地の三種の神器を必ず順番に実施します。省略は絶対に避けます。
+
+00:00:16.500 --> 00:00:26.000
+高所作業車で既設高圧機器を慎重に取り外します。制御ケーブルの結線状態を写真で記録します。
+
+00:00:26.500 --> 00:00:38.000
+新設機器を規定寸法で据え付け、制御ケーブルを結線します。SOG制御回路の誤結線は波及事故の原因になります。
+
+00:00:38.500 --> 00:00:50.000
+所定の動作試験を実施し、判定結果を記録します。
+
+00:00:50.500 --> 00:01:00.000
+最後に接地器具を撤去し、電力会社と連絡して送電手続きを行います。`,
+    default: `WEBVTT
+
+00:00:00.000 --> 00:00:06.000
+まず、作業前の安全確認を行います。
+
+00:00:06.500 --> 00:00:14.000
+次に、必要な工具と材料を準備します。
+
+00:00:14.500 --> 00:00:24.000
+続いて、既設設備の状態を写真で記録します。
+
+00:00:24.500 --> 00:00:36.000
+新設作業を規定手順に従って進めます。
+
+00:00:36.500 --> 00:00:44.000
+最後に、動作確認と記録を行って完了です。`,
+  };
+  const t = (workTitle || '').toLowerCase();
+  if (/(pas|高圧|受変電|キュービクル)/.test(t)) return templates.hv;
+  if (/(分電盤|ブレーカー|elb|漏電)/.test(t)) return templates.panel;
+  return templates.panel; // sensible default for electrical
+}
+
 // ============ Public API ============
 return {
   generateSteps,
@@ -355,6 +585,9 @@ return {
   generateQuiz: generateQuizFromSteps,
   ask: askAI,
   search: fulltextSearch,
+  parseTranscript, parseVTT, parseSRT,
+  generateStepsFromTranscript,
+  mockTranscribe,
 };
 
 })();

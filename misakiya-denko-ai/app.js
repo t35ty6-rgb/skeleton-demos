@@ -1017,6 +1017,13 @@ function buildDetailCard(w) {
             s.desc ? h('div', { class: 'step-desc' }, s.desc) : null,
             s.note ? h('div', { class: 'step-note' }, s.note) : null,
           ];
+          // 動画タイムスタンプ (transcribe 由来)
+          if (s.videoStart != null && w.videoUrl) {
+            const vlink = h('button', { class: 'step-video-link', title: 'この手順の映像を再生' });
+            vlink.innerHTML = `${I.play}<span>該当箇所を見る</span><span class="step-video-time">${fmtTS(s.videoStart)}${s.videoEnd ? ' – ' + fmtTS(s.videoEnd) : ''}</span>`;
+            vlink.addEventListener('click', () => seekVideoTo(s.videoStart));
+            bodyKids.push(vlink);
+          }
           // 写真 grid
           if (photos.length > 0) {
             const grid = h('div', { class: 'step-photos' });
@@ -1405,13 +1412,50 @@ function buildRelatedBlock(w) {
 function renderVideo(url) {
   // parse YouTube URL
   const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]{11})/);
-  if (m) return `<iframe src="https://www.youtube.com/embed/${m[1]}?rel=0" allowfullscreen title="動画"></iframe>`;
+  if (m) return `<iframe id="workVideo" src="https://www.youtube.com/embed/${m[1]}?rel=0&enablejsapi=1" allowfullscreen title="動画"></iframe>`;
   // Vimeo
   const v = url.match(/vimeo\.com\/(\d+)/);
-  if (v) return `<iframe src="https://player.vimeo.com/video/${v[1]}" allowfullscreen title="動画"></iframe>`;
-  // Direct video URL
-  if (/\.(mp4|webm|mov)$/i.test(url)) return `<video controls src="${esc(url)}" style="position:absolute;inset:0;width:100%;height:100%;background:#000"></video>`;
+  if (v) return `<iframe id="workVideo" src="https://player.vimeo.com/video/${v[1]}" allowfullscreen title="動画"></iframe>`;
+  // Direct video URL or data: URL
+  if (url.startsWith('data:video/') || /\.(mp4|webm|mov|m4v|ogv)$/i.test(url)) {
+    return `<video id="workVideo" controls src="${esc(url)}" style="position:absolute;inset:0;width:100%;height:100%;background:#000"></video>`;
+  }
   return `<div class="video-placeholder">${I.play}<div>再生できない URL 形式です</div><div style="margin-top:4px"><code style="background:#fff;color:var(--ink);padding:2px 6px;border-radius:3px;font-size:10px">${esc(url)}</code></div></div>`;
+}
+
+// Seek current work video to given time (seconds)
+function seekVideoTo(sec) {
+  const video = document.getElementById('workVideo');
+  if (!video) { toast('動画プレーヤーが見つかりません', 'err'); return; }
+  video.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (video.tagName === 'VIDEO') {
+    video.currentTime = sec;
+    video.play().catch(() => {});
+    toast(`${fmtTS(sec)} から再生します`, 'success');
+    return;
+  }
+  if (video.tagName === 'IFRAME') {
+    const src = video.src;
+    // YouTube iframe → postMessage seek
+    if (/youtube/.test(src)) {
+      video.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'seekTo', args: [sec, true] }), '*');
+      video.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*');
+      toast(`${fmtTS(sec)} から再生します`, 'success');
+      return;
+    }
+    // Vimeo iframe → postMessage
+    if (/vimeo/.test(src)) {
+      video.contentWindow.postMessage(JSON.stringify({ method: 'setCurrentTime', value: sec }), '*');
+      video.contentWindow.postMessage(JSON.stringify({ method: 'play' }), '*');
+      toast(`${fmtTS(sec)} から再生します`, 'success');
+      return;
+    }
+    // fallback: rebuild iframe URL with &start=
+    const m = src.match(/embed\/([\w-]+)/);
+    if (m) {
+      video.src = `https://www.youtube.com/embed/${m[1]}?start=${Math.floor(sec)}&autoplay=1&rel=0&enablejsapi=1`;
+    }
+  }
 }
 
 function viewWorkDetail(root, params) {
@@ -2814,6 +2858,9 @@ function viewWorkEdit(root, params) {
       tabBody.append(h('div', { style: 'height:16px' }));
       tabBody.append(formRow('動画URL', 'YouTube / Vimeo / mp4 の URL を貼り付け', h('input', { class: 'form-in', value: draft.videoUrl || '', oninput: e => draft.videoUrl = e.target.value })));
       tabBody.append(h('div', { class: 'video-note', style: 'margin-top:6px' }, `対応: YouTube (`, h('code', {}, 'youtu.be/XXX'), ` または `, h('code', {}, 'youtube.com/watch?v=XXX'), `) / Vimeo / .mp4 直リンク`));
+
+      // Transcribe → ステップ自動生成
+      tabBody.append(buildTranscribeSection(draft, () => { renderTab(); card.querySelector('#sc').textContent = `(${draft.steps.length})`; }));
     }
   }
   renderTab();
@@ -2994,6 +3041,153 @@ function buildTextListEditor(title, list, onChange) {
   box.append(addBtn);
   wrap.append(box);
   return wrap;
+}
+
+// ============================ Transcribe / 動画から手順自動生成 ============================
+function buildTranscribeSection(draft, onGenerate) {
+  const wrap = h('div', { class: 'transcribe-block' });
+  const state = { mode: 'file', cues: [], rawText: '' };
+
+  wrap.innerHTML = `
+    <div class="transcribe-h">
+      ${I.sparkle}
+      <div>
+        <div class="transcribe-h-title">🎬 動画の文字起こしから 手順を自動生成</div>
+        <div class="transcribe-h-sub">字幕ファイル (VTT / SRT) をアップロード or 文字起こしを貼り付け → キャプションを分析して 手順 1・2・3… に自動分解</div>
+      </div>
+    </div>
+    <div class="transcribe-tabs" id="tt">
+      <button class="transcribe-tab on" data-m="file">📁 字幕ファイル</button>
+      <button class="transcribe-tab" data-m="paste">📝 テキスト貼付</button>
+      <button class="transcribe-tab" data-m="ai">✨ AI 疑似生成</button>
+    </div>
+    <div class="transcribe-pane" id="tp"></div>
+    <div id="tprev"></div>`;
+
+  const paneEl = wrap.querySelector('#tp');
+  const prevEl = wrap.querySelector('#tprev');
+
+  function renderPane() {
+    paneEl.innerHTML = '';
+    if (state.mode === 'file') {
+      const dz = h('div', { class: 'dropzone compact', style: 'margin:0' });
+      dz.innerHTML = `
+        <div class="dropzone-icon">${I.import}</div>
+        <div style="flex:1;min-width:0">
+          <div class="dropzone-title">.vtt / .srt / .txt ファイルをドロップ</div>
+          <div class="dropzone-sub">YouTube・Zoom録画・Teams録画 の字幕ファイル (WebVTT / SubRip) 対応</div>
+        </div>
+        <input type="file" class="dropzone-in" accept=".vtt,.srt,.txt,text/plain,text/vtt">`;
+      const inp = dz.querySelector('input');
+      const handle = async (f) => {
+        if (!f) return;
+        const text = await f.text();
+        state.rawText = text;
+        state.cues = window.AI.parseTranscript(text);
+        if (state.cues.length === 0) { toast('字幕を認識できませんでした', 'err'); return; }
+        toast(`${state.cues.length} 個のキャプションを認識しました`, 'success');
+        renderPreview();
+      };
+      inp.addEventListener('change', () => handle(inp.files[0]));
+      dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+      dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+      dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); handle(e.dataTransfer.files[0]); });
+      paneEl.append(dz);
+    } else if (state.mode === 'paste') {
+      const ta = h('textarea', { class: 'transcribe-ta', placeholder: 'WEBVTT または SRT または プレーン文字起こし を貼り付けてください。\n\n例:\nWEBVTT\n\n00:00:00.000 --> 00:00:06.000\nまず停電確認を行います。\n\n00:00:06.500 --> 00:00:12.000\n次に検電器で確認します。' });
+      const acts = h('div', { class: 'transcribe-actions' });
+      const parseBtn = h('button', { class: 'btn btn-primary btn-sm' }, '文字起こしを解析');
+      parseBtn.innerHTML = I.sparkle + '文字起こしを解析';
+      parseBtn.addEventListener('click', () => {
+        const text = ta.value.trim();
+        if (!text) { toast('文字起こしを入力してください', 'err'); return; }
+        state.rawText = text;
+        state.cues = window.AI.parseTranscript(text);
+        if (state.cues.length === 0) { toast('形式を認識できませんでした', 'err'); return; }
+        toast(`${state.cues.length} 個のキャプションを認識しました`, 'success');
+        renderPreview();
+      });
+      acts.append(parseBtn);
+      paneEl.append(ta, acts);
+    } else if (state.mode === 'ai') {
+      const info = h('div', { style: 'font-size:11.5px;color:var(--dim);font-weight:500;line-height:1.65;margin-bottom:8px' },
+        '本番運用時は OpenAI Whisper API に接続して 動画音声を自動文字起こしします (実装 hook 済み)。 デモではタイトルから電気工事の標準トークを疑似生成します。');
+      const btn = h('button', { class: 'btn btn-primary btn-sm' });
+      btn.innerHTML = I.sparkle + '疑似 AI で 文字起こしを生成';
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.innerHTML = I.sparkle + '生成中 …';
+        await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
+        state.rawText = window.AI.mockTranscribe(draft.title);
+        state.cues = window.AI.parseTranscript(state.rawText);
+        btn.disabled = false;
+        btn.innerHTML = I.sparkle + '再生成';
+        toast(`${state.cues.length} 個のキャプションを生成しました`, 'success');
+        renderPreview();
+      });
+      paneEl.append(info, btn);
+    }
+  }
+
+  function renderPreview() {
+    prevEl.innerHTML = '';
+    if (!state.cues.length) return;
+    const p = h('div', { class: 'transcribe-preview', style: 'margin-top:12px' });
+    const totalDur = state.cues[state.cues.length - 1].end;
+    p.innerHTML = `
+      <div class="transcribe-preview-h">
+        <span>認識したキャプション <small>· ${state.cues.length} 個 · ${fmtTS(totalDur)} 分</small></span>
+        <button class="btn btn-primary btn-sm" data-make>${I.sparkle}この字幕から手順を作る</button>
+      </div>`;
+    const list = h('div', {});
+    state.cues.slice(0, 15).forEach(c => {
+      const row = h('div', { class: 'transcribe-cue' });
+      row.innerHTML = `<div class="transcribe-cue-time">${fmtTS(c.start)}</div><div class="transcribe-cue-text">${esc(c.text)}</div>`;
+      list.append(row);
+    });
+    if (state.cues.length > 15) list.append(h('div', { class: 'transcribe-cue', style: 'color:var(--dim);justify-content:center' }, h('div'), h('div', {}, `… 他 ${state.cues.length - 15} 個`)));
+    p.append(list);
+    p.querySelector('[data-make]').addEventListener('click', async () => {
+      const generated = window.AI.generateStepsFromTranscript(state.cues);
+      if (!generated.length) { toast('手順を生成できませんでした', 'err'); return; }
+      const mode = draft.steps.length === 0 ? 'append' : await new Promise(resolve => {
+        modal('手順生成方法', h('div', {},
+          h('div', {}, `字幕から ${generated.length} 手順が生成されます。既存 ${draft.steps.length} 手順をどうしますか?`),
+        ), (row, close) => {
+          row.append(
+            h('button', { class: 'btn btn-ghost', onclick: () => { close(null); resolve(null); } }, 'キャンセル'),
+            h('button', { class: 'btn btn-secondary', onclick: () => { close('replace'); resolve('replace'); } }, '既存を置換'),
+            h('button', { class: 'btn btn-primary', onclick: () => { close('append'); resolve('append'); } }, '末尾に追加'),
+          );
+        });
+      });
+      if (!mode) return;
+      if (mode === 'replace') draft.steps.length = 0;
+      draft.steps.push(...generated);
+      toast(`${generated.length} 手順を生成しました (動画タイムスタンプ付き)`, 'success');
+      onGenerate && onGenerate();
+    });
+    prevEl.append(p);
+  }
+
+  renderPane();
+
+  wrap.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => {
+    wrap.querySelectorAll('[data-m]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    state.mode = b.dataset.m;
+    renderPane();
+  }));
+
+  return wrap;
+}
+
+function fmtTS(seconds) {
+  if (seconds == null || isNaN(seconds)) return '00:00';
+  const s = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 
 function buildResourceEditor(draft, onChange) {
