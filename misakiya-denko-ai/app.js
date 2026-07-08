@@ -292,8 +292,8 @@ function renderSidebar() {
       ${navItem('recent', '最近の閲覧', 'clock')}
       ${navItem('mypage', 'マイページ', 'user')}
     </nav>
-    <div class="nav-group" style="margin-top:14px">
-      <div class="nav-heading">業務</div>
+    <div class="nav-group" style="margin-top:16px">
+      <div class="nav-heading">Ops</div>
       ${navItem('approve', '承認・確認', 'check', pending || null)}
       ${navItem('database', 'データベース', 'db')}
       ${navItem('courses', '教材モード', 'book')}
@@ -436,62 +436,65 @@ function render() {
 window.addEventListener('hashchange', render);
 
 // ============================ Reusable UI pieces ============================
-// Difficulty ladder — 5 squares, level-colored (signature element, replaces ★)
-function difficultyBar(n, small = false) {
-  const level = Math.max(1, Math.min(5, n));
-  return `<span class="diff ${small ? 'diff-sm' : ''}" data-level="${level}" title="難易度 ${level} / 5">
-    <span class="diff-cell"></span><span class="diff-cell"></span><span class="diff-cell"></span><span class="diff-cell"></span><span class="diff-cell"></span>
-  </span>`;
+function stars(n, max = 5) {
+  const filled = Math.max(0, Math.min(max, n));
+  const empty = max - filled;
+  return `<span class="stars">${I.star.repeat(filled)}${I.star.replaceAll('<svg', '<svg class="empty"').repeat(empty)}</span>`;
 }
+function difficultyStars(n) {
+  const filled = Math.max(0, Math.min(5, n));
+  return `<span class="stars">${I.star.repeat(filled)}${I.star.replace('<svg', '<svg class="empty"').repeat(5 - filled)}</span>`;
+}
+// backward compat alias for any lingering references
+const difficultyBar = difficultyStars;
 
-// Rendered as informational list row (not decorative card)
-function workCard(w, seq) {
+function workCard(w) {
   const isFav = store.isFav(w.id);
-  const cat = store.category(w.category);
-  const item = h('div', { class: 'reco-item', 'data-cat': w.category });
-  item.innerHTML = `
-    <div class="reco-num">${(seq ?? 0) < 9 ? '0' + ((seq ?? 0) + 1) : ((seq ?? 0) + 1)}</div>
+  const card = h('div', { class: 'reco-card' });
+  card.innerHTML = `
+    <div class="reco-thumb">
+      ${thumbSVG(w.thumb || 'default')}
+      <button class="reco-star ${isFav ? 'is-on' : ''}" data-fav="${w.id}" title="お気に入り">
+        ${isFav ? I.star : I.starOutline}
+      </button>
+    </div>
     <div class="reco-body">
       <div class="reco-title">${esc(w.title)}</div>
       <div class="reco-meta">
-        <span class="reco-cat">${esc(cat ? cat.name : '')}</span>
-        ${difficultyBar(w.difficulty, true)}
-        <span>· ${fmtDate(w.updatedAt).slice(5)}</span>
+        <span>更新: ${fmtDate(w.updatedAt)}</span>
+        ${difficultyStars(w.difficulty)}
       </div>
-    </div>
-    <button class="reco-fav ${isFav ? 'is-on' : ''}" data-fav="${w.id}" title="お気に入り" aria-label="お気に入り">
-      ${isFav ? I.star : I.starOutline}
-    </button>`;
-  item.addEventListener('click', e => {
+    </div>`;
+  card.addEventListener('click', e => {
     if (e.target.closest('[data-fav]')) return;
     router.go('work/' + w.id);
   });
-  item.querySelector('[data-fav]').addEventListener('click', e => {
+  card.querySelector('[data-fav]').addEventListener('click', e => {
     e.stopPropagation();
     const on = store.toggleFav(w.id);
     render();
     toast(on ? 'お気に入りに追加しました' : 'お気に入りから外しました', 'success');
   });
-  return item;
+  return card;
 }
 
-function searchCard(w, seq) {
-  const card = h('div', { class: 'sr-card', 'data-cat': w.category });
+function searchCard(w) {
+  const card = h('div', { class: 'sr-card' });
   card.innerHTML = `
-    <div class="sr-num">${(seq ?? 0) < 9 ? '0' + ((seq ?? 0) + 1) : ((seq ?? 0) + 1)}</div>
+    <div class="sr-thumb">${thumbSVG(w.thumb || 'default')}</div>
     <div class="sr-info">
       <div class="sr-name">${esc(w.title)}</div>
-      <div class="sr-sub">${esc(w.site || '—')} · ${esc((store.category(w.category) || {}).name || '')}</div>
+      <div class="sr-sub">${esc(w.site || '—')}</div>
       <div class="sr-tags">
         ${w.steps.length ? '<span class="sr-tag">手順書</span>' : ''}
         ${w.videoUrl ? '<span class="sr-tag">動画</span>' : ''}
         ${(w.resources || []).some(r => r.type === 'pdf' || r.type === 'dwg') ? '<span class="sr-tag">図面</span>' : ''}
-        ${w.status === 'pending' ? '<span class="sr-tag" style="background:var(--warn-soft);color:#5c3f0f;border-color:#e9c884">承認待ち</span>' : ''}
+        ${w.status === 'pending' ? '<span class="sr-tag" style="background:#fef3c7;color:#78350f">承認待ち</span>' : ''}
       </div>
-    </div>
-    <div class="sr-right">
-      <span class="sr-date">${fmtDate(w.updatedAt)}</span>
-      <span class="sr-diff-lbl">難易度 ${difficultyBar(w.difficulty)}</span>
+      <div class="sr-meta">
+        <span class="sr-date">${fmtDate(w.updatedAt)}</span>
+        <span class="sr-diff">難易度 ${difficultyStars(w.difficulty)}</span>
+      </div>
     </div>`;
   card.addEventListener('click', () => router.go('work/' + w.id));
   return card;
@@ -584,19 +587,37 @@ function viewHome(root) {
   twoCol.append(recentCard, noticeCard);
   left.append(twoCol);
 
-  // Left: Stats — inline KPI row (hero-metric REPLACED per impeccable rules)
+  // Left: Stats (v0.2 hero-metric grid)
   const statsCard = h('section', { class: 'card' });
   statsCard.innerHTML = `
-    <header class="card-h"><div class="card-h-title">今月の実績</div></header>
-    <div class="stats-inline">
-      <span class="kpi"><span class="kpi-label">新規登録</span><span class="kpi-value">${thisMonth}</span><span class="kpi-unit">件</span><span class="kpi-delta">+${Math.max(0, thisMonth - 8)}</span></span>
-      <span class="kpi"><span class="kpi-label">閲覧数</span><span class="kpi-value">${totalViews}</span><span class="kpi-delta">+31%</span></span>
-      <span class="kpi"><span class="kpi-label">学習中</span><span class="kpi-value">${learners}</span><span class="kpi-unit">人</span></span>
-      <span class="kpi"><span class="kpi-label">平均学習</span><span class="kpi-value">${avgTime.toFixed(1)}</span><span class="kpi-unit">時間</span></span>
-    </div>
-    <div class="kw-row">
-      <span class="kw-row-label">よく検索されている</span>
-      ${kws.map(([k]) => `<span class="kw-tag" data-kw="${esc(k)}">${esc(k)}</span>`).join('')}
+    <header class="card-h"><div class="card-h-title">データ統計 <small>（今月）</small></div></header>
+    <div class="stats">
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="stat-label">新規登録数</div>
+          <div class="stat-value">${thisMonth}<small>件</small></div>
+          <div class="stat-delta">${I.up2} +${Math.max(0, thisMonth - 8)} 前月比</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">閲覧数</div>
+          <div class="stat-value">${totalViews}</div>
+          <div class="stat-delta">${I.up2} +31%</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">学習完了数</div>
+          <div class="stat-value">${learners}<small>人</small></div>
+          <div class="stat-delta">${I.up2} +2 名</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">平均学習時間</div>
+          <div class="stat-value">${avgTime.toFixed(1)}<small>時間</small></div>
+          <div class="stat-delta flat">±0.0h</div>
+        </div>
+      </div>
+      <div class="kw-row">
+        <span class="kw-row-label">よく検索されているキーワード</span>
+        ${kws.map(([k]) => `<span class="kw-tag" data-kw="${esc(k)}">${esc(k)}</span>`).join('')}
+      </div>
     </div>`;
   statsCard.querySelectorAll('[data-kw]').forEach(el =>
     el.addEventListener('click', () => router.go('search', { q: el.dataset.kw }))
@@ -686,11 +707,14 @@ function buildTrainingCard() {
       <div>
         <div class="kz-section-h"><div class="kz-section-title">学習中のコース</div></div>
         <div class="now-learning">
+          <div class="nl-thumb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 0 1 2-2h11.5A1.5 1.5 0 0 1 19 4.5V17"/><path d="M4 19a2 2 0 0 0 2 2h13v-4H6a2 2 0 0 0-2 2z"/><path d="m9 8 2 2 5-5"/></svg>
+          </div>
           <div class="nl-info">
             <div class="nl-eyebrow">受講中</div>
             <div class="nl-name">${esc(current.c.name)}</div>
             <div class="nl-progress"><div class="nl-progress-fill" style="width:${(current.ratio * 100).toFixed(0)}%"></div></div>
-            <div class="nl-progress-lbl"><span>${current.done} / ${current.total} 章</span><span>${(current.ratio * 100).toFixed(0)}%</span></div>
+            <div class="nl-progress-lbl"><span>Chapter ${current.done} / ${current.total}</span><span>${(current.ratio * 100).toFixed(0)}%</span></div>
           </div>
           <button class="nl-cta" data-cont="${current.c.id}">学習を続ける</button>
         </div>
@@ -1519,12 +1543,15 @@ function viewCoursesTop(root) {
   const nl = h('section', { class: 'card', style: 'padding:0' });
   nl.innerHTML = `<div class="kz-body">
     <div class="now-learning">
+      <div class="nl-thumb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 0 1 2-2h11.5A1.5 1.5 0 0 1 19 4.5V17"/><path d="M4 19a2 2 0 0 0 2 2h13v-4H6a2 2 0 0 0-2 2z"/><path d="m9 8 2 2 5-5"/></svg>
+      </div>
       <div class="nl-info">
         <div class="nl-eyebrow">受講中</div>
         <div class="nl-name">${esc(current.c.name)}</div>
-        <div style="font-size:12px;color:var(--dim);margin-top:4px;line-height:1.6;font-weight:500;max-width:60ch">${esc(current.c.description || '')}</div>
+        <div style="font-size:12px;color:#cbd5e1;margin-top:4px">${esc(current.c.description || '')}</div>
         <div class="nl-progress"><div class="nl-progress-fill" style="width:${(current.ratio * 100).toFixed(0)}%"></div></div>
-        <div class="nl-progress-lbl"><span>${current.done} / ${current.total} 章</span><span>${(current.ratio * 100).toFixed(0)}%</span></div>
+        <div class="nl-progress-lbl"><span>Chapter ${current.done} / ${current.total}</span><span>${(current.ratio * 100).toFixed(0)}%</span></div>
       </div>
       <button class="nl-cta" data-cont>学習を続ける</button>
     </div>
