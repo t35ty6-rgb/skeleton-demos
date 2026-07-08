@@ -233,9 +233,23 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
 .bg-canvas{position:relative;width:100%;background:#0f172a;border-radius:5px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
 .bg-canvas.size-large{aspect-ratio:2500/1686}
 .bg-canvas.size-small{aspect-ratio:2500/843}
-.bg-canvas.mode-full{cursor:pointer;transition:background .12s}
-.bg-canvas.mode-full:hover,.bg-canvas.mode-full.hover{background:#1e293b}
-.bg-canvas.mode-full .bg-fullimg{position:absolute;inset:0;background-size:cover;background-position:center}
+.bg-canvas.mode-full{transition:background .12s}
+.bg-canvas.mode-full.empty{cursor:pointer}
+.bg-canvas.mode-full.empty:hover,.bg-canvas.mode-full.hover{background:#1e293b}
+.bg-canvas.mode-full.has-img{cursor:grab}
+.bg-canvas.mode-full.has-img:active{cursor:grabbing}
+.bg-canvas.mode-full .bg-fullimg{position:absolute;background-repeat:no-repeat;background-position:center;background-size:contain;pointer-events:none;user-select:none;-webkit-user-drag:none}
+
+.bg-adjust-bar{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:10px 14px;margin-top:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12px;font-weight:600;color:var(--ink-2)}
+.bg-adjust-bar .adj-group{display:flex;align-items:center;gap:8px}
+.bg-adjust-bar .adj-group label{font-size:11.5px;font-weight:700;color:var(--dim)}
+.bg-adjust-bar input[type=range]{width:120px;accent-color:var(--primary)}
+.bg-adjust-bar .adj-val{font-family:var(--font-mono);font-size:11.5px;font-weight:700;color:var(--ink);width:44px;text-align:right}
+.bg-adjust-bar .adj-btn{padding:5px 11px;background:var(--surface);border:1.5px solid var(--rule);color:var(--ink-2);font-size:11.5px;font-weight:700;border-radius:5px;cursor:pointer;font-family:var(--font-jp);letter-spacing:-.005em}
+.bg-adjust-bar .adj-btn:hover{border-color:var(--rule-2);background:var(--surface-2)}
+.bg-adjust-bar .adj-btn.on{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-hi)}
+.bg-adjust-bar .adj-btn.danger{color:var(--danger);border-color:var(--rule)}
+.bg-adjust-bar .adj-btn.danger:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
 .bg-canvas.mode-full .bg-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#f8fafc;gap:8px;pointer-events:none}
 .bg-canvas.mode-full .bg-empty svg{width:44px;height:44px;stroke:rgba(248,250,252,.6);fill:none;stroke-width:1.8}
 .bg-canvas.mode-full .bg-empty span{font-size:13px;font-weight:700;color:rgba(248,250,252,.8)}
@@ -1059,6 +1073,7 @@ const DEFAULT_CFG = {
     size: "large", // large 2500×1686 / small 2500×843
     template: "B", // A-G (large) / H-J (small)
     bgImage: null, // dataURL (全画面 単一背景 mode)
+    bgTransform: { x: 0, y: 0, scale: 1, fit: "cover" }, // full mode の 位置調整 (画像に対する)
     bgImages: [], // per-area images (index = area index, null if empty)
     bgMode: "per-area", // "per-area" or "full"
     actions: [
@@ -1127,6 +1142,7 @@ function ensureRmV3(){
   if (!r.actions) r.actions = [];
   if (!r.bgImages) r.bgImages = [];
   if (!r.bgMode) r.bgMode = "per-area";
+  if (!r.bgTransform) r.bgTransform = { x: 0, y: 0, scale: 1, fit: "cover" };
   if (!TEMPLATES[r.template]) r.template = r.size === "small" ? "H" : "B";
   // sync actions + bgImages length to template area count
   const tpl = TEMPLATES[r.template];
@@ -1208,36 +1224,156 @@ function renderRmBgCanvas(){
   if (hint) hint.textContent = r.bgMode === "full" ? ("推奨 " + W + " × " + H + " px を 1枚") : ("エリアごとに 個別 upload · 各" + tpl.areas.length + "箇所");
 
   if (r.bgMode === "full"){
-    // Single full-canvas image (LINE公式 relatively simpler mode)
+    const hasImg = !!r.bgImage;
+    canvasEl.classList.toggle("has-img", hasImg);
+    canvasEl.classList.toggle("empty", !hasImg);
     canvasEl.innerHTML = `
-      ${r.bgImage ? `<div class="bg-fullimg" style="background-image:url('${r.bgImage}')"></div>` : ""}
-      <div class="bg-empty">
-        ${r.bgImage ? "" : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>クリックまたは ドラッグで 画像を選択</span>'}
-      </div>
+      ${hasImg ? `<div class="bg-fullimg" id="rm-full-img"></div>` : ""}
+      ${hasImg ? "" : `<div class="bg-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+        <span>クリックまたは ドラッグで 画像を選択</span>
+      </div>`}
       <input type="file" accept="image/*" id="rm-full-input">
     `;
-    // Wire click + drop
-    canvasEl.onclick = e => {
-      if (e.target.closest("button")) return;
-      document.getElementById("rm-full-input").click();
-    };
+    // Remove old adjust bar if any
+    const oldBar = canvasEl.parentElement.querySelector(".bg-adjust-bar");
+    if (oldBar) oldBar.remove();
     const inp = document.getElementById("rm-full-input");
     inp.addEventListener("change", e => {
       const f = e.target.files[0];
       if (!f) return;
       const reader = new FileReader();
-      reader.onload = ev => { r.bgImage = ev.target.result; saveCfg(); renderRmBgCanvas(); renderRmPreviewV3(); };
+      reader.onload = ev => {
+        r.bgImage = ev.target.result;
+        r.bgTransform = { x: 0, y: 0, scale: 1, fit: "cover" };
+        saveCfg(); renderRmBgCanvas(); renderRmPreviewV3();
+      };
       reader.readAsDataURL(f);
       e.target.value = "";
     });
-    ["dragenter","dragover"].forEach(ev => canvasEl.addEventListener(ev, e => { e.preventDefault(); canvasEl.classList.add("hover"); }));
-    ["dragleave","drop"].forEach(ev => canvasEl.addEventListener(ev, e => { e.preventDefault(); canvasEl.classList.remove("hover"); }));
-    canvasEl.addEventListener("drop", e => {
-      const files = [...e.dataTransfer.files].filter(f => f.type.startsWith("image/"));
-      if (!files[0]) return;
-      const reader = new FileReader();
-      reader.onload = ev => { r.bgImage = ev.target.result; saveCfg(); renderRmBgCanvas(); renderRmPreviewV3(); };
-      reader.readAsDataURL(files[0]);
+    if (!hasImg){
+      canvasEl.onclick = e => { if (!e.target.closest("button, input")) inp.click(); };
+      ["dragenter","dragover"].forEach(ev => canvasEl.addEventListener(ev, e => { e.preventDefault(); canvasEl.classList.add("hover"); }));
+      ["dragleave","drop"].forEach(ev => canvasEl.addEventListener(ev, e => { e.preventDefault(); canvasEl.classList.remove("hover"); }));
+      canvasEl.addEventListener("drop", e => {
+        const files = [...e.dataTransfer.files].filter(f => f.type.startsWith("image/"));
+        if (!files[0]) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          r.bgImage = ev.target.result;
+          r.bgTransform = { x: 0, y: 0, scale: 1, fit: "cover" };
+          saveCfg(); renderRmBgCanvas(); renderRmPreviewV3();
+        };
+        reader.readAsDataURL(files[0]);
+      });
+      return;
+    }
+
+    // Has image: drag + zoom + adjust bar
+    canvasEl.onclick = null;
+    const fullImg = document.getElementById("rm-full-img");
+    const W = 2500, H = r.size === "small" ? 843 : 1686;
+    let imgNaturalW = 0, imgNaturalH = 0;
+    const applyTransform = () => {
+      if (!imgNaturalW) return;
+      const t = r.bgTransform;
+      const baseScale = t.fit === "contain" ? Math.min(W / imgNaturalW, H / imgNaturalH) : Math.max(W / imgNaturalW, H / imgNaturalH);
+      const scale = baseScale * t.scale;
+      const dw = imgNaturalW * scale, dh = imgNaturalH * scale;
+      const rect = canvasEl.getBoundingClientRect();
+      const dispScale = rect.width / W;
+      fullImg.style.width = (dw * dispScale) + "px";
+      fullImg.style.height = (dh * dispScale) + "px";
+      fullImg.style.left = (((W - dw) / 2 + t.x) * dispScale) + "px";
+      fullImg.style.top = (((H - dh) / 2 + t.y) * dispScale) + "px";
+      fullImg.style.backgroundImage = `url('${r.bgImage}')`;
+      fullImg.style.backgroundSize = "100% 100%";
+    };
+    const im = new Image();
+    im.onload = () => { imgNaturalW = im.naturalWidth; imgNaturalH = im.naturalHeight; applyTransform(); };
+    im.src = r.bgImage;
+
+    let dragging = false, sx = 0, sy = 0, tx0 = 0, ty0 = 0;
+    const onDown = e => {
+      if (e.target.closest(".adj-btn, .bg-adjust-bar")) return;
+      dragging = true;
+      const pt = e.touches ? e.touches[0] : e;
+      sx = pt.clientX; sy = pt.clientY;
+      tx0 = r.bgTransform.x; ty0 = r.bgTransform.y;
+      e.preventDefault();
+    };
+    const onMove = e => {
+      if (!dragging) return;
+      const pt = e.touches ? e.touches[0] : e;
+      const rect = canvasEl.getBoundingClientRect();
+      const px2cv = W / rect.width;
+      r.bgTransform.x = tx0 + (pt.clientX - sx) * px2cv;
+      r.bgTransform.y = ty0 + (pt.clientY - sy) * px2cv;
+      applyTransform();
+    };
+    const onUp = () => { if (dragging){ dragging = false; saveCfg(); renderRmPreviewV3(); } };
+    canvasEl.addEventListener("mousedown", onDown);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    canvasEl.addEventListener("touchstart", onDown, { passive: false });
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onUp);
+    canvasEl.addEventListener("wheel", e => {
+      e.preventDefault();
+      const t = r.bgTransform;
+      const delta = e.deltaY < 0 ? 0.05 : -0.05;
+      t.scale = Math.max(0.3, Math.min(4, t.scale + delta));
+      applyTransform();
+      const range = document.getElementById("rm-scale-range");
+      const rangeVal = document.getElementById("rm-scale-val");
+      if (range){ range.value = Math.round(t.scale * 100); rangeVal.textContent = range.value + "%"; }
+      saveCfg(); renderRmPreviewV3();
+    }, { passive: false });
+
+    // Adjustment bar (below canvas)
+    const bar = document.createElement("div");
+    bar.className = "bg-adjust-bar";
+    const t = r.bgTransform;
+    bar.innerHTML = `
+      <div class="adj-group">
+        <label>ズーム</label>
+        <input type="range" min="30" max="400" step="5" value="${Math.round(t.scale * 100)}" id="rm-scale-range">
+        <span class="adj-val" id="rm-scale-val">${Math.round(t.scale * 100)}%</span>
+      </div>
+      <div class="adj-group">
+        <button type="button" class="adj-btn ${t.fit === 'cover' ? 'on' : ''}" data-fit="cover">全体に (cover)</button>
+        <button type="button" class="adj-btn ${t.fit === 'contain' ? 'on' : ''}" data-fit="contain">縮小 (contain)</button>
+      </div>
+      <div class="adj-group" style="margin-left:auto">
+        <button type="button" class="adj-btn" data-reset="1">位置リセット</button>
+        <button type="button" class="adj-btn" data-replace="1">画像差替</button>
+        <button type="button" class="adj-btn danger" data-remove="1">削除</button>
+      </div>
+    `;
+    canvasEl.parentElement.appendChild(bar);
+    const range = document.getElementById("rm-scale-range");
+    const rangeVal = document.getElementById("rm-scale-val");
+    range.addEventListener("input", e => {
+      r.bgTransform.scale = e.target.value / 100;
+      rangeVal.textContent = e.target.value + "%";
+      applyTransform();
+    });
+    range.addEventListener("change", () => { saveCfg(); renderRmPreviewV3(); });
+    bar.querySelectorAll("[data-fit]").forEach(b => b.addEventListener("click", () => {
+      r.bgTransform.fit = b.dataset.fit;
+      r.bgTransform.x = 0; r.bgTransform.y = 0;
+      saveCfg(); renderRmBgCanvas(); renderRmPreviewV3();
+    }));
+    bar.querySelector("[data-reset]").addEventListener("click", () => {
+      r.bgTransform = { x: 0, y: 0, scale: 1, fit: r.bgTransform.fit || "cover" };
+      saveCfg(); renderRmBgCanvas(); renderRmPreviewV3();
+    });
+    bar.querySelector("[data-replace]").addEventListener("click", () => inp.click());
+    bar.querySelector("[data-remove]").addEventListener("click", () => {
+      if (!confirm("背景画像を削除しますか？")) return;
+      r.bgImage = null;
+      r.bgTransform = { x: 0, y: 0, scale: 1, fit: "cover" };
+      saveCfg(); renderRmBgCanvas(); renderRmPreviewV3();
     });
     return;
   }
@@ -1366,6 +1502,27 @@ async function drawCoverInto(ctx, dataUrl, rect){
   } catch(e){ return false; }
 }
 
+// Draw the full-canvas image with transform (fit + user pan + zoom)
+async function drawFullTransformed(ctx, dataUrl, transform, W, H){
+  try {
+    const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = dataUrl; });
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const t = transform || { x: 0, y: 0, scale: 1, fit: "cover" };
+    const baseScale = t.fit === "contain" ? Math.min(W / iw, H / ih) : Math.max(W / iw, H / ih);
+    const scale = baseScale * (t.scale || 1);
+    const dw = iw * scale, dh = ih * scale;
+    const dx = (W - dw) / 2 + (t.x || 0);
+    const dy = (H - dh) / 2 + (t.y || 0);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.clip();
+    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.restore();
+    return true;
+  } catch(e){ return false; }
+}
+
 async function renderRmPreviewV3(){
   const r = CFG.richmenuV3;
   const tpl = TEMPLATES[r.template];
@@ -1377,19 +1534,17 @@ async function renderRmPreviewV3(){
   ctx.fillRect(0, 0, W, H);
 
   if (r.bgMode === "full" && r.bgImage){
-    await drawCoverInto(ctx, r.bgImage, { x: 0, y: 0, w: W, h: H });
+    await drawFullTransformed(ctx, r.bgImage, r.bgTransform, W, H);
   } else if (r.bgMode === "per-area"){
     for (let i = 0; i < tpl.areas.length; i++){
       const src = r.bgImages[i];
       if (src) await drawCoverInto(ctx, src, tpl.areas[i]);
       else {
-        // placeholder for empty area
         ctx.fillStyle = "#e4e7ee";
         ctx.fillRect(tpl.areas[i].x, tpl.areas[i].y, tpl.areas[i].w, tpl.areas[i].h);
       }
     }
   } else {
-    // No image at all
     ctx.fillStyle = "#e4e7ee";
     ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = "#7c839a";
@@ -2505,7 +2660,7 @@ async function composeUploadPng(){
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, W, H);
   if (r.bgMode === "full" && r.bgImage){
-    await drawCoverInto(ctx, r.bgImage, { x: 0, y: 0, w: W, h: H });
+    await drawFullTransformed(ctx, r.bgImage, r.bgTransform, W, H);
   } else if (r.bgMode === "per-area"){
     for (let i = 0; i < tpl.areas.length; i++){
       const src = r.bgImages[i];
