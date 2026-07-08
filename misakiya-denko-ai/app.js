@@ -4,11 +4,11 @@
 
 // ============================ Store ============================
 const KEY = 'misakiya-denko-ai::v2::';
-const STORE_KEYS = ['works', 'favorites', 'recent', 'notices', 'courses', 'progress', 'quizzes', 'users', 'currentUserId', 'read', 'categories', 'stepChecks', 'workLog'];
+const STORE_KEYS = ['works', 'favorites', 'recent', 'notices', 'courses', 'progress', 'quizzes', 'users', 'currentUserId', 'read', 'categories', 'stepChecks', 'workLog', 'stepPhotos', 'guideDismissed'];
 
 const store = {
   works: [], favorites: {}, recent: {}, notices: [], courses: [], progress: {}, quizzes: {}, users: [], read: {}, categories: [],
-  stepChecks: {}, workLog: [],
+  stepChecks: {}, workLog: [], stepPhotos: {}, guideDismissed: false,
   currentUserId: 'u1',
 
   load() {
@@ -129,6 +129,30 @@ const store = {
     if (this.workLog.length > 200) this.workLog.length = 200;
     this.save('workLog');
   },
+
+  // Step photos (現場撮影)
+  getStepPhotos(wid, stepIdx) {
+    const key = this.stepKey(this.currentUserId, wid);
+    const arr = this.stepPhotos[key] || [];
+    return arr.filter(p => p.stepIdx === stepIdx);
+  },
+  getAllStepPhotos(wid) {
+    const key = this.stepKey(this.currentUserId, wid);
+    return this.stepPhotos[key] || [];
+  },
+  addStepPhoto(wid, stepIdx, dataURL, note = '') {
+    const key = this.stepKey(this.currentUserId, wid);
+    const arr = this.stepPhotos[key] = this.stepPhotos[key] || [];
+    arr.push({ stepIdx, dataURL, ts: Date.now(), note });
+    this.save('stepPhotos');
+  },
+  deleteStepPhoto(wid, stepIdx, ts) {
+    const key = this.stepKey(this.currentUserId, wid);
+    const arr = this.stepPhotos[key] || [];
+    const i = arr.findIndex(p => p.stepIdx === stepIdx && p.ts === ts);
+    if (i >= 0) arr.splice(i, 1);
+    this.save('stepPhotos');
+  },
 };
 
 // ============================ Utilities ============================
@@ -159,6 +183,11 @@ const fmtDate = d => {
   if (!d) return '';
   const dt = typeof d === 'number' ? new Date(d) : new Date(d);
   return `${dt.getFullYear()}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
+};
+const fmtDateTime = ts => {
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 const fmtRelative = ts => {
   const diff = Date.now() - ts;
@@ -318,6 +347,9 @@ function renderTopbar() {
   const user = store.user();
   const unread = store.unreadCount();
   tb.innerHTML = `
+    <button class="topbar-menu-btn" id="hamburger" aria-label="メニュー" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
     <div class="search">
       ${I.search}
       <input placeholder="キーワード・品番・現場名で検索" id="tbSearch" autocomplete="off">
@@ -344,6 +376,20 @@ function renderTopbar() {
   });
 
   $('[data-nav="notices"]').addEventListener('click', () => router.go('notices'));
+
+  // Hamburger menu (mobile)
+  const ham = $('#hamburger');
+  if (window.innerWidth <= 820) ham.style.display = 'grid';
+  ham.addEventListener('click', () => {
+    const sb = $('#sidebar');
+    sb.classList.toggle('open');
+  });
+  // Close sidebar when nav item clicked (mobile)
+  $('#sidebar').addEventListener('click', e => {
+    if (window.innerWidth <= 820 && e.target.closest('.nav-item')) {
+      $('#sidebar').classList.remove('open');
+    }
+  });
 
   // user dropdown
   const um = $('#userMenu');
@@ -507,6 +553,27 @@ function searchCard(w) {
 function viewHome(root) {
   const uid = store.currentUserId;
   const publishedWorks = store.works.filter(w => w.status === 'published');
+
+  // 「はじめての方へ」バナー (dismissible)
+  if (!store.guideDismissed) {
+    const wg = h('div', { class: 'welcome-guide' });
+    wg.innerHTML = `
+      <div class="wg-icon">${I.help}</div>
+      <div class="wg-body">
+        <div class="wg-eyebrow">はじめての方へ</div>
+        <div class="wg-title">現場での使い方 (5分で分かる) を見る</div>
+        <div class="wg-txt">「手順を見る → 現場でスマホで写真を撮る → チェック → 完了報告書を出す」 の 5ステップを順にご案内します。 AI や スマホ操作が初めての方でも大丈夫です。</div>
+      </div>
+      <div class="wg-actions">
+        <button class="btn btn-primary" data-open-guide>使い方を見る</button>
+        <button class="wg-close" title="今後は表示しない" data-dismiss>${I.x}</button>
+      </div>`;
+    wg.querySelector('[data-open-guide]').addEventListener('click', () => showWalkthrough());
+    wg.querySelector('[data-dismiss]').addEventListener('click', () => {
+      store.guideDismissed = true; store.save('guideDismissed'); render();
+    });
+    root.append(wg);
+  }
   const reco = [...publishedWorks].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 4);
   const recent = (store.recent[uid] || []).slice(0, 4);
   const unreadNotices = store.notices.slice(0, 4);
@@ -861,23 +928,67 @@ function buildDetailCard(w) {
     lower.innerHTML = '';
     if (tab === 'steps') {
       const wrap = h('div', {});
-      // Progress bar (現場モード)
+
+      // 現場ガイド (初回作業者向け 4ステップ案内、閉じられる)
+      if (!store.guideDismissed && w.steps.length > 0) {
+        const fg = h('div', { class: 'field-guide' });
+        fg.innerHTML = `
+          <div class="field-guide-h">
+            ${I.help}
+            <div class="field-guide-title">はじめての方へ · 現場での使い方 (4ステップ)</div>
+            <button class="field-guide-close" title="今後は表示しない">${I.x}</button>
+          </div>
+          <div class="field-guide-steps">
+            <div class="fg-step"><div class="fg-step-icon">1</div><div class="fg-step-txt">手順を読む</div><div class="fg-step-sub">上から順に</div></div>
+            <div class="fg-step"><div class="fg-step-icon">2</div><div class="fg-step-txt">作業する</div><div class="fg-step-sub">実際に手を動かす</div></div>
+            <div class="fg-step"><div class="fg-step-icon">3</div><div class="fg-step-txt">📸 写真を撮る</div><div class="fg-step-sub">スマホで撮影</div></div>
+            <div class="fg-step"><div class="fg-step-icon">4</div><div class="fg-step-txt">✓ 完了マーク</div><div class="fg-step-sub">緑丸をタップ</div></div>
+          </div>`;
+        fg.querySelector('.field-guide-close').addEventListener('click', () => {
+          store.guideDismissed = true; store.save('guideDismissed');
+          renderTab('steps');
+        });
+        wrap.append(fg);
+      }
+
+      // Progress bar
       if (w.steps.length > 0) {
         const done = store.getSteps(w.id);
+        const photos = store.getAllStepPhotos(w.id);
         const pct = Math.round(done.length / w.steps.length * 100);
         const pr = h('div', { class: 'step-progress' });
         pr.innerHTML = `
           <span class="step-progress-lbl">現場チェック進捗</span>
           <div class="step-progress-bar"><span style="width:${pct}%"></span></div>
           <span class="step-progress-cnt">${done.length} / ${w.steps.length} · ${pct}%</span>
+          <span class="step-photo-count-badge">${I.img} 写真 ${photos.length} 枚</span>
           <button class="btn btn-ghost btn-sm" data-reset-steps title="全チェック解除">${I.reset}リセット</button>`;
-        pr.querySelector('[data-reset-steps]').addEventListener('click', () => {
+        pr.querySelector('[data-reset-steps]').addEventListener('click', async () => {
+          const ok = await confirmModal('チェックをリセット', h('div', {}, 'このユーザーのチェックを全て解除します (写真は残ります)。'));
+          if (!ok) return;
           store.resetSteps(w.id);
           renderTab('steps');
           toast('チェックをリセットしました', 'success');
         });
         wrap.append(pr);
       }
+
+      // 完了報告書 CTA
+      if (w.steps.length > 0) {
+        const done = store.getSteps(w.id);
+        const isAll = done.length === w.steps.length;
+        const cta = h('div', { class: 'completion-cta-bar ' + (isAll ? '' : 'pending') });
+        cta.innerHTML = `
+          <div class="completion-cta-icon">${isAll ? I.check : I.book}</div>
+          <div class="completion-cta-body">
+            <div class="completion-cta-title">${isAll ? '全手順完了 — 完了報告書を作成できます' : '完了報告書 · 全手順の写真と時刻をまとめて出力'}</div>
+            <div class="completion-cta-sub">${isAll ? '写真・チェック・作業員・時刻 が入った 印刷可能な報告書を発行します。' : '途中でも作成可能。 未完了の手順はマークが付きます。'}</div>
+          </div>
+          <button class="btn ${isAll ? 'btn-primary' : 'btn-secondary'}" data-report>${I.print}完了報告書を作成</button>`;
+        cta.querySelector('[data-report]').addEventListener('click', () => printCompletionReport(w));
+        wrap.append(cta);
+      }
+
       const g = h('div', { class: 'detail-lower-grid', style: 'padding-top:12px' });
       const steps = h('div', { class: 'steps' });
       if (w.steps.length === 0) {
@@ -898,15 +1009,55 @@ function buildDetailCard(w) {
             }
             renderTab('steps');
           });
-          stepEl.append(
-            check,
-            h('div', { class: 'step-no' }, i + 1),
-            h('div', { class: 'step-body' },
-              h('div', { class: 'step-title' }, s.title),
-              s.desc ? h('div', { class: 'step-desc' }, s.desc) : null,
-              s.note ? h('div', { class: 'step-note' }, s.note) : null,
-            )
-          );
+
+          // 現場写真 UI
+          const photos = store.getStepPhotos(w.id, i);
+          const bodyKids = [
+            h('div', { class: 'step-title' }, s.title),
+            s.desc ? h('div', { class: 'step-desc' }, s.desc) : null,
+            s.note ? h('div', { class: 'step-note' }, s.note) : null,
+          ];
+          // 写真 grid
+          if (photos.length > 0) {
+            const grid = h('div', { class: 'step-photos' });
+            photos.forEach(ph => {
+              const el = h('div', { class: 'step-photo' });
+              el.innerHTML = `
+                <img src="${ph.dataURL}" alt="現場写真">
+                <div class="step-photo-time">${fmtDateTime(ph.ts)}</div>
+                <button class="step-photo-del" title="削除">${I.x}</button>`;
+              el.addEventListener('click', e => {
+                if (!e.target.closest('.step-photo-del')) showImagePreview({ url: ph.dataURL, name: `${s.title} — ${fmtDateTime(ph.ts)}` });
+              });
+              el.querySelector('.step-photo-del').addEventListener('click', async e => {
+                e.stopPropagation();
+                const ok = await confirmModal('写真を削除', h('div', {}, 'この写真を削除します。'));
+                if (!ok) return;
+                store.deleteStepPhoto(w.id, i, ph.ts);
+                renderTab('steps');
+                toast('削除しました', 'success');
+              });
+              grid.append(el);
+            });
+            bodyKids.push(grid);
+          }
+          // 「📸 写真を撮る」CTA
+          const photoCta = h('label', { class: 'step-photo-cta', title: '写真を撮る or 選ぶ' });
+          photoCta.innerHTML = `${I.img}📸 写真を追加 <input type="file" accept="image/*" capture="environment">`;
+          const inp = photoCta.querySelector('input');
+          inp.addEventListener('change', async () => {
+            const file = inp.files[0];
+            if (!file) return;
+            if (file.size > 10 * 1024 * 1024) { toast('写真が 10MB を超えています', 'err'); return; }
+            const url = await readFileAsDataURL(file);
+            store.addStepPhoto(w.id, i, url);
+            renderTab('steps');
+            toast('写真を保存しました', 'success');
+            inp.value = '';
+          });
+          bodyKids.push(photoCta);
+
+          stepEl.append(check, h('div', { class: 'step-no' }, i + 1), h('div', { class: 'step-body' }, ...bodyKids));
           steps.append(stepEl);
         });
       }
@@ -1042,6 +1193,104 @@ function showQRModal(w) {
       h('button', { class: 'btn btn-primary', onclick: () => close(true) }, '閉じる'),
     );
   });
+}
+
+// ===== 完了報告書 (現場写真+チェック+作業員 まとめて) =====
+function printCompletionReport(w) {
+  const win = window.open('', '_blank');
+  if (!win) { toast('ポップアップを許可してください', 'err'); return; }
+  const uid = store.currentUserId;
+  const user = store.user(uid);
+  const done = store.getSteps(w.id);
+  const photos = store.getAllStepPhotos(w.id);
+  const totalPhotos = photos.length;
+  const isAll = done.length === w.steps.length;
+  const startTs = photos.length ? Math.min(...photos.map(p => p.ts)) : null;
+  const endTs = photos.length ? Math.max(...photos.map(p => p.ts)) : null;
+  const cat = store.category(w.category);
+
+  win.document.write(`<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>${esc(w.title)} · 完了報告書</title>
+<style>
+  @page{margin:14mm 15mm;size:A4}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Noto Sans JP","Hiragino Sans",sans-serif;font-size:11pt;color:#111;line-height:1.65;font-weight:500}
+  .badge{display:inline-block;background:${isAll ? '#065f46' : '#b45309'};color:#fff;padding:3pt 10pt;border-radius:999pt;font-size:9pt;font-weight:800;letter-spacing:0.02em}
+  h1{font-size:22pt;font-weight:900;letter-spacing:-0.02em;margin:6pt 0 4pt 0}
+  .sub{font-size:10pt;color:#666;margin-bottom:10pt}
+  .meta{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:4pt 12pt;font-size:9.5pt;margin:12pt 0;padding:10pt 12pt;background:#f5f5f2;border:1px solid #ddd;border-radius:4pt}
+  .meta dt{color:#666;font-weight:600}
+  .meta dd{font-weight:700}
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8pt;margin:10pt 0 14pt 0}
+  .summary-box{padding:10pt 12pt;background:#fff;border:1px solid #ccc;border-radius:4pt}
+  .summary-lbl{font-size:8.5pt;color:#666;font-weight:700}
+  .summary-val{font-size:18pt;font-weight:900;letter-spacing:-0.02em;margin-top:2pt}
+  .summary-sub{font-size:8pt;color:#666;margin-top:1pt}
+  h2{font-size:12pt;font-weight:800;margin:16pt 0 6pt 0;padding-bottom:2pt;border-bottom:1px solid #666}
+  .step{display:grid;grid-template-columns:24pt 1fr;gap:8pt;padding:8pt 0;border-top:1px solid #ccc;page-break-inside:avoid}
+  .step:first-of-type{border-top:0}
+  .step-no{background:#111;color:#fff;width:22pt;height:22pt;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10pt}
+  .step-t{font-size:11pt;font-weight:800;display:flex;align-items:center;gap:6pt}
+  .st-done{background:#065f46;color:#fff;padding:1pt 6pt;border-radius:999pt;font-size:8pt;font-weight:800}
+  .st-miss{background:#b91c1c;color:#fff;padding:1pt 6pt;border-radius:999pt;font-size:8pt;font-weight:800}
+  .step-d{font-size:9.5pt;color:#333;margin-top:2pt}
+  .photos{display:grid;grid-template-columns:repeat(3,1fr);gap:4pt;margin-top:6pt}
+  .photo{aspect-ratio:4/3;border-radius:3pt;overflow:hidden;border:1px solid #ccc}
+  .photo img{width:100%;height:100%;object-fit:cover}
+  .photo-time{font-size:7.5pt;color:#666;font-family:sans-serif;margin-top:1pt;text-align:center}
+  .no-photo{font-size:9pt;color:#999;padding:4pt 8pt;background:#f5f5f2;border-radius:3pt;display:inline-block;margin-top:4pt}
+  .sign{margin-top:24pt;padding-top:12pt;border-top:2px solid #111;display:grid;grid-template-columns:1fr 1fr;gap:20pt}
+  .sign-box{border:1px solid #999;padding:10pt;border-radius:3pt;min-height:50pt}
+  .sign-lbl{font-size:8pt;color:#666;font-weight:700}
+  .sign-val{font-size:12pt;font-weight:800;margin-top:2pt}
+  footer{margin-top:18pt;padding-top:8pt;border-top:1px solid #999;font-size:8pt;color:#666;display:flex;justify-content:space-between}
+</style></head><body>
+  <div class="badge">${isAll ? '✓ 全手順完了' : '進捗途中 · ' + done.length + '/' + w.steps.length + ' 手順'}</div>
+  <h1>${esc(w.title)} · 完了報告書</h1>
+  <div class="sub">${esc(cat ? cat.name : '')} · 難易度 ${w.difficulty}/5 · 想定時間 ${esc(w.duration || '—')}</div>
+
+  <dl class="meta">
+    <dt>作業員</dt><dd>${esc(user.name)}</dd>
+    <dt>肩書</dt><dd>${esc(user.title || user.role)}</dd>
+    <dt>作業日</dt><dd>${startTs ? fmtDate(startTs) : fmtDate(Date.now())}</dd>
+    <dt>報告書発行</dt><dd>${fmtDateTime(Date.now())}</dd>
+    <dt>現場</dt><dd>${esc(w.site || '—')}</dd>
+    <dt>作業時間</dt><dd>${startTs && endTs ? `${fmtDateTime(startTs)} 〜 ${fmtDateTime(endTs)}` : '—'}</dd>
+  </dl>
+
+  <div class="summary">
+    <div class="summary-box"><div class="summary-lbl">手順の進捗</div><div class="summary-val">${done.length}/${w.steps.length}</div><div class="summary-sub">${Math.round(done.length / (w.steps.length || 1) * 100)}% 完了</div></div>
+    <div class="summary-box"><div class="summary-lbl">現場写真</div><div class="summary-val">${totalPhotos}</div><div class="summary-sub">枚 撮影</div></div>
+    <div class="summary-box"><div class="summary-lbl">未完了</div><div class="summary-val" style="color:${isAll ? '#065f46' : '#b91c1c'}">${w.steps.length - done.length}</div><div class="summary-sub">${isAll ? '無し' : '手順あり'}</div></div>
+  </div>
+
+  <h2>手順ごとの記録</h2>
+  ${w.steps.map((s, i) => {
+    const ph = store.getStepPhotos(w.id, i);
+    const isDone = done.includes(i);
+    return `<div class="step">
+      <div class="step-no">${i + 1}</div>
+      <div>
+        <div class="step-t">${esc(s.title)}<span class="${isDone ? 'st-done' : 'st-miss'}">${isDone ? '✓ 完了' : '未完'}</span></div>
+        ${s.desc ? `<div class="step-d">${esc(s.desc)}</div>` : ''}
+        ${ph.length > 0
+          ? `<div class="photos">${ph.map(p => `<div class="photo"><img src="${p.dataURL}"></div>`).join('')}</div>`
+          : `<div class="no-photo">写真なし</div>`}
+      </div>
+    </div>`;
+  }).join('')}
+
+  <div class="sign">
+    <div class="sign-box"><div class="sign-lbl">作業員</div><div class="sign-val">${esc(user.name)}</div></div>
+    <div class="sign-box"><div class="sign-lbl">承認 (現場責任者)</div><div class="sign-val">&nbsp;</div></div>
+  </div>
+
+  <footer>
+    <span>三崎屋電工 作業完了報告書 · ${esc(w.title)}</span>
+    <span>発行: ${fmtDateTime(Date.now())}</span>
+  </footer>
+  <script>window.onload=()=>setTimeout(()=>window.print(),500);<\/script>
+</body></html>`);
+  win.document.close();
 }
 
 // ===== Print work as procedure sheet =====
@@ -3164,6 +3413,46 @@ function mountShortcuts() {
         render();
       }
     }
+  });
+}
+
+// ============================ Walkthrough (5-step onboarding) ============================
+function showWalkthrough() {
+  const slides = [
+    { num: 'STEP 1', illust: I.search, title: '① 作業を見つける', txt: 'ホーム画面の 「おすすめの作業」 か、上の 検索バー にキーワード (例: 分電盤) を入れて 作業を探します。' },
+    { num: 'STEP 2', illust: I.book, title: '② 手順を上から順に読む', txt: '作業を開くと 手順が 1・2・3… と順番に並んでいます。 危険予知や注意点も 一緒に書いてあります。' },
+    { num: 'STEP 3', illust: I.img, title: '③ スマホで写真を撮る', txt: '各手順の下にある 「📸 写真を追加」 ボタンを タップ すると、 スマホのカメラが起動します。 施工前・施工後 を撮って残しましょう。' },
+    { num: 'STEP 4', illust: I.check, title: '④ 完了したら 緑丸をタップ', txt: '手順が終わったら 左端の 緑丸 (✓) をタップして 完了マーク をつけます。 全部の手順が終わったら 次のステップへ。' },
+    { num: 'STEP 5', illust: I.print, title: '⑤ 完了報告書を出す', txt: '「完了報告書を作成」 ボタンを押すと、 撮った写真と作業員名 が入った 印刷可能な報告書 が出ます。 責任者に提出してください。' },
+  ];
+  let idx = 0;
+  const shell = h('div', { class: 'wt-container' });
+  const render = () => {
+    const s = slides[idx];
+    shell.innerHTML = `<div class="wt-slide">
+      <div class="wt-num">${esc(s.num)} / 5</div>
+      <div class="wt-illust">${s.illust}</div>
+      <div class="wt-title">${esc(s.title)}</div>
+      <div class="wt-txt">${esc(s.txt)}</div>
+    </div>
+    <div class="wt-dots">${slides.map((_, i) => `<span class="wt-dot ${i === idx ? 'on' : ''}"></span>`).join('')}</div>`;
+  };
+  render();
+  modal('三崎屋電工AI の 使い方', shell, (row, close) => {
+    const back = h('button', { class: 'btn btn-secondary' }, '← 戻る');
+    const next = h('button', { class: 'btn btn-primary' }, '次へ →');
+    const done = h('button', { class: 'btn btn-primary' }, '始める');
+    back.addEventListener('click', () => { if (idx > 0) { idx--; render(); refresh(); } });
+    next.addEventListener('click', () => { if (idx < slides.length - 1) { idx++; render(); refresh(); } });
+    done.addEventListener('click', () => close(true));
+    row.append(back, next);
+    function refresh() {
+      back.disabled = idx === 0;
+      const isLast = idx === slides.length - 1;
+      row.removeChild(row.lastChild);
+      row.append(isLast ? done : next);
+    }
+    refresh();
   });
 }
 
