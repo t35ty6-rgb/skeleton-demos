@@ -2176,7 +2176,10 @@ async function categoryEditModal(c, onSave) {
       row.append(
         h('button', { class: 'btn btn-ghost', onclick: () => { close(null); resolve(null); } }, 'キャンセル'),
         h('button', { class: 'btn btn-primary', onclick: () => {
-          if (!draft.name.trim()) { toast('カテゴリ名は必須です', 'err'); return; }
+          const nm = draft.name.trim();
+          if (!nm) { toast('カテゴリ名は必須です', 'err'); return; }
+          const dup = store.categories.find(x => x.name === nm && x.id !== draft.id);
+          if (dup) { toast(`「${nm}」は既に存在します`, 'err'); return; }
           close(true); resolve(true);
         } }, isNew ? '追加' : '保存')
       );
@@ -2759,6 +2762,7 @@ function buildResourceEditor(draft, onChange) {
     <input type="file" class="dropzone-in" accept="image/*,application/pdf" multiple>`;
   const dzIn = dz.querySelector('input');
   const handleFiles = async (files) => {
+    let added = 0;
     for (const f of Array.from(files)) {
       if (f.size > 10 * 1024 * 1024) { toast(`${f.name} は 10MB を超えています`, 'err'); continue; }
       const data = await readFileAsDataURL(f);
@@ -2768,9 +2772,9 @@ function buildResourceEditor(draft, onChange) {
         url: data, meta: `${(f.size / 1024).toFixed(0)} KB`,
         size: f.size,
       });
+      added++;
     }
-    onChange();
-    toast(`${files.length} 件のファイルを追加しました`, 'success');
+    if (added > 0) { onChange(); toast(`${added} 件のファイルを追加しました`, 'success'); }
   };
   dzIn.addEventListener('change', () => handleFiles(dzIn.files));
   dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
@@ -2782,12 +2786,13 @@ function buildResourceEditor(draft, onChange) {
   draft.resources.forEach((r, i) => {
     // アップロード済みファイル (data: URL) は thumb で表示
     if (r.url && r.url.startsWith('data:image/')) {
-      const th = h('div', { class: 'upload-thumb' });
+      const th = h('div', { class: 'upload-thumb', style: 'cursor:pointer' });
       th.innerHTML = `<img class="upload-thumb-img" src="${r.url}">
-        <div><div class="upload-thumb-name">${esc(r.name)}</div><div class="upload-thumb-size">${esc(r.meta || '')}</div></div>
+        <div><div class="upload-thumb-name">${esc(r.name)}</div><div class="upload-thumb-size">${esc(r.meta || '')} · クリックで拡大</div></div>
         <button class="step-btn dz" title="削除">${I.trash}</button>`;
-      th.querySelector('img').addEventListener('click', () => showImagePreview(r));
-      th.querySelector('.step-btn').addEventListener('click', () => { draft.resources.splice(i, 1); onChange(); });
+      const delBtn = th.querySelector('.step-btn');
+      th.addEventListener('click', e => { if (!e.target.closest('.step-btn')) showImagePreview(r); });
+      delBtn.addEventListener('click', e => { e.stopPropagation(); draft.resources.splice(i, 1); onChange(); });
       box.append(th);
       return;
     }
