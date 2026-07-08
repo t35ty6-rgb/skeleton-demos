@@ -604,7 +604,34 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
 
       <!-- ─── VIEW: RICH MENU ─── -->
       <div class="view active" data-view="richmenu">
-        <p class="view-lead">LINE公式アカウントマネージャー と 同じ 4ステップ で 設定できます。 タイトル → 表示設定 → コンテンツ → アクション。</p>
+        <p class="view-lead">LINE公式アカウントマネージャー と 同じ 4ステップ で 設定。 タブ機能で 複数メニュー切替 も対応。</p>
+
+        <!-- ─ タブ機能 (multi-menu) ─ -->
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 4h16v6H4z"/><path d="M4 14h5v6H4zM11 14h5v6h-5zM18 14h4v6h-4z"/></svg></span>タブ機能 (複数メニュー切替)</h2>
+              <div class="card-sub">タブが 2つ以上 の 場合、 各メニュー下部に タブバー が 表示される (LINE公式は 1メニューだけ、これは 拡張機能)</div>
+            </div>
+          </div>
+          <div class="card-body dense">
+            <div class="form-row" style="border-bottom:none">
+              <div class="lbl">メニュー数</div>
+              <div class="val">
+                <div class="seg" id="rm-menu-count">
+                  <button data-count="1" class="on">1個 (単一)</button>
+                  <button data-count="2">2個</button>
+                  <button data-count="3">3個</button>
+                  <button data-count="4">4個</button>
+                </div>
+                <div id="rm-menu-tabs" style="display:none;margin-top:14px">
+                  <div style="font-size:11.5px;color:var(--dim);font-weight:700;margin-bottom:8px;letter-spacing:.02em">編集中の タブ</div>
+                  <div class="tab-strip" id="rm-menu-tabs-strip"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div class="split">
           <div class="split-l">
@@ -947,8 +974,30 @@ const TEMPLATES = {
   J: { size:"small", label:"2分割", subLabel:"1×2", areas:[
     {x:0,y:0,w:1250,h:843},{x:1250,y:0,w:1250,h:843},
   ]},
+  // ── 非対称テンプレ (LINE公式にはないが API的にはOK) ──
+  K: { size:"large", label:"上3+下4", subLabel:"7エリア", areas:[
+    {x:0,y:0,w:833,h:843},{x:833,y:0,w:834,h:843},{x:1667,y:0,w:833,h:843},
+    {x:0,y:843,w:625,h:843},{x:625,y:843,w:625,h:843},{x:1250,y:843,w:625,h:843},{x:1875,y:843,w:625,h:843},
+  ]},
+  L: { size:"large", label:"上4+下3", subLabel:"7エリア", areas:[
+    {x:0,y:0,w:625,h:843},{x:625,y:0,w:625,h:843},{x:1250,y:0,w:625,h:843},{x:1875,y:0,w:625,h:843},
+    {x:0,y:843,w:833,h:843},{x:833,y:843,w:834,h:843},{x:1667,y:843,w:833,h:843},
+  ]},
+  M: { size:"large", label:"上1+下3", subLabel:"hero大", areas:[
+    {x:0,y:0,w:2500,h:843},
+    {x:0,y:843,w:833,h:843},{x:833,y:843,w:834,h:843},{x:1667,y:843,w:833,h:843},
+  ]},
+  N: { size:"large", label:"上1+下4", subLabel:"hero + 4", areas:[
+    {x:0,y:0,w:2500,h:843},
+    {x:0,y:843,w:625,h:843},{x:625,y:843,w:625,h:843},{x:1250,y:843,w:625,h:843},{x:1875,y:843,w:625,h:843},
+  ]},
+  O: { size:"large", label:"3×3 (9個)", subLabel:"密グリッド", areas:[
+    {x:0,y:0,w:833,h:562},{x:833,y:0,w:834,h:562},{x:1667,y:0,w:833,h:562},
+    {x:0,y:562,w:833,h:562},{x:833,y:562,w:834,h:562},{x:1667,y:562,w:833,h:562},
+    {x:0,y:1124,w:833,h:562},{x:833,y:1124,w:834,h:562},{x:1667,y:1124,w:833,h:562},
+  ]},
 };
-const TPL_SIZE_LARGE = ["A","B","C","D","E","F","G"];
+const TPL_SIZE_LARGE = ["A","B","C","D","E","F","G","K","L","M","N","O"];
 const TPL_SIZE_SMALL = ["H","I","J"];
 
 const DEFAULT_CFG = {
@@ -1135,14 +1184,36 @@ function switchView(v){
 }
 
 // ═══════════════════ VIEW: RICHMENU v3 (LINE 公式マネージャー準拠) ═══════════════════
+// Multi-menu state (menus[] contains N full menu configs)
+function ensureMenus(){
+  if (!CFG.menus) CFG.menus = [];
+  if (!CFG.menus.length){
+    // Migrate: prefer existing richmenuV3, else fresh default
+    if (CFG.richmenuV3){
+      CFG.menus.push(CFG.richmenuV3);
+    } else {
+      CFG.menus.push(JSON.parse(JSON.stringify(DEFAULT_CFG.richmenuV3)));
+    }
+  }
+  if (CFG.activeMenuIdx == null) CFG.activeMenuIdx = 0;
+  if (CFG.activeMenuIdx < 0 || CFG.activeMenuIdx >= CFG.menus.length) CFG.activeMenuIdx = 0;
+  // Live reference: richmenuV3 always points to current editing menu
+  CFG.richmenuV3 = CFG.menus[CFG.activeMenuIdx];
+  return CFG.richmenuV3;
+}
+
 function ensureRmV3(){
-  if (!CFG.richmenuV3) CFG.richmenuV3 = JSON.parse(JSON.stringify(DEFAULT_CFG.richmenuV3));
+  ensureMenus();
   const r = CFG.richmenuV3;
+  if (!r.title) r.title = "メインメニュー";
+  if (!r.chatBarText) r.chatBarText = "メニュー";
   if (!r.period) r.period = { unlimited: true, start: "", end: "" };
   if (!r.actions) r.actions = [];
   if (!r.bgImages) r.bgImages = [];
   if (!r.bgMode) r.bgMode = "per-area";
   if (!r.bgTransform) r.bgTransform = { x: 0, y: 0, scale: 1, fit: "cover" };
+  if (!r.defaultShow) r.defaultShow = "on";
+  if (!r.size) r.size = "large";
   if (!TEMPLATES[r.template]) r.template = r.size === "small" ? "H" : "B";
   // sync actions + bgImages length to template area count
   const tpl = TEMPLATES[r.template];
@@ -1152,11 +1223,35 @@ function ensureRmV3(){
   if (r.bgImages.length > tpl.areas.length) r.bgImages = r.bgImages.slice(0, tpl.areas.length);
 }
 
+function renderMenuCount(){
+  const n = (CFG.menus || []).length || 1;
+  document.querySelectorAll("#rm-menu-count button").forEach(b => b.classList.toggle("on", +b.dataset.count === n));
+  const wrap = document.getElementById("rm-menu-tabs");
+  const strip = document.getElementById("rm-menu-tabs-strip");
+  if (n <= 1){
+    if (wrap) wrap.style.display = "none";
+    return;
+  }
+  if (wrap) wrap.style.display = "block";
+  if (!strip) return;
+  strip.innerHTML = CFG.menus.map((m, i) => `
+    <button data-menu-idx="${i}" class="${i === CFG.activeMenuIdx ? 'on' : ''}">タブ${i + 1}: ${(m.title || "無題").slice(0, 10)}</button>
+  `).join("");
+  strip.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      CFG.activeMenuIdx = +btn.dataset.menuIdx;
+      saveCfg();
+      renderRmV3();
+    });
+  });
+}
+
 function renderRmV3(){
   ensureRmV3();
   const r = CFG.richmenuV3;
   // Fill basic inputs
   const $ = id => document.getElementById(id);
+  renderMenuCount();
   if ($("rm-title")) $("rm-title").value = r.title || "";
   if ($("rm-bar-text")) $("rm-bar-text").value = r.chatBarText || "";
   if ($("rm-bar-preview")) $("rm-bar-preview").textContent = r.chatBarText || "メニュー";
@@ -1615,6 +1710,28 @@ function wireRmV3(){
       saveCfg();
       renderRmBgCanvas();
       renderRmPreviewV3();
+    });
+  });
+  // Menu count (multi-tab)
+  document.querySelectorAll("#rm-menu-count button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const newCount = +btn.dataset.count;
+      if (!CFG.menus) CFG.menus = [];
+      // Grow: push default copies with unique titles
+      while (CFG.menus.length < newCount){
+        const clone = JSON.parse(JSON.stringify(DEFAULT_CFG.richmenuV3));
+        clone.title = `タブ${CFG.menus.length + 1}`;
+        clone.chatBarText = `メニュー`;
+        CFG.menus.push(clone);
+      }
+      // Shrink: warn if losing data
+      if (CFG.menus.length > newCount){
+        if (!confirm(`メニューを ${newCount}個 に減らします。 タブ${newCount + 1} 以降 の 設定 は 削除されます。 続行 しますか？`)) return;
+        CFG.menus = CFG.menus.slice(0, newCount);
+      }
+      if (CFG.activeMenuIdx >= CFG.menus.length) CFG.activeMenuIdx = 0;
+      saveCfg();
+      renderRmV3();
     });
   });
   // bg-canvas per-area / full upload is wired inside renderRmBgCanvas since it re-renders
@@ -2670,28 +2787,48 @@ async function composeUploadPng(){
   return canvas.toDataURL("image/jpeg", 0.9);
 }
 
+// Compose PNG for a specific menu index (does not affect current active menu)
+async function composeUploadPngFor(idx){
+  const savedIdx = CFG.activeMenuIdx;
+  CFG.activeMenuIdx = idx;
+  CFG.richmenuV3 = CFG.menus[idx];
+  const composed = await composeUploadPng();
+  CFG.activeMenuIdx = savedIdx;
+  CFG.richmenuV3 = CFG.menus[savedIdx];
+  return composed;
+}
+
 // Build deployable payload — LINE 公式マネージャー準拠 schema (v3)
 async function buildDeployPayload(){
   ensureRmV3();
-  const r = CFG.richmenuV3;
-  const tpl = TEMPLATES[r.template];
-  const composed = await composeUploadPng();
+  const menuCount = (CFG.menus || []).length || 1;
+  const menusPayload = [];
+  for (let i = 0; i < menuCount; i++){
+    const m = CFG.menus[i];
+    if (!m) continue;
+    const tpl = TEMPLATES[m.template] || TEMPLATES.B;
+    const composed = await composeUploadPngFor(i);
+    menusPayload.push({
+      title: m.title,
+      chatBarText: m.chatBarText,
+      period: m.period,
+      defaultShow: m.defaultShow,
+      size: m.size,
+      template: m.template,
+      areas: tpl.areas.map((a, j) => ({
+        bounds: a,
+        action: m.actions[j] || { type: "uri", uri: "" },
+      })),
+      composedImage: composed,
+    });
+  }
+  // Backward compat: also emit `richmenu` (first menu) so old script paths keep working
   return {
     version: 3,
     generatedAt: new Date().toISOString(),
-    richmenu: {
-      title: r.title,
-      chatBarText: r.chatBarText,
-      period: r.period,
-      defaultShow: r.defaultShow,
-      size: r.size,
-      template: r.template,
-      areas: tpl.areas.map((a, i) => ({
-        bounds: a,
-        action: r.actions[i] || { type: "uri", uri: "" },
-      })),
-      composedImage: composed,
-    },
+    menuCount,
+    menus: menusPayload,
+    richmenu: menusPayload[0],
     prizes: CFG.prizes,
     roulette: CFG.roulette,
     shops: CFG.shops,
