@@ -222,6 +222,38 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
 .rm-bg-remove{position:absolute;top:10px;right:10px;background:rgba(15,23,42,.85);color:#fff;border:none;font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:var(--font-jp);z-index:2;backdrop-filter:blur(4px);letter-spacing:-.005em}
 .rm-bg-remove:hover{background:var(--danger)}
 
+/* ═══════════ BG MODE + PER-AREA CANVAS ═══════════ */
+.bg-mode-row{display:inline-flex;background:var(--surface-2);padding:3px;border-radius:8px;gap:2px;margin-bottom:14px}
+.bg-mode-btn{padding:7px 14px;background:transparent;border:none;font-size:12.5px;font-weight:700;color:var(--dim);cursor:pointer;border-radius:5px;font-family:var(--font-jp);letter-spacing:-.005em;display:inline-flex;align-items:center;gap:6px;line-height:1.3}
+.bg-mode-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8}
+.bg-mode-btn:hover{color:var(--ink-2)}
+.bg-mode-btn.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow-xs)}
+
+.bg-canvas-wrap{background:var(--surface-2);border:1.5px solid var(--rule);border-radius:8px;padding:14px}
+.bg-canvas{position:relative;width:100%;background:#0f172a;border-radius:5px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+.bg-canvas.size-large{aspect-ratio:2500/1686}
+.bg-canvas.size-small{aspect-ratio:2500/843}
+.bg-canvas.mode-full{cursor:pointer;transition:background .12s}
+.bg-canvas.mode-full:hover,.bg-canvas.mode-full.hover{background:#1e293b}
+.bg-canvas.mode-full .bg-fullimg{position:absolute;inset:0;background-size:cover;background-position:center}
+.bg-canvas.mode-full .bg-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#f8fafc;gap:8px;pointer-events:none}
+.bg-canvas.mode-full .bg-empty svg{width:44px;height:44px;stroke:rgba(248,250,252,.6);fill:none;stroke-width:1.8}
+.bg-canvas.mode-full .bg-empty span{font-size:13px;font-weight:700;color:rgba(248,250,252,.8)}
+.bg-canvas.mode-full input[type=file]{display:none}
+
+.bg-area{position:absolute;box-sizing:border-box;border:2px dashed rgba(255,255,255,.4);background:rgba(255,255,255,.04);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .12s,background-color .12s;overflow:hidden}
+.bg-area:hover,.bg-area.hover{border-color:var(--primary);background-color:rgba(23,178,106,.15)}
+.bg-area.has-img{border-style:solid;border-color:rgba(23,178,106,.7)}
+.bg-area .bg-area-label{position:absolute;top:6px;left:6px;background:rgba(15,23,42,.85);color:#fff;font-size:11px;font-weight:900;padding:2px 8px;border-radius:4px;font-family:var(--font-latin);letter-spacing:.02em;z-index:2;backdrop-filter:blur(4px)}
+.bg-area .bg-area-empty{color:#f8fafc;display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.bg-area .bg-area-empty svg{width:24px;height:24px;stroke:rgba(255,255,255,.85);fill:none;stroke-width:2}
+.bg-area .bg-area-empty span{font-size:11px;font-weight:700;letter-spacing:-.005em}
+.bg-area.has-img .bg-area-empty{display:none}
+.bg-area .bg-area-remove{position:absolute;top:6px;right:6px;background:rgba(15,23,42,.85);color:#fff;border:none;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:var(--font-jp);z-index:2;backdrop-filter:blur(4px);opacity:0;transition:opacity .12s;letter-spacing:-.005em}
+.bg-area.has-img:hover .bg-area-remove{opacity:1}
+.bg-area .bg-area-remove:hover{background:var(--danger)}
+.bg-area input[type=file]{display:none}
+
 /* ═══════════ ACTION INPUTS ═══════════ */
 .action-item{padding:16px 22px;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:80px 1fr;gap:16px;align-items:center;transition:background .12s}
 .action-item:last-child{border-bottom:none}
@@ -648,18 +680,22 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
                   </div>
                 </div>
                 <div class="form-row" style="border-bottom:none">
-                  <div class="lbl">背景画像<span class="req">*</span><span class="hint" id="rm-bg-hint">推奨: 2500 × 1686 px</span></div>
+                  <div class="lbl">背景画像<span class="req">*</span><span class="hint" id="rm-bg-hint">エリアごとに 個別 upload 可</span></div>
                   <div class="val">
-                    <div class="rm-bg-slot" id="rm-bg-slot">
-                      <div class="rm-bg-empty" id="rm-bg-empty">
-                        <div class="rm-bg-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></div>
-                        <div class="rm-bg-lbl">クリック または ドラッグ&ドロップ で 画像を アップロード</div>
-                        <div class="rm-bg-hint">JPG · PNG · 1MB以内 · サイズ不一致でも 自動フィット</div>
-                      </div>
-                      <img id="rm-bg-thumb" style="display:none">
-                      <input type="file" id="rm-bg-input" accept="image/*">
-                      <button class="rm-bg-remove" id="rm-bg-remove" type="button" style="display:none">画像を削除</button>
+                    <div class="bg-mode-row" id="rm-bg-mode">
+                      <button type="button" class="bg-mode-btn on" data-mode="per-area">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+                        エリアごとに 配置
+                      </button>
+                      <button type="button" class="bg-mode-btn" data-mode="full">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                        全体に 1枚
+                      </button>
                     </div>
+                    <div class="bg-canvas-wrap">
+                      <div class="bg-canvas" id="rm-bg-canvas"></div>
+                    </div>
+                    <div class="helper">エリアごと mode: 各エリア にクリック/ドロップ で 別々の 写真 · 全体 mode: 1枚を 全画面 cover fit</div>
                   </div>
                 </div>
               </div>
@@ -1022,7 +1058,9 @@ const DEFAULT_CFG = {
     defaultShow: "on",
     size: "large", // large 2500×1686 / small 2500×843
     template: "B", // A-G (large) / H-J (small)
-    bgImage: null, // dataURL
+    bgImage: null, // dataURL (全画面 単一背景 mode)
+    bgImages: [], // per-area images (index = area index, null if empty)
+    bgMode: "per-area", // "per-area" or "full"
     actions: [
       { type: "uri", uri: `${LIFF_URL}?tab=map` },
       { type: "uri", uri: `${LIFF_URL}?area=I` },
@@ -1087,11 +1125,15 @@ function ensureRmV3(){
   const r = CFG.richmenuV3;
   if (!r.period) r.period = { unlimited: true, start: "", end: "" };
   if (!r.actions) r.actions = [];
+  if (!r.bgImages) r.bgImages = [];
+  if (!r.bgMode) r.bgMode = "per-area";
   if (!TEMPLATES[r.template]) r.template = r.size === "small" ? "H" : "B";
-  // sync actions length to template area count
+  // sync actions + bgImages length to template area count
   const tpl = TEMPLATES[r.template];
   while (r.actions.length < tpl.areas.length) r.actions.push({ type: "uri", uri: "" });
   if (r.actions.length > tpl.areas.length) r.actions = r.actions.slice(0, tpl.areas.length);
+  while (r.bgImages.length < tpl.areas.length) r.bgImages.push(null);
+  if (r.bgImages.length > tpl.areas.length) r.bgImages = r.bgImages.slice(0, tpl.areas.length);
 }
 
 function renderRmV3(){
@@ -1149,27 +1191,113 @@ function renderTplPicker(){
   });
 }
 
-function renderRmBgSlot(){
+// Legacy stub for old callers
+function renderRmBgSlot(){ renderRmBgCanvas(); }
+
+function renderRmBgCanvas(){
   const r = CFG.richmenuV3;
-  const slot = document.getElementById("rm-bg-slot");
-  const thumb = document.getElementById("rm-bg-thumb");
-  const empty = document.getElementById("rm-bg-empty");
-  const removeBtn = document.getElementById("rm-bg-remove");
+  const canvasEl = document.getElementById("rm-bg-canvas");
+  if (!canvasEl) return;
+  const tpl = TEMPLATES[r.template];
+  const W = 2500, H = r.size === "small" ? 843 : 1686;
+  canvasEl.className = "bg-canvas size-" + r.size + " mode-" + r.bgMode;
+  // Update mode toggle state
+  document.querySelectorAll(".bg-mode-btn").forEach(b => b.classList.toggle("on", b.dataset.mode === r.bgMode));
+  // Hint text
   const hint = document.getElementById("rm-bg-hint");
-  if (!slot) return;
-  if (hint) hint.textContent = "推奨: 2500 × " + (r.size === "small" ? "843" : "1686") + " px";
-  if (r.bgImage){
-    thumb.src = r.bgImage;
-    thumb.style.display = "block";
-    empty.style.display = "none";
-    removeBtn.style.display = "inline-block";
-    slot.classList.add("has-img");
-  } else {
-    thumb.style.display = "none";
-    empty.style.display = "block";
-    removeBtn.style.display = "none";
-    slot.classList.remove("has-img");
+  if (hint) hint.textContent = r.bgMode === "full" ? ("推奨 " + W + " × " + H + " px を 1枚") : ("エリアごとに 個別 upload · 各" + tpl.areas.length + "箇所");
+
+  if (r.bgMode === "full"){
+    // Single full-canvas image (LINE公式 relatively simpler mode)
+    canvasEl.innerHTML = `
+      ${r.bgImage ? `<div class="bg-fullimg" style="background-image:url('${r.bgImage}')"></div>` : ""}
+      <div class="bg-empty">
+        ${r.bgImage ? "" : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>クリックまたは ドラッグで 画像を選択</span>'}
+      </div>
+      <input type="file" accept="image/*" id="rm-full-input">
+    `;
+    // Wire click + drop
+    canvasEl.onclick = e => {
+      if (e.target.closest("button")) return;
+      document.getElementById("rm-full-input").click();
+    };
+    const inp = document.getElementById("rm-full-input");
+    inp.addEventListener("change", e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = ev => { r.bgImage = ev.target.result; saveCfg(); renderRmBgCanvas(); renderRmPreviewV3(); };
+      reader.readAsDataURL(f);
+      e.target.value = "";
+    });
+    ["dragenter","dragover"].forEach(ev => canvasEl.addEventListener(ev, e => { e.preventDefault(); canvasEl.classList.add("hover"); }));
+    ["dragleave","drop"].forEach(ev => canvasEl.addEventListener(ev, e => { e.preventDefault(); canvasEl.classList.remove("hover"); }));
+    canvasEl.addEventListener("drop", e => {
+      const files = [...e.dataTransfer.files].filter(f => f.type.startsWith("image/"));
+      if (!files[0]) return;
+      const reader = new FileReader();
+      reader.onload = ev => { r.bgImage = ev.target.result; saveCfg(); renderRmBgCanvas(); renderRmPreviewV3(); };
+      reader.readAsDataURL(files[0]);
+    });
+    return;
   }
+
+  // Per-area mode: render each area as a drop zone overlay
+  canvasEl.innerHTML = tpl.areas.map((a, i) => {
+    const left = (a.x / W) * 100;
+    const top = (a.y / H) * 100;
+    const w = (a.w / W) * 100;
+    const h = (a.h / H) * 100;
+    const src = r.bgImages[i];
+    const letter = String.fromCharCode(65 + i);
+    return `
+      <div class="bg-area ${src ? 'has-img' : ''}" data-area-idx="${i}" style="left:${left}%;top:${top}%;width:${w}%;height:${h}%;background-image:${src ? `url('${src}')` : 'none'}">
+        <div class="bg-area-label">${letter}</div>
+        <div class="bg-area-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+          <span>${letter} に配置</span>
+        </div>
+        <button type="button" class="bg-area-remove" data-area-clear="${i}">✕ 削除</button>
+        <input type="file" accept="image/*" data-area-input="${i}">
+      </div>
+    `;
+  }).join("");
+  // Wire each area
+  canvasEl.querySelectorAll(".bg-area").forEach(areaEl => {
+    const idx = +areaEl.dataset.areaIdx;
+    const inp = areaEl.querySelector("input[type=file]");
+    areaEl.addEventListener("click", e => {
+      if (e.target.closest(".bg-area-remove")) return;
+      inp.click();
+    });
+    inp.addEventListener("change", e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = ev => { r.bgImages[idx] = ev.target.result; saveCfg(); renderRmBgCanvas(); renderRmPreviewV3(); };
+      reader.readAsDataURL(f);
+      e.target.value = "";
+    });
+    ["dragenter","dragover"].forEach(ev => areaEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); areaEl.classList.add("hover"); }));
+    ["dragleave","drop"].forEach(ev => areaEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); areaEl.classList.remove("hover"); }));
+    areaEl.addEventListener("drop", e => {
+      const files = [...e.dataTransfer.files].filter(f => f.type.startsWith("image/"));
+      if (!files[0]) return;
+      const reader = new FileReader();
+      reader.onload = ev => { r.bgImages[idx] = ev.target.result; saveCfg(); renderRmBgCanvas(); renderRmPreviewV3(); };
+      reader.readAsDataURL(files[0]);
+    });
+  });
+  canvasEl.querySelectorAll("[data-area-clear]").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      const i = +btn.dataset.areaClear;
+      r.bgImages[i] = null;
+      saveCfg();
+      renderRmBgCanvas();
+      renderRmPreviewV3();
+    });
+  });
 }
 
 function renderRmActions(){
@@ -1220,6 +1348,24 @@ function renderRmInfo(){
   if ($("pi-period")) $("pi-period").textContent = r.period.unlimited ? "無期限" : `${r.period.start || "-"} 〜 ${r.period.end || "-"}`;
 }
 
+// Cover-fit an image into a rect
+async function drawCoverInto(ctx, dataUrl, rect){
+  try {
+    const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = dataUrl; });
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const scale = Math.max(rect.w / iw, rect.h / ih);
+    const dw = iw * scale, dh = ih * scale;
+    const dx = rect.x + (rect.w - dw) / 2, dy = rect.y + (rect.h - dh) / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(rect.x, rect.y, rect.w, rect.h);
+    ctx.clip();
+    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.restore();
+    return true;
+  } catch(e){ return false; }
+}
+
 async function renderRmPreviewV3(){
   const r = CFG.richmenuV3;
   const tpl = TEMPLATES[r.template];
@@ -1227,29 +1373,31 @@ async function renderRmPreviewV3(){
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#1e2233";
+  ctx.fillStyle = "#0f172a";
   ctx.fillRect(0, 0, W, H);
-  // Draw background image (cover)
-  if (r.bgImage){
-    try {
-      const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = r.bgImage; });
-      const iw = img.naturalWidth, ih = img.naturalHeight;
-      const scale = Math.max(W / iw, H / ih);
-      const dw = iw * scale, dh = ih * scale;
-      const dx = (W - dw) / 2, dy = (H - dh) / 2;
-      ctx.drawImage(img, dx, dy, dw, dh);
-    } catch(e){}
+
+  if (r.bgMode === "full" && r.bgImage){
+    await drawCoverInto(ctx, r.bgImage, { x: 0, y: 0, w: W, h: H });
+  } else if (r.bgMode === "per-area"){
+    for (let i = 0; i < tpl.areas.length; i++){
+      const src = r.bgImages[i];
+      if (src) await drawCoverInto(ctx, src, tpl.areas[i]);
+      else {
+        // placeholder for empty area
+        ctx.fillStyle = "#e4e7ee";
+        ctx.fillRect(tpl.areas[i].x, tpl.areas[i].y, tpl.areas[i].w, tpl.areas[i].h);
+      }
+    }
   } else {
-    // Placeholder pattern
-    ctx.fillStyle = "#f0f2f7";
+    // No image at all
+    ctx.fillStyle = "#e4e7ee";
     ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#a8adbe";
+    ctx.fillStyle = "#7c839a";
     ctx.font = "700 60px 'Noto Sans JP', sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("背景画像 未アップロード", W/2, H/2 - 20);
-    ctx.font = "500 34px 'Noto Sans JP', sans-serif";
-    ctx.fillText("画像を追加してください", W/2, H/2 + 40);
+    ctx.fillText("背景画像 未アップロード", W/2, H/2);
   }
+
   // Draw area outlines with A / B / C letters
   tpl.areas.forEach((a, i) => {
     ctx.strokeStyle = "rgba(23,178,106,.85)";
@@ -1257,7 +1405,6 @@ async function renderRmPreviewV3(){
     ctx.strokeRect(a.x + 4, a.y + 4, a.w - 8, a.h - 8);
     ctx.fillStyle = "rgba(23,178,106,.85)";
     const letter = String.fromCharCode(65 + i);
-    // Letter badge in corner
     const bx = a.x + 30, by = a.y + 30, bw = 90, bh = 90;
     ctx.fillRect(bx, by, bw, bh);
     ctx.fillStyle = "#fff";
@@ -1306,53 +1453,16 @@ function wireRmV3(){
       saveCfg(); renderRmV3();
     });
   });
-  // Background image upload
-  const bgSlot = $("rm-bg-slot");
-  const bgInput = $("rm-bg-input");
-  if (bgSlot && bgInput){
-    bgSlot.addEventListener("click", e => {
-      if (e.target.closest("#rm-bg-remove")) return;
-      bgInput.click();
-    });
-    bgInput.addEventListener("change", e => {
-      const f = e.target.files[0];
-      if (!f) return;
-      const reader = new FileReader();
-      reader.onload = ev => {
-        r().bgImage = ev.target.result;
-        saveCfg();
-        renderRmBgSlot();
-        renderRmPreviewV3();
-      };
-      reader.readAsDataURL(f);
-      e.target.value = "";
-    });
-    ["dragenter","dragover"].forEach(ev => bgSlot.addEventListener(ev, e => { e.preventDefault(); bgSlot.classList.add("hover"); }));
-    ["dragleave","drop"].forEach(ev => bgSlot.addEventListener(ev, e => { e.preventDefault(); bgSlot.classList.remove("hover"); }));
-    bgSlot.addEventListener("drop", e => {
-      const files = [...e.dataTransfer.files].filter(f => f.type.startsWith("image/"));
-      if (!files[0]) return;
-      const reader = new FileReader();
-      reader.onload = ev => {
-        r().bgImage = ev.target.result;
-        saveCfg();
-        renderRmBgSlot();
-        renderRmPreviewV3();
-      };
-      reader.readAsDataURL(files[0]);
-    });
-  }
-  const bgRemove = $("rm-bg-remove");
-  if (bgRemove){
-    bgRemove.addEventListener("click", e => {
-      e.stopPropagation();
-      if (!confirm("背景画像を削除しますか？")) return;
-      r().bgImage = null;
+  // Bg mode toggle (per-area / full)
+  document.querySelectorAll(".bg-mode-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      r().bgMode = btn.dataset.mode;
       saveCfg();
-      renderRmBgSlot();
+      renderRmBgCanvas();
       renderRmPreviewV3();
     });
-  }
+  });
+  // bg-canvas per-area / full upload is wired inside renderRmBgCanvas since it re-renders
 }
 
 // ═══════════════════ (legacy) VIEW: RICHMENU ═══════════════════
@@ -2384,24 +2494,23 @@ async function svgPreviewToPng(){
   });
 }
 
-// Compose final PNG for LINE upload: bg image (cover) at true size WITHOUT area overlays
+// Compose final PNG for LINE upload (NO area overlays — clean image)
 async function composeUploadPng(){
   const r = CFG.richmenuV3;
+  const tpl = TEMPLATES[r.template];
   const W = 2500, H = r.size === "small" ? 843 : 1686;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, W, H);
-  if (r.bgImage){
-    try {
-      const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = r.bgImage; });
-      const iw = img.naturalWidth, ih = img.naturalHeight;
-      const scale = Math.max(W / iw, H / ih);
-      const dw = iw * scale, dh = ih * scale;
-      const dx = (W - dw) / 2, dy = (H - dh) / 2;
-      ctx.drawImage(img, dx, dy, dw, dh);
-    } catch(e){}
+  if (r.bgMode === "full" && r.bgImage){
+    await drawCoverInto(ctx, r.bgImage, { x: 0, y: 0, w: W, h: H });
+  } else if (r.bgMode === "per-area"){
+    for (let i = 0; i < tpl.areas.length; i++){
+      const src = r.bgImages[i];
+      if (src) await drawCoverInto(ctx, src, tpl.areas[i]);
+    }
   }
   return canvas.toDataURL("image/jpeg", 0.9);
 }
