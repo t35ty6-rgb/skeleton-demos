@@ -193,7 +193,10 @@ function modal(title, bodyEl, actions = null) {
     box.append(actionsRow);
     back.append(box);
     $('#modal-root').append(back);
-    function close(v) { back.remove(); resolve(v); }
+    // Esc で閉じる
+    const escHandler = e => { if (e.key === 'Escape') { e.preventDefault(); close(false); } };
+    document.addEventListener('keydown', escHandler, true);
+    function close(v) { document.removeEventListener('keydown', escHandler, true); back.remove(); resolve(v); }
   });
 }
 
@@ -1471,16 +1474,26 @@ function viewApprove(root) {
         const box = h('div', {});
         box.append(h('div', {}, `「${w.title}」を差戻します。理由を入力してください:`));
         const ta = h('textarea', { class: 'approve-modal-textarea', placeholder: '差戻し理由 (必須 · 提出者への修正指示になります)' });
-        box.append(h('div', { class: 'form-lbl', style: 'margin-top:10px' }, '差戻し理由 *'), ta);
-        const ok = await confirmModal('差戻し確認', box);
-        if (!ok) return;
-        const reason = ta.value.trim();
-        if (!reason) { toast('差戻し理由は必須です', 'err'); return; }
+        const err = h('div', { style: 'display:none;color:var(--danger);font-size:11.5px;font-weight:700;margin-top:6px' }, '差戻し理由は必須です');
+        box.append(h('div', { class: 'form-lbl', style: 'margin-top:10px' }, '差戻し理由 *'), ta, err);
+        const reason = await new Promise(resolve => {
+          modal('差戻し確認', box, (row, close) => {
+            row.append(
+              h('button', { class: 'btn btn-ghost', onclick: () => { close(null); resolve(null); } }, 'キャンセル'),
+              h('button', { class: 'btn btn-danger', onclick: () => {
+                const v = ta.value.trim();
+                if (!v) { err.style.display = 'block'; ta.style.borderColor = 'var(--danger)'; ta.focus(); return; }
+                close(v); resolve(v);
+              } }, '差戻す')
+            );
+          });
+        });
+        if (!reason) return;
         w.status = 'draft';
         w.history = w.history || [];
         w.history.unshift({ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: `差戻し — ${reason}` });
         store.save('works');
-        toast('差戻ししました');
+        toast('差戻ししました', 'success');
         render();
       });
       tb.append(tr);
@@ -1947,21 +1960,43 @@ function viewWorkEdit(root, params) {
       tabBody.append(formRow('作業概要', '', h('textarea', { class: 'form-ta', oninput: e => draft.description = e.target.value }, draft.description || '')));
     } else if (currentTab === 'steps') {
       const wrap = h('div', { style: 'display:flex;flex-direction:column;gap:8px' });
-      // AI ドラフト generator
-      if (draft.steps.length === 0) {
-        const helper = h('div', { class: 'ai-helper-row' });
-        helper.innerHTML = `${I.sparkle}<div class="ai-helper-row-text">タイトルから電気工事の標準手順 (停電確認 → 検電 → 養生 → 作業 → 通電確認 → 記録) を AI が下書きします。</div><button data-ai-draft>AI で下書き生成</button>`;
-        helper.querySelector('[data-ai-draft]').addEventListener('click', () => {
-          const t = (draft.title || '').trim();
-          if (!t) { toast('先にタイトルを入力してください', 'err'); return; }
-          const generated = window.AI.generateSteps(t, draft.category);
-          draft.steps.push(...generated);
-          renderTab();
-          card.querySelector('#sc').textContent = `(${draft.steps.length})`;
-          toast(`AI が ${generated.length} 手順を下書きしました`, 'success');
-        });
-        wrap.append(helper);
-      }
+      // AI ドラフト generator — 常時表示 (空なら「下書き」、既存ありなら「追記/置換」)
+      const helper = h('div', { class: 'ai-helper-row' });
+      const isEmpty = draft.steps.length === 0;
+      const btnLabel = isEmpty ? 'AI で下書き生成' : 'AI で再提案';
+      const msg = isEmpty
+        ? 'タイトルから電気工事の標準手順 (停電確認 → 検電 → 養生 → 作業 → 通電確認 → 記録) を AI が下書きします。'
+        : `現在 ${draft.steps.length} 手順。AI で標準手順を再提案 (末尾に追加 or 全置換を選択)。`;
+      helper.innerHTML = `${I.sparkle}<div class="ai-helper-row-text">${esc(msg)}</div><button data-ai-draft>${esc(btnLabel)}</button>`;
+      helper.querySelector('[data-ai-draft]').addEventListener('click', async () => {
+        const t = (draft.title || '').trim();
+        if (!t) { toast('先にタイトルを入力してください', 'err'); return; }
+        const generated = window.AI.generateSteps(t, draft.category);
+        let mode = 'append';
+        if (!isEmpty) {
+          const box = h('div', {},
+            h('div', {}, `AI が ${generated.length} 手順を提案します。既存 ${draft.steps.length} 手順をどうしますか?`),
+            h('div', { style: 'margin-top:12px;font-size:12px;color:var(--dim);font-weight:500' }, '「末尾に追加」→ 既存の後ろに追記。「全部置換」→ 既存を捨てて新規のみに。'),
+          );
+          const choice = await new Promise(resolve => {
+            modal('AI 提案の反映方法', box, (row, close) => {
+              row.append(
+                h('button', { class: 'btn btn-ghost', onclick: () => { close(null); resolve(null); } }, 'キャンセル'),
+                h('button', { class: 'btn btn-secondary', onclick: () => { close('replace'); resolve('replace'); } }, '全部置換'),
+                h('button', { class: 'btn btn-primary', onclick: () => { close('append'); resolve('append'); } }, '末尾に追加'),
+              );
+            });
+          });
+          if (!choice) return;
+          mode = choice;
+        }
+        if (mode === 'replace') draft.steps.length = 0;
+        draft.steps.push(...generated);
+        renderTab();
+        card.querySelector('#sc').textContent = `(${draft.steps.length})`;
+        toast(`AI が ${generated.length} 手順を${mode === 'replace' ? '置換' : '追記'}しました`, 'success');
+      });
+      wrap.append(helper);
       draft.steps.forEach((s, i) => wrap.append(buildStepEditor(draft, i, () => { renderTab(); card.querySelector('#sc').textContent = `(${draft.steps.length})`; })));
       wrap.append(h('button', {
         class: 'btn btn-secondary btn-block', style: 'margin-top:6px',
@@ -2469,26 +2504,27 @@ function mountShortcuts() {
   document.addEventListener('keydown', e => {
     const inField = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
 
-    // Cmd+K / Ctrl+K → palette
+    // Cmd+K / Ctrl+K → palette (どこからでも)
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
       if (palette.el) palette.close(); else palette.open();
       return;
     }
-    // Cmd+/ → AI
+    // Cmd+/ → AI (どこからでも)
     if ((e.metaKey || e.ctrlKey) && e.key === '/') {
       e.preventDefault();
       ai.toggle();
       return;
     }
+    // Esc → close overlays (input focus 中でも効く必要あるので inField guard の 前 に置く)
+    if (e.key === 'Escape') {
+      if (palette.el) { palette.close(); e.preventDefault(); return; }
+      if (ai.panel) { ai.close(); e.preventDefault(); return; }
+      return;
+    }
     if (inField) return;
     // ? → help
     if (e.key === '?') { e.preventDefault(); showHelp(); return; }
-    // Esc → close overlays
-    if (e.key === 'Escape') {
-      if (ai.panel) ai.close();
-      return;
-    }
     // g leader (vim-style)
     if (e.key === 'g' && !gLeader) {
       gLeader = 'g';
