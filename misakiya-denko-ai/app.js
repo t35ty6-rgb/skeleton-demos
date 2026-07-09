@@ -877,7 +877,6 @@ function buildDetailCard(w) {
   const uid = store.currentUserId;
   const isFav = store.isFav(w.id);
   const author = store.user(w.author);
-  const approver = store.user(w.approver);
 
   const card = h('section', { class: 'card', id: 'detailCard' });
 
@@ -1309,7 +1308,6 @@ function printWork(w) {
   if (!win) { toast('ポップアップを許可してください', 'err'); return; }
   const cat = store.category(w.category);
   const author = store.user(w.author);
-  const approver = store.user(w.approver);
   win.document.write(`<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>${esc(w.title)} · 手順書</title>
 <style>
   @page{margin:14mm 15mm;size:A4}
