@@ -551,26 +551,29 @@ function viewHome(root) {
 
   // メイン 3 CTA: 手順書を作る直感的な入口 (常時表示)
   const cta = h('div', { class: 'quick-start' });
+  const iVideo = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m22 8-6 4 6 4V8Z"/></svg>';
+  const iSpark = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg>';
+  const iPlus = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
   cta.innerHTML = `
     <div class="qs-h">
-      <div class="qs-h-title">📋 手順書を作る</div>
-      <a class="qs-help" data-open-guide>❓ 使い方を見る</a>
+      <div class="qs-h-title">手順書を作る<span class="qs-h-sub">入口を選んでください</span></div>
+      <a class="qs-help" data-open-guide>使い方を見る</a>
     </div>
     <div class="qs-grid">
       <button class="qs-card qs-video" data-a="video">
-        <div class="qs-icon">🎬</div>
+        <div class="qs-icon">${iVideo}</div>
         <div class="qs-title">動画から作る</div>
-        <div class="qs-sub">字幕付き動画をアップロードで<br>AI が自動で 手順1・2・3… に分解</div>
+        <div class="qs-sub">字幕付き動画をアップロードで<br>手順 1・2・3… に自動分解</div>
         <div class="qs-badge">おすすめ · 最短30秒</div>
       </button>
       <button class="qs-card qs-ai" data-a="ai">
-        <div class="qs-icon">✨</div>
+        <div class="qs-icon">${iSpark}</div>
         <div class="qs-title">AI で下書き</div>
         <div class="qs-sub">タイトルを入力するだけで<br>電気工事の標準手順を自動生成</div>
         <div class="qs-badge">1分</div>
       </button>
       <button class="qs-card qs-blank" data-a="blank">
-        <div class="qs-icon">＋</div>
+        <div class="qs-icon">${iPlus}</div>
         <div class="qs-title">白紙から作る</div>
         <div class="qs-sub">手順を自分で書く<br>細かい調整もできる</div>
         <div class="qs-badge">じっくり</div>
@@ -860,11 +863,11 @@ function buildDetailCard(w) {
       </div>
     </div>
     <div class="sub-tabs" id="subTabs">
-      <button class="sub-tab is-active" data-tab="steps">手順一覧 <small style="color:var(--dim);margin-left:3px">(${w.steps.length})</small></button>
-      <button class="sub-tab" data-tab="tools">使用工具・材料</button>
-      <button class="sub-tab" data-tab="resources">図面・資料</button>
-      <button class="sub-tab" data-tab="tips">注意点・コツ</button>
-      <button class="sub-tab" data-tab="history">関連履歴</button>
+      <button class="sub-tab is-active" data-tab="steps">手順一覧 <small style="color:var(--dim);margin-left:3px;font-weight:600">(${w.steps.length})</small></button>
+      <button class="sub-tab" data-tab="tools">使用工具・材料 <small style="color:var(--dim);margin-left:3px;font-weight:600">(${(w.tools || []).length + (w.materials || []).length})</small></button>
+      <button class="sub-tab" data-tab="resources">図面・資料 <small style="color:var(--dim);margin-left:3px;font-weight:600">(${(w.resources || []).length})</small></button>
+      <button class="sub-tab" data-tab="tips">注意点・コツ <small style="color:var(--dim);margin-left:3px;font-weight:600">(${(w.tips || []).length + (w.cautions || []).length})</small></button>
+      <button class="sub-tab" data-tab="history">関連履歴 <small style="color:var(--dim);margin-left:3px;font-weight:600">(${(w.history || []).length})</small></button>
     </div>
     <div class="detail-lower" id="lowerContent"></div>`;
 
