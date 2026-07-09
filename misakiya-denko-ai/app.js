@@ -316,6 +316,10 @@ function renderSidebar() {
         <div class="brand-tag">技術を未来へ、人を育てる</div>
       </div>
     </div>
+    <button class="sb-upload-btn" id="sbUploadVideo">
+      <span style="font-size:16px">📹</span>
+      <span>動画から作る</span>
+    </button>
     <nav class="nav-group">
       ${navItem('home', 'ホーム', 'home')}
       ${navItem('search', '作業を探す', 'search')}
@@ -338,6 +342,27 @@ function renderSidebar() {
     e.preventDefault();
     router.go(a.dataset.nav);
   }));
+  // 「+ 動画から作る」ボタン: 空の新規作業を作って 資料・動画タブに直行
+  const upBtn = sb.querySelector('#sbUploadVideo');
+  if (upBtn) upBtn.addEventListener('click', () => {
+    const uid = store.currentUserId;
+    let w = store.works.find(x => x.author === uid && !x.title.trim());
+    if (!w) {
+      w = {
+        id: 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+        title: '', category: 'panel', tags: [], site: '', difficulty: 2, duration: '',
+        thumb: 'panel', status: 'published', author: uid, approver: uid,
+        createdAt: new Date().toISOString().slice(0, 10),
+        updatedAt: new Date().toISOString().slice(0, 10),
+        views: 0, description: '',
+        steps: [], tools: [], materials: [], tips: [], cautions: [], resources: [], relatedIds: [],
+        videoUrl: '', history: [{ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: '動画から作るモードで開始' }],
+      };
+      store.works.unshift(w);
+      store.save('works');
+    }
+    location.hash = `#work/${w.id}/edit?tab=res`;
+  });
 }
 
 function renderTopbar() {
