@@ -2767,6 +2767,14 @@ async function svgPreviewToPng(){
 }
 
 // Compose final PNG for LINE upload (NO area overlays — clean image)
+// Return true if this menu has no image content at all
+function menuIsBlank(r){
+  if (!r) return true;
+  if (r.bgMode === "full") return !r.bgImage;
+  const imgs = r.bgImages || [];
+  return imgs.filter(x => !!x).length === 0;
+}
+
 async function composeUploadPng(){
   const r = CFG.richmenuV3;
   const tpl = TEMPLATES[r.template];
@@ -2783,6 +2791,25 @@ async function composeUploadPng(){
       const src = r.bgImages[i];
       if (src) await drawCoverInto(ctx, src, tpl.areas[i]);
     }
+  }
+  // 未設定 fallback: 白いままだと owner が「反映されてない」 と 混乱する ので 明示的 placeholder
+  if (menuIsBlank(r)){
+    // Subtle grid + centered label so the user sees "this tab has no image"
+    ctx.fillStyle = "#f1f5f9";
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.lineWidth = 4;
+    tpl.areas.forEach(a => ctx.strokeRect(a.x, a.y, a.w, a.h));
+    ctx.fillStyle = "#334155";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const menuIdx = (CFG.menus || []).indexOf(r);
+    const label = menuIdx >= 0 ? `タブ ${menuIdx + 1} · 画像未設定` : "画像未設定";
+    ctx.font = "900 96px 'Noto Sans JP', sans-serif";
+    ctx.fillText(label, W/2, H/2 - 40);
+    ctx.font = "500 42px 'Noto Sans JP', sans-serif";
+    ctx.fillStyle = "#64748b";
+    ctx.fillText("admin で背景画像を アップロード してください", W/2, H/2 + 60);
   }
   return canvas.toDataURL("image/jpeg", 0.9);
 }
@@ -2839,6 +2866,14 @@ async function buildDeployPayload(){
 
 document.getElementById("apply-btn").addEventListener("click", async () => {
   const btn = document.getElementById("apply-btn");
+  // Pre-apply check: warn about blank tabs
+  ensureRmV3();
+  const blanks = (CFG.menus || []).map((m, i) => menuIsBlank(m) ? i + 1 : null).filter(x => x !== null);
+  if (blanks.length){
+    const label = blanks.length === (CFG.menus || []).length ? "全タブ" : `タブ ${blanks.join(" と ")}`;
+    const msg = `${label} に 背景画像 が 設定 されていません。\n\nこのまま反映すると LINE 側 で 「画像未設定」 プレースホルダ が 表示されます。\n\n続行しますか？`;
+    if (!confirm(msg)) return;
+  }
   const orig = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = `<span class="spinner"></span>設定書 を生成中…`;
