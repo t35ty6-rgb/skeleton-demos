@@ -630,7 +630,7 @@ function viewHome(root) {
       <div class="stat-grid">
         <div class="stat"><div class="stat-label">新規登録数</div><div class="stat-value">${thisMonth}<small>件</small></div><div class="stat-delta">${I.up2} +${Math.max(0, thisMonth - 8)} 前月比</div></div>
         <div class="stat"><div class="stat-label">閲覧数</div><div class="stat-value">${totalViews}</div><div class="stat-delta">${I.up2} +31%</div></div>
-        <div class="stat"><div class="stat-label">学習中の人</div><div class="stat-value">${learners}<small>人</small></div><div class="stat-delta">${I.up2} +2 名</div></div>
+        <div class="stat"><div class="stat-label">学習完了数</div><div class="stat-value">${learners}<small>人</small></div><div class="stat-delta">${I.up2} +2 名</div></div>
         <div class="stat"><div class="stat-label">平均学習時間</div><div class="stat-value">${avgTime.toFixed(1)}<small>時間</small></div><div class="stat-delta flat">±0.0h</div></div>
       </div>
       <div class="kw-row">
@@ -821,10 +821,9 @@ function buildDetailCard(w) {
     <div class="detail-h">
       <a class="back-link" data-back>${I.left}戻る</a>
       <div class="detail-title">${esc(w.title)}</div>
-      <button class="btn-fav ${isFav ? 'is-on' : ''}" data-fav title="F">${I.star}${isFav ? 'お気に入り済' : 'お気に入り'}</button>
-      <button class="btn-share" data-qr title="QR">${I.qr}QR</button>
-      <button class="btn-share" data-print title="印刷">${I.print}印刷</button>
-      <button class="btn btn-secondary btn-sm" data-edit title="E">${I.edit}編集</button>
+      <button class="btn-fav ${isFav ? 'is-on' : ''}" data-fav>${I.star}${isFav ? 'お気に入り済' : 'お気に入り'}</button>
+      <button class="btn-share" data-share>${I.share}共有</button>
+      <button class="btn btn-secondary btn-sm" data-edit>${I.edit}編集</button>
     </div>
     ${statusBanner}
     <div class="chip-row">
@@ -851,11 +850,11 @@ function buildDetailCard(w) {
       </div>
     </div>
     <div class="sub-tabs" id="subTabs">
-      <button class="sub-tab is-active" data-tab="steps">手順一覧 <small style="color:var(--dim);margin-left:3px;font-weight:600">(${w.steps.length})</small></button>
-      <button class="sub-tab" data-tab="tools">使用工具・材料 <small style="color:var(--dim);margin-left:3px;font-weight:600">(${(w.tools || []).length + (w.materials || []).length})</small></button>
-      <button class="sub-tab" data-tab="resources">図面・資料 <small style="color:var(--dim);margin-left:3px;font-weight:600">(${(w.resources || []).length})</small></button>
-      <button class="sub-tab" data-tab="tips">注意点・コツ <small style="color:var(--dim);margin-left:3px;font-weight:600">(${(w.tips || []).length + (w.cautions || []).length})</small></button>
-      <button class="sub-tab" data-tab="history">関連履歴 <small style="color:var(--dim);margin-left:3px;font-weight:600">(${(w.history || []).length})</small></button>
+      <button class="sub-tab is-active" data-tab="steps">手順一覧</button>
+      <button class="sub-tab" data-tab="tools">使用工具・材料</button>
+      <button class="sub-tab" data-tab="resources">図面・資料</button>
+      <button class="sub-tab" data-tab="tips">注意点・コツ</button>
+      <button class="sub-tab" data-tab="history">関連履歴</button>
     </div>
     <div class="detail-lower" id="lowerContent"></div>`;
 
@@ -864,150 +863,24 @@ function buildDetailCard(w) {
   function renderTab(tab) {
     lower.innerHTML = '';
     if (tab === 'steps') {
-      const wrap = h('div', {});
-
-      // 現場ガイド (初回作業者向け 4ステップ案内、閉じられる)
-      if (!store.guideDismissed && w.steps.length > 0) {
-        const fg = h('div', { class: 'field-guide' });
-        fg.innerHTML = `
-          <div class="field-guide-h">
-            ${I.help}
-            <div class="field-guide-title">はじめての方へ · 現場での使い方 (4ステップ)</div>
-            <button class="field-guide-close" title="今後は表示しない">${I.x}</button>
-          </div>
-          <div class="field-guide-steps">
-            <div class="fg-step"><div class="fg-step-icon">1</div><div class="fg-step-txt">手順を読む</div><div class="fg-step-sub">上から順に</div></div>
-            <div class="fg-step"><div class="fg-step-icon">2</div><div class="fg-step-txt">作業する</div><div class="fg-step-sub">実際に手を動かす</div></div>
-            <div class="fg-step"><div class="fg-step-icon">3</div><div class="fg-step-txt">📸 写真を撮る</div><div class="fg-step-sub">スマホで撮影</div></div>
-            <div class="fg-step"><div class="fg-step-icon">4</div><div class="fg-step-txt">✓ 完了マーク</div><div class="fg-step-sub">緑丸をタップ</div></div>
-          </div>`;
-        fg.querySelector('.field-guide-close').addEventListener('click', () => {
-          store.guideDismissed = true; store.save('guideDismissed');
-          renderTab('steps');
-        });
-        wrap.append(fg);
-      }
-
-      // Progress bar
-      if (w.steps.length > 0) {
-        const done = store.getSteps(w.id);
-        const photos = store.getAllStepPhotos(w.id);
-        const pct = Math.round(done.length / w.steps.length * 100);
-        const pr = h('div', { class: 'step-progress' });
-        pr.innerHTML = `
-          <span class="step-progress-lbl">現場チェック進捗</span>
-          <div class="step-progress-bar"><span style="width:${pct}%"></span></div>
-          <span class="step-progress-cnt">${done.length} / ${w.steps.length} · ${pct}%</span>
-          <span class="step-photo-count-badge">${I.img} 写真 ${photos.length} 枚</span>
-          <button class="btn btn-ghost btn-sm" data-reset-steps title="全チェック解除">${I.reset}リセット</button>`;
-        pr.querySelector('[data-reset-steps]').addEventListener('click', async () => {
-          const ok = await confirmModal('チェックをリセット', h('div', {}, 'このユーザーのチェックを全て解除します (写真は残ります)。'));
-          if (!ok) return;
-          store.resetSteps(w.id);
-          renderTab('steps');
-          toast('チェックをリセットしました', 'success');
-        });
-        wrap.append(pr);
-      }
-
-      // 完了報告書 CTA
-      if (w.steps.length > 0) {
-        const done = store.getSteps(w.id);
-        const isAll = done.length === w.steps.length;
-        const cta = h('div', { class: 'completion-cta-bar ' + (isAll ? '' : 'pending') });
-        cta.innerHTML = `
-          <div class="completion-cta-icon">${isAll ? I.check : I.book}</div>
-          <div class="completion-cta-body">
-            <div class="completion-cta-title">${isAll ? '全手順完了 — 完了報告書を作成できます' : '完了報告書 · 全手順の写真と時刻をまとめて出力'}</div>
-            <div class="completion-cta-sub">${isAll ? '写真・チェック・作業員・時刻 が入った 印刷可能な報告書を発行します。' : '途中でも作成可能。 未完了の手順はマークが付きます。'}</div>
-          </div>
-          <button class="btn ${isAll ? 'btn-primary' : 'btn-secondary'}" data-report>${I.print}完了報告書を作成</button>`;
-        cta.querySelector('[data-report]').addEventListener('click', () => printCompletionReport(w));
-        wrap.append(cta);
-      }
-
-      const g = h('div', { class: 'detail-lower-grid', style: 'padding-top:12px' });
+      const g = h('div', { class: 'detail-lower-grid' });
       const steps = h('div', { class: 'steps' });
       if (w.steps.length === 0) {
-        steps.innerHTML = `<div class="empty" style="padding:24px 0">${I.book}<div>手順がまだ登録されていません</div><div style="margin-top:4px;font-size:11.5px">編集画面で「AI で手順下書き」を試してみてください</div></div>`;
+        steps.innerHTML = `<div class="empty" style="padding:24px 0">${I.book}<div>手順がまだ登録されていません</div></div>`;
       } else {
-        const done = store.getSteps(w.id);
         w.steps.forEach((s, i) => {
-          const isDone = done.includes(i);
-          const stepEl = h('div', { class: 'step' + (isDone ? ' is-done' : '') });
-          const check = h('div', { class: 'step-check' + (isDone ? ' on' : ''), title: 'この手順を完了' });
-          check.innerHTML = I.check.replace('<svg', '<svg fill="none"');
-          check.addEventListener('click', () => {
-            store.toggleStep(w.id, i);
-            const nowDone = store.getSteps(w.id);
-            if (nowDone.length === w.steps.length) {
-              store.logWorkComplete(w.id);
-              toast(`「${w.title}」全手順完了 · 作業ログに記録しました`, 'success');
-            }
-            renderTab('steps');
-          });
-
-          // 現場写真 UI
-          const photos = store.getStepPhotos(w.id, i);
-          const bodyKids = [
-            h('div', { class: 'step-title' }, s.title),
-            s.desc ? h('div', { class: 'step-desc' }, s.desc) : null,
-            s.note ? h('div', { class: 'step-note' }, s.note) : null,
-          ];
-          // 動画タイムスタンプ (transcribe 由来)
-          if (s.videoStart != null && w.videoUrl) {
-            const vlink = h('button', { class: 'step-video-link', title: 'この手順の映像を再生' });
-            vlink.innerHTML = `${I.play}<span>該当箇所を見る</span><span class="step-video-time">${fmtTS(s.videoStart)}${s.videoEnd ? ' – ' + fmtTS(s.videoEnd) : ''}</span>`;
-            vlink.addEventListener('click', () => seekVideoTo(s.videoStart));
-            bodyKids.push(vlink);
-          }
-          // 写真 grid
-          if (photos.length > 0) {
-            const grid = h('div', { class: 'step-photos' });
-            photos.forEach(ph => {
-              const el = h('div', { class: 'step-photo' });
-              el.innerHTML = `
-                <img src="${ph.dataURL}" alt="現場写真">
-                <div class="step-photo-time">${fmtDateTime(ph.ts)}</div>
-                <button class="step-photo-del" title="削除">${I.x}</button>`;
-              el.addEventListener('click', e => {
-                if (!e.target.closest('.step-photo-del')) showImagePreview({ url: ph.dataURL, name: `${s.title} — ${fmtDateTime(ph.ts)}` });
-              });
-              el.querySelector('.step-photo-del').addEventListener('click', async e => {
-                e.stopPropagation();
-                const ok = await confirmModal('写真を削除', h('div', {}, 'この写真を削除します。'));
-                if (!ok) return;
-                store.deleteStepPhoto(w.id, i, ph.ts);
-                renderTab('steps');
-                toast('削除しました', 'success');
-              });
-              grid.append(el);
-            });
-            bodyKids.push(grid);
-          }
-          // 「📸 写真を撮る」CTA
-          const photoCta = h('label', { class: 'step-photo-cta', title: '写真を撮る or 選ぶ' });
-          photoCta.innerHTML = `${I.img}📸 写真を追加 <input type="file" accept="image/*" capture="environment">`;
-          const inp = photoCta.querySelector('input');
-          inp.addEventListener('change', async () => {
-            const file = inp.files[0];
-            if (!file) return;
-            if (file.size > 10 * 1024 * 1024) { toast('写真が 10MB を超えています', 'err'); return; }
-            const url = await readFileAsDataURL(file);
-            store.addStepPhoto(w.id, i, url);
-            renderTab('steps');
-            toast('写真を保存しました', 'success');
-            inp.value = '';
-          });
-          bodyKids.push(photoCta);
-
-          stepEl.append(check, h('div', { class: 'step-no' }, i + 1), h('div', { class: 'step-body' }, ...bodyKids));
-          steps.append(stepEl);
+          steps.append(h('div', { class: 'step' },
+            h('div', { class: 'step-no' }, i + 1),
+            h('div', { class: 'step-body' },
+              h('div', { class: 'step-title' }, s.title),
+              s.desc ? h('div', { class: 'step-desc' }, s.desc) : null,
+              s.note ? h('div', { class: 'step-note' }, s.note) : null,
+            )
+          ));
         });
       }
       g.append(steps, buildRelatedBlock(w));
-      wrap.append(g);
-      lower.append(wrap);
+      lower.append(g);
     } else if (tab === 'tools') {
       const wrap = h('div', {});
       wrap.append(h('div', { class: 'related-h' }, '使用工具'));
@@ -1117,8 +990,11 @@ function buildDetailCard(w) {
     render();
   });
   card.querySelector('[data-edit]').addEventListener('click', () => router.go('work/' + w.id + '/edit'));
-  card.querySelector('[data-qr]').addEventListener('click', () => showQRModal(w));
-  card.querySelector('[data-print]').addEventListener('click', () => printWork(w));
+  card.querySelector('[data-share]').addEventListener('click', () => {
+    const url = location.origin + location.pathname + '#work/' + w.id;
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => toast('URL をコピーしました', 'success'));
+    else toast(url);
+  });
 
   return card;
 }
@@ -1947,624 +1823,105 @@ function viewQuiz(root, params) {
 }
 
 // ============================ Admin ============================
-function viewAdmin(root, params) {
-  const tab = params.id || 'overview';
-  root.append(h('div', { class: 'page-h' },
-    h('div', {}, h('div', { class: 'page-title' }, '管理メニュー'), h('div', { class: 'page-sub' }, 'ユーザー・データ・お知らせ・カテゴリ の 一括管理')),
-  ));
+function viewAdmin(root) {
+  root.append(h('div', { class: 'page-h' }, h('div', { class: 'page-title' }, '管理メニュー'), h('div', { class: 'page-sub' }, 'テナント設定・データ管理')));
 
-  const card = h('section', { class: 'card' });
-  card.innerHTML = `<div class="admin-tabs">
-    <button class="admin-tab ${tab === 'overview' ? 'is-active' : ''}" data-t="overview">概要</button>
-    <button class="admin-tab ${tab === 'works' ? 'is-active' : ''}" data-t="works">手順書 (一括操作)</button>
-    <button class="admin-tab ${tab === 'users' ? 'is-active' : ''}" data-t="users">ユーザー</button>
-    <button class="admin-tab ${tab === 'notices' ? 'is-active' : ''}" data-t="notices">お知らせ</button>
-    <button class="admin-tab ${tab === 'categories' ? 'is-active' : ''}" data-t="categories">カテゴリ</button>
-    <button class="admin-tab ${tab === 'release' ? 'is-active' : ''}" data-t="release">リリースノート</button>
-  </div>
-  <div style="padding:18px 20px 22px 20px" id="adminBody"></div>`;
-  card.querySelectorAll('[data-t]').forEach(b => b.addEventListener('click', () => {
-    router.go('admin/' + b.dataset.t);
-  }));
-  root.append(card);
+  const grid = h('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:16px' });
 
-  const body = card.querySelector('#adminBody');
-  const renderAdminTab = () => {
-    body.innerHTML = '';
-    if (tab === 'overview') adminOverview(body);
-    else if (tab === 'works') adminWorks(body);
-    else if (tab === 'users') adminUsers(body);
-    else if (tab === 'notices') adminNotices(body);
-    else if (tab === 'categories') adminCategories(body);
-    else if (tab === 'release') adminRelease(body);
-  };
-  renderAdminTab();
-}
+  const users = h('section', { class: 'card' });
+  users.innerHTML = `<header class="card-h"><div class="card-h-title">ユーザー</div>
+    <div style="font-size:12px;color:var(--dim);font-weight:600">${store.users.length} 名</div></header>
+    <div style="padding:8px 18px 18px 18px" id="uList"></div>`;
+  const ul = users.querySelector('#uList');
+  store.users.forEach(u => {
+    const isC = u.id === store.currentUserId;
+    const row = h('div', { class: 'list-item', style: 'padding:11px 4px' });
+    row.innerHTML = `
+      <div class="avatar ${u.avatarClass}" style="width:36px;height:36px;font-size:13px">${esc(u.initials)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:800;color:var(--ink);font-size:13.5px">${esc(u.name)} ${isC ? '<span class="pill pill-info" style="margin-left:6px">現在ログイン中</span>' : ''}</div>
+        <div style="font-size:11.5px;color:var(--dim);font-weight:600">${esc(u.role)} · ${esc(u.title || '')}</div>
+      </div>
+      ${isC ? '' : '<button class="btn btn-secondary btn-sm" data-sw>切替</button>'}`;
+    if (!isC) row.querySelector('[data-sw]').addEventListener('click', () => {
+      store.currentUserId = u.id; store.save('currentUserId'); toast(`${u.name} に切替えました`, 'success'); render();
+    });
+    ul.append(row);
+  });
+  grid.append(users);
 
-// ------------ Admin: 概要 ------------
-function adminOverview(body) {
+  const data = h('section', { class: 'card' });
+  data.innerHTML = `<header class="card-h"><div class="card-h-title">データ管理</div></header>
+    <div style="padding:14px 18px 18px 18px;display:flex;flex-direction:column;gap:10px">
+      <div>
+        <div style="font-size:12.5px;font-weight:800;margin-bottom:4px">現在の登録数</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="kw-tag">作業 ${store.works.length}件</span>
+          <span class="kw-tag">コース ${store.courses.length}件</span>
+          <span class="kw-tag">お知らせ ${store.notices.length}件</span>
+          <span class="kw-tag">テスト ${Object.keys(store.quizzes).length}種</span>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-block" data-exp>${I.export}JSON でエクスポート</button>
+      <button class="btn btn-secondary btn-block" data-imp>${I.import}JSON からインポート</button>
+      <button class="btn btn-danger btn-block" data-reset>${I.reset}初期シードにリセット</button>
+    </div>`;
+  data.querySelector('[data-exp]').addEventListener('click', () => {
+    const blob = new Blob([store.export()], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `misakiya-denko-ai-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('エクスポートしました', 'success');
+  });
+  data.querySelector('[data-imp]').addEventListener('click', () => {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = '.json,application/json';
+    inp.onchange = () => {
+      const f = inp.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          store.import(reader.result);
+          toast('インポートしました', 'success');
+          render();
+        } catch (e) { toast('JSON 読込エラー: ' + e.message, 'err'); }
+      };
+      reader.readAsText(f);
+    };
+    inp.click();
+  });
+  data.querySelector('[data-reset]').addEventListener('click', async () => {
+    const ok = await confirmModal('データをリセット', h('div', {},
+      h('div', {}, '全ての作業・お気に入り・進捗が消えて、初期シードデータに戻ります。'),
+      h('div', { style: 'margin-top:8px;color:var(--danger);font-weight:800' }, 'この操作は元に戻せません。')));
+    if (!ok) return;
+    store.reset();
+    toast('リセットしました', 'success');
+    render();
+  });
+  grid.append(data);
+
+  root.append(grid);
+
+  // Statistics
+  const stats = h('section', { class: 'card' });
   const totalWorks = store.works.length;
   const published = store.works.filter(w => w.status === 'published').length;
   const totalViews = store.works.reduce((s, w) => s + (w.views || 0), 0);
   const authors = new Set(store.works.map(w => w.author)).size;
-
-  body.append(explainer('管理メニューへようこそ',
-    '各タブから 手順書の一括アップロード・ユーザー追加・お知らせの投稿・カテゴリ変更 ができます。上のタブを切り替えて始めましょう。',
-    I.gear));
-
-  const kpi = h('div', {});
-  kpi.innerHTML = `<div style="font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:8px">全社KPI</div>
-    <div class="stat-grid">
-      <div class="stat"><div class="stat-label">手順書 総数</div><div class="stat-value">${published}<small>件</small></div></div>
+  stats.innerHTML = `<header class="card-h"><div class="card-h-title">全社KPI</div></header>
+    <div class="stats"><div class="stat-grid">
+      <div class="stat"><div class="stat-label">公開手順書</div><div class="stat-value">${published}<small>件</small></div></div>
       <div class="stat"><div class="stat-label">総閲覧数</div><div class="stat-value">${totalViews}</div></div>
       <div class="stat"><div class="stat-label">執筆者</div><div class="stat-value">${authors}<small>名</small></div></div>
       <div class="stat"><div class="stat-label">カテゴリ</div><div class="stat-value">${store.categories.length}<small>種</small></div></div>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
-      <span class="kw-tag">作業 ${store.works.length}件</span>
-      <span class="kw-tag">執筆者 ${authors}名</span>
-      <span class="kw-tag">コース ${store.courses.length}件</span>
-      <span class="kw-tag">お知らせ ${store.notices.length}件</span>
-      <span class="kw-tag">カテゴリ ${store.categories.length}種</span>
-      <span class="kw-tag">テスト ${Object.keys(store.quizzes).length}種</span>
-    </div>`;
-  body.append(kpi);
+    </div></div>`;
+  root.append(stats);
 }
 
-// ------------ Admin: 手順書 一括操作 ------------
-function adminWorks(body) {
-  body.append(explainer('手順書を まとめて 追加/更新/バックアップ',
-    'CSV or JSON ファイルで 一度に何十件でも 手順書を投入できます。 「① テンプレをダウンロード → ② Excel/スプレッドシートで埋める → ③ アップロード」 の 3ステップ。 バックアップは JSON で全データ書き出し。',
-    I.import));
-
-  // Section 1: CSV 一括アップロード
-  const sec1 = h('div', { style: 'margin-bottom:18px' });
-  sec1.innerHTML = `<div style="font-size:13px;font-weight:900;color:var(--ink);margin-bottom:8px;letter-spacing:-0.005em">📥 CSV 一括アップロード <small style="font-weight:500;color:var(--dim);font-size:11px;margin-left:6px">Excel / Google スプレッドシート から</small></div>`;
-  const csvActions = h('div', { style: 'display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap' });
-  csvActions.append(
-    btn('① CSV テンプレをダウンロード', 'btn-secondary', I.export, () => downloadCSVTemplate()),
-  );
-  sec1.append(csvActions);
-  const dz = h('div', { class: 'dropzone' });
-  dz.innerHTML = `
-    <div class="dropzone-icon">${I.import}</div>
-    <div class="dropzone-title">② ここに CSV / JSON ファイルをドロップ</div>
-    <div class="dropzone-sub">またはクリックしてファイルを選択 · CSV は「タイトル / カテゴリ / 難易度 / 想定時間 / 現場 / 説明 / タグ」列</div>
-    <input type="file" class="dropzone-in" accept=".csv,.json,text/csv,application/json" id="csvIn">`;
-  const csvIn = dz.querySelector('#csvIn');
-  const handleFile = (file) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        if (file.name.endsWith('.json') || file.type === 'application/json') {
-          const parsed = JSON.parse(reader.result);
-          if (Array.isArray(parsed)) importWorksArray(parsed);
-          else store.import(reader.result), toast('全データを復元しました', 'success'), render();
-        } else {
-          const rows = parseCSV(reader.result);
-          const parsed = csvToWorks(rows);
-          importWorksArray(parsed);
-        }
-      } catch (e) { toast('取込エラー: ' + e.message, 'err'); }
-    };
-    reader.readAsText(file);
-  };
-  csvIn.addEventListener('change', () => handleFile(csvIn.files[0]));
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); });
-  sec1.append(dz);
-  body.append(sec1);
-
-  // Section 2: バックアップ
-  const sec2 = h('div', { style: 'margin-bottom:18px;padding-top:16px;border-top:1px solid var(--rule)' });
-  sec2.innerHTML = `<div style="font-size:13px;font-weight:900;color:var(--ink);margin-bottom:6px">💾 バックアップ / 復元 <small style="font-weight:500;color:var(--dim);font-size:11px;margin-left:6px">JSON 全データ</small></div>
-    <div style="font-size:11.5px;color:var(--dim);font-weight:500;margin-bottom:10px;line-height:1.65">現在の全データ (作業/ユーザー/お気に入り/進捗/お知らせ 等) を JSON ファイルに書き出します。 別 PC で 復元 したり、大きな変更前に バックアップ しておくのに使います。</div>`;
-  const acts = h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' });
-  acts.append(
-    btn('全データをエクスポート (JSON)', 'btn-secondary', I.export, () => exportAllJSON()),
-    btn('危険 · 初期シードにリセット', 'btn-danger', I.reset, () => resetAll()),
-  );
-  sec2.append(acts);
-  body.append(sec2);
-
-  // Section 3: 直近の登録
-  const sec3 = h('div', { style: 'padding-top:16px;border-top:1px solid var(--rule)' });
-  sec3.innerHTML = `<div style="font-size:13px;font-weight:900;color:var(--ink);margin-bottom:8px">📄 直近の登録 (5件)</div>`;
-  const list = h('div', { class: 'admin-list' });
-  const recent = [...store.works].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '')).slice(0, 5);
-  recent.forEach(w => {
-    const row = h('div', { class: 'admin-row' });
-    row.innerHTML = `
-      <div class="list-icon li-doc" style="width:32px;height:32px;font-size:12px">D</div>
-      <div class="admin-row-body">
-        <div class="admin-row-title">${esc(w.title || '(無題)')}</div>
-        <div class="admin-row-sub">${esc((store.category(w.category) || {}).name || '')} · 公開中 · ${fmtDate(w.updatedAt)}</div>
-      </div>
-      <div class="admin-row-actions">
-        <button class="btn btn-secondary btn-sm" data-open>開く</button>
-      </div>`;
-    row.querySelector('[data-open]').addEventListener('click', () => router.go('work/' + w.id));
-    list.append(row);
-  });
-  sec3.append(list);
-  body.append(sec3);
-}
-
-// ------------ Admin: ユーザー ------------
-function adminUsers(body) {
-  body.append(explainer('社員を追加・削除・情報変更',
-    'ここで登録した人は 手順書の 作成 と 学習 に使えます。 初期は 4名 (三崎太郎/佐藤次郎/山田花子/鈴木一馬)。 実運用では 社員全員を登録します。',
-    I.user));
-
-  const acts = h('div', { style: 'display:flex;gap:8px;margin-bottom:12px' });
-  acts.append(btn('+ ユーザーを追加', 'btn-primary', I.plus, () => userEditModal(null, () => render())));
-  body.append(acts);
-
-  const list = h('div', { class: 'admin-list' });
-  store.users.forEach(u => {
-    const isC = u.id === store.currentUserId;
-    const row = h('div', { class: 'admin-row' });
-    row.innerHTML = `
-      <div class="avatar ${u.avatarClass}">${esc(u.initials)}</div>
-      <div class="admin-row-body">
-        <div class="admin-row-title">${esc(u.name)} ${isC ? '<span class="pill pill-info" style="margin-left:6px">現在ログイン中</span>' : ''}</div>
-        <div class="admin-row-sub">${esc(u.role)} · ${esc(u.title || '')}</div>
-      </div>
-      <div class="admin-row-actions">
-        ${isC ? '' : '<button class="btn btn-secondary btn-sm" data-sw>切替</button>'}
-        <button class="btn btn-secondary btn-sm" data-ed>${I.edit}編集</button>
-        ${isC ? '' : `<button class="btn btn-danger btn-sm" data-del>${I.trash}</button>`}
-      </div>`;
-    row.querySelector('[data-ed]').addEventListener('click', () => userEditModal(u, () => render()));
-    if (!isC) {
-      row.querySelector('[data-sw]').addEventListener('click', () => {
-        store.currentUserId = u.id; store.save('currentUserId'); toast(`${u.name} に切替えました`, 'success'); render();
-      });
-      row.querySelector('[data-del]').addEventListener('click', async () => {
-        const ok = await confirmModal('ユーザー削除', h('div', {}, `「${u.name}」を削除します。よろしいですか?`));
-        if (!ok) return;
-        store.users = store.users.filter(x => x.id !== u.id);
-        store.save('users');
-        toast('削除しました', 'success');
-        render();
-      });
-    }
-    list.append(row);
-  });
-  body.append(list);
-}
-
-async function userEditModal(u, onSave) {
-  const isNew = !u;
-  const draft = u ? { ...u } : { id: 'u' + Date.now().toString(36), name: '', role: '現場作業員', title: '', initials: '', avatarClass: ['', 'b', 'c', 'd'][store.users.length % 4] };
-  const box = h('div', { style: 'display:flex;flex-direction:column;gap:12px' });
-  const mkField = (lbl, key, ph, req) => {
-    const w = h('div', { class: 'form-row' });
-    w.append(h('div', { class: 'form-lbl' }, lbl + (req ? ' *' : '')),
-      h('input', { class: 'form-in', value: draft[key] || '', placeholder: ph, oninput: e => draft[key] = e.target.value }));
-    return w;
-  };
-  box.append(
-    mkField('氏名', 'name', '例: 三崎 太郎', true),
-    mkField('イニシャル', 'initials', '例: MT (2文字)', true),
-    mkField('役職 / ロール', 'role', '例: 管理者 / 現場責任者 / 若手技術者', true),
-    mkField('肩書 / 資格', 'title', '例: 代表取締役、第一種電気工事士'),
-  );
-  const clr = h('div', { class: 'form-row' });
-  clr.append(h('div', { class: 'form-lbl' }, 'アバター色'));
-  const clrRow = h('div', { style: 'display:flex;gap:8px' });
-  ['', 'b', 'c', 'd'].forEach((cls, i) => {
-    const dot = h('button', { class: 'avatar ' + cls, style: 'width:36px;height:36px;font-size:12px;cursor:pointer;border:2px solid transparent;' + (draft.avatarClass === cls ? 'border-color:var(--primary)' : '') },
-      draft.initials || '?');
-    dot.addEventListener('click', () => {
-      draft.avatarClass = cls;
-      clrRow.querySelectorAll('.avatar').forEach((el, idx) => el.style.borderColor = idx === i ? 'var(--primary)' : 'transparent');
-    });
-    clrRow.append(dot);
-  });
-  clr.append(clrRow);
-  box.append(clr);
-
-  const err = h('div', { style: 'display:none;color:var(--danger);font-size:11.5px;font-weight:700' }, '氏名・イニシャル・役職は必須です');
-  box.append(err);
-
-  const ok = await new Promise(resolve => {
-    modal(isNew ? 'ユーザーを追加' : 'ユーザーを編集', box, (row, close) => {
-      row.append(
-        h('button', { class: 'btn btn-ghost', onclick: () => { close(null); resolve(null); } }, 'キャンセル'),
-        h('button', { class: 'btn btn-primary', onclick: () => {
-          if (!draft.name.trim() || !draft.initials.trim() || !draft.role.trim()) { err.style.display = 'block'; return; }
-          close(true); resolve(true);
-        } }, isNew ? '追加する' : '保存')
-      );
-    });
-  });
-  if (!ok) return;
-  if (isNew) store.users.push(draft);
-  else Object.assign(store.user(u.id), draft);
-  store.save('users');
-  toast(isNew ? 'ユーザーを追加しました' : '保存しました', 'success');
-  onSave && onSave();
-}
-
-// ------------ Admin: お知らせ ------------
-function adminNotices(body) {
-  body.append(explainer('社内お知らせを 投稿・編集・削除',
-    'ここで作ったお知らせは 全ユーザーのホーム画面 と 「お知らせ」 タブ に表示されます。 手順書の新規公開・安全ポイントの更新・勉強会の案内 などに使います。',
-    I.bell));
-
-  const acts = h('div', { style: 'display:flex;gap:8px;margin-bottom:12px' });
-  acts.append(btn('+ お知らせを投稿', 'btn-primary', I.plus, () => noticeEditModal(null, () => render())));
-  body.append(acts);
-
-  const list = h('div', { class: 'admin-list' });
-  store.notices.forEach(n => {
-    const row = h('div', { class: 'admin-row' });
-    const pillCls = n.type === 'new' ? 'pill-new' : n.type === 'warn' ? 'pill-warn' : 'pill-info';
-    const pillLbl = n.type === 'new' ? 'NEW' : n.type === 'warn' ? '重要' : '連絡';
-    row.innerHTML = `
-      <span class="pill ${pillCls}" style="align-self:center">${pillLbl}</span>
-      <div class="admin-row-body">
-        <div class="admin-row-title">${esc(n.title)}</div>
-        <div class="admin-row-sub">${esc(n.body.slice(0, 60))}${n.body.length > 60 ? '…' : ''} · ${fmtDate(n.createdAt)}</div>
-      </div>
-      <div class="admin-row-actions">
-        <button class="btn btn-secondary btn-sm" data-ed>${I.edit}編集</button>
-        <button class="btn btn-danger btn-sm" data-del>${I.trash}</button>
-      </div>`;
-    row.querySelector('[data-ed]').addEventListener('click', () => noticeEditModal(n, () => render()));
-    row.querySelector('[data-del]').addEventListener('click', async () => {
-      const ok = await confirmModal('お知らせ削除', h('div', {}, `「${n.title}」を削除します。`));
-      if (!ok) return;
-      store.notices = store.notices.filter(x => x.id !== n.id);
-      store.save('notices'); toast('削除しました', 'success'); render();
-    });
-    list.append(row);
-  });
-  body.append(list);
-}
-
-async function noticeEditModal(n, onSave) {
-  const isNew = !n;
-  const draft = n ? { ...n } : { id: 'n' + Date.now().toString(36), type: 'info', title: '', body: '', workId: null, createdAt: new Date().toISOString().slice(0, 10) };
-  const box = h('div', { style: 'display:flex;flex-direction:column;gap:12px' });
-  const typeRow = h('div', { class: 'form-row' });
-  typeRow.append(h('div', { class: 'form-lbl' }, '種別'));
-  const chips = h('div', { class: 'category-picker' });
-  [['new', 'NEW · 新機能/公開'], ['warn', '重要 · 安全'], ['info', '連絡 · 通常']].forEach(([v, lbl]) => {
-    const b = h('button', { class: 'cat-chip ' + (draft.type === v ? 'on' : ''), type: 'button' }, lbl);
-    b.addEventListener('click', () => { draft.type = v; chips.querySelectorAll('.cat-chip').forEach(x => x.classList.remove('on')); b.classList.add('on'); });
-    chips.append(b);
-  });
-  typeRow.append(chips);
-  box.append(typeRow);
-  const titleRow = h('div', { class: 'form-row' });
-  titleRow.append(h('div', { class: 'form-lbl' }, 'タイトル *'), h('input', { class: 'form-in', value: draft.title, oninput: e => draft.title = e.target.value, placeholder: '例: 新しい手順書が公開されました' }));
-  box.append(titleRow);
-  const bodyRow = h('div', { class: 'form-row' });
-  bodyRow.append(h('div', { class: 'form-lbl' }, '本文 *'), h('textarea', { class: 'form-ta', oninput: e => draft.body = e.target.value, placeholder: 'お知らせの内容を入力してください' }, draft.body));
-  box.append(bodyRow);
-  const wRow = h('div', { class: 'form-row' });
-  wRow.append(h('div', { class: 'form-lbl' }, '関連手順書 (任意)'));
-  const sel = h('select', { class: 'form-in', onchange: e => draft.workId = e.target.value || null });
-  sel.innerHTML = `<option value="">（なし）</option>` + store.works.filter(w => w.status === 'published').map(w => `<option value="${w.id}" ${draft.workId === w.id ? 'selected' : ''}>${esc(w.title)}</option>`).join('');
-  wRow.append(sel);
-  box.append(wRow);
-  const err = h('div', { style: 'display:none;color:var(--danger);font-size:11.5px;font-weight:700' }, 'タイトルと本文は必須です');
-  box.append(err);
-
-  const ok = await new Promise(resolve => {
-    modal(isNew ? 'お知らせを投稿' : 'お知らせを編集', box, (row, close) => {
-      row.append(
-        h('button', { class: 'btn btn-ghost', onclick: () => { close(null); resolve(null); } }, 'キャンセル'),
-        h('button', { class: 'btn btn-primary', onclick: () => {
-          if (!draft.title.trim() || !draft.body.trim()) { err.style.display = 'block'; return; }
-          close(true); resolve(true);
-        } }, isNew ? '投稿する' : '保存')
-      );
-    });
-  });
-  if (!ok) return;
-  if (isNew) store.notices.unshift(draft);
-  else Object.assign(store.notices.find(x => x.id === n.id), draft);
-  store.save('notices');
-  toast(isNew ? 'お知らせを投稿しました' : '保存しました', 'success');
-  onSave && onSave();
-}
-
-// ------------ Admin: カテゴリ ------------
-function adminCategories(body) {
-  body.append(explainer('作業カテゴリの追加・削除',
-    '手順書を分類する カテゴリ を管理します。 現場の作業種別に合わせて追加してください (例: 弱電・防災設備・空調電源 など)。 使用中のカテゴリは削除できません。',
-    I.db));
-
-  const acts = h('div', { style: 'display:flex;gap:8px;margin-bottom:12px' });
-  acts.append(btn('+ カテゴリを追加', 'btn-primary', I.plus, () => categoryEditModal(null, () => render())));
-  body.append(acts);
-
-  const list = h('div', { class: 'admin-list' });
-  store.categories.forEach(c => {
-    const useCount = store.works.filter(w => w.category === c.id).length;
-    const row = h('div', { class: 'admin-row' });
-    row.innerHTML = `
-      <div style="width:32px;height:32px;background:${c.color};border-radius:6px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px">${esc(c.name.slice(0, 1))}</div>
-      <div class="admin-row-body">
-        <div class="admin-row-title">${esc(c.name)}</div>
-        <div class="admin-row-sub">使用中: ${useCount} 件 · カラー: <code style="font-family:var(--font-latin);font-size:10.5px;background:var(--surface-2);padding:1px 5px;border-radius:3px">${c.color}</code></div>
-      </div>
-      <div class="admin-row-actions">
-        <button class="btn btn-secondary btn-sm" data-ed>${I.edit}</button>
-        <button class="btn btn-danger btn-sm" data-del ${useCount > 0 ? 'disabled title="使用中のカテゴリは削除できません"' : ''}>${I.trash}</button>
-      </div>`;
-    row.querySelector('[data-ed]').addEventListener('click', () => categoryEditModal(c, () => render()));
-    const dBtn = row.querySelector('[data-del]');
-    if (!dBtn.disabled) dBtn.addEventListener('click', async () => {
-      const ok = await confirmModal('カテゴリ削除', h('div', {}, `「${c.name}」を削除します。`));
-      if (!ok) return;
-      store.categories = store.categories.filter(x => x.id !== c.id);
-      store.save('categories'); toast('削除しました', 'success'); render();
-    });
-    list.append(row);
-  });
-  body.append(list);
-}
-
-async function categoryEditModal(c, onSave) {
-  const isNew = !c;
-  const draft = c ? { ...c } : { id: 'cat' + Date.now().toString(36), name: '', color: '#3b82f6' };
-  const box = h('div', { style: 'display:flex;flex-direction:column;gap:12px' });
-  const nRow = h('div', { class: 'form-row' });
-  nRow.append(h('div', { class: 'form-lbl' }, 'カテゴリ名 *'), h('input', { class: 'form-in', value: draft.name, oninput: e => draft.name = e.target.value, placeholder: '例: 弱電・通信' }));
-  box.append(nRow);
-  const cRow = h('div', { class: 'form-row' });
-  cRow.append(h('div', { class: 'form-lbl' }, 'カラー'));
-  const cGrp = h('div', { style: 'display:flex;gap:6px;align-items:center' });
-  const inp = h('input', { type: 'color', value: draft.color, oninput: e => { draft.color = e.target.value; codeS.textContent = e.target.value; }, style: 'width:44px;height:32px;border:1px solid var(--rule);border-radius:6px;cursor:pointer' });
-  const codeS = h('code', { style: 'font-family:var(--font-latin);font-size:11px;background:var(--surface-2);padding:3px 8px;border-radius:4px' }, draft.color);
-  cGrp.append(inp, codeS);
-  cRow.append(cGrp);
-  box.append(cRow);
-
-  const ok = await new Promise(resolve => {
-    modal(isNew ? 'カテゴリを追加' : 'カテゴリを編集', box, (row, close) => {
-      row.append(
-        h('button', { class: 'btn btn-ghost', onclick: () => { close(null); resolve(null); } }, 'キャンセル'),
-        h('button', { class: 'btn btn-primary', onclick: () => {
-          const nm = draft.name.trim();
-          if (!nm) { toast('カテゴリ名は必須です', 'err'); return; }
-          const dup = store.categories.find(x => x.name === nm && x.id !== draft.id);
-          if (dup) { toast(`「${nm}」は既に存在します`, 'err'); return; }
-          close(true); resolve(true);
-        } }, isNew ? '追加' : '保存')
-      );
-    });
-  });
-  if (!ok) return;
-  if (isNew) store.categories.push(draft);
-  else Object.assign(store.category(c.id), draft);
-  store.save('categories');
-  toast(isNew ? '追加しました' : '保存しました', 'success');
-  onSave && onSave();
-}
-
-// ------------ Admin: リリースノート ------------
-function adminRelease(body) {
-  body.append(explainer('三崎屋電工AI の アップデート履歴',
-    'ツール自体の 新機能追加・改善・修正 の履歴です。 「あれ、この機能昔なかったよね?」 と思ったら ここを確認してください。',
-    I.sparkle || I.bell));
-
-  const releases = [
-    { ver: 'v0.6', date: '2026-07-09', tag: '最新', latest: true, items: [
-      { type: 'add', text: '管理画面をタブ構造に再編 (概要 / 手順書一括操作 / ユーザー / お知らせ / カテゴリ / リリースノート)' },
-      { type: 'add', text: 'CSV テンプレをダウンロード → Excel/スプレッドシートで埋めて → アップロードで 手順書を一括登録' },
-      { type: 'add', text: 'ユーザーの追加/編集/削除・アバター色選択' },
-      { type: 'add', text: 'お知らせの投稿/編集/削除 (種別: NEW / 重要 / 連絡、関連手順書リンク)' },
-      { type: 'add', text: 'カテゴリの追加/削除・カラー設定' },
-      { type: 'add', text: '作業詳細の資料タブで 画像/PDF ファイルをドラッグ&ドロップ添付 (base64 保存 · プレビュー付き)' },
-    ] },
-    { ver: 'v0.5.1', date: '2026-07-08', items: [
-      { type: 'fix', text: 'Esc キーで AI パネル・ヘルプ・パレット・承認モーダル が閉じるように修正' },
-      { type: 'fix', text: '差戻し時 空理由で送信 → モーダル残る + inline エラー + textarea 赤枠 focus 戻る' },
-      { type: 'add', text: 'AI ドラフト生成を編集画面で常時利用可 (既存手順あれば「AI で再提案」→ 追加/置換 選択)' },
-    ] },
-    { ver: 'v0.4', date: '2026-07-08', items: [
-      { type: 'add', text: 'AI 5点セット (手順ドラフト / 質問応答 / KYT 生成 / テスト自動生成 / BM25 検索)' },
-      { type: 'add', text: 'Cmd+K コマンドパレット (Linear/Raycast 相当、fuzzy 全横断)' },
-      { type: 'add', text: '現場チェックリスト (手順ごと ✓ + 進捗% + 全完了で作業ログ自動記録)' },
-      { type: 'add', text: 'QR コード表示 (SVG 自前生成 · 外部依存ゼロ)' },
-      { type: 'add', text: '印刷用ページ (A4 プリント CSS、手順+工具+材料+危険予知+チェック欄)' },
-      { type: 'add', text: 'キーボードショートカット (Cmd+K/Cmd+/ / G→leader / F / E / ? / Esc)' },
-      { type: 'add', text: '承認コメント + 差戻し理由必須 + 履歴に記録' },
-      { type: 'add', text: 'マイページに 現場作業ログ セクション' },
-    ] },
-    { ver: 'v0.2', date: '2026-07-08', items: [
-      { type: 'add', text: 'フル機能 SPA (localStorage 永続化)' },
-      { type: 'add', text: '作業 CRUD (新規/編集/削除、手順並替、工具・材料・資料)' },
-      { type: 'add', text: 'お気に入り / 最近の閲覧 / 全文検索 / カテゴリ絞込' },
-      { type: 'add', text: '教材コース (章別完了マーク、進捗%) · 理解度テスト (70% 合格ライン)' },
-      { type: 'add', text: '承認フロー (draft → pending → published) · ユーザー切替 4名' },
-    ] },
-    { ver: 'v0.1', date: '2026-07-08', items: [
-      { type: 'add', text: '三崎屋電工モックアップを HTML/CSS で再現 (静的プロトタイプ)' },
-    ] },
-  ];
-
-  const list = h('div', { class: 'release-list' });
-  releases.forEach(r => {
-    const el = h('div', { class: 'release' + (r.latest ? ' is-latest' : '') });
-    el.innerHTML = `
-      <div class="release-h">
-        <div class="release-ver">${r.ver}</div>
-        <div class="release-date">${r.date}</div>
-        ${r.tag ? `<div class="release-tag">${esc(r.tag)}</div>` : ''}
-      </div>
-      <ul>${r.items.map(it => `<li class="${it.type === 'fix' ? 'fix' : ''}">${esc(it.text)}</li>`).join('')}</ul>`;
-    list.append(el);
-  });
-  body.append(list);
-}
-
-// ------------ Admin helpers ------------
-function explainer(title, txt, icon) {
-  const el = h('div', { class: 'explainer' });
-  el.innerHTML = `<div class="explainer-icon">${icon || I.help}</div>
-    <div class="explainer-body">
-      <div class="explainer-title">${esc(title)}</div>
-      <div class="explainer-txt">${esc(txt)}</div>
-    </div>`;
-  return el;
-}
-
-function btn(label, cls, icon, onClick) {
-  const b = h('button', { class: 'btn ' + cls });
-  b.innerHTML = (icon ? icon : '') + esc(label);
-  b.addEventListener('click', onClick);
-  return b;
-}
-
-// ------------ CSV template / parse / import ------------
-function downloadCSVTemplate() {
-  const cats = store.categories.map(c => c.id).join(' / ');
-  const header = 'タイトル,カテゴリID,難易度(1-5),想定時間,現場,説明,タグ(カンマ区切り)';
-  const example = [
-    `分電盤の交換 (サンプル),panel,3,約4時間,◯◯工場,既設の分電盤を安全に取り外し新設分電盤を取り付ける,分電盤/交換/ブレーカー`,
-    `低圧ブレーカーの交換 (サンプル),panel,2,約1時間,◯◯商業ビル,同容量ブレーカーへの交換,ブレーカー/交換`,
-    `# カテゴリID は: ${cats} から選択。日本語カテゴリ名でもOK`,
-  ].join('\n');
-  const csv = '﻿' + header + '\n' + example; // BOM for Excel Japanese
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = '三崎屋電工AI_手順書テンプレ.csv';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast('CSV テンプレをダウンロードしました', 'success');
-}
-
-function parseCSV(text) {
-  const rows = [];
-  const lines = text.replace(/﻿/g, '').split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const cells = [];
-    let cur = '', inQ = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"' && !inQ) { inQ = true; continue; }
-      if (ch === '"' && inQ) {
-        if (line[i + 1] === '"') { cur += '"'; i++; continue; }
-        inQ = false; continue;
-      }
-      if (ch === ',' && !inQ) { cells.push(cur); cur = ''; continue; }
-      cur += ch;
-    }
-    cells.push(cur);
-    rows.push(cells.map(c => c.trim()));
-  }
-  return rows;
-}
-
-function csvToWorks(rows) {
-  if (rows.length < 2) throw new Error('データ行がありません (ヘッダーのみ?)');
-  const [header, ...data] = rows;
-  const idx = {
-    title: header.findIndex(h => /タイトル|title/i.test(h)),
-    category: header.findIndex(h => /カテゴリ|category/i.test(h)),
-    difficulty: header.findIndex(h => /難易度|difficulty/i.test(h)),
-    duration: header.findIndex(h => /時間|duration/i.test(h)),
-    site: header.findIndex(h => /現場|site/i.test(h)),
-    description: header.findIndex(h => /説明|description/i.test(h)),
-    tags: header.findIndex(h => /タグ|tags/i.test(h)),
-  };
-  if (idx.title < 0) throw new Error('「タイトル」列が見つかりません');
-  return data.map(row => {
-    let cat = idx.category >= 0 ? row[idx.category] : '';
-    if (cat && !store.category(cat)) {
-      const foundByName = store.categories.find(c => c.name === cat);
-      if (foundByName) cat = foundByName.id;
-      else cat = 'panel';
-    }
-    return {
-      title: row[idx.title] || '',
-      category: cat || 'panel',
-      difficulty: parseInt(row[idx.difficulty] || '2') || 2,
-      duration: idx.duration >= 0 ? row[idx.duration] : '',
-      site: idx.site >= 0 ? row[idx.site] : '',
-      description: idx.description >= 0 ? row[idx.description] : '',
-      tags: idx.tags >= 0 ? row[idx.tags].split(/[,、\/]/).map(t => t.trim()).filter(Boolean) : [],
-    };
-  }).filter(w => w.title);
-}
-
-async function importWorksArray(items) {
-  if (!items.length) { toast('取込データがありません', 'err'); return; }
-  const preview = h('div', {},
-    h('div', {}, `${items.length} 件の手順書を取り込みます。`),
-    h('div', { style: 'margin-top:10px;max-height:180px;overflow-y:auto;background:var(--surface-2);padding:8px 12px;border-radius:6px;font-size:11.5px' },
-      ...items.slice(0, 12).map(it => h('div', { style: 'padding:2px 0' }, `· ${it.title}`)),
-      items.length > 12 ? h('div', { style: 'padding:2px 0;color:var(--dim)' }, `… 他 ${items.length - 12} 件`) : null,
-    ),
-    h('div', { style: 'margin-top:10px;font-size:11.5px;color:var(--dim);font-weight:500' }, '取り込んだ手順書はすぐに全員が見られる状態で登録されます。'),
-  );
-  const ok = await confirmModal('CSV / JSON 取込確認', preview);
-  if (!ok) return;
-  const now = new Date().toISOString().slice(0, 10);
-  const uid = store.currentUserId;
-  for (const it of items) {
-    store.works.unshift({
-      id: 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-      title: it.title,
-      category: it.category || 'panel',
-      tags: it.tags || [],
-      site: it.site || '',
-      difficulty: Math.max(1, Math.min(5, it.difficulty || 2)),
-      duration: it.duration || '',
-      thumb: it.category || 'default',
-      status: 'published',
-      author: uid,
-      approver: uid,
-      createdAt: now,
-      updatedAt: now,
-      views: 0,
-      description: it.description || '',
-      steps: it.steps || [],
-      tools: it.tools || [],
-      materials: it.materials || [],
-      tips: it.tips || [],
-      cautions: it.cautions || [],
-      resources: it.resources || [],
-      relatedIds: [],
-      videoUrl: it.videoUrl || '',
-      history: [{ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: 'CSV/JSON で取込 · 公開' }],
-    });
-  }
-  store.save('works');
-  toast(`${items.length} 件を取り込みました · 全員が見られる状態で登録済み`, 'success');
-  render();
-}
-
-function exportAllJSON() {
-  const blob = new Blob([store.export()], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `三崎屋電工AI_全データ_${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast('全データを書き出しました', 'success');
-}
-
-async function resetAll() {
-  const ok = await confirmModal('データをリセット', h('div', {},
-    h('div', {}, '全ての作業・お気に入り・進捗・お知らせが消えて、初期シードデータに戻ります。'),
-    h('div', { style: 'margin-top:8px;color:var(--danger);font-weight:800' }, 'この操作は元に戻せません。')));
-  if (!ok) return;
-  store.reset();
-  toast('リセットしました', 'success');
-  render();
-}
 
 // ============================ Work Edit / New ============================
 function viewWorkNew(root) {
@@ -3668,8 +3025,7 @@ for (const w of store.works) {
 }
 if (migrated) store.save('works');
 render();
-mountAIFab();
-mountShortcuts();
+mountShortcuts(); // Cmd+K palette 等 (キーボードのみ、UI 見えない)
 
 window.__store = store;
 window.__router = router;
