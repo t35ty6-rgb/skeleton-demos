@@ -2814,14 +2814,68 @@ async function composeUploadPng(){
   return canvas.toDataURL("image/jpeg", 0.9);
 }
 
+// Draw tab bar overlay at bottom 100px (multi-tab only)
+function drawTabBar(baseDataUrl, activeIdx, labels, W, H){
+  return new Promise((res) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = W; c.height = H;
+      const ctx = c.getContext("2d");
+      ctx.drawImage(img, 0, 0, W, H);
+      const tabH = 100;
+      const tabW = W / labels.length;
+      // Bar background
+      ctx.fillStyle = "rgba(15,23,42,0.92)";
+      ctx.fillRect(0, H - tabH, W, tabH);
+      // Each tab
+      labels.forEach((lbl, i) => {
+        const x = i * tabW;
+        const isActive = i === activeIdx;
+        if (isActive){
+          ctx.fillStyle = "#17b26a";
+          ctx.fillRect(x, H - tabH, tabW, tabH);
+          ctx.fillStyle = "#ffffff";
+        } else {
+          ctx.fillStyle = "rgba(248,250,252,0.75)";
+        }
+        ctx.font = "900 42px 'Noto Sans JP', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const text = (lbl || `タブ${i+1}`).slice(0, 8);
+        ctx.fillText(text, x + tabW/2, H - tabH/2);
+        // Divider between tabs
+        if (i < labels.length - 1){
+          ctx.strokeStyle = "rgba(248,250,252,0.15)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x + tabW, H - tabH + 20);
+          ctx.lineTo(x + tabW, H - 20);
+          ctx.stroke();
+        }
+      });
+      res(c.toDataURL("image/jpeg", 0.9));
+    };
+    img.onerror = () => res(baseDataUrl);
+    img.src = baseDataUrl;
+  });
+}
+
 // Compose PNG for a specific menu index (does not affect current active menu)
 async function composeUploadPngFor(idx){
   const savedIdx = CFG.activeMenuIdx;
   CFG.activeMenuIdx = idx;
   CFG.richmenuV3 = CFG.menus[idx];
-  const composed = await composeUploadPng();
+  let composed = await composeUploadPng();
   CFG.activeMenuIdx = savedIdx;
   CFG.richmenuV3 = CFG.menus[savedIdx];
+  // Multi-tab: overlay tab bar at bottom
+  if ((CFG.menus || []).length > 1){
+    const r = CFG.menus[idx];
+    const W = 2500, H = r.size === "small" ? 843 : 1686;
+    const labels = CFG.menus.map((m, i) => (m.title || `タブ${i+1}`));
+    composed = await drawTabBar(composed, idx, labels, W, H);
+  }
   return composed;
 }
 
