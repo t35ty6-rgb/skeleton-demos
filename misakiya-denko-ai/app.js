@@ -300,7 +300,6 @@ function thumbSVG(kind) {
 // ============================ Sidebar & Topbar ============================
 function renderSidebar() {
   const sb = $('#sidebar');
-  const pending = store.pendingCount();
   const routeName = router.current.name;
 
   const navItem = (name, label, iconKey, badge) => `
@@ -537,7 +536,6 @@ function searchCard(w) {
         ${w.steps.length ? '<span class="sr-tag">手順書</span>' : ''}
         ${w.videoUrl ? '<span class="sr-tag">動画</span>' : ''}
         ${(w.resources || []).some(r => r.type === 'pdf' || r.type === 'dwg') ? '<span class="sr-tag">図面</span>' : ''}
-        ${w.status === 'pending' ? '<span class="sr-tag" style="background:#fef3c7;color:#78350f">承認待ち</span>' : ''}
       </div>
       <div class="sr-meta">
         <span class="sr-date">${fmtDate(w.updatedAt)}</span>
@@ -1293,7 +1291,7 @@ function printCompletionReport(w) {
 
   <div class="sign">
     <div class="sign-box"><div class="sign-lbl">作業員</div><div class="sign-val">${esc(user.name)}</div></div>
-    <div class="sign-box"><div class="sign-lbl">承認 (現場責任者)</div><div class="sign-val">&nbsp;</div></div>
+    <div class="sign-box"><div class="sign-lbl">確認 (現場責任者)</div><div class="sign-val">&nbsp;</div></div>
   </div>
 
   <footer>
@@ -1348,7 +1346,6 @@ function printWork(w) {
     <dt>想定時間</dt><dd>${esc(w.duration || '—')}</dd>
     <dt>現場</dt><dd>${esc(w.site || '—')}</dd>
     <dt>作成者</dt><dd>${esc(author ? author.name : '—')}</dd>
-    <dt>承認者</dt><dd>${esc(approver ? approver.name : '—')}</dd>
     <dt>版</dt><dd>${fmtDate(w.updatedAt)}</dd>
     <dt>印刷日</dt><dd>${fmtDate(Date.now())}</dd>
   </dl>
@@ -1484,7 +1481,6 @@ function filterWorks(q, opts = {}) {
   const kws = query ? query.split(/\s+/) : [];
   return store.works.filter(w => {
     if (opts.status && w.status !== opts.status) return false;
-    if (opts.status == null && w.status === 'draft') return false;
     if (opts.category && w.category !== opts.category) return false;
     if (kws.length === 0) return true;
     const hay = [w.title, w.site, ...(w.tags || []), (store.category(w.category) || {}).name || '', w.description || ''].join(' ').toLowerCase();
@@ -1738,79 +1734,10 @@ function viewNoticeDetail(root, params) {
   root.append(card);
 }
 
-// ============================ Approve ============================
+// ============================ (承認フロー v0.9 で撤廃済み) ============================
 function viewApprove(root) {
-  const pending = store.works.filter(w => w.status === 'pending');
-  root.append(h('div', { class: 'page-h' }, h('div', { class: 'page-title' }, '承認・確認'), h('div', { style: 'color:var(--dim);font-weight:700;font-size:13px' }, `${pending.length} 件が承認待ち`)));
-  const card = h('section', { class: 'card' });
-  if (pending.length === 0) {
-    card.append(h('div', { class: 'empty' }, h('div', { html: I.check }), h('div', {}, '承認待ちはありません')));
-  } else {
-    const tbl = h('table', { class: 'app-table' });
-    tbl.innerHTML = `<thead><tr><th>タイトル</th><th>カテゴリ</th><th>提出者</th><th>提出日</th><th>操作</th></tr></thead><tbody></tbody>`;
-    const tb = tbl.querySelector('tbody');
-    pending.forEach(w => {
-      const author = store.user(w.author);
-      const cat = store.category(w.category);
-      const tr = h('tr', {});
-      tr.innerHTML = `
-        <td><a style="color:var(--primary);font-weight:800" data-open>${esc(w.title)}</a></td>
-        <td>${esc(cat ? cat.name : '—')}</td>
-        <td>${esc(author ? author.name : '—')}</td>
-        <td style="color:var(--dim);font-family:var(--font-latin);font-size:12px">${fmtDate(w.updatedAt)}</td>
-        <td><div class="app-actions">
-          <button class="btn btn-primary btn-sm" data-approve>${I.approve}承認</button>
-          <button class="btn btn-danger btn-sm" data-reject>${I.reject}差戻し</button>
-        </div></td>`;
-      tr.querySelector('[data-open]').addEventListener('click', () => router.go('work/' + w.id));
-      tr.querySelector('[data-approve]').addEventListener('click', async () => {
-        const box = h('div', {});
-        box.append(h('div', {}, `「${w.title}」を承認して公開しますか?`));
-        const ta = h('textarea', { class: 'approve-modal-textarea', placeholder: '承認コメント (任意 · 提出者に届きます)' });
-        box.append(h('div', { class: 'form-lbl', style: 'margin-top:10px' }, '承認コメント'), ta);
-        const ok = await confirmModal('承認確認', box);
-        if (!ok) return;
-        w.status = 'published';
-        w.approver = store.currentUserId;
-        w.updatedAt = new Date().toISOString().slice(0, 10);
-        w.history = w.history || [];
-        const note = ta.value.trim();
-        w.history.unshift({ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: '承認して公開しました' + (note ? ` — ${note}` : '') });
-        store.save('works');
-        toast('承認しました', 'success');
-        render();
-      });
-      tr.querySelector('[data-reject]').addEventListener('click', async () => {
-        const box = h('div', {});
-        box.append(h('div', {}, `「${w.title}」を差戻します。理由を入力してください:`));
-        const ta = h('textarea', { class: 'approve-modal-textarea', placeholder: '差戻し理由 (必須 · 提出者への修正指示になります)' });
-        const err = h('div', { style: 'display:none;color:var(--danger);font-size:11.5px;font-weight:700;margin-top:6px' }, '差戻し理由は必須です');
-        box.append(h('div', { class: 'form-lbl', style: 'margin-top:10px' }, '差戻し理由 *'), ta, err);
-        const reason = await new Promise(resolve => {
-          modal('差戻し確認', box, (row, close) => {
-            row.append(
-              h('button', { class: 'btn btn-ghost', onclick: () => { close(null); resolve(null); } }, 'キャンセル'),
-              h('button', { class: 'btn btn-danger', onclick: () => {
-                const v = ta.value.trim();
-                if (!v) { err.style.display = 'block'; ta.style.borderColor = 'var(--danger)'; ta.focus(); return; }
-                close(v); resolve(v);
-              } }, '差戻す')
-            );
-          });
-        });
-        if (!reason) return;
-        w.status = 'draft';
-        w.history = w.history || [];
-        w.history.unshift({ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: `差戻し — ${reason}` });
-        store.save('works');
-        toast('差戻ししました', 'success');
-        render();
-      });
-      tb.append(tr);
-    });
-    card.append(tbl);
-  }
-  root.append(card);
+  // v0.9 で撤廃 → viewHome にフォールバック
+  return viewHome(root);
 }
 
 // ============================ Database ============================
@@ -2124,9 +2051,7 @@ function viewAdmin(root, params) {
 // ------------ Admin: 概要 ------------
 function adminOverview(body) {
   const totalWorks = store.works.length;
-  const pending = store.works.filter(w => w.status === 'pending').length;
   const published = store.works.filter(w => w.status === 'published').length;
-  const draft = store.works.filter(w => w.status === 'draft').length;
   const totalViews = store.works.reduce((s, w) => s + (w.views || 0), 0);
   const authors = new Set(store.works.map(w => w.author)).size;
 
@@ -2222,7 +2147,7 @@ function adminWorks(body) {
       <div class="list-icon li-doc" style="width:32px;height:32px;font-size:12px">D</div>
       <div class="admin-row-body">
         <div class="admin-row-title">${esc(w.title || '(無題)')}</div>
-        <div class="admin-row-sub">${esc((store.category(w.category) || {}).name || '')} · ${w.status === 'published' ? '公開中' : w.status === 'pending' ? '承認待ち' : '下書き'} · ${fmtDate(w.updatedAt)}</div>
+        <div class="admin-row-sub">${esc((store.category(w.category) || {}).name || '')} · 公開中 · ${fmtDate(w.updatedAt)}</div>
       </div>
       <div class="admin-row-actions">
         <button class="btn btn-secondary btn-sm" data-open>開く</button>
@@ -2237,7 +2162,7 @@ function adminWorks(body) {
 // ------------ Admin: ユーザー ------------
 function adminUsers(body) {
   body.append(explainer('社員を追加・削除・情報変更',
-    'ここで登録した人は 手順書の 作成/承認/学習 に使えます。 初期は 4名 (三崎太郎/佐藤次郎/山田花子/鈴木一馬)。 実運用では 社員全員を登録します。',
+    'ここで登録した人は 手順書の 作成 と 学習 に使えます。 初期は 4名 (三崎太郎/佐藤次郎/山田花子/鈴木一馬)。 実運用では 社員全員を登録します。',
     I.user));
 
   const acts = h('div', { style: 'display:flex;gap:8px;margin-bottom:12px' });
