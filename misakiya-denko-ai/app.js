@@ -320,12 +320,10 @@ function renderSidebar() {
       ${navItem('home', 'ホーム', 'home')}
       ${navItem('search', '作業を探す', 'search')}
       ${navItem('favorites', 'お気に入り', 'starOutline')}
-      ${navItem('recent', '最近の閲覧', 'clock')}
       ${navItem('mypage', 'マイページ', 'user')}
     </nav>
     <div class="nav-group" style="margin-top:16px">
       <div class="nav-heading">Ops</div>
-      ${navItem('database', 'データベース', 'db')}
       ${navItem('courses', '教材モード', 'book')}
       ${navItem('admin', '管理メニュー', 'gear')}
     </div>
@@ -463,10 +461,10 @@ function render() {
     home: viewHome,
     search: viewSearch,
     favorites: viewFavorites,
-    recent: viewRecent,
+    recent: viewMypage, // 最近の閲覧 → マイページに統合
     mypage: viewMypage,
     approve: viewHome, // 承認フロー撤廃 — ホームへリダイレクト
-    database: viewDatabase,
+    database: viewSearch, // データベース → 作業を探す に統合
     notices: viewNotices,
     notice: viewNoticeDetail,
     courses: viewCoursesTop,
@@ -601,10 +599,9 @@ function viewHome(root) {
   publishedWorks.forEach(w => (w.tags || []).forEach(t => keywordCounts[t] = (keywordCounts[t] || 0) + 1));
   const kws = Object.entries(keywordCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
-  // build layout
-  const grid = h('div', { class: 'home-grid' });
+  // シンプル化: home-grid → 1 column stack
+  const grid = h('div', { class: 'home-simple' });
   const left = h('div', { class: 'col' });
-  const right = h('div', { class: 'col' });
 
   // Left: Recommended
   const recoCard = h('section', { class: 'card' });
@@ -666,58 +663,11 @@ function viewHome(root) {
   twoCol.append(recentCard, noticeCard);
   left.append(twoCol);
 
-  // Left: Stats (v0.2 hero-metric grid)
-  const statsCard = h('section', { class: 'card' });
-  statsCard.innerHTML = `
-    <header class="card-h"><div class="card-h-title">データ統計 <small>（今月）</small></div></header>
-    <div class="stats">
-      <div class="stat-grid">
-        <div class="stat">
-          <div class="stat-label">新規登録数</div>
-          <div class="stat-value">${thisMonth}<small>件</small></div>
-          <div class="stat-delta">${I.up2} +${Math.max(0, thisMonth - 8)} 前月比</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">閲覧数</div>
-          <div class="stat-value">${totalViews}</div>
-          <div class="stat-delta">${I.up2} +31%</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">学習完了数</div>
-          <div class="stat-value">${learners}<small>人</small></div>
-          <div class="stat-delta">${I.up2} +2 名</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">平均学習時間</div>
-          <div class="stat-value">${avgTime.toFixed(1)}<small>時間</small></div>
-          <div class="stat-delta flat">±0.0h</div>
-        </div>
-      </div>
-      <div class="kw-row">
-        <span class="kw-row-label">よく検索されているキーワード</span>
-        ${kws.map(([k]) => `<span class="kw-tag" data-kw="${esc(k)}">${esc(k)}</span>`).join('')}
-      </div>
-    </div>`;
-  statsCard.querySelectorAll('[data-kw]').forEach(el =>
-    el.addEventListener('click', () => router.go('search', { q: el.dataset.kw }))
-  );
-  left.append(statsCard);
+  // シンプル化: データ統計は管理画面に移動、ホームには不要
 
-  // Right: Detail pane (highlighted work = first reco)
-  const highlight = reco[0];
-  if (highlight) right.append(buildDetailCard(highlight));
-
-  // Also: search + training side by side (like mockup row 2)
-  grid.append(left, right);
+  // シンプル化: 右カラム廃止、下段 (検索/教材) 削除。 ホームは「入口」だけ。
+  grid.append(left);
   root.append(grid);
-
-  // Row 2: search preview + training
-  const row2 = h('div', { style: 'display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;margin-top:16px' });
-  row2.append(buildSearchPreview(), buildTrainingCard());
-  root.append(row2);
-
-  // responsive fix for row2
-  if (window.innerWidth < 1180) row2.style.gridTemplateColumns = '1fr';
 }
 
 // ============================ Home: search preview ============================
@@ -892,12 +842,6 @@ function buildDetailCard(w) {
       <button class="btn btn-secondary btn-sm" data-edit title="E">${I.edit}編集</button>
     </div>
     ${statusBanner}
-    <div class="chip-row">
-      <button class="chip is-active" data-mode="doc">手順書</button>
-      <button class="chip" data-mode="video">動画</button>
-      <button class="chip" data-mode="dwg">図面</button>
-      <button class="chip" data-mode="tips">コツ・注意点</button>
-    </div>
     <div class="detail-body">
       <div class="video" id="videoBox">
         ${w.videoUrl ? renderVideo(w.videoUrl) : `<div class="video-placeholder">${I.play}<div>動画未登録</div><div style="margin-top:6px;font-weight:500">編集 → 動画URL を YouTube から貼り付けると再生できます</div></div>`}
@@ -1165,15 +1109,6 @@ function buildDetailCard(w) {
     renderTab(t.dataset.tab);
   }));
 
-  card.querySelectorAll('[data-mode]').forEach(c => c.addEventListener('click', e => {
-    card.querySelectorAll('[data-mode]').forEach(x => x.classList.remove('is-active'));
-    c.classList.add('is-active');
-    const activeTab = { doc: 'steps', video: 'steps', dwg: 'resources', tips: 'tips' }[c.dataset.mode];
-    card.querySelectorAll('#subTabs .sub-tab').forEach(x => x.classList.remove('is-active'));
-    card.querySelector(`[data-tab="${activeTab}"]`).classList.add('is-active');
-    renderTab(activeTab);
-    if (c.dataset.mode === 'video') card.querySelector('#videoBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }));
 
   card.querySelector('[data-back]').addEventListener('click', () => history.back());
   card.querySelector('[data-fav]').addEventListener('click', () => {
