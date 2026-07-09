@@ -107,7 +107,7 @@ const store = {
     return this.notices.filter(n => !read.includes(n.id)).length;
   },
 
-  pendingCount() { return this.works.filter(w => w.status === 'pending').length; },
+  pendingCount() { return 0; },
 
   // Step checks (現場モード)
   stepKey(uid, wid) { return `${uid}_${wid}`; },
@@ -326,7 +326,6 @@ function renderSidebar() {
     </nav>
     <div class="nav-group" style="margin-top:16px">
       <div class="nav-heading">Ops</div>
-      ${navItem('approve', '承認・確認', 'check', pending || null)}
       ${navItem('database', 'データベース', 'db')}
       ${navItem('courses', '教材モード', 'book')}
       ${navItem('admin', '管理メニュー', 'gear')}
@@ -467,7 +466,7 @@ function render() {
     favorites: viewFavorites,
     recent: viewRecent,
     mypage: viewMypage,
-    approve: viewApprove,
+    approve: viewHome, // 承認フロー撤廃 — ホームへリダイレクト
     database: viewDatabase,
     notices: viewNotices,
     notice: viewNoticeDetail,
@@ -554,26 +553,38 @@ function viewHome(root) {
   const uid = store.currentUserId;
   const publishedWorks = store.works.filter(w => w.status === 'published');
 
-  // 「はじめての方へ」バナー (dismissible)
-  if (!store.guideDismissed) {
-    const wg = h('div', { class: 'welcome-guide' });
-    wg.innerHTML = `
-      <div class="wg-icon">${I.help}</div>
-      <div class="wg-body">
-        <div class="wg-eyebrow">はじめての方へ</div>
-        <div class="wg-title">現場での使い方 (5分で分かる) を見る</div>
-        <div class="wg-txt">「手順を見る → 現場でスマホで写真を撮る → チェック → 完了報告書を出す」 の 5ステップを順にご案内します。 AI や スマホ操作が初めての方でも大丈夫です。</div>
-      </div>
-      <div class="wg-actions">
-        <button class="btn btn-primary" data-open-guide>使い方を見る</button>
-        <button class="wg-close" title="今後は表示しない" data-dismiss>${I.x}</button>
-      </div>`;
-    wg.querySelector('[data-open-guide]').addEventListener('click', () => showWalkthrough());
-    wg.querySelector('[data-dismiss]').addEventListener('click', () => {
-      store.guideDismissed = true; store.save('guideDismissed'); render();
-    });
-    root.append(wg);
-  }
+  // メイン 3 CTA: 手順書を作る直感的な入口 (常時表示)
+  const cta = h('div', { class: 'quick-start' });
+  cta.innerHTML = `
+    <div class="qs-h">
+      <div class="qs-h-title">📋 手順書を作る</div>
+      <a class="qs-help" data-open-guide>❓ 使い方を見る</a>
+    </div>
+    <div class="qs-grid">
+      <button class="qs-card qs-video" data-a="video">
+        <div class="qs-icon">🎬</div>
+        <div class="qs-title">動画から作る</div>
+        <div class="qs-sub">字幕付き動画をアップロードで<br>AI が自動で 手順1・2・3… に分解</div>
+        <div class="qs-badge">おすすめ · 最短30秒</div>
+      </button>
+      <button class="qs-card qs-ai" data-a="ai">
+        <div class="qs-icon">✨</div>
+        <div class="qs-title">AI で下書き</div>
+        <div class="qs-sub">タイトルを入力するだけで<br>電気工事の標準手順を自動生成</div>
+        <div class="qs-badge">1分</div>
+      </button>
+      <button class="qs-card qs-blank" data-a="blank">
+        <div class="qs-icon">＋</div>
+        <div class="qs-title">白紙から作る</div>
+        <div class="qs-sub">手順を自分で書く<br>細かい調整もできる</div>
+        <div class="qs-badge">じっくり</div>
+      </button>
+    </div>`;
+  cta.querySelector('[data-open-guide]').addEventListener('click', () => showWalkthrough());
+  cta.querySelector('[data-a="video"]').addEventListener('click', () => quickStartVideo());
+  cta.querySelector('[data-a="ai"]').addEventListener('click', () => quickStartAI());
+  cta.querySelector('[data-a="blank"]').addEventListener('click', () => router.go('new'));
+  root.append(cta);
   const reco = [...publishedWorks].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 4);
   const recent = (store.recent[uid] || []).slice(0, 4);
   const unreadNotices = store.notices.slice(0, 4);
@@ -872,12 +883,7 @@ function buildDetailCard(w) {
 
   const card = h('section', { class: 'card', id: 'detailCard' });
 
-  const lastRejectMsg = (w.history || []).find(hi => hi.what && hi.what.startsWith('差戻し'));
-  const statusBanner = w.status === 'draft'
-    ? `<div class="status-banner status-draft">${I.edit}<div><b>下書き</b>${lastRejectMsg ? ` — 前回差戻し理由: ${esc(lastRejectMsg.what.replace(/^差戻し\s*—\s*/, ''))}` : ' · 承認申請前'}</div></div>`
-    : w.status === 'pending'
-    ? `<div class="status-banner status-pending">${I.clock}承認待ち · ${esc(approver ? approver.name : '担当者')} が確認中</div>`
-    : '';
+  const statusBanner = '';
 
   card.innerHTML = `
     <div class="detail-h">
@@ -2644,7 +2650,7 @@ async function importWorksArray(items) {
       ...items.slice(0, 12).map(it => h('div', { style: 'padding:2px 0' }, `· ${it.title}`)),
       items.length > 12 ? h('div', { style: 'padding:2px 0;color:var(--dim)' }, `… 他 ${items.length - 12} 件`) : null,
     ),
-    h('div', { style: 'margin-top:10px;font-size:11.5px;color:var(--dim);font-weight:500' }, '取り込んだ手順書は「下書き」状態で登録されます。承認申請してから公開されます。'),
+    h('div', { style: 'margin-top:10px;font-size:11.5px;color:var(--dim);font-weight:500' }, '取り込んだ手順書はすぐに全員が見られる状態で登録されます。'),
   );
   const ok = await confirmModal('CSV / JSON 取込確認', preview);
   if (!ok) return;
@@ -2660,9 +2666,9 @@ async function importWorksArray(items) {
       difficulty: Math.max(1, Math.min(5, it.difficulty || 2)),
       duration: it.duration || '',
       thumb: it.category || 'default',
-      status: 'draft',
+      status: 'published',
       author: uid,
-      approver: null,
+      approver: uid,
       createdAt: now,
       updatedAt: now,
       views: 0,
@@ -2675,7 +2681,7 @@ async function importWorksArray(items) {
       resources: it.resources || [],
       relatedIds: [],
       videoUrl: it.videoUrl || '',
-      history: [{ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: 'CSV/JSON で取込 · 下書き作成' }],
+      history: [{ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: 'CSV/JSON で取込 · 公開' }],
     });
   }
   store.save('works');
@@ -2711,7 +2717,7 @@ function viewWorkNew(root) {
   if (existing) { location.hash = `#work/${existing.id}/edit`; return; }
   const newWork = {
     id: uid(), title: '', category: 'panel', tags: [], site: '', difficulty: 2, duration: '',
-    thumb: 'default', status: 'draft', author: store.currentUserId, approver: null,
+    thumb: 'default', status: 'published', author: store.currentUserId, approver: store.currentUserId,
     createdAt: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString().slice(0, 10),
     views: 0, description: '',
     steps: [], tools: [], materials: [], tips: [], cautions: [], resources: [], relatedIds: [],
@@ -2760,15 +2766,19 @@ function viewWorkEdit(root, params) {
       </div>
       <div class="form-actions-r">
         <button class="btn btn-secondary" data-cancel>キャンセル</button>
-        <button class="btn btn-secondary" data-save>下書き保存</button>
-        <button class="btn btn-primary" data-submit>${w.status === 'published' ? '再公開' : '承認申請'}</button>
+        <button class="btn btn-primary" data-save>${I.check}保存</button>
       </div>
     </div>`;
 
   root.append(card);
 
   const tabBody = card.querySelector('#tabBody');
-  let currentTab = 'basic';
+  let currentTab = params.tab || 'basic';
+  if (currentTab !== 'basic') {
+    card.querySelectorAll('#editTabs .sub-tab').forEach(x => x.classList.remove('is-active'));
+    const t = card.querySelector(`[data-t="${currentTab}"]`);
+    if (t) t.classList.add('is-active');
+  }
 
   function renderTab() {
     tabBody.innerHTML = '';
@@ -2877,27 +2887,12 @@ function viewWorkEdit(root, params) {
 
   card.querySelector('[data-save]').addEventListener('click', () => {
     if (!draft.title.trim()) { toast('タイトルを入力してください', 'err'); return; }
-    Object.assign(w, draft, { status: 'draft', updatedAt: new Date().toISOString().slice(0, 10) });
+    Object.assign(w, draft, { status: 'published', updatedAt: new Date().toISOString().slice(0, 10) });
     w.history = w.history || [];
-    w.history.unshift({ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: '下書き保存' });
+    const isFirst = !w.history.some(hi => hi.what && hi.what.includes('新規'));
+    w.history.unshift({ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: isFirst ? '新規登録' : '内容を更新' });
     store.save('works');
-    toast('下書きを保存しました', 'success');
-    router.go('work/' + w.id);
-  });
-
-  card.querySelector('[data-submit]').addEventListener('click', async () => {
-    if (!draft.title.trim()) { toast('タイトルを入力してください', 'err'); return; }
-    if (draft.steps.length === 0) {
-      const ok = await confirmModal('手順が未登録', h('div', {}, '手順が1件も登録されていません。このまま申請しますか?'));
-      if (!ok) return;
-    }
-    const isSelf = store.user().role === '管理者';
-    const status = isSelf ? 'published' : 'pending';
-    Object.assign(w, draft, { status, updatedAt: new Date().toISOString().slice(0, 10) });
-    w.history = w.history || [];
-    w.history.unshift({ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: status === 'published' ? '公開しました' : '承認申請しました' });
-    store.save('works');
-    toast(status === 'published' ? '公開しました' : '承認申請しました', 'success');
+    toast('保存しました', 'success');
     router.go('work/' + w.id);
   });
 
@@ -3610,6 +3605,83 @@ function mountShortcuts() {
   });
 }
 
+// ============================ Quick start helpers ============================
+async function quickStartVideo() {
+  // 新規作業を作って、資料タブへ直行
+  const currentUid = store.currentUserId;
+  const existing = store.works.find(w => w.author === currentUid && !w.title.trim() && w.status === 'published');
+  let w;
+  if (existing) {
+    w = existing;
+  } else {
+    w = {
+      id: uid(), title: '', category: 'panel', tags: [], site: '', difficulty: 2, duration: '',
+      thumb: 'default', status: 'published', author: currentUid, approver: currentUid,
+      createdAt: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString().slice(0, 10),
+      views: 0, description: '',
+      steps: [], tools: [], materials: [], tips: [], cautions: [], resources: [], relatedIds: [],
+      videoUrl: '', history: [{ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: '動画から手順生成モードで新規作成' }],
+    };
+    store.works.unshift(w);
+    store.save('works');
+  }
+  toast('動画から手順を作るモードで開きます', 'success');
+  location.hash = `#work/${w.id}/edit?tab=res`;
+}
+
+async function quickStartAI() {
+  // タイトル入力 → AI 手順生成 → 保存
+  const titleInput = h('input', { class: 'form-in', placeholder: '例: 分電盤の交換, PAS の交換, 照明器具の取付' });
+  const catRow = h('div', { class: 'category-picker', style: 'margin-top:8px' });
+  let selectedCat = 'panel';
+  store.categories.forEach(c => {
+    const b = h('button', { class: 'cat-chip ' + (c.id === 'panel' ? 'on' : ''), type: 'button' }, c.name);
+    b.addEventListener('click', () => {
+      catRow.querySelectorAll('.cat-chip').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      selectedCat = c.id;
+    });
+    catRow.append(b);
+  });
+  const body = h('div', {},
+    h('div', { style: 'font-size:12.5px;color:var(--ink-2);margin-bottom:12px;line-height:1.65' },
+      'タイトル (作業名) を入力すると AI が電気工事の標準手順 (停電確認→検電→養生→作業→通電→記録) を 12 前後の手順で下書きします。'),
+    h('div', { class: 'form-lbl' }, '作業のタイトル *'),
+    titleInput,
+    h('div', { class: 'form-lbl', style: 'margin-top:8px' }, 'カテゴリ'),
+    catRow,
+  );
+  const ok = await new Promise(resolve => {
+    modal('✨ AI で下書き作成', body, (row, close) => {
+      row.append(
+        h('button', { class: 'btn btn-ghost', onclick: () => { close(null); resolve(null); } }, 'キャンセル'),
+        h('button', { class: 'btn btn-primary', onclick: () => {
+          if (!titleInput.value.trim()) { toast('タイトルを入力してください', 'err'); return; }
+          close(true); resolve(true);
+        } }, '手順を生成する')
+      );
+    });
+    setTimeout(() => titleInput.focus(), 100);
+  });
+  if (!ok) return;
+  const title = titleInput.value.trim();
+  const generated = window.AI.generateSteps(title, selectedCat);
+  const kyt = window.AI.generateKYT(title);
+  const newWork = {
+    id: uid(), title, category: selectedCat, tags: [], site: '', difficulty: 2, duration: '約 4時間',
+    thumb: selectedCat, status: 'published', author: store.currentUserId, approver: store.currentUserId,
+    createdAt: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString().slice(0, 10),
+    views: 0, description: `AI が生成した ${title} の標準手順書です。 現場に合わせて 手順・注意点・写真 を編集してご利用ください。`,
+    steps: generated,
+    tools: [], materials: [], tips: [], cautions: kyt, resources: [], relatedIds: [], videoUrl: '',
+    history: [{ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: `AI で自動生成 (${generated.length}手順 + KYT ${kyt.length}件)` }],
+  };
+  store.works.unshift(newWork);
+  store.save('works');
+  toast(`AI が ${generated.length} 手順 + KYT ${kyt.length}件 を生成しました`, 'success');
+  location.hash = `#work/${newWork.id}`;
+}
+
 // ============================ Walkthrough (5-step onboarding) ============================
 function showWalkthrough() {
   const slides = [
@@ -3841,6 +3913,13 @@ function rsEncode(data, eccLen) {
 
 // ============================ Boot ============================
 store.load();
+// v0.9 マイグレーション: 承認フロー撤廃、pending/draft → published 統一
+let migrated = false;
+for (const w of store.works) {
+  if (w.status !== 'published') { w.status = 'published'; migrated = true; }
+  if (!w.approver) { w.approver = w.author; migrated = true; }
+}
+if (migrated) store.save('works');
 render();
 mountAIFab();
 mountShortcuts();
