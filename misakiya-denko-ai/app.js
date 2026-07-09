@@ -320,10 +320,12 @@ function renderSidebar() {
       ${navItem('home', 'ホーム', 'home')}
       ${navItem('search', '作業を探す', 'search')}
       ${navItem('favorites', 'お気に入り', 'starOutline')}
+      ${navItem('recent', '最近の閲覧', 'clock')}
       ${navItem('mypage', 'マイページ', 'user')}
     </nav>
     <div class="nav-group" style="margin-top:16px">
       <div class="nav-heading">Ops</div>
+      ${navItem('database', 'データベース', 'db')}
       ${navItem('courses', '教材モード', 'book')}
       ${navItem('admin', '管理メニュー', 'gear')}
     </div>
@@ -461,10 +463,10 @@ function render() {
     home: viewHome,
     search: viewSearch,
     favorites: viewFavorites,
-    recent: viewMypage, // 最近の閲覧 → マイページに統合
+    recent: viewRecent,
     mypage: viewMypage,
-    approve: viewHome, // 承認フロー撤廃 — ホームへリダイレクト
-    database: viewSearch, // データベース → 作業を探す に統合
+    approve: viewHome, // 承認フロー撤廃 (v0.9 オーナー明示) — ホームへリダイレクト
+    database: viewDatabase,
     notices: viewNotices,
     notice: viewNoticeDetail,
     courses: viewCoursesTop,
@@ -544,51 +546,14 @@ function searchCard(w) {
   return card;
 }
 
-// ============================ View: Home ============================
+// ============================ View: Home (v0.2 承認済み構造) ============================
 function viewHome(root) {
   const uid = store.currentUserId;
   const publishedWorks = store.works.filter(w => w.status === 'published');
-
-  // メイン 3 CTA: 手順書を作る直感的な入口 (常時表示)
-  const cta = h('div', { class: 'quick-start' });
-  const iVideo = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m22 8-6 4 6 4V8Z"/></svg>';
-  const iSpark = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg>';
-  const iPlus = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
-  cta.innerHTML = `
-    <div class="qs-h">
-      <div class="qs-h-title">手順書を作る<span class="qs-h-sub">入口を選んでください</span></div>
-      <a class="qs-help" data-open-guide>使い方を見る</a>
-    </div>
-    <div class="qs-grid">
-      <button class="qs-card qs-video" data-a="video">
-        <div class="qs-icon">${iVideo}</div>
-        <div class="qs-title">動画から作る</div>
-        <div class="qs-sub">字幕付き動画をアップロードで<br>手順 1・2・3… に自動分解</div>
-        <div class="qs-badge">おすすめ · 最短30秒</div>
-      </button>
-      <button class="qs-card qs-ai" data-a="ai">
-        <div class="qs-icon">${iSpark}</div>
-        <div class="qs-title">AI で下書き</div>
-        <div class="qs-sub">タイトルを入力するだけで<br>電気工事の標準手順を自動生成</div>
-        <div class="qs-badge">1分</div>
-      </button>
-      <button class="qs-card qs-blank" data-a="blank">
-        <div class="qs-icon">${iPlus}</div>
-        <div class="qs-title">白紙から作る</div>
-        <div class="qs-sub">手順を自分で書く<br>細かい調整もできる</div>
-        <div class="qs-badge">じっくり</div>
-      </button>
-    </div>`;
-  cta.querySelector('[data-open-guide]').addEventListener('click', () => showWalkthrough());
-  cta.querySelector('[data-a="video"]').addEventListener('click', () => quickStartVideo());
-  cta.querySelector('[data-a="ai"]').addEventListener('click', () => quickStartAI());
-  cta.querySelector('[data-a="blank"]').addEventListener('click', () => router.go('new'));
-  root.append(cta);
   const reco = [...publishedWorks].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 4);
   const recent = (store.recent[uid] || []).slice(0, 4);
   const unreadNotices = store.notices.slice(0, 4);
 
-  // stats
   const now = new Date();
   const thisMonth = publishedWorks.filter(w => {
     const d = new Date(w.updatedAt);
@@ -602,9 +567,9 @@ function viewHome(root) {
   publishedWorks.forEach(w => (w.tags || []).forEach(t => keywordCounts[t] = (keywordCounts[t] || 0) + 1));
   const kws = Object.entries(keywordCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
-  // シンプル化: home-grid → 1 column stack
-  const grid = h('div', { class: 'home-simple' });
+  const grid = h('div', { class: 'home-grid' });
   const left = h('div', { class: 'col' });
+  const right = h('div', { class: 'col' });
 
   // Left: Recommended
   const recoCard = h('section', { class: 'card' });
@@ -614,12 +579,11 @@ function viewHome(root) {
   </header><div class="reco"><div class="reco-grid" id="recoGrid"></div></div>`;
   left.append(recoCard);
   const recoGrid = recoCard.querySelector('#recoGrid');
-  reco.forEach((w, i) => recoGrid.append(workCard(w, i)));
+  reco.forEach(w => recoGrid.append(workCard(w)));
   recoCard.querySelector('[data-more]').addEventListener('click', () => router.go('search'));
 
   // Left: two-col lists (recent + notices)
   const twoCol = h('section', { class: 'two-col' });
-
   const recentCard = h('div', { class: 'card' });
   recentCard.innerHTML = `<header class="card-h">
     <div class="card-h-title">最近の閲覧</div>
@@ -634,15 +598,11 @@ function viewHome(root) {
       const w = store.work(r.workId);
       if (!w) return;
       const it = h('div', { class: 'list-item' });
-      it.innerHTML = `
-        <span class="list-icon li-doc">D</span>
-        <span class="list-title">${esc(w.title)}</span>
-        <span class="list-date">${fmtRelative(r.ts)}</span>`;
+      it.innerHTML = `<span class="list-icon li-doc">D</span><span class="list-title">${esc(w.title)}</span><span class="list-date">${fmtRelative(r.ts)}</span>`;
       it.addEventListener('click', () => router.go('work/' + w.id));
       rl.append(it);
     });
   }
-
   const noticeCard = h('div', { class: 'card' });
   noticeCard.innerHTML = `<header class="card-h">
     <div class="card-h-title">お知らせ</div>
@@ -655,22 +615,44 @@ function viewHome(root) {
     const pillCls = n.type === 'new' ? 'pill-new' : n.type === 'warn' ? 'pill-warn' : 'pill-info';
     const pillLbl = n.type === 'new' ? 'NEW' : n.type === 'warn' ? '重要' : '連絡';
     const unread = !store.isRead(n.id);
-    it.innerHTML = `
-      <span class="pill ${pillCls}">${pillLbl}</span>
-      <span class="list-title" style="${unread ? 'font-weight:800' : ''}">${unread ? '<span class="pill-dot"></span>' : ''}${esc(n.title)}</span>
-      <span class="list-date">${fmtDate(n.createdAt).slice(5)}</span>`;
+    it.innerHTML = `<span class="pill ${pillCls}">${pillLbl}</span><span class="list-title" style="${unread ? 'font-weight:800' : ''}">${unread ? '<span class="pill-dot"></span>' : ''}${esc(n.title)}</span><span class="list-date">${fmtDate(n.createdAt).slice(5)}</span>`;
     it.addEventListener('click', () => router.go('notice/' + n.id));
     nl.append(it);
   });
-
   twoCol.append(recentCard, noticeCard);
   left.append(twoCol);
 
-  // シンプル化: データ統計は管理画面に移動、ホームには不要
+  // Left: Stats
+  const statsCard = h('section', { class: 'card' });
+  statsCard.innerHTML = `
+    <header class="card-h"><div class="card-h-title">データ統計 <small>（今月）</small></div></header>
+    <div class="stats">
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-label">新規登録数</div><div class="stat-value">${thisMonth}<small>件</small></div><div class="stat-delta">${I.up2} +${Math.max(0, thisMonth - 8)} 前月比</div></div>
+        <div class="stat"><div class="stat-label">閲覧数</div><div class="stat-value">${totalViews}</div><div class="stat-delta">${I.up2} +31%</div></div>
+        <div class="stat"><div class="stat-label">学習中の人</div><div class="stat-value">${learners}<small>人</small></div><div class="stat-delta">${I.up2} +2 名</div></div>
+        <div class="stat"><div class="stat-label">平均学習時間</div><div class="stat-value">${avgTime.toFixed(1)}<small>時間</small></div><div class="stat-delta flat">±0.0h</div></div>
+      </div>
+      <div class="kw-row">
+        <span class="kw-row-label">よく検索されているキーワード</span>
+        ${kws.map(([k]) => `<span class="kw-tag" data-kw="${esc(k)}">${esc(k)}</span>`).join('')}
+      </div>
+    </div>`;
+  statsCard.querySelectorAll('[data-kw]').forEach(el => el.addEventListener('click', () => router.go('search', { q: el.dataset.kw })));
+  left.append(statsCard);
 
-  // シンプル化: 右カラム廃止、下段 (検索/教材) 削除。 ホームは「入口」だけ。
-  grid.append(left);
+  // Right: Detail pane (highlighted work = first reco)
+  const highlight = reco[0];
+  if (highlight) right.append(buildDetailCard(highlight));
+
+  grid.append(left, right);
   root.append(grid);
+
+  // Row 2: search preview + training
+  const row2 = h('div', { style: 'display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;margin-top:16px' });
+  row2.append(buildSearchPreview(), buildTrainingCard());
+  root.append(row2);
+  if (window.innerWidth < 1180) row2.style.gridTemplateColumns = '1fr';
 }
 
 // ============================ Home: search preview ============================
@@ -845,6 +827,12 @@ function buildDetailCard(w) {
       <button class="btn btn-secondary btn-sm" data-edit title="E">${I.edit}編集</button>
     </div>
     ${statusBanner}
+    <div class="chip-row">
+      <button class="chip is-active" data-mode="doc">手順書</button>
+      <button class="chip" data-mode="video">動画</button>
+      <button class="chip" data-mode="dwg">図面</button>
+      <button class="chip" data-mode="tips">コツ・注意点</button>
+    </div>
     <div class="detail-body">
       <div class="video" id="videoBox">
         ${w.videoUrl ? renderVideo(w.videoUrl) : `<div class="video-placeholder">${I.play}<div>動画未登録</div><div style="margin-top:6px;font-weight:500">編集 → 動画URL を YouTube から貼り付けると再生できます</div></div>`}
@@ -1112,6 +1100,15 @@ function buildDetailCard(w) {
     renderTab(t.dataset.tab);
   }));
 
+  card.querySelectorAll('[data-mode]').forEach(c => c.addEventListener('click', e => {
+    card.querySelectorAll('[data-mode]').forEach(x => x.classList.remove('is-active'));
+    c.classList.add('is-active');
+    const activeTab = { doc: 'steps', video: 'steps', dwg: 'resources', tips: 'tips' }[c.dataset.mode];
+    card.querySelectorAll('#subTabs .sub-tab').forEach(x => x.classList.remove('is-active'));
+    card.querySelector(`[data-tab="${activeTab}"]`).classList.add('is-active');
+    renderTab(activeTab);
+    if (c.dataset.mode === 'video') card.querySelector('#videoBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }));
 
   card.querySelector('[data-back]').addEventListener('click', () => history.back());
   card.querySelector('[data-fav]').addEventListener('click', () => {
