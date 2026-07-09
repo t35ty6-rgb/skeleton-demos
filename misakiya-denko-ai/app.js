@@ -2653,43 +2653,6 @@ function viewWorkEdit(root, params) {
       tabBody.append(formRow('作業概要', '', h('textarea', { class: 'form-ta', oninput: e => draft.description = e.target.value }, draft.description || '')));
     } else if (currentTab === 'steps') {
       const wrap = h('div', { style: 'display:flex;flex-direction:column;gap:8px' });
-      // AI ドラフト generator — 常時表示 (空なら「下書き」、既存ありなら「追記/置換」)
-      const helper = h('div', { class: 'ai-helper-row' });
-      const isEmpty = draft.steps.length === 0;
-      const btnLabel = isEmpty ? 'AI で下書き生成' : 'AI で再提案';
-      const msg = isEmpty
-        ? 'タイトルから電気工事の標準手順 (停電確認 → 検電 → 養生 → 作業 → 通電確認 → 記録) を AI が下書きします。'
-        : `現在 ${draft.steps.length} 手順。AI で標準手順を再提案 (末尾に追加 or 全置換を選択)。`;
-      helper.innerHTML = `${I.sparkle}<div class="ai-helper-row-text">${esc(msg)}</div><button data-ai-draft>${esc(btnLabel)}</button>`;
-      helper.querySelector('[data-ai-draft]').addEventListener('click', async () => {
-        const t = (draft.title || '').trim();
-        if (!t) { toast('先にタイトルを入力してください', 'err'); return; }
-        const generated = window.AI.generateSteps(t, draft.category);
-        let mode = 'append';
-        if (!isEmpty) {
-          const box = h('div', {},
-            h('div', {}, `AI が ${generated.length} 手順を提案します。既存 ${draft.steps.length} 手順をどうしますか?`),
-            h('div', { style: 'margin-top:12px;font-size:12px;color:var(--dim);font-weight:500' }, '「末尾に追加」→ 既存の後ろに追記。「全部置換」→ 既存を捨てて新規のみに。'),
-          );
-          const choice = await new Promise(resolve => {
-            modal('AI 提案の反映方法', box, (row, close) => {
-              row.append(
-                h('button', { class: 'btn btn-ghost', onclick: () => { close(null); resolve(null); } }, 'キャンセル'),
-                h('button', { class: 'btn btn-secondary', onclick: () => { close('replace'); resolve('replace'); } }, '全部置換'),
-                h('button', { class: 'btn btn-primary', onclick: () => { close('append'); resolve('append'); } }, '末尾に追加'),
-              );
-            });
-          });
-          if (!choice) return;
-          mode = choice;
-        }
-        if (mode === 'replace') draft.steps.length = 0;
-        draft.steps.push(...generated);
-        renderTab();
-        card.querySelector('#sc').textContent = `(${draft.steps.length})`;
-        toast(`AI が ${generated.length} 手順を${mode === 'replace' ? '置換' : '追記'}しました`, 'success');
-      });
-      wrap.append(helper);
       draft.steps.forEach((s, i) => wrap.append(buildStepEditor(draft, i, () => { renderTab(); card.querySelector('#sc').textContent = `(${draft.steps.length})`; })));
       wrap.append(h('button', {
         class: 'btn btn-secondary btn-block', style: 'margin-top:6px',
@@ -2705,18 +2668,6 @@ function viewWorkEdit(root, params) {
       tabBody.append(h('div', { style: 'height:16px' }));
       tabBody.append(buildListEditor('使用材料', draft.materials, () => renderTab()));
     } else if (currentTab === 'tipsc') {
-      // AI KYT helper
-      if (draft.cautions.length === 0 && draft.title) {
-        const helper = h('div', { class: 'ai-helper-row' });
-        helper.innerHTML = `${I.sparkle}<div class="ai-helper-row-text">この作業カテゴリの標準的な KYT (危険予知) を AI が候補として提案します。現場に合わせて編集してください。</div><button data-ai-kyt>AI で KYT 生成</button>`;
-        helper.querySelector('[data-ai-kyt]').addEventListener('click', () => {
-          const generated = window.AI.generateKYT(draft.title);
-          draft.cautions.push(...generated);
-          renderTab();
-          toast(`AI が KYT ${generated.length} 項目を提案しました`, 'success');
-        });
-        tabBody.append(helper);
-      }
       tabBody.append(buildTextListEditor('コツ・ポイント', draft.tips, () => renderTab()));
       tabBody.append(h('div', { style: 'height:16px' }));
       tabBody.append(buildTextListEditor('注意点・危険予知', draft.cautions, () => renderTab()));
@@ -2724,10 +2675,6 @@ function viewWorkEdit(root, params) {
       tabBody.append(buildResourceEditor(draft, () => renderTab()));
       tabBody.append(h('div', { style: 'height:16px' }));
       tabBody.append(formRow('動画URL', 'YouTube / Vimeo / mp4 の URL を貼り付け', h('input', { class: 'form-in', value: draft.videoUrl || '', oninput: e => draft.videoUrl = e.target.value })));
-      tabBody.append(h('div', { class: 'video-note', style: 'margin-top:6px' }, `対応: YouTube (`, h('code', {}, 'youtu.be/XXX'), ` または `, h('code', {}, 'youtube.com/watch?v=XXX'), `) / Vimeo / .mp4 直リンク`));
-
-      // Transcribe → ステップ自動生成
-      tabBody.append(buildTranscribeSection(draft, () => { renderTab(); card.querySelector('#sc').textContent = `(${draft.steps.length})`; }));
     }
   }
   renderTab();
@@ -3045,63 +2992,8 @@ function fmtTS(seconds) {
 function buildResourceEditor(draft, onChange) {
   const wrap = h('div', {});
   wrap.append(h('div', { class: 'related-h' }, '添付資料 (PDF・図面・写真・リンク)'));
-
-  // Drag&drop ファイルアップロード (画像/PDF)
-  const dz = h('div', { class: 'dropzone compact', style: 'margin-bottom:10px' });
-  dz.innerHTML = `
-    <div class="dropzone-icon">${I.import}</div>
-    <div style="flex:1;min-width:0">
-      <div class="dropzone-title">📎 ファイルをドロップ or クリック</div>
-      <div class="dropzone-sub">画像 (JPG/PNG) · PDF (10MB まで) · ドラッグ&ドロップ or クリックで選択</div>
-    </div>
-    <input type="file" class="dropzone-in" accept="image/*,application/pdf" multiple>`;
-  const dzIn = dz.querySelector('input');
-  const handleFiles = async (files) => {
-    let added = 0;
-    for (const f of Array.from(files)) {
-      if (f.size > 10 * 1024 * 1024) { toast(`${f.name} は 10MB を超えています`, 'err'); continue; }
-      const data = await readFileAsDataURL(f);
-      const type = f.type.startsWith('image/') ? 'img' : (f.type === 'application/pdf' ? 'pdf' : 'link');
-      draft.resources.push({
-        type, name: f.name,
-        url: data, meta: `${(f.size / 1024).toFixed(0)} KB`,
-        size: f.size,
-      });
-      added++;
-    }
-    if (added > 0) { onChange(); toast(`${added} 件のファイルを追加しました`, 'success'); }
-  };
-  dzIn.addEventListener('change', () => handleFiles(dzIn.files));
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
-  wrap.append(dz);
-
   const box = h('div', { style: 'display:flex;flex-direction:column;gap:6px' });
   draft.resources.forEach((r, i) => {
-    // アップロード済みファイル (data: URL) は thumb で表示
-    if (r.url && r.url.startsWith('data:image/')) {
-      const th = h('div', { class: 'upload-thumb', style: 'cursor:pointer' });
-      th.innerHTML = `<img class="upload-thumb-img" src="${r.url}">
-        <div><div class="upload-thumb-name">${esc(r.name)}</div><div class="upload-thumb-size">${esc(r.meta || '')} · クリックで拡大</div></div>
-        <button class="step-btn dz" title="削除">${I.trash}</button>`;
-      const delBtn = th.querySelector('.step-btn');
-      th.addEventListener('click', e => { if (!e.target.closest('.step-btn')) showImagePreview(r); });
-      delBtn.addEventListener('click', e => { e.stopPropagation(); draft.resources.splice(i, 1); onChange(); });
-      box.append(th);
-      return;
-    }
-    if (r.url && r.url.startsWith('data:application/pdf')) {
-      const th = h('div', { class: 'upload-thumb' });
-      th.innerHTML = `<div style="width:60px;height:44px;background:var(--danger-soft);border-radius:5px;display:grid;place-items:center;color:var(--danger);font-weight:900;font-size:11px">PDF</div>
-        <div><div class="upload-thumb-name">${esc(r.name)}</div><div class="upload-thumb-size">${esc(r.meta || '')}</div></div>
-        <button class="step-btn dz" title="削除">${I.trash}</button>`;
-      th.querySelector('div[style*="danger-soft"]').addEventListener('click', () => window.open(r.url, '_blank'));
-      th.querySelector('.step-btn').addEventListener('click', () => { draft.resources.splice(i, 1); onChange(); });
-      box.append(th);
-      return;
-    }
-    // 従来: type + name + url + del
     const row = h('div', { class: 'res-edit-row' });
     row.innerHTML = `
       <select class="form-in">
@@ -3120,7 +3012,7 @@ function buildResourceEditor(draft, onChange) {
     delB.addEventListener('click', () => { draft.resources.splice(i, 1); onChange(); });
     box.append(row);
   });
-  const addBtn = h('button', { class: 'btn btn-secondary btn-sm', style: 'align-self:flex-start;margin-top:4px' }, h('span', { html: I.plus }), 'URL / 手入力で追加');
+  const addBtn = h('button', { class: 'btn btn-secondary btn-sm', style: 'align-self:flex-start;margin-top:4px' }, h('span', { html: I.plus }), '資料を追加');
   addBtn.addEventListener('click', () => { draft.resources.push({ type: 'pdf', name: '', url: '', meta: '' }); onChange(); });
   box.append(addBtn);
   wrap.append(box);
