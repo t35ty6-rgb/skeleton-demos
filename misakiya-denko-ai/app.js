@@ -834,7 +834,7 @@ function buildDetailCard(w) {
     </div>
     <div class="detail-body">
       <div class="video" id="videoBox">
-        ${w.videoUrl ? renderVideo(w.videoUrl) : `<div class="video-placeholder">${I.play}<div>動画未登録</div><div style="margin-top:6px;font-weight:500">編集 → 動画URL を YouTube から貼り付けると再生できます</div></div>`}
+        ${w.videoUrl ? renderVideo(w.videoUrl) : `<div class="video-placeholder">${I.play}<div>動画未登録</div><button class="btn btn-primary btn-sm" data-add-video style="margin-top:10px;background:#3b82f6">${I.plus} 動画をアップロード</button><div style="margin-top:8px;font-size:11px;color:#94a3b8">MP4 / WebM ファイル or YouTube URL</div></div>`}
       </div>
       <div class="summary">
         <div class="summary-h">
@@ -998,6 +998,8 @@ function buildDetailCard(w) {
     render();
   });
   card.querySelector('[data-edit]').addEventListener('click', () => router.go('work/' + w.id + '/edit'));
+  const addVideoBtn = card.querySelector('[data-add-video]');
+  if (addVideoBtn) addVideoBtn.addEventListener('click', () => { location.hash = `#work/${w.id}/edit?tab=res`; });
   card.querySelector('[data-share]').addEventListener('click', () => {
     const url = location.origin + location.pathname + '#work/' + w.id;
     if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => toast('URL をコピーしました', 'success'));
@@ -2040,12 +2042,12 @@ function viewWorkEdit(root, params) {
       tabBody.append(buildResourceEditor(draft, () => renderTab()));
       tabBody.append(h('div', { style: 'height:16px' }));
 
-      // 動画URL + ファイル選択 + captions 状態表示
+      // 動画をアップロード
       const videoRow = h('div', { class: 'form-row' });
-      videoRow.append(h('div', { class: 'form-lbl' }, '動画URL ', h('small', {}, 'YouTube / Vimeo / mp4 の URL、または 動画ファイルを選ぶ')));
+      videoRow.append(h('div', { class: 'form-lbl' }, '📹 動画をアップロード ', h('small', {}, '動画ファイル (MP4/WebM) or YouTube・Vimeo の URL')));
       const videoWrap = h('div', { style: 'display:flex;gap:6px;align-items:center' });
-      const videoInp = h('input', { class: 'form-in', value: draft.videoUrl && !draft.videoUrl.startsWith('data:') ? draft.videoUrl : '', oninput: e => draft.videoUrl = e.target.value, placeholder: 'https://youtu.be/... または 動画ファイルを選ぶ →' });
-      const videoFileBtn = h('label', { class: 'btn btn-secondary btn-sm', style: 'cursor:pointer;position:relative;white-space:nowrap' }, h('span', { html: I.plus }), '動画ファイル');
+      const videoInp = h('input', { class: 'form-in', value: draft.videoUrl && !draft.videoUrl.startsWith('data:') ? draft.videoUrl : '', oninput: e => draft.videoUrl = e.target.value, placeholder: 'https://youtu.be/... を貼付 or 右のボタンから動画ファイル選択' });
+      const videoFileBtn = h('label', { class: 'btn btn-primary btn-sm', style: 'cursor:pointer;position:relative;white-space:nowrap;background:#3b82f6' }, h('span', { html: I.plus }), '動画ファイルを選ぶ');
       const videoFileInp = h('input', { type: 'file', accept: 'video/*', style: 'position:absolute;inset:0;opacity:0;cursor:pointer' });
       videoFileInp.addEventListener('change', async () => {
         const f = videoFileInp.files[0];
