@@ -869,13 +869,21 @@ function buildDetailCard(w) {
         steps.innerHTML = `<div class="empty" style="padding:24px 0">${I.book}<div>手順がまだ登録されていません</div></div>`;
       } else {
         w.steps.forEach((s, i) => {
+          const bodyKids = [
+            h('div', { class: 'step-title' }, s.title),
+            s.desc ? h('div', { class: 'step-desc' }, s.desc) : null,
+            s.note ? h('div', { class: 'step-note' }, s.note) : null,
+          ];
+          // 動画キャプション + 時刻 + ▶ 再生 (transcribe 由来の手順のみ)
+          if (s.videoStart != null && w.videoUrl) {
+            const cap = h('div', { class: 'step-caption' });
+            cap.innerHTML = `<span class="step-caption-time">${fmtTS(s.videoStart)}${s.videoEnd ? ' – ' + fmtTS(s.videoEnd) : ''}</span><button class="step-caption-play" title="この時刻から再生">${I.play}<span>再生</span></button>`;
+            cap.querySelector('.step-caption-play').addEventListener('click', () => seekVideoTo(s.videoStart));
+            bodyKids.push(cap);
+          }
           steps.append(h('div', { class: 'step' },
             h('div', { class: 'step-no' }, i + 1),
-            h('div', { class: 'step-body' },
-              h('div', { class: 'step-title' }, s.title),
-              s.desc ? h('div', { class: 'step-desc' }, s.desc) : null,
-              s.note ? h('div', { class: 'step-note' }, s.note) : null,
-            )
+            h('div', { class: 'step-body' }, ...bodyKids)
           ));
         });
       }
@@ -2031,7 +2039,113 @@ function viewWorkEdit(root, params) {
     } else if (currentTab === 'res') {
       tabBody.append(buildResourceEditor(draft, () => renderTab()));
       tabBody.append(h('div', { style: 'height:16px' }));
-      tabBody.append(formRow('動画URL', 'YouTube / Vimeo / mp4 の URL を貼り付け', h('input', { class: 'form-in', value: draft.videoUrl || '', oninput: e => draft.videoUrl = e.target.value })));
+
+      // 動画URL + ファイル選択 + captions 状態表示
+      const videoRow = h('div', { class: 'form-row' });
+      videoRow.append(h('div', { class: 'form-lbl' }, '動画URL ', h('small', {}, 'YouTube / Vimeo / mp4 の URL、または 動画ファイルを選ぶ')));
+      const videoWrap = h('div', { style: 'display:flex;gap:6px;align-items:center' });
+      const videoInp = h('input', { class: 'form-in', value: draft.videoUrl && !draft.videoUrl.startsWith('data:') ? draft.videoUrl : '', oninput: e => draft.videoUrl = e.target.value, placeholder: 'https://youtu.be/... または 動画ファイルを選ぶ →' });
+      const videoFileBtn = h('label', { class: 'btn btn-secondary btn-sm', style: 'cursor:pointer;position:relative;white-space:nowrap' }, h('span', { html: I.plus }), '動画ファイル');
+      const videoFileInp = h('input', { type: 'file', accept: 'video/*', style: 'position:absolute;inset:0;opacity:0;cursor:pointer' });
+      videoFileInp.addEventListener('change', async () => {
+        const f = videoFileInp.files[0];
+        if (!f) return;
+        if (f.size > 50 * 1024 * 1024) { toast(`動画は 50MB まで (現在 ${(f.size/1024/1024).toFixed(1)}MB)`, 'err'); return; }
+        const data = await readFileAsDataURL(f);
+        draft.videoUrl = data;
+        renderTab();
+        toast(`動画 ${f.name} を添付しました`, 'success');
+      });
+      videoFileBtn.append(videoFileInp);
+      videoWrap.append(videoInp, videoFileBtn);
+      videoRow.append(videoWrap);
+      if (draft.videoUrl && draft.videoUrl.startsWith('data:video/')) {
+        videoRow.append(h('div', { style: 'font-size:11px;color:var(--success);font-weight:700;margin-top:4px' }, '✓ 動画ファイル添付済 · 保存すると再生できます'));
+      }
+      tabBody.append(videoRow);
+
+      tabBody.append(h('div', { style: 'height:16px' }));
+
+      // 動画から手順を作る (compact)
+      const trBox = h('div', { style: 'padding:12px 14px;background:var(--surface-2);border:1px solid var(--rule);border-radius:8px' });
+      trBox.append(h('div', { class: 'form-lbl', style: 'margin-bottom:6px' }, '動画から手順を自動生成 ',
+        h('small', {}, 'キャプション/字幕を分析して 手順 1・2・3… + タイムスタンプを付けます')));
+      const trState = { cues: [], mode: null };
+      const trActions = h('div', { style: 'display:flex;gap:6px;flex-wrap:wrap' });
+      const btnVTT = h('label', { class: 'btn btn-secondary btn-sm', style: 'cursor:pointer;position:relative' }, '字幕ファイル (.vtt/.srt)');
+      const vttInp = h('input', { type: 'file', accept: '.vtt,.srt,.txt', style: 'position:absolute;inset:0;opacity:0;cursor:pointer' });
+      vttInp.addEventListener('change', async () => {
+        const f = vttInp.files[0];
+        if (!f) return;
+        const text = await f.text();
+        trState.cues = window.AI.parseTranscript(text);
+        if (trState.cues.length === 0) { toast('字幕を認識できませんでした', 'err'); return; }
+        toast(`${trState.cues.length} キャプション認識`, 'success');
+        renderPrev();
+      });
+      btnVTT.append(vttInp);
+      const btnAI = h('button', { class: 'btn btn-secondary btn-sm' }, 'AI で 疑似生成');
+      btnAI.addEventListener('click', async () => {
+        btnAI.disabled = true; btnAI.textContent = '生成中…';
+        await new Promise(r => setTimeout(r, 700));
+        const vtt = window.AI.mockTranscribe(draft.title || '');
+        trState.cues = window.AI.parseTranscript(vtt);
+        btnAI.disabled = false; btnAI.textContent = 'AI で 疑似生成';
+        toast(`${trState.cues.length} キャプション生成`, 'success');
+        renderPrev();
+      });
+      const btnPaste = h('button', { class: 'btn btn-secondary btn-sm' }, 'テキスト貼付');
+      btnPaste.addEventListener('click', async () => {
+        const ta = h('textarea', { class: 'form-ta', style: 'min-height:140px;font-family:monospace;font-size:11px', placeholder: 'WEBVTT ... or SRT or プレーンテキスト' });
+        const ok = await new Promise(resolve => modal('文字起こしを貼り付け', ta, (row, close) => {
+          row.append(
+            h('button', { class: 'btn btn-ghost', onclick: () => { close(false); resolve(false); } }, 'キャンセル'),
+            h('button', { class: 'btn btn-primary', onclick: () => { close(true); resolve(true); } }, '解析'),
+          );
+        }));
+        if (!ok || !ta.value.trim()) return;
+        trState.cues = window.AI.parseTranscript(ta.value.trim());
+        if (trState.cues.length === 0) { toast('形式を認識できませんでした', 'err'); return; }
+        toast(`${trState.cues.length} キャプション認識`, 'success');
+        renderPrev();
+      });
+      trActions.append(btnVTT, btnAI, btnPaste);
+      trBox.append(trActions);
+
+      const trPrev = h('div', {});
+      trBox.append(trPrev);
+      const renderPrev = () => {
+        trPrev.innerHTML = '';
+        if (trState.cues.length === 0) return;
+        const info = h('div', { style: 'margin-top:10px;padding:8px 10px;background:#fff;border:1px solid var(--rule);border-radius:6px;font-size:11.5px' });
+        const preview = trState.cues.slice(0, 3).map(c => `<div style="color:var(--ink-2)"><span style="color:var(--dim);font-family:monospace;font-size:10.5px;margin-right:6px">${fmtTS(c.start)}</span>${esc(c.text.slice(0, 50))}${c.text.length > 50 ? '…' : ''}</div>`).join('');
+        info.innerHTML = `<div style="font-weight:800;color:var(--ink);margin-bottom:4px">${trState.cues.length} キャプション 認識済 (${fmtTS(trState.cues[trState.cues.length-1].end)})</div>${preview}${trState.cues.length > 3 ? `<div style="color:var(--dim);margin-top:2px">… 他 ${trState.cues.length - 3} 件</div>` : ''}`;
+        trPrev.append(info);
+        const genBtn = h('button', { class: 'btn btn-primary btn-sm', style: 'margin-top:8px' }, 'この字幕から手順を生成');
+        genBtn.addEventListener('click', async () => {
+          const generated = window.AI.generateStepsFromTranscript(trState.cues);
+          if (!generated.length) { toast('手順を生成できませんでした', 'err'); return; }
+          let mode = 'append';
+          if (draft.steps.length > 0) {
+            const box = h('div', {}, h('div', {}, `${generated.length} 手順が生成されます。既存 ${draft.steps.length} 手順は?`));
+            mode = await new Promise(resolve => modal('反映方法', box, (row, close) => {
+              row.append(
+                h('button', { class: 'btn btn-ghost', onclick: () => { close(); resolve(null); } }, 'キャンセル'),
+                h('button', { class: 'btn btn-secondary', onclick: () => { close(); resolve('replace'); } }, '既存を置換'),
+                h('button', { class: 'btn btn-primary', onclick: () => { close(); resolve('append'); } }, '末尾に追加'),
+              );
+            }));
+            if (!mode) return;
+          }
+          if (mode === 'replace') draft.steps.length = 0;
+          draft.steps.push(...generated);
+          toast(`${generated.length} 手順を生成 (キャプション+タイムスタンプ付き)`, 'success');
+          renderTab();
+          card.querySelector('#sc').textContent = `(${draft.steps.length})`;
+        });
+        trPrev.append(genBtn);
+      };
+      tabBody.append(trBox);
     }
   }
   renderTab();
@@ -2369,9 +2483,26 @@ function buildResourceEditor(draft, onChange) {
     delB.addEventListener('click', () => { draft.resources.splice(i, 1); onChange(); });
     box.append(row);
   });
-  const addBtn = h('button', { class: 'btn btn-secondary btn-sm', style: 'align-self:flex-start;margin-top:4px' }, h('span', { html: I.plus }), '資料を追加');
+  const actions = h('div', { style: 'display:flex;gap:6px;align-self:flex-start;margin-top:4px;flex-wrap:wrap' });
+  const addBtn = h('button', { class: 'btn btn-secondary btn-sm' }, h('span', { html: I.plus }), '資料を追加');
   addBtn.addEventListener('click', () => { draft.resources.push({ type: 'pdf', name: '', url: '', meta: '' }); onChange(); });
-  box.append(addBtn);
+  const fileBtn = h('label', { class: 'btn btn-secondary btn-sm', style: 'cursor:pointer;position:relative' }, h('span', { html: I.plus }), 'ファイルから');
+  const fileInp = h('input', { type: 'file', accept: 'image/*,application/pdf', multiple: true, style: 'position:absolute;inset:0;opacity:0;cursor:pointer' });
+  fileInp.addEventListener('change', async () => {
+    let added = 0;
+    for (const f of Array.from(fileInp.files)) {
+      if (f.size > 10 * 1024 * 1024) { toast(`${f.name} は 10MB を超えています`, 'err'); continue; }
+      const data = await readFileAsDataURL(f);
+      const type = f.type.startsWith('image/') ? 'img' : (f.type === 'application/pdf' ? 'pdf' : 'link');
+      draft.resources.push({ type, name: f.name, url: data, meta: `${(f.size / 1024).toFixed(0)} KB` });
+      added++;
+    }
+    fileInp.value = '';
+    if (added > 0) { onChange(); toast(`${added} 件のファイルを追加しました`, 'success'); }
+  });
+  fileBtn.append(fileInp);
+  actions.append(addBtn, fileBtn);
+  box.append(actions);
   wrap.append(box);
   return wrap;
 }
