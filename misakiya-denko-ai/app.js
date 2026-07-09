@@ -1587,9 +1587,21 @@ function viewApprove(root) {
 // ============================ Database ============================
 function viewDatabase(root) {
   const state = { cat: '', q: '' };
+  const btnRow = h('div', { style: 'display:flex;gap:8px;align-items:center' });
+  const videoBtn = h('button', { class: 'btn btn-primary', style: 'background:#3b82f6' }, h('span', { html: I.plus }), '📹 動画から作る');
+  videoBtn.addEventListener('click', () => {
+    const uid = store.currentUserId;
+    let w = store.works.find(x => x.author === uid && !x.title.trim());
+    if (!w) {
+      w = { id: 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title: '', category: 'panel', tags: [], site: '', difficulty: 2, duration: '', thumb: 'panel', status: 'published', author: uid, approver: uid, createdAt: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString().slice(0, 10), views: 0, description: '', steps: [], tools: [], materials: [], tips: [], cautions: [], resources: [], relatedIds: [], videoUrl: '', history: [{ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: '動画から作るモードで開始' }] };
+      store.works.unshift(w); store.save('works');
+    }
+    location.hash = `#work/${w.id}/edit?tab=res`;
+  });
+  btnRow.append(videoBtn, h('button', { class: 'btn btn-secondary', onclick: () => router.go('new') }, h('span', { html: I.plus }), '白紙から作る'));
   root.append(h('div', { class: 'page-h' },
     h('div', {}, h('div', { class: 'page-title' }, 'データベース'), h('div', { class: 'page-sub' }, '全ての作業手順書を一覧できます')),
-    h('button', { class: 'btn btn-primary', onclick: () => router.go('new') }, h('span', { html: I.plus }), '新しい作業を追加')
+    btnRow
   ));
   const card = h('section', { class: 'card' });
   card.innerHTML = `
@@ -2006,7 +2018,7 @@ function viewWorkEdit(root, params) {
       <button class="sub-tab" data-t="steps">手順 <small style="color:var(--dim);margin-left:3px" id="sc">(${draft.steps.length})</small></button>
       <button class="sub-tab" data-t="tools">工具・材料</button>
       <button class="sub-tab" data-t="tipsc">コツ・注意点</button>
-      <button class="sub-tab" data-t="res">資料・動画</button>
+      <button class="sub-tab" data-t="res">📹 動画・資料</button>
     </div>
     <div id="tabBody" style="padding:14px 18px 18px 18px"></div>
     <div class="form-actions">
@@ -2043,6 +2055,35 @@ function viewWorkEdit(root, params) {
       );
       tabBody.append(g);
       tabBody.append(formRow('作業概要', '', h('textarea', { class: 'form-ta', oninput: e => draft.description = e.target.value }, draft.description || '')));
+
+      // 基本情報タブに 動画アップロード欄を追加 (見つけやすさのため)
+      tabBody.append(h('div', { style: 'height:20px' }));
+      const vBox = h('div', { style: 'padding:14px 16px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #bfdbfe;border-radius:10px' });
+      vBox.append(
+        h('div', { style: 'font-size:14px;font-weight:900;color:var(--ink);margin-bottom:4px;letter-spacing:-0.01em' }, '📹 動画をアップロード ',
+          h('span', { style: 'font-weight:500;color:var(--dim);font-size:11px;margin-left:4px' }, '任意 · 手順を動画で説明する場合')),
+        h('div', { style: 'font-size:11.5px;color:var(--dim);font-weight:500;margin-bottom:10px;line-height:1.6' }, '動画ファイル (MP4/WebM、50MBまで) or YouTube・Vimeo の URL。 字幕付き動画なら 動画・資料タブ で 手順を自動生成できます。'),
+      );
+      const vRow = h('div', { style: 'display:flex;gap:6px;align-items:center' });
+      const vInp = h('input', { class: 'form-in', value: draft.videoUrl && !draft.videoUrl.startsWith('data:') ? draft.videoUrl : '', placeholder: 'https://youtu.be/... を貼付', oninput: e => draft.videoUrl = e.target.value });
+      const vFileBtn = h('label', { class: 'btn btn-primary btn-sm', style: 'cursor:pointer;position:relative;white-space:nowrap;background:#3b82f6' }, h('span', { html: I.plus }), '動画ファイルを選ぶ');
+      const vFileInp = h('input', { type: 'file', accept: 'video/*', style: 'position:absolute;inset:0;opacity:0;cursor:pointer' });
+      vFileInp.addEventListener('change', async () => {
+        const f = vFileInp.files[0];
+        if (!f) return;
+        if (f.size > 50 * 1024 * 1024) { toast(`動画は 50MB まで (現在 ${(f.size/1024/1024).toFixed(1)}MB)`, 'err'); return; }
+        const data = await readFileAsDataURL(f);
+        draft.videoUrl = data;
+        renderTab();
+        toast(`動画 ${f.name} を添付しました`, 'success');
+      });
+      vFileBtn.append(vFileInp);
+      vRow.append(vInp, vFileBtn);
+      vBox.append(vRow);
+      if (draft.videoUrl && draft.videoUrl.startsWith('data:video/')) {
+        vBox.append(h('div', { style: 'font-size:11px;color:var(--success);font-weight:700;margin-top:6px' }, '✓ 動画ファイル添付済 · 保存すると再生できます'));
+      }
+      tabBody.append(vBox);
     } else if (currentTab === 'steps') {
       const wrap = h('div', { style: 'display:flex;flex-direction:column;gap:8px' });
       draft.steps.forEach((s, i) => wrap.append(buildStepEditor(draft, i, () => { renderTab(); card.querySelector('#sc').textContent = `(${draft.steps.length})`; })));
