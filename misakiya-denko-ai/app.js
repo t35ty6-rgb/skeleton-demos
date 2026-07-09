@@ -916,7 +916,6 @@ function buildDetailCard(w) {
         <div class="summary-row"><span class="summary-k">カテゴリ</span><span class="summary-v">${esc((store.category(w.category) || {}).name || '—')}</span></div>
         <div class="summary-row"><span class="summary-k">更新日</span><span class="summary-v">${fmtDate(w.updatedAt)}</span></div>
         <div class="summary-row"><span class="summary-k">作成者</span><span class="summary-v">${esc(author ? author.name : '—')}</span></div>
-        <div class="summary-row"><span class="summary-k">承認者</span><span class="summary-v">${esc(approver ? approver.name : '—')}<span style="color:var(--dim);font-weight:600"> ${approver && approver.role !== '管理者' ? `（${approver.role}）` : ''}</span></span></div>
       </div>
     </div>
     <div class="sub-tabs" id="subTabs">
@@ -2138,10 +2137,10 @@ function adminOverview(body) {
   const kpi = h('div', {});
   kpi.innerHTML = `<div style="font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:8px">全社KPI</div>
     <div class="stat-grid">
-      <div class="stat"><div class="stat-label">公開手順書</div><div class="stat-value">${published}<small>件</small></div></div>
-      <div class="stat"><div class="stat-label">承認待ち</div><div class="stat-value">${pending}<small>件</small></div></div>
-      <div class="stat"><div class="stat-label">下書き</div><div class="stat-value">${draft}<small>件</small></div></div>
+      <div class="stat"><div class="stat-label">手順書 総数</div><div class="stat-value">${published}<small>件</small></div></div>
       <div class="stat"><div class="stat-label">総閲覧数</div><div class="stat-value">${totalViews}</div></div>
+      <div class="stat"><div class="stat-label">執筆者</div><div class="stat-value">${authors}<small>名</small></div></div>
+      <div class="stat"><div class="stat-label">カテゴリ</div><div class="stat-value">${store.categories.length}<small>種</small></div></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
       <span class="kw-tag">作業 ${store.works.length}件</span>
@@ -2685,7 +2684,7 @@ async function importWorksArray(items) {
     });
   }
   store.save('works');
-  toast(`${items.length} 件を取り込みました (下書き状態)`, 'success');
+  toast(`${items.length} 件を取り込みました · 全員が見られる状態で登録済み`, 'success');
   render();
 }
 
@@ -2712,8 +2711,8 @@ async function resetAll() {
 // ============================ Work Edit / New ============================
 function viewWorkNew(root) {
   const currentUid = store.currentUserId;
-  // Reuse an existing empty draft by the same user (prevents draft spam on repeated #new visits)
-  const existing = store.works.find(w => w.author === currentUid && !w.title.trim() && w.status === 'draft');
+  // Reuse an existing empty work by the same user (prevents entry spam on repeated #new visits)
+  const existing = store.works.find(w => w.author === currentUid && !w.title.trim());
   if (existing) { location.hash = `#work/${existing.id}/edit`; return; }
   const newWork = {
     id: uid(), title: '', category: 'panel', tags: [], site: '', difficulty: 2, duration: '',
@@ -3494,7 +3493,6 @@ const palette = {
       { name: 'お気に入り', route: 'favorites', icon: I.starOutline, hint: 'G F' },
       { name: '最近の閲覧', route: 'recent', icon: I.clock },
       { name: 'マイページ', route: 'mypage', icon: I.user },
-      { name: '承認・確認', route: 'approve', icon: I.check },
       { name: 'データベース', route: 'database', icon: I.db },
       { name: '教材モード', route: 'courses', icon: I.book },
       { name: '管理メニュー', route: 'admin', icon: I.gear },
@@ -3583,7 +3581,7 @@ function mountShortcuts() {
     if (gLeader === 'g') {
       gLeader = null;
       clearTimeout(gLeaderTimeout);
-      const map = { h: 'home', s: 'search', f: 'favorites', r: 'recent', m: 'mypage', a: 'approve', d: 'database', c: 'courses' };
+      const map = { h: 'home', s: 'search', f: 'favorites', r: 'recent', m: 'mypage', d: 'database', c: 'courses' };
       if (map[e.key]) { router.go(map[e.key]); e.preventDefault(); return; }
     }
     // e = edit current work
@@ -3732,7 +3730,6 @@ function showHelp() {
     ['G → F', 'お気に入り'],
     ['G → R', '最近の閲覧'],
     ['G → M', 'マイページ'],
-    ['G → A', '承認・確認'],
     ['G → D', 'データベース'],
     ['G → C', '教材モード'],
     ['F', '作業詳細でお気に入り toggle'],
