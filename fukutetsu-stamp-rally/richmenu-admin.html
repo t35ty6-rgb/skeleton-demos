@@ -649,6 +649,12 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
                   </div>
 
                   <div style="display:grid;grid-template-columns:130px 1fr;gap:12px 16px;align-items:center;font-size:13px">
+                    <label style="color:var(--ink-2);font-weight:700">位置</label>
+                    <div class="seg" id="tb-position" style="display:inline-flex;gap:2px;background:var(--surface-2);padding:3px;border-radius:8px;width:fit-content">
+                      <button type="button" data-pos="bottom" class="on" style="padding:8px 20px;background:transparent;border:none;border-radius:5px;font-family:var(--font-jp);font-size:13px;font-weight:700;color:var(--dim);cursor:pointer">下</button>
+                      <button type="button" data-pos="top" style="padding:8px 20px;background:transparent;border:none;border-radius:5px;font-family:var(--font-jp);font-size:13px;font-weight:700;color:var(--dim);cursor:pointer">上</button>
+                    </div>
+
                     <label style="color:var(--ink-2);font-weight:700">高さ</label>
                     <div style="display:flex;align-items:center;gap:12px">
                       <input type="range" id="tb-height" min="120" max="300" step="10" style="flex:1;accent-color:var(--primary)">
@@ -684,6 +690,14 @@ input,textarea,button,select{font-family:inherit;font-weight:inherit}
                       <input type="color" id="tb-fg-inactive" style="width:52px;height:34px;border:1px solid var(--rule);border-radius:6px;cursor:pointer;padding:0;background:none">
                       <span id="tb-fg-inactive-val" style="font-family:var(--mono);font-size:12px;color:var(--dim);text-transform:uppercase">#f8fafc</span>
                     </div>
+                  </div>
+
+                  <div id="tb-icons-wrap" style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--rule)">
+                    <div style="font-size:12px;color:var(--ink-2);font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+                      <span>各タブ アイコン</span>
+                      <span style="font-weight:600;color:var(--dim);font-size:11px">(任意、 タブラベル の 上に 描画)</span>
+                    </div>
+                    <div id="tb-icons-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));gap:10px"></div>
                   </div>
 
                   <div style="display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px dashed var(--rule);flex-wrap:wrap;align-items:center">
@@ -1070,6 +1084,7 @@ const TPL_SIZE_LARGE = ["A","B","C","D","E","F","G","K","L","M","N","O"];
 const TPL_SIZE_SMALL = ["H","I","J"];
 
 const DEFAULT_TABBAR = {
+  position: "bottom", // "bottom" | "top"
   height: 200,        // canvas px (of 1686 total) — 120-300
   fontSize: 72,       // canvas px — 48-96
   bgActive: "#17b26a",
@@ -1348,11 +1363,38 @@ function ensureTabBar(){
   return CFG.tabBar;
 }
 
+const _iconCache = new Map();
+function preloadTabIcons(){
+  const menus = CFG.menus || [];
+  const promises = [];
+  for (const m of menus){
+    if (!m.tabIcon) continue;
+    if (_iconCache.has(m.tabIcon) && _iconCache.get(m.tabIcon)) continue;
+    const src = m.tabIcon;
+    promises.push(new Promise(res => {
+      const im = new Image();
+      im.onload = () => { _iconCache.set(src, im); res(); };
+      im.onerror = () => { _iconCache.set(src, null); res(); };
+      im.src = src;
+    }));
+  }
+  return Promise.all(promises);
+}
+
 let _tbWired = false;
 function renderTabBarDesign(){
   ensureTabBar();
   const tb = CFG.tabBar;
   const $ = id => document.getElementById(id);
+  // position seg
+  document.querySelectorAll("#tb-position button").forEach(b => b.classList.toggle("on", b.dataset.pos === tb.position));
+  // reflect .on style via inline (since seg buttons here are inline-styled)
+  document.querySelectorAll("#tb-position button").forEach(b => {
+    const isOn = b.classList.contains("on");
+    b.style.background = isOn ? "var(--surface,#fff)" : "transparent";
+    b.style.color = isOn ? "var(--ink)" : "var(--dim)";
+    b.style.boxShadow = isOn ? "var(--shadow-xs)" : "none";
+  });
   if ($("tb-height")) { $("tb-height").value = tb.height; $("tb-height-val").textContent = tb.height + " px"; }
   if ($("tb-fontsize")) { $("tb-fontsize").value = tb.fontSize; $("tb-fontsize-val").textContent = tb.fontSize + " px"; }
   const setColor = (id, val) => {
@@ -1364,8 +1406,57 @@ function renderTabBarDesign(){
   setColor("tb-bg-inactive", tb.bgInactive);
   setColor("tb-fg-active", tb.fgActive);
   setColor("tb-fg-inactive", tb.fgInactive);
+  // per-tab icon grid (rebuild each render, since menu count can change)
+  const iconsGrid = $("tb-icons-grid");
+  if (iconsGrid){
+    const menus = CFG.menus || [];
+    iconsGrid.innerHTML = menus.map((m, i) => {
+      const has = !!m.tabIcon;
+      const title = (m.title || `タブ${i+1}`).slice(0, 12);
+      const previewBg = has ? `background:url("${m.tabIcon}") center/contain no-repeat #f8fafc` : "background:#f1f5f9";
+      return `
+        <div style="border:1px solid var(--rule);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;background:#fff">
+          <div style="font-size:11px;font-weight:800;color:var(--ink-2);display:flex;justify-content:space-between;align-items:center">
+            <span>タブ${i+1} · ${title}</span>
+            ${has ? `<button type="button" class="tb-icon-clear" data-idx="${i}" style="border:none;background:transparent;color:var(--dim);cursor:pointer;font-size:11px;padding:0;font-weight:700">解除</button>` : ""}
+          </div>
+          <label style="display:block;height:64px;border-radius:6px;border:1px dashed var(--rule);${previewBg};cursor:pointer;position:relative">
+            <input type="file" accept="image/*" class="tb-icon-input" data-idx="${i}" style="position:absolute;inset:0;opacity:0;cursor:pointer">
+            ${has ? "" : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:11px;color:var(--dim);font-weight:700">＋ 画像 選択</div>`}
+          </label>
+        </div>`;
+    }).join("");
+    // Wire per-tab icon inputs (rebuilt each time — bind fresh)
+    iconsGrid.querySelectorAll(".tb-icon-input").forEach(inp => {
+      inp.addEventListener("change", e => {
+        const idx = +inp.dataset.idx;
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          CFG.menus[idx].tabIcon = ev.target.result;
+          saveCfg(); preloadTabIcons().then(() => { renderTabBarDesign(); renderRmPreviewV3(); });
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+    iconsGrid.querySelectorAll(".tb-icon-clear").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idx = +btn.dataset.idx;
+        CFG.menus[idx].tabIcon = null;
+        saveCfg(); renderTabBarDesign(); renderRmPreviewV3();
+      });
+    });
+  }
   if (_tbWired) return;
   _tbWired = true;
+  // Position seg (one-time wire)
+  document.querySelectorAll("#tb-position button").forEach(b => {
+    b.addEventListener("click", () => {
+      CFG.tabBar.position = b.dataset.pos;
+      saveCfg(); renderTabBarDesign(); renderRmPreviewV3();
+    });
+  });
   const onNum = (id, key, unit) => {
     $(id)?.addEventListener("input", () => {
       const v = +$(id).value;
@@ -1821,8 +1912,9 @@ async function renderRmPreviewV3(){
   });
   // Multi-tab: overlay tab bar so live preview reflects tabBar design changes
   if ((CFG.menus || []).length > 1){
-    const labels = CFG.menus.map((m, i) => (m.title || `タブ${i+1}`));
-    paintTabBarOnCtx(ctx, CFG.activeMenuIdx || 0, labels, W, H);
+    await preloadTabIcons();
+    const items = CFG.menus.map((m, i) => ({ label: m.title || `タブ${i+1}`, icon: m.tabIcon || null }));
+    paintTabBarOnCtx(ctx, CFG.activeMenuIdx || 0, items, W, H);
   }
   const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
   const el = document.getElementById("rm-img");
@@ -2977,42 +3069,71 @@ async function composeUploadPng(){
 
 // Draw tab bar overlay at bottom 200px (multi-tab only) — 200px = mobile で確実にタップ可能
 // Draw tab bar strip directly onto a ctx (pure sync). Reads CFG.tabBar.
-function paintTabBarOnCtx(ctx, activeIdx, labels, W, H){
+// items: array of { label, icon(dataURL|null) } — icon expected to be in _iconCache
+function paintTabBarOnCtx(ctx, activeIdx, items, W, H){
   const tb = (typeof CFG !== "undefined" && CFG.tabBar) ? CFG.tabBar : DEFAULT_TABBAR;
   const tabH = tb.height || 200;
-  const tabW = W / labels.length;
+  const tabW = W / items.length;
+  const isTop = tb.position === "top";
+  const tabY = isTop ? 0 : H - tabH;
   ctx.fillStyle = tb.bgInactive;
-  ctx.fillRect(0, H - tabH, W, tabH);
-  labels.forEach((lbl, i) => {
+  ctx.fillRect(0, tabY, W, tabH);
+  const anyIcons = items.some(it => it && it.icon);
+  items.forEach((it, i) => {
+    const item = (typeof it === "string") ? { label: it, icon: null } : (it || { label: "", icon: null });
     const x = i * tabW;
     const isActive = i === activeIdx;
     if (isActive){
       ctx.fillStyle = tb.bgActive;
-      ctx.fillRect(x, H - tabH, tabW, tabH);
+      ctx.fillRect(x, tabY, tabW, tabH);
+      // active indicator: underline (bottom variant) or top-line (top variant), in fgActive color
       ctx.fillStyle = tb.fgActive;
-      // active indicator: underline in fgActive color
-      ctx.fillRect(x + tabW/2 - 80, H - Math.max(20, Math.round(tabH * 0.12)), 160, 8);
+      if (isTop){
+        ctx.fillRect(x + tabW/2 - 80, tabY + Math.max(12, Math.round(tabH * 0.08)), 160, 8);
+      } else {
+        ctx.fillRect(x + tabW/2 - 80, tabY + tabH - Math.max(20, Math.round(tabH * 0.12)), 160, 8);
+      }
       ctx.fillStyle = tb.fgActive;
     } else {
       ctx.fillStyle = tb.fgInactive;
     }
+    const iconImg = (item.icon && typeof _iconCache !== "undefined") ? _iconCache.get(item.icon) : null;
     ctx.font = `900 ${tb.fontSize || 72}px 'Noto Sans JP', sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    const text = (lbl || `タブ${i+1}`).slice(0, 6);
-    ctx.fillText(text, x + tabW/2, H - tabH/2);
-    if (i < labels.length - 1){
+    const text = (item.label || `タブ${i+1}`).slice(0, 6);
+    if (iconImg){
+      // icon over label: icon centered upper 55%, label centered lower 30%
+      const iconSize = Math.min(tabH * 0.55, tabW * 0.35);
+      const iconX = x + tabW/2 - iconSize/2;
+      const iconY = tabY + tabH * 0.10;
+      ctx.save();
+      // preserve aspect
+      const ar = iconImg.naturalWidth / iconImg.naturalHeight;
+      let dw = iconSize, dh = iconSize;
+      if (ar > 1) dh = iconSize / ar; else dw = iconSize * ar;
+      ctx.drawImage(iconImg, iconX + (iconSize - dw)/2, iconY + (iconSize - dh)/2, dw, dh);
+      ctx.restore();
+      ctx.font = `900 ${Math.round((tb.fontSize || 72) * 0.72)}px 'Noto Sans JP', sans-serif`;
+      ctx.fillText(text, x + tabW/2, tabY + tabH * 0.82);
+    } else if (anyIcons){
+      // consistency: shift label down slightly so it aligns with icon rows
+      ctx.fillText(text, x + tabW/2, tabY + tabH * 0.82);
+    } else {
+      ctx.fillText(text, x + tabW/2, tabY + tabH/2);
+    }
+    if (i < items.length - 1){
       ctx.strokeStyle = "rgba(148,163,184,0.35)";
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(x + tabW, H - tabH + 40);
-      ctx.lineTo(x + tabW, H - 40);
+      ctx.moveTo(x + tabW, tabY + 40);
+      ctx.lineTo(x + tabW, tabY + tabH - 40);
       ctx.stroke();
     }
   });
 }
 
-function drawTabBar(baseDataUrl, activeIdx, labels, W, H){
+function drawTabBar(baseDataUrl, activeIdx, items, W, H){
   return new Promise((res) => {
     const img = new Image();
     img.onload = () => {
@@ -3020,7 +3141,7 @@ function drawTabBar(baseDataUrl, activeIdx, labels, W, H){
       c.width = W; c.height = H;
       const ctx = c.getContext("2d");
       ctx.drawImage(img, 0, 0, W, H);
-      paintTabBarOnCtx(ctx, activeIdx, labels, W, H);
+      paintTabBarOnCtx(ctx, activeIdx, items, W, H);
       res(c.toDataURL("image/jpeg", 0.9));
     };
     img.onerror = () => res(baseDataUrl);
@@ -3036,12 +3157,13 @@ async function composeUploadPngFor(idx){
   let composed = await composeUploadPng();
   CFG.activeMenuIdx = savedIdx;
   CFG.richmenuV3 = CFG.menus[savedIdx];
-  // Multi-tab: overlay tab bar at bottom
+  // Multi-tab: overlay tab bar (position + icons per CFG.tabBar)
   if ((CFG.menus || []).length > 1){
+    await preloadTabIcons();
     const r = CFG.menus[idx];
     const W = 2500, H = r.size === "small" ? 843 : 1686;
-    const labels = CFG.menus.map((m, i) => (m.title || `タブ${i+1}`));
-    composed = await drawTabBar(composed, idx, labels, W, H);
+    const items = CFG.menus.map((m, i) => ({ label: m.title || `タブ${i+1}`, icon: m.tabIcon || null }));
+    composed = await drawTabBar(composed, idx, items, W, H);
   }
   return composed;
 }
@@ -3063,6 +3185,7 @@ async function buildDeployPayload(){
       defaultShow: m.defaultShow,
       size: m.size,
       template: m.template,
+      tabIcon: m.tabIcon || null,
       areas: tpl.areas.map((a, j) => ({
         bounds: a,
         action: m.actions[j] || { type: "uri", uri: "" },
