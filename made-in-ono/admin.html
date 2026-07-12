@@ -1,0 +1,1243 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>越前おおの・はたらく旅 · 管理画面</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f8fa;
+  --paper:#ffffff;
+  --ink:#111827;
+  --ink-2:#374151;
+  --text:#4b5563;
+  --dim:#6b7280;
+  --muted:#9ca3af;
+  --rule:#e5e7eb;
+  --rule-strong:#d1d5db;
+  --primary:#3d8a5c;
+  --primary-hi:#2a6b45;
+  --primary-soft:#e0efe4;
+  --earth:#b04a2a;
+  --earth-hi:#8a3720;
+  --gold:#c99b30;
+  --danger:#dc2626;
+  --danger-soft:#fee2e2;
+  --warn:#d97706;
+
+  --f-jp:"Zen Kaku Gothic New","游ゴシック",YuGothic,sans-serif;
+  --f-latin:"Inter",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--f-jp);font-weight:500;line-height:1.7;
+  font-size:14px;-webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{font:inherit}
+
+/* Layout */
+body{display:flex;min-height:100vh}
+aside.sidebar{
+  width:240px;background:var(--paper);border-right:1px solid var(--rule);
+  padding:24px 20px;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;
+}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:32px}
+.brand-mark{
+  width:38px;height:38px;background:var(--primary);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;color:#fff;
+}
+.brand-mark svg{width:22px;height:22px}
+.brand-txt{
+  font-family:var(--f-jp);font-weight:900;font-size:13px;color:var(--ink);line-height:1.2;
+}
+.brand-txt small{
+  display:block;font-family:var(--f-latin);font-weight:500;font-size:9.5px;
+  color:var(--dim);letter-spacing:0.14em;margin-top:3px;
+}
+
+.nav-section{margin-bottom:24px}
+.nav-lbl{
+  font-family:var(--f-latin);font-weight:700;font-size:10px;
+  color:var(--muted);letter-spacing:0.14em;text-transform:uppercase;
+  padding:0 12px;margin-bottom:6px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;margin-bottom:2px;border-radius:6px;
+  font-family:var(--f-jp);font-weight:500;font-size:13px;color:var(--ink-2);
+  cursor:pointer;transition:background 150ms;
+  width:100%;text-align:left;
+}
+.nav-item:hover{background:var(--bg)}
+.nav-item.active{background:var(--ink);color:#fff;font-weight:700}
+.nav-item .icon{width:16px;height:16px;flex-shrink:0}
+.nav-item .badge{
+  margin-left:auto;background:var(--primary-soft);color:var(--primary-hi);
+  font-family:var(--f-latin);font-weight:700;font-size:10px;
+  padding:1px 7px;border-radius:8px;
+}
+.nav-item.active .badge{background:rgba(255,255,255,0.2);color:#fff}
+
+.sidebar-foot{
+  margin-top:auto;padding-top:16px;border-top:1px solid var(--rule);
+  font-family:var(--f-latin);font-size:10.5px;color:var(--muted);
+}
+.sidebar-foot .user{color:var(--ink-2);font-weight:600;margin-bottom:2px}
+.sidebar-foot .logout{
+  display:inline-block;margin-top:8px;color:var(--danger);cursor:pointer;
+}
+
+main.content{
+  flex:1;min-width:0;padding:0;
+}
+
+/* Header */
+.head{
+  background:var(--paper);border-bottom:1px solid var(--rule);
+  padding:16px 32px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;
+}
+.head h1{
+  font-family:var(--f-jp);font-weight:900;font-size:18px;color:var(--ink);letter-spacing:0.02em;
+}
+.head-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 16px;border-radius:6px;
+  font-family:var(--f-jp);font-weight:700;font-size:12.5px;letter-spacing:0.04em;
+  transition:background 200ms,color 200ms,border-color 200ms;cursor:pointer;
+  border:1px solid transparent;
+}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hi)}
+.btn-outline{background:var(--paper);color:var(--ink);border-color:var(--rule-strong)}
+.btn-outline:hover{background:var(--bg);border-color:var(--ink)}
+.btn-danger{background:var(--paper);color:var(--danger);border-color:var(--danger)}
+.btn-danger:hover{background:var(--danger);color:#fff}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-icon{width:32px;height:32px;padding:0;justify-content:center;border-radius:6px}
+.btn svg{width:14px;height:14px}
+.btn-sm svg{width:12px;height:12px}
+
+/* Page content */
+.page{padding:32px}
+.page-intro{margin-bottom:24px}
+.page-intro h2{font-family:var(--f-jp);font-weight:900;font-size:22px;color:var(--ink);margin-bottom:4px}
+.page-intro p{font-size:13px;color:var(--dim)}
+
+/* Stats grid on dashboard */
+.stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px;
+}
+.stat-card{
+  background:var(--paper);border:1px solid var(--rule);border-radius:10px;
+  padding:20px 22px;
+}
+.stat-card .lbl{
+  font-family:var(--f-latin);font-weight:700;font-size:10px;
+  color:var(--dim);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;
+}
+.stat-card .val{
+  font-family:var(--f-latin);font-weight:800;font-size:28px;color:var(--ink);
+  letter-spacing:-0.02em;line-height:1;font-variant-numeric:tabular-nums;
+}
+.stat-card .val .u{font-family:var(--f-jp);font-size:13px;color:var(--dim);margin-left:3px;font-weight:700}
+.stat-card .delta{
+  font-family:var(--f-latin);font-weight:600;font-size:11px;color:var(--primary);
+  margin-top:6px;
+}
+
+/* Cases table */
+.data-list{
+  background:var(--paper);border:1px solid var(--rule);border-radius:10px;overflow:hidden;
+}
+.data-list-toolbar{
+  padding:14px 18px;display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid var(--rule);background:var(--bg);
+}
+.data-list-toolbar input[type=search]{
+  flex:1;max-width:320px;padding:8px 14px;
+  border:1px solid var(--rule-strong);border-radius:6px;
+  font-size:12.5px;background:var(--paper);
+}
+.data-list-toolbar select{
+  padding:7px 12px;border:1px solid var(--rule-strong);border-radius:6px;
+  font-size:12px;background:var(--paper);font-family:var(--f-jp);font-weight:500;
+}
+.data-list-toolbar .count{margin-left:auto;font-size:12px;color:var(--dim)}
+
+.list-row{
+  padding:14px 18px;display:grid;
+  grid-template-columns:80px 1fr 140px 100px 100px 90px 120px;
+  gap:14px;align-items:center;
+  border-bottom:1px solid var(--rule);transition:background 150ms;
+}
+.list-row:last-child{border-bottom:none}
+.list-row:hover{background:var(--bg)}
+.list-row.head-row{
+  background:var(--bg);border-bottom:2px solid var(--rule);
+  font-family:var(--f-latin);font-weight:700;font-size:10.5px;
+  color:var(--dim);letter-spacing:0.1em;text-transform:uppercase;
+}
+
+.thumb{
+  width:64px;height:48px;border-radius:6px;
+  background:var(--bg-3,var(--bg));overflow:hidden;position:relative;
+  border:1px solid var(--rule);
+}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb .empty{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  color:var(--muted);font-size:16px;
+}
+.case-title{
+  font-family:var(--f-jp);font-weight:900;font-size:13px;color:var(--ink);line-height:1.4;
+}
+.case-title small{
+  display:block;font-family:var(--f-jp);font-weight:500;font-size:11px;color:var(--dim);
+  margin-top:2px;
+}
+.chip{
+  display:inline-block;padding:2px 8px;border-radius:12px;
+  font-family:var(--f-jp);font-weight:700;font-size:10.5px;letter-spacing:0.04em;
+}
+.chip.green{background:var(--primary-soft);color:var(--primary-hi)}
+.chip.gray{background:#f3f4f6;color:var(--dim)}
+.chip.earth{background:#fdece3;color:var(--earth-hi)}
+.chip.gold{background:#fdf3d0;color:#8a6a10}
+.chip.red{background:var(--danger-soft);color:var(--danger)}
+
+.status-toggle{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 10px;border-radius:14px;
+  font-family:var(--f-jp);font-weight:700;font-size:10.5px;letter-spacing:0.04em;
+  cursor:pointer;transition:background 150ms;
+}
+.status-toggle.on{background:var(--primary-soft);color:var(--primary-hi)}
+.status-toggle.off{background:#f3f4f6;color:var(--dim)}
+.status-toggle::before{
+  content:"";width:6px;height:6px;border-radius:50%;
+}
+.status-toggle.on::before{background:var(--primary)}
+.status-toggle.off::before{background:var(--muted)}
+
+.row-actions{display:flex;gap:6px;justify-content:flex-end}
+
+/* Modal / Form */
+.modal-back{
+  position:fixed;inset:0;background:rgba(17,24,39,0.55);
+  display:none;align-items:flex-start;justify-content:center;
+  padding:40px 20px;z-index:100;overflow-y:auto;
+}
+.modal-back.on{display:flex}
+.modal{
+  background:var(--paper);border-radius:10px;
+  width:100%;max-width:720px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.25);
+  animation:modalIn 220ms cubic-bezier(0.22,1,0.36,1);
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+.modal-head{
+  padding:20px 24px;border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;gap:12px;
+}
+.modal-head h3{font-family:var(--f-jp);font-weight:900;font-size:16px;color:var(--ink)}
+.modal-close{
+  margin-left:auto;color:var(--dim);cursor:pointer;padding:6px;
+  font-size:20px;line-height:1;
+}
+.modal-body{padding:24px}
+.modal-foot{
+  padding:16px 24px;border-top:1px solid var(--rule);
+  display:flex;justify-content:flex-end;gap:10px;
+  background:var(--bg);border-radius:0 0 10px 10px;
+}
+
+/* Forms */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-grid .full{grid-column:1 / -1}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{
+  font-family:var(--f-jp);font-weight:700;font-size:11.5px;color:var(--ink-2);
+  letter-spacing:0.04em;
+}
+.field label .req{color:var(--danger);margin-left:3px}
+.field label .help{color:var(--dim);font-weight:500;margin-left:6px;font-size:10.5px}
+.field input,.field select,.field textarea{
+  padding:9px 12px;border:1px solid var(--rule-strong);border-radius:6px;
+  font-family:var(--f-jp);font-weight:500;font-size:13px;color:var(--ink);
+  background:var(--paper);
+}
+.field textarea{resize:vertical;min-height:80px;line-height:1.7}
+.field input:focus,.field select:focus,.field textarea:focus{
+  outline:2px solid var(--primary);outline-offset:1px;border-color:var(--primary);
+}
+.field .hint{font-size:10.5px;color:var(--dim);margin-top:2px;line-height:1.5}
+
+/* Image URL preview */
+.img-field{
+  display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:start;
+}
+.img-preview{
+  width:120px;height:90px;border-radius:6px;border:1px dashed var(--rule-strong);
+  background:var(--bg);overflow:hidden;
+  display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;
+}
+.img-preview img{width:100%;height:100%;object-fit:cover}
+.img-input-col{display:flex;flex-direction:column;gap:6px}
+
+/* Auth screen */
+.auth-back{
+  position:fixed;inset:0;background:linear-gradient(135deg,#f7f8fa 0%,#e0efe4 100%);
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;z-index:200;
+}
+.auth-back.hidden{display:none}
+.auth-card{
+  background:var(--paper);border-radius:12px;padding:36px 40px;
+  max-width:400px;width:100%;
+  box-shadow:0 20px 60px rgba(0,0,0,0.12);
+}
+.auth-card h2{
+  font-family:var(--f-jp);font-weight:900;font-size:18px;color:var(--ink);
+  margin-bottom:6px;letter-spacing:0.02em;
+}
+.auth-card p{font-size:12.5px;color:var(--dim);margin-bottom:24px}
+.auth-card .field{margin-bottom:14px}
+.auth-card .btn{width:100%;justify-content:center;padding:11px}
+.auth-card .footnote{
+  margin-top:16px;text-align:center;font-size:11px;color:var(--dim);line-height:1.6;
+}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:#fff;
+  padding:12px 22px;border-radius:8px;
+  font-size:13px;font-weight:500;letter-spacing:0.03em;
+  box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:200;
+  opacity:0;pointer-events:none;transition:opacity 220ms,transform 220ms;
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(-4px);pointer-events:auto}
+.toast.ok{background:var(--primary)}
+.toast.err{background:var(--danger)}
+
+/* Setup guide (visible if firebase config not set) */
+.setup{
+  padding:32px;max-width:820px;margin:60px auto;
+  background:var(--paper);border:1px solid var(--rule);border-radius:12px;
+}
+.setup h2{font-family:var(--f-jp);font-weight:900;font-size:20px;color:var(--ink);margin-bottom:8px}
+.setup p{font-size:13.5px;line-height:1.9;margin-bottom:14px}
+.setup ol{padding-left:24px;font-size:13.5px;line-height:1.9;margin-bottom:20px}
+.setup ol li{margin-bottom:8px}
+.setup code{
+  background:var(--bg);padding:2px 6px;border-radius:4px;
+  font-family:var(--f-mono);font-size:12px;color:var(--ink);
+}
+.setup pre{
+  background:var(--ink);color:#f9fafb;padding:16px 20px;border-radius:8px;
+  font-family:var(--f-mono);font-size:11.5px;line-height:1.7;
+  overflow-x:auto;margin:12px 0 20px;
+}
+
+.page.hidden{display:none}
+
+@media (max-width:900px){
+  body{flex-direction:column}
+  aside.sidebar{width:100%;height:auto;position:static;padding:16px}
+  .brand{margin-bottom:16px}
+  .nav-section{display:none}
+  .list-row{grid-template-columns:60px 1fr auto;gap:10px}
+  .list-row > *:nth-child(n+4){display:none}
+  .stats-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .form-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ Auth ============ -->
+<div class="auth-back" id="authBack">
+  <div class="auth-card">
+    <h2>越前おおの 管理画面</h2>
+    <p>登録済み メールと パスワードで ログインしてください。</p>
+    <div class="field">
+      <label>メールアドレス</label>
+      <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>パスワード</label>
+      <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" id="authBtn" style="margin-top:12px">ログイン</button>
+    <button class="btn btn-outline" id="resetBtn" style="margin-top:8px;width:100%">パスワードを 忘れた（メール送る）</button>
+    <div class="footnote">
+      Skel·EC と 同じ Firebase Auth を 使っています。<br>
+      Skel·EC の パスワードで ログインできます。
+    </div>
+  </div>
+</div>
+
+<!-- ============ Setup Guide (if config missing) ============ -->
+<div class="setup" id="setupGuide" style="display:none">
+  <h2>🛠 初回セットアップが 必要です</h2>
+  <p>この 管理画面を 使うには、Firebase プロジェクトの 接続情報を <code>admin.html</code> の <code>FIREBASE_CONFIG</code> に 入力する 必要が あります。 一度だけ 3〜5分 で 完了します。</p>
+  <ol>
+    <li><a href="https://console.firebase.google.com/" target="_blank" style="color:var(--primary);text-decoration:underline">Firebase Console</a> で 新規プロジェクトを 作成（プロジェクト名: <code>skeleton-madeinono</code> 推奨）。</li>
+    <li>Firestore Database を 有効化（本番モード / asia-northeast1 リージョン）。</li>
+    <li>Authentication を 有効化 → メール/パスワードプロバイダを 有効化 → オーナー自分の アドレスで ユーザー追加。</li>
+    <li>プロジェクト設定 → ウェブアプリ を 追加 → 設定オブジェクトを コピー。</li>
+    <li>この <code>admin.html</code> の 上部 <code>FIREBASE_CONFIG</code> 変数に 貼り付け（下例 参照）。</li>
+    <li>Hosting は 任意（<code>firebase init hosting</code> → <code>firebase deploy</code>）。 ローカル file:// でも 動作します。</li>
+  </ol>
+  <pre>const FIREBASE_CONFIG = {
+  apiKey: "AIza...",
+  authDomain: "skeleton-madeinono.firebaseapp.com",
+  projectId: "skeleton-madeinono",
+  storageBucket: "skeleton-madeinono.appspot.com",
+  messagingSenderId: "123456789012",
+  appId: "1:123456789012:web:abc123"
+};</pre>
+  <p style="color:var(--dim);font-size:12px">設定後、この ページを 再読み込みしてください。 スケルトンサポート: Jobs (AI CEO) まで DM。</p>
+</div>
+
+<!-- ============ Main ============ -->
+<aside class="sidebar" id="sidebar" style="display:none">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 21 L10 10 L14 14 L21 6"/>
+        <path d="M3 21 L21 21"/>
+        <circle cx="18" cy="5" r="1.2" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+    <div class="brand-txt">
+      越前おおの 管理
+      <small>WORKING STAY · ADMIN</small>
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-lbl">Content</div>
+    <button class="nav-item active" data-page="dashboard">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+      ダッシュボード
+    </button>
+    <button class="nav-item" data-page="cases">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7h13M8 12h13M8 17h13M4 7h.01M4 12h.01M4 17h.01"/></svg>
+      案件 (募集)
+      <span class="badge" id="navCasesCount">0</span>
+    </button>
+    <button class="nav-item" data-page="products">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg>
+      商品 (ショップ)
+      <span class="badge" id="navProductsCount">0</span>
+    </button>
+    <button class="nav-item" data-page="voices">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      参加者の声
+      <span class="badge" id="navVoicesCount">0</span>
+    </button>
+    <button class="nav-item" data-page="stats">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      サイト全体の数字
+    </button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-lbl">Site</div>
+    <a class="nav-item" href="index.html" target="_blank">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14L21 3M21 14v7H3V3h7"/></svg>
+      公開サイトを 見る
+    </a>
+  </div>
+
+  <div class="sidebar-foot">
+    <div class="user" id="userDisplay">—</div>
+    <div id="userRole">Owner</div>
+    <span class="logout" id="logoutBtn">ログアウト</span>
+  </div>
+</aside>
+
+<main class="content" id="mainContent" style="display:none">
+  <div class="head">
+    <h1 id="pageTitle">ダッシュボード</h1>
+    <div class="head-actions">
+      <button class="btn btn-outline" id="refreshBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+        更新
+      </button>
+      <button class="btn btn-primary" id="addBtn" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        新規追加
+      </button>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="page" data-page="dashboard">
+    <div class="page-intro">
+      <h2>ようこそ。今日の 大野の 動き。</h2>
+      <p>案件、商品、参加者の 現状。 右のボタンで データ更新。</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="lbl">Active cases</div>
+        <div class="val" id="dashCases">—<span class="u">件</span></div>
+        <div class="delta" id="dashCasesDelta">募集中の 案件</div>
+      </div>
+      <div class="stat-card">
+        <div class="lbl">Products</div>
+        <div class="val" id="dashProducts">—<span class="u">品</span></div>
+        <div class="delta" id="dashProductsDelta">直販ショップ 掲載中</div>
+      </div>
+      <div class="stat-card">
+        <div class="lbl">Voices</div>
+        <div class="val" id="dashVoices">—<span class="u">件</span></div>
+        <div class="delta" id="dashVoicesDelta">参加者の 声</div>
+      </div>
+      <div class="stat-card">
+        <div class="lbl">Applicants total</div>
+        <div class="val" id="dashApplicants">—<span class="u">名</span></div>
+        <div class="delta" id="dashApplicantsDelta">全案件 応募数の 合計</div>
+      </div>
+    </div>
+
+    <div class="data-list">
+      <div class="data-list-toolbar">
+        <strong style="font-size:13px;color:var(--ink)">最近 追加した 案件</strong>
+        <span class="count" id="recentCasesLbl"></span>
+      </div>
+      <div id="recentCases"></div>
+    </div>
+  </div>
+
+  <!-- Cases -->
+  <div class="page hidden" data-page="cases">
+    <div class="page-intro">
+      <h2>案件 (お手伝い募集)</h2>
+      <p>ホストが 募集している お手伝い案件。 タイトル、期間、参加費、応募状況、写真URL を 編集できます。</p>
+    </div>
+    <div class="data-list">
+      <div class="data-list-toolbar">
+        <input type="search" placeholder="タイトル で 検索" id="casesSearch">
+        <select id="casesFilter">
+          <option value="">すべての カテゴリ</option>
+          <option value="酒蔵">酒蔵</option>
+          <option value="刃物">刃物</option>
+          <option value="和紙">和紙</option>
+          <option value="農家">農家</option>
+          <option value="民宿">民宿</option>
+          <option value="味噌">味噌・醤油</option>
+        </select>
+        <select id="casesStatusFilter">
+          <option value="">全ステータス</option>
+          <option value="published">公開中</option>
+          <option value="draft">下書き</option>
+          <option value="closed">締切</option>
+        </select>
+        <span class="count" id="casesCountLbl">0件</span>
+      </div>
+      <div class="list-row head-row">
+        <div>写真</div>
+        <div>タイトル / ホスト</div>
+        <div>期間</div>
+        <div>参加費</div>
+        <div>応募状況</div>
+        <div>公開</div>
+        <div style="text-align:right">操作</div>
+      </div>
+      <div id="casesList"></div>
+    </div>
+  </div>
+
+  <!-- Products -->
+  <div class="page hidden" data-page="products">
+    <div class="page-intro">
+      <h2>商品 (直販ショップ)</h2>
+      <p>ショップに 掲載する 商品。 写真URL、価格、体験case への 紐付け、在庫状況を 編集できます。</p>
+    </div>
+    <div class="data-list">
+      <div class="data-list-toolbar">
+        <input type="search" placeholder="商品名 で 検索" id="productsSearch">
+        <select id="productsFilter">
+          <option value="">すべての カテゴリ</option>
+          <option value="お酒">お酒</option>
+          <option value="刃物">刃物</option>
+          <option value="和紙">和紙</option>
+          <option value="食品">食品</option>
+          <option value="定期便">定期便</option>
+        </select>
+        <span class="count" id="productsCountLbl">0件</span>
+      </div>
+      <div class="list-row head-row">
+        <div>写真</div>
+        <div>商品名 / メーカー</div>
+        <div>カテゴリ</div>
+        <div>価格</div>
+        <div>体験case</div>
+        <div>公開</div>
+        <div style="text-align:right">操作</div>
+      </div>
+      <div id="productsList"></div>
+    </div>
+  </div>
+
+  <!-- Voices -->
+  <div class="page hidden" data-page="voices">
+    <div class="page-intro">
+      <h2>参加者の 声</h2>
+      <p>サイトに 掲載する 参加者テスティモニアル。 3件まで トップページに 表示。</p>
+    </div>
+    <div class="data-list">
+      <div class="data-list-toolbar">
+        <span class="count" id="voicesCountLbl">0件</span>
+      </div>
+      <div id="voicesList"></div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="page hidden" data-page="stats">
+    <div class="page-intro">
+      <h2>サイト全体の 数字</h2>
+      <p>Hero と Finale に 表示される 集計数字。 手動更新 or 自動集計 (案件 collection から)。</p>
+    </div>
+    <div style="max-width:640px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:28px">
+      <div class="form-grid">
+        <div class="field">
+          <label>受入先 <span class="help">(軒)</span></label>
+          <input type="number" id="statHosts" min="0">
+        </div>
+        <div class="field">
+          <label>募集中 <span class="help">(件) 自動集計可能</span></label>
+          <input type="number" id="statCases" min="0">
+        </div>
+        <div class="field">
+          <label>参加者数 <span class="help">(名) 累計</span></label>
+          <input type="number" id="statParticipants" min="0">
+        </div>
+        <div class="field">
+          <label>満足度 <span class="help">(5点満点)</span></label>
+          <input type="number" id="statSatisfaction" min="0" max="5" step="0.1">
+        </div>
+      </div>
+      <div style="margin-top:20px;display:flex;gap:10px">
+        <button class="btn btn-primary" id="saveStatsBtn">保存する</button>
+        <button class="btn btn-outline" id="autoStatsBtn">案件から 自動集計</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ============ Edit Modal ============ -->
+<div class="modal-back" id="modalBack">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">案件を 編集</h3>
+      <span class="modal-close" id="modalClose">✕</span>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" id="modalCancelBtn">キャンセル</button>
+      <button class="btn btn-danger" id="modalDeleteBtn" style="display:none;margin-right:auto">この 項目を 削除</button>
+      <button class="btn btn-primary" id="modalSaveBtn">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+// ============================================================
+// FIREBASE CONFIG - オーナーが Firebase Console から コピーして
+// ここに 貼り付ける。 空のまま だと Setup Guide が 表示される。
+// ============================================================
+const FIREBASE_CONFIG = {
+  // Skel·EC と同一 project を再利用中 (2026-07-10)
+  // 承認後、専用 project skeleton-madeinono に切り替え予定
+  apiKey: 'AIzaSyBHEuEACAfmJcqzAOv-hGA54ULajJKj9wc',
+  authDomain: 'skeleton-skel-ec-2606.firebaseapp.com',
+  projectId: 'skeleton-skel-ec-2606',
+  appId: '1:714352406083:web:94c2636fdb74854d5f6ef6'
+};
+// Collection prefix (Skel·EC data と 干渉回避)
+const COLL = {
+  cases: 'madeInOno_cases',
+  products: 'madeInOno_products',
+  voices: 'madeInOno_voices',
+  stats: 'madeInOno_stats',
+};
+
+// Detect if config is set
+const CONFIG_SET = FIREBASE_CONFIG && FIREBASE_CONFIG.projectId;
+
+if (!CONFIG_SET) {
+  document.getElementById('authBack').style.display = 'none';
+  document.getElementById('setupGuide').style.display = 'block';
+} else {
+  // Load Firebase SDK dynamically
+  const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js');
+  const { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } = await import('https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js');
+  const { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, setDoc, getDoc, orderBy, query, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js');
+
+  const app = initializeApp(FIREBASE_CONFIG);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // ============ State ============
+  const state = {
+    cases: [],
+    products: [],
+    voices: [],
+    stats: {},
+    currentPage: 'dashboard',
+    editing: null,   // {collection, id, data}
+  };
+
+  // ============ Toast ============
+  const toast = (msg, type='ok') => {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `toast on ${type}`;
+    setTimeout(() => el.classList.remove('on'), 2400);
+  };
+
+  // ============ Auth ============
+  const authBack = document.getElementById('authBack');
+  const sidebar = document.getElementById('sidebar');
+  const mainContent = document.getElementById('mainContent');
+  const authBtn = document.getElementById('authBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  authBtn.addEventListener('click', async () => {
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+    if (!email || !password) return toast('メールと パスワードを 入力', 'err');
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch(e) {
+      toast('ログイン失敗: ' + (e.code || e.message), 'err');
+    }
+  });
+  logoutBtn.addEventListener('click', async () => { await signOut(auth); location.reload(); });
+
+  document.getElementById('resetBtn').addEventListener('click', async () => {
+    const email = document.getElementById('authEmail').value.trim();
+    if (!email) return toast('メールアドレスを 入力してから 押してください', 'err');
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast('パスワードリセットメール を 送りました。 Gmail を 確認してください', 'ok');
+    } catch(e) {
+      toast('送信失敗: ' + (e.code || e.message), 'err');
+    }
+  });
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      authBack.classList.add('hidden');
+      sidebar.style.display = 'flex';
+      sidebar.style.flexDirection = 'column';
+      mainContent.style.display = 'block';
+      document.getElementById('userDisplay').textContent = user.email;
+      await loadAll();
+    } else {
+      authBack.classList.remove('hidden');
+      sidebar.style.display = 'none';
+      mainContent.style.display = 'none';
+    }
+  });
+
+  // ============ Data load ============
+  const loadCases = async () => {
+    const snap = await getDocs(query(collection(db, COLL.cases), orderBy('createdAt', 'desc')));
+    state.cases = snap.docs.map(d => ({id: d.id, ...d.data()}));
+  };
+  const loadProducts = async () => {
+    const snap = await getDocs(query(collection(db, COLL.products), orderBy('createdAt', 'desc')));
+    state.products = snap.docs.map(d => ({id: d.id, ...d.data()}));
+  };
+  const loadVoices = async () => {
+    const snap = await getDocs(query(collection(db, COLL.voices), orderBy('createdAt', 'desc')));
+    state.voices = snap.docs.map(d => ({id: d.id, ...d.data()}));
+  };
+  const loadStats = async () => {
+    const s = await getDoc(doc(db, COLL.stats, 'site'));
+    state.stats = s.exists() ? s.data() : {hosts:0,cases:0,participants:0,satisfaction:0};
+  };
+  const loadAll = async () => {
+    try {
+      await Promise.all([loadCases(), loadProducts(), loadVoices(), loadStats()]);
+      renderAll();
+    } catch(e) {
+      toast('データ取得失敗: ' + e.message, 'err');
+    }
+  };
+
+  // ============ Rendering ============
+  const renderAll = () => {
+    // Nav badges
+    document.getElementById('navCasesCount').textContent = state.cases.filter(c => c.status !== 'draft').length;
+    document.getElementById('navProductsCount').textContent = state.products.filter(p => p.status !== 'draft').length;
+    document.getElementById('navVoicesCount').textContent = state.voices.length;
+
+    // Dashboard
+    document.getElementById('dashCases').innerHTML = state.cases.filter(c=>c.status==='published').length + '<span class="u">件</span>';
+    document.getElementById('dashProducts').innerHTML = state.products.length + '<span class="u">品</span>';
+    document.getElementById('dashVoices').innerHTML = state.voices.length + '<span class="u">件</span>';
+    const applicants = state.cases.reduce((s,c) => s + (parseInt(c.applied)||0), 0);
+    document.getElementById('dashApplicants').innerHTML = applicants + '<span class="u">名</span>';
+
+    // Recent cases (dashboard)
+    const recentEl = document.getElementById('recentCases');
+    recentEl.innerHTML = state.cases.slice(0, 5).map(c => renderCaseRow(c)).join('') || '<div style="padding:20px;color:var(--dim);font-size:13px">まだ 案件が ありません。</div>';
+    document.getElementById('recentCasesLbl').textContent = `直近 5件`;
+
+    // Cases page
+    document.getElementById('casesCountLbl').textContent = `${state.cases.length}件`;
+    const filteredCases = filterCases();
+    document.getElementById('casesList').innerHTML = filteredCases.map(c => renderCaseRow(c)).join('') || '<div style="padding:20px;color:var(--dim);font-size:13px">該当する 案件が ありません。</div>';
+
+    // Products page
+    document.getElementById('productsCountLbl').textContent = `${state.products.length}品`;
+    const filteredProducts = filterProducts();
+    document.getElementById('productsList').innerHTML = filteredProducts.map(p => renderProductRow(p)).join('') || '<div style="padding:20px;color:var(--dim);font-size:13px">該当する 商品が ありません。</div>';
+
+    // Voices
+    document.getElementById('voicesCountLbl').textContent = `${state.voices.length}件`;
+    document.getElementById('voicesList').innerHTML = state.voices.map(v => renderVoiceRow(v)).join('') || '<div style="padding:20px;color:var(--dim);font-size:13px">まだ 声が ありません。</div>';
+
+    // Stats
+    document.getElementById('statHosts').value = state.stats.hosts || '';
+    document.getElementById('statCases').value = state.stats.cases || '';
+    document.getElementById('statParticipants').value = state.stats.participants || '';
+    document.getElementById('statSatisfaction').value = state.stats.satisfaction || '';
+
+    // Attach row click handlers
+    document.querySelectorAll('.list-row[data-id]').forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('button') || e.target.closest('.status-toggle')) return;
+        const type = row.dataset.type;
+        const id = row.dataset.id;
+        openEdit(type, id);
+      });
+    });
+    document.querySelectorAll('.status-toggle').forEach(el => {
+      el.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const type = el.dataset.type;
+        const id = el.dataset.id;
+        const currentStatus = el.classList.contains('on') ? 'draft' : 'published';
+        await updateDoc(doc(db, COLL[type] || type, id), {status: currentStatus, updatedAt: serverTimestamp()});
+        toast(currentStatus === 'published' ? '公開しました' : '下書きに 戻しました');
+        await loadAll();
+      });
+    });
+    document.querySelectorAll('.row-edit-btn').forEach(b => b.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openEdit(b.dataset.type, b.dataset.id);
+    }));
+  };
+
+  const filterCases = () => {
+    const q = document.getElementById('casesSearch').value.toLowerCase();
+    const cat = document.getElementById('casesFilter').value;
+    const stat = document.getElementById('casesStatusFilter').value;
+    return state.cases.filter(c => {
+      if (q && !(c.title||'').toLowerCase().includes(q) && !(c.host||'').toLowerCase().includes(q)) return false;
+      if (cat && c.category !== cat) return false;
+      if (stat && c.status !== stat) return false;
+      return true;
+    });
+  };
+  const filterProducts = () => {
+    const q = document.getElementById('productsSearch').value.toLowerCase();
+    const cat = document.getElementById('productsFilter').value;
+    return state.products.filter(p => {
+      if (q && !(p.name||'').toLowerCase().includes(q) && !(p.maker||'').toLowerCase().includes(q)) return false;
+      if (cat && p.category !== cat) return false;
+      return true;
+    });
+  };
+
+  const renderCaseRow = (c) => {
+    const isOn = c.status === 'published';
+    return `<div class="list-row" data-type="cases" data-id="${c.id}">
+      <div class="thumb">${c.imageUrl ? `<img src="${escapeHtml(c.imageUrl)}" alt="">` : '<div class="empty">📷</div>'}</div>
+      <div>
+        <div class="case-title">${escapeHtml(c.title || '(無題)')}<small>${escapeHtml(c.host||'')} · ${escapeHtml(c.category||'')}</small></div>
+      </div>
+      <div style="font-size:12px;color:var(--ink-2);font-weight:600">${escapeHtml(c.period||'—')}</div>
+      <div style="font-family:var(--f-latin);font-weight:700;font-size:13px;color:var(--earth-hi)">${c.fee !== undefined && c.fee !== '' ? '¥' + Number(c.fee).toLocaleString() : '—'}</div>
+      <div style="font-family:var(--f-latin);font-weight:700;font-size:12px;color:var(--ink)">${(c.applied||0)} / ${(c.capacity||0)}</div>
+      <div><span class="status-toggle ${isOn ? 'on' : 'off'}" data-type="cases" data-id="${c.id}">${isOn ? '公開中' : '下書き'}</span></div>
+      <div class="row-actions">
+        <button class="btn btn-outline btn-sm row-edit-btn" data-type="cases" data-id="${c.id}">編集</button>
+      </div>
+    </div>`;
+  };
+  const renderProductRow = (p) => {
+    const isOn = p.status === 'published';
+    return `<div class="list-row" data-type="products" data-id="${p.id}">
+      <div class="thumb">${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="">` : '<div class="empty">📷</div>'}</div>
+      <div>
+        <div class="case-title">${escapeHtml(p.name || '(無題)')}<small>${escapeHtml(p.maker||'')}</small></div>
+      </div>
+      <div><span class="chip green">${escapeHtml(p.category||'—')}</span></div>
+      <div style="font-family:var(--f-latin);font-weight:800;font-size:14px;color:var(--ink)">${p.price !== undefined ? '¥' + Number(p.price).toLocaleString() : '—'}</div>
+      <div style="font-size:11.5px;color:var(--dim)">${p.linkedCase ? '🔗 紐付き' : '—'}</div>
+      <div><span class="status-toggle ${isOn ? 'on' : 'off'}" data-type="products" data-id="${p.id}">${isOn ? '公開中' : '下書き'}</span></div>
+      <div class="row-actions">
+        <button class="btn btn-outline btn-sm row-edit-btn" data-type="products" data-id="${p.id}">編集</button>
+      </div>
+    </div>`;
+  };
+  const renderVoiceRow = (v) => {
+    return `<div class="list-row" data-type="voices" data-id="${v.id}" style="grid-template-columns:80px 1fr 200px 120px">
+      <div class="thumb">${v.avatarUrl ? `<img src="${escapeHtml(v.avatarUrl)}" alt="">` : `<div class="empty" style="font-size:20px;color:var(--ink)">${escapeHtml((v.name||'?').slice(0,1))}</div>`}</div>
+      <div><div class="case-title">${escapeHtml(v.quote || '(引用なし)').slice(0,80)}<small>${escapeHtml(v.name||'')} · ${escapeHtml(v.attribute||'')}</small></div></div>
+      <div style="font-size:11.5px;color:var(--dim)">${escapeHtml(v.hostName||'')}</div>
+      <div class="row-actions">
+        <button class="btn btn-outline btn-sm row-edit-btn" data-type="voices" data-id="${v.id}">編集</button>
+      </div>
+    </div>`;
+  };
+
+  const escapeHtml = (s) => (s+'').replace(/[<>&"']/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[m]));
+
+  // ============ Modal / Edit ============
+  const modal = document.getElementById('modalBack');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody = document.getElementById('modalBody');
+  const modalSave = document.getElementById('modalSaveBtn');
+  const modalDelete = document.getElementById('modalDeleteBtn');
+
+  document.getElementById('modalClose').addEventListener('click', () => modal.classList.remove('on'));
+  document.getElementById('modalCancelBtn').addEventListener('click', () => modal.classList.remove('on'));
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('on'); });
+
+  const openEdit = (type, id) => {
+    const isNew = !id;
+    let data = {};
+    if (!isNew) {
+      const store = type === 'cases' ? state.cases : type === 'products' ? state.products : state.voices;
+      data = store.find(x => x.id === id) || {};
+    }
+    state.editing = {collection: type, id, data};
+    modalTitle.textContent = (isNew ? '新規追加' : '編集') + ': ' + (type === 'cases' ? '案件' : type === 'products' ? '商品' : type === 'voices' ? '声' : type);
+    modalBody.innerHTML = renderForm(type, data);
+    modalDelete.style.display = isNew ? 'none' : 'inline-flex';
+    modal.classList.add('on');
+    // Wire image preview updates
+    modalBody.querySelectorAll('input[data-preview]').forEach(inp => {
+      const preview = document.getElementById(inp.dataset.preview);
+      inp.addEventListener('input', () => {
+        const url = inp.value.trim();
+        if (url) preview.innerHTML = `<img src="${escapeHtml(url)}" onerror="this.outerHTML='<span style=color:var(--danger);font-size:11px>読み込み失敗</span>'">`;
+        else preview.innerHTML = 'プレビュー';
+      });
+    });
+  };
+
+  const renderForm = (type, d) => {
+    if (type === 'cases') {
+      return `
+        <div class="form-grid">
+          <div class="field full">
+            <label>タイトル <span class="req">*</span></label>
+            <input type="text" name="title" value="${escapeHtml(d.title||'')}" placeholder="例: 秋の仕込み シーズン、蔵人と 朝の 仕事">
+          </div>
+          <div class="field full">
+            <label>写真URL <span class="help">Wikimedia / Unsplash / 自社CDN 等</span></label>
+            <div class="img-field">
+              <div class="img-preview" id="prev_case_img">${d.imageUrl ? `<img src="${escapeHtml(d.imageUrl)}">` : 'プレビュー'}</div>
+              <div class="img-input-col">
+                <input type="url" name="imageUrl" value="${escapeHtml(d.imageUrl||'')}" placeholder="https://..." data-preview="prev_case_img">
+                <div class="hint">URLを 貼り付けると 左に プレビュー表示。 空欄の場合は 案件カードで SVG デフォルトに戻ります。</div>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label>ホスト名 <span class="req">*</span></label>
+            <input type="text" name="host" value="${escapeHtml(d.host||'')}" placeholder="南部酒造場「花垣」">
+          </div>
+          <div class="field">
+            <label>ホスト略号 <span class="help">アバター1文字</span></label>
+            <input type="text" name="hostAvatar" maxlength="2" value="${escapeHtml(d.hostAvatar||'')}" placeholder="花">
+          </div>
+          <div class="field">
+            <label>ホストEN</label>
+            <input type="text" name="hostEn" value="${escapeHtml(d.hostEn||'')}" placeholder="HANAGAKI · SINCE 1901">
+          </div>
+          <div class="field">
+            <label>カテゴリ <span class="req">*</span></label>
+            <select name="category">
+              <option value="">選択</option>
+              ${['酒蔵','刃物','和紙','農家','民宿','味噌','その他'].map(c => `<option ${d.category===c?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>期間 <span class="help">例: 10/15 → 10/18 (3泊4日)</span></label>
+            <input type="text" name="period" value="${escapeHtml(d.period||'')}" placeholder="10/15 → 10/18">
+          </div>
+          <div class="field">
+            <label>参加費 <span class="help">円 (0 なら 無料)</span></label>
+            <input type="number" name="fee" min="0" value="${d.fee ?? ''}" placeholder="0">
+          </div>
+          <div class="field">
+            <label>参加費 補足</label>
+            <input type="text" name="feeNote" value="${escapeHtml(d.feeNote||'')}" placeholder="交通費のみ / 宿泊込">
+          </div>
+          <div class="field">
+            <label>定員 <span class="req">*</span></label>
+            <input type="number" name="capacity" min="0" value="${d.capacity ?? ''}" placeholder="8">
+          </div>
+          <div class="field">
+            <label>現在の応募数</label>
+            <input type="number" name="applied" min="0" value="${d.applied ?? 0}" placeholder="0">
+          </div>
+          <div class="field">
+            <label>ハート数</label>
+            <input type="number" name="hearts" min="0" value="${d.hearts ?? 0}" placeholder="0">
+          </div>
+          <div class="field">
+            <label>ステータスタグ</label>
+            <select name="statusBadge">
+              <option value="">なし</option>
+              <option ${d.statusBadge==='NEW'?'selected':''}>NEW</option>
+              <option ${d.statusBadge==='人気'?'selected':''}>人気</option>
+              <option ${d.statusBadge==='残り わずか'?'selected':''}>残り わずか</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>タグ <span class="help">カンマ区切り</span></label>
+            <input type="text" name="tags" value="${escapeHtml((d.tags||[]).join(', '))}" placeholder="秋季限定, 初心者OK">
+          </div>
+          <div class="field">
+            <label>公開状態</label>
+            <select name="status">
+              <option value="draft" ${d.status==='draft'?'selected':''}>下書き</option>
+              <option value="published" ${d.status==='published'?'selected':''}>公開中</option>
+              <option value="closed" ${d.status==='closed'?'selected':''}>締切</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label>本文 (詳細ページ用) <span class="help">Phase 2 で表示</span></label>
+            <textarea name="description" rows="4" placeholder="お手伝いの 内容、1日の 流れ、宿泊先、必要な もの、注意事項 など。">${escapeHtml(d.description||'')}</textarea>
+          </div>
+        </div>`;
+    } else if (type === 'products') {
+      return `
+        <div class="form-grid">
+          <div class="field full">
+            <label>商品名 <span class="req">*</span></label>
+            <input type="text" name="name" value="${escapeHtml(d.name||'')}" placeholder="花垣 純米大吟醸 山田錦六十">
+          </div>
+          <div class="field full">
+            <label>写真URL</label>
+            <div class="img-field">
+              <div class="img-preview" id="prev_prod_img">${d.imageUrl ? `<img src="${escapeHtml(d.imageUrl)}">` : 'プレビュー'}</div>
+              <div class="img-input-col">
+                <input type="url" name="imageUrl" value="${escapeHtml(d.imageUrl||'')}" placeholder="https://..." data-preview="prev_prod_img">
+                <div class="hint">Wikimedia / 自社CDN / Unsplash 等の URL を 貼り付け。</div>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label>メーカー <span class="req">*</span></label>
+            <input type="text" name="maker" value="${escapeHtml(d.maker||'')}" placeholder="花垣 南部酒造場">
+          </div>
+          <div class="field">
+            <label>カテゴリ <span class="req">*</span></label>
+            <select name="category">
+              <option value="">選択</option>
+              ${['お酒','刃物','和紙','食品','定期便'].map(c => `<option ${d.category===c?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>価格 (円) <span class="req">*</span></label>
+            <input type="number" name="price" min="0" value="${d.price ?? ''}" placeholder="3850">
+          </div>
+          <div class="field">
+            <label>容量 / 仕様</label>
+            <input type="text" name="volume" value="${escapeHtml(d.volume||'')}" placeholder="720ml 精米歩合 60%">
+          </div>
+          <div class="field">
+            <label>体験case 紐付け <span class="help">案件ID を 貼付</span></label>
+            <input type="text" name="linkedCase" value="${escapeHtml(d.linkedCase||'')}" placeholder="例: case_hanagaki_autumn">
+          </div>
+          <div class="field">
+            <label>体験case リンクの 文言</label>
+            <input type="text" name="linkedCaseLabel" value="${escapeHtml(d.linkedCaseLabel||'')}" placeholder="この蔵で 秋の仕込み案件 を見る">
+          </div>
+          <div class="field">
+            <label>ステータスタグ</label>
+            <select name="statusBadge">
+              <option value="">なし</option>
+              <option ${d.statusBadge==='おすすめ'?'selected':''}>おすすめ</option>
+              <option ${d.statusBadge==='体験できる'?'selected':''}>体験できる</option>
+              <option ${d.statusBadge==='人気'?'selected':''}>人気</option>
+              <option ${d.statusBadge==='冬季限定'?'selected':''}>冬季限定</option>
+              <option ${d.statusBadge==='春季限定'?'selected':''}>春季限定</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>公開状態</label>
+            <select name="status">
+              <option value="draft" ${d.status==='draft'?'selected':''}>下書き</option>
+              <option value="published" ${d.status==='published'?'selected':''}>公開中</option>
+              <option value="soldout" ${d.status==='soldout'?'selected':''}>売切</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label>説明 <span class="help">商品ページ用</span></label>
+            <textarea name="description" rows="3" placeholder="商品の 説明、味の 特徴、おすすめ の 呑み方 等">${escapeHtml(d.description||'')}</textarea>
+          </div>
+        </div>`;
+    } else if (type === 'voices') {
+      return `
+        <div class="form-grid">
+          <div class="field full">
+            <label>参加者名 <span class="req">*</span></label>
+            <input type="text" name="name" value="${escapeHtml(d.name||'')}" placeholder="松本さん">
+          </div>
+          <div class="field">
+            <label>属性</label>
+            <input type="text" name="attribute" value="${escapeHtml(d.attribute||'')}" placeholder="32歳 · IT エンジニア · 東京">
+          </div>
+          <div class="field">
+            <label>星評価 (1-5)</label>
+            <input type="number" name="stars" min="1" max="5" value="${d.stars ?? 5}">
+          </div>
+          <div class="field full">
+            <label>見出し <span class="req">*</span></label>
+            <input type="text" name="title" value="${escapeHtml(d.title||'')}" placeholder="働くと 旅の距離が、こんなに 縮まるとは">
+          </div>
+          <div class="field full">
+            <label>本文 <span class="req">*</span></label>
+            <textarea name="quote" rows="5" placeholder="花垣の秋の仕込みに 3泊4日 参加。 朝5時に蔵に入って...">${escapeHtml(d.quote||'')}</textarea>
+          </div>
+          <div class="field">
+            <label>参加した ホスト名</label>
+            <input type="text" name="hostName" value="${escapeHtml(d.hostName||'')}" placeholder="花垣">
+          </div>
+          <div class="field">
+            <label>アバター写真URL</label>
+            <input type="url" name="avatarUrl" value="${escapeHtml(d.avatarUrl||'')}" placeholder="https://... (空でも OK)">
+          </div>
+        </div>`;
+    }
+    return '<p>未対応 の 種類 です</p>';
+  };
+
+  modalSave.addEventListener('click', async () => {
+    const {collection: coll, id} = state.editing;
+    const form = modalBody;
+    const data = {};
+    form.querySelectorAll('input,select,textarea').forEach(inp => {
+      if (!inp.name) return;
+      let v = inp.value;
+      if (inp.type === 'number' && v !== '') v = Number(v);
+      if (inp.name === 'tags') v = v.split(',').map(s=>s.trim()).filter(Boolean);
+      data[inp.name] = v;
+    });
+    data.updatedAt = serverTimestamp();
+    const collName = COLL[coll] || coll;
+    try {
+      if (id) {
+        await updateDoc(doc(db, collName, id), data);
+        toast('保存しました');
+      } else {
+        data.createdAt = serverTimestamp();
+        if (!data.status) data.status = 'draft';
+        await addDoc(collection(db, collName), data);
+        toast('追加しました');
+      }
+      modal.classList.remove('on');
+      await loadAll();
+    } catch(e) {
+      toast('保存失敗: ' + e.message, 'err');
+    }
+  });
+
+  modalDelete.addEventListener('click', async () => {
+    const {collection: coll, id} = state.editing;
+    if (!id) return;
+    if (!confirm('この 項目を 削除しますか？ 元には 戻せません。')) return;
+    const collName = COLL[coll] || coll;
+    try {
+      await deleteDoc(doc(db, collName, id));
+      toast('削除しました');
+      modal.classList.remove('on');
+      await loadAll();
+    } catch(e) {
+      toast('削除失敗: ' + e.message, 'err');
+    }
+  });
+
+  // Add button per page
+  document.getElementById('addBtn').addEventListener('click', () => {
+    const page = state.currentPage;
+    if (page === 'cases') openEdit('cases', null);
+    else if (page === 'products') openEdit('products', null);
+    else if (page === 'voices') openEdit('voices', null);
+  });
+
+  // Page nav
+  document.querySelectorAll('.nav-item[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.currentPage = btn.dataset.page;
+      document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      document.querySelector(`.page[data-page="${state.currentPage}"]`).classList.remove('hidden');
+      document.getElementById('pageTitle').textContent = btn.textContent.trim().split(' ')[0];
+      // Add button visibility
+      const showAdd = ['cases','products','voices'].includes(state.currentPage);
+      document.getElementById('addBtn').style.display = showAdd ? 'inline-flex' : 'none';
+    });
+  });
+
+  // Refresh
+  document.getElementById('refreshBtn').addEventListener('click', async () => {
+    await loadAll();
+    toast('最新データに 更新しました');
+  });
+
+  // Search / filter
+  ['casesSearch','casesFilter','casesStatusFilter','productsSearch','productsFilter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', renderAll);
+  });
+
+  // Stats save
+  document.getElementById('saveStatsBtn').addEventListener('click', async () => {
+    const data = {
+      hosts: Number(document.getElementById('statHosts').value)||0,
+      cases: Number(document.getElementById('statCases').value)||0,
+      participants: Number(document.getElementById('statParticipants').value)||0,
+      satisfaction: Number(document.getElementById('statSatisfaction').value)||0,
+      updatedAt: serverTimestamp(),
+    };
+    try {
+      await setDoc(doc(db, COLL.stats, 'site'), data, {merge:true});
+      toast('数字を 更新しました');
+      state.stats = data;
+    } catch(e) { toast('保存失敗: ' + e.message, 'err'); }
+  });
+  document.getElementById('autoStatsBtn').addEventListener('click', () => {
+    document.getElementById('statCases').value = state.cases.filter(c => c.status === 'published').length;
+    document.getElementById('statHosts').value = new Set(state.cases.map(c => c.host).filter(Boolean)).size;
+    toast('募集中 案件と ホスト数を 自動集計。 保存で 確定してください');
+  });
+}
+</script>
+</body>
+</html>
