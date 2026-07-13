@@ -2499,16 +2499,54 @@ function buildTranscribeCard(draft, onGenerated) {
   });
   bVTT.append(vttInp);
 
-  // AI 疑似生成
+  // YouTube URL → 実 Gemini 2.5 Flash 解析 (Cloud Function 経由)
+  const bYT = h('button', { class: 'tr-choice' });
+  bYT.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2c-1.71-.46-8.6-.46-8.6-.46s-6.89 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.71.46 8.6.46 8.6.46s6.89 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.29 29 29 0 0 0-.46-5.29z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor"/></svg>
+    <div class="tr-choice-t">YouTube URL から 生成</div>
+    <div class="tr-choice-s">実 AI (Gemini 2.5 Flash) で 動画解析</div>`;
+  bYT.addEventListener('click', async () => {
+    const url = prompt('YouTube URL (公開 or 限定公開) を貼り付け:\n例: https://www.youtube.com/watch?v=xxxxxxxxxxx');
+    if (!url) return;
+    if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url)) {
+      toast('YouTube URL のみ対応 (youtube.com / youtu.be)', 'err'); return;
+    }
+    bYT.disabled = true;
+    const orig = bYT.innerHTML;
+    bYT.innerHTML = `<div class="tr-choice-t">Gemini 解析中…</div><div class="tr-choice-s">動画長により 30-120秒</div>`;
+    try {
+      const result = await window.MisakiyaGemini.generateStepsFromVideo(url, draft.title ? `作業名の候補: ${draft.title}` : '');
+      // Gemini returns { steps: [{title, desc, startSec, endSec, ...}, ...] }
+      // Convert to state.cues format so existing pipeline reuses parse → generateStepsFromTranscript
+      state.cues = (result.steps || []).map((s, i) => ({
+        start: s.startSec || 0,
+        end: s.endSec || (s.startSec + 30),
+        text: s.title + '。' + (s.desc || ''),
+      }));
+      if (!state.cues.length) { toast('Gemini から手順を取得できませんでした', 'err'); bYT.innerHTML = orig; bYT.disabled = false; return; }
+      // Also seed draft.title from Gemini output if empty
+      if (!draft.title && result.title) draft.title = result.title;
+      // Store full Gemini result for direct step import
+      state.geminiResult = result;
+      bYT.innerHTML = orig; bYT.disabled = false;
+      toast(`${result.steps.length} 手順を Gemini から取得 (信頼度 ${result.confidenceScore || '?'})`, 'success');
+      renderPrev();
+    } catch (e) {
+      console.error('gemini failed', e);
+      bYT.innerHTML = orig; bYT.disabled = false;
+      toast('Gemini 解析失敗: ' + e.message.slice(0, 80), 'err');
+    }
+  });
+
+  // AI 疑似生成 (fallback / タイトルから template 生成)
   const bAI = h('button', { class: 'tr-choice' });
   bAI.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
-    <div class="tr-choice-t">AI で 疑似生成</div>
-    <div class="tr-choice-s">タイトルから 自動作成</div>`;
+    <div class="tr-choice-t">タイトルから 生成</div>
+    <div class="tr-choice-s">電気工事 テンプレから</div>`;
   bAI.addEventListener('click', async () => {
     bAI.disabled = true;
     const orig = bAI.innerHTML;
     bAI.innerHTML = `<div class="tr-choice-t">生成中…</div>`;
-    await new Promise(r => setTimeout(r, 700));
+    await new Promise(r => setTimeout(r, 400));
     const vtt = window.AI.mockTranscribe(draft.title || '');
     state.cues = window.AI.parseTranscript(vtt);
     bAI.innerHTML = orig; bAI.disabled = false;
@@ -2534,7 +2572,7 @@ function buildTranscribeCard(draft, onGenerated) {
     toast(`${state.cues.length} キャプション認識`, 'success'); renderPrev();
   });
 
-  actions.append(bVTT, bAI, bPaste);
+  actions.append(bYT, bVTT, bAI, bPaste);
   body.append(actions);
 
   const prev = h('div', {});
