@@ -997,9 +997,12 @@
 
     const delBtn = document.getElementById('form-delete-btn');
     if (delBtn) delBtn.addEventListener('click', async () => {
-      if (!confirm('この顧客を削除しますか?')) return;
-      const idx = clients.findIndex(x => x.id === clientId);
-      const target = idx >= 0 ? clients[idx] : null;
+      const _tgtIdx = clients.findIndex(x => x.id === clientId);
+      const _tgt = _tgtIdx >= 0 ? clients[_tgtIdx] : null;
+      const _tgtName = _tgt?.name || 'この顧客';
+      if (!confirm('⚠ ' + _tgtName + ' さん を 削除 します。\n\nこの 客 に 紐付く LINE 履歴 / Zoom 予約 / 議事録 が すべて 消えます。\n元 に 戻せません。\n\n本当 に 削除 しますか?')) return;
+      const idx = _tgtIdx;
+      const target = _tgt;
       if (idx >= 0) clients.splice(idx, 1);
       saveClientsToLS();
       if (target) {
@@ -1021,7 +1024,7 @@
   //   実顧客 (福田様 tenants/fukuda) の 2026-07-02 07:22 報告 が発端。
   //   memory: feedback_demo_to_prod_save_path_audit.md
   async function _persistLoadFirebase() {
-    const [{ getFirestore, doc, setDoc, deleteDoc, serverTimestamp }, { initializeApp, getApps }] = await Promise.all([
+    const [{ getFirestore, initializeFirestore, doc, setDoc, deleteDoc, serverTimestamp }, { initializeApp, getApps }] = await Promise.all([
       import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js'),
       import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js'),
     ]);
@@ -1030,7 +1033,11 @@
       authDomain: 'skeleton-fp-compass-632026.firebaseapp.com',
       projectId: 'skeleton-fp-compass-632026',
     });
-    return { db: getFirestore(app), doc, setDoc, deleteDoc, serverTimestamp };
+    // memory: feedback_firestore_webchannel_blocked_longpolling.md
+    let db;
+    try { db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true }); }
+    catch (_) { db = getFirestore(app); }
+    return { db, doc, setDoc, deleteDoc, serverTimestamp };
   }
   function _persistTenantId() {
     return (window.__fp && window.__fp.tenantId)
@@ -3190,6 +3197,16 @@
             <div class="cd-section-label">メモ</div>
             <div class="cd-note">${escapeHtml(c.note)}</div>
           </div>` : ''}
+
+          <!-- 2026-07-11 v4 owner FB: 削除ボタン は 顧客モーダル 左タブ 一番下 (この画面 = この客 の 削除 と 文脈 明瞭) -->
+          <div class="cd-left-delete-zone" style="margin-top:auto;padding-top:24px;border-top:1px solid rgba(148,163,184,0.22);">
+            <div style="font-size:10.5px;font-weight:700;color:#94A3B8;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">danger zone</div>
+            <button id="cd-left-delete-btn" data-cid="${escapeHtml(c.id)}" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;color:#DC2626;border:1.5px solid #FCA5A5;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:0.02em;transition:background .15s,border-color .15s,box-shadow .15s;">
+              <span style="font-size:15px;">🗑</span>
+              <span>${escapeHtml(c.name)} さん を 削除</span>
+            </button>
+            <div style="font-size:11px;color:#94A3B8;margin-top:6px;line-height:1.5;">この客 の LINE / 議事録 / 予約 / 資料 が すべて 消えます。 元 に 戻せません。</div>
+          </div>
         </aside>
 
         <!-- ============= RIGHT: Activity column ============= -->
@@ -3330,9 +3347,8 @@
               </style>
             </div>
 
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;justify-content:flex-end;">
-              <button id="modal-delete-btn" style="background:transparent;color:#94A3B8;border:none;padding:6px 8px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:underline;">この顧客を削除</button>
-            </div>
+            <!-- 2026-07-11 v3: modal 内 grey 「この顧客を削除」 削除。 削除 は 左サイドバー の 大きな 赤ボタン から (owner 明示指示) -->
+            <button id="modal-delete-btn" style="display:none;"></button>
           </div>` : `
           <div class="cd-flow cd-flow-empty">
             <div class="cd-flow-eyebrow"><span class="cd-flow-eyebrow-pill">AI推奨</span></div>
@@ -3352,7 +3368,7 @@
               <button class="modal-brief-btn" data-line-brief="${c.id}" style="background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;padding:9px 16px;border-radius:7px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.04em;box-shadow:0 4px 12px rgba(16,185,129,0.32);">✍ 伝えたいことから 下書き</button>
               <button id="modal-deliv-btn" style="background:linear-gradient(135deg,#5B5BF0,#6D6DEF);color:#fff;border:none;padding:9px 16px;border-radius:7px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.04em;box-shadow:0 4px 12px rgba(91,91,240,0.32);">📎 資料パッケージを ダウンロード</button>
               <button class="cd-flow-edit ghost-btn" id="modal-edit-btn"><i data-lucide="pencil"></i><span>顧客情報を編集</span></button>
-              <button id="modal-delete-btn" style="background:#fff;color:#dc2626;border:1px solid #fecaca;padding:8px 14px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i><span>この顧客を削除</span></button>
+              <button id="modal-delete-btn" style="display:none;"></button>
             </div>
           </div>`}
 
@@ -3375,26 +3391,72 @@
           </div>
 
           <div class="cd-tabpanels">
-            <!-- OVERVIEW (オーナーfb 2026-06-20: WORKFLOW/次にやること/直近のイベント/イベント分類 を全削除し、 最終議事録サマリー 1枚 のみ) -->
+            <!-- OVERVIEW (2026-07-11 v7: 議事録空でも 有用情報 で 埋める、 誤表示 バグ fix) -->
             <div class="cd-tabpanel" data-cdpanel="overview">
               ${(function(){
-                if (latestAi && latestAi.summary && String(latestAi.summary).trim()) {
-                  const date = latestAi.ts ? new Date(latestAi.ts).toLocaleDateString('ja-JP') : '';
-                  return `
-                  <div class="cd-card" style="border:1px solid #E2E8F0;border-radius:12px;padding:18px 20px;">
+                // ★ 有用な最新議事録: summary or transcript or key_concerns の どれか あれば 使う
+                const useableAi = (function(){
+                  if (latestAi && (String(latestAi.summary||'').trim() || String(latestAi.transcript||'').trim() || (Array.isArray(latestAi.key_concerns) && latestAi.key_concerns.length))) return latestAi;
+                  const list = (Array.isArray(c.ai_results) ? c.ai_results : []).slice().sort((a,b)=>{
+                    const ta = a?.ts ? new Date(a.ts).getTime() : 0;
+                    const tb = b?.ts ? new Date(b.ts).getTime() : 0;
+                    return tb - ta;
+                  });
+                  return list.find(x => String(x?.summary||'').trim() || String(x?.transcript||'').trim() || (Array.isArray(x?.key_concerns) && x.key_concerns.length)) || null;
+                })();
+
+                // count of meetings (any signal)
+                const meetingCount = (Array.isArray(c.ai_results) ? c.ai_results : []).length;
+                const lineCount = (Array.isArray(c.lineHistory) ? c.lineHistory : []).length;
+                const familyCount = (Array.isArray(c.family) ? c.family : []).length + 1;
+                const lastContact = c.lastContactAt ? new Date(c.lastContactAt).toLocaleDateString('ja-JP') : null;
+
+                // Header: 最終議事録 サマリー (あれば)
+                let head = '';
+                if (useableAi) {
+                  const date = useableAi.ts ? new Date(useableAi.ts).toLocaleDateString('ja-JP') : '';
+                  const body = String(useableAi.summary || useableAi.transcript_summary || (Array.isArray(useableAi.key_concerns) ? useableAi.key_concerns.join('\n・') : '') || '').trim();
+                  head = `
+                  <div class="cd-card" style="border:1px solid #E2E8F0;border-radius:12px;padding:18px 20px;margin-bottom:14px;">
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-                      <span style="font-size:14px;font-weight:900;color:#0F172A;">📝 最終 Zoom 議事録</span>
+                      <span style="font-size:14px;font-weight:900;color:#0F172A;">📝 最終 議事録</span>
                       ${date ? `<span style="font-size:11.5px;color:#64748B;font-weight:600;">${escapeHtml(date)}</span>` : ''}
                     </div>
-                    <div style="font-size:14px;line-height:1.7;color:#334155;white-space:pre-wrap;">${escapeHtml(String(latestAi.summary).slice(0, 600))}</div>
+                    <div style="font-size:14px;line-height:1.7;color:#334155;white-space:pre-wrap;">${escapeHtml(body.slice(0, 600))}${body.length > 600 ? '…' : ''}</div>
+                    <div style="margin-top:10px;text-align:right;">
+                      <button type="button" class="cd-tab-jump" data-jump-tab="meetings" style="background:transparent;border:0;color:#5B5BF0;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:0.02em;font-family:inherit;">📖 議事録タブ で 全文 を 見る →</button>
+                    </div>
                   </div>`;
                 }
-                return `
-                <div style="padding:32px 24px;text-align:center;color:#64748B;background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:12px;">
-                  <div style="font-size:32px;margin-bottom:8px;">📋</div>
-                  <div style="font-size:14px;font-weight:700;color:#0F172A;margin-bottom:6px;">まだ 議事録 が ありません</div>
-                  <div style="font-size:12.5px;line-height:1.6;">上の <strong>LINE</strong> / <strong>履歴</strong> / <strong>議事録</strong> / <strong>家族</strong> タブ から詳細をご覧ください</div>
+
+                // Info-dense summary card (always shown, replaces the 「まだ議事録がありません」 error state)
+                const items = [
+                  { key:'meetings', label:'議事録', value: meetingCount, unit:'件', color:'#5B5BF0', jump:'meetings' },
+                  { key:'line', label:'LINE 履歴', value: lineCount, unit:'件', color:'#059669', jump:'line' },
+                  { key:'timeline', label:'イベント履歴', value: events.length, unit:'件', color:'#DC2626', jump:'timeline' },
+                  { key:'family', label:'家族構成', value: familyCount, unit:'名', color:'#F59E0B', jump:'family' },
+                ];
+                const stats = `
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:${useableAi ? '4' : '0'}px;">
+                  ${items.map(it => `
+                    <button type="button" class="cd-tab-jump" data-jump-tab="${it.jump}" style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px;text-align:left;cursor:pointer;font-family:inherit;transition:border-color .12s,box-shadow .15s,transform .12s;">
+                      <div style="font-size:10.5px;font-weight:800;color:#64748B;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">${escapeHtml(it.label)}</div>
+                      <div style="display:flex;align-items:baseline;gap:4px;">
+                        <span style="font-family:'Manrope','Inter',sans-serif;font-size:26px;font-weight:900;color:${it.color};letter-spacing:-0.02em;line-height:1;">${it.value}</span>
+                        <span style="font-size:11px;font-weight:700;color:#94A3B8;">${it.unit}</span>
+                      </div>
+                    </button>
+                  `).join('')}
                 </div>`;
+
+                // Empty hint (only if no meeting summary AND all counts 0)
+                const hint = (!useableAi && meetingCount === 0 && lineCount === 0 && events.length === 0)
+                  ? `<div style="margin-top:14px;padding:14px 16px;background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:10px;font-size:12.5px;color:#64748B;line-height:1.7;">
+                       <strong style="color:#334155;">はじめて の 客 です。</strong> LINE 追加 / Zoom 予約 / 対面録音 で 履歴 が 溜まって いきます。
+                     </div>`
+                  : '';
+
+                return head + stats + hint;
               })()}
             </div>
 
@@ -3527,6 +3589,13 @@
       </div>
     `;
     document.getElementById('modal-overlay').style.display = 'flex';
+    // ★ 2026-07-10: 顧客モーダル 開いてる 間 は コンパちゃん fab / hint 非表示 (右下 被り 対策)
+    // ★ 2026-07-10 v2: 単なる .hidden class では 効かない ケース対策 → 直接 inline !important
+    try {
+      const fab = document.getElementById('mbFab');
+      if (fab) fab.style.setProperty('display', 'none', 'important');
+      document.querySelectorAll('.mb-fab-hint, .mb-fab-badge, .mb-fab-pulse, .mb-panel').forEach(el => el.style.setProperty('display', 'none', 'important'));
+    } catch (_) {}
     // ★ オーナーfb 2026-06-25: cd-line-chat が 出現 / 再描画 されたら 必ず 最新へ scroll
     // (タブclick だけだと URL ?tab=line 復元 / hydrate 再render の時 漏れる)
     const _scrollLineChatBottom = () => {
@@ -3537,6 +3606,27 @@
     setTimeout(_scrollLineChatBottom, 250);
     setTimeout(_scrollLineChatBottom, 800);
     document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+    // ★ 2026-07-11 v4: cd-left 内 の 削除ボタン → modal-delete-btn に forward
+    try {
+      const cdDelBtn = document.getElementById('cd-left-delete-btn');
+      if (cdDelBtn && !cdDelBtn._boundOnce) {
+        cdDelBtn._boundOnce = true;
+        cdDelBtn.addEventListener('click', () => {
+          const modalBtn = document.getElementById('modal-delete-btn');
+          if (modalBtn) modalBtn.click();
+        });
+        cdDelBtn.addEventListener('mouseenter', () => {
+          cdDelBtn.style.background = '#FEF2F2';
+          cdDelBtn.style.borderColor = '#F87171';
+          cdDelBtn.style.boxShadow = '0 4px 12px rgba(220,38,38,0.15)';
+        });
+        cdDelBtn.addEventListener('mouseleave', () => {
+          cdDelBtn.style.background = '#fff';
+          cdDelBtn.style.borderColor = '#FCA5A5';
+          cdDelBtn.style.boxShadow = 'none';
+        });
+      }
+    } catch (_) {}
     // ★ 顧客削除ボタン
     const delBtn = document.getElementById('modal-delete-btn');
     if (delBtn) delBtn.addEventListener('click', async () => {
@@ -3781,6 +3871,138 @@
         cntEl.textContent = count;
       }
     } catch (_) {}
+
+    // 2026-07-11 v7: 概観カード の 「議事録タブ で 見る」 リンク delegation
+    if (!window._fpTabJumpBound) {
+      window._fpTabJumpBound = true;
+      document.body.addEventListener('click', (ev) => {
+        const b = ev.target && ev.target.closest && ev.target.closest('.cd-tab-jump');
+        if (!b) return;
+        const target = b.dataset.jumpTab;
+        if (!target) return;
+        const tabBtn = document.querySelector('.cd-tab[data-cdtab="' + target + '"]');
+        if (tabBtn) tabBtn.click();
+      });
+    }
+
+    // 2026-07-11 v8: cd-right の scroll 位置 で 「まだ 続く」 fade を toggle
+    try {
+      const rightEl = document.querySelector('.cd-right');
+      if (rightEl && !rightEl._boundScroll) {
+        rightEl._boundScroll = true;
+        const update = () => {
+          const canScroll = rightEl.scrollHeight - rightEl.clientHeight > 4;
+          const nearBottom = rightEl.scrollTop + rightEl.clientHeight >= rightEl.scrollHeight - 20;
+          rightEl.classList.toggle('has-more-below', canScroll && !nearBottom);
+        };
+        rightEl.addEventListener('scroll', update, { passive: true });
+        new ResizeObserver(update).observe(rightEl);
+        setTimeout(update, 100);
+        setTimeout(update, 400);
+        setTimeout(update, 1200);
+      }
+    } catch(_) {}
+
+    // 2026-07-11 v6: transcript 会話/プレーン toggle delegation
+    if (!window._fpTranscriptToggleBound) {
+      window._fpTranscriptToggleBound = true;
+      document.body.addEventListener('click', (ev) => {
+        const b = ev.target && ev.target.closest && ev.target.closest('.fp-tv-btn');
+        if (!b) return;
+        const toggle = b.closest('[data-transcript-toggle]');
+        const block = toggle?.closest('.fp-meeting-block');
+        if (!block) return;
+        const mode = b.dataset.tvMode;
+        // update button styles
+        toggle.querySelectorAll('.fp-tv-btn').forEach(btn => {
+          btn.classList.remove('fp-tv-active');
+          btn.style.background = 'transparent';
+          btn.style.color = '#64748B';
+          btn.style.boxShadow = 'none';
+        });
+        b.classList.add('fp-tv-active');
+        b.style.background = '#fff';
+        b.style.color = '#0F172A';
+        b.style.boxShadow = '0 1px 3px rgba(15,23,42,0.08)';
+        // swap content panels
+        const chat = block.querySelector('.fp-transcript-chat');
+        const raw = block.querySelector('.fp-transcript-raw');
+        if (chat && raw) {
+          chat.style.display = mode === 'chat' ? '' : 'none';
+          raw.style.display = mode === 'raw' ? '' : 'none';
+        }
+      });
+    }
+
+    // ★ 2026-07-10: 議事録 カード 削除 — event delegation (lazy-render 後にも 反応する)
+    //   注意: この関数 (openClientModal) は modal 開くたび に走るが、 delegation handler は 1回だけ 登録
+    if (!window._fpMeetingDeleteHandlerBound) {
+      window._fpMeetingDeleteHandlerBound = true;
+      document.body.addEventListener('click', async (ev) => {
+        const btn = ev.target && ev.target.closest && ev.target.closest('.fp-meeting-delete');
+        if (!btn) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (!confirm('この 議事録 を 削除しますか?\n\n削除する項目:\n・議事録 サマリー\n・文字起こし 全文\n・タスク / 提案\n\n元に戻せません。')) return;
+        const bookingTs = btn.dataset.bookingTs || '';
+        const aiTs = btn.dataset.aiTs || '';
+        btn.disabled = true;
+        btn.textContent = '削除中…';
+        try {
+          const live = window.LineAppLiveData || {};
+          if (Array.isArray(live.ai_results)) {
+            live.ai_results = live.ai_results.filter(r => {
+              const rBk = r.bookingTs || '';
+              const rTs = r.ts || r.createdAt || '';
+              return !(rBk === bookingTs && rTs === aiTs);
+            });
+          }
+          try {
+            const client = window._fpCurrentClient;
+            if (client) {
+              const keys = ['fp-ai-' + (client.lineFriendId || ''), 'fp-ai-' + (client.id || '')];
+              keys.forEach(k => {
+                if (!k || k.endsWith('-')) return;
+                try {
+                  const arr = JSON.parse(localStorage.getItem(k) || '[]');
+                  const filtered = arr.filter(r => (r.bookingTs || '') !== bookingTs || (r.ts || r.createdAt || '') !== aiTs);
+                  localStorage.setItem(k, JSON.stringify(filtered));
+                } catch (_) {}
+              });
+            }
+          } catch (_) {}
+          try {
+            const CLOUD_RUN = 'https://fp-compass-webhook-527726449426.asia-northeast1.run.app';
+            const h = window.getFpAuthHeaders ? await window.getFpAuthHeaders() : { 'Content-Type': 'application/json' };
+            await fetch(CLOUD_RUN + '/api/save-ai-result', {
+              method: 'POST',
+              headers: h,
+              body: JSON.stringify({
+                bookingTs, ts: aiTs, deleted: true,
+                tenantId: (window.__fp && window.__fp.tenantId) || '',
+              }),
+            }).catch(() => {});
+          } catch (_) {}
+          // panel 直接 innerHTML 再描画 (openClientModal 全体再描画 だと URL 履歴 邪魔になる)
+          const client = window._fpCurrentClient;
+          const panel = document.querySelector('[data-cdpanel="meetings"]');
+          if (client && panel && typeof renderMeetingRecordsBlock === 'function') {
+            panel.innerHTML = renderMeetingRecordsBlock(client) || '<div class="cd-empty">面談録なし</div>';
+            panel.dataset.cacheKey = '';
+            panel.dataset.cacheHasContent = '1';
+            // count 更新
+            const cntEl = document.getElementById('cd-meetings-count');
+            if (cntEl) cntEl.textContent = panel.querySelectorAll('.fp-meeting-card').length;
+          } else {
+            btn.closest('.fp-meeting-card')?.remove();
+          }
+        } catch (e) {
+          alert('削除失敗: ' + (e.message || e));
+          btn.disabled = false;
+          btn.textContent = '🗑 削除';
+        }
+      });
+    }
 
     // ★ 議事録 編集 / 保存 (CLOUD_RUN_BASE/api/save-ai-result 経由で GAS sheet 上書き)
     document.querySelectorAll('[data-minutes-editor]').forEach(wrap => {
@@ -4048,7 +4270,8 @@
       });
       const delBtn = overlay.querySelector('#fp-fam-delete');
       if (delBtn) delBtn.addEventListener('click', () => {
-        if (!confirm('この家族を削除しますか?')) return;
+        const _famName = c.family?.[memberIdx]?.name || 'この家族';
+        if (!confirm('⚠ ' + _famName + ' を 削除 します。 元 に 戻せません。\n\n本当 に 削除 しますか?')) return;
         c.family.splice(memberIdx, 1);
         persistFamily();
         overlay.remove();
@@ -4441,7 +4664,7 @@ ${ctxText}${surveyTxt}`;
           } catch (_) {}
           setTimeout(() => { try { openClientModal(cid); } catch (_) {} }, 1500);
         } catch (e) {
-          msg.textContent = '✗ 紐付け失敗: ' + (e.message || e);
+          console.error('紐付け 失敗:', e); msg.textContent = '❌ 紐付け できませんでした。 客 の LINE userId を 確認 して ください。';
           msg.style.color = '#B91C1C';
           lineidBtn.disabled = false;
         }
@@ -4564,12 +4787,12 @@ ${ctxText}${surveyTxt}`;
             appendLocalMessage(text);
             input.value = '';
           } else {
-            statusEl.textContent = '✕ 送信失敗: 戻り値異常';
+            console.error('送信 戻り値 異常'); statusEl.textContent = '❌ LINE で 送信 できません でした。 再度 お試し ください。';
             statusEl.style.color = 'var(--critical)';
           }
         } catch (e) {
           // HttpsError は e.message に 親切な文言 (友だち未追加 等) が 入ってる
-          statusEl.textContent = '✕ 送信失敗: ' + (e.message || e.code || '不明なエラー');
+          console.error('送信 例外:', e); statusEl.textContent = '❌ LINE で 送信 できませんでした。 通信 状態 を 確認 して 再度 お試し ください。';
           statusEl.style.color = 'var(--critical)';
         } finally {
           sendBtn.disabled = false;
@@ -4600,8 +4823,8 @@ ${ctxText}${surveyTxt}`;
           });
           const data = await r.json();
           if (data.ok) { btn.textContent = '✓ 送信済'; btn.style.background = '#94a3b8'; }
-          else { alert('失敗: ' + (data.error || '')); btn.disabled = false; btn.textContent = '→ LINEで送信'; }
-        } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; btn.textContent = '→ LINEで送信'; }
+          else { console.error('LINE 送信 失敗 (server):', data.error); alert('LINE で 送信 できませんでした。 通信 か LINE 連携 設定 を 確認 して 再度 お試し ください。'); btn.disabled = false; btn.textContent = '→ LINEで送信'; }
+        } catch (e) { console.error('LINE 送信 例外:', e); alert('LINE で 送信 できませんでした。 通信 状態 を 確認 して 再度 お試し ください。'); btn.disabled = false; btn.textContent = '→ LINEで送信'; }
       });
     });
     // ★ 生成済 資料 の「再開 / 削除」 ボタン
@@ -5323,14 +5546,28 @@ ${ctxText}${surveyTxt}`;
                 </div>
                 <div class="fp-meeting-card-actions" style="display:flex;gap:6px;flex-wrap:wrap;">
                   ${b.driveUrl ? `<a href="${escapeHtml(b.driveUrl)}" target="_blank" class="fp-btn fp-btn-sm fp-btn-gold">🎥 録画を見る</a>` : ''}
+                  <button class="fp-meeting-delete" data-booking-ts="${escapeHtml(b.ts || '')}" data-ai-ts="${escapeHtml(aiData.ts || aiData.createdAt || '')}" style="background:#fff;border:1.5px solid #FCA5A5;color:#DC2626;font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:5px;cursor:pointer;font-family:inherit;">🗑 削除</button>
                 </div>
               </div>
               ${aiData.transcript ? `
                 <div class="fp-meeting-block">
-                  <div class="fp-meeting-block-label">AI 文字起こし (Whisper)</div>
+                  <div class="fp-meeting-block-label" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                    <span>AI 文字起こし (Whisper)</span>
+                    <div class="fp-transcript-view-toggle" data-transcript-toggle style="display:inline-flex;background:#F1F5F9;border-radius:8px;padding:2px;gap:2px;font-family:inherit;">
+                      <button type="button" class="fp-tv-btn fp-tv-active" data-tv-mode="chat" style="background:#fff;color:#0F172A;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:0.04em;cursor:pointer;box-shadow:0 1px 3px rgba(15,23,42,0.08);font-family:inherit;">💬 会話</button>
+                      <button type="button" class="fp-tv-btn" data-tv-mode="raw" style="background:transparent;color:#64748B;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:0.04em;cursor:pointer;font-family:inherit;">📄 プレーン</button>
+                    </div>
+                  </div>
                   <details open style="background:#fff;border:1px solid var(--fp-line);">
                     <summary style="padding:11px 16px;cursor:pointer;font-size:12px;color:var(--fp-ink);font-weight:700;background:var(--fp-paper);border-bottom:1px solid var(--fp-line);font-family:Manrope,sans-serif;letter-spacing:0.04em;">AI 文字起こし 全文 (${(aiData.transcript||'').length}文字) — クリックで折りたたみ</summary>
-                    <div style="padding:14px 18px;font-size:12.5px;line-height:1.95;white-space:pre-wrap;max-height:320px;overflow-y:auto;color:var(--fp-ink);">${escapeHtml(aiData.transcript)}</div>
+                    <div class="fp-transcript-chat" style="padding:14px 18px;max-height:420px;overflow-y:auto;background:linear-gradient(180deg,#F8FAFC 0%,#F1F5F9 100%);">
+                      ${splitTranscriptToTurns(aiData.transcript).map((turn, i) => turn.speaker === 'fp'
+                        ? `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><div style="max-width:78%;background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:9px 13px;border-radius:14px 14px 4px 14px;font-size:12.5px;line-height:1.7;box-shadow:0 2px 6px rgba(5,150,105,0.22);"><div style="font-size:10px;font-weight:800;opacity:0.9;letter-spacing:0.08em;margin-bottom:3px;">FP先生</div><div>${escapeHtml(turn.text)}</div></div></div>`
+                        : `<div style="display:flex;justify-content:flex-start;margin-bottom:10px;"><div style="max-width:78%;background:#fff;color:#0F172A;padding:9px 13px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.7;box-shadow:0 1px 3px rgba(15,23,42,0.10);border:1px solid #E2E8F0;"><div style="font-size:10px;font-weight:800;color:#64748B;letter-spacing:0.08em;margin-bottom:3px;">お客様</div><div>${escapeHtml(turn.text)}</div></div></div>`
+                      ).join('')}
+                    </div>
+                    <div class="fp-transcript-raw" style="display:none;padding:14px 18px;font-size:12.5px;line-height:1.95;white-space:pre-wrap;max-height:420px;overflow-y:auto;color:var(--fp-ink);">${escapeHtml(aiData.transcript)}</div>
+                    <div style="padding:6px 16px;background:#F8FAFC;border-top:1px solid var(--fp-line);font-size:10.5px;color:#94A3B8;font-style:italic;letter-spacing:0.02em;">※ 話者 は AI が 会話 の 流れ から 推定。 実際 と 違う 場合 は 「📄 プレーン」 で 全文 確認 を。</div>
                   </details>
                 </div>` : ''}
               <div class="fp-meeting-block" data-minutes-editor data-booking-ts="${escapeHtml(b.ts || '')}" data-client-id="${escapeHtml(client.id)}">
@@ -5415,6 +5652,9 @@ ${ctxText}${surveyTxt}`;
                     <div class="fp-meeting-card-eyebrow" style="font-size:13px !important;font-weight:900 !important;color:#1B3A5C !important;letter-spacing:0 !important;">📹 Zoom ${zN}回目 ${a.ts || a.createdAt ? `<span style="font-size:11px;color:#9CA3AF;font-weight:700;margin-left:8px;font-family:Menlo,monospace;">#${(()=>{ const d=new Date(a.ts || a.createdAt); return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0'); })()}</span>` : ''}</div>
                     <div class="fp-meeting-card-date" style="font-size:14px;font-weight:700;">${escapeHtml(fmtDateRobust(a.ts || a.createdAt) || fmtDateRobust(a.date))} ${escapeHtml(fmtJstTime(a.ts || a.createdAt))} 面談</div>
                     ${a.ts || a.createdAt ? `<div class="fp-meeting-card-recstart" style="font-size:11.5px;color:#6B7280;font-weight:600;margin-top:3px;">録画開始: ${escapeHtml(fmtJstTime(a.ts || a.createdAt))} (${escapeHtml(fmtDateRobust(a.ts || a.createdAt))})</div>` : ''}
+                  </div>
+                  <div class="fp-meeting-card-actions" style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <button class="fp-meeting-delete" data-booking-ts="${escapeHtml(a.bookingTs || '')}" data-ai-ts="${escapeHtml(a.ts || a.createdAt || '')}" style="background:#fff;border:1.5px solid #FCA5A5;color:#DC2626;font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:5px;cursor:pointer;font-family:inherit;">🗑 削除</button>
                   </div>
                 </div>
                 ${a.transcript ? `
@@ -5850,8 +6090,8 @@ ${ctxText}${surveyTxt}`;
           t.innerHTML = `<strong style="font-size:14px;">✓ ${escapeHtml(client.name)} 様 に送信完了</strong><div style="font-size:12px;color:#6b7280;margin-top:4px;">LINE 履歴に追加済 — 次の提案で Jobs が参照します</div>`;
           document.body.appendChild(t);
           setTimeout(() => t.remove(), 4000);
-        } else { alert('失敗: ' + (d.error || '')); btn.disabled = false; btn.textContent = '📤 LINE 送信'; }
-      } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; btn.textContent = '📤 LINE 送信'; }
+        } else { console.error('LINE 送信 失敗 (server):', d.error); alert('LINE で 送信 できませんでした。 通信 か LINE 連携 設定 を 確認 して 再度 お試し ください。'); btn.disabled = false; btn.textContent = '📤 LINE 送信'; }
+      } catch (e) { console.error('LINE 送信 例外:', e); alert('LINE で 送信 できませんでした。 通信 状態 を 確認 して 再度 お試し ください。'); btn.disabled = false; btn.textContent = '📤 LINE 送信'; }
     });
   }
 
@@ -5951,8 +6191,8 @@ ${ctxText}${surveyTxt}`;
           t.innerHTML = `<strong style="font-size:14px;">✓ ${escapeHtml(client.name)} 様 に送信完了</strong>`;
           document.body.appendChild(t);
           setTimeout(() => t.remove(), 4000);
-        } else { alert('失敗: ' + (d.error || '')); btn.disabled = false; btn.textContent = '📤 LINEで送信'; }
-      } catch (e) { alert('失敗: ' + e.message); btn.disabled = false; btn.textContent = '📤 LINEで送信'; }
+        } else { console.error('LINE 送信 失敗 (server):', d.error); alert('LINE で 送信 できませんでした。 通信 か LINE 連携 設定 を 確認 して 再度 お試し ください。'); btn.disabled = false; btn.textContent = '📤 LINEで送信'; }
+      } catch (e) { console.error('LINE 送信 例外:', e); alert('LINE で 送信 できませんでした。 通信 状態 を 確認 して 再度 お試し ください。'); btn.disabled = false; btn.textContent = '📤 LINEで送信'; }
     });
   }
 
@@ -6458,6 +6698,21 @@ STEP C: 結果報告
           resolve({ json: async () => ({ ok: false, error: 'Mac mini 生成失敗: ' + (data.errorMessage || '不明') }) });
         }
         // processing 中は 何もしない (subscription 継続)
+      }, (err) => {
+        // 🚨 memory: feedback_firestore_permission_denied_silent_kpi_empty.md
+        // onSnapshot の第2引数 error callback を必ず実装 (silent fail 防止)
+        console.error('[deliverable onSnapshot] permission-denied or network error:', err);
+        clearTimeout(timeoutId); try { unsub && unsub(); } catch(_) {}
+        try {
+          const dbg = document.getElementById('__fp_debug') || (() => {
+            const d = document.createElement('div');
+            d.id = '__fp_debug';
+            d.style.cssText = 'position:fixed;bottom:8px;left:8px;background:#fee;border:1px solid #f66;color:#900;padding:6px 10px;font:11px monospace;z-index:99999;max-width:60%;';
+            document.body.appendChild(d); return d;
+          })();
+          dbg.textContent = '[deliverable] ' + (err.code || err.message);
+        } catch (_) {}
+        resolve({ json: async () => ({ ok: false, error: 'Firestore 監視エラー: ' + (err.code || err.message) }) });
       });
     });
   }
@@ -7314,8 +7569,12 @@ ${JSON.stringify(jsonPayload, null, 2)}
       try {
         if (!window._fpQACache) window._fpQACache = {};
         if (window._fpQACache[client.id] || !client.lineFriendId) return;
-        const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
-        const fs = getFirestore(window.__fp.app || window.__fp.firebaseApp || undefined);
+        const { getFirestore, initializeFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
+        // memory: feedback_firestore_webchannel_blocked_longpolling.md
+        const _app = window.__fp.app || window.__fp.firebaseApp || undefined;
+        let fs;
+        try { fs = initializeFirestore(_app, { experimentalAutoDetectLongPolling: true }); }
+        catch (_) { fs = getFirestore(_app); }
         const tid = (window.__fp && window.__fp.tenantId) || '';
         if (!tid) return;
         const ref = doc(fs, 'customer_qa_summary', `${tid}__${client.lineFriendId}`);
@@ -8900,6 +9159,13 @@ ${client.name}さん、ありがとうございます。
   function closeModal(options) {
     options = options || {};
     document.getElementById('modal-overlay').style.display = 'none';
+    // ★ 2026-07-10 v2: モーダル閉じたら コンパちゃん fab 復活 (inline !important 削除)
+    try {
+      const fab = document.getElementById('mbFab');
+      if (fab) { fab.style.removeProperty('display'); fab.classList.remove('hidden'); }
+      document.querySelectorAll('.mb-fab-hint, .mb-fab-badge, .mb-fab-pulse, .mb-panel').forEach(el => el.style.removeProperty('display'));
+    } catch (_) {}
+    // (v4: cd-left 内 削除ボタン は 顧客モーダル と 一緒 に destroy される ので cleanup 不要)
     // ★ 閉じたら復元 flag クリア
     try {
       localStorage.removeItem('fp-last-open-client');
@@ -9451,6 +9717,45 @@ ${client.name}さん、ありがとうございます。
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[m]));
   }
+
+  // 2026-07-11 v6: transcript を 話者ターン に heuristic 分割 (Whisper 出力 に 話者情報 が 無い ので 推定)
+  // ルール: (1) 段落改行 で 区切る → (2) 「?」 で 終わる 短文 は 質問 = 上位ターン から 交互、 (3) 「はい」「そうですね」「うーん」 で 始まる ターン は 応答 = 反対側、 (4) デフォルト は 交互 で FP先生(右) 開始
+  window.splitTranscriptToTurns = function splitTranscriptToTurns(text) {
+    const raw = String(text || '').trim();
+    if (!raw) return [];
+    // paragraph split
+    let paragraphs = raw.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+    if (paragraphs.length < 3) {
+      // fallback: split on single newline OR sentence-groups
+      paragraphs = raw.split(/\n+/).map(p => p.trim()).filter(Boolean);
+    }
+    if (paragraphs.length < 3) {
+      // sentence split — group 2 sentences per turn
+      const sentences = raw.split(/(?<=[。?!?!])\s*/).map(s => s.trim()).filter(Boolean);
+      paragraphs = [];
+      for (let i = 0; i < sentences.length; i += 2) {
+        paragraphs.push(sentences.slice(i, i + 2).join(' '));
+      }
+    }
+    const ackStart = /^(はい|うーん|えっと|えー|そうですね|そうそう|なるほど|ああ|うん|そうなんです|わかりました)/;
+    const questionEnd = /[??]\s*$/;
+    const turns = [];
+    let speaker = 'fp'; // FP先生 first (right side)
+    for (let i = 0; i < paragraphs.length; i++) {
+      const p = paragraphs[i];
+      const isAck = ackStart.test(p);
+      const isQuestion = questionEnd.test(p);
+      if (i > 0) {
+        // heuristic: if starts with ack, this is response = opposite of previous
+        if (isAck) speaker = turns[i - 1].speaker === 'fp' ? 'client' : 'fp';
+        // if previous was a short question, this is answer = opposite
+        else if (turns[i - 1] && questionEnd.test(turns[i - 1].text) && turns[i - 1].text.length < 40) speaker = turns[i - 1].speaker === 'fp' ? 'client' : 'fp';
+        else speaker = turns[i - 1].speaker === 'fp' ? 'client' : 'fp';
+      }
+      turns.push({ speaker, text: p, hint: isQuestion ? 'q' : (isAck ? 'a' : '') });
+    }
+    return turns;
+  };
   // ★ CSS injection fix (2026-06-25): タグ color 値が #rgb / #rrggbb / #rrggbbaa 以外なら 中立色にfallback
   //   ユーザー入力 color を style に直入れすると `red;background:url(...)` 等で 別CSS差込 可能
   function validColor(c) {
@@ -9462,6 +9767,7 @@ ${client.name}さん、ありがとうございます。
   // 初期化
   // ============================
   document.addEventListener('DOMContentLoaded', () => {
+    // scroll mask 初期化 は DOMContentLoaded 外 に 移動 (app.js が遅延loadされるので DCL 既に発火済ケース対策)
     // メタ
     document.getElementById('app-meta').textContent =
       `デモデータ ${clients.length}名 / 基準日 ${fmtDate(TODAY)}`;
@@ -9607,4 +9913,41 @@ ${client.name}さん、ありがとうございます。
       }
     } catch (_) {}
   });
+})();
+
+// ═══════════════════════════════════════════════════════
+// 2026-07-10 design-reviewer Critical#2: sidebar-scroll shadow mask
+// DOMContentLoaded 外 (app.js は 遅延load される ので DCL 既発火 が普通)
+// ═══════════════════════════════════════════════════════
+window._fpMaskCode = 'loaded';
+(function () {
+  window._fpMaskCode = 'IIFE-entered';
+  const bindMask = () => {
+    const sc = document.querySelector('.sidebar-scroll');
+    window._fpMaskLastCheck = { hasSC: !!sc, at: Date.now() };
+    if (!sc) return false;
+    const updateMask = () => {
+      try {
+        const hasMore = sc.scrollTop < sc.scrollHeight - sc.clientHeight - 4;
+        sc.classList.toggle('has-more', hasMore);
+      } catch (_) {}
+    };
+    if (!sc._maskBound) {
+      sc._maskBound = true;
+      sc.addEventListener('scroll', updateMask, { passive: true });
+      window.addEventListener('resize', updateMask);
+      if (typeof ResizeObserver !== 'undefined') {
+        try { new ResizeObserver(updateMask).observe(sc); } catch (_) {}
+      }
+    }
+    updateMask();
+    return true;
+  };
+  bindMask();
+  [100, 500, 1500, 3000, 6000, 10000].forEach(ms => setTimeout(bindMask, ms));
+  try {
+    const obs = new MutationObserver(() => bindMask());
+    obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+    setTimeout(() => { try { obs.disconnect(); } catch (_) {} }, 30000);
+  } catch (_) {}
 })();
