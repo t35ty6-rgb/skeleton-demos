@@ -604,7 +604,7 @@ function searchCard(w) {
       <div class="sr-name">${esc(w.title)}</div>
       <div class="sr-sub">${esc(w.site || '—')}</div>
       <div class="sr-tags">
-        ${w.steps.length ? '<span class="sr-tag">手順書</span>' : ''}
+        ${(w.steps||[]).length ? '<span class="sr-tag">手順書</span>' : ''}
         ${w.videoUrl ? '<span class="sr-tag">動画</span>' : ''}
         ${(w.resources || []).some(r => r.type === 'pdf' || r.type === 'dwg') ? '<span class="sr-tag">図面</span>' : ''}
       </div>
@@ -745,7 +745,7 @@ function buildSearchPreview() {
     </div>
     <div class="sr-tabs">
       <button class="sr-tab is-active">すべて <span class="cnt">(${results.length})</span></button>
-      <button class="sr-tab">手順書 <span class="cnt">(${results.filter(w => w.steps.length).length})</span></button>
+      <button class="sr-tab">手順書 <span class="cnt">(${results.filter(w => (w.steps||[]).length).length})</span></button>
       <button class="sr-tab">動画 <span class="cnt">(${results.filter(w => w.videoUrl).length})</span></button>
       <button class="sr-tab">図面 <span class="cnt">(${results.filter(w => (w.resources || []).some(r => r.type !== 'link')).length})</span></button>
     </div>
@@ -940,10 +940,10 @@ function buildDetailCard(w) {
     if (tab === 'steps') {
       const g = h('div', { class: 'detail-lower-grid' });
       const steps = h('div', { class: 'steps' });
-      if (w.steps.length === 0) {
+      if ((w.steps||[]).length === 0) {
         steps.innerHTML = `<div class="empty" style="padding:24px 0">${I.book}<div>手順がまだ登録されていません</div></div>`;
       } else {
-        w.steps.forEach((s, i) => {
+        (w.steps||[]).forEach((s, i) => {
           const bodyKids = [
             h('div', { class: 'step-title' }, s.title),
             s.desc ? h('div', { class: 'step-desc' }, s.desc) : null,
@@ -1115,7 +1115,7 @@ function printCompletionReport(w) {
   const done = store.getSteps(w.id);
   const photos = store.getAllStepPhotos(w.id);
   const totalPhotos = photos.length;
-  const isAll = done.length === w.steps.length;
+  const isAll = done.length === (w.steps||[]).length;
   const startTs = photos.length ? Math.min(...photos.map(p => p.ts)) : null;
   const endTs = photos.length ? Math.max(...photos.map(p => p.ts)) : null;
   const cat = store.category(w.category);
@@ -1155,7 +1155,7 @@ function printCompletionReport(w) {
   .sign-val{font-size:12pt;font-weight:800;margin-top:2pt}
   footer{margin-top:18pt;padding-top:8pt;border-top:1px solid #999;font-size:8pt;color:#666;display:flex;justify-content:space-between}
 </style></head><body>
-  <div class="badge">${isAll ? '✓ 全手順完了' : '進捗途中 · ' + done.length + '/' + w.steps.length + ' 手順'}</div>
+  <div class="badge">${isAll ? '✓ 全手順完了' : '進捗途中 · ' + done.length + '/' + (w.steps||[]).length + ' 手順'}</div>
   <h1>${esc(w.title)} · 完了報告書</h1>
   <div class="sub">${esc(cat ? cat.name : '')} · 難易度 ${w.difficulty}/5 · 想定時間 ${esc(w.duration || '—')}</div>
 
@@ -1169,13 +1169,13 @@ function printCompletionReport(w) {
   </dl>
 
   <div class="summary">
-    <div class="summary-box"><div class="summary-lbl">手順の進捗</div><div class="summary-val">${done.length}/${w.steps.length}</div><div class="summary-sub">${Math.round(done.length / (w.steps.length || 1) * 100)}% 完了</div></div>
+    <div class="summary-box"><div class="summary-lbl">手順の進捗</div><div class="summary-val">${done.length}/${(w.steps||[]).length}</div><div class="summary-sub">${Math.round(done.length / ((w.steps||[]).length || 1) * 100)}% 完了</div></div>
     <div class="summary-box"><div class="summary-lbl">現場写真</div><div class="summary-val">${totalPhotos}</div><div class="summary-sub">枚 撮影</div></div>
-    <div class="summary-box"><div class="summary-lbl">未完了</div><div class="summary-val" style="color:${isAll ? '#065f46' : '#b91c1c'}">${w.steps.length - done.length}</div><div class="summary-sub">${isAll ? '無し' : '手順あり'}</div></div>
+    <div class="summary-box"><div class="summary-lbl">未完了</div><div class="summary-val" style="color:${isAll ? '#065f46' : '#b91c1c'}">${(w.steps||[]).length - done.length}</div><div class="summary-sub">${isAll ? '無し' : '手順あり'}</div></div>
   </div>
 
   <h2>手順ごとの記録</h2>
-  ${w.steps.map((s, i) => {
+  ${(w.steps||[]).map((s, i) => {
     const ph = store.getStepPhotos(w.id, i);
     const isDone = done.includes(i);
     return `<div class="step">
@@ -1252,7 +1252,7 @@ function printWork(w) {
   ${w.cautions && w.cautions.length ? `<h2>危険予知</h2>${w.cautions.map(c => `<div class="caution">${esc(c)}</div>`).join('')}` : ''}
   ${w.tips && w.tips.length ? `<h2>コツ・ポイント</h2>${w.tips.map(t => `<div class="tip">${esc(t)}</div>`).join('')}` : ''}
   <h2>作業手順 <span style="font-weight:500;color:#666;font-size:9pt">(右端 □ で現場チェック)</span></h2>
-  ${w.steps.map((s, i) => `
+  ${(w.steps||[]).map((s, i) => `
     <div class="step">
       <div class="step-no">${i + 1}</div>
       <div>
@@ -1422,7 +1422,7 @@ function viewSearch(root, params) {
     const results = filterWorks(q, { category: cat || null });
     const perTab = {
       all: results,
-      doc: results.filter(w => w.steps.length),
+      doc: results.filter(w => (w.steps||[]).length),
       video: results.filter(w => w.videoUrl),
       dwg: results.filter(w => (w.resources || []).some(r => r.type === 'pdf' || r.type === 'dwg')),
     };
@@ -2681,12 +2681,16 @@ function buildTranscribeCard(draft, onGenerated) {
   bUpload.append(upInp);
 
   // YouTube URL → 実 Gemini 2.5 Flash 解析 (Cloud Function 経由)
+  // 注意: Vertex AI Gemini の YouTube 対応 は Google Cloud 所有 or 共有された動画のみ動作。
+  // 任意 公開 URL は PERMISSION_DENIED になるため、 通常は 「動画ファイル → 生成」 推奨。
   const bYT = h('button', { class: 'tr-choice' });
   bYT.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2c-1.71-.46-8.6-.46-8.6-.46s-6.89 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.71.46 8.6.46 8.6.46s6.89 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.29 29 29 0 0 0-.46-5.29z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor"/></svg>
-    <div class="tr-choice-t">YouTube URL から 生成</div>
-    <div class="tr-choice-s">実 AI (Gemini 2.5 Flash) で 動画解析</div>`;
+    <div class="tr-choice-t">YouTube URL <span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px;font-weight:700;margin-left:4px;">試験運用</span></div>
+    <div class="tr-choice-s">動画所有権エラー時は 「動画ファイル」 経路 で</div>`;
   bYT.addEventListener('click', async () => {
-    const url = prompt('YouTube URL (公開 or 限定公開) を貼り付け:\n例: https://www.youtube.com/watch?v=xxxxxxxxxxx');
+    const proceed = confirm('YouTube URL 経路 は Vertex AI の 仕様上、\n Google Cloud プロジェクト が 所有 or 共有された 動画 のみ 対応 (試験運用中)。\n\n任意 公開 動画 で 「所有者ではありません」エラー が 出る 場合、\n「動画ファイル → 生成」 に 切り替えてください。\n\nそれでも 続けますか?');
+    if (!proceed) return;
+    const url = prompt('YouTube URL を貼り付け:\n例: https://www.youtube.com/watch?v=xxxxxxxxxxx');
     if (!url) return;
     if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url)) {
       toast('YouTube URL のみ対応 (youtube.com / youtu.be)', 'err'); return;
@@ -2714,7 +2718,12 @@ function buildTranscribeCard(draft, onGenerated) {
     } catch (e) {
       console.error('gemini failed', e);
       bYT.innerHTML = orig; bYT.disabled = false;
-      toast('Gemini 解析失敗: ' + e.message.slice(0, 80), 'err');
+      const msg = e.message || '';
+      if (msg.includes('is not owned') || msg.includes('403')) {
+        toast('この YouTube 動画は Google Cloud 所有者ではないため 解析不可。「動画ファイル → 生成」 を お使いください', 'err');
+      } else {
+        toast('Gemini 解析失敗: ' + msg.slice(0, 80), 'err');
+      }
     }
   });
 
