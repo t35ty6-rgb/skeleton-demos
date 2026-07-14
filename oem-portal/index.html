@@ -141,73 +141,115 @@
 
   <button class="btn" id="open-btn" disabled>Portal を 開く</button>
   <a class="btn secondary" id="copy-btn" href="#" style="display:none;">URL を コピー</a>
+  <button class="btn secondary" id="retry-btn" style="display:none;">再読み込み</button>
 
   <div class="meta">
     この Portal は <code>~/.skeleton-oem-portal</code> の LaunchAgent が Mac 常時起動 中 に 動きます。<br>
-    tunnel URL が 変わっても この ページ は 自動で 追従 します (最終更新: <span id="updated-at">—</span>)。
+    tunnel URL が 変わっても この ページ は 自動で 追従 します (最終更新: <span id="updated-at">—</span>)。<br>
+    <span id="hint" style="color:#98A2B3;"></span>
   </div>
 </div>
 
 <script>
-(async function() {
+(function() {
   const statusEl = document.getElementById('status');
   const statusText = document.getElementById('status-text');
   const urlBox = document.getElementById('url-box');
   const openBtn = document.getElementById('open-btn');
   const copyBtn = document.getElementById('copy-btn');
+  const retryBtn = document.getElementById('retry-btn');
   const updatedAtEl = document.getElementById('updated-at');
+  const hintEl = document.getElementById('hint');
 
-  try {
-    // 1. current-tunnel.json を fetch (cache-bust)
-    const res = await fetch('current-tunnel.json?cb=' + Date.now(), { cache: 'no-store' });
-    if (!res.ok) throw new Error('tunnel info 取得失敗');
-    const { url, updatedAt } = await res.json();
-    if (!url) throw new Error('URL 未登録');
-
-    updatedAtEl.textContent = updatedAt ? new Date(updatedAt).toLocaleString('ja-JP') : '—';
-    urlBox.textContent = url;
-    urlBox.style.display = 'block';
-
-    // 2. tunnel 生存 check
-    statusText.textContent = 'Portal に 接続中…';
-    let alive = false;
-    try {
-      // login.html は auth 不要 で 200 返す
-      const ping = await fetch(url + '/login.html', { method: 'HEAD', mode: 'no-cors', cache: 'no-store' });
-      alive = true; // no-cors では status 取れないが 通信成功 = alive
-    } catch (e) {
-      alive = false;
-    }
-
-    if (alive) {
-      statusEl.classList.add('ok');
-      statusText.textContent = 'Portal 稼働中 · 開けます';
-      openBtn.disabled = false;
-      openBtn.textContent = 'Portal を 開く';
-      const target = url + '/login.html?next=' + encodeURIComponent('/inventory.html');
-      openBtn.onclick = () => window.location.href = target;
-      copyBtn.style.display = 'block';
-      copyBtn.onclick = async (e) => {
-        e.preventDefault();
-        try {
-          await navigator.clipboard.writeText(target);
-          copyBtn.textContent = '✓ コピーしました';
-          setTimeout(() => copyBtn.textContent = 'URL を コピー', 1500);
-        } catch { alert('コピー失敗: ' + target); }
-      };
-    } else {
-      statusEl.classList.add('err');
-      statusText.textContent = 'Portal に 接続できません (Mac を 確認)';
-      openBtn.disabled = false;
-      openBtn.textContent = 'それでも 開く (エラー覚悟)';
-      openBtn.onclick = () => window.location.href = url + '/login.html';
-    }
-  } catch (e) {
-    statusEl.classList.add('err');
-    statusText.textContent = 'エラー: ' + e.message;
-    openBtn.disabled = true;
-    openBtn.textContent = 'URL 情報 取得失敗';
+  function relativeTime(iso) {
+    if (!iso) return '—';
+    const then = new Date(iso).getTime();
+    const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000));
+    if (diffSec < 60) return `${diffSec}秒前`;
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}分前`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}時間前`;
+    return `${Math.floor(diffSec / 86400)}日前`;
   }
+
+  let retryTimer = null;
+
+  async function boot() {
+    // reset UI
+    statusEl.className = 'status';
+    statusText.textContent = 'Portal の 状態 を 確認中…';
+    urlBox.style.display = 'none';
+    openBtn.disabled = true;
+    openBtn.textContent = 'Portal を 開く';
+    copyBtn.style.display = 'none';
+    retryBtn.style.display = 'none';
+    hintEl.textContent = '';
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+
+    try {
+      // GH Pages CDN は max-age=600。 URL が cached の 可能性 に 備え、
+      // cb + no-store で browser cache は bypass、 CDN stale 時 は 下の 再試行 が救う。
+      const res = await fetch('current-tunnel.json?cb=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('tunnel info 取得失敗 (' + res.status + ')');
+      const { url, updatedAt } = await res.json();
+      if (!url) throw new Error('URL 未登録');
+
+      updatedAtEl.textContent = updatedAt
+        ? `${new Date(updatedAt).toLocaleString('ja-JP')} · ${relativeTime(updatedAt)}`
+        : '—';
+      urlBox.textContent = url;
+      urlBox.style.display = 'block';
+
+      statusText.textContent = 'Portal に 接続中…';
+      let alive = false;
+      try {
+        await fetch(url + '/login.html', { method: 'HEAD', mode: 'no-cors', cache: 'no-store' });
+        alive = true;
+      } catch (e) {
+        alive = false;
+      }
+
+      if (alive) {
+        statusEl.classList.add('ok');
+        statusText.textContent = 'Portal 稼働中 · 開けます';
+        openBtn.disabled = false;
+        const target = url + '/login.html?next=' + encodeURIComponent('/inventory.html');
+        openBtn.onclick = () => window.location.href = target;
+        copyBtn.style.display = 'block';
+        copyBtn.textContent = 'URL を コピー';
+        copyBtn.onclick = async (e) => {
+          e.preventDefault();
+          try {
+            await navigator.clipboard.writeText(target);
+            copyBtn.textContent = '✓ コピーしました';
+            setTimeout(() => copyBtn.textContent = 'URL を コピー', 1500);
+          } catch { alert('コピー失敗: ' + target); }
+        };
+      } else {
+        statusEl.classList.add('err');
+        statusText.textContent = 'Portal に 接続できません';
+        openBtn.disabled = false;
+        openBtn.textContent = 'それでも 開く';
+        openBtn.onclick = () => window.location.href = url + '/login.html';
+        retryBtn.style.display = 'block';
+        retryBtn.textContent = '再読み込み (自動 30秒後)';
+        retryBtn.onclick = () => boot();
+        hintEl.textContent = 'Mac 再起動 直後 は URL 更新 が GitHub Pages に 反映 されるまで 最大 10分 かかります。 30秒後 に 自動 再試行 します。';
+        retryTimer = setTimeout(() => boot(), 30000);
+      }
+    } catch (e) {
+      statusEl.classList.add('err');
+      statusText.textContent = 'エラー: ' + e.message;
+      openBtn.disabled = true;
+      openBtn.textContent = 'URL 情報 取得失敗';
+      retryBtn.style.display = 'block';
+      retryBtn.textContent = '再読み込み (自動 30秒後)';
+      retryBtn.onclick = () => boot();
+      hintEl.textContent = 'GitHub Pages CDN の キャッシュ か Mac 側 の 一時的 問題。 30秒後 に 自動 再試行 します。';
+      retryTimer = setTimeout(() => boot(), 30000);
+    }
+  }
+
+  boot();
 })();
 </script>
 
