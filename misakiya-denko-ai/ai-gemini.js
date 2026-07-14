@@ -140,3 +140,40 @@ async function getWork(workId) {
 }
 
 window.MisakiyaStore = { saveWork, listWorks, deleteWork, getWork, getTenantId };
+
+// ────────────────────────────────────────────────────────────────
+// RBAC / Audit / Support (tenant meta 経由)
+// ────────────────────────────────────────────────────────────────
+const CF_TCFG_GET  = CF_BASE + '/misakiyaGetTenantConfig';
+const CF_TCFG_SET  = CF_BASE + '/misakiyaSetTenantConfig';
+const CF_AUDITS    = CF_BASE + '/misakiyaListAudits';
+const CF_SUPPORT   = CF_BASE + '/misakiyaSubmitSupport';
+const CF_CHECKOUT  = CF_BASE + '/misakiyaCreateCheckout';
+
+function getUid() {
+  let uid = localStorage.getItem('misakiya-uid');
+  if (!uid || uid.length < 8) {
+    uid = 'u_' + Array.from(crypto.getRandomValues(new Uint8Array(10))).map(b => b.toString(16).padStart(2,'0')).join('');
+    localStorage.setItem('misakiya-uid', uid);
+  }
+  return uid;
+}
+async function apiPostUid(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-misakiya-uid': getUid() },
+    body: JSON.stringify(body),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+  return j;
+}
+async function getTenantConfig() { return apiPostUid(CF_TCFG_GET, { tenantId: getTenantId() }); }
+async function setTenantConfig(patch) { return apiPostUid(CF_TCFG_SET, { tenantId: getTenantId(), patch }); }
+async function listAudits(limit = 100) { return apiPostUid(CF_AUDITS, { tenantId: getTenantId(), limit }); }
+async function submitSupport({ name, email, subject, body }) { return apiPostUid(CF_SUPPORT, { tenantId: getTenantId(), name, email, subject, body }); }
+async function createCheckout(plan) { return apiPostUid(CF_CHECKOUT, { tenantId: getTenantId(), plan }); }
+
+Object.assign(window.MisakiyaStore, {
+  getUid, getTenantConfig, setTenantConfig, listAudits, submitSupport, createCheckout,
+});

@@ -894,6 +894,10 @@ function buildDetailCard(w) {
       <div class="detail-title">${esc(w.title)}</div>
       <button class="btn-fav ${isFav ? 'is-on' : ''}" data-fav>${I.star}${isFav ? 'お気に入り済' : 'お気に入り'}</button>
       <button class="btn-share" data-share>${I.share}共有</button>
+      <button class="btn btn-secondary btn-sm" data-print title="ブラウザの印刷ダイアログから PDF 保存できます">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        PDF/印刷
+      </button>
       <button class="btn btn-secondary btn-sm" data-edit>${I.edit}編集</button>
     </div>
     ${statusBanner}
@@ -1075,6 +1079,12 @@ function buildDetailCard(w) {
     const url = location.origin + location.pathname + '#work/' + w.id;
     if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => toast('URL をコピーしました', 'success'));
     else toast(url);
+  });
+  const printBtn = card.querySelector('[data-print]');
+  if (printBtn) printBtn.addEventListener('click', () => {
+    // Ensure all tabs are expanded before print (steps/tools/resources/tips)
+    document.querySelectorAll('.sub-tab-panel').forEach(p => { p.style.display = 'block'; });
+    setTimeout(() => window.print(), 100);
   });
 
   return card;
@@ -2013,6 +2023,87 @@ function viewAdmin(root) {
       <div class="stat"><div class="stat-label">カテゴリ</div><div class="stat-value">${store.categories.length}<small>種</small></div></div>
     </div></div>`;
   root.append(stats);
+
+  // ============= Tenant / RBAC / Audit / Support (Firestore-backed) =============
+  const tenantWrap = h('div', { style: 'margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px' });
+  const tenantCard = h('section', { class: 'card' });
+  tenantCard.innerHTML = `<header class="card-h"><div class="card-h-title">テナント設定</div>
+    <div style="font-size:12px;color:var(--dim);font-weight:600" id="tPlan">-</div></header>
+    <div style="padding:14px 18px 18px 18px;display:flex;flex-direction:column;gap:10px">
+      <div><div style="font-size:12px;font-weight:800;color:var(--dim);letter-spacing:0.06em;text-transform:uppercase">テナントID</div><div id="tId" style="font-family:monospace;font-size:12px;margin-top:2px;padding:6px 10px;background:var(--surface-2);border-radius:6px">-</div></div>
+      <div><div style="font-size:12px;font-weight:800;color:var(--dim);letter-spacing:0.06em;text-transform:uppercase">あなたのUID / 役割</div><div id="tUid" style="font-family:monospace;font-size:12px;margin-top:2px;padding:6px 10px;background:var(--surface-2);border-radius:6px">-</div></div>
+      <div><div style="font-size:12px;font-weight:800;color:var(--dim);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px">テナント名</div><input class="form-in" id="tName" placeholder="例: 三崎屋電工"></div>
+      <button class="btn btn-secondary btn-block" id="tSaveBtn">名前を保存</button>
+      <button class="btn btn-secondary btn-block" id="tUpgradeBtn" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-weight:900">プランをアップグレード</button>
+    </div>`;
+  const auditCard = h('section', { class: 'card' });
+  auditCard.innerHTML = `<header class="card-h"><div class="card-h-title">監査ログ</div>
+    <button class="btn btn-secondary btn-sm" id="aRefresh">更新</button></header>
+    <div style="padding:6px 18px 18px 18px;max-height:340px;overflow-y:auto" id="aList"><div style="text-align:center;color:var(--dim);padding:20px;font-size:12px">読み込み中…</div></div>`;
+  tenantWrap.append(tenantCard, auditCard);
+  root.append(tenantWrap);
+
+  const supCard = h('section', { class: 'card', style: 'margin-top:16px' });
+  supCard.innerHTML = `<header class="card-h"><div class="card-h-title">サポートに問い合わせ</div></header>
+    <div style="padding:14px 18px 18px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div><div style="font-size:12px;font-weight:800;color:var(--dim);margin-bottom:4px">お名前</div><input class="form-in" id="sName" placeholder="お名前"></div>
+      <div><div style="font-size:12px;font-weight:800;color:var(--dim);margin-bottom:4px">メール</div><input class="form-in" id="sEmail" type="email" placeholder="you@example.com"></div>
+      <div style="grid-column:span 2"><div style="font-size:12px;font-weight:800;color:var(--dim);margin-bottom:4px">件名</div><input class="form-in" id="sSubject" placeholder="件名"></div>
+      <div style="grid-column:span 2"><div style="font-size:12px;font-weight:800;color:var(--dim);margin-bottom:4px">お問い合わせ内容</div><textarea class="form-ta" id="sBody" placeholder="ご質問・ご要望をお書きください (5-5000文字)"></textarea></div>
+      <button class="btn btn-primary" style="grid-column:span 2" id="sSubmit">送信</button>
+    </div>`;
+  root.append(supCard);
+
+  // Wire up async
+  (async () => {
+    try {
+      const M = window.MisakiyaStore;
+      if (!M) return;
+      const cfg = await M.getTenantConfig();
+      const t = tenantCard;
+      t.querySelector('#tId').textContent = cfg.tenantId;
+      t.querySelector('#tUid').textContent = `${cfg.uid.slice(0,14)}… (${cfg.role})`;
+      t.querySelector('#tPlan').textContent = 'プラン: ' + (cfg.config?.plan || 'trial');
+      if (cfg.config?.name) t.querySelector('#tName').value = cfg.config.name;
+      t.querySelector('#tSaveBtn').addEventListener('click', async () => {
+        const name = t.querySelector('#tName').value.trim();
+        try { await M.setTenantConfig({ name }); toast('テナント名を保存しました', 'success'); }
+        catch (e) { toast('保存失敗: ' + e.message.slice(0, 80), 'err'); }
+      });
+      t.querySelector('#tUpgradeBtn').addEventListener('click', async () => {
+        try { const r = await M.createCheckout('standard'); toast('決済 準備中: ' + JSON.stringify(r).slice(0, 100), 'success'); }
+        catch (e) { toast(e.message.slice(0, 120), 'err'); }
+      });
+      // audits
+      const loadAudits = async () => {
+        const a = auditCard.querySelector('#aList');
+        try {
+          const r = await M.listAudits(50);
+          if (r.audits.length === 0) { a.innerHTML = '<div style="text-align:center;color:var(--dim);padding:20px;font-size:12px">監査ログはまだありません</div>'; return; }
+          a.innerHTML = r.audits.map(x => `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:12px">
+            <div style="font-family:monospace;color:var(--dim)">${(x.ts||'').slice(5, 16).replace('T',' ')}</div>
+            <div><b>${esc(x.action)}</b> <span style="color:var(--dim)">${esc(x.target || '')}</span><br><span style="color:var(--dim);font-size:11px">${esc(x.uid.slice(0, 20))}</span></div></div>`).join('');
+        } catch (e) { a.innerHTML = `<div style="color:var(--danger);padding:12px;font-size:12px">読み込み失敗: ${esc(e.message.slice(0, 80))}</div>`; }
+      };
+      auditCard.querySelector('#aRefresh').addEventListener('click', loadAudits);
+      loadAudits();
+    } catch (e) { console.warn('admin load failed:', e); }
+
+    // support
+    supCard.querySelector('#sSubmit').addEventListener('click', async () => {
+      const name = supCard.querySelector('#sName').value.trim();
+      const email = supCard.querySelector('#sEmail').value.trim();
+      const subject = supCard.querySelector('#sSubject').value.trim();
+      const body = supCard.querySelector('#sBody').value.trim();
+      if (body.length < 5) { toast('お問い合わせ内容 は 5文字以上', 'err'); return; }
+      try {
+        const r = await window.MisakiyaStore.submitSupport({ name, email, subject, body });
+        toast('サポート チケット 送信完了 (ticketId: ' + (r.ticketId || '').slice(0, 12) + ')', 'success');
+        supCard.querySelector('#sSubject').value = '';
+        supCard.querySelector('#sBody').value = '';
+      } catch (e) { toast('送信失敗: ' + e.message.slice(0, 100), 'err'); }
+    });
+  })();
 }
 
 
