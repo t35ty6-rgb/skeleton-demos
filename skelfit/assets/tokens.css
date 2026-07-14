@@ -1,0 +1,112 @@
+/* SkelFit design tokens (shared LP + admin + LIFF) */
+:root {
+  /* ink scale (navy black, not pure black) */
+  --ink:        #0f1729;
+  --ink-2:      #1e2740;
+  --ink-3:      #3a4560;
+  --dim:        #5f6a86;   /* WCAG AA on #f5f7fa (4.5+, was #6b7594 = 4.26 fail) */
+  --muted:      #6f7891;   /* WCAG AA on #fff (4.5+, was #9098b0 = 2.88 fail) */
+  --rule:       #e4e7ee;
+  --rule-2:     #eef0f5;
+
+  /* surfaces */
+  --bg:         #fbfbfd;
+  --surface:    #ffffff;
+  --surface-2:  #f5f7fa;
+
+  /* vital: signal green for state=live/active/healthy */
+  --vital:      #00c96a;
+  --vital-hi:   #00844a;   /* WCAG AA (4.5+ on vital-soft 4.55, on #fff 4.72). was #00b05c = 2.49 fail */
+  --vital-soft: #cff2df;   /* slightly deeper to hold contrast with new --vital-hi */
+  --vital-ring: rgba(0, 201, 106, 0.20);
+
+  /* pulse: heartbeat magenta accent, sparingly */
+  --pulse:      #ff4d7a;
+  --pulse-soft: #ffe4ec;
+
+  /* semantic */
+  --danger:     #ef4444;
+  --warn:       #f59e0b;
+  --info:       #3b82f6;
+
+  /* type */
+  --font-jp:    "Noto Sans JP", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-latin: "Inter", "Noto Sans JP", -apple-system, sans-serif;
+  --font-mono:  "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+  /* rhythm */
+  --r-1: 4px;   --r-2: 8px;   --r-3: 12px;  --r-4: 16px;
+  --r-5: 24px;  --r-6: 32px;  --r-7: 48px;  --r-8: 64px;
+
+  /* radius */
+  --rad-1: 4px; --rad-2: 8px; --rad-3: 12px; --rad-4: 16px; --rad-full: 999px;
+
+  /* elevation */
+  --elev-1: 0 1px 2px rgba(15, 23, 41, 0.04), 0 1px 3px rgba(15, 23, 41, 0.06);
+  --elev-2: 0 4px 12px rgba(15, 23, 41, 0.06), 0 2px 4px rgba(15, 23, 41, 0.04);
+  --elev-3: 0 12px 28px rgba(15, 23, 41, 0.10), 0 4px 8px rgba(15, 23, 41, 0.06);
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-jp);
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.6;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+/* pulse-wave signature (SVG-friendly divider) */
+.pulse-rule {
+  display: block;
+  width: 100%;
+  height: 24px;
+  color: var(--vital);
+  opacity: 0.9;
+}
+
+/* utility */
+.mono { font-family: var(--font-mono); letter-spacing: -0.01em; }
+.tabnum { font-variant-numeric: tabular-nums; }
+
+/* ─── Motion: pulse-ring 2重波 (LIVE 状態 signature) ─── */
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 var(--vital-ring), 0 0 0 0 var(--vital-ring); }
+  40%  { box-shadow: 0 0 0 5px var(--vital-ring), 0 0 0 0 var(--vital-ring); }
+  70%  { box-shadow: 0 0 0 8px rgba(0,201,106,0.06), 0 0 0 5px var(--vital-ring); }
+  100% { box-shadow: 0 0 0 12px transparent, 0 0 0 10px transparent; }
+}
+
+/* ─── Motion: button press depress ─── */
+button:active, .btn-primary:active, .btn-lg:active, .cta-btn:active, .next-btn:active,
+.session-cta:active, .btn-ghost:active, .btn-plain:active, .btn-sm:active {
+  transform: translateY(1px) scale(0.99);
+  transition-duration: 60ms;
+}
+
+/* ─── Motion: entrance stagger (opt-in via data-enter) ─── */
+[data-enter] {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 480ms cubic-bezier(0.22,1,0.36,1),
+              transform 480ms cubic-bezier(0.22,1,0.36,1);
+  will-change: opacity, transform;
+}
+[data-enter].entered {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── Motion: draw-on stroke for pulse-wave SVG ─── */
+@keyframes wave-draw {
+  from { stroke-dashoffset: 200; }
+  to   { stroke-dashoffset: 0; }
+}
+.wave-draw { stroke-dasharray: 200; stroke-dashoffset: 200; animation: wave-draw 800ms cubic-bezier(0.22,1,0.36,1) 300ms forwards; }

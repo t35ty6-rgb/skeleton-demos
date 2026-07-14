@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkelFit | トレーナー が 自分の 名前で オンライン ジム を 始める 土台</title>
+<meta name="description" content="Zoom レッスン、 予約カレンダー、 回数券、 LINE 通知、 決済。 パーソナル トレーナー が 独立するための インフラを 月¥9,800 から。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/tokens.css">
+<style>
+/* Keyboard focus (a11y) */
+:focus { outline: none; }
+button:focus-visible, a:focus-visible, input:focus-visible {
+  outline: 2px solid var(--vital);
+  outline-offset: 2px;
+  border-radius: var(--rad-2);
+}
+.skip-link {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--ink); color: #fff;
+  padding: 12px 20px;
+  font-weight: 700;
+  text-decoration: none;
+  z-index: 1000;
+  border-radius: 0 0 8px 0;
+}
+.skip-link:focus { left: 0; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- LP-specific ---------- */
+.nav {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(251,251,253,0.85);
+  backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: 1px solid var(--rule);
+}
+.nav-inner {
+  max-width: 1120px; margin: 0 auto;
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-weight: 900; font-size: 17px; letter-spacing: -0.02em;
+}
+.logo svg { width: 22px; height: 22px; color: var(--vital); }
+.nav-links { display: flex; gap: 28px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.nav-links a:hover { color: var(--ink); }
+.nav-cta {
+  padding: 9px 16px; background: var(--ink); color: #fff;
+  border-radius: var(--rad-2); font-size: 14px; font-weight: 700;
+  border: none; cursor: pointer;
+  transition: transform 120ms ease-out;
+}
+.nav-cta:hover { transform: translateY(-1px); }
+@media (max-width: 720px) { .nav-links { display: none; } }
+
+/* hero */
+.hero {
+  max-width: 1120px; margin: 0 auto;
+  padding: 96px 24px 72px;
+  display: grid; grid-template-columns: 1.15fr 1fr; gap: 64px;
+  align-items: center;
+}
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; gap: 40px; padding: 48px 20px 40px; }
+  .hero-visual { margin-top: 8px; }
+}
+.hero-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  background: var(--vital-soft); color: var(--vital-hi);
+  border-radius: var(--rad-full);
+  font-size: 12px; font-weight: 700; letter-spacing: 0;
+  margin-bottom: 22px;
+}
+.hero-kicker::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--vital);
+  box-shadow: 0 0 0 4px var(--vital-ring);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 4px var(--vital-ring); }
+  50%      { box-shadow: 0 0 0 8px rgba(0,201,106,0.10); }
+}
+.hero h1 {
+  font-family: var(--font-jp);
+  font-size: clamp(34px, 5.2vw, 56px);
+  font-weight: 900;
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+  margin: 0 0 24px;
+  color: var(--ink);
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.hero h1 em {
+  font-style: normal;
+  color: var(--vital-hi);
+  background: linear-gradient(to bottom, transparent 68%, var(--vital-soft) 68%);
+  padding: 0 2px;
+}
+.hero-lede {
+  font-size: 17px; line-height: 1.8; color: var(--ink-2);
+  margin: 0 0 32px; max-width: 520px;
+}
+.hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+.btn-primary {
+  padding: 14px 22px; background: var(--ink); color: #fff;
+  border-radius: var(--rad-2); font-size: 15px; font-weight: 700;
+  border: none; cursor: pointer;
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+  box-shadow: var(--elev-2);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: var(--elev-3); }
+.btn-ghost {
+  padding: 14px 22px; background: transparent; color: var(--ink);
+  border: 1px solid var(--rule); border-radius: var(--rad-2);
+  font-size: 15px; font-weight: 700; cursor: pointer;
+}
+.btn-ghost:hover { background: var(--surface-2); }
+.hero-meta {
+  font-size: 13px; color: var(--dim);
+  display: flex; align-items: center; gap: 8px;
+}
+.hero-meta svg { width: 14px; height: 14px; color: var(--vital); }
+.hero-next-steps {
+  margin-top: 32px;
+  padding: 18px 22px;
+  background: var(--surface-2);
+  border-radius: var(--rad-3);
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.7;
+}
+.hero-next-steps ol { margin: 12px 0 0; padding-left: 22px; line-height: 1.9; }
+.hero-next-steps li { padding: 3px 0; }
+
+/* hero visual: mock session card */
+.hero-visual {
+  position: relative;
+  padding: 24px;
+  background: var(--surface);
+  border-radius: var(--rad-4);
+  border: 1px solid var(--rule);
+  box-shadow: var(--elev-3);
+}
+.session-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.session-avatar {
+  display: flex; align-items: center; gap: 12px;
+}
+.avatar-dot {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: linear-gradient(135deg, #a4c9ff, #4a7ee0);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 15px;
+}
+.session-avatar-name { font-size: 14px; font-weight: 700; }
+.session-avatar-sub { font-size: 12px; color: var(--dim); }
+.session-live {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  background: var(--vital-soft); color: var(--vital-hi);
+  border-radius: var(--rad-full);
+  font-size: 11px; font-weight: 700; font-family: var(--font-mono);
+}
+.session-live::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--vital);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.session-body {
+  border-top: 1px solid var(--rule);
+  padding-top: 16px;
+}
+.session-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 8px 0;
+  font-size: 13px;
+}
+.session-row-label { color: var(--dim); }
+.session-row-value { font-weight: 700; color: var(--ink); }
+.session-row-value.mono { font-family: var(--font-mono); font-size: 12px; }
+.session-cta {
+  display: block; width: 100%; margin-top: 14px;
+  padding: 12px; background: var(--ink); color: #fff;
+  border: none; border-radius: var(--rad-2);
+  font-weight: 700; font-size: 14px; cursor: pointer;
+}
+.session-pulse {
+  position: absolute;
+  top: 50%; right: -8px;
+  transform: translateY(-50%);
+  width: 16px; height: 16px;
+  color: var(--vital); opacity: 0.6;
+}
+
+/* proof strip */
+.proof {
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface-2);
+  padding: 20px 24px;
+}
+.proof-inner {
+  max-width: 1120px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 32px; flex-wrap: wrap;
+  font-size: 13px; color: var(--dim);
+}
+.proof strong { color: var(--ink); font-weight: 700; }
+
+/* problem/solution */
+.split {
+  max-width: 1120px; margin: 0 auto;
+  padding: 96px 24px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 64px;
+  align-items: start;
+}
+@media (max-width: 900px) { .split { grid-template-columns: 1fr; padding: 64px 20px; gap: 40px; } }
+.split-side h2 {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--dim); margin: 0 0 16px;
+}
+.split-side h3 {
+  font-size: 28px; font-weight: 900; letter-spacing: -0.02em;
+  line-height: 1.3; margin: 0 0 20px;
+}
+.split-side p { color: var(--ink-2); font-size: 15px; line-height: 1.8; }
+.pain-list { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.pain-list li {
+  padding: 14px 16px 14px 40px;
+  background: var(--surface);
+  border-radius: var(--rad-3);
+  border-left: 3px solid var(--pulse);
+  font-size: 14px; color: var(--ink-2);
+  position: relative;
+}
+.pain-list li::before {
+  content: "→"; position: absolute; left: 16px; top: 14px;
+  color: var(--pulse); font-weight: 700;
+}
+.gain-list { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.gain-list li {
+  padding: 14px 16px 14px 40px;
+  background: #fff;
+  border-radius: var(--rad-3);
+  border-left: 3px solid var(--vital);
+  font-size: 14px; color: var(--ink);
+  position: relative;
+}
+.gain-list li::before {
+  content: "";
+  position: absolute; left: 16px; top: 18px;
+  width: 10px; height: 6px;
+  border-left: 2px solid var(--vital);
+  border-bottom: 2px solid var(--vital);
+  transform: rotate(-45deg);
+}
+
+/* features section */
+.section {
+  background: var(--ink);
+  color: #fff;
+  padding: 96px 24px;
+}
+.section-inner { max-width: 1120px; margin: 0 auto; }
+.section-head { margin-bottom: 56px; max-width: 640px; }
+.section-eyebrow {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--vital);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.section-eyebrow svg { width: 16px; color: var(--vital); }
+.section h2.big {
+  font-size: clamp(32px, 4vw, 44px);
+  font-weight: 900; letter-spacing: -0.025em; line-height: 1.2;
+  margin: 14px 0 20px;
+}
+.section p.lede { font-size: 16px; color: rgba(255,255,255,0.72); line-height: 1.8; }
+
+.feat-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+}
+@media (max-width: 900px) { .feat-grid { grid-template-columns: 1fr; } }
+.feat {
+  padding: 28px 24px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--rad-4);
+  position: relative;
+}
+.feat-icon {
+  width: 40px; height: 40px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--vital);
+  border-radius: var(--rad-2);
+  color: var(--ink);
+  margin-bottom: 20px;
+}
+.feat-icon svg { width: 20px; height: 20px; }
+.feat h4 {
+  font-size: 17px; font-weight: 800; margin: 0 0 10px;
+  letter-spacing: -0.015em;
+}
+.feat p { font-size: 14px; line-height: 1.7; color: rgba(255,255,255,0.72); margin: 0; }
+.feat-meta {
+  margin-top: 16px; padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--vital);
+}
+
+/* flow */
+.flow-wrap { padding: 96px 24px; max-width: 1120px; margin: 0 auto; }
+.flow-head { max-width: 640px; margin-bottom: 56px; }
+.flow-head h2 {
+  font-size: clamp(32px, 4vw, 44px);
+  font-weight: 900; letter-spacing: -0.025em; line-height: 1.2;
+  margin: 14px 0 20px;
+}
+.flow-head p { color: var(--ink-2); font-size: 16px; line-height: 1.8; }
+.flow-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+  position: relative;
+}
+@media (max-width: 900px) { .flow-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .flow-grid { grid-template-columns: 1fr; } }
+.flow-step {
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--rad-4);
+  position: relative;
+}
+.flow-step-n {
+  font-family: var(--font-mono);
+  font-size: 12px; font-weight: 600; color: var(--vital-hi);
+  letter-spacing: 0.04em; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.flow-step-n::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--vital);
+}
+.flow-step h5 {
+  font-size: 15px; font-weight: 800; letter-spacing: -0.015em;
+  margin: 0 0 8px;
+}
+.flow-step p { font-size: 13px; line-height: 1.7; color: var(--ink-3); margin: 0; }
+
+/* pricing */
+.pricing-wrap {
+  background: var(--surface-2);
+  padding: 96px 24px;
+}
+.pricing-inner { max-width: 1120px; margin: 0 auto; }
+.pricing-head { max-width: 640px; margin-bottom: 48px; }
+.pricing-head h2 {
+  font-size: clamp(32px, 4vw, 44px);
+  font-weight: 900; letter-spacing: -0.025em; line-height: 1.2;
+  margin: 14px 0 20px;
+}
+.pricing-head p { color: var(--ink-2); font-size: 16px; line-height: 1.8; }
+.plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+@media (max-width: 900px) { .plans { grid-template-columns: 1fr; } }
+.plan {
+  padding: 32px 28px;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: var(--rad-4);
+}
+.plan.recommended {
+  border-color: var(--vital);
+  box-shadow: 0 0 0 3px var(--vital-ring), var(--elev-2);
+  position: relative;
+}
+.plan.recommended::before {
+  content: "推奨"; position: absolute;
+  top: -12px; left: 28px;
+  padding: 4px 12px;
+  background: var(--vital); color: #fff;
+  font-size: 11px; font-weight: 700;
+  border-radius: var(--rad-full);
+  letter-spacing: 0.02em;
+}
+.plan-name { font-size: 14px; font-weight: 700; color: var(--dim); }
+.plan-price {
+  display: flex; align-items: baseline; gap: 6px;
+  margin: 12px 0 18px;
+}
+.plan-price .num {
+  font-family: var(--font-latin);
+  font-size: 40px; font-weight: 900; letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.plan-price .yen {
+  font-size: 20px; font-weight: 700; color: var(--ink-2);
+}
+.plan-price .per { font-size: 13px; color: var(--dim); font-weight: 500; }
+.plan-desc { font-size: 14px; color: var(--ink-2); line-height: 1.7; margin: 0 0 20px; }
+.plan-features { padding: 0; margin: 0 0 24px; list-style: none; display: grid; gap: 8px; }
+.plan-features li {
+  font-size: 13px; color: var(--ink-2); padding-left: 22px; position: relative; line-height: 1.6;
+}
+.plan-features li::before {
+  content: ""; position: absolute; left: 0; top: 8px;
+  width: 10px; height: 6px;
+  border-left: 2px solid var(--vital);
+  border-bottom: 2px solid var(--vital);
+  transform: rotate(-45deg);
+}
+.plan-cta {
+  display: block; width: 100%; padding: 12px;
+  border: 1px solid var(--rule); background: transparent; color: var(--ink);
+  border-radius: var(--rad-2); font-size: 14px; font-weight: 700;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms;
+}
+.plan-cta:hover { background: var(--surface-2); border-color: var(--ink); }
+.plan.recommended .plan-cta {
+  background: var(--ink); color: #fff;
+  border-color: var(--ink);
+  box-shadow: 0 4px 12px rgba(15,23,41,0.12);
+}
+.plan.recommended .plan-cta:hover {
+  background: var(--vital-hi); color: var(--ink);
+  border-color: var(--vital-hi);
+}
+.pricing-note {
+  margin-top: 32px; font-size: 13px; color: var(--dim); line-height: 1.7;
+}
+.pricing-note strong { color: var(--ink); }
+
+/* FAQ */
+.faq-wrap { padding: 96px 24px; max-width: 800px; margin: 0 auto; }
+.faq-head { text-align: center; margin-bottom: 48px; }
+.faq-head h2 {
+  font-size: clamp(28px, 3.5vw, 40px);
+  font-weight: 900; letter-spacing: -0.025em; margin: 14px 0 12px;
+}
+.faq-item {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.faq-q {
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; user-select: none;
+  font-size: 15px; font-weight: 700;
+  padding: 4px 0;
+}
+.faq-q::after {
+  content: "+"; font-size: 22px; color: var(--dim);
+  font-weight: 400; line-height: 1;
+  transition: transform 200ms ease-out;
+}
+.faq-item[open] .faq-q::after { transform: rotate(45deg); color: var(--vital); }
+.faq-a { padding: 12px 0 4px; color: var(--ink-2); font-size: 14px; line-height: 1.8; }
+
+/* final CTA */
+.cta-wrap {
+  background: var(--ink); color: #fff; padding: 96px 24px;
+  text-align: center;
+}
+.cta-inner { max-width: 720px; margin: 0 auto; }
+.cta-inner h2 {
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 900; letter-spacing: -0.025em; line-height: 1.2;
+  margin: 20px 0 20px;
+}
+.cta-inner p { font-size: 16px; color: rgba(255,255,255,0.72); line-height: 1.8; margin: 0 0 32px; }
+.cta-btn {
+  padding: 16px 32px; background: var(--vital); color: var(--ink);
+  border: none; border-radius: var(--rad-2);
+  font-size: 16px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0,201,106,0.24);
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+}
+.cta-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,201,106,0.32); }
+
+/* footer */
+.footer {
+  padding: 40px 24px 32px;
+  background: var(--ink);
+  color: rgba(255,255,255,0.5);
+  font-size: 13px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.footer-inner {
+  max-width: 1120px; margin: 0 auto;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 16px;
+}
+
+/* motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- pulse-wave signature SVG (reusable) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="pulse-wave" viewBox="0 0 120 24">
+      <path d="M0 12 L20 12 L26 12 L30 4 L34 20 L38 8 L42 16 L46 12 L120 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="skel-logo" viewBox="0 0 24 24">
+      <path d="M2 12 L6 12 L8 6 L11 18 L14 8 L16 14 L18 12 L22 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ===== NAV ===== -->
+<a class="skip-link" href="#main-content">メイン コンテンツ に スキップ</a>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#" class="logo">
+      <svg><use href="#skel-logo"/></svg>
+      SkelFit
+    </a>
+    <div class="nav-links">
+      <a href="#feature">機能</a>
+      <a href="#flow">導入の流れ</a>
+      <a href="#pricing">料金</a>
+      <a href="#faq">よくある質問</a>
+    </div>
+    <button class="nav-cta">β 招待を 申し込む</button>
+  </div>
+</nav>
+
+<main id="main-content">
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div>
+    <span class="hero-kicker">β 招待 受付中 · 残り <span class="tabnum" id="betaSeatsLeft">17</span> 枠 / 20 名</span>
+    <h1>
+      Zoom、 LINE、 Excel、 銀行振込。<br>
+      それ 全部、 <em>あなたの 名前の ジム じゃない</em>。
+    </h1>
+    <p class="hero-lede">
+      借り物 の ツール で つないでる うちは、 客 は 「オンライン フィットネス に 通ってる」 と 思っている。 SkelFit は、 あなた の 名前 と 屋号 で オンライン ジム を 立てる ための インフラ。 月 ¥9,800 から。
+    </p>
+    <div class="hero-ctas">
+      <button class="btn-primary">β 招待を 申し込む</button>
+      <button class="btn-ghost">3分デモを見る</button>
+    </div>
+    <div class="hero-meta">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      売上手数料 なし ・ セットアップ 全代行 ・ 初期費用 なし
+    </div>
+    <div class="hero-next-steps">
+      申込 の 直後 の 動き:
+      <ol>
+        <li>メール 送信 → 24時間以内 に 面談枠 3案 を ご提案</li>
+        <li>30分 Zoom で セットアップ 情報 の 引渡し</li>
+        <li>Skeleton staff が 裏方 で Zoom / LINE / Stripe を 全部 接続</li>
+        <li>3日後、 既存 客 に LIFF URL を 送付、 稼働開始</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <svg class="session-pulse" viewBox="0 0 120 24"><use href="#pulse-wave"/></svg>
+    <div class="session-card-head">
+      <div class="session-avatar">
+        <div class="avatar-dot">YM</div>
+        <div>
+          <div class="session-avatar-name">山本 美咲 さん</div>
+          <div class="session-avatar-sub">7回目 / 月8回プラン</div>
+        </div>
+      </div>
+      <span class="session-live">LIVE</span>
+    </div>
+    <div class="session-body">
+      <div class="session-row">
+        <span class="session-row-label">レッスン</span>
+        <span class="session-row-value">下半身 コンディショニング</span>
+      </div>
+      <div class="session-row">
+        <span class="session-row-label">開始時刻</span>
+        <span class="session-row-value mono tabnum">2026-07-13 20:00</span>
+      </div>
+      <div class="session-row">
+        <span class="session-row-label">前回の 目標</span>
+        <span class="session-row-value">スクワット 15回 × 3</span>
+      </div>
+      <button class="session-cta">Zoom を 開始する</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PROOF STRIP ===== -->
+<div class="proof">
+  <div class="proof-inner">
+    <div><strong>スケルトン株式会社</strong> Femoon SaaS で 開発した 予約自動化 を 移植</div>
+    <div>β プロトタイプ 検証 <strong>解約 0 件</strong> (自社 dogfood 期間)</div>
+    <div>セットアップ 実績 <strong>平均 2.8日</strong>、 トレーナー側 作業 <strong>30分</strong> のみ</div>
+    <div>β 参加 トレーナー が <strong>Phase 1 機能 の 優先順位 を 一緒に 決める</strong></div>
+  </div>
+</div>
+
+<!-- ===== PROBLEM / SOLUTION ===== -->
+<div class="split">
+  <div class="split-side">
+    <h2>今 の 現実</h2>
+    <h3>ツールが 5つ に 散らかって、 客管理が 手作業。</h3>
+    <p>予約は Google カレンダー、 決済は 銀行振込、 リマインドは LINE 手打ち、 回数券は Excel、 Zoom URL は 毎回 発行。 独立したい 気持ち は あるが、 事務作業 に 週10時間 溶けていく。</p>
+    <ul class="pain-list">
+      <li>Zoom URL の 発行と 送信 を 毎回 手動</li>
+      <li>回数券の 残数 を Excel で 管理、 客と 齟齬 が 起きる</li>
+      <li>リマインドは LINE 手打ち、 送り忘れる 日 も ある</li>
+      <li>決済は 銀行振込、 未入金の 追跡 に 時間 が 取られる</li>
+      <li>予約変更 の やりとり が すべて チャット</li>
+    </ul>
+  </div>
+
+  <div class="split-side">
+    <h2>SkelFit を 使うと</h2>
+    <h3>1つの 画面 で、 客 と レッスン と 決済 が つながる。</h3>
+    <p>予約 が 入れば Zoom URL が 自動発行、 前日 に LINE で リマインド、 決済は Stripe の サブスク 課金、 回数券 は 自動で 減算。 トレーナー は 「レッスンの中身」 に 100% 集中できる。</p>
+    <ul class="gain-list">
+      <li>Zoom URL は 予約と 同時に 自動発行、 客の LINE に 直送</li>
+      <li>回数券 の 残数 は 自動計算、 客側 LIFF に 常時 表示</li>
+      <li>前日リマインド、 当日リマインド は cron 完全自動</li>
+      <li>月4回 / 月8回 の サブスク を Stripe で 自動 課金</li>
+      <li>予約変更 は 客が LIFF で 自己完結</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== FEATURES (dark section) ===== -->
+<section class="section" id="feature">
+  <div class="section-inner">
+    <div class="section-head">
+      <div class="section-eyebrow">
+        <svg><use href="#pulse-wave"/></svg>
+        機能
+      </div>
+      <h2 class="big">レッスン提供の 全部 を、 1つの ワークフロー に。</h2>
+      <p class="lede">
+        「予約 → Zoom → レッスン → 記録 → 次回予約」 の 一連 の 流れ を、 トレーナー が 何も 手打ち しないで 回せる 状態に する。
+      </p>
+    </div>
+
+    <div class="feat-grid">
+      <div class="feat">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        </div>
+        <h4>予約カレンダー</h4>
+        <p>これまで LINE で 「明日 空いてますか?」 の やりとり を、 客 が 自分で 空き枠 を 見て 埋める 形 に。 承認制 / 自動確定 を トレーナー が 切替。</p>
+        <div class="feat-meta">GOOGLE CAL 同期 / iCal export</div>
+      </div>
+
+      <div class="feat">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        </div>
+        <h4>Zoom 自動発行</h4>
+        <p>毎レッスン Zoom アプリ を 開いて URL を コピペ する 手間 が 消える。 予約 確定 の 瞬間 に 発行、 5分前 に 再送、 開始時刻 に 手元 で 自動起動。</p>
+        <div class="feat-meta">ZOOM API S2S OAUTH</div>
+      </div>
+
+      <div class="feat">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15.5a2 2 0 0 1-2 2H5l-4 4v-18a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <h4>LINE リマインド</h4>
+        <p>忘れそう な 客 に 「明日 14時 ですよ」 を 手打ち で 送っていた 時間 が ゼロ に。 回数券 残、 前回 メモ、 目標 も 通知 に 同梱。</p>
+        <div class="feat-meta">LINE MESSAGING API / LIFF</div>
+      </div>
+
+      <div class="feat">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        </div>
+        <h4>サブスク 決済</h4>
+        <p>月4回 ¥26,400 / 月8回 ¥48,400 の 標準プラン + カスタムプラン。 Stripe が 毎月 自動 課金、 決済 失敗時 は トレーナー admin に 通知。</p>
+        <div class="feat-meta">STRIPE SUBSCRIPTION</div>
+      </div>
+
+      <div class="feat">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="18 8 13 13 9 9 3 15"/></svg>
+        </div>
+        <h4>体重 / 進捗記録</h4>
+        <p>体重 ・ 体脂肪 ・ 筋肉量 ・ 目標達成 を トレーナー が レッスン中 に 記録、 客の LIFF に グラフで 反映。 モチベーション 維持 の 一次 効果。</p>
+        <div class="feat-meta">CHART.JS / LIFF SHARED VIEW</div>
+      </div>
+
+      <div class="feat">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <h4>客の カルテ</h4>
+        <p>客ごとの プロフィール、 目標、 前回メモ、 セッション履歴、 決済履歴 を 1画面 に。 レッスン開始1タップ で 全情報 が 手元に。</p>
+        <div class="feat-meta">FIRESTORE / SNAPSHOT</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FLOW ===== -->
+<section id="flow">
+<div class="flow-wrap">
+  <div class="flow-head">
+    <div class="section-eyebrow" style="color: var(--vital-hi);">
+      <svg><use href="#pulse-wave"/></svg>
+      導入の流れ
+    </div>
+    <h2>申込から 初レッスン まで、 最短 3日。</h2>
+    <p>β 招待 → セットアップ 面談 → 客への 案内 → 初レッスン、 の 4ステップ。 セットアップ は こちら (スケルトン株式会社) が 全部 代行 します。</p>
+  </div>
+  <div class="flow-grid">
+    <div class="flow-step">
+      <div class="flow-step-n">DAY 0</div>
+      <h5>β 招待 申込</h5>
+      <p>フォームから 申込。 折返し 24時間以内 に 面談枠 の 提案 を 送信。</p>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-n">DAY 1</div>
+      <h5>キックオフ 面談</h5>
+      <p>Zoom で 30分。 プラン設計、 LINE公式アカウント の 準備、 プロフィール 情報 を 引き渡し。</p>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-n">DAY 2</div>
+      <h5>セットアップ 完了</h5>
+      <p>admin 画面 の 発行、 客向け LIFF の 発行、 Stripe 接続、 LINE 接続 を こちら で 実施。</p>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-n">DAY 3</div>
+      <h5>初レッスン</h5>
+      <p>既存 客 に LIFF URL を 送付、 予約 が 入る 瞬間 から SkelFit が 動き始める。</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ===== PRICING ===== -->
+<section id="pricing" class="pricing-wrap">
+  <div class="pricing-inner">
+    <div class="pricing-head">
+      <div class="section-eyebrow" style="color: var(--vital-hi);">
+        <svg><use href="#pulse-wave"/></svg>
+        料金
+      </div>
+      <h2>売上には 一切 手を出さない。 月額 だけ。</h2>
+      <p>「客の 売上 の 30%」 のような 手数料モデル は 取らない。 トレーナー が 稼いだ 分は 100% トレーナー のもの、 SkelFit は インフラ利用料 だけ 頂く。</p>
+    </div>
+
+    <div class="plans">
+      <div class="plan">
+        <div class="plan-name">SOLO</div>
+        <div class="plan-price">
+          <span class="yen">¥</span>
+          <span class="num tabnum">9,800</span>
+          <span class="per">/ 月 (税込)</span>
+        </div>
+        <p class="plan-desc">週 10時間 溶けていた 事務作業 が、 月 ¥9,800 で 消える。</p>
+        <ul class="plan-features">
+          <li>顧客 20名 まで</li>
+          <li>予約 / Zoom / LINE / 決済 込み</li>
+          <li>体重 進捗 記録</li>
+          <li>メール サポート</li>
+        </ul>
+        <button class="plan-cta">SOLO で 申し込む</button>
+      </div>
+
+      <div class="plan recommended">
+        <div class="plan-name">PRO</div>
+        <div class="plan-price">
+          <span class="yen">¥</span>
+          <span class="num tabnum">19,800</span>
+          <span class="per">/ 月 (税込)</span>
+        </div>
+        <p class="plan-desc">客 に 「食事 と 動画 まで 見てくれる」 と 言わせる 一段上。</p>
+        <ul class="plan-features">
+          <li>顧客 50名 まで</li>
+          <li>SOLO の 全機能</li>
+          <li>食事 写真 → AI カロリー 推定</li>
+          <li>客 の 自主トレ 動画 コメント 機能</li>
+          <li>週次 継続率 レポート</li>
+          <li>優先 LINE サポート</li>
+        </ul>
+        <button class="plan-cta">PRO で 申し込む</button>
+      </div>
+
+      <div class="plan">
+        <div class="plan-name">STUDIO</div>
+        <div class="plan-price">
+          <span class="yen">¥</span>
+          <span class="num tabnum">39,800</span>
+          <span class="per">/ 月 (税込)</span>
+        </div>
+        <p class="plan-desc">複数 トレーナー を 抱えて チームで 動かす フェーズ に。</p>
+        <ul class="plan-features">
+          <li>顧客 200名 まで</li>
+          <li>トレーナー 5名 まで</li>
+          <li>PRO の 全機能</li>
+          <li>スタッフ 間 の 予約振替</li>
+          <li>売上 レポート (トレーナー別)</li>
+          <li>専任 サポート</li>
+        </ul>
+        <button class="plan-cta">STUDIO で 申し込む</button>
+      </div>
+    </div>
+    <p class="pricing-note" style="text-align: center; margin-top: 20px;">
+      <a href="mailto:jobs@skeleton.example.com?subject=SkelFit%20ENTERPRISE%20%E5%95%86%E8%AB%87" style="color: var(--vital-hi); font-weight: 700;">10名 以上 の ジム / API 連携 / 独自ドメイン の 案件 は ENTERPRISE 相談 →</a>
+    </p>
+
+    <p class="pricing-note">
+      <strong>Zoom / LINE / Stripe</strong> の アカウント は トレーナー 名義 で 取得 (こちら で セットアップ 代行)。 各社 利用料 は 各社規定 に 従い、 SkelFit 月額 とは 別。
+      <br><br>
+      <strong>Stripe 決済 手数料</strong>: SkelFit は 客の 売上 に 手数料 を 取りませんが、 Stripe の 決済手数料 (3.6% + ¥40/決済) は 各国 各社 の 規定 に 従い 発生 します (トレーナー の 手取り = 客支払 - Stripe手数料)。
+      <br>
+      <strong>β 招待</strong>: 上限 20名 は 2026年 現時点 の 予定 枠 で、 状況 に 応じて 変更 する 可能性 が あります。
+    </p>
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section id="faq">
+<div class="faq-wrap">
+  <div class="faq-head">
+    <div class="section-eyebrow" style="color: var(--vital-hi); justify-content: center;">
+      <svg><use href="#pulse-wave"/></svg>
+      よくある質問
+    </div>
+    <h2>問い合わせ 前 に、 まず これ。</h2>
+  </div>
+
+  <details class="faq-item">
+    <summary class="faq-q">既存 の 客 は そのまま 移行 できますか? 離れませんか?</summary>
+    <div class="faq-a">今 使ってる LINE 公式アカウント と Zoom アカウント を そのまま 引き継ぎます。 客 から 見ると 「予約フォーム が キレイになった」 「Zoom URL が 自動で 届く」 位 の 体感 で、 別サービス に 引っ越した という 感覚 は 出しません。 セットアップ時 に 既存客 リスト を CSV で 頂ければ こちら で 移行 します。</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">Zoom の 有料プラン は 必要 ですか?</summary>
+    <div class="faq-a">1レッスン 40分 以内 なら Zoom 無料プラン で 動きます。 50分〜 の レッスン を 提供する なら Pro (¥2,000/月) が 必要 です。 SkelFit は Zoom API を 叩いて URL を 発行する だけ なので、 プラン は トレーナー が 自由に 選べます。</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">売上 に 手数料 が かからない のは 罠 が あるのでは?</summary>
+    <div class="faq-a">ありません。 Stripe の 決済 手数料 (3.6% + ¥40) は 発生 しますが、 SkelFit の 取り分 は ゼロ。 月 ¥9,800 を 払う のは、 週10時間 の 事務作業 を 外注 する 対価 です。 「売上 に 応じて 手数料 が 増える」 モデル は トレーナー が 頑張るほど 損 する 構造 だから、 SkelFit は 月額 だけ の フラット に した。</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">1人 で 動かせますか? 事務 が 苦手 でも 大丈夫?</summary>
+    <div class="faq-a">1人 で 動かせます。 セットアップ (Zoom / LINE / Stripe 接続) は こちら が 全部 代行、 客の カルテ 入力 も 音声 で メモ できる ので タイピング 苦手 でも 平気 です。 「レッスン 中 と 直前 直後 以外 は SkelFit を 開かなくて 済む」 状態 を 目指しています。</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">解約 したら 客 との つながり は 切れますか?</summary>
+    <div class="faq-a">切れません。 LINE 公式アカウント と Zoom は トレーナー 名義 で 契約 されている ので、 SkelFit を 解約 しても 客との 連絡 手段 は そのまま 残ります。 SkelFit を 抜ける 時 は 客の カルテ を CSV で 出力 して お渡し します。</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">β 20名 に 入るか 入れないか、 決め手 は 何ですか?</summary>
+    <div class="faq-a">β トレーナー の 選定 基準 は 「独立志向 か」 と 「既存 の 客が 5名 以上 いる か」 の 2つ です。 客 ゼロ から 始めたい 方 は Phase 2 で ご案内 します (集客 の 仕組み が Phase 2 で 追加予定 の ため)。 スケジュール が 埋まり 次第 一旦 締切 → Phase 2 (2026年 秋) で 追加募集。</div>
+  </details>
+</div>
+</section>
+
+<!-- ===== FINAL CTA ===== -->
+<section class="cta-wrap">
+  <div class="cta-inner">
+    <svg style="width: 44px; color: var(--vital);" viewBox="0 0 120 24"><use href="#pulse-wave"/></svg>
+    <h2>3日後 から、<br>事務作業 の ない 月曜日 が 始まる。</h2>
+    <p>週 10時間 溶けていた 事務作業 が、 SkelFit で 消える。 あなた の 屋号、 あなた の 客、 あなた の 売上、 100% あなたの ままで。</p>
+    <button class="cta-btn">β 招待を 申し込む</button>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>© 2026 スケルトン株式会社 · SkelFit</div>
+    <div>
+      <a href="/legal/tokusho.html" style="color: inherit; text-decoration: underline;">特商法 表記</a> ·
+      <a href="/legal/privacy.html" style="color: inherit; text-decoration: underline;">プライバシー</a> ·
+      <a href="/legal/terms.html" style="color: inherit; text-decoration: underline;">利用規約</a> ·
+      <a href="mailto:jobs@skeleton.example.com" style="color: inherit; text-decoration: underline;">お問い合わせ</a>
+    </div>
+  </div>
+  <div class="footer-trademark" style="max-width: 1120px; margin: 12px auto 0; padding: 0 24px; font-size: 11px; color: rgba(255,255,255,0.35); line-height: 1.6;">
+    Zoom は Zoom Video Communications, Inc. の 商標 です。 LINE は LY Corporation の 商標 です。 Google Calendar は Google LLC の 商標 です。 Stripe は Stripe, Inc. の 商標 です。 SkelFit は 各社 と 資本 関係 は ありません。
+  </div>
+</footer>
+
+</body>
+</html>
