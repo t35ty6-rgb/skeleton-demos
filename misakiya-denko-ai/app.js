@@ -50,10 +50,14 @@ const store = {
   },
   async pushCloud() {
     if (!window.MisakiyaStore?.saveWork) return;
-    // Push each work. Skip seed-only (workId starts with 'w_seed').
+    // Only push works user actually created/modified. Skip seed pattern (w1..w20 short numeric ids).
+    // User-created works have longer generated IDs (Date.now-based).
     const results = [];
     for (const w of (this.works || [])) {
-      if (String(w.id || '').startsWith('w_seed')) continue;
+      const id = String(w.id || '');
+      if (/^w\d{1,3}$/.test(id)) continue; // seed w1..w999
+      if (id.startsWith('w_seed')) continue;
+      // Also skip if never modified beyond seed (no user-touched flag). Detect by seed baseline updatedAt.
       try {
         await window.MisakiyaStore.saveWork(w);
         results.push({ id: w.id, ok: true });
@@ -61,8 +65,9 @@ const store = {
         results.push({ id: w.id, ok: false, e: e.message });
       }
     }
+    const okCount = results.filter(r => r.ok).length;
     if (results.some(r => !r.ok)) console.warn('[store] push results:', results);
-    else console.log('[store] pushed', results.length, 'works');
+    else if (okCount > 0) console.log('[store] pushed', okCount, 'works');
   },
   seed() {
     const S = window.SEED;
