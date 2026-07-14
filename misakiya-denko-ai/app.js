@@ -11,6 +11,15 @@ const store = {
   stepChecks: {}, workLog: [], stepPhotos: {}, guideDismissed: false,
   currentUserId: 'u1',
 
+
+  normalizeWork(w) {
+    if (!w || typeof w !== 'object') return w;
+    for (const k of ['steps','tools','materials','resources','tips','cautions','history','relatedIds','tags']) {
+      if (!Array.isArray(w[k])) w[k] = [];
+    }
+    return w;
+  },
+
   load() {
     let hasAny = false;
     for (const k of STORE_KEYS) {
@@ -18,6 +27,8 @@ const store = {
       if (raw != null) { try { this[k] = JSON.parse(raw); hasAny = true; } catch {} }
     }
     if (!hasAny) this.seed();
+    // Normalize all works to have expected array fields (prevents crash on partial data)
+    if (Array.isArray(this.works)) this.works = this.works.map(w => this.normalizeWork(w));
     // Background: pull latest works from Firestore (tenant-scoped). local wins on conflict for MVP.
     setTimeout(() => this.pullCloud().catch(e => console.warn('[store] pull failed:', e.message)), 500);
   },
@@ -43,7 +54,7 @@ const store = {
       const cloudT = new Date(cloud.updatedAt || 0).getTime();
       if (localT > cloudT) byId.set(local.id, local);
     }
-    this.works = Array.from(byId.values()).sort((a,b) => new Date(b.updatedAt||0) - new Date(a.updatedAt||0));
+    this.works = Array.from(byId.values()).sort((a,b) => new Date(b.updatedAt||0) - new Date(a.updatedAt||0)).map(w => this.normalizeWork(w));
     localStorage.setItem(KEY + 'works', JSON.stringify(this.works));
     console.log('[store] pulled', this.works.length, 'works');
     if (typeof window.render === 'function') window.render();
@@ -967,27 +978,27 @@ function buildDetailCard(w) {
     } else if (tab === 'tools') {
       const wrap = h('div', {});
       wrap.append(h('div', { class: 'related-h' }, '使用工具'));
-      if (w.tools.length === 0) wrap.append(h('div', { class: 'empty', style: 'padding:20px 0' }, '登録なし'));
+      if ((w.tools||[]).length === 0) wrap.append(h('div', { class: 'empty', style: 'padding:20px 0' }, '登録なし'));
       else {
         const g = h('div', { class: 'tools-grid' });
-        w.tools.forEach(t => g.append(h('div', { class: 'tool' }, h('span', { html: I.wrench }), h('span', { class: 'tool-name' }, t.name), h('span', { class: 'tool-qty' }, t.qty))));
+        (w.tools||[]).forEach(t => g.append(h('div', { class: 'tool' }, h('span', { html: I.wrench }), h('span', { class: 'tool-name' }, t.name), h('span', { class: 'tool-qty' }, t.qty))));
         wrap.append(g);
       }
       wrap.append(h('div', { class: 'related-h', style: 'margin-top:16px' }, '使用材料'));
-      if (w.materials.length === 0) wrap.append(h('div', { class: 'empty', style: 'padding:20px 0' }, '登録なし'));
+      if ((w.materials||[]).length === 0) wrap.append(h('div', { class: 'empty', style: 'padding:20px 0' }, '登録なし'));
       else {
         const g = h('div', { class: 'tools-grid' });
-        w.materials.forEach(t => g.append(h('div', { class: 'tool' }, h('span', { html: I.wrench }), h('span', { class: 'tool-name' }, t.name), h('span', { class: 'tool-qty' }, t.qty))));
+        (w.materials||[]).forEach(t => g.append(h('div', { class: 'tool' }, h('span', { html: I.wrench }), h('span', { class: 'tool-name' }, t.name), h('span', { class: 'tool-qty' }, t.qty))));
         wrap.append(g);
       }
       lower.append(wrap);
     } else if (tab === 'resources') {
       const wrap = h('div', {});
       wrap.append(h('div', { class: 'related-h' }, '添付資料'));
-      if (w.resources.length === 0) wrap.append(h('div', { class: 'empty', style: 'padding:20px 0' }, '添付資料はありません'));
+      if ((w.resources||[]).length === 0) wrap.append(h('div', { class: 'empty', style: 'padding:20px 0' }, '添付資料はありません'));
       else {
         const list = h('div', { class: 'rel-list' });
-        w.resources.forEach(r => {
+        (w.resources||[]).forEach(r => {
           const isUploadedImg = r.url && r.url.startsWith('data:image/');
           const isUploadedPdf = r.url && r.url.startsWith('data:application/pdf');
           if (isUploadedImg) {
@@ -1016,27 +1027,27 @@ function buildDetailCard(w) {
     } else if (tab === 'tips') {
       const wrap = h('div', {});
       wrap.append(h('div', { class: 'related-h' }, 'コツ・ポイント'));
-      if (w.tips.length === 0) wrap.append(h('div', { class: 'empty', style: 'padding:20px 0' }, '登録なし'));
+      if ((w.tips||[]).length === 0) wrap.append(h('div', { class: 'empty', style: 'padding:20px 0' }, '登録なし'));
       else {
         const list = h('div', { class: 'tips-list' });
-        w.tips.forEach(t => list.append(h('div', { class: 'tip' }, t)));
+        (w.tips||[]).forEach(t => list.append(h('div', { class: 'tip' }, t)));
         wrap.append(list);
       }
       wrap.append(h('div', { class: 'related-h', style: 'margin-top:16px' }, '注意点・危険予知'));
-      if (w.cautions.length === 0) wrap.append(h('div', { class: 'empty', style: 'padding:20px 0' }, '登録なし'));
+      if ((w.cautions||[]).length === 0) wrap.append(h('div', { class: 'empty', style: 'padding:20px 0' }, '登録なし'));
       else {
         const list = h('div', { class: 'tips-list' });
-        w.cautions.forEach(t => list.append(h('div', { class: 'caution' }, t)));
+        (w.cautions||[]).forEach(t => list.append(h('div', { class: 'caution' }, t)));
         wrap.append(list);
       }
       lower.append(wrap);
     } else if (tab === 'history') {
       const wrap = h('div', {});
       wrap.append(h('div', { class: 'related-h' }, '更新履歴'));
-      if (w.history.length === 0) wrap.append(h('div', { class: 'empty', style: 'padding:20px 0' }, '履歴なし'));
+      if ((w.history||[]).length === 0) wrap.append(h('div', { class: 'empty', style: 'padding:20px 0' }, '履歴なし'));
       else {
         const list = h('div', { class: 'history' });
-        w.history.forEach(hi => list.append(h('div', { class: 'hist' },
+        (w.history||[]).forEach(hi => list.append(h('div', { class: 'hist' },
           h('div', { class: 'hist-time' }, hi.time),
           h('div', { class: 'hist-body' },
             h('div', { class: 'hist-who' }, hi.who),
@@ -1249,8 +1260,8 @@ function printWork(w) {
     <dt>版</dt><dd>${fmtDate(w.updatedAt)}</dd>
     <dt>印刷日</dt><dd>${fmtDate(Date.now())}</dd>
   </dl>
-  ${w.cautions && w.cautions.length ? `<h2>危険予知</h2>${w.cautions.map(c => `<div class="caution">${esc(c)}</div>`).join('')}` : ''}
-  ${w.tips && w.tips.length ? `<h2>コツ・ポイント</h2>${w.tips.map(t => `<div class="tip">${esc(t)}</div>`).join('')}` : ''}
+  ${w.cautions && (w.cautions||[]).length ? `<h2>危険予知</h2>${(w.cautions||[]).map(c => `<div class="caution">${esc(c)}</div>`).join('')}` : ''}
+  ${w.tips && (w.tips||[]).length ? `<h2>コツ・ポイント</h2>${(w.tips||[]).map(t => `<div class="tip">${esc(t)}</div>`).join('')}` : ''}
   <h2>作業手順 <span style="font-weight:500;color:#666;font-size:9pt">(右端 □ で現場チェック)</span></h2>
   ${(w.steps||[]).map((s, i) => `
     <div class="step">
@@ -1263,8 +1274,8 @@ function printWork(w) {
       <div class="check-box"></div>
     </div>
   `).join('')}
-  ${w.tools && w.tools.length ? `<h2>使用工具</h2><ul class="tools">${w.tools.map(t => `<li>${esc(t.name)} <span style="color:#666;font-family:sans-serif;font-size:9pt">${esc(t.qty)}</span></li>`).join('')}</ul>` : ''}
-  ${w.materials && w.materials.length ? `<h2>使用材料</h2><ul class="tools">${w.materials.map(t => `<li>${esc(t.name)} <span style="color:#666;font-family:sans-serif;font-size:9pt">${esc(t.qty)}</span></li>`).join('')}</ul>` : ''}
+  ${w.tools && (w.tools||[]).length ? `<h2>使用工具</h2><ul class="tools">${(w.tools||[]).map(t => `<li>${esc(t.name)} <span style="color:#666;font-family:sans-serif;font-size:9pt">${esc(t.qty)}</span></li>`).join('')}</ul>` : ''}
+  ${w.materials && (w.materials||[]).length ? `<h2>使用材料</h2><ul class="tools">${(w.materials||[]).map(t => `<li>${esc(t.name)} <span style="color:#666;font-family:sans-serif;font-size:9pt">${esc(t.qty)}</span></li>`).join('')}</ul>` : ''}
   <footer>
     <span>三崎屋電工 作業手順書 · ${esc(w.title)}</span>
     <span>印刷: ${fmtDate(Date.now())}</span>
@@ -1279,10 +1290,10 @@ function buildRelatedBlock(w) {
   const rel = h('div', {});
   rel.innerHTML = `<div class="related-h">関連データ</div>`;
   const list = h('div', { class: 'rel-list' });
-  if (w.resources.length === 0) {
+  if ((w.resources||[]).length === 0) {
     list.innerHTML = '<div class="empty" style="padding:12px 0;font-size:11.5px">添付なし</div>';
   } else {
-    w.resources.slice(0, 4).forEach(r => {
+    (w.resources||[]).slice(0, 4).forEach(r => {
       const iconCls = r.type === 'pdf' ? 'pdf' : r.type === 'dwg' ? 'dwg' : r.type === 'img' ? 'img' : 'link';
       const iconSvg = r.type === 'pdf' ? I.pdf : r.type === 'dwg' ? I.dwg : r.type === 'img' ? I.img : I.link;
       const it = h('div', { class: 'rel-item' });
@@ -2249,7 +2260,7 @@ function viewWorkEdit(root, params) {
     if (!draft.title.trim()) { toast('タイトルを入力してください', 'err'); return; }
     Object.assign(w, draft, { status: 'published', updatedAt: new Date().toISOString().slice(0, 10) });
     w.history = w.history || [];
-    const isFirst = !w.history.some(hi => hi.what && hi.what.includes('新規'));
+    const isFirst = !(w.history||[]).some(hi => hi.what && hi.what.includes('新規'));
     w.history.unshift({ time: fmtDate(Date.now()).slice(5), who: store.user().name, what: isFirst ? '新規登録' : '内容を更新' });
     store.save('works');
     toast('保存しました', 'success');
