@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>OEM 在庫管理 Portal — Skeleton</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: 'Inter', 'Noto Sans JP', -apple-system, sans-serif;
+    background: #F1F3F6;
+    color: #101828;
+    line-height: 1.5;
+  }
+  body {
+    display: grid;
+    place-items: center;
+    padding: 24px;
+  }
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 32px 36px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 4px 20px rgba(16,24,40,.08), 0 1px 3px rgba(16,24,40,.06);
+  }
+  .brand {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+  }
+  .mark {
+    width: 40px; height: 40px; border-radius: 8px;
+    background: linear-gradient(135deg, #B04A08, #A8460A);
+    color: white; display: grid; place-items: center;
+    font-weight: 700; font-size: 18px;
+  }
+  h1 {
+    font-size: 18px; font-weight: 700; letter-spacing: -0.01em;
+  }
+  .sub {
+    font-size: 12px; color: #667085; margin-top: 2px;
+  }
+  .status {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 14px;
+    background: #F8F9FB;
+    border: 1px solid #E4E7EC;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #475467;
+  }
+  .status .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #98A2B3;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  .status.ok .dot { background: #067647; animation: none; }
+  .status.err .dot { background: #B42318; animation: none; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .url-box {
+    padding: 12px 14px;
+    background: #FFF4EA;
+    border: 1px solid #FFE7D3;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+    color: #A8460A;
+    word-break: break-all;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 14px 20px;
+    background: #B04A08;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .12s;
+    letter-spacing: 0.01em;
+  }
+  .btn:hover { background: #A8460A; }
+  .btn:disabled { background: #98A2B3; cursor: not-allowed; }
+  .btn.secondary {
+    background: white;
+    color: #101828;
+    border: 1px solid #CFD3DA;
+    margin-top: 8px;
+  }
+  .btn.secondary:hover { background: #F8F9FB; }
+
+  .meta {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #E4E7EC;
+    font-size: 11px;
+    color: #667085;
+    line-height: 1.6;
+  }
+  .meta code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    background: #F1F3F6;
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #475467;
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="brand">
+    <div class="mark">S</div>
+    <div>
+      <h1>OEM 在庫管理 Portal</h1>
+      <div class="sub">中国工場 → 大野倉庫 → Amazon FBA</div>
+    </div>
+  </div>
+
+  <div class="status" id="status">
+    <span class="dot"></span>
+    <span id="status-text">Portal の 状態 を 確認中…</span>
+  </div>
+
+  <div class="url-box" id="url-box"></div>
+
+  <button class="btn" id="open-btn" disabled>Portal を 開く</button>
+  <a class="btn secondary" id="copy-btn" href="#" style="display:none;">URL を コピー</a>
+
+  <div class="meta">
+    この Portal は <code>~/.skeleton-oem-portal</code> の LaunchAgent が Mac 常時起動 中 に 動きます。<br>
+    tunnel URL が 変わっても この ページ は 自動で 追従 します (最終更新: <span id="updated-at">—</span>)。
+  </div>
+</div>
+
+<script>
+(async function() {
+  const statusEl = document.getElementById('status');
+  const statusText = document.getElementById('status-text');
+  const urlBox = document.getElementById('url-box');
+  const openBtn = document.getElementById('open-btn');
+  const copyBtn = document.getElementById('copy-btn');
+  const updatedAtEl = document.getElementById('updated-at');
+
+  try {
+    // 1. current-tunnel.json を fetch (cache-bust)
+    const res = await fetch('current-tunnel.json?cb=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('tunnel info 取得失敗');
+    const { url, updatedAt } = await res.json();
+    if (!url) throw new Error('URL 未登録');
+
+    updatedAtEl.textContent = updatedAt ? new Date(updatedAt).toLocaleString('ja-JP') : '—';
+    urlBox.textContent = url;
+    urlBox.style.display = 'block';
+
+    // 2. tunnel 生存 check
+    statusText.textContent = 'Portal に 接続中…';
+    let alive = false;
+    try {
+      // login.html は auth 不要 で 200 返す
+      const ping = await fetch(url + '/login.html', { method: 'HEAD', mode: 'no-cors', cache: 'no-store' });
+      alive = true; // no-cors では status 取れないが 通信成功 = alive
+    } catch (e) {
+      alive = false;
+    }
+
+    if (alive) {
+      statusEl.classList.add('ok');
+      statusText.textContent = 'Portal 稼働中 · 開けます';
+      openBtn.disabled = false;
+      openBtn.textContent = 'Portal を 開く';
+      const target = url + '/login.html?next=' + encodeURIComponent('/inventory.html');
+      openBtn.onclick = () => window.location.href = target;
+      copyBtn.style.display = 'block';
+      copyBtn.onclick = async (e) => {
+        e.preventDefault();
+        try {
+          await navigator.clipboard.writeText(target);
+          copyBtn.textContent = '✓ コピーしました';
+          setTimeout(() => copyBtn.textContent = 'URL を コピー', 1500);
+        } catch { alert('コピー失敗: ' + target); }
+      };
+    } else {
+      statusEl.classList.add('err');
+      statusText.textContent = 'Portal に 接続できません (Mac を 確認)';
+      openBtn.disabled = false;
+      openBtn.textContent = 'それでも 開く (エラー覚悟)';
+      openBtn.onclick = () => window.location.href = url + '/login.html';
+    }
+  } catch (e) {
+    statusEl.classList.add('err');
+    statusText.textContent = 'エラー: ' + e.message;
+    openBtn.disabled = true;
+    openBtn.textContent = 'URL 情報 取得失敗';
+  }
+})();
+</script>
+
+</body>
+</html>
