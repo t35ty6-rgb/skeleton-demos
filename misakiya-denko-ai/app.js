@@ -18,10 +18,51 @@ const store = {
       if (raw != null) { try { this[k] = JSON.parse(raw); hasAny = true; } catch {} }
     }
     if (!hasAny) this.seed();
+    // Background: pull latest works from Firestore (tenant-scoped). local wins on conflict for MVP.
+    setTimeout(() => this.pullCloud().catch(e => console.warn('[store] pull failed:', e.message)), 500);
   },
   save(...keys) {
     const ks = keys.length ? keys : STORE_KEYS;
     for (const k of ks) localStorage.setItem(KEY + k, JSON.stringify(this[k]));
+    // Async push works to Firestore (only when works key touched)
+    if (ks.includes('works')) {
+      this._pushDirty = true;
+      clearTimeout(this._pushT); this._pushT = setTimeout(() => this.pushCloud().catch(e => console.warn('[store] push failed:', e.message)), 400);
+    }
+  },
+  async pullCloud() {
+    if (!window.MisakiyaStore?.listWorks) return;
+    const cloudWorks = await window.MisakiyaStore.listWorks(500);
+    if (!cloudWorks.length) return; // Empty cloud = keep local
+    // Merge by id: local overwrites cloud only if local.updatedAt > cloud.updatedAt
+    const byId = new Map(cloudWorks.map(w => [w.id, w]));
+    for (const local of (this.works || [])) {
+      const cloud = byId.get(local.id);
+      if (!cloud) { byId.set(local.id, local); continue; }
+      const localT = new Date(local.updatedAt || 0).getTime();
+      const cloudT = new Date(cloud.updatedAt || 0).getTime();
+      if (localT > cloudT) byId.set(local.id, local);
+    }
+    this.works = Array.from(byId.values()).sort((a,b) => new Date(b.updatedAt||0) - new Date(a.updatedAt||0));
+    localStorage.setItem(KEY + 'works', JSON.stringify(this.works));
+    console.log('[store] pulled', this.works.length, 'works');
+    if (typeof window.render === 'function') window.render();
+  },
+  async pushCloud() {
+    if (!window.MisakiyaStore?.saveWork) return;
+    // Push each work. Skip seed-only (workId starts with 'w_seed').
+    const results = [];
+    for (const w of (this.works || [])) {
+      if (String(w.id || '').startsWith('w_seed')) continue;
+      try {
+        await window.MisakiyaStore.saveWork(w);
+        results.push({ id: w.id, ok: true });
+      } catch (e) {
+        results.push({ id: w.id, ok: false, e: e.message });
+      }
+    }
+    if (results.some(r => !r.ok)) console.warn('[store] push results:', results);
+    else console.log('[store] pushed', results.length, 'works');
   },
   seed() {
     const S = window.SEED;

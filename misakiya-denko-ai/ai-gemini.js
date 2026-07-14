@@ -88,3 +88,55 @@ window.MisakiyaGemini = {
   uploadAndGenerateSteps,
   MAX_UPLOAD_BYTES,
 };
+
+// ────────────────────────────────────────────────────────────────
+// Firestore CRUD via CF proxy (tenant-scoped)
+// tenantId は localStorage 'misakiya-tid' + ?t= URL param override
+// ────────────────────────────────────────────────────────────────
+const CF_SAVE   = CF_BASE + '/misakiyaSaveWork';
+const CF_LIST   = CF_BASE + '/misakiyaListWorks';
+const CF_DELETE = CF_BASE + '/misakiyaDeleteWork';
+const CF_GET    = CF_BASE + '/misakiyaGetWork';
+
+function getTenantId() {
+  const url = new URLSearchParams(location.search);
+  const override = url.get('t');
+  if (override && /^[a-zA-Z0-9_-]{6,64}$/.test(override)) {
+    localStorage.setItem('misakiya-tid', override);
+    return override;
+  }
+  let tid = localStorage.getItem('misakiya-tid');
+  if (!tid || !/^[a-zA-Z0-9_-]{6,64}$/.test(tid)) {
+    tid = 'demo-' + Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2,'0')).join('');
+    localStorage.setItem('misakiya-tid', tid);
+  }
+  return tid;
+}
+
+async function apiPost(url, body) {
+  const r = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+  return j;
+}
+
+async function saveWork(work) {
+  const tenantId = getTenantId();
+  return apiPost(CF_SAVE, { tenantId, work });
+}
+async function listWorks(limit = 200) {
+  const tenantId = getTenantId();
+  const r = await apiPost(CF_LIST, { tenantId, limit });
+  return r.works || [];
+}
+async function deleteWork(workId) {
+  const tenantId = getTenantId();
+  return apiPost(CF_DELETE, { tenantId, workId });
+}
+async function getWork(workId) {
+  const tenantId = getTenantId();
+  const r = await apiPost(CF_GET, { tenantId, workId });
+  return r.work;
+}
+
+window.MisakiyaStore = { saveWork, listWorks, deleteWork, getWork, getTenantId };
