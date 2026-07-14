@@ -2499,6 +2499,50 @@ function buildTranscribeCard(draft, onGenerated) {
   });
   bVTT.append(vttInp);
 
+  // 動画ファイル → GCS upload → 実 Gemini 2.5 Flash 解析
+  const bUpload = h('label', { class: 'tr-choice', style: 'cursor:pointer' });
+  bUpload.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <div class="tr-choice-t">動画ファイル → 生成</div>
+    <div class="tr-choice-s">MP4/MOV/WebM · 500MB まで · AI 解析</div>`;
+  const upInp = h('input', { type: 'file', accept: 'video/*' });
+  upInp.style.display = 'none';
+  upInp.addEventListener('change', async () => {
+    const f = upInp.files[0]; if (!f) return;
+    if (!/^video\//.test(f.type)) { toast('動画ファイル (mp4/mov/webm 等) を選んでください', 'err'); return; }
+    if (f.size > 500 * 1024 * 1024) { toast(`ファイルサイズ 上限 500MB。 現在 ${Math.round(f.size/1024/1024)}MB`, 'err'); return; }
+    if (!window.MisakiyaGemini?.uploadAndGenerateSteps) { toast('Gemini モジュール 未初期化 (再読み込みしてください)', 'err'); return; }
+    const orig = bUpload.innerHTML;
+    bUpload.style.pointerEvents = 'none';
+    bUpload.innerHTML = `<div class="tr-choice-t">アップロード 0%</div><div class="tr-choice-s">${(f.size/1024/1024).toFixed(1)}MB の 動画を送信中</div>`;
+    try {
+      const result = await window.MisakiyaGemini.uploadAndGenerateSteps(
+        f,
+        draft.title ? `作業名の候補: ${draft.title}` : '',
+        (p) => {
+          if (p.phase === 'upload') bUpload.innerHTML = `<div class="tr-choice-t">アップロード ${p.pct}%</div><div class="tr-choice-s">${(f.size/1024/1024).toFixed(1)}MB を GCS に送信中</div>`;
+          if (p.phase === 'analyze') bUpload.innerHTML = `<div class="tr-choice-t">Gemini 解析中…</div><div class="tr-choice-s">動画長 により 20-120秒</div>`;
+        },
+      );
+      state.cues = (result.steps || []).map((s) => ({
+        start: s.startSec || 0,
+        end: s.endSec || (s.startSec + 30),
+        text: s.title + '。' + (s.desc || ''),
+      }));
+      if (!draft.title && result.title) draft.title = result.title;
+      state.geminiResult = result;
+      bUpload.innerHTML = orig; bUpload.style.pointerEvents = '';
+      upInp.value = '';
+      toast(`${result.steps?.length || 0} 手順 生成 完了 (信頼度 ${result.confidenceScore || '?'} · ${((result._meta?.elapsedMs||0)/1000).toFixed(1)}秒)`, 'success');
+      renderPrev();
+    } catch (e) {
+      console.error('upload+gemini failed', e);
+      bUpload.innerHTML = orig; bUpload.style.pointerEvents = '';
+      upInp.value = '';
+      toast('失敗: ' + e.message.slice(0, 100), 'err');
+    }
+  });
+  bUpload.append(upInp);
+
   // YouTube URL → 実 Gemini 2.5 Flash 解析 (Cloud Function 経由)
   const bYT = h('button', { class: 'tr-choice' });
   bYT.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2c-1.71-.46-8.6-.46-8.6-.46s-6.89 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.71.46 8.6.46 8.6.46s6.89 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.29 29 29 0 0 0-.46-5.29z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor"/></svg>
@@ -2572,7 +2616,7 @@ function buildTranscribeCard(draft, onGenerated) {
     toast(`${state.cues.length} キャプション認識`, 'success'); renderPrev();
   });
 
-  actions.append(bYT, bVTT, bAI, bPaste);
+  actions.append(bUpload, bYT, bVTT, bAI, bPaste);
   body.append(actions);
 
   const prev = h('div', {});
