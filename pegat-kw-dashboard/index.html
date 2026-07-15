@@ -692,6 +692,39 @@
         <canvas id="ho-chart-dows" style="max-height:180px;"></canvas>
       </div>
     </div>
+
+    <!-- ─────── KW × 曜日 × 時間 ヒートマップ (按分近似) ─────── -->
+    <div style="margin-top:14px;background:#fff;border:1px solid var(--gray-3);padding:12px;">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
+        <h3 style="margin:0;font-size:12px;font-weight:800;letter-spacing:.03em;color:var(--black);font-family:var(--font-display);">🔥 KW別 ヒートマップ (曜日 × 時間)</h3>
+        <span id="kh-sub" style="font-size:11px;color:#666;">読み込み中…</span>
+        <label style="font-size:11px;color:#666;margin-left:auto;">KW:
+          <select id="kh-kw" style="padding:3px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;margin-left:4px;min-width:200px;"></select>
+        </label>
+        <label style="font-size:11px;color:#666;">指標:
+          <select id="kh-metric" style="padding:3px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;margin-left:4px;">
+            <option value="roas" selected>ROAS</option>
+            <option value="orders">注文数</option>
+            <option value="cost">広告費</option>
+            <option value="sales">売上</option>
+            <option value="cvr">CVR</option>
+          </select>
+        </label>
+      </div>
+      <div style="background:#fff6cc;border:1px solid #e0c580;padding:6px 10px;margin-bottom:8px;font-size:10.5px;color:#5a4400;line-height:1.5;">
+        <b style="color:#7a5e00;">📐 按分近似</b>: Amazon Ads V3 は KW×hour×dow 直接未対応 → KW 30日 実測 (imp/click/cost/sales) × 全体注文 の 時空分布 (7×24) で 按分。 KW固有 の 曜日クセ は KW daily clicks から 復元。 セル値 は 推定量、 相対比較 用。
+      </div>
+      <div id="kh-grid" style="overflow-x:auto;"></div>
+      <div id="kh-summary" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;"></div>
+      <div style="margin-top:12px;">
+        <h4 style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--black);font-family:var(--font-display);">🎯 このKWの 微調節提案</h4>
+        <div id="kh-proposals" style="font-size:11.5px;line-height:1.6;"></div>
+      </div>
+      <div style="margin-top:12px;">
+        <h4 style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--black);font-family:var(--font-display);">全KW 提案 サマリー</h4>
+        <div id="kh-all-proposals" style="font-size:11px;color:#666;"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1980,6 +2013,7 @@ async function loadHourly(){
   document.getElementById('ho-metric').onchange = renderHourlyGrid;
   renderHourlyGrid();
   renderHourlyCharts();
+  loadKwHeatmap();
 }
 function renderHourlyGrid(){
   const D = HO_DATA;
@@ -2036,6 +2070,244 @@ function renderHourlyCharts(){
     },
     options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
   });
+}
+
+// ── KW × 曜日 × 時間 ヒートマップ (heatmap.json) ────────────────────────────
+let KH_DATA = null;
+const KH_DOW_LABELS = ['月','火','水','木','金','土','日'];
+async function loadKwHeatmap(){
+  try{
+    const r = await fetch('./data/heatmap.json?_=' + Date.now());
+    if(!r.ok) throw new Error('heatmap.json '+r.status);
+    KH_DATA = await r.json();
+  } catch(e){
+    document.getElementById('kh-sub').textContent = '読み込み失敗: '+e.message+' (heatmap.json が未生成)';
+    return;
+  }
+  const D = KH_DATA;
+  document.getElementById('kh-sub').textContent =
+    `KW ${D.kw_count}件 × 7曜日 × 24時 = ${D.kw_count*168}セル / 提案 ${D.proposals_count||0}件 (${D.generated_at.slice(0,10)} 更新)`;
+  const sel = document.getElementById('kh-kw');
+  sel.innerHTML = D.kws.map((k,i) =>
+    `<option value="${i}">${k.text} (${k.matchType}) — ¥${Math.round(k.summary30d?.cost||0).toLocaleString()} 消化</option>`
+  ).join('');
+  sel.onchange = renderKwHeatmap;
+  document.getElementById('kh-metric').onchange = renderKwHeatmap;
+  renderKwHeatmap();
+  renderAllProposalsSummary();
+}
+
+function khCellValue(cell, metric){
+  if(metric === 'roas')   return cell.cost > 0 ? cell.sales / cell.cost : null;
+  if(metric === 'cvr')    return cell.clicks > 0 ? cell.orders / cell.clicks : null;
+  if(metric === 'orders') return cell.orders;
+  if(metric === 'cost')   return cell.cost;
+  if(metric === 'sales')  return cell.sales;
+  return 0;
+}
+
+// 色: ROAS/CVR → 良し悪し (緑=良/赤=損失) / orders/cost/sales → 濃淡 (オレンジ)
+function khCellColor(v, metric, vmax, cell){
+  const nSamples = cell ? cell.clicks : 0;
+  if(nSamples < 3) return { bg:'#f5f5f5', fg:'#bbb' }; // データ薄
+  if(v == null)    return { bg:'#fafafa', fg:'#ccc' };
+  if(metric === 'roas'){
+    // ROAS ≥ 3.3 濃い緑、 ≥ 2.0 淡い緑、 1.5-2.0 グレー、 <1.5 赤
+    if(v >= 3.3) return { bg:'rgba(46,140,58,0.85)', fg:'#fff' };
+    if(v >= 2.5) return { bg:'rgba(46,140,58,0.55)', fg:'#fff' };
+    if(v >= 2.0) return { bg:'rgba(46,140,58,0.28)', fg:'#1a3a20' };
+    if(v >= 1.5) return { bg:'#eeeeee', fg:'#555' };
+    if(v >= 1.0) return { bg:'rgba(200,50,50,0.35)', fg:'#4a1010' };
+    return { bg:'rgba(200,50,50,0.75)', fg:'#fff' };
+  }
+  if(metric === 'cvr'){
+    // CVR ≥ 8% 濃緑、 ≥ 5% 中、 ≥ 3% 淡、 <3% グレー、 <1% 赤
+    const pct = v * 100;
+    if(pct >= 8)  return { bg:'rgba(46,140,58,0.85)', fg:'#fff' };
+    if(pct >= 5)  return { bg:'rgba(46,140,58,0.55)', fg:'#fff' };
+    if(pct >= 3)  return { bg:'rgba(46,140,58,0.28)', fg:'#1a3a20' };
+    if(pct >= 1)  return { bg:'#eeeeee', fg:'#555' };
+    return { bg:'rgba(200,50,50,0.55)', fg:'#4a1010' };
+  }
+  // 数量系 orders/cost/sales: オレンジ濃淡
+  const ratio = vmax > 0 ? v / vmax : 0;
+  if(v <= 0) return { bg:'#fafafa', fg:'#ccc' };
+  return { bg:`rgba(255,122,0,${0.08 + ratio*0.75})`, fg: ratio > 0.55 ? '#fff' : '#333' };
+}
+
+function khFmt(v, metric){
+  if(v == null) return '—';
+  if(metric === 'roas') return v.toFixed(1);
+  if(metric === 'cvr')  return (v*100).toFixed(1)+'%';
+  if(metric === 'orders'){
+    if(v < 0.05) return '';
+    if(v < 1) return v.toFixed(2);
+    return v.toFixed(1);
+  }
+  if(metric === 'cost' || metric === 'sales'){
+    if(v < 10) return '';
+    if(v >= 10000) return '¥' + Math.round(v/1000) + 'k';
+    return '¥' + Math.round(v);
+  }
+  return String(v);
+}
+
+function renderKwHeatmap(){
+  if(!KH_DATA) return;
+  const idx = +document.getElementById('kh-kw').value || 0;
+  const metric = document.getElementById('kh-metric').value;
+  const kw = KH_DATA.kws[idx];
+  if(!kw){ document.getElementById('kh-grid').innerHTML = ''; return; }
+
+  const grid = kw.grid; // grid[dow][hour] = {imp,clicks,cost,sales,orders}
+  // vmax (for orange gradient)
+  let vmax = 0;
+  for(let d=0;d<7;d++) for(let h=0;h<24;h++){
+    const v = khCellValue(grid[d][h], metric);
+    if(v != null && v > vmax) vmax = v;
+  }
+
+  // header
+  const hdr = `<div style="background:#1a1a1a;color:#fff;padding:5px 6px;font-weight:800;text-align:right;font-size:11px;font-family:var(--font-display);letter-spacing:.04em;">曜日 ＼ 時</div>` +
+    Array.from({length:24}, (_,h) => `<div style="background:#1a1a1a;color:#fff;padding:5px 3px;text-align:center;font-weight:700;font-size:10.5px;font-family:var(--font-num);font-variant-numeric:tabular-nums;">${h}</div>`).join('');
+
+  const body = [];
+  for(let d=0; d<7; d++){
+    const rowTot = grid[d].reduce((s,c)=>s + (khCellValue(c, metric === 'roas' || metric === 'cvr' ? 'orders' : metric) || 0), 0);
+    body.push(`<div style="background:${d>=5?'#fbfbf3':'#f5f5f5'};color:#333;padding:5px 8px;font-weight:800;font-size:11.5px;font-family:var(--font-display);border-right:1px solid var(--gray-3);text-align:right;">${KH_DOW_LABELS[d]}</div>`);
+    for(let h=0; h<24; h++){
+      const cell = grid[d][h];
+      const v = khCellValue(cell, metric);
+      const col = khCellColor(v, metric, vmax, cell);
+      const roas = cell.cost > 0 ? cell.sales / cell.cost : null;
+      const title = `${KH_DOW_LABELS[d]} ${h}時  |  imp ${cell.imp} / click ${(cell.clicks||0).toFixed(1)} / 注文 ${(cell.orders||0).toFixed(2)} / cost ¥${Math.round(cell.cost)} / 売上 ¥${Math.round(cell.sales)} / ROAS ${roas != null ? roas.toFixed(2) : '—'}`;
+      body.push(`<div title="${title}" style="background:${col.bg};color:${col.fg};padding:5px 2px;text-align:center;font-size:10.5px;font-weight:700;font-family:var(--font-num);font-variant-numeric:tabular-nums;border-right:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;letter-spacing:-.02em;">${khFmt(v, metric)}</div>`);
+    }
+  }
+
+  document.getElementById('kh-grid').innerHTML = `
+    <div style="display:grid;grid-template-columns:70px repeat(24, minmax(24px, 1fr));gap:0;border:1px solid var(--gray-3);border-radius:2px;overflow:hidden;min-width:640px;">
+      ${hdr}${body.join('')}
+    </div>
+    <div style="margin-top:6px;font-size:10.5px;color:#666;display:flex;gap:10px;flex-wrap:wrap;">
+      <span><span style="display:inline-block;width:12px;height:10px;background:rgba(46,140,58,0.85);vertical-align:middle;"></span> 好調 (ROAS≥3.3 / CVR≥8%)</span>
+      <span><span style="display:inline-block;width:12px;height:10px;background:rgba(46,140,58,0.28);vertical-align:middle;"></span> やや好調</span>
+      <span><span style="display:inline-block;width:12px;height:10px;background:#eeeeee;vertical-align:middle;"></span> 中間</span>
+      <span><span style="display:inline-block;width:12px;height:10px;background:rgba(200,50,50,0.75);vertical-align:middle;"></span> 損失 (ROAS<1)</span>
+      <span><span style="display:inline-block;width:12px;height:10px;background:#f5f5f5;vertical-align:middle;"></span> データ薄 (click<3)</span>
+    </div>
+  `;
+
+  // summary
+  const s = kw.summary30d || {};
+  const kwRoas = s.cost > 0 ? (s.sales14d/s.cost) : null;
+  const kwCvr  = s.clicks > 0 ? (s.purchases14d/s.clicks) : null;
+  document.getElementById('kh-summary').innerHTML = `
+    <div style="background:#fafafa;padding:8px 10px;border:1px solid var(--gray-3);">
+      <div style="color:#666;font-size:10px;letter-spacing:.05em;">KW 30日 合計</div>
+      <div style="font-family:var(--font-num);font-variant-numeric:tabular-nums;">
+        imp ${(s.impressions||0).toLocaleString()} / click ${(s.clicks||0).toLocaleString()} / 注文 ${s.purchases14d||0}<br>
+        cost ¥${Math.round(s.cost||0).toLocaleString()} / 売上 ¥${Math.round(s.sales14d||0).toLocaleString()}<br>
+        <b>ROAS ${kwRoas != null ? kwRoas.toFixed(2) : '—'}x / CVR ${kwCvr != null ? (kwCvr*100).toFixed(1)+'%' : '—'} / 現bid ¥${kw.current_bid || '—'} / Tier ${kw.tier || '—'}</b>
+      </div>
+    </div>
+    <div style="background:#fafafa;padding:8px 10px;border:1px solid var(--gray-3);">
+      <div style="color:#666;font-size:10px;letter-spacing:.05em;">曜日 weight (このKWの clicks 分布)</div>
+      <div style="font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:11px;line-height:1.5;">
+        ${(kw.dow_weight||[]).map((w,d) => `${KH_DOW_LABELS[d]} ${(w*100).toFixed(1)}%`).join(' / ')}
+      </div>
+    </div>
+  `;
+
+  // KW 単位 提案
+  const boostR = KH_DATA.kws && KH_DATA.proposals_count != null
+    ? (window._KH_PROPOSAL_RULES || defaultProposalRules())
+    : defaultProposalRules();
+  const proposals = extractKwProposals(kw, boostR);
+  const boostList = proposals.filter(p => p.action === 'BOOST');
+  const cutList = proposals.filter(p => p.action === 'CUT');
+  const propBox = document.getElementById('kh-proposals');
+  if(proposals.length === 0){
+    propBox.innerHTML = `<span style="color:#999;">このKWでは 微調節提案なし (全セル 中間ゾーン or データ薄)</span>`;
+  } else {
+    let html = '';
+    if(boostList.length){
+      html += `<div style="color:#2e8c3a;font-weight:700;margin-bottom:4px;">🟢 BOOST +30% 推奨 (${boostList.length}件)</div>`;
+      html += boostList.slice(0, 10).map(p =>
+        `<div style="padding:3px 6px;margin-bottom:2px;background:rgba(46,140,58,0.08);border-left:3px solid #2e8c3a;">${KH_DOW_LABELS[p.dow]} ${p.hour}時 · ROAS <b>${p.roas.toFixed(1)}</b> · 注文 ${p.orders.toFixed(2)} · cost ¥${Math.round(p.cost)} → 売上 ¥${Math.round(p.sales)}</div>`
+      ).join('');
+    }
+    if(cutList.length){
+      html += `<div style="color:#c83232;font-weight:700;margin:8px 0 4px;">🔴 CUT -30% or PAUSE 推奨 (${cutList.length}件)</div>`;
+      html += cutList.slice(0, 10).map(p =>
+        `<div style="padding:3px 6px;margin-bottom:2px;background:rgba(200,50,50,0.08);border-left:3px solid #c83232;">${KH_DOW_LABELS[p.dow]} ${p.hour}時 · ROAS <b>${p.roas.toFixed(2)}</b> · cost ¥${Math.round(p.cost)} → 売上 ¥${Math.round(p.sales)} (回収¥${Math.round(p.sales-p.cost)})</div>`
+      ).join('');
+    }
+    propBox.innerHTML = html;
+  }
+}
+
+function defaultProposalRules(){
+  return {
+    boost: { min_roas: 3.3, min_orders: 1.0, min_clicks: 5, multiplier_pct: 30 },
+    cut:   { max_roas: 1.5, min_spend_yen: 500, min_clicks: 5, multiplier_pct: -30 },
+  };
+}
+
+function extractKwProposals(kw, rules){
+  const out = [];
+  for(let d=0; d<7; d++){
+    for(let h=0; h<24; h++){
+      const c = kw.grid[d][h];
+      if(c.clicks < (rules.boost.min_clicks || 0)) continue;
+      const roas = c.cost > 0 ? c.sales/c.cost : null;
+      if(roas == null) continue;
+      if(roas >= rules.boost.min_roas && c.orders >= rules.boost.min_orders){
+        out.push({ action:'BOOST', dow:d, hour:h, roas, orders:c.orders, cost:c.cost, sales:c.sales });
+      } else if(roas < rules.cut.max_roas && c.cost >= rules.cut.min_spend_yen){
+        out.push({ action:'CUT', dow:d, hour:h, roas, orders:c.orders, cost:c.cost, sales:c.sales });
+      }
+    }
+  }
+  return out;
+}
+
+function renderAllProposalsSummary(){
+  const rules = defaultProposalRules();
+  const rows = [];
+  let totalBoost = 0, totalCut = 0;
+  for(const kw of KH_DATA.kws){
+    const ps = extractKwProposals(kw, rules);
+    const bo = ps.filter(p=>p.action==='BOOST').length;
+    const cu = ps.filter(p=>p.action==='CUT').length;
+    totalBoost += bo; totalCut += cu;
+    if(bo + cu > 0){
+      rows.push({ kw: kw.text, bo, cu, cost: kw.summary30d?.cost || 0 });
+    }
+  }
+  rows.sort((a,b) => (b.bo + b.cu) - (a.bo + a.cu));
+  const html = `
+    <div style="margin-bottom:6px;">全体: 🟢 BOOST <b>${totalBoost}</b> 件 / 🔴 CUT <b>${totalCut}</b> 件 (${KH_DATA.kw_count} KW 対象)</div>
+    <table style="width:100%;border-collapse:collapse;font-size:10.5px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="text-align:left;padding:4px 6px;border:1px solid var(--gray-3);">KW</th>
+        <th style="text-align:right;padding:4px 6px;border:1px solid var(--gray-3);">30d cost</th>
+        <th style="text-align:right;padding:4px 6px;border:1px solid var(--gray-3);color:#2e8c3a;">BOOST</th>
+        <th style="text-align:right;padding:4px 6px;border:1px solid var(--gray-3);color:#c83232;">CUT</th>
+      </tr></thead>
+      <tbody>
+        ${rows.slice(0, 15).map(r => `
+          <tr>
+            <td style="padding:3px 6px;border:1px solid var(--gray-3);">${r.kw}</td>
+            <td style="padding:3px 6px;border:1px solid var(--gray-3);text-align:right;font-family:var(--font-num);">¥${Math.round(r.cost).toLocaleString()}</td>
+            <td style="padding:3px 6px;border:1px solid var(--gray-3);text-align:right;font-family:var(--font-num);color:#2e8c3a;font-weight:700;">${r.bo}</td>
+            <td style="padding:3px 6px;border:1px solid var(--gray-3);text-align:right;font-family:var(--font-num);color:#c83232;font-weight:700;">${r.cu}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+  document.getElementById('kh-all-proposals').innerHTML = html;
 }
 
 // ── 学習ログ ────────────────────────────
