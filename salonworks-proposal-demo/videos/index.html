@@ -344,9 +344,15 @@ if (location.hash) {
   const fragId = location.hash.slice(1); // e.g. "ch06"
   const ch = CHAPTERS.find(c => c.id === fragId);
   if (ch) {
-    vid.addEventListener('loadedmetadata', () => {
+    const applySeek = () => {
       vid.currentTime = ch.t;
-    }, { once: true });
+      updateActiveChapter(ch.t);
+    };
+    if (vid.readyState >= 1) {
+      applySeek();
+    } else {
+      vid.addEventListener('loadedmetadata', applySeek, { once: true });
+    }
   }
 }
 </script>
