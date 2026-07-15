@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autopilot Heartbeat | Skeleton</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
+<style>
+  :root{
+    --orange:#ff7a00; --orange-dark:#e36a00;
+    --yellow:#ffd400; --yellow-soft:#fff6cc;
+    --black:#1a1a1a; --gray-1:#f5f5f5; --gray-2:#ececec; --gray-3:#ddd; --gray-4:#999;
+    --text:#222; --green:#2e8b57; --red:#d8302f; --amber:#c07a00;
+    --font-jp: "Zen Kaku Gothic New", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", system-ui, sans-serif;
+    --font-display: "Zen Kaku Gothic New", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+    --font-num: "Inter", "SF Pro Display", -apple-system, sans-serif;
+    --font-mono: "SF Mono", "Menlo", ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#fafafa;color:var(--text);font-family:var(--font-jp);font-size:13px;line-height:1.55;font-weight:500;font-feature-settings:"palt" 1;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+  .num{font-family:var(--font-num);font-variant-numeric:tabular-nums lining-nums;}
+  h1,h2,h3{font-family:var(--font-display);}
+  header{background:var(--black);color:#fff;padding:8px 14px;display:flex;align-items:center;gap:18px;border-bottom:3px solid var(--orange);}
+  header h1{font-size:14px;margin:0;font-weight:800;letter-spacing:-.005em;}
+  header .brand-pill{background:var(--orange);color:#fff;font-weight:700;padding:2px 8px;border-radius:2px;font-size:11px;}
+  header .meta{margin-left:auto;font-size:11px;color:#ccc;}
+  header a{color:#ffd400;text-decoration:none;margin-left:14px;font-size:12px;font-weight:700;}
+  header a:hover{text-decoration:underline;}
+  .wrap{max-width:1400px;margin:0 auto;padding:18px;}
+  h2{font-size:15px;background:var(--black);color:#fff;padding:6px 10px;margin:20px 0 8px;letter-spacing:.01em;border-left:5px solid var(--orange);font-weight:800;}
+  .stat-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:8px 0 20px;}
+  .stat{background:#fff;border-top:3px solid var(--gray-3);border:1px solid var(--gray-3);padding:10px;}
+  .stat .lbl{font-size:10px;color:#666;letter-spacing:.08em;text-transform:uppercase;font-weight:700;}
+  .stat .val{font-family:var(--font-num);font-size:26px;font-weight:800;line-height:1.05;margin-top:3px;color:var(--black);letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+  .stat .unit{font-size:11px;color:#666;font-weight:400;margin-left:2px;}
+  .stat.ok{border-top-color:var(--green);}
+  .stat.ok .val{color:var(--green);}
+  .stat.warn{border-top-color:var(--amber);}
+  .stat.warn .val{color:var(--amber);}
+  .stat.bad{border-top-color:var(--red);}
+  .stat.bad .val{color:var(--red);}
+  table{width:100%;border-collapse:collapse;background:#fff;margin-bottom:10px;font-size:12px;}
+  th{background:#333;color:#fff;padding:5px 8px;font-weight:600;text-align:left;font-size:11px;letter-spacing:.03em;border-right:1px solid #444;position:sticky;top:0;}
+  th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-num);}
+  td{padding:5px 8px;border-bottom:1px solid var(--gray-2);vertical-align:middle;}
+  td.label{font-family:var(--font-mono);font-size:11px;color:#333;font-weight:600;}
+  td.reason{color:#555;font-size:11px;}
+  tr.st-OK       {background:#fff;}
+  tr.st-STALE    {background:#fff7e5;}
+  tr.st-SILENT   {background:#fdecec;}
+  tr.st-FAIL     {background:#fadbd8;}
+  tr.st-UNLOADED {background:#f5f5f5;color:#999;}
+  tr.st-\?       {background:#f8f8f8;}
+  .badge{display:inline-block;padding:1px 6px;font-weight:800;border-radius:2px;font-size:10px;letter-spacing:.06em;font-family:var(--font-num);}
+  .b-OK       {background:#d5efdd;color:#155f34;}
+  .b-STALE    {background:#ffe9b3;color:#7a5100;}
+  .b-SILENT   {background:#ffcccc;color:#a11414;}
+  .b-FAIL     {background:#ff8f8a;color:#5a0d0d;}
+  .b-UNLOADED {background:#ddd;color:#555;}
+  .b-\?       {background:#eee;color:#666;}
+  .b-freq     {background:#e0f0ff;color:#164e8c;margin-left:4px;}
+  .filter-bar{display:flex;gap:6px;margin:0 0 10px;flex-wrap:wrap;align-items:center;}
+  .filter-bar button{background:#fff;border:1px solid var(--gray-3);padding:4px 10px;font-size:11px;font-weight:700;font-family:var(--font-jp);cursor:pointer;border-radius:2px;color:#333;}
+  .filter-bar button.on{background:var(--black);color:#fff;border-color:var(--black);}
+  .filter-bar input[type=text]{border:1px solid var(--gray-3);padding:4px 8px;font-size:12px;font-family:var(--font-jp);width:220px;border-radius:2px;}
+  .filter-bar .spacer{flex:1;}
+  .filter-bar .meta{font-size:11px;color:#666;}
+  .note{background:#fff;border:1px solid var(--gray-3);padding:10px 14px;margin:8px 0 12px;font-size:11.5px;line-height:1.7;color:#333;}
+  .note b{color:#000;}
+  .legend{font-size:10.5px;color:#666;margin-top:4px;}
+  .legend .badge{margin-right:6px;}
+  @media (max-width:900px){.stat-cards{grid-template-columns:repeat(3,1fr);}}
+  @media (max-width:600px){.stat-cards{grid-template-columns:repeat(2,1fr);}.wrap{padding:10px;}}
+</style>
+</head>
+<body>
+<header>
+  <span class="brand-pill">SKELETON</span>
+  <h1>Autopilot Heartbeat</h1>
+  <a href="./index.html">← KW ダッシュボード</a>
+  <a href="./pipeline.html">パイプライン</a>
+  <span class="meta" id="meta-updated">読み込み中…</span>
+</header>
+
+<div class="wrap">
+
+  <div class="stat-cards" id="cards">
+    <div class="stat"><div class="lbl">TOTAL</div><div class="val num" id="c-total">-</div></div>
+    <div class="stat ok"><div class="lbl">OK</div><div class="val num" id="c-ok">-</div></div>
+    <div class="stat warn"><div class="lbl">STALE</div><div class="val num" id="c-stale">-</div></div>
+    <div class="stat bad"><div class="lbl">SILENT</div><div class="val num" id="c-silent">-</div></div>
+    <div class="stat bad"><div class="lbl">FAIL</div><div class="val num" id="c-fail">-</div></div>
+    <div class="stat warn"><div class="lbl">UNLOADED / ?</div><div class="val num" id="c-other">-</div></div>
+  </div>
+
+  <div class="note">
+    <b>状態の意味</b>:
+    <span class="badge b-OK">OK</span> exit=0 かつ log 新鮮 かつ 実出力あり ／
+    <span class="badge b-STALE">STALE</span> log が 閾値超えて 更新なし ／
+    <span class="badge b-SILENT">SILENT</span> log は 動いてるが 実出力 (Sheet/JSON) 更新なし (silent-success 誤検知の 主犯) ／
+    <span class="badge b-FAIL">FAIL</span> last exit code ≠ 0 ／
+    <span class="badge b-UNLOADED">UNLOADED</span> plist あるが launchctl に居ない ／
+    <span class="badge b-\?">?</span> log 未生成 (初回未実行 or 判定不能)
+  </div>
+
+  <h2>問題あり ({{count-issue}})</h2>
+  <div class="filter-bar" id="filter-issue">
+    <span class="meta">昨日の 会話開始 で Jobs が これ を 見て 先制報告</span>
+  </div>
+  <table id="tbl-issue"><thead><tr>
+    <th style="width:100px;">status</th>
+    <th>label</th>
+    <th style="width:70px;">freq</th>
+    <th style="width:70px;">schedule</th>
+    <th class="num" style="width:80px;">log age (h)</th>
+    <th class="num" style="width:80px;">canary (h)</th>
+    <th>reason</th>
+  </tr></thead><tbody></tbody></table>
+
+  <h2>全 LaunchAgent ({{count-total}})</h2>
+  <div class="filter-bar">
+    <button data-f="all" class="on">All</button>
+    <button data-f="OK">OK</button>
+    <button data-f="STALE">STALE</button>
+    <button data-f="SILENT">SILENT</button>
+    <button data-f="FAIL">FAIL</button>
+    <button data-f="UNLOADED">UNLOADED</button>
+    <button data-f="?">?</button>
+    <input id="filter-txt" type="text" placeholder="label で 絞込 (例: cushion)">
+    <span class="spacer"></span>
+    <span class="meta">最終更新: <span id="meta-updated-2">-</span></span>
+  </div>
+  <table id="tbl-all"><thead><tr>
+    <th style="width:100px;">status</th>
+    <th>label</th>
+    <th style="width:70px;">freq</th>
+    <th style="width:70px;">schedule</th>
+    <th style="width:80px;">state</th>
+    <th class="num" style="width:60px;">exit</th>
+    <th class="num" style="width:80px;">log age (h)</th>
+    <th class="num" style="width:80px;">canary (h)</th>
+    <th>reason</th>
+  </tr></thead><tbody></tbody></table>
+
+</div>
+
+<script>
+  const DATA_URL = './data/heartbeat.json?cb=' + Date.now();
+
+  function fmtNum(n) {
+    if (n === null || n === undefined || n === '') return '';
+    return typeof n === 'number' ? n.toString() : String(n);
+  }
+  function ageCell(h) {
+    if (h === null || h === undefined) return '<td class="num" style="color:#aaa;">-</td>';
+    const cls = h > 168 ? 'style="color:var(--red);font-weight:800;"'
+              : h > 48  ? 'style="color:var(--amber);font-weight:700;"'
+              : '';
+    return `<td class="num" ${cls}>${h}</td>`;
+  }
+  function rowHtml(e, kind /* 'issue' | 'all' */) {
+    const canaryH = e.canary && e.canary.ageHours !== null ? e.canary.ageHours : null;
+    const stCls = e.status === '?' ? 'st-\\?' : `st-${e.status}`;
+    const badgeCls = e.status === '?' ? 'b-\\?' : `b-${e.status}`;
+    const base = `<td><span class="badge ${badgeCls}">${e.status}</span></td>
+                  <td class="label">${e.label}</td>
+                  <td><span class="badge b-freq">${e.freq}</span></td>
+                  <td class="num" style="font-size:11px;">${e.schedule || ''}</td>`;
+    if (kind === 'issue') {
+      return `<tr class="${stCls}">${base}
+        ${ageCell(e.logAgeHours)}
+        ${ageCell(canaryH)}
+        <td class="reason">${e.reason || ''}</td></tr>`;
+    }
+    return `<tr class="${stCls}" data-status="${e.status}" data-label="${e.label}">${base}
+      <td style="font-size:11px;color:#555;">${e.state || ''}</td>
+      <td class="num">${e.exitCode === null ? '' : e.exitCode}</td>
+      ${ageCell(e.logAgeHours)}
+      ${ageCell(canaryH)}
+      <td class="reason">${e.reason || ''}</td></tr>`;
+  }
+
+  async function load() {
+    let d;
+    try {
+      const res = await fetch(DATA_URL, { cache: 'no-store' });
+      d = await res.json();
+    } catch (e) {
+      document.getElementById('meta-updated').textContent = '読込失敗: ' + e;
+      return;
+    }
+    const local = new Date(d.generatedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+    document.getElementById('meta-updated').textContent = '最終更新: ' + local;
+    document.getElementById('meta-updated-2').textContent = local;
+
+    const c = d.counts || {};
+    document.getElementById('c-total').textContent  = d.totalAgents;
+    document.getElementById('c-ok').textContent     = c.OK || 0;
+    document.getElementById('c-stale').textContent  = c.STALE || 0;
+    document.getElementById('c-silent').textContent = c.SILENT || 0;
+    document.getElementById('c-fail').textContent   = c.FAIL || 0;
+    document.getElementById('c-other').textContent  = (c.UNLOADED || 0) + (c['?'] || 0);
+
+    const issues = d.entries.filter(e => e.status !== 'OK');
+    document.querySelector('#tbl-issue tbody').innerHTML = issues.length
+      ? issues.map(e => rowHtml(e, 'issue')).join('')
+      : '<tr><td colspan="7" style="text-align:center;color:var(--green);font-weight:700;padding:14px;">全 LaunchAgent 正常稼働中</td></tr>';
+
+    document.querySelector('h2').textContent = `問題あり (${issues.length})`;
+
+    const all = [...d.entries].sort((a, b) => a.label.localeCompare(b.label));
+    document.querySelector('#tbl-all tbody').innerHTML = all.map(e => rowHtml(e, 'all')).join('');
+
+    // 「全 LaunchAgent」 h2
+    document.querySelectorAll('h2')[1].textContent = `全 LaunchAgent (${d.totalAgents})`;
+
+    // filter buttons
+    let curStatus = 'all';
+    let curText = '';
+    function applyFilter() {
+      document.querySelectorAll('#tbl-all tbody tr').forEach(tr => {
+        const okS = curStatus === 'all' || tr.dataset.status === curStatus;
+        const okT = !curText || tr.dataset.label.toLowerCase().includes(curText);
+        tr.style.display = (okS && okT) ? '' : 'none';
+      });
+    }
+    document.querySelectorAll('.filter-bar button[data-f]').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('.filter-bar button[data-f]').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        curStatus = b.dataset.f;
+        applyFilter();
+      });
+    });
+    document.getElementById('filter-txt').addEventListener('input', (ev) => {
+      curText = ev.target.value.toLowerCase().trim();
+      applyFilter();
+    });
+  }
+
+  load();
+  // 60秒ごとに再読込
+  setInterval(load, 60_000);
+</script>
+</body>
+</html>
