@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KW × 時間帯 ヒートマップ | PEGAT KW ダッシュボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
+<style>
+  :root{
+    --orange:#ff7a00;
+    --orange-dark:#e36a00;
+    --yellow:#ffd400;
+    --black:#1a1a1a;
+    --gray-1:#f5f5f5;
+    --gray-2:#ececec;
+    --gray-3:#ddd;
+    --gray-4:#999;
+    --text:#222;
+    --green:#2e8b57;
+    --green-dark:#1c6a3c;
+    --red:#d8302f;
+    --red-dark:#a31818;
+    --main-bg:#f7f7f5;
+    --font-jp:"Zen Kaku Gothic New","BIZ UDPGothic","Hiragino Kaku Gothic ProN","Yu Gothic UI",system-ui,sans-serif;
+    --font-display:"Zen Kaku Gothic New","BIZ UDPGothic",system-ui,sans-serif;
+    --font-num:"Inter","SF Pro Display",-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--main-bg);color:var(--text);font-family:var(--font-jp);font-size:13px;line-height:1.55;font-weight:500;font-feature-settings:"palt" 1;-webkit-font-smoothing:antialiased;}
+  header{background:var(--black);color:#fff;padding:8px 14px;display:flex;align-items:center;gap:18px;border-bottom:3px solid var(--orange);}
+  header .brand{font-family:var(--font-display);font-weight:900;font-size:14px;letter-spacing:-.005em;}
+  header .brand .pill{background:var(--orange);color:#fff;font-size:10px;font-weight:800;letter-spacing:.08em;padding:2px 7px;border-radius:2px;margin-right:8px;}
+  header a{color:#c8c9c5;text-decoration:none;font-size:12px;font-weight:600;padding:4px 8px;border-radius:3px;transition:background .12s;}
+  header a:hover{background:rgba(255,255,255,.08);color:#fff;}
+  header .title{margin-left:auto;font-size:12px;color:#a8a8a5;font-weight:500;}
+  header .title strong{color:#fff;font-weight:700;margin-left:4px;}
+
+  .wrap{padding:14px 18px 40px;max-width:1600px;margin:0 auto;}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#fff;border:1px solid var(--gray-3);border-radius:6px;padding:10px 12px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+  .toolbar .grp{display:flex;align-items:center;gap:6px;}
+  .toolbar label{font-size:11px;font-weight:700;color:#555;letter-spacing:.02em;}
+  .toolbar select{background:#fff;border:1px solid var(--gray-3);border-radius:3px;padding:5px 8px;font-size:12px;font-family:var(--font-jp);font-weight:600;color:#222;cursor:pointer;min-width:120px;}
+  .toolbar select:focus{outline:2px solid var(--orange);outline-offset:1px;}
+  .toolbar .divider{width:1px;height:22px;background:var(--gray-3);}
+  .toolbar .meta{margin-left:auto;font-size:10.5px;color:#777;font-family:var(--font-num);letter-spacing:.01em;}
+  .toolbar .meta code{background:var(--gray-1);padding:1px 5px;border-radius:2px;font-family:var(--font-num);}
+
+  .kw-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px;}
+  .kw-summary .cell{background:#fff;border:1px solid var(--gray-3);border-radius:5px;padding:8px 10px;}
+  .kw-summary .cell .l{font-size:10.5px;color:#777;font-weight:600;letter-spacing:.02em;}
+  .kw-summary .cell .v{font-size:16px;font-weight:800;font-family:var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:-.015em;margin-top:2px;}
+  .kw-summary .cell .v.pos{color:var(--green-dark);}
+  .kw-summary .cell .v.neg{color:var(--red);}
+
+  /* Heatmap grid */
+  .hm-panel{background:#fff;border:1px solid var(--gray-3);border-radius:6px;padding:14px;box-shadow:0 1px 2px rgba(0,0,0,.03);overflow-x:auto;}
+  .hm-panel h3{margin:0 0 4px;font-size:14px;font-weight:800;color:#222;font-family:var(--font-display);letter-spacing:-.005em;}
+  .hm-panel .sub{font-size:11px;color:#777;margin-bottom:12px;}
+  .hm-panel .sub .disc{color:#a06400;background:#fff8e0;border:1px solid #f5e0a0;padding:2px 6px;border-radius:2px;margin-left:6px;font-size:10px;}
+
+  .hm-grid{display:grid;grid-template-columns:38px repeat(24, minmax(22px, 1fr));gap:2px;min-width:640px;}
+  .hm-hd{font-size:9.5px;color:#888;text-align:center;font-family:var(--font-num);font-weight:700;font-variant-numeric:tabular-nums;padding:3px 0;letter-spacing:.02em;}
+  .hm-row-lbl{font-size:11px;color:#333;font-weight:700;text-align:center;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);letter-spacing:.02em;background:var(--gray-1);border-radius:3px;}
+  .hm-cell{height:26px;border-radius:2px;background:var(--gray-2);position:relative;cursor:pointer;transition:transform .08s, box-shadow .08s;font-size:9.5px;color:#fff;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700;display:flex;align-items:center;justify-content:center;letter-spacing:-.01em;user-select:none;}
+  .hm-cell:hover{transform:scale(1.15);box-shadow:0 2px 8px rgba(0,0,0,.25);z-index:5;outline:2px solid var(--black);}
+  .hm-cell.insuf{background:repeating-linear-gradient(45deg,#e8e8e8,#e8e8e8 4px,#dcdcdc 4px,#dcdcdc 6px);color:#999;}
+
+  .hm-legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--gray-2);font-size:11px;color:#555;}
+  .hm-legend .swatch{display:inline-flex;align-items:center;gap:5px;}
+  .hm-legend .swatch .sq{width:14px;height:14px;border-radius:2px;}
+  .hm-legend .gradient{display:inline-flex;align-items:center;gap:6px;}
+  .hm-legend .gradient .bar{width:120px;height:12px;border-radius:2px;background:linear-gradient(90deg,#f7dcdc,#d8302f);}
+  .hm-legend .gradient.pos .bar{background:linear-gradient(90deg,#dcefe0,#1c6a3c);}
+  .hm-legend .metric-name{font-weight:800;color:#222;padding:2px 6px;background:var(--yellow);border-radius:2px;letter-spacing:.02em;}
+
+  /* Tooltip */
+  #tip{position:fixed;background:rgba(20,21,26,.97);color:#fff;font-family:var(--font-jp);font-size:11.5px;padding:8px 10px;border-radius:4px;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.35);z-index:1000;max-width:280px;line-height:1.5;display:none;letter-spacing:.005em;}
+  #tip .kw{font-weight:800;color:var(--orange);font-size:12px;margin-bottom:4px;letter-spacing:-.005em;}
+  #tip .when{color:#c8c9c5;font-size:10.5px;margin-bottom:6px;font-family:var(--font-num);letter-spacing:.02em;}
+  #tip .row{display:flex;justify-content:space-between;gap:12px;font-family:var(--font-num);font-variant-numeric:tabular-nums;}
+  #tip .row .l{color:#a8a8a5;}
+  #tip .row .v{color:#fff;font-weight:700;}
+  #tip .row .v.pos{color:#6fd18e;}
+  #tip .row .v.neg{color:#ff8a89;}
+
+  /* Proposals section */
+  .prop-panel{margin-top:16px;background:#fff;border:1px solid var(--gray-3);border-radius:6px;padding:14px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+  .prop-panel h3{margin:0 0 8px;font-size:14px;font-weight:800;color:#222;font-family:var(--font-display);}
+  .prop-panel .prop-count{display:inline-flex;gap:8px;margin-bottom:8px;font-family:var(--font-num);font-variant-numeric:tabular-nums;}
+  .prop-panel .prop-count .b{background:var(--green);color:#fff;padding:2px 8px;border-radius:2px;font-size:11px;font-weight:800;letter-spacing:.02em;}
+  .prop-panel .prop-count .c{background:var(--red);color:#fff;padding:2px 8px;border-radius:2px;font-size:11px;font-weight:800;letter-spacing:.02em;}
+  .prop-panel .note{font-size:11px;color:#777;margin-bottom:10px;}
+  .prop-panel .note a{color:var(--orange-dark);text-decoration:none;font-weight:700;}
+  .prop-panel .note a:hover{text-decoration:underline;}
+
+  @media (max-width:720px){
+    .wrap{padding:10px 8px 40px;}
+    header{padding:6px 10px;gap:10px;flex-wrap:wrap;}
+    header a{padding:3px 6px;font-size:11px;}
+    .toolbar{padding:8px 10px;}
+    .toolbar select{min-width:100px;font-size:11.5px;}
+    .toolbar .meta{width:100%;text-align:right;}
+    .hm-grid{grid-template-columns:32px repeat(24, minmax(20px, 1fr));min-width:560px;}
+    .hm-cell{height:22px;font-size:8.5px;}
+    .hm-row-lbl{font-size:10px;}
+    .hm-hd{font-size:8.5px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="pill">PEGAT</span>KW ヒートマップ</div>
+  <a href="./index.html">← ダッシュボード</a>
+  <a href="./history.html">意思決定 振り返り</a>
+  <a href="./heartbeat.html">Autopilot 稼働状況</a>
+  <div class="title">KW × 曜日 × 時間 の 反応分布 <strong id="metaGeneratedAt">—</strong></div>
+</header>
+
+<div class="wrap">
+
+  <div class="toolbar">
+    <div class="grp">
+      <label for="kwSel">KW</label>
+      <select id="kwSel"></select>
+    </div>
+    <div class="divider"></div>
+    <div class="grp">
+      <label for="metricSel">指標</label>
+      <select id="metricSel">
+        <option value="orders">注文</option>
+        <option value="roas">ROAS</option>
+        <option value="cvr">CVR</option>
+        <option value="spend">広告費</option>
+      </select>
+    </div>
+    <div class="meta" id="metaLine">
+      対象 <code id="metaKwCount">—</code> KW / セル按分 (min<code id="metaMinCell">5</code>)
+    </div>
+  </div>
+
+  <div class="kw-summary" id="kwSummary"></div>
+
+  <div class="hm-panel">
+    <h3 id="hmTitle">ヒートマップ</h3>
+    <div class="sub" id="hmSub">曜日 × 時間 (0-23時)。 セル ホバー で 詳細。<span class="disc">按分近似</span></div>
+    <div class="hm-grid" id="hmGrid"></div>
+    <div class="hm-legend" id="hmLegend"></div>
+  </div>
+
+  <div class="prop-panel">
+    <h3>微調節提案 (このKW)</h3>
+    <div class="prop-count">
+      <span class="b">BOOST <span id="propBoostN">0</span> 件</span>
+      <span class="c">CUT <span id="propCutN">0</span> 件</span>
+    </div>
+    <div class="note">
+      BOOST: ROAS ≥ 3.3 かつ orders ≥ 1 → +30% bid。
+      CUT: ROAS &lt; 1.5 かつ spend ≥ ¥500 → -30% bid or PAUSE。
+      詳細は <a href="#" id="propMdLink">~/.skeleton-pegat-autopilot/state/heatmap-proposals-YYYY-MM-DD.md</a> 参照。
+    </div>
+    <div id="propList" style="font-size:11.5px;font-family:var(--font-num);font-variant-numeric:tabular-nums;"></div>
+  </div>
+
+</div>
+
+<div id="tip"></div>
+
+<script>
+'use strict';
+const DOW_LABELS = ['月','火','水','木','金','土','日'];
+const HOURS = Array.from({length:24}, (_,i)=>i);
+
+let HM = null;      // 全 heatmap.json
+let CUR_KW = null;  // 選択中 KW obj
+
+async function load(){
+  const res = await fetch('./data/heatmap.json?ts=' + Date.now());
+  if(!res.ok) throw new Error('heatmap.json fetch failed: ' + res.status);
+  HM = await res.json();
+  document.getElementById('metaGeneratedAt').textContent = fmtDate(HM.generated_at);
+  document.getElementById('metaKwCount').textContent = HM.kw_count || (HM.kws||[]).length;
+  buildKwSelect();
+  buildLegend();
+  renderCurrent();
+}
+
+function fmtDate(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function buildKwSelect(){
+  const sel = document.getElementById('kwSel');
+  sel.innerHTML = '';
+  const kws = HM.kws || [];
+  // sort by 30d clicks desc
+  const sorted = [...kws].sort((a,b) => (b.summary30d?.clicks||0) - (a.summary30d?.clicks||0));
+  for(const kw of sorted){
+    const o = document.createElement('option');
+    o.value = String(kw.keywordId);
+    const clicks = kw.summary30d?.clicks || 0;
+    const roas = kw.summary30d?.roas || 0;
+    o.textContent = `${kw.text}  (30d clicks:${clicks} / ROAS:${roas.toFixed(2)})`;
+    sel.appendChild(o);
+  }
+  sel.addEventListener('change', renderCurrent);
+  document.getElementById('metricSel').addEventListener('change', renderCurrent);
+}
+
+function currentKw(){
+  const id = document.getElementById('kwSel').value;
+  return (HM.kws || []).find(k => String(k.keywordId) === id);
+}
+
+function buildLegend(){
+  const metric = document.getElementById('metricSel').value;
+  const wrap = document.getElementById('hmLegend');
+  const metricName = {orders:'注文', roas:'ROAS', cvr:'CVR', spend:'広告費 (¥)'}[metric];
+  let extras = '';
+  if(metric === 'roas'){
+    extras = `
+      <span class="gradient pos"><span>好調</span><span class="bar"></span><span>ROAS 3.3+</span></span>
+      <span class="gradient"><span>不振</span><span class="bar"></span><span>ROAS &lt;1.5</span></span>
+    `;
+  } else if(metric === 'cvr'){
+    extras = `
+      <span class="gradient pos"><span>低</span><span class="bar"></span><span>CVR 高</span></span>
+    `;
+  } else {
+    extras = `
+      <span class="gradient pos"><span>少</span><span class="bar"></span><span>多</span></span>
+    `;
+  }
+  wrap.innerHTML = `
+    <span>指標: <span class="metric-name">${metricName}</span></span>
+    ${extras}
+    <span class="swatch"><span class="sq" style="background:repeating-linear-gradient(45deg,#e8e8e8,#e8e8e8 4px,#dcdcdc 4px,#dcdcdc 6px);"></span>サンプル不足 (n&lt;3)</span>
+  `;
+}
+
+function renderCurrent(){
+  CUR_KW = currentKw();
+  if(!CUR_KW) return;
+  buildLegend();
+  renderSummary(CUR_KW);
+  renderGrid(CUR_KW);
+  renderProposals(CUR_KW);
+  updatePropMdLink();
+}
+
+function renderSummary(kw){
+  const s = kw.summary30d || {};
+  const yen = n => '¥' + Math.round(n||0).toLocaleString();
+  const num = n => (n||0).toLocaleString();
+  const pct = n => (100*(n||0)).toFixed(2) + '%';
+  const roas = (s.roas||0).toFixed(2);
+  const roasClass = s.roas >= 3.3 ? 'pos' : (s.roas < 1.5 ? 'neg' : '');
+  const bid = kw.current_bid != null ? '¥' + kw.current_bid : '—';
+  const tier = kw.tier || '—';
+  document.getElementById('kwSummary').innerHTML = `
+    <div class="cell"><div class="l">30日 imp</div><div class="v">${num(s.impressions)}</div></div>
+    <div class="cell"><div class="l">30日 clicks</div><div class="v">${num(s.clicks)}</div></div>
+    <div class="cell"><div class="l">30日 orders</div><div class="v">${num(s.purchases14d)}</div></div>
+    <div class="cell"><div class="l">30日 cost</div><div class="v neg">${yen(s.cost)}</div></div>
+    <div class="cell"><div class="l">30日 sales</div><div class="v pos">${yen(s.sales14d)}</div></div>
+    <div class="cell"><div class="l">ROAS</div><div class="v ${roasClass}">${roas}</div></div>
+    <div class="cell"><div class="l">CVR</div><div class="v">${pct(s.cvr)}</div></div>
+    <div class="cell"><div class="l">現 bid / Tier</div><div class="v" style="font-size:13px;">${bid} · ${tier}</div></div>
+  `;
+  document.getElementById('hmTitle').textContent = kw.text + ' — KW × 曜日 × 時間 分布';
+}
+
+function cellValue(cell, metric){
+  if(!cell) return null;
+  const c = cell;
+  if(metric === 'orders') return c.orders || 0;
+  if(metric === 'spend')  return c.cost || 0;
+  if(metric === 'roas'){
+    if(!c.cost || c.cost < 1e-6) return null;
+    return (c.sales || 0) / c.cost;
+  }
+  if(metric === 'cvr'){
+    if(!c.clicks || c.clicks < 1e-6) return null;
+    return (c.orders || 0) / c.clicks;
+  }
+  return null;
+}
+
+// n<3 sample judgement per cell (based on imp proxy — orders按分 は 小数 が多い の で imp 使う)
+function cellInsufficient(cell){
+  if(!cell) return true;
+  // 「n<3」 = imp が 極少 (≒ clicks 0 も含む)。 按分値なので 目安: imp < 3
+  return (cell.imp || 0) < 3;
+}
+
+function colorForRoas(v){
+  if(v == null) return null;
+  // ROAS: 1.5未満=赤系 / 3.3以上=緑系 / 中間=黄グラデ
+  if(v >= 3.3){
+    // 3.3〜5.0 → 濃い緑
+    const t = Math.min(1, (v - 3.3) / 1.7);
+    return `rgb(${lerp(120, 28, t)|0}, ${lerp(180, 106, t)|0}, ${lerp(140, 60, t)|0})`;
+  }
+  if(v < 1.5){
+    // 1.5未満: 0 に近いほど 濃い赤
+    const t = Math.min(1, (1.5 - v) / 1.5);
+    return `rgb(${lerp(240, 163, t)|0}, ${lerp(200, 24, t)|0}, ${lerp(200, 24, t)|0})`;
+  }
+  // 1.5〜3.3 中間: 黄→ライム
+  const t = (v - 1.5) / (3.3 - 1.5);
+  return `rgb(${lerp(220, 160, t)|0}, ${lerp(180, 200, t)|0}, ${lerp(80, 100, t)|0})`;
+}
+
+function colorForRatio(v, maxV, palette){
+  // palette: 'pos' (green) or 'warn' (red) or 'orange'
+  if(v == null || maxV <= 0) return '#ececec';
+  const t = Math.min(1, Math.max(0, v / maxV));
+  if(palette === 'pos'){
+    return `rgb(${lerp(230, 28, t)|0}, ${lerp(245, 106, t)|0}, ${lerp(232, 60, t)|0})`;
+  }
+  if(palette === 'warn'){
+    return `rgb(${lerp(247, 163, t)|0}, ${lerp(220, 24, t)|0}, ${lerp(220, 24, t)|0})`;
+  }
+  // orange
+  return `rgb(${lerp(255, 227, t)|0}, ${lerp(238, 106, t)|0}, ${lerp(210, 0, t)|0})`;
+}
+
+function lerp(a,b,t){ return a + (b-a)*t; }
+
+function renderGrid(kw){
+  const metric = document.getElementById('metricSel').value;
+  const grid = kw.grid;
+  if(!grid || grid.length !== 7) {
+    document.getElementById('hmGrid').innerHTML = '<div style="grid-column:1/-1;color:#999;padding:20px;text-align:center;">grid データなし</div>';
+    return;
+  }
+
+  // find maxV for ratio metrics
+  let maxV = 0;
+  if(metric !== 'roas'){
+    for(let d=0; d<7; d++) for(let h=0; h<24; h++){
+      if(cellInsufficient(grid[d][h])) continue;
+      const v = cellValue(grid[d][h], metric);
+      if(v != null && v > maxV) maxV = v;
+    }
+  }
+
+  const el = document.getElementById('hmGrid');
+  el.innerHTML = '';
+
+  // header row: blank + 24 hours
+  const blank = document.createElement('div');
+  blank.className = 'hm-hd';
+  blank.textContent = '';
+  el.appendChild(blank);
+  for(const h of HOURS){
+    const hd = document.createElement('div');
+    hd.className = 'hm-hd';
+    hd.textContent = h;
+    el.appendChild(hd);
+  }
+
+  // data rows
+  for(let d=0; d<7; d++){
+    const rowLbl = document.createElement('div');
+    rowLbl.className = 'hm-row-lbl';
+    rowLbl.textContent = DOW_LABELS[d];
+    el.appendChild(rowLbl);
+    for(let h=0; h<24; h++){
+      const cell = grid[d][h];
+      const div = document.createElement('div');
+      div.className = 'hm-cell';
+      const insuf = cellInsufficient(cell);
+      if(insuf){
+        div.classList.add('insuf');
+        div.textContent = '';
+      } else {
+        const v = cellValue(cell, metric);
+        let bg, label;
+        if(metric === 'roas'){
+          bg = colorForRoas(v);
+          label = v == null ? '—' : v.toFixed(1);
+        } else if(metric === 'cvr'){
+          bg = colorForRatio(v, maxV, 'pos');
+          label = v == null ? '—' : (v*100).toFixed(0);
+        } else if(metric === 'spend'){
+          bg = colorForRatio(v, maxV, 'warn');
+          label = v == null ? '—' : (v >= 1000 ? (v/1000).toFixed(1)+'k' : Math.round(v));
+        } else { // orders
+          bg = colorForRatio(v, maxV, 'orange');
+          label = v == null ? '—' : (v >= 1 ? v.toFixed(1) : v.toFixed(2).replace(/^0/,''));
+        }
+        if(bg) div.style.background = bg;
+        // color contrast: darker text on lighter bg
+        const isLight = metric === 'orders' && v < maxV * 0.3;
+        if(isLight || metric === 'cvr' && v < maxV * 0.3){
+          div.style.color = '#333';
+        }
+        div.textContent = label;
+      }
+      div.dataset.dow = d;
+      div.dataset.hour = h;
+      div.addEventListener('mouseenter', onCellHover);
+      div.addEventListener('mousemove', onCellMove);
+      div.addEventListener('mouseleave', hideTip);
+      el.appendChild(div);
+    }
+  }
+}
+
+function onCellHover(e){
+  const d = +e.target.dataset.dow;
+  const h = +e.target.dataset.hour;
+  const cell = CUR_KW.grid[d][h];
+  const tip = document.getElementById('tip');
+  const yen = n => '¥' + Math.round(n||0).toLocaleString();
+  const roas = (cell.cost > 0) ? (cell.sales / cell.cost) : null;
+  const cvr = (cell.clicks > 0) ? (cell.orders / cell.clicks) : null;
+  const roasClass = roas == null ? '' : (roas >= 3.3 ? 'pos' : (roas < 1.5 ? 'neg' : ''));
+  tip.innerHTML = `
+    <div class="kw">${CUR_KW.text}</div>
+    <div class="when">${DOW_LABELS[d]}曜日 ${h}:00 – ${h}:59</div>
+    <div class="row"><span class="l">imp</span><span class="v">${Math.round(cell.imp||0).toLocaleString()}</span></div>
+    <div class="row"><span class="l">clicks</span><span class="v">${(cell.clicks||0).toFixed(2)}</span></div>
+    <div class="row"><span class="l">orders</span><span class="v">${(cell.orders||0).toFixed(2)}</span></div>
+    <div class="row"><span class="l">cost</span><span class="v neg">${yen(cell.cost)}</span></div>
+    <div class="row"><span class="l">sales</span><span class="v pos">${yen(cell.sales)}</span></div>
+    <div class="row"><span class="l">ROAS</span><span class="v ${roasClass}">${roas == null ? '—' : roas.toFixed(2)}</span></div>
+    <div class="row"><span class="l">CVR</span><span class="v">${cvr == null ? '—' : (cvr*100).toFixed(2)+'%'}</span></div>
+  `;
+  tip.style.display = 'block';
+}
+function onCellMove(e){
+  const tip = document.getElementById('tip');
+  const pad = 14;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = e.clientX + pad, y = e.clientY + pad;
+  if(x + w > window.innerWidth - 8) x = e.clientX - w - pad;
+  if(y + h > window.innerHeight - 8) y = e.clientY - h - pad;
+  tip.style.left = x + 'px';
+  tip.style.top = y + 'px';
+}
+function hideTip(){ document.getElementById('tip').style.display = 'none'; }
+
+function renderProposals(kw){
+  const grid = kw.grid || [];
+  const boost = [], cut = [];
+  for(let d=0; d<7; d++){
+    for(let h=0; h<24; h++){
+      const c = grid[d][h];
+      if(!c || (c.clicks||0) < 0.5) continue;
+      const roas = c.cost > 0 ? c.sales/c.cost : 0;
+      if(roas >= 3.3 && (c.orders||0) >= 1){
+        boost.push({d,h,roas,orders:c.orders,cost:c.cost,sales:c.sales});
+      } else if(roas < 1.5 && (c.cost||0) >= 500){
+        cut.push({d,h,roas,orders:c.orders,cost:c.cost,sales:c.sales});
+      }
+    }
+  }
+  document.getElementById('propBoostN').textContent = boost.length;
+  document.getElementById('propCutN').textContent = cut.length;
+
+  const rows = [];
+  const yen = n => '¥' + Math.round(n||0).toLocaleString();
+  if(boost.length){
+    rows.push('<div style="font-weight:800;color:var(--green-dark);margin:6px 0 4px;font-family:var(--font-jp);">BOOST 提案</div>');
+    for(const b of boost.slice(0,20)){
+      rows.push(`<div style="padding:3px 6px;border-bottom:1px solid var(--gray-2);">${DOW_LABELS[b.d]} ${b.h}時 · ROAS ${b.roas.toFixed(2)} · orders ${b.orders.toFixed(2)} · cost ${yen(b.cost)} · sales ${yen(b.sales)} <b style="color:var(--green-dark);">+30%</b></div>`);
+    }
+  }
+  if(cut.length){
+    rows.push('<div style="font-weight:800;color:var(--red);margin:8px 0 4px;font-family:var(--font-jp);">CUT 提案</div>');
+    for(const c of cut.slice(0,30)){
+      rows.push(`<div style="padding:3px 6px;border-bottom:1px solid var(--gray-2);">${DOW_LABELS[c.d]} ${c.h}時 · ROAS ${c.roas.toFixed(2)} · orders ${c.orders.toFixed(2)} · cost ${yen(c.cost)} · sales ${yen(c.sales)} <b style="color:var(--red);">-30% or PAUSE</b></div>`);
+    }
+  }
+  if(!boost.length && !cut.length){
+    rows.push('<div style="color:#888;padding:6px;">この KW は 提案 対象 セル なし (ROAS ≥ 3.3 or &lt; 1.5 で spend ≥ ¥500 の セル が 該当なし)</div>');
+  }
+  document.getElementById('propList').innerHTML = rows.join('');
+}
+
+function updatePropMdLink(){
+  const today = new Date().toISOString().slice(0,10);
+  const el = document.getElementById('propMdLink');
+  el.textContent = `~/.skeleton-pegat-autopilot/state/heatmap-proposals-${today}.md`;
+}
+
+load().catch(e => {
+  console.error(e);
+  document.querySelector('.wrap').innerHTML = `<div style="padding:40px;text-align:center;color:var(--red);">heatmap.json の 読み込み失敗: ${e.message}</div>`;
+});
+</script>
+
+</body>
+</html>
