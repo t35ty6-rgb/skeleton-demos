@@ -572,12 +572,18 @@
       <table class="kwlist" id="kwlist">
         <thead>
           <tr>
-            <th data-key="tier" class="sortable">Tier <span class="arr">▾</span></th>
-            <th data-key="text" class="sortable">KW <span class="arr">▾</span></th>
-            <th data-key="cost30" class="sortable num">広告費30d <span class="arr">▾</span></th>
-            <th data-key="acos7" class="sortable num">ACoS 7d <span class="arr">▾</span></th>
-            <th data-key="roas7" class="sortable num">ROAS 7d <span class="arr">▾</span></th>
-            <th data-key="bid" class="sortable num">bid <span class="arr">▾</span></th>
+            <th data-key="tier" class="sortable">評価 <span class="arr">▾</span></th>
+            <th data-key="text" class="sortable">キーワード <span class="arr">▾</span></th>
+            <th data-key="orders7" class="sortable num">販売数<br><span style="font-size:9px;color:#aaa;">7日</span> <span class="arr">▾</span></th>
+            <th data-key="sales7" class="sortable num">売上<br><span style="font-size:9px;color:#aaa;">7日</span> <span class="arr">▾</span></th>
+            <th data-key="cost7" class="sortable num">広告費<br><span style="font-size:9px;color:#aaa;">7日</span> <span class="arr">▾</span></th>
+            <th data-key="profit7" class="sortable num">純利益<br><span style="font-size:9px;color:#aaa;">7日</span> <span class="arr">▾</span></th>
+            <th data-key="clicks7" class="sortable num">クリック<br><span style="font-size:9px;color:#aaa;">7日</span> <span class="arr">▾</span></th>
+            <th data-key="cvr7" class="sortable num">CVR<br><span style="font-size:9px;color:#aaa;">7日</span> <span class="arr">▾</span></th>
+            <th data-key="roas7" class="sortable num">ROAS<br><span style="font-size:9px;color:#aaa;">7日</span> <span class="arr">▾</span></th>
+            <th data-key="acos7" class="sortable num">ACoS<br><span style="font-size:9px;color:#aaa;">7日</span> <span class="arr">▾</span></th>
+            <th data-key="cost30" class="sortable num">広告費<br><span style="font-size:9px;color:#aaa;">30日</span> <span class="arr">▾</span></th>
+            <th data-key="bid" class="sortable num">単価 <span class="arr">▾</span></th>
           </tr>
         </thead>
         <tbody id="kwlist-body"></tbody>
@@ -982,6 +988,13 @@ function fmtRoas(n){
   if(n==null||isNaN(n)||!isFinite(n)) return '—';
   return n.toFixed(2);
 }
+function fmtProfit(s){
+  if(!s || s.sales14d==null) return '—';
+  const profit = (s.sales14d||0)*0.28 - (s.cost||0);
+  const color = profit >= 0 ? 'color:#17b26a' : 'color:#ef4444';
+  const sign = profit >= 0 ? '+' : '';
+  return `<span style="${color};font-weight:700">${sign}¥${Math.round(profit).toLocaleString()}</span>`;
+}
 
 async function loadData(){
   const url = DATA_URL + '?_=' + Date.now();
@@ -1009,8 +1022,14 @@ function getMetric(kw, key){
       return order[kw.tier]||0;
     case 'text': return kw.text||'';
     case 'cost30': return kw.summary30d.cost||0;
+    case 'cost7': return kw.summary7d.cost||0;
+    case 'sales7': return kw.summary7d.sales14d||0;
+    case 'orders7': return kw.summary7d.purchases14d||0;
+    case 'clicks7': return kw.summary7d.clicks||0;
+    case 'cvr7': return kw.summary7d.cvr==null?-1:kw.summary7d.cvr;
     case 'acos7': return kw.summary7d.acos==null?-1:kw.summary7d.acos;
     case 'roas7': return kw.summary7d.roas==null?-1:kw.summary7d.roas;
+    case 'profit7': return (kw.summary7d.sales14d||0)*0.28 - (kw.summary7d.cost||0);
     case 'bid': return kw.current_bid||0;
   }
   return 0;
@@ -1060,9 +1079,15 @@ function renderList(){
     tr.innerHTML = `
       <td><span class="tier-badge tier-${kw.tier}">${kw.tier==='INSUFFICIENT'?'N/A':kw.tier}</span></td>
       <td class="kw-text">${escapeHtml(kw.text)}<span class="mt">${kw.matchType||''}</span></td>
-      <td class="num">${fmtYen(kw.summary30d.cost)}</td>
-      <td class="num">${fmtPct(kw.summary7d.acos)}</td>
+      <td class="num">${fmtNum(kw.summary7d.purchases14d)}</td>
+      <td class="num">${fmtYen(kw.summary7d.sales14d)}</td>
+      <td class="num">${fmtYen(kw.summary7d.cost)}</td>
+      <td class="num">${fmtProfit(kw.summary7d)}</td>
+      <td class="num">${fmtNum(kw.summary7d.clicks)}</td>
+      <td class="num">${fmtPct(kw.summary7d.cvr)}</td>
       <td class="num">${fmtRoas(kw.summary7d.roas)}</td>
+      <td class="num">${fmtPct(kw.summary7d.acos)}</td>
+      <td class="num">${fmtYen(kw.summary30d.cost)}</td>
       <td class="num">${kw.current_bid?fmtYen(kw.current_bid):'—'}</td>
     `;
     tr.addEventListener('click', ()=>select(kw.id));
