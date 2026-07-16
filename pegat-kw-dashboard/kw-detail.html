@@ -1,0 +1,2432 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PEGAT KW ダッシュボード | Skeleton</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Morisawa BIZ UDGothic (Google Fonts無料版) + Inter (数字/英字) -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --orange:#ff7a00;
+    --orange-dark:#e36a00;
+    --yellow:#ffd400;
+    --yellow-soft:#fff6cc;
+    --black:#1a1a1a;
+    --gray-1:#f5f5f5;
+    --gray-2:#ececec;
+    --gray-3:#ddd;
+    --gray-4:#999;
+    --text:#222;
+    --green:#2e8b57;
+    --red:#d8302f;
+    --red-dark:#a31818;
+    --tier-star:#ff7a00;
+    --tier-good:#ffd400;
+    --tier-watch:#bcbcbc;
+    --tier-bad:#d8302f;
+    --tier-dead:#1a1a1a;
+    --tier-insuff:#e8e8e8;
+    /* Morisawa BIZ UD (無料版) + Zen Kaku Gothic New (見出し) + Inter (数字) */
+    --font-jp: "Zen Kaku Gothic New", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", system-ui, sans-serif;
+    --font-display: "Zen Kaku Gothic New", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+    --font-num: "Inter", "SF Pro Display", -apple-system, sans-serif;
+    --font-mono: "SF Mono", "Menlo", ui-monospace, monospace;
+    /* Sidebar tokens */
+    --side-bg:#14151a;
+    --side-fg:#e8e8e6;
+    --side-mute:#8b8b88;
+    --side-border:#26272d;
+    --side-hover:rgba(255,255,255,.05);
+    --side-active-bg:rgba(255,122,0,.14);
+    --side-input-bg:#1e1f25;
+    --side-input-border:#2a2b30;
+    --main-bg:#f7f7f5;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;background:var(--main-bg);color:var(--text);
+    font-family:var(--font-jp);
+    font-size:13px;line-height:1.55;
+    font-weight:500;
+    font-feature-settings:"palt" 1;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    text-rendering:optimizeLegibility;
+    height:100vh;overflow:hidden;
+  }
+  body{display:grid;grid-template-columns:236px 1fr;}
+  /* ── サイドバー ────────────────────────── */
+  aside.sidebar{
+    background:var(--side-bg);color:var(--side-fg);
+    display:flex;flex-direction:column;
+    overflow-y:auto;overflow-x:hidden;
+    border-right:1px solid var(--side-border);
+    min-height:0;
+  }
+  aside.sidebar::-webkit-scrollbar{width:6px;}
+  aside.sidebar::-webkit-scrollbar-thumb{background:#2f3038;border-radius:3px;}
+  .side-brand{
+    padding:14px 16px 12px;
+    display:flex;align-items:center;gap:8px;
+    border-bottom:1px solid var(--side-border);
+  }
+  .side-brand .pill{
+    background:var(--orange);color:#fff;
+    font-size:10px;font-weight:800;letter-spacing:.08em;
+    padding:2px 7px;border-radius:2px;
+    font-family:var(--font-display);
+  }
+  .side-brand .title{
+    font-size:13px;font-weight:800;
+    font-family:var(--font-display);
+    letter-spacing:-.005em;color:#fff;
+  }
+  .side-brand .sub{
+    margin-left:auto;font-size:10px;color:var(--side-mute);
+    letter-spacing:.06em;
+  }
+  .side-nav{
+    padding:10px 8px 8px;
+    display:flex;flex-direction:column;gap:1px;
+  }
+  .side-nav .item{
+    display:flex;align-items:center;gap:10px;
+    padding:8px 10px 8px 12px;
+    color:#c8c9c5;
+    font-size:13px;font-weight:600;
+    border:none;background:transparent;
+    cursor:pointer;
+    border-radius:5px;
+    text-align:left;width:100%;
+    transition:background .12s,color .12s;
+    position:relative;
+    font-family:var(--font-jp);
+    letter-spacing:.005em;
+  }
+  .side-nav .item:hover{background:var(--side-hover);color:var(--side-fg);}
+  .side-nav .item.active{background:var(--side-active-bg);color:#fff;font-weight:700;}
+  .side-nav .item.active::before{
+    content:'';position:absolute;left:0;top:8px;bottom:8px;
+    width:3px;background:var(--orange);border-radius:0 2px 2px 0;
+  }
+  .side-nav .item .ico{
+    width:18px;text-align:center;font-size:14px;flex-shrink:0;
+    opacity:.85;
+  }
+  .side-nav .item.active .ico{opacity:1;}
+  .side-nav .item .n{
+    margin-left:auto;
+    font-size:10.5px;font-weight:700;
+    padding:1px 6px;border-radius:9px;
+    background:rgba(255,255,255,.08);color:#c8c9c5;
+    min-width:20px;text-align:center;
+    font-family:var(--font-num);
+    font-variant-numeric:tabular-nums;
+    letter-spacing:0;
+  }
+  .side-nav .item .n.bad{background:rgba(216,48,47,.22);color:#ff8a89;}
+  .side-nav .item.active .n{background:rgba(255,122,0,.28);color:#ffcc88;}
+  .side-sec{
+    padding:12px 16px 12px;
+    border-top:1px solid var(--side-border);
+  }
+  .side-sec .h{
+    font-size:10px;font-weight:800;
+    letter-spacing:.1em;
+    color:var(--side-mute);
+    text-transform:uppercase;
+    margin-bottom:10px;
+    display:flex;align-items:center;justify-content:space-between;gap:6px;
+    font-family:var(--font-display);
+  }
+  .side-sec .h select{
+    background:var(--side-input-bg);border:1px solid var(--side-input-border);
+    color:var(--side-fg);font-size:10.5px;padding:2px 4px;
+    border-radius:3px;
+    font-family:var(--font-jp);font-weight:600;
+    letter-spacing:0;text-transform:none;
+    cursor:pointer;
+  }
+  .mini-metric{
+    display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+    padding:4px 0;
+  }
+  .mini-metric .l{
+    color:var(--side-mute);
+    font-size:11px;font-weight:500;
+    letter-spacing:.02em;
+  }
+  .mini-metric .v{
+    color:var(--side-fg);
+    font-family:var(--font-num);
+    font-size:14px;font-weight:700;
+    font-variant-numeric:tabular-nums lining-nums;
+    letter-spacing:-.015em;
+  }
+  .mini-metric .v.pos{color:#6fd18e;}
+  .mini-metric .v.neg{color:#ff8a89;}
+  .mini-metric .v.acos-bad{color:#ff8a89;}
+  .side-range-note{
+    font-size:10px;color:var(--side-mute);
+    margin-top:2px;letter-spacing:.02em;
+    font-family:var(--font-num);
+  }
+  .side-tier{
+    display:flex;align-items:center;gap:8px;
+    padding:5px 4px;border-radius:3px;
+    font-size:11px;
+    cursor:pointer;
+    transition:background .12s;
+  }
+  .side-tier:hover{background:var(--side-hover);}
+  .side-tier .dot{
+    width:8px;height:8px;border-radius:50%;
+    flex-shrink:0;
+    box-shadow:0 0 0 1px rgba(255,255,255,.08);
+  }
+  .side-tier .lbl{
+    color:var(--side-fg);font-weight:700;
+    font-size:11px;letter-spacing:.02em;
+    font-family:var(--font-display);
+    flex:1;
+  }
+  .side-tier .n{
+    font-family:var(--font-num);
+    font-size:13px;font-weight:700;
+    color:var(--side-fg);
+    font-variant-numeric:tabular-nums;
+    letter-spacing:-.01em;
+  }
+  .side-foot{
+    margin-top:auto;padding:12px 16px;
+    border-top:1px solid var(--side-border);
+    display:flex;flex-direction:column;gap:4px;
+  }
+  .side-foot a{
+    color:var(--side-mute);font-size:11px;
+    text-decoration:none;font-weight:600;
+    display:flex;align-items:center;gap:6px;
+    padding:4px 0;
+    letter-spacing:.01em;
+  }
+  .side-foot a:hover{color:var(--side-fg);}
+  .side-foot .stamp{
+    font-size:10px;color:#5a5b60;
+    font-family:var(--font-num);
+    font-variant-numeric:tabular-nums;
+    margin-top:4px;
+    padding-top:8px;
+    border-top:1px solid var(--side-border);
+  }
+  /* ── メイン ────────────────────────── */
+  main.main{
+    display:flex;flex-direction:column;
+    overflow:hidden;
+    background:var(--main-bg);
+    min-width:0;min-height:0;
+  }
+  .topbar{
+    height:48px;flex-shrink:0;
+    display:flex;align-items:center;gap:14px;
+    padding:0 20px;
+    background:#fff;
+    border-bottom:1px solid var(--gray-3);
+  }
+  .topbar .view-title{
+    font-size:15px;font-weight:800;
+    font-family:var(--font-display);
+    letter-spacing:-.015em;color:var(--black);
+  }
+  .topbar .view-sub{
+    font-size:12px;color:#666;font-weight:500;
+    padding-left:12px;border-left:1px solid var(--gray-3);
+    margin-left:2px;
+  }
+  .topbar .meta{
+    margin-left:auto;
+    display:flex;gap:16px;align-items:center;
+    font-size:11px;color:#666;font-weight:500;
+  }
+  .topbar .meta b{
+    color:var(--black);
+    font-family:var(--font-num);
+    font-weight:800;
+    font-variant-numeric:tabular-nums lining-nums;
+    letter-spacing:-.01em;
+    margin-left:2px;
+  }
+  .main-content{
+    flex:1;
+    overflow:auto;
+    min-height:0;
+    position:relative;
+  }
+  code,.mono{font-family:var(--font-mono);}
+  /* 数字/英字は Inter で 統一 (tabular-nums + lining-nums で 桁揃え) */
+  .num,td.num,.val,.big-stat .num,.stat .val,.card .val,.top-cell .v-total,.top-cell .v b,
+  .summary .cell .val,.tier-badge,.detail .sub .pill{
+    font-family:var(--font-num);
+    font-variant-numeric:tabular-nums lining-nums;
+    font-feature-settings:"tnum" 1,"lnum" 1;
+  }
+  /* 見出しは Zen Kaku Gothic New (weight 700-900) で 情報階層を強化 */
+  h1,h2,h3,.detail h2,.dd-head h2,.action-box .head,.chart-box h3,
+  header h1,.tabs button,.card .lbl,.summary .cell .lbl{
+    font-family:var(--font-display);
+  }
+  .card .lbl,.summary .cell .lbl{font-weight:700;}
+  /* ── ヘッダ */
+  header{background:var(--black);color:#fff;padding:8px 14px;display:flex;align-items:center;gap:18px;border-bottom:3px solid var(--orange);}
+  header h1{font-size:14px;margin:0;font-weight:800;letter-spacing:-.005em;}
+  header .brand-pill{background:var(--orange);color:#fff;font-weight:700;padding:2px 8px;border-radius:2px;font-size:11px;}
+  header .meta{margin-left:auto;display:flex;gap:14px;font-size:11px;color:#ccc;}
+  header .meta b{color:#fff;}
+  /* ── サマリバー */
+  .summary{display:flex;gap:1px;background:var(--gray-3);border-bottom:1px solid var(--gray-3);}
+  .summary .cell{background:#fff;padding:8px 14px;flex:1;text-align:center;}
+  .summary .cell .lbl{font-size:10px;color:#666;letter-spacing:.08em;text-transform:uppercase;}
+  .summary .cell .val{font-size:22px;font-weight:700;line-height:1.05;margin-top:3px;letter-spacing:-.02em;}
+  .summary .cell.star{background:#fff6e8;} .summary .cell.star .val{color:var(--orange);}
+  .summary .cell.good{background:var(--yellow-soft);} .summary .cell.good .val{color:#9a7700;}
+  .summary .cell.watch .val{color:#666;}
+  .summary .cell.bad{background:#fde9e8;} .summary .cell.bad .val{color:var(--red);}
+  .summary .cell.dead{background:#222;color:#fff;} .summary .cell.dead .val{color:#fff;}
+  .summary .cell.dead .lbl{color:#aaa;}
+  .summary .cell.insuff .val{color:#aaa;}
+  /* ── レイアウト */
+  .wrap{display:grid;grid-template-columns:520px 1fr;height:100%;}
+  /* ── 左ペイン: KW一覧 */
+  .left{border-right:1px solid var(--gray-3);background:#fff;display:flex;flex-direction:column;min-height:0;}
+  .filters{padding:8px;background:var(--gray-1);border-bottom:1px solid var(--gray-3);display:flex;flex-direction:column;gap:6px;}
+  .filters .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .filters input[type=text]{flex:1;padding:5px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:13px;}
+  .filters select{padding:4px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;}
+  .filters label{font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;}
+  .count{font-size:11px;color:#666;padding:4px 8px;background:var(--yellow-soft);border-bottom:1px solid var(--gray-3);}
+  .list-wrap{flex:1;overflow-y:auto;min-height:0;}
+  table.kwlist{width:100%;border-collapse:collapse;font-size:12px;}
+  table.kwlist thead th{position:sticky;top:0;background:var(--black);color:#fff;padding:5px 6px;font-weight:600;text-align:left;font-size:11px;cursor:pointer;user-select:none;white-space:nowrap;border-right:1px solid #333;}
+  table.kwlist thead th.num{text-align:right;}
+  table.kwlist thead th:hover{background:#333;}
+  table.kwlist thead th .arr{opacity:.4;font-size:9px;}
+  table.kwlist thead th.sorted .arr{opacity:1;color:var(--yellow);}
+  table.kwlist tbody td{padding:4px 6px;border-bottom:1px solid var(--gray-2);vertical-align:middle;}
+  table.kwlist tbody td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  table.kwlist tbody tr{cursor:pointer;}
+  table.kwlist tbody tr:hover{background:var(--yellow-soft);}
+  table.kwlist tbody tr.selected{background:#ffe7c2 !important;outline:2px solid var(--orange);outline-offset:-2px;}
+  .tier-badge{display:inline-block;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;color:#fff;letter-spacing:.04em;min-width:44px;text-align:center;}
+  .tier-STAR{background:var(--tier-star);}
+  .tier-GOOD{background:var(--tier-good);color:#5a4400;}
+  .tier-WATCH{background:var(--tier-watch);color:#fff;}
+  .tier-BAD{background:var(--tier-bad);}
+  .tier-DEAD{background:var(--tier-dead);}
+  .tier-INSUFFICIENT{background:var(--tier-insuff);color:#888;}
+  .kw-text{font-weight:600;}
+  .kw-text .mt{font-size:10px;color:#888;font-weight:400;margin-left:3px;}
+  /* ── 右ペイン: 詳細 */
+  .right{padding:14px;overflow-y:auto;background:#fafafa;min-height:0;}
+  .empty{color:#aaa;text-align:center;padding:80px 20px;font-size:14px;}
+  .detail h2{margin:0 0 4px;font-size:19px;font-weight:800;color:var(--black);letter-spacing:-.015em;}
+  .detail .sub{color:#666;font-size:12px;margin-bottom:14px;}
+  .detail .sub .pill{display:inline-block;background:var(--gray-2);padding:1px 6px;border-radius:2px;margin-right:4px;font-size:11px;}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+  .card{background:#fff;border:1px solid var(--gray-3);border-top:3px solid var(--orange);padding:8px 10px;}
+  .card .lbl{font-size:10px;color:#666;letter-spacing:.08em;text-transform:uppercase;}
+  .card .val{font-size:19px;font-weight:700;margin-top:2px;line-height:1.1;letter-spacing:-.015em;}
+  .card .delta{font-size:11px;color:#888;margin-top:1px;}
+  .card.bid{border-top-color:var(--yellow);background:var(--yellow-soft);}
+  .card.bid .val{color:#7a5e00;}
+  .card.bid .delta{color:#5a4400;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  .chart-box{background:#fff;border:1px solid var(--gray-3);padding:8px;}
+  .chart-box h3{margin:0 0 4px;font-size:11px;color:#666;letter-spacing:.04em;font-weight:600;}
+  .chart-box canvas{max-height:160px;}
+  .action-box{background:#fff;border:1px solid var(--gray-3);border-left:5px solid var(--orange);padding:10px 14px;margin-bottom:14px;}
+  .action-box .head{font-size:12px;font-weight:700;color:var(--orange);margin-bottom:6px;letter-spacing:.04em;}
+  .action-box .body{font-size:14px;line-height:1.5;}
+  .action-box .body .kbd{background:var(--black);color:#fff;padding:2px 6px;border-radius:2px;font-family:"SF Mono",monospace;font-size:12px;}
+  .action-box.tier-BAD{border-left-color:var(--red);} .action-box.tier-BAD .head{color:var(--red);}
+  .action-box.tier-DEAD{border-left-color:var(--tier-dead);} .action-box.tier-DEAD .head{color:var(--tier-dead);}
+  .action-box.tier-GOOD{border-left-color:var(--yellow);} .action-box.tier-GOOD .head{color:#9a7700;}
+  .action-box.tier-WATCH{border-left-color:var(--gray-4);} .action-box.tier-WATCH .head{color:#666;}
+  .action-box.tier-INSUFFICIENT{border-left-color:var(--gray-3);} .action-box.tier-INSUFFICIENT .head{color:#999;}
+  .btns{display:flex;gap:8px;margin-top:10px;}
+  .btn{display:inline-block;padding:6px 14px;font-size:13px;font-weight:700;border:none;border-radius:2px;cursor:pointer;letter-spacing:.04em;}
+  .btn.primary{background:var(--orange);color:#fff;}
+  .btn.primary:hover{background:var(--orange-dark);}
+  .btn.disabled{background:#ccc;color:#888;cursor:not-allowed;}
+  .btn.disabled:hover{background:#ccc;}
+  .copy-flash{font-size:11px;color:var(--green);margin-left:8px;display:none;}
+  .copy-flash.show{display:inline;}
+  /* 日次表 */
+  .daily-table{background:#fff;border:1px solid var(--gray-3);}
+  .daily-table h3{margin:0;font-size:11px;font-weight:600;color:#fff;background:var(--black);padding:6px 10px;letter-spacing:.04em;}
+  .daily-table table{width:100%;border-collapse:collapse;font-size:12px;}
+  .daily-table th,.daily-table td{padding:3px 8px;border-bottom:1px solid var(--gray-2);text-align:right;font-variant-numeric:tabular-nums;}
+  .daily-table th:first-child,.daily-table td:first-child{text-align:left;}
+  .daily-table th{background:var(--gray-1);font-weight:600;color:#555;font-size:11px;}
+  .daily-table tr.weekend td{background:#fbfbf3;}
+  .daily-table tr:hover td{background:var(--yellow-soft);}
+  /* ── タブバー (4タブ) */
+  .tabs{display:flex;background:#222;border-bottom:3px solid var(--orange);}
+  .tabs button{background:transparent;border:none;color:#aaa;font-size:12px;font-weight:700;padding:8px 18px;cursor:pointer;letter-spacing:.02em;border-right:1px solid #333;}
+  .tabs button:hover{background:#333;color:#fff;}
+  .tabs button.active{background:var(--orange);color:#fff;}
+  .view{display:none;}
+  .view.active{display:block;}
+  /* deep-dive 共通 (st/dow/placement) */
+  .dd-wrap{padding:14px;background:var(--main-bg);min-height:100%;}
+  .dd-head{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;}
+  .dd-head h2{margin:0;font-size:17px;font-weight:800;color:var(--black);letter-spacing:-.015em;}
+  .dd-head .sub{font-size:11px;color:#666;}
+  .dd-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;}
+  .dd-filters input[type=text]{padding:5px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;min-width:240px;}
+  .dd-filters select{padding:4px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;}
+  .dd-filters label{font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;}
+  .insight-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+  .insight-box{background:#fff;border:1px solid var(--gray-3);border-left:5px solid var(--orange);padding:8px 12px;}
+  .insight-box.bad{border-left-color:var(--red);}
+  .insight-box .head{font-size:11px;font-weight:700;color:var(--orange);letter-spacing:.04em;margin-bottom:4px;}
+  .insight-box.bad .head{color:var(--red);}
+  .insight-box .items{font-size:13px;font-weight:600;}
+  .insight-box .items span{display:inline-block;margin-right:10px;}
+  /* ST table */
+  table.dd-table{width:100%;border-collapse:collapse;font-size:12px;background:#fff;}
+  table.dd-table thead th{position:sticky;top:0;background:var(--black);color:#fff;padding:5px 6px;font-weight:600;text-align:left;font-size:11px;cursor:pointer;user-select:none;white-space:nowrap;border-right:1px solid #333;}
+  table.dd-table thead th.num{text-align:right;}
+  table.dd-table thead th:hover{background:#333;}
+  table.dd-table thead th.sorted{color:var(--yellow);}
+  table.dd-table tbody td{padding:4px 6px;border-bottom:1px solid var(--gray-2);}
+  table.dd-table tbody td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  table.dd-table tbody tr:hover{background:var(--yellow-soft);}
+  .tag-badge{display:inline-block;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;color:#fff;letter-spacing:.04em;min-width:64px;text-align:center;}
+  .tag-NEGATIVE{background:var(--red);}
+  .tag-PROMOTE{background:var(--orange);}
+  .tag-HIGH_ACOS{background:#9a7700;}
+  .tag-OK{background:#888;}
+  .tag-INSUFFICIENT{background:#ccc;color:#666;}
+  /* DoW heatmap */
+  .dow-grid{display:grid;grid-template-columns:120px repeat(7,1fr);gap:1px;background:var(--gray-3);border:1px solid var(--gray-3);font-size:11px;}
+  .dow-grid > div{background:#fff;padding:6px 8px;}
+  .dow-grid .hdr{background:var(--black);color:#fff;font-weight:700;text-align:center;letter-spacing:.04em;font-size:10px;}
+  .dow-grid .row-lbl{background:var(--gray-1);font-weight:600;color:#555;}
+  .dow-grid .cell{text-align:center;font-variant-numeric:tabular-nums;line-height:1.3;}
+  .dow-grid .cell .v{font-weight:700;font-size:13px;}
+  .dow-grid .cell .sub{font-size:9px;color:#666;}
+  .dow-grid .cell.weekend{background:#fbfbf3;}
+  /* Placement bars */
+  .pl-block{background:#fff;border:1px solid var(--gray-3);padding:10px 14px;margin-bottom:10px;}
+  .pl-block h3{margin:0 0 6px;font-size:14px;font-weight:800;color:var(--black);letter-spacing:-.01em;font-family:var(--font-display);}
+  .pl-block .sub{font-size:11px;color:#666;margin-bottom:6px;}
+  .pl-bars{display:flex;flex-direction:column;gap:5px;}
+  .pl-bar-row{display:grid;grid-template-columns:130px 1fr 90px 90px 90px;gap:8px;align-items:center;font-size:12px;}
+  .pl-bar-row .lbl{font-weight:600;color:#333;}
+  .pl-bar-row .track{position:relative;height:18px;background:var(--gray-1);border-radius:2px;overflow:hidden;}
+  .pl-bar-row .track .fill{height:100%;background:var(--orange);}
+  .pl-bar-row .track .fill.bad{background:var(--red);}
+  .pl-bar-row .track .fill.good{background:var(--yellow);}
+  .pl-bar-row .v{text-align:right;font-variant-numeric:tabular-nums;font-size:11px;color:#555;}
+  /* mobile fallback (狭くなったら縦) */
+  @media (max-width: 980px){
+    .wrap{grid-template-columns:1fr;height:auto;}
+    .left{max-height:50vh;}
+    .insight-row{grid-template-columns:1fr;}
+    .dow-grid{font-size:9px;}
+    .dow-grid > div{padding:3px 2px;}
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="side-brand">
+    <span class="pill">SKELETON</span>
+    <span class="title">PEGAT</span>
+    <span class="sub">v2</span>
+  </div>
+
+  <nav class="side-nav" id="side-nav">
+    <button class="item tab-btn active" data-view="kw" data-title="KW管理" data-sub="Tier分類で判断・入札調整">
+      <span class="ico">🎯</span><span>KW管理</span>
+      <span class="n bad" data-tier-badge="BAD">—</span>
+    </button>
+    <button class="item tab-btn" data-view="st" data-title="検索語句別" data-sub="実際に打たれたクエリを分析">
+      <span class="ico">🔎</span><span>検索語句</span>
+    </button>
+    <button class="item tab-btn" data-view="dow" data-title="曜日別" data-sub="広告費 × 曜日 集約">
+      <span class="ico">📅</span><span>曜日別</span>
+    </button>
+    <button class="item tab-btn" data-view="hourly" data-title="時間帯別" data-sub="注文の 曜日×時間 分布 (過去30日)">
+      <span class="ico">🕐</span><span>時間帯別</span>
+    </button>
+    <button class="item tab-btn" data-view="pl" data-title="プレースメント別" data-sub="TOS / PP / ROS 内訳">
+      <span class="ico">📍</span><span>プレースメント</span>
+    </button>
+    <button class="item tab-btn" data-view="review" data-title="レビュー分析" data-sub="星別+競合との差分">
+      <span class="ico">⭐</span><span>レビュー</span>
+    </button>
+    <button class="item tab-btn" data-view="adj" data-title="調整履歴" data-sub="日次で bid をいつ・なぜ動かしたか">
+      <span class="ico">📜</span><span>調整履歴</span>
+    </button>
+    <button class="item tab-btn" data-view="learn" data-title="学習ログ" data-sub="bid変更 × 予測 vs 実測 × Claude因果分析">
+      <span class="ico">🧠</span><span>学習ログ</span>
+    </button>
+    <a class="item" href="history.html" style="text-decoration:none;">
+      <span class="ico">📖</span><span>意思決定 振り返り</span>
+    </a>
+    <a class="item" href="heatmap.html" style="text-decoration:none;">
+      <span class="ico">🔥</span><span>KW ヒートマップ</span>
+    </a>
+    <a class="item" href="heartbeat.html" style="text-decoration:none;">
+      <span class="ico">💓</span><span>Autopilot 稼働状況</span>
+    </a>
+    <a class="item" href="canary.html" style="text-decoration:none;">
+      <span class="ico">🚦</span><span>Canary Status</span>
+    </a>
+  </nav>
+
+  <div class="side-sec">
+    <div class="h">
+      <span>販売実績</span>
+      <select id="top-range">
+        <option value="today">今日</option>
+        <option value="yesterday" selected>昨日</option>
+        <option value="7d">7日</option>
+        <option value="30d">30日</option>
+        <option value="90d">90日</option>
+        <option value="custom">カスタム</option>
+      </select>
+    </div>
+    <div id="top-custom-wrap" style="display:none;margin-bottom:6px;">
+      <input type="date" id="top-from" style="width:100%;background:var(--side-input-bg);border:1px solid var(--side-input-border);color:var(--side-fg);padding:3px 6px;border-radius:3px;font-size:10.5px;margin-bottom:3px;">
+      <input type="date" id="top-to" style="width:100%;background:var(--side-input-bg);border:1px solid var(--side-input-border);color:var(--side-fg);padding:3px 6px;border-radius:3px;font-size:10.5px;">
+    </div>
+    <div class="mini-metric"><span class="l">売上</span><span class="v" id="mini-sales">—</span></div>
+    <div class="mini-metric"><span class="l">粗利</span><span class="v" id="mini-gross" title="0.85×売上 − (厚1355+薄1292)×個数 = 販売手数料15%+仕入+FBA固定手数料 差引後">—</span></div>
+    <div class="mini-metric"><span class="l">広告費</span><span class="v neg" id="mini-ads">—</span></div>
+    <div class="mini-metric"><span class="l">純利益</span><span class="v" id="mini-net" title="粗利 − 広告費">—</span></div>
+    <div class="mini-metric"><span class="l">ROAS</span><span class="v" id="mini-roas">—</span></div>
+    <div class="mini-metric"><span class="l">ACoS</span><span class="v" id="mini-acos">—</span></div>
+    <div class="mini-metric"><span class="l">販売数</span><span class="v" id="mini-units">—</span></div>
+    <div class="side-range-note" id="top-range-label">—</div>
+  </div>
+
+  <div class="side-sec">
+    <div class="h"><span>Tier分布</span></div>
+    <div class="side-tier"><span class="dot" style="background:var(--orange)"></span><span class="lbl">STAR</span><span class="n" data-tier="STAR">—</span></div>
+    <div class="side-tier"><span class="dot" style="background:var(--yellow)"></span><span class="lbl">GOOD</span><span class="n" data-tier="GOOD">—</span></div>
+    <div class="side-tier"><span class="dot" style="background:#8b8b88"></span><span class="lbl">WATCH</span><span class="n" data-tier="WATCH">—</span></div>
+    <div class="side-tier"><span class="dot" style="background:var(--red)"></span><span class="lbl">BAD</span><span class="n" data-tier="BAD">—</span></div>
+    <div class="side-tier"><span class="dot" style="background:#4a4a4a"></span><span class="lbl">DEAD</span><span class="n" data-tier="DEAD">—</span></div>
+    <div class="side-tier"><span class="dot" style="background:#3a3a3a"></span><span class="lbl">判定不足</span><span class="n" data-tier="INSUFFICIENT">—</span></div>
+  </div>
+
+  <div class="side-foot">
+    <a href="./process.html">📖 しくみ説明</a>
+    <a href="./pipeline.html">🔧 データパイプライン</a>
+    <div class="stamp">更新: <span id="m-updated">—</span></div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <span class="view-title" id="view-title">KW管理</span>
+    <span class="view-sub" id="view-sub">Tier分類で判断・入札調整</span>
+    <div class="meta">
+      <span>期間 <b id="m-range">—</b></span>
+      <span>KW <b id="m-total">—</b></span>
+    </div>
+  </div>
+  <div class="main-content">
+
+<div class="view active" id="view-kw">
+<div class="wrap">
+  <div class="left">
+    <div class="filters">
+      <div class="row">
+        <input type="text" id="search" placeholder="KWで絞り込み (例: 車 クッション)">
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="f-bad"> BADのみ</label>
+        <label><input type="checkbox" id="f-roas1"> ROAS&lt;1</label>
+        <label><input type="checkbox" id="f-active"> 30日で1click+</label>
+        <select id="f-tier">
+          <option value="">全Tier</option>
+          <option value="STAR">STAR</option>
+          <option value="GOOD">GOOD</option>
+          <option value="WATCH">WATCH</option>
+          <option value="BAD">BAD</option>
+          <option value="DEAD">DEAD</option>
+          <option value="INSUFFICIENT">判定不足</option>
+        </select>
+      </div>
+    </div>
+    <div class="count" id="visible-count">読み込み中…</div>
+    <div class="list-wrap">
+      <table class="kwlist" id="kwlist">
+        <thead>
+          <tr>
+            <th data-key="tier" class="sortable">Tier <span class="arr">▾</span></th>
+            <th data-key="text" class="sortable">KW <span class="arr">▾</span></th>
+            <th data-key="cost30" class="sortable num">広告費30d <span class="arr">▾</span></th>
+            <th data-key="acos7" class="sortable num">ACoS 7d <span class="arr">▾</span></th>
+            <th data-key="roas7" class="sortable num">ROAS 7d <span class="arr">▾</span></th>
+            <th data-key="bid" class="sortable num">bid <span class="arr">▾</span></th>
+          </tr>
+        </thead>
+        <tbody id="kwlist-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="right" id="right">
+    <div class="empty">← 左からKWを選んでください</div>
+  </div>
+</div>
+</div><!-- /view-kw -->
+
+<div class="view" id="view-st">
+  <div class="dd-wrap">
+    <div class="dd-head">
+      <h2>検索語句別 (Manual Search Terms)</h2>
+      <span class="sub">過去14日 / Manual KW (BROAD/PHRASE/EXACT) で広告出した結果、 実際にユーザーが入力した検索語句</span>
+    </div>
+    <div class="insight-row" id="st-insights"><div class="insight-box"><div class="head">読み込み中…</div></div></div>
+    <div class="dd-filters">
+      <input type="text" id="st-search" placeholder="検索語句で絞り込み">
+      <select id="st-tag">
+        <option value="">全タグ</option>
+        <option value="NEGATIVE">Negative候補</option>
+        <option value="PROMOTE">昇格候補</option>
+        <option value="HIGH_ACOS">ACoS高</option>
+        <option value="OK">通常</option>
+        <option value="INSUFFICIENT">判定不足</option>
+      </select>
+      <select id="st-match">
+        <option value="">全Match</option>
+        <option value="BROAD">BROAD</option>
+        <option value="PHRASE">PHRASE</option>
+        <option value="EXACT">EXACT</option>
+      </select>
+      <label><input type="checkbox" id="st-cost"> cost&gt;0のみ</label>
+      <span id="st-count" style="font-size:11px;color:#666;margin-left:auto;">—</span>
+    </div>
+    <div style="background:#fff;border:1px solid var(--gray-3);max-height:calc(100vh - 280px);overflow:auto;">
+      <table class="dd-table" id="st-table">
+        <thead>
+          <tr>
+            <th data-key="tag">タグ</th>
+            <th data-key="searchTerm">検索語句</th>
+            <th data-key="matchType">Match</th>
+            <th data-key="clicks" class="num">clicks</th>
+            <th data-key="cost" class="num">cost</th>
+            <th data-key="sales14d" class="num">sales</th>
+            <th data-key="acos" class="num">ACoS</th>
+            <th data-key="cvr" class="num">CVR</th>
+            <th>推奨アクション</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-dow">
+  <div class="dd-wrap">
+    <div class="dd-head">
+      <h2>曜日別 (Day-of-Week)</h2>
+      <span class="sub">過去14日 / ASIN × 曜日 で 入札スケジューリング判断材料を抽出 (Amazon Ads API は hourOfDay 未対応のため 曜日 集約)</span>
+    </div>
+    <div class="insight-row" id="dow-insights"><div class="insight-box"><div class="head">読み込み中…</div></div></div>
+    <div class="dd-filters">
+      <select id="dow-asin"><option value="">全ASIN合算</option></select>
+      <select id="dow-metric">
+        <option value="acos">ACoS (色濃いほど悪い)</option>
+        <option value="roas">ROAS (色濃いほど良い)</option>
+        <option value="cost">広告費</option>
+        <option value="sales14d">売上</option>
+      </select>
+    </div>
+    <div id="dow-grid"></div>
+    <div style="margin-top:14px;background:#fff;border:1px solid var(--gray-3);padding:8px;">
+      <h3 style="margin:0 0 6px;font-size:11px;color:#666;letter-spacing:.04em;">日次推移 (14日)</h3>
+      <canvas id="dow-chart" style="max-height:200px;"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-hourly">
+  <div class="dd-wrap">
+    <div class="dd-head">
+      <h2>時間帯別 注文分布 (曜日 × 時間)</h2>
+      <span class="sub" id="ho-sub">読み込み中…</span>
+    </div>
+    <div class="insight-row" id="ho-insights">
+      <div class="insight-box"><div class="head">ピーク時間帯</div><div class="items"><span id="ho-peak-hours">—</span></div></div>
+      <div class="insight-box"><div class="head">ピーク曜日</div><div class="items"><span id="ho-peak-dows">—</span></div></div>
+      <div class="insight-box"><div class="head">注文ゼロ時間帯</div><div class="items"><span id="ho-dead-hours">—</span></div></div>
+    </div>
+    <div style="background:#fff6cc;border:1px solid #e0c580;padding:8px 12px;margin-bottom:10px;font-size:11.5px;color:#5a4400;line-height:1.55;">
+      <b style="color:#7a5e00;">📊 データソース</b>: SP-API Orders API の PurchaseDate (JST変換後) を 過去30日 分 集約。
+      <b>Amazon Ads V3 は hourOfDay 未対応</b> のため 時間帯別 CTR/CVR/ROAS の 直接計測は不可。
+      注文量 (需要側) の 時間分布 のみ 可視化。 手動 bid ピーク時間帯を強くする 判断材料 として使用可能。
+    </div>
+    <div style="background:#fff;border:1px solid var(--gray-3);padding:12px;">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px;">
+        <h3 style="margin:0;font-size:12px;font-weight:800;letter-spacing:.03em;color:var(--black);font-family:var(--font-display);">曜日 × 時間 ヒートマップ</h3>
+        <label style="font-size:11px;color:#666;margin-left:auto;">
+          表示:
+          <select id="ho-metric" style="padding:3px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;margin-left:4px;">
+            <option value="orders" selected>注文数</option>
+            <option value="sales">売上 (円)</option>
+          </select>
+        </label>
+      </div>
+      <div id="ho-grid" style="overflow-x:auto;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+      <div style="background:#fff;border:1px solid var(--gray-3);padding:10px 12px;">
+        <h3 style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--black);font-family:var(--font-display);">時間帯 合算 (全曜日)</h3>
+        <canvas id="ho-chart-hours" style="max-height:180px;"></canvas>
+      </div>
+      <div style="background:#fff;border:1px solid var(--gray-3);padding:10px 12px;">
+        <h3 style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--black);font-family:var(--font-display);">曜日 合算 (全時間)</h3>
+        <canvas id="ho-chart-dows" style="max-height:180px;"></canvas>
+      </div>
+    </div>
+
+    <!-- ─────── KW × 曜日 × 時間 ヒートマップ (按分近似) ─────── -->
+    <div style="margin-top:14px;background:#fff;border:1px solid var(--gray-3);padding:12px;">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
+        <h3 style="margin:0;font-size:12px;font-weight:800;letter-spacing:.03em;color:var(--black);font-family:var(--font-display);">🔥 KW別 ヒートマップ (曜日 × 時間)</h3>
+        <span id="kh-sub" style="font-size:11px;color:#666;">読み込み中…</span>
+        <label style="font-size:11px;color:#666;margin-left:auto;">KW:
+          <select id="kh-kw" style="padding:3px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;margin-left:4px;min-width:200px;"></select>
+        </label>
+        <label style="font-size:11px;color:#666;">指標:
+          <select id="kh-metric" style="padding:3px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;margin-left:4px;">
+            <option value="roas" selected>ROAS</option>
+            <option value="orders">注文数</option>
+            <option value="cost">広告費</option>
+            <option value="sales">売上</option>
+            <option value="cvr">CVR</option>
+          </select>
+        </label>
+      </div>
+      <div style="background:#fff6cc;border:1px solid #e0c580;padding:6px 10px;margin-bottom:8px;font-size:10.5px;color:#5a4400;line-height:1.5;">
+        <b style="color:#7a5e00;">📐 按分近似</b>: Amazon Ads V3 は KW×hour×dow 直接未対応 → KW 30日 実測 (imp/click/cost/sales) × 全体注文 の 時空分布 (7×24) で 按分。 KW固有 の 曜日クセ は KW daily clicks から 復元。 セル値 は 推定量、 相対比較 用。
+      </div>
+      <div id="kh-grid" style="overflow-x:auto;"></div>
+      <div id="kh-summary" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;"></div>
+      <div style="margin-top:12px;">
+        <h4 style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--black);font-family:var(--font-display);">🎯 このKWの 微調節提案</h4>
+        <div id="kh-proposals" style="font-size:11.5px;line-height:1.6;"></div>
+      </div>
+      <div style="margin-top:12px;">
+        <h4 style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--black);font-family:var(--font-display);">全KW 提案 サマリー</h4>
+        <div id="kh-all-proposals" style="font-size:11px;color:#666;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-pl">
+  <div class="dd-wrap">
+    <div class="dd-head">
+      <h2>プレースメント別 (Top of Search / Product Page / Rest of Search)</h2>
+      <span class="sub">過去14日 / Campaign × Placement 配信比率と効率</span>
+    </div>
+    <div class="insight-row" id="pl-insights"><div class="insight-box"><div class="head">読み込み中…</div></div></div>
+    <div id="pl-overall" class="pl-block"></div>
+    <div id="pl-campaigns"></div>
+  </div>
+</div>
+
+<div class="view" id="view-review">
+  <div class="dd-wrap">
+    <div class="dd-head">
+      <h2>レビュー分析 (Claude Haiku)</h2>
+      <span class="sub" id="rv-sub">読み込み中…</span>
+    </div>
+    <div class="insight-row" id="rv-insights">
+      <div class="insight-box"><div class="head">自社センチメント</div><div class="items"><span id="rv-own-sent">—</span></div></div>
+      <div class="insight-box"><div class="head">自社平均レビュー</div><div class="items"><span id="rv-own-rating">—</span></div></div>
+      <div class="insight-box"><div class="head">競合平均センチメント</div><div class="items"><span id="rv-comp-sent">—</span></div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:10px;margin-top:8px;">
+      <div class="daily-table">
+        <h3>自社 褒めTop10</h3>
+        <div id="rv-praise" style="max-height:calc(100vh - 280px);overflow:auto;"></div>
+      </div>
+      <div class="daily-table">
+        <h3>自社 不満Top10</h3>
+        <div id="rv-complaint" style="max-height:calc(100vh - 280px);overflow:auto;"></div>
+      </div>
+      <div class="daily-table">
+        <h3>差別化ギャップTop10 (競合褒め × 自社無し = 改善優先)</h3>
+        <div id="rv-gap-imp" style="max-height:calc(100vh - 280px);overflow:auto;"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;background:#fff;border:1px solid var(--gray-3);padding:8px;">
+      <h3 style="margin:0 0 6px;font-size:11px;color:#666;letter-spacing:.04em;">訴求チャンスTop10 (競合叩かれ × 自社良し)</h3>
+      <div id="rv-gap-adv"></div>
+    </div>
+
+    <!-- 個別レビュー一覧 (取得日タグ+消えたレビュー検知) — 2026-07-02 追加 -->
+    <div style="margin-top:10px;background:#fff;border:1px solid var(--gray-3);padding:12px;">
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+        <h3 style="margin:0;font-size:13px;font-weight:800;letter-spacing:-.01em;font-family:var(--font-display);">個別レビュー一覧 (Amazon消失検知付き)</h3>
+        <span id="rv-hist-meta" style="font-size:11px;color:#666;">読み込み中…</span>
+        <label style="font-size:11px;color:#666;margin-left:auto;">ASIN:
+          <select id="rv-hist-asin" style="padding:3px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;margin-left:4px;"></select>
+        </label>
+        <label style="font-size:11px;color:#666;">表示:
+          <select id="rv-hist-filter" style="padding:3px 6px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;background:#fff;margin-left:4px;">
+            <option value="all">全部</option>
+            <option value="active">現存のみ</option>
+            <option value="disappeared">消失のみ</option>
+            <option value="new">新着 (7日以内)</option>
+          </select>
+        </label>
+      </div>
+      <div id="rv-hist-list" style="max-height:520px;overflow:auto;border:1px solid var(--gray-2);border-radius:2px;"></div>
+    </div>
+
+    <div style="margin-top:10px;background:#fff;border:1px solid var(--gray-3);padding:8px;">
+      <h3 style="margin:0 0 6px;font-size:11px;color:#666;letter-spacing:.04em;">ASIN別 サマリー</h3>
+      <div style="overflow:auto;max-height:280px;">
+        <table class="dd-table" id="rv-asin-table">
+          <thead>
+            <tr>
+              <th>ラベル</th><th>ASIN</th>
+              <th class="num">レビュー数</th>
+              <th class="num">平均★</th>
+              <th class="num">Sentiment</th>
+              <th>主な用途</th>
+              <th>褒めTop3</th>
+              <th>不満Top3</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-adj">
+  <div class="dd-wrap">
+    <div class="dd-head">
+      <h2>📅 調整履歴 (KW入札変更 全記録)</h2>
+      <span class="sub" id="adj-sub">読み込み中…</span>
+    </div>
+
+    <!-- 今日/昨日の販売実績 (実績（日次）シート 直近14日、 佐瀬コンサル共有と同じデータ) -->
+    <div id="adj-recent" style="background:var(--yellow-soft);border-bottom:1px solid var(--yellow);padding:12px 14px;"></div>
+
+    <!-- 収益サマリカード (佐瀬コンサル 共有シートと同じ数字) -->
+    <div id="adj-perf" style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--gray-3);border-bottom:1px solid var(--gray-3);"></div>
+
+    <div style="padding:10px;background:var(--gray-1);border-bottom:1px solid var(--gray-3);display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      <label>日付:
+        <select id="adj-date" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;">
+          <option value="all">全期間</option>
+        </select>
+      </label>
+      <label>種別:
+        <select id="adj-tag" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;">
+          <option value="all">全部</option>
+          <option value="LIVE">LIVE (実変更のみ)</option>
+          <option value="DRY">DRY (判定のみ)</option>
+        </select>
+      </label>
+      <label>方向:
+        <select id="adj-dir" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;">
+          <option value="all">全部</option>
+          <option value="up">↑ 上げた</option>
+          <option value="down">↓ 下げた</option>
+        </select>
+      </label>
+      <span id="adj-count" style="font-size:11px;color:#666;margin-left:auto;">—</span>
+    </div>
+
+    <div class="daily-table">
+      <h3>📊 日別サマリ (LIVE件数 / 上げ↑ / 下げ↓)</h3>
+      <div id="adj-summary" style="max-height:200px;overflow:auto;padding:6px;"></div>
+    </div>
+
+    <div class="daily-table" style="margin-top:10px;">
+      <h3>📝 変更明細 (最新→古い順)</h3>
+      <div style="max-height:calc(100vh - 480px);overflow:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:var(--black);color:#fff;">
+              <th style="padding:5px 8px;text-align:left;font-size:11px;">日付</th>
+              <th style="padding:5px 8px;text-align:left;font-size:11px;">タグ</th>
+              <th style="padding:5px 8px;text-align:left;font-size:11px;">KW</th>
+              <th style="padding:5px 8px;text-align:left;font-size:11px;">match</th>
+              <th style="padding:5px 8px;text-align:left;font-size:11px;">判定</th>
+              <th style="padding:5px 8px;text-align:right;font-size:11px;">旧bid</th>
+              <th style="padding:5px 8px;text-align:right;font-size:11px;">→</th>
+              <th style="padding:5px 8px;text-align:right;font-size:11px;">新bid</th>
+              <th style="padding:5px 8px;text-align:right;font-size:11px;">差額</th>
+              <th style="padding:5px 8px;text-align:right;font-size:11px;">ACoS</th>
+              <th style="padding:5px 8px;text-align:left;font-size:11px;">理由</th>
+            </tr>
+          </thead>
+          <tbody id="adj-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-learn">
+  <div class="dd-wrap">
+    <div class="dd-head">
+      <h2>🧠 学習ログ (bid変更 × 予測 vs 実測 × Claude因果分析)</h2>
+      <span class="sub" id="learn-sub">読み込み中…</span>
+    </div>
+
+    <div class="summary" id="learn-summary" style="border-bottom:1px solid var(--gray-3);"></div>
+
+    <div style="padding:10px;background:var(--gray-1);border-bottom:1px solid var(--gray-3);display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      <input type="text" id="learn-search" placeholder="KWで絞り込み" style="padding:5px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:13px;min-width:200px;">
+      <label>カテゴリ:
+        <select id="learn-cat" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;">
+          <option value="all">全カテゴリ</option>
+        </select>
+      </label>
+      <label>スコープ:
+        <select id="learn-scope" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;">
+          <option value="all">全部</option>
+          <option value="汎用">汎用 (他OEM転用可)</option>
+          <option value="PEGAT固有">PEGAT固有</option>
+        </select>
+      </label>
+      <label>信頼度:
+        <select id="learn-conf" style="padding:4px 8px;border:1px solid var(--gray-3);border-radius:2px;font-size:12px;">
+          <option value="0">全部</option>
+          <option value="0.5">0.5+</option>
+          <option value="0.7">0.7+</option>
+          <option value="0.85">0.85+ (高)</option>
+        </select>
+      </label>
+      <span id="learn-count" style="font-size:11px;color:#666;margin-left:auto;">—</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;min-height:calc(100vh - 320px);">
+      <!-- 左: 効果測定テーブル -->
+      <div class="daily-table" style="min-height:0;overflow:hidden;display:flex;flex-direction:column;">
+        <h3>📊 効果測定 (bid変更 実測結果、 新→旧)</h3>
+        <div style="overflow:auto;flex:1;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:var(--black);color:#fff;position:sticky;top:0;">
+                <th style="padding:5px 6px;text-align:left;font-size:11px;">日付</th>
+                <th style="padding:5px 6px;text-align:left;font-size:11px;">KW</th>
+                <th style="padding:5px 6px;text-align:right;font-size:11px;">bid変化</th>
+                <th style="padding:5px 6px;text-align:right;font-size:11px;">imp<br><span style="font-size:9px;color:#aaa;">予/実/差</span></th>
+                <th style="padding:5px 6px;text-align:right;font-size:11px;">sales<br><span style="font-size:9px;color:#aaa;">予/実</span></th>
+                <th style="padding:5px 6px;text-align:center;font-size:11px;">判定</th>
+              </tr>
+            </thead>
+            <tbody id="learn-effect-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 右: 学びカード -->
+      <div style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+        <h3 style="margin:0;font-size:11px;font-weight:600;color:#fff;background:var(--black);padding:6px 10px;letter-spacing:.04em;">💡 Claude因果分析 (学び + primary_cause + 推奨アクション)</h3>
+        <div id="learn-cards" style="overflow-y:auto;flex:1;padding:8px;background:#fff;border:1px solid var(--gray-3);"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  </div><!-- /.main-content -->
+</main>
+
+<script>
+const DATA_URL = './data/kw-daily.json';
+
+let DATA = null;
+let sortKey = 'cost30';
+let sortDir = 'desc';
+let selectedId = null;
+let chartCost = null, chartAcos = null;
+
+function fmtYen(n){
+  if(n==null||isNaN(n)) return '—';
+  return '¥' + Math.round(n).toLocaleString();
+}
+function fmtPct(n){
+  if(n==null||isNaN(n)||!isFinite(n)) return '—';
+  return (n*100).toFixed(1)+'%';
+}
+function fmtNum(n){
+  if(n==null||isNaN(n)) return '—';
+  return Math.round(n).toLocaleString();
+}
+function fmtRoas(n){
+  if(n==null||isNaN(n)||!isFinite(n)) return '—';
+  return n.toFixed(2);
+}
+
+async function loadData(){
+  const url = DATA_URL + '?_=' + Date.now();
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('JSON fetch failed '+res.status);
+  return res.json();
+}
+
+function init(){
+  document.getElementById('m-range').textContent = `${DATA.range.startDate} 〜 ${DATA.range.endDate}`;
+  document.getElementById('m-total').textContent = DATA.total_kw;
+  const updated = new Date(DATA.generated_at);
+  document.getElementById('m-updated').textContent = updated.toLocaleString('ja-JP',{hour12:false});
+  for(const tier of ['STAR','GOOD','WATCH','BAD','DEAD','INSUFFICIENT']){
+    const el = document.querySelector(`[data-tier="${tier}"]`);
+    if(el) el.textContent = DATA.tier_count[tier] || 0;
+  }
+  renderList();
+}
+
+function getMetric(kw, key){
+  switch(key){
+    case 'tier':
+      const order = {STAR:5,GOOD:4,WATCH:3,BAD:2,DEAD:1,INSUFFICIENT:0};
+      return order[kw.tier]||0;
+    case 'text': return kw.text||'';
+    case 'cost30': return kw.summary30d.cost||0;
+    case 'acos7': return kw.summary7d.acos==null?-1:kw.summary7d.acos;
+    case 'roas7': return kw.summary7d.roas==null?-1:kw.summary7d.roas;
+    case 'bid': return kw.current_bid||0;
+  }
+  return 0;
+}
+
+function filterKws(){
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const fBad = document.getElementById('f-bad').checked;
+  const fRoas = document.getElementById('f-roas1').checked;
+  const fActive = document.getElementById('f-active').checked;
+  const fTier = document.getElementById('f-tier').value;
+  return DATA.kws.filter(k=>{
+    if(q && !(k.text||'').toLowerCase().includes(q)) return false;
+    if(fBad && k.tier!=='BAD') return false;
+    if(fTier && k.tier!==fTier) return false;
+    if(fRoas){
+      const r = k.summary7d.roas;
+      if(r==null || r>=1) return false;
+    }
+    if(fActive){
+      if(!(k.summary30d.clicks>0)) return false;
+    }
+    return true;
+  });
+}
+
+function renderList(){
+  const list = filterKws();
+  list.sort((a,b)=>{
+    const va = getMetric(a, sortKey);
+    const vb = getMetric(b, sortKey);
+    if(typeof va==='string'){
+      return sortDir==='asc'? va.localeCompare(vb) : vb.localeCompare(va);
+    }
+    return sortDir==='asc'? va-vb : vb-va;
+  });
+
+  document.getElementById('visible-count').textContent = `表示: ${list.length} / ${DATA.kws.length} KW`;
+
+  const tbody = document.getElementById('kwlist-body');
+  tbody.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  for(const kw of list){
+    const tr = document.createElement('tr');
+    if(kw.id===selectedId) tr.className = 'selected';
+    tr.dataset.id = kw.id;
+    tr.innerHTML = `
+      <td><span class="tier-badge tier-${kw.tier}">${kw.tier==='INSUFFICIENT'?'N/A':kw.tier}</span></td>
+      <td class="kw-text">${escapeHtml(kw.text)}<span class="mt">${kw.matchType||''}</span></td>
+      <td class="num">${fmtYen(kw.summary30d.cost)}</td>
+      <td class="num">${fmtPct(kw.summary7d.acos)}</td>
+      <td class="num">${fmtRoas(kw.summary7d.roas)}</td>
+      <td class="num">${kw.current_bid?fmtYen(kw.current_bid):'—'}</td>
+    `;
+    tr.addEventListener('click', ()=>select(kw.id));
+    frag.appendChild(tr);
+  }
+  tbody.appendChild(frag);
+
+  // ヘッダ ソート印
+  for(const th of document.querySelectorAll('th.sortable')){
+    th.classList.toggle('sorted', th.dataset.key===sortKey);
+    const arr = th.querySelector('.arr');
+    if(arr) arr.textContent = th.dataset.key===sortKey ? (sortDir==='asc'?'▴':'▾') : '▾';
+  }
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function select(id){
+  selectedId = id;
+  for(const tr of document.querySelectorAll('#kwlist-body tr')){
+    tr.classList.toggle('selected', tr.dataset.id===id);
+  }
+  const kw = DATA.kws.find(k=>k.id===id);
+  if(kw) renderDetail(kw);
+}
+
+function buildDailyArray(kw){
+  // 30日 startDate→endDate を埋める
+  const out = [];
+  const start = new Date(DATA.range.startDate+'T00:00:00Z');
+  const end = new Date(DATA.range.endDate+'T00:00:00Z');
+  for(let d=new Date(start); d<=end; d.setUTCDate(d.getUTCDate()+1)){
+    const key = d.toISOString().slice(0,10);
+    const v = kw.daily[key] || {impressions:0,clicks:0,cost:0,sales14d:0,purchases14d:0};
+    out.push({date:key, ...v, acos: v.sales14d>0? v.cost/v.sales14d : null});
+  }
+  return out;
+}
+
+function renderDetail(kw){
+  const days = buildDailyArray(kw);
+  const labels = days.map(x=>x.date.slice(5)); // MM-DD
+  const recommended = kw.recommended_bid;
+  const cur = kw.current_bid;
+  const bidDelta = (cur && recommended) ? (recommended - cur) : null;
+  const bidPct = (cur && recommended && cur>0) ? ((recommended-cur)/cur*100) : null;
+
+  const tierLabel = {
+    STAR:'STAR (効率最強)',
+    GOOD:'GOOD (採算内)',
+    WATCH:'WATCH (採算ぎりぎり)',
+    BAD:'BAD (損失)',
+    DEAD:'DEAD (停止候補)',
+    INSUFFICIENT:'判定不足 (clicks 不足)',
+  }[kw.tier] || kw.tier;
+
+  const actionTxt = {
+    BID_UP_15: '+15% bid up',
+    BID_UP_5: '+5% bid up',
+    NONE: '据え置き',
+    BID_DOWN_30: '-30% bid down',
+    PAUSE_AND_NEGATIVE: '一時停止 + ネガティブ追加',
+  }[kw.recommended_action] || kw.recommended_action;
+
+  const right = document.getElementById('right');
+  right.innerHTML = `
+    <div class="detail">
+      <h2>${escapeHtml(kw.text)}</h2>
+      <div class="sub">
+        <span class="pill">${kw.matchType||'-'}</span>
+        <span class="pill tier-badge tier-${kw.tier}" style="color:${kw.tier==='GOOD'?'#5a4400':'#fff'};">${kw.tier}</span>
+        <span class="pill mono">KW ID: ${kw.id}</span>
+        ${kw.state? `<span class="pill">${kw.state}</span>`:''}
+      </div>
+
+      <div class="cards">
+        <div class="card"><div class="lbl">広告費 (7d)</div><div class="val">${fmtYen(kw.summary7d.cost)}</div><div class="delta">30d: ${fmtYen(kw.summary30d.cost)}</div></div>
+        <div class="card"><div class="lbl">売上 (7d)</div><div class="val">${fmtYen(kw.summary7d.sales14d)}</div><div class="delta">30d: ${fmtYen(kw.summary30d.sales14d)}</div></div>
+        <div class="card"><div class="lbl">ACoS / ROAS (7d)</div><div class="val">${fmtPct(kw.summary7d.acos)}</div><div class="delta">ROAS ${fmtRoas(kw.summary7d.roas)} / CVR ${fmtPct(kw.summary7d.cvr)}</div></div>
+        <div class="card bid"><div class="lbl">現bid → 推奨bid</div><div class="val">${cur?fmtYen(cur):'—'} → ${fmtYen(recommended)}</div><div class="delta">${bidDelta==null?'':(bidDelta>0?'+':'')+bidDelta+'円 ('+ (bidPct>0?'+':'')+bidPct.toFixed(0)+'%)'}</div></div>
+      </div>
+
+      <div class="action-box tier-${kw.tier}">
+        <div class="head">▶ ${tierLabel} → ${actionTxt}</div>
+        <div class="body">
+          <b>${escapeHtml(kw.reason||'')}</b><br>
+          推奨入札を <span class="kbd">${fmtYen(recommended)}</span> に変更してください。
+          <div class="btns">
+            <button class="btn primary" id="copy-bid">推奨bidをコピー (${recommended})</button>
+            <button class="btn disabled" disabled title="Phase B解禁後に有効化">実行 (Phase B 未解禁)</button>
+            <span class="copy-flash" id="flash">✓ コピー済</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="chart-box"><h3>広告費 / 売上 (日別 ¥)</h3><canvas id="chart-cost"></canvas></div>
+        <div class="chart-box"><h3>ACoS / Impressions (日別)</h3><canvas id="chart-acos"></canvas></div>
+      </div>
+
+      <div class="daily-table">
+        <h3>日別明細 (新→旧)</h3>
+        <table>
+          <thead><tr><th>日付</th><th>imp</th><th>click</th><th>cost</th><th>sales</th><th>orders</th><th>ACoS</th></tr></thead>
+          <tbody>
+            ${[...days].reverse().map(d=>{
+              const isWeekend = [0,6].includes(new Date(d.date+'T00:00:00Z').getUTCDay());
+              return `<tr class="${isWeekend?'weekend':''}">
+                <td>${d.date.slice(5)}</td>
+                <td>${fmtNum(d.impressions)}</td>
+                <td>${fmtNum(d.clicks)}</td>
+                <td>${fmtYen(d.cost)}</td>
+                <td>${fmtYen(d.sales14d)}</td>
+                <td>${fmtNum(d.purchases14d)}</td>
+                <td>${fmtPct(d.acos)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('copy-bid').addEventListener('click', ()=>{
+    navigator.clipboard.writeText(String(recommended)).then(()=>{
+      const f = document.getElementById('flash');
+      f.classList.add('show');
+      setTimeout(()=>f.classList.remove('show'), 1500);
+    });
+  });
+
+  // Charts
+  if(chartCost) chartCost.destroy();
+  if(chartAcos) chartAcos.destroy();
+  const ctxCost = document.getElementById('chart-cost').getContext('2d');
+  chartCost = new Chart(ctxCost, {
+    data: {
+      labels,
+      datasets: [
+        { type:'bar', label:'広告費', data:days.map(x=>Math.round(x.cost)), backgroundColor:'#ff7a00', yAxisID:'y' },
+        { type:'line', label:'売上', data:days.map(x=>Math.round(x.sales14d)), borderColor:'#1a1a1a', backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.2, yAxisID:'y' },
+      ],
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10, font:{size:10}}}},
+      scales:{
+        x:{ticks:{font:{size:9},autoSkip:true,maxRotation:0}},
+        y:{beginAtZero:true, ticks:{font:{size:10}, callback:v=>'¥'+v.toLocaleString()}},
+      },
+    },
+  });
+
+  const ctxAcos = document.getElementById('chart-acos').getContext('2d');
+  chartAcos = new Chart(ctxAcos, {
+    data: {
+      labels,
+      datasets: [
+        { type:'line', label:'ACoS', data:days.map(x=>x.acos==null?null:Math.round(x.acos*1000)/10), borderColor:'#d8302f', backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.2, spanGaps:true, yAxisID:'y' },
+        { type:'bar', label:'impressions', data:days.map(x=>x.impressions), backgroundColor:'#ffd400', yAxisID:'y1' },
+      ],
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10, font:{size:10}}}},
+      scales:{
+        x:{ticks:{font:{size:9},autoSkip:true,maxRotation:0}},
+        y:{position:'left', beginAtZero:true, ticks:{font:{size:10}, callback:v=>v+'%'}, title:{display:true,text:'ACoS', font:{size:9}}},
+        y1:{position:'right', beginAtZero:true, ticks:{font:{size:10}}, grid:{display:false}, title:{display:true,text:'imp', font:{size:9}}},
+      },
+    },
+  });
+}
+
+// ── event wiring
+document.getElementById('search').addEventListener('input', renderList);
+document.getElementById('f-bad').addEventListener('change', renderList);
+document.getElementById('f-roas1').addEventListener('change', renderList);
+document.getElementById('f-active').addEventListener('change', renderList);
+document.getElementById('f-tier').addEventListener('change', renderList);
+for(const th of document.querySelectorAll('th.sortable')){
+  th.addEventListener('click', ()=>{
+    const k = th.dataset.key;
+    if(sortKey===k) sortDir = (sortDir==='asc'?'desc':'asc');
+    else { sortKey = k; sortDir = (k==='text'?'asc':'desc'); }
+    renderList();
+  });
+}
+
+loadData().then(d=>{
+  DATA = d;
+  init();
+  // 初期選択: BAD があれば BAD 中で cost30 最大、 なければ 全体で cost30 最大
+  const candidates = DATA.kws.slice().sort((a,b)=>(b.summary30d.cost||0)-(a.summary30d.cost||0));
+  const bad = candidates.find(k=>k.tier==='BAD');
+  const first = bad || candidates[0];
+  if(first) select(first.id);
+}).catch(err=>{
+  document.getElementById('right').innerHTML =
+    `<div class="empty" style="color:#d8302f;">データ取得失敗: ${escapeHtml(err.message)}<br>data/kw-daily.json が未生成の可能性</div>`;
+  document.getElementById('visible-count').textContent = '読み込み失敗';
+});
+
+// ── トップ実績パネル (全タブ共通、 期間選択) ──────
+let TOP_SALES = null;
+(async () => {
+  try {
+    const res = await fetch('./data/adjustments.json?t=' + Date.now());
+    if (!res.ok) return;
+    const j = await res.json();
+    TOP_SALES = j.recent_sales || [];
+    initTopSales();
+  } catch(e) { console.warn('[top-sales] fail:', e); }
+})();
+
+function initTopSales() {
+  const sel = document.getElementById('top-range');
+  const wrap = document.getElementById('top-custom-wrap');
+  const fromEl = document.getElementById('top-from');
+  const toEl = document.getElementById('top-to');
+  if (TOP_SALES.length) {
+    fromEl.value = TOP_SALES[TOP_SALES.length-1].date;
+    toEl.value = TOP_SALES[0].date;
+    fromEl.min = TOP_SALES[TOP_SALES.length-1].date;
+    toEl.max = TOP_SALES[0].date;
+  }
+  sel.addEventListener('change', () => {
+    wrap.style.display = sel.value === 'custom' ? 'inline-block' : 'none';
+    renderTopSales();
+  });
+  fromEl.addEventListener('change', renderTopSales);
+  toEl.addEventListener('change', renderTopSales);
+  renderTopSales();
+}
+
+function renderTopSales() {
+  if (!TOP_SALES || !TOP_SALES.length) return;
+  const range = document.getElementById('top-range').value;
+  const jstToday = new Date(Date.now() + 9*3600_000).toISOString().slice(0,10);
+  const yesterday = new Date(Date.now() + 9*3600_000 - 86400_000).toISOString().slice(0,10);
+  let from, to;
+  if (range === 'today') { from = jstToday; to = jstToday; }
+  else if (range === 'yesterday') { from = yesterday; to = yesterday; }
+  else if (range === '7d') { from = new Date(Date.now() + 9*3600_000 - 7*86400_000).toISOString().slice(0,10); to = yesterday; }
+  else if (range === '30d') { from = new Date(Date.now() + 9*3600_000 - 30*86400_000).toISOString().slice(0,10); to = yesterday; }
+  else if (range === '90d') { from = new Date(Date.now() + 9*3600_000 - 90*86400_000).toISOString().slice(0,10); to = yesterday; }
+  else { from = document.getElementById('top-from').value; to = document.getElementById('top-to').value; }
+
+  const filtered = TOP_SALES.filter(d => d.date >= from && d.date <= to);
+  document.getElementById('top-range-label').textContent = `${from} 〜 ${to} (${filtered.length}日)`;
+
+  let atsuU=0, usuU=0, atsuSales=0, usuSales=0, adCost=0, sess=0, imp=0, adsOrders=0;
+  for (const d of filtered) {
+    atsuU += d.atsu.units || 0;
+    usuU  += d.usu.units || 0;
+    atsuSales += d.atsu.sales_ex || 0;
+    usuSales += d.usu.sales_ex || 0;
+    adCost += (d.atsu.ad_cost || 0) + (d.usu.ad_cost || 0);
+    sess += (d.atsu.sess || 0) + (d.usu.sess || 0);
+    imp += (d.atsu.imp || 0) + (d.usu.imp || 0);
+    adsOrders += (d.atsu.ads_orders || 0) + (d.usu.ads_orders || 0);
+  }
+  const salesEx = atsuSales + usuSales;
+  const totalU = atsuU + usuU;
+  const acos = salesEx > 0 ? adCost / salesEx : null;
+  const roas = adCost > 0 ? salesEx / adCost : null;
+  // 粗利 SSOT: 厚 = 0.85×売上 − 1355×個 / 薄 = 0.85×売上 − 1292×個 (仕入+FBA+販売手数料15% 差引後)
+  const grossAtsu = 0.85 * atsuSales - 1355 * atsuU;
+  const grossUsu  = 0.85 * usuSales  - 1292 * usuU;
+  const gross = grossAtsu + grossUsu;
+  const net = gross - adCost;
+  const yenShort = v => {
+    const n = Math.round(v);
+    if (Math.abs(n) >= 10000) return '¥' + (n/10000).toFixed(n>=100000?0:1) + '万';
+    return '¥' + n.toLocaleString();
+  };
+  const numShort = v => {
+    const n = v || 0;
+    if (n >= 10000) return (n/10000).toFixed(n>=100000?0:1) + '万';
+    return n.toLocaleString();
+  };
+
+  const $ = id => document.getElementById(id);
+  const setSigned = (id, v, isYen) => {
+    const el = $(id); if (!el) return;
+    el.textContent = (isYen ? yenShort(v) : v);
+    el.classList.toggle('pos', v > 0);
+    el.classList.toggle('neg', v < 0);
+  };
+  $('mini-sales').textContent = yenShort(salesEx);
+  $('mini-sales').classList.toggle('pos', salesEx > 0);
+  setSigned('mini-gross', gross, true);
+  $('mini-ads').textContent = yenShort(adCost);
+  setSigned('mini-net', net, true);
+  $('mini-roas').textContent = roas != null ? roas.toFixed(2) + 'x' : '—';
+  const acosEl = $('mini-acos');
+  acosEl.textContent = acos != null ? (acos*100).toFixed(0) + '%' : '—';
+  acosEl.classList.toggle('acos-bad', acos != null && acos > 0.42);
+  $('mini-units').textContent = totalU + '個 (厚' + atsuU + '/薄' + usuU + ')';
+}
+
+// ════════════════════════════════════════════════
+// タブ切替 + 3軸ディープダイブ
+// ════════════════════════════════════════════════
+let ST_DATA=null, DOW_DATA=null, PL_DATA=null;
+let stSortKey='cost', stSortDir='desc';
+let dowChart=null;
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const v = btn.dataset.view;
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b===btn));
+    document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active', el.id==='view-'+v));
+    const t = btn.dataset.title, s = btn.dataset.sub;
+    if (t) document.getElementById('view-title').textContent = t;
+    if (s) document.getElementById('view-sub').textContent = s;
+    document.querySelector('.main-content').scrollTop = 0;
+    if(v==='st' && !ST_DATA) loadST();
+    if(v==='dow' && !DOW_DATA) loadDoW();
+    if(v==='hourly' && !HO_DATA) loadHourly();
+    if(v==='pl' && !PL_DATA) loadPL();
+    if(v==='review' && !RV_DATA) loadReview();
+    if(v==='adj' && !ADJ_DATA) loadAdj();
+    if(v==='learn' && !LEARN_DATA) loadLearn();
+  });
+});
+
+// Tier分布のBAD数を左サイドバーの KW管理 バッジ にコピー (Tier分布 の n が更新されたタイミングで同期)
+function syncNavBadges() {
+  const badEl = document.querySelector('.side-tier .n[data-tier="BAD"]');
+  const badgeEl = document.querySelector('.side-nav .item .n[data-tier-badge="BAD"]');
+  if (badEl && badgeEl) {
+    const txt = badEl.textContent;
+    badgeEl.textContent = txt;
+    badgeEl.style.display = (txt === '0' || txt === '—') ? 'none' : '';
+  }
+}
+new MutationObserver(syncNavBadges).observe(
+  document.querySelector('.side-tier .n[data-tier="BAD"]'),
+  { childList: true, characterData: true, subtree: true }
+);
+
+// ── 調整履歴 ────────────────────────────
+let ADJ_DATA = null;
+async function loadAdj(){
+  try{
+    const res = await fetch('./data/adjustments.json?t=' + Date.now());
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    ADJ_DATA = await res.json();
+  }catch(e){
+    document.getElementById('adj-sub').textContent = '読み込み失敗: '+e.message+' (adjustments.json が未生成の可能性)';
+    return;
+  }
+  const D = ADJ_DATA;
+  document.getElementById('adj-sub').textContent =
+    `全 ${D.total_rows.toLocaleString()} 件 / ${D.summary_by_date.length} 日 (${D.generated_at.slice(0,10)} 更新)`;
+
+  // 今日/昨日の販売実績 (実績（日次）シートと同じ数字)
+  const rs = D.recent_sales;
+  if (rs && rs.length) {
+    const yen = v => '¥' + Math.round(v).toLocaleString();
+    const dayLabel = (d, i) => i===0 ? '今日 ('+d+')' : i===1 ? '昨日 ('+d+')' : d;
+    const cell = (day, i) => {
+      const t = day.atsu.units + day.usu.units;
+      const s = Math.round(day.atsu.sales_ex + day.usu.sales_ex);
+      const ad = Math.round(day.atsu.ad_cost + day.usu.ad_cost);
+      const sess = day.atsu.sess + day.usu.sess;
+      const roas = ad > 0 ? (s/ad).toFixed(2) : '—';
+      // 粗利 SSOT: 厚 0.85×sales_ex − 1355×個 / 薄 0.85×sales_ex − 1292×個
+      const gross = Math.round(0.85*day.atsu.sales_ex - 1355*day.atsu.units + 0.85*day.usu.sales_ex - 1292*day.usu.units);
+      const net = gross - ad;
+      const netColor = net > 0 ? 'var(--green)' : net < 0 ? 'var(--red)' : '#666';
+      return `
+        <div style="background:#fff;border:1px solid #e0c580;padding:8px 10px;min-width:170px;">
+          <div style="font-size:10px;color:#7a5e00;font-weight:700;letter-spacing:.04em;margin-bottom:4px;">${dayLabel(day.date, i)}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;">
+            <div>厚:<b style="font-size:14px;">${day.atsu.units}</b>個</div>
+            <div>薄:<b style="font-size:14px;color:${day.usu.units===0?'var(--red)':'inherit'};">${day.usu.units}</b>個</div>
+            <div style="grid-column:1/-1;border-top:1px solid #f0e0a0;margin-top:2px;padding-top:2px;">
+              計 <b>${t}</b>個 / 売上 <b>${yen(s)}</b>
+            </div>
+            <div>広告費 <span style="color:var(--red);">${yen(ad)}</span></div>
+            <div>粗利 ${yen(gross)}</div>
+            <div>ROAS <b>${roas}x</b></div>
+            <div>純利益 <b style="color:${netColor};">${yen(net)}</b></div>
+          </div>
+        </div>
+      `;
+    };
+    const daysShown = rs.slice(0, 5);
+    document.getElementById('adj-recent').innerHTML = `
+      <div style="font-size:12px;font-weight:800;color:#5a4400;margin-bottom:8px;letter-spacing:.03em;">📊 直近5日 販売実績 (実績（日次）シートと 同じデータ)</div>
+      <div style="display:flex;gap:8px;overflow-x:auto;">${daysShown.map(cell).join('')}</div>
+    `;
+  }
+
+  // 収益サマリカード (7日 / 30日)
+  const perf = D.performance_summary;
+  if (perf) {
+    const yen = v => v == null ? '—' : '¥' + v.toLocaleString();
+    const pct = v => v == null ? '—' : (v * 100).toFixed(0) + '%';
+    const mkCard = (label, s) => `
+      <div style="background:#fff;padding:12px 14px;">
+        <div style="font-size:11px;color:#666;letter-spacing:.05em;margin-bottom:6px;font-weight:700;">${label} ${perf.data_date ? '('+perf.data_date+' 時点)' : ''}</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+          <div><div style="font-size:10px;color:#888;">売上</div><div style="font-size:16px;font-weight:800;color:var(--green);">${yen(s.sales)}</div></div>
+          <div><div style="font-size:10px;color:#888;">広告費</div><div style="font-size:16px;font-weight:800;color:var(--red);">${yen(s.cost)}</div></div>
+          <div><div style="font-size:10px;color:#888;">imp</div><div style="font-size:16px;font-weight:800;">${(s.impressions||0).toLocaleString()}</div></div>
+          <div><div style="font-size:10px;color:#888;">click</div><div style="font-size:16px;font-weight:800;">${(s.clicks||0).toLocaleString()}</div></div>
+          <div><div style="font-size:10px;color:#888;">購入</div><div style="font-size:16px;font-weight:800;">${s.purchases || 0}個</div></div>
+          <div><div style="font-size:10px;color:#888;">ACoS</div><div style="font-size:16px;font-weight:800;color:${s.acos > 0.42 ? 'var(--red)' : 'var(--green)'};">${pct(s.acos)}</div></div>
+          <div><div style="font-size:10px;color:#888;">ROAS</div><div style="font-size:16px;font-weight:800;">${s.roas ? s.roas.toFixed(2)+'x' : '—'}</div></div>
+          <div><div style="font-size:10px;color:#888;">CPC</div><div style="font-size:16px;font-weight:800;">${yen(s.cpc)}</div></div>
+        </div>
+      </div>
+    `;
+    document.getElementById('adj-perf').innerHTML = mkCard('過去7日', perf.last_7d) + mkCard('過去30日', perf.last_30d);
+  }
+
+  const sel = document.getElementById('adj-date');
+  for(const s of D.summary_by_date){
+    const opt = document.createElement('option');
+    opt.value = s.date;
+    opt.textContent = `${s.date} (LIVE:${s.live} DRY:${s.dry})`;
+    sel.appendChild(opt);
+  }
+  sel.addEventListener('change', renderAdj);
+  document.getElementById('adj-tag').addEventListener('change', renderAdj);
+  document.getElementById('adj-dir').addEventListener('change', renderAdj);
+  renderAdj();
+}
+function renderAdj(){
+  const D = ADJ_DATA;
+  const dateSel = document.getElementById('adj-date').value;
+  const tagSel = document.getElementById('adj-tag').value;
+  const dirSel = document.getElementById('adj-dir').value;
+  let rows = D.rows;
+  if(dateSel !== 'all') rows = rows.filter(r => r.date === dateSel);
+  if(tagSel !== 'all') rows = rows.filter(r => r.tag === tagSel);
+  if(dirSel === 'up') rows = rows.filter(r => (r.action||'').startsWith('BID_UP'));
+  else if(dirSel === 'down') rows = rows.filter(r => r.action === 'BID_DOWN_30');
+  document.getElementById('adj-count').textContent = `表示: ${rows.length} / ${D.total_rows} 件`;
+
+  const summaryHtml = D.summary_by_date.filter(s => dateSel==='all' || s.date===dateSel).slice(0, 30).map(s => `
+    <div style="display:grid;grid-template-columns:110px 90px 60px 60px 60px 1fr;gap:4px;padding:4px 8px;font-size:12px;border-bottom:1px solid var(--gray-2);align-items:center;">
+      <div style="font-weight:700;">${s.date}</div>
+      <div style="font-size:11px;color:#666;">LIVE:${s.live} DRY:${s.dry}</div>
+      <div style="color:${s.up>0?'var(--green)':'#999'};">↑${s.up}</div>
+      <div style="color:${s.down>0?'var(--red)':'#999'};">↓${s.down}</div>
+      <div style="color:#666;">停:${s.pause}</div>
+      <div style="font-size:10px;color:#888;">計 ${s.live+s.dry}件</div>
+    </div>
+  `).join('');
+  document.getElementById('adj-summary').innerHTML = summaryHtml || '<div style="padding:20px;text-align:center;color:#999;">データなし</div>';
+
+  const visible = rows.slice(0, 500);
+  const esc = s => (s||'').toString().replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'})[c]);
+  const tbodyHtml = visible.map(r => {
+    const delta = (r.oldBid != null && r.newBid != null) ? r.newBid - r.oldBid : null;
+    const deltaStr = delta === null ? '' : (delta > 0 ? `+${delta}` : `${delta}`);
+    const deltaColor = delta > 0 ? 'var(--green)' : delta < 0 ? 'var(--red)' : '#999';
+    const tagBg = r.tag === 'LIVE' ? 'background:var(--orange);color:#fff;' : 'background:var(--gray-3);color:#555;';
+    const tierColor = ({BAD:'var(--red)', GOOD:'#7a5e00', STAR:'var(--orange)', DEAD:'#000', WATCH:'#666'})[r.tier] || '#999';
+    return `
+      <tr style="border-bottom:1px solid var(--gray-2);">
+        <td style="padding:4px 8px;font-weight:600;">${esc(r.date)}</td>
+        <td style="padding:4px 8px;"><span style="${tagBg}padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;">${esc(r.tag)}</span></td>
+        <td style="padding:4px 8px;font-weight:600;">${esc(r.kw)}</td>
+        <td style="padding:4px 8px;font-size:11px;color:#666;">${esc(r.matchType)}</td>
+        <td style="padding:4px 8px;color:${tierColor};font-weight:700;">${esc(r.tier)}</td>
+        <td style="padding:4px 8px;text-align:right;font-family:'SF Mono',monospace;">${r.oldBid ?? '—'}</td>
+        <td style="padding:4px 8px;text-align:center;color:#999;">→</td>
+        <td style="padding:4px 8px;text-align:right;font-family:'SF Mono',monospace;font-weight:700;">${r.newBid ?? '—'}</td>
+        <td style="padding:4px 8px;text-align:right;font-family:'SF Mono',monospace;color:${deltaColor};font-weight:700;">${deltaStr}</td>
+        <td style="padding:4px 8px;text-align:right;font-size:11px;color:#666;">${r.acos != null ? (r.acos*100).toFixed(0)+'%' : '—'}</td>
+        <td style="padding:4px 8px;font-size:11px;color:#555;">${esc(r.reason)}</td>
+      </tr>
+    `;
+  }).join('');
+  document.getElementById('adj-tbody').innerHTML = tbodyHtml || '<tr><td colspan="11" style="padding:20px;text-align:center;color:#999;">該当なし</td></tr>';
+}
+
+// ── レビュー分析 ────────────────────────────
+let RV_DATA = null, RV_HIST = null;
+async function loadReview(){
+  try{
+    const r = await fetch('./data/reviews.json?_=' + Date.now());
+    if(!r.ok) throw new Error('reviews.json '+r.status);
+    RV_DATA = await r.json();
+    renderReview();
+  } catch(e){
+    document.getElementById('rv-sub').textContent = '読み込み失敗: ' + e.message + ' (data/reviews.json が未生成の可能性)';
+  }
+  // 個別レビュー履歴 (取得日 + 消失検知) 並行取得
+  try {
+    const r2 = await fetch('./data/reviews-history.json?_=' + Date.now());
+    if (r2.ok) {
+      RV_HIST = await r2.json();
+      initReviewHistoryUI();
+    }
+  } catch(_) { /* history 未生成でも 本体機能に影響なし */ }
+}
+function initReviewHistoryUI(){
+  if (!RV_HIST) return;
+  const asinSel = document.getElementById('rv-hist-asin');
+  const filterSel = document.getElementById('rv-hist-filter');
+  const asins = Object.entries(RV_HIST.asins || {});
+  // 自社 → 競合 の順、 各ASIN の disappeared 件数を バッジ表示
+  asins.sort((a,b) => {
+    const ownA = a[0].startsWith('B0FL5') ? 0 : 1;
+    const ownB = b[0].startsWith('B0FL5') ? 0 : 1;
+    if (ownA !== ownB) return ownA - ownB;
+    return b[1].latest_count - a[1].latest_count;
+  });
+  asinSel.innerHTML = asins.map(([asin, d]) => {
+    const dis = d.disappeared_count > 0 ? ` 🚨消失${d.disappeared_count}` : '';
+    return `<option value="${asin}">${d.label} (${d.latest_count}件${dis})</option>`;
+  }).join('');
+  const totalDis = asins.reduce((s, [,d]) => s + d.disappeared_count, 0);
+  const totalActive = asins.reduce((s, [,d]) => s + d.latest_count, 0);
+  document.getElementById('rv-hist-meta').innerHTML =
+    `<b>取得日 ${RV_HIST.latest_date}</b> / snapshot ${RV_HIST.snapshot_count}日分 (${RV_HIST.snapshot_dates[0]} 〜 ${RV_HIST.latest_date}) · 現存 ${totalActive}件` +
+    (totalDis > 0 ? ` · <span style="color:var(--red);font-weight:800;">消失 ${totalDis}件</span>` : '');
+  asinSel.onchange = renderReviewHistory;
+  filterSel.onchange = renderReviewHistory;
+  renderReviewHistory();
+}
+function renderReviewHistory(){
+  const asin = document.getElementById('rv-hist-asin').value;
+  const filter = document.getElementById('rv-hist-filter').value;
+  const d = RV_HIST.asins[asin];
+  if (!d) { document.getElementById('rv-hist-list').innerHTML = ''; return; }
+
+  const today = new Date(Date.now() + 9*3600_000).toISOString().slice(0,10);
+  const daysAgo = iso => {
+    if (!iso) return 999;
+    return Math.floor((new Date(today) - new Date(iso)) / 86400_000);
+  };
+
+  const merged = [
+    ...d.reviews.map(r => ({ ...r })),
+    ...(d.disappeared || []).map(r => ({ ...r })),
+  ];
+  let rows = merged.filter(r => {
+    if (filter === 'active') return r.status === 'active';
+    if (filter === 'disappeared') return r.status === 'disappeared';
+    if (filter === 'new') return r.status === 'active' && daysAgo(r.first_seen) <= 7;
+    return true;
+  });
+  rows.sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+
+  if (!rows.length) {
+    document.getElementById('rv-hist-list').innerHTML = '<div style="padding:20px;text-align:center;color:#888;font-size:12px;">該当なし</div>';
+    return;
+  }
+
+  const stars = n => '★'.repeat(n) + '☆'.repeat(5-n);
+  const html = rows.map(r => {
+    const isDis = r.status === 'disappeared';
+    const isNew = r.status === 'active' && daysAgo(r.first_seen) <= 7;
+    const bg = isDis ? '#fde9e8' : isNew ? '#fff6e8' : '#fff';
+    const border = isDis ? 'var(--red)' : isNew ? 'var(--orange)' : 'var(--gray-2)';
+    const badge = isDis
+      ? `<span style="background:var(--red);color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:2px;letter-spacing:.04em;">🚨 消失 (${r.missing_since} 最終確認)</span>`
+      : isNew
+      ? `<span style="background:var(--orange);color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:2px;letter-spacing:.04em;">NEW</span>`
+      : '';
+    return `
+      <div style="padding:10px 14px;border-bottom:1px solid var(--gray-2);border-left:3px solid ${border};background:${bg};">
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+          <span style="color:${r.rating>=4?'#f5a623':r.rating<=2?'var(--red)':'#999'};font-size:13px;letter-spacing:2px;">${stars(r.rating)}</span>
+          <b style="font-size:13px;color:${isDis?'#999':'var(--black)'};text-decoration:${isDis?'line-through':'none'};">${escapeHtml(r.title||'(タイトルなし)')}</b>
+          ${badge}
+          <span style="margin-left:auto;font-size:10.5px;color:#888;font-family:var(--font-num);font-variant-numeric:tabular-nums;">
+            投稿 <b style="color:#555;">${r.date||'不明'}</b>
+            · 初回scrape ${r.first_seen}
+            ${r.first_seen !== r.last_seen ? `· 最終確認 ${r.last_seen}` : ''}
+          </span>
+        </div>
+        <div style="font-size:12px;color:${isDis?'#888':'#333'};line-height:1.55;white-space:pre-wrap;">${escapeHtml(r.body||'')}</div>
+        <div style="font-size:10.5px;color:#888;margin-top:4px;">
+          ${r.reviewer||'匿名'}${r.verified?' · <span style="color:var(--green);font-weight:700;">Verified</span>':''}${r.helpful_count?` · 参考になった ${r.helpful_count}`:''}
+        </div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('rv-hist-list').innerHTML = html;
+}
+function renderReview(){
+  const D = RV_DATA;
+  document.getElementById('rv-sub').textContent =
+    `${D.source_date} 時点 / ${D.source_review_count}件のレビューを ${D.model} で分析 (各ASIN約8件 = 参考値、 統計的有意性は限定的)`;
+
+  const OWN = new Set(['B0FL5FC4J3','B0FL5BPJC7']);
+  const asins = Object.values(D.asins || {});
+  const own = asins.filter(a=>OWN.has(a.asin) && !a.error);
+  const comp = asins.filter(a=>!OWN.has(a.asin) && !a.error);
+  const avg = arr => arr.length ? arr.reduce((s,x)=>s+(x||0),0)/arr.length : null;
+  const ownSent = avg(own.map(a=>a.overall_sentiment).filter(x=>x!=null));
+  const ownRating = avg(own.map(a=>a.avg_rating).filter(x=>x!=null));
+  const compSent = avg(comp.map(a=>a.overall_sentiment).filter(x=>x!=null));
+  document.getElementById('rv-own-sent').textContent = ownSent==null ? '—' : ownSent.toFixed(2);
+  document.getElementById('rv-own-rating').textContent = ownRating==null ? '—' : ownRating.toFixed(2) + ' ★';
+  document.getElementById('rv-comp-sent').textContent = compSent==null ? '—' : compSent.toFixed(2);
+
+  const mergeThemes = key => {
+    const m = new Map();
+    own.forEach(a => (a[key]||[]).forEach(e => {
+      const k = (e.theme||'').trim();
+      if(!k) return;
+      if(!m.has(k)) m.set(k, { theme:k, count:0, sample_quote:e.sample_quote||'', asins:[] });
+      const c = m.get(k); c.count += e.count||0; c.asins.push(a.label||a.asin);
+      if(!c.sample_quote && e.sample_quote) c.sample_quote = e.sample_quote;
+    }));
+    return [...m.values()].sort((a,b)=>b.count-a.count).slice(0,10);
+  };
+  document.getElementById('rv-praise').innerHTML = renderThemeList(mergeThemes('praise_top10'), 'praise');
+  document.getElementById('rv-complaint').innerHTML = renderThemeList(mergeThemes('complaint_top10'), 'complaint');
+
+  const gapImp = (D.meta && D.meta.gap_improvement_top10) || [];
+  const gapAdv = (D.meta && D.meta.gap_advantage_top10) || [];
+  document.getElementById('rv-gap-imp').innerHTML = renderGapList(gapImp, 'improvement');
+  document.getElementById('rv-gap-adv').innerHTML = renderGapList(gapAdv, 'advantage');
+
+  const tb = document.querySelector('#rv-asin-table tbody');
+  tb.innerHTML = asins.map(a => {
+    if (a.error) return `<tr><td><b>${escapeHtml(a.label||a.asin)}</b></td><td style="font-family:monospace;font-size:11px;">${escapeHtml(a.asin)}</td><td colspan="6" style="color:#c00;font-size:11px;">${escapeHtml(a.error||'error')}</td></tr>`;
+    const p3 = (a.praise_top10||[]).slice(0,3).map(e=>escapeHtml(e.theme)).join('<br>');
+    const c3 = (a.complaint_top10||[]).slice(0,3).map(e=>escapeHtml(e.theme)).join('<br>');
+    return `<tr>
+      <td><b>${escapeHtml(a.label||a.asin)}</b></td>
+      <td style="font-family:monospace;font-size:11px;">${escapeHtml(a.asin)}</td>
+      <td class="num">${a.count}</td>
+      <td class="num">${a.avg_rating!=null?a.avg_rating.toFixed(2):'—'}</td>
+      <td class="num">${a.overall_sentiment!=null?a.overall_sentiment.toFixed(2):'—'}</td>
+      <td style="font-size:11px;">${escapeHtml(a.dominant_use_case||'')}</td>
+      <td style="font-size:11px;">${p3}</td>
+      <td style="font-size:11px;">${c3}</td>
+    </tr>`;
+  }).join('');
+}
+function renderThemeList(list, kind){
+  if(!list || list.length===0) return '<div style="padding:10px;color:#999;">データ無し</div>';
+  const color = kind==='praise' ? '#3b7d3b' : '#c04040';
+  return '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+    list.map((e,i)=>`
+      <tr style="border-bottom:1px solid var(--gray-2);">
+        <td style="padding:6px 8px;vertical-align:top;">
+          <div style="font-weight:600;color:${color};font-size:12px;">
+            <span style="color:#999;margin-right:6px;">${i+1}.</span>${escapeHtml(e.theme)}
+            <span style="float:right;color:#666;font-weight:400;">${e.count}件</span>
+          </div>
+          <div style="color:#666;font-size:11px;margin-top:3px;line-height:1.4;">「${escapeHtml((e.sample_quote||'').slice(0,120))}」</div>
+        </td>
+      </tr>`).join('') + '</table>';
+}
+function renderGapList(list, kind){
+  if(!list || list.length===0) return '<div style="padding:6px;color:#999;">ギャップ無し</div>';
+  const color = kind==='improvement' ? '#c04040' : '#3b7d3b';
+  const countKey = kind==='improvement' ? 'competitor_count' : 'competitor_complaint_count';
+  const countLabel = kind==='improvement' ? '競合褒め' : '競合不満';
+  return '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+    list.map((g,i)=>`
+      <tr style="border-bottom:1px solid var(--gray-2);">
+        <td style="padding:5px 8px;width:22px;color:#999;vertical-align:top;">${i+1}.</td>
+        <td style="padding:5px 8px;vertical-align:top;">
+          <div style="font-weight:600;color:${color};">${escapeHtml(g.theme)}</div>
+          <div style="color:#666;font-size:11px;margin-top:2px;">「${escapeHtml((g.sample_quote||'').slice(0,140))}」</div>
+        </td>
+        <td class="num" style="padding:5px 8px;font-size:11px;color:#555;vertical-align:top;white-space:nowrap;">${countLabel} <b>${g[countKey]}件</b></td>
+        <td style="padding:5px 8px;font-size:10px;color:#888;vertical-align:top;">${escapeHtml((g.competitor_asins||[]).join(' / '))}</td>
+      </tr>`).join('') + '</table>';
+}
+
+// ── ST (検索語句別) ────────────────────────────
+async function loadST(){
+  try{
+    const r = await fetch('./data/searchterm.json?_='+Date.now());
+    if(!r.ok) throw new Error('searchterm.json '+r.status);
+    ST_DATA = await r.json();
+    renderSTInsights();
+    renderSTTable();
+    document.getElementById('st-search').addEventListener('input', renderSTTable);
+    document.getElementById('st-tag').addEventListener('change', renderSTTable);
+    document.getElementById('st-match').addEventListener('change', renderSTTable);
+    document.getElementById('st-cost').addEventListener('change', renderSTTable);
+    document.querySelectorAll('#st-table thead th[data-key]').forEach(th=>{
+      th.addEventListener('click', ()=>{
+        const k=th.dataset.key;
+        if(stSortKey===k) stSortDir=(stSortDir==='asc'?'desc':'asc');
+        else { stSortKey=k; stSortDir=(['searchTerm','matchType','tag'].includes(k)?'asc':'desc'); }
+        renderSTTable();
+      });
+    });
+  } catch(e){
+    document.getElementById('st-insights').innerHTML =
+      `<div class="insight-box bad"><div class="head">読み込み失敗</div><div class="items">${escapeHtml(e.message)}<br>data/searchterm.json が未生成の可能性</div></div>`;
+  }
+}
+function renderSTInsights(){
+  const tc = ST_DATA.tag_count || {};
+  const top5neg = ST_DATA.terms.filter(t=>t.tag==='NEGATIVE').slice(0,5);
+  const top5prom = ST_DATA.terms.filter(t=>t.tag==='PROMOTE').slice(0,5);
+  const negCost = top5neg.reduce((s,t)=>s+t.cost,0);
+  document.getElementById('st-insights').innerHTML = `
+    <div class="insight-box bad">
+      <div class="head">▶ Negative候補 ${tc.NEGATIVE||0}語 (TOP5 損失合計 ¥${Math.round(negCost).toLocaleString()})</div>
+      <div class="items">${top5neg.length?top5neg.map(t=>`<span>${escapeHtml(t.searchTerm)} <b>¥${Math.round(t.cost).toLocaleString()}</b></span>`).join(''):'なし'}</div>
+    </div>
+    <div class="insight-box">
+      <div class="head">▶ 昇格(Exact化)候補 ${tc.PROMOTE||0}語</div>
+      <div class="items">${top5prom.length?top5prom.map(t=>`<span>${escapeHtml(t.searchTerm)} <b>ACoS ${(t.acos*100).toFixed(0)}%</b></span>`).join(''):'なし'}</div>
+    </div>`;
+}
+function renderSTTable(){
+  const q = document.getElementById('st-search').value.trim().toLowerCase();
+  const fTag = document.getElementById('st-tag').value;
+  const fMatch = document.getElementById('st-match').value;
+  const fCost = document.getElementById('st-cost').checked;
+  let list = ST_DATA.terms.filter(t=>{
+    if(q && !(t.searchTerm||'').toLowerCase().includes(q)) return false;
+    if(fTag && t.tag!==fTag) return false;
+    if(fMatch && t.matchType!==fMatch) return false;
+    if(fCost && !(t.cost>0)) return false;
+    return true;
+  });
+  list.sort((a,b)=>{
+    const va = a[stSortKey]==null?-1:a[stSortKey];
+    const vb = b[stSortKey]==null?-1:b[stSortKey];
+    if(typeof va==='string') return stSortDir==='asc'? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+    return stSortDir==='asc'? va-vb : vb-va;
+  });
+  const visible = list.slice(0, 500);
+  document.getElementById('st-count').textContent = `表示: ${visible.length}${list.length > 500 ? ' (上位500件、 残 '+(list.length-500)+'件は cost順上位のみ)' : ''} / ${ST_DATA.terms.length} 語`;
+  const tbody = document.querySelector('#st-table tbody');
+  tbody.innerHTML = visible.map(t=>`
+    <tr>
+      <td><span class="tag-badge tag-${t.tag}">${t.tag_label||t.tag}</span></td>
+      <td>${escapeHtml(t.searchTerm)}</td>
+      <td>${t.matchType||''}</td>
+      <td class="num">${fmtNum(t.clicks)}</td>
+      <td class="num">${fmtYen(t.cost)}</td>
+      <td class="num">${fmtYen(t.sales14d)}</td>
+      <td class="num">${fmtPct(t.acos)}</td>
+      <td class="num">${fmtPct(t.cvr)}</td>
+      <td>${escapeHtml(t.reason||'')}</td>
+    </tr>`).join('');
+  document.querySelectorAll('#st-table thead th[data-key]').forEach(th=>{
+    th.classList.toggle('sorted', th.dataset.key===stSortKey);
+  });
+}
+
+// ── DoW (曜日別) ───────────────────────────────
+async function loadDoW(){
+  try{
+    const r = await fetch('./data/hourly.json?_='+Date.now());
+    if(!r.ok) throw new Error('hourly.json '+r.status);
+    DOW_DATA = await r.json();
+    const sel = document.getElementById('dow-asin');
+    sel.innerHTML = '<option value="">全ASIN合算</option>' +
+      (DOW_DATA.by_asin||[]).map(a=>`<option value="${a.asin}">${a.asin}</option>`).join('');
+    sel.addEventListener('change', renderDoW);
+    document.getElementById('dow-metric').addEventListener('change', renderDoW);
+    renderDoWInsights();
+    renderDoW();
+  } catch(e){
+    document.getElementById('dow-insights').innerHTML =
+      `<div class="insight-box bad"><div class="head">読み込み失敗</div><div class="items">${escapeHtml(e.message)}<br>data/hourly.json が未生成の可能性</div></div>`;
+  }
+}
+function renderDoWInsights(){
+  const g = (DOW_DATA.insights&&DOW_DATA.insights.golden)||[];
+  const r = (DOW_DATA.insights&&DOW_DATA.insights.redzone)||[];
+  document.getElementById('dow-insights').innerHTML = `
+    <div class="insight-box">
+      <div class="head">▶ 黄金曜日 (ROAS高)</div>
+      <div class="items">${g.length?g.map(d=>`<span>${d.label}曜 <b>ROAS ${d.roas.toFixed(2)}</b></span>`).join(''):'cost=0'}</div>
+    </div>
+    <div class="insight-box bad">
+      <div class="head">▶ 赤字曜日 (ACoS高)</div>
+      <div class="items">${r.length?r.map(d=>`<span>${d.label}曜 <b>ACoS ${(d.acos*100).toFixed(0)}%</b></span>`).join(''):'なし'}</div>
+    </div>`;
+}
+function renderDoW(){
+  const asin = document.getElementById('dow-asin').value;
+  const metric = document.getElementById('dow-metric').value;
+  let cells;
+  if(asin){
+    const a = (DOW_DATA.by_asin||[]).find(x=>x.asin===asin);
+    cells = a? a.hours : DOW_DATA.hours;
+  } else cells = DOW_DATA.hours;
+
+  // metric range
+  const vals = cells.map(c=>c[metric]).filter(v=>v!=null && isFinite(v));
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const inverted = (metric==='acos' || metric==='cost'); // 高=悪 (赤強い)
+  function color(v){
+    if(v==null||!isFinite(v)) return '#fff';
+    const t = (mx===mn)?0.5: (v-mn)/(mx-mn);
+    const u = inverted ? t : 1-t;
+    // u 大 → 赤強い, u 小 → 緑
+    const r=255, g=Math.round(255-u*200), b=Math.round(150-u*80);
+    return `rgb(${r},${g},${b})`;
+  }
+  function fmtVal(v){
+    if(v==null||!isFinite(v)) return '—';
+    if(metric==='acos') return (v*100).toFixed(0)+'%';
+    if(metric==='roas') return v.toFixed(2);
+    if(metric==='cost'||metric==='sales14d') return '¥'+Math.round(v).toLocaleString();
+    return Math.round(v);
+  }
+  const labels = DOW_DATA.dow_labels || ['日','月','火','水','木','金','土'];
+  let html = '<div class="dow-grid">';
+  html += '<div class="hdr">' + (asin? asin : '全ASIN') + '</div>';
+  for(const l of labels) html += `<div class="hdr">${l}</div>`;
+  html += '<div class="row-lbl">' + metric + '</div>';
+  for(let i=0;i<7;i++){
+    const c = cells[i];
+    const v = c?c[metric]:null;
+    const isWE = (i===0||i===6);
+    html += `<div class="cell ${isWE?'weekend':''}" style="background:${color(v)};">
+      <div class="v">${fmtVal(v)}</div>
+      <div class="sub">cost ¥${Math.round(c.cost||0).toLocaleString()}</div>
+    </div>`;
+  }
+  html += '</div>';
+  document.getElementById('dow-grid').innerHTML = html;
+
+  // daily chart
+  if(dowChart) dowChart.destroy();
+  const daily = DOW_DATA.daily||[];
+  const ctx = document.getElementById('dow-chart').getContext('2d');
+  dowChart = new Chart(ctx, {
+    data: {
+      labels: daily.map(d=>d.date.slice(5)),
+      datasets: [
+        { type:'bar', label:'広告費', data:daily.map(d=>Math.round(d.cost)), backgroundColor:'#ff7a00', yAxisID:'y' },
+        { type:'line', label:'売上', data:daily.map(d=>Math.round(d.sales14d)), borderColor:'#1a1a1a', backgroundColor:'transparent', borderWidth:2, pointRadius:0, yAxisID:'y' },
+        { type:'line', label:'ACoS%', data:daily.map(d=>d.acos==null?null:Math.round(d.acos*1000)/10), borderColor:'#d8302f', backgroundColor:'transparent', borderWidth:2, pointRadius:0, yAxisID:'y1', spanGaps:true },
+      ],
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10, font:{size:10}}}},
+      scales:{
+        x:{ticks:{font:{size:9},autoSkip:true,maxRotation:0}},
+        y:{position:'left', beginAtZero:true, ticks:{font:{size:10}, callback:v=>'¥'+v.toLocaleString()}},
+        y1:{position:'right', beginAtZero:true, ticks:{font:{size:10},callback:v=>v+'%'}, grid:{display:false}},
+      },
+    },
+  });
+}
+
+// ── Placement (プレースメント別) ────────────────
+async function loadPL(){
+  try{
+    const r = await fetch('./data/placement.json?_='+Date.now());
+    if(!r.ok) throw new Error('placement.json '+r.status);
+    PL_DATA = await r.json();
+    renderPL();
+  } catch(e){
+    document.getElementById('pl-insights').innerHTML =
+      `<div class="insight-box bad"><div class="head">読み込み失敗</div><div class="items">${escapeHtml(e.message)}<br>data/placement.json が未生成の可能性</div></div>`;
+  }
+}
+function renderPL(){
+  const plList = PL_DATA.placements||[];
+  const totalCost = plList.reduce((s,p)=>s+p.cost,0);
+  // insights: 効いてる/損切り
+  const best = plList.filter(p=>p.acos!=null).sort((a,b)=>(a.acos)-(b.acos))[0];
+  const worst = plList.filter(p=>p.acos!=null).sort((a,b)=>(b.acos)-(a.acos))[0];
+  document.getElementById('pl-insights').innerHTML = `
+    <div class="insight-box">
+      <div class="head">▶ 効率最良: ${best?escapeHtml(best.label):'—'}</div>
+      <div class="items">${best?`<span>ACoS <b>${(best.acos*100).toFixed(1)}%</b></span><span>cost ¥${Math.round(best.cost).toLocaleString()}</span><span>売上 ¥${Math.round(best.sales14d).toLocaleString()}</span>`:'—'}</div>
+    </div>
+    <div class="insight-box bad">
+      <div class="head">▶ 損切り検討: ${worst&&worst.acos>=0.5?escapeHtml(worst.label):'なし'}</div>
+      <div class="items">${worst&&worst.acos>=0.5?`<span>ACoS <b>${(worst.acos*100).toFixed(1)}%</b></span><span>cost ¥${Math.round(worst.cost).toLocaleString()}</span><span>プレースメント入札比率 -25% 検討</span>`:'許容範囲'}</div>
+    </div>`;
+
+  // overall (3区分)
+  document.getElementById('pl-overall').innerHTML = `
+    <h3>全体: 配信比率 × 効率</h3>
+    <div class="sub">合計 cost ¥${Math.round(totalCost).toLocaleString()} (14日)</div>
+    <div class="pl-bars">
+      ${plList.map(p=>{
+        const w = totalCost>0? (p.cost/totalCost*100).toFixed(1) : 0;
+        const cls = p.acos==null?'':(p.acos>=0.5?'bad':(p.acos<0.3?'good':''));
+        return `<div class="pl-bar-row">
+          <div class="lbl">${escapeHtml(p.label)}</div>
+          <div class="track"><div class="fill ${cls}" style="width:${w}%;"></div></div>
+          <div class="v">¥${Math.round(p.cost).toLocaleString()}</div>
+          <div class="v">ACoS ${fmtPct(p.acos)}</div>
+          <div class="v">売上 ¥${Math.round(p.sales14d).toLocaleString()}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // per campaign
+  const cs = PL_DATA.campaigns||[];
+  document.getElementById('pl-campaigns').innerHTML = cs.map(c=>{
+    const ct = c.summary.cost;
+    return `<div class="pl-block">
+      <h3>${escapeHtml(c.campaignName||c.campaignId)}</h3>
+      <div class="sub">cost ¥${Math.round(ct).toLocaleString()} / 売上 ¥${Math.round(c.summary.sales14d).toLocaleString()} / ACoS ${fmtPct(c.summary.acos)}</div>
+      <div class="pl-bars">
+        ${c.placements.map(p=>{
+          const w = ct>0? (p.cost/ct*100).toFixed(1) : 0;
+          const cls = p.acos==null?'':(p.acos>=0.5?'bad':(p.acos<0.3?'good':''));
+          return `<div class="pl-bar-row">
+            <div class="lbl">${escapeHtml(p.label)}</div>
+            <div class="track"><div class="fill ${cls}" style="width:${w}%;"></div></div>
+            <div class="v">¥${Math.round(p.cost).toLocaleString()}</div>
+            <div class="v">ACoS ${fmtPct(p.acos)}</div>
+            <div class="v">売上 ¥${Math.round(p.sales14d).toLocaleString()}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 時間帯別 (Orders API 経由) ────────────────────────────
+let HO_DATA = null, hoChartHours=null, hoChartDows=null;
+async function loadHourly(){
+  try{
+    const r = await fetch('./data/hourly-orders.json?_=' + Date.now());
+    if(!r.ok) throw new Error('hourly-orders.json '+r.status);
+    HO_DATA = await r.json();
+  } catch(e){
+    document.getElementById('ho-sub').textContent = '読み込み失敗: '+e.message+' (data/hourly-orders.json が未生成の可能性)';
+    return;
+  }
+  const D = HO_DATA;
+  document.getElementById('ho-sub').textContent =
+    `${D.range.from} 〜 ${D.range.to} (${D.range.days}日) / 全 ${D.total_orders.toLocaleString()} 件 / 売上 ¥${D.total_sales.toLocaleString()}`;
+
+  // Insights
+  const dowLabels = ['月','火','水','木','金','土','日'];
+  const topH = [...D.hour_totals].sort((a,b) => b.orders - a.orders).slice(0,3).filter(t => t.orders > 0);
+  document.getElementById('ho-peak-hours').innerHTML = topH.length
+    ? topH.map(t => `<b>${t.h}時</b> ${t.orders}件`).join(' / ')
+    : '—';
+  const topD = [...D.dow_totals].sort((a,b) => b.orders - a.orders).slice(0,2).filter(t => t.orders > 0);
+  document.getElementById('ho-peak-dows').innerHTML = topD.length
+    ? topD.map(t => `<b>${dowLabels[t.d]}</b> ${t.orders}件`).join(' / ')
+    : '—';
+  const deadH = D.hour_totals.filter(t => t.orders === 0).map(t => t.h);
+  document.getElementById('ho-dead-hours').innerHTML = deadH.length
+    ? deadH.map(h => `${h}時`).join(', ')
+    : '<span style="color:var(--green);font-weight:700;">なし (全時間で注文あり)</span>';
+
+  document.getElementById('ho-metric').onchange = renderHourlyGrid;
+  renderHourlyGrid();
+  renderHourlyCharts();
+  loadKwHeatmap();
+}
+function renderHourlyGrid(){
+  const D = HO_DATA;
+  const metric = document.getElementById('ho-metric').value;
+  const dowLabels = ['月','火','水','木','金','土','日'];
+  const values = metric === 'sales' ? D.grid_sales : D.grid;
+  let vmax = 0;
+  for (const row of values) for (const v of row) if (v > vmax) vmax = v;
+
+  const cell = (v, dow, h) => {
+    const ratio = vmax > 0 ? v / vmax : 0;
+    // 濃淡は オレンジ→白
+    const bg = v === 0 ? '#fafafa' : `rgba(255,122,0,${0.08 + ratio * 0.75})`;
+    const txt = metric === 'sales'
+      ? (v === 0 ? '' : v >= 10000 ? '¥' + Math.round(v/1000) + 'k' : '¥' + v)
+      : (v === 0 ? '' : String(v));
+    const color = ratio > 0.55 ? '#fff' : v === 0 ? '#ccc' : '#333';
+    return `<div style="background:${bg};color:${color};padding:5px 3px;text-align:center;font-size:11px;font-weight:${ratio>0.4?800:600};font-family:var(--font-num);font-variant-numeric:tabular-nums;border-right:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;letter-spacing:-.01em;" title="${dowLabels[dow]} ${h}時: ${v}${metric==='sales'?'円':'件'}">${txt}</div>`;
+  };
+
+  const rowLabels = ['月','火','水','木','金','土','日'];
+  const hdr = `<div style="background:#1a1a1a;color:#fff;padding:5px 6px;font-weight:800;text-align:right;font-size:11px;font-family:var(--font-display);letter-spacing:.04em;">曜日 ＼ 時</div>` +
+    Array.from({length:24}, (_,h) => `<div style="background:#1a1a1a;color:#fff;padding:5px 3px;text-align:center;font-weight:700;font-size:10.5px;font-family:var(--font-num);font-variant-numeric:tabular-nums;">${h}</div>`).join('');
+  const body = values.map((row, dow) => {
+    const rowTot = row.reduce((s, v) => s + v, 0);
+    const label = `<div style="background:${dow>=5?'#fbfbf3':'#f5f5f5'};color:#333;padding:5px 8px;font-weight:800;font-size:11.5px;font-family:var(--font-display);border-right:1px solid var(--gray-3);text-align:right;">${rowLabels[dow]} <span style="color:#888;font-weight:600;font-family:var(--font-num);font-size:10.5px;">${rowTot}</span></div>`;
+    return label + row.map((v, h) => cell(v, dow, h)).join('');
+  }).join('');
+  document.getElementById('ho-grid').innerHTML = `
+    <div style="display:grid;grid-template-columns:80px repeat(24, minmax(28px, 1fr));gap:0;border:1px solid var(--gray-3);border-radius:2px;overflow:hidden;">
+      ${hdr}${body}
+    </div>
+  `;
+}
+function renderHourlyCharts(){
+  const D = HO_DATA;
+  if (typeof Chart === 'undefined') return;  // Chart.js まだ読み込まれてない
+  if (hoChartHours) hoChartHours.destroy();
+  if (hoChartDows) hoChartDows.destroy();
+  hoChartHours = new Chart(document.getElementById('ho-chart-hours'), {
+    type: 'bar',
+    data: {
+      labels: D.hour_totals.map(t => t.h + '時'),
+      datasets: [{ label: '注文数', data: D.hour_totals.map(t => t.orders), backgroundColor: '#ff7a00', borderRadius: 2 }],
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+  });
+  const dowLabels = ['月','火','水','木','金','土','日'];
+  hoChartDows = new Chart(document.getElementById('ho-chart-dows'), {
+    type: 'bar',
+    data: {
+      labels: D.dow_totals.map(t => dowLabels[t.d]),
+      datasets: [{ label: '注文数', data: D.dow_totals.map(t => t.orders), backgroundColor: '#ffd400', borderRadius: 2 }],
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+  });
+}
+
+// ── KW × 曜日 × 時間 ヒートマップ (heatmap.json) ────────────────────────────
+let KH_DATA = null;
+const KH_DOW_LABELS = ['月','火','水','木','金','土','日'];
+async function loadKwHeatmap(){
+  try{
+    const r = await fetch('./data/heatmap.json?_=' + Date.now());
+    if(!r.ok) throw new Error('heatmap.json '+r.status);
+    KH_DATA = await r.json();
+  } catch(e){
+    document.getElementById('kh-sub').textContent = '読み込み失敗: '+e.message+' (heatmap.json が未生成)';
+    return;
+  }
+  const D = KH_DATA;
+  document.getElementById('kh-sub').textContent =
+    `KW ${D.kw_count}件 × 7曜日 × 24時 = ${D.kw_count*168}セル / 提案 ${D.proposals_count||0}件 (${D.generated_at.slice(0,10)} 更新)`;
+  const sel = document.getElementById('kh-kw');
+  sel.innerHTML = D.kws.map((k,i) =>
+    `<option value="${i}">${k.text} (${k.matchType}) — ¥${Math.round(k.summary30d?.cost||0).toLocaleString()} 消化</option>`
+  ).join('');
+  sel.onchange = renderKwHeatmap;
+  document.getElementById('kh-metric').onchange = renderKwHeatmap;
+  renderKwHeatmap();
+  renderAllProposalsSummary();
+}
+
+function khCellValue(cell, metric){
+  if(metric === 'roas')   return cell.cost > 0 ? cell.sales / cell.cost : null;
+  if(metric === 'cvr')    return cell.clicks > 0 ? cell.orders / cell.clicks : null;
+  if(metric === 'orders') return cell.orders;
+  if(metric === 'cost')   return cell.cost;
+  if(metric === 'sales')  return cell.sales;
+  return 0;
+}
+
+// 色: ROAS/CVR → 良し悪し (緑=良/赤=損失) / orders/cost/sales → 濃淡 (オレンジ)
+function khCellColor(v, metric, vmax, cell){
+  const nSamples = cell ? cell.clicks : 0;
+  if(nSamples < 3) return { bg:'#f5f5f5', fg:'#bbb' }; // データ薄
+  if(v == null)    return { bg:'#fafafa', fg:'#ccc' };
+  if(metric === 'roas'){
+    // ROAS ≥ 3.3 濃い緑、 ≥ 2.0 淡い緑、 1.5-2.0 グレー、 <1.5 赤
+    if(v >= 3.3) return { bg:'rgba(46,140,58,0.85)', fg:'#fff' };
+    if(v >= 2.5) return { bg:'rgba(46,140,58,0.55)', fg:'#fff' };
+    if(v >= 2.0) return { bg:'rgba(46,140,58,0.28)', fg:'#1a3a20' };
+    if(v >= 1.5) return { bg:'#eeeeee', fg:'#555' };
+    if(v >= 1.0) return { bg:'rgba(200,50,50,0.35)', fg:'#4a1010' };
+    return { bg:'rgba(200,50,50,0.75)', fg:'#fff' };
+  }
+  if(metric === 'cvr'){
+    // CVR ≥ 8% 濃緑、 ≥ 5% 中、 ≥ 3% 淡、 <3% グレー、 <1% 赤
+    const pct = v * 100;
+    if(pct >= 8)  return { bg:'rgba(46,140,58,0.85)', fg:'#fff' };
+    if(pct >= 5)  return { bg:'rgba(46,140,58,0.55)', fg:'#fff' };
+    if(pct >= 3)  return { bg:'rgba(46,140,58,0.28)', fg:'#1a3a20' };
+    if(pct >= 1)  return { bg:'#eeeeee', fg:'#555' };
+    return { bg:'rgba(200,50,50,0.55)', fg:'#4a1010' };
+  }
+  // 数量系 orders/cost/sales: オレンジ濃淡
+  const ratio = vmax > 0 ? v / vmax : 0;
+  if(v <= 0) return { bg:'#fafafa', fg:'#ccc' };
+  return { bg:`rgba(255,122,0,${0.08 + ratio*0.75})`, fg: ratio > 0.55 ? '#fff' : '#333' };
+}
+
+function khFmt(v, metric){
+  if(v == null) return '—';
+  if(metric === 'roas') return v.toFixed(1);
+  if(metric === 'cvr')  return (v*100).toFixed(1)+'%';
+  if(metric === 'orders'){
+    if(v < 0.05) return '';
+    if(v < 1) return v.toFixed(2);
+    return v.toFixed(1);
+  }
+  if(metric === 'cost' || metric === 'sales'){
+    if(v < 10) return '';
+    if(v >= 10000) return '¥' + Math.round(v/1000) + 'k';
+    return '¥' + Math.round(v);
+  }
+  return String(v);
+}
+
+function renderKwHeatmap(){
+  if(!KH_DATA) return;
+  const idx = +document.getElementById('kh-kw').value || 0;
+  const metric = document.getElementById('kh-metric').value;
+  const kw = KH_DATA.kws[idx];
+  if(!kw){ document.getElementById('kh-grid').innerHTML = ''; return; }
+
+  const grid = kw.grid; // grid[dow][hour] = {imp,clicks,cost,sales,orders}
+  // vmax (for orange gradient)
+  let vmax = 0;
+  for(let d=0;d<7;d++) for(let h=0;h<24;h++){
+    const v = khCellValue(grid[d][h], metric);
+    if(v != null && v > vmax) vmax = v;
+  }
+
+  // header
+  const hdr = `<div style="background:#1a1a1a;color:#fff;padding:5px 6px;font-weight:800;text-align:right;font-size:11px;font-family:var(--font-display);letter-spacing:.04em;">曜日 ＼ 時</div>` +
+    Array.from({length:24}, (_,h) => `<div style="background:#1a1a1a;color:#fff;padding:5px 3px;text-align:center;font-weight:700;font-size:10.5px;font-family:var(--font-num);font-variant-numeric:tabular-nums;">${h}</div>`).join('');
+
+  const body = [];
+  for(let d=0; d<7; d++){
+    const rowTot = grid[d].reduce((s,c)=>s + (khCellValue(c, metric === 'roas' || metric === 'cvr' ? 'orders' : metric) || 0), 0);
+    body.push(`<div style="background:${d>=5?'#fbfbf3':'#f5f5f5'};color:#333;padding:5px 8px;font-weight:800;font-size:11.5px;font-family:var(--font-display);border-right:1px solid var(--gray-3);text-align:right;">${KH_DOW_LABELS[d]}</div>`);
+    for(let h=0; h<24; h++){
+      const cell = grid[d][h];
+      const v = khCellValue(cell, metric);
+      const col = khCellColor(v, metric, vmax, cell);
+      const roas = cell.cost > 0 ? cell.sales / cell.cost : null;
+      const title = `${KH_DOW_LABELS[d]} ${h}時  |  imp ${cell.imp} / click ${(cell.clicks||0).toFixed(1)} / 注文 ${(cell.orders||0).toFixed(2)} / cost ¥${Math.round(cell.cost)} / 売上 ¥${Math.round(cell.sales)} / ROAS ${roas != null ? roas.toFixed(2) : '—'}`;
+      body.push(`<div title="${title}" style="background:${col.bg};color:${col.fg};padding:5px 2px;text-align:center;font-size:10.5px;font-weight:700;font-family:var(--font-num);font-variant-numeric:tabular-nums;border-right:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;letter-spacing:-.02em;">${khFmt(v, metric)}</div>`);
+    }
+  }
+
+  document.getElementById('kh-grid').innerHTML = `
+    <div style="display:grid;grid-template-columns:70px repeat(24, minmax(24px, 1fr));gap:0;border:1px solid var(--gray-3);border-radius:2px;overflow:hidden;min-width:640px;">
+      ${hdr}${body.join('')}
+    </div>
+    <div style="margin-top:6px;font-size:10.5px;color:#666;display:flex;gap:10px;flex-wrap:wrap;">
+      <span><span style="display:inline-block;width:12px;height:10px;background:rgba(46,140,58,0.85);vertical-align:middle;"></span> 好調 (ROAS≥3.3 / CVR≥8%)</span>
+      <span><span style="display:inline-block;width:12px;height:10px;background:rgba(46,140,58,0.28);vertical-align:middle;"></span> やや好調</span>
+      <span><span style="display:inline-block;width:12px;height:10px;background:#eeeeee;vertical-align:middle;"></span> 中間</span>
+      <span><span style="display:inline-block;width:12px;height:10px;background:rgba(200,50,50,0.75);vertical-align:middle;"></span> 損失 (ROAS<1)</span>
+      <span><span style="display:inline-block;width:12px;height:10px;background:#f5f5f5;vertical-align:middle;"></span> データ薄 (click<3)</span>
+    </div>
+  `;
+
+  // summary
+  const s = kw.summary30d || {};
+  const kwRoas = s.cost > 0 ? (s.sales14d/s.cost) : null;
+  const kwCvr  = s.clicks > 0 ? (s.purchases14d/s.clicks) : null;
+  document.getElementById('kh-summary').innerHTML = `
+    <div style="background:#fafafa;padding:8px 10px;border:1px solid var(--gray-3);">
+      <div style="color:#666;font-size:10px;letter-spacing:.05em;">KW 30日 合計</div>
+      <div style="font-family:var(--font-num);font-variant-numeric:tabular-nums;">
+        imp ${(s.impressions||0).toLocaleString()} / click ${(s.clicks||0).toLocaleString()} / 注文 ${s.purchases14d||0}<br>
+        cost ¥${Math.round(s.cost||0).toLocaleString()} / 売上 ¥${Math.round(s.sales14d||0).toLocaleString()}<br>
+        <b>ROAS ${kwRoas != null ? kwRoas.toFixed(2) : '—'}x / CVR ${kwCvr != null ? (kwCvr*100).toFixed(1)+'%' : '—'} / 現bid ¥${kw.current_bid || '—'} / Tier ${kw.tier || '—'}</b>
+      </div>
+    </div>
+    <div style="background:#fafafa;padding:8px 10px;border:1px solid var(--gray-3);">
+      <div style="color:#666;font-size:10px;letter-spacing:.05em;">曜日 weight (このKWの clicks 分布)</div>
+      <div style="font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:11px;line-height:1.5;">
+        ${(kw.dow_weight||[]).map((w,d) => `${KH_DOW_LABELS[d]} ${(w*100).toFixed(1)}%`).join(' / ')}
+      </div>
+    </div>
+  `;
+
+  // KW 単位 提案
+  const boostR = KH_DATA.kws && KH_DATA.proposals_count != null
+    ? (window._KH_PROPOSAL_RULES || defaultProposalRules())
+    : defaultProposalRules();
+  const proposals = extractKwProposals(kw, boostR);
+  const boostList = proposals.filter(p => p.action === 'BOOST');
+  const cutList = proposals.filter(p => p.action === 'CUT');
+  const propBox = document.getElementById('kh-proposals');
+  if(proposals.length === 0){
+    propBox.innerHTML = `<span style="color:#999;">このKWでは 微調節提案なし (全セル 中間ゾーン or データ薄)</span>`;
+  } else {
+    let html = '';
+    if(boostList.length){
+      html += `<div style="color:#2e8c3a;font-weight:700;margin-bottom:4px;">🟢 BOOST +30% 推奨 (${boostList.length}件)</div>`;
+      html += boostList.slice(0, 10).map(p =>
+        `<div style="padding:3px 6px;margin-bottom:2px;background:rgba(46,140,58,0.08);border-left:3px solid #2e8c3a;">${KH_DOW_LABELS[p.dow]} ${p.hour}時 · ROAS <b>${p.roas.toFixed(1)}</b> · 注文 ${p.orders.toFixed(2)} · cost ¥${Math.round(p.cost)} → 売上 ¥${Math.round(p.sales)}</div>`
+      ).join('');
+    }
+    if(cutList.length){
+      html += `<div style="color:#c83232;font-weight:700;margin:8px 0 4px;">🔴 CUT -30% or PAUSE 推奨 (${cutList.length}件)</div>`;
+      html += cutList.slice(0, 10).map(p =>
+        `<div style="padding:3px 6px;margin-bottom:2px;background:rgba(200,50,50,0.08);border-left:3px solid #c83232;">${KH_DOW_LABELS[p.dow]} ${p.hour}時 · ROAS <b>${p.roas.toFixed(2)}</b> · cost ¥${Math.round(p.cost)} → 売上 ¥${Math.round(p.sales)} (回収¥${Math.round(p.sales-p.cost)})</div>`
+      ).join('');
+    }
+    propBox.innerHTML = html;
+  }
+}
+
+function defaultProposalRules(){
+  return {
+    boost: { min_roas: 3.3, min_orders: 1.0, min_clicks: 5, multiplier_pct: 30 },
+    cut:   { max_roas: 1.5, min_spend_yen: 500, min_clicks: 5, multiplier_pct: -30 },
+  };
+}
+
+function extractKwProposals(kw, rules){
+  const out = [];
+  for(let d=0; d<7; d++){
+    for(let h=0; h<24; h++){
+      const c = kw.grid[d][h];
+      if(c.clicks < (rules.boost.min_clicks || 0)) continue;
+      const roas = c.cost > 0 ? c.sales/c.cost : null;
+      if(roas == null) continue;
+      if(roas >= rules.boost.min_roas && c.orders >= rules.boost.min_orders){
+        out.push({ action:'BOOST', dow:d, hour:h, roas, orders:c.orders, cost:c.cost, sales:c.sales });
+      } else if(roas < rules.cut.max_roas && c.cost >= rules.cut.min_spend_yen){
+        out.push({ action:'CUT', dow:d, hour:h, roas, orders:c.orders, cost:c.cost, sales:c.sales });
+      }
+    }
+  }
+  return out;
+}
+
+function renderAllProposalsSummary(){
+  const rules = defaultProposalRules();
+  const rows = [];
+  let totalBoost = 0, totalCut = 0;
+  for(const kw of KH_DATA.kws){
+    const ps = extractKwProposals(kw, rules);
+    const bo = ps.filter(p=>p.action==='BOOST').length;
+    const cu = ps.filter(p=>p.action==='CUT').length;
+    totalBoost += bo; totalCut += cu;
+    if(bo + cu > 0){
+      rows.push({ kw: kw.text, bo, cu, cost: kw.summary30d?.cost || 0 });
+    }
+  }
+  rows.sort((a,b) => (b.bo + b.cu) - (a.bo + a.cu));
+  const html = `
+    <div style="margin-bottom:6px;">全体: 🟢 BOOST <b>${totalBoost}</b> 件 / 🔴 CUT <b>${totalCut}</b> 件 (${KH_DATA.kw_count} KW 対象)</div>
+    <table style="width:100%;border-collapse:collapse;font-size:10.5px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="text-align:left;padding:4px 6px;border:1px solid var(--gray-3);">KW</th>
+        <th style="text-align:right;padding:4px 6px;border:1px solid var(--gray-3);">30d cost</th>
+        <th style="text-align:right;padding:4px 6px;border:1px solid var(--gray-3);color:#2e8c3a;">BOOST</th>
+        <th style="text-align:right;padding:4px 6px;border:1px solid var(--gray-3);color:#c83232;">CUT</th>
+      </tr></thead>
+      <tbody>
+        ${rows.slice(0, 15).map(r => `
+          <tr>
+            <td style="padding:3px 6px;border:1px solid var(--gray-3);">${r.kw}</td>
+            <td style="padding:3px 6px;border:1px solid var(--gray-3);text-align:right;font-family:var(--font-num);">¥${Math.round(r.cost).toLocaleString()}</td>
+            <td style="padding:3px 6px;border:1px solid var(--gray-3);text-align:right;font-family:var(--font-num);color:#2e8c3a;font-weight:700;">${r.bo}</td>
+            <td style="padding:3px 6px;border:1px solid var(--gray-3);text-align:right;font-family:var(--font-num);color:#c83232;font-weight:700;">${r.cu}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+  document.getElementById('kh-all-proposals').innerHTML = html;
+}
+
+// ── 学習ログ ────────────────────────────
+let LEARN_DATA = null;
+async function loadLearn(){
+  try{
+    const res = await fetch('./data/knowledge.json?t=' + Date.now());
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    LEARN_DATA = await res.json();
+  }catch(e){
+    document.getElementById('learn-sub').textContent = '読み込み失敗: '+e.message+' (knowledge.json が未生成の可能性)';
+    return;
+  }
+  const D = LEARN_DATA;
+  document.getElementById('learn-sub').textContent =
+    `学び ${D.summary.learning_count}件 / 効果測定 ${D.summary.effect_count}件 (${D.generated_at.slice(0,10)} 更新)`;
+
+  // サマリバー
+  const s = D.summary;
+  const total = (s.verdicts['成功']||0)+(s.verdicts['期待外れ']||0)+(s.verdicts['悪化']||0);
+  const catList = Object.entries(s.by_category||{}).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  document.getElementById('learn-summary').innerHTML = `
+    <div class="cell"><div class="lbl">学び件数</div><div class="val">${s.learning_count}</div></div>
+    <div class="cell"><div class="lbl">平均confidence</div><div class="val">${(s.avg_confidence||0).toFixed(2)}</div></div>
+    <div class="cell good"><div class="lbl">成功🟢</div><div class="val">${s.verdicts['成功']||0}</div></div>
+    <div class="cell" style="background:#fff8e0;"><div class="lbl">期待外れ🟡</div><div class="val" style="color:#a37600;">${s.verdicts['期待外れ']||0}</div></div>
+    <div class="cell bad"><div class="lbl">悪化🔴</div><div class="val">${s.verdicts['悪化']||0}</div></div>
+    <div class="cell"><div class="lbl">汎用ルール</div><div class="val">${s.by_scope['汎用']||0}</div></div>
+    <div class="cell"><div class="lbl">主要カテゴリ</div><div class="val" style="font-size:12px;line-height:1.3;text-align:left;padding:2px 0;">${catList.map(c=>`${c[0]}:${c[1]}`).join('<br>')||'—'}</div></div>
+  `;
+
+  // カテゴリselect init
+  const catSel = document.getElementById('learn-cat');
+  const cats = new Set(D.learnings.map(l=>l.category).filter(Boolean));
+  for(const c of [...cats].sort()){
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    catSel.appendChild(opt);
+  }
+
+  ['learn-search','learn-cat','learn-scope','learn-conf'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', renderLearn);
+    document.getElementById(id).addEventListener('change', renderLearn);
+  });
+  renderLearn();
+}
+function renderLearn(){
+  const D = LEARN_DATA;
+  const q = (document.getElementById('learn-search').value||'').trim().toLowerCase();
+  const cat = document.getElementById('learn-cat').value;
+  const scope = document.getElementById('learn-scope').value;
+  const minConf = Number(document.getElementById('learn-conf').value);
+
+  const learnings = D.learnings.filter(l=>{
+    if(q && !(l.kw||'').toLowerCase().includes(q) && !(l.learning||'').toLowerCase().includes(q)) return false;
+    if(cat!=='all' && l.category!==cat) return false;
+    if(scope!=='all' && l.scope!==scope) return false;
+    if(l.confidence < minConf) return false;
+    return true;
+  });
+  const effects = D.effects.filter(e=>{
+    if(q && !(e.kw||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  document.getElementById('learn-count').textContent = `効果 ${effects.length} / 学び ${learnings.length}`;
+
+  const esc = s => (s||'').toString().replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'})[c]);
+
+  // 効果測定テーブル
+  const effRows = effects.map(e=>{
+    const verdictColor = e.verdict==='成功'?'#2e8b57':e.verdict==='悪化'?'#d8302f':'#a37600';
+    const verdictBg = e.verdict==='成功'?'#e8f5ec':e.verdict==='悪化'?'#fde9e8':'#fff8e0';
+    const impStr = `<span style="color:#888;">${e.predImp>=0?'+':''}${e.predImp.toFixed(0)}</span> / <b>${e.actImp!==null?(e.actImp>=0?'+':'')+e.actImp.toFixed(0):'—'}</b> / <span style="color:${(e.impDiff||0)>=0?'#2e8b57':'#d8302f'};">${e.impDiff!==null?(e.impDiff>=0?'+':'')+e.impDiff.toFixed(0):'—'}</span>`;
+    const salesStr = `<span style="color:#888;">${e.predSales>=0?'+':''}${e.predSales.toFixed(0)}</span> / <b>${e.actSales!==null?(e.actSales>=0?'+':'')+e.actSales.toFixed(0):'—'}</b>`;
+    return `<tr style="border-bottom:1px solid var(--gray-2);">
+      <td style="padding:5px 6px;font-weight:600;font-size:11px;">${esc(e.date)}</td>
+      <td style="padding:5px 6px;font-size:11px;">${esc(e.kw)} <span style="color:#999;font-size:10px;">(${esc(e.match)})</span></td>
+      <td style="padding:5px 6px;text-align:right;font-family:'SF Mono',monospace;font-size:11px;">¥${e.oldBid}→¥${e.newBid}<br><span style="color:#666;">${e.bidChangePct>=0?'+':''}${e.bidChangePct.toFixed(0)}%</span></td>
+      <td style="padding:5px 6px;text-align:right;font-size:11px;">${impStr}</td>
+      <td style="padding:5px 6px;text-align:right;font-size:11px;">${salesStr}</td>
+      <td style="padding:5px 6px;text-align:center;background:${verdictBg};color:${verdictColor};font-weight:700;font-size:11px;">${esc(e.verdict)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('learn-effect-tbody').innerHTML = effRows || '<tr><td colspan="6" style="padding:20px;text-align:center;color:#999;">該当なし (bid変更後 3日経過待ち)</td></tr>';
+
+  // 学びカード
+  const cardsHtml = learnings.map(l=>{
+    const scopeBadge = l.scope==='汎用'
+      ? '<span style="background:var(--orange);color:#fff;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;">汎用</span>'
+      : '<span style="background:var(--gray-3);color:#555;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;">PEGAT固有</span>';
+    const confColor = l.confidence>=0.8?'#2e8b57':l.confidence>=0.6?'#a37600':'#999';
+    return `<div style="border:1px solid var(--gray-3);border-left:3px solid var(--orange);padding:10px;margin-bottom:8px;background:#fff;">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">
+        <span style="font-size:11px;color:#666;">${esc(l.date)}</span>
+        <span style="background:var(--yellow-soft);color:#7a5e00;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;">${esc(l.category)}</span>
+        ${scopeBadge}
+        <span style="margin-left:auto;font-size:10px;color:${confColor};font-weight:700;">conf ${l.confidence.toFixed(2)}</span>
+      </div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:4px;color:var(--black);">${esc(l.kw)}</div>
+      <div style="font-size:12px;color:#333;line-height:1.5;margin-bottom:6px;background:var(--yellow-soft);padding:6px 8px;border-left:2px solid var(--yellow);">
+        <b>💡 学び:</b> ${esc(l.learning)}
+      </div>
+      <div style="font-size:11px;color:#555;margin-bottom:3px;"><b>原因:</b> ${esc(l.primary_cause)}</div>
+      <div style="font-size:11px;color:#555;margin-bottom:3px;"><b>次に:</b> ${esc(l.recommended_next_action)}</div>
+      ${l.hypotheses.length ? `<details style="margin-top:5px;"><summary style="font-size:10px;color:#888;cursor:pointer;">他の仮説 ${l.hypotheses.length}件</summary><ul style="font-size:11px;color:#666;margin:3px 0 0 20px;padding:0;">${l.hypotheses.map(h=>`<li>${esc(h)}</li>`).join('')}</ul></details>` : ''}
+    </div>`;
+  }).join('');
+  document.getElementById('learn-cards').innerHTML = cardsHtml || '<div style="padding:40px;text-align:center;color:#999;">該当なし</div>';
+}
+</script>
+
+</body>
+</html>

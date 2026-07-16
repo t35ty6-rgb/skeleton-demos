@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🚦 Canary Status | PEGAT Autopilot</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
+<style>
+  :root{
+    --orange:#ff7a00; --orange-dark:#e36a00;
+    --yellow:#ffd400; --yellow-soft:#fff6cc;
+    --black:#1a1a1a; --gray-1:#f5f5f5; --gray-2:#ececec; --gray-3:#ddd; --gray-4:#999;
+    --text:#222; --green:#2e8b57; --red:#d8302f; --amber:#c07a00; --blue:#164e8c;
+    --font-jp: "Zen Kaku Gothic New", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", system-ui, sans-serif;
+    --font-display: "Zen Kaku Gothic New", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+    --font-num: "Inter", "SF Pro Display", -apple-system, sans-serif;
+    --font-mono: "SF Mono", "Menlo", ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#fafafa;color:var(--text);font-family:var(--font-jp);font-size:13px;line-height:1.55;font-weight:500;font-feature-settings:"palt" 1;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+  .num{font-family:var(--font-num);font-variant-numeric:tabular-nums lining-nums;}
+  h1,h2,h3{font-family:var(--font-display);}
+  header{background:var(--black);color:#fff;padding:8px 14px;display:flex;align-items:center;gap:18px;border-bottom:3px solid var(--orange);}
+  header h1{font-size:14px;margin:0;font-weight:800;letter-spacing:-.005em;}
+  header .brand-pill{background:var(--orange);color:#fff;font-weight:700;padding:2px 8px;border-radius:2px;font-size:11px;}
+  header .meta{margin-left:auto;font-size:11px;color:#ccc;}
+  header a{color:#ffd400;text-decoration:none;margin-left:14px;font-size:12px;font-weight:700;}
+  header a:hover{text-decoration:underline;}
+  .wrap{max-width:1400px;margin:0 auto;padding:18px;}
+  h2{font-size:15px;background:var(--black);color:#fff;padding:6px 10px;margin:20px 0 8px;letter-spacing:.01em;border-left:5px solid var(--orange);font-weight:800;}
+  .note{background:#fff;border:1px solid var(--gray-3);padding:10px 14px;margin:8px 0 12px;font-size:11.5px;line-height:1.7;color:#333;}
+  .note b{color:#000;}
+
+  /* Week progress bar */
+  .week-progress{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0 24px;}
+  .week-cell{background:#fff;border:1px solid var(--gray-3);padding:12px 10px;text-align:center;border-top:4px solid var(--gray-3);}
+  .week-cell.past{border-top-color:var(--green);background:#eef7f0;}
+  .week-cell.current{border-top-color:var(--orange);background:#fff5e6;box-shadow:0 2px 8px rgba(255,122,0,.2);}
+  .week-cell.future{opacity:.55;}
+  .week-cell .w-num{font-family:var(--font-num);font-size:22px;font-weight:800;color:var(--black);letter-spacing:-.02em;line-height:1;}
+  .week-cell .w-title{font-size:11px;color:#666;margin-top:4px;font-weight:700;letter-spacing:.02em;}
+  .week-cell .w-status{font-size:10px;margin-top:6px;font-weight:800;letter-spacing:.06em;}
+  .week-cell.past .w-status{color:var(--green);}
+  .week-cell.current .w-status{color:var(--orange);}
+  .week-cell.future .w-status{color:#999;}
+  .week-cell .w-desc{font-size:10px;color:#555;margin-top:6px;line-height:1.4;}
+
+  /* Stat cards */
+  .stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 20px;}
+  .stat{background:#fff;border-top:3px solid var(--gray-3);border:1px solid var(--gray-3);padding:10px;}
+  .stat .lbl{font-size:10px;color:#666;letter-spacing:.08em;text-transform:uppercase;font-weight:700;}
+  .stat .val{font-family:var(--font-num);font-size:22px;font-weight:800;line-height:1.05;margin-top:3px;color:var(--black);letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+  .stat .unit{font-size:11px;color:#666;font-weight:400;margin-left:2px;}
+  .stat.ok{border-top-color:var(--green);}
+  .stat.ok .val{color:var(--green);}
+  .stat.warn{border-top-color:var(--amber);}
+  .stat.warn .val{color:var(--amber);}
+  .stat.bad{border-top-color:var(--red);}
+  .stat.bad .val{color:var(--red);}
+  .stat.info{border-top-color:var(--blue);}
+  .stat.info .val{color:var(--blue);}
+
+  /* Gate table */
+  table{width:100%;border-collapse:collapse;background:#fff;margin-bottom:14px;font-size:12px;}
+  th{background:#333;color:#fff;padding:5px 8px;font-weight:600;text-align:left;font-size:11px;letter-spacing:.03em;border-right:1px solid #444;}
+  th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-num);}
+  td{padding:6px 8px;border-bottom:1px solid var(--gray-2);vertical-align:middle;}
+  td.label{font-family:var(--font-mono);font-size:11px;color:#333;font-weight:600;}
+
+  .badge{display:inline-block;padding:1px 8px;font-weight:800;border-radius:2px;font-size:10px;letter-spacing:.06em;font-family:var(--font-num);}
+  .b-pass{background:#d5efdd;color:#155f34;}
+  .b-fail{background:#fadbd8;color:#5a0d0d;}
+  .b-warn{background:#ffe9b3;color:#7a5100;}
+  .b-info{background:#e0f0ff;color:#164e8c;}
+  .b-live{background:var(--green);color:#fff;}
+  .b-dry{background:var(--gray-3);color:#333;}
+  .b-cat-report{background:#e0f0ff;color:#164e8c;}
+  .b-cat-monitor{background:#efe6ff;color:#5a2ea0;}
+  .b-cat-guard{background:#fff3d9;color:#7a5100;}
+  .b-cat-bid_adjust{background:#ffe1d9;color:#a03a00;}
+  .b-cat-listing{background:#ffd8e6;color:#a01a4a;}
+
+  .plugin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .plugin-col{background:#fff;border:1px solid var(--gray-3);}
+  .plugin-col h3{margin:0;font-size:12px;background:var(--gray-1);padding:6px 10px;border-bottom:1px solid var(--gray-3);font-weight:800;}
+  .plugin-col.next h3{background:var(--yellow-soft);}
+  .plugin-col ul{list-style:none;margin:0;padding:6px 10px;font-size:12px;}
+  .plugin-col li{padding:4px 0;border-bottom:1px dashed var(--gray-2);}
+  .plugin-col li:last-child{border-bottom:none;}
+  .plugin-col .p-id{font-family:var(--font-mono);font-weight:700;color:var(--black);font-size:11px;}
+  .plugin-col .p-desc{color:#555;font-size:11px;margin-top:2px;}
+
+  .cli-box{background:#0e0e12;color:#e8e8e6;padding:10px 14px;font-family:var(--font-mono);font-size:11px;border-radius:3px;margin:8px 0 14px;line-height:1.7;overflow-x:auto;}
+  .cli-box .cmt{color:#7a7a7a;}
+  .cli-box .cmd{color:#ffd400;}
+
+  .history-table td.time{font-family:var(--font-mono);font-size:10.5px;color:#555;}
+  .history-table td.event{font-weight:800;}
+  .ev-promoted{color:var(--green);}
+  .ev-rollback{color:var(--red);}
+  .ev-init{color:#666;}
+  .ev-force{color:var(--amber);}
+
+  @media (max-width:900px){
+    .stat-cards{grid-template-columns:repeat(2,1fr);}
+    .week-progress{grid-template-columns:repeat(5,1fr);gap:3px;}
+    .week-cell{padding:6px 3px;}
+    .week-cell .w-desc{display:none;}
+    .plugin-grid{grid-template-columns:1fr;}
+    .wrap{padding:10px;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <span class="brand-pill">SKELETON</span>
+  <h1>🚦 PEGAT Autopilot Canary Status</h1>
+  <a href="./index.html">← ダッシュボード</a>
+  <a href="./heartbeat.html">💓 稼働状況</a>
+  <span class="meta">最終更新 <span id="m-updated">—</span></span>
+</header>
+
+<div class="wrap">
+  <div class="note">
+    <b>4週 Canary プラン</b>: read-only → guard → bid ±5% → bid ±15% → 残 全部。 各週の 昇格 gate は <b>前3日 pending_alerts 0件 + owner approve + qa-reviewer PASS 24h以内</b> の 3条件 全通過 が 必須。 日次 ROAS -20% 検知で 自動 rollback。
+  </div>
+
+  <div class="week-progress" id="week-progress">
+    <!-- filled by JS -->
+  </div>
+
+  <h2>ゲート 通過 状況</h2>
+  <div class="stat-cards" id="gate-cards">
+    <div class="stat" id="s-gate-all"><div class="lbl">総合判定</div><div class="val">—</div></div>
+    <div class="stat" id="s-gate-3d"><div class="lbl">前3日 pending_alerts</div><div class="val">—</div></div>
+    <div class="stat" id="s-gate-qa"><div class="lbl">qa-reviewer PASS</div><div class="val">—</div></div>
+    <div class="stat" id="s-gate-owner"><div class="lbl">owner approve</div><div class="val">—</div></div>
+  </div>
+
+  <table id="gate-detail">
+    <thead>
+      <tr><th style="width:24%;">項目</th><th style="width:12%;">判定</th><th>詳細</th></tr>
+    </thead>
+    <tbody id="gate-detail-body"></tbody>
+  </table>
+
+  <h2>Rollback 監視 (日次 ROAS -20%)</h2>
+  <div class="stat-cards" style="grid-template-columns:repeat(3,1fr);">
+    <div class="stat info" id="s-rb-thr"><div class="lbl">閾値</div><div class="val">—<span class="unit">%</span></div></div>
+    <div class="stat" id="s-rb-yest"><div class="lbl">昨日 ROAS</div><div class="val">—</div></div>
+    <div class="stat" id="s-rb-today"><div class="lbl">今日 ROAS</div><div class="val">—</div></div>
+  </div>
+  <div class="note" id="rb-note">—</div>
+
+  <h2>Plugin 一覧</h2>
+  <div class="plugin-grid">
+    <div class="plugin-col">
+      <h3>✓ 現在 LIVE (Week ≤ current)</h3>
+      <ul id="live-plugins"></ul>
+    </div>
+    <div class="plugin-col next">
+      <h3>⏭ 次 Week 対象 (gate 通過 で LIVE 化)</h3>
+      <ul id="next-plugins"></ul>
+    </div>
+  </div>
+
+  <h2>全 Plugin × Week マトリクス</h2>
+  <table id="matrix">
+    <thead>
+      <tr>
+        <th style="width:20%;">Plugin</th>
+        <th style="width:10%;">Week</th>
+        <th style="width:12%;">Category</th>
+        <th style="width:10%;">Live?</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody id="matrix-body"></tbody>
+  </table>
+
+  <h2>Owner 操作 (CLI)</h2>
+  <div class="cli-box">
+<span class="cmt"># 現状確認</span>
+<span class="cmd">node ~/.skeleton-pegat-autopilot/core/canary.mjs --status</span>
+
+<span class="cmt"># 次 Week 昇格 approve (gate 3条件 の 1つ)</span>
+<span class="cmd">node ~/.skeleton-pegat-autopilot/core/canary.mjs --approve</span>
+
+<span class="cmt"># qa-reviewer PASS を 手動 記録 (通常は subagent が書く)</span>
+<span class="cmd">node ~/.skeleton-pegat-autopilot/core/canary.mjs --record-qa-pass --agent-id=qa-reviewer-manual</span>
+
+<span class="cmt"># 強制 Week 変更 (gate bypass, 危険)</span>
+<span class="cmd">node ~/.skeleton-pegat-autopilot/core/canary.mjs --force-week=2 --dry-run</span>
+
+<span class="cmt"># 手動 rollback (1 Week 戻す)</span>
+<span class="cmd">node ~/.skeleton-pegat-autopilot/core/canary.mjs --rollback</span>
+  </div>
+
+  <h2>履歴 (最新 30件)</h2>
+  <table class="history-table">
+    <thead>
+      <tr>
+        <th style="width:22%;">時刻</th>
+        <th style="width:12%;">イベント</th>
+        <th style="width:12%;">Week</th>
+        <th>理由</th>
+      </tr>
+    </thead>
+    <tbody id="history-body"></tbody>
+  </table>
+</div>
+
+<script>
+const WEEK_TITLES = {
+  0: {title:'read-only', desc:'書込ゼロ・通知のみ (report/monitor 6個)'},
+  1: {title:'guard 系', desc:'「止める」だけ (budget/stock/bid-anomaly 3個)'},
+  2: {title:'bid 微調整', desc:'±5% 上限・薄型 (B0FL5BPJC7) のみ'},
+  3: {title:'bid 全開', desc:'±15%・全 SKU'},
+  4: {title:'残 全部', desc:'listing/SEO/reviews の LIVE 化'},
+};
+
+function badge(text, cls){ return `<span class="badge b-${cls}">${text}</span>`; }
+function fmt(v, digits=2){ return (v==null||isNaN(v))?'—':Number(v).toFixed(digits); }
+function iconOK(pass){ return pass ? '✅' : '❌'; }
+function classOK(pass){ return pass ? 'ok' : 'bad'; }
+function catBadge(c){ return badge(c, `cat-${c}`); }
+
+async function load(){
+  const r = await fetch(`./data/canary.json?v=${Date.now()}`, {cache:'no-store'});
+  if (!r.ok){ document.querySelector('.wrap').innerHTML = `<div class="note">canary.json 未生成。 <code>node ~/.skeleton-pegat-autopilot/core/canary.mjs</code> を実行してください。</div>`; return; }
+  const d = await r.json();
+  render(d);
+}
+
+function render(d){
+  document.getElementById('m-updated').textContent = d.generated_at.replace('T',' ').slice(0,19);
+
+  // Week progress
+  const wp = document.getElementById('week-progress');
+  wp.innerHTML = '';
+  for (let w=0; w<=4; w++){
+    const cls = w < d.current_week ? 'past' : w === d.current_week ? 'current' : 'future';
+    const status = w < d.current_week ? '完了' : w === d.current_week ? `${d.days_in_current_week}日目` : '未';
+    const meta = WEEK_TITLES[w];
+    wp.innerHTML += `<div class="week-cell ${cls}">
+      <div class="w-num">W${w}</div>
+      <div class="w-title">${meta.title}</div>
+      <div class="w-status">${status}</div>
+      <div class="w-desc">${meta.desc}</div>
+    </div>`;
+  }
+
+  // Gate stat cards
+  const g = d.gate;
+  const setStat = (id, val, cls) => {
+    const el = document.getElementById(id);
+    el.className = `stat ${cls||''}`;
+    el.querySelector('.val').innerHTML = val;
+  };
+  setStat('s-gate-all', iconOK(g.all_pass) + ' ' + (g.all_pass?'PASS':'待ち'), classOK(g.all_pass));
+  setStat('s-gate-3d', `<span class="num">${g.pending_3d.clean_days}/${g.pending_3d.needed}</span> 日 clean`, g.pending_3d.clean?'ok':'warn');
+  setStat('s-gate-qa', g.qa.pass ? '✅ PASS' : '❌ '+(g.qa.reason||'nil'), classOK(g.qa.pass));
+  setStat('s-gate-owner', g.owner_approve ? '✅ ON' : '❌ OFF', classOK(g.owner_approve));
+
+  // Gate detail table
+  const gb = document.getElementById('gate-detail-body');
+  gb.innerHTML = '';
+  const addRow = (label, pass, detail) => {
+    gb.innerHTML += `<tr><td>${label}</td><td>${pass ? badge('PASS','pass') : badge('FAIL','fail')}</td><td>${detail}</td></tr>`;
+  };
+  addRow('前3日 pending_alerts 0件', g.pending_3d.clean, `${g.pending_3d.clean_days}/${g.pending_3d.needed} 日 clean · 内訳: ${(g.pending_3d.detail||[]).map(x=>`${x.date}=${x.pending_hits==null?'∅':x.pending_hits}`).join(', ')}`);
+  addRow('現時点 pending_alerts.md', g.alerts_now.clean, g.alerts_now.note || '');
+  addRow('qa-reviewer PASS (24h以内)', g.qa.pass, g.qa.pass ? `agent=${g.qa.agent_id} at=${g.qa.at}` : g.qa.reason);
+  addRow('owner approve', g.owner_approve, g.owner_approve ? '--approve 済' : '--approve で on');
+
+  // Rollback
+  const rb = d.rollback;
+  setStat('s-rb-thr', `${rb.threshold_pct}<span class="unit">%</span>`, 'info');
+  if (rb.last_check && rb.last_check.roas){
+    setStat('s-rb-yest', fmt(rb.last_check.roas.roas_yesterday));
+    setStat('s-rb-today', fmt(rb.last_check.roas.roas_today), rb.last_check.trigger?'bad':'ok');
+  } else {
+    setStat('s-rb-yest', '—');
+    setStat('s-rb-today', '—');
+  }
+  document.getElementById('rb-note').textContent = rb.last_check ? rb.last_check.reason : '(データ不足)';
+
+  // Live/next plugins
+  const liveUl = document.getElementById('live-plugins');
+  const nextUl = document.getElementById('next-plugins');
+  liveUl.innerHTML = d.current_plugins.map(p =>
+    `<li><div class="p-id">${catBadge(p.category)} ${p.id}</div><div class="p-desc">${p.description}</div></li>`
+  ).join('') || '<li>（なし）</li>';
+  nextUl.innerHTML = d.next_plugins.map(p =>
+    `<li><div class="p-id">${catBadge(p.category)} ${p.id}</div><div class="p-desc">${p.description}</div></li>`
+  ).join('') || '<li>（Max Week に到達）</li>';
+
+  // Matrix
+  const mb = document.getElementById('matrix-body');
+  mb.innerHTML = d.all_plugins.sort((a,b)=>a.canary_week-b.canary_week || a.id.localeCompare(b.id)).map(p =>
+    `<tr>
+      <td class="label">${p.id}</td>
+      <td class="num">W${p.canary_week}</td>
+      <td>${catBadge(p.category)}</td>
+      <td>${p.is_live ? badge('LIVE','live') : badge('DRY','dry')}</td>
+      <td>${p.description}</td>
+    </tr>`
+  ).join('');
+
+  // History
+  const hb = document.getElementById('history-body');
+  hb.innerHTML = (d.history||[]).slice().reverse().map(h =>
+    `<tr>
+      <td class="time">${(h.at||'').replace('T',' ').slice(0,19)}</td>
+      <td class="event ev-${h.event}">${h.event}</td>
+      <td class="num">W${h.from_week} → W${h.to_week}</td>
+      <td>${h.reason||''}</td>
+    </tr>`
+  ).join('') || `<tr><td colspan="4" style="text-align:center;color:#999;">履歴なし</td></tr>`;
+}
+
+load();
+</script>
+</body>
+</html>
