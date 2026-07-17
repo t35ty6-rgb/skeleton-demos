@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920,initial-scale=1">
+<title>Salonworks TVCM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter+Tight:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green:   #06C755;
+    --green-d: #04A042;
+    --pink:    #FF1FA1;
+    --blue:    #0EA5E9;
+    --ink:     #0B1A2A;
+    --ink2:    #3A5068;
+    --bg:      #FAFBFC;
+    --white:   #FFFFFF;
+    --fBody:   'Noto Sans JP', 'Hiragino Sans', sans-serif;
+    --fNum:    'Inter Tight', 'Inter', sans-serif;
+  }
+
+  html, body {
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: var(--white);
+    font-family: var(--fBody);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ──────────────────────────────────────────
+     SCENE システム
+  ────────────────────────────────────────── */
+  .scene {
+    position: absolute;
+    inset: 0;
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.18s ease-out;
+    pointer-events: none;
+  }
+  .scene.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ──────────────────────────────────────────
+     SC-OPEN: 大テロップ主役 + 緑ドット右下
+  ────────────────────────────────────────── */
+  #sc-open {
+    background: var(--white);
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* 大テロップ (主役) */
+  .open-telop {
+    font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
+    font-size: 88px;
+    font-weight: 900;
+    color: var(--ink);
+    letter-spacing: -0.04em;
+    line-height: 1.2;
+    text-align: center;
+    text-wrap: balance;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.92);
+    opacity: 0;
+    transition: opacity 0.3s ease-out, transform 0.4s cubic-bezier(.2,.8,.4,1);
+    width: 1400px;
+  }
+  .open-telop .hl { color: var(--green); }
+  .open-telop.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  /* キャラ (右下に小さく) */
+  .dot-char-small {
+    width: 120px;
+    height: 120px;
+    background: var(--green);
+    border-radius: 50%;
+    position: absolute;
+    bottom: 80px;
+    right: 100px;
+    flex-shrink: 0;
+    transform: scale(0.5);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(.2,.8,.4,1) 0.15s, opacity 0.2s ease-out 0.15s;
+  }
+  .dot-char-small.pop {
+    transform: scale(1);
+    opacity: 1;
+  }
+  .dot-char-small::before,
+  .dot-char-small::after {
+    content: '';
+    position: absolute;
+    background: var(--white);
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    top: 38px;
+  }
+  .dot-char-small::before { left: 30px; }
+  .dot-char-small::after  { right: 30px; }
+
+  /* 吹き出し (小・右下) */
+  .balloon {
+    position: absolute;
+    bottom: 220px;
+    right: 80px;
+    background: var(--ink);
+    color: var(--white);
+    font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    padding: 14px 24px;
+    border-radius: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease-out 0.25s, transform 0.25s cubic-bezier(.2,.8,.4,1) 0.25s;
+  }
+  .balloon.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .balloon::after {
+    content: '';
+    position: absolute;
+    bottom: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 10px solid transparent;
+    border-top-color: var(--ink);
+  }
+
+  /* ──────────────────────────────────────────
+     ACT 共通: 左 = インパクト字 / 右 = 実UI
+  ────────────────────────────────────────── */
+  .act-layout {
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+    align-items: stretch;
+  }
+  .act-left {
+    flex: 0 0 820px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 80px 80px 100px;
+    position: relative;
+  }
+  .act-right {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  .act-right img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: left top;
+    border-radius: 0 0 0 40px;
+  }
+
+  /* 幕番号ラベル */
+  .act-num {
+    font-family: var(--fNum);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 28px;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.15s ease-out 0.04s, transform 0.22s cubic-bezier(.2,.8,.4,1) 0.04s;
+  }
+  .act-num.rev { opacity: 1; transform: translateY(0); }
+
+  /* Pain テキスト */
+  .act-pain {
+    font-family: var(--fBody);
+    font-size: 36px;
+    font-weight: 500;
+    color: var(--ink2);
+    line-height: 1.6;
+    margin-bottom: 40px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.15s ease-out, transform 0.22s cubic-bezier(.2,.8,.4,1);
+  }
+  .act-pain.rev { opacity: 1; transform: translateY(0); }
+
+  /* タグライン (BIG) */
+  .act-tagline {
+    font-family: var(--fBody);
+    font-size: 62px;
+    font-weight: 900;
+    color: var(--ink);
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+    margin-bottom: 36px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.15s ease-out, transform 0.22s cubic-bezier(.2,.8,.4,1);
+  }
+  .act-tagline.rev { opacity: 1; transform: translateY(0); }
+  .act-tagline .hl { color: var(--green); }
+
+  /* サブ補足 */
+  .act-sub {
+    font-family: var(--fBody);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--ink2);
+    line-height: 1.6;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.15s ease-out, transform 0.22s cubic-bezier(.2,.8,.4,1);
+  }
+  .act-sub.rev { opacity: 1; transform: translateY(0); }
+
+  /* 右パネル overlay chip */
+  .act-chip {
+    position: absolute;
+    bottom: 60px;
+    left: 40px;
+    background: var(--green);
+    color: var(--white);
+    font-family: var(--fNum);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 12px 28px;
+    border-radius: 100px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.15s ease-out, transform 0.22s cubic-bezier(.2,.8,.4,1);
+  }
+  .act-chip.rev { opacity: 1; transform: translateY(0); }
+
+  /* 縦区切り線 */
+  .act-divider {
+    position: absolute;
+    left: 820px;
+    top: 80px;
+    bottom: 80px;
+    width: 3px;
+    background: var(--green);
+    border-radius: 2px;
+    opacity: 0;
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: opacity 0.15s ease-out, transform 0.3s cubic-bezier(.2,.8,.4,1);
+  }
+  .act-divider.rev { opacity: 0.25; transform: scaleY(1); }
+
+  /* ──────────────────────────────────────────
+     SC-CLOSE: 締め
+  ────────────────────────────────────────── */
+  #sc-close {
+    background: var(--green);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .close-tagline {
+    font-family: var(--fBody);
+    font-size: 100px;
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    text-align: center;
+    opacity: 0;
+    transform: scale(0.9);
+    transition: opacity 0.2s ease-out, transform 0.28s cubic-bezier(.2,.8,.4,1);
+  }
+  .close-tagline.rev { opacity: 1; transform: scale(1); }
+
+  .close-dot {
+    width: 140px;
+    height: 140px;
+    background: var(--white);
+    border-radius: 50%;
+    margin-top: 60px;
+    position: relative;
+    opacity: 0;
+    transform: scale(0.6);
+    transition: opacity 0.18s ease-out 0.1s, transform 0.28s cubic-bezier(.2,.8,.4,1) 0.1s;
+    flex-shrink: 0;
+  }
+  .close-dot::before, .close-dot::after {
+    content: '';
+    position: absolute;
+    background: var(--green);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    top: 42px;
+  }
+  .close-dot::before { left: 34px; }
+  .close-dot::after  { right: 34px; }
+  .close-dot.rev { opacity: 1; transform: scale(1); }
+
+  .close-logo {
+    font-family: var(--fBody);
+    font-size: 52px;
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: -0.02em;
+    margin-top: 28px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.15s ease-out 0.18s, transform 0.22s cubic-bezier(.2,.8,.4,1) 0.18s;
+  }
+  .close-logo.rev { opacity: 1; transform: translateY(0); }
+
+  .close-sub {
+    font-family: var(--fBody);
+    font-size: 24px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.85);
+    margin-top: 14px;
+    letter-spacing: 0.02em;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.15s ease-out 0.24s, transform 0.22s cubic-bezier(.2,.8,.4,1) 0.24s;
+  }
+  .close-sub.rev { opacity: 1; transform: translateY(0); }
+
+  .close-url {
+    font-family: var(--fNum);
+    font-size: 18px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.7);
+    margin-top: 28px;
+    letter-spacing: 0.06em;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.15s ease-out 0.3s, transform 0.22s cubic-bezier(.2,.8,.4,1) 0.3s;
+  }
+  .close-url.rev { opacity: 1; transform: translateY(0); }
+
+  /* ──────────────────────────────────────────
+     幕1 専用: ピンクアクセント
+  ────────────────────────────────────────── */
+  #sc-act1 .act-left { background: #FFF8FA; }
+  #sc-act1 .act-tagline .hl { color: var(--pink); }
+
+  /* ──────────────────────────────────────────
+     幕2 専用: 青アクセント
+  ────────────────────────────────────────── */
+  #sc-act2 .act-left { background: #F0F9FF; }
+  #sc-act2 .act-tagline .hl { color: var(--blue); }
+
+  /* ──────────────────────────────────────────
+     幕3 専用: 緑アクセント
+  ────────────────────────────────────────── */
+  #sc-act3 .act-left { background: #F0FFF5; }
+  #sc-act3 .act-tagline .hl { color: var(--green-d); }
+
+  /* ──────────────────────────────────────────
+     COVER (preload 非表示)
+  ────────────────────────────────────────── */
+  #sc-cover {
+    background: var(--white);
+    z-index: 99999;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #sc-cover.hide {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-out;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── COVER ──────────────────────────────── -->
+<div id="sc-cover" class="scene active"></div>
+
+<!-- ── SC-OPEN ────────────────────────────── -->
+<div id="sc-open" class="scene">
+  <!-- 大テロップ (主役) -->
+  <div class="open-telop" id="open-telop">サロン経営、<br>こんな悩み<span class="hl">ない?</span></div>
+  <!-- キャラ + 吹き出し (右下・補助) -->
+  <div class="dot-char-small" id="dot-char"></div>
+  <div class="balloon" id="balloon">うんうん、あるある</div>
+</div>
+
+<!-- ── SC-ACT1 逃さない ─────────────────── -->
+<div id="sc-act1" class="scene">
+  <div class="act-layout">
+    <div class="act-left">
+      <div class="act-num" id="a1-num">ACT 01 · RETAIN</div>
+      <div class="act-pain" id="a1-pain">来てくれたお客さまが、<br>次、来なくなる。</div>
+      <div class="act-tagline" id="a1-tagline">一度掴んだお客様は、<br><span class="hl">二度と逃さない。</span></div>
+      <div class="act-sub" id="a1-sub">AIが来店間隔・購買履歴など4条件で、自動配信。</div>
+    </div>
+    <div class="act-divider" id="a1-div"></div>
+    <div class="act-right">
+      <img src="assets/screenshot-04-deliver-pick.png" alt="お誘い配信画面">
+      <div class="act-chip" id="a1-chip">AI 自動配信</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SC-ACT2 掴む ──────────────────────── -->
+<div id="sc-act2" class="scene">
+  <div class="act-layout">
+    <div class="act-left">
+      <div class="act-num" id="a2-num">ACT 02 · CAPTURE</div>
+      <div class="act-pain" id="a2-pain">お客さまのこと、<br>全部覚えてますか?</div>
+      <div class="act-tagline" id="a2-tagline">お客様の全部を、<br>一人残らず<span class="hl">掴む。</span></div>
+      <div class="act-sub" id="a2-sub">LINEで統合カルテ。来店・購買・会話が1画面に。</div>
+    </div>
+    <div class="act-divider" id="a2-div"></div>
+    <div class="act-right">
+      <img src="assets/screenshot-02-karte-unified.png" alt="統合カルテ画面">
+      <div class="act-chip" id="a2-chip">統合カルテ</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SC-ACT3 離さない ──────────────────── -->
+<div id="sc-act3" class="scene">
+  <div class="act-layout">
+    <div class="act-left">
+      <div class="act-num" id="a3-num">ACT 03 · LTV</div>
+      <div class="act-pain" id="a3-pain">お客様が離れてから<br>気づいても遅い。</div>
+      <div class="act-tagline" id="a3-tagline">お客様が離れる前に、<br><span class="hl">次を差す。</span></div>
+      <div class="act-sub" id="a3-sub">LTV 130〜150%<span style="font-size:0.4em;color:#6B7280;vertical-align:super;font-weight:400;">※導入実績ベース</span>。それが Salonworks。</div>
+    </div>
+    <div class="act-divider" id="a3-div"></div>
+    <div class="act-right">
+      <img src="assets/screenshot-01-dashboard.png" alt="ダッシュボード画面">
+      <div class="act-chip" id="a3-chip">LTV +30〜50%<span style="font-size:0.55em;font-weight:500;opacity:0.85;"> ※実績ベース</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SC-CLOSE 締め ──────────────────────── -->
+<div id="sc-close" class="scene">
+  <div class="close-tagline" id="cl-tagline">逃さず · 掴み · 離さない。</div>
+  <div class="close-dot" id="cl-dot"></div>
+  <div class="close-logo" id="cl-logo">Salonworks</div>
+  <div class="close-sub" id="cl-sub">LINE 1本で、集客・予約・EC・カルテ・再来店</div>
+  <div class="close-url" id="cl-url">salonworks.jp</div>
+</div>
+
+<script>
+// ── タイムポイント (TTS生成値 v2: 「お客様」置換 + 4条件ヒント化) ──────
+const TP = {
+  open_start:   0.015,
+  act1_start:   2.752,
+  act1_pain:    6.073,
+  act1_tagline: 9.485,
+  act2_start:   14.408,
+  act2_pain:    17.162,
+  act2_tagline: 20.161,
+  act3_start:   24.386,
+  act3_pain:    27.055,
+  act3_tagline: 29.923,
+  close_start:  34.501,
+  close_tagline:37.386,
+  close_end:    43.678,
+};
+
+// ── DOM refs ──────────────────────────────────
+const $ = id => document.getElementById(id);
+const scenes = {
+  cover: $('sc-cover'),
+  open:  $('sc-open'),
+  act1:  $('sc-act1'),
+  act2:  $('sc-act2'),
+  act3:  $('sc-act3'),
+  close: $('sc-close'),
+};
+
+let currentScene = null;
+function showScene(name) {
+  if (currentScene && scenes[currentScene]) {
+    scenes[currentScene].classList.remove('active');
+  }
+  currentScene = name;
+  if (scenes[name]) {
+    scenes[name].classList.add('active');
+  }
+}
+
+function rev(el) {
+  if (el) el.classList.add('rev');
+}
+
+// ── Playwright録画用 API ──────────────────────
+// window.TVCM_START() を record-video.mjs が呼ぶ
+window.TVCM_READY = false;
+window.TVCM_START = function() {
+  window.TVCM_READY = true;
+  runTVCM();
+};
+
+// ── フォントロード待機後に READY セット ───────
+document.fonts.ready.then(() => {
+  // preload 完了通知
+  window.FONTS_LOADED = true;
+});
+
+function wait(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+async function runTVCM() {
+  // ── OPEN (0.0s ~ 2.75s) ──────────────────
+  showScene('open');
+  // カバー撤去
+  $('sc-cover').classList.add('hide');
+  await wait(80);
+  // 大テロップ先行表示 (主役)
+  $('open-telop').classList.add('show');
+  await wait(220);
+  // キャラ + 吹き出し (右下・補助)
+  $('dot-char').classList.add('pop');
+  await wait(350);
+  $('balloon').classList.add('show');
+
+  // act1_start 2.752s まで待つ
+  await wait((TP.act1_start - 0) * 1000 - 400);
+
+  // ── ACT1 逃さない ────────────────────────
+  showScene('act1');
+  rev($('a1-div'));
+  rev($('a1-num'));
+  await wait(150);
+
+  // act1_pain 6.073s
+  await wait((TP.act1_pain - TP.act1_start) * 1000 - 150);
+  rev($('a1-pain'));
+
+  // act1_tagline 9.152s
+  await wait((TP.act1_tagline - TP.act1_pain) * 1000 - 150);
+  rev($('a1-tagline'));
+
+  // act2_start 12.671s → sub と chip も出す
+  await wait((TP.act2_start - TP.act1_tagline) * 1000 - 800);
+  rev($('a1-sub'));
+  await wait(300);
+  rev($('a1-chip'));
+
+  // ── ACT2 掴む ────────────────────────────
+  await wait(500);
+  showScene('act2');
+  rev($('a2-div'));
+  rev($('a2-num'));
+  await wait(150);
+
+  // act2_pain 15.425s
+  await wait((TP.act2_pain - TP.act2_start) * 1000 - 150);
+  rev($('a2-pain'));
+
+  // act2_tagline 18.127s
+  await wait((TP.act2_tagline - TP.act2_pain) * 1000 - 150);
+  rev($('a2-tagline'));
+
+  // act3_start 22.352s
+  await wait((TP.act3_start - TP.act2_tagline) * 1000 - 800);
+  rev($('a2-sub'));
+  await wait(300);
+  rev($('a2-chip'));
+
+  // ── ACT3 離さない ────────────────────────
+  await wait(500);
+  showScene('act3');
+  rev($('a3-div'));
+  rev($('a3-num'));
+  await wait(150);
+
+  // act3_pain 24.698s
+  await wait((TP.act3_pain - TP.act3_start) * 1000 - 150);
+  rev($('a3-pain'));
+
+  // act3_tagline 27.264s
+  await wait((TP.act3_tagline - TP.act3_pain) * 1000 - 150);
+  rev($('a3-tagline'));
+
+  // close_start 31.939s
+  await wait((TP.close_start - TP.act3_tagline) * 1000 - 800);
+  rev($('a3-sub'));
+  await wait(300);
+  rev($('a3-chip'));
+
+  // ── CLOSE 締め ───────────────────────────
+  await wait(500);
+  showScene('close');
+  await wait(100);
+  rev($('cl-tagline'));
+
+  // close_tagline 34.825s
+  await wait((TP.close_tagline - TP.close_start) * 1000 - 150);
+  rev($('cl-dot'));
+  rev($('cl-logo'));
+
+  // close_end 41.116s
+  await wait((TP.close_end - TP.close_tagline) * 1000 - 800);
+  rev($('cl-sub'));
+  await wait(400);
+  rev($('cl-url'));
+
+  // 尺終了
+  await wait(1000);
+  window.TVCM_DONE = true;
+}
+</script>
+</body>
+</html>
