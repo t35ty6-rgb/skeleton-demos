@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter+Tight:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/@lottiefiles/lottie-player@2/dist/lottie-player.js"></script>
+<!-- Lottie removed: CSS bounce char for headless reliability -->
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -140,17 +140,81 @@ html, body {
 }
 .open-telop .hl { color: var(--green); }
 
-/* Lottie キャラ (右下) */
+/* CSS バウンスキャラ (右下) */
 .open-char-wrap {
   position: absolute;
   bottom: 60px;
   right: 80px;
-  width: 240px;
-  height: 240px;
+  width: 200px;
+  height: 200px;
   opacity: 0;
   transition: opacity 0.35s ease-out 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
 }
 .open-char-wrap.in { opacity: 1; }
+
+/* バウンスアニメ */
+@keyframes char-bounce {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  30%       { transform: translateY(-60px) scale(0.95, 1.08); }
+  50%       { transform: translateY(-72px) scale(0.92, 1.10); }
+  70%       { transform: translateY(-12px) scale(1.04, 0.96); }
+  80%       { transform: translateY(0px) scale(1.06, 0.94); }
+  90%       { transform: translateY(-8px) scale(0.99, 1.01); }
+}
+@keyframes shadow-pulse {
+  0%, 100% { transform: scaleX(1); opacity: 0.25; }
+  50%       { transform: scaleX(0.55); opacity: 0.10; }
+}
+
+.char-body {
+  width: 120px;
+  height: 120px;
+  background: var(--green);
+  border-radius: 50%;
+  position: relative;
+  animation: char-bounce 1.4s cubic-bezier(.28,.84,.42,1) infinite;
+  animation-delay: 0.3s;
+  flex-shrink: 0;
+}
+/* 目 */
+.char-body::before, .char-body::after {
+  content: '';
+  position: absolute;
+  background: #fff;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  top: 38px;
+}
+.char-body::before { left: 28px; }
+.char-body::after  { right: 28px; }
+/* 口 */
+.char-mouth {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 18px;
+  border: 4px solid #fff;
+  border-top: none;
+  border-radius: 0 0 40px 40px;
+}
+/* 影 */
+.char-shadow {
+  width: 90px;
+  height: 14px;
+  background: rgba(11,26,42,0.18);
+  border-radius: 50%;
+  margin-top: 8px;
+  animation: shadow-pulse 1.4s cubic-bezier(.28,.84,.42,1) infinite;
+  animation-delay: 0.3s;
+  flex-shrink: 0;
+}
 
 /* 吹き出し */
 .balloon {
@@ -413,17 +477,10 @@ html, body {
     <span id="open-t2" style="display:block;opacity:0;transform:translateY(50px);transition:opacity .28s ease-out .06s,transform .5s cubic-bezier(.68,-0.55,.27,1.55) .06s">こんな悩み<span class="hl">ない?</span></span>
   </div>
 
-  <!-- Lottie キャラ (右下) -->
+  <!-- CSS バウンスキャラ (右下) -->
   <div class="open-char-wrap" id="open-char">
-    <!-- Lottie: バウンスするフレンドリーキャラ CDN 経由 -->
-    <lottie-player
-      src="https://assets10.lottiefiles.com/packages/lf20_kxsd2ytq.json"
-      background="transparent"
-      speed="1"
-      loop
-      autoplay
-      style="width:240px;height:240px;"
-    ></lottie-player>
+    <div class="char-body"><div class="char-mouth"></div></div>
+    <div class="char-shadow"></div>
   </div>
 
   <div class="balloon kin" id="balloon">うんうん、あるある</div>
