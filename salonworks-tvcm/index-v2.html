@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920,initial-scale=1">
+<title>Salonworks TVCM v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter+Tight:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@lottiefiles/lottie-player@2/dist/lottie-player.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --green:    #06C755;
+  --green-d:  #04A042;
+  --green-t:  #E7F8ED;
+  --pink:     #FF1FA1;
+  --pink-t:   #FFE6F3;
+  --blue:     #0EA5E9;
+  --blue-t:   #E0F2FE;
+  --ink:      #0B1A2A;
+  --ink2:     #2D4255;
+  --ink3:     #6B7F90;
+  --bg:       #FFFFFF;
+  --fBody:    'Noto Sans JP','Hiragino Sans','Yu Gothic',system-ui,sans-serif;
+  --fNum:     'Inter Tight','Inter',system-ui,sans-serif;
+}
+
+html, body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: var(--fBody);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "palt" 1;
+}
+
+/* ── SCENE システム ──────────────────────────── */
+.scene {
+  position: absolute;
+  inset: 0;
+  width: 1920px;
+  height: 1080px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+}
+.scene.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── キネティックタイポ ベース ────────────────
+   spring: cubic-bezier(.68,-0.55,.27,1.55)
+   スムーズ: cubic-bezier(.2,.8,.4,1)
+──────────────────────────────────────────── */
+.kin {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.25s ease-out, transform 0.45s cubic-bezier(.68,-0.55,.27,1.55);
+  will-change: transform, opacity;
+}
+.kin.in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 文字1枚ずつ飛び込む (.letter-wrap で wrap) */
+.letter {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(60px) scale(0.7);
+  transition: opacity 0.2s ease-out, transform 0.4s cubic-bezier(.68,-0.55,.27,1.55);
+}
+.letter.in {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* スケールポップ */
+.pop-scale {
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.2s ease-out, transform 0.45s cubic-bezier(.68,-0.55,.27,1.55);
+}
+.pop-scale.in {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ── COVER ───────────────────────────────── */
+#sc-cover {
+  background: var(--bg);
+  z-index: 99999;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.3s ease-out;
+}
+#sc-cover.hide {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── SC-OPEN ──────────────────────────────
+   白地 → 大テロップ中央 + Lottieキャラ右
+────────────────────────────────────────── */
+#sc-open {
+  background: var(--bg);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.open-kicker {
+  font-family: var(--fNum);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 32px;
+}
+
+.open-telop {
+  font-family: var(--fBody);
+  font-size: 100px;
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: -0.045em;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+  position: relative;
+  z-index: 1;
+}
+.open-telop .hl { color: var(--green); }
+
+/* Lottie キャラ (右下) */
+.open-char-wrap {
+  position: absolute;
+  bottom: 60px;
+  right: 80px;
+  width: 240px;
+  height: 240px;
+  opacity: 0;
+  transition: opacity 0.35s ease-out 0.2s;
+}
+.open-char-wrap.in { opacity: 1; }
+
+/* 吹き出し */
+.balloon {
+  position: absolute;
+  bottom: 310px;
+  right: 60px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--fBody);
+  font-size: 20px;
+  font-weight: 700;
+  padding: 14px 24px;
+  border-radius: 14px;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(8px) scale(0.9);
+  transition: opacity 0.2s ease-out 0.4s, transform 0.3s cubic-bezier(.2,.8,.4,1) 0.4s;
+}
+.balloon.in {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.balloon::after {
+  content: '';
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 10px solid transparent;
+  border-top-color: var(--ink);
+}
+
+/* ── ACT 共通: UI フルスクリーン構図 ──────
+   背景=UI スクリーンショット (Ken Burns)
+   前面=テキストオーバーレイ (左下 or 中央下)
+────────────────────────────────────────── */
+.act-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.act-bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: left top;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+/* Ken Burns */
+@keyframes kenburns-1 {
+  from { transform: scale(1.0) translate(0, 0); }
+  to   { transform: scale(1.12) translate(-1%, -1%); }
+}
+@keyframes kenburns-2 {
+  from { transform: scale(1.08) translate(-1%, 0); }
+  to   { transform: scale(1.0) translate(1%, -1%); }
+}
+@keyframes kenburns-3 {
+  from { transform: scale(1.0) translate(0, -1%); }
+  to   { transform: scale(1.10) translate(-1%, 1%); }
+}
+.kb-1 { animation: kenburns-1 10s ease-out forwards; }
+.kb-2 { animation: kenburns-2 10s ease-out forwards; }
+.kb-3 { animation: kenburns-3 10s ease-out forwards; }
+
+/* UI 上のダークグラデ (テキスト可読性) */
+.act-overlay-grad {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* 左 2/3 を半透明ダーク */
+.act-overlay-left {
+  background: linear-gradient(to right,
+    rgba(11,26,42,0.88) 0%,
+    rgba(11,26,42,0.78) 40%,
+    rgba(11,26,42,0.30) 70%,
+    rgba(11,26,42,0.00) 100%
+  );
+}
+/* 下部 バー */
+.act-overlay-bottom {
+  background: linear-gradient(to top,
+    rgba(11,26,42,0.70) 0%,
+    rgba(11,26,42,0.0) 30%
+  );
+}
+
+/* テキストブロック (左列) */
+.act-copy {
+  position: absolute;
+  left: 100px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 840px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.act-num-label {
+  font-family: var(--fNum);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 20px;
+}
+
+.act-pain-txt {
+  font-family: var(--fBody);
+  font-size: 32px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.70);
+  line-height: 1.7;
+  margin-bottom: 28px;
+}
+
+.act-tagline-txt {
+  font-family: var(--fBody);
+  font-size: 68px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.18;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  margin-bottom: 32px;
+}
+.act-tagline-txt .hl { color: var(--green); }
+#sc-act1 .act-tagline-txt .hl { color: #FF6EB4; }
+#sc-act2 .act-tagline-txt .hl { color: #5AC8FA; }
+#sc-act3 .act-tagline-txt .hl { color: var(--green); }
+
+.act-sub-txt {
+  font-family: var(--fBody);
+  font-size: 22px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.65;
+}
+
+/* 右側 チップ (UI 上) */
+.act-badge {
+  position: absolute;
+  top: 60px;
+  right: 60px;
+  background: rgba(6,199,85,0.92);
+  color: #fff;
+  font-family: var(--fNum);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 10px 26px;
+  border-radius: 100px;
+  backdrop-filter: blur(8px);
+}
+
+/* ── SC-CLOSE ─────────────────────────────
+   GREEN 背景 + 白テロップ + 三連語 + ロゴ
+────────────────────────────────────────── */
+#sc-close {
+  background: var(--green);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.close-three {
+  display: flex;
+  align-items: center;
+  gap: 60px;
+  margin-bottom: 56px;
+}
+.close-three-item {
+  font-family: var(--fBody);
+  font-size: 80px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.close-three-sep {
+  font-family: var(--fNum);
+  font-size: 48px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.5);
+  line-height: 1;
+}
+
+.close-dot {
+  width: 100px;
+  height: 100px;
+  background: rgba(255,255,255,0.22);
+  border-radius: 50%;
+  margin: 0 auto 40px;
+  position: relative;
+  flex-shrink: 0;
+}
+.close-dot::before, .close-dot::after {
+  content: '';
+  position: absolute;
+  background: #fff;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  top: 32px;
+}
+.close-dot::before { left: 24px; }
+.close-dot::after  { right: 24px; }
+
+.close-logo-txt {
+  font-family: var(--fBody);
+  font-size: 56px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.02em;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.close-sub-txt {
+  font-family: var(--fBody);
+  font-size: 22px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.80);
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+/* ── トランジション: シーン切替 フラッシュ ── */
+#flash {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 99998;
+  transition: opacity 0.08s ease-out;
+}
+#flash.on { opacity: 0.55; }
+</style>
+</head>
+<body>
+
+<!-- FLASH エフェクト -->
+<div id="flash"></div>
+
+<!-- ── COVER ──────────────────────────────── -->
+<div id="sc-cover" class="scene active"></div>
+
+<!-- ── SC-OPEN ────────────────────────────── -->
+<div id="sc-open" class="scene">
+  <div class="open-kicker kin" id="open-kicker">Salonworks</div>
+  <div class="open-telop" id="open-telop">
+    <span id="open-t1" style="display:block;opacity:0;transform:translateY(50px);transition:opacity .28s ease-out,transform .5s cubic-bezier(.68,-0.55,.27,1.55)">サロン経営、</span>
+    <span id="open-t2" style="display:block;opacity:0;transform:translateY(50px);transition:opacity .28s ease-out .06s,transform .5s cubic-bezier(.68,-0.55,.27,1.55) .06s">こんな悩み<span class="hl">ない?</span></span>
+  </div>
+
+  <!-- Lottie キャラ (右下) -->
+  <div class="open-char-wrap" id="open-char">
+    <!-- Lottie: バウンスするフレンドリーキャラ CDN 経由 -->
+    <lottie-player
+      src="https://assets10.lottiefiles.com/packages/lf20_kxsd2ytq.json"
+      background="transparent"
+      speed="1"
+      loop
+      autoplay
+      style="width:240px;height:240px;"
+    ></lottie-player>
+  </div>
+
+  <div class="balloon kin" id="balloon">うんうん、あるある</div>
+</div>
+
+<!-- ── SC-ACT1 逃さない ─────────────────── -->
+<div id="sc-act1" class="scene">
+  <div class="act-bg">
+    <img src="assets/screenshot-04-deliver-pick.png" class="kb-1" alt="お誘い配信">
+    <div class="act-overlay-grad act-overlay-left"></div>
+    <div class="act-overlay-grad act-overlay-bottom"></div>
+  </div>
+  <div class="act-copy">
+    <div class="act-num-label kin" id="a1-num">ACT 01 · RETAIN</div>
+    <div class="act-pain-txt kin" id="a1-pain">来てくれたお客さまが、次、来なくなる。</div>
+    <div class="act-tagline-txt" id="a1-tagline">
+      <span id="a1-t1" style="display:block;opacity:0;transform:translateY(40px);transition:opacity .25s ease-out,transform .45s cubic-bezier(.68,-0.55,.27,1.55)">一度掴んだお客様は、</span>
+      <span id="a1-t2" style="display:block;opacity:0;transform:translateY(40px);transition:opacity .25s ease-out .06s,transform .45s cubic-bezier(.68,-0.55,.27,1.55) .06s"><span class="hl">二度と逃さない。</span></span>
+    </div>
+    <div class="act-sub-txt kin" id="a1-sub">AIが来店間隔・購買履歴など4条件で、自動配信。</div>
+  </div>
+  <div class="act-badge kin" id="a1-badge">AI 自動配信</div>
+</div>
+
+<!-- ── SC-ACT2 掴む ──────────────────────── -->
+<div id="sc-act2" class="scene">
+  <div class="act-bg">
+    <img src="assets/screenshot-02-karte-unified.png" class="kb-2" alt="統合カルテ">
+    <div class="act-overlay-grad act-overlay-left"></div>
+    <div class="act-overlay-grad act-overlay-bottom"></div>
+  </div>
+  <div class="act-copy">
+    <div class="act-num-label kin" id="a2-num">ACT 02 · CAPTURE</div>
+    <div class="act-pain-txt kin" id="a2-pain">お客さまのこと、全部覚えてますか?</div>
+    <div class="act-tagline-txt" id="a2-tagline">
+      <span id="a2-t1" style="display:block;opacity:0;transform:translateY(40px);transition:opacity .25s ease-out,transform .45s cubic-bezier(.68,-0.55,.27,1.55)">お客様の全部を、</span>
+      <span id="a2-t2" style="display:block;opacity:0;transform:translateY(40px);transition:opacity .25s ease-out .06s,transform .45s cubic-bezier(.68,-0.55,.27,1.55) .06s">一人残らず<span class="hl">掴む。</span></span>
+    </div>
+    <div class="act-sub-txt kin" id="a2-sub">LINEで統合カルテ。来店・購買・会話が1画面に。</div>
+  </div>
+  <div class="act-badge kin" id="a2-badge">統合カルテ</div>
+</div>
+
+<!-- ── SC-ACT3 離さない ──────────────────── -->
+<div id="sc-act3" class="scene">
+  <div class="act-bg">
+    <img src="assets/screenshot-01-dashboard.png" class="kb-3" alt="ダッシュボード">
+    <div class="act-overlay-grad act-overlay-left"></div>
+    <div class="act-overlay-grad act-overlay-bottom"></div>
+  </div>
+  <div class="act-copy">
+    <div class="act-num-label kin" id="a3-num">ACT 03 · LTV</div>
+    <div class="act-pain-txt kin" id="a3-pain">お客様が離れてから気づいても遅い。</div>
+    <div class="act-tagline-txt" id="a3-tagline">
+      <span id="a3-t1" style="display:block;opacity:0;transform:translateY(40px);transition:opacity .25s ease-out,transform .45s cubic-bezier(.68,-0.55,.27,1.55)">お客様が離れる前に、</span>
+      <span id="a3-t2" style="display:block;opacity:0;transform:translateY(40px);transition:opacity .25s ease-out .06s,transform .45s cubic-bezier(.68,-0.55,.27,1.55) .06s"><span class="hl">次を差す。</span></span>
+    </div>
+    <div class="act-sub-txt kin" id="a3-sub">LTV 130〜150%<span style="font-size:0.4em;color:rgba(255,255,255,0.5);vertical-align:super;font-weight:400">※導入実績ベース</span>。それが Salonworks。</div>
+  </div>
+  <div class="act-badge kin" id="a3-badge">LTV +30〜50%</div>
+</div>
+
+<!-- ── SC-CLOSE 締め ──────────────────────── -->
+<div id="sc-close" class="scene">
+  <div id="close-three" class="close-three">
+    <span class="close-three-item kin" id="cl-1">逃さず</span>
+    <span class="close-three-sep kin" id="cl-sep1">·</span>
+    <span class="close-three-item kin" id="cl-2">掴み</span>
+    <span class="close-three-sep kin" id="cl-sep2">·</span>
+    <span class="close-three-item kin" id="cl-3">離さない。</span>
+  </div>
+  <div class="pop-scale" id="cl-dot"><div class="close-dot"></div></div>
+  <div class="close-logo-txt kin" id="cl-logo">Salonworks</div>
+  <div class="close-sub-txt kin" id="cl-sub">LINE 1本で、集客・予約・EC・カルテ・再来店</div>
+</div>
+
+<script>
+// ── タイムポイント (v2 Chirp3-HD-Kore 実測値) ──
+const TP = {
+  open_main:    0.000,
+  act1_pain:    3.789,
+  act1_tagline: 7.095,
+  act1_sub:     10.245,
+  act2_pain:    15.993,
+  act2_tagline: 18.960,
+  act2_sub:     22.449,
+  act3_pain:    28.929,
+  act3_tagline: 32.627,
+  act3_sub:     35.463,
+  close_tagline:40.741,
+  close_logo:   43.760,
+  total:        51.228, // close_logo 7.47s まで
+};
+
+const $ = id => document.getElementById(id);
+
+// ── シーン管理 ──────────────────────────────────
+let currentScene = null;
+function showScene(name) {
+  if (currentScene) {
+    const prev = document.getElementById('sc-' + currentScene);
+    if (prev) prev.classList.remove('active');
+  }
+  currentScene = name;
+  const next = document.getElementById('sc-' + name);
+  if (next) next.classList.add('active');
+}
+
+// ── フラッシュ ──────────────────────────────────
+function flash(ms = 80) {
+  const el = $('flash');
+  el.classList.add('on');
+  return new Promise(r => setTimeout(() => { el.classList.remove('on'); r(); }, ms));
+}
+
+// ── kin reveal ──────────────────────────────────
+function kin(el) {
+  if (!el) return;
+  el.classList.add('in');
+}
+function popIn(el) {
+  if (!el) return;
+  el.classList.add('in');
+}
+
+// ── line slide-in (タグライン 2行) ──────────────
+function lineIn(el) {
+  if (!el) return;
+  el.style.opacity = '1';
+  el.style.transform = 'translateY(0)';
+}
+
+// ── wait ──────────────────────────────────────
+function wait(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+// ── Playwright 録画用 API ──────────────────────
+window.FONTS_LOADED = false;
+window.TVCM_READY = false;
+window.TVCM_DONE = false;
+
+window.TVCM_START = function() {
+  window.TVCM_READY = true;
+  runTVCM();
+};
+
+document.fonts.ready.then(() => {
+  window.FONTS_LOADED = true;
+});
+
+// ── メインシーケンス ──────────────────────────
+async function runTVCM() {
+
+  // ━━ OPEN ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  showScene('open');
+  $('sc-cover').classList.add('hide');
+  await wait(100);
+
+  // kicker 飛び込み
+  kin($('open-kicker'));
+  await wait(180);
+
+  // 大テロップ 2行 spring
+  lineIn($('open-t1'));
+  await wait(100);
+  lineIn($('open-t2'));
+
+  // Lottie キャラ 登場
+  await wait(300);
+  $('open-char').classList.add('in');
+
+  // 吹き出し
+  await wait(600);
+  $('balloon').classList.add('in');
+
+  // act1_pain: 3.789s → 今は 0s スタートなので 3.789 * 1000 - 前処理分
+  // ナレーション全体時刻ベースで計算 (シーン内の相対時間)
+  // OPEN が 0.0s スタート、act1_pain が 3.789s
+  await wait(TP.act1_pain * 1000 - 1100); // 先行 1.1s でシーン切替
+
+  // ━━ ACT1 逃さない ━━━━━━━━━━━━━━━━━━━━━━━━━━
+  await flash(60);
+  showScene('act1');
+  await wait(80);
+
+  // num + pain 同時
+  kin($('a1-num'));
+  await wait(100);
+  kin($('a1-pain'));
+
+  // act1_tagline: 7.095s
+  const a1TLWait = (TP.act1_tagline - TP.act1_pain) * 1000 - 200;
+  await wait(a1TLWait);
+  lineIn($('a1-t1'));
+  await wait(80);
+  lineIn($('a1-t2'));
+
+  // act1_sub: 10.245s
+  const a1SubWait = (TP.act1_sub - TP.act1_tagline) * 1000 - 300;
+  await wait(a1SubWait);
+  kin($('a1-sub'));
+  await wait(400);
+  kin($('a1-badge'));
+
+  // act2_pain: 15.993s
+  const a2PainWait = (TP.act2_pain - TP.act1_sub) * 1000 - 1100;
+  await wait(a2PainWait);
+
+  // ━━ ACT2 掴む ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  await flash(60);
+  showScene('act2');
+  await wait(80);
+  kin($('a2-num'));
+  await wait(100);
+  kin($('a2-pain'));
+
+  const a2TLWait = (TP.act2_tagline - TP.act2_pain) * 1000 - 200;
+  await wait(a2TLWait);
+  lineIn($('a2-t1'));
+  await wait(80);
+  lineIn($('a2-t2'));
+
+  const a2SubWait = (TP.act2_sub - TP.act2_tagline) * 1000 - 300;
+  await wait(a2SubWait);
+  kin($('a2-sub'));
+  await wait(400);
+  kin($('a2-badge'));
+
+  // act3_pain: 28.929s
+  const a3PainWait = (TP.act3_pain - TP.act2_sub) * 1000 - 1100;
+  await wait(a3PainWait);
+
+  // ━━ ACT3 離さない ━━━━━━━━━━━━━━━━━━━━━━━━━━
+  await flash(60);
+  showScene('act3');
+  await wait(80);
+  kin($('a3-num'));
+  await wait(100);
+  kin($('a3-pain'));
+
+  const a3TLWait = (TP.act3_tagline - TP.act3_pain) * 1000 - 200;
+  await wait(a3TLWait);
+  lineIn($('a3-t1'));
+  await wait(80);
+  lineIn($('a3-t2'));
+
+  const a3SubWait = (TP.act3_sub - TP.act3_tagline) * 1000 - 300;
+  await wait(a3SubWait);
+  kin($('a3-sub'));
+  await wait(400);
+  kin($('a3-badge'));
+
+  // close_tagline: 40.741s
+  const clWait = (TP.close_tagline - TP.act3_sub) * 1000 - 1100;
+  await wait(clWait);
+
+  // ━━ CLOSE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  await flash(60);
+  showScene('close');
+  await wait(80);
+
+  // 三連語 順に飛び込み
+  kin($('cl-1'));
+  await wait(80);
+  kin($('cl-sep1'));
+  await wait(60);
+  kin($('cl-2'));
+  await wait(80);
+  kin($('cl-sep2'));
+  await wait(60);
+  kin($('cl-3'));
+
+  // close_logo: 43.760s
+  const clLogoWait = (TP.close_logo - TP.close_tagline) * 1000 - 400;
+  await wait(clLogoWait);
+  popIn($('cl-dot'));
+  await wait(100);
+  kin($('cl-logo'));
+  await wait(300);
+  kin($('cl-sub'));
+
+  // 末尾バッファ
+  await wait(2000);
+  window.TVCM_DONE = true;
+}
+</script>
+</body>
+</html>
