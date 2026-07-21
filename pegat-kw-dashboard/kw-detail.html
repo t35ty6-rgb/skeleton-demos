@@ -299,7 +299,14 @@
   .summary .cell.dead .lbl{color:#aaa;}
   .summary .cell.insuff .val{color:#aaa;}
   /* ── レイアウト */
-  .wrap{display:grid;grid-template-columns:520px 1fr;height:100%;}
+  .wrap{display:grid;grid-template-columns:var(--split-left,520px) 6px 1fr;height:100%;}
+  /* ── ドラッグ resizer */
+  .resizer{background:var(--gray-3);cursor:col-resize;position:relative;transition:background 0.15s;}
+  .resizer:hover,.resizer.dragging{background:var(--orange);}
+  .resizer::before{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:2px;height:32px;background:#fff;border-radius:1px;opacity:0.6;pointer-events:none;}
+  .resizer:hover::before,.resizer.dragging::before{opacity:1;}
+  body.resizing{cursor:col-resize;user-select:none;}
+  body.resizing *{cursor:col-resize !important;user-select:none !important;}
   /* ── 左ペイン: KW一覧 */
   .left{border-right:1px solid var(--gray-3);background:#fff;display:flex;flex-direction:column;min-height:0;}
   .filters{padding:8px;background:var(--gray-1);border-bottom:1px solid var(--gray-3);display:flex;flex-direction:column;gap:6px;}
@@ -590,6 +597,8 @@
       </table>
     </div>
   </div>
+
+  <div class="resizer" id="split-resizer" role="separator" aria-orientation="vertical" title="ドラッグで幅調整"></div>
 
   <div class="right" id="right">
     <div class="empty">← 左からKWを選んでください</div>
@@ -964,6 +973,57 @@
 </main>
 
 <script>
+// ── 左右パネル ドラッグリサイザー
+(function initSplitResizer(){
+  const KEY = 'pegat.kwdetail.splitLeftPx';
+  const MIN = 280, MAX_RATIO = 0.85;
+  const saved = parseInt(localStorage.getItem(KEY), 10);
+  if(!isNaN(saved) && saved >= MIN){
+    document.documentElement.style.setProperty('--split-left', saved + 'px');
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const resizer = document.getElementById('split-resizer');
+    const wrap = resizer?.closest('.wrap');
+    if(!resizer || !wrap) return;
+    let dragging = false;
+    const onMove = (e) => {
+      if(!dragging) return;
+      const rect = wrap.getBoundingClientRect();
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      const max = Math.floor(rect.width * MAX_RATIO);
+      const w = Math.max(MIN, Math.min(max, Math.round(x)));
+      document.documentElement.style.setProperty('--split-left', w + 'px');
+    };
+    const onUp = () => {
+      if(!dragging) return;
+      dragging = false;
+      resizer.classList.remove('dragging');
+      document.body.classList.remove('resizing');
+      const cur = getComputedStyle(document.documentElement).getPropertyValue('--split-left').trim();
+      const px = parseInt(cur, 10);
+      if(!isNaN(px)) localStorage.setItem(KEY, String(px));
+      window.dispatchEvent(new Event('resize'));
+    };
+    const onDown = (e) => {
+      dragging = true;
+      resizer.classList.add('dragging');
+      document.body.classList.add('resizing');
+      e.preventDefault();
+    };
+    resizer.addEventListener('mousedown', onDown);
+    resizer.addEventListener('touchstart', onDown, {passive:false});
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, {passive:false});
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchend', onUp);
+    resizer.addEventListener('dblclick', () => {
+      document.documentElement.style.setProperty('--split-left', '520px');
+      localStorage.removeItem(KEY);
+      window.dispatchEvent(new Event('resize'));
+    });
+  });
+})();
+
 const DATA_URL = './data/kw-daily.json';
 
 let DATA = null;
