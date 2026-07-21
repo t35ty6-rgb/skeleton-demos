@@ -967,7 +967,7 @@
       <div style="margin:0 0 18px;padding:0 0 16px;border-bottom:1px solid #e8e2d4;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;">
         <div>
           <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:6px;">New Consultation</div>
-          <h1 style="font-family:'Noto Serif JP',serif;font-size:28px;font-weight:700;letter-spacing:0.02em;margin:0 0 6px;color:#1f2a3f;">新規相談</h1>
+          <h1 style="font-family:'Noto Sans JP',serif;font-size:28px;font-weight:700;letter-spacing:0.02em;margin:0 0 6px;color:#1f2a3f;">新規相談</h1>
           <p style="color:#6b7280;font-size:13px;margin:0;line-height:1.6;">LINE — アンケート — 候補日 — Zoom面談 — 完了 までの進行状況</p>
         </div>
         <!-- ★ 急遽対面録画 (予約不要・お客様が突然来た時用) -->
@@ -991,7 +991,7 @@
           </div>
           <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:8px;">
             <div style="font-size:42px;font-weight:800;font-family:'Inter',sans-serif;color:${heroColor.fg};line-height:1;letter-spacing:-0.02em;">${hero.count}<span style="font-size:14px;color:#6b7280;font-weight:600;margin-left:4px;">${hero.unit}</span></div>
-            <div style="font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:#1f2a3f;line-height:1.35;">${hero.title}</div>
+            <div style="font-family:'Noto Sans JP',serif;font-size:18px;font-weight:600;color:#1f2a3f;line-height:1.35;">${hero.title}</div>
           </div>
           <div style="font-size:12.5px;color:#6b7280;line-height:1.6;letter-spacing:0.02em;">${hero.sub}</div>
         </div>
@@ -1002,14 +1002,14 @@
           <span style="width:6px;height:6px;background:${accents.ok.dot};border-radius:50%;display:inline-block;"></span>
           Status
         </div>
-        <div style="font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;color:#1f2a3f;">対応待ちはありません</div>
+        <div style="font-family:'Noto Sans JP',serif;font-size:18px;font-weight:600;color:#1f2a3f;">対応待ちはありません</div>
         <div style="font-size:12.5px;color:#6b7280;line-height:1.6;">新しい LINE 流入があれば自動でここに表示されます</div>
       </div>`}
 
       <div style="display:flex;align-items:baseline;justify-content:space-between;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #e8e2d4;">
         <div>
           <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">Pipeline</div>
-          <h2 style="font-family:'Noto Serif JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">FP 作業フロー</h2>
+          <h2 style="font-family:'Noto Sans JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">FP 作業フロー</h2>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:14px;">
@@ -1039,7 +1039,7 @@
         <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #e8e2d4;">
           <div>
             <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">Action Required</div>
-            <h2 style="font-family:'Noto Serif JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">候補日確定 待ち ${pendingConfirm > 0 ? `<span style="font-size:11px;background:#7a1530;color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;font-family:'Inter',sans-serif;font-weight:700;letter-spacing:0.04em;">${pendingConfirm} 名</span>` : ''}</h2>
+            <h2 style="font-family:'Noto Sans JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">候補日確定 待ち ${pendingConfirm > 0 ? `<span style="font-size:11px;background:#7a1530;color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;font-family:'Inter',sans-serif;font-weight:700;letter-spacing:0.04em;">${pendingConfirm} 名</span>` : ''}</h2>
           </div>
           <button id="fp-toggle-cal" style="font-size:11.5px;padding:8px 14px;background:#fff;border:1px solid #c19a3a;border-radius:5px;cursor:pointer;font-family:inherit;color:#5e4d1a;font-weight:700;letter-spacing:0.04em;">自分の Google カレンダーを並べて表示</button>
         </div>
@@ -1051,7 +1051,7 @@
         <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #e8e2d4;">
           <div>
             <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">Upcoming &amp; Active</div>
-            <h2 style="font-family:'Noto Serif JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">Zoom 打ち合わせ ${upcomingZoomCount > 0 ? `<span style="font-size:11px;background:#1e3a5f;color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;font-family:'Inter',sans-serif;font-weight:700;letter-spacing:0.04em;">${upcomingZoomCount} 件 予約あり</span>` : ''}</h2>
+            <h2 style="font-family:'Noto Sans JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">Zoom 打ち合わせ ${upcomingZoomCount > 0 ? `<span style="font-size:11px;background:#1e3a5f;color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;font-family:'Inter',sans-serif;font-weight:700;letter-spacing:0.04em;">${upcomingZoomCount} 件 予約あり</span>` : ''}</h2>
           </div>
           <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:#6b7280;">
             <span style="letter-spacing:0.05em;">並び順:</span>
@@ -1071,7 +1071,7 @@
       <section class="board-section" id="section-aftercare" style="margin-top:36px;">
         <div style="margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #e8e2d4;">
           <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">Stuck / Re-engage</div>
-          <h2 style="font-family:'Noto Serif JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">対応漏れ ${aftercare.length > 0 ? `<span style="font-size:11px;background:#9a5a18;color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;font-family:'Inter',sans-serif;font-weight:700;letter-spacing:0.04em;">${aftercare.length} 名</span>` : ''}</h2>
+          <h2 style="font-family:'Noto Sans JP',serif;font-size:18px;margin:0;font-weight:600;color:#1f2a3f;">対応漏れ ${aftercare.length > 0 ? `<span style="font-size:11px;background:#9a5a18;color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;font-family:'Inter',sans-serif;font-weight:700;letter-spacing:0.04em;">${aftercare.length} 名</span>` : ''}</h2>
         </div>
         <p style="color:#6b7280;font-size:12.5px;margin:0 0 18px;line-height:1.65;letter-spacing:0.02em;">アンケート途中・候補日提示後・面談キャンセル等で<strong>途中で止まっている方</strong> / LINEで追撃メッセージを送りましょう</p>
         <div id="aftercare-list">
@@ -1159,7 +1159,7 @@
     ov.innerHTML = `
       <div style="background:#fff;border-radius:16px;max-width:480px;width:92%;padding:28px;box-shadow:0 32px 80px rgba(0,0,0,0.4);">
         <div style="font-size:11px;font-weight:800;color:#9A5A18;letter-spacing:0.14em;margin-bottom:6px;">QUICK START</div>
-        <h2 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 6px;font-family:'Noto Serif JP',serif;">急遽 面談スタート</h2>
+        <h2 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 6px;font-family:'Noto Sans JP',serif;">急遽 面談スタート</h2>
         <p style="font-size:13px;color:#6b7280;line-height:1.65;margin:0 0 18px;">予約なしで お客様から相談が入った時はこちら。 <strong style="color:#9A5A18;">Zoom リンクを 即発行 して 双方参加</strong> するか、 <strong style="color:#1F2A3F;">対面で 録音だけ する</strong> かを 選んで 開始してください。</p>
 
         <label style="display:block;font-size:11.5px;font-weight:700;color:#374151;letter-spacing:0.04em;margin-bottom:6px;">お客様を選択</label>
@@ -2510,7 +2510,7 @@
       ov.innerHTML = `
         <div style="background:#fff;border-radius:14px;max-width:520px;width:92%;padding:28px 32px;box-shadow:0 28px 80px rgba(0,0,0,0.4);">
           <div style="display:inline-flex;align-items:center;gap:8px;background:#FEF3C7;color:#92400E;font-size:11px;font-weight:800;padding:5px 12px;border-radius:99px;letter-spacing:0.1em;margin-bottom:14px;">⚠ 録画準備 に 問題</div>
-          <h2 style="font-family:'Noto Serif JP',serif;font-size:19px;font-weight:700;color:#111827;margin:0 0 8px;line-height:1.45;">${heading}</h2>
+          <h2 style="font-family:'Noto Sans JP',serif;font-size:19px;font-weight:700;color:#111827;margin:0 0 8px;line-height:1.45;">${heading}</h2>
           <p style="font-size:13px;color:#6b7280;line-height:1.75;margin:0 0 18px;">大丈夫です。 <strong style="color:#111827;">下のどれかを選んで そのまま 面談に進めます</strong>。 設定の修正は あとで OK。</p>
 
           <!-- Option 1: マイクだけで録音 (大本命) -->
@@ -2680,7 +2680,7 @@
       <div style="background:#fff;border-radius:14px;padding:32px 40px;max-width:420px;width:90%;box-shadow:0 32px 80px rgba(0,0,0,0.5);text-align:center;">
         <div style="width:56px;height:56px;border:4px solid #E2E8F0;border-top-color:#C19A3A;border-radius:50%;margin:0 auto 18px;animation:fp-spin 0.9s linear infinite;"></div>
         <div style="font-size:11px;font-weight:800;color:#9A5A18;letter-spacing:0.14em;margin-bottom:6px;">QUICK ZOOM</div>
-        <div style="font-size:17px;font-weight:800;color:#111827;font-family:'Noto Serif JP',serif;margin-bottom:6px;">${escapeHtml(clientName)} 様 / Zoom 発行中…</div>
+        <div style="font-size:17px;font-weight:800;color:#111827;font-family:'Noto Sans JP',serif;margin-bottom:6px;">${escapeHtml(clientName)} 様 / Zoom 発行中…</div>
         <div style="font-size:12.5px;color:#6b7280;line-height:1.7;">Zoom Meeting を 作成 → お客様に LINE で URL 通知 → FP は host で 参加 します</div>
       </div>
       <style>@keyframes fp-spin { to { transform: rotate(360deg); } }</style>`;
@@ -2731,6 +2731,32 @@
 
     wait.remove();
 
+    // ★ 2026-07-17: Chrome拡張 が install 済 なら arm + Zoom タブ を 自動 open + 自動 録音開始
+    //   拡張 未 install なら 従来通り (arm のみ、 modal から window.open 手動)
+    const finalClientId = result.customerId || clientId;
+    let extAutoOpened = false;
+    try {
+      if (window.__fpTabRecorder && typeof window.armAndOpenZoom === 'function' && finalClientId && result.zoomUrl) {
+        // hostZoomUrl (FP先生 が host で 参加する URL) を 優先、 無ければ zoomUrl
+        const rawHostUrl = result.hostZoomUrl || result.startUrl || result.zoomUrl;
+        // ★ 2026-07-18 fix (qa FAIL C): /s/ (startUrl) は /wc/{id}/start に、 /j/ は /wc/join/{id} に 変換
+        //   前は 全部 /wc/join に していた が、 それだと FP先生 が host権限 なく 参加者 として 入る バグ
+        const forceWebUrl = (() => {
+          try {
+            const m = rawHostUrl.match(/\/(j|s)\/(\d+)([?&].*)?/);
+            if (!m) return rawHostUrl;
+            const u = new URL(rawHostUrl);
+            const isStart = m[1] === 's';
+            return `https://${u.host}/wc/${isStart ? m[2] + '/start' : 'join/' + m[2]}${m[3] || ''}`;
+          } catch (_) { return rawHostUrl; }
+        })();
+        extAutoOpened = window.armAndOpenZoom(finalClientId, clientName, window.currentTenantId, forceWebUrl);
+      } else if (typeof window.armTabRecorder === 'function' && finalClientId) {
+        // 従来 fallback (拡張 未 install)
+        window.armTabRecorder(finalClientId, clientName, window.currentTenantId);
+      }
+    } catch (e) { console.warn('extension arm failed:', e); }
+
     // 成功 → 結果モーダル — LINE 送信成否で 出し分け
     const ov = document.createElement('div');
     ov.id = 'fp-quick-zoom-result';
@@ -2745,9 +2771,11 @@
     const smsUrl = `sms:?body=${smsBody}`;
 
     ov.innerHTML = `
-      <div style="background:#fff;border-radius:14px;max-width:540px;width:100%;padding:28px 32px;box-shadow:0 32px 80px rgba(0,0,0,0.5);">
+      <div style="background:#fff;border-radius:14px;max-width:540px;width:100%;padding:28px 32px;box-shadow:0 32px 80px rgba(0,0,0,0.5);position:relative;">
+        <!-- ★ 2026-07-18 fix: 閉じる button 追加 (owner が modal 詰み 報告 — 下 の 「閉じる」 が scroll 下 で 見えない ケース 対策) -->
+        <button id="fp-qz-close-top" aria-label="閉じる" style="position:absolute;top:14px;right:14px;background:transparent;border:none;font-size:24px;line-height:1;color:#6B7280;cursor:pointer;padding:4px 8px;border-radius:6px;">×</button>
         <div style="display:inline-flex;align-items:center;gap:8px;background:#FBF5E3;color:#9A5A18;font-size:11px;font-weight:800;padding:5px 12px;border-radius:99px;letter-spacing:0.12em;margin-bottom:14px;">⚡ Zoom 発行完了</div>
-        <h2 style="font-family:'Noto Serif JP',serif;font-size:20px;font-weight:700;color:#111827;margin:0 0 6px;">${escapeHtml(clientName)} 様 と Zoom 開始</h2>
+        <h2 style="font-family:'Noto Sans JP',serif;font-size:20px;font-weight:700;color:#111827;margin:0 0 6px;">${escapeHtml(clientName)} 様 と Zoom 開始</h2>
 
         ${result.linePushed
           ? `<p style="font-size:12.5px;color:#6b7280;line-height:1.7;margin:0 0 16px;">下の <strong>「FPとして 参加」</strong> を 押すと 新タブで Zoom が起動。 お客様 にも すでに LINE で URL を 送信済 です。</p>
@@ -2763,6 +2791,22 @@
           </button>
           <div style="font-size:11px;color:#6B7280;margin-top:8px;line-height:1.55;">画面共有ダイアログで <strong>「Zoom タブ」 + 音声を共有</strong> を 選んで OK → 自動で 議事録 生成 されます</div>
         </div>
+
+        <!-- ★ Chrome拡張機能 install 済 の場合の別ルート案内 (AirPods等 で 相手の声が拾えない客向け) -->
+        ${window.__fpTabRecorder ? `
+          <div style="background:#ECFDF5;border:1.5px solid #10B981;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <span style="font-size:16px;">🧩</span>
+              <div style="font-size:10.5px;font-weight:800;color:#059669;letter-spacing:0.14em;">CHROME拡張で録音 (画面共有ダイアログ 不要)</div>
+            </div>
+            <div style="font-size:12.5px;color:#0F1729;line-height:1.65;margin-bottom:6px;">
+              ${escapeHtml(clientName)} さん を <b>拡張機能に arm済</b>。 上のZoom URL を 開いて、 <b>Zoom タブ の状態で 拡張機能アイコン (Chrome 右上) を 1回クリック</b> で 自動 録音開始します。
+            </div>
+            <div style="font-size:11px;color:#065F46;line-height:1.6;">
+              ✓ 顧客紐付け 済 &nbsp; ✓ AirPods でも 相手の声 拾える &nbsp; ✓ Zoom タブ 閉じたら 自動停止 → 議事録 生成
+            </div>
+          </div>
+        ` : ''}
 
         <!-- お客様用 URL 共有エリア -->
         ${result.linePushed ? `
@@ -2806,7 +2850,19 @@
       const w = document.getElementById('fp-qz-qr-wrap');
       if (w) w.style.display = w.style.display === 'none' ? 'block' : 'none';
     });
-    document.getElementById('fp-qz-close').addEventListener('click', () => ov.remove());
+    // ★ 2026-07-18 fix v2: 「× で 閉じれない」 owner 報告 対応。 event delegation で 全 button 型 close トリガー を 一括ハンドル
+    //   optional chain + delegation で 1つ でも throw しても 他 の close 手段 は 生きる
+    const _closeOv = () => { try { ov.remove(); } catch (_) {} };
+    ov.addEventListener('click', (e) => {
+      const t = e.target;
+      // 背景 click (overlay 本体) → 閉じる
+      if (t === ov) { _closeOv(); return; }
+      // 「閉じる」 button (下) / × button (右上) の どちらでも 閉じる
+      if (t.id === 'fp-qz-close' || t.id === 'fp-qz-close-top' || t.closest?.('#fp-qz-close, #fp-qz-close-top')) {
+        e.preventDefault(); e.stopPropagation(); _closeOv();
+      }
+    }, true);  // capture phase で 拾って 確実 に fire
+    document.addEventListener('keydown', function _esc(e) { if (e.key === 'Escape') { _closeOv(); document.removeEventListener('keydown', _esc); } });
     // ★ オーナーfb 2026-06-25: FPホストZoom入室 と 同時に startScreenRecording 起動
     //   ★ 2026-06-26 v.O fix: window.open を 先にすると user gesture 切れて Invalid state エラー
     //     → 画面共有ダイアログ先 → 許可後に startScreenRecording 内で Zoom を全画面で開く
@@ -2848,7 +2904,7 @@
     ov.innerHTML = `
       <div style="background:#fff;border-radius:14px;max-width:560px;width:100%;padding:28px 32px;box-shadow:0 28px 80px rgba(0,0,0,0.4);">
         <div style="display:inline-flex;align-items:center;gap:8px;background:#FBF5E3;color:#9A5A18;font-size:11px;font-weight:800;padding:5px 12px;border-radius:99px;letter-spacing:0.12em;margin-bottom:14px;">📝 メモ ONLY</div>
-        <h2 style="font-family:'Noto Serif JP',serif;font-size:19px;font-weight:700;color:#111827;margin:0 0 6px;">${escapeHtml(clientName)} 様 / 面談メモ</h2>
+        <h2 style="font-family:'Noto Sans JP',serif;font-size:19px;font-weight:700;color:#111827;margin:0 0 6px;">${escapeHtml(clientName)} 様 / 面談メモ</h2>
         <p style="font-size:12.5px;color:#6b7280;line-height:1.7;margin:0 0 14px;">面談中・面談後に メモを 書いてください。 保存すると 顧客カードに 残ります。</p>
         <textarea id="fp-memo-only-text" rows="12" placeholder="例:\n相談テーマ: 老後資金 / NISA\n論点: 月3万 積立 / 配偶者 控除\n次のアクション: 来月 候補日3つ 送る" style="width:100%;padding:14px 16px;font-size:13.5px;font-family:'Hiragino Sans',sans-serif;line-height:1.75;border:1.5px solid #E5E7EB;border-radius:8px;resize:vertical;box-sizing:border-box;"></textarea>
         <div style="display:flex;gap:10px;margin-top:18px;">
@@ -2885,35 +2941,107 @@
     });
   }
 
-  // ★ 2026-07-14 v11: Chrome拡張 (Zoom タブ音声レコーダー) から の 録音 blob 受信
-  //   content.js が postMessage で FP_RECORDING_DONE を 送って くる → 音声 を 既存 onRecordingComplete パイプライン に 流す
+  // ★ 2026-07-15 v11.1: Chrome拡張 (Zoom タブ音声レコーダー) から の 録音 blob 受信
+  //   content.js が postMessage で FP_RECORDING_DONE を 送ってくる → 音声 を 既存 onRecordingComplete パイプライン に 流す
+  //   meta.clientId が armed 済 なら その 顧客 の 議事録 として 保存、 なければ 「未分類」で 保存
   if (!window._fpTabRecorderListener) {
     window._fpTabRecorderListener = true;
     window.addEventListener('message', async (ev) => {
       if (ev.source !== window) return;
       const d = ev.data;
-      if (!d || d.source !== 'fp-tab-recorder' || d.type !== 'RECORDING_DONE') return;
+      if (!d || d.source !== 'fp-tab-recorder') return;
+
+      // 録音開始 通知 (badge 光っただけ の 場合、 UI 側 で 顧客名 トースト 出す)
+      if (d.type === 'RECORDING_STARTED') {
+        const p = d.payload || {};
+        try {
+          const t = document.createElement('div');
+          t.innerHTML = '● <b>録音開始</b>: ' + (p.clientName || '(顧客未指定)') + ' さん の Zoom タブ音声 を 収録中…';
+          t.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);background:#DC2626;color:#fff;padding:12px 22px;border-radius:99px;font-size:13px;font-weight:800;z-index:2147483647;box-shadow:0 12px 32px rgba(0,0,0,.35);';
+          document.body.appendChild(t);
+          setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .4s'; }, 3500);
+          setTimeout(() => t.remove(), 4000);
+        } catch(_) {}
+        return;
+      }
+
+      if (d.type !== 'RECORDING_DONE') return;
+
       const payload = d.payload || {};
-      console.log('[fp-tab-recorder] 受信:', payload.size, 'bytes,', Math.round(payload.durationMs / 1000), '秒');
+      const meta = payload.meta || {};
+      console.log('[fp-tab-recorder] 受信:', payload.size, 'bytes,', Math.round(payload.durationMs / 1000), '秒, clientId:', meta.clientId);
       try {
-        // base64 → Blob
         const bin = atob(payload.base64 || '');
         const arr = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
         const blob = new Blob([arr], { type: payload.mime || 'audio/webm' });
         const blobUrl = URL.createObjectURL(blob);
-        // bookingTs 新規発行 (拡張 起点 の 場合 は 客カルテ 未紐付 → 「未分類」 で 保存 → 後で UI で 紐付け)
-        const bookingTs = payload.meta?.bookingTs || (new Date().toISOString().replace(/[:.]/g, '-') + '-tabrec');
-        // トースト 通知
+
+        // ★ armed 済 なら 該当顧客 の bookingTs を 発行 して 顧客紐付け保証
+        //   fp-quick-inperson-meta に事前登録 → onRecordingComplete が それを見て 顧客ID解決
+        const bookingTs = meta.bookingTs || (new Date().toISOString().replace(/[:.]/g, '-') + '-tabrec');
+        if (meta.clientId && !meta.bookingTs) {
+          try {
+            const existing = JSON.parse(localStorage.getItem('fp-quick-inperson-meta') || '[]');
+            existing.push({
+              ts: bookingTs,
+              clientId: meta.clientId,
+              clientName: meta.clientName || '(名前未取得)',
+              startedAt: new Date(meta.startedAt || Date.now()).toISOString(),
+              mode: 'chrome-ext-tabrec',
+            });
+            localStorage.setItem('fp-quick-inperson-meta', JSON.stringify(existing.slice(-50)));
+          } catch(_) {}
+        }
+
+        const clientName = meta.clientName || '(顧客未指定)';
         try {
           const t = document.createElement('div');
-          t.textContent = '✓ Chrome拡張 から 音声 受信 (' + Math.round(blob.size/1024) + 'KB, ' + Math.round(payload.durationMs/1000) + '秒)。 議事録 生成 中…';
-          t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#059669;color:#fff;padding:12px 22px;border-radius:8px;font-size:13px;font-weight:800;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,.25);';
+          t.innerHTML = '✓ <b>' + escapeHtml(clientName) + '</b> さん の 音声 受信 (' + Math.round(blob.size/1024) + 'KB, ' + Math.round(payload.durationMs/1000) + '秒)。 議事録 生成中…';
+          t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#059669;color:#fff;padding:14px 26px;border-radius:8px;font-size:13px;font-weight:800;z-index:2147483647;box-shadow:0 12px 32px rgba(0,0,0,.35);';
           document.body.appendChild(t);
-          setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 4000);
-          setTimeout(() => t.remove(), 4500);
+          setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .4s'; }, 4500);
+          setTimeout(() => t.remove(), 5000);
         } catch(_) {}
-        // 既存 パイプライン に 流す
+
+        // ★ 2026-07-20 CRITICAL FIX (qa-reviewer FAIL #1): AI処理 pipeline (Whisper + Claude + GAS + Drive) を 実行
+        //   前 は onRecordingComplete だけ 呼んでたが、 それ は UI トースト 用 で AI処理 されず 「議事録 に入って こない」 バグ
+        //   startAudioOnlyRecording (line 3382) と 同じ full flow で 処理
+        const fallbackBooking = {
+          ts: bookingTs,
+          name: clientName,
+          userId: meta.clientId || '',
+          isInperson: false,
+        };
+        try { showUnifiedProgressPanel(clientName, blob); } catch (_) {}
+        try { updateProgressStep('save', 'done'); updateProgressStep('drive', 'active'); updateProgressStep('ai', 'active'); } catch (_) {}
+        try { showCenterToast('議事録 を 生成中…', clientName + ' 様 の Zoom 録音 → AI で 文字起こし + 議事録 作成 中。 30-60秒 ほど お待ちください', { tone: 'progress', duration: 0 }); } catch (_) {}
+
+        const drivePromise = autoUploadRecording(blob, bookingTs, clientName, fallbackBooking)
+          .then(() => { try { updateProgressStep('drive', 'done'); } catch(_){} })
+          .catch(() => { try { updateProgressStep('drive', 'error'); } catch(_){} });
+
+        let aiResult = null;
+        try { aiResult = await aiProcessRecording(blob, bookingTs, clientName, fallbackBooking); }
+        catch (e) { console.error('[fp-tab-recorder] aiProcessRecording fail:', e); }
+
+        if (aiResult && aiResult.ok) {
+          try { updateProgressStep('ai', 'done'); } catch(_){}
+          window._fpAIResult = { result: aiResult, customerName: clientName, booking: fallbackBooking };
+          try { autoSaveAIResult(aiResult, clientName, fallbackBooking); } catch(_){}
+          try { showProgressDoneAction(); } catch(_){}
+        } else {
+          try { updateProgressStep('ai', 'error', aiResult?.error); } catch(_){}
+          try {
+            autoSaveAIResult({
+              ok: true, bookingTs, userId: meta.clientId || '', customerName: clientName,
+              summary: '⚠ AI処理 失敗\n\nエラー: ' + (aiResult?.error || '不明') + '\n\n録音ファイル自体は Drive に保存されています。',
+              transcript: '', key_concerns: ['AI処理エラー'], tasks: [], error: true,
+            }, clientName, fallbackBooking);
+          } catch(_){}
+        }
+        await drivePromise;
+
         if (typeof onRecordingComplete === 'function') {
           await onRecordingComplete(bookingTs, blob, blobUrl);
         } else {
@@ -2921,10 +3049,285 @@
         }
       } catch (e) {
         console.error('[fp-tab-recorder] 処理 失敗:', e);
-        alert('拡張 から の 音声 受信 に 失敗 しました。 通信 or 拡張 の 状態 を 確認 して ください。');
+        alert('拡張 から の 音声 受信 に 失敗 しました。 通信 or 拡張 の 状態 を 確認 して ください。\n' + (e?.message || e));
       }
     });
   }
+
+  // ★ 2026-07-15: 拡張機能に 「顧客 arm」 を 送るヘルパー (startQuickZoom / 顧客カルテから 呼ぶ)
+  window.armTabRecorder = function armTabRecorder(clientId, clientName, tenantId) {
+    if (!clientId) return;
+    window.postMessage({
+      source: 'fp-compass',
+      type: 'ARM_TAB_RECORDER',
+      clientId,
+      clientName: clientName || '(名前未取得)',
+      tenantId: tenantId || (window.currentTenantId || ''),
+    }, '*');
+  };
+  window.disarmTabRecorder = function disarmTabRecorder() {
+    window.postMessage({ source: 'fp-compass', type: 'DISARM_TAB_RECORDER' }, '*');
+  };
+
+  // ★ 2026-07-17: 拡張機能に 「arm + Zoom タブ を 開いて 自動 録音」 を お願い
+  //   Zoom 面談 button click に つなぐ (owner の click は user gesture → 拡張が Zoom タブ open → auto tabCapture)
+  window.armAndOpenZoom = function armAndOpenZoom(clientId, clientName, tenantId, zoomUrl) {
+    if (!clientId || !zoomUrl) return false;
+    if (!window.__fpTabRecorder) {
+      // 拡張 未 install → 従来 通り window.open で 手動 フロー
+      return false;
+    }
+    window.postMessage({
+      source: 'fp-compass',
+      type: 'ARM_AND_OPEN_ZOOM',
+      clientId,
+      clientName: clientName || '(名前未取得)',
+      tenantId: tenantId || (window.currentTenantId || ''),
+      zoomUrl,
+    }, '*');
+    return true;
+  };
+
+  // ★ 拡張 → app: auto-start 失敗時 通知 (user gesture 制約 等) — 旧トーストは HUD に統合
+  //   FP_AUTO_START_FAILED も HUD の状態変化として扱う (下の HUD listener で処理)
+
+  // ★ 2026-07-18 撤去: 拡張機能 recording flow (owner 明示 「全部削除」)
+  //   fp-rec-pad / fp-rec-dbg / fp-ext-hud / armAndOpenZoom auto-arm 全 廃止。 元 の window.open Zoom flow に 復元
+  /* DISABLED — owner 明示 削除
+  (function initRecorderButtons() {
+    if (window._fpRecPad) return;
+    const pad = document.createElement('div');
+    pad.id = 'fp-rec-pad';
+    pad.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:2147483644;display:flex;gap:12px;background:#FFFFFF;padding:14px 18px;border-radius:99px;border:1px solid #ECECEA;box-shadow:0 12px 32px rgba(15,23,42,0.18),0 4px 8px rgba(15,23,42,0.08);font-family:"Noto Sans JP",sans-serif;';
+    pad.innerHTML = `
+      <button id="fp-rec-start" style="background:#DC2B2B;color:#FFF;border:none;padding:12px 24px;border-radius:99px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:0.02em;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(220,43,43,0.35);">
+        <span style="width:10px;height:10px;border-radius:50%;background:#FFF;"></span>
+        録画開始
+      </button>
+      <button id="fp-rec-stop" style="background:#0A0A0A;color:#FFF;border:none;padding:12px 24px;border-radius:99px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:0.02em;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(15,23,42,0.2);opacity:0.5;" disabled>
+        <span style="width:10px;height:10px;background:#FFF;"></span>
+        録画終了
+      </button>
+      <button id="fp-rec-hide" title="非表示" style="background:transparent;color:#9A9A9A;border:none;padding:8px 10px;font-size:16px;line-height:1;cursor:pointer;">×</button>`;
+    document.body.appendChild(pad);
+    const $start = pad.querySelector('#fp-rec-start');
+    const $stop = pad.querySelector('#fp-rec-stop');
+    const $hide = pad.querySelector('#fp-rec-hide');
+    let isRecording = false;
+    const setState = (rec) => {
+      isRecording = rec;
+      if (rec) {
+        $start.style.opacity = '0.5'; $start.disabled = true;
+        $stop.style.opacity = '1'; $stop.disabled = false;
+      } else {
+        $start.style.opacity = '1'; $start.disabled = false;
+        $stop.style.opacity = '0.5'; $stop.disabled = true;
+      }
+    };
+    // ★ 永続 debug パネル (recording pad の 上 に 出す、 全 通信 log)
+    const dbgPanel = document.createElement('div');
+    dbgPanel.id = 'fp-rec-dbg';
+    dbgPanel.style.cssText = 'position:fixed;bottom:88px;left:50%;transform:translateX(-50%);z-index:2147483644;background:#0F1117;color:#E4E6EB;padding:10px 14px;border-radius:8px;font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.55;max-width:600px;max-height:200px;overflow-y:auto;box-shadow:0 12px 32px rgba(0,0,0,.4);display:none;';
+    document.body.appendChild(dbgPanel);
+    const dbg = (msg, color) => {
+      const line = document.createElement('div');
+      const ts = new Date().toISOString().slice(11, 19);
+      line.innerHTML = '<span style="color:#7A8194;">[' + ts + ']</span> <span style="color:' + (color || '#E4E6EB') + ';">' + msg + '</span>';
+      dbgPanel.appendChild(line);
+      dbgPanel.scrollTop = dbgPanel.scrollHeight;
+      dbgPanel.style.display = 'block';
+      console.log('[fp-rec-dbg]', msg);
+    };
+    // 拡張 → app の 全 message を log
+    window.addEventListener('message', (ev) => {
+      if (ev.source !== window || ev.data?.source !== 'fp-tab-recorder') return;
+      dbg('← ext: ' + ev.data.type + ' ' + JSON.stringify(ev.data.payload || {}).substring(0, 200), '#A5A5F8');
+    });
+
+    $start.addEventListener('click', () => {
+      dbg('▶ 録画開始 button clicked', '#10B981');
+      dbg('window.__fpTabRecorder = ' + JSON.stringify(window.__fpTabRecorder), '#FCD34D');
+      if (!window.__fpTabRecorder) {
+        dbg('❌ 拡張機能 未 install / 未認識', '#DC2B2B');
+        alert('拡張機能 が 未 install または 認識されていません。\nchrome://extensions/ で v1.5.0 以降 が enabled か 確認してください。');
+        return;
+      }
+      dbg('→ ext: REQUEST_START_RECORDING 送信', '#10B981');
+      window.postMessage({ source: 'fp-compass', type: 'REQUEST_START_RECORDING' }, '*');
+      // 10秒 タイムアウト
+      let received = false;
+      const onResult = (ev) => {
+        if (ev.source !== window || ev.data?.source !== 'fp-tab-recorder' || ev.data?.type !== 'START_RESULT') return;
+        received = true;
+        window.removeEventListener('message', onResult);
+        const r = ev.data.payload || {};
+        if (r.ok) {
+          dbg('✅ START 成功 (targetTabId=' + r.targetTabId + ')', '#10B981');
+        } else {
+          dbg('❌ START 失敗: ' + (r.error || 'error なし'), '#DC2B2B');
+        }
+      };
+      window.addEventListener('message', onResult);
+      setTimeout(() => {
+        window.removeEventListener('message', onResult);
+        if (!received) dbg('⚠ 10秒 経過 も 拡張 から 応答なし。 content.js が REQUEST_START_RECORDING handler 持ってない or 拡張 disabled 疑い。', '#B5530F');
+      }, 10000);
+    });
+    $stop.addEventListener('click', () => {
+      window.postMessage({ source: 'fp-compass', type: 'REQUEST_STOP_TAB_RECORDING' }, '*');
+      const t = document.createElement('div');
+      t.textContent = '⏹ 録画停止 要求 送信中…';
+      t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0A0A0A;color:#FFF;padding:10px 18px;border-radius:8px;font-size:12.5px;font-weight:700;z-index:2147483647;';
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    });
+    $hide.addEventListener('click', () => { pad.style.display = 'none'; });
+
+    // 拡張 message で state 更新
+    window.addEventListener('message', (ev) => {
+      if (ev.source !== window) return;
+      const d = ev.data;
+      if (!d || d.source !== 'fp-tab-recorder') return;
+      if (d.type === 'RECORDING_STARTED') setState(true);
+      if (d.type === 'RECORDING_DONE') setState(false);
+      if (d.type === 'STATE' && d.payload) setState(!!d.payload.recording);
+    });
+
+    window._fpRecPad = { show: () => pad.style.display = 'flex', hide: () => pad.style.display = 'none', setState };
+    // 初期: 拡張 の 現在 state を 問い合わせ
+    setTimeout(() => window.postMessage({ source: 'fp-compass', type: 'GET_TAB_RECORDER_STATE' }, '*'), 500);
+  })();
+
+  (function initStatusHud() {
+    if (window._fpExtHud) return;
+    // HUD element (fixed top-right)
+    const hud = document.createElement('div');
+    hud.id = 'fp-ext-hud';
+    hud.style.cssText = 'position:fixed;top:16px;right:16px;z-index:2147483645;background:#FFFFFF;border:1px solid #ECECEA;border-radius:12px;padding:12px 16px;box-shadow:0 8px 24px rgba(15,23,42,0.15),0 2px 6px rgba(15,23,42,0.08);font-family:"Noto Sans JP",sans-serif;font-size:12.5px;line-height:1.55;max-width:340px;display:none;cursor:default;';
+    hud.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="fp-hud-dot" style="width:10px;height:10px;border-radius:50%;background:#9A9A9A;flex-shrink:0;"></span>
+        <div style="font-family:'Manrope','Noto Sans JP',sans-serif;font-size:10.5px;font-weight:800;letter-spacing:0.14em;color:#6B6B6B;">RECORDING STATUS</div>
+        <button id="fp-hud-close" style="margin-left:auto;background:transparent;border:none;color:#9A9A9A;cursor:pointer;padding:0 4px;font-size:16px;line-height:1;">×</button>
+      </div>
+      <div id="fp-hud-title" style="font-size:14px;font-weight:800;color:#0A0A0A;margin-top:8px;line-height:1.4;">—</div>
+      <div id="fp-hud-body" style="font-size:12px;color:#3F3F46;margin-top:6px;line-height:1.65;">—</div>
+      <div id="fp-hud-cta" style="margin-top:10px;display:none;">
+        <button style="width:100%;padding:8px 14px;background:#0A0A0A;color:#FFF;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">action</button>
+      </div>
+      <style>
+        @keyframes fp-hud-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+        #fp-ext-hud .pulsing { animation: fp-hud-pulse 1.2s ease-in-out infinite; }
+      </style>`;
+    document.body.appendChild(hud);
+    const $dot = hud.querySelector('#fp-hud-dot');
+    const $title = hud.querySelector('#fp-hud-title');
+    const $body = hud.querySelector('#fp-hud-body');
+    const $cta = hud.querySelector('#fp-hud-cta');
+    const $closeBtn = hud.querySelector('#fp-hud-close');
+    $closeBtn.addEventListener('click', () => { hud.style.display = 'none'; });
+
+    window._fpExtHud = {
+      set(state) {
+        // state = { color, title, body, ctaText, ctaClick, pulse, sticky }
+        hud.style.display = 'block';
+        $dot.style.background = state.color || '#9A9A9A';
+        $dot.classList.toggle('pulsing', !!state.pulse);
+        $title.textContent = state.title || '';
+        $body.innerHTML = state.body || '';
+        if (state.ctaText && state.ctaClick) {
+          $cta.style.display = 'block';
+          const b = $cta.querySelector('button');
+          b.textContent = state.ctaText;
+          b.onclick = state.ctaClick;
+        } else {
+          $cta.style.display = 'none';
+        }
+        // auto-hide after 15s if not sticky
+        if (window._fpHudAutoHide) clearTimeout(window._fpHudAutoHide);
+        if (!state.sticky) {
+          window._fpHudAutoHide = setTimeout(() => { hud.style.display = 'none'; }, 15000);
+        }
+      },
+      hide() { hud.style.display = 'none'; },
+    };
+
+    // 拡張 message listener を HUD 統合版に置き換え
+    window.addEventListener('message', (ev) => {
+      if (ev.source !== window) return;
+      const d = ev.data;
+      if (!d || d.source !== 'fp-tab-recorder') return;
+
+      // 準備完了 (armed) — Zoom タブ open 直後
+      if (d.type === 'ARM_AND_OPEN_RESULT' && d.payload?.ok) {
+        window._fpExtHud.set({
+          color: '#B5530F',
+          title: '🟡 録音準備完了',
+          body: `<b>${escapeHtml(d.payload.armed?.clientName || '(顧客未指定)')}</b> さん の Zoom タブ を 開いています…<br>拡張 が 自動 録音開始 を 試みます。`,
+          pulse: true,
+          sticky: true,
+        });
+      }
+
+      // 録音開始
+      if (d.type === 'RECORDING_STARTED') {
+        window._fpExtHud.set({
+          color: '#DC2B2B',
+          title: '🔴 録音中',
+          body: `<b>${escapeHtml(d.payload?.clientName || '(顧客未指定)')}</b> さん の Zoom 面談 を 録音しています。<br>面談 終了 (Zoom タブ を 閉じる) で 自動 停止 + 議事録生成 が 走ります。`,
+          pulse: true,
+          sticky: true,
+        });
+      }
+
+      // auto-start 失敗 → owner に 拡張アイコン click 案内
+      if (d.type === 'FP_AUTO_START_FAILED') {
+        window._fpExtHud.set({
+          color: '#B5530F',
+          title: '⚠ 自動起動 失敗 → 1 click 必要',
+          body: `<b>${escapeHtml(d.payload?.clientName || '')}</b> さん の 録音 準備 は 完了。<br>Zoom タブ に 切り替えて Chrome 右上 の <b>拡張アイコン (🧩 or ▶ 緑 badge)</b> を <b>1回 click</b> で 録音開始。`,
+          sticky: true,
+        });
+      }
+
+      // 録音終了 → 処理中
+      if (d.type === 'RECORDING_DONE') {
+        const p = d.payload || {};
+        const meta = p.meta || {};
+        const sec = Math.round((p.durationMs || 0) / 1000);
+        window._fpExtHud.set({
+          color: '#B5530F',
+          title: '⏳ 議事録 生成中…',
+          body: `<b>${escapeHtml(meta.clientName || '(顧客未指定)')}</b> さん の 音声 受信 (${Math.round((p.size||0)/1024)}KB, ${sec}秒)。<br>Whisper 文字起こし + Claude 5 section 議事録生成 で <b>約 5〜10 分</b> かかります。<br>完了 したら 顧客カルテ の <b>議事録タブ</b> に 表示 されます。`,
+          pulse: true,
+          sticky: true,
+        });
+      }
+    });
+  })();
+
+  // ★ 議事録 完成 検知 (ai_results に 新規 が 追加 された 瞬間 HUD 更新)
+  //   fetchLiveData 後 に 呼ぶ 前提 で window._fpLastAiResultTs を 保持
+  window._fpNotifyMeetingReady = function(newAi) {
+    if (!newAi || !window._fpExtHud) return;
+    const name = newAi.customerName || newAi.clientName || '(顧客未指定)';
+    window._fpExtHud.set({
+      color: '#047647',
+      title: '✅ 議事録できました',
+      body: `<b>${escapeHtml(name)}</b> さん の 議事録が 生成されました。<br>顧客カルテ → 議事録タブ で 確認 できます。`,
+      ctaText: '顧客カルテ で 開く',
+      ctaClick: () => {
+        try {
+          const cid = newAi.userId || newAi.clientId;
+          if (cid && window.openCustomerDetail) window.openCustomerDetail(cid);
+        } catch(_) {}
+      },
+      sticky: true,
+    });
+  };
+  */
+  // 撤去したので stub 化 (拡張が message 送っても無視、 debug panel 出さない)
+  window._fpNotifyMeetingReady = function() {};
 
   // ★ 2026-06-22 roundG: マイクのみ録音 fallback (カメラ NotFound / 不要 時)
   //   音声 → 同じパイプライン (upload → AI議事録)
@@ -3081,10 +3484,12 @@
       const sh = window.screen.availHeight || screen.height;
       const zoomBrowserUrl = (function() {
         try {
-          const m = (zoomUrl || '').match(/zoom\.us\/j\/(\d+)(\?.*)?/);
+          // ★ 2026-07-18 fix (qa FAIL B): /s/ (startUrl) 対応 追加 → ホスト URL は /wc/{id}/start に (Zoom Web で ホスト権限 保持)
+          const m = (zoomUrl || '').match(/zoom\.us\/(j|s)\/(\d+)(\?.*)?/);
           if (!m) return zoomUrl;
           const host = (zoomUrl.match(/^https?:\/\/([^\/]+)/) || ['', 'zoom.us'])[1];
-          return `https://${host}/wc/join/${m[1]}${m[2] || ''}`;
+          const isStart = m[1] === 's';
+          return `https://${host}/wc/${isStart ? m[2] + '/start' : 'join/' + m[2]}${m[3] || ''}`;
         } catch (_) { return zoomUrl; }
       })();
       let zoomWin = preZoomWin;
@@ -3481,6 +3886,7 @@
       key_concerns: result.key_concerns || [],
       next_meeting_suggestion: result.next_meeting_suggestion || '',
       lifeEventCandidates: result.lifeEventCandidates || [],
+      extractedProfile: result.extractedProfile || {},
       createdAt: new Date().toISOString(),
     };
     // ★ ライフイベント自動抽出: 抽出された 候補 を 該当顧客の customEvents[] に積む
@@ -3513,6 +3919,55 @@
         }
       }
     } catch (e) { console.warn('lifeEventCandidates merge fail:', e); }
+    // ★ AI抽出プロファイル: 空フィールドのみ自動補完 (上書き禁止)
+    try {
+      const ep = result.extractedProfile;
+      if (ep && typeof ep === 'object' && window.DUMMY_CLIENTS) {
+        const c = window.DUMMY_CLIENTS.find(x =>
+          (x.lineFriendId && x.lineFriendId === userId) ||
+          (x.name && (x.name === nameKey || x.name === customerName))
+        );
+        if (c) {
+          const changedFields = [];
+          if (ep.selfBirth && /^\d{4}/.test(ep.selfBirth) && (!c.birth || c.birth === '1985-01-01')) {
+            c.birth = ep.selfBirth.length === 4 ? ep.selfBirth + '-01-01' : ep.selfBirth;
+            changedFields.push('生年月日');
+          }
+          if (ep.selfOccupation && !c.occupation) { c.occupation = ep.selfOccupation; changedFields.push('職業'); }
+          if (Array.isArray(ep.family) && ep.family.length > 0) {
+            if (!Array.isArray(c.family)) c.family = [];
+            ep.family.forEach(member => {
+              if (!member.rel) return;
+              const exists = c.family.some(m => m.rel === member.rel && (m.name === member.name || (!m.name && !member.name)));
+              if (!exists) {
+                c.family.push({ rel: member.rel, name: member.name || '', birth: member.birth || '', note: member.occupation || '', addedByAI: true, aiAddedAt: new Date().toISOString() });
+                changedFields.push('家族:' + (member.name || member.rel));
+              }
+            });
+          }
+          if (changedFields.length > 0) {
+            c.aiExtractedAt = new Date().toISOString();
+            c.aiExtractedFields = changedFields;
+            try { localStorage.setItem('fp-crm-clients-v1', JSON.stringify(window.DUMMY_CLIENTS)); } catch (_) {}
+            const fsDocId = c._fsCustomerId || (typeof c.id === 'string' && /^[A-Za-z0-9]{20}$/.test(c.id) ? c.id : null);
+            if (fsDocId && window.__fp?.db && window.__fp?.tenantId) {
+              (async () => {
+                try {
+                  const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js');
+                  const upd = { aiExtractedAt: c.aiExtractedAt, aiExtractedFields: changedFields };
+                  if (changedFields.includes('生年月日')) upd.birth = c.birth;
+                  if (changedFields.includes('職業')) upd.occupation = c.occupation;
+                  if (changedFields.some(f => f.startsWith('家族'))) upd.family = c.family;
+                  await updateDoc(doc(window.__fp.db, 'tenants', window.__fp.tenantId, 'customers', fsDocId), upd);
+                  console.log('[extractedProfile] Firestore sync OK:', changedFields.join(', '));
+                } catch (e) { console.warn('[extractedProfile] Firestore sync fail:', e.message); }
+              })();
+            }
+            console.log('[extractedProfile] auto-filled:', changedFields.join(', '), 'for', c.name);
+          }
+        }
+      }
+    } catch (e) { console.warn('extractedProfile merge fail:', e); }
     // ★ 「録画されてない可能性」 を 構造的に 排除:
     //   1. 最初に localStorage backup を 確実に保存 (POST失敗しても データ消えない)
     //   2. GAS POST を 3回 retry (3s/6s/12s)
@@ -3859,7 +4314,7 @@
         <div style="padding:20px 26px;border-bottom:1px solid #e8e2d4;display:flex;justify-content:space-between;align-items:baseline;">
           <div>
             <div style="font-size:10.5px;font-weight:700;color:#8b7d5d;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:3px;">AI Meeting Summary${result.mock ? ' <span style="background:#fef2f2;color:#b91c3c;padding:1px 6px;border-radius:4px;font-size:9.5px;margin-left:4px;letter-spacing:0.02em;">DEMO MODE</span>' : ''}</div>
-            <h2 style="font-family:'Noto Serif JP',serif;font-size:20px;margin:0;font-weight:600;color:#1f2a3f;">${escapeHtml(customerName)}様 面談 AI 議事録</h2>
+            <h2 style="font-family:'Noto Sans JP',serif;font-size:20px;margin:0;font-weight:600;color:#1f2a3f;">${escapeHtml(customerName)}様 面談 AI 議事録</h2>
           </div>
           <button id="fp-ai-close-modal" title="保存済み・閉じる" style="background:#dcfce7;border:1px solid #86efac;color:#166534;width:auto;height:32px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;padding:0 12px;font-family:inherit;">✓ 保存済 ✕</button>
         </div>
@@ -3965,7 +4420,7 @@
     o.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(2px);z-index:10004;display:flex;align-items:flex-start;justify-content:center;padding-top:80px;pointer-events:none;';
     o.innerHTML = `
       <div style="background:linear-gradient(135deg,#fff7ed,#fffbf2);border:3px solid #f59e0b;border-radius:20px;padding:28px 36px;max-width:560px;box-shadow:0 24px 64px rgba(0,0,0,0.35);font-family:inherit;animation:fp-hint-bounce 0.6s ease-out;">
-        <h2 style="margin:0 0 12px;font-size:18px;font-family:'Noto Serif JP',serif;display:flex;align-items:center;gap:10px;">
+        <h2 style="margin:0 0 12px;font-size:18px;font-family:'Noto Sans JP',serif;display:flex;align-items:center;gap:10px;">
           <span style="font-size:28px;">👇</span> 画面共有ダイアログの操作方法
         </h2>
         <ol style="margin:0;padding-left:24px;font-size:14px;line-height:1.85;color:#1f2937;">
@@ -4969,7 +5424,7 @@
     overlay.innerHTML = `
       <div style="background:#fff;width:min(780px,100%);max-height:92vh;overflow-y:auto;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.35);">
         <div style="padding:28px 32px 0;">
-          <h2 style="margin:0 0 4px;font-family:'Noto Serif JP',serif;font-size:22px;font-weight:700;">✨ AI議事録生成</h2>
+          <h2 style="margin:0 0 4px;font-family:'Noto Sans JP',serif;font-size:22px;font-weight:700;">✨ AI議事録生成</h2>
           <p style="margin:0;color:#6b7280;font-size:12.5px;">録画ファイルをWhisperで文字起こし → Claudeで要約 → 顧客データへ自動書込</p>
         </div>
         <div id="fp-ai-body" style="padding:24px 32px 32px;"></div>
@@ -6360,7 +6815,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       <div class="modal-header" style="border-bottom:1px solid #E8E2D4;background:linear-gradient(180deg,#fdfbf4,#fff);">
         <div style="display:flex;flex-direction:column;gap:2px;">
           <div style="font-size:10.5px;font-weight:700;color:#9A5A18;letter-spacing:0.22em;text-transform:uppercase;font-family:'Inter',sans-serif;">Meeting Minutes</div>
-          <h2 style="font-family:'Noto Serif JP',serif;font-size:19px;font-weight:700;color:#1F2A3F;margin:0;letter-spacing:0.02em;">${escapeHtml(title || '議事録')}</h2>
+          <h2 style="font-family:'Noto Sans JP',serif;font-size:19px;font-weight:700;color:#1F2A3F;margin:0;letter-spacing:0.02em;">${escapeHtml(title || '議事録')}</h2>
         </div>
         <button class="modal-close" id="tr-close">×</button>
       </div>
@@ -6382,7 +6837,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
             ${summary ? `
               <div style="background:linear-gradient(135deg,#FBF5E3,#FDFBF4);border:1px solid #E8D9A8;border-left:3px solid #C19A3A;border-radius:10px;padding:18px 22px;margin-bottom:14px;">
                 <div style="font-size:10px;font-weight:800;color:#9A5A18;letter-spacing:0.18em;margin-bottom:6px;">TODAY'S THEME</div>
-                <div style="font-family:'Noto Serif JP',serif;font-size:15.5px;font-weight:600;color:#1F2A3F;line-height:1.75;">${escapeHtml(summary)}</div>
+                <div style="font-family:'Noto Sans JP',serif;font-size:15.5px;font-weight:600;color:#1F2A3F;line-height:1.75;">${escapeHtml(summary)}</div>
               </div>
             ` : ''}
             ${concerns.length ? `
@@ -6950,7 +7405,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         color: #C19A3A; margin-bottom: 12px;
       }
       .fp-dist-hero-title {
-        font-family: 'Noto Serif JP', serif;
+        font-family: 'Noto Sans JP', serif;
         font-weight: 700; font-size: 28px;
         line-height: 1.35; letter-spacing: -0.01em;
         color: #1F1A12; margin: 0 0 12px 0;
@@ -6983,7 +7438,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         color: #8B7D5D; margin-bottom: 6px;
       }
       .fp-dist-kpi-num {
-        font-family: 'Noto Serif JP', serif;
+        font-family: 'Noto Sans JP', serif;
         font-weight: 700; font-size: 28px;
         color: #1F1A12; letter-spacing: -0.012em;
         line-height: 1; font-variant-numeric: tabular-nums;
@@ -7000,7 +7455,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         text-transform: uppercase; margin-bottom: 5px;
       }
       .fp-dist-section-title {
-        font-family: 'Noto Serif JP', serif;
+        font-family: 'Noto Sans JP', serif;
         font-weight: 700; font-size: 19px;
         color: #1F1A12; margin: 0; letter-spacing: -0.01em;
       }
@@ -7029,7 +7484,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       .fp-dist-preset-emoji { font-size: 34px; line-height: 1; flex-shrink: 0; }
       .fp-dist-preset-titleblock { flex: 1; min-width: 0; }
       .fp-dist-preset-title {
-        font-family: 'Noto Serif JP', serif;
+        font-family: 'Noto Sans JP', serif;
         font-weight: 700; font-size: 16px;
         color: #1F1A12; letter-spacing: -0.005em;
         margin-bottom: 3px;
@@ -7088,7 +7543,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         text-align: center;
       }
       .fp-dist-preset-count strong {
-        font-family: 'Noto Serif JP', serif;
+        font-family: 'Noto Sans JP', serif;
         font-size: 16px; color: #C19A3A;
         font-weight: 700;
       }
@@ -7203,9 +7658,9 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         font-weight: 700; font-size: 10px;
         color: #8B7D5D; text-align: center; line-height: 1.2;
       }
-      .fp-cadence-mini strong { font-family: 'Noto Serif JP', serif; font-size: 19px; color: #C19A3A; font-weight: 700; }
+      .fp-cadence-mini strong { font-family: 'Noto Sans JP', serif; font-size: 19px; color: #C19A3A; font-weight: 700; }
       .fp-dist-run-main { flex: 1; min-width: 0; }
-      .fp-dist-run-name { font-family: 'Noto Serif JP', serif; font-weight: 700; font-size: 14px; color: #1F1A12; margin-bottom: 4px; }
+      .fp-dist-run-name { font-family: 'Noto Sans JP', serif; font-weight: 700; font-size: 14px; color: #1F1A12; margin-bottom: 4px; }
       .fp-dist-run-meta { font-size: 11.5px; color: #5E5648; margin-bottom: 4px; }
       .fp-dist-run-recipients { color: #8B7D5D; font-size: 10.5px; margin-left: 4px; }
       .fp-dist-run-next { font-size: 11px; color: #8B7D5D; font-family: 'Manrope', sans-serif; font-weight: 600; letter-spacing: 0.02em; }
@@ -7215,10 +7670,10 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       .fp-dist-bday-row { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-bottom: 1px solid #F1ECDF; }
       .fp-dist-bday-row:last-child { border-bottom: 0; }
       .fp-dist-bday-date { flex-shrink: 0; min-width: 56px; }
-      .fp-dist-bday-date strong { font-family: 'Noto Serif JP', serif; font-weight: 700; font-size: 16px; color: #1F1A12; display: block; line-height: 1.1; }
+      .fp-dist-bday-date strong { font-family: 'Noto Sans JP', serif; font-weight: 700; font-size: 16px; color: #1F1A12; display: block; line-height: 1.1; }
       .fp-dist-bday-date span { font-size: 10.5px; color: #C19A3A; font-weight: 700; letter-spacing: 0.04em; }
       .fp-dist-bday-main { flex: 1; min-width: 0; font-size: 12.5px; }
-      .fp-dist-bday-main strong { font-family: 'Noto Serif JP', serif; font-weight: 700; color: #1F1A12; font-size: 13px; }
+      .fp-dist-bday-main strong { font-family: 'Noto Sans JP', serif; font-weight: 700; color: #1F1A12; font-size: 13px; }
       .fp-dist-bday-rel { font-size: 10.5px; color: #8B7D5D; background: #FDFBF4; padding: 1px 7px; border-radius: 8px; margin-left: 5px; }
       .fp-dist-bday-main > div { color: #5E5648; margin-top: 2px; font-size: 11.5px; }
       .fp-dist-status-on { background: #ECFDF5; color: #047857; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
@@ -7393,13 +7848,13 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         width: 46px; height: 46px;
         border-radius: 50%; flex-shrink: 0;
         display: flex; align-items: center; justify-content: center;
-        font-family: 'Noto Serif JP', serif;
+        font-family: 'Noto Sans JP', serif;
         font-weight: 700; font-size: 19px;
         letter-spacing: -0.02em;
       }
       .fp-today-who { flex: 1; min-width: 0; }
       .fp-today-name {
-        font-family: 'Noto Serif JP', serif;
+        font-family: 'Noto Sans JP', serif;
         font-weight: 700; font-size: 17px;
         color: #1F1A12; letter-spacing: -0.008em;
         line-height: 1.3;
@@ -7507,7 +7962,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         color: #FAF8F1;
       }
       .fp-today-bulk strong {
-        font-family: 'Noto Serif JP', serif;
+        font-family: 'Noto Sans JP', serif;
         font-weight: 700;
         font-size: 15px;
         color: #FFE9A8;
@@ -7586,7 +8041,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         flex: 1; min-width: 0;
       }
       .fp-dist-fold > summary > div > strong {
-        font-family: 'Noto Serif JP', serif;
+        font-family: 'Noto Sans JP', serif;
         font-weight: 700;
         font-size: 14px;
         color: #1F1A12;
@@ -7748,7 +8203,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         const ok = await sendMsg(msg);
         if (ok) {
           const card = btn.closest('.fp-today-card-v2, .fp-today-msg');
-          if (card) { card.classList.add('fp-today-msg-done'); card.innerHTML = `<div style="padding:24px;text-align:center;color:#065F46;font-size:14px;font-family:'Noto Serif JP',serif;font-weight:700;">✓ ${escapeHtml(msg.clientName)}さんに送信しました</div>`; }
+          if (card) { card.classList.add('fp-today-msg-done'); card.innerHTML = `<div style="padding:24px;text-align:center;color:#065F46;font-size:14px;font-family:'Noto Sans JP',serif;font-weight:700;">✓ ${escapeHtml(msg.clientName)}さんに送信しました</div>`; }
           toast(`✓ ${msg.clientName}さん に 送信しました`, 'sent');
         } else {
           btn.disabled = false; btn.innerHTML = '<span class="fp-today-v2-send-icon">📤</span> <span>このまま LINE で送る</span>';
@@ -7936,7 +8391,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         <div style="background:linear-gradient(135deg,#FDFBF4,#FAF6E8);padding:22px 26px;border-bottom:1px solid #E8E2D4;display:flex;justify-content:space-between;align-items:center;">
           <div>
             <div style="font-family:'Manrope',sans-serif;font-weight:800;font-size:10.5px;letter-spacing:0.22em;color:#C19A3A;text-transform:uppercase;margin-bottom:5px;">EDIT TEMPLATE</div>
-            <h3 style="margin:0;font-family:'Noto Serif JP',serif;font-weight:700;font-size:18px;color:#1F1A12;">${escapeHtml(preset.emoji)} ${escapeHtml(preset.title)} の文面を編集</h3>
+            <h3 style="margin:0;font-family:'Noto Sans JP',serif;font-weight:700;font-size:18px;color:#1F1A12;">${escapeHtml(preset.emoji)} ${escapeHtml(preset.title)} の文面を編集</h3>
           </div>
           <button id="fp-preset-close" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:#8B7D5D;">✕</button>
         </div>
@@ -8030,7 +8485,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
           <div style="background:linear-gradient(135deg,#FDFBF4,#FAF6E8);padding:22px 26px;border-bottom:1px solid #E8E2D4;display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
               <div style="font-family:'Manrope',sans-serif;font-weight:800;font-size:10.5px;letter-spacing:0.2em;color:#C19A3A;text-transform:uppercase;margin-bottom:5px;">SEND NOW</div>
-              <h3 style="margin:0;font-family:'Noto Serif JP',serif;font-weight:700;font-size:19px;color:#1F1A12;">${escapeHtml(preset.emoji)} ${escapeHtml(preset.title)} を 今すぐ送る</h3>
+              <h3 style="margin:0;font-family:'Noto Sans JP',serif;font-weight:700;font-size:19px;color:#1F1A12;">${escapeHtml(preset.emoji)} ${escapeHtml(preset.title)} を 今すぐ送る</h3>
               <p style="margin:5px 0 0;font-size:12px;color:#8B7D5D;line-height:1.6;">該当する お客様 <strong style="color:#C19A3A;">${eligible.length}名</strong> です。 送りたい方を 選んでください。</p>
             </div>
             <button id="fp-sn-close" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:#8B7D5D;">✕</button>
@@ -8070,7 +8525,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
             <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${on ? '#F0FDF4' : '#fff'};border:1px solid ${on ? '#86EFAC' : '#E8E2D4'};border-radius:8px;cursor:pointer;font-family:inherit;">
               <input type="checkbox" data-idx="${i}" ${on ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;accent-color:#06C755;">
               <div style="flex:1;min-width:0;">
-                <div style="font-family:'Noto Serif JP',serif;font-weight:700;font-size:13.5px;color:#1F1A12;">${escapeHtml(e.client.name)} さん</div>
+                <div style="font-family:'Noto Sans JP',serif;font-weight:700;font-size:13.5px;color:#1F1A12;">${escapeHtml(e.client.name)} さん</div>
                 <div style="font-size:11px;color:#5E5648;margin-top:2px;">${escapeHtml(e.info)}</div>
               </div>
             </label>
@@ -8138,7 +8593,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         <div style="background:linear-gradient(135deg,#FDFBF4,#FAF6E8);padding:20px 26px;border-bottom:1px solid #E8E2D4;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;">
           <div style="flex:1;min-width:0;">
             <div style="font-family:'Manrope',sans-serif;font-weight:800;font-size:10.5px;letter-spacing:0.2em;color:#C19A3A;text-transform:uppercase;margin-bottom:5px;">PREVIEW · 配信される本文</div>
-            <h3 style="margin:0;font-family:'Noto Serif JP',serif;font-weight:700;font-size:18px;color:#1F1A12;letter-spacing:-0.005em;">${escapeHtml(s.name)}</h3>
+            <h3 style="margin:0;font-family:'Noto Sans JP',serif;font-weight:700;font-size:18px;color:#1F1A12;letter-spacing:-0.005em;">${escapeHtml(s.name)}</h3>
             <div style="margin-top:5px;font-size:11.5px;color:#5E5648;line-height:1.6;">
               ${escapeHtml(s.schedule || '')} · ${seg ? seg.icon + ' ' + escapeHtml(seg.name) : '🎂 誕生日対象者'}
             </div>
@@ -8208,7 +8663,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
         <div style="background:linear-gradient(135deg,#FDFBF4,#FAF6E8);padding:20px 24px;border-bottom:1px solid #E8E2D4;display:flex;justify-content:space-between;align-items:center;">
           <div>
             <div style="font-family:'Manrope',sans-serif;font-weight:800;font-size:10.5px;letter-spacing:0.16em;color:#C19A3A;text-transform:uppercase;margin-bottom:4px;">${msg.icon} ${escapeHtml(msg.category)}</div>
-            <h3 style="margin:0;font-family:'Noto Serif JP',serif;font-weight:700;font-size:17px;color:#1F1A12;">${escapeHtml(msg.clientName)}さん への メッセージを直す</h3>
+            <h3 style="margin:0;font-family:'Noto Sans JP',serif;font-weight:700;font-size:17px;color:#1F1A12;">${escapeHtml(msg.clientName)}さん への メッセージを直す</h3>
             <div style="font-size:11.5px;color:#8B7D5D;margin-top:3px;">${escapeHtml(msg.reason)}</div>
           </div>
           <button id="fp-tm-close" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:#8B7D5D;">✕</button>
@@ -8743,7 +9198,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       <div style="background:#fff;border-radius:14px;padding:32px 40px;max-width:440px;width:90%;box-shadow:0 32px 80px rgba(0,0,0,0.5);text-align:center;">
         <div style="width:60px;height:60px;border:4px solid #E2E8F0;border-top-color:#7C3AED;border-radius:50%;margin:0 auto 20px;animation:fp-spin 0.9s linear infinite;"></div>
         <div style="font-size:11px;font-weight:800;color:#7C3AED;letter-spacing:0.16em;margin-bottom:6px;">SENDING</div>
-        <div id="fp-sending-label" style="font-size:18px;font-weight:800;color:#111827;font-family:'Noto Serif JP',serif;margin-bottom:8px;">${label || '送信中…'}</div>
+        <div id="fp-sending-label" style="font-size:18px;font-weight:800;color:#111827;font-family:'Noto Sans JP',serif;margin-bottom:8px;">${label || '送信中…'}</div>
         <div id="fp-sending-progress" style="font-size:12.5px;color:#6b7280;line-height:1.7;">${total ? '0 / ' + total + ' 名 完了' : '通信中…'}</div>
         <div style="margin-top:18px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;padding:10px 14px;font-size:11px;color:#92400E;font-weight:600;line-height:1.6;">
           ⚠ 完了するまで このまま お待ちください<br>他の操作 / ブラウザ閉じ は 行わないでください
@@ -8910,14 +9365,14 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
           .mh-page { max-width: 920px; }
           .mh-header { padding: 0 0 22px; border-bottom: 1px solid #e8e2d4; margin-bottom: 26px; }
           .mh-eyebrow { font-size: 10.5px; font-weight: 700; color: #9a5a18; letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: 8px; font-family: 'Inter',sans-serif; }
-          .mh-title { font-family: 'Noto Serif JP', serif; font-size: 30px; font-weight: 700; letter-spacing: 0.02em; margin: 0 0 8px; color: #1f2a3f; line-height: 1.2; }
+          .mh-title { font-family: 'Noto Sans JP', serif; font-size: 30px; font-weight: 700; letter-spacing: 0.02em; margin: 0 0 8px; color: #1f2a3f; line-height: 1.2; }
           .mh-sub { color: #6b7280; font-size: 13px; margin: 0; line-height: 1.65; }
           .mh-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e8e2d4; border: 1px solid #e8e2d4; border-radius: 10px; overflow: hidden; margin-bottom: 32px; }
           .mh-stat { background: #fafaf7; padding: 18px 22px; }
           .mh-stat-label { font-size: 10px; font-weight: 700; color: #9a5a18; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 6px; font-family: 'Inter',sans-serif; }
           .mh-stat-val { font-size: 26px; font-weight: 800; color: #1f2a3f; font-family: 'Inter',sans-serif; line-height: 1; letter-spacing: -0.02em; }
           .mh-stat-unit { font-size: 11px; color: #9ca3af; font-weight: 600; margin-left: 4px; }
-          .mh-month-head { font-family: 'Noto Serif JP', serif; font-size: 22px; font-weight: 700; color: #1f2a3f; margin: 28px 0 14px; padding-bottom: 8px; border-bottom: 1px solid #e8e2d4; display: flex; align-items: baseline; justify-content: space-between; }
+          .mh-month-head { font-family: 'Noto Sans JP', serif; font-size: 22px; font-weight: 700; color: #1f2a3f; margin: 28px 0 14px; padding-bottom: 8px; border-bottom: 1px solid #e8e2d4; display: flex; align-items: baseline; justify-content: space-between; }
           .mh-month-count { font-size: 11px; color: #9ca3af; font-weight: 700; letter-spacing: 0.12em; font-family: 'Inter',sans-serif; }
           .mh-card { background: #fff; border: 1px solid #e8e2d4; border-left: 4px solid #c19a3a; border-radius: 10px; padding: 18px 22px; margin-bottom: 10px; display: grid; grid-template-columns: 88px 1fr auto; gap: 22px; align-items: center; transition: box-shadow 0.15s, transform 0.15s; }
           .mh-card:hover { box-shadow: 0 6px 22px rgba(193,154,58,0.18), 0 1px 3px rgba(15,23,42,0.04); }
@@ -8927,7 +9382,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
           .mh-date-month { font-size: 10.5px; color: #9a5a18; font-weight: 700; letter-spacing: 0.12em; margin-top: 4px; font-family: 'Inter',sans-serif; }
           .mh-date-time { font-size: 11.5px; color: #6b7280; font-weight: 600; margin-top: 6px; font-family: 'Inter',sans-serif; }
           .mh-meta { min-width: 0; }
-          .mh-name { font-family: 'Noto Serif JP', serif; font-size: 17px; font-weight: 700; color: #1f2a3f; margin-bottom: 4px; letter-spacing: 0.02em; }
+          .mh-name { font-family: 'Noto Sans JP', serif; font-size: 17px; font-weight: 700; color: #1f2a3f; margin-bottom: 4px; letter-spacing: 0.02em; }
           .mh-kind { display: inline-block; font-size: 9.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.08em; margin-left: 8px; vertical-align: 1px; font-family: 'Inter',sans-serif; }
           .mh-kind.zoom { background: #f0f4fa; color: #1e3a5f; }
           .mh-kind.inperson { background: #faf5ff; color: #6d28d9; }
@@ -8942,7 +9397,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
           .mh-btn-client { border-color: #cbd5e1; color: #1f2a3f; }
           .mh-btn-client:hover { background: #f8fafc; border-color: #94a3b8; }
           .mh-empty { background: #fff; border: 1px dashed #e8e2d4; border-radius: 10px; padding: 40px 36px; color: #6b7280; font-size: 13px; line-height: 1.8; text-align: center; }
-          .mh-empty-title { font-family: 'Noto Serif JP', serif; font-size: 16px; font-weight: 700; color: #1f2a3f; margin-bottom: 10px; }
+          .mh-empty-title { font-family: 'Noto Sans JP', serif; font-size: 16px; font-weight: 700; color: #1f2a3f; margin-bottom: 10px; }
           @media (max-width: 720px) {
             .mh-card { grid-template-columns: 72px 1fr; gap: 14px; padding: 14px 16px; }
             .mh-actions { grid-column: 1 / -1; justify-content: flex-end; padding-top: 8px; border-top: 1px dashed #e8e2d4; margin-top: 4px; }
@@ -9072,7 +9527,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
           ov.innerHTML = `
             <div style="background:#fff;border-radius:14px;max-width:460px;width:100%;padding:28px 32px;box-shadow:0 28px 80px rgba(0,0,0,0.4);">
               <div style="display:inline-flex;align-items:center;gap:8px;background:#FEF3C7;color:#92400E;font-size:11px;font-weight:800;padding:5px 12px;border-radius:99px;letter-spacing:0.12em;margin-bottom:14px;">⏳ 議事録 未生成</div>
-              <h2 style="font-family:'Noto Serif JP',serif;font-size:18px;font-weight:700;color:#111827;margin:0 0 8px;">${escapeHtml(cname)} 様 / 議事録</h2>
+              <h2 style="font-family:'Noto Sans JP',serif;font-size:18px;font-weight:700;color:#111827;margin:0 0 8px;">${escapeHtml(cname)} 様 / 議事録</h2>
               <p style="font-size:13px;color:#6b7280;line-height:1.75;margin:0 0 18px;">この面談の議事録は まだ 生成されていません。 次のいずれかが 原因です:</p>
               <ul style="font-size:12.5px;color:#374151;line-height:1.85;padding-left:22px;margin:0 0 18px;">
                 <li>録画停止後 まだ AI 処理が <strong>完了していない</strong> (通常 30〜60 秒)</li>
