@@ -332,6 +332,37 @@
   .pb-full-item .desc{font-size:11px;color:var(--dim);line-height:1.5}
   .pb-full-item .n-actions{font-size:10px;color:var(--orange);font-weight:800;margin-top:5px;font-family:var(--font-num);letter-spacing:.04em}
 
+  /* ============================================================
+     今日の変更履歴 panel (2026-07-25 追加、 累犯22回目 owner 指摘 発)
+     construct changes / incidents / fixes を 1 画面 に 統合、 dashboard に 見えない ものも 全部 表示
+     ============================================================ */
+  .cl-card{border-left:3px solid var(--info)}
+  .cl-day{margin-bottom:14px}
+  .cl-day:last-child{margin-bottom:0}
+  .cl-day-header{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--rule)}
+  .cl-day-date{font-family:var(--font-num);font-weight:900;font-size:14px;color:var(--ink);letter-spacing:-.01em}
+  .cl-day-title{font-size:12px;color:var(--ink-2);font-weight:600;flex:1}
+  .cl-day-outcome{margin-top:8px;padding:8px 10px;background:var(--green-soft);border-left:3px solid var(--green);border-radius:4px;font-size:11px;color:#166534;font-weight:600;line-height:1.5}
+  .cl-day-outcome::before{content:"結: ";color:var(--green);font-weight:900}
+  .cl-items{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+  .cl-item{display:grid;grid-template-columns:22px 90px 1fr;gap:8px;align-items:start;padding:6px 8px;background:var(--surface);border-radius:4px;border:1px solid var(--rule);font-size:12px;line-height:1.5}
+  .cl-item.kind-detect{border-left:3px solid var(--amber)}
+  .cl-item.kind-add{border-left:3px solid var(--green)}
+  .cl-item.kind-fix{border-left:3px solid var(--info)}
+  .cl-item.kind-verify{border-left:3px solid var(--orange)}
+  .cl-item.kind-recidivism{border-left:3px solid var(--red);background:#fef2f2}
+  .cl-item .icon{width:18px;height:18px;background:var(--surface-2);border-radius:3px;display:grid;place-items:center;font-size:11px;font-weight:900;font-family:var(--font-num);color:var(--ink-2)}
+  .cl-item.kind-detect .icon{background:var(--amber-soft);color:#92400e}
+  .cl-item.kind-add .icon{background:var(--green-soft);color:#166534}
+  .cl-item.kind-fix .icon{background:var(--info-soft);color:#1e40af}
+  .cl-item.kind-verify .icon{background:var(--orange-soft);color:#9a3412}
+  .cl-item.kind-recidivism .icon{background:#fee2e2;color:#991b1b}
+  .cl-item .cat{font-size:10px;font-weight:800;color:var(--ink-2);letter-spacing:.02em;padding-top:2px}
+  .cl-item .txt{color:var(--ink);font-weight:500}
+  .cl-urls{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--rule)}
+  .cl-url{font-size:11px;padding:3px 8px;background:var(--surface-2);border-radius:3px;color:var(--orange-dark);font-weight:700;text-decoration:none;border:1px solid var(--rule)}
+  .cl-url:hover{background:#fff8f0;border-color:var(--orange)}
+
   /* pb-col-title の hint text (「hover で アクション を光らせる」) を owner が気づける 存在感 に
      design-reviewer 指摘: text color を #a45000 に (WCAG AA 5.2:1) */
   .pb-col-title .hint{margin-left:auto;font-size:11px;color:#a45000;font-weight:700;background:#fff8f0;padding:3px 8px;border-radius:3px;border:1px solid #ffd6a5;font-family:var(--font-jp);letter-spacing:0}
@@ -544,6 +575,17 @@
       </div>
     </div>
 
+    <!-- 今日の変更履歴 panel (2026-07-25 追加) -->
+    <div class="card cl-card" style="margin-bottom:14px">
+      <header>
+        <h2><span class="ico" style="background:var(--info)">◪</span>今日 の 変更履歴 <span class="dim" style="font-weight:500;font-size:11px;margin-left:4px">dashboard に 見える もの と 見えない もの (LaunchAgent / hook / memory) を 1 画面 に</span></h2>
+        <div class="meta" id="cl-meta">—</div>
+      </header>
+      <div class="body">
+        <div id="cl-days"></div>
+      </div>
+    </div>
+
     <!-- Timeline -->
     <div class="card">
       <header>
@@ -595,6 +637,7 @@ const CAT_LABEL = {
 let SNAPSHOT = null;
 let SCENARIOS = null;
 let CURRENT_STATE = null;
+let CHANGELOG = null;
 
 async function loadSnapshot(){
   const url = './data/dashboard-snapshot.json?cb=' + Date.now();
@@ -602,17 +645,20 @@ async function loadSnapshot(){
     const r = await fetch(url, {cache:'no-store'});
     if (!r.ok) throw new Error('HTTP '+r.status);
     SNAPSHOT = await r.json();
-    // parallel: playbook data (non-fatal if missing)
+    // parallel: playbook + changelog data (non-fatal if missing)
     try {
-      const [scRes, stRes] = await Promise.all([
+      const [scRes, stRes, clRes] = await Promise.all([
         fetch('./data/scenarios.json?cb='+Date.now(), {cache:'no-store'}),
         fetch('./data/current-state.json?cb='+Date.now(), {cache:'no-store'}),
+        fetch('./data/changelog.json?cb='+Date.now(), {cache:'no-store'}),
       ]);
       if (scRes.ok) SCENARIOS = await scRes.json();
       if (stRes.ok) CURRENT_STATE = await stRes.json();
+      if (clRes.ok) CHANGELOG = await clRes.json();
     } catch(_) {}
     render();
     renderPlaybook();
+    renderChangelog();
   } catch (e) {
     document.getElementById('live-dot').className = 'dot fail';
     document.getElementById('live-txt').textContent = 'データ 読込失敗: ' + e.message;
@@ -1062,6 +1108,37 @@ function renderActionsForScenarios(scenarios, isHover){
   } else {
     gc.innerHTML = '';
   }
+}
+
+function renderChangelog(){
+  if (!CHANGELOG) return;
+  const meta = document.getElementById('cl-meta');
+  const container = document.getElementById('cl-days');
+  const KIND_ICON = { detect:'!', add:'+', fix:'✓', verify:'?', recidivism:'×' };
+  const KIND_LABEL = { detect:'発見', add:'追加', fix:'修正', verify:'確認', recidivism:'累犯' };
+  const days = CHANGELOG.days || [];
+  meta.textContent = `${days.length} 日 ・ 更新 ${fmtTs(CHANGELOG.generated_at)}`;
+  container.innerHTML = days.map(d => {
+    const items = (d.items || []).map(it => `
+      <div class="cl-item kind-${it.kind || 'add'}">
+        <div class="icon">${KIND_ICON[it.kind] || '·'}</div>
+        <div class="cat">${it.cat || KIND_LABEL[it.kind] || ''}</div>
+        <div class="txt">${it.text || ''}</div>
+      </div>
+    `).join('');
+    const urls = d.urls ? Object.entries(d.urls).map(([k,v]) => `<a class="cl-url" href="${v}" target="_blank" rel="noopener">${k} ↗</a>`).join('') : '';
+    return `
+      <div class="cl-day">
+        <div class="cl-day-header">
+          <span class="cl-day-date">${d.date}</span>
+          <span class="cl-day-title">${d.title || ''}</span>
+        </div>
+        <div class="cl-items">${items}</div>
+        ${d.outcome ? `<div class="cl-day-outcome">${d.outcome}</div>` : ''}
+        ${urls ? `<div class="cl-urls">${urls}</div>` : ''}
+      </div>
+    `;
+  }).join('');
 }
 
 loadSnapshot();
