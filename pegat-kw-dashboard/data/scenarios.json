@@ -1,0 +1,127 @@
+{
+  "generated_at": "2026-07-25T10:45:00+09:00",
+  "note": "PEGAT クッション 広告 状況別 プレイブック — 10 シナリオ の 判定 rule + 推奨 action。 佐瀬コンサル指示 (CVR最重要 / 週次-5%刻み) + 過去 実績 学習ループ 反映",
+  "scenarios": [
+    {
+      "id": "normal",
+      "name": "通常運転",
+      "detect": "在庫30日以上 かつ 通常価格 かつ CVR 直近3日 安定",
+      "priority": 100,
+      "color": "green",
+      "actions": [
+        { "label": "週次 -5% 刻み で CVR 微調整", "target": "全KW", "type": "bid_step_down", "value": -5, "when": "CVR<15% の KW のみ" },
+        { "label": "STAR KW を Manual 昇格", "target": "Auto検索語 で orders7d≥3 かつ ACOS<15%", "type": "promote", "value": null, "when": "在庫が減らない範囲で" }
+      ],
+      "guardrail": "1日 spend ¥10,000 上限 (spend_guardian で監視)"
+    },
+    {
+      "id": "low_stock",
+      "name": "在庫少 モード",
+      "detect": "fulfillable 10〜30日分",
+      "priority": 200,
+      "color": "amber",
+      "actions": [
+        { "label": "弱KW PAUSE", "target": "acos=∞ or clicks≥10 かつ orders=0 の KW", "type": "pause", "value": null, "when": "即" },
+        { "label": "主力以外 bid -10%", "target": "STAR以外", "type": "bid_pct", "value": -10, "when": "即" }
+      ],
+      "guardrail": "STAR KW は 触らない (imp share 維持)"
+    },
+    {
+      "id": "stockout_imminent",
+      "name": "在庫切れ 寸前",
+      "detect": "fulfillable <10日分",
+      "priority": 300,
+      "color": "red",
+      "actions": [
+        { "label": "全 bid -30%", "target": "全 KW", "type": "bid_pct", "value": -30, "when": "即" },
+        { "label": "主力以外 PAUSE", "target": "STAR以外", "type": "pause", "value": null, "when": "即" },
+        { "label": "在庫スナップショット 取得", "target": "全 KW の 元 bid", "type": "snapshot", "value": null, "when": "cut 前 に" }
+      ],
+      "guardrail": "cushion-thick-emergency-bid LaunchAgent と 二重化"
+    },
+    {
+      "id": "stockout",
+      "name": "在庫切れ",
+      "detect": "fulfillable = 0",
+      "priority": 400,
+      "color": "red",
+      "actions": [
+        { "label": "全 bid = ¥1 or キャンペーン PAUSE", "target": "全", "type": "bid_absolute", "value": 1, "when": "即" }
+      ],
+      "guardrail": "再入荷 前日 に bid 復元 LaunchAgent 仕込む (今回の pegat-bid-restore-postrecovery が例)"
+    },
+    {
+      "id": "discount_start",
+      "name": "割引 スタート",
+      "detect": "クーポン 10-20% 付与 or 定価から -10〜-20% 値下げ",
+      "priority": 250,
+      "color": "info",
+      "actions": [
+        { "label": "TOP KW bid +15%", "target": "STAR + GOOD KW", "type": "bid_pct", "value": 15, "when": "割引開始と同時" },
+        { "label": "spend cap を ¥15,000/日 に緩和", "target": "spend_guardian", "type": "cap_change", "value": 15000, "when": "割引期間中のみ" }
+      ],
+      "guardrail": "CVR 上昇 で ROAS 上がる 前提、 3日で ROAS 判定 → 効かなければ 復元"
+    },
+    {
+      "id": "big_sale",
+      "name": "大割引 / タイムセール / プライムデー",
+      "detect": "-30% 以上 割引 or Amazon 公式セール参加",
+      "priority": 350,
+      "color": "orange",
+      "actions": [
+        { "label": "全 bid +30〜50%", "target": "全 (RED KW も含む)", "type": "bid_pct", "value": 40, "when": "セール開始 1h前" },
+        { "label": "spend cap ¥30,000/日 に緩和", "target": "spend_guardian", "type": "cap_change", "value": 30000, "when": "セール中のみ" },
+        { "label": "imp share 追い 監視 開始", "target": "TOP 20 KW の placement rank", "type": "monitor_boost", "value": null, "when": "1時間ごと" }
+      ],
+      "guardrail": "在庫 30日以上 の 時のみ 発動、 それ以下は 発動禁止"
+    },
+    {
+      "id": "post_discount",
+      "name": "割引 終了 直後",
+      "detect": "割引 解除 から 3日以内",
+      "priority": 220,
+      "color": "amber",
+      "actions": [
+        { "label": "bid 段階復元 (-5%/日 × 3日)", "target": "割引中に上げた KW", "type": "bid_step_down", "value": -5, "when": "3日 分 割"  },
+        { "label": "spend cap を 通常 ¥10,000/日 に戻す", "target": "spend_guardian", "type": "cap_change", "value": 10000, "when": "day+1" }
+      ],
+      "guardrail": "一気に戻すと CVR 落ちで ACOS 悪化、 段階必須"
+    },
+    {
+      "id": "price_up",
+      "name": "値上げ 過渡期",
+      "detect": "+10% 以上 値上げ 直後",
+      "priority": 200,
+      "color": "amber",
+      "actions": [
+        { "label": "全 bid -20%", "target": "全 KW", "type": "bid_pct", "value": -20, "when": "値上げ 当日" },
+        { "label": "CVR 3日 観察 → 判定", "target": "sales-and-traffic", "type": "monitor", "value": null, "when": "day+3" }
+      ],
+      "guardrail": "CVR が元 の 70% を割ったら 一時 PAUSE、 コピー/画像 見直し"
+    },
+    {
+      "id": "new_launch",
+      "name": "新商品 launch 期",
+      "detect": "レビュー数 <20 かつ Amazon 出品後 <30日",
+      "priority": 180,
+      "color": "info",
+      "actions": [
+        { "label": "bid +20% で relevance data 集め", "target": "関連 20 KW を Manual EXACT 昇格", "type": "bid_pct", "value": 20, "when": "launch から 30日" },
+        { "label": "Auto キャンペーン に別途 ¥5,000/日 割り当て", "target": "Auto側", "type": "cap_change", "value": 5000, "when": "launch から 30日" }
+      ],
+      "guardrail": "ACOS 悪化 は 想定内、 30日後 に 学習ループ で 判定"
+    },
+    {
+      "id": "competitor_price_cut",
+      "name": "競合 大幅値下げ",
+      "detect": "主要競合 (LeLante 等) が -15% 以上 値下げ",
+      "priority": 240,
+      "color": "red",
+      "actions": [
+        { "label": "TOP KW bid +10% で imp share 死守", "target": "STAR KW のみ", "type": "bid_pct", "value": 10, "when": "検知 当日" },
+        { "label": "価格戦略 見直し 会議 (owner)", "target": "PEGAT 価格", "type": "owner_meeting", "value": null, "when": "1週間以内" }
+      ],
+      "guardrail": "bid で imp share 買う は 短期対応、 中期 は 価格 or 差別化 で 対応"
+    }
+  ]
+}
