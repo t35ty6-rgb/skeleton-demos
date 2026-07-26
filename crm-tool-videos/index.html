@@ -7,64 +7,290 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{background:#0f1117;color:#e5e7eb;font-family:'Noto Sans JP',system-ui,-apple-system,sans-serif;min-height:100vh}
-  header{padding:24px 32px;border-bottom:1px solid #1f2937;background:#0a0c11}
-  header h1{font-size:18px;font-weight:800;letter-spacing:.01em}
+  header{padding:28px 32px;border-bottom:1px solid #1f2937;background:#0a0c11;position:sticky;top:0;z-index:10;backdrop-filter:blur(8px);background:rgba(10,12,17,0.9)}
+  header .title{font-size:18px;font-weight:800;letter-spacing:.01em}
   header .sub{font-size:12px;color:#9ca3af;margin-top:4px}
-  main{max-width:1200px;margin:0 auto;padding:32px}
-  .card{background:#151821;border:1px solid #1f2937;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.3)}
-  .video-wrap{background:#000;position:relative;padding-bottom:56.25%;height:0}
+  main{max-width:1080px;margin:0 auto;padding:32px 24px 80px}
+  .intro{padding:24px 28px;background:linear-gradient(135deg,#151821,#111421);border:1px solid #1f2937;border-radius:14px;margin-bottom:32px}
+  .intro h2{font-size:15px;font-weight:800;letter-spacing:.01em;margin-bottom:8px}
+  .intro p{font-size:13px;line-height:1.7;color:#9ca3af}
+  .intro .meta{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+  .badge-inline{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border-radius:20px;background:#1f2937;font-size:11px;font-weight:600;color:#d1d5db;border:1px solid #374151}
+  .badge-inline.ok{background:#052e21;color:#6ee7b7;border-color:#065f46}
+
+  .section{margin-bottom:40px}
+  .section-title{font-size:13px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.12em;padding:0 4px 12px;border-bottom:1px solid #1f2937;margin-bottom:20px}
+
+  .feature{background:#151821;border:1px solid #1f2937;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.3);margin-bottom:18px}
+  .feature-head{padding:18px 22px;display:flex;align-items:center;gap:14px;border-bottom:1px solid transparent;transition:background .15s}
+  .feature-head.has-sub{cursor:pointer}
+  .feature-head.has-sub:hover{background:#1a1e28}
+  .fh-icon{width:36px;height:36px;border-radius:8px;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+  .fh-body{flex:1;min-width:0}
+  .fh-name{font-size:15px;font-weight:700}
+  .fh-desc{font-size:12px;color:#9ca3af;margin-top:3px}
+  .fh-badges{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .fh-chevron{font-size:14px;color:#6b7280;transition:transform .2s;flex-shrink:0;margin-left:8px}
+  .feature.open .fh-chevron{transform:rotate(90deg)}
+
+  .video-list{padding:0 22px 22px}
+  .video-item{border-top:1px solid #1f2937;padding-top:18px;margin-top:18px}
+  .video-item:first-child{border-top:0;padding-top:0;margin-top:8px}
+  .vi-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .vi-num{width:22px;height:22px;border-radius:50%;background:#1f2937;color:#9ca3af;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .vi-title{font-size:13px;font-weight:700;color:#d1d5db;flex:1}
+  .vi-len{font-size:11px;color:#6b7280;font-weight:600}
+  .video-wrap{background:#000;position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;border:1px solid #1f2937}
   video{position:absolute;inset:0;width:100%;height:100%;display:block}
-  .meta{padding:20px 24px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
-  .title{font-size:16px;font-weight:700}
-  .desc{font-size:13px;color:#9ca3af;margin-top:4px}
-  .badge{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border-radius:20px;background:#1f2937;font-size:11px;font-weight:600;color:#d1d5db}
-  .list{margin-top:32px;display:grid;gap:12px}
-  .row{display:flex;align-items:center;gap:16px;padding:14px 18px;background:#151821;border:1px solid #1f2937;border-radius:10px}
-  .row.done{border-color:#065f46}
-  .row.pending{opacity:.55}
-  .dot{width:10px;height:10px;border-radius:50%;background:#374151}
-  .row.done .dot{background:#10b981;box-shadow:0 0 8px rgba(16,185,129,.55)}
-  .rname{font-size:14px;font-weight:600}
-  .rsub{font-size:11px;color:#6b7280;margin-top:2px}
+
+  /* single-video feature (no accordion) */
+  .feature.single .feature-head{border-bottom:1px solid #1f2937}
+  .feature.single .video-wrap{border:0;border-radius:0}
+  .feature.single .video-list{padding:0}
+  .feature.single .video-item{border:0;padding:0;margin:0}
+  .feature.single .vi-head{display:none}
+  .feature.single .video-wrap{border-radius:0}
+
+  footer{padding:32px 0 0;text-align:center;font-size:11px;color:#6b7280}
 </style>
 </head>
 <body>
 <header>
-  <h1>顧客配信ツール — 機能別 使い方動画</h1>
-  <div class="sub">Skeleton LINE 統合プラットフォーム</div>
+  <div class="title">顧客配信ツール — 機能別 使い方動画</div>
+  <div class="sub">Skeleton LINE 統合プラットフォーム / v11 recipe · 1920×1080</div>
 </header>
 <main>
-  <div class="card">
-    <div class="video-wrap">
-      <video controls preload="metadata" playsinline>
-        <source src="tags-explainer.mp4" type="video/mp4">
-      </video>
-    </div>
+
+  <div class="intro">
+    <h2>ツールの全体像</h2>
+    <p>顧客リスト・タグ・自動タグルール・キャンペーン・セグメント・一括配信・ステップ配信・リッチメニュー・LINEアカウント・配信履歴 の 10機能を、機能ごとに短い動画で解説しています。気になるところだけつまみ食いで見られます。</p>
     <div class="meta">
-      <div>
-        <div class="title">タグ管理</div>
-        <div class="desc">タグの追加・編集・削除 / 色パレット / モーダル操作</div>
-      </div>
-      <div class="badge">v11 · 70秒 · 1920×1080</div>
+      <span class="badge-inline ok">11本 完成</span>
+      <span class="badge-inline">1920×1080 CRF16</span>
+      <span class="badge-inline">Neural2-C ナレ</span>
+      <span class="badge-inline">v11 recipe</span>
     </div>
   </div>
 
-  <div class="list">
-    <div class="row done">
-      <div class="dot"></div>
-      <div style="flex:1"><div class="rname">タグ管理 (tags)</div><div class="rsub">追加 → 編集 → 削除 の 3サイクル 実演</div></div>
-      <span class="badge">70s</span>
+  <!-- ============================================
+       Section 1: 顧客管理
+       ============================================ -->
+  <div class="section">
+    <div class="section-title">1. 顧客と タグ 管理</div>
+
+    <!-- 顧客リスト -->
+    <div class="feature single">
+      <div class="feature-head">
+        <div class="fh-icon">👥</div>
+        <div class="fh-body">
+          <div class="fh-name">顧客リスト</div>
+          <div class="fh-desc">LINE 友だち一覧 と タグ・LTV・登録日 の見方</div>
+        </div>
+        <div class="fh-badges"><span class="badge-inline">26s</span></div>
+      </div>
+      <div class="video-list">
+        <div class="video-item">
+          <div class="video-wrap"><video controls preload="metadata" playsinline><source src="customers-explainer.mp4" type="video/mp4"></video></div>
+        </div>
+      </div>
     </div>
-    <div class="row pending"><div class="dot"></div><div style="flex:1"><div class="rname">顧客リスト (customers)</div><div class="rsub">— 未着手</div></div></div>
-    <div class="row pending"><div class="dot"></div><div style="flex:1"><div class="rname">自動タグルール (autotag)</div><div class="rsub">— 未着手</div></div></div>
-    <div class="row pending"><div class="dot"></div><div style="flex:1"><div class="rname">キャンペーン (campaigns)</div><div class="rsub">— 未着手</div></div></div>
-    <div class="row pending"><div class="dot"></div><div style="flex:1"><div class="rname">セグメント (segments)</div><div class="rsub">— 未着手</div></div></div>
-    <div class="row pending"><div class="dot"></div><div style="flex:1"><div class="rname">一括配信 (broadcast)</div><div class="rsub">— 未着手</div></div></div>
-    <div class="row pending"><div class="dot"></div><div style="flex:1"><div class="rname">ステップ配信 (steps)</div><div class="rsub">— 未着手</div></div></div>
-    <div class="row pending"><div class="dot"></div><div style="flex:1"><div class="rname">リッチメニュー (richmenu)</div><div class="rsub">— 未着手</div></div></div>
-    <div class="row pending"><div class="dot"></div><div style="flex:1"><div class="rname">LINE アカウント (channels)</div><div class="rsub">— 未着手</div></div></div>
-    <div class="row pending"><div class="dot"></div><div style="flex:1"><div class="rname">配信履歴 (history)</div><div class="rsub">— 未着手</div></div></div>
+
+    <!-- タグ管理 -->
+    <div class="feature single">
+      <div class="feature-head">
+        <div class="fh-icon">🏷</div>
+        <div class="fh-body">
+          <div class="fh-name">タグ管理</div>
+          <div class="fh-desc">タグの 追加 → 編集 → 削除 の 3サイクル 実演</div>
+        </div>
+        <div class="fh-badges"><span class="badge-inline">70s</span></div>
+      </div>
+      <div class="video-list">
+        <div class="video-item">
+          <div class="video-wrap"><video controls preload="metadata" playsinline><source src="tags-explainer.mp4" type="video/mp4"></video></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 自動タグルール (2本) -->
+    <div class="feature open" data-toggle>
+      <div class="feature-head has-sub">
+        <div class="fh-icon">⚡</div>
+        <div class="fh-body">
+          <div class="fh-name">自動タグルール</div>
+          <div class="fh-desc">顧客行動に応じて タグを自動で付ける仕組み — 2本構成</div>
+        </div>
+        <div class="fh-badges"><span class="badge-inline">2本</span><span class="badge-inline">76s</span></div>
+        <div class="fh-chevron">▶</div>
+      </div>
+      <div class="video-list">
+        <div class="video-item">
+          <div class="vi-head"><div class="vi-num">1</div><div class="vi-title">ルールを作る</div><div class="vi-len">43s</div></div>
+          <div class="video-wrap"><video controls preload="metadata" playsinline><source src="autotag-create-explainer.mp4" type="video/mp4"></video></div>
+        </div>
+        <div class="video-item">
+          <div class="vi-head"><div class="vi-num">2</div><div class="vi-title">スイッチON → テスト実行 → 顧客に自動付与</div><div class="vi-len">34s</div></div>
+          <div class="video-wrap"><video controls preload="metadata" playsinline><source src="autotag-demo-explainer.mp4" type="video/mp4"></video></div>
+        </div>
+      </div>
+    </div>
+
   </div>
+
+  <!-- ============================================
+       Section 2: 配信
+       ============================================ -->
+  <div class="section">
+    <div class="section-title">2. 配信 と マーケティング</div>
+
+    <!-- キャンペーン -->
+    <div class="feature single">
+      <div class="feature-head">
+        <div class="fh-icon">📊</div>
+        <div class="fh-body">
+          <div class="fh-name">キャンペーン</div>
+          <div class="fh-desc">URLトラッキングで 広告・SNS流入 を計測</div>
+        </div>
+        <div class="fh-badges"><span class="badge-inline">26s</span></div>
+      </div>
+      <div class="video-list">
+        <div class="video-item">
+          <div class="video-wrap"><video controls preload="metadata" playsinline><source src="campaigns-explainer.mp4" type="video/mp4"></video></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- セグメント -->
+    <div class="feature single">
+      <div class="feature-head">
+        <div class="fh-icon">🎯</div>
+        <div class="fh-body">
+          <div class="fh-name">セグメント</div>
+          <div class="fh-desc">タグを組み合わせて 配信対象グループを作る</div>
+        </div>
+        <div class="fh-badges"><span class="badge-inline">26s</span></div>
+      </div>
+      <div class="video-list">
+        <div class="video-item">
+          <div class="video-wrap"><video controls preload="metadata" playsinline><source src="segments-explainer.mp4" type="video/mp4"></video></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 一括配信 -->
+    <div class="feature single">
+      <div class="feature-head">
+        <div class="fh-icon">📢</div>
+        <div class="fh-body">
+          <div class="fh-name">一括配信</div>
+          <div class="fh-desc">セグメント / 全顧客 に メッセージを一斉送信</div>
+        </div>
+        <div class="fh-badges"><span class="badge-inline">24s</span></div>
+      </div>
+      <div class="video-list">
+        <div class="video-item">
+          <div class="video-wrap"><video controls preload="metadata" playsinline><source src="broadcast-explainer.mp4" type="video/mp4"></video></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ステップ配信 -->
+    <div class="feature single">
+      <div class="feature-head">
+        <div class="fh-icon">🔀</div>
+        <div class="fh-body">
+          <div class="fh-name">ステップ配信</div>
+          <div class="fh-desc">友だち追加後や購入後の 自動シナリオ</div>
+        </div>
+        <div class="fh-badges"><span class="badge-inline">24s</span></div>
+      </div>
+      <div class="video-list">
+        <div class="video-item">
+          <div class="video-wrap"><video controls preload="metadata" playsinline><source src="steps-explainer.mp4" type="video/mp4"></video></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================
+       Section 3: 設定・履歴
+       ============================================ -->
+  <div class="section">
+    <div class="section-title">3. 設定 と 履歴</div>
+
+    <!-- リッチメニュー -->
+    <div class="feature single">
+      <div class="feature-head">
+        <div class="fh-icon">☰</div>
+        <div class="fh-body">
+          <div class="fh-name">リッチメニュー</div>
+          <div class="fh-desc">LINEトーク画面 下の 常時ボタン を設定</div>
+        </div>
+        <div class="fh-badges"><span class="badge-inline">20s</span></div>
+      </div>
+      <div class="video-list">
+        <div class="video-item">
+          <div class="video-wrap"><video controls preload="metadata" playsinline><source src="richmenu-explainer.mp4" type="video/mp4"></video></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINEアカウント -->
+    <div class="feature single">
+      <div class="feature-head">
+        <div class="fh-icon">🔗</div>
+        <div class="fh-body">
+          <div class="fh-name">LINE アカウント</div>
+          <div class="fh-desc">接続中の LINE公式 を 一箇所で管理</div>
+        </div>
+        <div class="fh-badges"><span class="badge-inline">21s</span></div>
+      </div>
+      <div class="video-list">
+        <div class="video-item">
+          <div class="video-wrap"><video controls preload="metadata" playsinline><source src="channels-explainer.mp4" type="video/mp4"></video></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 配信履歴 -->
+    <div class="feature single">
+      <div class="feature-head">
+        <div class="fh-icon">🕐</div>
+        <div class="fh-body">
+          <div class="fh-name">配信履歴</div>
+          <div class="fh-desc">過去の配信結果を一覧で振り返る</div>
+        </div>
+        <div class="fh-badges"><span class="badge-inline">23s</span></div>
+      </div>
+      <div class="video-list">
+        <div class="video-item">
+          <div class="video-wrap"><video controls preload="metadata" playsinline><source src="history-explainer.mp4" type="video/mp4"></video></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <div>generated with v11 recipe · Playwright + Google TTS Neural2-C · 1920×1080 CRF16 libx264</div>
+  </footer>
+
 </main>
+<script>
+  // accordion (has-sub) toggle
+  document.querySelectorAll('.feature[data-toggle] .feature-head.has-sub').forEach(h => {
+    h.addEventListener('click', () => {
+      const f = h.closest('.feature');
+      f.classList.toggle('open');
+      const list = f.querySelector('.video-list');
+      list.style.display = f.classList.contains('open') ? '' : 'none';
+    });
+  });
+  // init: hide accordion body if not open
+  document.querySelectorAll('.feature[data-toggle]').forEach(f => {
+    if (!f.classList.contains('open')) f.querySelector('.video-list').style.display = 'none';
+  });
+</script>
 </body>
 </html>
