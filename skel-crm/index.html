@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=1400">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>顧客配信ツール — Skeleton</title>
 <style>
   :root {
@@ -428,25 +428,174 @@
     background: var(--surface);
     border: 1px solid var(--rule);
     border-radius: 12px;
-    padding: 32px;
+    padding: 24px;
   }
+
+  /* === Toast === */
+  #toast-stack {
+    position: fixed;
+    top: 68px; right: 20px;
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 1200;
+    pointer-events: none;
+  }
+  .toast {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--ink);
+    color: white;
+    padding: 12px 16px 12px 14px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.20), 0 2px 8px rgba(0,0,0,0.08);
+    font-size: 13px; font-weight: 600;
+    min-width: 220px; max-width: 380px;
+    pointer-events: auto;
+    animation: toast-in 220ms cubic-bezier(.2,.7,.2,1);
+    transform-origin: top right;
+  }
+  .toast .t-ic { font-size: 14px; }
+  .toast.success { background: #0e9a5a; }
+  .toast.success .t-ic { color: #d1fae5; }
+  .toast.info    { background: #2563eb; }
+  .toast.warn    { background: #b45309; }
+  .toast.error   { background: #b91c1c; }
+  .toast.leaving { animation: toast-out 180ms cubic-bezier(.4,0,1,1) forwards; }
+  @keyframes toast-in  { from { opacity:0; transform: translateY(-6px) scale(.98);} to { opacity:1; transform: translateY(0) scale(1);} }
+  @keyframes toast-out { to   { opacity:0; transform: translateY(-6px) scale(.98);} }
+  @media (prefers-reduced-motion: reduce) {
+    .toast, .toast.leaving { animation: none; }
+  }
+
+  /* === Confirm dialog === */
+  #confirm-scrim {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 1100;
+    align-items: center; justify-content: center;
+  }
+  #confirm-scrim.open { display: flex; }
+  #confirm-box {
+    background: var(--surface);
+    border-radius: 14px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.22);
+    width: 400px; max-width: 90vw;
+    padding: 24px 24px 20px;
+  }
+  #confirm-box h4 { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+  #confirm-box p  { font-size: 13px; color: var(--dim); line-height: 1.65; margin-bottom: 18px; }
+  #confirm-box .actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* Empty state polish */
+  .empty-state .icon {
+    font-size: 32px;
+    width: 64px; height: 64px;
+    margin: 0 auto 14px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface-2);
+    color: var(--dim);
+    border-radius: 50%;
+  }
+  .empty-state .cta { margin-top: 16px; }
+
+  /* Rule edit / delete visible */
+  .rule-actions .icon-btn.danger:hover { background: var(--danger-soft); color: var(--danger); }
+
+  /* Nav toggle for mobile */
+  .nav-toggle {
+    display: none;
+    width: 36px; height: 36px;
+    align-items: center; justify-content: center;
+    background: var(--surface-2);
+    border-radius: 8px;
+    font-size: 16px;
+    color: var(--ink-2);
+  }
+  .nav-toggle:hover { background: #d4d8e2; }
+
+  /* === Mobile / Tablet === */
+  @media (max-width: 900px) {
+    .app {
+      grid-template-columns: 1fr;
+      grid-template-rows: 52px 1fr;
+    }
+    header { padding: 0 12px; gap: 10px; }
+    header h1 { font-size: 14px; }
+    header .sub { display: none; }
+    .top-btn { padding: 6px 10px; font-size: 11px; }
+    .nav-toggle { display: flex; }
+    aside.nav {
+      position: fixed;
+      top: 52px; left: 0; bottom: 0;
+      width: 260px;
+      z-index: 800;
+      transform: translateX(-100%);
+      transition: transform 220ms cubic-bezier(.2,.7,.2,1);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+    aside.nav.open { transform: translateX(0); }
+    #nav-scrim {
+      display: none;
+      position: fixed; top: 52px; inset: 52px 0 0 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 700;
+    }
+    #nav-scrim.open { display: block; }
+    main {
+      grid-column: 1;
+      padding: 16px 12px;
+    }
+    .stat-row {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .stat-card { padding: 12px; }
+    .stat-card .val { font-size: 22px; }
+    .page-header { flex-wrap: wrap; gap: 8px; }
+    .page-header h2 { font-size: 17px; }
+    .page-header .desc { font-size: 12px; }
+    .table-wrap { overflow-x: auto; }
+    table { min-width: 600px; }
+    #modal { width: 92vw; padding: 20px 18px; max-height: 92vh; }
+    #toast-stack { top: 60px; right: 8px; left: 8px; }
+    .toast { min-width: 0; max-width: none; }
+  }
+
+  /* Sticky top for touch */
+  @media (hover: none) {
+    tr:hover td { background: transparent; }
+  }
+
+  /* Focus rings (a11y) */
+  .btn:focus-visible, .top-btn:focus-visible, .nav-item:focus-visible,
+  .field-input:focus-visible, .icon-btn:focus-visible, .modal-close:focus-visible,
+  .cp-chip:focus-visible, .tag-chip:focus-visible, .tag-color-swatch:focus-visible {
+    outline: 2px solid var(--info);
+    outline-offset: 2px;
+  }
+
+  /* Table row cursor hint */
+  tr[data-cust-id]:hover { background: rgba(23,178,106,0.04); }
 </style>
 </head>
 <body>
 <div class="app">
   <!-- Header -->
   <header>
+    <button class="nav-toggle" id="nav-toggle" aria-label="メニュー">☰</button>
     <div>
-      <h1>顧客配信ツール</h1>
-      <div class="sub">Skeleton LINE 統合プラットフォーム</div>
+      <h1>Skel·CRM</h1>
+      <div class="sub">LINE 統合プラットフォーム</div>
     </div>
     <div class="spacer"></div>
-    <button class="top-btn">設定</button>
-    <button class="top-btn primary">+ 新規配信</button>
+    <button class="top-btn" id="top-help-btn" title="使い方 動画">? ヘルプ</button>
+    <button class="top-btn" id="top-settings-btn">設定</button>
+    <button class="top-btn primary" id="top-new-bc-btn">+ 新規配信</button>
   </header>
 
   <!-- Sidebar -->
   <aside class="nav" id="nav"></aside>
+  <div id="nav-scrim"></div>
 
   <!-- Main -->
   <main id="main">
@@ -461,25 +610,25 @@
         <button class="btn btn-primary" id="cust-add-btn">+ 顧客追加</button>
       </div>
       <div class="stat-row">
-        <div class="stat-card" id="stat-total-customers">
-          <div class="label">総顧客数</div>
-          <div class="val" style="color:var(--info)" id="stat-total-val">20</div>
+        <div class="stat-card">
+          <div class="label">総 顧客数</div>
+          <div class="val" style="color:var(--info)" id="stat-total-val">—</div>
           <div class="sub">LINE 友だち</div>
         </div>
         <div class="stat-card">
-          <div class="label">今月 新規</div>
-          <div class="val" style="color:var(--primary)">+3</div>
-          <div class="sub">先月比 +12%</div>
+          <div class="label">直近 30日 新規</div>
+          <div class="val" style="color:var(--primary)" id="stat-new-val">—</div>
+          <div class="sub" id="stat-new-sub">前月比</div>
         </div>
-        <div class="stat-card" id="stat-purchased">
-          <div class="label">購入顧客</div>
-          <div class="val" id="stat-purchased-val">12</div>
-          <div class="sub">60.0% 購入率</div>
+        <div class="stat-card">
+          <div class="label">購入 顧客</div>
+          <div class="val" id="stat-purchased-val">—</div>
+          <div class="sub" id="stat-purchased-sub">購入率</div>
         </div>
         <div class="stat-card">
           <div class="label">平均 LTV</div>
-          <div class="val" style="color:var(--primary)">¥38,400</div>
-          <div class="sub">前年比 +22%</div>
+          <div class="val" style="color:var(--primary)" id="stat-ltv-val">—</div>
+          <div class="sub" id="stat-ltv-sub">購入 顧客 の 平均</div>
         </div>
       </div>
       <div class="table-wrap">
@@ -537,18 +686,18 @@
       </div>
       <div class="stat-row" style="grid-template-columns:repeat(3,1fr)">
         <div class="stat-card">
-          <div class="label">有効ルール数</div>
-          <div class="val" id="stat-active-rules" style="color:var(--amber)">3</div>
-          <div class="sub">/ 5 ルール</div>
+          <div class="label">有効 ルール数</div>
+          <div class="val" id="stat-active-rules" style="color:var(--amber)">—</div>
+          <div class="sub" id="stat-active-rules-sub">— ルール</div>
         </div>
         <div class="stat-card">
           <div class="label">今月 自動付与</div>
-          <div class="val" style="color:var(--primary)">127</div>
-          <div class="sub">件のタグ付与</div>
+          <div class="val" style="color:var(--primary)" id="stat-monthly-tags">—</div>
+          <div class="sub">件 の タグ 付与</div>
         </div>
         <div class="stat-card">
-          <div class="label">自動化率</div>
-          <div class="val" style="color:var(--info)">84%</div>
+          <div class="label">自動化 率</div>
+          <div class="val" style="color:var(--info)" id="stat-auto-rate">—</div>
           <div class="sub">手動作業 削減</div>
         </div>
       </div>
@@ -630,10 +779,12 @@
     <!-- 使い方 (video guide iframe) -->
     <div class="view" id="view-guide">
       <div class="page-header">
-        <div><h2>使い方</h2><div class="desc">機能別 に 34本の 短い動画で 全操作 を 解説</div></div>
+        <div><h2>使い方</h2><div class="desc">機能別 に 34 本 の 短い 動画 で 全操作 を 解説 · 困った ら ここ を 見ればOK</div></div>
+        <div class="spacer"></div>
+        <a href="https://t35ty6-rgb.github.io/skeleton-demos/crm-tool-videos/" target="_blank" rel="noopener" class="btn btn-secondary" style="text-decoration:none">新しい タブ で 開く ↗</a>
       </div>
-      <div style="background:#0a0c11;border:1px solid var(--rule);border-radius:12px;overflow:hidden;height:calc(100vh - 180px);min-height:600px;">
-        <iframe src="https://t35ty6-rgb.github.io/skeleton-demos/crm-tool-videos/" style="width:100%;height:100%;border:0;display:block;" title="使い方 動画"></iframe>
+      <div style="background:#0a0c11;border:1px solid var(--rule);border-radius:12px;overflow:hidden;height:calc(100vh - 180px);min-height:520px;">
+        <iframe src="https://t35ty6-rgb.github.io/skeleton-demos/crm-tool-videos/" style="width:100%;height:100%;border:0;display:block;" title="使い方 動画" loading="lazy"></iframe>
       </div>
     </div>
 
@@ -673,6 +824,21 @@
   </div>
 </div>
 
+<!-- Confirm dialog -->
+<div id="confirm-scrim" role="dialog" aria-modal="true">
+  <div id="confirm-box">
+    <h4 id="confirm-title">確認</h4>
+    <p id="confirm-message">よろしいですか？</p>
+    <div class="actions">
+      <button class="btn btn-ghost" id="confirm-cancel">キャンセル</button>
+      <button class="btn btn-danger" id="confirm-ok">削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast stack -->
+<div id="toast-stack" aria-live="polite" aria-atomic="true"></div>
+
 <script>
 // =========================================================
 // State
@@ -686,6 +852,68 @@ const state = {
   autoTagRules: [],
   steps: [],
 };
+
+// =========================================================
+// Toast + Confirm helpers (used throughout)
+// =========================================================
+function toast(message, kind = 'success', duration = 2400) {
+  const stack = document.getElementById('toast-stack');
+  if (!stack) return;
+  const el = document.createElement('div');
+  el.className = `toast ${kind}`;
+  const icon = kind === 'success' ? '✓' : kind === 'info' ? 'ℹ' : kind === 'warn' ? '⚠' : '×';
+  el.innerHTML = `<span class="t-ic">${icon}</span><span>${message}</span>`;
+  stack.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('leaving');
+    setTimeout(() => el.remove(), 220);
+  }, duration);
+}
+
+let confirmResolver = null;
+function confirmDialog({ title = '確認', message, okLabel = '削除', okKind = 'danger' } = {}) {
+  return new Promise(resolve => {
+    confirmResolver = resolve;
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-message').innerHTML = message;
+    const ok = document.getElementById('confirm-ok');
+    ok.textContent = okLabel;
+    ok.className = 'btn ' + (okKind === 'danger' ? 'btn-danger' : 'btn-primary');
+    document.getElementById('confirm-scrim').classList.add('open');
+    setTimeout(() => ok.focus(), 60);
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {});
+setTimeout(() => {
+  const okBtn = document.getElementById('confirm-ok');
+  const cancelBtn = document.getElementById('confirm-cancel');
+  const scrim = document.getElementById('confirm-scrim');
+  function closeConfirm(result) {
+    scrim.classList.remove('open');
+    if (confirmResolver) { const r = confirmResolver; confirmResolver = null; r(result); }
+  }
+  if (okBtn) okBtn.addEventListener('click', () => closeConfirm(true));
+  if (cancelBtn) cancelBtn.addEventListener('click', () => closeConfirm(false));
+  if (scrim) scrim.addEventListener('click', e => { if (e.target === scrim) closeConfirm(false); });
+}, 30);
+
+// Empty state helper (used in list renders)
+function emptyStateHTML(icon, title, desc, ctaLabel, ctaId) {
+  return `<div class="empty-state" style="padding:64px 24px">
+    <div class="icon">${icon}</div>
+    <h3>${title}</h3>
+    <p>${desc}</p>
+    ${ctaLabel ? `<button class="btn btn-primary cta empty-cta" data-target="${ctaId||''}">${ctaLabel}</button>` : ''}
+  </div>`;
+}
+// Delegate empty-state CTA click
+document.addEventListener('click', e => {
+  const cta = e.target.closest('.empty-cta');
+  if (cta && cta.dataset.target) {
+    const btn = document.getElementById(cta.dataset.target);
+    if (btn) btn.click();
+  }
+});
 
 // =========================================================
 // Seed data
@@ -723,12 +951,14 @@ state.tags = [
 ];
 
 state.campaigns = [
-  { id: 'cp1', name: '春の特別セール 2024',    created: '2024-03-01' },
-  { id: 'cp2', name: 'Instagram広告 A案',     created: '2024-04-01' },
-  { id: 'cp3', name: 'Instagram広告 B案',     created: '2024-04-01' },
-  { id: 'cp4', name: 'Google広告 春キャン',    created: '2024-04-15' },
-  { id: 'cp5', name: 'LINE紹介プログラム',     created: '2024-05-01' },
-  { id: 'cp6', name: 'メルマガ再登録',         created: '2024-05-10' },
+  { id: 'cp1', name: 'LINE 追加誘導 春 A案',       created: '2024-02-28' },
+  { id: 'cp2', name: 'Instagram Story 広告 A案', created: '2024-03-14' },
+  { id: 'cp3', name: 'Instagram Story 広告 B案', created: '2024-03-14' },
+  { id: 'cp4', name: 'Google 検索広告 春 CV',     created: '2024-04-01' },
+  { id: 'cp5', name: '店頭 QR ポスター 春',        created: '2024-04-05' },
+  { id: 'cp6', name: 'LINE 友だち紹介 プログラム', created: '2024-04-20' },
+  { id: 'cp7', name: 'メルマガ 再登録 誘導',       created: '2024-05-01' },
+  { id: 'cp8', name: 'YouTube インフィード 広告',  created: '2024-05-15' },
 ];
 
 state.autoTagRules = [
@@ -774,29 +1004,62 @@ state.autoTagRules = [
   },
 ];
 
-const NAMES = ['田中 花子','山田 太郎','佐藤 美咲','鈴木 一郎','高橋 由美','伊藤 健一','渡辺 さくら','小林 雄大','加藤 真理','吉田 拓也','中村 陽子','林 秀明','清水 奈美','山本 幸子','福田 隆','岡田 純子','西村 誠','松本 理恵','内田 翔平','菊地 あゆみ'];
-const AVBG  = ['#6366f1','#f59e0b','#10b981','#ef4444','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#06b6d4'];
+// リアル な 顧客 デモデータ (30名、 電話/購入履歴/LTV も 現実感)
+const SEED_CUSTOMERS = [
+  { name: '田中 花子',   tags: ['t1','t2','t4','t3'],  tel: '090-1234-5678', lp: '2024-05-08', ltv: 128400, joined: '2023-06-14', src: 't7'  },
+  { name: '山田 太郎',   tags: ['t1','t2','t3'],       tel: '080-9821-4433', lp: '2024-05-04', ltv:  86200, joined: '2023-11-02', src: 't9'  },
+  { name: '佐藤 美咲',   tags: ['t1','t2','t11'],      tel: '070-5544-8811', lp: '2024-04-22', ltv:  54800, joined: '2024-01-18', src: 't16' },
+  { name: '鈴木 一郎',   tags: ['t1','t4','t2','t3'],  tel: '090-3311-9922', lp: '2024-05-10', ltv: 214600, joined: '2023-03-05', src: 't7'  },
+  { name: '高橋 由美',   tags: ['t1','t2','t12'],      tel: '080-4477-1188', lp: '2024-04-30', ltv:  67300, joined: '2023-09-27', src: 't17' },
+  { name: '伊藤 健一',   tags: ['t1','t2'],            tel: '070-6688-3322', lp: '2024-03-18', ltv:  38200, joined: '2024-02-11', src: 't16' },
+  { name: '渡辺 さくら', tags: ['t1','t2','t3','t11'], tel: '090-8811-4455', lp: '2024-05-01', ltv:  92100, joined: '2023-08-19', src: 't9'  },
+  { name: '小林 雄大',   tags: ['t1','t13','t6'],      tel: '080-2299-7733', lp: '—',           ltv:      0, joined: '2024-04-08', src: 't17' },
+  { name: '加藤 真理',   tags: ['t1','t2','t4'],       tel: '070-1122-9988', lp: '2024-04-14', ltv: 156800, joined: '2023-05-30', src: 't7'  },
+  { name: '吉田 拓也',   tags: ['t1','t5'],            tel: '090-7766-2233', lp: '2024-01-08', ltv:  22400, joined: '2023-10-04', src: 't16' },
+  { name: '中村 陽子',   tags: ['t1','t2','t3'],       tel: '080-5544-6677', lp: '2024-05-06', ltv:  74600, joined: '2024-01-25', src: 't10' },
+  { name: '林 秀明',     tags: ['t1','t2','t14'],      tel: '070-3388-1155', lp: '2024-04-27', ltv:  48200, joined: '2024-02-16', src: 't16' },
+  { name: '清水 奈美',   tags: ['t1','t13','t6'],      tel: '090-4422-8899', lp: '—',           ltv:      0, joined: '2024-04-19', src: 't9'  },
+  { name: '山本 幸子',   tags: ['t1','t2','t3','t12'], tel: '080-9977-3311', lp: '2024-04-25', ltv:  84500, joined: '2023-07-11', src: 't7'  },
+  { name: '福田 隆',     tags: ['t1','t2'],            tel: '070-6611-4488', lp: '2024-04-02', ltv:  36700, joined: '2024-03-08', src: 't17' },
+  { name: '岡田 純子',   tags: ['t1','t2','t11'],      tel: '090-2288-5566', lp: '2024-04-18', ltv:  61200, joined: '2023-12-14', src: 't16' },
+  { name: '西村 誠',     tags: ['t1','t5'],            tel: '080-7733-9911', lp: '2024-01-12', ltv:  18900, joined: '2023-08-02', src: 't16' },
+  { name: '松本 理恵',   tags: ['t1','t2','t3','t4'],  tel: '070-4499-1122', lp: '2024-05-09', ltv: 168300, joined: '2023-04-22', src: 't7'  },
+  { name: '内田 翔平',   tags: ['t1','t13'],           tel: '090-8822-7744', lp: '—',           ltv:      0, joined: '2024-04-24', src: 't17' },
+  { name: '菊地 あゆみ', tags: ['t1','t2','t14'],      tel: '080-3355-6699', lp: '2024-04-11', ltv:  52400, joined: '2023-11-19', src: 't9'  },
+  { name: '斎藤 光太',   tags: ['t1','t2','t3'],       tel: '070-9911-2244', lp: '2024-04-29', ltv:  74800, joined: '2023-06-30', src: 't10' },
+  { name: '長谷川 恵',   tags: ['t1','t2','t4'],       tel: '090-5544-8877', lp: '2024-05-07', ltv: 132100, joined: '2023-05-14', src: 't7'  },
+  { name: '前田 涼子',   tags: ['t1','t13','t6'],      tel: '080-6677-2233', lp: '—',           ltv:      0, joined: '2024-05-02', src: 't16' },
+  { name: '藤井 翼',     tags: ['t1','t2'],            tel: '070-1188-5599', lp: '2024-03-24', ltv:  42600, joined: '2024-02-28', src: 't17' },
+  { name: '石川 舞',     tags: ['t1','t2','t11','t12'],tel: '090-7744-3322', lp: '2024-04-16', ltv:  58400, joined: '2023-09-08', src: 't9'  },
+  { name: '大野 尚志',   tags: ['t1','t5'],            tel: '080-4488-6611', lp: '2023-12-22', ltv:  14200, joined: '2023-07-05', src: 't16' },
+  { name: '森田 麻衣',   tags: ['t1','t2','t3','t14'], tel: '070-2255-9988', lp: '2024-05-03', ltv:  96800, joined: '2023-10-30', src: 't10' },
+  { name: '池田 康弘',   tags: ['t1','t2','t4'],       tel: '090-6633-1177', lp: '2024-04-08', ltv: 178400, joined: '2023-02-19', src: 't7'  },
+  { name: '橋本 沙織',   tags: ['t1','t2'],            tel: '080-8899-2244', lp: '2024-04-06', ltv:  32800, joined: '2024-03-15', src: 't9'  },
+  { name: '木村 亮',     tags: ['t1','t13'],           tel: '070-3344-7799', lp: '—',           ltv:      0, joined: '2024-05-05', src: 't17' },
+];
+const AVBG = ['#6366f1','#f59e0b','#10b981','#ef4444','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#06b6d4'];
 
-for (let i = 0; i < 20; i++) {
-  const tagPool = state.tags.slice(0, 5);
-  const custTags = [state.tags[0].id];
-  if (Math.random() > 0.4) custTags.push(tagPool[Math.floor(Math.random()*tagPool.length)].id);
+SEED_CUSTOMERS.forEach((c, i) => {
   state.customers.push({
     id: `c${i+1}`,
-    name: NAMES[i],
+    name: c.name,
+    tel: c.tel,
     avatarBg: AVBG[i % AVBG.length],
-    tagIds: custTags,
-    lastPurchase: i < 12 ? `2024-0${(i%9)+1}-${(i*3+1)%28+1}`.replace(/-0(\d)-/, '-$1-') : '—',
-    ltv: i < 12 ? `¥${(18+i*3).toFixed(0)},00${i%10}` : '—',
-    joinedAt: `2024-0${(i%9)+1}-01`,
+    tagIds: c.src && !c.tags.includes(c.src) ? [...c.tags, c.src] : c.tags,
+    lastPurchase: c.lp,
+    ltv: c.ltv ? `¥${c.ltv.toLocaleString()}` : '—',
+    ltvNum: c.ltv,
+    joinedAt: c.joined,
   });
-}
+});
 
 state.segments = [
-  { id: 's1', name: 'SNS流入 × 未購入',   tagIds: ['t16','t13'], count: 34 },
-  { id: 's2', name: 'VIP顧客 × 定期便',    tagIds: ['t4','t3'],  count: 18 },
-  { id: 's3', name: '休眠顧客 (90日超)',    tagIds: ['t5'],       count: 42 },
-  { id: 's4', name: '広告経由 見込み',      tagIds: ['t17','t6'], count: 27 },
+  { id: 's1', name: '休眠 顧客 (90日 超)',       tagIds: ['t5'],         count: 42, kind: '再アプローチ' },
+  { id: 's2', name: 'VIP × 定期便',              tagIds: ['t4','t3'],    count: 18, kind: 'ロイヤル' },
+  { id: 's3', name: 'SNS 流入 × 未購入',         tagIds: ['t16','t13'],  count: 34, kind: '新規 育成' },
+  { id: 's4', name: '広告経由 見込み客',          tagIds: ['t17','t6'],   count: 27, kind: '新規 育成' },
+  { id: 's5', name: '再購入 促進 対象',            tagIds: ['t2','t11'],   count: 63, kind: 'リピート' },
+  { id: 's6', name: '誕生日月 × 購入済',          tagIds: ['t12','t2'],   count: 12, kind: 'イベント' },
 ];
 
 // =========================================================
@@ -858,6 +1121,11 @@ function navigate(view) {
   const viewEl = document.getElementById('view-' + view);
   if (viewEl) viewEl.classList.add('active');
   renderView(view);
+  // close mobile drawer
+  closeNav();
+  // scroll main to top
+  const main = document.getElementById('main');
+  if (main) main.scrollTop = 0;
 }
 
 // =========================================================
@@ -910,31 +1178,65 @@ function renderCustomers() {
     return true;
   });
 
-  tbody.innerHTML = filtered.map(c => `
-    <tr data-cust-id="${c.id}" style="cursor:pointer">
-      <td>
-        <div class="cust-cell">
-          <div class="avatar" style="background:${c.avatarBg}">${c.name[0]}</div>
-          <div>
-            <div class="cust-name">${c.name}</div>
-            <div class="cust-tags">${c.tagIds.slice(0,2).map(id => tagChipHTML(id)).join('')}</div>
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="padding:0">
+      <div class="empty-state" style="padding:64px 24px">
+        <div class="icon">👥</div>
+        <h3>${(searchQ || filterTag) ? '該当 する 顧客 が 見つかりません' : '顧客 が まだ 登録 されて いません'}</h3>
+        <p>${(searchQ || filterTag) ? '検索 条件 を 変えて みてください' : '「+ 顧客追加」 から 最初 の 顧客 を 登録 しましょう。<br>LINE 友だち追加 も 自動 で 反映 されます。'}</p>
+        ${!(searchQ || filterTag) ? '<button class="btn btn-primary cta empty-cta" data-target="cust-add-btn">+ 顧客 を 追加</button>' : ''}
+      </div>
+    </td></tr>`;
+  } else {
+    tbody.innerHTML = filtered.map(c => `
+      <tr data-cust-id="${c.id}" style="cursor:pointer">
+        <td>
+          <div class="cust-cell">
+            <div class="avatar" style="background:${c.avatarBg}">${c.name[0]}</div>
+            <div>
+              <div class="cust-name">${c.name}</div>
+              ${c.tel && c.tel !== '—' ? `<div style="font-size:11px;color:var(--dim);margin-top:2px;font-family:'SF Mono',monospace">${c.tel}</div>` : ''}
+            </div>
           </div>
-        </div>
-      </td>
-      <td>${c.tagIds.map(id => tagChipHTML(id)).join(' ')}</td>
-      <td style="color:var(--dim)">${c.lastPurchase}</td>
-      <td style="font-weight:700">${c.ltv}</td>
-      <td style="color:var(--dim);font-size:12px">${c.joinedAt}</td>
-      <td><button class="icon-btn cust-detail-btn" data-cust-id="${c.id}" title="詳細">→</button></td>
-    </tr>
-  `).join('');
+        </td>
+        <td><div style="display:flex;flex-wrap:wrap;gap:3px;max-width:280px">${c.tagIds.map(id => tagChipHTML(id)).join('')}</div></td>
+        <td style="color:${c.lastPurchase && c.lastPurchase !== '—' ? 'var(--ink-2)' : 'var(--dim)'};font-size:12px">${c.lastPurchase}</td>
+        <td style="font-weight:700;color:${c.ltvNum > 0 ? 'var(--primary-hi)' : 'var(--dim)'}">${c.ltv}</td>
+        <td style="color:var(--dim);font-size:12px">${c.joinedAt}</td>
+        <td><button class="icon-btn cust-detail-btn" data-cust-id="${c.id}" title="詳細">→</button></td>
+      </tr>
+    `).join('');
+  }
 
   const countLabel = document.getElementById('cust-count-label');
   if (countLabel) countLabel.textContent = `${filtered.length} 件`;
+  // === Stats ===
+  const total = state.customers.length;
   const totalVal = document.getElementById('stat-total-val');
-  if (totalVal) totalVal.textContent = state.customers.length;
+  if (totalVal) totalVal.textContent = total;
+  const purchased = state.customers.filter(c => c.lastPurchase && c.lastPurchase !== '—');
   const purchVal = document.getElementById('stat-purchased-val');
-  if (purchVal) purchVal.textContent = state.customers.filter(c => c.lastPurchase && c.lastPurchase !== '—').length;
+  if (purchVal) purchVal.textContent = purchased.length;
+  const purchSub = document.getElementById('stat-purchased-sub');
+  if (purchSub) purchSub.textContent = total > 0 ? `${(purchased.length/total*100).toFixed(1)}% 購入率` : '購入率';
+  // 直近 30日 新規: joinedAt が データ 上 の 最新 30日 以内 (seed data 基準)
+  const allJoinedTs = state.customers.map(c => Date.parse((c.joinedAt||'') + 'T00:00:00')).filter(t => !isNaN(t));
+  const latestJoined = allJoinedTs.length ? Math.max(...allJoinedTs) : Date.now();
+  const newRecent = state.customers.filter(c => {
+    if (!c.joinedAt) return false;
+    const t = Date.parse(c.joinedAt + 'T00:00:00');
+    if (isNaN(t)) return false;
+    return (latestJoined - t) < 30 * 24 * 3600 * 1000;
+  });
+  const newVal = document.getElementById('stat-new-val');
+  if (newVal) newVal.textContent = '+' + newRecent.length;
+  const newSub = document.getElementById('stat-new-sub');
+  if (newSub && newRecent.length > 0) newSub.textContent = `月間 平均 +${Math.max(3, Math.round(newRecent.length * 0.8))} 名`;
+  // 平均 LTV
+  const withLtv = state.customers.filter(c => c.ltvNum && c.ltvNum > 0);
+  const avgLtv = withLtv.length ? Math.round(withLtv.reduce((a,c) => a + c.ltvNum, 0) / withLtv.length) : 0;
+  const ltvVal = document.getElementById('stat-ltv-val');
+  if (ltvVal) ltvVal.textContent = avgLtv > 0 ? `¥${avgLtv.toLocaleString()}` : '—';
 
   tbody.querySelectorAll('tr').forEach(row => {
     row.addEventListener('click', () => {
@@ -995,21 +1297,27 @@ function openCustomerAddModal() {
     chip.addEventListener('click', () => chip.classList.toggle('selected'));
   });
   document.getElementById('cust-modal-save').addEventListener('click', () => {
-    const name = document.getElementById('cust-modal-name').value.trim() || '新しい顧客';
+    const nameEl = document.getElementById('cust-modal-name');
+    const name = nameEl.value.trim();
+    if (!name) { nameEl.focus(); nameEl.style.borderColor = 'var(--danger)'; toast('顧客名 を 入力 してください', 'warn'); return; }
+    const tel = document.getElementById('cust-modal-tel').value.trim();
     const selectedTags = [...document.querySelectorAll('#cust-modal-tags .tag-chip.selected')].map(c => c.dataset.tagId);
     const cust = {
       id: 'c' + Date.now(),
       name,
+      tel: tel || '—',
       avatarBg: AVBG[Math.floor(Math.random()*AVBG.length)],
       tagIds: selectedTags.length > 0 ? selectedTags : ['t1'],
       lastPurchase: '—',
       ltv: '—',
+      ltvNum: 0,
       joinedAt: new Date().toISOString().slice(0,10),
     };
     state.customers.unshift(cust);
     closeModal();
     renderCustomers();
     renderNav();
+    toast(`「${name}」 を 追加 しました`);
   });
   setTimeout(() => { document.getElementById('cust-modal-name').focus(); }, 80);
 }
@@ -1042,11 +1350,22 @@ function openCustomerDetailModal(cust) {
         <div style="font-size:20px;font-weight:800;color:var(--primary)">${cust.ltv}</div>
       </div>
     </div>
+    ${cust.tel ? `
     <div class="field-group">
-      <label class="field-label">タグ（クリックで付け外し）</label>
+      <label class="field-label">電話番号</label>
+      <div style="padding:10px 14px;background:var(--surface-2);border-radius:8px;font-family:'SF Mono',monospace;font-size:14px;">${cust.tel}</div>
+    </div>` : ''}
+    ${cust.lastPurchase && cust.lastPurchase !== '—' ? `
+    <div class="field-group">
+      <label class="field-label">最終購入</label>
+      <div style="padding:10px 14px;background:var(--surface-2);border-radius:8px;font-size:13px;">${cust.lastPurchase}</div>
+    </div>` : ''}
+    <div class="field-group">
+      <label class="field-label">タグ （クリック で 付け外し）</label>
       <div class="tag-chip-area" id="cust-detail-tags">${tagChips}</div>
     </div>
     <div class="modal-actions">
+      <button class="btn btn-danger" id="cust-detail-delete" style="margin-right:auto">削除</button>
       <button class="btn btn-ghost" id="cust-detail-cancel">閉じる</button>
       <button class="btn btn-primary" id="cust-detail-save">保存</button>
     </div>
@@ -1059,9 +1378,24 @@ function openCustomerDetailModal(cust) {
   });
   document.getElementById('cust-detail-save').addEventListener('click', () => {
     const newTags = [...document.querySelectorAll('#cust-detail-tags .tag-chip.selected')].map(c => c.dataset.tagId);
+    const changed = JSON.stringify(newTags.slice().sort()) !== JSON.stringify(cust.tagIds.slice().sort());
     cust.tagIds = newTags;
     closeModal();
     renderCustomers();
+    renderTags();
+    renderNav();
+    if (changed) toast(`「${cust.name}」 の タグ を 更新 しました`);
+  });
+  // Delete button
+  const delBtn = document.getElementById('cust-detail-delete');
+  if (delBtn) delBtn.addEventListener('click', async () => {
+    if (!await confirmDialog({ title: '顧客 を 削除', message: `「${cust.name}」 を 削除 します。<br>この操作 は 取り消せません。`, okLabel: '削除' })) return;
+    state.customers = state.customers.filter(c => c.id !== cust.id);
+    closeModal();
+    renderCustomers();
+    renderNav();
+    renderTags();
+    toast(`「${cust.name}」 を 削除 しました`, 'info');
   });
 }
 
@@ -1170,19 +1504,28 @@ function openTagModal(existingTag) {
   });
 
   if (isEdit && document.getElementById('tag-modal-delete')) {
-    document.getElementById('tag-modal-delete').addEventListener('click', () => {
-      if (confirm(`「${existingTag.name}」を削除しますか？\n削除すると、このタグが付いた全顧客から自動的に剥がれます。`)) {
-        state.tags = state.tags.filter(t => t.id !== existingTag.id);
-        state.customers.forEach(c => { c.tagIds = c.tagIds.filter(id => id !== existingTag.id); });
-        closeModal();
-        renderTags();
-        renderNav();
-      }
+    document.getElementById('tag-modal-delete').addEventListener('click', async () => {
+      const affected = state.customers.filter(c => c.tagIds.includes(existingTag.id)).length;
+      const ok = await confirmDialog({
+        title: 'タグ を 削除',
+        message: `「${existingTag.name}」 を 削除 します。<br>${affected > 0 ? `<b style="color:var(--danger)">${affected} 名</b> の 顧客 から この タグ が 自動 で 剥がれます。` : 'この タグ は どの 顧客 にも 付いて いません。'}`,
+        okLabel: '削除',
+      });
+      if (!ok) return;
+      state.tags = state.tags.filter(t => t.id !== existingTag.id);
+      state.customers.forEach(c => { c.tagIds = c.tagIds.filter(id => id !== existingTag.id); });
+      closeModal();
+      renderTags();
+      renderNav();
+      renderCustomers();
+      toast(`「${existingTag.name}」 を 削除 しました`, 'info');
     });
   }
 
   document.getElementById('tag-modal-save').addEventListener('click', () => {
-    const name = document.getElementById('tag-modal-name').value.trim() || '新しいタグ';
+    const nameEl = document.getElementById('tag-modal-name');
+    const name = nameEl.value.trim();
+    if (!name) { nameEl.focus(); nameEl.style.borderColor = 'var(--danger)'; toast('タグ名 を 入力 してください', 'warn'); return; }
     if (isEdit) {
       existingTag.name = name;
       existingTag.colorIdx = selectedColorIdx;
@@ -1192,6 +1535,8 @@ function openTagModal(existingTag) {
     closeModal();
     renderTags();
     renderNav();
+    renderCustomers();
+    toast(isEdit ? `「${name}」 を 更新 しました` : `「${name}」 を 追加 しました`);
     // highlight new/edited card
     setTimeout(() => {
       const cards = document.querySelectorAll('.tag-card');
@@ -1208,6 +1553,14 @@ function openTagModal(existingTag) {
 // タグ追加ボタン
 document.getElementById('tag-add-btn').addEventListener('click', () => openTagModal(null));
 
+// stable pseudo count per rule (seeded by rule id)
+function ruleMonthlyCount(rule) {
+  if (rule.monthlyCount != null) return rule.monthlyCount;
+  const seed = rule.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  rule.monthlyCount = (seed % 60) + 20;
+  return rule.monthlyCount;
+}
+
 function renderAutoTags() {
   const list = document.getElementById('rule-list');
   list.innerHTML = '';
@@ -1215,7 +1568,15 @@ function renderAutoTags() {
   const demoBtn = document.getElementById('rule-demo');
   if (demoBtn) demoBtn.style.display = state.autoTagRules.some(r => r.active) ? '' : 'none';
 
-  state.autoTagRules.forEach((rule, idx) => {
+  if (state.autoTagRules.length === 0) {
+    list.innerHTML = `<li style="padding:0">${emptyStateHTML('⚡','自動タグルール が ありません','特定 の イベント（購入 / 友だち追加 / キャンペーン 経由 等） を トリガー に、<br>タグ を 自動 で 付与 する ルール を 設定 できます。','+ 最初 の ルール を 作成','rule-add')}</li>`;
+    document.getElementById('rule-count-badge').textContent = 0;
+    const badge = document.getElementById('stat-active-rules');
+    if (badge) badge.textContent = 0;
+    return;
+  }
+
+  state.autoTagRules.forEach((rule) => {
     const tagChips = rule.tagIds.map(id => tagChipHTML(id)).join(' ');
     const li = document.createElement('li');
     li.className = 'rule-row';
@@ -1232,11 +1593,11 @@ function renderAutoTags() {
           ${rule.tagIds.map(id => getTag(id)?.name || id).join(', ')} を付与
         </div>
       </div>
-      <div class="rule-count">${Math.floor(Math.random()*80+20)} 件/月</div>
+      <div class="rule-count">${ruleMonthlyCount(rule)} 件/月</div>
       <div class="rule-tag">${tagChips}</div>
       <div class="rule-actions">
-        <button class="icon-btn" title="編集">✎</button>
-        <button class="icon-btn" title="削除" style="color:var(--danger)">✕</button>
+        <button class="icon-btn rule-edit-btn" data-rule-id="${rule.id}" title="編集">✎</button>
+        <button class="icon-btn danger rule-del-btn" data-rule-id="${rule.id}" title="削除">✕</button>
       </div>
     `;
     // toggle
@@ -1248,13 +1609,46 @@ function renderAutoTags() {
       if (badge) badge.textContent = state.autoTagRules.filter(r => r.active).length;
       document.getElementById('rule-count-badge').textContent = state.autoTagRules.length;
       renderNav();
+      toast(`「${rule.name}」 を ${rule.active ? '有効化' : '停止'} しました`, 'info', 1600);
     });
     list.appendChild(li);
   });
 
   document.getElementById('rule-count-badge').textContent = state.autoTagRules.length;
   const badge = document.getElementById('stat-active-rules');
-  if (badge) badge.textContent = state.autoTagRules.filter(r=>r.active).length;
+  const activeCount = state.autoTagRules.filter(r=>r.active).length;
+  if (badge) badge.textContent = activeCount;
+  const badgeSub = document.getElementById('stat-active-rules-sub');
+  if (badgeSub) badgeSub.textContent = `/ ${state.autoTagRules.length} ルール`;
+  const monthly = document.getElementById('stat-monthly-tags');
+  if (monthly) {
+    const sum = state.autoTagRules.filter(r=>r.active).reduce((a,r) => a + ruleMonthlyCount(r), 0);
+    monthly.textContent = sum;
+  }
+  const autoRate = document.getElementById('stat-auto-rate');
+  if (autoRate) {
+    // 有効ルール が 多い ほど 自動化 が 進む という 見せかけ
+    const rate = state.autoTagRules.length === 0 ? 0 : Math.min(96, Math.round(activeCount / Math.max(state.autoTagRules.length, 1) * 90 + 6));
+    autoRate.textContent = rate + '%';
+  }
+
+  // Wire edit / delete
+  list.querySelectorAll('.rule-edit-btn').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    const r = state.autoTagRules.find(x => x.id === b.dataset.ruleId);
+    if (r) openRuleModal(r);
+  }));
+  list.querySelectorAll('.rule-del-btn').forEach(b => b.addEventListener('click', async e => {
+    e.stopPropagation();
+    const r = state.autoTagRules.find(x => x.id === b.dataset.ruleId);
+    if (!r) return;
+    const ok = await confirmDialog({ title: 'ルール を 削除', message: `「${r.name}」 を 削除 します。<br>今後 この ルール による 自動 タグ 付与 は 行われません。`, okLabel: '削除' });
+    if (!ok) return;
+    state.autoTagRules = state.autoTagRules.filter(x => x.id !== r.id);
+    renderAutoTags();
+    renderNav();
+    toast(`ルール 「${r.name}」 を 削除 しました`, 'info');
+  }));
 }
 
 // =========================================================
@@ -1272,24 +1666,29 @@ if (!state.campaigns[0].url) {
 function renderCampaigns() {
   const el = document.getElementById('campaign-list');
   if (!el) return;
+  if (state.campaigns.length === 0) {
+    el.innerHTML = emptyStateHTML('📊', 'キャンペーン が ありません', 'URL 経由 の 流入 を 計測 する ため の キャンペーン を 作成 しましょう。<br>QR や 短縮 URL を 生成 して、 チラシ / 広告 / SNS で 配布 できます。', '+ 最初 の キャンペーン を 作成', 'cp-add-btn');
+    return;
+  }
   el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">${
     state.campaigns.map(cp => `
-      <div class="cp-card" data-cp-id="${cp.id}" style="background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px;">
-        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">
+      <div class="cp-card" data-cp-id="${cp.id}" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px;transition:box-shadow .15s;">
+        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
           <div style="flex:1">
-            <div style="font-size:13px;font-weight:700;margin-bottom:2px;">${cp.name}</div>
-            <div style="font-size:11px;color:var(--dim)">${cp.created} · ${cp.type||'広告'}</div>
+            <div style="font-size:14px;font-weight:800;margin-bottom:2px;">${cp.name}</div>
+            <div style="font-size:11px;color:var(--dim)">${cp.created}</div>
           </div>
-          <span style="background:var(--info-soft);color:var(--info);padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700">${cp.type||'広告'}</span>
+          <span style="background:var(--info-soft);color:var(--info);padding:2px 8px;border-radius:12px;font-size:10px;font-weight:800">${cp.type||'広告'}</span>
         </div>
         <div style="font-size:11px;color:var(--dim);word-break:break-all;font-family:'SF Mono',monospace;background:var(--surface-2);padding:6px 8px;border-radius:6px;margin-bottom:10px;">${cp.url||''}</div>
-        <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:flex-end;gap:8px;">
           <div style="flex:1">
-            <div style="font-size:11px;color:var(--dim);font-weight:700">流入</div>
-            <div style="font-size:22px;font-weight:800;color:var(--primary)">${cp.inflow||0}</div>
+            <div style="font-size:11px;color:var(--dim);font-weight:700">流入 (人)</div>
+            <div style="font-size:24px;font-weight:800;color:var(--primary);line-height:1;">${cp.inflow||0}</div>
           </div>
-          <button class="btn btn-secondary cp-url-btn" data-cp-id="${cp.id}" style="padding:6px 12px;font-size:11px">URL コピー</button>
-          <button class="btn btn-secondary cp-qr-btn" data-cp-id="${cp.id}" style="padding:6px 12px;font-size:11px">QR</button>
+          <button class="btn btn-secondary cp-url-btn" data-cp-id="${cp.id}" style="padding:6px 10px;font-size:11px">URL</button>
+          <button class="btn btn-secondary cp-qr-btn" data-cp-id="${cp.id}" style="padding:6px 10px;font-size:11px">QR</button>
+          <button class="icon-btn danger cp-del-btn" data-cp-id="${cp.id}" style="width:28px;height:28px" title="削除">✕</button>
         </div>
       </div>`).join('')
   }</div>`;
@@ -1300,6 +1699,17 @@ function renderCampaigns() {
   el.querySelectorAll('.cp-qr-btn').forEach(b => b.addEventListener('click', e => {
     e.stopPropagation();
     openCampaignQrModal(state.campaigns.find(c => c.id === b.dataset.cpId));
+  }));
+  el.querySelectorAll('.cp-del-btn').forEach(b => b.addEventListener('click', async e => {
+    e.stopPropagation();
+    const cp = state.campaigns.find(c => c.id === b.dataset.cpId);
+    if (!cp) return;
+    const ok = await confirmDialog({ title: 'キャンペーン を 削除', message: `「${cp.name}」 を 削除 します。<br>流入 履歴 も 一緒 に 消えます。`, okLabel: '削除' });
+    if (!ok) return;
+    state.campaigns = state.campaigns.filter(c => c.id !== cp.id);
+    renderCampaigns();
+    renderNav();
+    toast(`「${cp.name}」 を 削除 しました`, 'info');
   }));
 }
 
@@ -1354,7 +1764,9 @@ function openCampaignAddModal() {
     chip.addEventListener('click', () => chip.classList.toggle('selected'));
   });
   document.getElementById('cp-modal-save').addEventListener('click', () => {
-    const name = document.getElementById('cp-modal-name').value.trim() || '新しいキャンペーン';
+    const nameEl = document.getElementById('cp-modal-name');
+    const name = nameEl.value.trim();
+    if (!name) { nameEl.focus(); nameEl.style.borderColor = 'var(--danger)'; toast('キャンペーン名 を 入力 してください', 'warn'); return; }
     const url = document.getElementById('cp-modal-url').value.trim() || 'https://example.jp/';
     const type = document.querySelector('#cp-modal-type .cp-chip.selected')?.dataset.v || '広告';
     const tagIds = [...document.querySelectorAll('#cp-modal-tags .tag-chip.selected')].map(c => c.dataset.tagId);
@@ -1364,14 +1776,16 @@ function openCampaignAddModal() {
       name,
       created: new Date().toISOString().slice(0,10),
       type,
-      url: url + '?cp=' + cpId,
+      url: url + (url.includes('?') ? '&' : '?') + 'cp=' + cpId,
       tagIds,
       inflow: 0,
     });
     closeModal();
     renderCampaigns();
     renderNav();
+    toast(`「${name}」 を 作成 しました`);
   });
+  setTimeout(() => { const inp = document.getElementById('cp-modal-name'); if (inp) inp.focus(); }, 80);
 }
 
 function openCampaignUrlModal(cp) {
@@ -1399,8 +1813,12 @@ function openCampaignUrlModal(cp) {
   document.getElementById('modal-scrim').classList.add('open');
   document.getElementById('modal-close-btn').addEventListener('click', closeModal);
   document.getElementById('cp-url-close').addEventListener('click', closeModal);
-  document.getElementById('cp-url-copy').addEventListener('click', () => {
+  document.getElementById('cp-url-copy').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(cp.url);
+    } catch (e) { /* fallback */ }
     document.getElementById('cp-url-copied').style.display = '';
+    toast('URL を クリップボード に コピー しました');
   });
 }
 
@@ -1452,6 +1870,19 @@ function openCampaignQrModal(cp) {
   document.getElementById('modal-scrim').classList.add('open');
   document.getElementById('modal-close-btn').addEventListener('click', closeModal);
   document.getElementById('qr-close').addEventListener('click', closeModal);
+  const dl = document.getElementById('qr-download');
+  if (dl) dl.addEventListener('click', () => {
+    // demo: SVG を そのまま download
+    const svgEl = document.querySelector('#modal svg');
+    if (!svgEl) return;
+    const blob = new Blob([svgEl.outerHTML], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `qr-${cp.id}.svg`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('QR コード を ダウンロード しました');
+  });
 }
 
 // =========================================================
@@ -1460,17 +1891,23 @@ function openCampaignQrModal(cp) {
 function renderSegments() {
   const el = document.getElementById('segment-cards');
   if (!el) return;
+  if (state.segments.length === 0) {
+    el.innerHTML = emptyStateHTML('🎯', 'セグメント が ありません', 'タグ の 組み合わせ で 顧客 を 絞り込んだ セグメント を 作成 できます。<br>「休眠 客」「VIP × 定期便」 等 の 意味 ある 集合 を 事前 に 定義 しておくと、 配信 が 早い。', '+ 最初 の セグメント を 作成', 'seg-add-btn');
+    return;
+  }
   el.innerHTML = state.segments.map(seg => `
-    <div class="seg-card" data-seg-id="${seg.id}" style="background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:18px;cursor:pointer;transition:transform .1s, box-shadow .1s">
-      <div style="font-size:14px;font-weight:700;margin-bottom:8px;">${seg.name}</div>
+    <div class="seg-card" data-seg-id="${seg.id}" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:18px;transition:box-shadow .15s;position:relative;">
+      <button class="icon-btn danger seg-del-btn" data-seg-id="${seg.id}" title="削除" style="position:absolute;top:12px;right:12px;width:26px;height:26px;font-size:12px">✕</button>
+      <div style="font-size:14px;font-weight:800;margin-bottom:4px;padding-right:26px;">${seg.name}</div>
+      ${seg.kind ? `<div style="font-size:10px;color:var(--dim);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px">${seg.kind}</div>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${seg.tagIds.map(id => tagChipHTML(id)).join('')}</div>
       <div style="display:flex;align-items:baseline;gap:6px;">
-        <div style="font-size:26px;font-weight:800;color:var(--info)">${seg.count}</div>
-        <div style="font-size:12px;color:var(--dim)">名</div>
+        <div style="font-size:28px;font-weight:800;color:var(--info)">${seg.count}</div>
+        <div style="font-size:12px;color:var(--dim)">名 が対象</div>
       </div>
-      <div style="display:flex;gap:6px;margin-top:12px;">
-        <button class="btn btn-secondary seg-preview-btn" data-seg-id="${seg.id}" style="padding:6px 12px;font-size:11px;flex:1">対象客プレビュー</button>
-        <button class="btn btn-primary seg-send-btn" data-seg-id="${seg.id}" style="padding:6px 12px;font-size:11px;flex:1">配信する</button>
+      <div style="display:flex;gap:6px;margin-top:14px;">
+        <button class="btn btn-secondary seg-preview-btn" data-seg-id="${seg.id}" style="padding:8px 10px;font-size:11px;flex:1;justify-content:center;white-space:nowrap">プレビュー</button>
+        <button class="btn btn-primary seg-send-btn" data-seg-id="${seg.id}" style="padding:8px 10px;font-size:11px;flex:1;justify-content:center;white-space:nowrap">配信 →</button>
       </div>
     </div>`).join('');
   el.querySelectorAll('.seg-preview-btn').forEach(b => b.addEventListener('click', e => {
@@ -1479,7 +1916,22 @@ function renderSegments() {
   }));
   el.querySelectorAll('.seg-send-btn').forEach(b => b.addEventListener('click', e => {
     e.stopPropagation();
+    const seg = state.segments.find(s => s.id === b.dataset.segId);
     navigate('broadcast');
+    setTimeout(() => {
+      openBroadcastCreateModal(seg);
+    }, 150);
+  }));
+  el.querySelectorAll('.seg-del-btn').forEach(b => b.addEventListener('click', async e => {
+    e.stopPropagation();
+    const seg = state.segments.find(s => s.id === b.dataset.segId);
+    if (!seg) return;
+    const ok = await confirmDialog({ title: 'セグメント を 削除', message: `「${seg.name}」 を 削除 します。<br>顧客 データ は 消えません、 この 絞り込み 条件 だけ 削除 されます。`, okLabel: '削除' });
+    if (!ok) return;
+    state.segments = state.segments.filter(s => s.id !== seg.id);
+    renderSegments();
+    renderNav();
+    toast(`「${seg.name}」 を 削除 しました`, 'info');
   }));
 }
 
@@ -1543,18 +1995,23 @@ function openSegmentCreateModal() {
   }
 
   document.getElementById('seg-modal-save').addEventListener('click', () => {
-    const name = document.getElementById('seg-modal-name').value.trim() || '新しいセグメント';
+    const nameEl = document.getElementById('seg-modal-name');
+    const name = nameEl.value.trim();
+    if (!name) { nameEl.focus(); nameEl.style.borderColor = 'var(--danger)'; toast('セグメント名 を 入力 してください', 'warn'); return; }
     const selectedIds = [...document.querySelectorAll('#seg-modal-and .tag-chip.selected')].map(c => c.dataset.tagId);
+    if (selectedIds.length === 0) { toast('条件 タグ を 1つ 以上 選択 してください', 'warn'); return; }
     state.segments.unshift({
       id: 's' + Date.now(),
       name,
-      tagIds: selectedIds.length > 0 ? selectedIds : [state.tags[0].id],
+      tagIds: selectedIds,
       count: parseInt(document.getElementById('seg-preview-num').textContent) || 10,
     });
     closeModal();
     renderSegments();
     renderNav();
+    toast(`「${name}」 を 作成 しました`);
   });
+  setTimeout(() => { const inp = document.getElementById('seg-modal-name'); if (inp) inp.focus(); }, 80);
 }
 
 function openSegmentPreviewModal(seg) {
@@ -1607,25 +2064,38 @@ function openSegmentPreviewModal(seg) {
 function renderBroadcast() {
   const el = document.getElementById('broadcast-cards');
   if (!el) return;
-  const broadcasts = state.broadcasts || [
-    { name: '春の新商品ご案内', sent: '2024-04-10', target: 248, open: '68%', click: '24%' },
-    { name: 'GW 特別クーポン', sent: '2024-04-28', target: 132, open: '71%', click: '31%' },
-    { name: 'VIP 先行販売ご案内', sent: '2024-05-01', target: 18, open: '89%', click: '56%' },
-  ];
-  state.broadcasts = broadcasts;
-  el.innerHTML = broadcasts.map(b => `
-    <div style="background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:18px;">
-      <div style="font-size:14px;font-weight:700;margin-bottom:4px;">${b.name}</div>
-      <div style="font-size:12px;color:var(--dim);margin-bottom:12px">${b.sent} 配信</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-        <div><div style="font-size:11px;color:var(--dim);font-weight:700">対象</div><div style="font-size:20px;font-weight:800">${b.target}</div></div>
-        <div><div style="font-size:11px;color:var(--dim);font-weight:700">開封率</div><div style="font-size:20px;font-weight:800;color:var(--primary)">${b.open}</div></div>
-        <div><div style="font-size:11px;color:var(--dim);font-weight:700">クリック率</div><div style="font-size:20px;font-weight:800;color:var(--info)">${b.click}</div></div>
+  if (!state.broadcasts) {
+    state.broadcasts = [
+      { id: 'bc8', name: 'VIP 先行販売 のご案内',      sent: '2024-05-11 14:30', target:  18, open: '89%', click: '56%', target_label: 'VIP × 定期便' },
+      { id: 'bc7', name: 'GW 特別 クーポン 配布',       sent: '2024-04-28 10:00', target: 132, open: '71%', click: '31%', target_label: '購入済み 全員' },
+      { id: 'bc6', name: '母の日 ギフト おすすめ',       sent: '2024-04-24 09:00', target: 208, open: '62%', click: '22%', target_label: '全 顧客' },
+      { id: 'bc5', name: '春 の 新商品 ご案内',          sent: '2024-04-10 09:00', target: 248, open: '68%', click: '24%', target_label: '全 顧客' },
+      { id: 'bc4', name: '定期便 更新 リマインド',       sent: '2024-04-03 12:00', target:  48, open: '82%', click: '41%', target_label: '定期便 ユーザー' },
+      { id: 'bc3', name: '花見 週末 限定 セール',        sent: '2024-03-28 10:00', target: 226, open: '58%', click: '18%', target_label: '全 顧客' },
+      { id: 'bc2', name: '休眠 客 呼び戻し クーポン',     sent: '2024-03-15 18:00', target:  42, open: '34%', click:  '9%', target_label: '休眠 顧客' },
+      { id: 'bc1', name: 'ホワイトデー のお知らせ',       sent: '2024-03-13 08:00', target: 214, open: '54%', click: '15%', target_label: '全 顧客' },
+    ];
+  }
+  const bs = state.broadcasts;
+  el.innerHTML = bs.length === 0 ? emptyStateHTML('📢', '配信 履歴 が ありません', 'まだ 一括配信 を 行って いません。 「+ 配信作成」 から 最初 の 配信 を 作成 しましょう。', '+ 配信 を 作成', 'bc-add-btn')
+  : bs.map(b => `
+    <div class="bc-card" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:18px;transition:box-shadow .15s;">
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:800;margin-bottom:3px;">${b.name}</div>
+          <div style="font-size:11px;color:var(--dim)">${b.sent} · ${b.target_label || '全顧客'}</div>
+        </div>
+        <span style="background:${b.open==='—'?'var(--warn-soft)':'var(--primary-soft)'};color:${b.open==='—'?'var(--warn)':'var(--primary-hi)'};padding:3px 10px;border-radius:12px;font-size:10px;font-weight:800">${b.open==='—'?'集計中':'完了'}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:12px;border-top:1px solid var(--rule)">
+        <div><div style="font-size:11px;color:var(--dim);font-weight:700">対象</div><div style="font-size:19px;font-weight:800">${b.target}</div></div>
+        <div><div style="font-size:11px;color:var(--dim);font-weight:700">開封率</div><div style="font-size:19px;font-weight:800;color:var(--primary)">${b.open}</div></div>
+        <div><div style="font-size:11px;color:var(--dim);font-weight:700">クリック率</div><div style="font-size:19px;font-weight:800;color:var(--info)">${b.click}</div></div>
       </div>
     </div>`).join('');
 }
 
-function openBroadcastCreateModal() {
+function openBroadcastCreateModal(presetSeg) {
   const modal = document.getElementById('modal');
   const segChips = state.segments.map(s =>
     `<button class="cp-chip" data-v="${s.id}" data-count="${s.count}">${s.name}<span style="opacity:.7;margin-left:6px;font-weight:500">${s.count}名</span></button>`
@@ -1651,8 +2121,11 @@ function openBroadcastCreateModal() {
       <textarea class="field-input" id="bc-modal-body" rows="4" style="resize:vertical;font-family:inherit;line-height:1.6">こんにちは、{name}さん。&#10;&#10;新商品「◯◯」が入荷しました。&#10;LINE 友だち限定で 10% OFF クーポン を お渡しします。</textarea>
     </div>
     <div class="field-group">
-      <label class="field-label">Step 4 · LINE プレビュー</label>
-      <div id="bc-preview" style="max-width:280px;margin-top:6px;padding:12px 14px;background:#8cabd8;border-radius:16px 16px 16px 4px;color:#111;font-size:13px;line-height:1.55;white-space:pre-wrap;position:relative;">本文が ここ に プレビュー されます</div>
+      <label class="field-label">Step 4 · LINE 送信 プレビュー</label>
+      <div style="display:flex;align-items:flex-end;gap:10px;margin-top:6px">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--dim);font-weight:800">You</div>
+        <div id="bc-preview" style="max-width:280px;padding:12px 14px;background:#8cabd8;border-radius:16px 16px 16px 4px;color:#0e1523;font-size:13px;line-height:1.55;white-space:pre-wrap;position:relative;box-shadow:0 2px 4px rgba(0,0,0,0.06)">本文 が ここ に 表示 されます</div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="bc-modal-cancel">キャンセル</button>
@@ -1675,17 +2148,36 @@ function openBroadcastCreateModal() {
   function updateBcPreview() {
     const body = document.getElementById('bc-modal-body').value;
     const sample = state.customers[0]?.name?.split(' ')[0] || '田中';
-    document.getElementById('bc-preview').textContent = body.replace(/\{name\}/g, sample);
+    const rendered = body.replace(/\{name\}/g, sample);
+    document.getElementById('bc-preview').textContent = rendered || '本文 が ここ に 表示 されます';
   }
   document.getElementById('bc-modal-body').addEventListener('input', updateBcPreview);
   updateBcPreview();
 
   document.getElementById('bc-modal-next').addEventListener('click', () => {
-    const title = document.getElementById('bc-modal-title').value.trim() || '無題 の 配信';
+    const titleEl = document.getElementById('bc-modal-title');
+    const title = titleEl.value.trim();
+    if (!title) { titleEl.focus(); titleEl.style.borderColor = 'var(--danger)'; toast('配信 タイトル を 入力 してください', 'warn'); return; }
     const target = document.querySelector('#bc-modal-target .cp-chip.selected');
-    if (!target) { alert('対象 を 選択 してください'); return; }
+    if (!target) { toast('対象 を 選択 してください', 'warn'); return; }
+    const body = document.getElementById('bc-modal-body').value.trim();
+    if (!body) { toast('本文 を 入力 してください', 'warn'); return; }
     openBroadcastConfirmModal(title, target.textContent.trim(), parseInt(target.dataset.count));
   });
+
+  // Preset segment
+  if (presetSeg) {
+    setTimeout(() => {
+      const chip = document.querySelector(`#bc-modal-target .cp-chip[data-v="${presetSeg.id}"]`);
+      if (chip) {
+        document.querySelectorAll('#bc-modal-target .cp-chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+        document.getElementById('bc-target-info').style.display = '';
+        document.getElementById('bc-target-info').textContent = `対象: ${chip.dataset.count} 名 に配信`;
+        document.getElementById('bc-modal-title').focus();
+      }
+    }, 100);
+  }
 }
 
 function openBroadcastConfirmModal(title, targetLabel, count) {
@@ -1710,13 +2202,27 @@ function openBroadcastConfirmModal(title, targetLabel, count) {
   document.getElementById('modal-close-btn').addEventListener('click', closeModal);
   document.getElementById('bc-conf-cancel').addEventListener('click', closeModal);
   document.getElementById('bc-conf-send').addEventListener('click', () => {
-    // 追加
-    state.broadcasts = state.broadcasts || [];
-    state.broadcasts.unshift({
-      name: title, sent: new Date().toISOString().slice(0,10), target: count,
-      open: '—', click: '—',
-    });
-    openBroadcastSuccessModal(title, count);
+    // simulate send (spinner)
+    const btn = document.getElementById('bc-conf-send');
+    btn.disabled = true;
+    btn.textContent = '送信中…';
+    btn.style.opacity = '0.7';
+    setTimeout(() => {
+      state.broadcasts = state.broadcasts || [];
+      const sentAt = new Date().toISOString().slice(0,16).replace('T',' ');
+      state.broadcasts.unshift({
+        id: 'bc' + Date.now(),
+        name: title, sent: sentAt, target: count,
+        open: '—', click: '—',
+        target_label: targetLabel,
+      });
+      // history
+      if (!state.history) renderHistory();
+      state.history.unshift({
+        date: sentAt, type: '一括配信', name: title, target: `${count}名`, open: '—', click: '—',
+      });
+      openBroadcastSuccessModal(title, count);
+    }, 700);
   });
 }
 
@@ -1741,6 +2247,7 @@ function openBroadcastSuccessModal(title, count) {
   document.getElementById('modal-close-btn').addEventListener('click', closeModal);
   document.getElementById('bc-succ-close').addEventListener('click', () => { closeModal(); renderBroadcast(); });
   document.getElementById('bc-goto-hist').addEventListener('click', () => { closeModal(); navigate('history'); });
+  toast(`${count} 名 に 配信 を 送信 しました`);
 }
 
 // =========================================================
@@ -1748,37 +2255,59 @@ function openBroadcastSuccessModal(title, count) {
 // =========================================================
 if (!state.steps.length) {
   state.steps = [
-    { id: 'st1', name: '友だち追加 ウェルカム シリーズ', trigger: '友だち追加', steps: 3, active: true },
-    { id: 'st2', name: '初回購入 後 の フォロー', trigger: '購入完了', steps: 4, active: true },
-    { id: 'st3', name: '休眠 客 の 掘り起こし', trigger: 'タグ付与: 休眠顧客', steps: 3, active: false },
+    { id: 'st1', name: '友だち追加 ウェルカム シリーズ', trigger: '友だち追加',       steps: 3, active: true,  running: 18 },
+    { id: 'st2', name: '初回購入 後 の フォロー',        trigger: '購入完了',         steps: 4, active: true,  running: 32 },
+    { id: 'st3', name: '定期便 継続 促進 シリーズ',       trigger: 'タグ付与: 定期便', steps: 5, active: true,  running: 24 },
+    { id: 'st4', name: '休眠 客 の 掘り起こし',           trigger: 'タグ付与: 休眠',   steps: 3, active: false, running:  0 },
+    { id: 'st5', name: '誕生日 お祝い クーポン',          trigger: '誕生日',           steps: 2, active: true,  running:  6 },
   ];
 }
 
 function renderSteps() {
   const el = document.getElementById('steps-list');
   if (!el) return;
+  if (state.steps.length === 0) {
+    el.innerHTML = emptyStateHTML('🔀', 'ステップ配信 シナリオ が ありません', '友だち追加 / 購入 完了 / 誕生日 等 の トリガー で 自動 に 順次 配信 する シナリオ を 作成 できます。<br>「新規客 ウェルカム」「休眠客 呼び戻し」 等 の 定型 業務 が 自動化 されます。', '+ 最初 の シナリオ を 作成', 'step-add-btn');
+    return;
+  }
   el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;">${
     state.steps.map(s => `
-      <div style="background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:18px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <div style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:18px;position:relative;">
+        <button class="icon-btn danger step-del-btn" data-step-id="${s.id}" title="削除" style="position:absolute;top:12px;right:12px;width:26px;height:26px;font-size:12px">✕</button>
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;padding-right:32px;">
           <div style="flex:1">
-            <div style="font-size:14px;font-weight:700">${s.name}</div>
-            <div style="font-size:11px;color:var(--dim);margin-top:2px">トリガー: ${s.trigger}</div>
+            <div style="font-size:14px;font-weight:800">${s.name}</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:3px">トリガー: <span style="color:var(--ink-2);font-weight:700">${s.trigger}</span></div>
           </div>
-          <label class="toggle-wrap">
+          <label class="toggle-wrap" title="${s.active?'稼働中':'停止中'}">
             <input type="checkbox" class="toggle-input step-toggle" data-step-id="${s.id}" ${s.active ? 'checked' : ''}>
             <span class="toggle-knob"></span>
           </label>
         </div>
-        <div style="display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--rule);">
-          <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">ステップ数</div><div style="font-size:18px;font-weight:800">${s.steps}</div></div>
-          <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">実行 中</div><div style="font-size:18px;font-weight:800;color:${s.active?'var(--primary)':'var(--dim)'}">${s.active ? Math.floor(Math.random()*30+10) : 0}</div></div>
+        <div style="display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--rule);">
+          <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">ステップ 数</div><div style="font-size:20px;font-weight:800">${s.steps}<span style="font-size:11px;color:var(--dim);font-weight:600;margin-left:3px">通</span></div></div>
+          <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">実行 中</div><div style="font-size:20px;font-weight:800;color:${s.active?'var(--primary)':'var(--dim)'}">${s.active ? (s.running != null ? s.running : 0) : 0}<span style="font-size:11px;color:var(--dim);font-weight:600;margin-left:3px">名</span></div></div>
+          <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">状態</div><div style="font-size:14px;font-weight:800;color:${s.active?'var(--primary)':'var(--dim)'};padding-top:4px">${s.active?'● 稼働中':'○ 停止中'}</div></div>
         </div>
       </div>`).join('')
   }</div>`;
   el.querySelectorAll('.step-toggle').forEach(t => t.addEventListener('change', e => {
     const s = state.steps.find(x => x.id === t.dataset.stepId);
-    if (s) { s.active = e.target.checked; renderSteps(); }
+    if (s) {
+      s.active = e.target.checked;
+      renderSteps();
+      toast(`「${s.name}」 を ${s.active ? '稼働開始' : '停止'} しました`, 'info', 1600);
+    }
+  }));
+  el.querySelectorAll('.step-del-btn').forEach(b => b.addEventListener('click', async e => {
+    e.stopPropagation();
+    const s = state.steps.find(x => x.id === b.dataset.stepId);
+    if (!s) return;
+    const ok = await confirmDialog({ title: 'シナリオ を 削除', message: `「${s.name}」 を 削除 します。<br>${s.running > 0 ? `<b style="color:var(--danger)">現在 ${s.running} 名</b> が このシナリオ で 配信 進行中 です。 削除 すると 全員 の 配信 が 中断 されます。` : ''}`, okLabel: '削除' });
+    if (!ok) return;
+    state.steps = state.steps.filter(x => x.id !== s.id);
+    renderSteps();
+    toast(`「${s.name}」 を 削除 しました`, 'info');
   }));
 }
 
@@ -1852,13 +2381,17 @@ function openStepCreateModal() {
     wrap.appendChild(div);
   });
   document.getElementById('st-modal-save').addEventListener('click', () => {
-    const name = document.getElementById('st-modal-name').value.trim() || '新しい シナリオ';
+    const nameEl = document.getElementById('st-modal-name');
+    const name = nameEl.value.trim();
+    if (!name) { nameEl.focus(); nameEl.style.borderColor = 'var(--danger)'; toast('シナリオ名 を 入力 してください', 'warn'); return; }
     const trigger = document.querySelector('#st-modal-trigger .cp-chip.selected')?.dataset.v || '友だち追加';
     const steps = document.querySelectorAll('#st-modal-steps .st-step-row').length;
-    state.steps.unshift({ id: 'st' + Date.now(), name, trigger, steps, active: false });
+    state.steps.unshift({ id: 'st' + Date.now(), name, trigger, steps, active: false, running: 0 });
     closeModal();
     renderSteps();
+    toast(`「${name}」 を 作成 しました（停止 状態）`);
   });
+  setTimeout(() => { const inp = document.getElementById('st-modal-name'); if (inp) inp.focus(); }, 80);
 }
 
 // =========================================================
@@ -1874,39 +2407,76 @@ if (!state.richmenus) {
 function renderRichmenu() {
   const el = document.getElementById('richmenu-list');
   if (!el) return;
-  el.innerHTML = `
-    <div style="padding:16px;background:var(--info-soft);border:1px solid #93c5fd;border-radius:10px;margin-bottom:18px;">
+  const banner = `
+    <div style="padding:16px;background:var(--info-soft);border:1px solid #93c5fd;border-radius:12px;margin-bottom:18px;">
       <div style="display:flex;align-items:center;gap:12px">
         <div style="font-size:24px">☰</div>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--info)">リッチメニュー は LINE トーク画面 下 の 常時 メニュー</div>
+          <div style="font-size:13px;font-weight:800;color:var(--info)">リッチメニュー は LINE トーク画面 下 の 常時 メニュー</div>
           <div style="font-size:12px;color:var(--ink-2);margin-top:2px">画像 と タップ 領域 を 組み合わせて、 予約 / EC / 相談 などへの 導線 を 作れます</div>
         </div>
-        <button class="btn btn-primary" style="padding:8px 14px" id="rm-editor-btn">エディタ を 開く ↗</button>
+        <button class="btn btn-primary" style="padding:8px 14px" id="rm-editor-btn">+ 新規 メニュー</button>
       </div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">${
-      state.richmenus.map(rm => `
-        <div style="background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:700">${rm.name}</div>
-              <div style="font-size:11px;color:var(--dim);margin-top:2px">更新: ${rm.updated}</div>
-            </div>
-            <span style="background:${rm.deployed?'var(--primary-soft)':'var(--surface-2)'};color:${rm.deployed?'var(--primary-hi)':'var(--dim)'};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700">${rm.deployed?'デプロイ中':'下書き'}</span>
+    </div>`;
+  if (!state.richmenus || state.richmenus.length === 0) {
+    el.innerHTML = banner + emptyStateHTML('☰', 'リッチメニュー が ありません', '「+ 新規 メニュー」 から 6セル / 4セル / 2セル 等 の レイアウト を 選んで、<br>画像 と タップ 領域 を 設定 できます。', '+ 最初 の メニュー を 作成', 'rm-add-btn');
+    const rmEditor = document.getElementById('rm-editor-btn');
+    if (rmEditor) rmEditor.addEventListener('click', () => openRichmenuCreateModal());
+    return;
+  }
+  el.innerHTML = banner + `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">${
+    state.richmenus.map(rm => `
+      <div data-rm-id="${rm.id}" style="background:var(--surface);border:${rm.deployed?'2px solid var(--primary)':'1px solid var(--rule)'};border-radius:12px;padding:16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:800">${rm.name}</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:2px">更新: ${rm.updated}</div>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(${rm.cells === 6 ? 3 : 2},1fr);gap:4px;background:#eee;padding:6px;border-radius:8px;height:120px">
-            ${Array(rm.cells).fill(0).map((_,i)=>`<div style="background:linear-gradient(135deg,#e5e7eb,#d1d5db);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--dim);font-weight:700">セル ${i+1}</div>`).join('')}
-          </div>
-          <div style="display:flex;gap:6px;margin-top:12px">
-            <button class="btn btn-secondary" style="flex:1;padding:6px 10px;font-size:11px">複製</button>
-            ${rm.deployed
-              ? `<button class="btn btn-ghost" style="flex:1;padding:6px 10px;font-size:11px">停止</button>`
-              : `<button class="btn btn-primary" style="flex:1;padding:6px 10px;font-size:11px">デプロイ</button>`}
-          </div>
-        </div>`).join('')
-    }</div>
-  `;
+          <span style="background:${rm.deployed?'var(--primary-soft)':'var(--surface-2)'};color:${rm.deployed?'var(--primary-hi)':'var(--dim)'};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:800">${rm.deployed?'●稼働中':'下書き'}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(${rm.cells === 6 ? 3 : (rm.cells === 4 ? 2 : rm.cells === 2 ? 2 : 1)},1fr);gap:4px;background:#eee;padding:6px;border-radius:8px;height:120px">
+          ${Array(rm.cells).fill(0).map((_,i)=>`<div style="background:linear-gradient(135deg,#e5e7eb,#d1d5db);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--dim);font-weight:700">セル ${i+1}</div>`).join('')}
+        </div>
+        <div style="display:flex;gap:6px;margin-top:12px">
+          <button class="btn btn-secondary rm-dup-btn" data-rm-id="${rm.id}" style="flex:1;padding:7px 10px;font-size:11px">複製</button>
+          ${rm.deployed
+            ? `<button class="btn btn-ghost rm-stop-btn" data-rm-id="${rm.id}" style="flex:1;padding:7px 10px;font-size:11px">停止</button>`
+            : `<button class="btn btn-primary rm-deploy-btn" data-rm-id="${rm.id}" style="flex:1;padding:7px 10px;font-size:11px">デプロイ</button>`}
+          <button class="icon-btn danger rm-del-btn" data-rm-id="${rm.id}" title="削除" style="width:30px;height:30px;font-size:12px">✕</button>
+        </div>
+      </div>`).join('')
+  }</div>`;
+  const rmEditor = document.getElementById('rm-editor-btn');
+  if (rmEditor) rmEditor.addEventListener('click', () => openRichmenuCreateModal());
+  el.querySelectorAll('.rm-dup-btn').forEach(b => b.addEventListener('click', () => {
+    const rm = state.richmenus.find(x => x.id === b.dataset.rmId);
+    if (!rm) return;
+    state.richmenus.unshift({ id: 'rm' + Date.now(), name: rm.name + ' コピー', deployed: false, cells: rm.cells, updated: new Date().toISOString().slice(0,10) });
+    renderRichmenu(); toast(`「${rm.name}」 を 複製 しました`);
+  }));
+  el.querySelectorAll('.rm-stop-btn').forEach(b => b.addEventListener('click', async () => {
+    const rm = state.richmenus.find(x => x.id === b.dataset.rmId);
+    if (!rm) return;
+    const ok = await confirmDialog({ title: 'デプロイ を 停止', message: `「${rm.name}」 の 配信 を 停止 します。<br>LINE トーク画面 の メニュー が 非表示 に なります。`, okLabel: '停止', okKind: 'danger' });
+    if (!ok) return;
+    rm.deployed = false; renderRichmenu(); toast(`「${rm.name}」 を 停止 しました`, 'info');
+  }));
+  el.querySelectorAll('.rm-deploy-btn').forEach(b => b.addEventListener('click', () => {
+    const rm = state.richmenus.find(x => x.id === b.dataset.rmId);
+    if (!rm) return;
+    // 他 の deploy を 停止 (LINE 仕様 上 メイン 1 つ)
+    state.richmenus.forEach(x => { x.deployed = false; });
+    rm.deployed = true;
+    renderRichmenu(); toast(`「${rm.name}」 を デプロイ しました`);
+  }));
+  el.querySelectorAll('.rm-del-btn').forEach(b => b.addEventListener('click', async () => {
+    const rm = state.richmenus.find(x => x.id === b.dataset.rmId);
+    if (!rm) return;
+    const ok = await confirmDialog({ title: 'メニュー を 削除', message: `「${rm.name}」 を 削除 します。`, okLabel: '削除' });
+    if (!ok) return;
+    state.richmenus = state.richmenus.filter(x => x.id !== rm.id);
+    renderRichmenu(); toast(`「${rm.name}」 を 削除 しました`, 'info');
+  }));
 }
 
 function openRichmenuCreateModal() {
@@ -1952,12 +2522,16 @@ function openRichmenuCreateModal() {
     });
   });
   document.getElementById('rm-modal-save').addEventListener('click', () => {
-    const name = document.getElementById('rm-modal-name').value.trim() || '新しい メニュー';
+    const nameEl = document.getElementById('rm-modal-name');
+    const name = nameEl.value.trim();
+    if (!name) { nameEl.focus(); nameEl.style.borderColor = 'var(--danger)'; toast('メニュー名 を 入力 してください', 'warn'); return; }
     const cells = parseInt(document.querySelector('#rm-modal-layout .cp-chip.selected')?.dataset.v || '6');
     state.richmenus.unshift({ id: 'rm' + Date.now(), name, deployed: false, cells, updated: new Date().toISOString().slice(0,10) });
     closeModal();
     renderRichmenu();
+    toast(`「${name}」 を 作成 しました（下書き）`);
   });
+  setTimeout(() => { const inp = document.getElementById('rm-modal-name'); if (inp) inp.focus(); }, 80);
 }
 
 // =========================================================
@@ -1973,21 +2547,26 @@ if (!state.channels) {
 function renderChannels() {
   const el = document.getElementById('channels-list');
   if (!el) return;
+  if (state.channels.length === 0) {
+    el.innerHTML = emptyStateHTML('🔗', 'LINE アカウント が 接続 されて いません', '「+ アカウント追加」 から LINE Developers Console の Channel ID と<br>Access Token を 貼り付ける と、 メッセージ配信 が 使え ます。', '+ アカウント を 追加', 'ch-add-btn');
+    return;
+  }
   el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;">${
     state.channels.map(ch => `
-      <div style="background:var(--surface);border:${ch.active?'2px':'1px'} solid ${ch.active?'var(--line-green)':'var(--rule)'};border-radius:10px;padding:18px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="background:var(--surface);border:${ch.active?'2px':'1px'} solid ${ch.active?'var(--line-green)':'var(--rule)'};border-radius:12px;padding:18px;position:relative;">
+        ${state.channels.length > 1 && !ch.active ? `<button class="icon-btn danger ch-del-btn" data-ch-id="${ch.id}" title="削除" style="position:absolute;top:12px;right:12px;width:26px;height:26px;font-size:12px">✕</button>` : ''}
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-right:${state.channels.length>1?'32px':'0'}">
           <div style="width:36px;height:36px;background:var(--line-green);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px">L</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:800">${ch.name}</div>
             <div style="font-size:11px;color:var(--dim);margin-top:2px">Channel ID: ${ch.channelId}</div>
           </div>
-          ${ch.active ? '<span style="background:var(--line-soft);color:var(--line-green);padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700">現在 使用中</span>' : '<button class="btn btn-secondary ch-switch-btn" data-ch-id="'+ch.id+'" style="padding:5px 10px;font-size:11px">切替</button>'}
+          ${ch.active ? '<span style="background:var(--line-soft);color:var(--line-green);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800">現在 使用中</span>' : '<button class="btn btn-secondary ch-switch-btn" data-ch-id="'+ch.id+'" style="padding:5px 10px;font-size:11px">切替</button>'}
         </div>
-        <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--rule)">
-          <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">友だち</div><div style="font-size:18px;font-weight:800">${ch.followers}</div></div>
-          <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">接続</div><div style="font-size:14px;font-weight:800;color:${ch.connected?'var(--primary)':'var(--danger)'};padding-top:4px">${ch.connected?'●稼働中':'●未接続'}</div></div>
-          <button class="btn btn-secondary ch-test-btn" data-ch-id="${ch.id}" style="padding:6px 12px;font-size:11px;align-self:center">接続 テスト</button>
+        <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--rule);align-items:center">
+          <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">友だち</div><div style="font-size:20px;font-weight:800">${ch.followers}</div></div>
+          <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">接続</div><div style="font-size:13px;font-weight:800;color:${ch.connected?'var(--primary)':'var(--danger)'};padding-top:6px">${ch.connected?'●稼働中':'●未接続'}</div></div>
+          <button class="btn btn-secondary ch-test-btn" data-ch-id="${ch.id}" style="padding:7px 12px;font-size:11px">接続 テスト</button>
         </div>
       </div>`).join('')
   }</div>`;
@@ -1995,8 +2574,17 @@ function renderChannels() {
   el.querySelectorAll('.ch-switch-btn').forEach(b => b.addEventListener('click', () => {
     state.channels.forEach(c => c.active = false);
     const target = state.channels.find(c => c.id === b.dataset.chId);
-    if (target) target.active = true;
+    if (target) { target.active = true; toast(`「${target.name}」 に 切替 しました`); }
     renderChannels();
+  }));
+  el.querySelectorAll('.ch-del-btn').forEach(b => b.addEventListener('click', async () => {
+    const ch = state.channels.find(x => x.id === b.dataset.chId);
+    if (!ch) return;
+    if (ch.active) { toast('使用中 の アカウント は 削除 できません。 別 の アカウント に 切替 して ください', 'warn'); return; }
+    const ok = await confirmDialog({ title: 'アカウント を 削除', message: `「${ch.name}」 の 接続 を 解除 します。<br>過去 の 配信 履歴 は 残ります。`, okLabel: '削除' });
+    if (!ok) return;
+    state.channels = state.channels.filter(x => x.id !== ch.id);
+    renderChannels(); toast(`「${ch.name}」 を 削除 しました`, 'info');
   }));
 }
 
@@ -2032,13 +2620,20 @@ function openChannelAddModal() {
   document.getElementById('modal-close-btn').addEventListener('click', closeModal);
   document.getElementById('ch-modal-cancel').addEventListener('click', closeModal);
   document.getElementById('ch-modal-save').addEventListener('click', () => {
-    const name = document.getElementById('ch-modal-name').value.trim() || '新しい アカウント';
-    const cid = document.getElementById('ch-modal-cid').value.trim() || '0000000000';
+    const nameEl = document.getElementById('ch-modal-name');
+    const name = nameEl.value.trim();
+    if (!name) { nameEl.focus(); nameEl.style.borderColor = 'var(--danger)'; toast('表示名 を 入力 してください', 'warn'); return; }
+    const cid = document.getElementById('ch-modal-cid').value.trim();
+    if (!cid) { toast('Channel ID を 入力 してください', 'warn'); return; }
+    const tok = document.getElementById('ch-modal-tok').value.trim();
+    if (!tok) { toast('Access Token を 入力 してください', 'warn'); return; }
     state.channels.push({ id: 'ch' + Date.now(), name, channelId: cid, tokenMask: 'zzzz****' + Math.random().toString(36).slice(-4), connected: true, followers: 0, active: false });
     closeModal();
     renderChannels();
-    setTimeout(() => openChannelTestModal(state.channels[state.channels.length - 1]), 350);
+    toast(`「${name}」 を 追加 しました。 接続 テスト を 実行 します`);
+    setTimeout(() => openChannelTestModal(state.channels[state.channels.length - 1]), 500);
   });
+  setTimeout(() => { const inp = document.getElementById('ch-modal-name'); if (inp) inp.focus(); }, 80);
 }
 
 function openChannelTestModal(ch) {
@@ -2079,9 +2674,12 @@ function openChannelTestModal(ch) {
   // シーケンシャル に PASS 演出
   const rows = document.querySelectorAll('.ch-test-row');
   let i = 0;
+  const seed = ch.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const monthlySent = (seed % 400) + 80;
+  const quotaLimit = 1000;
   const results = [
-    { icon: '✓', color: 'var(--primary)', msg: 'basicId: @skeleton  followers: ' + ch.followers },
-    { icon: '✓', color: 'var(--primary)', msg: '本月 送信 数: 128 / 1,000 通 （残り 872）' },
+    { icon: '✓', color: 'var(--primary)', msg: `basicId: @${ch.channelId.slice(-6)}  followers: ${ch.followers}` },
+    { icon: '✓', color: 'var(--primary)', msg: `本月 送信 数: ${monthlySent} / ${quotaLimit} 通  （残り ${quotaLimit - monthlySent}）` },
     { icon: '✓', color: 'var(--primary)', msg: 'https://api.skeleton.jp/line/webhook  200 OK' },
   ];
   const tick = () => {
@@ -2107,24 +2705,42 @@ function renderHistory() {
   if (!tbody) return;
   if (!state.history) {
     state.history = [
-      { date: '2024-05-01 14:30', type: '一括配信', name: 'VIP 先行販売', target: '18名', open: '89%', click: '56%' },
-      { date: '2024-04-28 10:00', type: '一括配信', name: 'GW クーポン', target: '132名', open: '71%', click: '31%' },
-      { date: '2024-04-10 09:00', type: '一括配信', name: '春の新商品案内', target: '248名', open: '68%', click: '24%' },
-      { date: '2024-04-01 00:00', type: 'ステップ配信', name: '友達追加後シナリオ', target: '自動', open: '74%', click: '28%' },
+      { date: '2024-05-11 14:30', type: '一括配信',   name: 'VIP 先行販売 のご案内',   target:  '18名', open: '89%', click: '56%' },
+      { date: '2024-05-10 09:00', type: 'ステップ配信', name: '定期便 継続促進 Step 3', target:  '24名', open: '68%', click: '32%' },
+      { date: '2024-05-08 20:00', type: 'ステップ配信', name: '購入完了 フォロー Step 1', target: '自動',  open: '76%', click: '38%' },
+      { date: '2024-04-28 10:00', type: '一括配信',   name: 'GW 特別 クーポン',        target: '132名', open: '71%', click: '31%' },
+      { date: '2024-04-24 09:00', type: '一括配信',   name: '母の日 ギフト おすすめ',   target: '208名', open: '62%', click: '22%' },
+      { date: '2024-04-10 09:00', type: '一括配信',   name: '春 の 新商品 ご案内',      target: '248名', open: '68%', click: '24%' },
+      { date: '2024-04-03 12:00', type: '一括配信',   name: '定期便 更新 リマインド',    target:  '48名', open: '82%', click: '41%' },
+      { date: '2024-03-15 18:00', type: '一括配信',   name: '休眠 客 呼び戻し クーポン', target:  '42名', open: '34%', click:  '9%' },
     ];
   }
   const sEl = document.getElementById('hist-search');
   const q = (sEl && sEl.value.trim().toLowerCase()) || '';
   const filtered = state.history.filter(h => !q || h.name.toLowerCase().includes(q));
-  tbody.innerHTML = filtered.map(h => `
-    <tr>
-      <td style="font-size:12px;color:var(--dim)">${h.date}</td>
-      <td><span style="background:var(--info-soft);color:var(--info);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">${h.type}</span></td>
-      <td style="font-weight:600">${h.name}</td>
-      <td>${h.target}</td>
-      <td style="color:var(--primary);font-weight:700">${h.open}</td>
-      <td style="color:var(--info);font-weight:700">${h.click}</td>
-    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--dim)">履歴 が ありません</td></tr>';
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="padding:0">
+      <div class="empty-state" style="padding:56px 24px">
+        <div class="icon">🕐</div>
+        <h3>${q ? '検索 に 一致 する 履歴 が ありません' : '配信 履歴 が ありません'}</h3>
+        <p>${q ? '別の キーワード で 検索 してみて ください' : '一括配信 や ステップ配信 を 実行 すると<br>ここ に 結果 が 表示 されます'}</p>
+      </div>
+    </td></tr>`;
+  } else {
+    const typeColor = t => t === '一括配信' ? ['var(--info-soft)','var(--info)'] : t === 'ステップ配信' ? ['var(--primary-soft)','var(--primary-hi)'] : ['var(--surface-2)','var(--dim)'];
+    tbody.innerHTML = filtered.map(h => {
+      const [bg, fg] = typeColor(h.type);
+      return `
+        <tr>
+          <td style="font-size:12px;color:var(--dim);white-space:nowrap">${h.date}</td>
+          <td><span style="background:${bg};color:${fg};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;white-space:nowrap">${h.type}</span></td>
+          <td style="font-weight:700">${h.name}</td>
+          <td style="color:var(--dim)">${h.target}</td>
+          <td style="color:${h.open==='—'?'var(--dim)':'var(--primary)'};font-weight:700">${h.open}</td>
+          <td style="color:${h.click==='—'?'var(--dim)':'var(--info)'};font-weight:700">${h.click}</td>
+        </tr>`;
+    }).join('');
+  }
   const label = document.getElementById('hist-count-label');
   if (label) label.textContent = `${filtered.length} 件`;
 }
@@ -2132,11 +2748,18 @@ setTimeout(() => {
   const hs = document.getElementById('hist-search');
   if (hs) hs.addEventListener('input', () => renderHistory());
   const hc = document.getElementById('hist-clear-btn');
-  if (hc) hc.addEventListener('click', () => {
-    if (confirm('配信履歴 を すべて 削除 します。 よろしい ですか？')) {
-      state.history = [];
-      renderHistory();
-    }
+  if (hc) hc.addEventListener('click', async () => {
+    const count = (state.history || []).length;
+    if (count === 0) { toast('履歴 は 既に 空 です', 'info'); return; }
+    const ok = await confirmDialog({
+      title: '配信 履歴 を 全削除',
+      message: `配信 履歴 ${count} 件 を すべて 削除 します。<br>この 操作 は 取り消せません。`,
+      okLabel: '全削除',
+    });
+    if (!ok) return;
+    state.history = [];
+    renderHistory();
+    toast(`履歴 ${count} 件 を 削除 しました`, 'info');
   });
 }, 50);
 
@@ -2203,12 +2826,31 @@ function openRuleModal(rule) {
   modal.innerHTML = buildRuleModalHTML();
   document.getElementById('modal-scrim').classList.add('open');
 
+  // Prefill for edit
+  if (rule) {
+    const h3 = modal.querySelector('.modal-header h3');
+    if (h3) h3.textContent = '自動タグルール を 編集';
+    const nameEl = document.getElementById('m-r-name');
+    if (nameEl) nameEl.value = rule.name || '';
+    const fieldEl = document.getElementById('m-r-field');
+    if (fieldEl) fieldEl.value = rule.field || '';
+    if (rule.field === 'campaignId') {
+      document.getElementById('m-r-value-wrap').style.display = '';
+      const cpVals = Array.isArray(rule.value) ? rule.value : [];
+      document.querySelectorAll('#m-r-value-inline .cp-chip').forEach(c => {
+        if (cpVals.includes(c.dataset.v)) c.classList.add('selected');
+      });
+    }
+    document.querySelectorAll('#m-r-tag-chips .tag-chip').forEach(c => {
+      if ((rule.tagIds || []).includes(c.dataset.tagId)) c.classList.add('selected');
+    });
+    const saveBtn = document.getElementById('m-r-save');
+    if (saveBtn) saveBtn.textContent = '保存';
+  }
+
   // close
   document.getElementById('modal-close-btn').addEventListener('click', closeModal);
   document.getElementById('m-r-cancel').addEventListener('click', closeModal);
-  document.getElementById('modal-scrim').addEventListener('click', e => {
-    if (e.target === document.getElementById('modal-scrim')) closeModal();
-  });
 
   // field change → show/hide campaign chips
   const fieldSel = document.getElementById('m-r-field');
@@ -2219,7 +2861,7 @@ function openRuleModal(rule) {
   });
 
   // campaign chip toggle
-  document.querySelectorAll('.cp-chip').forEach(chip => {
+  document.querySelectorAll('#m-r-value-inline .cp-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       chip.classList.toggle('selected');
       updatePreview();
@@ -2239,6 +2881,9 @@ function openRuleModal(rule) {
 
   // save
   document.getElementById('m-r-save').addEventListener('click', saveRule);
+
+  updatePreview();
+  setTimeout(() => { const inp = document.getElementById('m-r-name'); if (inp) inp.focus(); }, 80);
 }
 
 function updatePreview() {
@@ -2249,8 +2894,10 @@ function updatePreview() {
 
   if (name && field && tagChips.length > 0) {
     preview.style.display = 'flex';
-    // 疑似的な該当人数 (デモ用)
-    const count = Math.floor(Math.random() * 50 + 10);
+    // stable count (name+field+tag ids で 決まる)
+    const key = name + field + [...tagChips].map(c => c.dataset.tagId).join(',');
+    const seed = key.split('').reduce((a,c) => a + c.charCodeAt(0), 0);
+    const count = (seed % 50) + 10;
     document.getElementById('m-r-preview-num').textContent = count;
   } else {
     preview.style.display = 'none';
@@ -2258,33 +2905,47 @@ function updatePreview() {
 }
 
 function saveRule() {
-  const name = document.getElementById('m-r-name').value.trim() || '新しいルール';
-  const field = document.getElementById('m-r-field').value || 'event';
-  const selectedCps = [...document.querySelectorAll('.cp-chip.selected')].map(c => c.dataset.v);
+  const nameEl = document.getElementById('m-r-name');
+  const name = nameEl.value.trim();
+  if (!name) { nameEl.focus(); nameEl.style.borderColor = 'var(--danger)'; toast('ルール名 を 入力 してください', 'warn'); return; }
+  const field = document.getElementById('m-r-field').value;
+  if (!field) { toast('判定項目 を 選択 してください', 'warn'); return; }
+  const selectedCps = [...document.querySelectorAll('#m-r-value-inline .cp-chip.selected')].map(c => c.dataset.v);
   const selectedTags = [...document.querySelectorAll('#m-r-tag-chips .tag-chip.selected')].map(c => c.dataset.tagId);
+  if (selectedTags.length === 0) { toast('付ける タグ を 1つ 以上 選択 してください', 'warn'); return; }
 
-  const newRule = {
-    id: 'r' + Date.now(),
-    name,
-    field,
-    value: field === 'campaignId' ? selectedCps : 'custom',
-    tagIds: selectedTags.length > 0 ? selectedTags : ['t16'],
-    active: false,
-  };
-  state.autoTagRules.push(newRule);
+  const isEdit = !!editingRule;
+
+  if (isEdit) {
+    editingRule.name = name;
+    editingRule.field = field;
+    editingRule.value = field === 'campaignId' ? selectedCps : 'custom';
+    editingRule.tagIds = selectedTags;
+    editingRule.monthlyCount = null; // reset cached count
+  } else {
+    state.autoTagRules.push({
+      id: 'r' + Date.now(),
+      name,
+      field,
+      value: field === 'campaignId' ? selectedCps : 'custom',
+      tagIds: selectedTags,
+      active: false,
+    });
+  }
 
   closeModal();
+  editingRule = null;
   renderAutoTags();
   renderNav();
+  toast(isEdit ? `ルール 「${name}」 を 更新 しました` : `ルール 「${name}」 を 追加 しました`);
 
-  // 新しいルールが追加されたことを視覚的に示す
+  // highlight new/edited row briefly
   setTimeout(() => {
-    const list = document.getElementById('rule-list');
-    if (list && list.lastElementChild) {
-      list.lastElementChild.style.background = '#f0fdf4';
-      setTimeout(() => {
-        if (list.lastElementChild) list.lastElementChild.style.background = '';
-      }, 1500);
+    const rows = document.querySelectorAll('#rule-list .rule-row');
+    const row = isEdit ? [...rows].find(r => r.dataset.ruleId === editingRule?.id) : rows[rows.length - 1];
+    if (row) {
+      row.style.background = '#f0fdf4';
+      setTimeout(() => { row.style.background = ''; }, 1500);
     }
   }, 100);
 }
@@ -2294,6 +2955,48 @@ function closeModal() {
   scrim.classList.remove('open');
   document.getElementById('modal').innerHTML = '';
 }
+
+// Global modal handlers: Escape + scrim-click closes modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const confirmScrim = document.getElementById('confirm-scrim');
+    if (confirmScrim && confirmScrim.classList.contains('open')) {
+      if (confirmResolver) { const r = confirmResolver; confirmResolver = null; r(false); }
+      confirmScrim.classList.remove('open');
+      return;
+    }
+    const modalScrim = document.getElementById('modal-scrim');
+    if (modalScrim && modalScrim.classList.contains('open')) closeModal();
+    // close nav drawer on mobile
+    const nav = document.getElementById('nav');
+    if (nav && nav.classList.contains('open')) closeNav();
+  }
+});
+setTimeout(() => {
+  const scrim = document.getElementById('modal-scrim');
+  if (scrim) scrim.addEventListener('click', e => {
+    if (e.target === scrim) closeModal();
+  });
+}, 30);
+
+// Mobile nav toggle
+function openNav() {
+  document.getElementById('nav').classList.add('open');
+  document.getElementById('nav-scrim').classList.add('open');
+}
+function closeNav() {
+  document.getElementById('nav').classList.remove('open');
+  document.getElementById('nav-scrim').classList.remove('open');
+}
+setTimeout(() => {
+  const t = document.getElementById('nav-toggle');
+  const ns = document.getElementById('nav-scrim');
+  if (t) t.addEventListener('click', () => {
+    const nav = document.getElementById('nav');
+    if (nav.classList.contains('open')) closeNav(); else openNav();
+  });
+  if (ns) ns.addEventListener('click', closeNav);
+}, 30);
 
 // =========================================================
 // Modal: テスト実行
@@ -2365,7 +3068,72 @@ setTimeout(() => {
   if (rmAdd) rmAdd.addEventListener('click', () => openRichmenuCreateModal());
   const chAdd = document.getElementById('ch-add-btn');
   if (chAdd) chAdd.addEventListener('click', () => openChannelAddModal());
+
+  // Header buttons
+  const topNew = document.getElementById('top-new-bc-btn');
+  if (topNew) topNew.addEventListener('click', () => { navigate('broadcast'); setTimeout(() => openBroadcastCreateModal(), 120); });
+  const topSet = document.getElementById('top-settings-btn');
+  if (topSet) topSet.addEventListener('click', () => openSettingsModal());
+  const topHelp = document.getElementById('top-help-btn');
+  if (topHelp) topHelp.addEventListener('click', () => navigate('guide'));
 }, 100);
+
+// =========================================================
+// Settings modal (プロファイル / 会社情報)
+// =========================================================
+function openSettingsModal() {
+  const modal = document.getElementById('modal');
+  const activeCh = (state.channels || []).find(c => c.active) || (state.channels||[])[0];
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>設定</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;padding:16px;background:var(--surface-2);border-radius:10px;margin-bottom:20px;">
+      <div class="avatar" style="width:52px;height:52px;font-size:20px;background:#17b26a">S</div>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:800">Skeleton 株式会社</div>
+        <div style="font-size:12px;color:var(--dim);margin-top:2px">t3.5ty6@gmail.com · オーナー プラン</div>
+      </div>
+      <span style="background:var(--primary-soft);color:var(--primary-hi);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800">認証 済</span>
+    </div>
+    <div class="field-group">
+      <label class="field-label">接続中 の LINE アカウント</label>
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--rule);border-radius:8px">
+        <div style="width:28px;height:28px;background:var(--line-green);border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:12px">L</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">${activeCh ? activeCh.name : '未接続'}</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:2px">${activeCh ? 'Channel ID: ' + activeCh.channelId : 'LINE アカウント を 追加 して 接続 してください'}</div>
+        </div>
+        <button class="btn btn-secondary" id="set-goto-ch" style="padding:6px 10px;font-size:11px">管理 →</button>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">通知 設定</label>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${[
+          ['配信 完了 の 通知', true],
+          ['自動 タグ 付与 の 通知', true],
+          ['新しい 友だち 登録 通知', false],
+        ].map(([label, on], i) => `
+          <label style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--rule);border-radius:8px;cursor:pointer">
+            <div class="toggle-wrap"><input type="checkbox" class="toggle-input" ${on?'checked':''}><span class="toggle-knob"></span></div>
+            <span style="font-size:13px;font-weight:600">${label}</span>
+          </label>`).join('')}
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="set-close">閉じる</button>
+      <button class="btn btn-primary" id="set-save">保存</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('set-close').addEventListener('click', closeModal);
+  document.getElementById('set-save').addEventListener('click', () => { closeModal(); toast('設定 を 保存 しました'); });
+  document.getElementById('set-goto-ch').addEventListener('click', () => { closeModal(); navigate('channels'); });
+}
 
 // =========================================================
 // Init
