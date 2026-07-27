@@ -93,36 +93,57 @@ Firebase console → Firestore → 「コレクションを開始」:
   - `createdAt`: 現在時刻 (timestamp)
 
 ### 4-2. admin claim を owner に 付与
-Cloud Functions が deploy 済 なら (Step 6 後)、 Cloud Shell で:
+
+Skel·CRM は Cloud Function `setAdminClaim` を持っており、 これを 呼ぶ には まず **自分 に super-admin custom claim** が 必要 (卵と鶏 問題)。 初回 のみ 下記 node script を 走らせて 自分 を super-admin に する。
+
+**初回セットアップ (Cloud Shell で 1回だけ)**:
 
 ```bash
-gcloud functions call setAdminClaim --data '{"uid":"YOUR_FIREBASE_UID","tenantId":"skeleton","role":"admin"}'
-```
-
-または、 Cloud Shell で node script を 実行:
-
-```bash
-# Cloud Shell (console 右上 の アイコン)
+# Cloud Shell (Firebase console 右上 の terminal アイコン)
 cd
-cat > setclaim.js <<'EOF'
+cat > bootstrap-admin.js <<'EOF'
 const admin = require('firebase-admin');
 admin.initializeApp();
-const [uid, tenantId, role] = process.argv.slice(2);
+const [uid, tenantId] = process.argv.slice(2);
 admin.auth().getUser(uid).then(u => {
   const existing = u.customClaims || {};
   const adminTenants = existing.adminTenants || {};
-  adminTenants[tenantId] = role || 'admin';
-  return admin.auth().setCustomUserClaims(uid, { ...existing, adminTenants });
+  adminTenants[tenantId] = 'admin';
+  return admin.auth().setCustomUserClaims(uid, {
+    ...existing,
+    adminTenants,
+    superAdmin: true,   // ← これで 以降 setAdminClaim を 呼べる
+  });
 }).then(() => {
-  console.log('done. sign out & sign in で反映されます');
+  console.log('done. sign out & sign in で 反映されます');
   process.exit(0);
 }).catch(e => { console.error(e); process.exit(1); });
 EOF
 npm i firebase-admin
-node setclaim.js <FIREBASE_UID> skeleton admin
+node bootstrap-admin.js <FIREBASE_UID> skeleton
 ```
 
 `FIREBASE_UID` は Firebase console → Authentication → 該当 user 行 の 「UID」列 で 確認。
+
+**2回目以降 (客の tenant を 増やす、 別 admin を 招く 等)**:
+
+super-admin token を 持って login 済 の state で、 browser DevTools console で:
+
+```js
+const fn = firebase.functions('asia-northeast1').httpsCallable('setAdminClaim');
+await fn({ uid: 'TARGET_UID', tenantId: 'client-abc', role: 'admin' });
+// → {ok:true, uid, tenantId, role}
+```
+
+または gcloud CLI:
+
+```bash
+gcloud functions call setAdminClaim \
+  --region=asia-northeast1 \
+  --data '{"data":{"uid":"TARGET_UID","tenantId":"client-abc","role":"admin"}}'
+```
+
+権限 追加 の 実行 記録 は `tenants/{tenantId}/auditLog` に `ADMIN_CLAIM_SET` として 残る。
 
 ### 4-3. login 後 一度 sign out / sign in で claim が token に 焼き込まれる
 
@@ -140,7 +161,17 @@ node setclaim.js <FIREBASE_UID> skeleton admin
      - `Channel access token (long-lived)` を 発行 → メモ (これが Skel·CRM で使う LINE token)
      - `Bot ID` メモ
 6. 「Auto-reply messages」 「Greeting messages」 を OFF (Skel·CRM が 制御 するため)
-7. Webhook URL を 設定 (Cloud Functions deploy 後、 `https://asia-northeast1-<project-id>.cloudfunctions.net/lineWebhook` 相当。 現状 webhook 未実装 なので 後日 追加)
+7. **Webhook URL を 設定** (Cloud Functions deploy 後):
+   - URL: `https://asia-northeast1-<project-id>.cloudfunctions.net/lineWebhook?tenant=<tenantId>&channel=<channelId>`
+     - 例 (単一 tenant): `https://asia-northeast1-skel-crm-prod.cloudfunctions.net/lineWebhook?tenant=skeleton`
+     - 複数 tenant を 1 project で 相乗り する 場合 は `?tenant=` を 客ごと に 使い分ける
+   - LINE Developers Console → Messaging API → Webhook URL に上記を貼付 → **Verify** button で 200 確認
+   - **Use webhook** を ON に する
+   - 挙動:
+     - `follow` event → Firestore に customer doc 作成、 LINE displayName / picture を 取得、 `onFollow` trigger の autoTagRule を 発火
+     - `unfollow` event → customer.status='unfollowed' に mark
+     - `message` event → customer.lastActivityAt を 更新
+     - `postback` event → postback.data (例: `campaign:cp123`) で campaignId autoTagRule を 発火
 
 ### 5-1. LINE token を Firestore に 保存
 
@@ -165,13 +196,28 @@ firebase deploy --only functions
 
 初回 deploy 時、 GCP APIs (Cloud Build / Artifact Registry / etc) の 有効化 promptあり → Y。
 
-deploy 完了後、 5 functions が 生える:
-- `sendLineBroadcast`  (callable)
-- `sendLineTest`       (callable)
-- `createCheckoutSession` (callable)
-- `stripeWebhook`      (HTTP endpoint、 Stripe に登録する)
-- `onCustomerCreate`   (Firestore trigger)
-- `dailyAggregator`    (schedule: 03:00 JST)
+deploy 完了後、 **10 functions** が 生える:
+
+**呼び出し系 (callable)**
+- `sendLineBroadcast`   一括配信 (LINE multicast / broadcast)。 1日 3回 / 1分 3回 の rate limit
+- `sendLineTest`        LINE bot/info で 接続テスト
+- `createCheckoutSession` Stripe checkout session 発行
+- `setAdminClaim`       admin 権限 付与 (super-admin のみ 呼べる)
+- `deployRichMenu`      LINE リッチメニュー 画像 upload + 全ユーザー link
+
+**HTTP endpoint**
+- `stripeWebhook`       Stripe subscription event 受信 → tenants/{id}.plan mirror
+- `lineWebhook`         LINE Messaging API webhook (follow / unfollow / message / postback)
+
+**トリガー**
+- `onCustomerCreate`    Firestore trigger: 新規客 追加 → welcome step 発火
+- `processStepRunners`  scheduled every 5 min: step runner を 走査 → LINE push
+- `dailyAggregator`     scheduled 03:00 JST: 前日 の 配信履歴 集計 → `analytics/{date}`
+
+**監査 / 制御 挙動**
+- 全 callable と webhook は `tenants/{tenantId}/auditLog/{logId}` に action log を 残す (admin のみ read、 client write 禁止)
+- rate limit hit / LINE API error / Stripe error は auditLog + Cloud Logging に 出る
+- Firestore rules で `auditLog` / `rateLimits` / `steps/{id}/runners` は client write を 全禁止 (Cloud Function 経由 のみ)
 
 ---
 
@@ -295,10 +341,48 @@ deploy 完了後 の URL (例: `https://skel-crm-prod.web.app`) で 本番 UI �
 
 ---
 
+## 挙動 詳細 (追加リファレンス)
+
+### Rate limit
+- `sendLineBroadcast`: 1分 3回 / 1時間 10回 / **1日 3回** (客への spam 予防)
+- `sendLineTest`: 1分 10回 / 1時間 100回
+- `createCheckoutSession`: 1分 10回 / 1時間 100回
+- `deployRichMenu`: 1分 3回 / 1時間 20回
+- 超過 = HttpsError `resource-exhausted`、 `auditLog` に `RATE_LIMIT_HIT` として記録
+
+### auditLog collection
+- 経路: `tenants/{tenantId}/auditLog/{logId}`
+- fields: `uid`, `tenantId`, `action`, `meta`, `createdAt`
+- action 種類:
+  - `LINE_BROADCAST_SENT` / `LINE_TEST_OK` / `LINE_TEST_FAILED`
+  - `LINE_WEBHOOK_FOLLOW` / `LINE_WEBHOOK_UNFOLLOW`
+  - `AUTOTAG_APPLIED`
+  - `STEP_MESSAGE_SENT`
+  - `STRIPE_CHECKOUT_CREATED`
+  - `ADMIN_CLAIM_SET`
+  - `RICHMENU_DEPLOYED`
+  - `RATE_LIMIT_HIT`
+- 監査 は `firebase functions:log` と 併用、 週次で 異常 API 呼び出し 有無 確認
+
+### step runner (`processStepRunners`)
+- 5分間隔 で `tenants/*/steps/*/runners/*` を 走査
+- `status==='pending' && nextRunAt<=now` の runner を LINE push
+- step 定義 に `messages: [{delayMinutes, text}, ...]` が 必要 (現状 UI では 空 で作成、 後日 UI 拡張)
+- 送信失敗 3回 で `status='failed'` に mark、 `lastError` 記録
+- 1 スケジュール実行 で 50 通/step まで (安全弁)
+
+### richmenu deploy (`deployRichMenu`)
+- Firestore `tenants/{tenantId}/richmenus/{richMenuId}` に `{name, imageDataUrl or imageUrl, areas, size, chatBarText}` を 事前 保存
+- Cloud Function が LINE `POST /v2/bot/richmenu` → 画像 upload → 全ユーザー link を 一気に 実行
+- 成功時 は `deployed:true, lineRichMenuId` を doc に 書き戻し
+
+---
+
 ## 次 の 拡張 候補 (Phase 2)
 
-- LINE webhook (`lineWebhook` HTTP function) 実装 → 友だち追加 event で 自動 顧客登録
-- Storage 統合 → 画像 message 配信
+- Storage 統合 → 画像 message 配信 (現状 は text のみ multicast)
+- リッチメニュー editor UI (画像 upload / タップ領域 GUI設定)
 - LIFF 連携 → 顧客 side の form / ミニアプリ
 - 分析 dashboard 強化 (Analytics BigQuery export)
 - SSO (Google Workspace SAML) 対応
+- audit log 検索 UI (admin panel)

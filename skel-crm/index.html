@@ -138,6 +138,13 @@
     overflow-y: auto;
     padding: 24px;
   }
+  /* 1920px+ Retina/Studio Display で 間延び 防止。 中央寄せ + 最大幅 cap。
+     memory: feedback_wide_screen_owner_monitor_verify.md */
+  main > .view {
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+  }
 
   /* === Page sections === */
   .view { display: none; }
@@ -251,7 +258,7 @@
   #rule-list { list-style: none; }
   .rule-row {
     display: grid;
-    grid-template-columns: 44px 1fr auto auto auto;
+    grid-template-columns: 44px minmax(0, 1fr) auto auto auto;
     align-items: center;
     gap: 12px;
     padding: 14px 16px;
@@ -260,10 +267,21 @@
   }
   .rule-row:last-child { border-bottom: none; }
   .rule-row:hover { background: #fafbfd; }
-  .rule-name { font-size: 13px; font-weight: 700; }
-  .rule-desc { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .rule-body { min-width: 0; }
+  .rule-name {
+    font-size: 13px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rule-desc {
+    font-size: 12px; color: var(--dim); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .rule-count { font-size: 12px; color: var(--dim); white-space: nowrap; }
-  .rule-tag {}
+  .rule-tag { max-width: 240px; overflow: hidden; }
+  .rule-tag .tag-chip {
+    max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .rule-actions { display: flex; gap: 6px; }
   .icon-btn {
     width: 30px; height: 30px;
@@ -559,6 +577,23 @@
     #modal { width: 92vw; padding: 20px 18px; max-height: 92vh; }
     #toast-stack { top: 60px; right: 8px; left: 8px; }
     .toast { min-width: 0; max-width: none; }
+
+    /* 使い方 iframe は スマホ で 全黒 or 極小 に なる → 隠して 外部リンク で 誘導 */
+    #view-guide .guide-iframe-wrap { display: none !important; }
+    #view-guide .guide-mobile-cta { display: block !important; }
+
+    /* rule-row: モバイル は 縦積み、 rule-tag は 折り返し可 */
+    .rule-row {
+      grid-template-columns: 1fr;
+      gap: 8px;
+      padding: 12px 14px;
+    }
+    .rule-row .toggle-wrap { justify-content: flex-start; }
+    .rule-body { grid-column: 1; }
+    .rule-count { justify-self: flex-start; }
+    .rule-tag { max-width: 100%; overflow: visible; }
+    .rule-tag .tag-chip { max-width: none; white-space: normal; }
+    .rule-actions { justify-content: flex-end; }
   }
 
   /* Sticky top for touch */
@@ -1082,9 +1117,14 @@
         <div class="spacer"></div>
         <a href="https://t35ty6-rgb.github.io/skeleton-demos/crm-tool-videos/" target="_blank" rel="noopener" class="btn btn-secondary" style="text-decoration:none">新しい タブ で 開く ↗</a>
       </div>
-      <div style="background:#0a0c11;border:1px solid var(--rule);border-radius:12px;overflow:hidden;height:calc(100vh - 180px);min-height:520px;">
+      <div class="guide-iframe-wrap" style="background:#0a0c11;border:1px solid var(--rule);border-radius:12px;overflow:hidden;height:calc(100vh - 180px);min-height:520px;">
         <iframe src="https://t35ty6-rgb.github.io/skeleton-demos/crm-tool-videos/" style="width:100%;height:100%;border:0;display:block;" title="使い方 動画" loading="lazy"></iframe>
       </div>
+      <a class="guide-mobile-cta" href="https://t35ty6-rgb.github.io/skeleton-demos/crm-tool-videos/" target="_blank" rel="noopener"
+         style="display:none;padding:22px;background:var(--primary);color:#fff;border-radius:12px;text-align:center;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 4px 14px rgba(23,178,106,0.28);">
+        動画 一覧 を 別タブ で 開く ↗
+        <div style="font-size:12px;font-weight:600;opacity:0.9;margin-top:6px;">34本 · 機能別 の 短い チュートリアル</div>
+      </a>
     </div>
 
     <!-- 配信履歴 -->
@@ -1284,6 +1324,21 @@ const stripeApi = {
 };
 
 // =========================================================
+// XSS-safe HTML escape (使い所: template literal に 生 user input を 差し込む 前)
+// =========================================================
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+// alias for shorter call sites
+const _e = escHtml;
+window.__CRM_ESC_HTML = escHtml;
+
+// =========================================================
 // Toast + Confirm helpers (used throughout)
 // =========================================================
 function toast(message, kind = 'success', duration = 2400) {
@@ -1292,7 +1347,7 @@ function toast(message, kind = 'success', duration = 2400) {
   const el = document.createElement('div');
   el.className = `toast ${kind}`;
   const icon = kind === 'success' ? '✓' : kind === 'info' ? 'ℹ' : kind === 'warn' ? '⚠' : '×';
-  el.innerHTML = `<span class="t-ic">${icon}</span><span>${message}</span>`;
+  el.innerHTML = `<span class="t-ic">${icon}</span><span>${escHtml(message)}</span>`;
   stack.appendChild(el);
   setTimeout(() => {
     el.classList.add('leaving');
@@ -1301,6 +1356,8 @@ function toast(message, kind = 'success', duration = 2400) {
 }
 
 let confirmResolver = null;
+// NOTE: `message` は 呼出側 で 明示 escape 済 の HTML を 渡す 前提。
+// user input (顧客名 / タグ名 / ルール名 等) は 必ず escHtml() で 通す。
 function confirmDialog({ title = '確認', message, okLabel = '削除', okKind = 'danger' } = {}) {
   return new Promise(resolve => {
     confirmResolver = resolve;
@@ -1566,7 +1623,7 @@ function tagChipHTML(tagId, selected = true) {
   const t = getTag(tagId);
   if (!t) return '';
   const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
-  return `<span class="tag-chip ${selected?'selected':''}" style="background:${c.bg};color:${c.color};border-color:${c.border};">${t.name}</span>`;
+  return `<span class="tag-chip ${selected?'selected':''}" style="background:${c.bg};color:${c.color};border-color:${c.border};">${escHtml(t.name)}</span>`;
 }
 
 // =========================================================
@@ -1595,7 +1652,7 @@ function renderCustomers() {
   // populate tag filter (once)
   if (filterEl && filterEl.options.length <= 1) {
     filterEl.innerHTML = '<option value="">— タグで絞り込み —</option>' +
-      state.tags.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+      state.tags.map(t => `<option value="${escHtml(t.id)}">${escHtml(t.name)}</option>`).join('');
   }
 
   const filtered = state.customers.filter(c => {
@@ -1619,21 +1676,21 @@ function renderCustomers() {
     </td></tr>`;
   } else {
     tbody.innerHTML = filtered.map(c => `
-      <tr data-cust-id="${c.id}" style="cursor:pointer">
+      <tr data-cust-id="${escHtml(c.id)}" style="cursor:pointer">
         <td>
           <div class="cust-cell">
-            <div class="avatar" style="background:${c.avatarBg}">${c.name[0]}</div>
+            <div class="avatar" style="background:${escHtml(c.avatarBg)}">${escHtml((c.name||'?')[0])}</div>
             <div>
-              <div class="cust-name">${c.name}</div>
-              ${c.tel && c.tel !== '—' ? `<div style="font-size:11px;color:var(--dim);margin-top:2px;font-family:'SF Mono',monospace">${c.tel}</div>` : ''}
+              <div class="cust-name">${escHtml(c.name)}</div>
+              ${c.tel && c.tel !== '—' ? `<div style="font-size:11px;color:var(--dim);margin-top:2px;font-family:'SF Mono',monospace">${escHtml(c.tel)}</div>` : ''}
             </div>
           </div>
         </td>
         <td><div style="display:flex;flex-wrap:wrap;gap:3px;max-width:280px">${c.tagIds.map(id => tagChipHTML(id)).join('')}</div></td>
-        <td style="color:${c.lastPurchase && c.lastPurchase !== '—' ? 'var(--ink-2)' : 'var(--dim)'};font-size:12px">${c.lastPurchase}</td>
-        <td style="font-weight:700;color:${c.ltvNum > 0 ? 'var(--primary-hi)' : 'var(--dim)'}">${c.ltv}</td>
-        <td style="color:var(--dim);font-size:12px">${c.joinedAt}</td>
-        <td><button class="icon-btn cust-detail-btn" data-cust-id="${c.id}" title="詳細">→</button></td>
+        <td style="color:${c.lastPurchase && c.lastPurchase !== '—' ? 'var(--ink-2)' : 'var(--dim)'};font-size:12px">${escHtml(c.lastPurchase)}</td>
+        <td style="font-weight:700;color:${c.ltvNum > 0 ? 'var(--primary-hi)' : 'var(--dim)'}">${escHtml(c.ltv)}</td>
+        <td style="color:var(--dim);font-size:12px">${escHtml(c.joinedAt)}</td>
+        <td><button class="icon-btn cust-detail-btn" data-cust-id="${escHtml(c.id)}" title="詳細">→</button></td>
       </tr>
     `).join('');
   }
@@ -1692,9 +1749,9 @@ function openCustomerAddModal() {
   const modal = document.getElementById('modal');
   const tagChips = state.tags.map(t => {
     const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
-    return `<button class="tag-chip" data-tag-id="${t.id}"
+    return `<button class="tag-chip" data-tag-id="${escHtml(t.id)}"
       style="background:${c.bg};color:${c.color};border-color:${c.border};"
-    >${t.name}</button>`;
+    >${escHtml(t.name)}</button>`;
   }).join('');
 
   modal.innerHTML = `
@@ -1757,9 +1814,9 @@ function openCustomerDetailModal(cust) {
   const tagChips = state.tags.map(t => {
     const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
     const selected = cust.tagIds.includes(t.id);
-    return `<button class="tag-chip ${selected?'selected':''}" data-tag-id="${t.id}"
+    return `<button class="tag-chip ${selected?'selected':''}" data-tag-id="${escHtml(t.id)}"
       style="background:${c.bg};color:${c.color};border-color:${c.border};"
-    >${t.name}</button>`;
+    >${escHtml(t.name)}</button>`;
   }).join('');
 
   modal.innerHTML = `
@@ -1769,26 +1826,26 @@ function openCustomerDetailModal(cust) {
       <button class="modal-close" id="modal-close-btn">✕</button>
     </div>
     <div style="display:flex;align-items:center;gap:16px;padding:16px;background:var(--surface-2);border-radius:10px;margin-bottom:20px;">
-      <div class="avatar" style="width:56px;height:56px;font-size:22px;background:${cust.avatarBg}">${cust.name[0]}</div>
+      <div class="avatar" style="width:56px;height:56px;font-size:22px;background:${escHtml(cust.avatarBg)}">${escHtml((cust.name||'?')[0])}</div>
       <div>
-        <div style="font-size:17px;font-weight:800">${cust.name}</div>
-        <div style="font-size:12px;color:var(--dim);margin-top:4px">登録日 ${cust.joinedAt}</div>
+        <div style="font-size:17px;font-weight:800">${escHtml(cust.name)}</div>
+        <div style="font-size:12px;color:var(--dim);margin-top:4px">登録日 ${escHtml(cust.joinedAt)}</div>
       </div>
       <div style="flex:1"></div>
       <div style="text-align:right">
         <div style="font-size:11px;color:var(--dim);font-weight:700">LTV</div>
-        <div style="font-size:20px;font-weight:800;color:var(--primary)">${cust.ltv}</div>
+        <div style="font-size:20px;font-weight:800;color:var(--primary)">${escHtml(cust.ltv)}</div>
       </div>
     </div>
     ${cust.tel ? `
     <div class="field-group">
       <label class="field-label">電話番号</label>
-      <div style="padding:10px 14px;background:var(--surface-2);border-radius:8px;font-family:'SF Mono',monospace;font-size:14px;">${cust.tel}</div>
+      <div style="padding:10px 14px;background:var(--surface-2);border-radius:8px;font-family:'SF Mono',monospace;font-size:14px;">${escHtml(cust.tel)}</div>
     </div>` : ''}
     ${cust.lastPurchase && cust.lastPurchase !== '—' ? `
     <div class="field-group">
       <label class="field-label">最終購入</label>
-      <div style="padding:10px 14px;background:var(--surface-2);border-radius:8px;font-size:13px;">${cust.lastPurchase}</div>
+      <div style="padding:10px 14px;background:var(--surface-2);border-radius:8px;font-size:13px;">${escHtml(cust.lastPurchase)}</div>
     </div>` : ''}
     <div class="field-group">
       <label class="field-label">タグ （クリック で 付け外し）</label>
@@ -1819,7 +1876,7 @@ function openCustomerDetailModal(cust) {
   // Delete button
   const delBtn = document.getElementById('cust-detail-delete');
   if (delBtn) delBtn.addEventListener('click', async () => {
-    if (!await confirmDialog({ title: '顧客 を 削除', message: `「${cust.name}」 を 削除 します。<br>この操作 は 取り消せません。`, okLabel: '削除' })) return;
+    if (!await confirmDialog({ title: '顧客 を 削除', message: `「${escHtml(cust.name)}」 を 削除 します。<br>この操作 は 取り消せません。`, okLabel: '削除' })) return;
     state.customers = state.customers.filter(c => c.id !== cust.id);
     closeModal();
     renderCustomers();
@@ -1836,8 +1893,8 @@ function renderTags() {
     const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
     const count = state.customers.filter(c2 => c2.tagIds.includes(t.id)).length;
     return `
-      <div class="tag-card" data-tag-id="${t.id}" style="background:${c.bg};border:1.5px solid ${c.border};border-radius:14px;padding:16px 18px;cursor:pointer;transition:transform .15s, box-shadow .15s;box-shadow:inset 0 0 0 2px rgba(255,255,255,0.35), 0 4px 16px rgba(${c.glow},0.35), 0 2px 4px rgba(0,0,0,0.12);">
-        <div style="font-size:14px;font-weight:800;color:${c.color};margin-bottom:6px;text-shadow:0 2px 4px rgba(0,0,0,0.35);letter-spacing:0.02em;">${t.name}</div>
+      <div class="tag-card" data-tag-id="${escHtml(t.id)}" style="background:${c.bg};border:1.5px solid ${c.border};border-radius:14px;padding:16px 18px;cursor:pointer;transition:transform .15s, box-shadow .15s;box-shadow:inset 0 0 0 2px rgba(255,255,255,0.35), 0 4px 16px rgba(${c.glow},0.35), 0 2px 4px rgba(0,0,0,0.12);">
+        <div style="font-size:14px;font-weight:800;color:${c.color};margin-bottom:6px;text-shadow:0 2px 4px rgba(0,0,0,0.35);letter-spacing:0.02em;">${escHtml(t.name)}</div>
         <div style="font-size:30px;font-weight:900;color:${c.color};text-shadow:0 2px 6px rgba(0,0,0,0.4);line-height:1;">${count}</div>
         <div style="font-size:11px;color:${c.color};opacity:0.92;margin-top:6px;text-shadow:0 1px 2px rgba(0,0,0,0.25);">顧客 · クリックで編集</div>
       </div>`;
@@ -1872,7 +1929,7 @@ function openTagModal(existingTag) {
     <div style="padding:24px 24px 0">
       <div style="margin-bottom:18px;">
         <label style="font-size:13px;font-weight:700;display:block;margin-bottom:8px;">タグ名</label>
-        <input id="tag-modal-name" type="text" class="form-input" placeholder="例: VIP会員" value="${isEdit ? existingTag.name : ''}" style="width:100%;font-size:15px;padding:10px 14px;border:1.5px solid var(--rule);border-radius:8px;outline:none;">
+        <input id="tag-modal-name" type="text" class="form-input" placeholder="例: VIP会員" value="${isEdit ? escHtml(existingTag.name) : ''}" style="width:100%;font-size:15px;padding:10px 14px;border:1.5px solid var(--rule);border-radius:8px;outline:none;">
       </div>
       <div style="margin-bottom:24px;">
         <label style="font-size:13px;font-weight:700;display:block;margin-bottom:10px;">色を選択</label>
@@ -1938,7 +1995,7 @@ function openTagModal(existingTag) {
       const affected = state.customers.filter(c => c.tagIds.includes(existingTag.id)).length;
       const ok = await confirmDialog({
         title: 'タグ を 削除',
-        message: `「${existingTag.name}」 を 削除 します。<br>${affected > 0 ? `<b style="color:var(--danger)">${affected} 名</b> の 顧客 から この タグ が 自動 で 剥がれます。` : 'この タグ は どの 顧客 にも 付いて いません。'}`,
+        message: `「${escHtml(existingTag.name)}」 を 削除 します。<br>${affected > 0 ? `<b style="color:var(--danger)">${affected} 名</b> の 顧客 から この タグ が 自動 で 剥がれます。` : 'この タグ は どの 顧客 にも 付いて いません。'}`,
         okLabel: '削除',
       });
       if (!ok) return;
@@ -2013,21 +2070,21 @@ function renderAutoTags() {
     li.dataset.ruleId = rule.id;
     li.innerHTML = `
       <div class="toggle-wrap">
-        <input type="checkbox" class="toggle-input" id="toggle-${rule.id}" ${rule.active ? 'checked' : ''}>
-        <label class="toggle-knob" for="toggle-${rule.id}"></label>
+        <input type="checkbox" class="toggle-input" id="toggle-${escHtml(rule.id)}" ${rule.active ? 'checked' : ''}>
+        <label class="toggle-knob" for="toggle-${escHtml(rule.id)}"></label>
       </div>
-      <div>
-        <div class="rule-name">${rule.name}</div>
+      <div class="rule-body">
+        <div class="rule-name">${escHtml(rule.name)}</div>
         <div class="rule-desc">
           ${rule.field === 'campaignId' ? 'キャンペーン参加' : 'イベント'} →
-          ${rule.tagIds.map(id => getTag(id)?.name || id).join(', ')} を付与
+          ${rule.tagIds.map(id => escHtml(getTag(id)?.name || id)).join(', ')} を付与
         </div>
       </div>
       <div class="rule-count">${ruleMonthlyCount(rule)} 件/月</div>
       <div class="rule-tag">${tagChips}</div>
       <div class="rule-actions">
-        <button class="icon-btn rule-edit-btn" data-rule-id="${rule.id}" title="編集">✎</button>
-        <button class="icon-btn danger rule-del-btn" data-rule-id="${rule.id}" title="削除">✕</button>
+        <button class="icon-btn rule-edit-btn" data-rule-id="${escHtml(rule.id)}" title="編集">✎</button>
+        <button class="icon-btn danger rule-del-btn" data-rule-id="${escHtml(rule.id)}" title="削除">✕</button>
       </div>
     `;
     // toggle
@@ -2072,7 +2129,7 @@ function renderAutoTags() {
     e.stopPropagation();
     const r = state.autoTagRules.find(x => x.id === b.dataset.ruleId);
     if (!r) return;
-    const ok = await confirmDialog({ title: 'ルール を 削除', message: `「${r.name}」 を 削除 します。<br>今後 この ルール による 自動 タグ 付与 は 行われません。`, okLabel: '削除' });
+    const ok = await confirmDialog({ title: 'ルール を 削除', message: `「${escHtml(r.name)}」 を 削除 します。<br>今後 この ルール による 自動 タグ 付与 は 行われません。`, okLabel: '削除' });
     if (!ok) return;
     state.autoTagRules = state.autoTagRules.filter(x => x.id !== r.id);
     renderAutoTags();
@@ -2102,23 +2159,23 @@ function renderCampaigns() {
   }
   el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">${
     state.campaigns.map(cp => `
-      <div class="cp-card" data-cp-id="${cp.id}" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px;transition:box-shadow .15s;">
+      <div class="cp-card" data-cp-id="${escHtml(cp.id)}" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px;transition:box-shadow .15s;">
         <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
           <div style="flex:1">
-            <div style="font-size:14px;font-weight:800;margin-bottom:2px;">${cp.name}</div>
-            <div style="font-size:11px;color:var(--dim)">${cp.created}</div>
+            <div style="font-size:14px;font-weight:800;margin-bottom:2px;">${escHtml(cp.name)}</div>
+            <div style="font-size:11px;color:var(--dim)">${escHtml(cp.created)}</div>
           </div>
-          <span style="background:var(--info-soft);color:var(--info);padding:2px 8px;border-radius:12px;font-size:10px;font-weight:800">${cp.type||'広告'}</span>
+          <span style="background:var(--info-soft);color:var(--info);padding:2px 8px;border-radius:12px;font-size:10px;font-weight:800">${escHtml(cp.type||'広告')}</span>
         </div>
-        <div style="font-size:11px;color:var(--dim);word-break:break-all;font-family:'SF Mono',monospace;background:var(--surface-2);padding:6px 8px;border-radius:6px;margin-bottom:10px;">${cp.url||''}</div>
+        <div style="font-size:11px;color:var(--dim);word-break:break-all;font-family:'SF Mono',monospace;background:var(--surface-2);padding:6px 8px;border-radius:6px;margin-bottom:10px;">${escHtml(cp.url||'')}</div>
         <div style="display:flex;align-items:flex-end;gap:8px;">
           <div style="flex:1">
             <div style="font-size:11px;color:var(--dim);font-weight:700">流入 (人)</div>
             <div style="font-size:24px;font-weight:800;color:var(--primary);line-height:1;">${cp.inflow||0}</div>
           </div>
-          <button class="btn btn-secondary cp-url-btn" data-cp-id="${cp.id}" style="padding:6px 10px;font-size:11px">URL</button>
-          <button class="btn btn-secondary cp-qr-btn" data-cp-id="${cp.id}" style="padding:6px 10px;font-size:11px">QR</button>
-          <button class="icon-btn danger cp-del-btn" data-cp-id="${cp.id}" style="width:28px;height:28px" title="削除">✕</button>
+          <button class="btn btn-secondary cp-url-btn" data-cp-id="${escHtml(cp.id)}" style="padding:6px 10px;font-size:11px">URL</button>
+          <button class="btn btn-secondary cp-qr-btn" data-cp-id="${escHtml(cp.id)}" style="padding:6px 10px;font-size:11px">QR</button>
+          <button class="icon-btn danger cp-del-btn" data-cp-id="${escHtml(cp.id)}" style="width:28px;height:28px" title="削除">✕</button>
         </div>
       </div>`).join('')
   }</div>`;
@@ -2134,7 +2191,7 @@ function renderCampaigns() {
     e.stopPropagation();
     const cp = state.campaigns.find(c => c.id === b.dataset.cpId);
     if (!cp) return;
-    const ok = await confirmDialog({ title: 'キャンペーン を 削除', message: `「${cp.name}」 を 削除 します。<br>流入 履歴 も 一緒 に 消えます。`, okLabel: '削除' });
+    const ok = await confirmDialog({ title: 'キャンペーン を 削除', message: `「${escHtml(cp.name)}」 を 削除 します。<br>流入 履歴 も 一緒 に 消えます。`, okLabel: '削除' });
     if (!ok) return;
     state.campaigns = state.campaigns.filter(c => c.id !== cp.id);
     renderCampaigns();
@@ -2147,9 +2204,9 @@ function openCampaignAddModal() {
   const modal = document.getElementById('modal');
   const tagChips = state.tags.map(t => {
     const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
-    return `<button class="tag-chip" data-tag-id="${t.id}"
+    return `<button class="tag-chip" data-tag-id="${escHtml(t.id)}"
       style="background:${c.bg};color:${c.color};border-color:${c.border};"
-    >${t.name}</button>`;
+    >${escHtml(t.name)}</button>`;
   }).join('');
 
   modal.innerHTML = `
@@ -2228,8 +2285,8 @@ function openCampaignUrlModal(cp) {
       <button class="modal-close" id="modal-close-btn">✕</button>
     </div>
     <div style="padding:8px 0">
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px">${cp.name}</div>
-      <div style="background:var(--surface-2);border:1px solid var(--rule);border-radius:8px;padding:14px;font-family:'SF Mono',monospace;font-size:13px;word-break:break-all;color:var(--ink)" id="cp-url-display">${cp.url}</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px">${escHtml(cp.name)}</div>
+      <div style="background:var(--surface-2);border:1px solid var(--rule);border-radius:8px;padding:14px;font-family:'SF Mono',monospace;font-size:13px;word-break:break-all;color:var(--ink)" id="cp-url-display">${escHtml(cp.url)}</div>
       <div id="cp-url-copied" style="display:none;margin-top:12px;padding:10px 14px;background:var(--primary-soft);border:1px solid #86efac;border-radius:8px;color:var(--primary-hi);font-size:13px;font-weight:700;">
         ✓ クリップボードに コピー しました
       </div>
@@ -2287,9 +2344,9 @@ function openCampaignQrModal(cp) {
       <button class="modal-close" id="modal-close-btn">✕</button>
     </div>
     <div style="text-align:center;padding:8px 0">
-      <div style="font-size:13px;font-weight:700;margin-bottom:14px">${cp.name}</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:14px">${escHtml(cp.name)}</div>
       <div style="display:inline-block;padding:16px;background:#fff;border:2px solid var(--rule);border-radius:12px;">${svg}</div>
-      <div style="font-size:11px;color:var(--dim);margin-top:14px;font-family:'SF Mono',monospace;word-break:break-all;">${cp.url}</div>
+      <div style="font-size:11px;color:var(--dim);margin-top:14px;font-family:'SF Mono',monospace;word-break:break-all;">${escHtml(cp.url)}</div>
       <p style="font-size:12px;color:var(--dim);margin-top:14px;line-height:1.7">紙 の チラシ や ポスター に 印刷 して 配布 できます。<br>スマホ で 読み取ると 上記 URL に 飛び、 流入 が 計測 されます。</p>
     </div>
     <div class="modal-actions">
@@ -2326,18 +2383,18 @@ function renderSegments() {
     return;
   }
   el.innerHTML = state.segments.map(seg => `
-    <div class="seg-card" data-seg-id="${seg.id}" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:18px;transition:box-shadow .15s;position:relative;">
-      <button class="icon-btn danger seg-del-btn" data-seg-id="${seg.id}" title="削除" style="position:absolute;top:12px;right:12px;width:26px;height:26px;font-size:12px">✕</button>
-      <div style="font-size:14px;font-weight:800;margin-bottom:4px;padding-right:26px;">${seg.name}</div>
-      ${seg.kind ? `<div style="font-size:10px;color:var(--dim);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px">${seg.kind}</div>` : ''}
+    <div class="seg-card" data-seg-id="${escHtml(seg.id)}" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:18px;transition:box-shadow .15s;position:relative;">
+      <button class="icon-btn danger seg-del-btn" data-seg-id="${escHtml(seg.id)}" title="削除" style="position:absolute;top:12px;right:12px;width:26px;height:26px;font-size:12px">✕</button>
+      <div style="font-size:14px;font-weight:800;margin-bottom:4px;padding-right:26px;">${escHtml(seg.name)}</div>
+      ${seg.kind ? `<div style="font-size:10px;color:var(--dim);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px">${escHtml(seg.kind)}</div>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${seg.tagIds.map(id => tagChipHTML(id)).join('')}</div>
       <div style="display:flex;align-items:baseline;gap:6px;">
         <div style="font-size:28px;font-weight:800;color:var(--info)">${seg.count}</div>
         <div style="font-size:12px;color:var(--dim)">名 が対象</div>
       </div>
       <div style="display:flex;gap:6px;margin-top:14px;">
-        <button class="btn btn-secondary seg-preview-btn" data-seg-id="${seg.id}" style="padding:8px 10px;font-size:11px;flex:1;justify-content:center;white-space:nowrap">プレビュー</button>
-        <button class="btn btn-primary seg-send-btn" data-seg-id="${seg.id}" style="padding:8px 10px;font-size:11px;flex:1;justify-content:center;white-space:nowrap">配信 →</button>
+        <button class="btn btn-secondary seg-preview-btn" data-seg-id="${escHtml(seg.id)}" style="padding:8px 10px;font-size:11px;flex:1;justify-content:center;white-space:nowrap">プレビュー</button>
+        <button class="btn btn-primary seg-send-btn" data-seg-id="${escHtml(seg.id)}" style="padding:8px 10px;font-size:11px;flex:1;justify-content:center;white-space:nowrap">配信 →</button>
       </div>
     </div>`).join('');
   el.querySelectorAll('.seg-preview-btn').forEach(b => b.addEventListener('click', e => {
@@ -2356,7 +2413,7 @@ function renderSegments() {
     e.stopPropagation();
     const seg = state.segments.find(s => s.id === b.dataset.segId);
     if (!seg) return;
-    const ok = await confirmDialog({ title: 'セグメント を 削除', message: `「${seg.name}」 を 削除 します。<br>顧客 データ は 消えません、 この 絞り込み 条件 だけ 削除 されます。`, okLabel: '削除' });
+    const ok = await confirmDialog({ title: 'セグメント を 削除', message: `「${escHtml(seg.name)}」 を 削除 します。<br>顧客 データ は 消えません、 この 絞り込み 条件 だけ 削除 されます。`, okLabel: '削除' });
     if (!ok) return;
     state.segments = state.segments.filter(s => s.id !== seg.id);
     renderSegments();
@@ -2369,9 +2426,9 @@ function openSegmentCreateModal() {
   const modal = document.getElementById('modal');
   const tagChips = state.tags.map(t => {
     const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
-    return `<button class="tag-chip" data-tag-id="${t.id}"
+    return `<button class="tag-chip" data-tag-id="${escHtml(t.id)}"
       style="background:${c.bg};color:${c.color};border-color:${c.border};"
-    >${t.name}</button>`;
+    >${escHtml(t.name)}</button>`;
   }).join('');
 
   modal.innerHTML = `
@@ -2418,7 +2475,9 @@ function openSegmentCreateModal() {
       const selectedIds = [...chips].map(c => c.dataset.tagId);
       const count = state.customers.filter(c => selectedIds.every(t => c.tagIds.includes(t))).length;
       prev.style.display = '';
-      document.getElementById('seg-preview-num').textContent = Math.max(count, Math.floor(Math.random()*20+5));
+      // NOTE: 実 データ の count を そのまま 出す。 過去 は Math.random で 見栄え を 盛って いたが、
+      //       セグメント作成者 が 何度 開いても 同じ 数字 に なる 挙動 を 保証 する。
+      document.getElementById('seg-preview-num').textContent = count;
     } else {
       prev.style.display = 'none';
     }
@@ -2457,17 +2516,17 @@ function openSegmentPreviewModal(seg) {
       <button class="modal-close" id="modal-close-btn">✕</button>
     </div>
     <div style="padding:12px 16px;background:var(--info-soft);border-radius:10px;margin-bottom:16px;">
-      <div style="font-size:13px;font-weight:700;margin-bottom:4px">${seg.name}</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">${escHtml(seg.name)}</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px;">${seg.tagIds.map(id => tagChipHTML(id)).join('')}</div>
       <div style="margin-top:10px;font-size:22px;font-weight:800;color:var(--info)">${seg.count} <span style="font-size:12px;color:var(--dim);font-weight:600">名 が対象</span></div>
     </div>
     <div style="max-height:280px;overflow-y:auto;border:1px solid var(--rule);border-radius:8px;">
       ${display.map(c => `
         <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--rule);">
-          <div class="avatar" style="width:28px;height:28px;font-size:12px;background:${c.avatarBg}">${c.name[0]}</div>
+          <div class="avatar" style="width:28px;height:28px;font-size:12px;background:${escHtml(c.avatarBg)}">${escHtml((c.name||'?')[0])}</div>
           <div style="flex:1">
-            <div style="font-size:13px;font-weight:700">${c.name}</div>
-            <div style="font-size:11px;color:var(--dim);margin-top:2px">${c.joinedAt}</div>
+            <div style="font-size:13px;font-weight:700">${escHtml(c.name)}</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:2px">${escHtml(c.joinedAt)}</div>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:3px;justify-content:flex-end">${c.tagIds.slice(0,3).map(id => tagChipHTML(id)).join('')}</div>
         </div>
@@ -2512,15 +2571,15 @@ function renderBroadcast() {
     <div class="bc-card" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:18px;transition:box-shadow .15s;">
       <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
         <div style="flex:1">
-          <div style="font-size:14px;font-weight:800;margin-bottom:3px;">${b.name}</div>
-          <div style="font-size:11px;color:var(--dim)">${b.sent} · ${b.target_label || '全顧客'}</div>
+          <div style="font-size:14px;font-weight:800;margin-bottom:3px;">${escHtml(b.name)}</div>
+          <div style="font-size:11px;color:var(--dim)">${escHtml(b.sent)} · ${escHtml(b.target_label || '全顧客')}</div>
         </div>
         <span style="background:${b.open==='—'?'var(--warn-soft)':'var(--primary-soft)'};color:${b.open==='—'?'var(--warn)':'var(--primary-hi)'};padding:3px 10px;border-radius:12px;font-size:10px;font-weight:800">${b.open==='—'?'集計中':'完了'}</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:12px;border-top:1px solid var(--rule)">
-        <div><div style="font-size:11px;color:var(--dim);font-weight:700">対象</div><div style="font-size:19px;font-weight:800">${b.target}</div></div>
-        <div><div style="font-size:11px;color:var(--dim);font-weight:700">開封率</div><div style="font-size:19px;font-weight:800;color:var(--primary)">${b.open}</div></div>
-        <div><div style="font-size:11px;color:var(--dim);font-weight:700">クリック率</div><div style="font-size:19px;font-weight:800;color:var(--info)">${b.click}</div></div>
+        <div><div style="font-size:11px;color:var(--dim);font-weight:700">対象</div><div style="font-size:19px;font-weight:800">${escHtml(b.target)}</div></div>
+        <div><div style="font-size:11px;color:var(--dim);font-weight:700">開封率</div><div style="font-size:19px;font-weight:800;color:var(--primary)">${escHtml(b.open)}</div></div>
+        <div><div style="font-size:11px;color:var(--dim);font-weight:700">クリック率</div><div style="font-size:19px;font-weight:800;color:var(--info)">${escHtml(b.click)}</div></div>
       </div>
     </div>`).join('');
 }
@@ -2528,38 +2587,38 @@ function renderBroadcast() {
 function openBroadcastCreateModal(presetSeg) {
   const modal = document.getElementById('modal');
   const segChips = state.segments.map(s =>
-    `<button class="cp-chip" data-v="${s.id}" data-count="${s.count}">${s.name}<span style="opacity:.7;margin-left:6px;font-weight:500">${s.count}名</span></button>`
-  ).join('') + `<button class="cp-chip" data-v="all" data-count="${state.customers.length}">全 顧客<span style="opacity:.7;margin-left:6px;font-weight:500">${state.customers.length}名</span></button>`;
+    `<button class="cp-chip" data-v="${escHtml(s.id)}" data-count="${s.count}">${escHtml(s.name)}<span style="opacity:.7;margin-left:6px;font-weight:500">${s.count}名</span></button>`
+  ).join('') + `<button class="cp-chip" data-v="all" data-count="${state.customers.length}">全顧客<span style="opacity:.7;margin-left:6px;font-weight:500">${state.customers.length}名</span></button>`;
 
   modal.innerHTML = `
     <div class="modal-header">
-      <h3>新しい 一括配信 を 作成</h3>
+      <h3>新しい一括配信を作成</h3>
       <div class="spacer"></div>
       <button class="modal-close" id="modal-close-btn">✕</button>
     </div>
     <div class="field-group">
-      <label class="field-label">Step 1 · 対象 を 選ぶ</label>
+      <label class="field-label">STEP 1 · 対象を選ぶ</label>
       <div class="chip-area" id="bc-modal-target">${segChips}</div>
       <div id="bc-target-info" style="display:none;margin-top:8px;font-size:12px;color:var(--info);font-weight:700"></div>
     </div>
     <div class="field-group">
-      <label class="field-label">Step 2 · 配信 タイトル</label>
+      <label class="field-label">STEP 2 · 配信タイトル</label>
       <input type="text" class="field-input" id="bc-modal-title" placeholder="例: 5月 新商品 のご案内">
     </div>
     <div class="field-group">
-      <label class="field-label">Step 3 · 本文 （{name} で 顧客名 差込）</label>
+      <label class="field-label">STEP 3 · 本文（{name}で顧客名差込）</label>
       <textarea class="field-input" id="bc-modal-body" rows="4" style="resize:vertical;font-family:inherit;line-height:1.6">こんにちは、{name}さん。&#10;&#10;新商品「◯◯」が入荷しました。&#10;LINE 友だち限定で 10% OFF クーポン を お渡しします。</textarea>
     </div>
     <div class="field-group">
-      <label class="field-label">Step 4 · LINE 送信 プレビュー</label>
+      <label class="field-label">STEP 4 · LINE送信プレビュー</label>
       <div style="display:flex;align-items:flex-end;gap:10px;margin-top:6px">
         <div style="width:28px;height:28px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--dim);font-weight:800">You</div>
-        <div id="bc-preview" style="max-width:280px;padding:12px 14px;background:#8cabd8;border-radius:16px 16px 16px 4px;color:#0e1523;font-size:13px;line-height:1.55;white-space:pre-wrap;position:relative;box-shadow:0 2px 4px rgba(0,0,0,0.06)">本文 が ここ に 表示 されます</div>
+        <div id="bc-preview" style="max-width:280px;padding:12px 14px;background:#8cabd8;border-radius:16px 16px 16px 4px;color:#0e1523;font-size:13px;line-height:1.55;white-space:pre-wrap;position:relative;box-shadow:0 2px 4px rgba(0,0,0,0.06)">本文がここに表示されます</div>
       </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="bc-modal-cancel">キャンセル</button>
-      <button class="btn btn-primary" id="bc-modal-next">送信 確認 →</button>
+      <button class="btn btn-primary" id="bc-modal-next">送信確認 →</button>
     </div>
   `;
   document.getElementById('modal-scrim').classList.add('open');
@@ -2571,7 +2630,7 @@ function openBroadcastCreateModal(presetSeg) {
       document.querySelectorAll('#bc-modal-target .cp-chip').forEach(c => c.classList.remove('selected'));
       chip.classList.add('selected');
       document.getElementById('bc-target-info').style.display = '';
-      document.getElementById('bc-target-info').textContent = `対象: ${chip.dataset.count} 名 に配信`;
+      document.getElementById('bc-target-info').textContent = `対象: ${chip.dataset.count} 名に配信`;
     });
   });
 
@@ -2579,7 +2638,7 @@ function openBroadcastCreateModal(presetSeg) {
     const body = document.getElementById('bc-modal-body').value;
     const sample = state.customers[0]?.name?.split(' ')[0] || '田中';
     const rendered = body.replace(/\{name\}/g, sample);
-    document.getElementById('bc-preview').textContent = rendered || '本文 が ここ に 表示 されます';
+    document.getElementById('bc-preview').textContent = rendered || '本文がここに表示されます';
   }
   document.getElementById('bc-modal-body').addEventListener('input', updateBcPreview);
   updateBcPreview();
@@ -2587,12 +2646,20 @@ function openBroadcastCreateModal(presetSeg) {
   document.getElementById('bc-modal-next').addEventListener('click', () => {
     const titleEl = document.getElementById('bc-modal-title');
     const title = titleEl.value.trim();
-    if (!title) { titleEl.focus(); titleEl.style.borderColor = 'var(--danger)'; toast('配信 タイトル を 入力 してください', 'warn'); return; }
+    if (!title) { titleEl.focus(); titleEl.style.borderColor = 'var(--danger)'; toast('配信タイトルを入力してください', 'warn'); return; }
     const target = document.querySelector('#bc-modal-target .cp-chip.selected');
-    if (!target) { toast('対象 を 選択 してください', 'warn'); return; }
+    if (!target) { toast('対象を選択してください', 'warn'); return; }
     const body = document.getElementById('bc-modal-body').value.trim();
-    if (!body) { toast('本文 を 入力 してください', 'warn'); return; }
-    openBroadcastConfirmModal(title, target.textContent.trim(), parseInt(target.dataset.count));
+    if (!body) { toast('本文を入力してください', 'warn'); return; }
+    // target.dataset.v は seg.id または 'all'。 送信 時 に 対象 userId 列 を 解決 する
+    const targetSegId = target.dataset.v;
+    openBroadcastConfirmModal({
+      title,
+      targetLabel: target.textContent.trim(),
+      count: parseInt(target.dataset.count),
+      body,
+      targetSegId,
+    });
   });
 
   // Preset segment
@@ -2603,40 +2670,97 @@ function openBroadcastCreateModal(presetSeg) {
         document.querySelectorAll('#bc-modal-target .cp-chip').forEach(c => c.classList.remove('selected'));
         chip.classList.add('selected');
         document.getElementById('bc-target-info').style.display = '';
-        document.getElementById('bc-target-info').textContent = `対象: ${chip.dataset.count} 名 に配信`;
+        document.getElementById('bc-target-info').textContent = `対象: ${chip.dataset.count} 名に配信`;
         document.getElementById('bc-modal-title').focus();
       }
     }, 100);
   }
 }
 
-function openBroadcastConfirmModal(title, targetLabel, count) {
+function openBroadcastConfirmModal(opts, legacyTargetLabel, legacyCount) {
+  // Backward compat: 旧 呼出し 形式 (title, targetLabel, count) も 受ける
+  let title, targetLabel, count, body, targetSegId;
+  if (typeof opts === 'object' && opts && !Array.isArray(opts)) {
+    ({ title, targetLabel, count, body, targetSegId } = opts);
+  } else {
+    title = opts; targetLabel = legacyTargetLabel; count = legacyCount;
+    body = null; targetSegId = null;
+  }
   const modal = document.getElementById('modal');
+  const modeLabel = (window.__CRM_MODE === 'prod') ? '本番' : 'デモ';
+  const modeColor = (window.__CRM_MODE === 'prod') ? 'var(--danger)' : 'var(--info)';
   modal.innerHTML = `
     <div class="modal-header">
-      <h3>送信 確認</h3>
+      <h3>送信確認</h3>
       <div class="spacer"></div>
       <button class="modal-close" id="modal-close-btn">✕</button>
     </div>
     <div style="padding:20px;background:var(--warn-soft);border:1px solid #fcd34d;border-radius:10px;text-align:center;margin-bottom:16px;">
       <div style="font-size:36px;margin-bottom:8px">⚠</div>
-      <div style="font-size:14px;font-weight:700;margin-bottom:4px">${count} 名 に 配信 します</div>
-      <div style="font-size:12px;color:var(--dim)">${targetLabel} / 「${title}」</div>
-      <div style="font-size:11px;color:var(--danger);margin-top:8px;font-weight:700">送信 は 取り消せません</div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">${count} 名に配信します</div>
+      <div style="font-size:12px;color:var(--dim)">${escHtml(targetLabel)} / 「${escHtml(title)}」</div>
+      <div style="font-size:11px;color:${modeColor};margin-top:8px;font-weight:700">${modeLabel}モード · 送信は取り消せません</div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="bc-conf-cancel">戻る</button>
-      <button class="btn btn-primary" id="bc-conf-send">${count} 名 に 送信</button>
+      <button class="btn btn-primary" id="bc-conf-send">${count} 名に送信</button>
     </div>
   `;
   document.getElementById('modal-close-btn').addEventListener('click', closeModal);
   document.getElementById('bc-conf-cancel').addEventListener('click', closeModal);
-  document.getElementById('bc-conf-send').addEventListener('click', () => {
-    // simulate send (spinner)
+  document.getElementById('bc-conf-send').addEventListener('click', async () => {
     const btn = document.getElementById('bc-conf-send');
     btn.disabled = true;
     btn.textContent = '送信中…';
     btn.style.opacity = '0.7';
+
+    // 対象 userIds 解決 (prod mode かつ 実 LINE 送信 する 時 のみ 必要)
+    let targetUserIds = null;
+    try {
+      if (targetSegId && targetSegId !== 'all') {
+        const seg = state.segments.find(s => s.id === targetSegId);
+        if (seg && Array.isArray(seg.tagIds)) {
+          targetUserIds = state.customers
+            .filter(c => seg.tagIds.every(t => (c.tagIds || []).includes(t)))
+            .map(c => c.lineUserId)
+            .filter(Boolean);
+        }
+      } else if (targetSegId === 'all') {
+        targetUserIds = state.customers.map(c => c.lineUserId).filter(Boolean);
+      }
+    } catch (e) { /* fall through */ }
+
+    // prod mode → Cloud Function 経由 で 実 LINE 送信
+    if (window.__CRM_MODE === 'prod' && window.__CRM_LINE_API && window.__CRM_LINE_API.sendBroadcast) {
+      try {
+        const activeCh = (state.channels || []).find(c => c.active) || (state.channels || [])[0];
+        const messages = [{
+          type: 'text',
+          text: (body || title || '').slice(0, 2000),
+        }];
+        const res = await window.__CRM_LINE_API.sendBroadcast({
+          channelId: activeCh ? activeCh.id : null,
+          targetUserIds: (targetUserIds && targetUserIds.length > 0) ? targetUserIds : null,
+          messages,
+        });
+        if (!res || res.ok === false) {
+          throw new Error((res && res.error) || 'unknown error');
+        }
+        toast(`${count} 名にLINE配信を送信しました (requestId: ${res.requestId || 'n/a'})`);
+      } catch (e) {
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.textContent = `${count} 名に送信`;
+        toast('LINE 送信 に失敗しました: ' + (e.message || e.code || e), 'error', 5000);
+        return;
+      }
+      // history は Cloud Function 側 で 追記される (functions/index.js sendLineBroadcast)、
+      // realtime listener が 拾って UI 更新 する
+      openBroadcastSuccessModal(title, count);
+      return;
+    }
+
+    // demo mode: 従来 の 疑似 送信
     setTimeout(() => {
       state.broadcasts = state.broadcasts || [];
       const sentAt = new Date().toISOString().slice(0,16).replace('T',' ');
@@ -2646,7 +2770,6 @@ function openBroadcastConfirmModal(title, targetLabel, count) {
         open: '—', click: '—',
         target_label: targetLabel,
       });
-      // history
       if (!state.history) renderHistory();
       state.history.unshift({
         date: sentAt, type: '一括配信', name: title, target: `${count}名`, open: '—', click: '—',
@@ -2660,15 +2783,15 @@ function openBroadcastSuccessModal(title, count) {
   const modal = document.getElementById('modal');
   modal.innerHTML = `
     <div class="modal-header">
-      <h3>送信 完了</h3>
+      <h3>送信完了</h3>
       <div class="spacer"></div>
       <button class="modal-close" id="modal-close-btn">✕</button>
     </div>
     <div class="demo-result">
       <div class="big">✅</div>
-      <h4>${count} 名 に 送信 しました</h4>
-      <p>「${title}」 の 配信 が 完了 しました。<br>開封率 と クリック率 は 数分後 に 反映 されます。</p>
-      <button class="btn btn-primary" id="bc-goto-hist" style="margin:0 auto">配信履歴 で 確認 →</button>
+      <h4>${count} 名に送信しました</h4>
+      <p>「${escHtml(title)}」の配信が完了しました。<br>開封率とクリック率は数分後に反映されます。</p>
+      <button class="btn btn-primary" id="bc-goto-hist" style="margin:0 auto">配信履歴で確認 →</button>
     </div>
     <div class="modal-actions" style="border-top:none;padding-top:0">
       <button class="btn btn-ghost" id="bc-succ-close">閉じる</button>
@@ -2677,7 +2800,7 @@ function openBroadcastSuccessModal(title, count) {
   document.getElementById('modal-close-btn').addEventListener('click', closeModal);
   document.getElementById('bc-succ-close').addEventListener('click', () => { closeModal(); renderBroadcast(); });
   document.getElementById('bc-goto-hist').addEventListener('click', () => { closeModal(); navigate('history'); });
-  toast(`${count} 名 に 配信 を 送信 しました`);
+  toast(`${count} 名に配信を送信しました`);
 }
 
 // =========================================================
@@ -2703,14 +2826,14 @@ function renderSteps() {
   el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;">${
     state.steps.map(s => `
       <div style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:18px;position:relative;">
-        <button class="icon-btn danger step-del-btn" data-step-id="${s.id}" title="削除" style="position:absolute;top:12px;right:12px;width:26px;height:26px;font-size:12px">✕</button>
+        <button class="icon-btn danger step-del-btn" data-step-id="${escHtml(s.id)}" title="削除" style="position:absolute;top:12px;right:12px;width:26px;height:26px;font-size:12px">✕</button>
         <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;padding-right:32px;">
           <div style="flex:1">
-            <div style="font-size:14px;font-weight:800">${s.name}</div>
-            <div style="font-size:11px;color:var(--dim);margin-top:3px">トリガー: <span style="color:var(--ink-2);font-weight:700">${s.trigger}</span></div>
+            <div style="font-size:14px;font-weight:800">${escHtml(s.name)}</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:3px">トリガー: <span style="color:var(--ink-2);font-weight:700">${escHtml(s.trigger)}</span></div>
           </div>
           <label class="toggle-wrap" title="${s.active?'稼働中':'停止中'}">
-            <input type="checkbox" class="toggle-input step-toggle" data-step-id="${s.id}" ${s.active ? 'checked' : ''}>
+            <input type="checkbox" class="toggle-input step-toggle" data-step-id="${escHtml(s.id)}" ${s.active ? 'checked' : ''}>
             <span class="toggle-knob"></span>
           </label>
         </div>
@@ -2733,7 +2856,7 @@ function renderSteps() {
     e.stopPropagation();
     const s = state.steps.find(x => x.id === b.dataset.stepId);
     if (!s) return;
-    const ok = await confirmDialog({ title: 'シナリオ を 削除', message: `「${s.name}」 を 削除 します。<br>${s.running > 0 ? `<b style="color:var(--danger)">現在 ${s.running} 名</b> が このシナリオ で 配信 進行中 です。 削除 すると 全員 の 配信 が 中断 されます。` : ''}`, okLabel: '削除' });
+    const ok = await confirmDialog({ title: 'シナリオ を 削除', message: `「${escHtml(s.name)}」 を 削除 します。<br>${s.running > 0 ? `<b style="color:var(--danger)">現在 ${s.running} 名</b> が このシナリオ で 配信 進行中 です。 削除 すると 全員 の 配信 が 中断 されます。` : ''}`, okLabel: '削除' });
     if (!ok) return;
     state.steps = state.steps.filter(x => x.id !== s.id);
     renderSteps();
@@ -2856,11 +2979,11 @@ function renderRichmenu() {
   }
   el.innerHTML = banner + `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">${
     state.richmenus.map(rm => `
-      <div data-rm-id="${rm.id}" style="background:var(--surface);border:${rm.deployed?'2px solid var(--primary)':'1px solid var(--rule)'};border-radius:12px;padding:16px;">
+      <div data-rm-id="${escHtml(rm.id)}" style="background:var(--surface);border:${rm.deployed?'2px solid var(--primary)':'1px solid var(--rule)'};border-radius:12px;padding:16px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
           <div style="flex:1">
-            <div style="font-size:13px;font-weight:800">${rm.name}</div>
-            <div style="font-size:11px;color:var(--dim);margin-top:2px">更新: ${rm.updated}</div>
+            <div style="font-size:13px;font-weight:800">${escHtml(rm.name)}</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:2px">更新: ${escHtml(rm.updated)}</div>
           </div>
           <span style="background:${rm.deployed?'var(--primary-soft)':'var(--surface-2)'};color:${rm.deployed?'var(--primary-hi)':'var(--dim)'};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:800">${rm.deployed?'●稼働中':'下書き'}</span>
         </div>
@@ -2868,11 +2991,11 @@ function renderRichmenu() {
           ${Array(rm.cells).fill(0).map((_,i)=>`<div style="background:linear-gradient(135deg,#e5e7eb,#d1d5db);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--dim);font-weight:700">セル ${i+1}</div>`).join('')}
         </div>
         <div style="display:flex;gap:6px;margin-top:12px">
-          <button class="btn btn-secondary rm-dup-btn" data-rm-id="${rm.id}" style="flex:1;padding:7px 10px;font-size:11px">複製</button>
+          <button class="btn btn-secondary rm-dup-btn" data-rm-id="${escHtml(rm.id)}" style="flex:1;padding:7px 10px;font-size:11px">複製</button>
           ${rm.deployed
-            ? `<button class="btn btn-ghost rm-stop-btn" data-rm-id="${rm.id}" style="flex:1;padding:7px 10px;font-size:11px">停止</button>`
-            : `<button class="btn btn-primary rm-deploy-btn" data-rm-id="${rm.id}" style="flex:1;padding:7px 10px;font-size:11px">デプロイ</button>`}
-          <button class="icon-btn danger rm-del-btn" data-rm-id="${rm.id}" title="削除" style="width:30px;height:30px;font-size:12px">✕</button>
+            ? `<button class="btn btn-ghost rm-stop-btn" data-rm-id="${escHtml(rm.id)}" style="flex:1;padding:7px 10px;font-size:11px">停止</button>`
+            : `<button class="btn btn-primary rm-deploy-btn" data-rm-id="${escHtml(rm.id)}" style="flex:1;padding:7px 10px;font-size:11px">デプロイ</button>`}
+          <button class="icon-btn danger rm-del-btn" data-rm-id="${escHtml(rm.id)}" title="削除" style="width:30px;height:30px;font-size:12px">✕</button>
         </div>
       </div>`).join('')
   }</div>`;
@@ -2887,22 +3010,42 @@ function renderRichmenu() {
   el.querySelectorAll('.rm-stop-btn').forEach(b => b.addEventListener('click', async () => {
     const rm = state.richmenus.find(x => x.id === b.dataset.rmId);
     if (!rm) return;
-    const ok = await confirmDialog({ title: 'デプロイ を 停止', message: `「${rm.name}」 の 配信 を 停止 します。<br>LINE トーク画面 の メニュー が 非表示 に なります。`, okLabel: '停止', okKind: 'danger' });
+    const ok = await confirmDialog({ title: 'デプロイ を 停止', message: `「${escHtml(rm.name)}」 の 配信 を 停止 します。<br>LINE トーク画面 の メニュー が 非表示 に なります。`, okLabel: '停止', okKind: 'danger' });
     if (!ok) return;
     rm.deployed = false; renderRichmenu(); toast(`「${rm.name}」 を 停止 しました`, 'info');
   }));
-  el.querySelectorAll('.rm-deploy-btn').forEach(b => b.addEventListener('click', () => {
+  el.querySelectorAll('.rm-deploy-btn').forEach(b => b.addEventListener('click', async () => {
     const rm = state.richmenus.find(x => x.id === b.dataset.rmId);
     if (!rm) return;
     // 他 の deploy を 停止 (LINE 仕様 上 メイン 1 つ)
     state.richmenus.forEach(x => { x.deployed = false; });
     rm.deployed = true;
-    renderRichmenu(); toast(`「${rm.name}」 を デプロイ しました`);
+
+    // prod mode → Cloud Function deployRichMenu 経由 で 実 LINE upload + all-user link
+    if (window.__CRM_MODE === 'prod' && window.__CRM_LINE_API && window.__CRM_LINE_API.deployRichMenu) {
+      try {
+        const activeCh = (state.channels || []).find(c => c.active) || (state.channels || [])[0];
+        const res = await window.__CRM_LINE_API.deployRichMenu({
+          channelId: activeCh ? activeCh.id : null,
+          richMenuId: rm.id,
+        });
+        if (!res || res.ok === false) throw new Error((res && res.error) || 'unknown');
+        toast(`「${rm.name}」 を LINE に デプロイ しました (id: ${res.lineRichMenuId})`);
+      } catch (e) {
+        rm.deployed = false; // rollback local state
+        renderRichmenu();
+        toast('リッチメニュー デプロイ失敗: ' + (e.message || e), 'error', 5000);
+        return;
+      }
+    } else {
+      toast(`「${rm.name}」 を デプロイ しました`);
+    }
+    renderRichmenu();
   }));
   el.querySelectorAll('.rm-del-btn').forEach(b => b.addEventListener('click', async () => {
     const rm = state.richmenus.find(x => x.id === b.dataset.rmId);
     if (!rm) return;
-    const ok = await confirmDialog({ title: 'メニュー を 削除', message: `「${rm.name}」 を 削除 します。`, okLabel: '削除' });
+    const ok = await confirmDialog({ title: 'メニュー を 削除', message: `「${escHtml(rm.name)}」 を 削除 します。`, okLabel: '削除' });
     if (!ok) return;
     state.richmenus = state.richmenus.filter(x => x.id !== rm.id);
     renderRichmenu(); toast(`「${rm.name}」 を 削除 しました`, 'info');
@@ -2984,19 +3127,19 @@ function renderChannels() {
   el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;">${
     state.channels.map(ch => `
       <div style="background:var(--surface);border:${ch.active?'2px':'1px'} solid ${ch.active?'var(--line-green)':'var(--rule)'};border-radius:12px;padding:18px;position:relative;">
-        ${state.channels.length > 1 && !ch.active ? `<button class="icon-btn danger ch-del-btn" data-ch-id="${ch.id}" title="削除" style="position:absolute;top:12px;right:12px;width:26px;height:26px;font-size:12px">✕</button>` : ''}
+        ${state.channels.length > 1 && !ch.active ? `<button class="icon-btn danger ch-del-btn" data-ch-id="${escHtml(ch.id)}" title="削除" style="position:absolute;top:12px;right:12px;width:26px;height:26px;font-size:12px">✕</button>` : ''}
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-right:${state.channels.length>1?'32px':'0'}">
           <div style="width:36px;height:36px;background:var(--line-green);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px">L</div>
           <div style="flex:1">
-            <div style="font-size:14px;font-weight:800">${ch.name}</div>
-            <div style="font-size:11px;color:var(--dim);margin-top:2px">Channel ID: ${ch.channelId}</div>
+            <div style="font-size:14px;font-weight:800">${escHtml(ch.name)}</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:2px">Channel ID: ${escHtml(ch.channelId)}</div>
           </div>
-          ${ch.active ? '<span style="background:var(--line-soft);color:var(--line-green);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800">現在 使用中</span>' : '<button class="btn btn-secondary ch-switch-btn" data-ch-id="'+ch.id+'" style="padding:5px 10px;font-size:11px">切替</button>'}
+          ${ch.active ? '<span style="background:var(--line-soft);color:var(--line-green);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800">現在 使用中</span>' : '<button class="btn btn-secondary ch-switch-btn" data-ch-id="'+escHtml(ch.id)+'" style="padding:5px 10px;font-size:11px">切替</button>'}
         </div>
         <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--rule);align-items:center">
           <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">友だち</div><div style="font-size:20px;font-weight:800">${ch.followers}</div></div>
           <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">接続</div><div style="font-size:13px;font-weight:800;color:${ch.connected?'var(--primary)':'var(--danger)'};padding-top:6px">${ch.connected?'●稼働中':'●未接続'}</div></div>
-          <button class="btn btn-secondary ch-test-btn" data-ch-id="${ch.id}" style="padding:7px 12px;font-size:11px">接続 テスト</button>
+          <button class="btn btn-secondary ch-test-btn" data-ch-id="${escHtml(ch.id)}" style="padding:7px 12px;font-size:11px">接続 テスト</button>
         </div>
       </div>`).join('')
   }</div>`;
@@ -3011,7 +3154,7 @@ function renderChannels() {
     const ch = state.channels.find(x => x.id === b.dataset.chId);
     if (!ch) return;
     if (ch.active) { toast('使用中 の アカウント は 削除 できません。 別 の アカウント に 切替 して ください', 'warn'); return; }
-    const ok = await confirmDialog({ title: 'アカウント を 削除', message: `「${ch.name}」 の 接続 を 解除 します。<br>過去 の 配信 履歴 は 残ります。`, okLabel: '削除' });
+    const ok = await confirmDialog({ title: 'アカウント を 削除', message: `「${escHtml(ch.name)}」 の 接続 を 解除 します。<br>過去 の 配信 履歴 は 残ります。`, okLabel: '削除' });
     if (!ok) return;
     state.channels = state.channels.filter(x => x.id !== ch.id);
     renderChannels(); toast(`「${ch.name}」 を 削除 しました`, 'info');
@@ -3076,8 +3219,8 @@ function openChannelTestModal(ch) {
       <button class="modal-close" id="modal-close-btn">✕</button>
     </div>
     <div style="padding:16px;background:var(--surface-2);border-radius:10px;margin-bottom:16px;">
-      <div style="font-size:13px;font-weight:700;margin-bottom:4px">${ch.name}</div>
-      <div style="font-size:11px;color:var(--dim);font-family:'SF Mono',monospace">Channel ID: ${ch.channelId}</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">${escHtml(ch.name)}</div>
+      <div style="font-size:11px;color:var(--dim);font-family:'SF Mono',monospace">Channel ID: ${escHtml(ch.channelId)}</div>
     </div>
     <div id="ch-test-results">
       <div class="ch-test-row" data-key="bot" style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule)">
@@ -3162,12 +3305,12 @@ function renderHistory() {
       const [bg, fg] = typeColor(h.type);
       return `
         <tr>
-          <td style="font-size:12px;color:var(--dim);white-space:nowrap">${h.date}</td>
-          <td><span style="background:${bg};color:${fg};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;white-space:nowrap">${h.type}</span></td>
-          <td style="font-weight:700">${h.name}</td>
-          <td style="color:var(--dim)">${h.target}</td>
-          <td style="color:${h.open==='—'?'var(--dim)':'var(--primary)'};font-weight:700">${h.open}</td>
-          <td style="color:${h.click==='—'?'var(--dim)':'var(--info)'};font-weight:700">${h.click}</td>
+          <td style="font-size:12px;color:var(--dim);white-space:nowrap">${escHtml(h.date)}</td>
+          <td><span style="background:${bg};color:${fg};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;white-space:nowrap">${escHtml(h.type)}</span></td>
+          <td style="font-weight:700">${escHtml(h.name)}</td>
+          <td style="color:var(--dim)">${escHtml(h.target)}</td>
+          <td style="color:${h.open==='—'?'var(--dim)':'var(--primary)'};font-weight:700">${escHtml(h.open)}</td>
+          <td style="color:${h.click==='—'?'var(--dim)':'var(--info)'};font-weight:700">${escHtml(h.click)}</td>
         </tr>`;
     }).join('');
   }
@@ -3202,14 +3345,14 @@ document.getElementById('rule-add').addEventListener('click', () => openRuleModa
 
 function buildRuleModalHTML() {
   const campaignChips = state.campaigns.map(cp =>
-    `<button class="cp-chip" data-v="${cp.id}" data-name="${cp.name}">${cp.name}</button>`
+    `<button class="cp-chip" data-v="${escHtml(cp.id)}" data-name="${escHtml(cp.name)}">${escHtml(cp.name)}</button>`
   ).join('');
 
   const tagChips = state.tags.map(t => {
     const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
-    return `<button class="tag-chip" data-tag-id="${t.id}"
+    return `<button class="tag-chip" data-tag-id="${escHtml(t.id)}"
       style="background:${c.bg};color:${c.color};border-color:${c.border};"
-    >${t.name}</button>`;
+    >${escHtml(t.name)}</button>`;
   }).join('');
 
   return `
@@ -3533,8 +3676,8 @@ function openSettingsModal() {
       <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--rule);border-radius:8px">
         <div style="width:28px;height:28px;background:var(--line-green);border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:12px">L</div>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:700">${activeCh ? activeCh.name : '未接続'}</div>
-          <div style="font-size:11px;color:var(--dim);margin-top:2px">${activeCh ? 'Channel ID: ' + activeCh.channelId : 'LINE アカウント を 追加 して 接続 してください'}</div>
+          <div style="font-size:13px;font-weight:700">${activeCh ? escHtml(activeCh.name) : '未接続'}</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:2px">${activeCh ? 'Channel ID: ' + escHtml(activeCh.channelId) : 'LINE アカウント を 追加 して 接続 してください'}</div>
         </div>
         <button class="btn btn-secondary" id="set-goto-ch" style="padding:6px 10px;font-size:11px">管理 →</button>
       </div>
@@ -3619,9 +3762,9 @@ function updateTenantSwitcher() {
   document.getElementById('tenant-current-name').textContent =
     (current && current.name) || state.currentTenantId;
   popup.innerHTML = state.availableTenants.map(t => `
-    <div class="tenant-option ${t.tenantId === state.currentTenantId ? 'active' : ''}" data-tenant-id="${t.tenantId}">
-      <span>${t.name || t.tenantId}</span>
-      <span class="role-badge">${t.role}</span>
+    <div class="tenant-option ${t.tenantId === state.currentTenantId ? 'active' : ''}" data-tenant-id="${escHtml(t.tenantId)}">
+      <span>${escHtml(t.name || t.tenantId)}</span>
+      <span class="role-badge">${escHtml(t.role)}</span>
     </div>
   `).join('');
   popup.querySelectorAll('.tenant-option').forEach(el => {
@@ -3829,25 +3972,48 @@ if (window.__CRM_MODE === 'prod') {
     listenCol('history',      'history');
 
     // dataAdapter の write 系 を Firestore に 差し替え
-    dataAdapter.saveCustomer = async (c) => {
-      const ref = c.id ? doc(db, 'tenants', state.currentTenantId, 'customers', c.id) : doc(collection(db, 'tenants', state.currentTenantId, 'customers'));
-      if (!c.id) c.id = ref.id;
-      await setDoc(ref, c, { merge: true });
-      return c;
-    };
-    dataAdapter.deleteCustomer = async (id) => {
-      await deleteDoc(doc(db, 'tenants', state.currentTenantId, 'customers', id));
-    };
-    dataAdapter.saveTag = async (t) => {
-      const ref = t.id ? doc(db, 'tenants', state.currentTenantId, 'tags', t.id) : doc(collection(db, 'tenants', state.currentTenantId, 'tags'));
-      if (!t.id) t.id = ref.id;
-      await setDoc(ref, t, { merge: true });
-      return t;
-    };
-    dataAdapter.deleteTag = async (id) => {
-      await deleteDoc(doc(db, 'tenants', state.currentTenantId, 'tags', id));
-    };
-    // (他 collection も 同 pattern、 client 側 は 引き続き state.* を 参照 する ので realtime listener が updated 後 に re-render される)
+    // 全 8 collection を 統一 pattern (makeSaver / makeDeleter) で 生成
+    const tid = state.currentTenantId;
+    function makeSaver(colName) {
+      return async (obj) => {
+        const ref = obj.id
+          ? doc(db, 'tenants', tid, colName, obj.id)
+          : doc(collection(db, 'tenants', tid, colName));
+        if (!obj.id) obj.id = ref.id;
+        await setDoc(ref, obj, { merge: true });
+        return obj;
+      };
+    }
+    function makeDeleter(colName) {
+      return async (id) => {
+        await deleteDoc(doc(db, 'tenants', tid, colName, id));
+      };
+    }
+    dataAdapter.saveCustomer   = makeSaver('customers');
+    dataAdapter.deleteCustomer = makeDeleter('customers');
+    dataAdapter.saveTag        = makeSaver('tags');
+    dataAdapter.deleteTag      = makeDeleter('tags');
+    dataAdapter.saveCampaign   = makeSaver('campaigns');
+    dataAdapter.deleteCampaign = makeDeleter('campaigns');
+    dataAdapter.saveSegment    = makeSaver('segments');
+    dataAdapter.deleteSegment  = makeDeleter('segments');
+    dataAdapter.saveStep       = makeSaver('steps');
+    dataAdapter.deleteStep     = makeDeleter('steps');
+    dataAdapter.saveChannel    = makeSaver('channels');
+    dataAdapter.deleteChannel  = makeDeleter('channels');
+    dataAdapter.saveAutoTagRule   = makeSaver('autoTagRules');
+    dataAdapter.deleteAutoTagRule = makeDeleter('autoTagRules');
+    dataAdapter.saveBroadcast     = makeSaver('broadcasts');
+    dataAdapter.deleteBroadcast   = makeDeleter('broadcasts');
+    dataAdapter.saveHistory       = makeSaver('history');
+    dataAdapter.deleteHistory     = makeDeleter('history');
+    dataAdapter.saveRichmenu      = makeSaver('richmenus');
+    dataAdapter.deleteRichmenu    = makeDeleter('richmenus');
+    // NOTE: 現行 UI は state.* を 直接 mutate して setTimeout で render 呼ぶ 構造。
+    //   prod mode の 場合、 realtime listener が Firestore 更新 を state に 反映 し 自動 re-render するので、
+    //   UI ハンドラ 側 は 「local state mutate → dataAdapter.save*() を await」 で 二重更新 に なる が、
+    //   listener が snapshot で 上書き するので 最終的 に consistent。 saveHooks を 網羅的 に 呼び出す
+    //   拡張 は Phase 2 で 統一 handler 化 する。
 
     // ---- LINE / Stripe API を Cloud Function callable に 差し替え ----
     window.__CRM_LINE_API = {
@@ -3858,6 +4024,10 @@ if (window.__CRM_MODE === 'prod') {
       testConnection: async ({channelId}) => {
         const fn = httpsCallable(functions, 'sendLineTest');
         return (await fn({ tenantId: state.currentTenantId, channelId })).data;
+      },
+      deployRichMenu: async ({channelId, richMenuId}) => {
+        const fn = httpsCallable(functions, 'deployRichMenu');
+        return (await fn({ tenantId: state.currentTenantId, channelId, richMenuId })).data;
       },
     };
     window.__CRM_STRIPE_API = {
