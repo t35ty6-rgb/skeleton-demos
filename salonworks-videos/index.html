@@ -22,8 +22,8 @@
     --muted:#6b7280;
     --accent:#ec4899;
     --accent-2:#f472b6;
-    --primary:#8b5cf6;
-    --primary-soft:rgba(139,92,246,0.14);
+    --primary:#db2777;
+    --primary-soft:rgba(219,39,119,0.16);
     --danger:#ef4444;
     --shadow:0 10px 30px rgba(0,0,0,0.35);
     --sidebar-w:320px;
@@ -71,7 +71,7 @@
 
   .sb-item-dot{width:7px;height:7px;border-radius:50%;background:var(--rule-2);flex-shrink:0;transition:background .2s,box-shadow .2s}
   .sb-item.visited .sb-item-dot{background:var(--accent);box-shadow:0 0 6px rgba(236,72,153,0.5)}
-  .sb-item.active .sb-item-dot{background:var(--primary);box-shadow:0 0 6px rgba(139,92,246,0.6)}
+  .sb-item.active .sb-item-dot{background:var(--primary);box-shadow:0 0 6px rgba(219,39,119,0.6)}
 
   .sb-item-body{flex:1;min-width:0}
   .sb-item-name{font-size:12.5px;font-weight:600;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -84,8 +84,8 @@
   .main{padding:32px 40px 60px;max-width:1400px;margin:0 auto;width:100%}
   .main-head{margin-bottom:24px}
   .mh-crumb{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px}
-  .mh-title{font-size:26px;font-weight:800;letter-spacing:-.01em;line-height:1.3}
-  .mh-desc{font-size:14px;color:var(--dim);margin-top:8px;line-height:1.65;max-width:700px}
+  h1.mh-title, h2.mh-title{font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.3;color:var(--ink);font-family:'Inter','Noto Sans JP',system-ui,sans-serif}
+  .mh-desc{font-size:14px;color:var(--dim);margin-top:8px;line-height:1.75;max-width:700px}
   .mh-meta{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
   .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;background:var(--surface);border:1px solid var(--rule);font-size:11px;font-weight:600;color:var(--dim)}
   .chip .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
@@ -98,7 +98,7 @@
   .btn:hover:not(:disabled){background:var(--surface-2);border-color:var(--rule-2);color:#fff}
   .btn:disabled{opacity:.35;cursor:not-allowed}
   .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
-  .btn-primary:hover:not(:disabled){background:#7c3aed;border-color:#7c3aed}
+  .btn-primary:hover:not(:disabled){background:#be185d;border-color:#be185d}
   .btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none}
 
   .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 24px;text-align:center;color:var(--dim)}
@@ -117,8 +117,11 @@
     .sidebar.open{transform:translateX(0)}
     .mobile-topbar{display:flex}
     .scrim.open{display:block}
-    .main{padding:20px 16px 60px}
-    .mh-title{font-size:20px}
+    .main{padding:20px 16px 40px}
+    h1.mh-title, h2.mh-title{font-size:22px}
+    .actions{margin-top:16px}
+    .btn{flex:1;justify-content:center}
+    .actions > div{display:none}
   }
 </style>
 </head>
@@ -293,22 +296,33 @@
         </video>
       </div>
       <div class="actions">
-        <button class="btn" id="prev-btn" ${prev ? '' : 'disabled'}>
-          <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-          <span>前へ${prev ? `： ${prev.title}` : ''}</span>
-        </button>
+        ${prev ? `
+          <button class="btn" id="prev-btn">
+            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+            <span>前へ： ${prev.title}</span>
+          </button>
+        ` : ''}
         <div style="flex:1"></div>
-        <button class="btn btn-primary" id="next-btn" ${next ? '' : 'disabled'}>
-          <span>次へ${next ? `： ${next.title}` : ''}</span>
-          <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-        </button>
+        ${next ? `
+          <button class="btn btn-primary" id="next-btn">
+            <span>次へ： ${next.title}</span>
+            <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        ` : `
+          <button class="btn btn-primary" id="restart-btn">
+            <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/></svg>
+            <span>最初 に 戻る</span>
+          </button>
+        `}
       </div>
     `;
 
     const p = document.getElementById('prev-btn');
     const n = document.getElementById('next-btn');
-    if (prev) p.addEventListener('click', () => select(prev.id));
-    if (next) n.addEventListener('click', () => select(next.id));
+    const r = document.getElementById('restart-btn');
+    if (p) p.addEventListener('click', () => select(prev.id));
+    if (n) n.addEventListener('click', () => select(next.id));
+    if (r) r.addEventListener('click', () => select(VIDEOS[0].id));
 
     const video = document.getElementById('main-video');
     video.addEventListener('loadedmetadata', () => {
