@@ -83,6 +83,14 @@
 
   .sb-foot{padding:14px 22px;border-top:1px solid var(--rule);font-size:10px;color:var(--muted);font-weight:500}
 
+  /* ============ Tier header (v13 追加) ============ */
+  .sb-tier{padding:18px 22px 10px 22px;margin-top:8px;border-top:1px solid var(--rule)}
+  .sb-tier:first-of-type{border-top:none;margin-top:0}
+  .sb-tier-label{display:flex;align-items:center;gap:8px;font-size:9px;font-weight:800;color:var(--accent);letter-spacing:.16em;text-transform:uppercase;margin-bottom:4px}
+  .sb-tier-title{font-size:13px;font-weight:800;color:var(--ink);letter-spacing:-.005em}
+  .sb-tier-desc{font-size:11px;color:var(--dim);margin-top:3px;line-height:1.5;font-weight:500}
+  .sb-tier-badge{display:inline-block;font-size:9px;padding:1px 7px;border-radius:8px;background:var(--surface-3);color:var(--dim);font-weight:700;letter-spacing:.04em}
+
   /* ============ Main ============ */
   .main{padding:32px 40px 60px;max-width:1400px;margin:0 auto;width:100%}
   .main-head{margin-bottom:24px}
@@ -133,10 +141,10 @@
   <aside class="sidebar" id="sidebar">
     <div class="sb-head">
       <div class="sb-title">顧客配信ツール</div>
-      <div class="sb-sub">機能別 使い方動画 · 全 34 本</div>
+      <div class="sb-sub">使い方動画 · 機能別 34本 + 使いこなし 12本</div>
     </div>
     <div class="sb-progress">
-      <div class="sb-progress-label"><span>視聴 進捗</span><span><span class="sb-progress-count" id="progress-count">0</span> / 34 本</span></div>
+      <div class="sb-progress-label"><span>視聴 進捗</span><span><span class="sb-progress-count" id="progress-count">0</span> / <span id="progress-total">46</span> 本</span></div>
       <div class="sb-progress-bar"><div class="sb-progress-fill" id="progress-fill"></div></div>
     </div>
     <nav class="sb-nav" id="sb-nav"></nav>
@@ -163,62 +171,89 @@
 </div>
 
 <script>
-  // ============ Video data (33本) ============
+  // ============ Video data (46本 = Tier1機能別34本 + Tier2使いこなし12本) ============
   const VIDEOS = [
+    // ==================== Tier 1: 機能別 (34本) ====================
     // 顧客リスト (4)
-    { id:'customers-overview', group:'顧客リスト',   title:'画面 の 見方',        desc:'総顧客数・今月新規・購入客・平均LTV の 4統計 と、顧客テーブル の 各列 の 意味 を まとめて 解説。', file:'customers-overview-explainer.mp4' },
-    { id:'customers-search',   group:'顧客リスト',   title:'検索 と フィルタ',    desc:'検索欄 で 名前 部分一致、 タグ フィルタ で VIP や 購入済み だけ を 表示 する 手順 を 実演。', file:'customers-search-explainer.mp4' },
-    { id:'customers-add',      group:'顧客リスト',   title:'顧客 を 追加',        desc:'手動 で 顧客 を 追加 する modal を 実演。 顧客名、 電話番号、 タグ 選択、 保存 まで の 全ステップ。', file:'customers-add-explainer.mp4' },
-    { id:'customers-detail',   group:'顧客リスト',   title:'詳細 と タグ編集',    desc:'顧客行 クリック → 詳細 modal。 プロフィール ヘッダー、 タグ の 付け外し、 保存 まで の 一連。', file:'customers-detail-explainer.mp4' },
+    { id:'customers-overview', tier:1, group:'顧客リスト',   title:'画面 の 見方',        desc:'総顧客数・今月新規・購入客・平均LTV の 4統計 と、顧客テーブル の 各列 の 意味 を まとめて 解説。', file:'customers-overview-explainer.mp4' },
+    { id:'customers-search',   tier:1, group:'顧客リスト',   title:'検索 と フィルタ',    desc:'検索欄 で 名前 部分一致、 タグ フィルタ で VIP や 購入済み だけ を 表示 する 手順 を 実演。', file:'customers-search-explainer.mp4' },
+    { id:'customers-add',      tier:1, group:'顧客リスト',   title:'顧客 を 追加',        desc:'手動 で 顧客 を 追加 する modal を 実演。 顧客名、 電話番号、 タグ 選択、 保存 まで の 全ステップ。', file:'customers-add-explainer.mp4' },
+    { id:'customers-detail',   tier:1, group:'顧客リスト',   title:'詳細 と タグ編集',    desc:'顧客行 クリック → 詳細 modal。 プロフィール ヘッダー、 タグ の 付け外し、 保存 まで の 一連。', file:'customers-detail-explainer.mp4' },
 
     // タグ管理 (3)
-    { id:'tags-add',    group:'タグ管理', title:'タグ を 追加', desc:'新しい タグ を 追加。 名前入力、 色スウォッチ 選択、 プレビュー 確認、 保存 まで を mini-step 単位 で。', file:'tags-add-explainer.mp4' },
-    { id:'tags-edit',   group:'タグ管理', title:'タグ を 編集', desc:'既存 タグ を クリック → 同じ modal で 名前 変更 や 色 変更。 保存 で 一覧 に 即反映 する 流れ。', file:'tags-edit-explainer.mp4' },
-    { id:'tags-delete', group:'タグ管理', title:'タグ を 削除', desc:'左下 の 削除 ボタン → 確認 ダイアログ。 削除 と 同時 に、 該当 顧客 からも タグ が 自動 剥がれる 挙動。', file:'tags-delete-explainer.mp4' },
+    { id:'tags-add',    tier:1, group:'タグ管理', title:'タグ を 追加', desc:'新しい タグ を 追加。 名前入力、 色スウォッチ 選択、 プレビュー 確認、 保存 まで を mini-step 単位 で。', file:'tags-add-explainer.mp4' },
+    { id:'tags-edit',   tier:1, group:'タグ管理', title:'タグ を 編集', desc:'既存 タグ を クリック → 同じ modal で 名前 変更 や 色 変更。 保存 で 一覧 に 即反映 する 流れ。', file:'tags-edit-explainer.mp4' },
+    { id:'tags-delete', tier:1, group:'タグ管理', title:'タグ を 削除', desc:'左下 の 削除 ボタン → 確認 ダイアログ。 削除 と 同時 に、 該当 顧客 からも タグ が 自動 剥がれる 挙動。', file:'tags-delete-explainer.mp4' },
 
     // 自動タグルール (4)
-    { id:'autotag-what',   group:'自動タグルール', title:'概要 (何のため)',       desc:'行動 に 応じて 自動 で タグ を 付ける 仕組み。 友だち追加/購入/キャンペーン経由 の 3 パターン の 使いどころ。', file:'autotag-what-explainer.mp4' },
-    { id:'autotag-create', group:'自動タグルール', title:'ルール を 作成',        desc:'ルール名、 判定項目 (キャンペーン)、 対象選択、 付与タグ、 該当人数 プレビュー、 保存 の 完全フロー。', file:'autotag-create-explainer.mp4' },
-    { id:'autotag-toggle', group:'自動タグルール', title:'稼働 ON / OFF',         desc:'左端 の スイッチ で 個別 に 稼働 を 切替。 有効ルール数 統計 が 連動 更新 される 挙動 も。', file:'autotag-toggle-explainer.mp4' },
-    { id:'autotag-demo',   group:'自動タグルール', title:'テスト客 で 動作 確認', desc:'テスト客追加ボタン で 有効 全ルール を 適用 → 結果 modal → 顧客リスト に 反映 まで を 追う。', file:'autotag-demo-explainer.mp4' },
+    { id:'autotag-what',   tier:1, group:'自動タグルール', title:'概要 (何のため)',       desc:'行動 に 応じて 自動 で タグ を 付ける 仕組み。 友だち追加/購入/キャンペーン経由 の 3 パターン の 使いどころ。', file:'autotag-what-explainer.mp4' },
+    { id:'autotag-create', tier:1, group:'自動タグルール', title:'ルール を 作成',        desc:'ルール名、 判定項目 (キャンペーン)、 対象選択、 付与タグ、 該当人数 プレビュー、 保存 の 完全フロー。', file:'autotag-create-explainer.mp4' },
+    { id:'autotag-toggle', tier:1, group:'自動タグルール', title:'稼働 ON / OFF',         desc:'左端 の スイッチ で 個別 に 稼働 を 切替。 有効ルール数 統計 が 連動 更新 される 挙動 も。', file:'autotag-toggle-explainer.mp4' },
+    { id:'autotag-demo',   tier:1, group:'自動タグルール', title:'テスト客 で 動作 確認', desc:'テスト客追加ボタン で 有効 全ルール を 適用 → 結果 modal → 顧客リスト に 反映 まで を 追う。', file:'autotag-demo-explainer.mp4' },
 
     // キャンペーン (5)
-    { id:'campaigns-overview', group:'キャンペーン', title:'画面 の 見方',       desc:'キャンペーン カード の 種別 chip、 URL、 流入数、 URL コピー ・ QR ボタン の 位置 と 意味。', file:'campaigns-overview-explainer.mp4' },
-    { id:'campaigns-create',   group:'キャンペーン', title:'キャンペーン を 作成', desc:'種別 (SNS/広告/etc)、 名前、 流入 URL、 付与タグ を 選択 して 作成 する 手順 を 一気に 実演。', file:'campaigns-create-explainer.mp4' },
-    { id:'campaigns-url',          group:'キャンペーン', title:'URL を コピー',           desc:'カード の URLコピー ボタン → 専用 URL 表示 → クリップボード コピー まで の 短い workflow。', file:'campaigns-url-explainer.mp4' },
-    { id:'campaigns-url-examples', group:'キャンペーン', title:'到達URL に 何を 入れる?', desc:'流入 URL 欄 に 何を 入れれば いい か を、 ホーム / 予約 / EC 商品 / LP の 4 例 で 詳しく 説明。 迷ったら お店 の トップ で OK。', file:'campaigns-url-examples-explainer.mp4' },
-    { id:'campaigns-qr',           group:'キャンペーン', title:'QR コード を 発行',       desc:'カード の QR ボタン → QR コード 表示 → PNG ダウンロード。 チラシ・ポスター 印刷 用途 の 解説。', file:'campaigns-qr-explainer.mp4' },
-    { id:'campaigns-inflow',       group:'キャンペーン', title:'流入 数 の 比較',         desc:'A案 と B案 の 流入 数 を 比較 して、 どちら が 効いて いる か を 判断 する 使い方 の 具体例。', file:'campaigns-inflow-explainer.mp4' },
+    { id:'campaigns-overview', tier:1, group:'キャンペーン', title:'画面 の 見方',       desc:'キャンペーン カード の 種別 chip、 URL、 流入数、 URL コピー ・ QR ボタン の 位置 と 意味。', file:'campaigns-overview-explainer.mp4' },
+    { id:'campaigns-create',   tier:1, group:'キャンペーン', title:'キャンペーン を 作成', desc:'種別 (SNS/広告/etc)、 名前、 流入 URL、 付与タグ を 選択 して 作成 する 手順 を 一気に 実演。', file:'campaigns-create-explainer.mp4' },
+    { id:'campaigns-url',          tier:1, group:'キャンペーン', title:'URL を コピー',           desc:'カード の URLコピー ボタン → 専用 URL 表示 → クリップボード コピー まで の 短い workflow。', file:'campaigns-url-explainer.mp4' },
+    { id:'campaigns-url-examples', tier:1, group:'キャンペーン', title:'到達URL に 何を 入れる?', desc:'流入 URL 欄 に 何を 入れれば いい か を、 ホーム / 予約 / EC 商品 / LP の 4 例 で 詳しく 説明。 迷ったら お店 の トップ で OK。', file:'campaigns-url-examples-explainer.mp4' },
+    { id:'campaigns-qr',           tier:1, group:'キャンペーン', title:'QR コード を 発行',       desc:'カード の QR ボタン → QR コード 表示 → PNG ダウンロード。 チラシ・ポスター 印刷 用途 の 解説。', file:'campaigns-qr-explainer.mp4' },
+    { id:'campaigns-inflow',       tier:1, group:'キャンペーン', title:'流入 数 の 比較',         desc:'A案 と B案 の 流入 数 を 比較 して、 どちら が 効いて いる か を 判断 する 使い方 の 具体例。', file:'campaigns-inflow-explainer.mp4' },
 
     // セグメント (4)
-    { id:'segments-overview', group:'セグメント', title:'画面 の 見方',       desc:'セグメント カード が 何 を 表す か。 タグ の 組み合わせ、 該当人数、 プレビュー / 配信 ボタン の 使い方。', file:'segments-overview-explainer.mp4' },
-    { id:'segments-create',   group:'セグメント', title:'セグメント を 作成', desc:'名前、 AND 条件 の タグ 選択 (複数)、 リアルタイム 該当人数 プレビュー、 保存 の 完全フロー。', file:'segments-create-explainer.mp4' },
-    { id:'segments-preview',  group:'セグメント', title:'対象客 プレビュー',   desc:'該当 セグメント の 対象 顧客 リスト を、 配信 前 に 目視 で 確認 する 手順。 タグ・登録日 も 表示。', file:'segments-preview-explainer.mp4' },
-    { id:'segments-send',     group:'セグメント', title:'配信 画面 への 動線', desc:'配信 する ボタン から、 セグメント が 予め 選択 された 状態 で、 一括配信 画面 へ 遷移 する 導線。', file:'segments-send-explainer.mp4' },
+    { id:'segments-overview', tier:1, group:'セグメント', title:'画面 の 見方',       desc:'セグメント カード が 何 を 表す か。 タグ の 組み合わせ、 該当人数、 プレビュー / 配信 ボタン の 使い方。', file:'segments-overview-explainer.mp4' },
+    { id:'segments-create',   tier:1, group:'セグメント', title:'セグメント を 作成', desc:'名前、 AND 条件 の タグ 選択 (複数)、 リアルタイム 該当人数 プレビュー、 保存 の 完全フロー。', file:'segments-create-explainer.mp4' },
+    { id:'segments-preview',  tier:1, group:'セグメント', title:'対象客 プレビュー',   desc:'該当 セグメント の 対象 顧客 リスト を、 配信 前 に 目視 で 確認 する 手順。 タグ・登録日 も 表示。', file:'segments-preview-explainer.mp4' },
+    { id:'segments-send',     tier:1, group:'セグメント', title:'配信 画面 への 動線', desc:'配信 する ボタン から、 セグメント が 予め 選択 された 状態 で、 一括配信 画面 へ 遷移 する 導線。', file:'segments-send-explainer.mp4' },
 
     // 一括配信 (3)
-    { id:'broadcast-target',  group:'一括配信', title:'対象 の 選択',       desc:'新規配信 → 対象 chip (セグメント別 or 全顧客) を 選択。 対象人数 が 下 に 即表示 される 挙動。', file:'broadcast-target-explainer.mp4' },
-    { id:'broadcast-compose', group:'一括配信', title:'本文 と プレビュー', desc:'タイトル、 本文入力、 {name} 変数 の 差込、 LINE トーク風 プレビュー が リアルタイム 反映 される 流れ。', file:'broadcast-compose-explainer.mp4' },
-    { id:'broadcast-send',    group:'一括配信', title:'送信 確認 と 完了',   desc:'送信 確認 modal → 対象人数・取り消し不可 警告 → 送信 → 完了 modal → 履歴 で 確認 まで。', file:'broadcast-send-explainer.mp4' },
+    { id:'broadcast-target',  tier:1, group:'一括配信', title:'対象 の 選択',       desc:'新規配信 → 対象 chip (セグメント別 or 全顧客) を 選択。 対象人数 が 下 に 即表示 される 挙動。', file:'broadcast-target-explainer.mp4' },
+    { id:'broadcast-compose', tier:1, group:'一括配信', title:'本文 と プレビュー', desc:'タイトル、 本文入力、 {name} 変数 の 差込、 LINE トーク風 プレビュー が リアルタイム 反映 される 流れ。', file:'broadcast-compose-explainer.mp4' },
+    { id:'broadcast-send',    tier:1, group:'一括配信', title:'送信 確認 と 完了',   desc:'送信 確認 modal → 対象人数・取り消し不可 警告 → 送信 → 完了 modal → 履歴 で 確認 まで。', file:'broadcast-send-explainer.mp4' },
 
     // ステップ配信 (3)
-    { id:'steps-overview', group:'ステップ配信', title:'概要 と トリガー',       desc:'シナリオ カード の 見方。 トリガー、 ステップ数、 実行中 の 数 が 何 を 示す か を 解説。', file:'steps-overview-explainer.mp4' },
-    { id:'steps-create',   group:'ステップ配信', title:'シナリオ を 作成',        desc:'名前、 トリガー選択、 デフォルト 2 ステップ、 プラス で 3日後 の ステップ 追加、 作成 まで の 全工程。', file:'steps-create-explainer.mp4' },
-    { id:'steps-run',      group:'ステップ配信', title:'稼働 ON と 実行 状況',   desc:'右 の トグル で 個別 に 稼働 ON/OFF。 実行中 の 顧客数 が どこ で 見える か を 実演。', file:'steps-run-explainer.mp4' },
+    { id:'steps-overview', tier:1, group:'ステップ配信', title:'概要 と トリガー',       desc:'シナリオ カード の 見方。 トリガー、 ステップ数、 実行中 の 数 が 何 を 示す か を 解説。', file:'steps-overview-explainer.mp4' },
+    { id:'steps-create',   tier:1, group:'ステップ配信', title:'シナリオ を 作成',        desc:'名前、 トリガー選択、 デフォルト 2 ステップ、 プラス で 3日後 の ステップ 追加、 作成 まで の 全工程。', file:'steps-create-explainer.mp4' },
+    { id:'steps-run',      tier:1, group:'ステップ配信', title:'稼働 ON と 実行 状況',   desc:'右 の トグル で 個別 に 稼働 ON/OFF。 実行中 の 顧客数 が どこ で 見える か を 実演。', file:'steps-run-explainer.mp4' },
 
     // リッチメニュー (2)
-    { id:'richmenu-overview', group:'リッチメニュー', title:'画面 の 見方',           desc:'デプロイ中 / 下書き カード の 見分け方、 レイアウト プレビュー、 複製 / 停止 / デプロイ ボタン の 位置。', file:'richmenu-overview-explainer.mp4' },
-    { id:'richmenu-create',   group:'リッチメニュー', title:'メニュー を 作成',       desc:'名前、 レイアウト (2×3 / 2×2 / 1×2 / 全面) を 選択 → エディタ で 続きを 編集 する 導線 まで。', file:'richmenu-create-explainer.mp4' },
+    { id:'richmenu-overview', tier:1, group:'リッチメニュー', title:'画面 の 見方',           desc:'デプロイ中 / 下書き カード の 見分け方、 レイアウト プレビュー、 複製 / 停止 / デプロイ ボタン の 位置。', file:'richmenu-overview-explainer.mp4' },
+    { id:'richmenu-create',   tier:1, group:'リッチメニュー', title:'メニュー を 作成',       desc:'名前、 レイアウト (2×3 / 2×2 / 1×2 / 全面) を 選択 → エディタ で 続きを 編集 する 導線 まで。', file:'richmenu-create-explainer.mp4' },
 
     // LINE アカウント (3)
-    { id:'channels-add',    group:'LINE アカウント', title:'アカウント を 追加',   desc:'表示名、 Channel ID、 Access Token を 入力 して 追加 する 完全 手順。 LINE Developers への 案内 も。', file:'channels-add-explainer.mp4' },
-    { id:'channels-test',   group:'LINE アカウント', title:'接続 テスト',           desc:'Bot 情報 / 配信上限 / Webhook 疎通 の 3 チェック を 順次 PASS で 表示 する テスト フロー。', file:'channels-test-explainer.mp4' },
-    { id:'channels-switch', group:'LINE アカウント', title:'複数 アカウント 切替', desc:'現在使用中 の 見分け方、 切替 ボタン で サブ アカウント に 切り替える 手順、 配信 の 紐付き 説明。', file:'channels-switch-explainer.mp4' },
+    { id:'channels-add',    tier:1, group:'LINE アカウント', title:'アカウント を 追加',   desc:'表示名、 Channel ID、 Access Token を 入力 して 追加 する 完全 手順。 LINE Developers への 案内 も。', file:'channels-add-explainer.mp4' },
+    { id:'channels-test',   tier:1, group:'LINE アカウント', title:'接続 テスト',           desc:'Bot 情報 / 配信上限 / Webhook 疎通 の 3 チェック を 順次 PASS で 表示 する テスト フロー。', file:'channels-test-explainer.mp4' },
+    { id:'channels-switch', tier:1, group:'LINE アカウント', title:'複数 アカウント 切替', desc:'現在使用中 の 見分け方、 切替 ボタン で サブ アカウント に 切り替える 手順、 配信 の 紐付き 説明。', file:'channels-switch-explainer.mp4' },
 
     // 配信履歴 (2)
-    { id:'history-view',   group:'配信履歴', title:'一覧 の 見方',        desc:'日時 / 種別 / 件名 / 対象 / 開封率 / クリック率 の 6 列 の 意味。 種別 chip の 使い分け 解説。', file:'history-view-explainer.mp4' },
-    { id:'history-search', group:'配信履歴', title:'検索 と 履歴 クリア', desc:'検索欄 で 件名 部分一致 で 絞り込み、 件数 の 動的 更新、 履歴 クリア ボタン と 確認 ダイアログ。', file:'history-search-explainer.mp4' },
+    { id:'history-view',   tier:1, group:'配信履歴', title:'一覧 の 見方',        desc:'日時 / 種別 / 件名 / 対象 / 開封率 / クリック率 の 6 列 の 意味。 種別 chip の 使い分け 解説。', file:'history-view-explainer.mp4' },
+    { id:'history-search', tier:1, group:'配信履歴', title:'検索 と 履歴 クリア', desc:'検索欄 で 件名 部分一致 で 絞り込み、 件数 の 動的 更新、 履歴 クリア ボタン と 確認 ダイアログ。', file:'history-search-explainer.mp4' },
+
+    // ==================== Tier 2: 使いこなし marketing (12本) ====================
+    // 業種別 (4)
+    { id:'mk-industry-salon',      tier:2, group:'業種別',           title:'美容サロン: 再来店 を 増やす', desc:'休眠客 90日 超 セグメント → 一括配信 の 実演。 施術後 フォロー、 誕生日 施策 も 同じ 流れ で。', file:'mk-industry-salon-explainer.mp4' },
+    { id:'mk-industry-ec',         tier:2, group:'業種別',           title:'EC 事業者: リピート を 促す',   desc:'顧客リスト の LTV → 再購入促進 セグメント → 補充タイミング の レコメンド配信 の EC 定番 workflow。', file:'mk-industry-ec-explainer.mp4' },
+    { id:'mk-industry-restaurant', tier:2, group:'業種別',           title:'飲食店: 予約 と 特別クーポン',  desc:'誕生日月 × 購入済 セグメント で デザートサービス案内。 平日 空席対策 は 直近来店 セグメント に 絞る。', file:'mk-industry-restaurant-explainer.mp4' },
+    { id:'mk-industry-school',     tier:2, group:'業種別',           title:'教室・スクール: 体験 → 本入会',  desc:'キャンペーン URL で 体験客 に 自動タグ → ステップ配信 で お礼 / 質問誘導 / 入会特典 の 3段自動化。', file:'mk-industry-school-explainer.mp4' },
+
+    // カスタマージャーニー (4)
+    { id:'mk-journey-acquisition', tier:2, group:'カスタマージャーニー', title:'新規獲得: URL 経由 で タグ 自動付与', desc:'キャンペーン で 経路別 URL 発行 → 経由客 に 自動タグ → 経路 ごと の 流入数 を 追跡 する 王道 flow。', file:'mk-journey-acquisition-explainer.mp4' },
+    { id:'mk-journey-activation',  tier:2, group:'カスタマージャーニー', title:'育成: ステップ配信 で 段階 信頼構築',  desc:'友だち追加 直後 → 3日後 → 7日後 の 段階 で じわじわ 信頼 を 積む、 押し売り 回避 の 育成 pattern。', file:'mk-journey-activation-explainer.mp4' },
+    { id:'mk-journey-retention',   tier:2, group:'カスタマージャーニー', title:'リピート: 休眠 と VIP の 使い分け',    desc:'休眠客 90日 と VIP × 定期便 の 対極 2 セグメント。 LTV を 見て、 誰 に、 どの 深さ で アプローチ。', file:'mk-journey-retention-explainer.mp4' },
+    { id:'mk-journey-referral',    tier:2, group:'カスタマージャーニー', title:'紹介: リファラル キャンペーン 設計',   desc:'紹介専用 URL 発行 → 既存客 が 家族 友人 へ シェア → 経由 で 自動タグ → 流入数 で 紹介経路 の 効果 判定。', file:'mk-journey-referral-explainer.mp4' },
+
+    // 目的別 (3)
+    { id:'mk-purpose-sales-up',    tier:2, group:'目的別',           title:'売上UP: セグメント × 一括配信',  desc:'全顧客 一斉 の アンチパターン → VIP × 定期便 18人 に 先行案内 → 履歴 で 効果 検証 の PDCA。', file:'mk-purpose-sales-up-explainer.mp4' },
+    { id:'mk-purpose-cost-down',   tier:2, group:'目的別',           title:'コスト削減: 手動作業 の 自動化',   desc:'ウェルカム 手動送信 → 自動タグ + ステップ配信 の 組み合わせ で 24時間 手放し 自動化。', file:'mk-purpose-cost-down-explainer.mp4' },
+    { id:'mk-purpose-line-friends',tier:2, group:'目的別',           title:'LINE 友だち を 増やす',            desc:'オンライン は URL 直貼り、 オフライン は QR 印刷。 経路 ごと に キャンペーン を 分けて 流入数 で 比較。', file:'mk-purpose-line-friends-explainer.mp4' },
+
+    // 効果測定 (1)
+    { id:'mk-analytics',           tier:2, group:'効果測定',         title:'配信履歴 と 流入数 の 見方',        desc:'開封率 が 低い 時 の 原因 3つ、 クリック率 が 低い 時 の 改善所、 予算配分 の 判断 の 実例。', file:'mk-analytics-explainer.mp4' },
   ];
+
+  const TIER_INFO = {
+    1: { label: 'Tier 1', title: '機能別 使い方', desc: '各画面 の 見方 と 基本操作 を mini-step で 実演。' },
+    2: { label: 'Tier 2', title: '使いこなし (marketing)', desc: '業種別・シナリオ別 の 実践 workflow。 marketing 視点 で 何 に 使うか。' },
+  };
 
   const LS_VISITED = 'crm-videos-visited-v2';
   const LS_CURRENT = 'crm-videos-current-v2';
@@ -230,29 +265,50 @@
     durs: {},  // id -> seconds
   };
 
-  // ============ Sidebar render ============
+  // ============ Sidebar render (v13: tier 対応) ============
   function renderSidebar(){
     const nav = document.getElementById('sb-nav');
-    const groups = {};
-    VIDEOS.forEach(v => { (groups[v.group] = groups[v.group] || []).push(v); });
+    // tier > group の 2階層 で 集約
+    const tiers = {};
+    VIDEOS.forEach(v => {
+      const t = v.tier || 1;
+      tiers[t] = tiers[t] || {};
+      (tiers[t][v.group] = tiers[t][v.group] || []).push(v);
+    });
 
-    nav.innerHTML = Object.entries(groups).map(([groupName, items], gi) => `
-      <div class="sb-group">
-        <div class="sb-group-title">
-          <span>${gi+1}. ${groupName}</span>
-          <span class="sb-group-count">${items.length} 本</span>
+    let groupSeq = 0;
+    nav.innerHTML = Object.entries(tiers).map(([tierNum, groups]) => {
+      const info = TIER_INFO[tierNum] || { label: `Tier ${tierNum}`, title: '', desc: '' };
+      const tierCount = Object.values(groups).reduce((n, arr) => n + arr.length, 0);
+      const tierHeader = `
+        <div class="sb-tier">
+          <div class="sb-tier-label">${info.label}<span class="sb-tier-badge">${tierCount} 本</span></div>
+          <div class="sb-tier-title">${info.title}</div>
+          <div class="sb-tier-desc">${info.desc}</div>
         </div>
-        ${items.map(v => `
-          <div class="sb-item ${state.visited.has(v.id) ? 'visited' : ''} ${state.currentId === v.id ? 'active' : ''}" data-id="${v.id}">
-            <div class="sb-item-dot"></div>
-            <div class="sb-item-body">
-              <div class="sb-item-name">${v.title}</div>
+      `;
+      const groupBlocks = Object.entries(groups).map(([groupName, items]) => {
+        groupSeq++;
+        return `
+          <div class="sb-group">
+            <div class="sb-group-title">
+              <span>${groupSeq}. ${groupName}</span>
+              <span class="sb-group-count">${items.length} 本</span>
             </div>
-            <div class="sb-item-len" data-len-for="${v.id}">${state.durs[v.id] ? formatDur(state.durs[v.id]) : '—'}</div>
+            ${items.map(v => `
+              <div class="sb-item ${state.visited.has(v.id) ? 'visited' : ''} ${state.currentId === v.id ? 'active' : ''}" data-id="${v.id}">
+                <div class="sb-item-dot"></div>
+                <div class="sb-item-body">
+                  <div class="sb-item-name">${v.title}</div>
+                </div>
+                <div class="sb-item-len" data-len-for="${v.id}">${state.durs[v.id] ? formatDur(state.durs[v.id]) : '—'}</div>
+              </div>
+            `).join('')}
           </div>
-        `).join('')}
-      </div>
-    `).join('');
+        `;
+      }).join('');
+      return tierHeader + groupBlocks;
+    }).join('');
 
     nav.querySelectorAll('.sb-item').forEach(el => {
       el.addEventListener('click', () => {
@@ -261,9 +317,11 @@
       });
     });
 
-    // progress
+    // progress (46本 全体)
     const done = state.visited.size;
     document.getElementById('progress-count').textContent = done;
+    const totalEl = document.getElementById('progress-total');
+    if (totalEl) totalEl.textContent = VIDEOS.length;
     document.getElementById('progress-fill').style.width = (done / VIDEOS.length * 100) + '%';
   }
 
@@ -297,13 +355,13 @@
 
     document.getElementById('main').innerHTML = `
       <div class="main-head">
-        <div class="mh-crumb">${v.group}</div>
+        <div class="mh-crumb">${(TIER_INFO[v.tier || 1] || {}).label || 'Tier 1'} · ${v.group}</div>
         <h1 class="mh-title">${v.title}</h1>
         <p class="mh-desc">${v.desc}</p>
         <div class="mh-meta">
           <span class="chip"><span class="dot"></span><span id="main-dur">${durLabel}</span></span>
           <span class="chip">1920×1080</span>
-          <span class="chip">v12 recipe</span>
+          <span class="chip">${v.tier === 2 ? 'v13 marketing' : 'v12 recipe'}</span>
           <span class="chip">${idx + 1} / ${VIDEOS.length}</span>
         </div>
       </div>
