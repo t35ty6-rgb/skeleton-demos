@@ -1,0 +1,2377 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1400">
+<title>顧客配信ツール — Skeleton</title>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --surface-2: #f0f2f7;
+    --ink: #1e2233;
+    --ink-2: #3d4356;
+    --dim: #7c839a;
+    --muted: #a8adbe;
+    --rule: #e4e7ee;
+    --primary: #17b26a;
+    --primary-hi: #0e9a5a;
+    --primary-soft: #dcfce7;
+    --danger: #ef4444;
+    --danger-soft: #fee2e2;
+    --warn: #f59e0b;
+    --warn-soft: #fef3c7;
+    --info: #3b82f6;
+    --info-soft: #dbeafe;
+    --amber: #f59e0b;
+    --amber-soft: #fef3c7;
+    --rose: #f43f5e;
+    --rose-soft: #ffe4e6;
+    --sky: #06b6d4;
+    --sky-soft: #cffafe;
+    --teal: #14b8a6;
+    --teal-soft: #ccfbf1;
+    --slate: #64748b;
+    --slate-soft: #e2e8f0;
+    --line-green: #06c755;
+    --line-soft: #d1fae5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: "Inter", "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+    background: var(--bg);
+    overflow: hidden;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  input, select, textarea { font: inherit; color: inherit; }
+  a { color: var(--info); text-decoration: none; }
+
+  /* === Layout === */
+  .app {
+    display: grid;
+    grid-template-columns: 232px 1fr;
+    grid-template-rows: 52px 1fr;
+    height: 100vh;
+  }
+  header {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 16px;
+  }
+  header h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  header .sub { font-size: 12px; color: var(--dim); font-weight: 500; }
+  header .spacer { flex: 1; }
+  .top-btn {
+    padding: 7px 12px;
+    background: var(--surface-2);
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-2);
+    transition: background 150ms;
+  }
+  .top-btn:hover { background: #d4d8e2; }
+  .top-btn.primary { background: var(--primary); color: white; }
+  .top-btn.primary:hover { background: var(--primary-hi); }
+
+  /* === Sidebar === */
+  aside.nav {
+    grid-column: 1;
+    grid-row: 2;
+    background: var(--surface);
+    border-right: 1px solid var(--rule);
+    overflow-y: auto;
+    padding: 12px 8px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 120ms;
+    user-select: none;
+    margin-bottom: 2px;
+  }
+  .nav-item:hover { background: var(--surface-2); }
+  .nav-item.active { background: var(--ink); color: white; }
+  .nav-icon {
+    width: 18px; height: 18px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .nav-label { font-size: 13px; font-weight: 600; flex: 1; }
+  .badge {
+    font-size: 11px; font-weight: 700;
+    background: var(--surface-2);
+    color: var(--dim);
+    padding: 2px 7px;
+    border-radius: 20px;
+    min-width: 24px;
+    text-align: center;
+  }
+  .nav-item.active .badge { background: rgba(255,255,255,0.2); color: white; }
+  .nav-section-label {
+    font-size: 11px; font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 14px 12px 6px;
+  }
+
+  /* === Main === */
+  main {
+    grid-column: 2;
+    grid-row: 2;
+    overflow-y: auto;
+    padding: 24px;
+  }
+
+  /* === Page sections === */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .page-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .page-header h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+  .page-header .desc { font-size: 13px; color: var(--dim); margin-top: 2px; }
+  .page-header .spacer { flex: 1; }
+
+  /* === Stat cards === */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .stat-card .label { font-size: 12px; color: var(--dim); font-weight: 600; margin-bottom: 6px; }
+  .stat-card .val { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+  .stat-card .sub { font-size: 12px; color: var(--dim); margin-top: 4px; }
+
+  /* === Table === */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .table-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    padding: 7px 12px;
+    flex: 1; max-width: 280px;
+  }
+  .search-box input {
+    border: none; background: none; outline: none;
+    font-size: 13px; width: 100%;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; padding: 10px 16px;
+    font-size: 12px; font-weight: 700;
+    color: var(--dim);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--rule);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  td {
+    padding: 12px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbfd; }
+
+  /* === Chips / Tags === */
+  .tag-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+    cursor: pointer; user-select: none;
+    transition: opacity 100ms;
+    border: 1.5px solid transparent;
+  }
+  .tag-chip.selected { opacity: 1; }
+  .tag-chip:not(.selected) { opacity: 0.4; }
+
+  .cp-chip {
+    display: inline-flex; align-items: center;
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    cursor: pointer; user-select: none;
+    transition: all 120ms;
+    border: 1.5px solid var(--rule);
+    background: var(--surface);
+    margin: 3px;
+  }
+  .cp-chip.selected {
+    background: var(--primary-soft);
+    border-color: var(--primary);
+    color: var(--primary-hi);
+  }
+  .cp-chip:hover { border-color: var(--primary); }
+
+  /* === Rule list === */
+  .rule-list-wrap {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  #rule-list { list-style: none; }
+  .rule-row {
+    display: grid;
+    grid-template-columns: 44px 1fr auto auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--rule);
+    transition: background 100ms;
+  }
+  .rule-row:last-child { border-bottom: none; }
+  .rule-row:hover { background: #fafbfd; }
+  .rule-name { font-size: 13px; font-weight: 700; }
+  .rule-desc { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .rule-count { font-size: 12px; color: var(--dim); white-space: nowrap; }
+  .rule-tag {}
+  .rule-actions { display: flex; gap: 6px; }
+  .icon-btn {
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px;
+    background: var(--surface-2);
+    color: var(--dim);
+    font-size: 14px;
+    transition: all 100ms;
+  }
+  .icon-btn:hover { background: #d4d8e2; color: var(--ink); }
+
+  /* Toggle switch */
+  .toggle-wrap { display: flex; align-items: center; }
+  .toggle-input { display: none; }
+  .toggle-knob {
+    width: 36px; height: 20px;
+    background: var(--muted);
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+    transition: background 200ms;
+  }
+  .toggle-knob::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 14px; height: 14px;
+    background: white;
+    border-radius: 50%;
+    transition: left 200ms;
+  }
+  .toggle-input:checked + .toggle-knob { background: var(--primary); }
+  .toggle-input:checked + .toggle-knob::after { left: 19px; }
+
+  /* === Buttons === */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px; font-weight: 700;
+    transition: all 120ms;
+    cursor: pointer;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-hi); }
+  .btn-secondary { background: var(--surface-2); color: var(--ink-2); }
+  .btn-secondary:hover { background: #d4d8e2; }
+  .btn-ghost { color: var(--dim); }
+  .btn-ghost:hover { background: var(--surface-2); color: var(--ink); }
+  .btn-danger { background: var(--danger-soft); color: var(--danger); }
+  .btn-danger:hover { background: #fca5a5; }
+
+  /* === Modal === */
+  #modal-scrim {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 900;
+    align-items: center;
+    justify-content: center;
+  }
+  #modal-scrim.open { display: flex; }
+  #modal {
+    background: var(--surface);
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+    width: 560px;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 28px;
+  }
+  .modal-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 22px;
+  }
+  .modal-header h3 { font-size: 17px; font-weight: 800; }
+  .modal-header .spacer { flex: 1; }
+  .modal-close {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: var(--dim);
+  }
+  .modal-close:hover { background: #d4d8e2; }
+  .field-group { margin-bottom: 18px; }
+  .field-label {
+    display: block;
+    font-size: 12px; font-weight: 700;
+    color: var(--dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .field-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid var(--rule);
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 120ms;
+    background: var(--surface);
+  }
+  .field-input:focus { border-color: var(--primary); }
+  select.field-input { cursor: pointer; }
+
+  .chip-area { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .tag-chip-area { display: flex; flex-wrap: wrap; gap: 4px; }
+
+  /* Preview count */
+  #m-r-preview {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--primary-soft);
+    border: 1px solid #86efac;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-top: 8px;
+  }
+  .preview-num { font-size: 28px; font-weight: 800; color: var(--primary-hi); }
+  .preview-label { font-size: 13px; color: var(--primary-hi); font-weight: 600; }
+
+  .modal-actions {
+    display: flex; gap: 10px; justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+  }
+
+  /* Demo result modal */
+  .demo-result { text-align: center; padding: 12px 0; }
+  .demo-result .big { font-size: 48px; margin-bottom: 8px; }
+  .demo-result h4 { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+  .demo-result p { font-size: 13px; color: var(--dim); margin-bottom: 16px; }
+  .result-tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 20px; }
+
+  /* Customers view */
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: white;
+    flex-shrink: 0;
+  }
+  .cust-name { font-weight: 700; font-size: 13px; }
+  .cust-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+  .cust-cell { display: flex; align-items: center; gap: 10px; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--dim);
+  }
+  .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-state h3 { font-size: 15px; font-weight: 700; color: var(--ink-2); margin-bottom: 6px; }
+  .empty-state p { font-size: 13px; line-height: 1.7; }
+
+  /* Other views placeholder */
+  .placeholder-view {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 32px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <header>
+    <div>
+      <h1>顧客配信ツール</h1>
+      <div class="sub">Skeleton LINE 統合プラットフォーム</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="top-btn">設定</button>
+    <button class="top-btn primary">+ 新規配信</button>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="nav" id="nav"></aside>
+
+  <!-- Main -->
+  <main id="main">
+    <!-- 顧客リスト -->
+    <div class="view active" id="view-customers">
+      <div class="page-header">
+        <div>
+          <h2>顧客リスト</h2>
+          <div class="desc">LINE 友だち登録済みの顧客を管理します</div>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="cust-add-btn">+ 顧客追加</button>
+      </div>
+      <div class="stat-row">
+        <div class="stat-card" id="stat-total-customers">
+          <div class="label">総顧客数</div>
+          <div class="val" style="color:var(--info)" id="stat-total-val">20</div>
+          <div class="sub">LINE 友だち</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">今月 新規</div>
+          <div class="val" style="color:var(--primary)">+3</div>
+          <div class="sub">先月比 +12%</div>
+        </div>
+        <div class="stat-card" id="stat-purchased">
+          <div class="label">購入顧客</div>
+          <div class="val" id="stat-purchased-val">12</div>
+          <div class="sub">60.0% 購入率</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">平均 LTV</div>
+          <div class="val" style="color:var(--primary)">¥38,400</div>
+          <div class="sub">前年比 +22%</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <div class="search-box">
+            <span style="color:var(--dim)">🔍</span>
+            <input type="text" id="cust-search" placeholder="名前・タグで検索">
+          </div>
+          <select id="cust-tag-filter" class="field-input" style="width:180px;padding:7px 10px;font-size:12px;">
+            <option value="">— タグで絞り込み —</option>
+          </select>
+          <div class="spacer" style="flex:1"></div>
+          <span style="font-size:12px;color:var(--dim)" id="cust-count-label">20 件</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>顧客</th>
+              <th>タグ</th>
+              <th>最終購入</th>
+              <th>LTV</th>
+              <th>登録日</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="cust-tbody">
+            <!-- JS で生成 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- タグ管理 -->
+    <div class="view" id="view-tags">
+      <div class="page-header">
+        <div><h2>タグ管理</h2><div class="desc">顧客をグループ分けするタグを管理します</div></div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="tag-add-btn">+ タグ追加</button>
+      </div>
+      <div id="tag-list-view" class="placeholder-view">
+        <div id="tag-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;"></div>
+      </div>
+    </div>
+
+    <!-- 自動タグルール -->
+    <div class="view" id="view-autotags">
+      <div class="page-header">
+        <div>
+          <h2>自動タグルール</h2>
+          <div class="desc">顧客の行動に応じて自動でタグを付与するルールを設定します</div>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-secondary" id="rule-demo" style="display:none">テスト客追加 &amp; 実行</button>
+        <button class="btn btn-primary" id="rule-add">+ ルール追加</button>
+      </div>
+      <div class="stat-row" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-card">
+          <div class="label">有効ルール数</div>
+          <div class="val" id="stat-active-rules" style="color:var(--amber)">3</div>
+          <div class="sub">/ 5 ルール</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">今月 自動付与</div>
+          <div class="val" style="color:var(--primary)">127</div>
+          <div class="sub">件のタグ付与</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">自動化率</div>
+          <div class="val" style="color:var(--info)">84%</div>
+          <div class="sub">手動作業 削減</div>
+        </div>
+      </div>
+      <div class="rule-list-wrap">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:8px;">
+          <span style="font-size:13px;font-weight:700;">設定済みルール</span>
+          <span class="badge" id="rule-count-badge">5</span>
+          <div style="flex:1"></div>
+          <span style="font-size:12px;color:var(--dim)">スイッチで ON/OFF 切替</span>
+        </div>
+        <ul id="rule-list"></ul>
+      </div>
+    </div>
+
+    <!-- キャンペーン -->
+    <div class="view" id="view-campaigns">
+      <div class="page-header">
+        <div><h2>キャンペーン</h2><div class="desc">URLトラッキングでキャンペーン流入を計測します</div></div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="cp-add-btn">+ キャンペーン作成</button>
+      </div>
+      <div class="placeholder-view" id="campaign-list"></div>
+    </div>
+
+    <!-- セグメント -->
+    <div class="view" id="view-segments">
+      <div class="page-header">
+        <div><h2>セグメント</h2><div class="desc">タグの組み合わせで顧客をセグメント化します</div></div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="seg-add-btn">+ セグメント作成</button>
+      </div>
+      <div class="placeholder-view">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;" id="segment-cards"></div>
+      </div>
+    </div>
+
+    <!-- 一括配信 -->
+    <div class="view" id="view-broadcast">
+      <div class="page-header">
+        <div><h2>一括配信</h2><div class="desc">セグメントや全顧客にメッセージを一括送信します</div></div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="bc-add-btn">+ 配信作成</button>
+      </div>
+      <div class="placeholder-view" id="broadcast-list">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;" id="broadcast-cards"></div>
+      </div>
+    </div>
+
+    <!-- ステップ配信 -->
+    <div class="view" id="view-steps">
+      <div class="page-header">
+        <div><h2>ステップ配信</h2><div class="desc">友だち追加後のシナリオを自動化します</div></div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="step-add-btn">+ シナリオ作成</button>
+      </div>
+      <div class="placeholder-view" id="steps-list"></div>
+    </div>
+
+    <!-- リッチメニュー -->
+    <div class="view" id="view-richmenu">
+      <div class="page-header">
+        <div><h2>リッチメニュー</h2><div class="desc">LINE のメニュー画面をカスタマイズします</div></div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="rm-add-btn">+ メニュー作成</button>
+      </div>
+      <div class="placeholder-view" id="richmenu-list"></div>
+    </div>
+
+    <!-- LINE アカウント -->
+    <div class="view" id="view-channels">
+      <div class="page-header">
+        <div><h2>LINE アカウント</h2><div class="desc">接続中の LINE 公式アカウントを管理します</div></div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="ch-add-btn">+ アカウント追加</button>
+      </div>
+      <div class="placeholder-view" id="channels-list"></div>
+    </div>
+
+    <!-- 使い方 (video guide iframe) -->
+    <div class="view" id="view-guide">
+      <div class="page-header">
+        <div><h2>使い方</h2><div class="desc">機能別 に 34本の 短い動画で 全操作 を 解説</div></div>
+      </div>
+      <div style="background:#0a0c11;border:1px solid var(--rule);border-radius:12px;overflow:hidden;height:calc(100vh - 180px);min-height:600px;">
+        <iframe src="https://t35ty6-rgb.github.io/skeleton-demos/crm-tool-videos/" style="width:100%;height:100%;border:0;display:block;" title="使い方 動画"></iframe>
+      </div>
+    </div>
+
+    <!-- 配信履歴 -->
+    <div class="view" id="view-history">
+      <div class="page-header">
+        <div><h2>配信履歴</h2><div class="desc">過去の配信結果を確認します</div></div>
+        <div class="spacer"></div>
+        <button class="btn btn-secondary" id="hist-clear-btn">履歴クリア</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <div class="search-box">
+            <span style="color:var(--dim)">🔍</span>
+            <input type="text" id="hist-search" placeholder="件名で検索">
+          </div>
+          <div class="spacer" style="flex:1"></div>
+          <span style="font-size:12px;color:var(--dim)" id="hist-count-label">4 件</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>日時</th><th>種別</th><th>件名</th><th>対象</th><th>開封率</th><th>クリック率</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div id="modal-scrim">
+  <div id="modal">
+    <!-- JS で中身を差し替え -->
+  </div>
+</div>
+
+<script>
+// =========================================================
+// State
+// =========================================================
+const state = {
+  view: 'customers',
+  customers: [],
+  tags: [],
+  campaigns: [],
+  segments: [],
+  autoTagRules: [],
+  steps: [],
+};
+
+// =========================================================
+// Seed data
+// =========================================================
+const TAG_COLORS = [
+  { bg: 'linear-gradient(135deg, #60a5fa, #1e40af)', color: '#ffffff', border: '#1e40af', glow: '59,130,246' }, // オーシャンブルー
+  { bg: 'linear-gradient(135deg, #34d399, #047857)', color: '#ffffff', border: '#047857', glow: '16,185,129' }, // エメラルド
+  { bg: 'linear-gradient(135deg, #fbbf24, #ea580c)', color: '#ffffff', border: '#ea580c', glow: '245,158,11' }, // サンセット
+  { bg: 'linear-gradient(135deg, #f472b6, #be185d)', color: '#ffffff', border: '#be185d', glow: '236,72,153' }, // チェリーピンク
+  { bg: 'linear-gradient(135deg, #f97316, #dc2626)', color: '#ffffff', border: '#dc2626', glow: '249,115,22' }, // ファイア
+  { bg: 'linear-gradient(135deg, #22d3ee, #2563eb)', color: '#ffffff', border: '#2563eb', glow: '34,211,238' }, // アクアブルー
+  { bg: 'linear-gradient(135deg, #ef4444, #991b1b)', color: '#ffffff', border: '#991b1b', glow: '239,68,68' }, // クリムゾン
+  { bg: 'linear-gradient(135deg, #a3e635, #4d7c0f)', color: '#ffffff', border: '#4d7c0f', glow: '132,204,22' }, // ライム
+];
+
+state.tags = [
+  { id: 't1',  name: 'LINE登録済',    colorIdx: 1 },
+  { id: 't2',  name: '購入済み',       colorIdx: 0 },
+  { id: 't3',  name: '定期便ユーザー', colorIdx: 2 },
+  { id: 't4',  name: 'VIP顧客',       colorIdx: 3 },
+  { id: 't5',  name: '休眠顧客',       colorIdx: 5 },
+  { id: 't6',  name: '見込み客',       colorIdx: 6 },
+  { id: 't7',  name: '紹介経由',       colorIdx: 4 },
+  { id: 't8',  name: 'EC流入',         colorIdx: 7 },
+  { id: 't9',  name: 'Instagram経由',  colorIdx: 2 },
+  { id: 't10', name: 'セミナー参加',   colorIdx: 0 },
+  { id: 't11', name: '再購入促進',     colorIdx: 3 },
+  { id: 't12', name: '誕生日月',       colorIdx: 4 },
+  { id: 't13', name: '未購入',         colorIdx: 6 },
+  { id: 't14', name: 'キャンペーン参加', colorIdx: 1 },
+  { id: 't15', name: 'Twitter流入',    colorIdx: 5 },
+  { id: 't16', name: 'SNS流入',        colorIdx: 2 },
+  { id: 't17', name: '広告経由',       colorIdx: 7 },
+  { id: 't18', name: '友人紹介',       colorIdx: 0 },
+];
+
+state.campaigns = [
+  { id: 'cp1', name: '春の特別セール 2024',    created: '2024-03-01' },
+  { id: 'cp2', name: 'Instagram広告 A案',     created: '2024-04-01' },
+  { id: 'cp3', name: 'Instagram広告 B案',     created: '2024-04-01' },
+  { id: 'cp4', name: 'Google広告 春キャン',    created: '2024-04-15' },
+  { id: 'cp5', name: 'LINE紹介プログラム',     created: '2024-05-01' },
+  { id: 'cp6', name: 'メルマガ再登録',         created: '2024-05-10' },
+];
+
+state.autoTagRules = [
+  {
+    id: 'r1',
+    name: 'LINE登録 → 基本タグ付与',
+    field: 'event',
+    value: 'follow',
+    tagIds: ['t1', 't13'],
+    active: true,
+  },
+  {
+    id: 'r2',
+    name: '購入完了 → 購入タグ',
+    field: 'event',
+    value: 'purchase',
+    tagIds: ['t2'],
+    active: true,
+  },
+  {
+    id: 'r3',
+    name: '定期便申込 → 定期便タグ',
+    field: 'event',
+    value: 'subscription',
+    tagIds: ['t3'],
+    active: true,
+  },
+  {
+    id: 'r4',
+    name: 'Twitter キャンペーン',
+    field: 'campaignId',
+    value: ['cp5'],
+    tagIds: ['t15'],
+    active: false,
+  },
+  {
+    id: 'r5',
+    name: 'Google広告春キャン',
+    field: 'campaignId',
+    value: ['cp4'],
+    tagIds: ['t17'],
+    active: false,
+  },
+];
+
+const NAMES = ['田中 花子','山田 太郎','佐藤 美咲','鈴木 一郎','高橋 由美','伊藤 健一','渡辺 さくら','小林 雄大','加藤 真理','吉田 拓也','中村 陽子','林 秀明','清水 奈美','山本 幸子','福田 隆','岡田 純子','西村 誠','松本 理恵','内田 翔平','菊地 あゆみ'];
+const AVBG  = ['#6366f1','#f59e0b','#10b981','#ef4444','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#06b6d4'];
+
+for (let i = 0; i < 20; i++) {
+  const tagPool = state.tags.slice(0, 5);
+  const custTags = [state.tags[0].id];
+  if (Math.random() > 0.4) custTags.push(tagPool[Math.floor(Math.random()*tagPool.length)].id);
+  state.customers.push({
+    id: `c${i+1}`,
+    name: NAMES[i],
+    avatarBg: AVBG[i % AVBG.length],
+    tagIds: custTags,
+    lastPurchase: i < 12 ? `2024-0${(i%9)+1}-${(i*3+1)%28+1}`.replace(/-0(\d)-/, '-$1-') : '—',
+    ltv: i < 12 ? `¥${(18+i*3).toFixed(0)},00${i%10}` : '—',
+    joinedAt: `2024-0${(i%9)+1}-01`,
+  });
+}
+
+state.segments = [
+  { id: 's1', name: 'SNS流入 × 未購入',   tagIds: ['t16','t13'], count: 34 },
+  { id: 's2', name: 'VIP顧客 × 定期便',    tagIds: ['t4','t3'],  count: 18 },
+  { id: 's3', name: '休眠顧客 (90日超)',    tagIds: ['t5'],       count: 42 },
+  { id: 's4', name: '広告経由 見込み',      tagIds: ['t17','t6'], count: 27 },
+];
+
+// =========================================================
+// Nav
+// =========================================================
+const NAV = [
+  { section: null },
+  { view: 'customers', label: '顧客リスト',      icon: '👥', badge: () => state.customers.length },
+  { view: 'tags',      label: 'タグ管理',         icon: '🏷', badge: () => state.tags.length },
+  { view: 'autotags',  label: '自動タグルール',   icon: '⚡', badge: () => `${state.autoTagRules.filter(r=>r.active).length}/${state.autoTagRules.length}` },
+  { view: 'campaigns', label: 'キャンペーン',     icon: '📊', badge: () => state.campaigns.length },
+  { section: 'メッセージ配信' },
+  { view: 'segments',  label: 'セグメント',        icon: '🎯', badge: () => state.segments.length },
+  { view: 'broadcast', label: '一括配信',          icon: '📢', badge: null },
+  { view: 'steps',     label: 'ステップ配信',      icon: '🔀', badge: null },
+  { section: '設定' },
+  { view: 'richmenu',  label: 'リッチメニュー',   icon: '☰', badge: null },
+  { view: 'channels',  label: 'LINE アカウント',   icon: '🔗', badge: null },
+  { view: 'history',   label: '配信履歴',          icon: '🕐', badge: null },
+  { section: 'ヘルプ' },
+  { view: 'guide',     label: '使い方',            icon: '📺', badge: () => '34' },
+];
+
+function renderNav() {
+  const nav = document.getElementById('nav');
+  nav.innerHTML = '';
+  NAV.forEach(item => {
+    if (item.section !== undefined) {
+      if (item.section) {
+        const s = document.createElement('div');
+        s.className = 'nav-section-label';
+        s.textContent = item.section;
+        nav.appendChild(s);
+      }
+      return;
+    }
+    const el = document.createElement('div');
+    el.className = 'nav-item' + (state.view === item.view ? ' active' : '');
+    el.dataset.view = item.view;
+    const badgeVal = item.badge ? item.badge() : null;
+    el.innerHTML = `
+      <span class="nav-icon">${item.icon}</span>
+      <span class="nav-label">${item.label}</span>
+      ${badgeVal !== null ? `<span class="badge">${badgeVal}</span>` : ''}
+    `;
+    el.addEventListener('click', () => navigate(item.view));
+    nav.appendChild(el);
+  });
+}
+
+function navigate(view) {
+  state.view = view;
+  // update nav active
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.view === view);
+  });
+  // update views
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const viewEl = document.getElementById('view-' + view);
+  if (viewEl) viewEl.classList.add('active');
+  renderView(view);
+}
+
+// =========================================================
+// Tag helpers
+// =========================================================
+function getTag(id) { return state.tags.find(t => t.id === id); }
+function tagChipHTML(tagId, selected = true) {
+  const t = getTag(tagId);
+  if (!t) return '';
+  const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
+  return `<span class="tag-chip ${selected?'selected':''}" style="background:${c.bg};color:${c.color};border-color:${c.border};">${t.name}</span>`;
+}
+
+// =========================================================
+// Render views
+// =========================================================
+function renderView(view) {
+  if (view === 'customers') renderCustomers();
+  if (view === 'tags')      renderTags();
+  if (view === 'autotags')  renderAutoTags();
+  if (view === 'campaigns') renderCampaigns();
+  if (view === 'segments')  renderSegments();
+  if (view === 'broadcast') renderBroadcast();
+  if (view === 'steps')     renderSteps();
+  if (view === 'richmenu')  renderRichmenu();
+  if (view === 'channels')  renderChannels();
+  if (view === 'history')   renderHistory();
+}
+
+function renderCustomers() {
+  const tbody = document.getElementById('cust-tbody');
+  const searchEl = document.getElementById('cust-search');
+  const filterEl = document.getElementById('cust-tag-filter');
+  const searchQ = (searchEl && searchEl.value.trim().toLowerCase()) || '';
+  const filterTag = (filterEl && filterEl.value) || '';
+
+  // populate tag filter (once)
+  if (filterEl && filterEl.options.length <= 1) {
+    filterEl.innerHTML = '<option value="">— タグで絞り込み —</option>' +
+      state.tags.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  }
+
+  const filtered = state.customers.filter(c => {
+    if (searchQ) {
+      const inName = c.name.toLowerCase().includes(searchQ);
+      const inTag  = c.tagIds.some(id => (getTag(id)?.name || '').toLowerCase().includes(searchQ));
+      if (!inName && !inTag) return false;
+    }
+    if (filterTag && !c.tagIds.includes(filterTag)) return false;
+    return true;
+  });
+
+  tbody.innerHTML = filtered.map(c => `
+    <tr data-cust-id="${c.id}" style="cursor:pointer">
+      <td>
+        <div class="cust-cell">
+          <div class="avatar" style="background:${c.avatarBg}">${c.name[0]}</div>
+          <div>
+            <div class="cust-name">${c.name}</div>
+            <div class="cust-tags">${c.tagIds.slice(0,2).map(id => tagChipHTML(id)).join('')}</div>
+          </div>
+        </div>
+      </td>
+      <td>${c.tagIds.map(id => tagChipHTML(id)).join(' ')}</td>
+      <td style="color:var(--dim)">${c.lastPurchase}</td>
+      <td style="font-weight:700">${c.ltv}</td>
+      <td style="color:var(--dim);font-size:12px">${c.joinedAt}</td>
+      <td><button class="icon-btn cust-detail-btn" data-cust-id="${c.id}" title="詳細">→</button></td>
+    </tr>
+  `).join('');
+
+  const countLabel = document.getElementById('cust-count-label');
+  if (countLabel) countLabel.textContent = `${filtered.length} 件`;
+  const totalVal = document.getElementById('stat-total-val');
+  if (totalVal) totalVal.textContent = state.customers.length;
+  const purchVal = document.getElementById('stat-purchased-val');
+  if (purchVal) purchVal.textContent = state.customers.filter(c => c.lastPurchase && c.lastPurchase !== '—').length;
+
+  tbody.querySelectorAll('tr').forEach(row => {
+    row.addEventListener('click', () => {
+      const cid = row.dataset.custId;
+      const cust = state.customers.find(c => c.id === cid);
+      if (cust) openCustomerDetailModal(cust);
+    });
+  });
+}
+
+// customer 検索 / filter events
+document.addEventListener('DOMContentLoaded', () => {});
+setTimeout(() => {
+  const s = document.getElementById('cust-search');
+  const f = document.getElementById('cust-tag-filter');
+  if (s) s.addEventListener('input', () => renderCustomers());
+  if (f) f.addEventListener('change', () => renderCustomers());
+  const addBtn = document.getElementById('cust-add-btn');
+  if (addBtn) addBtn.addEventListener('click', () => openCustomerAddModal());
+}, 50);
+
+function openCustomerAddModal() {
+  const modal = document.getElementById('modal');
+  const tagChips = state.tags.map(t => {
+    const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
+    return `<button class="tag-chip" data-tag-id="${t.id}"
+      style="background:${c.bg};color:${c.color};border-color:${c.border};"
+    >${t.name}</button>`;
+  }).join('');
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>新しい顧客を追加</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">顧客名</label>
+      <input type="text" class="field-input" id="cust-modal-name" placeholder="例: 山田 太郎">
+    </div>
+    <div class="field-group">
+      <label class="field-label">電話番号</label>
+      <input type="text" class="field-input" id="cust-modal-tel" placeholder="例: 090-1234-5678">
+    </div>
+    <div class="field-group">
+      <label class="field-label">タグを付ける</label>
+      <div class="tag-chip-area" id="cust-modal-tags">${tagChips}</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cust-modal-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="cust-modal-save">追加</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('cust-modal-cancel').addEventListener('click', closeModal);
+  document.querySelectorAll('#cust-modal-tags .tag-chip').forEach(chip => {
+    chip.addEventListener('click', () => chip.classList.toggle('selected'));
+  });
+  document.getElementById('cust-modal-save').addEventListener('click', () => {
+    const name = document.getElementById('cust-modal-name').value.trim() || '新しい顧客';
+    const selectedTags = [...document.querySelectorAll('#cust-modal-tags .tag-chip.selected')].map(c => c.dataset.tagId);
+    const cust = {
+      id: 'c' + Date.now(),
+      name,
+      avatarBg: AVBG[Math.floor(Math.random()*AVBG.length)],
+      tagIds: selectedTags.length > 0 ? selectedTags : ['t1'],
+      lastPurchase: '—',
+      ltv: '—',
+      joinedAt: new Date().toISOString().slice(0,10),
+    };
+    state.customers.unshift(cust);
+    closeModal();
+    renderCustomers();
+    renderNav();
+  });
+  setTimeout(() => { document.getElementById('cust-modal-name').focus(); }, 80);
+}
+
+function openCustomerDetailModal(cust) {
+  const modal = document.getElementById('modal');
+  const tagChips = state.tags.map(t => {
+    const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
+    const selected = cust.tagIds.includes(t.id);
+    return `<button class="tag-chip ${selected?'selected':''}" data-tag-id="${t.id}"
+      style="background:${c.bg};color:${c.color};border-color:${c.border};"
+    >${t.name}</button>`;
+  }).join('');
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>顧客詳細</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;padding:16px;background:var(--surface-2);border-radius:10px;margin-bottom:20px;">
+      <div class="avatar" style="width:56px;height:56px;font-size:22px;background:${cust.avatarBg}">${cust.name[0]}</div>
+      <div>
+        <div style="font-size:17px;font-weight:800">${cust.name}</div>
+        <div style="font-size:12px;color:var(--dim);margin-top:4px">登録日 ${cust.joinedAt}</div>
+      </div>
+      <div style="flex:1"></div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--dim);font-weight:700">LTV</div>
+        <div style="font-size:20px;font-weight:800;color:var(--primary)">${cust.ltv}</div>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">タグ（クリックで付け外し）</label>
+      <div class="tag-chip-area" id="cust-detail-tags">${tagChips}</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cust-detail-cancel">閉じる</button>
+      <button class="btn btn-primary" id="cust-detail-save">保存</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('cust-detail-cancel').addEventListener('click', closeModal);
+  document.querySelectorAll('#cust-detail-tags .tag-chip').forEach(chip => {
+    chip.addEventListener('click', () => chip.classList.toggle('selected'));
+  });
+  document.getElementById('cust-detail-save').addEventListener('click', () => {
+    const newTags = [...document.querySelectorAll('#cust-detail-tags .tag-chip.selected')].map(c => c.dataset.tagId);
+    cust.tagIds = newTags;
+    closeModal();
+    renderCustomers();
+  });
+}
+
+function renderTags() {
+  const grid = document.getElementById('tag-grid');
+  if (!grid) return;
+  grid.innerHTML = state.tags.map(t => {
+    const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
+    const count = state.customers.filter(c2 => c2.tagIds.includes(t.id)).length;
+    return `
+      <div class="tag-card" data-tag-id="${t.id}" style="background:${c.bg};border:1.5px solid ${c.border};border-radius:14px;padding:16px 18px;cursor:pointer;transition:transform .15s, box-shadow .15s;box-shadow:inset 0 0 0 2px rgba(255,255,255,0.35), 0 4px 16px rgba(${c.glow},0.35), 0 2px 4px rgba(0,0,0,0.12);">
+        <div style="font-size:14px;font-weight:800;color:${c.color};margin-bottom:6px;text-shadow:0 2px 4px rgba(0,0,0,0.35);letter-spacing:0.02em;">${t.name}</div>
+        <div style="font-size:30px;font-weight:900;color:${c.color};text-shadow:0 2px 6px rgba(0,0,0,0.4);line-height:1;">${count}</div>
+        <div style="font-size:11px;color:${c.color};opacity:0.92;margin-top:6px;text-shadow:0 1px 2px rgba(0,0,0,0.25);">顧客 · クリックで編集</div>
+      </div>`;
+  }).join('');
+  // click on card → edit modal
+  grid.querySelectorAll('.tag-card').forEach(card => {
+    card.addEventListener('mouseenter', () => { card.style.boxShadow = '0 4px 16px rgba(0,0,0,.14)'; });
+    card.addEventListener('mouseleave', () => { card.style.boxShadow = ''; });
+    card.addEventListener('click', () => {
+      const tag = state.tags.find(t => t.id === card.dataset.tagId);
+      if (tag) openTagModal(tag);
+    });
+  });
+}
+
+// =========================================================
+// Modal: タグ追加 / 編集
+// =========================================================
+function openTagModal(existingTag) {
+  const isEdit = !!existingTag;
+  const modal = document.getElementById('modal');
+  const colorOptions = TAG_COLORS.map((c, i) => `
+    <div class="tag-color-swatch" data-color-idx="${i}" style="width:28px;height:28px;border-radius:6px;background:${c.bg};border:2px solid ${existingTag && existingTag.colorIdx === i ? c.color : c.border};cursor:pointer;display:inline-block;transition:transform .15s;" title="色${i+1}"></div>
+  `).join('');
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>${isEdit ? 'タグを編集' : '新しいタグを追加'}</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div style="padding:24px 24px 0">
+      <div style="margin-bottom:18px;">
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:8px;">タグ名</label>
+        <input id="tag-modal-name" type="text" class="form-input" placeholder="例: VIP会員" value="${isEdit ? existingTag.name : ''}" style="width:100%;font-size:15px;padding:10px 14px;border:1.5px solid var(--rule);border-radius:8px;outline:none;">
+      </div>
+      <div style="margin-bottom:24px;">
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:10px;">色を選択</label>
+        <div id="tag-color-picker" style="display:flex;gap:10px;flex-wrap:wrap;">${colorOptions}</div>
+      </div>
+      <div id="tag-modal-preview" style="display:none;margin-bottom:18px;padding:12px 16px;background:var(--surface-alt,#f8fafc);border-radius:8px;border:1px solid var(--rule);">
+        <span style="font-size:12px;color:var(--dim);display:block;margin-bottom:6px;">プレビュー</span>
+        <div id="tag-preview-chip" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      ${isEdit ? `<button class="btn" id="tag-modal-delete" style="color:#ef4444;border-color:#fecaca;background:#fff5f5;margin-right:auto;">削除</button>` : ''}
+      <button class="btn btn-ghost" id="tag-modal-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="tag-modal-save">${isEdit ? '保存' : '追加'}</button>
+    </div>
+  `;
+
+  let selectedColorIdx = isEdit ? existingTag.colorIdx : 0;
+
+  function updatePreviewChip() {
+    const name = document.getElementById('tag-modal-name').value.trim();
+    const preview = document.getElementById('tag-modal-preview');
+    const chip = document.getElementById('tag-preview-chip');
+    const c = TAG_COLORS[selectedColorIdx % TAG_COLORS.length];
+    if (name) {
+      preview.style.display = '';
+      chip.style.background = c.bg;
+      chip.style.border = `1.5px solid ${c.border}`;
+      chip.style.color = c.color;
+      chip.textContent = name;
+    } else {
+      preview.style.display = 'none';
+    }
+  }
+
+  function refreshSwatches() {
+    document.querySelectorAll('.tag-color-swatch').forEach(sw => {
+      const idx = parseInt(sw.dataset.colorIdx);
+      const c = TAG_COLORS[idx % TAG_COLORS.length];
+      sw.style.border = `2px solid ${idx === selectedColorIdx ? c.color : c.border}`;
+      sw.style.transform = idx === selectedColorIdx ? 'scale(1.25)' : 'scale(1)';
+    });
+  }
+
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('tag-modal-cancel').addEventListener('click', closeModal);
+  document.getElementById('modal-scrim').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-scrim')) closeModal();
+  });
+
+  document.getElementById('tag-modal-name').addEventListener('input', updatePreviewChip);
+  document.querySelectorAll('.tag-color-swatch').forEach(sw => {
+    sw.addEventListener('click', () => {
+      selectedColorIdx = parseInt(sw.dataset.colorIdx);
+      refreshSwatches();
+      updatePreviewChip();
+    });
+  });
+
+  if (isEdit && document.getElementById('tag-modal-delete')) {
+    document.getElementById('tag-modal-delete').addEventListener('click', () => {
+      if (confirm(`「${existingTag.name}」を削除しますか？\n削除すると、このタグが付いた全顧客から自動的に剥がれます。`)) {
+        state.tags = state.tags.filter(t => t.id !== existingTag.id);
+        state.customers.forEach(c => { c.tagIds = c.tagIds.filter(id => id !== existingTag.id); });
+        closeModal();
+        renderTags();
+        renderNav();
+      }
+    });
+  }
+
+  document.getElementById('tag-modal-save').addEventListener('click', () => {
+    const name = document.getElementById('tag-modal-name').value.trim() || '新しいタグ';
+    if (isEdit) {
+      existingTag.name = name;
+      existingTag.colorIdx = selectedColorIdx;
+    } else {
+      state.tags.push({ id: 't' + Date.now(), name, colorIdx: selectedColorIdx });
+    }
+    closeModal();
+    renderTags();
+    renderNav();
+    // highlight new/edited card
+    setTimeout(() => {
+      const cards = document.querySelectorAll('.tag-card');
+      const last = cards[cards.length - 1];
+      if (last && !isEdit) { last.style.outline = '2px solid #3b82f6'; setTimeout(() => { last.style.outline = ''; }, 1800); }
+    }, 80);
+  });
+
+  refreshSwatches();
+  updatePreviewChip();
+  setTimeout(() => { const inp = document.getElementById('tag-modal-name'); if (inp) inp.focus(); }, 80);
+}
+
+// タグ追加ボタン
+document.getElementById('tag-add-btn').addEventListener('click', () => openTagModal(null));
+
+function renderAutoTags() {
+  const list = document.getElementById('rule-list');
+  list.innerHTML = '';
+  // 「テスト実行」ボタンは有効ルールがあるときのみ表示
+  const demoBtn = document.getElementById('rule-demo');
+  if (demoBtn) demoBtn.style.display = state.autoTagRules.some(r => r.active) ? '' : 'none';
+
+  state.autoTagRules.forEach((rule, idx) => {
+    const tagChips = rule.tagIds.map(id => tagChipHTML(id)).join(' ');
+    const li = document.createElement('li');
+    li.className = 'rule-row';
+    li.dataset.ruleId = rule.id;
+    li.innerHTML = `
+      <div class="toggle-wrap">
+        <input type="checkbox" class="toggle-input" id="toggle-${rule.id}" ${rule.active ? 'checked' : ''}>
+        <label class="toggle-knob" for="toggle-${rule.id}"></label>
+      </div>
+      <div>
+        <div class="rule-name">${rule.name}</div>
+        <div class="rule-desc">
+          ${rule.field === 'campaignId' ? 'キャンペーン参加' : 'イベント'} →
+          ${rule.tagIds.map(id => getTag(id)?.name || id).join(', ')} を付与
+        </div>
+      </div>
+      <div class="rule-count">${Math.floor(Math.random()*80+20)} 件/月</div>
+      <div class="rule-tag">${tagChips}</div>
+      <div class="rule-actions">
+        <button class="icon-btn" title="編集">✎</button>
+        <button class="icon-btn" title="削除" style="color:var(--danger)">✕</button>
+      </div>
+    `;
+    // toggle
+    li.querySelector(`#toggle-${rule.id}`).addEventListener('change', e => {
+      rule.active = e.target.checked;
+      const demoBtn = document.getElementById('rule-demo');
+      if (demoBtn) demoBtn.style.display = state.autoTagRules.some(r => r.active) ? '' : 'none';
+      const badge = document.getElementById('stat-active-rules');
+      if (badge) badge.textContent = state.autoTagRules.filter(r => r.active).length;
+      document.getElementById('rule-count-badge').textContent = state.autoTagRules.length;
+      renderNav();
+    });
+    list.appendChild(li);
+  });
+
+  document.getElementById('rule-count-badge').textContent = state.autoTagRules.length;
+  const badge = document.getElementById('stat-active-rules');
+  if (badge) badge.textContent = state.autoTagRules.filter(r=>r.active).length;
+}
+
+// =========================================================
+// キャンペーン
+// =========================================================
+if (!state.campaigns[0].url) {
+  state.campaigns.forEach((cp, i) => {
+    cp.url = `https://ex.jp/lp/?cp=${cp.id}`;
+    cp.inflow = 50 + i*38 + Math.floor(Math.random()*100);
+    cp.type = ['広告', 'SNS', 'メール', 'QR配布', '紹介'][i % 5];
+    cp.tagIds = i < 3 ? ['t14'] : ['t16'];
+  });
+}
+
+function renderCampaigns() {
+  const el = document.getElementById('campaign-list');
+  if (!el) return;
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">${
+    state.campaigns.map(cp => `
+      <div class="cp-card" data-cp-id="${cp.id}" style="background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px;">
+        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;margin-bottom:2px;">${cp.name}</div>
+            <div style="font-size:11px;color:var(--dim)">${cp.created} · ${cp.type||'広告'}</div>
+          </div>
+          <span style="background:var(--info-soft);color:var(--info);padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700">${cp.type||'広告'}</span>
+        </div>
+        <div style="font-size:11px;color:var(--dim);word-break:break-all;font-family:'SF Mono',monospace;background:var(--surface-2);padding:6px 8px;border-radius:6px;margin-bottom:10px;">${cp.url||''}</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--dim);font-weight:700">流入</div>
+            <div style="font-size:22px;font-weight:800;color:var(--primary)">${cp.inflow||0}</div>
+          </div>
+          <button class="btn btn-secondary cp-url-btn" data-cp-id="${cp.id}" style="padding:6px 12px;font-size:11px">URL コピー</button>
+          <button class="btn btn-secondary cp-qr-btn" data-cp-id="${cp.id}" style="padding:6px 12px;font-size:11px">QR</button>
+        </div>
+      </div>`).join('')
+  }</div>`;
+  el.querySelectorAll('.cp-url-btn').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    openCampaignUrlModal(state.campaigns.find(c => c.id === b.dataset.cpId));
+  }));
+  el.querySelectorAll('.cp-qr-btn').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    openCampaignQrModal(state.campaigns.find(c => c.id === b.dataset.cpId));
+  }));
+}
+
+function openCampaignAddModal() {
+  const modal = document.getElementById('modal');
+  const tagChips = state.tags.map(t => {
+    const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
+    return `<button class="tag-chip" data-tag-id="${t.id}"
+      style="background:${c.bg};color:${c.color};border-color:${c.border};"
+    >${t.name}</button>`;
+  }).join('');
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>新しいキャンペーンを作成</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">種別（用途）</label>
+      <div class="chip-area" id="cp-modal-type">
+        ${['広告','SNS','メール','QR配布','紹介'].map(t => `<button class="cp-chip" data-v="${t}">${t}</button>`).join('')}
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">キャンペーン名</label>
+      <input type="text" class="field-input" id="cp-modal-name" placeholder="例: Instagram広告 A案 春">
+    </div>
+    <div class="field-group">
+      <label class="field-label">流入 URL（LPやサイト）</label>
+      <input type="text" class="field-input" id="cp-modal-url" placeholder="https://example.jp/lp/spring" value="https://example.jp/lp/">
+    </div>
+    <div class="field-group">
+      <label class="field-label">流入客に付ける タグ</label>
+      <div class="tag-chip-area" id="cp-modal-tags">${tagChips}</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cp-modal-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="cp-modal-save">作成</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('cp-modal-cancel').addEventListener('click', closeModal);
+  document.querySelectorAll('#cp-modal-type .cp-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#cp-modal-type .cp-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+  });
+  document.querySelectorAll('#cp-modal-tags .tag-chip').forEach(chip => {
+    chip.addEventListener('click', () => chip.classList.toggle('selected'));
+  });
+  document.getElementById('cp-modal-save').addEventListener('click', () => {
+    const name = document.getElementById('cp-modal-name').value.trim() || '新しいキャンペーン';
+    const url = document.getElementById('cp-modal-url').value.trim() || 'https://example.jp/';
+    const type = document.querySelector('#cp-modal-type .cp-chip.selected')?.dataset.v || '広告';
+    const tagIds = [...document.querySelectorAll('#cp-modal-tags .tag-chip.selected')].map(c => c.dataset.tagId);
+    const cpId = 'cp' + Date.now();
+    state.campaigns.unshift({
+      id: cpId,
+      name,
+      created: new Date().toISOString().slice(0,10),
+      type,
+      url: url + '?cp=' + cpId,
+      tagIds,
+      inflow: 0,
+    });
+    closeModal();
+    renderCampaigns();
+    renderNav();
+  });
+}
+
+function openCampaignUrlModal(cp) {
+  if (!cp) return;
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>キャンペーン URL</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div style="padding:8px 0">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px">${cp.name}</div>
+      <div style="background:var(--surface-2);border:1px solid var(--rule);border-radius:8px;padding:14px;font-family:'SF Mono',monospace;font-size:13px;word-break:break-all;color:var(--ink)" id="cp-url-display">${cp.url}</div>
+      <div id="cp-url-copied" style="display:none;margin-top:12px;padding:10px 14px;background:var(--primary-soft);border:1px solid #86efac;border-radius:8px;color:var(--primary-hi);font-size:13px;font-weight:700;">
+        ✓ クリップボードに コピー しました
+      </div>
+      <p style="font-size:12px;color:var(--dim);margin-top:14px;line-height:1.7">この URL 経由 で 友だち追加 された 顧客 に、<br>自動 で 選択 した タグ が 付き、 流入数 が カウント されます。</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cp-url-close">閉じる</button>
+      <button class="btn btn-primary" id="cp-url-copy">URL をコピー</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('cp-url-close').addEventListener('click', closeModal);
+  document.getElementById('cp-url-copy').addEventListener('click', () => {
+    document.getElementById('cp-url-copied').style.display = '';
+  });
+}
+
+function openCampaignQrModal(cp) {
+  if (!cp) return;
+  const modal = document.getElementById('modal');
+  // 簡易 QR (SVG グリッド) 生成
+  const seed = cp.id.split('').reduce((a,c) => a + c.charCodeAt(0), 0);
+  const size = 21;
+  const cells = [];
+  for (let i = 0; i < size*size; i++) {
+    const on = ((seed * (i+7) + 31) * (i+3)) % 5 < 2;
+    cells.push(on);
+  }
+  // 3 finder patterns (角 に 大きな 四角)
+  function markFinder(r, c) {
+    for (let dr = 0; dr < 7; dr++) for (let dc = 0; dc < 7; dc++) {
+      const rr = r+dr, cc = c+dc;
+      const edge = dr === 0 || dr === 6 || dc === 0 || dc === 6;
+      const inner = dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4;
+      cells[rr*size + cc] = edge || inner;
+    }
+  }
+  markFinder(0, 0);
+  markFinder(0, size-7);
+  markFinder(size-7, 0);
+  const cellSize = 12;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size*cellSize}" height="${size*cellSize}" style="background:#fff;">
+    ${cells.map((on, i) => on ? `<rect x="${(i%size)*cellSize}" y="${Math.floor(i/size)*cellSize}" width="${cellSize}" height="${cellSize}" fill="#111"/>` : '').join('')}
+  </svg>`;
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>キャンペーン QR コード</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div style="text-align:center;padding:8px 0">
+      <div style="font-size:13px;font-weight:700;margin-bottom:14px">${cp.name}</div>
+      <div style="display:inline-block;padding:16px;background:#fff;border:2px solid var(--rule);border-radius:12px;">${svg}</div>
+      <div style="font-size:11px;color:var(--dim);margin-top:14px;font-family:'SF Mono',monospace;word-break:break-all;">${cp.url}</div>
+      <p style="font-size:12px;color:var(--dim);margin-top:14px;line-height:1.7">紙 の チラシ や ポスター に 印刷 して 配布 できます。<br>スマホ で 読み取ると 上記 URL に 飛び、 流入 が 計測 されます。</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="qr-close">閉じる</button>
+      <button class="btn btn-primary" id="qr-download">PNG ダウンロード</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('qr-close').addEventListener('click', closeModal);
+}
+
+// =========================================================
+// セグメント
+// =========================================================
+function renderSegments() {
+  const el = document.getElementById('segment-cards');
+  if (!el) return;
+  el.innerHTML = state.segments.map(seg => `
+    <div class="seg-card" data-seg-id="${seg.id}" style="background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:18px;cursor:pointer;transition:transform .1s, box-shadow .1s">
+      <div style="font-size:14px;font-weight:700;margin-bottom:8px;">${seg.name}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${seg.tagIds.map(id => tagChipHTML(id)).join('')}</div>
+      <div style="display:flex;align-items:baseline;gap:6px;">
+        <div style="font-size:26px;font-weight:800;color:var(--info)">${seg.count}</div>
+        <div style="font-size:12px;color:var(--dim)">名</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:12px;">
+        <button class="btn btn-secondary seg-preview-btn" data-seg-id="${seg.id}" style="padding:6px 12px;font-size:11px;flex:1">対象客プレビュー</button>
+        <button class="btn btn-primary seg-send-btn" data-seg-id="${seg.id}" style="padding:6px 12px;font-size:11px;flex:1">配信する</button>
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('.seg-preview-btn').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    openSegmentPreviewModal(state.segments.find(s => s.id === b.dataset.segId));
+  }));
+  el.querySelectorAll('.seg-send-btn').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    navigate('broadcast');
+  }));
+}
+
+function openSegmentCreateModal() {
+  const modal = document.getElementById('modal');
+  const tagChips = state.tags.map(t => {
+    const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
+    return `<button class="tag-chip" data-tag-id="${t.id}"
+      style="background:${c.bg};color:${c.color};border-color:${c.border};"
+    >${t.name}</button>`;
+  }).join('');
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>新しいセグメントを作成</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">セグメント名</label>
+      <input type="text" class="field-input" id="seg-modal-name" placeholder="例: SNS 経由 の 未購入 客">
+    </div>
+    <div class="field-group">
+      <label class="field-label">条件（AND：全て 満たす）</label>
+      <div class="tag-chip-area" id="seg-modal-and">${tagChips}</div>
+    </div>
+    <div id="seg-modal-preview" style="display:none;padding:14px 16px;background:var(--info-soft);border-radius:10px;margin-top:8px;">
+      <div style="display:flex;align-items:baseline;gap:8px;">
+        <div style="font-size:28px;font-weight:800;color:var(--info)" id="seg-preview-num">0</div>
+        <div style="font-size:13px;color:var(--info)">名 の 顧客 が 該当 します</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="seg-modal-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="seg-modal-save">作成</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('seg-modal-cancel').addEventListener('click', closeModal);
+  document.querySelectorAll('#seg-modal-and .tag-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      chip.classList.toggle('selected');
+      updateSegPreview();
+    });
+  });
+  document.getElementById('seg-modal-name').addEventListener('input', updateSegPreview);
+
+  function updateSegPreview() {
+    const name = document.getElementById('seg-modal-name').value.trim();
+    const chips = document.querySelectorAll('#seg-modal-and .tag-chip.selected');
+    const prev = document.getElementById('seg-modal-preview');
+    if (name && chips.length > 0) {
+      const selectedIds = [...chips].map(c => c.dataset.tagId);
+      const count = state.customers.filter(c => selectedIds.every(t => c.tagIds.includes(t))).length;
+      prev.style.display = '';
+      document.getElementById('seg-preview-num').textContent = Math.max(count, Math.floor(Math.random()*20+5));
+    } else {
+      prev.style.display = 'none';
+    }
+  }
+
+  document.getElementById('seg-modal-save').addEventListener('click', () => {
+    const name = document.getElementById('seg-modal-name').value.trim() || '新しいセグメント';
+    const selectedIds = [...document.querySelectorAll('#seg-modal-and .tag-chip.selected')].map(c => c.dataset.tagId);
+    state.segments.unshift({
+      id: 's' + Date.now(),
+      name,
+      tagIds: selectedIds.length > 0 ? selectedIds : [state.tags[0].id],
+      count: parseInt(document.getElementById('seg-preview-num').textContent) || 10,
+    });
+    closeModal();
+    renderSegments();
+    renderNav();
+  });
+}
+
+function openSegmentPreviewModal(seg) {
+  if (!seg) return;
+  const modal = document.getElementById('modal');
+  const matching = state.customers.filter(c => seg.tagIds.every(t => c.tagIds.includes(t))).slice(0, 10);
+  const display = matching.length > 0 ? matching : state.customers.slice(0, Math.min(seg.count, 10));
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>対象客 プレビュー</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div style="padding:12px 16px;background:var(--info-soft);border-radius:10px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">${seg.name}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;">${seg.tagIds.map(id => tagChipHTML(id)).join('')}</div>
+      <div style="margin-top:10px;font-size:22px;font-weight:800;color:var(--info)">${seg.count} <span style="font-size:12px;color:var(--dim);font-weight:600">名 が対象</span></div>
+    </div>
+    <div style="max-height:280px;overflow-y:auto;border:1px solid var(--rule);border-radius:8px;">
+      ${display.map(c => `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--rule);">
+          <div class="avatar" style="width:28px;height:28px;font-size:12px;background:${c.avatarBg}">${c.name[0]}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700">${c.name}</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:2px">${c.joinedAt}</div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;justify-content:flex-end">${c.tagIds.slice(0,3).map(id => tagChipHTML(id)).join('')}</div>
+        </div>
+      `).join('')}
+      <div style="padding:10px 14px;text-align:center;font-size:12px;color:var(--dim);">... 他 ${Math.max(0, seg.count - display.length)} 名</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="seg-prev-close">閉じる</button>
+      <button class="btn btn-primary" id="seg-prev-send">この セグメント に 配信 →</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('seg-prev-close').addEventListener('click', closeModal);
+  document.getElementById('seg-prev-send').addEventListener('click', () => {
+    closeModal();
+    navigate('broadcast');
+  });
+}
+
+// =========================================================
+// 一括配信
+// =========================================================
+function renderBroadcast() {
+  const el = document.getElementById('broadcast-cards');
+  if (!el) return;
+  const broadcasts = state.broadcasts || [
+    { name: '春の新商品ご案内', sent: '2024-04-10', target: 248, open: '68%', click: '24%' },
+    { name: 'GW 特別クーポン', sent: '2024-04-28', target: 132, open: '71%', click: '31%' },
+    { name: 'VIP 先行販売ご案内', sent: '2024-05-01', target: 18, open: '89%', click: '56%' },
+  ];
+  state.broadcasts = broadcasts;
+  el.innerHTML = broadcasts.map(b => `
+    <div style="background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:18px;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px;">${b.name}</div>
+      <div style="font-size:12px;color:var(--dim);margin-bottom:12px">${b.sent} 配信</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+        <div><div style="font-size:11px;color:var(--dim);font-weight:700">対象</div><div style="font-size:20px;font-weight:800">${b.target}</div></div>
+        <div><div style="font-size:11px;color:var(--dim);font-weight:700">開封率</div><div style="font-size:20px;font-weight:800;color:var(--primary)">${b.open}</div></div>
+        <div><div style="font-size:11px;color:var(--dim);font-weight:700">クリック率</div><div style="font-size:20px;font-weight:800;color:var(--info)">${b.click}</div></div>
+      </div>
+    </div>`).join('');
+}
+
+function openBroadcastCreateModal() {
+  const modal = document.getElementById('modal');
+  const segChips = state.segments.map(s =>
+    `<button class="cp-chip" data-v="${s.id}" data-count="${s.count}">${s.name}<span style="opacity:.7;margin-left:6px;font-weight:500">${s.count}名</span></button>`
+  ).join('') + `<button class="cp-chip" data-v="all" data-count="${state.customers.length}">全 顧客<span style="opacity:.7;margin-left:6px;font-weight:500">${state.customers.length}名</span></button>`;
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>新しい 一括配信 を 作成</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Step 1 · 対象 を 選ぶ</label>
+      <div class="chip-area" id="bc-modal-target">${segChips}</div>
+      <div id="bc-target-info" style="display:none;margin-top:8px;font-size:12px;color:var(--info);font-weight:700"></div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Step 2 · 配信 タイトル</label>
+      <input type="text" class="field-input" id="bc-modal-title" placeholder="例: 5月 新商品 のご案内">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Step 3 · 本文 （{name} で 顧客名 差込）</label>
+      <textarea class="field-input" id="bc-modal-body" rows="4" style="resize:vertical;font-family:inherit;line-height:1.6">こんにちは、{name}さん。&#10;&#10;新商品「◯◯」が入荷しました。&#10;LINE 友だち限定で 10% OFF クーポン を お渡しします。</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Step 4 · LINE プレビュー</label>
+      <div id="bc-preview" style="max-width:280px;margin-top:6px;padding:12px 14px;background:#8cabd8;border-radius:16px 16px 16px 4px;color:#111;font-size:13px;line-height:1.55;white-space:pre-wrap;position:relative;">本文が ここ に プレビュー されます</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="bc-modal-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="bc-modal-next">送信 確認 →</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('bc-modal-cancel').addEventListener('click', closeModal);
+
+  document.querySelectorAll('#bc-modal-target .cp-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#bc-modal-target .cp-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      document.getElementById('bc-target-info').style.display = '';
+      document.getElementById('bc-target-info').textContent = `対象: ${chip.dataset.count} 名 に配信`;
+    });
+  });
+
+  function updateBcPreview() {
+    const body = document.getElementById('bc-modal-body').value;
+    const sample = state.customers[0]?.name?.split(' ')[0] || '田中';
+    document.getElementById('bc-preview').textContent = body.replace(/\{name\}/g, sample);
+  }
+  document.getElementById('bc-modal-body').addEventListener('input', updateBcPreview);
+  updateBcPreview();
+
+  document.getElementById('bc-modal-next').addEventListener('click', () => {
+    const title = document.getElementById('bc-modal-title').value.trim() || '無題 の 配信';
+    const target = document.querySelector('#bc-modal-target .cp-chip.selected');
+    if (!target) { alert('対象 を 選択 してください'); return; }
+    openBroadcastConfirmModal(title, target.textContent.trim(), parseInt(target.dataset.count));
+  });
+}
+
+function openBroadcastConfirmModal(title, targetLabel, count) {
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>送信 確認</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div style="padding:20px;background:var(--warn-soft);border:1px solid #fcd34d;border-radius:10px;text-align:center;margin-bottom:16px;">
+      <div style="font-size:36px;margin-bottom:8px">⚠</div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">${count} 名 に 配信 します</div>
+      <div style="font-size:12px;color:var(--dim)">${targetLabel} / 「${title}」</div>
+      <div style="font-size:11px;color:var(--danger);margin-top:8px;font-weight:700">送信 は 取り消せません</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="bc-conf-cancel">戻る</button>
+      <button class="btn btn-primary" id="bc-conf-send">${count} 名 に 送信</button>
+    </div>
+  `;
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('bc-conf-cancel').addEventListener('click', closeModal);
+  document.getElementById('bc-conf-send').addEventListener('click', () => {
+    // 追加
+    state.broadcasts = state.broadcasts || [];
+    state.broadcasts.unshift({
+      name: title, sent: new Date().toISOString().slice(0,10), target: count,
+      open: '—', click: '—',
+    });
+    openBroadcastSuccessModal(title, count);
+  });
+}
+
+function openBroadcastSuccessModal(title, count) {
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>送信 完了</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="demo-result">
+      <div class="big">✅</div>
+      <h4>${count} 名 に 送信 しました</h4>
+      <p>「${title}」 の 配信 が 完了 しました。<br>開封率 と クリック率 は 数分後 に 反映 されます。</p>
+      <button class="btn btn-primary" id="bc-goto-hist" style="margin:0 auto">配信履歴 で 確認 →</button>
+    </div>
+    <div class="modal-actions" style="border-top:none;padding-top:0">
+      <button class="btn btn-ghost" id="bc-succ-close">閉じる</button>
+    </div>
+  `;
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('bc-succ-close').addEventListener('click', () => { closeModal(); renderBroadcast(); });
+  document.getElementById('bc-goto-hist').addEventListener('click', () => { closeModal(); navigate('history'); });
+}
+
+// =========================================================
+// ステップ配信
+// =========================================================
+if (!state.steps.length) {
+  state.steps = [
+    { id: 'st1', name: '友だち追加 ウェルカム シリーズ', trigger: '友だち追加', steps: 3, active: true },
+    { id: 'st2', name: '初回購入 後 の フォロー', trigger: '購入完了', steps: 4, active: true },
+    { id: 'st3', name: '休眠 客 の 掘り起こし', trigger: 'タグ付与: 休眠顧客', steps: 3, active: false },
+  ];
+}
+
+function renderSteps() {
+  const el = document.getElementById('steps-list');
+  if (!el) return;
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;">${
+    state.steps.map(s => `
+      <div style="background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:18px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700">${s.name}</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:2px">トリガー: ${s.trigger}</div>
+          </div>
+          <label class="toggle-wrap">
+            <input type="checkbox" class="toggle-input step-toggle" data-step-id="${s.id}" ${s.active ? 'checked' : ''}>
+            <span class="toggle-knob"></span>
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--rule);">
+          <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">ステップ数</div><div style="font-size:18px;font-weight:800">${s.steps}</div></div>
+          <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">実行 中</div><div style="font-size:18px;font-weight:800;color:${s.active?'var(--primary)':'var(--dim)'}">${s.active ? Math.floor(Math.random()*30+10) : 0}</div></div>
+        </div>
+      </div>`).join('')
+  }</div>`;
+  el.querySelectorAll('.step-toggle').forEach(t => t.addEventListener('change', e => {
+    const s = state.steps.find(x => x.id === t.dataset.stepId);
+    if (s) { s.active = e.target.checked; renderSteps(); }
+  }));
+}
+
+function openStepCreateModal() {
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>新しい ステップ配信 シナリオ</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">シナリオ名</label>
+      <input type="text" class="field-input" id="st-modal-name" placeholder="例: 友だち追加 ウェルカム">
+    </div>
+    <div class="field-group">
+      <label class="field-label">トリガー （発動 条件）</label>
+      <div class="chip-area" id="st-modal-trigger">
+        ${['友だち追加','購入完了','タグ付与','誕生日'].map(t => `<button class="cp-chip" data-v="${t}">${t}</button>`).join('')}
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">配信 ステップ （+ 追加 で 増やす）</label>
+      <div id="st-modal-steps">
+        <div class="st-step-row" data-idx="0" style="background:var(--surface-2);padding:12px 14px;border-radius:8px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:12px;font-weight:800;color:var(--primary)">Step 1</span>
+            <span style="font-size:11px;color:var(--dim)">— 即時</span>
+          </div>
+          <textarea class="field-input st-step-body" rows="2" style="font-family:inherit;font-size:13px" placeholder="こんにちは、{name}さん。友だち追加ありがとうございます。">こんにちは、{name}さん。友だち追加ありがとうございます。</textarea>
+        </div>
+        <div class="st-step-row" data-idx="1" style="background:var(--surface-2);padding:12px 14px;border-radius:8px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:12px;font-weight:800;color:var(--primary)">Step 2</span>
+            <span style="font-size:11px;color:var(--dim)">— 翌日</span>
+          </div>
+          <textarea class="field-input st-step-body" rows="2" style="font-family:inherit;font-size:13px" placeholder="ご紹介したい商品があります。">ご紹介したい商品があります。</textarea>
+        </div>
+      </div>
+      <button class="btn btn-secondary" id="st-add-step" style="width:100%;margin-top:4px">+ ステップを 追加</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="st-modal-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="st-modal-save">作成 する</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('st-modal-cancel').addEventListener('click', closeModal);
+  document.querySelectorAll('#st-modal-trigger .cp-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#st-modal-trigger .cp-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+  });
+  document.getElementById('st-add-step').addEventListener('click', () => {
+    const wrap = document.getElementById('st-modal-steps');
+    const idx = wrap.children.length;
+    const div = document.createElement('div');
+    div.className = 'st-step-row';
+    div.dataset.idx = idx;
+    div.style.cssText = 'background:var(--surface-2);padding:12px 14px;border-radius:8px;margin-bottom:8px;';
+    const days = ['3日後','7日後','14日後','30日後'][Math.min(idx-2, 3)];
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-size:12px;font-weight:800;color:var(--primary)">Step ${idx+1}</span>
+        <span style="font-size:11px;color:var(--dim)">— ${days}</span>
+      </div>
+      <textarea class="field-input st-step-body" rows="2" style="font-family:inherit;font-size:13px" placeholder="メッセージ 本文"></textarea>
+    `;
+    wrap.appendChild(div);
+  });
+  document.getElementById('st-modal-save').addEventListener('click', () => {
+    const name = document.getElementById('st-modal-name').value.trim() || '新しい シナリオ';
+    const trigger = document.querySelector('#st-modal-trigger .cp-chip.selected')?.dataset.v || '友だち追加';
+    const steps = document.querySelectorAll('#st-modal-steps .st-step-row').length;
+    state.steps.unshift({ id: 'st' + Date.now(), name, trigger, steps, active: false });
+    closeModal();
+    renderSteps();
+  });
+}
+
+// =========================================================
+// リッチメニュー
+// =========================================================
+if (!state.richmenus) {
+  state.richmenus = [
+    { id: 'rm1', name: 'デフォルト メニュー', deployed: true, cells: 6, updated: '2024-04-15' },
+    { id: 'rm2', name: 'VIP 会員 限定 メニュー', deployed: false, cells: 4, updated: '2024-04-20' },
+  ];
+}
+
+function renderRichmenu() {
+  const el = document.getElementById('richmenu-list');
+  if (!el) return;
+  el.innerHTML = `
+    <div style="padding:16px;background:var(--info-soft);border:1px solid #93c5fd;border-radius:10px;margin-bottom:18px;">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:24px">☰</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--info)">リッチメニュー は LINE トーク画面 下 の 常時 メニュー</div>
+          <div style="font-size:12px;color:var(--ink-2);margin-top:2px">画像 と タップ 領域 を 組み合わせて、 予約 / EC / 相談 などへの 導線 を 作れます</div>
+        </div>
+        <button class="btn btn-primary" style="padding:8px 14px" id="rm-editor-btn">エディタ を 開く ↗</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">${
+      state.richmenus.map(rm => `
+        <div style="background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700">${rm.name}</div>
+              <div style="font-size:11px;color:var(--dim);margin-top:2px">更新: ${rm.updated}</div>
+            </div>
+            <span style="background:${rm.deployed?'var(--primary-soft)':'var(--surface-2)'};color:${rm.deployed?'var(--primary-hi)':'var(--dim)'};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700">${rm.deployed?'デプロイ中':'下書き'}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(${rm.cells === 6 ? 3 : 2},1fr);gap:4px;background:#eee;padding:6px;border-radius:8px;height:120px">
+            ${Array(rm.cells).fill(0).map((_,i)=>`<div style="background:linear-gradient(135deg,#e5e7eb,#d1d5db);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--dim);font-weight:700">セル ${i+1}</div>`).join('')}
+          </div>
+          <div style="display:flex;gap:6px;margin-top:12px">
+            <button class="btn btn-secondary" style="flex:1;padding:6px 10px;font-size:11px">複製</button>
+            ${rm.deployed
+              ? `<button class="btn btn-ghost" style="flex:1;padding:6px 10px;font-size:11px">停止</button>`
+              : `<button class="btn btn-primary" style="flex:1;padding:6px 10px;font-size:11px">デプロイ</button>`}
+          </div>
+        </div>`).join('')
+    }</div>
+  `;
+}
+
+function openRichmenuCreateModal() {
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>新しい リッチメニュー</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">メニュー名</label>
+      <input type="text" class="field-input" id="rm-modal-name" placeholder="例: 春 の キャンペーン メニュー">
+    </div>
+    <div class="field-group">
+      <label class="field-label">レイアウト を 選ぶ</label>
+      <div class="chip-area" id="rm-modal-layout">
+        <button class="cp-chip" data-v="6">6 セル （2 × 3）</button>
+        <button class="cp-chip" data-v="4">4 セル （2 × 2）</button>
+        <button class="cp-chip" data-v="2">2 セル （1 × 2）</button>
+        <button class="cp-chip" data-v="1">1 セル （全面）</button>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">エディタ で 続き を 編集</label>
+      <div style="padding:14px 16px;background:var(--surface-2);border-radius:10px;font-size:12px;color:var(--dim);line-height:1.7">
+        画像 の アップロード、 タップ領域 の 設定、 URL やメッセージ の 紐付け は、<br>
+        次 の 画面 の エディタ で 行います。
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="rm-modal-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="rm-modal-save">エディタ を 開く →</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('rm-modal-cancel').addEventListener('click', closeModal);
+  document.querySelectorAll('#rm-modal-layout .cp-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#rm-modal-layout .cp-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+  });
+  document.getElementById('rm-modal-save').addEventListener('click', () => {
+    const name = document.getElementById('rm-modal-name').value.trim() || '新しい メニュー';
+    const cells = parseInt(document.querySelector('#rm-modal-layout .cp-chip.selected')?.dataset.v || '6');
+    state.richmenus.unshift({ id: 'rm' + Date.now(), name, deployed: false, cells, updated: new Date().toISOString().slice(0,10) });
+    closeModal();
+    renderRichmenu();
+  });
+}
+
+// =========================================================
+// LINE アカウント
+// =========================================================
+if (!state.channels) {
+  state.channels = [
+    { id: 'ch1', name: 'Skeleton 公式', channelId: '1234567890', tokenMask: 'xxxx****abcd', connected: true, followers: 248, active: true },
+    { id: 'ch2', name: 'サブ アカウント (テスト)', channelId: '9876543210', tokenMask: 'yyyy****efgh', connected: true, followers: 12, active: false },
+  ];
+}
+
+function renderChannels() {
+  const el = document.getElementById('channels-list');
+  if (!el) return;
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;">${
+    state.channels.map(ch => `
+      <div style="background:var(--surface);border:${ch.active?'2px':'1px'} solid ${ch.active?'var(--line-green)':'var(--rule)'};border-radius:10px;padding:18px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:36px;height:36px;background:var(--line-green);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px">L</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:800">${ch.name}</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:2px">Channel ID: ${ch.channelId}</div>
+          </div>
+          ${ch.active ? '<span style="background:var(--line-soft);color:var(--line-green);padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700">現在 使用中</span>' : '<button class="btn btn-secondary ch-switch-btn" data-ch-id="'+ch.id+'" style="padding:5px 10px;font-size:11px">切替</button>'}
+        </div>
+        <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--rule)">
+          <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">友だち</div><div style="font-size:18px;font-weight:800">${ch.followers}</div></div>
+          <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">接続</div><div style="font-size:14px;font-weight:800;color:${ch.connected?'var(--primary)':'var(--danger)'};padding-top:4px">${ch.connected?'●稼働中':'●未接続'}</div></div>
+          <button class="btn btn-secondary ch-test-btn" data-ch-id="${ch.id}" style="padding:6px 12px;font-size:11px;align-self:center">接続 テスト</button>
+        </div>
+      </div>`).join('')
+  }</div>`;
+  el.querySelectorAll('.ch-test-btn').forEach(b => b.addEventListener('click', () => openChannelTestModal(state.channels.find(c => c.id === b.dataset.chId))));
+  el.querySelectorAll('.ch-switch-btn').forEach(b => b.addEventListener('click', () => {
+    state.channels.forEach(c => c.active = false);
+    const target = state.channels.find(c => c.id === b.dataset.chId);
+    if (target) target.active = true;
+    renderChannels();
+  }));
+}
+
+function openChannelAddModal() {
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>LINE 公式アカウント を 追加</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">表示名 （管理用）</label>
+      <input type="text" class="field-input" id="ch-modal-name" placeholder="例: サロン 福井 店 公式">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Channel ID</label>
+      <input type="text" class="field-input" id="ch-modal-cid" placeholder="1234567890" style="font-family:'SF Mono',monospace">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Channel Access Token</label>
+      <input type="password" class="field-input" id="ch-modal-tok" placeholder="LINE Developers から コピペ" style="font-family:'SF Mono',monospace">
+      <div style="font-size:11px;color:var(--dim);margin-top:6px;line-height:1.6">
+        LINE Developers Console → Messaging API 設定 → チャネル アクセス トークン
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="ch-modal-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="ch-modal-save">追加 & 接続 テスト</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('ch-modal-cancel').addEventListener('click', closeModal);
+  document.getElementById('ch-modal-save').addEventListener('click', () => {
+    const name = document.getElementById('ch-modal-name').value.trim() || '新しい アカウント';
+    const cid = document.getElementById('ch-modal-cid').value.trim() || '0000000000';
+    state.channels.push({ id: 'ch' + Date.now(), name, channelId: cid, tokenMask: 'zzzz****' + Math.random().toString(36).slice(-4), connected: true, followers: 0, active: false });
+    closeModal();
+    renderChannels();
+    setTimeout(() => openChannelTestModal(state.channels[state.channels.length - 1]), 350);
+  });
+}
+
+function openChannelTestModal(ch) {
+  if (!ch) return;
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>接続 テスト</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div style="padding:16px;background:var(--surface-2);border-radius:10px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">${ch.name}</div>
+      <div style="font-size:11px;color:var(--dim);font-family:'SF Mono',monospace">Channel ID: ${ch.channelId}</div>
+    </div>
+    <div id="ch-test-results">
+      <div class="ch-test-row" data-key="bot" style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule)">
+        <span class="test-icon" style="width:22px;text-align:center;font-size:14px">…</span>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700">Bot 情報 取得 （/v2/bot/info）</div><div class="test-msg" style="font-size:11px;color:var(--dim);margin-top:2px">実行中...</div></div>
+      </div>
+      <div class="ch-test-row" data-key="quota" style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule)">
+        <span class="test-icon" style="width:22px;text-align:center;font-size:14px">…</span>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700">配信 上限 チェック （quota）</div><div class="test-msg" style="font-size:11px;color:var(--dim);margin-top:2px">待機中...</div></div>
+      </div>
+      <div class="ch-test-row" data-key="webhook" style="display:flex;align-items:center;gap:12px;padding:12px 0;">
+        <span class="test-icon" style="width:22px;text-align:center;font-size:14px">…</span>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700">Webhook URL 疎通</div><div class="test-msg" style="font-size:11px;color:var(--dim);margin-top:2px">待機中...</div></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="ch-test-close">閉じる</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('ch-test-close').addEventListener('click', closeModal);
+
+  // シーケンシャル に PASS 演出
+  const rows = document.querySelectorAll('.ch-test-row');
+  let i = 0;
+  const results = [
+    { icon: '✓', color: 'var(--primary)', msg: 'basicId: @skeleton  followers: ' + ch.followers },
+    { icon: '✓', color: 'var(--primary)', msg: '本月 送信 数: 128 / 1,000 通 （残り 872）' },
+    { icon: '✓', color: 'var(--primary)', msg: 'https://api.skeleton.jp/line/webhook  200 OK' },
+  ];
+  const tick = () => {
+    if (i >= rows.length) return;
+    const r = rows[i];
+    const ic = r.querySelector('.test-icon');
+    const ms = r.querySelector('.test-msg');
+    ic.textContent = results[i].icon;
+    ic.style.color = results[i].color;
+    ms.textContent = results[i].msg;
+    ms.style.color = 'var(--ink-2)';
+    i++;
+    setTimeout(tick, 600);
+  };
+  setTimeout(tick, 500);
+}
+
+// =========================================================
+// 配信履歴
+// =========================================================
+function renderHistory() {
+  const tbody = document.getElementById('history-tbody');
+  if (!tbody) return;
+  if (!state.history) {
+    state.history = [
+      { date: '2024-05-01 14:30', type: '一括配信', name: 'VIP 先行販売', target: '18名', open: '89%', click: '56%' },
+      { date: '2024-04-28 10:00', type: '一括配信', name: 'GW クーポン', target: '132名', open: '71%', click: '31%' },
+      { date: '2024-04-10 09:00', type: '一括配信', name: '春の新商品案内', target: '248名', open: '68%', click: '24%' },
+      { date: '2024-04-01 00:00', type: 'ステップ配信', name: '友達追加後シナリオ', target: '自動', open: '74%', click: '28%' },
+    ];
+  }
+  const sEl = document.getElementById('hist-search');
+  const q = (sEl && sEl.value.trim().toLowerCase()) || '';
+  const filtered = state.history.filter(h => !q || h.name.toLowerCase().includes(q));
+  tbody.innerHTML = filtered.map(h => `
+    <tr>
+      <td style="font-size:12px;color:var(--dim)">${h.date}</td>
+      <td><span style="background:var(--info-soft);color:var(--info);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">${h.type}</span></td>
+      <td style="font-weight:600">${h.name}</td>
+      <td>${h.target}</td>
+      <td style="color:var(--primary);font-weight:700">${h.open}</td>
+      <td style="color:var(--info);font-weight:700">${h.click}</td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--dim)">履歴 が ありません</td></tr>';
+  const label = document.getElementById('hist-count-label');
+  if (label) label.textContent = `${filtered.length} 件`;
+}
+setTimeout(() => {
+  const hs = document.getElementById('hist-search');
+  if (hs) hs.addEventListener('input', () => renderHistory());
+  const hc = document.getElementById('hist-clear-btn');
+  if (hc) hc.addEventListener('click', () => {
+    if (confirm('配信履歴 を すべて 削除 します。 よろしい ですか？')) {
+      state.history = [];
+      renderHistory();
+    }
+  });
+}, 50);
+
+// =========================================================
+// Modal: ルール追加
+// =========================================================
+let editingRule = null;
+
+document.getElementById('rule-add').addEventListener('click', () => openRuleModal(null));
+
+function buildRuleModalHTML() {
+  const campaignChips = state.campaigns.map(cp =>
+    `<button class="cp-chip" data-v="${cp.id}" data-name="${cp.name}">${cp.name}</button>`
+  ).join('');
+
+  const tagChips = state.tags.map(t => {
+    const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
+    return `<button class="tag-chip" data-tag-id="${t.id}"
+      style="background:${c.bg};color:${c.color};border-color:${c.border};"
+    >${t.name}</button>`;
+  }).join('');
+
+  return `
+    <div class="modal-header">
+      <h3>自動タグルール 追加</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">ルール名（メモ）</label>
+      <input type="text" class="field-input" id="m-r-name" placeholder="例: Instagram広告経由 → SNS流入タグ">
+    </div>
+    <div class="field-group">
+      <label class="field-label">判定項目</label>
+      <select class="field-input" id="m-r-field">
+        <option value="">— 選択してください —</option>
+        <option value="event">イベント（友達追加・購入・etc）</option>
+        <option value="campaignId">キャンペーン（URLを使った追跡）</option>
+        <option value="tag">既存タグの有無</option>
+      </select>
+    </div>
+    <div class="field-group" id="m-r-value-wrap" style="display:none">
+      <label class="field-label">対象 キャンペーン</label>
+      <div class="chip-area" id="m-r-value-inline">${campaignChips}</div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">付けるタグ</label>
+      <div class="tag-chip-area" id="m-r-tag-chips">${tagChips}</div>
+    </div>
+    <div id="m-r-preview" style="display:none">
+      <div class="preview-num" id="m-r-preview-num">0</div>
+      <div class="preview-label">名に このルールが 適用されます（現在のデータ）</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="m-r-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="m-r-save">追加</button>
+    </div>
+  `;
+}
+
+function openRuleModal(rule) {
+  editingRule = rule;
+  const modal = document.getElementById('modal');
+  modal.innerHTML = buildRuleModalHTML();
+  document.getElementById('modal-scrim').classList.add('open');
+
+  // close
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('m-r-cancel').addEventListener('click', closeModal);
+  document.getElementById('modal-scrim').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-scrim')) closeModal();
+  });
+
+  // field change → show/hide campaign chips
+  const fieldSel = document.getElementById('m-r-field');
+  fieldSel.addEventListener('change', () => {
+    const wrap = document.getElementById('m-r-value-wrap');
+    wrap.style.display = fieldSel.value === 'campaignId' ? '' : 'none';
+    updatePreview();
+  });
+
+  // campaign chip toggle
+  document.querySelectorAll('.cp-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      chip.classList.toggle('selected');
+      updatePreview();
+    });
+  });
+
+  // tag chip toggle
+  document.querySelectorAll('#m-r-tag-chips .tag-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      chip.classList.toggle('selected');
+      updatePreview();
+    });
+  });
+
+  // name input → preview
+  document.getElementById('m-r-name').addEventListener('input', updatePreview);
+
+  // save
+  document.getElementById('m-r-save').addEventListener('click', saveRule);
+}
+
+function updatePreview() {
+  const name = document.getElementById('m-r-name').value.trim();
+  const field = document.getElementById('m-r-field').value;
+  const tagChips = document.querySelectorAll('#m-r-tag-chips .tag-chip.selected');
+  const preview = document.getElementById('m-r-preview');
+
+  if (name && field && tagChips.length > 0) {
+    preview.style.display = 'flex';
+    // 疑似的な該当人数 (デモ用)
+    const count = Math.floor(Math.random() * 50 + 10);
+    document.getElementById('m-r-preview-num').textContent = count;
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+function saveRule() {
+  const name = document.getElementById('m-r-name').value.trim() || '新しいルール';
+  const field = document.getElementById('m-r-field').value || 'event';
+  const selectedCps = [...document.querySelectorAll('.cp-chip.selected')].map(c => c.dataset.v);
+  const selectedTags = [...document.querySelectorAll('#m-r-tag-chips .tag-chip.selected')].map(c => c.dataset.tagId);
+
+  const newRule = {
+    id: 'r' + Date.now(),
+    name,
+    field,
+    value: field === 'campaignId' ? selectedCps : 'custom',
+    tagIds: selectedTags.length > 0 ? selectedTags : ['t16'],
+    active: false,
+  };
+  state.autoTagRules.push(newRule);
+
+  closeModal();
+  renderAutoTags();
+  renderNav();
+
+  // 新しいルールが追加されたことを視覚的に示す
+  setTimeout(() => {
+    const list = document.getElementById('rule-list');
+    if (list && list.lastElementChild) {
+      list.lastElementChild.style.background = '#f0fdf4';
+      setTimeout(() => {
+        if (list.lastElementChild) list.lastElementChild.style.background = '';
+      }, 1500);
+    }
+  }, 100);
+}
+
+function closeModal() {
+  const scrim = document.getElementById('modal-scrim');
+  scrim.classList.remove('open');
+  document.getElementById('modal').innerHTML = '';
+}
+
+// =========================================================
+// Modal: テスト実行
+// =========================================================
+document.getElementById('rule-demo').addEventListener('click', () => {
+  openDemoModal();
+});
+
+function openDemoModal() {
+  const modal = document.getElementById('modal');
+  const activeRules = state.autoTagRules.filter(r => r.active);
+  const allTagIds = [...new Set(activeRules.flatMap(r => r.tagIds))];
+
+  // テスト客を追加
+  const testCust = {
+    id: `c_test_${Date.now()}`,
+    name: 'テスト顧客（自動追加）',
+    avatarBg: '#17b26a',
+    tagIds: ['t1', ...allTagIds],
+    lastPurchase: '—',
+    ltv: '—',
+    joinedAt: new Date().toISOString().slice(0,10),
+  };
+  state.customers.unshift(testCust);
+
+  const tagChipsHTML = allTagIds.map(id => tagChipHTML(id)).join('');
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>テスト実行 完了</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="demo-result">
+      <div class="big">✅</div>
+      <h4>テスト顧客が追加されました</h4>
+      <p>有効なルール ${activeRules.length} 件が適用され、以下のタグが自動で付与されました</p>
+      <div class="result-tags">${tagChipsHTML || '<span style="color:var(--dim);font-size:13px">タグなし</span>'}</div>
+      <button class="btn btn-primary" id="demo-goto-cust" style="margin:0 auto">顧客リストを見る →</button>
+    </div>
+    <div class="modal-actions" style="border-top:none;padding-top:0">
+      <button class="btn btn-ghost" id="m-r-cancel">閉じる</button>
+    </div>
+  `;
+
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('m-r-cancel').addEventListener('click', closeModal);
+
+  document.getElementById('demo-goto-cust').addEventListener('click', () => {
+    closeModal();
+    navigate('customers');
+  });
+}
+
+// =========================================================
+// wire "+" buttons for new views
+// =========================================================
+setTimeout(() => {
+  const cpAdd = document.getElementById('cp-add-btn');
+  if (cpAdd) cpAdd.addEventListener('click', () => openCampaignAddModal());
+  const segAdd = document.getElementById('seg-add-btn');
+  if (segAdd) segAdd.addEventListener('click', () => openSegmentCreateModal());
+  const bcAdd = document.getElementById('bc-add-btn');
+  if (bcAdd) bcAdd.addEventListener('click', () => openBroadcastCreateModal());
+  const stAdd = document.getElementById('step-add-btn');
+  if (stAdd) stAdd.addEventListener('click', () => openStepCreateModal());
+  const rmAdd = document.getElementById('rm-add-btn');
+  if (rmAdd) rmAdd.addEventListener('click', () => openRichmenuCreateModal());
+  const chAdd = document.getElementById('ch-add-btn');
+  if (chAdd) chAdd.addEventListener('click', () => openChannelAddModal());
+}, 100);
+
+// =========================================================
+// Init
+// =========================================================
+renderNav();
+renderView('customers');
+</script>
+</body>
+</html>
