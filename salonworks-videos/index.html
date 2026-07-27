@@ -60,6 +60,8 @@
   .sb-nav{flex:1;padding:14px 0}
   .sb-group{margin-bottom:4px}
   .sb-group-title{padding:16px 22px 8px;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.14em;display:flex;justify-content:space-between;align-items:center}
+  .sb-tier-hd{padding:18px 22px 6px;margin-top:8px;font-size:9px;font-weight:800;color:var(--accent);letter-spacing:.16em;text-transform:uppercase;border-top:1px solid var(--rule)}
+  .sb-tier-hd:first-child{border-top:0;margin-top:0}
   .sb-group-count{font-size:9px;color:var(--dim);font-weight:600;background:var(--surface);padding:2px 6px;border-radius:8px;letter-spacing:.02em;text-transform:none;font-variant-numeric:tabular-nums}
 
   .sb-item{
@@ -138,10 +140,10 @@
   <aside class="sidebar" id="sidebar">
     <div class="sb-head">
       <div class="sb-title">サロンワークス</div>
-      <div class="sb-sub">機能別 使い方動画・全12本</div>
+      <div class="sb-sub">使い方動画・全20本（機能別12+シーン別8）</div>
     </div>
     <div class="sb-progress">
-      <div class="sb-progress-label"><span>視聴 進捗</span><span><span class="sb-progress-count" id="progress-count">0</span> / 12 本</span></div>
+      <div class="sb-progress-label"><span>視聴 進捗</span><span><span class="sb-progress-count" id="progress-count">0</span> / 20 本</span></div>
       <div class="sb-progress-bar"><div class="sb-progress-fill" id="progress-fill"></div></div>
     </div>
     <nav class="sb-nav" id="sb-nav"></nav>
@@ -212,6 +214,32 @@
     { id:'settings-overview', group:'設定', title:'設定画面の見方',
       desc:'店舗情報・営業時間・メニューマスタ・スタッフ登録・LINE連携・通知設定など、サロン運営に必要な各種設定の全体像。',
       file:'settings-overview-explainer.mp4' },
+
+    // ============ Tier 2: 使いこなし（シーン別） ============
+    { id:'scene-phone-free', group:'こんな時に', title:'電話ゼロの予約管理', tier:2,
+      desc:'施術中に電話が鳴るたび手が止まる問題を、ダッシュボードと予約管理タイムラインだけで解消。当日の飛び込みは新規予約追加ボタン。',
+      file:'scene-phone-free-explainer.mp4' },
+    { id:'scene-dormant-recovery', group:'こんな時に', title:'休眠客を90日で呼び戻す', tier:2,
+      desc:'顧客一覧→最終来店90日フィルタ→セグメント保存→LINE一斉配信の3手。休眠掘り起こしの作業時間5分。',
+      file:'scene-dormant-recovery-explainer.mp4' },
+    { id:'scene-ltv-card', group:'こんな時に', title:'カルテで客単価を上げる', tier:2,
+      desc:'顧客カルテのLTV表示・来店履歴・施術メモ活用で、次回来店時に自然に提案。「次はどうしますか」の声かけ精度が変わる。',
+      file:'scene-ltv-card-explainer.mp4' },
+    { id:'scene-auto-birthday', group:'こんな時に', title:'誕生月に自動でLINE配信', tier:2,
+      desc:'自動タグルール（誕生月=今月）→セグメント→ステップ配信の設定を1度だけ。以降は毎月自動で誕生月客にLINEが届く。',
+      file:'scene-auto-birthday-explainer.mp4' },
+    { id:'scene-new-client-onboard', group:'こんな時に', title:'新規客をLINE友だち→次回予約に', tier:2,
+      desc:'キャンペーンでLINE友だち追加ページ用QRコード発行→施術スペースに貼付→追加後リッチメニュー予約ボタンで次回予約に誘導。',
+      file:'scene-new-client-onboard-explainer.mp4' },
+    { id:'scene-monthly-revenue-check', group:'こんな時に', title:'月次売上を5分で読む', tier:2,
+      desc:'売上分析タブで今月合計・週次グラフ・メニュー別内訳・客単価・リピート率をリアルタイム確認。月初5分の習慣で経営判断ができる。',
+      file:'scene-monthly-revenue-check-explainer.mp4' },
+    { id:'scene-ticket-management', group:'こんな時に', title:'回数券を客と共有管理', tier:2,
+      desc:'カルテ回数券タブで残数・有効期限を管理。1枚使用ボタン→使用履歴に記録→客側LIFFマイチケットからも同じ数字を確認。',
+      file:'scene-ticket-management-explainer.mp4' },
+    { id:'scene-staff-handover', group:'こんな時に', title:'スタッフ変わっても引き継げる', tier:2,
+      desc:'カルテの来店履歴（担当スタッフ名記録）・施術メモ・注意タグ（敏感肌/アレルギー等）で、担当変更時も施術品質が落ちない。',
+      file:'scene-staff-handover-explainer.mp4' },
   ];
 
   const LS_VISITED = 'salonworks-videos-visited-v1';
@@ -229,10 +257,20 @@
     const groups = {};
     VIDEOS.forEach(v => { (groups[v.group] = groups[v.group] || []).push(v); });
 
-    nav.innerHTML = Object.entries(groups).map(([groupName, items], gi) => `
+    let firstTier2 = true;
+    nav.innerHTML = Object.entries(groups).map(([groupName, items], gi) => {
+      const isTier2 = items[0] && items[0].tier === 2;
+      let prefix = '';
+      if (isTier2 && firstTier2) {
+        firstTier2 = false;
+        prefix = `<div class="sb-tier-hd">Tier 2 · 使いこなし（シーン別）</div>`;
+      } else if (gi === 0) {
+        prefix = `<div class="sb-tier-hd">Tier 1 · 機能別</div>`;
+      }
+      return `${prefix}
       <div class="sb-group">
         <div class="sb-group-title">
-          <span>${gi+1}. ${groupName}</span>
+          <span>${groupName}</span>
           <span class="sb-group-count">${items.length} 本</span>
         </div>
         ${items.map(v => `
@@ -244,8 +282,8 @@
             <div class="sb-item-len" data-len-for="${v.id}">${state.durs[v.id] ? formatDur(state.durs[v.id]) : '—'}</div>
           </div>
         `).join('')}
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
 
     nav.querySelectorAll('.sb-item').forEach(el => {
       el.addEventListener('click', () => {
