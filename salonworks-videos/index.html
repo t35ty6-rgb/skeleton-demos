@@ -59,9 +59,13 @@
 
   .sb-nav{flex:1;padding:14px 0}
   .sb-group{margin-bottom:4px}
-  .sb-group-title{padding:16px 22px 8px;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.14em;display:flex;justify-content:space-between;align-items:center}
-  .sb-tier-hd{padding:18px 22px 6px;margin-top:8px;font-size:9px;font-weight:800;color:var(--accent);letter-spacing:.16em;text-transform:uppercase;border-top:1px solid var(--rule)}
-  .sb-tier-hd:first-child{border-top:0;margin-top:0}
+  .sb-group-title{padding:14px 22px 6px;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.14em;display:flex;justify-content:space-between;align-items:center}
+  .sb-tabs{display:flex;gap:0;padding:10px 12px 0;border-bottom:1px solid var(--rule)}
+  .sb-tab{flex:1;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--dim);font-family:inherit;font-size:12px;font-weight:700;padding:12px 8px 11px;cursor:pointer;transition:color .15s,border-color .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+  .sb-tab:hover{color:var(--ink)}
+  .sb-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .sb-tab-num{font-size:10px;font-weight:600;color:var(--muted);background:var(--surface);padding:2px 7px;border-radius:9px;font-variant-numeric:tabular-nums}
+  .sb-tab.active .sb-tab-num{color:var(--accent);background:transparent;border:1px solid currentColor}
   .sb-group-count{font-size:9px;color:var(--dim);font-weight:600;background:var(--surface);padding:2px 6px;border-radius:8px;letter-spacing:.02em;text-transform:none;font-variant-numeric:tabular-nums}
 
   .sb-item{
@@ -145,6 +149,10 @@
     <div class="sb-progress">
       <div class="sb-progress-label"><span>視聴 進捗</span><span><span class="sb-progress-count" id="progress-count">0</span> / 20 本</span></div>
       <div class="sb-progress-bar"><div class="sb-progress-fill" id="progress-fill"></div></div>
+    </div>
+    <div class="sb-tabs" role="tablist">
+      <button class="sb-tab active" data-tier="1" role="tab" aria-selected="true">機能別 <span class="sb-tab-num">12</span></button>
+      <button class="sb-tab" data-tier="2" role="tab" aria-selected="false">使いこなし <span class="sb-tab-num">8</span></button>
     </div>
     <nav class="sb-nav" id="sb-nav"></nav>
     <div class="sb-foot">© 2026 スケルトン株式会社</div>
@@ -244,30 +252,24 @@
 
   const LS_VISITED = 'salonworks-videos-visited-v1';
   const LS_CURRENT = 'salonworks-videos-current-v1';
+  const LS_TIER = 'salonworks-videos-tier-v1';
   const POSTER_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='9'%3E%3Crect fill='%230a0c11' width='16' height='9'/%3E%3C/svg%3E";
 
   const state = {
     visited: new Set(JSON.parse(localStorage.getItem(LS_VISITED) || '[]')),
     currentId: null,
     durs: {},
+    activeTier: parseInt(localStorage.getItem(LS_TIER)) || 1,
   };
 
   function renderSidebar(){
     const nav = document.getElementById('sb-nav');
+    const activeTier = state.activeTier || 1;
+    const filtered = VIDEOS.filter(v => (v.tier || 1) === activeTier);
     const groups = {};
-    VIDEOS.forEach(v => { (groups[v.group] = groups[v.group] || []).push(v); });
+    filtered.forEach(v => { (groups[v.group] = groups[v.group] || []).push(v); });
 
-    let firstTier2 = true;
-    nav.innerHTML = Object.entries(groups).map(([groupName, items], gi) => {
-      const isTier2 = items[0] && items[0].tier === 2;
-      let prefix = '';
-      if (isTier2 && firstTier2) {
-        firstTier2 = false;
-        prefix = `<div class="sb-tier-hd">Tier 2 · 使いこなし（シーン別）</div>`;
-      } else if (gi === 0) {
-        prefix = `<div class="sb-tier-hd">Tier 1 · 機能別</div>`;
-      }
-      return `${prefix}
+    nav.innerHTML = Object.entries(groups).map(([groupName, items]) => `
       <div class="sb-group">
         <div class="sb-group-title">
           <span>${groupName}</span>
@@ -282,8 +284,14 @@
             <div class="sb-item-len" data-len-for="${v.id}">${state.durs[v.id] ? formatDur(state.durs[v.id]) : '—'}</div>
           </div>
         `).join('')}
-      </div>`;
-    }).join('');
+      </div>`).join('');
+
+    document.querySelectorAll('.sb-tab').forEach(t => {
+      const tier = parseInt(t.dataset.tier);
+      t.classList.toggle('active', tier === activeTier);
+      t.setAttribute('aria-selected', tier === activeTier);
+      t.onclick = () => { state.activeTier = tier; localStorage.setItem(LS_TIER, tier); renderSidebar(); };
+    });
 
     nav.querySelectorAll('.sb-item').forEach(el => {
       el.addEventListener('click', () => {
@@ -314,8 +322,10 @@
     if (!v) return;
     state.currentId = id;
     state.visited.add(id);
+    state.activeTier = v.tier || 1;
     localStorage.setItem(LS_VISITED, JSON.stringify([...state.visited]));
     localStorage.setItem(LS_CURRENT, id);
+    localStorage.setItem(LS_TIER, state.activeTier);
     location.hash = id;
     renderMain(v);
     renderSidebar();
