@@ -7315,7 +7315,7 @@ STEP C: 結果報告
               </div>
             </div>
             <input id="fp-ms-external-url" type="url" placeholder="https://zoom.us/j/..." style="width:100%;padding:11px 13px;border:2px solid #E2E8F0;border-radius:8px;font-size:13.5px;font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;box-sizing:border-box;background:#F8FAFC;margin-bottom:10px;">
-            <button id="fp-ms-external-go" style="width:100%;background:#059669;color:#fff;border:none;padding:11px 16px;border-radius:8px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;">URL を 開いて 録音 スタート</button>
+            <button id="fp-ms-external-go" style="width:100%;background:#fff;color:#059669;border:2px solid #059669;padding:10px 16px;border-radius:8px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;">URL を 開いて 録音 スタート</button>
           </div>
 
           <!-- 経路 3: 予約 (neutral) -->
