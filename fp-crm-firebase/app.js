@@ -3071,9 +3071,9 @@
           <!-- 旧 「今すぐ Zoom」 + 「予約 Zoom」 2 button → 1 button 「面談 を 開始」 + modal で 4 分岐 -->
           <!-- 4 分岐: 今すぐ Instant Zoom / 予約 / 相手が送ってきた Zoom URL 貼付 / 電話のみ (録音なし) -->
           <div class="cd-zoom-super" style="margin-top:14px;">
-              <button id="cd-meeting-start-btn" data-client-id="${escapeHtml(c.id)}" style="width:100%;background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;padding:18px 22px;border-radius:14px;font-size:16px;font-weight:900;cursor:pointer;font-family:'Noto Sans JP',sans-serif;letter-spacing:0.005em;box-shadow:0 10px 28px rgba(5,150,105,0.35);display:flex;align-items:center;justify-content:center;gap:12px;min-height:64px;transition:transform .12s,box-shadow .12s;">
+              <button id="cd-meeting-start-btn" data-client-id="${escapeHtml(c.id)}" style="width:100%;background:#059669;color:#fff;border:none;padding:18px 22px;border-radius:10px;font-size:16px;font-weight:900;cursor:pointer;font-family:'Noto Sans JP',sans-serif;letter-spacing:0.005em;box-shadow:0 6px 20px rgba(5,150,105,0.28);display:flex;align-items:center;justify-content:center;gap:12px;min-height:64px;transition:background .15s,box-shadow .15s;">
                 <span style="font-size:22px;line-height:1;">🎙</span>
-                <span style="text-align:left;line-height:1.35;">面談 を 開始<br><span style="font-size:11.5px;font-weight:700;opacity:0.92;letter-spacing:0.01em;">今すぐ / 予約 / 相手主催 URL / 電話 · 全部 ここから</span></span>
+                <span style="text-align:left;line-height:1.35;">面談 を 開始<br><span style="font-size:12px;font-weight:600;letter-spacing:0.01em;">今すぐ / 予約 / 相手主催 URL / 電話 · 全部 ここから</span></span>
               </button>
               <!-- 旧 button 互換 (別 code path から click 発火 される ため hidden で 残置) -->
               <button id="cd-instant-zoom-btn" data-client-id="${escapeHtml(c.id)}" style="display:none;"></button>
@@ -7280,65 +7280,65 @@ STEP C: 結果報告
   function openMeetingStartModal(client) {
     const hasLine = !!(client.lineFriendId);
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);z-index:10200;display:flex;align-items:center;justify-content:center;padding:20px;';
+    // glassmorphism 撤廃 (design-reviewer 指摘 Round 1): backdrop-filter 削除 → solid dark scrim only
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:10200;display:flex;align-items:center;justify-content:center;padding:20px;';
     overlay.innerHTML = `
-      <div style="background:#fff;width:min(540px,100%);max-height:92vh;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,0.35);font-family:'Noto Sans JP',sans-serif;overflow:hidden;display:flex;flex-direction:column;">
-        <!-- Header -->
-        <div style="background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
-          <div style="display:flex;align-items:center;gap:14px;">
-            <div style="width:42px;height:42px;background:rgba(255,255,255,0.18);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;">🎙</div>
+      <div style="background:#fff;width:min(540px,100%);max-height:92vh;border-radius:10px;box-shadow:0 24px 60px rgba(0,0,0,0.28);font-family:'Noto Sans JP',sans-serif;overflow:hidden;display:flex;flex-direction:column;">
+        <!-- Header (solid color、 グラデ 撤廃) -->
+        <div style="background:#059669;color:#fff;padding:16px 22px;display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:38px;height:38px;background:rgba(255,255,255,0.18);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;">🎙</div>
             <div>
-              <div style="font-size:10.5px;font-weight:800;letter-spacing:0.16em;opacity:0.85;">START MEETING</div>
-              <div style="font-size:17.5px;font-weight:900;margin-top:2px;">${escapeHtml(client.name || 'お客様')} 様 と 面談</div>
+              <div style="font-size:16.5px;font-weight:900;line-height:1.3;">${escapeHtml(client.name || 'お客様')} 様 と 面談</div>
+              <div style="font-size:11.5px;font-weight:600;margin-top:3px;opacity:0.92;">開始 方法 を 4つ から 選ぶ</div>
             </div>
           </div>
-          <button id="fp-ms-close" style="background:rgba(255,255,255,0.18);color:#fff;border:none;font-size:18px;cursor:pointer;width:36px;height:36px;border-radius:8px;font-family:inherit;">✕</button>
+          <button id="fp-ms-close" style="background:rgba(255,255,255,0.18);color:#fff;border:none;font-size:18px;cursor:pointer;width:34px;height:34px;border-radius:8px;font-family:inherit;">✕</button>
         </div>
-        <div style="padding:22px 26px;overflow-y:auto;background:#F8FAFC;">
-          <!-- 経路 1: 今すぐ (推奨) -->
-          <button id="fp-ms-instant" style="width:100%;background:#fff;color:#0F172A;border:2px solid #10B981;padding:16px 18px;border-radius:12px;font-family:inherit;font-size:14.5px;font-weight:800;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;box-shadow:0 4px 14px rgba(16,185,129,0.18);margin-bottom:12px;transition:transform .12s,box-shadow .12s;">
-            <div style="width:44px;height:44px;background:linear-gradient(135deg,#10B981,#059669);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-size:22px;">⚡</div>
+        <div style="padding:20px 22px;overflow-y:auto;background:#F8FAFC;">
+          <!-- 経路 1: 今すぐ (推奨) — filled green primary で 最強視覚 -->
+          <button id="fp-ms-instant" style="width:100%;background:#059669;color:#fff;border:none;padding:16px 18px;border-radius:10px;font-family:inherit;font-size:14.5px;font-weight:800;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;box-shadow:0 5px 16px rgba(5,150,105,0.28);margin-bottom:12px;transition:background .15s,box-shadow .15s;">
+            <div style="width:42px;height:42px;background:rgba(255,255,255,0.18);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-size:22px;">⚡</div>
             <div style="flex:1;line-height:1.5;">
-              <div style="font-size:15px;font-weight:900;color:#0F172A;">今すぐ Zoom を 開始 (推奨)</div>
-              <div style="font-size:11.5px;font-weight:600;color:#475569;margin-top:3px;">Zoom Instant Meeting 作成 → ${hasLine ? 'LINE 自動 送付' : 'URL を コピー / SMS'} → 拡張機能 が 自動 で 録音</div>
+              <div style="font-size:15px;font-weight:900;color:#fff;display:flex;align-items:center;gap:8px;">今すぐ Zoom を 開始 <span style="background:rgba(255,255,255,0.22);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px;letter-spacing:0.04em;">推奨</span></div>
+              <div style="font-size:12px;font-weight:600;color:#DCFCE7;margin-top:3px;">Zoom Instant Meeting 作成 → ${hasLine ? 'LINE 自動 送付' : 'URL を コピー / SMS'} → 拡張機能 が 自動 で 録音</div>
             </div>
           </button>
 
-          <!-- 経路 2: 相手主催 Zoom URL 貼付 (2026-07-28 owner 要望) -->
-          <div style="background:#fff;border:2px solid #E2E8F0;border-radius:12px;padding:16px 18px;margin-bottom:12px;">
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
-              <div style="width:44px;height:44px;background:#EEF2FF;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#4F46E5;font-size:22px;">🔗</div>
+          <!-- 経路 2: 相手主催 Zoom URL 貼付 (green border で 推奨 に 従属、 CTA は green) -->
+          <div style="background:#fff;border:2px solid #059669;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+              <div style="width:38px;height:38px;background:#ECFDF5;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#059669;font-size:19px;">🔗</div>
               <div style="flex:1;line-height:1.5;">
-                <div style="font-size:15px;font-weight:900;color:#0F172A;">相手 が 送ってきた Zoom URL を 使う</div>
-                <div style="font-size:11.5px;font-weight:600;color:#475569;margin-top:3px;">お客様 or 別会社 が host の Zoom も、 両者 の 音声 を 録音 + AI 議事録 化</div>
+                <div style="font-size:14.5px;font-weight:900;color:#0F172A;">相手 が 送ってきた Zoom URL を 使う</div>
+                <div style="font-size:12px;font-weight:600;color:#475569;margin-top:2px;">お客様 or 別会社 が host の Zoom も、 両者 の 音声 を 録音 + AI 議事録 化</div>
               </div>
             </div>
-            <input id="fp-ms-external-url" type="url" placeholder="https://zoom.us/j/..." style="width:100%;padding:12px 14px;border:2px solid #E2E8F0;border-radius:9px;font-size:13.5px;font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;box-sizing:border-box;background:#F8FAFC;margin-bottom:10px;">
-            <button id="fp-ms-external-go" style="width:100%;background:#4F46E5;color:#fff;border:none;padding:12px 16px;border-radius:9px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;">🎬 URL を 開いて 録音 スタート</button>
+            <input id="fp-ms-external-url" type="url" placeholder="https://zoom.us/j/..." style="width:100%;padding:11px 13px;border:2px solid #E2E8F0;border-radius:8px;font-size:13.5px;font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;box-sizing:border-box;background:#F8FAFC;margin-bottom:10px;">
+            <button id="fp-ms-external-go" style="width:100%;background:#059669;color:#fff;border:none;padding:11px 16px;border-radius:8px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;">URL を 開いて 録音 スタート</button>
           </div>
 
-          <!-- 経路 3: 予約 -->
-          <button id="fp-ms-schedule" style="width:100%;background:#fff;color:#0F172A;border:2px solid #E2E8F0;padding:14px 18px;border-radius:12px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;margin-bottom:12px;transition:border-color .12s;">
-            <div style="width:38px;height:38px;background:#DBEAFE;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#2563EB;font-size:19px;">📅</div>
+          <!-- 経路 3: 予約 (neutral) -->
+          <button id="fp-ms-schedule" style="width:100%;background:#fff;color:#0F172A;border:1px solid #CBD5E1;padding:13px 16px;border-radius:10px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px;margin-bottom:10px;transition:border-color .15s,background .15s;">
+            <div style="width:34px;height:34px;background:#F1F5F9;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#64748B;font-size:17px;">📅</div>
             <div style="flex:1;line-height:1.5;">
-              <div style="font-size:14px;font-weight:800;color:#0F172A;">予約 する (数日後 / 指定日時)</div>
+              <div style="font-size:13.5px;font-weight:800;color:#0F172A;">予約 する (数日後 / 指定日時)</div>
               <div style="font-size:11.5px;font-weight:600;color:#64748B;margin-top:2px;">Zoom 予約 + カレンダー 登録 + LINE 通知</div>
             </div>
           </button>
 
-          <!-- 経路 4: 電話 のみ (録音なし) -->
-          <button id="fp-ms-phone" style="width:100%;background:#fff;color:#475569;border:2px solid #E2E8F0;padding:12px 18px;border-radius:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;transition:border-color .12s;">
-            <div style="width:36px;height:36px;background:#F1F5F9;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#64748B;font-size:17px;">☎</div>
-            <div style="flex:1;line-height:1.5;">
-              <div style="font-size:13.5px;font-weight:800;color:#0F172A;">電話 で 対応 (録音 なし)</div>
-              <div style="font-size:11px;font-weight:600;color:#64748B;margin-top:1px;">面談履歴 に 手動 メモ 追加 だけ</div>
+          <!-- 経路 4: 電話 のみ (ghost、 tertiary) -->
+          <button id="fp-ms-phone" style="width:100%;background:transparent;color:#64748B;border:none;padding:10px 16px;border-radius:10px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px;transition:background .15s;">
+            <div style="width:30px;height:30px;background:transparent;border:1px solid #E2E8F0;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#94A3B8;font-size:15px;">☎</div>
+            <div style="flex:1;line-height:1.4;">
+              <div style="font-size:12.5px;font-weight:700;color:#475569;">電話 で 対応 (録音 なし)</div>
+              <div style="font-size:11px;font-weight:600;color:#94A3B8;margin-top:1px;">面談履歴 に 手動 メモ 追加 だけ</div>
             </div>
           </button>
 
           <!-- ヒント -->
-          <div style="margin-top:16px;padding:11px 14px;background:#ECFDF5;border:1px solid rgba(5,150,105,0.22);border-radius:9px;font-size:11.5px;line-height:1.7;color:#065F46;">
-            <b style="font-weight:800;">💡 録音 の 仕組み</b><br>
-            拡張機能 (v1.5.4) が Zoom タブ 音声 + Mac マイク を 合成 録音 → Whisper で 文字起こし → Claude で 議事録 化 → この 顧客 の 面談履歴 に 保存。 AirPods / Bluetooth も 対応 済。
+          <div style="margin-top:14px;padding:10px 13px;background:#ECFDF5;border:1px solid rgba(5,150,105,0.22);border-radius:8px;font-size:11.5px;line-height:1.7;color:#065F46;">
+            <b style="font-weight:800;">録音 の 仕組み</b> — 拡張機能 (v1.5.4) が Zoom タブ 音声 + Mac マイク を 合成 録音 → Whisper で 文字起こし → Claude で 議事録 化。 AirPods / Bluetooth 対応 済。
           </div>
 
           <div id="fp-ms-status" style="margin-top:12px;font-size:12.5px;font-weight:700;text-align:center;min-height:18px;"></div>
