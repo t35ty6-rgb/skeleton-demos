@@ -3067,25 +3067,17 @@
             </div>
           </div>
 
-          <!-- ★ オーナーfb 2026-06-20: 「今すぐ Zoom 開始」 + 「日時指定 Zoom 予約」 — 顧客名直下、 Zoom 公式アイコン -->
-          <!-- ★ 2026-07-18: LINE 未紐付け 客 でも 表示 (LINE 有→自動送付 / 無→URL コピー or SMS/Email で 手動送付、 拡張自動録音 は 両方 OK) -->
-          <div class="cd-zoom-pair" style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <button id="cd-instant-zoom-btn" data-client-id="${escapeHtml(c.id)}" style="background:#fff;color:#0F172A;border:2px solid #2D8CFF;padding:12px 14px;border-radius:14px;font-size:14.5px;font-weight:900;cursor:pointer;font-family:'Noto Sans JP',sans-serif;letter-spacing:0.005em;box-shadow:0 6px 18px rgba(45,140,255,0.22);display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:66px;transition:transform .12s,box-shadow .12s;">
-                <svg width="34" height="34" viewBox="0 0 100 100" style="flex-shrink:0;border-radius:10px;box-shadow:0 2px 6px rgba(45,140,255,0.30);">
-                  <defs><linearGradient id="zg-inst-${escapeHtml(c.id)}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#4A9BFF"/><stop offset="100%" stop-color="#2D8CFF"/></linearGradient></defs>
-                  <rect width="100" height="100" rx="22" fill="url(#zg-inst-${escapeHtml(c.id)})"/>
-                  <text x="50" y="62" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="700" font-size="28" fill="#fff" letter-spacing="-1">zoom</text>
-                </svg>
-                <span style="text-align:left;line-height:1.3;">⚡ 今すぐ 開始<br><span style="font-size:10.5px;font-weight:700;color:#475569;">${c.lineFriendId ? 'LINE 自動送付' : 'URL コピー可'}</span></span>
+          <!-- ★ 2026-07-28: 顧客カルテ super button (owner「ボタン多すぎ、 1個 で全部なんとかなるボタン」 要望対応) -->
+          <!-- 旧 「今すぐ Zoom」 + 「予約 Zoom」 2 button → 1 button 「面談 を 開始」 + modal で 4 分岐 -->
+          <!-- 4 分岐: 今すぐ Instant Zoom / 予約 / 相手が送ってきた Zoom URL 貼付 / 電話のみ (録音なし) -->
+          <div class="cd-zoom-super" style="margin-top:14px;">
+              <button id="cd-meeting-start-btn" data-client-id="${escapeHtml(c.id)}" style="width:100%;background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;padding:18px 22px;border-radius:14px;font-size:16px;font-weight:900;cursor:pointer;font-family:'Noto Sans JP',sans-serif;letter-spacing:0.005em;box-shadow:0 10px 28px rgba(5,150,105,0.35);display:flex;align-items:center;justify-content:center;gap:12px;min-height:64px;transition:transform .12s,box-shadow .12s;">
+                <span style="font-size:22px;line-height:1;">🎙</span>
+                <span style="text-align:left;line-height:1.35;">面談 を 開始<br><span style="font-size:11.5px;font-weight:700;opacity:0.92;letter-spacing:0.01em;">今すぐ / 予約 / 相手主催 URL / 電話 · 全部 ここから</span></span>
               </button>
-              <button id="cd-schedule-zoom-btn" data-client-id="${escapeHtml(c.id)}" style="background:#fff;color:#0F172A;border:2px solid #2D8CFF;padding:12px 14px;border-radius:14px;font-size:14.5px;font-weight:900;cursor:pointer;font-family:'Noto Sans JP',sans-serif;letter-spacing:0.005em;box-shadow:0 6px 18px rgba(45,140,255,0.22);display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:66px;transition:transform .12s,box-shadow .12s;">
-                <svg width="34" height="34" viewBox="0 0 100 100" style="flex-shrink:0;border-radius:10px;box-shadow:0 2px 6px rgba(45,140,255,0.30);">
-                  <defs><linearGradient id="zg-sch-${escapeHtml(c.id)}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#4A9BFF"/><stop offset="100%" stop-color="#2D8CFF"/></linearGradient></defs>
-                  <rect width="100" height="100" rx="22" fill="url(#zg-sch-${escapeHtml(c.id)})"/>
-                  <text x="50" y="62" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="700" font-size="28" fill="#fff" letter-spacing="-1">zoom</text>
-                </svg>
-                <span style="text-align:left;line-height:1.3;">📅 日時指定 予約<br><span style="font-size:10.5px;font-weight:700;color:#475569;">数日後 / 指定時刻</span></span>
-              </button>
+              <!-- 旧 button 互換 (別 code path から click 発火 される ため hidden で 残置) -->
+              <button id="cd-instant-zoom-btn" data-client-id="${escapeHtml(c.id)}" style="display:none;"></button>
+              <button id="cd-schedule-zoom-btn" data-client-id="${escapeHtml(c.id)}" style="display:none;"></button>
             </div>
             <div id="cd-instant-zoom-status" style="font-size:12px;font-weight:700;margin-top:8px;text-align:center;"></div>
 
@@ -4491,6 +4483,11 @@ ${ctxText}${surveyTxt}`;
     const scheduleBtn = document.getElementById('cd-schedule-zoom-btn');
     if (scheduleBtn) {
       scheduleBtn.addEventListener('click', () => openScheduleZoomModal(c));
+    }
+    // ★ 2026-07-28: super button 「🎙 面談 を 開始」 — 4 分岐 (今すぐ / 予約 / 相手 URL / 電話) を 1 modal に 集約
+    const meetingStartBtn = document.getElementById('cd-meeting-start-btn');
+    if (meetingStartBtn) {
+      meetingStartBtn.addEventListener('click', () => openMeetingStartModal(c));
     }
     // ★ クイックアクション (AI推奨ブロック内 内包)
     document.querySelectorAll('[data-quick-instant]').forEach(b => b.addEventListener('click', () => document.getElementById('cd-instant-zoom-btn')?.click()));
@@ -7276,6 +7273,136 @@ STEP C: 結果報告
   // ★ v 20260610J: Claude Code フロー化 — paid API (generateLineReply) は呼ばない。
   //   triggerDeliverable と同じパターン: JSON+プロンプト構築 → clipboard 自動コピー → claude.ai/new 別タブ open
   // ★ オーナーfb 2026-06-20: 「日時指定 Zoom 予約」 — 1スロット 指定 → scheduleZoomDirect → Zoom予約 + LINE 送付
+  // ★ 2026-07-28: 顧客カルテ 「🎙 面談 を 開始」 super button の modal
+  //   owner 要望: 「ボタン多すぎ、 1個 で全部なんとかなるボタンがあるといい」
+  //   + 「他人主催 Zoom (相手 が 送ってきた URL) でも 両側 声 認識 + AI 議事録 作りたい」
+  //   4 経路 (今すぐ / 相手主催 URL 貼付 / 予約 / 電話のみ) を 1 modal に 集約
+  function openMeetingStartModal(client) {
+    const hasLine = !!(client.lineFriendId);
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);z-index:10200;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff;width:min(540px,100%);max-height:92vh;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,0.35);font-family:'Noto Sans JP',sans-serif;overflow:hidden;display:flex;flex-direction:column;">
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="width:42px;height:42px;background:rgba(255,255,255,0.18);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;">🎙</div>
+            <div>
+              <div style="font-size:10.5px;font-weight:800;letter-spacing:0.16em;opacity:0.85;">START MEETING</div>
+              <div style="font-size:17.5px;font-weight:900;margin-top:2px;">${escapeHtml(client.name || 'お客様')} 様 と 面談</div>
+            </div>
+          </div>
+          <button id="fp-ms-close" style="background:rgba(255,255,255,0.18);color:#fff;border:none;font-size:18px;cursor:pointer;width:36px;height:36px;border-radius:8px;font-family:inherit;">✕</button>
+        </div>
+        <div style="padding:22px 26px;overflow-y:auto;background:#F8FAFC;">
+          <!-- 経路 1: 今すぐ (推奨) -->
+          <button id="fp-ms-instant" style="width:100%;background:#fff;color:#0F172A;border:2px solid #10B981;padding:16px 18px;border-radius:12px;font-family:inherit;font-size:14.5px;font-weight:800;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;box-shadow:0 4px 14px rgba(16,185,129,0.18);margin-bottom:12px;transition:transform .12s,box-shadow .12s;">
+            <div style="width:44px;height:44px;background:linear-gradient(135deg,#10B981,#059669);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-size:22px;">⚡</div>
+            <div style="flex:1;line-height:1.5;">
+              <div style="font-size:15px;font-weight:900;color:#0F172A;">今すぐ Zoom を 開始 (推奨)</div>
+              <div style="font-size:11.5px;font-weight:600;color:#475569;margin-top:3px;">Zoom Instant Meeting 作成 → ${hasLine ? 'LINE 自動 送付' : 'URL を コピー / SMS'} → 拡張機能 が 自動 で 録音</div>
+            </div>
+          </button>
+
+          <!-- 経路 2: 相手主催 Zoom URL 貼付 (2026-07-28 owner 要望) -->
+          <div style="background:#fff;border:2px solid #E2E8F0;border-radius:12px;padding:16px 18px;margin-bottom:12px;">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+              <div style="width:44px;height:44px;background:#EEF2FF;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#4F46E5;font-size:22px;">🔗</div>
+              <div style="flex:1;line-height:1.5;">
+                <div style="font-size:15px;font-weight:900;color:#0F172A;">相手 が 送ってきた Zoom URL を 使う</div>
+                <div style="font-size:11.5px;font-weight:600;color:#475569;margin-top:3px;">お客様 or 別会社 が host の Zoom も、 両者 の 音声 を 録音 + AI 議事録 化</div>
+              </div>
+            </div>
+            <input id="fp-ms-external-url" type="url" placeholder="https://zoom.us/j/..." style="width:100%;padding:12px 14px;border:2px solid #E2E8F0;border-radius:9px;font-size:13.5px;font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;box-sizing:border-box;background:#F8FAFC;margin-bottom:10px;">
+            <button id="fp-ms-external-go" style="width:100%;background:#4F46E5;color:#fff;border:none;padding:12px 16px;border-radius:9px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;">🎬 URL を 開いて 録音 スタート</button>
+          </div>
+
+          <!-- 経路 3: 予約 -->
+          <button id="fp-ms-schedule" style="width:100%;background:#fff;color:#0F172A;border:2px solid #E2E8F0;padding:14px 18px;border-radius:12px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;margin-bottom:12px;transition:border-color .12s;">
+            <div style="width:38px;height:38px;background:#DBEAFE;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#2563EB;font-size:19px;">📅</div>
+            <div style="flex:1;line-height:1.5;">
+              <div style="font-size:14px;font-weight:800;color:#0F172A;">予約 する (数日後 / 指定日時)</div>
+              <div style="font-size:11.5px;font-weight:600;color:#64748B;margin-top:2px;">Zoom 予約 + カレンダー 登録 + LINE 通知</div>
+            </div>
+          </button>
+
+          <!-- 経路 4: 電話 のみ (録音なし) -->
+          <button id="fp-ms-phone" style="width:100%;background:#fff;color:#475569;border:2px solid #E2E8F0;padding:12px 18px;border-radius:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;transition:border-color .12s;">
+            <div style="width:36px;height:36px;background:#F1F5F9;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#64748B;font-size:17px;">☎</div>
+            <div style="flex:1;line-height:1.5;">
+              <div style="font-size:13.5px;font-weight:800;color:#0F172A;">電話 で 対応 (録音 なし)</div>
+              <div style="font-size:11px;font-weight:600;color:#64748B;margin-top:1px;">面談履歴 に 手動 メモ 追加 だけ</div>
+            </div>
+          </button>
+
+          <!-- ヒント -->
+          <div style="margin-top:16px;padding:11px 14px;background:#ECFDF5;border:1px solid rgba(5,150,105,0.22);border-radius:9px;font-size:11.5px;line-height:1.7;color:#065F46;">
+            <b style="font-weight:800;">💡 録音 の 仕組み</b><br>
+            拡張機能 (v1.5.4) が Zoom タブ 音声 + Mac マイク を 合成 録音 → Whisper で 文字起こし → Claude で 議事録 化 → この 顧客 の 面談履歴 に 保存。 AirPods / Bluetooth も 対応 済。
+          </div>
+
+          <div id="fp-ms-status" style="margin-top:12px;font-size:12.5px;font-weight:700;text-align:center;min-height:18px;"></div>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    overlay.querySelector('#fp-ms-close').addEventListener('click', () => overlay.remove());
+
+    // 経路 1: 今すぐ → 既存 instantBtn.click() delegate (単一 SSOT で dedup)
+    overlay.querySelector('#fp-ms-instant').addEventListener('click', () => {
+      overlay.remove();
+      document.getElementById('cd-instant-zoom-btn')?.click();
+    });
+
+    // 経路 3: 予約
+    overlay.querySelector('#fp-ms-schedule').addEventListener('click', () => {
+      overlay.remove();
+      openScheduleZoomModal(client);
+    });
+
+    // 経路 4: 電話 のみ → 面談履歴 タブ に 遷移 して 手動 メモ 追加 促す (簡易 実装)
+    overlay.querySelector('#fp-ms-phone').addEventListener('click', () => {
+      overlay.remove();
+      const t = document.createElement('div');
+      t.innerHTML = '☎ 電話 対応 で OK。 面談履歴 タブ で 「メモ 追加」 から 内容 を 記録 してください';
+      t.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);background:#0F172A;color:#fff;padding:12px 20px;border-radius:8px;font-size:12.5px;font-weight:700;z-index:10300;box-shadow:0 10px 30px rgba(0,0,0,0.28);';
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 4500);
+    });
+
+    // 経路 2: 相手主催 Zoom URL 貼付 → armAndOpenZoom で 拡張 に URL open + auto-record 依頼
+    overlay.querySelector('#fp-ms-external-go').addEventListener('click', () => {
+      const status = overlay.querySelector('#fp-ms-status');
+      const url = String(overlay.querySelector('#fp-ms-external-url').value || '').trim();
+      if (!/^https?:\/\/.*zoom\.(us|com)\//i.test(url)) {
+        status.style.color = '#DC2626';
+        status.textContent = '⚠ Zoom URL の 形式 が 違います (https://zoom.us/j/... など)';
+        return;
+      }
+      const clientId = client._fsCustomerId || client.id;
+      const tenantId = (window.__fp && window.__fp.tenantId) || window.currentTenantId || '';
+      if (!window.__fpTabRecorder) {
+        status.style.color = '#DC2626';
+        status.textContent = '⚠ 拡張機能 が 未 install。 マイページ 「拡張機能 install」 から先に 入れてください';
+        return;
+      }
+      if (typeof window.armAndOpenZoom !== 'function') {
+        status.style.color = '#DC2626';
+        status.textContent = '⚠ armAndOpenZoom 未 定義 (ページ hard reload で 復旧)';
+        return;
+      }
+      const ok = window.armAndOpenZoom(clientId, client.name, tenantId, url);
+      if (ok) {
+        status.style.color = '#059669';
+        status.textContent = '✓ Zoom タブ を 開いて 録音 準備 完了。 面談 終了 で 自動 停止 + 議事録 化';
+        setTimeout(() => overlay.remove(), 2200);
+      } else {
+        status.style.color = '#DC2626';
+        status.textContent = '⚠ 拡張機能 への 送信 失敗。 ページ hard reload 後 再試行';
+      }
+    });
+  }
+
   function openScheduleZoomModal(client) {
     if (!client.lineFriendId) {
       alert('このお客様は LINE 未連携 です');
