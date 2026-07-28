@@ -7374,7 +7374,7 @@ STEP C: 結果報告
     overlay.querySelector('#fp-ms-external-go').addEventListener('click', () => {
       const status = overlay.querySelector('#fp-ms-status');
       const url = String(overlay.querySelector('#fp-ms-external-url').value || '').trim();
-      if (!/^https?:\/\/.*zoom\.(us|com)\//i.test(url)) {
+      if (!/^https?:\/\/([\w-]+\.)*zoom\.(us|com)\//i.test(url)) {
         status.style.color = '#DC2626';
         status.textContent = '⚠ Zoom URL の 形式 が 違います (https://zoom.us/j/... など)';
         return;
