@@ -272,6 +272,90 @@ deploy 完了後 の URL (例: `https://skel-crm-prod.web.app`) で 本番 UI �
 
 ---
 
+## Step 8.5: 動画ホスティング (会員動画) セットアップ (15 分)
+
+Skel·CRM の 「動画ホスティング」 tab は Firebase Storage + LIFF viewer + Cloud Functions で 会員限定 の 動画配信 を 実装 する (UTAGE の 会員サイト 動画 相当)。
+
+### 8.5-1. Firebase Storage を 有効化
+
+1. Firebase console → **Storage** → 「始める」
+2. 「本番モードで開始」 を 選択
+3. リージョン: `asia-northeast1` (Firestore と 揃える)
+4. rules を deploy:
+```bash
+firebase deploy --only storage
+```
+   `storage.rules` の 内容:
+   - `videos/{tenantId}/{videoId}/*` は 公開 read (URL を 知る 人 のみ)、 admin write
+   - それ以外 は default deny
+   - 500MB 上限 + `video/*` or `image/*` content-type のみ
+
+### 8.5-2. LIFF アプリ を 作成
+
+LIFF (LINE Front-end Framework) 経由で 顧客 の LINE ID を 取得 → tag 判定 して 動画 表示 する 構成。
+
+1. https://developers.line.biz/console/ → **既存 の Messaging API channel** を 開く (Step 5 で 作った channel)
+2. 「LIFF」 タブ → 「追加」
+3. 設定:
+   - **LIFF app name**: `Skel·CRM Video Viewer`
+   - **Size**: `Full` (画面全体、 mp4 再生 に 必要)
+   - **Endpoint URL**: `https://<your-domain>/liff/video`
+   - **Scope**: `profile` + `openid` (顧客 の userId を 取得 する ため)
+   - **Bot link feature**: `On (Aggressive)` (未 友だち の 場合 自動 で 友だち 追加 促す)
+4. 作成後、 「LIFF ID」 (`1234567890-abcXXXXX` 形式) を コピー
+
+### 8.5-3. config.js に LIFF ID を 記入
+
+```js
+window.__CRM_CONFIG = {
+  ...
+  liffId: '1234567890-abcXXXXX',   // 8.5-2 で 発行 された LIFF ID
+};
+```
+
+### 8.5-4. Cloud Functions を re-deploy
+
+`getVideoForMember` / `recordVideoView` の 2 callable が Storage + LIFF 対応 で 追加 されている。 Step 6 の re-deploy で 反映:
+```bash
+firebase deploy --only functions
+```
+
+### 8.5-5. 動画 を 1 本 アップロード して 動作 確認
+
+1. admin (自分) で login → 「動画ホスティング」 tab
+2. 「+ 動画 を アップロード」 → mp4 (5分 以内 推奨) を drag & drop
+3. タイトル + 説明 + 視聴 対象 タグ (例: `VIP`) を 入力 → 「アップロード」
+4. Firebase Storage console で `videos/skeleton/{videoId}/...` に file が 上がって いる か 確認
+5. カード の 「🔗 URL」 button で 視聴 URL を コピー → 別 browser で 開く
+6. LINE login popup → 対象 tag 保有 者 なら 動画 再生、 未保有 なら gate 画面 表示
+
+### 8.5-6. LINE 配信 から 動画 に 誘導
+
+1. 「一括配信」 → 「+ 配信作成」
+2. STEP 4 「動画 を 添付」 pulldown で 動画 を 選択
+3. STEP 5 プレビュー に 動画 サムネ + タイトル の カード が 出る
+4. 送信 → LINE 側 に text メッセージ + template message (動画 リンク) が 届く
+5. 顧客 が タップ → LIFF viewer 起動 → tag 判定 → 視聴 開始
+6. 15秒 ごと + 完走 で `viewLogs` に record → admin 側 の 分析 modal に 反映
+
+### 8.5-7. 分析 の 見方
+
+- **card 上 の 数字**: 累計 視聴 数 / 完走 率
+- **カード クリック** or 「📊 分析」 button で 詳細 modal:
+  - 累計 視聴 / ユニーク / 完走 数 / 平均 視聴率
+  - 直近 40 件 の 視聴 ログ (誰 が / いつ / どれくらい 見た か)
+
+### 動画 ホスティング の コスト 目安
+
+Firebase Storage:
+- 5GB まで 無料 (Blaze plan)、 以降 $0.026/GB/月
+- 転送 は 1GB/日 無料、 以降 $0.12/GB
+- **試算**: 動画 10本 × 100MB × 月間 500 視聴 = 保存 1GB + 転送 50GB → 月 約 ¥900
+
+大量 配信 or 大容量 動画 で コスト が 気に なったら Cloudflare Stream ($5/月 + $1/1000分 配信) 等 に 差し替え 検討 (Phase 2)。
+
+---
+
 ## Step 9: 動作確認 (10 分)
 
 ### 9-1. Login
@@ -362,6 +446,15 @@ deploy 完了後 の URL (例: `https://skel-crm-prod.web.app`) で 本番 UI �
   - `ADMIN_CLAIM_SET`
   - `RICHMENU_DEPLOYED`
   - `RATE_LIMIT_HIT`
+
+### 動画ホスティング (Firebase Storage + LIFF)
+- Storage path: `videos/{tenantId}/{videoId}/{fileName}` (公開 read、 admin write、 500MB 上限)
+- Firestore: `tenants/{tenantId}/videos/{videoId}` に メタ (title, memberTagIds, analytics)
+- 視聴ログ: `tenants/{tenantId}/videos/{videoId}/viewLogs/{logId}` (Cloud Function `recordVideoView` のみ write)
+- LIFF endpoint: `/liff/video?tenant=xxx&videoId=xxx`
+- CF callable:
+  - `getVideoForMember`: LINE access token 検証 → customer tag 判定 → video URL 返却
+  - `recordVideoView`: 15秒 ごと + 完走 で 視聴ログ 追記 + analytics 更新
 - 監査 は `firebase functions:log` と 併用、 週次で 異常 API 呼び出し 有無 確認
 
 ### step runner (`processStepRunners`)
@@ -378,11 +471,14 @@ deploy 完了後 の URL (例: `https://skel-crm-prod.web.app`) で 本番 UI �
 
 ---
 
-## 次 の 拡張 候補 (Phase 2)
+## 次 の 拡張 候補 (Phase 2 · UTAGE parity)
 
-- Storage 統合 → 画像 message 配信 (現状 は text のみ multicast)
-- リッチメニュー editor UI (画像 upload / タップ領域 GUI設定)
-- LIFF 連携 → 顧客 side の form / ミニアプリ
+- 決済 連動 (Stripe 既存 配線 → 動画 単品 販売 / 会員 プラン に 連動)
+- LP builder (drag-drop エディタ)
+- ステップ配信 の 動画 添付 UI (現状 は 一括配信 のみ 対応)
+- 動画 視聴 セグメント 化 (「動画 A を 80% 以上 視聴 した 人」 で 追加 配信)
+- Cloudflare Stream 移行 option (大容量 / 大量 配信 時 の コスト 最適化)
+- アフィリエイト 管理 (顧客 → 顧客 の 紹介 リンク 発行)
 - 分析 dashboard 強化 (Analytics BigQuery export)
 - SSO (Google Workspace SAML) 対応
 - audit log 検索 UI (admin panel)

@@ -1147,6 +1147,41 @@
       <div class="placeholder-view" id="channels-list"></div>
     </div>
 
+    <!-- 動画ホスティング (会員動画 = UTAGE 相当) -->
+    <div class="view" id="view-videos">
+      <div class="page-header">
+        <div>
+          <h2>動画ホスティング</h2>
+          <div class="desc">会員 限定 動画 を アップロード。 タグ で 視聴 対象 を 絞込み、 LINE 配信 から 誘導 して 視聴 ログ を 取得</div>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="video-add-btn">+ 動画 を アップロード</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="video-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px;">
+        <div class="stat-card" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 18px;">
+          <div style="font-size:11px;color:var(--dim);font-weight:700;letter-spacing:0.02em">動画 本数</div>
+          <div style="font-size:28px;font-weight:900;margin-top:4px" id="video-stat-count">0</div>
+        </div>
+        <div class="stat-card" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 18px;">
+          <div style="font-size:11px;color:var(--dim);font-weight:700;letter-spacing:0.02em">累計 視聴 回数</div>
+          <div style="font-size:28px;font-weight:900;margin-top:4px;color:var(--info)" id="video-stat-views">0</div>
+        </div>
+        <div class="stat-card" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 18px;">
+          <div style="font-size:11px;color:var(--dim);font-weight:700;letter-spacing:0.02em">ユニーク 視聴者</div>
+          <div style="font-size:28px;font-weight:900;margin-top:4px;color:var(--primary-hi)" id="video-stat-uniq">0</div>
+        </div>
+        <div class="stat-card" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 18px;">
+          <div style="font-size:11px;color:var(--dim);font-weight:700;letter-spacing:0.02em">平均 視聴率</div>
+          <div style="font-size:28px;font-weight:900;margin-top:4px;color:var(--warn)" id="video-stat-avg">0%</div>
+        </div>
+      </div>
+
+      <!-- Cards grid -->
+      <div id="video-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;"></div>
+    </div>
+
     <!-- 使い方 (video guide iframe) -->
     <div class="view" id="view-guide">
       <div class="page-header">
@@ -1260,6 +1295,7 @@ const state = {
   segments: [],
   autoTagRules: [],
   steps: [],
+  videos: [],
   // 認証 / tenant / plan (prod mode で 上書き、 demo mode は default)
   currentUser: null,     // { uid, email, displayName, photoURL }
   currentTenantId: window.__CRM_TENANT_ID,
@@ -1323,6 +1359,43 @@ const dataAdapter = {
   getHistory()                 { return state.history || []; },
   saveHistory(h)               { state.history = state.history || []; state.history.unshift(h); return Promise.resolve(h); },
   clearHistory()               { state.history = []; return Promise.resolve(); },
+
+  // ---- videos (会員動画 hosting) ----
+  //   demo mode: state.videos に in-memory (blob URL の 場合 は tab を 閉じる と 消える 前提)
+  //   prod mode: 下部 module script で Firestore + Storage upload に 差し替え
+  getVideos()                  { return state.videos || []; },
+  saveVideo(v)                 {
+    state.videos = state.videos || [];
+    const i = state.videos.findIndex(x=>x.id===v.id);
+    if (i>=0) state.videos[i]=v; else state.videos.unshift(v);
+    return Promise.resolve(v);
+  },
+  deleteVideo(id)              {
+    state.videos = (state.videos || []).filter(x=>x.id!==id);
+    return Promise.resolve();
+  },
+  // demo mode: File を blob URL に、 prod mode: Storage upload → downloadURL を 返す
+  async uploadVideoFile(file, videoId) {
+    if (state.mode === 'demo') {
+      // File 直接 は Firebase Storage 依存 で 保存 できない ので、 blob URL で 再生 だけ 可能 に する。
+      // 実 file は demo 用 static asset (0-byte placeholder) で 表現、 blob URL は tab 内 でのみ 有効。
+      return { url: URL.createObjectURL(file), path: `demo/${videoId}/${file.name}` };
+    }
+    return await window.__CRM_STORAGE.uploadVideo(file, videoId);
+  },
+  async uploadVideoThumb(file, videoId) {
+    if (state.mode === 'demo') {
+      return { url: URL.createObjectURL(file), path: `demo/${videoId}/thumb` };
+    }
+    return await window.__CRM_STORAGE.uploadThumb(file, videoId);
+  },
+  // 視聴ログ (LIFF 側 は Cloud Function 経由、 admin 側 は Firestore realtime で 取得)
+  async getViewLogs(videoId) {
+    if (state.mode === 'demo') {
+      return (state.videos || []).find(v=>v.id===videoId)?.viewLogs || [];
+    }
+    return await window.__CRM_VIDEO_API.getViewLogs(videoId);
+  },
 };
 
 // =========================================================
@@ -1586,6 +1659,44 @@ state.segments = [
   { id: 's6', name: '誕生日月 × 購入済',          tagIds: ['t12','t2'],   count: 12, kind: 'イベント' },
 ];
 
+state.videos = [
+  {
+    id: 'v1', title: 'VIP 会員 限定 · 新商品 先行 公開',
+    description: '5月 新商品 の 使い方 と 開発 秘話 を 動画 で 解説。 VIP 会員 の みなさま 限定 公開',
+    memberTagIds: ['t4'],
+    videoUrl: '', thumbUrl: '',
+    durationSec: 385, sizeBytes: 84500000,
+    createdAt: '2024-05-08', updatedAt: '2024-05-08',
+    analytics: { totalViews: 46, uniqueViewers: 23, completedViews: 18, avgWatchPct: 76 },
+    viewLogs: [
+      { customerId: 'c1', customerName: '佐藤 花子',   watchedAt: '2024-05-08 14:12', watchDurationSec: 385, completed: true },
+      { customerId: 'c1', customerName: '佐藤 花子',   watchedAt: '2024-05-09 09:20', watchDurationSec: 240, completed: false },
+      { customerId: 'c3', customerName: '田中 直樹',   watchedAt: '2024-05-08 22:04', watchDurationSec: 385, completed: true },
+      { customerId: 'c9', customerName: '斎藤 光太',   watchedAt: '2024-05-10 08:33', watchDurationSec: 180, completed: false },
+    ],
+  },
+  {
+    id: 'v2', title: '定期便 ユーザー · 使い方 講座 vol.3',
+    description: '定期便 商品 の 使い こなし kit。 3分 で 効果 を 最大化 する 手順',
+    memberTagIds: ['t3'],
+    videoUrl: '', thumbUrl: '',
+    durationSec: 210, sizeBytes: 42000000,
+    createdAt: '2024-04-22', updatedAt: '2024-04-22',
+    analytics: { totalViews: 128, uniqueViewers: 84, completedViews: 71, avgWatchPct: 82 },
+    viewLogs: [],
+  },
+  {
+    id: 'v3', title: '休眠 顧客 呼び戻し · 特別 メッセージ',
+    description: '90日 以上 ご購入 の ない お客様 へ 感謝 と 復帰 特典 の ご案内 (店主 直撮り)',
+    memberTagIds: ['t5'],
+    videoUrl: '', thumbUrl: '',
+    durationSec: 118, sizeBytes: 24000000,
+    createdAt: '2024-04-15', updatedAt: '2024-04-15',
+    analytics: { totalViews: 22, uniqueViewers: 19, completedViews: 12, avgWatchPct: 58 },
+    viewLogs: [],
+  },
+];
+
 // =========================================================
 // Nav
 // =========================================================
@@ -1599,6 +1710,8 @@ const NAV = [
   { view: 'segments',  label: 'セグメント',        icon: '🎯', badge: () => state.segments.length },
   { view: 'broadcast', label: '一括配信',          icon: '📢', badge: null },
   { view: 'steps',     label: 'ステップ配信',      icon: '🔀', badge: null },
+  { section: '会員動画' },
+  { view: 'videos',    label: '動画ホスティング',   icon: '🎬', badge: () => (state.videos || []).length },
   { section: '設定' },
   { view: 'richmenu',  label: 'リッチメニュー',   icon: '☰', badge: null },
   { view: 'channels',  label: 'LINE アカウント',   icon: '🔗', badge: null },
@@ -1677,6 +1790,7 @@ function renderView(view) {
   if (view === 'richmenu')  renderRichmenu();
   if (view === 'channels')  renderChannels();
   if (view === 'history')   renderHistory();
+  if (view === 'videos')    renderVideos();
 }
 
 function renderCustomers() {
@@ -2621,11 +2735,22 @@ function renderBroadcast() {
     </div>`).join('');
 }
 
-function openBroadcastCreateModal(presetSeg) {
+function openBroadcastCreateModal(presetSeg, prefill) {
   const modal = document.getElementById('modal');
   const segChips = state.segments.map(s =>
     `<button class="cp-chip" data-v="${escHtml(s.id)}" data-count="${s.count}">${escHtml(s.name)}<span style="opacity:.7;margin-left:6px;font-weight:500">${s.count}名</span></button>`
   ).join('') + `<button class="cp-chip" data-v="all" data-count="${state.customers.length}">全顧客<span style="opacity:.7;margin-left:6px;font-weight:500">${state.customers.length}名</span></button>`;
+
+  // 動画 attach 用 選択肢 (prefill.videoId で 事前選択、 選択なし = 「なし」)
+  const videos = state.videos || [];
+  const videoOptions = `
+    <option value="">動画 を 添付 しない</option>
+    ${videos.map(v => `<option value="${escHtml(v.id)}" ${prefill && prefill.videoId === v.id ? 'selected' : ''}>🎬 ${escHtml(v.title)}</option>`).join('')}
+  `;
+
+  const initTitle = (prefill && prefill.title) || '';
+  const initBody = (prefill && prefill.body) ||
+    'こんにちは、{name}さん。\n\n新商品「◯◯」が入荷しました。\nLINE 友だち限定で 10% OFF クーポン を お渡しします。';
 
   modal.innerHTML = `
     <div class="modal-header">
@@ -2640,17 +2765,33 @@ function openBroadcastCreateModal(presetSeg) {
     </div>
     <div class="field-group">
       <label class="field-label">STEP 2 · 配信タイトル</label>
-      <input type="text" class="field-input" id="bc-modal-title" placeholder="例: 5月 新商品 のご案内">
+      <input type="text" class="field-input" id="bc-modal-title" placeholder="例: 5月 新商品 のご案内" value="${escHtml(initTitle)}">
     </div>
     <div class="field-group">
       <label class="field-label">STEP 3 · 本文（{name}で顧客名差込）</label>
-      <textarea class="field-input" id="bc-modal-body" rows="4" style="resize:vertical;font-family:inherit;line-height:1.6">こんにちは、{name}さん。&#10;&#10;新商品「◯◯」が入荷しました。&#10;LINE 友だち限定で 10% OFF クーポン を お渡しします。</textarea>
+      <textarea class="field-input" id="bc-modal-body" rows="4" style="resize:vertical;font-family:inherit;line-height:1.6">${escHtml(initBody)}</textarea>
     </div>
     <div class="field-group">
-      <label class="field-label">STEP 4 · LINE送信プレビュー</label>
+      <label class="field-label">STEP 4 · 動画 を 添付 (任意 · 会員動画 に 誘導)</label>
+      <select class="field-input" id="bc-modal-video" style="cursor:pointer">${videoOptions}</select>
+      <div id="bc-video-hint" style="margin-top:6px;font-size:11px;color:var(--dim);line-height:1.5">
+        添付 する と 本文 に 視聴 URL が 自動 で 付与 されます。 対象 顧客 が LINE から タップ すると LIFF で 視聴 開始
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">STEP 5 · LINE送信プレビュー</label>
       <div style="display:flex;align-items:flex-end;gap:10px;margin-top:6px">
         <div style="width:28px;height:28px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--dim);font-weight:800">You</div>
         <div id="bc-preview" style="max-width:280px;padding:12px 14px;background:#8cabd8;border-radius:16px 16px 16px 4px;color:#0e1523;font-size:13px;line-height:1.55;white-space:pre-wrap;position:relative;box-shadow:0 2px 4px rgba(0,0,0,0.06)">本文がここに表示されます</div>
+      </div>
+      <div id="bc-preview-video" style="display:none;margin-top:6px;margin-left:38px;max-width:280px;padding:10px 12px;background:#fff;border:1px solid var(--rule);border-radius:12px;font-size:12px;line-height:1.4">
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="width:44px;height:44px;background:#0a0c11;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0">🎬</div>
+          <div style="min-width:0">
+            <div id="bc-preview-video-title" style="font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+            <div style="font-size:10px;color:var(--dim);margin-top:2px">タップ で 視聴 開始</div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-actions">
@@ -2676,8 +2817,24 @@ function openBroadcastCreateModal(presetSeg) {
     const sample = state.customers[0]?.name?.split(' ')[0] || '田中';
     const rendered = body.replace(/\{name\}/g, sample);
     document.getElementById('bc-preview').textContent = rendered || '本文がここに表示されます';
+
+    // video preview card
+    const vid = document.getElementById('bc-modal-video').value;
+    const vpBox = document.getElementById('bc-preview-video');
+    if (vid) {
+      const v = (state.videos || []).find(x => x.id === vid);
+      if (v) {
+        vpBox.style.display = 'block';
+        document.getElementById('bc-preview-video-title').textContent = v.title;
+      } else {
+        vpBox.style.display = 'none';
+      }
+    } else {
+      vpBox.style.display = 'none';
+    }
   }
   document.getElementById('bc-modal-body').addEventListener('input', updateBcPreview);
+  document.getElementById('bc-modal-video').addEventListener('change', updateBcPreview);
   updateBcPreview();
 
   document.getElementById('bc-modal-next').addEventListener('click', () => {
@@ -2690,12 +2847,14 @@ function openBroadcastCreateModal(presetSeg) {
     if (!body) { toast('本文を入力してください', 'warn'); return; }
     // target.dataset.v は seg.id または 'all'。 送信 時 に 対象 userId 列 を 解決 する
     const targetSegId = target.dataset.v;
+    const videoId = document.getElementById('bc-modal-video').value || null;
     openBroadcastConfirmModal({
       title,
       targetLabel: target.textContent.trim(),
       count: parseInt(target.dataset.count),
       body,
       targetSegId,
+      videoId,
     });
   });
 
@@ -2720,12 +2879,12 @@ function openBroadcastCreateModal(presetSeg) {
 
 function openBroadcastConfirmModal(opts, legacyTargetLabel, legacyCount) {
   // Backward compat: 旧 呼出し 形式 (title, targetLabel, count) も 受ける
-  let title, targetLabel, count, body, targetSegId;
+  let title, targetLabel, count, body, targetSegId, videoId;
   if (typeof opts === 'object' && opts && !Array.isArray(opts)) {
-    ({ title, targetLabel, count, body, targetSegId } = opts);
+    ({ title, targetLabel, count, body, targetSegId, videoId } = opts);
   } else {
     title = opts; targetLabel = legacyTargetLabel; count = legacyCount;
-    body = null; targetSegId = null;
+    body = null; targetSegId = null; videoId = null;
   }
   const modal = document.getElementById('modal');
   const modeLabel = (window.__CRM_MODE === 'prod') ? '本番' : 'デモ';
@@ -2775,10 +2934,21 @@ function openBroadcastConfirmModal(opts, legacyTargetLabel, legacyCount) {
     if (window.__CRM_MODE === 'prod' && window.__CRM_LINE_API && window.__CRM_LINE_API.sendBroadcast) {
       try {
         const activeCh = (state.channels || []).find(c => c.active) || (state.channels || [])[0];
+        // 動画 添付 が ある 場合 は video 情報 を meta に 埋め、 Cloud Function 側 で LINE template message に 変換
+        const attachedVideo = videoId ? (state.videos || []).find(v => v.id === videoId) : null;
         const messages = [{
           type: 'text',
           text: (body || title || '').slice(0, 2000),
         }];
+        if (attachedVideo) {
+          messages.push({
+            type: 'video_attachment',
+            videoId: attachedVideo.id,
+            videoTitle: attachedVideo.title,
+            videoThumb: attachedVideo.thumbUrl || null,
+            liffUrl: liffVideoUrl(attachedVideo.id),
+          });
+        }
         const res = await window.__CRM_LINE_API.sendBroadcast({
           channelId: activeCh ? activeCh.id : null,
           targetUserIds: (targetUserIds && targetUserIds.length > 0) ? targetUserIds : null,
@@ -2805,16 +2975,26 @@ function openBroadcastConfirmModal(opts, legacyTargetLabel, legacyCount) {
     setTimeout(() => {
       state.broadcasts = state.broadcasts || [];
       const sentAt = new Date().toISOString().slice(0,16).replace('T',' ');
+      const attachedVideo = videoId ? (state.videos || []).find(v => v.id === videoId) : null;
       state.broadcasts.unshift({
         id: 'bc' + Date.now(),
-        name: title, sent: sentAt, target: count,
+        name: title + (attachedVideo ? ' 🎬' : ''),
+        sent: sentAt, target: count,
         open: '—', click: '—',
         target_label: targetLabel,
+        videoId: attachedVideo ? attachedVideo.id : null,
       });
       if (!state.history) renderHistory();
       state.history.unshift({
-        date: sentAt, type: '一括配信', name: title, target: `${count}名`, open: '—', click: '—',
+        date: sentAt,
+        type: attachedVideo ? '一括配信 (動画)' : '一括配信',
+        name: title, target: `${count}名`, open: '—', click: '—',
       });
+      // demo: 疑似的 に 動画 の analytics を 少し 増やす
+      if (attachedVideo) {
+        attachedVideo.analytics = attachedVideo.analytics || { totalViews:0, uniqueViewers:0, completedViews:0, avgWatchPct:0 };
+        attachedVideo.analytics.totalViews += Math.floor(count * 0.15);
+      }
       openBroadcastSuccessModal(title, count);
     }, 700);
   });
@@ -2842,6 +3022,539 @@ function openBroadcastSuccessModal(title, count) {
   document.getElementById('bc-succ-close').addEventListener('click', () => { closeModal(); renderBroadcast(); });
   document.getElementById('bc-goto-hist').addEventListener('click', () => { closeModal(); navigate('history'); });
   toast(`${count} 名に配信を送信しました`);
+}
+
+// =========================================================
+// 動画ホスティング (会員動画 = UTAGE 相当)
+// =========================================================
+function fmtDuration(sec) {
+  if (!sec || sec < 0) return '—';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+function fmtBytes(b) {
+  if (!b || b < 0) return '—';
+  if (b < 1024) return b + ' B';
+  if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+  if (b < 1024*1024*1024) return (b/1024/1024).toFixed(1) + ' MB';
+  return (b/1024/1024/1024).toFixed(2) + ' GB';
+}
+function videoMemberCount(v) {
+  const tags = v.memberTagIds || [];
+  if (tags.length === 0) return state.customers.length;
+  return state.customers.filter(c =>
+    tags.every(tid => (c.tagIds || []).includes(tid))
+  ).length;
+}
+function liffVideoUrl(videoId) {
+  const origin = window.location.origin || 'https://example.web.app';
+  const tenant = state.currentTenantId || 'demo';
+  // demo mode (GitHub Pages 等) は /liff/video rewrite が 効かない ので、
+  //   現在の pathname から liff-video.html に 相対 で アクセス
+  // prod mode (Firebase Hosting) は firebase.json の rewrite で /liff/video → liff-video.html
+  const params = `?tenant=${encodeURIComponent(tenant)}&videoId=${encodeURIComponent(videoId)}`;
+  if (state.mode === 'demo') {
+    const dir = window.location.pathname.replace(/\/[^/]*$/, '/') || '/';
+    return `${origin}${dir}liff-video.html${params}`;
+  }
+  return `${origin}/liff/video${params}`;
+}
+
+function renderVideos() {
+  const grid = document.getElementById('video-cards');
+  if (!grid) return;
+  const videos = state.videos || [];
+
+  // stat cards
+  const totalViews = videos.reduce((s, v) => s + (v.analytics?.totalViews || 0), 0);
+  const uniqueViewers = videos.reduce((s, v) => s + (v.analytics?.uniqueViewers || 0), 0);
+  const avgPcts = videos.map(v => v.analytics?.avgWatchPct).filter(x => typeof x === 'number');
+  const avgPct = avgPcts.length ? Math.round(avgPcts.reduce((a,b)=>a+b,0) / avgPcts.length) : 0;
+  const setStat = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setStat('video-stat-count', videos.length);
+  setStat('video-stat-views', totalViews.toLocaleString());
+  setStat('video-stat-uniq',  uniqueViewers.toLocaleString());
+  setStat('video-stat-avg',   avgPct + '%');
+
+  if (videos.length === 0) {
+    grid.innerHTML = emptyStateHTML('🎬', '動画 が まだ ありません',
+      '会員 タグ で 視聴 対象 を 絞り込んだ 動画 を アップロード できます。<br>upload 後 は LINE 一括配信 / ステップ配信 の メッセージ に 動画 リンク を 添付 して 誘導 します。',
+      '+ 最初 の 動画 を アップロード', 'video-add-btn');
+    grid.style.display = 'block';
+    return;
+  }
+  grid.style.display = 'grid';
+
+  grid.innerHTML = videos.map(v => {
+    const a = v.analytics || {};
+    const memberCount = videoMemberCount(v);
+    const thumbHtml = v.thumbUrl
+      ? `<img src="${escHtml(v.thumbUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`
+      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:44px;color:var(--dim);background:linear-gradient(135deg,#e4e7ee,#f0f2f7)">🎬</div>`;
+    const tagChips = (v.memberTagIds || []).map(tid => tagChipHTML(tid)).join('') ||
+      `<span style="font-size:10px;color:var(--dim);font-weight:700">全 顧客 公開</span>`;
+    return `
+      <div class="video-card" data-video-id="${escHtml(v.id)}" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;overflow:hidden;transition:box-shadow .15s,transform .15s;cursor:pointer">
+        <div style="aspect-ratio:16/9;background:#0a0c11;position:relative;overflow:hidden">
+          ${thumbHtml}
+          <div style="position:absolute;bottom:8px;right:8px;background:rgba(15,20,35,.85);color:#fff;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:'SF Mono',monospace">
+            ${fmtDuration(v.durationSec)}
+          </div>
+        </div>
+        <div style="padding:14px 16px">
+          <div style="font-size:14px;font-weight:800;margin-bottom:6px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escHtml(v.title)}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:12px;min-height:22px">${tagChips}</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding-top:12px;border-top:1px solid var(--rule)">
+            <div><div style="font-size:10px;color:var(--dim);font-weight:700">視聴 可能</div><div style="font-size:15px;font-weight:800;margin-top:2px">${memberCount}</div></div>
+            <div><div style="font-size:10px;color:var(--dim);font-weight:700">視聴 数</div><div style="font-size:15px;font-weight:800;color:var(--info);margin-top:2px">${(a.totalViews || 0)}</div></div>
+            <div><div style="font-size:10px;color:var(--dim);font-weight:700">完走 率</div><div style="font-size:15px;font-weight:800;color:var(--primary-hi);margin-top:2px">${a.totalViews ? Math.round((a.completedViews || 0)/a.totalViews*100) : 0}%</div></div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:12px">
+            <button class="btn btn-secondary video-analytics-btn" data-video-id="${escHtml(v.id)}" style="flex:1;padding:8px;font-size:11px;justify-content:center">📊 分析</button>
+            <button class="btn btn-secondary video-share-btn" data-video-id="${escHtml(v.id)}" style="flex:1;padding:8px;font-size:11px;justify-content:center">🔗 URL</button>
+            <button class="btn btn-secondary video-edit-btn" data-video-id="${escHtml(v.id)}" style="padding:8px 10px;font-size:11px">編集</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // wire card click (whole card = open analytics)
+  grid.querySelectorAll('.video-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      openVideoAnalyticsModal(card.dataset.videoId);
+    });
+    card.addEventListener('mouseenter', () => card.style.boxShadow = '0 6px 20px rgba(15,20,35,0.08)');
+    card.addEventListener('mouseleave', () => card.style.boxShadow = '');
+  });
+  grid.querySelectorAll('.video-analytics-btn').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openVideoAnalyticsModal(b.dataset.videoId);
+  }));
+  grid.querySelectorAll('.video-share-btn').forEach(b => b.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const url = liffVideoUrl(b.dataset.videoId);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('視聴 URL を クリップボード に コピー しました');
+    } catch (err) {
+      toast('URL: ' + url, 'info', 5000);
+    }
+  }));
+  grid.querySelectorAll('.video-edit-btn').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openVideoEditModal(b.dataset.videoId);
+  }));
+}
+
+// ---- Upload / Edit modal ----
+function openVideoUploadModal() { openVideoEditModal(null); }
+
+function openVideoEditModal(videoId) {
+  const isEdit = !!videoId;
+  const v = isEdit ? (state.videos || []).find(x => x.id === videoId) : {
+    id: '', title: '', description: '', memberTagIds: [],
+    videoUrl: '', thumbUrl: '', durationSec: 0, sizeBytes: 0,
+    analytics: { totalViews: 0, uniqueViewers: 0, completedViews: 0, avgWatchPct: 0 },
+  };
+  if (isEdit && !v) { toast('動画 が 見つかりません', 'error'); return; }
+
+  const tagChips = state.tags.map(t => `
+    <button type="button" class="cp-chip video-tag-chip ${(v.memberTagIds || []).includes(t.id) ? 'selected' : ''}"
+            data-tag-id="${escHtml(t.id)}">${escHtml(t.name)}</button>
+  `).join('');
+
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>${isEdit ? '動画 を 編集' : '動画 を アップロード'}</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+
+    ${!isEdit ? `
+    <div class="field-group">
+      <label class="field-label">STEP 1 · 動画 ファイル を 選択</label>
+      <div id="video-drop-zone" style="border:2px dashed var(--rule);border-radius:10px;padding:28px;text-align:center;cursor:pointer;background:var(--surface-2);transition:border-color .15s,background .15s">
+        <div style="font-size:36px;margin-bottom:8px">🎬</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px">クリック or ドラッグ で 動画 を 選択</div>
+        <div style="font-size:11px;color:var(--dim)">mp4 / mov / webm · 500MB まで · 5分 以内 推奨</div>
+        <input type="file" id="video-file-input" accept="video/*" style="display:none">
+      </div>
+      <div id="video-file-info" style="display:none;margin-top:10px;padding:12px 14px;background:var(--primary-soft);border-radius:8px;font-size:12px;color:var(--primary-hi);font-weight:700"></div>
+      <div id="video-upload-progress" style="display:none;margin-top:10px">
+        <div style="height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden">
+          <div id="video-upload-bar" style="height:100%;width:0%;background:var(--primary);transition:width .3s"></div>
+        </div>
+        <div id="video-upload-label" style="font-size:11px;color:var(--dim);margin-top:6px;font-weight:600">0%</div>
+      </div>
+    </div>
+    ` : `
+    <div class="field-group">
+      <label class="field-label">動画 ファイル (upload 済み)</label>
+      <div style="padding:12px 14px;background:var(--surface-2);border-radius:8px;font-size:12px;color:var(--ink-2);font-weight:600">
+        ${escHtml(fmtDuration(v.durationSec))} · ${escHtml(fmtBytes(v.sizeBytes))}
+        ${v.videoUrl ? `<div style="font-size:10px;color:var(--dim);margin-top:4px;font-family:'SF Mono',monospace;word-break:break-all">${escHtml(v.videoUrl.slice(0,80))}${v.videoUrl.length > 80 ? '…' : ''}</div>` : ''}
+      </div>
+    </div>
+    `}
+
+    <div class="field-group">
+      <label class="field-label">${isEdit ? '' : 'STEP 2 · '}タイトル</label>
+      <input type="text" class="field-input" id="video-title-input" placeholder="例: VIP 会員 限定 · 新商品 先行 公開" value="${escHtml(v.title)}">
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">${isEdit ? '' : 'STEP 3 · '}説明 (任意)</label>
+      <textarea class="field-input" id="video-desc-input" rows="3" style="resize:vertical;font-family:inherit;line-height:1.6" placeholder="どんな 内容 か 1-2 行 で">${escHtml(v.description || '')}</textarea>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">${isEdit ? '' : 'STEP 4 · '}視聴 対象 (タグ AND 条件)</label>
+      <div class="chip-area" id="video-tag-chips">${tagChips || '<span style="font-size:12px;color:var(--dim)">タグ を 先に 登録 して ください</span>'}</div>
+      <div id="video-target-info" style="margin-top:8px;font-size:12px;color:var(--info);font-weight:700">
+        全 顧客 (${state.customers.length}名) が 視聴 可能
+      </div>
+      <div style="margin-top:6px;font-size:11px;color:var(--dim);line-height:1.5">
+        タグ 未選択 = 全 顧客 公開。 複数 選択 は AND 条件 (全 タグ 保有者 のみ 視聴 可能)
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">サムネイル (任意)</label>
+      <div style="display:flex;gap:12px;align-items:center">
+        <div id="video-thumb-preview" style="width:120px;height:68px;background:${v.thumbUrl ? `url('${escHtml(v.thumbUrl)}') center/cover` : 'var(--surface-2)'};border:1px solid var(--rule);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--dim);flex-shrink:0">${v.thumbUrl ? '' : '🖼'}</div>
+        <div style="flex:1">
+          <button type="button" class="btn btn-secondary" id="video-thumb-btn" style="padding:8px 12px;font-size:12px">画像 を 選択</button>
+          <input type="file" id="video-thumb-input" accept="image/*" style="display:none">
+          <div style="font-size:11px;color:var(--dim);margin-top:4px">未 選択 なら 動画 の 最初 の 1 フレーム を 使用</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="justify-content:space-between">
+      ${isEdit ? '<button class="btn btn-danger" id="video-delete-btn" style="margin-right:auto">🗑 削除</button>' : '<div></div>'}
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="video-modal-cancel">キャンセル</button>
+        <button class="btn btn-primary" id="video-modal-save">${isEdit ? '保存' : 'アップロード'}</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+
+  // local state
+  let pickedFile = null;
+  let pickedThumb = null;
+  const workingVideo = JSON.parse(JSON.stringify(v));
+
+  function updateTargetInfo() {
+    const info = document.getElementById('video-target-info');
+    if (!info) return;
+    const selected = Array.from(document.querySelectorAll('#video-tag-chips .video-tag-chip.selected'))
+      .map(c => c.dataset.tagId);
+    workingVideo.memberTagIds = selected;
+    const count = selected.length === 0
+      ? state.customers.length
+      : state.customers.filter(c => selected.every(t => (c.tagIds || []).includes(t))).length;
+    const label = selected.length === 0 ? '全 顧客' :
+      selected.map(t => getTag(t)?.name).filter(Boolean).join(' × ') + ' を 保有';
+    info.textContent = `${label} (${count}名) が 視聴 可能`;
+    info.style.color = count === 0 ? 'var(--warn)' : 'var(--info)';
+  }
+
+  document.querySelectorAll('#video-tag-chips .video-tag-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      chip.classList.toggle('selected');
+      updateTargetInfo();
+    });
+  });
+  updateTargetInfo();
+
+  // close / cancel
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('video-modal-cancel').addEventListener('click', closeModal);
+
+  // file pick + drop
+  const dropZone = document.getElementById('video-drop-zone');
+  const fileInput = document.getElementById('video-file-input');
+  if (dropZone && fileInput) {
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--primary)'; dropZone.style.background = 'var(--primary-soft)'; });
+    dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; dropZone.style.background = ''; });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = ''; dropZone.style.background = '';
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFilePick(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) handleFilePick(e.target.files[0]);
+    });
+  }
+  function handleFilePick(file) {
+    if (!file.type.startsWith('video/')) { toast('動画 ファイル を 選択 してください', 'warn'); return; }
+    if (file.size > 500 * 1024 * 1024) { toast('500MB を 超える ファイル は upload できません', 'warn'); return; }
+    pickedFile = file;
+    const info = document.getElementById('video-file-info');
+    info.style.display = 'block';
+    info.textContent = `✓ ${file.name} · ${fmtBytes(file.size)}`;
+    // 動画 の 尺 を 取得
+    const testUrl = URL.createObjectURL(file);
+    const testVid = document.createElement('video');
+    testVid.preload = 'metadata';
+    testVid.src = testUrl;
+    testVid.onloadedmetadata = () => {
+      workingVideo.durationSec = Math.round(testVid.duration || 0);
+      workingVideo.sizeBytes = file.size;
+      info.textContent = `✓ ${file.name} · ${fmtBytes(file.size)} · ${fmtDuration(workingVideo.durationSec)}`;
+      URL.revokeObjectURL(testUrl);
+    };
+    // タイトル 未入力 なら ファイル名 を 提案
+    const titleInp = document.getElementById('video-title-input');
+    if (titleInp && !titleInp.value.trim()) {
+      titleInp.value = file.name.replace(/\.[^.]+$/, '');
+    }
+  }
+
+  // thumb pick
+  const thumbBtn = document.getElementById('video-thumb-btn');
+  const thumbInput = document.getElementById('video-thumb-input');
+  if (thumbBtn && thumbInput) {
+    thumbBtn.addEventListener('click', () => thumbInput.click());
+    thumbInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        pickedThumb = e.target.files[0];
+        const url = URL.createObjectURL(pickedThumb);
+        const prev = document.getElementById('video-thumb-preview');
+        prev.style.background = `url('${url}') center/cover`;
+        prev.innerHTML = '';
+      }
+    });
+  }
+
+  // save
+  document.getElementById('video-modal-save').addEventListener('click', async () => {
+    const title = (document.getElementById('video-title-input').value || '').trim();
+    if (!title) { toast('タイトル を 入力 してください', 'warn'); return; }
+    if (!isEdit && !pickedFile) { toast('動画 ファイル を 選択 してください', 'warn'); return; }
+
+    const btn = document.getElementById('video-modal-save');
+    btn.disabled = true;
+    btn.textContent = pickedFile ? 'アップロード 中…' : '保存 中…';
+    btn.style.opacity = '0.7';
+
+    try {
+      const id = workingVideo.id || ('v' + Date.now());
+      workingVideo.id = id;
+      workingVideo.title = title;
+      workingVideo.description = (document.getElementById('video-desc-input').value || '').trim();
+      workingVideo.updatedAt = new Date().toISOString().slice(0,10);
+      if (!workingVideo.createdAt) workingVideo.createdAt = workingVideo.updatedAt;
+
+      if (pickedFile) {
+        const progBox = document.getElementById('video-upload-progress');
+        const progBar = document.getElementById('video-upload-bar');
+        const progLabel = document.getElementById('video-upload-label');
+        if (progBox) progBox.style.display = 'block';
+        const onProg = (pct) => {
+          if (progBar) progBar.style.width = pct + '%';
+          if (progLabel) progLabel.textContent = pct + '%';
+        };
+        // demo mode は 即完了、 prod mode は 実 upload
+        if (state.mode === 'demo') {
+          for (let p = 0; p <= 100; p += 20) { onProg(p); await new Promise(r => setTimeout(r, 80)); }
+          const res = await dataAdapter.uploadVideoFile(pickedFile, id);
+          workingVideo.videoUrl = res.url;
+          workingVideo.storagePath = res.path;
+        } else {
+          const res = await window.__CRM_STORAGE.uploadVideo(pickedFile, id, onProg);
+          workingVideo.videoUrl = res.url;
+          workingVideo.storagePath = res.path;
+        }
+      }
+      if (pickedThumb) {
+        const res = await dataAdapter.uploadVideoThumb(pickedThumb, id);
+        workingVideo.thumbUrl = res.url;
+        workingVideo.thumbPath = res.path;
+      }
+
+      await dataAdapter.saveVideo(workingVideo);
+      closeModal();
+      renderVideos();
+      renderNav();
+      toast(isEdit ? '動画 を 更新 しました' : '動画 を アップロード しました', 'success');
+    } catch (e) {
+      console.error(e);
+      btn.disabled = false;
+      btn.style.opacity = '';
+      btn.textContent = isEdit ? '保存' : 'アップロード';
+      toast('保存 失敗: ' + (e.message || e), 'error', 5000);
+    }
+  });
+
+  // delete
+  const delBtn = document.getElementById('video-delete-btn');
+  if (delBtn) {
+    delBtn.addEventListener('click', async () => {
+      const ok = await confirmDialog({
+        title: '動画 を 削除', message: `「${v.title}」 を 削除 します。 視聴 URL は 無効化 され、 分析 データ も 消えます。`,
+        okText: '削除 する', kind: 'danger'
+      });
+      if (!ok) return;
+      try {
+        await dataAdapter.deleteVideo(v.id);
+        closeModal();
+        renderVideos();
+        renderNav();
+        toast('動画 を 削除 しました');
+      } catch (e) {
+        toast('削除 失敗: ' + (e.message || e), 'error', 5000);
+      }
+    });
+  }
+}
+
+// ---- Analytics modal ----
+async function openVideoAnalyticsModal(videoId) {
+  const v = (state.videos || []).find(x => x.id === videoId);
+  if (!v) { toast('動画 が 見つかりません', 'error'); return; }
+  const a = v.analytics || {};
+  const memberCount = videoMemberCount(v);
+  const url = liffVideoUrl(v.id);
+  const modal = document.getElementById('modal');
+  const tagChips = (v.memberTagIds || []).map(tid => tagChipHTML(tid)).join('') ||
+    '<span style="font-size:11px;color:var(--dim);font-weight:700">全 顧客 公開</span>';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>${escHtml(v.title)}</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div style="aspect-ratio:16/9;background:#0a0c11;border-radius:10px;overflow:hidden;position:relative">
+        ${v.videoUrl
+          ? `<video src="${escHtml(v.videoUrl)}" controls preload="metadata" ${v.thumbUrl ? `poster="${escHtml(v.thumbUrl)}"` : ''} style="width:100%;height:100%;display:block;background:#000"></video>`
+          : `<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--dim);gap:8px"><div style="font-size:44px">🎬</div><div style="font-size:12px;font-weight:700">プレースホルダー</div><div style="font-size:10px">実 file を upload すると 再生 可能</div></div>`}
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:4px;letter-spacing:0.02em">説明</div>
+        <div style="font-size:13px;line-height:1.6;margin-bottom:14px;color:var(--ink-2)">${escHtml(v.description || '(説明 なし)')}</div>
+        <div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:4px;letter-spacing:0.02em">視聴 対象</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px">${tagChips}</div>
+        <div style="font-size:12px;color:var(--info);font-weight:700;margin-bottom:14px">${memberCount} 名 が 視聴 可能</div>
+        <div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:4px;letter-spacing:0.02em">尺 · サイズ</div>
+        <div style="font-size:12px;color:var(--ink-2);margin-bottom:14px">${fmtDuration(v.durationSec)} · ${fmtBytes(v.sizeBytes)}</div>
+      </div>
+    </div>
+
+    <!-- Analytics stats -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+      <div style="background:var(--surface-2);border-radius:8px;padding:12px">
+        <div style="font-size:11px;color:var(--dim);font-weight:700">累計 視聴</div>
+        <div style="font-size:22px;font-weight:900;margin-top:2px">${(a.totalViews || 0)}</div>
+      </div>
+      <div style="background:var(--surface-2);border-radius:8px;padding:12px">
+        <div style="font-size:11px;color:var(--dim);font-weight:700">ユニーク</div>
+        <div style="font-size:22px;font-weight:900;color:var(--primary-hi);margin-top:2px">${(a.uniqueViewers || 0)}</div>
+      </div>
+      <div style="background:var(--surface-2);border-radius:8px;padding:12px">
+        <div style="font-size:11px;color:var(--dim);font-weight:700">完走 数</div>
+        <div style="font-size:22px;font-weight:900;color:var(--info);margin-top:2px">${(a.completedViews || 0)}</div>
+      </div>
+      <div style="background:var(--surface-2);border-radius:8px;padding:12px">
+        <div style="font-size:11px;color:var(--dim);font-weight:700">平均 視聴率</div>
+        <div style="font-size:22px;font-weight:900;color:var(--warn);margin-top:2px">${(a.avgWatchPct || 0)}%</div>
+      </div>
+    </div>
+
+    <!-- Share URL -->
+    <div class="field-group">
+      <label class="field-label">視聴 URL (LIFF ページ · LINE 配信 で 誘導)</label>
+      <div style="display:flex;gap:6px">
+        <input type="text" class="field-input" id="video-share-url" value="${escHtml(url)}" readonly style="font-family:'SF Mono',monospace;font-size:11px;background:var(--surface-2)">
+        <button class="btn btn-secondary" id="video-share-copy" style="padding:8px 14px;font-size:12px;white-space:nowrap">📋 コピー</button>
+      </div>
+      <div style="margin-top:6px;font-size:11px;color:var(--dim)">
+        この URL を LINE メッセージ に 貼る と、 対象 顧客 の みが 視聴 可能 (LIFF 側 で タグ 判定)
+      </div>
+    </div>
+
+    <!-- View logs -->
+    <div class="field-group">
+      <label class="field-label">直近 の 視聴 ログ</label>
+      <div id="video-log-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--rule);border-radius:8px">
+        <div style="padding:12px;text-align:center;color:var(--dim);font-size:12px">読込中…</div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="video-analytics-close">閉じる</button>
+      <button class="btn btn-secondary" id="video-analytics-edit">編集 →</button>
+      <button class="btn btn-primary" id="video-analytics-broadcast">この 動画 を 配信 →</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('video-analytics-close').addEventListener('click', closeModal);
+  document.getElementById('video-analytics-edit').addEventListener('click', () => {
+    closeModal();
+    setTimeout(() => openVideoEditModal(v.id), 100);
+  });
+  document.getElementById('video-analytics-broadcast').addEventListener('click', () => {
+    closeModal();
+    // 対象 タグ に 一致 する segment を 探し preset に、 なければ segment 未選択 で 開く
+    let presetSeg = null;
+    const memberTagIds = v.memberTagIds || [];
+    if (memberTagIds.length > 0) {
+      presetSeg = (state.segments || []).find(s =>
+        (s.tagIds || []).length === memberTagIds.length &&
+        memberTagIds.every(t => (s.tagIds || []).includes(t))
+      );
+    }
+    setTimeout(() => openBroadcastCreateModal(presetSeg, {
+      title: v.title,
+      body: `【会員動画 公開 の お知らせ】\n{name}さん、 新しい 動画 を 公開 しました。\n\n▼ 視聴 は こちら から\n${url}`,
+      videoId: v.id,
+    }), 100);
+  });
+  document.getElementById('video-share-copy').addEventListener('click', async () => {
+    const inp = document.getElementById('video-share-url');
+    inp.select();
+    try {
+      await navigator.clipboard.writeText(inp.value);
+      toast('視聴 URL を コピー しました');
+    } catch (e) {
+      document.execCommand('copy');
+      toast('視聴 URL を コピー しました');
+    }
+  });
+
+  // logs
+  try {
+    const logs = await dataAdapter.getViewLogs(v.id);
+    const box = document.getElementById('video-log-list');
+    if (!box) return;
+    if (!logs || logs.length === 0) {
+      box.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);font-size:12px">まだ 視聴 ログ が ありません</div>';
+    } else {
+      box.innerHTML = logs.slice(0, 40).map(l => `
+        <div style="padding:10px 14px;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;font-size:12px">
+          <div style="font-weight:700">${escHtml(l.customerName || l.customerId || '(不明)')}</div>
+          <div style="color:var(--dim);font-family:'SF Mono',monospace;font-size:11px">${escHtml(l.watchedAt || '')}</div>
+          <div style="color:var(--ink-2);font-family:'SF Mono',monospace;font-size:11px">${fmtDuration(l.watchDurationSec || 0)}</div>
+          <div>${l.completed
+            ? '<span style="background:var(--primary-soft);color:var(--primary-hi);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800">完走</span>'
+            : '<span style="background:var(--warn-soft);color:var(--warn);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800">途中</span>'}</div>
+        </div>
+      `).join('');
+    }
+  } catch (e) {
+    const box = document.getElementById('video-log-list');
+    if (box) box.innerHTML = '<div style="padding:12px;text-align:center;color:var(--danger);font-size:12px">ログ 取得 失敗: ' + escHtml(e.message || e) + '</div>';
+  }
 }
 
 // =========================================================
@@ -3682,6 +4395,8 @@ setTimeout(() => {
   if (rmAdd) rmAdd.addEventListener('click', () => openRichmenuCreateModal());
   const chAdd = document.getElementById('ch-add-btn');
   if (chAdd) chAdd.addEventListener('click', () => openChannelAddModal());
+  const videoAdd = document.getElementById('video-add-btn');
+  if (videoAdd) videoAdd.addEventListener('click', () => openVideoUploadModal());
 
   // Header buttons
   const topNew = document.getElementById('top-new-bc-btn');
@@ -3895,19 +4610,22 @@ if (window.__CRM_MODE === 'prod') {
   const [
     { initializeApp },
     { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut },
-    { getFirestore, doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, query, where, serverTimestamp },
+    { getFirestore, doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, query, where, serverTimestamp, orderBy, limit },
     { getFunctions, httpsCallable },
+    { getStorage, ref: storageRef, uploadBytesResumable, getDownloadURL, deleteObject },
   ] = await Promise.all([
     import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js'),
     import('https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js'),
     import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js'),
     import('https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js'),
+    import('https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js'),
   ]);
 
   const app = initializeApp(window.__CRM_CONFIG.firebase);
   const auth = getAuth(app);
   const db = getFirestore(app);
   const functions = getFunctions(app, window.__CRM_CONFIG.functionsRegion || 'asia-northeast1');
+  const storage = getStorage(app);
 
   // =========================================================
   // Auth flow
@@ -4011,6 +4729,7 @@ if (window.__CRM_MODE === 'prod') {
     listenCol('steps',        'steps');
     listenCol('channels',     'channels');
     listenCol('history',      'history');
+    listenCol('videos',       'videos');
 
     // dataAdapter の write 系 を Firestore に 差し替え
     // 全 8 collection を 統一 pattern (makeSaver / makeDeleter) で 生成
@@ -4050,6 +4769,23 @@ if (window.__CRM_MODE === 'prod') {
     dataAdapter.deleteHistory     = makeDeleter('history');
     dataAdapter.saveRichmenu      = makeSaver('richmenus');
     dataAdapter.deleteRichmenu    = makeDeleter('richmenus');
+    dataAdapter.saveVideo         = makeSaver('videos');
+    dataAdapter.deleteVideo       = async (videoId) => {
+      // Firestore doc + Storage object 両方 消す
+      try {
+        const vDoc = await getDoc(doc(db, 'tenants', tid, 'videos', videoId));
+        if (vDoc.exists()) {
+          const vData = vDoc.data();
+          if (vData.storagePath) {
+            try { await deleteObject(storageRef(storage, vData.storagePath)); } catch (e) { console.warn('video file delete failed', e); }
+          }
+          if (vData.thumbPath) {
+            try { await deleteObject(storageRef(storage, vData.thumbPath)); } catch (e) { console.warn('thumb file delete failed', e); }
+          }
+        }
+      } catch (e) { console.warn('video pre-delete fetch failed', e); }
+      await deleteDoc(doc(db, 'tenants', tid, 'videos', videoId));
+    };
     // NOTE: 現行 UI は state.* を 直接 mutate して setTimeout で render 呼ぶ 構造。
     //   prod mode の 場合、 realtime listener が Firestore 更新 を state に 反映 し 自動 re-render するので、
     //   UI ハンドラ 側 は 「local state mutate → dataAdapter.save*() を await」 で 二重更新 に なる が、
@@ -4079,6 +4815,60 @@ if (window.__CRM_MODE === 'prod') {
         const successUrl = window.location.origin + window.location.pathname + `?tenant=${state.currentTenantId}&checkout=success`;
         const cancelUrl  = window.location.origin + window.location.pathname + `?tenant=${state.currentTenantId}&checkout=cancel`;
         return (await fn({ tenantId: state.currentTenantId, priceId, successUrl, cancelUrl })).data;
+      },
+    };
+
+    // ---- Storage upload (動画本体 と サムネ) + 視聴ログ取得 ----
+    window.__CRM_STORAGE = {
+      uploadVideo: (file, videoId, onProgress) => new Promise((resolve, reject) => {
+        const safe = (file.name || 'video').replace(/[^\w.\-]/g, '_').slice(0, 80);
+        const path = `videos/${state.currentTenantId}/${videoId}/${Date.now()}_${safe}`;
+        const task = uploadBytesResumable(storageRef(storage, path), file, {
+          contentType: file.type || 'video/mp4',
+        });
+        task.on('state_changed',
+          (snap) => {
+            if (onProgress) {
+              const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+              onProgress(pct);
+            }
+          },
+          (err) => reject(err),
+          async () => {
+            const url = await getDownloadURL(task.snapshot.ref);
+            resolve({ url, path });
+          },
+        );
+      }),
+      uploadThumb: async (file, videoId) => {
+        const path = `videos/${state.currentTenantId}/${videoId}/thumb_${Date.now()}`;
+        const task = await uploadBytesResumable(storageRef(storage, path), file, {
+          contentType: file.type || 'image/jpeg',
+        });
+        const url = await getDownloadURL(task.ref);
+        return { url, path };
+      },
+    };
+    window.__CRM_VIDEO_API = {
+      getViewLogs: async (videoId) => {
+        const snap = await getDocs(query(
+          collection(db, 'tenants', state.currentTenantId, 'videos', videoId, 'viewLogs'),
+          orderBy('watchedAt', 'desc'),
+          limit(50),
+        ));
+        return snap.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            customerId: data.customerId || null,
+            customerName: data.customerName || null,
+            watchedAt: data.watchedAt && data.watchedAt.toDate
+              ? data.watchedAt.toDate().toISOString().slice(0,16).replace('T',' ')
+              : (data.watchedAt || ''),
+            watchDurationSec: data.watchDurationSec || 0,
+            completed: !!data.completed,
+          };
+        });
       },
     };
 

@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0c11">
+<title>会員動画 · Skel·CRM</title>
+<style>
+  :root {
+    --bg: #0a0c11;
+    --surface: #121620;
+    --surface-2: #1a2030;
+    --ink: #f6f7fa;
+    --ink-2: #c9cfdb;
+    --dim: #8b93a6;
+    --rule: #262d3e;
+    --primary: #17b26a;
+    --primary-hi: #22d17f;
+    --danger: #ef4444;
+    --warn: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Inter", "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: -0.005em;
+    line-height: 1.55;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  a { color: var(--primary-hi); text-decoration: none; }
+
+  .wrap {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  /* Header (LIFF full mode で 上部 に 出る 帯) */
+  .top {
+    padding: 18px 20px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .top .brand {
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    color: var(--primary-hi);
+  }
+  .top .sub {
+    font-size: 11px;
+    color: var(--dim);
+    font-weight: 600;
+  }
+
+  /* Player */
+  .player {
+    position: relative;
+    background: #000;
+    aspect-ratio: 16 / 9;
+    width: 100%;
+  }
+  .player video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: #000;
+  }
+  .player .placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    color: var(--dim);
+  }
+  .player .placeholder .ic {
+    font-size: 50px;
+  }
+
+  /* Meta */
+  .meta {
+    padding: 18px 20px 24px;
+  }
+  .meta h1 {
+    font-size: 17px;
+    font-weight: 900;
+    letter-spacing: -0.01em;
+    line-height: 1.4;
+    margin-bottom: 8px;
+  }
+  .meta .duration {
+    font-size: 11px;
+    color: var(--dim);
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    letter-spacing: 0.02em;
+    margin-bottom: 14px;
+  }
+  .meta .description {
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.65;
+    white-space: pre-wrap;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule);
+  }
+
+  /* Progress footer */
+  .progress-bar {
+    height: 3px;
+    background: var(--surface-2);
+    width: 100%;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--primary);
+    width: 0%;
+    transition: width 200ms linear;
+  }
+
+  /* Gate screen (未対象 顧客 の 場合) */
+  .gate {
+    padding: 60px 24px;
+    text-align: center;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  .gate .ic {
+    font-size: 46px;
+    margin-bottom: 14px;
+  }
+  .gate h2 {
+    font-size: 17px;
+    font-weight: 900;
+    margin-bottom: 10px;
+  }
+  .gate p {
+    font-size: 13px;
+    color: var(--dim);
+    line-height: 1.65;
+    margin-bottom: 20px;
+  }
+  .gate .btn {
+    display: inline-block;
+    padding: 12px 24px;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 24px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+  }
+  .gate .btn:active { background: var(--primary-hi); }
+
+  /* Loading */
+  .loading {
+    padding: 80px 20px;
+    text-align: center;
+    color: var(--dim);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .loading .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--surface-2);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 900ms linear infinite;
+    margin: 0 auto 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+    background: var(--surface-2);
+    color: var(--ink);
+    padding: 10px 18px;
+    border-radius: 24px;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    opacity: 0;
+    transition: opacity 200ms;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="brand">🎬 会員動画</div>
+      <div class="sub" id="tenant-label">Skel·CRM</div>
+    </div>
+  </div>
+
+  <!-- Loading (初期) -->
+  <div id="scr-loading" class="loading">
+    <div class="spinner"></div>
+    <div>視聴 準備 中…</div>
+  </div>
+
+  <!-- Player + Meta -->
+  <div id="scr-player" style="display:none">
+    <div class="player">
+      <video id="video-el" playsinline controls preload="metadata"></video>
+      <div class="placeholder" id="video-placeholder" style="display:none">
+        <div class="ic">🎬</div>
+        <div style="font-size:12px;font-weight:700">動画 が 見つかりません</div>
+      </div>
+    </div>
+    <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+    <div class="meta">
+      <h1 id="video-title">読込中…</h1>
+      <div class="duration" id="video-duration">—:—</div>
+      <div class="description" id="video-description"></div>
+    </div>
+  </div>
+
+  <!-- Gate (対象外 or 未 login) -->
+  <div id="scr-gate" class="gate" style="display:none">
+    <div class="ic" id="gate-ic">🔒</div>
+    <h2 id="gate-title">この 動画 は 会員 限定 です</h2>
+    <p id="gate-msg">視聴 に は 対象 タグ の 保有 が 必要 です。 詳細 は 配信 元 に お問合せ ください。</p>
+    <button class="btn" id="gate-close-btn" style="display:none">閉じる</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js" onerror="void 0"></script>
+<script type="module">
+// =========================================================
+// LIFF Video Viewer
+// =========================================================
+// URL: /liff/video?tenant=<tenantId>&videoId=<videoId>
+//
+// フロー:
+//   1) URL param 取得
+//   2) LIFF init (config.liffId)
+//   3) liff.getProfile() で lineUserId 取得
+//   4) Cloud Function getVideoForMember({tenantId, videoId, lineUserId, accessToken})
+//        → tag 判定 OK なら {ok:true, video:{url, title, description, duration}}
+//        → NG なら {ok:false, reason:'not_member' | 'not_found'}
+//   5) 視聴 開始 → 15sec ごと + ended で recordVideoView
+// =========================================================
+
+const CFG = (window.__CRM_CONFIG || {});
+const REGION = CFG.functionsRegion || 'asia-northeast1';
+const url = new URL(window.location.href);
+const TENANT_ID = url.searchParams.get('tenant') || CFG.defaultTenantId || 'demo';
+const VIDEO_ID = url.searchParams.get('videoId') || '';
+
+const $ = (id) => document.getElementById(id);
+function show(scr) {
+  ['scr-loading', 'scr-player', 'scr-gate'].forEach(s => { $(s).style.display = 'none'; });
+  $(scr).style.display = scr === 'scr-gate' ? 'block' : (scr === 'scr-player' ? 'block' : 'block');
+}
+function toast(msg, dur = 2400) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+function fmtDur(sec) {
+  if (!sec) return '—:—';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+function showGate(icon, title, msg) {
+  show('scr-gate');
+  $('gate-ic').textContent = icon;
+  $('gate-title').textContent = title;
+  $('gate-msg').textContent = msg;
+}
+
+// -------------------------------------------------------------------
+// bootstrap
+// -------------------------------------------------------------------
+if (!VIDEO_ID) {
+  showGate('⚠', 'URL が 不正 です', 'videoId が 指定 されて いません。 配信 元 の URL を 開き 直して ください。');
+} else {
+  bootstrap();
+}
+
+async function bootstrap() {
+  const isDemo = !CFG || !CFG.firebase || !CFG.firebase.apiKey ||
+                 CFG.firebase.apiKey === 'YOUR_FIREBASE_API_KEY' ||
+                 CFG.demo === true;
+  const liffId = CFG.liffId || '';
+
+  // --- Demo mode: config 未設定 の 開発 環境。 dummy 動画 で 動作 確認 する ---
+  if (isDemo) {
+    setTimeout(() => {
+      renderPlayer({
+        videoUrl: '',   // demo は 実 URL なし で placeholder
+        title: `Demo 視聴 ページ · videoId=${VIDEO_ID}`,
+        description: '本番 環境 では、 対象 タグ を 保有 する LINE 顧客 の みが 視聴 できます。\n\n設定 手順:\n1. config.js を 用意 (Firebase + LIFF ID)\n2. Cloud Functions を deploy\n3. LINE Messaging API で 本 URL を 配信\n\nこの デモ 画面 は config 未設定 の 開発 状態 です。',
+        duration: 0,
+        thumbUrl: '',
+      }, /*isDemoMode*/ true);
+    }, 400);
+    return;
+  }
+
+  // --- Prod mode: LIFF + Cloud Function ---
+  if (!liffId) {
+    showGate('⚙', 'LIFF ID 未設定', 'config.js の liffId を 設定 して ください (LINE Developers Console で LIFF アプリ を 作成 → endpoint を /liff/video に 設定)。');
+    return;
+  }
+
+  try {
+    // LIFF SDK ロード
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
+      s.onload = resolve;
+      s.onerror = () => reject(new Error('LIFF SDK 読込 失敗'));
+      document.head.appendChild(s);
+    });
+
+    // LIFF init
+    await window.liff.init({ liffId });
+    if (!window.liff.isLoggedIn()) {
+      window.liff.login();  // redirect
+      return;
+    }
+    const profile = await window.liff.getProfile();
+    const accessToken = window.liff.getAccessToken();
+
+    // Firebase Functions callable 経由 で video fetch
+    const [{ initializeApp }, { getFunctions, httpsCallable }] = await Promise.all([
+      import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js'),
+      import('https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js'),
+    ]);
+    const app = initializeApp(CFG.firebase);
+    const functions = getFunctions(app, REGION);
+    const getVideoForMember = httpsCallable(functions, 'getVideoForMember');
+    const recordVideoView = httpsCallable(functions, 'recordVideoView');
+
+    let res;
+    try {
+      res = await getVideoForMember({
+        tenantId: TENANT_ID,
+        videoId: VIDEO_ID,
+        lineUserId: profile.userId,
+        lineAccessToken: accessToken,
+      });
+    } catch (err) {
+      const code = (err && err.code) || '';
+      if (code === 'permission-denied') {
+        showGate('🔒', 'この 動画 は 会員 限定 です', '視聴 に は 対象 タグ の 保有 が 必要 です。 配信 元 に お問合せ ください。');
+      } else if (code === 'not-found') {
+        showGate('❓', '動画 が 見つかりません', '公開 停止 or 削除 された 可能性 が あります。');
+      } else {
+        showGate('⚠', 'エラー が 発生 しました', (err && err.message) || String(err));
+      }
+      return;
+    }
+
+    const video = (res && res.data && res.data.video) || null;
+    if (!video || !video.url) {
+      showGate('❓', '動画 が 見つかりません', '再生 可能 な URL が 取得 できません でした。');
+      return;
+    }
+
+    renderPlayer(video, /*isDemoMode*/ false, {
+      recordFn: async (payload) => {
+        try {
+          await recordVideoView({
+            tenantId: TENANT_ID,
+            videoId: VIDEO_ID,
+            lineUserId: profile.userId,
+            lineAccessToken: accessToken,
+            watchDurationSec: payload.watchDurationSec,
+            completed: !!payload.completed,
+          });
+        } catch (e) { /* silent (視聴 は 継続) */ }
+      },
+    });
+  } catch (e) {
+    showGate('⚠', '読込 失敗', (e && e.message) || String(e));
+  }
+}
+
+function renderPlayer(video, isDemoMode, opts) {
+  show('scr-player');
+  $('video-title').textContent = video.title || '(untitled)';
+  $('video-description').textContent = video.description || '';
+  $('video-duration').textContent = fmtDur(video.duration || video.durationSec || 0);
+  if (TENANT_ID) $('tenant-label').textContent = TENANT_ID;
+
+  const vidEl = $('video-el');
+  const placeholder = $('video-placeholder');
+  const progressFill = $('progress-fill');
+
+  if (!video.url) {
+    vidEl.style.display = 'none';
+    placeholder.style.display = 'flex';
+  } else {
+    vidEl.src = video.url;
+    if (video.thumbUrl) vidEl.poster = video.thumbUrl;
+    vidEl.style.display = 'block';
+    placeholder.style.display = 'none';
+  }
+
+  // 進捗 bar (毎秒)
+  let lastRecordAt = 0;
+  let hasCompleted = false;
+  vidEl.addEventListener('timeupdate', async () => {
+    const dur = vidEl.duration || video.duration || 0;
+    if (dur > 0) {
+      const pct = Math.min(100, (vidEl.currentTime / dur) * 100);
+      progressFill.style.width = pct + '%';
+    }
+    // 15秒 ごと に record (spam 防止)
+    if (opts && opts.recordFn) {
+      const now = Date.now();
+      if (now - lastRecordAt > 15000) {
+        lastRecordAt = now;
+        opts.recordFn({ watchDurationSec: Math.floor(vidEl.currentTime || 0), completed: false });
+      }
+    }
+  });
+  vidEl.addEventListener('ended', async () => {
+    if (opts && opts.recordFn && !hasCompleted) {
+      hasCompleted = true;
+      opts.recordFn({ watchDurationSec: Math.floor(vidEl.duration || 0), completed: true });
+      toast('視聴 完了 · ありがとう ございました');
+    }
+  });
+
+  if (isDemoMode) {
+    // demo は placeholder のみ
+    vidEl.style.display = 'none';
+    placeholder.style.display = 'flex';
+  }
+}
+</script>
+</body>
+</html>
