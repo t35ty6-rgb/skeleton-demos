@@ -1241,18 +1241,17 @@
         <button class="btn btn-primary" id="course-add-btn">+ 新規 コース 作成</button>
       </div>
       <!-- 下層 header (course detail = chapter list) -->
-      <div class="page-header" id="video-header-detail" style="display:none">
-        <button class="btn btn-ghost" id="video-back-to-courses" style="padding:8px 10px;font-size:12px">
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <div class="page-header" id="video-header-detail" style="display:none;flex-wrap:nowrap;align-items:center;gap:14px">
+        <button class="btn btn-ghost" id="video-back-to-courses" style="padding:8px 12px;font-size:12px;white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:6px">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           <span>コース 一覧</span>
         </button>
-        <div style="margin-left:14px">
-          <h2 id="video-detail-title">—</h2>
-          <div class="desc" id="video-detail-desc">—</div>
+        <div style="min-width:0;flex:1">
+          <h2 id="video-detail-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</h2>
+          <div class="desc" id="video-detail-desc" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
         </div>
-        <div class="spacer"></div>
-        <button class="btn btn-secondary" id="course-edit-btn">コース 編集</button>
-        <button class="btn btn-primary" id="chapter-add-btn">+ 章 を 追加</button>
+        <button class="btn btn-secondary" id="course-edit-btn" style="white-space:nowrap;flex-shrink:0">コース 編集</button>
+        <button class="btn btn-primary" id="chapter-add-btn" style="white-space:nowrap;flex-shrink:0">+ 章 を 追加</button>
       </div>
 
       <!-- Stats (業務ツール トーン: 数字色 は 全て ink、 accent 使わない) -->
@@ -3308,13 +3307,13 @@ function renderVideos() {
     const completedCh = chapters.filter(v => (v.analytics?.completedViews || 0) > 0).length;
     const zoomCh = chapters.find(v => v.zoomMilestone?.enabled);
     const banner = document.createElement('div');
-    banner.style.cssText = 'background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:24px;flex-wrap:wrap';
+    banner.style.cssText = 'background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;gap:28px;flex-wrap:wrap';
     banner.innerHTML = `
       <div><div style="font-size:11px;color:var(--ink-muted);font-weight:700">章 数</div><div style="font-size:20px;font-weight:900;color:var(--ink)">${chapters.length}</div></div>
       <div><div style="font-size:11px;color:var(--ink-muted);font-weight:700">進行 中</div><div style="font-size:20px;font-weight:900;color:var(--ink)">${completedCh} / ${chapters.length}</div></div>
       <div><div style="font-size:11px;color:var(--ink-muted);font-weight:700">総 尺</div><div style="font-size:20px;font-weight:900;color:var(--ink)">${fmtDuration(chapters.reduce((s,v)=>s+(v.durationSec||0),0))}</div></div>
       <div class="spacer" style="flex:1"></div>
-      ${zoomCh ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;background:var(--primary-soft);color:var(--primary-hi);font-size:11.5px;font-weight:800;letter-spacing:0.02em">
+      ${zoomCh ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;background:rgba(28,37,48,0.08);color:var(--ink);font-size:11.5px;font-weight:800;letter-spacing:0.02em">
         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
         CH${String(zoomCh.chapterNo).padStart(2,'0')} 完走 で mentor Zoom 発行
       </span>` : ''}
@@ -3349,11 +3348,12 @@ function renderVideos() {
   if (courses.length > 0) {
     const courseHeader = document.createElement('div');
     courseHeader.style.cssText = 'display:flex;align-items:baseline;gap:10px;margin:0 0 12px';
-    courseHeader.innerHTML = `<h3 style="font-size:15px;font-weight:800;letter-spacing:-0.005em;margin:0">動画教材 (コース)</h3><span style="font-size:12px;color:var(--ink-muted);font-weight:700">${courses.length} コース</span>`;
+    courseHeader.innerHTML = `<h3 style="font-size:18px;font-weight:800;letter-spacing:-0.01em;margin:0">動画教材 (コース)</h3><span style="font-size:12.5px;color:var(--ink-muted);font-weight:700">${courses.length} コース</span>`;
     grid.appendChild(courseHeader);
 
     const courseGrid = document.createElement('div');
-    courseGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:28px';
+    // auto-fit で 1 tile でも 全幅 拡張 (auto-fill だと 1440px で 340px tile + 空 column 4本 発生)
+    courseGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-bottom:28px';
     courseGrid.innerHTML = courses.map(c => {
       const chapters = byCourse[c.id] || [];
       const completedCh = chapters.filter(v => (v.analytics?.completedViews || 0) > 0).length;
@@ -3384,7 +3384,7 @@ function renderVideos() {
               </div>
               <div style="font-size:10.5px;color:var(--ink-muted);font-weight:700;margin-top:4px">${completedCh}/${chapters.length} 章 実施 · 視聴 ${courseViews.toLocaleString()}</div>
             </div>
-            ${zoomCh ? `<span title="Zoom milestone 設定 済み" style="display:inline-flex;align-items:center;color:var(--primary-hi)">
+            ${zoomCh ? `<span title="Zoom milestone 設定 済み" style="display:inline-flex;align-items:center;color:var(--ink-soft)">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
             </span>` : ''}
           </div>
@@ -3408,7 +3408,7 @@ function renderVideos() {
   if (standalone.length > 0) {
     const stdHeader = document.createElement('div');
     stdHeader.style.cssText = 'display:flex;align-items:baseline;gap:10px;margin:8px 0 12px';
-    stdHeader.innerHTML = `<h3 style="font-size:15px;font-weight:800;letter-spacing:-0.005em;margin:0">単発 動画</h3><span style="font-size:12px;color:var(--ink-muted);font-weight:700">${standalone.length} 本</span>`;
+    stdHeader.innerHTML = `<h3 style="font-size:18px;font-weight:800;letter-spacing:-0.01em;margin:0">単発 動画</h3><span style="font-size:12.5px;color:var(--ink-muted);font-weight:700">${standalone.length} 本</span>`;
     grid.appendChild(stdHeader);
 
     const stdBox = document.createElement('div');
@@ -3425,7 +3425,7 @@ function renderVideoCard(v) {
     const memberCount = videoMemberCount(v);
     const thumbHtml = v.thumbUrl
       ? `<img src="${escHtml(v.thumbUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`
-      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--surface-2);color:var(--ink-2);font-size:11px;font-weight:700;letter-spacing:0.04em">サムネ 未 設定</div>`;
+      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#eeece7,#e2dfd8);color:var(--ink-soft);font-size:10.5px;font-weight:700;letter-spacing:0.04em">サムネ 未 設定</div>`;
     const tagChips = (v.memberTagIds || []).map(tid => tagChipHTML(tid)).join('') ||
       `<span style="font-size:10px;color:var(--ink-muted);font-weight:700">全 顧客 公開</span>`;
     // LMS chapter badge (章番号 が あれば 表示)
