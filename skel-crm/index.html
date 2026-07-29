@@ -78,7 +78,7 @@
   header {
     grid-column: 1 / -1;
     grid-row: 1;
-    background: var(--surface);
+    background: var(--bg);
     border-bottom: 1px solid var(--rule);
     display: flex;
     align-items: center;
@@ -251,7 +251,10 @@
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: rgba(0,0,0,0.015); }
 
-  /* === Chips / Tags (multi-color rainbow 廃止 · 単一 muted tone) === */
+  /* === Chips / Tags (multi-color rainbow 廃止 · 単一 muted tone) ===
+     表示 の 常態: neutral grey (どの 顧客 も 「持っている タグ」 は grey で 落ち着かせる)。
+     モーダル 内 の セレクター (.chip-area 配下) で のみ 「未選択=淡い grey / 選択=black outline」 に 差替。
+     これで 顧客一覧 で 「120個 の tag が 全面 green」 の 事故 回避 (design r5 指摘)。 */
   .tag-chip {
     display: inline-flex; align-items: center; gap: 4px;
     padding: 3px 10px; border-radius: 999px;
@@ -262,8 +265,13 @@
     color: var(--ink-soft) !important;
     border: 1px solid transparent !important;
   }
-  .tag-chip.selected { opacity: 1; background: var(--primary-soft) !important; color: var(--primary-hi) !important; }
-  .tag-chip:not(.selected) { opacity: 0.85; }
+  /* modal picker の 中 の 選択 chip のみ black outline で 「選択中」 を 明示 (green 塗り は 使わない) */
+  .chip-area .tag-chip.selected {
+    background: var(--ink) !important;
+    color: #fff !important;
+    border-color: var(--ink) !important;
+  }
+  .chip-area .tag-chip:not(.selected) { opacity: 0.65; }
 
   .cp-chip {
     display: inline-flex; align-items: center;
@@ -954,8 +962,8 @@
     font-size: 10px; font-weight: 800;
     letter-spacing: 0.06em;
   }
-  .mode-indicator.demo { background: var(--info-soft); color: #1d4ed8; }
-  .mode-indicator.prod { background: var(--primary-soft); color: var(--primary-hi); }
+  .mode-indicator.demo { background: rgba(0,0,0,0.08); color: var(--ink-soft); }
+  .mode-indicator.prod { background: rgba(0,0,0,0.08); color: var(--ink-soft); }
 </style>
 </head>
 <body>
@@ -1026,10 +1034,12 @@
         </div>
         <div class="user-menu-divider"></div>
         <div class="user-menu-item" id="user-menu-upgrade">
-          <span>💎</span><span>プラン アップグレード</span>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+          <span>プラン アップグレード</span>
         </div>
         <div class="user-menu-item danger" id="user-menu-logout">
-          <span>⏻</span><span>ログアウト</span>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>ログアウト</span>
         </div>
       </div>
     </div>
@@ -1054,12 +1064,12 @@
       <div class="stat-row">
         <div class="stat-card">
           <div class="label">総 顧客数</div>
-          <div class="val" style="color:var(--info)" id="stat-total-val">—</div>
+          <div class="val" id="stat-total-val">—</div>
           <div class="sub">LINE 友だち</div>
         </div>
         <div class="stat-card">
           <div class="label">直近 30日 新規</div>
-          <div class="val" style="color:var(--primary)" id="stat-new-val">—</div>
+          <div class="val" id="stat-new-val">—</div>
           <div class="sub" id="stat-new-sub">前月比</div>
         </div>
         <div class="stat-card">
@@ -1069,7 +1079,7 @@
         </div>
         <div class="stat-card">
           <div class="label">平均 LTV</div>
-          <div class="val" style="color:var(--primary)" id="stat-ltv-val">—</div>
+          <div class="val" id="stat-ltv-val">—</div>
           <div class="sub" id="stat-ltv-sub">購入 顧客 の 平均</div>
         </div>
       </div>
@@ -1805,7 +1815,8 @@ state.videos = [
     videoUrl: '', thumbUrl: '',
     durationSec: 260, sizeBytes: 38000000,
     createdAt: '2024-04-28', updatedAt: '2024-04-28',
-    analytics: { totalViews: 32, uniqueViewers: 24, completedViews: 15, avgWatchPct: 62 },
+    // demo で 順次解放 UX を 見せる ため CH04-05 は completedViews=0 (前提 CH03 も 0 と 判定 したい 場合 は CH03 も 0 に する)
+    analytics: { totalViews: 0, uniqueViewers: 0, completedViews: 0, avgWatchPct: 0 },
     viewLogs: [],
   },
   {
@@ -1816,7 +1827,7 @@ state.videos = [
     videoUrl: '', thumbUrl: '',
     durationSec: 200, sizeBytes: 30000000,
     createdAt: '2024-05-01', updatedAt: '2024-05-01',
-    analytics: { totalViews: 18, uniqueViewers: 15, completedViews: 8, avgWatchPct: 55 },
+    analytics: { totalViews: 0, uniqueViewers: 0, completedViews: 0, avgWatchPct: 0 },
     viewLogs: [],
   },
 ];
@@ -2191,19 +2202,19 @@ function openCustomerDetailModal(cust) {
 function renderTags() {
   const grid = document.getElementById('tag-grid');
   if (!grid) return;
+  // 業務ツール tone: card は 白 surface + 細い rule + weight 抑制。
+  // owner 指摘 「文字が太すぎて見づらい」 → name weight 800→600、 count 900→800、 sub weight 500 に。
   grid.innerHTML = state.tags.map(t => {
-    const c = TAG_COLORS[t.colorIdx % TAG_COLORS.length];
     const count = state.customers.filter(c2 => c2.tagIds.includes(t.id)).length;
     return `
-      <div class="tag-card" data-tag-id="${escHtml(t.id)}" style="background:${c.bg};border:1.5px solid ${c.border};border-radius:14px;padding:16px 18px;cursor:pointer;transition:transform .15s, box-shadow .15s;box-shadow:inset 0 0 0 2px rgba(255,255,255,0.35), 0 4px 16px rgba(${c.glow},0.35), 0 2px 4px rgba(0,0,0,0.12);">
-        <div style="font-size:14px;font-weight:800;color:${c.color};margin-bottom:6px;text-shadow:0 2px 4px rgba(0,0,0,0.35);letter-spacing:0.02em;">${escHtml(t.name)}</div>
-        <div style="font-size:30px;font-weight:900;color:${c.color};text-shadow:0 2px 6px rgba(0,0,0,0.4);line-height:1;">${count}</div>
-        <div style="font-size:11px;color:${c.color};opacity:0.92;margin-top:6px;text-shadow:0 1px 2px rgba(0,0,0,0.25);">顧客 · クリックで編集</div>
+      <div class="tag-card" data-tag-id="${escHtml(t.id)}" style="background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:16px 18px;cursor:pointer;transition:box-shadow .15s;">
+        <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px;letter-spacing:-0.005em">${escHtml(t.name)}</div>
+        <div style="font-size:26px;font-weight:800;color:var(--ink);line-height:1;letter-spacing:-0.02em">${count}</div>
+        <div style="font-size:11px;color:var(--ink-muted);font-weight:500;margin-top:6px">顧客 · クリックで編集</div>
       </div>`;
   }).join('');
-  // click on card → edit modal
   grid.querySelectorAll('.tag-card').forEach(card => {
-    card.addEventListener('mouseenter', () => { card.style.boxShadow = '0 4px 16px rgba(0,0,0,.14)'; });
+    card.addEventListener('mouseenter', () => { card.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)'; });
     card.addEventListener('mouseleave', () => { card.style.boxShadow = ''; });
     card.addEventListener('click', () => {
       const tag = state.tags.find(t => t.id === card.dataset.tagId);
@@ -3352,7 +3363,7 @@ function renderVideoCard(v) {
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding-top:12px;border-top:1px solid var(--rule)">
             <div><div style="font-size:10px;color:var(--ink-muted);font-weight:700">視聴 可能</div><div style="font-size:15px;font-weight:800;margin-top:2px">${memberCount}</div></div>
             <div><div style="font-size:10px;color:var(--ink-muted);font-weight:700">視聴 数</div><div style="font-size:15px;font-weight:800;margin-top:2px">${(a.totalViews || 0)}</div></div>
-            <div><div style="font-size:10px;color:var(--ink-muted);font-weight:700">完走 率</div><div style="font-size:15px;font-weight:800;color:var(--primary-hi);margin-top:2px">${a.totalViews ? Math.round((a.completedViews || 0)/a.totalViews*100) : 0}%</div></div>
+            <div><div style="font-size:10px;color:var(--ink-muted);font-weight:700">完走 率</div><div style="font-size:15px;font-weight:800;color:var(--ink);margin-top:2px">${a.totalViews ? Math.round((a.completedViews || 0)/a.totalViews*100) : 0}%</div></div>
           </div>
           <div style="display:flex;gap:6px;margin-top:12px">
             <button class="btn btn-primary video-analytics-btn" data-video-id="${escHtml(v.id)}" style="flex:1;padding:8px;font-size:11px;justify-content:center">分析</button>

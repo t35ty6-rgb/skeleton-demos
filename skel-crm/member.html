@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c2530">
+<title>会員ページ · Skel·CRM</title>
+<style>
+  :root {
+    --bg: #f5f4f1;
+    --surface: #ffffff;
+    --surface-2: #f0efec;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a4a;
+    --ink-muted: #6f6f6f;
+    --rule: rgba(0,0,0,0.08);
+    --rule-strong: rgba(0,0,0,0.16);
+    --primary: #06c755;
+    --primary-hi: #048a3c;
+    --primary-soft: #def5e4;
+    --warn: #c63b2a;
+    --side: #1c2530;
+    --side-ink: #e5ecf3;
+    --side-ink-muted: #98a6b5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: -0.005em;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  a { color: var(--primary-hi); text-decoration: none; }
+  input { font: inherit; color: inherit; }
+
+  /* ============ Layout (2-pane after login) ============ */
+  .wrap { min-height: 100%; display: flex; flex-direction: column; }
+
+  /* Top bar (会員ヘッダ) */
+  .topbar {
+    background: var(--side);
+    color: var(--side-ink);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .topbar .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 800; font-size: 14px; letter-spacing: -0.01em;
+  }
+  .topbar .brand svg { color: var(--primary); }
+  .topbar .spacer { flex: 1; }
+  .topbar .who { font-size: 12px; color: var(--side-ink-muted); font-weight: 600; }
+  .topbar .logout {
+    padding: 6px 12px; border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 8px; font-size: 12px; color: var(--side-ink-muted); font-weight: 700;
+  }
+  .topbar .logout:hover { color: var(--side-ink); background: rgba(255,255,255,0.05); }
+
+  /* ============ Login screen ============ */
+  #screen-login {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    padding: 36px 32px;
+    max-width: 380px;
+    width: 100%;
+  }
+  .login-card .brand-line {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 24px;
+    color: var(--ink-muted); font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+  }
+  .login-card .brand-line svg { color: var(--primary); }
+  .login-card h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 8px; }
+  .login-card .sub { font-size: 13px; color: var(--ink-soft); margin-bottom: 22px; line-height: 1.65; }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 11.5px; font-weight: 700; color: var(--ink-muted);
+    letter-spacing: 0.04em; margin-bottom: 6px;
+  }
+  .field input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--surface);
+    outline: none;
+    transition: border-color 120ms;
+  }
+  .field input:focus { border-color: var(--ink); }
+  #login-error {
+    display: none;
+    margin-bottom: 14px; padding: 10px 12px;
+    background: #fde8e5; border-left: 3px solid var(--warn);
+    color: #7a2415; font-size: 12px; font-weight: 600; border-radius: 4px;
+  }
+  #login-error.show { display: block; }
+  #login-btn {
+    width: 100%;
+    padding: 11px 14px;
+    background: var(--ink); color: #fff;
+    border: 1px solid var(--ink); border-radius: 8px;
+    font-size: 14px; font-weight: 800;
+    transition: opacity 120ms;
+  }
+  #login-btn:hover { opacity: 0.9; }
+  .login-hint {
+    margin-top: 18px; font-size: 11px; color: var(--ink-muted); text-align: center; line-height: 1.6;
+  }
+
+  /* ============ Course screen ============ */
+  #screen-courses {
+    flex: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+    width: 100%;
+  }
+  .page-title {
+    font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px;
+  }
+  .page-sub { font-size: 13px; color: var(--ink-muted); margin-bottom: 24px; }
+
+  .course-card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-bottom: 16px;
+    cursor: pointer;
+    transition: box-shadow 150ms;
+  }
+  .course-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.05); }
+  .course-title { font-size: 15px; font-weight: 800; letter-spacing: -0.005em; margin-bottom: 4px; }
+  .course-desc { font-size: 12.5px; color: var(--ink-muted); line-height: 1.55; margin-bottom: 12px; }
+  .course-progress {
+    display: flex; align-items: center; gap: 12px; margin-top: 8px;
+  }
+  .progress-bar {
+    flex: 1;
+    height: 5px;
+    background: var(--surface-2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--primary);
+    transition: width 300ms;
+    border-radius: 3px;
+  }
+  .course-progress .n { font-size: 11.5px; color: var(--ink-soft); font-weight: 700; letter-spacing: 0.02em; }
+
+  /* ============ Chapter list ============ */
+  #screen-chapters {
+    flex: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+    width: 100%;
+  }
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border: 1px solid var(--rule-strong); border-radius: 8px;
+    font-size: 12px; color: var(--ink-soft); font-weight: 700;
+    margin-bottom: 20px;
+    transition: background 120ms;
+  }
+  .back-btn:hover { background: var(--surface-2); }
+  .chapter-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+  .chapter-row {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: 46px 1fr auto;
+    align-items: center;
+    gap: 14px;
+    transition: box-shadow 150ms;
+  }
+  .chapter-row.unlocked { cursor: pointer; }
+  .chapter-row.unlocked:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.05); }
+  .chapter-row.locked { opacity: 0.55; cursor: not-allowed; }
+  .chapter-no {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.06em;
+    color: var(--ink-muted);
+    background: var(--surface-2);
+    border-radius: 6px;
+    padding: 6px 8px;
+    text-align: center;
+  }
+  .chapter-body .title { font-size: 14px; font-weight: 700; letter-spacing: -0.005em; margin-bottom: 2px; }
+  .chapter-body .desc { font-size: 12px; color: var(--ink-muted); line-height: 1.5; }
+  .chapter-action { display: flex; align-items: center; gap: 8px; }
+  .chapter-status {
+    font-size: 11px; font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.06);
+    color: var(--ink-soft);
+  }
+  .chapter-status.completed { background: var(--primary-soft); color: var(--primary-hi); }
+  .chapter-status.locked { background: rgba(0,0,0,0.04); color: var(--ink-muted); }
+  .chapter-cta {
+    padding: 7px 14px; background: var(--ink); color: #fff;
+    border-radius: 8px; font-size: 12px; font-weight: 800;
+  }
+  .chapter-cta:hover { opacity: 0.9; }
+  .zoom-milestone {
+    background: var(--primary-soft);
+    border: 1px solid rgba(6,199,85,0.25);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 14px;
+  }
+  .zoom-milestone svg { color: var(--primary); flex-shrink: 0; }
+  .zoom-milestone .m-body { flex: 1; }
+  .zoom-milestone .m-title { font-size: 13px; font-weight: 800; color: var(--primary-hi); margin-bottom: 2px; }
+  .zoom-milestone .m-desc { font-size: 11.5px; color: var(--ink-soft); line-height: 1.55; }
+  .zoom-cta {
+    padding: 8px 14px; background: var(--primary); color: #fff;
+    border-radius: 8px; font-size: 12px; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .zoom-cta:hover { opacity: 0.9; }
+  .zoom-locked {
+    background: rgba(0,0,0,0.04);
+    border: 1px solid var(--rule);
+    color: var(--ink-muted);
+  }
+  .zoom-locked .m-title { color: var(--ink-soft); }
+  .zoom-locked svg { color: var(--ink-muted); }
+
+  /* ============ Player screen ============ */
+  #screen-player {
+    flex: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 20px 80px;
+    width: 100%;
+  }
+  .player-frame {
+    aspect-ratio: 16/9;
+    background: #0a0c11;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .player-frame video {
+    width: 100%; height: 100%; display: block; background: #000;
+  }
+  .player-frame .placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.5); gap: 10px;
+  }
+  .player-frame .placeholder svg { color: rgba(255,255,255,0.35); }
+  .player-title { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 6px; }
+  .player-meta { font-size: 12px; color: var(--ink-muted); font-family: "SF Mono", monospace; letter-spacing: 0.02em; margin-bottom: 18px; }
+  .player-desc {
+    font-size: 13.5px; color: var(--ink-soft); line-height: 1.7;
+    padding-top: 14px; border-top: 1px solid var(--rule);
+    white-space: pre-wrap;
+  }
+  .player-complete-btn {
+    margin-top: 24px;
+    padding: 12px 20px; background: var(--ink); color: #fff;
+    border-radius: 8px; font-size: 14px; font-weight: 800;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .player-complete-btn.completed { background: var(--primary); }
+
+  @media (max-width: 640px) {
+    #screen-courses, #screen-chapters, #screen-player { padding: 20px 14px 60px; }
+    .topbar { padding: 12px 16px; }
+    .page-title { font-size: 18px; }
+    .course-card { padding: 16px 18px; }
+    .chapter-row { grid-template-columns: 38px 1fr; }
+    .chapter-action { grid-column: 1 / -1; justify-content: flex-end; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Topbar (after login) -->
+  <div class="topbar" id="topbar" style="display:none">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9 L15 12 L10 15 Z" fill="currentColor" stroke="none"/></svg>
+      <span>会員ページ</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="who" id="who">—</div>
+    <button class="logout" id="logout-btn">ログアウト</button>
+  </div>
+
+  <!-- Login screen -->
+  <div id="screen-login">
+    <div class="login-card">
+      <div class="brand-line">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9 L15 12 L10 15 Z" fill="currentColor" stroke="none"/></svg>
+        <span>SKEL·CRM 会員 ページ</span>
+      </div>
+      <h1>ログイン</h1>
+      <div class="sub">配信 元 から お送り した 会員 URL と パスワード で ログイン してください。</div>
+      <div id="login-error"></div>
+      <div class="field">
+        <label>会員 ID (メール or 会員番号)</label>
+        <input type="text" id="login-id" autocomplete="username" placeholder="member@example.com">
+      </div>
+      <div class="field">
+        <label>パスワード</label>
+        <input type="password" id="login-pw" autocomplete="current-password" placeholder="発行 された パスワード">
+      </div>
+      <button id="login-btn">ログイン</button>
+      <div class="login-hint">
+        パスワード を お忘れ の 方 は 配信 元 まで お問合せ ください。<br>
+        デモ アカウント: <b>demo@example.com</b> / <b>demo1234</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- Courses screen -->
+  <div id="screen-courses" style="display:none">
+    <div class="page-title">受講 可能 な コース</div>
+    <div class="page-sub" id="courses-sub">—</div>
+    <div id="courses-list"></div>
+  </div>
+
+  <!-- Chapters screen -->
+  <div id="screen-chapters" style="display:none">
+    <button class="back-btn" id="back-to-courses">
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      コース 一覧 に 戻る
+    </button>
+    <div class="page-title" id="chapters-title">—</div>
+    <div class="page-sub" id="chapters-desc">—</div>
+    <div class="chapter-list" id="chapters-list"></div>
+    <div id="zoom-panel"></div>
+  </div>
+
+  <!-- Player screen -->
+  <div id="screen-player" style="display:none">
+    <button class="back-btn" id="back-to-chapters">
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      章 一覧 に 戻る
+    </button>
+    <div class="player-frame">
+      <video id="video-el" controls playsinline preload="metadata"></video>
+      <div class="placeholder" id="video-placeholder" style="display:none">
+        <svg viewBox="0 0 24 24" width="50" height="50" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="1.5"/><path d="M10 10 L15 12 L10 14 z" fill="currentColor" stroke="none"/></svg>
+        <div style="font-size:12px;font-weight:700">デモ 再生 (実 file は 本番 で 差替)</div>
+      </div>
+    </div>
+    <div class="player-title" id="player-title">—</div>
+    <div class="player-meta" id="player-meta">—</div>
+    <div class="player-desc" id="player-desc"></div>
+    <button class="player-complete-btn" id="mark-complete-btn">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <span id="mark-complete-label">この 章 を 完走 済 に する</span>
+    </button>
+  </div>
+</div>
+
+<script>
+// =========================================================
+// Skel·CRM 会員ページ (member.html)
+// URL + パスワード ゲート · コース 受講 UI · 進捗 は localStorage
+// =========================================================
+// Demo mode: config.js なし で localStorage 完結。
+// 本番: 下部 script section で Firebase auth callable に 差替 予定 (Phase 2)。
+// =========================================================
+
+// ---- config ----
+const DEMO_MEMBERS = {
+  'demo@example.com': { password: 'demo1234', name: 'デモ 太郎', tagIds: ['t3'] },
+  'test@example.com': { password: 'test1234', name: 'テスト 花子', tagIds: ['t3', 't4'] },
+};
+
+// 会員 が 受講 可能 な course + chapter 定義 (admin 側 の state.courses / state.videos と 同じ schema)。
+// demo は 定期便 コース 1 本 で 5 章。 CH03 に Zoom milestone。
+const DEMO_COURSES = [
+  {
+    id: 'course-teiki',
+    title: '定期便 マスター コース',
+    description: '5 章 完結 の コース。 章 は 順番 に 解放。 CH03 完走 で 個別 mentor 面談 の Zoom link が 発行 されます。',
+    memberTagIds: ['t3'],
+    chapters: [
+      { id: 'v-course-teiki-ch1', chapterNo: 1, title: 'CH01 · はじめに', description: '定期便 の 全体像 と、 この コース で 得られる 成果 の 説明。', durationSec: 180 },
+      { id: 'v-course-teiki-ch2', chapterNo: 2, title: 'CH02 · 商品 の 選び方', description: '4 タイプ の 定期便 商品 を どう 選ぶ か、 判定 チェック リスト 付き。', durationSec: 240 },
+      { id: 'v-course-teiki-ch3', chapterNo: 3, title: 'CH03 · 使いこなし 応用編', description: '効果 を 最大化 する 実践 テク。 完了 すると 個別 mentor 面談 の Zoom link が 発行 されます。', durationSec: 315, zoomMilestone: true },
+      { id: 'v-course-teiki-ch4', chapterNo: 4, title: 'CH04 · 継続 の コツ', description: '3ヶ月 継続 の 壁 を 乗り越える method。', durationSec: 260 },
+      { id: 'v-course-teiki-ch5', chapterNo: 5, title: 'CH05 · 卒業 認定', description: '5章 全 修了 で 「定期便 マスター」 タグ 自動 付与。', durationSec: 200 },
+    ],
+  },
+];
+
+// ---- helpers ----
+const $ = (id) => document.getElementById(id);
+function show(scr) {
+  ['screen-login','screen-courses','screen-chapters','screen-player'].forEach(s => { $(s).style.display = 'none'; });
+  $(scr).style.display = scr === 'screen-login' ? 'flex' : 'block';
+  $('topbar').style.display = scr === 'screen-login' ? 'none' : 'flex';
+}
+function fmtDur(sec) {
+  if (!sec) return '—';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function progressKey(memberId, courseId) { return `skel-member-progress-${memberId}-${courseId}`; }
+function getProgress(memberId, courseId) {
+  try { return JSON.parse(localStorage.getItem(progressKey(memberId, courseId)) || '{}'); }
+  catch (e) { return {}; }
+}
+function setProgress(memberId, courseId, chapterNo, completed) {
+  const p = getProgress(memberId, courseId);
+  p[String(chapterNo)] = { completed: !!completed, at: new Date().toISOString() };
+  localStorage.setItem(progressKey(memberId, courseId), JSON.stringify(p));
+}
+
+// ---- state ----
+let currentMember = null;
+let currentCourseId = null;
+let currentChapterNo = null;
+
+// ---- login ----
+$('login-btn').addEventListener('click', () => {
+  const id = $('login-id').value.trim().toLowerCase();
+  const pw = $('login-pw').value;
+  const err = $('login-error');
+  err.classList.remove('show');
+  if (!id || !pw) { err.textContent = 'ID と パスワード を 入力 して ください'; err.classList.add('show'); return; }
+  const m = DEMO_MEMBERS[id];
+  if (!m || m.password !== pw) {
+    err.textContent = 'ID or パスワード が 一致 しません'; err.classList.add('show'); return;
+  }
+  currentMember = { id, ...m };
+  sessionStorage.setItem('skel-member-session', JSON.stringify({ id }));
+  $('who').textContent = m.name + ' さん';
+  renderCourses();
+  show('screen-courses');
+});
+
+// Enter key に 対応
+['login-id','login-pw'].forEach(id => {
+  $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') $('login-btn').click(); });
+});
+
+// ---- logout ----
+$('logout-btn').addEventListener('click', () => {
+  currentMember = null;
+  sessionStorage.removeItem('skel-member-session');
+  $('login-id').value = ''; $('login-pw').value = '';
+  show('screen-login');
+});
+
+// ---- session restore ----
+(function restore() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem('skel-member-session') || 'null');
+    if (s && DEMO_MEMBERS[s.id]) {
+      currentMember = { id: s.id, ...DEMO_MEMBERS[s.id] };
+      $('who').textContent = currentMember.name + ' さん';
+      renderCourses();
+      show('screen-courses');
+      return;
+    }
+  } catch (e) {}
+  show('screen-login');
+})();
+
+// ---- courses ----
+function renderCourses() {
+  const allowed = DEMO_COURSES.filter(c => {
+    const need = c.memberTagIds || [];
+    if (need.length === 0) return true;
+    return need.every(t => (currentMember.tagIds || []).includes(t));
+  });
+  $('courses-sub').textContent = `${currentMember.name} さん が 受講 可能 な コース ${allowed.length} 件`;
+  const list = $('courses-list');
+  if (allowed.length === 0) {
+    list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink-muted);font-size:13px">受講 可能 な コース が ありません。 タグ 付与 を 配信 元 に お問合せ ください。</div>';
+    return;
+  }
+  list.innerHTML = allowed.map(c => {
+    const p = getProgress(currentMember.id, c.id);
+    const done = Object.values(p).filter(x => x.completed).length;
+    const pct = c.chapters.length ? Math.round(done / c.chapters.length * 100) : 0;
+    return `
+      <div class="course-card" data-course-id="${escHtml(c.id)}">
+        <div class="course-title">${escHtml(c.title)}</div>
+        <div class="course-desc">${escHtml(c.description)}</div>
+        <div class="course-progress">
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <div class="n">${done} / ${c.chapters.length} 章 (${pct}%)</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  list.querySelectorAll('.course-card').forEach(card => {
+    card.addEventListener('click', () => {
+      currentCourseId = card.dataset.courseId;
+      renderChapters();
+      show('screen-chapters');
+    });
+  });
+}
+
+// ---- chapters ----
+$('back-to-courses').addEventListener('click', () => { renderCourses(); show('screen-courses'); });
+
+function renderChapters() {
+  const c = DEMO_COURSES.find(x => x.id === currentCourseId);
+  if (!c) { show('screen-courses'); return; }
+  const p = getProgress(currentMember.id, c.id);
+  $('chapters-title').textContent = c.title;
+  $('chapters-desc').textContent = c.description;
+
+  const rows = c.chapters.map(ch => {
+    const prereq = ch.chapterNo > 1 ? [ch.chapterNo - 1] : [];
+    const unlocked = prereq.every(n => p[String(n)]?.completed);
+    const completed = !!p[String(ch.chapterNo)]?.completed;
+    let status = '';
+    let action = '';
+    if (completed) {
+      status = '<span class="chapter-status completed">完了</span>';
+      action = '<button class="chapter-cta">もう一度 見る</button>';
+    } else if (unlocked) {
+      status = '<span class="chapter-status">受講可</span>';
+      action = '<button class="chapter-cta">見る →</button>';
+    } else {
+      status = '<span class="chapter-status locked">未解放</span>';
+      action = '';
+    }
+    return `
+      <div class="chapter-row ${unlocked ? 'unlocked' : 'locked'}" data-ch="${ch.chapterNo}">
+        <div class="chapter-no">CH${String(ch.chapterNo).padStart(2,'0')}</div>
+        <div class="chapter-body">
+          <div class="title">${escHtml(ch.title)}</div>
+          <div class="desc">${escHtml(ch.description)} · ${fmtDur(ch.durationSec)}</div>
+        </div>
+        <div class="chapter-action">${status}${action}</div>
+      </div>
+    `;
+  }).join('');
+  $('chapters-list').innerHTML = rows;
+
+  // Zoom milestone panel
+  const zoomCh = c.chapters.find(x => x.zoomMilestone);
+  const zoomPanel = $('zoom-panel');
+  if (zoomCh) {
+    const zoomUnlocked = !!p[String(zoomCh.chapterNo)]?.completed;
+    zoomPanel.innerHTML = `
+      <div class="zoom-milestone ${zoomUnlocked ? '' : 'zoom-locked'}">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        <div class="m-body">
+          <div class="m-title">${zoomUnlocked ? 'mentor 個別 面談 (30分) が 予約 できます' : `CH${String(zoomCh.chapterNo).padStart(2,'0')} 完了 で mentor 面談 が 予約 可能 に なります`}</div>
+          <div class="m-desc">${zoomUnlocked ? 'ボタン から Zoom link を 発行 し、 空いている 日時 で 予約 して ください。' : '応用編 の 完走 後 に、 個別 質問 · 相談 の 面談 が 発生 します。'}</div>
+        </div>
+        ${zoomUnlocked ? '<button class="zoom-cta" id="zoom-book-btn">面談 を 予約 する</button>' : ''}
+      </div>
+    `;
+    const zb = $('zoom-book-btn');
+    if (zb) zb.addEventListener('click', () => {
+      // demo: alert + 疑似 Zoom URL 発行 (本番: Zoom API で 実 meeting 生成)
+      const meetingId = Math.floor(Math.random() * 9000000000) + 1000000000;
+      const url = `https://zoom.us/j/${meetingId}?pwd=${Math.random().toString(36).slice(2, 10)}`;
+      alert('デモ: 個別 面談 の Zoom link を 発行 しました。\n\n' + url + '\n\n本番 では 会員 メール に 送付 + カレンダー 予約 に 連携 します。');
+    });
+  } else {
+    zoomPanel.innerHTML = '';
+  }
+
+  // wire chapter click (unlocked のみ)
+  $('chapters-list').querySelectorAll('.chapter-row.unlocked').forEach(row => {
+    row.addEventListener('click', () => {
+      currentChapterNo = parseInt(row.dataset.ch, 10);
+      renderPlayer();
+      show('screen-player');
+    });
+  });
+}
+
+// ---- player ----
+$('back-to-chapters').addEventListener('click', () => { renderChapters(); show('screen-chapters'); });
+
+function renderPlayer() {
+  const c = DEMO_COURSES.find(x => x.id === currentCourseId);
+  const ch = c?.chapters.find(x => x.chapterNo === currentChapterNo);
+  if (!ch) { show('screen-chapters'); return; }
+  $('player-title').textContent = ch.title;
+  $('player-meta').textContent = fmtDur(ch.durationSec) + '  ·  CH' + String(ch.chapterNo).padStart(2,'0');
+  $('player-desc').textContent = ch.description;
+
+  const vidEl = $('video-el');
+  const placeholder = $('video-placeholder');
+  // 本番 では 動画 URL を Cloud Function 経由 で 取得 (member session → tag 判定 → signed URL)
+  vidEl.src = '';
+  vidEl.style.display = 'none';
+  placeholder.style.display = 'flex';
+
+  const p = getProgress(currentMember.id, c.id);
+  const completed = !!p[String(ch.chapterNo)]?.completed;
+  const btn = $('mark-complete-btn');
+  const lbl = $('mark-complete-label');
+  if (completed) {
+    btn.classList.add('completed');
+    lbl.textContent = '完走 済 (再度 見て も 進捗 は 変わり ません)';
+  } else {
+    btn.classList.remove('completed');
+    lbl.textContent = 'この 章 を 完走 済 に する';
+  }
+  btn.onclick = null;
+  btn.onclick = () => {
+    setProgress(currentMember.id, c.id, ch.chapterNo, true);
+    // 次 章 が あれば 遷移 促す
+    const next = c.chapters.find(x => x.chapterNo === ch.chapterNo + 1);
+    if (next) {
+      if (confirm(`CH${String(ch.chapterNo).padStart(2,'0')} を 完走 済 に しました。\n\n次 の 章 CH${String(next.chapterNo).padStart(2,'0')} に 進みますか?`)) {
+        currentChapterNo = next.chapterNo;
+        renderPlayer();
+        return;
+      }
+    } else {
+      alert('コース 全 章 完走 おめでとう ございます!');
+    }
+    renderChapters();
+    show('screen-chapters');
+  };
+}
+</script>
+</body>
+</html>
