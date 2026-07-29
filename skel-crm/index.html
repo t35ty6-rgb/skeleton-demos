@@ -631,6 +631,27 @@
       border-top: 1px solid var(--rule);
     }
     #view-history table { min-width: 720px; }
+
+    /* SP: 動画ホスティング stat card を 2×2 に、 upload button は 折り返さない */
+    #view-videos .video-stats {
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 8px !important;
+      margin-bottom: 12px;
+    }
+    #view-videos .video-stats > div {
+      padding: 12px 14px !important;
+    }
+    #view-videos .video-stats > div > div:last-child {
+      font-size: 22px !important;
+    }
+    #view-videos #video-add-btn {
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #view-videos #video-cards {
+      grid-template-columns: 1fr !important;
+      gap: 12px !important;
+    }
   }
 
   /* Sticky top for touch */
@@ -1162,11 +1183,11 @@
       <div class="video-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px;">
         <div class="stat-card" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 18px;">
           <div style="font-size:11px;color:var(--dim);font-weight:700;letter-spacing:0.02em">動画 本数</div>
-          <div style="font-size:28px;font-weight:900;margin-top:4px" id="video-stat-count">0</div>
+          <div style="font-size:28px;font-weight:900;margin-top:4px;color:var(--ink)" id="video-stat-count">0</div>
         </div>
         <div class="stat-card" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 18px;">
           <div style="font-size:11px;color:var(--dim);font-weight:700;letter-spacing:0.02em">累計 視聴 回数</div>
-          <div style="font-size:28px;font-weight:900;margin-top:4px;color:var(--info)" id="video-stat-views">0</div>
+          <div style="font-size:28px;font-weight:900;margin-top:4px;color:var(--ink)" id="video-stat-views">0</div>
         </div>
         <div class="stat-card" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 18px;">
           <div style="font-size:11px;color:var(--dim);font-weight:700;letter-spacing:0.02em">ユニーク 視聴者</div>
@@ -3091,7 +3112,7 @@ function renderVideos() {
     const memberCount = videoMemberCount(v);
     const thumbHtml = v.thumbUrl
       ? `<img src="${escHtml(v.thumbUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`
-      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:44px;color:var(--dim);background:linear-gradient(135deg,#e4e7ee,#f0f2f7)">🎬</div>`;
+      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--surface-2);color:var(--muted);font-size:11px;font-weight:700;letter-spacing:0.04em">サムネ 未 設定</div>`;
     const tagChips = (v.memberTagIds || []).map(tid => tagChipHTML(tid)).join('') ||
       `<span style="font-size:10px;color:var(--dim);font-weight:700">全 顧客 公開</span>`;
     return `
@@ -3190,6 +3211,7 @@ function openVideoEditModal(videoId) {
         </div>
         <div id="video-upload-label" style="font-size:11px;color:var(--dim);margin-top:6px;font-weight:600">0%</div>
       </div>
+      <div id="video-step1-hint" style="margin-top:12px;padding:12px;background:var(--surface-2);border-radius:8px;font-size:11px;color:var(--dim);font-weight:600;text-align:center">ファイル を 選択 する と、 タイトル / 対象 / サムネ の 入力 に 進みます</div>
     </div>
     ` : `
     <div class="field-group">
@@ -3201,17 +3223,17 @@ function openVideoEditModal(videoId) {
     </div>
     `}
 
-    <div class="field-group">
+    <div class="field-group" id="video-step2-area" style="${isEdit ? '' : 'display:none'}">
       <label class="field-label">${isEdit ? '' : 'STEP 2 · '}タイトル</label>
       <input type="text" class="field-input" id="video-title-input" placeholder="例: VIP 会員 限定 · 新商品 先行 公開" value="${escHtml(v.title)}">
     </div>
 
-    <div class="field-group">
+    <div class="field-group" id="video-step3-area" style="${isEdit ? '' : 'display:none'}">
       <label class="field-label">${isEdit ? '' : 'STEP 3 · '}説明 (任意)</label>
       <textarea class="field-input" id="video-desc-input" rows="3" style="resize:vertical;font-family:inherit;line-height:1.6" placeholder="どんな 内容 か 1-2 行 で">${escHtml(v.description || '')}</textarea>
     </div>
 
-    <div class="field-group">
+    <div class="field-group" id="video-step4-area" style="${isEdit ? '' : 'display:none'}">
       <label class="field-label">${isEdit ? '' : 'STEP 4 · '}視聴 対象 (タグ AND 条件)</label>
       <div class="chip-area" id="video-tag-chips">${tagChips || '<span style="font-size:12px;color:var(--dim)">タグ を 先に 登録 して ください</span>'}</div>
       <div id="video-target-info" style="margin-top:8px;font-size:12px;color:var(--info);font-weight:700">
@@ -3222,7 +3244,7 @@ function openVideoEditModal(videoId) {
       </div>
     </div>
 
-    <div class="field-group">
+    <div class="field-group" id="video-thumb-area" style="${isEdit ? '' : 'display:none'}">
       <label class="field-label">サムネイル (任意)</label>
       <div style="display:flex;gap:12px;align-items:center">
         <div id="video-thumb-preview" style="width:120px;height:68px;background:${v.thumbUrl ? `url('${escHtml(v.thumbUrl)}') center/cover` : 'var(--surface-2)'};border:1px solid var(--rule);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--dim);flex-shrink:0">${v.thumbUrl ? '' : '🖼'}</div>
@@ -3299,6 +3321,13 @@ function openVideoEditModal(videoId) {
     const info = document.getElementById('video-file-info');
     info.style.display = 'block';
     info.textContent = `✓ ${file.name} · ${fmtBytes(file.size)}`;
+    // ファイル 選択 後 に STEP 2-4 + サムネ 領域 を 展開
+    ['video-step2-area', 'video-step3-area', 'video-step4-area', 'video-thumb-area'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = '';
+    });
+    const hintEl = document.getElementById('video-step1-hint');
+    if (hintEl) hintEl.style.display = 'none';
     // 動画 の 尺 を 取得
     const testUrl = URL.createObjectURL(file);
     const testVid = document.createElement('video');
@@ -3450,19 +3479,19 @@ async function openVideoAnalyticsModal(videoId) {
       </div>
     </div>
 
-    <!-- Analytics stats -->
+    <!-- Analytics stats (3色 統一: neutral / primary / warn の 3軸 で 視覚競合 抑制) -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
       <div style="background:var(--surface-2);border-radius:8px;padding:12px">
         <div style="font-size:11px;color:var(--dim);font-weight:700">累計 視聴</div>
-        <div style="font-size:22px;font-weight:900;margin-top:2px">${(a.totalViews || 0)}</div>
+        <div style="font-size:22px;font-weight:900;margin-top:2px;color:var(--ink)">${(a.totalViews || 0)}</div>
       </div>
       <div style="background:var(--surface-2);border-radius:8px;padding:12px">
         <div style="font-size:11px;color:var(--dim);font-weight:700">ユニーク</div>
-        <div style="font-size:22px;font-weight:900;color:var(--primary-hi);margin-top:2px">${(a.uniqueViewers || 0)}</div>
+        <div style="font-size:22px;font-weight:900;color:var(--ink);margin-top:2px">${(a.uniqueViewers || 0)}</div>
       </div>
       <div style="background:var(--surface-2);border-radius:8px;padding:12px">
         <div style="font-size:11px;color:var(--dim);font-weight:700">完走 数</div>
-        <div style="font-size:22px;font-weight:900;color:var(--info);margin-top:2px">${(a.completedViews || 0)}</div>
+        <div style="font-size:22px;font-weight:900;color:var(--primary-hi);margin-top:2px">${(a.completedViews || 0)}</div>
       </div>
       <div style="background:var(--surface-2);border-radius:8px;padding:12px">
         <div style="font-size:11px;color:var(--dim);font-weight:700">平均 視聴率</div>

@@ -119,7 +119,7 @@
 
   /* Progress footer */
   .progress-bar {
-    height: 3px;
+    height: 6px;
     background: var(--surface-2);
     width: 100%;
   }
@@ -128,6 +128,7 @@
     background: var(--primary);
     width: 0%;
     transition: width 200ms linear;
+    border-radius: 0 3px 3px 0;
   }
 
   /* Gate screen (未対象 顧客 の 場合) */
@@ -140,6 +141,12 @@
   .gate .ic {
     font-size: 46px;
     margin-bottom: 14px;
+  }
+  .gate .ic-shield {
+    color: var(--dim);
+    margin: 0 auto 18px;
+    display: flex;
+    justify-content: center;
   }
   .gate h2 {
     font-size: 17px;
@@ -238,8 +245,12 @@
 
   <!-- Gate (対象外 or 未 login) -->
   <div id="scr-gate" class="gate" style="display:none">
-    <div class="ic" id="gate-ic">🔒</div>
-    <h2 id="gate-title">この 動画 は 会員 限定 です</h2>
+    <div class="ic-shield" id="gate-ic" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2 4 5v7c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3z"/>
+      </svg>
+    </div>
+    <h2 id="gate-title">この 動画 は ご案内 した 方 だけ 見られます</h2>
     <p id="gate-msg">LINE で お送り した リンク から 開いて ください。 ご不明 な 点 は 配信 元 まで お問合せ ください。</p>
     <button class="btn" id="gate-close-btn" style="display:none">閉じる</button>
   </div>
@@ -289,7 +300,20 @@ function fmtDur(sec) {
 }
 function showGate(icon, title, msg) {
   show('scr-gate');
-  $('gate-ic').textContent = icon;
+  const ic = $('gate-ic');
+  // 会員限定 (permission-denied) は SVG shield を そのまま 使う。
+  //   error / warn 系 は 絵文字 に 差替 (エラー 判別性 が 高い)。
+  if (icon === '🔒' || icon === 'shield') {
+    // 初期 の shield SVG を そのまま 残す
+    ic.className = 'ic-shield';
+    ic.innerHTML = `
+      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2 4 5v7c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3z"/>
+      </svg>`;
+  } else {
+    ic.className = 'ic';
+    ic.textContent = icon;
+  }
   $('gate-title').textContent = title;
   $('gate-msg').textContent = msg;
 }
@@ -310,12 +334,13 @@ async function bootstrap() {
   const liffId = CFG.liffId || '';
 
   // --- Demo mode: config 未設定 の 開発 環境。 dummy 動画 で 動作 確認 する ---
+  //     description は 客 に 見せない (本番 で 開発 手順 が 露出 する 事故 予防)
   if (isDemo) {
     setTimeout(() => {
       renderPlayer({
-        videoUrl: '',   // demo は 実 URL なし で placeholder
-        title: `Demo 視聴 ページ · videoId=${VIDEO_ID}`,
-        description: '本番 環境 では、 対象 タグ を 保有 する LINE 顧客 の みが 視聴 できます。\n\n設定 手順:\n1. config.js を 用意 (Firebase + LIFF ID)\n2. Cloud Functions を deploy\n3. LINE Messaging API で 本 URL を 配信\n\nこの デモ 画面 は config 未設定 の 開発 状態 です。',
+        videoUrl: '',
+        title: 'デモ 視聴 ページ',
+        description: '',    // 本番 では video.description が 入る
         duration: 0,
         thumbUrl: '',
       }, /*isDemoMode*/ true);
@@ -406,7 +431,10 @@ async function bootstrap() {
 function renderPlayer(video, isDemoMode, opts) {
   show('scr-player');
   $('video-title').textContent = video.title || '(untitled)';
-  $('video-description').textContent = video.description || '';
+  const desc = video.description || '';
+  const descEl = $('video-description');
+  descEl.textContent = desc;
+  descEl.style.display = desc ? '' : 'none';
   $('video-duration').textContent = fmtDur(video.duration || video.durationSec || 0);
   if (TENANT_ID) $('tenant-label').textContent = TENANT_ID;
 
