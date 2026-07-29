@@ -1228,15 +1228,31 @@
       <div class="placeholder-view" id="channels-list"></div>
     </div>
 
-    <!-- 動画ホスティング (会員動画 = UTAGE 相当) -->
+    <!-- 動画ホスティング (会員動画 = UTAGE 相当 · 2階層: コース → 章) -->
     <div class="view" id="view-videos">
-      <div class="page-header">
+      <!-- 上層 header (course grid) -->
+      <div class="page-header" id="video-header-top">
         <div>
           <h2>動画ホスティング</h2>
-          <div class="desc">会員 限定 動画 を アップロード。 タグ で 視聴 対象 を 絞込み、 LINE 配信 から 誘導 して 視聴 ログ を 取得</div>
+          <div class="desc">動画教材 を コース 単位 で 管理。 章 の 順次解放 と Zoom 面談 milestone を 設定 できます</div>
         </div>
         <div class="spacer"></div>
-        <button class="btn btn-primary" id="video-add-btn">+ 動画 を アップロード</button>
+        <button class="btn btn-secondary" id="video-add-single-btn">+ 単発 動画</button>
+        <button class="btn btn-primary" id="course-add-btn">+ 新規 コース 作成</button>
+      </div>
+      <!-- 下層 header (course detail = chapter list) -->
+      <div class="page-header" id="video-header-detail" style="display:none">
+        <button class="btn btn-ghost" id="video-back-to-courses" style="padding:8px 10px;font-size:12px">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          <span>コース 一覧</span>
+        </button>
+        <div style="margin-left:14px">
+          <h2 id="video-detail-title">—</h2>
+          <div class="desc" id="video-detail-desc">—</div>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-secondary" id="course-edit-btn">コース 編集</button>
+        <button class="btn btn-primary" id="chapter-add-btn">+ 章 を 追加</button>
       </div>
 
       <!-- Stats (業務ツール トーン: 数字色 は 全て ink、 accent 使わない) -->
@@ -3242,9 +3258,17 @@ function liffVideoUrl(videoId) {
 function renderVideos() {
   const grid = document.getElementById('video-cards');
   if (!grid) return;
-  const videos = state.videos || [];
 
-  // stat cards
+  // 2階層 UI: state.videoLevel = 'courses' (default) | 'chapters' (course 内)
+  //   'chapters' の 時 は state.videoCurrentCourseId を 参照。
+  if (!state.videoLevel) state.videoLevel = 'courses';
+
+  const headerTop = document.getElementById('video-header-top');
+  const headerDetail = document.getElementById('video-header-detail');
+  const statsBox = document.querySelector('#view-videos .video-stats');
+
+  // stat cards (全体 累計、 常に 表示)
+  const videos = state.videos || [];
   const totalViews = videos.reduce((s, v) => s + (v.analytics?.totalViews || 0), 0);
   const uniqueViewers = videos.reduce((s, v) => s + (v.analytics?.uniqueViewers || 0), 0);
   const avgPcts = videos.map(v => v.analytics?.avgWatchPct).filter(x => typeof x === 'number');
@@ -3255,75 +3279,145 @@ function renderVideos() {
   setStat('video-stat-uniq',  uniqueViewers.toLocaleString());
   setStat('video-stat-avg',   avgPct + '%');
 
-  if (videos.length === 0) {
-    grid.innerHTML = emptyStateHTML('🎬', '動画 が まだ ありません',
-      '会員 タグ で 視聴 対象 を 絞り込んだ 動画 を アップロード できます。<br>upload 後 は LINE 一括配信 / ステップ配信 の メッセージ に 動画 リンク を 添付 して 誘導 します。',
-      '+ 最初 の 動画 を アップロード', 'video-add-btn');
+  const courses = state.courses || [];
+  const byCourse = {};
+  courses.forEach(c => { byCourse[c.id] = videos.filter(v => v.courseId === c.id).sort((a,b) => (a.chapterNo||0) - (b.chapterNo||0)); });
+  const standalone = videos.filter(v => !v.courseId);
+
+  // ---- Level 2: course detail (章 一覧) ----
+  if (state.videoLevel === 'chapters' && state.videoCurrentCourseId) {
+    const c = courses.find(x => x.id === state.videoCurrentCourseId);
+    if (!c) { state.videoLevel = 'courses'; state.videoCurrentCourseId = null; return renderVideos(); }
+    headerTop.style.display = 'none';
+    headerDetail.style.display = 'flex';
+    if (statsBox) statsBox.style.display = 'none';   // course detail では 全体 stat 隠す
+    document.getElementById('video-detail-title').textContent = c.title;
+    document.getElementById('video-detail-desc').textContent = c.description || '';
     grid.style.display = 'block';
+    grid.innerHTML = '';
+
+    const chapters = byCourse[c.id] || [];
+    if (chapters.length === 0) {
+      grid.innerHTML = emptyStateHTML('🎬', 'この コース に まだ 章 が ありません',
+        '「+ 章 を 追加」 から 動画 を upload して ください。 章 番号 は 自動 で 連番 に なり、 前 章 の 完走 で 次 章 が 解放 されます。',
+        '+ 最初 の 章 を 追加', 'chapter-add-btn');
+      return;
+    }
+
+    // course 統計 バナー + zoom milestone フラグ
+    const completedCh = chapters.filter(v => (v.analytics?.completedViews || 0) > 0).length;
+    const zoomCh = chapters.find(v => v.zoomMilestone?.enabled);
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:24px;flex-wrap:wrap';
+    banner.innerHTML = `
+      <div><div style="font-size:11px;color:var(--ink-muted);font-weight:700">章 数</div><div style="font-size:20px;font-weight:900;color:var(--ink)">${chapters.length}</div></div>
+      <div><div style="font-size:11px;color:var(--ink-muted);font-weight:700">進行 中</div><div style="font-size:20px;font-weight:900;color:var(--ink)">${completedCh} / ${chapters.length}</div></div>
+      <div><div style="font-size:11px;color:var(--ink-muted);font-weight:700">総 尺</div><div style="font-size:20px;font-weight:900;color:var(--ink)">${fmtDuration(chapters.reduce((s,v)=>s+(v.durationSec||0),0))}</div></div>
+      <div class="spacer" style="flex:1"></div>
+      ${zoomCh ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;background:var(--primary-soft);color:var(--primary-hi);font-size:11.5px;font-weight:800;letter-spacing:0.02em">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        CH${String(zoomCh.chapterNo).padStart(2,'0')} 完走 で mentor Zoom 発行
+      </span>` : ''}
+    `;
+    grid.appendChild(banner);
+
+    const chBox = document.createElement('div');
+    chBox.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px';
+    chBox.innerHTML = chapters.map(v => renderVideoCard(v)).join('');
+    grid.appendChild(chBox);
+
+    wireVideoCardEvents(grid);
     return;
   }
 
-  // LMS: 章構造 (courseId + chapterNo) を 持つ 動画 は course ごと に 章順 で 束ねる、
-  //   それ以外 (memberTagIds ベース の 単発 動画) は 「単発」 セクション に 並べる。
-  const courses = state.courses || [];
-  const standalone = videos.filter(v => !v.courseId);
-  const byCourse = {};
-  courses.forEach(c => { byCourse[c.id] = videos.filter(v => v.courseId === c.id).sort((a,b) => (a.chapterNo||0) - (b.chapterNo||0)); });
+  // ---- Level 1: courses grid ----
+  headerTop.style.display = 'flex';
+  headerDetail.style.display = 'none';
+  if (statsBox) statsBox.style.display = 'grid';
 
-  // grid を section の 集合 に 差替
+  if (courses.length === 0 && standalone.length === 0) {
+    grid.style.display = 'block';
+    grid.innerHTML = emptyStateHTML('🎬', '動画教材 が まだ ありません',
+      '「動画教材」 = 章 順次 解放 で 見せる コース。 単発 動画 は 個別 アップロード も 可能 です。<br>Zoom milestone を 章 に 仕込む と、 該当 章 完走 で mentor 面談 の Zoom link が 自動発行 されます。',
+      '+ 最初 の コース を 作成', 'course-add-btn');
+    return;
+  }
   grid.style.display = 'block';
   grid.innerHTML = '';
 
-  // Course sections (章構造 の コース) を 先 に レンダ
-  courses.forEach(c => {
-    const chapters = byCourse[c.id] || [];
-    if (chapters.length === 0) return;
-    const completedCh = chapters.filter(v => (v.analytics?.completedViews || 0) > 0).length;
-    const zoomCh = chapters.find(v => v.zoomMilestone?.enabled);
-    const zoomFlag = zoomCh
-      ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary-hi);font-size:11px;font-weight:800;letter-spacing:0.02em">
-           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-           CH${String(zoomCh.chapterNo).padStart(2,'0')} 完走 で Zoom link 発行
-         </span>`
-      : '';
-    const section = document.createElement('div');
-    section.style.marginBottom = '32px';
-    section.innerHTML = `
-      <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:14px;flex-wrap:wrap">
-        <div>
-          <div style="display:flex;align-items:baseline;gap:10px">
-            <h3 style="font-size:16px;font-weight:800;letter-spacing:-0.01em;margin:0">${escHtml(c.title)}</h3>
-            <span style="font-size:12px;color:var(--ink-muted);font-weight:700">${completedCh}/${chapters.length} 章 進行中</span>
-          </div>
-          <div style="font-size:12px;color:var(--ink-muted);margin-top:4px;max-width:640px;line-height:1.55">${escHtml(c.description || '')}</div>
-        </div>
-        <div class="spacer" style="flex:1"></div>
-        ${zoomFlag}
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px" data-course-cards="${escHtml(c.id)}"></div>
-    `;
-    grid.appendChild(section);
-    const box = section.querySelector('[data-course-cards]');
-    box.innerHTML = chapters.map(v => renderVideoCard(v)).join('');
-  });
+  // Courses grid
+  if (courses.length > 0) {
+    const courseHeader = document.createElement('div');
+    courseHeader.style.cssText = 'display:flex;align-items:baseline;gap:10px;margin:0 0 12px';
+    courseHeader.innerHTML = `<h3 style="font-size:15px;font-weight:800;letter-spacing:-0.005em;margin:0">動画教材 (コース)</h3><span style="font-size:12px;color:var(--ink-muted);font-weight:700">${courses.length} コース</span>`;
+    grid.appendChild(courseHeader);
 
-  // Standalone (単発 会員向け 動画)
-  if (standalone.length > 0) {
-    const std = document.createElement('div');
-    std.innerHTML = `
-      <div style="display:flex;align-items:baseline;gap:10px;margin:8px 0 14px">
-        <h3 style="font-size:16px;font-weight:800;letter-spacing:-0.01em;margin:0">単発 動画</h3>
-        <span style="font-size:12px;color:var(--ink-muted);font-weight:700">${standalone.length} 本</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px" id="video-cards-standalone"></div>
-    `;
-    grid.appendChild(std);
-    const stdBox = std.querySelector('#video-cards-standalone');
-    stdBox.innerHTML = standalone.map(v => renderVideoCard(v)).join('');
+    const courseGrid = document.createElement('div');
+    courseGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:28px';
+    courseGrid.innerHTML = courses.map(c => {
+      const chapters = byCourse[c.id] || [];
+      const completedCh = chapters.filter(v => (v.analytics?.completedViews || 0) > 0).length;
+      const totalDur = chapters.reduce((s, v) => s + (v.durationSec || 0), 0);
+      const courseViews = chapters.reduce((s, v) => s + (v.analytics?.totalViews || 0), 0);
+      const zoomCh = chapters.find(v => v.zoomMilestone?.enabled);
+      const memberTags = c.memberTagIds || [];
+      const tagChips = memberTags.map(tid => tagChipHTML(tid)).join('') ||
+        '<span style="font-size:10px;color:var(--ink-muted);font-weight:700">全 顧客 公開</span>';
+      const pct = chapters.length ? Math.round(completedCh / chapters.length * 100) : 0;
+      return `
+        <div class="course-tile" data-course-id="${escHtml(c.id)}" style="background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:18px 20px;cursor:pointer;transition:box-shadow .15s;position:relative">
+          <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+            <div style="width:34px;height:34px;background:var(--side);color:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15px;font-weight:800;letter-spacing:-0.005em;line-height:1.35">${escHtml(c.title)}</div>
+              <div style="font-size:11.5px;color:var(--ink-muted);margin-top:3px;font-weight:600">${chapters.length} 章 · ${fmtDuration(totalDur)}</div>
+            </div>
+          </div>
+          <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.55;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px">${escHtml(c.description || '(説明 なし)')}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:12px;min-height:20px">${tagChips}</div>
+          <div style="display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--rule)">
+            <div style="flex:1">
+              <div style="height:4px;background:var(--surface-2);border-radius:2px;overflow:hidden">
+                <div style="height:100%;width:${pct}%;background:var(--primary);border-radius:2px"></div>
+              </div>
+              <div style="font-size:10.5px;color:var(--ink-muted);font-weight:700;margin-top:4px">${completedCh}/${chapters.length} 章 実施 · 視聴 ${courseViews.toLocaleString()}</div>
+            </div>
+            ${zoomCh ? `<span title="Zoom milestone 設定 済み" style="display:inline-flex;align-items:center;color:var(--primary-hi)">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            </span>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+    grid.appendChild(courseGrid);
+
+    courseGrid.querySelectorAll('.course-tile').forEach(t => {
+      t.addEventListener('mouseenter', () => t.style.boxShadow = '0 6px 20px rgba(15,20,35,0.06)');
+      t.addEventListener('mouseleave', () => t.style.boxShadow = '');
+      t.addEventListener('click', () => {
+        state.videoLevel = 'chapters';
+        state.videoCurrentCourseId = t.dataset.courseId;
+        renderVideos();
+      });
+    });
   }
 
-  wireVideoCardEvents(grid);
-  return;
+  // Standalone videos section
+  if (standalone.length > 0) {
+    const stdHeader = document.createElement('div');
+    stdHeader.style.cssText = 'display:flex;align-items:baseline;gap:10px;margin:8px 0 12px';
+    stdHeader.innerHTML = `<h3 style="font-size:15px;font-weight:800;letter-spacing:-0.005em;margin:0">単発 動画</h3><span style="font-size:12px;color:var(--ink-muted);font-weight:700">${standalone.length} 本</span>`;
+    grid.appendChild(stdHeader);
+
+    const stdBox = document.createElement('div');
+    stdBox.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px';
+    stdBox.innerHTML = standalone.map(v => renderVideoCard(v)).join('');
+    grid.appendChild(stdBox);
+
+    wireVideoCardEvents(stdBox);
+  }
 }
 
 function renderVideoCard(v) {
@@ -3406,12 +3500,24 @@ function wireVideoCardEvents(grid) {
 }
 
 // ---- Upload / Edit modal ----
-function openVideoUploadModal() { openVideoEditModal(null); }
+function openVideoUploadModal(opts) { openVideoEditModal(null, opts); }
 
-function openVideoEditModal(videoId) {
+function openVideoEditModal(videoId, opts) {
+  opts = opts || {};
   const isEdit = !!videoId;
+  const parentCourse = opts.courseId ? (state.courses || []).find(c => c.id === opts.courseId) : null;
+  // 新規 章 追加 の 場合、 course の memberTagIds と 次 の chapterNo を prefill
+  let defaultChapterNo = null;
+  if (opts.chapterMode && parentCourse) {
+    const existing = (state.videos || []).filter(v => v.courseId === parentCourse.id);
+    defaultChapterNo = existing.length + 1;
+  }
   const v = isEdit ? (state.videos || []).find(x => x.id === videoId) : {
-    id: '', title: '', description: '', memberTagIds: [],
+    id: '', title: '', description: '',
+    memberTagIds: parentCourse ? (parentCourse.memberTagIds || []) : [],
+    courseId: parentCourse ? parentCourse.id : null,
+    chapterNo: defaultChapterNo,
+    prerequisiteChapters: defaultChapterNo && defaultChapterNo > 1 ? [defaultChapterNo - 1] : [],
     videoUrl: '', thumbUrl: '', durationSec: 0, sizeBytes: 0,
     analytics: { totalViews: 0, uniqueViewers: 0, completedViews: 0, avgWatchPct: 0 },
   };
@@ -3675,6 +3781,104 @@ function openVideoEditModal(videoId) {
       } catch (e) {
         toast('削除 失敗: ' + (e.message || e), 'error', 5000);
       }
+    });
+  }
+}
+
+// ---- Course create / edit modal ----
+function openCourseEditModal(course) {
+  const isEdit = !!course;
+  const c = course || { id: '', title: '', description: '', memberTagIds: [], totalChapters: null };
+
+  const tagChips = state.tags.map(t => `
+    <button type="button" class="cp-chip course-tag-chip ${(c.memberTagIds || []).includes(t.id) ? 'selected' : ''}"
+            data-tag-id="${escHtml(t.id)}">${escHtml(t.name)}</button>
+  `).join('');
+
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>${isEdit ? 'コース を 編集' : '新規 コース を 作成'}</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">コース タイトル</label>
+      <input type="text" class="field-input" id="course-title-input" placeholder="例: 定期便 マスター コース" value="${escHtml(c.title)}">
+    </div>
+    <div class="field-group">
+      <label class="field-label">説明</label>
+      <textarea class="field-input" id="course-desc-input" rows="3" style="resize:vertical;font-family:inherit;line-height:1.6" placeholder="どんな 内容 の コース か 1-2 行 で">${escHtml(c.description || '')}</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">受講 対象 (タグ AND 条件)</label>
+      <div class="chip-area" id="course-tag-chips">${tagChips || '<span style="font-size:12px;color:var(--ink-muted)">タグ を 先に 登録 して ください</span>'}</div>
+      <div style="margin-top:6px;font-size:11px;color:var(--ink-muted);line-height:1.5">
+        タグ 未選択 = 全 顧客 が 受講 可能。 このタグ を 持つ 顧客 のみ 会員 ページ で 表示 されます。
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between">
+      ${isEdit ? '<button class="btn btn-danger" id="course-del-btn" style="margin-right:auto">🗑 コース 削除</button>' : '<div></div>'}
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="course-cancel-btn">キャンセル</button>
+        <button class="btn btn-primary" id="course-save-btn">${isEdit ? '保存' : '作成'}</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('course-cancel-btn').addEventListener('click', closeModal);
+
+  document.querySelectorAll('#course-tag-chips .course-tag-chip').forEach(chip => {
+    chip.addEventListener('click', () => chip.classList.toggle('selected'));
+  });
+
+  document.getElementById('course-save-btn').addEventListener('click', async () => {
+    const title = document.getElementById('course-title-input').value.trim();
+    if (!title) { toast('コース タイトル を 入力 してください', 'warn'); return; }
+    const desc = document.getElementById('course-desc-input').value.trim();
+    const memberTagIds = Array.from(document.querySelectorAll('#course-tag-chips .course-tag-chip.selected')).map(el => el.dataset.tagId);
+
+    state.courses = state.courses || [];
+    if (isEdit) {
+      const idx = state.courses.findIndex(x => x.id === c.id);
+      if (idx >= 0) state.courses[idx] = { ...c, title, description: desc, memberTagIds };
+    } else {
+      const newId = 'course-' + Date.now();
+      state.courses.unshift({ id: newId, title, description: desc, memberTagIds, totalChapters: null });
+      // 直後 に そのコース の 詳細 に 遷移 (章 追加 の 導線 が すぐ)
+      state.videoLevel = 'chapters';
+      state.videoCurrentCourseId = newId;
+    }
+    // TODO (prod): dataAdapter.saveCourse で Firestore 永続化 (現状 demo で state のみ)
+    closeModal();
+    renderVideos();
+    renderNav();
+    toast(isEdit ? 'コース を 更新 しました' : 'コース を 作成 しました', 'success');
+  });
+
+  const del = document.getElementById('course-del-btn');
+  if (del) {
+    del.addEventListener('click', async () => {
+      const chapters = (state.videos || []).filter(v => v.courseId === c.id);
+      const ok = await confirmDialog({
+        title: 'コース を 削除',
+        message: `「${c.title}」 を 削除 します。 このコース の 章 ${chapters.length} 本 も 一緒 に 削除 されます。`,
+        okText: '削除 する', kind: 'danger',
+      });
+      if (!ok) return;
+      state.courses = (state.courses || []).filter(x => x.id !== c.id);
+      state.videos = (state.videos || []).filter(v => v.courseId !== c.id);
+      // deleteVideo を 各 chapter に 実行 (Firestore + Storage cleanup)
+      for (const ch of chapters) {
+        try { await dataAdapter.deleteVideo(ch.id); } catch (e) { console.warn('chapter delete failed', e); }
+      }
+      state.videoLevel = 'courses';
+      state.videoCurrentCourseId = null;
+      closeModal();
+      renderVideos();
+      renderNav();
+      toast('コース を 削除 しました');
     });
   }
 }
@@ -4659,8 +4863,23 @@ setTimeout(() => {
   if (rmAdd) rmAdd.addEventListener('click', () => openRichmenuCreateModal());
   const chAdd = document.getElementById('ch-add-btn');
   if (chAdd) chAdd.addEventListener('click', () => openChannelAddModal());
-  const videoAdd = document.getElementById('video-add-btn');
-  if (videoAdd) videoAdd.addEventListener('click', () => openVideoUploadModal());
+  // 動画ホスティング: 2階層 の nav + create button 群
+  const videoAddSingle = document.getElementById('video-add-single-btn');
+  if (videoAddSingle) videoAddSingle.addEventListener('click', () => openVideoUploadModal({ chapterMode: false }));
+  const courseAdd = document.getElementById('course-add-btn');
+  if (courseAdd) courseAdd.addEventListener('click', () => openCourseEditModal(null));
+  const videoBack = document.getElementById('video-back-to-courses');
+  if (videoBack) videoBack.addEventListener('click', () => { state.videoLevel = 'courses'; state.videoCurrentCourseId = null; renderVideos(); });
+  const courseEdit = document.getElementById('course-edit-btn');
+  if (courseEdit) courseEdit.addEventListener('click', () => {
+    const c = (state.courses || []).find(x => x.id === state.videoCurrentCourseId);
+    if (c) openCourseEditModal(c);
+  });
+  const chapterAdd = document.getElementById('chapter-add-btn');
+  if (chapterAdd) chapterAdd.addEventListener('click', () => {
+    const c = (state.courses || []).find(x => x.id === state.videoCurrentCourseId);
+    if (c) openVideoUploadModal({ chapterMode: true, courseId: c.id });
+  });
 
   // Header buttons
   const topNew = document.getElementById('top-new-bc-btn');
