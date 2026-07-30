@@ -1290,6 +1290,7 @@
           </div>
           <div class="desc" id="video-detail-desc" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
         </div>
+        <button class="btn btn-secondary" id="course-publish-toggle-btn" style="white-space:nowrap;flex-shrink:0" title="公開 / 下書き を 切り替え">—</button>
         <button class="btn btn-secondary" id="course-edit-btn" style="white-space:nowrap;flex-shrink:0">編集</button>
         <button class="btn btn-primary" id="chapter-add-btn" style="white-space:nowrap;flex-shrink:0">+ 章 を 追加</button>
       </div>
@@ -3366,6 +3367,38 @@ function renderVideos() {
       </span>`;
     } else {
       statusEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:rgba(0,0,0,0.08);color:var(--ink-soft);font-size:11.5px;font-weight:800;letter-spacing:0.02em">下書き</span>`;
+    }
+
+    // 公開/下書き 切り替え button (常時 見える header CTA)
+    const toggleBtn = document.getElementById('course-publish-toggle-btn');
+    if (toggleBtn) {
+      if (c.published) {
+        toggleBtn.textContent = '下書き に 戻す';
+        toggleBtn.className = 'btn btn-secondary';
+        toggleBtn.title = '公開 を 停止 して 下書き 状態 に 戻す (客側 で 見えなく なる)';
+      } else {
+        toggleBtn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle"><path d="M12 2v10"/><path d="m5 9 7-7 7 7"/><path d="M5 20h14"/></svg>公開 する';
+        toggleBtn.className = 'btn btn-primary';
+        toggleBtn.title = '公開 する と 対象 顧客 が 会員ページ で 受講 可能 に なり、 URL が 発行 されます';
+      }
+      toggleBtn.onclick = async () => {
+        if (c.published) {
+          const ok = await confirmDialog({
+            title: '下書き に 戻す',
+            message: `「${escHtml(c.title)}」 を 下書き に 戻します。 客側 会員 ページ から 見えなく なります。 (視聴 進捗 は 保持)`,
+            okLabel: '下書き に 戻す', okKind: 'danger',
+          });
+          if (!ok) return;
+          c.published = false;
+          renderVideos();
+          toast('下書き に 戻しました');
+        } else {
+          c.published = true;
+          c.publishedAt = c.publishedAt || new Date().toISOString().slice(0,10);
+          renderVideos();
+          toast('コース を 公開 しました');
+        }
+      };
     }
 
     grid.style.display = 'block';
