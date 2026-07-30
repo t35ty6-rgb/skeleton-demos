@@ -3671,15 +3671,20 @@ function renderEmail() {
 
   // 送信 設定 未完了 なら 警告
   const cfg = state.emailConfig || {};
-  const configOK = !!(cfg.provider && cfg.fromEmail && cfg.spfStatus === 'ok' && cfg.dkimStatus === 'ok');
+  const configOK = !!(cfg.provider && cfg.fromEmail && cfg.spfStatus === 'ok' && cfg.dkimStatus === 'ok' && cfg.company && cfg.address && cfg.contactEmail);
   if (!configOK) {
     guard.style.display = 'block';
+    const missing = [];
+    if (!cfg.provider) missing.push('送信 プロバイダ');
+    if (!cfg.fromEmail) missing.push('From メール');
+    if (cfg.spfStatus !== 'ok' || cfg.dkimStatus !== 'ok') missing.push('SPF/DKIM/DMARC 認証');
+    if (!cfg.company || !cfg.address || !cfg.contactEmail) missing.push('特商法 会社情報');
     guard.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--warn);border-radius:14px;padding:16px 20px 16px 22px;margin-bottom:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--warn)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <div style="flex:1;min-width:200px">
-          <div style="font-size:13.5px;font-weight:800;margin-bottom:2px">送信 認証 が 未完了 です</div>
-          <div style="font-size:12px;color:var(--ink-muted);line-height:1.55">SPF / DKIM / DMARC を 設定 する と 迷惑メール 判定 を 回避 できます。 未 設定 の まま 配信 する と 受信 拒否 の 可能性 が あります。</div>
+          <div style="font-size:13.5px;font-weight:800;margin-bottom:2px">送信 の 準備 が 未完了 です</div>
+          <div style="font-size:12px;color:var(--ink-muted);line-height:1.55">未 設定: ${escHtml(missing.join(' / '))}。 SPF/DKIM/DMARC は 到達率、 特商法 会社情報 は 法令 準拠 に 必須 です。</div>
         </div>
         <button class="btn btn-primary" id="email-config-jump-btn" style="white-space:nowrap;flex-shrink:0">送信 設定 に 進む →</button>
       </div>
@@ -3729,7 +3734,7 @@ function openEmailEditModal(existing) {
   const isEdit = !!existing;
   const c = existing || { id: '', name: '', subject: '', body: 'こんにちは、{name} 様。\n\nこの メール は 定期 配信 の テスト です。\n', targetSegmentIds: [], targetLabel: '' };
   const cfg = state.emailConfig || {};
-  const configOK = !!(cfg.provider && cfg.fromEmail && cfg.spfStatus === 'ok' && cfg.dkimStatus === 'ok');
+  const configOK = !!(cfg.provider && cfg.fromEmail && cfg.spfStatus === 'ok' && cfg.dkimStatus === 'ok' && cfg.company && cfg.address && cfg.contactEmail);
 
   const segChips = state.segments.map(s => `
     <button class="cp-chip email-seg-chip ${(c.targetSegmentIds || []).includes(s.id) ? 'selected' : ''}" data-v="${escHtml(s.id)}" data-count="${s.count}">${escHtml(s.name)}<span style="opacity:.7;margin-left:6px;font-weight:500">${s.count}名</span></button>
@@ -3759,6 +3764,13 @@ function openEmailEditModal(existing) {
       <textarea class="field-input" id="email-body-input" rows="8" style="resize:vertical;font-family:inherit;line-height:1.65">${escHtml(c.body)}</textarea>
       <div style="margin-top:6px;font-size:11px;color:var(--ink-muted);line-height:1.5">
         現状 は plain text 想定。 HTML メール 対応 と リンク クリック トラッキング は Phase 2 で 追加 予定
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">STEP 3.5 · 配信停止 リンク (特商法 対応)</label>
+      <div style="padding:12px 14px;background:var(--surface-2);border-left:3px solid var(--ink);border-radius:6px;font-size:12px;color:var(--ink-soft);line-height:1.65">
+        送信時 に 全 メール の 末尾 に <b>「配信停止 リンク」</b> と <b>送信者 情報 (会社 名 / 住所 / 連絡先)</b> が 自動 で 追記 されます (特商法 第12条の3 準拠)。<br>
+        <span style="color:var(--ink-muted);font-size:11px">未追記 で 送信 する と 法令 違反 に なる ため、 この 自動 追記 は 外せません。 会社 情報 は 「メール送信 設定」 の 「送信元 情報」 で 編集 して ください。</span>
       </div>
     </div>
     <div class="field-group">
@@ -3899,6 +3911,47 @@ function renderEmailConfig() {
       </div>
     </div>
 
+    <div style="background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--ink);border-radius:14px;padding:20px 24px;margin-bottom:20px">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+        <div style="font-size:14px;font-weight:800;letter-spacing:-0.005em">特商法 対応 · 会社 情報 (メール末尾 自動追記)</div>
+        <span style="font-size:11px;color:var(--warn);font-weight:800;background:var(--warn-soft);padding:2px 8px;border-radius:999px">必須</span>
+      </div>
+      <div style="font-size:12px;color:var(--ink-muted);line-height:1.65;margin-bottom:14px">
+        送信 メール の 末尾 に 送信者 情報 + 配信停止 リンク を 自動 追記 (特商法 第12条の3 · Gmail 2024年 送信者 ガイドライン 準拠)。 未入力 で 送信 は できません。
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <label class="field-label">会社 名 · 事業者 名</label>
+          <input type="text" class="field-input" id="ec-company" placeholder="Skeleton 株式会社" value="${escHtml(cfg.company || '')}">
+        </div>
+        <div>
+          <label class="field-label">代表 者 名 (任意)</label>
+          <input type="text" class="field-input" id="ec-representative" placeholder="吉田 司" value="${escHtml(cfg.representative || '')}">
+        </div>
+        <div style="grid-column:span 2">
+          <label class="field-label">所在地</label>
+          <input type="text" class="field-input" id="ec-address" placeholder="福井県 福井市 ◯◯町 1-2-3" value="${escHtml(cfg.address || '')}">
+        </div>
+        <div>
+          <label class="field-label">連絡先 メール</label>
+          <input type="text" class="field-input" id="ec-contactemail" placeholder="contact@example.com" value="${escHtml(cfg.contactEmail || '')}">
+        </div>
+        <div>
+          <label class="field-label">連絡先 電話 (任意)</label>
+          <input type="text" class="field-input" id="ec-contacttel" placeholder="0776-XX-XXXX" value="${escHtml(cfg.contactTel || '')}">
+        </div>
+      </div>
+      <div style="margin-top:14px;padding:12px 14px;background:var(--surface-2);border-radius:8px;font-family:'SF Mono',ui-monospace,monospace;font-size:11px;color:var(--ink-soft);line-height:1.65;white-space:pre-wrap">${escHtml(`━━━━━━━━━━━━━━━━━━━
+${cfg.company || '(会社 名 未設定)'}
+${cfg.address || '(所在地 未設定)'}
+${cfg.contactEmail ? 'Email: ' + cfg.contactEmail : ''}${cfg.contactTel ? ' / TEL: ' + cfg.contactTel : ''}
+
+配信停止 は こちら:
+{unsubscribe_url}
+━━━━━━━━━━━━━━━━━━━`)}</div>
+      <div style="margin-top:8px;font-size:11px;color:var(--ink-muted)">↑ この 内容 が 全 送信 メール の 末尾 に 自動 追記 されます (プレビュー)。 <code style="background:var(--surface-2);padding:1px 5px;border-radius:3px">{unsubscribe_url}</code> は 顧客 個別 の トークン URL に 置換 されます。</div>
+    </div>
+
     <!-- Wizard: SPF -->
     <div class="dns-card" style="background:var(--surface);border:1px solid var(--rule);border-left:3px solid ${cfg.spfStatus==='ok'?'var(--primary)':'var(--warn)'};border-radius:14px;padding:20px 24px;margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
@@ -3972,6 +4025,11 @@ function renderEmailConfig() {
       fromName: document.getElementById('ec-fromname').value.trim(),
       replyTo: document.getElementById('ec-replyto').value.trim(),
       dkimSelector: document.getElementById('ec-dkim-selector').value.trim() || 'skelcrm',
+      company: document.getElementById('ec-company').value.trim(),
+      representative: document.getElementById('ec-representative').value.trim(),
+      address: document.getElementById('ec-address').value.trim(),
+      contactEmail: document.getElementById('ec-contactemail').value.trim(),
+      contactTel: document.getElementById('ec-contacttel').value.trim(),
     };
     toast('送信 設定 を 保存 しました');
     renderEmailConfig();
