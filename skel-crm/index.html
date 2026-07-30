@@ -1513,18 +1513,36 @@ const dataAdapter = {
     state.videos = (state.videos || []).filter(x=>x.id!==id);
     return Promise.resolve();
   },
-  // demo mode: File を blob URL に、 prod mode: Storage upload → downloadURL を 返す
+  // demo mode: File を data URL (base64) で 保存 → localStorage 経由 で member.html tab に そのまま 伝わる。
+  //   prod mode: Firebase Storage upload → downloadURL を 返す
   async uploadVideoFile(file, videoId) {
     if (state.mode === 'demo') {
-      // File 直接 は Firebase Storage 依存 で 保存 できない ので、 blob URL で 再生 だけ 可能 に する。
-      // 実 file は demo 用 static asset (0-byte placeholder) で 表現、 blob URL は tab 内 でのみ 有効。
-      return { url: URL.createObjectURL(file), path: `demo/${videoId}/${file.name}` };
+      // 15MB 超 は data URL 化 で localStorage quota (5-10MB) を 超える 可能性 → blob URL に fallback + warn
+      const LIMIT = 15 * 1024 * 1024;
+      if (file.size > LIMIT) {
+        toast('demo mode: 15MB 超 は 別 tab (会員 portal) で 再生 不可 (実運用 は Firebase Storage で 無制限)', 'warn', 5000);
+        return { url: URL.createObjectURL(file), path: `demo/${videoId}/${file.name}` };
+      }
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onloadend = () => resolve(r.result);
+        r.onerror = () => reject(new Error('file read failed'));
+        r.readAsDataURL(file);
+      });
+      return { url: dataUrl, path: `demo/${videoId}/${file.name}` };
     }
     return await window.__CRM_STORAGE.uploadVideo(file, videoId);
   },
   async uploadVideoThumb(file, videoId) {
     if (state.mode === 'demo') {
-      return { url: URL.createObjectURL(file), path: `demo/${videoId}/thumb` };
+      // サムネ は 通常 数百KB なので data URL 化 (member.html tab で 表示 可能 に)
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onloadend = () => resolve(r.result);
+        r.onerror = () => reject(new Error('thumb read failed'));
+        r.readAsDataURL(file);
+      });
+      return { url: dataUrl, path: `demo/${videoId}/thumb` };
     }
     return await window.__CRM_STORAGE.uploadThumb(file, videoId);
   },
@@ -3329,7 +3347,7 @@ function syncDemoLms() {
   if (state.mode !== 'demo') return;
   try {
     const tenantId = state.currentTenantId || 'demo';
-    localStorage.setItem(`skel-crm-demo-lms-${tenantId}`, JSON.stringify({
+    const payload = JSON.stringify({
       updatedAt: new Date().toISOString(),
       courses: state.courses || [],
       videos: (state.videos || []).map(v => ({
@@ -3340,12 +3358,29 @@ function syncDemoLms() {
         zoomMilestone: v.zoomMilestone || null,
         durationSec: v.durationSec || 0,
         thumbUrl: v.thumbUrl || '',
-        // videoUrl は 血obをストレージ に 入れる と 別 tab で 死ぬ ので、 http(s) URL の 時 だけ 通す。
-        //   demo mode で file upload した blob: は 意図的 に 空 に して member.html 側 の sample MP4 fallback で 再生 する。
-        videoUrl: (v.videoUrl && /^https?:\/\//.test(v.videoUrl)) ? v.videoUrl : '',
+        // videoUrl: http(s):// (実サーバー) or data: (base64 demo upload) を そのまま 通す。
+        //   blob: URL は 別 tab で 死ぬ ので 除外 → member.html 側 の sample MP4 fallback へ
+        videoUrl: (v.videoUrl && /^(https?|data):/.test(v.videoUrl)) ? v.videoUrl : '',
       })),
-    }));
-  } catch (e) { console.warn('syncDemoLms failed', e); }
+    });
+    try {
+      localStorage.setItem(`skel-crm-demo-lms-${tenantId}`, payload);
+    } catch (e) {
+      // Quota 超過 (data URL の 動画 が 大き すぎる) → 動画/サムネ の data URL を 除いて 保存 する fallback
+      if (e && (e.name === 'QuotaExceededError' || String(e.message).includes('quota'))) {
+        console.warn('syncDemoLms: quota over, stripping data: URLs');
+        const stripped = JSON.parse(payload);
+        stripped.videos.forEach(v => {
+          if (v.videoUrl && v.videoUrl.startsWith('data:')) v.videoUrl = '';
+          if (v.thumbUrl && v.thumbUrl.startsWith('data:')) v.thumbUrl = '';
+        });
+        try { localStorage.setItem(`skel-crm-demo-lms-${tenantId}`, JSON.stringify(stripped)); toast('動画 file が 大きすぎて 別 tab 共有 不可 (member portal で sample 動画 に fallback)', 'warn', 5000); }
+        catch (e2) { console.warn('syncDemoLms retry failed', e2); }
+      } else {
+        console.warn('syncDemoLms failed', e);
+      }
+    }
+  } catch (e) { console.warn('syncDemoLms outer failed', e); }
 }
 
 function renderVideos() {
@@ -3883,14 +3918,14 @@ function openEmailEditModal(existing) {
     const draft = collectEmailForm(c);
     if (!draft.name) { toast('タイトル 必須', 'warn'); return; }
     if (!draft.subject) { toast('件名 必須', 'warn'); return; }
-    const ok = await confirmDialog({ title: 'メール 送信 確認', message: `「${draft.name}」 を ${draft.targetLabel} に 送信 します。`, okText: '送信 する', kind: 'danger' });
+    const ok = await confirmDialog({ title: 'メール 送信 確認', message: `「${draft.name}」 を ${draft.targetLabel} に 送信 します。`, okLabel: '送信 する', okKind: 'danger' });
     if (!ok) return;
     upsertEmailCampaign(draft, /*sent*/ true);
     closeModal(); renderEmail(); toast('メール を 送信 しました (demo mode)');
   });
   const del = document.getElementById('email-del-btn');
   if (del) del.addEventListener('click', async () => {
-    const ok = await confirmDialog({ title: '配信 を 削除', message: `「${c.name}」 を 削除 します。`, okText: '削除', kind: 'danger' });
+    const ok = await confirmDialog({ title: '配信 を 削除', message: `「${escHtml(c.name)}」 を 削除 します。`, okLabel: '削除', okKind: 'danger' });
     if (!ok) return;
     state.emailCampaigns = (state.emailCampaigns || []).filter(x => x.id !== c.id);
     closeModal(); renderEmail(); toast('削除 しました');
