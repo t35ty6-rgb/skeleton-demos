@@ -1228,6 +1228,35 @@
       <div class="placeholder-view" id="channels-list"></div>
     </div>
 
+    <!-- メール配信 (SendGrid / SES / Mailgun 等 の 差込 想定) -->
+    <div class="view" id="view-email">
+      <div class="page-header">
+        <div>
+          <h2>メール配信</h2>
+          <div class="desc">HTML メール マガジン を セグメント 別 に 配信。 SPF / DKIM / DMARC を 設定 済 の 独自 ドメイン から 送信 します</div>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-secondary" id="email-config-shortcut">🛡 送信 設定</button>
+        <button class="btn btn-primary" id="email-add-btn">+ メール 配信 を 作成</button>
+      </div>
+      <div id="email-guard" style="display:none"></div>
+      <div id="email-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px"></div>
+    </div>
+
+    <!-- メール送信 設定 (DKIM / DMARC / SPF wizard) -->
+    <div class="view" id="view-email-config">
+      <div class="page-header">
+        <div>
+          <h2>メール送信 設定</h2>
+          <div class="desc">独自 ドメイン から 送信 する ため の 認証 設定 (SPF / DKIM / DMARC)。 迷惑メール 判定 を 回避 する ため の 必須 設定</div>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-secondary" id="email-config-verify-btn">🔍 認証 状態 を 確認</button>
+        <button class="btn btn-primary" id="email-config-save-btn">保存</button>
+      </div>
+      <div id="email-config-form"></div>
+    </div>
+
     <!-- 動画ホスティング (会員動画 = UTAGE 相当 · 2階層: コース → 章) -->
     <div class="view" id="view-videos">
       <!-- 上層 header (course grid) -->
@@ -1395,6 +1424,8 @@ const state = {
   autoTagRules: [],
   steps: [],
   videos: [],
+  emailCampaigns: [],
+  emailConfig: {},
   // 認証 / tenant / plan (prod mode で 上書き、 demo mode は default)
   currentUser: null,     // { uid, email, displayName, photoURL }
   currentTenantId: window.__CRM_TENANT_ID,
@@ -1882,6 +1913,8 @@ const NAV_ICONS = {
   plug:  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.71"/></svg>',
   clock: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
   help:  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  mail:  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
 };
 
 const NAV = [
@@ -1892,13 +1925,15 @@ const NAV = [
   { view: 'campaigns', label: 'キャンペーン',     icon: NAV_ICONS.chart,  badge: () => state.campaigns.length },
   { section: 'メッセージ配信' },
   { view: 'segments',  label: 'セグメント',        icon: NAV_ICONS.target, badge: () => state.segments.length },
-  { view: 'broadcast', label: '一括配信',          icon: NAV_ICONS.send,   badge: null },
+  { view: 'broadcast', label: 'LINE 一括配信',     icon: NAV_ICONS.send,   badge: null },
+  { view: 'email',     label: 'メール配信',         icon: NAV_ICONS.mail,   badge: () => (state.emailCampaigns || []).length },
   { view: 'steps',     label: 'ステップ配信',      icon: NAV_ICONS.flow,   badge: null },
   { section: '会員動画' },
   { view: 'videos',    label: '動画ホスティング',   icon: NAV_ICONS.film,   badge: () => (state.videos || []).length },
   { section: '設定' },
   { view: 'richmenu',  label: 'リッチメニュー',   icon: NAV_ICONS.grid,   badge: null },
   { view: 'channels',  label: 'LINE アカウント',   icon: NAV_ICONS.plug,   badge: null },
+  { view: 'email-config', label: 'メール送信 設定',icon: NAV_ICONS.shield, badge: null },
   { view: 'history',   label: '配信履歴',          icon: NAV_ICONS.clock,  badge: null },
   { section: 'ヘルプ' },
   { view: 'guide',     label: '使い方',            icon: NAV_ICONS.help,   badge: () => '34' },
@@ -1975,6 +2010,8 @@ function renderView(view) {
   if (view === 'channels')  renderChannels();
   if (view === 'history')   renderHistory();
   if (view === 'videos')    renderVideos();
+  if (view === 'email')     renderEmail();
+  if (view === 'email-config') renderEmailConfig();
 }
 
 function renderCustomers() {
@@ -3596,6 +3633,361 @@ function wireVideoCardEvents(grid) {
   }));
 }
 
+// =========================================================
+// メール配信 (SendGrid / SES / Mailgun 等 送信 プロバイダ 前提)
+// =========================================================
+// state.emailConfig = {
+//   provider: 'sendgrid' | 'ses' | 'mailgun' | '',
+//   apiKey: '', apiKeyRef: '',   // 本番 は Secret Manager 経由
+//   fromDomain: 'mg.example.com',
+//   fromEmail: 'info@mg.example.com',
+//   fromName: 'Skeleton 株式会社',
+//   replyTo: '',
+//   spfStatus: 'ok'|'ng'|'unknown',
+//   dkimStatus, dmarcStatus,
+//   dkimSelector: 'skelcrm', dkimPublicKey: '', dkimTxt: '',
+// }
+// state.emailCampaigns = [{ id, name, subject, body, targetSegmentIds, sentAt, sentCount, openRate, clickRate, bounceCount }]
+
+if (!state.emailCampaigns.length) {
+  state.emailCampaigns = [
+    { id: 'em1', name: '定期便 5月 号 · 春 の 新商品 特集', subject: '【skeleton】 5月 の 定期便 に 新商品 が 加わりました', body: 'こんにちは、{name} 様。\n\n5月 の 定期便 では、 新商品 の 「◯◯」 が 加わります。 …', targetLabel: '定期便 ユーザー (9名)', sentAt: '2024-05-08 10:00', sentCount: 9, openRate: '68%', clickRate: '32%', bounceCount: 0 },
+    { id: 'em2', name: '休眠 顧客 呼び戻し キャンペーン', subject: '【skeleton】 3ヶ月 ぶり です。 お得 な 特典 の ご案内', body: 'ご無沙汰 して います、 {name} 様。 …', targetLabel: '休眠 顧客 (3名)', sentAt: '2024-04-15 09:00', sentCount: 3, openRate: '34%', clickRate: '12%', bounceCount: 0 },
+  ];
+}
+if (!state.emailConfig.provider) {
+  state.emailConfig = {
+    provider: '', apiKey: '', apiKeyRef: '',
+    fromDomain: '', fromEmail: '', fromName: '', replyTo: '',
+    spfStatus: 'unknown', dkimStatus: 'unknown', dmarcStatus: 'unknown',
+    dkimSelector: 'skelcrm', dkimTxt: '', dmarcTxt: 'v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com',
+  };
+}
+
+function renderEmail() {
+  const grid = document.getElementById('email-cards');
+  const guard = document.getElementById('email-guard');
+  if (!grid) return;
+
+  // 送信 設定 未完了 なら 警告
+  const cfg = state.emailConfig || {};
+  const configOK = !!(cfg.provider && cfg.fromEmail && cfg.spfStatus === 'ok' && cfg.dkimStatus === 'ok');
+  if (!configOK) {
+    guard.style.display = 'block';
+    guard.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--warn);border-radius:14px;padding:16px 20px 16px 22px;margin-bottom:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--warn)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:13.5px;font-weight:800;margin-bottom:2px">送信 認証 が 未完了 です</div>
+          <div style="font-size:12px;color:var(--ink-muted);line-height:1.55">SPF / DKIM / DMARC を 設定 する と 迷惑メール 判定 を 回避 できます。 未 設定 の まま 配信 する と 受信 拒否 の 可能性 が あります。</div>
+        </div>
+        <button class="btn btn-primary" id="email-config-jump-btn" style="white-space:nowrap;flex-shrink:0">送信 設定 に 進む →</button>
+      </div>
+    `;
+    setTimeout(() => {
+      document.getElementById('email-config-jump-btn')?.addEventListener('click', () => navigate('email-config'));
+    }, 20);
+  } else {
+    guard.style.display = 'none';
+    guard.innerHTML = '';
+  }
+
+  const campaigns = state.emailCampaigns || [];
+  if (campaigns.length === 0) {
+    grid.innerHTML = emptyStateHTML('📧', 'メール 配信 が まだ ありません',
+      '定期メルマガ や キャンペーン 告知 を セグメント 別 に 配信 できます。<br>SPF / DKIM / DMARC を 設定 済 の 独自 ドメイン から 送信 する ため 到達率 が 高い です。',
+      '+ 最初 の 配信 を 作成', 'email-add-btn');
+    grid.style.display = 'block';
+    return;
+  }
+  grid.style.display = 'grid';
+  grid.innerHTML = campaigns.map(c => `
+    <div class="email-card" data-em-id="${escHtml(c.id)}" style="background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:18px 20px;cursor:pointer;transition:box-shadow .15s">
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14.5px;font-weight:800;letter-spacing:-0.005em;line-height:1.35;margin-bottom:3px">${escHtml(c.name)}</div>
+          <div style="font-size:11.5px;color:var(--ink-muted);font-weight:600">${escHtml(c.sentAt || '未送信')} · ${escHtml(c.targetLabel || '')}</div>
+        </div>
+        <span style="background:rgba(0,0,0,0.06);color:var(--ink-soft);padding:3px 9px;border-radius:999px;font-size:10px;font-weight:800">${c.sentAt ? '完了' : '下書き'}</span>
+      </div>
+      <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.55;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escHtml(c.subject || '(件名 未設定)')}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding-top:12px;border-top:1px solid var(--rule)">
+        <div><div style="font-size:10px;color:var(--ink-muted);font-weight:700">送信 数</div><div style="font-size:15px;font-weight:800;margin-top:2px">${c.sentCount || 0}</div></div>
+        <div><div style="font-size:10px;color:var(--ink-muted);font-weight:700">開封率</div><div style="font-size:15px;font-weight:800;margin-top:2px">${escHtml(c.openRate || '—')}</div></div>
+        <div><div style="font-size:10px;color:var(--ink-muted);font-weight:700">クリック率</div><div style="font-size:15px;font-weight:800;margin-top:2px">${escHtml(c.clickRate || '—')}</div></div>
+      </div>
+    </div>
+  `).join('');
+  grid.querySelectorAll('.email-card').forEach(card => {
+    card.addEventListener('click', () => openEmailEditModal((state.emailCampaigns || []).find(c => c.id === card.dataset.emId)));
+    card.addEventListener('mouseenter', () => card.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)');
+    card.addEventListener('mouseleave', () => card.style.boxShadow = '');
+  });
+}
+
+function openEmailEditModal(existing) {
+  const isEdit = !!existing;
+  const c = existing || { id: '', name: '', subject: '', body: 'こんにちは、{name} 様。\n\nこの メール は 定期 配信 の テスト です。\n', targetSegmentIds: [], targetLabel: '' };
+  const cfg = state.emailConfig || {};
+  const configOK = !!(cfg.provider && cfg.fromEmail && cfg.spfStatus === 'ok' && cfg.dkimStatus === 'ok');
+
+  const segChips = state.segments.map(s => `
+    <button class="cp-chip email-seg-chip ${(c.targetSegmentIds || []).includes(s.id) ? 'selected' : ''}" data-v="${escHtml(s.id)}" data-count="${s.count}">${escHtml(s.name)}<span style="opacity:.7;margin-left:6px;font-weight:500">${s.count}名</span></button>
+  `).join('') + `<button class="cp-chip email-seg-chip" data-v="all" data-count="${state.customers.length}">全 顧客<span style="opacity:.7;margin-left:6px;font-weight:500">${state.customers.length}名</span></button>`;
+
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>${isEdit ? 'メール 配信 を 編集' : '新規 メール 配信 を 作成'}</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    ${!configOK ? `
+    <div style="padding:10px 14px;background:var(--warn-soft);border-left:3px solid var(--warn);border-radius:6px;margin-bottom:16px;font-size:12px;color:#7a2415;line-height:1.55">
+      SPF / DKIM / DMARC が 未 認証 の ため、 実 送信 は 保留 されます。 「送信 設定」 で 認証 を 完了 して ください。
+    </div>` : ''}
+    <div class="field-group">
+      <label class="field-label">STEP 1 · 配信 タイトル (社内 管理 用)</label>
+      <input type="text" class="field-input" id="email-name-input" placeholder="例: 定期便 5月号 · 春 の 新商品 特集" value="${escHtml(c.name)}">
+    </div>
+    <div class="field-group">
+      <label class="field-label">STEP 2 · 件名 (Subject)</label>
+      <input type="text" class="field-input" id="email-subject-input" placeholder="例: 【skeleton】 5月 の 定期便 に 新商品 が 加わりました" value="${escHtml(c.subject)}">
+    </div>
+    <div class="field-group">
+      <label class="field-label">STEP 3 · 本文 ({name} で 顧客 名 差込)</label>
+      <textarea class="field-input" id="email-body-input" rows="8" style="resize:vertical;font-family:inherit;line-height:1.65">${escHtml(c.body)}</textarea>
+      <div style="margin-top:6px;font-size:11px;color:var(--ink-muted);line-height:1.5">
+        現状 は plain text 想定。 HTML メール 対応 と リンク クリック トラッキング は Phase 2 で 追加 予定
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">STEP 4 · 配信 対象 (セグメント)</label>
+      <div class="chip-area" id="email-seg-chips">${segChips}</div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between">
+      ${isEdit ? '<button class="btn btn-danger" id="email-del-btn" style="margin-right:auto">🗑 削除</button>' : '<div></div>'}
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="email-cancel-btn">キャンセル</button>
+        <button class="btn btn-secondary" id="email-save-btn">下書き 保存</button>
+        <button class="btn btn-primary" id="email-send-btn" ${!configOK ? 'disabled title="送信 設定 が 未完了"' : ''}>送信 する</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('email-cancel-btn').addEventListener('click', closeModal);
+  document.querySelectorAll('#email-seg-chips .email-seg-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#email-seg-chips .email-seg-chip').forEach(x => x.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+  });
+
+  document.getElementById('email-save-btn').addEventListener('click', async () => {
+    const draft = collectEmailForm(c);
+    if (!draft.name) { toast('タイトル 必須', 'warn'); return; }
+    upsertEmailCampaign(draft, /*sent*/ false);
+    closeModal(); renderEmail(); toast('下書き 保存 しました');
+  });
+  document.getElementById('email-send-btn').addEventListener('click', async () => {
+    if (!configOK) return;
+    const draft = collectEmailForm(c);
+    if (!draft.name) { toast('タイトル 必須', 'warn'); return; }
+    if (!draft.subject) { toast('件名 必須', 'warn'); return; }
+    const ok = await confirmDialog({ title: 'メール 送信 確認', message: `「${draft.name}」 を ${draft.targetLabel} に 送信 します。`, okText: '送信 する', kind: 'danger' });
+    if (!ok) return;
+    upsertEmailCampaign(draft, /*sent*/ true);
+    closeModal(); renderEmail(); toast('メール を 送信 しました (demo mode)');
+  });
+  const del = document.getElementById('email-del-btn');
+  if (del) del.addEventListener('click', async () => {
+    const ok = await confirmDialog({ title: '配信 を 削除', message: `「${c.name}」 を 削除 します。`, okText: '削除', kind: 'danger' });
+    if (!ok) return;
+    state.emailCampaigns = (state.emailCampaigns || []).filter(x => x.id !== c.id);
+    closeModal(); renderEmail(); toast('削除 しました');
+  });
+
+  function collectEmailForm(base) {
+    const seg = document.querySelector('#email-seg-chips .email-seg-chip.selected');
+    return {
+      ...base,
+      id: base.id || 'em' + Date.now(),
+      name: document.getElementById('email-name-input').value.trim(),
+      subject: document.getElementById('email-subject-input').value.trim(),
+      body: document.getElementById('email-body-input').value,
+      targetSegmentIds: seg ? [seg.dataset.v] : [],
+      targetLabel: seg ? seg.textContent.trim() : '未選択',
+    };
+  }
+  function upsertEmailCampaign(draft, sent) {
+    state.emailCampaigns = state.emailCampaigns || [];
+    if (sent) {
+      draft.sentAt = new Date().toISOString().slice(0,16).replace('T',' ');
+      draft.sentCount = parseInt((draft.targetLabel.match(/(\d+)名/) || [0,'0'])[1], 10);
+      draft.openRate = '—'; draft.clickRate = '—'; draft.bounceCount = 0;
+    }
+    const idx = state.emailCampaigns.findIndex(x => x.id === draft.id);
+    if (idx >= 0) state.emailCampaigns[idx] = draft; else state.emailCampaigns.unshift(draft);
+  }
+}
+
+function renderEmailConfig() {
+  const box = document.getElementById('email-config-form');
+  if (!box) return;
+  const cfg = state.emailConfig || {};
+  const statusIc = (s) => s === 'ok'
+    ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary-hi);font-size:11px;font-weight:800">✓ 認証 済</span>'
+    : s === 'ng'
+    ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font-size:11px;font-weight:800">× 未 通過</span>'
+    : '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:rgba(0,0,0,0.06);color:var(--ink-soft);font-size:11px;font-weight:800">未 確認</span>';
+
+  const dkimSelector = cfg.dkimSelector || 'skelcrm';
+  const dkimHost = cfg.fromDomain ? `${dkimSelector}._domainkey.${cfg.fromDomain}` : `${dkimSelector}._domainkey.YOUR_DOMAIN`;
+  const dmarcHost = cfg.fromDomain ? `_dmarc.${cfg.fromDomain}` : '_dmarc.YOUR_DOMAIN';
+  const spfValue = 'v=spf1 include:sendgrid.net include:_spf.google.com ~all';
+  const dkimValue = cfg.dkimTxt || `v=DKIM1; k=rsa; p=(サーバー 側 で 発行 された 公開鍵)`;
+  const dmarcValue = cfg.dmarcTxt || 'v=DMARC1; p=quarantine; rua=mailto:dmarc@YOUR_DOMAIN';
+
+  box.innerHTML = `
+    <!-- Overall status banner -->
+    <div style="background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:20px 24px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+      <div><div style="font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.04em;margin-bottom:6px">SPF</div>${statusIc(cfg.spfStatus)}</div>
+      <div><div style="font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.04em;margin-bottom:6px">DKIM</div>${statusIc(cfg.dkimStatus)}</div>
+      <div><div style="font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.04em;margin-bottom:6px">DMARC</div>${statusIc(cfg.dmarcStatus)}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div class="stat-card" style="border-radius:14px">
+        <div class="label">送信 プロバイダ</div>
+        <div style="margin-top:10px">
+          <select class="field-input" id="ec-provider">
+            <option value="" ${!cfg.provider?'selected':''}>—— 選択 ——</option>
+            <option value="sendgrid" ${cfg.provider==='sendgrid'?'selected':''}>SendGrid</option>
+            <option value="ses"      ${cfg.provider==='ses'?'selected':''}>AWS SES</option>
+            <option value="mailgun"  ${cfg.provider==='mailgun'?'selected':''}>Mailgun</option>
+          </select>
+        </div>
+      </div>
+      <div class="stat-card" style="border-radius:14px">
+        <div class="label">API Key (Secret Manager 経由 推奨)</div>
+        <div style="margin-top:10px">
+          <input type="password" class="field-input" id="ec-apikey" placeholder="SG. or SES access key or key-xxx" value="${escHtml(cfg.apiKey || '')}">
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:20px 24px;margin-bottom:20px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:14px;letter-spacing:-0.005em">送信元 情報</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <label class="field-label">From ドメイン (独自 ドメイン)</label>
+          <input type="text" class="field-input" id="ec-fromdomain" placeholder="mg.example.com" value="${escHtml(cfg.fromDomain || '')}">
+        </div>
+        <div>
+          <label class="field-label">From メール アドレス</label>
+          <input type="text" class="field-input" id="ec-fromemail" placeholder="info@mg.example.com" value="${escHtml(cfg.fromEmail || '')}">
+        </div>
+        <div>
+          <label class="field-label">From 名前</label>
+          <input type="text" class="field-input" id="ec-fromname" placeholder="Skeleton 株式会社" value="${escHtml(cfg.fromName || '')}">
+        </div>
+        <div>
+          <label class="field-label">Reply-To (任意)</label>
+          <input type="text" class="field-input" id="ec-replyto" placeholder="support@example.com" value="${escHtml(cfg.replyTo || '')}">
+        </div>
+      </div>
+    </div>
+
+    <!-- Wizard: SPF -->
+    <div class="dns-card" style="background:var(--surface);border:1px solid var(--rule);border-left:3px solid ${cfg.spfStatus==='ok'?'var(--primary)':'var(--warn)'};border-radius:14px;padding:20px 24px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="font-size:15px;font-weight:800;letter-spacing:-0.005em">STEP 1 · SPF レコード を DNS に 追加</div>
+        <div style="flex:1"></div>
+        ${statusIc(cfg.spfStatus)}
+      </div>
+      <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:12px">
+        送信サーバー を 「この ドメイン から 送って いい」 と 宣言 する レコード。 未設定 だと Gmail / Outlook で 迷惑メール 判定 の 確率 高い。
+      </div>
+      <div style="background:var(--surface-2);border-radius:8px;padding:12px 14px;font-family:'SF Mono',ui-monospace,monospace;font-size:12px;color:var(--ink);word-break:break-all">
+        <div style="color:var(--ink-muted);font-size:10.5px;margin-bottom:4px">Type: TXT · Host: @ or ${escHtml(cfg.fromDomain || 'YOUR_DOMAIN')} · TTL: 3600</div>
+        <div>${escHtml(spfValue)}</div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--ink-muted)">既存 の SPF レコード が ある 場合 は マージ (1 ドメイン に SPF 1本 の 制約)。</div>
+    </div>
+
+    <!-- Wizard: DKIM -->
+    <div class="dns-card" style="background:var(--surface);border:1px solid var(--rule);border-left:3px solid ${cfg.dkimStatus==='ok'?'var(--primary)':'var(--warn)'};border-radius:14px;padding:20px 24px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="font-size:15px;font-weight:800;letter-spacing:-0.005em">STEP 2 · DKIM レコード を DNS に 追加</div>
+        <div style="flex:1"></div>
+        ${statusIc(cfg.dkimStatus)}
+      </div>
+      <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:12px">
+        メール 本文 に 電子署名 を つけて 「途中で 改ざん されて ない」 事 を 証明 する。 SendGrid / SES が 発行 した 公開鍵 を DNS に 登録 する だけ。
+      </div>
+      <div style="background:var(--surface-2);border-radius:8px;padding:12px 14px;font-family:'SF Mono',ui-monospace,monospace;font-size:12px;color:var(--ink);word-break:break-all">
+        <div style="color:var(--ink-muted);font-size:10.5px;margin-bottom:4px">Type: TXT · Host: <b>${escHtml(dkimHost)}</b> · TTL: 3600</div>
+        <div>${escHtml(dkimValue)}</div>
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+        <label class="field-label" style="margin:0">セレクター:</label>
+        <input type="text" class="field-input" id="ec-dkim-selector" placeholder="skelcrm" value="${escHtml(cfg.dkimSelector || 'skelcrm')}" style="width:180px">
+      </div>
+    </div>
+
+    <!-- Wizard: DMARC -->
+    <div class="dns-card" style="background:var(--surface);border:1px solid var(--rule);border-left:3px solid ${cfg.dmarcStatus==='ok'?'var(--primary)':'var(--warn)'};border-radius:14px;padding:20px 24px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="font-size:15px;font-weight:800;letter-spacing:-0.005em">STEP 3 · DMARC レコード を DNS に 追加</div>
+        <div style="flex:1"></div>
+        ${statusIc(cfg.dmarcStatus)}
+      </div>
+      <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:12px">
+        SPF / DKIM を 通らなかった メール を どう 扱う か の ポリシー。 なりすまし 対策 の 最上位 レイヤ。 Gmail は 2024年 以降 「一定 数 送る なら DMARC 必須」。
+      </div>
+      <div style="background:var(--surface-2);border-radius:8px;padding:12px 14px;font-family:'SF Mono',ui-monospace,monospace;font-size:12px;color:var(--ink);word-break:break-all">
+        <div style="color:var(--ink-muted);font-size:10.5px;margin-bottom:4px">Type: TXT · Host: <b>${escHtml(dmarcHost)}</b> · TTL: 3600</div>
+        <div>${escHtml(dmarcValue)}</div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--ink-muted)">最初 は <code style="background:var(--surface-2);padding:1px 5px;border-radius:3px">p=none</code> (レポート のみ) → 1ヶ月 様子 見 → <code style="background:var(--surface-2);padding:1px 5px;border-radius:3px">p=quarantine</code> → 最終 <code style="background:var(--surface-2);padding:1px 5px;border-radius:3px">p=reject</code> の 3段階 で 締めて いく の が 定石。</div>
+    </div>
+
+    <div style="background:var(--surface-2);border-radius:14px;padding:16px 20px;font-size:12.5px;color:var(--ink-soft);line-height:1.65">
+      <div style="font-weight:800;color:var(--ink);margin-bottom:6px">認証 確認 の フロー</div>
+      1. 上記 3 レコード を DNS 管理 (お名前.com / Route53 等) に 追加<br>
+      2. TTL 経過 後 (最大 1時間)、 「認証 状態 を 確認」 button を 押す<br>
+      3. 3 つ 全 「認証 済」 に なった ら 実 送信 可能<br>
+      4. まず <b>自分 の Gmail</b> に テスト 送信 → ヘッダ の <code style="background:var(--surface);padding:1px 5px;border-radius:3px">Authentication-Results: spf=pass, dkim=pass, dmarc=pass</code> を 目視 確認
+    </div>
+  `;
+
+  document.getElementById('email-config-save-btn')?.addEventListener('click', () => {
+    state.emailConfig = {
+      ...cfg,
+      provider: document.getElementById('ec-provider').value,
+      apiKey: document.getElementById('ec-apikey').value,
+      fromDomain: document.getElementById('ec-fromdomain').value.trim(),
+      fromEmail: document.getElementById('ec-fromemail').value.trim(),
+      fromName: document.getElementById('ec-fromname').value.trim(),
+      replyTo: document.getElementById('ec-replyto').value.trim(),
+      dkimSelector: document.getElementById('ec-dkim-selector').value.trim() || 'skelcrm',
+    };
+    toast('送信 設定 を 保存 しました');
+    renderEmailConfig();
+  });
+  document.getElementById('email-config-verify-btn')?.addEventListener('click', async () => {
+    toast('DNS 確認 中… (demo)', 'info');
+    // demo: 数秒 で 認証 済 に
+    await new Promise(r => setTimeout(r, 1200));
+    state.emailConfig.spfStatus = 'ok';
+    state.emailConfig.dkimStatus = 'ok';
+    state.emailConfig.dmarcStatus = 'ok';
+    toast('SPF / DKIM / DMARC が 全て 認証 済 (demo)', 'success');
+    renderEmailConfig();
+  });
+}
+
 // ---- Upload / Edit modal ----
 function openVideoUploadModal(opts) { openVideoEditModal(null, opts); }
 
@@ -4981,6 +5373,12 @@ setTimeout(() => {
   if (rmAdd) rmAdd.addEventListener('click', () => openRichmenuCreateModal());
   const chAdd = document.getElementById('ch-add-btn');
   if (chAdd) chAdd.addEventListener('click', () => openChannelAddModal());
+  // メール配信 tab
+  const emailAdd = document.getElementById('email-add-btn');
+  if (emailAdd) emailAdd.addEventListener('click', () => openEmailEditModal(null));
+  const emailCfgShortcut = document.getElementById('email-config-shortcut');
+  if (emailCfgShortcut) emailCfgShortcut.addEventListener('click', () => navigate('email-config'));
+
   // 動画ホスティング: 2階層 の nav + create button 群
   const videoAddSingle = document.getElementById('video-add-single-btn');
   if (videoAddSingle) videoAddSingle.addEventListener('click', () => openVideoUploadModal({ chapterMode: false }));
