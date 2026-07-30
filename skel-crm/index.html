@@ -4819,11 +4819,19 @@ function openStepCreateModal() {
     const name = nameEl.value.trim();
     if (!name) { nameEl.focus(); nameEl.style.borderColor = 'var(--danger)'; toast('シナリオ名 を 入力 してください', 'warn'); return; }
     const trigger = document.querySelector('#st-modal-trigger .cp-chip.selected')?.dataset.v || '友だち追加';
-    const steps = document.querySelectorAll('#st-modal-steps .st-step-row').length;
-    state.steps.unshift({ id: 'st' + Date.now(), name, trigger, steps, active: false, running: 0 });
+    // Step 本文 を 実際 に 拾って messages 配列 として 保存 (旧 実装 は count のみ で 本文 が 消えて いた bug)
+    const rows = document.querySelectorAll('#st-modal-steps .st-step-row');
+    const messages = Array.from(rows).map((row, i) => {
+      const text = row.querySelector('.st-step-body')?.value?.trim() || '';
+      const delayLabels = ['即時', '翌日', '3日後', '7日後', '14日後', '30日後'];
+      const delayMinutes = [0, 1440, 4320, 10080, 20160, 43200][Math.min(i, 5)];
+      return { delayLabel: delayLabels[Math.min(i, 5)], delayMinutes, text };
+    }).filter(m => m.text);
+    if (messages.length === 0) { toast('最低 1 通 は 本文 を 入力 して ください', 'warn'); return; }
+    state.steps.unshift({ id: 'st' + Date.now(), name, trigger, steps: messages.length, messages, active: false, running: 0 });
     closeModal();
     renderSteps();
-    toast(`「${name}」 を 作成 しました（停止 状態）`);
+    toast(`「${name}」 を 作成 しました (${messages.length} 通、 停止 状態)`);
   });
   setTimeout(() => { const inp = document.getElementById('st-modal-name'); if (inp) inp.focus(); }, 80);
 }
@@ -5561,6 +5569,12 @@ setTimeout(() => {
 function openSettingsModal() {
   const modal = document.getElementById('modal');
   const activeCh = (state.channels || []).find(c => c.active) || (state.channels||[])[0];
+  const tenantName = state.tenant?.name || 'Skeleton 株式会社';
+  const userEmail = state.currentUser?.email || 't3.5ty6@gmail.com';
+  const planLabel = ({demo:'デモ プラン', trial:'無料 trial', trialing:'試用中', active:'スタンダード', cancelled:'解約 済'})[state.tenant?.plan] || 'オーナー プラン';
+  // 通知 設定 default (state.notifPrefs で 前回 保存 値 を 参照)
+  if (!state.notifPrefs) state.notifPrefs = { broadcastDone: true, autoTagAssigned: true, newFriend: false };
+  const np = state.notifPrefs;
   modal.innerHTML = `
     <div class="modal-header">
       <h3>設定</h3>
@@ -5568,34 +5582,38 @@ function openSettingsModal() {
       <button class="modal-close" id="modal-close-btn">✕</button>
     </div>
     <div style="display:flex;align-items:center;gap:14px;padding:16px;background:var(--surface-2);border-radius:10px;margin-bottom:20px;">
-      <div class="avatar" style="width:52px;height:52px;font-size:20px;background:#17b26a">S</div>
-      <div style="flex:1">
-        <div style="font-size:15px;font-weight:800">Skeleton 株式会社</div>
-        <div style="font-size:12px;color:var(--dim);margin-top:2px">t3.5ty6@gmail.com · オーナー プラン</div>
+      <div class="avatar" style="width:52px;height:52px;font-size:20px;background:var(--side);color:var(--primary)">${escHtml((tenantName||'S')[0])}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:800">${escHtml(tenantName)}</div>
+        <div style="font-size:12px;color:var(--ink-muted);margin-top:2px">${escHtml(userEmail)} · ${escHtml(planLabel)}</div>
       </div>
-      <span style="background:var(--primary-soft);color:var(--primary-hi);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800">認証 済</span>
+      <span style="background:var(--primary-soft);color:var(--primary-hi);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800;flex-shrink:0">認証 済</span>
+    </div>
+    <div class="field-group">
+      <label class="field-label">会社 名 · 事業者 名</label>
+      <input type="text" class="field-input" id="set-tenant-name" value="${escHtml(tenantName)}">
     </div>
     <div class="field-group">
       <label class="field-label">接続中 の LINE アカウント</label>
       <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--rule);border-radius:8px">
         <div style="width:28px;height:28px;background:var(--line-green);border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:12px">L</div>
-        <div style="flex:1">
+        <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700">${activeCh ? escHtml(activeCh.name) : '未接続'}</div>
-          <div style="font-size:11px;color:var(--dim);margin-top:2px">${activeCh ? 'Channel ID: ' + escHtml(activeCh.channelId) : 'LINE アカウント を 追加 して 接続 してください'}</div>
+          <div style="font-size:11px;color:var(--ink-muted);margin-top:2px">${activeCh ? 'Channel ID: ' + escHtml(activeCh.channelId || '(未設定)') : 'LINE アカウント を 追加 して 接続 してください'}</div>
         </div>
-        <button class="btn btn-secondary" id="set-goto-ch" style="padding:6px 10px;font-size:11px">管理 →</button>
+        <button class="btn btn-secondary" id="set-goto-ch" style="padding:6px 10px;font-size:11px;flex-shrink:0">管理 →</button>
       </div>
     </div>
     <div class="field-group">
       <label class="field-label">通知 設定</label>
       <div style="display:flex;flex-direction:column;gap:8px;">
         ${[
-          ['配信 完了 の 通知', true],
-          ['自動 タグ 付与 の 通知', true],
-          ['新しい 友だち 登録 通知', false],
-        ].map(([label, on], i) => `
+          ['broadcastDone', '配信 完了 の 通知', np.broadcastDone],
+          ['autoTagAssigned', '自動 タグ 付与 の 通知', np.autoTagAssigned],
+          ['newFriend', '新しい 友だち 登録 通知', np.newFriend],
+        ].map(([key, label, on]) => `
           <label style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--rule);border-radius:8px;cursor:pointer">
-            <div class="toggle-wrap"><input type="checkbox" class="toggle-input" ${on?'checked':''}><span class="toggle-knob"></span></div>
+            <div class="toggle-wrap"><input type="checkbox" class="toggle-input set-notif" data-k="${key}" ${on?'checked':''}><span class="toggle-knob"></span></div>
             <span style="font-size:13px;font-weight:600">${label}</span>
           </label>`).join('')}
       </div>
@@ -5608,7 +5626,26 @@ function openSettingsModal() {
   document.getElementById('modal-scrim').classList.add('open');
   document.getElementById('modal-close-btn').addEventListener('click', closeModal);
   document.getElementById('set-close').addEventListener('click', closeModal);
-  document.getElementById('set-save').addEventListener('click', () => { closeModal(); toast('設定 を 保存 しました'); });
+  document.getElementById('set-save').addEventListener('click', async () => {
+    // 会社名 更新 → state.tenant + Firestore mirror (prod のみ)
+    const newName = document.getElementById('set-tenant-name').value.trim();
+    if (newName) {
+      state.tenant = state.tenant || {};
+      state.tenant.name = newName;
+    }
+    // 通知 設定 保存
+    document.querySelectorAll('.set-notif').forEach(inp => {
+      state.notifPrefs[inp.dataset.k] = inp.checked;
+    });
+    // prod mode: tenants doc に mirror
+    if (state.mode === 'prod' && dataAdapter.saveTenantMeta) {
+      try { await dataAdapter.saveTenantMeta({ name: newName, notifPrefs: state.notifPrefs }); }
+      catch (e) { console.warn('tenant save failed', e); }
+    }
+    updateUserMenu();
+    closeModal();
+    toast('設定 を 保存 しました');
+  });
   document.getElementById('set-goto-ch').addEventListener('click', () => { closeModal(); navigate('channels'); });
 }
 
