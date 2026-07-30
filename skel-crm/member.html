@@ -407,13 +407,16 @@ const DEMO_MEMBERS = {
 };
 
 // 会員 が 受講 可能 な course + chapter 定義 (admin 側 の state.courses / state.videos と 同じ schema)。
-// demo は 定期便 コース 1 本 で 5 章。 CH03 に Zoom milestone。
-const DEMO_COURSES = [
+// demo mode: localStorage `skel-crm-demo-lms-{tenantId}` に admin 側 で 書いた 内容 を 読む。
+//   admin で 追加 された コース + 章 が 即 反映 される。 storage に 何 も 無ければ 下記 fallback 使用。
+// prod mode: 本番 は Firestore + Cloud Function 経由 で 取得 (Phase 2)。
+const DEMO_COURSES_FALLBACK = [
   {
     id: 'course-teiki',
     title: '定期便 マスター コース',
     description: '5 章 完結 の コース。 章 は 順番 に 解放。 CH03 完走 で 個別 mentor 面談 の Zoom link が 発行 されます。',
     memberTagIds: ['t3'],
+    published: true,
     chapters: [
       { id: 'v-course-teiki-ch1', chapterNo: 1, title: 'CH01 · はじめに', description: '定期便 の 全体像 と、 この コース で 得られる 成果 の 説明。', durationSec: 180 },
       { id: 'v-course-teiki-ch2', chapterNo: 2, title: 'CH02 · 商品 の 選び方', description: '4 タイプ の 定期便 商品 を どう 選ぶ か、 判定 チェック リスト 付き。', durationSec: 240 },
@@ -423,6 +426,41 @@ const DEMO_COURSES = [
     ],
   },
 ];
+
+function loadDemoCourses(tenantId) {
+  try {
+    const raw = localStorage.getItem(`skel-crm-demo-lms-${tenantId}`);
+    if (!raw) return DEMO_COURSES_FALLBACK;
+    const data = JSON.parse(raw);
+    const courses = (data.courses || []).filter(c => c.published);  // 公開済 のみ 客側 表示
+    const chaptersByCourse = {};
+    (data.videos || []).forEach(v => {
+      if (!v.courseId) return;
+      chaptersByCourse[v.courseId] = chaptersByCourse[v.courseId] || [];
+      chaptersByCourse[v.courseId].push({
+        id: v.id,
+        chapterNo: v.chapterNo,
+        title: v.title,
+        description: v.description,
+        durationSec: v.durationSec,
+        zoomMilestone: v.zoomMilestone?.enabled || false,
+        thumbUrl: v.thumbUrl || '',
+      });
+    });
+    const merged = courses.map(c => ({
+      ...c,
+      chapters: (chaptersByCourse[c.id] || []).sort((a,b) => (a.chapterNo||0) - (b.chapterNo||0)),
+    })).filter(c => c.chapters.length > 0);   // 章 なし コース は 非表示
+    return merged.length > 0 ? merged : DEMO_COURSES_FALLBACK;
+  } catch (e) {
+    console.warn('loadDemoCourses failed', e);
+    return DEMO_COURSES_FALLBACK;
+  }
+}
+
+// tenantId は URL の ?tenant= or 'demo'
+const _tenantForCourses = new URL(window.location.href).searchParams.get('tenant') || 'demo';
+const DEMO_COURSES = loadDemoCourses(_tenantForCourses);
 
 // ---- helpers ----
 const $ = (id) => document.getElementById(id);

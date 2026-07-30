@@ -3320,7 +3320,31 @@ function liffVideoUrl(videoId) {
   return `${origin}/liff/video${params}`;
 }
 
+// demo mode: state.courses + state.videos を localStorage に 同期 して
+//   member.html (客側 会員 portal) から 参照 可能 に する (別 tab / 別 URL でも 同 origin で 共有)。
+//   prod mode は Firestore が SSOT なので この 関数 は no-op。
+function syncDemoLms() {
+  if (state.mode !== 'demo') return;
+  try {
+    const tenantId = state.currentTenantId || 'demo';
+    localStorage.setItem(`skel-crm-demo-lms-${tenantId}`, JSON.stringify({
+      updatedAt: new Date().toISOString(),
+      courses: state.courses || [],
+      videos: (state.videos || []).map(v => ({
+        id: v.id, courseId: v.courseId || null, chapterNo: v.chapterNo || null,
+        title: v.title, description: v.description,
+        memberTagIds: v.memberTagIds || [],
+        prerequisiteChapters: v.prerequisiteChapters || [],
+        zoomMilestone: v.zoomMilestone || null,
+        durationSec: v.durationSec || 0,
+        thumbUrl: v.thumbUrl || '',
+      })),
+    }));
+  } catch (e) { console.warn('syncDemoLms failed', e); }
+}
+
 function renderVideos() {
+  syncDemoLms();  // 描画 の 度 に 最新 を storage に flush
   const grid = document.getElementById('video-cards');
   if (!grid) return;
 
