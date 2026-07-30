@@ -421,16 +421,32 @@
     </div>
     <div class="spacer"></div>
     <div class="who" id="who">—</div>
-    <button class="logout" id="logout-btn" style="display:none">ログアウト</button>
+    <button class="logout" id="logout-btn">ログアウト</button>
   </div>
 
-  <!-- Login screen 撤去 済 (owner 明示 2026-07-30「パスワードめんどい」)。
-       login 関連 DOM が 参照 されて も 落ちない よう hidden stub だけ 残す -->
-  <div id="screen-login" style="display:none">
-    <input type="text" id="login-id" hidden>
-    <input type="password" id="login-pw" hidden>
-    <div id="login-error" hidden></div>
-    <button id="login-btn" hidden></button>
+  <!-- Login screen (owner 明示 2026-07-30 「ID/PW 1111/1111 で いい」) -->
+  <div id="screen-login">
+    <div class="login-card">
+      <div class="brand-line">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9 L15 12 L10 15 Z" fill="currentColor" stroke="none"/></svg>
+        <span>SKEL·CRM 受講 ページ</span>
+      </div>
+      <h1>ログイン</h1>
+      <div class="sub">ID と パスワード は それぞれ <b>1111</b> で 入れます</div>
+      <div id="login-error"></div>
+      <div class="field">
+        <label>会員 ID</label>
+        <input type="text" id="login-id" autocomplete="off" placeholder="1111" value="1111">
+      </div>
+      <div class="field">
+        <label>パスワード</label>
+        <input type="password" id="login-pw" autocomplete="off" placeholder="1111" value="1111">
+      </div>
+      <button id="login-btn">ログイン</button>
+      <div class="login-hint">
+        デモ アカウント: <b>1111</b> / <b>1111</b>
+      </div>
+    </div>
   </div>
 
   <!-- Courses screen -->
@@ -531,6 +547,7 @@
 
 // ---- config ----
 const DEMO_MEMBERS = {
+  '1111': { password: '1111', name: 'ゲスト', tagIds: ['t3', 't4'] },
   'demo@example.com': { password: 'demo1234', name: 'デモ 太郎', tagIds: ['t3'] },
   'test@example.com': { password: 'test1234', name: 'テスト 花子', tagIds: ['t3', 't4'] },
 };
@@ -749,14 +766,18 @@ function showCourseNotAllowed(course) {
 }
 
 // ---- session restore ----
-// owner 明示 2026-07-30 「パスワード入れるのめんどくさいからなしにして」 → login gate 撤去。
-// 常に demo アカウント で 自動 login。 全 tag 保有 で 全 course 見える 想定。
+// owner 明示 2026-07-30 「ID/PW 1111/1111 で いい」 → login screen 復活、 fields に 1111 prefilled
 (function restore() {
-  const autoMember = { id: 'demo@example.com', name: 'ゲスト', password: '', tagIds: ['t3','t4'] };
-  DEMO_MEMBERS[autoMember.id] = { password: autoMember.password, name: autoMember.name, tagIds: autoMember.tagIds };
-  currentMember = autoMember;
-  $('who').textContent = autoMember.name + ' さん';
-  jumpAfterLogin();
+  try {
+    const s = JSON.parse(sessionStorage.getItem('skel-member-session') || 'null');
+    if (s && DEMO_MEMBERS[s.id]) {
+      currentMember = { id: s.id, ...DEMO_MEMBERS[s.id] };
+      $('who').textContent = currentMember.name + ' さん';
+      jumpAfterLogin();
+      return;
+    }
+  } catch (e) {}
+  show('screen-login');
 })();
 
 // ---- courses ----
