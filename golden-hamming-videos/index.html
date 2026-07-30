@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Golden Hamming (真誓会 ツール) 使い方 · クーポン 機能</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c11; --surface:#151821; --surface-2:#1e2230; --ink:#e5e7eb; --dim:#94a3b8; --muted:#64748b;
+  --accent:#10b981; --primary:#3b82f6; --red:#ef4444; --rule:rgba(255,255,255,0.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:"Inter","Noto Sans JP",-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased}
+.app{display:grid;grid-template-columns:320px 1fr;min-height:100vh}
+.sb{background:var(--surface);border-right:1px solid var(--rule);padding:20px 18px;overflow-y:auto}
+.sb-brand{padding-bottom:14px;border-bottom:1px solid var(--rule);margin-bottom:14px}
+.sb-brand h1{margin:0;font-size:15px;font-weight:900;letter-spacing:-0.01em}
+.sb-brand small{color:var(--dim);font-size:11px;font-weight:700;display:block;margin-top:2px}
+.sb-progress{font-size:11px;color:var(--dim);font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px}
+.sb-tier{margin-top:18px;padding-top:14px;border-top:1px solid var(--rule)}
+.sb-tier:first-of-type{border-top:none;padding-top:0;margin-top:0}
+.sb-tier-label{display:inline-block;padding:2px 8px;background:rgba(16,185,129,.14);color:var(--accent);font-size:10px;font-weight:900;letter-spacing:.1em;border-radius:99px;margin-bottom:6px}
+.sb-tier-title{font-size:13.5px;font-weight:900;margin:2px 0 4px}
+.sb-tier-desc{font-size:11.5px;color:var(--dim);line-height:1.6;margin-bottom:10px}
+.sb-group{margin-top:14px}
+.sb-group-title{font-size:11px;color:var(--dim);font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.sb-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .12s;color:var(--ink);text-decoration:none;font-size:13px;line-height:1.4}
+.sb-item:hover{background:var(--surface-2)}
+.sb-item.active{background:var(--surface-2);color:var(--accent)}
+.sb-item.done{opacity:.6}
+.sb-item .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.sb-item.done .dot{background:var(--accent)}
+.sb-item.active .dot{background:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,.2)}
+.sb-item .txt{flex:1;font-weight:600}
+.sb-item .chip{font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace;font-weight:700}
+
+.main{padding:26px 32px;max-width:1400px;margin:0 auto}
+.crumb{font-size:11.5px;color:var(--dim);font-weight:700;letter-spacing:.02em;margin-bottom:8px}
+.crumb .accent{color:var(--accent)}
+h2.title{font-size:26px;font-weight:900;margin:0 0 4px;letter-spacing:-0.01em}
+.desc{color:var(--dim);font-size:14px;margin-bottom:16px;line-height:1.7}
+.player{background:#000;border-radius:14px;overflow:hidden;position:relative;aspect-ratio:16/9;max-height:calc(100vh - 320px)}
+.player video{width:100%;height:100%;display:block;background:#000}
+.nav-btns{display:flex;justify-content:space-between;gap:12px;margin-top:14px}
+.btn{padding:10px 18px;border-radius:8px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);font-size:13px;font-weight:700;cursor:pointer}
+.btn:hover{background:var(--surface-2)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.tier-badge{display:inline-block;padding:2px 8px;background:rgba(59,130,246,.14);color:var(--primary);font-size:10px;font-weight:900;letter-spacing:.1em;border-radius:99px;margin-left:6px;vertical-align:middle}
+
+@media (max-width: 900px){
+  .app{grid-template-columns:1fr}
+  .sb{position:fixed;top:0;left:-320px;width:280px;height:100vh;z-index:20;transition:left .2s}
+  .sb.open{left:0}
+  .main{padding:20px 16px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sb" id="sb">
+    <div class="sb-brand">
+      <h1>Golden Hamming · 使い方</h1>
+      <small>真誓会 ツール / クーポン 機能</small>
+    </div>
+    <div class="sb-progress" id="progress">1 / 6 本</div>
+    <div id="sb-body"></div>
+  </aside>
+  <main class="main">
+    <div class="crumb" id="crumb"></div>
+    <h2 class="title" id="title"></h2>
+    <div class="desc" id="desc"></div>
+    <div class="player">
+      <video id="v" controls playsinline preload="metadata"></video>
+    </div>
+    <div class="nav-btns">
+      <button class="btn" id="prev">← 前の 動画</button>
+      <button class="btn" id="next">次の 動画 →</button>
+    </div>
+  </main>
+</div>
+
+<script>
+const VIDEOS = [
+  { id: 'coupon-shops-add', tier: 1, group: '準備', title: '加盟店 を 登録 する', desc: 'クーポン を 使える お店 を 一覧 に 登録 します。', file: 'coupon-shops-add-explainer.mp4' },
+  { id: 'coupon-config',    tier: 1, group: 'イベント 設定', title: 'イベント で 割引券 の 設定 を 保存 する', desc: '発行 する か しない か、 金額、 有効期限、 使える 店 を 選んで 保存 します。', file: 'coupon-config-explainer.mp4' },
+  { id: 'coupon-issue',     tier: 1, group: 'イベント 設定', title: '参加者 全員 に 一括 発行 + LINE 通知', desc: 'ボタン ひとつ で 全員 に コード を 作って LINE で 送ります。', file: 'coupon-issue-explainer.mp4' },
+  { id: 'coupon-liff-view', tier: 1, group: '当日',           title: '参加者 が LINE で QR を 見る', desc: '参加者 側 の LINE 画面 で QR コード が 表示 されます。', file: 'coupon-liff-view-explainer.mp4' },
+  { id: 'coupon-redeem',    tier: 1, group: '当日',           title: '店員 モード で 使用 登録', desc: 'お店 を 選んで、 お客 の コード を 入れて、 使用 登録 します。', file: 'coupon-redeem-explainer.mp4' },
+  { id: 'coupon-analytics', tier: 1, group: '振り返り',        title: '発行 と 使用 の 集計 を 見る', desc: '発行数、 使用数、 店 別 の 使用 まで、 主催者 が 一目 で 分かります。', file: 'coupon-analytics-explainer.mp4' },
+];
+
+let currentIdx = 0;
+const params = new URLSearchParams(location.hash.slice(1) || '');
+if (params.get('v')) {
+  const i = VIDEOS.findIndex(x => x.id === params.get('v'));
+  if (i >= 0) currentIdx = i;
+}
+const seen = new Set(JSON.parse(localStorage.getItem('gh-video-seen') || '[]'));
+
+function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+function renderSidebar() {
+  const groups = {};
+  VIDEOS.forEach(v => { groups[v.group] = groups[v.group] || []; groups[v.group].push(v); });
+  const body = document.getElementById('sb-body');
+  body.innerHTML = `
+    <div class="sb-tier">
+      <div class="sb-tier-label">TIER 1</div>
+      <div class="sb-tier-title">クーポン 機能 使い方</div>
+      <div class="sb-tier-desc">加盟店 登録 → イベント 設定 → 発行 → 使用 → 集計 の 一連 の 流れ を mini-step で 実演。</div>
+      ${Object.entries(groups).map(([g, items]) => `
+        <div class="sb-group">
+          <div class="sb-group-title">${esc(g)} · ${items.length}本</div>
+          ${items.map(item => {
+            const idx = VIDEOS.indexOf(item);
+            const isActive = idx === currentIdx;
+            const isDone = seen.has(item.id);
+            return `<a class="sb-item ${isActive?'active':''} ${isDone?'done':''}" href="#v=${item.id}" data-idx="${idx}">
+              <div class="dot"></div>
+              <div class="txt">${esc(item.title)}</div>
+              <div class="chip" data-chip="${item.id}">—</div>
+            </a>`;
+          }).join('')}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function loadCurrent() {
+  const v = VIDEOS[currentIdx];
+  document.getElementById('crumb').innerHTML = `<span class="accent">Tier ${v.tier}</span> · ${esc(v.group)} <span class="tier-badge">${(currentIdx+1)} / ${VIDEOS.length}</span>`;
+  document.getElementById('title').textContent = v.title;
+  document.getElementById('desc').textContent = v.desc;
+  const player = document.getElementById('v');
+  player.src = v.file + '?v=' + Date.now();
+  player.load();
+  player.play().catch(() => {});
+  document.getElementById('progress').textContent = `${currentIdx+1} / ${VIDEOS.length} 本`;
+  document.getElementById('prev').disabled = currentIdx === 0;
+  document.getElementById('next').disabled = currentIdx === VIDEOS.length - 1;
+  seen.add(v.id);
+  localStorage.setItem('gh-video-seen', JSON.stringify([...seen]));
+  renderSidebar();
+  // duration chip
+  const p2 = document.createElement('video');
+  p2.src = v.file + '?v=' + Date.now();
+  p2.onloadedmetadata = () => {
+    const chip = document.querySelector(`[data-chip="${v.id}"]`);
+    if (chip) chip.textContent = `${Math.round(p2.duration)}s`;
+  };
+}
+
+document.getElementById('prev').onclick = () => { if (currentIdx > 0) { currentIdx--; location.hash = 'v=' + VIDEOS[currentIdx].id; loadCurrent(); } };
+document.getElementById('next').onclick = () => { if (currentIdx < VIDEOS.length - 1) { currentIdx++; location.hash = 'v=' + VIDEOS[currentIdx].id; loadCurrent(); } };
+window.addEventListener('hashchange', () => {
+  const p = new URLSearchParams(location.hash.slice(1) || '');
+  const id = p.get('v');
+  if (id) {
+    const i = VIDEOS.findIndex(x => x.id === id);
+    if (i >= 0 && i !== currentIdx) { currentIdx = i; loadCurrent(); }
+  }
+});
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') document.getElementById('prev').click();
+  if (e.key === 'ArrowRight') document.getElementById('next').click();
+});
+document.getElementById('v').addEventListener('ended', () => {
+  if (currentIdx < VIDEOS.length - 1) document.getElementById('next').click();
+});
+
+loadCurrent();
+
+// preload chip durations for all
+VIDEOS.forEach((v) => {
+  const p = document.createElement('video');
+  p.src = v.file;
+  p.onloadedmetadata = () => {
+    const chip = document.querySelector(`[data-chip="${v.id}"]`);
+    if (chip) chip.textContent = `${Math.round(p.duration)}s`;
+  };
+  p.onerror = () => {
+    const chip = document.querySelector(`[data-chip="${v.id}"]`);
+    if (chip) chip.textContent = '準備中';
+  };
+});
+</script>
+</body>
+</html>
