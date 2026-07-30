@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>期末棚卸資産 明細 - スケルトン株式会社 令和8年6月期</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ===== Design tokens ===== */
+  :root {
+    --bg:           oklch(0.985 0.003 250);
+    --surface:      #ffffff;
+    --surface-2:    oklch(0.965 0.005 250);
+    --ink:          oklch(0.22 0.02 250);
+    --ink-2:        oklch(0.38 0.015 250);
+    --dim:          oklch(0.55 0.015 250);
+    --muted:        oklch(0.72 0.01 250);
+    --rule:         oklch(0.92 0.005 250);
+    --rule-strong:  oklch(0.78 0.008 250);
+    --accent:       oklch(0.58 0.14 155);
+    --accent-soft:  oklch(0.96 0.03 155);
+    --accent-mid:   oklch(0.92 0.05 155);
+    --warn:         oklch(0.72 0.12 65);
+    --warn-soft:    oklch(0.97 0.025 65);
+  }
+
+  /* ===== Reset ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ===== Base ===== */
+  html {
+    font-size: 15px;
+    -webkit-text-size-adjust: 100%;
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  body {
+    font-family: "Noto Sans JP", "Inter", -apple-system, sans-serif;
+    font-weight: 500;
+    line-height: 1.65;
+    letter-spacing: -0.005em;
+    min-height: 100vh;
+    padding: 48px 32px 80px;
+  }
+
+  /* ===== Layout ===== */
+  .wrapper {
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+
+  /* ===== Document header ===== */
+  .doc-header {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 20px;
+    margin-bottom: 36px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .doc-header__title {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+    line-height: 1.2;
+    color: var(--ink);
+  }
+
+  .doc-header__meta {
+    text-align: right;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    line-height: 1.8;
+    flex-shrink: 0;
+  }
+
+  .doc-header__meta strong {
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  /* ===== Summary band ===== */
+  .summary {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 24px 28px;
+    margin-bottom: 40px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 40px;
+    align-items: center;
+  }
+
+  .summary__amount {
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .summary__amount sup {
+    font-size: 20px;
+    font-weight: 700;
+    vertical-align: super;
+    letter-spacing: -0.02em;
+  }
+
+  .summary__label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--dim);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .summary__sub {
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.6;
+    font-weight: 500;
+  }
+
+  .summary__sub .qty {
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  /* ===== Section spacing ===== */
+  section + section {
+    margin-top: 48px;
+  }
+
+  .section-label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* ===== Table ===== */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: var(--surface);
+    font-size: 13.5px;
+  }
+
+  thead th {
+    background: var(--surface-2);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--dim);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: right;
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  thead th:first-child,
+  thead th:nth-child(2),
+  thead th:nth-child(4),
+  thead th:nth-child(5) {
+    text-align: left;
+  }
+
+  thead th:first-child {
+    border-radius: 4px 0 0 0;
+  }
+
+  thead th:last-child {
+    border-radius: 0 4px 0 0;
+  }
+
+  tbody tr:not(:last-child) td {
+    border-bottom: 1px solid var(--rule);
+  }
+
+  tbody td {
+    padding: 11px 14px;
+    vertical-align: top;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  tbody td:first-child,
+  tbody td:nth-child(2),
+  tbody td:nth-child(4),
+  tbody td:nth-child(5) {
+    text-align: left;
+  }
+
+  tbody td:first-child {
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  tbody td:nth-child(2) {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* quantity */
+  tbody td:nth-child(3) {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* date cells */
+  tbody td:nth-child(4),
+  tbody td:nth-child(5) {
+    font-size: 13px;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+
+  /* amount cells */
+  tbody td:nth-child(6),
+  tbody td:nth-child(7),
+  tbody td:nth-child(8),
+  tbody td:nth-child(9) {
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+
+  /* row hover */
+  tbody tr:hover td {
+    background: oklch(0.975 0.004 250);
+  }
+
+  /* total row */
+  tfoot tr td {
+    background: var(--accent-soft);
+    border-top: 2px solid var(--ink);
+    font-weight: 700;
+    color: var(--ink);
+    padding: 12px 14px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  tfoot tr td:first-child,
+  tfoot tr td:nth-child(2),
+  tfoot tr td:nth-child(4),
+  tfoot tr td:nth-child(5) {
+    text-align: left;
+  }
+
+  tfoot tr td:first-child {
+    border-radius: 0 0 0 4px;
+  }
+
+  tfoot tr td:last-child {
+    border-radius: 0 0 4px 0;
+    color: var(--accent);
+    font-size: 14.5px;
+  }
+
+  /* ===== Pending tag ===== */
+  .tag-pending {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--warn);
+    background: var(--warn-soft);
+    border: 1px solid oklch(0.88 0.06 65);
+    border-radius: 3px;
+    padding: 1px 5px;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+
+  .tag-confirmed {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-mid);
+    border-radius: 3px;
+    padding: 1px 5px;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+
+  /* ===== Notes section ===== */
+  .notes {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 20px 24px;
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.75;
+  }
+
+  .notes p {
+    padding-left: 1em;
+    text-indent: -1em;
+  }
+
+  .notes p + p {
+    margin-top: 6px;
+  }
+
+  .notes strong {
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .notes .warn-inline {
+    color: var(--warn);
+    font-weight: 600;
+  }
+
+  /* ===== Sources section ===== */
+  .sources {
+    font-size: 12px;
+    color: var(--dim);
+    line-height: 1.7;
+  }
+
+  .sources p {
+    padding-left: 1em;
+    text-indent: -1em;
+  }
+
+  .sources p + p {
+    margin-top: 4px;
+  }
+
+  /* ===== Footer ===== */
+  footer {
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--dim);
+  }
+
+  footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  footer a:hover {
+    text-decoration: underline;
+  }
+
+  .footer-url {
+    display: none;
+  }
+
+  /* ===== Print styles ===== */
+  @media print {
+    @page {
+      size: A4 portrait;
+      margin: 18mm 15mm 18mm 15mm;
+    }
+
+    html {
+      font-size: 10pt;
+      background: white;
+    }
+
+    body {
+      padding: 0;
+      background: white;
+    }
+
+    .wrapper {
+      max-width: 100%;
+    }
+
+    .doc-header {
+      border-bottom: 2pt solid #000;
+    }
+
+    .summary {
+      border: 1pt solid #ccc;
+    }
+
+    table {
+      border: 1pt solid #bbb;
+      font-size: 9pt;
+    }
+
+    thead th {
+      background: #f0f0f0 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      border-bottom: 1pt solid #bbb;
+    }
+
+    tfoot tr td {
+      background: #edf7f1 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      border-top: 2pt solid #000;
+    }
+
+    .notes {
+      border: 1pt solid #ccc;
+    }
+
+    tbody tr:hover td {
+      background: transparent;
+    }
+
+    footer {
+      font-size: 8pt;
+    }
+
+    .footer-url {
+      display: inline;
+    }
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 700px) {
+    body {
+      padding: 28px 16px 56px;
+    }
+
+    .doc-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .doc-header__meta {
+      text-align: left;
+    }
+
+    .doc-header__title {
+      font-size: 20px;
+    }
+
+    .summary {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .summary__amount {
+      font-size: 26px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Document header -->
+  <header class="doc-header">
+    <h1 class="doc-header__title">期末棚卸資産 明細</h1>
+    <div class="doc-header__meta">
+      <strong>スケルトン株式会社</strong><br>
+      令和8年6月期 (2026年6月30日 現在)<br>
+      作成: 2026年7月31日
+    </div>
+  </header>
+
+  <!-- Summary -->
+  <div class="summary" role="region" aria-label="期末在庫合計">
+    <div>
+      <div class="summary__label">期末在庫 取得原価 合計</div>
+      <div class="summary__amount">¥3,090,624<sup>+</sup></div>
+    </div>
+    <div class="summary__sub">
+      合計数量: <span class="qty">4,520個</span><br>
+      内訳: 製品代 ¥2,478,227 + 国際輸送費 ¥608,997以上 + 通関費 ¥3,400以上<br>
+      <span class="warn-inline">+ マークは追跡中・未確定の費用を含む合計であることを示す</span>
+    </div>
+  </div>
+
+  <!-- Main table -->
+  <section>
+    <div class="section-label">ロット別 明細</div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>ロット</th>
+            <th>商品</th>
+            <th>数量</th>
+            <th>中国出荷</th>
+            <th>日本到着</th>
+            <th>製品代</th>
+            <th>国際輸送費</th>
+            <th>通関費</th>
+            <th>合計</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>20260423</td>
+            <td>厚型 <span class="tag-confirmed">確定</span></td>
+            <td>2,000個</td>
+            <td>2026-06-01</td>
+            <td>2026-06-13</td>
+            <td>¥1,099,127</td>
+            <td>¥229,728</td>
+            <td>¥3,400</td>
+            <td>¥1,332,255</td>
+          </tr>
+          <tr>
+            <td>20260518</td>
+            <td>薄型 <span class="tag-pending">要確認</span></td>
+            <td>2,000個</td>
+            <td>2026-06-22</td>
+            <td>2026-07-11</td>
+            <td>¥1,153,540</td>
+            <td>¥379,269</td>
+            <td>(確認中)</td>
+            <td>¥1,532,809<span class="tag-pending">+</span></td>
+          </tr>
+          <tr>
+            <td>L1 (旧)</td>
+            <td>薄型 (旧ロット) <span class="tag-pending">要確認</span></td>
+            <td>20個</td>
+            <td>(不明)</td>
+            <td>(旧入庫)</td>
+            <td>¥15,560</td>
+            <td>内包の可能性</td>
+            <td>(不明)</td>
+            <td>¥15,560<span class="tag-pending">+</span></td>
+          </tr>
+          <tr>
+            <td>P003</td>
+            <td>撥水コーティング <span class="tag-pending">追跡中</span></td>
+            <td>500個</td>
+            <td>(追跡中)</td>
+            <td>(追跡中)</td>
+            <td>¥210,000</td>
+            <td>(追跡中)</td>
+            <td>(追跡中)</td>
+            <td>¥210,000<span class="tag-pending">+</span></td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>合計</td>
+            <td></td>
+            <td>4,520個</td>
+            <td></td>
+            <td></td>
+            <td>¥2,478,227</td>
+            <td>¥608,997<span class="tag-pending" style="font-size:9px;">+</span></td>
+            <td>¥3,400<span class="tag-pending" style="font-size:9px;">+</span></td>
+            <td>¥3,090,624<span class="tag-pending" style="font-size:11px;">+</span></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  <!-- Notes -->
+  <section>
+    <div class="section-label">注記</div>
+    <div class="notes" role="note">
+      <p>・厚型 = 車用シートクッション (厚型): ASIN B0FL5FC4J3</p>
+      <p>・薄型 = 車用シートクッション (薄型): ASIN B0FL5BPJC7</p>
+      <p>・日本到着 = 福井県 大野倉庫 入庫日</p>
+      <p>・<strong>薄型 20260518 は 2026年6月22日 中国出荷 (FOB 所有権移転)</strong>: 2026年6月30日 時点は未着品として棚卸資産に計上。日本到着は 2026年7月11日。</p>
+      <p>・<span class="warn-inline">(要確認)</span> の項目は 楽麦・海源物流で追跡中。通関費の請求書は届き次第 本表に反映予定。</p>
+      <p>・L1 (旧) は旧ロット残在庫。輸送費の区分が不明のため合計に「+」を付記。</p>
+      <p>・P003 撥水コーティング は入庫日・輸送費が未確定。6月30日期末時点の在庫有無については税理士と要確認。</p>
+      <p>・製品代の円換算: 楽麦 API 取得額を適用レート (¥24.38/元) で換算。</p>
+    </div>
+  </section>
+
+  <!-- Sources -->
+  <section>
+    <div class="section-label">出典</div>
+    <div class="sources">
+      <p>・製品代: 楽麦 (www.rakumade.com) 注文詳細 (厚型 orderId 20260423 / 薄型 orderId 20260518)</p>
+      <p>・国際輸送費: 海源物流 請求書 DQRAKU25002685HD / 07KGT26237 (Gmail: spapi-vetting-na-t2@amazon.com 受信)</p>
+      <p>・通関費 ¥3,400: 海源物流 請求書内訳 (厚型 ロット確定分)</p>
+      <p>・入庫日: inventory.json (receivedAt フィールド) / warehouse-ledger.json (trigger: reconcile)</p>
+      <p>・出荷日: 楽麦「発送完了のお知らせ」メール (from: info@mail.rakumade.com)</p>
+      <p>・数量: Amazon SP-API 在庫レポート + 大野倉庫 台帳 突合</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <span>スケルトン株式会社 | 令和8年6月期 決算資料</span>
+    <span>
+      詳細エビデンス:
+      <a href="https://drive.google.com/drive/folders/17b9Js3Gm9ZBP-IRYZtPHrlYORHZqWhME" target="_blank" rel="noopener">
+        Google Drive フォルダ
+      </a>
+      <span class="footer-url"> (https://drive.google.com/drive/folders/17b9Js3Gm9ZBP-IRYZtPHrlYORHZqWhME)</span>
+    </span>
+  </footer>
+
+</div>
+</body>
+</html>
