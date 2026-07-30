@@ -418,7 +418,7 @@
     </div>
     <div class="spacer"></div>
     <div class="who" id="who">—</div>
-    <button class="logout" id="logout-btn">ログアウト</button>
+    <button class="logout" id="logout-btn" style="display:none">ログアウト</button>
   </div>
 
   <!-- Login screen -->
@@ -763,17 +763,14 @@ function showCourseNotAllowed(course) {
 }
 
 // ---- session restore ----
+// owner 明示 2026-07-30 「パスワード入れるのめんどくさいからなしにして」 → login gate 撤去。
+// 常に demo アカウント で 自動 login。 全 tag 保有 で 全 course 見える 想定。
 (function restore() {
-  try {
-    const s = JSON.parse(sessionStorage.getItem('skel-member-session') || 'null');
-    if (s && DEMO_MEMBERS[s.id]) {
-      currentMember = { id: s.id, ...DEMO_MEMBERS[s.id] };
-      $('who').textContent = currentMember.name + ' さん';
-      jumpAfterLogin();
-      return;
-    }
-  } catch (e) {}
-  show('screen-login');
+  const autoMember = { id: 'demo@example.com', name: 'ゲスト', password: '', tagIds: ['t3','t4'] };
+  DEMO_MEMBERS[autoMember.id] = { password: autoMember.password, name: autoMember.name, tagIds: autoMember.tagIds };
+  currentMember = autoMember;
+  $('who').textContent = autoMember.name + ' さん';
+  jumpAfterLogin();
 })();
 
 // ---- courses ----
@@ -783,7 +780,7 @@ function renderCourses() {
     if (need.length === 0) return true;
     return need.every(t => (currentMember.tagIds || []).includes(t));
   });
-  $('courses-sub').textContent = `${currentMember.name} さん が 受講 可能 な コース ${allowed.length} 件`;
+  $('courses-sub').textContent = `受講 可能 な コース ${allowed.length} 件`;
   const list = $('courses-list');
   if (allowed.length === 0) {
     list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink-muted);font-size:13px">受講 可能 な コース が ありません。 タグ 付与 を 配信 元 に お問合せ ください。</div>';
