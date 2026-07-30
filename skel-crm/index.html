@@ -2925,6 +2925,8 @@ function openSegmentPreviewModal(seg) {
   document.getElementById('seg-prev-send').addEventListener('click', () => {
     closeModal();
     navigate('broadcast');
+    // broadcast create modal を prefill seg で 開く (旧: navigate のみ で 何 も 起きない bug)
+    setTimeout(() => openBroadcastCreateModal(seg), 150);
   });
 }
 
@@ -4121,6 +4123,8 @@ ${cfg.contactEmail ? 'Email: ' + cfg.contactEmail : ''}${cfg.contactTel ? ' / TE
       contactEmail: document.getElementById('ec-contactemail').value.trim(),
       contactTel: document.getElementById('ec-contacttel').value.trim(),
     };
+    // demo mode: localStorage 永続化 (ページ リロード で 消えない)
+    try { localStorage.setItem('skel-crm-email-config', JSON.stringify(state.emailConfig)); } catch(e) {}
     toast('送信 設定 を 保存 しました');
     renderEmailConfig();
   });
@@ -4131,6 +4135,7 @@ ${cfg.contactEmail ? 'Email: ' + cfg.contactEmail : ''}${cfg.contactTel ? ' / TE
     state.emailConfig.spfStatus = 'ok';
     state.emailConfig.dkimStatus = 'ok';
     state.emailConfig.dmarcStatus = 'ok';
+    try { localStorage.setItem('skel-crm-email-config', JSON.stringify(state.emailConfig)); } catch(e) {}
     toast('SPF / DKIM / DMARC が 全て 認証 済 (demo)', 'success');
     renderEmailConfig();
   });
@@ -5633,10 +5638,11 @@ function openSettingsModal() {
       state.tenant = state.tenant || {};
       state.tenant.name = newName;
     }
-    // 通知 設定 保存
+    // 通知 設定 保存 (demo mode は localStorage 永続化 で リロード 対応)
     document.querySelectorAll('.set-notif').forEach(inp => {
       state.notifPrefs[inp.dataset.k] = inp.checked;
     });
+    try { localStorage.setItem('skel-crm-notif-prefs', JSON.stringify(state.notifPrefs)); } catch(e) {}
     // prod mode: tenants doc に mirror
     if (state.mode === 'prod' && dataAdapter.saveTenantMeta) {
       try { await dataAdapter.saveTenantMeta({ name: newName, notifPrefs: state.notifPrefs }); }
@@ -5767,6 +5773,9 @@ setTimeout(() => {
 // =========================================================
 window.__CRM_BOOT_APP = function bootApp() {
   document.getElementById('login-scrim').classList.remove('open');
+  // demo mode: 前回 セッション の localStorage 永続 分 を 復元
+  //   (state.courses / state.videos / state.emailConfig 等 が リロード で 消えない よう に)
+  if (state.mode === 'demo') restoreDemoState();
   updateModeIndicator();
   updatePlanBadge();
   updateUserMenu();
@@ -5777,6 +5786,32 @@ window.__CRM_BOOT_APP = function bootApp() {
   //   member.html が 起動 直後 でも course-teiki 等 seed を 見られる 状態 に する
   if (typeof syncDemoLms === 'function') syncDemoLms();
 };
+
+// demo mode 永続化 (LMS + email config) を localStorage から 起動時 復元
+function restoreDemoState() {
+  try {
+    const tenantId = state.currentTenantId || 'demo';
+    const lmsRaw = localStorage.getItem(`skel-crm-demo-lms-${tenantId}`);
+    if (lmsRaw) {
+      const lms = JSON.parse(lmsRaw);
+      if (Array.isArray(lms.courses) && lms.courses.length > 0) state.courses = lms.courses;
+      if (Array.isArray(lms.videos) && lms.videos.length > 0) {
+        // seed の videos に stored videos を merge (id で 上書き、 新規 は 追加)
+        const bySeedId = new Map((state.videos || []).map(v => [v.id, v]));
+        lms.videos.forEach(sv => {
+          const seed = bySeedId.get(sv.id);
+          // stored の 章 情報 を seed に merge (analytics/viewLogs 等 は seed 側 が rich)
+          if (seed) Object.assign(seed, sv);
+          else state.videos.push({ ...sv, analytics: { totalViews:0, uniqueViewers:0, completedViews:0, avgWatchPct:0 }, viewLogs: [] });
+        });
+      }
+    }
+    const emailCfgRaw = localStorage.getItem('skel-crm-email-config');
+    if (emailCfgRaw) state.emailConfig = { ...(state.emailConfig||{}), ...JSON.parse(emailCfgRaw) };
+    const notifRaw = localStorage.getItem('skel-crm-notif-prefs');
+    if (notifRaw) state.notifPrefs = JSON.parse(notifRaw);
+  } catch (e) { console.warn('restoreDemoState failed', e); }
+}
 
 // mode indicator は auth 完了 前 でも 表示 (login screen 隅 の badge 相当)
 updateModeIndicator();
