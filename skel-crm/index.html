@@ -603,6 +603,9 @@
       transform: translateX(-100%);
       transition: transform 220ms cubic-bezier(.2,.7,.2,1);
       box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 40px;  /* SP で 最終 item が 隠れない よう bottom padding */
     }
     aside.nav.open { transform: translateX(0); }
     #nav-scrim {
@@ -3774,7 +3777,7 @@ function openEmailEditModal(existing) {
     </div>
     <div class="field-group">
       <label class="field-label">STEP 3.5 · 配信停止 リンク (特商法 対応)</label>
-      <div style="padding:12px 14px;background:var(--surface-2);border-left:3px solid var(--ink);border-radius:6px;font-size:12px;color:var(--ink-soft);line-height:1.65">
+      <div style="padding:12px 14px;background:var(--surface-2);border-left:3px solid var(--side);border-radius:6px;font-size:12px;color:var(--ink-soft);line-height:1.65">
         送信時 に 全 メール の 末尾 に <b>「配信停止 リンク」</b> と <b>送信者 情報 (会社 名 / 住所 / 連絡先)</b> が 自動 で 追記 されます (特商法 第12条の3 準拠)。<br>
         <span style="color:var(--ink-muted);font-size:11px">未追記 で 送信 する と 法令 違反 に なる ため、 この 自動 追記 は 外せません。 会社 情報 は 「メール送信 設定」 の 「送信元 情報」 で 編集 して ください。</span>
       </div>
@@ -3854,11 +3857,12 @@ function renderEmailConfig() {
   const box = document.getElementById('email-config-form');
   if (!box) return;
   const cfg = state.emailConfig || {};
+  // WCAG AA 準拠 (7:1 以上) の 3-state badge。 未確認 は amber 色 (灰色 だと 2.6:1 で 不合格)
   const statusIc = (s) => s === 'ok'
-    ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary-hi);font-size:11px;font-weight:800">✓ 認証 済</span>'
+    ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:#def5e4;color:#035724;font-size:11px;font-weight:800">✓ 認証 済</span>'
     : s === 'ng'
-    ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font-size:11px;font-weight:800">× 未 通過</span>'
-    : '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:rgba(0,0,0,0.06);color:var(--ink-soft);font-size:11px;font-weight:800">未 確認</span>';
+    ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:#fde8e5;color:#7a1e12;font-size:11px;font-weight:800">× 未 通過</span>'
+    : '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:#fff4ec;color:#7a4b00;font-size:11px;font-weight:800">! 未 確認</span>';
 
   const dkimSelector = cfg.dkimSelector || 'skelcrm';
   const dkimHost = cfg.fromDomain ? `${dkimSelector}._domainkey.${cfg.fromDomain}` : `${dkimSelector}._domainkey.YOUR_DOMAIN`;
@@ -3867,12 +3871,27 @@ function renderEmailConfig() {
   const dkimValue = cfg.dkimTxt || `v=DKIM1; k=rsa; p=(サーバー 側 で 発行 された 公開鍵)`;
   const dmarcValue = cfg.dmarcTxt || 'v=DMARC1; p=quarantine; rua=mailto:dmarc@YOUR_DOMAIN';
 
+  const statusCard = (name, s, note) => {
+    const cfg2 = s === 'ok' ? { bg: '#def5e4', color: '#035724', ic: '✓', label: '認証 済' }
+      : s === 'ng' ? { bg: '#fde8e5', color: '#7a1e12', ic: '×', label: '未 通過' }
+      : { bg: '#fff4ec', color: '#7a4b00', ic: '!', label: '未 確認' };
+    return `<div style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="width:34px;height:34px;background:${cfg2.bg};color:${cfg2.color};border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex-shrink:0">${cfg2.ic}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:800;letter-spacing:0.01em">${name}</div>
+          <div style="font-size:11px;color:var(--ink-muted);font-weight:600;margin-top:1px">${note}</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:${cfg2.color};font-weight:800">${cfg2.label}</div>
+    </div>`;
+  };
   box.innerHTML = `
-    <!-- Overall status banner -->
-    <div style="background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:20px 24px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
-      <div><div style="font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.04em;margin-bottom:6px">SPF</div>${statusIc(cfg.spfStatus)}</div>
-      <div><div style="font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.04em;margin-bottom:6px">DKIM</div>${statusIc(cfg.dkimStatus)}</div>
-      <div><div style="font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.04em;margin-bottom:6px">DMARC</div>${statusIc(cfg.dmarcStatus)}</div>
+    <!-- Overall status: 3 card 昇格 -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px">
+      ${statusCard('SPF', cfg.spfStatus, '送信 サーバー 認可')}
+      ${statusCard('DKIM', cfg.dkimStatus, '電子署名 で 改ざん 検知')}
+      ${statusCard('DMARC', cfg.dmarcStatus, 'なりすまし ポリシー')}
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
@@ -3917,7 +3936,7 @@ function renderEmailConfig() {
       </div>
     </div>
 
-    <div style="background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--ink);border-radius:14px;padding:20px 24px;margin-bottom:20px">
+    <div style="background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--side);border-radius:14px;padding:20px 24px;margin-bottom:20px">
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
         <div style="font-size:14px;font-weight:800;letter-spacing:-0.005em">特商法 対応 · 会社 情報 (メール末尾 自動追記)</div>
         <span style="font-size:11px;color:var(--warn);font-weight:800;background:var(--warn-soft);padding:2px 8px;border-radius:999px">必須</span>
@@ -3968,7 +3987,7 @@ ${cfg.contactEmail ? 'Email: ' + cfg.contactEmail : ''}${cfg.contactTel ? ' / TE
       <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:12px">
         送信サーバー を 「この ドメイン から 送って いい」 と 宣言 する レコード。 未設定 だと Gmail / Outlook で 迷惑メール 判定 の 確率 高い。
       </div>
-      <div style="background:var(--surface-2);border-radius:8px;padding:12px 14px;font-family:'SF Mono',ui-monospace,monospace;font-size:12px;color:var(--ink);word-break:break-all">
+      <div style="background:var(--surface-2);border:1px solid var(--rule);border-radius:8px;padding:12px 14px;font-family:'SF Mono',ui-monospace,monospace;font-size:12px;color:var(--ink);word-break:break-all">
         <div style="color:var(--ink-muted);font-size:10.5px;margin-bottom:4px">Type: TXT · Host: @ or ${escHtml(cfg.fromDomain || 'YOUR_DOMAIN')} · TTL: 3600</div>
         <div>${escHtml(spfValue)}</div>
       </div>
@@ -3985,7 +4004,7 @@ ${cfg.contactEmail ? 'Email: ' + cfg.contactEmail : ''}${cfg.contactTel ? ' / TE
       <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:12px">
         メール 本文 に 電子署名 を つけて 「途中で 改ざん されて ない」 事 を 証明 する。 SendGrid / SES が 発行 した 公開鍵 を DNS に 登録 する だけ。
       </div>
-      <div style="background:var(--surface-2);border-radius:8px;padding:12px 14px;font-family:'SF Mono',ui-monospace,monospace;font-size:12px;color:var(--ink);word-break:break-all">
+      <div style="background:var(--surface-2);border:1px solid var(--rule);border-radius:8px;padding:12px 14px;font-family:'SF Mono',ui-monospace,monospace;font-size:12px;color:var(--ink);word-break:break-all">
         <div style="color:var(--ink-muted);font-size:10.5px;margin-bottom:4px">Type: TXT · Host: <b>${escHtml(dkimHost)}</b> · TTL: 3600</div>
         <div>${escHtml(dkimValue)}</div>
       </div>
@@ -4005,7 +4024,7 @@ ${cfg.contactEmail ? 'Email: ' + cfg.contactEmail : ''}${cfg.contactTel ? ' / TE
       <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:12px">
         SPF / DKIM を 通らなかった メール を どう 扱う か の ポリシー。 なりすまし 対策 の 最上位 レイヤ。 Gmail は 2024年 以降 「一定 数 送る なら DMARC 必須」。
       </div>
-      <div style="background:var(--surface-2);border-radius:8px;padding:12px 14px;font-family:'SF Mono',ui-monospace,monospace;font-size:12px;color:var(--ink);word-break:break-all">
+      <div style="background:var(--surface-2);border:1px solid var(--rule);border-radius:8px;padding:12px 14px;font-family:'SF Mono',ui-monospace,monospace;font-size:12px;color:var(--ink);word-break:break-all">
         <div style="color:var(--ink-muted);font-size:10.5px;margin-bottom:4px">Type: TXT · Host: <b>${escHtml(dmarcHost)}</b> · TTL: 3600</div>
         <div>${escHtml(dmarcValue)}</div>
       </div>
