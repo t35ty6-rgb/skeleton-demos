@@ -1103,7 +1103,54 @@ function loadDemoCourses(tenantId) {
 
 // tenantId は URL の ?tenant= or 'demo'
 const _tenantForCourses = new URL(window.location.href).searchParams.get('tenant') || 'demo';
-const DEMO_COURSES = loadDemoCourses(_tenantForCourses);
+let DEMO_COURSES = loadDemoCourses(_tenantForCourses);
+
+// ================= IndexedDB media resolver (admin と 共有 origin) =================
+// admin 側 で file upload された blob は IndexedDB `skel-crm-media` に 保存 されて いる。
+// state (localStorage) には `idb:{key}` の 参照 だけ。 ここで blob URL に 事前 展開。
+const IDB_DB_NAME = 'skel-crm-media';
+const IDB_STORE = 'blobs';
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbGetBlobUrl(key) {
+  try {
+    const db = await idbOpen();
+    return await new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get(key);
+      req.onsuccess = () => {
+        const blob = req.result;
+        if (!blob) return resolve('');
+        resolve(URL.createObjectURL(blob));
+      };
+      req.onerror = () => resolve('');
+    });
+  } catch (e) { return ''; }
+}
+const _idbUrlCache = new Map();
+function resolveMedia(u) {
+  if (!u) return '';
+  if (typeof u === 'string' && u.startsWith('idb:')) return _idbUrlCache.get(u) || '';
+  return u;
+}
+async function preResolveDemoCourses() {
+  const keys = new Set();
+  const collect = (u) => { if (typeof u === 'string' && u.startsWith('idb:')) keys.add(u.slice(4)); };
+  for (const c of DEMO_COURSES) {
+    collect(c.coverThumbUrl);
+    for (const ch of (c.chapters || [])) { collect(ch.thumbUrl); collect(ch.videoUrl); }
+  }
+  for (const k of keys) {
+    const url = await idbGetBlobUrl(k);
+    if (url) _idbUrlCache.set('idb:' + k, url);
+  }
+}
 
 // ---- helpers ----
 const $ = (id) => document.getElementById(id);
@@ -1253,7 +1300,15 @@ function showCourseNotAllowed(course) {
 
 // ---- session restore ----
 // owner 明示 2026-07-30 「ID/PW 1111/1111 で いい」 → login screen 復活、 fields に 1111 prefilled
-(function restore() {
+(async function restore() {
+  // IndexedDB 内 の blob (動画/サムネ/cover) を in-memory cache に 事前展開。
+  // これで admin で 大 動画 upload しても member 側 は 実 file を そのまま 再生 (sample fallback しない)。
+  try {
+    await preResolveDemoCourses();
+    // 展開 後、 描画 前 に DEMO_COURSES を 最新 の localStorage 内容 で 再読込 (admin が push した 最新 反映)
+    DEMO_COURSES = loadDemoCourses(_tenantForCourses);
+    await preResolveDemoCourses();
+  } catch (e) { console.warn('preResolveDemoCourses failed', e); }
   try {
     const s = JSON.parse(sessionStorage.getItem('skel-member-session') || 'null');
     if (s && DEMO_MEMBERS[s.id]) {
@@ -1310,7 +1365,8 @@ function lastAccessedAt(progress) {
 }
 function courseCoverStyle(c) {
   // 決定 順: 1) course.coverThumbUrl (admin で 明示 設定) → 2) 1章目 動画 の thumbUrl → 3) coverColor gradient
-  const url = c.coverThumbUrl || c.chapters?.[0]?.thumbUrl;
+  const raw = c.coverThumbUrl || c.chapters?.[0]?.thumbUrl;
+  const url = resolveMedia(raw);
   if (url) return `background-image:url('${escHtml(url)}');background-size:cover;background-position:center`;
   const base = c.coverColor || '#1c2530';
   return `background:linear-gradient(135deg, ${base}, ${base}dd 40%, #0f172a)`;
@@ -1757,9 +1813,10 @@ function renderChapters() {
     const prereq = ch.chapterNo > 1 ? [ch.chapterNo - 1] : [];
     const unlocked = prereq.every(n => p[String(n)]?.completed);
     const completed = !!p[String(ch.chapterNo)]?.completed;
-    // サムネ (data URL or http URL、 admin で 未 設定 なら グレー デフォルト)
-    const thumbBg = ch.thumbUrl
-      ? `background:url('${escHtml(ch.thumbUrl)}') center/cover, linear-gradient(135deg,#1c2530,#3a4553)`
+    // サムネ (idb: / data: / http URL、 admin で 未 設定 なら グレー デフォルト)
+    const chThumbResolved = resolveMedia(ch.thumbUrl);
+    const thumbBg = chThumbResolved
+      ? `background:url('${escHtml(chThumbResolved)}') center/cover, linear-gradient(135deg,#1c2530,#3a4553)`
       : `background:linear-gradient(135deg,#eeece7,#e2dfd8)`;
     // 続きから: 前回 見た 秒 の 進捗
     const resumeSec = p[String(ch.chapterNo)]?.lastPositionSec || 0;
@@ -1854,10 +1911,13 @@ function renderPlayer() {
     'https://www.w3schools.com/html/mov_bbb.mp4',
   ];
   const chIndex = Math.max(0, (ch.chapterNo || 1) - 1);
-  const url = ch.videoUrl || DEMO_SAMPLES[chIndex % DEMO_SAMPLES.length];
+  const resolvedVideo = resolveMedia(ch.videoUrl);
+  // 優先: admin upload された 実 URL (idb→blob 展開済 or data/http) → sample MP4 fallback
+  const url = resolvedVideo || DEMO_SAMPLES[chIndex % DEMO_SAMPLES.length];
   if (url) {
     vidEl.src = url;
-    if (ch.thumbUrl) vidEl.poster = ch.thumbUrl;
+    const posterResolved = resolveMedia(ch.thumbUrl);
+    if (posterResolved) vidEl.poster = posterResolved;
     vidEl.style.display = 'block';
     placeholder.style.display = 'none';
   } else {
