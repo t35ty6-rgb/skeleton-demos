@@ -316,7 +316,7 @@
   <div class="topbar" id="topbar" style="display:none">
     <div class="brand">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9 L15 12 L10 15 Z" fill="currentColor" stroke="none"/></svg>
-      <span>会員ページ</span>
+      <span>受講コース</span>
     </div>
     <div class="spacer"></div>
     <div class="who" id="who">—</div>
@@ -328,10 +328,10 @@
     <div class="login-card">
       <div class="brand-line">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9 L15 12 L10 15 Z" fill="currentColor" stroke="none"/></svg>
-        <span>SKEL·CRM 会員 ページ</span>
+        <span>SKEL·CRM 受講 ページ</span>
       </div>
       <h1>ログイン</h1>
-      <div class="sub">配信 元 から お送り した 会員 URL と パスワード で ログイン してください。</div>
+      <div class="sub">ご案内 の メール に 記載 の ID と パスワード で ログイン して ください。</div>
       <div id="login-error"></div>
       <div class="field">
         <label>会員 ID (メール or 会員番号)</label>
@@ -343,7 +343,7 @@
       </div>
       <button id="login-btn">ログイン</button>
       <div class="login-hint">
-        パスワード を お忘れ の 方 は 配信 元 まで お問合せ ください。<br>
+        パスワード を お忘れ の 方 は 担当 まで お問合せ ください。<br>
         デモ アカウント: <b>demo@example.com</b> / <b>demo1234</b>
       </div>
     </div>
@@ -470,8 +470,7 @@ $('login-btn').addEventListener('click', () => {
   currentMember = { id, ...m };
   sessionStorage.setItem('skel-member-session', JSON.stringify({ id }));
   $('who').textContent = m.name + ' さん';
-  renderCourses();
-  show('screen-courses');
+  jumpAfterLogin();
 });
 
 // Enter key に 対応
@@ -487,6 +486,29 @@ $('logout-btn').addEventListener('click', () => {
   show('screen-login');
 });
 
+// ---- deep link: ?course=xxx で 目的 コース を login 後 に 直遷移 ----
+const _url = new URL(window.location.href);
+const _deepCourseId = _url.searchParams.get('course') || null;
+
+function jumpAfterLogin() {
+  // deep link course が 指定 されて いて、 かつ 受講 可能 なら 直遷移
+  if (_deepCourseId) {
+    const c = DEMO_COURSES.find(x => x.id === _deepCourseId);
+    if (c) {
+      const need = c.memberTagIds || [];
+      const allowed = need.length === 0 || need.every(t => (currentMember.tagIds || []).includes(t));
+      if (allowed) {
+        currentCourseId = _deepCourseId;
+        renderChapters();
+        show('screen-chapters');
+        return;
+      }
+    }
+  }
+  renderCourses();
+  show('screen-courses');
+}
+
 // ---- session restore ----
 (function restore() {
   try {
@@ -494,8 +516,7 @@ $('logout-btn').addEventListener('click', () => {
     if (s && DEMO_MEMBERS[s.id]) {
       currentMember = { id: s.id, ...DEMO_MEMBERS[s.id] };
       $('who').textContent = currentMember.name + ' さん';
-      renderCourses();
-      show('screen-courses');
+      jumpAfterLogin();
       return;
     }
   } catch (e) {}
@@ -561,12 +582,12 @@ function renderChapters() {
     let action = '';
     if (completed) {
       status = '<span class="chapter-status completed">完了</span>';
-      action = '<button class="chapter-cta">もう一度 見る</button>';
+      action = '<button class="chapter-cta">もう一度 再生 する</button>';
     } else if (unlocked) {
       status = '<span class="chapter-status">受講可</span>';
-      action = '<button class="chapter-cta">見る →</button>';
+      action = '<button class="chapter-cta">再生 する →</button>';
     } else {
-      status = '<span class="chapter-status locked">未解放</span>';
+      status = '<span class="chapter-status locked">前 の 章 を 完了 で 開きます</span>';
       action = '';
     }
     return `
@@ -591,8 +612,8 @@ function renderChapters() {
       <div class="zoom-milestone ${zoomUnlocked ? '' : 'zoom-locked'}">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
         <div class="m-body">
-          <div class="m-title">${zoomUnlocked ? 'mentor 個別 面談 (30分) が 予約 できます' : `CH${String(zoomCh.chapterNo).padStart(2,'0')} 完了 で mentor 面談 が 予約 可能 に なります`}</div>
-          <div class="m-desc">${zoomUnlocked ? 'ボタン から Zoom link を 発行 し、 空いている 日時 で 予約 して ください。' : '応用編 の 完走 後 に、 個別 質問 · 相談 の 面談 が 発生 します。'}</div>
+          <div class="m-title">${zoomUnlocked ? '担当 者 と の 個別 面談 (30分) が 予約 できます' : `第${zoomCh.chapterNo}章 を 完了 する と、 担当 者 と の 1対1 面談 が 予約 できる よう に なります`}</div>
+          <div class="m-desc">${zoomUnlocked ? '疑問 や 悩み を、 担当 者 に 直接 相談 して ください。 空いて いる 日時 で 予約 できます。' : 'コース で 出て きた 疑問 を、 担当 者 に 直接 相談 できる 場 を ご用意 して います。'}</div>
         </div>
         ${zoomUnlocked ? '<button class="zoom-cta" id="zoom-book-btn">面談 を 予約 する</button>' : ''}
       </div>

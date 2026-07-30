@@ -71,7 +71,7 @@
   /* === Layout === */
   .app {
     display: grid;
-    grid-template-columns: 232px 1fr;
+    grid-template-columns: 248px 1fr;
     grid-template-rows: 52px 1fr;
     height: 100vh;
   }
@@ -115,13 +115,13 @@
   .nav-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 9px 12px;
+    gap: 11px;
+    padding: 11px 14px;
     border-radius: 8px;
     cursor: pointer;
     transition: background 120ms, color 120ms;
     user-select: none;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
     color: var(--side-ink-muted);
   }
   .nav-item:hover { background: rgba(255,255,255,0.06); color: var(--side-ink); }
@@ -136,23 +136,23 @@
     font-size: 14px;
     opacity: 0.85;
   }
-  .nav-label { font-size: 13px; font-weight: 600; flex: 1; }
+  .nav-label { font-size: 14.5px; font-weight: 700; flex: 1; letter-spacing: -0.005em; }
   .badge {
-    font-size: 11px; font-weight: 700;
+    font-size: 12px; font-weight: 800;
     background: rgba(255,255,255,0.08);
     color: var(--side-ink-muted);
-    padding: 2px 7px;
+    padding: 3px 9px;
     border-radius: 20px;
-    min-width: 24px;
+    min-width: 26px;
     text-align: center;
   }
   .nav-item.active .badge { background: rgba(6,199,85,0.2); color: var(--primary); }
   .nav-section-label {
-    font-size: 10.5px; font-weight: 700;
+    font-size: 11.5px; font-weight: 800;
     color: var(--side-ink-muted);
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 14px 12px 6px;
+    padding: 16px 12px 8px;
   }
 
   /* === Main === */
@@ -1247,10 +1247,13 @@
           <span>コース 一覧</span>
         </button>
         <div style="min-width:0;flex:1">
-          <h2 id="video-detail-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</h2>
+          <div style="display:flex;align-items:center;gap:10px">
+            <h2 id="video-detail-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0">—</h2>
+            <span id="video-detail-status" style="flex-shrink:0"></span>
+          </div>
           <div class="desc" id="video-detail-desc" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
         </div>
-        <button class="btn btn-secondary" id="course-edit-btn" style="white-space:nowrap;flex-shrink:0">コース 編集</button>
+        <button class="btn btn-secondary" id="course-edit-btn" style="white-space:nowrap;flex-shrink:0">編集</button>
         <button class="btn btn-primary" id="chapter-add-btn" style="white-space:nowrap;flex-shrink:0">+ 章 を 追加</button>
       </div>
 
@@ -1848,6 +1851,8 @@ state.videos = [
 ];
 
 // LMS course 定義 (章 を 束ねる 上位 概念)
+// published: false = 下書き (客側 member portal に 表示 されない、 admin のみ 触れる)、
+//           true  = 公開 (対象タグ 保有 客 が member portal で 受講 可能)
 state.courses = [
   {
     id: 'course-teiki',
@@ -1855,6 +1860,8 @@ state.courses = [
     description: '定期便 ユーザー 向け の 5 章 完結 コース。 章 は 順番 に 解放。 CH03 完走 で 個別 mentor 面談 の Zoom link が 発行 されます。',
     memberTagIds: ['t3'],
     totalChapters: 5,
+    published: true,
+    publishedAt: '2024-05-01',
   },
 ];
 
@@ -3240,6 +3247,19 @@ function getVideoLockState(v) {
   return { locked: true, reason: `CH${String(prereq[prereq.length-1]).padStart(2,'0')} 完走 で 解放` };
 }
 
+// 客側 会員ページ (member.html) の コース 直リンク URL 発行。
+//   client 側 で ?course=xxx を 見て login 後 に そのコース の 章 一覧 に 直遷移 (member.html 側 で 処理)
+function memberCourseUrl(courseId) {
+  const origin = window.location.origin || 'https://example.web.app';
+  const tenant = state.currentTenantId || 'demo';
+  const params = `?tenant=${encodeURIComponent(tenant)}&course=${encodeURIComponent(courseId)}`;
+  if (state.mode === 'demo') {
+    const dir = window.location.pathname.replace(/\/[^/]*$/, '/') || '/';
+    return `${origin}${dir}member.html${params}`;
+  }
+  return `${origin}/member${params}`;
+}
+
 function liffVideoUrl(videoId) {
   const origin = window.location.origin || 'https://example.web.app';
   const tenant = state.currentTenantId || 'demo';
@@ -3292,14 +3312,88 @@ function renderVideos() {
     if (statsBox) statsBox.style.display = 'none';   // course detail では 全体 stat 隠す
     document.getElementById('video-detail-title').textContent = c.title;
     document.getElementById('video-detail-desc').textContent = c.description || '';
+
+    // 公開 status badge (h2 の 横)
+    const statusEl = document.getElementById('video-detail-status');
+    if (c.published) {
+      statusEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary-hi);font-size:11.5px;font-weight:800;letter-spacing:0.02em">
+        <svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="6"/></svg>公開 中
+      </span>`;
+    } else {
+      statusEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:rgba(0,0,0,0.08);color:var(--ink-soft);font-size:11.5px;font-weight:800;letter-spacing:0.02em">下書き</span>`;
+    }
+
     grid.style.display = 'block';
     grid.innerHTML = '';
 
+    // 公開 / URL / 配信 アクション バナー (最上部、 client に 出す 動線)
     const chapters = byCourse[c.id] || [];
+    const publishBar = document.createElement('div');
+    const url = memberCourseUrl(c.id);
+    if (c.published) {
+      publishBar.style.cssText = 'background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center';
+      publishBar.innerHTML = `
+        <div style="width:32px;height:32px;background:var(--primary-soft);color:var(--primary-hi);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M14 10l7-7"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4"/></svg>
+        </div>
+        <div style="min-width:0">
+          <div style="font-size:12px;color:var(--ink-muted);font-weight:700;margin-bottom:2px">この コース の 公開 URL</div>
+          <input type="text" id="course-share-url" readonly value="${escHtml(url)}" style="width:100%;padding:6px 10px;border:1px solid var(--rule-strong);border-radius:6px;background:var(--surface-2);font-family:'SF Mono',ui-monospace,monospace;font-size:11.5px;color:var(--ink);cursor:text">
+        </div>
+        <button class="btn btn-secondary" id="course-copy-url-btn" style="white-space:nowrap;flex-shrink:0">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span>URL コピー</span>
+        </button>
+        <button class="btn btn-primary" id="course-broadcast-btn" style="white-space:nowrap;flex-shrink:0">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <span>LINE で 配信</span>
+        </button>
+      `;
+    } else {
+      publishBar.style.cssText = 'background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--ink);border-radius:14px;padding:16px 20px 16px 22px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap';
+      publishBar.innerHTML = `
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:13.5px;font-weight:800;color:var(--ink);margin-bottom:2px">下書き 状態 です</div>
+          <div style="font-size:12px;color:var(--ink-muted);line-height:1.55">「公開 する」 を 押す と 対象 顧客 が 会員ページ で 受講 できる 状態 に なり、 URL が 発行 されます。</div>
+        </div>
+        <button class="btn btn-primary" id="course-publish-btn" style="white-space:nowrap;flex-shrink:0;padding:10px 18px">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10"/><path d="m5 9 7-7 7 7"/><path d="M5 20h14"/></svg>
+          <span>公開 する</span>
+        </button>
+      `;
+    }
+    grid.appendChild(publishBar);
+
+    // 公開 button
+    setTimeout(() => {
+      const pubBtn = document.getElementById('course-publish-btn');
+      if (pubBtn) pubBtn.addEventListener('click', async () => {
+        c.published = true;
+        c.publishedAt = new Date().toISOString().slice(0,10);
+        renderVideos();
+        toast('コース を 公開 しました');
+      });
+      const copyBtn = document.getElementById('course-copy-url-btn');
+      if (copyBtn) copyBtn.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(url); toast('公開 URL を コピー しました'); }
+        catch (e) { const inp = document.getElementById('course-share-url'); inp.select(); document.execCommand('copy'); toast('公開 URL を コピー しました'); }
+      });
+      const bcBtn = document.getElementById('course-broadcast-btn');
+      if (bcBtn) bcBtn.addEventListener('click', () => {
+        navigate('broadcast');
+        setTimeout(() => openBroadcastCreateModal(null, {
+          title: `【新 コース 公開】 ${c.title}`,
+          body: `{name}さん\n\n新しい 受講 コース 「${c.title}」 を 公開 しました。\n\n▼ 受講 は こちら から\n${url}\n\n${(c.memberTagIds && c.memberTagIds.length > 0) ? '対象 タグ を お持ち の 方 のみ 受講 できます。' : ''}`,
+        }), 120);
+      });
+    }, 30);
+
     if (chapters.length === 0) {
-      grid.innerHTML = emptyStateHTML('🎬', 'この コース に まだ 章 が ありません',
+      const emptyBox = document.createElement('div');
+      emptyBox.innerHTML = emptyStateHTML('🎬', 'この コース に まだ 章 が ありません',
         '「+ 章 を 追加」 から 動画 を upload して ください。 章 番号 は 自動 で 連番 に なり、 前 章 の 完走 で 次 章 が 解放 されます。',
         '+ 最初 の 章 を 追加', 'chapter-add-btn');
+      grid.appendChild(emptyBox);
       return;
     }
 
@@ -3364,6 +3458,9 @@ function renderVideos() {
       const tagChips = memberTags.map(tid => tagChipHTML(tid)).join('') ||
         '<span style="font-size:10px;color:var(--ink-muted);font-weight:700">全 顧客 公開</span>';
       const pct = chapters.length ? Math.round(completedCh / chapters.length * 100) : 0;
+      const pubBadge = c.published
+        ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:var(--primary-soft);color:var(--primary-hi);font-size:10px;font-weight:800;letter-spacing:0.02em;flex-shrink:0"><svg viewBox="0 0 24 24" width="8" height="8" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>公開 中</span>'
+        : '<span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,0.08);color:var(--ink-soft);font-size:10px;font-weight:800;letter-spacing:0.02em;flex-shrink:0">下書き</span>';
       return `
         <div class="course-tile" data-course-id="${escHtml(c.id)}" style="background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:18px 20px;cursor:pointer;transition:box-shadow .15s;position:relative">
           <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
@@ -3371,7 +3468,7 @@ function renderVideos() {
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
             </div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:15px;font-weight:800;letter-spacing:-0.005em;line-height:1.35">${escHtml(c.title)}</div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div style="font-size:15px;font-weight:800;letter-spacing:-0.005em;line-height:1.35;min-width:0">${escHtml(c.title)}</div>${pubBadge}</div>
               <div style="font-size:11.5px;color:var(--ink-muted);margin-top:3px;font-weight:600">${chapters.length} 章 · ${fmtDuration(totalDur)}</div>
             </div>
           </div>
@@ -3817,6 +3914,19 @@ function openCourseEditModal(course) {
         タグ 未選択 = 全 顧客 が 受講 可能。 このタグ を 持つ 顧客 のみ 会員 ページ で 表示 されます。
       </div>
     </div>
+    <div class="field-group">
+      <label class="field-label">公開 状態</label>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface-2);border-radius:8px">
+        <label class="toggle-wrap" style="cursor:pointer">
+          <input type="checkbox" class="toggle-input" id="course-published-toggle" ${c.published ? 'checked' : ''}>
+          <div class="toggle-knob"></div>
+        </label>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700" id="course-pub-label">${c.published ? '公開 中 (客 が 受講 できる)' : '下書き (admin のみ)'}</div>
+          <div style="font-size:11px;color:var(--ink-muted);margin-top:2px">公開 する と 対象 顧客 が 会員ページ で 受講 可能 に なり、 URL が 発行 されます。</div>
+        </div>
+      </div>
+    </div>
     <div class="modal-actions" style="justify-content:space-between">
       ${isEdit ? '<button class="btn btn-danger" id="course-del-btn" style="margin-right:auto">🗑 コース 削除</button>' : '<div></div>'}
       <div style="display:flex;gap:8px">
@@ -3833,19 +3943,27 @@ function openCourseEditModal(course) {
     chip.addEventListener('click', () => chip.classList.toggle('selected'));
   });
 
+  const pubToggle = document.getElementById('course-published-toggle');
+  const pubLabel = document.getElementById('course-pub-label');
+  pubToggle.addEventListener('change', () => {
+    pubLabel.textContent = pubToggle.checked ? '公開 中 (客 が 受講 できる)' : '下書き (admin のみ)';
+  });
+
   document.getElementById('course-save-btn').addEventListener('click', async () => {
     const title = document.getElementById('course-title-input').value.trim();
     if (!title) { toast('コース タイトル を 入力 してください', 'warn'); return; }
     const desc = document.getElementById('course-desc-input').value.trim();
     const memberTagIds = Array.from(document.querySelectorAll('#course-tag-chips .course-tag-chip.selected')).map(el => el.dataset.tagId);
+    const published = pubToggle.checked;
+    const wasPublished = c.published;
 
     state.courses = state.courses || [];
     if (isEdit) {
       const idx = state.courses.findIndex(x => x.id === c.id);
-      if (idx >= 0) state.courses[idx] = { ...c, title, description: desc, memberTagIds };
+      if (idx >= 0) state.courses[idx] = { ...c, title, description: desc, memberTagIds, published, publishedAt: (published && !wasPublished) ? new Date().toISOString().slice(0,10) : c.publishedAt };
     } else {
       const newId = 'course-' + Date.now();
-      state.courses.unshift({ id: newId, title, description: desc, memberTagIds, totalChapters: null });
+      state.courses.unshift({ id: newId, title, description: desc, memberTagIds, totalChapters: null, published, publishedAt: published ? new Date().toISOString().slice(0,10) : null });
       // 直後 に そのコース の 詳細 に 遷移 (章 追加 の 導線 が すぐ)
       state.videoLevel = 'chapters';
       state.videoCurrentCourseId = newId;
