@@ -1233,7 +1233,7 @@
       <div class="page-header">
         <div>
           <h2>メール配信</h2>
-          <div class="desc">HTML メール マガジン を セグメント 別 に 配信。 SPF / DKIM / DMARC を 設定 済 の 独自 ドメイン から 送信 します</div>
+          <div class="desc">セグメント 絞込み の HTML メール を、 認証 済み 独自 ドメイン から 送信。 Gmail / Outlook の 受信 トレイ に 届く 確率 を 最大化 する 配信 設計</div>
         </div>
         <div class="spacer"></div>
         <button class="btn btn-secondary" id="email-config-shortcut">🛡 送信 設定</button>
@@ -1248,7 +1248,7 @@
       <div class="page-header">
         <div>
           <h2>メール送信 設定</h2>
-          <div class="desc">独自 ドメイン から 送信 する ため の 認証 設定 (SPF / DKIM / DMARC)。 迷惑メール 判定 を 回避 する ため の 必須 設定</div>
+          <div class="desc">迷惑メール 判定 を ゼロ に する ため の 3点 認証。 SPF / DKIM / DMARC を 1回 設定 すれば、 以降 の 全 配信 が 認証済み ドメイン から 自動 送信 されます</div>
         </div>
         <div class="spacer"></div>
         <button class="btn btn-secondary" id="email-config-verify-btn">🔍 認証 状態 を 確認</button>
@@ -3679,14 +3679,20 @@ function renderEmail() {
     if (!cfg.fromEmail) missing.push('From メール');
     if (cfg.spfStatus !== 'ok' || cfg.dkimStatus !== 'ok') missing.push('SPF/DKIM/DMARC 認証');
     if (!cfg.company || !cfg.address || !cfg.contactEmail) missing.push('特商法 会社情報');
+    const risks = [];
+    if (cfg.spfStatus !== 'ok' || cfg.dkimStatus !== 'ok') risks.push('SPF / DKIM / DMARC 未設定 → Gmail で 迷惑メール 判定 の 可能性');
+    if (!cfg.company || !cfg.address || !cfg.contactEmail) risks.push('会社情報 未入力 → 特商法 第12条の3 違反、 送信 ブロック');
+    if (!cfg.provider) risks.push('送信 プロバイダ 未選択 → 実 送信 不可');
+    if (!cfg.fromEmail) risks.push('From メール 未設定 → 送信元 が 決まって いない');
+    const risksHtml = risks.map(r => `<div style="display:flex;gap:6px;margin-top:4px"><span style="color:var(--warn);flex-shrink:0">·</span><span>${escHtml(r)}</span></div>`).join('');
     guard.innerHTML = `
-      <div style="background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--warn);border-radius:14px;padding:16px 20px 16px 22px;margin-bottom:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--warn)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <div style="flex:1;min-width:200px">
-          <div style="font-size:13.5px;font-weight:800;margin-bottom:2px">送信 の 準備 が 未完了 です</div>
-          <div style="font-size:12px;color:var(--ink-muted);line-height:1.55">未 設定: ${escHtml(missing.join(' / '))}。 SPF/DKIM/DMARC は 到達率、 特商法 会社情報 は 法令 準拠 に 必須 です。</div>
+      <div style="background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--warn);border-radius:14px;padding:16px 20px 16px 22px;margin-bottom:18px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--warn)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div style="flex:1;min-width:220px">
+          <div style="font-size:13.5px;font-weight:800;margin-bottom:6px">送信前 に ${risks.length} 件 の 設定 が 必要 です</div>
+          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55">${risksHtml}</div>
         </div>
-        <button class="btn btn-primary" id="email-config-jump-btn" style="white-space:nowrap;flex-shrink:0">送信 設定 に 進む →</button>
+        <button class="btn btn-primary" id="email-config-jump-btn" style="white-space:nowrap;flex-shrink:0;align-self:center">送信 設定 に 進む →</button>
       </div>
     `;
     setTimeout(() => {
@@ -3699,8 +3705,8 @@ function renderEmail() {
 
   const campaigns = state.emailCampaigns || [];
   if (campaigns.length === 0) {
-    grid.innerHTML = emptyStateHTML('📧', 'メール 配信 が まだ ありません',
-      '定期メルマガ や キャンペーン 告知 を セグメント 別 に 配信 できます。<br>SPF / DKIM / DMARC を 設定 済 の 独自 ドメイン から 送信 する ため 到達率 が 高い です。',
+    grid.innerHTML = emptyStateHTML('📧', 'まだ 配信 が ありません',
+      '購入者 / 未購入者 / タグ 別 で 対象 を 絞って 送れます。 「+ メール 配信 を 作成」 から どうぞ。',
       '+ 最初 の 配信 を 作成', 'email-add-btn');
     grid.style.display = 'block';
     return;
