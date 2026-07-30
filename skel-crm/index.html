@@ -6090,16 +6090,36 @@ function restoreDemoState() {
     const lmsRaw = localStorage.getItem(`skel-crm-demo-lms-${tenantId}`);
     if (lmsRaw) {
       const lms = JSON.parse(lmsRaw);
-      if (Array.isArray(lms.courses) && lms.courses.length > 0) state.courses = lms.courses;
+      // legacy cleanup: fix 前 に data:/blob: URL で 保存 された 動画/サムネ/cover は 全部 破棄。
+      //   IndexedDB 移行後 は 「idb:」 と http(s): だけ が 有効。 legacy を 引き継ぐ と
+      //   quota 超過 で syncDemoLms が 剥ぐ → sample fallback の 悪循環 が 続く。
+      const isValidUrl = (u) => !u || u.startsWith('idb:') || u.startsWith('http://') || u.startsWith('https://');
+      let legacyDropped = 0;
+      if (Array.isArray(lms.courses)) {
+        lms.courses = lms.courses.map(c => {
+          if (c.coverThumbUrl && !isValidUrl(c.coverThumbUrl)) { legacyDropped++; return { ...c, coverThumbUrl: '' }; }
+          return c;
+        });
+        if (lms.courses.length > 0) state.courses = lms.courses;
+      }
       if (Array.isArray(lms.videos) && lms.videos.length > 0) {
         // seed の videos に stored videos を merge (id で 上書き、 新規 は 追加)
         const bySeedId = new Map((state.videos || []).map(v => [v.id, v]));
         lms.videos.forEach(sv => {
-          const seed = bySeedId.get(sv.id);
-          // stored の 章 情報 を seed に merge (analytics/viewLogs 等 は seed 側 が rich)
-          if (seed) Object.assign(seed, sv);
-          else state.videos.push({ ...sv, analytics: { totalViews:0, uniqueViewers:0, completedViews:0, avgWatchPct:0 }, viewLogs: [] });
+          const cleaned = { ...sv };
+          if (cleaned.videoUrl && !isValidUrl(cleaned.videoUrl)) { legacyDropped++; cleaned.videoUrl = ''; }
+          if (cleaned.thumbUrl && !isValidUrl(cleaned.thumbUrl)) { legacyDropped++; cleaned.thumbUrl = ''; }
+          const seed = bySeedId.get(cleaned.id);
+          if (seed) Object.assign(seed, cleaned);
+          else state.videos.push({ ...cleaned, analytics: { totalViews:0, uniqueViewers:0, completedViews:0, avgWatchPct:0 }, viewLogs: [] });
         });
+      }
+      // 剥がした 場合 は 即 localStorage 書き戻し (owner に 「再 upload して」 を toast で 案内)
+      if (legacyDropped > 0) {
+        try { localStorage.setItem(`skel-crm-demo-lms-${tenantId}`, JSON.stringify({ ...lms, updatedAt: new Date().toISOString() })); } catch (e) {}
+        setTimeout(() => {
+          if (typeof toast === 'function') toast(`旧 バグ で 消えた サムネ/動画 ${legacyDropped} 件 を 検出、 もう一度 upload して ください (再発 しません)`, 'warn', 8000);
+        }, 1500);
       }
     }
     const emailCfgRaw = localStorage.getItem('skel-crm-email-config');
