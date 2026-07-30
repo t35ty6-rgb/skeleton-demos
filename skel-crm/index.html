@@ -3374,6 +3374,9 @@ function syncDemoLms() {
           if (v.videoUrl && v.videoUrl.startsWith('data:')) v.videoUrl = '';
           if (v.thumbUrl && v.thumbUrl.startsWith('data:')) v.thumbUrl = '';
         });
+        (stripped.courses || []).forEach(c => {
+          if (c.coverThumbUrl && c.coverThumbUrl.startsWith('data:')) c.coverThumbUrl = '';
+        });
         try { localStorage.setItem(`skel-crm-demo-lms-${tenantId}`, JSON.stringify(stripped)); toast('動画 file が 大きすぎて 別 tab 共有 不可 (member portal で sample 動画 に fallback)', 'warn', 5000); }
         catch (e2) { console.warn('syncDemoLms retry failed', e2); }
       } else {
@@ -3603,14 +3606,24 @@ function renderVideos() {
       const pubBadge = c.published
         ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:var(--primary-soft);color:var(--primary-hi);font-size:10px;font-weight:800;letter-spacing:0.02em;flex-shrink:0"><svg viewBox="0 0 24 24" width="8" height="8" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>公開 中</span>'
         : '<span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,0.08);color:var(--ink-soft);font-size:10px;font-weight:800;letter-spacing:0.02em;flex-shrink:0">下書き</span>';
+      // Cover 決定 順: course.coverThumbUrl → 1章目 の thumbUrl → dark gradient
+      const coverSrc = c.coverThumbUrl || chapters[0]?.thumbUrl || '';
+      const coverStyle = coverSrc
+        ? `background:url('${escHtml(coverSrc)}') center/cover`
+        : `background:linear-gradient(135deg,#2d3541,#1c2530)`;
       return `
-        <div class="course-tile" data-course-id="${escHtml(c.id)}" style="background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:18px 20px;cursor:pointer;transition:box-shadow .15s;position:relative">
+        <div class="course-tile" data-course-id="${escHtml(c.id)}" style="background:var(--surface);border:1px solid var(--rule);border-radius:14px;cursor:pointer;transition:box-shadow .15s;position:relative;overflow:hidden">
+          <div style="aspect-ratio:16/9;${coverStyle};position:relative">
+            ${!coverSrc ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;letter-spacing:0.06em">サムネ 未 設定</div>' : ''}
+            <div style="position:absolute;top:8px;right:8px">${pubBadge}</div>
+          </div>
+          <div style="padding:14px 18px 16px">
           <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
-            <div style="width:34px;height:34px;background:var(--side);color:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            <div style="width:32px;height:32px;background:var(--side);color:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
             </div>
             <div style="flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div style="font-size:15px;font-weight:800;letter-spacing:-0.005em;line-height:1.35;min-width:0">${escHtml(c.title)}</div>${pubBadge}</div>
+              <div style="font-size:15px;font-weight:800;letter-spacing:-0.005em;line-height:1.35">${escHtml(c.title)}</div>
               <div style="font-size:11.5px;color:var(--ink-muted);margin-top:3px;font-weight:600">${chapters.length} 章 · ${fmtDuration(totalDur)}</div>
             </div>
           </div>
@@ -3626,6 +3639,7 @@ function renderVideos() {
             ${zoomCh ? `<span title="Zoom milestone 設定 済み" style="display:inline-flex;align-items:center;color:var(--ink-soft)">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
             </span>` : ''}
+          </div>
           </div>
         </div>
       `;
@@ -4215,21 +4229,39 @@ function openVideoEditModal(videoId, opts) {
 
     ${!isEdit ? `
     <div class="field-group">
-      <label class="field-label">STEP 1 · 動画 ファイル を 選択</label>
-      <div id="video-drop-zone" style="border:2px dashed var(--rule);border-radius:10px;padding:28px;text-align:center;cursor:pointer;background:var(--surface-2);transition:border-color .15s,background .15s">
-        <div style="font-size:36px;margin-bottom:8px">🎬</div>
-        <div style="font-size:14px;font-weight:700;margin-bottom:4px">クリック or ドラッグ で 動画 を 選択</div>
-        <div style="font-size:11px;color:var(--dim)">mp4 / mov / webm · 500MB まで · 5分 以内 推奨</div>
-        <input type="file" id="video-file-input" accept="video/*" style="display:none">
+      <label class="field-label">STEP 1 · 動画 の 元 データ</label>
+      <!-- 選択タブ: 「ファイル upload」 vs 「URL 貼付」 -->
+      <div style="display:flex;gap:0;background:var(--surface-2);border-radius:8px;padding:3px;margin-bottom:12px">
+        <button type="button" class="src-tab active" data-src="file" style="flex:1;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:700;background:var(--surface);color:var(--ink);border:0;cursor:pointer">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>ファイル upload (〜15MB)
+        </button>
+        <button type="button" class="src-tab" data-src="url" style="flex:1;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:700;background:transparent;color:var(--ink-muted);border:0;cursor:pointer">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.71"/></svg>URL 貼付 (無制限 · 1時間動画 OK)
+        </button>
       </div>
-      <div id="video-file-info" style="display:none;margin-top:10px;padding:12px 14px;background:var(--primary-soft);border-radius:8px;font-size:12px;color:var(--primary-hi);font-weight:700"></div>
-      <div id="video-upload-progress" style="display:none;margin-top:10px">
-        <div style="height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden">
-          <div id="video-upload-bar" style="height:100%;width:0%;background:var(--primary);transition:width .3s"></div>
+      <div id="video-src-file">
+        <div id="video-drop-zone" style="border:2px dashed var(--rule);border-radius:10px;padding:28px;text-align:center;cursor:pointer;background:var(--surface-2);transition:border-color .15s,background .15s">
+          <div style="font-size:36px;margin-bottom:8px">🎬</div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:4px">クリック or ドラッグ で 動画 を 選択</div>
+          <div style="font-size:11px;color:var(--dim)">mp4 / mov / webm · 15MB まで (demo で 別 tab 共有 の 上限)</div>
+          <input type="file" id="video-file-input" accept="video/*" style="display:none">
         </div>
-        <div id="video-upload-label" style="font-size:11px;color:var(--dim);margin-top:6px;font-weight:600">0%</div>
+        <div id="video-file-info" style="display:none;margin-top:10px;padding:12px 14px;background:var(--primary-soft);border-radius:8px;font-size:12px;color:var(--primary-hi);font-weight:700"></div>
+        <div id="video-upload-progress" style="display:none;margin-top:10px">
+          <div style="height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden">
+            <div id="video-upload-bar" style="height:100%;width:0%;background:var(--primary);transition:width .3s"></div>
+          </div>
+          <div id="video-upload-label" style="font-size:11px;color:var(--dim);margin-top:6px;font-weight:600">0%</div>
+        </div>
       </div>
-      <div id="video-step1-hint" style="margin-top:12px;padding:12px;background:var(--surface-2);border-radius:8px;font-size:11px;color:var(--dim);font-weight:600;text-align:center">ファイル を 選択 する と、 タイトル / 対象 / サムネ の 入力 に 進みます</div>
+      <div id="video-src-url" style="display:none">
+        <input type="url" class="field-input" id="video-url-input" placeholder="https://example.com/video.mp4  または  YouTube URL (未対応、 直 mp4 URL を 推奨)" style="width:100%;margin-bottom:8px">
+        <div style="padding:12px 14px;background:var(--surface-2);border-radius:8px;font-size:11.5px;color:var(--ink-soft);line-height:1.65">
+          長尺 動画 (1時間 等) は 外部 ホスティング (Cloudflare Stream / Vimeo / 直 mp4) の URL を 貼って ください。 本番 は Firebase Storage で 無制限 upload に なります (Phase 2)。<br>
+          <b>YouTube URL は 現状 未対応</b> (iframe 埋込 で 視聴ログ / DRM 取れない ため)。 直 mp4 URL 推奨
+        </div>
+      </div>
+      <div id="video-step1-hint" style="margin-top:12px;padding:12px;background:var(--surface-2);border-radius:8px;font-size:11px;color:var(--dim);font-weight:600;text-align:center">ファイル or URL を 指定 する と、 タイトル / 対象 / サムネ の 入力 に 進みます</div>
     </div>
     ` : `
     <div class="field-group">
@@ -4364,6 +4396,51 @@ function openVideoEditModal(videoId, opts) {
     }
   }
 
+  // URL 貼付 対応: src-tab 切替 + URL 入力 で workingVideo.videoUrl 直 設定
+  let pickedUrl = '';
+  document.querySelectorAll('.src-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const src = tab.dataset.src;
+      document.querySelectorAll('.src-tab').forEach(t => {
+        t.classList.toggle('active', t === tab);
+        t.style.background = t === tab ? 'var(--surface)' : 'transparent';
+        t.style.color = t === tab ? 'var(--ink)' : 'var(--ink-muted)';
+      });
+      document.getElementById('video-src-file').style.display = (src === 'file') ? 'block' : 'none';
+      document.getElementById('video-src-url').style.display = (src === 'url') ? 'block' : 'none';
+    });
+  });
+  const urlInp = document.getElementById('video-url-input');
+  if (urlInp) urlInp.addEventListener('input', () => {
+    const url = urlInp.value.trim();
+    if (!url) return;
+    if (!/^https?:\/\//.test(url)) { toast('http:// or https:// で 始まる URL を 貼って ください', 'warn'); return; }
+    pickedUrl = url;
+    pickedFile = null;   // URL 優先
+    // 展開
+    ['video-step2-area', 'video-step3-area', 'video-step4-area', 'video-thumb-area'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = '';
+    });
+    const hintEl = document.getElementById('video-step1-hint');
+    if (hintEl) hintEl.style.display = 'none';
+    // 尺 取得 (crossorigin OK な mp4 のみ)
+    const testVid = document.createElement('video');
+    testVid.preload = 'metadata';
+    testVid.src = url;
+    testVid.onloadedmetadata = () => {
+      workingVideo.durationSec = Math.round(testVid.duration || 0);
+      workingVideo.sizeBytes = 0;
+    };
+    workingVideo.videoUrl = url;
+    // タイトル 未入力 なら URL の 末尾 file 名 を 提案
+    const titleInp = document.getElementById('video-title-input');
+    if (titleInp && !titleInp.value.trim()) {
+      const name = url.split('/').pop().split('?')[0].replace(/\.[^.]+$/, '');
+      if (name) titleInp.value = decodeURIComponent(name);
+    }
+  });
+
   // thumb pick
   const thumbBtn = document.getElementById('video-thumb-btn');
   const thumbInput = document.getElementById('video-thumb-input');
@@ -4384,7 +4461,7 @@ function openVideoEditModal(videoId, opts) {
   document.getElementById('video-modal-save').addEventListener('click', async () => {
     const title = (document.getElementById('video-title-input').value || '').trim();
     if (!title) { toast('タイトル を 入力 してください', 'warn'); return; }
-    if (!isEdit && !pickedFile) { toast('動画 ファイル を 選択 してください', 'warn'); return; }
+    if (!isEdit && !pickedFile && !pickedUrl) { toast('動画 ファイル または URL を 指定 して ください', 'warn'); return; }
 
     const btn = document.getElementById('video-modal-save');
     btn.disabled = true;
@@ -4419,6 +4496,10 @@ function openVideoEditModal(videoId, opts) {
           workingVideo.videoUrl = res.url;
           workingVideo.storagePath = res.path;
         }
+      } else if (pickedUrl) {
+        // URL 貼付 経路: そのまま videoUrl として 保存
+        workingVideo.videoUrl = pickedUrl;
+        workingVideo.storagePath = null;
       }
       if (pickedThumb) {
         const res = await dataAdapter.uploadVideoThumb(pickedThumb, id);
@@ -4466,7 +4547,9 @@ function openVideoEditModal(videoId, opts) {
 function openCourseEditModal(course) {
   const isEdit = !!course;
   // 新規 コース は default 公開 (owner が toggle 見逃して 「URL 動かない」 事故 の 予防)
-  const c = course || { id: '', title: '', description: '', memberTagIds: [], totalChapters: null, published: true };
+  const c = course || { id: '', title: '', description: '', memberTagIds: [], totalChapters: null, published: true, coverThumbUrl: '' };
+  // 編集 中 の 揮発 バッファ (保存 で state.courses に 反映)
+  let workingCoverThumb = c.coverThumbUrl || '';
 
   const tagChips = state.tags.map(t => `
     <button type="button" class="cp-chip course-tag-chip ${(c.memberTagIds || []).includes(t.id) ? 'selected' : ''}"
@@ -4487,6 +4570,25 @@ function openCourseEditModal(course) {
     <div class="field-group">
       <label class="field-label">説明</label>
       <textarea class="field-input" id="course-desc-input" rows="3" style="resize:vertical;font-family:inherit;line-height:1.6" placeholder="どんな 内容 の コース か 1-2 行 で">${escHtml(c.description || '')}</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">コース サムネイル (任意)</label>
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        <div id="course-thumb-preview" style="width:200px;aspect-ratio:16/9;background:${workingCoverThumb ? `url('${escHtml(workingCoverThumb)}') center/cover` : 'linear-gradient(135deg,#2d3541,#1c2530)'};border:1px solid var(--rule);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;overflow:hidden">
+          ${workingCoverThumb ? '' : '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+          <div style="display:flex;gap:6px">
+            <button type="button" class="btn btn-secondary" id="course-thumb-btn" style="padding:8px 12px;font-size:12px">画像 を 選択</button>
+            <button type="button" class="btn btn-ghost" id="course-thumb-clear" style="padding:8px 12px;font-size:12px;${workingCoverThumb ? '' : 'display:none'}">解除</button>
+          </div>
+          <input type="file" id="course-thumb-input" accept="image/*" style="display:none">
+          <div style="font-size:11px;color:var(--ink-muted);line-height:1.5">
+            会員 マイページ の hero 大画面 と コース カード の 表紙 に 使われます。 16:9 推奨。<br>
+            未 設定 の 場合 は 1 章目 の 動画 サムネ → dark gradient の 順 で fallback。
+          </div>
+        </div>
+      </div>
     </div>
     <div class="field-group">
       <label class="field-label">受講 対象 (タグ AND 条件)</label>
@@ -4524,6 +4626,48 @@ function openCourseEditModal(course) {
     chip.addEventListener('click', () => chip.classList.toggle('selected'));
   });
 
+  // ---- コース サムネ upload / clear ----
+  const thumbBtn = document.getElementById('course-thumb-btn');
+  const thumbInput = document.getElementById('course-thumb-input');
+  const thumbPreview = document.getElementById('course-thumb-preview');
+  const thumbClear = document.getElementById('course-thumb-clear');
+  const refreshThumbPreview = () => {
+    if (workingCoverThumb) {
+      thumbPreview.style.background = `url('${workingCoverThumb.replace(/'/g, "\\'")}') center/cover`;
+      thumbPreview.innerHTML = '';
+      thumbClear.style.display = '';
+    } else {
+      thumbPreview.style.background = 'linear-gradient(135deg,#2d3541,#1c2530)';
+      thumbPreview.innerHTML = '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+      thumbClear.style.display = 'none';
+    }
+  };
+  thumbBtn.addEventListener('click', () => thumbInput.click());
+  thumbInput.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      toast('サムネ は 3MB 以内 の 画像 に して ください', 'warn');
+      thumbInput.value = '';
+      return;
+    }
+    try {
+      const tempId = c.id || `temp-${Date.now()}`;
+      const res = await dataAdapter.uploadVideoThumb(file, `course_${tempId}`);
+      workingCoverThumb = res.url;
+      refreshThumbPreview();
+      toast('サムネ を 設定 しました', 'success');
+    } catch (err) {
+      console.error('course thumb upload failed', err);
+      toast('サムネ の 取込 に 失敗 しました', 'error');
+    }
+    thumbInput.value = '';
+  });
+  thumbClear.addEventListener('click', () => {
+    workingCoverThumb = '';
+    refreshThumbPreview();
+  });
+
   const pubToggle = document.getElementById('course-published-toggle');
   const pubLabel = document.getElementById('course-pub-label');
   pubToggle.addEventListener('change', () => {
@@ -4541,10 +4685,10 @@ function openCourseEditModal(course) {
     state.courses = state.courses || [];
     if (isEdit) {
       const idx = state.courses.findIndex(x => x.id === c.id);
-      if (idx >= 0) state.courses[idx] = { ...c, title, description: desc, memberTagIds, published, publishedAt: (published && !wasPublished) ? new Date().toISOString().slice(0,10) : c.publishedAt };
+      if (idx >= 0) state.courses[idx] = { ...c, title, description: desc, memberTagIds, published, coverThumbUrl: workingCoverThumb || '', publishedAt: (published && !wasPublished) ? new Date().toISOString().slice(0,10) : c.publishedAt };
     } else {
       const newId = 'course-' + Date.now();
-      state.courses.unshift({ id: newId, title, description: desc, memberTagIds, totalChapters: null, published, publishedAt: published ? new Date().toISOString().slice(0,10) : null });
+      state.courses.unshift({ id: newId, title, description: desc, memberTagIds, totalChapters: null, published, coverThumbUrl: workingCoverThumb || '', publishedAt: published ? new Date().toISOString().slice(0,10) : null });
       // 直後 に そのコース の 詳細 に 遷移 (章 追加 の 導線 が すぐ)
       state.videoLevel = 'chapters';
       state.videoCurrentCourseId = newId;
