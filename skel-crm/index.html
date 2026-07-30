@@ -4422,7 +4422,8 @@ function openVideoEditModal(videoId, opts) {
 // ---- Course create / edit modal ----
 function openCourseEditModal(course) {
   const isEdit = !!course;
-  const c = course || { id: '', title: '', description: '', memberTagIds: [], totalChapters: null };
+  // 新規 コース は default 公開 (owner が toggle 見逃して 「URL 動かない」 事故 の 予防)
+  const c = course || { id: '', title: '', description: '', memberTagIds: [], totalChapters: null, published: true };
 
   const tagChips = state.tags.map(t => `
     <button type="button" class="cp-chip course-tag-chip ${(c.memberTagIds || []).includes(t.id) ? 'selected' : ''}"
@@ -5732,6 +5733,9 @@ window.__CRM_BOOT_APP = function bootApp() {
   updateTenantSwitcher();
   renderNav();
   renderView('customers');
+  // demo mode: state.courses seed を localStorage に 即 flush して
+  //   member.html が 起動 直後 でも course-teiki 等 seed を 見られる 状態 に する
+  if (typeof syncDemoLms === 'function') syncDemoLms();
 };
 
 // mode indicator は auth 完了 前 でも 表示 (login screen 隅 の badge 相当)

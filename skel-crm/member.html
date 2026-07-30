@@ -529,22 +529,60 @@ const _url = new URL(window.location.href);
 const _deepCourseId = _url.searchParams.get('course') || null;
 
 function jumpAfterLogin() {
-  // deep link course が 指定 されて いて、 かつ 受講 可能 なら 直遷移
+  // deep link course が 指定 されて いて、 かつ 受講 可能 なら 直遷移。
+  //   不 存在 or 対象外 なら 「見つからない」 と 明示 (課ース一覧 に fallback すると 「デモ の 別 コース が 出てくる」 誤解)
   if (_deepCourseId) {
     const c = DEMO_COURSES.find(x => x.id === _deepCourseId);
-    if (c) {
-      const need = c.memberTagIds || [];
-      const allowed = need.length === 0 || need.every(t => (currentMember.tagIds || []).includes(t));
-      if (allowed) {
-        currentCourseId = _deepCourseId;
-        renderChapters();
-        show('screen-chapters');
-        return;
-      }
+    if (!c) {
+      // Sorry, this specific course isn't available
+      showCourseNotFound(_deepCourseId);
+      return;
     }
+    const need = c.memberTagIds || [];
+    const allowed = need.length === 0 || need.every(t => (currentMember.tagIds || []).includes(t));
+    if (!allowed) {
+      showCourseNotAllowed(c);
+      return;
+    }
+    currentCourseId = _deepCourseId;
+    renderChapters();
+    show('screen-chapters');
+    return;
   }
   renderCourses();
   show('screen-courses');
+}
+
+function showCourseNotFound(courseId) {
+  show('screen-courses');
+  $('courses-sub').textContent = '';
+  $('courses-list').innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--warn);border-radius:14px;padding:24px 28px">
+      <div style="font-size:16px;font-weight:800;margin-bottom:8px">この コース は 見つかりません</div>
+      <div style="font-size:13px;color:var(--ink-muted);line-height:1.65;margin-bottom:14px">
+        指定 された コース は 現在 公開 されて いない か、 URL が 変更 された 可能性 が あります。<br>
+        (id: <span style="font-family:monospace;font-size:11px">${escHtml(courseId)}</span>)<br><br>
+        <b>admin ページ で コース を 作成 した 場合</b>: 「動画ホスティング → コース 詳細 → 公開 する」 を 押してから、 発行 された URL を コピー して ください。<br>
+        現在 の member portal は demo 目的 で 同じ ブラウザ の localStorage を 参照 して います (同 ブラウザ で admin を 開いて 公開 する 必要 が あります)。
+      </div>
+      <button class="course-cta" onclick="renderCourses();show('screen-courses');" style="background:var(--ink);color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">受講 可能 な コース 一覧 を 見る →</button>
+    </div>
+  `;
+}
+
+function showCourseNotAllowed(course) {
+  show('screen-courses');
+  $('courses-sub').textContent = '';
+  $('courses-list').innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--warn);border-radius:14px;padding:24px 28px">
+      <div style="font-size:16px;font-weight:800;margin-bottom:8px">受講 対象 タグ を 保有 して いません</div>
+      <div style="font-size:13px;color:var(--ink-muted);line-height:1.65;margin-bottom:14px">
+        「${escHtml(course.title)}」 は 特定 の タグ を 保有 する 会員 の み 受講 可能 です。<br>
+        必要 タグ 保有 の 確認 は 担当 まで お問合せ ください。
+      </div>
+      <button class="course-cta" onclick="renderCourses();show('screen-courses');" style="background:var(--ink);color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">受講 可能 な コース 一覧 を 見る →</button>
+    </div>
+  `;
 }
 
 // ---- session restore ----
