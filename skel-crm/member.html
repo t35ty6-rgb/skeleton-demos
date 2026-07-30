@@ -445,6 +445,7 @@ function loadDemoCourses(tenantId) {
         durationSec: v.durationSec,
         zoomMilestone: v.zoomMilestone?.enabled || false,
         thumbUrl: v.thumbUrl || '',
+        videoUrl: v.videoUrl || '',  // admin upload の 実 URL (demo mode の blob は tab 間 で 死ぬ ので、 空 なら sample MP4 fallback)
       });
     });
     const merged = courses.map(c => ({
@@ -728,10 +729,29 @@ function renderPlayer() {
 
   const vidEl = $('video-el');
   const placeholder = $('video-placeholder');
-  // 本番 では 動画 URL を Cloud Function 経由 で 取得 (member session → tag 判定 → signed URL)
-  vidEl.src = '';
-  vidEl.style.display = 'none';
-  placeholder.style.display = 'flex';
+  // 動画 URL 決定 優先順:
+  //   1. ch.videoUrl (admin で upload された 実 URL)
+  //   2. demo mode fallback (公開 sample MP4 · 章 番号 で 複数 サンプル ローテ で 見た目 の 差別化)
+  //   3. なし → placeholder
+  const DEMO_SAMPLES = [
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+  ];
+  const chIndex = Math.max(0, (ch.chapterNo || 1) - 1);
+  const url = ch.videoUrl || DEMO_SAMPLES[chIndex % DEMO_SAMPLES.length];
+  if (url) {
+    vidEl.src = url;
+    if (ch.thumbUrl) vidEl.poster = ch.thumbUrl;
+    vidEl.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    vidEl.src = '';
+    vidEl.style.display = 'none';
+    placeholder.style.display = 'flex';
+  }
 
   const p = getProgress(currentMember.id, c.id);
   const completed = !!p[String(ch.chapterNo)]?.completed;
