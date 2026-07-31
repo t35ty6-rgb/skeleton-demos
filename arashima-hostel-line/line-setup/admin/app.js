@@ -2078,6 +2078,21 @@ function fmtYen(n) {
   return '¥' + Math.round(n).toLocaleString('ja-JP');
 }
 
+function bookingUrlForDate(h, date) {
+  if (!h || !h.url || !/^https:\/\//.test(h.url)) return null;
+  try {
+    const u = new URL(h.url);
+    const co = new Date(date + 'T00:00:00+09:00');
+    co.setDate(co.getDate() + 1);
+    u.searchParams.set('checkin', date);
+    u.searchParams.set('checkout', co.toISOString().slice(0, 10));
+    u.searchParams.set('group_adults', '2');
+    u.searchParams.set('no_rooms', '1');
+    u.searchParams.set('group_children', '0');
+    return u.toString();
+  } catch { return null; }
+}
+
 function median(arr) {
   const s = arr.filter((x) => x != null).sort((a, b) => a - b);
   if (!s.length) return null;
@@ -2229,14 +2244,21 @@ function renderHeatmap(data) {
     cells.className = 'price-hm__cells';
     for (const d of dates) {
       const p = data.prices[k]?.[d];
-      const cell = document.createElement('div');
+      const href = bookingUrlForDate(h, d);
+      const cell = document.createElement(p != null && href ? 'a' : 'div');
       cell.className = 'price-hm__cell';
       if (p == null) {
         cell.dataset.empty = '1';
         cell.dataset.tooltip = `${d} · 満室 or 未取得`;
       } else {
         cell.dataset.h = String(quantileBucket(p, buckets));
-        cell.dataset.tooltip = `${d} · ${fmtYen(p)}`;
+        cell.dataset.tooltip = `${d} · ${fmtYen(p)}${href ? ' · タップで Booking' : ''}`;
+        if (href) {
+          cell.href = href;
+          cell.target = '_blank';
+          cell.rel = 'noopener';
+          cell.setAttribute('aria-label', `${h.name || ''} ${d} ${fmtYen(p)} — Booking で 開く`);
+        }
       }
       cells.appendChild(cell);
     }
