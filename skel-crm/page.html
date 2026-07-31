@@ -424,6 +424,18 @@ window.__SKEL_TRACK = (function() {
       const db = getFirestore(app_);
       await new Promise(res => { onAuthStateChanged(auth, u => u && res()); signInAnonymously(auth).catch(()=>{}); });
       const tenantId = url.searchParams.get('tenant') || cfg.defaultTenantId || 'demo';
+      // brand fetch (color / logo)
+      try {
+        const tSnap = await getDoc(doc(db, 'tenants', tenantId));
+        if (tSnap.exists()) {
+          const brand = tSnap.data().brandConfig;
+          if (brand?.color) {
+            document.documentElement.style.setProperty('--primary', brand.color);
+            const m = brand.color.match(/^#([0-9a-f]{6})$/i);
+            if (m) { const n = parseInt(m[1],16); document.documentElement.style.setProperty('--primary-hi', '#'+[Math.max(0,(n>>16)-30),Math.max(0,((n>>8)&0xff)-30),Math.max(0,(n&0xff)-30)].map(x=>x.toString(16).padStart(2,'0')).join('')); document.documentElement.style.setProperty('--primary-soft', `rgba(${n>>16},${(n>>8)&0xff},${n&0xff},0.12)`); }
+          }
+        }
+      } catch (e) {}
       const snap = await getDoc(doc(db, 'tenants', tenantId, 'pages', pageId));
       if (snap.exists()) page = snap.data();
     } catch (e) { console.warn('page fetch failed', e); }

@@ -1140,9 +1140,31 @@ async function ensureFirebase() {
     return null;
   }
 }
+async function fetchTenantBrand(tenantId) {
+  const fb = await ensureFirebase();
+  if (!fb) return null;
+  try {
+    const snap = await fb.getDoc(fb.doc(fb.db, 'tenants', tenantId));
+    if (!snap.exists()) return null;
+    return snap.data();
+  } catch (e) { return null; }
+}
+function applyMemberBrand(brand) {
+  if (!brand) return;
+  const root = document.documentElement;
+  if (brand.color) {
+    root.style.setProperty('--primary', brand.color);
+    const shade = (hex, p) => { const m = hex.match(/^#([0-9a-f]{6})$/i); if (!m) return hex; const n = parseInt(m[1], 16); const r = Math.max(0, Math.min(255, (n>>16)+Math.round(255*p/100))); const g = Math.max(0, Math.min(255, ((n>>8)&0xff)+Math.round(255*p/100))); const b = Math.max(0, Math.min(255, (n&0xff)+Math.round(255*p/100))); return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); };
+    const rgba = (hex, a) => { const m = hex.match(/^#([0-9a-f]{6})$/i); if (!m) return `rgba(6,199,85,${a})`; const n = parseInt(m[1], 16); return `rgba(${n>>16},${(n>>8)&0xff},${n&0xff},${a})`; };
+    root.style.setProperty('--primary-hi', shade(brand.color, -12));
+    root.style.setProperty('--primary-soft', rgba(brand.color, 0.12));
+  }
+}
 async function fetchLmsFromFirestore(tenantId) {
   const fb = await ensureFirebase();
   if (!fb) return null;
+  // brand も 同時 fetch (会員 サイト の color/logo 反映 用)
+  try { const b = await fetchTenantBrand(tenantId); if (b) applyMemberBrand(b.brandConfig); } catch (e) {}
   try {
     const snap = await fb.getDoc(fb.doc(fb.db, 'tenants', tenantId, 'lms', 'current'));
     if (!snap.exists()) return null;

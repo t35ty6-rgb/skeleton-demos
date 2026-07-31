@@ -72,7 +72,7 @@
   .app {
     display: grid;
     grid-template-columns: 248px 1fr;
-    grid-template-rows: 52px 1fr;
+    grid-template-rows: 52px 44px 1fr;
     height: 100vh;
   }
   header {
@@ -85,6 +85,38 @@
     padding: 0 20px;
     gap: 16px;
   }
+
+  /* 上 category tabs (顧客 / 配信 / 販売 / 設定) */
+  .category-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    background: var(--bg);
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: stretch;
+    padding: 0 20px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .cat-tab {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 0 16px;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    font-size: 13.5px; font-weight: 700;
+    letter-spacing: -0.005em;
+    color: var(--ink-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 120ms, border-color 120ms;
+    height: 100%;
+  }
+  .cat-tab:hover { color: var(--ink); }
+  .cat-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 800; }
+  .cat-tab-icon { display: inline-flex; opacity: 0.7; }
+  .cat-tab.active .cat-tab-icon { opacity: 1; }
+  .cat-tab-label { font-size: 13.5px; }
   header h1 { font-size: 14.5px; font-weight: 800; letter-spacing: -0.01em; }
   header .sub { font-size: 12px; color: var(--ink-muted); font-weight: 600; }
   header .spacer { flex: 1; }
@@ -105,7 +137,7 @@
   /* === Sidebar (dark navy 業務ツール調) === */
   aside.nav {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 3;
     background: var(--side);
     color: var(--side-ink);
     border-right: 0;
@@ -159,7 +191,7 @@
   /* === Main === */
   main {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 3;
     overflow-y: auto;
     padding: 24px;
   }
@@ -590,8 +622,12 @@
   @media (max-width: 900px) {
     .app {
       grid-template-columns: 1fr;
-      grid-template-rows: 52px 1fr;
+      grid-template-rows: 52px 44px 1fr;
     }
+    .category-bar { padding: 0 12px; }
+    .cat-tab { padding: 0 12px; font-size: 12.5px; }
+    .cat-tab-label { font-size: 12.5px; }
+    main { grid-row: 3; }
     header { padding: 0 12px; gap: 10px; }
     header h1 { font-size: 14px; }
     header .sub { display: none; }
@@ -1021,6 +1057,7 @@
   <!-- Header -->
   <header>
     <button class="nav-toggle" id="nav-toggle" aria-label="メニュー">☰</button>
+    <img id="header-brand-logo" style="display:none;width:32px;height:32px;object-fit:contain;border-radius:6px" alt="">
     <div>
       <h1>Skel·CRM</h1>
       <div class="sub">Lステップ / エルメ 拡張 · CRM 統合</div>
@@ -1056,6 +1093,9 @@
       </div>
     </div>
   </header>
+
+  <!-- 上 category tabs (顧客 / 配信 / 販売 / 設定) -->
+  <div class="category-bar" id="category-bar"></div>
 
   <!-- Sidebar -->
   <aside class="nav" id="nav"></aside>
@@ -1349,6 +1389,30 @@
       </a>
     </div>
 
+    <!-- ブランド 設定 (色 テーマ + ロゴ) -->
+    <div class="view" id="view-brand">
+      <div class="page-header">
+        <div><h2>ブランド 設定</h2><div class="desc">SaaS の 色 テーマ · ロゴ を 客 の 会社 仕様 に カスタマイズ。 admin と 公開 ページ の 両方 に 反映</div></div>
+      </div>
+      <div id="brand-body"></div>
+    </div>
+
+    <!-- 店舗 情報 -->
+    <div class="view" id="view-store-info">
+      <div class="page-header">
+        <div><h2>店舗 情報</h2><div class="desc">実店舗 の 名前 · 住所 · 電話 · 営業時間 · Google Maps 連携 情報 を 保存 (公開 ページ に 表示)</div></div>
+      </div>
+      <div id="store-info-body"></div>
+    </div>
+
+    <!-- 機能 ON/OFF -->
+    <div class="view" id="view-features">
+      <div class="page-header">
+        <div><h2>機能 ON/OFF</h2><div class="desc">使う 機能 だけ を ON。 客 の 混乱 を 防ぐ ため 不要 機能 は 左 nav から 非表示。 plan (Free/Pro/Enterprise) で 上限 自動 制御</div></div>
+      </div>
+      <div id="features-body"></div>
+    </div>
+
     <!-- アフィリエイト -->
     <div class="view" id="view-partners">
       <div class="page-header">
@@ -1486,6 +1550,10 @@ const state = {
   events: [],  // 予約 / セミナー (Firestore: tenants/{tid}/events/{eventId})
   partners: [], // アフィリ パートナー (Firestore: tenants/{tid}/partners/{partnerId})
   attributions: [], // 送客 log (Firestore: tenants/{tid}/attributions/{attrId})
+  currentCategory: 'customers',   // 上 category tab (customers/broadcast/sales/settings)
+  enabledFeatures: null,          // null = 全 ON (default)、 array なら 指定 の featureKey のみ 表示
+  brandConfig: null,              // { color, logoUrl, name }
+  storeInfo: null,                // { name, address, phone, googleMapsPlaceId, hours, gapiKey }
   emailCampaigns: [],
   emailConfig: {},
   // 認証 / tenant / plan (prod mode で 上書き、 demo mode は default)
@@ -2080,45 +2148,110 @@ const NAV_ICONS = {
   shield:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
 };
 
-const NAV = [
-  { section: null },
-  { view: 'customers', label: '顧客リスト',      icon: NAV_ICONS.users,  badge: () => state.customers.length },
-  { view: 'tags',      label: 'タグ管理',         icon: NAV_ICONS.tag,    badge: () => state.tags.length },
-  { view: 'autotags',  label: '自動タグルール',   icon: NAV_ICONS.zap,    badge: () => `${state.autoTagRules.filter(r=>r.active).length}/${state.autoTagRules.length}` },
-  { view: 'campaigns', label: 'キャンペーン',     icon: NAV_ICONS.chart,  badge: () => state.campaigns.length },
-  { section: 'メッセージ配信' },
-  { view: 'segments',  label: 'セグメント',        icon: NAV_ICONS.target, badge: () => state.segments.length },
-  { view: 'broadcast', label: 'LINE 一括配信',     icon: NAV_ICONS.send,   badge: null },
-  { view: 'email',     label: 'メール配信',         icon: NAV_ICONS.mail,   badge: () => (state.emailCampaigns || []).length },
-  { view: 'steps',     label: 'ステップ配信',      icon: NAV_ICONS.flow,   badge: null },
-  { section: '会員動画' },
-  { view: 'videos',    label: '動画ホスティング',   icon: NAV_ICONS.film,   badge: () => (state.videos || []).length },
-  { section: '販売 ページ' },
-  { view: 'pages',     label: 'LP · ページ',        icon: NAV_ICONS.grid,   badge: () => (state.pages || []).length },
-  { view: 'events',    label: '予約 · セミナー',     icon: NAV_ICONS.calendar || NAV_ICONS.flow, badge: () => (state.events || []).length },
-  { view: 'partners',  label: 'アフィリエイト',      icon: NAV_ICONS.target || NAV_ICONS.flow,   badge: () => (state.partners || []).length },
-  { section: '設定' },
-  { view: 'richmenu',  label: 'リッチメニュー',   icon: NAV_ICONS.grid,   badge: null },
-  { view: 'channels',  label: 'LINE アカウント',   icon: NAV_ICONS.plug,   badge: null },
-  { view: 'email-config', label: 'メール送信 設定',icon: NAV_ICONS.shield, badge: null },
-  { view: 'history',   label: '配信履歴',          icon: NAV_ICONS.clock,  badge: null },
-  { section: 'ヘルプ' },
-  { view: 'guide',     label: '使い方',            icon: NAV_ICONS.help,   badge: () => '34' },
+// ===============================================================
+// NAV: 上 category tabs + 左 sidebar detail の 2 段構成
+// - category: 上 tabs に 表示 する 大枠
+// - items[].featureKey: 客 の 機能 ON/OFF (checkbox) で 表示 制御。 default true
+// - items[].plan: 'free' | 'pro' | 'enterprise' (客 tier で 自動 制御)
+// ===============================================================
+const NAV_CATEGORIES = [
+  {
+    id: 'customers', label: '顧客', icon: NAV_ICONS.users,
+    items: [
+      { view: 'customers', label: '顧客リスト',      icon: NAV_ICONS.users,  badge: () => state.customers.length,          featureKey: 'customers.list', plan: 'free' },
+      { view: 'tags',      label: 'タグ管理',         icon: NAV_ICONS.tag,    badge: () => state.tags.length,               featureKey: 'customers.tags', plan: 'free' },
+      { view: 'autotags',  label: '自動タグルール',   icon: NAV_ICONS.zap,    badge: () => `${state.autoTagRules.filter(r=>r.active).length}/${state.autoTagRules.length}`, featureKey: 'customers.autotag', plan: 'pro' },
+      { view: 'segments',  label: 'セグメント',       icon: NAV_ICONS.target, badge: () => state.segments.length,           featureKey: 'customers.segments', plan: 'pro' },
+      { view: 'campaigns', label: 'キャンペーン',     icon: NAV_ICONS.chart,  badge: () => state.campaigns.length,          featureKey: 'customers.campaigns', plan: 'free' },
+    ],
+  },
+  {
+    id: 'broadcast', label: '配信', icon: NAV_ICONS.send,
+    items: [
+      { view: 'broadcast', label: 'LINE 一括配信',    icon: NAV_ICONS.send,   badge: null,                                  featureKey: 'broadcast.line', plan: 'free' },
+      { view: 'email',     label: 'メール配信',        icon: NAV_ICONS.mail,   badge: () => (state.emailCampaigns || []).length, featureKey: 'broadcast.email', plan: 'pro' },
+      { view: 'steps',     label: 'ステップ配信',     icon: NAV_ICONS.flow,   badge: null,                                  featureKey: 'broadcast.steps', plan: 'pro' },
+      { view: 'richmenu',  label: 'リッチメニュー',   icon: NAV_ICONS.grid,   badge: null,                                  featureKey: 'broadcast.richmenu', plan: 'free' },
+      { view: 'history',   label: '配信履歴',         icon: NAV_ICONS.clock,  badge: null,                                  featureKey: 'broadcast.history', plan: 'free' },
+    ],
+  },
+  {
+    id: 'sales', label: '販売', icon: NAV_ICONS.chart,
+    items: [
+      { view: 'videos',    label: '動画ホスティング', icon: NAV_ICONS.film,   badge: () => (state.videos || []).length,     featureKey: 'sales.videos', plan: 'pro' },
+      { view: 'pages',     label: 'LP · ページ',      icon: NAV_ICONS.grid,   badge: () => (state.pages || []).length,      featureKey: 'sales.pages', plan: 'pro' },
+      { view: 'events',    label: '予約 · セミナー',  icon: NAV_ICONS.flow,   badge: () => (state.events || []).length,     featureKey: 'sales.events', plan: 'pro' },
+      { view: 'partners',  label: 'アフィリエイト',    icon: NAV_ICONS.target, badge: () => (state.partners || []).length,   featureKey: 'sales.partners', plan: 'enterprise' },
+    ],
+  },
+  {
+    id: 'settings', label: '設定', icon: NAV_ICONS.shield,
+    items: [
+      { view: 'channels',      label: 'LINE アカウント', icon: NAV_ICONS.plug,   badge: null,                                featureKey: 'settings.channels', plan: 'free' },
+      { view: 'email-config',  label: 'メール送信 設定', icon: NAV_ICONS.shield, badge: null,                                featureKey: 'settings.email', plan: 'pro' },
+      { view: 'brand',         label: 'ブランド 設定',   icon: NAV_ICONS.tag,    badge: null,                                featureKey: 'settings.brand', plan: 'free' },
+      { view: 'store-info',    label: '店舗 情報',       icon: NAV_ICONS.target, badge: null,                                featureKey: 'settings.store', plan: 'free' },
+      { view: 'features',      label: '機能 ON/OFF',     icon: NAV_ICONS.zap,    badge: null,                                featureKey: 'settings.features', plan: 'free', alwaysOn: true },
+      { view: 'guide',         label: '使い方',          icon: NAV_ICONS.help,   badge: () => '34',                          featureKey: 'settings.guide', plan: 'free' },
+    ],
+  },
 ];
+
+// flatten で 旧 NAV 互換 (view lookup 用)
+const NAV = NAV_CATEGORIES.flatMap(c => c.items);
+
+// 初期値: 全 feature ON (owner が checkbox で 選ぶ 想定、 客 契約 tier で 自動 制御 は Phase 2)
+function defaultEnabledFeatures() {
+  return NAV_CATEGORIES.flatMap(c => c.items.map(i => i.featureKey));
+}
+
+function isFeatureEnabled(featureKey) {
+  if (!featureKey) return true;
+  const enabled = state.enabledFeatures;
+  if (!Array.isArray(enabled)) return true;   // null / undefined = 全 ON
+  return enabled.includes(featureKey);
+}
+
+function renderCategoryTabs() {
+  const bar = document.getElementById('category-bar');
+  if (!bar) return;
+  bar.innerHTML = NAV_CATEGORIES.map(c => {
+    // その category の item が 1 つ でも 有効 なら 表示
+    const visible = c.items.some(i => isFeatureEnabled(i.featureKey) || i.alwaysOn);
+    if (!visible) return '';
+    const active = state.currentCategory === c.id ? 'active' : '';
+    return `<button type="button" class="cat-tab ${active}" data-cat-id="${c.id}">
+      <span class="cat-tab-icon">${c.icon}</span><span class="cat-tab-label">${c.label}</span>
+    </button>`;
+  }).join('');
+  bar.querySelectorAll('.cat-tab').forEach(b => b.addEventListener('click', () => {
+    switchCategory(b.dataset.catId);
+  }));
+}
+
+function switchCategory(catId) {
+  state.currentCategory = catId;
+  renderCategoryTabs();
+  renderNav();
+  // その category の 最初 の 有効 item に 遷移
+  const cat = NAV_CATEGORIES.find(c => c.id === catId);
+  if (cat) {
+    const firstVisible = cat.items.find(i => isFeatureEnabled(i.featureKey) || i.alwaysOn);
+    if (firstVisible) navigate(firstVisible.view);
+  }
+}
 
 function renderNav() {
   const nav = document.getElementById('nav');
+  if (!nav) return;
   nav.innerHTML = '';
-  NAV.forEach(item => {
-    if (item.section !== undefined) {
-      if (item.section) {
-        const s = document.createElement('div');
-        s.className = 'nav-section-label';
-        s.textContent = item.section;
-        nav.appendChild(s);
-      }
-      return;
-    }
+  const cat = NAV_CATEGORIES.find(c => c.id === state.currentCategory) || NAV_CATEGORIES[0];
+  const catLabel = document.createElement('div');
+  catLabel.className = 'nav-section-label';
+  catLabel.textContent = cat.label;
+  nav.appendChild(catLabel);
+  cat.items.forEach(item => {
+    if (!isFeatureEnabled(item.featureKey) && !item.alwaysOn) return;
     const el = document.createElement('div');
     el.className = 'nav-item' + (state.view === item.view ? ' active' : '');
     el.dataset.view = item.view;
@@ -2135,6 +2268,13 @@ function renderNav() {
 
 function navigate(view) {
   state.view = view;
+  // navigate 先 の item の category も 追随 して 選択 状態 に (deep-link や 直接 navigate 対応)
+  const owningCat = NAV_CATEGORIES.find(c => c.items.some(i => i.view === view));
+  if (owningCat && owningCat.id !== state.currentCategory) {
+    state.currentCategory = owningCat.id;
+    renderCategoryTabs();
+    renderNav();
+  }
   // update nav active
   document.querySelectorAll('.nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.view === view);
@@ -2180,6 +2320,9 @@ function renderView(view) {
   if (view === 'pages')     renderPages();
   if (view === 'events')    renderEvents();
   if (view === 'partners')  renderPartners();
+  if (view === 'brand')     renderBrand();
+  if (view === 'store-info') renderStoreInfo();
+  if (view === 'features')  renderFeatures();
   if (view === 'email')     renderEmail();
   if (view === 'email-config') renderEmailConfig();
 }
@@ -6004,6 +6147,205 @@ function openPageEditModal(page) {
 }
 
 // =========================================================
+// ブランド 設定 / 店舗 情報 / 機能 ON/OFF (Firestore: tenants/{tid}.brandConfig / storeInfo / enabledFeatures)
+// =========================================================
+function applyBrandTheme() {
+  const b = state.brandConfig || {};
+  const root = document.documentElement;
+  if (b.color) {
+    root.style.setProperty('--primary', b.color);
+    // primary-hi = 少し 暗く、 primary-soft = 20% opacity 相当
+    root.style.setProperty('--primary-hi', shadeColor(b.color, -12));
+    root.style.setProperty('--primary-soft', hexToRgba(b.color, 0.12));
+  }
+  // logo: header の brand-mark に 表示 (実装 は header side だけ)
+  const brandName = document.querySelector('header h1');
+  if (brandName && b.name) brandName.textContent = b.name;
+  const brandLogo = document.getElementById('header-brand-logo');
+  if (brandLogo) {
+    if (b.logoUrl) { brandLogo.src = b.logoUrl; brandLogo.style.display = 'inline-block'; }
+    else brandLogo.style.display = 'none';
+  }
+}
+function shadeColor(hex, percent) {
+  const m = hex.match(/^#([0-9a-f]{6})$/i);
+  if (!m) return hex;
+  const num = parseInt(m[1], 16);
+  const r = Math.max(0, Math.min(255, (num >> 16) + Math.round(255 * percent / 100)));
+  const g = Math.max(0, Math.min(255, ((num >> 8) & 0xff) + Math.round(255 * percent / 100)));
+  const b = Math.max(0, Math.min(255, (num & 0xff) + Math.round(255 * percent / 100)));
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function hexToRgba(hex, a) {
+  const m = hex.match(/^#([0-9a-f]{6})$/i);
+  if (!m) return `rgba(6,199,85,${a})`;
+  const num = parseInt(m[1], 16);
+  return `rgba(${num >> 16},${(num >> 8) & 0xff},${num & 0xff},${a})`;
+}
+
+function renderBrand() {
+  const el = document.getElementById('brand-body');
+  if (!el) return;
+  const b = state.brandConfig || { color: '#17b26a', name: 'Skel·CRM', logoUrl: '' };
+  el.innerHTML = `
+    <div style="max-width:640px;background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:24px 28px">
+      <div class="field-group">
+        <label class="field-label">サービス 名 (header に 表示)</label>
+        <input type="text" class="field-input" id="brand-name" value="${escHtml(b.name || 'Skel·CRM')}" placeholder="◯◯ 会社 CRM">
+      </div>
+      <div class="field-group">
+        <label class="field-label">ブランド カラー (primary accent)</label>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input type="color" id="brand-color" value="${escHtml(b.color || '#17b26a')}" style="width:60px;height:40px;border:1px solid var(--rule);border-radius:6px;padding:2px;cursor:pointer">
+          <input type="text" class="field-input" id="brand-color-text" value="${escHtml(b.color || '#17b26a')}" style="flex:1;font-family:'SF Mono',monospace;font-size:13px">
+          <div id="brand-color-preview" style="width:80px;height:40px;background:${escHtml(b.color || '#17b26a')};border-radius:6px"></div>
+        </div>
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:6px">button / active nav / progress bar 等 に 反映。 会員 サイト · LP · 予約 ページ にも 適用</div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">ロゴ 画像 URL (header 左端 に 表示、 40×40)</label>
+        <input type="url" class="field-input" id="brand-logo" value="${escHtml(b.logoUrl || '')}" placeholder="https://your-domain.com/logo.png">
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:6px">正方形 · 透過 PNG 推奨、 40×40 で 表示</div>
+        ${b.logoUrl ? `<div style="margin-top:8px;padding:12px;background:var(--surface-2);border-radius:8px;display:inline-flex;align-items:center;gap:12px"><img src="${escHtml(b.logoUrl)}" style="width:40px;height:40px;object-fit:contain"><span style="font-size:12px;color:var(--ink-muted);font-weight:600">現在 の ロゴ</span></div>` : ''}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-primary" id="brand-save">保存 · 反映</button>
+      </div>
+    </div>
+  `;
+  const c = document.getElementById('brand-color');
+  const cText = document.getElementById('brand-color-text');
+  const cPrev = document.getElementById('brand-color-preview');
+  c.addEventListener('input', () => { cText.value = c.value; cPrev.style.background = c.value; });
+  cText.addEventListener('input', () => { if (/^#[0-9a-f]{6}$/i.test(cText.value)) { c.value = cText.value; cPrev.style.background = cText.value; } });
+  document.getElementById('brand-save').addEventListener('click', async () => {
+    const updated = {
+      name: document.getElementById('brand-name').value.trim() || 'Skel·CRM',
+      color: cText.value.match(/^#[0-9a-f]{6}$/i) ? cText.value : '#17b26a',
+      logoUrl: document.getElementById('brand-logo').value.trim(),
+    };
+    state.brandConfig = updated;
+    applyBrandTheme();
+    if (typeof dataAdapter.saveTenantConfig === 'function') {
+      try { await dataAdapter.saveTenantConfig({ brandConfig: updated }); } catch (e) { console.warn(e); }
+    } else {
+      try { localStorage.setItem('skel-crm-brand-config', JSON.stringify(updated)); } catch (e) {}
+    }
+    renderBrand();
+    toast('ブランド 設定 を 保存 · 反映 しました', 'success');
+  });
+}
+
+function renderStoreInfo() {
+  const el = document.getElementById('store-info-body');
+  if (!el) return;
+  const s = state.storeInfo || {};
+  el.innerHTML = `
+    <div style="max-width:640px;background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:24px 28px">
+      <div class="field-group">
+        <label class="field-label">店舗 名 (正式)</label>
+        <input type="text" class="field-input" id="si-name" value="${escHtml(s.name || '')}" placeholder="◯◯ ヘアサロン 福井 本店">
+      </div>
+      <div class="field-group">
+        <label class="field-label">住所</label>
+        <input type="text" class="field-input" id="si-address" value="${escHtml(s.address || '')}" placeholder="福井県 福井市 ◯◯ 町 1-2-3">
+      </div>
+      <div class="field-group">
+        <label class="field-label">電話 · メール</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input type="tel" class="field-input" id="si-phone" value="${escHtml(s.phone || '')}" placeholder="0776-XX-XXXX">
+          <input type="email" class="field-input" id="si-email" value="${escHtml(s.email || '')}" placeholder="info@example.com">
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">営業 時間</label>
+        <textarea class="field-input" id="si-hours" rows="3" style="resize:vertical;font-family:inherit;line-height:1.6" placeholder="月〜金 9:00-18:00 / 土 10:00-17:00 / 日 定休">${escHtml(s.hours || '')}</textarea>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Google Maps place ID or 埋込 URL</label>
+        <input type="text" class="field-input" id="si-gmap" value="${escHtml(s.googleMapsUrl || '')}" placeholder="https://maps.google.com/... または place ID">
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:6px">公開 ページ に 地図 embed を 出す 用</div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Google API キー (Maps · Business Profile 連携 用、 任意)</label>
+        <input type="password" class="field-input" id="si-gapi" value="${escHtml(s.googleApiKey || '')}" placeholder="AIza..." autocomplete="off">
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:6px">Google Cloud Console → 認証情報 で 発行。 client-side 露出 する ので Maps JS API 用 の 制限 付き 鍵 推奨</div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-primary" id="si-save">保存</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('si-save').addEventListener('click', async () => {
+    const updated = {
+      name: document.getElementById('si-name').value.trim(),
+      address: document.getElementById('si-address').value.trim(),
+      phone: document.getElementById('si-phone').value.trim(),
+      email: document.getElementById('si-email').value.trim(),
+      hours: document.getElementById('si-hours').value.trim(),
+      googleMapsUrl: document.getElementById('si-gmap').value.trim(),
+      googleApiKey: document.getElementById('si-gapi').value.trim(),
+    };
+    state.storeInfo = updated;
+    if (typeof dataAdapter.saveTenantConfig === 'function') {
+      try { await dataAdapter.saveTenantConfig({ storeInfo: updated }); } catch (e) { console.warn(e); }
+    } else {
+      try { localStorage.setItem('skel-crm-store-info', JSON.stringify(updated)); } catch (e) {}
+    }
+    toast('店舗 情報 を 保存 しました', 'success');
+  });
+}
+
+function renderFeatures() {
+  const el = document.getElementById('features-body');
+  if (!el) return;
+  const enabled = new Set(state.enabledFeatures || defaultEnabledFeatures());
+  const planLabel = { free: '無料', pro: 'Pro', enterprise: 'Enterprise' };
+  const planColor = { free: 'var(--ink-muted)', pro: 'var(--primary-hi)', enterprise: '#7c3aed' };
+  el.innerHTML = `
+    <div style="max-width:820px">
+      <div style="padding:14px 18px;background:var(--primary-soft);border:1px solid var(--primary);border-radius:10px;margin-bottom:20px;font-size:12.5px;color:var(--ink-soft);line-height:1.65">
+        使わ ない 機能 は OFF に する と 左 nav から 消え、 客 の 迷い が 減ります。 常時 表示 (「機能 ON/OFF」 「使い方」) は OFF に できません。<br>
+        料金 tier: <span style="color:${planColor.free}">● 無料</span> / <span style="color:${planColor.pro}">● Pro (¥14,800/月)</span> / <span style="color:${planColor.enterprise}">● Enterprise (¥39,800/月)</span>
+      </div>
+      ${NAV_CATEGORIES.map(cat => `
+        <div style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:20px 22px;margin-bottom:14px">
+          <h3 style="font-size:14px;font-weight:900;letter-spacing:-0.01em;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+            <span style="color:var(--primary)">${cat.icon}</span>${escHtml(cat.label)}
+          </h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${cat.items.map(it => `
+              <label style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface-2);border-radius:8px;cursor:${it.alwaysOn?'not-allowed':'pointer'};opacity:${it.alwaysOn?'0.65':'1'}">
+                <input type="checkbox" class="feat-cb" data-fk="${escHtml(it.featureKey)}" ${enabled.has(it.featureKey) ? 'checked' : ''} ${it.alwaysOn ? 'disabled checked' : ''}>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:700">${escHtml(it.label)}</div>
+                  <div style="font-size:11px;color:var(--ink-muted);margin-top:2px">featureKey: <code style="font-family:'SF Mono',monospace;font-size:10.5px">${escHtml(it.featureKey)}</code></div>
+                </div>
+                <span style="padding:3px 10px;border-radius:999px;background:${it.plan==='enterprise'?'rgba(124,58,237,0.12)':(it.plan==='pro'?'var(--primary-soft)':'rgba(0,0,0,0.05)')};color:${planColor[it.plan]||'var(--ink-muted)'};font-size:10.5px;font-weight:800;letter-spacing:0.02em">${planLabel[it.plan]||'—'}</span>
+              </label>`).join('')}
+          </div>
+        </div>
+      `).join('')}
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-primary" id="feat-save">保存 · 反映</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('feat-save').addEventListener('click', async () => {
+    const checked = Array.from(document.querySelectorAll('.feat-cb:checked')).map(c => c.dataset.fk);
+    state.enabledFeatures = checked;
+    if (typeof dataAdapter.saveTenantConfig === 'function') {
+      try { await dataAdapter.saveTenantConfig({ enabledFeatures: checked }); } catch (e) { console.warn(e); }
+    } else {
+      try { localStorage.setItem('skel-crm-enabled-features', JSON.stringify(checked)); } catch (e) {}
+    }
+    renderCategoryTabs();
+    renderNav();
+    toast(`${checked.length} 機能 を ON、 それ 以外 は 左 nav から 非表示`, 'success');
+  });
+}
+
+// =========================================================
 // アフィリエイト (Firestore: tenants/{tid}/partners + attributions)
 // =========================================================
 function renderPartners() {
@@ -7009,6 +7351,8 @@ window.__CRM_BOOT_APP = async function bootApp() {
   updatePlanBadge();
   updateUserMenu();
   updateTenantSwitcher();
+  applyBrandTheme();     // 客 の brandConfig を CSS に 反映
+  renderCategoryTabs();
   renderNav();
   renderView('customers');
   // demo mode: state.courses seed を localStorage に 即 flush して
@@ -7059,6 +7403,10 @@ function restoreDemoState() {
     if (emailCfgRaw) state.emailConfig = { ...(state.emailConfig||{}), ...JSON.parse(emailCfgRaw) };
     const notifRaw = localStorage.getItem('skel-crm-notif-prefs');
     if (notifRaw) state.notifPrefs = JSON.parse(notifRaw);
+    // brand / store / features (demo mode local persistence)
+    try { const b = localStorage.getItem('skel-crm-brand-config'); if (b) state.brandConfig = JSON.parse(b); } catch (e) {}
+    try { const s = localStorage.getItem('skel-crm-store-info'); if (s) state.storeInfo = JSON.parse(s); } catch (e) {}
+    try { const f = localStorage.getItem('skel-crm-enabled-features'); if (f) state.enabledFeatures = JSON.parse(f); } catch (e) {}
   } catch (e) { console.warn('restoreDemoState failed', e); }
 }
 
@@ -7202,16 +7550,22 @@ if (window.__CRM_MODE === 'prod') {
       return;
     }
 
-    // tenant 名 を 取得
+    // tenant 名 + brand / store / features を 取得
     try {
       const tSnap = await getDoc(doc(db, 'tenants', state.currentTenantId));
       if (tSnap.exists()) {
         const td = tSnap.data();
         state.tenant = { name: td.name || state.currentTenantId, plan: td.plan || 'trial' };
-        // availableTenants の name も 引ける だけ 引く (簡易)
+        if (td.brandConfig) state.brandConfig = td.brandConfig;
+        if (td.storeInfo) state.storeInfo = td.storeInfo;
+        if (Array.isArray(td.enabledFeatures)) state.enabledFeatures = td.enabledFeatures;
         for (const t of state.availableTenants) {
           if (t.tenantId === state.currentTenantId) t.name = state.tenant.name;
         }
+        // 反映
+        if (typeof applyBrandTheme === 'function') applyBrandTheme();
+        if (typeof renderCategoryTabs === 'function') renderCategoryTabs();
+        if (typeof renderNav === 'function') renderNav();
       }
     } catch (e) {
       console.warn('tenant doc fetch failed', e);
@@ -7336,6 +7690,10 @@ if (window.__CRM_MODE === 'prod') {
     dataAdapter.deleteEvent       = makeDeleter('events');
     dataAdapter.savePartner       = makeSaver('partners');
     dataAdapter.deletePartner     = makeDeleter('partners');
+    // tenant doc に brandConfig / storeInfo / enabledFeatures を merge 保存
+    dataAdapter.saveTenantConfig = async (patch) => {
+      await setDoc(doc(db, 'tenants', tid), { ...patch, updatedAt: new Date().toISOString() }, { merge: true });
+    };
     dataAdapter.saveVideo         = makeSaver('videos');
 
     // LMS mirror: syncDemoLms が この window.__CRM_FIRESTORE_MIRROR.write() を 呼んで
