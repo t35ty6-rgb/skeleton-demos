@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>読み込み中…</title>
+<style>
+  :root {
+    --bg: #fafafa; --surface: #fff; --surface-2: #f0f2f7;
+    --ink: #0f172a; --ink-2: #3d4356; --ink-muted: #6b7280;
+    --rule: #e4e7ee; --rule-strong: #cbd5e1;
+    --primary: #17b26a; --primary-hi: #0e9a5a; --primary-soft: #dcfce7;
+    --danger: #ef4444;
+    --font-jp: "Noto Sans JP", "Inter", -apple-system, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-jp); color: var(--ink); background: var(--bg); font-size: 15px; font-weight: 500; letter-spacing: -0.005em; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 40px 20px 80px; }
+  h1 { font-size: clamp(24px, 5vw, 32px); font-weight: 900; letter-spacing: -0.02em; line-height: 1.3; margin-bottom: 10px; }
+  .type-label { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--primary-soft); color: var(--primary-hi); border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; margin-bottom: 14px; }
+  .desc { font-size: 14px; color: var(--ink-2); line-height: 1.8; margin-bottom: 24px; }
+  .meta { display: flex; gap: 16px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; margin-bottom: 24px; font-size: 12.5px; color: var(--ink-muted); font-weight: 600; }
+  .meta b { color: var(--ink); font-weight: 800; }
+  .section-h { font-size: 18px; font-weight: 900; letter-spacing: -0.01em; margin: 32px 0 14px; }
+
+  .slot { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 14px 16px; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; margin-bottom: 8px; }
+  .slot.full, .slot.past { opacity: 0.55; }
+  .slot-when { font-size: 15px; font-weight: 800; letter-spacing: -0.005em; }
+  .slot-info { font-size: 11.5px; color: var(--ink-muted); font-weight: 600; margin-top: 2px; }
+  .slot-btn { padding: 10px 18px; background: var(--primary); color: #fff; border: 0; border-radius: 8px; font-size: 13px; font-weight: 800; cursor: pointer; }
+  .slot-btn:hover { background: var(--primary-hi); }
+  .slot-btn:disabled { background: var(--surface-2); color: var(--ink-muted); cursor: not-allowed; }
+
+  .booking-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .booking-modal.hidden { display: none; }
+  .booking-card { background: #fff; border-radius: 14px; padding: 28px 24px; max-width: 440px; width: 100%; }
+  .booking-card h2 { font-size: 20px; font-weight: 900; letter-spacing: -0.01em; margin-bottom: 6px; }
+  .booking-card .slot-when-lg { font-size: 14px; color: var(--primary-hi); font-weight: 800; margin-bottom: 20px; }
+  .booking-card label { display: block; font-size: 12px; font-weight: 800; color: var(--ink); margin: 12px 0 6px; letter-spacing: 0.02em; }
+  .booking-card input, .booking-card textarea { width: 100%; padding: 10px 14px; font-family: inherit; font-size: 14px; border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--surface); }
+  .booking-card input:focus, .booking-card textarea:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+  .booking-card .actions { display: flex; gap: 8px; margin-top: 20px; }
+  .booking-card .cancel { flex: 1; padding: 12px; background: var(--surface-2); color: var(--ink); border: 0; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .booking-card .submit { flex: 2; padding: 12px; background: var(--primary); color: #fff; border: 0; border-radius: 8px; font-size: 13px; font-weight: 800; cursor: pointer; }
+  .booking-card .submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .success { padding: 40px 24px; text-align: center; background: var(--primary-soft); border: 1px solid var(--primary); border-radius: 14px; margin-bottom: 20px; }
+  .success .check { width: 48px; height: 48px; border-radius: 50%; background: var(--primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; margin-bottom: 14px; }
+  .success h3 { font-size: 18px; font-weight: 900; letter-spacing: -0.01em; margin-bottom: 8px; }
+  .success p { font-size: 13px; color: var(--ink-2); line-height: 1.8; }
+  .success .zoom-link { display: inline-block; margin-top: 12px; padding: 10px 18px; background: var(--ink); color: #fff; border-radius: 8px; font-size: 12px; font-weight: 800; text-decoration: none; }
+
+  footer { padding: 40px 20px; text-align: center; color: var(--ink-muted); font-size: 11px; font-weight: 600; border-top: 1px solid var(--rule); }
+  .loading, .not-found { padding: 120px 24px; text-align: center; color: var(--ink-muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="app"><div class="loading">読み込み中…</div></div>
+<div class="booking-modal hidden" id="booking-modal">
+  <div class="booking-card">
+    <h2>予約 する</h2>
+    <div class="slot-when-lg" id="modal-when">—</div>
+    <label>お名前</label>
+    <input type="text" id="in-name" placeholder="山田 太郎" autocomplete="name">
+    <label>メール アドレス</label>
+    <input type="email" id="in-email" placeholder="you@example.com" autocomplete="email">
+    <label>相談 内容 · 質問 (任意)</label>
+    <textarea id="in-note" rows="3" placeholder="事前 に お伝え したい こと が あれば"></textarea>
+    <div class="actions">
+      <button class="cancel" id="btn-cancel">キャンセル</button>
+      <button class="submit" id="btn-submit">この 枠 で 予約</button>
+    </div>
+  </div>
+</div>
+
+<script>window.__CRM_CONFIG = window.__CRM_CONFIG || {};</script>
+<script src="/config.js" onerror="void 0"></script>
+<script>
+// tracking (copy of page.html) — LP と 同じ pattern
+window.__SKEL_TRACK = (function() {
+  const KEY = 'skel-partner-ref';
+  const TTL = 24 * 3600 * 1000;
+  try {
+    const ref = new URL(window.location.href).searchParams.get('ref');
+    if (ref) localStorage.setItem(KEY, JSON.stringify({ ref, at: Date.now() }));
+  } catch (e) {}
+  const getRef = () => { try { const raw = localStorage.getItem(KEY); if (!raw) return null; const { ref, at } = JSON.parse(raw); if (Date.now() - at > TTL) { localStorage.removeItem(KEY); return null; } return ref; } catch (e) { return null; } };
+  const log = async (event, meta) => {
+    const ref = getRef();
+    if (!ref) return;
+    try {
+      const cfg = window.__CRM_CONFIG || {};
+      if (!cfg.firebase) return;
+      const [{ initializeApp, getApps }, { getAuth, signInAnonymously, onAuthStateChanged }, { getFirestore, doc, setDoc }] = await Promise.all([
+        import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js'),
+        import('https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js'),
+        import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js'),
+      ]);
+      const app = getApps().length ? getApps()[0] : initializeApp(cfg.firebase);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      if (!auth.currentUser) await new Promise(res => { onAuthStateChanged(auth, u => u && res()); signInAnonymously(auth).catch(()=>{}); });
+      const attrId = `attr-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+      const tenantId = new URL(window.location.href).searchParams.get('tenant') || cfg.defaultTenantId || 'demo';
+      await setDoc(doc(db, 'tenants', tenantId, 'attributions', attrId), {
+        ref, event, at: new Date().toISOString(),
+        path: window.location.pathname,
+        userId: auth.currentUser?.uid || '',
+        value: meta?.value || 0,
+        _meta: JSON.stringify(meta || {}).slice(0, 400),
+      });
+    } catch (e) {}
+  };
+  setTimeout(() => log('click', { source: 'pageview' }), 1500);
+  return { getRef, log };
+})();
+</script>
+<script>
+(async function() {
+  const url = new URL(window.location.href);
+  let eventId = url.searchParams.get('id');
+  if (!eventId) {
+    const m = url.pathname.match(/^\/e\/([^\/]+)/);
+    if (m) eventId = decodeURIComponent(m[1]);
+  }
+  const app = document.getElementById('app');
+  if (!eventId) { app.innerHTML = '<div class="not-found">URL に ?id=xxx が 必要 です</div>'; return; }
+
+  const cfg = window.__CRM_CONFIG || {};
+  if (!cfg.firebase) { app.innerHTML = '<div class="not-found">config 未設定</div>'; return; }
+
+  const [{ initializeApp }, { getAuth, signInAnonymously, onAuthStateChanged }, { getFirestore, doc, getDoc, updateDoc }] = await Promise.all([
+    import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js'),
+    import('https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js'),
+    import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js'),
+  ]);
+  const app_ = initializeApp(cfg.firebase);
+  const auth = getAuth(app_);
+  const db = getFirestore(app_);
+  await new Promise(res => { onAuthStateChanged(auth, u => u && res()); signInAnonymously(auth).catch(()=>{}); });
+
+  const tenantId = url.searchParams.get('tenant') || cfg.defaultTenantId || 'demo';
+  const ref = doc(db, 'tenants', tenantId, 'events', eventId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) { app.innerHTML = '<div class="not-found"><h1>イベント が 見つかりません</h1></div>'; return; }
+  const ev = snap.data();
+  if (!ev.published) { app.innerHTML = '<div class="not-found"><h1>下書き 中</h1><p>この イベント は まだ 公開 されて いません</p></div>'; return; }
+
+  document.title = ev.title || 'イベント 予約';
+  const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const fmt = iso => { const d = new Date(iso); return `${d.getMonth()+1}月 ${d.getDate()}日 (${'日月火水木金土'[d.getDay()]}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+  const typeLabel = { seminar: 'セミナー', consult: '個別 相談' }[ev.type] || 'イベント';
+  const now = new Date();
+  const slots = (ev.slots || [])
+    .filter(s => s.datetime)
+    .sort((a, b) => a.datetime.localeCompare(b.datetime));
+
+  // Success (redirect from booking)
+  const bookedSlotId = url.searchParams.get('booked');
+  const bookedSlot = bookedSlotId ? slots.find(s => s.id === bookedSlotId) : null;
+
+  const render = () => {
+    let bookedHtml = '';
+    if (bookedSlot) {
+      bookedHtml = `
+        <div class="success">
+          <div class="check">✓</div>
+          <h3>予約 が 完了 しました</h3>
+          <p><b>${esc(fmt(bookedSlot.datetime))}</b> · ${ev.durationMin || 30} 分<br>
+          確認 メール を お送り しました。 当日 は 時間 に なりましたら 下記 URL に アクセス して ください。</p>
+          ${bookedSlot.zoomUrl ? `<a href="${esc(bookedSlot.zoomUrl)}" class="zoom-link" target="_blank" rel="noopener">Zoom に 参加</a>` : ''}
+        </div>`;
+    }
+    app.innerHTML = `
+      <div class="wrap">
+        ${bookedHtml}
+        <div class="type-label">${esc(typeLabel)} · 各 ${ev.durationMin || 30} 分</div>
+        <h1>${esc(ev.title || '')}</h1>
+        <div class="desc">${esc(ev.description || '')}</div>
+        <div class="meta">
+          <div>枠 <b>${slots.length}</b> 個</div>
+          <div>所要 <b>${ev.durationMin || 30} 分</b></div>
+        </div>
+        <div class="section-h">${bookedSlot ? '他 の 枠' : '空き 枠 を 選ぶ'}</div>
+        <div id="slots-list">
+          ${slots.length === 0 ? '<div style="padding:24px;text-align:center;color:var(--ink-muted);font-size:13px">まだ 予約 枠 が 発行 されて いません</div>' : slots.map(s => {
+            const past = new Date(s.datetime) < now;
+            const booked = (s.bookings || []).length;
+            const cap = s.capacity || 1;
+            const full = booked >= cap;
+            const disabled = past || full || (bookedSlot && bookedSlot.id === s.id);
+            const statusText = past ? '終了' : (full ? '満席' : (bookedSlot && bookedSlot.id === s.id ? '予約 済' : `残 ${cap - booked} 枠`));
+            return `<div class="slot ${past?'past':''} ${full?'full':''}" data-slot-id="${esc(s.id)}">
+              <div>
+                <div class="slot-when">${esc(fmt(s.datetime))}</div>
+                <div class="slot-info">${statusText} · 定員 ${cap}</div>
+              </div>
+              <button class="slot-btn book-btn" data-slot-id="${esc(s.id)}" ${disabled ? 'disabled' : ''}>${disabled ? statusText : '予約 する'}</button>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <footer>Powered by Skel·CRM · Lステップ / エルメ 拡張 モジュール</footer>
+    `;
+    app.querySelectorAll('.book-btn').forEach(b => b.addEventListener('click', () => openBooking(b.dataset.slotId)));
+  };
+
+  const openBooking = (slotId) => {
+    const s = slots.find(x => x.id === slotId);
+    if (!s) return;
+    document.getElementById('modal-when').textContent = fmt(s.datetime);
+    document.getElementById('booking-modal').classList.remove('hidden');
+    document.getElementById('booking-modal').dataset.slotId = slotId;
+    setTimeout(() => document.getElementById('in-name').focus(), 80);
+  };
+  document.getElementById('btn-cancel').addEventListener('click', () => document.getElementById('booking-modal').classList.add('hidden'));
+  document.getElementById('btn-submit').addEventListener('click', async () => {
+    const name = document.getElementById('in-name').value.trim();
+    const email = document.getElementById('in-email').value.trim();
+    const note = document.getElementById('in-note').value.trim();
+    if (!name || !email) { alert('お名前 と メール を 入力 して ください'); return; }
+    const slotId = document.getElementById('booking-modal').dataset.slotId;
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true; btn.textContent = '送信 中…';
+    try {
+      const fresh = await getDoc(ref);
+      const evData = fresh.data();
+      const slots2 = (evData.slots || []).map(s => s.id === slotId
+        ? { ...s, bookings: [...(s.bookings||[]), { name, email, note, at: new Date().toISOString() }] }
+        : s);
+      await updateDoc(ref, { slots: slots2, updatedAt: new Date().toISOString() });
+      window.__SKEL_TRACK?.log('conversion', { source: 'booking', eventId, slotId, name });
+      window.location.href = `?id=${encodeURIComponent(eventId)}&booked=${encodeURIComponent(slotId)}`;
+    } catch (e) {
+      alert('予約 保存 に 失敗 しました: ' + e.message);
+      btn.disabled = false; btn.textContent = 'この 枠 で 予約';
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

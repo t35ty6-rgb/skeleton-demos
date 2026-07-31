@@ -1349,6 +1349,32 @@
       </a>
     </div>
 
+    <!-- アフィリエイト -->
+    <div class="view" id="view-partners">
+      <div class="page-header">
+        <div><h2>アフィリエイト</h2><div class="desc">紹介者 (パートナー) を 登録 して 専用 リンク を 発行、 送客 数 · 成約 数 · 報酬 を 集計</div></div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="partner-add-btn">+ パートナー 追加</button>
+      </div>
+      <div class="video-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
+        <div class="stat-card"><div class="stat-label">パートナー</div><div class="stat-val" id="pt-stat-count">0</div></div>
+        <div class="stat-card"><div class="stat-label">送客 (30日)</div><div class="stat-val" id="pt-stat-clicks">0</div></div>
+        <div class="stat-card"><div class="stat-label">成約 (30日)</div><div class="stat-val" id="pt-stat-conv">0</div></div>
+        <div class="stat-card"><div class="stat-label">未払い 報酬</div><div class="stat-val" id="pt-stat-pending">¥0</div></div>
+      </div>
+      <div id="partners-list"></div>
+    </div>
+
+    <!-- 予約 · セミナー -->
+    <div class="view" id="view-events">
+      <div class="page-header">
+        <div><h2>予約 · セミナー</h2><div class="desc">セミナー / 個別 相談 の 予約 枠 を 発行、 Zoom URL 添付、 客 は 公開 予約 ページ から 申込</div></div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="event-add-btn">+ 新規 イベント</button>
+      </div>
+      <div id="events-list"></div>
+    </div>
+
     <!-- LP · ページ -->
     <div class="view" id="view-pages">
       <div class="page-header">
@@ -1457,6 +1483,9 @@ const state = {
   steps: [],
   videos: [],
   pages: [],   // LP / セールス ページ (Firestore: tenants/{tid}/pages/{pageId})
+  events: [],  // 予約 / セミナー (Firestore: tenants/{tid}/events/{eventId})
+  partners: [], // アフィリ パートナー (Firestore: tenants/{tid}/partners/{partnerId})
+  attributions: [], // 送客 log (Firestore: tenants/{tid}/attributions/{attrId})
   emailCampaigns: [],
   emailConfig: {},
   // 認証 / tenant / plan (prod mode で 上書き、 demo mode は default)
@@ -2066,6 +2095,8 @@ const NAV = [
   { view: 'videos',    label: '動画ホスティング',   icon: NAV_ICONS.film,   badge: () => (state.videos || []).length },
   { section: '販売 ページ' },
   { view: 'pages',     label: 'LP · ページ',        icon: NAV_ICONS.grid,   badge: () => (state.pages || []).length },
+  { view: 'events',    label: '予約 · セミナー',     icon: NAV_ICONS.calendar || NAV_ICONS.flow, badge: () => (state.events || []).length },
+  { view: 'partners',  label: 'アフィリエイト',      icon: NAV_ICONS.target || NAV_ICONS.flow,   badge: () => (state.partners || []).length },
   { section: '設定' },
   { view: 'richmenu',  label: 'リッチメニュー',   icon: NAV_ICONS.grid,   badge: null },
   { view: 'channels',  label: 'LINE アカウント',   icon: NAV_ICONS.plug,   badge: null },
@@ -2147,6 +2178,8 @@ function renderView(view) {
   if (view === 'history')   renderHistory();
   if (view === 'videos')    renderVideos();
   if (view === 'pages')     renderPages();
+  if (view === 'events')    renderEvents();
+  if (view === 'partners')  renderPartners();
   if (view === 'email')     renderEmail();
   if (view === 'email-config') renderEmailConfig();
 }
@@ -5971,6 +6004,376 @@ function openPageEditModal(page) {
 }
 
 // =========================================================
+// アフィリエイト (Firestore: tenants/{tid}/partners + attributions)
+// =========================================================
+function renderPartners() {
+  const el = document.getElementById('partners-list');
+  if (!el) return;
+  const partners = state.partners || [];
+  const attrs = state.attributions || [];
+  const now = Date.now();
+  const day30 = now - 30 * 86400 * 1000;
+  const recent = attrs.filter(a => new Date(a.at).getTime() >= day30);
+  const clicksTotal = recent.filter(a => a.event === 'click').length;
+  const convTotal = recent.filter(a => a.event === 'conversion').length;
+  const pending = partners.reduce((s, p) => s + ((p.pendingCommissionJpy || 0)), 0);
+
+  const setStat = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  setStat('pt-stat-count', partners.length);
+  setStat('pt-stat-clicks', clicksTotal);
+  setStat('pt-stat-conv', convTotal);
+  setStat('pt-stat-pending', '¥' + pending.toLocaleString());
+
+  if (partners.length === 0) {
+    el.innerHTML = `<div style="padding:60px 20px;text-align:center;color:var(--ink-muted);font-size:13px;background:var(--surface);border:1px dashed var(--rule);border-radius:12px">
+      <div style="font-size:14px;font-weight:800;color:var(--ink);margin-bottom:8px">まだ パートナー が いません</div>
+      <div style="margin-bottom:14px">既存 客 · インフルエンサー を パートナー 登録 し、 専用 URL (?ref=xxx) で 送客 追跡 と 報酬 集計 できます</div>
+      <button class="btn btn-primary" id="pt-empty-add">+ 最初 の パートナー を 追加</button>
+    </div>`;
+    document.getElementById('pt-empty-add')?.addEventListener('click', () => openPartnerEditModal(null));
+    return;
+  }
+  el.innerHTML = `<div style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse">
+      <thead style="background:var(--surface-2)">
+        <tr style="font-size:11px;font-weight:800;color:var(--ink-muted);text-align:left;letter-spacing:0.02em">
+          <th style="padding:12px 14px">パートナー</th>
+          <th style="padding:12px 14px">紹介 コード</th>
+          <th style="padding:12px 14px;text-align:right">送客 (30日)</th>
+          <th style="padding:12px 14px;text-align:right">成約 (30日)</th>
+          <th style="padding:12px 14px;text-align:right">報酬 率</th>
+          <th style="padding:12px 14px;text-align:right">未払</th>
+          <th style="padding:12px 14px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${partners.map(p => {
+          const pClicks = recent.filter(a => a.ref === p.code && a.event === 'click').length;
+          const pConv = recent.filter(a => a.ref === p.code && a.event === 'conversion').length;
+          return `<tr style="border-top:1px solid var(--rule);font-size:13px">
+            <td style="padding:12px 14px">
+              <div style="font-weight:800">${escHtml(p.name)}</div>
+              <div style="font-size:11px;color:var(--ink-muted);font-weight:600">${escHtml(p.email || '')}</div>
+            </td>
+            <td style="padding:12px 14px"><code style="font-family:'SF Mono',monospace;font-size:12px;padding:2px 6px;background:var(--surface-2);border-radius:4px">${escHtml(p.code)}</code></td>
+            <td style="padding:12px 14px;text-align:right;font-weight:800">${pClicks}</td>
+            <td style="padding:12px 14px;text-align:right;font-weight:800;color:var(--primary-hi)">${pConv}</td>
+            <td style="padding:12px 14px;text-align:right;font-weight:600">${p.commissionRate || 20}%</td>
+            <td style="padding:12px 14px;text-align:right;font-weight:600">¥${(p.pendingCommissionJpy || 0).toLocaleString()}</td>
+            <td style="padding:12px 14px;text-align:right">
+              <button class="btn btn-secondary pt-link-btn" data-code="${escHtml(p.code)}" style="padding:5px 10px;font-size:11px">URL</button>
+              <button class="btn btn-secondary pt-edit-btn" data-pt-id="${escHtml(p.id)}" style="padding:5px 10px;font-size:11px">編集</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+  el.querySelectorAll('.pt-edit-btn').forEach(b => b.addEventListener('click', () => openPartnerEditModal(state.partners.find(x => x.id === b.dataset.ptId))));
+  el.querySelectorAll('.pt-link-btn').forEach(b => b.addEventListener('click', async () => {
+    // 標準 リンク: 会員 サイト + LP top を 例示 する pick modal
+    const code = b.dataset.code;
+    const modal = document.getElementById('modal');
+    const memberUrl = `https://skel-crm-oa-02.web.app/member.html?ref=${encodeURIComponent(code)}`;
+    const pages = (state.pages || []).filter(p => p.published);
+    modal.innerHTML = `
+      <div class="modal-header"><h3>紹介 URL (code: ${escHtml(code)})</h3><div class="spacer"></div><button class="modal-close" id="modal-close-btn">✕</button></div>
+      <div class="field-group">
+        <label class="field-label">会員 サイト URL</label>
+        <input type="text" class="field-input" readonly value="${memberUrl}" onclick="this.select()" style="font-family:'SF Mono',monospace;font-size:12px">
+      </div>
+      ${pages.length > 0 ? `
+      <div class="field-group">
+        <label class="field-label">LP 個別 URL (公開 済 ${pages.length} 件)</label>
+        ${pages.map(p => {
+          const u = `https://skel-crm-oa-02.web.app/page.html?id=${encodeURIComponent(p.id)}&ref=${encodeURIComponent(code)}`;
+          return `<div style="margin-bottom:6px"><div style="font-size:11px;color:var(--ink-muted);font-weight:700;margin-bottom:2px">${escHtml(p.heroTitle || p.id)}</div><input type="text" class="field-input" readonly value="${u}" onclick="this.select()" style="font-family:'SF Mono',monospace;font-size:11px"></div>`;
+        }).join('')}
+      </div>` : ''}
+      <div style="padding:10px 14px;background:var(--surface-2);border-radius:8px;font-size:11.5px;color:var(--ink-soft);line-height:1.6">
+        URL の 「?ref=${escHtml(code)}」 が click 時 に 客 browser に 24 時間 保存 され、 その 間 の 成約 は この パートナー の 送客 として 計上 されます。
+      </div>
+      <div class="modal-actions"><button class="btn btn-primary" id="pt-link-close">閉じる</button></div>
+    `;
+    document.getElementById('modal-scrim').classList.add('open');
+    document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+    document.getElementById('pt-link-close').addEventListener('click', closeModal);
+  }));
+}
+
+function openPartnerEditModal(partner) {
+  const p = partner || {
+    id: 'partner-' + Date.now(),
+    name: '',
+    email: '',
+    code: '',
+    commissionRate: 20,
+    pendingCommissionJpy: 0,
+    createdAt: new Date().toISOString(),
+  };
+  const isEdit = !!partner;
+  const suggestedCode = p.code || (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 10) : '') || ('p' + Date.now().toString(36).slice(-6));
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header"><h3>${isEdit ? 'パートナー を 編集' : '新規 パートナー'}</h3><div class="spacer"></div><button class="modal-close" id="modal-close-btn">✕</button></div>
+    <div class="field-group"><label class="field-label">名前</label><input type="text" class="field-input" id="pt-name" value="${escHtml(p.name)}" placeholder="山田 太郎"></div>
+    <div class="field-group"><label class="field-label">メール (任意)</label><input type="email" class="field-input" id="pt-email" value="${escHtml(p.email)}"></div>
+    <div class="field-group">
+      <label class="field-label">紹介 コード (URL に ?ref= で 付与)</label>
+      <input type="text" class="field-input" id="pt-code" value="${escHtml(p.code || suggestedCode)}" placeholder="yamada2025" style="font-family:'SF Mono',monospace">
+      <div style="font-size:11px;color:var(--ink-muted);margin-top:4px">半角 英数 のみ、 変更 不可 (発行 済 URL が 使え なく なる ため)</div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">報酬 率 (%)</label>
+      <input type="number" class="field-input" id="pt-rate" value="${p.commissionRate}" min="0" max="100" step="1">
+      <div style="font-size:11px;color:var(--ink-muted);margin-top:4px">成約 額 の X% を パートナー に 支払う 想定 (Stripe 決済 と 連動 する 場合 は 自動 集計)</div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between">
+      ${isEdit ? '<button class="btn btn-danger" id="pt-del" style="margin-right:auto">🗑 削除</button>' : '<div></div>'}
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="pt-cancel">キャンセル</button>
+        <button class="btn btn-primary" id="pt-save">保存</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('pt-cancel').addEventListener('click', closeModal);
+  document.getElementById('pt-save').addEventListener('click', async () => {
+    const name = document.getElementById('pt-name').value.trim();
+    const code = document.getElementById('pt-code').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!name || !code) { toast('名前 と コード を 入力 して ください', 'warn'); return; }
+    if ((state.partners || []).some(x => x.code === code && x.id !== p.id)) { toast('この コード は 既に 使われて います', 'warn'); return; }
+    const updated = {
+      ...p, name, code,
+      email: document.getElementById('pt-email').value.trim(),
+      commissionRate: parseInt(document.getElementById('pt-rate').value) || 20,
+      updatedAt: new Date().toISOString(),
+    };
+    const idx = (state.partners || []).findIndex(x => x.id === p.id);
+    if (idx >= 0) state.partners[idx] = updated; else { state.partners = state.partners || []; state.partners.unshift(updated); }
+    if (typeof dataAdapter.savePartner === 'function') { try { await dataAdapter.savePartner(updated); } catch (e) { console.warn(e); } }
+    closeModal(); renderPartners(); toast('保存 しました', 'success');
+  });
+  const del = document.getElementById('pt-del');
+  if (del) del.addEventListener('click', async () => {
+    const ok = await confirmDialog({ title: 'パートナー 削除', message: `「${escHtml(p.name)}」 を 削除 します。 発行 済 URL の ?ref= は 無効 に なります。`, okLabel: '削除', okKind: 'danger' });
+    if (!ok) return;
+    state.partners = (state.partners || []).filter(x => x.id !== p.id);
+    if (typeof dataAdapter.deletePartner === 'function') { try { await dataAdapter.deletePartner(p.id); } catch (e) {} }
+    closeModal(); renderPartners(); toast('削除 しました');
+  });
+}
+
+// =========================================================
+// 予約 · セミナー (Firestore: tenants/{tid}/events/{eventId})
+// =========================================================
+function fmtSlotDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return `${d.getMonth()+1}/${d.getDate()} (${'日月火水木金土'[d.getDay()]}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function renderEvents() {
+  const el = document.getElementById('events-list');
+  if (!el) return;
+  const events = state.events || [];
+  if (events.length === 0) {
+    el.innerHTML = `<div style="padding:60px 20px;text-align:center;color:var(--ink-muted);font-size:13px;background:var(--surface);border:1px dashed var(--rule);border-radius:12px">
+      <div style="font-size:14px;font-weight:800;color:var(--ink);margin-bottom:8px">まだ 予約 イベント が ありません</div>
+      <div style="margin-bottom:14px">セミナー · 個別 相談 の 予約 枠 を 発行 して 客 に URL 配布 できます</div>
+      <button class="btn btn-primary" id="events-empty-add">+ 最初 の イベント を 作る</button>
+    </div>`;
+    document.getElementById('events-empty-add')?.addEventListener('click', () => openEventEditModal(null));
+    return;
+  }
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,380px));gap:14px;justify-content:start">${events.map(ev => {
+    const slots = (ev.slots || []);
+    const upcoming = slots.filter(s => new Date(s.datetime) > new Date()).length;
+    const totalBookings = slots.reduce((n, s) => n + ((s.bookings || []).length), 0);
+    const cap = slots.reduce((n, s) => n + (s.capacity || 1), 0);
+    return `
+      <div class="event-tile" data-event-id="${escHtml(ev.id)}" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 18px;cursor:pointer;transition:box-shadow .15s">
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+          <div style="width:36px;height:36px;background:var(--side);color:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:2px">
+              <div style="font-size:14px;font-weight:800">${escHtml(ev.title || '(タイトル 未設定)')}</div>
+              ${ev.published ? '<span style="padding:1px 6px;border-radius:4px;background:var(--primary-soft);color:var(--primary-hi);font-size:9px;font-weight:800">公開</span>' : '<span style="padding:1px 6px;border-radius:4px;background:rgba(0,0,0,0.08);color:var(--ink-soft);font-size:9px;font-weight:800">下書き</span>'}
+            </div>
+            <div style="font-size:11.5px;color:var(--ink-muted);font-weight:600">${escHtml({seminar:'セミナー',consult:'個別 相談'}[ev.type] || '')} · 各 ${ev.durationMin || 30} 分</div>
+          </div>
+        </div>
+        <div style="font-size:11.5px;color:var(--ink-soft);line-height:1.55;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escHtml(ev.description || '')}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:10px;border-top:1px solid var(--rule);margin-bottom:10px">
+          <div><div style="font-size:10px;color:var(--ink-muted);font-weight:700">枠</div><div style="font-size:15px;font-weight:800">${slots.length}</div></div>
+          <div><div style="font-size:10px;color:var(--ink-muted);font-weight:700">今後</div><div style="font-size:15px;font-weight:800">${upcoming}</div></div>
+          <div><div style="font-size:10px;color:var(--ink-muted);font-weight:700">予約</div><div style="font-size:15px;font-weight:800;color:var(--primary-hi)">${totalBookings}/${cap||'∞'}</div></div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-secondary event-edit-btn" data-event-id="${escHtml(ev.id)}" style="flex:1;padding:7px;font-size:11px">編集</button>
+          <button class="btn btn-secondary event-url-btn" data-event-id="${escHtml(ev.id)}" style="padding:7px 10px;font-size:11px">URL</button>
+          <button class="btn btn-secondary event-open-btn" data-event-id="${escHtml(ev.id)}" style="padding:7px 10px;font-size:11px">見る</button>
+        </div>
+      </div>`;
+  }).join('')}</div>`;
+  el.querySelectorAll('.event-tile').forEach(t => {
+    t.addEventListener('mouseenter', () => t.style.boxShadow = '0 4px 16px rgba(15,20,35,0.06)');
+    t.addEventListener('mouseleave', () => t.style.boxShadow = '');
+  });
+  el.querySelectorAll('.event-edit-btn').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openEventEditModal(state.events.find(x => x.id === b.dataset.eventId));
+  }));
+  el.querySelectorAll('.event-url-btn').forEach(b => b.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const url = `https://skel-crm-oa-02.web.app/event.html?id=${encodeURIComponent(b.dataset.eventId)}`;
+    try { await navigator.clipboard.writeText(url); toast('予約 URL を コピー しました', 'success', 4000); }
+    catch (err) { toast('URL: ' + url, 'info', 8000); }
+  }));
+  el.querySelectorAll('.event-open-btn').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.open(`https://skel-crm-oa-02.web.app/event.html?id=${encodeURIComponent(b.dataset.eventId)}`, '_blank');
+  }));
+}
+
+function openEventEditModal(event) {
+  const e = event || {
+    id: 'event-' + Date.now(),
+    title: '',
+    description: '',
+    type: 'consult',
+    durationMin: 30,
+    published: false,
+    slots: [],
+    zoomLinkTemplate: '',
+    createdAt: new Date().toISOString(),
+  };
+  const isEdit = !!event;
+  const slots = [...(e.slots || [])];
+  const slotRow = (s, i) => `
+    <div class="slot-row" data-idx="${i}" data-slot-id="${escHtml(s.id || '')}" style="display:grid;grid-template-columns:1fr 80px 1fr 30px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--rule)">
+      <input type="datetime-local" class="field-input slot-dt" value="${escHtml(s.datetime ? s.datetime.slice(0,16) : '')}" style="padding:6px 8px;font-size:12px">
+      <input type="number" class="field-input slot-cap" value="${s.capacity || 1}" min="1" placeholder="定員" style="padding:6px 8px;font-size:12px">
+      <input type="url" class="field-input slot-zoom" value="${escHtml(s.zoomUrl || '')}" placeholder="Zoom URL (任意)" style="padding:6px 8px;font-size:11px">
+      <button type="button" class="btn btn-ghost slot-del" style="padding:4px 6px;font-size:11px">✕</button>
+    </div>`;
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>${isEdit ? 'イベント を 編集' : '新規 イベント'}</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">タイトル</label>
+      <input type="text" class="field-input" id="ev-title" value="${escHtml(e.title)}" placeholder="例: 個別 zoom 相談 30 分">
+    </div>
+    <div class="field-group">
+      <label class="field-label">説明</label>
+      <textarea class="field-input" id="ev-desc" rows="3" style="resize:vertical;font-family:inherit;line-height:1.6" placeholder="どんな 相談 に 使う か 1-2 行 で">${escHtml(e.description)}</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">種類 / 所要 時間</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <select class="field-input" id="ev-type" style="padding:8px 12px">
+          <option value="consult" ${e.type==='consult'?'selected':''}>個別 相談</option>
+          <option value="seminar" ${e.type==='seminar'?'selected':''}>セミナー</option>
+        </select>
+        <input type="number" class="field-input" id="ev-duration" value="${e.durationMin || 30}" min="15" step="15" placeholder="分">
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">予約 枠 (日時 / 定員 / Zoom URL、 追加 可)</label>
+      <div id="slots-list" style="border:1px solid var(--rule);border-radius:8px;padding:8px 10px;background:var(--surface)">
+        ${slots.length === 0 ? '<div style="padding:8px;text-align:center;color:var(--ink-muted);font-size:12px">まだ 枠 が ありません</div>' : slots.map(slotRow).join('')}
+      </div>
+      <button type="button" class="btn btn-ghost" id="slots-add" style="margin-top:6px;font-size:12px">+ 枠 を 追加</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">公開 状態</label>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface-2);border-radius:8px">
+        <label class="toggle-wrap" style="cursor:pointer">
+          <input type="checkbox" class="toggle-input" id="ev-pub" ${e.published ? 'checked' : ''}>
+          <div class="toggle-knob"></div>
+        </label>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700" id="ev-pub-label">${e.published ? '公開 中' : '下書き'}</div>
+          <div style="font-size:11px;color:var(--ink-muted);margin-top:2px">公開 URL: <code style="font-size:11px;padding:1px 5px;background:var(--surface);border-radius:4px">https://skel-crm-oa-02.web.app/event.html?id=${escHtml(e.id)}</code></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between">
+      ${isEdit ? '<button class="btn btn-danger" id="ev-del" style="margin-right:auto">🗑 削除</button>' : '<div></div>'}
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="ev-cancel">キャンセル</button>
+        <button class="btn btn-primary" id="ev-save">保存</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('ev-cancel').addEventListener('click', closeModal);
+  const pub = document.getElementById('ev-pub');
+  pub.addEventListener('change', () => { document.getElementById('ev-pub-label').textContent = pub.checked ? '公開 中' : '下書き'; });
+
+  const slotsList = document.getElementById('slots-list');
+  const wireSlots = () => {
+    slotsList.querySelectorAll('.slot-del').forEach(b => b.onclick = () => {
+      b.closest('.slot-row').remove();
+      if (slotsList.querySelectorAll('.slot-row').length === 0) slotsList.innerHTML = '<div style="padding:8px;text-align:center;color:var(--ink-muted);font-size:12px">まだ 枠 が ありません</div>';
+    });
+  };
+  wireSlots();
+  document.getElementById('slots-add').addEventListener('click', () => {
+    if (slotsList.querySelector('div[style*="center"]')) slotsList.innerHTML = '';
+    const idx = slotsList.querySelectorAll('.slot-row').length;
+    slotsList.insertAdjacentHTML('beforeend', slotRow({ id: 'slot-' + Date.now() + '-' + idx, datetime: '', capacity: 1, zoomUrl: '' }, idx));
+    wireSlots();
+  });
+
+  document.getElementById('ev-save').addEventListener('click', async () => {
+    const title = document.getElementById('ev-title').value.trim();
+    if (!title) { toast('タイトル を 入力 して ください', 'warn'); return; }
+    const slotsRaw = Array.from(slotsList.querySelectorAll('.slot-row')).map(row => ({
+      id: row.dataset.slotId || ('slot-' + Date.now() + '-' + row.dataset.idx),
+      datetime: row.querySelector('.slot-dt').value ? new Date(row.querySelector('.slot-dt').value).toISOString() : '',
+      capacity: parseInt(row.querySelector('.slot-cap').value) || 1,
+      zoomUrl: row.querySelector('.slot-zoom').value.trim(),
+      bookings: (e.slots?.find(s => s.id === row.dataset.slotId)?.bookings) || [],
+    })).filter(s => s.datetime);
+    const updated = {
+      ...e,
+      title,
+      description: document.getElementById('ev-desc').value.trim(),
+      type: document.getElementById('ev-type').value,
+      durationMin: parseInt(document.getElementById('ev-duration').value) || 30,
+      slots: slotsRaw,
+      published: pub.checked,
+      updatedAt: new Date().toISOString(),
+    };
+    const idx = (state.events || []).findIndex(x => x.id === e.id);
+    if (idx >= 0) state.events[idx] = updated; else { state.events = state.events || []; state.events.unshift(updated); }
+    if (typeof dataAdapter.saveEvent === 'function') { try { await dataAdapter.saveEvent(updated); } catch (err) { console.warn(err); } }
+    closeModal();
+    renderEvents();
+    toast('イベント を 保存 しました' + (updated.published ? ' (公開)' : ' (下書き)'), 'success');
+  });
+  const del = document.getElementById('ev-del');
+  if (del) del.addEventListener('click', async () => {
+    const ok = await confirmDialog({ title: 'イベント 削除', message: `「${escHtml(e.title)}」 を 削除 します。 公開 URL は 使えなく なります。`, okLabel: '削除', okKind: 'danger' });
+    if (!ok) return;
+    state.events = (state.events || []).filter(x => x.id !== e.id);
+    if (typeof dataAdapter.deleteEvent === 'function') { try { await dataAdapter.deleteEvent(e.id); } catch (err) { console.warn(err); } }
+    closeModal();
+    renderEvents();
+    toast('削除 しました');
+  });
+}
+
+// =========================================================
 // 配信履歴
 // =========================================================
 function renderHistory() {
@@ -6354,6 +6757,10 @@ setTimeout(() => {
   if (courseAdd) courseAdd.addEventListener('click', () => openCourseEditModal(null));
   const pageAdd = document.getElementById('page-add-btn');
   if (pageAdd) pageAdd.addEventListener('click', () => openPageTemplatePicker());
+  const eventAdd = document.getElementById('event-add-btn');
+  if (eventAdd) eventAdd.addEventListener('click', () => openEventEditModal(null));
+  const partnerAdd = document.getElementById('partner-add-btn');
+  if (partnerAdd) partnerAdd.addEventListener('click', () => openPartnerEditModal(null));
   const memberShare = document.getElementById('member-site-share-btn');
   if (memberShare) memberShare.addEventListener('click', async () => {
     const url = memberCourseUrl('').replace(/\?.*$/, '');   // ?course= 抜き の 会員 サイト URL
@@ -6851,6 +7258,9 @@ if (window.__CRM_MODE === 'prod') {
     listenCol('history',      'history');
     listenCol('videos',       'videos', { preserveSeed: true, seedWriteBack: true });
     listenCol('pages',         'pages');
+    listenCol('events',        'events');
+    listenCol('partners',      'partners');
+    listenCol('attributions',  'attributions');
 
     // lms/current doc を admin boot 時 に **一度 だけ** fetch → state.courses に coverThumbUrl 等 を merge back
     // (onSnapshot だと syncDemoLms の write が trigger する snapshot → 無限 loop)
@@ -6922,6 +7332,10 @@ if (window.__CRM_MODE === 'prod') {
     dataAdapter.deleteRichmenu    = makeDeleter('richmenus');
     dataAdapter.savePage          = makeSaver('pages');
     dataAdapter.deletePage        = makeDeleter('pages');
+    dataAdapter.saveEvent         = makeSaver('events');
+    dataAdapter.deleteEvent       = makeDeleter('events');
+    dataAdapter.savePartner       = makeSaver('partners');
+    dataAdapter.deletePartner     = makeDeleter('partners');
     dataAdapter.saveVideo         = makeSaver('videos');
 
     // LMS mirror: syncDemoLms が この window.__CRM_FIRESTORE_MIRROR.write() を 呼んで

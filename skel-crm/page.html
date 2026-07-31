@@ -335,6 +335,56 @@
 <script>window.__CRM_CONFIG = window.__CRM_CONFIG || {};</script>
 <script src="/config.js" onerror="void 0"></script>
 <script>
+// ================= アフィリ tracking =================
+// ?ref=XXX を localStorage に 24h 保存、 CTA click 時 に attribution log を Firestore に write
+window.__SKEL_TRACK = (function() {
+  const KEY = 'skel-partner-ref';
+  const TTL = 24 * 3600 * 1000;
+  try {
+    const ref = new URL(window.location.href).searchParams.get('ref');
+    if (ref) localStorage.setItem(KEY, JSON.stringify({ ref, at: Date.now() }));
+  } catch (e) {}
+  const getRef = () => {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return null;
+      const { ref, at } = JSON.parse(raw);
+      if (Date.now() - at > TTL) { localStorage.removeItem(KEY); return null; }
+      return ref;
+    } catch (e) { return null; }
+  };
+  const log = async (event, meta) => {
+    const ref = getRef();
+    if (!ref) return;
+    try {
+      const cfg = window.__CRM_CONFIG || {};
+      if (!cfg.firebase) return;
+      const [{ initializeApp, getApps }, { getAuth, signInAnonymously, onAuthStateChanged }, { getFirestore, doc, setDoc }] = await Promise.all([
+        import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js'),
+        import('https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js'),
+        import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js'),
+      ]);
+      const app = getApps().length ? getApps()[0] : initializeApp(cfg.firebase);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      if (!auth.currentUser) await new Promise(res => { onAuthStateChanged(auth, u => u && res()); signInAnonymously(auth).catch(()=>{}); });
+      const attrId = `attr-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+      const tenantId = new URL(window.location.href).searchParams.get('tenant') || cfg.defaultTenantId || 'demo';
+      await setDoc(doc(db, 'tenants', tenantId, 'attributions', attrId), {
+        ref, event, at: new Date().toISOString(),
+        path: window.location.pathname,
+        userId: auth.currentUser?.uid || '',
+        value: meta?.value || 0,
+        _meta: JSON.stringify(meta || {}).slice(0, 400),
+      });
+    } catch (e) { /* silent */ }
+  };
+  // pageview = click log (LP 訪問)
+  setTimeout(() => log('click', { source: 'pageview' }), 1500);
+  return { getRef, log };
+})();
+</script>
+<script>
 (async function() {
   const url = new URL(window.location.href);
   let pageId = url.searchParams.get('id');
@@ -483,6 +533,10 @@
     stickyCta.classList.toggle('show', !entries[0].isIntersecting);
   }, { threshold: 0.1 });
   io.observe(heroEl);
+  // CTA click 時 に conversion log (owner の 実 決済 前 の pre-conv)
+  document.querySelectorAll('.hero-cta, .sticky-cta').forEach(el => {
+    el.addEventListener('click', () => window.__SKEL_TRACK?.log('conversion', { source: 'cta', pageId, ctaUrl: page.ctaUrl }));
+  });
 })();
 </script>
 </body>
