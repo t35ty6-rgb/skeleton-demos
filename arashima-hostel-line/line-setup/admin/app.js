@@ -2064,6 +2064,7 @@ async function loadPriceScan() {
     priceScanCache = r.data;
     renderPriceKpis(r.data);
     renderHeatmap(r.data);
+    renderPriceCards(r.data);
     renderPriceTable(r.data);
   } catch (e) {
     wrap.innerHTML = `<div class="hint" style="padding:24px;color:#b91c1c;">読み込み失敗: ${e.message}</div>`;
@@ -2212,9 +2213,15 @@ function renderHeatmap(data) {
 
     const label = document.createElement('div');
     label.className = 'price-hm__label';
+    const thumbHtml = h.photoUrl && /^https:\/\//.test(h.photoUrl)
+      ? `<img class="price-hm__thumb" src="${escapeHtml(h.photoUrl)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'price-hm__thumb price-hm__thumb--fallback',textContent:'${escapeHtml((h.name || '?').slice(0, 1))}'}))">`
+      : `<span class="price-hm__thumb price-hm__thumb--fallback">${escapeHtml((h.name || '?').slice(0, 1))}</span>`;
     label.innerHTML = `
-      <span class="price-hm__name" title="${escapeHtml(h.name || '?')}">${escapeHtml(h.name || '?')}</span>
-      <span class="price-hm__meta">${(h.distanceKm ?? '—')} km${isOwn ? ' · 自ホテル' : ''}</span>
+      ${thumbHtml}
+      <span class="price-hm__label-text">
+        <span class="price-hm__name" title="${escapeHtml(h.name || '?')}">${escapeHtml(h.name || '?')}</span>
+        <span class="price-hm__meta">${(h.distanceKm ?? '—')} km${isOwn ? ' · 自ホテル' : ''}</span>
+      </span>
     `;
     row.appendChild(label);
 
@@ -2236,6 +2243,60 @@ function renderHeatmap(data) {
     row.appendChild(cells);
     wrap.appendChild(row);
   }
+}
+
+function renderPriceCards(data) {
+  const wrap = $('#priceCards');
+  if (!wrap) return;
+  const hotelKeys = Object.keys(data.hotels).sort((a, b) => {
+    const oa = OWN_EXTERNAL_IDS.has(a) ? 0 : 1;
+    const ob = OWN_EXTERNAL_IDS.has(b) ? 0 : 1;
+    if (oa !== ob) return oa - ob;
+    return (data.hotels[a].distanceKm || 99) - (data.hotels[b].distanceKm || 99);
+  });
+  const html = hotelKeys.map((k) => {
+    const h = data.hotels[k];
+    const prices = Object.values(data.prices[k] || {}).filter((v) => v != null);
+    const min = prices.length ? Math.min(...prices) : null;
+    const max = prices.length ? Math.max(...prices) : null;
+    const avg = average(prices);
+    const isOwn = OWN_EXTERNAL_IDS.has(k);
+    const safeUrl = (h.url && /^https:\/\//.test(h.url)) ? escapeHtml(h.url) : '#';
+    const safePhoto = (h.photoUrl && /^https:\/\//.test(h.photoUrl)) ? escapeHtml(h.photoUrl) : null;
+    const initial = escapeHtml((h.name || '?').slice(0, 1));
+    const photoBlock = safePhoto
+      ? `<a class="price-card__photo" href="${safeUrl}" target="_blank" rel="noopener">
+           <img src="${safePhoto}" alt="" loading="lazy" onerror="this.parentNode.classList.add('price-card__photo--fallback');this.parentNode.dataset.initial='${initial}';this.remove();">
+         </a>`
+      : `<a class="price-card__photo price-card__photo--fallback" href="${safeUrl}" target="_blank" rel="noopener" data-initial="${initial}"></a>`;
+    return `
+      <article class="price-card${isOwn ? ' price-card--own' : ''}">
+        ${photoBlock}
+        <div class="price-card__body">
+          <div class="price-card__head">
+            <a class="price-card__name" href="${safeUrl}" target="_blank" rel="noopener">${escapeHtml(h.name || '?')}</a>
+            ${isOwn ? '<span class="price-card__badge">自ホテル</span>' : ''}
+          </div>
+          <div class="price-card__meta">${h.distanceKm ?? '—'} km${h.reviewScore ? ' · ' + escapeHtml(h.reviewScore) : ''}</div>
+          <div class="price-card__prices">
+            <div class="price-card__stat">
+              <span class="price-card__stat-lbl">${data.dates.length}日 平均</span>
+              <span class="price-card__stat-val">${fmtYen(avg)}</span>
+            </div>
+            <div class="price-card__stat">
+              <span class="price-card__stat-lbl">最安 → 最高</span>
+              <span class="price-card__stat-val">${fmtYen(min)} → ${fmtYen(max)}</span>
+            </div>
+          </div>
+          <div class="price-card__foot">
+            <span class="price-card__coverage">${prices.length} / ${data.dates.length} 日 取得</span>
+            <a class="price-card__link" href="${safeUrl}" target="_blank" rel="noopener">Booking で見る →</a>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join('');
+  wrap.innerHTML = html;
 }
 
 function renderPriceTable(data) {
