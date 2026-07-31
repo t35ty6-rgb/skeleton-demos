@@ -2762,7 +2762,12 @@ function renderPriceCards(data) {
             <button class="price-card__name" data-hotel="${escapeHtml(k)}" type="button">${escapeHtml(h.name || '?')}</button>
             ${isOwn ? '<span class="price-card__badge">自ホテル</span>' : ''}
           </div>
-          <div class="price-card__meta">${h.distanceKm ?? '—'} km${h.reviewScore ? ' · ' + escapeHtml(h.reviewScore) : ''}</div>
+          <div class="price-card__meta">
+            <span class="price-card__site price-card__site--${escapeHtml(h.site || 'booking')}">${h.site === 'rakuten' ? '楽天' : 'Booking'}</span>
+            <span>${h.distanceKm ?? '—'} km</span>
+            ${h.reviewScore ? `<span>★ ${escapeHtml(String(h.reviewScore))}${h.reviewCount ? ' (' + h.reviewCount + ')' : ''}</span>` : ''}
+            ${h.roomName ? `<span class="price-card__room">${escapeHtml(String(h.roomName).slice(0, 20))}</span>` : ''}
+          </div>
           <div class="price-card__prices">
             <div class="price-card__stat">
               <span class="price-card__stat-lbl">${data.dates.length}日 平均</span>
