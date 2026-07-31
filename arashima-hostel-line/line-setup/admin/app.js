@@ -2064,6 +2064,7 @@ async function loadPriceScan() {
     priceScanCache = r.data;
     renderPriceKpis(r.data);
     renderHeatmap(r.data);
+    renderConsultAnalysis(r.data);
     renderPriceCards(r.data);
     renderPriceTable(r.data);
   } catch (e) {
@@ -2265,6 +2266,169 @@ function renderHeatmap(data) {
     row.appendChild(cells);
     wrap.appendChild(row);
   }
+}
+
+// ---- コンサル 分析 (2026-07-31 owner 明示 「ホテル コンサル で ディテールアップ」) ----
+function renderConsultAnalysis(data) {
+  const dates = data.dates.slice().sort();
+  const compKeys = Object.keys(data.hotels).filter((k) => !OWN_EXTERNAL_IDS.has(k));
+  const ownKeys = Object.keys(data.hotels).filter((k) => OWN_EXTERNAL_IDS.has(k));
+
+  // 曜日別 相場 (競合 中央値 と 自 平均)
+  const dowChars = ['日', '月', '火', '水', '木', '金', '土'];
+  const dowStats = Array.from({ length: 7 }, () => ({ comp: [], own: [] }));
+  for (const d of dates) {
+    const dow = new Date(d + 'T00:00:00+09:00').getDay();
+    for (const k of compKeys) { const p = data.prices[k]?.[d]; if (p != null) dowStats[dow].comp.push(p); }
+    for (const k of ownKeys) { const p = data.prices[k]?.[d]; if (p != null) dowStats[dow].own.push(p); }
+  }
+  const dowMed = dowStats.map(s => median(s.comp));
+  const dowOwn = dowStats.map(s => average(s.own));
+  const dowMedMax = Math.max(...dowMed.filter(x => x != null), 0);
+  const dowMedMin = Math.min(...dowMed.filter(x => x != null), Infinity);
+
+  const dowWrap = $('#consultDow');
+  if (dowWrap) {
+    const bars = Array.from({ length: 7 }, (_, i) => {
+      const med = dowMed[i];
+      const own = dowOwn[i];
+      const barH = med != null && dowMedMax > 0 ? Math.round((med / dowMedMax) * 100) : 0;
+      const ownH = own != null && dowMedMax > 0 ? Math.round((own / dowMedMax) * 100) : 0;
+      const isWknd = i === 0 || i === 5 || i === 6;
+      return `
+        <div class="consult-dow__col ${isWknd ? 'consult-dow__col--wknd' : ''}">
+          <div class="consult-dow__bars" title="${dowChars[i]}曜: 相場 中央値 ${fmtYen(med)} / 自ホテル 平均 ${fmtYen(own)}">
+            <div class="consult-dow__bar consult-dow__bar--comp" style="height:${barH}%"></div>
+            ${own != null ? `<div class="consult-dow__bar consult-dow__bar--own" style="height:${ownH}%"></div>` : ''}
+          </div>
+          <div class="consult-dow__label">${dowChars[i]}</div>
+          <div class="consult-dow__num">${med != null ? '¥' + (Math.round(med / 100) / 10).toFixed(1) + 'k' : '—'}</div>
+        </div>
+      `;
+    }).join('');
+    dowWrap.innerHTML = bars;
+  }
+
+  // 週末 vs 平日 premium
+  const wkndComp = [5, 6, 0].flatMap(i => dowStats[i].comp);
+  const wdayComp = [1, 2, 3, 4].flatMap(i => dowStats[i].comp);
+  const wkndMed = median(wkndComp);
+  const wdayMed = median(wdayComp);
+  const wkndPct = (wkndMed && wdayMed) ? Math.round((wkndMed / wdayMed - 1) * 100) : null;
+  const wkndOwn = [5, 6, 0].flatMap(i => dowStats[i].own);
+  const wdayOwn = [1, 2, 3, 4].flatMap(i => dowStats[i].own);
+  const wkndOwnMed = median(wkndOwn);
+  const wdayOwnMed = median(wdayOwn);
+  const wkndOwnPct = (wkndOwnMed && wdayOwnMed) ? Math.round((wkndOwnMed / wdayOwnMed - 1) * 100) : null;
+  const dowNote = $('#consultDowNote');
+  if (dowNote) {
+    const parts = [];
+    if (wkndPct != null) parts.push(`相場 の 週末 プレミアム = <b>+${wkndPct}%</b>`);
+    if (wkndOwnPct != null) parts.push(`自ホテル は <b>${wkndOwnPct >= 0 ? '+' : ''}${wkndOwnPct}%</b>`);
+    dowNote.innerHTML = parts.join(' / ') || '—';
+  }
+
+  // 自 vs 相場 percentile 分布 (30日 各日、 荒島 は 相場 の 何位)
+  const rankBins = { cheap: 0, mid: 0, high: 0, unpriced: 0 };
+  const perDayRank = [];
+  for (const d of dates) {
+    const compPrices = compKeys.map(k => data.prices[k]?.[d]).filter(x => x != null).sort((a, b) => a - b);
+    const ownPrice = ownKeys.map(k => data.prices[k]?.[d]).filter(x => x != null)[0];
+    if (ownPrice == null || compPrices.length === 0) { rankBins.unpriced++; perDayRank.push({ d, rank: null }); continue; }
+    const belowCount = compPrices.filter(p => p < ownPrice).length;
+    const pct = belowCount / compPrices.length;
+    perDayRank.push({ d, rank: pct, ownPrice, compMed: median(compPrices), compCount: compPrices.length });
+    if (pct < 0.33) rankBins.cheap++;
+    else if (pct < 0.67) rankBins.mid++;
+    else rankBins.high++;
+  }
+  const total = rankBins.cheap + rankBins.mid + rankBins.high;
+  const rankWrap = $('#consultRank');
+  if (rankWrap) {
+    const p = (n) => total > 0 ? Math.round((n / total) * 100) : 0;
+    rankWrap.innerHTML = `
+      <div class="consult-rank__bar">
+        <div class="consult-rank__seg consult-rank__seg--cheap" style="flex:${rankBins.cheap};" title="${rankBins.cheap}日 = 安値 帯 (下位1/3)"><span>${rankBins.cheap}</span></div>
+        <div class="consult-rank__seg consult-rank__seg--mid" style="flex:${rankBins.mid};" title="${rankBins.mid}日 = 中間 帯"><span>${rankBins.mid}</span></div>
+        <div class="consult-rank__seg consult-rank__seg--high" style="flex:${rankBins.high};" title="${rankBins.high}日 = 高値 帯 (上位1/3)"><span>${rankBins.high}</span></div>
+      </div>
+      <div class="consult-rank__legend">
+        <span><i class="dot dot--cheap"></i>安値 ${p(rankBins.cheap)}%</span>
+        <span><i class="dot dot--mid"></i>中間 ${p(rankBins.mid)}%</span>
+        <span><i class="dot dot--high"></i>高値 ${p(rankBins.high)}%</span>
+      </div>
+    `;
+  }
+  const rankNote = $('#consultRankNote');
+  if (rankNote) {
+    if (total === 0) rankNote.textContent = '自ホテル の 単価 データ が 不足';
+    else {
+      const dominant = rankBins.cheap > rankBins.mid && rankBins.cheap > rankBins.high ? '安値'
+        : rankBins.high > rankBins.mid && rankBins.high > rankBins.cheap ? '高値' : '中間';
+      rankNote.innerHTML = `30日 中 <b>${dominant}</b> 帯 が 主体 (競合 平均 の ${dominant === '安値' ? '下' : dominant === '高値' ? '上' : '前後'})`;
+    }
+  }
+
+  // アクション 提案 (自動生成)
+  const actions = generateConsultActions({
+    wkndPct, wkndOwnPct, wkndMed, wdayMed, wkndOwnMed, wdayOwnMed,
+    rankBins, total, perDayRank, dates, dowMed, dowOwn,
+  });
+  const actWrap = $('#consultActions');
+  if (actWrap) actWrap.innerHTML = actions.map(a => `<li class="consult-action"><span class="consult-action__tag">${a.tag}</span> ${a.text}</li>`).join('') || '<li class="consult-action">データ が 足りないため 提案 なし。</li>';
+}
+
+function generateConsultActions(s) {
+  const acts = [];
+  // 週末 プレミアム 差
+  if (s.wkndPct != null && s.wkndOwnPct != null) {
+    const gap = s.wkndPct - s.wkndOwnPct;
+    if (gap >= 8) {
+      const yenUp = s.wdayOwnMed ? Math.round(s.wdayOwnMed * (gap / 100) / 100) * 100 : null;
+      acts.push({ tag: '週末', text: `相場 は +${s.wkndPct}% 週末 プレミアム を 取っているが、 自ホテル は +${s.wkndOwnPct}% で <b>${gap}pt 抑え目</b>。 週末 単価 に <b>${yenUp ? '+' + fmtYen(yenUp) : '上乗せ'}</b> の 余地。` });
+    } else if (gap <= -8) {
+      acts.push({ tag: '週末', text: `自ホテル は 週末 +${s.wkndOwnPct}% で 相場 (+${s.wkndPct}%) を <b>${-gap}pt 上回る</b>。 週末 需要 の 裏付け が 確実 か 確認 (客層/イベント日)。` });
+    } else {
+      acts.push({ tag: '週末', text: `週末 プレミアム 相場 +${s.wkndPct}% と 自ホテル +${s.wkndOwnPct}% は ほぼ 均衡。 現状 維持 で OK。` });
+    }
+  }
+
+  // 位置 帯 の 偏り
+  if (s.total > 0) {
+    const cheapPct = s.rankBins.cheap / s.total;
+    const highPct = s.rankBins.high / s.total;
+    if (cheapPct >= 0.5) {
+      acts.push({ tag: '相場位置', text: `30日 中 <b>${s.rankBins.cheap}日 (${Math.round(cheapPct * 100)}%)</b> が 相場 下位 1/3。 需要 曲線 に 合わせて 段階的 に 単価 上げ 検証 を 推奨。` });
+    } else if (highPct >= 0.5) {
+      acts.push({ tag: '相場位置', text: `30日 中 <b>${s.rankBins.high}日 (${Math.round(highPct * 100)}%)</b> が 相場 上位 1/3。 稼働率 が 落ちて ない か 監視、 落ちて いれば -¥1,000 〜 -¥2,000 の 段階下げ 検証。` });
+    }
+  }
+
+  // 曜日 単位 の ズレ 検出 (自 が 相場 中央値 の -20% 以下 の 曜日)
+  const dowChars = ['日', '月', '火', '水', '木', '金', '土'];
+  const laggingDows = [];
+  for (let i = 0; i < 7; i++) {
+    const med = s.dowMed[i]; const own = s.dowOwn[i];
+    if (med != null && own != null && own / med <= 0.75) laggingDows.push({ dow: i, med, own, gap: Math.round((1 - own / med) * 100) });
+  }
+  if (laggingDows.length) {
+    const top = laggingDows.sort((a, b) => b.gap - a.gap)[0];
+    acts.push({ tag: '曜日', text: `<b>${dowChars[top.dow]}曜</b> は 自ホテル ${fmtYen(top.own)} で 相場 ${fmtYen(top.med)} を <b>-${top.gap}%</b>。 曜日 別 の 段階 単価 で <b>+${fmtYen(top.med * 0.9 - top.own)}</b> の 余地。` });
+  }
+
+  // 相場 レンジ の 中 で 自 の 最頻 帯
+  if (s.perDayRank.length) {
+    const priced = s.perDayRank.filter(r => r.rank != null);
+    if (priced.length) {
+      const avgRank = priced.reduce((a, b) => a + b.rank, 0) / priced.length;
+      acts.push({ tag: '客層', text: `自ホテル の 相場 パーセンタイル 平均 = <b>${Math.round(avgRank * 100)}%</b> (0=最安 / 100=最高)。 ${avgRank < 0.35 ? 'エコノミー 訴求 (清潔+設備) が 効きます。' : avgRank > 0.65 ? 'プレミアム 訴求 (体験/朝食/眺望) が 効きます。' : 'ミドル 帯 は 「価格 vs 体験」 の バランス 訴求。'}` });
+    }
+  }
+
+  // 需要 tightness (Phase 2 で Booking scarcity signal 追加 予定)
+  acts.push({ tag: 'next', text: `Phase 2 予定 = Booking の 「残X室 / N人が見ている」 signal で 需要 tightness スコア 化 → 相場 alert LINE 通知。` });
+
+  return acts;
 }
 
 function renderPriceCards(data) {
