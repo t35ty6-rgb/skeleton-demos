@@ -807,6 +807,9 @@
 </style>
 </head>
 <body>
+<!-- config.js が あれば prod mode 有効 (Firestore fetch で cross-browser 対応)、 無ければ demo mode -->
+<script>window.__CRM_CONFIG = window.__CRM_CONFIG || { demo: true };</script>
+<script src="config.js" onerror="void 0"></script>
 <div class="wrap">
   <!-- Topbar (after login) -->
   <div class="topbar" id="topbar" style="display:none">
@@ -1105,6 +1108,67 @@ function loadDemoCourses(tenantId) {
 const _tenantForCourses = new URL(window.location.href).searchParams.get('tenant') || 'demo';
 let DEMO_COURSES = loadDemoCourses(_tenantForCourses);
 
+// ================= Firebase (prod mode) init - 別 device の 客 browser で も 反映 =================
+// config.js が demo:false なら Firebase 初期化 → Anonymous auth → Firestore fetch。
+// これで owner 端末 で upload した 動画/サムネ が 客 の 別 デバイス の browser にも 即 見える。
+let __memberFirebase = null;
+async function ensureFirebase() {
+  if (__memberFirebase) return __memberFirebase;
+  const cfg = window.__CRM_CONFIG || {};
+  if (!cfg.firebase || cfg.demo === true) return null;
+  try {
+    const [{ initializeApp }, { getAuth, signInAnonymously, onAuthStateChanged }, { getFirestore, doc, getDoc, onSnapshot }] = await Promise.all([
+      import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js'),
+      import('https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js'),
+      import('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js'),
+    ]);
+    const app = initializeApp(cfg.firebase);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    await new Promise((resolve) => {
+      onAuthStateChanged(auth, (user) => { if (user) resolve(); });
+      signInAnonymously(auth).catch(e => console.warn('anon sign-in failed', e));
+    });
+    __memberFirebase = { app, auth, db, doc, getDoc, onSnapshot };
+    return __memberFirebase;
+  } catch (e) {
+    console.warn('Firebase init failed, fallback to localStorage', e);
+    return null;
+  }
+}
+async function fetchLmsFromFirestore(tenantId) {
+  const fb = await ensureFirebase();
+  if (!fb) return null;
+  try {
+    const snap = await fb.getDoc(fb.doc(fb.db, 'tenants', tenantId, 'lms', 'current'));
+    if (!snap.exists()) return null;
+    return snap.data();
+  } catch (e) { console.warn('Firestore lms fetch failed', e); return null; }
+}
+function normalizeLmsData(data) {
+  if (!data) return null;
+  const courses = (data.courses || []).filter(c => c.published);
+  const chaptersByCourse = {};
+  (data.videos || []).forEach(v => {
+    if (!v.courseId) return;
+    chaptersByCourse[v.courseId] = chaptersByCourse[v.courseId] || [];
+    chaptersByCourse[v.courseId].push({
+      id: v.id, chapterNo: v.chapterNo, title: v.title, description: v.description,
+      durationSec: v.durationSec,
+      zoomMilestone: v.zoomMilestone?.enabled || false,
+      thumbUrl: v.thumbUrl || '',
+      videoUrl: v.videoUrl || '',
+    });
+  });
+  const merged = courses.map(c => ({
+    ...c,
+    category: c.category || 'コース',
+    instructor: c.instructor || '',
+    chapters: (chaptersByCourse[c.id] || []).sort((a, b) => (a.chapterNo || 0) - (b.chapterNo || 0)),
+  })).filter(c => c.chapters.length > 0);
+  return merged;
+}
+
 // ================= IndexedDB media resolver (admin と 共有 origin) =================
 // admin 側 で file upload された blob は IndexedDB `skel-crm-media` に 保存 されて いる。
 // state (localStorage) には `idb:{key}` の 参照 だけ。 ここで blob URL に 事前 展開。
@@ -1301,14 +1365,26 @@ function showCourseNotAllowed(course) {
 // ---- session restore ----
 // owner 明示 2026-07-30 「ID/PW 1111/1111 で いい」 → login screen 復活、 fields に 1111 prefilled
 (async function restore() {
-  // IndexedDB 内 の blob (動画/サムネ/cover) を in-memory cache に 事前展開。
-  // これで admin で 大 動画 upload しても member 側 は 実 file を そのまま 再生 (sample fallback しない)。
+  // 1) prod mode: Firestore から fetch (cross-browser, cross-device 対応)
+  try {
+    const remote = await fetchLmsFromFirestore(_tenantForCourses);
+    const normalized = normalizeLmsData(remote);
+    if (normalized && normalized.length > 0) {
+      DEMO_COURSES = normalized;
+      console.log('member: loaded', normalized.length, 'courses from Firestore');
+    }
+  } catch (e) { console.warn('firestore load failed', e); }
+
+  // 2) IndexedDB 内 の blob (旧 admin upload) を cache に (backward compat)
   try {
     await preResolveDemoCourses();
-    // 展開 後、 描画 前 に DEMO_COURSES を 最新 の localStorage 内容 で 再読込 (admin が push した 最新 反映)
-    DEMO_COURSES = loadDemoCourses(_tenantForCourses);
-    await preResolveDemoCourses();
+    // Firestore 取れて いない ときの ため に localStorage も 再 load
+    if (!DEMO_COURSES || DEMO_COURSES.length === 0 || DEMO_COURSES === DEMO_COURSES_FALLBACK) {
+      DEMO_COURSES = loadDemoCourses(_tenantForCourses);
+      await preResolveDemoCourses();
+    }
   } catch (e) { console.warn('preResolveDemoCourses failed', e); }
+
   try {
     const s = JSON.parse(sessionStorage.getItem('skel-member-session') || 'null');
     if (s && DEMO_MEMBERS[s.id]) {

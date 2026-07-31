@@ -3425,27 +3425,49 @@ function liffVideoUrl(videoId) {
 
 // demo mode: state.courses + state.videos を localStorage に 同期 して
 //   member.html (客側 会員 portal) から 参照 可能 に する (別 tab / 別 URL でも 同 origin で 共有)。
-//   prod mode は Firestore が SSOT なので この 関数 は no-op。
+//   prod mode (Firebase config あり) は Firestore `tenants/{tid}/lms/current` doc に mirror して
+//   別 デバイス · 別 browser の member.html でも 見える よう に する (これ が 本番 客配信 の SSOT)。
 function syncDemoLms() {
+  const tenantId = state.currentTenantId || 'demo';
+  const payload = JSON.stringify({
+    updatedAt: new Date().toISOString(),
+    courses: (state.courses || []).map(c => ({
+      ...c,
+      // http(s):// と idb:/data: 混在 の可能性 - member 側 で resolveMedia が 判定
+      coverThumbUrl: c.coverThumbUrl || '',
+    })),
+    videos: (state.videos || []).map(v => ({
+      id: v.id, courseId: v.courseId || null, chapterNo: v.chapterNo || null,
+      title: v.title, description: v.description,
+      memberTagIds: v.memberTagIds || [],
+      prerequisiteChapters: v.prerequisiteChapters || [],
+      zoomMilestone: v.zoomMilestone || null,
+      durationSec: v.durationSec || 0,
+      thumbUrl: v.thumbUrl || '',
+      // videoUrl: http(s):// (実サーバー) or data: (base64 demo upload) を そのまま 通す。
+      //   blob: URL は 別 tab で 死ぬ ので 除外 → member.html 側 の sample MP4 fallback へ
+      videoUrl: (v.videoUrl && /^(https?|data|idb):/.test(v.videoUrl)) ? v.videoUrl : '',
+    })),
+  });
+
+  // prod mode: Firestore mirror (同 origin/同 tab に 依存 しない → 別 device の 客 browser で 見える)
+  if (state.mode === 'prod' && window.__CRM_FIRESTORE_MIRROR) {
+    // idb:/data: URL は cross-browser で 死ぬ ので Firestore に は http(s):// だけ 書く
+    try {
+      const forFirestore = JSON.parse(payload);
+      forFirestore.courses.forEach(c => {
+        if (c.coverThumbUrl && !/^https?:/.test(c.coverThumbUrl)) c.coverThumbUrl = '';
+      });
+      forFirestore.videos.forEach(v => {
+        if (v.thumbUrl && !/^https?:/.test(v.thumbUrl)) v.thumbUrl = '';
+        if (v.videoUrl && !/^https?:/.test(v.videoUrl)) v.videoUrl = '';
+      });
+      window.__CRM_FIRESTORE_MIRROR.write(forFirestore).catch(e => console.warn('firestore mirror failed', e));
+    } catch (e) { console.warn('firestore mirror prep failed', e); }
+  }
+
   if (state.mode !== 'demo') return;
   try {
-    const tenantId = state.currentTenantId || 'demo';
-    const payload = JSON.stringify({
-      updatedAt: new Date().toISOString(),
-      courses: state.courses || [],
-      videos: (state.videos || []).map(v => ({
-        id: v.id, courseId: v.courseId || null, chapterNo: v.chapterNo || null,
-        title: v.title, description: v.description,
-        memberTagIds: v.memberTagIds || [],
-        prerequisiteChapters: v.prerequisiteChapters || [],
-        zoomMilestone: v.zoomMilestone || null,
-        durationSec: v.durationSec || 0,
-        thumbUrl: v.thumbUrl || '',
-        // videoUrl: http(s):// (実サーバー) or data: (base64 demo upload) を そのまま 通す。
-        //   blob: URL は 別 tab で 死ぬ ので 除外 → member.html 側 の sample MP4 fallback へ
-        videoUrl: (v.videoUrl && /^(https?|data):/.test(v.videoUrl)) ? v.videoUrl : '',
-      })),
-    });
     try {
       localStorage.setItem(`skel-crm-demo-lms-${tenantId}`, payload);
     } catch (e) {
@@ -6148,7 +6170,7 @@ if (state.mode === 'demo') {
 if (window.__CRM_MODE === 'prod') {
   const [
     { initializeApp },
-    { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut },
+    { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, signInAnonymously },
     { getFirestore, doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, query, where, serverTimestamp, orderBy, limit },
     { getFunctions, httpsCallable },
     { getStorage, ref: storageRef, uploadBytesResumable, getDownloadURL, deleteObject },
@@ -6203,21 +6225,34 @@ if (window.__CRM_MODE === 'prod') {
     document.getElementById('login-divider').style.display = 'none';
   }
 
+  // Anonymous auth 自動 sign-in (demo tenant のみ、 config.enableAnonymousMemberAuth=true 時)
+  const ALLOW_ANON = !!(window.__CRM_CONFIG || {}).enableAnonymousMemberAuth;
+  if (ALLOW_ANON && !auth.currentUser) {
+    signInAnonymously(auth).catch(e => console.warn('anon sign-in failed', e));
+  }
+
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
-      // 未login: login screen 表示
+      // 未login: anon 有効 なら anon で 自動 login、 でなければ login screen
+      if (ALLOW_ANON) { signInAnonymously(auth).catch(() => {}); return; }
       document.getElementById('login-scrim').classList.add('open');
       return;
     }
     // login 済: adminTenants claim を 取得
     const idTokenResult = await user.getIdTokenResult(true);
-    const adminTenants = (idTokenResult.claims && idTokenResult.claims.adminTenants) || {};
+    let adminTenants = (idTokenResult.claims && idTokenResult.claims.adminTenants) || {};
+
+    // Anonymous user は 「demo」 tenant に 対して admin 相当 の 扱い (rules 側 で allow 済)
+    if (user.isAnonymous && ALLOW_ANON) {
+      adminTenants = { demo: 'admin', ...adminTenants };
+    }
 
     state.currentUser = {
       uid: user.uid,
       email: user.email,
-      displayName: user.displayName,
+      displayName: user.displayName || (user.isAnonymous ? 'ゲスト' : ''),
       photoURL: user.photoURL,
+      isAnonymous: user.isAnonymous,
     };
     state.availableTenants = Object.keys(adminTenants).map(tid => ({
       tenantId: tid, role: adminTenants[tid], name: tid,
@@ -6250,17 +6285,35 @@ if (window.__CRM_MODE === 'prod') {
 
     // ---- Firestore を dataAdapter に 差し込む (簡易 版; realtime listener + 各 collection) ----
     const tenantRoot = collection(db, 'tenants', state.currentTenantId, 'customers');
-    function listenCol(name, targetKey) {
+    function listenCol(name, targetKey, opts) {
+      opts = opts || {};
       onSnapshot(collection(db, 'tenants', state.currentTenantId, name), (snap) => {
+        // 空 snapshot で local seed を 消さない (preserveSeed=true 指定 の 場合)
+        if (snap.empty && opts.preserveSeed && (state[targetKey] || []).length > 0) {
+          console.log(`listenCol(${name}): Firestore empty, preserving local seed (${state[targetKey].length} items)`);
+          // 空 の Firestore に seed を 書き戻す (次回以降 は Firestore SSOT に)
+          if (opts.seedWriteBack) {
+            (async () => {
+              for (const item of state[targetKey]) {
+                if (item.id) {
+                  try { await setDoc(doc(db, 'tenants', state.currentTenantId, name, item.id), item, { merge: true }); }
+                  catch (e) { console.warn(`seed writeback ${name}/${item.id} failed`, e); }
+                }
+              }
+              console.log(`listenCol(${name}): seed writeback complete (${state[targetKey].length} items)`);
+            })();
+          }
+          return;
+        }
         state[targetKey] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         if (typeof renderView === 'function' && state.view) renderView(state.view);
         if (typeof renderNav === 'function') renderNav();
       });
     }
 
-    // realtime subscriptions
-    listenCol('customers',    'customers');
-    listenCol('tags',         'tags');
+    // realtime subscriptions (videos は 初回 空 で seed を 消さない ため preserveSeed + writeback)
+    listenCol('customers',    'customers', { preserveSeed: true, seedWriteBack: true });
+    listenCol('tags',         'tags', { preserveSeed: true, seedWriteBack: true });
     listenCol('campaigns',    'campaigns');
     listenCol('segments',     'segments');
     listenCol('autoTagRules', 'autoTagRules');
@@ -6268,7 +6321,7 @@ if (window.__CRM_MODE === 'prod') {
     listenCol('steps',        'steps');
     listenCol('channels',     'channels');
     listenCol('history',      'history');
-    listenCol('videos',       'videos');
+    listenCol('videos',       'videos', { preserveSeed: true, seedWriteBack: true });
 
     // dataAdapter の write 系 を Firestore に 差し替え
     // 全 8 collection を 統一 pattern (makeSaver / makeDeleter) で 生成
@@ -6309,6 +6362,15 @@ if (window.__CRM_MODE === 'prod') {
     dataAdapter.saveRichmenu      = makeSaver('richmenus');
     dataAdapter.deleteRichmenu    = makeDeleter('richmenus');
     dataAdapter.saveVideo         = makeSaver('videos');
+
+    // LMS mirror: syncDemoLms が この window.__CRM_FIRESTORE_MIRROR.write() を 呼んで
+    //   tenants/{tid}/lms/current doc に courses + videos の snapshot を まるっと 書く。
+    //   member.html は 同 doc を Firestore realtime で subscribe して 別 device でも 即 反映 する。
+    window.__CRM_FIRESTORE_MIRROR = {
+      write: async (data) => {
+        await setDoc(doc(db, 'tenants', tid, 'lms', 'current'), data, { merge: true });
+      },
+    };
     dataAdapter.deleteVideo       = async (videoId) => {
       // Firestore doc + Storage object 両方 消す
       try {
