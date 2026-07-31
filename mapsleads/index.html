@@ -3,297 +3,496 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>MapsLeads — 都道府県 × 市 × 業種 で HP無しの店だけ、CSV即取得</title>
-<meta name="description" content="Googleマップから 都道府県+市+業種 で 検索 → HP無し / Insta有 / 公式LINE有 で フィルタ → CSV。 MEO・サイト制作・SaaS営業 の 見込み客リスト作成 が 秒で終わる Chrome 拡張。" />
+<title>MapsLeads · ホームページを持たない店だけ、地図から一撃で。</title>
+<meta name="description" content="Googleマップから 都道府県×市×業種 で 検索し、 自社HPのない店だけを CSV に出力する Chrome拡張。 MEO・サイト制作・SaaS営業 の 見込み客リスト作成を 数分に。" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #ffffff;
-    --bg-2: #f7f8fa;
-    --ink: #0F1B2D;
-    --ink-2: #3d4356;
-    --dim: #7c839a;
-    --muted: #a8adbe;
-    --rule: #e4e7ee;
-    --accent: #C8102E;
-    --accent-hi: #7A0C1F;
-    --pill: #F0F4FA;
+    --paper:      #FAFAF8;
+    --paper-tint: #F0EDE5;
+    --ink:        #1A1A1D;
+    --ink-2:      #4A4A50;
+    --dim:        #8A8A87;
+    --rule:       #DDDBD3;
+    --rule-2:     #EFEDE6;
+    --seal:       #C41E3A;
+    --seal-2:     #9E0021;
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
     margin: 0;
-    background: var(--bg);
+    background: var(--paper);
     color: var(--ink);
-    font-family: "Noto Sans JP", "Inter", -apple-system, sans-serif;
+    font-family: "Noto Sans JP", -apple-system, sans-serif;
     font-weight: 500;
-    line-height: 1.75;
+    line-height: 1.8;
     letter-spacing: -0.005em;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
-  a { color: inherit; text-decoration: none; }
-  a:hover { color: var(--accent); }
+  .mincho { font-family: "Zen Old Mincho", serif; letter-spacing: -0.02em; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; letter-spacing: 0; }
 
-  /* header */
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 32px; }
+
+  /* ===== header ===== */
   header {
-    position: sticky; top: 0; z-index: 50;
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(10px);
+    position: sticky; top: 0; z-index: 40;
+    background: rgba(250, 250, 248, 0.94);
+    backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--rule);
   }
   header .wrap {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 24px;
+    padding: 16px 32px;
   }
   .brand {
-    display: flex; align-items: center; gap: 8px;
-    font-weight: 900; font-size: 17px; letter-spacing: -0.01em;
+    font-family: "Zen Old Mincho", serif;
+    font-weight: 900;
+    font-size: 18px;
+    letter-spacing: -0.03em;
+    display: flex; align-items: baseline; gap: 10px;
   }
-  .brand .logo {
-    width: 26px; height: 26px; border-radius: 6px;
-    background: var(--ink);
-    display: inline-flex; align-items: center; justify-content: center;
-    color: #fff; font-family: Inter, sans-serif; font-weight: 900; font-size: 12px;
-    letter-spacing: 0.02em;
-  }
-  .brand .logo::before { content: "M"; }
-  .nav-cta {
-    display: inline-block; padding: 8px 16px;
-    background: var(--ink); color: #fff;
-    border-radius: 4px; font-weight: 700; font-size: 13px;
-  }
-  .nav-cta:hover { background: #000; color: #fff; }
-
-  /* hero */
-  .hero {
-    padding: 80px 0 60px;
-    text-align: left;
-  }
-  .hero .kicker {
+  .brand .seal-mark {
     display: inline-block;
-    background: var(--pill);
-    color: var(--ink-2);
-    padding: 5px 12px; border-radius: 999px;
-    font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
-    margin-bottom: 20px;
+    width: 22px; height: 22px;
+    background: var(--seal);
+    color: var(--paper);
+    font-family: "Zen Old Mincho", serif;
+    font-weight: 900;
+    font-size: 12px;
+    line-height: 22px;
+    text-align: center;
+    letter-spacing: 0;
+    transform: translateY(2px);
+  }
+  .brand .seal-mark::before { content: "地"; }
+  .nav-cta {
+    display: inline-flex; align-items: baseline; gap: 8px;
+    padding: 9px 18px;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .nav-cta:hover { background: #000; }
+
+  /* ===== hero ===== */
+  .hero {
+    padding: 96px 0 20px;
+  }
+  .hero-kicker {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--seal);
+    letter-spacing: 0.08em;
+    margin-bottom: 28px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .hero-kicker::before {
+    content: ""; display: inline-block;
+    width: 40px; height: 1px; background: var(--seal);
   }
   h1 {
-    font-size: clamp(34px, 5.4vw, 56px);
+    font-family: "Zen Old Mincho", serif;
     font-weight: 900;
-    letter-spacing: -0.025em;
-    line-height: 1.2;
-    margin: 0 0 20px;
-    max-width: 820px;
+    font-size: clamp(38px, 5.5vw, 62px);
+    letter-spacing: -0.035em;
+    line-height: 1.28;
+    margin: 0 0 32px;
+    color: var(--ink);
   }
-  h1 em {
-    font-style: normal;
-    color: var(--accent);
-    background: linear-gradient(180deg, transparent 60%, rgba(200,16,46,0.15) 60%);
+  h1 .line { display: block; }
+  h1 .seal-word {
+    position: relative;
+    display: inline-block;
     padding: 0 4px;
   }
+  h1 .seal-word::after {
+    content: "";
+    position: absolute;
+    inset: -6px -4px -8px -4px;
+    border: 2.5px solid var(--seal);
+    z-index: -1;
+  }
   .lead {
+    font-family: "Noto Sans JP", sans-serif;
     font-size: 17px;
+    font-weight: 500;
     color: var(--ink-2);
-    max-width: 620px;
-    line-height: 1.85;
-    margin: 0 0 32px;
+    line-height: 1.9;
+    max-width: 640px;
+    margin: 0 0 44px;
   }
   .cta-row {
-    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
-    margin-bottom: 40px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    margin-bottom: 28px;
   }
   .btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 14px 24px;
-    border-radius: 4px;
-    font-weight: 700; font-size: 15px;
-    transition: transform 0.15s, background 0.15s;
+    display: inline-flex; align-items: baseline; gap: 10px;
+    padding: 16px 28px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: "Noto Sans JP", sans-serif;
+    letter-spacing: -0.005em;
     cursor: pointer; border: 0;
+    transition: transform 0.12s ease, background 0.12s ease;
   }
-  .btn-primary {
-    background: var(--accent); color: #fff;
-  }
-  .btn-primary:hover {
-    background: var(--accent-hi); color: #fff;
-    transform: translateY(-1px);
-  }
+  .btn-primary { background: var(--seal); color: var(--paper); }
+  .btn-primary:hover { background: var(--seal-2); transform: translateY(-1px); }
+  .btn-primary .price { font-family: "JetBrains Mono", monospace; font-size: 13px; opacity: 0.85; }
   .btn-ghost {
     background: transparent; color: var(--ink);
-    border: 1.5px solid var(--rule);
+    border-bottom: 1.5px solid var(--ink);
+    padding: 8px 4px;
+    border-radius: 0;
   }
-  .btn-ghost:hover { border-color: var(--ink); }
+  .btn-ghost:hover { color: var(--seal); border-color: var(--seal); }
   .trust {
-    display: flex; gap: 24px; flex-wrap: wrap;
-    font-size: 13px; color: var(--dim); font-weight: 500;
+    display: flex; flex-wrap: wrap; gap: 24px;
+    font-size: 12px;
+    color: var(--dim);
+    padding-top: 20px;
+    border-top: 1px solid var(--rule-2);
   }
-  .trust .item::before {
-    content: "✓"; color: var(--accent); font-weight: 900; margin-right: 6px;
-  }
+  .trust .item { display: inline-flex; align-items: baseline; gap: 6px; }
+  .trust .item::before { content: "・"; color: var(--seal); }
 
-  /* mock demo panel */
-  .demo {
-    margin: 40px auto 0;
-    max-width: 920px;
-    background: var(--ink);
-    border-radius: 12px;
-    padding: 28px;
-    box-shadow: 0 30px 80px -20px rgba(15, 27, 45, 0.25);
-    color: #f0f4fa;
-    font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  /* ===== signature: CSV sample ===== */
+  .signature {
+    padding: 60px 0 96px;
+  }
+  .csv-frame {
+    background: #fff;
+    border: 1px solid var(--rule);
+    padding: 0;
+    font-family: "JetBrains Mono", monospace;
     font-size: 13px;
-    line-height: 1.9;
+    line-height: 1.8;
+    color: var(--ink);
+    box-shadow: 0 24px 60px -30px rgba(26, 26, 29, 0.15);
   }
-  .demo .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
-  .demo .dot.r { background: #ff5f57; }
-  .demo .dot.y { background: #febc2e; }
-  .demo .dot.g { background: #28c840; }
-  .demo .csv { border-top: 1px solid #26314a; margin-top: 14px; padding-top: 14px; }
-  .demo .csv .row { display: grid; grid-template-columns: 28px 1.4fr 1fr 1fr 1fr; gap: 10px; padding: 5px 0; }
-  .demo .csv .row.header { color: var(--dim); font-size: 11px; letter-spacing: 0.05em; border-bottom: 1px solid #26314a; padding-bottom: 8px; margin-bottom: 4px; }
-  .demo .csv .row .n { color: var(--muted); font-size: 11px; }
-  .demo .csv .row.hit .no { color: #C8102E; }
-  .demo .csv .row .tag {
-    display: inline-block; padding: 1px 6px; border-radius: 3px;
-    background: rgba(200,16,46,0.18); color: #ffb0b8; font-size: 10px;
-    letter-spacing: 0.03em;
+  .csv-frame .meta {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 20px;
+    background: var(--paper-tint);
+    border-bottom: 1px solid var(--rule);
+    font-size: 11px;
+    color: var(--ink-2);
+    letter-spacing: 0.02em;
+  }
+  .csv-frame .meta .filename { color: var(--ink); font-weight: 500; }
+  .csv-frame .meta .count { color: var(--seal); font-weight: 500; }
+  .csv-frame table { width: 100%; border-collapse: collapse; }
+  .csv-frame th, .csv-frame td {
+    padding: 12px 20px;
+    text-align: left;
+    border-bottom: 1px solid var(--rule-2);
+    font-weight: 400;
+  }
+  .csv-frame th {
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: #FDFCF9;
+    font-weight: 500;
+  }
+  .csv-frame td { vertical-align: baseline; }
+  .csv-frame tr:last-child td { border-bottom: 0; }
+  .csv-frame tr:hover td { background: rgba(196, 30, 58, 0.03); }
+  .csv-frame td.name { font-family: "Noto Sans JP", sans-serif; font-weight: 500; color: var(--ink); }
+  .csv-frame td.tel { color: var(--ink-2); }
+  .csv-frame td.area { color: var(--dim); font-family: "Noto Sans JP", sans-serif; font-weight: 400; }
+  .csv-frame td.tag { text-align: right; }
+  .tag-noweb {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--seal);
+    color: var(--paper);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+  .csv-note {
+    text-align: right;
+    font-size: 11px;
+    color: var(--dim);
+    margin-top: 14px;
+    font-family: "JetBrains Mono", monospace;
+    letter-spacing: 0.02em;
   }
 
-  /* section base */
-  section { padding: 80px 0; }
-  section.alt { background: var(--bg-2); }
+  /* ===== sections ===== */
+  section { padding: 96px 0; border-top: 1px solid var(--rule-2); }
   h2 {
-    font-size: clamp(26px, 3.4vw, 38px);
-    font-weight: 900;
-    letter-spacing: -0.02em;
-    line-height: 1.3;
+    font-family: "Zen Old Mincho", serif;
+    font-weight: 700;
+    font-size: clamp(26px, 3.5vw, 36px);
+    letter-spacing: -0.025em;
+    line-height: 1.35;
     margin: 0 0 12px;
+    color: var(--ink);
   }
   .section-lead {
     color: var(--ink-2);
-    max-width: 640px;
     font-size: 15px;
-    margin-bottom: 48px;
+    line-height: 1.9;
+    max-width: 560px;
+    margin: 0 0 56px;
   }
 
-  /* features grid */
-  .feats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-  .feat {
-    background: #fff;
-    padding: 32px 28px;
-    border-radius: 8px;
-    border: 1px solid var(--rule);
+  /* ===== 3 blocks ===== */
+  .blocks {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--rule);
   }
-  .feat h3 {
-    font-size: 18px;
-    font-weight: 900;
-    margin: 0 0 10px;
-    letter-spacing: -0.01em;
+  .block {
+    padding: 32px 24px 8px;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
   }
-  .feat p { color: var(--ink-2); font-size: 14px; margin: 0; line-height: 1.85; }
-  .feat .fnum {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px; border-radius: 4px;
-    background: var(--accent); color: #fff;
-    font-family: Inter, sans-serif; font-weight: 900; font-size: 14px;
+  .block:last-child { border-right: 0; }
+  .block h3 {
+    font-family: "Zen Old Mincho", serif;
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.02em;
+    margin: 0 0 14px;
+    color: var(--ink);
+  }
+  .block .glyph {
+    display: block;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    color: var(--seal);
+    letter-spacing: 0.1em;
+    margin-bottom: 20px;
+  }
+  .block p { font-size: 13.5px; color: var(--ink-2); line-height: 1.9; margin: 0 0 24px; }
+  .block .detail {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: var(--dim);
+    padding-top: 16px;
+    border-top: 1px solid var(--rule-2);
     margin-bottom: 20px;
   }
 
-  /* how it works */
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
-  .step { position: relative; }
-  .step .snum {
-    font-family: Inter, sans-serif;
-    font-size: 56px; font-weight: 900;
-    color: var(--rule); line-height: 1;
+  /* ===== steps ===== */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+  .step { position: relative; padding-top: 24px; border-top: 2px solid var(--ink); }
+  .step .step-no {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    color: var(--seal);
+    font-weight: 500;
+    letter-spacing: 0.1em;
     margin-bottom: 12px;
-    letter-spacing: -0.03em;
   }
-  .step h3 { font-size: 17px; font-weight: 900; margin: 0 0 8px; }
-  .step p { color: var(--ink-2); font-size: 14px; margin: 0; }
+  .step h3 {
+    font-family: "Zen Old Mincho", serif;
+    font-weight: 700;
+    font-size: 17px;
+    margin: 0 0 10px;
+    letter-spacing: -0.02em;
+  }
+  .step p { font-size: 13.5px; color: var(--ink-2); margin: 0; line-height: 1.9; }
 
-  /* pricing */
-  .price {
-    max-width: 520px; margin: 0 auto;
-    background: #fff;
-    border: 2px solid var(--ink);
-    border-radius: 12px;
-    padding: 40px;
-    text-align: center;
-  }
-  .price .tier {
-    font-size: 12px; font-weight: 900; letter-spacing: 0.08em;
-    color: var(--accent); text-transform: uppercase;
-    margin-bottom: 16px;
-  }
-  .price .amt {
-    font-family: Inter, sans-serif;
-    font-size: 56px; font-weight: 900;
-    letter-spacing: -0.03em; line-height: 1;
-    margin-bottom: 4px;
-  }
-  .price .amt .yen { font-size: 24px; vertical-align: super; margin-right: 4px; color: var(--ink-2); }
-  .price .amt .unit { font-size: 13px; color: var(--dim); font-weight: 500; letter-spacing: 0; margin-left: 6px; vertical-align: middle; }
-  .price .note { color: var(--dim); font-size: 13px; margin-bottom: 24px; }
-  .price ul { list-style: none; padding: 0; margin: 0 0 28px; text-align: left; }
-  .price li { padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 14px; }
-  .price li::before { content: "✓"; color: var(--accent); font-weight: 900; margin-right: 10px; }
-  .price li:last-child { border-bottom: 0; }
-  .price .btn { width: 100%; justify-content: center; }
-
-  .free-note {
-    margin-top: 20px; text-align: center; color: var(--dim); font-size: 13px;
-  }
-
-  /* faq */
-  .faq { max-width: 780px; margin: 0 auto; }
-  details {
+  /* ===== price ===== */
+  .price-wrap { display: flex; justify-content: center; }
+  .price-card {
     background: #fff;
     border: 1px solid var(--rule);
-    border-radius: 6px;
-    padding: 16px 20px;
-    margin-bottom: 10px;
+    padding: 48px 56px;
+    max-width: 460px;
+    width: 100%;
+    text-align: left;
+    position: relative;
   }
-  details[open] { border-color: var(--ink); }
+  .price-card .plan-name {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: var(--seal);
+    letter-spacing: 0.1em;
+    margin-bottom: 18px;
+  }
+  .price-card .amount {
+    font-family: "Zen Old Mincho", serif;
+    font-weight: 900;
+    font-size: 56px;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin: 0;
+  }
+  .price-card .amount .yen {
+    font-size: 22px;
+    vertical-align: super;
+    margin-right: 2px;
+    color: var(--ink-2);
+    font-family: "Noto Sans JP", sans-serif;
+    font-weight: 700;
+  }
+  .price-card .amount .unit {
+    display: block;
+    font-family: "Noto Sans JP", sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--dim);
+    letter-spacing: 0;
+    margin-top: 10px;
+  }
+  .price-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 32px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .price-card li {
+    padding: 12px 0;
+    font-size: 13.5px;
+    color: var(--ink-2);
+    border-bottom: 1px solid var(--rule-2);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .price-card li::before {
+    content: "・";
+    color: var(--seal);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .price-card .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 16px;
+  }
+  .price-note {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--dim);
+  }
+
+  /* ===== faq ===== */
+  .faq { max-width: 720px; margin: 0 auto; }
+  details {
+    border-top: 1px solid var(--rule);
+    padding: 20px 0;
+  }
+  details:last-of-type { border-bottom: 1px solid var(--rule); }
   summary {
-    cursor: pointer; list-style: none;
-    font-weight: 700; font-size: 15px;
-    display: flex; align-items: center; justify-content: space-between;
-    letter-spacing: -0.01em;
+    cursor: pointer;
+    list-style: none;
+    font-family: "Zen Old Mincho", serif;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.015em;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    color: var(--ink);
   }
   summary::-webkit-details-marker { display: none; }
   summary::after {
-    content: "+"; color: var(--accent); font-size: 24px; font-weight: 400;
-    margin-left: 12px; transition: transform 0.2s;
+    content: "+";
+    color: var(--seal);
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1;
+    font-family: "Noto Sans JP", sans-serif;
+    flex-shrink: 0;
   }
   details[open] summary::after { content: "−"; }
-  details p { color: var(--ink-2); font-size: 14px; margin: 16px 0 4px; line-height: 1.9; }
+  details p {
+    font-size: 13.5px;
+    color: var(--ink-2);
+    line-height: 1.9;
+    margin: 16px 0 4px;
+    max-width: 620px;
+  }
 
-  /* footer */
+  /* ===== footer ===== */
   footer {
-    background: var(--ink); color: #e4e7ee;
-    padding: 48px 0 32px;
+    padding: 64px 0 40px;
+    background: var(--ink);
+    color: var(--paper);
     font-size: 13px;
   }
-  footer .wrap { display: flex; flex-wrap: wrap; gap: 40px; justify-content: space-between; }
-  footer .brand { color: #fff; }
-  footer .brand .logo { background: #fff; color: var(--ink); }
-  footer .col h4 { font-size: 12px; font-weight: 900; letter-spacing: 0.08em; color: #a8adbe; margin: 0 0 12px; text-transform: uppercase; }
-  footer .col a { display: block; padding: 3px 0; color: #d0d5df; }
-  footer .col a:hover { color: #fff; }
-  footer .legal { border-top: 1px solid #26314a; margin-top: 32px; padding-top: 20px; color: var(--dim); font-size: 12px; }
+  footer .wrap {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 48px;
+  }
+  footer .brand { color: var(--paper); }
+  footer .brand .seal-mark { background: var(--seal); color: var(--paper); }
+  footer .brand-desc {
+    color: var(--dim);
+    font-size: 12px;
+    max-width: 240px;
+    margin-top: 16px;
+    line-height: 1.8;
+  }
+  footer h4 {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+    margin: 0 0 14px;
+    font-weight: 500;
+  }
+  footer a { display: block; padding: 4px 0; color: #C8C6BE; font-size: 13px; }
+  footer a:hover { color: var(--paper); }
+  footer .legal {
+    grid-column: 1 / -1;
+    border-top: 1px solid #33333A;
+    margin-top: 40px;
+    padding-top: 24px;
+    color: var(--dim);
+    font-size: 11px;
+    font-family: "JetBrains Mono", monospace;
+    letter-spacing: 0.02em;
+  }
 
-  /* responsive */
+  /* ===== reveal ===== */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .reveal { animation: fadeUp 400ms ease-out both; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { animation: none; }
+  }
+
+  /* ===== responsive ===== */
   @media (max-width: 780px) {
-    .hero { padding: 56px 0 40px; }
-    section { padding: 56px 0; }
-    .feats, .steps { grid-template-columns: 1fr; }
-    .demo { padding: 20px; font-size: 12px; }
-    .demo .csv .row { grid-template-columns: 22px 1.6fr 1fr; gap: 8px; }
-    .demo .csv .row .col3, .demo .csv .row .col4 { display: none; }
-    footer .wrap { gap: 24px; }
+    .wrap { padding: 0 20px; }
+    .hero { padding: 56px 0 8px; }
+    section { padding: 64px 0; }
+    .cta-row { flex-direction: column; align-items: stretch; }
+    .cta-row .btn { width: 100%; justify-content: center; }
+    .btn-ghost { text-align: center; }
+    .blocks { grid-template-columns: 1fr; }
+    .block { border-right: 0; padding: 28px 4px; }
+    .steps { grid-template-columns: 1fr; gap: 24px; }
+    .price-card { padding: 32px 24px; }
+    .csv-frame { font-size: 12px; }
+    .csv-frame th, .csv-frame td { padding: 10px 14px; }
+    .csv-frame td.area { display: none; }
+    footer .wrap { grid-template-columns: 1fr; gap: 32px; }
   }
 </style>
 </head>
@@ -301,81 +500,118 @@
 
 <header>
   <div class="wrap">
-    <div class="brand"><span class="logo"></span>MapsLeads</div>
-    <a href="#pricing" class="nav-cta">購入する</a>
+    <div class="brand">
+      <span class="seal-mark"></span>
+      MapsLeads
+    </div>
+    <a href="#buy" class="nav-cta">購入 <span class="mono">¥4,980</span></a>
   </div>
 </header>
 
 <section class="hero">
   <div class="wrap">
-    <div class="kicker">Chrome 拡張 · 買い切り ¥4,980</div>
-    <h1>県 × 市 × 業種 を選ぶだけ、<br /><em>ホームページ無しの店</em> だけ CSV で。</h1>
-    <p class="lead">
-      MEO 提案、 サイト制作 の 飛び込み営業、 SaaS 導入 の 見込み客リスト作成。
-      Google マップから 「まだ HP を 持ってない店」 「Instagram だけ の 店」 「公式 LINE を 使っている店」 を 業種と地域 で 一気に 抽出します。
-      裏で 動くので Chrome を 触っている 時間 は ゼロ。
+    <div class="hero-kicker reveal">CHROME 拡張 · 買い切り ¥4,980 · 1 PC 1 ライセンス</div>
+    <h1 class="reveal">
+      <span class="line">ホームページを持たない店だけ、</span>
+      <span class="line">地図から<span class="seal-word mincho">一撃</span>で。</span>
+    </h1>
+    <p class="lead reveal">
+      Google マップから 都道府県 × 市 × 業種 で 検索し、 自社ホームページ の ない店だけ を CSV に。
+      MEO · サイト制作 · SaaS 営業 の 見込み客リスト作成 が、 手作業 の コピペ から 数分 の 一 操作 に 変わります。
     </p>
-    <div class="cta-row">
-      <a href="#pricing" class="btn btn-primary">今すぐ購入 · ¥4,980</a>
-      <a href="mapsleads-v0.5.1.zip" class="btn btn-ghost" download>5 検索まで無料で試す (zip DL)</a>
+    <div class="cta-row reveal">
+      <a href="#buy" class="btn btn-primary">
+        今すぐ購入 <span class="price">¥4,980</span>
+      </a>
+      <a href="mapsleads-v0.5.1.zip" class="btn btn-ghost" download>無料で 5 件 試す (zip DL)</a>
     </div>
-    <div class="trust">
-      <span class="item">買い切り (月額なし)</span>
-      <span class="item">1 PC 1 ライセンス</span>
+    <div class="trust reveal">
       <span class="item">Chrome / Edge / Brave 対応</span>
-      <span class="item">CSV · TSV · スプシ 貼付 対応</span>
-    </div>
-
-    <div class="demo" aria-hidden="true">
-      <div>
-        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-        &nbsp;&nbsp;maps-leads · 福井市 美容室 · HP無しフィルタ ON
-      </div>
-      <div class="csv">
-        <div class="row header">
-          <div>#</div><div>店名</div><div>電話</div><div class="col3">エリア</div><div class="col4">状態</div>
-        </div>
-        <div class="row hit">
-          <div class="n no">01</div><div>NEW★STAR!</div><div>0776-53-0355</div><div class="col3">南四ツ居</div><div class="col4"><span class="tag">HP無</span></div>
-        </div>
-        <div class="row hit">
-          <div class="n no">02</div><div>hair make Lapis</div><div>0776-21-1881</div><div class="col3">日光２丁目</div><div class="col4"><span class="tag">HP無</span></div>
-        </div>
-        <div class="row hit">
-          <div class="n no">03</div><div>Agu hair i´ott</div><div>0776-97-9950</div><div class="col3">大和田</div><div class="col4"><span class="tag">HP無</span></div>
-        </div>
-        <div class="row hit">
-          <div class="n no">04</div><div>material</div><div>0776-25-1900</div><div class="col3">松本４丁目</div><div class="col4"><span class="tag">HP無</span></div>
-        </div>
-        <div class="row hit">
-          <div class="n no">05</div><div>Elparaiso</div><div>0776-27-7570</div><div class="col3">大手２丁目</div><div class="col4"><span class="tag">HP無</span></div>
-        </div>
-      </div>
+      <span class="item">月額課金なし</span>
+      <span class="item">CSV · TSV · スプシ 貼付</span>
+      <span class="item">郵便番号入力 対応</span>
     </div>
   </div>
 </section>
 
-<section class="alt">
+<section class="signature" style="border-top: 0; padding-top: 20px;">
   <div class="wrap">
-    <h2>3 つの武器</h2>
+    <div class="csv-frame reveal">
+      <div class="meta">
+        <span><span class="filename">mapsleads-福井県_福井市_美容室.csv</span> · 2026-08-01</span>
+        <span class="count">HP無 24 / 82 件</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 44%;">店 名</th>
+            <th>電 話</th>
+            <th>エリア</th>
+            <th style="text-align: right;">状 態</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="name">NEW★STAR!</td>
+            <td class="tel">0776-53-0355</td>
+            <td class="area">南四ツ居</td>
+            <td class="tag"><span class="tag-noweb">HP無</span></td>
+          </tr>
+          <tr>
+            <td class="name">hair make Lapis</td>
+            <td class="tel">0776-21-1881</td>
+            <td class="area">日光２丁目</td>
+            <td class="tag"><span class="tag-noweb">HP無</span></td>
+          </tr>
+          <tr>
+            <td class="name">Agu hair i'ott 大和田</td>
+            <td class="tel">0776-97-9950</td>
+            <td class="area">大和田</td>
+            <td class="tag"><span class="tag-noweb">HP無</span></td>
+          </tr>
+          <tr>
+            <td class="name">material</td>
+            <td class="tel">0776-25-1900</td>
+            <td class="area">松本４丁目</td>
+            <td class="tag"><span class="tag-noweb">HP無</span></td>
+          </tr>
+          <tr>
+            <td class="name">Elparaiso</td>
+            <td class="tel">0776-27-7570</td>
+            <td class="area">大手２丁目</td>
+            <td class="tag"><span class="tag-noweb">HP無</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="csv-note">ほか 19 件 · スプレッドシート に そのまま 貼付 可</div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>3 つ の 武器。</h2>
     <p class="section-lead">
-      Google マップ を 手でスクロール しながら 「あれ、この店 HP ないな」 と 目視する 作業 を、 全自動 にします。
+      Google マップ を 手 で スクロール して 「この店 HP ないな」 を 目視 する 作業 を、 全 自動 で。
     </p>
-    <div class="feats">
-      <div class="feat">
-        <div class="fnum">1</div>
-        <h3>都道府県 × 市 × 業種</h3>
-        <p>プルダウンで 選ぶだけ。 福井県 21 市町 + 全国 主要都市 内蔵。 業種プリセット 30 種類、 自由入力も可。</p>
+    <div class="blocks">
+      <div class="block">
+        <span class="glyph">01 · SEARCH</span>
+        <h3>県 · 市 · 郵便番号 · 業種</h3>
+        <p>プルダウン で 選ぶだけ。 全 47 都道府県 + 業種 30 種 内蔵、 郵便番号 入力 で 町名 まで 自動 絞込。</p>
+        <div class="detail">福井県 21 市町 完備</div>
       </div>
-      <div class="feat">
-        <div class="fnum">2</div>
-        <h3>HP 無 · Insta 有 · 公式 LINE 有</h3>
-        <p>3 つの チェックボックス で 絞り込み。 「HP 無し」 は HotPepper / 楽天ビューティ のみ 掲載 の 店 も 検出。 「Instagram 有」 「公式 LINE 有」 で 攻める先を 変えられます。</p>
+      <div class="block">
+        <span class="glyph">02 · FILTER</span>
+        <h3>HP無 · Insta · 公式 LINE</h3>
+        <p>3 つ の チェックボックス で AND 絞込。 ホットペッパー · 楽天ビューティ のみ の 店 も 「自社 HP なし」 と 正しく 検出。</p>
+        <div class="detail">予約サイト 12 種 を 自動判別</div>
       </div>
-      <div class="feat">
-        <div class="fnum">3</div>
-        <h3>裏で 動く</h3>
-        <p>ボタン押すと 最小化ウィンドウが 自動で立ち上がり、 裏で Google マップを操作。 popup を 閉じても 継続、 完了時に アイコンで通知。</p>
+      <div class="block">
+        <span class="glyph">03 · EXTRACT</span>
+        <h3>裏で 動く 最小化 モード</h3>
+        <p>収集 中 は Chrome が 最小化 で 裏 に 回る。 popup 閉じて も 継続、 完了で アイコン に 件数 バッジ 表示。</p>
+        <div class="detail">100 件 の 詳細確認 で 約 3〜5 分</div>
       </div>
     </div>
   </div>
@@ -383,85 +619,96 @@
 
 <section>
   <div class="wrap">
-    <h2>使い方 は 3 ステップ</h2>
-    <p class="section-lead">拡張を入れる → 条件を選ぶ → CSV に落とす。 平均 2 分で 20〜60 件のリスト が 手元に。</p>
+    <h2>使い方 は 3 段階。</h2>
+    <p class="section-lead">拡張 を 入れる、 条件 を 選ぶ、 CSV に 落とす。 覚える こと は それだけ。</p>
     <div class="steps">
       <div class="step">
-        <div class="snum">01</div>
-        <h3>拡張を Chrome に インストール</h3>
-        <p>zip を DL → chrome://extensions で 「デベロッパーモード ON」 → 「パッケージ化されていない拡張機能を読み込む」 → 完了。</p>
+        <div class="step-no">STEP 01</div>
+        <h3>拡張 を Chrome に 入れる</h3>
+        <p>zip を DL、 chrome://extensions で 「デベロッパー モード」 → 「読み込む」 → 完了。 30 秒。</p>
       </div>
       <div class="step">
-        <div class="snum">02</div>
-        <h3>県・市・業種を選び「収集開始」</h3>
-        <p>ツールバーの MapsLeads アイコン クリック → プルダウン 3 つ + フィルタ を 選ぶ → 収集開始。 裏で 作業が 始まります。</p>
+        <div class="step-no">STEP 02</div>
+        <h3>県 · 市 · 業種 を 選ぶ</h3>
+        <p>ツールバー の MapsLeads アイコン → プルダウン 3 つ と フィルタ を 選び 「収集 を 開始」。</p>
       </div>
       <div class="step">
-        <div class="snum">03</div>
-        <h3>CSV / TSV で 出力</h3>
-        <p>完了通知 が 来たら popup を 開く → 「CSV ダウンロード」 or 「TSV コピー」 → Google スプシ に そのまま 貼付。</p>
+        <div class="step-no">STEP 03</div>
+        <h3>CSV / TSV で 受け取る</h3>
+        <p>完了 通知 で popup 開き 「CSV DL」 か 「TSV コピー」。 Google スプレッドシート に そのまま 貼付。</p>
       </div>
     </div>
   </div>
 </section>
 
-<section class="alt" id="pricing">
+<section id="buy">
   <div class="wrap">
-    <h2 style="text-align:center;">料金</h2>
-    <p class="section-lead" style="margin:0 auto 40px; text-align:center;">月額 課金なし。 1 度買えば 一生使える 買い切り 型。</p>
-    <div class="price">
-      <div class="tier">Standard</div>
-      <div class="amt"><span class="yen">¥</span>4,980<span class="unit">/ 買い切り</span></div>
-      <div class="note">1 PC 1 ライセンス · 生涯利用</div>
-      <ul>
-        <li>全ての 検索 条件 (地域 · 業種 · フィルタ) 使い放題</li>
-        <li>CSV · TSV 出力 無制限</li>
-        <li>裏で動く 最小化 モード</li>
-        <li>Chrome DOM 変更時 の 無償 アップデート (1 年間)</li>
-        <li>メール サポート (skeleton-inc.jp)</li>
-      </ul>
-      <a href="mailto:sales@skeleton-inc.jp?subject=MapsLeads購入希望&body=会社名 / 個人名:%0A用途:%0A支払方法希望 (Stripe / 銀行振込):" class="btn btn-primary">購入 申し込み (メール)</a>
+    <h2 style="text-align: center;">料金。</h2>
+    <p class="section-lead" style="margin: 0 auto 48px; text-align: center;">
+      月額 課金 は しません。 一度 買えば 永年 使えます。
+    </p>
+    <div class="price-wrap">
+      <div class="price-card">
+        <div class="plan-name">STANDARD LICENSE</div>
+        <p class="amount">
+          <span class="yen">¥</span>4,980
+          <span class="unit">買い切り · 税込 · 1 PC 1 ライセンス</span>
+        </p>
+        <ul>
+          <li>都道府県 × 市 × 郵便番号 × 業種 検索 無制限</li>
+          <li>HP無 / Instagram / 公式 LINE の 3 フィルタ</li>
+          <li>CSV · TSV 出力 無制限 · 精確モード / 速さ優先</li>
+          <li>Chrome DOM 変更時 の 無償 アップデート 1 年</li>
+          <li>メール サポート (skeleton-inc.jp)</li>
+          <li>1 キー 1 PC 縛り · 別 PC 移行 は owner 依頼 で 交換</li>
+        </ul>
+        <a href="mailto:sales@skeleton-inc.jp?subject=MapsLeads%20購入希望&body=会社名%20%2F%20個人名%3A%0A用途%3A%0A支払方法希望%20(Stripe%20%2F%20銀行振込)%3A" class="btn btn-primary">
+          購入 を メール で 申し込む
+        </a>
+      </div>
     </div>
-    <p class="free-note" id="trial">まずは 無料 で 5 検索 まで お試し 可能。 (トライアル 中も 全機能 使えます)</p>
+    <div class="price-note">まず 5 件 無料 で 動作 確認 → 気に入れば メール で 購入。</div>
   </div>
 </section>
 
 <section>
   <div class="wrap">
-    <h2 style="text-align:center;">よくある質問</h2>
-    <p class="section-lead" style="margin:0 auto 40px; text-align:center;">導入前 に 気になる ポイント まとめ。</p>
+    <h2 style="text-align: center;">よくある 質問。</h2>
+    <p class="section-lead" style="margin: 0 auto 40px; text-align: center;">
+      導入 前 に 気になる ポイント を 8 つ に。
+    </p>
     <div class="faq">
       <details>
-        <summary>Google マップ の 利用規約 に 触れませんか?</summary>
-        <p>本ツール は 「人間 が 検索 する ペース」 を 大幅 に 超えない 待機時間 (デフォルト 1.2 秒/スクロール · 0.6 秒/店舗) を 挟んで います。 大量 hammering は しません。 通常 の 営業リスト 作成用途 (1 日 数十 検索) の 範囲内 で ご利用 ください。 サーバに 対する 過度な 負荷 を 意図的 に かける 使用 は 利用規約 で 禁止 しています。</p>
+        <summary>Google マップ の 利用規約 に 抵触 しませんか</summary>
+        <p>本ツール は 人間 が 検索 する ペース を 大幅 に 超えない 待機時間 (デフォルト 1.2 秒 / スクロール、 0.6 秒 / 店舗) を 挟んで います。 大量 hammering は しません。 通常 の 営業 リスト 作成用途 (1 日 数十 検索) の 範囲 で ご利用 ください。</p>
       </details>
       <details>
-        <summary>1 検索 で 何件 取れますか?</summary>
-        <p>Google マップ 側 の 表示 上限 で 通常 20〜120 件 / 検索 です。 より 深い 網羅 が 必要 な 場合 は 業種 を 細分化 (「美容室」 → 「メンズ 美容室」 「40代 女性 向け 美容室」 等) するか、 エリア を 町単位 まで 絞る と 追加取得 できます。</p>
+        <summary>1 検索 で 何件 取れますか</summary>
+        <p>Google マップ 側 の 表示 上限 で 通常 20〜120 件 / 検索 です。 より 深い 網羅 が 必要 な 場合 は 業種 を 細分化 (「美容室」 → 「メンズ美容室」) するか、 郵便番号 で 町単位 に 絞る と 追加 取得 できます。</p>
       </details>
       <details>
-        <summary>HP 無し の 判定 精度 は?</summary>
-        <p>Google マップ の 詳細パネル に ウェブサイト 欄 が 未登録 の 店舗 を 「HP 無し」 と 判定 します。 加えて 「ウェブサイト 欄 が HotPepper / 楽天ビューティ / minimo など の 予約ポータル のみ」 の 場合 も 「自社 HP 無し」 として 検出 します (フィルタ で 分離 可能)。</p>
+        <summary>「HP 無し」 の 判定 精度 は</summary>
+        <p>Google マップ の 詳細 パネル に ウェブサイト 欄 が 未登録 の 店舗 を 「HP 無し」 と 判定 します。 加えて 「ウェブサイト 欄 が HotPepper / 楽天ビューティ / minimo など の 予約 ポータル のみ」 の 場合 も 「自社 HP 無し」 として 検出 します (フィルタ で 分離 可能)。</p>
       </details>
       <details>
-        <summary>Instagram / 公式 LINE の 検出 は どこまで?</summary>
-        <p>Google マップ の 詳細 に 登録 されて いる リンク を ベース に 検出 します。 具体的 に は Instagram (instagram.com/...) · LINE 公式 (lin.ee/... / liff.line.me/...) の URL が Maps 上 に 掲載 されて いる 場合 に hit します。 Maps に 未登録 で 実 は SNS を やって いる 店 は 検出 されません (Phase 2 で 別途 対応 予定)。</p>
+        <summary>Instagram / 公式 LINE の 検出 は どこまで</summary>
+        <p>Google マップ の 詳細 に 登録 されている リンク を ベース に 検出 します。 具体的 に は Instagram (instagram.com/...) と LINE 公式 (lin.ee/... / liff.line.me/...) の URL が Maps 上 に 掲載 されている 場合 に hit します。 Maps に 未登録 で 実 は SNS を やっている 店 は 検出 されません (Phase 2 で 別途 対応 予定)。</p>
       </details>
       <details>
-        <summary>返品・返金 は?</summary>
-        <p>ソフトウェア の 性質上、 ライセンス キー 発行後 の キャンセル・返金 は 承れません。 5 検索 の 無料 トライアル で 動作 を ご確認 の上、 ご購入 ください。</p>
+        <summary>1 キー 1 PC の 縛り は なぜ</summary>
+        <p>不正 な キー 共有 を 防ぐ ため、 初回 起動 の PC に キー が bind されます。 別 PC で 使いたい 場合 は owner に メール で 依頼 → 旧 bind を 解除 し 新 PC で 再度 bind し 直します (無料)。 Chrome 拡張 の chrome.storage 内 で 完結、 個人 情報 は 一切 サーバ に 送信 しません。</p>
+      </details>
+      <details>
+        <summary>返品 · 返金 は</summary>
+        <p>ソフトウェア の 性質 上、 ライセンス キー 発行 後 の キャンセル · 返金 は 承れません。 5 件 の 無料 トライアル で 動作 を ご確認 の上、 ご購入 ください。 当社 の 責 に 帰す べき 事由 で 動作 しない 場合 は 全額 返金 します。</p>
       </details>
       <details>
         <summary>複数 PC で 使いたい</summary>
         <p>PC 台数分 の ライセンス を お求め ください。 2 PC ¥8,960 · 3 PC ¥12,940 · 5 PC 以上 は 別途 見積り。 sales@skeleton-inc.jp まで。</p>
       </details>
       <details>
-        <summary>Chrome マップ の 仕様変更 で 動かなく なる 可能性 は?</summary>
-        <p>Google マップ の DOM 構造 は 年 1〜2 回 変更 が 入ります。 購入 後 1 年間 は 仕様変更 に 対応 する 無償 アップデート を 提供 します (2 年目以降 は アップデート 版 ¥1,980 / 年)。</p>
-      </details>
-      <details>
-        <summary>個人 情報 の 収集 は?</summary>
-        <p>本ツール は お客様 の 個人情報 を 一切 送信・保存 しません。 ライセンス キー · 検索条件 · 収集 結果 は 全て お使い の Chrome 内 (chrome.storage.local) に 保持 されます。 詳細 は <a href="privacy.html">プライバシーポリシー</a> を ご覧 ください。</p>
+        <summary>Chrome マップ の 仕様変更 で 動かなく なる 可能性 は</summary>
+        <p>Google マップ の DOM 構造 は 年 1〜2 回 変更 が 入ります。 購入 後 1 年間 は 仕様変更 に 対応 する 無償 アップデート を 提供 (2 年目 以降 は アップデート版 ¥1,980 / 年)。</p>
       </details>
     </div>
   </div>
@@ -470,24 +717,25 @@
 <footer>
   <div class="wrap">
     <div>
-      <div class="brand"><span class="logo"></span>MapsLeads</div>
-      <p style="color:#a8adbe; margin:12px 0 0; max-width:280px; font-size:12px;">Google マップ 営業 リスト 抽出 Chrome 拡張。 提供: スケルトン株式会社</p>
+      <div class="brand">
+        <span class="seal-mark"></span>
+        MapsLeads
+      </div>
+      <p class="brand-desc">Google マップ 営業 リスト 抽出 Chrome 拡張。 提供 : スケルトン株式会社</p>
     </div>
-    <div class="col">
-      <h4>製品</h4>
-      <a href="#pricing">料金</a>
-      <a href="#trial">無料トライアル</a>
-      <a href="terms.html">利用規約</a>
-      <a href="privacy.html">プライバシーポリシー</a>
-      <a href="tokusho.html">特定商取引法に基づく表記</a>
+    <div>
+      <h4>製 品</h4>
+      <a href="#buy">料金</a>
+      <a href="mapsleads-v0.5.1.zip" download>無料 トライアル DL</a>
+      <a href="terms.html">利用 規約</a>
+      <a href="privacy.html">プライバシー ポリシー</a>
+      <a href="tokusho.html">特定 商取引法 に 基づく 表記</a>
     </div>
-    <div class="col">
+    <div>
       <h4>サポート</h4>
       <a href="mailto:sales@skeleton-inc.jp">sales@skeleton-inc.jp</a>
       <a href="https://skeleton-inc.jp">スケルトン株式会社</a>
     </div>
-  </div>
-  <div class="wrap">
     <div class="legal">© 2026 SKELETON Inc. · 本サービス は Google LLC · Google マップ と は 一切 関係 ありません。</div>
   </div>
 </footer>
