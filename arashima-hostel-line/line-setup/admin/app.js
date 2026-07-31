@@ -113,6 +113,7 @@ function renderTab(tab) {
   else if (tab === 'guests') loadGuests();
   else if (tab === 'ota') loadOta();
   else if (tab === 'ops') loadOps();
+  else if (tab === 'price') loadPriceScan();
   else if (tab === 'logs') loadLogs();
 }
 
@@ -2038,3 +2039,242 @@ function openStaffModal(sid) {
 
   $('#opsModal').hidden = false;
 }
+
+// ============ 価格調査 (Booking 半径10km) ============
+const OWN_EXTERNAL_IDS = new Set([
+  'booking:arashima-hostel',
+]);
+let priceScanCache = null;
+
+async function loadPriceScan() {
+  const wrap = $('#priceHeatmap');
+  const tbl = $('#priceTable');
+  const empty = $('#priceEmpty');
+  wrap.innerHTML = '<div class="hint" style="padding:24px;">読み込み中…</div>';
+  tbl.innerHTML = '';
+  empty.hidden = true;
+  try {
+    const r = await apiGet('get-comp-scan');
+    if (!r || !r.ok || !r.data || !r.data.dates || !r.data.dates.length) {
+      wrap.innerHTML = '';
+      empty.hidden = false;
+      renderPriceKpis(null);
+      return;
+    }
+    priceScanCache = r.data;
+    renderPriceKpis(r.data);
+    renderHeatmap(r.data);
+    renderPriceTable(r.data);
+  } catch (e) {
+    wrap.innerHTML = `<div class="hint" style="padding:24px;color:#b91c1c;">読み込み失敗: ${e.message}</div>`;
+  }
+}
+
+$('#priceRefresh')?.addEventListener('click', loadPriceScan);
+
+function fmtYen(n) {
+  if (n == null || Number.isNaN(n)) return '—';
+  return '¥' + Math.round(n).toLocaleString('ja-JP');
+}
+
+function median(arr) {
+  const s = arr.filter((x) => x != null).sort((a, b) => a - b);
+  if (!s.length) return null;
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+function average(arr) {
+  const s = arr.filter((x) => x != null);
+  return s.length ? s.reduce((a, b) => a + b, 0) / s.length : null;
+}
+
+function quantileBucket(price, buckets) {
+  if (price == null) return null;
+  for (let i = 0; i < buckets.length; i++) if (price <= buckets[i]) return i + 1;
+  return 5;
+}
+
+function computeBuckets(allPrices) {
+  const s = allPrices.filter((x) => x != null).sort((a, b) => a - b);
+  if (!s.length) return [0, 0, 0, 0];
+  const q = (p) => s[Math.min(s.length - 1, Math.floor(s.length * p))];
+  return [q(0.20), q(0.40), q(0.60), q(0.80)];
+}
+
+function renderPriceKpis(data) {
+  const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  const setEyebrow = (label) => setText('priceEyebrow', label);
+
+  if (!data) {
+    setText('priceMedian', '—');
+    setText('priceDelta', 'データなし');
+    setText('priceCount', '—');
+    setText('priceAvg30', '—');
+    setText('priceWeekend', '—');
+    setText('priceScannedAt', '—');
+    return;
+  }
+  setEyebrow(`大野 半径 ${data.radiusKm}km · ${data.sites?.join(' + ') || 'Booking.com'}`);
+
+  const dates = data.dates.slice().sort();
+  const today = new Date().toISOString().slice(0, 10);
+  const targetDate = dates.find((d) => d >= today) || dates[0];
+
+  const compKeys = Object.keys(data.hotels).filter((k) => !OWN_EXTERNAL_IDS.has(k));
+  const ownKeys = Object.keys(data.hotels).filter((k) => OWN_EXTERNAL_IDS.has(k));
+
+  const compPricesToday = compKeys.map((k) => data.prices[k]?.[targetDate]).filter((x) => x != null);
+  const med = median(compPricesToday);
+  setText('priceMedian', fmtYen(med));
+
+  const ownPricesToday = ownKeys.map((k) => data.prices[k]?.[targetDate]).filter((x) => x != null);
+  const ownMed = median(ownPricesToday);
+  const deltaEl = document.getElementById('priceDelta');
+  if (ownMed != null && med != null) {
+    const diff = ownMed - med;
+    const dir = diff > 0 ? '高い' : diff < 0 ? '安い' : '同じ';
+    deltaEl.textContent = `自ホテル ${fmtYen(ownMed)} · ${dir}${diff !== 0 ? ' ' + fmtYen(Math.abs(diff)) : ''} (${targetDate})`;
+    deltaEl.className = 'price-hero__delta ' + (diff < 0 ? 'is-cheaper' : diff > 0 ? 'is-pricier' : '');
+  } else {
+    deltaEl.textContent = `対象日 ${targetDate}`;
+    deltaEl.className = 'price-hero__delta';
+  }
+
+  setText('priceCount', compKeys.length);
+
+  const allCompPrices = compKeys.flatMap((k) => Object.values(data.prices[k] || {}));
+  setText('priceAvg30', fmtYen(average(allCompPrices)));
+
+  const weekendPrices = compKeys.flatMap((k) => {
+    return dates.filter((d) => {
+      const dow = new Date(d + 'T00:00:00+09:00').getDay();
+      return dow === 5 || dow === 6;
+    }).map((d) => data.prices[k]?.[d]).filter((x) => x != null);
+  });
+  setText('priceWeekend', fmtYen(average(weekendPrices)));
+
+  const scanned = new Date(data.scannedAt);
+  const scannedStr = `${scanned.getMonth() + 1}/${scanned.getDate()} ${String(scanned.getHours()).padStart(2, '0')}:${String(scanned.getMinutes()).padStart(2, '0')}`;
+  setText('priceScannedAt', scannedStr);
+}
+
+function renderHeatmap(data) {
+  const wrap = $('#priceHeatmap');
+  wrap.innerHTML = '';
+
+  const dates = data.dates.slice().sort();
+  const allPrices = Object.values(data.prices).flatMap((row) => Object.values(row));
+  const buckets = computeBuckets(allPrices);
+
+  // header row (date labels)
+  const head = document.createElement('div');
+  head.className = 'price-hm__row price-hm__row--head';
+  const headLbl = document.createElement('div');
+  headLbl.className = 'price-hm__label';
+  headLbl.textContent = 'ホテル / 日付';
+  head.appendChild(headLbl);
+
+  const headCells = document.createElement('div');
+  headCells.className = 'price-hm__cells';
+  const dowChars = ['日', '月', '火', '水', '木', '金', '土'];
+  for (const d of dates) {
+    const cell = document.createElement('div');
+    const dObj = new Date(d + 'T00:00:00+09:00');
+    const dow = dObj.getDay();
+    const isWknd = dow === 0 || dow === 5 || dow === 6;
+    cell.className = 'price-hm__date' + (isWknd ? ' price-hm__date--wknd' : '');
+    cell.innerHTML = `<span class="price-hm__date-dow">${dowChars[dow]}</span><span class="price-hm__date-num">${dObj.getDate()}</span>`;
+    headCells.appendChild(cell);
+  }
+  head.appendChild(headCells);
+  wrap.appendChild(head);
+
+  // sort hotels: own first, then by distance
+  const hotelKeys = Object.keys(data.hotels).sort((a, b) => {
+    const oa = OWN_EXTERNAL_IDS.has(a) ? 0 : 1;
+    const ob = OWN_EXTERNAL_IDS.has(b) ? 0 : 1;
+    if (oa !== ob) return oa - ob;
+    return (data.hotels[a].distanceKm || 99) - (data.hotels[b].distanceKm || 99);
+  });
+
+  for (const k of hotelKeys) {
+    const h = data.hotels[k];
+    const isOwn = OWN_EXTERNAL_IDS.has(k);
+    const row = document.createElement('div');
+    row.className = 'price-hm__row' + (isOwn ? ' price-hm__row--own' : '');
+
+    const label = document.createElement('div');
+    label.className = 'price-hm__label';
+    label.innerHTML = `
+      <span class="price-hm__name" title="${escapeHtml(h.name || '?')}">${escapeHtml(h.name || '?')}</span>
+      <span class="price-hm__meta">${(h.distanceKm ?? '—')} km${isOwn ? ' · 自ホテル' : ''}</span>
+    `;
+    row.appendChild(label);
+
+    const cells = document.createElement('div');
+    cells.className = 'price-hm__cells';
+    for (const d of dates) {
+      const p = data.prices[k]?.[d];
+      const cell = document.createElement('div');
+      cell.className = 'price-hm__cell';
+      if (p == null) {
+        cell.dataset.empty = '1';
+        cell.dataset.tooltip = `${d} · 満室 or 未取得`;
+      } else {
+        cell.dataset.h = String(quantileBucket(p, buckets));
+        cell.dataset.tooltip = `${d} · ${fmtYen(p)}`;
+      }
+      cells.appendChild(cell);
+    }
+    row.appendChild(cells);
+    wrap.appendChild(row);
+  }
+}
+
+function renderPriceTable(data) {
+  const tbl = $('#priceTable');
+  const hotelKeys = Object.keys(data.hotels).sort((a, b) => {
+    const oa = OWN_EXTERNAL_IDS.has(a) ? 0 : 1;
+    const ob = OWN_EXTERNAL_IDS.has(b) ? 0 : 1;
+    if (oa !== ob) return oa - ob;
+    return (data.hotels[a].distanceKm || 99) - (data.hotels[b].distanceKm || 99);
+  });
+  const rows = hotelKeys.map((k) => {
+    const h = data.hotels[k];
+    const prices = Object.entries(data.prices[k] || {}).filter(([, v]) => v != null);
+    const priceVals = prices.map(([, v]) => v);
+    const min = priceVals.length ? Math.min(...priceVals) : null;
+    const max = priceVals.length ? Math.max(...priceVals) : null;
+    const avg = average(priceVals);
+    const minDate = priceVals.length ? prices.find(([, v]) => v === min)?.[0] : null;
+    const maxDate = priceVals.length ? prices.find(([, v]) => v === max)?.[0] : null;
+    const isOwn = OWN_EXTERNAL_IDS.has(k);
+    return `
+      <tr class="${isOwn ? 'is-own' : ''}">
+        <td class="name"><a href="${h.url}" target="_blank" rel="noopener">${escapeHtml(h.name || '?')}</a>${isOwn ? ' <span style="font-size:10px;letter-spacing:0.16em;">自ホテル</span>' : ''}</td>
+        <td class="num">${h.distanceKm ?? '—'} km</td>
+        <td class="num">${fmtYen(avg)}</td>
+        <td class="num">${fmtYen(min)}${minDate ? ` <span style="font-size:10px;color:var(--muted);">${minDate.slice(5)}</span>` : ''}</td>
+        <td class="num">${fmtYen(max)}${maxDate ? ` <span style="font-size:10px;color:var(--muted);">${maxDate.slice(5)}</span>` : ''}</td>
+        <td class="num">${prices.length} / ${data.dates.length}</td>
+      </tr>
+    `;
+  }).join('');
+  tbl.innerHTML = `
+    <table class="price-table">
+      <thead>
+        <tr>
+          <th>ホテル</th>
+          <th style="text-align:right;">距離</th>
+          <th style="text-align:right;">${data.dates.length}日 平均</th>
+          <th style="text-align:right;">最安</th>
+          <th style="text-align:right;">最高</th>
+          <th style="text-align:right;">出現日</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+

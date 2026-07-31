@@ -143,6 +143,13 @@ exports.adminApi = functions.onRequest(
           });
         }
 
+        // ---- 価格調査 (競合ホテル scrape) latest snapshot ----
+        if (action === 'get-comp-scan') {
+          const snap = await db.collection('comp_scan').doc('latest').get();
+          if (!snap.exists) return res.json({ ok: true, data: null });
+          return res.json({ ok: true, data: snap.data() });
+        }
+
         if (action === 'detail') {
           const resNo = String(req.query.resNo || '');
           const doc = await db.collection('reservations').doc(resNo).get();
@@ -277,6 +284,24 @@ exports.adminApi = functions.onRequest(
             list, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
           return res.json({ ok: true });
+        }
+
+        // ---- 価格調査 (competitor scrape) upload from LaunchAgent / notebook ----
+        if (body.action === 'save-comp-scan') {
+          const data = body.data;
+          if (!data || typeof data !== 'object') return res.status(400).json({ error: 'invalid data' });
+          const bytes = Buffer.byteLength(JSON.stringify(data), 'utf8');
+          if (bytes > 900000) return res.status(400).json({ error: 'comp-scan too large (near 1MiB doc limit)' });
+          await db.collection('comp_scan').doc('latest').set({
+            ...data,
+            uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          const dateKey = new Date().toISOString().slice(0, 10);
+          await db.collection('comp_scan_history').doc(dateKey).set({
+            ...data,
+            uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          return res.json({ ok: true, bytes });
         }
 
         return res.status(400).json({ error: 'unknown POST action' });
