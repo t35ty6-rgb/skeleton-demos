@@ -979,7 +979,7 @@
       <div class="login-brand-mark">S</div>
       <div class="login-brand-name">Skel·CRM</div>
     </div>
-    <div class="login-tagline">LINE 統合 顧客配信 プラットフォーム</div>
+    <div class="login-tagline">Lステップ / エルメ の 拡張 モジュール · CRM + 動画 + メール 認証 統合</div>
 
     <div class="login-title">ログイン</div>
     <div class="login-sub">メールアドレス と パスワード で ログイン</div>
@@ -1023,7 +1023,7 @@
     <button class="nav-toggle" id="nav-toggle" aria-label="メニュー">☰</button>
     <div>
       <h1>Skel·CRM</h1>
-      <div class="sub">LINE 統合プラットフォーム</div>
+      <div class="sub">Lステップ / エルメ 拡張 · CRM 統合</div>
     </div>
     <div class="tenant-switcher" id="tenant-switcher" style="display:none;margin-left:8px;">
       <span id="tenant-current-name">—</span>
@@ -5396,9 +5396,17 @@ function renderChannels() {
           <div style="flex:1"><div style="font-size:11px;color:var(--dim);font-weight:700">接続</div><div style="font-size:13px;font-weight:800;color:${ch.connected?'var(--primary)':'var(--danger)'};padding-top:6px">${ch.connected?'●稼働中':'●未接続'}</div></div>
           <button class="btn btn-secondary ch-test-btn" data-ch-id="${escHtml(ch.id)}" style="padding:7px 12px;font-size:11px">接続 テスト</button>
         </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--rule);display:flex;align-items:center;gap:8px">
+          <div style="flex:1;font-size:11px;color:var(--ink-soft);font-weight:600;line-height:1.55">
+            <div style="font-weight:800;color:var(--ink)">Webhook 転送 (Lステップ / エルメ 連携)</div>
+            <div>${(ch.forwardWebhookUrls || []).length > 0 ? `${(ch.forwardWebhookUrls || []).length} 件 の URL に 転送 中` : '未 設定 (Skel·CRM 単独 動作)'}</div>
+          </div>
+          <button class="btn btn-secondary ch-fanout-btn" data-ch-id="${escHtml(ch.id)}" style="padding:6px 10px;font-size:11px;white-space:nowrap">転送 設定</button>
+        </div>
       </div>`).join('')
   }</div>`;
   el.querySelectorAll('.ch-test-btn').forEach(b => b.addEventListener('click', () => openChannelTestModal(state.channels.find(c => c.id === b.dataset.chId))));
+  el.querySelectorAll('.ch-fanout-btn').forEach(b => b.addEventListener('click', () => openChannelFanoutModal(state.channels.find(c => c.id === b.dataset.chId))));
   el.querySelectorAll('.ch-switch-btn').forEach(b => b.addEventListener('click', () => {
     state.channels.forEach(c => c.active = false);
     const target = state.channels.find(c => c.id === b.dataset.chId);
@@ -5462,6 +5470,76 @@ function openChannelAddModal() {
     setTimeout(() => openChannelTestModal(state.channels[state.channels.length - 1]), 500);
   });
   setTimeout(() => { const inp = document.getElementById('ch-modal-name'); if (inp) inp.focus(); }, 80);
+}
+
+// Lステップ / エルメ / 他 CRM 等 に LINE webhook を 転送 する 設定 modal
+// Skel·CRM が LINE 公式 webhook の 一次 受け先 に なって、 同 payload を
+// ここで 指定 した URL に fanout する。 raw body + X-Line-Signature 転送 なので
+// 転送 先 の 署名検証 も pass。
+function openChannelFanoutModal(ch) {
+  if (!ch) return;
+  const urls = Array.isArray(ch.forwardWebhookUrls) ? [...ch.forwardWebhookUrls] : [];
+  const modal = document.getElementById('modal');
+  const rowHtml = (u, i) => `
+    <div class="fanout-row" data-idx="${i}" style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+      <input type="url" class="field-input fanout-url" value="${escHtml(u)}" placeholder="https://example.com/api/webhook (Lステップ / エルメ / 他 CRM)" style="flex:1;font-family:'SF Mono',monospace;font-size:12px">
+      <button type="button" class="btn btn-ghost fanout-del-btn" title="削除" style="padding:6px 10px;font-size:11px">✕</button>
+    </div>`;
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>Webhook 転送 設定 (${escHtml(ch.name)})</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div style="padding:14px 16px;background:var(--primary-soft);border:1px solid var(--primary);border-radius:8px;margin-bottom:14px;font-size:12px;line-height:1.65;color:var(--ink-soft)">
+      Skel·CRM が LINE 公式 の webhook を 一次 受信 して、 ここで 指定 した URL に そのまま <b>raw payload + X-Line-Signature</b> を 転送 します。<br>
+      Lステップ / エルメ 等 の webhook URL を 入れる と、 それら の tool でも 「LINE から 直接 呼ばれた」 と 判定 され、 併用 運用 が 可能 に なります。
+    </div>
+    <div class="field-group">
+      <label class="field-label">転送先 URL (複数 可)</label>
+      <div id="fanout-list">${urls.length > 0 ? urls.map(rowHtml).join('') : rowHtml('', 0)}</div>
+      <button type="button" class="btn btn-ghost" id="fanout-add-row" style="margin-top:6px;font-size:12px">+ URL を 追加</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">LINE Developers Console 設定 手順</label>
+      <div style="padding:12px 14px;background:var(--surface-2);border-radius:8px;font-size:11.5px;line-height:1.65;color:var(--ink-soft)">
+        1. LINE Developers Console → Messaging API 設定<br>
+        2. Webhook URL に 下 の URL を 貼付 (Skel·CRM CF に 一元化):<br>
+        <code style="display:block;padding:8px 10px;margin-top:4px;background:var(--surface);border:1px solid var(--rule);border-radius:6px;font-family:'SF Mono',monospace;font-size:11px;word-break:break-all;user-select:all">https://asia-northeast1-skel-crm-oa-02.cloudfunctions.net/lineWebhook?tenant=${escHtml(state.currentTenantId || 'demo')}&amp;channel=${escHtml(ch.id)}</code>
+        3. 「Webhook の 利用」 を ON<br>
+        4. 応答メッセージ を OFF (Lステップ / エルメ 側 で 応答 する なら)
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="fanout-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="fanout-save">保存</button>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  const list = document.getElementById('fanout-list');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('fanout-cancel').addEventListener('click', closeModal);
+  document.getElementById('fanout-add-row').addEventListener('click', () => {
+    const n = list.querySelectorAll('.fanout-row').length;
+    list.insertAdjacentHTML('beforeend', rowHtml('', n));
+    wireDelBtns();
+  });
+  const wireDelBtns = () => {
+    list.querySelectorAll('.fanout-del-btn').forEach(b => {
+      b.onclick = () => { b.closest('.fanout-row').remove(); if (list.children.length === 0) list.insertAdjacentHTML('beforeend', rowHtml('', 0)); };
+    });
+  };
+  wireDelBtns();
+  document.getElementById('fanout-save').addEventListener('click', async () => {
+    const raw = Array.from(list.querySelectorAll('.fanout-url')).map(i => i.value.trim()).filter(u => /^https?:\/\//.test(u));
+    ch.forwardWebhookUrls = raw;
+    if (typeof dataAdapter.saveChannel === 'function') {
+      try { await dataAdapter.saveChannel(ch); } catch (e) { console.warn('saveChannel failed', e); }
+    }
+    closeModal();
+    renderChannels();
+    toast(raw.length > 0 ? `${raw.length} 件 の 転送先 を 保存 しました` : '転送先 を すべて 解除 しました', 'success');
+  });
 }
 
 function openChannelTestModal(ch) {
