@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C · Editorial Magazine — 荒島 価格調査</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Shippori+Mincho+B1:wght@400;500;700&family=Marcellus&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #FAF7F1;
+    --paper: #FEFCF6;
+    --ink: #14110E;
+    --ink-2: #3D3830;
+    --ink-3: #7A7365;
+    --rule: rgba(20,17,14,0.10);
+    --accent: #A63A21;
+    --serif: 'Shippori Mincho B1', 'Noto Serif JP', 'YuMincho', serif;
+    --roman: 'Marcellus', serif;
+    --sans: 'Hiragino Sans', 'Inter', system-ui, sans-serif;
+    --num: 'Inter', 'Hiragino Sans', system-ui, sans-serif;
+  }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.8;
+    padding: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .back { position: fixed; top: 14px; left: 14px; font-size: 10px; letter-spacing: 0.2em; color: var(--ink-3); text-decoration: none; z-index: 10; font-family: var(--roman); text-transform: uppercase; }
+  .back:hover { color: var(--ink); }
+
+  .mag { max-width: 940px; margin: 0 auto; padding: 60px 40px 80px; }
+
+  /* --- masthead --- */
+  .masthead {
+    text-align: center;
+    padding-bottom: 44px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 60px;
+  }
+  .masthead__pub {
+    font-family: var(--roman);
+    font-size: 10px;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--accent);
+    display: inline-block;
+    margin-bottom: 26px;
+  }
+  .masthead__title {
+    font-family: var(--serif);
+    font-size: 44px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    line-height: 1.35;
+    color: var(--ink);
+    margin-bottom: 18px;
+  }
+  .masthead__sub {
+    font-family: var(--serif);
+    font-size: 16px;
+    color: var(--ink-2);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    line-height: 1.65;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+  .masthead__meta {
+    display: flex;
+    justify-content: center;
+    gap: 26px;
+    margin-top: 24px;
+    font-family: var(--roman);
+    font-size: 10px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .masthead__meta span::before { content: '· '; margin-right: 4px; }
+  .masthead__meta span:first-child::before { content: ''; }
+
+  /* --- 章 --- */
+  .chapter {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 40px;
+    padding-bottom: 56px;
+    margin-bottom: 56px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .chapter:last-child { border-bottom: none; }
+  .chapter__num {
+    font-family: var(--roman);
+    font-size: 32px;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: 0;
+    padding-top: 4px;
+  }
+  .chapter__num::after {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 1px;
+    background: var(--accent);
+    margin-top: 12px;
+  }
+  .chapter__body { min-width: 0; }
+  .chapter__eyebrow {
+    font-family: var(--roman);
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .chapter__title {
+    font-family: var(--serif);
+    font-size: 30px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 20px;
+    letter-spacing: 0.02em;
+    line-height: 1.35;
+  }
+  .chapter__lead {
+    font-family: var(--serif);
+    font-size: 15.5px;
+    color: var(--ink-2);
+    font-weight: 400;
+    line-height: 1.85;
+    margin-bottom: 30px;
+    max-width: 640px;
+  }
+  .chapter__lead .drop {
+    font-family: var(--roman);
+    font-size: 42px;
+    line-height: 0.9;
+    float: left;
+    padding: 4px 10px 0 0;
+    color: var(--accent);
+  }
+
+  /* --- 章 Ⅰ hero 数字 --- */
+  .quote {
+    padding: 24px 0 12px;
+    border-top: 1px solid var(--rule);
+    margin-top: 24px;
+  }
+  .quote__val {
+    font-family: var(--serif);
+    font-size: 76px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .quote__caption {
+    font-family: var(--serif);
+    font-size: 14px;
+    color: var(--ink-2);
+    letter-spacing: 0.02em;
+    line-height: 1.7;
+    max-width: 480px;
+  }
+  .quote__caption b {
+    font-family: var(--num);
+    font-weight: 500;
+    color: var(--ink);
+    padding: 0 2px;
+  }
+
+  /* --- 章 Ⅰ 副 KPI --- */
+  .facets {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+  }
+  .facet { min-width: 0; }
+  .facet__lbl {
+    font-family: var(--roman);
+    font-size: 9.5px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .facet__val {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+    line-height: 1.2;
+  }
+  .facet__caption {
+    font-family: var(--serif);
+    font-size: 12px;
+    color: var(--ink-3);
+    line-height: 1.65;
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  /* --- 章 Ⅱ ヒートマップ --- */
+  .grid30 {
+    display: grid;
+    grid-template-columns: repeat(15, 1fr);
+    gap: 3px;
+    margin: 22px 0 12px;
+    max-width: 700px;
+  }
+  .grid30 > div {
+    aspect-ratio: 1;
+    border-radius: 2px;
+  }
+  .grid30 > div[data-h="1"] { background: rgba(31,92,140,0.72); }
+  .grid30 > div[data-h="2"] { background: rgba(80,140,175,0.44); }
+  .grid30 > div[data-h="3"] { background: rgba(20,17,14,0.10); }
+  .grid30 > div[data-h="4"] { background: rgba(180,90,65,0.44); }
+  .grid30 > div[data-h="5"] { background: var(--accent); }
+  .grid30-lgd {
+    font-family: var(--roman);
+    font-size: 9.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .grid30-lgd i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin: 0 2px; }
+  .grid30-lgd i:nth-child(1) { background: rgba(31,92,140,0.72); }
+  .grid30-lgd i:nth-child(2) { background: rgba(80,140,175,0.44); }
+  .grid30-lgd i:nth-child(3) { background: rgba(20,17,14,0.10); }
+  .grid30-lgd i:nth-child(4) { background: rgba(180,90,65,0.44); }
+  .grid30-lgd i:nth-child(5) { background: var(--accent); }
+
+  /* --- 章 Ⅲ 競合 リスト --- */
+  .comp {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    border-top: 1px solid var(--rule);
+    margin-top: 20px;
+  }
+  .comp__row {
+    display: grid;
+    grid-template-columns: 30px 1fr 60px 96px 96px;
+    align-items: baseline;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--rule);
+    gap: 20px;
+  }
+  .comp__idx {
+    font-family: var(--roman);
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.1em;
+  }
+  .comp__name {
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .comp__row.own .comp__name { color: var(--accent); font-weight: 700; }
+  .comp__row.own {
+    background: rgba(166,58,33,0.03);
+    border-left: 1px solid var(--accent);
+    padding-left: 12px;
+  }
+  .comp__dist {
+    font-family: var(--num);
+    font-size: 12px;
+    color: var(--ink-3);
+    text-align: right;
+    font-feature-settings: 'tnum' 1;
+  }
+  .comp__price {
+    font-family: var(--serif);
+    font-size: 16px;
+    color: var(--ink);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.005em;
+  }
+  .comp__diff {
+    font-family: var(--num);
+    font-size: 11.5px;
+    color: var(--ink-3);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .comp__diff.neg { color: rgb(31,92,140); }
+  .comp__diff.pos { color: var(--accent); }
+
+  /* --- 章 Ⅳ アクション --- */
+  .actions {
+    list-style: none;
+    padding: 0;
+    counter-reset: act;
+  }
+  .actions li {
+    counter-increment: act;
+    padding: 20px 0 24px 60px;
+    position: relative;
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--serif);
+    font-size: 15px;
+    color: var(--ink-2);
+    line-height: 1.85;
+  }
+  .actions li:last-child { border-bottom: none; }
+  .actions li::before {
+    content: counter(act, decimal-leading-zero);
+    position: absolute;
+    left: 0; top: 24px;
+    font-family: var(--roman);
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+  .actions li b { color: var(--ink); font-family: var(--num); font-weight: 500; padding: 0 2px; }
+
+  /* --- footer --- */
+  .colophon {
+    padding: 32px 0 0;
+    text-align: center;
+    font-family: var(--roman);
+    font-size: 9.5px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .colophon::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 1px;
+    background: var(--accent);
+    margin: 0 auto 20px;
+  }
+
+  @media (max-width: 760px) {
+    .mag { padding: 40px 22px; }
+    .masthead__title { font-size: 32px; }
+    .chapter { grid-template-columns: 1fr; gap: 22px; }
+    .chapter__num { font-size: 26px; }
+    .chapter__title { font-size: 24px; }
+    .quote__val { font-size: 56px; }
+    .facets { grid-template-columns: repeat(2, 1fr); gap: 22px; }
+    .grid30 { grid-template-columns: repeat(10, 1fr); }
+    .comp__row { grid-template-columns: 24px 1fr 80px 80px; gap: 12px; }
+    .comp__diff { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<a class="back" href="../">← 5案 一覧</a>
+
+<div class="mag">
+  <!-- masthead -->
+  <header class="masthead">
+    <div class="masthead__pub">Arashima · Market Insight · Volume 01</div>
+    <h1 class="masthead__title">大野 の 相場、<br>今夜 と これから 30 日。</h1>
+    <p class="masthead__sub">
+      半径 10 km、 十二 の 宿。 数字 は 今 の 顔 を 映し、 折線 は 動き 方 を 教える。 荒島 が どこ に 立つ か を、 相場 の 中 で 読む。
+    </p>
+    <div class="masthead__meta">
+      <span>Booking.com scrape</span>
+      <span>30 days × 12 rooms</span>
+      <span>2026·08·01 03·37</span>
+    </div>
+  </header>
+
+  <!-- 章 Ⅰ -->
+  <article class="chapter">
+    <div class="chapter__num">Ⅰ</div>
+    <div class="chapter__body">
+      <div class="chapter__eyebrow">Face of the Market</div>
+      <h2 class="chapter__title">相場 の 顔</h2>
+      <p class="chapter__lead">
+        <span class="drop">今</span>夜 の 中央値 ¥18,400。 半径 10 km で 12 軒 が 灯 を つけ、 平均 の 上下 に 均等 に 別れる 帯 が 見える。 特別 な 日 で は ない。 平日 の 顔 だ。
+      </p>
+      <div class="quote">
+        <span class="quote__val">¥18,400</span>
+        <p class="quote__caption">
+          今夜、 大野市 半径 10 km では <b>12</b> 軒 が 稼働。 荒島 は <b>¥9,800</b> で、 相場 より <b>¥8,600</b> 安い。
+        </p>
+      </div>
+      <div class="facets">
+        <div class="facet"><div class="facet__lbl">30 Days · Median</div><div class="facet__val">¥25,900</div><div class="facet__caption">相場 の 帯</div></div>
+        <div class="facet"><div class="facet__lbl">Weekend · Median</div><div class="facet__val">¥33,500</div><div class="facet__caption">土日 の 山</div></div>
+        <div class="facet"><div class="facet__lbl">Tightness</div><div class="facet__val">緩</div><div class="facet__caption">週末 需要 −3.3</div></div>
+        <div class="facet"><div class="facet__lbl">Trend · 3d/30d</div><div class="facet__val">−9%</div><div class="facet__caption">下降 の 兆し</div></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 章 Ⅱ -->
+  <article class="chapter">
+    <div class="chapter__num">Ⅱ</div>
+    <div class="chapter__body">
+      <div class="chapter__eyebrow">Rhythm of Thirty Days</div>
+      <h2 class="chapter__title">動き 方</h2>
+      <p class="chapter__lead">
+        <span class="drop">三</span>十 日 分 の 中央値 を 一枚 に 敷き詰める と、 週末 の 山 と 平日 の 谷 が 波 として 現れる。 濃 は 高値、 淡 は 安値。 荒島 は 常に 谷 の 底 に 座って いる。
+      </p>
+      <div class="grid30" id="grid30"></div>
+      <div class="grid30-lgd">
+        <span>安</span>
+        <i></i><i></i><i></i><i></i><i></i>
+        <span>高</span>
+      </div>
+      <p class="chapter__lead" style="margin-top:24px;">
+        直近 三日 の 中央値 は 30日 平均 より <b>−9%</b>、 相場 は 静か に 下降 し つつ ある。 週末 プレミアム は 依然 として <b>+29%</b>、 金土 に 価値 が 集約 する 構造 は 崩れ て い ない。
+      </p>
+    </div>
+  </article>
+
+  <!-- 章 Ⅲ -->
+  <article class="chapter">
+    <div class="chapter__num">Ⅲ</div>
+    <div class="chapter__body">
+      <div class="chapter__eyebrow">Faces of the Neighbours</div>
+      <h2 class="chapter__title">競合 の 素顔</h2>
+      <p class="chapter__lead">
+        <span class="drop">十</span>三 の 宿。 距離 順 に 並べる と、 徒歩圏 に 直接 競合 する 二 軒 と、 車 で 十分 圏 の 勝山 系 が 見える。 荒島 の 隣人 た ち は、 皆 それぞれ の 客層 を 持って いる。
+      </p>
+      <div class="comp" id="comp"></div>
+    </div>
+  </article>
+
+  <!-- 章 Ⅳ -->
+  <article class="chapter">
+    <div class="chapter__num">Ⅳ</div>
+    <div class="chapter__body">
+      <div class="chapter__eyebrow">Actions to Take</div>
+      <h2 class="chapter__title">打つ 手</h2>
+      <p class="chapter__lead">
+        <span class="drop">相</span>場 が 教える の は 数字 だけ で は ない。 曜日 の 波、 帯 の 位置、 隣人 の 顔 か ら 導い た、 今 打つ べき 具体 の 手。
+      </p>
+      <ol class="actions">
+        <li>相場 中央値 <b>¥25,900</b> に 対して 荒島 は <b>¥9,800</b>、 下位 15% 帯。 客層 「エコノミー 徹底」 と 「+¥3,000 上乗せ 検証」 の 二択 を、 三週 単位 で 試す。</li>
+        <li>週末 プレミアム 相場 <b>+29%</b>、 荒島 は 上乗せ 弱。 金土 の 単価 に <b>+¥2,500</b> を 三週 の 稼働率 で 検証。</li>
+        <li>相場 trend <b>−9%</b> 下降 中。 客足 落ち の 予兆 と 読み、 写真 / レビュー 応答 / OTA description の 見直し で 差別化 を 強化。</li>
+        <li>徒歩圏 直接 競合 = ナマケモノ (0.8 km / 平均 <b>¥14,400</b> / レビュー <b>9.0</b>)。 客層 かぶり 大、 「連泊 割引」「朝食 追加」 で 選ばれ る 理由 を 一つ 明確 に。</li>
+      </ol>
+    </div>
+  </article>
+
+  <div class="colophon">Arashima · Market Insight · rendered 03·37 JST</div>
+</div>
+
+<script src="../_data.js"></script>
+<script>
+  const D = window.MOCK_DATA;
+  const fmt = window.fmtYen;
+
+  // Ⅱ グリッド
+  const grid = document.getElementById('grid30');
+  const min = Math.min(...D.trend), max = Math.max(...D.trend), range = max - min || 1;
+  grid.innerHTML = D.trend.map(v => {
+    const rel = (v - min) / range;
+    const h = rel < 0.2 ? 1 : rel < 0.4 ? 2 : rel < 0.6 ? 3 : rel < 0.8 ? 4 : 5;
+    return `<div data-h="${h}" title="¥${v.toLocaleString('ja-JP')}"></div>`;
+  }).join('');
+
+  // Ⅲ 競合
+  const marketAvg = D.avg30;
+  const rows = D.hotels.slice().sort((a, b) => (a.own ? -1 : b.own ? 1 : a.dist - b.dist));
+  document.getElementById('comp').innerHTML = rows.map((h, i) => {
+    const diff = h.avg - marketAvg;
+    const dc = diff < -1000 ? 'neg' : diff > 1000 ? 'pos' : '';
+    return `
+      <div class="comp__row ${h.own ? 'own' : ''}">
+        <div class="comp__idx">${String(i + 1).padStart(2, '0')}</div>
+        <div class="comp__name">${h.name}</div>
+        <div class="comp__dist">${h.dist.toFixed(1)}km</div>
+        <div class="comp__price">${fmt(h.avg)}</div>
+        <div class="comp__diff ${dc}">${diff >= 0 ? '+' : ''}${fmt(diff)}</div>
+      </div>
+    `;
+  }).join('');
+</script>
+
+</body>
+</html>
