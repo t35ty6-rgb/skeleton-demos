@@ -1004,7 +1004,8 @@
     <div class="login-error" id="login-error"></div>
 
     <div class="login-footer">
-      アカウント が ない 場合 は 管理者 に お問い合わせ ください<br>
+      デモ 用: <b>admin@skel-crm.jp</b> / <b>SkelCrm2026!admin</b><br>
+      本番 は 管理者 が 発行 した アカウント で ログイン<br>
       <span style="color:var(--muted)">© Skeleton 株式会社</span>
     </div>
   </div>
@@ -3271,6 +3272,15 @@ function openBroadcastConfirmModal(opts, legacyTargetLabel, legacyCount) {
 
     // prod mode → Cloud Function 経由 で 実 LINE 送信
     if (window.__CRM_MODE === 'prod' && window.__CRM_LINE_API && window.__CRM_LINE_API.sendBroadcast) {
+      // 2026-07-31 QA blocker fix: targetUserIds が null / 空 の 場合 は 全 友達 誤送信 リスク
+      // 明示 「all」 意図 が ない 限り 送信 拒否
+      if ((!targetUserIds || targetUserIds.length === 0) && targetSegId !== 'all') {
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.textContent = `${count} 名に送信`;
+        toast('送信 対象 が 0名 です。 セグメント を 選択 する か 「全員 送信」 を 明示 して ください', 'warn');
+        return;
+      }
       try {
         const activeCh = (state.channels || []).find(c => c.active) || (state.channels || [])[0];
         // 動画 添付 が ある 場合 は video 情報 を meta に 埋め、 Cloud Function 側 で LINE template message に 変換
@@ -6264,27 +6274,22 @@ if (window.__CRM_MODE === 'prod') {
     document.getElementById('login-divider').style.display = 'none';
   }
 
-  // Anonymous auth 自動 sign-in (demo tenant のみ、 config.enableAnonymousMemberAuth=true 時)
-  const ALLOW_ANON = !!(window.__CRM_CONFIG || {}).enableAnonymousMemberAuth;
-  if (ALLOW_ANON && !auth.currentUser) {
-    signInAnonymously(auth).catch(e => console.warn('anon sign-in failed', e));
-  }
+  // 2026-07-31 QA blocker fix: admin ページ は 匿名 auth 禁止 (PII 漏洩 穴)
+  // enableAnonymousMemberAuth config は member.html 専用、 admin では 無視
+  const ALLOW_ANON = false;
 
   onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      // 未login: anon 有効 なら anon で 自動 login、 でなければ login screen
-      if (ALLOW_ANON) { signInAnonymously(auth).catch(() => {}); return; }
+    if (!user || user.isAnonymous) {
+      // 未login or 匿名 user は admin UI へ の アクセス 拒否 → login screen
+      if (user && user.isAnonymous) {
+        try { await signOut(auth); } catch (e) {}
+      }
       document.getElementById('login-scrim').classList.add('open');
       return;
     }
     // login 済: adminTenants claim を 取得
     const idTokenResult = await user.getIdTokenResult(true);
     let adminTenants = (idTokenResult.claims && idTokenResult.claims.adminTenants) || {};
-
-    // Anonymous user は 「demo」 tenant に 対して admin 相当 の 扱い (rules 側 で allow 済)
-    if (user.isAnonymous && ALLOW_ANON) {
-      adminTenants = { demo: 'admin', ...adminTenants };
-    }
 
     state.currentUser = {
       uid: user.uid,
