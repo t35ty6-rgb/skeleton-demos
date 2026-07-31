@@ -3408,7 +3408,6 @@
                   font-size: 10.5px; color: #6B7280; font-weight: 600; letter-spacing: 0.02em;
                 }
               </style>
-            </div>
 
             <!-- 2026-07-11 v3: modal 内 grey 「この顧客を削除」 削除。 削除 は 左サイドバー の 大きな 赤ボタン から (owner 明示指示) -->
             <button id="modal-delete-btn" style="display:none;"></button>
