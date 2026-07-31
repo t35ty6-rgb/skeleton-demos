@@ -2073,6 +2073,13 @@ async function loadPriceScan() {
 }
 
 $('#priceRefresh')?.addEventListener('click', loadPriceScan);
+$('#pricePrint')?.addEventListener('click', () => {
+  document.body.classList.add('is-printing');
+  const restore = () => { document.body.classList.remove('is-printing'); window.removeEventListener('afterprint', restore); };
+  window.addEventListener('afterprint', restore);
+  window.print();
+  setTimeout(restore, 4000);
+});
 
 function fmtYen(n) {
   if (n == null || Number.isNaN(n)) return '—';
@@ -2174,6 +2181,66 @@ function renderPriceKpis(data) {
   const scanned = new Date(data.scannedAt);
   const scannedStr = `${scanned.getMonth() + 1}/${scanned.getDate()} ${String(scanned.getHours()).padStart(2, '0')}:${String(scanned.getMinutes()).padStart(2, '0')}`;
   setText('priceScannedAt', scannedStr);
+
+  // tightness + trend (2026-07-31 tier A)
+  const t = computeTightness(data);
+  const tightEl = document.getElementById('priceTightness');
+  if (tightEl) {
+    const label = t.tightnessScore >= 8 ? '高' : t.tightnessScore >= 3 ? '中' : t.tightnessScore >= -3 ? '中立' : '緩';
+    tightEl.textContent = label;
+    tightEl.dataset.level = label;
+    const sub = document.getElementById('priceTightnessSub');
+    if (sub) sub.textContent = `週末 需要 score ${t.tightnessScore > 0 ? '+' : ''}${t.tightnessScore}`;
+  }
+  const trendEl = document.getElementById('priceTrend');
+  if (trendEl) {
+    trendEl.textContent = t.trendLabel;
+    trendEl.dataset.dir = t.trendLabel;
+    const sub = document.getElementById('priceTrendSub');
+    if (sub && t.trendPct != null) sub.textContent = `直近3日 vs 30日 平均 ${t.trendPct > 0 ? '+' : ''}${t.trendPct}%`;
+  }
+  renderMiniTrend('#priceTrendMini', t.marketMed, dates);
+  renderMiniSupply('#priceSupplyMini', t.supply, dates);
+}
+
+function renderMiniTrend(sel, marketMed, dates) {
+  const el = document.querySelector(sel);
+  if (!el) return;
+  const vals = dates.map(d => marketMed[d]).map(v => v == null ? null : v);
+  const numeric = vals.filter(v => v != null);
+  if (!numeric.length) { el.innerHTML = ''; return; }
+  const min = Math.min(...numeric), max = Math.max(...numeric);
+  const range = max - min || 1;
+  const w = 240, h = 60, pad = 4;
+  const stepX = (w - pad * 2) / Math.max(1, dates.length - 1);
+  const pts = vals.map((v, i) => v == null ? null : [pad + i * stepX, pad + (h - pad * 2) * (1 - (v - min) / range)]);
+  const path = pts.filter(Boolean).map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const dots = pts.map((p, i) => {
+    if (!p) return '';
+    const dow = new Date(dates[i] + 'T00:00:00+09:00').getDay();
+    const wknd = dow === 0 || dow === 5 || dow === 6;
+    return `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${wknd ? 2.5 : 1.6}" fill="${wknd ? '#9B3A26' : '#1a1a1a'}"/>`;
+  }).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="30日 相場 折線">
+    <path d="${path}" fill="none" stroke="#1a1a1a" stroke-width="1.4" stroke-linejoin="round"/>
+    ${dots}
+  </svg>`;
+}
+
+function renderMiniSupply(sel, supply, dates) {
+  const el = document.querySelector(sel);
+  if (!el) return;
+  const vals = dates.map(d => supply[d]?.priced || 0);
+  const max = Math.max(...vals, 1);
+  const w = 240, h = 40, pad = 2;
+  const barW = (w - pad * 2) / dates.length;
+  const bars = vals.map((v, i) => {
+    const bh = ((h - pad * 2) * v / max);
+    const dow = new Date(dates[i] + 'T00:00:00+09:00').getDay();
+    const wknd = dow === 0 || dow === 5 || dow === 6;
+    return `<rect x="${(pad + i * barW).toFixed(1)}" y="${(h - pad - bh).toFixed(1)}" width="${(barW - 0.6).toFixed(1)}" height="${bh.toFixed(1)}" fill="${wknd ? '#9B3A26' : '#1a1a1a'}" opacity="${wknd ? 0.9 : 0.65}"/>`;
+  }).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="日別 供給 (取得 hotel 数)">${bars}</svg>`;
 }
 
 function renderHeatmap(data) {
@@ -2183,6 +2250,7 @@ function renderHeatmap(data) {
   const dates = data.dates.slice().sort();
   const allPrices = Object.values(data.prices).flatMap((row) => Object.values(row));
   const buckets = computeBuckets(allPrices);
+  const marketMed = computeMarketMedianSeries(data);
 
   // header row (date labels)
   const head = document.createElement('div');
@@ -2253,7 +2321,10 @@ function renderHeatmap(data) {
         cell.dataset.tooltip = `${d} · 満室 or 未取得`;
       } else {
         cell.dataset.h = String(quantileBucket(p, buckets));
-        cell.dataset.tooltip = `${d} · ${fmtYen(p)}${href ? ' · タップで Booking' : ''}`;
+        const mm = marketMed[d];
+        const diff = mm != null ? Math.round(p - mm) : null;
+        const diffStr = diff == null ? '' : (diff === 0 ? ' · 相場 と 同水準' : ` · 相場 median ${diff >= 0 ? '+' : ''}${fmtYen(diff)}`);
+        cell.dataset.tooltip = `${d} · ${fmtYen(p)}${diffStr}${href ? ' · タップで Booking' : ''}`;
         if (href) {
           cell.href = href;
           cell.target = '_blank';
@@ -2266,6 +2337,67 @@ function renderHeatmap(data) {
     row.appendChild(cells);
     wrap.appendChild(row);
   }
+}
+
+// ---- 需要 tightness 集計 (2026-07-31 tier A) ----
+function computeDailySupply(data) {
+  const dates = data.dates.slice().sort();
+  const supply = {};
+  for (const d of dates) {
+    let priced = 0, unpriced = 0;
+    for (const k of Object.keys(data.hotels)) {
+      const p = data.prices[k]?.[d];
+      if (p != null) priced++; else unpriced++;
+    }
+    supply[d] = { priced, unpriced, total: priced + unpriced };
+  }
+  return supply;
+}
+
+function computeMarketMedianSeries(data) {
+  const compKeys = Object.keys(data.hotels).filter((k) => !OWN_EXTERNAL_IDS.has(k));
+  const series = {};
+  for (const d of data.dates) {
+    const prices = compKeys.map(k => data.prices[k]?.[d]).filter(x => x != null);
+    series[d] = median(prices);
+  }
+  return series;
+}
+
+function computeTightness(data) {
+  const supply = computeDailySupply(data);
+  const marketMed = computeMarketMedianSeries(data);
+  const dates = data.dates.slice().sort();
+  const supplyVals = dates.map(d => supply[d]?.priced || 0);
+  const priceVals = dates.map(d => marketMed[d]).filter(x => x != null);
+
+  const supplyAvg = average(supplyVals) || 0;
+  const priceAvg = average(priceVals) || 0;
+
+  // 週末 3日 vs 30日 平均
+  const wknd = dates.filter(d => {
+    const dow = new Date(d + 'T00:00:00+09:00').getDay();
+    return dow === 0 || dow === 5 || dow === 6;
+  });
+  const wkndSupply = average(wknd.map(d => supply[d]?.priced || 0)) || 0;
+  const wkndPrice = average(wknd.map(d => marketMed[d]).filter(x => x != null)) || 0;
+
+  // tightness score: 供給少 (supplyAvg - wkndSupply) / supplyAvg + 単価高 (wkndPrice - priceAvg) / priceAvg
+  const supplyRatio = supplyAvg > 0 ? (supplyAvg - wkndSupply) / supplyAvg : 0;
+  const priceRatio = priceAvg > 0 ? (wkndPrice - priceAvg) / priceAvg : 0;
+  const score = Math.round((supplyRatio * 50 + priceRatio * 50) * 10) / 10; // -50 to +50 相当
+
+  // 直近 3日 vs 30日平均 trend
+  const recentDates = dates.slice(0, 3);
+  const recentPrice = average(recentDates.map(d => marketMed[d]).filter(x => x != null));
+  const trendPct = (recentPrice && priceAvg) ? Math.round((recentPrice / priceAvg - 1) * 100) : null;
+
+  return {
+    supply, marketMed, supplyAvg, priceAvg, wkndSupply, wkndPrice,
+    tightnessScore: score,
+    trendPct,
+    trendLabel: trendPct == null ? '—' : (trendPct >= 5 ? '上昇' : trendPct <= -5 ? '下降' : '横ばい'),
+  };
 }
 
 // ---- コンサル 分析 (2026-07-31 owner 明示 「ホテル コンサル で ディテールアップ」) ----
@@ -2431,6 +2563,86 @@ function generateConsultActions(s) {
   return acts;
 }
 
+function openHotelDetailModal(hotelKey) {
+  const data = priceScanCache;
+  if (!data) return;
+  const h = data.hotels[hotelKey];
+  if (!h) return;
+  const prices = data.dates.map(d => ({ date: d, price: data.prices[hotelKey]?.[d] || null }));
+  const marketMed = computeMarketMedianSeries(data);
+  const priceVals = prices.map(p => p.price).filter(v => v != null);
+  const minP = priceVals.length ? Math.min(...priceVals) : null;
+  const maxP = priceVals.length ? Math.max(...priceVals) : null;
+  const avgP = average(priceVals);
+  const safeUrl = (h.url && /^https:\/\//.test(h.url)) ? escapeHtml(h.url) : '#';
+
+  // 平均 vs 相場 median
+  const marketAvgSeries = data.dates.map(d => marketMed[d]).filter(x => x != null);
+  const marketAvg = average(marketAvgSeries);
+  const diffAvg = (avgP != null && marketAvg != null) ? Math.round(avgP - marketAvg) : null;
+
+  // 30日 折線 SVG (self vs market)
+  const dates = data.dates.slice().sort();
+  const allVals = [...priceVals, ...marketAvgSeries];
+  const min = Math.min(...allVals), max = Math.max(...allVals);
+  const range = max - min || 1;
+  const w = 620, hh = 200, pad = 24;
+  const stepX = (w - pad * 2) / Math.max(1, dates.length - 1);
+  const scaleY = (v) => v == null ? null : pad + (hh - pad * 2) * (1 - (v - min) / range);
+  const selfPts = dates.map((d, i) => [pad + i * stepX, scaleY(data.prices[hotelKey]?.[d])]);
+  const marketPts = dates.map((d, i) => [pad + i * stepX, scaleY(marketMed[d])]);
+  const pathFrom = (pts) => pts.filter(p => p[1] != null).map((p, i, arr) => (arr[i - 1] && arr[i - 1][1] != null ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ') || 'M0 0';
+  const selfPath = pathFrom(selfPts);
+  const marketPath = pathFrom(marketPts);
+  // date labels (weekly)
+  const dateLabels = dates.map((d, i) => {
+    if (i % 5 !== 0 && i !== dates.length - 1) return '';
+    return `<text x="${(pad + i * stepX).toFixed(1)}" y="${(hh - 4).toFixed(1)}" font-size="9" fill="#6f6f6f" text-anchor="middle">${d.slice(5)}</text>`;
+  }).join('');
+
+  const isOwn = OWN_EXTERNAL_IDS.has(hotelKey);
+  const modal = document.getElementById('priceHotelModal');
+  const title = document.getElementById('priceHotelModalTitle');
+  const body = document.getElementById('priceHotelModalBody');
+  if (title) title.innerHTML = `${escapeHtml(h.name || '?')}${isOwn ? ' <span class="modal-badge">自ホテル</span>' : ''}`;
+  if (body) {
+    body.innerHTML = `
+      <div class="hotel-modal__grid">
+        ${h.photoUrl && /^https:\/\//.test(h.photoUrl) ? `<img class="hotel-modal__photo" src="${escapeHtml(h.photoUrl)}" alt="">` : ''}
+        <div class="hotel-modal__meta">
+          <div class="hotel-modal__row"><span class="hotel-modal__lbl">距離</span><span class="hotel-modal__val">${h.distanceKm ?? '—'} km</span></div>
+          <div class="hotel-modal__row"><span class="hotel-modal__lbl">${dates.length}日 平均</span><span class="hotel-modal__val">${fmtYen(avgP)}</span></div>
+          <div class="hotel-modal__row"><span class="hotel-modal__lbl">最安 → 最高</span><span class="hotel-modal__val">${fmtYen(minP)} → ${fmtYen(maxP)}</span></div>
+          <div class="hotel-modal__row"><span class="hotel-modal__lbl">相場 median 差</span><span class="hotel-modal__val ${diffAvg != null && diffAvg < 0 ? 'is-cheaper' : diffAvg != null && diffAvg > 0 ? 'is-pricier' : ''}">${diffAvg != null ? (diffAvg >= 0 ? '+' : '') + fmtYen(diffAvg) : '—'}</span></div>
+          ${h.reviewScore ? `<div class="hotel-modal__row"><span class="hotel-modal__lbl">Booking スコア</span><span class="hotel-modal__val">${escapeHtml(h.reviewScore)}</span></div>` : ''}
+          <div class="hotel-modal__row"><span class="hotel-modal__lbl">出現日</span><span class="hotel-modal__val">${priceVals.length} / ${dates.length}</span></div>
+          <div class="hotel-modal__actions">
+            <a class="btn btn--primary" href="${safeUrl}" target="_blank" rel="noopener">Booking で 開く →</a>
+          </div>
+        </div>
+      </div>
+      <div class="hotel-modal__chart">
+        <div class="hotel-modal__chart-lbl">
+          <span><i class="dot" style="background:${isOwn ? '#9B3A26' : '#1a1a1a'}"></i>この ホテル</span>
+          <span><i class="dot" style="background:#4a90c8"></i>相場 中央値</span>
+        </div>
+        <svg viewBox="0 0 ${w} ${hh}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="30日 単価 折線">
+          <path d="${marketPath}" fill="none" stroke="#4a90c8" stroke-width="1.6" stroke-dasharray="4 3" opacity="0.7"/>
+          <path d="${selfPath}" fill="none" stroke="${isOwn ? '#9B3A26' : '#1a1a1a'}" stroke-width="2.2"/>
+          ${dateLabels}
+        </svg>
+      </div>
+    `;
+  }
+  if (modal) modal.hidden = false;
+}
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-close-price-hotel-modal]')) {
+    const m = document.getElementById('priceHotelModal');
+    if (m) m.hidden = true;
+  }
+});
+
 function renderPriceCards(data) {
   const wrap = $('#priceCards');
   if (!wrap) return;
@@ -2440,6 +2652,8 @@ function renderPriceCards(data) {
     if (oa !== ob) return oa - ob;
     return (data.hotels[a].distanceKm || 99) - (data.hotels[b].distanceKm || 99);
   });
+  const marketMed = computeMarketMedianSeries(data);
+  const marketAvg = average(Object.values(marketMed).filter(x => x != null));
   const html = hotelKeys.map((k) => {
     const h = data.hotels[k];
     const prices = Object.values(data.prices[k] || {}).filter((v) => v != null);
@@ -2450,17 +2664,19 @@ function renderPriceCards(data) {
     const safeUrl = (h.url && /^https:\/\//.test(h.url)) ? escapeHtml(h.url) : '#';
     const safePhoto = (h.photoUrl && /^https:\/\//.test(h.photoUrl)) ? escapeHtml(h.photoUrl) : null;
     const initial = escapeHtml((h.name || '?').slice(0, 1));
+    const diff = (avg != null && marketAvg != null) ? Math.round(avg - marketAvg) : null;
+    const diffClass = diff == null ? '' : diff < -1000 ? 'is-cheaper' : diff > 1000 ? 'is-pricier' : 'is-neutral';
     const photoBlock = safePhoto
-      ? `<a class="price-card__photo" href="${safeUrl}" target="_blank" rel="noopener">
+      ? `<button class="price-card__photo" data-hotel="${escapeHtml(k)}" type="button" aria-label="${escapeHtml(h.name || '?')} 詳細">
            <img src="${safePhoto}" alt="" loading="lazy" onerror="this.parentNode.classList.add('price-card__photo--fallback');this.parentNode.dataset.initial='${initial}';this.remove();">
-         </a>`
-      : `<a class="price-card__photo price-card__photo--fallback" href="${safeUrl}" target="_blank" rel="noopener" data-initial="${initial}"></a>`;
+         </button>`
+      : `<button class="price-card__photo price-card__photo--fallback" data-hotel="${escapeHtml(k)}" type="button" data-initial="${initial}" aria-label="${escapeHtml(h.name || '?')} 詳細"></button>`;
     return `
-      <article class="price-card${isOwn ? ' price-card--own' : ''}">
+      <article class="price-card${isOwn ? ' price-card--own' : ''}" data-hotel="${escapeHtml(k)}">
         ${photoBlock}
         <div class="price-card__body">
           <div class="price-card__head">
-            <a class="price-card__name" href="${safeUrl}" target="_blank" rel="noopener">${escapeHtml(h.name || '?')}</a>
+            <button class="price-card__name" data-hotel="${escapeHtml(k)}" type="button">${escapeHtml(h.name || '?')}</button>
             ${isOwn ? '<span class="price-card__badge">自ホテル</span>' : ''}
           </div>
           <div class="price-card__meta">${h.distanceKm ?? '—'} km${h.reviewScore ? ' · ' + escapeHtml(h.reviewScore) : ''}</div>
@@ -2470,19 +2686,23 @@ function renderPriceCards(data) {
               <span class="price-card__stat-val">${fmtYen(avg)}</span>
             </div>
             <div class="price-card__stat">
-              <span class="price-card__stat-lbl">最安 → 最高</span>
-              <span class="price-card__stat-val">${fmtYen(min)} → ${fmtYen(max)}</span>
+              <span class="price-card__stat-lbl">相場 median 差</span>
+              <span class="price-card__stat-val ${diffClass}">${diff == null ? '—' : (diff >= 0 ? '+' : '') + fmtYen(diff)}</span>
             </div>
           </div>
           <div class="price-card__foot">
-            <span class="price-card__coverage">${prices.length} / ${data.dates.length} 日 取得</span>
-            <a class="price-card__link" href="${safeUrl}" target="_blank" rel="noopener">Booking で見る →</a>
+            <span class="price-card__coverage">${fmtYen(min)} → ${fmtYen(max)} · ${prices.length}/${data.dates.length}日</span>
+            <a class="price-card__link" href="${safeUrl}" target="_blank" rel="noopener">Booking →</a>
           </div>
         </div>
       </article>
     `;
   }).join('');
   wrap.innerHTML = html;
+  wrap.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-hotel]');
+    if (t && !e.target.closest('a[href]')) openHotelDetailModal(t.dataset.hotel);
+  });
 }
 
 function renderPriceTable(data) {

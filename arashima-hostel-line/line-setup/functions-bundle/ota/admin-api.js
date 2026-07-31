@@ -150,6 +150,15 @@ exports.adminApi = functions.onRequest(
           return res.json({ ok: true, data: snap.data() });
         }
 
+        // ---- 履歴 doc (相場変動 alert から call) ----
+        if (action === 'get-comp-scan-history') {
+          const dateKey = String(req.query.date || '').match(/^\d{4}-\d{2}-\d{2}$/)?.[0];
+          if (!dateKey) return res.status(400).json({ error: 'invalid date (YYYY-MM-DD)' });
+          const snap = await db.collection('comp_scan_history').doc(dateKey).get();
+          if (!snap.exists) return res.json({ ok: true, data: null });
+          return res.json({ ok: true, data: snap.data() });
+        }
+
         if (action === 'detail') {
           const resNo = String(req.query.resNo || '');
           const doc = await db.collection('reservations').doc(resNo).get();
