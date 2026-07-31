@@ -2178,13 +2178,19 @@ function renderHeatmap(data) {
   const headCells = document.createElement('div');
   headCells.className = 'price-hm__cells';
   const dowChars = ['日', '月', '火', '水', '木', '金', '土'];
+  // 日別 「価格 取得 hotel 数 = 0」 判定 (qa-reviewer P2-1): 検索 hit ゼロ 日 は 「?」 バッジ
+  const zeroDates = new Set(dates.filter((d) => {
+    return Object.values(data.prices).every((row) => row?.[d] == null);
+  }));
   for (const d of dates) {
     const cell = document.createElement('div');
     const dObj = new Date(d + 'T00:00:00+09:00');
     const dow = dObj.getDay();
     const isWknd = dow === 0 || dow === 5 || dow === 6;
-    cell.className = 'price-hm__date' + (isWknd ? ' price-hm__date--wknd' : '');
-    cell.innerHTML = `<span class="price-hm__date-dow">${dowChars[dow]}</span><span class="price-hm__date-num">${dObj.getDate()}</span>`;
+    const isZero = zeroDates.has(d);
+    cell.className = 'price-hm__date' + (isWknd ? ' price-hm__date--wknd' : '') + (isZero ? ' price-hm__date--zero' : '');
+    cell.title = isZero ? `${d} 半径10km 全滅 (検索hit0)` : '';
+    cell.innerHTML = `<span class="price-hm__date-dow">${dowChars[dow]}</span><span class="price-hm__date-num">${dObj.getDate()}${isZero ? '<span class="price-hm__date-zero">?</span>' : ''}</span>`;
     headCells.appendChild(cell);
   }
   head.appendChild(headCells);
@@ -2252,7 +2258,7 @@ function renderPriceTable(data) {
     const isOwn = OWN_EXTERNAL_IDS.has(k);
     return `
       <tr class="${isOwn ? 'is-own' : ''}">
-        <td class="name"><a href="${h.url}" target="_blank" rel="noopener">${escapeHtml(h.name || '?')}</a>${isOwn ? ' <span style="font-size:10px;letter-spacing:0.16em;">自ホテル</span>' : ''}</td>
+        <td class="name"><a href="${(h.url && /^https:\/\//.test(h.url)) ? escapeHtml(h.url) : '#'}" target="_blank" rel="noopener">${escapeHtml(h.name || '?')}</a>${isOwn ? ' <span style="font-size:10px;letter-spacing:0.16em;">自ホテル</span>' : ''}</td>
         <td class="num">${h.distanceKm ?? '—'} km</td>
         <td class="num">${fmtYen(avg)}</td>
         <td class="num">${fmtYen(min)}${minDate ? ` <span style="font-size:10px;color:var(--muted);">${minDate.slice(5)}</span>` : ''}</td>
