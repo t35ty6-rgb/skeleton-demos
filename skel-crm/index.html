@@ -136,7 +136,8 @@
     font-size: 14px;
     opacity: 0.85;
   }
-  .nav-label { font-size: 14.5px; font-weight: 700; flex: 1; letter-spacing: -0.005em; }
+  .nav-label { font-size: 14.5px; font-weight: 500; flex: 1; letter-spacing: -0.005em; }
+  .nav-item.active .nav-label { font-weight: 700; }
   .badge {
     font-size: 12px; font-weight: 800;
     background: rgba(255,255,255,0.08);
@@ -148,7 +149,7 @@
   }
   .nav-item.active .badge { background: rgba(6,199,85,0.2); color: var(--primary); }
   .nav-section-label {
-    font-size: 11.5px; font-weight: 800;
+    font-size: 11.5px; font-weight: 600;
     color: var(--side-ink-muted);
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -1275,6 +1276,10 @@
           <div class="desc">動画教材 を コース 単位 で 管理。 章 の 順次解放 と Zoom 面談 milestone を 設定 できます</div>
         </div>
         <div class="spacer"></div>
+        <button class="btn btn-secondary" id="member-site-share-btn" title="会員 全員 が 見られる 受講 ページ の URL を コピー" style="display:inline-flex;align-items:center;gap:6px">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          会員 サイト URL
+        </button>
         <button class="btn btn-secondary" id="video-add-single-btn">+ 単発 動画</button>
         <button class="btn btn-primary" id="course-add-btn">+ 新規 コース 作成</button>
       </div>
@@ -3452,6 +3457,10 @@ function syncDemoLms() {
   });
 
   // prod mode: Firestore mirror (同 origin/同 tab に 依存 しない → 別 device の 客 browser で 見える)
+  // ただし admin boot 直後 の merge-back が 完了 する まで は 「seed data で 上書き」 事故 を 防ぐ ため 保留
+  if (state.mode === 'prod' && !window.__CRM_LMS_MERGE_BACK_DONE) {
+    return;   // merge-back 未完 → Firestore write を skip (seed が Firestore の 値 を 消さない)
+  }
   if (state.mode === 'prod' && window.__CRM_FIRESTORE_MIRROR) {
     // idb:/data: URL は cross-browser で 死ぬ ので Firestore に は http(s):// だけ 書く
     try {
@@ -3842,7 +3851,7 @@ function renderVideoCard(v) {
           </div>
           <div style="display:flex;gap:6px;margin-top:12px">
             <button class="btn btn-primary video-analytics-btn" data-video-id="${escHtml(v.id)}" style="flex:1;padding:8px;font-size:11px;justify-content:center">分析</button>
-            <button class="btn btn-secondary video-share-btn" data-video-id="${escHtml(v.id)}" style="flex:1;padding:8px;font-size:11px;justify-content:center">URL コピー</button>
+            <button class="btn btn-secondary video-share-btn" data-video-id="${escHtml(v.id)}" title="この動画 だけ を 単独 で LINE 配信 する ため の URL" style="flex:1;padding:8px;font-size:11px;justify-content:center">LINE 配信 URL</button>
             <button class="btn btn-ghost video-edit-btn" data-video-id="${escHtml(v.id)}" style="padding:8px 10px;font-size:11px">編集</button>
           </div>
         </div>
@@ -5861,6 +5870,16 @@ setTimeout(() => {
   if (videoAddSingle) videoAddSingle.addEventListener('click', () => openVideoUploadModal({ chapterMode: false }));
   const courseAdd = document.getElementById('course-add-btn');
   if (courseAdd) courseAdd.addEventListener('click', () => openCourseEditModal(null));
+  const memberShare = document.getElementById('member-site-share-btn');
+  if (memberShare) memberShare.addEventListener('click', async () => {
+    const url = memberCourseUrl('').replace(/\?.*$/, '');   // ?course= 抜き の 会員 サイト URL
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('会員 サイト URL を コピー しました: ' + url, 'success', 6000);
+    } catch (e) {
+      toast('URL: ' + url, 'info', 8000);
+    }
+  });
   const videoBack = document.getElementById('video-back-to-courses');
   if (videoBack) videoBack.addEventListener('click', () => { state.videoLevel = 'courses'; state.videoCurrentCourseId = null; renderVideos(); });
   const courseEdit = document.getElementById('course-edit-btn');
@@ -6323,6 +6342,36 @@ if (window.__CRM_MODE === 'prod') {
     listenCol('channels',     'channels');
     listenCol('history',      'history');
     listenCol('videos',       'videos', { preserveSeed: true, seedWriteBack: true });
+
+    // lms/current doc を admin boot 時 に **一度 だけ** fetch → state.courses に coverThumbUrl 等 を merge back
+    // (onSnapshot だと syncDemoLms の write が trigger する snapshot → 無限 loop)
+    // syncDemoLms は __CRM_LMS_MERGE_BACK_DONE=true まで write を 保留 (seed が Firestore を 消さない ガード)
+    (async () => {
+      try {
+        const lmsSnap = await getDoc(doc(db, 'tenants', state.currentTenantId, 'lms', 'current'));
+        if (lmsSnap.exists()) {
+          const data = lmsSnap.data();
+          if (Array.isArray(data.courses) && data.courses.length > 0) {
+            const byId = new Map((state.courses || []).map(c => [c.id, c]));
+            data.courses.forEach(fc => {
+              const existing = byId.get(fc.id);
+              if (existing) {
+                ['coverThumbUrl', 'instructor', 'category', 'publishedAt', 'published', 'description', 'title', 'memberTagIds'].forEach(k => {
+                  if (fc[k] !== undefined && fc[k] !== '' && fc[k] !== null) existing[k] = fc[k];
+                });
+              } else {
+                state.courses.push(fc);
+              }
+            });
+          }
+        }
+      } catch (e) { console.warn('lms merge-back failed', e); }
+      finally {
+        window.__CRM_LMS_MERGE_BACK_DONE = true;
+        if (typeof renderView === 'function' && state.view === 'videos') renderView('videos');
+        if (typeof syncDemoLms === 'function') syncDemoLms();   // merge 後 の 状態 を Firestore に flush
+      }
+    })();
 
     // dataAdapter の write 系 を Firestore に 差し替え
     // 全 8 collection を 統一 pattern (makeSaver / makeDeleter) で 生成
