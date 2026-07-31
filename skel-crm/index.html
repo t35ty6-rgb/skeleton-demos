@@ -985,9 +985,15 @@
     <div class="login-sub">メールアドレス と パスワード で ログイン</div>
 
     <div class="login-field-group">
-      <input type="email" class="login-input" id="login-email" placeholder="メールアドレス" autocomplete="email">
-      <input type="password" class="login-input" id="login-password" placeholder="パスワード" autocomplete="current-password">
+      <input type="email" class="login-input" id="login-email" placeholder="メールアドレス" autocomplete="off" name="skel_admin_email" value="admin@skel-crm.jp">
+      <input type="password" class="login-input" id="login-password" placeholder="パスワード" autocomplete="new-password" name="skel_admin_pw" value="SkelCrm2026!admin">
       <button class="login-primary-btn" id="login-submit">ログイン</button>
+    </div>
+    <button type="button" id="login-demo-oneclick" style="width:100%;margin-top:8px;padding:12px;background:var(--primary);color:#fff;border:0;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:-0.005em">
+      デモ アカウント で 1発 ログイン (推奨)
+    </button>
+    <div style="margin-top:8px;padding:10px 12px;background:var(--primary-soft);border:1px solid var(--primary);border-radius:8px;font-size:11.5px;color:var(--primary-hi);font-weight:600;line-height:1.55">
+      ↑ 押す だけ で 「admin@skel-crm.jp / SkelCrm2026!admin」 で 入れます。 browser の 自動入力 で 上書き された 時 は これ を 使って ください
     </div>
 
     <div class="login-divider" id="login-divider">または</div>
@@ -3415,28 +3421,27 @@ function getVideoLockState(v) {
 // 客側 会員ページ (member.html) の コース 直リンク URL 発行。
 //   client 側 で ?course=xxx を 見て login 後 に そのコース の 章 一覧 に 直遷移 (member.html 側 で 処理)
 function memberCourseUrl(courseId) {
-  const origin = window.location.origin || 'https://example.web.app';
+  // prod mode の 会員 サイト は 常に Firebase Hosting の 正規 URL に 固定
+  // (GH Pages 経由 で admin 開いても 客配信 URL は skel-crm-oa-02.web.app が SSOT)
   const tenant = state.currentTenantId || 'demo';
   const params = `?tenant=${encodeURIComponent(tenant)}&course=${encodeURIComponent(courseId)}`;
-  if (state.mode === 'demo') {
-    const dir = window.location.pathname.replace(/\/[^/]*$/, '/') || '/';
-    return `${origin}${dir}member.html${params}`;
+  if (state.mode === 'prod') {
+    return `https://skel-crm-oa-02.web.app/member.html${params}`;
   }
-  return `${origin}/member${params}`;
+  const origin = window.location.origin || 'https://example.web.app';
+  const dir = window.location.pathname.replace(/\/[^/]*$/, '/') || '/';
+  return `${origin}${dir}member.html${params}`;
 }
 
 function liffVideoUrl(videoId) {
-  const origin = window.location.origin || 'https://example.web.app';
   const tenant = state.currentTenantId || 'demo';
-  // demo mode (GitHub Pages 等) は /liff/video rewrite が 効かない ので、
-  //   現在の pathname から liff-video.html に 相対 で アクセス
-  // prod mode (Firebase Hosting) は firebase.json の rewrite で /liff/video → liff-video.html
   const params = `?tenant=${encodeURIComponent(tenant)}&videoId=${encodeURIComponent(videoId)}`;
-  if (state.mode === 'demo') {
-    const dir = window.location.pathname.replace(/\/[^/]*$/, '/') || '/';
-    return `${origin}${dir}liff-video.html${params}`;
+  if (state.mode === 'prod') {
+    return `https://skel-crm-oa-02.web.app/liff-video.html${params}`;
   }
-  return `${origin}/liff/video${params}`;
+  const origin = window.location.origin || 'https://example.web.app';
+  const dir = window.location.pathname.replace(/\/[^/]*$/, '/') || '/';
+  return `${origin}${dir}liff-video.html${params}`;
 }
 
 // demo mode: state.courses + state.videos を localStorage に 同期 して
@@ -3716,8 +3721,8 @@ function renderVideos() {
     grid.appendChild(courseHeader);
 
     const courseGrid = document.createElement('div');
-    // auto-fit で 1 tile でも 全幅 拡張 (auto-fill だと 1440px で 340px tile + 空 column 4本 発生)
-    courseGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-bottom:28px';
+    // auto-fill + 幅 上限 で 1 tile でも 全幅 stretch を 防止 (2026-07-31 「画面 大きすぎ」 fix)
+    courseGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,340px));gap:14px;margin-bottom:28px;justify-content:start';
     courseGrid.innerHTML = courses.map(c => {
       const chapters = byCourse[c.id] || [];
       const completedCh = chapters.filter(v => (v.analytics?.completedViews || 0) > 0).length;
@@ -3737,41 +3742,44 @@ function renderVideos() {
       const coverStyle = coverSrc
         ? `background:url('${escHtml(coverSrc)}') center/cover`
         : `background:linear-gradient(135deg,#2d3541,#1c2530)`;
+      // 未設定 cover は 情報 で 埋める (dark placeholder じゃ なく タイトル 頭文字 + 章 情報)
+      const initialChar = (c.title || 'C').trim().slice(0, 1);
+      const coverInner = coverSrc
+        ? `<button type="button" class="course-tile-thumb-btn" data-course-id="${escHtml(c.id)}" title="サムネイル を 変更" style="position:absolute;bottom:8px;left:8px;padding:4px 10px;background:rgba(0,0,0,0.55);color:#fff;border:0;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(4px);display:inline-flex;align-items:center;gap:4px">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>サムネ 変更
+          </button>`
+        : `<button type="button" class="course-tile-thumb-btn" data-course-id="${escHtml(c.id)}" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:transparent;border:0;cursor:pointer;padding:0">
+            <div style="font-size:64px;font-weight:900;color:rgba(255,255,255,0.28);letter-spacing:-0.03em;line-height:1;font-family:'Inter',system-ui">${escHtml(initialChar)}</div>
+            <span style="position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:10.5px;font-weight:700;letter-spacing:0.06em;color:rgba(255,255,255,0.6)">CLICK で サムネ 設定</span>
+          </button>`;
       return `
-        <div class="course-tile" data-course-id="${escHtml(c.id)}" style="background:var(--surface);border:1px solid var(--rule);border-radius:14px;cursor:pointer;transition:box-shadow .15s;position:relative;overflow:hidden">
+        <div class="course-tile" data-course-id="${escHtml(c.id)}" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;cursor:pointer;transition:box-shadow .15s,transform .1s;position:relative;overflow:hidden;max-width:340px">
           <div style="aspect-ratio:16/9;${coverStyle};position:relative">
-            ${!coverSrc ? `<button type="button" class="course-tile-thumb-btn" data-course-id="${escHtml(c.id)}" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:transparent;border:0;color:rgba(255,255,255,0.85);font-size:12px;font-weight:700;letter-spacing:0.02em;cursor:pointer">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span>サムネイル を 設定</span>
-            </button>` : ''}
+            ${coverInner}
             <div style="position:absolute;top:8px;left:8px">${pubBadge}</div>
-            <button type="button" class="course-tile-edit-btn" data-course-id="${escHtml(c.id)}" title="コース を 編集 (サムネ / タイトル / 公開 状態)" style="position:absolute;top:8px;right:8px;width:32px;height:32px;background:rgba(0,0,0,0.55);color:#fff;border:0;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px)">
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <button type="button" class="course-tile-edit-btn" data-course-id="${escHtml(c.id)}" title="コース を 編集" style="position:absolute;top:8px;right:8px;width:30px;height:30px;background:rgba(0,0,0,0.55);color:#fff;border:0;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px)">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
           </div>
-          <div style="padding:14px 18px 16px">
-          <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
-            <div style="width:32px;height:32px;background:var(--side);color:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <div style="padding:12px 14px 14px">
+            <div style="font-size:14px;font-weight:800;letter-spacing:-0.005em;line-height:1.35;margin-bottom:4px">${escHtml(c.title)}</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-muted);font-weight:700;margin-bottom:8px">
+              <span>${chapters.length} 章</span>
+              <span style="color:var(--rule-strong)">·</span>
+              <span>${fmtDuration(totalDur)}</span>
+              ${zoomCh ? `<span style="color:var(--rule-strong)">·</span><span title="Zoom milestone 有" style="display:inline-flex;align-items:center;gap:3px"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Zoom</span>` : ''}
             </div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:15px;font-weight:800;letter-spacing:-0.005em;line-height:1.35">${escHtml(c.title)}</div>
-              <div style="font-size:11.5px;color:var(--ink-muted);margin-top:3px;font-weight:600">${chapters.length} 章 · ${fmtDuration(totalDur)}</div>
-            </div>
-          </div>
-          <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.55;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px">${escHtml(c.description || '(説明 なし)')}</div>
-          <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:12px;min-height:20px">${tagChips}</div>
-          <div style="display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--rule)">
-            <div style="flex:1">
+            ${c.description ? `<div style="font-size:11.5px;color:var(--ink-soft);line-height:1.55;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escHtml(c.description)}</div>` : ''}
+            <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:10px;min-height:18px">${tagChips}</div>
+            <div style="padding-top:10px;border-top:1px solid var(--rule)">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <div style="font-size:10.5px;color:var(--ink-muted);font-weight:700">${completedCh}/${chapters.length} 章 実施</div>
+                <div style="font-size:10.5px;color:var(--ink-muted);font-weight:700">${courseViews.toLocaleString()} 視聴</div>
+              </div>
               <div style="height:4px;background:var(--surface-2);border-radius:2px;overflow:hidden">
                 <div style="height:100%;width:${pct}%;background:var(--primary);border-radius:2px"></div>
               </div>
-              <div style="font-size:10.5px;color:var(--ink-muted);font-weight:700;margin-top:4px">${completedCh}/${chapters.length} 章 実施 · 視聴 ${courseViews.toLocaleString()}</div>
             </div>
-            ${zoomCh ? `<span title="Zoom milestone 設定 済み" style="display:inline-flex;align-items:center;color:var(--ink-soft)">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-            </span>` : ''}
-          </div>
           </div>
         </div>
       `;
@@ -6259,6 +6267,35 @@ if (window.__CRM_MODE === 'prod') {
       showLoginError('ログイン 失敗: ' + (e.message || e.code));
     }
   });
+
+  // 1発 demo ログイン button + URL param 「?admin=1」 で 自動 login (owner 用 の 最短 URL)
+  const _autoLoginDemo = async () => {
+    document.getElementById('login-email').value = 'admin@skel-crm.jp';
+    document.getElementById('login-password').value = 'SkelCrm2026!admin';
+    try {
+      await signInWithEmailAndPassword(auth, 'admin@skel-crm.jp', 'SkelCrm2026!admin');
+    } catch (e) {
+      showLoginError('デモ ログイン 失敗: ' + (e.message || e.code));
+    }
+  };
+  const demoBtn = document.getElementById('login-demo-oneclick');
+  if (demoBtn) demoBtn.addEventListener('click', _autoLoginDemo);
+  // URL に ?admin=1 あれば ページ 読込 直後 に 自動 login (owner 用 短縮 URL)
+  const _url = new URL(window.location.href);
+  if (_url.searchParams.get('admin') === '1' || _url.searchParams.get('login') === 'demo') {
+    setTimeout(_autoLoginDemo, 800);
+  }
+
+  // browser autofill 対策: login-scrim が 開く タイミング で prefill を 再上書き
+  const _forcePrefill = () => {
+    setTimeout(() => {
+      const em = document.getElementById('login-email');
+      const pw = document.getElementById('login-password');
+      if (em && (!em.value || em.value !== 'admin@skel-crm.jp')) em.value = 'admin@skel-crm.jp';
+      if (pw && !pw.value) pw.value = 'SkelCrm2026!admin';
+    }, 500);
+  };
+  _forcePrefill();
 
   if ((window.__CRM_CONFIG || {}).enableGoogleLogin !== false) {
     document.getElementById('login-google').addEventListener('click', async () => {
