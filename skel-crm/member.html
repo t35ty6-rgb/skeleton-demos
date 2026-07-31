@@ -1164,13 +1164,39 @@ function normalizeLmsData(data) {
       videoUrl: v.videoUrl || '',
     });
   });
-  const merged = courses.map(c => ({
+  // 単一 コース (bundle じゃ ない)
+  const singleCourses = courses.map(c => ({
     ...c,
     category: c.category || 'コース',
     instructor: c.instructor || '',
     chapters: (chaptersByCourse[c.id] || []).sort((a, b) => (a.chapterNo || 0) - (b.chapterNo || 0)),
-  })).filter(c => c.chapters.length > 0);
-  return merged;
+    isBundle: false,
+  })).filter(c => c.chapters.length > 0 || (Array.isArray(c.bundleCoursesIds) && c.bundleCoursesIds.length > 0));
+
+  // Bundle コース: 中 の 全 コース の 章 を まとめて 「セット 教材」 として 見せる
+  const singlesById = new Map(singleCourses.map(c => [c.id, c]));
+  const bundles = (data.courses || []).filter(c => c.published && Array.isArray(c.bundleCoursesIds) && c.bundleCoursesIds.length > 0)
+    .map(bc => {
+      const includedCourses = bc.bundleCoursesIds
+        .map(id => singlesById.get(id))
+        .filter(Boolean);
+      // 全 章 を courseTitle 情報 付き で 連結 (client 側 で 表示 の 時 group 化)
+      const chapters = includedCourses.flatMap(inner => inner.chapters.map(ch => ({
+        ...ch,
+        _bundleFrom: inner.title,
+        _bundleFromId: inner.id,
+      })));
+      return {
+        ...bc,
+        category: bc.category || 'バンドル',
+        instructor: bc.instructor || '',
+        isBundle: true,
+        includedCoursesCount: includedCourses.length,
+        chapters,
+      };
+    }).filter(b => b.chapters.length > 0);
+
+  return [...bundles, ...singleCourses.filter(c => !c.isBundle && c.chapters.length > 0)];
 }
 
 // ================= IndexedDB media resolver (admin と 共有 origin) =================
@@ -1694,9 +1720,10 @@ function renderCourseCardHTML(e) {
   const ctaLabel = isNew ? '受講 を 始める' : (isDone ? 'もう一度 見る' : '続き から');
 
   const badges = [];
+  if (c.isBundle) badges.push(`<div class="cover-badge milestone">バンドル ${c.includedCoursesCount || ''}コース</div>`);
   if (isDone) badges.push('<div class="cover-badge milestone">修了</div>');
   else if (zoomDone) badges.push('<div class="cover-badge milestone">Zoom 発行 済</div>');
-  if (isNew) badges.push('<div class="cover-badge">NEW</div>');
+  if (isNew && !c.isBundle) badges.push('<div class="cover-badge">NEW</div>');
 
   const metaItems = [
     `<span class="m-item">${c.chapters.length} 章</span>`,

@@ -1349,6 +1349,16 @@
       </a>
     </div>
 
+    <!-- LP · ページ -->
+    <div class="view" id="view-pages">
+      <div class="page-header">
+        <div><h2>LP · セールス ページ</h2><div class="desc">講座 販売 / セミナー 案内 / 個別 相談 予約 の LP を テンプレ から 作成 · 公開</div></div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="page-add-btn">+ 新規 ページ</button>
+      </div>
+      <div id="pages-list"></div>
+    </div>
+
     <!-- 配信履歴 -->
     <div class="view" id="view-history">
       <div class="page-header">
@@ -1446,6 +1456,7 @@ const state = {
   autoTagRules: [],
   steps: [],
   videos: [],
+  pages: [],   // LP / セールス ページ (Firestore: tenants/{tid}/pages/{pageId})
   emailCampaigns: [],
   emailConfig: {},
   // 認証 / tenant / plan (prod mode で 上書き、 demo mode は default)
@@ -2053,6 +2064,8 @@ const NAV = [
   { view: 'steps',     label: 'ステップ配信',      icon: NAV_ICONS.flow,   badge: null },
   { section: '会員動画' },
   { view: 'videos',    label: '動画ホスティング',   icon: NAV_ICONS.film,   badge: () => (state.videos || []).length },
+  { section: '販売 ページ' },
+  { view: 'pages',     label: 'LP · ページ',        icon: NAV_ICONS.grid,   badge: () => (state.pages || []).length },
   { section: '設定' },
   { view: 'richmenu',  label: 'リッチメニュー',   icon: NAV_ICONS.grid,   badge: null },
   { view: 'channels',  label: 'LINE アカウント',   icon: NAV_ICONS.plug,   badge: null },
@@ -2133,6 +2146,7 @@ function renderView(view) {
   if (view === 'channels')  renderChannels();
   if (view === 'history')   renderHistory();
   if (view === 'videos')    renderVideos();
+  if (view === 'pages')     renderPages();
   if (view === 'email')     renderEmail();
   if (view === 'email-config') renderEmailConfig();
 }
@@ -4707,7 +4721,9 @@ function openVideoEditModal(videoId, opts) {
 function openCourseEditModal(course) {
   const isEdit = !!course;
   // 新規 コース は default 公開 (owner が toggle 見逃して 「URL 動かない」 事故 の 予防)
-  const c = course || { id: '', title: '', description: '', memberTagIds: [], totalChapters: null, published: true, coverThumbUrl: '' };
+  const c = course || { id: '', title: '', description: '', memberTagIds: [], totalChapters: null, published: true, coverThumbUrl: '', bundleCoursesIds: [] };
+  const isBundle = Array.isArray(c.bundleCoursesIds) && c.bundleCoursesIds.length > 0;
+  const otherCourses = (state.courses || []).filter(x => x.id !== c.id && !(x.bundleCoursesIds || []).length);
   // 編集 中 の 揮発 バッファ (保存 で state.courses に 反映)
   let workingCoverThumb = c.coverThumbUrl || '';
 
@@ -4774,6 +4790,33 @@ function openCourseEditModal(course) {
       <div class="chip-area" id="course-tag-chips">${tagChips || '<span style="font-size:12px;color:var(--ink-muted)">タグ を 先に 登録 して ください</span>'}</div>
       <div style="margin-top:6px;font-size:11px;color:var(--ink-muted);line-height:1.5">
         タグ 未選択 = 全 顧客 が 受講 可能。 このタグ を 持つ 顧客 のみ 会員 ページ で 表示 されます。
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">バンドル コース (複数 コース を セット 販売)</label>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface-2);border-radius:8px;margin-bottom:8px">
+        <label class="toggle-wrap" style="cursor:pointer">
+          <input type="checkbox" class="toggle-input" id="course-bundle-toggle" ${isBundle ? 'checked' : ''}>
+          <div class="toggle-knob"></div>
+        </label>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700" id="course-bundle-label">${isBundle ? 'バンドル (複数 コース を まとめ 販売)' : '単一 コース (章 の 集合)'}</div>
+          <div style="font-size:11px;color:var(--ink-muted);margin-top:2px">バンドル ON = この コース を 購入/発行 する と 選択 済 の 全 コース が 客 の 会員 ページ に 解放</div>
+        </div>
+      </div>
+      <div id="course-bundle-select" style="${isBundle ? '' : 'display:none'};margin-top:6px">
+        <div style="font-size:11px;color:var(--ink-muted);margin-bottom:6px;font-weight:700">含める コース (${otherCourses.length} 件 から 選択)</div>
+        <div id="course-bundle-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--rule);border-radius:8px;padding:8px;background:var(--surface)">
+          ${otherCourses.length === 0
+            ? '<div style="padding:12px;text-align:center;color:var(--ink-muted);font-size:12px">先 に 他 の コース を 作成 して ください</div>'
+            : otherCourses.map(oc => `
+                <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12.5px" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+                  <input type="checkbox" class="course-bundle-item" data-course-id="${escHtml(oc.id)}" ${(c.bundleCoursesIds||[]).includes(oc.id) ? 'checked' : ''}>
+                  <span style="flex:1">${escHtml(oc.title)}</span>
+                  <span style="font-size:10.5px;color:var(--ink-muted)">${(state.videos||[]).filter(v => v.courseId === oc.id).length} 章</span>
+                </label>`).join('')}
+        </div>
       </div>
     </div>
     <div class="field-group">
@@ -4855,6 +4898,15 @@ function openCourseEditModal(course) {
     pubLabel.textContent = pubToggle.checked ? '公開 中 (客 が 受講 できる)' : '下書き (admin のみ)';
   });
 
+  // bundle toggle
+  const bundleToggle = document.getElementById('course-bundle-toggle');
+  const bundleLabel = document.getElementById('course-bundle-label');
+  const bundleSelect = document.getElementById('course-bundle-select');
+  if (bundleToggle) bundleToggle.addEventListener('change', () => {
+    bundleSelect.style.display = bundleToggle.checked ? '' : 'none';
+    bundleLabel.textContent = bundleToggle.checked ? 'バンドル (複数 コース を まとめ 販売)' : '単一 コース (章 の 集合)';
+  });
+
   document.getElementById('course-save-btn').addEventListener('click', async () => {
     const title = document.getElementById('course-title-input').value.trim();
     if (!title) { toast('コース タイトル を 入力 してください', 'warn'); return; }
@@ -4864,13 +4916,17 @@ function openCourseEditModal(course) {
     const wasPublished = c.published;
 
     const unlockMode = document.querySelector('input[name="course-unlock-mode"]:checked')?.value || 'sequential';
+    const bundleOn = document.getElementById('course-bundle-toggle')?.checked || false;
+    const bundleCoursesIds = bundleOn
+      ? Array.from(document.querySelectorAll('.course-bundle-item:checked')).map(el => el.dataset.courseId)
+      : [];
     state.courses = state.courses || [];
     if (isEdit) {
       const idx = state.courses.findIndex(x => x.id === c.id);
-      if (idx >= 0) state.courses[idx] = { ...c, title, description: desc, memberTagIds, published, unlockMode, coverThumbUrl: workingCoverThumb || '', publishedAt: (published && !wasPublished) ? new Date().toISOString().slice(0,10) : c.publishedAt };
+      if (idx >= 0) state.courses[idx] = { ...c, title, description: desc, memberTagIds, published, unlockMode, bundleCoursesIds, coverThumbUrl: workingCoverThumb || '', publishedAt: (published && !wasPublished) ? new Date().toISOString().slice(0,10) : c.publishedAt };
     } else {
       const newId = 'course-' + Date.now();
-      state.courses.unshift({ id: newId, title, description: desc, memberTagIds, totalChapters: null, published, unlockMode, coverThumbUrl: workingCoverThumb || '', publishedAt: published ? new Date().toISOString().slice(0,10) : null });
+      state.courses.unshift({ id: newId, title, description: desc, memberTagIds, totalChapters: null, published, unlockMode, bundleCoursesIds, coverThumbUrl: workingCoverThumb || '', publishedAt: published ? new Date().toISOString().slice(0,10) : null });
       // 直後 に そのコース の 詳細 に 遷移 (章 追加 の 導線 が すぐ)
       state.videoLevel = 'chapters';
       state.videoCurrentCourseId = newId;
@@ -5604,6 +5660,317 @@ function openChannelTestModal(ch) {
 }
 
 // =========================================================
+// LP · セールス ページ (Firestore: tenants/{tid}/pages/{pageId})
+// =========================================================
+const PAGE_TEMPLATES = [
+  {
+    id: 'sales',
+    label: '講座 販売 LP',
+    desc: '動画教材 · コース の 販売 用。 hero + 特徴 + 章立て + 講師 + 価格 + FAQ',
+    seed: () => ({
+      template: 'sales',
+      heroTitle: '3 ヶ月 で 学ぶ · SNS 運用 マスター 講座',
+      heroSubtitle: '受講生 200 人 が 実践 した 成功 の 型 を 8 章 で 体系化',
+      heroImage: 'https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=1200&auto=format&fit=crop',
+      benefits: [
+        { title: '実践 型 curriculum', body: '座学 じゃ ない。 毎章 に 「今日 やる 課題」 付き。' },
+        { title: 'mentor 面談 付き', body: 'CH03 完走 で Zoom で 1 対 1 の 個別 相談 が 受けられる。' },
+        { title: '30 日 保証', body: '合わ ない と 感じ たら 全額 返金。 リスク ゼロ で 始められる。' },
+      ],
+      instructor: { name: '山田 亮太', title: 'SNS マーケター · 元 大手 EC 責任者', bio: '運用 実績 200 社 · 月 商 1 億 を 越え る 実店舗 支援 で 培っ た ノウハウ を 体系化。' },
+      priceLabel: '通常 ¥98,000',
+      priceMain: '¥49,800',
+      priceNote: '(税込) · 一括 払い / 分割 3 回 対応',
+      ctaText: '受講 を 申し込む',
+      ctaUrl: 'https://skel-crm-oa-02.web.app/member.html',
+      faq: [
+        { q: '受講 期限 は?', a: '購入 後 12 ヶ月 の 視聴 可能。 何度 でも 見直せる。' },
+        { q: '分割 払い に 対応?', a: '3 回 分割 対応 (追加 手数料 なし)。' },
+      ],
+    }),
+  },
+  {
+    id: 'seminar',
+    label: 'セミナー 案内 LP',
+    desc: 'オンライン セミナー の 集客 用。 hero + agenda + speaker + 日程 + 申込 フォーム',
+    seed: () => ({
+      template: 'seminar',
+      heroTitle: '無料 オンライン セミナー',
+      heroSubtitle: '90 分 で 学ぶ · 定期便 EC の 立ち上げ 完全 ガイド',
+      heroImage: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&auto=format&fit=crop',
+      benefits: [
+        { title: '実 事例 3 選', body: '月 商 100 万 · 300 万 · 1000 万 の 定期便 事例 を 数字 で 解説' },
+        { title: '質疑 応答 30 分', body: '個別 の 質問 に 直接 回答' },
+      ],
+      instructor: { name: '田中 純也', title: '定期便 コンサル · 上場 EC 元 CMO', bio: '定期便 施策 で 30 社 以上 の 立ち上げ を 支援。' },
+      priceLabel: '参加 費',
+      priceMain: '無料',
+      priceNote: '事前 申込 制',
+      ctaText: '参加 を 申し込む',
+      ctaUrl: 'https://skel-crm-oa-02.web.app/member.html',
+      faq: [{ q: '録画 は もらえる?', a: '参加 者 限定 で 後日 URL 配布。' }],
+    }),
+  },
+  {
+    id: 'consult',
+    label: '個別 相談 予約 LP',
+    desc: '個別 zoom 相談 の 予約 用。 hero + こんな 方 向け + 相談 内容 例 + 予約',
+    seed: () => ({
+      template: 'consult',
+      heroTitle: '30 分 · 無料 個別 相談',
+      heroSubtitle: 'あなた の 事業 の 現状 を お聞き し、 次 の 一手 を 提案',
+      heroImage: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=1200&auto=format&fit=crop',
+      benefits: [
+        { title: '営業 なし', body: 'サービス 押し売り 一切 なし。 純粋 に 課題 整理 と 提案 のみ' },
+        { title: '実 課題 で 具体 提案', body: '事前 に お聞き した 課題 に 対する 具体 施策 を 用意 し て 臨む' },
+      ],
+      instructor: { name: '山田 亮太', title: 'SNS 運用 コンサル', bio: '' },
+      priceLabel: '相談 料',
+      priceMain: '無料',
+      priceNote: '30 分 · Zoom',
+      ctaText: '予約 する',
+      ctaUrl: 'https://skel-crm-oa-02.web.app/member.html',
+      faq: [{ q: '本当に 無料?', a: 'はい。 情報 商材 販売 一切 なし。' }],
+    }),
+  },
+];
+
+function renderPages() {
+  const el = document.getElementById('pages-list');
+  if (!el) return;
+  const pages = state.pages || [];
+  if (pages.length === 0) {
+    el.innerHTML = `<div class="courses-empty" style="padding:60px 20px;text-align:center;color:var(--ink-muted);font-size:13px;background:var(--surface);border:1px dashed var(--rule);border-radius:12px">
+      <div style="font-size:14px;font-weight:800;color:var(--ink);margin-bottom:8px">まだ ページ が ありません</div>
+      <div style="margin-bottom:14px">3 種 の テンプレ (講座 販売 / セミナー 案内 / 個別 相談) から 選ん で 公開 URL を 発行 できます</div>
+      <button class="btn btn-primary" id="pages-empty-add">+ 最初 の ページ を 作る</button>
+    </div>`;
+    document.getElementById('pages-empty-add')?.addEventListener('click', () => openPageTemplatePicker());
+    return;
+  }
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,340px));gap:14px;justify-content:start">${pages.map(p => {
+    const tpl = PAGE_TEMPLATES.find(t => t.id === (p.template || 'sales'));
+    const publicUrl = `https://skel-crm-oa-02.web.app/page.html?id=${encodeURIComponent(p.id)}`;
+    return `
+      <div class="page-tile" data-page-id="${escHtml(p.id)}" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow .15s">
+        <div style="aspect-ratio:16/9;background:${p.heroImage ? `url('${escHtml(p.heroImage)}') center/cover` : 'linear-gradient(135deg,#2d3541,#1c2530)'};position:relative">
+          <div style="position:absolute;top:8px;left:8px">${p.published ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:var(--primary-soft);color:var(--primary-hi);font-size:10px;font-weight:800"><svg viewBox="0 0 24 24" width="8" height="8" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>公開 中</span>' : '<span style="padding:2px 8px;border-radius:999px;background:rgba(0,0,0,0.08);color:var(--ink-soft);font-size:10px;font-weight:800">下書き</span>'}</div>
+          <div style="position:absolute;top:8px;right:8px;padding:3px 8px;background:rgba(0,0,0,0.6);color:#fff;border-radius:4px;font-size:10px;font-weight:700">${escHtml(tpl?.label || 'ページ')}</div>
+        </div>
+        <div style="padding:12px 14px 14px">
+          <div style="font-size:14px;font-weight:800;line-height:1.35;margin-bottom:4px">${escHtml(p.heroTitle || '(タイトル 未設定)')}</div>
+          <div style="font-size:11.5px;color:var(--ink-muted);line-height:1.55;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escHtml(p.heroSubtitle || '(サブ 未設定)')}</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-secondary page-edit-btn" data-page-id="${escHtml(p.id)}" style="flex:1;padding:7px 8px;font-size:11px">編集</button>
+            <button class="btn btn-secondary page-url-btn" data-page-id="${escHtml(p.id)}" title="公開 URL を コピー" style="padding:7px 10px;font-size:11px">URL</button>
+            <button class="btn btn-secondary page-open-btn" data-url="${escHtml(publicUrl)}" title="別 tab で 開く" style="padding:7px 10px;font-size:11px">見る</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('')}</div>`;
+  el.querySelectorAll('.page-tile').forEach(t => {
+    t.addEventListener('mouseenter', () => t.style.boxShadow = '0 4px 16px rgba(15,20,35,0.06)');
+    t.addEventListener('mouseleave', () => t.style.boxShadow = '');
+  });
+  el.querySelectorAll('.page-edit-btn').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const p = state.pages.find(x => x.id === b.dataset.pageId);
+    if (p) openPageEditModal(p);
+  }));
+  el.querySelectorAll('.page-url-btn').forEach(b => b.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const p = state.pages.find(x => x.id === b.dataset.pageId);
+    if (!p) return;
+    const url = `https://skel-crm-oa-02.web.app/page.html?id=${encodeURIComponent(p.id)}`;
+    try { await navigator.clipboard.writeText(url); toast('公開 URL を コピー しました: ' + url, 'success', 5000); }
+    catch (err) { toast('URL: ' + url, 'info', 8000); }
+  }));
+  el.querySelectorAll('.page-open-btn').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.open(b.dataset.url, '_blank');
+  }));
+}
+
+function openPageTemplatePicker() {
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>テンプレ を 選択</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:6px 0">
+      ${PAGE_TEMPLATES.map(t => `
+        <button type="button" class="tpl-btn" data-tpl-id="${escHtml(t.id)}" style="text-align:left;padding:16px 14px;background:var(--surface-2);border:1px solid var(--rule);border-radius:10px;cursor:pointer;transition:border-color .15s">
+          <div style="font-size:13px;font-weight:800;margin-bottom:4px">${escHtml(t.label)}</div>
+          <div style="font-size:11px;color:var(--ink-muted);line-height:1.55">${escHtml(t.desc)}</div>
+        </button>`).join('')}
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.querySelectorAll('.tpl-btn').forEach(b => {
+    b.addEventListener('mouseenter', () => b.style.borderColor = 'var(--primary)');
+    b.addEventListener('mouseleave', () => b.style.borderColor = 'var(--rule)');
+    b.addEventListener('click', () => {
+      const tpl = PAGE_TEMPLATES.find(t => t.id === b.dataset.tplId);
+      if (!tpl) return;
+      const seed = tpl.seed();
+      const newPage = {
+        id: 'page-' + Date.now(),
+        published: false,
+        createdAt: new Date().toISOString(),
+        ...seed,
+      };
+      state.pages = state.pages || [];
+      state.pages.unshift(newPage);
+      closeModal();
+      renderPages();
+      setTimeout(() => openPageEditModal(newPage), 150);
+      toast(`「${tpl.label}」 テンプレ で 作成 しました。 編集 して 公開 に 切り替えて ください`, 'success');
+    });
+  });
+}
+
+function openPageEditModal(page) {
+  const p = { ...page };
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>ページ を 編集</h3>
+      <div class="spacer"></div>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Hero タイトル (メイン 見出し)</label>
+      <input type="text" class="field-input" id="pg-hero-title" value="${escHtml(p.heroTitle || '')}">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Hero サブ タイトル (1-2 行)</label>
+      <textarea class="field-input" id="pg-hero-subtitle" rows="2" style="resize:vertical;font-family:inherit;line-height:1.6">${escHtml(p.heroSubtitle || '')}</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Hero 画像 URL</label>
+      <input type="url" class="field-input" id="pg-hero-image" value="${escHtml(p.heroImage || '')}" placeholder="https://images.unsplash.com/...">
+    </div>
+    <div class="field-group">
+      <label class="field-label">特徴 3 項目 (title | body、 改行 区切り)</label>
+      <textarea class="field-input" id="pg-benefits" rows="6" style="resize:vertical;font-family:inherit;line-height:1.6">${escHtml((p.benefits||[]).map(b => `${b.title} | ${b.body}`).join('\n'))}</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">講師 · 主催 情報</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input type="text" class="field-input" id="pg-ins-name" value="${escHtml(p.instructor?.name||'')}" placeholder="名前">
+        <input type="text" class="field-input" id="pg-ins-title" value="${escHtml(p.instructor?.title||'')}" placeholder="肩書">
+      </div>
+      <textarea class="field-input" id="pg-ins-bio" rows="2" style="resize:vertical;font-family:inherit;line-height:1.6;margin-top:6px" placeholder="経歴 · 実績">${escHtml(p.instructor?.bio||'')}</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">価格</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <input type="text" class="field-input" id="pg-price-label" value="${escHtml(p.priceLabel||'')}" placeholder="通常 ¥98,000">
+        <input type="text" class="field-input" id="pg-price-main" value="${escHtml(p.priceMain||'')}" placeholder="¥49,800">
+        <input type="text" class="field-input" id="pg-price-note" value="${escHtml(p.priceNote||'')}" placeholder="(税込)">
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">CTA (申込 / 予約 ボタン)</label>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px">
+        <input type="text" class="field-input" id="pg-cta-text" value="${escHtml(p.ctaText||'')}" placeholder="受講 を 申し込む">
+        <input type="url" class="field-input" id="pg-cta-url" value="${escHtml(p.ctaUrl||'')}" placeholder="https://skel-crm-oa-02.web.app/member.html">
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">FAQ (Q | A、 改行 区切り、 最大 5 項目)</label>
+      <textarea class="field-input" id="pg-faq" rows="6" style="resize:vertical;font-family:inherit;line-height:1.6">${escHtml((p.faq||[]).map(f => `${f.q} | ${f.a}`).join('\n'))}</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">公開 状態</label>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface-2);border-radius:8px">
+        <label class="toggle-wrap" style="cursor:pointer">
+          <input type="checkbox" class="toggle-input" id="pg-published-toggle" ${p.published ? 'checked' : ''}>
+          <div class="toggle-knob"></div>
+        </label>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700" id="pg-pub-label">${p.published ? '公開 中 (URL に アクセス できる)' : '下書き (URL 未 発行)'}</div>
+          <div style="font-size:11px;color:var(--ink-muted);margin-top:2px">公開 URL: <code style="font-size:11px;padding:1px 5px;background:var(--surface);border-radius:4px">https://skel-crm-oa-02.web.app/page.html?id=${escHtml(p.id)}</code></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-danger" id="pg-del-btn" style="margin-right:auto">🗑 削除</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="pg-cancel">キャンセル</button>
+        <button class="btn btn-secondary" id="pg-preview" title="別 tab で プレビュー">プレビュー</button>
+        <button class="btn btn-primary" id="pg-save">保存</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modal-scrim').classList.add('open');
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('pg-cancel').addEventListener('click', closeModal);
+  const pubTgl = document.getElementById('pg-published-toggle');
+  const pubLbl = document.getElementById('pg-pub-label');
+  pubTgl.addEventListener('change', () => { pubLbl.textContent = pubTgl.checked ? '公開 中 (URL に アクセス できる)' : '下書き (URL 未 発行)'; });
+
+  const collect = () => {
+    const parseList = (raw, keys) => raw.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+      const parts = l.split('|').map(x => x.trim());
+      return keys.reduce((o, k, i) => { o[k] = parts[i] || ''; return o; }, {});
+    });
+    return {
+      ...p,
+      heroTitle: document.getElementById('pg-hero-title').value.trim(),
+      heroSubtitle: document.getElementById('pg-hero-subtitle').value.trim(),
+      heroImage: document.getElementById('pg-hero-image').value.trim(),
+      benefits: parseList(document.getElementById('pg-benefits').value, ['title', 'body']),
+      instructor: {
+        name: document.getElementById('pg-ins-name').value.trim(),
+        title: document.getElementById('pg-ins-title').value.trim(),
+        bio: document.getElementById('pg-ins-bio').value.trim(),
+      },
+      priceLabel: document.getElementById('pg-price-label').value.trim(),
+      priceMain: document.getElementById('pg-price-main').value.trim(),
+      priceNote: document.getElementById('pg-price-note').value.trim(),
+      ctaText: document.getElementById('pg-cta-text').value.trim(),
+      ctaUrl: document.getElementById('pg-cta-url').value.trim(),
+      faq: parseList(document.getElementById('pg-faq').value, ['q', 'a']),
+      published: pubTgl.checked,
+      updatedAt: new Date().toISOString(),
+    };
+  };
+
+  document.getElementById('pg-save').addEventListener('click', async () => {
+    const updated = collect();
+    const idx = (state.pages || []).findIndex(x => x.id === p.id);
+    if (idx >= 0) state.pages[idx] = updated; else state.pages.unshift(updated);
+    if (typeof dataAdapter.savePage === 'function') {
+      try { await dataAdapter.savePage(updated); } catch (e) { console.warn('savePage failed', e); }
+    }
+    closeModal();
+    renderPages();
+    toast('ページ を 保存 しました' + (updated.published ? ' (公開 中)' : ' (下書き)'), 'success');
+  });
+  document.getElementById('pg-preview').addEventListener('click', async () => {
+    // 未保存 の 内容 で preview する ため 一時的 に collect() → sessionStorage に 退避 → page.html は ?preview=1 で 読む
+    const updated = collect();
+    try { sessionStorage.setItem(`page-preview-${p.id}`, JSON.stringify(updated)); } catch (e) {}
+    window.open(`https://skel-crm-oa-02.web.app/page.html?id=${encodeURIComponent(p.id)}&preview=1`, '_blank');
+  });
+  document.getElementById('pg-del-btn').addEventListener('click', async () => {
+    const ok = await confirmDialog({ title: 'ページ を 削除', message: `「${escHtml(p.heroTitle || 'このページ')}」 を 削除 します。 公開 URL は 使え なく なります。`, okLabel: '削除 する', okKind: 'danger' });
+    if (!ok) return;
+    state.pages = (state.pages || []).filter(x => x.id !== p.id);
+    if (typeof dataAdapter.deletePage === 'function') {
+      try { await dataAdapter.deletePage(p.id); } catch (e) { console.warn('deletePage failed', e); }
+    }
+    closeModal();
+    renderPages();
+    toast('削除 しました');
+  });
+}
+
+// =========================================================
 // 配信履歴
 // =========================================================
 function renderHistory() {
@@ -5985,6 +6352,8 @@ setTimeout(() => {
   if (videoAddSingle) videoAddSingle.addEventListener('click', () => openVideoUploadModal({ chapterMode: false }));
   const courseAdd = document.getElementById('course-add-btn');
   if (courseAdd) courseAdd.addEventListener('click', () => openCourseEditModal(null));
+  const pageAdd = document.getElementById('page-add-btn');
+  if (pageAdd) pageAdd.addEventListener('click', () => openPageTemplatePicker());
   const memberShare = document.getElementById('member-site-share-btn');
   if (memberShare) memberShare.addEventListener('click', async () => {
     const url = memberCourseUrl('').replace(/\?.*$/, '');   // ?course= 抜き の 会員 サイト URL
@@ -6481,6 +6850,7 @@ if (window.__CRM_MODE === 'prod') {
     listenCol('channels',     'channels');
     listenCol('history',      'history');
     listenCol('videos',       'videos', { preserveSeed: true, seedWriteBack: true });
+    listenCol('pages',         'pages');
 
     // lms/current doc を admin boot 時 に **一度 だけ** fetch → state.courses に coverThumbUrl 等 を merge back
     // (onSnapshot だと syncDemoLms の write が trigger する snapshot → 無限 loop)
@@ -6495,7 +6865,7 @@ if (window.__CRM_MODE === 'prod') {
             data.courses.forEach(fc => {
               const existing = byId.get(fc.id);
               if (existing) {
-                ['coverThumbUrl', 'instructor', 'category', 'publishedAt', 'published', 'description', 'title', 'memberTagIds', 'unlockMode'].forEach(k => {
+                ['coverThumbUrl', 'instructor', 'category', 'publishedAt', 'published', 'description', 'title', 'memberTagIds', 'unlockMode', 'bundleCoursesIds'].forEach(k => {
                   if (fc[k] !== undefined && fc[k] !== '' && fc[k] !== null) existing[k] = fc[k];
                 });
               } else {
@@ -6550,6 +6920,8 @@ if (window.__CRM_MODE === 'prod') {
     dataAdapter.deleteHistory     = makeDeleter('history');
     dataAdapter.saveRichmenu      = makeSaver('richmenus');
     dataAdapter.deleteRichmenu    = makeDeleter('richmenus');
+    dataAdapter.savePage          = makeSaver('pages');
+    dataAdapter.deletePage        = makeDeleter('pages');
     dataAdapter.saveVideo         = makeSaver('videos');
 
     // LMS mirror: syncDemoLms が この window.__CRM_FIRESTORE_MIRROR.write() を 呼んで
