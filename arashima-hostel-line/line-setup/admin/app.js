@@ -2075,6 +2075,52 @@ async function loadPriceScan() {
 }
 
 $('#priceRefresh')?.addEventListener('click', loadPriceScan);
+$('#priceCsv')?.addEventListener('click', () => {
+  const data = priceScanCache;
+  if (!data) { alert('data がまだ 読み込まれて いません'); return; }
+  const compKeys = Object.keys(data.hotels).filter(k => !OWN_EXTERNAL_IDS.has(k));
+  const marketMed = computeMarketMedianSeries(data);
+  const marketAvg = average(Object.values(marketMed).filter(x => x != null));
+  const rows = Object.keys(data.hotels).sort((a, b) => {
+    const oa = OWN_EXTERNAL_IDS.has(a) ? 0 : 1;
+    const ob = OWN_EXTERNAL_IDS.has(b) ? 0 : 1;
+    if (oa !== ob) return oa - ob;
+    return (data.hotels[a].distanceKm || 99) - (data.hotels[b].distanceKm || 99);
+  }).map(k => {
+    const h = data.hotels[k];
+    const prices = Object.values(data.prices[k] || {}).filter(v => v != null);
+    const min = prices.length ? Math.min(...prices) : '';
+    const max = prices.length ? Math.max(...prices) : '';
+    const avg = prices.length ? Math.round(prices.reduce((s, x) => s + x, 0) / prices.length) : '';
+    const diff = (avg !== '' && marketAvg != null) ? Math.round(avg - marketAvg) : '';
+    const isOwn = OWN_EXTERNAL_IDS.has(k) ? '★自ホテル' : '';
+    const esc = (v) => {
+      const s = String(v ?? '');
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    return [isOwn, esc(h.name || ''), h.distanceKm ?? '', prices.length, avg, min, max, diff, esc(h.reviewScore || ''), esc(h.url || '')].join(',');
+  });
+  const dates = data.dates.slice().sort();
+  const header = ['タグ', 'ホテル名', '距離km', '取得日数', `${dates.length}日平均円`, '最安円', '最高円', '相場median差円', 'レビュー', 'URL'].join(',');
+  const meta = [
+    `# 荒島 半径10km ${dates.length}日 相場レポート`,
+    `# 取得: ${new Date(data.scannedAt).toLocaleString('ja-JP')}`,
+    `# hotel数: ${Object.keys(data.hotels).length} (自ホテル含む)`,
+    `# 相場平均: ¥${marketAvg != null ? Math.round(marketAvg).toLocaleString('ja-JP') : '—'}`,
+    '',
+  ].join('\n');
+  const csv = meta + header + '\n' + rows.join('\n') + '\n';
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `arashima-price-scan-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
 $('#pricePrint')?.addEventListener('click', () => {
   document.body.classList.add('is-printing');
   const restore = () => { document.body.classList.remove('is-printing'); window.removeEventListener('afterprint', restore); };
