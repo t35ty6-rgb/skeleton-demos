@@ -3437,7 +3437,8 @@
 
           <!-- Tabs -->
           <div class="cd-tabs" role="tablist" style="font-size:15px !important;">
-            <button class="cd-tab cd-tab-active" data-cdtab="overview" style="font-size:15px !important;font-weight:700 !important;">概観</button>
+            <button class="cd-tab cd-tab-active" data-cdtab="c1stream" style="font-size:15px !important;font-weight:900 !important;color:#fff !important;background:linear-gradient(135deg,#00844A,#065F46) !important;padding:6px 14px !important;border-radius:6px !important;box-shadow:0 2px 8px rgba(0,132,74,0.28);">✨ 統合</button>
+            <button class="cd-tab" data-cdtab="overview" style="font-size:15px !important;font-weight:700 !important;">概観</button>
             <button class="cd-tab" data-cdtab="line" style="font-size:15px !important;font-weight:700 !important;">LINE <span class="cd-tab-count">${(c.lineHistory || []).length}</span>${(function(){
               const lr = parseInt(localStorage.getItem('fp-line-read-' + c.id) || '0', 10);
               const uc = (c.lineHistory || []).filter(m => {
@@ -3454,8 +3455,13 @@
           </div>
 
           <div class="cd-tabpanels">
+            <!-- C1 統合 stream (2026-08-01: C1 mockup pick 反映) -->
+            <div class="cd-tabpanel" data-cdpanel="c1stream" data-lazy-render="c1stream">
+              <div style="padding:32px 24px;color:#94A3B8;font-size:12.5px;text-align:center;">読込中…</div>
+            </div>
+
             <!-- OVERVIEW (2026-07-11 v7: 議事録空でも 有用情報 で 埋める、 誤表示 バグ fix) -->
-            <div class="cd-tabpanel" data-cdpanel="overview">
+            <div class="cd-tabpanel" data-cdpanel="overview" hidden>
               ${(function(){
                 // ★ 有用な最新議事録: summary or transcript or key_concerns の どれか あれば 使う
                 const useableAi = (function(){
@@ -4529,6 +4535,10 @@ ${ctxText}${surveyTxt}`;
             } else if (key === 'timeline' && panel.dataset.cacheHasContent !== '1') {
               panel.innerHTML = buildLifePlanPanel(c, events, lifeCtaCard);
               panel.dataset.cacheHasContent = '1';
+            } else if (key === 'c1stream' && panel.dataset.cacheHasContent !== '1') {
+              panel.innerHTML = _buildC1StreamPanel(c);
+              panel.dataset.cacheHasContent = '1';
+              _bindC1StreamHandlers(panel, c);
             } else if (key === 'family' && typeof renderFamilyTreeBlock === 'function' && panel.dataset.cacheHasContent !== '1') {
               panel.innerHTML = renderFamilyTreeBlock(c);
               panel.dataset.cacheHasContent = '1';
@@ -4567,6 +4577,15 @@ ${ctxText}${surveyTxt}`;
         }
       });
     });
+    // ★ 2026-08-01: c1stream tab が default active なので 初期render を 即実行
+    try {
+      const c1Panel = document.querySelector('.cd-tabpanel[data-cdpanel="c1stream"]');
+      if (c1Panel && c1Panel.dataset.cacheHasContent !== '1') {
+        c1Panel.innerHTML = _buildC1StreamPanel(c);
+        c1Panel.dataset.cacheHasContent = '1';
+        _bindC1StreamHandlers(c1Panel, c);
+      }
+    } catch (e) { console.warn('[c1stream init] fail:', e); }
     // Quick action stubs
     const qaStub = (id, label) => {
       const el = document.getElementById(id);
@@ -5215,6 +5234,91 @@ ${ctxText}${surveyTxt}`;
       root.dataset.refresh = '1';
       delete root.dataset.loaded;
       loadQATabForClient(client);
+    });
+  }
+
+  // C1 統合 stream panel (2026-08-01 owner pick 反映)
+  function _buildC1StreamPanel(c) {
+    const entries = buildUnifiedLineTimeline(c);
+    // newest first
+    const sorted = entries.slice().sort((a, b) => String(b.ts || '').localeCompare(String(a.ts || '')));
+    const cntLine = sorted.filter(e => e.type === 'line').length;
+    const cntMeet = sorted.filter(e => e.type === 'ai_minutes' || e.type === 'booking_confirmed').length;
+    const cntProp = sorted.filter(e => e.type === 'deliverable' || e.type === 'booking_request').length;
+    const cntSurv = sorted.filter(e => e.type === 'survey').length;
+    const cntCanc = sorted.filter(e => e.type === 'cancellation').length;
+    const total = sorted.length;
+    const chips = [
+      { k: 'all', label: 'すべて', n: total },
+      { k: 'line', label: 'LINE', n: cntLine, color: '#04A94A' },
+      { k: 'meeting', label: '面談', n: cntMeet, color: '#065F46' },
+      { k: 'proposal', label: '提案 / 予約', n: cntProp, color: '#1E40AF' },
+      { k: 'survey', label: 'アンケート', n: cntSurv, color: '#B45309' },
+      { k: 'cancel', label: 'キャンセル', n: cntCanc, color: '#DC2626' },
+    ];
+    const chipsHtml = chips.map(c => `
+      <button type="button" class="c1s-chip ${c.k === 'all' ? 'active' : ''}" data-filter="${c.k}" style="background:${c.k==='all' ? '#00844A' : '#fff'};color:${c.k==='all'?'#fff':'#334155'};border:1.5px solid ${c.k==='all' ? '#00844A' : '#E2E8F0'};padding:6px 12px;border-radius:999px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:0.02em;display:inline-flex;align-items:center;gap:5px;">
+        <span>${c.label}</span>
+        <span style="font-family:'Manrope',monospace;background:${c.k==='all'?'rgba(255,255,255,0.22)':'#F1F3F5'};color:${c.k==='all'?'#fff':(c.color||'#6B7280')};font-size:10.5px;font-weight:900;padding:1px 6px;border-radius:4px;letter-spacing:0;">${c.n}</span>
+      </button>
+    `).join('');
+    const listHtml = sorted.length === 0
+      ? `<div style="padding:60px 30px;text-align:center;color:#94A3B8;font-size:13px;line-height:1.7;">
+           <div style="font-size:36px;margin-bottom:10px;opacity:0.6;">📭</div>
+           まだ活動履歴が ありません。<br>LINE 追加 / Zoom 予約 / 対面録音 で 履歴 が 溜まって いきます。
+         </div>`
+      : `<div class="c1s-list" style="display:flex;flex-direction:column;gap:10px;">
+           ${sorted.map(e => `<div class="c1s-item" data-etype="${_c1sTypeGroup(e.type)}">${renderTimelineEntry(e)}</div>`).join('')}
+         </div>`;
+    return `
+      <div style="padding:20px 24px 32px;">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #E2E8F0;">
+          <div style="font-size:11px;font-weight:900;color:#00844A;letter-spacing:0.12em;text-transform:uppercase;margin-right:8px;">✨ AI 統合 timeline</div>
+          <span style="font-size:11.5px;color:#64748B;">${total} 件の 活動 · 新しい 順</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;" data-c1s-chips>
+          ${chipsHtml}
+        </div>
+        <div class="c1s-body">
+          ${listHtml}
+        </div>
+      </div>
+    `;
+  }
+  function _c1sTypeGroup(type) {
+    if (type === 'line') return 'line';
+    if (type === 'ai_minutes' || type === 'booking_confirmed') return 'meeting';
+    if (type === 'deliverable' || type === 'booking_request') return 'proposal';
+    if (type === 'survey') return 'survey';
+    if (type === 'cancellation') return 'cancel';
+    return 'other';
+  }
+  function _bindC1StreamHandlers(panel, c) {
+    if (!panel) return;
+    const chipsWrap = panel.querySelector('[data-c1s-chips]');
+    if (!chipsWrap) return;
+    chipsWrap.querySelectorAll('.c1s-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const filter = btn.dataset.filter;
+        // update chip active styles
+        chipsWrap.querySelectorAll('.c1s-chip').forEach(b => {
+          const isActive = b === btn;
+          b.classList.toggle('active', isActive);
+          b.style.background = isActive ? '#00844A' : '#fff';
+          b.style.color = isActive ? '#fff' : '#334155';
+          b.style.borderColor = isActive ? '#00844A' : '#E2E8F0';
+          const cnt = b.querySelector('span:nth-child(2)');
+          if (cnt) {
+            cnt.style.background = isActive ? 'rgba(255,255,255,0.22)' : '#F1F3F5';
+            cnt.style.color = isActive ? '#fff' : '#6B7280';
+          }
+        });
+        // filter items
+        panel.querySelectorAll('.c1s-item').forEach(item => {
+          const et = item.dataset.etype;
+          item.style.display = (filter === 'all' || et === filter) ? '' : 'none';
+        });
+      });
     });
   }
 
