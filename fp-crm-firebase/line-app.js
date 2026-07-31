@@ -9794,7 +9794,7 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
       const when = last ? _lchWhen(last.ts || last.date) : '';
       const unread = _lchUnreadCount(c);
       const active = _lchState.selectedClientId === c.id ? 'active' : '';
-      const tag = c.status || (c.lineFriendId ? '' : '未連携');
+      const tag = (c.status && c.status !== 'active') ? c.status : (c.lineFriendId ? '' : '未連携');
       return `
         <div class="lch-item ${active}" data-cid="${_lchEscape(c.id)}">
           <div class="lch-item-avatar ${_lchAvatarClass(c.id)}">${_lchEscape(_lchAvatarChar(c.name))}</div>
@@ -9837,8 +9837,11 @@ ${family} ${era}層は「教育費ピーク (子18歳) と退職金準備が重�
     const msgs = (c.lineHistory || []).slice().sort((a, b) => _lchTsStr(a.ts || a.date || '').localeCompare(_lchTsStr(b.ts || b.date || '')));
     const meta = [];
     if (c.age || c.birth) meta.push((c.age ? (c.age + '歳') : '') + (c.birth ? ` (${_lchEscape(c.birth)}生)` : ''));
-    if (c.status) meta.push(_lchEscape(c.status));
-    if (c.lastContactAt) meta.push('最終接触 ' + new Date(c.lastContactAt).toLocaleDateString('ja-JP'));
+    if (c.status && c.status !== 'active') meta.push(_lchEscape(c.status));
+    if (c.lastContactAt) {
+      const d = new Date(c.lastContactAt);
+      if (!isNaN(d.getTime())) meta.push('最終接触 ' + d.toLocaleDateString('ja-JP'));
+    }
     if (!meta.length && c.lineFriendId) meta.push('LINE連携済');
     const subLine = meta.join(' · ') || '(情報 なし)';
     let lastDay = '';
