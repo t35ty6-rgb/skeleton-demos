@@ -105,6 +105,8 @@ $$('.head__nav button').forEach((b) => {
 });
 
 function renderTab(tab) {
+  // qa-reviewer P1 fix (2026-07-31): hotel modal を タブ切替 で 強制 close
+  document.getElementById('priceHotelModal')?.setAttribute('hidden', '');
   $$('[data-pane]').forEach((s) => { s.hidden = s.dataset.pane !== tab; });
   if (tab === 'today') loadToday();
   else if (tab === 'week') loadWeek();
@@ -2591,7 +2593,16 @@ function openHotelDetailModal(hotelKey) {
   const scaleY = (v) => v == null ? null : pad + (hh - pad * 2) * (1 - (v - min) / range);
   const selfPts = dates.map((d, i) => [pad + i * stepX, scaleY(data.prices[hotelKey]?.[d])]);
   const marketPts = dates.map((d, i) => [pad + i * stepX, scaleY(marketMed[d])]);
-  const pathFrom = (pts) => pts.filter(p => p[1] != null).map((p, i, arr) => (arr[i - 1] && arr[i - 1][1] != null ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ') || 'M0 0';
+  // qa-reviewer P2 fix (2026-07-31): null 欠損日 で 線 を 切る (filter 後 の arr 参照 バグ)
+  const pathFrom = (pts) => {
+    let d = '', prev = false;
+    for (const p of pts) {
+      if (!p || p[1] == null) { prev = false; continue; }
+      d += (prev ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1) + ' ';
+      prev = true;
+    }
+    return d.trim() || 'M0 0';
+  };
   const selfPath = pathFrom(selfPts);
   const marketPath = pathFrom(marketPts);
   // date labels (weekly)
@@ -2643,6 +2654,15 @@ document.addEventListener('click', (e) => {
   }
 });
 
+let priceCardSort = 'distance';
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.price-sort__btn');
+  if (!b) return;
+  document.querySelectorAll('.price-sort__btn').forEach(x => x.classList.toggle('is-on', x === b));
+  priceCardSort = b.dataset.sort;
+  if (priceScanCache) renderPriceCards(priceScanCache);
+});
+
 function renderPriceCards(data) {
   const wrap = $('#priceCards');
   if (!wrap) return;
@@ -2654,7 +2674,24 @@ function renderPriceCards(data) {
   });
   const marketMed = computeMarketMedianSeries(data);
   const marketAvg = average(Object.values(marketMed).filter(x => x != null));
-  const html = hotelKeys.map((k) => {
+
+  // 並び替え: 自ホテル 常に 上端 pin、 その 下 で priceCardSort に 従う
+  const hotelKeysSorted = hotelKeys.slice().sort((a, b) => {
+    const oa = OWN_EXTERNAL_IDS.has(a) ? 0 : 1;
+    const ob = OWN_EXTERNAL_IDS.has(b) ? 0 : 1;
+    if (oa !== ob) return oa - ob;
+    const ha = data.hotels[a], hb = data.hotels[b];
+    const pricesA = Object.values(data.prices[a] || {}).filter(v => v != null);
+    const pricesB = Object.values(data.prices[b] || {}).filter(v => v != null);
+    const valFor = (h, prices) => {
+      if (priceCardSort === 'min') return prices.length ? Math.min(...prices) : Infinity;
+      if (priceCardSort === 'avg') return prices.length ? (prices.reduce((s, x) => s + x, 0) / prices.length) : Infinity;
+      if (priceCardSort === 'diff') return prices.length && marketAvg != null ? (prices.reduce((s, x) => s + x, 0) / prices.length) - marketAvg : Infinity;
+      return h.distanceKm ?? 99;
+    };
+    return valFor(ha, pricesA) - valFor(hb, pricesB);
+  });
+  const html = hotelKeysSorted.map((k) => {
     const h = data.hotels[k];
     const prices = Object.values(data.prices[k] || {}).filter((v) => v != null);
     const min = prices.length ? Math.min(...prices) : null;
