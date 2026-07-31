@@ -4485,6 +4485,16 @@ ${ctxText}${surveyTxt}`;
       });
     }
     bindFamilyHandlers();
+    // ★ 2026-08-01: C1 統合 tab active 時 は cd-flow (AI推薦 CTA hero) を 隠す
+    //   理由: cd-flow が 常時表示 だと C1 panel が top:918px で viewport 外 → click 無反応 に 見える
+    //   統合 panel 内部 に profile+CTA snapshot を 埋め込む ので 情報 loss なし
+    function _toggleFlowForTab(key) {
+      try {
+        const flow = document.querySelector('.cd-flow');
+        if (!flow) return;
+        flow.style.display = (key === 'c1stream') ? 'none' : '';
+      } catch (_) {}
+    }
     // Tab switching inside new modal
     document.querySelectorAll('.cd-tab').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -4494,6 +4504,7 @@ ${ctxText}${surveyTxt}`;
           if (p.dataset.cdpanel === key) p.removeAttribute('hidden');
           else p.setAttribute('hidden', '');
         });
+        _toggleFlowForTab(key);
         // ★ 2026-06-29: lazy render — タブclick時 初めて panel 中身 build
         try {
           const panel = document.querySelector(`[data-cdpanel="${key}"]`);
@@ -4585,6 +4596,8 @@ ${ctxText}${surveyTxt}`;
         c1Panel.dataset.cacheHasContent = '1';
         _bindC1StreamHandlers(c1Panel, c);
       }
+      // default active が c1stream なので cd-flow を 即 隠す
+      _toggleFlowForTab('c1stream');
     } catch (e) { console.warn('[c1stream init] fail:', e); }
     // Quick action stubs
     const qaStub = (id, label) => {
@@ -5242,6 +5255,43 @@ ${ctxText}${surveyTxt}`;
     const entries = buildUnifiedLineTimeline(c);
     // newest first
     const sorted = entries.slice().sort((a, b) => String(b.ts || '').localeCompare(String(a.ts || '')));
+    // hero row: 客 profile snapshot + AI CTA を C1 panel 内 に 埋込 (cd-flow 隠す 代替)
+    const initial = String(c.name || '?').trim()[0] || '?';
+    const familyLine = (c.family && c.family.length)
+      ? `${c.family.length + 1}名 (${(c.family.find(m => m.rel === 'spouse') ? '夫婦' : '単身')})`
+      : '単身';
+    const aumDisp = c.aum >= 100000000 ? `¥${(c.aum/100000000).toFixed(2)}億` : (c.aum ? `¥${Math.round(c.aum/10000).toLocaleString()}万` : '—');
+    const lastContactDisp = (function(){
+      if (!c.lastContactAt) return '—';
+      const d = new Date(c.lastContactAt); if (isNaN(d.getTime())) return '—';
+      const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+      if (days === 0) return '今日';
+      if (days === 1) return '昨日';
+      if (days < 30) return `${days}日前`;
+      return d.toLocaleDateString('ja-JP');
+    })();
+    const lineCount = (c.lineHistory || []).length;
+    const meetCount = ((window.LineAppLiveData?.ai_results || []).filter(r => (r.userId && r.userId === c.lineFriendId) || (r.customerName === c.name))).length;
+    const tags = Array.isArray(c.autoTags) ? c.autoTags.slice(0, 3) : [];
+    const heroHtml = `
+      <div style="display:grid;grid-template-columns:56px 1fr auto;gap:14px;padding:14px 18px;margin-bottom:16px;background:linear-gradient(135deg,#ECFDF5,#F0FDF4);border:1px solid #BBF7D0;border-radius:12px;align-items:center;">
+        <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#00844A,#065F46);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;">${escapeHtml(initial)}</div>
+        <div style="min-width:0;">
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+            <span style="font-size:17px;font-weight:900;color:#0F1729;letter-spacing:-0.01em;">${escapeHtml(c.name || '(名前未設定)')}</span>
+            ${tags.map(t => `<span style="background:${t.color || '#6B7280'};color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;letter-spacing:0.04em;">${escapeHtml(t.label || t.key || '')}</span>`).join('')}
+          </div>
+          <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap;font-size:11.5px;color:#065F46;">
+            <span><b style="color:#0F1729;">最終接触</b> ${escapeHtml(lastContactDisp)}</span>
+            <span><b style="color:#0F1729;">家族</b> ${escapeHtml(familyLine)}</span>
+            <span><b style="color:#0F1729;">管理資産</b> ${escapeHtml(aumDisp)}</span>
+            <span><b style="color:#0F1729;">LINE</b> ${lineCount}件</span>
+            <span><b style="color:#0F1729;">面談</b> ${meetCount}件</span>
+          </div>
+        </div>
+        <button type="button" class="c1s-jump-overview" style="background:#fff;color:#065F46;border:1.5px solid #00844A;padding:8px 14px;border-radius:8px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">✨ AI推奨 / CTA →</button>
+      </div>
+    `;
     const cntLine = sorted.filter(e => e.type === 'line').length;
     const cntMeet = sorted.filter(e => e.type === 'ai_minutes' || e.type === 'booking_confirmed').length;
     const cntProp = sorted.filter(e => e.type === 'deliverable' || e.type === 'booking_request').length;
@@ -5272,7 +5322,8 @@ ${ctxText}${surveyTxt}`;
          </div>`;
     return `
       <div style="padding:20px 24px 32px;">
-        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #E2E8F0;">
+        ${heroHtml}
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #E2E8F0;">
           <div style="font-size:11px;font-weight:900;color:#00844A;letter-spacing:0.12em;text-transform:uppercase;margin-right:8px;">✨ AI 統合 timeline</div>
           <span style="font-size:11.5px;color:#64748B;">${total} 件の 活動 · 新しい 順</span>
         </div>
@@ -5295,6 +5346,14 @@ ${ctxText}${surveyTxt}`;
   }
   function _bindC1StreamHandlers(panel, c) {
     if (!panel) return;
+    // hero jump button → 概観 tab (AI 推奨/CTA 見せる = cd-flow を 復活)
+    const jumpBtn = panel.querySelector('.c1s-jump-overview');
+    if (jumpBtn) {
+      jumpBtn.addEventListener('click', () => {
+        const overviewTab = document.querySelector('.cd-tab[data-cdtab="overview"]');
+        if (overviewTab) overviewTab.click();
+      });
+    }
     const chipsWrap = panel.querySelector('[data-c1s-chips]');
     if (!chipsWrap) return;
     chipsWrap.querySelectorAll('.c1s-chip').forEach(btn => {
