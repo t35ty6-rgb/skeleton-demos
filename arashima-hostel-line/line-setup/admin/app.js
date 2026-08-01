@@ -2341,7 +2341,9 @@ function renderDistribution(data, targetDate, median, compPrices, ownPrice) {
       </linearGradient>
     </defs>
     <path d="${area}" fill="url(#mgr-dist-area)" stroke="url(#mgr-dist-line)" stroke-width="2"/>
-    ${axis}${ticks}${medLine}${dots}${ownDot}`;
+    ${axis}${ticks}${medLine}${dots}${ownDot}
+    <text x="${padL}" y="14" fill="#424245" font-size="11" font-weight="600" font-family="'Hiragino Sans','Inter',sans-serif">Y軸: 競合ホテル 数 の 相対密度</text>
+    <text x="${(w-padR).toFixed(1)}" y="${(h-6).toFixed(1)}" fill="#6E6E73" font-size="10" font-family="'Hiragino Sans','Inter',sans-serif" text-anchor="end">X軸: 1泊 単価 (¥)</text>`;
 }
 
 function renderMiniTrend(sel, marketMed, dates) {
@@ -2352,23 +2354,42 @@ function renderMiniTrend(sel, marketMed, dates) {
   if (!numeric.length) { el.innerHTML = ''; return; }
   const min = Math.min(...numeric), max = Math.max(...numeric);
   const range = max - min || 1;
-  const w = 240, h = 60, pad = 4;
-  const stepX = (w - pad * 2) / Math.max(1, dates.length - 1);
-  const pts = vals.map((v, i) => v == null ? null : [pad + i * stepX, pad + (h - pad * 2) * (1 - (v - min) / range)]);
+  // 左 Y軸 に ¥ 目盛 (42px)、 下 X軸 に 日付 (14px)、 上 に unit label (10px)
+  const w = 320, h = 130, padL = 46, padR = 8, padT = 16, padB = 22;
+  const chartW = w - padL - padR, chartH = h - padT - padB;
+  const stepX = chartW / Math.max(1, dates.length - 1);
+  const pts = vals.map((v, i) => v == null ? null : [padL + i * stepX, padT + chartH * (1 - (v - min) / range)]);
   const path = pts.filter(Boolean).map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
   const dots = pts.map((p, i) => {
     if (!p) return '';
     const dow = new Date(dates[i] + 'T00:00:00+09:00').getDay();
     const wknd = dow === 0 || dow === 5 || dow === 6;
-    return `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${wknd ? 2.5 : 1.6}" fill="${wknd ? '#9B3A26' : '#1a1a1a'}"/>`;
+    return `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${wknd ? 2.8 : 1.8}" fill="${wknd ? '#EC4899' : '#8B5CF6'}"/>`;
+  }).join('');
+  // Y軸 目盛 (3段: max / mid / min)
+  const yFmt = v => '¥' + Math.round(v / 1000) + 'k';
+  const yTicks = [max, (max + min) / 2, min].map((v, idx) => {
+    const y = padT + chartH * (idx / 2);
+    return `<line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="#EBEBEE" stroke-width="0.6"/>
+      <text x="${padL - 4}" y="${y + 3.5}" text-anchor="end" fill="#6E6E73" font-size="9.5" font-family="'JetBrains Mono',monospace">${yFmt(v)}</text>`;
+  }).join('');
+  // X軸 日付 (最初 / 中間 / 最後 の 3点)
+  const dfmt = d => { const m = new Date(d + 'T00:00:00+09:00'); return `${m.getMonth()+1}/${m.getDate()}`; };
+  const xIdxs = [0, Math.floor(dates.length / 2), dates.length - 1];
+  const xTicks = xIdxs.map(i => {
+    const x = padL + i * stepX;
+    return `<text x="${x}" y="${h - 6}" text-anchor="middle" fill="#6E6E73" font-size="9.5" font-family="'JetBrains Mono',monospace">${dfmt(dates[i])}</text>`;
   }).join('');
   const gradId = 'mgr-trend-' + Math.random().toString(36).slice(2, 7);
   el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="30日相場折線">
     <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#0071E3"/><stop offset="0.55" stop-color="#8B5CF6"/><stop offset="1" stop-color="#EC4899"/>
     </linearGradient></defs>
-    <path d="${path}" fill="none" stroke="url(#${gradId})" stroke-width="1.8" stroke-linejoin="round"/>
-    ${dots.replace(/#1a1a1a|#9B3A26/g, m => m === '#9B3A26' ? '#EC4899' : '#8B5CF6')}
+    <text x="${padL}" y="10" fill="#424245" font-size="9.5" font-weight="600" font-family="'Hiragino Sans','Inter',sans-serif">相場 中央値 (¥/泊)</text>
+    ${yTicks}
+    <path d="${path}" fill="none" stroke="url(#${gradId})" stroke-width="2" stroke-linejoin="round"/>
+    ${dots}
+    ${xTicks}
   </svg>`;
 }
 
@@ -2377,19 +2398,38 @@ function renderMiniSupply(sel, supply, dates) {
   if (!el) return;
   const vals = dates.map(d => supply[d]?.priced || 0);
   const max = Math.max(...vals, 1);
-  const w = 240, h = 40, pad = 2;
-  const barW = (w - pad * 2) / dates.length;
+  // Y軸 に 「軒」 目盛 (36px)、 下 X軸 に 日付 (14px)、 上 に unit label
+  const w = 320, h = 130, padL = 40, padR = 8, padT = 16, padB = 22;
+  const chartW = w - padL - padR, chartH = h - padT - padB;
+  const barW = chartW / dates.length;
   const bars = vals.map((v, i) => {
-    const bh = ((h - pad * 2) * v / max);
+    const bh = chartH * v / max;
     const dow = new Date(dates[i] + 'T00:00:00+09:00').getDay();
     const wknd = dow === 0 || dow === 5 || dow === 6;
     const fill = wknd ? 'url(#mgr-sup-grad)' : '#D2D2D7';
-    return `<rect x="${(pad + i * barW).toFixed(1)}" y="${(h - pad - bh).toFixed(1)}" width="${(barW - 0.6).toFixed(1)}" height="${bh.toFixed(1)}" fill="${fill}" rx="1.5"/>`;
+    return `<rect x="${(padL + i * barW).toFixed(1)}" y="${(padT + chartH - bh).toFixed(1)}" width="${(barW - 0.8).toFixed(1)}" height="${bh.toFixed(1)}" fill="${fill}" rx="1.5"/>`;
+  }).join('');
+  // Y軸 目盛 (3段)
+  const yTicks = [max, Math.round(max / 2), 0].map((v, idx) => {
+    const y = padT + chartH * (idx / 2);
+    return `<line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="#EBEBEE" stroke-width="0.6"/>
+      <text x="${padL - 4}" y="${y + 3.5}" text-anchor="end" fill="#6E6E73" font-size="9.5" font-family="'JetBrains Mono',monospace">${v}軒</text>`;
+  }).join('');
+  const dfmt = d => { const m = new Date(d + 'T00:00:00+09:00'); return `${m.getMonth()+1}/${m.getDate()}`; };
+  const xIdxs = [0, Math.floor(dates.length / 2), dates.length - 1];
+  const xTicks = xIdxs.map(i => {
+    const x = padL + i * barW + barW / 2;
+    return `<text x="${x}" y="${h - 6}" text-anchor="middle" fill="#6E6E73" font-size="9.5" font-family="'JetBrains Mono',monospace">${dfmt(dates[i])}</text>`;
   }).join('');
   el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="日別供給 (取得 hotel 数)">
     <defs><linearGradient id="mgr-sup-grad" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#EC4899"/><stop offset="1" stop-color="#8B5CF6"/>
-    </linearGradient></defs>${bars}</svg>`;
+    </linearGradient></defs>
+    <text x="${padL}" y="10" fill="#424245" font-size="9.5" font-weight="600" font-family="'Hiragino Sans','Inter',sans-serif">予約可能 な 競合 (軒/日)</text>
+    ${yTicks}
+    ${bars}
+    ${xTicks}
+  </svg>`;
 }
 
 function renderHeatmap(data) {
