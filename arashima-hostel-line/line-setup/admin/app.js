@@ -2892,6 +2892,23 @@ function renderPriceCards(data) {
     const t = e.target.closest('[data-hotel]');
     if (t && !e.target.closest('a[href]')) openHotelDetailModal(t.dataset.hotel);
   });
+  // SP show-more: 初期 6件 + 「もっと見る」 (reviewer #7 ページ長 削減)
+  const toggle = document.getElementById('priceCardsToggle');
+  const rest = document.getElementById('priceCardsRest');
+  const total = wrap.querySelectorAll('.price-card').length;
+  const INITIAL = 6;
+  if (toggle && total > INITIAL) {
+    toggle.hidden = false;
+    if (rest) rest.textContent = String(total - INITIAL);
+    wrap.classList.add('is-collapsed');
+    toggle.onclick = () => {
+      const expanded = wrap.classList.toggle('is-collapsed') === false;
+      toggle.textContent = expanded ? '折りたたむ' : `もっと見る (残り ${total - INITIAL}件)`;
+    };
+  } else if (toggle) {
+    toggle.hidden = true;
+    wrap.classList.remove('is-collapsed');
+  }
 }
 
 function renderPriceTable(data) {
