@@ -2202,15 +2202,18 @@ function renderPriceKpis(data) {
 
   const ownPricesToday = ownKeys.map((k) => data.prices[k]?.[targetDate]).filter((x) => x != null);
   const ownMed = median(ownPricesToday);
+  setText('priceOwnTonight', ownMed != null ? fmtYen(ownMed) : '—');
   const deltaEl = document.getElementById('priceDelta');
   if (ownMed != null && med != null) {
     const diff = ownMed - med;
-    const dir = diff > 0 ? '高い' : diff < 0 ? '安い' : '同じ';
-    deltaEl.textContent = `自ホテル ${fmtYen(ownMed)} · ${dir}${diff !== 0 ? ' ' + fmtYen(Math.abs(diff)) : ''} (${targetDate})`;
-    deltaEl.className = 'price-hero__delta ' + (diff < 0 ? 'is-cheaper' : diff > 0 ? 'is-pricier' : '');
-  } else {
+    const dir = diff > 0 ? '↑ 高い' : diff < 0 ? '↓ 安い' : '同水準';
+    if (deltaEl) {
+      deltaEl.textContent = `${dir}${diff !== 0 ? ' ' + fmtYen(Math.abs(diff)) : ''} vs market`;
+      deltaEl.className = 'mgr__kpi-delta ' + (diff < 0 ? 'is-good' : diff > 0 ? 'is-warn' : '');
+    }
+  } else if (deltaEl) {
     deltaEl.textContent = `対象日 ${targetDate}`;
-    deltaEl.className = 'price-hero__delta';
+    deltaEl.className = 'mgr__kpi-delta';
   }
 
   setText('priceCount', compKeys.length);
@@ -2229,6 +2232,10 @@ function renderPriceKpis(data) {
   const scanned = new Date(data.scannedAt);
   const scannedStr = `${scanned.getMonth() + 1}/${scanned.getDate()} ${String(scanned.getHours()).padStart(2, '0')}:${String(scanned.getMinutes()).padStart(2, '0')}`;
   setText('priceScannedAt', scannedStr);
+  setText('priceScannedAtTop', `updated ${scannedStr}`);
+
+  // M · Gradient signature: 相場 分布 プロット
+  renderDistribution(data, targetDate, med, compPricesToday, ownMed);
 
   // tightness + trend (2026-07-31 tier A)
   const t = computeTightness(data);
@@ -2251,6 +2258,80 @@ function renderPriceKpis(data) {
   renderMiniSupply('#priceSupplyMini', t.supply, dates);
 }
 
+function renderDistribution(data, targetDate, median, compPrices, ownPrice) {
+  const svg = document.getElementById('priceDistSvg');
+  if (!svg) return;
+  if (!compPrices || compPrices.length === 0) { svg.innerHTML = '<text x="450" y="110" fill="#6E6E73" font-size="12" text-anchor="middle" font-family="Inter">データなし</text>'; return; }
+  const w = 900, h = 220, padL = 40, padR = 40, padT = 30, padB = 46;
+  const all = [...compPrices, ownPrice].filter(v => v != null);
+  const min = Math.min(...all) * 0.9;
+  const max = Math.max(...all) * 1.08;
+  const range = max - min || 1;
+  const scale = (x) => padL + (w - padL - padR) * (x - min) / range;
+  const bins = 100;
+  const bw = range / 11;
+  const density = [];
+  for (let i = 0; i < bins; i++) {
+    const x = min + (i / (bins - 1)) * range;
+    let d = 0;
+    for (const p of compPrices) { const u = (x - p) / bw; d += Math.exp(-u * u / 2); }
+    density.push(d);
+  }
+  const maxD = Math.max(...density);
+  const yScale = (d) => padT + (h - padT - padB) * (1 - d / maxD * 0.82);
+  let area = `M ${padL} ${(h - padB).toFixed(1)} `;
+  for (let i = 0; i < bins; i++) {
+    const x = padL + (w - padL - padR) * (i / (bins - 1));
+    const y = yScale(density[i]);
+    area += `L ${x.toFixed(1)} ${y.toFixed(1)} `;
+  }
+  area += `L ${(w - padR)} ${(h - padB).toFixed(1)} Z`;
+  const axis = `<line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#D2D2D7" stroke-width="1"/>`;
+  let medLine = '';
+  if (median != null) {
+    const medX = scale(median);
+    medLine = `<line x1="${medX.toFixed(1)}" y1="${padT-6}" x2="${medX.toFixed(1)}" y2="${h-padB}" stroke="#424245" stroke-width="1" stroke-dasharray="4 4"/>
+      <text x="${medX.toFixed(1)}" y="${padT-10}" fill="#424245" font-size="10.5" font-family="JetBrains Mono, monospace" text-anchor="middle">median ${fmtYen(median)}</text>`;
+  }
+  let dots = '';
+  compPrices.forEach((p, i) => {
+    const jx = ((i * 137) % 100 - 50) * 0.14;
+    dots += `<circle cx="${scale(p).toFixed(1)}" cy="${(h-padB-6+jx).toFixed(1)}" r="4.5" fill="#86868B" stroke="white" stroke-width="1.5"/>`;
+  });
+  let ownDot = '';
+  if (ownPrice != null) {
+    const ownX = scale(ownPrice);
+    const pct = compPrices.length ? Math.round(compPrices.filter(p => p < ownPrice).length / compPrices.length * 100) : null;
+    ownDot = `
+      <line x1="${ownX.toFixed(1)}" y1="${padT+12}" x2="${ownX.toFixed(1)}" y2="${(h-padB).toFixed(1)}" stroke="#0071E3" stroke-width="1.8"/>
+      <circle cx="${ownX.toFixed(1)}" cy="${(h-padB-6).toFixed(1)}" r="9" fill="white" stroke="#0071E3" stroke-width="3"/>
+      <text x="${ownX.toFixed(1)}" y="${padT+2}" fill="#0071E3" font-size="12" font-weight="700" font-family="Inter" text-anchor="middle">荒島 ${fmtYen(ownPrice)}</text>
+      ${pct != null ? `<text x="${ownX.toFixed(1)}" y="${padT+18}" fill="#0071E3" font-size="10" font-family="JetBrains Mono, monospace" text-anchor="middle">${pct}th percentile</text>` : ''}`;
+  }
+  let ticks = '';
+  const tickStep = range < 30000 ? 5000 : range < 100000 ? 10000 : 20000;
+  for (let v = Math.ceil(min/tickStep)*tickStep; v < max; v += tickStep) {
+    const x = scale(v).toFixed(1);
+    ticks += `<line x1="${x}" y1="${h-padB}" x2="${x}" y2="${h-padB+4}" stroke="#86868B" stroke-width="1"/>
+      <text x="${x}" y="${h-padB+18}" fill="#86868B" font-size="10" font-family="JetBrains Mono, monospace" text-anchor="middle">¥${(v/1000).toFixed(0)}k</text>`;
+  }
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="mgr-dist-area" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#0071E3" stop-opacity="0.28"/>
+        <stop offset="0.55" stop-color="#8B5CF6" stop-opacity="0.28"/>
+        <stop offset="1" stop-color="#EC4899" stop-opacity="0.28"/>
+      </linearGradient>
+      <linearGradient id="mgr-dist-line" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#0071E3"/>
+        <stop offset="0.55" stop-color="#8B5CF6"/>
+        <stop offset="1" stop-color="#EC4899"/>
+      </linearGradient>
+    </defs>
+    <path d="${area}" fill="url(#mgr-dist-area)" stroke="url(#mgr-dist-line)" stroke-width="2"/>
+    ${axis}${ticks}${medLine}${dots}${ownDot}`;
+}
+
 function renderMiniTrend(sel, marketMed, dates) {
   const el = document.querySelector(sel);
   if (!el) return;
@@ -2269,9 +2350,13 @@ function renderMiniTrend(sel, marketMed, dates) {
     const wknd = dow === 0 || dow === 5 || dow === 6;
     return `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${wknd ? 2.5 : 1.6}" fill="${wknd ? '#9B3A26' : '#1a1a1a'}"/>`;
   }).join('');
+  const gradId = 'mgr-trend-' + Math.random().toString(36).slice(2, 7);
   el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="30日 相場 折線">
-    <path d="${path}" fill="none" stroke="#1a1a1a" stroke-width="1.4" stroke-linejoin="round"/>
-    ${dots}
+    <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0071E3"/><stop offset="0.55" stop-color="#8B5CF6"/><stop offset="1" stop-color="#EC4899"/>
+    </linearGradient></defs>
+    <path d="${path}" fill="none" stroke="url(#${gradId})" stroke-width="1.8" stroke-linejoin="round"/>
+    ${dots.replace(/#1a1a1a|#9B3A26/g, m => m === '#9B3A26' ? '#EC4899' : '#8B5CF6')}
   </svg>`;
 }
 
@@ -2286,9 +2371,13 @@ function renderMiniSupply(sel, supply, dates) {
     const bh = ((h - pad * 2) * v / max);
     const dow = new Date(dates[i] + 'T00:00:00+09:00').getDay();
     const wknd = dow === 0 || dow === 5 || dow === 6;
-    return `<rect x="${(pad + i * barW).toFixed(1)}" y="${(h - pad - bh).toFixed(1)}" width="${(barW - 0.6).toFixed(1)}" height="${bh.toFixed(1)}" fill="${wknd ? '#9B3A26' : '#1a1a1a'}" opacity="${wknd ? 0.9 : 0.65}"/>`;
+    const fill = wknd ? 'url(#mgr-sup-grad)' : '#D2D2D7';
+    return `<rect x="${(pad + i * barW).toFixed(1)}" y="${(h - pad - bh).toFixed(1)}" width="${(barW - 0.6).toFixed(1)}" height="${bh.toFixed(1)}" fill="${fill}" rx="1.5"/>`;
   }).join('');
-  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="日別 供給 (取得 hotel 数)">${bars}</svg>`;
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="日別 供給 (取得 hotel 数)">
+    <defs><linearGradient id="mgr-sup-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#EC4899"/><stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient></defs>${bars}</svg>`;
 }
 
 function renderHeatmap(data) {
