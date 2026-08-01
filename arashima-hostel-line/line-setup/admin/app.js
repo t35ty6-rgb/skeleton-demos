@@ -2208,7 +2208,7 @@ function renderPriceKpis(data) {
     const diff = ownMed - med;
     const dir = diff > 0 ? '↑ 高い' : diff < 0 ? '↓ 安い' : '同水準';
     if (deltaEl) {
-      deltaEl.textContent = `${dir}${diff !== 0 ? ' ' + fmtYen(Math.abs(diff)) : ''} vs market`;
+      deltaEl.textContent = `${dir}${diff !== 0 ? ' ' + fmtYen(Math.abs(diff)) : ''} (相場 と 比較)`;
       deltaEl.className = 'mgr__kpi-delta ' + (diff < 0 ? 'is-good' : diff > 0 ? 'is-warn' : '');
     }
   } else if (deltaEl) {
@@ -2232,27 +2232,39 @@ function renderPriceKpis(data) {
   const scanned = new Date(data.scannedAt);
   const scannedStr = `${scanned.getMonth() + 1}/${scanned.getDate()} ${String(scanned.getHours()).padStart(2, '0')}:${String(scanned.getMinutes()).padStart(2, '0')}`;
   setText('priceScannedAt', scannedStr);
-  setText('priceScannedAtTop', `updated ${scannedStr}`);
+  setText('priceScannedAtTop', `最終 更新 ${scannedStr}`);
 
   // M · Gradient signature: 相場 分布 プロット
   renderDistribution(data, targetDate, med, compPricesToday, ownMed);
 
-  // tightness + trend (2026-07-31 tier A)
+  // 需要 の 強さ + 相場 の 向き (2026-07-31 tier A)
   const t = computeTightness(data);
   const tightEl = document.getElementById('priceTightness');
   if (tightEl) {
-    const label = t.tightnessScore >= 8 ? '高' : t.tightnessScore >= 3 ? '中' : t.tightnessScore >= -3 ? '中立' : '緩';
+    const s = t.tightnessScore;
+    // 満室気味 / やや埋まる / 普通 / 空きが多い の 4段階
+    const label = s >= 8 ? '満室気味' : s >= 3 ? 'やや埋まる' : s >= -3 ? '普通' : '空きが多い';
+    const level = s >= 8 ? '高' : s >= 3 ? '中' : s >= -3 ? '中立' : '緩';
     tightEl.textContent = label;
-    tightEl.dataset.level = label;
+    tightEl.dataset.level = level;
     const sub = document.getElementById('priceTightnessSub');
-    if (sub) sub.textContent = `週末 需要 score ${t.tightnessScore > 0 ? '+' : ''}${t.tightnessScore}`;
+    if (sub) {
+      const arrow = s > 0 ? '＋' : '';
+      const desc = s >= 3 ? '週末 に 相場 が 上がる = 客 が 動いてる'
+        : s >= -3 ? '週末 と 平日 で 相場 差 小さい'
+        : '週末 でも 相場 上がらず = 空き 多い';
+      sub.textContent = `週末 の 上乗せ ${arrow}${s} → ${desc}`;
+    }
   }
   const trendEl = document.getElementById('priceTrend');
   if (trendEl) {
     trendEl.textContent = t.trendLabel;
     trendEl.dataset.dir = t.trendLabel;
     const sub = document.getElementById('priceTrendSub');
-    if (sub && t.trendPct != null) sub.textContent = `直近3日 vs 30日 平均 ${t.trendPct > 0 ? '+' : ''}${t.trendPct}%`;
+    if (sub && t.trendPct != null) {
+      const sign = t.trendPct > 0 ? '＋' : '';
+      sub.textContent = `直近3日 は 30日 平均 に 対して ${sign}${t.trendPct}％`;
+    }
   }
   renderMiniTrend('#priceTrendMini', t.marketMed, dates);
   renderMiniSupply('#priceSupplyMini', t.supply, dates);
@@ -2291,7 +2303,7 @@ function renderDistribution(data, targetDate, median, compPrices, ownPrice) {
   if (median != null) {
     const medX = scale(median);
     medLine = `<line x1="${medX.toFixed(1)}" y1="${padT-6}" x2="${medX.toFixed(1)}" y2="${h-padB}" stroke="#424245" stroke-width="1" stroke-dasharray="4 4"/>
-      <text x="${medX.toFixed(1)}" y="${padT-10}" fill="#424245" font-size="10.5" font-family="JetBrains Mono, monospace" text-anchor="middle">median ${fmtYen(median)}</text>`;
+      <text x="${medX.toFixed(1)}" y="${padT-10}" fill="#424245" font-size="10.5" font-family="JetBrains Mono, monospace" text-anchor="middle">中央値 ${fmtYen(median)}</text>`;
   }
   let dots = '';
   compPrices.forEach((p, i) => {
@@ -2306,7 +2318,7 @@ function renderDistribution(data, targetDate, median, compPrices, ownPrice) {
       <line x1="${ownX.toFixed(1)}" y1="${padT+12}" x2="${ownX.toFixed(1)}" y2="${(h-padB).toFixed(1)}" stroke="#0071E3" stroke-width="1.8"/>
       <circle cx="${ownX.toFixed(1)}" cy="${(h-padB-6).toFixed(1)}" r="9" fill="white" stroke="#0071E3" stroke-width="3"/>
       <text x="${ownX.toFixed(1)}" y="${padT+2}" fill="#0071E3" font-size="12" font-weight="700" font-family="Inter" text-anchor="middle">荒島 ${fmtYen(ownPrice)}</text>
-      ${pct != null ? `<text x="${ownX.toFixed(1)}" y="${padT+18}" fill="#0071E3" font-size="10" font-family="JetBrains Mono, monospace" text-anchor="middle">${pct}th percentile</text>` : ''}`;
+      ${pct != null ? `<text x="${ownX.toFixed(1)}" y="${padT+18}" fill="#0071E3" font-size="10" font-family="JetBrains Mono, monospace" text-anchor="middle">下位 ${pct}％</text>` : ''}`;
   }
   let ticks = '';
   const tickStep = range < 30000 ? 5000 : range < 100000 ? 10000 : 20000;
@@ -2460,8 +2472,8 @@ function renderHeatmap(data) {
         cell.dataset.h = String(quantileBucket(p, buckets));
         const mm = marketMed[d];
         const diff = mm != null ? Math.round(p - mm) : null;
-        const diffStr = diff == null ? '' : (diff === 0 ? ' · 相場 と 同水準' : ` · 相場 median ${diff >= 0 ? '+' : ''}${fmtYen(diff)}`);
-        cell.dataset.tooltip = `${d} · ${fmtYen(p)}${diffStr}${href ? ' · タップで Booking' : ''}`;
+        const diffStr = diff == null ? '' : (diff === 0 ? ' · 相場 と 同水準' : ` · 相場 中央値 と ${diff >= 0 ? '+' : ''}${fmtYen(diff)}`);
+        cell.dataset.tooltip = `${d} · ${fmtYen(p)}${diffStr}${href ? ' · タップで 予約サイト' : ''}`;
         if (href) {
           cell.href = href;
           cell.target = '_blank';
@@ -2694,8 +2706,8 @@ function generateConsultActions(s) {
     }
   }
 
-  // 需要 tightness (Phase 2 で Booking scarcity signal 追加 予定)
-  acts.push({ tag: 'next', text: `Phase 2 予定 = Booking の 「残X室 / N人が見ている」 signal で 需要 tightness スコア 化 → 相場 alert LINE 通知。` });
+  // 需要 の 強さ (次段 で Booking の 逼迫 サイン 追加 予定)
+  acts.push({ tag: '次段', text: `次段 予定 = Booking の 「残り 客室 数」「今 見ている 人数」 表示 から 需要 の 強さ を 点数 化 → 動く 相場 を LINE 通知。` });
 
   return acts;
 }
@@ -2759,7 +2771,7 @@ function openHotelDetailModal(hotelKey) {
           <div class="hotel-modal__row"><span class="hotel-modal__lbl">距離</span><span class="hotel-modal__val">${h.distanceKm ?? '—'} km</span></div>
           <div class="hotel-modal__row"><span class="hotel-modal__lbl">${dates.length}日 平均</span><span class="hotel-modal__val">${fmtYen(avgP)}</span></div>
           <div class="hotel-modal__row"><span class="hotel-modal__lbl">最安 → 最高</span><span class="hotel-modal__val">${fmtYen(minP)} → ${fmtYen(maxP)}</span></div>
-          <div class="hotel-modal__row"><span class="hotel-modal__lbl">相場 median 差</span><span class="hotel-modal__val ${diffAvg != null && diffAvg < 0 ? 'is-cheaper' : diffAvg != null && diffAvg > 0 ? 'is-pricier' : ''}">${diffAvg != null ? (diffAvg >= 0 ? '+' : '') + fmtYen(diffAvg) : '—'}</span></div>
+          <div class="hotel-modal__row"><span class="hotel-modal__lbl">相場 中央値 と の 差</span><span class="hotel-modal__val ${diffAvg != null && diffAvg < 0 ? 'is-cheaper' : diffAvg != null && diffAvg > 0 ? 'is-pricier' : ''}">${diffAvg != null ? (diffAvg >= 0 ? '+' : '') + fmtYen(diffAvg) : '—'}</span></div>
           ${h.reviewScore ? `<div class="hotel-modal__row"><span class="hotel-modal__lbl">Booking スコア</span><span class="hotel-modal__val">${escapeHtml(h.reviewScore)}</span></div>` : ''}
           <div class="hotel-modal__row"><span class="hotel-modal__lbl">出現日</span><span class="hotel-modal__val">${priceVals.length} / ${dates.length}</span></div>
           <div class="hotel-modal__actions">
@@ -2863,7 +2875,7 @@ function renderPriceCards(data) {
               <span class="price-card__stat-val">${fmtYen(avg)}</span>
             </div>
             <div class="price-card__stat">
-              <span class="price-card__stat-lbl">相場 median 差</span>
+              <span class="price-card__stat-lbl">相場 中央値 と の 差</span>
               <span class="price-card__stat-val ${diffClass}">${diff == null ? '—' : (diff >= 0 ? '+' : '') + fmtYen(diff)}</span>
             </div>
           </div>
