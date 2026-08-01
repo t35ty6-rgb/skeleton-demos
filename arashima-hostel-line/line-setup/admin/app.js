@@ -105,7 +105,7 @@ $$('.head__nav button').forEach((b) => {
 });
 
 function renderTab(tab) {
-  // qa-reviewer P1 fix (2026-07-31): hotel modal を タブ切替 で 強制 close
+  // qa-reviewer P1 fix (2026-07-31): hotel modal をタブ切替で強制 close
   document.getElementById('priceHotelModal')?.setAttribute('hidden', '');
   $$('[data-pane]').forEach((s) => { s.hidden = s.dataset.pane !== tab; });
   if (tab === 'today') loadToday();
@@ -343,7 +343,7 @@ async function loadWeek() {
     };
   });
 
-  // upcoming 全件取って 週内のものだけ拾う
+  // upcoming 全件取って週内のものだけ拾う
   const data = await apiGet('list', { pane: 'upcoming' });
   if (!data?.ok) return;
   let items = data.items || [];
@@ -694,11 +694,11 @@ const OPS_TASK_KEY  = 'arashima.ops.task.v1';
 
 // スタッフ初期データ (バイト5人想定)
 const DEFAULT_STAFF = [
-  { id: 's1', name: '山田 花', initial: '山', tel: '', wish: '週3', color: '#5A6B3F' },
-  { id: 's2', name: '佐藤 桃', initial: '佐', tel: '', wish: '週2', color: '#B8893B' },
-  { id: 's3', name: '田中 蓮', initial: '田', tel: '', wish: '週4', color: '#2A4A5E' },
-  { id: 's4', name: '鈴木 葵', initial: '鈴', tel: '', wish: '週2', color: '#9B3A26' },
-  { id: 's5', name: '高橋 陸', initial: '高', tel: '', wish: '週3', color: '#4A4238' },
+  { id: 's1', name: '山田花', initial: '山', tel: '', wish: '週3', color: '#5A6B3F' },
+  { id: 's2', name: '佐藤桃', initial: '佐', tel: '', wish: '週2', color: '#B8893B' },
+  { id: 's3', name: '田中蓮', initial: '田', tel: '', wish: '週4', color: '#2A4A5E' },
+  { id: 's4', name: '鈴木葵', initial: '鈴', tel: '', wish: '週2', color: '#9B3A26' },
+  { id: 's5', name: '高橋陸', initial: '高', tel: '', wish: '週3', color: '#4A4238' },
 ];
 const STAFF_PALETTE = ['#5A6B3F', '#B8893B', '#2A4A5E', '#9B3A26', '#4A4238', '#7C8068', '#6B7A99'];
 
@@ -878,7 +878,7 @@ function autoTasksForDate(dateStr) {
         id: `auto-in-${r.resNo}`,
         type: 'reception',
         typeLabel: 'Reception',
-        title: `${r.name || 'お客様'} 様 受付`,
+        title: `${r.name || 'お客様'} 様受付`,
         meta: `${roomNum(r.roomId)}号 · ${r.nights}泊 · ${r.guests}名`,
         roomId: r.roomId,
         photo: ROOM_PHOTO_LOOKUP[r.roomId],
@@ -891,7 +891,7 @@ function autoTasksForDate(dateStr) {
         id: `auto-out-${r.resNo}`,
         type: 'bedmaking',
         typeLabel: 'Bed making',
-        title: `${roomNum(r.roomId)}号 ベッド`,
+        title: `${roomNum(r.roomId)}号ベッド`,
         meta: `${r.name || ''} 様 OUT`,
         roomId: r.roomId,
         photo: ROOM_PHOTO_LOOKUP[r.roomId],
@@ -908,7 +908,7 @@ const ROOM_PHOTO_LOOKUP = {
   'g-101': 'p07.webp', 'g-201': 'p02.webp', 'g-202': 'p04.webp',
 };
 
-// ---- 本日タスク 描画 ----
+// ---- 本日タスク描画 ----
 function renderOpsToday() {
   const dateStr = ymd(opsState.date);
   const dayLbl = `${opsState.date.getMonth()+1}/${opsState.date.getDate()} (${'日月火水木金土'[opsState.date.getDay()]})`;
@@ -972,7 +972,7 @@ function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-// ---- タスク編集 モーダル ----
+// ---- タスク編集モーダル ----
 function openTaskModal(tid) {
   const dateStr = ymd(opsState.date);
   const auto = autoTasksForDate(dateStr);
@@ -1172,7 +1172,7 @@ function renderMonthShift() {
     });
   });
 
-  // + 追加 chip tap → その日 全スタッフ編集シート (bulk 入力)
+  // + 追加 chip tap → その日全スタッフ編集シート (bulk 入力)
   $$('#shiftMonthGrid .mm-chip--add').forEach((el) => {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1181,7 +1181,7 @@ function renderMonthShift() {
     });
   });
 
-  // +Nスタッフ (溢れ) tap → その日 全スタッフ編集シート
+  // +Nスタッフ (溢れ) tap → その日全スタッフ編集シート
   $$('#shiftMonthGrid .mm-chip--more').forEach((el) => {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1199,7 +1199,7 @@ function renderMonthShift() {
   });
 }
 
-// 月ビュー: セルをタップ → その日 全スタッフのシフトを1画面で編集
+// 月ビュー: セルをタップ → その日全スタッフのシフトを1画面で編集
 // (選択は local state に保持 → 「保存」で一括コミット、「キャンセル」で破棄)
 function openMonthDaySheet(dateStr) {
   const [y, mo, dd] = dateStr.split('-').map(Number);
@@ -1208,7 +1208,7 @@ function openMonthDaySheet(dateStr) {
   const staff = opsLoadStaff();
   const shifts = opsLoadShifts();
 
-  // 各スタッフの 変更前値 / 変更後値 を保持
+  // 各スタッフの変更前値 / 変更後値を保持
   const pending = {};
   for (const s of staff) pending[s.id] = shifts[`${dateStr}|${s.id}`] || '';
   const original = { ...pending };
@@ -1248,12 +1248,12 @@ function openMonthDaySheet(dateStr) {
     const changed = staff.filter((s) => pending[s.id] !== original[s.id]);
     $('#daySave').disabled = changed.length === 0;
     $('#dayChangeSummary').innerHTML = changed.length
-      ? `<span class="day-summary__chg">${changed.length} 名 変更予定 (保存を押すと反映)</span>`
+      ? `<span class="day-summary__chg">${changed.length} 名変更予定 (保存を押すと反映)</span>`
       : '<span class="day-summary__none">変更なし</span>';
   };
   updateSummary();
 
-  // ボタン クリックで pending 更新のみ (保存はしない)
+  // ボタンクリックで pending 更新のみ (保存はしない)
   $$('#opsModalBody .day-row').forEach((row) => {
     const sid = row.dataset.sid;
     $$('.day-opt', row).forEach((btn) => {
@@ -1282,12 +1282,12 @@ function openMonthDaySheet(dateStr) {
   };
   $('#dayCancel').onclick = () => {
     const changed = staff.filter((s) => pending[s.id] !== original[s.id]);
-    if (changed.length > 0 && !confirm(`${changed.length} 名 の変更を破棄しますか?`)) return;
+    if (changed.length > 0 && !confirm(`${changed.length} 名の変更を破棄しますか?`)) return;
     $('#opsModal').hidden = true;
   };
 }
 
-// ---- 月次シフト全員に配信 モーダル ----
+// ---- 月次シフト全員に配信モーダル ----
 function openPublishMonthlyModal() {
   const staff = opsLoadStaff();
   const shifts = opsLoadShifts();
@@ -1296,7 +1296,7 @@ function openPublishMonthlyModal() {
   const daysInMonth = new Date(y, mo + 1, 0).getDate();
   const monthLbl = `${y}年${mo + 1}月`;
 
-  // 各スタッフの その月の シフト集計
+  // 各スタッフのその月のシフト集計
   const summary = staff.map((s) => {
     let cnt = 0, off = 0;
     for (let dd = 1; dd <= daysInMonth; dd++) {
@@ -1310,12 +1310,12 @@ function openPublishMonthlyModal() {
   const cfg = opsLoadConfig();
   const notifyAll = !!cfg.notifyAllOnNewReservation;
 
-  $('#opsModalTitle').textContent = `${monthLbl} シフト 一斉配信`;
+  $('#opsModalTitle').textContent = `${monthLbl} シフト一斉配信`;
   $('#opsModalBody').innerHTML = `
     <div class="ops-edit">
       <div class="ops-edit__lbl">配信内容</div>
       <div style="font-size:13px;color:var(--ink-3);line-height:1.7;">
-        LINE 連携済みの スタッフ に、 その月の 自分の シフト一覧 + Google カレンダー 一括登録リンク の Flex を送信します。
+        LINE 連携済みのスタッフに、 その月の自分のシフト一覧 + Google カレンダー一括登録リンクの Flex を送信します。
       </div>
 
       <div class="ops-edit__lbl" style="margin-top:8px;">対象スタッフ</div>
@@ -1332,12 +1332,12 @@ function openPublishMonthlyModal() {
         `).join('')}
       </div>
 
-      <div class="ops-edit__lbl" style="margin-top:8px;border-top:1px solid var(--rule);padding-top:14px;">通知 設定 (常時)</div>
+      <div class="ops-edit__lbl" style="margin-top:8px;border-top:1px solid var(--rule);padding-top:14px;">通知設定 (常時)</div>
       <label class="cfg-row">
         <input type="checkbox" id="cfgNotifyAll" ${notifyAll ? 'checked' : ''}>
         <span>
-          <strong>新規予約が入ったら 全員に通知する</strong>
-          <span class="cfg-row__hint">OFF なら 該当日 シフト入り の スタッフ のみに通知 (現行動作)。 ON なら グループ LINE のように 連携済み 全員 に軽通知も追加送信。</span>
+          <strong>新規予約が入ったら全員に通知する</strong>
+          <span class="cfg-row__hint">OFF なら該当日シフト入りのスタッフのみに通知 (現行動作)。 ON ならグループ LINE のように連携済み全員に軽通知も追加送信。</span>
         </span>
       </label>
 
@@ -1360,7 +1360,7 @@ function openPublishMonthlyModal() {
   $('#pubSend').onclick = async () => {
     const targets = $$('#publishList input[type=checkbox]:checked').map((c) => c.dataset.sid);
     if (!targets.length) { $('#pubResult').textContent = '対象スタッフを選択してください。'; return; }
-    if (!confirm(`${monthLbl} のシフトを ${targets.length}名 の LINE に送信します。よろしいですか?`)) return;
+    if (!confirm(`${monthLbl} のシフトを ${targets.length}名の LINE に送信します。よろしいですか?`)) return;
     $('#pubSend').disabled = true; $('#pubSend').textContent = '送信中…';
     try {
       const r = await apiPost({
@@ -1369,7 +1369,7 @@ function openPublishMonthlyModal() {
         staffIds: targets,
       });
       if (r?.ok) {
-        $('#pubResult').innerHTML = `<span style="color:var(--moss);">✓ ${r.sent}名 送信完了 (失敗 ${r.failed || 0})</span>`;
+        $('#pubResult').innerHTML = `<span style="color:var(--moss);">✓ ${r.sent}名送信完了 (失敗 ${r.failed || 0})</span>`;
         $('#pubSend').textContent = '完了';
       } else {
         $('#pubResult').innerHTML = `<span style="color:var(--accent);">エラー: ${escapeHtml(r?.error || 'unknown')}</span>`;
@@ -1430,7 +1430,7 @@ function renderShiftGrid() {
   `;
   $('#shiftGrid').innerHTML = html;
 
-  // セル タップ → ピッカーポップオーバー
+  // セルタップ → ピッカーポップオーバー
   $$('.shift-cell[data-key]').forEach((el) => {
     el.addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -1439,7 +1439,7 @@ function renderShiftGrid() {
   });
 }
 
-// ---- シフトピッカー (候補選択 → 確定/取消 の 2段階) ----
+// ---- シフトピッカー (候補選択 → 確定/取消の 2段階) ----
 let _shiftPickerAnchor = null;
 let _shiftPickerPending = null; // { key, prevVal, chosenVal }
 function openShiftPicker(cellEl) {
@@ -1455,18 +1455,18 @@ function openShiftPicker(cellEl) {
   _shiftPickerPending = { key, prevVal, chosenVal: prevVal };
   cellEl.classList.add('shift-cell--active');
 
-  // ヘッダ 描画
+  // ヘッダ描画
   $('#shiftPickerHead').innerHTML = `
     <div><strong>${escapeHtml(sname)}</strong> さん<span class="shift-picker__date">${mo}/${dd}(${dowLbl})</span></div>
     <div class="shift-picker__cur" id="shiftPickerCur">現在: <em>${prevVal || '未定'}</em></div>
   `;
 
-  // 選択肢 に is-on を prevVal に付与
+  // 選択肢に is-on を prevVal に付与
   $$('#shiftPicker .shift-opt').forEach((b) => {
     b.classList.toggle('is-on', b.dataset.shift === prevVal);
   });
 
-  // 確定/取消 バー を表示
+  // 確定/取消バーを表示
   const bar = $('#shiftPickerBar');
   if (bar) {
     bar.hidden = false;
@@ -1648,7 +1648,7 @@ function renderStaffList() {
       <span class="avatar avatar--lg" style="background:${s.color}">${s.initial}</span>
       <div class="staff-card__body">
         <div class="staff-card__name">${escapeHtml(s.name)}${isLinked ? '<span class="staff-card__line" title="LINE連携済">LINE</span>' : ''}</div>
-        <div class="staff-card__meta">${escapeHtml(s.tel || '電話 未登録')}${s.wish ? ' · ' + escapeHtml(s.wish) : ''}</div>
+        <div class="staff-card__meta">${escapeHtml(s.tel || '電話未登録')}${s.wish ? ' · ' + escapeHtml(s.wish) : ''}</div>
       </div>
       <div class="staff-card__actions">
         <button class="btn staff-card__shift" data-act="shift" data-sid="${s.id}">📅 シフト入力</button>
@@ -1671,9 +1671,9 @@ function renderStaffList() {
   });
 }
 
-// ---- スタッフ × 月シフト エディタ ----
-// スタッフを選んで、その人の 月カレンダー上で 日付タップ or テキスト入力+Enter で
-// シフトを 一括で 入力・保存する UI
+// ---- スタッフ × 月シフトエディタ ----
+// スタッフを選んで、その人の月カレンダー上で日付タップ or テキスト入力+Enter で
+// シフトを一括で入力・保存する UI
 let _staffShiftEditor = null;
 function openStaffShiftEditor(sid) {
   const staff = opsLoadStaff();
@@ -1681,7 +1681,7 @@ function openStaffShiftEditor(sid) {
   if (!s) return;
   const shifts = opsLoadShifts();
 
-  // その人の 全シフト を pending にコピー (保存前は Firestore に反映しない)
+  // その人の全シフトを pending にコピー (保存前は Firestore に反映しない)
   const pending = {};
   const original = {};
   for (const [k, v] of Object.entries(shifts)) {
@@ -1691,7 +1691,7 @@ function openStaffShiftEditor(sid) {
   const anchor = opsState.monthAnchor || (() => { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), 1); })();
   _staffShiftEditor = { sid, s, pending, original, anchor: new Date(anchor), curShift: '9-16' };
 
-  $('#opsModalTitle').innerHTML = `<span class="avatar avatar--sm" style="background:${s.color};vertical-align:middle;margin-right:8px;">${s.initial}</span>${escapeHtml(s.name)} さん のシフト`;
+  $('#opsModalTitle').innerHTML = `<span class="avatar avatar--sm" style="background:${s.color};vertical-align:middle;margin-right:8px;">${s.initial}</span>${escapeHtml(s.name)} さんのシフト`;
   $('#opsModalBody').innerHTML = `
     <div class="ops-edit sse-root">
       <!-- 月ナビ -->
@@ -1774,14 +1774,14 @@ function openStaffShiftEditor(sid) {
   // キャンセル / 保存
   $('#sseCancel').onclick = () => {
     const changed = getStaffShiftChangedCount();
-    if (changed > 0 && !confirm(`${changed} 日の 変更を破棄しますか?`)) return;
+    if (changed > 0 && !confirm(`${changed} 日の変更を破棄しますか?`)) return;
     $('#opsModal').hidden = true;
     _staffShiftEditor = null;
   };
   $('#sseSave').onclick = () => {
     const m = opsLoadShifts();
     let n = 0;
-    // その人のキー を pending で置き換える
+    // その人のキーを pending で置き換える
     for (const k of Object.keys(m)) {
       if (k.endsWith('|' + sid)) delete m[k];
     }
@@ -1799,7 +1799,7 @@ function openStaffShiftEditor(sid) {
     $('#opsModal').hidden = true;
     _staffShiftEditor = null;
     renderShiftMode();
-    showOpsToast(`${s.name} さん のシフト ${n} 日 を保存しました`);
+    showOpsToast(`${s.name} さんのシフト ${n} 日を保存しました`);
   };
 }
 
@@ -1848,7 +1848,7 @@ function renderStaffShiftCal() {
   `;
   $('#sseCal').innerHTML = html;
 
-  // セル tap: curShift を割当 (もう一度同じセル tap で 削除にできる)
+  // セル tap: curShift を割当 (もう一度同じセル tap で削除にできる)
   $$('#sseCal .sse-cell[data-date]').forEach((el) => {
     el.addEventListener('click', () => {
       const dstr = el.dataset.date;
@@ -1868,7 +1868,7 @@ function updateStaffShiftSummary() {
   const n = getStaffShiftChangedCount();
   $('#sseSave').disabled = n === 0;
   $('#sseSummary').innerHTML = n > 0
-    ? `<span class="sse-summary__chg">${n} 日 変更予定 (保存を押すと反映)</span>`
+    ? `<span class="sse-summary__chg">${n} 日変更予定 (保存を押すと反映)</span>`
     : '<span class="sse-summary__none">変更なし</span>';
 }
 
@@ -1922,7 +1922,7 @@ function openStaffModal(sid) {
     <div class="ops-edit">
       <label class="ops-edit__field">
         <span class="ops-edit__lbl">お名前</span>
-        <input type="text" id="sfName" value="${escapeHtml(s.name)}" placeholder="例) 山田 花">
+        <input type="text" id="sfName" value="${escapeHtml(s.name)}" placeholder="例) 山田花">
       </label>
       <label class="ops-edit__field">
         <span class="ops-edit__lbl">イニシャル (1文字)</span>
@@ -1934,7 +1934,7 @@ function openStaffModal(sid) {
       </label>
       <label class="ops-edit__field">
         <span class="ops-edit__lbl">希望シフト</span>
-        <input type="text" id="sfWish" value="${escapeHtml(s.wish)}" placeholder="週3 / 週末のみ 等">
+        <input type="text" id="sfWish" value="${escapeHtml(s.wish)}" placeholder="週3 / 週末のみ等">
       </label>
       <div class="ops-edit__field">
         <span class="ops-edit__lbl">色 (シフト表・タスクで使用)</span>
@@ -1973,7 +1973,7 @@ function openStaffModal(sid) {
             <div style="text-align:center;padding:14px;border:1px dashed var(--rule);border-radius:4px;background:var(--paper2);">
               <div style="font-size:11px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;">連携コード (10分有効)</div>
               <div style="font-family:var(--num);font-size:32px;font-weight:700;letter-spacing:0.14em;color:var(--ink);margin:8px 0;">${r.code}</div>
-              <div style="font-size:12px;color:var(--muted);">${escapeHtml(s.name)} さんの LINE から <br>この 6桁 を送ってもらってください</div>
+              <div style="font-size:12px;color:var(--muted);">${escapeHtml(s.name)} さんの LINE から <br>この 6桁を送ってもらってください</div>
             </div>`;
         } else {
           $('#sfLineArea').innerHTML = `<div style="color:var(--red);">発行に失敗しました: ${escapeHtml(r?.error || 'unknown')}</div>`;
@@ -2077,7 +2077,7 @@ async function loadPriceScan() {
 $('#priceRefresh')?.addEventListener('click', loadPriceScan);
 $('#priceCsv')?.addEventListener('click', () => {
   const data = priceScanCache;
-  if (!data) { alert('data がまだ 読み込まれて いません'); return; }
+  if (!data) { alert('data がまだ読み込まれていません'); return; }
   const compKeys = Object.keys(data.hotels).filter(k => !OWN_EXTERNAL_IDS.has(k));
   const marketMed = computeMarketMedianSeries(data);
   const marketAvg = average(Object.values(marketMed).filter(x => x != null));
@@ -2103,7 +2103,7 @@ $('#priceCsv')?.addEventListener('click', () => {
   const dates = data.dates.slice().sort();
   const header = ['タグ', 'ホテル名', '距離km', '取得日数', `${dates.length}日平均円`, '最安円', '最高円', '相場median差円', 'レビュー', 'URL'].join(',');
   const meta = [
-    `# 荒島 半径10km ${dates.length}日 相場レポート`,
+    `# 荒島半径10km ${dates.length}日相場レポート`,
     `# 取得: ${new Date(data.scannedAt).toLocaleString('ja-JP')}`,
     `# hotel数: ${Object.keys(data.hotels).length} (自ホテル含む)`,
     `# 相場平均: ¥${marketAvg != null ? Math.round(marketAvg).toLocaleString('ja-JP') : '—'}`,
@@ -2187,7 +2187,7 @@ function renderPriceKpis(data) {
     setText('priceScannedAt', '—');
     return;
   }
-  setEyebrow(`大野 半径 ${data.radiusKm}km · ${data.sites?.join(' + ') || 'Booking.com'}`);
+  setEyebrow(`大野半径 ${data.radiusKm}km · ${data.sites?.join(' + ') || 'Booking.com'}`);
 
   const dates = data.dates.slice().sort();
   const today = new Date().toISOString().slice(0, 10);
@@ -2208,7 +2208,7 @@ function renderPriceKpis(data) {
     const diff = ownMed - med;
     const dir = diff > 0 ? '↑ 高い' : diff < 0 ? '↓ 安い' : '同水準';
     if (deltaEl) {
-      deltaEl.textContent = `${dir}${diff !== 0 ? ' ' + fmtYen(Math.abs(diff)) : ''} (相場 と 比較)`;
+      deltaEl.textContent = `${dir}${diff !== 0 ? ' ' + fmtYen(Math.abs(diff)) : ''} (相場と比較)`;
       deltaEl.className = 'mgr__kpi-delta ' + (diff < 0 ? 'is-good' : diff > 0 ? 'is-warn' : '');
     }
   } else if (deltaEl) {
@@ -2232,17 +2232,17 @@ function renderPriceKpis(data) {
   const scanned = new Date(data.scannedAt);
   const scannedStr = `${scanned.getMonth() + 1}/${scanned.getDate()} ${String(scanned.getHours()).padStart(2, '0')}:${String(scanned.getMinutes()).padStart(2, '0')}`;
   setText('priceScannedAt', scannedStr);
-  setText('priceScannedAtTop', `最終 更新 ${scannedStr}`);
+  setText('priceScannedAtTop', `最終更新 ${scannedStr}`);
 
-  // M · Gradient signature: 相場 分布 プロット
+  // M · Gradient signature: 相場分布プロット
   renderDistribution(data, targetDate, med, compPricesToday, ownMed);
 
-  // 需要 の 強さ + 相場 の 向き (2026-07-31 tier A)
+  // 需要の強さ + 相場の向き (2026-07-31 tier A)
   const t = computeTightness(data);
   const tightEl = document.getElementById('priceTightness');
   if (tightEl) {
     const s = t.tightnessScore;
-    // 満室気味 / やや埋まる / 普通 / 空きが多い の 4段階
+    // 満室気味 / やや埋まる / 普通 / 空きが多いの 4段階
     const label = s >= 8 ? '満室気味' : s >= 3 ? 'やや埋まる' : s >= -3 ? '普通' : '空きが多い';
     const level = s >= 8 ? '高' : s >= 3 ? '中' : s >= -3 ? '中立' : '緩';
     tightEl.textContent = label;
@@ -2250,10 +2250,10 @@ function renderPriceKpis(data) {
     const sub = document.getElementById('priceTightnessSub');
     if (sub) {
       const arrow = s > 0 ? '＋' : '';
-      const desc = s >= 3 ? '週末 に 相場 が 上がる = 客 が 動いてる'
-        : s >= -3 ? '週末 と 平日 で 相場 差 小さい'
-        : '週末 でも 相場 上がらず = 空き 多い';
-      sub.textContent = `週末 の 上乗せ ${arrow}${s} → ${desc}`;
+      const desc = s >= 3 ? '週末に相場が上がる = 客が動いてる'
+        : s >= -3 ? '週末と平日で相場差小さい'
+        : '週末でも相場上がらず = 空き多い';
+      sub.textContent = `週末の上乗せ ${arrow}${s} → ${desc}`;
     }
   }
   const trendEl = document.getElementById('priceTrend');
@@ -2263,7 +2263,7 @@ function renderPriceKpis(data) {
     const sub = document.getElementById('priceTrendSub');
     if (sub && t.trendPct != null) {
       const sign = t.trendPct > 0 ? '＋' : '';
-      sub.textContent = `直近3日 は 30日 平均 に 対して ${sign}${t.trendPct}％`;
+      sub.textContent = `直近3日は 30日平均に対して ${sign}${t.trendPct}％`;
     }
   }
   renderMiniTrend('#priceTrendMini', t.marketMed, dates);
@@ -2363,7 +2363,7 @@ function renderMiniTrend(sel, marketMed, dates) {
     return `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${wknd ? 2.5 : 1.6}" fill="${wknd ? '#9B3A26' : '#1a1a1a'}"/>`;
   }).join('');
   const gradId = 'mgr-trend-' + Math.random().toString(36).slice(2, 7);
-  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="30日 相場 折線">
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="30日相場折線">
     <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#0071E3"/><stop offset="0.55" stop-color="#8B5CF6"/><stop offset="1" stop-color="#EC4899"/>
     </linearGradient></defs>
@@ -2386,7 +2386,7 @@ function renderMiniSupply(sel, supply, dates) {
     const fill = wknd ? 'url(#mgr-sup-grad)' : '#D2D2D7';
     return `<rect x="${(pad + i * barW).toFixed(1)}" y="${(h - pad - bh).toFixed(1)}" width="${(barW - 0.6).toFixed(1)}" height="${bh.toFixed(1)}" fill="${fill}" rx="1.5"/>`;
   }).join('');
-  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="日別 供給 (取得 hotel 数)">
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="日別供給 (取得 hotel 数)">
     <defs><linearGradient id="mgr-sup-grad" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#EC4899"/><stop offset="1" stop-color="#8B5CF6"/>
     </linearGradient></defs>${bars}</svg>`;
@@ -2412,7 +2412,7 @@ function renderHeatmap(data) {
   const headCells = document.createElement('div');
   headCells.className = 'price-hm__cells';
   const dowChars = ['日', '月', '火', '水', '木', '金', '土'];
-  // 日別 「価格 取得 hotel 数 = 0」 判定 (qa-reviewer P2-1): 検索 hit ゼロ 日 は 「?」 バッジ
+  // 日別 「価格取得 hotel 数 = 0」 判定 (qa-reviewer P2-1): 検索 hit ゼロ日は 「?」 バッジ
   const zeroDates = new Set(dates.filter((d) => {
     return Object.values(data.prices).every((row) => row?.[d] == null);
   }));
@@ -2472,13 +2472,13 @@ function renderHeatmap(data) {
         cell.dataset.h = String(quantileBucket(p, buckets));
         const mm = marketMed[d];
         const diff = mm != null ? Math.round(p - mm) : null;
-        const diffStr = diff == null ? '' : (diff === 0 ? ' · 相場 と 同水準' : ` · 相場 中央値 と ${diff >= 0 ? '+' : ''}${fmtYen(diff)}`);
-        cell.dataset.tooltip = `${d} · ${fmtYen(p)}${diffStr}${href ? ' · タップで 予約サイト' : ''}`;
+        const diffStr = diff == null ? '' : (diff === 0 ? ' · 相場と同水準' : ` · 相場中央値と ${diff >= 0 ? '+' : ''}${fmtYen(diff)}`);
+        cell.dataset.tooltip = `${d} · ${fmtYen(p)}${diffStr}${href ? ' · タップで予約サイト' : ''}`;
         if (href) {
           cell.href = href;
           cell.target = '_blank';
           cell.rel = 'noopener';
-          cell.setAttribute('aria-label', `${h.name || ''} ${d} ${fmtYen(p)} — Booking で 開く`);
+          cell.setAttribute('aria-label', `${h.name || ''} ${d} ${fmtYen(p)} — Booking で開く`);
         }
       }
       cells.appendChild(cell);
@@ -2523,7 +2523,7 @@ function computeTightness(data) {
   const supplyAvg = average(supplyVals) || 0;
   const priceAvg = average(priceVals) || 0;
 
-  // 週末 3日 vs 30日 平均
+  // 週末 3日 vs 30日平均
   const wknd = dates.filter(d => {
     const dow = new Date(d + 'T00:00:00+09:00').getDay();
     return dow === 0 || dow === 5 || dow === 6;
@@ -2549,13 +2549,13 @@ function computeTightness(data) {
   };
 }
 
-// ---- コンサル 分析 (2026-07-31 owner 明示 「ホテル コンサル で ディテールアップ」) ----
+// ---- コンサル分析 (2026-07-31 owner 明示 「ホテルコンサルでディテールアップ」) ----
 function renderConsultAnalysis(data) {
   const dates = data.dates.slice().sort();
   const compKeys = Object.keys(data.hotels).filter((k) => !OWN_EXTERNAL_IDS.has(k));
   const ownKeys = Object.keys(data.hotels).filter((k) => OWN_EXTERNAL_IDS.has(k));
 
-  // 曜日別 相場 (競合 中央値 と 自 平均)
+  // 曜日別相場 (競合中央値と自平均)
   const dowChars = ['日', '月', '火', '水', '木', '金', '土'];
   const dowStats = Array.from({ length: 7 }, () => ({ comp: [], own: [] }));
   for (const d of dates) {
@@ -2578,7 +2578,7 @@ function renderConsultAnalysis(data) {
       const isWknd = i === 0 || i === 5 || i === 6;
       return `
         <div class="consult-dow__col ${isWknd ? 'consult-dow__col--wknd' : ''}">
-          <div class="consult-dow__bars" title="${dowChars[i]}曜: 相場 中央値 ${fmtYen(med)} / 自ホテル 平均 ${fmtYen(own)}">
+          <div class="consult-dow__bars" title="${dowChars[i]}曜: 相場中央値 ${fmtYen(med)} / 自ホテル平均 ${fmtYen(own)}">
             <div class="consult-dow__bar consult-dow__bar--comp" style="height:${barH}%"></div>
             ${own != null ? `<div class="consult-dow__bar consult-dow__bar--own" style="height:${ownH}%"></div>` : ''}
           </div>
@@ -2604,12 +2604,12 @@ function renderConsultAnalysis(data) {
   const dowNote = $('#consultDowNote');
   if (dowNote) {
     const parts = [];
-    if (wkndPct != null) parts.push(`相場 の 週末 プレミアム = <b>+${wkndPct}%</b>`);
-    if (wkndOwnPct != null) parts.push(`自ホテル は <b>${wkndOwnPct >= 0 ? '+' : ''}${wkndOwnPct}%</b>`);
+    if (wkndPct != null) parts.push(`相場の週末プレミアム = <b>+${wkndPct}%</b>`);
+    if (wkndOwnPct != null) parts.push(`自ホテルは <b>${wkndOwnPct >= 0 ? '+' : ''}${wkndOwnPct}%</b>`);
     dowNote.innerHTML = parts.join(' / ') || '—';
   }
 
-  // 自 vs 相場 percentile 分布 (30日 各日、 荒島 は 相場 の 何位)
+  // 自 vs 相場 percentile 分布 (30日各日、 荒島は相場の何位)
   const rankBins = { cheap: 0, mid: 0, high: 0, unpriced: 0 };
   const perDayRank = [];
   for (const d of dates) {
@@ -2629,9 +2629,9 @@ function renderConsultAnalysis(data) {
     const p = (n) => total > 0 ? Math.round((n / total) * 100) : 0;
     rankWrap.innerHTML = `
       <div class="consult-rank__bar">
-        <div class="consult-rank__seg consult-rank__seg--cheap" style="flex:${rankBins.cheap};" title="${rankBins.cheap}日 = 安値 帯 (下位1/3)"><span>${rankBins.cheap}</span></div>
-        <div class="consult-rank__seg consult-rank__seg--mid" style="flex:${rankBins.mid};" title="${rankBins.mid}日 = 中間 帯"><span>${rankBins.mid}</span></div>
-        <div class="consult-rank__seg consult-rank__seg--high" style="flex:${rankBins.high};" title="${rankBins.high}日 = 高値 帯 (上位1/3)"><span>${rankBins.high}</span></div>
+        <div class="consult-rank__seg consult-rank__seg--cheap" style="flex:${rankBins.cheap};" title="${rankBins.cheap}日 = 安値帯 (下位1/3)"><span>${rankBins.cheap}</span></div>
+        <div class="consult-rank__seg consult-rank__seg--mid" style="flex:${rankBins.mid};" title="${rankBins.mid}日 = 中間帯"><span>${rankBins.mid}</span></div>
+        <div class="consult-rank__seg consult-rank__seg--high" style="flex:${rankBins.high};" title="${rankBins.high}日 = 高値帯 (上位1/3)"><span>${rankBins.high}</span></div>
       </div>
       <div class="consult-rank__legend">
         <span><i class="dot dot--cheap"></i>安値 ${p(rankBins.cheap)}%</span>
@@ -2642,50 +2642,50 @@ function renderConsultAnalysis(data) {
   }
   const rankNote = $('#consultRankNote');
   if (rankNote) {
-    if (total === 0) rankNote.textContent = '自ホテル の 単価 データ が 不足';
+    if (total === 0) rankNote.textContent = '自ホテルの単価データが不足';
     else {
       const dominant = rankBins.cheap > rankBins.mid && rankBins.cheap > rankBins.high ? '安値'
         : rankBins.high > rankBins.mid && rankBins.high > rankBins.cheap ? '高値' : '中間';
-      rankNote.innerHTML = `30日 中 <b>${dominant}</b> 帯 が 主体 (競合 平均 の ${dominant === '安値' ? '下' : dominant === '高値' ? '上' : '前後'})`;
+      rankNote.innerHTML = `30日中 <b>${dominant}</b> 帯が主体 (競合平均の ${dominant === '安値' ? '下' : dominant === '高値' ? '上' : '前後'})`;
     }
   }
 
-  // アクション 提案 (自動生成)
+  // アクション提案 (自動生成)
   const actions = generateConsultActions({
     wkndPct, wkndOwnPct, wkndMed, wdayMed, wkndOwnMed, wdayOwnMed,
     rankBins, total, perDayRank, dates, dowMed, dowOwn,
   });
   const actWrap = $('#consultActions');
-  if (actWrap) actWrap.innerHTML = actions.map(a => `<li class="consult-action"><span class="consult-action__tag">${a.tag}</span> ${a.text}</li>`).join('') || '<li class="consult-action">データ が 足りないため 提案 なし。</li>';
+  if (actWrap) actWrap.innerHTML = actions.map(a => `<li class="consult-action"><span class="consult-action__tag">${a.tag}</span> ${a.text}</li>`).join('') || '<li class="consult-action">データが足りないため提案なし。</li>';
 }
 
 function generateConsultActions(s) {
   const acts = [];
-  // 週末 プレミアム 差
+  // 週末プレミアム差
   if (s.wkndPct != null && s.wkndOwnPct != null) {
     const gap = s.wkndPct - s.wkndOwnPct;
     if (gap >= 8) {
       const yenUp = s.wdayOwnMed ? Math.round(s.wdayOwnMed * (gap / 100) / 100) * 100 : null;
-      acts.push({ tag: '週末', text: `相場 は +${s.wkndPct}% 週末 プレミアム を 取っているが、 自ホテル は +${s.wkndOwnPct}% で <b>${gap}pt 抑え目</b>。 週末 単価 に <b>${yenUp ? '+' + fmtYen(yenUp) : '上乗せ'}</b> の 余地。` });
+      acts.push({ tag: '週末', text: `相場は +${s.wkndPct}% 週末プレミアムを取っているが、 自ホテルは +${s.wkndOwnPct}% で <b>${gap}pt 抑え目</b>。 週末単価に <b>${yenUp ? '+' + fmtYen(yenUp) : '上乗せ'}</b> の余地。` });
     } else if (gap <= -8) {
-      acts.push({ tag: '週末', text: `自ホテル は 週末 +${s.wkndOwnPct}% で 相場 (+${s.wkndPct}%) を <b>${-gap}pt 上回る</b>。 週末 需要 の 裏付け が 確実 か 確認 (客層/イベント日)。` });
+      acts.push({ tag: '週末', text: `自ホテルは週末 +${s.wkndOwnPct}% で相場 (+${s.wkndPct}%) を <b>${-gap}pt 上回る</b>。 週末需要の裏付けが確実か確認 (客層/イベント日)。` });
     } else {
-      acts.push({ tag: '週末', text: `週末 プレミアム 相場 +${s.wkndPct}% と 自ホテル +${s.wkndOwnPct}% は ほぼ 均衡。 現状 維持 で OK。` });
+      acts.push({ tag: '週末', text: `週末プレミアム相場 +${s.wkndPct}% と自ホテル +${s.wkndOwnPct}% はほぼ均衡。 現状維持で OK。` });
     }
   }
 
-  // 位置 帯 の 偏り
+  // 位置帯の偏り
   if (s.total > 0) {
     const cheapPct = s.rankBins.cheap / s.total;
     const highPct = s.rankBins.high / s.total;
     if (cheapPct >= 0.5) {
-      acts.push({ tag: '相場位置', text: `30日 中 <b>${s.rankBins.cheap}日 (${Math.round(cheapPct * 100)}%)</b> が 相場 下位 1/3。 需要 曲線 に 合わせて 段階的 に 単価 上げ 検証 を 推奨。` });
+      acts.push({ tag: '相場位置', text: `30日中 <b>${s.rankBins.cheap}日 (${Math.round(cheapPct * 100)}%)</b> が相場下位 1/3。 需要曲線に合わせて段階的に単価上げ検証を推奨。` });
     } else if (highPct >= 0.5) {
-      acts.push({ tag: '相場位置', text: `30日 中 <b>${s.rankBins.high}日 (${Math.round(highPct * 100)}%)</b> が 相場 上位 1/3。 稼働率 が 落ちて ない か 監視、 落ちて いれば -¥1,000 〜 -¥2,000 の 段階下げ 検証。` });
+      acts.push({ tag: '相場位置', text: `30日中 <b>${s.rankBins.high}日 (${Math.round(highPct * 100)}%)</b> が相場上位 1/3。 稼働率が落ちてないか監視、 落ちていれば -¥1,000 〜 -¥2,000 の段階下げ検証。` });
     }
   }
 
-  // 曜日 単位 の ズレ 検出 (自 が 相場 中央値 の -20% 以下 の 曜日)
+  // 曜日単位のズレ検出 (自が相場中央値の -20% 以下の曜日)
   const dowChars = ['日', '月', '火', '水', '木', '金', '土'];
   const laggingDows = [];
   for (let i = 0; i < 7; i++) {
@@ -2694,20 +2694,20 @@ function generateConsultActions(s) {
   }
   if (laggingDows.length) {
     const top = laggingDows.sort((a, b) => b.gap - a.gap)[0];
-    acts.push({ tag: '曜日', text: `<b>${dowChars[top.dow]}曜</b> は 自ホテル ${fmtYen(top.own)} で 相場 ${fmtYen(top.med)} を <b>-${top.gap}%</b>。 曜日 別 の 段階 単価 で <b>+${fmtYen(top.med * 0.9 - top.own)}</b> の 余地。` });
+    acts.push({ tag: '曜日', text: `<b>${dowChars[top.dow]}曜</b> は自ホテル ${fmtYen(top.own)} で相場 ${fmtYen(top.med)} を <b>-${top.gap}%</b>。 曜日別の段階単価で <b>+${fmtYen(top.med * 0.9 - top.own)}</b> の余地。` });
   }
 
-  // 相場 レンジ の 中 で 自 の 最頻 帯
+  // 相場レンジの中で自の最頻帯
   if (s.perDayRank.length) {
     const priced = s.perDayRank.filter(r => r.rank != null);
     if (priced.length) {
       const avgRank = priced.reduce((a, b) => a + b.rank, 0) / priced.length;
-      acts.push({ tag: '客層', text: `自ホテル の 相場 パーセンタイル 平均 = <b>${Math.round(avgRank * 100)}%</b> (0=最安 / 100=最高)。 ${avgRank < 0.35 ? 'エコノミー 訴求 (清潔+設備) が 効きます。' : avgRank > 0.65 ? 'プレミアム 訴求 (体験/朝食/眺望) が 効きます。' : 'ミドル 帯 は 「価格 vs 体験」 の バランス 訴求。'}` });
+      acts.push({ tag: '客層', text: `自ホテルの相場パーセンタイル平均 = <b>${Math.round(avgRank * 100)}%</b> (0=最安 / 100=最高)。 ${avgRank < 0.35 ? 'エコノミー訴求 (清潔+設備) が効きます。' : avgRank > 0.65 ? 'プレミアム訴求 (体験/朝食/眺望) が効きます。' : 'ミドル帯は 「価格 vs 体験」 のバランス訴求。'}` });
     }
   }
 
-  // 需要 の 強さ (次段 で Booking の 逼迫 サイン 追加 予定)
-  acts.push({ tag: '次段', text: `次段 予定 = Booking の 「残り 客室 数」「今 見ている 人数」 表示 から 需要 の 強さ を 点数 化 → 動く 相場 を LINE 通知。` });
+  // 需要の強さ (次段で Booking の逼迫サイン追加予定)
+  acts.push({ tag: '次段', text: `次段予定 = Booking の 「残り客室数」「今見ている人数」 表示から需要の強さを点数化 → 動く相場を LINE 通知。` });
 
   return acts;
 }
@@ -2730,7 +2730,7 @@ function openHotelDetailModal(hotelKey) {
   const marketAvg = average(marketAvgSeries);
   const diffAvg = (avgP != null && marketAvg != null) ? Math.round(avgP - marketAvg) : null;
 
-  // 30日 折線 SVG (self vs market)
+  // 30日折線 SVG (self vs market)
   const dates = data.dates.slice().sort();
   const allVals = [...priceVals, ...marketAvgSeries];
   const min = Math.min(...allVals), max = Math.max(...allVals);
@@ -2740,7 +2740,7 @@ function openHotelDetailModal(hotelKey) {
   const scaleY = (v) => v == null ? null : pad + (hh - pad * 2) * (1 - (v - min) / range);
   const selfPts = dates.map((d, i) => [pad + i * stepX, scaleY(data.prices[hotelKey]?.[d])]);
   const marketPts = dates.map((d, i) => [pad + i * stepX, scaleY(marketMed[d])]);
-  // qa-reviewer P2 fix (2026-07-31): null 欠損日 で 線 を 切る (filter 後 の arr 参照 バグ)
+  // qa-reviewer P2 fix (2026-07-31): null 欠損日で線を切る (filter 後の arr 参照バグ)
   const pathFrom = (pts) => {
     let d = '', prev = false;
     for (const p of pts) {
@@ -2769,22 +2769,22 @@ function openHotelDetailModal(hotelKey) {
         ${h.photoUrl && /^https:\/\//.test(h.photoUrl) ? `<img class="hotel-modal__photo" src="${escapeHtml(h.photoUrl)}" alt="">` : ''}
         <div class="hotel-modal__meta">
           <div class="hotel-modal__row"><span class="hotel-modal__lbl">距離</span><span class="hotel-modal__val">${h.distanceKm ?? '—'} km</span></div>
-          <div class="hotel-modal__row"><span class="hotel-modal__lbl">${dates.length}日 平均</span><span class="hotel-modal__val">${fmtYen(avgP)}</span></div>
+          <div class="hotel-modal__row"><span class="hotel-modal__lbl">${dates.length}日平均</span><span class="hotel-modal__val">${fmtYen(avgP)}</span></div>
           <div class="hotel-modal__row"><span class="hotel-modal__lbl">最安 → 最高</span><span class="hotel-modal__val">${fmtYen(minP)} → ${fmtYen(maxP)}</span></div>
-          <div class="hotel-modal__row"><span class="hotel-modal__lbl">相場 中央値 と の 差</span><span class="hotel-modal__val ${diffAvg != null && diffAvg < 0 ? 'is-cheaper' : diffAvg != null && diffAvg > 0 ? 'is-pricier' : ''}">${diffAvg != null ? (diffAvg >= 0 ? '+' : '') + fmtYen(diffAvg) : '—'}</span></div>
+          <div class="hotel-modal__row"><span class="hotel-modal__lbl">相場中央値との差</span><span class="hotel-modal__val ${diffAvg != null && diffAvg < 0 ? 'is-cheaper' : diffAvg != null && diffAvg > 0 ? 'is-pricier' : ''}">${diffAvg != null ? (diffAvg >= 0 ? '+' : '') + fmtYen(diffAvg) : '—'}</span></div>
           ${h.reviewScore ? `<div class="hotel-modal__row"><span class="hotel-modal__lbl">Booking スコア</span><span class="hotel-modal__val">${escapeHtml(h.reviewScore)}</span></div>` : ''}
           <div class="hotel-modal__row"><span class="hotel-modal__lbl">出現日</span><span class="hotel-modal__val">${priceVals.length} / ${dates.length}</span></div>
           <div class="hotel-modal__actions">
-            <a class="btn btn--primary" href="${safeUrl}" target="_blank" rel="noopener">Booking で 開く →</a>
+            <a class="btn btn--primary" href="${safeUrl}" target="_blank" rel="noopener">Booking で開く →</a>
           </div>
         </div>
       </div>
       <div class="hotel-modal__chart">
         <div class="hotel-modal__chart-lbl">
-          <span><i class="dot" style="background:${isOwn ? '#9B3A26' : '#1a1a1a'}"></i>この ホテル</span>
-          <span><i class="dot" style="background:#4a90c8"></i>相場 中央値</span>
+          <span><i class="dot" style="background:${isOwn ? '#9B3A26' : '#1a1a1a'}"></i>このホテル</span>
+          <span><i class="dot" style="background:#4a90c8"></i>相場中央値</span>
         </div>
-        <svg viewBox="0 0 ${w} ${hh}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="30日 単価 折線">
+        <svg viewBox="0 0 ${w} ${hh}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="30日単価折線">
           <path d="${marketPath}" fill="none" stroke="#4a90c8" stroke-width="1.6" stroke-dasharray="4 3" opacity="0.7"/>
           <path d="${selfPath}" fill="none" stroke="${isOwn ? '#9B3A26' : '#1a1a1a'}" stroke-width="2.2"/>
           ${dateLabels}
@@ -2822,7 +2822,7 @@ function renderPriceCards(data) {
   const marketMed = computeMarketMedianSeries(data);
   const marketAvg = average(Object.values(marketMed).filter(x => x != null));
 
-  // 並び替え: 自ホテル 常に 上端 pin、 その 下 で priceCardSort に 従う
+  // 並び替え: 自ホテル常に上端 pin、 その下で priceCardSort に従う
   const hotelKeysSorted = hotelKeys.slice().sort((a, b) => {
     const oa = OWN_EXTERNAL_IDS.has(a) ? 0 : 1;
     const ob = OWN_EXTERNAL_IDS.has(b) ? 0 : 1;
@@ -2871,11 +2871,11 @@ function renderPriceCards(data) {
           </div>
           <div class="price-card__prices">
             <div class="price-card__stat">
-              <span class="price-card__stat-lbl">${data.dates.length}日 平均</span>
+              <span class="price-card__stat-lbl">${data.dates.length}日平均</span>
               <span class="price-card__stat-val">${fmtYen(avg)}</span>
             </div>
             <div class="price-card__stat">
-              <span class="price-card__stat-lbl">相場 中央値 と の 差</span>
+              <span class="price-card__stat-lbl">相場中央値との差</span>
               <span class="price-card__stat-val ${diffClass}">${diff == null ? '—' : (diff >= 0 ? '+' : '') + fmtYen(diff)}</span>
             </div>
           </div>
@@ -2929,7 +2929,7 @@ function renderPriceTable(data) {
         <tr>
           <th>ホテル</th>
           <th style="text-align:right;">距離</th>
-          <th style="text-align:right;">${data.dates.length}日 平均</th>
+          <th style="text-align:right;">${data.dates.length}日平均</th>
           <th style="text-align:right;">最安</th>
           <th style="text-align:right;">最高</th>
           <th style="text-align:right;">出現日</th>
