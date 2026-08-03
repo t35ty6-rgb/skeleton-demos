@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K · スワイプ 型 — 荒島</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #14110E;
+    --card: #FBFAF6;
+    --ink: #14110E;
+    --ink-2: #4A4238;
+    --ink-3: #7A7365;
+    --accent: #C1462C;
+    --cool: #2A4A5E;
+    --sans: 'Hiragino Sans', 'Inter', system-ui;
+    --num: 'Inter', system-ui;
+  }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); }
+  body { font-family: var(--sans); color: var(--card); font-size: 14px; display: flex; align-items: center; justify-content: center; padding: 20px; user-select: none; -webkit-user-select: none; }
+  .back { position: fixed; top: 14px; left: 14px; background: rgba(255,255,255,0.1); border-radius: 20px; padding: 6px 12px; font-size: 11px; letter-spacing: 0.14em; color: rgba(255,255,255,0.7); text-decoration: none; z-index: 20; }
+
+  .stage {
+    width: 100%; max-width: 380px; height: 100%; max-height: 720px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card {
+    position: absolute; inset: 0;
+    background: var(--card);
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    color: var(--ink);
+    padding: 32px 28px;
+    display: flex; flex-direction: column;
+    transition: transform .4s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity .4s;
+    overflow: hidden;
+  }
+  .card.out-up { transform: translateY(-120vh) rotate(-4deg); opacity: 0; }
+  .card.out-down { transform: translateY(120vh) rotate(4deg); opacity: 0; }
+  .card.below { transform: translateY(20px) scale(0.95); opacity: 0.5; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+
+  .card__head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .card__idx { font-family: var(--num); font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ink-3); }
+  .card__dist { font-family: var(--num); font-size: 13px; font-weight: 500; color: var(--ink-2); }
+  .card__badge { display: inline-block; font-size: 9px; letter-spacing: 0.16em; padding: 3px 8px; background: var(--accent); color: white; border-radius: 3px; text-transform: uppercase; font-weight: 600; margin-top: 4px; }
+  .card__body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .card__name { font-size: 22px; font-weight: 600; letter-spacing: -0.005em; margin-bottom: 8px; line-height: 1.35; }
+  .card--own .card__name { color: var(--accent); }
+  .card__cap { font-size: 12.5px; color: var(--ink-3); margin-bottom: 24px; line-height: 1.7; }
+  .card__cap b { color: var(--ink-2); font-family: var(--num); font-weight: 500; }
+
+  .card__price-block { padding: 22px 0; border-top: 1px solid rgba(20,17,14,0.08); border-bottom: 1px solid rgba(20,17,14,0.08); text-align: center; margin-bottom: 20px; }
+  .card__price-lbl { font-family: var(--num); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px; }
+  .card__price { font-family: var(--num); font-size: 42px; font-weight: 300; letter-spacing: -0.03em; color: var(--ink); line-height: 1; }
+  .card__price-sub { font-size: 12px; color: var(--ink-2); margin-top: 8px; }
+
+  .card__facts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
+  .card__fact { padding: 12px 14px; background: rgba(20,17,14,0.03); border-radius: 8px; }
+  .card__fact-lbl { font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); font-family: var(--num); margin-bottom: 3px; }
+  .card__fact-val { font-family: var(--num); font-size: 15px; font-weight: 500; color: var(--ink); letter-spacing: -0.005em; }
+  .card__fact-val.accent { color: var(--accent); }
+  .card__fact-val.cool { color: var(--cool); }
+
+  .card__foot { margin-top: auto; font-size: 11.5px; color: var(--ink-3); text-align: center; letter-spacing: 0.02em; line-height: 1.65; }
+  .card__foot b { color: var(--accent); font-family: var(--num); font-weight: 500; }
+
+  .hints {
+    position: fixed;
+    bottom: 30px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 24px;
+    color: rgba(255,255,255,0.5);
+    font-size: 11px; letter-spacing: 0.14em;
+    z-index: 5;
+  }
+  .hints span { display: flex; align-items: center; gap: 6px; }
+  .arrow { font-family: var(--num); font-size: 18px; font-weight: 300; }
+
+  .counter {
+    position: fixed;
+    top: 14px; right: 14px;
+    background: rgba(255,255,255,0.1);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-family: var(--num);
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    letter-spacing: 0.06em;
+    z-index: 20;
+  }
+</style>
+</head>
+<body>
+
+<a class="back" href="../">← 一覧</a>
+<div class="counter" id="cnt">1 / 13</div>
+
+<div class="stage" id="stage"></div>
+
+<div class="hints">
+  <span><span class="arrow">↑</span> 次</span>
+  <span><span class="arrow">↓</span> 前</span>
+  <span>tap: 詳細</span>
+</div>
+
+<script>
+const hotels = [
+  { name: '荒島 (自ホテル)', dist: 0.0, avg: 9800, tonight: 9800, own: true, delta: -8600, sub: '相場 より −¥8,600 · 相場 下位 15% 帯' },
+  { name: '古民家 ナマケモノ', dist: 0.8, avg: 14400, tonight: 12500, review: 9.0, delta: -6000, sub: '徒歩圏 直接 競合 · 「連泊」「朝食」 で 差別化' },
+  { name: '大野 街道 の 宿', dist: 3.2, avg: 12800, tonight: 11500, delta: -6900, sub: '車で 8分 · 低価格 帯' },
+  { name: '奥越 民泊 みずのわ', dist: 5.8, avg: 15200, tonight: 14200, delta: -3200, sub: '中間 価格 帯' },
+  { name: '勝山駅 恐竜博 BBQ 民泊', dist: 8.6, avg: 24500, tonight: 22000, delta: +5600, sub: '恐竜博物館 客層 メイン' },
+  { name: '勝山ニューホテル', dist: 8.5, avg: 32200, tonight: 28000, review: 8.1, delta: +11600, sub: '車圏 中 - 高価 帯 · ビジネス層' },
+  { name: 'ふとん屋 の 宿 悦', dist: 9.4, avg: 28300, tonight: 25000, review: 9.0, delta: +8600, sub: '恐竜博物館 徒歩10分' },
+  { name: 'じゅらどん の 家', dist: 9.3, avg: 34100, tonight: 30000, review: 8.9, delta: +15700, sub: '恐竜好き 家族層 高価 帯' },
+  { name: '恐竜一色 Dinosaur Guest', dist: 9.4, avg: 21000, tonight: 18000, delta: +2600, sub: '恐竜 テーマ 民泊' },
+  { name: 'Irifune', dist: 9.1, avg: 19800, tonight: 17500, delta: -600, sub: '相場 中央値 前後' },
+  { name: '天然木曽ひのき 志ろきや', dist: 9.6, avg: 18500, tonight: 16800, delta: -1900, sub: '一棟貸し · 家族層' },
+  { name: 'JAM FUKUI KATSUYAMA TOKYU', dist: 12.1, avg: 45200, tonight: 42000, review: 8.6, delta: +26800, sub: '半径外 高価 帯 リゾート · 参考' },
+  { name: '山斎 一棟貸し', dist: 16.2, avg: 30000, tonight: 28000, review: 9.2, delta: +11600, sub: '半径外 · 参考' },
+];
+
+const stage = document.getElementById('stage');
+const cnt = document.getElementById('cnt');
+let idx = 0;
+
+function render() {
+  stage.innerHTML = '';
+  const cur = hotels[idx];
+  const next = hotels[idx + 1];
+  if (next) {
+    const c = build(next); c.classList.add('below'); stage.appendChild(c);
+  }
+  const c = build(cur); stage.appendChild(c);
+  cnt.textContent = (idx + 1) + ' / ' + hotels.length;
+}
+
+function build(h) {
+  const c = document.createElement('div');
+  c.className = 'card' + (h.own ? ' card--own' : '');
+  const deltaTxt = h.delta >= 0 ? '+¥' + h.delta.toLocaleString('ja-JP') : '−¥' + Math.abs(h.delta).toLocaleString('ja-JP');
+  const deltaCls = h.delta > 1000 ? 'accent' : h.delta < -1000 ? 'cool' : '';
+  c.innerHTML = `
+    <div class="card__head">
+      <div>
+        <div class="card__idx">${String(idx+1).padStart(2,'0')} / ${hotels.length}</div>
+        ${h.own ? '<div class="card__badge">自ホテル</div>' : ''}
+      </div>
+      <div class="card__dist">${h.dist} km</div>
+    </div>
+    <div class="card__body">
+      <div class="card__name">${h.name}</div>
+      <div class="card__cap">${h.sub}${h.review ? ' · ★ <b>' + h.review + '</b>' : ''}</div>
+      <div class="card__price-block">
+        <div class="card__price-lbl">Tonight</div>
+        <div class="card__price">¥${h.tonight.toLocaleString('ja-JP')}</div>
+        <div class="card__price-sub">30日 平均 ¥${h.avg.toLocaleString('ja-JP')}</div>
+      </div>
+      <div class="card__facts">
+        <div class="card__fact">
+          <div class="card__fact-lbl">相場 差</div>
+          <div class="card__fact-val ${deltaCls}">${deltaTxt}</div>
+        </div>
+        <div class="card__fact">
+          <div class="card__fact-lbl">半径 帯</div>
+          <div class="card__fact-val">${h.dist <= 1 ? '徒歩圏' : h.dist <= 5 ? '車 5分' : h.dist <= 10 ? '車 15分' : '半径外'}</div>
+        </div>
+      </div>
+    </div>
+    <div class="card__foot">${h.own ? '打つ手: 週末 <b>+¥3,000</b> 上乗せ 検証' : idx === 1 ? '直接 競合、 差別化 訴求 必要' : idx > 4 ? '客層 別、 直接 競合 度 低' : '相場 中央 帯 参考'}</div>
+  `;
+  return c;
+}
+
+function goNext() {
+  if (idx >= hotels.length - 1) return;
+  const cur = stage.querySelector('.card:last-child');
+  if (cur) cur.classList.add('out-up');
+  setTimeout(() => { idx++; render(); }, 380);
+}
+function goPrev() {
+  if (idx === 0) return;
+  const cur = stage.querySelector('.card:last-child');
+  if (cur) cur.classList.add('out-down');
+  setTimeout(() => { idx--; render(); }, 380);
+}
+
+// key + wheel + swipe
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowUp' || e.key === 'ArrowRight') goNext();
+  if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') goPrev();
+});
+let wheelLock = false;
+window.addEventListener('wheel', e => {
+  if (wheelLock) return;
+  wheelLock = true;
+  setTimeout(() => wheelLock = false, 500);
+  if (e.deltaY > 10) goNext();
+  else if (e.deltaY < -10) goPrev();
+}, { passive: true });
+let ty = 0;
+window.addEventListener('touchstart', e => ty = e.touches[0].clientY);
+window.addEventListener('touchend', e => {
+  const dy = e.changedTouches[0].clientY - ty;
+  if (dy < -50) goNext();
+  else if (dy > 50) goPrev();
+});
+stage.addEventListener('click', () => alert(hotels[idx].name + '\n30日 平均 ¥' + hotels[idx].avg.toLocaleString('ja-JP') + '\n距離 ' + hotels[idx].dist + ' km'));
+
+render();
+</script>
+
+</body>
+</html>

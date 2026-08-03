@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D · iOS Card — 荒島 価格調査</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #EDE9E1;
+    --surface: #FFFFFF;
+    --surface-2: #F7F4EE;
+    --ink: #1D1B18;
+    --ink-2: #4A4640;
+    --ink-3: #7A7365;
+    --ink-4: #B0A99B;
+    --rule: rgba(29,27,24,0.06);
+    --accent: #C5502F;
+    --good: #2F7A5C;
+    --shadow: 0 1px 3px rgba(0,0,0,0.03), 0 6px 20px rgba(0,0,0,0.05);
+    --shadow-lg: 0 4px 10px rgba(0,0,0,0.05), 0 20px 50px rgba(0,0,0,0.08);
+    --sans: 'Inter', -apple-system, 'SF Pro Text', 'Hiragino Sans', system-ui;
+    --num: 'Inter', -apple-system, 'SF Pro Display', 'Hiragino Sans', system-ui;
+  }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 13.5px;
+    line-height: 1.6;
+    padding: 32px 24px 60px;
+    letter-spacing: 0.005em;
+    font-variant-numeric: tabular-nums;
+  }
+  .back { position: fixed; top: 14px; left: 14px; font-size: 11px; letter-spacing: 0.16em; color: var(--ink-3); text-decoration: none; z-index: 10; background: white; padding: 6px 12px; border-radius: 20px; box-shadow: var(--shadow); }
+  .back:hover { color: var(--ink); }
+
+  .app { max-width: 1180px; margin: 0 auto; }
+
+  /* --- topline --- */
+  .topline {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 6px 4px 26px;
+  }
+  .topline__title { font-family: var(--num); font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .topline__sub { font-size: 12.5px; color: var(--ink-3); letter-spacing: 0.02em; margin-top: 4px; }
+  .topline__meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: white;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    color: var(--ink-3);
+    box-shadow: var(--shadow);
+  }
+  .topline__meta::before { content: '●'; color: var(--good); font-size: 8px; }
+
+  /* --- hero カード --- */
+  .hero {
+    background: var(--ink);
+    color: white;
+    border-radius: 22px;
+    padding: 34px 36px;
+    box-shadow: var(--shadow-lg);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 24px;
+    margin-bottom: 20px;
+  }
+  .hero__lbl { font-size: 12px; color: rgba(255,255,255,0.55); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 12px; }
+  .hero__val {
+    font-family: var(--num);
+    font-size: 68px;
+    font-weight: 300;
+    letter-spacing: -0.035em;
+    line-height: 1;
+    color: white;
+  }
+  .hero__delta { color: rgba(255,255,255,0.7); margin-top: 8px; font-size: 13px; }
+  .hero__own {
+    text-align: right;
+    padding: 14px 20px;
+    background: rgba(255,255,255,0.10);
+    border-radius: 14px;
+    min-width: 180px;
+  }
+  .hero__own-lbl { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.55); margin-bottom: 6px; }
+  .hero__own-val { font-family: var(--num); font-size: 26px; font-weight: 500; letter-spacing: -0.015em; color: white; }
+  .hero__own-diff { font-size: 11.5px; color: #F0A090; margin-top: 4px; letter-spacing: 0.02em; }
+
+  /* --- KPI カード grid --- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .kpi {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 18px 20px 20px;
+    box-shadow: var(--shadow);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .kpi:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+  .kpi__lbl { font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; font-weight: 500; }
+  .kpi__val { font-family: var(--num); font-size: 26px; font-weight: 500; letter-spacing: -0.015em; color: var(--ink); line-height: 1.1; }
+  .kpi__sub { font-size: 11.5px; color: var(--ink-3); margin-top: 4px; }
+
+  /* --- チャート カード --- */
+  .charts {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .chart {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 22px 24px;
+    box-shadow: var(--shadow);
+  }
+  .chart__title { font-size: 12px; color: var(--ink-3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; font-weight: 500; }
+  .chart svg { width: 100%; height: auto; display: block; }
+
+  /* --- カード grid (競合) --- */
+  .section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 4px 12px;
+  }
+  .section-title h2 { font-family: var(--num); font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .section-title span { font-size: 12px; color: var(--ink-3); }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+    margin-bottom: 30px;
+  }
+  .card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+    transition: transform .2s, box-shadow .2s;
+    position: relative;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+  .card--own {
+    background: linear-gradient(180deg, rgba(197,80,47,0.05), rgba(197,80,47,0.02));
+    border: 1px solid rgba(197,80,47,0.15);
+  }
+  .card__own-tag {
+    position: absolute;
+    top: 16px; right: 16px;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    background: var(--accent);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .card__name { font-family: var(--num); font-size: 14.5px; font-weight: 600; letter-spacing: -0.005em; margin-bottom: 4px; line-height: 1.35; padding-right: 60px; }
+  .card--own .card__name { color: var(--accent); }
+  .card__meta { font-size: 11.5px; color: var(--ink-3); margin-bottom: 14px; }
+  .card__stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 12px; border-top: 1px solid var(--rule); }
+  .card__stat-lbl { font-size: 10px; color: var(--ink-3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2px; }
+  .card__stat-val { font-family: var(--num); font-size: 15px; font-weight: 500; letter-spacing: -0.01em; }
+  .card__stat-val.pos { color: var(--accent); }
+  .card__stat-val.neg { color: var(--good); }
+
+  /* --- アクション --- */
+  .actions-wrap {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 24px 28px;
+    box-shadow: var(--shadow);
+  }
+  .actions-wrap h3 { font-family: var(--num); font-size: 15px; font-weight: 600; letter-spacing: 0.02em; margin-bottom: 12px; }
+  .actions { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .actions li {
+    padding: 12px 16px;
+    background: var(--surface-2);
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.65;
+  }
+  .actions li b { color: var(--ink); font-family: var(--num); font-weight: 600; padding: 0 2px; }
+  .actions li strong { color: var(--accent); font-family: var(--num); font-weight: 700; padding-right: 8px; font-size: 11px; letter-spacing: 0.14em; }
+
+  @media (max-width: 900px) {
+    body { padding: 20px 14px 40px; }
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .charts { grid-template-columns: 1fr; }
+    .hero { grid-template-columns: 1fr; padding: 24px 24px; }
+    .hero__val { font-size: 52px; }
+    .cards { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 480px) {
+    .cards { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: 1fr 1fr; }
+    .topline { flex-direction: column; align-items: flex-start; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<a class="back" href="../">← 5案</a>
+
+<div class="app">
+  <div class="topline">
+    <div>
+      <div class="topline__title">価格調査</div>
+      <div class="topline__sub">大野 半径 10 km · Booking</div>
+    </div>
+    <span class="topline__meta">最終 取得 2026·08·01 03·37</span>
+  </div>
+
+  <!-- hero -->
+  <div class="hero">
+    <div>
+      <div class="hero__lbl">Tonight · Median</div>
+      <div class="hero__val">¥18,400</div>
+      <div class="hero__delta">半径 10 km で 12 軒 が 稼働。 相場 は 静か。</div>
+    </div>
+    <div class="hero__own">
+      <div class="hero__own-lbl">自ホテル · 荒島</div>
+      <div class="hero__own-val">¥9,800</div>
+      <div class="hero__own-diff">−¥8,600 vs 中央値</div>
+    </div>
+  </div>
+
+  <!-- KPI 4 -->
+  <div class="grid">
+    <div class="kpi"><div class="kpi__lbl">30 Days · Median</div><div class="kpi__val">¥25,900</div><div class="kpi__sub">平均 ¥27,052</div></div>
+    <div class="kpi"><div class="kpi__lbl">Weekend · Median</div><div class="kpi__val">¥33,500</div><div class="kpi__sub">+29% vs 平日</div></div>
+    <div class="kpi"><div class="kpi__lbl">Tightness</div><div class="kpi__val">緩</div><div class="kpi__sub">score −3.3</div></div>
+    <div class="kpi"><div class="kpi__lbl">Trend · 3d/30d</div><div class="kpi__val">−9%</div><div class="kpi__sub">下降</div></div>
+  </div>
+
+  <!-- charts -->
+  <div class="charts">
+    <div class="chart">
+      <div class="chart__title">30-day 相場 折線</div>
+      <svg viewBox="0 0 600 140" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="chart">
+      <div class="chart__title">日別 供給</div>
+      <svg viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+
+  <!-- 競合 カード grid -->
+  <div class="section-title">
+    <h2>競合 13 軒</h2>
+    <span>距離 順 · 自ホテル 上端 pin</span>
+  </div>
+  <div class="cards" id="cards"></div>
+
+  <!-- アクション -->
+  <div class="actions-wrap">
+    <h3>今 打つ 手</h3>
+    <ol class="actions">
+      <li><strong>週末</strong>相場 週末プレミアム <b>+29%</b> に対して 荒島 は 上乗せ弱。 金土に <b>+¥2,500</b> 上乗せ を 三週 の 稼働率 で 検証。</li>
+      <li><strong>相場位置</strong>荒島 は 相場 の 下位 <b>15%</b> 帯。 客層「エコノミー 徹底」 or 「¥3,000 上乗せ」 の 二択 を 三週 で 検証。</li>
+      <li><strong>trend</strong>相場 <b>−9%</b> 下降 中。 客足 落ち の 予兆 と 読み、 写真 / レビュー 応答 / OTA description の 見直し。</li>
+      <li><strong>直近</strong>徒歩圏 直接 競合 = ナマケモノ (0.8km, 平均 <b>¥14,400</b>, レビュー <b>9.0</b>)。 客層 かぶり 大、 「連泊 割引」「朝食」 で 差別化。</li>
+    </ol>
+  </div>
+</div>
+
+<script src="../_data.js"></script>
+<script>
+  const D = window.MOCK_DATA;
+  const fmt = window.fmtYen;
+
+  // 折線
+  {
+    const svg = document.querySelectorAll('.chart svg')[0];
+    const w = 600, h = 140, pad = 6;
+    const vals = D.trend;
+    const min = Math.min(...vals), max = Math.max(...vals), range = max - min || 1;
+    const step = (w - pad * 2) / (vals.length - 1);
+    let path = '';
+    vals.forEach((v, i) => {
+      const x = pad + i * step;
+      const y = pad + (h - pad * 2) * (1 - (v - min) / range);
+      path += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+    });
+    svg.innerHTML = `<path d="${path.trim()}" fill="none" stroke="#1D1B18" stroke-width="1.6" stroke-linejoin="round"/>`;
+  }
+
+  // 供給
+  {
+    const svg = document.querySelectorAll('.chart svg')[1];
+    const w = 300, h = 140, pad = 4;
+    const vals = D.supply;
+    const max = Math.max(...vals);
+    const bw = (w - pad * 2) / vals.length;
+    let bars = '';
+    vals.forEach((v, i) => {
+      const dow = new Date(D.dates[i] + 'T00:00:00+09:00').getDay();
+      const wknd = dow === 0 || dow === 5 || dow === 6;
+      const bh = ((h - pad * 2) * v / max);
+      bars += `<rect x="${(pad + i * bw).toFixed(1)}" y="${(h - pad - bh).toFixed(1)}" width="${(bw - 1).toFixed(1)}" height="${bh.toFixed(1)}" fill="${wknd?'#C5502F':'#1D1B18'}" opacity="${wknd?0.85:0.6}" rx="1"/>`;
+    });
+    svg.innerHTML = bars;
+  }
+
+  // 競合 カード
+  const marketAvg = D.avg30;
+  const rows = D.hotels.slice().sort((a, b) => (a.own ? -1 : b.own ? 1 : a.dist - b.dist));
+  document.getElementById('cards').innerHTML = rows.map(h => {
+    const diff = h.avg - marketAvg;
+    const diffClass = diff < -1000 ? 'neg' : diff > 1000 ? 'pos' : '';
+    return `
+      <div class="card ${h.own ? 'card--own' : ''}">
+        ${h.own ? '<div class="card__own-tag">自ホテル</div>' : ''}
+        <div class="card__name">${h.name}</div>
+        <div class="card__meta">${h.dist.toFixed(1)} km · Booking${h.review ? ' · ★' + h.review : ''}</div>
+        <div class="card__stats">
+          <div><div class="card__stat-lbl">30日 平均</div><div class="card__stat-val">${fmt(h.avg)}</div></div>
+          <div><div class="card__stat-lbl">相場 差</div><div class="card__stat-val ${diffClass}">${diff >= 0 ? '+' : ''}${fmt(diff)}</div></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+</script>
+
+</body>
+</html>

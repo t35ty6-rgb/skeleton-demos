@@ -2304,6 +2304,173 @@ function renderPriceKpis(data) {
   }
   renderMiniTrend('#priceTrendMini', t.marketMed, dates);
   renderMiniSupply('#priceSupplyMini', t.supply, dates);
+
+  // Phase 1 拡張 (2026-08-04): 3 機能 追加
+  renderExecVerdict(data, t, targetDate, med, ownMed);   // verdict 動的化
+  renderCompetitorAlerts(data);                          // 競合動向 alert
+  renderRevenueForecast(data, t);                        // 収益予測 (30日 期待売上)
+}
+
+// === Phase 1: 経営者 向け 動的 verdict (hardcoded の ¥18,400 例 を 撤廃) ===
+function renderExecVerdict(data, t, targetDate, todayMed, ownPrice) {
+  const el = document.getElementById('priceVerdictText');
+  if (!el) return;
+  const dates = data.dates.slice().sort();
+  // 平日 相場 median (月火水木)
+  const wdayPrices = [];
+  for (const d of dates) {
+    const dow = new Date(d + 'T00:00:00+09:00').getDay();
+    if (dow >= 1 && dow <= 4) {
+      const compK = Object.keys(data.hotels).filter(k => !OWN_EXTERNAL_IDS.has(k));
+      for (const k of compK) { const p = data.prices[k]?.[d]; if (p != null) wdayPrices.push(p); }
+    }
+  }
+  const wdayMed = median(wdayPrices);
+  // 週末 相場 median (金土日)
+  const wkndPrices = [];
+  for (const d of dates) {
+    const dow = new Date(d + 'T00:00:00+09:00').getDay();
+    if (dow === 0 || dow === 5 || dow === 6) {
+      const compK = Object.keys(data.hotels).filter(k => !OWN_EXTERNAL_IDS.has(k));
+      for (const k of compK) { const p = data.prices[k]?.[d]; if (p != null) wkndPrices.push(p); }
+    }
+  }
+  const wkndMed = median(wkndPrices);
+  const wkndUpPct = (wkndMed && wdayMed) ? Math.round((wkndMed / wdayMed - 1) * 100) : null;
+  // 荒島 の 上乗せ 余地 (平日 単価 × 週末プレミアム%)
+  const upliftYen = (ownPrice != null && wkndUpPct != null) ? Math.round(ownPrice * wkndUpPct / 100 / 500) * 500 : null;
+  const diffFromWday = (ownPrice != null && wdayMed != null) ? wdayMed - ownPrice : null;
+
+  // s1 = 「平日相場 ¥N に対して 荒島 ¥M = ¥K 安い」 の 1文
+  let s1;
+  if (wdayMed != null && ownPrice != null && diffFromWday != null) {
+    let diffPhrase;
+    if (diffFromWday > 500) diffPhrase = `= <b>${fmtYen(diffFromWday)} 安い</b>`;
+    else if (diffFromWday < -500) diffPhrase = `= <b>${fmtYen(-diffFromWday)} 高い</b>`;
+    else diffPhrase = `≒ 同 水準`;
+    s1 = `平日 相場 <b>${fmtYen(wdayMed)}</b> に 対して 荒島 <b>${fmtYen(ownPrice)}</b> ${diffPhrase}`;
+  } else if (wdayMed != null) {
+    s1 = `平日 相場 <b>${fmtYen(wdayMed)}</b>`;
+  } else {
+    s1 = '相場 データ 未確定';
+  }
+  let s2 = '';
+  if (wkndUpPct != null && wkndUpPct >= 5) {
+    s2 = `週末 は 相場 <b>+${wkndUpPct}%</b> 上昇。`;
+    if (upliftYen && ownPrice) s2 += ` 荒島 も 週末 <b>+${fmtYen(upliftYen)}</b> 上乗せ 検証 が 次 の 手。`;
+  } else if (wkndUpPct != null && wkndUpPct <= -5) {
+    s2 = `週末 は 相場 <b>${wkndUpPct}%</b> ダウン。 単価 は 維持 or 微減 で 稼働 優先。`;
+  } else {
+    s2 = `週末 と 平日 で 相場 差 は 小さい。 曜日 別 段階 単価 の 効果 は 限定的。`;
+  }
+  el.innerHTML = `${s1}。 ${s2}`;
+}
+
+// === Phase 1: 競合 動向 alert (7日 rolling vs 直近 3日 で ±15% 以上 変化 検知) ===
+function renderCompetitorAlerts(data) {
+  const wrap = document.getElementById('priceCompAlerts');
+  if (!wrap) return;
+  const dates = data.dates.slice().sort();
+  const alerts = [];
+  const compKeys = Object.keys(data.hotels).filter(k => !OWN_EXTERNAL_IDS.has(k));
+  for (const k of compKeys) {
+    const series = data.prices[k] || {};
+    // 直近 3日 avg vs その 前 4日 avg
+    const recent = dates.slice(0, 3).map(d => series[d]).filter(v => v != null);
+    const prior = dates.slice(3, 7).map(d => series[d]).filter(v => v != null);
+    if (recent.length < 2 || prior.length < 2) continue;
+    const recentAvg = average(recent);
+    const priorAvg = average(prior);
+    if (recentAvg == null || priorAvg == null || priorAvg === 0) continue;
+    const pct = Math.round((recentAvg / priorAvg - 1) * 100);
+    if (Math.abs(pct) < 15) continue;
+    const h = data.hotels[k] || {};
+    alerts.push({
+      key: k,
+      name: h.name || '?',
+      site: h.site,
+      distance: h.distanceKm,
+      recentAvg, priorAvg, pct,
+      dir: pct > 0 ? 'up' : 'down',
+    });
+  }
+  alerts.sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct));
+  const top = alerts.slice(0, 3);
+  if (!top.length) {
+    wrap.innerHTML = '';
+    wrap.hidden = true;
+    return;
+  }
+  wrap.hidden = false;
+  wrap.innerHTML = top.map(a => {
+    const arrow = a.dir === 'up' ? '↑' : '↓';
+    const clsD = a.dir === 'up' ? 'is-up' : 'is-down';
+    const siteBadge = a.site === 'rakuten'
+      ? '<span class="mgr-alert__site mgr-alert__site--rakuten">楽天</span>'
+      : '<span class="mgr-alert__site mgr-alert__site--booking">Booking</span>';
+    const interpret = a.dir === 'up'
+      ? (a.pct >= 30 ? '週末 満室 見込み・ 単価 集中 販売 の 可能性、 相場 追従 検討' : '需要 上昇 の signal、 荒島 単価 も 見直し 余地')
+      : (a.pct <= -30 ? '予約 苦戦 or 客層 変更 の 可能性' : '相場 緩み、 荒島 は 現状 維持 で 稼働 優先');
+    return `
+      <div class="mgr-alert mgr-alert--${clsD}">
+        <div class="mgr-alert__head">
+          <span class="mgr-alert__pct">${arrow} ${a.pct >= 0 ? '+' : ''}${a.pct}%</span>
+          <span class="mgr-alert__name">${escapeHtml(a.name.slice(0, 24))}</span>
+          ${siteBadge}
+          <span class="mgr-alert__dist">${a.distance != null ? a.distance.toFixed(1) + 'km' : ''}</span>
+        </div>
+        <div class="mgr-alert__body">
+          <span class="mgr-alert__prices">直近3日 <b>${fmtYen(a.recentAvg)}</b> vs 前4日 <b>${fmtYen(a.priorAvg)}</b></span>
+          <span class="mgr-alert__note">${interpret}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// === Phase 1: 収益予測 (単価 × 想定稼働率 = 期待売上) ===
+function renderRevenueForecast(data, t) {
+  const wrap = document.getElementById('priceRevenueForecast');
+  if (!wrap) return;
+  const dates = data.dates.slice().sort();
+  const ownK = Object.keys(data.hotels).find(k => OWN_EXTERNAL_IDS.has(k));
+  const OCC = 0.70; // 想定稼働率 70%
+  const ROOMS = 6; // 荒島 の 部屋数 (config.js から 取れる と 尚可、 今は 定数)
+  if (!ownK) { wrap.innerHTML = ''; return; }
+  const ownSeries = data.prices[ownK] || {};
+  const marketMed = t.marketMed || computeMarketMedianSeries(data);
+  let sumCurrent = 0, sumMarket = 0, cntC = 0, cntM = 0;
+  for (const d of dates) {
+    const o = ownSeries[d];
+    const m = marketMed[d];
+    if (o != null) { sumCurrent += o * OCC * ROOMS; cntC++; }
+    if (m != null) { sumMarket += m * OCC * ROOMS; cntM++; }
+  }
+  const days = dates.length;
+  const gapYen = sumMarket - sumCurrent;
+  const gapPct = sumCurrent > 0 ? Math.round((gapYen / sumCurrent) * 100) : null;
+  wrap.innerHTML = `
+    <div class="mgr-fc__head">
+      <span class="mgr-fc__eyebrow">収益 予測 (${days}日、 稼働率 ${Math.round(OCC * 100)}% 想定、 ${ROOMS} 室)</span>
+    </div>
+    <div class="mgr-fc__grid">
+      <div class="mgr-fc__col">
+        <div class="mgr-fc__lbl">現行 単価 の まま</div>
+        <div class="mgr-fc__val">${fmtYen(Math.round(sumCurrent / 10000) * 10000)}</div>
+        <div class="mgr-fc__sub">${cntC} 日 実データ</div>
+      </div>
+      <div class="mgr-fc__col mgr-fc__col--target">
+        <div class="mgr-fc__lbl">相場 中央値 追従</div>
+        <div class="mgr-fc__val mgr-fc__val--target">${fmtYen(Math.round(sumMarket / 10000) * 10000)}</div>
+        <div class="mgr-fc__sub">${cntM} 日 相場 median</div>
+      </div>
+      <div class="mgr-fc__col mgr-fc__col--gap">
+        <div class="mgr-fc__lbl">上乗せ 余地</div>
+        <div class="mgr-fc__val ${gapYen > 0 ? 'is-positive' : gapYen < 0 ? 'is-negative' : ''}">${gapYen >= 0 ? '+' : ''}${fmtYen(Math.round(gapYen / 10000) * 10000)}</div>
+        <div class="mgr-fc__sub">${gapPct != null ? (gapPct >= 0 ? '+' : '') + gapPct + '%' : ''}</div>
+      </div>
+    </div>
+  `;
 }
 
 function renderDistribution(data, targetDate, median, compPrices, ownPrice) {

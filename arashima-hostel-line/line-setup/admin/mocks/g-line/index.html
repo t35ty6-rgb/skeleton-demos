@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>G · LINE bot 会話 — 荒島</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --line-bg: #8CABD8;
+    --line-chat: #97B4D9;
+    --bubble-in: #FFFFFF;
+    --bubble-out: #83E169;
+    --ink: #14110E;
+    --ink-3: #7A7365;
+    --time: #ffffffcc;
+    --sans: 'Hiragino Sans', 'Inter', system-ui, sans-serif;
+    --num: 'Inter', system-ui;
+  }
+  html, body { background: var(--line-bg); }
+  body { font-family: var(--sans); color: var(--ink); font-size: 15px; line-height: 1.55; min-height: 100vh; }
+  .back { position: fixed; top: 12px; right: 14px; background: white; border-radius: 20px; padding: 6px 12px; font-size: 11px; letter-spacing: 0.14em; color: var(--ink-3); text-decoration: none; z-index: 20; }
+  .app { max-width: 480px; margin: 0 auto; background: var(--line-chat); min-height: 100vh; padding-bottom: 80px; }
+
+  header.chat-head {
+    background: #f4f4f4;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #C1462C, #7C8068); color: white; display: grid; place-items: center; font-family: var(--num); font-weight: 700; font-size: 14px; letter-spacing: 0.05em; }
+  .name { font-weight: 600; font-size: 15px; }
+  .name span { display: block; font-size: 11px; color: var(--ink-3); font-weight: 400; }
+
+  .date-tag { text-align: center; margin: 20px 0 16px; }
+  .date-tag span { background: rgba(0,0,0,0.25); color: white; padding: 3px 12px; border-radius: 12px; font-size: 11px; letter-spacing: 0.06em; }
+
+  .msg { padding: 4px 12px; display: flex; align-items: flex-end; gap: 6px; }
+  .msg--in { justify-content: flex-start; }
+  .msg--out { justify-content: flex-end; }
+  .msg__bub {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 14.5px;
+    line-height: 1.6;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.06);
+  }
+  .msg--in .msg__bub { background: var(--bubble-in); border-top-left-radius: 4px; color: var(--ink); }
+  .msg--out .msg__bub { background: var(--bubble-out); border-top-right-radius: 4px; color: var(--ink); }
+  .msg__bub b { font-family: var(--num); font-weight: 600; padding: 0 1px; }
+  .msg__bub .big { font-family: var(--num); font-size: 22px; font-weight: 600; letter-spacing: -0.01em; display: block; padding: 4px 0; }
+  .msg__time { font-size: 10px; color: var(--time); align-self: flex-end; padding-bottom: 2px; }
+  .msg--in .msg__time { color: rgba(0,0,0,0.4); }
+
+  .card-in-chat {
+    background: var(--bubble-in);
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 78%;
+    margin: 4px 12px;
+    align-self: flex-start;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.06);
+  }
+  .card-in-chat__head { padding: 12px 14px 8px; font-weight: 600; font-size: 14px; }
+  .card-in-chat__list { padding: 0 14px 14px; font-size: 13px; color: var(--ink-3); }
+  .card-in-chat__list div { padding: 4px 0; border-top: 1px dashed rgba(0,0,0,0.08); display: flex; justify-content: space-between; }
+  .card-in-chat__list div:first-child { border-top: none; }
+  .card-in-chat__list b { color: var(--ink); font-family: var(--num); font-weight: 500; }
+
+  .cta { padding: 14px 12px; display: flex; gap: 8px; overflow-x: auto; }
+  .cta button { background: white; border: 1px solid rgba(0,0,0,0.06); border-radius: 20px; padding: 8px 16px; font-size: 12.5px; font-family: var(--sans); color: var(--ink); white-space: nowrap; }
+
+  .input-bar {
+    position: fixed;
+    bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px;
+    background: white; padding: 10px 14px; display: flex; gap: 8px; align-items: center;
+    border-top: 1px solid rgba(0,0,0,0.08);
+  }
+  .input-bar input { flex: 1; border: none; padding: 10px 14px; border-radius: 20px; background: #f0f0f0; font-family: var(--sans); font-size: 14px; }
+  .input-bar button { background: var(--bubble-out); border: none; color: var(--ink); font-weight: 600; padding: 8px 16px; border-radius: 20px; font-family: var(--sans); }
+</style>
+</head>
+<body>
+
+<a class="back" href="../">← 一覧</a>
+
+<div class="app">
+  <header class="chat-head">
+    <div class="avatar">相場</div>
+    <div class="name">大野 相場 bot<span>荒島 専用 · Booking scrape</span></div>
+  </header>
+
+  <div class="date-tag"><span>今日 2026-08-01</span></div>
+
+  <div class="msg msg--in">
+    <div class="msg__bub">
+      おはようございます 🌅<br>
+      今夜 の 相場 が 出ました。
+    </div>
+    <div class="msg__time">03:37</div>
+  </div>
+
+  <div class="msg msg--in">
+    <div class="msg__bub">
+      大野 半径10km の 中央値 は<br>
+      <span class="big">¥18,400</span>
+      半径10km で <b>12</b> 軒 が 稼働中。
+    </div>
+    <div class="msg__time">03:37</div>
+  </div>
+
+  <div class="msg msg--in">
+    <div class="msg__bub">
+      荒島 は <b>¥9,800</b>、<br>
+      相場 より <b>¥8,600 安い</b> です。<br>
+      (2026-08-02 の 分)
+    </div>
+    <div class="msg__time">03:38</div>
+  </div>
+
+  <div class="msg msg--in">
+    <div class="msg__bub">
+      明日 は 週末、<br>
+      相場 は 平日 の <b>+29%</b> 上がる 見込み。<br>
+      週末 中央値 は <b>¥33,500</b>。
+    </div>
+    <div class="msg__time">03:38</div>
+  </div>
+
+  <div class="msg msg--in">
+    <div class="msg__bub" style="background:#FFF6E5;">
+      💡 <b>提案</b><br>
+      週末 単価 に <b>+¥3,000 上乗せ</b> 検証。<br>
+      3週 で 稼働率 変化 を 見ましょう。
+    </div>
+    <div class="msg__time">03:39</div>
+  </div>
+
+  <div class="card-in-chat">
+    <div class="card-in-chat__head">📍 徒歩圏 の 直接 競合</div>
+    <div class="card-in-chat__list">
+      <div><span>古民家 ナマケモノ</span><b>¥14,400</b></div>
+      <div><span>距離</span><b>0.8 km</b></div>
+      <div><span>レビュー</span><b>★9.0</b></div>
+      <div><span>提案</span><b>連泊割引 / 朝食 で 差別化</b></div>
+    </div>
+  </div>
+
+  <div class="cta">
+    <button>📊 30日 折線 を 見る</button>
+    <button>🏨 全 12軒 リスト</button>
+    <button>📅 週末 予測</button>
+    <button>🔔 通知 設定</button>
+  </div>
+
+  <div class="date-tag"><span>昨日 2026-07-31</span></div>
+
+  <div class="msg msg--in">
+    <div class="msg__bub">
+      昨夜 の 中央値 は <b>¥18,900</b> でした。<br>
+      直近 3日 平均 vs 30日 平均 = <b>−9%</b>、<br>
+      相場 は 静か に 下降 中。
+    </div>
+    <div class="msg__time">昨 03:37</div>
+  </div>
+
+  <div class="msg msg--out">
+    <div class="msg__time">昨 08:12</div>
+    <div class="msg__bub">はい、 見ました。</div>
+  </div>
+
+</div>
+
+<div class="input-bar">
+  <input placeholder="bot に 質問 (例: 週末 の 予測 は?)">
+  <button>送信</button>
+</div>
+
+</body>
+</html>

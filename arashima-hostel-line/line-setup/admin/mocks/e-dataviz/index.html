@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E · Data-viz — 荒島 価格調査</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0E1A2A;
+    --bg-2: #142236;
+    --surface: rgba(255,255,255,0.04);
+    --ink: #F5F1E8;
+    --ink-2: #C0BEB7;
+    --ink-3: #8E8A82;
+    --ink-4: #55524C;
+    --rule: rgba(245,241,232,0.08);
+    --accent: #C1462C;
+    --cool: #4A9EFF;
+    --sans: 'Inter', 'Hiragino Sans', system-ui;
+    --mono: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+  }
+  html, body { background: var(--bg); }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 0;
+    font-variant-numeric: tabular-nums;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(1200px 600px at 20% 20%, rgba(74,158,255,0.06), transparent 60%),
+      radial-gradient(900px 500px at 90% 80%, rgba(193,70,44,0.06), transparent 60%);
+  }
+  .back { position: fixed; top: 14px; left: 14px; font-size: 10.5px; letter-spacing: 0.2em; color: var(--ink-3); text-decoration: none; z-index: 10; font-family: var(--mono); text-transform: uppercase; }
+  .back:hover { color: var(--ink); }
+
+  .app { max-width: 1440px; margin: 0 auto; padding: 44px 36px 60px; }
+
+  /* --- topbar --- */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 26px;
+  }
+  .topbar__brand {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .topbar__brand::before { content: '◉ '; color: var(--accent); margin-right: 4px; }
+  .topbar__meta { font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); letter-spacing: 0.14em; }
+
+  /* --- hero + stats overlay --- */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: center;
+    padding: 40px 4px 30px;
+    margin-bottom: 20px;
+  }
+  .hero__lead {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 22px;
+    padding-bottom: 6px;
+    display: inline-block;
+    position: relative;
+  }
+  .hero__lead::after {
+    content: '';
+    position: absolute;
+    left: 0; bottom: 0;
+    width: 28px;
+    height: 1px;
+    background: var(--accent);
+  }
+  .hero__val {
+    font-family: var(--sans);
+    font-size: 96px;
+    font-weight: 300;
+    letter-spacing: -0.035em;
+    line-height: 0.95;
+    color: var(--ink);
+    text-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+  .hero__cap {
+    font-size: 14px;
+    color: var(--ink-2);
+    margin-top: 16px;
+    line-height: 1.75;
+    max-width: 420px;
+  }
+  .hero__cap b { color: var(--ink); font-family: var(--mono); font-weight: 500; padding: 0 2px; }
+
+  .hero__stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+  .hstat {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 18px 20px;
+    border-radius: 4px;
+    backdrop-filter: blur(20px);
+  }
+  .hstat__lbl { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+  .hstat__val { font-family: var(--sans); font-size: 26px; font-weight: 400; letter-spacing: -0.015em; color: var(--ink); }
+  .hstat__val.own { color: var(--cool); }
+  .hstat__val.neg { color: var(--cool); }
+  .hstat__val.pos { color: var(--accent); }
+  .hstat__sub { font-size: 11px; color: var(--ink-4); margin-top: 4px; font-family: var(--mono); }
+
+  /* --- signature heatmap --- */
+  .signature {
+    background: var(--bg-2);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 30px 32px 34px;
+    margin: 20px 0 30px;
+    position: relative;
+    overflow: hidden;
+  }
+  .signature::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cool), var(--accent), transparent);
+    opacity: 0.7;
+  }
+  .signature__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 24px;
+    font-family: var(--mono);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-size: 10px;
+  }
+  .signature__title { color: var(--ink); font-weight: 500; }
+  .grid30 {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .grid30__row { display: contents; }
+  .grid30__label {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--ink-3);
+    line-height: 22px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .grid30__row.own .grid30__label { color: var(--cool); font-weight: 500; }
+  .grid30__cells {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 2px;
+  }
+  .grid30__cell {
+    height: 22px;
+    border-radius: 1px;
+  }
+  .grid30__cell[data-h="0"] {
+    background: repeating-linear-gradient(45deg, transparent 0, transparent 3px, rgba(255,255,255,0.05) 3px, rgba(255,255,255,0.05) 4px);
+  }
+  .grid30__cell[data-h="1"] { background: rgba(74,158,255,0.75); }
+  .grid30__cell[data-h="2"] { background: rgba(74,158,255,0.42); }
+  .grid30__cell[data-h="3"] { background: rgba(255,255,255,0.08); }
+  .grid30__cell[data-h="4"] { background: rgba(193,70,44,0.42); }
+  .grid30__cell[data-h="5"] { background: var(--accent); }
+  .grid30__row.own .grid30__cell { border-left: 1px solid var(--cool); }
+  .grid30__row.own .grid30__cell:first-child { border-left: 3px solid var(--cool); }
+
+  .signature__lgd {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 18px;
+    margin-top: 18px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .signature__scale { display: inline-flex; align-items: center; gap: 4px; }
+  .signature__scale span { padding: 0 8px; }
+  .signature__scale i { display: inline-block; width: 14px; height: 12px; border-radius: 2px; }
+  .signature__scale i:nth-of-type(1) { background: rgba(74,158,255,0.75); }
+  .signature__scale i:nth-of-type(2) { background: rgba(74,158,255,0.42); }
+  .signature__scale i:nth-of-type(3) { background: rgba(255,255,255,0.08); }
+  .signature__scale i:nth-of-type(4) { background: rgba(193,70,44,0.42); }
+  .signature__scale i:nth-of-type(5) { background: var(--accent); }
+
+  /* --- 分析 rows --- */
+  .rows {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .row {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 22px 24px;
+  }
+  .row__title { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 12px; }
+  .row svg { width: 100%; height: auto; display: block; }
+  .row ul { list-style: none; padding: 0; }
+  .row li {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.65;
+  }
+  .row li:last-child { border-bottom: none; }
+  .row li b { color: var(--ink); font-family: var(--mono); font-weight: 500; padding: 0 2px; }
+  .row li::before {
+    content: '›';
+    color: var(--accent);
+    padding-right: 10px;
+    font-family: var(--mono);
+  }
+
+  @media (max-width: 900px) {
+    .app { padding: 28px 18px 40px; }
+    .hero { grid-template-columns: 1fr; gap: 24px; }
+    .hero__val { font-size: 64px; }
+    .grid30 { grid-template-columns: 70px 1fr; }
+    .rows { grid-template-columns: 1fr; }
+    .signature { padding: 22px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<a class="back" href="../">← 5案</a>
+
+<div class="app">
+  <div class="topbar">
+    <div class="topbar__brand">Ohno · Radius 10km · Booking</div>
+    <div class="topbar__meta">Sample 30d × 12 rooms · 2026·08·01 03·37 JST</div>
+  </div>
+
+  <!-- hero -->
+  <div class="hero">
+    <div>
+      <span class="hero__lead">Tonight · Market Median</span>
+      <div class="hero__val">¥18,400</div>
+      <p class="hero__cap">
+        今夜、 大野 半径 10 km で <b>12</b> 軒 が 稼働 中。 相場 の 直近 3日 は 30日 平均 より <b>−9%</b>、 静か に 下降 中。
+      </p>
+    </div>
+    <div class="hero__stats">
+      <div class="hstat">
+        <div class="hstat__lbl">Own · Tonight</div>
+        <div class="hstat__val own">¥9,800</div>
+        <div class="hstat__sub">−¥8,600 vs market</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat__lbl">30d Median</div>
+        <div class="hstat__val">¥25,900</div>
+        <div class="hstat__sub">avg ¥27,052</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat__lbl">Weekend Prem</div>
+        <div class="hstat__val pos">+29%</div>
+        <div class="hstat__sub">¥33,500 median</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat__lbl">Tightness</div>
+        <div class="hstat__val">緩</div>
+        <div class="hstat__sub">wknd score −3.3</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGNATURE: 30日 × N軒 ヒートマップ 主役 -->
+  <div class="signature">
+    <div class="signature__head">
+      <span class="signature__title">— Signature — 相場 の 全景 · 30 days × 13 rooms</span>
+      <span>tap for detail</span>
+    </div>
+    <div class="grid30" id="grid30"></div>
+    <div class="signature__lgd">
+      <span class="signature__scale">
+        <span>安</span>
+        <i></i><i></i><i></i><i></i><i></i>
+        <span>高</span>
+      </span>
+      <span style="color:var(--cool);">■ 自ホテル 荒島</span>
+    </div>
+  </div>
+
+  <!-- 分析 rows -->
+  <div class="rows">
+    <div class="row">
+      <div class="row__title">Market Median · 30 days trend</div>
+      <svg viewBox="0 0 600 120" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="row">
+      <div class="row__title">Actions · auto-generated</div>
+      <ul>
+        <li>週末 プレミアム 相場 <b>+29%</b>、 荒島 は 上乗せ 弱 → 金土 <b>+¥2,500</b> 検証。</li>
+        <li>相場 中央値 <b>¥25,900</b> に 対して 荒島 <b>¥9,800</b> = 下位 <b>15%</b> 帯。</li>
+        <li>相場 trend <b>−9%</b> 下降 中。 写真 / レビュー / OTA description 見直し。</li>
+        <li>徒歩圏 競合 ナマケモノ (0.8km, <b>¥14,400</b>) と 差別化 訴求 検討。</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script src="../_data.js"></script>
+<script>
+  const D = window.MOCK_DATA;
+  const fmt = window.fmtYen;
+
+  // Signature ヒートマップ: 30日 × 13軒
+  // 各 hotel の 日別 単価 は 「hotel avg × (日別 相場 / 相場 平均)」 の 推定 で 生成
+  const grid = document.getElementById('grid30');
+  const marketAvg = D.trend.reduce((a, b) => a + b, 0) / D.trend.length;
+  const globalPrices = [];
+  const hotelSeries = D.hotels.map(h => {
+    const series = D.dates.map((d, i) => {
+      const rel = D.trend[i] / marketAvg;
+      const p = h.own ? D.own.priceTonight * rel : Math.round(h.avg * rel);
+      globalPrices.push(p);
+      return p;
+    });
+    return { h, series };
+  });
+  const sortedP = globalPrices.slice().sort((a, b) => a - b);
+  const q = (p) => sortedP[Math.min(sortedP.length - 1, Math.floor(sortedP.length * p))];
+  const buckets = [q(0.2), q(0.4), q(0.6), q(0.8)];
+  const rows = hotelSeries.sort((x, y) => (x.h.own ? -1 : y.h.own ? 1 : x.h.dist - y.h.dist));
+  grid.innerHTML = rows.map(({ h, series }) => `
+    <div class="grid30__row ${h.own ? 'own' : ''}">
+      <div class="grid30__label" title="${h.name}">${h.name.slice(0, 12)}</div>
+      <div class="grid30__cells">
+        ${series.map(p => {
+          const b = p <= buckets[0] ? 1 : p <= buckets[1] ? 2 : p <= buckets[2] ? 3 : p <= buckets[3] ? 4 : 5;
+          return `<div class="grid30__cell" data-h="${b}" title="¥${p.toLocaleString('ja-JP')}"></div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  // trend chart
+  {
+    const svg = document.querySelector('.row svg');
+    const w = 600, h = 120, pad = 8;
+    const vals = D.trend;
+    const min = Math.min(...vals), max = Math.max(...vals), range = max - min || 1;
+    const step = (w - pad * 2) / (vals.length - 1);
+    let path = '';
+    vals.forEach((v, i) => {
+      const x = pad + i * step;
+      const y = pad + (h - pad * 2) * (1 - (v - min) / range);
+      path += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+    });
+    let dots = '';
+    vals.forEach((v, i) => {
+      const dow = new Date(D.dates[i] + 'T00:00:00+09:00').getDay();
+      const wknd = dow === 0 || dow === 5 || dow === 6;
+      const x = pad + i * step;
+      const y = pad + (h - pad * 2) * (1 - (v - min) / range);
+      dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${wknd?2.6:1.5}" fill="${wknd?'#C1462C':'#F5F1E8'}"/>`;
+    });
+    svg.innerHTML = `<path d="${path.trim()}" fill="none" stroke="#F5F1E8" stroke-width="1.4" opacity="0.7"/>${dots}`;
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>H · カレンダー 型 — 荒島</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #FBFAF6;
+    --paper: #FFFFFF;
+    --ink: #14110E;
+    --ink-2: #4A4238;
+    --ink-3: #7A7365;
+    --rule: rgba(20,17,14,0.08);
+    --accent: #C1462C;
+    --cool: #2A4A5E;
+    --sans: 'Hiragino Sans', 'Inter', system-ui;
+    --num: 'Inter', system-ui;
+  }
+  html, body { background: var(--bg); }
+  body { font-family: var(--sans); color: var(--ink); font-size: 13px; line-height: 1.6; padding: 32px 24px 60px; font-variant-numeric: tabular-nums; }
+  .back { position: fixed; top: 14px; left: 14px; font-size: 11px; letter-spacing: 0.16em; color: var(--ink-3); text-decoration: none; z-index: 10; }
+  .app { max-width: 1400px; margin: 0 auto; }
+
+  header.head { display: grid; grid-template-columns: 1fr auto; align-items: baseline; padding: 0 4px 20px; border-bottom: 1px solid var(--rule); margin-bottom: 30px; }
+  .title { font-size: 26px; font-weight: 500; letter-spacing: -0.005em; }
+  .title .sub { font-size: 12px; color: var(--ink-3); margin-left: 12px; font-weight: 400; letter-spacing: 0.06em; }
+  .meta { font-family: var(--num); font-size: 11.5px; color: var(--ink-3); letter-spacing: 0.06em; }
+
+  .today {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 24px; padding: 22px 28px; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; margin-bottom: 24px;
+  }
+  .today__block { display: flex; flex-direction: column; gap: 4px; }
+  .today__lbl { font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); }
+  .today__val { font-family: var(--num); font-size: 32px; font-weight: 500; letter-spacing: -0.02em; color: var(--ink); line-height: 1.1; }
+  .today__sub { font-size: 12px; color: var(--ink-2); }
+  .today__block--action .today__val { color: var(--accent); font-size: 20px; font-weight: 500; letter-spacing: 0; line-height: 1.35; }
+
+  .cal-nav { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px 12px; }
+  .cal-nav__title { font-size: 16px; font-weight: 500; }
+  .cal-nav__lgd { display: flex; gap: 14px; font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.06em; }
+  .cal-nav__lgd i { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; border-radius: 2px; }
+
+  .cal-grid { background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+  .cal-head { display: grid; grid-template-columns: repeat(7, 1fr); background: rgba(20,17,14,0.02); border-bottom: 1px solid var(--rule); }
+  .cal-head span { padding: 10px 8px; font-family: var(--num); font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); text-align: center; }
+  .cal-head span.wknd { color: var(--accent); }
+  .cal-body { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cel {
+    aspect-ratio: 1 / 1;
+    padding: 8px 10px 6px;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100px;
+    position: relative;
+  }
+  .cel:nth-child(7n) { border-right: none; }
+  .cel--wknd { background: rgba(193,70,44,0.02); }
+  .cel--out { background: rgba(20,17,14,0.02); color: var(--ink-3); }
+  .cel__d { display: flex; justify-content: space-between; align-items: baseline; }
+  .cel__num { font-family: var(--num); font-size: 14px; font-weight: 500; color: var(--ink); }
+  .cel--wknd .cel__num { color: var(--accent); font-weight: 600; }
+  .cel__dow { font-family: var(--num); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+  .cel__price { font-family: var(--num); font-size: 16px; font-weight: 500; color: var(--ink); letter-spacing: -0.005em; line-height: 1; }
+  .cel__hint { font-size: 10px; color: var(--ink-2); line-height: 1.35; }
+  .cel__hint b { color: var(--accent); font-family: var(--num); font-weight: 600; }
+  .cel__hint .cool { color: var(--cool); font-family: var(--num); font-weight: 500; }
+
+  @media (max-width: 900px) {
+    .cel { padding: 6px 6px 4px; min-height: 74px; }
+    .cel__price { font-size: 12px; }
+    .cel__num { font-size: 12px; }
+    .cel__hint { font-size: 9px; }
+    .today { grid-template-columns: 1fr; padding: 18px 22px; }
+    .today__val { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<a class="back" href="../">← 一覧</a>
+
+<div class="app">
+  <header class="head">
+    <h1 class="title">相場 カレンダー <span class="sub">大野 半径 10 km · Booking</span></h1>
+    <span class="meta">最終 取得 2026·08·01 03·37</span>
+  </header>
+
+  <div class="today">
+    <div class="today__block">
+      <span class="today__lbl">Tonight · 中央値</span>
+      <span class="today__val">¥18,400</span>
+      <span class="today__sub">半径10km 12軒 稼働 · 荒島 ¥9,800 (相場 より ¥8,600 安)</span>
+    </div>
+    <div class="today__block today__block--action">
+      <span class="today__lbl">今 打つ 手</span>
+      <span class="today__val">週末 +¥3,000 上乗せ、 3週 検証</span>
+      <span class="today__sub">週末 プレミアム 相場 +29% を 前提</span>
+    </div>
+  </div>
+
+  <div class="cal-nav">
+    <span class="cal-nav__title">2026 年 8 月</span>
+    <span class="cal-nav__lgd">
+      <span><i style="background:rgba(193,70,44,0.02);border:1px solid rgba(193,70,44,0.3);"></i>週末</span>
+      <span style="color:var(--accent);">↑ 上げ余地</span>
+      <span style="color:var(--cool);">↓ 弱含み</span>
+    </span>
+  </div>
+
+  <div class="cal-grid">
+    <div class="cal-head">
+      <span class="wknd">Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span class="wknd">Sat</span>
+    </div>
+    <div class="cal-body" id="body"></div>
+  </div>
+</div>
+
+<script>
+  const D = {
+    dates: Array.from({length:30},(_,i)=>{const d=new Date(2026,7,2+i);return d;}),
+    trend: [24500,25200,26100,27800,32100,34800,29500,25100,25800,26400,27200,30500,33200,28900,24800,25400,26800,27900,32400,35800,30200,25100,25400,26200,28100,33500,36800,28100,25800,24900],
+  };
+  const body = document.getElementById('body');
+  const first = D.dates[0];
+  const startDow = first.getDay();
+  const cells = [];
+  // 前月 空 セル
+  for (let i = 0; i < startDow; i++) cells.push({ out: true, d: null });
+  D.dates.forEach((d, i) => {
+    const dow = d.getDay();
+    const wknd = dow === 0 || dow === 5 || dow === 6;
+    const p = D.trend[i];
+    const avg = D.trend.reduce((a,b)=>a+b,0) / D.trend.length;
+    const delta = Math.round((p - avg) / 1000);
+    const hint = wknd
+      ? `<b>+¥${Math.round(p*0.09/500)*500}</b> 上乗せ可`
+      : delta > 2 ? `<b>+¥${delta*500}</b>` : delta < -2 ? `<span class="cool">−¥${Math.abs(delta)*500}</span>` : '相場帯';
+    cells.push({ out: false, d, dow, wknd, p, hint });
+  });
+  // 後 空
+  while (cells.length % 7 !== 0) cells.push({ out: true, d: null });
+  body.innerHTML = cells.map(c => {
+    if (c.out) return `<div class="cel cel--out"></div>`;
+    return `
+      <div class="cel ${c.wknd?'cel--wknd':''}">
+        <div class="cel__d"><span class="cel__num">${c.d.getDate()}</span></div>
+        <div>
+          <div class="cel__price">¥${c.p.toLocaleString('ja-JP')}</div>
+          <div class="cel__hint">${c.hint}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+</script>
+
+</body>
+</html>

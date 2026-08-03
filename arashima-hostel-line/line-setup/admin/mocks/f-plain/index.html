@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F · Plain — 荒島 価格調査</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #FAF7F1;
+    --paper: #FFFFFF;
+    --ink: #14110E;
+    --ink-2: #3D3830;
+    --ink-3: #7A7365;
+    --rule: rgba(20,17,14,0.10);
+    --accent: #C1462C;
+    --sans: 'Hiragino Sans', 'Noto Sans JP', -apple-system, 'Inter', sans-serif;
+    --num: 'Inter', 'Hiragino Sans', system-ui, sans-serif;
+  }
+  html, body { background: var(--bg); }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.75;
+    padding: 0;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.005em;
+  }
+  .back { position: fixed; top: 14px; left: 14px; font-size: 11px; letter-spacing: 0.16em; color: var(--ink-3); text-decoration: none; z-index: 10; }
+  .back:hover { color: var(--ink); }
+
+  .wrap { max-width: 780px; margin: 0 auto; padding: 60px 32px 80px; }
+
+  /* --- eyebrow --- */
+  .eyebrow {
+    font-family: var(--num);
+    font-size: 10.5px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--accent);
+    display: inline-block;
+    margin-bottom: 40px;
+  }
+  .eyebrow b { color: var(--ink); font-weight: 500; }
+
+  /* --- signature: 3文 hero --- */
+  .say {
+    padding: 30px 0 32px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .say + .say { padding-top: 32px; }
+  .say__lead {
+    font-family: var(--sans);
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 0.005em;
+    line-height: 1.55;
+    color: var(--ink);
+    margin-bottom: 14px;
+  }
+  .say__lead b { font-weight: 500; }
+  .say__lead .big {
+    font-family: var(--num);
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.015em;
+    padding: 0 2px;
+  }
+  .say__lead em { font-style: normal; color: var(--accent); font-weight: 400; padding: 0 2px; }
+  .say__sub {
+    font-size: 13px;
+    color: var(--ink-3);
+    line-height: 1.75;
+    letter-spacing: 0.01em;
+  }
+  .say__sub .num { font-family: var(--num); color: var(--ink-2); font-weight: 500; padding: 0 1px; }
+
+  .say--action .say__lead::before {
+    content: '打つ手';
+    display: inline-block;
+    font-family: var(--num);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding: 4px 10px;
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    vertical-align: 6px;
+    margin-right: 12px;
+    line-height: 1;
+  }
+
+  /* --- section divider --- */
+  .hr {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 56px 0 24px;
+    font-family: var(--num);
+    font-size: 10px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .hr::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+
+  /* --- 折線 SVG --- */
+  .chart {
+    padding: 6px 0 4px;
+  }
+  .chart svg { width: 100%; height: auto; display: block; }
+  .chart__note {
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+    margin-top: 6px;
+    font-family: var(--num);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* --- 競合 list --- */
+  .comp { display: flex; flex-direction: column; }
+  .comp__row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 16px;
+    align-items: baseline;
+    padding: 12px 4px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .comp__row.own {
+    background: rgba(193,70,44,0.03);
+    border-left: 1px solid var(--accent);
+    padding-left: 12px;
+  }
+  .comp__name { font-size: 14px; color: var(--ink); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .comp__row.own .comp__name { color: var(--accent); font-weight: 500; }
+  .comp__dist { font-family: var(--num); font-size: 11.5px; color: var(--ink-3); text-align: right; }
+  .comp__price { font-family: var(--num); font-size: 15px; font-weight: 400; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.005em; }
+
+  /* --- footer note --- */
+  .colophon {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--num);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+  }
+  .colophon span { padding: 0 8px; }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 40px 22px 60px; }
+    .say__lead { font-size: 22px; line-height: 1.55; }
+    .say--action .say__lead::before { display: block; margin-bottom: 8px; vertical-align: baseline; }
+  }
+</style>
+</head>
+<body>
+
+<a class="back" href="../">← 5案 一覧</a>
+
+<div class="wrap">
+  <span class="eyebrow"><b>Arashima</b> · 大野 半径 10 km · Booking</span>
+
+  <!-- 事実 -->
+  <div class="say say--fact">
+    <p class="say__lead">
+      今夜、 荒島 は 相場 より <em class="big">¥8,600 安い</em>。
+    </p>
+    <p class="say__sub">
+      相場 中央値 <span class="num">¥18,400</span> · 荒島 <span class="num">¥9,800</span> · <span class="num">2026-08-02</span>
+    </p>
+  </div>
+
+  <!-- 予測 -->
+  <div class="say say--fore">
+    <p class="say__lead">
+      明日 は 週末、 相場 は 平日 の <b>+29%</b> 上がる 見込み。
+    </p>
+    <p class="say__sub">
+      週末 中央値 <span class="num">¥33,500</span> · 30日 中央値 <span class="num">¥25,900</span>
+    </p>
+  </div>
+
+  <!-- 打つ手 -->
+  <div class="say say--action">
+    <p class="say__lead">
+      週末 単価 に <em class="big">+¥3,000 上乗せ</em>、 3週 で 稼働率 検証。
+    </p>
+    <p class="say__sub">
+      相場 の 週末 プレミアム <span class="num">+29%</span> を 前提、 稼働率 が 落ちなければ 継続、 落ちたら 段階的 に 戻す。
+    </p>
+  </div>
+
+  <div class="say say--action">
+    <p class="say__lead">
+      徒歩圏 の <b>ナマケモノ</b> は 平均 <em class="big">¥14,400</em>。 客層 が 重なる。
+    </p>
+    <p class="say__sub">
+      レビュー <span class="num">9.0</span> · 距離 <span class="num">0.8 km</span> · 「連泊 割引」「朝食 追加」 等 で 一 つ の 差別化 訴求 を 明確 に。
+    </p>
+  </div>
+
+  <!-- 折線 -->
+  <div class="hr"><span>30 日 の 相場 (中央値)</span></div>
+  <div class="chart">
+    <svg viewBox="0 0 720 120" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="chart__note"><span>今日 →</span><span>← 30日後 (週末は朱)</span></div>
+  </div>
+
+  <!-- 競合 一覧 -->
+  <div class="hr"><span>競合 (距離 順)</span></div>
+  <div class="comp" id="comp"></div>
+
+  <div class="colophon">
+    Booking.com scrape<span>·</span>30 days × 12 rooms<span>·</span>2026·08·01 03:37 JST
+  </div>
+</div>
+
+<script src="../_data.js"></script>
+<script>
+  const D = window.MOCK_DATA;
+  const fmt = window.fmtYen;
+
+  // 折線
+  {
+    const svg = document.querySelector('.chart svg');
+    const w = 720, h = 120, pad = 6;
+    const vals = D.trend;
+    const min = Math.min(...vals), max = Math.max(...vals), range = max - min || 1;
+    const step = (w - pad * 2) / (vals.length - 1);
+    let path = '';
+    vals.forEach((v, i) => {
+      const x = pad + i * step;
+      const y = pad + (h - pad * 2) * (1 - (v - min) / range);
+      path += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+    });
+    let dots = '';
+    vals.forEach((v, i) => {
+      const dow = new Date(D.dates[i] + 'T00:00:00+09:00').getDay();
+      const wknd = dow === 0 || dow === 5 || dow === 6;
+      const x = pad + i * step;
+      const y = pad + (h - pad * 2) * (1 - (v - min) / range);
+      dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${wknd?2.6:1.4}" fill="${wknd?'#C1462C':'#14110E'}"/>`;
+    });
+    svg.innerHTML = `<path d="${path.trim()}" fill="none" stroke="#14110E" stroke-width="1.2" opacity="0.5"/>${dots}`;
+  }
+
+  // 競合
+  const rows = D.hotels.slice().sort((a, b) => (a.own ? -1 : b.own ? 1 : a.dist - b.dist));
+  document.getElementById('comp').innerHTML = rows.map(h => `
+    <div class="comp__row ${h.own ? 'own' : ''}">
+      <div class="comp__name">${h.name}</div>
+      <div class="comp__dist">${h.dist.toFixed(1)} km</div>
+      <div class="comp__price">${fmt(h.own ? D.own.priceTonight : h.avg)}</div>
+    </div>
+  `).join('');
+</script>
+
+</body>
+</html>

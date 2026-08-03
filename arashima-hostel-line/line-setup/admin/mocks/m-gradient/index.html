@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M · Gradient — 荒島 価格調査</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --paper:     #FBFBFD;
+    --surface:   #FFFFFF;
+    --surface-2: #F5F5F7;
+    --surface-3: #EBEBEE;
+    --ink:       #1D1D1F;
+    --ink-2:     #424245;
+    --ink-3:     #6E6E73;
+    --dim:       #86868B;
+    --rule:      #D2D2D7;
+    --blue:      #0071E3;
+    --blue-deep: #0056B3;
+    --blue-tint: #E8F1FD;
+    --violet:    #8B5CF6;
+    --pink:      #EC4899;
+    --magenta:   #C026D3;
+    --red:       #FF3B30;
+    --green:     #34C759;
+    --amber:     #FF9F0A;
+    --sans: 'Inter', -apple-system, 'SF Pro Display', 'Hiragino Sans', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', monospace;
+    --grad-hero: linear-gradient(120deg, var(--blue) 0%, var(--violet) 55%, var(--pink) 100%);
+    --grad-hero-soft: linear-gradient(120deg, rgba(0,113,227,0.10), rgba(139,92,246,0.10), rgba(236,72,153,0.10));
+  }
+  html, body { background: var(--paper); }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    font-size: 13.5px;
+    line-height: 1.55;
+    letter-spacing: -0.005em;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(900px 500px at 12% 8%, rgba(0,113,227,0.08), transparent 60%),
+      radial-gradient(700px 500px at 95% 12%, rgba(236,72,153,0.06), transparent 60%),
+      radial-gradient(1000px 700px at 50% 90%, rgba(139,92,246,0.05), transparent 60%);
+    background-attachment: fixed;
+  }
+  .back { position: fixed; top: 14px; left: 14px; font-size: 11px; color: var(--ink-3); text-decoration: none; z-index: 20; padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); border: 1px solid var(--rule); font-weight: 500; }
+  .back:hover { color: var(--ink); }
+
+  .app { max-width: 1440px; margin: 0 auto; padding: 40px 32px 60px; }
+
+  /* --- top --- */
+  .top { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 22px; border-bottom: 1px solid var(--rule); margin-bottom: 30px; }
+  .top__left { display: flex; align-items: baseline; gap: 14px; }
+  .top__title {
+    font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
+    background: var(--grad-hero);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .top__loc { font-size: 12.5px; color: var(--ink-3); font-family: var(--mono); }
+  .top__actions { display: flex; gap: 8px; align-items: center; }
+  .btn { background: var(--surface); border: 1px solid var(--rule); color: var(--ink-2); padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 500; font-family: var(--sans); cursor: pointer; transition: all .15s; letter-spacing: -0.005em; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { background: var(--surface-2); color: var(--ink); }
+  .btn--primary {
+    background: var(--grad-hero);
+    color: white; border: none;
+    box-shadow: 0 1px 0 var(--blue-deep), 0 8px 24px -6px rgba(139,92,246,0.45);
+  }
+  .btn--primary:hover { box-shadow: 0 1px 0 var(--blue-deep), 0 14px 32px -6px rgba(139,92,246,0.55); transform: translateY(-1px); }
+  .top__meta { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-3); font-family: var(--mono); }
+  .top__meta::before { content: '●'; color: var(--green); font-size: 8px; }
+
+  /* --- hero KPI --- */
+  .hero-wrap {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 20px;
+    padding: 32px 36px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 12px 40px -8px rgba(0,0,0,0.05);
+  }
+  .hero-wrap::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 3px;
+    background: var(--grad-hero);
+  }
+  .hero-lead {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+  .hero-row {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    gap: 40px;
+    align-items: end;
+  }
+  .kpi { display: flex; flex-direction: column; gap: 6px; }
+  .kpi__lbl { font-size: 11px; font-weight: 500; color: var(--ink-3); letter-spacing: 0.02em; }
+  .kpi__val { font-size: 34px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.05; color: var(--ink); }
+  .kpi__val--hero {
+    font-size: 56px;
+    font-weight: 800;
+    background: var(--grad-hero);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    letter-spacing: -0.04em;
+  }
+  .kpi__val--own {
+    color: var(--blue);
+  }
+  .kpi__delta {
+    display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11.5px; margin-top: 2px;
+    padding: 3px 8px; border-radius: 6px; font-weight: 500;
+  }
+  .kpi__delta--good { color: var(--green); background: rgba(52,199,89,0.10); }
+  .kpi__delta--warn { color: var(--red); background: rgba(255,59,48,0.10); }
+  .kpi__delta--ink { color: var(--ink-2); background: var(--surface-2); }
+  .kpi__sub { font-size: 12px; color: var(--ink-3); font-family: var(--mono); }
+
+  /* --- signature: 相場 分布 --- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    padding: 24px 28px 28px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  }
+  .card__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .card__title { font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+  .card__desc { font-size: 12.5px; color: var(--ink-3); margin-top: 4px; }
+  .card__meta { font-size: 11px; color: var(--ink-3); font-family: var(--mono); }
+
+  .dist { margin-top: 22px; height: 220px; position: relative; }
+  .dist svg { width: 100%; height: 100%; display: block; }
+  .dist__legend { display: flex; gap: 24px; margin-top: 16px; font-size: 12px; color: var(--ink-3); flex-wrap: wrap; }
+  .dist__legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .dist__legend .own-mark { width: 14px; height: 14px; border-radius: 50%; background: white; border: 3px solid var(--blue); box-shadow: 0 2px 6px rgba(0,113,227,0.35); }
+  .dist__legend .comp-mark { width: 12px; height: 12px; border-radius: 50%; background: var(--dim); }
+  .dist__legend .med-mark { width: 16px; height: 2px; background: var(--ink-2); }
+
+  /* --- 2 col charts --- */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .chart-svg { width: 100%; height: 180px; display: block; margin-top: 16px; }
+
+  /* --- 競合 table --- */
+  .tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 16px; }
+  .tbl th {
+    text-align: right; padding: 10px 14px; border-bottom: 1px solid var(--rule);
+    font-size: 10.5px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .tbl th:first-child { text-align: left; }
+  .tbl td { padding: 12px 14px; text-align: right; border-bottom: 1px solid var(--surface-3); color: var(--ink); font-family: var(--mono); font-weight: 500; }
+  .tbl td:first-child { text-align: left; font-family: var(--sans); font-weight: 500; }
+  .tbl tr:hover td { background: var(--surface-2); }
+  .tbl tr.own td {
+    background: var(--blue-tint);
+    position: relative;
+  }
+  .tbl tr.own td:first-child { color: var(--blue-deep); font-weight: 700; }
+  .tbl tr.own td:first-child::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--grad-hero);
+  }
+  .badge {
+    display: inline-block; font-size: 9.5px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+    background: var(--grad-hero); color: white; margin-right: 10px;
+    text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--mono);
+    box-shadow: 0 2px 6px -1px rgba(139,92,246,0.35);
+  }
+  .cell-diff.good { color: var(--green); }
+  .cell-diff.warn { color: var(--red); }
+  .cell-dim { color: var(--ink-3); }
+
+  /* --- action strip --- */
+  .action-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 22px; }
+  .action {
+    padding: 18px 20px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.7;
+    position: relative;
+    overflow: hidden;
+    transition: all .15s;
+  }
+  .action:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); transform: translateY(-1px); }
+  .action::before {
+    content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
+    background: var(--grad-hero);
+  }
+  .action b { color: var(--ink); font-family: var(--mono); font-weight: 600; padding: 0 1px; }
+  .action strong {
+    display: block;
+    font-size: 10.5px;
+    background: var(--grad-hero);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-family: var(--mono);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  /* --- rainbow bar --- */
+  .rainbow-bar {
+    height: 3px;
+    background: linear-gradient(90deg, var(--blue), var(--violet), var(--pink), var(--magenta), var(--blue));
+    background-size: 200% 100%;
+    border-radius: 3px;
+    margin: 30px 0;
+    animation: shift 8s linear infinite;
+  }
+  @keyframes shift { to { background-position: -200% 0; } }
+
+  @media (max-width: 900px) {
+    .app { padding: 24px 16px 40px; }
+    .hero-wrap { padding: 24px 22px; }
+    .hero-row { grid-template-columns: 1fr 1fr; gap: 24px; }
+    .kpi__val--hero { font-size: 40px; }
+    .kpi__val { font-size: 26px; }
+    .grid2 { grid-template-columns: 1fr; }
+    .top { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .top__actions { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<a class="back" href="../">← 案 一覧</a>
+
+<div class="app">
+  <div class="top">
+    <div class="top__left">
+      <span class="top__title">Price Insight</span>
+      <span class="top__loc">Ohno · 10km · Booking</span>
+    </div>
+    <div class="top__actions">
+      <span class="top__meta">updated 03:37</span>
+      <button class="btn">CSV</button>
+      <button class="btn">Print</button>
+      <button class="btn btn--primary">Refresh</button>
+    </div>
+  </div>
+
+  <!-- hero KPI with gradient -->
+  <div class="hero-wrap">
+    <div class="hero-lead">Tonight · Market Snapshot</div>
+    <div class="hero-row">
+      <div class="kpi">
+        <div class="kpi__lbl">Market median · Tonight</div>
+        <div class="kpi__val kpi__val--hero">¥18,400</div>
+        <div class="kpi__sub">12 rooms open · 2026-08-02</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi__lbl">Arashima · own</div>
+        <div class="kpi__val kpi__val--own">¥9,800</div>
+        <span class="kpi__delta kpi__delta--good">↓ ¥8,600 vs market</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi__lbl">30-day median</div>
+        <div class="kpi__val">¥25,900</div>
+        <span class="kpi__delta kpi__delta--ink">avg ¥27,052</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi__lbl">Weekend premium</div>
+        <div class="kpi__val">+29%</div>
+        <span class="kpi__delta kpi__delta--warn">trend ↓ −9% (3d/30d)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="rainbow-bar"></div>
+
+  <!-- SIGNATURE: 相場 分布 -->
+  <div class="card">
+    <div class="card__head">
+      <div>
+        <div class="card__title">相場 の 分布</div>
+        <div class="card__desc">12 rooms in 10km — 単価 の 山 と 荒島 の 位置。 中央値 は 破線。</div>
+      </div>
+      <div class="card__meta">今夜 の 単価</div>
+    </div>
+    <div class="dist">
+      <svg viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="dist__legend">
+      <span><i class="own-mark"></i>荒島 (自ホテル)</span>
+      <span><i class="comp-mark"></i>競合 (12軒)</span>
+      <span><i class="med-mark"></i>中央値 ¥18,400</span>
+    </div>
+  </div>
+
+  <!-- charts -->
+  <div class="grid2">
+    <div class="card">
+      <div class="card__head">
+        <div>
+          <div class="card__title">30-day market trend</div>
+          <div class="card__desc">相場 中央値 · 週末 は 塗り 強調</div>
+        </div>
+      </div>
+      <svg class="chart-svg" viewBox="0 0 600 180" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="card">
+      <div class="card__head">
+        <div>
+          <div class="card__title">Daily supply</div>
+          <div class="card__desc">取得 hotel 数 (低 = 需要 高 疑い)</div>
+        </div>
+      </div>
+      <svg class="chart-svg" viewBox="0 0 600 180" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+
+  <!-- 競合 表 -->
+  <div class="card">
+    <div class="card__head">
+      <div>
+        <div class="card__title">Competitors</div>
+        <div class="card__desc">距離 順 · 自ホテル 上端 pin</div>
+      </div>
+      <div class="card__meta">13 rows</div>
+    </div>
+    <table class="tbl" id="tbl"></table>
+  </div>
+
+  <!-- actions -->
+  <div class="action-strip">
+    <div class="action"><strong>Weekend · +¥3,000</strong>相場 週末 プレミアム <b>+29%</b> に対して 荒島 は 弱。 金土 単価 <b>+¥3,000</b> を 3週 検証。</div>
+    <div class="action"><strong>Position · P15</strong>相場 の 下位 <b>15%</b> 帯。 「エコノミー 徹底」 or 「+¥3,000 上乗せ」 の A/B 検証。</div>
+    <div class="action"><strong>Trend · −9%</strong>直近3日 vs 30日 平均 <b>−9%</b> 下降。 写真 / レビュー 応答 / OTA description 見直し。</div>
+    <div class="action"><strong>Direct · Namake</strong>徒歩圏 (0.8km, <b>¥14,400</b>, ★9.0)。 「連泊」「朝食」 で 差別化 一点。</div>
+  </div>
+</div>
+
+<script>
+const D = {
+  hotels: [
+    { name: '荒島 (自ホテル)', dist: 0.0, avg: 9800, tonight: 9800, own: true },
+    { name: '古民家 ナマケモノ', dist: 0.8, avg: 14400, tonight: 12500, review: 9.0 },
+    { name: '大野 街道 の 宿', dist: 3.2, avg: 12800, tonight: 11500 },
+    { name: '奥越 民泊 みずのわ', dist: 5.8, avg: 15200, tonight: 14200 },
+    { name: '勝山ニューホテル', dist: 8.5, avg: 32200, tonight: 28000, review: 8.1 },
+    { name: '勝山駅 恐竜博 民泊', dist: 8.6, avg: 24500, tonight: 22000 },
+    { name: 'Irifune', dist: 9.1, avg: 19800, tonight: 17500 },
+    { name: 'じゅらどん の 家', dist: 9.3, avg: 34100, tonight: 30000, review: 8.9 },
+    { name: 'ふとん屋 の 宿 悦', dist: 9.4, avg: 28300, tonight: 25000, review: 9.0 },
+    { name: '恐竜一色 Dinosaur Guest', dist: 9.4, avg: 21000, tonight: 18000 },
+    { name: '天然木曽ひのき 志ろきや', dist: 9.6, avg: 18500, tonight: 16800 },
+    { name: 'JAM FUKUI KATSUYAMA', dist: 12.1, avg: 45200, tonight: 42000, review: 8.6 },
+    { name: '山斎 一棟貸し', dist: 16.2, avg: 30000, tonight: 28000, review: 9.2 },
+  ],
+  trend: [24500,25200,26100,27800,32100,34800,29500,25100,25800,26400,27200,30500,33200,28900,24800,25400,26800,27900,32400,35800,30200,25100,25400,26200,28100,33500,36800,28100,25800,24900],
+  supply: [12,13,11,12,10,9,11,13,12,12,11,10,8,11,13,12,11,12,9,8,10,13,12,12,10,9,8,11,13,12],
+  dates: Array.from({length:30},(_,i)=>{const d=new Date(2026,7,2+i);return d;}),
+};
+const fmt = n => n == null ? '—' : '¥' + Math.round(n).toLocaleString('ja-JP');
+
+// SIGNATURE 相場 分布
+{
+  const svg = document.querySelector('.dist svg');
+  const w = 900, h = 220, padL = 40, padR = 40, padT = 30, padB = 46;
+  const prices = D.hotels.filter(h => !h.own).map(h => h.tonight);
+  const ownP = D.hotels.find(h => h.own).tonight;
+  const median = 18400;
+  const min = Math.min(...prices, ownP) * 0.9;
+  const max = Math.max(...prices) * 1.08;
+  const range = max - min;
+  const scale = x => padL + (w - padL - padR) * (x - min) / range;
+  const bins = 100;
+  const bw = range / 11;
+  const density = [];
+  for (let i = 0; i < bins; i++) {
+    const x = min + (i / (bins - 1)) * range;
+    let d = 0;
+    for (const p of prices) {
+      const u = (x - p) / bw;
+      d += Math.exp(-u * u / 2);
+    }
+    density.push(d);
+  }
+  const maxD = Math.max(...density);
+  const yScale = d => padT + (h - padT - padB) * (1 - d / maxD * 0.82);
+  let area = `M ${padL} ${(h - padB).toFixed(1)} `;
+  for (let i = 0; i < bins; i++) {
+    const x = padL + (w - padL - padR) * (i / (bins - 1));
+    const y = yScale(density[i]);
+    area += `L ${x.toFixed(1)} ${y.toFixed(1)} `;
+  }
+  area += `L ${(w - padR)} ${(h - padB).toFixed(1)} Z`;
+  const axis = `<line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#D2D2D7" stroke-width="1"/>`;
+  const medX = scale(median);
+  const medLine = `<line x1="${medX.toFixed(1)}" y1="${padT-6}" x2="${medX.toFixed(1)}" y2="${h-padB}" stroke="#424245" stroke-width="1" stroke-dasharray="4 4"/>
+    <text x="${medX.toFixed(1)}" y="${(padT-10).toFixed(1)}" fill="#424245" font-size="10.5" font-family="JetBrains Mono" text-anchor="middle">median ¥18.4k</text>`;
+  let dots = '';
+  D.hotels.filter(h => !h.own).forEach((hh, i) => {
+    const jx = ((i * 137) % 100 - 50) * 0.14;
+    dots += `<circle cx="${scale(hh.tonight).toFixed(1)}" cy="${(h-padB-6+jx).toFixed(1)}" r="4.5" fill="#86868B" stroke="white" stroke-width="1.5"/>`;
+  });
+  const ownX = scale(ownP);
+  const ownDot = `
+    <line x1="${ownX.toFixed(1)}" y1="${padT+12}" x2="${ownX.toFixed(1)}" y2="${(h-padB).toFixed(1)}" stroke="#0071E3" stroke-width="1.8"/>
+    <circle cx="${ownX.toFixed(1)}" cy="${(h-padB-6).toFixed(1)}" r="9" fill="white" stroke="#0071E3" stroke-width="3"/>
+    <text x="${ownX.toFixed(1)}" y="${(padT+2).toFixed(1)}" fill="#0071E3" font-size="12" font-weight="700" font-family="Inter" text-anchor="middle">荒島 ¥9,800</text>
+    <text x="${ownX.toFixed(1)}" y="${(padT+18).toFixed(1)}" fill="#0071E3" font-size="10" font-family="JetBrains Mono" text-anchor="middle">15th percentile</text>`;
+  let ticks = '';
+  [10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000].forEach(v => {
+    if (v < min || v > max) return;
+    const x = scale(v).toFixed(1);
+    ticks += `<line x1="${x}" y1="${h-padB}" x2="${x}" y2="${h-padB+4}" stroke="#86868B" stroke-width="1"/>
+      <text x="${x}" y="${(h-padB+18).toFixed(1)}" fill="#86868B" font-size="10" font-family="JetBrains Mono" text-anchor="middle">¥${v/1000}k</text>`;
+  });
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="mgrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#0071E3" stop-opacity="0.28"/>
+        <stop offset="0.55" stop-color="#8B5CF6" stop-opacity="0.28"/>
+        <stop offset="1" stop-color="#EC4899" stop-opacity="0.28"/>
+      </linearGradient>
+      <linearGradient id="mgradLine" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#0071E3"/>
+        <stop offset="0.55" stop-color="#8B5CF6"/>
+        <stop offset="1" stop-color="#EC4899"/>
+      </linearGradient>
+    </defs>
+    <path d="${area}" fill="url(#mgrad)" stroke="url(#mgradLine)" stroke-width="2"/>
+    ${axis}
+    ${ticks}
+    ${medLine}
+    ${dots}
+    ${ownDot}
+  `;
+}
+
+// 30d trend (rainbow gradient stroke)
+{
+  const svg = document.querySelectorAll('.chart-svg')[0];
+  const w = 600, h = 180, pad = 16;
+  const vals = D.trend;
+  const min = Math.min(...vals) * 0.97, max = Math.max(...vals) * 1.03;
+  const range = max - min;
+  const stepX = (w - pad * 2) / (vals.length - 1);
+  let path = '', area = '';
+  vals.forEach((v, i) => {
+    const x = pad + i * stepX;
+    const y = pad + (h - pad * 2) * (1 - (v - min) / range);
+    path += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+    if (i === 0) area = `M ${x.toFixed(1)} ${(h-pad).toFixed(1)} L ${x.toFixed(1)} ${y.toFixed(1)} `;
+    else area += 'L ' + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+  });
+  area += `L ${(pad + (vals.length-1) * stepX).toFixed(1)} ${(h-pad).toFixed(1)} Z`;
+  let wknds = '';
+  vals.forEach((v, i) => {
+    const dow = D.dates[i].getDay();
+    if (dow === 0 || dow === 5 || dow === 6) {
+      const x = pad + i * stepX;
+      const y = pad + (h - pad * 2) * (1 - (v - min) / range);
+      wknds += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="#EC4899"/>`;
+    }
+  });
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="tgrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#0071E3"/>
+        <stop offset="0.55" stop-color="#8B5CF6"/>
+        <stop offset="1" stop-color="#EC4899"/>
+      </linearGradient>
+      <linearGradient id="tgradA" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#8B5CF6" stop-opacity="0.20"/>
+        <stop offset="1" stop-color="#8B5CF6" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="${area}" fill="url(#tgradA)"/>
+    <path d="${path.trim()}" fill="none" stroke="url(#tgrad)" stroke-width="2.2" stroke-linejoin="round"/>
+    ${wknds}
+  `;
+}
+
+// supply bar (gradient bars for weekend)
+{
+  const svg = document.querySelectorAll('.chart-svg')[1];
+  const w = 600, h = 180, pad = 8;
+  const vals = D.supply;
+  const max = Math.max(...vals);
+  const bw = (w - pad * 2) / vals.length;
+  let bars = '';
+  vals.forEach((v, i) => {
+    const dow = D.dates[i].getDay();
+    const wknd = dow === 0 || dow === 5 || dow === 6;
+    const bh = ((h - pad * 2) * v / max);
+    const fill = wknd ? 'url(#sgrad)' : '#D2D2D7';
+    bars += `<rect x="${(pad + i * bw + 0.6).toFixed(1)}" y="${(h - pad - bh).toFixed(1)}" width="${(bw - 1.2).toFixed(1)}" height="${bh.toFixed(1)}" fill="${fill}" rx="2"/>`;
+  });
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="sgrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#EC4899"/>
+        <stop offset="1" stop-color="#8B5CF6"/>
+      </linearGradient>
+    </defs>
+    ${bars}
+  `;
+}
+
+// 表
+const marketAvg = 27052;
+const rows = D.hotels.slice().sort((a, b) => (a.own ? -1 : b.own ? 1 : a.dist - b.dist));
+document.getElementById('tbl').innerHTML = `
+  <thead><tr><th>Property</th><th>km</th><th>Tonight</th><th>30d avg</th><th>vs market</th><th>Review</th></tr></thead>
+  <tbody>${rows.map(h => {
+    const diff = h.avg - marketAvg;
+    const dc = diff < -1000 ? 'good' : diff > 1000 ? 'warn' : '';
+    return `<tr class="${h.own?'own':''}">
+      <td>${h.own?'<span class="badge">OWN</span>':''}${h.name}</td>
+      <td>${h.dist.toFixed(1)}</td>
+      <td>${fmt(h.tonight)}</td>
+      <td>${fmt(h.avg)}</td>
+      <td class="cell-diff ${dc}">${diff>=0?'+':''}${fmt(diff)}</td>
+      <td class="cell-dim">${h.review?'★'+h.review:'—'}</td>
+    </tr>`;
+  }).join('')}</tbody>
+`;
+</script>
+
+</body>
+</html>

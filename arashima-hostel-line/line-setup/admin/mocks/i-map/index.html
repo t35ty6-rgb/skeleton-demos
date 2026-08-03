@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>I · 地図 型 — 荒島</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #14110E;
+    --ink-2: #4A4238;
+    --ink-3: #7A7365;
+    --accent: #C1462C;
+    --cool: #2A4A5E;
+    --sans: 'Hiragino Sans', 'Inter', system-ui;
+    --num: 'Inter', system-ui;
+  }
+  html, body { height: 100%; background: #EDE9E1; }
+  body { font-family: var(--sans); color: var(--ink); font-size: 13px; overflow: hidden; }
+  .back { position: fixed; top: 12px; right: 14px; background: white; border-radius: 20px; padding: 6px 12px; font-size: 11px; letter-spacing: 0.14em; color: var(--ink-3); text-decoration: none; z-index: 1001; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+  #map { position: absolute; inset: 0; }
+  .panel {
+    position: absolute;
+    top: 20px; left: 20px;
+    background: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    z-index: 1000;
+    max-width: 340px;
+    font-family: var(--sans);
+  }
+  .panel__eyebrow { font-family: var(--num); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+  .panel__title { font-size: 18px; font-weight: 600; margin-bottom: 12px; letter-spacing: -0.005em; }
+  .panel__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; padding: 12px 0; border-top: 1px solid rgba(0,0,0,0.08); border-bottom: 1px solid rgba(0,0,0,0.08); }
+  .panel__grid div { display: flex; flex-direction: column; gap: 2px; }
+  .panel__lbl { font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); font-family: var(--num); }
+  .panel__val { font-family: var(--num); font-size: 17px; font-weight: 500; color: var(--ink); letter-spacing: -0.005em; }
+  .panel__val.accent { color: var(--accent); }
+  .panel__action { margin-top: 12px; font-size: 12.5px; color: var(--ink-2); line-height: 1.6; }
+  .panel__action b { color: var(--accent); font-family: var(--num); font-weight: 500; padding: 0 1px; }
+
+  .legend {
+    position: absolute; bottom: 20px; left: 20px;
+    background: white;
+    border-radius: 10px;
+    padding: 12px 18px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    z-index: 1000;
+    display: flex;
+    gap: 20px;
+    font-size: 11px;
+    color: var(--ink-3);
+    font-family: var(--num);
+    letter-spacing: 0.06em;
+  }
+  .legend b { color: var(--ink); font-weight: 500; }
+
+  .leaflet-popup-content-wrapper { border-radius: 8px; padding: 4px; }
+  .leaflet-popup-content { font-family: var(--sans); font-size: 12.5px; line-height: 1.5; margin: 8px 12px; min-width: 180px; }
+  .leaflet-popup-content b { font-family: var(--num); font-weight: 500; color: var(--accent); font-size: 15px; }
+  .leaflet-popup-content .pop-name { font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .leaflet-popup-content .pop-meta { font-size: 11px; color: var(--ink-3); font-family: var(--num); }
+
+  .hotel-pin { background: white; border: 2px solid var(--accent); border-radius: 50%; display: grid; place-items: center; font-family: var(--num); font-size: 10.5px; font-weight: 700; color: var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+  .own-pin { background: var(--accent); border-color: white; color: white; border-width: 3px; font-size: 12px; box-shadow: 0 3px 10px rgba(193,70,44,0.5); }
+</style>
+</head>
+<body>
+
+<a class="back" href="../">← 一覧</a>
+
+<div id="map"></div>
+
+<div class="panel">
+  <div class="panel__eyebrow">Arashima · 大野 半径 10 km · Booking</div>
+  <div class="panel__title">今夜 の 相場</div>
+  <div class="panel__grid">
+    <div><span class="panel__lbl">Median</span><span class="panel__val">¥18,400</span></div>
+    <div><span class="panel__lbl">自ホテル</span><span class="panel__val accent">¥9,800</span></div>
+    <div><span class="panel__lbl">半径10km</span><span class="panel__val">12 軒</span></div>
+    <div><span class="panel__lbl">30日 中央値</span><span class="panel__val">¥25,900</span></div>
+  </div>
+  <div class="panel__action">
+    <b>打つ手</b>: 週末 単価 に <b>+¥3,000</b> 上乗せ、 3週 で 稼働率 検証。 相場 週末 プレミアム <b>+29%</b> が 前提。
+  </div>
+</div>
+
+<div class="legend">
+  <span><b>◉</b> 自ホテル 荒島</span>
+  <span><b>◯</b> 競合 hotel (数字 = 30日 平均 千円)</span>
+  <span><b>─</b> 半径 10 km 圏</span>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const center = [35.9797, 136.4867];
+const hotels = [
+  { name: '荒島 (自ホテル)', lat: 35.984197, lng: 136.490285, avg: 9800, own: true, dist: 0.6, review: null },
+  { name: '古民家ゲストハウス ナマケモノ', lat: 35.9729, lng: 136.4894, avg: 14400, dist: 0.8, review: 9.0 },
+  { name: '大野 街道 の 宿', lat: 35.9720, lng: 136.5100, avg: 12800, dist: 3.2, review: null },
+  { name: '奥越 民泊 みずのわ', lat: 35.9450, lng: 136.4400, avg: 15200, dist: 5.8, review: null },
+  { name: '勝山ニューホテル', lat: 36.0526, lng: 136.5158, avg: 32200, dist: 8.5, review: 8.1 },
+  { name: '勝山駅 恐竜博 BBQ 民泊', lat: 36.0570, lng: 136.4930, avg: 24500, dist: 8.6, review: null },
+  { name: 'Irifune', lat: 36.0610, lng: 136.4980, avg: 19800, dist: 9.1, review: null },
+  { name: 'じゅらどん の 家', lat: 36.0629, lng: 136.4991, avg: 34100, dist: 9.3, review: 8.9 },
+  { name: 'ふとん屋 の 宿 悦', lat: 36.0632, lng: 136.5019, avg: 28300, dist: 9.4, review: 9.0 },
+  { name: '恐竜一色 Dinosaur Guest', lat: 36.0620, lng: 136.5100, avg: 21000, dist: 9.4, review: null },
+  { name: '天然木曽ひのき 志ろきや', lat: 36.0660, lng: 136.4980, avg: 18500, dist: 9.6, review: null },
+];
+
+const map = L.map('map').setView(center, 12);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 18,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map);
+
+// 半径10km 円
+L.circle(center, {
+  radius: 10000,
+  color: '#C1462C',
+  weight: 1.5,
+  fillColor: '#C1462C',
+  fillOpacity: 0.04,
+  dashArray: '4 4',
+}).addTo(map);
+
+hotels.forEach(h => {
+  const label = Math.round(h.avg / 1000);
+  const html = `<div class="hotel-pin ${h.own?'own-pin':''}" style="width:${h.own?36:32}px;height:${h.own?36:32}px;">${label}</div>`;
+  const icon = L.divIcon({ html, className: '', iconSize: [h.own?36:32, h.own?36:32], iconAnchor: [h.own?18:16, h.own?18:16] });
+  const m = L.marker([h.lat, h.lng], { icon }).addTo(map);
+  const pop = `
+    <div class="pop-name">${h.name}</div>
+    <div class="pop-meta">${h.dist} km${h.review ? ' · ★' + h.review : ''}</div>
+    <div style="margin-top:8px;">30日 平均 <b>¥${h.avg.toLocaleString('ja-JP')}</b></div>
+    ${h.own ? '<div style="margin-top:4px;font-size:10.5px;color:#7A7365;">自ホテル (相場 より −¥8,600)</div>' : ''}
+  `;
+  m.bindPopup(pop);
+});
+</script>
+
+</body>
+</html>

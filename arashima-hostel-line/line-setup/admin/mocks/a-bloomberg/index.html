@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A · Bloomberg Terminal — 荒島 価格調査</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #FFFFFF;
+    --surface: #FBFBFB;
+    --ink: #111111;
+    --ink-2: #363636;
+    --ink-3: #666666;
+    --ink-4: #A8A8A8;
+    --rule: #EAEAEA;
+    --rule-2: #D0D0D0;
+    --hi: #B93A2B;
+    --lo: #1F5C8C;
+    --sans: 'Inter', 'Hiragino Sans', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', monospace;
+  }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 0;
+    font-feature-settings: 'ss01' 1, 'tnum' 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .back { position: fixed; top: 14px; left: 14px; font-size: 10px; letter-spacing: 0.2em; color: var(--ink-3); text-decoration: none; z-index: 10; }
+  .back:hover { color: var(--ink); }
+
+  .term {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 44px 40px 60px;
+  }
+
+  /* --- topbar --- */
+  .topbar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 32px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--ink);
+    margin-bottom: 4px;
+  }
+  .topbar__brand { font-weight: 600; font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; }
+  .topbar__meta { display: flex; gap: 22px; justify-content: center; font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.14em; text-transform: uppercase; }
+  .topbar__meta span b { color: var(--ink); font-weight: 500; margin-right: 6px; }
+  .topbar__ts { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+
+  /* --- statline --- */
+  .statline {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    border-bottom: 1px solid var(--rule);
+    padding: 22px 0;
+    gap: 0;
+  }
+  .stat { padding: 0 20px; border-right: 1px solid var(--rule); }
+  .stat:last-child { border-right: none; }
+  .stat__lbl { font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px; }
+  .stat__val { font-family: var(--mono); font-size: 22px; font-weight: 400; color: var(--ink); letter-spacing: -0.01em; line-height: 1.1; }
+  .stat__sub { font-size: 10.5px; color: var(--ink-3); margin-top: 4px; font-family: var(--mono); }
+  .stat__val.pos { color: var(--hi); }
+  .stat__val.neg { color: var(--lo); }
+  .stat__lg { font-size: 32px; }
+
+  /* --- 表 --- */
+  .frame {
+    padding: 24px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .frame__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .frame__title { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+  .frame__count { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 11.5px;
+  }
+  th {
+    text-align: right;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--ink);
+    font-weight: 500;
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    background: var(--surface);
+    font-family: var(--sans);
+  }
+  th:first-child { text-align: left; }
+  td {
+    padding: 8px 12px;
+    text-align: right;
+    border-bottom: 1px solid var(--rule);
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  td:first-child { text-align: left; font-family: var(--sans); font-size: 12px; }
+  tr:hover td { background: var(--surface); }
+  tr.own td { background: rgba(185,58,43,0.03); font-weight: 500; }
+  tr.own td:first-child { color: var(--hi); }
+  .cell-diff.neg { color: var(--lo); }
+  .cell-diff.pos { color: var(--hi); }
+  .cell-dim { color: var(--ink-4); }
+  .badge {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    padding: 1px 6px;
+    border: 1px solid currentColor;
+    color: var(--ink-3);
+    margin-right: 8px;
+    text-transform: uppercase;
+    font-family: var(--sans);
+    vertical-align: 1px;
+  }
+  .badge.own { color: var(--hi); }
+
+  /* --- グリッド ヒートマップ (mini) --- */
+  .heatline {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    height: 46px;
+    gap: 1px;
+    margin: 10px 0 6px;
+    background: var(--rule);
+    padding: 1px;
+  }
+  .heatline__cell { min-width: 0; }
+  .heatline__cell.wk { border-top: 2px solid var(--ink); }
+  .heatline__label {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    font-family: var(--mono);
+    font-size: 8.5px;
+    color: var(--ink-4);
+    text-align: center;
+  }
+  .heatline__label > span { padding: 0 1px; }
+
+  /* --- 30日 折線 (svg) + 供給 --- */
+  .charts { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; padding: 22px 0; border-bottom: 1px solid var(--rule); }
+  .chart__lbl { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+  .chart svg { width: 100%; height: auto; display: block; }
+
+  /* --- responsive --- */
+  @media (max-width: 900px) {
+    .term { padding: 30px 20px 40px; }
+    .topbar { grid-template-columns: 1fr; text-align: left; gap: 6px; }
+    .topbar__meta { justify-content: flex-start; flex-wrap: wrap; }
+    .statline { grid-template-columns: repeat(3, 1fr); }
+    .stat { border-bottom: 1px solid var(--rule); padding: 12px 12px; }
+    .stat:nth-child(3n) { border-right: none; }
+    .charts { grid-template-columns: 1fr; }
+    table { font-size: 10.5px; }
+    th, td { padding: 6px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<a class="back" href="../">← 5案 一覧 に 戻る</a>
+
+<div class="term">
+  <div class="topbar">
+    <div class="topbar__brand">Ohno · Radius 10km · Booking</div>
+    <div class="topbar__meta">
+      <span><b>Method</b> Playwright scrape</span>
+      <span><b>Own</b> Arashima Hostel</span>
+      <span><b>Sample</b> 30 days × 12 rooms</span>
+    </div>
+    <div class="topbar__ts">Last · 2026·08·01 03·37 JST</div>
+  </div>
+
+  <div class="statline">
+    <div class="stat">
+      <div class="stat__lbl">Tonight · Median</div>
+      <div class="stat__val stat__lg">¥18,400</div>
+      <div class="stat__sub">2026·08·02 · 12 rooms open</div>
+    </div>
+    <div class="stat">
+      <div class="stat__lbl">Own · Tonight</div>
+      <div class="stat__val neg">¥9,800</div>
+      <div class="stat__sub">−¥8,600 vs market</div>
+    </div>
+    <div class="stat">
+      <div class="stat__lbl">30d · Median</div>
+      <div class="stat__val">¥25,900</div>
+      <div class="stat__sub">Avg ¥27,052</div>
+    </div>
+    <div class="stat">
+      <div class="stat__lbl">Weekend · Median</div>
+      <div class="stat__val">¥33,500</div>
+      <div class="stat__sub">+29% vs weekday</div>
+    </div>
+    <div class="stat">
+      <div class="stat__lbl">Tightness · Wknd</div>
+      <div class="stat__val">Loose</div>
+      <div class="stat__sub">score −3.3</div>
+    </div>
+    <div class="stat">
+      <div class="stat__lbl">Trend · 3d vs 30d</div>
+      <div class="stat__val neg">−9%</div>
+      <div class="stat__sub">falling</div>
+    </div>
+  </div>
+
+  <div class="charts">
+    <div class="chart">
+      <div class="chart__lbl">30-day Market Median · Trend</div>
+      <svg viewBox="0 0 800 140" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="chart">
+      <div class="chart__lbl">Daily Supply · Rooms</div>
+      <svg viewBox="0 0 400 140" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+
+  <div class="frame">
+    <div class="frame__head">
+      <span class="frame__title">Competitor Matrix · 12 rooms + Own</span>
+      <span class="frame__count">Sorted by distance</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th>km</th>
+          <th>Tonight</th>
+          <th>30d Avg</th>
+          <th>Min</th>
+          <th>Max</th>
+          <th>vs Market</th>
+          <th>Cov.</th>
+        </tr>
+      </thead>
+      <tbody id="tblBody"></tbody>
+    </table>
+  </div>
+
+  <div class="frame">
+    <div class="frame__head">
+      <span class="frame__title">Actions · Auto-generated</span>
+      <span class="frame__count">based on 30d rank + weekend premium</span>
+    </div>
+    <div id="actions" style="font-family:var(--sans);font-size:12.5px;line-height:1.8;color:var(--ink-2);"></div>
+  </div>
+
+  <p style="margin-top:26px;font-size:10.5px;color:var(--ink-4);letter-spacing:0.06em;line-height:1.7;">
+    Data · Booking.com scrape via headless Playwright · Own hotel identified by hotelNo · 4CROWNS class filter applied · rendered at 03:37 JST.
+  </p>
+</div>
+
+<script src="../_data.js"></script>
+<script>
+  const D = window.MOCK_DATA;
+  const fmt = window.fmtYen;
+
+  // 30d trend line
+  {
+    const svg = document.querySelectorAll('.chart svg')[0];
+    const w = 800, h = 140, pad = 8;
+    const vals = D.trend;
+    const min = Math.min(...vals), max = Math.max(...vals), range = max - min || 1;
+    const step = (w - pad * 2) / (vals.length - 1);
+    let path = '';
+    vals.forEach((v, i) => {
+      const x = pad + i * step;
+      const y = pad + (h - pad * 2) * (1 - (v - min) / range);
+      path += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+    });
+    let dots = '';
+    vals.forEach((v, i) => {
+      const dow = new Date(D.dates[i] + 'T00:00:00+09:00').getDay();
+      const wknd = dow === 0 || dow === 5 || dow === 6;
+      const x = pad + i * step;
+      const y = pad + (h - pad * 2) * (1 - (v - min) / range);
+      dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${wknd?2.5:1.4}" fill="${wknd?'#B93A2B':'#111'}"/>`;
+    });
+    svg.innerHTML = `<path d="${path.trim()}" fill="none" stroke="#111" stroke-width="1"/>${dots}`;
+  }
+
+  // supply bar
+  {
+    const svg = document.querySelectorAll('.chart svg')[1];
+    const w = 400, h = 140, pad = 6;
+    const vals = D.supply;
+    const max = Math.max(...vals);
+    const bw = (w - pad * 2) / vals.length;
+    let bars = '';
+    vals.forEach((v, i) => {
+      const dow = new Date(D.dates[i] + 'T00:00:00+09:00').getDay();
+      const wknd = dow === 0 || dow === 5 || dow === 6;
+      const bh = ((h - pad * 2) * v / max);
+      bars += `<rect x="${(pad + i * bw).toFixed(1)}" y="${(h - pad - bh).toFixed(1)}" width="${(bw - 0.8).toFixed(1)}" height="${bh.toFixed(1)}" fill="${wknd?'#B93A2B':'#111'}" opacity="${wknd?0.9:0.65}"/>`;
+    });
+    svg.innerHTML = bars;
+  }
+
+  // 表
+  const marketAvg = D.avg30;
+  const tbody = document.getElementById('tblBody');
+  const rows = D.hotels.slice().sort((a, b) => (a.own ? -1 : b.own ? 1 : a.dist - b.dist));
+  tbody.innerHTML = rows.map(h => {
+    const tonight = h.own ? D.own.priceTonight : h.avg;
+    const diff = h.avg - marketAvg;
+    const diffClass = diff < -1000 ? 'neg' : diff > 1000 ? 'pos' : '';
+    const covPct = Math.round(h.coverage / 30 * 100);
+    return `
+      <tr class="${h.own ? 'own' : ''}">
+        <td>${h.own ? '<span class="badge own">OWN</span>' : '<span class="badge">CMP</span>'}${h.name}</td>
+        <td>${h.dist.toFixed(1)}</td>
+        <td>${fmt(tonight)}</td>
+        <td>${fmt(h.avg)}</td>
+        <td>${fmt(h.min)}</td>
+        <td>${fmt(h.max)}</td>
+        <td class="cell-diff ${diffClass}">${diff >= 0 ? '+' : ''}${fmt(diff)}</td>
+        <td class="cell-dim">${covPct}%</td>
+      </tr>
+    `;
+  }).join('');
+
+  // actions
+  document.getElementById('actions').innerHTML = [
+    '<div style="padding:6px 0;border-bottom:1px solid var(--rule);"><b style="font-size:10px;letter-spacing:0.14em;color:var(--hi);">01</b> &nbsp; 30日 中央値 ¥25,900 に 対して 荒島 ¥9,800 は 相場 の 下位 15% 帯。 客層 「エコノミー 徹底」 or 「+¥3,000 上乗せ 検証」 の 2択。</div>',
+    '<div style="padding:6px 0;border-bottom:1px solid var(--rule);"><b style="font-size:10px;letter-spacing:0.14em;color:var(--hi);">02</b> &nbsp; 週末 +29% プレミアム 相場 に 対して 荒島 は 週末 上乗せ 弱 → 金土 は +¥2,500 検証 で 稼働率 変化 を 3週 観察。</div>',
+    '<div style="padding:6px 0;border-bottom:1px solid var(--rule);"><b style="font-size:10px;letter-spacing:0.14em;color:var(--hi);">03</b> &nbsp; 相場 trend −9% (直近3日 vs 30日平均) 下降中。 客足 落ち 予兆、 レビュー / 写真 / OTA description 見直し で 差別化 訴求。</div>',
+    '<div style="padding:6px 0;"><b style="font-size:10px;letter-spacing:0.14em;color:var(--hi);">04</b> &nbsp; 徒歩圏 直接 競合 = ナマケモノ (0.8km / ¥14,400 平均、 レビュー 9.0)。 客層 かぶり 大、 「連泊 割引」「朝食 追加」 等 で 差別化 検討。</div>',
+  ].join('');
+</script>
+
+</body>
+</html>
