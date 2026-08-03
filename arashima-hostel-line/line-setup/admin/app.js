@@ -2047,6 +2047,36 @@ const OWN_EXTERNAL_IDS = new Set([
   'booking:arashima-hostel',
 ]);
 let priceScanCache = null;
+// 表示期間 (days) — owner 明示 「3日/7日/14日/30日 で 選べる ように」
+let selectedPeriodDays = 30;
+
+// full data を N日 に filter (dates を 先頭 N 個、 prices も それに 合わせて 切る)
+function applyPeriodFilter(fullData, days) {
+  if (!fullData || !fullData.dates || days >= fullData.dates.length) return fullData;
+  const dates = fullData.dates.slice(0, days);
+  const dateSet = new Set(dates);
+  const prices = {};
+  for (const [k, series] of Object.entries(fullData.prices || {})) {
+    const f = {};
+    for (const [d, v] of Object.entries(series)) if (dateSet.has(d)) f[d] = v;
+    if (Object.keys(f).length) prices[k] = f;
+  }
+  return { ...fullData, dates, prices };
+}
+
+function getViewData() {
+  return priceScanCache ? applyPeriodFilter(priceScanCache, selectedPeriodDays) : null;
+}
+
+function renderPricePane() {
+  const data = getViewData();
+  if (!data) return;
+  renderPriceKpis(data);
+  renderHeatmap(data);
+  renderConsultAnalysis(data);
+  renderPriceCards(data);
+  renderPriceTable(data);
+}
 
 async function loadPriceScan() {
   const wrap = $('#priceHeatmap');
@@ -2064,19 +2094,25 @@ async function loadPriceScan() {
       return;
     }
     priceScanCache = r.data;
-    renderPriceKpis(r.data);
-    renderHeatmap(r.data);
-    renderConsultAnalysis(r.data);
-    renderPriceCards(r.data);
-    renderPriceTable(r.data);
+    renderPricePane();
   } catch (e) {
     wrap.innerHTML = `<div class="hint" style="padding:24px;color:#b91c1c;">読み込み失敗: ${e.message}</div>`;
   }
 }
 
 $('#priceRefresh')?.addEventListener('click', loadPriceScan);
+
+// 期間 selector wire (3日 / 7日 / 14日 / 30日)
+document.querySelectorAll('.mgr__period-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.mgr__period-btn').forEach(x => x.classList.remove('is-on'));
+    b.classList.add('is-on');
+    selectedPeriodDays = Number(b.dataset.days) || 30;
+    if (priceScanCache) renderPricePane();
+  });
+});
 $('#priceCsv')?.addEventListener('click', () => {
-  const data = priceScanCache;
+  const data = getViewData();
   if (!data) { alert('data がまだ読み込まれていません'); return; }
   const compKeys = Object.keys(data.hotels).filter(k => !OWN_EXTERNAL_IDS.has(k));
   const marketMed = computeMarketMedianSeries(data);
@@ -2753,7 +2789,7 @@ function generateConsultActions(s) {
 }
 
 function openHotelDetailModal(hotelKey) {
-  const data = priceScanCache;
+  const data = getViewData();
   if (!data) return;
   const h = data.hotels[hotelKey];
   if (!h) return;
@@ -2802,7 +2838,15 @@ function openHotelDetailModal(hotelKey) {
   const modal = document.getElementById('priceHotelModal');
   const title = document.getElementById('priceHotelModalTitle');
   const body = document.getElementById('priceHotelModalBody');
-  if (title) title.innerHTML = `${escapeHtml(h.name || '?')}${isOwn ? ' <span class="modal-badge">自ホテル</span>' : ''}`;
+  const isRakuten = h.site === 'rakuten';
+  const siteName = isRakuten ? '楽天トラベル' : 'Booking.com';
+  const siteBadgeCls = isRakuten ? 'modal-badge modal-badge--rakuten' : 'modal-badge modal-badge--booking';
+  const reviewLbl = isRakuten ? '楽天レビュー' : 'Booking スコア';
+  const openLbl = isRakuten ? '楽天トラベル で 開く →' : 'Booking.com で 開く →';
+  // hotelClassCode: 1=ホテル 2=旅館 3=民宿 4=B&B 5=リゾートホテル 6=ペンション 7=公共の宿 8=貸別荘
+  const CLASS = { 1: 'ホテル', 2: '旅館', 3: '民宿', 4: 'B&B', 5: 'リゾートホテル', 6: 'ペンション', 7: '公共の宿', 8: '貸別荘' };
+  const hotelClassLabel = h.hotelClassCode ? CLASS[h.hotelClassCode] : null;
+  if (title) title.innerHTML = `${escapeHtml(h.name || '?')}${isOwn ? ' <span class="modal-badge">自ホテル</span>' : ` <span class="${siteBadgeCls}">${siteName}</span>`}${hotelClassLabel ? ` <span class="modal-badge modal-badge--class">${hotelClassLabel}</span>` : ''}`;
   if (body) {
     body.innerHTML = `
       <div class="hotel-modal__grid">
@@ -2812,13 +2856,22 @@ function openHotelDetailModal(hotelKey) {
           <div class="hotel-modal__row"><span class="hotel-modal__lbl">${dates.length}日平均</span><span class="hotel-modal__val">${fmtYen(avgP)}</span></div>
           <div class="hotel-modal__row"><span class="hotel-modal__lbl">最安 → 最高</span><span class="hotel-modal__val">${fmtYen(minP)} → ${fmtYen(maxP)}</span></div>
           <div class="hotel-modal__row"><span class="hotel-modal__lbl">相場中央値との差</span><span class="hotel-modal__val ${diffAvg != null && diffAvg < 0 ? 'is-cheaper' : diffAvg != null && diffAvg > 0 ? 'is-pricier' : ''}">${diffAvg != null ? (diffAvg >= 0 ? '+' : '') + fmtYen(diffAvg) : '—'}</span></div>
-          ${h.reviewScore ? `<div class="hotel-modal__row"><span class="hotel-modal__lbl">Booking スコア</span><span class="hotel-modal__val">${escapeHtml(h.reviewScore)}</span></div>` : ''}
+          ${h.reviewScore ? `<div class="hotel-modal__row"><span class="hotel-modal__lbl">${reviewLbl}</span><span class="hotel-modal__val">★ ${escapeHtml(String(h.reviewScore))}${h.reviewCount ? ` (${h.reviewCount}件)` : ''}</span></div>` : ''}
+          ${h.roomName ? `<div class="hotel-modal__row"><span class="hotel-modal__lbl">最安 客室</span><span class="hotel-modal__val">${escapeHtml(String(h.roomName).slice(0, 40))}</span></div>` : ''}
+          ${h.planName ? `<div class="hotel-modal__row"><span class="hotel-modal__lbl">プラン</span><span class="hotel-modal__val">${escapeHtml(String(h.planName).slice(0, 40))}</span></div>` : ''}
           <div class="hotel-modal__row"><span class="hotel-modal__lbl">出現日</span><span class="hotel-modal__val">${priceVals.length} / ${dates.length}</span></div>
+          <div class="hotel-modal__row"><span class="hotel-modal__lbl">情報 元</span><span class="hotel-modal__val">${siteName}</span></div>
           <div class="hotel-modal__actions">
-            <a class="btn btn--primary" href="${safeUrl}" target="_blank" rel="noopener">Booking で開く →</a>
+            <a class="btn btn--primary hotel-modal__cta ${isRakuten ? 'hotel-modal__cta--rakuten' : 'hotel-modal__cta--booking'}" href="${safeUrl}" target="_blank" rel="noopener">${openLbl}</a>
           </div>
         </div>
       </div>
+      ${(h.facilities && (h.facilities.hotelFacilities || h.facilities.roomFacilities)) ? `
+        <div class="hotel-modal__facilities">
+          ${h.facilities.hotelFacilities ? `<div class="hotel-modal__fac-block"><div class="hotel-modal__fac-title">館内 設備</div><div class="hotel-modal__fac-text">${escapeHtml(String(h.facilities.hotelFacilities).slice(0, 220))}</div></div>` : ''}
+          ${h.facilities.roomFacilities ? `<div class="hotel-modal__fac-block"><div class="hotel-modal__fac-title">客室 設備</div><div class="hotel-modal__fac-text">${escapeHtml(String(h.facilities.roomFacilities).slice(0, 220))}</div></div>` : ''}
+        </div>
+      ` : ''}
       <div class="hotel-modal__chart">
         <div class="hotel-modal__chart-lbl">
           <span><i class="dot" style="background:${isOwn ? '#9B3A26' : '#1a1a1a'}"></i>このホテル</span>
