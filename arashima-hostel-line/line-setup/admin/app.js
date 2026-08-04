@@ -2223,7 +2223,11 @@ function renderPriceKpis(data) {
     setText('priceScannedAt', '—');
     return;
   }
-  setEyebrow(`大野半径 ${data.radiusKm}km · ${data.sites?.join(' + ') || 'Booking.com'}`);
+  const siteLabels = { booking: 'Booking.com', rakuten: '楽天トラベル', jalan: 'じゃらん', ikyu: '一休' };
+  const siteText = (data.sites || []).map(s => siteLabels[s] || s).join(' + ') || 'Booking.com';
+  setEyebrow(`大野半径 ${data.radiusKm}km · 出典 ${siteText}`);
+  const locEl = document.getElementById('priceLoc');
+  if (locEl) locEl.textContent = `大野市 · 半径${data.radiusKm}km · 出典 ${siteText}`;
 
   const dates = data.dates.slice().sort();
   const today = new Date().toISOString().slice(0, 10);
@@ -2252,7 +2256,19 @@ function renderPriceKpis(data) {
     deltaEl.className = 'mgr__kpi-delta';
   }
 
+  // 軒数 内訳 (Booking N + 楽天 M) を tooltip + title で 明示
+  const bookingCount = compKeys.filter(k => data.hotels[k]?.site === 'booking').length;
+  const rakutenCount = compKeys.filter(k => data.hotels[k]?.site === 'rakuten').length;
+  const otherCount = compKeys.length - bookingCount - rakutenCount;
+  const breakdown = [];
+  if (bookingCount) breakdown.push(`Booking ${bookingCount}`);
+  if (rakutenCount) breakdown.push(`楽天 ${rakutenCount}`);
+  if (otherCount) breakdown.push(`他 ${otherCount}`);
   setText('priceCount', compKeys.length);
+  const countEl = document.getElementById('priceCount');
+  if (countEl && breakdown.length) countEl.title = breakdown.join(' + ');
+  const kpiSub = document.getElementById('priceCountBreakdown');
+  if (kpiSub) kpiSub.textContent = breakdown.length ? `(${breakdown.join(' + ')})` : '';
 
   const allCompPrices = compKeys.flatMap((k) => Object.values(data.prices[k] || {}));
   setText('priceAvg30', fmtYen(average(allCompPrices)));
@@ -2285,11 +2301,11 @@ function renderPriceKpis(data) {
     tightEl.dataset.level = level;
     const sub = document.getElementById('priceTightnessSub');
     if (sub) {
-      const arrow = s > 0 ? '＋' : '';
-      const desc = s >= 3 ? '週末に相場が上がる = 客が動いてる'
-        : s >= -3 ? '週末と平日で相場差小さい'
-        : '週末でも相場上がらず = 空き多い';
-      sub.textContent = `週末の上乗せ ${arrow}${s} → ${desc}`;
+      // s は 「供給減 + 単価高」 の 合成 スコア (0-50)、 週末プレミアム% とは 別 指標
+      const desc = s >= 3 ? '週末 は 供給 減 + 単価 高 = 客 が 動いてる'
+        : s >= -3 ? '週末 と 平日 の 差 は 小さい'
+        : '週末 でも 供給 余る = 空き 多い';
+      sub.textContent = `需要 スコア ${s > 0 ? '+' : ''}${s} → ${desc}`;
     }
   }
   const trendEl = document.getElementById('priceTrend');
@@ -2900,6 +2916,34 @@ function renderConsultAnalysis(data) {
   });
   const actWrap = $('#consultActions');
   if (actWrap) actWrap.innerHTML = actions.map(a => `<li class="consult-action"><span class="consult-action__tag">${a.tag}</span> ${a.text}</li>`).join('') || '<li class="consult-action">データが足りないため提案なし。</li>';
+
+  // Zone 1 頭 に 「今日の打ち手 Top 3」 (owner 明示 「どういう作業すればいいか わからない」 対応)
+  // 「次段」 tag (未実装 予告) は 除外、 具体的 な 打ち手 のみ 上位 3件 抑える
+  renderTopActions(actions.filter(a => a.tag !== '次段').slice(0, 3));
+}
+
+function renderTopActions(actions) {
+  const wrap = document.getElementById('priceTopActions');
+  if (!wrap) return;
+  if (!actions.length) { wrap.innerHTML = ''; wrap.hidden = true; return; }
+  wrap.hidden = false;
+  wrap.innerHTML = `
+    <div class="mgr-actions__head">
+      <span class="mgr-actions__title">今日 の 打ち手 Top ${actions.length}</span>
+      <span class="mgr-actions__sub">相場 データ から の 具体 提案 · スクロール 不要</span>
+    </div>
+    <ol class="mgr-actions__list">
+      ${actions.map((a, i) => `
+        <li class="mgr-actions__item">
+          <span class="mgr-actions__num">${i + 1}</span>
+          <div class="mgr-actions__body">
+            <span class="mgr-actions__tag">${escapeHtml(a.tag)}</span>
+            <span class="mgr-actions__text">${a.text}</span>
+          </div>
+        </li>
+      `).join('')}
+    </ol>
+  `;
 }
 
 function generateConsultActions(s) {
