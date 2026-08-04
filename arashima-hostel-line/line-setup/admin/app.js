@@ -3106,18 +3106,42 @@ document.addEventListener('click', (e) => {
 });
 
 let priceCardSort = 'distance';
+let priceSiteFilter = 'all'; // 'all' | 'booking' | 'rakuten'
 document.addEventListener('click', (e) => {
   const b = e.target.closest('.price-sort__btn');
   if (!b) return;
   document.querySelectorAll('.price-sort__btn').forEach(x => x.classList.toggle('is-on', x === b));
   priceCardSort = b.dataset.sort;
-  if (priceScanCache) renderPriceCards(priceScanCache);
+  if (priceScanCache) renderPriceCards(getViewData() || priceScanCache);
+});
+// 出典 filter (owner 明示 「楽天 の データ どこ か わからない」 対応)
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.mgr__site-btn');
+  if (!b) return;
+  document.querySelectorAll('.mgr__site-btn').forEach(x => x.classList.toggle('is-on', x === b));
+  priceSiteFilter = b.dataset.site || 'all';
+  if (priceScanCache) renderPriceCards(getViewData() || priceScanCache);
 });
 
 function renderPriceCards(data) {
   const wrap = $('#priceCards');
   if (!wrap) return;
-  const hotelKeys = Object.keys(data.hotels).sort((a, b) => {
+  // 出典 別 count を site filter tab に 反映
+  const allKeys = Object.keys(data.hotels);
+  const cntBooking = allKeys.filter(k => data.hotels[k]?.site === 'booking' && !OWN_EXTERNAL_IDS.has(k)).length;
+  const cntRakuten = allKeys.filter(k => data.hotels[k]?.site === 'rakuten' && !OWN_EXTERNAL_IDS.has(k)).length;
+  const cntAll = cntBooking + cntRakuten;
+  const setCnt = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = String(n); };
+  setCnt('filterCountAll', cntAll);
+  setCnt('filterCountBooking', cntBooking);
+  setCnt('filterCountRakuten', cntRakuten);
+
+  // 出典 filter 適用 (自ホテル は 常に 通す)
+  let hotelKeys = allKeys;
+  if (priceSiteFilter !== 'all') {
+    hotelKeys = allKeys.filter(k => OWN_EXTERNAL_IDS.has(k) || data.hotels[k]?.site === priceSiteFilter);
+  }
+  hotelKeys = hotelKeys.slice().sort((a, b) => {
     const oa = OWN_EXTERNAL_IDS.has(a) ? 0 : 1;
     const ob = OWN_EXTERNAL_IDS.has(b) ? 0 : 1;
     if (oa !== ob) return oa - ob;
@@ -3126,7 +3150,7 @@ function renderPriceCards(data) {
   const marketMed = computeMarketMedianSeries(data);
   const marketAvg = average(Object.values(marketMed).filter(x => x != null));
 
-  // 並び替え: 自ホテル常に上端 pin、 その下で priceCardSort に従う
+  // 並び替え: 自ホテル常に上端 pin、 その下で priceCardSort に従う (filter 済 keys を 使う)
   const hotelKeysSorted = hotelKeys.slice().sort((a, b) => {
     const oa = OWN_EXTERNAL_IDS.has(a) ? 0 : 1;
     const ob = OWN_EXTERNAL_IDS.has(b) ? 0 : 1;
@@ -3159,8 +3183,9 @@ function renderPriceCards(data) {
            <img src="${safePhoto}" alt="" loading="lazy" onerror="this.parentNode.classList.add('price-card__photo--fallback');this.parentNode.dataset.initial='${initial}';this.remove();">
          </button>`
       : `<button class="price-card__photo price-card__photo--fallback" data-hotel="${escapeHtml(k)}" type="button" data-initial="${initial}" aria-label="${escapeHtml(h.name || '?')} 詳細"></button>`;
+    const siteCls = h.site === 'rakuten' ? ' price-card--rakuten' : h.site === 'booking' ? ' price-card--booking' : '';
     return `
-      <article class="price-card${isOwn ? ' price-card--own' : ''}" data-hotel="${escapeHtml(k)}">
+      <article class="price-card${isOwn ? ' price-card--own' : ''}${siteCls}" data-hotel="${escapeHtml(k)}" data-site="${escapeHtml(h.site || '')}">
         ${photoBlock}
         <div class="price-card__body">
           <div class="price-card__head">
