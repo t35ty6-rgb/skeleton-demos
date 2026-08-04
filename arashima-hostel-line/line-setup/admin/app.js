@@ -2482,8 +2482,8 @@ function renderDo1(data, t, todayMed, ownPrice) {
         <div class="mgr-do1__title">今夜 の 単価 を <b>${fmtYen(ownPrice)}</b> → <b>${fmtYen(rec)}</b> に ${dir}</div>
         <div class="mgr-do1__text">相場 との ギャップ を ${diff > 0 ? '半分' : ''} 埋める 段階 検証。 <b>1週間 で 期待 効果 ${eff >= 0 ? '+' : ''}${fmtYen(eff)}</b> (稼働率 70% × 6 室 × 7日 想定)</div>
         <div class="mgr-do1__cta">
-          <a class="mgr-do1__cta-btn mgr-do1__cta-btn--primary" href="https://admin.booking.com/" target="_blank" rel="noopener">Booking で 反映</a>
-          <a class="mgr-do1__cta-btn" href="https://manager.travel.rakuten.co.jp/" target="_blank" rel="noopener">楽天 で 反映</a>
+          <a class="mgr-do1__cta-btn mgr-do1__cta-btn--primary" href="https://admin.booking.com/" target="_blank" rel="noopener">Booking Extranet</a>
+          <a class="mgr-do1__cta-btn" href="https://travel.rakuten.co.jp/" target="_blank" rel="noopener">楽天トラベル</a>
         </div>
       </div>
     </div>
