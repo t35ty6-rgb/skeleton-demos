@@ -2424,6 +2424,53 @@ function renderHero(data, t, targetDate, todayMed, ownPrice) {
       heroReason.innerHTML = `相場 中央値 <b>${fmtYen(todayMed)}</b> の 85% を 目安 単価 として 提示。`;
     }
   }
+
+  // 楽天 施設管理 URL は tenant 個別 発行 → localStorage で 保存 (owner が 一度 登録 したら 以降 button 表示)
+  const rakBtn = document.getElementById('rakutenExtranetBtn');
+  const rakSetup = document.getElementById('rakutenExtranetSetup');
+  const rakNote = document.getElementById('rakutenExtranetNote');
+  const saved = localStorage.getItem('rakutenExtranetUrl');
+  if (rakBtn && rakSetup && rakNote) {
+    if (saved) {
+      rakBtn.href = saved;
+      rakBtn.hidden = false;
+      rakSetup.textContent = '楽天 URL 変更';
+      rakSetup.classList.add('is-registered');
+      rakNote.innerHTML = `※ 楽天 施設管理 URL 保存 済: <code>${escapeHtml(saved.slice(0, 60))}${saved.length > 60 ? '…' : ''}</code>`;
+    } else {
+      rakBtn.hidden = true;
+      rakSetup.textContent = '楽天 施設管理 URL を 登録';
+      rakSetup.classList.remove('is-registered');
+      rakNote.innerHTML = `※ 楽天 施設様 管理画面 は tenant 個別 発行 URL。 上 「楽天 施設管理 URL を 登録」 から 貴社 の ログイン URL を 1回 保存 → 以降 1 click で 開ける。`;
+    }
+  }
+}
+
+// 楽天 URL 登録 button の click handler (renderHero とは 独立、 DOM ready 後 1回 だけ bind)
+if (typeof window !== 'undefined' && !window.__rakSetupBound) {
+  window.__rakSetupBound = true;
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('#rakutenExtranetSetup');
+    if (!btn) return;
+    const cur = localStorage.getItem('rakutenExtranetUrl') || '';
+    const input = prompt('楽天 施設管理画面 の ログイン URL を 入力 して ください\n(次回 から 1 click で 開ける ように 保存 します)', cur);
+    if (input == null) return; // cancel
+    const trimmed = input.trim();
+    if (!trimmed) {
+      localStorage.removeItem('rakutenExtranetUrl');
+    } else if (!/^https?:\/\//.test(trimmed)) {
+      alert('URL は https:// で 始まる 形式 で 入力 して ください');
+      return;
+    } else {
+      localStorage.setItem('rakutenExtranetUrl', trimmed);
+    }
+    // 再 render (renderHero に localStorage 反映)
+    if (typeof priceScanCache !== 'undefined' && priceScanCache) {
+      renderPricePane();
+    } else {
+      location.reload();
+    }
+  });
 }
 
 function renderNext3(data, t) {
@@ -2483,7 +2530,7 @@ function renderDo1(data, t, todayMed, ownPrice) {
         <div class="mgr-do1__text">相場 との ギャップ を ${diff > 0 ? '半分' : ''} 埋める 段階 検証。 <b>1週間 で 期待 効果 ${eff >= 0 ? '+' : ''}${fmtYen(eff)}</b> (稼働率 70% × 6 室 × 7日 想定)</div>
         <div class="mgr-do1__cta">
           <a class="mgr-do1__cta-btn mgr-do1__cta-btn--primary" href="https://admin.booking.com/" target="_blank" rel="noopener">Booking Extranet</a>
-          <a class="mgr-do1__cta-btn" href="https://travel.rakuten.co.jp/" target="_blank" rel="noopener">楽天トラベル</a>
+          ${localStorage.getItem('rakutenExtranetUrl') ? `<a class="mgr-do1__cta-btn" href="${escapeHtml(localStorage.getItem('rakutenExtranetUrl'))}" target="_blank" rel="noopener">楽天 施設管理</a>` : ''}
         </div>
       </div>
     </div>
