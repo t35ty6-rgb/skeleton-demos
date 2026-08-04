@@ -4710,6 +4710,23 @@ a.price-hm__cell:hover { outline: 2px solid var(--p-ink, #1a1a1a); outline-offse
 /* === 旧 zone 見出し を 非表示 (JS 参照 用 の DOM は 残す) === */
 .mgr-zone--primary, .mgr-zone--kpis, .mgr-zone--analysis, .mgr-zone--detail { display: none !important; }
 
+/* === v3 (2026-08-05): 旧 要素 (打ち手Top3 / 販促プラン / verdict / hero) が render fn で hidden=false され visible に なる の を CSS で 強制 hide === */
+#priceTopActions, #priceMarketingPlan, #priceVerdictText, #priceCompAlerts,
+#heroDate, #heroPrice, #heroMarket, #heroOwn, #heroDelta, #heroFill, #heroConf, #heroReason,
+#mgrNext3, #mgrDo1,
+#rakutenExtranetBtn, #rakutenExtranetSetup, #rakutenExtranetNote {
+  display: none !important;
+}
+/* 但し 詳細 accordion 内 では 表示 したい (mgr-tabpanel 内 の 弾力性 は 使う) */
+.mgr-details__inner #priceHeatmap,
+.mgr-details__inner #priceCards,
+.mgr-details__inner #priceDistSvg,
+.mgr-details__inner #priceTrendMini,
+.mgr-details__inner #priceSupplyMini,
+.mgr-details__inner #priceRevenueForecast {
+  display: block !important;
+}
+
 /* === HERO: 推奨単価 大数字 + 副次3行 + CTA === */
 .mgr-hero {
   background: white;
@@ -4841,6 +4858,211 @@ a.price-hm__cell:hover { outline: 2px solid var(--p-ink, #1a1a1a); outline-offse
   color: var(--mgr-blue-deep, #0056B3);
   border-color: rgba(0,113,227,0.30);
   background: rgba(0,113,227,0.04);
+}
+
+/* ==============================================================
+   v3 (2026-08-05): 「1画面 = 1タスク」 Todo card + details accordion
+   owner「何をするべきかがわからない」対応、 default で は Todo だけ 見せる
+   ============================================================== */
+.mgr-todo {
+  background: white;
+  border-radius: 20px;
+  padding: 32px 40px 36px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(139,92,246,0.22);
+  box-shadow: 0 2px 6px rgba(139,92,246,0.08), 0 24px 60px -20px rgba(139,92,246,0.20);
+  position: relative;
+  overflow: hidden;
+}
+.mgr-todo::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, #0071E3, #8B5CF6, #EC4899);
+}
+.mgr-todo__eyebrow {
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--mgr-ink-3, #6E6E73);
+  letter-spacing: 0.04em;
+  margin-bottom: 20px;
+}
+.mgr-todo__loading {
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 14px; color: var(--mgr-ink-3, #6E6E73);
+  padding: 40px 0; text-align: center;
+}
+.mgr-todo__title {
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 22px; font-weight: 700; line-height: 1.5;
+  color: var(--mgr-ink, #1D1D1F);
+  margin-bottom: 18px;
+  letter-spacing: -0.01em;
+}
+.mgr-todo__title-plain {
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 20px; font-weight: 700; color: var(--mgr-ink, #1D1D1F);
+  margin-bottom: 12px;
+}
+.mgr-todo__note {
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 13.5px; line-height: 1.75; color: var(--mgr-ink-2, #424245);
+}
+.mgr-todo__when {
+  display: inline-block;
+  padding: 4px 12px; border-radius: 8px;
+  background: var(--mgr-ink, #1D1D1F); color: white;
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 15px; font-weight: 800;
+  margin-right: 4px;
+}
+.mgr-todo__price-old {
+  font-family: 'Inter', sans-serif;
+  font-size: 28px; font-weight: 700; color: var(--mgr-ink-3, #6E6E73);
+  font-variant-numeric: tabular-nums;
+  text-decoration: line-through;
+  text-decoration-color: rgba(0,0,0,0.28);
+  padding: 0 4px;
+}
+.mgr-todo__arrow {
+  color: var(--mgr-ink-3, #6E6E73);
+  padding: 0 6px; font-weight: 400;
+}
+.mgr-todo__price-new {
+  font-family: 'Inter', sans-serif;
+  font-size: 40px; font-weight: 900; letter-spacing: -0.02em;
+  color: var(--mgr-ink, #1D1D1F);
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(120deg, #0071E3, #8B5CF6, #EC4899);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  padding: 0 6px;
+}
+.mgr-todo__uplift {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px; font-weight: 700; color: var(--mgr-blue-deep, #0056B3);
+  font-variant-numeric: tabular-nums;
+  padding: 4px 10px; border-radius: 6px;
+  background: rgba(0,113,227,0.08);
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.mgr-todo__reason {
+  padding: 14px 18px;
+  background: var(--mgr-surface-2, #F5F5F7);
+  border-radius: 10px;
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 13.5px; line-height: 1.75; color: var(--mgr-ink-2, #424245);
+  border-left: 3px solid transparent;
+  border-image: linear-gradient(180deg, #0071E3, #8B5CF6, #EC4899) 1;
+  margin-bottom: 18px;
+}
+.mgr-todo__reason b {
+  color: var(--mgr-ink, #1D1D1F); font-weight: 700;
+  font-family: 'Inter', sans-serif;
+}
+.mgr-todo__cta-row {
+  display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.mgr-todo__cta {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 14px 24px; border-radius: 10px;
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 14px; font-weight: 700;
+  text-decoration: none; cursor: pointer;
+  border: 1px solid var(--mgr-rule, #D2D2D7);
+  background: white; color: var(--mgr-ink-2, #424245);
+  transition: all 0.15s;
+}
+.mgr-todo__cta:hover { background: var(--mgr-surface-2, #F5F5F7); color: var(--mgr-ink, #1D1D1F); }
+.mgr-todo__cta--primary {
+  background: linear-gradient(120deg, #0071E3, #8B5CF6, #EC4899); color: white; border: none;
+  box-shadow: 0 2px 6px -1px rgba(139,92,246,0.30), 0 12px 30px -8px rgba(236,72,153,0.30);
+  font-size: 15px; padding: 15px 28px;
+}
+.mgr-todo__cta--primary:hover {
+  transform: translateY(-1px); color: white;
+  box-shadow: 0 2px 6px -1px rgba(139,92,246,0.30), 0 16px 40px -8px rgba(236,72,153,0.40);
+  background: linear-gradient(120deg, #0071E3, #8B5CF6, #EC4899);
+}
+.mgr-todo__cta--sub { border-color: var(--mgr-blue, #0071E3); color: var(--mgr-blue-deep, #0056B3); }
+.mgr-todo__cta--ghost {
+  background: transparent; border: 1px dashed var(--mgr-rule, #D2D2D7);
+  color: var(--mgr-ink-3, #6E6E73); font-weight: 500;
+}
+.mgr-todo__alt {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  padding-top: 16px;
+  border-top: 1px dashed var(--mgr-rule, #D2D2D7);
+}
+.mgr-todo__alt-lbl {
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 12px; color: var(--mgr-ink-3, #6E6E73);
+  margin-right: 4px;
+}
+.mgr-todo__alt-btn {
+  padding: 7px 14px; border-radius: 8px;
+  background: white; border: 1px solid var(--mgr-rule, #D2D2D7);
+  color: var(--mgr-ink-2, #424245);
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 12.5px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
+.mgr-todo__alt-btn:hover { background: var(--mgr-surface-2, #F5F5F7); color: var(--mgr-ink, #1D1D1F); border-color: var(--mgr-ink-3, #6E6E73); }
+
+/* === Details accordion (default 閉じる) === */
+.mgr-details {
+  margin-top: 12px;
+  background: transparent;
+}
+.mgr-details__summary {
+  display: flex; align-items: baseline; gap: 12px;
+  padding: 14px 20px;
+  background: var(--mgr-surface-2, #F5F5F7);
+  border: 1px solid var(--mgr-rule, #D2D2D7);
+  border-radius: 12px;
+  cursor: pointer;
+  list-style: none;
+  transition: all 0.15s;
+}
+.mgr-details__summary::-webkit-details-marker { display: none; }
+.mgr-details__summary:hover {
+  background: white;
+  border-color: var(--mgr-ink-3, #6E6E73);
+}
+.mgr-details[open] .mgr-details__summary {
+  background: white;
+  border-color: rgba(139,92,246,0.24);
+  margin-bottom: 16px;
+}
+.mgr-details__summary-arrow {
+  display: inline-block;
+  font-size: 11px; color: var(--mgr-ink-3, #6E6E73);
+  transition: transform 0.2s;
+}
+.mgr-details[open] .mgr-details__summary-arrow { transform: rotate(90deg); }
+.mgr-details__summary-lbl {
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 14px; font-weight: 700; color: var(--mgr-ink, #1D1D1F);
+}
+.mgr-details__summary-sub {
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 11.5px; color: var(--mgr-ink-3, #6E6E73);
+}
+.mgr-details__inner {
+  padding-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .mgr-todo { padding: 24px 22px 26px; border-radius: 16px; }
+  .mgr-todo__title { font-size: 18px; }
+  .mgr-todo__price-old { font-size: 22px; }
+  .mgr-todo__price-new { font-size: 32px; }
+  .mgr-todo__uplift { font-size: 13px; }
+  .mgr-todo__cta { flex: 1 1 100%; font-size: 13px; padding: 12px 16px; }
+  .mgr-todo__cta--primary { font-size: 14px; }
+  .mgr-todo__alt { flex-direction: column; align-items: stretch; }
+  .mgr-todo__alt-btn { text-align: center; }
 }
 
 /* === Next3: 明日から4日 の mini card === */

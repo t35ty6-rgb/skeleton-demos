@@ -2327,12 +2327,130 @@ function renderPriceKpis(data) {
   renderRevenueForecast(data, t);                        // 収益予測 (Tab 3)
   renderMarketingPlan(data, t, med, ownMed);             // 販促プラン (hidden 要素 更新、 UI 表示なし)
 
-  // Hero + Next3 + Do1 + Elasticity (2026-08-04 大 refactor: 10人 会議 統合仕様 v1)
+  // Hero + Next3 + Do1 + Elasticity (詳細 accordion 内 に 移動、 v3 default で は 見えない)
   renderHero(data, t, targetDate, med, ownMed);
   renderNext3(data, t);
   renderDo1(data, t, med, ownMed);
   renderElasticity(data, t, med, ownMed);
+
+  // v3 (2026-08-05 owner「何をするべきかがわからない」対応): 1 画面 = 1 タスク の Todo card
+  renderTodo(data, t, targetDate, med, ownMed);
 }
+
+// ==================== v3: Todo card (1 画面 = 1 タスク) ====================
+// 現実的 uplift = gap × 15%、 上限 ¥3,000。 owner が 「一気 に 相場中央値」 じゃない 小さな 検証 を できる ように
+function pickTodayTask(data, t, targetDate, todayMed, ownPrice) {
+  const dates = data.dates.slice().sort();
+  const today = new Date().toISOString().slice(0, 10);
+  const marketMed = t.marketMed || computeMarketMedianSeries(data);
+  const ownK = Object.keys(data.hotels).find(k => OWN_EXTERNAL_IDS.has(k));
+  const ownSeries = ownK ? (data.prices[ownK] || {}) : {};
+  // 次 7 日 の 中 で 荒島 vs 相場 の ギャップ が 一番 大きい 日 を 選ぶ (今日 含む)
+  const candidateDates = dates.filter(d => d >= today).slice(0, 7);
+  let bestDate = null, bestGap = 0;
+  for (const d of candidateDates) {
+    const m = marketMed[d];
+    const o = ownSeries[d];
+    if (m == null || o == null) continue;
+    const gap = m - o;
+    if (gap > bestGap) { bestGap = gap; bestDate = d; }
+  }
+  if (!bestDate) {
+    // Fallback: 今日 の median と own で 計算
+    if (todayMed != null && ownPrice != null) {
+      bestDate = targetDate; bestGap = todayMed - ownPrice;
+    }
+  }
+  if (!bestDate || bestGap < 1000) return null;
+
+  const marketAtDate = marketMed[bestDate];
+  const ownAtDate = ownSeries[bestDate] || ownPrice;
+  // 現実的 uplift = gap × 15%、 500円 単位、 上限 ¥3,000
+  const raw = Math.min(bestGap * 0.15, 3000);
+  const uplift = Math.max(500, Math.round(raw / 500) * 500);
+  const newPrice = ownAtDate + uplift;
+  const dt = new Date(bestDate + 'T00:00:00+09:00');
+  const dow = ['日','月','火','水','木','金','土'][dt.getDay()];
+  const isToday = bestDate === today;
+  const isTomorrow = bestDate === dates.filter(d => d > today)[0];
+  const whenLbl = isToday ? '今夜' : isTomorrow ? '明日' : `${dt.getMonth()+1}/${dt.getDate()}(${dow})`;
+  const marketPct = marketAtDate ? Math.round((ownAtDate / marketAtDate) * 100) : null;
+  return {
+    date: bestDate, whenLbl, dow, marketMed: marketAtDate,
+    ownPrice: ownAtDate, newPrice, uplift, marketPct, gap: bestGap,
+  };
+}
+
+function renderTodo(data, t, targetDate, todayMed, ownPrice) {
+  const wrap = document.getElementById('mgrTodo');
+  if (!wrap) return;
+  const today = new Date();
+  const todayLbl = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}(${['日','月','火','水','木','金','土'][today.getDay()]})`;
+
+  const task = pickTodayTask(data, t, targetDate, todayMed, ownPrice);
+  if (!task) {
+    wrap.innerHTML = `
+      <div class="mgr-todo__eyebrow">今日 ${escapeHtml(todayLbl)} · 状況 確認</div>
+      <div class="mgr-todo__body">
+        <div class="mgr-todo__title-plain">今日 は 特別 な アクション なし</div>
+        <div class="mgr-todo__note">荒島 単価 は 直近 7日 で 相場 との ギャップ が 小さい (¥1,000 未満)、 現状 維持 で OK。 気 になる 日 は 下 の 「詳細 データ を 見る」 から 深掘り。</div>
+      </div>
+    `;
+    return;
+  }
+  const savedRakutenUrl = localStorage.getItem('rakutenExtranetUrl');
+  const rakutenBtn = savedRakutenUrl
+    ? `<a class="mgr-todo__cta mgr-todo__cta--sub" href="${escapeHtml(savedRakutenUrl)}" target="_blank" rel="noopener">楽天 施設管理 を 開く</a>`
+    : `<button class="mgr-todo__cta mgr-todo__cta--ghost" type="button" data-todo-action="setup-rakuten">楽天 施設管理 URL を 登録</button>`;
+
+  wrap.innerHTML = `
+    <div class="mgr-todo__eyebrow">今日 ${escapeHtml(todayLbl)} · やる こと は 1 つ だけ</div>
+    <div class="mgr-todo__body">
+      <div class="mgr-todo__title">
+        <span class="mgr-todo__when">${escapeHtml(task.whenLbl)}</span> の 単価 を
+        <span class="mgr-todo__price-old">${fmtYen(task.ownPrice)}</span>
+        <span class="mgr-todo__arrow">→</span>
+        <span class="mgr-todo__price-new">${fmtYen(task.newPrice)}</span>
+        <span class="mgr-todo__uplift">(+${fmtYen(task.uplift)})</span>
+      </div>
+      <div class="mgr-todo__reason">
+        この日 の 相場 中央値 は <b>${fmtYen(task.marketMed)}</b>、 荒島 は 相場 の <b>${task.marketPct}%</b>。
+        一気 に 相場 まで 追い付く のは 予約 が 減る 恐れ、 まず <b>+${fmtYen(task.uplift)}</b> だけ 上げて <b>3日 反応 を 見る</b>。
+      </div>
+      <div class="mgr-todo__cta-row">
+        <a class="mgr-todo__cta mgr-todo__cta--primary" href="https://admin.booking.com/" target="_blank" rel="noopener">Booking Extranet を 開いて 変更 する</a>
+        ${rakutenBtn}
+      </div>
+      <div class="mgr-todo__alt">
+        <span class="mgr-todo__alt-lbl">この 推奨 が 気 に 入らない?</span>
+        <button class="mgr-todo__alt-btn" type="button" data-todo-alt="none">現状 維持 で OK</button>
+        <button class="mgr-todo__alt-btn" type="button" data-todo-alt="small" data-uplift="500">+¥500 だけ (慎重)</button>
+        <button class="mgr-todo__alt-btn" type="button" data-todo-alt="large" data-uplift="3000">+¥3,000 (強気)</button>
+      </div>
+    </div>
+  `;
+}
+
+// Todo 内 の 楽天 URL 登録 button, alt button の click 処理
+document.addEventListener('click', (e) => {
+  const rakSetup = e.target.closest('[data-todo-action="setup-rakuten"]');
+  if (rakSetup) {
+    const setup = document.getElementById('rakutenExtranetSetup');
+    if (setup) setup.click();
+    return;
+  }
+  const alt = e.target.closest('[data-todo-alt]');
+  if (alt) {
+    const kind = alt.dataset.todoAlt;
+    if (kind === 'none') {
+      alert('OK。 今日 は 単価 変更 なし で 進む。');
+    } else {
+      const yen = alt.dataset.uplift;
+      alert(`了解: +¥${yen} 案 で 検討。 Booking Extranet で 該当日 の 単価 を 実際 に 変更 して ください。`);
+    }
+    return;
+  }
+});
 
 // ==================== 大 refactor: Hero + Tab 系 render fns ====================
 
