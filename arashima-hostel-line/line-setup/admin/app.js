@@ -2325,6 +2325,168 @@ function renderPriceKpis(data) {
   renderExecVerdict(data, t, targetDate, med, ownMed);   // verdict 動的化
   renderCompetitorAlerts(data);                          // 競合動向 alert
   renderRevenueForecast(data, t);                        // 収益予測 (30日 期待売上)
+  renderMarketingPlan(data, t, med, ownMed);             // 販促プラン (Zone 4 頭、 印刷可)
+}
+
+// === 販促プラン (owner 明示「どうマーケティングすればいいか わからない」対応) ===
+function renderMarketingPlan(data, t, todayMed, ownPrice) {
+  const wrap = document.getElementById('priceMarketingPlan');
+  if (!wrap) return;
+  const dates = data.dates.slice().sort();
+  const marketMed = t.marketMed || computeMarketMedianSeries(data);
+  const supply = t.supply || computeDailySupply(data);
+  const ownK = Object.keys(data.hotels).find(k => OWN_EXTERNAL_IDS.has(k));
+  const ownSeries = ownK ? (data.prices[ownK] || {}) : {};
+  const fmtDate = d => { const dt = new Date(d + 'T00:00:00+09:00'); return `${dt.getMonth()+1}/${dt.getDate()}(${['日','月','火','水','木','金','土'][dt.getDay()]})`; };
+  const items = [];
+
+  // 1. 今週末 (直近 の 金土日) の 単価 検証
+  const wkndDates = dates.filter(d => { const dow = new Date(d+'T00:00:00+09:00').getDay(); return dow===5||dow===6||dow===0; }).slice(0, 3);
+  if (wkndDates.length) {
+    const wkndMedians = wkndDates.map(d => marketMed[d]).filter(v => v != null);
+    const wkndOwns = wkndDates.map(d => ownSeries[d]).filter(v => v != null);
+    if (wkndMedians.length && wkndOwns.length) {
+      const avgMed = Math.round(wkndMedians.reduce((s,v)=>s+v,0)/wkndMedians.length);
+      const avgOwn = Math.round(wkndOwns.reduce((s,v)=>s+v,0)/wkndOwns.length);
+      const gap = avgMed - avgOwn;
+      if (gap > 2000) {
+        const suggest = Math.round(gap * 0.5 / 500) * 500;
+        items.push({
+          tag: '週末 単価',
+          when: `${fmtDate(wkndDates[0])}-${fmtDate(wkndDates[wkndDates.length-1])}`,
+          action: `荒島 単価 <b>¥${avgOwn.toLocaleString()}</b> → <b>¥${(avgOwn+suggest).toLocaleString()}</b> に 段階 上げ 検証 (相場中央値 ¥${avgMed.toLocaleString()} と の 差 の 半分)`,
+          where: '公式サイト + Booking + 楽天 (3 経路 同期)',
+          due: `${fmtDate(wkndDates[0])} の 3日前 まで に 変更 反映`,
+          effect: `1泊 +¥${suggest.toLocaleString()} × ${wkndDates.length}日 = <b>+¥${(suggest*wkndDates.length).toLocaleString()}</b> の 見込み`,
+        });
+      }
+    }
+  }
+
+  // 2. 平日 の 価格 帯 判定 (下位1/3 が多いなら 段階UP、 上位1/3 が多いなら 稼働率 監視)
+  const wdayDates = dates.filter(d => { const dow = new Date(d+'T00:00:00+09:00').getDay(); return dow>=1&&dow<=4; }).slice(0, 8);
+  const wdayOwns = wdayDates.map(d => ownSeries[d]).filter(v => v != null);
+  const wdayMeds = wdayDates.map(d => marketMed[d]).filter(v => v != null);
+  if (wdayOwns.length && wdayMeds.length) {
+    const avgOwn = wdayOwns.reduce((s,v)=>s+v,0)/wdayOwns.length;
+    const avgMed = wdayMeds.reduce((s,v)=>s+v,0)/wdayMeds.length;
+    const pct = Math.round((avgOwn / avgMed) * 100);
+    if (pct < 70) {
+      const suggest = Math.round((avgMed*0.85 - avgOwn) / 500) * 500;
+      if (suggest > 500) items.push({
+        tag: '平日 単価',
+        when: `今週 平日 (${fmtDate(wdayDates[0])}〜)`,
+        action: `荒島 単価 相場 の <b>${pct}%</b>、 相場 の 85% (¥${Math.round(avgMed*0.85).toLocaleString()}) まで <b>+¥${suggest.toLocaleString()}</b> 段階 up`,
+        where: '公式 + Booking + 楽天',
+        due: '今週 中',
+        effect: `1泊 +¥${suggest.toLocaleString()} × 平日 4日 = <b>+¥${(suggest*4).toLocaleString()}</b>`,
+      });
+    } else if (pct > 110) {
+      items.push({
+        tag: '平日 単価',
+        when: `今週 平日 (${fmtDate(wdayDates[0])}〜)`,
+        action: `荒島 単価 相場 の <b>${pct}%</b>、 稼働率 が 70% 切ってる なら <b>-¥1,000〜2,000</b> の 段階 下げ 検証`,
+        where: '公式 (直予約) 優先、 OTA は 段階 遅らせ',
+        due: '来週 前 に 稼働率 判断',
+        effect: '稼働率 +10-15%pt で 総 売上 uplift',
+      });
+    }
+  }
+
+  // 3. 需要 tightness score が 高い日 = 早割 で 早期 埋め
+  if (t.tightnessScore >= 5) {
+    items.push({
+      tag: '早割',
+      when: `今週末 〜 来週末`,
+      action: `週末 は 需要 スコア +${t.tightnessScore} (競合 満室 リスク)、 <b>直前 3日 割 -10%</b> or <b>早割 14日前 -15%</b> で 埋め`,
+      where: '楽天 (早割 プラン 設定 が 楽) + 公式',
+      due: '週末 の 5日前',
+      effect: '稼働率 +5-10%pt (満室 時 は 単価 上げ の 余地)',
+    });
+  }
+
+  // 4. 曜日別 の 大きな ギャップ 検出
+  const dowStats = Array.from({length: 7}, () => ({ own: [], med: [] }));
+  for (const d of dates) {
+    const dow = new Date(d+'T00:00:00+09:00').getDay();
+    if (ownSeries[d] != null) dowStats[dow].own.push(ownSeries[d]);
+    if (marketMed[d] != null) dowStats[dow].med.push(marketMed[d]);
+  }
+  const dowChars = ['日','月','火','水','木','金','土'];
+  const lagging = [];
+  for (let i = 0; i < 7; i++) {
+    const own = dowStats[i].own.length ? dowStats[i].own.reduce((s,v)=>s+v,0)/dowStats[i].own.length : null;
+    const med = dowStats[i].med.length ? dowStats[i].med.reduce((s,v)=>s+v,0)/dowStats[i].med.length : null;
+    if (own && med && own/med <= 0.7) lagging.push({dow: i, own, med, gap: med-own});
+  }
+  if (lagging.length) {
+    const top = lagging.sort((a,b)=>b.gap-a.gap)[0];
+    const uplift = Math.round(top.gap * 0.6 / 500) * 500;
+    items.push({
+      tag: '曜日 別 単価',
+      when: `毎週 ${dowChars[top.dow]}曜`,
+      action: `${dowChars[top.dow]}曜 は 荒島 ¥${Math.round(top.own).toLocaleString()} 相場 ¥${Math.round(top.med).toLocaleString()} の -${Math.round((1-top.own/top.med)*100)}% ギャップ、 <b>${dowChars[top.dow]}曜 だけ +¥${uplift.toLocaleString()}</b> の 曜日別 単価 設定`,
+      where: 'Booking + 楽天 (曜日別 単価 テーブル)',
+      due: '来週 の 該当 曜日 前 に 設定',
+      effect: `月4回 × +¥${uplift.toLocaleString()} = <b>+¥${(uplift*4).toLocaleString()}/月</b>`,
+    });
+  }
+
+  // 5. 施設 訴求 (rakuten 情報 から 特徴 抽出、 なければ 一般 提案)
+  items.push({
+    tag: '施設 訴求',
+    when: '常時 (OTA プラン 説明文)',
+    action: `荒島 の <b>徒歩10分 / 駐車場 20台 無料 / 越前大野 の 郷土料理</b> を OTA プラン説明文 に 明記、 競合 の 3割 は 駐車場 情報 なし で 差別化 可`,
+    where: 'Booking プラン説明 + 楽天 プラン名',
+    due: '今週 中',
+    effect: 'CVR +1-2%pt (客 の 「駐車場 迷い」 排除)',
+  });
+
+  // 6. 収益 予測 (t.marketMed から)
+  const marketAvg = Object.values(marketMed).filter(v=>v!=null).reduce((s,v,_,a)=>s+v/a.length,0);
+  const ownAvg = Object.values(ownSeries).filter(v=>v!=null).reduce((s,v,_,a)=>s+v/a.length,0);
+  if (marketAvg && ownAvg && marketAvg - ownAvg > 5000) {
+    items.push({
+      tag: '中期 目標',
+      when: '3 ヶ月 (Q3)',
+      action: `荒島 平均 単価 <b>¥${Math.round(ownAvg).toLocaleString()}</b> → 相場 中央値 の 80% (<b>¥${Math.round(marketAvg*0.8).toLocaleString()}</b>) まで 段階 up (レビュー ★向上 と 平行)`,
+      where: '全 OTA',
+      due: '3 ヶ月 後 の 相場位置 パーセンタイル 20% → 40% 目標',
+      effect: `月次 売上 <b>+15-25%</b>`,
+    });
+  }
+
+  // render
+  if (!items.length) { wrap.innerHTML = ''; wrap.hidden = true; return; }
+  wrap.hidden = false;
+  wrap.innerHTML = `
+    <div class="mgr-plan__head">
+      <div>
+        <h3 class="mgr-plan__title">販促 プラン (今週 の 打ち手)</h3>
+        <p class="mgr-plan__sub">相場 データ から の 具体 マーケ アクション ${items.length} 件、 印刷 して スタッフ と 共有 可</p>
+      </div>
+      <button class="mgr-plan__print" type="button" onclick="window.print()">印刷 する</button>
+    </div>
+    <ol class="mgr-plan__list">
+      ${items.map((it, i) => `
+        <li class="mgr-plan__item">
+          <div class="mgr-plan__num">${i+1}</div>
+          <div class="mgr-plan__body">
+            <div class="mgr-plan__row-1">
+              <span class="mgr-plan__tag">${escapeHtml(it.tag)}</span>
+              <span class="mgr-plan__when">${escapeHtml(it.when)}</span>
+            </div>
+            <div class="mgr-plan__action">${it.action}</div>
+            <div class="mgr-plan__meta">
+              <span class="mgr-plan__meta-item"><b>どこ で</b>: ${escapeHtml(it.where)}</span>
+              <span class="mgr-plan__meta-item"><b>期日</b>: ${escapeHtml(it.due)}</span>
+              <span class="mgr-plan__meta-item mgr-plan__meta-item--effect"><b>期待 効果</b>: ${it.effect}</span>
+            </div>
+          </div>
+        </li>
+      `).join('')}
+    </ol>
+  `;
 }
 
 // === Phase 1: 経営者 向け 動的 verdict (hardcoded の ¥18,400 例 を 撤廃) ===
