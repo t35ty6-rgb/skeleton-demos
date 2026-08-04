@@ -3685,6 +3685,8 @@ document.addEventListener('click', (e) => {
 
 let priceCardSort = 'distance';
 let priceSiteFilter = 'all'; // 'all' | 'booking' | 'rakuten'
+// v3.1 (2026-08-05): owner「一覧で全部見れるように」対応、 default list (1行1軒)
+let priceCardView = localStorage.getItem('priceCardView') || 'list';
 document.addEventListener('click', (e) => {
   const b = e.target.closest('.price-sort__btn');
   if (!b) return;
@@ -3744,6 +3746,7 @@ function renderPriceCards(data) {
     };
     return valFor(ha, pricesA) - valFor(hb, pricesB);
   });
+  const CLASS_MAP = { RYOKAN: '旅館', HOTEL: 'ホテル', MINSHUKU: '民宿', PENSION: 'ペンション', LODGE: '公共の宿', COTTAGE: '貸別荘', RESORT: 'リゾート' };
   const html = hotelKeysSorted.map((k) => {
     const h = data.hotels[k];
     const prices = Object.values(data.prices[k] || {}).filter((v) => v != null);
@@ -3756,12 +3759,43 @@ function renderPriceCards(data) {
     const initial = escapeHtml((h.name || '?').slice(0, 1));
     const diff = (avg != null && marketAvg != null) ? Math.round(avg - marketAvg) : null;
     const diffClass = diff == null ? '' : diff < -1000 ? 'is-cheaper' : diff > 1000 ? 'is-pricier' : 'is-neutral';
+    const siteCls = h.site === 'rakuten' ? ' price-card--rakuten' : h.site === 'booking' ? ' price-card--booking' : '';
+    const cls = h.hotelClassCode ? (CLASS_MAP[h.hotelClassCode] || h.hotelClassCode) : null;
+    const classChip = cls ? `<span class="price-card__class price-card__class--${escapeHtml(String(h.hotelClassCode).toLowerCase())}">${escapeHtml(cls)}</span>` : '';
+    const siteChip = `<span class="price-card__site price-card__site--${escapeHtml(h.site || 'booking')}">${h.site === 'rakuten' ? '楽天' : 'Booking'}</span>`;
+
+    // v3.1 (2026-08-05 owner「一覧で全部見れるように」対応): list mode = 1行1軒
+    if (priceCardView === 'list') {
+      const photoBlockList = safePhoto
+        ? `<button class="price-row__photo" data-hotel="${escapeHtml(k)}" type="button" aria-label="${escapeHtml(h.name || '?')} 詳細"><img src="${safePhoto}" alt="" loading="lazy" onerror="this.parentNode.classList.add('price-row__photo--fallback');this.parentNode.dataset.initial='${initial}';this.remove();"></button>`
+        : `<button class="price-row__photo price-row__photo--fallback" data-hotel="${escapeHtml(k)}" type="button" data-initial="${initial}" aria-label="${escapeHtml(h.name || '?')} 詳細"></button>`;
+      return `
+        <div class="price-row${isOwn ? ' price-row--own' : ''}${siteCls.replace('price-card','price-row')}" data-hotel="${escapeHtml(k)}" data-site="${escapeHtml(h.site || '')}">
+          ${photoBlockList}
+          <div class="price-row__name-col">
+            <button class="price-row__name" data-hotel="${escapeHtml(k)}" type="button">${escapeHtml(h.name || '?')}</button>
+            <div class="price-row__chips">${siteChip}${classChip}${isOwn ? '<span class="price-card__badge">自ホテル</span>' : ''}</div>
+          </div>
+          <div class="price-row__distance">${h.distanceKm != null ? h.distanceKm.toFixed(1) + 'km' : '—'}</div>
+          <div class="price-row__review">${h.reviewScore ? '★ ' + escapeHtml(String(h.reviewScore)) : '—'}</div>
+          <div class="price-row__avg">
+            <div class="price-row__avg-lbl">${data.dates.length}日平均</div>
+            <div class="price-row__avg-val">${fmtYen(avg)}</div>
+          </div>
+          <div class="price-row__diff ${diffClass}">
+            <div class="price-row__diff-lbl">相場差</div>
+            <div class="price-row__diff-val">${diff == null ? '—' : (diff >= 0 ? '+' : '') + fmtYen(diff)}</div>
+          </div>
+          <a class="price-row__link" href="${safeUrl}" target="_blank" rel="noopener" aria-label="${h.site === 'rakuten' ? '楽天' : 'Booking'} で 開く">↗</a>
+        </div>
+      `;
+    }
+    // 従来 card mode
     const photoBlock = safePhoto
       ? `<button class="price-card__photo" data-hotel="${escapeHtml(k)}" type="button" aria-label="${escapeHtml(h.name || '?')} 詳細">
            <img src="${safePhoto}" alt="" loading="lazy" onerror="this.parentNode.classList.add('price-card__photo--fallback');this.parentNode.dataset.initial='${initial}';this.remove();">
          </button>`
       : `<button class="price-card__photo price-card__photo--fallback" data-hotel="${escapeHtml(k)}" type="button" data-initial="${initial}" aria-label="${escapeHtml(h.name || '?')} 詳細"></button>`;
-    const siteCls = h.site === 'rakuten' ? ' price-card--rakuten' : h.site === 'booking' ? ' price-card--booking' : '';
     return `
       <article class="price-card${isOwn ? ' price-card--own' : ''}${siteCls}" data-hotel="${escapeHtml(k)}" data-site="${escapeHtml(h.site || '')}">
         ${photoBlock}
@@ -3771,12 +3805,8 @@ function renderPriceCards(data) {
             ${isOwn ? '<span class="price-card__badge">自ホテル</span>' : ''}
           </div>
           <div class="price-card__meta">
-            <span class="price-card__site price-card__site--${escapeHtml(h.site || 'booking')}">${h.site === 'rakuten' ? '楽天' : 'Booking'}</span>
-            ${(() => {
-              const CLASS_MAP = { RYOKAN: '旅館', HOTEL: 'ホテル', MINSHUKU: '民宿', PENSION: 'ペンション', LODGE: '公共の宿', COTTAGE: '貸別荘', RESORT: 'リゾート' };
-              const cls = h.hotelClassCode ? (CLASS_MAP[h.hotelClassCode] || h.hotelClassCode) : null;
-              return cls ? `<span class="price-card__class price-card__class--${escapeHtml(String(h.hotelClassCode).toLowerCase())}">${escapeHtml(cls)}</span>` : '';
-            })()}
+            ${siteChip}
+            ${classChip}
             <span>${h.distanceKm ?? '—'} km</span>
             ${h.reviewScore ? `<span>★ ${escapeHtml(String(h.reviewScore))}${h.reviewCount ? ' (' + h.reviewCount + ')' : ''}</span>` : ''}
             ${h.roomName ? `<span class="price-card__room">${escapeHtml(String(h.roomName).slice(0, 20))}</span>` : ''}
@@ -3800,16 +3830,25 @@ function renderPriceCards(data) {
     `;
   }).join('');
   wrap.innerHTML = html;
+  wrap.classList.toggle('price-cards--list', priceCardView === 'list');
+  wrap.classList.toggle('price-cards--card', priceCardView === 'card');
+  // toggle button 状態 反映
+  document.querySelectorAll('.price-view-btn').forEach(b => b.classList.toggle('is-on', b.dataset.view === priceCardView));
   wrap.addEventListener('click', (e) => {
     const t = e.target.closest('[data-hotel]');
     if (t && !e.target.closest('a[href]')) openHotelDetailModal(t.dataset.hotel);
   });
-  // SP show-more: 初期 6件 + 「もっと見る」 (reviewer #7 ページ長 削減)
+  // list mode で は show-more (6件制限) 無効化 = 一覧 で 全部 見れる
   const toggle = document.getElementById('priceCardsToggle');
   const rest = document.getElementById('priceCardsRest');
-  const total = wrap.querySelectorAll('.price-card').length;
+  const itemSel = priceCardView === 'list' ? '.price-row' : '.price-card';
+  const total = wrap.querySelectorAll(itemSel).length;
   const INITIAL = 6;
-  if (toggle && total > INITIAL) {
+  if (priceCardView === 'list') {
+    // list mode は 全部 表示、 show-more 隠す + is-collapsed 解除
+    if (toggle) toggle.hidden = true;
+    wrap.classList.remove('is-collapsed');
+  } else if (toggle && total > INITIAL) {
     toggle.hidden = false;
     if (rest) rest.textContent = String(total - INITIAL);
     wrap.classList.add('is-collapsed');
@@ -3822,6 +3861,15 @@ function renderPriceCards(data) {
     wrap.classList.remove('is-collapsed');
   }
 }
+
+// view mode toggle wire (list / card)
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.price-view-btn');
+  if (!btn) return;
+  priceCardView = btn.dataset.view === 'card' ? 'card' : 'list';
+  localStorage.setItem('priceCardView', priceCardView);
+  if (priceScanCache) renderPriceCards(getViewData() || priceScanCache);
+});
 
 function renderPriceTable(data) {
   const tbl = $('#priceTable');

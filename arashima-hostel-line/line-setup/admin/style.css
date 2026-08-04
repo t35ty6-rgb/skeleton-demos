@@ -5342,3 +5342,143 @@ a.price-hm__cell:hover { outline: 2px solid var(--p-ink, #1a1a1a); outline-offse
   .mgr-do1__title { font-size: 14px; }
   .mgr-elast__case-price { font-size: 26px; }
 }
+
+/* ============================================================================
+   v3.1 (2026-08-05): 競合ホテル一覧 list mode (1行1軒、 owner「全部見れるように」対応)
+   default view = list、 owner が 「カード」 toggle 押した時 のみ 従来 grid card
+   ============================================================================ */
+.mgr__view {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding-left: 12px; margin-left: 8px;
+  border-left: 1px solid var(--mgr-rule, #D2D2D7);
+}
+.price-cards.price-cards--list {
+  display: flex !important;
+  flex-direction: column;
+  gap: 4px;
+  grid-template-columns: none !important;
+}
+.price-cards.price-cards--list > * { max-width: none !important; }
+
+/* 1 行 1 軒 の 行 */
+.price-row {
+  display: grid;
+  grid-template-columns: 44px minmax(140px, 1.6fr) 60px 60px 130px 130px 32px;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 14px;
+  background: white;
+  border: 1px solid var(--mgr-rule, #D2D2D7);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  transition: box-shadow 0.15s;
+}
+.price-row:hover { box-shadow: 0 2px 8px -2px rgba(0,0,0,0.08); }
+.price-row--own {
+  background: linear-gradient(135deg, rgba(0,113,227,0.05), rgba(139,92,246,0.05)), white;
+  border-color: rgba(139,92,246,0.28);
+}
+.price-row--rakuten::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: linear-gradient(180deg, #BF0000, #EC4899);
+}
+.price-row--booking::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: #003580;
+}
+.price-row--own::before { display: none; }
+.price-row__photo {
+  width: 44px; height: 44px; border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--mgr-rule, #D2D2D7); background: var(--mgr-surface-2, #F5F5F7);
+  padding: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.price-row__photo img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.price-row__photo--fallback::before {
+  content: attr(data-initial);
+  font-family: 'Hiragino Sans', sans-serif;
+  font-size: 18px; font-weight: 700; color: var(--mgr-ink-3, #6E6E73);
+}
+.price-row__name-col { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.price-row__name {
+  background: transparent; border: none; padding: 0; text-align: left; cursor: pointer;
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 13.5px; font-weight: 700; color: var(--mgr-ink, #1D1D1F);
+  letter-spacing: -0.005em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.price-row__name:hover { color: var(--mgr-blue-deep, #0056B3); text-decoration: underline; }
+.price-row__chips { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.price-row__chips .price-card__site {
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 3px;
+  letter-spacing: 0.02em;
+}
+.price-row__chips .price-card__site--booking { background: rgba(0,53,128,0.10); color: #003580; }
+.price-row__chips .price-card__site--rakuten { background: rgba(191,0,0,0.10); color: #BF0000; }
+.price-row__chips .price-card__class { font-size: 10px; padding: 1px 6px; }
+.price-row__chips .price-card__badge {
+  background: linear-gradient(120deg, #0071E3, #8B5CF6, #EC4899); color: white;
+  padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 700;
+}
+.price-row__distance {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--mgr-ink-2, #424245);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.price-row__review {
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 12px; color: var(--mgr-ink-2, #424245);
+  text-align: right;
+}
+.price-row__avg, .price-row__diff {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+  text-align: right;
+}
+.price-row__avg-lbl, .price-row__diff-lbl {
+  font-family: 'Hiragino Sans', 'Inter', sans-serif;
+  font-size: 10px; color: var(--mgr-ink-3, #6E6E73); letter-spacing: 0.02em;
+}
+.price-row__avg-val, .price-row__diff-val {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px; font-weight: 700; color: var(--mgr-ink, #1D1D1F);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.price-row__diff.is-cheaper .price-row__diff-val { color: var(--mgr-blue-deep, #0056B3); }
+.price-row__diff.is-pricier .price-row__diff-val { color: var(--mgr-red, #FF3B30); }
+.price-row__diff.is-neutral .price-row__diff-val { color: var(--mgr-ink-3, #6E6E73); }
+.price-row__link {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 6px;
+  background: var(--mgr-surface-2, #F5F5F7);
+  color: var(--mgr-ink-2, #424245);
+  text-decoration: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px; font-weight: 700;
+  transition: all 0.15s;
+}
+.price-row__link:hover { background: var(--mgr-blue, #0071E3); color: white; }
+
+@media (max-width: 900px) {
+  .price-row {
+    grid-template-columns: 40px minmax(100px, 1.6fr) 46px 100px 100px 28px;
+    gap: 8px; padding: 8px 10px;
+  }
+  .price-row__review { display: none; }
+}
+@media (max-width: 640px) {
+  .price-row {
+    grid-template-columns: 36px 1fr 90px 90px 28px;
+    padding: 8px;
+    gap: 6px;
+  }
+  .price-row__distance { display: none; }
+  .price-row__avg-val, .price-row__diff-val { font-size: 13px; }
+}
