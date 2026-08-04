@@ -2322,11 +2322,241 @@ function renderPriceKpis(data) {
   renderMiniSupply('#priceSupplyMini', t.supply, dates);
 
   // Phase 1 拡張 (2026-08-04): 3 機能 追加
-  renderExecVerdict(data, t, targetDate, med, ownMed);   // verdict 動的化
-  renderCompetitorAlerts(data);                          // 競合動向 alert
-  renderRevenueForecast(data, t);                        // 収益予測 (30日 期待売上)
-  renderMarketingPlan(data, t, med, ownMed);             // 販促プラン (Zone 4 頭、 印刷可)
+  renderExecVerdict(data, t, targetDate, med, ownMed);   // verdict 動的化 (hidden 要素 更新、 UI 表示なし)
+  renderCompetitorAlerts(data);                          // 競合動向 alert (Tab 1 下段 に 発火時のみ)
+  renderRevenueForecast(data, t);                        // 収益予測 (Tab 3)
+  renderMarketingPlan(data, t, med, ownMed);             // 販促プラン (hidden 要素 更新、 UI 表示なし)
+
+  // Hero + Next3 + Do1 + Elasticity (2026-08-04 大 refactor: 10人 会議 統合仕様 v1)
+  renderHero(data, t, targetDate, med, ownMed);
+  renderNext3(data, t);
+  renderDo1(data, t, med, ownMed);
+  renderElasticity(data, t, med, ownMed);
 }
+
+// ==================== 大 refactor: Hero + Tab 系 render fns ====================
+
+// 推奨単価 = 荒島 が 相場 の 70% 未満 なら 相場×0.85、 それ以外 は 現行 + tightness 上乗せ
+function computeRecommendedPrice(data, t, todayMed, ownPrice) {
+  if (todayMed == null) return null;
+  if (ownPrice == null) return Math.round(todayMed * 0.85 / 500) * 500;
+  const pct = ownPrice / todayMed;
+  if (pct < 0.70) {
+    // 大幅 安値 → 相場 の 85% まで 段階UP
+    return Math.round(todayMed * 0.85 / 500) * 500;
+  } else if (pct < 0.85) {
+    // 相場 の 70-85% → 中間 UP
+    return Math.round(((ownPrice + todayMed * 0.9) / 2) / 500) * 500;
+  } else if (pct <= 1.10) {
+    // 相場 付近 → tightness で 上乗せ (需要スコア 5以上 なら +¥1,500)
+    const tightBonus = (t.tightnessScore || 0) >= 5 ? 1500 : 0;
+    return Math.round((ownPrice + tightBonus) / 500) * 500;
+  } else {
+    // 相場 超え → 稼働率 監視 の 現状 維持
+    return ownPrice;
+  }
+}
+
+// 予測 埋まり率 = tightness score + 荒島 相場位置 から (60% + score*0.6)
+function computeFillPct(tightnessScore, ownPct) {
+  const base = 60;
+  const tightAdj = Math.max(-10, Math.min(20, (tightnessScore || 0) * 0.6));
+  const priceAdj = ownPct != null ? Math.max(-15, Math.min(10, (0.85 - ownPct) * 30)) : 0;
+  return Math.round(Math.max(30, Math.min(95, base + tightAdj + priceAdj)));
+}
+
+// 信頼度 label (sample size 依存)
+function computeConfidence(sampleN) {
+  if (sampleN >= 20) return { label: '高', level: 'high' };
+  if (sampleN >= 10) return { label: '中', level: 'mid' };
+  return { label: '低', level: 'low' };
+}
+
+function renderHero(data, t, targetDate, todayMed, ownPrice) {
+  const heroDate = document.getElementById('heroDate');
+  const heroPrice = document.getElementById('heroPrice');
+  const heroMarket = document.getElementById('heroMarket');
+  const heroOwn = document.getElementById('heroOwn');
+  const heroDelta = document.getElementById('heroDelta');
+  const heroFill = document.getElementById('heroFill');
+  const heroConf = document.getElementById('heroConf');
+  const heroReason = document.getElementById('heroReason');
+  const dt = new Date(targetDate + 'T00:00:00+09:00');
+  const dow = ['日','月','火','水','木','金','土'][dt.getDay()];
+  if (heroDate) heroDate.textContent = `${dt.getMonth()+1}/${dt.getDate()} (${dow})`;
+
+  const rec = computeRecommendedPrice(data, t, todayMed, ownPrice);
+  if (heroPrice) heroPrice.textContent = rec != null ? fmtYen(rec) : '—';
+  if (heroMarket) heroMarket.textContent = todayMed != null ? fmtYen(todayMed) : '—';
+  if (heroOwn) heroOwn.textContent = ownPrice != null ? fmtYen(ownPrice) : '—';
+
+  if (heroDelta) {
+    if (ownPrice != null && todayMed != null) {
+      const d = ownPrice - todayMed;
+      heroDelta.textContent = `${d >= 0 ? '+' : ''}${fmtYen(d)}`;
+      heroDelta.className = d < -1000 ? 'is-cheap' : d > 1000 ? 'is-high' : 'is-neutral';
+    } else heroDelta.textContent = '—';
+  }
+
+  const ownPct = (ownPrice != null && todayMed != null) ? ownPrice / todayMed : null;
+  const fillPct = computeFillPct(t.tightnessScore, ownPct);
+  if (heroFill) heroFill.textContent = fillPct + '%';
+
+  const conf = computeConfidence(data.dates?.length || 0);
+  if (heroConf) {
+    heroConf.textContent = `${conf.label} (${data.dates?.length || 0}日 分)`;
+    heroConf.className = `is-conf-${conf.level}`;
+  }
+
+  // 根拠 1文
+  if (heroReason && rec != null) {
+    if (ownPrice != null && todayMed != null) {
+      const gap = todayMed - ownPrice;
+      const uplift = rec - ownPrice;
+      if (uplift > 500) {
+        heroReason.innerHTML = `荒島 現行 <b>${fmtYen(ownPrice)}</b> は 相場 中央値 <b>${fmtYen(todayMed)}</b> の <b>${Math.round(ownPct*100)}%</b>。 <b>${fmtYen(rec)}</b> へ の 段階UP で 相場 との ギャップ <b>${fmtYen(gap)}</b> の 半分 以上 を 埋める。`;
+      } else if (uplift < -500) {
+        heroReason.innerHTML = `荒島 現行 <b>${fmtYen(ownPrice)}</b> は 相場 中央値 <b>${fmtYen(todayMed)}</b> の <b>${Math.round(ownPct*100)}%</b>。 稼働率 が 70% 未満 なら <b>${fmtYen(rec)}</b> へ の 微減 で 埋め 優先。`;
+      } else {
+        heroReason.innerHTML = `荒島 現行 <b>${fmtYen(ownPrice)}</b> は 相場 中央値 <b>${fmtYen(todayMed)}</b> と ほぼ 同水準、 需要 スコア +${t.tightnessScore || 0} で 若干 の 上乗せ 余地。`;
+      }
+    } else {
+      heroReason.innerHTML = `相場 中央値 <b>${fmtYen(todayMed)}</b> の 85% を 目安 単価 として 提示。`;
+    }
+  }
+}
+
+function renderNext3(data, t) {
+  const wrap = document.getElementById('mgrNext3');
+  if (!wrap) return;
+  const dates = data.dates.slice().sort();
+  const today = new Date().toISOString().slice(0, 10);
+  const nextDates = dates.filter(d => d >= today).slice(1, 5); // 明日 から 4日分
+  const marketMed = t.marketMed || computeMarketMedianSeries(data);
+  const cards = nextDates.map(d => {
+    const dt = new Date(d + 'T00:00:00+09:00');
+    const dow = ['日','月','火','水','木','金','土'][dt.getDay()];
+    const isWknd = dt.getDay() === 0 || dt.getDay() === 5 || dt.getDay() === 6;
+    const med = marketMed[d];
+    return `
+      <div class="mgr-next3__card ${isWknd ? 'is-wknd' : ''}">
+        <div class="mgr-next3__day">${dt.getMonth()+1}/${dt.getDate()} <span class="mgr-next3__dow">${dow}</span></div>
+        <div class="mgr-next3__val">${med != null ? fmtYen(med) : '—'}</div>
+        <div class="mgr-next3__sub">${isWknd ? '週末 相場' : '平日 相場'}</div>
+      </div>
+    `;
+  }).join('');
+  wrap.innerHTML = `
+    <div class="mgr-next3__head">明日 から 4日 の 相場 中央値</div>
+    <div class="mgr-next3__grid">${cards}</div>
+  `;
+}
+
+function renderDo1(data, t, todayMed, ownPrice) {
+  const wrap = document.getElementById('mgrDo1');
+  if (!wrap) return;
+  const rec = computeRecommendedPrice(data, t, todayMed, ownPrice);
+  if (rec == null || ownPrice == null) { wrap.innerHTML = ''; return; }
+  const diff = rec - ownPrice;
+  if (Math.abs(diff) < 500) {
+    wrap.innerHTML = `
+      <div class="mgr-do1__inner">
+        <div class="mgr-do1__num">✓</div>
+        <div class="mgr-do1__body">
+          <div class="mgr-do1__title">今夜 は 現状 維持 で OK</div>
+          <div class="mgr-do1__text">荒島 現行 <b>${fmtYen(ownPrice)}</b> は 推奨単価 <b>${fmtYen(rec)}</b> と 近い、 稼働率 を 監視。</div>
+        </div>
+      </div>`;
+    return;
+  }
+  const days = 7; // 週次 効果
+  const OCC = 0.70;
+  const ROOMS = 6;
+  const eff = Math.round(diff * OCC * ROOMS * days / 1000) * 1000;
+  const dir = diff > 0 ? '上げ' : '下げ';
+  const dirCls = diff > 0 ? 'is-up' : 'is-down';
+  wrap.innerHTML = `
+    <div class="mgr-do1__inner ${dirCls}">
+      <div class="mgr-do1__num">1</div>
+      <div class="mgr-do1__body">
+        <div class="mgr-do1__title">今夜 の 単価 を <b>${fmtYen(ownPrice)}</b> → <b>${fmtYen(rec)}</b> に ${dir}</div>
+        <div class="mgr-do1__text">相場 との ギャップ を ${diff > 0 ? '半分' : ''} 埋める 段階 検証。 <b>1週間 で 期待 効果 ${eff >= 0 ? '+' : ''}${fmtYen(eff)}</b> (稼働率 70% × 6 室 × 7日 想定)</div>
+        <div class="mgr-do1__cta">
+          <a class="mgr-do1__cta-btn mgr-do1__cta-btn--primary" href="https://admin.booking.com/" target="_blank" rel="noopener">Booking で 反映</a>
+          <a class="mgr-do1__cta-btn" href="https://manager.travel.rakuten.co.jp/" target="_blank" rel="noopener">楽天 で 反映</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderElasticity(data, t, todayMed, ownPrice) {
+  const wrap = document.getElementById('mgrElasticity');
+  if (!wrap) return;
+  if (todayMed == null) { wrap.innerHTML = ''; return; }
+  const rec = computeRecommendedPrice(data, t, todayMed, ownPrice);
+  if (rec == null) { wrap.innerHTML = ''; return; }
+  const step = 2000;
+  const cases = [
+    { price: Math.round((rec - step) / 500) * 500, label: '控えめ' },
+    { price: rec, label: '推奨', isRec: true },
+    { price: Math.round((rec + step) / 500) * 500, label: '強気' },
+  ];
+  const ownPct = ownPrice != null ? ownPrice / todayMed : 0.85;
+  const OCC_BASE = 70;
+  const ROOMS = 6;
+  const DAYS = 7;
+  const items = cases.map(c => {
+    // fill pct: 価格 が 相場 の 何 % か で 傾き
+    const pct = c.price / todayMed;
+    const priceAdj = Math.round((0.85 - pct) * 60); // 相場 の 85% で ±0、 それ より 高い ほど 下がる
+    const tightAdj = Math.round((t.tightnessScore || 0) * 0.4);
+    const fill = Math.max(25, Math.min(92, OCC_BASE + priceAdj + tightAdj));
+    const revenue = Math.round(c.price * (fill/100) * ROOMS * DAYS / 1000) * 1000;
+    return { ...c, pct: Math.round(pct * 100), fill, revenue };
+  });
+  // 期待収益 最大 の case を マーク
+  const maxRev = Math.max(...items.map(i => i.revenue));
+  wrap.innerHTML = `
+    <div class="mgr-elast__head">
+      <h3 class="mgr-elast__title">単価 3 案 の 弾力性 予測</h3>
+      <p class="mgr-elast__sub">価格 × 予測 埋まり率 × 6室 × 7日 で 期待 収益 を 試算</p>
+    </div>
+    <div class="mgr-elast__grid">
+      ${items.map(it => `
+        <div class="mgr-elast__case ${it.isRec ? 'is-rec' : ''} ${it.revenue === maxRev ? 'is-max' : ''}">
+          <div class="mgr-elast__case-lbl">${it.label}${it.isRec ? ' (推奨)' : ''}</div>
+          <div class="mgr-elast__case-price">${fmtYen(it.price)}</div>
+          <div class="mgr-elast__case-meta">相場 の ${it.pct}%</div>
+          <div class="mgr-elast__case-fill">
+            <div class="mgr-elast__case-fill-lbl">予測 埋まり</div>
+            <div class="mgr-elast__case-fill-val">${it.fill}%</div>
+            <div class="mgr-elast__case-fill-bar"><div class="mgr-elast__case-fill-bar-in" style="width:${it.fill}%"></div></div>
+          </div>
+          <div class="mgr-elast__case-rev">
+            <div class="mgr-elast__case-rev-lbl">1週 期待 収益</div>
+            <div class="mgr-elast__case-rev-val">${fmtYen(it.revenue)}</div>
+          </div>
+          ${it.revenue === maxRev ? '<div class="mgr-elast__case-max">💰 最大 収益 案</div>' : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// タブ 切替 (Hero 直下 の 3 tab)
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.mgr-tabs__btn');
+  if (!btn) return;
+  const target = btn.dataset.tabtarget;
+  document.querySelectorAll('.mgr-tabs__btn').forEach(b => {
+    b.classList.toggle('is-on', b === btn);
+    b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+  });
+  document.querySelectorAll('.mgr-tabpanel').forEach(p => {
+    p.hidden = p.dataset.tabpanel !== target;
+  });
+});
 
 // === 販促プラン (owner 明示「どうマーケティングすればいいか わからない」対応) ===
 function renderMarketingPlan(data, t, todayMed, ownPrice) {

@@ -324,273 +324,264 @@
           </div>
         </div>
 
-        <!-- ============ ① 今夜の判断 (最重要) ============ -->
-        <section class="mgr-zone mgr-zone--primary">
-          <header class="mgr-zone__head">
-            <span class="mgr-zone__num">①</span>
-            <div class="mgr-zone__title-wrap">
-              <h3 class="mgr-zone__title">今夜の判断</h3>
-              <p class="mgr-zone__note">まずここを見る。 相場と荒島の差と次に取る手。</p>
+        <!-- ============ HERO: 今夜の推奨単価 (owner 「大胆に変えて」対応、 10人PM会議 統合仕様 v1) ============ -->
+        <div class="mgr-hero">
+          <div class="mgr-hero__label">今夜 <span id="heroDate">—</span> の 推奨単価</div>
+          <div class="mgr-hero__main">
+            <div class="mgr-hero__price" id="heroPrice">—</div>
+            <div class="mgr-hero__meta">
+              <div class="mgr-hero__meta-row"><span class="mgr-hero__meta-lbl">相場 中央値</span><b id="heroMarket">—</b></div>
+              <div class="mgr-hero__meta-row"><span class="mgr-hero__meta-lbl">荒島 の 現行</span><b id="heroOwn">—</b></div>
+              <div class="mgr-hero__meta-row"><span class="mgr-hero__meta-lbl">相場 vs 現行</span><b id="heroDelta">—</b></div>
+              <div class="mgr-hero__meta-row"><span class="mgr-hero__meta-lbl">予測 埋まり</span><b id="heroFill">—</b></div>
+              <div class="mgr-hero__meta-row"><span class="mgr-hero__meta-lbl">信頼度</span><b id="heroConf">—</b></div>
             </div>
-            <span class="mgr-zone__badge mgr-zone__badge--top">最重要</span>
-          </header>
+          </div>
+          <div class="mgr-hero__reason" id="heroReason">— データ 読込 中 —</div>
+          <div class="mgr-hero__cta">
+            <a class="mgr-hero__cta-btn mgr-hero__cta-btn--primary" href="https://admin.booking.com/" target="_blank" rel="noopener">Booking Extranet を 開く</a>
+            <a class="mgr-hero__cta-btn" href="https://manager.travel.rakuten.co.jp/" target="_blank" rel="noopener">楽天 管理画面 を 開く</a>
+          </div>
+        </div>
 
-          <!-- 今日の打ち手 Top 3 (相場データからの具体提案、 スクロール不要) -->
-          <div class="mgr-actions" id="priceTopActions" hidden></div>
+        <!-- 3日先 mini strip -->
+        <div class="mgr-next3" id="mgrNext3"></div>
 
-          <div class="mgr__verdict">
-            <span class="mgr__verdict-tag">今夜の結論</span>
-            <p class="mgr__verdict-text" id="priceVerdictText">
-              — データ読み込み中 —
-            </p>
+        <!-- 今夜 の 打ち手 1個 -->
+        <div class="mgr-do1" id="mgrDo1"></div>
+
+        <!-- ============ TAB BAR (今日 の 判断 / 競合 と 相場 / 需要 予測) ============ -->
+        <div class="mgr-tabs" role="tablist" aria-label="ダッシュボード タブ">
+          <button class="mgr-tabs__btn is-on" data-tabtarget="judge" type="button" role="tab" aria-selected="true">
+            <span class="mgr-tabs__btn-num">1</span>
+            <span class="mgr-tabs__btn-lbl">今日 の 判断</span>
+            <span class="mgr-tabs__btn-sub">弾力性 + 根拠</span>
+          </button>
+          <button class="mgr-tabs__btn" data-tabtarget="comp" type="button" role="tab" aria-selected="false">
+            <span class="mgr-tabs__btn-num">2</span>
+            <span class="mgr-tabs__btn-lbl">競合 と 相場</span>
+            <span class="mgr-tabs__btn-sub">ヒートマップ + 一覧</span>
+          </button>
+          <button class="mgr-tabs__btn" data-tabtarget="forecast" type="button" role="tab" aria-selected="false">
+            <span class="mgr-tabs__btn-num">3</span>
+            <span class="mgr-tabs__btn-lbl">需要 予測</span>
+            <span class="mgr-tabs__btn-sub">30日 推移 + 予測</span>
+          </button>
+        </div>
+
+        <!-- ============ TAB 1: 今日 の 判断 (弾力性 3 case + 根拠) ============ -->
+        <div class="mgr-tabpanel" data-tabpanel="judge">
+          <!-- 弾力性 3 case card (¥X / ¥Y / ¥Z, 各 case の 予測 埋まり率 と 期待 売上) -->
+          <div class="mgr-elasticity" id="mgrElasticity"></div>
+
+          <!-- 判断根拠 (verdict + tightness + trend の 統合 サマリ) -->
+          <div class="mgr__card mgr-reasoning">
+            <div class="mgr__card-head">
+              <div>
+                <div class="mgr__card-title">推奨 単価 の 根拠</div>
+                <div class="mgr__card-desc">相場 中央値 · 需要 の 強さ · 相場 の 向き の 3 指標</div>
+              </div>
+            </div>
+            <div class="mgr__hero-row">
+              <div class="mgr__kpi">
+                <div class="mgr__kpi-lbl">今夜 の 相場 中央値</div>
+                <div class="mgr__kpi-val mgr__kpi-val--hero" id="priceMedian">—</div>
+                <div class="mgr__kpi-sub">半径10km <b id="priceCount">—</b>軒 <span id="priceCountBreakdown"></span> · <span id="priceScannedAt">—</span></div>
+              </div>
+              <div class="mgr__kpi">
+                <div class="mgr__kpi-lbl">荒島 の 今夜 単価</div>
+                <div class="mgr__kpi-val mgr__kpi-val--own" id="priceOwnTonight">—</div>
+                <div class="mgr__kpi-delta" id="priceDelta">—</div>
+              </div>
+              <div class="mgr__kpi">
+                <div class="mgr__kpi-lbl">30日 の 相場 中央値</div>
+                <div class="mgr__kpi-val" id="priceAvg30">—</div>
+                <div class="mgr__kpi-sub">平均 的 な 相場 帯</div>
+              </div>
+              <div class="mgr__kpi">
+                <div class="mgr__kpi-lbl">需要 の 強さ</div>
+                <div class="mgr__kpi-val" id="priceTightness">—</div>
+                <div class="mgr__kpi-sub" id="priceTightnessSub">—</div>
+              </div>
+              <div class="mgr__kpi">
+                <div class="mgr__kpi-lbl">相場 の 向き</div>
+                <div class="mgr__kpi-val" id="priceTrend">—</div>
+                <div class="mgr__kpi-sub" id="priceTrendSub">—</div>
+              </div>
+            </div>
           </div>
 
-          <!-- 収益予測 (期間 単価 × 想定稼働率 → 期待売上、 現行 vs 相場中央値追従) -->
-          <div class="mgr-fc" id="priceRevenueForecast"></div>
-
-          <!-- 競合動向 alert (直近3日 vs 前4日 で ±15% 以上 変動 の top3) -->
+          <!-- 競合 動向 alert (発火時のみ) -->
           <div class="mgr-alerts" id="priceCompAlerts" hidden></div>
-        </section>
-
-        <!-- ============ ② 相場の状況 (数字で確認) ============ -->
-        <section class="mgr-zone mgr-zone--kpis">
-          <header class="mgr-zone__head">
-            <span class="mgr-zone__num">②</span>
-            <div class="mgr-zone__title-wrap">
-              <h3 class="mgr-zone__title">相場の状況</h3>
-              <p class="mgr-zone__note">今夜の相場中央値と荒島の位置、 需要の強さ、 相場の向き。</p>
-            </div>
-            <span class="mgr-zone__badge mgr-zone__badge--kpi">今の数字</span>
-          </header>
-        <div class="mgr__hero-wrap">
-          <div class="mgr__hero-lead">今夜の相場サマリ</div>
-          <div class="mgr__hero-row">
-            <div class="mgr__kpi">
-              <div class="mgr__kpi-lbl">今夜の相場中央値</div>
-              <div class="mgr__kpi-val mgr__kpi-val--hero" id="priceMedian">—</div>
-              <div class="mgr__kpi-sub">半径10km <b id="priceCount">—</b>軒 <span id="priceCountBreakdown" class="mgr__kpi-sub-breakdown"></span> · <span id="priceScannedAt">—</span></div>
-            </div>
-            <div class="mgr__kpi">
-              <div class="mgr__kpi-lbl">荒島の今夜単価</div>
-              <div class="mgr__kpi-val mgr__kpi-val--own" id="priceOwnTonight">—</div>
-              <div class="mgr__kpi-delta" id="priceDelta">—</div>
-            </div>
-            <div class="mgr__kpi">
-              <div class="mgr__kpi-lbl">30日の相場中央値</div>
-              <div class="mgr__kpi-val" id="priceAvg30">—</div>
-              <div class="mgr__kpi-sub">この帯が平均的な相場</div>
-            </div>
-            <div class="mgr__kpi">
-              <div class="mgr__kpi-lbl">需要の強さ</div>
-              <div class="mgr__kpi-val" id="priceTightness">—</div>
-              <div class="mgr__kpi-sub" id="priceTightnessSub">—</div>
-            </div>
-            <div class="mgr__kpi">
-              <div class="mgr__kpi-lbl">相場の向き</div>
-              <div class="mgr__kpi-val" id="priceTrend">—</div>
-              <div class="mgr__kpi-sub" id="priceTrendSub">—</div>
-            </div>
-          </div>
         </div>
 
-        </section>
-        <!-- /② 相場の状況 -->
-
-        <!-- ============ ③ 動きの分析 (相場の形と波) ============ -->
-        <section class="mgr-zone mgr-zone--analysis">
-          <header class="mgr-zone__head">
-            <span class="mgr-zone__num">③</span>
-            <div class="mgr-zone__title-wrap">
-              <h3 class="mgr-zone__title">動きの分析</h3>
-              <p class="mgr-zone__note">相場がどこにあってどう動くか。 3 枚の図で形を掴む。</p>
-            </div>
-            <span class="mgr-zone__badge mgr-zone__badge--analysis">読み解く</span>
-          </header>
-
-          <!-- SIGNATURE: 相場分布プロット -->
-          <div class="mgr__card">
-          <div class="mgr__card-head">
-            <div>
-              <div class="mgr__card-title">相場の分布</div>
-              <div class="mgr__card-desc">半径10km の単価の山と荒島の位置。 中央値は破線。</div>
-            </div>
-            <div class="mgr__card-meta">今夜の単価分布</div>
-          </div>
-          <div class="mgr__dist">
-            <svg id="priceDistSvg" viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg"></svg>
-          </div>
-          <div class="mgr__dist-lgd">
-            <span><i class="mgr__lgd-own"></i>荒島 (自ホテル)</span>
-            <span><i class="mgr__lgd-comp"></i>競合</span>
-            <span><i class="mgr__lgd-med"></i>中央値</span>
-          </div>
-          <p class="mgr__chart-note">
-            <b>読み方</b>: 山が高い ¥帯 = 競合が集中。 荒島 (青丸) が山の左端 = 相場の最安帯に立つ。
-            → 「エコノミー徹底」 か 「山 (¥18k 前後) に寄せる」 の 2択。
-          </p>
-        </div>
-
-        <!-- 2 col charts -->
-        <div class="mgr__grid2">
+        <!-- ============ TAB 2: 競合 と 相場 (heatmap + 分布 + 一覧) ============ -->
+        <div class="mgr-tabpanel" data-tabpanel="comp" hidden>
+          <!-- 相場 分布 -->
           <div class="mgr__card">
             <div class="mgr__card-head">
               <div>
-                <div class="mgr__card-title">30日の相場推移</div>
-                <div class="mgr__card-desc">相場中央値の 30日折れ線。 ピンクの大点 = 週末 (金土日)</div>
+                <div class="mgr__card-title">相場 の 分布</div>
+                <div class="mgr__card-desc">半径10km の 単価 の 山 と 荒島 の 位置。 中央値 は 破線。</div>
               </div>
             </div>
-            <div class="mgr__mini-chart" id="priceTrendMini"></div>
-            <p class="mgr__chart-note">
-              <b>読み方</b>: 週末 (ピンクの大点) が山、 平日が谷。 荒島も週末に相場追従で単価を合わせる。
-            </p>
+            <div class="mgr__dist">
+              <svg id="priceDistSvg" viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg"></svg>
+            </div>
+            <div class="mgr__dist-lgd">
+              <span><i class="mgr__lgd-own"></i>荒島 (自ホテル)</span>
+              <span><i class="mgr__lgd-comp"></i>競合</span>
+              <span><i class="mgr__lgd-med"></i>中央値</span>
+            </div>
           </div>
+
+          <!-- Heatmap + 読み方 guide -->
           <div class="mgr__card">
             <div class="mgr__card-head">
               <div>
-                <div class="mgr__card-title">日別の空き状況</div>
-                <div class="mgr__card-desc">その日予約可能なホテル軒数。 ピンク = 週末</div>
+                <div class="mgr__card-title">30日 × 各ホテル の 相場 推移 (ヒートマップ)</div>
+                <div class="mgr__card-desc">マス を 押すと 予約 ページ へ · 荒島 は 上段 固定</div>
+              </div>
+              <span class="mgr__legend">
+                <span>安</span>
+                <i class="price-heat" data-h="1"></i>
+                <i class="price-heat" data-h="2"></i>
+                <i class="price-heat" data-h="3"></i>
+                <i class="price-heat" data-h="4"></i>
+                <i class="price-heat" data-h="5"></i>
+                <span>高</span>
+              </span>
+            </div>
+            <div class="mgr-guide">
+              <div class="mgr-guide__head">
+                <span class="mgr-guide__title">読み方 · 使い方</span>
+                <span class="mgr-guide__sub">3 秒 で 掴む</span>
+              </div>
+              <div class="mgr-guide__grid">
+                <div class="mgr-guide__item">
+                  <div class="mgr-guide__lbl">縦 (行)</div>
+                  <div class="mgr-guide__text">各 hotel。 <b>荒島 は 上段 固定</b>、 その 下 に 距離 順。</div>
+                </div>
+                <div class="mgr-guide__item">
+                  <div class="mgr-guide__lbl">横 (列)</div>
+                  <div class="mgr-guide__text">日付 (今日 → 30日先)。 <b>週末 (金土日) は 色 濃い マス が 集中</b>。</div>
+                </div>
+                <div class="mgr-guide__item">
+                  <div class="mgr-guide__lbl">色 (セル)</div>
+                  <div class="mgr-guide__text"><b>青 = 安値、 赤 = 高値</b>。 全 hotel 単価 の 分位。</div>
+                </div>
               </div>
             </div>
-            <div class="mgr__mini-chart" id="priceSupplyMini"></div>
-            <p class="mgr__chart-note">
-              <b>読み方</b>: 棒が低い日 = 競合が満室 = 需要が高い日。 荒島に空きがあれば単価を上げるチャンス。
-            </p>
-          </div>
-        </div>
-
-        </section>
-        <!-- /③ 動きの分析 -->
-
-        <!-- ============ ④ 詳細データ (競合とアクション) ============ -->
-        <section class="mgr-zone mgr-zone--detail">
-          <header class="mgr-zone__head">
-            <span class="mgr-zone__num">④</span>
-            <div class="mgr-zone__title-wrap">
-              <h3 class="mgr-zone__title">詳細データ</h3>
-              <p class="mgr-zone__note">競合ホテル一覧と 30日推移マップ、 次に取る打ち手の候補。</p>
+            <div class="mgr__heatwrap">
+              <div id="priceHeatmap" class="price-heatmap"></div>
             </div>
-            <span class="mgr-zone__badge mgr-zone__badge--detail">深掘り</span>
-          </header>
+          </div>
 
-          <!-- 販促プラン (owner「どうマーケティングすればいいか わからない」対応)
-               今週+来週 の 具体アクション を data から 生成、 印刷可 -->
-          <div class="mgr-plan" id="priceMarketingPlan"></div>
-
-          <!-- Heatmap -->
+          <!-- 競合 ホテル 一覧 -->
           <div class="mgr__card">
-          <div class="mgr__card-head">
-            <div>
-              <div class="mgr__card-title">30日 × 各ホテルの相場推移 (ヒートマップ)</div>
-              <div class="mgr__card-desc">マスを押すと Booking の予約ページへ · 荒島は上段固定</div>
-            </div>
-            <span class="mgr__legend">
-              <span>安</span>
-              <i class="price-heat" data-h="1"></i>
-              <i class="price-heat" data-h="2"></i>
-              <i class="price-heat" data-h="3"></i>
-              <i class="price-heat" data-h="4"></i>
-              <i class="price-heat" data-h="5"></i>
-              <span>高</span>
-            </span>
-          </div>
-          <!-- 読み方 guide (owner「詳細データの見方がよくわかんない」対応) -->
-          <div class="mgr-guide">
-            <div class="mgr-guide__head">
-              <span class="mgr-guide__title">読み方 · 使い方</span>
-              <span class="mgr-guide__sub">3 秒 で 掴む</span>
-            </div>
-            <div class="mgr-guide__grid">
-              <div class="mgr-guide__item">
-                <div class="mgr-guide__lbl">縦 (行)</div>
-                <div class="mgr-guide__text">各 hotel。 <b>荒島 は 上段 固定</b>、 その 下 に 距離順 で 22 軒。</div>
+            <div class="mgr__card-head">
+              <div>
+                <div class="mgr__card-title">競合 ホテル 一覧</div>
+                <div class="mgr__card-desc">距離 の 近い 順 · 出典 別 で 絞込 可</div>
               </div>
-              <div class="mgr-guide__item">
-                <div class="mgr-guide__lbl">横 (列)</div>
-                <div class="mgr-guide__text">日付 (今日 → 30日先)。 <b>週末 (金土日) は 色 濃い マス が 集中</b>。</div>
-              </div>
-              <div class="mgr-guide__item">
-                <div class="mgr-guide__lbl">色 (セル)</div>
-                <div class="mgr-guide__text"><b>青 = 安値、 赤 = 高値</b>。 その 日 の 全 hotel 単価 の 分位 (下位1/5 が 青)。</div>
+              <div class="mgr__sort" role="tablist">
+                <span class="mgr__sort-lbl">並び</span>
+                <button class="mgr__sort-btn price-sort__btn is-on" data-sort="distance" type="button">距離</button>
+                <button class="mgr__sort-btn price-sort__btn" data-sort="min" type="button">最安</button>
+                <button class="mgr__sort-btn price-sort__btn" data-sort="avg" type="button">中央値</button>
+                <button class="mgr__sort-btn price-sort__btn" data-sort="diff" type="button">相場差</button>
               </div>
             </div>
-            <div class="mgr-guide__actions">
-              <div class="mgr-guide__act"><span class="mgr-guide__act-num">1</span>荒島 の 行 で <b>青 マス が 多い 日</b> = 相場 より 安すぎ = <b>単価 上げ 検証</b> (¥1,000-3,000)</div>
-              <div class="mgr-guide__act"><span class="mgr-guide__act-num">2</span>ある 列 で <b>全体 が 赤い 日</b> = 需要期、 競合 満室 リスク → 早割 で 早期 埋め</div>
-              <div class="mgr-guide__act"><span class="mgr-guide__act-num">3</span><b>週末 だけ 濃い hotel</b> (縦見) = 週末 集中 販売、 荒島 も 週末 +¥ 検証 の 余地</div>
+            <div class="mgr__site-filter" role="tablist" aria-label="出典 で 絞込">
+              <button class="mgr__site-btn is-on" data-site="all" type="button">
+                <span class="mgr__site-btn-lbl">すべて</span>
+                <span class="mgr__site-btn-count" id="filterCountAll">—</span>
+              </button>
+              <button class="mgr__site-btn mgr__site-btn--booking" data-site="booking" type="button">
+                <span class="mgr__site-btn-lbl">Booking</span>
+                <span class="mgr__site-btn-count" id="filterCountBooking">—</span>
+              </button>
+              <button class="mgr__site-btn mgr__site-btn--rakuten" data-site="rakuten" type="button">
+                <span class="mgr__site-btn-lbl">楽天トラベル</span>
+                <span class="mgr__site-btn-count" id="filterCountRakuten">—</span>
+              </button>
             </div>
-          </div>
-          <div class="mgr__heatwrap">
-            <div id="priceHeatmap" class="price-heatmap"></div>
+            <div id="priceCards" class="price-cards is-collapsed"></div>
+            <button type="button" id="priceCardsToggle" class="mgr__more-btn" hidden>もっと 見る (残り <span id="priceCardsRest">—</span>件)</button>
+            <details class="price-table-details">
+              <summary>テーブル 表示</summary>
+              <div id="priceTable"></div>
+            </details>
           </div>
         </div>
 
-        <!-- Competitors -->
-        <div class="mgr__card">
-          <div class="mgr__card-head">
-            <div>
-              <div class="mgr__card-title">競合ホテル一覧</div>
-              <div class="mgr__card-desc">距離の近い順 · 荒島は上段固定 · 出典 別 で 絞込 可</div>
+        <!-- ============ TAB 3: 需要 予測 (30日 推移 + 空き + 収益予測) ============ -->
+        <div class="mgr-tabpanel" data-tabpanel="forecast" hidden>
+          <div class="mgr__grid2">
+            <div class="mgr__card">
+              <div class="mgr__card-head">
+                <div>
+                  <div class="mgr__card-title">30日 の 相場 推移</div>
+                  <div class="mgr__card-desc">相場 中央値 の 30日 折れ線。 ピンク = 週末</div>
+                </div>
+              </div>
+              <div class="mgr__mini-chart" id="priceTrendMini"></div>
             </div>
-            <div class="mgr__sort" role="tablist">
-              <span class="mgr__sort-lbl">並び</span>
-              <button class="mgr__sort-btn price-sort__btn is-on" data-sort="distance" type="button">距離</button>
-              <button class="mgr__sort-btn price-sort__btn" data-sort="min" type="button">最安</button>
-              <button class="mgr__sort-btn price-sort__btn" data-sort="avg" type="button">中央値</button>
-              <button class="mgr__sort-btn price-sort__btn" data-sort="diff" type="button">相場差</button>
+            <div class="mgr__card">
+              <div class="mgr__card-head">
+                <div>
+                  <div class="mgr__card-title">日別 の 空き 状況</div>
+                  <div class="mgr__card-desc">その日 予約 可能 な ホテル 軒数</div>
+                </div>
+              </div>
+              <div class="mgr__mini-chart" id="priceSupplyMini"></div>
             </div>
           </div>
-          <!-- 出典 別 フィルタ (owner 明示 「楽天 の データ どこ か わからない」 対応、 一目 で 絞込 可) -->
-          <div class="mgr__site-filter" role="tablist" aria-label="出典で絞込">
-            <button class="mgr__site-btn is-on" data-site="all" type="button">
-              <span class="mgr__site-btn-lbl">すべて</span>
-              <span class="mgr__site-btn-count" id="filterCountAll">—</span>
-            </button>
-            <button class="mgr__site-btn mgr__site-btn--booking" data-site="booking" type="button">
-              <span class="mgr__site-btn-lbl">Booking</span>
-              <span class="mgr__site-btn-count" id="filterCountBooking">—</span>
-            </button>
-            <button class="mgr__site-btn mgr__site-btn--rakuten" data-site="rakuten" type="button">
-              <span class="mgr__site-btn-lbl">楽天トラベル</span>
-              <span class="mgr__site-btn-count" id="filterCountRakuten">—</span>
-            </button>
-          </div>
-          <div id="priceCards" class="price-cards is-collapsed"></div>
-          <button type="button" id="priceCardsToggle" class="mgr__more-btn" hidden>もっと見る (残り <span id="priceCardsRest">—</span>件)</button>
-          <details class="price-table-details">
-            <summary>テーブル表示</summary>
-            <div id="priceTable"></div>
-          </details>
-        </div>
 
-        <!-- 動き方の分析 -->
-        <div class="consult-grid">
-          <div class="consult-panel consult-panel--dow">
-            <div class="consult-panel__head">
-              <span class="consult-panel__eyebrow">30日の曜日別</span>
-              <span class="consult-panel__title">曜日別相場</span>
+          <!-- 収益 予測 -->
+          <div class="mgr__card">
+            <div class="mgr__card-head">
+              <div>
+                <div class="mgr__card-title">30日 期待 売上 (稼働率 70% 想定)</div>
+                <div class="mgr__card-desc">現行 単価 の まま vs 相場 中央値 追従</div>
+              </div>
             </div>
-            <div id="consultDow" class="consult-dow"></div>
-            <p class="consult-panel__note" id="consultDowNote">—</p>
+            <div class="mgr-fc" id="priceRevenueForecast"></div>
           </div>
-          <div class="consult-panel consult-panel--rank">
-            <div class="consult-panel__head">
-              <span class="consult-panel__eyebrow">30日の相場と比較</span>
-              <span class="consult-panel__title">自ホテルの位置</span>
+
+          <!-- 曜日別 + 自 位置 -->
+          <div class="consult-grid">
+            <div class="consult-panel consult-panel--dow">
+              <div class="consult-panel__head">
+                <span class="consult-panel__eyebrow">30日 の 曜日 別</span>
+                <span class="consult-panel__title">曜日別 相場</span>
+              </div>
+              <div id="consultDow" class="consult-dow"></div>
+              <p class="consult-panel__note" id="consultDowNote">—</p>
             </div>
-            <div id="consultRank" class="consult-rank"></div>
-            <p class="consult-panel__note" id="consultRankNote">—</p>
-          </div>
-          <div class="consult-panel consult-panel--actions">
-            <div class="consult-panel__head">
-              <span class="consult-panel__eyebrow">次の一手</span>
-              <span class="consult-panel__title">アクション提案</span>
+            <div class="consult-panel consult-panel--rank">
+              <div class="consult-panel__head">
+                <span class="consult-panel__eyebrow">30日 の 相場 と 比較</span>
+                <span class="consult-panel__title">自ホテル の 位置</span>
+              </div>
+              <div id="consultRank" class="consult-rank"></div>
+              <p class="consult-panel__note" id="consultRankNote">—</p>
             </div>
-            <ol id="consultActions" class="consult-actions"></ol>
+            <div class="consult-panel consult-panel--actions">
+              <div class="consult-panel__head">
+                <span class="consult-panel__eyebrow">次 の 一手</span>
+                <span class="consult-panel__title">アクション 提案</span>
+              </div>
+              <ol id="consultActions" class="consult-actions"></ol>
+            </div>
           </div>
         </div>
 
-        </section>
-        <!-- /④ 詳細データ -->
+        <!-- 削除 済み (10人 会議 で 削減 判定): mgr-actions#priceTopActions / mgr__verdict / mgr-plan#priceMarketingPlan -->
+        <!-- 削除 済み hidden fallback (JS が id 参照 → 存在 しない と error になる 可能性 抑え) -->
+        <p class="mgr__verdict-text" id="priceVerdictText" hidden></p>
+        <div id="priceTopActions" hidden></div>
+        <div id="priceMarketingPlan" hidden></div>
 
         <div class="price-empty-state" id="priceEmpty" hidden>
           <p><strong>データがまだありません。</strong></p>
