@@ -3054,9 +3054,13 @@ function openHotelDetailModal(hotelKey) {
   const siteBadgeCls = isRakuten ? 'modal-badge modal-badge--rakuten' : 'modal-badge modal-badge--booking';
   const reviewLbl = isRakuten ? '楽天レビュー' : 'Booking スコア';
   const openLbl = isRakuten ? '楽天トラベル で 開く →' : 'Booking.com で 開く →';
-  // hotelClassCode: 1=ホテル 2=旅館 3=民宿 4=B&B 5=リゾートホテル 6=ペンション 7=公共の宿 8=貸別荘
-  const CLASS = { 1: 'ホテル', 2: '旅館', 3: '民宿', 4: 'B&B', 5: 'リゾートホテル', 6: 'ペンション', 7: '公共の宿', 8: '貸別荘' };
-  const hotelClassLabel = h.hotelClassCode ? CLASS[h.hotelClassCode] : null;
+  // hotelClassCode: 楽天 API v20170426 は 文字列 (RYOKAN/HOTEL/...) を 返す。 旧数字 code 互換 も 残す。
+  const CLASS = {
+    RYOKAN: '旅館', HOTEL: 'ホテル', MINSHUKU: '民宿', PENSION: 'ペンション',
+    LODGE: '公共の宿', COTTAGE: '貸別荘', RESORT: 'リゾート',
+    1: 'ホテル', 2: '旅館', 3: '民宿', 4: 'B&B', 5: 'リゾートホテル', 6: 'ペンション', 7: '公共の宿', 8: '貸別荘',
+  };
+  const hotelClassLabel = h.hotelClassCode ? (CLASS[h.hotelClassCode] || h.hotelClassCode) : null;
   if (title) title.innerHTML = `${escapeHtml(h.name || '?')}${isOwn ? ' <span class="modal-badge">自ホテル</span>' : ` <span class="${siteBadgeCls}">${siteName}</span>`}${hotelClassLabel ? ` <span class="modal-badge modal-badge--class">${hotelClassLabel}</span>` : ''}`;
   if (body) {
     body.innerHTML = `
@@ -3077,6 +3081,23 @@ function openHotelDetailModal(hotelKey) {
           </div>
         </div>
       </div>
+      ${h.hotelSpecial ? `
+        <div class="hotel-modal__section">
+          <div class="hotel-modal__section-title">売り の 特徴</div>
+          <div class="hotel-modal__section-text">${escapeHtml(String(h.hotelSpecial).slice(0, 500))}</div>
+        </div>
+      ` : ''}
+      ${(h.address || h.access || h.nearestStation || h.parkingInformation || h.telephoneNo || h.checkinTime) ? `
+        <div class="hotel-modal__info-grid">
+          ${h.address ? `<div class="hotel-modal__info-row"><span class="hotel-modal__info-lbl">住所</span><span class="hotel-modal__info-val">${escapeHtml(h.address)}</span></div>` : ''}
+          ${h.nearestStation ? `<div class="hotel-modal__info-row"><span class="hotel-modal__info-lbl">最寄駅</span><span class="hotel-modal__info-val">${escapeHtml(h.nearestStation)}</span></div>` : ''}
+          ${h.access ? `<div class="hotel-modal__info-row"><span class="hotel-modal__info-lbl">アクセス</span><span class="hotel-modal__info-val">${escapeHtml(String(h.access).slice(0, 200))}</span></div>` : ''}
+          ${h.parkingInformation ? `<div class="hotel-modal__info-row"><span class="hotel-modal__info-lbl">駐車場</span><span class="hotel-modal__info-val">${escapeHtml(String(h.parkingInformation).slice(0, 100))}</span></div>` : ''}
+          ${(h.checkinTime || h.checkoutTime) ? `<div class="hotel-modal__info-row"><span class="hotel-modal__info-lbl">チェック イン / アウト</span><span class="hotel-modal__info-val">${h.checkinTime || '—'} / ${h.checkoutTime || '—'}</span></div>` : ''}
+          ${h.telephoneNo ? `<div class="hotel-modal__info-row"><span class="hotel-modal__info-lbl">電話</span><span class="hotel-modal__info-val"><a href="tel:${escapeHtml(h.telephoneNo)}">${escapeHtml(h.telephoneNo)}</a></span></div>` : ''}
+          ${h.areaName ? `<div class="hotel-modal__info-row"><span class="hotel-modal__info-lbl">エリア</span><span class="hotel-modal__info-val">${escapeHtml(h.areaName)}</span></div>` : ''}
+        </div>
+      ` : ''}
       ${(h.facilities && (h.facilities.hotelFacilities || h.facilities.roomFacilities)) ? `
         <div class="hotel-modal__facilities">
           ${h.facilities.hotelFacilities ? `<div class="hotel-modal__fac-block"><div class="hotel-modal__fac-title">館内 設備</div><div class="hotel-modal__fac-text">${escapeHtml(String(h.facilities.hotelFacilities).slice(0, 220))}</div></div>` : ''}
@@ -3194,6 +3215,11 @@ function renderPriceCards(data) {
           </div>
           <div class="price-card__meta">
             <span class="price-card__site price-card__site--${escapeHtml(h.site || 'booking')}">${h.site === 'rakuten' ? '楽天' : 'Booking'}</span>
+            ${(() => {
+              const CLASS_MAP = { RYOKAN: '旅館', HOTEL: 'ホテル', MINSHUKU: '民宿', PENSION: 'ペンション', LODGE: '公共の宿', COTTAGE: '貸別荘', RESORT: 'リゾート' };
+              const cls = h.hotelClassCode ? (CLASS_MAP[h.hotelClassCode] || h.hotelClassCode) : null;
+              return cls ? `<span class="price-card__class price-card__class--${escapeHtml(String(h.hotelClassCode).toLowerCase())}">${escapeHtml(cls)}</span>` : '';
+            })()}
             <span>${h.distanceKm ?? '—'} km</span>
             ${h.reviewScore ? `<span>★ ${escapeHtml(String(h.reviewScore))}${h.reviewCount ? ' (' + h.reviewCount + ')' : ''}</span>` : ''}
             ${h.roomName ? `<span class="price-card__room">${escapeHtml(String(h.roomName).slice(0, 20))}</span>` : ''}
