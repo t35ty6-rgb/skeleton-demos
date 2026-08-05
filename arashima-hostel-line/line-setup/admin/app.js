@@ -2335,7 +2335,236 @@ function renderPriceKpis(data) {
 
   // v3 (2026-08-05 owner「何をするべきかがわからない」対応): 1 画面 = 1 タスク の Todo card
   renderTodo(data, t, targetDate, med, ownMed);
+
+  // v4 (2026-08-06 owner「売上上がるツールに特化」対応): 累積 効果 tracker
+  renderTracker(data, t, targetDate, med, ownMed);
 }
+
+// ==================== v4: 累積 効果 tracker + 施策 log + 月末 report ====================
+
+// 施策 log 全部 (localStorage 'arashimaActionLog') を parse
+function loadActionLog() {
+  try {
+    const raw = localStorage.getItem('arashimaActionLog');
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (_) { return []; }
+}
+function saveActionLog(log) {
+  try { localStorage.setItem('arashimaActionLog', JSON.stringify(log.slice(-500))); } catch (_) {}
+}
+function logAction(entry) {
+  const log = loadActionLog();
+  log.push({ ts: Date.now(), ...entry });
+  saveActionLog(log);
+}
+
+// 累積 効果 計算: 実行 log の uplift × 想定稼働 × 部屋数 の 総和
+function computeCumulativeEffect() {
+  const log = loadActionLog();
+  const OCC = 0.70, ROOMS = 6;
+  const now = Date.now();
+  const day30 = 30 * 24 * 3600 * 1000;
+  let total = 0, thisMonth = 0, lastMonth = 0, count = 0, count30 = 0;
+  const today = new Date();
+  const thisMonthKey = `${today.getFullYear()}-${today.getMonth()+1}`;
+  const lastM = new Date(today); lastM.setMonth(lastM.getMonth() - 1);
+  const lastMonthKey = `${lastM.getFullYear()}-${lastM.getMonth()+1}`;
+  for (const e of log) {
+    if (!e.uplift) continue;
+    const d = new Date(e.ts || Date.now());
+    const key = `${d.getFullYear()}-${d.getMonth()+1}`;
+    // 各 log の 1週間 効果 = uplift × OCC × ROOMS × 7日 (実施策 の 期待効果)
+    const wkEffect = e.uplift * OCC * ROOMS * 7;
+    total += wkEffect;
+    count++;
+    if (key === thisMonthKey) thisMonth += wkEffect;
+    if (key === lastMonthKey) lastMonth += wkEffect;
+    if (now - (e.ts || 0) < day30) count30++;
+  }
+  return { total, thisMonth, lastMonth, count, count30 };
+}
+
+function renderTracker(data, t, targetDate, todayMed, ownPrice) {
+  const wrap = document.getElementById('mgrTracker');
+  if (!wrap) return;
+  const eff = computeCumulativeEffect();
+  const log = loadActionLog();
+  const firstLog = log.length ? new Date(log[0].ts).toLocaleDateString('ja-JP') : '未 開始';
+  const daysSince = log.length ? Math.max(1, Math.floor((Date.now() - log[0].ts) / (24 * 3600 * 1000))) : 0;
+
+  wrap.innerHTML = `
+    <div class="mgr-tracker__inner">
+      <div class="mgr-tracker__lead">
+        <div class="mgr-tracker__lbl">導入後 の 累積 効果 (想定)</div>
+        <div class="mgr-tracker__amount">${eff.total > 0 ? '+' : ''}${fmtYen(Math.round(eff.total / 1000) * 1000)}</div>
+        <div class="mgr-tracker__sub">
+          ${log.length === 0
+            ? '施策 実行 待ち — Todo の 「Booking Extranet を 開いて 変更 する」 を 押すと 累計 開始'
+            : `${daysSince}日 経過 · 実行 ${eff.count}件 (直近30日: ${eff.count30}件)`}
+        </div>
+      </div>
+      <div class="mgr-tracker__side">
+        <div class="mgr-tracker__side-row">
+          <span class="mgr-tracker__side-lbl">今月</span>
+          <span class="mgr-tracker__side-val">${eff.thisMonth > 0 ? '+' : ''}${fmtYen(Math.round(eff.thisMonth / 1000) * 1000)}</span>
+        </div>
+        <div class="mgr-tracker__side-row">
+          <span class="mgr-tracker__side-lbl">前月</span>
+          <span class="mgr-tracker__side-val">${eff.lastMonth > 0 ? '+' : ''}${fmtYen(Math.round(eff.lastMonth / 1000) * 1000)}</span>
+        </div>
+      </div>
+      <div class="mgr-tracker__actions">
+        <button class="mgr-tracker__btn mgr-tracker__btn--primary" type="button" data-tracker-action="report">月末 経営 report</button>
+        <button class="mgr-tracker__btn" type="button" data-tracker-action="log">施策 履歴 (${log.length})</button>
+      </div>
+    </div>
+  `;
+}
+
+// 月末 report 生成 (新窓 で 印刷可 HTML)
+function generateMonthlyReport(data, t) {
+  const log = loadActionLog();
+  const eff = computeCumulativeEffect();
+  const today = new Date();
+  const monthLbl = `${today.getFullYear()}年 ${today.getMonth()+1}月`;
+  const dates = data.dates.slice().sort();
+  const marketMed = t.marketMed || computeMarketMedianSeries(data);
+  const ownK = Object.keys(data.hotels).find(k => OWN_EXTERNAL_IDS.has(k));
+  const ownSeries = ownK ? (data.prices[ownK] || {}) : {};
+  const marketAvg = average(Object.values(marketMed).filter(v => v != null));
+  const ownAvg = average(Object.values(ownSeries).filter(v => v != null));
+
+  // RevPAR / ADR / OCC 想定 (12人 会議 で 追加 提言)
+  const ROOMS = 6, OCC_ASSUMED = 0.70;
+  const adr = Math.round(ownAvg || 0);
+  const occ = Math.round(OCC_ASSUMED * 100);
+  const revpar = Math.round((ownAvg || 0) * OCC_ASSUMED);
+
+  const logRows = log.slice(-20).reverse().map(e => `
+    <tr>
+      <td>${new Date(e.ts).toLocaleString('ja-JP')}</td>
+      <td>${escapeHtml(e.type || '単価変更')}</td>
+      <td>${e.date || '—'}</td>
+      <td>${e.oldPrice ? fmtYen(e.oldPrice) + ' → ' + fmtYen(e.newPrice) : '—'}</td>
+      <td>${e.uplift ? (e.uplift >= 0 ? '+' : '') + fmtYen(e.uplift) : '—'}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" style="text-align:center;color:#6E6E73">まだ 施策 実行 log なし</td></tr>';
+
+  const html = `<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8"><title>荒島 hostel 月末 経営 report ${monthLbl}</title>
+<style>
+  body { font-family: 'Hiragino Sans', -apple-system, sans-serif; max-width: 820px; margin: 20px auto; padding: 20px; color: #1D1D1F; }
+  h1 { font-size: 28px; margin: 0 0 4px; letter-spacing: -0.02em; }
+  h1 span { background: linear-gradient(120deg,#0071E3,#8B5CF6,#EC4899); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { color: #6E6E73; font-size: 13px; margin-bottom: 24px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 24px; }
+  .kpi { background: #F5F5F7; padding: 16px 18px; border-radius: 10px; }
+  .kpi__lbl { font-size: 11px; color: #6E6E73; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+  .kpi__val { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .kpi__sub { font-size: 11px; color: #6E6E73; margin-top: 2px; }
+  h2 { font-size: 18px; margin: 32px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #D2D2D7; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid #EBEBEE; text-align: left; }
+  th { background: #F5F5F7; font-size: 11px; letter-spacing: 0.04em; color: #6E6E73; }
+  .effect-hero { padding: 20px; background: linear-gradient(135deg, rgba(0,113,227,0.05), rgba(236,72,153,0.05)); border-radius: 12px; margin-bottom: 24px; border-left: 4px solid #8B5CF6; }
+  .effect-hero__amount { font-size: 42px; font-weight: 900; letter-spacing: -0.03em; background: linear-gradient(120deg,#0071E3,#8B5CF6,#EC4899); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .footnote { font-size: 11px; color: #86868B; margin-top: 32px; line-height: 1.7; }
+  @media print { body { max-width: 100%; padding: 8mm; } }
+</style></head><body>
+  <h1>荒島 hostel <span>月末 経営 report</span></h1>
+  <div class="sub">${monthLbl} · 発行 ${today.toLocaleString('ja-JP')}</div>
+
+  <div class="effect-hero">
+    <div style="font-size:12px;color:#6E6E73;letter-spacing:0.06em;margin-bottom:6px;">導入後 の 累積 効果 (想定)</div>
+    <div class="effect-hero__amount">${eff.total > 0 ? '+' : ''}${fmtYen(Math.round(eff.total / 1000) * 1000)}</div>
+    <div style="font-size:12px;color:#424245;margin-top:6px;">
+      施策 実行 <b>${eff.count}件</b> · 今月 <b>${eff.thisMonth > 0 ? '+' : ''}${fmtYen(Math.round(eff.thisMonth / 1000) * 1000)}</b> · 前月 <b>${eff.lastMonth > 0 ? '+' : ''}${fmtYen(Math.round(eff.lastMonth / 1000) * 1000)}</b>
+    </div>
+  </div>
+
+  <h2>業界 標準 KPI (${dates.length}日 平均)</h2>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi__lbl">ADR (平均 単価)</div><div class="kpi__val">${fmtYen(adr)}</div><div class="kpi__sub">荒島 の 販売 単価 平均</div></div>
+    <div class="kpi"><div class="kpi__lbl">OCC (稼働率)</div><div class="kpi__val">${occ}%</div><div class="kpi__sub">想定 (実測 は 予約 データ 連携 後)</div></div>
+    <div class="kpi"><div class="kpi__lbl">RevPAR (客室 単価)</div><div class="kpi__val">${fmtYen(revpar)}</div><div class="kpi__sub">ADR × OCC = 収益 力 指標</div></div>
+  </div>
+
+  <h2>相場 比較</h2>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi__lbl">相場 中央値 (${dates.length}日)</div><div class="kpi__val">${fmtYen(Math.round(marketAvg || 0))}</div><div class="kpi__sub">半径10km 競合 22軒 の 中央値</div></div>
+    <div class="kpi"><div class="kpi__lbl">荒島 単価 平均</div><div class="kpi__val">${fmtYen(Math.round(ownAvg || 0))}</div><div class="kpi__sub">${marketAvg && ownAvg ? '相場 の ' + Math.round(ownAvg / marketAvg * 100) + '%' : '—'}</div></div>
+    <div class="kpi"><div class="kpi__lbl">gap (機会 損失)</div><div class="kpi__val">${fmtYen(Math.round((marketAvg || 0) - (ownAvg || 0)))}</div><div class="kpi__sub">相場 追随 で 埋め得 の 目安</div></div>
+  </div>
+
+  <h2>今月 の 施策 実行 履歴 (直近 20件)</h2>
+  <table>
+    <thead><tr><th>実行 日時</th><th>種別</th><th>対象日</th><th>単価 変更</th><th>1週 期待 効果</th></tr></thead>
+    <tbody>${logRows}</tbody>
+  </table>
+
+  <h2>次月 の 打ち手 (推奨)</h2>
+  <ol style="font-size: 13.5px; line-height: 1.9;">
+    <li>相場 gap ${fmtYen(Math.round((marketAvg || 0) - (ownAvg || 0)))} の うち 20-30% を 段階 UP で 埋める (実行 済 施策 の 反応 見ながら)</li>
+    <li>週末 (金土日) の 単価 を 平日 比 +15% 検証 (相場 平均 の 週末 プレミアム)</li>
+    <li>OTA プラン 説明文 に 「駐車場 20台 無料 + 越前大野 郷土料理」 を 明記 (差別化 で CVR +1-2%pt)</li>
+  </ol>
+
+  <div class="footnote">
+    ※ 効果額 は 想定値 (単価変更 uplift × 稼働率 70% × 6室 × 7日)。 実測 効果 は 予約 データ 連携 (Booking Extranet API / 楽天 API) で 精緻 化 予定。<br>
+    ※ この report は IT導入補助金 の 効果 報告 / 銀行 融資 の 材料 / 月次 経営 会議 の 資料 と して 使えます。<br>
+    ※ 発行: 荒島 hostel 相場ダッシュボード v4 (2026-08-06) / Skeleton Inc.
+  </div>
+</body></html>`;
+  const win = window.open('', '_blank');
+  if (win) { win.document.write(html); win.document.close(); }
+}
+
+// tracker button click handler
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-tracker-action]');
+  if (!btn) return;
+  const action = btn.dataset.trackerAction;
+  if (action === 'report') {
+    if (!priceScanCache) { alert('data 未読込'); return; }
+    const t = computeTightness(priceScanCache);
+    generateMonthlyReport(getViewData() || priceScanCache, t);
+  } else if (action === 'log') {
+    const log = loadActionLog();
+    if (!log.length) { alert('まだ 施策 実行 log なし。 Todo card の 「Booking Extranet を 開いて 変更 する」 を 押すと 記録 開始。'); return; }
+    const lines = log.slice(-20).reverse().map(e => `${new Date(e.ts).toLocaleString('ja-JP')} · ${e.type || '単価変更'} · ${e.date || '—'} · ${e.uplift ? (e.uplift >= 0 ? '+' : '') + '¥' + e.uplift.toLocaleString() : '—'}`);
+    alert(`施策 履歴 (直近${lines.length}件、 全${log.length}件):\n\n${lines.join('\n')}`);
+  }
+});
+
+// Todo CTA の 「Booking Extranet で 変更」 「楽天 施設管理」 押した ら 施策 log に 記録
+document.addEventListener('click', (e) => {
+  const cta = e.target.closest('.mgr-todo__cta--primary, .mgr-todo__cta--sub');
+  if (!cta) return;
+  // click 直前 に 見えていた Todo の task 情報 を pull
+  const todoTitle = document.querySelector('.mgr-todo__title');
+  if (!todoTitle) return;
+  const priceOldText = todoTitle.querySelector('.mgr-todo__price-old')?.textContent?.replace(/[^\d]/g, '');
+  const priceNewText = todoTitle.querySelector('.mgr-todo__price-new')?.textContent?.replace(/[^\d]/g, '');
+  const upliftText = todoTitle.querySelector('.mgr-todo__uplift')?.textContent?.replace(/[^\d-]/g, '');
+  const whenText = todoTitle.querySelector('.mgr-todo__when')?.textContent?.trim();
+  const oldPrice = priceOldText ? Number(priceOldText) : null;
+  const newPrice = priceNewText ? Number(priceNewText) : null;
+  const uplift = upliftText ? Number(upliftText) : (oldPrice && newPrice ? newPrice - oldPrice : null);
+  logAction({
+    type: '単価 変更',
+    date: whenText || null,
+    oldPrice, newPrice, uplift,
+    channel: cta.classList.contains('mgr-todo__cta--primary') ? 'booking' : 'rakuten',
+  });
+  // re-render tracker
+  if (priceScanCache) {
+    const d = getViewData() || priceScanCache;
+    const t = computeTightness(d);
+    renderTracker(d, t, null, null, null);
+  }
+});
 
 // ==================== v3: Todo card (1 画面 = 1 タスク) ====================
 // 現実的 uplift = gap × 15%、 上限 ¥3,000。 owner が 「一気 に 相場中央値」 じゃない 小さな 検証 を できる ように
