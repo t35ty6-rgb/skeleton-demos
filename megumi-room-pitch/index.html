@@ -12,7 +12,7 @@
   /* v4 palette: 女性 · pink signature (owner 明示 2026-08-07)
      megumi-room chat UI 本体 (--rose #C05B72) と 揃えて client → 商品 continuity
      var 名 は 保持 (--blue/--violet/--pink) して gradient/mixin 全 自動 追随 */
-  --paper:      #FDFAFC;  /* very faint pink 白、 cream trap 回避 */
+  --paper:      #FBF7EE;  /* faint cream 白 (owner 明示 2026-08-07 「白っぽいクリームっぽい」) */
   --surface:    #FFFFFF;
   --surface-2:  #FBF3F6;  /* pink-tinted mute */
   --ink:        #2D1F26;  /* wine-tinted near-black */
@@ -468,6 +468,36 @@ html, body {
   .revenue-val { font-size: 22px; }
   .revenue-row:last-child .revenue-val { font-size: 30px; }
 }
+/* --- Persistent nav buttons (bottom-center、 keyboard 効かない env 用) --- */
+.deck-nav {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 10px; align-items: center;
+  z-index: 200;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  padding: 8px 12px; border-radius: 999px;
+  box-shadow: 0 4px 20px rgba(122,37,63,0.15), 0 1px 3px rgba(0,0,0,0.08);
+  border: 1px solid var(--rule);
+}
+.deck-nav-btn {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--blue); color: #fff;
+  font-size: 20px; font-weight: 700;
+  box-shadow: 0 2px 6px rgba(236,72,153,0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.deck-nav-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(236,72,153,0.5); }
+.deck-nav-btn:active { transform: translateY(1px); }
+.deck-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; background: var(--ink-3); box-shadow: none; }
+.deck-nav-info {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  color: var(--ink-2); min-width: 48px; text-align: center;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
 /* MOBILE @media は 最後 に 置く (memory: feedback_mobile_media_query_must_be_last) */
 </style>
 </head>
@@ -769,11 +799,21 @@ html, body {
 
 </div>
 
+<!-- 常時表示 nav (キーボード 効かない env / 迷った時 の 補助) -->
+<div class="deck-nav" id="deck-nav">
+  <button class="deck-nav-btn" id="deck-prev" aria-label="前へ">‹</button>
+  <div class="deck-nav-info" id="deck-info">1 / 11</div>
+  <button class="deck-nav-btn" id="deck-next" aria-label="次へ">›</button>
+</div>
+
 <script>
 (function() {
   const slides = document.querySelectorAll('.slide');
   const total = slides.length;
   const progress = document.getElementById('progress');
+  const prevBtn = document.getElementById('deck-prev');
+  const nextBtn = document.getElementById('deck-next');
+  const info = document.getElementById('deck-info');
   let current = 0;
 
   function show(i) {
@@ -782,9 +822,16 @@ html, body {
     slides[i].classList.add('active');
     current = i;
     progress.style.width = ((i + 1) / total * 100) + '%';
-    document.body.style.background = slides[i].classList.contains('dark') ? '#1D1D1F' : '#FBFBFD';
+    document.body.style.background = slides[i].classList.contains('dark') ? '#1D1D1F' : 'var(--paper)';
+    info.textContent = (i + 1) + ' / ' + total;
+    prevBtn.disabled = (i === 0);
+    nextBtn.disabled = (i === total - 1);
   }
   show(0);
+
+  // Explicit nav button (最も確実)
+  prevBtn.addEventListener('click', (e) => { e.stopPropagation(); show(current - 1); });
+  nextBtn.addEventListener('click', (e) => { e.stopPropagation(); show(current + 1); });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(current + 1); }
@@ -797,12 +844,17 @@ html, body {
     }
   });
 
-  // Click right half = next, left half = prev
+  // Click 左右 半分 nav (nav button と demo-url とか interactive は 除外)
   document.addEventListener('click', (e) => {
-    if (e.target.tagName === 'A' || e.target.closest('a')) return;
+    if (e.target.closest('a, button, input, textarea, .deck-nav, .demo-url, .demo-callout')) return;
     if (e.clientX > window.innerWidth / 2) show(current + 1);
     else show(current - 1);
   });
+
+  // Auto-focus で キーボード nav 即効
+  window.focus();
+  document.body.setAttribute('tabindex', '-1');
+  document.body.focus();
 })();
 </script>
 </body>
