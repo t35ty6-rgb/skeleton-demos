@@ -2090,11 +2090,11 @@ async function loadPriceScan() {
     if (!r || !r.ok || !r.data || !r.data.dates || !r.data.dates.length) {
       wrap.innerHTML = '';
       empty.hidden = false;
-      renderPriceKpis(null);
+      await renderPriceKpis(null);
       return;
     }
     priceScanCache = r.data;
-    renderPricePane();
+    await renderPricePane();
   } catch (e) {
     wrap.innerHTML = `<div class="hint" style="padding:24px;color:#b91c1c;">読み込み失敗: ${e.message}</div>`;
   }
@@ -2104,11 +2104,11 @@ $('#priceRefresh')?.addEventListener('click', loadPriceScan);
 
 // 期間 selector wire (3日 / 7日 / 14日 / 30日)
 document.querySelectorAll('.mgr__period-btn').forEach(b => {
-  b.addEventListener('click', () => {
+  b.addEventListener('click', async () => {
     document.querySelectorAll('.mgr__period-btn').forEach(x => x.classList.remove('is-on'));
     b.classList.add('is-on');
     selectedPeriodDays = Number(b.dataset.days) || 30;
-    if (priceScanCache) renderPricePane();
+    if (priceScanCache) await renderPricePane();
   });
 });
 $('#priceCsv')?.addEventListener('click', () => {
@@ -3035,7 +3035,7 @@ function renderHero(data, t, targetDate, todayMed, ownPrice) {
 // 楽天 URL 登録 button の click handler (renderHero とは 独立、 DOM ready 後 1回 だけ bind)
 if (typeof window !== 'undefined' && !window.__rakSetupBound) {
   window.__rakSetupBound = true;
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', async (e) => {
     const btn = e.target.closest('#rakutenExtranetSetup');
     if (!btn) return;
     const cur = localStorage.getItem('rakutenExtranetUrl') || '';
@@ -3052,7 +3052,7 @@ if (typeof window !== 'undefined' && !window.__rakSetupBound) {
     }
     // 再 render (renderHero に localStorage 反映)
     if (typeof priceScanCache !== 'undefined' && priceScanCache) {
-      renderPricePane();
+      await renderPricePane();
     } else {
       location.reload();
     }
