@@ -2566,6 +2566,172 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// ==================== v5: 需要 押し上げ 要因 の 自動 検出 (Phase 1) ====================
+// 「相場 が 上がる 要因」 10人 会議 で 挙がった driver を 無料 API + 静的 seed で 検出、
+// Todo card に 「今夜 の 押し上げ 要因 X件」 として 表示、 uplift 攻撃度 mode の 推奨 を 変える。
+// 為替 / SNS バズ / Booking Genius 等 の 動的 系 は Phase 2 で 追加。
+
+// 大野 / 福井 の 定型 recurrent イベント (owner 追加 は localStorage 'arashimaCustomEvents')
+const AA_RECURRENT_EVENTS = [
+  { name: '越前大野 七夕まつり', month: 8, dayFrom: 5, dayTo: 8, impact: 12, radiusKm: 3 },
+  { name: '越前大野 秋 まつり', month: 11, dayFrom: 14, dayTo: 17, impact: 15, radiusKm: 3 },
+  { name: '亀山 紅葉 ピーク', month: 11, dayFrom: 10, dayTo: 25, impact: 10, radiusKm: 5 },
+  { name: '越前大野城 桜 見頃', month: 4, dayFrom: 5, dayTo: 15, impact: 10, radiusKm: 3 },
+  { name: '九頭竜川 花火 大会', month: 8, dayFrom: 15, dayTo: 15, impact: 20, radiusKm: 10 },
+  { name: '勝山スキージャム オープン期', month: 12, dayFrom: 20, dayTo: 31, impact: 8, radiusKm: 30 },
+  { name: '勝山スキージャム ピーク', month: 1, dayFrom: 1, dayTo: 15, impact: 12, radiusKm: 30 },
+  { name: '恐竜博物館 春休み ピーク', month: 3, dayFrom: 24, dayTo: 31, impact: 10, radiusKm: 25 },
+  { name: '恐竜博物館 GW ピーク', month: 5, dayFrom: 1, dayTo: 6, impact: 12, radiusKm: 25 },
+  { name: '恐竜博物館 夏休み ピーク', month: 8, dayFrom: 1, dayTo: 20, impact: 10, radiusKm: 25 },
+];
+
+// 日本 祝日 seed (2026-2027、 内閣府 準拠、 API 依存 減らす)
+const AA_HOLIDAYS_2026 = new Set([
+  '2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20',
+  '2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06',
+  '2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23',
+  '2026-10-12','2026-11-03','2026-11-23','2026-12-23',
+]);
+const AA_HOLIDAYS_2027 = new Set([
+  '2027-01-01','2027-01-11','2027-02-11','2027-02-23','2027-03-21','2027-03-22',
+  '2027-04-29','2027-05-03','2027-05-04','2027-05-05',
+  '2027-07-19','2027-08-11','2027-09-20','2027-09-23',
+  '2027-10-11','2027-11-03','2027-11-23',
+]);
+function aa_isHoliday(iso) {
+  if (AA_HOLIDAYS_2026.has(iso)) return true;
+  if (AA_HOLIDAYS_2027.has(iso)) return true;
+  return false;
+}
+
+// 3連休 判定 (前後 3日 中 に 祝日 + 土日 が 3日 連続)
+function aa_isLongWeekend(iso) {
+  const d = new Date(iso + 'T00:00:00+09:00');
+  for (let offset = -2; offset <= 0; offset++) {
+    let streak = 0;
+    for (let i = 0; i < 3; i++) {
+      const cur = new Date(d.getTime() + (offset + i) * 86400000);
+      const curIso = cur.toISOString().slice(0, 10);
+      const dow = cur.getDay();
+      if (dow === 0 || dow === 6 || aa_isHoliday(curIso)) streak++;
+      else break;
+    }
+    if (streak >= 3) return true;
+  }
+  return false;
+}
+
+// 気象庁 API (福井県 = area 180000) の 天気予報 pull、 快晴 or 雪 or 台風 を driver に
+async function aa_fetchWeather() {
+  const cacheKey = 'arashimaWeatherCache_v1';
+  try {
+    const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+    if (cached && Date.now() - cached.fetchedAt < 3 * 3600 * 1000) return cached.data;
+  } catch (_) {}
+  try {
+    const res = await fetch('https://www.jma.go.jp/bosai/forecast/data/forecast/180000.json');
+    if (!res.ok) return null;
+    const data = await res.json();
+    localStorage.setItem(cacheKey, JSON.stringify({ fetchedAt: Date.now(), data }));
+    return data;
+  } catch (_) { return null; }
+}
+
+// 天気 → 需要 driver: 晴 (紅葉/桜/星空 期 のみ +5%)、 雪 (スキー期 +10%)、 台風/大雨 は 別 signal
+function aa_weatherDrivers(weatherData, iso) {
+  if (!weatherData || !Array.isArray(weatherData) || !weatherData[0]) return [];
+  const tsDates = weatherData[0].timeSeries?.[0]?.timeDefines || [];
+  const areas = weatherData[0].timeSeries?.[0]?.areas || [];
+  const idx = tsDates.findIndex(td => td.slice(0, 10) === iso);
+  if (idx < 0 || !areas[0]) return [];
+  const wCode = areas[0].weatherCodes?.[idx] || '';
+  const wText = areas[0].weathers?.[idx] || '';
+  const drivers = [];
+  const m = Number(iso.slice(5, 7));
+  if (/^1[0-1]$|^20[0-1]$|^12[3-4]$/.test(wCode) || /晴/.test(wText)) {
+    if (m === 11 || m === 4) drivers.push({ kind: 'weather', label: `晴天 予報 (紅葉/桜 期)`, impact: 5, source: '気象庁' });
+    else if (m === 8) drivers.push({ kind: 'weather', label: `晴天 予報 (星空 / 花火 期)`, impact: 3, source: '気象庁' });
+  }
+  if (/^40|^30/.test(wCode) || /雪/.test(wText)) {
+    if (m === 12 || m === 1 || m === 2) drivers.push({ kind: 'weather', label: `雪 予報 (スキー 期)`, impact: 8, source: '気象庁' });
+  }
+  if (/雨/.test(wText) && /^30|^20/.test(wCode)) {
+    drivers.push({ kind: 'weather', label: `雨 予報 (屋外 系 需要 減)`, impact: -5, source: '気象庁' });
+  }
+  return drivers;
+}
+
+function aa_customEvents() {
+  try {
+    const raw = localStorage.getItem('arashimaCustomEvents');
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (_) { return []; }
+}
+
+// 全 driver 検出
+async function aa_detectDemandDrivers(iso) {
+  const drivers = [];
+  const d = new Date(iso + 'T00:00:00+09:00');
+  const dow = d.getDay();
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+
+  // 曜日 driver
+  if (dow === 5) drivers.push({ kind: 'dow', label: '金曜 (週末 前 泊)', impact: 5, source: '曜日' });
+  else if (dow === 6) drivers.push({ kind: 'dow', label: '土曜 (週末 需要)', impact: 12, source: '曜日' });
+  else if (dow === 0) drivers.push({ kind: 'dow', label: '日曜 (連休 中日 or 帰り)', impact: 3, source: '曜日' });
+
+  // 祝日 / 3連休
+  if (aa_isHoliday(iso)) drivers.push({ kind: 'holiday', label: '祝日', impact: 10, source: '内閣府 seed' });
+  if (aa_isLongWeekend(iso)) drivers.push({ kind: 'longwknd', label: '3連休 中', impact: 15, source: '祝日 + 曜日 算出' });
+
+  // 定型 イベント
+  for (const ev of AA_RECURRENT_EVENTS) {
+    if (ev.month === m && day >= ev.dayFrom && day <= ev.dayTo) {
+      drivers.push({ kind: 'event', label: ev.name, impact: ev.impact, source: `大野 定型 (半径 ${ev.radiusKm}km)` });
+    }
+  }
+
+  // owner 手入力 カスタム イベント
+  for (const ev of aa_customEvents()) {
+    if (ev.date === iso || (ev.dateFrom && ev.dateTo && iso >= ev.dateFrom && iso <= ev.dateTo)) {
+      drivers.push({ kind: 'custom', label: ev.name, impact: Number(ev.impact) || 10, source: 'owner 入力' });
+    }
+  }
+
+  // お盆 特別 期
+  if (m === 8 && day >= 10 && day <= 16) {
+    drivers.push({ kind: 'obon', label: 'お盆 期間', impact: 20, source: '固定 期間' });
+  }
+  // 年末年始
+  if ((m === 12 && day >= 29) || (m === 1 && day <= 3)) {
+    drivers.push({ kind: 'newyear', label: '年末年始 (帰省 / 初詣)', impact: 22, source: '固定 期間' });
+  }
+  // GW
+  if (m === 5 && day >= 1 && day <= 6) {
+    drivers.push({ kind: 'gw', label: 'ゴールデンウィーク', impact: 20, source: '固定 期間' });
+  }
+
+  // 気象 driver (非同期)
+  try {
+    const w = await aa_fetchWeather();
+    aa_weatherDrivers(w, iso).forEach(dr => drivers.push(dr));
+  } catch (_) {}
+
+  const totalImpact = drivers.reduce((s, d) => s + d.impact, 0);
+  return { drivers, totalImpact };
+}
+
+// impact 合計 → 推奨 攻撃度 mode
+function aa_recommendedAggr(totalImpact) {
+  if (totalImpact >= 20) return { pct: 20, label: '積極', note: `押し上げ 要因 が 合計 +${totalImpact}% 分 積み上がってる (相場 上ぶれ 見込み) → 積極 mode 推奨` };
+  if (totalImpact >= 8)  return { pct: 15, label: '標準', note: `押し上げ 要因 +${totalImpact}% (通常 週末 pattern) → 標準 mode 推奨` };
+  if (totalImpact >= 0)  return { pct: 10, label: '慎重', note: `押し上げ 要因 +${totalImpact}% (需要 弱め) → 慎重 mode 推奨` };
+  return { pct: 10, label: '慎重', note: `押し下げ 要因 ${totalImpact}% (需要 逆風) → 慎重 mode 推奨 or 現状 維持` };
+}
+
 // ==================== v3: Todo card (1 画面 = 1 タスク) ====================
 // 現実的 uplift = gap × 15%、 上限 ¥3,000。 owner が 「一気 に 相場中央値」 じゃない 小さな 検証 を できる ように
 function pickTodayTask(data, t, targetDate, todayMed, ownPrice) {
@@ -2612,10 +2778,11 @@ function pickTodayTask(data, t, targetDate, todayMed, ownPrice) {
   };
 }
 
-function renderTodo(data, t, targetDate, todayMed, ownPrice) {
+async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
   const wrap = document.getElementById('mgrTodo');
   if (!wrap) return;
   const wasCalcOpen = wrap.querySelector('.mgr-todo__calc')?.hasAttribute('open') ?? false;
+  const wasDriversOpen = wrap.querySelector('.mgr-todo__drivers')?.hasAttribute('open') ?? false;
   const today = new Date();
   const todayLbl = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}(${['日','月','火','水','木','金','土'][today.getDay()]})`;
 
@@ -2635,6 +2802,42 @@ function renderTodo(data, t, targetDate, todayMed, ownPrice) {
     ? `<a class="mgr-todo__cta mgr-todo__cta--sub" href="${escapeHtml(savedRakutenUrl)}" target="_blank" rel="noopener">楽天 施設管理 を 開く</a>`
     : `<button class="mgr-todo__cta mgr-todo__cta--ghost" type="button" data-todo-action="setup-rakuten">楽天 施設管理 URL を 登録</button>`;
 
+  // 需要 押し上げ 要因 自動 検出 (非同期、 気象庁 API + 静的 seed)
+  let driversHtml = '';
+  let driversRes = { drivers: [], totalImpact: 0 };
+  try {
+    driversRes = await aa_detectDemandDrivers(task.date);
+  } catch (_) {}
+  if (driversRes.drivers.length > 0) {
+    const rec = aa_recommendedAggr(driversRes.totalImpact);
+    const impactColor = driversRes.totalImpact >= 20 ? '#EC4899' : driversRes.totalImpact >= 8 ? '#0071E3' : '#6E6E73';
+    const driverList = driversRes.drivers.map(d => {
+      const sign = d.impact >= 0 ? '+' : '';
+      const cls = d.impact >= 0 ? 'is-pos' : 'is-neg';
+      return `<li class="mgr-todo__driver-item"><span class="mgr-todo__driver-lbl">${escapeHtml(d.label)}</span><span class="mgr-todo__driver-src">${escapeHtml(d.source)}</span><span class="mgr-todo__driver-impact ${cls}">${sign}${d.impact}%</span></li>`;
+    }).join('');
+    driversHtml = `
+      <details class="mgr-todo__drivers"${wasDriversOpen ? ' open' : ''}>
+        <summary>
+          <span class="mgr-todo__drivers-title">今夜 の 需要 押し上げ 要因</span>
+          <span class="mgr-todo__drivers-count">${driversRes.drivers.length} 件 検出</span>
+          <span class="mgr-todo__drivers-impact" style="color: ${impactColor}">合計 ${driversRes.totalImpact >= 0 ? '+' : ''}${driversRes.totalImpact}%</span>
+        </summary>
+        <div class="mgr-todo__drivers-body">
+          <ul class="mgr-todo__driver-list">${driverList}</ul>
+          <div class="mgr-todo__drivers-rec">
+            <b>推奨 mode:</b> ${rec.label} (${rec.pct}%) — ${escapeHtml(rec.note)}
+            ${task.aggrPct !== rec.pct ? `<button class="mgr-todo__drivers-apply" type="button" data-aggr="${rec.pct}">推奨 に 切替 (${rec.label} ${rec.pct}%)</button>` : `<span class="mgr-todo__drivers-match">✓ 現在 の mode が 推奨 と 一致</span>`}
+          </div>
+          <div class="mgr-todo__drivers-note">
+            自動 検出 source: 曜日 / 内閣府 祝日 seed / 大野 定型 イベント (10件) / 気象庁 天気予報 API (3h cache) / owner カスタム 入力。
+            外部 API (為替 / SNS バズ / Booking Genius) は Phase 2 で 追加 予定。
+          </div>
+        </div>
+      </details>
+    `;
+  }
+
   wrap.innerHTML = `
     <div class="mgr-todo__eyebrow">今日 ${escapeHtml(todayLbl)} · やる こと は 1 つ だけ</div>
     <div class="mgr-todo__body">
@@ -2649,6 +2852,7 @@ function renderTodo(data, t, targetDate, todayMed, ownPrice) {
         この日 の 相場 中央値 は <b>${fmtYen(task.marketMed)}</b>、 荒島 は 相場 の <b>${task.marketPct}%</b>。
         一気 に 相場 まで 追い付く のは 予約 が 減る 恐れ、 まず <b>+${fmtYen(task.uplift)}</b> だけ 上げて <b>3日 反応 を 見る</b>。
       </div>
+      ${driversHtml}
       <details class="mgr-todo__calc">
         <summary>なぜ +${fmtYen(task.uplift)} なのか (計算 根拠 を 見る)</summary>
         <div class="mgr-todo__calc-body">
@@ -2682,6 +2886,7 @@ function renderTodo(data, t, targetDate, todayMed, ownPrice) {
     </div>
   `;
   if (wasCalcOpen) wrap.querySelector('.mgr-todo__calc')?.setAttribute('open', '');
+  if (wasDriversOpen) wrap.querySelector('.mgr-todo__drivers')?.setAttribute('open', '');
 }
 
 // Todo 内 の 楽天 URL 登録 button, alt button, 攻撃度 mode 切替 の click 処理
