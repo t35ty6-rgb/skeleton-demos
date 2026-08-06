@@ -2068,10 +2068,10 @@ function getViewData() {
   return priceScanCache ? applyPeriodFilter(priceScanCache, selectedPeriodDays) : null;
 }
 
-function renderPricePane() {
+async function renderPricePane() {
   const data = getViewData();
   if (!data) return;
-  renderPriceKpis(data);
+  await renderPriceKpis(data);
   renderHeatmap(data);
   renderConsultAnalysis(data);
   renderPriceCards(data);
@@ -2210,7 +2210,7 @@ function computeBuckets(allPrices) {
   return [q(0.20), q(0.40), q(0.60), q(0.80)];
 }
 
-function renderPriceKpis(data) {
+async function renderPriceKpis(data) {
   const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   const setEyebrow = (label) => setText('priceEyebrow', label);
 
@@ -2334,7 +2334,7 @@ function renderPriceKpis(data) {
   renderElasticity(data, t, med, ownMed);
 
   // v3 (2026-08-05 owner「何をするべきかがわからない」対応): 1 画面 = 1 タスク の Todo card
-  renderTodo(data, t, targetDate, med, ownMed);
+  await renderTodo(data, t, targetDate, med, ownMed);
 
   // v4 (2026-08-06 owner「売上上がるツールに特化」対応): 累積 効果 tracker
   renderTracker(data, t, targetDate, med, ownMed);
@@ -2604,15 +2604,18 @@ function aa_isHoliday(iso) {
   return false;
 }
 
-// 3連休 判定 (前後 3日 中 に 祝日 + 土日 が 3日 連続)
+// 3連休 判定 (前後 3日 中 に 祝日 + 土日 が 3日 連続)。 JST 固定 で 判定 (toISOString の UTC ズレ 回避)
+function aa_isoJst(dateObj) {
+  return new Date(dateObj.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+}
 function aa_isLongWeekend(iso) {
   const d = new Date(iso + 'T00:00:00+09:00');
   for (let offset = -2; offset <= 0; offset++) {
     let streak = 0;
     for (let i = 0; i < 3; i++) {
       const cur = new Date(d.getTime() + (offset + i) * 86400000);
-      const curIso = cur.toISOString().slice(0, 10);
-      const dow = cur.getDay();
+      const curIso = aa_isoJst(cur);
+      const dow = new Date(curIso + 'T00:00:00+09:00').getDay();
       if (dow === 0 || dow === 6 || aa_isHoliday(curIso)) streak++;
       else break;
     }
