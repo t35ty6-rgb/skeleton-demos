@@ -2615,6 +2615,7 @@ function pickTodayTask(data, t, targetDate, todayMed, ownPrice) {
 function renderTodo(data, t, targetDate, todayMed, ownPrice) {
   const wrap = document.getElementById('mgrTodo');
   if (!wrap) return;
+  const wasCalcOpen = wrap.querySelector('.mgr-todo__calc')?.hasAttribute('open') ?? false;
   const today = new Date();
   const todayLbl = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}(${['日','月','火','水','木','金','土'][today.getDay()]})`;
 
@@ -2662,7 +2663,7 @@ function renderTodo(data, t, targetDate, todayMed, ownPrice) {
           </div>
           <div class="mgr-todo__calc-modes">
             <span class="mgr-todo__calc-modes-lbl">攻撃度 を 変える:</span>
-            <button class="mgr-todo__mode-btn" type="button" data-aggr="10">慎重 10%</button>
+            <button class="mgr-todo__mode-btn ${task.aggrPct === 10 ? 'is-active' : ''}" type="button" data-aggr="10">慎重 10%</button>
             <button class="mgr-todo__mode-btn ${task.aggrPct === 15 ? 'is-active' : ''}" type="button" data-aggr="15">標準 15%</button>
             <button class="mgr-todo__mode-btn ${task.aggrPct === 20 ? 'is-active' : ''}" type="button" data-aggr="20">積極 20%</button>
           </div>
@@ -2680,6 +2681,7 @@ function renderTodo(data, t, targetDate, todayMed, ownPrice) {
       </div>
     </div>
   `;
+  if (wasCalcOpen) wrap.querySelector('.mgr-todo__calc')?.setAttribute('open', '');
 }
 
 // Todo 内 の 楽天 URL 登録 button, alt button, 攻撃度 mode 切替 の click 処理
