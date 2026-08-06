@@ -2594,9 +2594,10 @@ function pickTodayTask(data, t, targetDate, todayMed, ownPrice) {
 
   const marketAtDate = marketMed[bestDate];
   const ownAtDate = ownSeries[bestDate] || ownPrice;
-  // 現実的 uplift = gap × 15%、 500円 単位、 上限 ¥3,000
-  const raw = Math.min(bestGap * 0.15, 3000);
-  const uplift = Math.max(500, Math.round(raw / 500) * 500);
+  // 攻撃度 (localStorage 保存、 default 15% = 標準): 慎重 10 / 標準 15 / 積極 20
+  const aggrPct = Number(localStorage.getItem('arashimaAggressiveness') || 15);
+  const rawUplift = Math.min(bestGap * (aggrPct / 100), 3000);
+  const uplift = Math.max(500, Math.round(rawUplift / 500) * 500);
   const newPrice = ownAtDate + uplift;
   const dt = new Date(bestDate + 'T00:00:00+09:00');
   const dow = ['日','月','火','水','木','金','土'][dt.getDay()];
@@ -2607,6 +2608,7 @@ function pickTodayTask(data, t, targetDate, todayMed, ownPrice) {
   return {
     date: bestDate, whenLbl, dow, marketMed: marketAtDate,
     ownPrice: ownAtDate, newPrice, uplift, marketPct, gap: bestGap,
+    rawUplift, aggrPct,
   };
 }
 
@@ -2646,6 +2648,26 @@ function renderTodo(data, t, targetDate, todayMed, ownPrice) {
         この日 の 相場 中央値 は <b>${fmtYen(task.marketMed)}</b>、 荒島 は 相場 の <b>${task.marketPct}%</b>。
         一気 に 相場 まで 追い付く のは 予約 が 減る 恐れ、 まず <b>+${fmtYen(task.uplift)}</b> だけ 上げて <b>3日 反応 を 見る</b>。
       </div>
+      <details class="mgr-todo__calc">
+        <summary>なぜ +${fmtYen(task.uplift)} なのか (計算 根拠 を 見る)</summary>
+        <div class="mgr-todo__calc-body">
+          <ol class="mgr-todo__calc-steps">
+            <li><b>gap (機会 損失) を 出す</b> — 相場 中央値 ${fmtYen(task.marketMed)} − 荒島 単価 ${fmtYen(task.ownPrice)} = <b>${fmtYen(task.gap)}</b></li>
+            <li><b>gap の ${task.aggrPct}% を 上げ幅 候補 に</b> — ${fmtYen(task.gap)} × ${task.aggrPct}% = ${fmtYen(Math.round(task.rawUplift))} <span class="mgr-todo__calc-hint">(攻撃度 ${task.aggrPct}% = ${task.aggrPct <= 10 ? '慎重' : task.aggrPct >= 20 ? '積極' : '標準'} mode)</span></li>
+            <li><b>500円 単位 で 丸める</b> — ${fmtYen(Math.round(task.rawUplift))} → <b>+${fmtYen(task.uplift)}</b> (上限 ¥3,000 / 下限 ¥500)</li>
+          </ol>
+          <div class="mgr-todo__calc-why">
+            <b>なぜ gap の 15% ?</b> — 一気 に 相場 まで 追い付ける 額 (gap 100%) を 上げる と、 客 が 「急 に 高く なった」 と 感じて 予約 離れ が 起きやすい。
+            段階 的 に 15% ずつ 埋めて 3日 の 反応 (予約 落ち込み の 有無) を 見ながら 次 の 値上げ を 判断 する のが hotel 業界 の 定石 (Duetto / IDeaS の 段階 pricing、 revenue management 教科書 の Cross 2015 準拠)。
+          </div>
+          <div class="mgr-todo__calc-modes">
+            <span class="mgr-todo__calc-modes-lbl">攻撃度 を 変える:</span>
+            <button class="mgr-todo__mode-btn" type="button" data-aggr="10">慎重 10%</button>
+            <button class="mgr-todo__mode-btn ${task.aggrPct === 15 ? 'is-active' : ''}" type="button" data-aggr="15">標準 15%</button>
+            <button class="mgr-todo__mode-btn ${task.aggrPct === 20 ? 'is-active' : ''}" type="button" data-aggr="20">積極 20%</button>
+          </div>
+        </div>
+      </details>
       <div class="mgr-todo__cta-row">
         <a class="mgr-todo__cta mgr-todo__cta--primary" href="https://admin.booking.com/" target="_blank" rel="noopener">Booking Extranet を 開いて 変更 する</a>
         ${rakutenBtn}
@@ -2660,12 +2682,19 @@ function renderTodo(data, t, targetDate, todayMed, ownPrice) {
   `;
 }
 
-// Todo 内 の 楽天 URL 登録 button, alt button の click 処理
+// Todo 内 の 楽天 URL 登録 button, alt button, 攻撃度 mode 切替 の click 処理
 document.addEventListener('click', (e) => {
   const rakSetup = e.target.closest('[data-todo-action="setup-rakuten"]');
   if (rakSetup) {
     const setup = document.getElementById('rakutenExtranetSetup');
     if (setup) setup.click();
+    return;
+  }
+  const modeBtn = e.target.closest('[data-aggr]');
+  if (modeBtn) {
+    const pct = Number(modeBtn.dataset.aggr);
+    localStorage.setItem('arashimaAggressiveness', String(pct));
+    document.getElementById('priceRefresh')?.click();
     return;
   }
   const alt = e.target.closest('[data-todo-alt]');
