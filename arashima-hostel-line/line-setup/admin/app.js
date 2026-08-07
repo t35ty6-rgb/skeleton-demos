@@ -2539,11 +2539,12 @@ document.addEventListener('click', (e) => {
 });
 
 // Todo CTA の 「Booking Extranet で 変更」 「楽天 施設管理」 押した ら 施策 log に 記録
+// v2 rework で hero-cta に class 変更 された の で セレクタ に 追加
 document.addEventListener('click', (e) => {
-  const cta = e.target.closest('.mgr-todo__cta--primary, .mgr-todo__cta--sub');
+  const cta = e.target.closest('.mgr-todo__hero-cta, .mgr-todo__cta--primary, .mgr-todo__cta--sub');
   if (!cta) return;
-  // click 直前 に 見えていた Todo の task 情報 を pull
-  const todoTitle = document.querySelector('.mgr-todo__title');
+  // v2 で は .mgr-todo__title は 存在 しない、 .mgr-todo__hero-line に fallback
+  const todoTitle = document.querySelector('.mgr-todo__hero-line') || document.querySelector('.mgr-todo__title');
   if (!todoTitle) return;
   const priceOldText = todoTitle.querySelector('.mgr-todo__price-old')?.textContent?.replace(/[^\d]/g, '');
   const priceNewText = todoTitle.querySelector('.mgr-todo__price-new')?.textContent?.replace(/[^\d]/g, '');
@@ -2552,11 +2553,12 @@ document.addEventListener('click', (e) => {
   const oldPrice = priceOldText ? Number(priceOldText) : null;
   const newPrice = priceNewText ? Number(priceNewText) : null;
   const uplift = upliftText ? Number(upliftText) : (oldPrice && newPrice ? newPrice - oldPrice : null);
+  const isBooking = cta.classList.contains('mgr-todo__hero-cta') || cta.classList.contains('mgr-todo__cta--primary');
   logAction({
     type: '単価 変更',
     date: whenText || null,
     oldPrice, newPrice, uplift,
-    channel: cta.classList.contains('mgr-todo__cta--primary') ? 'booking' : 'rakuten',
+    channel: isBooking ? 'booking' : 'rakuten',
   });
   // re-render tracker
   if (priceScanCache) {
@@ -2784,8 +2786,7 @@ function pickTodayTask(data, t, targetDate, todayMed, ownPrice) {
 async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
   const wrap = document.getElementById('mgrTodo');
   if (!wrap) return;
-  const wasCalcOpen = wrap.querySelector('.mgr-todo__calc')?.hasAttribute('open') ?? false;
-  const wasDriversOpen = wrap.querySelector('.mgr-todo__drivers')?.hasAttribute('open') ?? false;
+  const wasMoreOpen = wrap.querySelector('.mgr-todo__more')?.hasAttribute('open') ?? false;
   const today = new Date();
   const todayLbl = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}(${['日','月','火','水','木','金','土'][today.getDay()]})`;
 
@@ -2873,8 +2874,7 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
       </details>
     </div>
   `;
-  if (wasCalcOpen) wrap.querySelector('.mgr-todo__more')?.setAttribute('open', '');
-  if (wasDriversOpen) wrap.querySelector('.mgr-todo__more')?.setAttribute('open', '');
+  if (wasMoreOpen) wrap.querySelector('.mgr-todo__more')?.setAttribute('open', '');
 }
 
 // Todo 内 の 楽天 URL 登録 button, alt button, 攻撃度 mode 切替 の click 処理
