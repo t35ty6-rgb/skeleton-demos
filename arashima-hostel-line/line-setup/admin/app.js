@@ -2791,12 +2791,18 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
   const todayLbl = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}(${['日','月','火','水','木','金','土'][today.getDay()]})`;
 
   const task = pickTodayTask(data, t, targetDate, todayMed, ownPrice);
+  // 時間帯 に 応じた コンシェルジュ 挨拶
+  const hr = today.getHours();
+  const greet = hr < 5 ? '夜分 遅く に 恐れ入ります' : hr < 11 ? 'おはようございます' : hr < 17 ? 'こんにちは' : hr < 23 ? 'こんばんは' : '夜分 遅く に 恐れ入ります';
   if (!task) {
     wrap.innerHTML = `
-      <div class="mgr-todo__eyebrow">今日 ${escapeHtml(todayLbl)} · 状況 確認</div>
+      <div class="mgr-todo__greet">${escapeHtml(greet)}。 本日 ${escapeHtml(todayLbl)} の ご 案内 で ございます。</div>
       <div class="mgr-todo__body">
-        <div class="mgr-todo__title-plain">今日 は 特別 な アクション なし</div>
-        <div class="mgr-todo__note">荒島 単価 は 直近 7日 で 相場 との ギャップ が 小さい (¥1,000 未満)、 現状 維持 で OK。 気 になる 日 は 下 の 「詳細 データ を 見る」 から 深掘り。</div>
+        <div class="mgr-todo__hero">
+          <div class="mgr-todo__hero-lbl">本日 の ご 提案</div>
+          <div class="mgr-todo__hero-line-plain">本日 は 特別 に お薦め の 変更 は ございません。</div>
+          <div class="mgr-todo__note">荒島 の 単価 は 直近 7日 で 相場 との 差 が 小さい (¥1,000 未満) 状況 で ござい ます。 現状 の 単価 を 維持 なさる の が よろしい か と 存じます。 気 になる 日 が ございましたら 下 の 「詳細 データ を 見る」 より お 調べ ください。</div>
+        </div>
       </div>
     `;
     return;
@@ -2817,58 +2823,63 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
     const cls = d.impact >= 0 ? 'is-pos' : 'is-neg';
     return `<span class="mgr-todo__tag ${cls}" title="${escapeHtml(d.source)}">${escapeHtml(d.label)} <b>${sign}${d.impact}%</b></span>`;
   }).join('');
+  const modeLabel = (p) => p <= 10 ? '控えめ' : p >= 20 ? '攻める' : 'ふつう';
   const driversRowHtml = driversRes.drivers.length > 0 ? `
-    <div class="mgr-todo__tag-row" role="group" aria-label="今夜 の 需要 押し上げ 要因">
-      ${tagChips}
-      <span class="mgr-todo__tag-total">合計 ${driversRes.totalImpact >= 0 ? '+' : ''}${driversRes.totalImpact}% → 推奨 ${rec.label} ${rec.pct}%</span>
-      ${task.aggrPct !== rec.pct ? `<button class="mgr-todo__tag-apply" type="button" data-aggr="${rec.pct}">推奨 に 切替</button>` : `<span class="mgr-todo__tag-match">✓ 現在 一致</span>`}
+    <div class="mgr-todo__concierge-why" role="group" aria-label="お薦め の 根拠">
+      <div class="mgr-todo__concierge-why-lead">こちら を お薦め する 根拠 は 以下 の ${driversRes.drivers.length}点 で ございます。</div>
+      <div class="mgr-todo__tag-row">
+        ${tagChips}
+      </div>
+      <div class="mgr-todo__concierge-why-sum">
+        合計 <b>${driversRes.totalImpact >= 0 ? '+' : ''}${driversRes.totalImpact}%</b> の 需要 押し上げ 要因 が 揃って おり、 上げ幅 を <b>${modeLabel(rec.pct)} (${rec.pct}%)</b> に する ご 判断 を お薦め いたします。
+        ${task.aggrPct !== rec.pct ? `<button class="mgr-todo__tag-apply" type="button" data-aggr="${rec.pct}">お薦め に 従う</button>` : `<span class="mgr-todo__tag-match">✓ 現在 ご 選択 の 意向 と 一致</span>`}
+      </div>
     </div>
   ` : '';
 
-  const modeLabel = (p) => p <= 10 ? '慎重' : p >= 20 ? '積極' : '標準';
-
   wrap.innerHTML = `
-    <div class="mgr-todo__eyebrow">今日 ${escapeHtml(todayLbl)} · やる こと は 1 つ だけ</div>
+    <div class="mgr-todo__greet">${escapeHtml(greet)}、 お客様。 本日 ${escapeHtml(todayLbl)} の ご 案内 で ございます。</div>
     <div class="mgr-todo__body">
       <div class="mgr-todo__hero">
-        <div class="mgr-todo__hero-lbl">今日 やる こと</div>
+        <div class="mgr-todo__hero-lbl">本日 の ご 提案</div>
         <div class="mgr-todo__hero-line">
-          <span class="mgr-todo__when">${escapeHtml(task.whenLbl)}</span> の 単価 を
-          <span class="mgr-todo__price-old">${fmtYen(task.ownPrice)}</span>
+          <span class="mgr-todo__when">${escapeHtml(task.whenLbl)}</span> は 需要 が 高まる 一日 と 見て おります。
+          単価 を <span class="mgr-todo__price-old">${fmtYen(task.ownPrice)}</span>
           <span class="mgr-todo__arrow">→</span>
           <span class="mgr-todo__price-new">${fmtYen(task.newPrice)}</span>
           <span class="mgr-todo__uplift">(+${fmtYen(task.uplift)})</span>
+          へ お上げ に なる こと を お薦め いたします。
         </div>
         <a class="mgr-todo__hero-cta" href="https://admin.booking.com/" target="_blank" rel="noopener">
-          Booking Extranet を 開いて ${escapeHtml(task.whenLbl)} の 単価 を ${fmtYen(task.newPrice)} に 変更
+          承知 いたしました、 Booking Extranet で ${fmtYen(task.newPrice)} へ 変更 いたします
         </a>
       </div>
       ${driversRowHtml}
       <div class="mgr-todo__calc-inline">
-        <div class="mgr-todo__calc-inline-title">なぜ +${fmtYen(task.uplift)} か</div>
+        <div class="mgr-todo__calc-inline-title">わたくし の ご 提案 の 根拠 (計算 詳細)</div>
         <ol class="mgr-todo__calc-steps">
-          <li>相場 中央値 <b>${fmtYen(task.marketMed)}</b> − 荒島 単価 <b>${fmtYen(task.ownPrice)}</b> = gap <b>${fmtYen(task.gap)}</b></li>
-          <li>gap × <b>${task.aggrPct}%</b> (${modeLabel(task.aggrPct)} mode) = ${fmtYen(Math.round(task.rawUplift))}</li>
+          <li>相場 中央値 <b>${fmtYen(task.marketMed)}</b> と 荒島 の 単価 <b>${fmtYen(task.ownPrice)}</b> の 差 = <b>${fmtYen(task.gap)}</b> (機会 損失)</li>
+          <li>差 の <b>${task.aggrPct}%</b> (${modeLabel(task.aggrPct)} ご 意向) を 上げ幅 候補 に = ${fmtYen(Math.round(task.rawUplift))}</li>
           <li>500円 単位 で 丸め → <b>+${fmtYen(task.uplift)}</b> (上限 ¥3,000 / 下限 ¥500)</li>
         </ol>
         <div class="mgr-todo__calc-modes">
-          <span class="mgr-todo__calc-modes-lbl">攻撃度:</span>
-          <button class="mgr-todo__mode-btn ${task.aggrPct === 10 ? 'is-active' : ''}" type="button" data-aggr="10">慎重 10%</button>
-          <button class="mgr-todo__mode-btn ${task.aggrPct === 15 ? 'is-active' : ''}" type="button" data-aggr="15">標準 15%</button>
-          <button class="mgr-todo__mode-btn ${task.aggrPct === 20 ? 'is-active' : ''}" type="button" data-aggr="20">積極 20%</button>
+          <span class="mgr-todo__calc-modes-lbl">本日 の ご 意向 を 変える:</span>
+          <button class="mgr-todo__mode-btn ${task.aggrPct === 10 ? 'is-active' : ''}" type="button" data-aggr="10">控えめ 10%</button>
+          <button class="mgr-todo__mode-btn ${task.aggrPct === 15 ? 'is-active' : ''}" type="button" data-aggr="15">ふつう 15%</button>
+          <button class="mgr-todo__mode-btn ${task.aggrPct === 20 ? 'is-active' : ''}" type="button" data-aggr="20">攻める 20%</button>
         </div>
       </div>
       <details class="mgr-todo__more">
-        <summary>他 の 選択 肢 を 見る (楽天 で 変更 / 上げ 幅 を 自分 で 決める / 現状 維持)</summary>
+        <summary>別 案 を ご 覧 に なる (楽天 で 変更 / 上げ幅 を お客様 が お決めに / 現状 維持)</summary>
         <div class="mgr-todo__more-body">
           ${rakutenBtn}
           <div class="mgr-todo__alt">
-            <button class="mgr-todo__alt-btn" type="button" data-todo-alt="none">今日 は 現状 維持 で OK</button>
-            <button class="mgr-todo__alt-btn" type="button" data-todo-alt="small" data-uplift="500">+¥500 だけ (慎重)</button>
-            <button class="mgr-todo__alt-btn" type="button" data-todo-alt="large" data-uplift="3000">+¥3,000 (強気)</button>
+            <button class="mgr-todo__alt-btn" type="button" data-todo-alt="none">本日 は 現状 維持 で 参ります</button>
+            <button class="mgr-todo__alt-btn" type="button" data-todo-alt="small" data-uplift="500">+¥500 だけ の 控えめ 案</button>
+            <button class="mgr-todo__alt-btn" type="button" data-todo-alt="large" data-uplift="3000">+¥3,000 の 攻め 案</button>
           </div>
           <div class="mgr-todo__more-why">
-            <b>なぜ 段階 的 に 上げる か</b>: 一気 に 相場 まで 追い付ける 額 を 上げる と 「急 に 高く なった」 感 で 予約 離れ の リスク。 3日 の 反応 (予約 落ち込み の 有無) を 見ながら 次 の 値上げ を 判断 する のが hotel 業界 の 定石 (Duetto / IDeaS の 段階 pricing、 Cross 2015 準拠)。
+            <b>段階 的 に お上げ に なる 理由 で ございます</b>: 一気 に 相場 の 額 まで お上げ に なる と 「急 に 高く なった」 印象 で 予約 離れ の 恐れ が ございます。 3日 の 反応 (予約 の 動き) を 見な がら 次 の 値上げ を ご 判断 いた だく の が hotel 業界 の 定石 で ございます (Duetto / IDeaS の 段階 pricing、 Cross 2015 準拠)。
           </div>
         </div>
       </details>
@@ -2896,10 +2907,10 @@ document.addEventListener('click', (e) => {
   if (alt) {
     const kind = alt.dataset.todoAlt;
     if (kind === 'none') {
-      alert('OK。 今日 は 単価 変更 なし で 進む。');
+      alert('承知 いたしました。 本日 は 現状 維持 で 参ります。');
     } else {
       const yen = alt.dataset.uplift;
-      alert(`了解: +¥${yen} 案 で 検討。 Booking Extranet で 該当日 の 単価 を 実際 に 変更 して ください。`);
+      alert(`承知 いたしました、 +¥${yen} 案 で 参ります。 Booking Extranet で 該当日 の 単価 を ¥${yen} お上げ に なる 操作 を お願い いたします。`);
     }
     return;
   }
