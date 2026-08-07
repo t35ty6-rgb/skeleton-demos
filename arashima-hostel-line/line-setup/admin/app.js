@@ -2826,25 +2826,31 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
   const rec = aa_recommendedAggr(driversRes.totalImpact);
   const modeLabel = (p) => p <= 10 ? '控えめ' : p >= 20 ? '攻める' : 'ふつう';
   // driver kind → icon / severity / 分類
+  // SVG icon set (24px monochrome, currentColor 継承、 業務 admin の 信頼性 用)
+  const AA_SVG_CAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+  const AA_SVG_FLAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>';
+  const AA_SVG_SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';
+  const AA_SVG_STAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4.5L6 21l1.5-7.5L2 9h7z"/></svg>';
+  const AA_SVG_SNOW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M4 6l16 12M4 18L20 6M2 12h20"/></svg>';
+  const AA_SVG_RAIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10a5 5 0 0 1 10-1 4 4 0 0 1 0 8H7a4 4 0 0 1-1-7z"/><path d="M9 20l1-2M14 20l1-2"/></svg>';
+  const AA_SVG_LEAF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4c0 8-6 14-14 14 0-8 6-14 14-14z"/><path d="M6 18l7-7"/></svg>';
+  const AA_SVG_MOUNTAIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l6-10 4 6 3-4 5 8z"/></svg>';
   const iconOf = (d) => {
     const k = d.kind || '';
     if (k === 'weather') {
-      if (/雪/.test(d.label)) return '❄';
-      if (/雨/.test(d.label)) return '☂';
-      return '☀';
+      if (/雪/.test(d.label)) return AA_SVG_SNOW;
+      if (/雨/.test(d.label)) return AA_SVG_RAIN;
+      return AA_SVG_SUN;
     }
-    if (k === 'holiday') return '🎌';
-    if (k === 'longwknd' || k === 'obon' || k === 'newyear' || k === 'gw') return '🏖';
+    if (k === 'holiday') return AA_SVG_FLAG;
+    if (k === 'longwknd' || k === 'obon' || k === 'newyear' || k === 'gw') return AA_SVG_SUN;
     if (k === 'event' || k === 'custom') {
-      if (/恐竜/.test(d.label)) return '🦕';
-      if (/花火/.test(d.label)) return '🎆';
-      if (/スキー/.test(d.label)) return '⛷';
-      if (/紅葉/.test(d.label)) return '🍁';
-      if (/桜/.test(d.label)) return '🌸';
-      return '🎉';
+      if (/紅葉/.test(d.label)) return AA_SVG_LEAF;
+      if (/スキー|雪/.test(d.label)) return AA_SVG_MOUNTAIN;
+      return AA_SVG_STAR;
     }
-    if (k === 'dow') return '📅';
-    return '●';
+    if (k === 'dow') return AA_SVG_CAL;
+    return AA_SVG_STAR;
   };
   const severityOf = (imp) => imp >= 15 ? 'is-hot' : imp >= 5 ? 'is-warm' : imp > 0 ? 'is-mild' : 'is-neg';
   // impact 大 順 で 並び替え、 top 1 に ★ 最大 要因 badge
@@ -2957,19 +2963,25 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
             </div>
           </div>
           <div class="mgr-todo__calc-final">
-            <span class="mgr-todo__calc-final-lbl">最終 提案 単価</span>
-            <span class="mgr-todo__calc-final-eq">${fmtYen(task.ownPrice)} + ${fmtYen(task.uplift)} =</span>
-            <span class="mgr-todo__calc-final-val">${fmtYen(task.newPrice)}</span>
+            <div class="mgr-todo__calc-final-top">
+              <span class="mgr-todo__calc-final-lbl">最終 提案 単価</span>
+            </div>
+            <div class="mgr-todo__calc-final-bottom">
+              <span class="mgr-todo__calc-final-eq">${fmtYen(task.ownPrice)} + ${fmtYen(task.uplift)} =</span>
+              <span class="mgr-todo__calc-final-val">${fmtYen(task.newPrice)}</span>
+            </div>
           </div>
         </div>
         <div class="mgr-todo__calc-modes">
           <div class="mgr-todo__calc-modes-lbl">本日 の ご 意向 を 変える</div>
           <div class="mgr-todo__mode-group">
             ${[10, 15, 20].map(pct => {
-              const modeUplift = Math.max(500, Math.round(Math.min(task.gap * (pct/100), 3000) / 500) * 500);
+              const raw = task.gap * (pct/100);
+              const capped = raw >= 3000;
+              const modeUplift = Math.max(500, Math.round(Math.min(raw, 3000) / 500) * 500);
               const active = task.aggrPct === pct;
               return `<button class="mgr-todo__mode-btn ${active ? 'is-active' : ''}" type="button" data-aggr="${pct}">
-                <span class="mgr-todo__mode-btn-preview">+${fmtYen(modeUplift)}</span>
+                <span class="mgr-todo__mode-btn-preview">+${fmtYen(modeUplift)}${capped ? ' <em>(上限)</em>' : ''}</span>
                 <span class="mgr-todo__mode-btn-name">${modeLabel(pct)}</span>
                 <span class="mgr-todo__mode-btn-pct">${pct}%</span>
               </button>`;
