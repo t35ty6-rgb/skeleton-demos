@@ -2654,14 +2654,14 @@ function aa_weatherDrivers(weatherData, iso) {
   const drivers = [];
   const m = Number(iso.slice(5, 7));
   if (/^1[0-1]$|^20[0-1]$|^12[3-4]$/.test(wCode) || /晴/.test(wText)) {
-    if (m === 11 || m === 4) drivers.push({ kind: 'weather', label: `晴天 予報 (紅葉/桜 期)`, impact: 5, source: '気象庁' });
-    else if (m === 8) drivers.push({ kind: 'weather', label: `晴天 予報 (星空 / 花火 期)`, impact: 3, source: '気象庁' });
+    if (m === 11 || m === 4) drivers.push({ kind: 'weather', label: `晴天 予報 (紅葉/桜 期)`, impact: 5, source: '気象庁', why: '晴天 の 紅葉/桜 期 は 屋外 観光 客 が 集中、 前泊 需要 +5%' });
+    else if (m === 8) drivers.push({ kind: 'weather', label: `晴天 予報 (星空 / 花火 期)`, impact: 3, source: '気象庁', why: '晴天 の 8月 は 星空 撮影 or 花火 見物 の 前泊 需要 +3%' });
   }
   if (/^40|^30/.test(wCode) || /雪/.test(wText)) {
-    if (m === 12 || m === 1 || m === 2) drivers.push({ kind: 'weather', label: `雪 予報 (スキー 期)`, impact: 8, source: '気象庁' });
+    if (m === 12 || m === 1 || m === 2) drivers.push({ kind: 'weather', label: `雪 予報 (スキー 期)`, impact: 8, source: '気象庁', why: '雪 予報 の 冬 期 は スキー ジャム 客 が 大野 経由 で 集中、 +8%' });
   }
   if (/雨/.test(wText) && /^30|^20/.test(wCode)) {
-    drivers.push({ kind: 'weather', label: `雨 予報 (屋外 系 需要 減)`, impact: -5, source: '気象庁' });
+    drivers.push({ kind: 'weather', label: `雨 予報 (屋外 系 需要 減)`, impact: -5, source: '気象庁', why: '雨 予報 で 屋外 観光 が 中止 の 客 が 減少、 -5% の 押し下げ' });
   }
   return drivers;
 }
@@ -2684,39 +2684,45 @@ async function aa_detectDemandDrivers(iso) {
   const day = d.getDate();
 
   // 曜日 driver
-  if (dow === 5) drivers.push({ kind: 'dow', label: '金曜 (週末 前 泊)', impact: 5, source: '曜日' });
-  else if (dow === 6) drivers.push({ kind: 'dow', label: '土曜 (週末 需要)', impact: 12, source: '曜日' });
-  else if (dow === 0) drivers.push({ kind: 'dow', label: '日曜 (連休 中日 or 帰り)', impact: 3, source: '曜日' });
+  if (dow === 5) drivers.push({ kind: 'dow', label: '金曜 (週末 前 泊)', impact: 5, source: '曜日', why: '金曜 は 週末 前 泊 の 需要 が 集中、 過去 データ で 平均 +5% 高い' });
+  else if (dow === 6) drivers.push({ kind: 'dow', label: '土曜 (週末 需要)', impact: 12, source: '曜日', why: '土曜 は 週末 需要 の ピーク、 hotel 業界 で 通年 +10-15% 高値 で 取引' });
+  else if (dow === 0) drivers.push({ kind: 'dow', label: '日曜 (連休 中日 or 帰り)', impact: 3, source: '曜日', why: '日曜 は 連休 中日 か 帰り 客 が 中心、 平均 +3% の 弱 押し上げ' });
 
   // 祝日 / 3連休
-  if (aa_isHoliday(iso)) drivers.push({ kind: 'holiday', label: '祝日', impact: 10, source: '内閣府 seed' });
-  if (aa_isLongWeekend(iso)) drivers.push({ kind: 'longwknd', label: '3連休 中', impact: 15, source: '祝日 + 曜日 算出' });
+  if (aa_isHoliday(iso)) drivers.push({ kind: 'holiday', label: '祝日', impact: 10, source: '内閣府 seed', why: '祝日 は 平日 と 比べて 通年 で +10% 前後 上ぶれ、 前泊 需要 も 発生' });
+  if (aa_isLongWeekend(iso)) drivers.push({ kind: 'longwknd', label: '3連休 中', impact: 15, source: '祝日 + 曜日 算出', why: '3連休 は 遠方 客 の 予約 が 集中、 直前 では 満室 化 も 珍しくない、 通常 +15% 前後' });
 
   // 定型 イベント
   for (const ev of AA_RECURRENT_EVENTS) {
     if (ev.month === m && day >= ev.dayFrom && day <= ev.dayTo) {
-      drivers.push({ kind: 'event', label: ev.name, impact: ev.impact, source: `大野 定型 (半径 ${ev.radiusKm}km)` });
+      drivers.push({
+        kind: 'event',
+        label: ev.name,
+        impact: ev.impact,
+        source: `大野 定型 (半径 ${ev.radiusKm}km)`,
+        why: `${ev.name} 期間 中 は 半径 ${ev.radiusKm}km の 需要 が 集中、 客 は 徒歩/車 圏内 の 宿 を 選ぶ`,
+      });
     }
   }
 
   // owner 手入力 カスタム イベント
   for (const ev of aa_customEvents()) {
     if (ev.date === iso || (ev.dateFrom && ev.dateTo && iso >= ev.dateFrom && iso <= ev.dateTo)) {
-      drivers.push({ kind: 'custom', label: ev.name, impact: Number(ev.impact) || 10, source: 'owner 入力' });
+      drivers.push({ kind: 'custom', label: ev.name, impact: Number(ev.impact) || 10, source: 'owner 入力', why: 'owner が 手 入力 で 追加 した カスタム 要因' });
     }
   }
 
   // お盆 特別 期
   if (m === 8 && day >= 10 && day <= 16) {
-    drivers.push({ kind: 'obon', label: 'お盆 期間', impact: 20, source: '固定 期間' });
+    drivers.push({ kind: 'obon', label: 'お盆 期間', impact: 20, source: '固定 期間', why: 'お盆 は 帰省 + 観光 の 二重 需要 で 通年 最 大 期 の 一つ、 +20% 前後' });
   }
   // 年末年始
   if ((m === 12 && day >= 29) || (m === 1 && day <= 3)) {
-    drivers.push({ kind: 'newyear', label: '年末年始 (帰省 / 初詣)', impact: 22, source: '固定 期間' });
+    drivers.push({ kind: 'newyear', label: '年末年始 (帰省 / 初詣)', impact: 22, source: '固定 期間', why: '年末年始 は 帰省 + 初詣 客 の 集中 で 通年 最 高 値、 +22% 前後' });
   }
   // GW
   if (m === 5 && day >= 1 && day <= 6) {
-    drivers.push({ kind: 'gw', label: 'ゴールデンウィーク', impact: 20, source: '固定 期間' });
+    drivers.push({ kind: 'gw', label: 'ゴールデンウィーク', impact: 20, source: '固定 期間', why: 'ゴールデンウィーク は 家族 旅行 の ピーク、 早期 予約 が 集中 して +20% 前後' });
   }
 
   // 気象 driver (非同期)
@@ -2841,15 +2847,20 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
     return '●';
   };
   const severityOf = (imp) => imp >= 15 ? 'is-hot' : imp >= 5 ? 'is-warm' : imp > 0 ? 'is-mild' : 'is-neg';
-  const driverCards = driversRes.drivers.map(d => {
+  // impact 大 順 で 並び替え、 top 1 に ★ 最大 要因 badge
+  const sortedDrivers = driversRes.drivers.slice().sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
+  const driverCards = sortedDrivers.map((d, idx) => {
     const sign = d.impact >= 0 ? '+' : '';
-    return `<div class="mgr-todo__wcard ${severityOf(d.impact)}" title="${escapeHtml(d.source)}">
-      <div class="mgr-todo__wcard-icon" aria-hidden="true">${iconOf(d)}</div>
-      <div class="mgr-todo__wcard-body">
-        <div class="mgr-todo__wcard-lbl">${escapeHtml(d.label)}</div>
-        <div class="mgr-todo__wcard-src">${escapeHtml(d.source)}</div>
+    const isTop = idx === 0 && d.impact > 0;
+    return `<div class="mgr-todo__wcard ${severityOf(d.impact)}${isTop ? ' is-top' : ''}" title="${escapeHtml(d.source)}">
+      ${isTop ? '<div class="mgr-todo__wcard-badge">★ 最大 要因</div>' : ''}
+      <div class="mgr-todo__wcard-head">
+        <div class="mgr-todo__wcard-icon" aria-hidden="true">${iconOf(d)}</div>
+        <div class="mgr-todo__wcard-impact">${sign}${d.impact}<span>%</span></div>
       </div>
-      <div class="mgr-todo__wcard-impact">${sign}${d.impact}<span>%</span></div>
+      <div class="mgr-todo__wcard-lbl">${escapeHtml(d.label)}</div>
+      <div class="mgr-todo__wcard-src">${escapeHtml(d.source)}</div>
+      ${d.why ? `<div class="mgr-todo__wcard-why">${escapeHtml(d.why)}</div>` : ''}
     </div>`;
   }).join('');
   // meter fill 位置 (0-40% を 満 tank と 想定、 40 超 は cap)
@@ -2885,7 +2896,10 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
             : `<button class="mgr-todo__why-apply" type="button" data-aggr="${rec.pct}">お薦め に 従う →</button>`}
         </div>
       </div>
-      <div class="mgr-todo__why-cards-lbl">押し上げ 要因 の 内訳</div>
+      <div class="mgr-todo__why-cards-head">
+        <div class="mgr-todo__why-cards-lbl">押し上げ 要因 の 内訳</div>
+        <div class="mgr-todo__why-cards-count">${driversRes.drivers.length} 件</div>
+      </div>
       <div class="mgr-todo__why-cards">${driverCards}</div>
     </div>
   ` : '';
@@ -2909,17 +2923,58 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
       </div>
       ${driversRowHtml}
       <div class="mgr-todo__calc-inline">
-        <div class="mgr-todo__calc-inline-title">わたくし の ご 提案 の 根拠 (計算 詳細)</div>
-        <ol class="mgr-todo__calc-steps">
-          <li>相場 中央値 <b>${fmtYen(task.marketMed)}</b> と 荒島 の 単価 <b>${fmtYen(task.ownPrice)}</b> の 差 = <b>${fmtYen(task.gap)}</b> (機会 損失)</li>
-          <li>差 の <b>${task.aggrPct}%</b> (${modeLabel(task.aggrPct)} の ご 意向) を 上げ幅 候補 に = ${fmtYen(Math.round(task.rawUplift))}</li>
-          <li>500円 単位 で 丸め → <b>+${fmtYen(task.uplift)}</b> (上限 ¥3,000 / 下限 ¥500)</li>
-        </ol>
+        <div class="mgr-todo__calc-head">
+          <div class="mgr-todo__calc-eyebrow">わたくし の ご 提案 根拠</div>
+          <div class="mgr-todo__calc-title">計算 詳細</div>
+        </div>
+        <div class="mgr-todo__calcbox">
+          <div class="mgr-todo__calc-row">
+            <div class="mgr-todo__calc-cell">
+              <div class="mgr-todo__calc-cell-lbl">相場 中央値</div>
+              <div class="mgr-todo__calc-cell-val">${fmtYen(task.marketMed)}</div>
+            </div>
+            <div class="mgr-todo__calc-op">−</div>
+            <div class="mgr-todo__calc-cell">
+              <div class="mgr-todo__calc-cell-lbl">荒島 単価</div>
+              <div class="mgr-todo__calc-cell-val">${fmtYen(task.ownPrice)}</div>
+            </div>
+            <div class="mgr-todo__calc-op">=</div>
+            <div class="mgr-todo__calc-cell is-gap">
+              <div class="mgr-todo__calc-cell-lbl">gap (機会 損失)</div>
+              <div class="mgr-todo__calc-cell-val">${fmtYen(task.gap)}</div>
+            </div>
+          </div>
+          <div class="mgr-todo__calc-arrow">↓ 差 の ${task.aggrPct}% を 上げ幅 に (${modeLabel(task.aggrPct)} ご 意向)</div>
+          <div class="mgr-todo__calc-row">
+            <div class="mgr-todo__calc-cell">
+              <div class="mgr-todo__calc-cell-lbl">gap × ${task.aggrPct}%</div>
+              <div class="mgr-todo__calc-cell-val">${fmtYen(Math.round(task.rawUplift))}</div>
+            </div>
+            <div class="mgr-todo__calc-op">→</div>
+            <div class="mgr-todo__calc-cell is-final">
+              <div class="mgr-todo__calc-cell-lbl">上げ幅 (500円 丸め)</div>
+              <div class="mgr-todo__calc-cell-val">+${fmtYen(task.uplift)}</div>
+            </div>
+          </div>
+          <div class="mgr-todo__calc-final">
+            <span class="mgr-todo__calc-final-lbl">最終 提案 単価</span>
+            <span class="mgr-todo__calc-final-eq">${fmtYen(task.ownPrice)} + ${fmtYen(task.uplift)} =</span>
+            <span class="mgr-todo__calc-final-val">${fmtYen(task.newPrice)}</span>
+          </div>
+        </div>
         <div class="mgr-todo__calc-modes">
-          <span class="mgr-todo__calc-modes-lbl">本日 の ご 意向 を 変える:</span>
-          <button class="mgr-todo__mode-btn ${task.aggrPct === 10 ? 'is-active' : ''}" type="button" data-aggr="10">控えめ 10%</button>
-          <button class="mgr-todo__mode-btn ${task.aggrPct === 15 ? 'is-active' : ''}" type="button" data-aggr="15">ふつう 15%</button>
-          <button class="mgr-todo__mode-btn ${task.aggrPct === 20 ? 'is-active' : ''}" type="button" data-aggr="20">攻める 20%</button>
+          <div class="mgr-todo__calc-modes-lbl">本日 の ご 意向 を 変える</div>
+          <div class="mgr-todo__mode-group">
+            ${[10, 15, 20].map(pct => {
+              const modeUplift = Math.max(500, Math.round(Math.min(task.gap * (pct/100), 3000) / 500) * 500);
+              const active = task.aggrPct === pct;
+              return `<button class="mgr-todo__mode-btn ${active ? 'is-active' : ''}" type="button" data-aggr="${pct}">
+                <span class="mgr-todo__mode-btn-preview">+${fmtYen(modeUplift)}</span>
+                <span class="mgr-todo__mode-btn-name">${modeLabel(pct)}</span>
+                <span class="mgr-todo__mode-btn-pct">${pct}%</span>
+              </button>`;
+            }).join('')}
+          </div>
         </div>
       </div>
       <details class="mgr-todo__more">
