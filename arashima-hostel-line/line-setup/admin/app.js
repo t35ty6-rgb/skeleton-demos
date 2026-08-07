@@ -3286,7 +3286,7 @@ function renderElasticity(data, t, todayMed, ownPrice) {
             <div class="mgr-elast__case-rev-lbl">1週 期待 収益</div>
             <div class="mgr-elast__case-rev-val">${fmtYen(it.revenue)}</div>
           </div>
-          ${it.revenue === maxRev ? '<div class="mgr-elast__case-max">💰 最大 収益 案</div>' : ''}
+          ${it.revenue === maxRev ? '<div class="mgr-elast__case-max"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"><path d="M12 3v18M8 7h6a3 3 0 0 1 0 6H8h8a3 3 0 0 1 0 6H6"/></svg>最大 収益 案</div>' : ''}
         </div>
       `).join('')}
     </div>
