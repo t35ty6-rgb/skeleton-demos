@@ -2401,7 +2401,7 @@ function renderTracker(data, t, targetDate, todayMed, ownPrice) {
         <div class="mgr-tracker__amount">${eff.total > 0 ? '+' : ''}${fmtYen(Math.round(eff.total / 1000) * 1000)}</div>
         <div class="mgr-tracker__sub">
           ${log.length === 0
-            ? '施策 実行 待ち — Todo の 「Booking Extranet を 開いて 変更 する」 を 押すと 累計 開始'
+            ? '施策 実行 待ち — 「承知 いたしました」 ボタン を 押すと 累計 開始'
             : `${daysSince}日 経過 · 実行 ${eff.count}件 (直近30日: ${eff.count30}件)`}
         </div>
       </div>
@@ -2532,7 +2532,7 @@ document.addEventListener('click', (e) => {
     generateMonthlyReport(getViewData() || priceScanCache, t);
   } else if (action === 'log') {
     const log = loadActionLog();
-    if (!log.length) { alert('まだ 施策 実行 log なし。 Todo card の 「Booking Extranet を 開いて 変更 する」 を 押すと 記録 開始。'); return; }
+    if (!log.length) { alert('まだ 施策 実行 log なし。 「承知 いたしました」 ボタン を 押すと 記録 開始。'); return; }
     const lines = log.slice(-20).reverse().map(e => `${new Date(e.ts).toLocaleString('ja-JP')} · ${e.type || '単価変更'} · ${e.date || '—'} · ${e.uplift ? (e.uplift >= 0 ? '+' : '') + '¥' + e.uplift.toLocaleString() : '—'}`);
     alert(`施策 履歴 (直近${lines.length}件、 全${log.length}件):\n\n${lines.join('\n')}`);
   }
@@ -2796,12 +2796,12 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
   const greet = hr < 5 ? '夜分 遅く に 恐れ入ります' : hr < 11 ? 'おはようございます' : hr < 17 ? 'こんにちは' : hr < 23 ? 'こんばんは' : '夜分 遅く に 恐れ入ります';
   if (!task) {
     wrap.innerHTML = `
-      <div class="mgr-todo__greet">${escapeHtml(greet)}。 本日 ${escapeHtml(todayLbl)} の ご 案内 で ございます。</div>
+      <div class="mgr-todo__greet">${escapeHtml(greet)}、 お客様。 本日 ${escapeHtml(todayLbl)} の ご 案内 で ございます。</div>
       <div class="mgr-todo__body">
         <div class="mgr-todo__hero">
           <div class="mgr-todo__hero-lbl">本日 の ご 提案</div>
           <div class="mgr-todo__hero-line-plain">本日 は 特別 に お薦め の 変更 は ございません。</div>
-          <div class="mgr-todo__note">荒島 の 単価 は 直近 7日 で 相場 との 差 が 小さい (¥1,000 未満) 状況 で ござい ます。 現状 の 単価 を 維持 なさる の が よろしい か と 存じます。 気 になる 日 が ございましたら 下 の 「詳細 データ を 見る」 より お 調べ ください。</div>
+          <div class="mgr-todo__note">荒島 の 単価 は 直近 7日 で 相場 との 差 が 小さい (¥1,000 未満) 状況 で ございます。 現状 の 単価 を 維持 なさる の が よろしい か と 存じます。 気 に なる 日 が ございましたら 下 の 「詳細 データ を 見る」 より お 調べ ください。</div>
         </div>
       </div>
     `;
@@ -2859,7 +2859,7 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
         <div class="mgr-todo__calc-inline-title">わたくし の ご 提案 の 根拠 (計算 詳細)</div>
         <ol class="mgr-todo__calc-steps">
           <li>相場 中央値 <b>${fmtYen(task.marketMed)}</b> と 荒島 の 単価 <b>${fmtYen(task.ownPrice)}</b> の 差 = <b>${fmtYen(task.gap)}</b> (機会 損失)</li>
-          <li>差 の <b>${task.aggrPct}%</b> (${modeLabel(task.aggrPct)} ご 意向) を 上げ幅 候補 に = ${fmtYen(Math.round(task.rawUplift))}</li>
+          <li>差 の <b>${task.aggrPct}%</b> (${modeLabel(task.aggrPct)} の ご 意向) を 上げ幅 候補 に = ${fmtYen(Math.round(task.rawUplift))}</li>
           <li>500円 単位 で 丸め → <b>+${fmtYen(task.uplift)}</b> (上限 ¥3,000 / 下限 ¥500)</li>
         </ol>
         <div class="mgr-todo__calc-modes">
@@ -2879,7 +2879,7 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
             <button class="mgr-todo__alt-btn" type="button" data-todo-alt="large" data-uplift="3000">+¥3,000 の 攻め 案</button>
           </div>
           <div class="mgr-todo__more-why">
-            <b>段階 的 に お上げ に なる 理由 で ございます</b>: 一気 に 相場 の 額 まで お上げ に なる と 「急 に 高く なった」 印象 で 予約 離れ の 恐れ が ございます。 3日 の 反応 (予約 の 動き) を 見な がら 次 の 値上げ を ご 判断 いた だく の が hotel 業界 の 定石 で ございます (Duetto / IDeaS の 段階 pricing、 Cross 2015 準拠)。
+            <b>段階 的 に お上げ に なる 理由 で ございます</b>: 一気 に 相場 の 額 まで お上げ に なる と 「急 に 高く なった」 印象 で 予約 離れ の 恐れ が ございます。 3日 の 反応 (予約 の 動き) を 見ながら 次 の 値上げ を ご 判断 いただく の が hotel 業界 の 定石 で ございます (Duetto / IDeaS の 段階 pricing、 Cross 2015 準拠)。
           </div>
         </div>
       </details>
@@ -3023,7 +3023,7 @@ function renderHero(data, t, targetDate, todayMed, ownPrice) {
       rakBtn.hidden = true;
       rakSetup.textContent = '楽天 施設管理 URL を 登録';
       rakSetup.classList.remove('is-registered');
-      rakNote.innerHTML = `※ 楽天 施設様 管理画面 は tenant 個別 発行 URL。 上 「楽天 施設管理 URL を 登録」 から 貴社 の ログイン URL を 1回 保存 → 以降 1 click で 開ける。`;
+      rakNote.innerHTML = `※ 楽天 施設管理画面 は tenant 個別 発行 URL。 上 「楽天 施設管理 URL を 登録」 から 貴社 の ログイン URL を 1回 保存 → 以降 1 click で 開ける。`;
     }
   }
 }
