@@ -2818,22 +2818,68 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
     driversRes = await aa_detectDemandDrivers(task.date);
   } catch (_) {}
   const rec = aa_recommendedAggr(driversRes.totalImpact);
-  const tagChips = driversRes.drivers.map(d => {
-    const sign = d.impact >= 0 ? '+' : '';
-    const cls = d.impact >= 0 ? 'is-pos' : 'is-neg';
-    return `<span class="mgr-todo__tag ${cls}" title="${escapeHtml(d.source)}">${escapeHtml(d.label)} <b>${sign}${d.impact}%</b></span>`;
-  }).join('');
   const modeLabel = (p) => p <= 10 ? '控えめ' : p >= 20 ? '攻める' : 'ふつう';
+  // driver kind → icon / severity / 分類
+  const iconOf = (d) => {
+    const k = d.kind || '';
+    if (k === 'weather') {
+      if (/雪/.test(d.label)) return '❄';
+      if (/雨/.test(d.label)) return '☂';
+      return '☀';
+    }
+    if (k === 'holiday') return '🎌';
+    if (k === 'longwknd' || k === 'obon' || k === 'newyear' || k === 'gw') return '🏖';
+    if (k === 'event' || k === 'custom') return '🎉';
+    if (k === 'dow') return '📅';
+    return '●';
+  };
+  const severityOf = (imp) => imp >= 15 ? 'is-hot' : imp >= 5 ? 'is-warm' : imp > 0 ? 'is-mild' : 'is-neg';
+  const driverCards = driversRes.drivers.map(d => {
+    const sign = d.impact >= 0 ? '+' : '';
+    return `<div class="mgr-todo__wcard ${severityOf(d.impact)}" title="${escapeHtml(d.source)}">
+      <div class="mgr-todo__wcard-icon" aria-hidden="true">${iconOf(d)}</div>
+      <div class="mgr-todo__wcard-body">
+        <div class="mgr-todo__wcard-lbl">${escapeHtml(d.label)}</div>
+        <div class="mgr-todo__wcard-src">${escapeHtml(d.source)}</div>
+      </div>
+      <div class="mgr-todo__wcard-impact">${sign}${d.impact}<span>%</span></div>
+    </div>`;
+  }).join('');
+  // meter fill 位置 (0-40% を 満 tank と 想定、 40 超 は cap)
+  const meterPct = Math.max(0, Math.min(100, (driversRes.totalImpact / 40) * 100));
+  const isMatch = task.aggrPct === rec.pct;
   const driversRowHtml = driversRes.drivers.length > 0 ? `
-    <div class="mgr-todo__concierge-why" role="group" aria-label="お薦め の 根拠">
-      <div class="mgr-todo__concierge-why-lead">こちら を お薦め する 根拠 は 以下 の ${driversRes.drivers.length}点 で ございます。</div>
-      <div class="mgr-todo__tag-row">
-        ${tagChips}
+    <div class="mgr-todo__why-v2" role="group" aria-label="本日 の 需要 判定">
+      <div class="mgr-todo__why-hero">
+        <div class="mgr-todo__why-hero-left">
+          <div class="mgr-todo__why-hero-lbl">本日 の 需要 判定</div>
+          <div class="mgr-todo__why-hero-big">
+            ${driversRes.totalImpact >= 0 ? '+' : ''}${driversRes.totalImpact}<span>%</span>
+          </div>
+          <div class="mgr-todo__why-hero-sub">${driversRes.drivers.length} 要素 の 合計 押し上げ</div>
+        </div>
+        <div class="mgr-todo__why-meter">
+          <div class="mgr-todo__why-meter-track">
+            <div class="mgr-todo__why-meter-fill" style="width: ${meterPct.toFixed(0)}%"></div>
+            <div class="mgr-todo__why-meter-tick" style="left: 20%"></div>
+            <div class="mgr-todo__why-meter-tick" style="left: 50%"></div>
+          </div>
+          <div class="mgr-todo__why-meter-labels">
+            <span class="${rec.pct === 10 ? 'is-current' : ''}">控えめ<br><em>10%</em></span>
+            <span class="${rec.pct === 15 ? 'is-current' : ''}">ふつう<br><em>15%</em></span>
+            <span class="${rec.pct === 20 ? 'is-current' : ''}">攻める<br><em>20%</em></span>
+          </div>
+        </div>
+        <div class="mgr-todo__why-rec">
+          <div class="mgr-todo__why-rec-lbl">お薦め</div>
+          <div class="mgr-todo__why-rec-val">${modeLabel(rec.pct)} <span>${rec.pct}%</span></div>
+          ${isMatch
+            ? `<div class="mgr-todo__why-match">✓ ご 選択 と 一致</div>`
+            : `<button class="mgr-todo__why-apply" type="button" data-aggr="${rec.pct}">お薦め に 従う →</button>`}
+        </div>
       </div>
-      <div class="mgr-todo__concierge-why-sum">
-        合計 <b>${driversRes.totalImpact >= 0 ? '+' : ''}${driversRes.totalImpact}%</b> の 需要 押し上げ 要因 が 揃って おり、 上げ幅 を <b>${modeLabel(rec.pct)} (${rec.pct}%)</b> に する ご 判断 を お薦め いたします。
-        ${task.aggrPct !== rec.pct ? `<button class="mgr-todo__tag-apply" type="button" data-aggr="${rec.pct}">お薦め に 従う</button>` : `<span class="mgr-todo__tag-match">✓ 現在 ご 選択 の 意向 と 一致</span>`}
-      </div>
+      <div class="mgr-todo__why-cards-lbl">押し上げ 要因 の 内訳</div>
+      <div class="mgr-todo__why-cards">${driverCards}</div>
     </div>
   ` : '';
 
