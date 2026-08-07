@@ -2829,7 +2829,14 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
     }
     if (k === 'holiday') return '🎌';
     if (k === 'longwknd' || k === 'obon' || k === 'newyear' || k === 'gw') return '🏖';
-    if (k === 'event' || k === 'custom') return '🎉';
+    if (k === 'event' || k === 'custom') {
+      if (/恐竜/.test(d.label)) return '🦕';
+      if (/花火/.test(d.label)) return '🎆';
+      if (/スキー/.test(d.label)) return '⛷';
+      if (/紅葉/.test(d.label)) return '🍁';
+      if (/桜/.test(d.label)) return '🌸';
+      return '🎉';
+    }
     if (k === 'dow') return '📅';
     return '●';
   };
