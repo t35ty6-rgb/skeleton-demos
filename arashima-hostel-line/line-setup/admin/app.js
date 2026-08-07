@@ -2805,91 +2805,76 @@ async function renderTodo(data, t, targetDate, todayMed, ownPrice) {
     ? `<a class="mgr-todo__cta mgr-todo__cta--sub" href="${escapeHtml(savedRakutenUrl)}" target="_blank" rel="noopener">楽天 施設管理 を 開く</a>`
     : `<button class="mgr-todo__cta mgr-todo__cta--ghost" type="button" data-todo-action="setup-rakuten">楽天 施設管理 URL を 登録</button>`;
 
-  // 需要 押し上げ 要因 自動 検出 (非同期、 気象庁 API + 静的 seed)
-  let driversHtml = '';
+  // 需要 押し上げ 要因 自動 検出 → tag chip 常時 表示 (accordion 撤廃、 owner「分かりづらい」対応)
   let driversRes = { drivers: [], totalImpact: 0 };
   try {
     driversRes = await aa_detectDemandDrivers(task.date);
   } catch (_) {}
-  if (driversRes.drivers.length > 0) {
-    const rec = aa_recommendedAggr(driversRes.totalImpact);
-    const impactColor = driversRes.totalImpact >= 20 ? '#EC4899' : driversRes.totalImpact >= 8 ? '#0071E3' : '#6E6E73';
-    const driverList = driversRes.drivers.map(d => {
-      const sign = d.impact >= 0 ? '+' : '';
-      const cls = d.impact >= 0 ? 'is-pos' : 'is-neg';
-      return `<li class="mgr-todo__driver-item"><span class="mgr-todo__driver-lbl">${escapeHtml(d.label)}</span><span class="mgr-todo__driver-src">${escapeHtml(d.source)}</span><span class="mgr-todo__driver-impact ${cls}">${sign}${d.impact}%</span></li>`;
-    }).join('');
-    driversHtml = `
-      <details class="mgr-todo__drivers"${wasDriversOpen ? ' open' : ''}>
-        <summary>
-          <span class="mgr-todo__drivers-title">今夜 の 需要 押し上げ 要因</span>
-          <span class="mgr-todo__drivers-count">${driversRes.drivers.length} 件 検出</span>
-          <span class="mgr-todo__drivers-impact" style="color: ${impactColor}">合計 ${driversRes.totalImpact >= 0 ? '+' : ''}${driversRes.totalImpact}%</span>
-        </summary>
-        <div class="mgr-todo__drivers-body">
-          <ul class="mgr-todo__driver-list">${driverList}</ul>
-          <div class="mgr-todo__drivers-rec">
-            <b>推奨 mode:</b> ${rec.label} (${rec.pct}%) — ${escapeHtml(rec.note)}
-            ${task.aggrPct !== rec.pct ? `<button class="mgr-todo__drivers-apply" type="button" data-aggr="${rec.pct}">推奨 に 切替 (${rec.label} ${rec.pct}%)</button>` : `<span class="mgr-todo__drivers-match">✓ 現在 の mode が 推奨 と 一致</span>`}
-          </div>
-          <div class="mgr-todo__drivers-note">
-            自動 検出 source: 曜日 / 内閣府 祝日 seed / 大野 定型 イベント (10件) / 気象庁 天気予報 API (3h cache) / owner カスタム 入力。
-            外部 API (為替 / SNS バズ / Booking Genius) は Phase 2 で 追加 予定。
-          </div>
-        </div>
-      </details>
-    `;
-  }
+  const rec = aa_recommendedAggr(driversRes.totalImpact);
+  const tagChips = driversRes.drivers.map(d => {
+    const sign = d.impact >= 0 ? '+' : '';
+    const cls = d.impact >= 0 ? 'is-pos' : 'is-neg';
+    return `<span class="mgr-todo__tag ${cls}" title="${escapeHtml(d.source)}">${escapeHtml(d.label)} <b>${sign}${d.impact}%</b></span>`;
+  }).join('');
+  const driversRowHtml = driversRes.drivers.length > 0 ? `
+    <div class="mgr-todo__tag-row" role="group" aria-label="今夜 の 需要 押し上げ 要因">
+      ${tagChips}
+      <span class="mgr-todo__tag-total">合計 ${driversRes.totalImpact >= 0 ? '+' : ''}${driversRes.totalImpact}% → 推奨 ${rec.label} ${rec.pct}%</span>
+      ${task.aggrPct !== rec.pct ? `<button class="mgr-todo__tag-apply" type="button" data-aggr="${rec.pct}">推奨 に 切替</button>` : `<span class="mgr-todo__tag-match">✓ 現在 一致</span>`}
+    </div>
+  ` : '';
+
+  const modeLabel = (p) => p <= 10 ? '慎重' : p >= 20 ? '積極' : '標準';
 
   wrap.innerHTML = `
     <div class="mgr-todo__eyebrow">今日 ${escapeHtml(todayLbl)} · やる こと は 1 つ だけ</div>
     <div class="mgr-todo__body">
-      <div class="mgr-todo__title">
-        <span class="mgr-todo__when">${escapeHtml(task.whenLbl)}</span> の 単価 を
-        <span class="mgr-todo__price-old">${fmtYen(task.ownPrice)}</span>
-        <span class="mgr-todo__arrow">→</span>
-        <span class="mgr-todo__price-new">${fmtYen(task.newPrice)}</span>
-        <span class="mgr-todo__uplift">(+${fmtYen(task.uplift)})</span>
+      <div class="mgr-todo__hero">
+        <div class="mgr-todo__hero-lbl">今日 やる こと</div>
+        <div class="mgr-todo__hero-line">
+          <span class="mgr-todo__when">${escapeHtml(task.whenLbl)}</span> の 単価 を
+          <span class="mgr-todo__price-old">${fmtYen(task.ownPrice)}</span>
+          <span class="mgr-todo__arrow">→</span>
+          <span class="mgr-todo__price-new">${fmtYen(task.newPrice)}</span>
+          <span class="mgr-todo__uplift">(+${fmtYen(task.uplift)})</span>
+        </div>
+        <a class="mgr-todo__hero-cta" href="https://admin.booking.com/" target="_blank" rel="noopener">
+          Booking Extranet を 開いて ${escapeHtml(task.whenLbl)} の 単価 を ${fmtYen(task.newPrice)} に 変更
+        </a>
       </div>
-      <div class="mgr-todo__reason">
-        この日 の 相場 中央値 は <b>${fmtYen(task.marketMed)}</b>、 荒島 は 相場 の <b>${task.marketPct}%</b>。
-        一気 に 相場 まで 追い付く のは 予約 が 減る 恐れ、 まず <b>+${fmtYen(task.uplift)}</b> だけ 上げて <b>3日 反応 を 見る</b>。
+      ${driversRowHtml}
+      <div class="mgr-todo__calc-inline">
+        <div class="mgr-todo__calc-inline-title">なぜ +${fmtYen(task.uplift)} か</div>
+        <ol class="mgr-todo__calc-steps">
+          <li>相場 中央値 <b>${fmtYen(task.marketMed)}</b> − 荒島 単価 <b>${fmtYen(task.ownPrice)}</b> = gap <b>${fmtYen(task.gap)}</b></li>
+          <li>gap × <b>${task.aggrPct}%</b> (${modeLabel(task.aggrPct)} mode) = ${fmtYen(Math.round(task.rawUplift))}</li>
+          <li>500円 単位 で 丸め → <b>+${fmtYen(task.uplift)}</b> (上限 ¥3,000 / 下限 ¥500)</li>
+        </ol>
+        <div class="mgr-todo__calc-modes">
+          <span class="mgr-todo__calc-modes-lbl">攻撃度:</span>
+          <button class="mgr-todo__mode-btn ${task.aggrPct === 10 ? 'is-active' : ''}" type="button" data-aggr="10">慎重 10%</button>
+          <button class="mgr-todo__mode-btn ${task.aggrPct === 15 ? 'is-active' : ''}" type="button" data-aggr="15">標準 15%</button>
+          <button class="mgr-todo__mode-btn ${task.aggrPct === 20 ? 'is-active' : ''}" type="button" data-aggr="20">積極 20%</button>
+        </div>
       </div>
-      ${driversHtml}
-      <details class="mgr-todo__calc">
-        <summary>なぜ +${fmtYen(task.uplift)} なのか (計算 根拠 を 見る)</summary>
-        <div class="mgr-todo__calc-body">
-          <ol class="mgr-todo__calc-steps">
-            <li><b>gap (機会 損失) を 出す</b> — 相場 中央値 ${fmtYen(task.marketMed)} − 荒島 単価 ${fmtYen(task.ownPrice)} = <b>${fmtYen(task.gap)}</b></li>
-            <li><b>gap の ${task.aggrPct}% を 上げ幅 候補 に</b> — ${fmtYen(task.gap)} × ${task.aggrPct}% = ${fmtYen(Math.round(task.rawUplift))} <span class="mgr-todo__calc-hint">(攻撃度 ${task.aggrPct}% = ${task.aggrPct <= 10 ? '慎重' : task.aggrPct >= 20 ? '積極' : '標準'} mode)</span></li>
-            <li><b>500円 単位 で 丸める</b> — ${fmtYen(Math.round(task.rawUplift))} → <b>+${fmtYen(task.uplift)}</b> (上限 ¥3,000 / 下限 ¥500)</li>
-          </ol>
-          <div class="mgr-todo__calc-why">
-            <b>なぜ gap の 15% ?</b> — 一気 に 相場 まで 追い付ける 額 (gap 100%) を 上げる と、 客 が 「急 に 高く なった」 と 感じて 予約 離れ が 起きやすい。
-            段階 的 に 15% ずつ 埋めて 3日 の 反応 (予約 落ち込み の 有無) を 見ながら 次 の 値上げ を 判断 する のが hotel 業界 の 定石 (Duetto / IDeaS の 段階 pricing、 revenue management 教科書 の Cross 2015 準拠)。
+      <details class="mgr-todo__more">
+        <summary>他 の 選択 肢 を 見る (楽天 で 変更 / 上げ 幅 を 自分 で 決める / 現状 維持)</summary>
+        <div class="mgr-todo__more-body">
+          ${rakutenBtn}
+          <div class="mgr-todo__alt">
+            <button class="mgr-todo__alt-btn" type="button" data-todo-alt="none">今日 は 現状 維持 で OK</button>
+            <button class="mgr-todo__alt-btn" type="button" data-todo-alt="small" data-uplift="500">+¥500 だけ (慎重)</button>
+            <button class="mgr-todo__alt-btn" type="button" data-todo-alt="large" data-uplift="3000">+¥3,000 (強気)</button>
           </div>
-          <div class="mgr-todo__calc-modes">
-            <span class="mgr-todo__calc-modes-lbl">攻撃度 を 変える:</span>
-            <button class="mgr-todo__mode-btn ${task.aggrPct === 10 ? 'is-active' : ''}" type="button" data-aggr="10">慎重 10%</button>
-            <button class="mgr-todo__mode-btn ${task.aggrPct === 15 ? 'is-active' : ''}" type="button" data-aggr="15">標準 15%</button>
-            <button class="mgr-todo__mode-btn ${task.aggrPct === 20 ? 'is-active' : ''}" type="button" data-aggr="20">積極 20%</button>
+          <div class="mgr-todo__more-why">
+            <b>なぜ 段階 的 に 上げる か</b>: 一気 に 相場 まで 追い付ける 額 を 上げる と 「急 に 高く なった」 感 で 予約 離れ の リスク。 3日 の 反応 (予約 落ち込み の 有無) を 見ながら 次 の 値上げ を 判断 する のが hotel 業界 の 定石 (Duetto / IDeaS の 段階 pricing、 Cross 2015 準拠)。
           </div>
         </div>
       </details>
-      <div class="mgr-todo__cta-row">
-        <a class="mgr-todo__cta mgr-todo__cta--primary" href="https://admin.booking.com/" target="_blank" rel="noopener">Booking Extranet を 開いて 変更 する</a>
-        ${rakutenBtn}
-      </div>
-      <div class="mgr-todo__alt">
-        <span class="mgr-todo__alt-lbl">この 推奨 が 気 に 入らない?</span>
-        <button class="mgr-todo__alt-btn" type="button" data-todo-alt="none">現状 維持 で OK</button>
-        <button class="mgr-todo__alt-btn" type="button" data-todo-alt="small" data-uplift="500">+¥500 だけ (慎重)</button>
-        <button class="mgr-todo__alt-btn" type="button" data-todo-alt="large" data-uplift="3000">+¥3,000 (強気)</button>
-      </div>
     </div>
   `;
-  if (wasCalcOpen) wrap.querySelector('.mgr-todo__calc')?.setAttribute('open', '');
-  if (wasDriversOpen) wrap.querySelector('.mgr-todo__drivers')?.setAttribute('open', '');
+  if (wasCalcOpen) wrap.querySelector('.mgr-todo__more')?.setAttribute('open', '');
+  if (wasDriversOpen) wrap.querySelector('.mgr-todo__more')?.setAttribute('open', '');
 }
 
 // Todo 内 の 楽天 URL 登録 button, alt button, 攻撃度 mode 切替 の click 処理
