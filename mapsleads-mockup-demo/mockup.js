@@ -1,4 +1,4 @@
-// MapsLeads サイト案 プレビュー (v0.8.0 · 8 style + 多section HP + 実写真)
+// MapsLeads サイト案 プレビュー (v0.9.0 · 8 style + 多section + 実写真 + 25社 skill hero copy)
 // popup 側 から chrome.storage.session に "ml_mockup_rows" で 店舗配列 が入る
 // 左 sidebar で 店 選択 → 右 preview で 1ページ サイト案 生成
 
@@ -282,22 +282,97 @@ function servicesForCategory(cat) {
 }
 
 // ==== 業種 別 の hero コピー ====
+// SSOT: memory `reference_hp_catchcopy_business_types.md` (25社 実 HP 調査、8 業種 archetype 別 差分表)
+// 3 archetype: 高級·老舗 (h1短·philosophy sub) / チェーン·大手 (h1中·structured sub) / ビジュアル系 (h1最小·画像dominant)
 function heroCopyForCategory(cat, area) {
   const areaTxt = area || '地域';
-  if (!cat) return { eyebrow: 'LOCAL BUSINESS', h1line: `${areaTxt}で、<em>あなたに</em>いちばん近い お店。`, sub: 'アクセス · 営業時間 · メニュー が 一目でわかる。 予約 は お電話 で 承ります。' };
-  // 順序 注意: ネイル/まつげ を 美容/サロン より 先 に (「ネイルサロン」 が HAIR SALON に 誤 hit する 防止)
-  if (/ネイル/.test(cat)) return { eyebrow: 'NAIL SALON', h1line: `${areaTxt}で、<em>指先まで</em>整える 時間。`, sub: 'デザイン 相談 から 定期 ケア まで。 忙しい 日常 の 中 に、 自分 を いたわる 60 分 を。' };
-  if (/まつげ|まつ毛|アイ/.test(cat)) return { eyebrow: 'EYELASH SALON', h1line: `${areaTxt}で、<em>自然に映える</em>目元 に。`, sub: 'あなた の 骨格 と 目 の 形 に 合わせて、 一本 一本 デザイン する まつげ 施術。' };
-  if (/美容|サロン|ヘア/.test(cat)) return { eyebrow: 'HAIR SALON', h1line: `${areaTxt}で、<em>あなただけの</em>髪型 を。`, sub: 'マンツーマン カウンセリング と 骨格補正 カットで、 毎日 の セット が 楽 に なる 髪型 を ご提案 します。' };
-  if (/エステ|マッサージ|リラク/.test(cat)) return { eyebrow: 'RELAXATION', h1line: `${areaTxt}で、<em>力を抜ける</em>90 分。`, sub: '国家資格 保持 の セラピスト が、 その 日 の 疲れ に 合わせて 施術 を 組み立てます。' };
-  if (/カフェ|喫茶|cafe/i.test(cat)) return { eyebrow: 'CAFÉ', h1line: `${areaTxt}で、<em>あの一杯</em>に会いに。`, sub: '自家焙煎 の コーヒー と、 毎日 手作り の スイーツ · ランチ を お楽しみ ください。' };
-  if (/寿司|鮨|割烹|料亭|懐石|和食|日本料理/.test(cat)) return { eyebrow: 'JAPANESE CUISINE', h1line: `${areaTxt}で、<em>その日の海</em>と 向き合う。`, sub: '毎朝 市場 に 通う 大将 が、 その 日 に しか 出せない 一皿 を お出し します。 静かな 時間 の 中 で どうぞ。' };
-  if (/ホステル|旅館|民宿|民泊|宿/.test(cat)) return { eyebrow: 'STAY', h1line: `${areaTxt}に、<em>もう一つの</em>家 を。`, sub: '個室 と ドミトリー、 共用 ラウンジ と キッチン。 その 街 に 暮らす ように 過ごせる 宿 です。' };
-  if (/ジム|フィットネス|パーソナル|ヨガ|ピラティス/.test(cat)) return { eyebrow: 'PERSONAL TRAINING', h1line: `${areaTxt}で、<em>限界 を</em>更新 する。`, sub: '目標 と 現状 を 一緒 に 見て、 60 分 の 型 を 作る。 マンツーマン だから、 続く。' };
-  if (/イタリアン|フレンチ|ビストロ|レストラン/.test(cat)) return { eyebrow: 'RESTAURANT', h1line: `${areaTxt}で、<em>特別 な</em>夜 に。`, sub: '季節 の 食材 と ソムリエ が 選ぶ ペアリング。 大切 な 人 と、 記念 の 一日 を。' };
-  if (/ラーメン|そば|うどん|中華|食堂/.test(cat)) return { eyebrow: 'RESTAURANT', h1line: `${areaTxt}で、<em>毎日 通える</em>味 を。`, sub: 'スープ から 麺 まで 自家製。 昔ながら の 味 を、 今日 の 空腹 に。' };
-  if (/歯科|デンタル/.test(cat)) return { eyebrow: 'DENTAL CLINIC', h1line: `${areaTxt}で、<em>痛くない</em>歯科 を。`, sub: '予防 中心 の 診療 方針。 説明 と 相談 に 時間 を かけ、 納得 の 治療 を 進めます。' };
-  return { eyebrow: cat.toUpperCase(), h1line: `${areaTxt}の<em>${cat}</em>。`, sub: '地域 の お客様 に 長く 愛される 店 を 目指しています。 詳細 は お気軽 に お問い合わせ ください。' };
+  if (!cat) return { eyebrow: 'LOCAL', h1line: `${areaTxt}で、<em>ふらり</em>と立ち寄れる場所。`, sub: 'アクセス、営業時間、メニュー。まずはこのページで、お店の空気を感じてください。' };
+
+  // ネイル (archetype: チェーン·大手、ライフスタイル tag)
+  // 順序注意: ネイル → 美容 (「ネイルサロン」→HAIR 誤hit 防止)
+  if (/ネイル/.test(cat)) return {
+    eyebrow: `${areaTxt} · ネイルサロン`,
+    h1line: `指先から、<em>すこし違う</em>明日へ。`,
+    sub: 'デザイン相談から定期ケアまで。忙しい日常のなかに、自分をいたわる60分を。'
+  };
+
+  // まつげ (archetype: チェーン·大手、感情)
+  if (/まつげ|まつ毛|アイラッシュ/.test(cat)) return {
+    eyebrow: `${areaTxt} · アイラッシュ`,
+    h1line: `目もとで、<em>印象は</em>変わる。`,
+    sub: 'あなたの骨格と目の形に合わせて、一本ずつデザインする。派手すぎない、自然な自分に。'
+  };
+
+  // 美容室 (archetype: チェーン·大手、修飾語 やさしさ)
+  // 「骨格補正」等 の 技術用語 は eyebrow に 逃す (h1 は 感覚 優先) — 過去 owner reject pattern
+  if (/美容|サロン|ヘア/.test(cat)) return {
+    eyebrow: `${areaTxt} · 骨格補正 × ニュアンスカット`,
+    h1line: `朝のセットが、<em>ラクになる</em>髪型を。`,
+    sub: '骨格診断とマンツーマンのカウンセリングで、あなたの「ラク」と「好き」を両立するスタイルを。'
+  };
+
+  // エステ·リラクゼーション (archetype: チェーン·大手、やさしさ)
+  if (/エステ|マッサージ|リラク|フェイシャル/.test(cat)) return {
+    eyebrow: `${areaTxt} · リラクゼーション`,
+    h1line: `力を、<em>ほどく</em>90分。`,
+    sub: 'その日の疲れに合わせて、施術を組み立てる。国家資格を持つセラピストが、あなただけの時間を。'
+  };
+
+  // カフェ (archetype: ビジュアル系、text 最小 品質語)
+  if (/カフェ|喫茶|cafe/i.test(cat)) return {
+    eyebrow: `${areaTxt} · Roastery & Café`,
+    h1line: `毎朝、<em>豆から</em>。`,
+    sub: '自家焙煎のスペシャルティコーヒーと、季節のスイーツ。ふらりと寄れる、この街の一杯。'
+  };
+
+  // 寿司·和食·高級飲食 (archetype: 高級·老舗、修飾語 格調)
+  if (/寿司|鮨|割烹|料亭|懐石|和食|日本料理/.test(cat)) return {
+    eyebrow: `${areaTxt} · 寿司 · 和食`,
+    h1line: `その日の海と、<em>向き合う</em>。`,
+    sub: '毎朝、市場へ。その日にしか出せない一皿を、静かな時間のなかで。'
+  };
+
+  // ホステル·旅館 (archetype: 高級·老舗 or チェーン·大手 mid、terroir系)
+  if (/ホステル|旅館|民宿|民泊|温泉|宿/.test(cat)) return {
+    eyebrow: `${areaTxt} · Stay`,
+    h1line: `${areaTxt}に、<em>もう一つの</em>家を。`,
+    sub: '個室とドミトリー、共用ラウンジとキッチン。その街に暮らすように過ごす、数日間。'
+  };
+
+  // ジム·フィットネス (archetype: チェーン·大手、修飾語 変革)
+  if (/ジム|フィットネス|パーソナル|ヨガ|ピラティス/.test(cat)) return {
+    eyebrow: `${areaTxt} · Personal Training`,
+    h1line: `変わるよろこびを、<em>あなたの</em>毎日へ。`,
+    sub: '目標と現状を一緒に見て、60分の型を作る。科学的なメソッドと、続けたくなる伴走で。'
+  };
+
+  // イタリアン·フレンチ (archetype: 高級·老舗、terroir系)
+  if (/イタリアン|フレンチ|ビストロ|レストラン/.test(cat)) return {
+    eyebrow: `${areaTxt} · Restaurant`,
+    h1line: `季節と、<em>大地の</em>物語を。`,
+    sub: '旬の食材と、ソムリエが選ぶペアリング。記念日にも、日常の少し特別な夜にも。'
+  };
+
+  // ラーメン·大衆 (archetype: チェーン·大手 mid、日常寄り)
+  if (/ラーメン|そば|うどん|中華|食堂/.test(cat)) return {
+    eyebrow: `${areaTxt} · 食堂`,
+    h1line: `毎日通える、<em>この街の</em>味。`,
+    sub: 'スープから麺まで、店内で仕込む。派手さはないけれど、通いたくなる一杯を。'
+  };
+
+  // 歯科·デンタル (archetype: チェーン·大手、修飾語 信頼)
+  if (/歯科|デンタル|クリニック|医院|病院|dental|clinic/i.test(cat)) return {
+    eyebrow: `${areaTxt} · 予防歯科`,
+    h1line: `10年後も、<em>自分の歯で</em>笑う。`,
+    sub: '予防を中心とした診療方針。説明と相談に時間をかけ、一人ひとりに合わせた治療計画を。'
+  };
+
+  // fallback (archetype: local business)
+  return {
+    eyebrow: `${areaTxt} · ${cat}`,
+    h1line: `${areaTxt}で、<em>長く愛される</em>お店を。`,
+    sub: '一人ひとりに寄り添う対応を大切に、地域のお客様と長くお付き合いできる店を目指しています。'
+  };
 }
 
 // ==== HP 生成 ====
@@ -398,20 +473,19 @@ function renderMockHP(row) {
         <div class="section-eyebrow">CONCEPT</div>
         <h2 class="section-h2"><em>${escapeHtml(name)}</em>について</h2>
         <p class="section-lead">
-          ${escapeHtml(area)}${area ? 'に構える' : ''}${escapeHtml(cat || 'お店')}です。
-          お客様 一人ひとり の 悩み や ライフスタイル に 合わせた ご提案 を 大切 に、 地域 の 皆様 と 長く お付き合い できる お店 を 目指して います。
+          派手さはなくても、通いたくなる場所を。${escapeHtml(area) || 'この街'}に、そう思ってもらえるお店を作りました。
         </p>
         <div class="about-grid">
           <div class="about-photo" style="background-image: url('${escapeAttr(images.about)}');"></div>
           <div class="about-body">
-            <h3>大切 に している こと</h3>
+            <h3>ここで、大切にしていること</h3>
             <p>
-              初めて の 方 に も、 何度 も 通って くださる 方 に も、 その 日 の 気分 と 悩み に 合わせた 対応 を 心がけて います。 「お店 に 来る」 こと 自体 が 楽しみ に なる、 そんな 時間 を お届け します。
+              初めての方にも、何度も来てくださる方にも。その日の気分にそっと寄り添って、「また来たい」と思ってもらえる時間をお届けします。
             </p>
             <ul>
-              <li>マンツーマン の 丁寧 な カウンセリング</li>
-              <li>初めて の 方 も 安心 の 少人数 制</li>
-              <li>${cat ? cat + ' 一筋 の 熟練 スタッフ' : '経験 豊富 な スタッフ'} が 対応</li>
+              <li>マンツーマンの丁寧なカウンセリング</li>
+              <li>初めての方も安心の、少人数制</li>
+              <li>${cat ? escapeHtml(cat) + ' 一筋の、熟練スタッフが対応' : '経験豊富なスタッフが、しっかりと対応'}</li>
             </ul>
           </div>
         </div>
@@ -423,7 +497,7 @@ function renderMockHP(row) {
         <div class="section-eyebrow">MENU</div>
         <h2 class="section-h2"><em>メニュー</em>のご案内</h2>
         <p class="section-lead">
-          代表 的 な メニュー を ご紹介 します。 詳細 · 所要時間 は お電話 で ご確認 ください。
+          代表的なメニューを、いくつか。詳しい所要時間や料金は、お気軽にお電話でご確認ください。
         </p>
         <div class="svc-grid">
           ${services.map((s) => `
@@ -441,9 +515,9 @@ function renderMockHP(row) {
     <section class="section gallery" id="gallery">
       <div class="section-inner">
         <div class="section-eyebrow">GALLERY</div>
-        <h2 class="section-h2"><em>店内 · 作品</em>の 雰囲気</h2>
+        <h2 class="section-h2"><em>店内と、</em>お客様の時間</h2>
         <p class="section-lead">
-          店内 · メニュー · スタイル の 一部 を ご紹介 します。
+          言葉より、雰囲気で。店内や、実際の作品を少しだけご覧ください。
         </p>
         <div class="gallery-grid">
           ${images.gallery.map((src) => `<div class="gallery-item" style="background-image: url('${escapeAttr(src)}');"></div>`).join('')}
@@ -454,9 +528,9 @@ function renderMockHP(row) {
     <section class="section staff" id="staff">
       <div class="section-inner">
         <div class="section-eyebrow">STAFF</div>
-        <h2 class="section-h2"><em>スタッフ</em>紹介</h2>
+        <h2 class="section-h2"><em>お迎えする</em>スタッフ</h2>
         <p class="section-lead">
-          お客様 に 寄り添い、 一人ひとり を 大切 に する スタッフ を ご紹介 します。
+          肩書きよりも、まず「どんな人か」を。お店で待っているスタッフを、少しだけご紹介します。
         </p>
         <div class="staff-grid">
           ${images.staff.map((s) => `
@@ -476,7 +550,7 @@ function renderMockHP(row) {
     <section class="section testimonial" id="voices">
       <div class="section-inner">
         <div class="section-eyebrow">VOICES</div>
-        <h2 class="section-h2"><em>お客様</em>の 声</h2>
+        <h2 class="section-h2"><em>通ってくださる</em>方の声</h2>
         <div class="voice-grid">
           ${testimonials.map((v) => `
             <div class="voice-card">
@@ -527,8 +601,8 @@ function renderMockHP(row) {
 
     <section class="cta-final" id="contact">
       <div class="cta-final-inner">
-        <h2>まずは お電話 で、<br>お気軽 に ご相談 ください</h2>
-        <p>予約 · メニュー の 相談 · 初めて の 方 の 質問 も 大歓迎 です。</p>
+        <h2>まずは、<br>お電話でお話ししませんか。</h2>
+        <p>ご予約はもちろん、メニューのご相談も。初めての方のちいさな質問もお気軽に。</p>
         ${phone ? `<a class="btn-primary" href="tel:${escapeAttr(phone)}">📞 ${escapeHtml(phone)} に電話する</a>` : `<a class="btn-primary" href="#">お問い合わせ</a>`}
       </div>
     </section>
