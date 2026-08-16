@@ -1,4 +1,4 @@
-// MapsLeads サイト案 プレビュー (v0.7.0 · 8 style pattern 対応)
+// MapsLeads サイト案 プレビュー (v0.8.0 · 8 style + 多section HP + 実写真)
 // popup 側 から chrome.storage.session に "ml_mockup_rows" で 店舗配列 が入る
 // 左 sidebar で 店 選択 → 右 preview で 1ページ サイト案 生成
 
@@ -16,6 +16,131 @@ let rows = [];
 let selectedIdx = -1;
 let currentStyle = 'A'; // A-H
 let userStyleOverride = false; // true = user manually picked, don't auto-switch on store change
+
+// ==== 業種 別 画像 bank (実 写真 URL) ====
+// 素材 出所:
+// - salon: skeleton-demos/mapsleads-mockup-demo/images/salon/ (kaguya HP 実素材 24枚)
+// - 他 業種: Unsplash CDN (freely hotlinkable、 photo id 固定 で 安定)
+const IMAGE_BANK = {
+  salon: {
+    hero: 'images/salon/header_main_01.jpg',
+    about: 'images/salon/interior_01.jpg',
+    gallery: [
+      'images/salon/interior_02.jpg', 'images/salon/interior_03.jpg', 'images/salon/interior_04.jpg',
+      'images/salon/style_01.jpg', 'images/salon/style_02.jpg', 'images/salon/style_03.jpg',
+    ],
+    staff: [
+      { photo: 'images/salon/stylist_osaka.jpg', name: '大坂', role: 'Owner Stylist', bio: '経験 15 年。 顔立ち と 骨格 に 合わせた 骨格補正 カット が 得意。' },
+      { photo: 'images/salon/stylist_nomura.jpg', name: '野村', role: 'Color Specialist', bio: 'イルミナ カラー · アディクシー カラー 認定。 白髪 も 透明感 も 相談 OK。' },
+    ],
+  },
+  sushi: {
+    hero: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=1600&q=80',
+    about: 'https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=1200&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=800&q=80',
+      'https://images.unsplash.com/photo-1553621042-f6e147245754?w=800&q=80',
+      'https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?w=800&q=80',
+      'https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?w=800&q=80',
+      'https://images.unsplash.com/photo-1580822184713-fc5400e7fe10?w=800&q=80',
+      'https://images.unsplash.com/photo-1563612116625-3012372fccce?w=800&q=80',
+    ],
+    staff: [
+      { photo: 'https://images.unsplash.com/photo-1583394293214-28ded15ee548?w=600&q=80', name: '大将', role: '大将 · 板前 30年', bio: '築地 の 老舗 で 修行 15 年。 毎朝 の 仕入れ に は 妥協 しない。' },
+      { photo: 'https://images.unsplash.com/photo-1595475207225-428b62bda831?w=600&q=80', name: '若旦那', role: '副板前', bio: '会席 · 一品 料理 担当。 季節 感 の ある 器 選び も 手掛ける。' },
+    ],
+  },
+  cafe: {
+    hero: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=1600&q=80',
+    about: 'https://images.unsplash.com/photo-1445116572660-236099ec97a0?w=1200&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80',
+      'https://images.unsplash.com/photo-1509785307050-d4066910ec1e?w=800&q=80',
+      'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=800&q=80',
+      'https://images.unsplash.com/photo-1511920170033-f8396924c348?w=800&q=80',
+      'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&q=80',
+      'https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=800&q=80',
+    ],
+    staff: [
+      { photo: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&q=80', name: '店主', role: 'Barista · Owner', bio: '毎朝 手回し ロースター で 焙煎。 豆 に 合わせて 抽出 温度 を 変えます。' },
+      { photo: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&q=80', name: 'ケーキ 担当', role: 'Pâtissier', bio: '季節 の フルーツ を 使った 週替わり ケーキ を 毎日 焼き上げます。' },
+    ],
+  },
+  nail: {
+    hero: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=1600&q=80',
+    about: 'https://images.unsplash.com/photo-1610992015732-2449b76344bc?w=1200&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?w=800&q=80',
+      'https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=800&q=80',
+      'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80',
+      'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=800&q=80',
+      'https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=800&q=80',
+      'https://images.unsplash.com/photo-1608228088998-57828365d486?w=800&q=80',
+    ],
+    staff: [
+      { photo: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=600&q=80', name: 'オーナー', role: 'Nail Artist', bio: 'JNA 認定講師。 ブライダル · イベント 対応 も 得意。' },
+      { photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600&q=80', name: 'デザイナー', role: 'Designer', bio: '毎月 100 種 以上 の デザイン サンプル を ご用意 して います。' },
+    ],
+  },
+  gym: {
+    hero: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1600&q=80',
+    about: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=1200&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80',
+      'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&q=80',
+      'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800&q=80',
+      'https://images.unsplash.com/photo-1594737625785-a6cbdabd333c?w=800&q=80',
+      'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=800&q=80',
+      'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800&q=80',
+    ],
+    staff: [
+      { photo: 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=600&q=80', name: 'ヘッドトレーナー', role: 'Certified Personal Trainer', bio: 'NSCA-CPT 認定。 リハビリ 領域 も 対応。' },
+      { photo: 'https://images.unsplash.com/photo-1594381898411-846e7d193883?w=600&q=80', name: '管理栄養士', role: 'Registered Dietitian', bio: '食事 指導 と メンタル コーチ 兼任。 LINE で 毎日 フィードバック。' },
+    ],
+  },
+  japanese: {
+    hero: 'https://images.unsplash.com/photo-1580442151529-343f2f6e0e27?w=1600&q=80',
+    about: 'https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=1200&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80',
+      'https://images.unsplash.com/photo-1553621042-f6e147245754?w=800&q=80',
+      'https://images.unsplash.com/photo-1517244683847-7456b63c5969?w=800&q=80',
+      'https://images.unsplash.com/photo-1580822184713-fc5400e7fe10?w=800&q=80',
+      'https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?w=800&q=80',
+      'https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=800&q=80',
+    ],
+    staff: [
+      { photo: 'https://images.unsplash.com/photo-1583394293214-28ded15ee548?w=600&q=80', name: '料理長', role: '日本 料理 · 京料理 25 年', bio: '京都 の 料亭 で 修行。 季節 の 器 と 献立 で もてなします。' },
+      { photo: 'https://images.unsplash.com/photo-1595475207225-428b62bda831?w=600&q=80', name: '接客 責任者', role: 'ホール マネージャー', bio: '和 の しつらえ と 気配り。 お名前 と 好み を 覚えて お迎え します。' },
+    ],
+  },
+  restaurant: {
+    hero: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1600&q=80',
+    about: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=80',
+      'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=800&q=80',
+      'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80',
+      'https://images.unsplash.com/photo-1600891964599-f61ba0e24092?w=800&q=80',
+      'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&q=80',
+      'https://images.unsplash.com/photo-1547573854-74d2a71d0826?w=800&q=80',
+    ],
+    staff: [
+      { photo: 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=600&q=80', name: 'シェフ', role: 'Executive Chef', bio: 'イタリア · フィレンツェ の 三ツ星 で 5 年 修行。 地元 食材 が 主役。' },
+      { photo: 'https://images.unsplash.com/photo-1622505091018-0fd63656b7bc?w=600&q=80', name: 'ソムリエ', role: 'Sommelier', bio: '国産 ワイン と ペアリング を 得意 と します。' },
+    ],
+  },
+};
+function pickImageBank(cat) {
+  if (!cat) return IMAGE_BANK.salon; // fallback
+  if (/寿司|鮨/.test(cat)) return IMAGE_BANK.sushi;
+  if (/割烹|料亭|懐石|和食|日本料理/.test(cat)) return IMAGE_BANK.japanese;
+  if (/カフェ|喫茶|パン|ベーカリー|cafe/i.test(cat)) return IMAGE_BANK.cafe;
+  if (/ネイル|nail/i.test(cat)) return IMAGE_BANK.nail;
+  if (/ジム|フィットネス|パーソナル|ヨガ|ピラティス/.test(cat)) return IMAGE_BANK.gym;
+  if (/イタリアン|フレンチ|ビストロ|レストラン/.test(cat)) return IMAGE_BANK.restaurant;
+  return IMAGE_BANK.salon; // salon がベスト generic (実写真 が 一番豊富)
+}
 
 // ==== 業種 → style 自動 選択 ====
 function pickStyleForCategory(cat) {
@@ -189,6 +314,7 @@ function renderMockHP(row) {
   // XSS 対策: heroCopyForCategory の 戻り値 は innerHTML で 挿入 されるので、area/cat を エスケープ済み で 渡す
   const hero = heroCopyForCategory(escapeHtml(cat), escapeHtml(area));
   const services = servicesForCategory(cat);
+  const images = pickImageBank(cat);
 
   const mapsSrc = address
     ? `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`
@@ -200,6 +326,20 @@ function renderMockHP(row) {
     reviewCount ? { num: reviewCount, lbl: '口コミ 件数' } : { num: '—', lbl: '口コミ' },
     { num: cat || '専門店', lbl: '業種' },
     { num: area || '地域密着', lbl: 'エリア' },
+  ];
+
+  // News (静的 サンプル · 業種 汎用)
+  const news = [
+    { date: '2026.08.10', tag: 'お知らせ', title: '公式 サイト を リニューアル しました' },
+    { date: '2026.07.28', tag: 'メニュー', title: '夏 の 新メニュー を 追加しました' },
+    { date: '2026.07.15', tag: 'お知らせ', title: 'お盆 期間 の 営業 について' },
+  ];
+
+  // Testimonials (業種 汎用)
+  const testimonials = [
+    { rating: 5, text: '接客 が とても 丁寧 で、 相談 に も じっくり 時間 を 取って くださいました。 また 伺います。', author: 'Y.T. 様 (30代 · 女性)' },
+    { rating: 5, text: '仕上がり が 想像以上 で 大満足 です。 予約 も 取り やすくて 助かって います。', author: 'K.M. 様 (40代 · 女性)' },
+    { rating: 4, text: '初めて でしたが、 スタッフ の 方 の 対応 が 良く、 リラックス できました。', author: 'S.A. 様 (20代 · 男性)' },
   ];
 
   return `
@@ -214,14 +354,17 @@ function renderMockHP(row) {
     <nav class="nav">
       <div class="nav-brand">${escapeHtml(name)}</div>
       <div class="nav-links">
-        <span>店舗 紹介</span>
-        <span>メニュー</span>
-        <span>アクセス</span>
+        <a href="#about">CONCEPT</a>
+        <a href="#services">MENU</a>
+        <a href="#gallery">GALLERY</a>
+        <a href="#staff">STAFF</a>
+        <a href="#news">NEWS</a>
+        <a href="#access">ACCESS</a>
       </div>
       <button class="nav-cta">${phone ? '電話する' : '予約する'}</button>
     </nav>
 
-    <section class="hero">
+    <section class="hero hero-photo" style="background-image: linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.55)), url('${escapeAttr(images.hero)}');">
       <div class="hero-inner">
         <div class="hero-eyebrow">${hero.eyebrow}</div>
         <h1 class="hero-h1">${hero.h1line}</h1>
@@ -239,14 +382,14 @@ function renderMockHP(row) {
 
     <section class="section about" id="about">
       <div class="section-inner">
-        <div class="section-eyebrow">ABOUT</div>
+        <div class="section-eyebrow">CONCEPT</div>
         <h2 class="section-h2"><em>${escapeHtml(name)}</em>について</h2>
         <p class="section-lead">
           ${escapeHtml(area)}${area ? 'に構える' : ''}${escapeHtml(cat || 'お店')}です。
           お客様 一人ひとり の 悩み や ライフスタイル に 合わせた ご提案 を 大切 に、 地域 の 皆様 と 長く お付き合い できる お店 を 目指して います。
         </p>
         <div class="about-grid">
-          <div class="about-photo"></div>
+          <div class="about-photo" style="background-image: url('${escapeAttr(images.about)}');"></div>
           <div class="about-body">
             <h3>大切 に している こと</h3>
             <p>
@@ -282,6 +425,73 @@ function renderMockHP(row) {
       </div>
     </section>
 
+    <section class="section gallery" id="gallery">
+      <div class="section-inner">
+        <div class="section-eyebrow">GALLERY</div>
+        <h2 class="section-h2"><em>店内 · 作品</em>の 雰囲気</h2>
+        <p class="section-lead">
+          店内 · メニュー · スタイル の 一部 を ご紹介 します。
+        </p>
+        <div class="gallery-grid">
+          ${images.gallery.map((src) => `<div class="gallery-item" style="background-image: url('${escapeAttr(src)}');"></div>`).join('')}
+        </div>
+      </div>
+    </section>
+
+    <section class="section staff" id="staff">
+      <div class="section-inner">
+        <div class="section-eyebrow">STAFF</div>
+        <h2 class="section-h2"><em>スタッフ</em>紹介</h2>
+        <p class="section-lead">
+          お客様 に 寄り添い、 一人ひとり を 大切 に する スタッフ を ご紹介 します。
+        </p>
+        <div class="staff-grid">
+          ${images.staff.map((s) => `
+            <div class="staff-card">
+              <div class="staff-photo" style="background-image: url('${escapeAttr(s.photo)}');"></div>
+              <div class="staff-body">
+                <div class="staff-name">${escapeHtml(s.name)}</div>
+                <div class="staff-role">${escapeHtml(s.role)}</div>
+                <p class="staff-bio">${escapeHtml(s.bio)}</p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+
+    <section class="section testimonial" id="voices">
+      <div class="section-inner">
+        <div class="section-eyebrow">VOICES</div>
+        <h2 class="section-h2"><em>お客様</em>の 声</h2>
+        <div class="voice-grid">
+          ${testimonials.map((v) => `
+            <div class="voice-card">
+              <div class="voice-stars">${'★'.repeat(v.rating)}${'☆'.repeat(5 - v.rating)}</div>
+              <p class="voice-text">${escapeHtml(v.text)}</p>
+              <div class="voice-author">${escapeHtml(v.author)}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+
+    <section class="section news" id="news">
+      <div class="section-inner">
+        <div class="section-eyebrow">NEWS</div>
+        <h2 class="section-h2"><em>お知らせ</em></h2>
+        <div class="news-list">
+          ${news.map((n) => `
+            <div class="news-item">
+              <div class="news-date">${escapeHtml(n.date)}</div>
+              <div class="news-tag">${escapeHtml(n.tag)}</div>
+              <div class="news-title">${escapeHtml(n.title)}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+
     <section class="section access" id="access">
       <div class="section-inner">
         <div class="section-eyebrow">ACCESS</div>
@@ -302,7 +512,7 @@ function renderMockHP(row) {
       </div>
     </section>
 
-    <section class="cta-final">
+    <section class="cta-final" id="contact">
       <div class="cta-final-inner">
         <h2>まずは お電話 で、<br>お気軽 に ご相談 ください</h2>
         <p>予約 · メニュー の 相談 · 初めて の 方 の 質問 も 大歓迎 です。</p>
@@ -401,9 +611,7 @@ els.btnPrint.addEventListener('click', () => {
 
 // ==== init (standalone demo mode · chrome API 排除、window.SAMPLE_ROWS 使用) ====
 (function () {
-  if (Array.isArray(window.SAMPLE_ROWS)) {
-    rows = window.SAMPLE_ROWS;
-  }
+  if (Array.isArray(window.SAMPLE_ROWS)) rows = window.SAMPLE_ROWS;
   bindStylePicker();
   updateStylePickerActive();
   renderSidebar();
