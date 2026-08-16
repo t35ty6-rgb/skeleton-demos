@@ -292,7 +292,7 @@ function heroCopyForCategory(cat, area) {
   // 順序注意: ネイル → 美容 (「ネイルサロン」→HAIR 誤hit 防止)
   if (/ネイル/.test(cat)) return {
     eyebrow: `${areaTxt} · ネイルサロン`,
-    h1line: `指先から、<em>すこし違う</em>明日へ。`,
+    h1line: `ネイルを変えると、<em>週明けが</em>ちがう。`,
     sub: 'デザイン相談から定期ケアまで。忙しい日常のなかに、自分をいたわる60分を。'
   };
 
@@ -340,16 +340,18 @@ function heroCopyForCategory(cat, area) {
   };
 
   // ジム·フィットネス (archetype: チェーン·大手、修飾語 変革)
+  // RIZAP h1 完コピー 排除、 owner 独自 コピー に
   if (/ジム|フィットネス|パーソナル|ヨガ|ピラティス/.test(cat)) return {
     eyebrow: `${areaTxt} · Personal Training`,
-    h1line: `変わるよろこびを、<em>あなたの</em>毎日へ。`,
+    h1line: `今日の60分が、<em>明日の自分を</em>作る。`,
     sub: '目標と現状を一緒に見て、60分の型を作る。科学的なメソッドと、続けたくなる伴走で。'
   };
 
   // イタリアン·フレンチ (archetype: 高級·老舗、terroir系)
+  // エステール 「大地と海の物語」 流用 排除、 owner 独自 コピー に
   if (/イタリアン|フレンチ|ビストロ|レストラン/.test(cat)) return {
     eyebrow: `${areaTxt} · Restaurant`,
-    h1line: `季節と、<em>大地の</em>物語を。`,
+    h1line: `${areaTxt}の土と海を、<em>皿に。</em>`,
     sub: '旬の食材と、ソムリエが選ぶペアリング。記念日にも、日常の少し特別な夜にも。'
   };
 
@@ -368,10 +370,11 @@ function heroCopyForCategory(cat, area) {
   };
 
   // fallback (archetype: local business)
+  // 「一人ひとりに寄り添う」= 凡庸 AI 地雷、 owner reject pattern → 排除
   return {
     eyebrow: `${areaTxt} · ${cat}`,
-    h1line: `${areaTxt}で、<em>長く愛される</em>お店を。`,
-    sub: '一人ひとりに寄り添う対応を大切に、地域のお客様と長くお付き合いできる店を目指しています。'
+    h1line: `${areaTxt}に、<em>居場所を</em>ひとつ。`,
+    sub: '派手さはなくても、通うたび少しだけ気分が上がる。そんなお店を、この街で続けています。'
   };
 }
 
