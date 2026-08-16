@@ -104,8 +104,8 @@ const IMAGE_BANK = {
     ],
   },
   japanese: {
-    // hero swap: 元 photo-1580442151529 は 暖簾 · 提灯 に 文字 混入 の 可能性、 kaiseki plate (text-free) に
-    hero: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1600&q=80',
+    // hero swap v2: photo-1546069901 は サラダボウル で 和食感ゼロ → design-reviewer 提案 の 懐石plate に
+    hero: 'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=1600&q=80',
     about: 'https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80',
@@ -121,8 +121,8 @@ const IMAGE_BANK = {
     ],
   },
   restaurant: {
-    // hero swap: 元 photo-1414235077428 は レストラン 内 に メニュー · 看板 混入 の 可能性、 fine dining plate (text-free) に
-    hero: 'https://images.unsplash.com/photo-1600891964599-f61ba0e24092?w=1600&q=80',
+    // hero swap v2: photo-1600891964599 は 缶ビール 英字ラベル + アメリカン系 で fine dining 感 なし → design-reviewer 提案 の restaurant photo に戻す (元候補 は table setting、text 混入 なし の 別 crop)
+    hero: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1600&q=80',
     about: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=80',
