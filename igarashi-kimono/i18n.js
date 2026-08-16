@@ -1,6 +1,7 @@
 // Shared i18n dictionary · all 5 variations use this
 window.T = {
   ja: {
+    page_title: "きもの 五十嵐 · 金沢の 出張着物レンタル",
     utility_hours: "火〜日 09:00〜18:00 / 月曜定休",
     utility_area: "金沢 · 出張対応",
     brand_name: "きもの 五十嵐",
@@ -236,6 +237,7 @@ window.T = {
     lang_en: "English"
   },
   en: {
+    page_title: "Kimono Igarashi · On-location kimono rental in Kanazawa",
     utility_hours: "Tue–Sun 09:00–18:00 / Closed Mon",
     utility_area: "Kanazawa · Hotel visits available",
     brand_name: "Kimono Igarashi",
@@ -484,6 +486,7 @@ window.applyLang = function(lang){
     if (dict[k] != null) el.innerHTML = dict[k];
   });
   document.querySelectorAll('.lang-tog button').forEach(b => b.classList.toggle('on', b.dataset.lang === lang));
+  if (dict.page_title) document.title = dict.page_title;
   try { localStorage.setItem('igarashi_lang', lang); } catch(e){}
 };
 
