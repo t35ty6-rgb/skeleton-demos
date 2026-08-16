@@ -23,11 +23,12 @@ let userStyleOverride = false; // true = user manually picked, don't auto-switch
 // - 他 業種: Unsplash CDN (freely hotlinkable、 photo id 固定 で 安定)
 const IMAGE_BANK = {
   salon: {
-    hero: 'images/salon/header_main_01.jpg',
-    about: 'images/salon/interior_01.jpg',
+    // header_main_01/02/03 は 元 サロン (Kaguya) の ロゴ 焼込 画像 だった ので 排除。 interior_* は text-free 確認済
+    hero: 'images/salon/interior_01.jpg',
+    about: 'images/salon/interior_02.jpg',
     gallery: [
-      'images/salon/interior_02.jpg', 'images/salon/interior_03.jpg', 'images/salon/interior_04.jpg',
-      'images/salon/style_01.jpg', 'images/salon/style_02.jpg', 'images/salon/style_03.jpg',
+      'images/salon/interior_03.jpg', 'images/salon/interior_04.jpg',
+      'images/salon/style_01.jpg', 'images/salon/style_02.jpg', 'images/salon/style_03.jpg', 'images/salon/style_04.jpg',
     ],
     staff: [
       { photo: 'images/salon/stylist_osaka.jpg', name: '大坂', role: 'Owner Stylist', bio: '経験 15 年。 顔立ち と 骨格 に 合わせた 骨格補正 カット が 得意。' },
@@ -35,7 +36,8 @@ const IMAGE_BANK = {
     ],
   },
   sushi: {
-    hero: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=1600&q=80',
+    // hero swap: 元 photo-1579584425555 は 職人 back に 店名 看板 混入 の 可能性、 sushi close-up (text-free 確実) に
+    hero: 'https://images.unsplash.com/photo-1553621042-f6e147245754?w=1600&q=80',
     about: 'https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=800&q=80',
@@ -51,7 +53,8 @@ const IMAGE_BANK = {
     ],
   },
   cafe: {
-    hero: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=1600&q=80',
+    // hero swap: 元 photo-1554118811 は 店内 に メニュー黒板 · 看板 の 可能性、 latte close-up (text-free 確実) に
+    hero: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=1600&q=80',
     about: 'https://images.unsplash.com/photo-1445116572660-236099ec97a0?w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80',
@@ -67,7 +70,8 @@ const IMAGE_BANK = {
     ],
   },
   nail: {
-    hero: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=1600&q=80',
+    // hero swap: 元 photo-1604654894610 は 店内 に 商品ラベル · 看板 混入 の 可能性、 nail macro (text-free 確実) に
+    hero: 'https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=1600&q=80',
     about: 'https://images.unsplash.com/photo-1610992015732-2449b76344bc?w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?w=800&q=80',
@@ -83,7 +87,8 @@ const IMAGE_BANK = {
     ],
   },
   gym: {
-    hero: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1600&q=80',
+    // hero swap: 元 photo-1534438327276 は gym 内 に brand シール · メーカーロゴ 混入 の 可能性、 rope waves (text-free) に
+    hero: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=1600&q=80',
     about: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80',
@@ -99,7 +104,8 @@ const IMAGE_BANK = {
     ],
   },
   japanese: {
-    hero: 'https://images.unsplash.com/photo-1580442151529-343f2f6e0e27?w=1600&q=80',
+    // hero swap: 元 photo-1580442151529 は 暖簾 · 提灯 に 文字 混入 の 可能性、 kaiseki plate (text-free) に
+    hero: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1600&q=80',
     about: 'https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80',
@@ -115,7 +121,8 @@ const IMAGE_BANK = {
     ],
   },
   restaurant: {
-    hero: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1600&q=80',
+    // hero swap: 元 photo-1414235077428 は レストラン 内 に メニュー · 看板 混入 の 可能性、 fine dining plate (text-free) に
+    hero: 'https://images.unsplash.com/photo-1600891964599-f61ba0e24092?w=1600&q=80',
     about: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=80',
