@@ -364,7 +364,19 @@ function renderMockHP(row) {
       <button class="nav-cta">${phone ? '電話する' : '予約する'}</button>
     </nav>
 
-    <section class="hero hero-photo" style="background-image: linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.55)), url('${escapeAttr(images.hero)}');">
+    ${(() => {
+      // B (luxury dark) と F (editorial dark serif) は 意図的 dark hero、 写真なし で 世界観 確保
+      // 他 6 style は 全画面 実写真 hero + overlay
+      const isPhotoHero = !['B', 'F'].includes(currentStyle);
+      // cafe は 明るい 写真 が 多い ので overlay を 濃く
+      const isCafe = /カフェ|cafe/i.test(cat);
+      const ov1 = isCafe ? '0.45' : '0.35';
+      const ov2 = isCafe ? '0.65' : '0.55';
+      const heroClass = isPhotoHero ? 'hero hero-photo' : 'hero';
+      const heroStyle = isPhotoHero
+        ? `style="background-image: linear-gradient(rgba(0,0,0,${ov1}), rgba(0,0,0,${ov2})), url('${escapeAttr(images.hero)}');"`
+        : '';
+      return `<section class="${heroClass}" ${heroStyle}>
       <div class="hero-inner">
         <div class="hero-eyebrow">${hero.eyebrow}</div>
         <h1 class="hero-h1">${hero.h1line}</h1>
@@ -374,7 +386,8 @@ function renderMockHP(row) {
           <a class="btn-ghost" href="#access">アクセス を 見る</a>
         </div>
       </div>
-    </section>
+    </section>`;
+    })()}
 
     <div class="trust">
       ${trust.map((t) => `<div><div class="num">${escapeHtml(String(t.num))}</div><div class="lbl">${escapeHtml(t.lbl)}</div></div>`).join('')}
