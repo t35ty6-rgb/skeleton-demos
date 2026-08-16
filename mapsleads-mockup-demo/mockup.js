@@ -296,10 +296,10 @@ function heroCopyForCategory(cat, area) {
     sub: 'デザイン相談から定期ケアまで。忙しい日常のなかに、自分をいたわる60分を。'
   };
 
-  // まつげ (archetype: チェーン·大手、感情)
+  // まつげ (archetype: チェーン·大手、感情) — WIIFM「メイクが1分減る」を h1 に
   if (/まつげ|まつ毛|アイラッシュ/.test(cat)) return {
     eyebrow: `${areaTxt} · アイラッシュ`,
-    h1line: `目もとで、<em>印象は</em>変わる。`,
+    h1line: `朝のメイクが、<em>1分</em>短くなる。`,
     sub: 'あなたの骨格と目の形に合わせて、一本ずつデザインする。派手すぎない、自然な自分に。'
   };
 
@@ -332,11 +332,11 @@ function heroCopyForCategory(cat, area) {
     sub: '毎朝、市場へ。その日にしか出せない一皿を、静かな時間のなかで。'
   };
 
-  // ホステル·旅館 (archetype: 高級·老舗 or チェーン·大手 mid、terroir系)
+  // ホステル·旅館 (archetype: 高級·老舗 or チェーン·大手 mid、terroir系) — Airbnb 影 を 消す 、 「暮らす」体験 に focus
   if (/ホステル|旅館|民宿|民泊|温泉|宿/.test(cat)) return {
     eyebrow: `${areaTxt} · Stay`,
-    h1line: `${areaTxt}に、<em>もう一つの</em>家を。`,
-    sub: '個室とドミトリー、共用ラウンジとキッチン。その街に暮らすように過ごす、数日間。'
+    h1line: `観光では気づかない、<em>${areaTxt}の</em>夜。`,
+    sub: '個室とドミトリー、共用ラウンジとキッチン。ガイドブックに載らない、この街の顔を持ち帰るように。'
   };
 
   // ジム·フィットネス (archetype: チェーン·大手、修飾語 変革)
@@ -355,11 +355,11 @@ function heroCopyForCategory(cat, area) {
     sub: '旬の食材と、ソムリエが選ぶペアリング。記念日にも、日常の少し特別な夜にも。'
   };
 
-  // ラーメン·大衆 (archetype: チェーン·大手 mid、日常寄り)
+  // ラーメン·大衆 (archetype: チェーン·大手 mid、日常寄り) — 「仕込み」の 具体 で 差別化
   if (/ラーメン|そば|うどん|中華|食堂/.test(cat)) return {
     eyebrow: `${areaTxt} · 食堂`,
-    h1line: `毎日通える、<em>この街の</em>味。`,
-    sub: 'スープから麺まで、店内で仕込む。派手さはないけれど、通いたくなる一杯を。'
+    h1line: `スープは、<em>朝6時から</em>。`,
+    sub: '出汁から麺まで、店内で仕込む。派手さはないけれど、明日も食べたくなる一杯を。'
   };
 
   // 歯科·デンタル (archetype: チェーン·大手、修飾語 信頼)
