@@ -453,13 +453,17 @@ function renderMockHP(row) {
       // B (luxury dark) と F (editorial dark serif) は 意図的 dark hero、 写真なし で 世界観 確保
       // 他 6 style は 全画面 実写真 hero + overlay
       const isPhotoHero = !['B', 'F'].includes(currentStyle);
-      // cafe は 明るい 写真 が 多い ので overlay を 濃く
-      const isCafe = /カフェ|cafe/i.test(cat);
-      const ov1 = isCafe ? '0.45' : '0.35';
-      const ov2 = isCafe ? '0.65' : '0.55';
+      // 全体 overlay を 大幅 強化 (owner「色被る」指摘 対応、text-first pocket 確保)
+      // + 下方 に 濃い dark → text pocket (h1 が 綺麗 に 沈む)
+      // 業種 別 微調整: cafe/nail (明るい 写真) は もっと 濃く、 gym (dark 写真) は やや 薄く
+      const isBright = /カフェ|cafe|ネイル|nail/i.test(cat);
+      const isDark = /ジム|gym|寿司|鮨|割烹/i.test(cat);
+      const ov1 = isBright ? '0.55' : (isDark ? '0.45' : '0.5');
+      const ov2 = isBright ? '0.85' : (isDark ? '0.70' : '0.78');
       const heroClass = isPhotoHero ? 'hero hero-photo' : 'hero';
+      // 2 層 overlay: (1) 上→下 dark gradient で text pocket / (2) 中央 vignette で 主題 に focus
       const heroStyle = isPhotoHero
-        ? `style="background-image: linear-gradient(rgba(0,0,0,${ov1}), rgba(0,0,0,${ov2})), url('${escapeAttr(images.hero)}');"`
+        ? `style="background-image: linear-gradient(180deg, rgba(0,0,0,${ov1}) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,${ov2}) 100%), url('${escapeAttr(images.hero)}');"`
         : '';
       return `<section class="${heroClass}" ${heroStyle}>
       <div class="hero-inner">
