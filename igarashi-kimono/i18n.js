@@ -33,7 +33,7 @@ window.T = {
 
     plan1_tier: "PLAN 01",
     plan1_name: "エコノミー",
-    plan1_price: "要相談",
+    plan1_price: "お見積もり",
     plan1_unit: "／お一人様",
     plan1_cost: "原価内訳は 五十嵐様確定後 に 表示",
     plan1_f1: "ベーシック着物 20柄から",
@@ -46,7 +46,7 @@ window.T = {
 
     plan2_tier: "PLAN 02",
     plan2_name: "スタンダード",
-    plan2_price: "要相談",
+    plan2_price: "お見積もり",
     plan2_unit: "／お一人様",
     plan2_cost: "原価内訳は 五十嵐様確定後 に 表示",
     plan2_f1: "プレミアム着物 80柄から",
@@ -60,7 +60,7 @@ window.T = {
 
     plan3_tier: "PLAN 03",
     plan3_name: "ラグジュアリー",
-    plan3_price: "要相談",
+    plan3_price: "お見積もり",
     plan3_unit: "／お一人様",
     plan3_cost: "原価内訳は 五十嵐様確定後 に 表示",
     plan3_f1: "京友禅大賞 受賞作 含む 高級着物",
@@ -286,7 +286,7 @@ window.T = {
 
     plan1_tier: "PLAN 01",
     plan1_name: "Economy",
-    plan1_price: "Ask",
+    plan1_price: "On request",
     plan1_unit: "/ per person",
     plan1_cost: "Cost breakdown to be confirmed",
     plan1_f1: "20 basic kimono designs",
@@ -299,7 +299,7 @@ window.T = {
 
     plan2_tier: "PLAN 02",
     plan2_name: "Standard",
-    plan2_price: "Ask",
+    plan2_price: "On request",
     plan2_unit: "/ per person",
     plan2_cost: "Cost breakdown to be confirmed",
     plan2_f1: "80 premium kimono designs",
@@ -313,7 +313,7 @@ window.T = {
 
     plan3_tier: "PLAN 03",
     plan3_name: "Luxury",
-    plan3_price: "Ask",
+    plan3_price: "On request",
     plan3_unit: "/ per person",
     plan3_cost: "Cost breakdown to be confirmed",
     plan3_f1: "Kyoto Yuzen award-winning kimono",
