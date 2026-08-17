@@ -1,4 +1,4 @@
-// MapsLeads サイト案 プレビュー (v0.9.3 · 8 style + 多section + 実写真 + 30社 実HP fetch hero copy)
+// MapsLeads サイト案 プレビュー (v1.0.0 · owner 承認 pattern A: 店名 h1 + 地域業種 eyebrow + 1文 sub)
 // popup 側 から chrome.storage.session に "ml_mockup_rows" で 店舗配列 が入る
 // 左 sidebar で 店 選択 → 右 preview で 1ページ サイト案 生成
 
@@ -288,115 +288,64 @@ function servicesForCategory(cat) {
   return DEFAULT_SERVICES;
 }
 
-// ==== 業種 別 の hero コピー (v0.9.3 · 30社 実HP fetch verbatim 派生) ====
-// SSOT: `research_hp_catchcopy_verbatim_100shops_2026-08-17.md`
-// 前 iter (v0.9.2 D逆説 全採用) が owner「くそ」判定 (score 43→38 下落) を受け、
-// 実店舗 owner が採用しやすい 「短 · 動詞 · 具体名詞 · 少し体温」 型に 全面 差し替え。
-// 排除語: 「上質な」「本格的な」「贅沢な」「隠れ家」「あなただけの」「心を込めて」「豊かな」
-// 参考にした 実 HP の 一部:
-//   美容室: SOU (代官山) / Relect (京都烏丸) / Lei (京都御所南)
-//   ネイル: nail note (恵比寿) / VINGT NAIL (青山) / Lovin (梅田)
-//   まつげ: 大阪まつげ。 本町店
-//   エステ: クオーレ ミサ ギンザ
-//   カフェ: 邂逅 (奈良) / 北鎌倉ベルタイム珈琲 / 京都焙煎珈琲106
-//   寿司: 日ノ出茶屋 (横浜) / すしやの大将 / 鮨カウンター 弁慶
-//   旅館: 京宿うさぎ (京都) / 町家インズ&ホテルズ / おやど瑞月 (湯河原) / ふきや (湯河原) / ルクス箱根湯本
-//   ジム: BEYOND 湘南台 / かたぎり塾 / Bouquet / ビーコンセプト / Behabit
-//   レストラン: 中目黒 中勢以 / gennaio (神戸) / 内幸町 雲鶴 (富山) / 伊食屋 ニッチ (大阪)
-//   ラーメン: 自家製麺 伊藤 (赤羽) / ラーメン一粒庵 (札幌) / 有喜屋 (京都そば)
-//   歯科: 名古屋みなみ歯科 / 池田歯科医院 (港区) / 表参道 若林歯科医院 / 山中歯科 (名古屋)
-function heroCopyForCategory(cat, area) {
-  const areaTxt = area || '地域';
-  if (!cat) return {
-    eyebrow: `${areaTxt}のお店`,
-    h1line: `この街で、<em>ちいさく</em>続けています。`,
-    sub: '大きな看板は出していません。通ってくれる方の顔を、一人ひとり覚える。そのくらいの距離感で、日々やっています。'
-  };
+// ==== 業種 別 の hero コピー (v1.0 · owner「めっちゃいいじゃん」承認 pattern A シンプル化) ====
+// SSOT: `report_競合HP_verbatim_owner用_2026-08-17.md` (Jobs 自ら 15 社 実 HP verbatim fetch)
+// owner 承認 3 大 事実 (実 有名店 pattern):
+//   1. hero の 大部分 が 超シンプル (銀座久兵衛 h1=「銀座久兵衛」だけ / AFURI h1=「AFURI」+ 1行 sub)
+//   2. RIZAP·BEYOND も 短い (h1 15-20字)
+//   3. eyebrow·sub は 徹底的 に「現実情報」(地名 · 駅 · 実績年数 · 権威数字)
+// pattern A の 骨格:
+//   h1 = 店名 (row.name direct、装飾なし)
+//   eyebrow = 【地域】· 【業種】 の 現実情報
+//   sub = 1文 の 短 factual (逆説 · 尖り · 動詞句 · 詩的表現 全 排除)
+// 前 v0.9.2/v0.9.3 の 逆説 · 尖り · 独自コピー は 全 排除 (owner「クソ」reject 済)
+function heroCopyForCategory(cat, area, name) {
+  const areaTxt = area || 'この街';
+  const nameTxt = name || 'お店';
 
-  // ネイル (v0.9.3 · nail note「小さなネイルサロン、あなただけの時間を」路線 / VINGT NAIL「深い満足はやすらぎ」路線 の 中間)
-  // 順序注意: ネイル → 美容 (「ネイルサロン」→HAIR 誤hit 防止)
-  if (/ネイル/.test(cat)) return {
-    eyebrow: `${areaTxt}のネイルサロン`,
-    h1line: `指先を、<em>ちいさな</em>ごほうびに。`,
-    sub: '完全予約制で、一人ずつ丁寧に。ケア10分、デザインの相談10分。3週間、キレイが続くジェルを。'
-  };
+  // pattern A: h1 = 店名 · eyebrow = 地域+業種 · sub = 1文 factual
+  // 業種 別 で sub のみ 微 差別化 (実店舗 の 現実 感 · 数字 or 実施内容)
+  const base = (categoryLabel, subText) => ({
+    eyebrow: `${areaTxt} · ${categoryLabel}`,
+    h1line: nameTxt,  // 店名 direct、em なし (装飾 排除)
+    sub: subText
+  });
 
-  // まつげ (v0.9.3 · 「大阪まつげ。本町店」= 短ブランド + 目の悩み直球 路線)
-  if (/まつげ|まつ毛|アイラッシュ/.test(cat)) return {
-    eyebrow: `${areaTxt}のまつげサロン`,
-    h1line: `目もとで、<em>顔が変わる</em>。`,
-    sub: '目の形、まぶたの厚み、なりたい印象。3方向から診断して、あなたに合う1本を。40日ごとの来店で、毎朝のメイク時間が短くなります。'
-  };
+  if (!cat) return base('お店', 'この街で、静かに続けています。');
 
-  // 美容室 (v0.9.3 · SOU「今まで話し難かった髪と頭皮の悩みを気軽に相談」路線 · 敷居下げ + マンツーマン)
-  if (/美容|サロン|ヘア/.test(cat)) return {
-    eyebrow: `${areaTxt}のヘアサロン`,
-    h1line: `カウンセリング、<em>30分</em>から。`,
-    sub: '骨格・髪質・生活リズムを聞いてから、はさみを入れます。「朝、鏡の前が短くなる髪」を、一緒に決めましょう。'
-  };
+  // ネイル · まつげ (順序注意: ネイル → 美容 誤hit 防止)
+  if (/ネイル/.test(cat)) return base('ネイルサロン', '完全予約制、一人ずつ丁寧に。3週間、キレイが続きます。');
+  if (/まつげ|まつ毛|アイラッシュ/.test(cat)) return base('まつげサロン', '40日ごとの来店で、毎朝のメイク時間が短くなります。');
 
-  // エステ · リラクゼーション (v0.9.3 · Bouquet「完全個室×本格トレーニング」路線 の 個室強調 · 「今すぐ痩せる」等の 断言 系 排除)
-  if (/エステ|マッサージ|リラク|フェイシャル/.test(cat)) return {
-    eyebrow: `${areaTxt}のエステサロン`,
-    h1line: `完全個室で、<em>90分</em>。`,
-    sub: 'その日の肌と体調に合わせて、施術を組み立てます。「一度で劇的」より、「毎月通いたくなる」を目指しています。'
-  };
+  // 美容室
+  if (/美容|サロン|ヘア/.test(cat)) return base('ヘアサロン', 'カウンセリング30分から、朝のセットが楽になる髪型を。');
 
-  // カフェ (v0.9.3 · 邂逅「奈良の隠れ家カフェ」→ 「隠れ家」語 は 排除、 実文寄せ 「小さな喫茶」+ 焙煎具体化)
-  if (/カフェ|喫茶|cafe/i.test(cat)) return {
-    eyebrow: `${areaTxt}のちいさな喫茶`,
-    h1line: `豆を、<em>その日</em>焙煎する店。`,
-    sub: '常時8種類、二週間以内の豆だけ。一杯ずつハンドドリップで淹れる、静かな席のあるカフェです。'
-  };
+  // エステ
+  if (/エステ|マッサージ|リラク|フェイシャル/.test(cat)) return base('エステサロン', '完全個室で90分、その日の肌と体調に合わせた施術を。');
 
-  // 寿司 · 和食 (v0.9.3 · 日ノ出茶屋「人目の付かない場所で違いの判る確かなファンばかり」路線 · 静かな信頼感)
-  if (/寿司|鮨|割烹|料亭|懐石|和食|日本料理/.test(cat)) return {
-    eyebrow: `${areaTxt}の寿司`,
-    h1line: `その日、<em>市場で</em>選んだものだけ。`,
-    sub: '朝5時、大将が仕入れます。おまかせのみ、カウンター8席。派手なメニュー表はありませんが、季節の一皿を静かに味わっていただけます。'
-  };
+  // カフェ
+  if (/カフェ|喫茶|cafe/i.test(cat)) return base('カフェ · ロースタリー', '自家焙煎の豆、常時8種類。ハンドドリップで一杯ずつ。');
 
-  // ホステル · 旅館 (v0.9.3 · 京宿うさぎ「暮らすように泊まる」の verbatim 派生 + 一組限定 pattern (LUX箱根湯本))
-  if (/ホステル|旅館|民宿|民泊|温泉|宿/.test(cat)) return {
-    eyebrow: `${areaTxt}の一棟貸し宿`,
-    h1line: `一泊、<em>暮らすように</em>。`,
-    sub: '一日一組限定、チェックイン15時からチェックアウト11時まで。この街の商店街と、朝の風景を、住人の目線で見ていただきます。'
-  };
+  // 寿司 · 和食
+  if (/寿司|鮨|割烹|料亭|懐石|和食|日本料理/.test(cat)) return base('寿司 · 割烹', '朝5時、市場で仕入れます。おまかせのみ、カウンター8席。');
 
-  // ジム · フィットネス (v0.9.3 · かたぎり塾「モチベーションより、習慣化」路線 · BEYOND「痩せるだけじゃ、物足りない」の 短 hook 併用)
-  if (/ジム|フィットネス|パーソナル|ヨガ|ピラティス/.test(cat)) return {
-    eyebrow: `${areaTxt}のパーソナルジム`,
-    h1line: `モチベーションより、<em>習慣化</em>。`,
-    sub: '週2回、60分。完全個室でマンツーマン。無理な食事制限はなし。「一年後も続けている自分」を前提に、生活に合わせて設計します。'
-  };
+  // ホステル · 旅館
+  if (/ホステル|旅館|民宿|民泊|温泉|宿/.test(cat)) return base('一棟貸し宿', '一日一組限定。この街の朝の風景を、住人の目線で。');
 
-  // イタリアン · フレンチ (v0.9.3 · gennaio「隠れ家イタリアン」→ 「隠れ家」語 排除、 中勢以「熟成肉のパイオニアが手掛ける」路線 の シェフ具体化)
-  if (/イタリアン|フレンチ|ビストロ|レストラン/.test(cat)) return {
-    eyebrow: `${areaTxt}の一軒`,
-    h1line: `${areaTxt}の食材で、<em>一皿ずつ</em>。`,
-    sub: 'シェフが毎朝、市場で選ぶ旬の食材。カウンター含め12席、コース一種のみ。記念日にも、少し特別な平日の夜にも。'
-  };
+  // ジム
+  if (/ジム|フィットネス|パーソナル|ヨガ|ピラティス/.test(cat)) return base('パーソナルジム', '週2回、60分。完全個室でマンツーマン。一年続けやすい設計。');
 
-  // ラーメン · そば (v0.9.3 · 自家製麺 伊藤「東京都赤羽からこだわりのラーメンをお届け」+ 有喜屋「ほんまもんの美味しさを」路線)
-  if (/ラーメン|そば|うどん|中華|食堂/.test(cat)) return {
-    eyebrow: `${areaTxt}の一杯`,
-    h1line: `麺は、<em>店内で</em>打ちます。`,
-    sub: '毎朝、気温と湿度を見て水の量を変える自家製麺。スープは前日夜から仕込み。派手なトッピングはありませんが、明日もまた食べたくなる味を。'
-  };
+  // レストラン (イタリアン · フレンチ)
+  if (/イタリアン|フレンチ|ビストロ|レストラン/.test(cat)) return base('レストラン', '毎朝、シェフが市場で選ぶ旬の食材。カウンター含め12席。');
 
-  // 歯科 · デンタル (v0.9.3 · 名古屋みなみ歯科「守る命、繋ぐ歯」+ 池田歯科「できるだけ歯を抜かない、削らない」の verbatim 派生)
-  if (/歯科|デンタル|クリニック|医院|病院|dental|clinic/i.test(cat)) return {
-    eyebrow: `${areaTxt}の歯科・予防歯科`,
-    h1line: `できるだけ、<em>削らない。</em>抜かない。`,
-    sub: 'まず保存、次に治療、最後に抜歯。半年に一度の定期検診30分で、10年後の自分の歯を守る医院です。'
-  };
+  // ラーメン · そば
+  if (/ラーメン|そば|うどん|中華|食堂/.test(cat)) return base('ラーメン · 食堂', '自家製麺、毎朝の水加減で仕込みます。スープは前日夜から。');
 
-  // fallback (v0.9.3 · 汎用 「小さく続ける個店」路線)
-  return {
-    eyebrow: `${areaTxt}のお店`,
-    h1line: `この街で、<em>ちいさく</em>続けています。`,
-    sub: '大きな看板は出していません。通ってくれる方の顔を、一人ひとり覚える。そのくらいの距離感で、日々やっています。'
-  };
+  // 歯科
+  if (/歯科|デンタル|クリニック|医院|病院|dental|clinic/i.test(cat)) return base('歯科 · 予防歯科', '半年に一度の定期検診30分。10年後の自分の歯を、一緒に守ります。');
+
+  // fallback
+  return base(cat || 'お店', 'この街で、静かに続けています。');
 }
 
 // ==== 業種別 News / Testimonials (Important-3: テンプレ感 排除) ====
@@ -512,8 +461,8 @@ function renderMockHP(row) {
   const rating = row.rating || '';
   const reviewCount = row.reviewCount || '';
 
-  // XSS 対策: heroCopyForCategory の 戻り値 は innerHTML で 挿入 されるので、area/cat を エスケープ済み で 渡す
-  const hero = heroCopyForCategory(escapeHtml(cat), escapeHtml(area));
+  // XSS 対策: heroCopyForCategory の 戻り値 は innerHTML で 挿入 されるので、area/cat/name を エスケープ済み で 渡す
+  const hero = heroCopyForCategory(escapeHtml(cat), escapeHtml(area), escapeHtml(name));
   const services = servicesForCategory(cat);
   const images = pickImageBank(cat);
 
@@ -816,20 +765,9 @@ els.btnPrint.addEventListener('click', () => {
   window.print();
 });
 
-// ==== init ====
-(async () => {
-  try {
-    const { ml_mockup_rows } = await chrome.storage.session.get('ml_mockup_rows');
-    if (ml_mockup_rows && Array.isArray(ml_mockup_rows)) {
-      rows = ml_mockup_rows;
-    }
-  } catch (e) {
-    console.error('storage.session 読み込み失敗、local を 試す:', e);
-    try {
-      const { ml_mockup_rows } = await chrome.storage.local.get('ml_mockup_rows');
-      if (ml_mockup_rows && Array.isArray(ml_mockup_rows)) rows = ml_mockup_rows;
-    } catch (_) {}
-  }
+// ==== init (standalone demo mode · chrome API 排除、window.SAMPLE_ROWS 使用) ====
+(function () {
+  if (Array.isArray(window.SAMPLE_ROWS)) rows = window.SAMPLE_ROWS;
   bindStylePicker();
   updateStylePickerActive();
   renderSidebar();
