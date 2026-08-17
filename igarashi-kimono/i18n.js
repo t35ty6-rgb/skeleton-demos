@@ -244,6 +244,12 @@ window.T = {
     ref_line3_lbl: "ご紹介者様へ 還元",
     ref_line3_sub: "次回使用可 · 6ヶ月 有効",
     brand_address: "金沢市 東山 X-X-X",
+    brand_tel: "076-000-0000",
+    brand_tel_display: "☎ 076-000-0000",
+    brand_open_short: "Tue – Sun 9:00–18:00",
+    contact_email: "info@kimono-igarashi.jp",
+    contact_email_label: "メールを送る",
+
     lang_ja: "日本語",
     lang_en: "English"
   },
@@ -491,6 +497,12 @@ window.T = {
     ref_line3_lbl: "Points back to you",
     ref_line3_sub: "Usable next visit · valid 6 months",
     brand_address: "Higashiyama X-X-X, Kanazawa",
+    brand_tel: "+81-76-000-0000",
+    brand_tel_display: "☎ +81-76-000-0000",
+    brand_open_short: "Tue – Sun 9:00–18:00",
+    contact_email: "info@kimono-igarashi.jp",
+    contact_email_label: "Send email",
+
     lang_ja: "日本語",
     lang_en: "English"
   }
