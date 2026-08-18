@@ -1,4 +1,4 @@
-// MapsLeads サイト案 プレビュー (v1.0.0 · owner 承認 pattern A: 店名 h1 + 地域業種 eyebrow + 1文 sub)
+// MapsLeads サイト案 プレビュー (v1.1.0 · hybrid: catch h1 + 店名 eyebrow + factual sub: 店名 h1 + 地域業種 eyebrow + 1文 sub)
 // popup 側 から chrome.storage.session に "ml_mockup_rows" で 店舗配列 が入る
 // 左 sidebar で 店 選択 → 右 preview で 1ページ サイト案 生成
 
@@ -288,64 +288,117 @@ function servicesForCategory(cat) {
   return DEFAULT_SERVICES;
 }
 
-// ==== 業種 別 の hero コピー (v1.0 · owner「めっちゃいいじゃん」承認 pattern A シンプル化) ====
-// SSOT: `report_競合HP_verbatim_owner用_2026-08-17.md` (Jobs 自ら 15 社 実 HP verbatim fetch)
-// owner 承認 3 大 事実 (実 有名店 pattern):
-//   1. hero の 大部分 が 超シンプル (銀座久兵衛 h1=「銀座久兵衛」だけ / AFURI h1=「AFURI」+ 1行 sub)
-//   2. RIZAP·BEYOND も 短い (h1 15-20字)
-//   3. eyebrow·sub は 徹底的 に「現実情報」(地名 · 駅 · 実績年数 · 権威数字)
-// pattern A の 骨格:
-//   h1 = 店名 (row.name direct、装飾なし)
-//   eyebrow = 【地域】· 【業種】 の 現実情報
-//   sub = 1文 の 短 factual (逆説 · 尖り · 動詞句 · 詩的表現 全 排除)
-// 前 v0.9.2/v0.9.3 の 逆説 · 尖り · 独自コピー は 全 排除 (owner「クソ」reject 済)
+// ==== 業種 別 の hero コピー (v1.1 · pattern hybrid: catch h1 + 店名 eyebrow + factual sub) ====
+// v1.0 (店名だけ h1) が owner「一気に良くなくなった」 判定 で reject。
+// 実 HP 事実:
+//   RIZAP h1「ここから、人生の美しい『転機』が始まる。」= 15-20字 感情+断定 (店名 は top nav)
+//   AFURI h1「AFURI」+ sub「AFURIのらーめんの命は、黄金色に輝くスープ。」= 店名 h1 + 命題sub
+// hybrid 型:
+//   eyebrow = 【地域】· 【業種】· 【店名】 (店名 情報 は 保持、eyebrow に 逃す)
+//   h1 = 15-20字 catchphrase (marketing hook、業種特化)
+//   sub = 1文 factual (店舗 の 具体 · 数字 · 実施内容)
+// h1 catchphrase 選定 基準:
+//   1. 業種 の 中央値 客ニーズ 直撃 (美容室 = 「朝ラクな髪」/ ジム = 「続く身体」/ カフェ = 「静かな時間」)
+//   2. 前 iter reject 済 表現 排除: 「うちにありません」「隠れ家」「あなただけの」「上質な」
+//   3. 「感情 + 断定」 pattern (RIZAP/BEYOND式)、 尖り 過ぎ ない
 function heroCopyForCategory(cat, area, name) {
   const areaTxt = area || 'この街';
   const nameTxt = name || 'お店';
 
-  // pattern A: h1 = 店名 · eyebrow = 地域+業種 · sub = 1文 factual
-  // 業種 別 で sub のみ 微 差別化 (実店舗 の 現実 感 · 数字 or 実施内容)
-  const base = (categoryLabel, subText) => ({
-    eyebrow: `${areaTxt} · ${categoryLabel}`,
-    h1line: nameTxt,  // 店名 direct、em なし (装飾 排除)
+  // hybrid pattern helper
+  const build = (categoryLabel, h1Catch, subText) => ({
+    eyebrow: `${areaTxt} · ${categoryLabel} · ${nameTxt}`,
+    h1line: h1Catch,
     sub: subText
   });
 
-  if (!cat) return base('お店', 'この街で、静かに続けています。');
+  if (!cat) return build(
+    'お店',
+    `この街に、<em>通いたくなる</em>場所を。`,
+    'アクセス、営業時間、メニュー。ここで、お店の空気を感じてください。'
+  );
 
   // ネイル · まつげ (順序注意: ネイル → 美容 誤hit 防止)
-  if (/ネイル/.test(cat)) return base('ネイルサロン', '完全予約制、一人ずつ丁寧に。3週間、キレイが続きます。');
-  if (/まつげ|まつ毛|アイラッシュ/.test(cat)) return base('まつげサロン', '40日ごとの来店で、毎朝のメイク時間が短くなります。');
+  if (/ネイル/.test(cat)) return build(
+    'ネイルサロン',
+    `指先から、<em>気分が</em>整う。`,
+    '完全予約制、一人ずつ丁寧に。3週間、キレイが続きます。'
+  );
+  if (/まつげ|まつ毛|アイラッシュ/.test(cat)) return build(
+    'アイラッシュ',
+    `毎朝の5分を、<em>返します。</em>`,
+    '40日ごとの来店で、メイク時間が短くなります。'
+  );
 
   // 美容室
-  if (/美容|サロン|ヘア/.test(cat)) return base('ヘアサロン', 'カウンセリング30分から、朝のセットが楽になる髪型を。');
+  if (/美容|サロン|ヘア/.test(cat)) return build(
+    'ヘアサロン',
+    `朝が、<em>少しラク</em>になる髪型を。`,
+    'カウンセリング30分から、あなたに合う一本を見つけます。'
+  );
 
   // エステ
-  if (/エステ|マッサージ|リラク|フェイシャル/.test(cat)) return base('エステサロン', '完全個室で90分、その日の肌と体調に合わせた施術を。');
+  if (/エステ|マッサージ|リラク|フェイシャル/.test(cat)) return build(
+    'エステサロン',
+    `深く、<em>息をする</em>90分を。`,
+    '完全個室で、その日の肌と体調に合わせた施術を。'
+  );
 
   // カフェ
-  if (/カフェ|喫茶|cafe/i.test(cat)) return base('カフェ · ロースタリー', '自家焙煎の豆、常時8種類。ハンドドリップで一杯ずつ。');
+  if (/カフェ|喫茶|cafe/i.test(cat)) return build(
+    'カフェ · ロースタリー',
+    `今日の一杯を、<em>いつもの店</em>で。`,
+    '自家焙煎の豆、常時8種類。ハンドドリップで一杯ずつ。'
+  );
 
   // 寿司 · 和食
-  if (/寿司|鮨|割烹|料亭|懐石|和食|日本料理/.test(cat)) return base('寿司 · 割烹', '朝5時、市場で仕入れます。おまかせのみ、カウンター8席。');
+  if (/寿司|鮨|割烹|料亭|懐石|和食|日本料理/.test(cat)) return build(
+    '寿司 · 割烹',
+    `その日の海を、<em>一貫ずつ</em>。`,
+    '朝5時、市場で仕入れます。おまかせのみ、カウンター8席。'
+  );
 
   // ホステル · 旅館
-  if (/ホステル|旅館|民宿|民泊|温泉|宿/.test(cat)) return base('一棟貸し宿', '一日一組限定。この街の朝の風景を、住人の目線で。');
+  if (/ホステル|旅館|民宿|民泊|温泉|宿/.test(cat)) return build(
+    '一棟貸し宿',
+    `暮らすように、<em>泊まる</em>一晩を。`,
+    '一日一組限定。この街の朝の風景を、住人の目線で。'
+  );
 
   // ジム
-  if (/ジム|フィットネス|パーソナル|ヨガ|ピラティス/.test(cat)) return base('パーソナルジム', '週2回、60分。完全個室でマンツーマン。一年続けやすい設計。');
+  if (/ジム|フィットネス|パーソナル|ヨガ|ピラティス/.test(cat)) return build(
+    'パーソナルジム',
+    `変わるより、<em>続く</em>を。`,
+    '週2回、60分。完全個室でマンツーマン。一年続けやすい設計。'
+  );
 
-  // レストラン (イタリアン · フレンチ)
-  if (/イタリアン|フレンチ|ビストロ|レストラン/.test(cat)) return base('レストラン', '毎朝、シェフが市場で選ぶ旬の食材。カウンター含め12席。');
+  // レストラン
+  if (/イタリアン|フレンチ|ビストロ|レストラン/.test(cat)) return build(
+    'レストラン',
+    `季節を、<em>皿で味わう</em>夜。`,
+    '毎朝、シェフが市場で選ぶ旬の食材。カウンター含め12席。'
+  );
 
   // ラーメン · そば
-  if (/ラーメン|そば|うどん|中華|食堂/.test(cat)) return base('ラーメン · 食堂', '自家製麺、毎朝の水加減で仕込みます。スープは前日夜から。');
+  if (/ラーメン|そば|うどん|中華|食堂/.test(cat)) return build(
+    'ラーメン · 食堂',
+    `今日の一杯が、<em>明日の元気</em>に。`,
+    '自家製麺、毎朝の水加減で仕込みます。スープは前日夜から。'
+  );
 
   // 歯科
-  if (/歯科|デンタル|クリニック|医院|病院|dental|clinic/i.test(cat)) return base('歯科 · 予防歯科', '半年に一度の定期検診30分。10年後の自分の歯を、一緒に守ります。');
+  if (/歯科|デンタル|クリニック|医院|病院|dental|clinic/i.test(cat)) return build(
+    '歯科 · 予防歯科',
+    `10年後も、<em>自分の歯で</em>笑うために。`,
+    '半年に一度の定期検診30分。予防中心で、一緒に守ります。'
+  );
 
   // fallback
-  return base(cat || 'お店', 'この街で、静かに続けています。');
+  return build(
+    cat || 'お店',
+    `この街に、<em>通いたくなる</em>場所を。`,
+    'アクセス、営業時間、メニュー。ここで、お店の空気を感じてください。'
+  );
 }
 
 // ==== 業種別 News / Testimonials (Important-3: テンプレ感 排除) ====
