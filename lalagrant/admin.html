@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>いろはグループ 管理画面 (v0.1)</title>
+<meta name="description" content="いろはグループ 会員 教育プラットフォーム · スタッフ 用 管理画面" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:            #f7f5f7;
+    --workspace:     #fbfafb;
+    --surface:       #ffffff;
+    --surface-2:     #f4f0f2;
+    --surface-3:     #ebe5e8;
+    --ink:           #14141f;
+    --ink-2:         #3e3e50;
+    --ink-3:         #666676;
+    --dim:           #8e8e9c;
+    --muted:         #b8b8c4;
+    --rule:          #ececf0;
+    --rule-2:        #ddd8dc;
+    --rose:          #c4728c;
+    --rose-hi:       #a75672;
+    --rose-lo:       #d992a5;
+    --rose-soft:     #f8ecef;
+    --rose-tint:     #fdf6f8;
+    --rose-shadow:   rgba(196, 114, 140, 0.16);
+    --rose-glow:     0 0 0 3px rgba(196, 114, 140, 0.14);
+    --gold:          #b89968;
+    --gold-lo:       #d4b988;
+    --gold-soft:     rgba(184, 153, 104, 0.14);
+    --success:       #4a9b6b;
+    --success-soft:  #ecf6f1;
+    --danger:        #d94c5c;
+    --danger-soft:   #fdecee;
+    --warn:          #d99c4a;
+    --warn-soft:     #fdf3e4;
+    --info:          #4a7bd9;
+    --font-jp:       "Noto Sans JP", "Inter", -apple-system, sans-serif;
+    --font-mono:     "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --shadow-1:      0 1px 2px rgba(20,20,31,0.04), 0 1px 3px rgba(20,20,31,0.03);
+    --shadow-2:      0 4px 12px rgba(20,20,31,0.06), 0 2px 4px rgba(20,20,31,0.03);
+    --shadow-3:      0 8px 24px rgba(20,20,31,0.08);
+    --inner-h:       inset 0 1px 0 rgba(255,255,255,0.14);
+    --ease-emp:      cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-out-q:    cubic-bezier(0.25, 1, 0.5, 1);
+    --rail-l:        260px;
+    --rail-r:        340px;
+    --top-h:         56px;
+    --sticky-cta-h:  64px;
+    --z-nav:         30;
+    --z-sticky:      40;
+    --z-backdrop:    50;
+    --z-drawer:      60;
+    --z-modal:       70;
+    --z-toast:       80;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: var(--font-jp); font-weight: 500; -webkit-font-smoothing: antialiased; letter-spacing: -0.005em; font-feature-settings: "tnum" 1, "palt" 1; font-size: 14px; }
+  body { min-height: 100vh; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  input, textarea, select { font: inherit; color: inherit; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex="0"]:focus-visible {
+    outline: none; box-shadow: var(--rose-glow);
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--rule-2); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* ========== BUTTONS ========== */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; letter-spacing: 0.01em; line-height: 1; cursor: pointer; transition: transform 0.16s var(--ease-out-q), background 0.15s var(--ease-out-q), box-shadow 0.18s var(--ease-out-q), color 0.15s var(--ease-out-q); white-space: nowrap; position: relative; }
+  .btn:active { transform: translateY(1px); }
+  .btn svg { width: 14px; height: 14px; flex: none; }
+  .btn-ink { background: var(--ink); color: #fff; box-shadow: var(--inner-h), var(--shadow-1); }
+  .btn-ink:hover { background: #23232f; box-shadow: var(--inner-h), var(--shadow-2); }
+  .btn-rose { background: linear-gradient(180deg, var(--rose) 0%, var(--rose-hi) 100%); color: #fff; box-shadow: var(--inner-h), 0 2px 8px var(--rose-shadow); }
+  .btn-rose:hover { transform: translateY(-1px); box-shadow: var(--inner-h), 0 4px 16px var(--rose-shadow); }
+  .btn-ghost { background: transparent; color: var(--ink-2); border: 1px solid var(--rule-2); }
+  .btn-ghost:hover { background: var(--surface-2); border-color: var(--rule-2); color: var(--ink); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger-soft); }
+  .btn-danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+  .btn-lg { padding: 12px 22px; font-size: 14px; border-radius: 12px; }
+
+  .icon-btn { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: var(--ink-3); position: relative; transition: background 0.15s var(--ease-out-q), color 0.15s var(--ease-out-q); }
+  .icon-btn:hover { background: var(--surface-2); color: var(--ink); }
+  .icon-btn svg { width: 17px; height: 17px; }
+
+  /* ========== TOP HEADER ========== */
+  .top-hdr {
+    position: sticky; top: 0; z-index: var(--z-sticky);
+    background: rgba(255,255,255,0.94); backdrop-filter: saturate(180%) blur(16px); -webkit-backdrop-filter: saturate(180%) blur(16px);
+    border-bottom: 1px solid var(--rule);
+    height: var(--top-h);
+    display: grid; grid-template-columns: var(--rail-l) 1fr auto; align-items: center;
+  }
+  .top-hdr .brand-cell {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 20px;
+    height: 100%;
+    border-right: 1px solid var(--rule);
+  }
+  .brand-mono { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, var(--rose) 0%, var(--rose-hi) 100%); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 900; letter-spacing: -0.02em; box-shadow: var(--inner-h), 0 1px 4px var(--rose-shadow); }
+  .brand-name { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .brand-name .n { font-size: 13.5px; font-weight: 900; color: var(--ink); letter-spacing: 0.01em; }
+  .brand-name .s { font-size: 10px; color: var(--dim); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+  .brand-tenant-pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 7px; border-radius: 999px; background: var(--gold-soft); color: var(--gold); font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+  .brand-tenant-pill::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--gold); }
+
+  .top-hdr .center-cell { display: flex; align-items: center; padding: 0 24px; gap: 16px; min-width: 0; }
+  .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--dim); font-weight: 600; }
+  .breadcrumb .sep { color: var(--muted); }
+  .breadcrumb .curr { color: var(--ink); font-weight: 800; }
+
+  .top-hdr .right-cell { display: flex; align-items: center; gap: 6px; padding: 0 16px; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--rose-lo) 0%, var(--rose) 100%); color: #fff; display: grid; place-items: center; font-weight: 900; font-size: 12px; box-shadow: var(--inner-h), 0 1px 4px var(--rose-shadow); position: relative; }
+  .avatar::after { content: ''; position: absolute; bottom: 0; right: 0; width: 9px; height: 9px; border-radius: 50%; background: var(--success); border: 2px solid #fff; }
+  .env-badge { font-size: 10px; padding: 3px 8px; border: 1px solid var(--rule); border-radius: 6px; color: var(--dim); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+
+  /* ========== SHELL ========== */
+  .shell { display: grid; grid-template-columns: var(--rail-l) minmax(0, 1fr); min-height: calc(100vh - var(--top-h)); }
+  .rail-l { border-right: 1px solid var(--rule); background: var(--workspace); position: sticky; top: var(--top-h); height: calc(100vh - var(--top-h)); overflow-y: auto; padding: 16px 0 20px; }
+  .main { min-width: 0; padding: 24px 32px 100px; }
+  .main.has-preview { display: grid; grid-template-columns: minmax(0,1fr) var(--rail-r); gap: 24px; }
+
+  /* ========== LEFT RAIL NAV ========== */
+  .rail-l .sec-label { font-size: 10px; color: var(--dim); font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; padding: 12px 22px 8px; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 9px 12px; margin: 1px 12px; border-radius: 9px; cursor: pointer; color: var(--ink-2); font-size: 13px; font-weight: 600; transition: background 0.15s var(--ease-out-q), color 0.15s var(--ease-out-q); position: relative; }
+  .nav-item:hover { background: var(--surface-2); color: var(--ink); }
+  .nav-item.is-on { background: var(--ink); color: #fff; box-shadow: var(--inner-h), var(--shadow-1); font-weight: 700; }
+  .nav-item svg { width: 16px; height: 16px; flex: none; opacity: 0.7; }
+  .nav-item.is-on svg { opacity: 1; }
+  .nav-item .cnt { margin-left: auto; font-size: 10.5px; color: var(--dim); font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px 7px; background: var(--surface-2); border-radius: 999px; }
+  .nav-item.is-on .cnt { background: rgba(255,255,255,0.14); color: rgba(255,255,255,0.86); }
+  .nav-item.new-badge::after { content: 'NEW'; margin-left: 6px; font-size: 8.5px; padding: 2px 5px; border-radius: 3px; background: var(--rose); color: #fff; font-weight: 900; letter-spacing: 0.04em; }
+  .rail-l .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--rule), transparent); margin: 14px 20px; }
+
+  .rail-l .rail-foot { padding: 12px 20px; margin: 0 4px; border-top: 1px solid var(--rule); position: relative; }
+  .rail-l .rail-foot .staff-row { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-radius: 8px; cursor: pointer; transition: background 0.15s var(--ease-out-q); }
+  .rail-l .rail-foot .staff-row:hover { background: var(--surface-2); }
+  .rail-l .rail-foot .staff-av { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--rose-lo), var(--rose)); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 900; box-shadow: var(--inner-h); flex: none; }
+  .rail-l .rail-foot .staff-info { flex: 1; min-width: 0; }
+  .rail-l .rail-foot .staff-info .n { font-size: 12px; font-weight: 800; color: var(--ink); line-height: 1.3; }
+  .rail-l .rail-foot .staff-info .r { font-size: 10.5px; color: var(--dim); font-weight: 600; margin-top: 1px; }
+
+  /* ========== VIEW SWITCH ========== */
+  .view { display: none; animation: fadeIn 220ms var(--ease-out-q); }
+  .view.is-active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ========== VIEW HEADING ========== */
+  .view-hd { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--rule); }
+  .view-hd h1 { font-size: 24px; font-weight: 900; letter-spacing: -0.025em; line-height: 1.2; }
+  .view-hd .sub { font-size: 12.5px; color: var(--dim); margin-top: 6px; font-weight: 500; line-height: 1.6; }
+  .view-hd .actions { display: flex; align-items: center; gap: 8px; flex: none; }
+
+  /* ========== KPI STRIP ========== */
+  .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .kpi { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow-1); position: relative; overflow: hidden; }
+  .kpi .lbl { font-size: 11px; color: var(--dim); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+  .kpi .val-row { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
+  .kpi .val { font-size: 26px; font-weight: 900; color: var(--ink); letter-spacing: -0.025em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .kpi .u { font-size: 12px; color: var(--dim); font-weight: 700; }
+  .kpi .diff { font-size: 11px; padding: 2px 7px; border-radius: 5px; font-weight: 800; margin-left: auto; font-variant-numeric: tabular-nums; }
+  .kpi .diff.up { background: var(--success-soft); color: var(--success); }
+  .kpi .diff.down { background: var(--rose-soft); color: var(--rose-hi); }
+  .kpi .diff.flat { background: var(--surface-2); color: var(--dim); }
+  .kpi .sub-line { font-size: 11px; color: var(--dim); margin-top: 6px; font-weight: 600; }
+
+  /* ========== SECTION HD ========== */
+  .sec-hd { display: flex; align-items: baseline; justify-content: space-between; margin: 28px 0 12px; gap: 16px; }
+  .sec-hd h2 { font-size: 15px; font-weight: 900; letter-spacing: -0.01em; color: var(--ink); }
+  .sec-hd .sub { font-size: 12px; color: var(--dim); font-weight: 600; }
+  .sec-hd .actions { display: flex; gap: 8px; }
+
+  /* ========== CARD ========== */
+  .card { background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; box-shadow: var(--shadow-1); overflow: hidden; }
+  .card-pad { padding: 20px 22px; }
+  .card + .card { margin-top: 14px; }
+
+  /* ========== TWO COL ========== */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* ========== TABLE ========== */
+  .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tbl th { text-align: left; padding: 10px 14px; background: var(--surface-2); font-weight: 800; color: var(--ink-2); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; border-bottom: 1px solid var(--rule); }
+  .tbl td { padding: 12px 14px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+  .tbl tr:last-child td { border-bottom: 0; }
+  .tbl tr:hover td { background: var(--rose-tint); }
+  .tbl .th-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tbl td.th-num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .tbl .row-avatar { display: flex; align-items: center; gap: 10px; }
+  .tbl .row-avatar .av { width: 30px; height: 30px; border-radius: 50%; background: var(--surface-2); color: var(--ink-3); display: grid; place-items: center; font-size: 11px; font-weight: 900; flex: none; }
+  .tbl .row-avatar .av.rose { background: linear-gradient(135deg, var(--rose-lo), var(--rose)); color: #fff; }
+  .tbl .row-avatar .info { min-width: 0; }
+  .tbl .row-avatar .info .n { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .tbl .row-avatar .info .s { font-size: 11px; color: var(--dim); font-weight: 500; margin-top: 1px; }
+
+  /* ========== PILL / BADGE ========== */
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; }
+  .pill-rose { background: var(--rose-soft); color: var(--rose-hi); }
+  .pill-gold { background: var(--gold-soft); color: var(--gold); }
+  .pill-ink { background: var(--surface-3); color: var(--ink-2); }
+  .pill-success { background: var(--success-soft); color: var(--success); }
+  .pill-warn { background: var(--warn-soft); color: var(--warn); }
+  .pill-danger { background: var(--danger-soft); color: var(--danger); }
+  .pill-outline { background: transparent; border: 1px solid var(--rule-2); color: var(--ink-3); }
+
+  /* ========== DASHBOARD LIST ========== */
+  .activity-row { display: grid; grid-template-columns: 32px 1fr auto; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--rule); align-items: center; }
+  .activity-row:last-child { border-bottom: 0; }
+  .activity-row .ic { width: 32px; height: 32px; border-radius: 8px; background: var(--rose-soft); color: var(--rose-hi); display: grid; place-items: center; box-shadow: var(--inner-h); }
+  .activity-row .ic svg { width: 14px; height: 14px; }
+  .activity-row .ic.gold { background: var(--gold-soft); color: var(--gold); }
+  .activity-row .ic.ink { background: var(--surface-3); color: var(--ink-2); }
+  .activity-row .body .t { font-size: 13px; font-weight: 700; color: var(--ink); line-height: 1.4; }
+  .activity-row .body .m { font-size: 11.5px; color: var(--dim); margin-top: 2px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .activity-row .when { font-size: 11px; color: var(--dim); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* ========== VIDEO UPLOAD ========== */
+  .upload-zone {
+    background: var(--workspace);
+    border: 2px dashed var(--rule-2);
+    border-radius: 16px;
+    padding: 44px 32px;
+    text-align: center;
+    transition: border-color 0.2s var(--ease-out-q), background 0.2s var(--ease-out-q);
+    cursor: pointer;
+    position: relative; overflow: hidden;
+  }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--rose); background: var(--rose-tint); }
+  .upload-zone::before {
+    content: ''; position: absolute; top: -40px; right: -40px; width: 180px; height: 180px;
+    background: radial-gradient(circle, var(--rose-soft) 0%, transparent 65%);
+    pointer-events: none; opacity: 0.6;
+  }
+  .upload-zone > * { position: relative; }
+  .upload-zone .ic-wrap {
+    width: 56px; height: 56px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--rose-soft) 0%, #f4d8de 100%);
+    display: grid; place-items: center; margin: 0 auto 16px;
+    color: var(--rose-hi); box-shadow: var(--inner-h);
+  }
+  .upload-zone .ic-wrap svg { width: 24px; height: 24px; }
+  .upload-zone .t { font-size: 15px; font-weight: 800; color: var(--ink); letter-spacing: -0.005em; }
+  .upload-zone .m { font-size: 12.5px; color: var(--dim); margin-top: 8px; font-weight: 500; line-height: 1.6; }
+  .upload-zone .browse { display: inline-block; margin-top: 16px; padding: 10px 20px; background: var(--ink); color: #fff; border-radius: 10px; font-size: 12.5px; font-weight: 800; letter-spacing: 0.02em; box-shadow: var(--inner-h), var(--shadow-1); }
+
+  /* Upload progress row */
+  .upload-item { display: grid; grid-template-columns: 60px 1fr auto; gap: 14px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; align-items: center; box-shadow: var(--shadow-1); }
+  .upload-item + .upload-item { margin-top: 8px; }
+  .upload-item .th { width: 60px; height: 40px; border-radius: 8px; background: linear-gradient(135deg, #fbecf0, #f2ced7); display: grid; place-items: center; color: var(--rose-hi); font-size: 10px; font-weight: 900; letter-spacing: 0.06em; }
+  .upload-item .name { font-size: 13px; font-weight: 700; color: var(--ink); line-height: 1.35; }
+  .upload-item .meta { font-size: 11px; color: var(--dim); margin-top: 3px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .upload-item .bar { height: 5px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin-top: 8px; }
+  .upload-item .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--rose) 0%, var(--gold) 100%); border-radius: 999px; transition: width 0.3s var(--ease-out-q); }
+  .upload-item .ctl { display: flex; align-items: center; gap: 6px; }
+
+  /* Video list card */
+  .vid-row { display: grid; grid-template-columns: 96px 1fr auto auto auto; gap: 14px; padding: 12px 14px; border-bottom: 1px solid var(--rule); align-items: center; }
+  .vid-row:last-child { border-bottom: 0; }
+  .vid-row:hover { background: var(--rose-tint); }
+  .vid-row .th { width: 96px; height: 54px; border-radius: 8px; background: linear-gradient(135deg, #fbecf0, #f2ced7); display: grid; place-items: center; color: var(--rose-hi); font-size: 9.5px; font-weight: 900; letter-spacing: 0.06em; position: relative; overflow: hidden; }
+  .vid-row .th.tc2 { background: linear-gradient(135deg, #f4edf5, #e2d5e6); }
+  .vid-row .th.tc3 { background: linear-gradient(135deg, #f2e9ed, #e2d0d9); }
+  .vid-row .th.tc4 { background: linear-gradient(135deg, #f4f0ec, #e5dcd0); }
+  .vid-row .th.tc5 { background: linear-gradient(135deg, #f6ede1, #ecd5b8); }
+  .vid-row .th.tc6 { background: linear-gradient(135deg, #f2e5eb, #dfc8d1); }
+  .vid-row .th::after { content: ''; width: 0; height: 0; border-left: 8px solid var(--ink); border-top: 5px solid transparent; border-bottom: 5px solid transparent; opacity: 0.7; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+  .vid-row .th .dur { position: absolute; bottom: 3px; right: 4px; font-size: 9.5px; padding: 1px 4px; border-radius: 3px; background: rgba(20,20,31,0.75); color: #fff; font-weight: 700; letter-spacing: 0.02em; }
+  .vid-row .info .t { font-size: 13px; font-weight: 700; color: var(--ink); line-height: 1.4; }
+  .vid-row .info .m { font-size: 11px; color: var(--dim); margin-top: 3px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .vid-row .cat-tag { font-size: 10.5px; padding: 3px 8px; background: var(--surface-2); color: var(--ink-2); border-radius: 6px; font-weight: 700; letter-spacing: 0.02em; }
+  .vid-row .views { font-size: 11.5px; color: var(--ink-2); font-weight: 700; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 4px; }
+  .vid-row .views svg { width: 12px; height: 12px; color: var(--dim); }
+
+  /* ========== FORM ========== */
+  .form-grid { display: grid; grid-template-columns: 160px 1fr; gap: 12px 20px; align-items: start; }
+  .form-lbl { font-size: 12px; color: var(--ink-2); font-weight: 700; padding-top: 9px; letter-spacing: 0.01em; }
+  .form-lbl .required { color: var(--rose); margin-left: 3px; font-weight: 900; }
+  .form-inp, .form-sel, .form-txt { width: 100%; padding: 9px 12px; background: var(--surface); border: 1px solid var(--rule-2); border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--ink); transition: border-color 0.15s var(--ease-out-q); }
+  .form-inp:focus, .form-sel:focus, .form-txt:focus { border-color: var(--rose); outline: none; box-shadow: var(--rose-glow); }
+  .form-txt { min-height: 84px; resize: vertical; font-family: inherit; line-height: 1.6; }
+  .form-help { font-size: 11px; color: var(--dim); margin-top: 5px; font-weight: 500; line-height: 1.55; }
+  .form-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .form-chip { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 6px; background: var(--surface); border: 1px solid var(--rule-2); font-size: 11.5px; font-weight: 700; color: var(--ink-2); cursor: pointer; transition: all 0.15s var(--ease-out-q); }
+  .form-chip:hover { border-color: var(--rose); color: var(--rose-hi); }
+  .form-chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .form-chip.on:hover { color: #fff; }
+  .form-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--surface-2); border-radius: 999px; cursor: pointer; user-select: none; }
+  .form-toggle .knob { width: 32px; height: 18px; background: var(--rule-2); border-radius: 999px; position: relative; transition: background 0.2s var(--ease-out-q); }
+  .form-toggle .knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform 0.2s var(--ease-out-q); box-shadow: var(--shadow-1); }
+  .form-toggle.on .knob { background: var(--rose); }
+  .form-toggle.on .knob::after { transform: translateX(14px); }
+  .form-toggle .lbl { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+
+  /* ========== STICKY BOTTOM CTA ========== */
+  .sticky-cta {
+    position: fixed; bottom: 0; left: var(--rail-l); right: 0; z-index: var(--z-sticky);
+    height: var(--sticky-cta-h);
+    background: rgba(255,255,255,0.95); backdrop-filter: saturate(180%) blur(16px);
+    border-top: 1px solid var(--rule);
+    display: none; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+    box-shadow: 0 -4px 20px rgba(20,20,31,0.04);
+  }
+  .sticky-cta.is-visible { display: flex; animation: slideUp 240ms var(--ease-emp); }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .sticky-cta .status { font-size: 12px; color: var(--ink-2); font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .sticky-cta .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+  .sticky-cta .actions { display: flex; align-items: center; gap: 10px; }
+
+  /* ========== TOAST (reused) ========== */
+  .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: var(--z-toast); display: flex; flex-direction: column-reverse; gap: 10px; pointer-events: none; max-width: 380px; }
+  .toast { background: #fff; border: 1px solid var(--rule); border-radius: 12px; box-shadow: var(--shadow-3); padding: 12px 14px; display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; pointer-events: auto; animation: toastIn 300ms var(--ease-emp); position: relative; overflow: hidden; }
+  .toast.leaving { animation: toastOut 240ms var(--ease-out-q) forwards; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(10px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes toastOut { to { opacity: 0; transform: translateX(20px); } }
+  .toast .toast-ico { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, var(--rose-soft), #f4d8de); color: var(--rose-hi); display: grid; place-items: center; box-shadow: var(--inner-h); }
+  .toast .toast-ico svg { width: 14px; height: 14px; }
+  .toast .toast-body .toast-title { font-size: 12px; font-weight: 800; color: var(--ink); line-height: 1.4; }
+  .toast .toast-body .toast-msg { font-size: 11px; color: var(--dim); font-weight: 500; margin-top: 2px; line-height: 1.5; }
+  .toast .toast-close { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; color: var(--muted); transition: background 0.15s var(--ease-out-q); }
+  .toast .toast-close:hover { background: var(--surface-2); color: var(--ink); }
+  .toast .toast-close svg { width: 11px; height: 11px; }
+  .toast::before { content: ''; position: absolute; bottom: 0; left: 0; height: 2px; background: linear-gradient(90deg, var(--gold), var(--rose)); animation: toastBar 3.6s linear forwards; }
+  @keyframes toastBar { from { width: 100%; } to { width: 0%; } }
+
+  /* ========== KARTE DETAIL ========== */
+  .karte-split { display: grid; grid-template-columns: 260px 1fr; gap: 20px; }
+  .karte-list-card { padding: 12px 4px; max-height: 640px; overflow-y: auto; }
+  .karte-list-row { display: grid; grid-template-columns: 36px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; margin: 0 8px; border-radius: 8px; cursor: pointer; transition: background 0.15s var(--ease-out-q); }
+  .karte-list-row:hover { background: var(--rose-tint); }
+  .karte-list-row.is-on { background: var(--ink); color: #fff; }
+  .karte-list-row.is-on .m, .karte-list-row.is-on .n-sub { color: rgba(255,255,255,0.7); }
+  .karte-list-row .av { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--rose-lo), var(--rose)); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 900; box-shadow: var(--inner-h); }
+  .karte-list-row .info .n { font-size: 12.5px; font-weight: 700; color: inherit; line-height: 1.3; }
+  .karte-list-row .info .n-sub { font-size: 10.5px; color: var(--dim); font-weight: 500; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .karte-list-row .updated { font-size: 10px; color: var(--dim); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .karte-list-search { position: sticky; top: 0; background: var(--surface); padding: 8px 12px; z-index: 2; border-bottom: 1px solid var(--rule); }
+  .karte-list-search input { width: 100%; padding: 7px 10px 7px 30px; background: var(--surface-2); border: 1px solid transparent; border-radius: 8px; font-size: 12px; position: relative; }
+  .karte-list-search { display: flex; align-items: center; gap: 8px; }
+  .karte-list-search svg { color: var(--muted); flex: none; }
+
+  /* ========== LINE COMPOSER ========== */
+  .line-composer-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+  .line-preview {
+    background: linear-gradient(180deg, #8daccd 0%, #a5c1de 100%);
+    border-radius: 22px; padding: 12px;
+    box-shadow: var(--shadow-3);
+    position: relative;
+  }
+  .line-preview .msg-bubble {
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--ink); line-height: 1.6;
+    max-width: 78%;
+    box-shadow: var(--shadow-1);
+    white-space: pre-wrap;
+  }
+  .line-preview .flex-card {
+    background: #fff; border-radius: 14px; overflow: hidden;
+    max-width: 78%; margin-top: 10px;
+    box-shadow: var(--shadow-1);
+  }
+  .line-preview .flex-card .cover { height: 100px; background: linear-gradient(135deg, var(--rose) 0%, var(--rose-hi) 100%); display: grid; place-items: center; color: #fff; font-size: 20px; font-weight: 900; letter-spacing: -0.02em; }
+  .line-preview .flex-card .body { padding: 12px 14px; }
+  .line-preview .flex-card .t { font-size: 13px; font-weight: 800; color: var(--ink); }
+  .line-preview .flex-card .d { font-size: 11px; color: var(--dim); margin-top: 4px; font-weight: 600; }
+  .line-preview .flex-card .cta { width: 100%; margin-top: 10px; padding: 8px; background: var(--rose); color: #fff; border-radius: 8px; font-size: 12px; font-weight: 800; text-align: center; }
+  .line-preview .avatar-sm { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--rose-lo), var(--rose)); color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 900; margin-bottom: 8px; box-shadow: var(--inner-h); }
+  .line-preview .brand-name-sm { font-size: 11px; color: rgba(255,255,255,0.86); font-weight: 700; margin-bottom: 6px; }
+
+  /* ========== SETTINGS ========== */
+  .settings-nav { display: flex; flex-direction: column; gap: 2px; }
+  .settings-nav .set-nav-item { padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; color: var(--ink-2); cursor: pointer; transition: background 0.15s var(--ease-out-q); }
+  .settings-nav .set-nav-item:hover { background: var(--surface-2); }
+  .settings-nav .set-nav-item.is-on { background: var(--rose-soft); color: var(--rose-hi); }
+
+  /* ========== EMPTY STATE ========== */
+  .empty { text-align: center; padding: 44px 20px; }
+  .empty .ic { width: 48px; height: 48px; border-radius: 12px; background: var(--surface-2); color: var(--dim); display: grid; place-items: center; margin: 0 auto 14px; }
+  .empty .ic svg { width: 22px; height: 22px; }
+  .empty .t { font-size: 13px; font-weight: 700; color: var(--ink-2); }
+  .empty .m { font-size: 11.5px; color: var(--dim); margin-top: 6px; font-weight: 500; }
+
+  /* ========== SEG CONTROL ========== */
+  .seg-ctl { display: inline-flex; padding: 3px; background: var(--surface-2); border-radius: 8px; gap: 2px; }
+  .seg-ctl button { padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; color: var(--ink-3); transition: background 0.15s var(--ease-out-q), color 0.15s var(--ease-out-q); }
+  .seg-ctl button.is-on { background: #fff; color: var(--ink); box-shadow: var(--shadow-1); }
+
+  /* ========== RESPONSIVE ========== */
+  @media (max-width: 1100px) {
+    .karte-split { grid-template-columns: 1fr; }
+    .line-composer-grid { grid-template-columns: 1fr; }
+    .main.has-preview { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+    .rail-l { position: fixed; top: var(--top-h); left: 0; height: calc(100vh - var(--top-h)); width: 280px; z-index: var(--z-drawer); transform: translateX(-100%); transition: transform 0.24s var(--ease-emp); box-shadow: 0 20px 60px rgba(20,20,31,0.24); }
+    .rail-l.is-open { transform: translateX(0); }
+    .backdrop { display: none; position: fixed; inset: 0; background: rgba(20,20,31,0.44); z-index: var(--z-backdrop); }
+    .backdrop.is-on { display: block; }
+    .top-hdr { grid-template-columns: auto 1fr auto; }
+    .top-hdr .brand-cell { padding: 0 12px; border-right: 0; gap: 8px; }
+    .top-hdr .brand-cell .brand-tenant-pill { display: none; }
+    .top-hdr .ham { display: grid; }
+    .top-hdr .center-cell { padding: 0 8px; }
+    .breadcrumb { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .env-badge { display: none; }
+    .main { padding: 20px 16px 100px; }
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+    .two-col { grid-template-columns: 1fr; }
+    .sticky-cta { left: 0; padding: 0 16px; }
+    .form-grid { grid-template-columns: 1fr; gap: 4px 0; }
+    .form-lbl { padding-top: 2px; }
+  }
+  .top-hdr .ham { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top-hdr">
+  <div class="brand-cell">
+    <button class="icon-btn ham" id="ham" aria-label="menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <div class="brand-mono">い·G</div>
+    <div class="brand-name">
+      <span class="n">いろはグループ</span>
+      <span class="s">Admin</span>
+    </div>
+    <span class="brand-tenant-pill">Tenant A</span>
+  </div>
+  <div class="center-cell">
+    <div class="breadcrumb" id="breadcrumb"><em>Admin</em><span class="sep">·</span><span class="curr">ダッシュボード</span></div>
+  </div>
+  <div class="right-cell">
+    <button class="icon-btn" aria-label="ヘルプ" onclick="toast('ヘルプ センター', 'FAQ · チュートリアル · 問い合わせ')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 3.5"/><circle cx="12" cy="17" r="0.6" fill="currentColor"/></svg>
+    </button>
+    <button class="icon-btn" aria-label="通知" onclick="toast('通知', '未読 3件')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+    </button>
+    <span class="env-badge">Staging</span>
+    <div class="avatar">吉</div>
+  </div>
+</header>
+
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+
+  <aside class="rail-l" id="railL">
+    <div class="sec-label">運営</div>
+    <div class="nav-item is-on" data-view="dash">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="10" width="8" height="11" rx="1"/></svg>
+      ダッシュボード
+    </div>
+    <div class="nav-item new-badge" data-view="videos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l6 3-6 3z" fill="currentColor" stroke="none"/></svg>
+      動画 コンテンツ
+      <span class="cnt">89</span>
+    </div>
+    <div class="nav-item" data-view="seminars">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+      セミナー
+      <span class="cnt">12</span>
+    </div>
+    <div class="nav-item" data-view="members">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 20v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 20v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+      会員
+      <span class="cnt">104</span>
+    </div>
+    <div class="nav-item" data-view="karte">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h9l3 3v13H6z"/><path d="M9 12h6M9 16h4M9 8h4"/></svg>
+      カルテ
+    </div>
+
+    <div class="divider"></div>
+    <div class="sec-label">運用</div>
+    <div class="nav-item" data-view="salons">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V9l8-5 8 5v12"/><path d="M10 21v-6h4v6"/></svg>
+      サロン / 予約
+      <span class="cnt">6</span>
+    </div>
+    <div class="nav-item" data-view="line">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      LINE 配信
+    </div>
+    <div class="nav-item" data-view="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.09a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h.09a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.09a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      設定
+    </div>
+
+    <div style="flex: 1;"></div>
+    <div class="rail-foot">
+      <div class="staff-row">
+        <div class="staff-av">吉</div>
+        <div class="staff-info">
+          <div class="n">吉田 恭聡</div>
+          <div class="r">オーナー</div>
+        </div>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main" id="main">
+
+    <!-- ========== DASHBOARD ========== -->
+    <section class="view is-active" id="view-dash">
+      <div class="view-hd">
+        <div>
+          <h1>ダッシュボード</h1>
+          <div class="sub">直近 30 日 · 会員数 · 動画 視聴 · セミナー 参加 · サロン 予約 の 全体 状況</div>
+        </div>
+        <div class="actions">
+          <div class="seg-ctl">
+            <button class="is-on">7 日</button>
+            <button>30 日</button>
+            <button>90 日</button>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="toast('CSV エクスポート', '直近 30 日 の 数値 を DL 中')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+            エクスポート
+          </button>
+        </div>
+      </div>
+
+      <div class="kpi-strip">
+        <div class="kpi">
+          <div class="lbl">総 会員数</div>
+          <div class="val-row"><span class="val">104</span><span class="u">人</span><span class="diff up">+8</span></div>
+          <div class="sub-line">Premium 68 · 一般 24 · 販売員 12</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">今月 の 視聴</div>
+          <div class="val-row"><span class="val">1,284</span><span class="u">回</span><span class="diff up">+22%</span></div>
+          <div class="sub-line">平均 12.3 回/人 · 完視率 68%</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">セミナー 参加</div>
+          <div class="val-row"><span class="val">168</span><span class="u">名</span><span class="diff up">+14</span></div>
+          <div class="sub-line">前月 154名 / 直近 4 回 平均</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">サロン 予約</div>
+          <div class="val-row"><span class="val">42</span><span class="u">件</span><span class="diff flat">±0</span></div>
+          <div class="sub-line">福井 24 · 東京 8 · 大阪 6 · 他 4</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card card-pad">
+          <div class="sec-hd" style="margin-top:0;"><h2>直近 の 動画 (視聴 数 順)</h2><span class="sub">今週 集計</span></div>
+          <div>
+            <div class="activity-row">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+              <div class="body">
+                <div class="t">ブラ の サイズ が 変わる 5つ の タイミング</div>
+                <div class="m">1.1 · 6分 · カテゴリ 「選び方」</div>
+              </div>
+              <div class="when">184 回</div>
+            </div>
+            <div class="activity-row">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+              <div class="body">
+                <div class="t">サイズ 表 の 読み方 (LALA Grant 独自 の 表記)</div>
+                <div class="m">1.1 · 7分 · カテゴリ 「選び方」</div>
+              </div>
+              <div class="when">142 回</div>
+            </div>
+            <div class="activity-row">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+              <div class="body">
+                <div class="t">骨盤 の 前傾 · 後傾 セルフチェック</div>
+                <div class="m">3.1 · 8分 · カテゴリ 「体形補整」</div>
+              </div>
+              <div class="when">98 回</div>
+            </div>
+            <div class="activity-row">
+              <div class="ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 12l3 3 5-6"/></svg></div>
+              <div class="body">
+                <div class="t">産後 の 体形戻し 時期 と 順序</div>
+                <div class="m">3.3 · 9分 · 完視率 92%</div>
+              </div>
+              <div class="when">76 回</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-pad">
+          <div class="sec-hd" style="margin-top:0;"><h2>スタッフ の 動き</h2><span class="sub">直近 24 時間</span></div>
+          <div>
+            <div class="activity-row">
+              <div class="ic ink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+              <div class="body">
+                <div class="t">佐藤 が 動画 を 3 本 追加</div>
+                <div class="m">「補整下着 と 一般下着 の 違い」 他 · カテゴリ 「選び方」</div>
+              </div>
+              <div class="when">2h 前</div>
+            </div>
+            <div class="activity-row">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+              <div class="body">
+                <div class="t">田中 が LINE 配信 を 送信 (対象 68名)</div>
+                <div class="m">「稲井田社長 8月度 セミナー の ご案内」</div>
+              </div>
+              <div class="when">5h 前</div>
+            </div>
+            <div class="activity-row">
+              <div class="ic ink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h9l3 3v13H6z"/><path d="M9 12h6M9 16h4"/></svg></div>
+              <div class="body">
+                <div class="t">佐藤 が 吉田 恭聡 さん の カルテ を 更新</div>
+                <div class="m">採寸 差分 記入 · スタッフ メモ 追記</div>
+              </div>
+              <div class="when">昨日</div>
+            </div>
+            <div class="activity-row">
+              <div class="ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></div>
+              <div class="body">
+                <div class="t">Zoom 録画 が 自動 で アーカイブ に 追加</div>
+                <div class="m">「ゲスト講師 : 整体師 姿勢 改善」 · 38分</div>
+              </div>
+              <div class="when">昨日</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-hd"><h2>次 の アクション</h2><span class="sub">今週 の 予定</span></div>
+      <div class="card">
+        <table class="tbl">
+          <thead><tr><th style="width:100px;">日付</th><th>内容</th><th style="width:120px;">担当</th><th style="width:100px;">状態</th><th style="width:60px;" class="th-num">操作</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>8/25 (火)</b><div style="font-size:11px; color:var(--dim); font-weight:600;">18:00</div></td>
+              <td>9月度 会員限定 Q&A 配信 の 準備 (質問 32件 集約)</td>
+              <td>吉田</td>
+              <td><span class="pill pill-warn">下書き 中</span></td>
+              <td class="th-num"><button class="btn btn-ghost btn-sm">開く</button></td>
+            </tr>
+            <tr>
+              <td><b>8/28 (木)</b><div style="font-size:11px; color:var(--dim); font-weight:600;">20:00</div></td>
+              <td>稲井田社長 8月度 講演 「補整下着 の 未来」 の Zoom 開催</td>
+              <td>佐藤</td>
+              <td><span class="pill pill-rose">開催 予定</span></td>
+              <td class="th-num"><button class="btn btn-ghost btn-sm">Zoom</button></td>
+            </tr>
+            <tr>
+              <td><b>9/1 (月)</b><div style="font-size:11px; color:var(--dim); font-weight:600;">09:00</div></td>
+              <td>9月 新規 コンテンツ 「秋 の 着こなし」 5本 一括公開</td>
+              <td>田中</td>
+              <td><span class="pill pill-outline">予約 公開</span></td>
+              <td class="th-num"><button class="btn btn-ghost btn-sm">確認</button></td>
+            </tr>
+            <tr>
+              <td><b>9/5 (金)</b><div style="font-size:11px; color:var(--dim); font-weight:600;">14:00</div></td>
+              <td>吉田 恭聡 さん (Premium) 再フィッティング 予約 (福井本店)</td>
+              <td>佐藤</td>
+              <td><span class="pill pill-success">確定</span></td>
+              <td class="th-num"><button class="btn btn-ghost btn-sm">カルテ</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== VIDEOS ========== -->
+    <section class="view" id="view-videos">
+      <div class="view-hd">
+        <div>
+          <h1>動画 コンテンツ</h1>
+          <div class="sub">89 本 · 総 視聴 時間 12h 24m · カテゴリ 7 (販売員限定 含む)</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-ghost btn-sm" onclick="toast('CSV インポート', 'メタ 一括 登録')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-6 9 6"/><path d="M3 9v10a2 2 0 002 2h14a2 2 0 002-2V9"/></svg>CSV 取込</button>
+          <button class="btn btn-rose" onclick="scrollToUpload()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>動画 を 追加</button>
+        </div>
+      </div>
+
+      <div class="sec-hd" style="margin-top:0;"><h2>アップロード</h2><span class="sub">ドラッグ & ドロップ or ファイル 選択</span></div>
+      <div class="upload-zone" id="uploadZone" onclick="triggerUpload()">
+        <div class="ic-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v14"/><path d="M5 10l7-7 7 7"/><path d="M3 21h18"/></svg>
+        </div>
+        <div class="t">動画 ファイル を ここ に ドロップ</div>
+        <div class="m">mp4 · mov · webm 対応 / 1ファイル 上限 2GB / 複数 一括 も OK</div>
+        <div class="browse" onclick="event.stopPropagation(); triggerUpload();">ファイル を 選択</div>
+      </div>
+
+      <div id="uploadList" style="margin-top: 14px;">
+        <div class="upload-item">
+          <div class="th">MP4</div>
+          <div style="min-width: 0;">
+            <div class="name">「秋 の 着こなし」 プロモ 映像 v3.mp4</div>
+            <div class="meta">182 MB · アップロード 中</div>
+            <div class="bar"><span style="width: 62%"></span></div>
+          </div>
+          <div class="ctl">
+            <span class="pill pill-warn">62%</span>
+            <button class="icon-btn" aria-label="キャンセル" onclick="toast('中止', 'アップロード を キャンセル')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-hd"><h2>コンテンツ 一覧</h2>
+        <div class="actions">
+          <div class="seg-ctl">
+            <button class="is-on">すべて</button>
+            <button>公開中</button>
+            <button>下書き</button>
+            <button>非公開</button>
+          </div>
+          <select class="form-sel" style="max-width: 180px;">
+            <option>すべての カテゴリ</option>
+            <option>1. 選び方</option>
+            <option>2. 着用方法</option>
+            <option>3. 体形補整</option>
+            <option>4. お手入れ</option>
+            <option>5. 美容 連携</option>
+            <option>6. セミナー</option>
+            <option>7. 販売員限定</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="vid-row" onclick="openVideoEdit('ブラ の サイズ が 変わる 5つ の タイミング')">
+          <div class="th"><span class="dur">6:12</span></div>
+          <div class="info">
+            <div class="t">ブラ の サイズ が 変わる 5つ の タイミング</div>
+            <div class="m">1.1 · 追加 2026-06-14 · 公開中</div>
+          </div>
+          <span class="cat-tag">1.1 選び方</span>
+          <div class="views">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            184
+          </div>
+          <div class="ctl">
+            <span class="pill pill-success">公開</span>
+            <button class="icon-btn" aria-label="編集"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg></button>
+          </div>
+        </div>
+        <div class="vid-row" onclick="openVideoEdit('サイズ 表 の 読み方')">
+          <div class="th tc2"><span class="dur">7:05</span></div>
+          <div class="info">
+            <div class="t">サイズ 表 の 読み方 (LALA Grant 独自 の 表記)</div>
+            <div class="m">1.1 · 追加 2026-06-14 · 公開中</div>
+          </div>
+          <span class="cat-tag">1.1 選び方</span>
+          <div class="views"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>142</div>
+          <div class="ctl">
+            <span class="pill pill-success">公開</span>
+            <button class="icon-btn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg></button>
+          </div>
+        </div>
+        <div class="vid-row" onclick="openVideoEdit('骨盤 セルフチェック')">
+          <div class="th tc3"><span class="dur">8:24</span></div>
+          <div class="info">
+            <div class="t">骨盤 の 前傾 · 後傾 セルフチェック</div>
+            <div class="m">3.1 · 追加 2026-05-20 · 公開中</div>
+          </div>
+          <span class="cat-tag">3.1 体形補整</span>
+          <div class="views"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>98</div>
+          <div class="ctl">
+            <span class="pill pill-success">公開</span>
+            <button class="icon-btn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg></button>
+          </div>
+        </div>
+        <div class="vid-row" onclick="openVideoEdit('秋 の 着こなし')">
+          <div class="th tc5"><span class="dur">--:--</span></div>
+          <div class="info">
+            <div class="t">「秋 の 着こなし」 プロモ 映像 v3</div>
+            <div class="m">2.4 · アップロード 中 (62%)</div>
+          </div>
+          <span class="cat-tag">2.4 応用</span>
+          <div class="views">-</div>
+          <div class="ctl">
+            <span class="pill pill-warn">処理 中</span>
+            <button class="icon-btn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg></button>
+          </div>
+        </div>
+        <div class="vid-row" onclick="openVideoEdit('会員限定 Q&A')">
+          <div class="th tc6"><span class="dur">40:12</span></div>
+          <div class="info">
+            <div class="t">2026-07 会員限定 Q&A セッション</div>
+            <div class="m">6.3 · Zoom 自動 追加 · 2026-07-10</div>
+          </div>
+          <span class="cat-tag">6.3 Q&A</span>
+          <div class="views"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>52</div>
+          <div class="ctl">
+            <span class="pill pill-success">公開</span>
+            <button class="icon-btn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg></button>
+          </div>
+        </div>
+        <div class="vid-row" onclick="openVideoEdit('APファイバー')">
+          <div class="th tc4"><span class="dur">10:33</span></div>
+          <div class="info">
+            <div class="t">APファイバー × 光電子® の 説明 スクリプト</div>
+            <div class="m">7.1 · 販売員 tag 認証 のみ 閲覧 可</div>
+          </div>
+          <span class="cat-tag">7.1 販売員</span>
+          <div class="views"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>24</div>
+          <div class="ctl">
+            <span class="pill pill-ink">限定</span>
+            <button class="icon-btn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center; padding: 24px 0; color: var(--dim); font-size: 12px; font-weight: 600;">
+        全 89 本 中 6 本 表示 中 · <a href="#" style="color: var(--rose-hi); font-weight: 800; text-decoration: underline;">すべて を 見る</a>
+      </div>
+
+      <input type="file" id="fileInput" accept="video/*" multiple style="display:none" onchange="handleFileSelect(event)" />
+    </section>
+
+    <!-- ========== SEMINARS ========== -->
+    <section class="view" id="view-seminars">
+      <div class="view-hd">
+        <div>
+          <h1>セミナー</h1>
+          <div class="sub">Zoom 開催 + アーカイブ 自動 蓄積 · 12 件 (今後 4 · アーカイブ 8)</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-ghost btn-sm" onclick="toast('Zoom 連携 設定', 'アカウント 認証 済')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 3v4M16 3v4"/></svg>Zoom 設定</button>
+          <button class="btn btn-rose" onclick="toast('セミナー 新規 作成', '開催 予定 の フォーム を 開く')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>新規 セミナー</button>
+        </div>
+      </div>
+
+      <div class="sec-hd" style="margin-top:0;"><h2>今後 の 開催</h2></div>
+      <div class="card">
+        <table class="tbl">
+          <thead><tr><th style="width:110px;">開催 日時</th><th>タイトル</th><th style="width:100px;">形式</th><th style="width:110px;" class="th-num">予約 / 定員</th><th style="width:100px;">状態</th><th style="width:100px;" class="th-num">操作</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>8/28 (木)</b><div style="font-size:11px; color:var(--dim); font-weight:600;">20:00</div></td>
+              <td><b>稲井田社長 8月度 講演 「補整下着 の 未来」</b><div style="font-size:11px; color:var(--dim); font-weight:500; margin-top:3px;">APファイバー × 光電子® の 次世代 展開</div></td>
+              <td>Zoom</td>
+              <td class="th-num">68 / 100</td>
+              <td><span class="pill pill-rose">受付 中</span></td>
+              <td class="th-num"><button class="btn btn-ghost btn-sm">編集</button></td>
+            </tr>
+            <tr>
+              <td><b>9/11 (木)</b><div style="font-size:11px; color:var(--dim); font-weight:600;">19:30</div></td>
+              <td><b>ゲスト講師 : 姿勢改善 の 5 メソッド</b><div style="font-size:11px; color:var(--dim); font-weight:500; margin-top:3px;">整体師 · 質疑応答 あり</div></td>
+              <td>Zoom</td>
+              <td class="th-num">24 / 80</td>
+              <td><span class="pill pill-rose">受付 中</span></td>
+              <td class="th-num"><button class="btn btn-ghost btn-sm">編集</button></td>
+            </tr>
+            <tr>
+              <td><b>9/25 (木)</b><div style="font-size:11px; color:var(--dim); font-weight:600;">18:00</div></td>
+              <td><b>2026 秋冬 コレクション 発表会</b><div style="font-size:11px; color:var(--dim); font-weight:500; margin-top:3px;">Zoom + 東京会場 ハイブリッド</div></td>
+              <td>Hybrid</td>
+              <td class="th-num">12 / 150</td>
+              <td><span class="pill pill-warn">下書き</span></td>
+              <td class="th-num"><button class="btn btn-ghost btn-sm">編集</button></td>
+            </tr>
+            <tr>
+              <td><b>10/9 (木)</b><div style="font-size:11px; color:var(--dim); font-weight:600;">未定</div></td>
+              <td><b>稲井田社長 10月度 講演</b><div style="font-size:11px; color:var(--dim); font-weight:500; margin-top:3px;">内容 未定 · 1週間前 に 案内</div></td>
+              <td>Zoom</td>
+              <td class="th-num">- / -</td>
+              <td><span class="pill pill-outline">下書き</span></td>
+              <td class="th-num"><button class="btn btn-ghost btn-sm">編集</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sec-hd"><h2>Zoom 録画 · 自動 追加 待ち</h2><span class="sub">Zoom cloud recording が 完了 次第、 該当 カテゴリ に 自動 で 追加 されます</span></div>
+      <div class="card card-pad">
+        <div class="activity-row">
+          <div class="ic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></div>
+          <div class="body">
+            <div class="t">「ゲスト講師 : 整体師 姿勢 改善」 の 録画 が Zoom で 処理 中</div>
+            <div class="m">2026-08-23 (金) 開催 · 38分 · 想定 追加 先 : 6.2 ゲスト講師</div>
+          </div>
+          <div class="when">10分 前</div>
+        </div>
+        <div class="activity-row">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12l3 3 5-6"/></svg></div>
+          <div class="body">
+            <div class="t">「2026-07 Q&A セッション」 の 録画 を アーカイブ に 追加 完了</div>
+            <div class="m">2026-07-10 開催 · 40分 · 追加 先 : 6.3 会員限定 Q&A</div>
+          </div>
+          <div class="when">昨日</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== MEMBERS ========== -->
+    <section class="view" id="view-members">
+      <div class="view-hd">
+        <div>
+          <h1>会員</h1>
+          <div class="sub">104 名 (Premium 68 · 一般 24 · 販売員 12) · LINE 連携 済 98 名</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-ghost btn-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>CSV 出力</button>
+          <button class="btn btn-rose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>会員 招待</button>
+        </div>
+      </div>
+
+      <div class="sec-hd" style="margin-top:0; padding-bottom: 8px;">
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input class="form-inp" placeholder="名前 · LINE ID · サロン で 検索" style="width: 320px;" />
+          <div class="seg-ctl">
+            <button class="is-on">全員</button>
+            <button>Premium</button>
+            <button>一般</button>
+            <button>販売員</button>
+          </div>
+        </div>
+        <span class="sub">6 名 表示 中 (全 104名)</span>
+      </div>
+
+      <div class="card">
+        <table class="tbl">
+          <thead><tr><th>会員</th><th>タグ</th><th>担当 サロン</th><th class="th-num">登録日</th><th class="th-num">視聴数</th><th class="th-num">最終 来店</th><th style="width:60px;"></th></tr></thead>
+          <tbody>
+            <tr onclick="switchView('karte'); toast('カルテ を 開く', '吉田 恭聡 さん')">
+              <td><div class="row-avatar"><div class="av rose">吉</div><div class="info"><div class="n">吉田 恭聡</div><div class="s">LINE : yoshida_ky · yoshida@example.com</div></div></div></td>
+              <td><span class="pill pill-gold">Premium</span></td>
+              <td>いろは サロン 福井本店</td>
+              <td class="th-num">2026-04-10</td>
+              <td class="th-num">32</td>
+              <td class="th-num">2026-07-14</td>
+              <td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="row-avatar"><div class="av">田</div><div class="info"><div class="n">田村 美咲</div><div class="s">LINE : misaki_t · misaki@example.com</div></div></div></td>
+              <td><span class="pill pill-gold">Premium</span></td>
+              <td>いろは サロン 銀座</td>
+              <td class="th-num">2026-03-22</td>
+              <td class="th-num">28</td>
+              <td class="th-num">2026-08-14</td>
+              <td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="row-avatar"><div class="av">高</div><div class="info"><div class="n">高橋 あかね</div><div class="s">LINE : akane_taka · akane@example.com</div></div></div></td>
+              <td><span class="pill pill-ink">一般</span></td>
+              <td>いろは サロン 心斎橋</td>
+              <td class="th-num">2026-05-08</td>
+              <td class="th-num">14</td>
+              <td class="th-num">2026-08-02</td>
+              <td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="row-avatar"><div class="av">佐</div><div class="info"><div class="n">佐々木 佳菜</div><div class="s">LINE : kana_sasaki · kana@example.com</div></div></div></td>
+              <td><span class="pill pill-rose">販売員</span></td>
+              <td>いろは サロン 栄</td>
+              <td class="th-num">2025-11-14</td>
+              <td class="th-num">62</td>
+              <td class="th-num">2026-08-20</td>
+              <td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="row-avatar"><div class="av">山</div><div class="info"><div class="n">山口 智子</div><div class="s">LINE : tomoko_y · tomoko@example.com</div></div></div></td>
+              <td><span class="pill pill-gold">Premium</span></td>
+              <td>いろは サロン 福井本店</td>
+              <td class="th-num">2026-06-18</td>
+              <td class="th-num">18</td>
+              <td class="th-num">2026-08-16</td>
+              <td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="row-avatar"><div class="av">中</div><div class="info"><div class="n">中村 春香</div><div class="s">LINE : haruka_n · haruka@example.com</div></div></div></td>
+              <td><span class="pill pill-ink">一般</span></td>
+              <td>いろは サロン 金沢</td>
+              <td class="th-num">2026-07-02</td>
+              <td class="th-num">9</td>
+              <td class="th-num">2026-08-10</td>
+              <td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== KARTE ========== -->
+    <section class="view" id="view-karte">
+      <div class="view-hd">
+        <div>
+          <h1>カルテ 管理</h1>
+          <div class="sub">左 一覧 から 会員 を 選んで 採寸 · メモ · 写真 を 編集</div>
+        </div>
+      </div>
+
+      <div class="karte-split">
+        <div class="card karte-list-card">
+          <div class="karte-list-search">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
+            <input placeholder="会員 検索" />
+          </div>
+          <div class="karte-list-row is-on">
+            <div class="av">吉</div>
+            <div class="info"><div class="n">吉田 恭聡</div><div class="n-sub">Premium · 福井本店</div></div>
+            <div class="updated">7/14</div>
+          </div>
+          <div class="karte-list-row">
+            <div class="av">田</div>
+            <div class="info"><div class="n">田村 美咲</div><div class="n-sub">Premium · 銀座</div></div>
+            <div class="updated">8/14</div>
+          </div>
+          <div class="karte-list-row">
+            <div class="av">高</div>
+            <div class="info"><div class="n">高橋 あかね</div><div class="n-sub">一般 · 心斎橋</div></div>
+            <div class="updated">8/02</div>
+          </div>
+          <div class="karte-list-row">
+            <div class="av">山</div>
+            <div class="info"><div class="n">山口 智子</div><div class="n-sub">Premium · 福井本店</div></div>
+            <div class="updated">8/16</div>
+          </div>
+          <div class="karte-list-row">
+            <div class="av">中</div>
+            <div class="info"><div class="n">中村 春香</div><div class="n-sub">一般 · 金沢</div></div>
+            <div class="updated">8/10</div>
+          </div>
+        </div>
+        <div>
+          <div class="card card-pad" style="margin-bottom:16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+              <div style="display:flex; align-items:center; gap:14px;">
+                <div class="av" style="width:52px; height:52px; border-radius:50%; background: linear-gradient(135deg, var(--rose-lo), var(--rose)); color:#fff; display:grid; place-items:center; font-size:16px; font-weight:900; box-shadow: var(--inner-h);">吉</div>
+                <div>
+                  <div style="font-size:18px; font-weight:900; letter-spacing:-0.02em;">吉田 恭聡 さん</div>
+                  <div style="font-size:12px; color:var(--dim); margin-top:3px; font-weight:600;">Premium 会員 · いろは サロン 福井本店 · 担当 佐藤 · 登録 2026-04-10</div>
+                </div>
+              </div>
+              <div class="actions" style="display:flex; gap:8px;">
+                <button class="btn btn-ghost btn-sm" onclick="toast('LINE メッセージ', '吉田 さん へ 個別 メッセージ')">LINE 送信</button>
+                <button class="btn btn-ink btn-sm" onclick="showStickyCta()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>編集</button>
+              </div>
+            </div>
+
+            <div class="sec-hd" style="margin-top:0;"><h2 style="font-size:13px;">採寸 サマリー</h2><span class="sub">最終 2026-07-14</span></div>
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap: 12px 24px;">
+              <div><div style="font-size:10.5px; color:var(--dim); font-weight:800; text-transform:uppercase; letter-spacing:0.06em;">バスト</div><div style="font-size:20px; font-weight:900; letter-spacing:-0.02em; margin-top:5px;">87.0<small style="font-size:11px; color:var(--dim); font-weight:700;">cm</small> <span class="pill pill-outline" style="margin-left:6px; font-size:10px;">±0.0</span></div></div>
+              <div><div style="font-size:10.5px; color:var(--dim); font-weight:800; text-transform:uppercase; letter-spacing:0.06em;">アンダー</div><div style="font-size:20px; font-weight:900; letter-spacing:-0.02em; margin-top:5px;">72.5<small style="font-size:11px; color:var(--dim); font-weight:700;">cm</small> <span class="pill pill-rose" style="margin-left:6px; font-size:10px;">-0.5</span></div></div>
+              <div><div style="font-size:10.5px; color:var(--dim); font-weight:800; text-transform:uppercase; letter-spacing:0.06em;">ウエスト</div><div style="font-size:20px; font-weight:900; letter-spacing:-0.02em; margin-top:5px;">68.5<small style="font-size:11px; color:var(--dim); font-weight:700;">cm</small> <span class="pill pill-rose" style="margin-left:6px; font-size:10px;">-1.8</span></div></div>
+              <div><div style="font-size:10.5px; color:var(--dim); font-weight:800; text-transform:uppercase; letter-spacing:0.06em;">ヒップ</div><div style="font-size:20px; font-weight:900; letter-spacing:-0.02em; margin-top:5px;">92.2<small style="font-size:11px; color:var(--dim); font-weight:700;">cm</small> <span class="pill pill-rose" style="margin-left:6px; font-size:10px;">-2.4</span></div></div>
+              <div><div style="font-size:10.5px; color:var(--dim); font-weight:800; text-transform:uppercase; letter-spacing:0.06em;">身長</div><div style="font-size:20px; font-weight:900; letter-spacing:-0.02em; margin-top:5px;">162.0<small style="font-size:11px; color:var(--dim); font-weight:700;">cm</small></div></div>
+              <div><div style="font-size:10.5px; color:var(--dim); font-weight:800; text-transform:uppercase; letter-spacing:0.06em;">体重</div><div style="font-size:20px; font-weight:900; letter-spacing:-0.02em; margin-top:5px;">54.8<small style="font-size:11px; color:var(--dim); font-weight:700;">kg</small> <span class="pill pill-rose" style="margin-left:6px; font-size:10px;">-1.2</span></div></div>
+            </div>
+          </div>
+
+          <div class="card card-pad" style="margin-bottom:16px;">
+            <div class="sec-hd" style="margin-top:0;"><h2 style="font-size:13px;">スタッフ メモ</h2><button class="btn btn-ghost btn-sm">＋ 追記</button></div>
+            <textarea class="form-txt" placeholder="今回 の 施術 内容 · 提案 · 気付き など">前回 比 ウエスト -1.8cm、 ヒップ -2.4cm。 姿勢 の 改善 が 顕著、 ガードル ワンサイズ ダウン を 検討。 秋物 の 新作 「Fantasy シリーズ」 に ご興味 あり。</textarea>
+            <div style="display:flex; justify-content:space-between; margin-top:10px; align-items:center;">
+              <div style="font-size:11px; color:var(--dim); font-weight:600;">佐藤 · 2026-07-14 更新</div>
+              <div style="font-size:11px; color:var(--dim); font-weight:600;">124 / 500 字</div>
+            </div>
+          </div>
+
+          <div class="card card-pad">
+            <div class="sec-hd" style="margin-top:0;"><h2 style="font-size:13px;">Before / After 写真</h2><button class="btn btn-ghost btn-sm">＋ 追加</button></div>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px;">
+              <div style="aspect-ratio:3/4; background: linear-gradient(155deg, var(--surface-2), var(--surface-3)); border:1px solid var(--rule); border-radius:12px; display:grid; place-items:center; color:var(--muted); font-size:10.5px; font-weight:700; text-align:center; line-height:1.5;"><div><div class="pill pill-rose" style="font-size:9px; margin-bottom:6px;">BEFORE</div>2026-04-10<br>正面</div></div>
+              <div style="aspect-ratio:3/4; background: linear-gradient(155deg, var(--surface-2), var(--surface-3)); border:1px solid var(--rule); border-radius:12px; display:grid; place-items:center; color:var(--muted); font-size:10.5px; font-weight:700; text-align:center; line-height:1.5;"><div><div class="pill pill-rose" style="font-size:9px; margin-bottom:6px;">AFTER</div>2026-07-14<br>正面</div></div>
+              <div style="aspect-ratio:3/4; background: linear-gradient(155deg, var(--surface-2), var(--surface-3)); border:1px solid var(--rule); border-radius:12px; display:grid; place-items:center; color:var(--muted); font-size:10.5px; font-weight:700; text-align:center; line-height:1.5;"><div><div class="pill pill-rose" style="font-size:9px; margin-bottom:6px;">BEFORE</div>2026-04-10<br>側面</div></div>
+              <div style="aspect-ratio:3/4; background: linear-gradient(155deg, var(--surface-2), var(--surface-3)); border:1px solid var(--rule); border-radius:12px; display:grid; place-items:center; color:var(--muted); font-size:10.5px; font-weight:700; text-align:center; line-height:1.5;"><div><div class="pill pill-rose" style="font-size:9px; margin-bottom:6px;">AFTER</div>2026-07-14<br>側面</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== SALONS ========== -->
+    <section class="view" id="view-salons">
+      <div class="view-hd">
+        <div>
+          <h1>サロン / 予約</h1>
+          <div class="sub">6 サロン · 直近 30 日 予約 42 件 (福井 24 · 東京 8 · 大阪 6 · 他 4)</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-rose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>サロン 追加</button>
+        </div>
+      </div>
+
+      <div class="sec-hd" style="margin-top:0;"><h2>予約 一覧 (今週)</h2>
+        <div class="actions">
+          <select class="form-sel" style="max-width: 200px;">
+            <option>すべての サロン</option>
+            <option>いろは サロン 福井本店</option>
+            <option>いろは サロン 銀座</option>
+            <option>いろは サロン 心斎橋</option>
+            <option>いろは サロン 栄</option>
+            <option>いろは サロン 金沢</option>
+            <option>AUBE FOR ONE</option>
+          </select>
+        </div>
+      </div>
+      <div class="card">
+        <table class="tbl">
+          <thead><tr><th style="width:110px;">日時</th><th>会員</th><th>サロン</th><th>担当</th><th>内容</th><th style="width:90px;">状態</th><th style="width:60px;"></th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>8/26 (火)</b><div style="font-size:11px; color:var(--dim); font-weight:600;">10:30</div></td>
+              <td><div class="row-avatar"><div class="av">田</div><div class="info"><div class="n">田村 美咲</div></div></div></td>
+              <td>いろは サロン 銀座</td>
+              <td>山本</td>
+              <td>再フィッティング</td>
+              <td><span class="pill pill-success">確定</span></td>
+              <td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><b>8/27 (水)</b><div style="font-size:11px; color:var(--dim); font-weight:600;">14:00</div></td>
+              <td><div class="row-avatar"><div class="av">高</div><div class="info"><div class="n">高橋 あかね</div></div></div></td>
+              <td>いろは サロン 心斎橋</td>
+              <td>鈴木</td>
+              <td>初回 カウンセリング</td>
+              <td><span class="pill pill-success">確定</span></td>
+              <td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><b>8/28 (木)</b><div style="font-size:11px; color:var(--dim); font-weight:600;">11:00</div></td>
+              <td><div class="row-avatar"><div class="av">山</div><div class="info"><div class="n">山口 智子</div></div></div></td>
+              <td>いろは サロン 福井本店</td>
+              <td>佐藤</td>
+              <td>採寸 + 秋物 試着</td>
+              <td><span class="pill pill-warn">仮 予約</span></td>
+              <td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><b>9/5 (金)</b><div style="font-size:11px; color:var(--dim); font-weight:600;">14:00</div></td>
+              <td><div class="row-avatar"><div class="av rose">吉</div><div class="info"><div class="n">吉田 恭聡</div></div></div></td>
+              <td>いろは サロン 福井本店</td>
+              <td>佐藤</td>
+              <td>再フィッティング + 秋物 提案</td>
+              <td><span class="pill pill-success">確定</span></td>
+              <td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sec-hd"><h2>サロン 一覧</h2></div>
+      <div class="card">
+        <table class="tbl">
+          <thead><tr><th>サロン 名</th><th>地域</th><th>担当 スタッフ</th><th class="th-num">今月 予約</th><th class="th-num">稼働率</th><th style="width:60px;"></th></tr></thead>
+          <tbody>
+            <tr><td><b>いろは サロン 福井本店</b><div style="font-size:11px; color:var(--dim); font-weight:500;">10:00-19:00 · 火曜 定休</div></td><td>福井</td><td>佐藤 · 田中 (2名)</td><td class="th-num">24</td><td class="th-num">78%</td><td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td></tr>
+            <tr><td><b>AUBE FOR ONE</b><div style="font-size:11px; color:var(--dim); font-weight:500;">10:00-20:00 · 無休</div></td><td>福井</td><td>山田 (1名)</td><td class="th-num">6</td><td class="th-num">32%</td><td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td></tr>
+            <tr><td><b>いろは サロン 銀座</b><div style="font-size:11px; color:var(--dim); font-weight:500;">11:00-20:00 · 無休</div></td><td>東京</td><td>山本 · 加藤 (2名)</td><td class="th-num">8</td><td class="th-num">42%</td><td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td></tr>
+            <tr><td><b>いろは サロン 心斎橋</b><div style="font-size:11px; color:var(--dim); font-weight:500;">11:00-20:00 · 無休</div></td><td>大阪</td><td>鈴木 (1名)</td><td class="th-num">6</td><td class="th-num">28%</td><td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td></tr>
+            <tr><td><b>いろは サロン 栄</b><div style="font-size:11px; color:var(--dim); font-weight:500;">11:00-20:00 · 無休</div></td><td>名古屋</td><td>木下 (1名)</td><td class="th-num">4</td><td class="th-num">22%</td><td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td></tr>
+            <tr><td><b>いろは サロン 金沢</b><div style="font-size:11px; color:var(--dim); font-weight:500;">10:00-19:00 · 火曜 定休</div></td><td>金沢</td><td>藤井 (1名)</td><td class="th-num">4</td><td class="th-num">24%</td><td class="th-num"><button class="icon-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== LINE ========== -->
+    <section class="view" id="view-line">
+      <div class="view-hd">
+        <div>
+          <h1>LINE 配信</h1>
+          <div class="sub">配信 メッセージ 作成 · 対象 絞込 · プレビュー 確認 で 送信</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-ghost btn-sm">履歴</button>
+          <button class="btn btn-ink" onclick="toast('下書き 保存', '配信 メッセージ を 保存 しました')">下書き 保存</button>
+          <button class="btn btn-rose" onclick="toast('送信 完了', '対象 68 名 に 配信 しました')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>送信 する</button>
+        </div>
+      </div>
+
+      <div class="line-composer-grid">
+        <div>
+          <div class="card card-pad" style="margin-bottom:14px;">
+            <div class="sec-hd" style="margin-top:0;"><h2 style="font-size:13px;">配信 対象</h2></div>
+            <div class="form-grid">
+              <div class="form-lbl">セグメント</div>
+              <div>
+                <div class="form-chips">
+                  <span class="form-chip on">全 会員 (104)</span>
+                  <span class="form-chip">Premium (68)</span>
+                  <span class="form-chip">一般 (24)</span>
+                  <span class="form-chip">販売員 (12)</span>
+                </div>
+              </div>
+              <div class="form-lbl">サロン 絞込</div>
+              <div>
+                <div class="form-chips">
+                  <span class="form-chip on">すべて</span>
+                  <span class="form-chip">福井本店</span>
+                  <span class="form-chip">銀座</span>
+                  <span class="form-chip">心斎橋</span>
+                  <span class="form-chip">栄</span>
+                  <span class="form-chip">金沢</span>
+                  <span class="form-chip">AUBE FOR ONE</span>
+                </div>
+              </div>
+              <div class="form-lbl">配信 タイミング</div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <select class="form-sel" style="width: 160px;"><option>今すぐ</option><option>予約 送信</option></select>
+                <span style="font-size:12px; color:var(--dim); font-weight:600;">対象 数 : <b style="color:var(--rose-hi); font-weight:900;">104 名</b></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-pad">
+            <div class="sec-hd" style="margin-top:0;"><h2 style="font-size:13px;">メッセージ 内容</h2>
+              <div class="seg-ctl">
+                <button class="is-on">テキスト</button>
+                <button>Flex カード</button>
+                <button>画像</button>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="form-lbl">本文<span class="required">*</span></div>
+              <div>
+                <textarea class="form-txt" style="min-height: 140px;" id="lineMsgTxt">こんにちは、 いろはグループ です。
+
+8月度 の 会員限定 セミナー 「補整下着 の 未来」 を 8/28 (木) 20:00 から Zoom で 開催します。
+
+・ 稲井田社長 講演 60分
+・ 質疑応答 あり
+・ 参加費 会員 無料
+
+参加 予約 は 会員 サイト から どうぞ 👇</textarea>
+                <div class="form-help">最大 500文字 (現在 108文字)</div>
+              </div>
+              <div class="form-lbl">Flex カード 添付</div>
+              <div>
+                <label class="form-toggle on"><span class="knob"></span><span class="lbl">セミナー 案内 カード を 添付</span></label>
+                <div class="form-help">タイトル · 日時 · サムネイル · 予約 ボタン を 自動 生成</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="sec-hd" style="margin-top:0;"><h2 style="font-size:13px;">プレビュー</h2><span class="sub">LINE 上 の 見え方</span></div>
+          <div class="line-preview">
+            <div class="avatar-sm">い</div>
+            <div class="brand-name-sm">いろはグループ</div>
+            <div class="msg-bubble" id="linePreviewTxt">こんにちは、 いろはグループ です。
+
+8月度 の 会員限定 セミナー 「補整下着 の 未来」 を 8/28 (木) 20:00 から Zoom で 開催します。
+
+・ 稲井田社長 講演 60分
+・ 質疑応答 あり
+・ 参加費 会員 無料
+
+参加 予約 は 会員 サイト から どうぞ 👇</div>
+            <div class="flex-card">
+              <div class="cover">補整下着<br />の 未来</div>
+              <div class="body">
+                <div class="t">稲井田社長 8月度 講演</div>
+                <div class="d">8/28 (木) 20:00 · Zoom · 60分</div>
+                <div class="cta">参加 を 予約 する</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== SETTINGS ========== -->
+    <section class="view" id="view-settings">
+      <div class="view-hd">
+        <div>
+          <h1>設定</h1>
+          <div class="sub">テナント · スタッフ · 支払 · 外部連携 · 通知</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card card-pad">
+          <div class="settings-nav">
+            <div class="set-nav-item is-on">テナント 情報</div>
+            <div class="set-nav-item">スタッフ 管理 (7名)</div>
+            <div class="set-nav-item">支払 · プラン</div>
+            <div class="set-nav-item">Zoom 連携</div>
+            <div class="set-nav-item">LINE 公式アカウント</div>
+            <div class="set-nav-item">Firebase Storage</div>
+            <div class="set-nav-item">通知 設定</div>
+            <div class="set-nav-item">監査 ログ</div>
+          </div>
+        </div>
+        <div class="card card-pad">
+          <div class="sec-hd" style="margin-top:0;"><h2 style="font-size:13px;">テナント 情報</h2></div>
+          <div class="form-grid">
+            <div class="form-lbl">組織 名<span class="required">*</span></div>
+            <div><input class="form-inp" value="いろはグループ" /></div>
+            <div class="form-lbl">短縮 名</div>
+            <div><input class="form-inp" value="iroha" /><div class="form-help">サブドメイン / 内部 識別 に 使用</div></div>
+            <div class="form-lbl">ロゴ mono</div>
+            <div style="display:flex; align-items:center; gap:14px;"><div class="brand-mono" style="width:44px; height:44px; font-size:15px;">い·G</div><button class="btn btn-ghost btn-sm">変更</button></div>
+            <div class="form-lbl">お問合せ メール</div>
+            <div><input class="form-inp" value="info@iroha-group.jp" /></div>
+            <div class="form-lbl">住所</div>
+            <div><input class="form-inp" value="福井県福井市 (仮住所)" /></div>
+            <div class="form-lbl">TEL</div>
+            <div><input class="form-inp" value="0776-XX-XXXX (仮番号)" /></div>
+            <div class="form-lbl">環境</div>
+            <div>
+              <div class="form-chips">
+                <span class="form-chip on">Staging</span>
+                <span class="form-chip">Production</span>
+              </div>
+              <div class="form-help">現在 は Staging (骨組み デモ)。 本番 移行 は 承認後 に 実施。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- Sticky bottom apply CTA (for edit views) -->
+<div class="sticky-cta" id="stickyCta">
+  <div class="status"><span class="dot"></span>未 保存 の 変更 が あります</div>
+  <div class="actions">
+    <button class="btn btn-ghost" onclick="hideStickyCta()">破棄</button>
+    <button class="btn btn-rose" onclick="hideStickyCta(); toast('保存 完了', 'カルテ を 更新 しました')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12l5 5 9-11"/></svg>
+      変更 を 保存
+    </button>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<script>
+// ========== VIEW SWITCH ==========
+const bcMap = {
+  dash: 'ダッシュボード',
+  videos: '動画 コンテンツ',
+  seminars: 'セミナー',
+  members: '会員',
+  karte: 'カルテ',
+  salons: 'サロン / 予約',
+  line: 'LINE 配信',
+  settings: '設定'
+};
+
+function switchView(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('is-active'));
+  document.getElementById('view-' + v)?.classList.add('is-active');
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('is-on', el.dataset.view === v));
+  document.getElementById('breadcrumb').innerHTML = `<em>Admin</em><span class="sep">·</span><span class="curr">${bcMap[v] || '-'}</span>`;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  closeDrawer();
+  hideStickyCta();
+}
+
+document.querySelectorAll('.nav-item').forEach(el => el.addEventListener('click', () => switchView(el.dataset.view)));
+
+// ========== MOBILE DRAWER ==========
+function openDrawer() { document.getElementById('railL').classList.add('is-open'); document.getElementById('backdrop').classList.add('is-on'); }
+function closeDrawer() { document.getElementById('railL').classList.remove('is-open'); document.getElementById('backdrop').classList.remove('is-on'); }
+document.getElementById('ham')?.addEventListener('click', openDrawer);
+document.getElementById('backdrop')?.addEventListener('click', closeDrawer);
+
+// ========== TOAST ==========
+function toast(title, msg) {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `
+    <div class="toast-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></div>
+    <div class="toast-body">
+      <div class="toast-title">${title || ''}</div>
+      ${msg ? `<div class="toast-msg">${msg}</div>` : ''}
+    </div>
+    <button class="toast-close" aria-label="close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  `;
+  c.appendChild(t);
+  const close = () => { t.classList.add('leaving'); setTimeout(() => t.remove(), 240); };
+  t.querySelector('.toast-close').addEventListener('click', close);
+  setTimeout(close, 3600);
+}
+
+// ========== STICKY CTA ==========
+function showStickyCta() { document.getElementById('stickyCta').classList.add('is-visible'); }
+function hideStickyCta() { document.getElementById('stickyCta').classList.remove('is-visible'); }
+
+// ========== VIDEO UPLOAD ==========
+function triggerUpload() { document.getElementById('fileInput').click(); }
+function scrollToUpload() { document.getElementById('uploadZone').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+function handleFileSelect(e) {
+  const files = e.target.files;
+  if (files.length > 0) {
+    toast(`${files.length} ファイル 選択`, 'アップロード 開始 (デモ)');
+    // add to list mock
+    const list = document.getElementById('uploadList');
+    for (const f of files) {
+      const item = document.createElement('div');
+      item.className = 'upload-item';
+      item.innerHTML = `
+        <div class="th">MP4</div>
+        <div style="min-width: 0;">
+          <div class="name">${f.name}</div>
+          <div class="meta">${(f.size / 1024 / 1024).toFixed(1)} MB · アップロード 中</div>
+          <div class="bar"><span style="width: 8%"></span></div>
+        </div>
+        <div class="ctl"><span class="pill pill-warn">8%</span></div>
+      `;
+      list.appendChild(item);
+    }
+  }
+}
+
+// Drag & drop
+const uz = document.getElementById('uploadZone');
+if (uz) {
+  ['dragenter', 'dragover'].forEach(ev => uz.addEventListener(ev, e => { e.preventDefault(); uz.classList.add('dragover'); }));
+  ['dragleave', 'drop'].forEach(ev => uz.addEventListener(ev, e => { e.preventDefault(); uz.classList.remove('dragover'); }));
+  uz.addEventListener('drop', e => {
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      toast(`${files.length} ファイル ドロップ`, 'アップロード 開始 (デモ)');
+    }
+  });
+}
+
+// ========== VIDEO EDIT MOCK ==========
+function openVideoEdit(title) {
+  toast('動画 編集', title);
+}
+
+// ========== LINE COMPOSER LIVE PREVIEW ==========
+document.getElementById('lineMsgTxt')?.addEventListener('input', e => {
+  const el = document.getElementById('linePreviewTxt');
+  if (el) el.textContent = e.target.value;
+});
+
+// ========== FORM CHIPS toggle ==========
+document.querySelectorAll('.form-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    // toggle single-select behavior within its parent .form-chips
+    const parent = chip.parentElement;
+    parent.querySelectorAll('.form-chip').forEach(c => c.classList.remove('on'));
+    chip.classList.add('on');
+  });
+});
+
+// Toggles
+document.querySelectorAll('.form-toggle').forEach(tg => {
+  tg.addEventListener('click', () => tg.classList.toggle('on'));
+});
+
+// Seg controls
+document.querySelectorAll('.seg-ctl').forEach(seg => {
+  seg.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => {
+      seg.querySelectorAll('button').forEach(x => x.classList.remove('is-on'));
+      b.classList.add('is-on');
+    });
+  });
+});
+
+// Settings nav
+document.querySelectorAll('.set-nav-item').forEach(it => {
+  it.addEventListener('click', () => {
+    document.querySelectorAll('.set-nav-item').forEach(x => x.classList.remove('is-on'));
+    it.classList.add('is-on');
+  });
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeDrawer(); hideStickyCta(); }
+});
+</script>
+
+</body>
+</html>
