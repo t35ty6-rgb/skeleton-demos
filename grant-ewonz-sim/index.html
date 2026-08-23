@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>自分 の 取分</title>
+<style>
+* { box-sizing: border-box; }
+:root {
+  --bg: #fafbfc;
+  --surface: #ffffff;
+  --ink: #0f172a;
+  --ink-2: #64748b;
+  --muted: #94a3b8;
+  --line: #e5e7eb;
+  --accent: #4f46e5;
+  --gain: #059669;
+  --loss: #dc2626;
+  --warm: #ea580c;
+  --warm-bg: #fff7ed;
+}
+body { font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; background: var(--bg); margin: 0; padding: 32px 24px; color: var(--ink); font-size: 14px; line-height: 1.6; }
+.container { max-width: 900px; margin: 0 auto; }
+
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; gap: 16px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+h1 { font-size: 22px; margin: 0; font-weight: 800; color: var(--ink); letter-spacing: -0.01em; line-height: 1.2; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+h1 .h1-sub { font-size: 13px; color: var(--ink-2); font-weight: 500; letter-spacing: 0.02em; padding-left: 12px; border-left: 2px solid var(--line); }
+.rank-picker { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px 6px 14px; background: white; border-radius: 8px; box-shadow: 0 0 0 1px var(--line); font-size: 12px; color: var(--ink-2); }
+.rank-picker select { border: none; background: transparent; font-size: 14px; font-weight: 700; color: var(--accent); cursor: pointer; padding: 2px 4px; font-family: inherit; }
+
+.toolbar { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+.btn { padding: 6px 12px; border: 1px solid var(--line); background: white; border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--ink-2); font-weight: 500; }
+.btn:hover { background: #f1f5f9; }
+
+.hero { background: linear-gradient(135deg, #0071E3 0%, #8B5CF6 50%, #EC4899 100%); color: white; padding: 28px 32px; border-radius: 14px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(79,70,229,0.2); }
+.hero .label { font-size: 12px; opacity: 0.9; margin-bottom: 6px; font-weight: 500; }
+.hero .huge { font-size: 44px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; line-height: 1.1; }
+
+.tree ul { list-style: none; padding-left: 30px; margin: 0; position: relative; }
+.tree ul::before { content: ''; position: absolute; left: 12px; top: 0; bottom: 22px; border-left: 1.5px dashed #cbd5e1; }
+.tree li { position: relative; padding: 10px 0 10px 22px; }
+.tree li::before { content: ''; position: absolute; left: -18px; top: 30px; border-top: 1.5px dashed #cbd5e1; width: 30px; }
+
+.node-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.node { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; background: white; border-radius: 10px; box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 0 0 1px var(--line); }
+.node.me { box-shadow: 0 2px 6px rgba(79,70,229,0.12), 0 0 0 1.5px var(--accent); background: #eef2ff; }
+.node.has-amount { box-shadow: 0 2px 6px rgba(234,88,12,0.1), 0 0 0 1.5px var(--warm); }
+
+.name-input { border: none; background: #f1f5f9; border-radius: 5px; padding: 6px 8px; font-size: 14px; font-weight: 600; width: 130px; font-family: inherit; color: var(--ink); }
+.name-input:focus { outline: 2px solid var(--accent); background: white; }
+.node.me .name-input { background: white; }
+.rank-select { border: none; background: #e0e7ff; padding: 6px 6px; font-size: 12px; font-weight: 800; border-radius: 5px; cursor: pointer; font-family: inherit; color: var(--accent); }
+
+.amount-wrap { display: inline-flex; align-items: center; padding: 0 10px; background: var(--warm-bg); border: 1.5px solid #fed7aa; border-radius: 6px; height: 34px; }
+.amount-wrap:focus-within { border-color: var(--warm); background: white; }
+.amount-wrap .yen-sign { color: var(--warm); font-size: 13px; font-weight: 800; margin-right: 4px; }
+.amount-input { border: none; background: transparent; width: 110px; padding: 6px 2px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; color: #7c2d12; font-family: inherit; }
+.amount-input:focus { outline: none; }
+.amount-input::placeholder { color: #fbbf24; opacity: 0.7; font-weight: 400; font-size: 12px; }
+
+.user-check { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-2); padding: 4px 6px; border-radius: 5px; cursor: pointer; }
+.user-check:hover { background: #f1f5f9; }
+.user-check input { width: 13px; height: 13px; accent-color: var(--accent); }
+
+.btn-mini { width: 26px; height: 26px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; padding: 0; line-height: 1; font-weight: 700; }
+.btn-mini.add { background: #dcfce7; color: #15803d; }
+.btn-mini.add:hover { background: #86efac; }
+.btn-mini.del { background: #fee2e2; color: #b91c1c; }
+.btn-mini.del:hover { background: #fca5a5; }
+
+.income-arrow { display: inline-flex; align-items: center; gap: 10px; margin-left: 12px; }
+.income-arrow .arrow { color: var(--muted); font-size: 20px; font-weight: 300; }
+.income-arrow .value { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--gain); letter-spacing: -0.01em; }
+.income-arrow .value.zero { color: var(--muted); }
+.income-arrow .value.negative { color: var(--loss); }
+.income-arrow .formula { font-size: 11px; color: var(--ink-2); font-family: "SF Mono", Consolas, monospace; padding: 3px 8px; background: #f1f5f9; border-radius: 5px; font-variant-numeric: tabular-nums; }
+.income-arrow .self-note { font-size: 11px; color: var(--muted); font-style: italic; }
+
+.foot { margin-top: 32px; padding: 16px 18px; background: white; border-radius: 8px; box-shadow: 0 0 0 1px var(--line); font-size: 11px; color: var(--ink-2); line-height: 1.7; }
+.foot strong { color: var(--ink); }
+.rate-table { width: 100%; margin-top: 12px; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+.rate-table td, .rate-table th { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: center; font-variant-numeric: tabular-nums; color: var(--ink); }
+.rate-table th { background: #f8fafc; font-weight: 700; color: var(--ink); font-size: 11px; letter-spacing: 0.03em; text-transform: uppercase; }
+.rate-table td:first-child, .rate-table th:first-child { text-align: left; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+<h1>グラント・イーワンズ<span class="h1-sub">収入 シミュレーター</span></h1>
+<div class="rank-picker">
+自分 の ランク
+<select id="meRank" onchange="updateMeRank(this.value)">
+<option value="GC">GC</option><option value="GA" selected>GA</option><option value="GM">GM</option><option value="GE">GE</option><option value="GP">GP</option><option value="VCLP">VCLP</option><option value="CLP">CLP</option><option value="CRP">CRP</option><option value="WCRP">WCRP</option>
+</select>
+</div>
+</header>
+
+<div class="toolbar">
+<button class="btn" onclick="loadPreset('small')">サンプル 小</button>
+<button class="btn" onclick="loadPreset('mid')">サンプル 中</button>
+<button class="btn" onclick="loadPreset('empty')">リセット</button>
+</div>
+
+<div class="hero">
+<div class="label">下 の 人 の 契約 合計 で 自分 に 入る 額</div>
+<div class="huge"><span id="totalIncome">¥0</span></div>
+</div>
+
+<div class="tree" id="tree"></div>
+
+<div class="foot">
+<strong>計算 ルール</strong> — 直下 (自分 が 直接 紹介 した 人) の 契約 = <strong>掛け率 の 差 (spread) + ボーナス 1次</strong>。 2次 以降 の 契約 = <strong>ボーナス 表 の 料率 のみ</strong>。 「愛用者」 チェック 時 = 直上 GA+ から 5% 調整費。 自分 の 自己購入 は 収入 対象外。
+
+<table class="rate-table">
+<tr><th>ランク</th><th>掛け率</th><th>販売卸差益率</th><th>1次 下</th><th>2次 下</th><th>3次 下</th><th>4次 下</th></tr>
+<tr><td>GC</td><td>80%</td><td>20%</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>GA</td><td>60%</td><td>40%</td><td>4%</td><td>2%</td><td>1%</td><td>—</td></tr>
+<tr><td>GM</td><td>52%</td><td>48%</td><td>2%</td><td>1%</td><td>1%</td><td>—</td></tr>
+<tr><td>GE</td><td>47%</td><td>53%</td><td>1%</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>GP〜WCRP</td><td>39%</td><td>61%</td><td>3%</td><td>2%</td><td>1%</td><td>0.5%</td></tr>
+</table>
+</div>
+
+</div>
+
+<script>
+const buyRate = { GC:0.80, GA:0.60, GM:0.52, GE:0.47, GP:0.39, VCLP:0.39, CLP:0.39, CRP:0.39, WCRP:0.39 };
+const bonusRate = {
+  GC:[0,0,0,0], GA:[0.04,0.02,0.01,0], GM:[0.02,0.01,0.01,0], GE:[0.01,0,0,0],
+  GP:[0.03,0.02,0.01,0.005], VCLP:[0.03,0.02,0.01,0.005], CLP:[0.03,0.02,0.01,0.005], CRP:[0.03,0.02,0.01,0.005], WCRP:[0.03,0.02,0.01,0.005]
+};
+const RANKS = ['GC','GA','GM','GE','GP','VCLP','CLP','CRP','WCRP'];
+
+let nextId = 1;
+function uid() { return 'n' + (nextId++); }
+
+const state = {
+  root: { id: 'me', name: '自分', rank: 'GA', amount: 0, isUser: false, children: [] }
+};
+
+function findNode(id, node = state.root) {
+  if (node.id === id) return node;
+  for (const c of node.children) { const f = findNode(id, c); if (f) return f; }
+  return null;
+}
+function findParent(id, node = state.root) {
+  for (const c of node.children) { if (c.id === id) return node; const f = findParent(id, c); if (f) return f; }
+  return null;
+}
+function findAncestors(id) {
+  const ancestors = []; let current = id;
+  while (true) { const p = findParent(current); if (!p) break; ancestors.push(p); current = p.id; }
+  return ancestors;
+}
+function tierFromMe(id) { if (id === 'me') return 0; return findAncestors(id).length; }
+function walkAll(node, fn) { fn(node); for (const c of node.children) walkAll(c, fn); }
+
+function addChild(parentId) {
+  const p = findNode(parentId); if (!p) return;
+  const id = uid();
+  p.children.push({ id, name: '', rank: 'GC', amount: 0, isUser: false, children: [] });
+  render();
+  setTimeout(() => { const el = document.querySelector(`[data-id="${id}"] .name-input`); if (el) el.focus(); }, 30);
+}
+function deleteNode(id) {
+  if (id === 'me') return;
+  const p = findParent(id); if (!p) return;
+  p.children = p.children.filter(c => c.id !== id);
+  render();
+}
+function updateField(id, field, value) {
+  const n = findNode(id); if (!n) return;
+  n[field] = value; render();
+}
+function updateMeRank(v) { state.root.rank = v; render(); }
+
+function onAmountInput(id, el) {
+  const cursorAtEnd = el.selectionStart === el.value.length;
+  const raw = el.value.replace(/[^0-9]/g, '');
+  const num = +raw || 0;
+  const formatted = num > 0 ? num.toLocaleString('ja-JP') : '';
+  el.value = formatted;
+  const n = findNode(id); if (n) n.amount = num;
+  if (cursorAtEnd) el.setSelectionRange(formatted.length, formatted.length);
+  const wrap = document.querySelector(`[data-id="${id}"]`);
+  if (wrap) wrap.classList.toggle('has-amount', num > 0);
+  walkAll(state.root, n2 => { if (n2.id !== 'me') updateNodeArrow(n2.id); });
+  renderSummary();
+}
+function updateNodeArrow(id) {
+  const node = findNode(id); if (!node) return;
+  const wrap = document.querySelector(`[data-id="${id}"]`);
+  if (!wrap) return;
+  const nodeRow = wrap.parentElement;
+  const oldArrow = nodeRow.querySelector('.income-arrow');
+  if (oldArrow) oldArrow.remove();
+  const showArrow = (+node.amount || 0) > 0;
+  if (!showArrow) return;
+  const inc = myIncomeFrom(node);
+  const valCls = inc.amount === 0 ? 'zero' : (inc.amount < 0 ? 'negative' : '');
+  const val = inc.amount === 0 ? '¥0' : (inc.amount > 0 ? '+' : '') + yen(inc.amount);
+  nodeRow.insertAdjacentHTML('beforeend', `<div class="income-arrow"><span class="arrow">→</span><span class="value ${valCls}">${val}</span>${inc.formula ? `<span class="formula">${inc.formula}</span>` : ''}</div>`);
+}
+
+function yen(n) { return (n < 0 ? '−' : '') + '¥' + Math.abs(Math.round(n)).toLocaleString('ja-JP'); }
+
+// モデル C 固定: 直下 = spread + ボーナス、 2次 以降 = ボーナス のみ
+function myIncomeFrom(node) {
+  if (node.id === 'me') return { amount: 0, formula: '', tier: 0, self: true };
+  const amount = +node.amount || 0;
+  const tier = tierFromMe(node.id);
+  if (amount === 0) return { amount: 0, formula: '', tier };
+  if (tier > 4) return { amount: 0, formula: '対象外', tier };
+
+  const meRank = state.root.rank;
+  const meBuyRate = buyRate[meRank];
+  const bonusR = bonusRate[meRank][tier - 1];
+  const ancestors = findAncestors(node.id);
+  let myAmount = 0, formula = '';
+
+  if (tier === 1) {
+    const spread = buyRate[node.rank] - meBuyRate;
+    const spreadPart = spread > 0 ? amount * spread : 0;
+    const bonusPart = amount * bonusR;
+    myAmount = spreadPart + bonusPart;
+    const parts = [];
+    if (spreadPart > 0) parts.push(`${yen(amount)} × ${(spread*100).toFixed(0)}% (spread)`);
+    if (bonusR > 0) parts.push(`${yen(amount)} × ${(bonusR*100).toFixed(1)}% (ボーナス)`);
+    formula = parts.length ? parts.join(' + ') : '料率 0%';
+  } else {
+    if (bonusR === 0) return { amount: 0, formula: `${meRank} の ${tier}次 料率 0%`, tier };
+    myAmount = amount * bonusR;
+    formula = `${yen(amount)} × ${(bonusR*100).toFixed(1)}% (${tier}次 ボーナス)`;
+  }
+
+  // 愛用者 5% 調整費: 直上 GA+ に 該当 する 時 だけ
+  if (node.isUser) {
+    const directGA = ancestors.find(a => a.rank !== 'GC');
+    if (directGA && directGA.id === 'me') {
+      myAmount -= amount * 0.05;
+      formula += ` − ${yen(amount)} × 5% (愛用者 調整費)`;
+    }
+  }
+  return { amount: myAmount, formula, tier };
+}
+
+function renderNode(node) {
+  const isMe = node.id === 'me';
+  const cls = ['node'];
+  if (isMe) cls.push('me');
+  if ((+node.amount || 0) > 0) cls.push('has-amount');
+  const amtStr = (node.amount && node.amount > 0) ? node.amount.toLocaleString('ja-JP') : '';
+  const inc = myIncomeFrom(node);
+  const showArrow = !isMe && (+node.amount || 0) > 0;
+  let rightSide = '';
+  if (showArrow) {
+    const valCls = inc.amount === 0 ? 'zero' : (inc.amount < 0 ? 'negative' : '');
+    const val = inc.amount === 0 ? '¥0' : (inc.amount > 0 ? '+' : '') + yen(inc.amount);
+    rightSide = `<div class="income-arrow"><span class="arrow">→</span><span class="value ${valCls}">${val}</span>${inc.formula ? `<span class="formula">${inc.formula}</span>` : ''}</div>`;
+  }
+  const amountBox = isMe ? ''
+    : `<div class="amount-wrap"><span class="yen-sign">¥</span><input class="amount-input" type="text" inputmode="numeric" value="${amtStr}" placeholder="契約 額" oninput="onAmountInput('${node.id}', this)"></div>`;
+
+  return `<div class="node-row">
+    <div class="${cls.join(' ')}" data-id="${node.id}">
+      <input class="name-input" type="text" value="${node.name}" placeholder="名前" onchange="updateField('${node.id}','name',this.value)">
+      <select class="rank-select" onchange="updateField('${node.id}','rank',this.value)">
+        ${RANKS.map(r => `<option value="${r}"${r === node.rank ? ' selected' : ''}>${r}</option>`).join('')}
+      </select>
+      ${amountBox}
+      ${isMe ? '' : `<label class="user-check"><input type="checkbox" ${node.isUser ? 'checked' : ''} onchange="updateField('${node.id}','isUser',this.checked)">愛用者</label>`}
+      <button class="btn-mini add" onclick="addChild('${node.id}')" title="下 に 追加">＋</button>
+      ${isMe ? '' : `<button class="btn-mini del" onclick="deleteNode('${node.id}')" title="削除">×</button>`}
+    </div>
+    ${rightSide}
+  </div>`;
+}
+
+function renderTree(node) {
+  let html = renderNode(node);
+  if (node.children.length > 0) {
+    html += '<ul>';
+    for (const c of node.children) html += '<li>' + renderTree(c) + '</li>';
+    html += '</ul>';
+  }
+  return html;
+}
+
+function renderSummary() {
+  let total = 0;
+  walkAll(state.root, (n) => { if (n.id !== 'me') total += myIncomeFrom(n).amount; });
+  document.getElementById('totalIncome').textContent = (total >= 0 ? '+' : '') + yen(total);
+}
+
+function render() {
+  document.getElementById('tree').innerHTML = renderTree(state.root);
+  renderSummary();
+}
+
+function loadPreset(kind) {
+  nextId = 1;
+  if (kind === 'empty') state.root = { id: 'me', name: '自分', rank: 'GA', amount: 0, isUser: false, children: [] };
+  else if (kind === 'small') state.root = { id: 'me', name: '自分', rank: 'GA', amount: 0, isUser: false, children: [
+    { id: uid(), name: '吉田恭聡', rank: 'GC', amount: 100000, isUser: false, children: [
+      { id: uid(), name: '佐藤', rank: 'GC', amount: 50000, isUser: false, children: [] }
+    ]},
+    { id: uid(), name: '田中', rank: 'GC', amount: 30000, isUser: false, children: [] }
+  ]};
+  else if (kind === 'mid') state.root = { id: 'me', name: '自分', rank: 'GM', amount: 0, isUser: false, children: [
+    { id: uid(), name: '田中', rank: 'GA', amount: 500000, isUser: false, children: [
+      { id: uid(), name: '佐藤', rank: 'GC', amount: 100000, isUser: false, children: [] },
+      { id: uid(), name: '高橋', rank: 'GC', amount: 80000, isUser: false, children: [] }
+    ]},
+    { id: uid(), name: '山田', rank: 'GA', amount: 300000, isUser: false, children: [
+      { id: uid(), name: '伊藤', rank: 'GC', amount: 60000, isUser: false, children: [] }
+    ]}
+  ]};
+  document.getElementById('meRank').value = state.root.rank;
+  render();
+}
+
+loadPreset('small');
+</script>
+</body>
+</html>
