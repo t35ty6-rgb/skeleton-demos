@@ -456,6 +456,10 @@
   </div>
 </header>
 
+<div style="background: linear-gradient(135deg, #fdfaf7 0%, #f9f2f4 100%); border-bottom: 1px solid var(--rule); padding: 8px 24px; font-size: 11px; color: var(--ink-3); font-weight: 600; text-align: center; letter-spacing: 0.01em;">
+  <span style="color:var(--rose-hi); font-weight:900;">デモ 稼働 中</span> · 動画 は <b>この browser 内 (IndexedDB)</b> に 保存 (実 upload · 実 再生 動作) / 別 device · 別 browser で は 見えません / 本番 は Firebase Storage に 差替 予定
+</div>
+
 <div class="backdrop" id="backdrop"></div>
 
 <div class="shell">
@@ -699,22 +703,16 @@
         <div class="browse" onclick="event.stopPropagation(); triggerUpload();">ファイル を 選択</div>
       </div>
 
-      <div id="uploadList" style="margin-top: 14px;">
-        <div class="upload-item">
-          <div class="th">MP4</div>
-          <div style="min-width: 0;">
-            <div class="name">「秋 の 着こなし」 プロモ 映像 v3.mp4</div>
-            <div class="meta">182 MB · アップロード 中</div>
-            <div class="bar"><span style="width: 62%"></span></div>
-          </div>
-          <div class="ctl">
-            <span class="pill pill-warn">62%</span>
-            <button class="icon-btn" aria-label="キャンセル" onclick="toast('中止', 'アップロード を キャンセル')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-          </div>
-        </div>
-      </div>
+      <div id="uploadList" style="margin-top: 14px;"></div>
 
-      <div class="sec-hd"><h2>コンテンツ 一覧</h2>
+      <div class="sec-hd"><h2>アップロード 済 (この browser)</h2><span class="sub" id="uploadedCount">0 本</span></div>
+      <div class="card" id="uploadedVideosCard"><div class="empty"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l6 3-6 3z" fill="currentColor" stroke="none"/></svg></div><div class="t">まだ 動画 が ありません</div><div class="m">上 の ゾーン に mp4 を ドロップ すると、 この browser 内 に 保存 されます</div></div></div>
+
+      <div class="sec-hd">
+        <div>
+          <h2>サンプル (デモ 表示 用)</h2>
+          <span class="sub">静的 表示 · 実際 の 動画 は 含まれません</span>
+        </div>
         <div class="actions">
           <div class="seg-ctl">
             <button class="is-on">すべて</button>
@@ -1338,6 +1336,46 @@
 
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
+<!-- Video preview / edit modal -->
+<div id="videoPreviewModal" style="display:none; position:fixed; inset:0; z-index:70; align-items:center; justify-content:center; padding:20px;">
+  <div style="position:absolute; inset:0; background:rgba(20,20,31,0.72); backdrop-filter:blur(4px);" onclick="closeVideoPreview()"></div>
+  <div style="position:relative; background:#fff; border-radius:20px; max-width:720px; width:100%; overflow:hidden; box-shadow:0 24px 64px rgba(20,20,31,0.24);">
+    <button onclick="closeVideoPreview()" aria-label="close" style="position:absolute; top:12px; right:12px; z-index:2; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.9); display:grid; place-items:center;">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <video id="previewVideo" style="width:100%; display:block; background:#000; aspect-ratio:16/9; object-fit:contain;" controls></video>
+    <div style="padding:22px 26px 24px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:14px;">
+        <h3 id="previewTitle" style="font-size:17px; font-weight:900; letter-spacing:-0.02em; line-height:1.4; flex:1;">動画</h3>
+        <div id="previewMeta" style="font-size:11.5px; color:var(--dim); font-weight:700; font-variant-numeric:tabular-nums;"></div>
+      </div>
+      <div class="form-grid" style="grid-template-columns:110px 1fr; gap:10px 16px;">
+        <div class="form-lbl">タイトル</div>
+        <div><input class="form-inp" id="previewEditTitle" /></div>
+        <div class="form-lbl">カテゴリ</div>
+        <div>
+          <select class="form-sel" id="previewEditCategory"></select>
+        </div>
+        <div class="form-lbl">説明</div>
+        <div><textarea class="form-txt" id="previewEditDesc" style="min-height:60px;"></textarea></div>
+        <div class="form-lbl">公開</div>
+        <div><label class="form-toggle" id="previewEditPublish"><span class="knob"></span><span class="lbl">会員 に 公開 する</span></label></div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:18px; padding-top:16px; border-top:1px solid var(--rule); justify-content:space-between;">
+        <button class="btn btn-danger btn-sm" onclick="deletePreviewVideo()">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14"/></svg>
+          削除
+        </button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="closeVideoPreview()">閉じる</button>
+          <button class="btn btn-rose btn-sm" onclick="savePreviewVideo()"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12l5 5 9-11"/></svg>変更 を 保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="lib/store.js"></script>
 <script>
 // ========== VIEW SWITCH ==========
 const bcMap = {
@@ -1392,49 +1430,188 @@ function toast(title, msg) {
 function showStickyCta() { document.getElementById('stickyCta').classList.add('is-visible'); }
 function hideStickyCta() { document.getElementById('stickyCta').classList.remove('is-visible'); }
 
-// ========== VIDEO UPLOAD ==========
+// ========== VIDEO UPLOAD (real IndexedDB flow) ==========
 function triggerUpload() { document.getElementById('fileInput').click(); }
 function scrollToUpload() { document.getElementById('uploadZone').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-function handleFileSelect(e) {
-  const files = e.target.files;
-  if (files.length > 0) {
-    toast(`${files.length} ファイル 選択`, 'アップロード 開始 (デモ)');
-    // add to list mock
-    const list = document.getElementById('uploadList');
-    for (const f of files) {
-      const item = document.createElement('div');
-      item.className = 'upload-item';
-      item.innerHTML = `
-        <div class="th">MP4</div>
-        <div style="min-width: 0;">
-          <div class="name">${f.name}</div>
-          <div class="meta">${(f.size / 1024 / 1024).toFixed(1)} MB · アップロード 中</div>
-          <div class="bar"><span style="width: 8%"></span></div>
-        </div>
-        <div class="ctl"><span class="pill pill-warn">8%</span></div>
-      `;
-      list.appendChild(item);
+
+const uploadProgressMap = new Map();
+
+async function handleFilesUpload(files) {
+  if (!files || files.length === 0) return;
+  toast(`${files.length} 本 の 動画 を 処理 中`, 'ブラウザ 内 に 保存 します');
+  for (const f of files) {
+    if (!f.type.startsWith('video/') && !/\.(mp4|mov|webm|m4v)$/i.test(f.name)) {
+      toast('スキップ', `${f.name} は 動画 形式 では ありません`);
+      continue;
+    }
+    const upId = 'up_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+    addUploadRow(upId, f);
+    try {
+      await IrohaStore.upload(f, { title: f.name.replace(/\.[^.]+$/, ''), category: '1.1', published: true }, (pct, phase) => {
+        updateUploadRow(upId, pct, phase);
+      });
+      removeUploadRow(upId);
+      toast('保存 完了', f.name);
+      renderUploadedVideos();
+    } catch (err) {
+      console.error(err);
+      updateUploadRow(upId, null, 'error');
+      toast('エラー', String(err.message || err));
     }
   }
 }
+function handleFileSelect(e) { handleFilesUpload(e.target.files); e.target.value = ''; }
+
+function addUploadRow(id, file) {
+  const list = document.getElementById('uploadList');
+  const el = document.createElement('div');
+  el.className = 'upload-item';
+  el.id = 'up-' + id;
+  el.innerHTML = `
+    <div class="th">${(file.type || 'MP4').split('/').pop().toUpperCase().slice(0,4)}</div>
+    <div style="min-width: 0;">
+      <div class="name">${escapeHtml(file.name)}</div>
+      <div class="meta" data-role="meta">${IrohaStore.fmtSize(file.size)} · 読み込み 中</div>
+      <div class="bar"><span style="width: 2%"></span></div>
+    </div>
+    <div class="ctl">
+      <span class="pill pill-warn" data-role="pct">0%</span>
+    </div>
+  `;
+  list.appendChild(el);
+}
+function updateUploadRow(id, pct, phase) {
+  const el = document.getElementById('up-' + id);
+  if (!el) return;
+  if (phase === 'error') {
+    el.querySelector('[data-role="pct"]').className = 'pill pill-danger';
+    el.querySelector('[data-role="pct"]').textContent = 'エラー';
+    el.querySelector('[data-role="meta"]').textContent = 'アップロード 失敗';
+    return;
+  }
+  const p = Math.round(pct * 100);
+  el.querySelector('.bar span').style.width = p + '%';
+  el.querySelector('[data-role="pct"]').textContent = p + '%';
+  const phLabel = { reading: '読み込み 中', meta: 'サムネイル 生成', persist: '保存 中', done: '完了' };
+  el.querySelector('[data-role="meta"]').textContent = phLabel[phase] || '処理 中';
+}
+function removeUploadRow(id) {
+  setTimeout(() => { document.getElementById('up-' + id)?.remove(); }, 600);
+}
+function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // Drag & drop
 const uz = document.getElementById('uploadZone');
 if (uz) {
   ['dragenter', 'dragover'].forEach(ev => uz.addEventListener(ev, e => { e.preventDefault(); uz.classList.add('dragover'); }));
   ['dragleave', 'drop'].forEach(ev => uz.addEventListener(ev, e => { e.preventDefault(); uz.classList.remove('dragover'); }));
-  uz.addEventListener('drop', e => {
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      toast(`${files.length} ファイル ドロップ`, 'アップロード 開始 (デモ)');
-    }
-  });
+  uz.addEventListener('drop', e => { handleFilesUpload(e.dataTransfer.files); });
 }
 
-// ========== VIDEO EDIT MOCK ==========
-function openVideoEdit(title) {
-  toast('動画 編集', title);
+// ========== RENDER UPLOADED VIDEOS ==========
+async function renderUploadedVideos() {
+  const card = document.getElementById('uploadedVideosCard');
+  const cntEl = document.getElementById('uploadedCount');
+  if (!card) return;
+  const vids = await IrohaStore.list();
+  if (cntEl) cntEl.textContent = `${vids.length} 本`;
+  if (vids.length === 0) {
+    card.innerHTML = `<div class="empty"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l6 3-6 3z" fill="currentColor" stroke="none"/></svg></div><div class="t">まだ 動画 が ありません</div><div class="m">上 の ゾーン に mp4 を ドロップ すると、 この browser 内 に 保存 されます</div></div>`;
+    return;
+  }
+  card.innerHTML = vids.map(v => {
+    const catLabel = IrohaStore.CATEGORY_LABELS[v.category] || v.category;
+    const dur = v.duration ? IrohaStore.fmtDur(v.duration) : '--:--';
+    const pubPill = v.published ? '<span class="pill pill-success">公開</span>' : '<span class="pill pill-outline">下書き</span>';
+    const thumb = v.thumbDataUrl ? `<img src="${v.thumbDataUrl}" alt="" style="width:100%; height:100%; object-fit:cover;">` : '';
+    return `
+      <div class="vid-row" data-vid="${v.id}" onclick="openVideoPreview('${v.id}')">
+        <div class="th" style="background:#1a1a2e; overflow:hidden;">${thumb}<span class="dur">${escapeHtml(dur)}</span></div>
+        <div class="info">
+          <div class="t">${escapeHtml(v.title || v.name)}</div>
+          <div class="m">${escapeHtml(v.category)} ${escapeHtml(catLabel)} · 追加 ${IrohaStore.fmtDate(v.uploadedAt)} · ${IrohaStore.fmtSize(v.size)}</div>
+        </div>
+        <span class="cat-tag">${escapeHtml(v.category)}</span>
+        <div class="views">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          ${v.views || 0}
+        </div>
+        <div class="ctl">
+          ${pubPill}
+          <button class="icon-btn" aria-label="編集" onclick="event.stopPropagation(); openVideoPreview('${v.id}');"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg></button>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
+
+// ========== VIDEO PREVIEW / EDIT ==========
+let currentPreviewId = null;
+let currentPreviewBlobUrl = null;
+
+async function openVideoPreview(id) {
+  const v = await IrohaStore.get(id);
+  if (!v) { toast('見つかりません', 'この 動画 は 削除 されている 可能性 が あります'); return; }
+  currentPreviewId = id;
+  // clean up previous blob URL if any
+  if (currentPreviewBlobUrl) { URL.revokeObjectURL(currentPreviewBlobUrl); currentPreviewBlobUrl = null; }
+  const url = IrohaStore.blobUrl(v);
+  currentPreviewBlobUrl = url;
+  const videoEl = document.getElementById('previewVideo');
+  videoEl.src = url;
+  videoEl.load();
+  document.getElementById('previewTitle').textContent = v.title || v.name;
+  document.getElementById('previewMeta').textContent = `${IrohaStore.fmtDur(v.duration)} · ${IrohaStore.fmtSize(v.size)} · ${IrohaStore.fmtDate(v.uploadedAt)}`;
+  document.getElementById('previewEditTitle').value = v.title || v.name;
+  const catSel = document.getElementById('previewEditCategory');
+  catSel.innerHTML = IrohaStore.CATEGORY_ORDER.map(k => `<option value="${k}" ${k === v.category ? 'selected' : ''}>${k} ${IrohaStore.CATEGORY_LABELS[k]}</option>`).join('');
+  document.getElementById('previewEditDesc').value = v.description || '';
+  const toggle = document.getElementById('previewEditPublish');
+  toggle.classList.toggle('on', !!v.published);
+  document.getElementById('videoPreviewModal').style.display = 'flex';
+}
+
+function closeVideoPreview() {
+  document.getElementById('videoPreviewModal').style.display = 'none';
+  const videoEl = document.getElementById('previewVideo');
+  videoEl.pause();
+  videoEl.removeAttribute('src'); videoEl.load();
+  if (currentPreviewBlobUrl) { URL.revokeObjectURL(currentPreviewBlobUrl); currentPreviewBlobUrl = null; }
+  currentPreviewId = null;
+}
+
+async function savePreviewVideo() {
+  if (!currentPreviewId) return;
+  const v = await IrohaStore.get(currentPreviewId);
+  if (!v) return;
+  v.title = document.getElementById('previewEditTitle').value.trim() || v.title;
+  v.category = document.getElementById('previewEditCategory').value;
+  v.description = document.getElementById('previewEditDesc').value;
+  v.published = document.getElementById('previewEditPublish').classList.contains('on');
+  await IrohaStore.put(v);
+  toast('保存 完了', v.title);
+  closeVideoPreview();
+  renderUploadedVideos();
+}
+
+async function deletePreviewVideo() {
+  if (!currentPreviewId) return;
+  if (!confirm('この 動画 を 削除 します。 元 に 戻せません。 よろしい ですか?')) return;
+  await IrohaStore.remove(currentPreviewId);
+  toast('削除 完了', 'この 動画 を 削除 しました');
+  closeVideoPreview();
+  renderUploadedVideos();
+}
+
+// preview edit publish toggle
+document.getElementById('previewEditPublish')?.addEventListener('click', function() { this.classList.toggle('on'); });
+
+// static sample video row click (existing HTML) → toast
+function openVideoEdit(title) { toast('サンプル 動画 (デモ 表示 のみ)', title + ' — アップロード された 動画 は 上 の 一覧 から'); }
+
+// Initial render + subscribe to store changes
+renderUploadedVideos();
+IrohaStore.subscribe(renderUploadedVideos);
 
 // ========== LINE COMPOSER LIVE PREVIEW ==========
 document.getElementById('lineMsgTxt')?.addEventListener('input', e => {

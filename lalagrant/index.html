@@ -974,7 +974,7 @@
 </head>
 <body>
 
-<div class="demo-note"><em>v0.5</em> · 実 動画 未収録 (プレイヤー モック 表示) / 数値 は 仮</div>
+<div class="demo-note"><em>v0.6 デモ</em> · スタッフ が 管理画面 で アップロード した 実 動画 は 「スタッフ 追加 の 動画」 で 再生 可 (この browser 内) / 静的 サンプル 動画 は プレイヤー モック</div>
 
 <header class="top-hdr">
   <button class="ham" id="ham" aria-label="menu">
@@ -1278,7 +1278,12 @@
 
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
+<script src="lib/store.js"></script>
 <script>
+const ORIGINAL_PLAYER_MOCK_HTML = `<div class="big-play"></div>
+      <div class="time-badge" id="modalTime">0:00 / --:--</div>
+      <div class="seekbar"><div class="fill"></div></div>`;
+
 const CATS = [
   { n: 1, title: '正しい下着 の 選び方',
     desc: 'サイズ · 種類 · 用途 の 3視点 で 「あなた に 合う 一枚」 を 見つける。 初めて の 方 も、 買い替え の 方 も、 まず ここ から。',
@@ -1537,11 +1542,21 @@ function ornamentSvg() {
   </svg>`;
 }
 
-function renderLearn() {
+async function renderLearn() {
   const cat = CATS.find(c => c.n === currentCat);
   if (!cat) return;
-  const totalItems = cat.subs.reduce((s, sub) => s + sub.items.length, 0);
-  const totalMin = cat.subs.reduce((s, sub) => s + sub.items.reduce((s2, it) => s2 + (parseInt(it.dur) || 0), 0), 0);
+
+  // Load uploaded videos for THIS category (from IndexedDB)
+  let uploaded = [];
+  try {
+    if (window.IrohaStore) {
+      const all = await IrohaStore.list();
+      uploaded = all.filter(v => v.published && v.category && v.category.startsWith(String(cat.n) + '.'));
+    }
+  } catch (e) { console.warn(e); }
+
+  const totalItems = cat.subs.reduce((s, sub) => s + sub.items.length, 0) + uploaded.length;
+  const totalMin = cat.subs.reduce((s, sub) => s + sub.items.reduce((s2, it) => s2 + (parseInt(it.dur) || 0), 0), 0) + uploaded.reduce((s, v) => s + Math.round((v.duration || 0) / 60), 0);
   const doneItems = cat.subs.reduce((s, sub) => s + sub.items.filter(i => i.prog === 'done').length, 0);
   const pct = totalItems > 0 ? Math.round(doneItems / totalItems * 100) : 0;
   const hStr = totalMin >= 60 ? `${Math.floor(totalMin/60)}<span class="u">h</span>${totalMin%60}<span class="u">m</span>` : `${totalMin}<span class="u">分</span>`;
@@ -1564,7 +1579,35 @@ function renderLearn() {
     </div>
   `;
 
-  document.getElementById('learnBody').innerHTML = cat.subs.map(sub => {
+  // Uploaded section (if any videos)
+  let uploadedHtml = '';
+  if (uploaded.length > 0) {
+    uploadedHtml = `<div class="sub-block">
+      <div class="sub-hd">
+        <span class="chev">▾</span>
+        <span class="num">NEW</span>
+        <span class="name">スタッフ 追加 の 動画</span>
+        <span class="cnt">${uploaded.length} 本 · 実 動画 (この browser)</span>
+      </div>
+      <div class="items">
+        ${uploaded.map(v => `
+          <div class="row" data-uploaded-id="${v.id}">
+            <div class="prog"></div>
+            <div class="thumb tc${cat.n}" style="overflow:hidden; background:#1a1a2e;">${v.thumbDataUrl ? `<img src="${v.thumbDataUrl}" alt="" style="width:100%; height:100%; object-fit:cover;">` : '<div class="play-hex"></div>'}</div>
+            <div class="body">
+              <div class="t">${(v.title || v.name || '無題').replace(/[<>]/g, '')}</div>
+              <div class="m">${v.category} · ${IrohaStore.fmtDur(v.duration)} · ${IrohaStore.fmtDate(v.uploadedAt)}</div>
+            </div>
+            <div class="lvl l1"><i></i><i></i><i></i></div>
+            <div class="dur">${IrohaStore.fmtDur(v.duration)}</div>
+            <div class="chev-r">›</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('learnBody').innerHTML = uploadedHtml + cat.subs.map(sub => {
     const totalMinSub = sub.items.reduce((s, it) => s + (parseInt(it.dur) || 0), 0);
     return `<div class="sub-block ${sub.closed ? 'is-closed' : ''}">
       <div class="sub-hd">
@@ -1595,10 +1638,19 @@ function renderLearn() {
     hd.addEventListener('click', () => hd.parentElement.classList.toggle('is-closed'));
   });
   document.querySelectorAll('#view-learn .row').forEach(row => {
-    row.addEventListener('click', (e) => {
+    row.addEventListener('click', async (e) => {
       if (e.target.closest('.sub-hd')) return;
       const title = row.querySelector('.body .t')?.textContent || '';
       const meta = row.querySelector('.body .m')?.textContent || '';
+      const uploadedId = row.dataset.uploadedId;
+      if (uploadedId && window.IrohaStore) {
+        const v = await IrohaStore.get(uploadedId);
+        if (v) {
+          IrohaStore.incrementViews(uploadedId).catch(() => {});
+          openUploadedPlayer(v);
+          return;
+        }
+      }
       if (row.classList.contains('locked')) {
         toast('認証 が 必要 です', title, 'lock');
       } else {
@@ -1606,6 +1658,20 @@ function renderLearn() {
       }
     });
   });
+}
+
+let uploadedBlobUrl = null;
+function openUploadedPlayer(v) {
+  if (uploadedBlobUrl) { URL.revokeObjectURL(uploadedBlobUrl); uploadedBlobUrl = null; }
+  uploadedBlobUrl = IrohaStore.blobUrl(v);
+  // reuse existing videoModal but swap the player mock with a real video element
+  const modal = document.getElementById('videoModal');
+  const playerMock = modal.querySelector('.player-mock');
+  playerMock.innerHTML = `<video id="uploadedVideoEl" src="${uploadedBlobUrl}" controls autoplay style="width:100%; height:100%; object-fit:contain; background:#000;"></video>`;
+  document.getElementById('modalTitle').textContent = v.title || v.name;
+  document.getElementById('modalMeta').textContent = `${v.category} · ${IrohaStore.fmtDur(v.duration)} · ${IrohaStore.fmtSize(v.size)}`;
+  document.getElementById('modalTxt').textContent = v.description || 'スタッフ が アップロード した 実 動画 です (この browser 内 に 保存)。';
+  modal.classList.add('is-open');
 }
 
 function renderKarte() {
@@ -1757,7 +1823,16 @@ function openPlayer(title, meta, txt) {
   if (txt) document.getElementById('modalTxt').textContent = txt;
   document.getElementById('videoModal').classList.add('is-open');
 }
-function closePlayer() { document.getElementById('videoModal').classList.remove('is-open'); }
+function closePlayer() {
+  document.getElementById('videoModal').classList.remove('is-open');
+  // clean up uploaded video blob if present
+  const uv = document.getElementById('uploadedVideoEl');
+  if (uv) { uv.pause(); uv.removeAttribute('src'); uv.load(); }
+  if (uploadedBlobUrl) { URL.revokeObjectURL(uploadedBlobUrl); uploadedBlobUrl = null; }
+  // restore original mock player HTML
+  const pm = document.querySelector('#videoModal .player-mock');
+  if (pm) pm.innerHTML = ORIGINAL_PLAYER_MOCK_HTML;
+}
 
 // ========== TOAST ==========
 function toast(title, msg, variant) {
@@ -1795,6 +1870,8 @@ window.addEventListener('resize', syncMTabTabIndex);
 
 renderRailCats();
 renderLearn();
+// Cross-tab: admin uploaded / edited a video → re-render
+if (window.IrohaStore) IrohaStore.subscribe(() => { if (currentView === 'learn') renderLearn(); });
 renderHeatmap();
 syncMTabTabIndex();
 // Kick off ring animation after render
