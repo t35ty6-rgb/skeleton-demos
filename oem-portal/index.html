@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>OEM 在庫管理 Portal — Skeleton</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -192,6 +195,14 @@
       if (!res.ok) throw new Error('tunnel info 取得失敗 (' + res.status + ')');
       const { url, updatedAt } = await res.json();
       if (!url) throw new Error('URL 未登録');
+
+      // タブを開きっぱなし で 41日 経った状態 (2026-08-25 事故) の 再発防止:
+      // updatedAt が 24h 超 古い場合、 tab の JS state 自体 が stale の 疑い → hard reload で 全 asset 取り直す
+      if (updatedAt && (Date.now() - new Date(updatedAt).getTime()) > 24 * 60 * 60 * 1000) {
+        console.warn('[boot] updatedAt >24h old, forcing hard reload');
+        window.location.href = location.pathname + '?v=' + Date.now();
+        return;
+      }
 
       updatedAtEl.textContent = updatedAt
         ? `${new Date(updatedAt).toLocaleString('ja-JP')} · ${relativeTime(updatedAt)}`
