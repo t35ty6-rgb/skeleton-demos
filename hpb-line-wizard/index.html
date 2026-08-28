@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>導入ウィザード · サロン予約 → LINE通知</title>
+<style>
+:root {
+  --paper:     #ffffff;
+  --ink:       #0a0f1e;
+  --ink-2:     #3d4356;
+  --dim:       #7c839a;
+  --muted:     #a8adbe;
+  --rule:      #e4e7ee;
+  --rule-soft: #f0f2f7;
+  --surface:   #f7f8fa;
+
+  --brand-blue:   #0071E3;
+  --brand-violet: #8B5CF6;
+  --brand-pink:   #EC4899;
+  --gradient:     linear-gradient(120deg, #0071E3 0%, #8B5CF6 50%, #EC4899 100%);
+  --gradient-vh:  linear-gradient(180deg, #0071E3 0%, #8B5CF6 50%, #EC4899 100%);
+
+  --font-jp:   "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-jp);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.75;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* ============ Shell ============ */
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+/* ============ Header with progress ============ */
+header.top {
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+  position: sticky; top: 0; z-index: 20;
+}
+.top-inner {
+  max-width: 780px; margin: 0 auto;
+  padding: 18px 28px;
+}
+.top-brand-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 14px;
+}
+.top-brand {
+  display: flex; align-items: baseline; gap: 10px;
+}
+.top-brand .logo {
+  font-size: 13px; font-weight: 900;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.top-brand .sep {
+  color: var(--rule);
+}
+.top-brand .doc {
+  font-size: 12px; color: var(--dim); font-weight: 700;
+}
+.top-count {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 900;
+  color: var(--brand-violet);
+  letter-spacing: 0.06em;
+}
+
+/* Progress bar (10 pips) */
+.progress-track {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  height: 4px;
+}
+.progress-track .pip {
+  background: var(--rule);
+  border-radius: 2px;
+  transition: background 300ms ease;
+}
+.progress-track .pip.done {
+  background: var(--gradient);
+}
+.progress-track .pip.active {
+  background: var(--gradient);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+/* ============ Main view area ============ */
+main.stage {
+  max-width: 780px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 28px 40px;
+}
+.view { display: none; animation: slideIn 320ms cubic-bezier(.22,1,.36,1); }
+.view[data-active] { display: block; }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ============ Step header ============ */
+.step-header {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 32px;
+  align-items: start;
+  margin-bottom: 40px;
+}
+.step-numeral {
+  font-family: var(--font-jp);
+  font-weight: 900;
+  font-size: 140px;
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin: 0;
+  user-select: none;
+}
+.step-header .step-headings {
+  padding-top: 12px;
+}
+.step-header .step-kicker {
+  display: inline-block;
+  font-size: 11px; font-weight: 800; color: var(--brand-violet);
+  letter-spacing: 0.14em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.step-header h1 {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -0.028em;
+  line-height: 1.15;
+  margin: 0 0 12px;
+  text-wrap: balance;
+  max-width: 22ch;
+}
+.step-header .step-tldr {
+  font-size: 15px; color: var(--ink-2);
+  line-height: 1.7;
+  max-width: 44ch;
+  margin: 0;
+}
+.step-header .step-tldr b { color: var(--ink); font-weight: 800; }
+
+/* ============ Who badge ============ */
+.who {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px 6px 10px;
+  background: var(--surface);
+  border-radius: 999px;
+  font-size: 12px; font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  margin-bottom: 24px;
+}
+.who svg { width: 16px; height: 16px; stroke: currentColor; }
+.who.client { color: var(--brand-blue); }
+.who.staff  { color: var(--brand-violet); }
+
+/* ============ Action block (main thing to do) ============ */
+.action {
+  margin-bottom: 24px;
+}
+
+/* External CTA (open a URL) */
+.cta-huge {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px;
+  padding: 28px 32px;
+  background: var(--gradient);
+  color: #fff !important;
+  border: none;
+  border-radius: 14px;
+  font-family: var(--font-jp);
+  font-weight: 900; font-size: 18px;
+  letter-spacing: -0.01em;
+  text-decoration: none !important;
+  cursor: pointer;
+  transition: all 220ms cubic-bezier(.22,1,.36,1);
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.25);
+  width: 100%;
+}
+.cta-huge:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(139, 92, 246, 0.35); }
+.cta-huge .cta-arrow { font-size: 22px; font-weight: 900; }
+.cta-huge .cta-domain {
+  font-family: var(--font-mono);
+  font-size: 12px; font-weight: 700;
+  color: rgba(255,255,255,0.75);
+  display: block; margin-top: 4px;
+  letter-spacing: 0.02em;
+}
+
+/* Terminal block */
+.terminal {
+  padding: 28px 32px;
+  background: var(--ink);
+  color: #ecfdf5;
+  border-radius: 14px;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+  word-break: break-all;
+  position: relative;
+  box-shadow: 0 12px 32px rgba(10, 15, 30, 0.15);
+}
+.terminal::before {
+  content: "TERMINAL · コピー して 貼付";
+  position: absolute; top: 14px; right: 20px;
+  font-family: var(--font-jp);
+  font-size: 10px; font-weight: 900;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.1em;
+}
+.terminal .prompt {
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 900;
+  margin-right: 10px;
+  font-size: 20px;
+}
+.terminal .hi {
+  background: rgba(139, 92, 246, 0.35);
+  color: #f5d0fe;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+.copy-btn {
+  position: absolute; top: 12px; right: 130px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-family: var(--font-jp);
+  font-size: 11px; font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); }
+.copy-btn.copied { background: var(--brand-pink); border-color: var(--brand-pink); }
+
+/* Value list */
+.values {
+  padding: 24px 28px;
+  background: var(--paper);
+  border: 2px solid var(--rule);
+  border-radius: 14px;
+}
+.values .v-title {
+  font-size: 10px; font-weight: 900;
+  color: var(--brand-violet);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.values .v-row {
+  display: grid;
+  grid-template-columns: 10em 1fr;
+  gap: 20px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+  align-items: baseline;
+}
+.values .v-row:last-child { border-bottom: none; }
+.values .v-key {
+  font-size: 13px; font-weight: 800; color: var(--ink);
+}
+.values .v-desc {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-2);
+  overflow-wrap: break-word;
+  word-break: break-all;
+  line-height: 1.6;
+}
+
+/* Setting table */
+.settings {
+  width: 100%;
+  border-collapse: collapse;
+  padding: 0;
+  background: var(--paper);
+  border: 2px solid var(--rule);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.settings thead th {
+  padding: 14px 22px;
+  text-align: left;
+  background: var(--surface);
+  font-size: 11px; font-weight: 900; color: var(--dim);
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+.settings tbody td {
+  padding: 14px 22px;
+  color: var(--ink);
+  border-top: 1px solid var(--rule);
+  font-size: 14px;
+}
+.settings tbody td:last-child {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  text-align: right;
+}
+.settings tr.emphasize td:last-child { color: var(--brand-pink); }
+.settings tr.emphasize-brand td:last-child { color: var(--brand-blue); }
+
+/* Notes list */
+.notes {
+  margin: 24px 0;
+  padding: 20px 24px;
+  background: var(--surface);
+  border-radius: 12px;
+}
+.notes .n-title {
+  font-size: 11px; font-weight: 900;
+  color: var(--dim);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.notes ol {
+  margin: 0; padding-left: 24px;
+  color: var(--ink-2);
+}
+.notes li {
+  margin-bottom: 8px;
+  line-height: 1.75;
+  font-size: 14px;
+}
+.notes li:last-child { margin-bottom: 0; }
+.notes li b { color: var(--ink); font-weight: 800; }
+
+/* Warn box */
+.warn {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 16px;
+  padding: 18px 22px;
+  background: rgba(236, 72, 153, 0.05);
+  border: 2px solid rgba(236, 72, 153, 0.4);
+  border-radius: 10px;
+  margin: 20px 0;
+}
+.warn::before {
+  content: "!";
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px;
+  background: var(--brand-pink);
+  color: #fff;
+  border-radius: 6px;
+  font-weight: 900; font-size: 16px;
+}
+.warn .warn-body {
+  font-size: 14px; color: var(--ink); line-height: 1.65;
+}
+.warn .warn-body b { color: var(--brand-pink); font-weight: 900; }
+
+/* Done card (checkbox confirming step) */
+.done-card {
+  margin-top: 32px;
+  padding: 24px 28px;
+  background: var(--ink);
+  color: #fff;
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.done-card::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px; background: var(--gradient);
+}
+.done-card .dc-label {
+  font-size: 10px; font-weight: 900;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.done-card .dc-text {
+  font-size: 16px; font-weight: 800;
+  line-height: 1.55;
+}
+
+/* ============ Bottom nav ============ */
+footer.nav {
+  position: sticky; bottom: 0;
+  background: var(--paper);
+  border-top: 1px solid var(--rule);
+  padding: 16px 28px;
+  z-index: 10;
+}
+.nav-inner {
+  max-width: 780px; margin: 0 auto;
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center;
+  gap: 16px;
+}
+.nav button {
+  padding: 14px 24px;
+  border-radius: 999px;
+  font-family: var(--font-jp);
+  font-weight: 800; font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: all 200ms ease;
+}
+.nav button.prev {
+  background: var(--paper);
+  color: var(--ink-2);
+  border: 1.5px solid var(--rule);
+}
+.nav button.prev:hover:not(:disabled) {
+  border-color: var(--ink-2);
+}
+.nav button.prev:disabled {
+  opacity: 0.3; cursor: not-allowed;
+}
+.nav button.next {
+  padding: 14px 32px;
+  background: var(--gradient);
+  color: #fff;
+  font-weight: 900; font-size: 15px;
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
+}
+.nav button.next:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(139, 92, 246, 0.4);
+}
+.nav .nav-context {
+  text-align: center;
+  font-size: 11px; color: var(--dim);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.nav .nav-context b {
+  color: var(--ink);
+  font-family: var(--font-mono);
+}
+
+/* ============ Intro view ============ */
+.intro-hero {
+  padding: 40px 0 20px;
+  text-align: left;
+}
+.intro-hero .intro-kicker {
+  display: inline-block;
+  font-size: 11px; font-weight: 900;
+  color: var(--brand-violet);
+  letter-spacing: 0.14em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.intro-hero h1 {
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  margin: 0 0 20px;
+  text-wrap: balance;
+}
+.intro-hero h1 .em {
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.intro-hero .intro-lede {
+  font-size: 17px;
+  color: var(--ink-2);
+  margin: 0 0 32px;
+  max-width: 44ch;
+  line-height: 1.7;
+}
+
+.intro-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  padding: 20px 0;
+  margin-bottom: 32px;
+}
+.intro-meta > div {
+  padding: 0 20px;
+  border-right: 1px solid var(--rule);
+}
+.intro-meta > div:first-child { padding-left: 0; }
+.intro-meta > div:last-child { border-right: none; padding-right: 0; }
+.intro-meta .m-label {
+  font-size: 10px; font-weight: 800; color: var(--dim);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.intro-meta .m-value {
+  font-size: 20px; font-weight: 900; color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.phase-preview {
+  display: grid; gap: 14px;
+  margin-bottom: 32px;
+}
+.phase-preview .pp {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  gap: 20px;
+  align-items: center;
+  padding: 20px 24px;
+  background: var(--paper);
+  border: 2px solid var(--rule);
+  border-radius: 12px;
+}
+.phase-preview .pp .pp-letter {
+  font-family: var(--font-jp);
+  font-weight: 900;
+  font-size: 44px;
+  line-height: 1;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.phase-preview .pp .pp-name {
+  font-size: 16px; font-weight: 900; color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.phase-preview .pp .pp-desc {
+  font-size: 12px; color: var(--dim); margin-top: 2px;
+}
+.phase-preview .pp .pp-time {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 700; color: var(--brand-violet);
+}
+
+/* ============ Done view (final) ============ */
+.done-hero {
+  padding: 60px 0 40px;
+  text-align: center;
+}
+.done-hero .check-mark {
+  width: 96px; height: 96px; border-radius: 50%;
+  background: var(--gradient);
+  color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 48px; font-weight: 900;
+  margin-bottom: 24px;
+  box-shadow: 0 20px 48px rgba(139, 92, 246, 0.35);
+}
+.done-hero h1 {
+  font-size: 44px; font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 0 0 12px;
+}
+.done-hero h1 .em {
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.done-hero p {
+  font-size: 16px; color: var(--ink-2);
+  max-width: 40ch;
+  margin: 0 auto 32px;
+  line-height: 1.7;
+}
+.done-next {
+  padding: 24px 28px;
+  background: var(--surface);
+  border-radius: 12px;
+  text-align: left;
+  max-width: 46ch;
+  margin: 0 auto;
+}
+.done-next .dn-title {
+  font-size: 11px; font-weight: 900;
+  color: var(--dim);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.done-next ol {
+  margin: 0; padding-left: 22px;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.done-next li { margin-bottom: 8px; }
+.done-next li:last-child { margin-bottom: 0; }
+.done-next li b { color: var(--ink); font-weight: 800; }
+
+/* ============ Mobile ============ */
+@media (max-width: 640px) {
+  main.stage { padding: 24px 20px 32px; }
+  .top-inner { padding: 14px 20px; }
+  .step-header { grid-template-columns: 1fr; gap: 12px; margin-bottom: 28px; }
+  .step-numeral { font-size: 96px; }
+  .step-header h1 { font-size: 26px; }
+  .cta-huge { padding: 20px 22px; font-size: 15px; }
+  .terminal { padding: 18px 22px; font-size: 13px; }
+  .terminal::before { display: none; }
+  .copy-btn { top: 10px; right: 10px; }
+  .intro-hero { padding: 24px 0 16px; }
+  .intro-hero h1 { font-size: 34px; }
+  .intro-meta { grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px 0; }
+  .intro-meta > div { padding: 8px 0; border-right: none; border-bottom: 1px solid var(--rule); }
+  .intro-meta > div:last-child { border-bottom: none; }
+  .phase-preview .pp { grid-template-columns: 44px 1fr; }
+  .phase-preview .pp .pp-time { grid-column: 2; margin-top: 4px; }
+  .phase-preview .pp .pp-letter { font-size: 32px; }
+  footer.nav { padding: 12px 16px; }
+  .nav button { padding: 12px 18px; font-size: 13px; }
+  .nav button.next { padding: 12px 22px; font-size: 14px; }
+  .done-hero h1 { font-size: 32px; }
+  .step-header .step-tldr { font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view { animation: none; }
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- SVG icons -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="ic-client" viewBox="0 0 24 24">
+      <circle cx="12" cy="8" r="4" fill="none" stroke-width="1.75"/>
+      <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" fill="none" stroke-width="1.75"/>
+    </symbol>
+    <symbol id="ic-staff" viewBox="0 0 24 24">
+      <rect x="3" y="5" width="18" height="12" rx="1.5" fill="none" stroke-width="1.75"/>
+      <path d="M2 20h20" stroke-width="1.75"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="shell">
+
+<!-- ============ HEADER ============ -->
+<header class="top">
+  <div class="top-inner">
+    <div class="top-brand-row">
+      <div class="top-brand">
+        <span class="logo">SKELETON, Inc.</span>
+        <span class="sep">·</span>
+        <span class="doc">HPB-LINE 導入ウィザード</span>
+      </div>
+      <div class="top-count" id="stepLabel">START</div>
+    </div>
+    <div class="progress-track" id="progressTrack"></div>
+  </div>
+</header>
+
+<!-- ============ STAGE (views) ============ -->
+<main class="stage">
+
+  <!-- ============ INTRO ============ -->
+  <section class="view" data-view="intro" data-active>
+    <div class="intro-hero">
+      <div class="intro-kicker">営業マン 携行 · 現場 導入 手順書</div>
+      <h1>サロン予約 を、<br><span class="em">1客 20分</span> で<br>LINE と カレンダー に。</h1>
+      <p class="intro-lede">
+        上 の 「開始 する」 button を 押して、 次 の 画面 が 出た ら 上 から 順 に 実行。 9 の step、 途中 で 迷う 分岐 なし、 完走 で 導入 完了。
+      </p>
+    </div>
+
+    <div class="intro-meta">
+      <div>
+        <div class="m-label">1客 所要</div>
+        <div class="m-value">15–20 <span style="font-size:14px;color:var(--dim);font-weight:500;">分</span></div>
+      </div>
+      <div>
+        <div class="m-label">Step 数</div>
+        <div class="m-value">9</div>
+      </div>
+      <div>
+        <div class="m-label">スタッフ 技術</div>
+        <div class="m-value">タイピング のみ</div>
+      </div>
+    </div>
+
+    <div class="phase-preview">
+      <div class="pp">
+        <div class="pp-letter">A</div>
+        <div><div class="pp-name">Phase A · 事前準備</div><div class="pp-desc">客 から LINE の 情報 を 3 つ 取る</div></div>
+        <div class="pp-time">STEP 01–03</div>
+      </div>
+      <div class="pp">
+        <div class="pp-letter">B</div>
+        <div><div class="pp-name">Phase B · Deploy</div><div class="pp-desc">ターミナル 1 コマンド で 客専用 ツール を 生成</div></div>
+        <div class="pp-time">STEP 04–06</div>
+      </div>
+      <div class="pp">
+        <div class="pp-letter">C</div>
+        <div><div class="pp-name">Phase C · 接続 と 稼働</div><div class="pp-desc">サロンボード 繋いで 試験 して 稼働 開始</div></div>
+        <div class="pp-time">STEP 07–09</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 01 ============ -->
+  <section class="view" data-view="1">
+    <div class="step-header">
+      <div class="step-numeral">01</div>
+      <div class="step-headings">
+        <div class="step-kicker">Phase A · 事前準備</div>
+        <h1>LINE 公式アカウント を 作る</h1>
+        <p class="step-tldr">客 が LINE Business 管理画面 に ログイン → 新規 作成 → サロン名 で <b>無料 プラン</b> を 選ぶ だけ。</p>
+      </div>
+    </div>
+    <div class="who client"><svg><use href="#ic-client"/></svg>CLIENT が 操作</div>
+    <div class="action">
+      <a href="https://manager.line.biz/" target="_blank" rel="noopener" class="cta-huge">
+        <span>LINE Business を 開く<span class="cta-domain">manager.line.biz</span></span>
+        <span class="cta-arrow">↗</span>
+      </a>
+    </div>
+    <div class="notes">
+      <div class="n-title">画面 で やる こと</div>
+      <ol>
+        <li>客 の <b>LINE アカウント</b> で ログイン</li>
+        <li>右上 <b>「新しい アカウント を 作成」</b></li>
+        <li>アカウント名: <b>サロン名</b> / 業種: <b>美容・サロン</b></li>
+        <li><b>無料 プラン</b> を 選択 → 作成 完了</li>
+      </ol>
+    </div>
+    <div class="done-card">
+      <div class="dc-label">☐ この step が 完了 する 条件</div>
+      <div class="dc-text">公式アカウント の 管理画面 に 入れた</div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 02 ============ -->
+  <section class="view" data-view="2">
+    <div class="step-header">
+      <div class="step-numeral">02</div>
+      <div class="step-headings">
+        <div class="step-kicker">Phase A · 事前準備</div>
+        <h1>長期 トークン を 発行 する</h1>
+        <p class="step-tldr">LINE Developers Console の Messaging API 設定 タブ で <b>「発行」</b> を 1回 押す → 200 文字 の 文字列 が 出る → コピー。</p>
+      </div>
+    </div>
+    <div class="who client"><svg><use href="#ic-client"/></svg>CLIENT が 操作</div>
+    <div class="action">
+      <a href="https://developers.line.biz/console/" target="_blank" rel="noopener" class="cta-huge">
+        <span>LINE Developers を 開く<span class="cta-domain">developers.line.biz</span></span>
+        <span class="cta-arrow">↗</span>
+      </a>
+    </div>
+    <div class="notes">
+      <div class="n-title">画面 で やる こと</div>
+      <ol>
+        <li>作成 した <b>チャネル</b> を 選ぶ</li>
+        <li>上 の タブ <b>「Messaging API 設定」</b> を クリック</li>
+        <li>一番下 まで scroll</li>
+        <li><b>「チャネルアクセストークン (長期)」</b> の <b>「発行」</b> button を 押す</li>
+        <li>出た <b>200 文字</b> の 文字列 を コピー して スタッフ に 共有</li>
+      </ol>
+    </div>
+    <div class="warn"><div class="warn-body"><b>注意</b>: 「発行」 じゃ なく 「再発行」 を 押すと 他 端末 の トークン が 死ぬ。 初回 は 必ず 「発行」 のみ。</div></div>
+    <div class="done-card">
+      <div class="dc-label">☐ この step が 完了 する 条件</div>
+      <div class="dc-text">200 文字 の トークン を メモ した</div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 03 ============ -->
+  <section class="view" data-view="3">
+    <div class="step-header">
+      <div class="step-numeral">03</div>
+      <div class="step-headings">
+        <div class="step-kicker">Phase A · 事前準備</div>
+        <h1>通知先ID を コピー する</h1>
+        <p class="step-tldr">同 画面 の 一番下 に <b>「あなたの ユーザーID」</b> が ある。 <b>U から 始まる 33 文字</b> を コピー。</p>
+      </div>
+    </div>
+    <div class="who client"><svg><use href="#ic-client"/></svg>CLIENT が 操作</div>
+    <div class="notes">
+      <div class="n-title">画面 で やる こと</div>
+      <ol>
+        <li>STEP 02 と 同じ 「Messaging API 設定」 タブ の 一番下</li>
+        <li><b>「あなたの ユーザーID」</b> の <b>U</b> から 始まる 33 文字 を コピー</li>
+        <li>スタッフ に 共有 (これ が 「客 自身 の LINE に 通知 を 送る 宛先」)</li>
+      </ol>
+    </div>
+    <div class="done-card">
+      <div class="dc-label">☐ この step が 完了 する 条件</div>
+      <div class="dc-text">U... 33 文字 の 通知先ID を メモ した</div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 04 ============ -->
+  <section class="view" data-view="4">
+    <div class="step-header">
+      <div class="step-numeral">04</div>
+      <div class="step-headings">
+        <div class="step-kicker">Phase B · Deploy</div>
+        <h1>ターミナル で 1 コマンド 実行</h1>
+        <p class="step-tldr">Mac の ターミナル に 下 の コマンド を 貼付 → Enter → 5 項目 に 答える → 30 秒 待つ。</p>
+      </div>
+    </div>
+    <div class="who staff"><svg><use href="#ic-staff"/></svg>STAFF が 操作</div>
+    <div class="action">
+      <div class="terminal">
+        <button class="copy-btn" data-copy="bash ~/Desktop/クロード/hotpepper-line-tool/deploy/add-client.sh">コピー</button>
+        <span class="prompt">$</span>bash ~/Desktop/クロード/hotpepper-line-tool/deploy/add-client.sh
+      </div>
+    </div>
+    <div class="values">
+      <div class="v-title">対話 プロンプト の 5 項目</div>
+      <div class="v-row"><span class="v-key">客 slug</span><span class="v-desc">salon-hanako (半角英数 と ハイフン)</span></div>
+      <div class="v-row"><span class="v-key">サロン名</span><span class="v-desc">サロン花子</span></div>
+      <div class="v-row"><span class="v-key">客 Gmail</span><span class="v-desc">空欄 の まま Enter</span></div>
+      <div class="v-row"><span class="v-key">LINE トークン</span><span class="v-desc">STEP 02 の 200 文字</span></div>
+      <div class="v-row"><span class="v-key">通知先ID</span><span class="v-desc">STEP 03 の U... 33 文字</span></div>
+    </div>
+    <div class="done-card">
+      <div class="dc-label">☐ この step が 完了 する 条件</div>
+      <div class="dc-text">ブラウザ が 自動 で 開いた (Web app URL)</div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 05 ============ -->
+  <section class="view" data-view="5">
+    <div class="step-header">
+      <div class="step-numeral">05</div>
+      <div class="step-headings">
+        <div class="step-kicker">Phase B · Deploy</div>
+        <h1>Google 認証 を 通す</h1>
+        <p class="step-tldr">警告 画面 が 出る が、 <b>詳細 → 移動 → 許可</b> の 3 クリック で 通過。 中身 は 自作 script。</p>
+      </div>
+    </div>
+    <div class="who staff"><svg><use href="#ic-staff"/></svg>STAFF が 操作</div>
+    <div class="notes">
+      <div class="n-title">画面 で 押す 順番</div>
+      <ol>
+        <li>左下 <b>「詳細」</b> を クリック</li>
+        <li>下 に 出る <b>「(プロジェクト名) に 移動 (安全 では ない ページ)」</b> を クリック</li>
+        <li>権限 リスト の 一番下 <b>「許可」</b> を クリック</li>
+      </ol>
+    </div>
+    <div class="warn"><div class="warn-body"><b>「安全 では ない」 は Google の 定型 warning</b>。 自分 で deploy した script なので 承認 で 問題 なし。</div></div>
+    <div class="done-card">
+      <div class="dc-label">☐ この step が 完了 する 条件</div>
+      <div class="dc-text">設定 パネル (3 枚 の card) が 表示 された</div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 06 ============ -->
+  <section class="view" data-view="6">
+    <div class="step-header">
+      <div class="step-numeral">06</div>
+      <div class="step-headings">
+        <div class="step-kicker">Phase B · Deploy</div>
+        <h1>設定 パネル に 3 値 貼付 → 保存</h1>
+        <p class="step-tldr">ターミナル 出力 の 3 値 を form の 各 欄 に コピペ → 右下 の 緑 <b>「保存」</b>。</p>
+      </div>
+    </div>
+    <div class="who staff"><svg><use href="#ic-staff"/></svg>STAFF が 操作</div>
+    <div class="values">
+      <div class="v-title">form に 貼付 する 3 値</div>
+      <div class="v-row"><span class="v-key">チャネルアクセストークン</span><span class="v-desc">STEP 02 の 200 文字</span></div>
+      <div class="v-row"><span class="v-key">通知先ID</span><span class="v-desc">STEP 03 の U... 33 文字</span></div>
+      <div class="v-row"><span class="v-key">サロン名</span><span class="v-desc">STEP 04 で 入力 した サロン名</span></div>
+    </div>
+    <div class="done-card">
+      <div class="dc-label">☐ この step が 完了 する 条件</div>
+      <div class="dc-text">「保存 しました」 の 緑 メッセージ が 下 の bar に 出た</div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 07 ============ -->
+  <section class="view" data-view="7">
+    <div class="step-header">
+      <div class="step-numeral">07</div>
+      <div class="step-headings">
+        <div class="step-kicker">Phase C · 接続 と 稼働</div>
+        <h1>サロンボード の 宛先 を 変更</h1>
+        <p class="step-tldr">サロンボード の 予約通知 メール 送信先 を <b>客専用 の アドレス</b> に 差替。</p>
+      </div>
+    </div>
+    <div class="who client"><svg><use href="#ic-client"/></svg>CLIENT が 操作</div>
+    <div class="action">
+      <a href="https://salonboard.com/" target="_blank" rel="noopener" class="cta-huge">
+        <span>サロンボード を 開く<span class="cta-domain">salonboard.com</span></span>
+        <span class="cta-arrow">↗</span>
+      </a>
+    </div>
+    <div class="notes">
+      <div class="n-title">画面 で やる こと</div>
+      <ol>
+        <li>客 が サロンボード に ログイン</li>
+        <li>右上 <b>「店舗設定」</b> or 「各種設定」</li>
+        <li><b>「メール送信先設定」</b> or 「予約通知メール設定」</li>
+        <li>送信先 メール を 下 の アドレス に 変更 (slug は STEP 04 で 決めた 値)</li>
+      </ol>
+    </div>
+    <div class="terminal" style="font-size:15px;text-align:center;padding:22px 26px;">
+      t3.5ty6+<span class="hi">&lt;slug&gt;</span>@gmail.com
+    </div>
+    <div class="done-card">
+      <div class="dc-label">☐ この step が 完了 する 条件</div>
+      <div class="dc-text">サロンボード 側 で 「保存」 が 完了 した</div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 08 ============ -->
+  <section class="view" data-view="8">
+    <div class="step-header">
+      <div class="step-numeral">08</div>
+      <div class="step-headings">
+        <div class="step-kicker">Phase C · 接続 と 稼働</div>
+        <h1>試験 3 個 → 本稼働 開始</h1>
+        <p class="step-tldr">設定 パネル の Section 3 を 展開 → ①②③ を 順番 に 押す → 最後 に ④ で 本稼働 開始。</p>
+      </div>
+    </div>
+    <div class="who staff"><svg><use href="#ic-staff"/></svg>STAFF が 操作</div>
+    <div class="notes">
+      <div class="n-title">4 button を 順番 に</div>
+      <ol>
+        <li><b>試験 ① LINE に テスト通知</b> → 客 の LINE に 「新規予約 テスト太郎」 が 届く</li>
+        <li><b>試験 ② カレンダー に テスト登録</b> → Google カレンダー の 明日 の 同時刻 に 予定 が 出る</li>
+        <li><b>試験 ③ 直近メール を 解析</b> → STEP 07 の テスト予約 メール が Parser を 通る</li>
+        <li><b>④ 本稼働 開始</b> → 上部 pill が 「稼働中」 に 変わる</li>
+      </ol>
+    </div>
+    <div class="warn"><div class="warn-body">試験 ① で <b>status=429</b> が 出たら → LINE 応答メッセージ が ON で 上限 200通 到達。 次 の STEP 09 で 直す。</div></div>
+    <div class="done-card">
+      <div class="dc-label">☐ この step が 完了 する 条件</div>
+      <div class="dc-text">上部 pill が 「稼働中」 に 変わった</div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 09 ============ -->
+  <section class="view" data-view="9">
+    <div class="step-header">
+      <div class="step-numeral">09</div>
+      <div class="step-headings">
+        <div class="step-kicker">Phase C · 接続 と 稼働</div>
+        <h1>LINE 応答設定 の 4 項目</h1>
+        <p class="step-tldr">Official Account Manager の <b>応答設定</b> で 4 項目 を 表 の 通り に 直す。 これ で 429 (月間 上限) を 予防。</p>
+      </div>
+    </div>
+    <div class="who client"><svg><use href="#ic-client"/></svg>CLIENT が 操作</div>
+    <div class="action">
+      <a href="https://manager.line.biz/" target="_blank" rel="noopener" class="cta-huge">
+        <span>Official Account Manager を 開く<span class="cta-domain">manager.line.biz</span></span>
+        <span class="cta-arrow">↗</span>
+      </a>
+    </div>
+    <div class="notes">
+      <div class="n-title">画面 で やる こと</div>
+      <ol>
+        <li>対象 アカウント を 開く</li>
+        <li>右上 <b>⚙ 設定</b> → 左メニュー <b>「応答設定」</b></li>
+        <li>下 の 表 の 通り に 5 項目 を 設定</li>
+        <li><b>「保存」</b> クリック</li>
+      </ol>
+    </div>
+    <table class="settings">
+      <thead><tr><th>項目</th><th>値</th></tr></thead>
+      <tbody>
+        <tr><td>応答モード</td><td>Bot</td></tr>
+        <tr class="emphasize"><td>応答メッセージ</td><td>OFF</td></tr>
+        <tr class="emphasize"><td>あいさつメッセージ</td><td>OFF</td></tr>
+        <tr><td>Webhook</td><td>OFF</td></tr>
+        <tr class="emphasize-brand"><td>グループ・複数人トーク の 参加</td><td>ON</td></tr>
+      </tbody>
+    </table>
+    <div class="done-card">
+      <div class="dc-label">☐ この step が 完了 する 条件</div>
+      <div class="dc-text">応答設定 5 項目 の 保存 が 完了 した</div>
+    </div>
+  </section>
+
+  <!-- ============ DONE ============ -->
+  <section class="view" data-view="done">
+    <div class="done-hero">
+      <div class="check-mark">✓</div>
+      <h1>導入 <span class="em">完了</span></h1>
+      <p>おつかれさま。 予約 メール が 届いたら 1 分 以内 に 客 の LINE と Google カレンダー に 自動 反映 される。</p>
+
+      <div class="done-next">
+        <div class="dn-title">本番 確認 (最終)</div>
+        <ol>
+          <li>サロンボード で <b>テスト予約 を 1件</b> 追加</li>
+          <li>1 分 待つ (手動 button は 押さない)</li>
+          <li>客 の LINE に <b>予約通知</b> が 届く</li>
+          <li>owner の Google カレンダー に <b>イベント</b> が 追加 される</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER NAV ============ -->
+<footer class="nav">
+  <div class="nav-inner">
+    <button class="prev" id="btnPrev">← 前 の step</button>
+    <div class="nav-context">
+      Step <b id="ctxCurrent">START</b> / <b>09</b>
+    </div>
+    <button class="next" id="btnNext">開始 する →</button>
+  </div>
+</footer>
+
+</div>
+
+<script>
+const VIEWS = ['intro','1','2','3','4','5','6','7','8','9','done'];
+const STORAGE_KEY = 'hpb_sales_wizard_step';
+
+let currentIdx = 0;
+try {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved !== null) currentIdx = Math.min(Math.max(0, parseInt(saved, 10)), VIEWS.length - 1);
+} catch (e) {}
+
+function render() {
+  // Show only current view
+  document.querySelectorAll('.view').forEach(v => v.removeAttribute('data-active'));
+  const cur = document.querySelector('.view[data-view="' + VIEWS[currentIdx] + '"]');
+  if (cur) cur.setAttribute('data-active', '');
+
+  // Progress pips
+  const track = document.getElementById('progressTrack');
+  track.innerHTML = '';
+  for (let i = 0; i < VIEWS.length; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'pip' + (i < currentIdx ? ' done' : '') + (i === currentIdx ? ' active' : '');
+    track.appendChild(pip);
+  }
+
+  // Header label
+  const view = VIEWS[currentIdx];
+  const labels = { intro: 'START', done: 'DONE · 導入 完了' };
+  document.getElementById('stepLabel').textContent = labels[view] || ('STEP ' + view.padStart(2, '0') + ' / 09');
+  document.getElementById('ctxCurrent').textContent = labels[view] ? (view === 'done' ? '完了' : '開始 前') : view.padStart(2, '0');
+
+  // Nav buttons
+  const prev = document.getElementById('btnPrev');
+  const next = document.getElementById('btnNext');
+  prev.disabled = currentIdx === 0;
+
+  if (view === 'intro') {
+    next.textContent = '開始 する →';
+  } else if (view === 'done') {
+    next.textContent = '最初 から やり直す';
+  } else {
+    next.textContent = 'できた, 次 の step →';
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  try { localStorage.setItem(STORAGE_KEY, String(currentIdx)); } catch (e) {}
+}
+
+document.getElementById('btnPrev').addEventListener('click', () => {
+  if (currentIdx > 0) { currentIdx--; render(); }
+});
+document.getElementById('btnNext').addEventListener('click', () => {
+  if (currentIdx < VIEWS.length - 1) { currentIdx++; render(); }
+  else { currentIdx = 0; render(); }
+});
+
+// Copy buttons
+document.querySelectorAll('.copy-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const text = btn.dataset.copy;
+    try { await navigator.clipboard.writeText(text); }
+    catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.top = '-9999px';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    btn.classList.add('copied');
+    const orig = btn.textContent;
+    btn.textContent = '✓ コピー済';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.textContent = orig;
+    }, 2000);
+  });
+});
+
+// Keyboard nav (← / →)
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'ArrowLeft' && currentIdx > 0) { currentIdx--; render(); }
+  else if (e.key === 'ArrowRight' && currentIdx < VIEWS.length - 1) { currentIdx++; render(); }
+});
+
+render();
+</script>
+
+</body>
+</html>
