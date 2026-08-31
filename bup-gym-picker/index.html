@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B'up Gym — Designer Picker (5 variants)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', 'Noto Sans JP', sans-serif;
+    background: #0A0A0B;
+    color: #fff;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: auto 1fr;
+  }
+  .picker {
+    display: flex; align-items: center;
+    background: #101013;
+    border-bottom: 1px solid #1F1F23;
+    padding: 0 20px;
+    height: 56px;
+    gap: 4px;
+    overflow-x: auto;
+  }
+  .brand {
+    font-family: 'Inter', sans-serif;
+    font-weight: 900; font-size: 15px; letter-spacing: -0.03em;
+    color: #fff; margin-right: 20px;
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .brand::before {
+    content: ''; width: 8px; height: 8px; border-radius: 50%;
+    background: #FF3366;
+  }
+  .tab {
+    background: transparent;
+    border: 1px solid #26262B;
+    color: #A0A0A6;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tab strong { font-weight: 700; color: #fff; }
+  .tab:hover { border-color: #3A3A40; color: #fff; }
+  .tab.active {
+    background: #fff; color: #0A0A0B; border-color: #fff;
+  }
+  .tab.active strong { color: #0A0A0B; }
+  .meta {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: #6C6C74;
+    letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 12px;
+    flex-shrink: 0;
+    padding-right: 8px;
+  }
+  .meta a {
+    color: #A0A0A6;
+    text-decoration: none;
+    padding: 5px 10px;
+    border: 1px solid #26262B;
+    border-radius: 999px;
+    transition: all 0.2s;
+    font-size: 10.5px;
+  }
+  .meta a:hover { color: #fff; border-color: #3A3A40; }
+  .frame {
+    position: relative;
+    background: #0A0A0B;
+    overflow: hidden;
+  }
+  iframe {
+    width: 100%; height: 100%;
+    border: 0;
+    display: block;
+  }
+  @media (max-width: 640px) {
+    .meta { display: none; }
+    .picker { height: 52px; padding: 0 14px; }
+    .brand { margin-right: 12px; font-size: 13px; }
+    .tab { padding: 6px 10px; font-size: 10.5px; }
+  }
+</style>
+</head>
+<body>
+  <nav class="picker">
+    <div class="brand">B'up · Designer Picker</div>
+    <button class="tab active" data-t="d1"><strong>D1</strong> Cinema</button>
+    <button class="tab" data-t="d2"><strong>D2</strong> Workspace</button>
+    <button class="tab" data-t="d3"><strong>D3</strong> Earth</button>
+    <button class="tab" data-t="d4"><strong>D4</strong> Split</button>
+    <button class="tab" data-t="d5"><strong>D5</strong> Bento</button>
+    <div class="meta">
+      <span id="active-desc">Cinema · full-bleed b&w + copper</span>
+      <a href="d1.html" target="_blank" id="open-link">Open new tab ↗</a>
+    </div>
+  </nav>
+  <div class="frame">
+    <iframe id="stage" src="d1.html" loading="eager"></iframe>
+  </div>
+
+<script>
+  const descs = {
+    d1: "Cinema · full-bleed b&w + copper",
+    d2: "Workspace · desaturated + indigo data grid",
+    d3: "Earth · terracotta + sage + creme",
+    d4: "Split · 50/50 photo + magenta big brand",
+    d5: "Bento · mono + acid-yellow grid"
+  };
+  const tabs = document.querySelectorAll('.tab');
+  const stage = document.getElementById('stage');
+  const desc = document.getElementById('active-desc');
+  const open = document.getElementById('open-link');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    const k = t.dataset.t;
+    stage.src = k + '.html';
+    desc.textContent = descs[k];
+    open.href = k + '.html';
+    history.replaceState(null, '', '#' + k);
+  }));
+  // support #d3 deep-link
+  const initial = location.hash.replace('#', '');
+  if (initial && descs[initial]) {
+    document.querySelector(`.tab[data-t="${initial}"]`).click();
+  }
+</script>
+</body>
+</html>

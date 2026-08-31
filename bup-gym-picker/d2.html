@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B'up Gym — D2 Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --paper: #FAFAFB;
+    --surface: #FFFFFF;
+    --surface-2: #F4F4F6;
+    --surface-3: #ECECF0;
+    --ink: #14141A;
+    --ink-2: #3D3D48;
+    --ink-3: #7C7C88;
+    --hair: #E3E3E8;
+    --indigo: #4F46E5;
+    --indigo-2: #6366F1;
+    --emerald: #10B981;
+    --amber: #F59E0B;
+    --rose: #F43F5E;
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', 'Noto Sans JP', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04';
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  .app {
+    display: grid;
+    grid-template-columns: 240px 1fr 320px;
+    min-height: 100vh;
+  }
+
+  /* SIDEBAR LEFT */
+  .sidebar {
+    background: var(--paper);
+    border-right: 1px solid var(--hair);
+    padding: 20px 16px;
+    display: flex; flex-direction: column;
+  }
+  .side-brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px 20px;
+    border-bottom: 1px solid var(--hair);
+    margin-bottom: 14px;
+  }
+  .side-brand-mark {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: var(--ink);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Inter', sans-serif;
+    font-weight: 900; font-size: 12px;
+    letter-spacing: -0.03em;
+  }
+  .side-brand-txt {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700; font-size: 13.5px;
+    letter-spacing: -0.01em;
+  }
+  .side-brand-txt em {
+    display: block;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 10.5px;
+    color: var(--ink-3);
+    margin-top: 1px;
+    letter-spacing: 0;
+  }
+  .side-search {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px;
+    background: var(--surface-2);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-size: 12px; color: var(--ink-3);
+  }
+  .side-search::before {
+    content: ''; width: 12px; height: 12px;
+    border: 1.5px solid var(--ink-3);
+    border-radius: 50%;
+    position: relative;
+  }
+  .side-search kbd {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 2px 5px;
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    border-radius: 3px;
+    color: var(--ink-3);
+  }
+  .side-section-lbl {
+    padding: 12px 10px 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 600;
+  }
+  .side-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .side-item:hover { background: var(--surface-2); color: var(--ink); }
+  .side-item.active { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+  .side-item .dot {
+    width: 8px; height: 8px; border-radius: 2px;
+    background: var(--indigo);
+  }
+  .side-item .dot.emerald { background: var(--emerald); }
+  .side-item .dot.amber { background: var(--amber); }
+  .side-item .dot.rose { background: var(--rose); }
+  .side-item .count {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* CENTER */
+  .center {
+    padding: 24px 40px 60px;
+    min-width: 0;
+  }
+  .breadcrumb {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--ink-3);
+    margin-bottom: 20px;
+  }
+  .breadcrumb a { color: var(--ink-3); }
+  .breadcrumb strong { color: var(--ink); font-weight: 600; }
+  .breadcrumb .sep { opacity: 0.4; }
+
+  .center-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 30px;
+  }
+  .center-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 36px;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  .center-title .jp {
+    display: block;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700;
+    font-size: 30px;
+    letter-spacing: -0.02em;
+    margin-top: 6px;
+  }
+  .center-sub {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12.5px;
+    color: var(--ink-3);
+    margin-top: 12px;
+  }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 8px;
+    background: rgba(16,185,129,0.1);
+    color: var(--emerald);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .status-pill::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--emerald);
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.2);
+  }
+  .center-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .btn {
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px;
+    font-weight: 500;
+    border: 1px solid var(--hair);
+    background: var(--surface);
+    color: var(--ink-2);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--ink-3); color: var(--ink); }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: var(--indigo); border-color: var(--indigo); color: #fff; }
+
+  /* meta strip */
+  .meta-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    border-radius: 8px;
+    padding: 0;
+    margin-bottom: 24px;
+  }
+  .meta-cell {
+    padding: 16px 18px;
+    border-right: 1px solid var(--hair);
+  }
+  .meta-cell:last-child { border-right: none; }
+  .meta-cell .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .meta-cell .val {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .meta-cell .val .unit {
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-left: 2px;
+    font-weight: 500;
+  }
+  .meta-cell .trend {
+    font-size: 11px;
+    color: var(--emerald);
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .meta-cell .trend.flat { color: var(--ink-3); }
+
+  /* session log */
+  .log {
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .log-head {
+    display: grid;
+    grid-template-columns: 88px 1fr 120px 100px 100px;
+    padding: 12px 18px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--hair);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 600;
+  }
+  .log-row {
+    display: grid;
+    grid-template-columns: 88px 1fr 120px 100px 100px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--hair);
+    font-size: 13px;
+    align-items: center;
+    transition: background 0.15s;
+    cursor: default;
+  }
+  .log-row:last-child { border-bottom: none; }
+  .log-row:hover { background: var(--surface-2); }
+  .log-row .date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .log-row .name { font-weight: 600; color: var(--ink); }
+  .log-row .name em {
+    display: block;
+    font-style: normal;
+    font-weight: 400;
+    color: var(--ink-3);
+    font-size: 12px;
+    margin-top: 2px;
+  }
+  .log-row .type {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--ink-2);
+  }
+  .log-row .type::before {
+    content: ''; display: inline-block;
+    width: 6px; height: 6px; border-radius: 2px;
+    background: var(--indigo);
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .log-row .type.premium::before { background: var(--amber); }
+  .log-row .type.contest::before { background: var(--rose); }
+  .log-row .dur {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--ink-3);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .log-row .status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 2px 8px;
+    background: rgba(16,185,129,0.1);
+    color: var(--emerald);
+    border-radius: 4px;
+    font-weight: 600;
+    display: inline-block;
+    width: fit-content;
+  }
+  .log-row .status.upcoming {
+    background: rgba(79,70,229,0.1);
+    color: var(--indigo);
+  }
+  .log-foot {
+    padding: 12px 18px;
+    background: var(--surface-2);
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+
+  /* RIGHT PANE */
+  .aside {
+    background: var(--surface);
+    border-left: 1px solid var(--hair);
+    padding: 24px 20px;
+    display: flex; flex-direction: column;
+    gap: 22px;
+    overflow-y: auto;
+  }
+  .aside-block {
+    padding: 18px;
+    border: 1px solid var(--hair);
+    border-radius: 8px;
+    background: var(--paper);
+  }
+  .aside-block.hero-block {
+    padding: 0;
+    overflow: hidden;
+  }
+  .aside-block.hero-block img {
+    width: 100%;
+    aspect-ratio: 3/4;
+    object-fit: cover;
+    object-position: center 12%;
+    display: block;
+  }
+  .aside-block.hero-block .meta {
+    padding: 14px 16px;
+    border-top: 1px solid var(--hair);
+  }
+  .aside-block .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .aside-block h4 {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700;
+    font-size: 14.5px;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+  }
+  .aside-block .role {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-bottom: 8px;
+  }
+  .aside-block p {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--ink-2);
+  }
+
+  .pricing {
+    padding: 20px;
+    background: linear-gradient(180deg, var(--ink) 0%, #1F1F27 100%);
+    color: #fff;
+    border-radius: 8px;
+    border: 1px solid var(--ink);
+  }
+  .pricing .lbl { color: rgba(255,255,255,0.55); margin-bottom: 6px; }
+  .pricing .amt {
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: 36px;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+  }
+  .pricing .amt .unit {
+    font-size: 14px;
+    color: rgba(255,255,255,0.55);
+    font-weight: 500;
+    margin-left: 4px;
+  }
+  .pricing .per {
+    font-size: 12px;
+    color: rgba(255,255,255,0.65);
+    margin-top: 6px;
+  }
+  .pricing .cta-primary {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--indigo);
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-top: 16px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  .pricing .cta-primary:hover { background: var(--indigo-2); }
+
+  .quicklinks {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .quicklink {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  .quicklink:hover { background: var(--surface-2); }
+  .quicklink .k {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-3);
+  }
+
+  @media (max-width: 1200px) {
+    .app { grid-template-columns: 220px 1fr; }
+    .aside { display: none; }
+    .log-head, .log-row { grid-template-columns: 80px 1fr 100px 80px; }
+    .log-head .cell-status, .log-row .status { display: none; }
+  }
+  @media (max-width: 800px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .center { padding: 20px; }
+    .center-head { flex-direction: column; }
+    .meta-strip { grid-template-columns: 1fr 1fr; }
+    .meta-cell:nth-child(2) { border-right: none; }
+    .meta-cell { border-bottom: 1px solid var(--hair); }
+    .meta-cell:nth-last-child(-n+2) { border-bottom: none; }
+    .log-head, .log-row { grid-template-columns: 70px 1fr 70px; }
+    .log-head .cell-type, .log-row .type, .log-head .cell-dur, .log-row .dur, .log-head .cell-status, .log-row .status { display: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar">
+      <div class="side-brand">
+        <div class="side-brand-mark">B</div>
+        <div class="side-brand-txt">B'up Gym<em>Toyama · Imizu</em></div>
+      </div>
+      <div class="side-search">
+        Search sessions...
+        <kbd>⌘K</kbd>
+      </div>
+
+      <div class="side-section-lbl">Workspace</div>
+      <div class="side-item active">
+        <span class="dot"></span>
+        Dashboard
+      </div>
+      <div class="side-item">
+        <span class="dot emerald"></span>
+        Members <span class="count">12</span>
+      </div>
+      <div class="side-item">
+        <span class="dot amber"></span>
+        Session log <span class="count">48</span>
+      </div>
+      <div class="side-item">
+        <span class="dot rose"></span>
+        Contest track <span class="count">3</span>
+      </div>
+
+      <div class="side-section-lbl">Plans</div>
+      <div class="side-item">Standard · ¥33,600</div>
+      <div class="side-item">Premium · ¥48,600</div>
+      <div class="side-item">Contest · ¥120,000</div>
+
+      <div class="side-section-lbl">Studio</div>
+      <div class="side-item">Trainer profile</div>
+      <div class="side-item">Access</div>
+      <div class="side-item">LINE / Instagram</div>
+    </aside>
+
+    <!-- CENTER -->
+    <main class="center">
+      <div class="breadcrumb">
+        <a>Workspace</a>
+        <span class="sep">/</span>
+        <a>B'up Gym</a>
+        <span class="sep">/</span>
+        <strong>Overview</strong>
+      </div>
+
+      <div class="center-head">
+        <div>
+          <h1 class="center-title">
+            Body Composition Reset
+            <span class="jp">産後 の 体、 24週間 で 整える。</span>
+          </h1>
+          <div class="center-sub">
+            <span class="status-pill">Enrolling · Autumn 2026</span>
+            <span>Female-only · 60min × 4 / month · Fully private</span>
+          </div>
+        </div>
+        <div class="center-actions">
+          <a class="btn" href="https://www.instagram.com/bimajyobody" target="_blank">Instagram</a>
+          <a class="btn btn-primary" href="https://lin.ee/NRarajY" target="_blank">LINE で 初回体験 →</a>
+        </div>
+      </div>
+
+      <div class="meta-strip">
+        <div class="meta-cell">
+          <div class="lbl">Members active</div>
+          <div class="val">12<span class="unit">人</span></div>
+          <div class="trend">+2 this month</div>
+        </div>
+        <div class="meta-cell">
+          <div class="lbl">Sessions / mo</div>
+          <div class="val">48<span class="unit">回</span></div>
+          <div class="trend flat">— stable</div>
+        </div>
+        <div class="meta-cell">
+          <div class="lbl">Trainer</div>
+          <div class="val">1<span class="unit">/1</span></div>
+          <div class="trend flat">Megumi only</div>
+        </div>
+        <div class="meta-cell">
+          <div class="lbl">Retention 90d</div>
+          <div class="val">92<span class="unit">%</span></div>
+          <div class="trend">+4 vs. Q2</div>
+        </div>
+      </div>
+
+      <div class="log">
+        <div class="log-head">
+          <div>Date</div>
+          <div>Member</div>
+          <div class="cell-type">Type</div>
+          <div class="cell-dur">Dur.</div>
+          <div class="cell-status">Status</div>
+        </div>
+        <div class="log-row">
+          <div class="date">09/01 · Mon</div>
+          <div class="name">Kaori S. <em>Standard · Session 03</em></div>
+          <div class="type">Standard</div>
+          <div class="dur">60min</div>
+          <div class="status upcoming">Upcoming</div>
+        </div>
+        <div class="log-row">
+          <div class="date">08/31 · Sun</div>
+          <div class="name">Emi Y. <em>Contest · Week 12 / 24</em></div>
+          <div class="type contest">Contest</div>
+          <div class="dur">90min</div>
+          <div class="status">Complete</div>
+        </div>
+        <div class="log-row">
+          <div class="date">08/30 · Sat</div>
+          <div class="name">Rika M. <em>Standard · Session 07</em></div>
+          <div class="type">Standard</div>
+          <div class="dur">60min</div>
+          <div class="status">Complete</div>
+        </div>
+        <div class="log-row">
+          <div class="date">08/29 · Fri</div>
+          <div class="name">Ayaka T. <em>Premium · 4回コース 03/04</em></div>
+          <div class="type premium">Premium</div>
+          <div class="dur">90min</div>
+          <div class="status">Complete</div>
+        </div>
+        <div class="log-row">
+          <div class="date">08/28 · Thu</div>
+          <div class="name">Miho K. <em>Standard · Session 12</em></div>
+          <div class="type">Standard</div>
+          <div class="dur">60min</div>
+          <div class="status">Complete</div>
+        </div>
+        <div class="log-foot">
+          <span>Showing 5 of 48 sessions</span>
+          <span>Session log · updated 2m ago</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- RIGHT ASIDE -->
+    <aside class="aside">
+      <div class="aside-block hero-block">
+        <img src="https://tsunagaru-marche.net/wp-content/uploads/S__86769669_0.jpg" alt="Megumi trainer">
+        <div class="meta">
+          <div class="lbl">Head Trainer</div>
+          <h4>山屋 めぐみ</h4>
+          <div class="role">Megumi Yamaya · Founder</div>
+          <p>指導歴 8年。 BBJ 日本大会 4年連続 出場、 富山 グランプリ 複数優勝。 産後ケア · 姿勢 · 美肌食 マイスター。</p>
+        </div>
+      </div>
+
+      <div class="pricing">
+        <div class="lbl">Standard Plan · Recommended</div>
+        <div class="amt">¥33,600<span class="unit">/mo</span></div>
+        <div class="per">60分 × 月4回 (¥8,400 / 回)</div>
+        <a class="cta-primary" href="https://lin.ee/NRarajY" target="_blank">
+          LINE で 初回体験
+          <span>→</span>
+        </a>
+      </div>
+
+      <div>
+        <div class="lbl" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600;padding:0 12px 8px;">Quick links</div>
+        <div class="quicklinks">
+          <div class="quicklink">Trainer profile <span class="k">→</span></div>
+          <div class="quicklink">All plans <span class="k">→</span></div>
+          <div class="quicklink">Session flow <span class="k">→</span></div>
+          <div class="quicklink">Access · 富山県 射水市 <span class="k">→</span></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</body>
+</html>
