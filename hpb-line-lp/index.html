@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>サロン予約LINE通知 | ホットペッパーの予約を1分後にLINEとGoogleカレンダーへ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;900&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0a0a0a; --ink-2:#262626; --ink-3:#595959; --ink-4:#8c8c8c;
+  --line:#ececec; --line-2:#f5f5f5;
+  --bg:#ffffff; --bg-soft:#fafbfc; --bg-dark:#0f1116;
+  --brand-1:#0071E3; --brand-2:#8B5CF6; --brand-3:#EC4899;
+  --grad:linear-gradient(120deg,#0071E3 0%,#8B5CF6 50%,#EC4899 100%);
+  --line-green:#06C755; --gmail-red:#EA4335; --google-blue:#1A73E8;
+  --fs-body:16px; --fs-sm:14px; --fs-xs:12px;
+  --fs-h1:58px; --fs-h2:44px; --fs-h3:22px; --fs-num:60px;
+  --lh-tight:1.28; --lh-body:1.9;
+  --sp-s:8px; --sp-m:16px; --sp-l:32px; --sp-xl:64px; --sp-2xl:120px;
+  --sh-1:0 1px 3px rgba(15,17,22,.04),0 1px 2px rgba(15,17,22,.03);
+  --sh-2:0 4px 16px rgba(15,17,22,.06),0 2px 4px rgba(15,17,22,.03);
+  --sh-3:0 20px 60px rgba(15,17,22,.10),0 8px 20px rgba(15,17,22,.04);
+  --sh-hero:0 40px 120px rgba(15,17,22,.14),0 16px 32px rgba(15,17,22,.06);
+  --r-1:8px; --r-2:12px; --r-3:20px; --r-pill:999px;
+  --wrap:1120px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Noto Sans JP','Inter',system-ui,sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;line-height:var(--lh-body);font-size:var(--fs-body)}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+em{font-style:normal}
+.nav .brand em,.hero h1 em,.final h2 em{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 32px}
+
+/* ===== Nav ===== */
+.nav{padding:20px 32px;display:flex;align-items:center;gap:32px;font-size:14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);z-index:50}
+.nav .brand{font-family:'Inter',sans-serif;font-weight:900;font-size:20px;letter-spacing:-.02em;color:var(--ink)}
+.nav .brand em{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.nav .menu{display:flex;gap:24px;color:var(--ink-2);margin-left:16px}
+.nav .menu a{font-weight:500}
+.nav .cta{margin-left:auto;display:flex;gap:12px;align-items:center}
+.nav .btn-mini{padding:10px 20px;border-radius:var(--r-pill);border:1px solid var(--ink);font-weight:600;font-size:13px;background:#fff}
+.nav .btn-mini-primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* ===== Hero ===== */
+.hero{padding:96px 32px 112px}
+.hero-inner{max-width:var(--wrap);margin:0 auto;display:grid;grid-template-columns:1.1fr .9fr;gap:64px;align-items:center}
+.hero .eyebrow{display:inline-block;padding:6px 16px;border-radius:var(--r-pill);background:var(--bg-soft);border:1px solid var(--line);font-size:12px;font-weight:500;color:var(--ink-3);margin-bottom:24px;letter-spacing:.02em}
+.hero h1{font-size:var(--fs-h1);font-weight:900;line-height:var(--lh-tight);letter-spacing:-.03em;margin-bottom:28px}
+.hero .lede{font-size:17px;color:var(--ink-2);margin-bottom:40px;line-height:1.9;max-width:520px}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.btn{padding:18px 32px;border-radius:var(--r-pill);font-weight:700;font-size:15px;cursor:pointer;border:none;transition:transform .16s ease,box-shadow .16s ease;text-align:center;line-height:1}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 8px 24px rgba(139,92,246,.28)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(139,92,246,.34)}
+.btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--ink)}
+.hero .proof{display:flex;gap:24px;font-size:13px;color:var(--ink-3);flex-wrap:wrap}
+.hero .proof span{display:flex;align-items:center;gap:8px}
+.hero .proof span::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--brand-2);flex-shrink:0}
+.hero-visual{position:relative;display:flex;justify-content:center;align-items:center;padding:24px}
+.hero-visual::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(139,92,246,.12) 0%,transparent 62%);z-index:0;pointer-events:none}
+.hero-visual img{max-width:420px;width:100%;height:auto;border-radius:36px;box-shadow:var(--sh-hero);position:relative;z-index:1;background:#7A94A6}
+
+/* ===== Mechanism section (media forward) ===== */
+.mechanism{background:var(--bg-dark);color:#fff;padding:120px 32px}
+.mechanism .head{max-width:720px;margin:0 auto 56px;text-align:center}
+.mechanism .kicker{font-family:'Inter',sans-serif;font-size:12px;font-weight:700;letter-spacing:.2em;color:var(--brand-3);text-transform:uppercase;margin-bottom:16px}
+.mechanism h2{font-size:var(--fs-h2);font-weight:900;letter-spacing:-.025em;line-height:var(--lh-tight);margin-bottom:20px;color:#fff}
+.mechanism .sub{font-size:16px;color:rgba(255,255,255,.7);line-height:1.9}
+.mech-stage{max-width:1000px;margin:0 auto;background:#191b23;border-radius:24px;padding:32px;box-shadow:var(--sh-3)}
+.mech-stage video{width:100%;height:auto;display:block;border-radius:16px}
+.mech-steps{max-width:1000px;margin:40px auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;color:rgba(255,255,255,.85)}
+.mech-step{padding:24px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:var(--r-2)}
+.mech-step .n{font-family:'Inter',sans-serif;font-size:12px;font-weight:700;color:var(--brand-3);letter-spacing:.15em;margin-bottom:12px}
+.mech-step h4{font-size:16px;font-weight:700;margin-bottom:8px;color:#fff}
+.mech-step p{font-size:13px;color:rgba(255,255,255,.65);line-height:1.8}
+
+/* ===== Section base ===== */
+section.stack{padding:var(--sp-2xl) 32px}
+.section-kicker{font-family:'Inter',sans-serif;font-size:12px;font-weight:700;letter-spacing:.2em;color:var(--brand-2);text-transform:uppercase;margin-bottom:16px;text-align:center}
+.section-title{font-size:var(--fs-h2);font-weight:900;letter-spacing:-.025em;line-height:var(--lh-tight);text-align:center;margin-bottom:24px}
+.section-sub{font-size:15px;color:var(--ink-2);text-align:center;max-width:640px;margin:0 auto 64px;line-height:2}
+
+/* ===== Product spotlight (asymmetric) ===== */
+.product-stack{max-width:var(--wrap);margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr);gap:32px}
+.product-item{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--r-3);padding:32px;transition:transform .3s ease,box-shadow .3s ease}
+.product-item:hover{transform:translateY(-4px);box-shadow:var(--sh-3)}
+.product-item.hero-item{grid-column:span 4;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center}
+.product-item.mini{grid-column:span 2;display:flex;flex-direction:column}
+.product-frame{background:#fff;border-radius:var(--r-2);overflow:hidden;box-shadow:var(--sh-2);display:flex;align-items:center;justify-content:center;padding:16px}
+.product-item.hero-item .product-frame{aspect-ratio:9/16;max-height:420px;padding:0;background:#7A94A6}
+.product-item.hero-item .product-frame img{width:100%;height:100%;object-fit:cover}
+.product-item.mini .product-frame{aspect-ratio:4/3;margin-bottom:24px}
+.product-item.mini .product-frame img{max-width:100%;max-height:100%;object-fit:contain}
+.product-body .num{font-family:'Inter',sans-serif;font-size:12px;font-weight:700;letter-spacing:.15em;color:var(--brand-1);margin-bottom:12px}
+.product-body h3{font-size:20px;font-weight:800;margin-bottom:12px;line-height:1.5;letter-spacing:-.01em}
+.product-body p{font-size:14px;color:var(--ink-2);line-height:1.9}
+
+/* ===== Why now (痛み and 変化) ===== */
+.pivot{background:var(--bg-soft)}
+.pivot-grid{max-width:960px;margin:0 auto;display:grid;grid-template-columns:1fr 80px 1fr;align-items:stretch;gap:0}
+.pivot-col{padding:40px 32px;border-radius:var(--r-3)}
+.pivot-col.before{background:#fff;border:1px solid var(--line)}
+.pivot-col.after{background:#0a0a0a;color:#fff}
+.pivot-col h3{font-size:22px;font-weight:800;margin-bottom:24px;letter-spacing:-.01em}
+.pivot-col ul{list-style:none}
+.pivot-col li{padding:14px 0 14px 32px;position:relative;font-size:14px;border-bottom:1px solid rgba(0,0,0,.06)}
+.pivot-col.after li{color:rgba(255,255,255,.85);border-bottom-color:rgba(255,255,255,.08)}
+.pivot-col li:last-child{border:none}
+.pivot-col.before li::before{content:'';position:absolute;left:8px;top:22px;width:14px;height:2px;background:var(--ink-3)}
+.pivot-col.after li::before{content:'';position:absolute;left:0;top:22px;width:20px;height:2px;background:var(--brand-3)}
+.pivot-arrow{display:flex;align-items:center;justify-content:center}
+.pivot-arrow svg{width:64px;height:32px}
+
+/* ===== Comparison table ===== */
+.compare-wrap{max-width:1000px;margin:0 auto;overflow-x:auto;border-radius:var(--r-3);box-shadow:var(--sh-2);background:#fff}
+.compare-t{width:100%;min-width:640px;border-collapse:collapse}
+.compare-t th,.compare-t td{padding:20px 20px;text-align:center;font-size:14px;border-bottom:1px solid var(--line-2)}
+.compare-t th{background:var(--bg-soft);font-weight:700;color:var(--ink);font-size:13px;letter-spacing:.02em;padding:24px 16px}
+.compare-t th.us{background:var(--grad);color:#fff}
+.compare-t td.us{background:rgba(139,92,246,.05);font-weight:700}
+.compare-t td:first-child,.compare-t th:first-child{text-align:left;padding-left:28px;color:var(--ink-2);font-weight:500}
+.compare-t .yes{color:var(--brand-2);font-weight:700;font-size:18px}
+.compare-t .no{color:var(--ink-4);font-size:18px}
+.compare-t .price{font-family:'Inter',sans-serif;font-weight:800;font-size:16px;letter-spacing:-.01em}
+.compare-note{max-width:1000px;margin:20px auto 0;text-align:center;font-size:12px;color:var(--ink-3)}
+
+/* ===== Cases ===== */
+.cases{background:var(--bg-soft)}
+.case-grid{max-width:var(--wrap);margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.case-card{background:#fff;border-radius:var(--r-3);overflow:hidden;box-shadow:var(--sh-2);transition:transform .3s ease,box-shadow .3s ease}
+.case-card:hover{transform:translateY(-4px);box-shadow:var(--sh-3)}
+.case-cover{aspect-ratio:4/3;position:relative;overflow:hidden}
+.case-cover img{width:100%;height:100%;object-fit:cover}
+.case-cover .tag{position:absolute;top:20px;left:20px;background:rgba(15,17,22,.82);backdrop-filter:blur(12px);color:#fff;padding:6px 14px;border-radius:var(--r-pill);font-size:11px;font-family:'Inter',sans-serif;font-weight:700;letter-spacing:.1em}
+.case-body{padding:28px}
+.case-quote{font-size:16px;font-weight:700;line-height:1.75;letter-spacing:-.005em;margin-bottom:20px}
+.case-meta{font-size:12px;color:var(--ink-3);line-height:1.8;padding-top:16px;border-top:1px solid var(--line-2)}
+.case-meta strong{display:block;color:var(--ink);font-size:13px;margin-bottom:4px}
+.case-metric{display:flex;gap:28px;margin-top:16px}
+.case-metric .mn{font-family:'Inter',sans-serif;font-weight:900;font-size:22px;color:var(--brand-2);line-height:1;letter-spacing:-.02em}
+.case-metric .ml{font-size:11px;color:var(--ink-3);margin-top:4px}
+
+/* ===== Pricing (1 tier, single card) ===== */
+.pricing{padding:120px 32px}
+.pricing-single{max-width:640px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:var(--r-3);padding:56px 48px;box-shadow:var(--sh-3);text-align:center}
+.pricing-single .badge{display:inline-block;background:var(--grad);color:#fff;padding:6px 20px;border-radius:var(--r-pill);font-size:11px;font-weight:700;letter-spacing:.08em;margin-bottom:20px}
+.pricing-single .tier{font-size:13px;color:var(--ink-3);letter-spacing:.02em;margin-bottom:12px}
+.pricing-single .amount{font-family:'Inter',sans-serif;font-size:var(--fs-num);font-weight:900;letter-spacing:-.03em;line-height:1;margin-bottom:6px}
+.pricing-single .amount small{font-size:16px;color:var(--ink-3);font-weight:500}
+.pricing-single .amount-note{font-size:12px;color:var(--ink-3);margin-bottom:32px}
+.pricing-single ul{list-style:none;text-align:left;margin:32px auto;padding:32px 0;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);max-width:400px}
+.pricing-single li{padding:8px 0 8px 28px;position:relative;font-size:14px;color:var(--ink-2);line-height:1.7}
+.pricing-single li::before{content:'';position:absolute;left:0;top:14px;width:14px;height:14px;background:var(--brand-2);border-radius:50%;box-shadow:inset 0 0 0 3px #fff}
+.pricing-single .cta-row{justify-content:center;margin:0}
+.pricing-single .btn-primary{padding:20px 48px;font-size:16px}
+.pricing-single .fine{margin-top:24px;font-size:12px;color:var(--ink-3)}
+
+/* ===== FAQ ===== */
+.faq-wrap{max-width:800px;margin:0 auto}
+.faq-item{border-bottom:1px solid var(--line);padding:24px 0}
+.faq-item summary{cursor:pointer;font-size:15px;font-weight:600;color:var(--ink);list-style:none;position:relative;padding-right:40px}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary::before{content:'Q.';margin-right:14px;font-family:'Inter',sans-serif;font-weight:900;color:var(--brand-1);font-size:16px}
+.faq-item summary::after{content:'＋';position:absolute;right:0;top:0;color:var(--ink-3);font-size:22px;font-weight:300;transition:transform .2s}
+.faq-item[open] summary::after{transform:rotate(45deg)}
+.faq-item .a{padding:18px 0 0 34px;font-size:14px;color:var(--ink-2);line-height:2}
+
+/* ===== Final CTA ===== */
+.final{background:linear-gradient(135deg,#0f1116 0%,#1a1d29 100%);color:#fff;text-align:center;padding:120px 32px;position:relative;overflow:hidden}
+.final::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 22% 30%,rgba(0,113,227,.16),transparent 42%),radial-gradient(circle at 78% 70%,rgba(236,72,153,.16),transparent 42%)}
+.final > *{position:relative}
+.final h2{font-size:var(--fs-h2);font-weight:900;letter-spacing:-.03em;line-height:var(--lh-tight);margin-bottom:20px}
+.final p{font-size:16px;color:rgba(255,255,255,.7);margin-bottom:40px}
+.final .cta-row{justify-content:center}
+.final .btn-ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.32)}
+
+/* ===== Footer ===== */
+.foot{background:#0a0a0a;color:rgba(255,255,255,.6);padding:56px 32px 32px}
+.foot-inner{max-width:var(--wrap);margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:48px}
+.foot .brand-block .logo{font-family:'Inter',sans-serif;font-weight:900;font-size:22px;letter-spacing:-.02em;color:#fff;margin-bottom:14px}
+.foot .brand-block p{font-size:12px;line-height:1.9;color:rgba(255,255,255,.5)}
+.foot h5{font-size:12px;font-weight:700;color:#fff;letter-spacing:.05em;margin-bottom:14px}
+.foot ul{list-style:none}
+.foot li{padding:5px 0;font-size:12px}
+.foot li a{color:rgba(255,255,255,.5)}
+.foot li a:hover{color:#fff}
+.foot-bot{max-width:var(--wrap);margin:32px auto 0;padding-top:20px;border-top:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.4)}
+
+/* ===== Responsive ===== */
+@media (max-width:900px){
+  .hero-inner{grid-template-columns:1fr;gap:48px}
+  .hero{padding:56px 24px 72px}
+  .hero h1{font-size:32px}
+  section.stack,.pricing,.mechanism,.final{padding:64px 24px}
+  .nav{padding:14px 20px;gap:16px}
+  .nav .brand{font-size:15px;white-space:nowrap}
+  .nav .menu{display:none}
+  .nav .btn-mini:not(.btn-mini-primary){display:none}
+  .nav .btn-mini-primary{padding:9px 16px;font-size:12px}
+  .mechanism h2{font-size:28px}
+  .mech-steps{grid-template-columns:1fr;gap:16px}
+  .product-stack{grid-template-columns:1fr;gap:24px}
+  .product-item.hero-item,.product-item.mini{grid-column:span 1}
+  .product-item.hero-item{grid-template-columns:1fr}
+  .pivot-grid{grid-template-columns:1fr;gap:24px}
+  .pivot-arrow{transform:rotate(90deg);padding:8px 0}
+  .case-grid{grid-template-columns:1fr;gap:20px}
+  .pricing-single{padding:40px 28px}
+  .pricing-single .amount{font-size:44px}
+  .compare-t th,.compare-t td{padding:14px 12px;font-size:12px}
+  .final h2{font-size:28px}
+  .foot-inner{grid-template-columns:1fr 1fr;gap:32px}
+  .foot-bot{flex-direction:column;gap:8px;text-align:center}
+}
+
+/* ===== v5 polish: scroll reveal ===== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .9s cubic-bezier(.2,.7,.3,1),transform .9s cubic-bezier(.2,.7,.3,1)}
+.reveal.in{opacity:1;transform:translateY(0)}
+.reveal-d1{transition-delay:.08s} .reveal-d2{transition-delay:.16s} .reveal-d3{transition-delay:.24s}
+
+/* ===== v5 polish: hero signature grid (subtle) ===== */
+.hero{position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(139,92,246,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,.05) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;-webkit-mask-image:radial-gradient(ellipse 60% 80% at 25% 45%,#000 30%,transparent 75%);mask-image:radial-gradient(ellipse 60% 80% at 25% 45%,#000 30%,transparent 75%)}
+.hero-inner{position:relative;z-index:1}
+
+/* ===== v5 polish: h1 tightened kerning ===== */
+.hero h1{letter-spacing:-.035em}
+.hero h1 em{letter-spacing:-.04em}
+
+/* ===== v5 polish: pricing card 3D hover ===== */
+.pricing-single{transition:transform .35s cubic-bezier(.2,.7,.3,1),box-shadow .35s ease}
+.pricing-single:hover{transform:translateY(-8px);box-shadow:0 50px 120px rgba(15,17,22,.16),0 16px 32px rgba(139,92,246,.14)}
+
+/* ===== v5 polish: mechanism section stage subtle glow ===== */
+.mech-stage{position:relative}
+.mech-stage::after{content:'';position:absolute;inset:-40px;background:radial-gradient(ellipse at center,rgba(236,72,153,.12) 0%,transparent 60%);pointer-events:none;z-index:-1;border-radius:32px}
+
+/* ===== v5 polish: count-up transient state ===== */
+.mn.counting{opacity:.85}
+
+/* ===== v5 polish: reduced motion ===== */
+@media (prefers-reduced-motion:reduce){
+  .reveal,.reveal.in{opacity:1;transform:none;transition:none}
+  .pricing-single:hover{transform:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="brand">サロン<em>予約LINE通知</em></div>
+  <div class="menu">
+    <a href="#mechanism">仕組み</a>
+    <a href="#product">画面</a>
+    <a href="#compare">他社比較</a>
+    <a href="#price">料金</a>
+    <a href="#faq">FAQ</a>
+  </div>
+  <div class="cta">
+    <a href="#price" class="btn-mini">資料ダウンロード</a>
+    <a href="#price" class="btn-mini btn-mini-primary">無料で試す</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow">ホットペッパー掲載中のサロンオーナーへ</div>
+      <h1>予約メールを、<br><em>もう開きに行かない</em>。</h1>
+      <p class="lede">ホットペッパーに予約が入った1分後、スタッフ全員のLINEとGoogleカレンダーに、自動で届きます。設定は弊社が訪問15分で済ませ、その日から使えます。</p>
+      <div class="cta-row">
+        <a href="#price" class="btn btn-primary">無料で試す</a>
+        <a href="#" class="btn btn-ghost">3分で分かる資料</a>
+      </div>
+      <div class="proof">
+        <span>初月 ¥0</span>
+        <span>訪問設定 15分</span>
+        <span>解約いつでも可</span>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <img src="assets/line_flex.png" alt="LINE Flexメッセージの実物 — 予約が入った瞬間の通知画面">
+    </div>
+  </div>
+</section>
+
+<!-- Mechanism (video forward) -->
+<section class="mechanism" id="mechanism">
+  <div class="head">
+    <div class="kicker">HOW IT WORKS</div>
+    <h2>メールを受け、LINEで知らせ、<br>カレンダーへ入れる。</h2>
+    <p class="sub">3つをつなぐだけのシンプルな仕組み。新しい管理画面にログインする必要はありません。</p>
+  </div>
+  <div class="mech-stage">
+    <video autoplay loop muted playsinline preload="auto">
+      <source src="assets/flow_animation.webm" type="video/webm">
+    </video>
+  </div>
+  <div class="mech-steps">
+    <div class="mech-step">
+      <div class="n">STEP 01 · RECEIVE</div>
+      <h4>Gmail が受け取る</h4>
+      <p>ホットペッパーから届く予約確認メールを、Gmail が常時監視します。</p>
+    </div>
+    <div class="mech-step">
+      <div class="n">STEP 02 · NOTIFY</div>
+      <h4>LINE に配信</h4>
+      <p>予約内容を抜き出し、スタッフ全員のLINEに1分以内でFlexメッセージが届きます。</p>
+    </div>
+    <div class="mech-step">
+      <div class="n">STEP 03 · SCHEDULE</div>
+      <h4>Googleカレンダーへ追加</h4>
+      <p>同時にオーナーのGoogleカレンダーへ予約が入り、手入力の30分が消えます。</p>
+    </div>
+  </div>
+</section>
+
+<!-- Product spotlight (asymmetric) -->
+<section class="stack" id="product">
+  <div class="section-kicker">PRODUCT</div>
+  <h2 class="section-title">実際の画面は、<em>こう届きます</em>。</h2>
+  <p class="section-sub">導入後にオーナーとスタッフが見るのは、いつものLINEとGoogleカレンダーだけです。</p>
+  <div class="product-stack">
+    <div class="product-item hero-item">
+      <div class="product-frame"><img src="assets/line_flex.png" alt="LINE Flexメッセージの実物"></div>
+      <div class="product-body">
+        <div class="num">FEATURE 01</div>
+        <h3>予約内容が一目で分かるFlexメッセージ</h3>
+        <p>日時・お客様・メニュー・担当・電話・要望まで、スクロールなしで全部見えます。新規・変更・キャンセルで色が分かれるので、状況も一瞬で判断できます。</p>
+      </div>
+    </div>
+    <div class="product-item mini">
+      <div class="product-frame"><img src="assets/calendar_week.png" alt="Googleカレンダー週表示"></div>
+      <div class="product-body">
+        <div class="num">FEATURE 02</div>
+        <h3>スタッフ別の色分けカレンダー</h3>
+        <p>予約通知と同時に、スタッフごとに色分けされたGoogleカレンダーへ自動追加されます。</p>
+      </div>
+    </div>
+    <div class="product-item mini">
+      <div class="product-frame"><img src="assets/setup_wizard.png" alt="管理画面"></div>
+      <div class="product-body">
+        <div class="num">FEATURE 03</div>
+        <h3>設定は1画面。覚える操作はありません</h3>
+        <p>初期設定は弊社が訪問で完了させます。日々の運用で管理画面を触る必要はほぼゼロです。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pivot (before/after) -->
+<section class="stack pivot">
+  <div class="section-kicker">CHANGE</div>
+  <h2 class="section-title">現場の動きが、<em>こう変わります</em>。</h2>
+  <p class="section-sub">導入後に消えるのは「メールを見に行く」という動作そのものです。</p>
+  <div class="pivot-grid">
+    <div class="pivot-col before">
+      <h3>導入前の1日</h3>
+      <ul>
+        <li>施術中にメールが来ても気付かない</li>
+        <li>閉店後、家で開いて明日の予約に気付く</li>
+        <li>スタッフに口頭で「予約入ってるよ」と伝える</li>
+        <li>Googleカレンダーに手で転記する30分</li>
+        <li>見落としで客を帰す経験が年に数回</li>
+        <li>休みの日もメールが気になる</li>
+      </ul>
+    </div>
+    <div class="pivot-arrow">
+      <svg viewBox="0 0 64 32"><line x1="0" y1="16" x2="52" y2="16" stroke="#8B5CF6" stroke-width="2"/><polygon points="52,8 64,16 52,24" fill="#EC4899"/></svg>
+    </div>
+    <div class="pivot-col after">
+      <h3>導入後の1日</h3>
+      <ul>
+        <li>予約が入った1分後、スタッフ全員のLINEが鳴る</li>
+        <li>閉店後の「明日の予約チェック」が消える</li>
+        <li>口頭で伝える必要が消え、施術に集中</li>
+        <li>Googleカレンダーに自動で入る、転記ゼロ</li>
+        <li>見落としが構造的に起きなくなる</li>
+        <li>休みの日はLINEを見れば全部分かる</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Comparison -->
+<section class="stack" id="compare">
+  <div class="section-kicker">COMPARISON</div>
+  <h2 class="section-title">他のツールと、<em>何が違うか</em>。</h2>
+  <p class="section-sub">競合10社を調査して分かった、うちの3つの独自ポジションです。</p>
+  <div class="compare-wrap">
+    <table class="compare-t">
+      <thead>
+        <tr>
+          <th></th>
+          <th>他社A</th>
+          <th>他社B</th>
+          <th class="us">サロン予約LINE通知</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>月額</td><td class="price">¥13,800〜</td><td class="price">¥5,980〜</td><td class="us price">¥6,980</td></tr>
+        <tr><td>初期費用</td><td class="price">¥50,000</td><td>¥0</td><td class="us">¥0</td></tr>
+        <tr><td>HPB→LINE通知</td><td><span class="yes">✓</span> オプション</td><td><span class="yes">✓</span> +¥2,000</td><td class="us"><span class="yes">✓</span> 標準</td></tr>
+        <tr><td>Googleカレンダー連携</td><td><span class="yes">✓</span> +¥1,000</td><td><span class="no">×</span></td><td class="us"><span class="yes">✓</span> 標準</td></tr>
+        <tr><td>スタッフ全員のLINE通知</td><td><span class="no">×</span></td><td><span class="no">×</span></td><td class="us"><span class="yes">✓</span> 標準</td></tr>
+        <tr><td>訪問設定サポート</td><td>オンライン</td><td>オンライン</td><td class="us"><span class="yes">✓</span> 訪問15分</td></tr>
+        <tr><td>無料トライアル</td><td>あり</td><td>1週間</td><td class="us">1ヶ月</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="compare-note">※ 他社情報は2026年9月時点の公開サイト情報に基づきます。</p>
+</section>
+
+<!-- Cases -->
+<section class="stack cases">
+  <div class="section-kicker">CASES</div>
+  <h2 class="section-title">導入したサロンの、<em>変化の声</em>。</h2>
+  <p class="section-sub">導入3ヶ月で現場の動きがどう変わったか、3サロンに聞きました。</p>
+  <div class="case-grid">
+    <div class="case-card">
+      <div class="case-cover"><img src="assets/photos/salon_hair_2.jpg" alt=""><div class="tag">CASE 01</div></div>
+      <div class="case-body">
+        <div class="case-quote">「予約見落としで月5件は帰していたのが、3ヶ月でゼロになった」</div>
+        <div class="case-meta"><strong>個人美容室 (福井県 / スタッフ3人)</strong>HPB利用、導入期間3ヶ月</div>
+        <div class="case-metric">
+          <div><div class="mn">-100%</div><div class="ml">見落とし件数</div></div>
+          <div><div class="mn">+40万円<sup style="font-size:10px;color:var(--ink-3);font-weight:500;margin-left:2px">※1</sup></div><div class="ml">月間売上影響</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-cover"><img src="assets/photos/salon_nail.jpg" alt=""><div class="tag">CASE 02</div></div>
+      <div class="case-body">
+        <div class="case-quote">「スタッフに予約を口頭で伝える手間が消え、施術に集中できる時間が増えた」</div>
+        <div class="case-meta"><strong>ネイルサロン (東京都 / スタッフ5人)</strong>HPB + minimo併用、導入期間6ヶ月</div>
+        <div class="case-metric">
+          <div><div class="mn">-30分</div><div class="ml">1日の共有時間</div></div>
+          <div><div class="mn">+1件<sup style="font-size:10px;color:var(--ink-3);font-weight:500;margin-left:2px">※1</sup></div><div class="ml">1日の施術数</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-cover"><img src="assets/photos/salon_massage.jpg" alt=""><div class="tag">CASE 03</div></div>
+      <div class="case-body">
+        <div class="case-quote">「Googleカレンダーへの手入力30分が毎日消えて、施術準備に回せる時間が生まれた」</div>
+        <div class="case-meta"><strong>リラクゼーションサロン (大阪府 / 個人経営)</strong>HPB利用、導入期間4ヶ月</div>
+        <div class="case-metric">
+          <div><div class="mn">-30分</div><div class="ml">1日の転記時間</div></div>
+          <div><div class="mn">100%</div><div class="ml">予約反映率</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="max-width:960px;margin:32px auto 0;text-align:center;font-size:11px;color:var(--ink-4);line-height:1.8">※1 見落とし解消による機会損失回復の当社推計。個別の導入効果を保証するものではありません。</p>
+</section>
+
+<!-- Pricing -->
+<section class="pricing" id="price">
+  <div class="section-kicker">PRICING</div>
+  <h2 class="section-title">料金は<em>1プラン</em>、分かりやすく。</h2>
+  <p class="section-sub">機能を分けて追加課金する仕組みはありません。予約通知に必要なものは全部込みです。</p>
+  <div class="pricing-single">
+    <div class="badge">全部込み</div>
+    <div class="tier">スタンダードプラン</div>
+    <div class="amount">¥6,980<small> / 月 (税込)</small></div>
+    <div class="amount-note">1日あたり¥230相当 · 初月無料</div>
+    <ul>
+      <li>HPB / 楽天 / minimo / EPARK 対応</li>
+      <li>スタッフ全員のLINEへ通知配信</li>
+      <li>Googleカレンダー自動追加</li>
+      <li>訪問設定サポート15分 (交通費込み)</li>
+      <li>電話・LINEサポート (平日9-18時)</li>
+      <li>解約いつでも可 · 違約金なし</li>
+    </ul>
+    <div class="cta-row">
+      <a href="#" class="btn btn-primary">無料で試す</a>
+    </div>
+    <p class="fine">多店舗運営 (10店舗以上) はお問い合わせください</p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="stack" id="faq" style="background:var(--bg-soft)">
+  <div class="section-kicker">FAQ</div>
+  <h2 class="section-title">よくある<em>質問</em>。</h2>
+  <div class="faq-wrap">
+    <details class="faq-item">
+      <summary>初期費用はかかりますか?</summary>
+      <div class="a">かかりません。訪問設定の費用も月額に含まれています (交通費の別途請求もありません)。</div>
+    </details>
+    <details class="faq-item">
+      <summary>導入まで何日で使えるようになりますか?</summary>
+      <div class="a">お申し込みから訪問まで通常3〜5営業日、訪問当日は15分で設定を済ませます。翌日の予約からLINEとカレンダーに届きます。</div>
+    </details>
+    <details class="faq-item">
+      <summary>LINE公式アカウントを契約する必要はありますか?</summary>
+      <div class="a">スタッフの個人LINEで通知を受ける使い方で十分動きます。お客様に何かを送る用途ではないので、LINE公式アカウントの契約は不要です。</div>
+    </details>
+    <details class="faq-item">
+      <summary>ホットペッパー以外の予約サイトにも対応していますか?</summary>
+      <div class="a">楽天ビューティー、minimo、EPARKビューティーに対応しています。追加費用はかかりません。</div>
+    </details>
+    <details class="faq-item">
+      <summary>サロンボードの設定は変更が必要ですか?</summary>
+      <div class="a">変更は不要です。サロンボードの予約確認メールの転送先を追加するだけで動きます。ログイン情報も変更は不要です。</div>
+    </details>
+    <details class="faq-item">
+      <summary>他社の通知ツールから移行できますか?</summary>
+      <div class="a">できます。既存ツールの解約手続きを確認のうえ、弊社の設定を済ませてから切り替える段取りで進めます。移行サポートは追加費用なしで対応します。</div>
+    </details>
+    <details class="faq-item">
+      <summary>解約はいつでもできますか?</summary>
+      <div class="a">はい、いつでも解約できます。違約金・解約手数料は発生しません。契約は月単位で更新されます。</div>
+    </details>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="final">
+  <h2>予約通知の見落としを、<br><em>今日から消しましょう</em>。</h2>
+  <p>初月無料で試せます。続けるかは、動くのを見てから判断できます。</p>
+  <div class="cta-row">
+    <a href="#" class="btn btn-primary">無料で試す</a>
+    <a href="#" class="btn btn-ghost">3分で分かる資料</a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="foot">
+  <div class="foot-inner">
+    <div class="brand-block">
+      <div class="logo">Skeleton</div>
+      <p>スケルトン株式会社<br>〒910-0004 福井県福井市</p>
+      <p style="margin-top:12px">サロンの現場で起きている見落としを、仕組みで消す。</p>
+    </div>
+    <div>
+      <h5>プロダクト</h5>
+      <ul>
+        <li><a href="#">サロン予約LINE通知</a></li>
+        <li><a href="#">FP Compass</a></li>
+        <li><a href="#">タスクル</a></li>
+      </ul>
+    </div>
+    <div>
+      <h5>導入検討</h5>
+      <ul>
+        <li><a href="#">資料ダウンロード</a></li>
+        <li><a href="#">導入相談</a></li>
+        <li><a href="#">FAQ</a></li>
+      </ul>
+    </div>
+    <div>
+      <h5>会社</h5>
+      <ul>
+        <li><a href="#">運営会社</a></li>
+        <li><a href="#">利用規約</a></li>
+        <li><a href="#">プライバシー</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot-bot">
+    <div>© 2026 Skeleton, Inc.</div>
+    <div>写真素材: Unsplash</div>
+  </div>
+</footer>
+
+</body>
+</html>
