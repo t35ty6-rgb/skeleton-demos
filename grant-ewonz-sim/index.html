@@ -84,6 +84,25 @@ h1 .h1-sub { font-size: 13px; color: var(--ink-2); font-weight: 500; letter-spac
 .income-arrow .formula.adj { color: var(--loss); background: #fef2f2; }
 .income-arrow .formula.none { color: var(--muted); background: transparent; font-style: italic; padding-left: 0; }
 
+.person-table-wrap { margin-top: 32px; padding: 20px 22px; background: white; border-radius: 12px; box-shadow: 0 0 0 1px var(--line); }
+.person-table-wrap h3 { margin: 0 0 12px; font-size: 13px; color: var(--ink); font-weight: 700; }
+.person-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.person-table th, .person-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+.person-table th { background: #f8fafc; font-weight: 700; font-size: 11px; letter-spacing: 0.03em; color: var(--ink-2); }
+.person-table th:first-child, .person-table td:first-child { text-align: left; }
+.person-table th:nth-child(2), .person-table td:nth-child(2) { text-align: center; }
+.person-table tr.me { background: #eef2ff; }
+.person-table tr.me td { font-weight: 700; }
+.person-table td.total { font-weight: 700; }
+.person-table td.total.gain { color: var(--gain); }
+.person-table td.total.loss { color: var(--loss); }
+.person-table td.total.zero { color: var(--muted); font-weight: 500; }
+.person-table td.zero { color: var(--muted); }
+.person-table .rank-chip { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #e0e7ff; color: var(--accent); font-weight: 700; font-size: 11px; }
+.person-table .rank-chip.aiyou { background: #fde68a; color: var(--aiyou); }
+.person-table .rank-chip.gc { background: #f1f5f9; color: var(--ink-2); }
+.person-table caption { caption-side: top; text-align: left; padding: 0 0 10px; font-size: 12px; color: var(--ink-2); }
+
 .foot { margin-top: 32px; padding: 20px 22px; background: white; border-radius: 12px; box-shadow: 0 0 0 1px var(--line); font-size: 12.5px; color: var(--ink-2); line-height: 1.75; }
 .foot h3 { margin: 0 0 8px; font-size: 13px; color: var(--ink); font-weight: 700; }
 .foot h3:not(:first-child) { margin-top: 20px; }
@@ -123,6 +142,9 @@ h1 .h1-sub { font-size: 13px; color: var(--ink-2); font-weight: 500; letter-spac
   .rate-table { font-size: 10px; }
   .rate-table td, .rate-table th { padding: 5px 4px; }
   .toolbar-toggle { font-size: 11px; }
+  .person-table { font-size: 11px; }
+  .person-table th, .person-table td { padding: 6px 5px; }
+  .person-table .rank-chip { padding: 1px 5px; font-size: 10px; }
 }
 </style>
 </head>
@@ -157,6 +179,8 @@ h1 .h1-sub { font-size: 13px; color: var(--ink-2); font-weight: 500; letter-spac
 </div>
 
 <div class="tree" id="tree"></div>
+
+<div class="person-table-wrap" id="personTableWrap"></div>
 
 <div class="foot">
 <h3>計算 ルール (公式 マーケティング プラン p.14 準拠)</h3>
@@ -259,22 +283,26 @@ function updateField(id, field, value) {
   n[field] = value; render();
 }
 function updateMeRank(v) { state.root.rank = v; render(); }
+// iOS Safari 対策: typing 中 は el.value を 触らない (書き換え + setSelectionRange で focus/cursor が 手放される 既知 事象)。
+// blur で 初めて 3桁 区切り format に する。 focus 時 は カンマ 剥がして 素の 数字 に。
 function onAmountInput(id, el) {
-  const cursorAtEnd = el.selectionStart === el.value.length;
   const raw = el.value.replace(/[^0-9]/g, '');
   const num = +raw || 0;
-  const formatted = num > 0 ? num.toLocaleString('ja-JP') : '';
-  el.value = formatted;
   const n = findNode(id); if (n) n.amount = num;
-  if (cursorAtEnd) el.setSelectionRange(formatted.length, formatted.length);
-  // 部分更新: tree 全再構築 する と input が 破壊 されて focus 消える。
-  // 各 node の 「income arrow (→ ¥xxx)」 と hero summary だけ 更新。
-  walkAll(state.root, n2 => { if (n2.id !== 'me') updateNodeArrow(n2.id); });
   const wrap = document.querySelector(`[data-id="${id}"]`);
   if (wrap && !wrap.classList.contains('me') && !wrap.classList.contains('aiyou')) {
     wrap.classList.toggle('has-amount', num > 0);
   }
+  updateNodeArrow(id);
   renderSummary();
+}
+function onAmountFocus(id, el) {
+  el.value = el.value.replace(/,/g, '');
+}
+function onAmountBlur(id, el) {
+  const raw = el.value.replace(/[^0-9]/g, '');
+  const num = +raw || 0;
+  el.value = num > 0 ? num.toLocaleString('ja-JP') : '';
 }
 
 function updateNodeArrow(id) {
@@ -282,100 +310,86 @@ function updateNodeArrow(id) {
   const wrap = document.querySelector(`[data-id="${id}"]`);
   if (!wrap) return;
   const nodeRow = wrap.parentElement;
-  const oldArrow = nodeRow.querySelector('.income-arrow');
-  if (oldArrow) oldArrow.remove();
+  let arrow = nodeRow.querySelector('.income-arrow');
   const showArrow = (+node.amount || 0) > 0;
-  if (!showArrow) return;
+  if (!showArrow) { if (arrow) arrow.remove(); return; }
   const inc = myIncomeFrom(node);
   const valCls = inc.amount === 0 ? 'zero' : (inc.amount < 0 ? 'negative' : '');
   const val = inc.amount === 0 ? '¥0' : (inc.amount > 0 ? '+' : '') + yen(inc.amount);
-  nodeRow.insertAdjacentHTML('beforeend', `<div class="income-arrow"><span class="arrow">→</span><span class="value ${valCls}">${val}</span>${partsHTML(inc.parts)}</div>`);
+  const html = `<span class="arrow">→</span><span class="value ${valCls}">${val}</span>${partsHTML(inc.parts)}`;
+  if (arrow) arrow.innerHTML = html;    // in-place 更新 (要素 削除 → 追加 は しない)
+  else nodeRow.insertAdjacentHTML('beforeend', `<div class="income-arrow">${html}</div>`);
 }
 
 // === 販売卸差益 waterfall + 同ランク override + 5% 調整費 の 3 layer 計算 ===
-// orderNode = 発注 者。 me 目線 で me が 貰う 金額 と breakdown を 返す。
-function myIncomeFrom(orderNode) {
-  if (orderNode.id === 'me') return { amount: 0, parts: [] };
+// distributionForOrder: 発注 者 に 対して chain 上 の 各 upline が 得る share を 全部 返す。
+// 返り値: [{ personId, kind: 'spread'|'bonus'|'adj', value, label }, ...]
+function distributionForOrder(orderNode) {
   const amount = +orderNode.amount || 0;
-  if (amount === 0) return { amount: 0, parts: [] };
+  if (amount === 0 || orderNode.id === 'me') return [];
 
   const isAiyousha = orderNode.rank === '愛用者';
   const assistantOn = !!document.getElementById('assistantToggle')?.checked;
+  const ancestors = findAncestors(orderNode.id);
+  if (ancestors.length === 0) return [];
 
-  const ancestors = findAncestors(orderNode.id);   // bottom-up, last = me
-  if (ancestors.length === 0) return { amount: 0, parts: [] };
-
-  let lastRate = rankRate[orderNode.rank];         // 0 for 愛用者, 0.20 for GC, etc.
-  const sameRankGen = {};                          // rank -> encounter counter
-  let firstGAplusHandled = false;                  // 5% 調整費 と アシスタント は 直上 の 初回 GA+ で 発火
-  let mineAmount = 0;
-  const mineParts = [];
+  let lastRate = rankRate[orderNode.rank];
+  const sameRankGen = {};
+  let firstGAplusHandled = false;
+  const shares = [];
 
   for (let i = 0; i < ancestors.length; i++) {
     const U = ancestors[i];
-    const isMe = (U.id === 'me');
     const uRate = rankRate[U.rank];
-    let uGotShare = false;   // この upline が この order で 収入 を 得たか (aug/adj 発火 判定)
+    let uGotShare = false;
 
     if (uRate > lastRate) {
-      // Waterfall spread — 上 が 高 ランク
       const spreadPct = uRate - lastRate;
-      const spread = amount * spreadPct;
-      if (isMe) {
-        mineAmount += spread;
-        mineParts.push({
-          label: `${(spreadPct*100).toFixed(0)}% 卸差益`,
-          value: spread,
-          kind: 'spread',
-        });
-      }
+      shares.push({ personId: U.id, kind: 'spread', value: amount * spreadPct, label: `${(spreadPct*100).toFixed(0)}% 卸差益` });
       uGotShare = true;
       lastRate = uRate;
     } else if (uRate === lastRate && isGAplus(U.rank)) {
-      // 同ランク block — bonus 表 の 世代 別 料率 で 配分
       sameRankGen[U.rank] = (sameRankGen[U.rank] || 0) + 1;
       const gen = sameRankGen[U.rank];
       const rate = (bonusRate[U.rank] || [])[gen - 1] || 0;
       if (rate > 0) {
-        const override = amount * rate;
-        if (isMe) {
-          mineAmount += override;
-          mineParts.push({
-            label: `${(rate*100).toFixed(1)}% 同ランク ${gen}次 ボーナス`,
-            value: override,
-            kind: 'bonus',
-          });
-        }
+        shares.push({ personId: U.id, kind: 'bonus', value: amount * rate, label: `${(rate*100).toFixed(1)}% 同ランク ${gen}次 ボーナス` });
         uGotShare = true;
       }
-      // lastRate は 進めない (waterfall 未消費)
     }
-    // else: uRate < lastRate → 既 に 下 で waterfall 消費済、 この upline は bypass
 
-    // 5% 愛用者 調整費 & アシスタント料 — 「直上 の 初回 GA+ で 収入 得た upline」 から 控除
-    // (waterfall spread の 場合 でも 同ランク bonus の 場合 でも 適用、 直上 GA+ の 定義 は 同じ)
     if (isGAplus(U.rank) && uGotShare && !firstGAplusHandled) {
-      if (isAiyousha) {
-        const adj = amount * 0.05;
-        if (isMe) {
-          mineAmount -= adj;
-          mineParts.push({ label: `5% 愛用者 調整費`, value: -adj, kind: 'adj' });
-        }
-      }
-      if (assistantOn) {
-        const asst = amount * 0.05;
-        if (isMe) {
-          mineAmount -= asst;
-          mineParts.push({ label: `5% アシスタント料`, value: -asst, kind: 'adj' });
-        }
-      }
+      if (isAiyousha) shares.push({ personId: U.id, kind: 'adj', value: -amount * 0.05, label: `5% 愛用者 調整費` });
+      if (assistantOn) shares.push({ personId: U.id, kind: 'adj', value: -amount * 0.05, label: `5% アシスタント料` });
       firstGAplusHandled = true;
     }
-
-    if (isMe) break;
   }
+  return shares;
+}
 
-  return { amount: mineAmount, parts: mineParts };
+// myIncomeFrom: distributionForOrder の 「me だけ」 filter 版 (既存 呼び出し 互換)
+function myIncomeFrom(orderNode) {
+  const shares = distributionForOrder(orderNode);
+  const mine = shares.filter(s => s.personId === 'me');
+  const amount = mine.reduce((sum, s) => sum + s.value, 0);
+  const parts = mine.map(s => ({ label: s.label, value: s.value, kind: s.kind }));
+  return { amount, parts };
+}
+
+// personTotals: tree 全体 で 各 person の 月間 収入 を 集計
+// 返り値: Map<personId, { spread, bonus, adj, total }>
+function personTotals() {
+  const totals = new Map();
+  walkAll(state.root, (n) => {
+    const shares = distributionForOrder(n);
+    for (const s of shares) {
+      if (!totals.has(s.personId)) totals.set(s.personId, { spread: 0, bonus: 0, adj: 0 });
+      totals.get(s.personId)[s.kind] += s.value;
+    }
+  });
+  // total 追加
+  for (const [id, t] of totals) t.total = t.spread + t.bonus + t.adj;
+  return totals;
 }
 
 // === render ===
@@ -410,7 +424,7 @@ function renderNode(node) {
   }
 
   const amountBox = isMe ? ''
-    : `<div class="amount-wrap"><span class="yen-sign">¥</span><input class="amount-input" type="text" inputmode="numeric" value="${amtStr}" placeholder="上代税抜" oninput="onAmountInput('${node.id}', this)"></div>`;
+    : `<div class="amount-wrap"><span class="yen-sign">¥</span><input class="amount-input" type="text" inputmode="numeric" value="${amtStr}" placeholder="上代税抜" oninput="onAmountInput('${node.id}', this)" onfocus="onAmountFocus('${node.id}', this)" onblur="onAmountBlur('${node.id}', this)"></div>`;
 
   return `<div class="node-row">
     <div class="${cls.join(' ')}" data-id="${node.id}">
@@ -437,23 +451,54 @@ function renderTree(node) {
 }
 
 function renderSummary() {
-  let total = 0, spread = 0, bonus = 0, adj = 0;
-  walkAll(state.root, (n) => {
-    if (n.id === 'me') return;
-    const inc = myIncomeFrom(n);
-    total += inc.amount;
-    for (const p of inc.parts) {
-      if (p.kind === 'spread') spread += p.value;
-      else if (p.kind === 'bonus') bonus += p.value;
-      else if (p.kind === 'adj') adj += p.value;
-    }
-  });
-  document.getElementById('totalIncome').textContent = (total > 0 ? '+' : '') + yen(total);
+  const totals = personTotals();
+  const mine = totals.get('me') || { spread: 0, bonus: 0, adj: 0, total: 0 };
+  document.getElementById('totalIncome').textContent = (mine.total > 0 ? '+' : '') + yen(mine.total);
   const bd = [];
-  if (spread > 0) bd.push(`卸差益<b>${yen(spread)}</b>`);
-  if (bonus > 0)  bd.push(`同ランク ボーナス<b>${yen(bonus)}</b>`);
-  if (adj < 0)    bd.push(`調整・アシスタント<b>${yen(adj)}</b>`);
+  if (mine.spread > 0) bd.push(`卸差益<b>${yen(mine.spread)}</b>`);
+  if (mine.bonus > 0)  bd.push(`同ランク ボーナス<b>${yen(mine.bonus)}</b>`);
+  if (mine.adj < 0)    bd.push(`調整・アシスタント<b>${yen(mine.adj)}</b>`);
   document.getElementById('totalBreakdown').innerHTML = bd.length ? bd.join('　／　') : '';
+  renderPersonTable(totals);
+}
+
+function renderPersonTable(totals) {
+  totals = totals || personTotals();
+  // 全 person を depth-first で 列挙 (tree 順)、 me を 先頭 に
+  const rows = [];
+  walkAll(state.root, (n) => { if (n.rank !== '愛用者') rows.push(n); });
+  if (rows.length <= 1) {
+    // me しか いない → table 隠す
+    document.getElementById('personTableWrap').innerHTML = '';
+    return;
+  }
+  const rankChipCls = (rank) => rank === '愛用者' ? ' aiyou' : (rank === 'GC' ? ' gc' : '');
+  const displayName = (n) => n.id === 'me' ? (n.name || '自分') : (n.name || `(名前 未入力)`);
+  const totalCls = (v) => v === 0 ? 'zero' : (v < 0 ? 'loss' : 'gain');
+  const cell = (v) => v === 0 ? '<td class="zero">¥0</td>' : `<td>${v > 0 ? '+' : ''}${yen(v)}</td>`;
+
+  const bodyRows = rows.map(n => {
+    const t = totals.get(n.id) || { spread: 0, bonus: 0, adj: 0, total: 0 };
+    const meCls = n.id === 'me' ? ' class="me"' : '';
+    return `<tr${meCls}>
+      <td>${esc(displayName(n))}</td>
+      <td><span class="rank-chip${rankChipCls(n.rank)}">${n.rank}</span></td>
+      ${cell(t.spread)}
+      ${cell(t.bonus)}
+      ${cell(t.adj)}
+      <td class="total ${totalCls(t.total)}">${t.total === 0 ? '¥0' : (t.total > 0 ? '+' : '') + yen(t.total)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('personTableWrap').innerHTML = `
+    <h3>誰 に いくら 入る か (月間 収入 一覧)</h3>
+    <table class="person-table">
+      <caption>tree 内 の 全 GA+/GC の 月間 収入 内訳。 愛用者 は 発注 側 なので 除外。</caption>
+      <thead>
+        <tr><th>名前</th><th>ランク</th><th>販売卸差益</th><th>同ランク ボーナス</th><th>調整・アシスタント</th><th>合計</th></tr>
+      </thead>
+      <tbody>${bodyRows}</tbody>
+    </table>`;
 }
 
 function render() {
