@@ -267,7 +267,29 @@ function onAmountInput(id, el) {
   el.value = formatted;
   const n = findNode(id); if (n) n.amount = num;
   if (cursorAtEnd) el.setSelectionRange(formatted.length, formatted.length);
-  render();
+  // 部分更新: tree 全再構築 する と input が 破壊 されて focus 消える。
+  // 各 node の 「income arrow (→ ¥xxx)」 と hero summary だけ 更新。
+  walkAll(state.root, n2 => { if (n2.id !== 'me') updateNodeArrow(n2.id); });
+  const wrap = document.querySelector(`[data-id="${id}"]`);
+  if (wrap && !wrap.classList.contains('me') && !wrap.classList.contains('aiyou')) {
+    wrap.classList.toggle('has-amount', num > 0);
+  }
+  renderSummary();
+}
+
+function updateNodeArrow(id) {
+  const node = findNode(id); if (!node) return;
+  const wrap = document.querySelector(`[data-id="${id}"]`);
+  if (!wrap) return;
+  const nodeRow = wrap.parentElement;
+  const oldArrow = nodeRow.querySelector('.income-arrow');
+  if (oldArrow) oldArrow.remove();
+  const showArrow = (+node.amount || 0) > 0;
+  if (!showArrow) return;
+  const inc = myIncomeFrom(node);
+  const valCls = inc.amount === 0 ? 'zero' : (inc.amount < 0 ? 'negative' : '');
+  const val = inc.amount === 0 ? '¥0' : (inc.amount > 0 ? '+' : '') + yen(inc.amount);
+  nodeRow.insertAdjacentHTML('beforeend', `<div class="income-arrow"><span class="arrow">→</span><span class="value ${valCls}">${val}</span>${partsHTML(inc.parts)}</div>`);
 }
 
 // === 販売卸差益 waterfall + 同ランク override + 5% 調整費 の 3 layer 計算 ===
