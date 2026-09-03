@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>自分 の 取分</title>
+<title>グラント・イーワンズ 収入 シミュレーター</title>
 <style>
 * { box-sizing: border-box; }
 :root {
   --bg: #fafbfc;
   --surface: #ffffff;
   --ink: #0f172a;
-  --ink-2: #64748b;
+  --ink-2: #475569;
   --muted: #94a3b8;
   --line: #e5e7eb;
   --accent: #4f46e5;
@@ -18,23 +18,31 @@
   --loss: #dc2626;
   --warm: #ea580c;
   --warm-bg: #fff7ed;
+  --bonus: #7c3aed;
+  --bonus-bg: #f5f3ff;
+  --aiyou: #92400e;
+  --aiyou-bg: #fef3c7;
 }
 body { font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; background: var(--bg); margin: 0; padding: 32px 24px; color: var(--ink); font-size: 14px; line-height: 1.6; overflow-x: hidden; }
-.container { max-width: 900px; margin: 0 auto; }
+.container { max-width: 960px; margin: 0 auto; }
 
-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; gap: 16px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
 h1 { font-size: 22px; margin: 0; font-weight: 800; color: var(--ink); letter-spacing: -0.01em; line-height: 1.2; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 h1 .h1-sub { font-size: 13px; color: var(--ink-2); font-weight: 500; letter-spacing: 0.02em; padding-left: 12px; border-left: 2px solid var(--line); }
 .rank-picker { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px 6px 14px; background: white; border-radius: 8px; box-shadow: 0 0 0 1px var(--line); font-size: 12px; color: var(--ink-2); }
 .rank-picker select { border: none; background: transparent; font-size: 14px; font-weight: 700; color: var(--accent); cursor: pointer; padding: 2px 4px; font-family: inherit; }
 
-.toolbar { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
-.btn { padding: 6px 12px; border: 1px solid var(--line); background: white; border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--ink-2); font-weight: 500; }
+.toolbar { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.btn { padding: 6px 12px; border: 1px solid var(--line); background: white; border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--ink-2); font-weight: 500; font-family: inherit; }
 .btn:hover { background: #f1f5f9; }
+.toolbar-toggle { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); cursor: pointer; }
+.toolbar-toggle input { width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; }
 
 .hero { background: linear-gradient(135deg, #0071E3 0%, #8B5CF6 50%, #EC4899 100%); color: white; padding: 28px 32px; border-radius: 14px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(79,70,229,0.2); }
-.hero .label { font-size: 12px; opacity: 0.9; margin-bottom: 6px; font-weight: 500; }
+.hero .label { font-size: 12px; opacity: 0.92; margin-bottom: 6px; font-weight: 500; }
 .hero .huge { font-size: 44px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; line-height: 1.1; }
+.hero .breakdown { margin-top: 14px; font-size: 12px; opacity: 0.95; display: flex; gap: 20px; flex-wrap: wrap; }
+.hero .breakdown b { font-variant-numeric: tabular-nums; font-weight: 700; margin-left: 6px; }
 
 .tree ul { list-style: none; padding-left: 30px; margin: 0; position: relative; }
 .tree ul::before { content: ''; position: absolute; left: 12px; top: 0; bottom: 22px; border-left: 1.5px dashed #cbd5e1; }
@@ -45,22 +53,20 @@ h1 .h1-sub { font-size: 13px; color: var(--ink-2); font-weight: 500; letter-spac
 .node { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; background: white; border-radius: 10px; box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 0 0 1px var(--line); }
 .node.me { box-shadow: 0 2px 6px rgba(79,70,229,0.12), 0 0 0 1.5px var(--accent); background: #eef2ff; }
 .node.has-amount { box-shadow: 0 2px 6px rgba(234,88,12,0.1), 0 0 0 1.5px var(--warm); }
+.node.aiyou { box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 0 0 1px #f59e0b; background: var(--aiyou-bg); }
 
 .name-input { border: none; background: #f1f5f9; border-radius: 5px; padding: 6px 8px; font-size: 14px; font-weight: 600; width: 130px; font-family: inherit; color: var(--ink); }
 .name-input:focus { outline: 2px solid var(--accent); background: white; }
 .node.me .name-input { background: white; }
 .rank-select { border: none; background: #e0e7ff; padding: 6px 6px; font-size: 12px; font-weight: 800; border-radius: 5px; cursor: pointer; font-family: inherit; color: var(--accent); }
+.node.aiyou .rank-select { background: #fde68a; color: var(--aiyou); }
 
 .amount-wrap { display: inline-flex; align-items: center; padding: 0 10px; background: var(--warm-bg); border: 1.5px solid #fed7aa; border-radius: 6px; height: 34px; }
 .amount-wrap:focus-within { border-color: var(--warm); background: white; }
 .amount-wrap .yen-sign { color: var(--warm); font-size: 13px; font-weight: 800; margin-right: 4px; }
 .amount-input { border: none; background: transparent; width: 110px; padding: 6px 2px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; color: #7c2d12; font-family: inherit; }
 .amount-input:focus { outline: none; }
-.amount-input::placeholder { color: #fbbf24; opacity: 0.7; font-weight: 400; font-size: 12px; }
-
-.user-check { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-2); padding: 4px 6px; border-radius: 5px; cursor: pointer; }
-.user-check:hover { background: #f1f5f9; }
-.user-check input { width: 13px; height: 13px; accent-color: var(--accent); }
+.amount-input::placeholder { color: #d97706; opacity: 0.6; font-weight: 400; font-size: 11px; }
 
 .btn-mini { width: 26px; height: 26px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; padding: 0; line-height: 1; font-weight: 700; }
 .btn-mini.add { background: #dcfce7; color: #15803d; }
@@ -68,28 +74,37 @@ h1 .h1-sub { font-size: 13px; color: var(--ink-2); font-weight: 500; letter-spac
 .btn-mini.del { background: #fee2e2; color: #b91c1c; }
 .btn-mini.del:hover { background: #fca5a5; }
 
-.income-arrow { display: inline-flex; align-items: center; gap: 10px; margin-left: 12px; }
+.income-arrow { display: inline-flex; align-items: center; gap: 8px; margin-left: 12px; flex-wrap: wrap; }
 .income-arrow .arrow { color: var(--muted); font-size: 20px; font-weight: 300; }
 .income-arrow .value { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--gain); letter-spacing: -0.01em; }
-.income-arrow .value.zero { color: var(--muted); }
+.income-arrow .value.zero { color: var(--muted); font-weight: 500; font-size: 15px; }
 .income-arrow .value.negative { color: var(--loss); }
-.income-arrow .formula { font-size: 11px; color: var(--ink-2); font-family: "SF Mono", Consolas, monospace; padding: 3px 8px; background: #f1f5f9; border-radius: 5px; font-variant-numeric: tabular-nums; }
-.income-arrow .self-note { font-size: 11px; color: var(--muted); font-style: italic; }
+.income-arrow .formula { font-size: 11px; color: var(--ink-2); font-family: "SF Mono", Consolas, monospace; padding: 3px 8px; background: #f1f5f9; border-radius: 5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.income-arrow .formula.bonus { color: var(--bonus); background: var(--bonus-bg); }
+.income-arrow .formula.adj { color: var(--loss); background: #fef2f2; }
+.income-arrow .formula.none { color: var(--muted); background: transparent; font-style: italic; padding-left: 0; }
 
-.foot { margin-top: 32px; padding: 16px 18px; background: white; border-radius: 8px; box-shadow: 0 0 0 1px var(--line); font-size: 11px; color: var(--ink-2); line-height: 1.7; }
+.foot { margin-top: 32px; padding: 20px 22px; background: white; border-radius: 12px; box-shadow: 0 0 0 1px var(--line); font-size: 12.5px; color: var(--ink-2); line-height: 1.75; }
+.foot h3 { margin: 0 0 8px; font-size: 13px; color: var(--ink); font-weight: 700; }
+.foot h3:not(:first-child) { margin-top: 20px; }
 .foot strong { color: var(--ink); }
-.rate-table { width: 100%; margin-top: 12px; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+.foot ol, .foot ul { margin: 4px 0; padding-left: 22px; }
+.foot li { margin-bottom: 6px; }
+.foot code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-family: "SF Mono", Consolas, monospace; font-size: 11px; color: var(--ink); }
+.rate-table { width: 100%; margin-top: 10px; border-collapse: separate; border-spacing: 0; font-size: 12px; }
 .rate-table td, .rate-table th { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: center; font-variant-numeric: tabular-nums; color: var(--ink); }
-.rate-table th { background: #f8fafc; font-weight: 700; color: var(--ink); font-size: 11px; letter-spacing: 0.03em; text-transform: uppercase; }
+.rate-table th { background: #f8fafc; font-weight: 700; color: var(--ink); font-size: 11px; letter-spacing: 0.03em; }
 .rate-table td:first-child, .rate-table th:first-child { text-align: left; font-weight: 600; }
+.rate-table tr.aiyou-row td { background: var(--aiyou-bg); }
 
-/* SP 対応 (直上 代理店 が スマホ で 見る 前提) */
+/* SP 対応 */
 @media (max-width: 640px) {
   body { padding: 20px 12px; }
   h1 { font-size: 18px; }
   h1 .h1-sub { font-size: 11px; padding-left: 8px; }
   .hero { padding: 22px 20px; }
   .hero .huge { font-size: 32px; }
+  .hero .breakdown { gap: 12px; }
   .tree ul { padding-left: 18px; }
   .tree ul::before { left: 6px; }
   .tree li { padding: 8px 0 8px 14px; }
@@ -100,14 +115,14 @@ h1 .h1-sub { font-size: 13px; color: var(--ink-2); font-weight: 500; letter-spac
   .rank-select { font-size: 11px; padding: 5px 4px; }
   .amount-wrap { padding: 0 6px; height: 30px; }
   .amount-input { width: 80px; font-size: 13px; }
-  .user-check { font-size: 10px; padding: 3px 4px; }
   .btn-mini { width: 24px; height: 24px; font-size: 12px; }
-  .income-arrow { margin-left: 0; margin-top: 4px; flex-wrap: wrap; gap: 6px; }
+  .income-arrow { margin-left: 0; margin-top: 4px; gap: 6px; }
   .income-arrow .value { font-size: 16px; }
-  .income-arrow .formula { font-size: 10px; padding: 2px 6px; }
+  .income-arrow .formula { font-size: 10px; padding: 2px 6px; white-space: normal; }
   .rank-picker { font-size: 11px; padding: 4px 8px 4px 10px; }
   .rate-table { font-size: 10px; }
   .rate-table td, .rate-table th { padding: 5px 4px; }
+  .toolbar-toggle { font-size: 11px; }
 }
 </style>
 </head>
@@ -127,67 +142,109 @@ h1 .h1-sub { font-size: 13px; color: var(--ink-2); font-weight: 500; letter-spac
 <div class="toolbar">
 <button class="btn" onclick="loadPreset('small')">サンプル 小</button>
 <button class="btn" onclick="loadPreset('mid')">サンプル 中</button>
+<button class="btn" onclick="loadPreset('deep')">サンプル 深</button>
 <button class="btn" onclick="loadPreset('empty')">リセット</button>
+<label class="toolbar-toggle">
+<input type="checkbox" id="assistantToggle" onchange="render()">
+アシスタント料 5% 控除
+</label>
 </div>
 
 <div class="hero">
-<div class="label">下 の 人 の 契約 合計 で 自分 に 入る 額</div>
+<div class="label">下 の 人 の 契約 合計 で 自分 に 入る 額 (月間)</div>
 <div class="huge"><span id="totalIncome">¥0</span></div>
+<div class="breakdown" id="totalBreakdown"></div>
 </div>
 
 <div class="tree" id="tree"></div>
 
 <div class="foot">
-<strong>計算 ルール</strong> — 直下 (自分 が 直接 紹介 した 人) の 契約 = <strong>掛け率 の 差 (spread) + ボーナス 1次</strong>。 2次 以降 の 契約 = <strong>ボーナス 表 の 料率 のみ</strong>。 「愛用者」 チェック 時 = 直上 GA+ から 5% 調整費。 自分 の 自己購入 は 収入 対象外。
+<h3>計算 ルール (公式 マーケティング プラン p.14 準拠)</h3>
+<ol>
+<li><strong>販売卸差益 (waterfall)</strong> — 下 の 人 の 注文 に 対し、 「自分 の 販売卸差益率 − 直下 の 販売卸差益率」 の spread を 取る。 例: GC 20% → GA 40% で GA は <code>契約額 × 20%</code></li>
+<li><strong>同ランク が 2次・3次 と 続く 場合</strong> — spread が 止まり、 その 上 の 同ランク は <strong>ボーナス 表 の 世代 別 料率</strong> で 配分。 例: GM (me) ← GM ← GC の 場合、 中 GM が 28% (spread)、 上 GM (me) は GM 1次 ボーナス 2% (公式 プラン 「※GA 以上 の ランク が 2次、3次 と 続く 場合 は 直上 の ランク と ボーナス 率 に 基づき 配分 計算」 の 実装)</li>
+<li><strong>愛用者 の 注文</strong> — 直上 の GA+ の 販売卸差益 から 上代税抜 の <strong>5%</strong> を 「調整費」 として 控除 (2026年6月度〜)</li>
+<li><strong>アシスタント 料</strong> — 直上 GA+ の 販売卸差益 から 契約額 の <strong>5%</strong> を 控除 (登録 された アシスタント へ)。 上 の toggle で ON/OFF</li>
+<li><strong>コミッション 発生 条件</strong> — 当月内 に 「直新規 紹介 1名 以上」 又は 「1 アイテム 以上 の 自己購入」 (シミュレーター は 条件 満たす 前提)</li>
+<li><strong>ボーナス 資格</strong> — GA 以上、 GM/GE は サイド 売上 10万+/月、 GP+ は 50万+/月 (シミュレーター は 資格 満たす 前提)</li>
+</ol>
 
+<h3>ランク 別 レート 表</h3>
 <table class="rate-table">
-<tr><th>ランク</th><th>掛け率</th><th>販売卸差益率</th><th>1次 下</th><th>2次 下</th><th>3次 下</th><th>4次 下</th></tr>
+<tr><th>ランク</th><th>掛け率</th><th>販売卸差益率</th><th>同ランク 1次</th><th>2次</th><th>3次</th><th>4次</th></tr>
+<tr class="aiyou-row"><td>愛用者</td><td>100%</td><td>0%</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
 <tr><td>GC</td><td>80%</td><td>20%</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
 <tr><td>GA</td><td>60%</td><td>40%</td><td>4%</td><td>2%</td><td>1%</td><td>—</td></tr>
-<tr><td>GM</td><td>52%</td><td>48%</td><td>2%</td><td>1%</td><td>1%</td><td>—</td></tr>
+<tr><td>GM</td><td>52%</td><td>48%</td><td>2%</td><td>1%</td><td>—</td><td>—</td></tr>
 <tr><td>GE</td><td>47%</td><td>53%</td><td>1%</td><td>—</td><td>—</td><td>—</td></tr>
 <tr><td>GP〜WCRP</td><td>39%</td><td>61%</td><td>3%</td><td>2%</td><td>1%</td><td>0.5%</td></tr>
 </table>
+
+<h3>注意</h3>
+<ul>
+<li>入力 する 「契約 額」 は <strong>上代税抜</strong> (retail 相当)。 買い手 が 実 支払う 現金 では ない</li>
+<li>本 シミュレーター は 単月 の 収入 モデル。 昇格 条件 (総傘下 売上 累計 等) は 計算 対象外</li>
+<li>「調整費」 は 2026年6月度 以降 の 新 rule。 それ 以前 は 適用 なし</li>
+</ul>
 </div>
 
 </div>
 
 <script>
-const buyRate = { GC:0.80, GA:0.60, GM:0.52, GE:0.47, GP:0.39, VCLP:0.39, CLP:0.39, CRP:0.39, WCRP:0.39 };
+// === 公式 プラン p.14 準拠 定数 ===
+const buyRate = {
+  '愛用者': 1.00, GC: 0.80, GA: 0.60, GM: 0.52, GE: 0.47,
+  GP: 0.39, VCLP: 0.39, CLP: 0.39, CRP: 0.39, WCRP: 0.39,
+};
+const rankRate = {
+  '愛用者': 0.00, GC: 0.20, GA: 0.40, GM: 0.48, GE: 0.53,
+  GP: 0.61, VCLP: 0.61, CLP: 0.61, CRP: 0.61, WCRP: 0.61,
+};
+// bonusRate[rank][gen-1] = same-rank override rate at that generation distance
 const bonusRate = {
-  GC:[0,0,0,0], GA:[0.04,0.02,0.01,0], GM:[0.02,0.01,0.01,0], GE:[0.01,0,0,0],
-  GP:[0.03,0.02,0.01,0.005], VCLP:[0.03,0.02,0.01,0.005], CLP:[0.03,0.02,0.01,0.005], CRP:[0.03,0.02,0.01,0.005], WCRP:[0.03,0.02,0.01,0.005]
+  '愛用者': [0, 0, 0, 0],
+  GC:       [0, 0, 0, 0],
+  GA:       [0.04, 0.02, 0.01, 0    ],
+  GM:       [0.02, 0.01, 0,    0    ],
+  GE:       [0.01, 0,    0,    0    ],
+  GP:       [0.03, 0.02, 0.01, 0.005],
+  VCLP:     [0.03, 0.02, 0.01, 0.005],
+  CLP:      [0.03, 0.02, 0.01, 0.005],
+  CRP:      [0.03, 0.02, 0.01, 0.005],
+  WCRP:     [0.03, 0.02, 0.01, 0.005],
 };
-const RANKS = ['GC','GA','GM','GE','GP','VCLP','CLP','CRP','WCRP'];
+const RANKS = ['愛用者','GC','GA','GM','GE','GP','VCLP','CLP','CRP','WCRP'];
+const isGAplus = (rank) => rank !== '愛用者' && rank !== 'GC';
 
+// === state ===
 let nextId = 1;
-function uid() { return 'n' + (nextId++); }
+const uid = () => 'n' + (nextId++);
+const state = { root: { id: 'me', name: '自分', rank: 'GA', children: [] } };
 
-const state = {
-  root: { id: 'me', name: '自分', rank: 'GA', amount: 0, isUser: false, children: [] }
-};
-
+// === tree helpers ===
 function findNode(id, node = state.root) {
   if (node.id === id) return node;
-  for (const c of node.children) { const f = findNode(id, c); if (f) return f; }
+  for (const c of node.children || []) { const f = findNode(id, c); if (f) return f; }
   return null;
 }
 function findParent(id, node = state.root) {
-  for (const c of node.children) { if (c.id === id) return node; const f = findParent(id, c); if (f) return f; }
+  for (const c of node.children || []) { if (c.id === id) return node; const f = findParent(id, c); if (f) return f; }
   return null;
 }
+// [parent, grandparent, ..., me]
 function findAncestors(id) {
   const ancestors = []; let current = id;
   while (true) { const p = findParent(current); if (!p) break; ancestors.push(p); current = p.id; }
   return ancestors;
 }
-function tierFromMe(id) { if (id === 'me') return 0; return findAncestors(id).length; }
-function walkAll(node, fn) { fn(node); for (const c of node.children) walkAll(c, fn); }
+function walkAll(node, fn) { fn(node); for (const c of node.children || []) walkAll(c, fn); }
 
+// === mutations ===
 function addChild(parentId) {
   const p = findNode(parentId); if (!p) return;
   const id = uid();
-  p.children.push({ id, name: '', rank: 'GC', amount: 0, isUser: false, children: [] });
+  if (!p.children) p.children = [];
+  p.children.push({ id, name: '', rank: 'GC', amount: 0, children: [] });
   render();
   setTimeout(() => { const el = document.querySelector(`[data-id="${id}"] .name-input`); if (el) el.focus(); }, 30);
 }
@@ -202,7 +259,6 @@ function updateField(id, field, value) {
   n[field] = value; render();
 }
 function updateMeRank(v) { state.root.rank = v; render(); }
-
 function onAmountInput(id, el) {
   const cursorAtEnd = el.selectionStart === el.value.length;
   const raw = el.value.replace(/[^0-9]/g, '');
@@ -211,93 +267,135 @@ function onAmountInput(id, el) {
   el.value = formatted;
   const n = findNode(id); if (n) n.amount = num;
   if (cursorAtEnd) el.setSelectionRange(formatted.length, formatted.length);
-  const wrap = document.querySelector(`[data-id="${id}"]`);
-  if (wrap) wrap.classList.toggle('has-amount', num > 0);
-  walkAll(state.root, n2 => { if (n2.id !== 'me') updateNodeArrow(n2.id); });
-  renderSummary();
-}
-function updateNodeArrow(id) {
-  const node = findNode(id); if (!node) return;
-  const wrap = document.querySelector(`[data-id="${id}"]`);
-  if (!wrap) return;
-  const nodeRow = wrap.parentElement;
-  const oldArrow = nodeRow.querySelector('.income-arrow');
-  if (oldArrow) oldArrow.remove();
-  const showArrow = (+node.amount || 0) > 0;
-  if (!showArrow) return;
-  const inc = myIncomeFrom(node);
-  const valCls = inc.amount === 0 ? 'zero' : (inc.amount < 0 ? 'negative' : '');
-  const val = inc.amount === 0 ? '¥0' : (inc.amount > 0 ? '+' : '') + yen(inc.amount);
-  nodeRow.insertAdjacentHTML('beforeend', `<div class="income-arrow"><span class="arrow">→</span><span class="value ${valCls}">${val}</span>${inc.formula ? `<span class="formula">${inc.formula}</span>` : ''}</div>`);
+  render();
 }
 
-function yen(n) { return (n < 0 ? '−' : '') + '¥' + Math.abs(Math.round(n)).toLocaleString('ja-JP'); }
+// === 販売卸差益 waterfall + 同ランク override + 5% 調整費 の 3 layer 計算 ===
+// orderNode = 発注 者。 me 目線 で me が 貰う 金額 と breakdown を 返す。
+function myIncomeFrom(orderNode) {
+  if (orderNode.id === 'me') return { amount: 0, parts: [] };
+  const amount = +orderNode.amount || 0;
+  if (amount === 0) return { amount: 0, parts: [] };
 
-// モデル C 固定: 直下 = spread + ボーナス、 2次 以降 = ボーナス のみ
-function myIncomeFrom(node) {
-  if (node.id === 'me') return { amount: 0, formula: '', tier: 0, self: true };
-  const amount = +node.amount || 0;
-  const tier = tierFromMe(node.id);
-  if (amount === 0) return { amount: 0, formula: '', tier };
-  if (tier > 4) return { amount: 0, formula: '対象外', tier };
+  const isAiyousha = orderNode.rank === '愛用者';
+  const assistantOn = !!document.getElementById('assistantToggle')?.checked;
 
-  const meRank = state.root.rank;
-  const meBuyRate = buyRate[meRank];
-  const bonusR = bonusRate[meRank][tier - 1];
-  const ancestors = findAncestors(node.id);
-  let myAmount = 0, formula = '';
+  const ancestors = findAncestors(orderNode.id);   // bottom-up, last = me
+  if (ancestors.length === 0) return { amount: 0, parts: [] };
 
-  if (tier === 1) {
-    const spread = buyRate[node.rank] - meBuyRate;
-    const spreadPart = spread > 0 ? amount * spread : 0;
-    const bonusPart = amount * bonusR;
-    myAmount = spreadPart + bonusPart;
-    const parts = [];
-    if (spreadPart > 0) parts.push(`${yen(amount)} × ${(spread*100).toFixed(0)}% (spread)`);
-    if (bonusR > 0) parts.push(`${yen(amount)} × ${(bonusR*100).toFixed(1)}% (ボーナス)`);
-    formula = parts.length ? parts.join(' + ') : '料率 0%';
-  } else {
-    if (bonusR === 0) return { amount: 0, formula: `${meRank} の ${tier}次 料率 0%`, tier };
-    myAmount = amount * bonusR;
-    formula = `${yen(amount)} × ${(bonusR*100).toFixed(1)}% (${tier}次 ボーナス)`;
-  }
+  let lastRate = rankRate[orderNode.rank];         // 0 for 愛用者, 0.20 for GC, etc.
+  const sameRankGen = {};                          // rank -> encounter counter
+  let firstGAplusHandled = false;                  // 5% 調整費 と アシスタント は 直上 の 初回 GA+ で 発火
+  let mineAmount = 0;
+  const mineParts = [];
 
-  // 愛用者 5% 調整費: 直上 GA+ に 該当 する 時 だけ
-  if (node.isUser) {
-    const directGA = ancestors.find(a => a.rank !== 'GC');
-    if (directGA && directGA.id === 'me') {
-      myAmount -= amount * 0.05;
-      formula += ` − ${yen(amount)} × 5% (愛用者 調整費)`;
+  for (let i = 0; i < ancestors.length; i++) {
+    const U = ancestors[i];
+    const isMe = (U.id === 'me');
+    const uRate = rankRate[U.rank];
+    let uGotShare = false;   // この upline が この order で 収入 を 得たか (aug/adj 発火 判定)
+
+    if (uRate > lastRate) {
+      // Waterfall spread — 上 が 高 ランク
+      const spreadPct = uRate - lastRate;
+      const spread = amount * spreadPct;
+      if (isMe) {
+        mineAmount += spread;
+        mineParts.push({
+          label: `${(spreadPct*100).toFixed(0)}% 卸差益`,
+          value: spread,
+          kind: 'spread',
+        });
+      }
+      uGotShare = true;
+      lastRate = uRate;
+    } else if (uRate === lastRate && isGAplus(U.rank)) {
+      // 同ランク block — bonus 表 の 世代 別 料率 で 配分
+      sameRankGen[U.rank] = (sameRankGen[U.rank] || 0) + 1;
+      const gen = sameRankGen[U.rank];
+      const rate = (bonusRate[U.rank] || [])[gen - 1] || 0;
+      if (rate > 0) {
+        const override = amount * rate;
+        if (isMe) {
+          mineAmount += override;
+          mineParts.push({
+            label: `${(rate*100).toFixed(1)}% 同ランク ${gen}次 ボーナス`,
+            value: override,
+            kind: 'bonus',
+          });
+        }
+        uGotShare = true;
+      }
+      // lastRate は 進めない (waterfall 未消費)
     }
+    // else: uRate < lastRate → 既 に 下 で waterfall 消費済、 この upline は bypass
+
+    // 5% 愛用者 調整費 & アシスタント料 — 「直上 の 初回 GA+ で 収入 得た upline」 から 控除
+    // (waterfall spread の 場合 でも 同ランク bonus の 場合 でも 適用、 直上 GA+ の 定義 は 同じ)
+    if (isGAplus(U.rank) && uGotShare && !firstGAplusHandled) {
+      if (isAiyousha) {
+        const adj = amount * 0.05;
+        if (isMe) {
+          mineAmount -= adj;
+          mineParts.push({ label: `5% 愛用者 調整費`, value: -adj, kind: 'adj' });
+        }
+      }
+      if (assistantOn) {
+        const asst = amount * 0.05;
+        if (isMe) {
+          mineAmount -= asst;
+          mineParts.push({ label: `5% アシスタント料`, value: -asst, kind: 'adj' });
+        }
+      }
+      firstGAplusHandled = true;
+    }
+
+    if (isMe) break;
   }
-  return { amount: myAmount, formula, tier };
+
+  return { amount: mineAmount, parts: mineParts };
+}
+
+// === render ===
+const yen = (n) => (n < 0 ? '−' : '') + '¥' + Math.abs(Math.round(n)).toLocaleString('ja-JP');
+
+function partsHTML(parts) {
+  if (!parts.length) return '<span class="formula none">対象外</span>';
+  return parts.map(p => {
+    const cls = p.kind === 'bonus' ? 'bonus' : (p.kind === 'adj' ? 'adj' : '');
+    const sign = p.value < 0 ? '−' : '+';
+    return `<span class="formula ${cls}">${sign}${yen(Math.abs(p.value))} <span style="opacity:0.75">(${p.label})</span></span>`;
+  }).join('');
 }
 
 function renderNode(node) {
   const isMe = node.id === 'me';
+  const isAiyou = node.rank === '愛用者';
   const cls = ['node'];
   if (isMe) cls.push('me');
-  if ((+node.amount || 0) > 0) cls.push('has-amount');
+  if (isAiyou) cls.push('aiyou');
+  if ((+node.amount || 0) > 0 && !isMe && !isAiyou) cls.push('has-amount');
   const amtStr = (node.amount && node.amount > 0) ? node.amount.toLocaleString('ja-JP') : '';
-  const inc = myIncomeFrom(node);
+
+  const inc = isMe ? { amount: 0, parts: [] } : myIncomeFrom(node);
   const showArrow = !isMe && (+node.amount || 0) > 0;
   let rightSide = '';
   if (showArrow) {
     const valCls = inc.amount === 0 ? 'zero' : (inc.amount < 0 ? 'negative' : '');
     const val = inc.amount === 0 ? '¥0' : (inc.amount > 0 ? '+' : '') + yen(inc.amount);
-    rightSide = `<div class="income-arrow"><span class="arrow">→</span><span class="value ${valCls}">${val}</span>${inc.formula ? `<span class="formula">${inc.formula}</span>` : ''}</div>`;
+    rightSide = `<div class="income-arrow"><span class="arrow">→</span><span class="value ${valCls}">${val}</span>${partsHTML(inc.parts)}</div>`;
   }
+
   const amountBox = isMe ? ''
-    : `<div class="amount-wrap"><span class="yen-sign">¥</span><input class="amount-input" type="text" inputmode="numeric" value="${amtStr}" placeholder="契約 額" oninput="onAmountInput('${node.id}', this)"></div>`;
+    : `<div class="amount-wrap"><span class="yen-sign">¥</span><input class="amount-input" type="text" inputmode="numeric" value="${amtStr}" placeholder="上代税抜" oninput="onAmountInput('${node.id}', this)"></div>`;
 
   return `<div class="node-row">
     <div class="${cls.join(' ')}" data-id="${node.id}">
-      <input class="name-input" type="text" value="${node.name}" placeholder="名前" onchange="updateField('${node.id}','name',this.value)">
+      <input class="name-input" type="text" value="${node.name || ''}" placeholder="名前" onchange="updateField('${node.id}','name',this.value)">
       <select class="rank-select" onchange="updateField('${node.id}','rank',this.value)">
         ${RANKS.map(r => `<option value="${r}"${r === node.rank ? ' selected' : ''}>${r}</option>`).join('')}
       </select>
       ${amountBox}
-      ${isMe ? '' : `<label class="user-check"><input type="checkbox" ${node.isUser ? 'checked' : ''} onchange="updateField('${node.id}','isUser',this.checked)">愛用者</label>`}
       <button class="btn-mini add" onclick="addChild('${node.id}')" title="下 に 追加">＋</button>
       ${isMe ? '' : `<button class="btn-mini del" onclick="deleteNode('${node.id}')" title="削除">×</button>`}
     </div>
@@ -307,7 +405,7 @@ function renderNode(node) {
 
 function renderTree(node) {
   let html = renderNode(node);
-  if (node.children.length > 0) {
+  if (node.children && node.children.length > 0) {
     html += '<ul>';
     for (const c of node.children) html += '<li>' + renderTree(c) + '</li>';
     html += '</ul>';
@@ -316,9 +414,23 @@ function renderTree(node) {
 }
 
 function renderSummary() {
-  let total = 0;
-  walkAll(state.root, (n) => { if (n.id !== 'me') total += myIncomeFrom(n).amount; });
-  document.getElementById('totalIncome').textContent = (total >= 0 ? '+' : '') + yen(total);
+  let total = 0, spread = 0, bonus = 0, adj = 0;
+  walkAll(state.root, (n) => {
+    if (n.id === 'me') return;
+    const inc = myIncomeFrom(n);
+    total += inc.amount;
+    for (const p of inc.parts) {
+      if (p.kind === 'spread') spread += p.value;
+      else if (p.kind === 'bonus') bonus += p.value;
+      else if (p.kind === 'adj') adj += p.value;
+    }
+  });
+  document.getElementById('totalIncome').textContent = (total > 0 ? '+' : '') + yen(total);
+  const bd = [];
+  if (spread > 0) bd.push(`卸差益<b>${yen(spread)}</b>`);
+  if (bonus > 0)  bd.push(`同ランク ボーナス<b>${yen(bonus)}</b>`);
+  if (adj < 0)    bd.push(`調整・アシスタント<b>${yen(adj)}</b>`);
+  document.getElementById('totalBreakdown').innerHTML = bd.length ? bd.join('　／　') : '';
 }
 
 function render() {
@@ -326,24 +438,45 @@ function render() {
   renderSummary();
 }
 
+// === presets ===
 function loadPreset(kind) {
   nextId = 1;
-  if (kind === 'empty') state.root = { id: 'me', name: '自分', rank: 'GA', amount: 0, isUser: false, children: [] };
-  else if (kind === 'small') state.root = { id: 'me', name: '自分', rank: 'GA', amount: 0, isUser: false, children: [
-    { id: uid(), name: '吉田恭聡', rank: 'GC', amount: 100000, isUser: false, children: [
-      { id: uid(), name: '佐藤', rank: 'GC', amount: 50000, isUser: false, children: [] }
-    ]},
-    { id: uid(), name: '田中', rank: 'GC', amount: 30000, isUser: false, children: [] }
-  ]};
-  else if (kind === 'mid') state.root = { id: 'me', name: '自分', rank: 'GM', amount: 0, isUser: false, children: [
-    { id: uid(), name: '田中', rank: 'GA', amount: 500000, isUser: false, children: [
-      { id: uid(), name: '佐藤', rank: 'GC', amount: 100000, isUser: false, children: [] },
-      { id: uid(), name: '高橋', rank: 'GC', amount: 80000, isUser: false, children: [] }
-    ]},
-    { id: uid(), name: '山田', rank: 'GA', amount: 300000, isUser: false, children: [
-      { id: uid(), name: '伊藤', rank: 'GC', amount: 60000, isUser: false, children: [] }
-    ]}
-  ]};
+  if (kind === 'empty') {
+    state.root = { id: 'me', name: '自分', rank: 'GA', children: [] };
+  } else if (kind === 'small') {
+    // GA (me) → GC × 2 + 直下 の GC の 下 に 愛用者
+    state.root = { id: 'me', name: '自分', rank: 'GA', children: [
+      { id: uid(), name: '吉田', rank: 'GC', amount: 100000, children: [
+        { id: uid(), name: '佐藤 (客)', rank: '愛用者', amount: 50000, children: [] },
+      ]},
+      { id: uid(), name: '田中', rank: 'GC', amount: 30000, children: [] },
+    ]};
+  } else if (kind === 'mid') {
+    // GM (me) → GA × 2 + それぞれ に GC
+    state.root = { id: 'me', name: '自分', rank: 'GM', children: [
+      { id: uid(), name: '田中 (GA)', rank: 'GA', amount: 500000, children: [
+        { id: uid(), name: '佐藤', rank: 'GC', amount: 100000, children: [] },
+        { id: uid(), name: '高橋', rank: 'GC', amount: 80000,  children: [] },
+      ]},
+      { id: uid(), name: '山田 (GA)', rank: 'GA', amount: 300000, children: [
+        { id: uid(), name: '伊藤', rank: 'GC', amount: 60000, children: [] },
+      ]},
+    ]};
+  } else if (kind === 'deep') {
+    // GM (me) → GM (同ランク stack) → GC → 愛用者、 別系列 GA → GA → GC
+    state.root = { id: 'me', name: '自分', rank: 'GM', children: [
+      { id: uid(), name: '直下 GM', rank: 'GM', amount: 200000, children: [
+        { id: uid(), name: '下 GC', rank: 'GC', amount: 100000, children: [
+          { id: uid(), name: '愛用者 A', rank: '愛用者', amount: 30000, children: [] },
+        ]},
+      ]},
+      { id: uid(), name: 'GA 系列', rank: 'GA', amount: 400000, children: [
+        { id: uid(), name: 'GA 孫', rank: 'GA', amount: 200000, children: [
+          { id: uid(), name: 'GC ひ孫', rank: 'GC', amount: 80000, children: [] },
+        ]},
+      ]},
+    ]};
+  }
   document.getElementById('meRank').value = state.root.rank;
   render();
 }
