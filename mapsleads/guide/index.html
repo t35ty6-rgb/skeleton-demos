@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MapsLeads v2.1.0 使い方 — AI コピー 生成 対応</title>
+<style>
+  :root {
+    --grad: linear-gradient(120deg, #0071E3 0%, #8B5CF6 50%, #EC4899 100%);
+    --ink: #0F172A;
+    --sub: #475569;
+    --line: #E2E8F0;
+    --bg: #F8FAFC;
+    --card: #FFFFFF;
+    --brand-1: #0071E3;
+    --brand-2: #8B5CF6;
+    --brand-3: #EC4899;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.75;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 40px 32px 80px; }
+
+  header.hero {
+    background: var(--grad);
+    color: white;
+    padding: 48px 40px;
+    border-radius: 20px;
+    margin-bottom: 32px;
+  }
+  header.hero .eyebrow {
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.85;
+    margin-bottom: 14px;
+  }
+  header.hero h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.35;
+    margin-bottom: 16px;
+    text-wrap: balance;
+  }
+  header.hero .lead {
+    font-size: 15px;
+    opacity: 0.94;
+    max-width: 700px;
+    line-height: 1.75;
+  }
+
+  .intro {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 32px;
+  }
+  .intro h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--sub);
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+  }
+  .intro p { color: var(--ink); line-height: 1.8; }
+  .intro code {
+    background: #F1F5F9;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .intro a {
+    color: var(--brand-1);
+    text-decoration: underline;
+    text-decoration-color: rgba(0, 113, 227, 0.35);
+    text-underline-offset: 3px;
+    font-weight: 600;
+  }
+
+  .step {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 32px 36px;
+    margin-bottom: 20px;
+  }
+  .step-head {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+  .step-num {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--grad);
+    color: white;
+    font-weight: 700;
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    letter-spacing: -0.5px;
+  }
+  .step-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    line-height: 1.5;
+  }
+  .step-body {
+    color: var(--ink);
+    margin-bottom: 24px;
+    line-height: 1.85;
+  }
+  .step-body strong { color: var(--ink); font-weight: 700; }
+  .step-body em { font-style: normal; background: linear-gradient(transparent 60%, rgba(236,72,153,0.18) 60%); padding: 0 2px; font-weight: 600; }
+
+  .shot {
+    background: #F1F5F9;
+    padding: 24px;
+    border-radius: 10px;
+    text-align: center;
+  }
+  .shot img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    background: white;
+    display: inline-block;
+  }
+  .shot.wide img { width: 100%; max-width: 800px; height: auto; }
+
+  .caption {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--sub);
+    letter-spacing: 0.5px;
+  }
+
+  /* 例文 比較 — pastel 排除、 モノクロ + gradient border */
+  .examples {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0 4px;
+  }
+  .example {
+    padding: 18px 22px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    position: relative;
+  }
+  .example-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    color: white;
+  }
+  .example.bad .example-label { background: #64748B; }
+  .example.good .example-label {
+    background: var(--grad);
+  }
+  .example p {
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.75;
+  }
+  .example.bad p { color: var(--sub); }
+
+  .compare-headline {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--sub);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin: 24px 0 12px;
+  }
+
+  .final {
+    background: var(--ink);
+    color: white;
+    padding: 36px 40px;
+    border-radius: 14px;
+    margin-top: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .final::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--grad);
+  }
+  .final h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 18px;
+    letter-spacing: -0.3px;
+  }
+  .final dl { display: grid; grid-template-columns: 140px 1fr; gap: 12px 20px; }
+  .final dt {
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    letter-spacing: 0.5px;
+    padding-top: 2px;
+  }
+  .final dd {
+    font-size: 14px;
+    line-height: 1.75;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  .final dd strong { color: white; }
+  .final a { color: #93C5FD; text-decoration: underline; text-decoration-color: rgba(147, 197, 253, 0.4); text-underline-offset: 3px; }
+  .final code {
+    background: rgba(255,255,255,0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: white;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--sub);
+    font-size: 12px;
+    padding: 32px 0 8px;
+    letter-spacing: 0.5px;
+  }
+
+  @media (max-width: 720px) {
+    .wrap { padding: 24px 16px; }
+    header.hero { padding: 32px 24px; }
+    header.hero h1 { font-size: 22px; }
+    .step { padding: 24px 20px; }
+    .examples { grid-template-columns: 1fr; }
+    .final { padding: 24px 20px; }
+    .final dl { grid-template-columns: 1fr; gap: 4px 0; }
+    .final dt { padding-top: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">MapsLeads v2.1.0 · 使い方 手順</div>
+  <h1>制作会社 の 考え方 を AI に 教えて、<br>店 ごと の サイト案 コピー を 自動 生成</h1>
+  <p class="lead">
+    サイト案 の hero キャッチコピー · About セクション · Services を、 業種 別 の 汎用 テンプレ じゃ なく、 あなた の 会社 の デザイン 思想 · トーン に 沿った 文章 で 出せる ように なりました。 5 手順 で 使え ます。
+  </p>
+</header>
+
+<section class="intro">
+  <h2>始める 前 に</h2>
+  <p>
+    <a href="https://t35ty6-rgb.github.io/skeleton-demos/mapsleads/mapsleads-v2.1.0.zip">mapsleads-v2.1.0.zip</a> を DL → <code>chrome://extensions</code> で 一度 削除 → zip 解凍 → 「読み込む」 で 再 install → 以前 の ライセンスキー を 入力。
+  </p>
+</section>
+
+<!-- Step 1 -->
+<section class="step">
+  <div class="step-head">
+    <div class="step-num">1</div>
+    <div class="step-title">拡張 popup の 一番 下 に ある <em>「あなた の 会社 の 考え方」</em> を 開く</div>
+  </div>
+  <div class="step-body">
+    Chrome 右上 の MapsLeads アイコン を 押して popup を 開き、 一番 下 まで スクロール。 「AI が サイト案 コピー を 書く 時 に 反映 する 『あなた の 会社 の 考え方』」 と いう 折りたたみ が あり ます。
+  </div>
+  <div class="shot">
+    <img src="img/01-popup-initial.png" alt="popup 下部 の 折りたたみ に 赤枠 highlight">
+  </div>
+</section>
+
+<!-- Step 2 -->
+<section class="step">
+  <div class="step-head">
+    <div class="step-num">2</div>
+    <div class="step-title">テキスト 欄 に、 <em>制作会社 として 大切に して いる こと</em> を 貼り付ける</div>
+  </div>
+  <div class="step-body">
+    最低 20 文字、 最大 8000 文字。 <strong>「〜の 表現 は 使わ ない」 「〜を 優先 する」 の ような 判断 基準</strong> を 入れる と、 生成 の 一貫性 が 大きく 上がり ます。 抽象的 だと AI も 抽象的 に なる ので、 具体 的 に。
+  </div>
+
+  <div class="compare-headline">書き方 の 対比</div>
+  <div class="examples">
+    <div class="example bad">
+      <span class="example-label">抽象 的</span>
+      <p>お客様 に 寄り添う デザイン を 心がけて います。</p>
+    </div>
+    <div class="example good">
+      <span class="example-label">具体 的</span>
+      <p>「地域 で 30 年 続く 店」 を 作る HP を 作って います。 派手 な 装飾 より、 客 が 迷わ ず 電話 · 予約 まで 辿り着ける 情報 設計 を 優先。 「地域 で 愛される」 「お客様 の 笑顔」 の ような テンプレ 表現 は 使わ ず、 その 店 に しか 無い 具体 を 書き ます。 写真 は 実 店舗 のみ、 ストック 素材 は 使い ませ ん。</p>
+    </div>
+  </div>
+
+  <div class="shot" style="margin-top:24px;">
+    <img src="img/02-popup-philosophy.png" alt="textarea に philosophy を 貼り付けた 状態、 赤枠 highlight">
+  </div>
+</section>
+
+<!-- Step 3 -->
+<section class="step">
+  <div class="step-head">
+    <div class="step-num">3</div>
+    <div class="step-title"><em>「この 考え方 を 保存」</em> を 押す</div>
+  </div>
+  <div class="step-body">
+    保存 が 済む と、 テキスト 欄 の 下 に <strong>文字 数 と 保存 時刻</strong> が 緑 文字 で 表示 され ます。 一度 保存 すれ ば、 以降 の サイト案 生成 に 自動 で 反映 (毎回 貼り直し 不要)。 変更 は 上書き 保存、 削除 は 「クリア」 で 汎用 テンプレ に 戻り ます。
+  </div>
+  <div class="shot">
+    <img src="img/03-popup-saved.png" alt="保存 button に 赤枠 highlight、 上 に 保存 済 の 緑 status">
+  </div>
+</section>
+
+<!-- Step 4 -->
+<section class="step">
+  <div class="step-head">
+    <div class="step-num">4</div>
+    <div class="step-title">通常 通り 収集 → <em>「サイト案 を 作る」</em> を 押す</div>
+  </div>
+  <div class="step-body">
+    エリア + 業種 (or 店名 直接) で 検索 → 収集 完了 後、 「サイト案 を 作る (全 件)」 ボタン を 押す だけ。 別 タブ で サイト案 viewer が 開き ます。
+  </div>
+  <div class="shot">
+    <img src="img/04-popup-results.png" alt="検索 完了 状態 · サイト案 button に 赤枠 highlight">
+  </div>
+</section>
+
+<!-- Step 5 -->
+<section class="step">
+  <div class="step-head">
+    <div class="step-num">5</div>
+    <div class="step-title">店 を 選ぶ と、 数 秒 後 に <em>AI 生成 コピー</em> に 差し替わる</div>
+  </div>
+  <div class="step-body">
+    サイト案 viewer で 左 の 一覧 から 店 を 選ぶ と、 まず 業種 別 テンプレ で 描画 され、 <strong>1-5 秒 後 に hero キャッチコピー · About · Services が AI 生成 版 に 差し替わり ます</strong>。 保存 した 考え方 と 店 の 具体 情報 (店名 · 業種 · 立地) を 組み合わせて 都度 生成。 <strong>口コミ 件数 · 評価 の 数値 は AI に 渡さ ない</strong> ので、 「◯◯ 件 の 口コミ が 示す」 型 の 権威 借り 訴求 は 出 ませ ん。
+  </div>
+  <div class="shot wide">
+    <img src="img/06-mockup-hero-crop.png" alt="AI 生成 された hero キャッチコピー 「大野の朝を、一杯から始める」">
+    <div class="caption">実 生成 例: 福井県 大野市 「モモンガコーヒー」 に 上記 の 考え方 を 適用</div>
+  </div>
+
+  <div class="compare-headline">生成 結果 の 対比 (同じ 店 · 同じ サイト案)</div>
+  <div class="examples">
+    <div class="example bad">
+      <span class="example-label">汎用 テンプレ (従来)</span>
+      <p>「この街 に、 通いたく なる 場所 を。 アクセス、 営業時間、 メニュー。 ここ で、 お店 の 空気 を 感じて ください」</p>
+    </div>
+    <div class="example good">
+      <span class="example-label">AI 生成 (考え方 反映)</span>
+      <p>「大野 の 朝 を、 一杯 から 始める。 城下町 の 静けさ の 中 に 店 を 構え、 豆 の 選定 から 抽出 まで 省かず に 仕上げる、 一杯 の ため の 店」</p>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <h2>知って おく と 良い こと</h2>
+  <dl>
+    <dt>料金</dt>
+    <dd>1 生成 あたり 約 <strong>¥3</strong>。 同 考え方 で 5 分 以内 に 続けて 生成 する と、 2 回目 以降 は 約 <strong>¥2</strong> (AI の キャッシュ 機能 で 割引)。</dd>
+
+    <dt>月 上限</dt>
+    <dd>利用鍵 単位 で <strong>月 200 生成 まで</strong>。 超えた 場合 は 翌月 1 日 に 自動 復帰。 上限 変更 が 必要 なら お知らせ ください。</dd>
+
+    <dt>効き 目 を 上げる</dt>
+    <dd>「考え方」 は 具体的 に 書く ほど 効き ます。 「〜は 使わ ない」 「〜を 優先 する」 の ような <strong>判断 基準</strong> が 一貫性 に 直結。</dd>
+
+    <dt>店 別 上書き</dt>
+    <dd>現状 は 全 店 で 同じ 考え方 が 反映 され ます。 店 別 に トーン を 変え たい 場合 は 都度 「考え方」 を 書き 換えて 保存 → 該当 店 の サイト案 を 開く。</dd>
+
+    <dt>AI の 補完</dt>
+    <dd>メニュー 名 や 説明 は 業種 と 立地 から 妥当 な 範囲 で 補完 され ます (具体 数値 は 出し ませ ん)。 実 店舗 の 詳細 と 異なる 場合 は 手動 で 修正 して ください。</dd>
+
+    <dt>不具合 · 要望</dt>
+    <dd><a href="mailto:sales@skeleton-inc.jp">sales@skeleton-inc.jp</a> まで お知らせ ください。</dd>
+  </dl>
+</section>
+
+<footer>
+  MapsLeads v2.1.0 使い方 資料 · 2026-09-08 · スケルトン 株式会社
+</footer>
+
+</div>
+</body>
+</html>
