@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ニトリ修理の受付ツール　使い方の動画</title>
+<style>
+:root{
+  --o:#C4440A; --o-1:#D2550F; --o-deep:#9E3606; --o-tint:#FFF2EA;
+  --ground:#FFF9F5; --card:#fff; --ink:#1B1613; --ink-2:#5A524C; --line:#EFE2D8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ground);color:var(--ink);
+  font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,Meiryo,
+    "Noto Sans JP",system-ui,sans-serif;
+  display:flex;min-height:100vh}
+
+#side{width:320px;flex:0 0 auto;background:#fff;border-right:1px solid var(--line);
+  height:100vh;overflow-y:auto;position:sticky;top:0}
+#side .hd{background:linear-gradient(135deg,var(--o-1),var(--o-deep));color:#fff;padding:20px 18px}
+#side .hd b{display:block;font-size:17px;font-weight:800}
+#side .hd span{display:block;font-size:13px;opacity:.9;margin-top:4px}
+.grp{padding:16px 18px 4px;font-size:13px;font-weight:800;color:var(--o-deep);letter-spacing:.06em}
+.grp span{display:block;font-weight:600;color:var(--ink-2);font-size:12px;margin-top:3px;letter-spacing:0}
+ul{list-style:none}
+li{display:flex;gap:10px;align-items:center;padding:11px 18px;cursor:pointer;
+  font-size:14.5px;font-weight:700;border-left:4px solid transparent}
+li:hover{background:var(--o-tint)}
+li.on{background:var(--o-tint);border-left-color:var(--o);color:var(--o-deep)}
+li .dot{width:9px;height:9px;border-radius:50%;background:#E0D2C6;flex:0 0 auto}
+li.seen .dot{background:#3F9E63}
+li .t{flex:1 1 auto}
+li .len{font-size:12px;color:var(--ink-2);font-weight:600}
+
+#main{flex:1 1 auto;padding:26px 32px 48px;max-width:1400px;margin:0 auto}
+#crumb{font-size:13px;color:var(--ink-2);font-weight:700;margin-bottom:8px}
+h1{font-size:24px;font-weight:800;margin-bottom:6px}
+#desc{font-size:15px;color:var(--ink-2);margin-bottom:16px}
+video{width:100%;background:#000;border-radius:12px;display:block;
+  box-shadow:0 6px 22px rgba(120,60,20,.14)}
+#nav{display:flex;gap:10px;margin-top:16px}
+button{font:inherit;font-weight:800;font-size:15px;border:2px solid var(--line);background:#fff;
+  color:var(--o-deep);border-radius:10px;padding:11px 18px;cursor:pointer}
+button:hover{border-color:var(--o)}
+button[disabled]{opacity:.4;cursor:default}
+#nav .sp{flex:1 1 auto}
+#note{margin-top:22px;font-size:13.5px;color:var(--ink-2);line-height:1.8;
+  border-top:1px solid var(--line);padding-top:16px}
+@media(max-width:900px){
+  body{display:block}
+  #side{width:auto;height:auto;position:static;border-right:0;border-bottom:1px solid var(--line)}
+  #main{padding:18px}
+}
+</style>
+</head>
+<body>
+<nav id="side">
+  <div class="hd"><b>ニトリ修理の受付ツール</b><span>使い方の動画　全11本</span></div>
+  <div id="list"></div>
+</nav>
+
+<main id="main">
+  <div id="crumb"></div>
+  <h1 id="ttl"></h1>
+  <p id="desc"></p>
+  <video id="v" controls playsinline></video>
+  <div id="nav">
+    <button id="prev">前の動画</button>
+    <div class="sp"></div>
+    <button id="next">次の動画</button>
+  </div>
+  <p id="note">
+    動画に出てくる案件（DEMO-1001 など）はすべて見本です。ニトリのお客様の情報は1件も入っていません。<br>
+    こえは合成のこえです。音を消して、下の字まくだけでも分かるように作ってあります。
+  </p>
+</main>
+
+<script>
+var VIDEOS = [
+ {
+  "id": "menu",
+  "group": "業者さんの画面",
+  "title": "LINEのメニューの見方",
+  "desc": "LINEの下に出る6つのボタンが、それぞれ何の画面かを見ます。",
+  "file": "videos/menu-explainer.mp4"
+ },
+ {
+  "id": "flow-accept",
+  "group": "業者さんの画面",
+  "title": "ご依頼を受けて、伺える日を送る",
+  "desc": "LINEに届いたカードを押していくだけで、お受けする返事と訪問日が送れます。",
+  "file": "videos/flow-accept-explainer.mp4"
+ },
+ {
+  "id": "flow-done",
+  "group": "業者さんの画面",
+  "title": "終わったら知らせて、そのまま請求へ",
+  "desc": "訪問の日の夕方に届くカードで、作業の完了とご請求までつながります。",
+  "file": "videos/flow-done-explainer.mp4"
+ },
+ {
+  "id": "bills",
+  "group": "業者さんの画面",
+  "title": "ご請求を入力する",
+  "desc": "修理が終わったあと、金額と作業の内容を送るまでの流れです。",
+  "file": "videos/bills-explainer.mp4"
+ },
+ {
+  "id": "jobs",
+  "group": "業者さんの画面",
+  "title": "いまのご依頼を見る",
+  "desc": "いま担当している修理を、一覧で確かめます。",
+  "file": "videos/jobs-explainer.mp4"
+ },
+ {
+  "id": "done",
+  "group": "業者さんの画面",
+  "title": "作業が終了を知らせる",
+  "desc": "修理が終わったことを、その場で送ります。",
+  "file": "videos/done-explainer.mp4"
+ },
+ {
+  "id": "visit",
+  "group": "業者さんの画面",
+  "title": "訪問日を連絡する",
+  "desc": "お客様に伺える日が決まったら、ここから送ります。",
+  "file": "videos/visit-explainer.mp4"
+ },
+ {
+  "id": "contact",
+  "group": "業者さんの画面",
+  "title": "担当者に連絡する",
+  "desc": "電話がつながらないときに、文字で用件を送ります。",
+  "file": "videos/contact-explainer.mp4"
+ },
+ {
+  "id": "history",
+  "group": "業者さんの画面",
+  "title": "送った履歴を見る",
+  "desc": "送ったものが届いているか、二度送っていないかを確かめます。",
+  "file": "videos/history-explainer.mp4"
+ },
+ {
+  "id": "inbox-bills",
+  "group": "おくの電化の画面",
+  "title": "届いたご請求を見る",
+  "desc": "業者さんから届いた金額を、この1画面で受けて確認します。",
+  "file": "videos/inbox-bills-explainer.mp4"
+ },
+ {
+  "id": "inbox-notes",
+  "group": "おくの電化の画面",
+  "title": "届いたご連絡を見る",
+  "desc": "作業完了・訪問日・ご連絡が、同じ画面に届きます。",
+  "file": "videos/inbox-notes-explainer.mp4"
+ },
+ {
+  "id": "inbox-waiting",
+  "group": "おくの電化の画面",
+  "title": "請求まちを見て催促する",
+  "desc": "作業は終わったのに金額がまだの案件を出し、まとめて催促します。",
+  "file": "videos/inbox-waiting-explainer.mp4"
+ },
+ {
+  "id": "notice",
+  "group": "おくの電化の画面",
+  "title": "依頼のお知らせを自動で送る",
+  "desc": "担当が決まった業者さんに、LINEでお知らせのカードを送ります。",
+  "file": "videos/notice-explainer.mp4"
+ },
+ {
+  "id": "dispatch-preview",
+  "group": "おくの電化の画面",
+  "title": "送る前に、業者さんに届くカードを見る",
+  "desc": "依頼を送るボタンの下で、実際に届くカードと、そのあとの流れが確かめられます。",
+  "file": "videos/dispatch-preview-explainer.mp4"
+ },
+ {
+  "id": "vendor-add",
+  "group": "おくの電化の画面",
+  "title": "新しい業者を登録する（表）",
+  "desc": "業者が増えたときに、業者マスタへ1行足します。",
+  "file": "videos/vendor-add-explainer.mp4"
+ },
+ {
+  "id": "vendor-line",
+  "group": "おくの電化の画面",
+  "title": "新しい業者を登録する（LINE）",
+  "desc": "友だち追加されたIDを、どの会社のものか選んで登録します。",
+  "file": "videos/vendor-line-explainer.mp4"
+ }
+];
+var GROUPS = [
+ {
+  "key": "業者さんの画面",
+  "title": "業者さん向け",
+  "desc": "LINEに届くカードと、メニューから使う9本"
+ },
+ {
+  "key": "おくの電化の画面",
+  "title": "おくの電化さん向け",
+  "desc": "届いたものを受けて、まわす画面と、業者の登録（7本）"
+ }
+];
+var cur = 0;
+var seen = {};
+try { seen = JSON.parse(localStorage.getItem('nitori-videos') || '{}'); } catch (e) { seen = {}; }
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function renderList(){
+  var h = '';
+  GROUPS.forEach(function(g){
+    h += '<div class="grp">' + esc(g.title) + '<span>' + esc(g.desc) + '</span></div><ul>';
+    VIDEOS.forEach(function(v, i){
+      if (v.group !== g.key) return;
+      h += '<li data-i="' + i + '" class="' + (i === cur ? 'on ' : '') + (seen[v.id] ? 'seen' : '') + '">'
+        + '<span class="dot"></span><span class="t">' + esc(v.title) + '</span>'
+        + '<span class="len" id="len-' + v.id + '"></span></li>';
+    });
+    h += '</ul>';
+  });
+  $('list').innerHTML = h;
+  Array.prototype.forEach.call(document.querySelectorAll('[data-i]'), function(el){
+    el.addEventListener('click', function(){ go(Number(el.getAttribute('data-i'))); });
+  });
+}
+
+function go(i){
+  cur = Math.max(0, Math.min(VIDEOS.length - 1, i));
+  var v = VIDEOS[cur];
+  $('crumb').textContent = (v.group === '業者さんの画面' ? '業者さん向け' : 'おくの電化さん向け')
+    + '　' + (cur + 1) + ' / ' + VIDEOS.length;
+  $('ttl').textContent = v.title;
+  $('desc').textContent = v.desc;
+  $('v').src = v.file;
+  $('prev').disabled = cur === 0;
+  $('next').disabled = cur === VIDEOS.length - 1;
+  seen[v.id] = 1;
+  try { localStorage.setItem('nitori-videos', JSON.stringify(seen)); } catch (e) {}
+  location.hash = v.id;
+  renderList();
+}
+
+$('prev').addEventListener('click', function(){ go(cur - 1); });
+$('next').addEventListener('click', function(){ go(cur + 1); });
+$('v').addEventListener('ended', function(){ if (cur < VIDEOS.length - 1) go(cur + 1); });
+document.addEventListener('keydown', function(e){
+  if (e.key === 'ArrowLeft') go(cur - 1);
+  if (e.key === 'ArrowRight') go(cur + 1);
+});
+
+// 尺をよみこんで、左にだす
+VIDEOS.forEach(function(v){
+  var t = document.createElement('video');
+  t.preload = 'metadata';
+  t.src = v.file;
+  t.addEventListener('loadedmetadata', function(){
+    var s = Math.round(t.duration);
+    var el = document.getElementById('len-' + v.id);
+    if (el) el.textContent = Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+  });
+});
+
+var h = location.hash.replace('#', '');
+var start = 0;
+VIDEOS.forEach(function(v, i){ if (v.id === h) start = i; });
+go(start);
+</script>
+</body>
+</html>
