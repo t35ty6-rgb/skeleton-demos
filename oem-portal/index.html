@@ -196,17 +196,37 @@
       const { url, updatedAt } = await res.json();
       if (!url) throw new Error('URL 未登録');
 
-      // タブを開きっぱなし で 41日 経った状態 (2026-08-25 事故) の 再発防止:
-      // updatedAt が 24h 超 古い場合、 tab の JS state 自体 が stale の 疑い → hard reload で 全 asset 取り直す
-      if (updatedAt && (Date.now() - new Date(updatedAt).getTime()) > 24 * 60 * 60 * 1000) {
-        console.warn('[boot] updatedAt >24h old, forcing hard reload');
-        window.location.href = location.pathname + '?v=' + Date.now();
+      // タブを開きっぱなし で 41日 経った状態 (2026-08-25 事故) の 再発防止。
+      //
+      // 2026-09-11 修正 (無限リロード 事故):
+      //   旧実装 は updatedAt (= tunnel URL が rotate した 時刻) を 判定軸 に していたが、
+      //   updatedAt は notify-tunnel-url.js が URL 変更 時 に しか 更新 しない。
+      //   つまり tunnel が 24h 以上 安定 稼働 している だけ で 条件 が 成立 し、
+      //   reload -> 同じ json を 再取得 -> また reload の 無限ループ に なっていた。
+      //   (安定稼働している ほど ページ が 開けなく なる という 逆転 バグ)
+      //
+      //   本来 見るべき は 「この document が 何時間 開きっぱなし か」 なので performance.timeOrigin で 判定。
+      //   加えて sessionStorage で 1回きり に 制限 し、 ループ を 構造的 に 不可能 に する。
+      const RELOAD_KEY = 'oemPortalHardReloadedAt';
+      let alreadyReloaded = true;
+      try { alreadyReloaded = !!sessionStorage.getItem(RELOAD_KEY); } catch {}
+      const docAgeMs = Date.now() - (performance.timeOrigin || Date.now());
+      if (docAgeMs > 6 * 60 * 60 * 1000 && !alreadyReloaded) {
+        try { sessionStorage.setItem(RELOAD_KEY, String(Date.now())); } catch {}
+        console.warn('[boot] document open >6h, forcing one-time hard reload');
+        window.location.replace(location.pathname + '?v=' + Date.now());
         return;
       }
 
       updatedAtEl.textContent = updatedAt
         ? `${new Date(updatedAt).toLocaleString('ja-JP')} · ${relativeTime(updatedAt)}`
         : '—';
+
+      // updatedAt が 古い の は 「tunnel URL が ずっと 変わっていない」 だけ で 障害 とは 限らない。
+      // 成否 は 下の 死活 チェック で 決め、 ここ では 注意書き に 留める。
+      const staleNote = (updatedAt && (Date.now() - new Date(updatedAt).getTime()) > 24 * 60 * 60 * 1000)
+        ? ` ※ tunnel URL は ${relativeTime(updatedAt)} から 変わっていません (安定稼働中 なら 正常)。`
+        : '';
       urlBox.textContent = url;
       urlBox.style.display = 'block';
 
@@ -235,6 +255,7 @@
             setTimeout(() => copyBtn.textContent = 'URL を コピー', 1500);
           } catch { alert('コピー失敗: ' + target); }
         };
+        hintEl.textContent = staleNote;
       } else {
         statusEl.classList.add('err');
         statusText.textContent = 'Portal に 接続できません';
@@ -244,7 +265,7 @@
         retryBtn.style.display = 'block';
         retryBtn.textContent = '再読み込み (自動 30秒後)';
         retryBtn.onclick = () => boot();
-        hintEl.textContent = 'Mac 再起動 直後 は URL 更新 が GitHub Pages に 反映 されるまで 最大 10分 かかります。 30秒後 に 自動 再試行 します。';
+        hintEl.textContent = 'Mac 再起動 直後 は URL 更新 が 反映 されるまで 最大 10分 かかります。 30秒後 に 自動 再試行 します。' + staleNote;
         retryTimer = setTimeout(() => boot(), 30000);
       }
     } catch (e) {
