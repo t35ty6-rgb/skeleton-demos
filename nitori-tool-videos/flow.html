@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>全体の流れ ─ ニトリ修理受付の自動化</title>
+<style>
+:root{
+  --ink:#1B1613; --ink2:#4E5964; --line:#E5DCD4; --bg:#FBF7F4; --card:#fff;
+  --o:#C4440A; --o-soft:#FCEFE7; --green:#1F6F4A; --green-soft:#E6F2EC;
+  --blue:#1F4E79; --blue-soft:#E8EFF6; --gray:#8C8279;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.75 -apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 90px}
+
+header{background:linear-gradient(180deg,#C4440A,#A63A08);color:#fff;padding:34px 0 30px;margin-bottom:26px}
+header .wrap{padding-bottom:0}
+header .kicker{font-size:13px;letter-spacing:.14em;color:#FFD9C4;font-weight:700;margin-bottom:6px}
+header h1{margin:0 0 10px;font-size:31px;font-weight:800;letter-spacing:.01em}
+header p{margin:0;color:#FFE7D8;font-size:15.5px;max-width:760px}
+
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 30px}
+.lg{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
+  border-radius:999px;padding:7px 15px;font-size:13.5px;font-weight:700;color:var(--ink2)}
+.dot{width:11px;height:11px;border-radius:50%}
+.dot.g{background:var(--green)} .dot.o{background:var(--o)} .dot.b{background:var(--blue)}
+.dot.h{background:#B0201C}
+
+.lanes{display:grid;grid-template-columns:112px 1fr 1fr 1fr;gap:0 16px;
+  position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0 9px;
+  border-bottom:2px solid var(--line);margin-bottom:6px}
+.lanes div{font-size:13.5px;font-weight:800;letter-spacing:.02em;text-align:center;color:var(--ink2)}
+.lanes .l1{color:var(--green)} .lanes .l2{color:var(--o)} .lanes .l3{color:var(--blue)}
+.lanes .t{text-align:left;color:var(--gray)}
+
+.row{display:grid;grid-template-columns:112px 1fr 1fr 1fr;gap:0 16px;align-items:start;
+  position:relative;padding:11px 0}
+.row::before{content:"";position:absolute;left:55px;top:0;bottom:0;width:2px;background:var(--line)}
+.when{position:relative;z-index:2;text-align:left;padding-top:14px}
+.when b{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:7px;
+  padding:3px 9px;font-size:12px;font-weight:800;color:var(--ink2);white-space:nowrap}
+.when b.auto{background:#EFEAE5;border-color:#DED5CD;color:#6B625B}
+.when i{display:block;font-style:normal;font-size:11.5px;color:var(--gray);margin-top:5px;padding-left:2px}
+
+.cell{min-height:1px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;
+  box-shadow:0 1px 0 rgba(27,22,19,.03)}
+.card h3{margin:0 0 7px;font-size:16.5px;font-weight:800;line-height:1.5}
+.card p{margin:0;font-size:14px;line-height:1.72;color:var(--ink2)}
+.card p + p{margin-top:7px}
+.card ul{margin:8px 0 0;padding-left:1.15em;font-size:13.5px;color:var(--ink2);line-height:1.7}
+.card li{margin-bottom:3px}
+.card.g{border-left:5px solid var(--green)}
+.card.o{border-left:5px solid var(--o)}
+.card.b{border-left:5px solid var(--blue);background:var(--blue-soft)}
+.card.b h3{color:var(--blue)}
+.card.hand{border-left:5px solid #B0201C;background:#FFF7F5}
+
+.tag{display:inline-block;font-size:11.5px;font-weight:800;padding:2px 9px;border-radius:999px;
+  margin:0 0 8px;letter-spacing:.02em}
+.tag.g{background:var(--green-soft);color:var(--green)}
+.tag.o{background:var(--o-soft);color:var(--o)}
+.tag.b{background:#D9E5F1;color:var(--blue)}
+.tag.hand{background:#FBE3DF;color:#B0201C}
+
+.field{display:inline-block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12.5px;background:#fff;border:1px solid #C9D6E4;border-radius:5px;
+  padding:1px 7px;margin:3px 5px 0 0;color:var(--blue)}
+
+.arrow{position:relative}
+.arrow::after{content:"";position:absolute;top:26px;left:-14px;width:12px;height:2px;background:#C9BFB6}
+.arrow::before{content:"";position:absolute;top:22px;left:-7px;border:5px solid transparent;
+  border-left-color:#C9BFB6}
+
+h2.sec{margin:42px 0 4px;font-size:20px;font-weight:800;letter-spacing:.01em}
+p.secsub{margin:0 0 4px;color:var(--ink2);font-size:14.5px}
+
+.note{background:#FFF9E8;border:1px solid #EFDFA8;border-radius:12px;padding:17px 20px;margin:30px 0 0}
+.note h3{margin:0 0 7px;font-size:16px;font-weight:800;color:#7A5B00}
+.note p{margin:0;font-size:14.5px;color:#6B5412;line-height:1.75}
+.note p + p{margin-top:7px}
+
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+.sum div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.sum h4{margin:0 0 6px;font-size:14.5px;font-weight:800}
+.sum p{margin:0;font-size:13.5px;color:var(--ink2);line-height:1.7}
+.sum .n{font-size:13px;color:var(--gray);margin-top:6px}
+
+footer{margin-top:44px;padding-top:20px;border-top:1px solid var(--line);
+  font-size:13px;color:var(--gray)}
+
+@media (max-width:900px){
+  .lanes{display:none}
+  .row{grid-template-columns:1fr;gap:0;padding:8px 0}
+  .row::before{left:9px}
+  .when{padding:0 0 8px 26px}
+  .when i{display:inline;margin-left:8px}
+  .cell{padding-left:26px}
+  .cell:empty{display:none}
+  .arrow::after,.arrow::before{display:none}
+  .sum{grid-template-columns:1fr}
+}
+@media print{
+  body{background:#fff} header{background:#C4440A !important;-webkit-print-color-adjust:exact}
+  .lanes{position:static} .row{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="kicker">ニトリ修理受付 自動化ツール</div>
+    <h1>全体の流れ ─ 誰が何をすると、どこに何が入るか</h1>
+    <p>1件の修理が、受付から支払いまでどう進むかを時間の順に並べました。
+       業者さんが押したことが、このツールでどう動いて、kintone のどの欄に入るかまで書いてあります。</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="legend">
+  <span class="lg"><span class="dot g"></span>業者さん（LINE）</span>
+  <span class="lg"><span class="dot o"></span>このツール（自動）</span>
+  <span class="lg"><span class="dot h"></span>人が押すところ</span>
+  <span class="lg"><span class="dot b"></span>kintone に書かれる</span>
+</div>
+
+<div class="lanes">
+  <div class="t">いつ</div>
+  <div class="l1">業者さん</div>
+  <div class="l2">このツール（おくの電化さん）</div>
+  <div class="l3">kintone（ニトリの台帳）</div>
+</div>
+
+<!-- 0 -->
+<div class="row">
+  <div class="when"><b class="auto">毎朝 8:00</b><i>自動</i></div>
+  <div class="cell"></div>
+  <div class="cell">
+    <div class="card o"><span class="tag o">取り込み</span>
+      <h3>kintone から受付を読み込む</h3>
+      <p>修理受付管理（アプリ14）の全件を読んで、シートとダッシュボードに反映します。
+         8:15 には「未手配」「滞留」をLINEでお知らせします。</p>
+    </div>
+  </div>
+  <div class="cell"><div class="card b arrow"><span class="tag b">読むだけ</span>
+    <h3>変更なし</h3><p>この時点では kintone に書き込みません。</p></div></div>
+</div>
+
+<!-- 1 -->
+<div class="row">
+  <div class="when"><b class="auto">15分ごと</b><i>自動／手でも可</i></div>
+  <div class="cell"></div>
+  <div class="cell">
+    <div class="card o"><span class="tag o">依頼を出す</span>
+      <h3>業者を決めて、LINEで依頼カードを送る</h3>
+      <p>担当エリア表と過去の実績から業者を決め、その会社のLINEに「修理のご依頼」を送ります。
+         エリア表がOFFのところは、アプリの「業者を決める」から人が送ります。</p>
+      <ul>
+        <li>カードに出るのは 場所・品物・受付日・ご希望 だけ</li>
+        <li>お客様の氏名・ご住所・お電話番号は出しません</li>
+      </ul>
+    </div>
+  </div>
+  <div class="cell"></div>
+</div>
+
+<!-- 2 -->
+<div class="row">
+  <div class="when"><b>業者さんが押す</b><i>1分以内に届く</i></div>
+  <div class="cell">
+    <div class="card g"><span class="tag g">押す</span>
+      <h3>「受けます」</h3>
+      <p>難しいときは「今回は難しい」。そのときは別の業者に出しなおします。</p>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="card o arrow"><span class="tag o">受け取る</span>
+      <h3>受注を記録して、次のカードを送る</h3>
+      <p>1分ごとに返事を拾います。受注を記録して、そのまま
+         「伺える日を教えてください」を自動で送ります。</p>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="card b arrow"><span class="tag b">書き込み</span>
+      <h3>担当業者が入る</h3>
+      <span class="field">修理訪問業者</span>
+    </div>
+  </div>
+</div>
+
+<!-- 3 -->
+<div class="row">
+  <div class="when"><b>業者さんが押す</b></div>
+  <div class="cell">
+    <div class="card g"><span class="tag g">選ぶ</span>
+      <h3>カレンダーで日にちを選ぶ</h3>
+      <p>「日を選ぶ」を押すとカレンダーが出ます。決まらなければ、あとで送りなおせます。</p>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="card o arrow"><span class="tag o">次を送る</span>
+      <h3>「何時ごろ伺えますか」を送る</h3>
+      <p>よく使う時間はボタン一つ。ほかの時間も選べます。</p>
+    </div>
+  </div>
+  <div class="cell"></div>
+</div>
+
+<!-- 4 -->
+<div class="row">
+  <div class="when"><b>業者さんが押す</b></div>
+  <div class="cell">
+    <div class="card g"><span class="tag g">選ぶ</span>
+      <h3>時間を選ぶ</h3>
+      <p>ここで選ぶのは「お客様との約束の時刻」です。</p>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="card o arrow"><span class="tag o">返す</span>
+      <h3>「訪問のご予定」を返す</h3>
+      <p>約束の時刻と、余白を分けて返します。どこが余白かがひと目で分かります。</p>
+      <ul>
+        <li>お客様との約束　14:00</li>
+        <li>現地入りの目安　13:45（準備 15分）</li>
+        <li>ご案内の幅　13:45〜14:15（前後 15分）</li>
+      </ul>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="card b arrow"><span class="tag b">書き込み</span>
+      <h3>訪問の日時が入る</h3>
+      <span class="field">修理訪問予定日</span>
+      <span class="field">修理訪問予定日時間</span>
+    </div>
+  </div>
+</div>
+
+<!-- 5 -->
+<div class="row">
+  <div class="when"><b class="auto">訪問日 18:00</b><i>自動</i></div>
+  <div class="cell"></div>
+  <div class="cell">
+    <div class="card o"><span class="tag o">声をかける</span>
+      <h3>「本日の作業はいかがでしたか」を送る</h3>
+      <p>訪問予定日が今日の案件だけに送ります。同じ日に二度は送りません。</p>
+    </div>
+  </div>
+  <div class="cell"></div>
+</div>
+
+<!-- 6 -->
+<div class="row">
+  <div class="when"><b>業者さんが押す</b></div>
+  <div class="cell">
+    <div class="card g"><span class="tag g">押す</span>
+      <h3>「終わりました」</h3>
+      <p>まだのときは「まだです」。日にちから選びなおせます。</p>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="card o arrow"><span class="tag o">請求へ</span>
+      <h3>その案件だけの請求フォームを送る</h3>
+      <p>「ご請求をお願いします」と、この修理1件のためのURLを送ります。
+         一度使うと閉じるので、使い回しはできません。</p>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="card b arrow"><span class="tag b">書き込み</span>
+      <h3>作業した日が入る</h3>
+      <span class="field">作業実施日</span>
+    </div>
+  </div>
+</div>
+
+<!-- 7 -->
+<div class="row">
+  <div class="when"><b>業者さんが入れる</b></div>
+  <div class="cell">
+    <div class="card g"><span class="tag g">入れる</span>
+      <h3>請求フォームに入れて送る</h3>
+      <ul>
+        <li>走った距離（片道）→ 出張費は料金表から自動</li>
+        <li>工賃・部品代・高速代・駐車場代</li>
+        <li>作業した日・作業の内容・交換した部品</li>
+      </ul>
+      <p>合計はその場で出ます。電卓は要りません。</p>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="card o arrow"><span class="tag o">受け取る</span>
+      <h3>受け取って、両方に知らせる</h3>
+      <p>シートに1行ためて、業者さんには受付のお返事、
+         おくの電化さんには「ご請求が届きました」をLINEで送ります。</p>
+      <p>この時点ではまだ kintone に書きません。</p>
+    </div>
+  </div>
+  <div class="cell"></div>
+</div>
+
+<!-- 8 -->
+<div class="row">
+  <div class="when"><b>おくの電化さんが押す</b><i>人が確かめる</i></div>
+  <div class="cell"></div>
+  <div class="cell">
+    <div class="card hand"><span class="tag hand">人が押す</span>
+      <h3>「届いた請求」で中身を見て、確認済にする</h3>
+      <p>アプリの「届いたもの」に、金額・作業内容・距離が出ます。
+         おかしいところがなければ「確認済にする」を押します。
+         <b>ここで初めて kintone に書きます。</b></p>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="card b arrow"><span class="tag b">書き込み</span>
+      <h3>金額と部品が入る</h3>
+      <span class="field">技術点検費_ニトリ請求額</span>
+      <span class="field">出張費_ニトリ請求額</span>
+      <span class="field">高速代_ニトリ請求額</span>
+      <span class="field">駐車場代_ニトリ請求額</span>
+      <span class="field">部品代_ニトリ請求額</span>
+      <span class="field">作業実施日</span>
+      <span class="field">交換部品テーブル</span>
+    </div>
+  </div>
+</div>
+
+<!-- 9 -->
+<div class="row">
+  <div class="when"><b class="auto">毎月1日 9:00</b><i>自動</i></div>
+  <div class="cell"></div>
+  <div class="cell">
+    <div class="card o"><span class="tag o">締める</span>
+      <h3>先月ぶんの支払いをまとめる</h3>
+      <p>業者ごとに、先月ぶんを掛け率で計算して一覧にします。</p>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="card b arrow"><span class="tag b">読むだけ</span>
+      <h3>変更なし</h3><p>集計に使うだけです。</p></div>
+  </div>
+</div>
+
+<h2 class="sec">まとめると</h2>
+<p class="secsub">人が手を動かすのは2か所だけです。</p>
+<div class="sum">
+  <div>
+    <h4>業者さんがすること</h4>
+    <p>届いたカードを押していくだけ。日にちと時間を選んで、終わったら押して、金額を入れる。</p>
+    <p class="n">文字を打つのは、作業の内容と金額だけ</p>
+  </div>
+  <div>
+    <h4>おくの電化さんがすること</h4>
+    <p>エリア表がOFFの案件の「送る」と、届いた請求の「確認済にする」。この2つだけ。</p>
+    <p class="n">あとは自動で動きます</p>
+  </div>
+  <div>
+    <h4>kintone に入るもの</h4>
+    <p>訪問業者 → 訪問予定日と時間 → 作業実施日 → 金額と交換部品。
+       順番に、そのつど入っていきます。</p>
+    <p class="n">書き込みは全部 _書込ログ に残ります</p>
+  </div>
+</div>
+
+<div class="note">
+  <h3>いまはお試しモード（DRY_RUN）です</h3>
+  <p>上の図で <b>kintone に書かれる</b> と書いてあるところだけが、いまは止まっています。
+     書こうとした内容は <b>_書込ログ</b> シートに1行ずつ残るので、
+     「本番にしたら何が入るか」を先に確かめられます。</p>
+  <p>LINEのカードのやりとり・請求フォーム・届いたものの画面・催促・履歴は、
+     お試しモードでもすべて本物どおりに動きます。本番にするときは、アプリの設定画面で切り替えます。</p>
+</div>
+
+<div class="note" style="background:#F2F7FF;border-color:#C6D8EE">
+  <h3 style="color:#1F4E79">まちがいが起きないようにしてあること</h3>
+  <p style="color:#33506E">・お客様の氏名・ご住所・お電話番号は、業者さんに送るカードに一切入れていません。<br>
+     ・請求フォームのURLは修理1件ごと。一度使うと閉じます。<br>
+     ・kintone に書くのは、人が「確認済にする」を押したときだけ。自動では書きません。<br>
+     ・同じ案件に同じお知らせを二度送らないように、送った記録を見てから送ります。</p>
+</div>
+
+<footer>
+  ニトリ修理受付 自動化ツール ／ 社外秘・取り扱い注意 ／ 2026-09-18 時点
+</footer>
+
+</div>
+</body>
+</html>
