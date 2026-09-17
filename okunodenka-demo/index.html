@@ -1,0 +1,116 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>見積メーカー 提案デモ — おくの電化さま</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0c11;--surf:#151821;--surf2:#1b1f2b;--line:#252a37;--ink:#e8ebf2;--ink2:#9aa3b5;--ink3:#6b7488;--acc:#10b981;--pri:#3b82f6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.7 Inter,"Noto Sans JP",system-ui,sans-serif;display:flex;min-height:100vh}
+.sb{width:320px;flex:0 0 320px;border-right:1px solid var(--line);background:var(--surf);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow:auto}
+.sb-h{padding:20px 18px 14px;border-bottom:1px solid var(--line)}
+.sb-h h1{margin:0 0 4px;font-size:15px;font-weight:700;letter-spacing:.01em}
+.sb-h p{margin:0;font-size:11px;color:var(--ink3);font-family:Inter}
+.prog{margin-top:12px;font-size:11px;color:var(--ink2);font-family:Inter}
+.sb-tier{padding:16px 18px 8px}
+.sb-tier .lbl{font-size:10px;letter-spacing:.14em;color:var(--acc);font-weight:600;font-family:Inter;text-transform:uppercase}
+.sb-tier .ttl{font-size:13px;font-weight:700;margin-top:3px}
+.sb-tier .dsc{font-size:11px;color:var(--ink3);margin-top:3px;line-height:1.6}
+.item{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink2);padding:11px 18px;cursor:pointer;border-left:3px solid transparent;font:inherit;display:flex;gap:9px;align-items:flex-start}
+.item:hover{background:var(--surf2);color:var(--ink)}
+.item[aria-current=true]{background:var(--surf2);color:var(--ink);border-left-color:var(--acc)}
+.item .dot{width:7px;height:7px;border-radius:50%;background:var(--line);margin-top:8px;flex:0 0 7px}
+.item.seen .dot{background:var(--acc)}
+.item .tx{flex:1;min-width:0}
+.item .t{font-size:12.5px;font-weight:500;line-height:1.5}
+.item .c{font-size:10px;color:var(--ink3);font-family:Inter;margin-top:2px}
+.sb-f{margin-top:auto;padding:16px 18px;border-top:1px solid var(--line);font-size:10px;color:var(--ink3);font-family:Inter;line-height:1.7}
+.main{flex:1;min-width:0;padding:26px 30px 40px}
+.wrap{max-width:1400px;margin:0 auto}
+.crumb{font-size:11px;color:var(--ink3);font-family:Inter;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.crumb .badge{background:rgba(16,185,129,.13);color:var(--acc);padding:2px 8px;border-radius:999px;font-weight:600;font-size:10px;letter-spacing:.06em}
+h2{margin:9px 0 5px;font-size:20px;font-weight:700;letter-spacing:.01em}
+.desc{margin:0 0 16px;color:var(--ink2);font-size:13px;max-width:78ch}
+.player{background:#000;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+video{display:block;width:100%;max-height:calc(100vh - 290px);background:#000}
+.nav{display:flex;gap:10px;margin-top:16px;align-items:center}
+.btn{background:var(--surf);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:9px 16px;font:inherit;font-size:12.5px;cursor:pointer}
+.btn:hover:not(:disabled){background:var(--surf2);border-color:#333a4c}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.p{background:var(--pri);border-color:var(--pri);font-weight:600}
+.spacer{flex:1}
+.note{margin-top:18px;padding:13px 15px;background:var(--surf);border:1px solid var(--line);border-left:3px solid var(--pri);border-radius:9px;font-size:12px;color:var(--ink2);line-height:1.8}
+.note b{color:var(--ink);font-weight:600}
+.mtb{display:none}
+@media(max-width:900px){
+ body{flex-direction:column}
+ .sb{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);transition:transform .25s;z-index:20;width:300px;flex-basis:auto}
+ .sb.open{transform:none}
+ .mtb{display:flex;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--surf);position:sticky;top:0;z-index:10}
+ .main{padding:18px 16px 32px}
+ video{max-height:none}
+ .scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:15;display:none}
+ .scrim.on{display:block}
+}
+</style></head><body>
+<aside class="sb" id="sb">
+  <div class="sb-h">
+    <h1>見積メーカー 提案デモ</h1>
+    <p>有限会社 おくの電化 さま / スケルトン株式会社</p>
+    <div class="prog" id="prog"></div>
+  </div>
+  <div class="sb-tier">
+    <div class="lbl">Demo</div>
+    <div class="ttl">つくる・おくる・のこる</div>
+    <div class="dsc">実際の画面をそのまま録画したものです。3本で3分46秒。</div>
+  </div>
+  <div id="list"></div>
+  <div class="sb-f">← → キーで前後に移動<br>https://okunodenka.skeleton-inc.jp</div>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <div class="mtb"><button class="btn" id="mbtn">≡ 一覧</button><b style="font-size:13px">見積メーカー 提案デモ</b></div>
+  <div class="wrap">
+    <div class="crumb"><span class="badge" id="cbadge">DEMO</span><span id="cnum"></span></div>
+    <h2 id="ctitle"></h2>
+    <p class="desc" id="cdesc"></p>
+    <div class="player"><video id="vid" controls playsinline preload="metadata"></video></div>
+    <div class="nav">
+      <button class="btn" id="prev">← 前</button>
+      <span class="spacer"></span>
+      <button class="btn p" id="next">次 →</button>
+    </div>
+    <div class="note" id="note"></div>
+  </div>
+</main>
+<script>
+const V=[{"id":"mitsumori-tsukuru","title":"つくる — 現場で3分、A4 1枚の見積書","desc":"工事の種類を選び、機種と数量を入れるだけで、A4 1枚の見積書ができるまで。","file":"mitsumori-tsukuru-explainer.mp4","dur":87.16},{"id":"mitsumori-okuru","title":"おくる — その場でPDFを添付して送信","desc":"作った見積書を、ボタン1つでPDF添付メールとして送るまで。","file":"mitsumori-okuru-explainer.mp4","dur":61.4},{"id":"mitsumori-nokoru","title":"のこる — 顧客・履歴・下書き・端末共有","desc":"送った見積が自動でたまり、途中でやめた入力も残り、別の端末でも同じ状態になるところ。","file":"mitsumori-nokoru-explainer.mp4","dur":77.96}];
+const NOTE="この3本は<b>音声なし</b>です。提案の場ではご自身で説明を足してください。ナレーション台本は別ファイルでお渡ししています。";
+const mmss=s=>Math.floor(s/60)+":"+String(Math.round(s%60)).padStart(2,"0");
+const el=id=>document.getElementById(id);
+let i=0; const seen=new Set(JSON.parse(localStorage.getItem("mm_seen")||"[]"));
+function list(){
+  el("list").innerHTML=V.map((v,n)=>'<button class="item'+(seen.has(v.id)?" seen":"")+'" aria-current="'+(n===i)+'" data-i="'+n+'"><span class="dot"></span><span class="tx"><span class="t">'+v.title+'</span><span class="c">'+mmss(v.dur)+'</span></span></button>').join("");
+  el("prog").textContent="視聴 "+seen.size+" / "+V.length;
+}
+function show(n,autoplay){
+  i=Math.max(0,Math.min(V.length-1,n)); const v=V[i];
+  el("cnum").textContent=(i+1)+" / "+V.length+" ・ "+mmss(v.dur);
+  el("ctitle").textContent=v.title; el("cdesc").textContent=v.desc;
+  el("note").innerHTML=NOTE;
+  const vid=el("vid"); vid.src=v.file; if(autoplay) vid.play().catch(()=>{});
+  el("prev").disabled=i===0; el("next").disabled=i===V.length-1;
+  location.hash=v.id; localStorage.setItem("mm_last",v.id);
+  seen.add(v.id); localStorage.setItem("mm_seen",JSON.stringify([...seen])); list();
+}
+el("list").addEventListener("click",e=>{const b=e.target.closest("[data-i]"); if(b){show(+b.dataset.i,true); el("sb").classList.remove("open"); el("scrim").classList.remove("on");}});
+el("prev").addEventListener("click",()=>show(i-1,true));
+el("next").addEventListener("click",()=>show(i+1,true));
+el("vid").addEventListener("ended",()=>{ if(i<V.length-1) show(i+1,true); });
+document.addEventListener("keydown",e=>{ if(e.key==="ArrowRight")show(i+1,true); if(e.key==="ArrowLeft")show(i-1,true); });
+el("mbtn").addEventListener("click",()=>{el("sb").classList.add("open");el("scrim").classList.add("on")});
+el("scrim").addEventListener("click",()=>{el("sb").classList.remove("open");el("scrim").classList.remove("on")});
+const want=location.hash.slice(1)||localStorage.getItem("mm_last")||"";
+const idx=V.findIndex(v=>v.id===want);
+list(); show(idx>=0?idx:0,false);
+</script></body></html>
