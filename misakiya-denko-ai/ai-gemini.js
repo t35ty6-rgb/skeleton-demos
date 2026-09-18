@@ -7,7 +7,63 @@ const CF_BASE = 'https://us-central1-skeleton-femoon-saas.cloudfunctions.net';
 const CF_GEN  = CF_BASE + '/misakiyaGenerateStepsFromVideo';
 const CF_URL  = CF_BASE + '/misakiyaGetUploadUrl';
 
+const CF_SESSION = CF_BASE + '/misakiyaStartSession';
+
 const MAX_UPLOAD_BYTES = 500 * 1024 * 1024;
+
+// ────────────────────────────────────────────────────────────────
+// 🔒 2026-09-18 — uid を サーバ発行 の 署名トークン に する
+//   これまで uid は localStorage の 自作 文字列 を そのまま ヘッダ で 送って
+//   いた だけ な ので、 他人 の uid を 名乗れば admin に なれた。
+//   サーバ が 発行 した トークン を Authorization: Bearer で 添える。
+// ────────────────────────────────────────────────────────────────
+const MIS_TOKEN_KEY = 'misakiya-token';
+let _misTokenInFlight = null;
+
+async function misNewToken() {
+  const r = await fetch(CF_SESSION, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.token) throw new Error(j.error || `session ${r.status}`);
+  try { localStorage.setItem(MIS_TOKEN_KEY, j.token); } catch (e) {}
+  return j.token;
+}
+
+async function misToken(forceNew) {
+  if (!forceNew) {
+    let t = null;
+    try { t = localStorage.getItem(MIS_TOKEN_KEY); } catch (e) {}
+    if (t) return t;
+  }
+  if (!_misTokenInFlight) {
+    _misTokenInFlight = misNewToken().finally(() => { _misTokenInFlight = null; });
+  }
+  return _misTokenInFlight;
+}
+
+// 認証付き POST。 401 なら トークン を 取り直して 一度だけ 再試行。
+async function cfPost(url, body, extraHeaders) {
+  const call = (tok) => fetch(url, {
+    method: 'POST',
+    headers: Object.assign(
+      { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+      extraHeaders || {}
+    ),
+    body: JSON.stringify(body || {}),
+  });
+  let r = await call(await misToken(false));
+  if (r.status === 401) r = await call(await misToken(true));
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const e = new Error(j.error || `HTTP ${r.status}`);
+    e.status = r.status; e.detail = j.message || j.detail || '';
+    throw e;
+  }
+  return j;
+}
 
 /**
  * YouTube URL or gs:// URI から Gemini 手順生成
@@ -15,16 +71,7 @@ const MAX_UPLOAD_BYTES = 500 * 1024 * 1024;
 async function generateStepsFromVideo(videoUrl, hint = '') {
   if (!videoUrl) throw new Error('videoUrl required');
   const t0 = Date.now();
-  const resp = await fetch(CF_GEN, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ videoUrl, hint }),
-  });
-  if (!resp.ok) {
-    const errTxt = await resp.text().catch(() => '');
-    throw new Error(`CF ${resp.status}: ${errTxt.slice(0, 200)}`);
-  }
-  const data = await resp.json();
+  const data = await cfPost(CF_GEN, { videoUrl, hint });
   if (data.error) throw new Error(data.error + (data.detail ? ': ' + data.detail : ''));
   console.log(`[misakiya-gemini] ${data?.steps?.length || 0} steps in ${((Date.now()-t0)/1000).toFixed(1)}s (${data._meta?.model})`);
   return data;
@@ -42,13 +89,9 @@ async function uploadVideoToGcs(file, onProgress = () => {}) {
   if (file.size > MAX_UPLOAD_BYTES) throw new Error(`ファイル サイズ 上限 ${Math.round(MAX_UPLOAD_BYTES/1024/1024)}MB を超えています (${Math.round(file.size/1024/1024)}MB)`);
 
   // 1) Get signed upload URL from CF
-  const urlResp = await fetch(CF_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filename: file.name, contentType: file.type, size: file.size }),
+  const { uploadUrl, gsUri } = await cfPost(CF_URL, {
+    filename: file.name, contentType: file.type, size: file.size,
   });
-  if (!urlResp.ok) throw new Error(`upload URL取得失敗 (${urlResp.status})`);
-  const { uploadUrl, gsUri } = await urlResp.json();
   if (!uploadUrl || !gsUri) throw new Error('CF returned invalid upload URL');
 
   // 2) PUT to signed URL with progress
@@ -114,10 +157,7 @@ function getTenantId() {
 }
 
 async function apiPost(url, body) {
-  const r = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
-  return j;
+  return cfPost(url, body, { 'x-misakiya-uid': getUid() });
 }
 
 async function saveWork(work) {
@@ -159,14 +199,7 @@ function getUid() {
   return uid;
 }
 async function apiPostUid(url, body) {
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-misakiya-uid': getUid() },
-    body: JSON.stringify(body),
-  });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
-  return j;
+  return cfPost(url, body, { 'x-misakiya-uid': getUid() });
 }
 async function getTenantConfig() { return apiPostUid(CF_TCFG_GET, { tenantId: getTenantId() }); }
 async function setTenantConfig(patch) { return apiPostUid(CF_TCFG_SET, { tenantId: getTenantId(), patch }); }
@@ -176,4 +209,6 @@ async function createCheckout(plan) { return apiPostUid(CF_CHECKOUT, { tenantId:
 
 Object.assign(window.MisakiyaStore, {
   getUid, getTenantConfig, setTenantConfig, listAudits, submitSupport, createCheckout,
+  ensureSession: () => misToken(false),
+  resetSession: () => misToken(true),
 });
