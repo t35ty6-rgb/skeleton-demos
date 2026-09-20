@@ -1,0 +1,12 @@
+(()=>{const send=document.getElementById('dmSend'),reset=document.getElementById('dmReset'),res=document.getElementById('dmResult');if(!send)return;
+const phones=[...document.querySelectorAll('.dm-phone')],slots={13:document.querySelector('[data-slot="13"]'),15:document.querySelector('[data-slot="15"]')};
+const msg='【空き枠のお知らせ】10/25(金) 13:00・15:00 にお席をご用意できます。';
+let timers=[];const T=(f,ms)=>timers.push(setTimeout(f,ms));
+send.addEventListener('click',()=>{if(send.disabled)return;send.disabled=true;send.classList.add('sent');send.textContent='送信しました';document.getElementById('demo').classList.add('run');
+phones.forEach((p,i)=>T(()=>{const c=p.querySelector('.ph-chat');c.innerHTML='';const b=document.createElement('div');b.className='bub';b.textContent=msg;const k=document.createElement('span');k.className='bk-btn';k.textContent='予約する';b.appendChild(k);c.appendChild(b);p.classList.add('got');},600+i*450));
+T(()=>{phones[0].classList.add('tapped');phones[0].querySelector('.ph-chat').insertAdjacentHTML('beforeend','<div class="me">13:00で予約しました</div>');slots[13].className='new';slots[13].innerHTML='13:00<small>山田様</small>';},2700);
+T(()=>{phones[2].classList.add('tapped');phones[2].querySelector('.ph-chat').insertAdjacentHTML('beforeend','<div class="me">15:00で予約しました</div>');slots[15].className='new';slots[15].innerHTML='15:00<small>小林様</small>';},3700);
+T(()=>res.classList.add('on'),4400);});
+reset.addEventListener('click',()=>{timers.forEach(clearTimeout);timers=[];send.disabled=false;send.classList.remove('sent');send.textContent='3名にLINEで送る';res.classList.remove('on');document.getElementById('demo').classList.remove('run');
+phones.forEach(p=>{p.classList.remove('got','tapped');p.querySelector('.ph-chat').innerHTML='';});
+slots[13].className='free';slots[13].innerHTML='13:00<small>空き</small>';slots[15].className='free';slots[15].innerHTML='15:00<small>空き</small>';});})();
