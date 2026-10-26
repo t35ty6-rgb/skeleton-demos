@@ -76,8 +76,34 @@ h1,h2,h3,.wb{word-break:auto-phrase;text-wrap:balance}
 @media(max-width:600px){.panel{margin-inline:0}}
 
 /* スクロールで少し浮き上がる（静止時は常に表示） */
-@media (prefers-reduced-motion:no-preference){@supports (animation-timeline:view()){.rv{animation:rv linear both;animation-timeline:view();animation-range:entry 0% cover 20%}}}
-@keyframes rv{from{transform:translateY(32px)}to{transform:none}}
+/* 動き：JSが動いたときだけ「画面の下にある要素」を隠してから、見えた瞬間にふわっと出す（どのスマホでも動く） */
+@media (prefers-reduced-motion:no-preference){
+  .js .rv.pre{opacity:0;transform:translateY(40px)}
+  .js .rv{transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1)}
+  .js .rv.pre.l{transform:translateX(-50px)} .js .rv.pre.r{transform:translateX(50px)} .js .rv.pre.z{transform:scale(.9)}
+  .hero-ph img.on{animation:kb 7s ease-out both}
+  @keyframes kb{from{transform:scale(1.14)}to{transform:scale(1)}}
+  .hero-tx>*{animation:up .9s cubic-bezier(.2,.7,.2,1) both}
+  .hero-tx>*:nth-child(2){animation-delay:.12s}.hero-tx>*:nth-child(3){animation-delay:.24s}.hero-tx>*:nth-child(4){animation-delay:.36s}.hero-tx>*:nth-child(5){animation-delay:.48s}
+  @keyframes up{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+  .bubble{animation:bob 2.4s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .btn-line{position:relative;overflow:hidden}
+  .btn-line::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);animation:shine 3.2s ease-in-out infinite}
+  @keyframes shine{0%,55%{left:-60%}100%{left:130%}}
+  .card,.trio .c,.steps li,.prof-ph{transition:transform .35s ease,box-shadow .35s ease}
+  .card:hover,.steps li:hover{transform:translateY(-6px);box-shadow:0 18px 30px -18px rgba(120,70,20,.45)}
+  .trio .c:hover{transform:scale(1.06) rotate(-2deg)}
+  .chips li{transition:transform .25s ease}.chips li:hover{transform:translateY(-3px)}
+  .dot.open{animation:pulse 1.8s ease-out infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(23,168,92,.45)}100%{box-shadow:0 0 0 10px rgba(23,168,92,0)}}
+  .ticker{overflow:hidden;background:var(--orange);color:#fff;padding:12px 0;white-space:nowrap}
+  .ticker div{display:inline-flex;gap:48px;animation:tk 28s linear infinite;font-weight:700;letter-spacing:.12em}
+  .ticker span::before{content:"✓ ";opacity:.8}
+  @keyframes tk{to{transform:translateX(-50%)}}
+}
+.ticker{overflow:hidden;background:var(--orange);color:#fff;padding:12px 0;white-space:nowrap}
+.ticker div{display:inline-flex;gap:48px;font-weight:700;letter-spacing:.12em}
 
 /* ボタン */
 .btn-line{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:64px;padding:0 44px;border-radius:999px;color:#fff;font-weight:700;font-size:17px;letter-spacing:.08em;
@@ -576,12 +602,26 @@ function Footer(){
   </div></footer>`;
 }
 
+function Ticker(){
+  const w=["元プロ野球トレーナーの院長","評価・施術・運動まで一貫","健康保険・労災・交通事故に対応","専用駐車場4台","土曜も受付","LINEで24時間予約"];
+  return html`<div class="ticker" aria-hidden="true"><div>${[...w,...w].map((t,i)=>html`<span key=${i}>${t}</span>`)}</div></div>`;
+}
 function App(){
   const [st,setSt] = useState(status());
   useEffect(()=>{const t=setInterval(()=>setSt(status()),60000);return()=>clearInterval(t)},[]);
+  useEffect(()=>{
+    if(!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    document.documentElement.classList.add("js");
+    const els=[...document.querySelectorAll(".rv")];
+    els.forEach((e,i)=>{ const r=e.getBoundingClientRect(); if(r.top>innerHeight*0.9){ e.classList.add("pre"); e.style.transitionDelay=((i%3)*0.08)+"s"; } });
+    const io=new IntersectionObserver(es=>es.forEach(x=>{ if(x.isIntersecting){ x.target.classList.remove("pre"); io.unobserve(x.target); } }),{rootMargin:"0px 0px -8% 0px"});
+    els.forEach(e=>io.observe(e));
+    const safety=setTimeout(()=>els.forEach(e=>e.classList.remove("pre")),12000);
+    return ()=>{io.disconnect();clearTimeout(safety)};
+  },[]);
   return html`<${Header}/>
     <main>
-      <${Hero} st=${st}/><${About}/><${Worry}/><${Band}/><${Course}/><${Price}/><${Director}/><${Flow}/><${Faq}/><${Access} st=${st}/><${EndCta}/>
+      <${Hero} st=${st}/><${Ticker}/><${About}/><${Worry}/><${Band}/><${Course}/><${Price}/><${Director}/><${Flow}/><${Faq}/><${Access} st=${st}/><${EndCta}/>
     </main>
     <${Footer}/>
     <div class="fix"><a class="btn-line" href=${LINE} target="_blank" rel="noopener"><${LineIcon} s=${20}/>LINEで予約</a><a class="tl" href=${TELH}><${TelIcon} s=${16}/>電話</a></div>`;
