@@ -1,0 +1,278 @@
+/** 飲食店 飛び込み営業 — 一覧・ルート・訪問記録 (Apps Script) */
+const DATA_URL = 'https://t35ty6-rgb.github.io/skeleton-demos/_data/fukui-food-798a468c9591.json';
+const API_KEY = 'akari-798a468c9591';
+const SH_LIST = '回る店一覧', SH_ROUTE = 'ルート（ブロック）', SH_EX = '対象外（HPあり・チェーン）', SH_LOG = '訪問ログ', SH_SUM = '集計';
+const HEAD = ['ID','ブロック','順番','予定日','担当','店名','ジャンル','種別','町名','住所','電話','評価','口コミ数','HP状況','SNS・ポータル','Googleマップ','試作HP','結果','次にやること','フォロー日','訪問日','メモ','緯度','経度'];
+const C = {}; HEAD.forEach((h, i) => C[h] = i + 1);
+const RESULTS = [
+  ['未訪問', '#ffffff'], ['不在', '#e0e0e0'], ['話せた・検討中', '#fff2cc'], ['興味あり・要フォロー', '#fce5cd'],
+  ['商談の約束', '#d9ead3'], ['成約', '#93c47d'], ['断られた', '#f4cccc'], ['対象外（閉店など）', '#b7b7b7']];
+const NEXTS = ['', '再訪問', '電話する', '試作HPを見せる', '資料を送る', '商談', 'LINE交換済み', 'なし'];
+
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('営業ツール')
+    .addItem('最初のセットアップ（1回だけ）', 'setup')
+    .addItem('新しいお店を取り込む', 'importNew')
+    .addToUi();
+}
+
+function setup() {
+  const ss = SpreadsheetApp.getActive();
+  const data = JSON.parse(UrlFetchApp.fetch(DATA_URL).getContentText());
+  // --- list ---
+  let sh = ss.getSheetByName(SH_LIST) || ss.insertSheet(SH_LIST);
+  sh.clear();
+  sh.getRange(1, 1, 1, HEAD.length).setValues([HEAD]);
+  const rows = data.targets.map(t => [t[0], t[1], t[2], new Date(t[3] + 'T00:00:00'), t[4], t[5], t[6], t[7], t[8], t[9], t[10], t[11], t[12], t[13], t[14], t[15], '', '未訪問', '', '', '', '', t[16], t[17]]);
+  sh.getRange(2, 1, rows.length, HEAD.length).setValues(rows);
+  formatList(sh, rows.length);
+  // --- route ---
+  let rt = ss.getSheetByName(SH_ROUTE) || ss.insertSheet(SH_ROUTE, 0);
+  rt.clear();
+  const rh = ['ブロック','予定日','担当','エリア','軒数','移動距離(km)','ルート①','ルート②','訪問済','状態'];
+  rt.getRange(1, 1, 1, rh.length).setValues([rh]);
+  const br = data.blocks.map((b, i) => {
+    const r = i + 2;
+    return [b[0], new Date(b[1] + 'T00:00:00'), b[2], b[3], b[4], b[5],
+      '=HYPERLINK("' + b[6] + '","ルート①")', b[7] ? '=HYPERLINK("' + b[7] + '","ルート②")' : '',
+      '=COUNTIFS(\'' + SH_LIST + '\'!B:B,A' + r + ',\'' + SH_LIST + '\'!R:R,"<>未訪問")',
+      '=IF(I' + r + '=0,"未着手",IF(I' + r + '>=E' + r + ',"完了","途中"))'];
+  });
+  rt.getRange(2, 1, br.length, rh.length).setValues(br);
+  styleHeader(rt, rh.length); rt.getRange('B2:B').setNumberFormat('m/d(ddd)'); rt.setFrozenRows(1);
+  const rules = [
+    SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo('完了').setBackground('#93c47d').setRanges([rt.getRange('J2:J')]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo('途中').setBackground('#fff2cc').setRanges([rt.getRange('J2:J')]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$B2=TODAY()').setBackground('#cfe2f3').setRanges([rt.getRange('A2:H')]).build()];
+  rt.setConditionalFormatRules(rules);
+  [8, 11, 6, 12, 6, 11, 10, 10, 8, 10].forEach((w, i) => rt.setColumnWidth(i + 1, w * 8));
+  // --- excluded ---
+  let ex = ss.getSheetByName(SH_EX) || ss.insertSheet(SH_EX);
+  ex.clear();
+  const eh = ['店名','ジャンル','住所','電話','評価','口コミ数','HP','理由'];
+  ex.getRange(1, 1, 1, eh.length).setValues([eh]);
+  if (data.excluded.length) ex.getRange(2, 1, data.excluded.length, eh.length).setValues(data.excluded);
+  styleHeader(ex, eh.length); ex.setFrozenRows(1);
+  // --- log ---
+  let lg = ss.getSheetByName(SH_LOG) || ss.insertSheet(SH_LOG);
+  if (lg.getLastRow() === 0) { lg.getRange(1, 1, 1, 8).setValues([['日時','担当','ID','店名','結果','次にやること','フォロー日','メモ']]); styleHeader(lg, 8); lg.setFrozenRows(1); }
+  // --- summary ---
+  let sm = ss.getSheetByName(SH_SUM) || ss.insertSheet(SH_SUM);
+  sm.clear();
+  sm.getRange(1, 1, 1, 4).setValues([['結果', '合計', '担当A', '担当B']]); styleHeader(sm, 4);
+  RESULTS.forEach((r, i) => {
+    const row = i + 2;
+    sm.getRange(row, 1, 1, 4).setValues([[r[0], '=COUNTIF(\'' + SH_LIST + '\'!R:R,A' + row + ')', '=COUNTIFS(\'' + SH_LIST + '\'!R:R,A' + row + ',\'' + SH_LIST + '\'!E:E,"A")', '=COUNTIFS(\'' + SH_LIST + '\'!R:R,A' + row + ',\'' + SH_LIST + '\'!E:E,"B")']]);
+    sm.getRange(row, 1).setBackground(r[1]);
+  });
+  const tr = RESULTS.length + 2;
+  sm.getRange(tr, 1, 1, 4).setValues([['合計', '=SUM(B2:B' + (tr - 1) + ')', '=SUM(C2:C' + (tr - 1) + ')', '=SUM(D2:D' + (tr - 1) + ')']]).setFontWeight('bold');
+  sm.getRange(tr + 2, 1, 2, 2).setValues([['今日までにフォローが必要', '=COUNTIFS(\'' + SH_LIST + '\'!T:T,"<="&TODAY(),\'' + SH_LIST + '\'!R:R,"興味あり・要フォロー")'], ['成約率（訪問済のうち）', '=IFERROR(B7/(B' + tr + '-B2),0)']]);
+  sm.getRange(tr + 3, 2).setNumberFormat('0.0%');
+  sm.setColumnWidth(1, 200);
+  try {
+    const chart = sm.newChart().setChartType(Charts.ChartType.BAR).addRange(sm.getRange('A2:B' + (tr - 1)))
+      .setPosition(1, 6, 0, 0).setOption('title', '訪問結果').setOption('legend', { position: 'none' }).build();
+    sm.getCharts().forEach(c => sm.removeChart(c)); sm.insertChart(chart);
+  } catch (e) {}
+  const def = ss.getSheetByName('シート1'); if (def && ss.getSheets().length > 1) ss.deleteSheet(def);
+  ss.setActiveSheet(rt);
+}
+
+function styleHeader(sh, n) {
+  sh.getRange(1, 1, 1, n).setBackground('#2c7f8e').setFontColor('#ffffff').setFontWeight('bold');
+}
+
+function formatList(sh, n) {
+  styleHeader(sh, HEAD.length);
+  sh.setFrozenRows(1); sh.setFrozenColumns(6);
+  sh.getRange(2, C['予定日'], n).setNumberFormat('m/d(ddd)');
+  sh.getRange(2, C['フォロー日'], n, 2).setNumberFormat('m/d');
+  const resRange = sh.getRange(2, C['結果'], n);
+  resRange.setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(RESULTS.map(r => r[0]), true).build());
+  sh.getRange(2, C['次にやること'], n).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(NEXTS.filter(x => x), true).build());
+  sh.getRange(2, C['フォロー日'], n, 2).setDataValidation(SpreadsheetApp.newDataValidation().requireDate().build());
+  const all = sh.getRange(2, 1, Math.max(n, 2000), HEAD.length);
+  const rules = RESULTS.filter(r => r[0] !== '未訪問').map(r =>
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$R2="' + r[0] + '"').setBackground(r[1]).setRanges([all]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND($T2<>"",$T2<=TODAY(),$R2="興味あり・要フォロー")').setBackground('#f6b26b').setFontColor('#000000').setRanges([sh.getRange(2, C['フォロー日'], Math.max(n, 2000))]).build());
+  sh.setConditionalFormatRules(rules);
+  const widths = { 'ID': 40, 'ブロック': 56, '順番': 44, '予定日': 76, '担当': 40, '店名': 200, 'ジャンル': 96, '種別': 110, '町名': 80, '住所': 260, '電話': 110, '評価': 44, '口コミ数': 56, 'HP状況': 90, 'SNS・ポータル': 180, 'Googleマップ': 70, '試作HP': 90, '結果': 130, '次にやること': 120, 'フォロー日': 76, '訪問日': 76, 'メモ': 260, '緯度': 60, '経度': 60 };
+  HEAD.forEach((h, i) => sh.setColumnWidth(i + 1, widths[h] || 80));
+  sh.hideColumns(C['ID']); sh.hideColumns(C['緯度'], 2);
+  const links = sh.getRange(2, C['Googleマップ'], n).getValues().map(r => [r[0] ? '=HYPERLINK("' + r[0] + '","地図")' : '']);
+  sh.getRange(2, C['Googleマップ'], n).setValues(links);
+  sh.getRange(1, 1, n + 1, HEAD.length).createFilter();
+}
+
+/** 追加取り込み：DATA_URL の targets のうち、まだ無いIDだけ末尾に足す */
+function importNew() {
+  const ss = SpreadsheetApp.getActive(), sh = ss.getSheetByName(SH_LIST);
+  const data = JSON.parse(UrlFetchApp.fetch(DATA_URL).getContentText());
+  const have = new Set(sh.getRange(2, 1, Math.max(sh.getLastRow() - 1, 1), 1).getValues().map(r => r[0]));
+  const add = data.targets.filter(t => !have.has(t[0])).map(t => [t[0], t[1], t[2], new Date(t[3] + 'T00:00:00'), t[4], t[5], t[6], t[7], t[8], t[9], t[10], t[11], t[12], t[13], t[14], t[15] ? '=HYPERLINK("' + t[15] + '","地図")' : '', '', '未訪問', '', '', '', '', t[16], t[17]]);
+  if (add.length) sh.getRange(sh.getLastRow() + 1, 1, add.length, HEAD.length).setValues(add);
+  SpreadsheetApp.getActive().toast(add.length + '件 追加しました');
+}
+
+// ================= Web app =================
+function doGet(e) {
+  return HtmlService.createHtmlOutput(APP_HTML)
+    .setTitle('訪問記録')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/** 夜間の試作HP登録など: POST {key, protos:[{id,url}]} */
+function doPost(e) {
+  const body = JSON.parse(e.postData.contents || '{}');
+  if (body.key !== API_KEY) return ContentService.createTextOutput('ng');
+  const sh = SpreadsheetApp.getActive().getSheetByName(SH_LIST);
+  const ids = sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().map(r => r[0]);
+  let n = 0;
+  (body.protos || []).forEach(p => {
+    const i = ids.indexOf(p.id);
+    if (i >= 0) { sh.getRange(i + 2, C['試作HP']).setFormula('=HYPERLINK("' + p.url + '","試作HP")'); n++; }
+  });
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, updated: n })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function fmtDate_(d) { return d instanceof Date ? Utilities.formatDate(d, 'Asia/Tokyo', 'yyyy-MM-dd') : (d || ''); }
+
+function readRows_() {
+  const sh = SpreadsheetApp.getActive().getSheetByName(SH_LIST);
+  const n = sh.getLastRow() - 1;
+  const vals = sh.getRange(2, 1, n, HEAD.length).getValues();
+  const forms = sh.getRange(2, C['Googleマップ'], n, 2).getFormulas();
+  const pick = f => { const m = /HYPERLINK\("([^"]+)"/.exec(f || ''); return m ? m[1] : ''; };
+  return vals.map((v, i) => ({
+    row: i + 2, id: v[0], block: v[1], seq: v[2], date: fmtDate_(v[3]), who: v[4], name: v[5], genre: v[6], cat: v[7], town: v[8], addr: v[9], tel: v[10],
+    rating: v[11], reviews: v[12], hp: v[13], sns: v[14], map: pick(forms[i][0]), proto: pick(forms[i][1]), result: v[17], next: v[18], follow: fmtDate_(v[19]), visited: fmtDate_(v[20]), memo: v[21], lat: v[22], lng: v[23]
+  }));
+}
+
+function api_day(who, date) {
+  const rows = readRows_();
+  let mine = rows.filter(r => r.who === who && r.date === date);
+  const blocks = {};
+  const rt = SpreadsheetApp.getActive().getSheetByName(SH_ROUTE);
+  const bv = rt.getRange(2, 1, rt.getLastRow() - 1, 8).getFormulas();
+  const bvals = rt.getRange(2, 1, rt.getLastRow() - 1, 8).getValues();
+  bvals.forEach((b, i) => { blocks[b[0]] = { no: b[0], date: fmtDate_(b[1]), who: b[2], area: b[3], km: b[5], links: [bv[i][6], bv[i][7]].map(f => { const m = /HYPERLINK\("([^"]+)"/.exec(f || ''); return m ? m[1] : ''; }).filter(x => x) }; });
+  const bnos = [...new Set(mine.map(r => r.block))];
+  // 予定日の無い日は、自分の担当で未完了の一番早いブロックを提案
+  let suggested = false;
+  if (!mine.length) {
+    const open = rows.filter(r => r.who === who && r.result === '未訪問').sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.seq - b.seq);
+    if (open.length) { const b = open[0].block; mine = rows.filter(r => r.block === b); bnos.push(b); suggested = true; }
+  }
+  mine.sort((a, b) => a.block - b.block || a.seq - b.seq);
+  return { rows: mine, blocks: bnos.map(n => blocks[n]).filter(Boolean), suggested };
+}
+
+function api_follow() {
+  const today = fmtDate_(new Date());
+  return readRows_().filter(r => ['興味あり・要フォロー', '話せた・検討中', '商談の約束'].includes(r.result))
+    .sort((a, b) => (a.follow || '9999') < (b.follow || '9999') ? -1 : 1).map(r => Object.assign(r, { due: r.follow && r.follow <= today }));
+}
+
+function api_summary() {
+  const rows = readRows_(), out = {};
+  RESULTS.forEach(r => out[r[0]] = { all: 0, A: 0, B: 0, color: r[1] });
+  rows.forEach(r => { const o = out[r.result] || (out[r.result] = { all: 0, A: 0, B: 0, color: '#fff' }); o.all++; if (r.who === 'A' || r.who === 'B') o[r.who]++; });
+  return { total: rows.length, byResult: out };
+}
+
+function api_save(p) {
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    const ss = SpreadsheetApp.getActive(), sh = ss.getSheetByName(SH_LIST);
+    const row = Number(p.row);
+    if (sh.getRange(row, 1).getValue() !== p.id) throw new Error('行がずれています。読み込み直してください');
+    sh.getRange(row, C['結果']).setValue(p.result);
+    sh.getRange(row, C['次にやること']).setValue(p.next || '');
+    sh.getRange(row, C['フォロー日']).setValue(p.follow ? new Date(p.follow + 'T00:00:00') : '');
+    sh.getRange(row, C['訪問日']).setValue(new Date());
+    if (p.memo != null) sh.getRange(row, C['メモ']).setValue(p.memo);
+    ss.getSheetByName(SH_LOG).appendRow([new Date(), p.who || '', p.id, sh.getRange(row, C['店名']).getValue(), p.result, p.next || '', p.follow || '', p.memo || '']);
+    return { ok: true };
+  } finally { lock.releaseLock(); }
+}
+
+function api_log(id) {
+  const lg = SpreadsheetApp.getActive().getSheetByName(SH_LOG);
+  if (lg.getLastRow() < 2) return [];
+  return lg.getRange(2, 1, lg.getLastRow() - 1, 8).getValues().filter(r => r[2] === id)
+    .map(r => ({ at: Utilities.formatDate(r[0], 'Asia/Tokyo', 'M/d HH:mm'), who: r[1], result: r[4], next: r[5], memo: r[7] }));
+}
+
+const APP_HTML = String.raw`<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<style>
+:root{--ink:#1f2d32;--sub:#5b6b70;--line:#e3e8ea;--acc:#2c7f8e;--bg:#f5f7f8}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+header{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);padding:10px 14px}
+h1{font-size:17px;margin:0 0 8px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+select,input,textarea,button{font:inherit}select,input[type=date]{padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.tabs{display:flex;gap:6px;margin-top:8px}.tabs button{flex:1;padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.tabs button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+main{padding:12px 14px 90px}.blk{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
+.blk b{font-size:16px}.blk a{display:inline-block;margin:6px 8px 0 0;padding:8px 12px;border-radius:999px;background:var(--acc);color:#fff;text-decoration:none;font-size:14px}
+.card{background:#fff;border:1px solid var(--line);border-left:8px solid #ccc;border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.card .t{display:flex;justify-content:space-between;gap:8px}.card .n{font-weight:700}.card .m{color:var(--sub);font-size:13px;margin-top:3px}
+.chip{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap;align-self:flex-start}
+.note{color:var(--sub);font-size:13px;margin:4px 0 10px}
+#sheet{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:10}#sheet .in{position:absolute;left:0;right:0;bottom:0;max-height:92vh;overflow:auto;background:#fff;border-radius:18px 18px 0 0;padding:16px}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.res button{padding:12px 8px;border-radius:12px;border:2px solid transparent;font-weight:700}
+.res button.on{border-color:var(--ink)}label{display:block;font-size:13px;color:var(--sub);margin:10px 0 4px}
+textarea{width:100%;min-height:80px;padding:10px;border:1px solid var(--line);border-radius:10px}
+.save{width:100%;padding:14px;border:0;border-radius:12px;background:#06c755;color:#fff;font-weight:700;font-size:16px;margin-top:12px}
+.lnk a{display:inline-block;margin:4px 8px 4px 0;color:var(--acc)}.log{font-size:13px;color:var(--sub);border-top:1px dashed var(--line);margin-top:12px;padding-top:8px}
+.sum td{padding:8px;border-bottom:1px solid var(--line)}.sum{width:100%;border-collapse:collapse;background:#fff;border-radius:12px}
+.loading{color:var(--sub);text-align:center;padding:30px}
+</style></head><body>
+<header><h1>訪問記録</h1>
+<div class="row"><select id="who"><option value="A">担当A</option><option value="B">担当B</option></select><input type="date" id="date"></div>
+<div class="tabs"><button data-t="day" class="on">今日のルート</button><button data-t="follow">フォロー</button><button data-t="sum">集計</button></div></header>
+<main id="main"><div class="loading">読み込み中…</div></main>
+<div id="sheet"><div class="in" id="sheetIn"></div></div>
+<script>
+const COLORS={'未訪問':'#ffffff','不在':'#e0e0e0','話せた・検討中':'#fff2cc','興味あり・要フォロー':'#fce5cd','商談の約束':'#d9ead3','成約':'#93c47d','断られた':'#f4cccc','対象外（閉店など）':'#b7b7b7'};
+const BORDER={'未訪問':'#cfd8dc','不在':'#9e9e9e','話せた・検討中':'#f1c232','興味あり・要フォロー':'#e69138','商談の約束':'#6aa84f','成約':'#38761d','断られた':'#cc0000','対象外（閉店など）':'#666'};
+const NEXTS=['','再訪問','電話する','試作HPを見せる','資料を送る','商談','LINE交換済み','なし'];
+let tab='day',cur=[];const $=s=>document.querySelector(s);
+const today=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);$('#date').value=today;
+try{$('#who').value=localStorage.getItem('who')||'A'}catch(e){}
+$('#who').onchange=()=>{try{localStorage.setItem('who',$('#who').value)}catch(e){}load()};$('#date').onchange=load;
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));b.classList.add('on');tab=b.dataset.t;load()});
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function load(){$('#main').innerHTML='<div class="loading">読み込み中…</div>';
+ if(tab==='day')google.script.run.withSuccessHandler(renderDay).withFailureHandler(err).api_day($('#who').value,$('#date').value);
+ if(tab==='follow')google.script.run.withSuccessHandler(renderFollow).withFailureHandler(err).api_follow();
+ if(tab==='sum')google.script.run.withSuccessHandler(renderSum).withFailureHandler(err).api_summary();}
+function err(e){$('#main').innerHTML='<div class="loading">エラー：'+esc(e.message||e)+'</div>'}
+function card(r,i){return '<div class="card" style="border-left-color:'+BORDER[r.result]+';background:'+(r.result==='未訪問'?'#fff':COLORS[r.result])+'" onclick="openShop('+i+')"><div class="t"><div><div class="n">'+(r.seq?r.seq+'. ':'')+esc(r.name)+'</div><div class="m">'+esc(r.genre)+'・'+esc(r.town||'')+(r.hp?'・'+esc(r.hp):'')+'</div>'+(r.follow?'<div class="m">フォロー日 '+esc(r.follow)+(r.next?'（'+esc(r.next)+'）':'')+'</div>':'')+'</div><span class="chip">'+esc(r.result)+'</span></div></div>'}
+function renderDay(d){cur=d.rows;let h='';if(!d.rows.length){$('#main').innerHTML='<div class="loading">この日の予定はありません</div>';return}
+ if(d.suggested)h+='<div class="note">この日の予定が無いので、次に回るブロックを出しています。</div>';
+ d.blocks.forEach(b=>{const done=cur.filter(r=>r.block===b.no&&r.result!=='未訪問').length,tot=cur.filter(r=>r.block===b.no).length;h+='<div class="blk"><b>ブロック'+b.no+'（'+esc(b.area)+'）</b><div class="m">'+done+' / '+tot+'軒 訪問済・移動 約'+b.km+'km</div>'+b.links.map((l,i)=>'<a href="'+l+'" target="_blank">ルート'+(i?'②':'①')+'を開く</a>').join('')+'</div>'});
+ h+=cur.map(card).join('');$('#main').innerHTML=h}
+function renderFollow(rows){cur=rows;$('#main').innerHTML=rows.length?'<div class="note">フォロー日が近い順。オレンジ枠は今日までに連絡が必要なお店です。</div>'+rows.map((r,i)=>card(r,i).replace('class="card"','class="card"'+(r.due?' style="outline:3px solid #e69138"':''))).join(''):'<div class="loading">フォローが必要なお店はまだありません</div>'}
+function renderSum(s){let h='<table class="sum"><tr><td><b>結果</b></td><td><b>合計</b></td><td><b>A</b></td><td><b>B</b></td></tr>';Object.keys(s.byResult).forEach(k=>{const o=s.byResult[k];h+='<tr style="background:'+o.color+'"><td>'+esc(k)+'</td><td>'+o.all+'</td><td>'+o.A+'</td><td>'+o.B+'</td></tr>'});h+='</table><div class="note">全'+s.total+'軒</div>';$('#main').innerHTML=h}
+let sel=null;
+function openShop(i){const r=cur[i];sel={row:r.row,id:r.id,result:r.result==='未訪問'?'':r.result};
+ let h='<div class="t" style="display:flex;justify-content:space-between"><b style="font-size:18px">'+esc(r.name)+'</b><button onclick="closeSheet()" style="border:0;background:none;font-size:22px">×</button></div>';
+ h+='<div class="m">'+esc(r.cat)+'・評価 '+esc(r.rating)+'（'+esc(r.reviews)+'件）</div><div class="m">'+esc(r.addr)+'</div><div class="lnk">'+(r.map?'<a href="'+r.map+'" target="_blank">地図</a>':'')+(r.tel?'<a href="tel:'+esc(r.tel)+'">'+esc(r.tel)+'</a>':'')+(r.proto?'<a href="'+r.proto+'" target="_blank">試作HPを開く</a>':'<span class="m">試作HP：準備中</span>')+(r.sns?'<a href="'+esc(r.sns)+'" target="_blank">'+esc(r.hp)+'</a>':'')+'</div>';
+ h+='<label>結果</label><div class="res">'+Object.keys(COLORS).filter(k=>k!=='未訪問').map(k=>'<button type="button" data-r="'+k+'" style="background:'+COLORS[k]+'" class="'+(sel.result===k?'on':'')+'">'+k+'</button>').join('')+'</div>';
+ h+='<label>次にやること</label><select id="nx" style="width:100%">'+NEXTS.map(n=>'<option'+(n===r.next?' selected':'')+'>'+n+'</option>').join('')+'</select>';
+ h+='<label>フォロー日（次に連絡・訪問する日）</label><input type="date" id="fd" value="'+esc(r.follow)+'" style="width:100%">';
+ h+='<label>メモ（話した内容・担当者・反応など）</label><textarea id="mm">'+esc(r.memo)+'</textarea><button class="save" id="sv">保存する</button><div class="log" id="lg">記録を読み込み中…</div>';
+ $('#sheetIn').innerHTML=h;$('#sheet').style.display='block';
+ document.querySelectorAll('.res button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.res button').forEach(x=>x.classList.remove('on'));b.classList.add('on');sel.result=b.dataset.r;
+   if((sel.result==='興味あり・要フォロー'||sel.result==='話せた・検討中')&&!$('#fd').value){const d=new Date(Date.now()+9*3600e3+3*864e5);$('#fd').value=d.toISOString().slice(0,10)}});
+ $('#sv').onclick=()=>{if(!sel.result){alert('結果を選んでください');return}$('#sv').disabled=true;$('#sv').textContent='保存中…';
+   google.script.run.withSuccessHandler(()=>{closeSheet();load()}).withFailureHandler(e=>{$('#sv').disabled=false;$('#sv').textContent='保存する';alert(e.message)})
+   .api_save({row:sel.row,id:sel.id,result:sel.result,next:$('#nx').value,follow:$('#fd').value,memo:$('#mm').value,who:$('#who').value})};
+ google.script.run.withSuccessHandler(l=>{$('#lg').innerHTML=l.length?'これまでの記録<br>'+l.map(x=>esc(x.at)+' '+esc(x.who)+' '+esc(x.result)+(x.next?'／'+esc(x.next):'')+(x.memo?'<br>　'+esc(x.memo):'')).join('<br>'):'まだ記録はありません'}).api_log(r.id)}
+function closeSheet(){$('#sheet').style.display='none'}
+$('#sheet').onclick=e=>{if(e.target.id==='sheet')closeSheet()};
+load();
+</script></body></html>`;
