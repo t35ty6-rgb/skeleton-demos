@@ -12,6 +12,8 @@ import worlds2
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 E = lambda s: html.escape(str(s or ''), quote=True)
+import time
+VER = time.strftime('%Y%m%d%H%M')  # 見た目を直したとき、古いCSSが残らないように
 
 # ---------------------------------------------------------------- 写真ライブラリ（業種ごと）
 A = '../_assets/'
@@ -251,7 +253,7 @@ def page(s, c):
 <title>{E(title)}</title><meta name="description" content="{E(desc)}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family={FONTS[w]}&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../_assets/w/base.css"><link rel="stylesheet" href="../_assets/w/{w}.css">
+<link rel="stylesheet" href="../_assets/w/base.css?v={VER}"><link rel="stylesheet" href="../_assets/w/{w}.css?v={VER}">
 </head>
 <body class="w-{w} pal-{E(c.get("pal", "a"))}">
 {ribbon(s)}
@@ -262,7 +264,7 @@ def page(s, c):
 </main>
 {footer(s, c)}
 {spbar(s)}
-<script src="../_assets/w/base.js" defer></script>
+<script src="../_assets/w/base.js?v={VER}" defer></script>
 </body></html>
 '''
 
