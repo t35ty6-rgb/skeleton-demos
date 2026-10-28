@@ -113,7 +113,7 @@ def rate(s, ico=None):
     if not s.get('rating') or (s.get('reviews') or 0) < 3:
         return ''
     p = max(0, min(100, float(s['rating']) / 5 * 100))
-    return f'<p class="rate" aria-label="Googleの口コミ {s["rating"]}（{s["reviews"]}件）"><b class="rate__n">{s["rating"]}</b><span class="rate__r"><span class="rate__s" style="--p:{p:.0f}%" aria-hidden="true"></span><small>Googleの口コミ {s["reviews"]}件</small></span></p>'
+    return f'<p class="rate" aria-label="Googleの口コミ {s["rating"]}（{s["reviews"]}件）"><b class="rate__n">{float(s["rating"]):.1f}</b><span class="rate__r"><span class="rate__s" style="--p:{p:.0f}%" aria-hidden="true"></span><small>Googleの口コミ {s["reviews"]}件</small></span></p>'
 
 
 # 「こんなときに」の写真：場面の言葉から選ぶ（同じページで使った写真は避ける）

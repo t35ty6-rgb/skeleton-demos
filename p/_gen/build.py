@@ -99,7 +99,7 @@ def rating(s):
     if not s.get('rating') or (s.get('reviews') or 0) < 3:
         return ''
     p = max(0, min(100, float(s['rating']) / 5 * 100))
-    return f'<p class="rate" aria-label="Googleの口コミ {s["rating"]}（{s["reviews"]}件）"><b class="rate__n">{s["rating"]}</b><span class="rate__r"><span class="rate__s" style="--p:{p:.0f}%" aria-hidden="true"></span><small>Googleの口コミ {s["reviews"]}件</small></span></p>'
+    return f'<p class="rate" aria-label="Googleの口コミ {s["rating"]}（{s["reviews"]}件）"><b class="rate__n">{float(s["rating"]):.1f}</b><span class="rate__r"><span class="rate__s" style="--p:{p:.0f}%" aria-hidden="true"></span><small>Googleの口コミ {s["reviews"]}件</small></span></p>'
 
 
 def header(s, c):
@@ -236,10 +236,10 @@ FONTS.update(worlds2.FONTS2)
 
 # 店名・キャッチ用の「顔」になる書体（使う文字だけを読み込む）
 DISP = {
-  'hiraki': ['Yuji+Boku'], 'yami': ['Yuji+Syuku'], 'sankaku': ['Klee+One:wght@600', 'Yuji+Syuku'],
-  'shokutaku': ['Klee+One:wght@600', 'Murecho:wght@700'], 'zasshi': ['Mochiy+Pop+One', 'Yusei+Magic', 'RocknRoll+One'],
-  'men': ['Potta+One', 'Murecho:wght@800'], 'washi': ['Klee+One:wght@600'], 'sumi': ['Murecho:wght@900'],
-  'kiiro': ['RocknRoll+One'], 'kawaii': ['Mochiy+Pop+One'], 'retro': ['Reggae+One'], 'pub': [],
+  'hiraki': ['Yuji+Boku', 'Josefin+Sans:wght@600'], 'yami': ['Yuji+Syuku', 'Bebas+Neue'], 'sankaku': ['Klee+One:wght@600', 'Yuji+Syuku', 'Raleway:wght@300'],
+  'shokutaku': ['Klee+One:wght@600', 'Murecho:wght@700', 'Oswald:wght@300'], 'zasshi': ['Mochiy+Pop+One', 'Yusei+Magic', 'RocknRoll+One', 'Baloo+2:wght@800'],
+  'men': ['Potta+One', 'Murecho:wght@800', 'Anton'], 'washi': ['Klee+One:wght@600', 'Josefin+Sans:wght@300'], 'sumi': ['Murecho:wght@900', 'Oswald:wght@500'],
+  'kiiro': ['RocknRoll+One', 'Bowlby+One'], 'kawaii': ['Mochiy+Pop+One', 'Fredoka:wght@600'], 'retro': ['Reggae+One', 'Righteous'], 'pub': ['Oswald:wght@400'],
 }
 
 
@@ -251,7 +251,7 @@ def disp_link(w, s, c):
     txt = ''.join([s['name'], c.get('short', ''), c.get('short_v', ''), c['catch'], c.get('cta', ''), c.get('sticker', ''),
                    worlds2.kanji(c), s.get('town', ''), str(s.get('kind', '')).split('、')[0],
                    ''.join(n for n, _ in c['dishes']), ''.join(t for t, _ in c['scenes']), ''.join(c.get('marquee') or []),
-                   'おすすめこんなときにお店のことアクセス名物品書き0123456789.'])
+                   'おすすめこんなときにお店のことアクセス名物品書き0123456789.-件', 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz·&', str(s.get('tel') or '')])
     chars = ''.join(sorted(set(txt) - set('\n ')))
     return f'<link href="https://fonts.googleapis.com/css2?family={"&family=".join(fams)}&text={quote(chars)}&display=swap" rel="stylesheet">'
 
