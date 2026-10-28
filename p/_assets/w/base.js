@@ -1,7 +1,10 @@
 (() => {
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const els = document.querySelectorAll('.rv,.reveal-clip,.rvc');
-  if (reduce || !('IntersectionObserver' in window)) { els.forEach((e) => e.classList.add('in')); return; }
+  // 一覧ページの縮小表示では動きを止めて完成形を見せる
+  const still = window.self !== window.top;
+  if (still) document.documentElement.classList.add('still');
+  if (reduce || still || !('IntersectionObserver' in window)) { els.forEach((e) => e.classList.add('in')); return; }
   // clip-path で隠れた要素は親を見て出す
   const io = new IntersectionObserver((en) => en.forEach((x) => {
     if (!x.isIntersecting) return;
