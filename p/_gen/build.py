@@ -98,7 +98,8 @@ def ribbon(s):
 def rating(s):
     if not s.get('rating') or (s.get('reviews') or 0) < 3:
         return ''
-    return f'<p class="rate">{ICON["star"]}<b>{s["rating"]}</b><span>Googleの口コミ {s["reviews"]}件</span></p>'
+    p = max(0, min(100, float(s['rating']) / 5 * 100))
+    return f'<p class="rate" aria-label="Googleの口コミ {s["rating"]}（{s["reviews"]}件）"><b class="rate__n">{s["rating"]}</b><span class="rate__r"><span class="rate__s" style="--p:{p:.0f}%" aria-hidden="true"></span><small>Googleの口コミ {s["reviews"]}件</small></span></p>'
 
 
 def header(s, c):
@@ -158,7 +159,7 @@ def body_washi(s, c, im):
 </div></section>
 <section class="lead"><div class="wrap narrow rv"><p class="lead__t">{lines(c["lead"])}</p></div></section>
 <section class="menu" id="menu"><div class="wrap"><h2 class="h2 rv">おすすめ</h2><ul class="menu__list">{dishes_cards(c, im)}</ul><p class="note">※ 写真と内容はイメージです。実際のお品書きに差し替えます。</p></div></section>
-<section class="scene" id="scene"><div class="wrap scene__in"><h2 class="h2 rv">こんなときに</h2><ol class="scene__list">{scenes_list(c)}</ol></div></section>
+<section class="scene" id="scene"><div class="wrap scene__in"><h2 class="h2 rv">こんなときに</h2><ol class="scene__list">{worlds2.scenes_ph(c, im)}</ol></div></section>
 <section class="about" id="about"><div class="wrap about__in"><figure class="about__ph reveal-clip"><img src="{im["room"]}" alt="" loading="lazy"></figure><div class="about__t rv"><h2 class="h2">お店のこと</h2><p>{lines(c["about"])}</p></div></div></section>'''
 
 
@@ -171,7 +172,7 @@ def body_sumi(s, c, im):
 <section class="lead"><div class="wrap narrow rv"><p class="lead__t">{lines(c["lead"])}</p></div></section>
 <section class="menu" id="menu"><div class="wrap"><h2 class="h2 rv">今夜の一品</h2></div><ul class="menu__rail" tabindex="0" aria-label="おすすめ（横にスクロールできます）">{dishes_cards(c, im)}</ul><div class="wrap"><p class="note">※ 写真と内容はイメージです。実際のお品書きに差し替えます。</p></div></section>
 <section class="about" id="about"><figure class="about__ph"><img src="{im["room"]}" alt="" loading="lazy" data-par></figure><div class="about__t rv"><h2 class="h2">お店のこと</h2><p>{lines(c["about"])}</p></div></section>
-<section class="scene" id="scene"><div class="wrap"><h2 class="h2 rv">こんな夜に</h2><ol class="scene__list">{scenes_list(c)}</ol></div></section>'''
+<section class="scene" id="scene"><div class="wrap"><h2 class="h2 rv">こんな夜に</h2><ol class="scene__list">{worlds2.scenes_ph(c, im)}</ol></div></section>'''
 
 
 def body_kiiro(s, c, im):
@@ -185,7 +186,7 @@ def body_kiiro(s, c, im):
 <div class="marq" aria-hidden="true"><div class="marq__t">{mq}</div></div>
 <section class="lead"><div class="wrap narrow rv"><p class="lead__t">{lines(c["lead"])}</p></div></section>
 <section class="menu" id="menu"><div class="wrap"><h2 class="h2 rv">これ食べて！</h2><ul class="menu__list">{dishes_cards(c, im)}</ul><p class="note">※ 写真と内容はイメージです。実際のお品書きに差し替えます。</p></div></section>
-<section class="scene" id="scene"><div class="wrap"><h2 class="h2 rv">こんな時に、どうぞ</h2><ol class="scene__list">{scenes_list(c)}</ol></div></section>
+<section class="scene" id="scene"><div class="wrap"><h2 class="h2 rv">こんな時に、どうぞ</h2><ol class="scene__list">{worlds2.scenes_ph(c, im)}</ol></div></section>
 <section class="about" id="about"><div class="wrap about__in"><figure class="about__ph rv"><img src="{im["room"]}" alt="" loading="lazy"></figure><div class="about__t rv"><h2 class="h2">お店のこと</h2><p>{lines(c["about"])}</p></div></div></section>'''
 
 
@@ -197,7 +198,7 @@ def body_kawaii(s, c, im):
 </div><svg class="wave" viewBox="0 0 1440 80" preserveAspectRatio="none" aria-hidden="true"><path d="M0 40 C 240 90 480 0 720 40 S 1200 80 1440 30 L1440 80 L0 80Z"/></svg></section>
 <section class="lead"><div class="wrap narrow rv"><p class="lead__t">{lines(c["lead"])}</p></div></section>
 <section class="menu" id="menu"><div class="wrap"><h2 class="h2 rv">おすすめ</h2><ul class="menu__list">{dishes_cards(c, im)}</ul><p class="note">※ 写真と内容はイメージです。実際のメニューに差し替えます。</p></div></section>
-<section class="scene" id="scene"><div class="wrap"><h2 class="h2 rv">こんなときに</h2><ol class="scene__list">{scenes_list(c)}</ol></div></section>
+<section class="scene" id="scene"><div class="wrap"><h2 class="h2 rv">こんなときに</h2><ol class="scene__list">{worlds2.scenes_ph(c, im)}</ol></div></section>
 <section class="about" id="about"><div class="wrap about__in"><figure class="about__ph rv"><img src="{im["room"]}" alt="" loading="lazy"></figure><div class="about__t rv"><h2 class="h2">お店のこと</h2><p>{lines(c["about"])}</p></div></div></section>'''
 
 
@@ -215,7 +216,7 @@ def body_retro(s, c, im):
 <div class="marq" aria-hidden="true"><div class="marq__t">{mq}</div></div>
 <section class="lead"><div class="wrap narrow rv"><p class="lead__t">{lines(c["lead"])}</p></div></section>
 <section class="menu" id="menu"><div class="wrap"><h2 class="h2 rv">名物</h2><ul class="menu__list">{dishes_cards(c, im)}</ul><p class="note">※ 写真と内容はイメージです。実際のお品書きに差し替えます。</p></div></section>
-<section class="scene" id="scene"><div class="wrap"><h2 class="h2 rv">こんな時に</h2><ol class="scene__list">{scenes_list(c)}</ol></div></section>
+<section class="scene" id="scene"><div class="wrap"><h2 class="h2 rv">こんな時に</h2><ol class="scene__list">{worlds2.scenes_ph(c, im)}</ol></div></section>
 <section class="about" id="about"><div class="wrap about__in"><figure class="about__ph rv"><img src="{im["room"]}" alt="" loading="lazy"></figure><div class="about__t rv"><h2 class="h2">お店のこと</h2><p>{lines(c["about"])}</p></div></div></section>'''
 
 
@@ -226,7 +227,7 @@ def body_pub(s, c, im):
 </section>
 <section class="lead"><div class="wrap narrow rv"><p class="lead__t">{lines(c["lead"])}</p></div></section>
 <section class="menu" id="menu"><div class="wrap menu__in"><figure class="menu__ph rv"><img src="{im["d"][0]}" alt="" loading="lazy"></figure><div class="board rv"><h2 class="h2">Tonight</h2><ul>{"".join(f"<li><b>{E(n)}</b><span>{E(note)}</span></li>" for n, note in c["dishes"])}</ul><p class="note">※ 内容はイメージです。実際のメニューに差し替えます。</p></div></div></section>
-<section class="scene" id="scene"><div class="wrap"><h2 class="h2 rv">こんな夜に</h2><ol class="scene__list">{scenes_list(c)}</ol></div></section>
+<section class="scene" id="scene"><div class="wrap"><h2 class="h2 rv">こんな夜に</h2><ol class="scene__list">{worlds2.scenes_ph(c, im)}</ol></div></section>
 <section class="about" id="about"><div class="wrap about__in"><figure class="about__ph rv"><img src="{im["room"]}" alt="" loading="lazy"></figure><div class="about__t rv"><h2 class="h2">お店のこと</h2><p>{lines(c["about"])}</p></div></div></section>'''
 
 

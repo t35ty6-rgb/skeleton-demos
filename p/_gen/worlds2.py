@@ -109,10 +109,51 @@ def kanji(c):
     return c.get('kanji') or KANJI.get(c['img'], '旨味')
 
 
-def rate(s, ico):
+def rate(s, ico=None):
     if not s.get('rating') or (s.get('reviews') or 0) < 3:
         return ''
-    return f'<p class="rate">{ico}<b>{s["rating"]}</b><span>Googleの口コミ {s["reviews"]}件</span></p>'
+    p = max(0, min(100, float(s['rating']) / 5 * 100))
+    return f'<p class="rate" aria-label="Googleの口コミ {s["rating"]}（{s["reviews"]}件）"><b class="rate__n">{s["rating"]}</b><span class="rate__r"><span class="rate__s" style="--p:{p:.0f}%" aria-hidden="true"></span><small>Googleの口コミ {s["reviews"]}件</small></span></p>'
+
+
+# 「こんなときに」の写真：場面の言葉から選ぶ（同じページで使った写真は避ける）
+SC = A + 'img/'
+SCENE_PICS = [
+  (('ひとり', '仕事帰り', '一杯', 'カウンター', '晩ごはん', 'さっと'), [SC+'iz-iz_interior-sq.webp', SC+'r2-interior-sq.webp']),
+  (('大切', 'デート', '記念', '二人', 'ゆっくり'), [SC+'r2-private-sq.webp', SC+'iz-iz_zashiki-sq.webp']),
+  (('集ま', '宴会', '仲間', '飲み会', '会社', 'はしご', '乾杯', 'みんな', '友'), [SC+'iz-iz_toast-sq.webp', SC+'r2-party-sq.webp']),
+  (('家族', '子ども', 'ごほうび'), [SC+'r2-party-sq.webp', SC+'iz-iz_zashiki-sq.webp']),
+  (('昼', 'ランチ', 'お昼'), [SC+'r2-lunch-sq.webp', SC+'r2-serve-sq.webp']),
+  (('持ち帰', 'テイクアウト', 'おうち', 'お持ち'), [SC+'r2-takeout-sq.webp']),
+  (('朝', '出勤', '通勤'), [A+'g/morning.webp', SC+'r2-lunch-sq.webp']),
+  (('旅', '出張', 'おみやげ', '観光', '電車', '駅', '待ち'), [SC+'iz-iz_exterior-sq.webp', SC+'r2-serve-sq.webp']),
+]
+SCENE_DEFAULT = [SC+'r2-serve-sq.webp', SC+'iz-iz_toast-sq.webp', SC+'r2-private-sq.webp', SC+'r2-chef-por.webp', SC+'r2-owner-thumb.webp']
+
+
+WEST = {'pub', 'bar', 'bistro', 'dogs', 'cafe', 'coffee'}
+WEST_PICS = [A+'g/pub_in.webp', A+'g/bar_in.webp', A+'g/cocktail.webp', A+'g/stout.webp', A+'g/coffee.webp', A+'g/sweets.webp', A+'g/bistro.webp']
+
+
+def scene_pics(c, im):
+    used = {im.get('hero'), im.get('room'), im.get('sub'), *im['d']}
+    out = []
+    for t, d in c['scenes']:
+        if c['img'] in WEST:
+            cands = WEST_PICS
+        else:
+            cands = [p for keys, ps in SCENE_PICS if any(k in t + d for k in keys) for p in ps] + SCENE_DEFAULT
+        pick = next((p for p in cands if p not in used), SCENE_DEFAULT[0])
+        used.add(pick)
+        out.append(pick)
+    return out
+
+
+def scenes_ph(c, im):
+    pics = scene_pics(c, im)
+    return ''.join(
+        f'<li class="sc rv" style="--d:{i*0.09:.2f}s"><figure><img src="{pics[i]}" alt="" loading="lazy"></figure><div class="sc__t"><h3>{E(t)}</h3><p>{E(d)}</p></div></li>'
+        for i, (t, d) in enumerate(c['scenes']))
 
 
 NOTE = '<p class="note">※ 写真と内容はイメージです。実際のお品書きに差し替えます。</p>'
@@ -151,7 +192,7 @@ def body_hiraki(s, c, im, ICON):
   <figure class="hk-panel__ph rv"><img src="{im["room"]}" alt="" loading="lazy"></figure>
   <div class="hk-panel__t rv" style="--d:.1s"><p class="hk-panel__en"><span>About</span></p><h2>お店のこと</h2><p>{lines(c["about"])}</p></div>
 </div></section>
-<section class="hk-scene" id="scene"><div class="wrap"><h2 class="hk-h rv"><span>Scene</span>こんなときに</h2><ol class="hk-scene__list">{scenes(c)}</ol></div></section>'''
+<section class="hk-scene" id="scene"><div class="wrap"><h2 class="hk-h rv"><span>Scene</span>こんなときに</h2><ol class="hk-scene__list">{scenes_ph(c, im)}</ol></div></section>'''
 
 
 # ================================================================ sankaku
@@ -176,7 +217,7 @@ def body_sankaku(s, c, im, ICON):
 </section>
 <section class="sk-lead"><div class="wrap sk-lead__in"><p class="sk-lead__v rv">{lines(c["lead"])}</p><figure class="sk-lead__ph reveal-clip"><img src="{im["room"]}" alt="" loading="lazy"></figure></div></section>
 <section class="sk-menu" id="menu"><div class="wrap"><h2 class="sk-h rv">おすすめ</h2><ul class="sk-menu__list">{dishes}</ul>{NOTE}</div></section>
-<section class="sk-scene" id="scene"><div class="wrap sk-scene__in"><h2 class="sk-h rv">こんなときに</h2><ol class="sk-scene__list">{scenes(c)}</ol></div></section>
+<section class="sk-scene" id="scene"><div class="wrap sk-scene__in"><h2 class="sk-h rv">こんなときに</h2><ol class="sk-scene__list">{scenes_ph(c, im)}</ol></div></section>
 <section class="sk-about" id="about"><div class="wrap sk-about__in rv"><h2 class="sk-h">お店のこと</h2><p>{lines(c["about"])}</p></div></section>'''
 
 
@@ -201,7 +242,7 @@ def body_shokutaku(s, c, im, ICON):
 </section>
 <section class="st-lead"><div class="wrap narrow"><p class="st-catch rv">{lines(c["catch"])}</p><p class="st-lead__t rv" style="--d:.1s">{lines(c["lead"])}</p>{rate(s, ICON["star"])}</div></section>
 <section class="st-menu" id="menu"><div class="wrap"><h2 class="st-h rv"><span>お品書き</span></h2><ul class="st-menu__list">{dishes}</ul>{NOTE}</div></section>
-<section class="st-scene" id="scene"><div class="wrap"><h2 class="st-h rv"><span>こんなときに</span></h2><ol class="st-scene__list">{scenes(c)}</ol></div></section>
+<section class="st-scene" id="scene"><div class="wrap"><h2 class="st-h rv"><span>こんなときに</span></h2><ol class="st-scene__list">{scenes_ph(c, im)}</ol></div></section>
 <section class="st-about" id="about"><div class="wrap st-about__in"><figure class="st-about__ph reveal-clip"><img src="{im["room"]}" alt="" loading="lazy"></figure><div class="rv"><h2 class="st-h st-h--l"><span>お店のこと</span></h2><p>{lines(c["about"])}</p></div></div></section>'''
 
 
@@ -224,7 +265,7 @@ def body_zasshi(s, c, im, ICON):
 </section>
 <section class="zs-lead"><div class="wrap zs-lead__in"><p class="zs-lead__q rv">{lines(c["cta"])}</p><div class="rv" style="--d:.1s"><p>{lines(c["about"])}</p>{rate(s, ICON["star"])}</div></div></section>
 <section class="zs-menu" id="menu"><div class="wrap"><h2 class="zs-h rv"><span>おすすめ</span><small>Menu</small></h2><ul class="zs-menu__list">{dishes}</ul>{NOTE}</div></section>
-<section class="zs-scene" id="scene"><div class="wrap zs-scene__in"><h2 class="zs-h rv"><span>こんな日に</span><small>Scene</small></h2><ol class="zs-scene__list">{sc}</ol></div></section>
+<section class="zs-scene" id="scene"><div class="wrap zs-scene__in"><h2 class="zs-h rv"><span>こんな日に</span><small>Scene</small></h2><ol class="zs-scene__list">{scenes_ph(c, im)}</ol></div></section>
 <section class="zs-about" id="about"><div class="wrap zs-about__in"><figure class="zs-about__ph rv"><img src="{im["room"]}" alt="" loading="lazy"></figure><div class="rv" style="--d:.1s"><h2 class="zs-h"><span>お店のこと</span><small>About</small></h2><p>{lines(c["about"])}</p></div></div></section>'''
 
 
@@ -251,7 +292,7 @@ def body_yami(s, c, im, ICON):
   <div class="ym-guide__t rv" style="--d:.1s"><p class="ym-guide__s">{E(c["dishes"][0][1])}</p><h2>{E(c["dishes"][0][0])}</h2><p>{lines(c["about"])}</p></div>
 </div></section>
 <section class="ym-menu" id="menu"><div class="wrap"><h2 class="ym-h rv"><span>Menu</span>おすすめ</h2><ul class="ym-menu__list">{dishes}</ul>{NOTE}</div></section>
-<section class="ym-scene" id="scene"><div class="wrap"><h2 class="ym-h rv"><span>Scene</span>こんな夜に</h2><ol class="ym-scene__list">{scenes(c)}</ol></div></section>
+<section class="ym-scene" id="scene"><div class="wrap"><h2 class="ym-h rv"><span>Scene</span>こんな夜に</h2><ol class="ym-scene__list">{scenes_ph(c, im)}</ol></div></section>
 <section class="ym-about" id="about"><div class="wrap narrow rv"><h2 class="ym-h"><span>About</span>お店のこと</h2><p>{lines(c["about"])}</p></div></section>'''
 
 
@@ -278,7 +319,7 @@ def body_men(s, c, im, ICON):
   <figure class="mn-lead__ph reveal-clip"><img src="{im["d"][0]}" alt="" loading="lazy"></figure>
 </div></section>
 <section class="mn-menu" id="menu"><div class="wrap"><h2 class="mn-h rv">おすすめ</h2><ul class="mn-menu__list">{bowls}</ul>{NOTE}</div></section>
-<section class="mn-scene" id="scene"><div class="wrap"><h2 class="mn-h rv">こんなときに</h2><ol class="mn-scene__list">{scenes(c)}</ol></div></section>
+<section class="mn-scene" id="scene"><div class="wrap"><h2 class="mn-h rv">こんなときに</h2><ol class="mn-scene__list">{scenes_ph(c, im)}</ol></div></section>
 <section class="mn-about" id="about"><div class="wrap mn-about__in"><figure class="mn-about__ph rv"><img src="{im["room"]}" alt="" loading="lazy"></figure><div class="rv" style="--d:.1s"><h2 class="mn-h mn-h--l">お店のこと</h2><p>{lines(c["about"])}</p></div></div></section>'''
 
 
