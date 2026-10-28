@@ -276,7 +276,7 @@ def page(s, c):
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family={FONTS[w]}&display=swap" rel="stylesheet">
 {disp_link(w, s, c)}
-<link rel="stylesheet" href="../_assets/w/base.css?v={VER}"><link rel="stylesheet" href="../_assets/w/{w}.css?v={VER}">
+<link rel="stylesheet" href="../_assets/w/base.css?v={VER}"><link rel="stylesheet" href="../_assets/w/{w}.css?v={VER}"><link rel="stylesheet" href="../_assets/w/deco.css?v={VER}">
 </head>
 <body class="w-{w} pal-{E(c.get("pal", "a"))}">
 {ribbon(s)}
