@@ -4,6 +4,7 @@
 1. `leads-data/fukui-food-*.json`（訪問記録シートと同じ並び）の `targets` から、今日より後でいちばん近い「予定日」の30軒を取り出す（列：place, block, order, date, staff, name, genre, kind, town, addr, tel, rating, reviews, hp, sns, map, lat, lng）
 2. 店ごとに「業種 → 写真 → 世界観 → 訴求」を決めて、`p/_gen/shops/<予定日>.json` を書く（形式は `2026-10-29.json` と同じ）
 3. `python3 p/_gen/build.py p/_gen/shops/<予定日>.json` で `p/<ID>/index.html` を作る（ID = 's' + md5(place)[:8]）
+   一覧も作り直す：`python3 p/_gen/gallery.py <予定日> <予定日>`
 4. 公開（git push）し、訪問記録アプリへ試作HPのURLを登録する
 
 ## 世界観の決め方（業種と店名から）
@@ -15,6 +16,15 @@
 | kawaii（かわいい系） | カフェ・スイーツ・おばんざい・女性客の多い店 | a コーラル / b ミント / c ラベンダー |
 | retro（昭和レトロ） | 大衆酒場・おでん・酒場・昔ながらの居酒屋 | a 紺赤 / b 緑からし / c 茶橙 |
 | pub（深緑） | アイリッシュパブ・洋風バー | a |
+| hiraki（漆喰×炭火・参考：焼鳥ひらき） | 焼き鳥・炉端・鶏料理・落ち着いた居酒屋 | a 朱 / b 金茶 / c 臙脂 |
+| sankaku（斜めモザイク・参考：高田屋ポスター） | そば・寿司・天ぷら・会席 | a 朱 / b 藍 / c 抹茶 |
+| shokutaku（食卓と枠つき漢字） | 定食・海鮮丼・魚の店・町中華 | a 茶 / b 藍 / c 緑 |
+| zasshi（雑誌の特集） | 朝ごはん・定食・お好み焼き・とんかつ・カジュアル | a 朱 / b 青 / c 山吹 |
+| yami（夜の居酒屋・黒） | 焼肉・もつ鍋・焼き鳥・バー | a 金 / b 赤 / c 緑 |
+| men（クラフト×丼） | ラーメン・そば・町中華 | a 赤 / b 墨 / c 黄土 |
+
+- 新しい6型は p/_gen/worlds2.py。業種ごとの大きな文字（kanji）と英字はそこで決まる。店ごとに変えたい時は shops の JSON に "kanji": "蕎麦" のように書く
+- 30軒のうち半分くらいは新しい6型にして、同じ日に同じ型が続かないようにする
 
 - 同じ日に同じ world が続きすぎないよう、居酒屋は店名の雰囲気（炭・魚・大衆・ちょい呑み など）で振り分ける
 - 写真は `IMG` のキー（soba, chuka, korean, yakitori, kushiage, sea, oden, okonomi, izakaya, sushi, robata, obanzai, nabe, washoku, tempura, bar, cafe, pub, chicken）から選ぶ。合うものが無い業種は、Figmaの画像生成で2〜3枚作って `p/_assets/g/` に足し、`IMG` に追加する

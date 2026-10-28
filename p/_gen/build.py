@@ -7,6 +7,8 @@
   - 出力は p/<ID>/index.html（ID は 's' + md5(place_id)[:8]）
 """
 import glob, hashlib, html, json, os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import worlds2
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 E = lambda s: html.escape(str(s or ''), quote=True)
@@ -227,11 +229,19 @@ def body_pub(s, c, im):
 
 
 BODY = dict(washi=body_washi, sumi=body_sumi, kiiro=body_kiiro, kawaii=body_kawaii, retro=body_retro, pub=body_pub)
+FONTS.update(worlds2.FONTS2)
 
 
 def page(s, c):
     w = c['world']
     im = IMG[c['img']]
+    if w in worlds2.BODY2:
+        im = worlds2.imgs(w, c['img'], im)
+        if c.get('hero'):
+            im['hero'] = A + c['hero']
+        main_html = worlds2.BODY2[w](s, c, im, ICON)
+    else:
+        main_html = BODY[w](s, c, im)
     title = f'{s["name"]}｜福井市{s["town"]}の{s["kind"].split("、")[0]}（試作ページ）'
     desc = f'{s["name"]}（福井市{s["town"]}）のホームページ試作イメージです。'
     return f'''<!doctype html>
@@ -246,7 +256,7 @@ def page(s, c):
 <body class="w-{w} pal-{E(c.get("pal", "a"))}">
 {ribbon(s)}
 {header(s, c)}
-<main>{BODY[w](s, c, im)}
+<main>{main_html}
 {info(s, c)}
 {cta(s, c)}
 </main>
