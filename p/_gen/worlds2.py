@@ -240,7 +240,7 @@ def body_shokutaku(s, c, im, ICON):
   <div class="st-title"><p class="st-title__name">{nm(s, c)}</p><h1 class="st-title__k" aria-label="{E(k)}">{frames}</h1><p class="st-title__en">{E(en)} · {E(s["town"])}</p></div>
   {labels}
 </section>
-<section class="st-lead"><div class="wrap narrow"><p class="st-catch rv">{lines(c["catch"])}</p><p class="st-lead__t rv" style="--d:.1s">{lines(c["lead"])}</p>{rate(s, ICON["star"])}</div></section>
+<section class="st-lead"><div class="wrap narrow"><p class="st-catch rv">{mix(c["catch"])}</p><p class="st-lead__t rv" style="--d:.1s">{lines(c["lead"])}</p>{rate(s, ICON["star"])}</div></section>
 <section class="st-menu" id="menu"><div class="wrap"><h2 class="st-h rv"><span>お品書き</span></h2><ul class="st-menu__list">{dishes}</ul>{NOTE}</div></section>
 <section class="st-scene" id="scene"><div class="wrap"><h2 class="st-h rv"><span>こんなときに</span></h2><ol class="st-scene__list">{scenes_ph(c, im)}</ol></div></section>
 <section class="st-about" id="about"><div class="wrap st-about__in"><figure class="st-about__ph reveal-clip"><img src="{im["room"]}" alt="" loading="lazy"></figure><div class="rv"><h2 class="st-h st-h--l"><span>お店のこと</span></h2><p>{lines(c["about"])}</p></div></div></section>'''

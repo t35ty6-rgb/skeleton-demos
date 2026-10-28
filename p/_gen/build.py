@@ -155,7 +155,7 @@ def body_washi(s, c, im):
 <section class="hero" id="top"><div class="hero__in">
   <div class="hero__name rv"><p>{E(s["kind"].split("、")[0])}</p><h1>{vlines(c["short_v"] if c.get("short_v") else c.get("short") or s["name"])}</h1></div>
   <figure class="hero__ph reveal-clip"><img src="{im["hero"]}" alt="" fetchpriority="high"></figure>
-  <div class="hero__copy rv"><p class="catch">{lines(c["catch"])}</p>{rating(s)}</div>
+  <div class="hero__copy rv"><p class="catch">{worlds2.mix(c["catch"])}</p>{rating(s)}</div>
 </div></section>
 <section class="lead"><div class="wrap narrow rv"><p class="lead__t">{lines(c["lead"])}</p></div></section>
 <section class="menu" id="menu"><div class="wrap"><h2 class="h2 rv">おすすめ</h2><ul class="menu__list">{dishes_cards(c, im)}</ul><p class="note">※ 写真と内容はイメージです。実際のお品書きに差し替えます。</p></div></section>
@@ -234,6 +234,27 @@ def body_pub(s, c, im):
 BODY = dict(washi=body_washi, sumi=body_sumi, kiiro=body_kiiro, kawaii=body_kawaii, retro=body_retro, pub=body_pub)
 FONTS.update(worlds2.FONTS2)
 
+# 店名・キャッチ用の「顔」になる書体（使う文字だけを読み込む）
+DISP = {
+  'hiraki': ['Yuji+Boku'], 'yami': ['Yuji+Syuku'], 'sankaku': ['Klee+One:wght@600', 'Yuji+Syuku'],
+  'shokutaku': ['Klee+One:wght@600', 'Murecho:wght@700'], 'zasshi': ['Mochiy+Pop+One', 'Yusei+Magic', 'RocknRoll+One'],
+  'men': ['Potta+One', 'Murecho:wght@800'], 'washi': ['Klee+One:wght@600'], 'sumi': ['Murecho:wght@900'],
+  'kiiro': ['RocknRoll+One'], 'kawaii': ['Mochiy+Pop+One'], 'retro': ['Reggae+One'], 'pub': [],
+}
+
+
+def disp_link(w, s, c):
+    fams = DISP.get(w) or []
+    if not fams:
+        return ''
+    from urllib.parse import quote
+    txt = ''.join([s['name'], c.get('short', ''), c.get('short_v', ''), c['catch'], c.get('cta', ''), c.get('sticker', ''),
+                   worlds2.kanji(c), s.get('town', ''), str(s.get('kind', '')).split('、')[0],
+                   ''.join(n for n, _ in c['dishes']), ''.join(t for t, _ in c['scenes']), ''.join(c.get('marquee') or []),
+                   'おすすめこんなときにお店のことアクセス名物品書き0123456789.'])
+    chars = ''.join(sorted(set(txt) - set('\n ')))
+    return f'<link href="https://fonts.googleapis.com/css2?family={"&family=".join(fams)}&text={quote(chars)}&display=swap" rel="stylesheet">'
+
 
 def page(s, c):
     w = c['world']
@@ -254,6 +275,7 @@ def page(s, c):
 <title>{E(title)}</title><meta name="description" content="{E(desc)}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family={FONTS[w]}&display=swap" rel="stylesheet">
+{disp_link(w, s, c)}
 <link rel="stylesheet" href="../_assets/w/base.css?v={VER}"><link rel="stylesheet" href="../_assets/w/{w}.css?v={VER}">
 </head>
 <body class="w-{w} pal-{E(c.get("pal", "a"))}">
