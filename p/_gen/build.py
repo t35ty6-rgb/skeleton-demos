@@ -300,6 +300,10 @@ def main(spec_path):
         s = T[c['place']]
         d = os.path.join(ROOT, 'p', pid(c['place']))
         os.makedirs(d, exist_ok=True)
+        f = os.path.join(d, 'index.html')
+        if os.path.exists(f) and '<!-- custom' in open(f).read(500):
+            out.append((pid(c['place']), s['name'], 'custom（手作りのため上書きしない）'))
+            continue
         open(os.path.join(d, 'index.html'), 'w').write(page(s, c))
         out.append((pid(c['place']), s['name'], c['world']))
     for o in out:
