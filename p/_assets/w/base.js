@@ -5,7 +5,8 @@
   const still = window.self !== window.top;
   if (still) document.documentElement.classList.add('still');
   // 大ビジュアルの組み上がり（読み込み直後に一度だけ）
-  requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('is-in')));
+  const go = () => document.body.classList.add('is-in');
+  if (still || reduce) go(); else { requestAnimationFrame(() => requestAnimationFrame(go)); setTimeout(go, 400); }
   if (reduce || still || !('IntersectionObserver' in window)) { els.forEach((e) => e.classList.add('in')); return; }
   // clip-path で隠れた要素は親を見て出す
   const io = new IntersectionObserver((en) => en.forEach((x) => {
