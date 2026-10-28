@@ -22,7 +22,14 @@
   const io = new IntersectionObserver((ents) => {
     ents.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
   }, { rootMargin: '0px 0px -12% 0px', threshold: 0.05 });
-  document.querySelectorAll('.rv').forEach((el) => io.observe(el));
+  // 縦書きの見出しは clip-path で隠しているため、親要素を見て表示する
+  const CLIP = '.vline,.about__h,.about__body,.item__head,.blog__head';
+  const pio = new IntersectionObserver((ents) => {
+    ents.forEach((en) => { if (en.isIntersecting) { en.target.querySelectorAll(':scope > .rv').forEach((c) => c.classList.add('in')); pio.unobserve(en.target); } });
+  }, { rootMargin: '0px 0px -12% 0px', threshold: 0.05 });
+  const parents = new Set();
+  document.querySelectorAll('.rv').forEach((el) => { if (el.matches(CLIP)) parents.add(el.parentElement); else io.observe(el); });
+  parents.forEach((p) => pio.observe(p));
 
   // スライダー
   document.querySelectorAll('[data-slider]').forEach((sl) => {
@@ -76,7 +83,7 @@
     if (ride) {
       const r = ride.parentElement.getBoundingClientRect();
       const p = Math.min(1, Math.max(0, (vh - r.top) / (vh * 0.9)));
-      ride.style.transform = `translate3d(${(p * 240).toFixed(1)}px,0,0)`;
+      ride.style.transform = `translate3d(${(p * 130).toFixed(1)}px,0,0)`;
     }
   };
   addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });

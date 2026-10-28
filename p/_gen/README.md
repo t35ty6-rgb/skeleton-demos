@@ -1,0 +1,33 @@
+# 試作HP 夜間作成の手順（毎晩・翌営業日の30軒）
+
+## 流れ
+1. `_data/fukui-food-*.json` の `targets` から、今日より後でいちばん近い「予定日」の30軒を取り出す（列：place, block, order, date, staff, name, genre, kind, town, addr, tel, rating, reviews, hp, sns, map, lat, lng）
+2. 店ごとに「業種 → 写真 → 世界観 → 訴求」を決めて、`p/_gen/shops/<予定日>.json` を書く（形式は `2026-10-29.json` と同じ）
+3. `python3 p/_gen/build.py p/_gen/shops/<予定日>.json` で `p/<ID>/index.html` を作る（ID = 's' + md5(place)[:8]）
+4. 公開（git push）し、訪問記録アプリへ試作HPのURLを登録する
+
+## 世界観の決め方（業種と店名から）
+| world | 合う店 | 色（pal） |
+|---|---|---|
+| washi（白・和モダン） | そば・寿司・天ぷら・割烹・和食・魚と地酒 | a 朱 / b 藍 / c 抹茶 |
+| sumi（黒系） | 焼き鳥・炉端・炭火焼・バー・落ち着いた居酒屋 | a 炭火の橙 / b 金 / c 赤 |
+| kiiro（黄色系） | お好み焼き・串揚げ・町中華・韓国・もつ鍋・元気な大衆店 | a 赤 / b 黒 / c 橙 |
+| kawaii（かわいい系） | カフェ・スイーツ・おばんざい・女性客の多い店 | a コーラル / b ミント / c ラベンダー |
+| retro（昭和レトロ） | 大衆酒場・おでん・酒場・昔ながらの居酒屋 | a 紺赤 / b 緑からし / c 茶橙 |
+| pub（深緑） | アイリッシュパブ・洋風バー | a |
+
+- 同じ日に同じ world が続きすぎないよう、居酒屋は店名の雰囲気（炭・魚・大衆・ちょい呑み など）で振り分ける
+- 写真は `IMG` のキー（soba, chuka, korean, yakitori, kushiage, sea, oden, okonomi, izakaya, sushi, robata, obanzai, nabe, washoku, tempura, bar, cafe, pub, chicken）から選ぶ。合うものが無い業種は、Figmaの画像生成で2〜3枚作って `p/_assets/g/` に足し、`IMG` に追加する
+
+## 文章のルール
+- 店の事実（住所・電話・評価）はデータの値だけを使う。営業時間・価格・創業年などデータに無い事実は書かない（ページでは〔要確認〕になる）
+- メニューは業種の定番を「例」として書く（ページに「写真と内容はイメージです」が出る）
+- catch は2行。店名・町名・業種の特徴が伝わる短い言葉。`\n` で改行
+- 見出しは短い名詞句（builder側で固定）。英字の小見出し・番号は付けない
+- 「No.1」「必ず」「治る」などの断定や誇張は使わない
+- short は看板に出す短い店名（支店名や「個室完備」などは外す）
+
+## 公開
+- Mac の自動公開が止まっている時は、デスクトップの「試作HP公開.command」をダブルクリックすると公開される
+- URL：`https://t35ty6-rgb.github.io/skeleton-demos/p/<ID>/`
+- 訪問記録アプリへの登録：Apps Script の /exec に `POST {"key":"akari-798a468c9591","protos":[{"id":"<place>","url":"<URL>"}]}`
