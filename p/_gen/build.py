@@ -67,10 +67,15 @@ def pid(place_id):
 
 
 def load_targets():
-    f = sorted(glob.glob(os.path.join(ROOT, '_data', 'fukui-food-*.json')))[-1]
-    d = json.load(open(f))
+    # 訪問記録シートの元データは leads-data。_data 側にしか無い店も拾えるよう両方読む（leads-data 優先）
     keys = ['place', 'block', 'order', 'date', 'staff', 'name', 'genre', 'kind', 'town', 'addr', 'tel', 'rating', 'reviews', 'hp', 'sns', 'map', 'lat', 'lng']
-    return {r[0]: dict(zip(keys, r)) for r in d['targets']}
+    out = {}
+    for sub in ('_data', 'leads-data'):
+        fs = sorted(glob.glob(os.path.join(ROOT, sub, 'fukui-food-*.json')))
+        if fs:
+            for r in json.load(open(fs[-1]))['targets']:
+                out[r[0]] = dict(zip(keys, r))
+    return out
 
 
 def lines(txt):

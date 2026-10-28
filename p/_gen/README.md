@@ -1,7 +1,7 @@
 # 試作HP 夜間作成の手順（毎晩・翌営業日の30軒）
 
 ## 流れ
-1. `_data/fukui-food-*.json` の `targets` から、今日より後でいちばん近い「予定日」の30軒を取り出す（列：place, block, order, date, staff, name, genre, kind, town, addr, tel, rating, reviews, hp, sns, map, lat, lng）
+1. `leads-data/fukui-food-*.json`（訪問記録シートと同じ並び）の `targets` から、今日より後でいちばん近い「予定日」の30軒を取り出す（列：place, block, order, date, staff, name, genre, kind, town, addr, tel, rating, reviews, hp, sns, map, lat, lng）
 2. 店ごとに「業種 → 写真 → 世界観 → 訴求」を決めて、`p/_gen/shops/<予定日>.json` を書く（形式は `2026-10-29.json` と同じ）
 3. `python3 p/_gen/build.py p/_gen/shops/<予定日>.json` で `p/<ID>/index.html` を作る（ID = 's' + md5(place)[:8]）
 4. 公開（git push）し、訪問記録アプリへ試作HPのURLを登録する
@@ -26,6 +26,9 @@
 - 見出しは短い名詞句（builder側で固定）。英字の小見出し・番号は付けない
 - 「No.1」「必ず」「治る」などの断定や誇張は使わない
 - short は看板に出す短い店名（支店名や「個室完備」などは外す）
+
+## 抜けの確認
+- 作ったあと、`leads-data` のその日の30軒すべてに `p/<ID>/index.html` があるか確かめる（無い店は訪問記録で「試作HP：準備中」になる）
 
 ## 公開
 - Mac の自動公開が止まっている時は、デスクトップの「試作HP公開.command」をダブルクリックすると公開される
