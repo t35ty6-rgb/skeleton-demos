@@ -586,7 +586,7 @@ def page(name, c, s, d, p):
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>{E(s["name"])}｜{E(town)}の{E(kind)}（試作ページ）</title>
-<meta name="description" content="{E(s["name"])}（福井市{E(town)}）のホームページ試作イメージです。">
+<meta name="description" content="{E(s["name"])}（{E(s.get("city","福井市"))}{E(town)}）のホームページ試作イメージです。">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@500;700&family=Noto+Sans+JP:wght@400;500&family=Shippori+Mincho:wght@500;700&family=Lexend:wght@400;500;600&family=Alegreya:wght@500&family=Amiri:wght@700&display=swap" rel="stylesheet">
 <style>{CSS}</style>
