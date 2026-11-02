@@ -28,7 +28,10 @@ def main(dates):
             if os.path.exists(f):
                 m = re.search(r'class="w-(\w+)', open(f).read())
                 w = m.group(1) if m else 'washi'
-                cards.append(f'<a class="card" href="../{pid}/" target="_blank" rel="noopener"><div class="frame"><iframe src="../{pid}/" loading="lazy" tabindex="-1" title="{E(r[5])}"></iframe></div><div class="meta"><span class="tag t-{w}">{TAG.get(w, w)}</span><b>{E(r[5])}</b><small>{meta}</small></div></a>')
+                hasb = os.path.exists(os.path.join(ROOT, 'p', pid, 'b', 'index.html'))
+                ab = (f'<div class="ab"><a class="ab__a" href="../{pid}/" target="_blank" rel="noopener">A ひらき型</a>'
+                      + (f'<a class="ab__b" href="../{pid}/b/" target="_blank" rel="noopener">B ひより型</a>' if hasb else '') + '</div>')
+                cards.append(f'<div class="card"><a href="../{pid}/" target="_blank" rel="noopener" class="frame"><iframe src="../{pid}/" loading="lazy" tabindex="-1" title="{E(r[5])}"></iframe></a><div class="meta"><b>{E(r[5])}</b><small>{meta}</small>{ab}</div></div>')
             else:
                 cards.append(f'<div class="card card--none"><div class="frame frame--none"><span>試作HPなし</span></div><div class="meta"><span class="tag t-none">未作成</span><b>{E(r[5])}</b><small>{meta}</small></div></div>')
         dt = datetime.date.fromisoformat(d)
@@ -47,11 +50,11 @@ section{{max-width:1400px;margin:0 auto;padding:30px 28px}}h2{{font-size:20px;fo
 .frame{{position:relative;aspect-ratio:9/13;overflow:hidden;background:#eee}}
 .frame iframe{{position:absolute;top:0;left:0;width:390px;height:563px;border:0;transform-origin:0 0;transform:scale(var(--s,.64));pointer-events:none}}
 .frame--none{{display:grid;place-items:center;color:var(--sub);font-size:13px;background:repeating-linear-gradient(135deg,#F1EEE8 0 10px,#ECE8E0 10px 20px)}}
-.meta{{padding:12px 14px 14px;display:grid;gap:4px}}.meta b{{font-size:14.5px;line-height:1.4}}.meta small{{font-size:12px;color:var(--sub)}}
+.meta{{padding:12px 14px 14px;display:grid;gap:4px}}.frame{{display:block}}.ab{{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}}.ab a{{display:grid;place-items:center;height:40px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none}}.ab__a{{background:#B0462A;color:#fff}}.ab__b{{background:#0E4472;color:#fff}}.meta b{{font-size:14.5px;line-height:1.4}}.meta small{{font-size:12px;color:var(--sub)}}
 .tag{{justify-self:start;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px}}
 .t-washi{{background:#F1EDE4;color:#6B3A2C}}.t-sumi{{background:#15120F;color:#EFE7DA}}.t-kiiro{{background:#FFD23F;color:#1A1712}}.t-kawaii{{background:#FFE6E0;color:#B24C55}}.t-retro{{background:#0E4472;color:#E9E4D0}}.t-pub{{background:#13271E;color:#C9A45C}}
 .t-hiraki{{background:#B0462A;color:#FFF8F2}}.t-sankaku{{background:#24211D;color:#FCFBF8}}.t-shokutaku{{background:#8C4A2F;color:#FFF9F3}}.t-zasshi{{background:#D2552E;color:#FFF}}.t-yami{{background:#1A1715;color:#C8A062}}.t-men{{background:#E8DDCB;color:#2D241D}}.t-none{{background:#E6E1D8;color:#6B645C}}
-</style></head><body><header><h1>試作HP一覧</h1><p>訪問記録と同じ並びです。カードを押すと、その店の試作HPが開きます（スマホで見たときの表示）。</p></header>{"".join(secs)}
+</style></head><body><header><h1>試作HP一覧</h1><p>訪問記録と同じ並びです。A＝ひらき型（夜のお店向け）、B＝ひより型（昼・定食向け）。ボタンを押すとそれぞれの試作HPが開きます。</p></header>{"".join(secs)}
 <script>
 // カードの幅に合わせて中身を縮める
 const fit=()=>document.querySelectorAll('.frame').forEach(f=>f.style.setProperty('--s',(f.clientWidth/390).toFixed(4)));addEventListener('resize',fit);fit();
