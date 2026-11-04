@@ -33,6 +33,9 @@ header{background:var(--surface);border-bottom:1px solid var(--line);position:st
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn.primary:hover{background:var(--accent-ink);color:#fff}
 .btn:disabled{opacity:.4;pointer-events:none}
+.btn.line{background:#06C755;border-color:#06C755;color:#fff;font-weight:700}
+.btn.line:hover{background:#05B34C;border-color:#05B34C;color:#fff}
+.dock{display:none}
 .btn.add{padding-left:10px}
 .btn.add img{width:22px;height:22px;margin-right:2px}
 .inkans{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
@@ -89,6 +92,14 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
 .busy{position:fixed;inset:0;background:rgba(255,255,255,.7);display:none;place-items:center;z-index:40;font-weight:500;color:var(--ink-2)}
 .busy.on{display:grid}
 @media (max-width:760px){
+  header{position:static}
+  header #save, header #line{display:none}
+  .toast{white-space:nowrap;font-size:13px}
+  .dock.on{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;gap:10px;padding:10px 14px calc(12px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line)}
+  .dock .line{flex:1;justify-content:center;font-size:17px;padding:15px 18px}
+  .dock .sv{padding:15px 16px}
+  main{padding-bottom:120px}
+  .toast{bottom:100px}
   .hero{grid-template-columns:1fr}
   .bar{padding:10px 14px;gap:10px}
   .brand{width:100%}
@@ -105,7 +116,8 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
     <div class="size" id="sizebox">大きさ <input type="range" id="size" min="8" max="45" step="0.5" value="21"><b id="sizev">21mm</b></div>
     <button class="btn add" data-k="kaku" disabled><img src="stamp.png" alt="">＋ 角印</button><button class="btn add" data-k="maru" disabled><img src="maru.png" alt="">＋ 奥野</button>
     <button class="btn" id="open">PDFを開く</button>
-    <button class="btn primary" id="save" disabled>押印したPDFを保存</button>
+    <button class="btn line" id="line" data-act="line" disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.6 1.6 4.9 4 6.4V21l3.4-2.3c.8.2 1.7.3 2.6.3 5.5 0 10-3.6 10-8s-4.5-8-10-8z"/></svg>LINEで送る</button>
+    <button class="btn primary" id="save" data-act="save" disabled>押印したPDFを保存</button>
   </div>
 </header>
 
@@ -136,11 +148,12 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
   </section>
 
   <section class="ws" id="ws">
-    <div class="tip">印はドラッグで移動、右下の青い丸で拡大縮小、× で削除。文字は印の下から透けて見えます。</div>
+    <div class="tip">印はドラッグで移動、右下の青い丸で拡大縮小、× で削除。位置を合わせたら「LINEで送る」を押すだけ。次からは同じ位置に自動で置きます。</div>
     <div class="fname"><label for="outname">保存するファイル名</label><div class="in"><input id="outname" autocomplete="off" spellcheck="false"><span class="ext">.pdf</span></div></div>
     <div id="pages"></div>
   </section>
 </main>
+<div class="dock" id="dock"><button class="btn line" data-act="line"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.6 1.6 4.9 4 6.4V21l3.4-2.3c.8.2 1.7.3 2.6.3 5.5 0 10-3.6 10-8s-4.5-8-10-8z"/></svg>LINEで送る</button><button class="btn sv" data-act="save">保存</button></div>
 <div class="busy" id="busy">読み込み中…</div>
 <div class="toast" id="toast"></div>
 
@@ -215,10 +228,13 @@ async function loadFile(f){
     }
     $("#start").style.display="none"; $("#ws").classList.add("on");
     $("#outname").value = fileName + "_押印";
-    document.querySelectorAll(".btn.add").forEach(b=>b.disabled=false); $("#save").disabled=false; if($("#share")) $("#share").disabled=false;
-    // 1ページ目の右上に1つ置く
-    kind="kaku"; const p0=pages[0], s=SZ.kaku*MM*p0.scale;
-    addStamp(p0, p0.vp.width - s - 36*MM*p0.scale*0.5 - s*0.6, 28*MM*p0.scale*0.5 + s*0.9);
+    document.querySelectorAll(".btn.add,[data-act]").forEach(b=>b.disabled=false); $("#dock").classList.add("on");
+    if(!restoreLayout()){
+      // 1ページ目の右上に1つ置く
+      kind="kaku"; const p0=pages[0], s=SZ.kaku*MM*p0.scale;
+      addStamp(p0, p0.vp.width - s - 36*MM*p0.scale*0.5 - s*0.6, 28*MM*p0.scale*0.5 + s*0.9);
+    } else toast("前回と同じ位置に印を置きました");
+    select(null);
     window.scrollTo({top:0});
   }catch(err){
     console.error(err); toast(/password/i.test(err?.name||err?.message||"") ? "パスワード付きのPDFは開けません" : "PDFを開けませんでした");
@@ -240,6 +256,7 @@ function place(S){
   const s=px(S), W=S.page.vp.width, H=S.page.vp.height;
   S.x=Math.max(-s*0.3,Math.min(W-s*0.7,S.x)); S.y=Math.max(-s*0.3,Math.min(H-s*0.7,S.y));
   Object.assign(S.el.style,{left:S.x+"px",top:S.y+"px",width:s+"px",height:s+"px"});
+  markDirty();
 }
 function select(S){
   stamps.forEach(t=>t.el.classList.toggle("sel",t===S)); sel=S;
@@ -248,7 +265,7 @@ function select(S){
 function bind(S){
   const el=S.el;
   el.querySelector(".x").addEventListener("pointerdown", e=>e.stopPropagation());
-  el.querySelector(".x").addEventListener("click", e=>{ e.stopPropagation(); el.remove(); stamps=stamps.filter(t=>t!==S); if(sel===S) sel=null; });
+  el.querySelector(".x").addEventListener("click", e=>{ e.stopPropagation(); el.remove(); stamps=stamps.filter(t=>t!==S); if(sel===S) sel=null; markDirty(); });
   el.addEventListener("pointerdown", e=>{
     if(e.target.classList.contains("x")) return;
     e.preventDefault(); select(S);
@@ -271,7 +288,7 @@ function bind(S){
 }
 document.addEventListener("keydown", e=>{
   if(!sel || /input|textarea/i.test(document.activeElement?.tagName)) return;
-  if(e.key==="Delete"||e.key==="Backspace"){ sel.el.remove(); stamps=stamps.filter(t=>t!==sel); sel=null; e.preventDefault(); }
+  if(e.key==="Delete"||e.key==="Backspace"){ sel.el.remove(); stamps=stamps.filter(t=>t!==sel); sel=null; markDirty(); e.preventDefault(); }
   const k={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
   if(k){ const st=e.shiftKey?10:1; sel.x+=k[0]*st; sel.y+=k[1]*st; place(sel); e.preventDefault(); }
 });
@@ -291,28 +308,39 @@ document.querySelectorAll(".btn.add").forEach(btn=>btn.addEventListener("click",
   addStamp(best, best.vp.width/2 - s/2, y, k);
 }));
 
-/* ---------- 保存 ---------- */
-let lastOut=null;
-function offer(name, bytes, mime){
+/* ---------- 保存・LINE送信 ---------- */
+function offer(name, bytes, mime, msg){
   try{
     const url=URL.createObjectURL(new Blob([bytes],{type:mime}));
     const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),30000); toast("保存しました");
+    setTimeout(()=>URL.revokeObjectURL(url),30000); toast(msg||"保存しました");
   }catch(e){ toast("保存できませんでした"); }
 }
-async function share(name, bytes, mime){
-  const f=new File([bytes],name,{type:mime});
-  try{ await navigator.share({files:[f], title:name}); }
-  catch(err){ if(err?.name!=="AbortError") offer(name,bytes,mime); }
-}
 const canShareFiles = (()=>{ try{ return !!(navigator.canShare && navigator.canShare({files:[new File([new Uint8Array(1)],"a.pdf",{type:"application/pdf"})]})); }catch(e){ return false; } })();
-if(canShareFiles){ const b=document.createElement("button"); b.className="btn"; b.id="share"; b.disabled=true; b.textContent="LINE・メールで送る"; $("#save").before(b);
-  b.addEventListener("click", async()=>{ const o=await build(); if(o) share(outName(), o, "application/pdf"); }); }
 
-async function build(){
+// 前回の印の位置を覚える（ページ内の割合で保存）
+const LKEY="okuno_stamp_layout";
+function saveLayout(){
+  try{ localStorage.setItem(LKEY, JSON.stringify(stamps.map(S=>{ const s=px(S); return {k:S.kind, p:S.page.index, fx:(S.x+s/2)/S.page.vp.width, fy:(S.y+s/2)/S.page.vp.height, mm:S.mm}; }))); }catch(e){}
+}
+function restoreLayout(){
+  let L=null; try{ L=JSON.parse(localStorage.getItem(LKEY)||"null"); }catch(e){}
+  if(!Array.isArray(L)||!L.length) return false;
+  let n=0;
+  for(const it of L){ const P=pages[Math.min(it.p, pages.length-1)]; if(!P||!KINDS[it.k]) continue;
+    const S=addStamp(P,0,0,it.k); S.mm=it.mm||SZ[it.k]; const s=px(S); S.x=it.fx*P.vp.width-s/2; S.y=it.fy*P.vp.height-s/2; place(S); n++; }
+  return n>0;
+}
+
+// 印を動かすたびに裏でPDFを作っておく → ボタンを押した瞬間に送れる
+let ver=0, ready=null, readyVer=-1, dirtyT=null;
+function markDirty(){ ver++; ready=null; clearTimeout(dirtyT); dirtyT=setTimeout(prebuild, 350); }
+async function prebuild(){ const v=ver; const o=await build(true); if(o && v===ver){ ready=o; readyVer=v; } }
+
+async function build(quiet){
   if(!pdfBytes) return null;
-  if(!stamps.length){ toast("印が置かれていません"); return null; }
-  busy(true,"PDFを作成中…");
+  if(!stamps.length){ if(!quiet) toast("印が置かれていません"); return null; }
+  if(!quiet) busy(true,"PDFを作成中…");
   try{
     const {PDFDocument, degrees, BlendMode} = PDFLib;
     const doc = await PDFDocument.load(pdfBytes, {ignoreEncryption:true});
@@ -327,10 +355,31 @@ async function build(){
       pdfPages[P.index].drawImage(pngs[S.kind],{x:blx,y:bly,width:size,height:size,rotate:degrees(ang),blendMode:BlendMode.Multiply});
     }
     return await doc.save();
-  }catch(err){ console.error(err); toast("PDFを作れませんでした"); return null; }
-  finally{ busy(false); }
+  }catch(err){ console.error(err); if(!quiet) toast("PDFを作れませんでした"); return null; }
+  finally{ if(!quiet) busy(false); }
 }
-$("#save").addEventListener("click", async()=>{ const o=await build(); if(o) offer(outName(), o, "application/pdf"); });
+const current = () => (ready && readyVer===ver) ? ready : null;
+
+async function sendLine(){
+  const name=outName();
+  if(!canShareFiles){
+    const o=current()||await build(); if(!o) return;
+    saveLayout(); offer(name,o,"application/pdf","保存しました。LINEのトークにこのPDFをドラッグして送ってください"); return;
+  }
+  let o=current(), waited=false;
+  if(!o){ o=await build(); waited=true; if(!o) return; ready=o; readyVer=ver; }
+  try{
+    await navigator.share({files:[new File([o],name,{type:"application/pdf"})]});
+    saveLayout();
+  }catch(err){
+    if(err?.name==="AbortError") return;
+    if(err?.name==="NotAllowedError" && waited){ toast("準備できました。もう一度「LINEで送る」を押してください"); return; }
+    saveLayout(); offer(name,o,"application/pdf");
+  }
+}
+async function saveFile(){ const o=current()||await build(); if(o){ saveLayout(); offer(outName(), o, "application/pdf"); } }
+document.querySelectorAll('[data-act="line"]').forEach(b=>b.addEventListener("click", sendLine));
+document.querySelectorAll('[data-act="save"]').forEach(b=>b.addEventListener("click", saveFile));
 document.querySelectorAll(".btn.png").forEach(b=>b.addEventListener("click", async e=>{
   e.preventDefault(); const k=b.dataset.k; offer(KINDS[k].file, await stampBytes(k), "image/png");
 }));
