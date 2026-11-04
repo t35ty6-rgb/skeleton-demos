@@ -33,6 +33,13 @@ header{background:var(--surface);border-bottom:1px solid var(--line);position:st
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn.primary:hover{background:var(--accent-ink);color:#fff}
 .btn:disabled{opacity:.4;pointer-events:none}
+.btn.add{padding-left:10px}
+.btn.add img{width:22px;height:22px;margin-right:2px}
+.inkans{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.inkans figure{margin:0;text-align:center}
+.inkans .inkan{margin-bottom:0}
+.inkans figcaption{font-size:13px;font-weight:500;margin:8px 0 6px}
+.inkans .btn{font-size:12px;padding:6px 12px}
 .size{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
 .size input[type=range]{width:110px;accent-color:var(--accent)}
 .size b{color:var(--ink);font-weight:700;min-width:44px;display:inline-block}
@@ -52,7 +59,7 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
   linear-gradient(var(--surface),var(--surface)) padding-box;border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:16px;
   background-image:linear-gradient(45deg,#F2F5F8 25%,transparent 25%,transparent 75%,#F2F5F8 75%),linear-gradient(45deg,#F2F5F8 25%,transparent 25%,transparent 75%,#F2F5F8 75%);
   background-size:16px 16px;background-position:0 0,8px 8px}
-.inkan img{width:160px;height:160px}
+.inkan img{width:120px;height:120px}
 .steps{margin:0;padding:0;list-style:none;counter-reset:s}
 .steps li{counter-increment:s;display:flex;gap:10px;font-size:14px;line-height:1.6;padding:6px 0;color:var(--ink-2)}
 .steps li::before{content:counter(s);flex:0 0 22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;margin-top:1px}
@@ -95,8 +102,8 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
 <header>
   <div class="bar">
     <div class="brand"><span style="width:34px;height:34px;border-radius:10px;background:#1D9BF0;display:grid;place-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 15l2 2 4-4"/></svg></span><div>押印ツール<small>有限会社 おくの電化</small></div></div>
-    <div class="size" id="sizebox">大きさ <input type="range" id="size" min="12" max="45" step="0.5" value="21"><b id="sizev">21mm</b></div>
-    <button class="btn" id="add" disabled>＋ 印を置く</button>
+    <div class="size" id="sizebox">大きさ <input type="range" id="size" min="8" max="45" step="0.5" value="21"><b id="sizev">21mm</b></div>
+    <button class="btn add" data-k="kaku" disabled><img src="stamp.png" alt="">＋ 角印</button><button class="btn add" data-k="maru" disabled><img src="maru.png" alt="">＋ 奥野</button>
     <button class="btn" id="open">PDFを開く</button>
     <button class="btn primary" id="save" disabled>押印したPDFを保存</button>
   </div>
@@ -114,15 +121,17 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
       </label>
       <div class="card">
         <h3>使う印</h3>
-        <div class="sub">背景を透明にした角印（朱色）</div>
-        <div class="inkan"><img src="stamp.png" alt="おくの電化 角印"></div>
+        <div class="sub">背景を透明にした印影（朱色）。上の「＋ 角印」「＋ 奥野」で置けます</div>
+        <div class="inkans">
+          <figure><div class="inkan"><img src="stamp.png" alt="おくの電化 角印"></div><figcaption>角印（社印）</figcaption><button class="btn png" data-k="kaku">画像を保存（PNG）</button></figure>
+          <figure><div class="inkan"><img src="maru.png" alt="奥野 丸印"></div><figcaption>丸印（奥野）</figcaption><button class="btn png" data-k="maru">画像を保存（PNG）</button></figure>
+        </div>
         <ul class="steps">
-          <li>PDFを入れると、1ページ目の右上に印が置かれます</li>
+          <li>PDFを入れると、1ページ目の右上に角印が置かれます。奥野の丸印は「＋ 奥野」で追加</li>
           <li>印をドラッグして社名の上へ。右下の青い丸で大きさを変えます</li>
           <li>「押印したPDFを保存」で完成。ページをダブルクリックでも印を追加できます</li>
         </ul>
-        <button class="btn" id="pngsave" style="margin-top:14px">印の画像を保存（PNG）</button>
-      </div>
+              </div>
     </div>
   </section>
 
@@ -136,8 +145,12 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
 <div class="toast" id="toast"></div>
 
 <script>
-const STAMP_SRC = "stamp.png";
-let _sb=null; const stampBytes = async () => _sb || (_sb = new Uint8Array(await (await fetch(STAMP_SRC)).arrayBuffer()));
+const KINDS = {
+  kaku:{src:"stamp.png", file:"おくの電化_角印.png", def:21},
+  maru:{src:"maru.png",  file:"奥野_丸印.png",     def:12}
+};
+let kind = "kaku";
+const _sb={}; const stampBytes = async (k="kaku") => _sb[k] || (_sb[k] = new Uint8Array(await (await fetch(KINDS[k].src)).arrayBuffer()));
 const MM = 72/25.4;            // 1mm = 2.8346pt
 const $ = s => document.querySelector(s);
 pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
@@ -157,9 +170,10 @@ function outName(){
   return (v || fileName + "_押印") + ".pdf";
 }
 let pdfBytes = null, fileName = "", pages = [], stamps = [], sel = null;
-let sizeMM = 21;
-try{ const v = parseFloat(localStorage.getItem("okuno_stamp_mm")); if(v>=12&&v<=45) sizeMM=v; }catch(e){}
-$("#size").value = sizeMM; $("#sizev").textContent = sizeMM+"mm";
+const SZ = {};
+for(const k in KINDS){ SZ[k]=KINDS[k].def; try{ const v=parseFloat(localStorage.getItem("okuno_stamp_mm_"+k) ?? (k==="kaku"?localStorage.getItem("okuno_stamp_mm"):null)); if(v>=8&&v<=60) SZ[k]=v; }catch(e){} }
+const saveSZ = k => { try{ localStorage.setItem("okuno_stamp_mm_"+k, SZ[k]); }catch(e){} };
+$("#size").value = SZ.kaku; $("#sizev").textContent = SZ.kaku+"mm";
 
 function toast(t){ const el=$("#toast"); el.textContent=t; el.classList.add("on"); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove("on"),2600); }
 function busy(on,t){ $("#busy").textContent=t||"読み込み中…"; $("#busy").classList.toggle("on",on); }
@@ -196,14 +210,14 @@ async function loadFile(f){
       await pg.render({canvasContext:cv.getContext("2d"), viewport:pg.getViewport({scale:scale*dpr})}).promise;
       const P = {index:i-1, el:box, vp, scale};
       pages.push(P);
-      box.addEventListener("dblclick", e => { const r=box.getBoundingClientRect(); const s=sizeMM*MM*scale; addStamp(P, e.clientX-r.left-s/2, e.clientY-r.top-s/2); });
+      box.addEventListener("dblclick", e => { const r=box.getBoundingClientRect(); const s=SZ[kind]*MM*scale; addStamp(P, e.clientX-r.left-s/2, e.clientY-r.top-s/2); });
       box.addEventListener("pointerdown", e => { if(e.target===cv) select(null); });
     }
     $("#start").style.display="none"; $("#ws").classList.add("on");
     $("#outname").value = fileName + "_押印";
-    $("#add").disabled=false; $("#save").disabled=false; if($("#share")) $("#share").disabled=false;
+    document.querySelectorAll(".btn.add").forEach(b=>b.disabled=false); $("#save").disabled=false; if($("#share")) $("#share").disabled=false;
     // 1ページ目の右上に1つ置く
-    const p0=pages[0], s=sizeMM*MM*p0.scale;
+    kind="kaku"; const p0=pages[0], s=SZ.kaku*MM*p0.scale;
     addStamp(p0, p0.vp.width - s - 36*MM*p0.scale*0.5 - s*0.6, 28*MM*p0.scale*0.5 + s*0.9);
     window.scrollTo({top:0});
   }catch(err){
@@ -212,10 +226,11 @@ async function loadFile(f){
 }
 
 /* ---------- 印の操作 ---------- */
-function addStamp(P, x, y){
-  const S = {page:P, x, y, mm:sizeMM, el:document.createElement("div")};
+function addStamp(P, x, y, k=kind){
+  kind=k;
+  const S = {page:P, x, y, kind:k, mm:SZ[k], el:document.createElement("div")};
   S.el.className="st";
-  S.el.innerHTML='<img alt="" src="'+STAMP_SRC+'"><div class="frame"></div><button class="x" title="削除">×</button><div class="h"></div>';
+  S.el.innerHTML='<img alt="" src="'+KINDS[k].src+'"><div class="frame"></div><button class="x" title="削除">×</button><div class="h"></div>';
   P.el.appendChild(S.el);
   stamps.push(S); place(S); select(S); bind(S);
   return S;
@@ -228,7 +243,7 @@ function place(S){
 }
 function select(S){
   stamps.forEach(t=>t.el.classList.toggle("sel",t===S)); sel=S;
-  if(S){ $("#size").value=S.mm; $("#sizev").textContent=S.mm+"mm"; }
+  if(S){ kind=S.kind; $("#size").value=S.mm; $("#sizev").textContent=S.mm+"mm"; }
 }
 function bind(S){
   const el=S.el;
@@ -250,7 +265,7 @@ function bind(S){
       place(S);
     };
     const up=()=>{ el.removeEventListener("pointermove",mv); el.removeEventListener("pointerup",up); el.removeEventListener("pointercancel",up);
-      if(resize){ sizeMM=S.mm; try{localStorage.setItem("okuno_stamp_mm",sizeMM)}catch(e){} } };
+      if(resize){ SZ[S.kind]=S.mm; saveSZ(S.kind); } };
     el.addEventListener("pointermove",mv); el.addEventListener("pointerup",up); el.addEventListener("pointercancel",up);
   });
 }
@@ -261,19 +276,20 @@ document.addEventListener("keydown", e=>{
   if(k){ const st=e.shiftKey?10:1; sel.x+=k[0]*st; sel.y+=k[1]*st; place(sel); e.preventDefault(); }
 });
 $("#size").addEventListener("input", e=>{
-  const v=parseFloat(e.target.value); $("#sizev").textContent=v+"mm"; sizeMM=v;
-  try{localStorage.setItem("okuno_stamp_mm",v)}catch(_){}
+  const v=parseFloat(e.target.value); $("#sizev").textContent=v+"mm";
+  const k = sel ? sel.kind : kind; SZ[k]=v; saveSZ(k);
   if(sel){ const c=px(sel)/2, cx=sel.x+c, cy=sel.y+c; sel.mm=v; const n=px(sel)/2; sel.x=cx-n; sel.y=cy-n; place(sel); }
 });
-$("#add").addEventListener("click", ()=>{
+document.querySelectorAll(".btn.add").forEach(btn=>btn.addEventListener("click", ()=>{
+  const k=btn.dataset.k;
   if(!pages.length) return;
   // いま画面の中央に一番近いページ
   const mid=innerHeight/2; let best=pages[0], bd=1e9;
   pages.forEach(P=>{ const r=P.el.getBoundingClientRect(); let d=Math.abs((r.top+r.bottom)/2-mid); if(r.top<mid&&r.bottom>mid){d=0;} if(d<bd){bd=d;best=P;} });
-  const r=best.el.getBoundingClientRect(), s=sizeMM*MM*best.scale;
+  const r=best.el.getBoundingClientRect(), s=SZ[k]*MM*best.scale;
   const y=Math.max(20, Math.min(best.vp.height-s-20, mid-r.top-s/2));
-  addStamp(best, best.vp.width/2 - s/2, y);
-});
+  addStamp(best, best.vp.width/2 - s/2, y, k);
+}));
 
 /* ---------- 保存 ---------- */
 let lastOut=null;
@@ -300,7 +316,7 @@ async function build(){
   try{
     const {PDFDocument, degrees, BlendMode} = PDFLib;
     const doc = await PDFDocument.load(pdfBytes, {ignoreEncryption:true});
-    const png = await doc.embedPng(await stampBytes());
+    const pngs={}; for(const S of stamps){ if(!pngs[S.kind]) pngs[S.kind]=await doc.embedPng(await stampBytes(S.kind)); }
     const pdfPages = doc.getPages();
     for(const S of stamps){
       const P=S.page, vp=P.vp, s=px(S);
@@ -308,17 +324,16 @@ async function build(){
       const [brx,bry]=vp.convertToPdfPoint(S.x+s, S.y+s);
       const ang=Math.atan2(bry-bly, brx-blx)*180/Math.PI;
       const size=S.mm*MM;
-      pdfPages[P.index].drawImage(png,{x:blx,y:bly,width:size,height:size,rotate:degrees(ang),blendMode:BlendMode.Multiply});
+      pdfPages[P.index].drawImage(pngs[S.kind],{x:blx,y:bly,width:size,height:size,rotate:degrees(ang),blendMode:BlendMode.Multiply});
     }
     return await doc.save();
   }catch(err){ console.error(err); toast("PDFを作れませんでした"); return null; }
   finally{ busy(false); }
 }
 $("#save").addEventListener("click", async()=>{ const o=await build(); if(o) offer(outName(), o, "application/pdf"); });
-$("#pngsave").addEventListener("click", async e=>{
-  e.preventDefault();
-  await offer("おくの電化_角印.png", await stampBytes(), "image/png");
-});
+document.querySelectorAll(".btn.png").forEach(b=>b.addEventListener("click", async e=>{
+  e.preventDefault(); const k=b.dataset.k; offer(KINDS[k].file, await stampBytes(k), "image/png");
+}));
 if("serviceWorker" in navigator) addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 </script>
 </body>
