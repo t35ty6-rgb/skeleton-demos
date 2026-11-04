@@ -61,7 +61,12 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
 .ws{display:none}
 .ws.on{display:block}
 .tip{background:var(--accent-soft);color:var(--accent-ink);border-radius:12px;padding:10px 14px;font-size:13px;margin-bottom:18px;display:flex;gap:8px;align-items:center}
-.fname{font-weight:700;font-size:15px;margin:0 0 36px;color:var(--ink-2)}
+.fname{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:0 0 40px}
+.fname label{font-size:13px;color:var(--ink-2);font-weight:500;white-space:nowrap}
+.fname .in{flex:1;min-width:220px;display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;padding:0 12px;background:#fff}
+.fname .in:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.fname input{flex:1;border:0;outline:0;font:inherit;font-size:15px;padding:10px 0;color:var(--ink);min-width:0;background:transparent}
+.fname .ext{color:var(--ink-3);font-size:14px}
 .page{position:relative;margin:0 auto 26px;background:#fff;box-shadow:0 1px 2px rgba(15,20,25,.08),0 0 0 1px var(--line);touch-action:pan-y}
 .page canvas{display:block;width:100%;height:100%}
 .pno{position:absolute;left:-1px;top:-24px;font-size:12px;color:var(--ink-3)}
@@ -123,7 +128,7 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
 
   <section class="ws" id="ws">
     <div class="tip">印はドラッグで移動、右下の青い丸で拡大縮小、× で削除。文字は印の下から透けて見えます。</div>
-    <p class="fname" id="fname"></p>
+    <div class="fname"><label for="outname">保存するファイル名</label><div class="in"><input id="outname" autocomplete="off" spellcheck="false"><span class="ext">.pdf</span></div></div>
     <div id="pages"></div>
   </section>
 </main>
@@ -137,6 +142,20 @@ const MM = 72/25.4;            // 1mm = 2.8346pt
 const $ = s => document.querySelector(s);
 pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
+// 「_E3_82_A8…」「%E3%82%A8…」のように文字化けした名前を日本語に戻す
+function cleanName(n){
+  n = n.replace(/\.pdf$/i,"");
+  const dec = s => { try{ return decodeURIComponent(s); }catch(e){ return null; } };
+  n = n.replace(/(?:%[0-9A-Fa-f]{2})+/g, m => { const d=dec(m); return d && /[^\x00-\x7f]/.test(d) ? d : m; });
+  n = n.replace(/(?:_[0-9A-Fa-f]{2}){2,}/g, m => { const d=dec(m.replace(/_/g,"%")); return d && /[^\x00-\x7f]/.test(d) ? d : m; });
+  n = n.replace(/_押印(\s*\(\d+\))?$/,"");           // 押印済みを入れ直したとき二重にしない
+  n = n.replace(/[\\/:*?"<>|]+/g,"_").replace(/^[\s_]+|[\s_]+$/g,"");
+  return n || "書類";
+}
+function outName(){
+  let v = ($("#outname")?.value || "").trim().replace(/\.pdf$/i,"").replace(/[\\/:*?"<>|]+/g,"_");
+  return (v || fileName + "_押印") + ".pdf";
+}
 let pdfBytes = null, fileName = "", pages = [], stamps = [], sel = null;
 let sizeMM = 21;
 try{ const v = parseFloat(localStorage.getItem("okuno_stamp_mm")); if(v>=12&&v<=45) sizeMM=v; }catch(e){}
@@ -158,7 +177,7 @@ async function loadFile(f){
   try{
     const buf = await f.arrayBuffer();
     pdfBytes = new Uint8Array(buf.slice(0));
-    fileName = f.name.replace(/\.pdf$/i,"");
+    fileName = cleanName(f.name);
     const doc = await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
     stamps.forEach(s=>s.el.remove()); stamps=[]; pages=[]; sel=null;
     const wrap=$("#pages"); wrap.innerHTML="";
@@ -181,7 +200,7 @@ async function loadFile(f){
       box.addEventListener("pointerdown", e => { if(e.target===cv) select(null); });
     }
     $("#start").style.display="none"; $("#ws").classList.add("on");
-    $("#fname").textContent = f.name;
+    $("#outname").value = fileName + "_押印";
     $("#add").disabled=false; $("#save").disabled=false; if($("#share")) $("#share").disabled=false;
     // 1ページ目の右上に1つ置く
     const p0=pages[0], s=sizeMM*MM*p0.scale;
@@ -272,7 +291,7 @@ async function share(name, bytes, mime){
 }
 const canShareFiles = (()=>{ try{ return !!(navigator.canShare && navigator.canShare({files:[new File([new Uint8Array(1)],"a.pdf",{type:"application/pdf"})]})); }catch(e){ return false; } })();
 if(canShareFiles){ const b=document.createElement("button"); b.className="btn"; b.id="share"; b.disabled=true; b.textContent="LINE・メールで送る"; $("#save").before(b);
-  b.addEventListener("click", async()=>{ const o=await build(); if(o) share(fileName+"_押印.pdf", o, "application/pdf"); }); }
+  b.addEventListener("click", async()=>{ const o=await build(); if(o) share(outName(), o, "application/pdf"); }); }
 
 async function build(){
   if(!pdfBytes) return null;
@@ -295,7 +314,7 @@ async function build(){
   }catch(err){ console.error(err); toast("PDFを作れませんでした"); return null; }
   finally{ busy(false); }
 }
-$("#save").addEventListener("click", async()=>{ const o=await build(); if(o) offer(fileName+"_押印.pdf", o, "application/pdf"); });
+$("#save").addEventListener("click", async()=>{ const o=await build(); if(o) offer(outName(), o, "application/pdf"); });
 $("#pngsave").addEventListener("click", async e=>{
   e.preventDefault();
   await offer("おくの電化_角印.png", await stampBytes(), "image/png");
