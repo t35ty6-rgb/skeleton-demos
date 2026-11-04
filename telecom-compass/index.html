@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-store">
+<title>Telecom Compass</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#fff;color:#101828;font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+  body{display:grid;place-items:center;padding:24px}
+  .card{max-width:420px;width:100%;text-align:center}
+  h1{font-size:20px;font-weight:700;margin-bottom:8px}
+  p{font-size:14px;color:#667085;line-height:1.7}
+  .bar{height:4px;background:#EEF2F6;border-radius:4px;overflow:hidden;margin:20px 0}
+  .bar i{display:block;height:100%;width:40%;background:#1F6FEB;border-radius:4px;animation:m 1.2s ease-in-out infinite}
+  @keyframes m{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+  button{margin-top:16px;padding:12px 20px;border:0;border-radius:8px;background:#1F6FEB;color:#fff;font-size:15px;font-weight:700;display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Telecom Compass</h1>
+  <p id="msg">ひらいています…</p>
+  <div class="bar" id="bar"><i></i></div>
+  <button id="retry" onclick="go()">もう一度ひらく</button>
+</div>
+<script>
+// 固定の入口。いまの公開先（current-tunnel.json）へ自動で移動する。
+// 合言葉(t)はURLかこの端末に保存したものを使う（リポジトリには置かない）。
+async function go(){
+  const msg=document.getElementById('msg'),bar=document.getElementById('bar'),btn=document.getElementById('retry');
+  msg.textContent='ひらいています…';bar.style.display='block';btn.style.display='none';
+  const q=new URLSearchParams(location.search);
+  let t=q.get('t');
+  try{ if(t) localStorage.setItem('tc_t',t); else t=localStorage.getItem('tc_t'); }catch(e){}
+  const page=(q.get('p')||'').replace(/[^a-zA-Z0-9._-]/g,'');
+  try{
+    const r=await fetch('current-tunnel.json?cb='+Date.now(),{cache:'no-store'});
+    const {url}=await r.json();
+    if(!url) throw 0;
+    location.replace(url.replace(/\/$/,'')+'/'+page+(t?'?t='+encodeURIComponent(t):''));
+  }catch(e){
+    msg.textContent='いまつながりません。少し待ってからもう一度押してください。';
+    bar.style.display='none';btn.style.display='inline-block';
+  }
+}
+go();
+</script>
+</body>
+</html>
