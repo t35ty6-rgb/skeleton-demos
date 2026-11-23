@@ -1,0 +1,49 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LINEマーケ 設定動画 | FPコンパス</title>
+<style>
+:root{--bg:#0a0c11;--panel:#151821;--line:#232936;--ink:#e8eaf0;--dim:#8b93a7;--ac:#10b981;--pri:#3b82f6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,"Noto Sans JP",system-ui,-apple-system,"Hiragino Sans",sans-serif;font-size:14px;display:flex;min-height:100vh}
+aside{width:320px;flex:0 0 320px;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:22px 0}
+aside h1{font-size:15px;margin:0 20px 4px}
+aside .sub{font-size:12px;color:var(--dim);margin:0 20px 18px;line-height:1.7}
+.it{display:flex;gap:11px;padding:12px 20px;cursor:pointer;border-left:3px solid transparent}
+.it:hover,.it.on{background:#1b2130}.it.on{border-left-color:var(--ac)}
+.it .t{font-size:13px;font-weight:600;line-height:1.45}
+.it .d{font-size:11.5px;color:var(--dim);margin-top:3px;line-height:1.55}
+.it .c{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums;margin-left:auto;padding-top:2px}
+.it .dot{width:7px;height:7px;border-radius:50%;background:#2c3444;margin-top:6px;flex:0 0 7px}
+.it.seen .dot{background:var(--ac)}
+main{flex:1;min-width:0;display:flex;flex-direction:column;padding:28px 32px;gap:14px;max-width:1460px;margin:0 auto}
+video{width:100%;max-height:calc(100vh - 220px);background:#000;border-radius:10px;border:1px solid var(--line)}
+h2{font-size:18px;margin:0}p.d{margin:0;color:var(--dim);font-size:13.5px;line-height:1.7}
+.nav{display:flex;gap:10px}
+button{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px 18px;font-size:13px;cursor:pointer;min-height:44px}
+button:hover{border-color:var(--ac)}
+@media(max-width:900px){body{flex-direction:column}aside{width:100%;flex:none;border-right:none;border-bottom:1px solid var(--line);max-height:40vh}main{padding:16px}}
+</style></head><body>
+<aside><h1>LINEマーケ 設定動画</h1>
+<p class="sub">FPコンパスで LINEマーケを使えるようにするまで。上から順に見てください。<br>全 5 本 ／ 合計 4 分 24 秒</p>
+<div id="list"></div></aside>
+<main><video id="vid" controls playsinline preload="metadata"></video>
+<h2 id="ttl"></h2><p class="d" id="dsc"></p>
+<div class="nav"><button id="prev">← 前へ</button><button id="next">次へ →</button></div></main>
+<script>
+const ITEMS=[{"id":"lm-01-flow","title":"1. 全体の流れ","desc":"FPコンパスの「LINEマーケ」画面の見方と、①〜④ をそろえて有効にするまでの流れ。","file":"v/lm-01-flow.mp4","sec":51},{"id":"lm-02-login-channel","title":"2. LINEログイン チャネルを作る（各項目の説明）","desc":"LINE Developers で「LINEログイン」チャネルを新しく作る手順。作成画面の項目を上から順に説明します。すでにある場合は 3 へ。","file":"v/lm-02-login-channel.mp4","sec":82},{"id":"lm-03-copy","title":"3. チャネルIDとシークレットをコピーする","desc":"LINEログイン チャネルの「チャネル基本設定」タブで、③ チャネルID と ④ チャネルシークレットの場所、公開と公式アカウントのリンクを確認します。","file":"v/lm-03-copy.mp4","sec":48},{"id":"lm-04-enable","title":"4. 貼り付けて有効にする","desc":"FPコンパスに ③ チャネルID と ④ チャネルシークレットを貼り付けて保存し、「LINEマーケを有効にする」から管理画面を開くまで。","file":"v/lm-04-enable.mp4","sec":47},{"id":"lm-05-trouble","title":"5. うまくいかないとき","desc":"③④ を貼り間違えたとき、組み合わせが通らないとき、入れ直すとき、準備の途中で止まったときの画面と直し方。","file":"v/lm-05-trouble.mp4","sec":36}];
+const FMT=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+const L=document.getElementById('list'),V=document.getElementById('vid');
+let cur=0,seen=new Set();
+try{seen=new Set(JSON.parse(localStorage.getItem('lmv-seen')||'[]'));cur=+(localStorage.getItem('lmv-cur')||0)||0;}catch(e){}
+const h=ITEMS.findIndex(x=>'#'+x.id===location.hash); if(h>=0)cur=h;
+L.innerHTML=ITEMS.map((x,i)=>'<div class="it" data-i="'+i+'"><div class="dot"></div><div><div class="t">'+x.title+'</div><div class="d">'+x.desc+'</div></div><div class="c">'+FMT(x.sec)+'</div></div>').join('');
+function paint(){[...L.children].forEach((e,i)=>{e.classList.toggle('on',i===cur);e.classList.toggle('seen',seen.has(ITEMS[i].id));});}
+function load(i,play){cur=Math.max(0,Math.min(ITEMS.length-1,i));const x=ITEMS[cur];
+ V.src=x.file;document.getElementById('ttl').textContent=x.title;document.getElementById('dsc').textContent=x.desc;
+ paint();try{localStorage.setItem('lmv-cur',cur);}catch(e){} history.replaceState(null,'','#'+x.id); if(play)V.play().catch(()=>{});}
+L.addEventListener('click',e=>{const d=e.target.closest('.it');if(d)load(+d.dataset.i,true);});
+V.addEventListener('ended',()=>{seen.add(ITEMS[cur].id);try{localStorage.setItem('lmv-seen',JSON.stringify([...seen]));}catch(e){}paint();if(cur<ITEMS.length-1)load(cur+1,true);});
+document.getElementById('prev').onclick=()=>load(cur-1,true);document.getElementById('next').onclick=()=>load(cur+1,true);
+addEventListener('keydown',e=>{if(e.key==='ArrowRight')load(cur+1,true);if(e.key==='ArrowLeft')load(cur-1,true);});
+load(cur);
+</script></body></html>
